@@ -11,11 +11,11 @@ mechanic a card leans on, not a verdict on what it needs.
 | Slice | In catalog |
 | --- | --- |
 | Top 100 Commander cards by EDHREC rank | 100 / 100 |
-| Top 250 Commander cards by EDHREC rank | 245 / 250 |
-| Top 500 Commander cards by EDHREC rank | 468 / 500 |
-| Top 1000 Commander cards by EDHREC rank | 885 / 1000 |
-| Top 2000 Commander cards by EDHREC rank | 1636 / 2000 |
-| Top 5000 Commander cards by EDHREC rank | 3416 / 5000 |
+| Top 250 Commander cards by EDHREC rank | 249 / 250 |
+| Top 500 Commander cards by EDHREC rank | 488 / 500 |
+| Top 1000 Commander cards by EDHREC rank | 918 / 1000 |
+| Top 2000 Commander cards by EDHREC rank | 1670 / 2000 |
+| Top 5000 Commander cards by EDHREC rank | 3452 / 5000 |
 | Top 100 commanders by decks built | 47 / 100 |
 | Top 300 commanders by decks built | 127 / 300 |
 
@@ -25,369 +25,333 @@ A partner pair lists only its missing halves.
 
 | EDHREC # | Commander | Decks | Identity | Type | Flags |
 | --- | --- | --- | --- | --- | --- |
-| 7 | Sauron, the Dark Lord | 39,738 | BRU | Legendary Creature — Avatar Horror |  |
-| 8 | Kaalia of the Vast | 39,633 | BRW | Legendary Creature — Human Cleric |  |
-| 11 | Ms. Bumbleflower | 36,890 | GUW | Legendary Creature — Rabbit Citizen |  |
-| 15 | The Wise Mothman | 33,586 | BGU | Legendary Creature — Insect Mutant |  |
-| 16 | Jodah, the Unifier | 33,035 | BGRUW | Legendary Creature — Human Wizard |  |
-| 18 | Nekusar, the Mindrazer | 32,282 | BRU | Legendary Creature — Zombie Wizard |  |
-| 20 | Kenrith, the Returned King | 31,577 | BGRUW | Legendary Creature — Human Noble |  |
-| 22 | Hearthhull, the Worldseed | 31,209 | BGR | Legendary Artifact — Spacecraft |  |
-| 24 | Valgavoth, Harrower of Souls | 30,751 | BR | Legendary Creature — Elder Demon |  |
-| 25 | Isshin, Two Heavens as One | 30,509 | BRW | Legendary Creature — Human Samurai |  |
-| 28 | Miirym, Sentinel Wyrm | 28,471 | GRU | Legendary Creature — Dragon Spirit |  |
-| 30 | Ulalek, Fused Atrocity | 27,588 | BGRUW | Legendary Creature — Eldrazi |  |
-| 31 | Frodo, Adventurous Hobbit | 26,873 | BW | Legendary Creature — Halfling Scout | partner |
-| 31 | Sam, Loyal Attendant | 26,873 | GW | Legendary Creature — Halfling Peasant | partner |
-| 32 | Hashaton, Scarab's Fist | 26,825 | BUW | Legendary Creature — Zombie Wizard |  |
-| 33 | Bello, Bard of the Brambles | 26,227 | GR | Legendary Creature — Raccoon Bard |  |
-| 34 | Ashling, the Limitless | 26,153 | BGRUW | Legendary Creature — Elemental Sorcerer |  |
-| 35 | Esika, God of the Tree | 25,938 | BGRUW | Legendary Creature — God // Legendary Enchantment |  |
-| 36 | Hakbal of the Surging Soul | 25,234 | GU | Legendary Creature — Merfolk Scout |  |
-| 38 | Rin and Seri, Inseparable | 24,731 | GRW | Legendary Creature — Dog Cat |  |
-| 40 | Animar, Soul of Elements | 23,451 | GRU | Legendary Creature — Elemental |  |
-| 41 | Aragorn, the Uniter | 23,085 | GRUW | Legendary Creature — Human Noble |  |
-| 42 | Arcades, the Strategist | 23,079 | GUW | Legendary Creature — Elder Dragon |  |
-| 45 | Flubs, the Fool | 22,805 | GRU | Legendary Creature — Frog Scout |  |
-| 46 | Mr. House, President and CEO | 22,796 | BRW | Legendary Artifact Creature — Human |  |
-| 47 | Caesar, Legion's Emperor | 22,706 | BRW | Legendary Creature — Human Soldier |  |
-| 49 | Breya, Etherium Shaper | 22,444 | BRUW | Legendary Artifact Creature — Human |  |
-| 51 | Maralen, Fae Ascendant | 22,387 | BGU | Legendary Creature — Elf Faerie Noble |  |
-| 55 | Ureni of the Unwritten | 21,928 | GRU | Legendary Creature — Spirit Dragon |  |
-| 56 | Kinnan, Bonder Prodigy | 21,589 | GU | Legendary Creature — Human Druid |  |
-| 59 | Zhulodok, Void Gorger | 21,208 | C | Legendary Creature — Eldrazi |  |
-| 60 | Tom Bombadil | 21,189 | BGRUW | Legendary Creature — God Bard |  |
-| 61 | Tidus, Yuna's Guardian | 21,108 | GUW | Legendary Creature — Human Warrior |  |
-| 62 | Atla Palani, Nest Tender | 21,067 | GRW | Legendary Creature — Human Shaman |  |
-| 65 | Zurgo Stormrender | 20,797 | BRW | Legendary Creature — Orc Warrior |  |
-| 66 | Go-Shintai of Life's Origin | 20,567 | BGRUW | Legendary Enchantment Creature — Shrine |  |
-| 68 | Felothar the Steadfast | 20,434 | BGW | Legendary Creature — Human Warrior |  |
-| 69 | K'rrik, Son of Yawgmoth | 20,410 | B | Legendary Creature — Phyrexian Horror Minion |  |
-| 72 | Avatar Aang | 20,084 | BGRUW | Legendary Creature — Human Avatar Ally // Legendary Creature — Avatar Ally |  |
-| 74 | Zaxara, the Exemplary | 20,074 | BGU | Legendary Creature — Nightmare Hydra |  |
-| 76 | Ghyrson Starn, Kelermorph | 19,863 | RU | Legendary Creature — Tyranid Human |  |
-| 77 | Xyris, the Writhing Storm | 19,719 | GRU | Legendary Creature — Snake Leviathan |  |
-| 80 | Terra, Herald of Hope | 19,593 | BRW | Legendary Creature — Human Wizard Warrior |  |
-| 83 | Betor, Ancestor's Voice | 19,301 | BGW | Legendary Creature — Spirit Dragon |  |
-| 84 | Sisay, Weatherlight Captain | 19,030 | BGRUW | Legendary Creature — Human Soldier |  |
-| 85 | Eriette of the Charmed Apple | 18,994 | BW | Legendary Creature — Human Warlock |  |
-| 86 | Kilo, Apogee Mind | 18,982 | RUW | Legendary Artifact Creature — Robot Artificer |  |
-| 87 | Henzie "Toolbox" Torre | 18,733 | BGR | Legendary Creature — Devil Rogue | commander |
-| 91 | Norman Osborn | 18,488 | BRU | Legendary Creature — Human Scientist Villain // Legendary Creature — Goblin Human Villain |  |
-| 92 | Urtet, Remnant of Memnarch | 18,471 | BGRUW | Legendary Artifact Creature — Myr |  |
-| 96 | Ezio Auditore da Firenze | 17,851 | BGRUW | Legendary Creature — Human Assassin |  |
-| 97 | Alela, Cunning Conqueror | 17,801 | BU | Legendary Creature — Faerie Warlock | goad |
-| 98 | Zinnia, Valley's Voice | 17,799 | RUW | Legendary Creature — Bird Bard |  |
-| 99 | Sidar Jabari of Zhalfir | 17,782 | BUW | Legendary Creature — Human Knight | commander |
-| 101 | High Perfect Morcant | 17,699 | BG | Legendary Creature — Elf Noble |  |
-| 102 | Marneus Calgar | 17,648 | BUW | Legendary Creature — Astartes Warrior |  |
-| 104 | Aminatou, Veil Piercer | 17,241 | BUW | Legendary Creature — Human Wizard |  |
-| 105 | Deadpool, Trading Card | 17,173 | BR | Legendary Creature — Mutant Mercenary Hero | multiplayer |
-| 108 | Zur the Enchanter | 17,069 | BUW | Legendary Creature — Human Wizard |  |
-| 111 | Alela, Artful Provocateur | 16,842 | BUW | Legendary Creature — Faerie Warlock |  |
-| 113 | Galadriel, Light of Valinor | 16,783 | GUW | Legendary Creature — Elf Noble |  |
-| 114 | Jin Sakai, Ghost of Tsushima | 16,430 | BUW | Legendary Creature — Human Samurai |  |
-| 115 | Storm, Force of Nature | 16,398 | GRU | Legendary Creature — Mutant Hero |  |
-| 117 | Morophon, the Boundless | 16,118 | BGRUW | Legendary Creature — Shapeshifter |  |
-| 118 | Captain America, First Avenger | 15,953 | RUW | Legendary Creature — Human Soldier Hero |  |
-| 119 | Zimone, Mystery Unraveler | 15,787 | GU | Legendary Creature — Human Wizard |  |
-| 121 | Tovolar, Dire Overlord | 15,751 | GR | Legendary Creature — Human Werewolf // Legendary Creature — Werewolf |  |
-| 122 | Kynaios and Tiro of Meletis | 15,729 | GRUW | Legendary Creature — Human Soldier | multiplayer |
-| 124 | Be'lakor, the Dark Master | 15,626 | BRU | Legendary Creature — Demon Noble |  |
-| 127 | Magus Lucea Kane | 15,153 | GRU | Legendary Creature — Human Tyranid Wizard |  |
-| 128 | Éowyn, Shieldmaiden | 15,146 | RUW | Legendary Creature — Human Knight |  |
-| 130 | Lord of the Nazgûl | 15,071 | BU | Legendary Creature — Wraith Noble |  |
-| 132 | Satya, Aetherflux Genius | 14,889 | RUW | Legendary Creature — Human Artificer |  |
-| 134 | Kibo, Uktabi Prince | 14,744 | GR | Legendary Creature — Monkey Noble |  |
-| 135 | Satoru Umezawa | 14,633 | BU | Legendary Creature — Human Ninja |  |
-| 136 | Eshki, Temur's Roar | 14,464 | GRU | Legendary Creature — Human Warrior |  |
-| 137 | Inalla, Archmage Ritualist | 14,416 | BRU | Legendary Creature — Human Wizard | commander |
-| 138 | Prosper, Tome-Bound | 14,284 | BR | Legendary Creature — Tiefling Warlock |  |
-| 140 | Omnath, Locus of All | 14,267 | BGRUW | Legendary Creature — Phyrexian Elemental |  |
-| 147 | Najeela, the Blade-Blossom | 14,010 | BGRUW | Legendary Creature — Human Warrior |  |
-| 149 | Temmet, Naktamun's Will | 13,897 | BUW | Legendary Creature — Zombie Wizard |  |
-| 150 | Tiamat | 13,824 | BGRUW | Legendary Creature — Dragon God |  |
-| 151 | Azlask, the Swelling Scourge | 13,810 | BGRUW | Legendary Creature — Eldrazi |  |
-| 152 | Cosmic Spider-Man | 13,748 | BGRUW | Legendary Creature — Spider Human Hero |  |
-| 153 | Shelob, Child of Ungoliant | 13,705 | BG | Legendary Creature — Spider Demon |  |
-| 155 | Inspirit, Flagship Vessel | 13,469 | RUW | Legendary Artifact — Spacecraft |  |
-| 156 | Rocco, Street Chef | 13,418 | GRW | Legendary Creature — Elf Druid |  |
-| 157 | Anikthea, Hand of Erebos | 13,341 | BGW | Legendary Enchantment Creature — Demigod |  |
-| 158 | Rendmaw, Creaking Nest | 13,340 | BG | Legendary Artifact Creature — Scarecrow | goad |
-| 159 | Omo, Queen of Vesuva | 13,316 | GU | Legendary Creature — Shapeshifter Noble |  |
-| 160 | Atreus, Impulsive Son | 13,316 | RU | Legendary Creature — God Archer | partner |
-| 160 | Kratos, Stoic Father | 13,316 | RW | Legendary Creature — God Warrior | partner |
-| 163 | Edward Kenway | 13,072 | BRU | Legendary Creature — Human Assassin Pirate |  |
-| 164 | Liesa, Shroud of Dusk | 13,022 | BW | Legendary Creature — Angel | commander |
-| 165 | Dr. Eggman | 12,989 | BRU | Legendary Creature — Human Scientist |  |
-| 166 | Doran, Besieged by Time | 12,981 | BGW | Legendary Creature — Treefolk Druid |  |
-| 168 | Tivit, Seller of Secrets | 12,953 | BUW | Legendary Creature — Sphinx Rogue | vote |
-| 169 | Shroofus Sproutsire | 12,880 | G | Legendary Creature — Saproling |  |
-| 170 | Jon Irenicus, Shattered One | 12,860 | BU | Legendary Creature — Elf Wizard | goad |
-| 172 | Wolverine, Best There Is | 12,814 | GR | Legendary Creature — Mutant Berserker Hero |  |
-| 174 | Sefris of the Hidden Ways | 12,768 | BUW | Legendary Creature — Human Wizard | dungeon |
-| 176 | Tergrid, God of Fright | 12,740 | B | Legendary Creature — God // Legendary Artifact |  |
-| 177 | Yurlok of Scorch Thrash | 12,617 | BGR | Legendary Creature — Lizard Shaman |  |
-| 179 | Disa the Restless | 12,554 | BGR | Legendary Creature — Human Scout |  |
-| 182 | Zedruu the Greathearted | 12,440 | RUW | Legendary Creature — Minotaur Monk |  |
-| 183 | Light-Paws, Emperor's Voice | 12,368 | W | Legendary Creature — Fox Advisor |  |
-| 184 | Stella Lee, Wild Card | 12,360 | RU | Legendary Creature — Human Rogue |  |
-| 185 | Hazel of the Rootbloom | 12,353 | BG | Legendary Creature — Squirrel Druid |  |
-| 186 | Anti-Venom, Horrifying Healer | 12,200 | W | Legendary Creature — Symbiote Hero |  |
-| 189 | Celes, Rune Knight | 12,051 | BRW | Legendary Creature — Human Wizard Knight |  |
-| 190 | Sonic the Hedgehog | 11,984 | RUW | Legendary Creature — Hedgehog Warrior |  |
-| 191 | Kraum, Ludevic's Opus | 11,937 | RU | Legendary Creature — Zombie Horror | partner |
-| 191 | Tymna the Weaver | 11,937 | BW | Legendary Creature — Human Cleric | partner |
-| 192 | Varina, Lich Queen | 11,927 | BUW | Legendary Creature — Zombie Wizard |  |
-| 194 | Thalia and The Gitrog Monster | 11,873 | BGW | Legendary Creature — Human Frog Horror |  |
-| 196 | Derevi, Empyrial Tactician | 11,866 | GUW | Legendary Creature — Bird Wizard | commander |
-| 197 | Shadow the Hedgehog | 11,830 | BR | Legendary Creature — Hedgehog Mercenary |  |
-| 199 | Indoraptor, the Perfect Hybrid | 11,772 | BGR | Legendary Creature — Dinosaur Mutant |  |
-| 201 | Thrasios, Triton Hero | 11,668 | GU | Legendary Creature — Merfolk Wizard | partner |
-| 201 | Tymna the Weaver | 11,668 | BW | Legendary Creature — Human Cleric | partner |
-| 205 | Yuna, Grand Summoner | 11,407 | GUW | Legendary Creature — Human Cleric |  |
-| 206 | Gonti, Canny Acquisitor | 11,364 | BGU | Legendary Creature — Aetherborn Rogue |  |
-| 207 | Saruman, the White Hand | 11,341 | BRU | Legendary Creature — Avatar Wizard |  |
-| 210 | Orvar, the All-Form | 11,305 | U | Legendary Creature — Shapeshifter |  |
-| 211 | Tinybones, Bauble Burglar | 11,113 | B | Legendary Creature — Skeleton Rogue |  |
-| 212 | Child of Alara | 11,092 | BGRUW | Legendary Creature — Avatar |  |
-| 213 | Dina, Essence Brewer | 11,043 | BG | Legendary Creature — Dryad Druid |  |
-| 214 | Dihada, Binder of Wills | 11,013 | BRW | Legendary Planeswalker — Dihada | commander |
-| 217 | Ziatora, the Incinerator | 10,804 | BGR | Legendary Creature — Demon Dragon |  |
-| 218 | Zimone, Infinite Analyst | 10,782 | GU | Legendary Creature — Human Wizard |  |
-| 219 | Ob Nixilis, Captive Kingpin | 10,743 | BR | Legendary Creature — Demon |  |
-| 220 | Killian, Decisive Mentor | 10,677 | BW | Legendary Creature — Human Warlock | goad |
+| 7 | Sauron, the Dark Lord | 39,797 | BRU | Legendary Creature — Avatar Horror |  |
+| 8 | Kaalia of the Vast | 39,672 | BRW | Legendary Creature — Human Cleric |  |
+| 11 | Ms. Bumbleflower | 36,916 | GUW | Legendary Creature — Rabbit Citizen |  |
+| 15 | The Wise Mothman | 33,617 | BGU | Legendary Creature — Insect Mutant |  |
+| 16 | Jodah, the Unifier | 33,057 | BGRUW | Legendary Creature — Human Wizard |  |
+| 18 | Nekusar, the Mindrazer | 32,314 | BRU | Legendary Creature — Zombie Wizard |  |
+| 20 | Kenrith, the Returned King | 31,584 | BGRUW | Legendary Creature — Human Noble |  |
+| 22 | Hearthhull, the Worldseed | 31,261 | BGR | Legendary Artifact — Spacecraft |  |
+| 24 | Valgavoth, Harrower of Souls | 30,737 | BR | Legendary Creature — Elder Demon |  |
+| 25 | Isshin, Two Heavens as One | 30,544 | BRW | Legendary Creature — Human Samurai |  |
+| 28 | Miirym, Sentinel Wyrm | 28,480 | GRU | Legendary Creature — Dragon Spirit |  |
+| 30 | Ulalek, Fused Atrocity | 27,613 | BGRUW | Legendary Creature — Eldrazi |  |
+| 31 | Frodo, Adventurous Hobbit | 26,896 | BW | Legendary Creature — Halfling Scout | partner |
+| 31 | Sam, Loyal Attendant | 26,896 | GW | Legendary Creature — Halfling Peasant | partner |
+| 32 | Hashaton, Scarab's Fist | 26,852 | BUW | Legendary Creature — Zombie Wizard |  |
+| 33 | Bello, Bard of the Brambles | 26,239 | GR | Legendary Creature — Raccoon Bard |  |
+| 34 | Ashling, the Limitless | 26,186 | BGRUW | Legendary Creature — Elemental Sorcerer |  |
+| 35 | Esika, God of the Tree | 25,962 | BGRUW | Legendary Creature — God // Legendary Enchantment |  |
+| 36 | Hakbal of the Surging Soul | 25,249 | GU | Legendary Creature — Merfolk Scout |  |
+| 38 | Rin and Seri, Inseparable | 24,754 | GRW | Legendary Creature — Dog Cat |  |
+| 40 | Animar, Soul of Elements | 23,465 | GRU | Legendary Creature — Elemental |  |
+| 41 | Aragorn, the Uniter | 23,117 | GRUW | Legendary Creature — Human Noble |  |
+| 42 | Arcades, the Strategist | 23,093 | GUW | Legendary Creature — Elder Dragon |  |
+| 45 | Flubs, the Fool | 22,824 | GRU | Legendary Creature — Frog Scout |  |
+| 46 | Mr. House, President and CEO | 22,810 | BRW | Legendary Artifact Creature — Human |  |
+| 47 | Caesar, Legion's Emperor | 22,717 | BRW | Legendary Creature — Human Soldier |  |
+| 49 | Breya, Etherium Shaper | 22,474 | BRUW | Legendary Artifact Creature — Human |  |
+| 51 | Maralen, Fae Ascendant | 22,411 | BGU | Legendary Creature — Elf Faerie Noble |  |
+| 55 | Ureni of the Unwritten | 21,957 | GRU | Legendary Creature — Spirit Dragon |  |
+| 56 | Kinnan, Bonder Prodigy | 21,628 | GU | Legendary Creature — Human Druid |  |
+| 59 | Zhulodok, Void Gorger | 21,228 | C | Legendary Creature — Eldrazi |  |
+| 60 | Tom Bombadil | 21,207 | BGRUW | Legendary Creature — God Bard |  |
+| 61 | Tidus, Yuna's Guardian | 21,138 | GUW | Legendary Creature — Human Warrior |  |
+| 62 | Atla Palani, Nest Tender | 21,080 | GRW | Legendary Creature — Human Shaman |  |
+| 65 | Zurgo Stormrender | 20,816 | BRW | Legendary Creature — Orc Warrior |  |
+| 66 | Go-Shintai of Life's Origin | 20,584 | BGRUW | Legendary Enchantment Creature — Shrine |  |
+| 68 | Felothar the Steadfast | 20,463 | BGW | Legendary Creature — Human Warrior |  |
+| 69 | K'rrik, Son of Yawgmoth | 20,433 | B | Legendary Creature — Phyrexian Horror Minion |  |
+| 72 | Avatar Aang | 20,107 | BGRUW | Legendary Creature — Human Avatar Ally // Legendary Creature — Avatar Ally |  |
+| 74 | Zaxara, the Exemplary | 20,096 | BGU | Legendary Creature — Nightmare Hydra |  |
+| 76 | Ghyrson Starn, Kelermorph | 19,873 | RU | Legendary Creature — Tyranid Human |  |
+| 77 | Xyris, the Writhing Storm | 19,733 | GRU | Legendary Creature — Snake Leviathan |  |
+| 80 | Terra, Herald of Hope | 19,630 | BRW | Legendary Creature — Human Wizard Warrior |  |
+| 83 | Betor, Ancestor's Voice | 19,336 | BGW | Legendary Creature — Spirit Dragon |  |
+| 84 | Sisay, Weatherlight Captain | 19,071 | BGRUW | Legendary Creature — Human Soldier |  |
+| 85 | Kilo, Apogee Mind | 19,008 | RUW | Legendary Artifact Creature — Robot Artificer |  |
+| 86 | Eriette of the Charmed Apple | 19,007 | BW | Legendary Creature — Human Warlock |  |
+| 87 | Henzie "Toolbox" Torre | 18,746 | BGR | Legendary Creature — Devil Rogue | commander |
+| 90 | Norman Osborn | 18,515 | BRU | Legendary Creature — Human Scientist Villain // Legendary Creature — Goblin Human Villain |  |
+| 92 | Urtet, Remnant of Memnarch | 18,496 | BGRUW | Legendary Artifact Creature — Myr |  |
+| 96 | Ezio Auditore da Firenze | 17,858 | BGRUW | Legendary Creature — Human Assassin |  |
+| 97 | Alela, Cunning Conqueror | 17,811 | BU | Legendary Creature — Faerie Warlock | goad |
+| 98 | Zinnia, Valley's Voice | 17,810 | RUW | Legendary Creature — Bird Bard |  |
+| 99 | Sidar Jabari of Zhalfir | 17,787 | BUW | Legendary Creature — Human Knight | commander |
+| 101 | High Perfect Morcant | 17,708 | BG | Legendary Creature — Elf Noble |  |
+| 102 | Marneus Calgar | 17,669 | BUW | Legendary Creature — Astartes Warrior |  |
+| 104 | Aminatou, Veil Piercer | 17,234 | BUW | Legendary Creature — Human Wizard |  |
+| 105 | Deadpool, Trading Card | 17,187 | BR | Legendary Creature — Mutant Mercenary Hero | multiplayer |
+| 108 | Zur the Enchanter | 17,088 | BUW | Legendary Creature — Human Wizard |  |
+| 111 | Alela, Artful Provocateur | 16,864 | BUW | Legendary Creature — Faerie Warlock |  |
+| 113 | Galadriel, Light of Valinor | 16,796 | GUW | Legendary Creature — Elf Noble |  |
+| 114 | Jin Sakai, Ghost of Tsushima | 16,452 | BUW | Legendary Creature — Human Samurai |  |
+| 115 | Storm, Force of Nature | 16,413 | GRU | Legendary Creature — Mutant Hero |  |
+| 117 | Morophon, the Boundless | 16,138 | BGRUW | Legendary Creature — Shapeshifter |  |
+| 118 | Captain America, First Avenger | 15,963 | RUW | Legendary Creature — Human Soldier Hero |  |
+| 119 | Zimone, Mystery Unraveler | 15,795 | GU | Legendary Creature — Human Wizard |  |
+| 121 | Tovolar, Dire Overlord | 15,768 | GR | Legendary Creature — Human Werewolf // Legendary Creature — Werewolf |  |
+| 122 | Kynaios and Tiro of Meletis | 15,766 | GRUW | Legendary Creature — Human Soldier | multiplayer |
+| 124 | Be'lakor, the Dark Master | 15,629 | BRU | Legendary Creature — Demon Noble |  |
+| 127 | Magus Lucea Kane | 15,171 | GRU | Legendary Creature — Human Tyranid Wizard |  |
+| 128 | Éowyn, Shieldmaiden | 15,165 | RUW | Legendary Creature — Human Knight |  |
+| 130 | Lord of the Nazgûl | 15,086 | BU | Legendary Creature — Wraith Noble |  |
+| 132 | Satya, Aetherflux Genius | 14,899 | RUW | Legendary Creature — Human Artificer |  |
+| 134 | Kibo, Uktabi Prince | 14,756 | GR | Legendary Creature — Monkey Noble |  |
+| 135 | Satoru Umezawa | 14,642 | BU | Legendary Creature — Human Ninja |  |
+| 136 | Eshki, Temur's Roar | 14,477 | GRU | Legendary Creature — Human Warrior |  |
+| 137 | Inalla, Archmage Ritualist | 14,436 | BRU | Legendary Creature — Human Wizard | commander |
+| 138 | Omnath, Locus of All | 14,295 | BGRUW | Legendary Creature — Phyrexian Elemental |  |
+| 139 | Prosper, Tome-Bound | 14,293 | BR | Legendary Creature — Tiefling Warlock |  |
+| 147 | Najeela, the Blade-Blossom | 14,011 | BGRUW | Legendary Creature — Human Warrior |  |
+| 149 | Temmet, Naktamun's Will | 13,906 | BUW | Legendary Creature — Zombie Wizard |  |
+| 150 | Tiamat | 13,834 | BGRUW | Legendary Creature — Dragon God |  |
+| 151 | Azlask, the Swelling Scourge | 13,816 | BGRUW | Legendary Creature — Eldrazi |  |
+| 152 | Cosmic Spider-Man | 13,776 | BGRUW | Legendary Creature — Spider Human Hero |  |
+| 153 | Shelob, Child of Ungoliant | 13,714 | BG | Legendary Creature — Spider Demon |  |
+| 154 | Inspirit, Flagship Vessel | 13,488 | RUW | Legendary Artifact — Spacecraft |  |
+| 156 | Rocco, Street Chef | 13,435 | GRW | Legendary Creature — Elf Druid |  |
+| 157 | Anikthea, Hand of Erebos | 13,353 | BGW | Legendary Enchantment Creature — Demigod |  |
+| 158 | Rendmaw, Creaking Nest | 13,335 | BG | Legendary Artifact Creature — Scarecrow | goad |
+| 159 | Atreus, Impulsive Son | 13,332 | RU | Legendary Creature — God Archer | partner |
+| 159 | Kratos, Stoic Father | 13,332 | RW | Legendary Creature — God Warrior | partner |
+| 160 | Omo, Queen of Vesuva | 13,314 | GU | Legendary Creature — Shapeshifter Noble |  |
+| 163 | Edward Kenway | 13,079 | BRU | Legendary Creature — Human Assassin Pirate |  |
+| 164 | Liesa, Shroud of Dusk | 13,034 | BW | Legendary Creature — Angel | commander |
+| 165 | Dr. Eggman | 13,007 | BRU | Legendary Creature — Human Scientist |  |
+| 166 | Doran, Besieged by Time | 13,006 | BGW | Legendary Creature — Treefolk Druid |  |
+| 168 | Tivit, Seller of Secrets | 12,966 | BUW | Legendary Creature — Sphinx Rogue | vote |
+| 169 | Shroofus Sproutsire | 12,896 | G | Legendary Creature — Saproling |  |
+| 170 | Jon Irenicus, Shattered One | 12,861 | BU | Legendary Creature — Elf Wizard | goad |
+| 172 | Wolverine, Best There Is | 12,822 | GR | Legendary Creature — Mutant Berserker Hero |  |
+| 174 | Sefris of the Hidden Ways | 12,776 | BUW | Legendary Creature — Human Wizard | dungeon |
+| 176 | Tergrid, God of Fright | 12,752 | B | Legendary Creature — God // Legendary Artifact |  |
+| 177 | Yurlok of Scorch Thrash | 12,626 | BGR | Legendary Creature — Lizard Shaman |  |
+| 180 | Disa the Restless | 12,558 | BGR | Legendary Creature — Human Scout |  |
+| 182 | Zedruu the Greathearted | 12,446 | RUW | Legendary Creature — Minotaur Monk |  |
+| 183 | Light-Paws, Emperor's Voice | 12,378 | W | Legendary Creature — Fox Advisor |  |
+| 184 | Hazel of the Rootbloom | 12,362 | BG | Legendary Creature — Squirrel Druid |  |
+| 185 | Stella Lee, Wild Card | 12,361 | RU | Legendary Creature — Human Rogue |  |
+| 186 | Anti-Venom, Horrifying Healer | 12,217 | W | Legendary Creature — Symbiote Hero |  |
+| 189 | Celes, Rune Knight | 12,066 | BRW | Legendary Creature — Human Wizard Knight |  |
+| 190 | Sonic the Hedgehog | 11,997 | RUW | Legendary Creature — Hedgehog Warrior |  |
+| 191 | Kraum, Ludevic's Opus | 11,943 | RU | Legendary Creature — Zombie Horror | partner |
+| 191 | Tymna the Weaver | 11,943 | BW | Legendary Creature — Human Cleric | partner |
+| 192 | Varina, Lich Queen | 11,933 | BUW | Legendary Creature — Zombie Wizard |  |
+| 194 | Thalia and The Gitrog Monster | 11,876 | BGW | Legendary Creature — Human Frog Horror |  |
+| 196 | Derevi, Empyrial Tactician | 11,871 | GUW | Legendary Creature — Bird Wizard | commander |
+| 197 | Shadow the Hedgehog | 11,847 | BR | Legendary Creature — Hedgehog Mercenary |  |
+| 198 | Indoraptor, the Perfect Hybrid | 11,780 | BGR | Legendary Creature — Dinosaur Mutant |  |
+| 201 | Thrasios, Triton Hero | 11,674 | GU | Legendary Creature — Merfolk Wizard | partner |
+| 201 | Tymna the Weaver | 11,674 | BW | Legendary Creature — Human Cleric | partner |
+| 204 | Yuna, Grand Summoner | 11,421 | GUW | Legendary Creature — Human Cleric |  |
+| 206 | Gonti, Canny Acquisitor | 11,372 | BGU | Legendary Creature — Aetherborn Rogue |  |
+| 207 | Saruman, the White Hand | 11,365 | BRU | Legendary Creature — Avatar Wizard |  |
+| 210 | Orvar, the All-Form | 11,319 | U | Legendary Creature — Shapeshifter |  |
+| 211 | Tinybones, Bauble Burglar | 11,128 | B | Legendary Creature — Skeleton Rogue |  |
+| 212 | Child of Alara | 11,096 | BGRUW | Legendary Creature — Avatar |  |
+| 213 | Dina, Essence Brewer | 11,077 | BG | Legendary Creature — Dryad Druid |  |
+| 214 | Dihada, Binder of Wills | 11,021 | BRW | Legendary Planeswalker — Dihada | commander |
+| 217 | Ziatora, the Incinerator | 10,814 | BGR | Legendary Creature — Demon Dragon |  |
+| 218 | Zimone, Infinite Analyst | 10,811 | GU | Legendary Creature — Human Wizard |  |
+| 219 | Ob Nixilis, Captive Kingpin | 10,746 | BR | Legendary Creature — Demon |  |
+| 220 | Killian, Decisive Mentor | 10,701 | BW | Legendary Creature — Human Warlock | goad |
 | 223 | Narset, Enlightened Exile | 10,492 | RUW | Legendary Creature — Human Monk |  |
-| 228 | Ojer Axonil, Deepest Might | 10,395 | R | Legendary Creature — God // Land |  |
-| 230 | Volo, Guide to Monsters | 10,343 | GU | Legendary Creature — Human Wizard |  |
-| 232 | Saheeli, Radiant Creator | 10,239 | GRU | Legendary Creature — Human Artificer |  |
-| 234 | Yidris, Maelstrom Wielder | 10,198 | BGRU | Legendary Creature — Ogre Wizard |  |
-| 237 | Vihaan, Goldwaker | 10,186 | BRW | Legendary Creature — Dwarf Warlock |  |
-| 239 | Lord Windgrace | 10,108 | BGR | Legendary Planeswalker — Windgrace | commander |
-| 241 | Okaun, Eye of Chaos | 10,055 | R | Legendary Creature — Cyclops Berserker | partner |
-| 241 | Zndrsplt, Eye of Wisdom | 10,055 | U | Legendary Creature — Homunculus | partner |
-| 245 | Jetmir, Nexus of Revels | 9,882 | GRW | Legendary Creature — Cat Demon |  |
-| 246 | Doctor Doom, King of Latveria | 9,858 | BRU | Legendary Creature — Human Noble Villain |  |
-| 247 | Aloy, Savior of Meridian | 9,846 | GU | Legendary Creature — Human Warrior |  |
-| 249 | Eddie Brock | 9,778 | BGR | Legendary Creature — Human Hero Villain // Legendary Creature — Symbiote Hero Villain |  |
-| 250 | Nicol Bolas, the Ravager | 9,749 | BRU | Legendary Creature — Elder Dragon // Legendary Planeswalker — Bolas |  |
-| 251 | Rocco, Cabaretti Caterer | 9,720 | GRW | Legendary Creature — Elf Druid |  |
-| 252 | Quintorius, History Chaser | 9,702 | RW | Legendary Planeswalker — Quintorius | commander |
-| 254 | Chulane, Teller of Tales | 9,662 | GUW | Legendary Creature — Human Druid |  |
-| 255 | Shilgengar, Sire of Famine | 9,583 | BW | Legendary Creature — Elder Demon |  |
-| 256 | Shalai and Hallar | 9,560 | GRW | Legendary Creature — Angel Elf |  |
-| 257 | Leonardo, the Balance | 9,555 | BGRUW | Legendary Creature — Mutant Ninja Turtle | partner |
-| 257 | Michelangelo, the Heart | 9,555 | G | Legendary Creature — Mutant Ninja Turtle | partner |
-| 261 | Skullbriar, the Walking Grave | 9,420 | BG | Legendary Creature — Zombie Elemental |  |
-| 262 | Jodah, Archmage Eternal | 9,420 | BGRUW | Legendary Creature — Human Wizard |  |
-| 264 | Queza, Augur of Agonies | 9,374 | BUW | Legendary Creature — Octopus Advisor |  |
-| 265 | Iron Man, Titan of Innovation | 9,346 | RU | Legendary Artifact Creature — Human Hero |  |
-| 266 | Kratos, God of War | 9,346 | R | Legendary Creature — God Warrior |  |
-| 267 | Mirko, Obsessive Theorist | 9,316 | BU | Legendary Creature — Vampire Detective |  |
-| 268 | Rowan, Scion of War | 9,292 | BR | Legendary Creature — Human Wizard |  |
-| 270 | Hazezon, Shaper of Sand | 9,237 | GRW | Legendary Creature — Human Warrior |  |
-| 271 | Tayam, Luminous Enigma | 9,217 | BGW | Legendary Creature — Nightmare Beast |  |
-| 272 | Reaper King | 9,215 | BGRUW | Legendary Artifact Creature — Scarecrow |  |
-| 274 | Brenard, Ginger Sculptor | 9,185 | GUW | Legendary Creature — Human Artificer |  |
-| 275 | Indominus Rex, Alpha | 9,171 | BGU | Legendary Creature — Dinosaur Mutant |  |
-| 277 | Elsha, Threefold Master | 9,139 | RUW | Legendary Creature — Djinn Monk |  |
-| 278 | Gargos, Vicious Watcher | 9,094 | G | Legendary Creature — Hydra |  |
-| 279 | Thranduil, the Elvenking | 9,082 | BGU | Legendary Creature — Elf Noble |  |
-| 282 | Syr Gwyn, Hero of Ashvale | 9,063 | BRW | Legendary Creature — Human Knight |  |
-| 283 | Thrasios, Triton Hero | 9,058 | GU | Legendary Creature — Merfolk Wizard | partner |
-| 284 | Coram, the Undertaker | 9,053 | BGR | Legendary Creature — Human Warrior |  |
-| 286 | Marvo, Deep Operative | 9,038 | BU | Legendary Creature — Octopus Rogue |  |
-| 290 | Arna Kennerüd, Skycaptain | 8,965 | BUW | Legendary Creature — Human Knight |  |
-| 291 | Raggadragga, Goreguts Boss | 8,963 | GR | Legendary Creature — Human Boar |  |
-| 293 | Dogmeat, Ever Loyal | 8,930 | GRW | Legendary Creature — Dog |  |
-| 294 | The Master of Keys | 8,923 | BUW | Legendary Enchantment Creature — Horror |  |
-| 295 | Alexios, Deimos of Kosmos | 8,920 | R | Legendary Creature — Human Berserker |  |
-| 296 | Silas Renn, Seeker Adept | 8,891 | BU | Legendary Artifact Creature — Human | partner |
-| 297 | Myrel, Shield of Argive | 8,875 | W | Legendary Creature — Human Soldier |  |
+| 228 | Ojer Axonil, Deepest Might | 10,404 | R | Legendary Creature — God // Land |  |
+| 230 | Volo, Guide to Monsters | 10,354 | GU | Legendary Creature — Human Wizard |  |
+| 233 | Saheeli, Radiant Creator | 10,255 | GRU | Legendary Creature — Human Artificer |  |
+| 235 | Yidris, Maelstrom Wielder | 10,205 | BGRU | Legendary Creature — Ogre Wizard |  |
+| 236 | Vihaan, Goldwaker | 10,192 | BRW | Legendary Creature — Dwarf Warlock |  |
+| 239 | Lord Windgrace | 10,114 | BGR | Legendary Planeswalker — Windgrace | commander |
+| 241 | Okaun, Eye of Chaos | 10,059 | R | Legendary Creature — Cyclops Berserker | partner |
+| 241 | Zndrsplt, Eye of Wisdom | 10,059 | U | Legendary Creature — Homunculus | partner |
+| 245 | Jetmir, Nexus of Revels | 9,890 | GRW | Legendary Creature — Cat Demon |  |
+| 246 | Doctor Doom, King of Latveria | 9,887 | BRU | Legendary Creature — Human Noble Villain |  |
+| 247 | Aloy, Savior of Meridian | 9,861 | GU | Legendary Creature — Human Warrior |  |
+| 249 | Eddie Brock | 9,796 | BGR | Legendary Creature — Human Hero Villain // Legendary Creature — Symbiote Hero Villain |  |
+| 250 | Nicol Bolas, the Ravager | 9,759 | BRU | Legendary Creature — Elder Dragon // Legendary Planeswalker — Bolas |  |
+| 251 | Quintorius, History Chaser | 9,726 | RW | Legendary Planeswalker — Quintorius | commander |
+| 252 | Rocco, Cabaretti Caterer | 9,725 | GRW | Legendary Creature — Elf Druid |  |
+| 254 | Chulane, Teller of Tales | 9,667 | GUW | Legendary Creature — Human Druid |  |
+| 255 | Shilgengar, Sire of Famine | 9,594 | BW | Legendary Creature — Elder Demon |  |
+| 256 | Leonardo, the Balance | 9,580 | BGRUW | Legendary Creature — Mutant Ninja Turtle | partner |
+| 256 | Michelangelo, the Heart | 9,580 | G | Legendary Creature — Mutant Ninja Turtle | partner |
+| 257 | Shalai and Hallar | 9,561 | GRW | Legendary Creature — Angel Elf |  |
+| 261 | Jodah, Archmage Eternal | 9,428 | BGRUW | Legendary Creature — Human Wizard |  |
+| 262 | Skullbriar, the Walking Grave | 9,426 | BG | Legendary Creature — Zombie Elemental |  |
+| 263 | Queza, Augur of Agonies | 9,390 | BUW | Legendary Creature — Octopus Advisor |  |
+| 265 | Kratos, God of War | 9,362 | R | Legendary Creature — God Warrior |  |
+| 266 | Iron Man, Titan of Innovation | 9,353 | RU | Legendary Artifact Creature — Human Hero |  |
+| 267 | Mirko, Obsessive Theorist | 9,320 | BU | Legendary Creature — Vampire Detective |  |
+| 268 | Rowan, Scion of War | 9,305 | BR | Legendary Creature — Human Wizard |  |
+| 270 | Hazezon, Shaper of Sand | 9,234 | GRW | Legendary Creature — Human Warrior |  |
+| 271 | Tayam, Luminous Enigma | 9,233 | BGW | Legendary Creature — Nightmare Beast |  |
+| 272 | Reaper King | 9,216 | BGRUW | Legendary Artifact Creature — Scarecrow |  |
+| 274 | Brenard, Ginger Sculptor | 9,199 | GUW | Legendary Creature — Human Artificer |  |
+| 275 | Indominus Rex, Alpha | 9,183 | BGU | Legendary Creature — Dinosaur Mutant |  |
+| 277 | Thranduil, the Elvenking | 9,159 | BGU | Legendary Creature — Elf Noble |  |
+| 278 | Elsha, Threefold Master | 9,151 | RUW | Legendary Creature — Djinn Monk |  |
+| 279 | Gargos, Vicious Watcher | 9,102 | G | Legendary Creature — Hydra |  |
+| 281 | Thrasios, Triton Hero | 9,075 | GU | Legendary Creature — Merfolk Wizard | partner |
+| 283 | Syr Gwyn, Hero of Ashvale | 9,065 | BRW | Legendary Creature — Human Knight |  |
+| 284 | Coram, the Undertaker | 9,063 | BGR | Legendary Creature — Human Warrior |  |
+| 285 | Marvo, Deep Operative | 9,052 | BU | Legendary Creature — Octopus Rogue |  |
+| 290 | Raggadragga, Goreguts Boss | 8,968 | GR | Legendary Creature — Human Boar |  |
+| 291 | Arna Kennerüd, Skycaptain | 8,965 | BUW | Legendary Creature — Human Knight |  |
+| 293 | Dogmeat, Ever Loyal | 8,934 | GRW | Legendary Creature — Dog |  |
+| 294 | Alexios, Deimos of Kosmos | 8,929 | R | Legendary Creature — Human Berserker |  |
+| 295 | The Master of Keys | 8,919 | BUW | Legendary Enchantment Creature — Horror |  |
+| 296 | Silas Renn, Seeker Adept | 8,908 | BU | Legendary Artifact Creature — Human | partner |
+| 297 | Myrel, Shield of Argive | 8,878 | W | Legendary Creature — Human Soldier |  |
 
-## 2. Top 1000 Commander cards not in the catalog (115)
+## 2. Top 1000 Commander cards not in the catalog (82)
 
 | EDHREC rank | Card | Cost | Type | Flags |
 | --- | --- | --- | --- | --- |
-| 140 | War Room |  | Land | commander |
-| 154 | Training Center |  | Land |  |
-| 164 | Sea of Clouds |  | Land |  |
-| 210 | Bountiful Promenade |  | Land |  |
-| 237 | Mithril Coat | {3} | Legendary Artifact — Equipment |  |
+| 238 | Mithril Coat | {3} | Legendary Artifact — Equipment |  |
 | 257 | Bloom Tender | {1}{G} | Creature — Elf Druid |  |
 | 274 | Deserted Beach |  | Land |  |
-| 282 | Rugged Prairie |  | Land |  |
 | 286 | Overgrown Farmland |  | Land |  |
-| 292 | Cascade Bluffs |  | Land |  |
-| 303 | Flooded Grove |  | Land |  |
 | 318 | Decanter of Endless Water | {3} | Artifact |  |
-| 320 | Jungle Shrine |  | Land |  |
-| 339 | Port Town |  | Land |  |
-| 343 | Fortified Village |  | Land |  |
 | 350 | Blackblade Reforged | {2} | Legendary Artifact — Equipment |  |
-| 351 | Arcane Sanctum |  | Land |  |
-| 357 | Twilight Mire |  | Land |  |
-| 362 | Crumbling Necropolis |  | Land |  |
-| 363 | Jetmir's Garden |  | Land — Mountain Forest Plains |  |
-| 392 | Spire of Industry |  | Land |  |
-| 406 | Seaside Citadel |  | Land |  |
-| 408 | Parallel Lives | {3}{G} | Enchantment |  |
 | 409 | Lotho, Corrupt Shirriff | {W}{B} | Legendary Creature — Halfling Rogue |  |
-| 421 | Hall of Heliod's Generosity |  | Legendary Land |  |
-| 427 | Raffine's Tower |  | Land — Plains Island Swamp |  |
 | 442 | Unnatural Growth | {1}{G}{G}{G}{G} | Enchantment |  |
 | 465 | Treasure Vault |  | Artifact Land |  |
-| 471 | Xander's Lounge |  | Land — Island Swamp Mountain |  |
 | 478 | Commander's Plate | {1} | Artifact — Equipment | commander |
 | 480 | Plaza of Heroes |  | Land |  |
 | 501 | Faeburrow Elder | {1}{G}{W} | Creature — Treefolk Druid |  |
-| 530 | Ziatora's Proving Ground |  | Land — Swamp Mountain Forest |  |
 | 536 | Relic of Legends | {3} | Artifact |  |
 | 537 | The Reaver Cleaver | {2}{R} | Legendary Artifact — Equipment |  |
 | 550 | Displacer Kitten | {3}{U} | Creature — Cat Beast |  |
-| 553 | Graven Cairns |  | Land |  |
 | 560 | Nesting Grounds |  | Land |  |
 | 561 | Second Harvest | {2}{G}{G} | Instant |  |
-| 573 | Champion of Lambholt | {1}{G}{G} | Creature — Human Warrior |  |
+| 574 | Champion of Lambholt | {1}{G}{G} | Creature — Human Warrior |  |
 | 582 | Saw in Half | {2}{B} | Instant |  |
 | 590 | Teferi's Ageless Insight | {2}{U}{U} | Legendary Enchantment |  |
-| 608 | Tribute to the World Tree | {G}{G}{G} | Enchantment |  |
+| 609 | Tribute to the World Tree | {G}{G}{G} | Enchantment |  |
 | 610 | Cloud Key | {3} | Artifact |  |
 | 611 | Mangara, the Diplomat | {3}{W} | Legendary Creature — Human Cleric |  |
 | 621 | Torment of Hailfire | {X}{B}{B} | Sorcery |  |
 | 625 | Trouble in Pairs | {2}{W}{W} | Enchantment |  |
-| 640 | Ozolith, the Shattered Spire | {1}{G} | Legendary Artifact |  |
-| 644 | Savage Lands |  | Land |  |
-| 646 | Borne Upon a Wind | {1}{U} | Instant |  |
-| 666 | Imp's Mischief | {1}{B} | Instant |  |
+| 641 | Ozolith, the Shattered Spire | {1}{G} | Legendary Artifact |  |
+| 645 | Borne Upon a Wind | {1}{U} | Instant |  |
+| 664 | Imp's Mischief | {1}{B} | Instant |  |
 | 690 | Archivist of Oghma | {1}{W} | Creature — Halfling Cleric |  |
 | 698 | Curse of Opulence | {R} | Enchantment — Aura Curse |  |
-| 703 | Vernal Fen |  | Land — Swamp Forest |  |
+| 701 | Vernal Fen |  | Land — Swamp Forest |  |
 | 714 | Archaeomancer's Map | {2}{W} | Artifact |  |
-| 718 | Viridescent Bog |  | Land |  |
-| 719 | Overflowing Basin |  | Land |  |
-| 744 | Champion's Helm | {3} | Artifact — Equipment |  |
-| 754 | Loyal Apprentice | {1}{R} | Creature — Human Artificer | commander |
-| 766 | Void Rend | {W}{U}{B} | Instant |  |
-| 770 | Avacyn, Angel of Hope | {5}{W}{W}{W} | Legendary Creature — Angel |  |
-| 775 | Ferrous Lake |  | Land |  |
+| 745 | Champion's Helm | {3} | Artifact — Equipment |  |
+| 765 | Void Rend | {W}{U}{B} | Instant |  |
 | 787 | Inkshield | {3}{W}{B} | Instant |  |
 | 790 | Peregrin Took | {2}{G} | Legendary Creature — Halfling Citizen |  |
 | 791 | Brash Taunter | {4}{R} | Creature — Goblin |  |
-| 799 | High Tide | {U} | Instant |  |
+| 800 | High Tide | {U} | Instant |  |
 | 803 | Flowering of the White Tree | {W}{W} | Legendary Enchantment |  |
-| 818 | Sunscorched Divide |  | Land |  |
 | 819 | The World Tree |  | Land |  |
-| 823 | Ashaya, Soul of the Wild | {3}{G}{G} | Legendary Creature — Elemental |  |
+| 824 | Ashaya, Soul of the Wild | {3}{G}{G} | Legendary Creature — Elemental |  |
 | 847 | Dragon Tempest | {1}{R} | Enchantment |  |
-| 853 | Ayara, First of Locthwain | {B}{B}{B} | Legendary Creature — Elf Noble |  |
-| 854 | Fiery Emancipation | {3}{R}{R}{R} | Enchantment |  |
-| 856 | Boromir, Warden of the Tower | {2}{W} | Legendary Creature — Human Soldier |  |
-| 868 | Tempt with Discovery | {3}{G} | Sorcery | multiplayer |
-| 870 | Mystic Gate |  | Land |  |
+| 854 | Ayara, First of Locthwain | {B}{B}{B} | Legendary Creature — Elf Noble |  |
+| 855 | Fiery Emancipation | {3}{R}{R}{R} | Enchantment |  |
+| 857 | Boromir, Warden of the Tower | {2}{W} | Legendary Creature — Human Soldier |  |
+| 870 | Tempt with Discovery | {3}{G} | Sorcery | multiplayer |
 | 872 | Beseech the Mirror | {1}{B}{B}{B} | Sorcery |  |
-| 873 | City on Fire | {5}{R}{R}{R} | Enchantment |  |
+| 874 | City on Fire | {5}{R}{R}{R} | Enchantment |  |
 | 880 | Bear Umbra | {2}{G}{G} | Enchantment — Aura |  |
 | 882 | Thousand-Year Elixir | {3} | Artifact |  |
 | 883 | Descent into Avernus | {2}{R} | Enchantment |  |
-| 884 | Throne of Eldraine | {5} | Legendary Artifact |  |
-| 888 | Witch's Cottage |  | Land — Swamp |  |
-| 892 | Grim Hireling | {3}{B} | Creature — Tiefling Rogue |  |
+| 885 | Throne of Eldraine | {5} | Legendary Artifact |  |
+| 887 | Witch's Cottage |  | Land — Swamp |  |
+| 891 | Grim Hireling | {3}{B} | Creature — Tiefling Rogue |  |
 | 894 | Reconnaissance Mission | {2}{U}{U} | Enchantment |  |
-| 896 | Ojer Taq, Deepest Foundation // Temple of Civilization |  | Legendary Creature — God // Land |  |
-| 900 | Xorn | {2}{R} | Creature — Elemental |  |
-| 907 | Forsaken Monument | {5} | Legendary Artifact |  |
-| 908 | Padeem, Consul of Innovation | {3}{U} | Legendary Creature — Vedalken Artificer |  |
+| 897 | Ojer Taq, Deepest Foundation // Temple of Civilization |  | Legendary Creature — God // Land |  |
+| 899 | Xorn | {2}{R} | Creature — Elemental |  |
+| 904 | Forsaken Monument | {5} | Legendary Artifact |  |
+| 909 | Padeem, Consul of Innovation | {3}{U} | Legendary Creature — Vedalken Artificer |  |
 | 913 | Excalibur, Sword of Eden | {12} | Legendary Artifact — Equipment |  |
 | 914 | Raise the Palisade | {4}{U} | Sorcery |  |
-| 915 | Jaheira, Friend of the Forest | {2}{G} | Legendary Creature — Human Elf Druid | partner |
+| 916 | Jaheira, Friend of the Forest | {2}{G} | Legendary Creature — Human Elf Druid | partner |
 | 923 | Archway of Innovation |  | Land |  |
-| 926 | Desolate Mire |  | Land |  |
-| 933 | Bastion Protector | {2}{W} | Creature — Human Soldier | commander |
 | 936 | Ripples of Potential | {1}{U} | Instant |  |
-| 939 | Thopter Spy Network | {2}{U}{U} | Enchantment |  |
-| 946 | Promise of Loyalty | {4}{W} | Sorcery |  |
+| 940 | Thopter Spy Network | {2}{U}{U} | Enchantment |  |
+| 945 | Promise of Loyalty | {4}{W} | Sorcery |  |
 | 967 | Cabaretti Courtyard |  | Land |  |
-| 972 | Eerie Interlude | {2}{W} | Instant |  |
-| 973 | Cabal Stronghold |  | Land |  |
-| 977 | Alhammarret's Archive | {5} | Legendary Artifact |  |
+| 971 | Eerie Interlude | {2}{W} | Instant |  |
+| 975 | Alhammarret's Archive | {5} | Legendary Artifact |  |
 | 979 | Kardur, Doomscourge | {2}{B}{R} | Legendary Creature — Demon Berserker |  |
-| 980 | Inspiring Statuary | {3} | Artifact |  |
-| 982 | Kodama of the East Tree | {4}{G}{G} | Legendary Creature — Spirit | partner |
-| 983 | Moraug, Fury of Akoum | {4}{R}{R} | Legendary Creature — Minotaur Warrior |  |
+| 981 | Inspiring Statuary | {3} | Artifact |  |
+| 982 | Moraug, Fury of Akoum | {4}{R}{R} | Legendary Creature — Minotaur Warrior |  |
+| 983 | Kodama of the East Tree | {4}{G}{G} | Legendary Creature — Spirit | partner |
 | 986 | Moldervine Reclamation | {3}{B}{G} | Enchantment |  |
 | 988 | Mirror Entity | {2}{W} | Creature — Shapeshifter |  |
-| 991 | Cut a Deal | {2}{W} | Sorcery | multiplayer |
+| 990 | Cut a Deal | {2}{W} | Sorcery | multiplayer |
 | 992 | Teleportation Circle | {3}{W} | Enchantment |  |
 | 996 | Mechanized Production | {2}{U}{U} | Enchantment — Aura |  |
 | 998 | Mines of Moria |  | Legendary Land |  |
-| 1001 | Gavony Township |  | Land |  |
 | 1003 | Cyberdrive Awakener | {5}{U} | Artifact Creature — Construct |  |
-| 1005 | Combat Celebrant | {2}{R} | Creature — Human Warrior |  |
+| 1006 | Combat Celebrant | {2}{R} | Creature — Human Warrior |  |
+| 1008 | Thriving Isle |  | Land |  |
 
 ## 3. Cards that name a commander / the command zone / colour identity (top 5000)
 
 These need Commander primitives (an "is a commander" selector, a
 commander's-colour-identity mana source, "if you control your commander").
 
-### Missing (52)
+### Missing (49)
 
 | EDHREC rank | Card | Type | Oracle |
 | --- | --- | --- | --- |
-| 140 | War Room | Land | {T}: Add {C}. {3}, {T}, Pay life equal to the number of colors in your commanders' color identity: Draw a card. |
 | 478 | Commander's Plate | Artifact — Equipment | Equipped creature gets +3/+3 and has protection from each color that's not in your commander's color identity. Equip commander {3} Equip {5} |
-| 754 | Loyal Apprentice | Creature — Human Artificer | Haste Lieutenant — At the beginning of combat on your turn, if you control your commander, create a 1/1 colorless Thopter artifact creature token with flying. T… |
-| 933 | Bastion Protector | Creature — Human Soldier | Commander creatures you control get +2/+2 and have indestructible. |
 | 1165 | Kediss, Emberclaw Familiar | Legendary Creature — Elemental Lizard | Whenever a commander you control deals combat damage to an opponent, it deals that much damage to each other opponent. Partner (You can have two commanders if b… |
-| 1534 | Codsworth, Handy Helper | Legendary Artifact Creature — Robot | Commanders you control have ward {2}. {T}: Add {W}{W}. Spend this mana only to cast Aura and/or Equipment spells. {T}: Attach target Aura or Equipment you contr… |
-| 1693 | Timely Ward | Enchantment — Aura | You may cast this spell as though it had flash if it targets a commander. Enchant creature Enchanted creature has indestructible. |
-| 2006 | Daretti, Scrap Savant | Legendary Planeswalker — Daretti | +2: Discard up to two cards, then draw that many cards. −2: Sacrifice an artifact. If you do, return target artifact card from your graveyard to the battlefield… |
-| 2154 | Thunderclap Drake | Creature — Drake | Flying Instant and sorcery spells you cast cost {1} less to cast. {2}{U}, Sacrifice this creature: When you next cast an instant or sorcery spell this turn, cop… |
-| 2157 | Ainok Strike Leader | Creature — Dog Warrior | Whenever you attack with this creature and/or your commander, for each opponent, create a 1/1 red Goblin creature token that's tapped and attacking that player.… |
-| 2182 | Will of the Jeskai | Sorcery | Choose one. If you control a commander as you cast this spell, you may choose both instead. • Each player may discard their hand and draw five cards. • Each ins… |
+| 1535 | Codsworth, Handy Helper | Legendary Artifact Creature — Robot | Commanders you control have ward {2}. {T}: Add {W}{W}. Spend this mana only to cast Aura and/or Equipment spells. {T}: Attach target Aura or Equipment you contr… |
+| 1694 | Timely Ward | Enchantment — Aura | You may cast this spell as though it had flash if it targets a commander. Enchant creature Enchanted creature has indestructible. |
+| 2008 | Daretti, Scrap Savant | Legendary Planeswalker — Daretti | +2: Discard up to two cards, then draw that many cards. −2: Sacrifice an artifact. If you do, return target artifact card from your graveyard to the battlefield… |
+| 2154 | Ainok Strike Leader | Creature — Dog Warrior | Whenever you attack with this creature and/or your commander, for each opponent, create a 1/1 red Goblin creature token that's tapped and attacking that player.… |
+| 2155 | Thunderclap Drake | Creature — Drake | Flying Instant and sorcery spells you cast cost {1} less to cast. {2}{U}, Sacrifice this creature: When you next cast an instant or sorcery spell this turn, cop… |
+| 2181 | Will of the Jeskai | Sorcery | Choose one. If you control a commander as you cast this spell, you may choose both instead. • Each player may discard their hand and draw five cards. • Each ins… |
 | 2198 | Forge of Heroes | Land | {T}: Add {C}. {T}: Choose target commander that entered this turn. Put a +1/+1 counter on it if it's a creature and a loyalty counter on it if it's a planeswalk… |
-| 2253 | Will of the Mardu | Instant | Choose one. If you control a commander as you cast this spell, you may choose both instead. • Create a number of 1/1 red Warrior creature tokens equal to the nu… |
+| 2251 | Will of the Mardu | Instant | Choose one. If you control a commander as you cast this spell, you may choose both instead. • Create a number of 1/1 red Warrior creature tokens equal to the nu… |
 | 2277 | Tome of Legends | Artifact — Book | This artifact enters with a page counter on it. Whenever your commander enters or attacks, put a page counter on this artifact. {1}, {T}, Remove a page counter … |
-| 2282 | Agent of the Iron Throne | Legendary Enchantment — Background | Commander creatures you own have "Whenever an artifact or creature you control is put into a graveyard from the battlefield, each opponent loses 1 life." |
-| 2577 | Siege-Gang Lieutenant | Creature — Goblin | Lieutenant — At the beginning of combat on your turn, if you control your commander, create two 1/1 red Goblin creature tokens. Those tokens gain haste until en… |
-| 2586 | Will of the Abzan | Sorcery | Choose one. If you control a commander as you cast this spell, you may choose both instead. • Any number of target opponents each sacrifice a creature with the … |
-| 2770 | Guardian Augmenter | Creature — Troll Wizard | Flash Commander creatures you control get +2/+2. Commanders you control have hexproof. |
-| 2852 | Inspiring Leader | Legendary Enchantment — Background | Commander creatures you own have "Creature tokens you control get +2/+2." |
-| 2916 | Derevi, Empyrial Tactician | Legendary Creature — Bird Wizard | Flying When Derevi enters and whenever a creature you control deals combat damage to a player, you may tap or untap target permanent. {1}{G}{W}{U}: Put Derevi o… |
-| 3042 | Loyal Guardian | Creature — Rhino | Trample Lieutenant — At the beginning of combat on your turn, if you control your commander, put a +1/+1 counter on each creature you control. |
-| 3203 | Geode Golem | Artifact Creature — Golem | Trample Whenever this creature deals combat damage to a player, you may cast your commander from the command zone without paying its mana cost. (You still pay a… |
+| 2283 | Agent of the Iron Throne | Legendary Enchantment — Background | Commander creatures you own have "Whenever an artifact or creature you control is put into a graveyard from the battlefield, each opponent loses 1 life." |
+| 2575 | Siege-Gang Lieutenant | Creature — Goblin | Lieutenant — At the beginning of combat on your turn, if you control your commander, create two 1/1 red Goblin creature tokens. Those tokens gain haste until en… |
+| 2587 | Will of the Abzan | Sorcery | Choose one. If you control a commander as you cast this spell, you may choose both instead. • Any number of target opponents each sacrifice a creature with the … |
+| 2769 | Guardian Augmenter | Creature — Troll Wizard | Flash Commander creatures you control get +2/+2. Commanders you control have hexproof. |
+| 2854 | Inspiring Leader | Legendary Enchantment — Background | Commander creatures you own have "Creature tokens you control get +2/+2." |
+| 2920 | Derevi, Empyrial Tactician | Legendary Creature — Bird Wizard | Flying When Derevi enters and whenever a creature you control deals combat damage to a player, you may tap or untap target permanent. {1}{G}{W}{U}: Put Derevi o… |
+| 3044 | Loyal Guardian | Creature — Rhino | Trample Lieutenant — At the beginning of combat on your turn, if you control your commander, put a +1/+1 counter on each creature you control. |
+| 3201 | Geode Golem | Artifact Creature — Golem | Trample Whenever this creature deals combat damage to a player, you may cast your commander from the command zone without paying its mana cost. (You still pay a… |
 | 3235 | Skyhunter Strike Force | Creature — Cat Knight | Flying Melee (Whenever this creature attacks, it gets +1/+1 until end of turn for each opponent you attacked this combat.) Lieutenant — As long as you control y… |
-| 3373 | Esior, Wardwing Familiar | Legendary Creature — Bird | Flying Spells your opponents cast that target one or more commanders you control cost {3} more to cast. Partner (You can have two commanders if both have partne… |
+| 3372 | Esior, Wardwing Familiar | Legendary Creature — Bird | Flying Spells your opponents cast that target one or more commanders you control cost {3} more to cast. Partner (You can have two commanders if both have partne… |
 | 3381 | Stinging Study | Instant | You draw X cards and you lose X life, where X is the mana value of a commander you own on the battlefield or in the command zone. |
 | 3391 | Norn's Choirmaster | Creature — Phyrexian Angel | Flying, first strike Whenever a commander you control enters or attacks, proliferate. (Choose any number of permanents and/or players, then give each another co… |
-| 3539 | Dihada, Binder of Wills | Legendary Planeswalker — Dihada | +2: Up to one target legendary creature gains vigilance, lifelink, and indestructible until your next turn. −3: Reveal the top four cards of your library. Put a… |
-| 3587 | Guild Artisan | Legendary Enchantment — Background | Commander creatures you own have "Whenever this creature attacks a player, if no opponent has more life than that player, you create two Treasure tokens." (They… |
-| 3611 | Study Hall | Land | {T}: Add {C}. {1}, {T}: Add one mana of any color. When you spend this mana to cast your commander, scry X, where X is the number of times it's been cast from t… |
-| 3688 | Astarion's Thirst | Instant | Exile target creature. Put X +1/+1 counters on a commander creature you control, where X is the power of the creature exiled this way. |
-| 3735 | Hidden Hideout | Land | This land enters tapped. {T}: Add one mana of any color in your commander's color identity. {2}, {T}: Target creature you control with a counter on it gains lif… |
-| 3846 | Folk Hero | Legendary Enchantment — Background | Commander creatures you own have "Whenever you cast a spell that shares a creature type with this creature, draw a card. This ability triggers only once each tu… |
-| 3902 | Noble Heritage | Legendary Enchantment — Background | Commander creatures you own have "When this creature enters and at the beginning of your upkeep, each player may put two +1/+1 counters on a creature they contr… |
+| 3540 | Dihada, Binder of Wills | Legendary Planeswalker — Dihada | +2: Up to one target legendary creature gains vigilance, lifelink, and indestructible until your next turn. −3: Reveal the top four cards of your library. Put a… |
+| 3589 | Guild Artisan | Legendary Enchantment — Background | Commander creatures you own have "Whenever this creature attacks a player, if no opponent has more life than that player, you create two Treasure tokens." (They… |
+| 3607 | Study Hall | Land | {T}: Add {C}. {1}, {T}: Add one mana of any color. When you spend this mana to cast your commander, scry X, where X is the number of times it's been cast from t… |
+| 3695 | Astarion's Thirst | Instant | Exile target creature. Put X +1/+1 counters on a commander creature you control, where X is the power of the creature exiled this way. |
+| 3728 | Hidden Hideout | Land | This land enters tapped. {T}: Add one mana of any color in your commander's color identity. {2}, {T}: Target creature you control with a counter on it gains lif… |
+| 3843 | Folk Hero | Legendary Enchantment — Background | Commander creatures you own have "Whenever you cast a spell that shares a creature type with this creature, draw a card. This ability triggers only once each tu… |
+| 3901 | Noble Heritage | Legendary Enchantment — Background | Commander creatures you own have "When this creature enters and at the beginning of your upkeep, each player may put two +1/+1 counters on a creature they contr… |
 | 3909 | Cactus Preserve | Land — Desert | This land enters tapped. {T}: Add one mana of any type that a land you control could produce. {3}: Until end of turn, this land becomes an X/X green Plant creat… |
-| 3920 | Tevesh Szat, Doom of Fools | Legendary Planeswalker — Szat | +2: Create two 0/1 black Thrull creature tokens. +1: You may sacrifice another creature or planeswalker. If you do, draw two cards, then draw another card if th… |
-| 4058 | Will of the Temur | Sorcery | Choose one. If you control a commander as you cast this spell, you may choose both instead. • Create a token that's a copy of target permanent, except it's a 4/… |
-| 4059 | Anara, Wolvid Familiar | Legendary Creature — Wolf Beast | During your turn, commanders you control have indestructible. (Effects that say "destroy" don't destroy them. A creature with indestructible can't be destroyed … |
-| 4233 | Dancer's Chakrams | Artifact — Equipment | Job select (When this Equipment enters, create a 1/1 colorless Hero creature token, then attach this to it.) Equipped creature gets +2/+2, has lifelink and "Oth… |
-| 4263 | Tavern Brawler | Legendary Enchantment — Background | Commander creatures you own have "At the beginning of your upkeep, exile the top card of your library. This creature gets +X/+0 until end of turn, where X is th… |
+| 3921 | Tevesh Szat, Doom of Fools | Legendary Planeswalker — Szat | +2: Create two 0/1 black Thrull creature tokens. +1: You may sacrifice another creature or planeswalker. If you do, draw two cards, then draw another card if th… |
+| 4054 | Will of the Temur | Sorcery | Choose one. If you control a commander as you cast this spell, you may choose both instead. • Create a token that's a copy of target permanent, except it's a 4/… |
+| 4057 | Anara, Wolvid Familiar | Legendary Creature — Wolf Beast | During your turn, commanders you control have indestructible. (Effects that say "destroy" don't destroy them. A creature with indestructible can't be destroyed … |
+| 4234 | Dancer's Chakrams | Artifact — Equipment | Job select (When this Equipment enters, create a 1/1 colorless Hero creature token, then attach this to it.) Equipped creature gets +2/+2, has lifelink and "Oth… |
+| 4262 | Tavern Brawler | Legendary Enchantment — Background | Commander creatures you own have "At the beginning of your upkeep, exile the top card of your library. This creature gets +X/+0 until end of turn, where X is th… |
 | 4290 | Vexilus Praetor | Creature — Custodes Warrior | Flash Vigilance Aegis of the Emperor — Commanders you control have protection from everything. |
-| 4291 | Lozhan, Dragons' Legacy | Legendary Creature — Dragon Shaman | Flying Whenever you cast an Adventure or Dragon spell, Lozhan deals damage equal to that spell's mana value to any target that isn't a commander. |
-| 4293 | Master Chef | Legendary Enchantment — Background | Commander creatures you own have "This creature enters with an additional +1/+1 counter on it" and "Other creatures you control enter with an additional +1/+1 c… |
-| 4344 | Teferi, Temporal Archmage | Legendary Planeswalker — Teferi | +1: Look at the top two cards of your library. Put one of them into your hand and the other on the bottom of your library. −1: Untap up to four target permanent… |
-| 4474 | Tasha, the Witch Queen | Legendary Planeswalker — Tasha | Whenever you cast a spell you don't own, create a 3/3 black Demon creature token. +1: Draw a card. For each opponent, exile up to one target instant or sorcery … |
-| 4495 | Angelic Field Marshal | Creature — Angel | Flying Lieutenant — As long as you control your commander, this creature gets +2/+2 and creatures you control have vigilance. |
-| 4559 | Jeska, Thrice Reborn | Legendary Planeswalker — Jeska | Jeska enters with a loyalty counter on her for each time you've cast a commander from the command zone this game. 0: Choose target creature. Until your next tur… |
-| 4659 | Tyrant's Familiar | Creature — Dragon | Flying, haste Lieutenant — As long as you control your commander, this creature gets +2/+2 and has "Whenever this creature attacks, it deals 7 damage to target … |
-| 4688 | Haunted One | Legendary Enchantment — Background | Commander creatures you own have "Whenever this creature becomes tapped, it and other creatures you control that share a creature type with it each get +2/+0 an… |
-| 4724 | Far Traveler | Legendary Enchantment — Background | Commander creatures you own have "At the beginning of your end step, exile up to one target tapped creature you control, then return it to the battlefield under… |
-| 4897 | Aminatou, the Fateshifter | Legendary Planeswalker — Aminatou | +1: Draw a card, then put a card from your hand on top of your library. −1: Exile another target permanent you own, then return it to the battlefield under your… |
-| 4917 | Loyal Subordinate | Creature — Zombie | Menace (This creature can't be blocked except by two or more creatures.) Lieutenant — At the beginning of combat on your turn, if you control your commander, ea… |
-| 4997 | Slash the Ranks | Sorcery | Destroy all creatures and planeswalkers except for commanders. |
+| 4292 | Lozhan, Dragons' Legacy | Legendary Creature — Dragon Shaman | Flying Whenever you cast an Adventure or Dragon spell, Lozhan deals damage equal to that spell's mana value to any target that isn't a commander. |
+| 4296 | Master Chef | Legendary Enchantment — Background | Commander creatures you own have "This creature enters with an additional +1/+1 counter on it" and "Other creatures you control enter with an additional +1/+1 c… |
+| 4341 | Teferi, Temporal Archmage | Legendary Planeswalker — Teferi | +1: Look at the top two cards of your library. Put one of them into your hand and the other on the bottom of your library. −1: Untap up to four target permanent… |
+| 4480 | Tasha, the Witch Queen | Legendary Planeswalker — Tasha | Whenever you cast a spell you don't own, create a 3/3 black Demon creature token. +1: Draw a card. For each opponent, exile up to one target instant or sorcery … |
+| 4501 | Angelic Field Marshal | Creature — Angel | Flying Lieutenant — As long as you control your commander, this creature gets +2/+2 and creatures you control have vigilance. |
+| 4561 | Jeska, Thrice Reborn | Legendary Planeswalker — Jeska | Jeska enters with a loyalty counter on her for each time you've cast a commander from the command zone this game. 0: Choose target creature. Until your next tur… |
+| 4661 | Tyrant's Familiar | Creature — Dragon | Flying, haste Lieutenant — As long as you control your commander, this creature gets +2/+2 and has "Whenever this creature attacks, it deals 7 damage to target … |
+| 4691 | Haunted One | Legendary Enchantment — Background | Commander creatures you own have "Whenever this creature becomes tapped, it and other creatures you control that share a creature type with it each get +2/+0 an… |
+| 4727 | Far Traveler | Legendary Enchantment — Background | Commander creatures you own have "At the beginning of your end step, exile up to one target tapped creature you control, then return it to the battlefield under… |
+| 4895 | Aminatou, the Fateshifter | Legendary Planeswalker — Aminatou | +1: Draw a card, then put a card from your hand on top of your library. −1: Exile another target permanent you own, then return it to the battlefield under your… |
+| 4920 | Loyal Subordinate | Creature — Zombie | Menace (This creature can't be blocked except by two or more creatures.) Lieutenant — At the beginning of combat on your turn, if you control your commander, ea… |
+| 4998 | Slash the Ranks | Sorcery | Destroy all creatures and planeswalkers except for commanders. |
 
-### In the catalog — check the commander clause is modelled (25)
+### In the catalog — check the commander clause is modelled (28)
 
 | EDHREC rank | Card | Type |
 | --- | --- | --- |
@@ -399,20 +363,23 @@ commander's-colour-identity mana source, "if you control your commander").
 | 83 | Fierce Guardianship | Instant |
 | 104 | Jeska's Will | Sorcery |
 | 107 | Deadly Rollick | Instant |
+| 140 | War Room | Land |
 | 181 | Flawless Maneuver | Instant |
 | 183 | Command Beacon | Land |
 | 189 | Akroma's Will | Instant |
 | 672 | Opal Palace | Land |
+| 754 | Loyal Apprentice | Creature — Human Artificer |
+| 933 | Bastion Protector | Creature — Human Soldier |
 | 1066 | Witch's Clinic | Land |
-| 1496 | Obscuring Haze | Instant |
-| 1860 | Passionate Archaeologist | Legendary Enchantment — Background |
-| 1888 | Hellkite Courser | Creature — Dragon |
-| 2016 | Thunderfoot Baloth | Creature — Beast |
-| 2094 | Drown in Dreams | Instant |
+| 1497 | Obscuring Haze | Instant |
+| 1861 | Passionate Archaeologist | Legendary Enchantment — Background |
+| 1891 | Hellkite Courser | Creature — Dragon |
+| 2018 | Thunderfoot Baloth | Creature — Beast |
+| 2095 | Drown in Dreams | Instant |
 | 2493 | Yuriko, the Tiger's Shadow | Legendary Creature — Human Ninja |
 | 2636 | The Ur-Dragon | Legendary Creature — Dragon Avatar |
-| 2687 | Freyalise, Llanowar's Fury | Legendary Planeswalker — Freyalise |
-| 2966 | Will of the Sultai | Sorcery |
-| 3157 | Edgar Markov | Legendary Creature — Vampire Knight |
+| 2685 | Freyalise, Llanowar's Fury | Legendary Planeswalker — Freyalise |
+| 2968 | Will of the Sultai | Sorcery |
+| 3158 | Edgar Markov | Legendary Creature — Vampire Knight |
 | 3762 | Sanctum of Eternity | Land |
-| 3985 | Minsc & Boo, Timeless Heroes | Legendary Planeswalker — Minsc |
+| 3987 | Minsc & Boo, Timeless Heroes | Legendary Planeswalker — Minsc |
