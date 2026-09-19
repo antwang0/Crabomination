@@ -160,6 +160,13 @@ fn sowing_mycospawn_cast_searches_a_land_to_battlefield() {
     let lands_after = g.battlefield.iter().filter(|c| c.controller == 0
         && c.definition.is_land()).count();
     assert_eq!(lands_after, lands_before + 1, "the cast trigger tutors a land onto the battlefield");
+    // ⚠ **Untapped.** The oracle is "put it onto the battlefield" with no
+    // "tapped", and this shipped tapped — a strict nerf that no ratchet
+    // catches, because none of them compares a value inside an effect.
+    assert!(
+        !g.battlefield_find(forest).expect("the Forest arrived").tapped,
+        "the tutored land enters untapped",
+    );
 }
 
 /// **Kicker {1}{C}: "when you cast this spell, if it was kicked, exile target

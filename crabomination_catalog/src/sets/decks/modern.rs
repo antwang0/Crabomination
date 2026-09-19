@@ -44119,7 +44119,22 @@ pub fn delighted_halfling() -> CardDefinition {
         toughness: 2,
         activated_abilities: vec![
             crate::sets::tap_add_colorless(),
-            crate::sets::tap_add_any_color(),
+            // "{T}: Add one mana of any color. Spend this mana only to cast a
+            // legendary spell, and that spell can't be countered." The rider
+            // was dropped, which made this a strictly better Birds of
+            // Paradise — `LegendarySpellUncounterable` is the restriction and
+            // the stamp in one, the way Cavern of Souls' is.
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: crate::effect::ManaPayload::Restricted(
+                        Box::new(crate::effect::ManaPayload::AnyOneColor(Value::ONE)),
+                        crate::mana::SpendRestriction::LegendarySpellUncounterable,
+                    ),
+                },
+                ..Default::default()
+            },
         ],
         ..Default::default()
     }

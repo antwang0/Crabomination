@@ -608,6 +608,12 @@ pub enum SpendRestriction {
     /// "Spend this mana only to cast legendary spells." (Untaidake, the Cloud
     /// Keeper.)
     LegendarySpell,
+    /// "Spend this mana only to cast a legendary spell, and that spell can't
+    /// be countered." (Delighted Halfling.) The legendary twin of
+    /// [`CreatureOfTypeUncounterable`](Self::CreatureOfTypeUncounterable):
+    /// a real restriction *plus* the rider, so it carries a label and
+    /// `note_cast_payment_riders` stamps the cast.
+    LegendarySpellUncounterable,
     /// "Spend this mana only to cast Room spells and unlock doors." (Smoky
     /// Lounge.)
     RoomSpellsOrDoors,
@@ -658,6 +664,9 @@ impl SpendRestriction {
             SpendRestriction::PlaneswalkerSpellsOnly => "only planeswalker spells",
             SpendRestriction::NoncreatureSpellsOnly => "only noncreature spells",
             SpendRestriction::LegendarySpell => "only legendary spells",
+            SpendRestriction::LegendarySpellUncounterable => {
+                "only legendary spells, which can't be countered"
+            }
             SpendRestriction::RoomSpellsOrDoors => "only Room spells and doors",
             SpendRestriction::FaceDownSpellsOrTurnFaceUp => {
                 "only face-down casts or turning face up"
@@ -726,7 +735,8 @@ impl SpendRestriction {
             SpendRestriction::EnchantmentSpell => kind.enchantment,
             SpendRestriction::MulticoloredSpell => kind.multicolored,
             SpendRestriction::PlaneswalkerSpellsOnly => kind.planeswalker,
-            SpendRestriction::LegendarySpell => kind.legendary,
+            SpendRestriction::LegendarySpell
+            | SpendRestriction::LegendarySpellUncounterable => kind.legendary,
             SpendRestriction::RoomSpellsOrDoors => kind.room_or_door,
             SpendRestriction::FaceDownSpellsOrTurnFaceUp => {
                 kind.face_down || kind.turning_face_up

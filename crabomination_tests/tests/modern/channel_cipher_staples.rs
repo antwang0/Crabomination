@@ -1200,6 +1200,59 @@ fn delighted_halfling_makes_mana() {
     assert_eq!(g.players[0].mana_pool.colorless_amount(), 1, "added colorless mana");
 }
 
+/// The Halfling's *second* ability is not a Birds of Paradise tap: "Spend this
+/// mana only to cast a legendary spell, and that spell can't be countered."
+/// Both halves shipped dropped, which made a one-drop mana dork strictly
+/// better than printed.
+#[test]
+fn delighted_halfling_second_ability_is_legendary_only_and_uncounterable() {
+    use crabomination::mana::SpendRestriction;
+    let mut g = two_player_game();
+    let h = g.add_card_to_battlefield(0, catalog::delighted_halfling());
+    g.clear_sickness(h);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Green)]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: h, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
+    }).expect("tap for any colour");
+    assert_eq!(g.players[0].mana_pool.total(), 0, "restricted mana is not free mana");
+    assert_eq!(
+        g.players[0].mana_pool.restricted_breakdown(),
+        vec![("{G}".to_string(), 1, SpendRestriction::LegendarySpellUncounterable)],
+    );
+
+    // A nonlegendary green one-drop cannot be paid for with it.
+    let elves = g.add_card_to_hand(0, catalog::llanowar_elves());
+    g.perform_action(GameAction::CastSpell {
+        card_id: elves, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect_err("legendary-only mana can't cast Llanowar Elves");
+
+    // A legendary one does, and the cast it funded can't be countered —
+    // Cavern of Souls' shape, tested Cavern's way.
+    let rofellos = g.add_card_to_hand(0, catalog::rofellos_llanowar_emissary());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: rofellos, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("a legendary spell is what the mana is for");
+    let counter = g.add_card_to_hand(1, catalog::counterspell());
+    g.players[1].mana_pool.add(Color::Blue, 2);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: counter,
+        target: Some(Target::Permanent(rofellos)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Counterspell castable");
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield.iter().any(|c| c.id == rofellos),
+        "the legendary spell the Halfling funded can't be countered",
+    );
+}
+
 /// Voracious Hydra enters with X counters and can double them.
 #[test]
 fn voracious_hydra_doubles_counters_mode() {

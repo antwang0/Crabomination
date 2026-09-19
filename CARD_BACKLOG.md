@@ -195,54 +195,63 @@ every one of them is in the `cube` pool**, which is the finding:
 
 | Card | Decks | Residual |
 | --- | --- | --- |
-| Ghost Vacuum | Hanna, Sigarda, Tatyova | 🟡 the `{6}, {T}, Sacrifice:` half — "put each creature card exiled **with this artifact** onto the battlefield" — is unmodelled. `ExileLink` / `ExileUntilSourceLeaves` is the existing link primitive and would carry it; nothing else is missing |
-| Simian Spirit Guide | Judith | the "exile from hand: add {R}" mana ability needs a from-hand activation zone. In an aristocrats deck it is a vanilla 2/2 today |
-| Sowing Mycospawn | Sigarda | the searched land enters **tapped** and the oracle does not say tapped — a strict nerf, and the card's own comment has said so since it shipped |
-| Delighted Halfling | Sigarda, Tatyova | the legendary-only + uncounterable spend rider is dropped |
-| Obstinate Baloth | Tatyova | the discard-to-battlefield clause is dropped |
+| Ghost Vacuum | Hanna, Sigarda, Tatyova | 🟡 the `{6}, {T}, Sacrifice:` half — "put each creature card exiled **with this artifact** onto the battlefield with a flying counter, each a 1/1 Spirit in addition to its other types" — is unmodelled. `ExileLink` / `ExileUntilSourceLeaves` is the link primitive; what is *also* missing is a mass return from a linked exile set that stamps a counter and a type/PT override, which is the real size of it |
+| ~~Simian Spirit Guide~~ | Judith | ✅ **the row was stale** — `from_hand: true, exile_self_cost: true, add_mana([Red])` has shipped, with `modern::coverage_backfill::simian_spirit_guide_pitches_from_hand_for_red` on it. The bot's `available_mana` does not *count* a Spirit Guide in hand, which is a deliberate downward bias, not a missing card |
+| ~~Sowing Mycospawn~~ | Sigarda | ✅ **fixed 2026-09-19** — the tutored land enters untapped, and the assertion is now in the card's own test |
+| ~~Delighted Halfling~~ | Sigarda, Tatyova | ✅ **fixed 2026-09-19** — `SpendRestriction::LegendarySpellUncounterable` (a real restriction *plus* the Cavern-shaped stamp), tested both ways |
+| Obstinate Baloth | Tatyova | the discard-to-battlefield clause is dropped. Needs a discard *replacement* keyed on "a spell or ability an opponent controls caused it" |
 | Spark Double | Tatyova | the planeswalker-copy half is omitted |
 | Wall of Roots | Tatyova | the -0/-1 counter is a permanent `PumpPT` stand-in |
 | Delver of Secrets | Tatyova | the transform half is approximated |
 
-⚠ **Every one of the eight is a card the `cube` deck builder can draw**, so a
-behavior change to any of them *can* move the committed bench aggregate and a
-golden trace. **That is a measurement, not a veto** — the CR 603.2c graveyard
-batch above changed five pool cards and `--bench` came back byte-identical.
-**Take them as one batch with one `--bench` reading in hand**, in roughly the
-order above (Ghost Vacuum first: three decks, and the link primitive exists),
-and re-bless only if the reading actually moves. Arcane Signet, which the same
-walk flagged in all five decks, was a **stale doc comment** and nothing else —
-`tap_add_commander_identity()` has shipped for a while; the comment is
-corrected.
+⚠⚠ **THE "BLOCKED ON A BENCH RE-BLESS" PREMISE IS FALSE, AND TWO SESSIONS
+FOUND IT INDEPENDENTLY.** All eight are cards the `cube` deck builder can draw,
+so the worry was that a behaviour change to any of them moves the committed
+bench aggregate and a golden trace. **It is a measurement, not a veto**: the
+CR 603.2c graveyard batch above changed five pool cards and `--bench` came back
+byte-identical, and Sowing Mycospawn + Delighted Halfling changed two more with
+the same result (195,806 / 27.49 / 611.9 / 0 stalls, every golden trace held).
+Pool *membership* is not pool *reach* — the bench plays `--decks fixed` and the
+traces are fixed-seed games, and a card has to actually be drawn and played in
+one of them to move a number. **Take the rest one or two at a time with a
+`--bench` reading in hand**, in roughly the order above (Ghost Vacuum first:
+three decks, and the link primitive exists), and re-bless only if the reading
+actually moves.
 
-## Judith (BR), the pod's losing seat — what it is NOT
+Arcane Signet, which the same walk flagged in all five decks, was a **stale doc
+comment** and nothing else — `tap_add_commander_identity()` has shipped for a
+while; the comment is corrected. Two of the eight rows turning out stale is the
+standing lesson: **read the definition before believing the row.**
 
-Seed 43, 4,000 four-seat games: Sigarda 42.6 % / Tatyova 26.3 % / Hanna 23.3 %
-/ **Judith 7.8 %**, and in a *duel* Judith reads **23.7 %** against Sigarda —
-so it is not a multiplayer artifact and not a stall (100 % of those games
-decide, `undecided_by` all zero).
+## Judith (BR), the pod's losing seat — CLOSED, and what ruled the cards out
 
-**Ruled out 2026-09-19 with no build spent**, so the next run starts past it:
+**Closed 2026-09-19 by the list retune** (28 of 72 nonbasics), which took
+Judith from 6.2 % to **14.6 %** at four seats and flattened the field to
+40.8/14.6/20.3/24.3. The retune is the record; this section is kept for the
+half that came first and is the reusable part — **the cards were ruled out
+before anything was rebuilt**, which is why the retune was the right lever.
 
-* `audit_incomplete`'s structural pass is clean — no dead mode or dead ability
-  in the list.
-* Of the deck's **73 distinct cards**, exactly **two** carried an
-  approximation note in their doc comment, and one of those was **stale**:
-  Arcane Signet's "no identity gate" line was corrected the same day (the
-  gate has shipped for a while — see the ratchet section above), leaving
-  Chain Lightning's pay-to-copy half, which is upside the card never gets.
-  Nothing in the list is *worse* than printed.
-* The commander itself is faithful: the +1/+0 anthem is a `PumpPT` static over
-  `Creature ∧ ControlledByYou ∧ OtherThanSource`, and the death trigger is
-  `CreatureDied / YourControl` filtered `NotToken ∧ OtherThanSource`.
+Seed 43, 4,000 four-seat games read Sigarda 42.6 % / Tatyova 26.3 % / Hanna
+23.3 % / **Judith 7.8 %**, and in a *duel* Judith read **23.7 %** against
+Sigarda — so it was never a multiplayer artifact and never a stall (100 % of
+those games decided, `undecided_by` all zero). Then, with no build spent:
 
-So it is **the list or the pilot**, not defective cards. The list reads like an
-assembly of what happened to be implemented in BR — a lot of cube-grade
-cantrips (Crash Through, Crimson Wisps, Cremate, Darkblast) and few sacrifice
-outlets for an aristocrats deck. Two ways forward, neither taken yet:
-instrument which of its cards are ever cast in a pod, or rebuild the list.
-⚠ **A list rebuild re-blesses `cr_903_seeded_pod_outcomes_match_the_committed_table`.**
+* `audit_incomplete`'s structural pass was clean — no dead mode or dead
+  ability in the list.
+* Of the deck's **73 distinct cards**, exactly two carried an approximation
+  note, and both turned out to be non-issues: Arcane Signet's "no identity
+  gate" line was stale, and Chain Lightning's pay-to-copy half is upside the
+  card never gets. Simian Spirit Guide, which the target-deck defect table
+  above listed as a vanilla 2/2, had shipped its pitch ability with a test.
+  **Nothing in the list was worse than printed.**
+* The commander itself was faithful: the +1/+0 anthem is a `PumpPT` static
+  over `Creature ∧ ControlledByYou ∧ OtherThanSource`, and the death trigger
+  is `CreatureDied / YourControl` filtered `NotToken ∧ OtherThanSource`.
 
+📐 **The method, which is the transferable part: price the CARDS before
+rebuilding the LIST.** A deck losing three-to-one has two explanations and
+only one of them is a bug; a card audit is an afternoon and a list rebuild
+re-blesses the pod table.
 ## The printed-clause ratchet family — one body, and where its needles break
 
 `core_rules/catalog_registration.rs` now holds a family of ratchets that all

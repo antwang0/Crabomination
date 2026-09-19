@@ -618,7 +618,8 @@ fn cr_106_6_every_rider_allows_every_payment() {
                 | LessonSpellsOnly | DevoidSpellsOnly | InstantSorceryUncounterable
                 | EquipmentOnly | ColorlessSpellsOrAbilities | HighMvOrX | DragonOrOmenSpell
                 | EnchantmentSpell | MulticoloredSpell | PlaneswalkerSpellsOnly
-                | LegendarySpell | NoncreatureSpellsOnly | RoomSpellsOrDoors
+                | LegendarySpell | LegendarySpellUncounterable | NoncreatureSpellsOnly
+                | RoomSpellsOrDoors
                 | FaceDownSpellsOrTurnFaceUp | CreatureHaste | CommanderTypeScry
                 | CommanderCastCounters => {}
             }
@@ -645,6 +646,7 @@ fn cr_106_6_every_rider_allows_every_payment() {
             MulticoloredSpell,
             PlaneswalkerSpellsOnly,
             LegendarySpell,
+            LegendarySpellUncounterable,
             NoncreatureSpellsOnly,
             RoomSpellsOrDoors,
             FaceDownSpellsOrTurnFaceUp,

@@ -2945,6 +2945,10 @@ impl crate::game::GameState {
         // Both riders here are idempotent, so the CR 106.6a count is not read.
         if receipt.side_effects.spent_restrictions.iter().any(|(r, _)| match r {
             SpendRestriction::CreatureOfTypeUncounterable(_) => true,
+            // Delighted Halfling — the legendary spell it funded can't be
+            // countered. `allows` has already refused a nonlegendary one, so
+            // no kind test is owed here (unlike Boseiju's, below).
+            SpendRestriction::LegendarySpellUncounterable => true,
             // Boseiju — only an instant/sorcery funded this way is stamped.
             SpendRestriction::InstantSorceryUncounterable => kind.instant_or_sorcery,
             _ => false,

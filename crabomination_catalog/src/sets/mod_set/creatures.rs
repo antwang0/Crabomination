@@ -5311,9 +5311,10 @@ pub fn sowing_mycospawn() -> CardDefinition {
         // shipped as an ETB and the second — the kicked one — did not ship at
         // all, which is what `audit_keyword_drift` named the card for.
         //
-        // ⚠ The land enters TAPPED here and the cached oracle does not say
-        // tapped. Left as it was rather than changed on one reading; no column
-        // compares a value inside an effect, so nothing else will catch it.
+        // The land enters UNTAPPED: the oracle is "search your library for a
+        // land card, put it onto the battlefield, then shuffle" with no
+        // "tapped", and it shipped tapped — a strict nerf that no column
+        // catches, because none of them compares a value inside an effect.
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::SpellCast, EventScope::SelfSource),
@@ -5322,7 +5323,7 @@ pub fn sowing_mycospawn() -> CardDefinition {
                     filter: SelectionRequirement::Land,
                     to: ZoneDest::Battlefield {
                         controller: PlayerRef::You,
-                        tapped: true,
+                        tapped: false,
                     },
                 },
             },
