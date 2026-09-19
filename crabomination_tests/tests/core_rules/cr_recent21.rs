@@ -64,6 +64,7 @@ fn cr_601_3a_play_card_exiled_with_grant() {
             duration: MayPlayDuration::WhileExiled,
             exile_after: false,
             miracle: false,
+            pay_life: false,
         });
         // "You may play them" pays the card's own cost (Nightveil's pay_own_cost).
         c.granted_alt_cast_cost_eot = Some(c.definition.cost.clone());

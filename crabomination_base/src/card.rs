@@ -824,6 +824,10 @@ pub enum CounterType {
     Rust,
     /// Geyadrone Dihada — marks what her protection ignores and her -7 takes.
     Corruption,
+    /// Slime counters — Sludge Monster strips the abilities of non-Horrors
+    /// carrying one; Toxrill, the Corrosive shrinks each opponent's creature
+    /// by -1/-1 per counter.
+    Slime,
 }
 
 /// Every zone a card can occupy.
@@ -1039,6 +1043,11 @@ pub struct MayPlayPermission {
     /// be cast there. Defaults to `false` for snapshot back-compat.
     #[serde(default)]
     pub miracle: bool,
+    /// "If you cast a spell this way, pay life equal to its mana value rather
+    /// than pay its mana cost" (Inside Information): the cast is free of mana
+    /// and bills the caster life equal to the card's mana value instead.
+    #[serde(default)]
+    pub pay_life: bool,
 }
 
 /// CR 122 — the counters on a permanent, in the order they were first added.
@@ -2623,6 +2632,11 @@ pub enum SelectionRequirement {
     /// whose `attached_to` points at the candidate. Powers Kestia's
     /// "whenever an enchanted creature … you control attacks" trigger.
     IsEnchanted,
+    /// The permanent is one of its controller's designated commanders
+    /// (`Player.commanders`) — "commanders you control" (Falthis, Shadowcat
+    /// Familiar). A board fact, so it never takes the layer system's
+    /// card-only `CardMatch` route.
+    IsCommander,
     /// True for a graveyard card that got there from the battlefield this turn
     /// (`GameState.graveyard_from_battlefield_this_turn`) — Gleancrawler's
     /// "all creature cards in your graveyard that were put there from the
@@ -7205,7 +7219,9 @@ pub fn static_effect_gather_bits(effect: &crate::effect::StaticEffect) -> u64 {
         SE::PumpPT { .. } => g::PUMP_PT,
         SE::SelfHasKeywordWhile { .. } => g::SELF_HAS_KEYWORD_WHILE,
         SE::SelfHasKeywordWhilePredicate { .. } => g::SELF_HAS_KEYWORD_WHILE_PREDICATE,
-        SE::NotCreatureWhileDevotionBelow { .. } => g::NOT_CREATURE_WHILE_DEVOTION_BELOW,
+        SE::NotCreatureWhileDevotionBelow { .. } | SE::NotCreatureUnless { .. } => {
+            g::NOT_CREATURE_WHILE_DEVOTION_BELOW
+        }
         SE::NonAuraEnchantmentsAreCreatures { .. } => g::NON_AURA_ENCHANTMENTS_ARE_CREATURES,
         SE::NoncreatureArtifactsAreCreatures => g::NONCREATURE_ARTIFACTS_ARE_CREATURES,
         SE::NoncreatureArtifactsLoseAbilities => g::NONCREATURE_ARTIFACTS_LOSE_ABILITIES,

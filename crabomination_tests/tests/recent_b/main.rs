@@ -43,6 +43,7 @@ mod dft_gaps;
 mod otj_gaps;
 mod otj_gaps2;
 mod dst;
+mod cmdr_umbris;
 mod mrd;
 mod fdn5;
 mod mbs;

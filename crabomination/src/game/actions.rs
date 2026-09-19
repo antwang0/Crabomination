@@ -11076,8 +11076,10 @@ impl GameState {
                     return Err(GameError::CardNotInHand(card_id));
                 }
                 // A real may-play grant drives this cast; don't also bill the
-                // Valgavoth life toll.
-                valgavoth_toll = None;
+                // Valgavoth life toll — unless the grant itself is a life-for-
+                // mana one (Inside Information), which bills the same toll.
+                valgavoth_toll =
+                    permission.pay_life.then(|| card_ref.definition.cost.cmc());
                 miracle_window = permission.miracle;
                 permission.exile_after
             }

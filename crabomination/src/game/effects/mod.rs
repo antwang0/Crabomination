@@ -3011,6 +3011,7 @@ impl GameState {
                     duration: crate::card::MayPlayDuration::EndOfThisTurn,
                     exile_after: false,
                     miracle: false,
+                    pay_life: false,
                 });
                 card.exiled_with = ctx.source;
                 events.push(GameEvent::PermanentExiled { card_id: card.id });
@@ -4647,6 +4648,7 @@ impl GameState {
                         duration: MayPlayDuration::EndOfThisTurn,
                         exile_after: false,
                         miracle: false,
+                        pay_life: false,
                     });
                     // Pay-own-cost cast, not free.
                     card.granted_alt_cast_cost_eot = Some(card.definition.cost.clone());
@@ -11863,6 +11865,7 @@ impl GameState {
                             duration: crate::card::MayPlayDuration::EndOfThisStep,
                             exile_after: false,
                             miracle: true,
+                            pay_life: false,
                         });
                         card.granted_alt_cast_cost_eot = Some(cost.clone());
                         self.step_bounded_may_play = true;
@@ -15968,6 +15971,7 @@ impl GameState {
                             duration: crate::card::MayPlayDuration::WhileExiled,
                             exile_after: false,
                             miracle: false,
+                            pay_life: false,
                         });
                         card.granted_alt_cast_cost_eot =
                             Some(crate::mana::ManaCost::new(vec![crate::mana::ManaSymbol::Generic(2)]));
@@ -22802,6 +22806,7 @@ impl GameState {
                     duration: crate::card::MayPlayDuration::WhileExiled,
                     exile_after: false,
                     miracle: false,
+                    pay_life: false,
                 });
                 // Gonti's "spend mana as though it were mana of any type"
                 // (CR 609.4b) — the pay-to-cast cost is the MV as generic.
@@ -24682,6 +24687,7 @@ impl GameState {
                         duration: crate::card::MayPlayDuration::WhileExiled,
                         exile_after: false,
                         miracle: false,
+                        pay_life: false,
                     });
                     card.exiled_with = Some(source);
                     self.exile.push(card);
@@ -25604,6 +25610,7 @@ impl GameState {
                             duration: crate::card::MayPlayDuration::EndOfThisTurn,
                             exile_after: false,
                             miracle: false,
+                            pay_life: false,
                         });
                     }
                 }
@@ -25950,6 +25957,7 @@ impl GameState {
                             duration: MayPlayDuration::WhileExiled,
                             exile_after: false,
                             miracle: false,
+                            pay_life: false,
                         });
                         self.exile.push(*card);
                         events.push(GameEvent::PermanentExiled { card_id });
@@ -28534,6 +28542,7 @@ impl GameState {
                         duration: crate::card::MayPlayDuration::WhileExiled,
                         exile_after: false,
                         miracle: false,
+                        pay_life: false,
                     });
                     card.granted_alt_cast_cost_eot = Some(crate::mana::ManaCost::new(vec![]));
                     self.exile.push(card);
@@ -31525,6 +31534,25 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::RemoveAllPlayerCounters { who } => {
+                for seat in self.resolve_players(who, ctx) {
+                    let pl = &mut self.players[seat];
+                    if pl.poison_counters != 0 {
+                        pl.poison_counters = 0;
+                    }
+                    if pl.energy != 0 {
+                        pl.energy = 0;
+                    }
+                    if pl.experience != 0 {
+                        pl.experience = 0;
+                    }
+                    if pl.rad_counters != 0 {
+                        pl.rad_counters = 0;
+                    }
+                }
+                Ok(())
+            }
+
             Effect::RemoveAllPoison { who } => {
                 if let Some(seat) = self.resolve_player(who, ctx) {
                     self.players[seat].poison_counters = 0;
@@ -32678,6 +32706,7 @@ impl GameState {
                                 duration: *duration,
                                 exile_after: false,
                                 miracle: false,
+                                pay_life: false,
                             });
                             // Pay-to-cast rider (CR 609.4b any-type spend):
                             // the cast costs the card's MV as generic.
@@ -32751,6 +32780,7 @@ impl GameState {
                         duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
                         exile_after: false,
                         miracle: false,
+                        pay_life: false,
                     });
                     card.granted_alt_cast_cost_eot = Some(card.definition.cost.clone());
                 }
@@ -32776,6 +32806,7 @@ impl GameState {
                     duration: crate::card::MayPlayDuration::WhileExiled,
                     exile_after: false,
                     miracle: false,
+                    pay_life: false,
                 });
                 // CR 609.4b — "mana of any type can be spent": paying the
                 // mana value as generic is the same set of payments.
@@ -33379,6 +33410,7 @@ impl GameState {
                             duration: crate::card::MayPlayDuration::EndOfThisTurn,
                             exile_after: false,
                             miracle: false,
+                            pay_life: false,
                         });
                     }
                 }
@@ -33656,6 +33688,7 @@ impl GameState {
                             duration: *duration,
                             exile_after: *exile_after,
                             miracle: false,
+                            pay_life: false,
                         });
                         if *pay_own_cost {
                             // "Spend mana as though it were mana of any type"
@@ -33668,6 +33701,28 @@ impl GameState {
                                 card.definition.cost.clone()
                             });
                         }
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::GrantMayPlayForLife { what, duration } => {
+                let granted_turn = self.turn_number;
+                let player = ctx.controller;
+                for ent in self.resolve_selector(what, ctx) {
+                    let cid = match ent {
+                        EntityRef::Card(id) | EntityRef::Permanent(id) => id,
+                        _ => continue,
+                    };
+                    if let Some(card) = self.find_card_anywhere_mut(cid) {
+                        card.may_play_until = Some(crate::card::MayPlayPermission {
+                            player,
+                            granted_turn,
+                            duration: *duration,
+                            exile_after: false,
+                            miracle: false,
+                            pay_life: true,
+                        });
                     }
                 }
                 Ok(())
@@ -34022,6 +34077,7 @@ impl GameState {
                             duration: *duration,
                             exile_after: false,
                             miracle: false,
+                            pay_life: false,
                         });
                         if !*free {
                             card.granted_alt_cast_cost_eot = Some(real_cost);

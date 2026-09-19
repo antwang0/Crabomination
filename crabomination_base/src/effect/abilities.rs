@@ -2144,6 +2144,13 @@ pub enum StaticEffect {
         colors: Vec<crate::mana::Color>,
         threshold: u32,
     },
+    /// "This isn't a creature unless [condition]" — the general sibling of
+    /// `NotCreatureWhileDevotionBelow` (Arvinox, the Mind Flail: "unless you
+    /// control three or more permanents you don't own"). Shares that
+    /// variant's stateful gather pass and gate bit: a layer-4
+    /// `RemoveCardType(Creature)` self-effect while `condition` (read from the
+    /// source's controller) fails.
+    NotCreatureUnless { condition: Predicate },
     /// CR 700.5 — "Your devotion to each color and each combination of colors
     /// is increased by one." Altar of the Pantheon. Each permanent the player
     /// controls carrying this static adds 1 to every non-empty devotion query.
@@ -2346,6 +2353,11 @@ pub enum StaticEffect {
     /// Dress Down / Humility-lite — all creatures lose all abilities
     /// (layer 6 `RemoveAllAbilities`).
     CreaturesLoseAllAbilities,
+    /// "[Permanents the selector picks] lose all abilities" — the filtered
+    /// sibling of `CreaturesLoseAllAbilities` (layer 6 `RemoveAllAbilities`
+    /// over `applies_to`). Sludge Monster: "Non-Horror creatures with slime
+    /// counters on them lose all abilities".
+    MatchingLoseAllAbilities { applies_to: Selector },
     /// Lantern of Insight — every player plays with their library top
     /// revealed (the all-players sibling of `TopOfLibraryRevealed`).
     AllLibraryTopsRevealed,

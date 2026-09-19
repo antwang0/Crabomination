@@ -5153,6 +5153,7 @@ mod tests {
             duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
             exile_after: false,
             miracle: false,
+            pay_life: false,
         });
         state.exile.push(bolt);
 
