@@ -4720,3 +4720,42 @@ fn cr_101_4_a_parked_tail_comes_back_under_the_seat_that_parked_it() {
         assert_eq!(g.players[seat].life, 19, "and seat {seat} paid its own life");
     }
 }
+
+/// CR 608.2 — `Effect::ForEach` binds each entity as the body's `Triggerer`,
+/// which is an `EffectContext` field the continuation cannot carry. A body
+/// that asks therefore dropped the entities after it *and* came back bound
+/// to nothing. `Selector::ExactObjects` is what lets the tail name them.
+#[test]
+fn cr_608_2_for_each_reaches_every_entity_when_the_body_suspends() {
+    use crabomination::card::SelectionRequirement as R;
+    use crabomination::effect::{Effect, Selector, Value};
+    let mut g = multi_player_game(2);
+    g.players[0].wants_ui = true;
+    for _ in 0..4 {
+        g.add_card_to_hand(0, catalog::lightning_bolt());
+    }
+    let hand = g.players[0].hand.len();
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    }
+    let src = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    g.stack.push(
+        TriggerPush::new(src, 0, Effect::ForEach {
+            selector: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+            // The discard suspends; the destroy after it is what the
+            // continuation has to carry, with its entity still bound.
+            body: Box::new(Effect::Seq(vec![
+                Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+                Effect::Destroy { what: Selector::TriggerSource },
+            ])),
+        })
+        .build(),
+    );
+    resolve_answering(&mut g);
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.controller == 0).count(),
+        0,
+        "all four creatures were reached, and each destroyed its own",
+    );
+    assert_eq!(g.players[0].hand.len(), hand - 4, "one discard per entity");
+}

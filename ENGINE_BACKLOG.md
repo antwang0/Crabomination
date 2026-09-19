@@ -168,17 +168,18 @@ call takes it to 1.
 **OPEN, each waiting on a primitive that does not exist** (the allowlist
 carries these verbatim, so the script stays the index):
 
-- ⏳ `Effect::ForEach` over non-player entities. The tail needs a `Selector`
-  that names a specific `CardId`; none of the 60-odd variants does. Over
-  players it is already covered (`Selector::Player(PlayerRef::Seat(q))`).
+- ✅ **CLOSED the same day, and it was the best next primitive here:**
+  `Selector::ExactObjects(Vec<CardId>)` names entities the arm has already
+  resolved, and `Effect::BindTargetObjects { ids, body }` puts objects an arm
+  picked itself back into `ctx.targets`. Between them they closed
+  `Effect::ForEach` over non-player entities, `TurnFaceUpFree`'s `if_cant`
+  (one catalog card casts a spell from exile there) and `EyeOfTheStorm` —
+  the last needs **both** pins, the caster via `EachPlayerDoes` over one seat
+  and the card via `BindTargetObjects`. Nine OPEN rows became six.
 - ⏳ `Effect::Vote` under `VoteTally::PerVote` (`AllTied` is spliced). Each
   run pins `self.current_voter`, which no `Effect` carries.
 - ⏳ `Effect::RollDie`: each die's result arm runs under its own
   `self.last_die_roll`, which no `Effect` carries.
-- ⏳ `Effect::TurnFaceUpFree`'s `if_cant` and `Effect::EyeOfTheStorm`: each
-  run pins its own card in `ctx.targets`, and the resumed context carries
-  the stack item's list. `Effect::BindTargetSlot` covers this **only** when
-  the card is already one of the spell's targets, which neither is.
 - ⏳ `Effect::MayPayRepeatedly`: the arm's resume path is a re-run from the
   top over the answer log (`answer_already_acted_on`), which a spliced tail
   would double-count.

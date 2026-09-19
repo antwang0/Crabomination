@@ -120,10 +120,6 @@ ALLOW = {
         "continuation on, so the ask is answered in place",
     ("apply_opening_hand_effects", "&extra"): "ditto",
     # ── OPEN, each waiting on a primitive (ENGINE_BACKLOG has all four) ───
-    ("ForEach", "body"):
-        "OPEN over non-player entities: the tail needs a `Selector` naming a "
-        "specific `CardId` and none exists. Over players `ForEachOpponent` "
-        "covers it",
     ("AnteTopOfLibrary", "inner"):
         "OPEN: the second pass antes AND runs the branch, so a tail would "
         "have to hoist every ante ahead of every branch. CR 407 ante is in "
@@ -142,11 +138,6 @@ ALLOW = {
         "OPEN: the arm's resume path is a re-run from the top over the "
         "answer log (`answer_already_acted_on`), which a spliced tail would "
         "double-count",
-    ("TurnFaceUpFree", "alt"):
-        "OPEN: `if_cant` runs with the permanent in `ctx.targets`, which a "
-        "parked continuation does not carry",
-    ("EyeOfTheStorm", "&Effect::CastWithoutPayingImmediate {"):
-        "OPEN: each cast runs with its own exiled card in `ctx.targets`",
     ("ExileRandomGraveyardCopyTapped", "&Effect::Move { what: Selector::Target(0), to: ZoneDest::Exile }"):
         "the move is choiceless; the mint beside it is `NEVER_ASKS`",
     ("SacrificeAnyNumber", "per_each"):

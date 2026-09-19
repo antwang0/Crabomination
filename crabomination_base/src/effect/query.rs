@@ -389,6 +389,7 @@ impl Effect {
             | Effect::CapTargetsAt { body, .. }
             | Effect::ForEachOpponentTarget { body }
             | Effect::BindTargetSlot { body, .. }
+            | Effect::BindTargetObjects { body, .. }
             | Effect::OptionalTargets { body, .. }
             | Effect::OathCatchUp { body, .. }
             | Effect::OnAttackedUntilYourNextTurn { body, .. }
@@ -1337,7 +1338,8 @@ impl Effect {
             | Effect::TargetsExactlyX { body }
             | Effect::CapTargetsAt { body, .. }
             | Effect::ForEachOpponentTarget { body }
-            | Effect::BindTargetSlot { body, .. } => body.requires_target(),
+            | Effect::BindTargetSlot { body, .. }
+            | Effect::BindTargetObjects { body, .. } => body.requires_target(),
             Effect::MayPayX { body, .. } => body.requires_target(),
             Effect::OptionalTargets { body, .. } => body.requires_target(),
             Effect::WithSacrificedPt { body, .. } => body.requires_target(),
@@ -2606,7 +2608,8 @@ impl Effect {
             | Effect::TargetsExactlyX { body }
             | Effect::CapTargetsAt { body, .. }
             | Effect::ForEachOpponentTarget { body }
-            | Effect::BindTargetSlot { body, .. } => body.primary_target_filter(),
+            | Effect::BindTargetSlot { body, .. }
+            | Effect::BindTargetObjects { body, .. } => body.primary_target_filter(),
             // "**Target player** may draw a card" (Questing Phelddagrif's
             // `{U}`) — the chooser is a slot of its own, and the body's is
             // still the fallback, so this cannot shadow it.
@@ -2800,6 +2803,7 @@ impl Effect {
             | Effect::CapTargetsAt { body, .. }
             | Effect::ForEachOpponentTarget { body }
             | Effect::BindTargetSlot { body, .. }
+            | Effect::BindTargetObjects { body, .. }
             | Effect::MayPayX { body, .. }
             | Effect::Repeat { body, .. } => body.slot_owner(slot, mode),
             other => other
@@ -2849,6 +2853,7 @@ impl Effect {
                 | Effect::CapTargetsAt { body, .. }
                 | Effect::ForEachOpponentTarget { body }
                 | Effect::BindTargetSlot { body, .. }
+                | Effect::BindTargetObjects { body, .. }
                 | Effect::MayPayX { body, .. }
                 | Effect::Repeat { body, .. } => hostile(body),
                 _ => false,
@@ -2919,6 +2924,7 @@ impl Effect {
             | Effect::CapTargetsAt { body, .. }
             | Effect::ForEachOpponentTarget { body }
             | Effect::BindTargetSlot { body, .. }
+            | Effect::BindTargetObjects { body, .. }
             | Effect::MayPayX { body, .. } => body.prefers_friendly_target(),
             // "TARGET player draws a card" is a gift — aim slot 0 at the
             // caster (Shadrix Silverquill's draw mode is the mode you take
@@ -3025,6 +3031,7 @@ impl Effect {
             | Effect::CapTargetsAt { body, .. }
             | Effect::ForEachOpponentTarget { body }
             | Effect::BindTargetSlot { body, .. }
+            | Effect::BindTargetObjects { body, .. }
             | Effect::MayPayX { body, .. }
             | Effect::MayPay { body, .. }
             | Effect::MayPayBy { body, .. }
@@ -3118,6 +3125,7 @@ impl Effect {
             | Effect::CapTargetsAt { body, .. }
             | Effect::ForEachOpponentTarget { body }
             | Effect::BindTargetSlot { body, .. }
+            | Effect::BindTargetObjects { body, .. }
             | Effect::MayPayX { body, .. }
             | Effect::MayPay { body, .. }
             | Effect::MayPayBy { body, .. }
@@ -3558,6 +3566,7 @@ impl Effect {
             | Effect::CapTargetsAt { body, .. }
             | Effect::ForEachOpponentTarget { body }
             | Effect::BindTargetSlot { body, .. }
+            | Effect::BindTargetObjects { body, .. }
             | Effect::MayPayX { body, .. }
             | Effect::MayPay { body, .. }
             | Effect::MayPayBy { body, .. }
@@ -3885,6 +3894,7 @@ impl Effect {
             | Effect::CapTargetsAt { body, .. }
             | Effect::ForEachOpponentTarget { body }
             | Effect::BindTargetSlot { body, .. }
+            | Effect::BindTargetObjects { body, .. }
             | Effect::OptionalTargets { body, .. }
             | Effect::MayPayX { body, .. }
             | Effect::MayPay { body, .. }
@@ -4152,6 +4162,7 @@ impl Effect {
                 | Effect::CapTargetsAt { body, .. }
                 | Effect::ForEachOpponentTarget { body }
                 | Effect::BindTargetSlot { body, .. }
+                | Effect::BindTargetObjects { body, .. }
                 | Effect::MayPayX { body, .. }
                 | Effect::MayPay { body, .. }
                 | Effect::MaySacrifice { then: body, .. }
@@ -4869,6 +4880,7 @@ impl Effect {
             | Effect::CapTargetsAt { body, .. }
             | Effect::ForEachOpponentTarget { body }
             | Effect::BindTargetSlot { body, .. }
+            | Effect::BindTargetObjects { body, .. }
             | Effect::MayPayX { body, .. }
             | Effect::MayPay { body, .. }
             | Effect::MayPayBy { body, .. }
@@ -4899,6 +4911,7 @@ impl Effect {
             | Effect::CapTargetsAt { body, .. }
             | Effect::ForEachOpponentTarget { body }
             | Effect::BindTargetSlot { body, .. }
+            | Effect::BindTargetObjects { body, .. }
             | Effect::MayPayX { body, .. }
             | Effect::MayPay { body, .. }
             | Effect::MayPayBy { body, .. }
@@ -4985,6 +4998,7 @@ impl Effect {
             | Effect::CapTargetsAt { body, .. }
             | Effect::ForEachOpponentTarget { body }
             | Effect::BindTargetSlot { body, .. }
+            | Effect::BindTargetObjects { body, .. }
             | Effect::MayPayX { body, .. }
             | Effect::MayPay { body, .. }
             | Effect::MayPayBy { body, .. }

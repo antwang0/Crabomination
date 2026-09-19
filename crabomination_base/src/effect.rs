@@ -533,6 +533,15 @@ pub enum Selector {
     /// as permanents, the rest as cards (Death or Glory splits a graveyard).
     SeparatedPile { chosen: bool },
 
+    /// Exactly these objects, in this order. Ids on the battlefield resolve as
+    /// permanents, the rest as cards.
+    ///
+    /// **Runtime-only** — built by `Effect::ForEach`'s suspend splice so the
+    /// entities it has not reached yet survive the suspension. A card never
+    /// names a `CardId`, and `scripts/audit_variant_coverage.py` carries this
+    /// as a by-design dead primitive.
+    ExactObjects(Vec<crate::card::CardId>),
+
     /// No entities (placeholder/default).
     None,
 }
@@ -6752,6 +6761,15 @@ pub enum Effect {
     /// spell's *whole* target list, so the slot has to be named in the effect
     /// or every remaining mode reads slot 0.
     BindTargetSlot { slot: u8, body: Box<Effect> },
+    /// Run `body` with `ctx.targets` set to exactly these objects.
+    ///
+    /// **Runtime-only**, and the sibling of `BindTargetSlot`: that one pins a
+    /// slot of the spell's own target list, this one pins objects the arm
+    /// picked itself (a card in the exile pile, the permanent this iteration
+    /// is about). A parked continuation is resumed under the stack item's
+    /// context, so without it the rest of that iteration's body reads the
+    /// caster's targets.
+    BindTargetObjects { ids: Vec<crate::card::CardId>, body: Box<Effect> },
     /// Eerie Ultimatum — return any number of permanent cards with different
     /// names from the controller's graveyard to the battlefield. The controller
     /// picks at resolution (`Decision::ChooseCards`); duplicate names are

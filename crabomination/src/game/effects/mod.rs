@@ -96,6 +96,15 @@ pub(crate) fn modal_continuation_in_order<'a>(
     }))
 }
 
+/// A `Selector` that resolves to exactly this one entity, for a continuation
+/// that has to re-bind an entity the enclosing loop had already resolved.
+pub(crate) fn selector_for_entity(ent: &EntityRef) -> Selector {
+    match *ent {
+        EntityRef::Player(p) => Selector::Player(PlayerRef::Seat(p)),
+        EntityRef::Permanent(id) | EntityRef::Card(id) => Selector::ExactObjects(vec![id]),
+    }
+}
+
 /// Re-wrap whatever a body just parked, when it suspended, so a wrapper that
 /// rebinds the context keeps its binding across the suspend.
 ///
@@ -4470,10 +4479,32 @@ impl GameState {
 
             Effect::ForEach { selector, body } => {
                 let entities = self.resolve_selector(selector, ctx);
-                for ent in entities {
+                for (i, ent) in entities.iter().copied().enumerate() {
                     let mut sub_ctx = ctx.clone();
                     sub_ctx.trigger_source = Some(ent);
                     self.run_effect(body, &sub_ctx, events)?;
+                    // `trigger_source` is a context field, and a parked
+                    // continuation comes back under the stack item's context —
+                    // so this entity's own remainder needs re-binding, and the
+                    // entities after it need splicing, both by naming the
+                    // entity inside the effect.
+                    rewrap_parked(&mut self.suspend_signal, |carried| Effect::ForEach {
+                        selector: selector_for_entity(&ent),
+                        body: Box::new(carried),
+                    });
+                    if splice_after_suspend(&mut self.suspend_signal, || {
+                        Effect::seq(
+                            entities[i + 1..]
+                                .iter()
+                                .map(|e| Effect::ForEach {
+                                    selector: selector_for_entity(e),
+                                    body: body.clone(),
+                                })
+                                .collect(),
+                        )
+                    }) {
+                        return Ok(());
+                    }
                 }
                 Ok(())
             }
@@ -7287,6 +7318,20 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::BindTargetObjects { ids, body } => {
+                // Runtime continuation only: the objects this iteration is
+                // about, as the body's whole target list.
+                let sub = EffectContext {
+                    targets: ids.iter().map(|id| Target::Permanent(*id)).collect(),
+                    ..ctx.clone()
+                };
+                self.run_effect(body, &sub, events)?;
+                rewrap_parked(&mut self.suspend_signal, |carried| {
+                    Effect::BindTargetObjects { ids: ids.clone(), body: Box::new(carried) }
+                });
+                Ok(())
+            }
+
             Effect::ForEachOpponentTarget { body } => {
                 // CR 601.2c — "for each opponent, … up to one target X that
                 // player controls": keep at most one target per controller,
@@ -9255,7 +9300,8 @@ impl GameState {
             Effect::TurnFaceUpFree { what, if_cant } => {
                 // CR 707.9 — turned up without paying the morph cost; the
                 // megamorph +1/+1 counter still applies (CR 702.36e).
-                for ent in self.resolve_selector(what, ctx) {
+                let ents = self.resolve_selector(what, ctx);
+                for (i, ent) in ents.iter().copied().enumerate() {
                     let Some(cid) = ent.as_permanent_id() else { continue };
                     let Some(c) = self.battlefield_find_mut(cid) else { continue };
                     if !c.face_down {
@@ -9270,6 +9316,32 @@ impl GameState {
                                 ..ctx.clone()
                             };
                             self.run_effect(alt, &sub, events)?;
+                            // `if_cant` casts a spell from exile on one catalog
+                            // card, so it suspends: its own remainder needs
+                            // this permanent back in `targets`, and the
+                            // permanents after it need splicing.
+                            rewrap_parked(&mut self.suspend_signal, |carried| {
+                                Effect::BindTargetObjects {
+                                    ids: vec![cid],
+                                    body: Box::new(carried),
+                                }
+                            });
+                            if splice_after_suspend(&mut self.suspend_signal, || {
+                                let rest: Vec<CardId> = ents[i + 1..]
+                                    .iter()
+                                    .filter_map(|e| e.as_permanent_id())
+                                    .collect();
+                                if rest.is_empty() {
+                                    Effect::Noop
+                                } else {
+                                    Effect::TurnFaceUpFree {
+                                        what: Selector::ExactObjects(rest),
+                                        if_cant: if_cant.clone(),
+                                    }
+                                }
+                            }) {
+                                return Ok(());
+                            }
                         }
                         continue;
                     }
@@ -18200,19 +18272,41 @@ impl GameState {
                     .map(|c| c.id)
                     .collect();
                 let ctx = EffectContext { controller: caster, ..ctx.clone() };
-                for cid in pile {
+                let free_cast = Effect::CastWithoutPayingImmediate {
+                    reduce_generic: 0,
+                    pay_own_cost: false,
+                    what: Selector::Target(0),
+                    source_zone: crate::card::Zone::Exile,
+                    exile_after: false,
+                    copy: true,
+                };
+                // Each free cast picks its own targets and modes, so it can
+                // suspend — and the tail needs BOTH pins back: the caster
+                // (`EachPlayerDoes` over one seat) and the card being cast.
+                let one_cast = |cid: CardId, inner: Effect| Effect::EachPlayerDoes {
+                    who: PlayerRef::Seat(caster),
+                    body: Box::new(Effect::BindTargetObjects {
+                        ids: vec![cid],
+                        body: Box::new(inner),
+                    }),
+                };
+                for (i, cid) in pile.iter().copied().enumerate() {
                     self.run_effect(
-                        &Effect::CastWithoutPayingImmediate {
-                            reduce_generic: 0,
-                                pay_own_cost: false,
-                            what: Selector::Target(0),
-                            source_zone: crate::card::Zone::Exile,
-                            exile_after: false,
-                            copy: true,
-                        },
+                        &free_cast,
                         &EffectContext { targets: vec![Target::Permanent(cid)], ..ctx.clone() },
                         events,
                     )?;
+                    rewrap_parked(&mut self.suspend_signal, |carried| one_cast(cid, carried));
+                    if splice_after_suspend(&mut self.suspend_signal, || {
+                        Effect::seq(
+                            pile[i + 1..]
+                                .iter()
+                                .map(|c| one_cast(*c, free_cast.clone()))
+                                .collect(),
+                        )
+                    }) {
+                        return Ok(());
+                    }
                 }
                 Ok(())
             }
@@ -36558,6 +36652,17 @@ impl GameState {
                 }
                 out
             }
+
+            Selector::ExactObjects(ids) => ids
+                .iter()
+                .map(|cid| {
+                    if self.battlefield_find(*cid).is_some() {
+                        EntityRef::Permanent(*cid)
+                    } else {
+                        EntityRef::Card(*cid)
+                    }
+                })
+                .collect(),
 
             Selector::SeparatedPile { chosen } => {
                 let pile =
