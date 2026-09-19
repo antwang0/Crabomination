@@ -3856,11 +3856,12 @@ fn elesh_norn_suppresses_opponent_etb_triggers() {
     assert!(!g.exile.iter().any(|c| c.id == p0_creature));
 }
 
-/// Cavern's "as this enters, choose a creature type" is an ETB TRIGGER, so it
-/// goes on the stack and its ask can suspend properly — a UI seat is asked, and
-/// the type it names is the one that sticks. (The `as_enters_effect` field is
-/// the other route into the same choice; `an_off_stack_ask_is_driven_instead_of_
-/// dropped` covers that one, where there is no stack item to park on.)
+/// CR 614.12a — Cavern's "as this enters, choose a creature type" is a
+/// REPLACEMENT applied inside the land drop, and a `wants_ui` seat is still
+/// asked: the drop parks the ask on `ResumeContext::LandEntry` (it cannot be
+/// replayed — the land is on the battlefield and the drop is spent) and
+/// finishes the entry when the answer lands. Nothing reaches the stack, so
+/// the pass loop below never runs a lap.
 #[test]
 fn cavern_of_souls_names_the_type_a_ui_seat_picks() {
     use crabomination::card::CreatureType;

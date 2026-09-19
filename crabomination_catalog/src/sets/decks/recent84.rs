@@ -5,17 +5,19 @@
 //! `tests/recent84.rs`.
 
 use crate::card::{CardDefinition, CardType, CounterType, StaticAbility, StaticEffect};
-use crate::effect::shortcut::{draw, etb};
+use crate::effect::shortcut::draw;
 use crate::effect::{
     Effect, EventKind, EventScope, EventSpec, Predicate, Selector, TriggeredAbility, Value,
 };
 use crate::mana::{cost, generic, u};
 
 /// ETB "choose a creature type" trigger.
-fn choose_type() -> TriggeredAbility {
-    etb(Effect::NameCreatureType {
+/// CR 614.12 — "As this ~ enters, choose a creature type" is a replacement,
+/// so it goes in `as_enters_effect`, not in a trigger.
+fn choose_type() -> Effect {
+    Effect::NameCreatureType {
         what: Selector::This,
-    })
+    }
 }
 
 /// Kindred Discovery — {3}{U}{U} Enchantment. Choose a creature type. Whenever
@@ -26,8 +28,8 @@ pub fn kindred_discovery() -> CardDefinition {
         name: "Kindred Discovery",
         cost: cost(&[generic(3), u(), u()]),
         card_types: vec![CardType::Enchantment],
+        as_enters_effect: Some(choose_type()),
         triggered_abilities: vec![
-            choose_type(),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
                     .with_filter(of_chosen_type()),
@@ -51,8 +53,8 @@ pub fn door_of_destinies() -> CardDefinition {
         name: "Door of Destinies",
         cost: cost(&[generic(4)]),
         card_types: vec![CardType::Artifact],
+        as_enters_effect: Some(choose_type()),
         triggered_abilities: vec![
-            choose_type(),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
                     .with_filter(Predicate::TriggerObjectIsChosenType),

@@ -428,3 +428,130 @@ fn cr_614_12a_a_headless_seats_land_drop_never_parks() {
     assert!(g.pending_decision.is_none(), "a headless seat is answered for, not asked");
     assert!(g.battlefield_find(id).expect("entered").chosen_color.is_some());
 }
+// ── The choose-a-type class (CR 614.12) ────────────────────────────────────
+
+/// The twenty-four "As this ~ enters, choose a creature type" cards, as one
+/// table. Engineered Plague is the sharp one — "creatures of the chosen type
+/// get -1/-1" was live against an *unchosen* type for at least one SBA check
+/// while its trigger sat on the stack.
+#[test]
+fn cr_614_12a_the_choose_a_type_class_chooses_as_it_enters() {
+    let namers: [Namer; 19] = [
+        ("Adaptive Automaton", catalog::adaptive_automaton),
+        ("An-Zerrin Ruins", catalog::an_zerrin_ruins),
+        ("Ashes of the Fallen", catalog::ashes_of_the_fallen),
+        ("Conspiracy", catalog::conspiracy),
+        ("Door of Destinies", catalog::door_of_destinies),
+        ("Engineered Plague", catalog::engineered_plague),
+        ("Icon of Ancestry", catalog::icon_of_ancestry),
+        ("Kindred Discovery", catalog::kindred_discovery),
+        ("Metallic Mimic", catalog::metallic_mimic),
+        ("Obelisk of Urd", catalog::obelisk_of_urd),
+        ("Patchwork Banner", catalog::patchwork_banner),
+        ("Plague Engineer", catalog::plague_engineer),
+        ("Radiant Destiny", catalog::radiant_destiny),
+        ("Rally the Ranks", catalog::rally_the_ranks),
+        ("Reflections of Littjara", catalog::reflections_of_littjara),
+        ("Shared Triumph", catalog::shared_triumph),
+        ("Vanquisher's Banner", catalog::vanquishers_banner),
+        ("Volrath's Laboratory", catalog::volraths_laboratory),
+        ("Xenograft", catalog::xenograft),
+    ];
+    for (name, factory) in namers {
+        let mut g = two_player_game();
+        // Something on the board for the type heuristic to name.
+        g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        let id = g.move_card_to_battlefield_for_test(0, factory());
+        let inst = g.battlefield_find(id).unwrap_or_else(|| panic!("{name} entered"));
+        assert!(
+            inst.chosen_creature_type.is_some(),
+            "CR 614.12a — {name} names its creature type as it enters"
+        );
+        assert!(
+            g.stack.is_empty(),
+            "CR 614.12 — {name} leaves no trigger on the stack to carry the choice"
+        );
+    }
+}
+
+/// Shimmer's clause names a **land** type (CR 205.3i), stamped on
+/// `chosen_land_type`; the class is one clause with three namespaces.
+#[test]
+fn cr_614_12a_shimmer_chooses_a_land_type_as_it_enters() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::forest());
+    let id = g.move_card_to_battlefield_for_test(0, catalog::shimmer());
+    let inst = g.battlefield_find(id).expect("Shimmer entered");
+    assert!(
+        inst.chosen_land_type.is_some(),
+        "CR 614.12a — the land type is chosen as Shimmer enters"
+    );
+    assert!(g.stack.is_empty(), "no trigger carries it");
+}
+
+/// Serra's Emissary is the class's other odd member: it chooses a **card**
+/// type,
+/// not a creature type (CR 205.2a), and stamps `chosen_card_type`.
+#[test]
+fn cr_614_12a_serras_emissary_chooses_a_card_type_as_it_enters() {
+    let mut g = two_player_game();
+    let id = g.move_card_to_battlefield_for_test(0, catalog::serras_emissary());
+    let inst = g.battlefield_find(id).expect("the Emissary entered");
+    assert!(
+        inst.chosen_card_type.is_some(),
+        "CR 614.12a — the card type is chosen as the Emissary enters"
+    );
+    assert!(g.stack.is_empty(), "no trigger carries it");
+}
+
+/// The three type-namers that are *lands*: their only entry is a land drop,
+/// which applied no as-enters replacement at all until the funnel landed.
+/// Cavern of Souls' restricted mana is unusable without the chosen type, so
+/// the window it left was a land that tapped for nothing.
+#[test]
+fn cr_614_12a_a_type_naming_land_names_off_the_land_drop() {
+    let lands: [Namer; 3] = [
+        ("Cavern of Souls", catalog::cavern_of_souls),
+        ("Secluded Courtyard", catalog::secluded_courtyard),
+        ("Three Tree City", catalog::three_tree_city),
+    ];
+    for (name, factory) in lands {
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        let id = g.add_card_to_hand(0, factory());
+        g.perform_action(GameAction::PlayLand(id)).expect("land drop is legal");
+        let land = g.battlefield_find(id).unwrap_or_else(|| panic!("{name} entered"));
+        assert!(
+            land.chosen_creature_type.is_some(),
+            "CR 614.12a — {name} names its type as it is played"
+        );
+        assert!(g.stack.is_empty(), "{name} leaves no trigger behind");
+    }
+}
+
+/// And the consequence, on the card the class exists for: Engineered Plague's
+/// type-keyed penalty is applied against a type that is already chosen, with
+/// no state-based-action check in between.
+#[test]
+fn cr_614_12a_a_type_keyed_penalty_never_reads_an_unchosen_type() {
+    use crabomination::card::CreatureType;
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2 Bear
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::CreatureType(
+        CreatureType::Bear,
+    )]));
+    let plague = g.move_card_to_battlefield_for_test(0, catalog::engineered_plague());
+    assert_eq!(
+        g.battlefield_find(plague).and_then(|c| c.chosen_creature_type),
+        Some(CreatureType::Bear),
+        "the type is chosen as the Plague enters"
+    );
+    assert!(g.stack.is_empty(), "nothing is waiting to resolve");
+    let cp = g.computed_permanent(bears).expect("the Bears are still there");
+    assert_eq!(
+        (cp.power, cp.toughness),
+        (1, 1),
+        "CR 614.12a — -1/-1 is on before any SBA check could read an unchosen type"
+    );
+}

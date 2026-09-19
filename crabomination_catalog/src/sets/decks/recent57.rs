@@ -211,9 +211,9 @@ pub fn rally_the_ranks() -> CardDefinition {
         name: "Rally the Ranks",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Enchantment],
-        triggered_abilities: vec![etb(Effect::NameCreatureType {
+        as_enters_effect: Some(Effect::NameCreatureType {
             what: Selector::This,
-        })],
+        }),
         static_abilities: vec![StaticAbility {
             description: "Creatures you control of the chosen type get +1/+1.",
             effect: StaticEffect::AnthemForChosenType {

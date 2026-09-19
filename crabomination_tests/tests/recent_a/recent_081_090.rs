@@ -640,6 +640,9 @@ mod recent84 {
     /// Choose `ct` at the next creature-type decision, then fire `id`'s ETB.
     fn enter_choosing(g: &mut GameState, id: CardId, ct: CreatureType) {
         g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::CreatureType(ct)]));
+        // CR 614.12 — the type is an as-enters REPLACEMENT, not a trigger, and
+        // `add_card_to_battlefield` skips every entry replacement.
+        g.apply_as_enters_replacements(id);
         g.fire_self_etb_triggers(id, 0);
         drain_stack(g);
     }
@@ -744,6 +747,9 @@ mod recent85 {
     /// Choose `ct` at the next creature-type decision, then fire `id`'s ETB.
     fn enter_choosing(g: &mut GameState, id: CardId, ct: CreatureType) {
         g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::CreatureType(ct)]));
+        // CR 614.12 — the type is an as-enters REPLACEMENT, not a trigger, and
+        // `add_card_to_battlefield` skips every entry replacement.
+        g.apply_as_enters_replacements(id);
         g.fire_self_etb_triggers(id, 0);
         drain_stack(g);
     }
@@ -823,6 +829,9 @@ mod recent86 {
 
     fn enter_choosing(g: &mut GameState, id: CardId, ct: CreatureType) {
         g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::CreatureType(ct)]));
+        // CR 614.12 — the type is an as-enters REPLACEMENT, not a trigger, and
+        // `add_card_to_battlefield` skips every entry replacement.
+        g.apply_as_enters_replacements(id);
         g.fire_self_etb_triggers(id, 0);
         drain_stack(g);
     }

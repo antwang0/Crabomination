@@ -618,10 +618,7 @@ pub fn xenograft() -> CardDefinition {
         name: "Xenograft",
         cost: cost(&[generic(4), u()]),
         card_types: vec![CardType::Enchantment],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::NameCreatureType { what: Selector::This },
-        }],
+        as_enters_effect: Some(Effect::NameCreatureType { what: Selector::This }),
         static_abilities: vec![StaticAbility {
             description: "Each creature you control is the chosen type in addition to its \
                           other types.",

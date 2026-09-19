@@ -21064,7 +21064,7 @@ pub fn three_tree_city() -> CardDefinition {
         card_types: vec![CardType::Land],
         // "As this enters, choose a creature type" — stamped on the land
         // itself, which is what `IsSourceChosenCreatureType` below reads.
-        triggered_abilities: vec![etb(Effect::NameCreatureType { what: Selector::This })],
+        as_enters_effect: Some(Effect::NameCreatureType { what: Selector::This }),
         activated_abilities: vec![
             ActivatedAbility {
                 tap_cost: true,
@@ -36187,9 +36187,9 @@ pub fn adaptive_automaton() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        triggered_abilities: vec![etb(Effect::NameCreatureType {
+        as_enters_effect: Some(Effect::NameCreatureType {
             what: Selector::This,
-        })],
+        }),
         static_abilities: vec![StaticAbility {
             description: "Other creatures you control of the chosen type get +1/+1.",
             effect: StaticEffect::AnthemForChosenType {
@@ -36214,9 +36214,9 @@ pub fn patchwork_banner() -> CardDefinition {
         name: "Patchwork Banner",
         cost: cost(&[generic(3)]),
         card_types: vec![CardType::Artifact],
-        triggered_abilities: vec![etb(Effect::NameCreatureType {
+        as_enters_effect: Some(Effect::NameCreatureType {
             what: Selector::This,
-        })],
+        }),
         static_abilities: vec![StaticAbility {
             description: "Creatures you control of the chosen type get +1/+1.",
             effect: StaticEffect::AnthemForChosenType {
@@ -36327,9 +36327,9 @@ pub fn metallic_mimic() -> CardDefinition {
         },
         power: 2,
         toughness: 1,
-        triggered_abilities: vec![etb(Effect::NameCreatureType {
+        as_enters_effect: Some(Effect::NameCreatureType {
             what: Selector::This,
-        })],
+        }),
         static_abilities: vec![StaticAbility {
             description: "Each other creature you control of the chosen type enters with an additional +1/+1 counter.",
             effect: StaticEffect::ChosenTypeEntersWithCounter {
@@ -42315,9 +42315,9 @@ pub fn obelisk_of_urd() -> CardDefinition {
         cost: cost(&[generic(6)]),
         card_types: vec![CardType::Artifact],
         keywords: vec![Keyword::Convoke],
-        triggered_abilities: vec![etb(Effect::NameCreatureType {
+        as_enters_effect: Some(Effect::NameCreatureType {
             what: Selector::This,
-        })],
+        }),
         static_abilities: vec![StaticAbility {
             description: "Creatures you control of the chosen type get +2/+2.",
             effect: StaticEffect::AnthemForChosenType {
@@ -43320,9 +43320,9 @@ pub fn shared_triumph() -> CardDefinition {
         name: "Shared Triumph",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Enchantment],
-        triggered_abilities: vec![etb(Effect::NameCreatureType {
+        as_enters_effect: Some(Effect::NameCreatureType {
             what: Selector::This,
-        })],
+        }),
         static_abilities: vec![StaticAbility {
             description: "Creatures of the chosen type get +1/+1.",
             effect: StaticEffect::AnthemForChosenType {
@@ -56112,18 +56112,15 @@ pub fn ancient_ziggurat() -> CardDefinition {
     }
 }
 
-/// Unclaimed Territory — Land. ETB: choose a creature type. {T}: Add {C};
+/// Unclaimed Territory — Land. As it enters, choose a creature type. {T}: Add {C};
 /// or any color restricted to creature spells of the chosen type.
 pub fn unclaimed_territory() -> CardDefinition {
     CardDefinition {
         name: "Unclaimed Territory",
         card_types: vec![CardType::Land],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::NameCreatureType {
-                what: Selector::This,
-            },
-        }],
+        as_enters_effect: Some(Effect::NameCreatureType {
+            what: Selector::This,
+        }),
         activated_abilities: vec![
             ActivatedAbility {
                 tap_cost: true,

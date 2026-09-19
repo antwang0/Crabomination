@@ -312,10 +312,7 @@ pub fn an_zerrin_ruins() -> CardDefinition {
         name: "An-Zerrin Ruins",
         cost: cost(&[generic(2), r(), r()]),
         card_types: vec![CardType::Enchantment],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::NameCreatureType { what: Selector::This },
-        }],
+        as_enters_effect: Some(Effect::NameCreatureType { what: Selector::This }),
         static_abilities: vec![StaticAbility {
             description: "Creatures of the chosen type don't untap during their \
                           controllers' untap steps.",

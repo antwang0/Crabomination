@@ -394,7 +394,6 @@ pub fn gemstone_caverns() -> CardDefinition {
 /// creature spell of the chosen type, and that spell can't be countered
 /// (mana provenance via `ManaPayload::RestrictedToChosenType`).
 pub fn cavern_of_souls() -> CardDefinition {
-    use crate::card::TriggeredAbility;
     CardDefinition {
         name: "Cavern of Souls",
         card_types: vec![CardType::Land],
@@ -418,12 +417,9 @@ pub fn cavern_of_souls() -> CardDefinition {
                 ..Default::default()
             },
         ],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::NameCreatureType {
-                what: Selector::This,
-            },
-        }],
+        as_enters_effect: Some(Effect::NameCreatureType {
+            what: Selector::This,
+        }),
         ..Default::default()
     }
 }

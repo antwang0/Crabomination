@@ -1103,11 +1103,10 @@ pub fn titans_nest() -> CardDefinition {
 /// choose a creature type. Whenever you cast a spell of the chosen type, copy
 /// that spell. (A copy of a permanent spell becomes a token.)
 ///
-/// Approximation: the type is chosen by an ETB trigger rather than as it enters.
 pub fn reflections_of_littjara() -> CardDefinition {
     CardDefinition {
+        as_enters_effect: Some(Effect::NameCreatureType { what: Selector::This }),
         triggered_abilities: vec![
-            etb(Effect::NameCreatureType { what: Selector::This }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
                     .with_filter(Predicate::TriggerObjectIsChosenType),

@@ -901,10 +901,7 @@ pub fn levitation() -> CardDefinition {
 /// creatures of that type get -1/-1.
 pub fn engineered_plague() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::NameCreatureType { what: Selector::This },
-        }],
+        as_enters_effect: Some(Effect::NameCreatureType { what: Selector::This }),
         static_abilities: vec![StaticAbility {
             description: "All creatures of the chosen type get -1/-1.",
             effect: StaticEffect::AnthemForChosenType {

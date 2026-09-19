@@ -151,9 +151,9 @@ pub fn radiant_destiny() -> CardDefinition {
         name: "Radiant Destiny",
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Enchantment],
-        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::NameCreatureType {
+        as_enters_effect: Some(Effect::NameCreatureType {
             what: Selector::This,
-        })],
+        }),
         static_abilities: vec![StaticAbility {
             description: "Creatures you control of the chosen type get +1/+1.",
             effect: StaticEffect::AnthemForChosenType {

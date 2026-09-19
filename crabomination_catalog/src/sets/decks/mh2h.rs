@@ -96,7 +96,7 @@ pub fn serras_emissary() -> CardDefinition {
         power: 7,
         toughness: 7,
         keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![etb(Effect::ChooseCardTypeForSource)],
+        as_enters_effect: Some(Effect::ChooseCardTypeForSource),
         static_abilities: vec![StaticAbility {
             description: "You and creatures you control have protection from the chosen card type.",
             effect: StaticEffect::YouAndCreaturesProtectionFromChosenCardType,

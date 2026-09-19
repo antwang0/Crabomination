@@ -988,10 +988,7 @@ pub fn chameleon_spirit() -> CardDefinition {
 /// Conspiracy — {3}{B}{B}. Your whole board becomes one creature type.
 pub fn conspiracy() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::NameCreatureType { what: Selector::This },
-        }],
+        as_enters_effect: Some(Effect::NameCreatureType { what: Selector::This }),
         static_abilities: vec![StaticAbility {
             description: "Creatures you control are the chosen type.",
             effect: StaticEffect::CreaturesYouControlAreChosenType,

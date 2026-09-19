@@ -874,7 +874,8 @@ fn conspiracy_retypes_your_creatures() {
         &mut g,
         vec![DecisionAnswer::CreatureType(crabomination::card::CreatureType::Zombie)],
     );
-    g.fire_self_etb_triggers(con, 0);
+    // CR 614.12 — Conspiracy's type is an as-enters replacement now.
+    g.apply_as_enters_replacements(con);
     drain_stack(&mut g);
     assert_eq!(
         g.computed_permanent(bear).unwrap().subtypes().creature_types,

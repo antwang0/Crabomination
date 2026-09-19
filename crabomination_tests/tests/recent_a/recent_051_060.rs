@@ -2111,7 +2111,8 @@ mod recent57 {
         g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::CreatureType(CreatureType::Bear)]));
         let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // a Bear
         let rally = g.add_card_to_battlefield(0, catalog::rally_the_ranks());
-        g.fire_self_etb_triggers(rally, 0);
+        // CR 614.12 — Rally the Ranks' type is an as-enters replacement now.
+        g.apply_as_enters_replacements(rally);
         drain_stack(&mut g);
         let cp = g.compute_battlefield();
         let b = cp.iter().find(|c| c.id == bear).unwrap();

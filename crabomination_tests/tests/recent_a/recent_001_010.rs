@@ -10228,9 +10228,13 @@ mod recent6 {
         g.decider = Box::new(ScriptedDecider::new([
             DecisionAnswer::CreatureType(CreatureType::Goblin),
         ]));
-        g.fire_self_etb_triggers(engineer, 0);
+        // CR 614.12 — the Engineer's type is an as-enters replacement now.
+        g.apply_as_enters_replacements(engineer);
         drain_stack(&mut g);
-        // A 1/1 Goblin getting -1/-1 has 0 toughness → dies as SBA.
+        // A 1/1 Goblin getting -1/-1 has 0 toughness → dies as SBA. CR 614.12a
+        // is why the very first sweep sees it: nothing goes on the stack, so
+        // there is no trigger to resolve and `drain_stack` has nothing to do.
+        g.check_state_based_actions();
         assert!(g.battlefield_find(goblin).is_none(), "opponent's 1/1 Goblin dies to -1/-1");
     }
 

@@ -1037,7 +1037,8 @@ fn obelisk_of_urd_buffs_chosen_type() {
     g.decider = Box::new(ScriptedDecider::new([
         DecisionAnswer::CreatureType(crabomination::card::CreatureType::Goblin),
     ]));
-    g.fire_self_etb_triggers(obelisk, 0);
+    // CR 614.12 — the Obelisk's type is an as-enters replacement now.
+    g.apply_as_enters_replacements(obelisk);
     drain_stack(&mut g);
     assert_eq!(g.computed_permanent(goblin).unwrap().power, 3, "Goblin 1/1 → 3/3");
 }

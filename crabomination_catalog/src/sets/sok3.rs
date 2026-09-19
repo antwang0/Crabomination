@@ -30,10 +30,7 @@ pub fn ashes_of_the_fallen() -> CardDefinition {
         name: "Ashes of the Fallen",
         cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::NameCreatureType { what: Selector::This },
-        }],
+        as_enters_effect: Some(Effect::NameCreatureType { what: Selector::This }),
         static_abilities: vec![StaticAbility {
             description: "Each creature card in your graveyard has the chosen creature type.",
             effect: StaticEffect::YourGraveyardCreaturesHaveChosenType,

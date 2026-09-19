@@ -23,7 +23,9 @@ fn flood(g: &mut GameState, seat: usize) {
 
 /// Put `def` onto seat 0's battlefield and resolve its ETB triggers.
 fn etb(g: &mut GameState, def: CardDefinition) -> CardId {
-    let id = g.add_card_to_battlefield(0, def);
+    // CR 614.12 — the entry runs its as-enters replacements first;
+    // `add_card_to_battlefield` skips every one of them.
+    let id = g.add_card_to_battlefield_entering(0, def);
     g.fire_self_etb_triggers(id, 0);
     drain_stack(g);
     id

@@ -649,11 +649,14 @@ mod recent16 {
         let d = catalog::secluded_courtyard();
         assert!(d.card_types.contains(&CardType::Land));
         assert_eq!(d.activated_abilities.len(), 2, "colorless + chosen-type-restricted mana");
-        // ETB chooses a creature type.
-        assert!(d.triggered_abilities.iter().any(|t| matches!(
-            t.effect,
-            crabomination::effect::Effect::NameCreatureType { .. }
-        )));
+        // CR 614.12 — the creature type is chosen as it enters, by a
+        // replacement rather than a trigger. The behaviour is asserted in
+        // `core_rules::as_enters::cr_614_12a_a_type_naming_land_names_off_
+        // the_land_drop`; this only pins which mechanism the card carries.
+        assert!(matches!(
+            d.as_enters_effect,
+            Some(crabomination::effect::Effect::NameCreatureType { .. })
+        ));
     }
 }
 

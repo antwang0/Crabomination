@@ -730,9 +730,7 @@ pub fn basalt_golem() -> CardDefinition {
 /// Shimmer — {2}{U}{U} gives every land of the named type phasing.
 pub fn shimmer() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![crate::effect::shortcut::etb(
-            Effect::ChooseBasicLandTypeForSource,
-        )],
+        as_enters_effect: Some(Effect::ChooseBasicLandTypeForSource),
         static_abilities: vec![StaticAbility {
             description: "Each land of the chosen type has phasing.",
             effect: StaticEffect::GrantKeyword {

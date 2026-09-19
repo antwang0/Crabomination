@@ -653,9 +653,9 @@ pub fn plague_engineer() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Deathtouch],
-        triggered_abilities: vec![etb(Effect::NameCreatureType {
+        as_enters_effect: Some(Effect::NameCreatureType {
             what: Selector::This,
-        })],
+        }),
         static_abilities: vec![StaticAbility {
             description: "Creatures of the chosen type your opponents control get -1/-1.",
             effect: StaticEffect::AnthemForChosenType {

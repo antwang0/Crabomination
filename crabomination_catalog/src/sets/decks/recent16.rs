@@ -7,7 +7,6 @@ use crate::card::{
     SelectionRequirement, Selector, StaticAbility, StaticEffect, Subtypes, Supertype,
     TriggeredAbility, Value,
 };
-use crate::effect::shortcut::etb;
 use crate::effect::{Effect, ManaPayload, PlayerRef};
 use crate::game::types::TurnStep;
 use crate::mana::{cost, generic};
@@ -72,9 +71,9 @@ pub fn secluded_courtyard() -> CardDefinition {
     CardDefinition {
         name: "Secluded Courtyard",
         card_types: vec![CardType::Land],
-        triggered_abilities: vec![etb(Effect::NameCreatureType {
+        as_enters_effect: Some(Effect::NameCreatureType {
             what: Selector::This,
-        })],
+        }),
         activated_abilities: vec![
             ActivatedAbility {
                 tap_cost: true,
@@ -148,10 +147,10 @@ pub fn vanquishers_banner() -> CardDefinition {
         name: "Vanquisher's Banner",
         cost: cost(&[generic(5)]),
         card_types: vec![CardType::Artifact],
+        as_enters_effect: Some(Effect::NameCreatureType {
+            what: Selector::This,
+        }),
         triggered_abilities: vec![
-            etb(Effect::NameCreatureType {
-                what: Selector::This,
-            }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
                     .with_filter(crate::effect::Predicate::TriggerObjectIsChosenType),
@@ -181,9 +180,9 @@ pub fn icon_of_ancestry() -> CardDefinition {
         name: "Icon of Ancestry",
         cost: cost(&[generic(3)]),
         card_types: vec![CardType::Artifact],
-        triggered_abilities: vec![etb(Effect::NameCreatureType {
+        as_enters_effect: Some(Effect::NameCreatureType {
             what: Selector::This,
-        })],
+        }),
         // "{3}, {T}: Look at the top three cards of your library. You may
         // reveal a creature card of the chosen type from among them and put it
         // into your hand. Put the rest on the bottom in a random order."
