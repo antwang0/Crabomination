@@ -19,7 +19,14 @@ invented column cannot afford an over-approximated `have` set.
 ⚠ Both directions of a rider are defects, and this column only asks one of
 them. A rider the card prints and the body drops is the MISSING direction and
 belongs to `core_rules/catalog_registration.rs`'s clause-ratchet family (see
-CARD_BACKLOG, "The printed-clause ratchet family").
+CARD_BACKLOG, "The printed-clause ratchet family"). Every row of that family
+is worth a row here: the "enters tapped" mirror named two lands the ratchet
+could never see, one of them carrying three separate deviations.
+
+⚠ **A keyword IS the printed wording.** A phrase set that knows only the
+spelled-out clause reports every card whose keyword supplies it — modular
+(CR 702.43a, "enters with N +1/+1 counters") and STX's prepared both landed
+as false positives before the `enters_with_counters` row learned them.
 """
 
 import json
@@ -34,6 +41,12 @@ CATALOG = os.path.join(ROOT, "crabomination_catalog", "src")
 CACHE = os.path.join(ROOT, "scripts", ".scryfall_cache.json")
 
 TOKEN_MARKERS = ("TokenDefinition", "token_def", "TokenSpec", "_token()")
+
+# ⚠ A keyword named inside a FILTER is a read, not a rider. Season of the
+# Witch ("except for creatures that couldn't attack") spells that exception
+# `Not(HasKeyword(Keyword::Defender))` and read as a card granting itself
+# Defender. A grant (`GrantKeyword { keyword: … }`) is a rider and stays.
+FILTER_READ = re.compile(r"HasKeyword\(\s*(?:\w+::)*Keyword::\w+\s*\)")
 
 # (needle in the body, phrases any of which licenses it, one-line note)
 RIDERS = [
@@ -66,6 +79,85 @@ RIDERS = [
             "second card each turn",
         ),
         "an activation limit the printed ability does not carry",
+    ),
+    (
+        # The mirror of the clause-ratchet family's "enters tapped" row
+        # (`core_rules/catalog_registration.rs`), which only ever asked
+        # print -> body. Two spellings, both matched: `sets::etb_tap`'s
+        # trigger and the rules-correct `StaticEffect::EntersTapped`.
+        "EntersTapped",
+        ("tapped",),
+        "a land or permanent entering tapped that the printed card does not",
+    ),
+    (
+        "etb_tap()",
+        ("tapped",),
+        "the `etb_tap` spelling of the same rider",
+    ),
+    (
+        "enters_with_counters: Some(",
+        # ⚠ Two keywords put the counters on without printing the clause, and
+        # both are spelled only as the keyword: **modular** (CR 702.43a,
+        # "enters with that many +1/+1 counters") and STX's **prepared**
+        # (`CounterType::Prepared`, "enters prepared" on a Lesson body).
+        ("enters with", "enters the battlefield with", "counter",
+         "modular", "prepared"),
+        "counters on entry the printed card does not put there",
+    ),
+    # ── The combat-restriction mirrors ───────────────────────────────────
+    # Each of these is the other direction of a `clause_ratchet` row in
+    # `core_rules/catalog_registration.rs`. A restriction the card does not
+    # print is a strictly WORSE card, which is why none of them showed up in
+    # play: nobody files a bug about a creature that declined to attack.
+    # ⚠ A grant counts as printed. "Target creature can't block this turn"
+    # puts `CantBlock` in the body and "can't block" in the text, so the
+    # phrase sets are written to match the clause wherever it appears rather
+    # than to anchor it on the card itself.
+    (
+        "Keyword::CantBeCountered",
+        ("can't be countered", "cannot be countered"),
+        "uncounterability the printed spell does not have",
+    ),
+    (
+        # ⚠ "Hexproof from X" is the modern *keywording* of a clause older
+        # cards print longhand — "can't be the target of red spells or
+        # abilities from red sources" (Suq'Ata Firewalker), "creatures you
+        # control can't be the targets of blue or black spells" (Autumn's
+        # Veil). Bare "hexproof" is in the set too, because a
+        # `HexproofFromColor` over all five colors is how this tree
+        # approximates the unrestricted grant (Lazotep Plating, documented).
+        "HexproofFrom",
+        ("hexproof", "can't be the target", "can't be the targets"),
+        "a narrowed hexproof the printed card does not name",
+    ),
+    (
+        "Keyword::MustAttack",
+        ("if able", "must attack"),
+        "an attack requirement the printed card does not carry",
+    ),
+    (
+        # Lure's own wording is the trap: "All creatures able to block
+        # enchanted creature do so" never says "must be blocked".
+        "MustBeBlocked",
+        ("must be blocked", "able to block", "blocks this creature if able"),
+        "a Lure effect (CR 509.1c) the printed card does not carry",
+    ),
+    (
+        "PreventUntap",
+        ("untap",),
+        "a doesn't-untap rider the printed card does not carry",
+    ),
+    (
+        "Keyword::Unblockable",
+        ("can't be blocked", "unblockable"),
+        "evasion the printed card does not have",
+    ),
+    (
+        # `Defender` is the keyword and `CantBlock` the one-shot; both spell
+        # the same restriction and both are in `KEYWORD_WORD`'s blind spot.
+        "Keyword::Defender",
+        ("defender", "can't attack", "cannot attack"),
+        "Defender the printed card does not print",
     ),
     (
         "sorcery_speed: true",
@@ -148,7 +240,8 @@ def main():
                 continue
             path = os.path.join(dirpath, f)
             for fn, name, body in defs_in(path):
-                present = [r for r in RIDERS if r[0] in body]
+                scan = FILTER_READ.sub(" ", body)
+                present = [r for r in RIDERS if r[0] in scan]
                 if not present:
                     continue
                 card = lower.get(name.lower())

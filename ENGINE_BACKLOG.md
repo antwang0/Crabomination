@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED 2026-09-19 (the forty-sixth find) — a static's filter leaf that the chosen `AffectedPermanents` variant cannot carry is SILENTLY DROPPED, and a dropped leaf widens the static](#fixed-2026-09-19-the-forty-sixth-find--a-statics-filter-leaf-that-the-chosen-affectedpermanents-variant-cannot-carry-is-silently-dropped-and-a-dropped-leaf-widens-the-static) | 62 |
 | Bugs & robustness | [FIXED 2026-09-19 (the forty-fifth find) — the INVENTED-ability column, built the way this file's own "CLOSED WITH A REASON" note prescribed, and the eleven cards it named](#fixed-2026-09-19-the-forty-fifth-find--the-invented-ability-column-built-the-way-this-files-own-closed-with-a-reason-note-prescribed-and-the-eleven-cards-it-named) | 68 |
 | Bugs & robustness | [OPEN 2026-09-19 — nineteen cube-pool entries are DUPLICATED, so nineteen cards draft at double weight](#open-2026-09-19--nineteen-cube-pool-entries-are-duplicated-so-nineteen-cards-draft-at-double-weight) | 19 |
 | Bugs & robustness | [FIXED 2026-09-19 (the forty-fourth find) — a printed "TARGET opponent" clause modelled as a fan-out is invisible in a duel and hits the whole table in a pod](#fixed-2026-09-19-the-forty-fourth-find--a-printed-target-opponent-clause-modelled-as-a-fan-out-is-invisible-in-a-duel-and-hits-the-whole-table-in-a-pod) | 55 |
@@ -86,6 +87,78 @@ the handoff.
 
 # Bugs & robustness
 
+## FIXED 2026-09-19 (the forty-sixth find) — a static's filter leaf that the chosen `AffectedPermanents` variant cannot carry is SILENTLY DROPPED, and a dropped leaf widens the static
+
+`affected_from_requirement` decomposes a static ability's `And`-tree into one
+of five `AffectedPermanents` variants. Four of them are narrow structs, and
+**each early return discards every accumulator its variant has no field for**.
+`AllWithCreatureType` has `controller`, `creature_type` and `exclude_source`
+and nothing else — so the moment a filter names a creature type, `token`,
+`color`, `colorless` and `owned_by_controller` are gone.
+
+Gleaming Overseer is the card that showed it. It prints "Zombie **tokens** you
+control have hexproof and menace"; writing `SelectionRequirement::IsToken`
+into the filter changed **nothing**, because `HasCreatureType(Zombie)` took
+the `AllWithCreatureType` return and the token leaf never reached the layer
+pass. The static stayed "every Zombie you control", the Overseer's own body
+included.
+
+📐 **This is the same failure the function already guards against one step
+earlier, and the guard is the tell.** The `HasCreatureType` / `WithCounter` /
+`HasColor` arms each check for a *conflicting* second value and bail to
+`card_match_fallback` with a comment explaining that a conflict "is not a
+shape this decomposition can express". A leaf with no field at all is equally
+inexpressible; nobody extended the check to it. The fix is the same escape
+hatch, applied before each of the three early returns: any accumulator the
+variant cannot carry sends the whole tree to the card-local matcher, which
+walks `And` honestly.
+
+⚠ **One carve-out, and it is load-bearing for the fast path.**
+`AllWithCreatureType`'s `affects()` arm asserts
+`card_types.contains(&CardType::Creature)` itself, so `types == [Creature]` is
+carried rather than dropped — and `Creature.and(HasCreatureType(x))` is the
+overwhelmingly common lord shape. Only a card type *other* than `Creature`
+falls back. Without that carve-out every tribal lord in the catalog changes
+code path.
+
+⚠⚠ **`AllOpponents` is deliberately left unguarded, and that is the second
+asymmetry.** It resolves its controller check through `friendly_seats` —
+team-aware — where `CardMatch`'s `ControlledByOpponent` is the plain
+`card.controller != source_controller`. Routing it to the fallback trades a
+silent widening for a silent **narrowing** in team play. Nothing in the
+catalog combines `ControlledByOpponent` with a leaf that variant cannot carry
+(its 22 near-miss sites are all effect selectors, not `applies_to` filters),
+so the right fix when one lands is a `token` field on `AllOpponents`, not a
+fallback. **A guard that swaps one silent wrong answer for another is not a
+fix; check which way the asymmetry runs before adding it.**
+
+⚠⚠ **And the escape hatch had a hole that would have been WORSE than the
+bug.** `card_match_fallback` returns `None` on a tree that is not
+*card-only*, and `None` here drops the static **entirely**. `OwnedByYou` was
+handled by the And-walk and by `requirement_matches_card`, but was missing
+from `layers::requirement_is_card_only` — so routing an `OwnedByYou` filter
+to the fallback would have deleted the ability rather than narrowed it. It is
+in the list now, and a `debug_assert!` in the guard fails on any future leaf
+the walk accepts and that list does not. **Three parallel hand-written
+walkers had to agree and only two did**, which is this file's recurring
+shape: a leaf added to the walk belongs in both other places.
+
+⚠ **A card-side fix is not a fix until the engine can express it.** The
+oracle audit named Gleaming Overseer, the card edit looked right, and the test
+still failed — the filter was correct and unreachable. `gleaming_overseer_
+zombie_anthem` pins both halves.
+
+✅ **And the engine half repaired a second card with no card edit: Eternal
+Skylord.** Its filter has said `HasCreatureType(Zombie).and(IsToken).and(
+ControlledByYou)` since it was written; the token leaf never reached the
+layer pass, so the Skylord granted flying to itself. Its test asserted only
+the token side, which is why a card written correctly stayed broken and
+green. **When a decomposition drops a leaf, every card using that leaf is
+wrong at once — grep the catalog for the shape before calling it one card.**
+A crude scan for `HasCreatureType` beside `IsToken` / `NotToken` / `HasColor`
+/ `Colorless` / `OwnedByYou` reads 21 statics; those two are the ones whose
+dropped leaf changed an answer.
+
 ## FIXED 2026-09-19 (the forty-fifth find) — the INVENTED-ability column, built the way this file's own "CLOSED WITH A REASON" note prescribed, and the eleven cards it named
 
 Two mirrors, both of the "ask the printed-clause ratchet the other way" family,
@@ -118,8 +191,34 @@ global table — a different reader, not a flag on this one."
 - **`scripts/audit_invented_rider.py`** — a clause bolted onto an effect the
   card *does* print. It is a **table**, one line per rider, which is the point:
   the first row (`DestroyNoRegen`) was written for one card and named eight.
-  **14 → 0** over 392 bodies with a needle. Rows so far: `DestroyNoRegen`,
-  `CantBeRegeneratedThisTurn`, `once_per_turn: true`, `sorcery_speed: true`.
+  **14 → 0** over 392 bodies with a needle, then **0** again at 14 rows over
+  **1,248**. 📐 **Every row after the first four is the mirror of a
+  `clause_ratchet` row in `core_rules/catalog_registration.rs`, and that is
+  the recipe: the ratchet family only ever asked print → body.** Rows so far:
+  `DestroyNoRegen`, `CantBeRegeneratedThisTurn`, `once_per_turn: true`,
+  `sorcery_speed: true`, `EntersTapped`, `etb_tap()`,
+  `enters_with_counters: Some(`, `Keyword::CantBeCountered`, `HexproofFrom`,
+  `Keyword::MustAttack`, `MustBeBlocked`, `PreventUntap`,
+  `Keyword::Unblockable`, `Keyword::Defender`. Four more cards named:
+  Deep-Sea Kraken (uncounterable, not unblockable, at the wrong suspend
+  cost), Gleaming Overseer (`Unblockable` to every Zombie where it prints
+  menace to Zombie **tokens**), and the two lands below.
+  ⚠ **A needle inside a FILTER is a read, not a rider** — Season of the
+  Witch spells "except for creatures that couldn't attack" as
+  `Not(HasKeyword(Keyword::Defender))`, so the reader strips
+  `HasKeyword(Keyword::…)` before matching. A `GrantKeyword` stays.
+  📐 **The "enters tapped" mirror is where extending the table paid.** The
+  clause ratchet in `core_rules/catalog_registration.rs` had only ever asked
+  *print → body*; asked the other way it named **Cephalid Coliseum** (no
+  enters-tapped clause, a `{2}{U}` activation the print costs at `{U}`, and
+  the whole Threshold gate missing under a doc that called shipping it
+  ungated deliberate) and **Glimmerpost** (Cloudpost prints "This land
+  enters tapped", Glimmerpost does not — and the shared `locus_count_value`
+  helper counted "Loci **you control**" where both cards print "on the
+  battlefield", so it was one helper bug across two cards).
+  ⚠ **Two keywords put counters on without printing the clause**, and both
+  cost a false positive before the phrase set learned them: **modular**
+  (CR 702.43a) and STX's **prepared**. A keyword *is* the printed wording.
 - **`scripts/audit_synthesised_name.py`** — the fourth column, and the only
   one that is not about the body: a factory whose **doc comment** still claims
   to be a synthesised card under a name Scryfall owns. **27 → 0.** Eight were

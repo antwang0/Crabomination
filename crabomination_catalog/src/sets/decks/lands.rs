@@ -429,12 +429,15 @@ pub fn cavern_of_souls() -> CardDefinition {
     }
 }
 
-/// Cephalid Coliseum — Land. Cephalid Coliseum enters tapped. Tap to add {U}.
-/// "{2}{U}, {T}, Sacrifice Cephalid Coliseum: Each player draws three cards,
-/// then discards three cards." (The Oracle has a threshold clause; we ship
-/// the post-threshold version since the demo deck wants it as a graveyard
-/// enabler.) The sacrifice is folded into the resolved effect via a `Move`
-/// to graveyard before the draw / discard fires — a faithful approximation
+/// Cephalid Coliseum — Land. "{T}: Add {U}. This land deals 1 damage to you.
+/// Threshold — {U}, {T}, Sacrifice this land: Target player draws three
+/// cards, then discards three cards. Activate only if there are seven or
+/// more cards in your graveyard."
+///
+/// It does **not** enter tapped, and the second ability costs {U}, not
+/// {2}{U} — both were invented here (`audit_invented_rider.py`, `etb_tap()`
+/// row). The sacrifice is folded into the resolved effect via a `Move` to
+/// graveyard before the draw / discard fires — a faithful approximation
 /// since the only non-cost interaction it changes is "destroy in response
 /// before sacrifice", which the bot/UI never attempts.
 pub fn cephalid_coliseum() -> CardDefinition {
@@ -460,7 +463,7 @@ pub fn cephalid_coliseum() -> CardDefinition {
                 energy_cost: 0,
                 discard_cost: None,
                 tap_cost: true,
-                mana_cost: cost(&[generic(2), u()]),
+                mana_cost: cost(&[u()]),
                 effect: Effect::Seq(vec![
                     // Sacrifice as additional cost — modelled as the first
                     // step of the resolved effect (the bot never tries to
@@ -482,7 +485,15 @@ pub fn cephalid_coliseum() -> CardDefinition {
                 once_per_turn: false,
                 sorcery_speed: false,
                 sac_cost: false,
-                condition: None,
+                // "Threshold — … Activate only if there are seven or more
+                // cards in your graveyard." Threshold is an ability word
+                // with no rules meaning (CR 207.2c); the printed sentence is
+                // the activation restriction (CR 602.5b). The gate was
+                // missing, and the doc used to call shipping the ungated
+                // version a deliberate simplification.
+                condition: Some(Predicate::ThresholdActive {
+                    who: PlayerRef::You,
+                }),
                 life_cost: 0,
                 from_graveyard: false,
                 exile_self_cost: false,
@@ -494,7 +505,6 @@ pub fn cephalid_coliseum() -> CardDefinition {
                 ..Default::default()
             },
         ],
-        triggered_abilities: vec![etb_tap()],
         ..Default::default()
     }
 }

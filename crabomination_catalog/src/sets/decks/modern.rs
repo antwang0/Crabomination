@@ -531,8 +531,13 @@ pub fn dwarven_reinforcements() -> CardDefinition {
     }
 }
 
-/// Deep-Sea Kraken — {7}{U}{U}{U} 6/6 Kraken that can't be countered. Suspend 9—{1}{U}.
-/// While suspended, an opponent's spell removes a time counter (accelerant).
+/// Deep-Sea Kraken — {7}{U}{U}{U} 6/6 Kraken. "This creature can't be
+/// blocked. Suspend 9—{2}{U}. Whenever an opponent casts a spell, if this
+/// card is suspended, remove a time counter from it."
+///
+/// It shipped **uncounterable** instead of unblockable, at a suspend cost of
+/// {1}{U} — three deviations under a doc that described the wrong one
+/// (`audit_invented_rider.py`, `Keyword::CantBeCountered` row).
 pub fn deep_sea_kraken() -> CardDefinition {
     CardDefinition {
         name: "Deep-Sea Kraken",
@@ -545,8 +550,8 @@ pub fn deep_sea_kraken() -> CardDefinition {
         power: 6,
         toughness: 6,
         keywords: vec![
-            Keyword::CantBeCountered,
-            Keyword::Suspend(9, cost(&[generic(1), u()])),
+            Keyword::Unblockable,
+            Keyword::Suspend(9, cost(&[generic(2), u()])),
             Keyword::SuspendAccelerant,
         ],
         ..Default::default()
@@ -6114,9 +6119,11 @@ fn modern_etb_tap() -> TriggeredAbility {
     }
 }
 
-/// Glimmerpost — Land — Locus. Glimmerpost enters tapped. When it enters,
-/// you gain 1 life for each Locus you control (`locus_count_value`).
-/// {T}: Add {C}.
+/// Glimmerpost — Land — Locus. "When this land enters, you gain 1 life for
+/// each Locus on the battlefield. {T}: Add {C}."
+///
+/// Unlike Cloudpost it does **not** enter tapped; the trigger was invented
+/// here (`audit_invented_rider.py`, `etb_tap()` row).
 pub fn glimmerpost() -> CardDefinition {
     use crate::card::ActivatedAbility;
     CardDefinition {
@@ -6149,30 +6156,28 @@ pub fn glimmerpost() -> CardDefinition {
             from_hand: false,
             ..Default::default()
         }],
-        triggered_abilities: vec![
-            modern_etb_tap(),
-            crate::effect::shortcut::etb(Effect::GainLife {
-                who: Selector::You,
-                amount: locus_count_value(),
-            }),
-        ],
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::GainLife {
+            who: Selector::You,
+            amount: locus_count_value(),
+        })],
         ..Default::default()
     }
 }
 
-/// Number of Loci you control — `{T}: Add {C} for each Locus you control`
-/// reads this so 12-post engines scale correctly. The tapped Locus counts
-/// itself, so the value is at least 1.
+/// Loci **on the battlefield**, not just yours — both Cloudpost ("Add {C}
+/// for each Locus on the battlefield") and Glimmerpost ("1 life for each
+/// Locus on the battlefield") print the wide scope, and the shared helper
+/// used to `.and(ControlledByYou)` for both. The tapped Locus counts itself,
+/// so the value is at least 1.
 fn locus_count_value() -> Value {
     use crate::card::{LandType, SelectionRequirement};
     Value::CountOf(Box::new(Selector::EachPermanent(
-        SelectionRequirement::HasLandType(LandType::Locus)
-            .and(SelectionRequirement::ControlledByYou),
+        SelectionRequirement::HasLandType(LandType::Locus),
     )))
 }
 
-/// Cloudpost — Land — Locus. Cloudpost enters tapped. {T}: Add {C} for
-/// each Locus you control (`locus_count_value`).
+/// Cloudpost — Land — Locus. "This land enters tapped. {T}: Add {C} for
+/// each Locus on the battlefield" (`locus_count_value`).
 pub fn cloudpost() -> CardDefinition {
     use crate::card::ActivatedAbility;
     CardDefinition {
@@ -64035,13 +64040,18 @@ pub fn will_of_the_all_hunter() -> CardDefinition {
 }
 
 /// Gleaming Overseer — {1}{U}{B} 1/4 Zombie Wizard. ETB: amass Zombies 1.
-/// Zombies you control have hexproof and can't be blocked.
+/// "Zombie **tokens** you control have hexproof and **menace**."
+///
+/// It shipped granting to every Zombie you control, and granting
+/// `Unblockable` rather than `Menace` — a strict upgrade over a wider set
+/// (`audit_invented_rider.py`, `Keyword::Unblockable` row).
 pub fn gleaming_overseer() -> CardDefinition {
     use crate::effect::shortcut::amass_zombies;
-    let zombies = || {
+    let zombie_tokens = || {
         Selector::EachPermanent(
             SelectionRequirement::Creature
                 .and(SelectionRequirement::ControlledByYou)
+                .and(SelectionRequirement::IsToken)
                 .and(SelectionRequirement::HasCreatureType(CreatureType::Zombie)),
         )
     };
@@ -64058,17 +64068,17 @@ pub fn gleaming_overseer() -> CardDefinition {
         triggered_abilities: vec![etb(amass_zombies(1))],
         static_abilities: vec![
             StaticAbility {
-                description: "Zombies you control have hexproof.",
+                description: "Zombie tokens you control have hexproof.",
                 effect: StaticEffect::GrantKeyword {
-                    applies_to: zombies(),
+                    applies_to: zombie_tokens(),
                     keyword: Keyword::Hexproof,
                 },
             },
             StaticAbility {
-                description: "Zombies you control can't be blocked.",
+                description: "Zombie tokens you control have menace.",
                 effect: StaticEffect::GrantKeyword {
-                    applies_to: zombies(),
-                    keyword: Keyword::Unblockable,
+                    applies_to: zombie_tokens(),
+                    keyword: Keyword::Menace,
                 },
             },
         ],
