@@ -1685,7 +1685,7 @@ pub enum Keyword {
     /// because the rule is the label equality and nothing else. Deck
     /// construction only, like the rest of the family.
     PartnerLabel(String),
-    /// CR 702.124j — "Choose a Background". This commander may be paired
+    /// CR 702.124k — "Choose a Background". This commander may be paired
     /// with a legendary Background enchantment as its second commander.
     ChooseABackground,
     /// CR 702.124m — "Doctor's companion". This commander may be paired with

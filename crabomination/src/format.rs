@@ -656,7 +656,7 @@ pub enum CommanderDeckError {
     /// caps at two — anything beyond is illegal).
     TooManyCommanders { found: u32 },
     /// CR 903.3 / 903.3a — the card is none of the kinds a commander may be
-    /// (see [`is_legal_commander`]), nor the Background half of a CR 702.124j
+    /// (see [`is_legal_commander`]), nor the Background half of a CR 702.124k
     /// pair.
     IllegalCommander { card_name: &'static str },
     /// Two commanders that may not lead a deck together (CR 702.124): neither
@@ -704,7 +704,7 @@ impl std::error::Error for CommanderDeckError {}
 /// CR 702.124 — may `a` and `b` be a deck's two commanders? Plain Partner on
 /// both (702.124a), "partner with" naming each other (702.124c), a
 /// partner—[text] label shared (702.124i), a Choose-a-Background commander with
-/// a Background (702.124j), or a Doctor's companion with a Doctor (702.124m).
+/// a Background (702.124k), or a Doctor's companion with a Doctor (702.124m).
 pub fn commanders_may_pair(a: &CardDefinition, b: &CardDefinition) -> bool {
     use crate::card::{Keyword, KeywordSlice};
     let partners_with = |x: &CardDefinition, y: &CardDefinition| {
@@ -769,7 +769,7 @@ fn is_background(def: &CardDefinition) -> bool {
 /// must be legendary and either **(a)** a creature card, **(b)** a Vehicle
 /// card, or **(c)** a Spacecraft card with one or more power/toughness boxes;
 /// CR 903.3a's printed "[this] can be your commander" (CR 113.6n) is the other
-/// way in. The Background half of a CR 702.124j pair is not covered here — it
+/// way in. The Background half of a CR 702.124k pair is not covered here — it
 /// is legal only *with* its partner, which `validate_commander_deck` knows and
 /// a lone card does not.
 ///
@@ -833,7 +833,7 @@ pub fn validate_commander_deck(
 
     // CR 903.3 / 903.3a — each commander must be one of the card kinds
     // `is_legal_commander` lists, except the Background half of a
-    // Choose-a-Background pair (CR 702.124j), which is a legendary enchantment
+    // Choose-a-Background pair (CR 702.124k), which is a legendary enchantment
     // and legal only alongside its partner.
     let background_pair = match deck.commanders.as_slice() {
         [a, b] => is_background_pair(a, b) || is_background_pair(b, a),
