@@ -336,6 +336,7 @@ mod tests {
             legal_blockers: vec![],
             legal_block_targets: vec![],
             attack_bands: vec![],
+            castable_command: vec![],
         }
     }
 

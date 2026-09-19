@@ -101,8 +101,29 @@ pub struct PutOnLibraryHighlight {
 /// triggers tracks each separately. Reset at match start by
 /// `start_net_session_from_menu`; each auto-answer logs a line so the
 /// player can tell why no prompt appeared.
+///
+/// CR 903.9b commander redirects ("send it to the command zone instead?")
+/// share the map under [`COMMANDER_REDIRECT_KEY`], keyed by the commander, so
+/// "Always Yes" on one commander doesn't answer for its partner.
 #[derive(Resource, Default)]
 pub struct AutoOptionalAnswers(pub std::collections::HashMap<(CardId, String), bool>);
+
+/// The description slot a standing CR 903.9b commander-redirect answer is
+/// stored under in [`AutoOptionalAnswers`]. Not a real trigger description,
+/// so it can never collide with one.
+pub const COMMANDER_REDIRECT_KEY: &str = "\u{0}commander-redirect";
+
+impl AutoOptionalAnswers {
+    /// The standing answer for `commander`'s redirect prompt, if one was set.
+    pub fn commander_redirect(&self, commander: CardId) -> Option<bool> {
+        self.0.get(&(commander, COMMANDER_REDIRECT_KEY.to_string())).copied()
+    }
+
+    /// Remember `answer` for every later redirect prompt of `commander`.
+    pub fn set_commander_redirect(&mut self, commander: CardId, answer: bool) {
+        self.0.insert((commander, COMMANDER_REDIRECT_KEY.to_string()), answer);
+    }
+}
 
 /// Local UI state tracked during an in-flight decision. Cleared when the
 /// server's `pending_decision` goes back to `None`.
@@ -699,12 +720,31 @@ pub fn spawn_decision_ui(
                 crabomination::card::Zone::Library => "your library",
                 _ => "that zone",
             };
-            spawn_optional_modal(
-                &mut commands,
-                &ui_fonts,
-                &format!("Send {name} to the command zone instead of {zone}?"),
-                false,
-            );
+            // A standing "Always Yes / Always No" for this commander answers
+            // without a modal, logged like an auto-answered trigger.
+            if let Some(answer) = auto_answers.commander_redirect(*commander) {
+                if let Some(outbox) = &outbox {
+                    outbox.submit(GameAction::SubmitDecision(DecisionAnswer::Bool(answer)));
+                    log.push_event(
+                        format!(
+                            "Auto-answered: {name} {} (set via Always)",
+                            if answer {
+                                "returns to the command zone".to_string()
+                            } else {
+                                format!("goes to {zone}")
+                            },
+                        ),
+                        theme::TEXT_SECONDARY,
+                    );
+                }
+            } else {
+                spawn_optional_modal(
+                    &mut commands,
+                    &ui_fonts,
+                    &format!("Send {name} to the command zone instead of {zone}?"),
+                    true,
+                );
+            }
         }
         DecisionWire::ChooseLegendToKeep { name, duplicates, .. } => {
             state.spawned_for = Some(key);
@@ -2651,8 +2691,8 @@ fn spawn_optional_modal(
                 });
             }
         });
-        // Standing-answer row (optional triggers only — a commander redirect
-        // is a one-off): smaller, tertiary styling, so the one-shot Yes/No
+        // Standing-answer row (optional triggers and CR 903.9b commander
+        // redirects): smaller, tertiary styling, so the one-shot Yes/No
         // stays the visually primary choice.
         if show_always {
             p.spawn(Node {
@@ -2723,8 +2763,14 @@ pub fn handle_optional_buttons(
     // identical prompts auto-answer in `spawn_decision_ui`.
     for (interaction, btn) in &always_buttons {
         if *interaction == Interaction::Pressed {
-            if let Some(DecisionWire::OptionalTrigger { source, description }) = decision {
-                auto_answers.0.insert((*source, description.clone()), btn.0);
+            match decision {
+                Some(DecisionWire::OptionalTrigger { source, description }) => {
+                    auto_answers.0.insert((*source, description.clone()), btn.0);
+                }
+                Some(DecisionWire::CommanderRedirect { commander, .. }) => {
+                    auto_answers.set_commander_redirect(*commander, btn.0);
+                }
+                _ => {}
             }
             outbox.submit(GameAction::SubmitDecision(DecisionAnswer::Bool(btn.0)));
             state.spawned_for = None;
@@ -4225,5 +4271,27 @@ pub fn handle_creature_type_buttons(
         }
         state.spawned_for = None;
         return;
+    }
+}
+
+#[cfg(test)]
+mod commander_redirect_tests {
+    use super::*;
+
+    /// CR 903.9b — "Always" on the redirect prompt is remembered per
+    /// commander, and never answers an optional trigger from the same card.
+    #[test]
+    fn standing_redirect_answer_is_per_commander() {
+        let mut auto = AutoOptionalAnswers::default();
+        let (a, b) = (CardId(1), CardId(2));
+        assert_eq!(auto.commander_redirect(a), None);
+        auto.set_commander_redirect(a, true);
+        auto.set_commander_redirect(b, false);
+        assert_eq!(auto.commander_redirect(a), Some(true));
+        assert_eq!(auto.commander_redirect(b), Some(false));
+        // An optional trigger on the same card is a different prompt.
+        assert_eq!(auto.0.get(&(a, "When this enters, draw".to_string())), None);
+        // A new game starts from a fresh resource (menu.rs re-inserts it).
+        assert_eq!(AutoOptionalAnswers::default().commander_redirect(a), None);
     }
 }

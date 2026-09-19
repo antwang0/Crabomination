@@ -1748,6 +1748,7 @@ mod tests {
             reconfigurable: false,
             modified: false,
             can_attack_despite_defender: false,
+            attacking_player: None,
         }
     }
 

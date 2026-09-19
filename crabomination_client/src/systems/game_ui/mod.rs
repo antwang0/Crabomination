@@ -3439,7 +3439,9 @@ pub fn auto_advance_p0(
         || !cv.may_play_lands.is_empty()
         || !cv.castable_plotted.is_empty()
         || !cv.adventure_exile.is_empty()
-        || !cv.hand_activatable.is_empty();
+        || !cv.hand_activatable.is_empty()
+        // CR 903.8 — a flash commander castable from the command zone.
+        || !cv.castable_command.is_empty();
 
     // Auto-pass a window only when the viewer has nothing to do there —
     // unless they've explicitly asked to fast-forward. End Turn (E) skips
@@ -4643,16 +4645,15 @@ pub fn handle_game_input(
                         });
                     }
                 } else if card.needs_target {
-                    // Reuse the targeting modal — when the user picks a
-                    // target it submits CastSpell today. We mark the
-                    // pending cast as command-zone-sourced via a new
-                    // resource if/when we wire the prompt for it.
-                    // For now: skip targeted commanders from the
-                    // command zone (the Rofellos demo commander is
-                    // non-targeted, so this branch is dormant).
+                    // Reuse the targeting cursor; the `CommandZone` variant
+                    // makes the eventual pick submit `CastFromCommandZone`
+                    // (tax included) rather than a hand `CastSpell`, which
+                    // the engine rejects for a card outside the hand.
                     targeting.active = true;
                     targeting.pending_card_id = Some(card.id);
                     targeting.back_face_pending = false;
+                    targeting.pending_cast_variant =
+                        Some(crate::game::HandCastVariant::CommandZone);
                 } else {
                     outbox.submit(GameAction::CastFromCommandZone {
                         card_id: card.id,
