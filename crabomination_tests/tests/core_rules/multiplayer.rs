@@ -3144,6 +3144,86 @@ fn cr_903_9a_commander_dies_then_returns_as_an_sba() {
     assert!(g.players[0].graveyard.iter().all(|c| c.id != cmd));
 }
 
+/// Put `cmd` from its owner's command zone onto the battlefield, the way the
+/// 903.9a test does — the seating is what the tally is keyed on, not the zone.
+fn command_zone_to_battlefield(g: &mut GameState, seat: usize, cmd: crabomination::card::CardId) {
+    let pos = g.players[seat].command.iter().position(|c| c.id == cmd).expect("in command zone");
+    let card = g.players[seat].command.remove(pos);
+    g.battlefield.push(card);
+    g.clear_sickness(cmd);
+}
+
+/// One seeded swing of `attacker` into `victim`, damage resolved.
+fn swing(g: &mut GameState, attacker: crabomination::card::CardId, victim: usize) {
+    g.priority.player_with_priority = g.active_player_idx;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker,
+        target: AttackTarget::Player(victim),
+    }]))
+    .expect("declare the attack");
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().expect("combat resolves");
+    drain_stack(g);
+}
+
+/// CR 903.10a — the 21 is "by the same commander over the course of the
+/// game", so the tally is a property of the *card* and survives it leaving
+/// the battlefield. A commander that dies, goes to the command zone under
+/// 903.9a and comes back keeps every point it has dealt: the key is
+/// `(victim, CardId)` and a command-zone round trip does not re-issue the id.
+#[test]
+fn cr_903_10a_commander_damage_survives_a_zone_change() {
+    let mut g = multi_player_game(3);
+    let cmd = g.seat_commanders(0, vec![test_commander()])[0];
+    g.active_player_idx = 0;
+    command_zone_to_battlefield(&mut g, 0, cmd);
+    swing(&mut g, cmd, 1);
+    assert_eq!(g.commander_damage.get(&(1, cmd)).copied(), Some(1), "one swing, one point");
+
+    // Round trip: battlefield → graveyard → command zone (CR 903.9a's SBA).
+    let mut evs = vec![];
+    g.destroy_permanent(cmd, false, &mut evs);
+    g.check_state_based_actions();
+    assert!(g.players[0].command.iter().any(|c| c.id == cmd), "back in the command zone");
+    command_zone_to_battlefield(&mut g, 0, cmd);
+    swing(&mut g, cmd, 1);
+
+    assert_eq!(
+        g.commander_damage.get(&(1, cmd)).copied(),
+        Some(2),
+        "the tally is cumulative across the zone change, not restarted",
+    );
+}
+
+/// CR 903.10a — and it survives a *control* change. "The same commander" is
+/// the card its owner designated (CR 903.3, which control does not move), so
+/// a stolen commander's combat damage still lands on the same
+/// `(victim, commander)` row — the thief does not get a fresh 21.
+#[test]
+fn cr_903_10a_commander_damage_survives_a_control_change() {
+    let mut g = multi_player_game(3);
+    let cmd = g.seat_commanders(0, vec![test_commander()])[0];
+    g.active_player_idx = 0;
+    command_zone_to_battlefield(&mut g, 0, cmd);
+    swing(&mut g, cmd, 1);
+    assert_eq!(g.commander_damage.get(&(1, cmd)).copied(), Some(1));
+
+    // Seat 2 takes it and swings at the same victim on their own turn.
+    g.battlefield.iter_mut().find(|c| c.id == cmd).expect("on the battlefield").controller = 2;
+    assert!(g.is_commander(cmd), "designation follows the card, not control (CR 903.3)");
+    g.active_player_idx = 2;
+    g.clear_sickness(cmd);
+    g.battlefield.iter_mut().find(|c| c.id == cmd).unwrap().tapped = false;
+    swing(&mut g, cmd, 1);
+
+    assert_eq!(
+        g.commander_damage.get(&(1, cmd)).copied(),
+        Some(2),
+        "the same commander, so the same row — stealing it does not reset the clock",
+    );
+}
+
 /// CR 903.10a / 704.6c — only *combat* damage from a commander counts
 /// toward 21. Non-combat damage from it (a pinger commander's ability, a
 /// fight) is ordinary damage.

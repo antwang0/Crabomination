@@ -435,20 +435,17 @@ mod tests {
     #[test]
     fn cr_903_seeded_pod_outcomes_match_the_committed_table() {
         // (seed, winner, turns, actions)
-        // Re-blessed for the auto-targeter's ranked "target opponent": the
-        // same `default_hostile_opponent` the defender already used now fills
-        // an open opponent slot on every cast too, so the two seeded games
-        // that were already off the seat order diverge again (92→63, 79→69
-        // turns; same winners). ⚠ Three games is a re-bless gate, not a
-        // measurement — the aggregate is 32,000 pod games a side, 2/3/4/5
-        // seats at two seeds, and it reads **identical** at two seats (the
-        // control: a duel has one candidate and the ranking never runs),
-        // -0.06/0.00 turns at three, -0.24/-0.17 at four and -0.37/-0.43 at
-        // five, 100 % decided with zero stalls on both sides.
+        // Re-blessed for the Judith list's retune (2026-09-19): 28 of its 72
+        // nonbasics changed, so all three games are different games. ⚠ Three
+        // games is a re-bless gate, not a measurement — the aggregate is
+        // 3,000 games a configuration at seed 43 and it reads Judith
+        // 23.2→33.6 % at two seats, 16.0→26.2 at three and 6.2→14.6 at four,
+        // with the field at four seats flattening 43.5/6.2/22.2/28.0 →
+        // 40.8/14.6/20.3/24.3, 100 % decided and zero stalls on both sides.
         const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
-            (0xC0FFEE, Some(3), 63, 3005),
-            (43, Some(2), 38, 1668),
-            (4242, Some(0), 69, 2882),
+            (0xC0FFEE, Some(1), 55, 2368),
+            (43, Some(3), 47, 2040),
+            (4242, Some(0), 47, 2223),
         ];
         let decks = rofellos_pod(4);
         let t = build_pod_template(&decks);
