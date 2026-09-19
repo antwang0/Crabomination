@@ -417,6 +417,34 @@ fn hellkite_courser_borrows_a_commander_until_the_end_step() {
     a_to_end_step(&mut g);
     assert!(g.battlefield_find(bears).is_none(), "returned at the end step");
     assert!(g.players[0].command.iter().any(|c| c.id == bears), "to the command zone");
+
+    // CR 400.7 — a commander that dies and is recast before the end step is
+    // a new object: the delayed "return it" has nothing to return.
+    let mut g = a_main_phase();
+    let bears = g.seat_commanders(0, vec![catalog::grizzly_bears()])[0];
+    let courser = g.add_card_to_battlefield(0, catalog::hellkite_courser());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.fire_self_etb_triggers(courser, 0);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bears).is_some());
+    g.remove_from_battlefield_to_graveyard_raw(bears);
+    g.check_state_based_actions();
+    assert!(g.players[0].command.iter().any(|c| c.id == bears), "back home via the SBA");
+    a_flood(&mut g, 0);
+    g.perform_action(GameAction::CastFromCommandZone {
+        card_id: bears,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+        alternative: false,
+        pitch_card: None,
+    })
+    .expect("recast the commander");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bears).is_some());
+    a_to_end_step(&mut g);
+    assert!(g.battlefield_find(bears).is_some(), "the recast commander stays");
 }
 
 /// Sanctum of Eternity returns your commander to your hand on your turn

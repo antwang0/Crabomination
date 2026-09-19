@@ -3,8 +3,6 @@
 //! Tests in `tests/recent_b/cmdr_etali.rs`.
 //!
 //! Residuals (approximated or omitted clauses; each card's doc has the detail):
-//! - Hellkite Courser: a commander that left and was recast before the end
-//!   step is still returned (one `CardId` across zones; CR 400.7 unmodelled).
 //! - Hunting Velociraptor: a Dinosaur with a printed alternative cost keeps
 //!   that one instead of the granted prowl (a card carries one alt cost).
 //! - _____ Goblin: the name stickers are the engine's stand-in sheets (not
@@ -694,8 +692,10 @@ pub fn cursed_mirror() -> CardDefinition {
 /// `Effect::PutCommanderOntoBattlefield`: not a cast (no tax); with two
 /// commanders in the command zone you choose one. The haste is an
 /// until-end-of-turn grant (the commander goes home in the end step anyway).
-/// Approximation: a commander that left and was recast before the end step is
-/// still returned (CR 400.7 new objects aren't tracked).
+/// CR 400.7 — the return reads the object that entered here
+/// (`Predicate::SourceIsSameObjectOnBattlefield`): a commander that left and
+/// was recast before the end step is a new object and stays; one that only
+/// transformed is the same object and goes home.
 pub fn hellkite_courser() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying],

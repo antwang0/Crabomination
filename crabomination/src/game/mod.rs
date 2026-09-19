@@ -16594,6 +16594,30 @@ impl GameState {
         ts
     }
 
+    /// CR 400.7 — move the delayed triggers that check
+    /// `Predicate::SourceIsSameObjectOnBattlefield { from }` on `card` to
+    /// `to`: an entry binds `UNBOUND_OBJECT_STAMP` to the entering object's
+    /// stamp, and a re-stamp that keeps the object (attach, transform, turn
+    /// face up) carries a bound one along. A card that leaves and comes back
+    /// gets a fresh stamp nothing is bound to — a new object. One scan of the
+    /// (usually empty) delayed-trigger list per stamp.
+    fn rebind_object_stamp(&mut self, card: CardId, from: u64, to: u64) {
+        use crate::effect::{Effect, Predicate};
+        for d in self.delayed_triggers.iter_mut() {
+            if d.source != card {
+                continue;
+            }
+            if let Effect::If {
+                cond: Predicate::SourceIsSameObjectOnBattlefield { battlefield_timestamp },
+                ..
+            } = &mut d.effect
+                && *battlefield_timestamp == from
+            {
+                *battlefield_timestamp = to;
+            }
+        }
+    }
+
     /// Remove the continuous effects whose source is `id` (source left the
     /// battlefield). CR 611.2b — a one-shot effect that created a continuous
     /// effect with no duration (`EffectDuration::Indefinite`) doesn't depend on
@@ -21114,6 +21138,9 @@ impl GameState {
                             land_ctrl = Some(c.controller);
                         }
                     }
+                    // CR 400.7 — a delayed "return it" scheduled as this
+                    // object entered is bound to the stamp it just got.
+                    self.rebind_object_stamp(*card_id, crate::effect::UNBOUND_OBJECT_STAMP, ts);
                     // Arboria — "put a nontoken permanent onto the battlefield
                     // during their last turn".
                     if let Some(p) = acted {
@@ -21141,18 +21168,31 @@ impl GameState {
                 // give the object a new timestamp.
                 GameEvent::AttachmentMoved { attachment, attached_to: Some(_) } => {
                     let ts = self.next_timestamp();
+                    let mut old = None;
                     if let Some(c) = self.battlefield_find_mut(*attachment) {
+                        old = Some(c.battlefield_timestamp);
                         c.battlefield_timestamp = ts;
+                    }
+                    // Same object, new timestamp (CR 400.7 doesn't apply).
+                    if let Some(old) = old {
+                        self.rebind_object_stamp(*attachment, old, ts);
                     }
                 }
                 GameEvent::Transformed { card_id } | GameEvent::TurnedFaceUp { card_id } => {
                     let ts = self.next_timestamp();
                     let mut face_up_ctrl = None;
+                    let mut old = None;
                     if let Some(c) = self.battlefield_find_mut(*card_id) {
+                        old = Some(c.battlefield_timestamp);
                         c.battlefield_timestamp = ts;
                         if matches!(e, GameEvent::TurnedFaceUp { .. }) {
                             face_up_ctrl = Some(c.controller);
                         }
+                    }
+                    // Transform / turn face up keep the object (CR 400.7
+                    // doesn't apply), so a bound "same object" check follows.
+                    if let Some(old) = old {
+                        self.rebind_object_stamp(*card_id, old, ts);
                     }
                     // CR 708 — "you turned a permanent face up this turn".
                     if let Some(p) = face_up_ctrl {

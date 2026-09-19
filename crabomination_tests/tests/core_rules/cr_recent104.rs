@@ -277,3 +277,35 @@ fn cr_119_4_a_phyrexian_pip_needs_the_life_to_pay_it() {
     .expect("one pip with life, one with the Swamp");
     assert_eq!(g.players[0].life, 1);
 }
+
+/// CR 400.7 — Hellkite Courser's "return it at the next end step" reads the
+/// object that entered (`Predicate::SourceIsSameObjectOnBattlefield`, bound to
+/// its entry stamp). Transforming keeps the object (CR 712.3), so the return
+/// follows it through the transform's new timestamp (CR 613.7g).
+#[test]
+fn cr_400_7_a_transformed_permanent_is_still_the_object_a_delayed_return_names() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    use crabomination::game::types::TurnStep;
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let delver = g.seat_commanders(0, vec![catalog::delver_of_secrets()])[0];
+    let courser = g.add_card_to_battlefield(0, catalog::hellkite_courser());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.fire_self_etb_triggers(courser, 0);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(delver).is_some(), "put onto the battlefield");
+    let mut events = Vec::new();
+    g.transform_permanent(delver, &mut events);
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(delver).unwrap().transformed, "it transformed");
+    while g.step != TurnStep::End {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+    }
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(delver).is_none(), "the transformed commander still goes home");
+    assert!(g.players[0].command.iter().any(|c| c.id == delver));
+}

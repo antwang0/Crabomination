@@ -139,12 +139,16 @@ impl GameState {
             self.grant_keyword_eot(chosen, Keyword::Haste);
         }
         if return_at_end_step {
+            // CR 400.7 — "return it": only the object that entered here, not
+            // the same card back on the battlefield after a trip elsewhere.
+            // Bound to its entry stamp when this batch's entry is stamped.
+            let battlefield_timestamp = crate::effect::UNBOUND_OBJECT_STAMP;
             self.delayed_triggers.push(crate::game::types::DelayedTrigger {
                 controller,
                 source: chosen,
                 kind: crate::game::types::DelayedKind::NextEndStep,
                 effect: Effect::If {
-                    cond: Predicate::SourceOnBattlefield,
+                    cond: Predicate::SourceIsSameObjectOnBattlefield { battlefield_timestamp },
                     then: Box::new(Effect::Move { what: Selector::This, to: ZoneDest::Command }),
                     else_: Box::new(Effect::Noop),
                 },

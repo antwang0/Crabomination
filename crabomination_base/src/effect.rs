@@ -1313,6 +1313,10 @@ impl Value {
 
 // ── Predicate ────────────────────────────────────────────────────────────────
 
+/// `Predicate::SourceIsSameObjectOnBattlefield`'s "bind me to the stamp this
+/// object is about to get as it enters" value.
+pub const UNBOUND_OBJECT_STAMP: u64 = u64::MAX;
+
 /// A boolean game-state condition (for `Effect::If` / cast-time checks).
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Predicate {
@@ -1556,6 +1560,16 @@ pub enum Predicate {
     /// intervening-'if' half of "…if [this] is still on the battlefield"
     /// (Shirei, Shizo's Caretaker's delayed return).
     SourceOnBattlefield,
+    /// CR 400.7 — the source is on the battlefield as the SAME object a
+    /// delayed trigger was scheduled for: its `battlefield_timestamp` (stamped
+    /// fresh on every entry) still equals the recorded one. A card keeps its
+    /// `CardId` across zones, so `SourceOnBattlefield` alone reads a permanent
+    /// that left and came back as the one that was there (Hellkite Courser's
+    /// end-step return). Schedule it with [`UNBOUND_OBJECT_STAMP`] as the
+    /// object enters: the entry stamp binds it (`rebind_object_stamp`), and
+    /// attach / transform / turn-face-up re-stamps carry it along, since those
+    /// keep the object.
+    SourceIsSameObjectOnBattlefield { battlefield_timestamp: u64 },
     /// The source is blocking a creature that at least one *other* blocker
     /// matching `filter` is also blocking, and every blocker on it matches
     /// `filter` (Wall of Caltrops' banding intervening-'if').

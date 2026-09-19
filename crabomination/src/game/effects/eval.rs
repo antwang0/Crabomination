@@ -2053,6 +2053,12 @@ impl GameState {
             Predicate::SourceOnBattlefield => {
                 ctx.source.is_some_and(|cid| self.battlefield_find(cid).is_some())
             }
+            Predicate::SourceIsSameObjectOnBattlefield { battlefield_timestamp } => {
+                ctx.source.is_some_and(|cid| {
+                    self.battlefield_find(cid)
+                        .is_some_and(|c| c.battlefield_timestamp == *battlefield_timestamp)
+                })
+            }
             // Wall of Caltrops — every blocker on the creature the source is
             // blocking matches `filter`, and at least one of them isn't the
             // source.
