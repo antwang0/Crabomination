@@ -781,6 +781,23 @@ impl GameState {
                 .map(|c| c.crewed_by.len() as i32)
                 .unwrap_or(0),
             Value::GraveyardSizeOf(p) => self.resolve_player(p, ctx).map(|p| self.players[p].graveyard.len() as i32).unwrap_or(0),
+            Value::GraveyardsWithAtLeast(n) => self
+                .players
+                .iter()
+                .filter(|p| p.is_alive() && p.graveyard.len() >= *n as usize)
+                .count() as i32,
+            Value::GreatestPowerAmongCards(s) => self
+                .resolve_selector(s, ctx)
+                .into_iter()
+                .filter_map(|e| match e {
+                    EntityRef::Permanent(cid) | EntityRef::Card(cid) => {
+                        self.find_card_anywhere(cid).map(|c| c.definition.power)
+                    }
+                    EntityRef::Player(_) => None,
+                })
+                .max()
+                .unwrap_or(0)
+                .max(0),
             Value::MaxGraveyardSize => self
                 .players
                 .iter()
@@ -4358,6 +4375,9 @@ impl GameState {
                     // sets `attached_to`, so require the attachment be an
                     // enchantment to exclude it.
                     R::IsEnchanted => self.permanent_is_enchanted(*cid),
+                    R::IsCommander => {
+                        self.players.get(card.controller).is_some_and(|p| p.commanders.contains(cid))
+                    }
                     R::PutIntoGraveyardFromBattlefieldThisTurn => {
                         self.deaths.graveyard_from_battlefield_this_turn.contains(cid)
                     }
@@ -5545,6 +5565,10 @@ impl GameState {
             // battlefield: the Aura's `attached_to` still points at it during
             // the death replacement (Necromancer's Magemark).
             R::IsEnchanted => self.permanent_is_enchanted(card.id),
+            R::IsCommander => self
+                .players
+                .get(card.controller)
+                .is_some_and(|p| p.commanders.contains(&card.id)),
             // CR 301.5 — same reasoning for "equipped" (Rakdos Riteknife's
             // tap-an-equipped-creature cost).
             R::IsEquipped => self.attached_equipment_count(card.id) > 0,

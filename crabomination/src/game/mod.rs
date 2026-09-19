@@ -7702,6 +7702,7 @@ impl GameState {
                 duration: MayPlayDuration::EndOfControllersNextTurn,
                 exile_after: false,
                 miracle: false,
+                pay_life: false,
             });
             card.granted_alt_cast_cost_eot = Some(cost);
         }
@@ -12650,14 +12651,23 @@ impl GameState {
                     continue;
                 }
                 for sa in &card.definition.static_abilities {
-                    let crate::effect::StaticEffect::NotCreatureWhileDevotionBelow {
-                        colors,
-                        threshold,
-                    } = &sa.effect
-                    else {
-                        continue;
+                    let not_creature = match &sa.effect {
+                        crate::effect::StaticEffect::NotCreatureWhileDevotionBelow {
+                            colors,
+                            threshold,
+                        } => (self.devotion_to(card.controller, colors) as u32) < *threshold,
+                        // Arvinox — "isn't a creature unless [condition]".
+                        crate::effect::StaticEffect::NotCreatureUnless { condition } => {
+                            let ctx = crate::game::effects::EffectContext::for_ability(
+                                card.id,
+                                card.controller,
+                                None,
+                            );
+                            !self.evaluate_predicate(condition, &ctx)
+                        }
+                        _ => continue,
                     };
-                    if (self.devotion_to(card.controller, colors) as u32) < *threshold {
+                    if not_creature {
                         all_effects.push(ContinuousEffect {
                             timestamp: card.object_timestamp(),
                             source: card.id,
@@ -19104,6 +19114,7 @@ impl GameState {
                 duration: crate::card::MayPlayDuration::WhileExiled,
                 exile_after: false,
                 miracle: false,
+                pay_life: false,
             });
             let card_id = card.id;
             self.exile.push(card);
@@ -19123,6 +19134,7 @@ impl GameState {
                 duration: crate::card::MayPlayDuration::EndOfThisTurn,
                 exile_after: false,
                 miracle: false,
+                pay_life: false,
             });
             let card_id = card.id;
             self.exile.push(card);
@@ -19634,6 +19646,7 @@ impl GameState {
                 duration: crate::card::MayPlayDuration::EndOfThisStep,
                 exile_after: false,
                 miracle: true,
+                pay_life: false,
             });
             card.granted_alt_cast_cost_eot = Some(cost);
             self.step_bounded_may_play = true;
@@ -25027,6 +25040,7 @@ impl GameState {
                             duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
                             exile_after: false,
                             miracle: false,
+                            pay_life: false,
                         });
                         card.granted_alt_cast_cost_eot = Some(taxed);
                         self.exile.push(card);
@@ -27941,6 +27955,21 @@ fn static_effect_to_effects(
                     modification: Modification::RemoveAllAbilities,
                 })
             }
+            // Sludge Monster — only the matching permanents lose all abilities.
+            StaticEffect::MatchingLoseAllAbilities { applies_to } => {
+                debug_assert!(static_effect_strips_abilities(effect), "strip gate: Sludge Monster");
+                if let Some(affected) = selector_to_affected(applies_to, card) {
+                    out.push(ContinuousEffect {
+                        timestamp,
+                        source,
+                        affected,
+                        layer: Layer::L6Ability,
+                        sublayer: None,
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::RemoveAllAbilities,
+                    });
+                }
+            }
             StaticEffect::SetBasePtForFilter { applies_to, power, toughness } => {
                 if let Some(affected) = selector_to_affected(applies_to, card) {
                     out.push(ContinuousEffect {
@@ -28398,6 +28427,7 @@ fn static_effect_to_effects(
             // NotCreatureWhileDevotionBelow — needs live devotion count,
             // resolved in `gather_continuous_effects` against the GameState.
             | StaticEffect::NotCreatureWhileDevotionBelow { .. }
+            | StaticEffect::NotCreatureUnless { .. }
             // NonAuraEnchantmentsAreCreatures — Starfield's gate reads the live
             // enchantment count; resolved in `gather_continuous_effects`.
             | StaticEffect::NonAuraEnchantmentsAreCreatures { .. }

@@ -68,6 +68,7 @@ fn cr_118_may_play_permission_covers_a_land_in_exile() {
             duration: MayPlayDuration::WhileExiled,
             exile_after: false,
             miracle: false,
+            pay_life: false,
         });
     };
     grant(&mut g, 1);

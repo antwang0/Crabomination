@@ -1102,6 +1102,7 @@ impl Effect {
             | Effect::RevealTopOfLibrary { who }
             | Effect::RevealTopThenShuffle { who, .. }
             | Effect::RemoveAllPoison { who }
+            | Effect::RemoveAllPlayerCounters { who }
             | Effect::PlayerCantCastMatchingThisTurn { who, .. }
             | Effect::PlayerCantActivateNonManaAbilitiesThisTurn { who }
             | Effect::ChooseFromHandToTopOfLibrary { who, .. }
@@ -1807,6 +1808,7 @@ impl Effect {
                 sel_has_target(what) || value_has_target(count)
             }
             Effect::GrantMayPlay { what, .. }
+            | Effect::GrantMayPlayForLife { what, .. }
             | Effect::StampMayPlaySurcharge { what, .. } => sel_has_target(what),
             Effect::GrantCastBackFromGraveyard { what } => sel_has_target(what),
             Effect::GainActivatedAbility { what, .. } => sel_has_target(what),
@@ -2664,6 +2666,7 @@ impl Effect {
             | Effect::SwitchPowerToughness { what, .. }
             | Effect::AddCreatureTypes { what, .. }
             | Effect::GrantMayPlay { what, .. }
+            | Effect::GrantMayPlayForLife { what, .. }
             | Effect::StampMayPlaySurcharge { what, .. }
             | Effect::DoubleCountersOnEach { what, .. }
             | Effect::DoubleAllCountersOn { what }
@@ -4645,6 +4648,7 @@ impl Effect {
                 | Effect::ReplaceColorWord { what, .. }
                 | Effect::ReplaceBasicLandType { what, .. }
                 | Effect::GrantMayPlay { what, .. }
+                | Effect::GrantMayPlayForLife { what, .. }
                 | Effect::CastWithoutPayingImmediate { what, .. }
                 | Effect::DoubleCountersOnEach { what, .. }
                 | Effect::DoubleAllCountersOn { what }

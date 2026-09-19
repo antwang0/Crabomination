@@ -24775,6 +24775,7 @@ mod stack_response_tests {
                     duration: crate::card::MayPlayDuration::EndOfThisTurn,
                     exile_after: false,
                     miracle: false,
+                    pay_life: false,
                 });
             }
         };

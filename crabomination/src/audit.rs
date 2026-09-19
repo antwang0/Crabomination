@@ -38,6 +38,11 @@ pub const REVIEWED_DEAD_MODES: &[(&str, &str)] = &[(
     "Elite Interceptor",
     "\"You may tap or untap target creature\" — declining is the empty arm, \
      which is the printed card and not a gap",
+), (
+    "Braids, Arisen Nightmare",
+    "\"You may sacrifice an artifact, creature, enchantment, land, or \
+     planeswalker\" — the sixth arm is declining the sacrifice, which is the \
+     printed card and not a gap",
 )];
 
 /// A selectable capability that resolves to nothing.

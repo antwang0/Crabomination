@@ -800,6 +800,15 @@ pub enum Value {
     /// future Tombstalker / Mercurial Chemister-style scaling). Distinct
     /// from `GraveyardSizeOf(p)` which only inspects a single player.
     MaxGraveyardSize,
+    /// How many alive players' graveyards hold at least `n` cards — "draw a
+    /// card for each graveyard with seven or more cards in it" (The Master of
+    /// Lake-town).
+    GraveyardsWithAtLeast(u32),
+    /// The greatest *printed* power among the cards the selector resolves to,
+    /// in whatever zone they sit (a battlefield permanent reads its printed
+    /// power too); 0 when none. Szat's Will's "the greatest power among
+    /// creature cards exiled this way".
+    GreatestPowerAmongCards(Box<Selector>),
     /// Number of cards in `who`'s library. Used by Body of Research's
     /// "for each card in your library" Fractal-token scaling.
     LibrarySizeOf(PlayerRef),
@@ -4769,6 +4778,10 @@ pub enum Effect {
     },
     /// "`who` loses all poison counters" (Leeches). Emits no `PoisonAdded`.
     RemoveAllPoison { who: PlayerRef },
+    /// "Each resolved player loses all counters" — every player counter kind
+    /// the engine tracks (poison, energy, experience, rad). Final Act's
+    /// fifth mode.
+    RemoveAllPlayerCounters { who: PlayerRef },
     /// "Deals `amount` damage to each creature for each Aura attached to that
     /// creature" (Baki's Curse). Creatures with no Aura take nothing.
     DamageEachCreaturePerAura { amount: Value },
@@ -7327,6 +7340,11 @@ pub enum Effect {
     /// land the resolved instant/sorcery in exile (Nita, The Dawning
     /// Archaic). For permanent spells the flag is ignored — they enter
     /// the battlefield normally.
+    /// "You may play those cards [duration]. If you cast a spell this way,
+    /// pay life equal to its mana value rather than pay its mana cost"
+    /// (Inside Information). Stamps a `MayPlayPermission` with `pay_life` on
+    /// each resolved card: the cast costs no mana and bills life instead.
+    GrantMayPlayForLife { what: Selector, duration: crate::card::MayPlayDuration },
     GrantMayPlay {
         what: Selector,
         duration: crate::card::MayPlayDuration,
@@ -9984,6 +10002,7 @@ pub fn static_effect_changes_card_types(effect: &StaticEffect) -> bool {
         // counter count, a predicate), so it can't route through
         // `static_effect_to_effects`, but the printed static is the same tell.
         SE::NotCreatureWhileDevotionBelow { .. }
+        | SE::NotCreatureUnless { .. }
         | SE::NonAuraEnchantmentsAreCreatures { .. }
         | SE::NoncreatureArtifactsAreCreatures
         | SE::SelfIsCreatureWhileCountersAtLeast { .. }
@@ -10067,6 +10086,7 @@ pub fn static_effect_strips_abilities(effect: &StaticEffect) -> bool {
     match effect {
         // Dress Down; Titania's Song; Alpine Moon; Ultima.
         SE::CreaturesLoseAllAbilities
+        | SE::MatchingLoseAllAbilities { .. }
         | SE::NoncreatureArtifactsLoseAbilities
         | SE::NamedLandsNeutralized
         | SE::BlightedLandsNeutralized => true,
