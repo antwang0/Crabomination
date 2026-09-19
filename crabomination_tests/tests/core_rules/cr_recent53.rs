@@ -574,6 +574,28 @@ fn cr_603_6_land_put_into_graveyard_fans_out_per_land() {
     );
 }
 
+/// CR 603.2c — landfall is "whenever **a** land you control enters": two lands
+/// entering in one batch (a blink, Entish Restoration's search) are two
+/// triggers. `LandPlayed` read a batch as one until it joined
+/// `event_kind_fans_out`.
+#[test]
+fn cr_603_2c_landfall_fans_out_per_land() {
+    let mut g = two_player_game();
+    let kudzu = g.add_card_to_battlefield(0, catalog::vinelasher_kudzu());
+    let a = g.add_card_to_battlefield(0, catalog::forest());
+    let b = g.add_card_to_battlefield(0, catalog::forest());
+    g.dispatch_triggers_for_events(&[
+        GameEvent::LandPlayed { player: 0, card_id: a, played: false },
+        GameEvent::LandPlayed { player: 0, card_id: b, played: false },
+    ]);
+    let from_kudzu = g
+        .stack
+        .iter()
+        .filter(|item| matches!(item, StackItem::Trigger { source, .. } if *source == kudzu))
+        .count();
+    assert_eq!(from_kudzu, 2, "one landfall trigger per land");
+}
+
 /// CR 603.6 — "whenever you create **a** token" is per token: three Spirits
 /// from one Spectral Procession drain for three.
 #[test]

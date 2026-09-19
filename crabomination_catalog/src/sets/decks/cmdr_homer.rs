@@ -34,11 +34,6 @@
 //!   - Afterlife from the Loam: the per-player picks are chosen on resolution
 //!     rather than targeted, and the Zombie rider covers every creature you
 //!     control that entered from a graveyard this turn.
-//!   - Landfall off simultaneous land entries (Gandalf's three-land blink,
-//!     Entish Restoration, Through the Forest Gate, Reshape the Earth) fires
-//!     once per batch, not once per land: the engine's `LandPlayed` kind is
-//!     not in `event_kind_fans_out` (CR 603.2c gap, engine-wide, left alone
-//!     here because fixing it moves every landfall card).
 //!   - Maskwood Nexus: creatures you control gain changeling (layer 6), which
 //!     computed-keyword readers see but on-battlefield creature-type filters
 //!     (e.g. Homer's count) do not; the clause for creature spells and cards
@@ -291,8 +286,8 @@ pub fn rikala_homarid_king() -> CardDefinition {
 /// Gandalf, Shadow's Foe — {5}{U}{U} Legendary Creature — Avatar Wizard 3/4.
 /// Vigilance. ETB: exile up to three target lands you control, then return
 /// them to the battlefield tapped under their owner's control. Landfall —
-/// draw a card and put a +1/+1 counter on Gandalf. (The blinked lands re-enter
-/// in one batch, which the engine's landfall reads as a single trigger.)
+/// draw a card and put a +1/+1 counter on Gandalf. The blinked lands re-enter
+/// in one batch and each is its own landfall (CR 603.2c).
 pub fn gandalf_shadows_foe() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Vigilance],

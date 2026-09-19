@@ -552,6 +552,12 @@ pub(crate) fn event_kind_fans_out(kind: &EventKind) -> bool {
             // The plural "one or more" wordings on these kinds pin themselves
             // (Moonshadow, The Gitrog Monster, Kambal's second half) or
             // already carried `once_per_turn`, which excludes fan-out anyway.
+            //   LandPlayed            landfall — Gandalf, Shadow's Foe blinking
+            //                         two lands drew 1 and grew by 1 ("whenever
+            //                         **a** land you control enters"); no catalog
+            //                         card prints the plural wording (census of
+            //                         the 88 `LandPlayed` triggers at the change)
+            | EventKind::LandPlayed
             | EventKind::PutIntoGraveyard
             | EventKind::LandPutIntoGraveyard
             | EventKind::TokenCreated

@@ -226,11 +226,11 @@ fn gandalf_blinks_lands_and_their_landfall_feeds_him() {
     let islands: Vec<_> = g.battlefield.iter().filter(|c| c.definition.name == "Island").collect();
     assert_eq!(islands.len(), 2);
     assert!(islands.iter().all(|c| c.tapped), "returned tapped");
-    // The two lands re-enter in one batch; the engine's landfall reads a
-    // batch as one trigger (module residual).
+    // CR 603.2c — the two lands re-enter in one batch and each is its own
+    // landfall: two draws, two counters.
     let counters = g.battlefield_find(gandalf).unwrap().counter_count(CounterType::PlusOnePlusOne);
-    assert!(counters >= 1);
-    assert_eq!(g.players[0].hand.len(), hand - 1 + counters as usize);
+    assert_eq!(counters, 2);
+    assert_eq!(g.players[0].hand.len(), hand - 1 + 2);
     // A later land drop is its own landfall.
     play_land(&mut g, 0, catalog::island());
     assert_eq!(
