@@ -4084,3 +4084,96 @@ fn cr_800_4a_for_each_opponent_does_not_count_the_departed() {
          is not an opponent who 'can't'",
     );
 }
+
+/// CR 800.4c — "If an effect that gives a player still in the game control of
+/// an object ends, there is no other effect giving control of that object to
+/// another player in the game, and the player who controlled that object by
+/// default has left the game, the object is exiled. This is not a state-based
+/// action. It happens as soon as the control-changing effect ends."
+///
+/// Three deep, which is why CR 800.4a's own revert does not cover it: seat 2
+/// owns the Bears, seat 1 takes them permanently, seat 0 takes them until end
+/// of turn, seat 1 leaves. 800.4a only reverts permanents the departing seat
+/// controls *at that moment*, and seat 1 controls nothing — so the Bears sit
+/// under seat 0 until the Act of Treason ends, and then the seat they would
+/// go back to is not in the game.
+///
+/// `change_control` refuses the move under CR 800.4b and returns `None`, so
+/// without this rule seat 0 keeps a permanent for the rest of the game.
+#[test]
+fn cr_800_4c_control_reverting_to_a_departed_seat_exiles_the_object() {
+    use crabomination::game::types::Target;
+    let mut g = multi_player_game(3);
+    let bears = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    // Seat 1's permanent steal: no reversion entry, which is the whole point.
+    g.battlefield_find_mut(bears).unwrap().controller = 1;
+
+    let treason = g.add_card_to_hand(0, catalog::act_of_treason());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: treason,
+        target: Some(Target::Permanent(bears)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("cast Act of Treason");
+    while !g.stack.is_empty() {
+        g.resolve_top_of_stack().expect("resolve");
+    }
+    assert_eq!(g.battlefield_find(bears).unwrap().controller, 0, "seat 0 has it for the turn");
+
+    g.players[1].life = 0;
+    g.check_state_based_actions();
+    assert!(!g.players[1].is_alive());
+    assert_eq!(
+        g.battlefield_find(bears).unwrap().controller,
+        0,
+        "CR 800.4a leaves it alone — seat 1 controls nothing to revert",
+    );
+
+    g.do_cleanup(&mut vec![]);
+    assert!(
+        g.battlefield_find(bears).is_none(),
+        "CR 800.4c — the default controller is gone, so the object is exiled",
+    );
+    assert!(g.exile.iter().any(|c| c.id == bears), "and exiled is where it went");
+}
+
+/// The control for the rule above: with the default controller still in the
+/// game the reversion is the ordinary one, so 800.4c changes nothing about
+/// any board where nobody has left — which is every duel.
+#[test]
+fn cr_800_4c_an_ordinary_reversion_is_untouched() {
+    use crabomination::game::types::Target;
+    let mut g = multi_player_game(3);
+    let bears = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    g.battlefield_find_mut(bears).unwrap().controller = 1;
+    let treason = g.add_card_to_hand(0, catalog::act_of_treason());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: treason,
+        target: Some(Target::Permanent(bears)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("cast Act of Treason");
+    while !g.stack.is_empty() {
+        g.resolve_top_of_stack().expect("resolve");
+    }
+    g.do_cleanup(&mut vec![]);
+    assert_eq!(
+        g.battlefield_find(bears).unwrap().controller,
+        1,
+        "back to the seat that held it by default",
+    );
+}
