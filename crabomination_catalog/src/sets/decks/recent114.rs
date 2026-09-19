@@ -267,13 +267,10 @@ pub fn nevermore() -> CardDefinition {
         name: "Nevermore",
         cost: cost(&[generic(1), w(), w()]),
         card_types: vec![CardType::Enchantment],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::NameCard {
-                what: Selector::This,
-                restrict_to: None,
-            },
-        }],
+        as_enters_effect: Some(Effect::NameCard {
+            what: Selector::This,
+            restrict_to: None,
+        }),
         static_abilities: vec![StaticAbility {
             description: "Spells with the chosen name can't be cast.",
             effect: StaticEffect::NamedSpellCantBeCast,

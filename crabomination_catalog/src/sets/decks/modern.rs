@@ -21245,11 +21245,10 @@ pub fn kari_zev_skyship_raider() -> CardDefinition {
 
 /// Pithing Needle — {1} Artifact. "As ~ enters, choose a card name.
 /// Activated abilities of sources with the chosen name can't be activated
-/// unless they're mana abilities." ETB `Effect::NameCard` stamps the chosen
-/// name; `activate_ability` suppresses non-mana abilities of matching sources.
+/// unless they're mana abilities." CR 614.12 — the name is chosen as an
+/// `as_enters_effect`, not off a trigger; `activate_ability` suppresses
+/// non-mana abilities of matching sources.
 pub fn pithing_needle() -> CardDefinition {
-    use crate::card::TriggeredAbility;
-    use crate::effect::{EventKind, EventScope, EventSpec};
     CardDefinition {
         name: "Pithing Needle",
         cost: cost(&[generic(1)]),
@@ -21259,13 +21258,10 @@ pub fn pithing_needle() -> CardDefinition {
                           activated unless they're mana abilities.",
             effect: StaticEffect::NamedSourcesAbilitiesCantBeActivated,
         }],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::NameCard {
-                what: Selector::This,
-                restrict_to: None,
-            },
-        }],
+        as_enters_effect: Some(Effect::NameCard {
+            what: Selector::This,
+            restrict_to: None,
+        }),
         ..Default::default()
     }
 }
@@ -23188,8 +23184,6 @@ pub fn robber_of_the_rich() -> CardDefinition {
 /// with the chosen name can't be activated unless they're mana abilities."
 /// Shares Pithing Needle's `Effect::NameCard` + `activate_ability` suppression.
 pub fn phyrexian_revoker() -> CardDefinition {
-    use crate::card::TriggeredAbility;
-    use crate::effect::{EventKind, EventScope, EventSpec};
     CardDefinition {
         name: "Phyrexian Revoker",
         cost: cost(&[generic(2)]),
@@ -23205,13 +23199,10 @@ pub fn phyrexian_revoker() -> CardDefinition {
                           activated unless they're mana abilities.",
             effect: StaticEffect::NamedSourcesAbilitiesCantBeActivated,
         }],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::NameCard {
-                what: Selector::This,
-                restrict_to: None,
-            },
-        }],
+        as_enters_effect: Some(Effect::NameCard {
+            what: Selector::This,
+            restrict_to: None,
+        }),
         ..Default::default()
     }
 }
@@ -53936,7 +53927,7 @@ pub fn transmogrify() -> CardDefinition {
     }
 }
 
-/// Disruptor Flute — {2} Artifact, Flash. Names a card on enter: spells
+/// Disruptor Flute — {2} Artifact, Flash. Names a card *as* it enters: spells
 /// with that name cost {3} more; non-mana abilities of matching sources
 /// are locked (shared Pithing Needle machinery).
 pub fn disruptor_flute() -> CardDefinition {
@@ -53945,10 +53936,10 @@ pub fn disruptor_flute() -> CardDefinition {
         cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact],
         keywords: vec![Keyword::Flash],
-        triggered_abilities: vec![etb(Effect::NameCard {
+        as_enters_effect: Some(Effect::NameCard {
             what: Selector::This,
             restrict_to: None,
-        })],
+        }),
         static_abilities: vec![
             StaticAbility {
                 description: "Spells with the chosen name cost {3} more to cast.",
@@ -56584,8 +56575,8 @@ pub fn voice_of_resurgence() -> CardDefinition {
     }
 }
 
-/// Meddling Mage — {W}{U} 2/2. ETB: name a nonland card; spells with the
-/// chosen name can't be cast.
+/// Meddling Mage — {W}{U} 2/2. As it enters, name a nonland card; spells
+/// with the chosen name can't be cast.
 pub fn meddling_mage() -> CardDefinition {
     CardDefinition {
         name: "Meddling Mage",
@@ -56597,13 +56588,10 @@ pub fn meddling_mage() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::NameCard {
-                what: Selector::This,
-                restrict_to: None,
-            },
-        }],
+        as_enters_effect: Some(Effect::NameCard {
+            what: Selector::This,
+            restrict_to: None,
+        }),
         static_abilities: vec![StaticAbility {
             description: "Spells with the chosen name can't be cast.",
             effect: StaticEffect::NamedSpellCantBeCast,
@@ -57293,7 +57281,7 @@ pub fn kataki_wars_wage() -> CardDefinition {
     }
 }
 
-/// Alpine Moon — {R} Enchantment. ETB: choose a nonbasic land card name.
+/// Alpine Moon — {R} Enchantment. As it enters, choose a nonbasic land name.
 /// Opponents' lands with that name lose all land types and abilities and
 /// gain "{T}: Add one mana of any color."
 pub fn alpine_moon() -> CardDefinition {
@@ -57301,10 +57289,10 @@ pub fn alpine_moon() -> CardDefinition {
         name: "Alpine Moon",
         cost: cost(&[r()]),
         card_types: vec![CardType::Enchantment],
-        triggered_abilities: vec![etb(Effect::NameCard {
+        as_enters_effect: Some(Effect::NameCard {
             what: Selector::This,
             restrict_to: None,
-        })],
+        }),
         static_abilities: vec![
             StaticAbility {
                 description: "Lands your opponents control with the chosen name lose all land types and abilities.",

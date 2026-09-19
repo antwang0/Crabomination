@@ -176,3 +176,73 @@ fn cr_614_12_both_as_enters_replacements_apply_on_one_entry() {
     let cp = g.computed_permanent(id).expect("entered");
     assert_eq!((cp.power, cp.toughness), (4, 4), "and so did the mode picker");
 }
+
+// ── The choose-a-name class (CR 201.3 + CR 614.12) ──────────────────────────
+
+/// The nine "As this ~ enters, choose a … card name" cards, as one table.
+/// Each was an `EntersBattlefield` trigger until 2026-09-19: the permanent was
+/// on the battlefield with its name-keyed static live and *nothing chosen*
+/// until its controller let the trigger resolve. What is asserted is the
+/// window, not the field — the name is stamped by the time the entry returns,
+/// with nothing left on the stack to resolve.
+#[test]
+fn cr_614_12a_the_choose_a_name_class_names_as_it_enters() {
+    let namers: [(&str, fn() -> CardDefinition); 9] = [
+        ("Pithing Needle", catalog::pithing_needle),
+        ("Phyrexian Revoker", catalog::phyrexian_revoker),
+        ("Disruptor Flute", catalog::disruptor_flute),
+        ("Meddling Mage", catalog::meddling_mage),
+        ("Alpine Moon", catalog::alpine_moon),
+        ("Nevermore", catalog::nevermore),
+        ("Council of the Absolute", catalog::council_of_the_absolute),
+        ("Sorcerous Spyglass", catalog::sorcerous_spyglass),
+        ("Silverquill Silencer", catalog::silverquill_silencer),
+    ];
+    for (name, factory) in namers {
+        let mut g = two_player_game();
+        // The namer's heuristic wants an opponent permanent with an activated
+        // ability to point at; give it one.
+        g.add_card_to_battlefield(1, catalog::prodigal_sorcerer());
+        let id = g.move_card_to_battlefield_for_test(0, factory());
+        let inst = g.battlefield_find(id).unwrap_or_else(|| panic!("{name} entered"));
+        assert!(
+            inst.named_card.is_some(),
+            "CR 614.12a — {name} names as it enters, not off a trigger"
+        );
+        assert!(
+            g.stack.is_empty(),
+            "CR 614.12 — {name} leaves no trigger on the stack to carry the choice"
+        );
+    }
+}
+
+/// And the consequence the window had: Pithing Needle's name-keyed static is
+/// live the moment the Needle is on the battlefield. CR 614.12a leaves no
+/// priority in between for the named source's controller to use the ability
+/// the Needle is about to lock.
+#[test]
+fn cr_614_12a_a_named_sources_ability_is_locked_with_no_window() {
+    let mut g = two_player_game();
+    let tim = g.add_card_to_battlefield(1, catalog::prodigal_sorcerer());
+    let needle = g.move_card_to_battlefield_for_test(0, catalog::pithing_needle());
+    assert_eq!(
+        g.battlefield_find(needle).and_then(|c| c.named_card.clone()).as_deref(),
+        Some("Prodigal Sorcerer"),
+        "the heuristic names the opponent's activated-ability permanent"
+    );
+    assert!(g.stack.is_empty(), "nothing is waiting to resolve");
+    g.active_player_idx = 1;
+    assert!(
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: tim,
+            ability_index: 0,
+            target: Some(Target::Player(0)),
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+        .is_err(),
+        "CR 614.12a — the lock is on before the named source's controller ever \
+         holds priority"
+    );
+}

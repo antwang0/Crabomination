@@ -18,11 +18,17 @@ priority before it resolves. Three consequences, all reachable:
 * CR 614.12's own example — a token copy of a card with an as-enters choice
   makes that choice as the token is created — has no trigger to fire.
 
-What the class needs is a replacement that can ASK. The engine applies
-`StaticEffect::EntersTapped` / `EntersTappedUnless` inside
-`GameState::apply_enters_tapped_replacement`, which reads a `Predicate` — it
-can test the game state but cannot put a question to a player. That is the
-one missing primitive; every bucket below is downstream of it.
+A replacement that can ASK already ships: `CardDefinition.as_enters_effect`,
+resolved inside the battlefield hop by `apply_as_enters_effect` over
+`resolve_effect_driven`. Since 2026-09-19 `game::as_enters` funnels it (and
+the two mode pickers) through **all four** entry paths, the land drop and the
+token mint included, so converting a card is a catalog edit with no engine
+work behind it.
+
+The one bucket that still needs a primitive is **pay-life-or-tapped**:
+`GameState::apply_enters_tapped_replacement` reads a `Predicate`, which can
+test the game state but cannot put a question to a player, and the choice is
+"you may pay 2 life", not a fact about the board.
 
 Columns, by what the printed clause asks for:
 
@@ -77,6 +83,8 @@ TRIGGER = re.compile(
 REPLACEMENT = re.compile(
     r"StaticEffect::(EntersTapped|EntersTappedUnless|EntersWith\w*|AsEnters\w*)"
     r"|enters_tapped_unless\(|reveal_or_tapped_land\(|land_type_reveal_land\("
+    # The three as-enters appliers `game::as_enters` funnels (CR 614.12).
+    r"|as_enters_effect:|enters_as_choice:|enter_modes:"
 )
 
 # The reveal cycle, closed 2026-09-19. `--gate` fails if any of these comes

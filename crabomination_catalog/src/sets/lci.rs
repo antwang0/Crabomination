@@ -4199,8 +4199,9 @@ pub fn kindled_heroism() -> CardDefinition {
     }
 }
 
-/// Sorcerous Spyglass — {2} Artifact. ETB: name a card; activated abilities of
-/// sources with that name can't be activated (unless mana abilities). (The
+/// Sorcerous Spyglass — {2} Artifact. As it enters, name a card; activated
+/// abilities of sources with that name can't be activated (unless mana
+/// abilities). (The
 /// "look at an opponent's hand" rider is cosmetic and dropped.)
 pub fn sorcerous_spyglass() -> CardDefinition {
     CardDefinition {
@@ -4212,10 +4213,10 @@ pub fn sorcerous_spyglass() -> CardDefinition {
                           activated unless they're mana abilities.",
             effect: StaticEffect::NamedSourcesAbilitiesCantBeActivated,
         }],
-        triggered_abilities: vec![etb(Effect::NameCard {
+        as_enters_effect: Some(Effect::NameCard {
             what: Selector::This,
             restrict_to: None,
-        })],
+        }),
         ..Default::default()
     }
 }

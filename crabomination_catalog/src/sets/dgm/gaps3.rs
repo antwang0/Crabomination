@@ -361,10 +361,10 @@ pub fn council_of_the_absolute() -> CardDefinition {
                 effect: StaticEffect::NamedSpellCostReduction { amount: 2 },
             },
         ],
-        triggered_abilities: vec![etb(Effect::NameCard {
+        as_enters_effect: Some(Effect::NameCard {
             what: Selector::This,
             restrict_to: None,
-        })],
+        }),
         ..Default::default()
     }
 }
