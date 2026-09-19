@@ -3068,15 +3068,35 @@ sac the Spawn for {C} → a creature died → Cordial Vampire puts a +1/+1 count
 on each Vampire, Broodscale included → Broodscale mints another Spawn →
 repeat. Every step is correct Magic.
 
-**The bot loops because every iteration is materially positive** — a dozen
-Vampires each gain +1/+1 — so `pick_sacrifice_value`'s `ev > baseline` holds
-forever and it never converts. ⚠ Neither backstop can see it: the battlefield
-never grows (one Spawn at a time) so `MAX_BATTLEFIELD` is untouched, and the
-counters move every iteration so CR 104.4's fingerprint never repeats — the
-diag's `repeats 0/12` is *correct*. The fix is a bot one (a real player takes
-CR 720's shortcut and names a number) and `bot.rs` is the `--bench` path, so
-it needs the throughput gate re-taken. Rate: 1/2,000 at eight seats, 0/12,000
-at 2..7. TODO's Commander NEXT items 7-8 carry the repro.
+**The bot looped because every iteration is materially positive** — a dozen
+Vampires each gain +1/+1 — so `pick_sacrifice_value`'s `ev > baseline` held
+7,535 times and it never converted. ⚠ Neither backstop could see it: the
+battlefield never grows (one Spawn at a time) so `MAX_BATTLEFIELD` is
+untouched, and the counters move every iteration so CR 104.4's fingerprint
+never repeats — the diag's `repeats 0/12` was *correct*.
+
+✅ **Fixed, and the pool pre-check said it was safe before the edit.**
+`ability_is_pure_mana` makes `pick_sacrifice_value` skip an ability whose
+whole body is "add mana": the bot does not pre-tap, the engine's auto-tapper
+pays costs when a cast needs them, and CR 106.4 empties the pool at the next
+step regardless. The arm is gated on `sink::AB_SAC` and **no card in
+`archetypes()` has a sacrifice cost at all**, so neither `--bench` nor
+`golden_trace.rs` can reach it — then confirmed empirically:
+
+```text
+--bench (release-fast), after the fix, CRAB_THREAD_CHECK=1:
+  decisions          195,806   byte-identical, again
+  turns_per_game       27.49   "
+  decisions_per_game   611.9   "
+  stalls          0; determinism ok; thread_determinism ok (3 vs 1)
+
+--commander --seats 8 --games 2000 --seed 9101, after the fix:
+  decided 2000 (100.0 %), undecided 0; every undecided_by column zero
+  turns/game 92.84 (was 92.89), actions/game 7,366.0 (was 7,403.5)
+```
+
+📐 **A `bot.rs` change is not automatically a bench risk** — ask which sink
+bit gates the arm and whether the pool can light it.
 
 ### 2026-09-19 (the seventh Commander session, tip `3aca0ddb`) — guardrail, no perf work
 
