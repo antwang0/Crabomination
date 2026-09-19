@@ -5160,6 +5160,8 @@ fn cr_506_2_the_undirected_attacker_count_is_not_the_defender_side_one() {
         ),
         "but none of them at seat 3 — the difference a duel cannot show",
     );
+}
+
 // ── "Choose an opponent" at 3+ seats (CR 601.2c's singular choice) ──────────
 
 /// A printed "As this ~ enters, **choose an opponent**" names ONE seat. Eight

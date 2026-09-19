@@ -436,7 +436,7 @@ fn cr_614_12a_a_headless_seats_land_drop_never_parks() {
 /// while its trigger sat on the stack.
 #[test]
 fn cr_614_12a_the_choose_a_type_class_chooses_as_it_enters() {
-    let namers: [Namer; 19] = [
+    let namers: [(&str, Factory); 19] = [
         ("Adaptive Automaton", catalog::adaptive_automaton),
         ("An-Zerrin Ruins", catalog::an_zerrin_ruins),
         ("Ashes of the Fallen", catalog::ashes_of_the_fallen),
@@ -510,7 +510,7 @@ fn cr_614_12a_serras_emissary_chooses_a_card_type_as_it_enters() {
 /// the window it left was a land that tapped for nothing.
 #[test]
 fn cr_614_12a_a_type_naming_land_names_off_the_land_drop() {
-    let lands: [Namer; 3] = [
+    let lands: [(&str, Factory); 3] = [
         ("Cavern of Souls", catalog::cavern_of_souls),
         ("Secluded Courtyard", catalog::secluded_courtyard),
         ("Three Tree City", catalog::three_tree_city),
