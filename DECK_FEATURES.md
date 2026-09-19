@@ -36,6 +36,7 @@ lists were picked.
 | Tatyova GU | Tatyova, Benthic Druid | GU | 100 | ✅ complete |
 | Krark/Rograkh R | Krark, the Thumbless **+** Rograkh, Son of Rohgahh (Partner) | R | 98 + 2 | ✅ complete |
 | Edgar Markov BRW | Edgar Markov (Eminence) | BRW | 100 | ✅ complete |
+| Freyalise G | Freyalise, Llanowar's Fury (**planeswalker**, CR 903.3a) | G | 100 | ✅ complete |
 
 The **sixth** is the pod's first three-colour identity and its first
 **Eminence** commander (CR 113.6b): Edgar Markov's "whenever you cast another
@@ -57,6 +58,51 @@ Nocturnus, Sanctum Seeker …) took it **up**, 61.6 → 64.0 %, and only cutting
 52.1 %. The engine is the commander: a free 1/1 per Vampire spell, from the
 command zone, from turn one, with no card spent and no commander tax paid.
 None of the other five commanders does anything from the command zone.
+
+The **seventh** is the pod's only seat led by a **non-creature** (CR 903.3a).
+`CardDefinition::can_be_commander` had been validated since it shipped and
+never piloted; this list is what pilots it, and two consequences of a
+planeswalker commander both hold in play: it is recast from the command zone
+under the CR 903.8 tax like any other, and its (commander, player) damage
+tally stays at zero all game, because CR 903.10a counts **combat** damage and
+a planeswalker deals none — so the seat wins and loses by every other route
+instead. It sits after `pod_field(6)`, so every committed 2..6-seat reading is
+unchanged; `--commander --seats 7` is what reaches it.
+
+The 99 is mono-green ramp into fat with green's own interaction, built to what
+a one-ply material evaluator can price (the Judith lesson below) and to **one**
+wipe's worth of interaction rather than two, per the board-wipe measurement.
+Like mono-red Krark it takes neither the guild Signet nor the guild Talisman:
+both cycles are two-colour in CR 903.4 identity.
+
+`scripts/pod_deck_candidates.py` is how the list was picked — it joins every
+implemented factory to the Scryfall cache and keeps the ones whose
+`color_identity` is a subset of the commander's and whose
+`legalities.commander` is legal, i.e. the CR 903.4 / 903.5b gates the suite
+will apply, answered before the list is written rather than after it is
+rejected. Mono-green had **4,323** candidates. ⚠ It cannot tell a complete
+implementation from an approximated one; read `INCOMPLETE_CARDS.md` for a card
+before leaning on it.
+
+⚠ **Two tests used to find their deck with `last()`** — the Partner one broke
+when Edgar was appended and would have broken again here. Both search by
+**shape** now (two commanders / a non-creature commander).
+
+**Seven-seat field, seed 7301, 3,000 games, at the closing tip — 100 %
+decided, every `undecided_by` column zero, turns/game 77.13:**
+
+| Sigarda | Judith | Hanna | Tatyova | Krark | Edgar | Freyalise |
+|---|---|---|---|---|---|---|
+| 16.8 | 5.9 | 6.1 | 10.1 | 2.1 | **51.4** | 7.7 |
+
+⚠ **Read that against the Edgar finding above, not against 1/7.** Edgar takes
+51.4 % of the table, so an even share of what is left is 8.1 %, and Freyalise's
+7.7 % is **15.8 % of the non-Edgar remainder against a 16.7 % even share** —
+mid-field, ahead of Krark, Judith and Hanna, behind Tatyova and Sigarda. A
+first build that needs no retune. The six-seat control at the same seed reads
+18.8 / 7.6 / 7.2 / 11.2 / 3.6 / **51.7**, so the seventh seat costs Edgar
+nothing and the rest of the field a proportional slice, which is what adding a
+seat should do.
 
 ⚠ **Six seats is also the pod's only configuration with a non-zero stall
 rate**: 1 action-capped game in 2,000 at seed 43 and 1 in 3,000 at seed 99
@@ -133,10 +179,12 @@ number that says which to do first:
   removal, card advantage, fat, and per-opponent effects that resolve in one
   shot** (Gray Merchant, Massacre Wurm, Sepulchral Primordial).
 - ⚠ **Krark/Rograkh is the number now**: **9.0 %** of five-seat games (seed
-  43, 3,000 games; field 37.9/14.3/16.4/22.4/9.0). Mono-red, and the only list
-  the two-colour Signet/Talisman cycles cannot legally carry — and its two
-  commanders are a 0/1 for {1}{R} and a 0/1 for {0}, chosen to exercise
-  Partner rather than to win, so some of this is structural.
+  43, 3,000 games; field 37.9/14.3/16.4/22.4/9.0), 3.6 % at six and **2.1 % at
+  seven**. Its two commanders are a 0/1 for {1}{R} and a 0/1 for {0}, chosen
+  to exercise Partner rather than to win, so some of this is structural — but
+  **mono-colour is not the explanation**: Freyalise sits under the same
+  CR 903.4 constraint (neither guild cycle is legal in a one-colour identity)
+  and runs at 3.7x Krark's share.
 - ✅ **Every deck can now break a stalled board.** Five swaps, 2026-09-19:
   **Wrath of God** and **Fumigate** into Sigarda, **River's Rebuke** into
   Hanna, **Evacuation** and **Bane of Progress** into Tatyova; Judith already

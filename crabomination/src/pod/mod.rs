@@ -132,6 +132,13 @@ pub fn target_decks() -> Vec<PodDeck> {
         // leaves `pod_field(4)` and `pod_field(5)` — and the committed outcome
         // table — the games they already were. `--seats 6` is what reaches it.
         PodDeck { name: "Edgar Markov (BRW)", commanders: decks::EDGAR_COMMANDERS, main: decks::EDGAR_MAIN },
+        // Seventh, same reason again: the pod's only seat led by a
+        // **non-creature** (CR 903.3a). `--seats 7` is what reaches it.
+        PodDeck {
+            name: "Freyalise (G)",
+            commanders: decks::FREYALISE_COMMANDERS,
+            main: decks::FREYALISE_MAIN,
+        },
     ]
 }
 
@@ -374,6 +381,43 @@ mod tests {
         for p in &t.players {
             assert_eq!(p.life, 40);
         }
+
+        let pilots = vec![Pilot::default(); 4];
+        for seed in [0xC0FFEE_u64, 43, 4242] {
+            let o = play_one_pod_game(&t, &pilots, 50_000, seed);
+            assert!(o.winner.is_some(), "seed {seed} left the pod undecided");
+            assert!(o.turns > 0);
+        }
+    }
+
+    /// CR 903.3a — "[this card] can be your commander" on a **non-creature**.
+    /// `CardDefinition::can_be_commander` had been validated since it shipped
+    /// and never piloted; this is the seat that pilots it. Found by its
+    /// *shape* and not its position, for the reason the Partner test above
+    /// records.
+    ///
+    /// Two consequences of a planeswalker commander and both hold: it is
+    /// recast from the command zone under the CR 903.8 tax like any other,
+    /// and its (commander, player) damage tally stays at zero for the whole
+    /// game, because CR 903.10a counts **combat** damage and a planeswalker
+    /// deals none — so the seat wins and loses by every other route instead.
+    #[test]
+    fn cr_903_3a_a_planeswalker_commander_seat_plays_a_pod_game() {
+        let field = target_decks();
+        let pw = *field
+            .iter()
+            .find(|d| !d.commanders[0]().is_creature())
+            .expect("a non-creature commander");
+        assert_eq!(pw.card_count(), 100);
+        let def = pw.commanders[0]();
+        assert!(def.can_be_commander, "CR 903.3a — the printed permission");
+        assert!(!def.is_creature(), "and it is not a creature");
+
+        let decks = vec![pw, field[0], field[1], field[3]];
+        let t = build_pod_template(&decks);
+        assert_eq!(t.players[0].command.len(), 1, "it begins in the command zone");
+        assert_eq!(t.players[0].commanders.len(), 1);
+        assert_eq!(t.players[0].library.len(), 99);
 
         let pilots = vec![Pilot::default(); 4];
         for seed in [0xC0FFEE_u64, 43, 4242] {

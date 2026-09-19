@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Six hand-picked commanders, each with a 99 drawn from cards this engine
+//! Seven hand-picked commanders, each with a 99 drawn from cards this engine
 //! already implements: legal under CR 903 (100 cards including the commander,
 //! singleton outside basics, every card inside the commander's CR 903.4 color
 //! identity) and Commander-legal per Scryfall's ban list, both of which
@@ -10,7 +10,11 @@
 //! decks is not derivable from the offline Scryfall cache this repo carries,
 //! and a list nobody can verify is worse than one the suite checks every run.
 //! What they keep from the precon idea is what the pod needs — fixed, legal,
-//! six different color identities, and built to play against each other.
+//! seven different color identities, and built to play against each other.
+//! One is a Partner pair (CR 702.124b) and one is a **planeswalker**
+//! (CR 903.3a); both sit past the fourth slot, because `pod_field(n)` takes
+//! the first `n` and appending is what keeps the committed outcome table
+//! from moving.
 //!
 //! Each list is ~37 lands (12 nonbasic), the format's colorless staples, then
 //! ramp / removal / draw / a creature curve, so bots finish games with them.
@@ -205,4 +209,57 @@ pub const EDGAR_MAIN: &[CardFactory] = &[
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, plains, plains,
     plains, plains, plains, plains, plains, mountain, mountain, mountain, mountain, mountain,
     mountain,
+];
+/// Freyalise, Llanowar's Fury — mono-green, and the pod's only seat led by a
+/// **non-creature**. Seventh in `target_decks`, so `--seats 7` is what runs
+/// it and every committed 2..6-seat number is untouched. CR 903.3a lets a card say "[this] can be your commander";
+/// `CardDefinition::can_be_commander` is that line and `validate_commander_deck`
+/// reads it, but until this list existed the rule was only ever unit-tested.
+/// A planeswalker commander also exercises the rest of CR 903 from an unusual
+/// angle: it is recast from the command zone under the CR 903.8 tax like any
+/// other commander, it cannot deal commander damage (CR 903.10a is combat
+/// damage, and a planeswalker never deals any), and a seat whose commander is
+/// a loyalty engine keeps it on the battlefield rather than replaying it.
+pub const FREYALISE_COMMANDERS: &[CardFactory] = &[freyalise_llanowars_fury];
+
+/// Freyalise mono-G: 72 nonbasic cards + 27 basics = 99.
+///
+/// Built from the measurement in `DECK_FEATURES.md` rather than from taste: a
+/// one-ply material evaluator prices removal, card advantage and fat, and
+/// cannot price a value engine — so this is ramp into big bodies, with the
+/// removal green actually has (Beast Within, Krosan Grip, Song of the Dryads)
+/// and **one** board wipe's worth of interaction rather than two, since the
+/// board-wipe measurement showed a second one only lengthens games.
+///
+/// Mono-green takes neither the guild Signet nor the guild Talisman, for the
+/// same CR 903.4 reason mono-red Krark does not: every card in both cycles is
+/// two-colour in identity because the pips are in the rules text.
+pub const FREYALISE_MAIN: &[CardFactory] = &[
+    // Lands (12 nonbasic + 25 Forest = 37)
+    command_tower, path_of_ancestry, opal_palace, gaeas_cradle, boseiju_who_endures,
+    mosswort_bridge, shifting_woodland, nykthos_shrine_to_nyx, castle_garenbrig,
+    ancient_tomb, blast_zone, rogues_passage,
+    // Colorless ramp and utility
+    sol_ring, arcane_signet, commanders_sphere, mind_stone, everflowing_chalice,
+    mana_vault, wayfarers_bauble, skullclamp, senseis_divining_top, walking_ballista,
+    // Green ramp — the half the evaluator does price, because a land is material
+    llanowar_elves, elvish_mystic, boreal_druid, delighted_halfling, sakura_tribe_elder,
+    rampant_growth, cultivate, kodamas_reach, natures_lore, three_visits, farseek,
+    wall_of_roots, fertilid, yavimaya_elder,
+    // Card advantage
+    harmonize, return_of_the_wildspeaker, shamanic_revelation, regal_force,
+    sylvan_library, eternal_witness, tishanas_wayfinder, keen_sense,
+    // Interaction
+    beast_within, krosan_grip, natures_claim, song_of_the_dryads, reclamation_sage,
+    acidic_slime, wickerbough_elder, nessian_demolok, heroic_intervention,
+    // Bodies and finishers
+    craterhoof_behemoth, avenger_of_zendikar, vorinclex_voice_of_hunger, thragtusk,
+    obstinate_baloth, penumbra_wurm, greater_sandwurm, vengevine, ohran_frostfang,
+    emeritus_of_abundance, mossborn_hydra, lumra_bellow_of_the_woods, seedborn_muse,
+    thrun_the_last_troll, immaculate_magistrate, elvish_piper, spike_feeder,
+    sentinel_of_the_nameless_city, garruk_wildspeaker,
+    // Basics: 27 forest
+    forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest,
 ];
