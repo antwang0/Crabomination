@@ -3,12 +3,10 @@
 //! Tests in `tests/recent_b/cmdr_etali.rs`.
 //!
 //! Residuals (approximated or omitted clauses; each card's doc has the detail):
-//! - Hellkite Courser: the ETB (commander from the command zone onto the
-//!   battlefield, returned at the next end step) is omitted — a 6/5 flier.
-//! - Hunting Velociraptor: "Dinosaur spells you cast have prowl {2}{R}" is
-//!   omitted — a 3/2 first striker.
-//! - Mirror Box: the legend-rule exemption is global (Mirror Gallery's static),
-//!   not yours-only; the same-name +1/+1 scaling is omitted.
+//! - Hellkite Courser: a commander that left and was recast before the end
+//!   step is still returned (one `CardId` across zones; CR 400.7 unmodelled).
+//! - Hunting Velociraptor: a Dinosaur with a printed alternative cost keeps
+//!   that one instead of the granted prowl (a card carries one alt cost).
 //! - _____ Goblin: no sticker subsystem — the ETB is an optional "add
 //!   {R}{R}{R}" stand-in for a three-vowel name sticker; the Guest type is
 //!   dropped (no `CreatureType::Guest`).
@@ -59,7 +57,11 @@
 //! New primitives: `Value::InstantsOrSorceriesCastThisTurn` (Rionya),
 //! `Value::TotalManaValueOfOtherSpellsCastThisTurn` (Call Forth the Tempest),
 //! `Selector::SoulbondPartner` (Mirage Phalanx), and flash grants read
-//! through `active_static` so a gated one works (Radagast of Rhosgobel).
+//! through `active_static` so a gated one works (Radagast of Rhosgobel);
+//! `Effect::PutCommanderOntoBattlefield` + `ZoneDest::Command` (Hellkite
+//! Courser), `StaticEffect::GrantProwlToSpells` (Hunting Velociraptor),
+//! `StaticEffect::LegendRuleDoesntApplyToYourPermanents` and
+//! `StaticEffect::PumpPerSameNameCreatureYouControl` (Mirror Box).
 
 use crate::card::{
     ActivatedAbility, AdditionalCastCost, ArtifactSubtype, BattleSubtype, CardDefinition, CardType,
@@ -614,10 +616,6 @@ pub fn blade_of_selves() -> CardDefinition {
 /// control. Each legendary creature you control gets +1/+1. Each nontoken
 /// creature you control gets +1/+1 for each other creature you control with the
 /// same name.
-/// Approximation: the legend-rule exemption is Mirror Gallery's *global* one
-/// (opponents' permanents are exempt too while Mirror Box is out).
-/// Omitted: the same-name +1/+1 scaling (no per-creature same-name count
-/// static yet).
 pub fn mirror_box() -> CardDefinition {
     CardDefinition {
         name: "Mirror Box",
@@ -626,7 +624,7 @@ pub fn mirror_box() -> CardDefinition {
         static_abilities: vec![
             StaticAbility {
                 description: "The \"legend rule\" doesn't apply to permanents you control.",
-                effect: StaticEffect::LegendRuleDoesntApply,
+                effect: StaticEffect::LegendRuleDoesntApplyToYourPermanents,
             },
             StaticAbility {
                 description: "Each legendary creature you control gets +1/+1.",
@@ -640,6 +638,11 @@ pub fn mirror_box() -> CardDefinition {
                     only_your_turn: false,
                     scale_by_counters_on_self: None,
                 },
+            },
+            StaticAbility {
+                description: "Each nontoken creature you control gets +1/+1 for each other \
+                              creature you control with the same name as that creature.",
+                effect: StaticEffect::PumpPerSameNameCreatureYouControl { power: 1, toughness: 1 },
             },
         ],
         ..Default::default()
@@ -688,12 +691,23 @@ pub fn cursed_mirror() -> CardDefinition {
 /// Hellkite Courser — {4}{R}{R} 6/5 Dragon. Flying. When it enters, you may put
 /// a commander you own from the command zone onto the battlefield; it gains
 /// haste; return it to the command zone at the beginning of the next end step.
-/// Omitted: the ETB — the engine has no "commander from the command zone onto
-/// the battlefield" effect (only `CommanderToHand`) and no way to return a
-/// card to the command zone directly.
+/// `Effect::PutCommanderOntoBattlefield`: not a cast (no tax); with two
+/// commanders in the command zone you choose one. The haste is an
+/// until-end-of-turn grant (the commander goes home in the end step anyway).
+/// Approximation: a commander that left and was recast before the end step is
+/// still returned (CR 400.7 new objects aren't tracked).
 pub fn hellkite_courser() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "Put a commander you own from the command zone onto the battlefield?"
+                .into(),
+            body: Box::new(Effect::PutCommanderOntoBattlefield {
+                who: PlayerRef::You,
+                haste: true,
+                return_at_end_step: true,
+            }),
+        })],
         ..a_creature(
             "Hellkite Courser",
             cost(&[generic(4), r(), r()]),
@@ -2361,9 +2375,11 @@ pub fn strionic_resonator() -> CardDefinition {
 }
 
 /// Hunting Velociraptor — {2}{R} Creature — Dinosaur 3/2. First strike.
-/// Dinosaur spells you cast have prowl {2}{R}.
-/// Omitted: the prowl grant — no static grants an alternative cost with a
-/// condition, so the Dinosaur prowl cost is never offered.
+/// Dinosaur spells you cast have prowl {2}{R} (`StaticEffect::
+/// GrantProwlToSpells`, read by `effective_alternative_cost`; the prowl gate
+/// uses the spell's own creature types).
+/// Approximation: a Dinosaur with a printed alternative cost keeps that one
+/// instead (a card carries one alternative cost).
 pub fn hunting_velociraptor() -> CardDefinition {
     CardDefinition {
         name: "Hunting Velociraptor",
@@ -2376,6 +2392,13 @@ pub fn hunting_velociraptor() -> CardDefinition {
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::FirstStrike],
+        static_abilities: vec![StaticAbility {
+            description: "Dinosaur spells you cast have prowl {2}{R}.",
+            effect: StaticEffect::GrantProwlToSpells {
+                filter: R::HasCreatureType(CreatureType::Dinosaur),
+                cost: cost(&[generic(2), r()]),
+            },
+        }],
         ..Default::default()
     }
 }

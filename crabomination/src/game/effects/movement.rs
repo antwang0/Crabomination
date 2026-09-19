@@ -2244,7 +2244,8 @@ impl GameState {
             | ZoneDest::Exile
             | ZoneDest::ExilePlotted
             | ZoneDest::ExileWithSourceStamp
-            | ZoneDest::Ante => dest.clone(),
+            | ZoneDest::Ante
+            | ZoneDest::Command => dest.clone(),
         }
     }
 
@@ -2271,6 +2272,7 @@ impl GameState {
             ZoneDest::Battlefield { .. } => crate::card::Zone::Battlefield,
             ZoneDest::Graveyard => crate::card::Zone::Graveyard,
             ZoneDest::Ante => crate::card::Zone::Ante,
+            ZoneDest::Command => crate::card::Zone::Command,
             ZoneDest::Exile | ZoneDest::ExilePlotted | ZoneDest::ExileWithSourceStamp => {
                 crate::card::Zone::Exile
             }
@@ -2455,6 +2457,15 @@ impl GameState {
             ZoneDest::Ante => {
                 let owner = card.owner;
                 self.players[owner].ante.push(card);
+            }
+            // CR 408.1 — the command zone is its owner's. Counters were
+            // cleared above (CR 400.7); a commander's command-zone keyword
+            // grants are re-gathered.
+            ZoneDest::Command => {
+                let owner = card.owner;
+                card.exiled_with = None;
+                self.players[owner].command.push(card);
+                self.offboard_keyword_grants = true;
             }
             ZoneDest::ExilePlotted => {
                 // CR 702.170 — exile it face up and mark it plotted so its

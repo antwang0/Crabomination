@@ -2353,6 +2353,10 @@ pub enum ZoneDest {
     Battlefield { controller: PlayerRef, tapped: bool },
     /// CR 407.4 — the moved card's owner's ante zone.
     Ante,
+    /// CR 408 — the moved card's owner's command zone ("return it to the
+    /// command zone", Hellkite Courser). A direct move, not the optional CR
+    /// 903.9 redirect.
+    Command,
 }
 
 /// Where a countered spell goes after being lifted off the stack. The
@@ -5375,6 +5379,20 @@ pub enum Effect {
     /// (Command Beacon). With two commanders the controller chooses one.
     /// Does nothing when no commander of `who`'s is in the command zone.
     CommanderToHand { who: PlayerRef },
+    /// "Put a commander you own from the command zone onto the battlefield"
+    /// (Hellkite Courser). Not a cast: no commander tax, no cast-count bump.
+    /// With two commanders there the owner chooses; with none it does nothing.
+    /// The entrant is exposed on `Selector::LastMoved`. `haste` grants it
+    /// haste; `return_at_end_step` registers a CR 603.7a delayed trigger that
+    /// returns it to the command zone at the beginning of the next end step
+    /// (only if it is still on the battlefield).
+    PutCommanderOntoBattlefield {
+        who: PlayerRef,
+        #[serde(default)]
+        haste: bool,
+        #[serde(default)]
+        return_at_end_step: bool,
+    },
 
     // ── Mana ─────────────────────────────────────────────────────────────────
     AddMana { who: PlayerRef, pool: ManaPayload },
@@ -9940,7 +9958,8 @@ fn zonedest_has_target(z: &ZoneDest) -> bool {
         | ZoneDest::Exile
         | ZoneDest::ExilePlotted
         | ZoneDest::ExileWithSourceStamp
-        | ZoneDest::Ante => false,
+        | ZoneDest::Ante
+        | ZoneDest::Command => false,
     }
 }
 

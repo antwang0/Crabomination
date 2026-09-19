@@ -4240,6 +4240,9 @@ impl GameState {
         if !self.players[p].graveyard_cast_types_this_turn.is_empty() {
             self.players[p].graveyard_cast_types_this_turn.clear();
         }
+        if !self.players[p].graveyard_sac_cast_sources_this_turn.is_empty() {
+            self.players[p].graveyard_sac_cast_sources_this_turn.clear();
+        }
         // "Protection from everything until your next turn" expires as that
         // player's turn begins (The One Ring).
         self.players[p].protected_from_everything = false;
@@ -6206,9 +6209,33 @@ impl GameState {
                             .computed_permanent(c.id)
                             .is_some_and(|cp| cp.supertypes().contains(&Supertype::Legendary)))
             };
-            // CR 704.5j — Mirror Gallery turns the legend rule off entirely.
+            // CR 704.5j — Mirror Gallery turns the legend rule off entirely;
+            // Mirror Box / Sakashima only for their controller's permanents.
             // Only *this* SBA is switched off; the rest of the sweep (deaths,
-            // loss conditions, the Aura/Equipment sweeps) still runs.
+            // loss conditions, the Aura/Equipment sweeps) still runs. The bit
+            // says one of the two is on the board; which, and whose, is read
+            // here, only then.
+            let (legend_rule_off, exempt_controllers) = if scan.legend_rule_off {
+                use crate::effect::StaticEffect;
+                let mut global = false;
+                let mut exempt: SmallVec<[usize; 4]> = SmallVec::new();
+                for c in self.battlefield.iter() {
+                    for sa in &c.definition.static_abilities {
+                        match sa.effect {
+                            StaticEffect::LegendRuleDoesntApply => global = true,
+                            StaticEffect::LegendRuleDoesntApplyToYourPermanents
+                                if !exempt.contains(&c.controller) =>
+                            {
+                                exempt.push(c.controller)
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+                (global, exempt)
+            } else {
+                (false, SmallVec::new())
+            };
             let mut out = Vec::new();
             // A group needs two members, so one printed legendary on the
             // board cannot fire the rule — and one is the common sealed
@@ -6216,7 +6243,7 @@ impl GameState {
             // sweeps to build groups of one (PERF `(-260)`). A live
             // supertype grant can make any permanent legendary, so it keeps
             // the full walk.
-            if !scan.legend_rule_off && (scan.legendary_count >= 2 || supertype_grant_active) {
+            if !legend_rule_off && (scan.legendary_count >= 2 || supertype_grant_active) {
                 // Walk descending by id so each group's vec is newest-first.
                 let mut by_id: SmallVec<[&CardInstance; 8]> = self
                     .battlefield
@@ -6249,7 +6276,10 @@ impl GameState {
                         })
                 };
                 for (player, name, dups) in groups {
-                    if dups.len() > 1 && !pair_exempt(&dups) {
+                    if dups.len() > 1
+                        && !pair_exempt(&dups)
+                        && !exempt_controllers.contains(&player)
+                    {
                         out.push((
                             player,
                             name.to_string(),

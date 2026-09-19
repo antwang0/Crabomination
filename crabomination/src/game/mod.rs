@@ -12914,6 +12914,53 @@ impl GameState {
         // shares ≥1 creature type with it (Changeling shares all types). The
         // bonus is per-creature (shared-type count differs per subject), so it's
         // gathered state-aware like Sliver Legion above.
+        // Mirror Box — "each nontoken creature you control gets +1/+1 for
+        // each other creature you control with the same name as that
+        // creature." Shares Coat of Arms' pre-scan bit, so it is gated on the
+        // static being present before the creature walk is built.
+        if any_pump_per_shared_type {
+            for &(src, _) in &sa_cards {
+                for sa in &src.definition.static_abilities {
+                    let crate::effect::StaticEffect::PumpPerSameNameCreatureYouControl {
+                        power,
+                        toughness,
+                    } = &sa.effect
+                    else {
+                        continue;
+                    };
+                    let yours: Vec<&CardInstance> = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| {
+                            c.controller == src.controller
+                                && c.definition.is_creature()
+                                && !c.face_down
+                        })
+                        .collect();
+                    for c in yours.iter().filter(|c| !c.is_token) {
+                        let same = yours
+                            .iter()
+                            .filter(|o| o.id != c.id && o.definition.name == c.definition.name)
+                            .count() as i32;
+                        if same == 0 {
+                            continue;
+                        }
+                        all_effects.push(ContinuousEffect {
+                            timestamp: src.object_timestamp(),
+                            source: src.id,
+                            affected: AffectedPermanents::just(c.id),
+                            layer: Layer::L7PowerTough,
+                            sublayer: Some(PtSublayer::Modify),
+                            duration: EffectDuration::WhileSourceOnBattlefield,
+                            modification: Modification::ModifyPowerToughness(
+                                same * power,
+                                same * toughness,
+                            ),
+                        });
+                    }
+                }
+            }
+        }
         if any_pump_per_shared_type {
             use crate::card::Keyword;
             let creatures: Vec<(CardId, &Vec<crate::card::CreatureType>, bool)> = self
@@ -27218,6 +27265,7 @@ fn static_effect_reduces_toughness(effect: &crate::effect::StaticEffect) -> bool
         | SE::GrantPumpSelfIf { toughness, .. }
         | SE::PumpPTPerOtherOfType { toughness, .. }
         | SE::PumpPerSharedType { toughness, .. }
+        | SE::PumpPerSameNameCreatureYouControl { toughness, .. }
         | SE::AnthemForChosenType { toughness, .. }
         | SE::AnthemForChosenColor { toughness, .. }
         | SE::AnthemForFilter { toughness, .. }
@@ -28386,6 +28434,7 @@ fn static_effect_to_effects(
             // LegendRuleDoesntApply (Mirror Gallery) — read by the CR 704.5j
             // SBA; PreventAllDamageToAndFrom — read by the damage funnel.
             | StaticEffect::LegendRuleDoesntApply
+            | StaticEffect::LegendRuleDoesntApplyToYourPermanents
             | StaticEffect::PreventAllDamageToAndFromEnchanted
             | StaticEffect::PreventAllDamageToEnchanted
             | StaticEffect::PreventAllDamageByEnchanted
@@ -28463,6 +28512,7 @@ fn static_effect_to_effects(
             | StaticEffect::MayCastPermanentsFromGraveyard
             | StaticEffect::PlayExiledWithSourceForLife
             | StaticEffect::GraveyardCastWithLifeSurcharge { .. }
+            | StaticEffect::GraveyardCastBySacrificingOncePerTurn { .. }
             | StaticEffect::ActivationCostReduction { .. }
             | StaticEffect::YourCreatureActivatedAbilitiesCostLess { .. }
             // Consulted directly in `activate_ability`, not a layer effect.
@@ -28537,6 +28587,8 @@ fn static_effect_to_effects(
             // PumpPerSharedType (Coat of Arms) — per-creature shared-type count;
             // resolved in `gather_continuous_effects`.
             | StaticEffect::PumpPerSharedType { .. }
+            // Mirror Box — per-creature same-name count; same walk.
+            | StaticEffect::PumpPerSameNameCreatureYouControl { .. }
             // SelfIsCreatureWhileCountersAtLeast — live counter check; resolved
             // in `gather_continuous_effects`.
             | StaticEffect::SelfIsCreatureWhileCountersAtLeast { .. }
@@ -28719,6 +28771,8 @@ fn static_effect_to_effects(
             // Kentaro / Dream Halls — consulted by `effective_alternative_cost`.
             | StaticEffect::GenericAlternativeCostForFilter { .. }
             | StaticEffect::DiscardColorSharingCardAlternativeCost
+            // Hunting Velociraptor — consulted by `effective_alternative_cost`.
+            | StaticEffect::GrantProwlToSpells { .. }
             // Memory Crystal — read by the cast path's buyback fold.
             | StaticEffect::BuybackCostsLess { .. }
             // Invasion Plans — read by `block_chooser` at declare-blockers.

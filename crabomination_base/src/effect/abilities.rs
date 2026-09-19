@@ -288,6 +288,13 @@ pub enum StaticEffect {
     /// sharing ≥1 creature type (Changeling shares every type). Affects every
     /// creature on the battlefield, all controllers.
     PumpPerSharedType { power: i32, toughness: i32 },
+    /// "Each nontoken creature you control gets +P/+T for each other creature
+    /// you control with the same name as that creature" (Mirror Box). Resolved
+    /// state-aware in `gather_continuous_effects` beside
+    /// [`Self::PumpPerSharedType`] (they share its pre-scan bit): one
+    /// per-creature layer-7c effect scaled by that creature's same-name count.
+    /// Face-down creatures have no name (CR 708.2) and match nothing.
+    PumpPerSameNameCreatureYouControl { power: i32, toughness: i32 },
     /// Each creature `applies_to` matches gets +`per_power`/+`per_toughness`
     /// for each of *its own* creature types, capped at `max` types (CR 613.7c
     /// layer-7 per-target dynamic pump). Diligent Zookeeper's "+1/+1 for each
@@ -1243,6 +1250,12 @@ pub enum StaticEffect {
     /// CR 704.5j — "the 'legend rule' doesn't apply" (Mirror Gallery). The
     /// legend-rule SBA is skipped entirely while this is on the battlefield.
     LegendRuleDoesntApply,
+    /// CR 704.5j — "the 'legend rule' doesn't apply to permanents you
+    /// control" (Mirror Box, Sakashima of a Thousand Faces). The controller-
+    /// scoped sibling of [`Self::LegendRuleDoesntApply`]: the SBA skips every
+    /// same-name group controlled by this permanent's controller, and still
+    /// applies to everyone else's.
+    LegendRuleDoesntApplyToYourPermanents,
     /// "Prevent all combat damage that would be dealt to this creature by
     /// creatures blocking it." The narrower sibling of
     /// `PreventAllCombatDamageToThis` — only strikes-back from this creature's
@@ -1703,6 +1716,16 @@ pub enum StaticEffect {
     /// (checked in `cast_spell`; the life is paid on a successful cast and
     /// the finality counter stamped via `CardInstance.pending_etb_counters`).
     GraveyardCastWithLifeSurcharge { filter: SelectionRequirement, life: u32 },
+    /// "Once during each of your turns, you may cast a [filter] spell from
+    /// your graveyard by sacrificing a [sacrifice] in addition to paying its
+    /// other costs" (Exploration Broodship's {8+} station band). Checked in
+    /// `cast_spell` on the source's controller's turn; each source grants one
+    /// cast per turn (`PlayerCold::graveyard_sac_cast_sources_this_turn`).
+    /// Read off `static_abilities` and off the active station bands' `statics`.
+    GraveyardCastBySacrificingOncePerTurn {
+        filter: SelectionRequirement,
+        sacrifice: SelectionRequirement,
+    },
     /// CR 401.5: the controller plays with the top card of their library
     /// revealed (surfaced to every seat via `PlayerView.library_top`).
     TopOfLibraryRevealed,
@@ -2653,6 +2676,11 @@ pub enum StaticEffect {
     /// for spells you cast" (Fist of Suns). Surfaces a WUBRG alternative cost
     /// on every spell the controller casts.
     FiveColorAlternativeCost,
+    /// CR 702.76 — "[filter] spells you cast have prowl [cost]" (Hunting
+    /// Velociraptor). Read by `effective_alternative_cost`, which builds the
+    /// prowl alternative cost against the spell's own printed creature types.
+    /// A printed alternative cost wins (a card carries one alt cost).
+    GrantProwlToSpells { filter: SelectionRequirement, cost: crate::mana::ManaCost },
     /// "Permanents you control have: whenever one or more +1/+1 counters are put
     /// on this permanent, put an additional +1/+1 counter on it. This ability
     /// triggers only once each turn." Cursed Wombat. Consulted in the

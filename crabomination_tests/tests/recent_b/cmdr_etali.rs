@@ -341,20 +341,38 @@ fn blade_of_selves_grants_myriad() {
     );
 }
 
-/// Mirror Box: two copies of a legend both survive and each gets +1/+1.
+/// Mirror Box: the legend rule is off for *your* permanents only; each
+/// legendary creature you control gets +1/+1; each nontoken creature you
+/// control gets +1/+1 per other creature you control with its name (tokens
+/// count, but aren't pumped themselves).
 #[test]
-fn mirror_box_keeps_duplicate_legends_and_pumps_them() {
+fn mirror_box_exempts_your_legends_and_scales_by_same_name() {
     let mut g = a_main_phase();
     g.add_card_to_battlefield(0, catalog::mirror_box());
     let a = g.add_card_to_battlefield(0, catalog::krenko_mob_boss());
     let b = g.add_card_to_battlefield(0, catalog::krenko_mob_boss());
+    let opp_a = g.add_card_to_battlefield(1, catalog::krenko_mob_boss());
+    let opp_b = g.add_card_to_battlefield(1, catalog::krenko_mob_boss());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bear2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bear_token = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear_token).unwrap().is_token = true;
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let opp_bear2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     g.check_state_based_actions();
-    assert!(g.battlefield_find(a).is_some() && g.battlefield_find(b).is_some(), "no legend rule");
+    assert!(g.battlefield_find(a).is_some() && g.battlefield_find(b).is_some(), "yours survive");
     assert_eq!(
-        g.computed_permanent(a).map(|c| (c.power, c.toughness)),
-        Some((4, 4)),
-        "legendary creatures you control get +1/+1 (Krenko is a 3/3 here)"
+        [opp_a, opp_b].iter().filter(|id| g.battlefield_find(**id).is_some()).count(),
+        1,
+        "the legend rule still applies to the opponent's pair"
     );
+    let pt = |id| g.computed_permanent(id).map(|c| (c.power, c.toughness));
+    assert_eq!(pt(a), Some((5, 5)), "Krenko 3/3 +1/+1 legendary +1/+1 for the other Krenko");
+    assert_eq!(pt(bear), Some((4, 4)), "two other Grizzly Bears (one a token)");
+    assert_eq!(pt(bear2), Some((4, 4)));
+    assert_eq!(pt(bear_token), Some((2, 2)), "a token isn't pumped");
+    assert_eq!(pt(opp_bear), Some((2, 2)), "the opponent's creatures aren't pumped");
+    assert_eq!(pt(opp_bear2), Some((2, 2)));
 }
 
 /// Cursed Mirror becomes a hasty copy of a creature until end of turn.
@@ -374,12 +392,31 @@ fn cursed_mirror_becomes_a_hasty_copy() {
     assert!(a_has_haste(&g, mirror), "except it has haste");
 }
 
-/// Hellkite Courser's body (its command-zone ETB is omitted).
+/// Hellkite Courser: its ETB puts the chosen one of two commanders onto the
+/// battlefield with haste — not a cast, so no tax — and the next end step
+/// returns it to the command zone.
 #[test]
-fn hellkite_courser_is_a_six_five_flier() {
-    let d = catalog::hellkite_courser();
-    assert_eq!((d.power, d.toughness), (6, 5));
-    assert!(d.keywords.contains(&Keyword::Flying));
+fn hellkite_courser_borrows_a_commander_until_the_end_step() {
+    let mut g = a_main_phase();
+    let cmds = g.seat_commanders(0, vec![catalog::krenko_mob_boss(), catalog::grizzly_bears()]);
+    let (krenko, bears) = (cmds[0], cmds[1]);
+    let courser = g.add_card_to_battlefield(0, catalog::hellkite_courser());
+    let cp = g.computed_permanent(courser).unwrap();
+    assert_eq!((cp.power, cp.toughness), (6, 5));
+    assert!(cp.keywords().contains(&Keyword::Flying));
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Cards(vec![bears]),
+    ]));
+    g.fire_self_etb_triggers(courser, 0);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bears).is_some(), "the chosen commander entered");
+    assert!(g.players[0].command.iter().any(|c| c.id == krenko), "the other stays home");
+    assert!(a_has_haste(&g, bears), "it gains haste");
+    assert_eq!(g.commander_cast_count.get(&bears).copied().unwrap_or(0), 0, "not cast: no tax");
+    a_to_end_step(&mut g);
+    assert!(g.battlefield_find(bears).is_none(), "returned at the end step");
+    assert!(g.players[0].command.iter().any(|c| c.id == bears), "to the command zone");
 }
 
 /// Sanctum of Eternity returns your commander to your hand on your turn
@@ -1579,13 +1616,33 @@ fn strionic_resonator_copies_a_triggered_ability() {
     assert_eq!(g.players[0].hand.len(), before + 2, "original + copy");
 }
 
-/// Hunting Velociraptor — a 3/2 first-striking Dinosaur (the prowl grant is
-/// omitted).
+/// Hunting Velociraptor: Dinosaur spells you cast have prowl {2}{R} — offered
+/// once a Dinosaur dealt you combat damage this turn, and not to a non-Dinosaur.
 #[test]
-fn hunting_velociraptor_is_a_first_striking_dinosaur() {
+fn hunting_velociraptor_grants_dinosaurs_prowl() {
     let mut g = main_phase_d();
     let id = g.add_card_to_battlefield(0, catalog::hunting_velociraptor());
     let cp = g.computed_permanent(id).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 2));
     assert!(cp.keywords().contains(&Keyword::FirstStrike));
+    let dreadmaw = g.add_card_to_hand(0, catalog::colossal_dreadmaw());
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    let alt = |g: &mut GameState, card_id| {
+        g.perform_action(GameAction::CastSpellAlternative {
+            card_id,
+            pitch_card: None,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+    };
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    assert!(alt(&mut g, dreadmaw).is_err(), "no Dinosaur combat damage yet");
+    g.players[0].prowl_types_this_turn.push(CreatureType::Dinosaur);
+    assert!(alt(&mut g, bears).is_err(), "Grizzly Bears isn't a Dinosaur");
+    alt(&mut g, dreadmaw).expect("prowl {2}{R}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(dreadmaw).is_some(), "a 6-drop for three mana");
 }

@@ -168,6 +168,12 @@ pub struct PlayerCold {
     /// Muldrotha-style permission (one of each per turn). Reset at untap.
     #[serde(default)]
     pub graveyard_cast_types_this_turn: Vec<crate::card::CardType>,
+    /// Sources whose once-per-turn "cast a permanent spell from your
+    /// graveyard by sacrificing a land" grant (Exploration Broodship's {8+}
+    /// band, `StaticEffect::GraveyardCastBySacrificingOncePerTurn`) was used
+    /// this turn. Reset with `graveyard_cast_types_this_turn`.
+    #[serde(default)]
+    pub graveyard_sac_cast_sources_this_turn: Vec<crate::card::CardId>,
     /// "You can't cast [filter] spells this turn" (Cease-Fire). Cleared at the
     /// turn boundary alongside `cant_play_lands_this_turn`.
     #[serde(default)]
