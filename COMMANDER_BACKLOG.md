@@ -13,9 +13,9 @@ mechanic a card leans on, not a verdict on what it needs.
 | Top 100 Commander cards by EDHREC rank | 100 / 100 |
 | Top 250 Commander cards by EDHREC rank | 245 / 250 |
 | Top 500 Commander cards by EDHREC rank | 468 / 500 |
-| Top 1000 Commander cards by EDHREC rank | 884 / 1000 |
-| Top 2000 Commander cards by EDHREC rank | 1635 / 2000 |
-| Top 5000 Commander cards by EDHREC rank | 3415 / 5000 |
+| Top 1000 Commander cards by EDHREC rank | 885 / 1000 |
+| Top 2000 Commander cards by EDHREC rank | 1636 / 2000 |
+| Top 5000 Commander cards by EDHREC rank | 3416 / 5000 |
 | Top 100 commanders by decks built | 47 / 100 |
 | Top 300 commanders by decks built | 127 / 300 |
 
@@ -205,7 +205,7 @@ A partner pair lists only its missing halves.
 | 296 | Silas Renn, Seeker Adept | 8,891 | BU | Legendary Artifact Creature — Human | partner |
 | 297 | Myrel, Shield of Argive | 8,875 | W | Legendary Creature — Human Soldier |  |
 
-## 2. Top 1000 Commander cards not in the catalog (116)
+## 2. Top 1000 Commander cards not in the catalog (115)
 
 | EDHREC rank | Card | Cost | Type | Flags |
 | --- | --- | --- | --- | --- |
@@ -249,7 +249,6 @@ A partner pair lists only its missing halves.
 | 560 | Nesting Grounds |  | Land |  |
 | 561 | Second Harvest | {2}{G}{G} | Instant |  |
 | 573 | Champion of Lambholt | {1}{G}{G} | Creature — Human Warrior |  |
-| 576 | Opposition Agent | {2}{B} | Creature — Human Rogue |  |
 | 582 | Saw in Half | {2}{B} | Instant |  |
 | 590 | Teferi's Ageless Insight | {2}{U}{U} | Legendary Enchantment |  |
 | 608 | Tribute to the World Tree | {G}{G}{G} | Enchantment |  |
