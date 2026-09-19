@@ -11,6 +11,11 @@ use crabomination::game::types::Target;
 use crabomination::game::*;
 use crabomination::game::{cast, drain_stack, two_player_game};
 
+/// The shape both class tables below are written in. Aliased because a bare
+/// `[(&str, fn() -> CardDefinition); N]` trips `clippy::type_complexity`; the
+/// same alias is what `counters.rs` and `structural_audit.rs` use.
+type Factory = fn() -> CardDefinition;
+
 /// A permanent whose whole body is an as-enters "choose a color" replacement
 /// (Coldsteel Heart's shape), typed by the caller so the same body can be a
 /// land, an artifact or a creature.
@@ -187,7 +192,7 @@ fn cr_614_12_both_as_enters_replacements_apply_on_one_entry() {
 /// with nothing left on the stack to resolve.
 #[test]
 fn cr_614_12a_the_choose_a_name_class_names_as_it_enters() {
-    let namers: [(&str, fn() -> CardDefinition); 9] = [
+    let namers: [(&str, Factory); 9] = [
         ("Pithing Needle", catalog::pithing_needle),
         ("Phyrexian Revoker", catalog::phyrexian_revoker),
         ("Disruptor Flute", catalog::disruptor_flute),
@@ -259,7 +264,7 @@ fn cr_614_12a_a_named_sources_ability_is_locked_with_no_window() {
 /// own entry is covered by `cho_mannos_blessing_chooses_as_it_enters` below.
 #[test]
 fn cr_614_12a_the_choose_a_colour_class_chooses_as_it_enters() {
-    let namers: [(&str, fn() -> CardDefinition); 14] = [
+    let namers: [(&str, Factory); 14] = [
         ("Caged Sun", catalog::caged_sun),
         ("Chameleon Spirit", catalog::chameleon_spirit),
         ("Coldsteel Heart", catalog::coldsteel_heart),
