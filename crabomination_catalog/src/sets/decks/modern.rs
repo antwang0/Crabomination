@@ -24035,11 +24035,18 @@ pub fn pyre_charger() -> CardDefinition {
 }
 
 /// Obstinate Baloth — {2}{G}{G} 4/4 Beast. "When this enters, you gain 4
-/// life." (The discard-to-battlefield clause is dropped.)
+/// life. If a spell or ability an opponent controls causes you to discard
+/// this card, put it onto the battlefield instead of putting it into your
+/// graveyard."
 pub fn obstinate_baloth() -> CardDefinition {
     use crate::effect::shortcut::etb_gain_life;
     CardDefinition {
         name: "Obstinate Baloth",
+        // CR 614 — Dodecapod's replacement with no counters attached;
+        // `add_counters` is a no-op at zero, so the field carries both
+        // shapes. The clause had shipped dropped, which in a format full of
+        // Thoughtseize is most of why the card is played.
+        opponent_discard_deploys: Some((crate::card::CounterType::PlusOnePlusOne, 0)),
         cost: cost(&[generic(2), g(), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {

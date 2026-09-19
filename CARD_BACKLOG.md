@@ -232,7 +232,7 @@ every one of them is in the `cube` pool**, which is the finding:
 | ~~Simian Spirit Guide~~ | Judith | ✅ **the row was stale** — `from_hand: true, exile_self_cost: true, add_mana([Red])` has shipped, with `modern::coverage_backfill::simian_spirit_guide_pitches_from_hand_for_red` on it. The bot's `available_mana` does not *count* a Spirit Guide in hand, which is a deliberate downward bias, not a missing card |
 | ~~Sowing Mycospawn~~ | Sigarda | ✅ **fixed 2026-09-19** — the tutored land enters untapped, and the assertion is now in the card's own test |
 | ~~Delighted Halfling~~ | Sigarda, Tatyova | ✅ **fixed 2026-09-19** — `SpendRestriction::LegendarySpellUncounterable` (a real restriction *plus* the Cavern-shaped stamp), tested both ways |
-| Obstinate Baloth | Tatyova | the discard-to-battlefield clause is dropped. Needs a discard *replacement* keyed on "a spell or ability an opponent controls caused it" |
+| ~~Obstinate Baloth~~ | Tatyova | ✅ **fixed 2026-09-19** — no primitive was needed: `CardDefinition::opponent_discard_deploys` is Dodecapod's replacement and `add_counters` is a no-op at zero, so the same field carries a counterless deploy. `--bench` byte-identical, fourth in a row |
 | Spark Double | Tatyova | the planeswalker-copy half is omitted |
 | ~~Wall of Roots~~ | Tatyova | ✅ **fixed 2026-09-19** — `CounterType::MinusZeroMinusOne` already existed and `p_t_delta` already summed it; the card just wasn't using it. The stand-in was invisible to everything that reads, moves, removes or proliferates counters, and applied in layer 7c where a counter applies in 7d. `--bench` byte-identical, third in a row |
 | Delver of Secrets | Tatyova | the transform half is approximated |
