@@ -79,14 +79,35 @@ ALLOW = {
 }
 
 
+
+def _factory_body(src, start):
+    """The factory's source, brace-matched from its opening `{`.
+
+    ⚠ NOT "up to the next `pub fn`". A private helper between two factories is
+    otherwise read as part of the preceding card, and the card *after* such a
+    helper has its own body hidden behind it — `audit_enters_tapped` had a row
+    hidden that way. Brace matching also drops the trailing doc comment that
+    belongs to the next card, which had read as a shipped ability.
+    """
+    i = src.index("{", start)
+    depth = 0
+    while i < len(src):
+        if src[i] == "{":
+            depth += 1
+        elif src[i] == "}":
+            depth -= 1
+            if depth == 0:
+                return src[start : i + 1]
+        i += 1
+    return src[start:]
+
 def card_bodies():
     out = {}
     for path in sorted(SRC.rglob("*.rs")):
         src = path.read_text()
-        fns = [(m.start(), m.group(1)) for m in FN_RE.finditer(src)]
-        for i, (pos, ident) in enumerate(fns):
-            end = fns[i + 1][0] if i + 1 < len(fns) else len(src)
-            body = src[pos:end]
+        for mm in FN_RE.finditer(src):
+            pos, ident = mm.start(), mm.group(1)
+            body = _factory_body(src, pos)
             m = NAME_RE.search(body)
             if m:
                 name = m.group(1).replace('\\"', '"').replace("\\'", "'")

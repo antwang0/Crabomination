@@ -114,15 +114,37 @@ def bucket(clause):
     return "other"
 
 
+
+def _factory_body(src, start):
+    """The factory's source, brace-matched from its opening `{`.
+
+    ⚠ NOT "up to the next `pub fn`". A private helper between two factories is
+    otherwise read as part of the preceding card, and the card *after* such a
+    helper has its own body hidden behind it — the sibling census
+    (`audit_enters_tapped`) had a row hidden that way, and a trailing doc
+    comment belonging to the next card read as a shipped ability.
+    """
+    i = src.index("{", start)
+    depth = 0
+    while i < len(src):
+        if src[i] == "{":
+            depth += 1
+        elif src[i] == "}":
+            depth -= 1
+            if depth == 0:
+                return src[start : i + 1]
+        i += 1
+    return src[start:]
+
+
 def card_bodies():
     """{printed name: (factory, file, source body)} for every card factory."""
     out = {}
     for path in sorted(CATALOG.rglob("*.rs")):
         src = path.read_text()
-        fns = [(m.start(), m.group(1)) for m in FN_RE.finditer(src)]
-        for i, (start, ident) in enumerate(fns):
-            stop = fns[i + 1][0] if i + 1 < len(fns) else len(src)
-            body = src[start:stop]
+        for m in FN_RE.finditer(src):
+            start, ident = m.start(), m.group(1)
+            body = _factory_body(src, start)
             m = NAME_RE.search(body) or HELPER_NAME.search(body)
             if m:
                 name = m.group(1).replace('\\"', '"')

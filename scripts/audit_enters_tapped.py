@@ -59,7 +59,6 @@ CATALOG = ROOT / "crabomination_catalog/src"
 CACHE = ROOT / "scripts/.scryfall_cache.json"
 
 FN_RE = re.compile(r"pub fn (\w+)\(\) -> CardDefinition \{")
-FN_ANY = re.compile(r"^(?:pub(?:\([^)]*\))? )?fn \w+", re.M)
 COMMENT = re.compile(r"^\s*//.*$", re.M)
 NAME_RE = re.compile(r'name:\s*"((?:[^"\\]|\\.)*)"')
 HELPER_NAME = re.compile(r'\(\s*"((?:[^"\\]|\\.)*)"')
@@ -112,6 +111,22 @@ BATTLE_LANDS = [
 ]
 
 
+
+def _factory_body(src, start):
+    """The factory's source, brace-matched from its opening `{`."""
+    i = src.index("{", start)
+    depth = 0
+    while i < len(src):
+        if src[i] == "{":
+            depth += 1
+        elif src[i] == "}":
+            depth -= 1
+            if depth == 0:
+                return src[start : i + 1]
+        i += 1
+    return src[start:]
+
+
 def card_bodies(cache):
     """{printed name: (factory, file, source body)} for every card factory.
 
@@ -126,20 +141,18 @@ def card_bodies(cache):
     out = {}
     for path in sorted(CATALOG.rglob("*.rs")):
         src = path.read_text()
-        # ⚠ The body ends at the next function of ANY visibility, not at the
-        # next `pub fn`. A private helper sitting between two card factories
-        # is otherwise read as part of the preceding card, which both hides
-        # that card's own shape and attributes the helper's to it.
-        bounds = [m.start() for m in FN_ANY.finditer(src)]
         for m in FN_RE.finditer(src):
             start, ident = m.start(), m.group(1)
-            stop = next((b for b in bounds if b > start), len(src))
-            # ⚠ Comments out. A doc comment for the NEXT card sits inside this
-            # slice (the boundary is the next `fn`, and the comment precedes
-            # it), and a doc comment that names `StaticEffect::EntersTappedUnless`
-            # is prose, not a shipped ability. Hardened Academic read as an
-            # invented replacement until this line.
-            body = COMMENT.sub("", src[start:stop])
+            # ⚠ Brace-matched from the factory's own `{`, NOT "up to the next
+            # `pub fn`". A private helper between two factories is otherwise
+            # read as part of the preceding card, and the card *after* such a
+            # helper has its own body hidden behind it — Shifting Woodland was
+            # hidden that way. Brace matching also drops the trailing doc
+            # comment that belongs to the next card, which had read as a
+            # shipped ability (Hardened Academic). Comments inside the body
+            # still go, because a comment can name an effect the card does not
+            # carry.
+            body = COMMENT.sub("", _factory_body(src, start))
             candidates = [m.group(1) for m in NAME_RE.finditer(body)]
             candidates += [m.group(1) for m in HELPER_NAME.finditer(body)]
             name = next(
