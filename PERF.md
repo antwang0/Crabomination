@@ -3015,6 +3015,60 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-09-19 (the fifth Commander session, tip `HEAD`) — guardrail
+
+CR 603.2c's batch work, 25 catalog cards across three clauses, and a retuned
+pod deck. **The `--bench` invariant is byte-identical at three separate tips**,
+including the one that changed six `cube`/SOS pool cards' behavior:
+
+```text
+--bench (release-fast, this session's three readings all identical):
+  decisions          195,806   byte-identical to the committed invariant
+  turns_per_game       27.49   "
+  decisions_per_game   611.9   "
+  stalls          0 (cap 0 / board 0 / stuck 0 / draw 0)
+  determinism     ok (all pairs split)
+```
+
+**Ir, and it is the clean single-commit A/B**: base `3964e1c5`, candidate
+`a09f4704` — one commit apart, so the reading is the CR 603.2c batch-subject
+change and nothing else. Both `profiling-fast --no-default-features`, separate
+worktrees on one shared target dir, `nm | grep -cE " (T|t) (_)?mi_"` = 0 on
+both, distinct md5s.
+
+```text
+                        3964e1c5          a09f4704          delta
+  fixed              569,009,641       569,150,030       +0.0247 %
+  cube             1,480,034,899     1,480,485,041       +0.0304 %
+  sealed           1,601,529,456     1,601,932,160       +0.0251 %
+```
+
+📐 **All three pools move together by the same ~0.027 %, which by `(-361)`'s
+rule is a CODEGEN row rather than a workload row** — and that is what the
+change is: `combat_trigger_fired_this_step`'s key gains a `BatchSubject`
+field and `fire_combat_damage_triggers` gains a `bool`. The `Vec` itself is
+empty on virtually every board (`clear_cold!` guards it), so nothing here is
+per-permanent work.
+
+The card commits under it are **pure data** (`once_per_batch: true` on 25
+definitions) plus one dispatch-local `Vec<CardId>` behind the graveyard
+phase's existing `has_graveyard_trigger()` gate. Six of the 25 are pool cards
+and the `--bench` counters did not move: several cards leaving one graveyard
+at once, or three unblocked attackers into one seat, are rare in those pools.
+⚠ **That is the correction this session owes the file** — the previous pass
+had deferred the whole graveyard clause *on the assumption* that a pool card's
+behavior change must move the aggregate. Change it, then run `--bench`.
+
+**The pod, 20,000 games over six configurations** (`release-fast`, seed 43,
+3,000 a configuration at 2/3/4/5 seats plus the retune's before/after), 100 %
+decided, 0 undecided, 0 stalls throughout. Judith 6.2 → 14.6 % at four seats;
+turns/game 39.45 → 41.08 there, 52.54 at five seats.
+
+**Assertions sweep** (`overflow` + `-C debug-assertions=yes`): 8,000 pod games
+at 2/3/4/5 seats on fresh seeds 2005-2006 and the two-player grid over
+fixed/cube/sos/all at seed 2005 (4,080 games) — **0 assertions, 0 panics,
+100 % decided**. FRONTIER 2007.
+
 ### 2026-09-18 (the fourth Commander session, tip `06d60b26`) — guardrail
 
 Six Commander rules changes, a bot heuristic and an engine targeting change,
