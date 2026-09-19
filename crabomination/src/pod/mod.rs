@@ -481,10 +481,17 @@ mod tests {
         // was; at four it is one seat instead of three, so two of the three
         // seeded games are different games. ⚠ Three games is a re-bless gate,
         // not a measurement — the aggregate is in DECK_FEATURES.
+        // Re-blessed 2026-09-19 (board wipes): DECK_FEATURES' standing item was
+        // that Sigarda, Hanna and Tatyova had no way to break a stalled board.
+        // Five swaps close it — Wrath of God and Fumigate for Sigarda, River's
+        // Rebuke for Hanna, Evacuation and Bane of Progress for Tatyova — and
+        // the aggregate moved with them: the four-seat spread TIGHTENS from
+        // 25.1 to 23.6 points (39.8/14.7/20.0/25.5 → 40.9/17.1/17.3/24.7,
+        // 3,000 games at seed 43), and games run ~9 % longer.
         const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
-            (0xC0FFEE, Some(1), 55, 2369),
-            (43, Some(3), 47, 2040),
-            (4242, Some(3), 56, 2400),
+            (0xC0FFEE, Some(1), 55, 2360),
+            (43, Some(3), 101, 3969),
+            (4242, Some(3), 57, 2480),
         ];
         let decks = rofellos_pod(4);
         let t = build_pod_template(&decks);

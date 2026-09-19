@@ -100,14 +100,27 @@ number that says which to do first:
   seat-count bug. **Build pod lists out of what a greedy evaluator can price:
   removal, card advantage, fat, and per-opponent effects that resolve in one
   shot** (Gray Merchant, Massacre Wurm, Sepulchral Primordial).
-- ⚠ **Krark/Rograkh is the number now**: 8.1 % of five-seat games (seed 43,
-  3,000 games; field 35.5/12.8/19.8/23.7/8.1). Mono-red, and the only list the
-  two-colour Signet/Talisman cycles cannot legally carry.
-- **Board wipes are thin**: Judith now runs Blasphemous Act and Toxic Deluge
-  and Krark has Blasphemous Act and Mizzium Mortars, but Sigarda, Hanna and
-  Tatyova have none at all. A stalled board has two seats that can break it.
+- ⚠ **Krark/Rograkh is the number now**: **9.0 %** of five-seat games (seed
+  43, 3,000 games; field 37.9/14.3/16.4/22.4/9.0). Mono-red, and the only list
+  the two-colour Signet/Talisman cycles cannot legally carry — and its two
+  commanders are a 0/1 for {1}{R} and a 0/1 for {0}, chosen to exercise
+  Partner rather than to win, so some of this is structural.
+- ✅ **Every deck can now break a stalled board.** Five swaps, 2026-09-19:
+  **Wrath of God** and **Fumigate** into Sigarda, **River's Rebuke** into
+  Hanna, **Evacuation** and **Bane of Progress** into Tatyova; Judith already
+  ran Blasphemous Act and Toxic Deluge, Krark Blasphemous Act and Mizzium
+  Mortars. ⚠ **The shape of the wipe matters more than having one**, and that
+  was measured rather than assumed: Hanna took *Supreme Verdict* first and
+  dropped 20.0 → 15.3 %, because a deck whose plan is a wide artifact board
+  cannot afford a symmetric wrath. Swapping it for the one-sided River's
+  Rebuke, and dropping Evacuation, put it at **17.3 %** — and the four-seat
+  spread **tightens from 25.1 to 23.6 points** overall
+  (39.8/14.7/20.0/25.5 → **40.9/17.1/17.3/24.7**, seed 43, 3,000 games).
+  Five seats reads 37.9/14.3/16.4/22.4/**9.0** (Krark up from 8.1).
+  Cost: games run ~9 % longer (41.3 → 45.1 turns at four seats, 52.8 → 57.5 at
+  five), 100 % decided and zero stalls at every seat count.
 
-Both move the committed outcome table
+Any of these moves the committed outcome table
 (`pod::tests::cr_903_seeded_pod_outcomes_match_the_committed_table`), so
 re-bless in the same commit.
 
