@@ -37,6 +37,7 @@ lists were picked.
 | Krark/Rograkh R | Krark, the Thumbless **+** Rograkh, Son of Rohgahh (Partner) | R | 98 + 2 | ✅ complete |
 | Edgar Markov BRW | Edgar Markov (Eminence) | BRW | 100 | ✅ complete |
 | Freyalise G | Freyalise, Llanowar's Fury (**planeswalker**, CR 903.3a) | G | 100 | ✅ complete |
+| Zellix + Background UR | Zellix, Sanity Flayer **+** Passionate Archaeologist (**Choose a Background**, CR 702.124k) | UR | 98 + 2 | ✅ complete |
 
 The **sixth** is the pod's first three-colour identity and its first
 **Eminence** commander (CR 113.6b): Edgar Markov's "whenever you cast another
@@ -83,6 +84,35 @@ will apply, answered before the list is written rather than after it is
 rejected. Mono-green had **4,323** candidates. ⚠ It cannot tell a complete
 implementation from an approximated one; read `INCOMPLETE_CARDS.md` for a card
 before leaning on it.
+
+The **eighth** is the pod's only **Choose a Background** pair (CR 702.124k).
+`Keyword::ChooseABackground` and `format::is_background_pair` had been
+validated since they shipped and never piloted; this list pilots them, and
+three things fall out that the Partner seat does not produce: the second
+commander is a legendary **enchantment**, which `is_legal_commander` rejects
+on its own and only the pair check lets in; CR 702.124c combines the identity
+across a creature ({U}) and an enchantment ({R}); and CR 702.124d's second
+21-damage tally is zero all game for CR 903.10a's reason — an enchantment
+deals no combat damage, which is the planeswalker seat's consequence reached
+from the other side. That last point is why the pair is Zellix +
+Archaeologist rather than the mono-red Gut + Archaeologist one: UR is also a
+colour identity the field did not have.
+
+Zellix's own trigger is the pod half — "whenever **a player** mills one or
+more creature cards" is `EventScope::AnyPlayer` with `once_per_batch`
+(CR 603.2c), so it reads the whole table rather than its controller. The 99 is
+built to the measured shape the Judith and Freyalise retunes settled on
+(removal, card advantage, fat) rather than to the mill theme; the self-mill
+that is there — Hedron Crab, Careful Study, Faithless Looting — feeds the Hive
+Mind trigger without asking a one-ply material evaluator to price a graveyard.
+It sits after `pod_field(7)`, so every committed 2..7-seat reading is
+unchanged; `--commander --seats 8` is what reaches it. The UR pool had **7,272**
+candidates.
+
+⚠ **"Two commanders" stopped being a unique shape** when this list landed —
+CR 702.124k is also a pair — so the Partner test now looks for two commanders
+that are both *creatures* (CR 702.124h) and the planeswalker test for a deck
+with exactly *one* non-creature commander.
 
 ⚠ **Two tests used to find their deck with `last()`** — the Partner one broke
 when Edgar was appended and would have broken again here. Both search by
