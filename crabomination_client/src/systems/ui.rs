@@ -1523,6 +1523,7 @@ pub fn exile_browser(
     let key_v = !text_input.typing() && keyboard.just_pressed(KeyCode::KeyV);
     if key_v {
         state.open = !state.open;
+        state.owner = None;
     }
     // Clicking the scrim closes without consuming the Esc press.
     let close_requested = overlay_interaction.iter().any(|i| *i == Interaction::Pressed)
@@ -1532,12 +1533,16 @@ pub fn exile_browser(
             commands.entity(entity).despawn();
         }
         state.open = false;
+        state.owner = None;
         return;
     }
     if !existing.is_empty() || !state.open {
         return;
     }
     let Some(cv) = view.0.as_ref() else { return };
+    // An opponent panel's exile count opens the browser on that seat's
+    // cards only; the `V` key and the shared pile show everything.
+    let owner_filter = state.owner;
 
     // (owner, display name, badge, face_down, may-play id) per exiled card.
     // The last slot is `Some` only when the engine says the viewer could
@@ -1553,6 +1558,7 @@ pub fn exile_browser(
     )> = cv
         .exile
         .iter()
+        .filter(|c| owner_filter.is_none_or(|o| c.owner == o))
         .map(|c| {
             let mut badges: Vec<String> = Vec::new();
             if c.face_down {
@@ -1677,7 +1683,10 @@ pub fn exile_browser(
 
     commands.entity(panel).with_children(|panel| {
         panel.spawn((
-            Text::new(format!("Exile ({count} cards)")),
+            Text::new(match owner_filter {
+                Some(o) => format!("Exile — {}'s cards ({count})", owner_label(o)),
+                None => format!("Exile ({count} cards)"),
+            }),
             ui_fonts.tf(18.0),
             TextColor(theme::TEXT_PRIMARY),
             Pickable::IGNORE,

@@ -344,7 +344,7 @@ pub(super) fn storm_chip_visible(spells_cast_this_turn: u32) -> bool {
 /// Library size at or below which the Deck chip switches to its amber
 /// deck-out warning style (CR 104.3a — a player with an empty library
 /// loses the next time they'd draw).
-const LOW_LIBRARY_WARN: usize = 3;
+pub(super) const LOW_LIBRARY_WARN: usize = 3;
 
 /// Pick the Deck chip style based on remaining library size.
 fn deck_chip_kind(library_size: usize) -> StatChipKind {
@@ -371,7 +371,7 @@ fn speed_chip_label(speed: u32, at_max: bool) -> String {
 /// cap has been moved off the printed seven (Locust Miser, Minamo Scrollkeeper),
 /// it reads "✋ N/M" so both the looming discard and the shifted cap are
 /// glanceable; otherwise the plain count.
-fn hand_chip_label(hand: usize, max_hand_size: Option<usize>) -> String {
+pub(super) fn hand_chip_label(hand: usize, max_hand_size: Option<usize>) -> String {
     const DEFAULT_MAX: usize = 7;
     match max_hand_size {
         None => format!("✋ {hand} ∞"),
@@ -418,7 +418,7 @@ pub(super) fn spawn_stat_chip(
 /// the same colour all game (Arena / MTGO-style player colours), wrapping
 /// for more than `PALETTE.len()` seats. This is the player's visual
 /// identity in the HUD now that the 3-D coloured disc is gone.
-pub(super) fn seat_color(seat: usize) -> Color {
+pub(crate) fn seat_color(seat: usize) -> Color {
     const PALETTE: [Color; 6] = [
         Color::srgb(0.30, 0.55, 0.90), // blue
         Color::srgb(0.85, 0.32, 0.28), // red
@@ -464,7 +464,7 @@ fn spawn_avatar(parent: &mut ChildSpawnerCommands, ui_fonts: &UiFonts, seat: usi
 
 /// Threshold-graded `(background, text)` colours for the life badge,
 /// mirroring the tiers the old crest life numeral used.
-fn life_badge_style(life: i32) -> (Color, Color) {
+pub(super) fn life_badge_style(life: i32) -> (Color, Color) {
     match life {
         l if l <= 0 => (Color::srgb(0.55, 0.10, 0.10), theme::TEXT_PRIMARY),
         l if l <= 5 => (Color::srgb(0.45, 0.14, 0.14), theme::TEXT_DANGER),
@@ -1562,6 +1562,8 @@ pub fn update_opponent_stats_rows(
     commands.entity(container).despawn_children();
     let opponents: Vec<_> = cv.players.iter().filter(|p| p.seat != cv.your_seat).collect();
     commands.entity(container).with_children(|col| {
+        // Pods: "▶ You → Bob → Carol → Dave" over the rows.
+        super::table_awareness::spawn_turn_order_strip(col, &ui_fonts, cv);
         for p in opponents {
             col.spawn((
                 Node {
@@ -1579,7 +1581,7 @@ pub fn update_opponent_stats_rows(
                     border: UiRect::all(Val::Px(2.0)),
                     ..default()
                 },
-                BackgroundColor(Color::NONE),
+                BackgroundColor(super::table_awareness::opponent_row_bg(p.eliminated)),
                 BorderColor::all(Color::NONE),
                 Button,
                 // Opponent row is its own clickable player target — the
@@ -1589,20 +1591,21 @@ pub fn update_opponent_stats_rows(
                 PlayerHudPanel { seat: p.seat },
             ))
             .with_children(|row| {
-                spawn_avatar(row, &ui_fonts, p.seat, &p.name);
-                spawn_stat_chip(row, &ui_fonts, StatChipKind::Name, p.name.clone());
-                spawn_life_badge(row, &ui_fonts, p.life, p.starting_life);
+                // Avatar, name, large life, hand/library, clickable
+                // graveyard/exile — or a dimmed "☠ OUT" for a dead seat,
+                // whose remaining chips no longer matter.
+                if super::table_awareness::spawn_opponent_summary(row, &ui_fonts, p, cv) {
+                    return;
+                }
                 // CR 903.10a commander damage taken — see the viewer row.
                 for entry in &p.commander_damage_taken {
                     spawn_commander_damage_chip(row, &ui_fonts, entry);
                 }
                 // CR 903.8 - opponents' commander tax is public info too.
                 spawn_commander_tax_chips(row, &ui_fonts, &p.commander_casts);
-                spawn_stat_chip(row, &ui_fonts, StatChipKind::Hand, hand_chip_label(p.hand.len(), p.max_hand_size));
                 if let Some(by) = p.controlled_by {
                     spawn_stat_chip(row, &ui_fonts, StatChipKind::Controlled, format!("⛓ seat {by}"));
                 }
-                spawn_stat_chip(row, &ui_fonts, deck_chip_kind(p.library.size), format!("▤ {}", p.library.size));
                 // CR 401.5 — an opponent's revealed library top is public.
                 if let Some(top) = p.library.known_top.first() {
                     spawn_stat_chip(row, &ui_fonts, StatChipKind::TopCard, format!("▲ {}", top.name));
@@ -1612,7 +1615,6 @@ pub fn update_opponent_stats_rows(
                 if let Some(label) = revealed_hand_label(&p.hand, p.hand_revealed_to_viewer) {
                     spawn_stat_chip(row, &ui_fonts, StatChipKind::RevealedHand, label);
                 }
-                spawn_stat_chip(row, &ui_fonts, StatChipKind::Grave, format!("✟ {}", p.graveyard.len()));
                 if p.poison_counters > 0 {
                     spawn_poison_chip(row, &ui_fonts, p.poison_counters, p.poison_loss_threshold);
                 }

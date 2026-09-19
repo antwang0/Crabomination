@@ -224,6 +224,7 @@ fn on_exile_click(
     mut browser: ResMut<crate::game::ExileBrowserState>,
 ) {
     browser.open = !browser.open;
+    browser.owner = None;
 }
 
 /// Click on any graveyard pile toggles the browser to that pile's owner.

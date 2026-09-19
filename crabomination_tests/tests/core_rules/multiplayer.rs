@@ -494,6 +494,41 @@ fn three_player_ffa_can_attack_either_opponent() {
     assert!(matches!(err, GameError::InvalidAttackTarget(0)));
 }
 
+/// The client view says *who* in a pod: a goaded creature carries its
+/// goader seats (CR 701.38b — the seats it must avoid attacking if able) and
+/// a declared attacker carries its target and defending player (CR 508.1b),
+/// so a four-player HUD can name them rather than show bare flags.
+#[test]
+fn view_projects_goaders_and_attack_targets_per_seat() {
+    let mut g = multi_player_game(4);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let idle = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.battlefield_find_mut(bear).unwrap().goaded_by = vec![1, 3];
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear,
+        target: AttackTarget::Player(2),
+    }]))
+    .expect("the goaded bear may attack the non-goader");
+
+    for viewer in 0..4 {
+        let view = crabomination::server::view::project(&g, viewer);
+        let b = view.battlefield.iter().find(|p| p.id == bear).unwrap();
+        assert!(b.goaded);
+        assert_eq!(b.goaded_by, vec![1, 3], "viewer {viewer} sees both goaders");
+        assert!(b.attacking);
+        assert_eq!(b.attack_target, Some(AttackTarget::Player(2)));
+        assert_eq!(b.defending_player, Some(2));
+        let i = view.battlefield.iter().find(|p| p.id == idle).unwrap();
+        assert!(i.goaded_by.is_empty());
+        assert_eq!(i.attack_target, None);
+        assert_eq!(i.defending_player, None);
+    }
+}
+
 /// In a 2v2 team game, an attacker may not target a teammate. The
 /// pre-Phase-D check only rejected `target == active_player_idx`; with
 /// teams enabled, the active player's partner is equally off-limits.

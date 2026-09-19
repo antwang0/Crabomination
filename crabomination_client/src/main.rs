@@ -354,6 +354,7 @@ fn main() {
             theme::UiFontsPlugin,
             systems::draft::DraftPlugin,
             systems::lobby_ui::LobbyUiPlugin,
+            systems::game_ui::TableAwarenessPlugin,
         ))
         .init_gizmo_group::<BlockingGizmos>()
         .init_gizmo_group::<AttackerGizmos>()
