@@ -188,7 +188,7 @@ pub enum CreatureType {
     Drake, Griffin, Hippogriff, Pegasus, Unicorn, Horse, Hound, Wolf, Werewolf, Fox, Dog,
     Ferret,
     Jackal, Hyena,
-    Serpent, Fish, Octopus, Squid, Jellyfish, Starfish, Crab, Turtle, Frog, Crocodile, Homarid,
+    Serpent, Fish, Octopus, Squid, Jellyfish, Starfish, Crab, Turtle, Frog, Crocodile, Homarid, Lobster,
     Dinosaur, Lizard, Snake, Scorpion, Bat, Squirrel, Ox, Boar, Goat, Llama, Shark, Harpy, Porcupine,
     Sheep, Trilobite, Beaver, Beeble, Sponge, Oyster,
     Basilisk, Cockatrice,
@@ -4456,6 +4456,11 @@ pub struct EntersAsCopy {
     /// "except it has '{2}{U}{U}: Return this creature to its owner's hand'").
     #[serde(default)]
     pub extra_activated: Vec<crate::effect::ActivatedAbility>,
+    /// Static abilities layered on top of the copy (Sakashima of a Thousand
+    /// Faces — "except it has Sakashima's other abilities", i.e. "the legend
+    /// rule doesn't apply to permanents you control").
+    #[serde(default)]
+    pub extra_static: Vec<crate::effect::StaticAbility>,
 }
 
 /// CR 614 — one mode of a `CardDefinition.enters_as_choice` as-enters

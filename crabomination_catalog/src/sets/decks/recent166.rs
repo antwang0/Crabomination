@@ -331,7 +331,7 @@ pub fn ragost_deft_gastronaut() -> CardDefinition {
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Citizen],
+            creature_types: vec![CreatureType::Lobster, CreatureType::Citizen],
             ..Default::default()
         },
         power: 2,

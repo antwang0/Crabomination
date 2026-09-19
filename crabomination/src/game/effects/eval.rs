@@ -1145,6 +1145,12 @@ impl GameState {
                 .map(|p| self.players[p].cards_discarded_this_turn as i32)
                 .max()
                 .unwrap_or(0),
+            Value::CardsPutIntoGraveyardThisTurn(who) => self
+                .resolve_players(who, ctx)
+                .into_iter()
+                .map(|p| self.players[p].cards_to_graveyard_this_turn as i32)
+                .max()
+                .unwrap_or(0),
             Value::SquadCount => ctx
                 .source
                 .and_then(|s| self.battlefield_find(s))

@@ -1578,6 +1578,12 @@ fn affected_includes_gated(
                 && card.counter_count(*counter) >= *at_least
         }
         AffectedPermanents::CardMatch { source_controller, requirement } => {
+            // "This creature is the chosen type in addition to its other
+            // types" (Roaming Throne) — a bare `IsSource` requirement names
+            // the source itself, which only this arm can see.
+            if matches!(**requirement, crate::card::SelectionRequirement::IsSource) {
+                return source == card.id;
+            }
             // CR "other ... you control": `OtherThanSource` is matched here
             // (where the source id is known) rather than in the source-blind
             // `requirement_matches_card`, which treats it as always-true.

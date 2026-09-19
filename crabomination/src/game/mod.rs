@@ -21495,6 +21495,7 @@ impl GameState {
                                 | GameEvent::CreatureSacrificed { .. }
                         ),
                         triggered_by_attack: matches!(ev, GameEvent::AttackerDeclared(_)),
+                        triggered_by_land_entry: matches!(ev, GameEvent::LandPlayed { .. }),
                         from_mana_ability: matches!(
                             ev,
                             GameEvent::TappedForMana { .. }
@@ -21648,6 +21649,7 @@ impl GameState {
                             triggered_by_etb: false,
                             triggered_by_death: false,
                             triggered_by_attack: false,
+                            triggered_by_land_entry: false,
                         });
                     }
                 }
@@ -21691,6 +21693,7 @@ impl GameState {
                                 triggered_by_etb: false,
                                 triggered_by_death: false,
                                 triggered_by_attack: false,
+                                triggered_by_land_entry: false,
                             });
                         }
                     }
@@ -21803,6 +21806,7 @@ impl GameState {
                                     | GameEvent::CreatureSacrificed { .. }
                             ),
                             triggered_by_attack: matches!(ev, GameEvent::AttackerDeclared(_)),
+                            triggered_by_land_entry: false,
                             from_mana_ability: matches!(
                                 ev,
                                 GameEvent::TappedForMana { .. }
@@ -21868,6 +21872,7 @@ impl GameState {
                                         | GameEvent::CreatureSacrificed { .. }
                                 ),
                                 triggered_by_attack: matches!(ev, GameEvent::AttackerDeclared(_)),
+                                triggered_by_land_entry: false,
                                 from_mana_ability: false,
                             });
                             break;
@@ -21919,6 +21924,7 @@ impl GameState {
                                     triggered_by_etb: false,
                                     triggered_by_death: false,
                                     triggered_by_attack: false,
+                                    triggered_by_land_entry: false,
                                 });
                                 break;
                             }
@@ -21959,6 +21965,7 @@ impl GameState {
                                 triggered_by_etb: false,
                             triggered_by_death: false,
                             triggered_by_attack: false,
+                            triggered_by_land_entry: false,
                             });
                         }
                     }
@@ -22049,6 +22056,7 @@ impl GameState {
                             triggered_by_etb: false,
                             triggered_by_death: false,
                             triggered_by_attack: false,
+                            triggered_by_land_entry: false,
                         });
                     }
                 }
@@ -22100,6 +22108,7 @@ impl GameState {
                                     triggered_by_etb: false,
                                 triggered_by_death: false,
                                 triggered_by_attack: false,
+                                triggered_by_land_entry: false,
                                 });
                             }
                         }
@@ -22125,6 +22134,7 @@ impl GameState {
                                     triggered_by_etb: false,
                                 triggered_by_death: false,
                                 triggered_by_attack: false,
+                                triggered_by_land_entry: false,
                                 });
                             }
                         }
@@ -22235,6 +22245,24 @@ impl GameState {
     /// resulting queue onto the stack. Split from
     /// `dispatch_triggers_for_events` so the `OrderTriggers` resume path
     /// can re-enter after a networked controller picks their order.
+    /// Count Ancient Greenwarden-style land-entry trigger doublers a player
+    /// controls (`StaticEffect::DoubleControllerLandEntryTriggers`). Each adds
+    /// one extra fire to a trigger a land entering caused. Only reached for a
+    /// land-caused candidate, so ordinary dispatch never walks for it.
+    pub(crate) fn land_entry_trigger_extra_fires(&self, controller: usize) -> usize {
+        self.battlefield
+            .iter()
+            .filter(|c| c.controller == controller)
+            .flat_map(|c| &c.definition.static_abilities)
+            .filter(|sa| {
+                matches!(
+                    sa.effect,
+                    crate::effect::StaticEffect::DoubleControllerLandEntryTriggers
+                )
+            })
+            .count()
+    }
+
     /// Count active Isshin-style attack-trigger doublers a player controls
     /// (`StaticEffect::DoubleControllerAttackTriggers` — Windcrag Siege's Mardu
     /// mode). Each adds one extra fire to a permanent's attack-caused trigger.
@@ -22281,6 +22309,7 @@ impl GameState {
                 triggered_by_etb,
                 triggered_by_death,
                 triggered_by_attack,
+                triggered_by_land_entry,
                 from_mana_ability,
             } = candidate;
             if let Some(filter) = filter {
@@ -22313,7 +22342,20 @@ impl GameState {
                 let mult = if etb_mult == 0 {
                     0
                 } else {
-                    etb_mult + crate::game::actions::ally_trigger_extra_fires(self, controller, source)
+                    // Ancient Greenwarden — a *land* entering is a permanent
+                    // entering too, so an ETB-caused trigger off a land gets
+                    // the land doubler's extra fires as well.
+                    let land_extra = match subject {
+                        Some(crate::game::effects::EntityRef::Permanent(id))
+                            if self.battlefield_find(id).is_some_and(|c| c.definition.is_land()) =>
+                        {
+                            self.land_entry_trigger_extra_fires(controller)
+                        }
+                        _ => 0,
+                    };
+                    etb_mult
+                        + crate::game::actions::ally_trigger_extra_fires(self, controller, source)
+                        + land_extra
                 };
                 // `repeat_n` clones `mult - 1` times and yields the original
                 // last, so the ordinary board — no doubler, `mult == 1` —
@@ -22368,10 +22410,18 @@ impl GameState {
                 } else {
                     0
                 };
+                // Ancient Greenwarden: a landfall trigger (`LandPlayed`) of a
+                // permanent you control fires an additional time per doubler.
+                let land_extra = if triggered_by_land_entry {
+                    self.land_entry_trigger_extra_fires(controller)
+                } else {
+                    0
+                };
                 let fires = 1
                     + crate::game::actions::ally_trigger_extra_fires(self, controller, source)
                     + death_extra
-                    + attack_extra;
+                    + attack_extra
+                    + land_extra;
                 for effect in std::iter::repeat_n(effect, fires) {
                     queue.push(PendingTriggerPush {
                         actor,
@@ -28163,6 +28213,7 @@ fn static_effect_to_effects(
             | StaticEffect::DoubleControllerPermanentTriggers
             | StaticEffect::DoubleControllerDeathTriggers
             | StaticEffect::DoubleControllerAttackTriggers
+            | StaticEffect::DoubleControllerLandEntryTriggers
             // SuppressCreatureEtbTriggers — read at trigger dispatch via
             // `creature_etb_triggers_suppressed` / `creature_dies_triggers_suppressed`;
             // no layer effect (Torpor Orb, Tocatli Honor Guard, Hushbringer).

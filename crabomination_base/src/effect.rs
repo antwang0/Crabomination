@@ -694,6 +694,10 @@ pub enum Value {
     /// Cards `who` has discarded this turn (max over resolved players).
     /// Backed by `Player.cards_discarded_this_turn` (Dihada's Ploy).
     CardsDiscardedThisTurn(PlayerRef),
+    /// Cards put into `who`'s graveyard from anywhere this turn (max over
+    /// resolved players). Backed by `Player.cards_to_graveyard_this_turn`
+    /// (Fraying Sanity).
+    CardsPutIntoGraveyardThisTurn(PlayerRef),
     /// Number of card types on the most recently discarded card (Mount
     /// Velus Manticore's "X = the number of card types the discarded card
     /// has"). Backed by `GameState.last_discarded_card_types`.

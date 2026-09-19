@@ -1869,6 +1869,7 @@ impl GameState {
         // copy rewrite stamped the source's name over it.
         if (!spec.extra_triggered.is_empty()
             || !spec.extra_activated.is_empty()
+            || !spec.extra_static.is_empty()
             || !spec.extra_keywords.is_empty()
             || !spec.extra_card_types.is_empty()
             || spec.keep_name
@@ -1880,6 +1881,8 @@ impl GameState {
                 .extend(spec.extra_triggered.iter().cloned());
             def.activated_abilities
                 .extend(spec.extra_activated.iter().cloned());
+            def.static_abilities
+                .extend(spec.extra_static.iter().cloned());
             for kw in &spec.extra_keywords {
                 if !def.keywords.contains(kw) {
                     def.keywords.push(kw.clone());

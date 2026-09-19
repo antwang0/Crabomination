@@ -3580,6 +3580,13 @@ impl crate::game::GameState {
                     continue;
                 }
                 ExtraManaKind::AnyColor => Some(self.best_color_for_hand(p)),
+                ExtraManaKind::FixedWhileSourceCounters(c, kind, n) => {
+                    if self.battlefield_find(src_id).is_some_and(|s| s.counter_count(kind) >= n) {
+                        Some(c)
+                    } else {
+                        continue;
+                    }
+                }
                 // Handled above (colorless-only fast path).
                 ExtraManaKind::MirrorColorless => continue,
             };
@@ -5250,6 +5257,17 @@ impl GameState {
         self.battlefield.iter().any(|c| {
             c.controller == p
                 && c.definition.static_abilities.iter().any(|sa| match &sa.effect {
+                    // Realmwalker — "creature spells of the chosen type": the
+                    // grant's filter reads the granting permanent's choice,
+                    // which the source-blind card check can't see, so it is
+                    // concretized here (only when a choice is stamped).
+                    StaticEffect::PlayFromLibraryTop { filter } if c.chosen_creature_type.is_some() => {
+                        self.evaluate_requirement_on_card(
+                            &filter.resolve_chosen_creature_type(c.chosen_creature_type),
+                            card,
+                            p,
+                        )
+                    }
                     StaticEffect::PlayFromLibraryTop { filter }
                     | StaticEffect::PlayFromLibraryTopPayLife { filter } => {
                         self.evaluate_requirement_on_card(filter, card, p)
@@ -5302,7 +5320,11 @@ impl GameState {
             for sa in &c.definition.static_abilities {
                 match &sa.effect {
                     StaticEffect::PlayFromLibraryTop { filter }
-                        if self.evaluate_requirement_on_card(filter, card, p) =>
+                        if self.evaluate_requirement_on_card(
+                            &filter.resolve_chosen_creature_type(c.chosen_creature_type),
+                            card,
+                            p,
+                        ) =>
                     {
                         return false;
                     }

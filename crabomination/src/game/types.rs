@@ -1506,6 +1506,12 @@ pub struct TriggerCandidate {
     /// additional time" doubler.
     #[serde(default)]
     pub triggered_by_attack: bool,
+    /// True if the originating event was a land entering (`LandPlayed`,
+    /// which every land entry reports) — Ancient Greenwarden's "if a land
+    /// entering causes a triggered ability … triggers an additional time"
+    /// doubler for landfall triggers.
+    #[serde(default)]
+    pub triggered_by_land_entry: bool,
     /// CR 605.1b — fired from a mana ability (a permanent tapped for mana).
     #[serde(default)]
     pub from_mana_ability: bool,
