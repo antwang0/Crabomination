@@ -766,6 +766,14 @@ fn ashiok_life_payments_exile_the_library_instead() {
     });
     assert!(r.is_err(), "can't pay 1 life at 0");
     assert_eq!(g.players[0].library.len(), 5);
+
+    // A fetch land's "pay 1 life" is a cost too, so Ashiok replaces it.
+    let mut g = with_ashiok(5);
+    g.add_card_to_library(0, catalog::island());
+    let delta = g.add_card_to_battlefield(0, catalog::polluted_delta());
+    activate(&mut g, delta, 0, None);
+    assert_eq!(g.players[0].life, 20, "no life paid for the fetch");
+    assert_eq!(g.exile.len(), 1, "one card exiled instead");
 }
 
 // ── Artifacts ────────────────────────────────────────────────────────────────

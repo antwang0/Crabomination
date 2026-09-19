@@ -1,11 +1,17 @@
 use crate::card::{CardDefinition, CardType, LandType, SelectionRequirement};
-use crate::effect::{ActivatedAbility, Effect, PlayerRef, Selector, Value, ZoneDest};
+use crate::effect::{ActivatedAbility, Effect, PlayerRef, ZoneDest};
 use crate::mana::ManaCost;
 
 /// Build a fetch land activated ability: {T}, pay 1 life, sacrifice this:
 /// search your library for a `type_a` or `type_b` land and put it onto the
 /// battlefield (untapped — Oracle text for Onslaught/Zendikar fetches says
 /// "put it onto the battlefield", which means untapped).
+///
+/// The life and the sacrifice are activation COSTS (CR 602.2b / 119.4):
+/// paid before the ability is on the stack, so a Stifled fetch is still gone
+/// and still cost the life, the payment needs 1 life to make, and a
+/// pay-life replacement (Ashiok, Wicked Manipulator) sees it. They were
+/// `LoseLife` + `Move` steps of the resolution until 2026-09-19.
 fn fetch_ability(type_a: LandType, type_b: LandType) -> ActivatedAbility {
     let filter =
         SelectionRequirement::HasLandType(type_a).or(SelectionRequirement::HasLandType(type_b));
@@ -14,33 +20,21 @@ fn fetch_ability(type_a: LandType, type_b: LandType) -> ActivatedAbility {
         discard_cost: None,
         tap_cost: true,
         mana_cost: ManaCost::default(),
-        effect: Effect::Seq(vec![
-            // Pay 1 life
-            Effect::LoseLife {
-                who: Selector::You,
-                amount: Value::ONE,
+        // Search library for a land of either type, put it onto the
+        // battlefield untapped.
+        effect: Effect::Search {
+            who: PlayerRef::You,
+            filter,
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::You,
+                tapped: false,
             },
-            // Sacrifice this land
-            Effect::Move {
-                what: Selector::This,
-                to: ZoneDest::Graveyard,
-            },
-            // Search library for a land of either type, put it onto
-            // battlefield untapped.
-            Effect::Search {
-                who: PlayerRef::You,
-                filter,
-                to: ZoneDest::Battlefield {
-                    controller: PlayerRef::You,
-                    tapped: false,
-                },
-            },
-        ]),
+        },
         once_per_turn: false,
         sorcery_speed: false,
-        sac_cost: false,
+        sac_cost: true,
         condition: None,
-        life_cost: 0,
+        life_cost: 1,
         from_graveyard: false,
         exile_self_cost: false,
         exile_other_filter: None,
@@ -114,20 +108,15 @@ pub fn prismatic_vista() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             life_cost: 1,
-            effect: Effect::Seq(vec![
-                Effect::Move {
-                    what: Selector::This,
-                    to: ZoneDest::Graveyard,
+            sac_cost: true,
+            effect: Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::IsBasicLand,
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
                 },
-                Effect::Search {
-                    who: PlayerRef::You,
-                    filter: SelectionRequirement::IsBasicLand,
-                    to: ZoneDest::Battlefield {
-                        controller: PlayerRef::You,
-                        tapped: false,
-                    },
-                },
-            ]),
+            },
             ..Default::default()
         }],
         ..Default::default()

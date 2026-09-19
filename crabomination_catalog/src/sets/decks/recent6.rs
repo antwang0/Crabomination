@@ -888,11 +888,9 @@ pub fn fabled_passage() -> CardDefinition {
         card_types: vec![CardType::Land],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
+            // CR 602.2b — the sacrifice is a cost, not a resolution step.
+            sac_cost: true,
             effect: Effect::Seq(vec![
-                Effect::Move {
-                    what: Selector::This,
-                    to: ZoneDest::Graveyard,
-                },
                 Effect::Search {
                     who: PlayerRef::You,
                     filter: SelectionRequirement::IsBasicLand,

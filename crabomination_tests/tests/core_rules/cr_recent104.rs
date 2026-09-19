@@ -167,3 +167,46 @@ fn probing_telepathy_copies_only_the_entrants_own_etb_caused_trigger() {
     assert_eq!(g.players[0].life, 21, "Soul Warden triggers once");
     assert_eq!(g.players[1].life, 20, "another permanent's trigger isn't copied");
 }
+
+/// CR 602.2b / 119.4 — a fetch land's "pay 1 life, sacrifice this" are costs:
+/// both are paid while the ability goes on the stack, before it resolves. They
+/// were resolution steps, so a countered fetch kept its land and its life.
+#[test]
+fn cr_602_2b_a_fetch_lands_life_and_sacrifice_are_paid_on_activation() {
+    use crabomination::game::types::{GameAction, TurnStep};
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.add_card_to_library(0, catalog::island());
+    let delta = g.add_card_to_battlefield(0, catalog::polluted_delta());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: delta,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("activate the fetch");
+    assert_eq!(g.stack.len(), 1, "the search is on the stack");
+    assert_eq!(g.players[0].life, 19, "life paid before resolution");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == delta), "sacrificed as a cost");
+
+    // CR 119.4 — at 0 life the payment can't be made.
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].life = 0;
+    let delta = g.add_card_to_battlefield(0, catalog::polluted_delta());
+    let r = g.perform_action(GameAction::ActivateAbility {
+        card_id: delta,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    });
+    assert!(r.is_err(), "can't pay 1 life at 0");
+}
