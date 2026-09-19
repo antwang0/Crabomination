@@ -254,7 +254,7 @@ every one of them is in the `cube` pool**, which is the finding:
 | ~~Sowing Mycospawn~~ | Sigarda | ✅ **fixed 2026-09-19** — the tutored land enters untapped, and the assertion is now in the card's own test |
 | ~~Delighted Halfling~~ | Sigarda, Tatyova | ✅ **fixed 2026-09-19** — `SpendRestriction::LegendarySpellUncounterable` (a real restriction *plus* the Cavern-shaped stamp), tested both ways |
 | ~~Obstinate Baloth~~ | Tatyova | ✅ **fixed 2026-09-19** — no primitive was needed: `CardDefinition::opponent_discard_deploys` is Dodecapod's replacement and `add_counters` is a no-op at zero, so the same field carries a counterless deploy. `--bench` byte-identical, fourth in a row |
-| Spark Double | Tatyova | the planeswalker-copy half is omitted |
+| ~~Spark Double~~ | Tatyova | ✅ **fixed 2026-09-19** — all three exceptions had shipped missing, not just one: the filter was creature-only, the extra counter was always `+1/+1`, and `non_legendary` (CR 707.2e, the whole reason the card is a legend-rule dodge) was unset. The planeswalker half needed one engine fix — a copy of a planeswalker was entering with **no** loyalty counters and dying to the first SBA sweep, because the entering counters are seeded off the printed line before the copy rewrites it (`reseed_entering_counters_after_copy`, its own commit) |
 | ~~Wall of Roots~~ | Tatyova | ✅ **fixed 2026-09-19** — `CounterType::MinusZeroMinusOne` already existed and `p_t_delta` already summed it; the card just wasn't using it. The stand-in was invisible to everything that reads, moves, removes or proliferates counters, and applied in layer 7c where a counter applies in 7d. `--bench` byte-identical, third in a row |
 | Delver of Secrets | Tatyova | the transform half is approximated |
 

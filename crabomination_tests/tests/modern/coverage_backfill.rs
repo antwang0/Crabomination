@@ -1858,6 +1858,44 @@ fn spark_double_copies_with_an_extra_counter() {
     assert_eq!(dbl.definition.name, "Grizzly Bears");
     assert_eq!(dbl.counter_count(CounterType::PlusOnePlusOne), 1,
         "Spark Double enters with the extra +1/+1 counter (via CR 707.5 copied trigger)");
+    assert_eq!(dbl.counter_count(CounterType::Loyalty), 0, "and not a loyalty counter");
+}
+
+/// CR 707.2e — "a creature **or planeswalker** you control … an additional
+/// loyalty counter on it if it's a planeswalker, and it isn't legendary". All
+/// three halves had shipped missing: the filter was creature-only, so a
+/// planeswalker was not even offered.
+#[test]
+fn spark_double_copies_a_planeswalker_with_a_loyalty_counter() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    let walker = g.add_card_to_battlefield(0, catalog::jace_arcane_strategist());
+    let base = g.battlefield_find(walker).unwrap().counter_count(CounterType::Loyalty);
+    let id = g.add_card_to_hand(0, catalog::spark_double());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let dbl = g.battlefield.iter().find(|c| c.id == id).expect("on battlefield");
+    assert_eq!(dbl.definition.name, g.battlefield_find(walker).unwrap().definition.name);
+    assert_eq!(
+        dbl.counter_count(CounterType::Loyalty),
+        base + 1,
+        "a planeswalker copy enters with one loyalty counter more than printed",
+    );
+    assert_eq!(dbl.counter_count(CounterType::PlusOnePlusOne), 0, "and no +1/+1 counter");
+    // CR 707.2e — not legendary, so the legend rule does not eat one of them.
+    assert!(
+        !dbl.definition.supertypes.contains(&crabomination::card::Supertype::Legendary),
+        "the copy isn't legendary",
+    );
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_planeswalker()).count(),
+        2,
+        "both survive",
+    );
 }
 
 #[test]

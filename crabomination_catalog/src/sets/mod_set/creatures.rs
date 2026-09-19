@@ -2261,13 +2261,35 @@ pub fn spark_double() -> CardDefinition {
             ..Default::default()
         },
         enters_as_copy: Some(EntersAsCopy {
-            filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            // "a creature **or planeswalker** you control" — the planeswalker
+            // half had shipped missing, along with the "and it isn't
+            // legendary" exception (CR 707.2e, which is why the card is a
+            // legend-rule dodge in the first place).
+            filter: SelectionRequirement::Creature
+                .or(SelectionRequirement::Planeswalker)
+                .and(SelectionRequirement::ControlledByYou),
+            non_legendary: true,
+            // "...an additional +1/+1 counter if it's a creature, an
+            // additional loyalty counter if it's a planeswalker." The kind
+            // depends on what it turned into, so it is read off the copy at
+            // resolution rather than fixed here.
             extra_triggered: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: Effect::AddCounter {
-                    what: Selector::This,
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::Const(1),
+                effect: Effect::If {
+                    cond: crate::effect::Predicate::EntityMatches {
+                        what: Selector::This,
+                        filter: SelectionRequirement::Planeswalker,
+                    },
+                    then: Box::new(Effect::AddCounter {
+                        what: Selector::This,
+                        kind: CounterType::Loyalty,
+                        amount: Value::Const(1),
+                    }),
+                    else_: Box::new(Effect::AddCounter {
+                        what: Selector::This,
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::Const(1),
+                    }),
                 },
             }],
             ..Default::default()
