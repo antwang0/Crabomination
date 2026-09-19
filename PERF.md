@@ -3039,6 +3039,23 @@ Room's leaves it `None`, so the added work on the bench's ~196 k decisions is
 one null discriminant check per activation that takes the life-cost branch at
 all. The reading above says the same thing from the other side.
 
+**Closing re-verification, everything below taken at the final tip
+`5a4bc0d6` after the whole run:** suite **20,273 / 0 / 6**
+(`CRAB_ANSWER_LOG=strict`), clippy **0** over the workspace, `--bench`
+**195,806 / 27.49 / 611.9 / 0 stalls** with `determinism ok (all pairs
+split)`, `thread_determinism ok (3 vs 1)` and `peak_rss_mib` 31.7,
+`audit_panics` **0 bare**, every mirror column at its ratchet and
+`audit_as_enters --gate` clean, CR_COVERAGE 146/146. **Pod smoke at a fresh
+seed 9102 — 2,000 games at each of 2..8 seats, 14,000 games, 14,000
+DECIDED, every `undecided_by` column zero, no panic:**
+
+```text
+seats        2      3      4      5      6      7      8
+turns/game  19.37  32.35  45.30  56.88  64.74  77.85  93.34
+```
+
+**FRONTIER 9103.**
+
 ⚠ **And the cards could not reach it either**: none of the 51 lands or three
 commander-matters cards is in `bot_ladder::archetypes()` or either
 `golden_trace.rs` deck, and the seeded pod table
