@@ -1220,9 +1220,9 @@ fn cmdr_etali_rg_lands_enter_tapped_on_their_conditions() {
     let island_in_hand: Setup = |g| {
         g.add_card_to_hand(0, catalog::island());
     };
-    // (land, seats, setup, expected tapped)
-    type Factory = fn() -> CardDefinition;
-    let cases: [(Factory, usize, Setup, bool); 11] = [
+    /// (land factory, seat count, board setup, does it enter tapped).
+    type SeatTapCase = (fn() -> CardDefinition, usize, Setup, bool);
+    let cases: [SeatTapCase; 11] = [
         (catalog::arena_of_glory, 2, none, true),
         (catalog::arena_of_glory, 2, mountain_in_play, false),
         (catalog::spire_garden, 2, none, true),
@@ -1301,8 +1301,9 @@ fn flood_d(g: &mut GameState, seat: usize) {
 /// hand, the fodder in the graveyard.
 #[test]
 fn pia_and_formidable_speaker_discard_to_tutor() {
-    type Factory = fn() -> CardDefinition;
-    let cases: [(Factory, Factory); 2] = [
+    /// (the discard-to-tutor card, the card it goes and finds).
+    type TutorCase = (fn() -> CardDefinition, fn() -> CardDefinition);
+    let cases: [TutorCase; 2] = [
         (catalog::pia_aether_ascetic, catalog::oblivion_ring),
         (catalog::formidable_speaker, catalog::grizzly_bears),
     ];

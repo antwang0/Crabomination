@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Four hand-picked commanders, each with a 99 drawn from cards this engine
+//! Six hand-picked commanders, each with a 99 drawn from cards this engine
 //! already implements: legal under CR 903 (100 cards including the commander,
 //! singleton outside basics, every card inside the commander's CR 903.4 color
 //! identity) and Commander-legal per Scryfall's ban list, both of which
@@ -10,7 +10,7 @@
 //! decks is not derivable from the offline Scryfall cache this repo carries,
 //! and a list nobody can verify is worse than one the suite checks every run.
 //! What they keep from the precon idea is what the pod needs — fixed, legal,
-//! four different color identities, and built to play against each other.
+//! six different color identities, and built to play against each other.
 //!
 //! Each list is ~37 lands (12 nonbasic), the format's colorless staples, then
 //! ramp / removal / draw / a creature curve, so bots finish games with them.
@@ -169,5 +169,40 @@ pub const KRARK_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain,
+];
+
+/// Edgar Markov — BRW (Mardu). Commander, then the 99.
+///
+/// The pod's **sixth** deck and its first three-colour identity, which is what
+/// it is here for: CR 903.4 over three colours (Command Tower, Arcane Signet,
+/// Commander's Sphere, Path of Ancestry and Opal Palace all read it), and an
+/// **Eminence** commander (CR 113.6b) whose ability runs from the command zone
+/// every game rather than only in a unit test. It is last in `target_decks`, so
+/// `pod_field(4)` and `pod_field(5)` — and the committed outcome table — are
+/// unchanged by its existence; `--seats 6` is what reaches it.
+pub const EDGAR_COMMANDERS: &[CardFactory] = &[edgar_markov];
+
+/// Edgar Markov Vampire tribal BRW: 76 nonbasic cards + 23 basics = 99.
+pub const EDGAR_MAIN: &[CardFactory] = &[
+    accursed_duneyard, anguished_unmaking, arcane_signet, bedevil, blasphemous_act,
+    blood_artist, bloodghast, bloodline_bidding, bloodline_keeper, bloodline_recollector,
+    bloodtithe_harvester, boros_signet, burnished_hart, captivating_vampire, champion_of_dusk,
+    chaos_warp, charismatic_conqueror, clavileno_first_of_the_blessed, command_tower,
+    commanders_sphere, cordial_vampire, cruel_celebrant, crux_of_fate, damn, drana_and_linvala,
+    drana_liberator_of_malakir, edgar_ancient_bloodlord, edgar_charmed_groom,
+    elenda_the_dusk_rose, elendas_hierophant, farewell, feed_the_swarm, fetid_heath,
+    florian_voldaren_scion, foreboding_ruins, forerunner_of_the_legion, haunted_ridge,
+    heirloom_blade, kindred_dominance, luxury_suite, markov_baron, master_of_dark_rites,
+    mavren_fein_dusk_apostle, minas_tirith, mind_stone, necropotence, new_blood, nights_whisper,
+    oathsworn_vampire, olivia_voldaren, olivias_wrath, opal_palace, orzhov_signet,
+    path_of_ancestry, patron_of_the_vein, phyrexian_arena, rakdos_signet, rakish_heir,
+    read_the_bones, sign_in_blood, skullclamp, sol_ring, solemn_simulacrum,
+    sorin_lord_of_innistrad, sorin_solemn_visitor, spectator_seating, swords_to_plowshares,
+    talisman_of_indulgence, terminate, toxic_deluge, vault_of_champions, vault_of_the_archangel,
+    village_rites, wayfarers_bauble, westvale_abbey, wrath_of_god,
+    // Basics: 10 swamp, 7 plains, 6 mountain
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, plains, plains,
+    plains, plains, plains, plains, plains, mountain, mountain, mountain, mountain, mountain,
     mountain,
 ];
