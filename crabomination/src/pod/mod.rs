@@ -591,6 +591,22 @@ mod tests {
     #[test]
     fn cr_903_seeded_pod_outcomes_match_the_committed_table() {
         // (seed, winner, turns, actions)
+        // Re-blessed 2026-09-19 (the sinkless sacrifice): the bot no longer
+        // volunteers a sacrifice whose ability only makes mana, so a board with
+        // a mana-rock-shaped sacrifice outlet stops spending actions it never
+        // cashes in. All three games get SHORTER and cheaper — 55→47 turns /
+        // 2360→1909 actions, 101→67 / 3969→2831, 57→49 / 2480→2116 — which is
+        // the shape the fix predicts; two winners hold and seed 4242's moves
+        // 3→2. ⚠ Three games is a re-bless gate, not a measurement: the
+        // aggregate is 2,000 games a seat count at seed 9101, after vs before,
+        // and it barely moves — 19.33/19.30 turns at two seats (the control),
+        // 32.62/32.59 at three, 45.15/45.30 at four, 57.21/57.20 at five,
+        // 64.11/64.50 at six, 77.71/77.57 at seven, 92.84/92.89 at eight, every
+        // block 2,000/2,000 decided on both sides. The seeded games move far
+        // more than the aggregate because the outlet has to be on the board
+        // with something to feed it; when it is, the loop was thousands of
+        // actions long. `--bench` is byte-identical (the 2-player pool has no
+        // such outlet), so no golden trace moves.
         // Re-blessed twice on 2026-09-19, and the second one rides the first.
         // ① **The Judith list's retune** — 28 of its 72 nonbasics changed, so
         // all three games are different games. Its aggregate is 3,000 games a
@@ -645,9 +661,9 @@ mod tests {
         // 25.1 to 23.6 points (39.8/14.7/20.0/25.5 → 40.9/17.1/17.3/24.7,
         // 3,000 games at seed 43), and games run ~9 % longer.
         const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
-            (0xC0FFEE, Some(1), 55, 2360),
-            (43, Some(3), 101, 3969),
-            (4242, Some(3), 57, 2480),
+            (0xC0FFEE, Some(1), 47, 1909),
+            (43, Some(3), 67, 2831),
+            (4242, Some(2), 49, 2116),
         ];
         let decks = rofellos_pod(4);
         let t = build_pod_template(&decks);
