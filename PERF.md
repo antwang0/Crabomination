@@ -3055,6 +3055,15 @@ hits one. **FRONTIER 3204.**
 39.8 / 14.7 / 20.0 / 25.5 against the recorded 40.8 / 14.6 / 20.3 / 24.3 —
 inside the noise.
 
+**Assertions sweep, taken at the closing tip** (`overflow` +
+`-C debug-assertions=yes` into `target-audit`, `RUST_MIN_STACK=33554432`):
+**4,000 pod games** over 2/3/4/5 seats at seeds 4101-4102 and **4,080
+two-player games** over `fixed` / `cube` / `sos` / `all` at seed 4101 — no
+panic, no assertion, no overflow, 100 % decided, every `undecided_by` column
+zero. The build is **7m45s** (`release-fast`'s opt settings plus
+overflow checks), i.e. a third of a `release` build: it is the cheap
+robustness gate, not the expensive one.
+
 ⚠ **Build economics, measured again on this box (4 cores, 15 GB):** `release`
 bot_ladder **23m24s** after a catalog + engine change; `release-fast` ~13 min;
 the workspace debug suite 95-102 s. ⚠⚠ **And the rule that cost two whole
