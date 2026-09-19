@@ -231,7 +231,7 @@ pub fn play_one_pod_game(
             let crate::server::bot::BotStep { action, settled } = step;
             // Keyed against the pre-action state: a cast names the card while
             // it is still in the zone it is cast from.
-            let key = census.key_for(&g, &action);
+            let key = census.key_for(&g, seat, &action);
             let ok = if let Some(settled) = settled {
                 g = *settled;
                 true

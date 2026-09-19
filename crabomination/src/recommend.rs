@@ -2486,8 +2486,18 @@ impl ActionCensus {
 
     /// The key for an action *about to be taken*, or `None` when off. Taken
     /// before the action so a cast names the card in the zone it left.
-    pub fn key_for(&self, g: &GameState, a: &crate::game::GameAction) -> Option<String> {
-        self.on.then(|| Self::key(g, a))
+    ///
+    /// `seat` is the poller's index, and it is in the key rather than beside
+    /// it because the first capped game this found read `ActivateAbility#0
+    /// Eldrazi Spawn x7535` against a *different* seat's mana pool, and
+    /// nothing in the line said whether that was real.
+    pub fn key_for(
+        &self,
+        g: &GameState,
+        seat: usize,
+        a: &crate::game::GameAction,
+    ) -> Option<String> {
+        self.on.then(|| format!("p{seat} {}", Self::key(g, a)))
     }
 
     /// Count a key from [`Self::key_for`], once the action is known to have
