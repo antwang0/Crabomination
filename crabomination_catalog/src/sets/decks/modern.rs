@@ -6961,7 +6961,7 @@ pub fn krark_clan_ironworks() -> CardDefinition {
 // ── Surveil land cycle (Murders at Karlov Manor — non-deck slots) ────────────
 //
 // Each surveil land enters tapped and surveils 1. Reuses the
-// `dual_land_with` + `etb_tap_then_surveil_one` helpers from
+// `tapland_typed` + `etb_surveil_one` helpers from
 // `super::super::mod` (the same primitives that power the
 // `lands.rs::meticulous_archive` / `shadowy_backstreet` / `undercity_sewers`
 // trio in the deck-specific catalog).
@@ -6969,78 +6969,78 @@ pub fn krark_clan_ironworks() -> CardDefinition {
 /// Underground Mortuary — BG surveil land. ETB tapped, surveil 1, taps for {B} or {G}.
 pub fn underground_mortuary() -> CardDefinition {
     use crate::card::LandType;
-    super::super::dual_land_with(
+    super::super::tapland_typed(
         "Underground Mortuary",
         LandType::Swamp,
         LandType::Forest,
         Color::Black,
         Color::Green,
-        vec![super::super::etb_tap_then_surveil_one()],
+        super::super::etb_surveil_one(),
     )
 }
 
 /// Lush Portico — GW surveil land. ETB tapped, surveil 1, taps for {G} or {W}.
 pub fn lush_portico() -> CardDefinition {
     use crate::card::LandType;
-    super::super::dual_land_with(
+    super::super::tapland_typed(
         "Lush Portico",
         LandType::Forest,
         LandType::Plains,
         Color::Green,
         Color::White,
-        vec![super::super::etb_tap_then_surveil_one()],
+        super::super::etb_surveil_one(),
     )
 }
 
 /// Hedge Maze — UG surveil land. ETB tapped, surveil 1, taps for {U} or {G}.
 pub fn hedge_maze() -> CardDefinition {
     use crate::card::LandType;
-    super::super::dual_land_with(
+    super::super::tapland_typed(
         "Hedge Maze",
         LandType::Forest,
         LandType::Island,
         Color::Green,
         Color::Blue,
-        vec![super::super::etb_tap_then_surveil_one()],
+        super::super::etb_surveil_one(),
     )
 }
 
 /// Thundering Falls — UR surveil land. ETB tapped, surveil 1, taps for {U} or {R}.
 pub fn thundering_falls() -> CardDefinition {
     use crate::card::LandType;
-    super::super::dual_land_with(
+    super::super::tapland_typed(
         "Thundering Falls",
         LandType::Island,
         LandType::Mountain,
         Color::Blue,
         Color::Red,
-        vec![super::super::etb_tap_then_surveil_one()],
+        super::super::etb_surveil_one(),
     )
 }
 
 /// Commercial District — RW surveil land. ETB tapped, surveil 1, taps for {R} or {W}.
 pub fn commercial_district() -> CardDefinition {
     use crate::card::LandType;
-    super::super::dual_land_with(
+    super::super::tapland_typed(
         "Commercial District",
         LandType::Mountain,
         LandType::Forest,
         Color::Red,
         Color::Green,
-        vec![super::super::etb_tap_then_surveil_one()],
+        super::super::etb_surveil_one(),
     )
 }
 
 /// Raucous Theater — BR surveil land. ETB tapped, surveil 1, taps for {B} or {R}.
 pub fn raucous_theater() -> CardDefinition {
     use crate::card::LandType;
-    super::super::dual_land_with(
+    super::super::tapland_typed(
         "Raucous Theater",
         LandType::Swamp,
         LandType::Mountain,
         Color::Black,
         Color::Red,
-        vec![super::super::etb_tap_then_surveil_one()],
+        super::super::etb_surveil_one(),
     )
 }
 
@@ -7049,13 +7049,13 @@ pub fn raucous_theater() -> CardDefinition {
 /// printed card is in fact RG — Gruul slot of the MKM cycle.)
 pub fn elegant_parlor() -> CardDefinition {
     use crate::card::LandType;
-    super::super::dual_land_with(
+    super::super::tapland_typed(
         "Elegant Parlor",
         LandType::Mountain,
         LandType::Plains,
         Color::Red,
         Color::White,
-        vec![super::super::etb_tap_then_surveil_one()],
+        super::super::etb_surveil_one(),
     )
 }
 

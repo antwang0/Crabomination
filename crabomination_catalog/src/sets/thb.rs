@@ -3370,7 +3370,8 @@ fn temple(name: &'static str, a: Color, b: Color) -> CardDefinition {
         name,
         card_types: vec![CardType::Land],
         activated_abilities: vec![super::tap_add(a), super::tap_add(b)],
-        triggered_abilities: vec![super::etb_tap_then_scry_one()],
+        static_abilities: vec![super::enters_tapped()],
+        triggered_abilities: vec![super::etb_scry_one()],
         ..Default::default()
     }
 }

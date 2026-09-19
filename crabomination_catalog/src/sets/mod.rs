@@ -337,52 +337,72 @@ pub fn etb_tap() -> TriggeredAbility {
 }
 
 /// Triggered ability: when this permanent enters, tap it AND surveil 1.
-pub fn etb_tap_then_surveil_one() -> TriggeredAbility {
+/// A tapland with no basic land types: the CR 614.1c "enters tapped"
+/// replacement plus one ETB trigger for whatever the card does on arrival
+/// (the Theros scrylands' scry 1, the Khans gainlands' 1 life).
+///
+/// ⚠ The printed card reads "This land enters tapped. When this land enters,
+/// scry 1", which is **two** abilities: a replacement and a trigger. It used
+/// to ship as one trigger whose body was `Seq[Tap(This), Scry(1)]`, which put
+/// the land on the battlefield untapped and tapped it on resolution — see
+/// [`enters_tapped`] and ENGINE_BACKLOG's forty-ninth find.
+pub fn tapland_untyped(
+    name: &'static str,
+    color_a: Color,
+    color_b: Color,
+    on_enter: TriggeredAbility,
+) -> CardDefinition {
+    let mut d = dual_land_untyped(name, color_a, color_b, vec![on_enter]);
+    d.static_abilities.push(enters_tapped());
+    d
+}
+
+/// [`tapland_untyped`] for a **typed** dual (the surveil lands print their two
+/// basic land types).
+pub fn tapland_typed(
+    name: &'static str,
+    type_a: LandType,
+    type_b: LandType,
+    color_a: Color,
+    color_b: Color,
+    on_enter: TriggeredAbility,
+) -> CardDefinition {
+    let mut d = dual_land_with(name, type_a, type_b, color_a, color_b, vec![on_enter]);
+    d.static_abilities.push(enters_tapped());
+    d
+}
+
+pub fn etb_surveil_one() -> TriggeredAbility {
     TriggeredAbility {
         event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-        effect: Effect::Seq(vec![
-            Effect::Tap {
-                what: Selector::This,
-            },
-            Effect::Surveil {
-                who: PlayerRef::You,
-                amount: Value::Const(1),
-            },
-        ]),
+        effect: Effect::Surveil {
+            who: PlayerRef::You,
+            amount: Value::Const(1),
+        },
     }
 }
 
 /// Triggered ability: when this permanent enters, tap it AND scry 1
 /// (the Theros "scry tapland" cycle — Temple of Abandon et al.).
-pub fn etb_tap_then_scry_one() -> TriggeredAbility {
+pub fn etb_scry_one() -> TriggeredAbility {
     TriggeredAbility {
         event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-        effect: Effect::Seq(vec![
-            Effect::Tap {
-                what: Selector::This,
-            },
-            Effect::Scry {
-                who: PlayerRef::You,
-                amount: Value::Const(1),
-            },
-        ]),
+        effect: Effect::Scry {
+            who: PlayerRef::You,
+            amount: Value::Const(1),
+        },
     }
 }
 
 /// Triggered ability: when this permanent enters, tap it AND gain 1 life
 /// (the Khans "life-gain tapland" cycle — Tranquil Cove et al.).
-pub fn etb_tap_then_gain_one() -> TriggeredAbility {
+pub fn etb_gain_one() -> TriggeredAbility {
     TriggeredAbility {
         event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-        effect: Effect::Seq(vec![
-            Effect::Tap {
-                what: Selector::This,
-            },
-            Effect::GainLife {
-                who: Selector::You,
-                amount: Value::Const(1),
-            },
-        ]),
+        effect: Effect::GainLife {
+            who: Selector::You,
+            amount: Value::Const(1),
+        },
     }
 }
 

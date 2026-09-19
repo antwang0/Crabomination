@@ -1100,14 +1100,18 @@ fn underground_mortuary_etbs_tapped_and_carries_surveil_trigger() {
     // The factory definition carries the surveil trigger (AutoDecider keeps
     // the surveil-peeked card on top, so we don't observe a library shape
     // change here — the structural assertion is what the cube wires).
+    //
+    // ⚠ The trigger's effect is the surveil ALONE. It used to be
+    // `Seq[Tap(This), Surveil(1)]`, and this assertion walked into the `Seq`
+    // to find it — the tap is CR 614.1c's replacement now and lives in
+    // `static_abilities`, so the printed "This land enters tapped. When this
+    // land enters, surveil 1" is two abilities, as printed.
     let def = catalog::underground_mortuary();
-    let has_surveil = def.triggered_abilities.iter().any(|t| {
-        if let crabomination::card::Effect::Seq(steps) = &t.effect {
-            steps.iter().any(|e| matches!(e, crabomination::card::Effect::Surveil { .. }))
-        } else {
-            false
-        }
-    });
+    assert_eq!(def.static_abilities.len(), 1, "the enters-tapped replacement");
+    let has_surveil = def
+        .triggered_abilities
+        .iter()
+        .any(|t| matches!(t.effect, crabomination::card::Effect::Surveil { .. }));
     assert!(has_surveil, "Mortuary's ETB trigger contains a Surveil step");
 }
 

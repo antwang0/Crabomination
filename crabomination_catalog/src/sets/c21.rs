@@ -11,7 +11,7 @@ use crate::card::{StaticAbility, StaticEffect};
 use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, ZoneDest};
 use crate::mana::{Color, b, cost, g, generic, w};
 
-use super::{dual_land_untyped, etb_tap_then_scry_one, tap_add, tap_add_colorless};
+use super::{etb_scry_one, tap_add, tap_add_colorless, tapland_untyped};
 
 // ══════════════════════════════════════════════════════════════════════════
 // Lands
@@ -20,43 +20,43 @@ use super::{dual_land_untyped, etb_tap_then_scry_one, tap_add, tap_add_colorless
 // ── Theros scrylands (enters tapped, scry 1) ──────────────────────────────
 
 pub fn temple_of_epiphany() -> CardDefinition {
-    dual_land_untyped(
+    tapland_untyped(
         "Temple of Epiphany",
         Color::Blue,
         Color::Red,
-        vec![etb_tap_then_scry_one()],
+        etb_scry_one(),
     )
 }
 pub fn temple_of_malady() -> CardDefinition {
-    dual_land_untyped(
+    tapland_untyped(
         "Temple of Malady",
         Color::Black,
         Color::Green,
-        vec![etb_tap_then_scry_one()],
+        etb_scry_one(),
     )
 }
 pub fn temple_of_mystery() -> CardDefinition {
-    dual_land_untyped(
+    tapland_untyped(
         "Temple of Mystery",
         Color::Green,
         Color::Blue,
-        vec![etb_tap_then_scry_one()],
+        etb_scry_one(),
     )
 }
 pub fn temple_of_silence() -> CardDefinition {
-    dual_land_untyped(
+    tapland_untyped(
         "Temple of Silence",
         Color::White,
         Color::Black,
-        vec![etb_tap_then_scry_one()],
+        etb_scry_one(),
     )
 }
 pub fn temple_of_triumph() -> CardDefinition {
-    dual_land_untyped(
+    tapland_untyped(
         "Temple of Triumph",
         Color::Red,
         Color::White,
-        vec![etb_tap_then_scry_one()],
+        etb_scry_one(),
     )
 }
 

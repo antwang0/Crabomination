@@ -7,7 +7,8 @@
 //! lands and tap lands enter tapped via a self-targeting `Tap` trigger.
 
 use super::super::{
-    dual_land_untyped, dual_land_with, enters_tapped, etb_tap_then_gain_one, etb_tap_then_surveil_one,
+    dual_land_untyped, dual_land_with, enters_tapped, etb_gain_one, etb_surveil_one,
+    tapland_typed, tapland_untyped,
     fastland_etb_conditional_tap, hybrid_filter_land, land_type_reveal_land, painland,
     pay_one_filter_land, reveal_or_tapped_land, shockland_pay_two_or_tap, tap_add,
     tap_add_colorless, tri_land,
@@ -178,35 +179,35 @@ pub fn overgrown_tomb() -> CardDefinition {
 // All surveil lands enter tapped and surveil 1 on ETB.
 
 pub fn meticulous_archive() -> CardDefinition {
-    dual_land_with(
+    tapland_typed(
         "Meticulous Archive",
         LandType::Plains,
         LandType::Island,
         Color::White,
         Color::Blue,
-        vec![etb_tap_then_surveil_one()],
+        etb_surveil_one(),
     )
 }
 
 pub fn shadowy_backstreet() -> CardDefinition {
-    dual_land_with(
+    tapland_typed(
         "Shadowy Backstreet",
         LandType::Plains,
         LandType::Swamp,
         Color::White,
         Color::Black,
-        vec![etb_tap_then_surveil_one()],
+        etb_surveil_one(),
     )
 }
 
 pub fn undercity_sewers() -> CardDefinition {
-    dual_land_with(
+    tapland_typed(
         "Undercity Sewers",
         LandType::Island,
         LandType::Swamp,
         Color::Blue,
         Color::Black,
-        vec![etb_tap_then_surveil_one()],
+        etb_surveil_one(),
     )
 }
 
@@ -1557,96 +1558,96 @@ pub fn field_of_ruin() -> CardDefinition {
 //
 // "~ enters tapped. When ~ enters, you gain 1 life. {T}: Add {C1} or {C2}."
 // `dual_land_with` supplies the two color mana abilities; the shared
-// `etb_tap_then_gain_one` trigger taps it and gains the life.
+// `enters_tapped` replacement taps it and the `etb_gain_one` trigger gains the life.
 
 pub fn tranquil_cove() -> CardDefinition {
-    dual_land_untyped(
+    tapland_untyped(
         "Tranquil Cove",
         Color::White,
         Color::Blue,
-        vec![etb_tap_then_gain_one()],
+        etb_gain_one(),
     )
 }
 
 pub fn dismal_backwater() -> CardDefinition {
-    dual_land_untyped(
+    tapland_untyped(
         "Dismal Backwater",
         Color::Blue,
         Color::Black,
-        vec![etb_tap_then_gain_one()],
+        etb_gain_one(),
     )
 }
 
 pub fn bloodfell_caves() -> CardDefinition {
-    dual_land_untyped(
+    tapland_untyped(
         "Bloodfell Caves",
         Color::Black,
         Color::Red,
-        vec![etb_tap_then_gain_one()],
+        etb_gain_one(),
     )
 }
 
 pub fn rugged_highlands() -> CardDefinition {
-    dual_land_untyped(
+    tapland_untyped(
         "Rugged Highlands",
         Color::Red,
         Color::Green,
-        vec![etb_tap_then_gain_one()],
+        etb_gain_one(),
     )
 }
 
 pub fn blossoming_sands() -> CardDefinition {
-    dual_land_untyped(
+    tapland_untyped(
         "Blossoming Sands",
         Color::Green,
         Color::White,
-        vec![etb_tap_then_gain_one()],
+        etb_gain_one(),
     )
 }
 
 // IKO completes the enemy-pair half of the gain-tapland cycle.
 pub fn jungle_hollow() -> CardDefinition {
-    dual_land_untyped(
+    tapland_untyped(
         "Jungle Hollow",
         Color::Black,
         Color::Green,
-        vec![etb_tap_then_gain_one()],
+        etb_gain_one(),
     )
 }
 
 pub fn scoured_barrens() -> CardDefinition {
-    dual_land_untyped(
+    tapland_untyped(
         "Scoured Barrens",
         Color::White,
         Color::Black,
-        vec![etb_tap_then_gain_one()],
+        etb_gain_one(),
     )
 }
 
 pub fn swiftwater_cliffs() -> CardDefinition {
-    dual_land_untyped(
+    tapland_untyped(
         "Swiftwater Cliffs",
         Color::Blue,
         Color::Red,
-        vec![etb_tap_then_gain_one()],
+        etb_gain_one(),
     )
 }
 
 pub fn thornwood_falls() -> CardDefinition {
-    dual_land_untyped(
+    tapland_untyped(
         "Thornwood Falls",
         Color::Green,
         Color::Blue,
-        vec![etb_tap_then_gain_one()],
+        etb_gain_one(),
     )
 }
 
 pub fn wind_scarred_crag() -> CardDefinition {
-    dual_land_untyped(
+    tapland_untyped(
         "Wind-Scarred Crag",
         Color::Red,
         Color::White,
-        vec![etb_tap_then_gain_one()],
+        etb_gain_one(),
     )
 }
 
