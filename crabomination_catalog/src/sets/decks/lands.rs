@@ -13,11 +13,11 @@ use super::super::{
     tap_add_colorless, tri_land,
 };
 use crate::card::{
-    CardDefinition, CardType, Effect, EventKind, EventScope, EventSpec, LandType,
+    CardDefinition, CardType, CounterType, Effect, EventKind, EventScope, EventSpec, LandType,
     SelectionRequirement, Selector, Subtypes, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::target_filtered;
-use crate::effect::{ActivatedAbility, ManaPayload, PlayerRef, Predicate};
+use crate::effect::{ActivatedAbility, ManaPayload, PlayerRef, Predicate, ZoneDest};
 use crate::mana::{Color, ManaCost, cost, g, generic, r, u, w};
 
 // ── Fastlands ────────────────────────────────────────────────────────────────
@@ -1771,6 +1771,122 @@ pub fn sunscorched_divide() -> CardDefinition {
 
 pub fn overflowing_basin() -> CardDefinition {
     pay_one_filter_land("Overflowing Basin", Color::Green, Color::Blue)
+}
+
+// ── Utility lands: `{T}: Add {C}` plus one activated ability ────────────────
+
+/// Spire of Industry — Land. "{T}: Add {C}. {T}, Pay 1 life: Add one mana of
+/// any color. Activate only if you control an artifact."
+pub fn spire_of_industry() -> CardDefinition {
+    CardDefinition {
+        name: "Spire of Industry",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            tap_add_colorless(),
+            ActivatedAbility {
+                tap_cost: true,
+                life_cost: 1,
+                condition: Some(Predicate::SelectorExists(Selector::EachPermanent(
+                    SelectionRequirement::Artifact.and(SelectionRequirement::ControlledByYou),
+                ))),
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::AnyOneColor(Value::ONE),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Cabal Stronghold — Land. "{T}: Add {C}. {3}, {T}: Add {B} for each basic
+/// Swamp you control."
+///
+/// ⚠ **basic** Swamp: a Swamp dual (Vernal Fen, Witch's Cottage) has the land
+/// type and not the supertype, so the filter carries `IsBasicLand` as well as
+/// `HasLandType(Swamp)`.
+pub fn cabal_stronghold() -> CardDefinition {
+    CardDefinition {
+        name: "Cabal Stronghold",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            tap_add_colorless(),
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(3)]),
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::OfColor(
+                        Color::Black,
+                        Value::count(Selector::EachPermanent(
+                            SelectionRequirement::IsBasicLand
+                                .and(SelectionRequirement::HasLandType(LandType::Swamp))
+                                .and(SelectionRequirement::ControlledByYou),
+                        )),
+                    ),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Gavony Township — Land. "{T}: Add {C}. {2}{G}{W}, {T}: Put a +1/+1 counter
+/// on each creature you control."
+pub fn gavony_township() -> CardDefinition {
+    CardDefinition {
+        name: "Gavony Township",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            tap_add_colorless(),
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(2), g(), w()]),
+                effect: Effect::AddCounter {
+                    what: Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou),
+                    ),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Hall of Heliod's Generosity — Legendary Land. "{T}: Add {C}. {1}{W}, {T}:
+/// Put target enchantment card from your graveyard on top of your library."
+pub fn hall_of_heliods_generosity() -> CardDefinition {
+    use crate::effect::LibraryPosition;
+    CardDefinition {
+        name: "Hall of Heliod's Generosity",
+        card_types: vec![CardType::Land],
+        supertypes: vec![crate::card::Supertype::Legendary],
+        activated_abilities: vec![
+            tap_add_colorless(),
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(1), w()]),
+                effect: Effect::Move {
+                    what: target_filtered(
+                        SelectionRequirement::Enchantment
+                            .and(SelectionRequirement::InYourGraveyard),
+                    ),
+                    to: ZoneDest::Library {
+                        who: PlayerRef::You,
+                        pos: LibraryPosition::Top,
+                    },
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
 }
 
 // ── Reveal-or-tapped lands, the five the catalog was missing ────────────────

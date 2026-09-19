@@ -1359,3 +1359,118 @@ fn every_triome_carries_its_three_types_and_cycling_three() {
         }
     }
 }
+
+// ── Utility lands: {T}: Add {C} plus one activated ability ──────────────────
+
+/// Spire of Industry's second ability is gated on controlling an artifact and
+/// costs a life; the colourless half is ungated.
+#[test]
+fn spire_of_industry_needs_an_artifact_and_a_life() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let land = g.add_card_to_battlefield(0, catalog::spire_of_industry());
+    let act = |g: &mut crabomination::game::GameState, i: usize| {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: land, ability_index: i, target: None, additional_targets: Vec::new(),
+            x_value: None, mode: None,
+        })
+    };
+    assert!(act(&mut g, 1).is_err(), "no artifact, no colour");
+
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let land = g.add_card_to_battlefield(0, catalog::spire_of_industry());
+    g.add_card_to_battlefield(0, catalog::sol_ring());
+    let life = g.players[0].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 1, target: None, additional_targets: Vec::new(),
+        x_value: None, mode: None,
+    })
+    .expect("with an artifact out");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life - 1, "paid 1 life");
+    assert_eq!(
+        [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green]
+            .iter()
+            .map(|c| g.players[0].mana_pool.amount(*c))
+            .sum::<u32>(),
+        1,
+        "one mana of some colour",
+    );
+}
+
+/// Cabal Stronghold counts **basic** Swamps — a Swamp dual has the land type
+/// without the supertype and does not count.
+#[test]
+fn cabal_stronghold_counts_only_basic_swamps() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let land = g.add_card_to_battlefield(0, catalog::cabal_stronghold());
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::swamp());
+    }
+    g.add_card_to_battlefield(0, catalog::overgrown_tomb());
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 1, target: None, additional_targets: Vec::new(),
+        x_value: None, mode: None,
+    })
+    .expect("{3}, {T}");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.players[0].mana_pool.amount(Color::Black),
+        3,
+        "three basic Swamps; Overgrown Tomb has the type, not the supertype",
+    );
+}
+
+/// Gavony Township puts a counter on each creature you control, and on
+/// nobody else's.
+#[test]
+fn gavony_township_counters_your_team_only() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let land = g.add_card_to_battlefield(0, catalog::gavony_township());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 1, target: None, additional_targets: Vec::new(),
+        x_value: None, mode: None,
+    })
+    .expect("{2}{G}{W}, {T}");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(mine).unwrap().power, 3, "+1/+1");
+    assert_eq!(g.computed_permanent(theirs).unwrap().power, 2, "not theirs");
+}
+
+/// Hall of Heliod's Generosity puts a graveyard enchantment back on top of
+/// the library, and it is legendary.
+#[test]
+fn hall_of_heliods_generosity_recurs_an_enchantment_to_the_top() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    assert!(catalog::hall_of_heliods_generosity().is_legendary());
+    let land = g.add_card_to_battlefield(0, catalog::hall_of_heliods_generosity());
+    let aura = g.add_card_to_graveyard(0, catalog::pacifism());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land,
+        ability_index: 1,
+        target: Some(Target::Permanent(aura)),
+        additional_targets: Vec::new(),
+        x_value: None,
+        mode: None,
+    })
+    .expect("{1}{W}, {T}");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.is_empty(), "left the graveyard");
+    assert_eq!(
+        g.players[0].library.last().map(|c| c.definition.name),
+        Some("Pacifism"),
+        "on top of the library",
+    );
+}
