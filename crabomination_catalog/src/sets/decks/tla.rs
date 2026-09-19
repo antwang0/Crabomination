@@ -1814,7 +1814,7 @@ pub fn foggy_swamp_spirit_keeper() -> CardDefinition {
 /// One TLA two-color sac-land: enters tapped, taps for either color, and can be
 /// sacrificed for a card. Untyped (no basic land subtypes).
 fn tla_sac_land(name: &'static str, color_a: Color, color_b: Color) -> CardDefinition {
-    use super::super::{etb_tap, tap_add};
+    use super::super::{enters_tapped, tap_add};
     CardDefinition {
         name,
         card_types: vec![CardType::Land],
@@ -1832,7 +1832,7 @@ fn tla_sac_land(name: &'static str, color_a: Color, color_b: Color) -> CardDefin
                 ..Default::default()
             },
         ],
-        triggered_abilities: vec![etb_tap()],
+        static_abilities: vec![enters_tapped()],
         ..Default::default()
     }
 }

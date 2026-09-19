@@ -6104,16 +6104,12 @@ pub fn last_gasp() -> CardDefinition {
 
 // ── Utility lands (Locus / fetch / sacrifice / bridge cycle) ─────────────────
 
-/// Self-source ETB tap trigger — local copy of `super::super::etb_tap` to
-/// avoid a wide import here. The same shape powers all the ETB-tapped
-/// utility lands below.
-fn modern_etb_tap() -> TriggeredAbility {
-    TriggeredAbility {
-        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-        effect: Effect::Tap {
-            what: Selector::This,
-        },
-    }
+/// "This land enters tapped" as the CR 614.1c **replacement** it is — the
+/// local alias for `super::super::enters_tapped`, kept to avoid a wide import
+/// here. It used to be a local copy of `etb_tap`, i.e. an ETB *trigger*, which
+/// left the land on the battlefield untapped with the trigger on the stack.
+fn modern_etb_tap() -> crate::effect::StaticAbility {
+    super::super::enters_tapped()
 }
 
 /// Glimmerpost — Land — Locus. "When this land enters, you gain 1 life for
@@ -6207,7 +6203,7 @@ pub fn cloudpost() -> CardDefinition {
             from_hand: false,
             ..Default::default()
         }],
-        triggered_abilities: vec![modern_etb_tap()],
+        static_abilities: vec![modern_etb_tap()],
         ..Default::default()
     }
 }
@@ -6301,7 +6297,7 @@ pub fn evolving_wilds() -> CardDefinition {
             from_hand: false,
             ..Default::default()
         }],
-        triggered_abilities: vec![modern_etb_tap()],
+        static_abilities: vec![modern_etb_tap()],
         ..Default::default()
     }
 }
@@ -6322,7 +6318,7 @@ fn bridge_land(
             crate::catalog::sets::tap_add(color_a),
             crate::catalog::sets::tap_add(color_b),
         ],
-        triggered_abilities: vec![modern_etb_tap()],
+        static_abilities: vec![modern_etb_tap()],
         ..Default::default()
     }
 }
@@ -27049,7 +27045,7 @@ pub fn mutable_explorer() -> CardDefinition {
         card_types: vec![CardType::Land],
         activated_abilities: vec![super::super::tap_add_colorless(), animate],
         // "Create a tapped Mutavault token" — enter tapped via a self-ETB tap.
-        triggered_abilities: vec![super::super::etb_tap()],
+        static_abilities: vec![super::super::enters_tapped()],
         ..Default::default()
     };
     CardDefinition {
@@ -27411,10 +27407,8 @@ pub fn power_depot() -> CardDefinition {
                 ..Default::default()
             },
         ],
-        triggered_abilities: vec![
-            super::super::etb_tap(),
-            crate::effect::shortcut::modular_dies(),
-        ],
+        static_abilities: vec![super::super::enters_tapped()],
+        triggered_abilities: vec![crate::effect::shortcut::modular_dies()],
         ..Default::default()
     }
 }
@@ -28505,7 +28499,7 @@ pub fn guardian_idol() -> CardDefinition {
         name: "Guardian Idol",
         cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact],
-        triggered_abilities: vec![modern_etb_tap()],
+        static_abilities: vec![modern_etb_tap()],
         activated_abilities: vec![
             ActivatedAbility {
                 tap_cost: true,
@@ -31462,7 +31456,7 @@ pub fn reassembling_skeleton() -> CardDefinition {
 /// this from your graveyard to the battlefield. Activate only as a sorcery
 /// and only if you have one or fewer cards in hand."
 pub fn dread_wanderer() -> CardDefinition {
-    use crate::sets::etb_tap;
+    use crate::sets::enters_tapped;
     CardDefinition {
         name: "Dread Wanderer",
         cost: cost(&[b()]),
@@ -31473,7 +31467,7 @@ pub fn dread_wanderer() -> CardDefinition {
         },
         power: 2,
         toughness: 1,
-        triggered_abilities: vec![etb_tap()],
+        static_abilities: vec![enters_tapped()],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2), b()]),
             from_graveyard: true,
@@ -59993,7 +59987,7 @@ pub fn pyxis_of_pandemonium() -> CardDefinition {
 /// Faerie Conclave — Land. Enters tapped; {T}: Add {U}; {1}{U}: 2/1 blue
 /// flying Faerie until end of turn.
 pub fn faerie_conclave() -> CardDefinition {
-    use crate::sets::{etb_tap, tap_add};
+    use crate::sets::{enters_tapped, tap_add};
     CardDefinition {
         name: "Faerie Conclave",
         card_types: vec![CardType::Land],
@@ -60012,7 +60006,7 @@ pub fn faerie_conclave() -> CardDefinition {
                 ..Default::default()
             },
         ],
-        triggered_abilities: vec![etb_tap()],
+        static_abilities: vec![enters_tapped()],
         ..Default::default()
     }
 }

@@ -224,7 +224,7 @@ fn urzas_legacy_manland(
     ctype: CreatureType,
     kws: Vec<Keyword>,
 ) -> CardDefinition {
-    use crate::sets::{etb_tap, tap_add};
+    use crate::sets::{enters_tapped, tap_add};
     CardDefinition {
         name,
         card_types: vec![CardType::Land],
@@ -243,7 +243,7 @@ fn urzas_legacy_manland(
                 ..Default::default()
             },
         ],
-        triggered_abilities: vec![etb_tap()],
+        static_abilities: vec![enters_tapped()],
         ..Default::default()
     }
 }

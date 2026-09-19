@@ -20,7 +20,7 @@ use crate::mana::{Color, b, cost, g, generic, r, u, w};
 /// Build a Strixhaven Campus land: enters tapped, taps for one of two
 /// colors, and `{4}, {T}: Scry 1`.
 fn campus_land(name: &'static str, color_a: Color, color_b: Color) -> CardDefinition {
-    use super::super::{etb_tap, tap_add};
+    use super::super::{enters_tapped, tap_add};
     let scry = ActivatedAbility {
         tap_cost: true,
         mana_cost: cost(&[generic(4)]),
@@ -34,7 +34,7 @@ fn campus_land(name: &'static str, color_a: Color, color_b: Color) -> CardDefini
         name,
         card_types: vec![CardType::Land],
         activated_abilities: vec![tap_add(color_a), tap_add(color_b), scry],
-        triggered_abilities: vec![etb_tap()],
+        static_abilities: vec![enters_tapped()],
         ..Default::default()
     }
 }
@@ -87,21 +87,22 @@ pub fn access_tunnel() -> CardDefinition {
 /// Archway Commons — enters tapped; "When this land enters, sacrifice it
 /// unless you pay {1}"; `{T}: Add one mana of any color.`
 pub fn archway_commons() -> CardDefinition {
-    use super::super::{etb_tap, tap_add_any_color};
+    use super::super::{enters_tapped, tap_add_any_color};
     CardDefinition {
         name: "Archway Commons",
         card_types: vec![CardType::Land],
         activated_abilities: vec![tap_add_any_color()],
-        // The tax after the tap in the list, so the tap resolves first: the
-        // engine's "enters tapped" is an ETB trigger, and a tax resolving on
-        // the still-untapped land would tap the land itself to pay it.
-        triggered_abilities: vec![
-            etb(Effect::PayManaOrElse {
-                mana_cost: cost(&[generic(1)]),
-                otherwise: Box::new(Effect::SacrificeSource),
-            }),
-            etb_tap(),
-        ],
+        // ⚠ The ordering hack this list used to carry is gone with the
+        // trigger: "the tax after the tap in the list, so the tap resolves
+        // first, because a tax resolving on the still-untapped land would tap
+        // the land itself to pay it". CR 614.1c makes the tap a replacement,
+        // so the land is already tapped when the tax trigger resolves and no
+        // ordering is needed.
+        static_abilities: vec![enters_tapped()],
+        triggered_abilities: vec![etb(Effect::PayManaOrElse {
+            mana_cost: cost(&[generic(1)]),
+            otherwise: Box::new(Effect::SacrificeSource),
+        })],
         ..Default::default()
     }
 }

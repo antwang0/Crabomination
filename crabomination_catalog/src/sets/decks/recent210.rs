@@ -24,7 +24,7 @@ fn guildgate(name: &'static str, a: Color, b: Color) -> CardDefinition {
             ..Default::default()
         },
         activated_abilities: vec![super::super::tap_add(a), super::super::tap_add(b)],
-        triggered_abilities: vec![super::super::etb_tap()],
+        static_abilities: vec![super::super::enters_tapped()],
         ..Default::default()
     }
 }

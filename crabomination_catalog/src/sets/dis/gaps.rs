@@ -1309,8 +1309,8 @@ fn karoo(name: &'static str, a: Color, b: Color) -> CardDefinition {
             },
             ..Default::default()
         }],
+        static_abilities: vec![super::super::enters_tapped()],
         triggered_abilities: vec![
-            super::super::etb_tap(),
             etb(Effect::Move {
                 what: target_filtered(R::Land.and(R::ControlledByYou)),
                 to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),

@@ -591,6 +591,22 @@ mod tests {
     #[test]
     fn cr_903_seeded_pod_outcomes_match_the_committed_table() {
         // (seed, winner, turns, actions)
+        // Re-blessed 2026-09-19 (CR 614.1c, "enters tapped" is a REPLACEMENT):
+        // the shared `etb_tap()` helper and its call sites moved from an
+        // `EntersBattlefield` trigger to `StaticEffect::EntersTapped`, so a
+        // tapland is tapped as it enters rather than by a trigger resolving
+        // after its controller has had priority. Every pod deck runs taplands,
+        // so all three games are different games — and the first one is 47→97
+        // turns, which is the largest single move this table has taken.
+        // ⚠ **Three games is a re-bless gate, not a measurement, and this is
+        // the clearest case of it yet.** The aggregate is 2,000 games a seat
+        // count at seed 9102, after against before, and it barely moves:
+        // 19.36/19.37 turns at two seats, 32.40/32.35 at three, 45.24/45.30 at
+        // four, 57.08/56.88 at five, 64.87/64.74 at six, 77.80/77.85 at seven,
+        // 93.14/93.34 at eight — largest move 0.20 turns — with every block
+        // 2,000/2,000 decided on both sides. `--bench` is byte-identical
+        // (195,806 / 27.49 / 611.9 / 0 stalls, both determinism checks ok):
+        // `archetypes()` plays basic lands, which have no such replacement.
         // Re-blessed 2026-09-19 (the sinkless sacrifice): the bot no longer
         // volunteers a sacrifice whose ability only makes mana, so a board with
         // a mana-rock-shaped sacrifice outlet stops spending actions it never
@@ -661,9 +677,9 @@ mod tests {
         // 25.1 to 23.6 points (39.8/14.7/20.0/25.5 → 40.9/17.1/17.3/24.7,
         // 3,000 games at seed 43), and games run ~9 % longer.
         const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
-            (0xC0FFEE, Some(1), 47, 1909),
-            (43, Some(3), 67, 2831),
-            (4242, Some(2), 49, 2116),
+            (0xC0FFEE, Some(1), 97, 4071),
+            (43, Some(3), 63, 2542),
+            (4242, Some(2), 55, 2436),
         ];
         let decks = rofellos_pod(4);
         let t = build_pod_template(&decks);

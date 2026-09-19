@@ -3073,7 +3073,7 @@ fn sphere_land(name: &'static str, color: Color) -> CardDefinition {
                 ..Default::default()
             },
         ],
-        triggered_abilities: vec![super::etb_tap()],
+        static_abilities: vec![super::enters_tapped()],
         ..Default::default()
     }
 }

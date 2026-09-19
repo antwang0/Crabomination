@@ -10,7 +10,7 @@ use crate::effect::shortcut::{etb, target_any, target_filtered};
 use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, ZoneDest, ZoneRef};
 use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
-use super::super::etb_tap;
+use super::super::enters_tapped;
 
 /// A Karoo bounce-land (CR — Ravnica block): enters tapped, returns a land you
 /// control to hand on entry, and taps for two guild colors at once.
@@ -26,8 +26,8 @@ fn bounce_land(name: &'static str, a: Color, b: Color) -> CardDefinition {
             },
             ..Default::default()
         }],
+        static_abilities: vec![enters_tapped()],
         triggered_abilities: vec![
-            etb_tap(),
             etb(Effect::Move {
                 what: target_filtered(R::Land.and(R::ControlledByYou)),
                 to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),

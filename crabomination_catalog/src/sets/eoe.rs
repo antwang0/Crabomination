@@ -5609,7 +5609,7 @@ fn eoe_planet(name: &'static str, color: crate::mana::Color) -> CardDefinition {
             ..Default::default()
         },
         activated_abilities: vec![super::tap_add(color), station()],
-        triggered_abilities: vec![super::etb_tap()],
+        static_abilities: vec![super::enters_tapped()],
         ..Default::default()
     }
 }
@@ -7464,7 +7464,7 @@ pub fn command_bridge() -> CardDefinition {
         name: "Command Bridge",
         card_types: vec![CardType::Land],
         activated_abilities: vec![super::tap_add_any_color()],
-        triggered_abilities: vec![super::etb_tap()],
+        static_abilities: vec![super::enters_tapped()],
         ..Default::default()
     }
 }

@@ -191,7 +191,7 @@ pub fn myriad_landscape() -> CardDefinition {
     CardDefinition {
         name: "Myriad Landscape",
         card_types: vec![CardType::Land],
-        triggered_abilities: vec![super::etb_tap()],
+        static_abilities: vec![super::enters_tapped()],
         activated_abilities: vec![
             tap_add_colorless(),
             ActivatedAbility {

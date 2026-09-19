@@ -1313,9 +1313,14 @@ fn all_bridges_are_indestructible_artifact_lands_with_two_color_taps() {
         assert!(def.card_types.contains(&CardType::Land), "{}: land", def.name);
         assert!(def.keywords.contains(&Keyword::Indestructible), "{}: indestructible", def.name);
         assert!(def.subtypes.land_types.is_empty(), "{}: no basic types", def.name);
-        // Two mana abilities (one per colour) + the etb-tap trigger.
+        // Two mana abilities (one per colour) + the enters-tapped
+        // REPLACEMENT. CR 614.1c: "this land enters tapped" modifies how the
+        // permanent enters, so it is a static, not an ETB trigger — this
+        // assertion read `!triggered_abilities.is_empty()` until 2026-09-19
+        // and was holding the wrong shape in place.
         assert_eq!(def.activated_abilities.len(), 2, "{}: two mana abilities", def.name);
-        assert!(!def.triggered_abilities.is_empty(), "{}: etb-tap trigger", def.name);
+        assert!(def.triggered_abilities.is_empty(), "{}: not a trigger", def.name);
+        assert_eq!(def.static_abilities.len(), 1, "{}: enters-tapped replacement", def.name);
     }
 }
 

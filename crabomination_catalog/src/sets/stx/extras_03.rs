@@ -56,7 +56,7 @@ pub fn brackish_trudge() -> CardDefinition {
         power: 4,
         toughness: 2,
         // Enters tapped (self-tap ETB trigger).
-        triggered_abilities: vec![super::super::etb_tap()],
+        static_abilities: vec![super::super::enters_tapped()],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), b()]),
             from_graveyard: true,

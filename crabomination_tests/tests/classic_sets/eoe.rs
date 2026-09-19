@@ -1862,9 +1862,11 @@ fn haliya_counters_on_enter_and_attack() {
 fn planet_enters_tapped_and_taps_for_mana() {
     let mut g = two_player_game();
     let evendo = g.add_card_to_battlefield(0, catalog::evendo_waking_haven());
-    // A tap-for-G mana ability and a Station ability; an ETB-tap trigger.
+    // A tap-for-G mana ability and a Station ability; the enters-tapped
+    // REPLACEMENT (CR 614.1c), which used to be an ETB-tap trigger.
     assert_eq!(g.battlefield_find(evendo).unwrap().definition.activated_abilities.len(), 2);
-    assert_eq!(g.battlefield_find(evendo).unwrap().definition.triggered_abilities.len(), 1);
+    assert!(g.battlefield_find(evendo).unwrap().definition.triggered_abilities.is_empty());
+    assert_eq!(g.battlefield_find(evendo).unwrap().definition.static_abilities.len(), 1);
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {

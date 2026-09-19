@@ -383,7 +383,8 @@ pub fn solar_transformer() -> CardDefinition {
         name: "Solar Transformer",
         cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact],
-        triggered_abilities: vec![super::etb_tap(), etb(Effect::AddEnergy(Value::Const(3)))],
+        static_abilities: vec![super::enters_tapped()],
+        triggered_abilities: vec![etb(Effect::AddEnergy(Value::Const(3)))],
         activated_abilities: vec![
             ActivatedAbility {
                 tap_cost: true,

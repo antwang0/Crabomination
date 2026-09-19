@@ -3787,7 +3787,7 @@ pub fn nyx_lotus() -> CardDefinition {
         cost: cost(&[generic(4)]),
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Artifact],
-        triggered_abilities: vec![super::etb_tap()],
+        static_abilities: vec![super::enters_tapped()],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             effect: Effect::AddMana {

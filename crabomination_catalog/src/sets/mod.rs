@@ -5,7 +5,7 @@ use crate::card::{
     ActivatedAbility, CardDefinition, CardType, EventKind, EventScope, EventSpec, LandType,
     SelectionRequirement, Selector, Subtypes, TriggeredAbility, Value,
 };
-use crate::effect::{Effect, ManaPayload, PlayerRef, Predicate};
+use crate::effect::{Effect, ManaPayload, PlayerRef, Predicate, StaticAbility, StaticEffect};
 use crate::mana::{Color, cost, generic, hybrid};
 
 pub fn tap_add(color: Color) -> ActivatedAbility {
@@ -305,6 +305,28 @@ pub fn verge_land(
 // ── Land helpers shared across set modules ───────────────────────────────────
 
 /// Triggered ability: when this permanent enters the battlefield, tap it.
+/// CR 614.1c — "This land enters tapped" as the **replacement** it is.
+///
+/// The sibling of [`etb_tap`], and the one to reach for. An
+/// `EntersBattlefield` trigger puts the land on the battlefield untapped,
+/// puts the trigger on the stack and hands its controller priority: it can
+/// tap the land for mana it should never have made, and its opponents see an
+/// untapped land while deciding whether to respond.
+/// `GameState::apply_enters_tapped_replacement` runs this inside the
+/// battlefield hop instead, so the land is never on the battlefield untapped.
+///
+/// `scripts/audit_enters_tapped.py` is the census over the cards still on the
+/// trigger (ENGINE_BACKLOG's forty-ninth find).
+pub fn enters_tapped() -> StaticAbility {
+    StaticAbility {
+        description: "This land enters tapped.",
+        effect: StaticEffect::EntersTapped { applies_to: Selector::This },
+    }
+}
+
+/// ⚠ **The trigger form, and CR 614.1c says it is the wrong one** — see
+/// [`enters_tapped`]. Kept only for the `etb_tap_then_*` siblings, whose
+/// "then" half really is a trigger.
 pub fn etb_tap() -> TriggeredAbility {
     TriggeredAbility {
         event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -463,7 +485,7 @@ pub fn tri_land(name: &'static str, a: Color, b: Color, c: Color) -> CardDefinit
         name,
         card_types: vec![CardType::Land],
         activated_abilities: vec![tap_add(a), tap_add(b), tap_add(c)],
-        triggered_abilities: vec![etb_tap()],
+        static_abilities: vec![enters_tapped()],
         ..Default::default()
     }
 }

@@ -696,13 +696,13 @@ pub fn augusta_dean_of_order() -> CardDefinition {
 // utility mana rocks in cube games.
 
 fn diamond(name: &'static str, color: Color) -> CardDefinition {
-    use super::super::{etb_tap, tap_add};
+    use super::super::{enters_tapped, tap_add};
     CardDefinition {
         name,
         cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact],
         activated_abilities: vec![tap_add(color)],
-        triggered_abilities: vec![etb_tap()],
+        static_abilities: vec![enters_tapped()],
         ..Default::default()
     }
 }

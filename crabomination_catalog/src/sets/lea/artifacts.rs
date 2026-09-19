@@ -126,7 +126,7 @@ pub fn nevinyrrals_disk() -> CardDefinition {
         name: "Nevinyrral's Disk",
         cost: cost(&[generic(4)]),
         card_types: vec![CardType::Artifact],
-        triggered_abilities: vec![super::super::etb_tap()],
+        static_abilities: vec![super::super::enters_tapped()],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,

@@ -1144,7 +1144,8 @@ fn every_shard_tri_land_enters_tapped_and_taps_for_its_three() {
         assert!(def.card_types.contains(&CardType::Land), "{name} is a land");
         assert!(def.subtypes.land_types.is_empty(), "{name} has no basic land type");
         assert_eq!(def.activated_abilities.len(), 3, "{name} taps for three colours");
-        assert_eq!(def.triggered_abilities.len(), 1, "{name} enters tapped");
+        assert!(def.triggered_abilities.is_empty(), "{name}: CR 614.1c, not a trigger");
+        assert_eq!(def.static_abilities.len(), 1, "{name} enters tapped");
         let mut g = two_player_game();
         g.step = TurnStep::PreCombatMain;
         let id = g.add_card_to_hand(0, factory());

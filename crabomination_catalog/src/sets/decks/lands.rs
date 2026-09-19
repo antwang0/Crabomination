@@ -7,7 +7,7 @@
 //! lands and tap lands enter tapped via a self-targeting `Tap` trigger.
 
 use super::super::{
-    dual_land_untyped, dual_land_with, etb_tap, etb_tap_then_gain_one, etb_tap_then_surveil_one,
+    dual_land_untyped, dual_land_with, enters_tapped, etb_tap_then_gain_one, etb_tap_then_surveil_one,
     fastland_etb_conditional_tap, hybrid_filter_land, land_type_reveal_land, painland,
     pay_one_filter_land, reveal_or_tapped_land, shockland_pay_two_or_tap, tap_add,
     tap_add_colorless, tri_land,
@@ -538,9 +538,9 @@ pub fn shelldock_isle() -> CardDefinition {
                 ..Default::default()
             },
         ],
-        // Enters tapped + Hideaway 4 on ETB.
+        // Enters tapped (CR 614.1c, a replacement) + Hideaway 4 on ETB.
+        static_abilities: vec![enters_tapped()],
         triggered_abilities: vec![
-            etb_tap(),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
                 effect: Effect::Hideaway {
@@ -580,15 +580,13 @@ fn lorwyn_hideaway_land(
                 ..Default::default()
             },
         ],
-        triggered_abilities: vec![
-            etb_tap(),
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: Effect::Hideaway {
-                    count: Value::Const(4),
-                },
+        static_abilities: vec![enters_tapped()],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Hideaway {
+                count: Value::Const(4),
             },
-        ],
+        }],
         ..Default::default()
     }
 }
@@ -645,8 +643,8 @@ pub fn vesuva() -> CardDefinition {
     CardDefinition {
         name: "Vesuva",
         card_types: vec![CardType::Land],
+        static_abilities: vec![enters_tapped()],
         triggered_abilities: vec![
-            etb_tap(),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
                 effect: Effect::BecomeCopyOfFor {
@@ -777,7 +775,7 @@ fn manland(
         name,
         card_types: vec![CardType::Land],
         activated_abilities: vec![tap_add(color_a), tap_add(color_b), animate],
-        triggered_abilities: vec![etb_tap()],
+        static_abilities: vec![enters_tapped()],
         ..Default::default()
     }
 }
@@ -969,7 +967,8 @@ fn restless_land(
         name,
         card_types: vec![CardType::Land],
         activated_abilities: vec![tap_add(color_a), tap_add(color_b), animate],
-        triggered_abilities: vec![etb_tap(), crate::effect::shortcut::on_attack(attack_effect)],
+        static_abilities: vec![enters_tapped()],
+        triggered_abilities: vec![crate::effect::shortcut::on_attack(attack_effect)],
         ..Default::default()
     }
 }
@@ -1145,13 +1144,11 @@ pub fn restless_spire() -> CardDefinition {
         name: "Restless Spire",
         card_types: vec![CardType::Land],
         activated_abilities: vec![tap_add(Color::Blue), tap_add(Color::Red), animate],
-        triggered_abilities: vec![
-            etb_tap(),
-            crate::effect::shortcut::on_attack(Effect::Scry {
-                who: PlayerRef::You,
-                amount: Value::Const(1),
-            }),
-        ],
+        static_abilities: vec![enters_tapped()],
+        triggered_abilities: vec![crate::effect::shortcut::on_attack(Effect::Scry {
+            who: PlayerRef::You,
+            amount: Value::Const(1),
+        })],
         ..Default::default()
     }
 }
@@ -2389,7 +2386,8 @@ fn cycling_dual(
     color_b: Color,
 ) -> CardDefinition {
     use super::super::dual_land_with;
-    let mut d = dual_land_with(name, type_a, type_b, color_a, color_b, vec![etb_tap()]);
+    let mut d = dual_land_with(name, type_a, type_b, color_a, color_b, vec![]);
+    d.static_abilities.push(enters_tapped());
     d.keywords
         .push(crate::card::Keyword::Cycling(cost(&[generic(2)])));
     d
