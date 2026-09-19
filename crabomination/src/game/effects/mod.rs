@@ -1803,7 +1803,7 @@ impl GameState {
 
     /// Slot-aware form of `repoint_copy_target`: slot 0 walks the effect's own
     /// enumeration, later slots filter that pool by the slot's printed
-    /// requirement (CR 115.7c — a copy may re-aim *every* declared slot).
+    /// requirement (CR 115.7d — a copy may re-aim *every* declared slot).
     fn repoint_copy_slot(
         &mut self,
         effect: &crate::effect::Effect,
@@ -30574,7 +30574,7 @@ impl GameState {
             }
 
             Effect::ChooseNewTargetsForSpell { what } => {
-                // CR 115.7c — repoint *every* declared target slot of the
+                // CR 115.7d — repoint *every* declared target slot of the
                 // spell in place, each against its own printed filter. The
                 // controller of this effect (Redirect's caster) chooses.
                 let chooser = ctx.controller;

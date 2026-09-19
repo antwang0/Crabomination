@@ -7379,7 +7379,7 @@ pub enum Effect {
     /// could legally target, each copy aimed at a different one. No-op when the
     /// spell targets anything besides the source.
     CopyForEachOtherTargetableCreature,
-    /// CR 115.7c — "You may choose new targets for target spell." Repoints
+    /// CR 115.7d — "You may choose new targets for target spell." Repoints
     /// every declared slot of the targeted spell in place (Redirect), each
     /// against its own printed filter. This effect's controller (the
     /// redirector) chooses via `Decision::ChooseTarget`. Unlike

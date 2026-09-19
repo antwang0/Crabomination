@@ -153,8 +153,58 @@ controller is judged when the damage would be dealt, and stored as
 combat-only fog would have dropped ability damage from opponents' creatures,
 which in a Commander pod is Judith pinging.
 
-🟡 **Deflecting Swat** still counters only a *spell*; printed is "spell or
-ability", plus "you may choose new targets for it". Unchanged by this pass.
+⚠⚠ **And that row was wrong about the card, which is the finding.** Deflecting
+Swat **does not counter anything**. Its printed body is "You may choose new
+targets for target spell or ability" — the whole card is a CR 115.7d retarget
+— and it shipped as `Effect::CounterSpell`, with
+`deflecting_swat_counters_a_spell` asserting the wrong rule beside it. Fixed
+2026-09-19 to `Effect::ChooseNewTargetsForSpell`, the primitive Redirect, Bolt
+Bend, Divert, Goblin Flectomancer and Redirect Lightning were already using;
+the "or ability" half stays approximated to spells, the same documented
+approximation Redirect Lightning carries. See the retarget class below.
+
+## The RETARGET class — CR 115.7 is not a counter, and the card that proved it
+
+`scripts/audit_retarget.py`. CR 115.7 gives four permissions to **move** a
+spell or ability already on the stack — "change the target(s) of" (115.7a),
+"change a target" (115.7b), "change any targets" (115.7c) and "choose new
+targets for" (115.7d). None of them counters, copies or fizzles anything.
+
+**Reading: 2 → 0.**
+
+* **Deflecting Swat** — EDHREC top-100, the red member of the CR 118.9
+  free-spell cycle this branch deliberately completed, and its entire printed
+  body is "You may choose new targets for target spell or ability". It shipped
+  as `Effect::CounterSpell`. Every sibling that prints the same clause already
+  used the right primitive (`ChooseNewTargetsForSpell` for Redirect, Bolt
+  Bend, Divert, Goblin Flectomancer, Redirect Lightning; `ChangeSpellTarget`
+  for Swerve, Shunt, Misdirection, Reflecting Mirror; `ChangeTargetOfAbility`
+  for Reroute and Willbender; `RedirectSpellTargetToSelf` for Spellskite), so
+  **the card was the only thing wrong and no primitive was needed**.
+* **Perplexing Chimera** — "…if you do, you may choose new targets for the
+  spell". The exchange shipped; its second half did not, so the Chimera took
+  an opponent's removal spell and left it aimed where they had aimed it.
+
+📐 **The reusable half is the precision gate.** A retarget clause reaches a
+printed card two ways, and only one of them is a queue: a card that prints
+"copy target …, you may choose new targets for **the copy**" is answered by
+any `Copy*` effect, because the engine repoints a copy's slots inside
+`repoint_copy_slot` rather than in an effect of its own. Splitting the two
+columns on whether the print says "copy" took the reading from 67 rows to 2.
+⚠ The copy column's nine unread rows are **reader misses**: Swarm
+Intelligence, Mirari, Thousand-Year Storm and the two Guildmages spell their
+copy through a private helper the name-keyed reader cannot open, which is the
+same limitation every script in `scripts/` has.
+
+⚠ **A test asserted the wrong rule**, exactly as `audit_invented_rider`'s
+first row found for Mortify: `deflecting_swat_counters_a_spell` pinned the
+counter. It is `cr_115_7d_deflecting_swat_repoints_a_spell_instead_of_
+countering_it` now, and it reads the *life totals* rather than the graveyard,
+because a resolved Bolt and a countered Bolt are both in the graveyard.
+
+⚠ **Three CR citations were one letter out**: "choose new targets" is
+**115.7d**; 115.7c is "change any targets". `ChooseNewTargetsForSpell`'s own
+doc, its resolver arm and `repoint_copy_slot`'s comment all said 115.7c.
 
 ## CR 603.2c batches — four clauses closed, and the ratchets that hold them
 

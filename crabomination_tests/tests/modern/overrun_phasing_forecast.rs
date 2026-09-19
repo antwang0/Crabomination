@@ -565,15 +565,29 @@ fn fierce_guardianship_counters_noncreature() {
     assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt), "Bolt countered");
 }
 
+/// CR 115.7d — Deflecting Swat **does not counter anything**: "You may choose
+/// new targets for target spell or ability." It shipped as
+/// `Effect::CounterSpell`, and the test that used to stand here asserted that
+/// wrong rule, which is why the defect survived (`scripts/audit_retarget.py`
+/// is the ratchet now).
+///
+/// The Bolt the opponent aimed at seat 0 is repointed, not countered: it still
+/// resolves, and `retarget_slot` sorts the legal set by friendliness for the
+/// chooser — seat 0 — so it lands on the seat that cast it.
 #[test]
-fn deflecting_swat_counters_a_spell() {
+fn cr_115_7d_deflecting_swat_repoints_a_spell_instead_of_countering_it() {
     let mut g = two_player_game();
     let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
     let ds = g.add_card_to_hand(0, catalog::deflecting_swat());
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(2);
     cast_then_counter(&mut g, ds, bolt);
-    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt), "Bolt countered");
+    assert_eq!(g.players[0].life, 20, "the Bolt no longer points at the Swat's controller");
+    assert_eq!(g.players[1].life, 17, "it resolved — a retarget is not a counter");
+    assert!(
+        g.players[1].graveyard.iter().any(|c| c.id == bolt),
+        "and a resolved Bolt is in its owner's graveyard either way",
+    );
 }
 
 /// Opponent (seat 1) casts a Lightning Bolt at seat 0. Returns nothing; the

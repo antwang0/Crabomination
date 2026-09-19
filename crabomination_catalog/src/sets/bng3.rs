@@ -982,9 +982,18 @@ pub fn perplexing_chimera() -> CardDefinition {
             event: EventSpec::new(EventKind::SpellCast, EventScope::OpponentControl),
             effect: Effect::MayDo {
                 description: "Exchange control of Perplexing Chimera and that spell".into(),
-                body: Box::new(Effect::ExchangeControlWithTriggeringSpell {
-                    what: Selector::This,
-                }),
+                // CR 115.7d — "If you do, you may choose new targets for the
+                // spell." The exchange shipped without its second half, so the
+                // Chimera took an opponent's removal spell and left it pointed
+                // at the permanent they had aimed it at. The retarget is
+                // modelled as mandatory, the same way Redirect's identical
+                // printed "may" is: `retarget_slot` sorts the legal set by
+                // friendliness for the chooser, who is now the spell's
+                // controller.
+                body: Box::new(Effect::Seq(vec![
+                    Effect::ExchangeControlWithTriggeringSpell { what: Selector::This },
+                    Effect::ChooseNewTargetsForSpell { what: Selector::TriggerSource },
+                ])),
             },
         }],
         ..creature(

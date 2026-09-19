@@ -1223,7 +1223,10 @@ fn mindreaver_counters_only_named_spells() {
     assert!(g.players[1].graveyard.iter().any(|c| c.id == bear), "name matched → countered");
 }
 
-/// Perplexing Chimera swaps itself for the opponent's spell.
+/// Perplexing Chimera swaps itself for the opponent's spell — and CR 115.7d's
+/// second half, "if you do, you may choose new targets for the spell", which
+/// shipped missing: the Chimera took an opponent's spell and left it aimed
+/// where they had aimed it.
 #[test]
 fn perplexing_chimera_swaps_for_the_spell() {
     use crabomination::decision::{DecisionAnswer, ScriptedDecider};
@@ -1253,6 +1256,40 @@ fn perplexing_chimera_swaps_for_the_spell() {
         g.battlefield_find(chimera).map(|c| c.controller),
         Some(1),
         "the Chimera went the other way"
+    );
+}
+
+/// CR 115.7d — the "if you do" half. The opponent aims a Lightning Bolt at the
+/// Chimera's controller; after the exchange that controller owns the spell and
+/// repoints it, so the damage goes back across the table.
+#[test]
+fn cr_115_7d_perplexing_chimera_repoints_the_spell_it_took() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::perplexing_chimera());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast the Bolt at seat 0");
+    drain_stack(&mut g);
+    // The claim is the repoint, not which of the two hostile candidates the
+    // chooser lands on: after the exchange the Chimera itself is a legal
+    // target under seat 1's control, so `retarget_slot` ranks it level with
+    // seat 1 and the enumeration order decides. What cannot happen any more
+    // is the Bolt resolving where its caster aimed it.
+    assert_eq!(g.players[0].life, 20, "the Bolt was repointed off its original target");
+    assert!(
+        g.players[1].graveyard.iter().any(|c| c.id == bolt),
+        "and it resolved somewhere else",
     );
 }
 

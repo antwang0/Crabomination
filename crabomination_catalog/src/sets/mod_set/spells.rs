@@ -478,11 +478,16 @@ pub fn fierce_guardianship() -> CardDefinition {
     }
 }
 
-/// Deflecting Swat — {2}{R} Instant. "Counter target spell. If you control a
-/// commander, you may cast this spell without paying its mana cost." (Printed:
-/// counter target spell **or ability** and you may choose new targets; the
-/// ability half and the new-targets rider stay omitted — see
-/// INCOMPLETE_CARDS.)
+/// Deflecting Swat — {2}{R} Instant. "If you control a commander, you may cast
+/// this spell without paying its mana cost. You may choose new targets for
+/// target spell or ability."
+///
+/// ⚠ **The card counters nothing**, and the comment that used to stand here
+/// said it did — it quoted a "Counter target spell" the print does not carry
+/// and then described the retarget as a *rider* on it. Both the body and the
+/// doc were a different card. CR 115.7d is the whole effect; only the "or
+/// ability" half is approximated to spells, which is the same documented
+/// approximation Redirect Lightning carries.
 pub fn deflecting_swat() -> CardDefinition {
     CardDefinition {
         name: "Deflecting Swat",
@@ -500,8 +505,16 @@ pub fn deflecting_swat() -> CardDefinition {
         }),
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::CounterSpell {
-            what: target_filtered(SelectionRequirement::Any),
+        // CR 115.7d — "You may choose new targets for target spell or
+        // ability." The card counters **nothing**; it shipped as
+        // `Effect::CounterSpell`, which is the whole of its printed body
+        // replaced by a different one. `ChooseNewTargetsForSpell` is the
+        // primitive Redirect, Bolt Bend, Divert, Goblin Flectomancer and
+        // Redirect Lightning already use. ⚠ The "or ability" half is
+        // approximated to spells, the same documented approximation Redirect
+        // Lightning carries; `scripts/audit_retarget.py` is the ratchet.
+        effect: Effect::ChooseNewTargetsForSpell {
+            what: target_filtered(SelectionRequirement::IsSpellOnStack),
         },
         ..Default::default()
     }
