@@ -19,6 +19,7 @@ Four changes, all reversible from `git log -p`, and **no body was edited**:
 
 | Set / topic | Status | Lines |
 | --- | --- | --- |
+| [The fan-out family's third ratchet — "each player" is not "each opponent"](#the-fan-out-familys-third-ratchet--each-player-is-not-each-opponent) | closed — 1 residual | 22 |
 | [The TARGET-clause class — 126 cards printed "target opponent" and hit the whole table](#the-target-clause-class--126-cards-printed-target-opponent-and-hit-the-whole-table) | closed — 1 residual | 60 |
 | [Target-deck card defects, and why they are all blocked on one thing](#target-deck-card-defects-and-why-they-are-all-blocked-on-one-thing) | open | 33 |
 | [CR 603.2c batches — four clauses closed, and the ratchets that hold them](#cr-6032c-batches--four-clauses-closed-and-the-ratchets-that-hold-them) | closed — residuals only | 72 |
@@ -239,6 +240,30 @@ card and not the damage one; reading the whole line put Ark of Hunger, Fuming
 Effigy and Chandra, Fire Artisan in the wrong list on the first run. What is
 left outside the four clauses: Kaya, Spirits' Justice ("…are put into exile",
 a known residual) and City in a Bottle (a static dressed as a trigger).
+
+## The fan-out family's third ratchet — "each player" is not "each opponent"
+
+`audit_each_opponent.py` asks "the print says each opponent, does the body name
+one?"; `audit_target_opponent.py` asks the mirror. `scripts/audit_each_player.py`
+asks the third question: the fan-out is **present and wrong by one seat** — the
+controller. Both directions are wrong at two seats as well, which is why the
+yield is small: **5 hits, 1 real**, and the script's own docstring records the
+other four so nobody re-triages them (two decompositions, one trigger *scope*,
+one documented friend/foe approximation). It reads **1 / 1 allowlisted / 0
+unexplained / 0 stale** now, with a staleness half like the loop-splice
+ratchet's.
+
+📐 **The real find is the reusable part, and it is about the ratchets rather
+than the card.** **Parallax Nexus** is a *target-clause* defect — "Remove a
+fade counter: **target opponent** exiles a card from their hand", shipped as a
+**discard** by **every** opponent — and `audit_target_opponent.py` could not
+see it, because its precision gate drops any card whose printed text also
+carries a per-opponent clause, and Parallax Nexus's leave-trigger says "each
+player returns to their hand all cards they own exiled with it". **The gate
+that keeps one ratchet honest is the hole in the other**, so run the family,
+not a member. ⏳ Residual on the card: that leave-trigger return is still
+missing — `Effect::ExileFromHand` carries no `exiled_with` stamp for it to
+find.
 
 ## The TARGET-clause class — 126 cards printed "target opponent" and hit the whole table
 

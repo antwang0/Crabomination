@@ -415,11 +415,12 @@ fn parallax_nexus_enters_with_counters_and_forces_discard() {
 
     let opp_hand_before = g.players[1].hand.len();
 
-    // Activate the {0} ability to force an opponent discard.
+    // "Remove a fade counter: **target opponent** exiles a card from their
+    // hand." It shipped as a *discard* by *every* opponent.
     g.perform_action(GameAction::ActivateAbility {
         card_id: nexus,
         ability_index: 0,
-        target: None,
+        target: Some(Target::Player(1)),
         additional_targets: Vec::new(),
         x_value: None, mode: None,
     })
@@ -427,7 +428,9 @@ fn parallax_nexus_enters_with_counters_and_forces_discard() {
     drain_stack(&mut g);
 
     assert_eq!(g.players[1].hand.len(), opp_hand_before - 1,
-        "Opponent should have discarded one card");
+        "the targeted opponent lost a card from hand");
+    assert!(g.exile.iter().any(|c| c.definition.name == "Grizzly Bears"),
+        "and it was exiled, not discarded");
 }
 
 // ── Cube expansion: body-only stubs ─────────────────────────────────────────

@@ -19797,10 +19797,15 @@ pub fn parallax_nexus() -> CardDefinition {
             // as a sorcery." Both halves were missing.
             remove_counter_cost: Some((crate::card::CounterType::Fade, 1)),
             sorcery_speed: true,
-            effect: Effect::Discard {
-                who: Selector::Player(PlayerRef::EachOpponent),
+            // "**Target opponent** exiles a card from their hand" — one seat,
+            // chosen, and *exiled* rather than discarded. It shipped as a
+            // discard by every opponent. ⏳ Residual: the leave-trigger
+            // ("each player returns to their hand all cards they own exiled
+            // with it") is still missing — `ExileFromHand` carries no
+            // `exiled_with` stamp for the return to find.
+            effect: Effect::ExileFromHand {
+                who: target_filtered(SelectionRequirement::OpponentPlayer),
                 amount: Value::Const(1),
-                random: false,
             },
             ..Default::default()
         }],
