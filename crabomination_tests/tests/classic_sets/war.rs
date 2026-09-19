@@ -385,15 +385,23 @@ fn topple_the_statue_taps_destroys_artifact_draws() {
     assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card");
 }
 
-/// Eternal Skylord amasses Zombies 2 and grants flying to Zombie tokens.
+/// Eternal Skylord amasses Zombies 2 and grants flying to Zombie **tokens**.
+///
+/// ⚠ The filter always said `IsToken`; the engine dropped it.
+/// `affected_from_requirement` returns `AllWithCreatureType` the moment a
+/// creature type is named, and that variant has no `token` field, so every
+/// Zombie you control flew — the Skylord itself included. ENGINE_BACKLOG's
+/// forty-sixth find; the nontoken half below is what nothing asserted.
 #[test]
 fn eternal_skylord_amasses_and_grants_flying() {
     let mut g = two_player_game();
-    g.move_card_to_battlefield_for_test(0, catalog::eternal_skylord());
+    let skylord = g.move_card_to_battlefield_for_test(0, catalog::eternal_skylord());
     drain_stack(&mut g);
     let army = g.battlefield.iter().find(|c| c.controller == 0 && c.definition.subtypes.creature_types.contains(&CreatureType::Army)).expect("Army").id;
     assert_eq!(g.battlefield_find(army).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
     assert!(g.computed_permanent(army).unwrap().keywords().contains(&Keyword::Flying), "Zombie token flies");
+    assert!(!g.computed_permanent(skylord).unwrap().keywords().contains(&Keyword::Flying),
+        "the Skylord is a Zombie but not a token");
 }
 
 /// Spellkeeper Weird returns an instant/sorcery from the graveyard.
