@@ -3233,8 +3233,10 @@ gaps. Follow-ups that came out of it:
   the controller send actions for the controlled seat and CR 723.4 shares the
   hand, but the *client* still renders from its own seat — it shows the
   "⛓ seat N" chip without switching its action UI to the controlled board.
-  Word of Command / Opposition Agent's limited-duration control (CR 723.2) is
-  not modeled.
+  Word of Command's limited-duration control (CR 723.2) is not modeled.
+  Opposition Agent's "control while searching" is routed per decision
+  instead (`GameState::search_hijacker`): the search pick goes to the Agent's
+  controller, nothing else about the searcher's seat changes hands.
 - **Quicksilver Elemental drops its colour-relaxation rider.** "Spend blue as
   though it were any colour to pay this creature's activation costs" needs a
   source-scoped payment relaxation; the engine only has the table-wide

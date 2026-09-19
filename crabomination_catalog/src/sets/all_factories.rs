@@ -1697,6 +1697,7 @@ static DECKS: &[Factory] = &[
     super::decks::psionic_ritual,
     super::decks::cut_your_losses,
     super::decks::startled_awake,
+    super::decks::opposition_agent,
     super::decks::callous_sell_sword,
     super::decks::chancellor_of_the_tangle,
     super::decks::cosmogoyf,

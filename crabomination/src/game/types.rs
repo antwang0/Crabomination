@@ -2043,6 +2043,11 @@ pub enum PendingEffectState {
         /// Memories). `place_card_in_dest` has no effect context of its own.
         #[serde(default)]
         source: Option<crate::card::CardId>,
+        /// Opposition Agent — the seat controlling this search (it answered
+        /// the pick); a card found in the library is exiled with a may-play
+        /// permission for this seat instead of going to `to`.
+        #[serde(default)]
+        hijacked_by: Option<usize>,
     },
     /// Dakkon −6: the picked hand/graveyard card enters the battlefield.
     PutFromZonesPending { player: usize },

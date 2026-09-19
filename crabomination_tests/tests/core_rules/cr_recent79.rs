@@ -1,7 +1,8 @@
 //! CR conformance for this run:
 //! - CR 506.2 — a permanent with "can't be attacked" isn't a legal attack
 //!   target, for planeswalkers and battles alike.
-//! - CR 118 / 305 — "you may play that card" covers land plays from exile.
+//! - CR 118 / 305 — "you may play that card" covers land plays from exile,
+//!   and the land enters under the player who played it (CR 305.1).
 //! - CR 614 — an as-enters replacement resolves before the enters-with-counters
 //!   replacement, so a count can read what it did.
 //! - CR 716.2 — a Class's level-gated cost static applies only at that level.
@@ -76,6 +77,27 @@ fn cr_118_may_play_permission_covers_a_land_in_exile() {
     grant(&mut g, 0);
     g.perform_action(GameAction::PlayLand(land)).expect("your permission, your land drop");
     assert!(g.battlefield.iter().any(|c| c.id == land));
+}
+
+/// CR 305.1 / 110.2 — the player who plays a land controls it, whoever owns
+/// it. An opponent-owned land played off a may-play grant (Opposition Agent,
+/// Gonti) used to enter under its owner's control.
+#[test]
+fn cr_305_1_a_land_played_from_an_opponents_exile_is_yours() {
+    let mut g = game();
+    let land = g.add_card_to_exile(1, catalog::forest());
+    let turn = g.turn_number;
+    g.find_card_anywhere_mut(land).unwrap().may_play_until = Some(MayPlayPermission {
+        player: 0,
+        granted_turn: turn,
+        duration: MayPlayDuration::WhileExiled,
+        exile_after: false,
+        miracle: false,
+        pay_life: false,
+    });
+    g.perform_action(GameAction::PlayLand(land)).expect("seat 0's permission");
+    let played = g.battlefield_find(land).unwrap();
+    assert_eq!((played.owner, played.controller), (1, 0));
 }
 
 /// CR 614 — the as-enters replacement runs first, so an enters-with-counters

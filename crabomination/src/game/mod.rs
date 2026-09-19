@@ -24539,6 +24539,7 @@ impl GameState {
                 include_hand,
                 include_library,
                 source,
+                hijacked_by,
             } => {
                 let DecisionAnswer::Search(chosen_id) = answer else {
                     return Err(GameError::DecisionAnswerMismatch);
@@ -24590,7 +24591,12 @@ impl GameState {
                             _ => &*self.players[player].library,
                         };
                         let def = src.iter().find(|c| c.id == *card_id).map(|c| c.definition.arc());
-                        let blocked = matches!(to, crate::effect::ZoneDest::Battlefield { .. })
+                        // Opposition Agent — a card found in a hijacked
+                        // search's library goes to exile, not to `to`.
+                        let hijack = hijacked_by
+                            .filter(|_| from_zone == crate::card::Zone::Library);
+                        let blocked = hijack.is_none()
+                            && matches!(to, crate::effect::ZoneDest::Battlefield { .. })
                             && def.as_ref().is_some_and(|d| {
                                 self.battlefield_entry_from_zone_blocked(d, from_zone)
                             });
@@ -24608,7 +24614,18 @@ impl GameState {
                                 _ => Self::take_card(&mut self.players[player].library, *card_id),
                             }
                         };
-                        if let Some(card) = taken {
+                        let (hijacked_card, taken) = match hijack {
+                            Some(_) => (taken, None),
+                            None => (None, taken),
+                        };
+                        if let Some(card) = hijacked_card
+                            && let Some(h) = hijack
+                        {
+                            // Not surfaced as `LastMoved`: a follow-up that
+                            // reads "that card" (put it onto the battlefield,
+                            // it gains haste) must not reach into exile.
+                            self.exile_found_for_hijacker(card, h, &mut events);
+                        } else if let Some(card) = taken {
                             self.place_card_in_dest(card, player, &to, &mut events);
                             // CR 607 — `place_card_in_dest` carries no effect
                             // context, so the linked-exile stamp is applied here.
@@ -28170,6 +28187,8 @@ fn static_effect_to_effects(
             | StaticEffect::IgnoreOpponentsHexproof
             | StaticEffect::LandsUntargetableByOpponents
             | StaticEffect::OpponentsCantSearchLibraries
+            // Opposition Agent — read by the search resolvers.
+            | StaticEffect::ControlOpponentsSearches
             // FlagbearersMustBeTargeted — consulted at cast/activation time
             // via `flagbearer_violation`; no layer effect.
             | StaticEffect::FlagbearersMustBeTargeted

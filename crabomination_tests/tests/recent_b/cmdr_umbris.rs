@@ -160,6 +160,7 @@ fn cmdr_umbris_printed_bodies() {
         (catalog::gollum_the_abandoned, 2, 2, &[Keyword::CantBlock]),
         (catalog::wharf_infiltrator, 1, 1, &[Keyword::Skulk]),
         (catalog::brainstealer_dragon, 6, 6, &[Keyword::Flying]),
+        (catalog::opposition_agent, 3, 2, &[Keyword::Flash]),
     ];
     for (f, p, t, kws) in rows {
         let mut g = game(2);
@@ -1007,3 +1008,127 @@ fn cmdr_umbris_card_shapes() {
     let d = catalog::startled_awake();
     assert_eq!(d.back_face.as_ref().unwrap().name, "Persistent Nightmare");
 }
+
+/// Seat 1 (the searcher) gets priority in its own main phase.
+fn hand_turn_to(g: &mut GameState, seat: usize) {
+    g.active_player_idx = seat;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = seat;
+}
+
+/// Opposition Agent: an opponent's tutor is the Agent controller's to answer
+/// (the pending pick is seat 0's), the find is exiled instead of going to the
+/// searcher's hand, the library is still shuffled, and seat 0 casts the stolen
+/// green card with black mana. The Agent's controller's own search, and the
+/// opponent's search once the Agent is gone, are untouched.
+#[test]
+fn cmdr_umbris_opposition_agent_hijacks_an_opponents_tutor() {
+    let mut g = game(2);
+    let agent = g.add_card_to_battlefield(0, catalog::opposition_agent());
+    let bears = g.add_card_to_library(1, catalog::grizzly_bears());
+    let lib = g.players[1].library.len();
+    g.players[0].wants_ui = true;
+    hand_turn_to(&mut g, 1);
+    g.players[1].mana_pool.add(Color::Black, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    let tutor = g.add_card_to_hand(1, catalog::demonic_tutor());
+    let hand = g.players[1].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: tutor,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast tutor");
+    for _ in 0..4 {
+        if g.pending_decision.is_some() {
+            break;
+        }
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    let pending = g.pending_decision.as_ref().expect("the search is asked");
+    assert_eq!(pending.acting_player(), 0, "the Agent's controller makes the pick");
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Search(Some(bears))))
+        .expect("seat 0 picks for seat 1");
+    drain_stack(&mut g);
+    g.players[0].wants_ui = false;
+
+    let found = g.exile.iter().find(|c| c.id == bears).expect("the find is exiled");
+    assert_eq!(found.may_play_until.map(|p| p.player), Some(0), "the Agent's controller may play it");
+    assert_eq!(g.players[1].hand.len(), hand - 1, "nothing reached the searcher's hand");
+    assert_eq!(g.players[1].library.len(), lib - 1);
+
+    // Seat 0 casts the {1}{G} Bears off two black mana.
+    hand_turn_to(&mut g, 0);
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: bears,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("castable from exile spending black as green");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bears).unwrap().controller, 0);
+    assert_eq!(g.players[0].mana_pool.total(), 0, "the mana value was paid");
+
+    // The Agent's controller's own search is not an opponent's.
+    let mine = g.add_card_to_library(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(mine))]));
+    g.players[0].mana_pool.add(Color::Black, 2);
+    let own = g.add_card_to_hand(0, catalog::demonic_tutor());
+    cast(&mut g, own, None, vec![], None);
+    assert!(g.players[0].hand.iter().any(|c| c.id == mine), "own tutor finds to hand");
+
+    // With the Agent gone, seat 1's search is its own again.
+    g.remove_from_battlefield_to_exile(agent);
+    let theirs = g.add_card_to_library(1, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(theirs))]));
+    hand_turn_to(&mut g, 1);
+    g.players[1].mana_pool.add(Color::Black, 2);
+    let again = g.add_card_to_hand(1, catalog::demonic_tutor());
+    g.perform_action(GameAction::CastSpell {
+        card_id: again,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast tutor");
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == theirs), "no Agent: the find goes to hand");
+}
+
+/// Opposition Agent vs a fetch land: the life and the sacrifice are still
+/// paid, the land found is exiled, and the Agent's controller plays it.
+#[test]
+fn cmdr_umbris_opposition_agent_hijacks_a_fetch_land() {
+    let mut g = game(2);
+    g.add_card_to_battlefield(0, catalog::opposition_agent());
+    let island = g.add_card_to_library(1, catalog::island());
+    let delta = g.add_card_to_battlefield(1, catalog::polluted_delta());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(island))]));
+    hand_turn_to(&mut g, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: delta,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("crack the fetch");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 19, "the fetch's life is still paid");
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == delta), "and it is sacrificed");
+    assert!(g.battlefield_find(island).is_none(), "the Island never entered");
+    let found = g.exile.iter().find(|c| c.id == island).expect("the Island is exiled");
+    assert_eq!(found.may_play_until.map(|p| p.player), Some(0));
+
+    hand_turn_to(&mut g, 0);
+    g.perform_action(GameAction::PlayLand(island)).expect("seat 0 plays the stolen land");
+    assert_eq!(g.battlefield_find(island).unwrap().controller, 0);
+}
+

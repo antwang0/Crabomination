@@ -5143,7 +5143,16 @@ pub(crate) fn rank_library_search(
     let mut basics: Vec<(i64, u32, crate::card::CardId)> = Vec::new();
     let mut others: Vec<(u8, std::cmp::Reverse<u32>, crate::card::CardId)> = Vec::new();
     for (id, _) in candidates {
-        let Some(card) = lib.iter().find(|c| c.id == *id) else { continue };
+        // A pick from another seat's library — a search we control
+        // (Opposition Agent: the find is exiled for *us* to play, so the
+        // same "what do I want" ranking applies) or one we make of an
+        // opponent's library (Inevitable Betrayal) — is ranked from that
+        // library, against our own board and hand.
+        let Some(card) = lib.iter().find(|c| c.id == *id).or_else(|| {
+            state.players.iter().flat_map(|p| p.library.iter()).find(|c| c.id == *id)
+        }) else {
+            continue;
+        };
         let cmc = card.printed_cmc();
         if card.definition.is_basic() && card.definition.is_land() {
             let out = land_color_output(&card.definition);
