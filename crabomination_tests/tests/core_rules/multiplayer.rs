@@ -526,7 +526,14 @@ fn view_projects_goaders_and_attack_targets_per_seat() {
         assert!(i.goaded_by.is_empty());
         assert_eq!(i.attack_target, None);
         assert_eq!(i.defending_player, None);
+        assert_eq!(i.protected_by, None, "a non-battle has no protector");
     }
+    // CR 310.8 — a battle carries its protector, the seat an attack on it
+    // is aimed at (CR 508.4), so the client can colour a planned attack.
+    let battle = g.add_card_to_battlefield(0, catalog::invasion_of_zendikar());
+    g.battlefield_find_mut(battle).unwrap().protected_by = Some(3);
+    let view = crabomination::server::view::project(&g, 0);
+    assert_eq!(view.battlefield.iter().find(|p| p.id == battle).unwrap().protected_by, Some(3));
 }
 
 /// In a 2v2 team game, an attacker may not target a teammate. The

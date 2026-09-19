@@ -217,7 +217,10 @@ pub(crate) fn plan_defender(cv: &ClientView, target: AttackTarget) -> Option<usi
         AttackTarget::Planeswalker(id) => {
             cv.battlefield.iter().find(|c| c.id == id).map(|c| c.controller)
         }
-        AttackTarget::Battle(_) => None,
+        // CR 508.4 — a battle is defended by its protector.
+        AttackTarget::Battle(id) => {
+            cv.battlefield.iter().find(|c| c.id == id).and_then(|c| c.protected_by)
+        }
     }
 }
 
@@ -795,8 +798,14 @@ mod tests {
     fn plan_defender_resolves_planeswalker_controller() {
         let cv = ClientView::default();
         assert_eq!(plan_defender(&cv, AttackTarget::Player(2)), Some(2));
-        // Unknown planeswalker (not in view) and battles resolve to None.
+        // Unknown planeswalker / battle (not in view) resolve to None.
         assert_eq!(plan_defender(&cv, AttackTarget::Planeswalker(CardId(9))), None);
         assert_eq!(plan_defender(&cv, AttackTarget::Battle(CardId(9))), None);
+        // CR 508.4 — a battle in view is defended by its protector.
+        let mut battle = crate::systems::counter_tooltip::tests::make_permanent_view(0, 0);
+        battle.id = CardId(9);
+        battle.protected_by = Some(3);
+        let cv = ClientView { battlefield: vec![battle], ..ClientView::default() };
+        assert_eq!(plan_defender(&cv, AttackTarget::Battle(CardId(9))), Some(3));
     }
 }

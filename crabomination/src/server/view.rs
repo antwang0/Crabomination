@@ -1867,6 +1867,7 @@ fn project_permanent(
         defending_player: state
             .attack_for(card.id)
             .and_then(|a| state.defender_for(a.target)),
+        protected_by: card.protected_by,
     }
 }
 

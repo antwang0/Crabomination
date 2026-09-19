@@ -1677,7 +1677,7 @@ fn counter_reminder(kind: CounterType) -> Option<&'static str> {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::{attack_target_line, build_tooltip_body, companion_restriction_text, goad_tooltip_line, humanize_keyword_debug, keyword_label, keyword_reminder, legend_rule_at_risk, prevention_summary};
     use crabomination::card::{CardId, CardType, CounterType, Keyword};
     use crabomination::net::PermanentView;
@@ -1696,7 +1696,7 @@ mod tests {
         }
     }
 
-    fn make_permanent_view(damage: u32, toughness: i32) -> PermanentView {
+    pub(crate) fn make_permanent_view(damage: u32, toughness: i32) -> PermanentView {
         PermanentView {
             must_block: false,
             abilities_locked: false,
@@ -1812,6 +1812,7 @@ mod tests {
             goaded_by: vec![],
             attack_target: None,
             defending_player: None,
+            protected_by: None,
         }
     }
 

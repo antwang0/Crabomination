@@ -2219,6 +2219,10 @@ pub struct PermanentView {
     /// protector). `None` when not attacking.
     #[serde(default)]
     pub defending_player: Option<usize>,
+    /// CR 310.8 — a battle's protector: the player who defends it, so the
+    /// seat an attack on it is aimed at (CR 508.4). `None` for a non-battle.
+    #[serde(default)]
+    pub protected_by: Option<usize>,
 }
 
 impl PermanentView {
