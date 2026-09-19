@@ -1538,17 +1538,14 @@ pub fn turbulent_wetlands() -> CardDefinition {
 /// card from your hand. If you don't, this land enters tapped. {T}: Add {U} or
 /// {B}.
 pub fn choked_estuary() -> CardDefinition {
-    CardDefinition {
-        static_abilities: vec![enters_tapped_unless(
-            "This land enters tapped unless you reveal an Island or Swamp card from your hand.",
-            Predicate::SelectorExists(Selector::CardsInZone {
-                who: PlayerRef::You,
-                zone: Zone::Hand,
-                filter: R::HasLandType(LandType::Island).or(R::HasLandType(LandType::Swamp)),
-            }),
-        )],
-        ..land("Choked Estuary", vec![tap_add(Color::Blue), tap_add(Color::Black)])
-    }
+    crate::sets::land_type_reveal_land(
+        "Choked Estuary",
+        "As this land enters, you may reveal an Island or Swamp card from your hand. If you don't, this land enters tapped.",
+        LandType::Island,
+        LandType::Swamp,
+        Color::Blue,
+        Color::Black,
+    )
 }
 
 /// Shipwreck Marsh — Land. This land enters tapped unless you control two or

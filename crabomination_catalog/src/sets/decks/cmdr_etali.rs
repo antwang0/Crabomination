@@ -1801,18 +1801,14 @@ pub fn rockfall_vale() -> CardDefinition {
 /// than an as-enters replacement, and the reveal is automatic when a match
 /// exists.
 pub fn game_trail() -> CardDefinition {
-    CardDefinition {
-        activated_abilities: vec![tap_add(Color::Red), tap_add(Color::Green)],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::IfRevealFromHand {
-                filter: R::HasLandType(LandType::Mountain).or(R::HasLandType(LandType::Forest)),
-                then: Box::new(Effect::Noop),
-                else_: Box::new(Effect::Tap { what: Selector::This }),
-            },
-        }],
-        ..c_land("Game Trail")
-    }
+    crate::sets::land_type_reveal_land(
+        "Game Trail",
+        "As this land enters, you may reveal a Mountain or Forest card from your hand. If you don't, this land enters tapped.",
+        LandType::Mountain,
+        LandType::Forest,
+        Color::Red,
+        Color::Green,
+    )
 }
 
 /// Fire-Lit Thicket — Land (Shadowmoor allied filter land). `{T}: Add {C}.`

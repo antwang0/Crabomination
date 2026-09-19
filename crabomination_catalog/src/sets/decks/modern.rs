@@ -60035,23 +60035,13 @@ pub fn faerie_conclave() -> CardDefinition {
 /// Secluded Glen — Land. Reveal a Faerie card from your hand or it enters
 /// tapped; {T}: Add {U} or {B}.
 pub fn secluded_glen() -> CardDefinition {
-    use crate::sets::tap_add;
-    CardDefinition {
-        name: "Secluded Glen",
-        card_types: vec![CardType::Land],
-        activated_abilities: vec![tap_add(Color::Blue), tap_add(Color::Black)],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::IfRevealFromHand {
-                filter: SelectionRequirement::HasCreatureType(CreatureType::Faerie),
-                then: Box::new(Effect::Noop),
-                else_: Box::new(Effect::Tap {
-                    what: Selector::This,
-                }),
-            },
-        }],
-        ..Default::default()
-    }
+    crate::sets::reveal_or_tapped_land(
+        "Secluded Glen",
+        "As this land enters, you may reveal a Faerie card from your hand. If you don't, this land enters tapped.",
+        SelectionRequirement::HasCreatureType(CreatureType::Faerie),
+        Color::Blue,
+        Color::Black,
+    )
 }
 
 /// Familiar's Ruse — {U}{U} Instant. Additional cost: return a creature you

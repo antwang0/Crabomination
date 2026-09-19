@@ -136,41 +136,23 @@ pub fn star_pupils_papers() -> CardDefinition {
 /// player can bluff "don't reveal" with a matching card in hand.
 fn snarl_land(
     name: &'static str,
+    description: &'static str,
     type_a: LandType,
     type_b: LandType,
     color_a: Color,
     color_b: Color,
 ) -> CardDefinition {
-    use super::super::tap_add;
-    use crate::card::{SelectionRequirement, TriggeredAbility};
-    use crate::effect::{EventKind, EventScope, EventSpec};
-    let reveal_filter =
-        SelectionRequirement::HasLandType(type_a).or(SelectionRequirement::HasLandType(type_b));
     // ⚠ A Snarl prints "Land" with **no** basic land types — `type_a` /
     // `type_b` name what the ETB reveal looks for, not what the land is. It
     // carried them as subtypes until 2026-09-01.
-    CardDefinition {
-        name,
-        card_types: vec![CardType::Land],
-        activated_abilities: vec![tap_add(color_a), tap_add(color_b)],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::IfRevealFromHand {
-                filter: reveal_filter,
-                then: Box::new(Effect::Noop),
-                else_: Box::new(Effect::Tap {
-                    what: Selector::This,
-                }),
-            },
-        }],
-        ..Default::default()
-    }
+    crate::sets::land_type_reveal_land(name, description, type_a, type_b, color_a, color_b)
 }
 
 /// Frostboil Snarl — Izzet (U/R) Snarl land.
 pub fn frostboil_snarl() -> CardDefinition {
     snarl_land(
         "Frostboil Snarl",
+        "As this land enters, you may reveal an Island or Mountain card from your hand. If you don't, this land enters tapped.",
         LandType::Island,
         LandType::Mountain,
         Color::Blue,
@@ -182,6 +164,7 @@ pub fn frostboil_snarl() -> CardDefinition {
 pub fn furycalm_snarl() -> CardDefinition {
     snarl_land(
         "Furycalm Snarl",
+        "As this land enters, you may reveal a Mountain or Plains card from your hand. If you don't, this land enters tapped.",
         LandType::Mountain,
         LandType::Plains,
         Color::Red,
@@ -193,6 +176,7 @@ pub fn furycalm_snarl() -> CardDefinition {
 pub fn necroblossom_snarl() -> CardDefinition {
     snarl_land(
         "Necroblossom Snarl",
+        "As this land enters, you may reveal a Swamp or Forest card from your hand. If you don't, this land enters tapped.",
         LandType::Swamp,
         LandType::Forest,
         Color::Black,
@@ -204,6 +188,7 @@ pub fn necroblossom_snarl() -> CardDefinition {
 pub fn shineshadow_snarl() -> CardDefinition {
     snarl_land(
         "Shineshadow Snarl",
+        "As this land enters, you may reveal a Plains or Swamp card from your hand. If you don't, this land enters tapped.",
         LandType::Plains,
         LandType::Swamp,
         Color::White,
@@ -215,6 +200,7 @@ pub fn shineshadow_snarl() -> CardDefinition {
 pub fn vineglimmer_snarl() -> CardDefinition {
     snarl_land(
         "Vineglimmer Snarl",
+        "As this land enters, you may reveal a Forest or Island card from your hand. If you don't, this land enters tapped.",
         LandType::Forest,
         LandType::Island,
         Color::Green,

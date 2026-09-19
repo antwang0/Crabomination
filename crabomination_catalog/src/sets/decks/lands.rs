@@ -8,8 +8,9 @@
 
 use super::super::{
     dual_land_untyped, dual_land_with, etb_tap, etb_tap_then_gain_one, etb_tap_then_surveil_one,
-    fastland_etb_conditional_tap, hybrid_filter_land, painland, pay_one_filter_land,
-    shockland_pay_two_or_tap, tap_add, tap_add_colorless, tri_land,
+    fastland_etb_conditional_tap, hybrid_filter_land, land_type_reveal_land, painland,
+    pay_one_filter_land, reveal_or_tapped_land, shockland_pay_two_or_tap, tap_add,
+    tap_add_colorless, tri_land,
 };
 use crate::card::{
     CardDefinition, CardType, Effect, EventKind, EventScope, EventSpec, LandType,
@@ -1770,6 +1771,66 @@ pub fn sunscorched_divide() -> CardDefinition {
 
 pub fn overflowing_basin() -> CardDefinition {
     pay_one_filter_land("Overflowing Basin", Color::Green, Color::Blue)
+}
+
+// ── Reveal-or-tapped lands, the five the catalog was missing ────────────────
+//
+// "As this land enters, you may reveal a [X] card from your hand. If you
+// don't, this land enters tapped." Two name land types (Shadows over
+// Innistrad), three name a creature type (Lorwyn). The other ten live in
+// `sets::stx`, `sets::decks::modern`, `recent110` and the Commander deck
+// files, and all fifteen share `sets::reveal_or_tapped_land`.
+
+pub fn port_town() -> CardDefinition {
+    land_type_reveal_land(
+        "Port Town",
+        "As this land enters, you may reveal a Plains or Island card from your hand. If you don't, this land enters tapped.",
+        LandType::Plains,
+        LandType::Island,
+        Color::White,
+        Color::Blue,
+    )
+}
+
+pub fn fortified_village() -> CardDefinition {
+    land_type_reveal_land(
+        "Fortified Village",
+        "As this land enters, you may reveal a Forest or Plains card from your hand. If you don't, this land enters tapped.",
+        LandType::Forest,
+        LandType::Plains,
+        Color::Green,
+        Color::White,
+    )
+}
+
+pub fn ancient_amphitheater() -> CardDefinition {
+    reveal_or_tapped_land(
+        "Ancient Amphitheater",
+        "As this land enters, you may reveal a Giant card from your hand. If you don't, this land enters tapped.",
+        SelectionRequirement::HasCreatureType(crate::card::CreatureType::Giant),
+        Color::Red,
+        Color::White,
+    )
+}
+
+pub fn aunties_hovel() -> CardDefinition {
+    reveal_or_tapped_land(
+        "Auntie's Hovel",
+        "As this land enters, you may reveal a Goblin card from your hand. If you don't, this land enters tapped.",
+        SelectionRequirement::HasCreatureType(crate::card::CreatureType::Goblin),
+        Color::Black,
+        Color::Red,
+    )
+}
+
+pub fn gilt_leaf_palace() -> CardDefinition {
+    reveal_or_tapped_land(
+        "Gilt-Leaf Palace",
+        "As this land enters, you may reveal an Elf card from your hand. If you don't, this land enters tapped.",
+        SelectionRequirement::HasCreatureType(crate::card::CreatureType::Elf),
+        Color::Black,
+        Color::Green,
+    )
 }
 
 /// Restless Anchorage — W/U. `{1}{W}{U}`: 2/3 flying Bird. Whenever it

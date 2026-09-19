@@ -1210,3 +1210,82 @@ fn every_pay_one_filter_land_is_one_ability_for_two_fixed_pips() {
         assert!(g.battlefield_find(id).unwrap().tapped);
     }
 }
+
+// ── Reveal-or-tapped lands: a replacement, not a trigger ────────────────────
+
+/// All fifteen "As this land enters, you may reveal a [X] card from your hand.
+/// If you don't, this land enters tapped." lands. CR 614.12 makes that a
+/// replacement effect, so the shape is one `EntersTappedUnless` static and
+/// **no** triggered ability — thirteen of them shipped as an ETB trigger that
+/// tapped the land after it was already on the battlefield.
+#[test]
+fn every_reveal_land_taps_itself_by_replacement_not_by_trigger() {
+    let cycle: [(Factory, &str); 15] = [
+        (catalog::port_town, "Port Town"),
+        (catalog::choked_estuary, "Choked Estuary"),
+        (catalog::foreboding_ruins, "Foreboding Ruins"),
+        (catalog::game_trail, "Game Trail"),
+        (catalog::fortified_village, "Fortified Village"),
+        (catalog::frostboil_snarl, "Frostboil Snarl"),
+        (catalog::furycalm_snarl, "Furycalm Snarl"),
+        (catalog::necroblossom_snarl, "Necroblossom Snarl"),
+        (catalog::shineshadow_snarl, "Shineshadow Snarl"),
+        (catalog::vineglimmer_snarl, "Vineglimmer Snarl"),
+        (catalog::ancient_amphitheater, "Ancient Amphitheater"),
+        (catalog::aunties_hovel, "Auntie's Hovel"),
+        (catalog::secluded_glen, "Secluded Glen"),
+        (catalog::wanderwine_hub, "Wanderwine Hub"),
+        (catalog::gilt_leaf_palace, "Gilt-Leaf Palace"),
+    ];
+    for (factory, name) in cycle {
+        let def = factory();
+        assert_eq!(def.name, name);
+        assert!(def.card_types.contains(&CardType::Land), "{name} is a land");
+        assert!(
+            def.subtypes.land_types.is_empty(),
+            "{name} prints no basic land type — the type is the reveal's filter",
+        );
+        assert_eq!(def.activated_abilities.len(), 2, "{name} taps for two colours");
+        assert!(
+            def.triggered_abilities.is_empty(),
+            "{name}: 'as this enters' is CR 614.12, not a trigger",
+        );
+        assert_eq!(def.static_abilities.len(), 1, "{name} has the one replacement");
+
+        // With nothing to reveal it enters tapped, and it is tapped the moment
+        // it is on the battlefield — no priority window with a trigger on the
+        // stack in which its controller could tap it for mana.
+        let mut g = two_player_game();
+        g.step = TurnStep::PreCombatMain;
+        let id = g.add_card_to_hand(0, factory());
+        g.perform_action(GameAction::PlayLand(id)).unwrap();
+        assert!(
+            g.battlefield_find(id).unwrap().tapped,
+            "{name} enters tapped, before anything resolves",
+        );
+        drain_stack(&mut g);
+        assert!(g.battlefield_find(id).unwrap().tapped, "{name} stays tapped");
+    }
+}
+
+/// The other half of the replacement: a matching card in hand and the land
+/// enters untapped. One card per filter kind — a land type (Port Town wants a
+/// Plains or an Island) and a creature type (Gilt-Leaf Palace wants an Elf).
+#[test]
+fn a_reveal_land_enters_untapped_when_the_hand_can_show_it() {
+    for (factory, name, reveal) in [
+        (catalog::port_town as Factory, "Port Town", catalog::island as Factory),
+        (catalog::gilt_leaf_palace as Factory, "Gilt-Leaf Palace", catalog::llanowar_elves as Factory),
+    ] {
+        let mut g = two_player_game();
+        g.step = TurnStep::PreCombatMain;
+        g.add_card_to_hand(0, reveal());
+        let id = g.add_card_to_hand(0, factory());
+        g.perform_action(GameAction::PlayLand(id)).unwrap();
+        drain_stack(&mut g);
+        assert!(
+            !g.battlefield_find(id).unwrap().tapped,
+            "{name} enters untapped with a card to reveal",
+        );
+    }
+}

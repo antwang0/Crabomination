@@ -197,22 +197,13 @@ pub fn kumenas_speaker() -> CardDefinition {
 /// Wanderwine Hub — Land. Reveal a Merfolk from hand or enter tapped;
 /// {T}: Add {W} or {U}.
 pub fn wanderwine_hub() -> CardDefinition {
-    CardDefinition {
-        name: "Wanderwine Hub",
-        card_types: vec![CardType::Land],
-        activated_abilities: vec![tap_add(Color::White), tap_add(Color::Blue)],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::IfRevealFromHand {
-                filter: SelectionRequirement::HasCreatureType(CreatureType::Merfolk),
-                then: Box::new(Effect::Noop),
-                else_: Box::new(Effect::Tap {
-                    what: Selector::This,
-                }),
-            },
-        }],
-        ..Default::default()
-    }
+    crate::sets::reveal_or_tapped_land(
+        "Wanderwine Hub",
+        "As this land enters, you may reveal a Merfolk card from your hand. If you don't, this land enters tapped.",
+        SelectionRequirement::HasCreatureType(CreatureType::Merfolk),
+        Color::White,
+        Color::Blue,
+    )
 }
 
 /// Shriekhorn — {1} Artifact; enters with three charge counters.

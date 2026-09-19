@@ -134,6 +134,70 @@ pub fn hybrid_filter_land(name: &'static str, a: Color, b: Color) -> CardDefinit
     }
 }
 
+/// Reveal-or-tapped land: "As this land enters, you may reveal a [X] card
+/// from your hand. If you don't, this land enters tapped." plus
+/// `{T}: Add {A} or {B}.`
+///
+/// Fifteen cards over three cycles that differ only in what `reveal` looks
+/// for — the Shadows over Innistrad five and the Strixhaven "Snarl" five name
+/// two **land types**, the Lorwyn five name a **creature type**. None of them
+/// carries the land type it asks about as a subtype: the card is a plain
+/// "Land", and the type is the reveal's filter, not its own.
+///
+/// ⚠ **A replacement, not a trigger.** "As this land enters …" is CR 614.12:
+/// the effect modifies *how* the permanent enters, so the land is never on
+/// the battlefield untapped. Thirteen of the fifteen shipped as an
+/// `EntersBattlefield` trigger that tapped the land afterwards — which lets
+/// its controller hold priority with the trigger on the stack and tap the
+/// land for mana it should never have produced. The condition is "a matching
+/// card is in your hand", which is what the engine's `IfRevealFromHand` also
+/// resolved to: it peeks and always accepts, since declining only buys the
+/// printed downside.
+pub fn reveal_or_tapped_land(
+    name: &'static str,
+    description: &'static str,
+    reveal: SelectionRequirement,
+    color_a: Color,
+    color_b: Color,
+) -> CardDefinition {
+    CardDefinition {
+        name,
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![tap_add(color_a), tap_add(color_b)],
+        static_abilities: vec![crate::effect::StaticAbility {
+            description,
+            effect: crate::effect::StaticEffect::EntersTappedUnless {
+                applies_to: Selector::This,
+                condition: Predicate::SelectorExists(Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: crate::card::Zone::Hand,
+                    filter: reveal,
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// [`reveal_or_tapped_land`] over the two land types the SOI / Snarl ten ask
+/// for ("reveal a Plains **or** Island card").
+pub fn land_type_reveal_land(
+    name: &'static str,
+    description: &'static str,
+    type_a: LandType,
+    type_b: LandType,
+    color_a: Color,
+    color_b: Color,
+) -> CardDefinition {
+    reveal_or_tapped_land(
+        name,
+        description,
+        SelectionRequirement::HasLandType(type_a).or(SelectionRequirement::HasLandType(type_b)),
+        color_a,
+        color_b,
+    )
+}
+
 /// Pay-one filter land (the Odyssey allied / modern enemy cycle, ten cards):
 /// a single `{1}, {T}: Add {A}{B}.` and nothing else. The other cycle that
 /// goes by "filter land"; see [`hybrid_filter_land`] for the Shadowmoor one.

@@ -1894,20 +1894,14 @@ pub fn haunted_ridge() -> CardDefinition {
 /// Add {B} or {R}."
 pub fn foreboding_ruins() -> CardDefinition {
     use crate::card::LandType;
-    CardDefinition {
-        triggered_abilities: vec![etb(Effect::IfRevealFromHand {
-            filter: R::HasLandType(LandType::Swamp).or(R::HasLandType(LandType::Mountain)),
-            then: Box::new(Effect::Noop),
-            else_: Box::new(Effect::Tap {
-                what: Selector::This,
-            }),
-        })],
-        activated_abilities: vec![
-            super::super::tap_add(Color::Black),
-            super::super::tap_add(Color::Red),
-        ],
-        ..land("Foreboding Ruins")
-    }
+    super::super::land_type_reveal_land(
+        "Foreboding Ruins",
+        "As this land enters, you may reveal a Swamp or Mountain card from your hand. If you don't, this land enters tapped.",
+        LandType::Swamp,
+        LandType::Mountain,
+        Color::Black,
+        Color::Red,
+    )
 }
 
 /// Fetid Heath — Land. "{T}: Add {C}. {W/B}, {T}: Add {W}{W}, {W}{B}, or
