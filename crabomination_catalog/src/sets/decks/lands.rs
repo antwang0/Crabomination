@@ -8,8 +8,8 @@
 
 use super::super::{
     dual_land_untyped, dual_land_with, etb_tap, etb_tap_then_gain_one, etb_tap_then_surveil_one,
-    fastland_etb_conditional_tap, filter_land, painland, shockland_pay_two_or_tap, tap_add,
-    tap_add_colorless, tri_land,
+    fastland_etb_conditional_tap, hybrid_filter_land, painland, pay_one_filter_land,
+    shockland_pay_two_or_tap, tap_add, tap_add_colorless, tri_land,
 };
 use crate::card::{
     CardDefinition, CardType, Effect, EventKind, EventScope, EventSpec, LandType,
@@ -1715,34 +1715,61 @@ pub fn seaside_citadel() -> CardDefinition {
 // `{T}: Add {C}.` plus `{A/B}, {T}: Add {A}{A}, {A}{B}, or {B}{B}.` The other
 // three of the ten (Sunken Ruins, Fetid Heath, Fire-Lit Thicket) live in the
 // Commander deck files that first needed them and share this same body via
-// `sets::filter_land`.
+// `sets::hybrid_filter_land`.
 
 pub fn mystic_gate() -> CardDefinition {
-    filter_land("Mystic Gate", Color::White, Color::Blue)
+    hybrid_filter_land("Mystic Gate", Color::White, Color::Blue)
 }
 
 pub fn graven_cairns() -> CardDefinition {
-    filter_land("Graven Cairns", Color::Black, Color::Red)
+    hybrid_filter_land("Graven Cairns", Color::Black, Color::Red)
 }
 
 pub fn wooded_bastion() -> CardDefinition {
-    filter_land("Wooded Bastion", Color::Green, Color::White)
+    hybrid_filter_land("Wooded Bastion", Color::Green, Color::White)
 }
 
 pub fn cascade_bluffs() -> CardDefinition {
-    filter_land("Cascade Bluffs", Color::Blue, Color::Red)
+    hybrid_filter_land("Cascade Bluffs", Color::Blue, Color::Red)
 }
 
 pub fn twilight_mire() -> CardDefinition {
-    filter_land("Twilight Mire", Color::Black, Color::Green)
+    hybrid_filter_land("Twilight Mire", Color::Black, Color::Green)
 }
 
 pub fn rugged_prairie() -> CardDefinition {
-    filter_land("Rugged Prairie", Color::Red, Color::White)
+    hybrid_filter_land("Rugged Prairie", Color::Red, Color::White)
 }
 
 pub fn flooded_grove() -> CardDefinition {
-    filter_land("Flooded Grove", Color::Green, Color::Blue)
+    hybrid_filter_land("Flooded Grove", Color::Green, Color::Blue)
+}
+
+// ── Pay-one filter lands, the enemy five ────────────────────────────────────
+//
+// `{1}, {T}: Add {A}{B}.` and nothing else — the other cycle called "filter
+// lands". The allied five (Odyssey: Skycloud Expanse, Darkwater Catacombs,
+// Shadowblood Ridge, Mossfire Valley, Sungrass Prairie) are in `sets::ody`
+// and share this body through `sets::pay_one_filter_land`.
+
+pub fn desolate_mire() -> CardDefinition {
+    pay_one_filter_land("Desolate Mire", Color::White, Color::Black)
+}
+
+pub fn ferrous_lake() -> CardDefinition {
+    pay_one_filter_land("Ferrous Lake", Color::Blue, Color::Red)
+}
+
+pub fn viridescent_bog() -> CardDefinition {
+    pay_one_filter_land("Viridescent Bog", Color::Black, Color::Green)
+}
+
+pub fn sunscorched_divide() -> CardDefinition {
+    pay_one_filter_land("Sunscorched Divide", Color::Red, Color::White)
+}
+
+pub fn overflowing_basin() -> CardDefinition {
+    pay_one_filter_land("Overflowing Basin", Color::Green, Color::Blue)
 }
 
 /// Restless Anchorage — W/U. `{1}{W}{U}`: 2/3 flying Bird. Whenever it

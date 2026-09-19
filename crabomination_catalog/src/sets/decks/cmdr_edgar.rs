@@ -1912,9 +1912,9 @@ pub fn foreboding_ruins() -> CardDefinition {
 
 /// Fetid Heath — Land. "{T}: Add {C}. {W/B}, {T}: Add {W}{W}, {W}{B}, or
 /// {B}{B}." The Eventide enemy filter land; body shared with the other nine
-/// by `sets::filter_land`.
+/// by `sets::hybrid_filter_land`.
 pub fn fetid_heath() -> CardDefinition {
-    super::super::filter_land("Fetid Heath", Color::White, Color::Black)
+    super::super::hybrid_filter_land("Fetid Heath", Color::White, Color::Black)
 }
 
 /// Vault of the Archangel — Land. "{T}: Add {C}. {2}{W}{B}, {T}: Creatures you

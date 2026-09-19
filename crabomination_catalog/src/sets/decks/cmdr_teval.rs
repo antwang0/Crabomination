@@ -1570,9 +1570,9 @@ pub fn shipwreck_marsh() -> CardDefinition {
 
 /// Sunken Ruins — Land. {T}: Add {C}. {U/B}, {T}: Add {U}{U}, {U}{B}, or
 /// {B}{B}. The Shadowmoor allied filter land; body shared with the other nine
-/// by `sets::filter_land`.
+/// by `sets::hybrid_filter_land`.
 pub fn sunken_ruins() -> CardDefinition {
-    crate::sets::filter_land("Sunken Ruins", Color::Blue, Color::Black)
+    crate::sets::hybrid_filter_land("Sunken Ruins", Color::Blue, Color::Black)
 }
 
 /// River of Tears — Land. {T}: Add {U}. If you played a land this turn, add {B}

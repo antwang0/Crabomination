@@ -1818,9 +1818,9 @@ pub fn game_trail() -> CardDefinition {
 /// Fire-Lit Thicket — Land (Shadowmoor allied filter land). `{T}: Add {C}.`
 /// `{R/G}, {T}: Add {R}{R}, {R}{G}, or {G}{G}.` The second ability is two pips
 /// each chosen from {R, G} (`ManaPayload::OfColors`), which is exactly the
-/// three printed options — the shape `sets::filter_land` now gives all ten.
+/// three printed options — the shape `sets::hybrid_filter_land` now gives all ten.
 pub fn fire_lit_thicket() -> CardDefinition {
-    crate::sets::filter_land("Fire-Lit Thicket", Color::Red, Color::Green)
+    crate::sets::hybrid_filter_land("Fire-Lit Thicket", Color::Red, Color::Green)
 }
 
 /// Wooded Ridgeline — Land — Mountain Forest. ({T}: Add {R} or {G}.) This

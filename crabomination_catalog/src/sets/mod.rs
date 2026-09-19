@@ -6,7 +6,7 @@ use crate::card::{
     SelectionRequirement, Selector, Subtypes, TriggeredAbility, Value,
 };
 use crate::effect::{Effect, ManaPayload, PlayerRef, Predicate};
-use crate::mana::{Color, cost, hybrid};
+use crate::mana::{Color, cost, generic, hybrid};
 
 pub fn tap_add(color: Color) -> ActivatedAbility {
     ActivatedAbility {
@@ -99,8 +99,12 @@ pub fn painland(name: &'static str, color_a: Color, color_b: Color) -> CardDefin
     }
 }
 
-/// Filter land (the Shadowmoor allied / Eventide enemy cycle, ten cards):
-/// `{T}: Add {C}.` plus `{A/B}, {T}: Add {A}{A}, {A}{B}, or {B}{B}.`
+/// Hybrid filter land (the Shadowmoor allied / Eventide enemy cycle, ten
+/// cards): `{T}: Add {C}.` plus `{A/B}, {T}: Add {A}{A}, {A}{B}, or {B}{B}.`
+///
+/// "Hybrid" in the name because [`pay_one_filter_land`] is the *other* cycle
+/// that goes by "filter land" — two cycles, one nickname, and one of them had
+/// already taken the bare name as a module-private helper.
 ///
 /// **One** activated ability for the filter, not three. The printed card is a
 /// single mana ability whose payout is chosen as it resolves, and
@@ -110,7 +114,7 @@ pub fn painland(name: &'static str, color_a: Color, color_b: Color) -> CardDefin
 /// land with four activated abilities instead of two, and forces the choice at
 /// activation time rather than at resolution. No basic land types; enters
 /// untapped.
-pub fn filter_land(name: &'static str, a: Color, b: Color) -> CardDefinition {
+pub fn hybrid_filter_land(name: &'static str, a: Color, b: Color) -> CardDefinition {
     CardDefinition {
         name,
         card_types: vec![CardType::Land],
@@ -126,6 +130,32 @@ pub fn filter_land(name: &'static str, a: Color, b: Color) -> CardDefinition {
                 ..Default::default()
             },
         ],
+        ..Default::default()
+    }
+}
+
+/// Pay-one filter land (the Odyssey allied / modern enemy cycle, ten cards):
+/// a single `{1}, {T}: Add {A}{B}.` and nothing else. The other cycle that
+/// goes by "filter land"; see [`hybrid_filter_land`] for the Shadowmoor one.
+///
+/// Two fixed pips, so `ManaPayload::Colors` — no choice is made, and nobody
+/// is asked. The five allied ones shipped as a `Seq` of two
+/// `OfColors(vec![one_color], 1)` adds, which routes a *choice* through
+/// `chosen_mana_color` over a one-element palette: the same two pips, but a
+/// decision where the card offers none.
+pub fn pay_one_filter_land(name: &'static str, a: Color, b: Color) -> CardDefinition {
+    CardDefinition {
+        name,
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colors(vec![a, b]),
+            },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }

@@ -1065,7 +1065,7 @@ fn eldrazi_confluence_chooses_scion_mode_three_times() {
 // ── The filter-land cycle, all ten in one table ──────────────────────────────
 
 /// The ten Shadowmoor/Eventide filter lands share one body
-/// (`sets::filter_land`), and that body is **two** activated abilities: the
+/// (`sets::hybrid_filter_land`), and that body is **two** activated abilities: the
 /// printed card is `{T}: Add {C}.` plus a single `{A/B}, {T}: Add {A}{A},
 /// {A}{B}, or {B}{B}` whose payout is chosen as it resolves. Three of the ten
 /// used to ship as three abilities, one per payout — the same set of outcomes
@@ -1163,5 +1163,50 @@ fn every_shard_tri_land_enters_tapped_and_taps_for_its_three() {
             drain_stack(&mut g);
             assert_eq!(g.players[0].mana_pool.amount(*color), 1, "{name} ability {i}");
         }
+    }
+}
+
+/// The *other* cycle called "filter lands": one `{1}, {T}: Add {A}{B}` and
+/// nothing else, ten cards. The allied five shipped as a `Seq` of two
+/// single-colour `OfColors` adds — the same two pips, but routed through the
+/// decider's colour choice over a one-element palette. Both pips are fixed on
+/// the printed card, so there is nothing to choose.
+#[test]
+fn every_pay_one_filter_land_is_one_ability_for_two_fixed_pips() {
+    let cycle: [(Factory, &str, Color, Color); 10] = [
+        (catalog::skycloud_expanse, "Skycloud Expanse", Color::White, Color::Blue),
+        (catalog::darkwater_catacombs, "Darkwater Catacombs", Color::Blue, Color::Black),
+        (catalog::shadowblood_ridge, "Shadowblood Ridge", Color::Black, Color::Red),
+        (catalog::mossfire_valley, "Mossfire Valley", Color::Red, Color::Green),
+        (catalog::sungrass_prairie, "Sungrass Prairie", Color::Green, Color::White),
+        (catalog::desolate_mire, "Desolate Mire", Color::White, Color::Black),
+        (catalog::ferrous_lake, "Ferrous Lake", Color::Blue, Color::Red),
+        (catalog::viridescent_bog, "Viridescent Bog", Color::Black, Color::Green),
+        (catalog::sunscorched_divide, "Sunscorched Divide", Color::Red, Color::White),
+        (catalog::overflowing_basin, "Overflowing Basin", Color::Green, Color::Blue),
+    ];
+    for (factory, name, a, b) in cycle {
+        let def = factory();
+        assert_eq!(def.name, name);
+        assert!(def.card_types.contains(&CardType::Land), "{name} is a land");
+        assert!(def.subtypes.land_types.is_empty(), "{name} has no basic land type");
+        assert!(def.triggered_abilities.is_empty(), "{name} enters untapped");
+        assert_eq!(def.activated_abilities.len(), 1, "{name}: one ability, no {{C}} mode");
+
+        let mut g = two_player_game();
+        g.step = TurnStep::PreCombatMain;
+        let id = g.add_card_to_battlefield(0, factory());
+        g.players[0].mana_pool.add_colorless(1);
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(),
+            x_value: None, mode: None,
+        })
+        .unwrap_or_else(|e| panic!("{name}: {{1}}, {{T}}: {e:?}"));
+        drain_stack(&mut g);
+        let pool = &g.players[0].mana_pool;
+        assert_eq!(pool.amount(a), 1, "{name} adds its first pip");
+        assert_eq!(pool.amount(b), 1, "{name} adds its second pip");
+        assert_eq!(pool.colorless_amount(), 0, "{name} spent the {{1}}");
+        assert!(g.battlefield_find(id).unwrap().tapped);
     }
 }

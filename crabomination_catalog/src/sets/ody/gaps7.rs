@@ -166,26 +166,10 @@ pub fn centaur_garden() -> CardDefinition {
 
 // ── Other lands ─────────────────────────────────────────────────────────────
 
-/// The Odyssey filter-land cycle: `{1}, {T}: Add two coloured mana.`
+/// The Odyssey filter-land cycle: `{1}, {T}: Add two coloured mana.` Body
+/// shared with the enemy five by `sets::pay_one_filter_land`.
 fn filter_land(name: &'static str, colors: [Color; 2]) -> CardDefinition {
-    CardDefinition {
-        activated_abilities: vec![ActivatedAbility {
-            mana_cost: cost(&[generic(1)]),
-            tap_cost: true,
-            effect: Effect::Seq(vec![
-                Effect::AddMana {
-                    who: PlayerRef::You,
-                    pool: ManaPayload::OfColors(vec![colors[0]], Value::ONE),
-                },
-                Effect::AddMana {
-                    who: PlayerRef::You,
-                    pool: ManaPayload::OfColors(vec![colors[1]], Value::ONE),
-                },
-            ]),
-            ..Default::default()
-        }],
-        ..land(name)
-    }
+    crate::sets::pay_one_filter_land(name, colors[0], colors[1])
 }
 
 pub fn sungrass_prairie() -> CardDefinition {
