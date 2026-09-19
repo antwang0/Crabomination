@@ -866,11 +866,14 @@ pub fn frantic_scapegoat() -> CardDefinition {
         triggered_abilities: vec![
             etb(Effect::Suspect { what: Selector::This }),
             TriggeredAbility {
+                // CR 603.2c — "whenever ONE OR MORE other creatures you
+                // control enter": one ask, not one per creature in the batch.
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
                     .with_filter(Predicate::EntityMatches {
                         what: Selector::TriggerSource,
                         filter: R::Creature.and(R::OtherThanSource),
-                    }),
+                    })
+                    .once_per_batch(),
                 effect: Effect::If {
                     // CR 603.4 intervening 'if' — only while this one is
                     // suspected is there anything to move.

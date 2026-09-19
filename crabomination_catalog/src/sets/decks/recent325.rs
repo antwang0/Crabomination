@@ -151,7 +151,11 @@ pub fn chainsaw() -> CardDefinition {
                 }),
             }),
             TriggeredAbility {
-                event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer),
+                // CR 603.2c — "whenever ONE OR MORE creatures die": one rev
+                // counter for the batch, so a board wipe is one point of
+                // power and not one per body.
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer)
+                    .once_per_batch(),
                 effect: Effect::AddCounter {
                     what: Selector::This,
                     kind: CounterType::Rev,

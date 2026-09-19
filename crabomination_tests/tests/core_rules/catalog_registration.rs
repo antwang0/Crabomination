@@ -2010,6 +2010,51 @@ fn every_batched_attack_trigger_fires_once_a_declaration() {
     );
 }
 
+/// Woodland Champion is the one name the zone-change batch ratchet signs off,
+/// and the reason is arithmetic again: "put **that many** +1/+1 counters on
+/// this creature" as a per-token `+1/+1` sums to exactly the printed count,
+/// and batching it would need the size of the entering batch, which no
+/// `Value` reads.
+const ZONE_BATCH_SIGNED_OFF: &[&str] = &["Woodland Champion"];
+
+/// **A card that prints "whenever one or more … enter / die / leave the
+/// battlefield" fires once per batch, not once per permanent.**
+///
+/// CR 603.2c again, over the zone-change events. Blood Spatter Analysis put a
+/// bloodstain counter on itself *per creature that died*, so one board wipe
+/// filled all five and sacrificed it on the spot; Dour Port-Mage drew a card
+/// per creature a mass bounce took; Aang got an experience counter apiece, and
+/// its own comment had said so since it shipped.
+///
+/// ⚠ **`CounterAdded` is deliberately not in this family.** `GameEvent::
+/// CounterAdded` carries a `count`, so one placement of three counters is one
+/// event and "whenever one or more +1/+1 counters are put on this creature"
+/// already fires once — eleven cards read as gaps against a naive predicate
+/// and none of them is one.
+#[test]
+fn every_batched_zone_change_trigger_fires_once_a_batch() {
+    clause_ratchet(
+        "whenever one or more … enter / die / leave the battlefield",
+        4,
+        |t, _| {
+            t.lines().map(str::trim).filter_map(|l| l.split_once("whenever one or more")).any(
+                |(_, rest)| {
+                    rest.split(',').next().is_some_and(|cond| {
+                        cond.ends_with(" enter")
+                            || cond.ends_with(" die")
+                            || cond.contains("leave the battlefield")
+                    })
+                },
+            )
+        },
+        |def, body| {
+            ZONE_BATCH_SIGNED_OFF.contains(&def.name)
+                || body.contains("once_per_batch: true")
+                || body.contains("once_per_turn: true")
+        },
+    );
+}
+
 // ── The printed *keyword* ratchet — the MISSING direction, restricted ───────
 
 /// The keywords this ratchet checks, as `(scryfall name, does the definition

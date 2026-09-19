@@ -20,7 +20,7 @@ Four changes, all reversible from `git log -p`, and **no body was edited**:
 | Set / topic | Status | Lines |
 | --- | --- | --- |
 | [Target-deck card defects, and why they are all blocked on one thing](#target-deck-card-defects-and-why-they-are-all-blocked-on-one-thing) | open | 33 |
-| [CR 603.2c batches — three clauses closed, and the ratchets that hold them](#cr-6032c-batches--three-clauses-closed-and-the-ratchets-that-hold-them) | closed — residuals only | 60 |
+| [CR 603.2c batches — four clauses closed, and the ratchets that hold them](#cr-6032c-batches--four-clauses-closed-and-the-ratchets-that-hold-them) | closed — residuals only | 72 |
 | [The printed-clause ratchet family — one body, and where its needles break](#the-printed-clause-ratchet-family--one-body-and-where-its-needles-break) | open | 58 |
 | [The printed *keyword* and printed *numbers* ratchets — the join, not the text](#the-printed-keyword-and-printed-numbers-ratchets--the-join-not-the-text) | open | 56 |
 | [The two once-a-turn limits, and the one card that cannot carry the flag](#the-two-once-a-turn-limits-and-the-one-card-that-cannot-carry-the-flag) | open | 47 |
@@ -151,9 +151,9 @@ which in a Commander pod is Judith pinging.
 🟡 **Deflecting Swat** still counters only a *spell*; printed is "spell or
 ability", plus "you may choose new targets for it". Unchanged by this pass.
 
-## CR 603.2c batches — three clauses closed, and the ratchets that hold them
+## CR 603.2c batches — four clauses closed, and the ratchets that hold them
 
-Three `clause_ratchet` clauses in `core_rules/catalog_registration.rs`, all
+Four `clause_ratchet` clauses in `core_rules/catalog_registration.rs`, all
 green, all keyed off the **trigger condition** rather than the effect (an
 "…leave your graveyard, this deals 1 damage to each opponent" line belongs to
 the graveyard ratchet, not the damage one):
@@ -163,6 +163,7 @@ the graveyard ratchet, not the damage one):
 | `every_batched_damage_trigger_fires_once_a_batch` | 20 | 8 |
 | `every_graveyard_leave_trigger_fires_once_a_batch` | 23 | 14 |
 | `every_batched_attack_trigger_fires_once_a_declaration` | 13 | 3 |
+| `every_batched_zone_change_trigger_fires_once_a_batch` | 23 | 5 |
 
 **Damage half.** Elegy Acolyte, Haliya, Kaito, Kastral, Kutzil, Malcolm,
 Nature's Will and Prosperous Thief took `once_per_batch`; the engine's batch
@@ -209,14 +210,34 @@ draws). Hedge Shredder and Kaya, Spirits' Justice are not signed off but
 excluded — "put INTO your graveyard from your library" and "put into exile"
 are different events, which is why the graveyard predicate anchors on *leave*.
 
-📐 **The shape all three share, and the thing to copy for the next clause:
+**Zone-change half.** "Whenever one or more … enter / die / leave the
+battlefield." Blood Spatter Analysis put a bloodstain counter on itself *per
+creature that died*, so one board wipe filled all five and sacrificed it on
+the spot; Chainsaw took a rev counter per body; Dour Port-Mage drew per
+creature a mass bounce took; Aang got an experience counter apiece, and its
+own comment had said so since it shipped; Frantic Scapegoat posed its "you
+may suspect one of the other creatures" ask once per creature entering.
+**Woodland Champion is signed off**: "put *that many* +1/+1 counters" as a
+per-token `+1/+1` sums to exactly the printed count, and batching it would
+need the size of the entering batch, which no `Value` reads.
+
+✅ **`CounterAdded` is CLOSED as a non-question, read rather than assumed.**
+`GameEvent::CounterAdded` carries a `count`, so one placement of three
+counters is one event and "whenever one or more +1/+1 counters are put on
+this creature" already fires once. Eleven cards read as gaps against a naive
+predicate (Benthic Biomancer, Scurry Oak, Evolution Witness, Knighted Myr,
+Pensive Professor, Fetid Gargantua, Dreamdrinker Vampire, Constable of the
+Realm, Wildwood Scourge, Simic Ascendancy, Lonis) and **none of them is one**.
+The only residual is two *different* effects placing counters in one batch,
+which no shipped card produces.
+
+📐 **The shape all four share, and the thing to copy for the next clause:
 anchor the predicate on the TRIGGER CONDITION, not the line.** "…leave your
 graveyard, this deals 1 damage to each opponent" is the graveyard ratchet's
 card and not the damage one; reading the whole line put Ark of Hunger, Fuming
-Effigy and Chandra, Fire Artisan in the wrong list on the first run. The
-remaining unaudited clauses are `CounterAdded` (11 cards — likely already
-right, since `add_counters` emits one event carrying a count), `EntersBattlefield`
-(~4) and `CreatureDied` (~2).
+Effigy and Chandra, Fire Artisan in the wrong list on the first run. What is
+left outside the four clauses: Kaya, Spirits' Justice ("…are put into exile",
+a known residual) and City in a Bottle (a static dressed as a trigger).
 
 ## Target-deck card defects, and why they are all blocked on one thing
 

@@ -3056,10 +3056,14 @@ pub fn dour_port_mage() -> CardDefinition {
         power: 1,
         toughness: 3,
         triggered_abilities: vec![TriggeredAbility {
+            // CR 603.2c — "whenever ONE OR MORE other creatures you control
+            // leave the battlefield without dying": one card for the batch,
+            // not one per creature a mass bounce took.
             event: EventSpec::new(
                 EventKind::CreatureLeavesBattlefieldNotDying,
                 EventScope::AnotherOfYours,
-            ),
+            )
+            .once_per_batch(),
             effect: Effect::Draw {
                 who: Selector::You,
                 amount: Value::Const(1),
