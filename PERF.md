@@ -3015,7 +3015,7 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
-### 2026-09-19 (the seventh Commander session, tip `7f9520ed`) — guardrail, no perf work
+### 2026-09-19 (the seventh Commander session, tip `3aca0ddb`) — guardrail, no perf work
 
 Two correctness commits: `Effect::BindScratch` (the resolver scratch a parked
 continuation dropped) and the **target-clause class** — 126 implemented cards
@@ -3054,6 +3054,14 @@ hits one. **FRONTIER 3204.**
 **Deck aggregate** (release-fast, seed 43, 3,000 games, four seats):
 39.8 / 14.7 / 20.0 / 25.5 against the recorded 40.8 / 14.6 / 20.3 / 24.3 —
 inside the noise.
+
+⚠ **The `--bench` and pod numbers were taken at `7f9520ed` and still hold at
+the closing tip**, and the derivation is the one above rather than a re-run:
+the eight cards changed after it (Parallax Nexus, the seven filter
+mismatches) are in **none** of `bot_ladder::archetypes()`,
+`golden_trace.rs`'s two decks or `pod/decks.rs`'s five — and
+`cr_903_seeded_pod_outcomes_match_the_committed_table`, which is a
+cross-process check over three whole pod games, passes unchanged at the tip.
 
 **Assertions sweep, taken at the closing tip** (`overflow` +
 `-C debug-assertions=yes` into `target-audit`, `RUST_MIN_STACK=33554432`):
