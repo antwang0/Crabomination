@@ -4759,3 +4759,54 @@ fn cr_608_2_for_each_reaches_every_entity_when_the_body_suspends() {
     );
     assert_eq!(g.players[0].hand.len(), hand - 4, "one discard per entity");
 }
+
+/// The pair form of the same class: `SeparateIntoPiles` runs `chosen`, then
+/// `other`, then drops the piles. A suspend inside `chosen` is `Ok(())`, so
+/// `other` ran *before* `chosen` had finished and the piles were cleared out
+/// from under `chosen`'s continuation — which then resolved
+/// `Selector::SeparatedPile` to nothing.
+#[test]
+fn a_pile_splits_second_half_waits_for_the_first_to_finish() {
+    use crabomination::card::SelectionRequirement as R;
+    use crabomination::effect::{Effect, Selector, Value};
+    let mut g = multi_player_game(2);
+    g.players[0].wants_ui = true;
+    for _ in 0..4 {
+        g.add_card_to_hand(0, catalog::lightning_bolt());
+    }
+    for _ in 0..4 {
+        g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    }
+    let src = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    g.stack.push(
+        TriggerPush::new(src, 0, Effect::SeparateIntoPiles {
+            what: Selector::ControlledBy {
+                who: PlayerRef::Seat(0),
+                filter: R::Creature.and(R::HasCreatureType(
+                    crabomination::card::CreatureType::Bear,
+                )),
+            },
+            splitter: PlayerRef::You,
+            chooser: PlayerRef::You,
+            // The discard suspends, so the destroy after it is what the
+            // continuation carries — and it needs the piles still there.
+            chosen: Box::new(Effect::Seq(vec![
+                Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+                Effect::DestroyNoRegen { what: Selector::SeparatedPile { chosen: true } },
+            ])),
+            other: Box::new(Effect::DestroyNoRegen {
+                what: Selector::SeparatedPile { chosen: false },
+            }),
+        })
+        .build(),
+    );
+    resolve_answering(&mut g);
+    assert_eq!(
+        g.battlefield
+            .iter()
+            .filter(|c| c.controller == 0 && c.definition.name == "Grizzly Bears")
+            .count(),
+        0,
+        "both piles were destroyed — the chosen one's destroy still found it",
+    );
+}

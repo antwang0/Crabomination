@@ -191,13 +191,19 @@ carries these verbatim, so the script stays the index):
   `exiled_with` stamps re-applied, which a remaining count cannot carry.
 - ⏳ `Effect::SacrificeAnyNumber`: the sacrifices are inline zone moves, not
   an `Effect`, so a tail cannot carry the ones not yet made.
-- ⏳ **And the shape the ratchet cannot see: a sequential PAIR.** A loop is
-  only the commonest form of "a second `run_effect` after one that can
-  suspend". `Effect::SeparatePilesChoose` and `PickOnePileThen` each run
-  `chosen` then `other` and restore `self.separated_piles` after both, so a
-  suspend in `chosen` drops `other` *and* clears the piles the continuation
-  would need (`effects/mod.rs` ~1497 and ~18791). Detecting this is a
-  dataflow question, not a lexical one.
+- ✅ **The shape the ratchet cannot see — a sequential PAIR — CLOSED for its
+  two known instances.** A loop is only the commonest form of "a second
+  `run_effect` after one that can suspend". The pile splits
+  (`SeparateIntoPiles` and `ChooseOneAmong`, one body now:
+  `run_piles_then_clear`) ran `chosen`, then `other`, then dropped the
+  piles — and a suspend inside `chosen` is `Ok(())`, so `other` ran *before*
+  `chosen` had finished and the clear happened under `chosen`'s
+  continuation, which then resolved `Selector::SeparatedPile` to nothing.
+  Do or Die and Death or Glory destroyed one pile of two. The splice carries
+  `other` and the clear waits. ⏳ **Detecting the shape generally is still
+  open**: "is this arm's second statement reachable after a suspend" is a
+  dataflow question, not a lexical one, so `audit_loop_splice.py` cannot ask
+  it.
 - ⏳ The ante branch loop (`effects/mod.rs`, the `AnteTopOfLibrary` arm). Its
   second pass calls `ante_top_card` *and* runs the branch, so a tail would
   have to hoist every ante ahead of every branch — a real ordering change

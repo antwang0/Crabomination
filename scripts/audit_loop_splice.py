@@ -34,12 +34,10 @@ of them.
 
 ⚠ **What it does NOT see: a sequential PAIR.** The class is "a second
 `run_effect` after one that can suspend", and a loop is only its commonest
-shape. `Effect::SeparatePilesChoose` / `PickOnePileThen` each run `chosen`
-then `other` and restore `self.separated_piles` after both — a suspend in
-`chosen` drops `other` *and* clears the piles the continuation would need.
-Recorded in ENGINE_BACKLOG rather than detected here: an "is this arm's
-second statement reachable after a suspend" check is a dataflow question,
-not a lexical one.
+shape. The pile splits (`SeparateIntoPiles`, `ChooseOneAmong`) were the
+known pair and are fixed (`run_piles_then_clear`), but this script did not
+find them and would not find the next one: "is this arm's second statement
+reachable after a suspend" is a dataflow question, not a lexical one.
 
 **Injection:** deleting the `splice_after_suspend` call from
 `Effect::ForEachOpponent` takes 0 -> **1 unexplained**. A gate that cannot

@@ -1502,9 +1502,30 @@ impl GameState {
         self.clear_answer_log();
         self.separated_piles =
             if take_first { (first, second) } else { (second, first) };
-        let run = self
-            .run_effect(chosen, ctx, events)
-            .and_then(|()| self.run_effect(other, ctx, events));
+        self.run_piles_then_clear(chosen, other, ctx, events)
+    }
+
+    /// Run a pile split's two halves, then drop the piles.
+    ///
+    /// A loop is only the commonest shape of "a second `run_effect` after one
+    /// that can suspend" — this is the pair form. `chosen` asks (a cast, a
+    /// sacrifice) and parks only itself, so `other` was dropped *and* the
+    /// piles it reads were cleared out from under the continuation. The
+    /// splice carries `other`, and the clear waits: `separated_piles` is
+    /// written by whichever arm set it and read by nobody else, so leaving it
+    /// set across the suspension costs nothing.
+    fn run_piles_then_clear(
+        &mut self,
+        chosen: &Effect,
+        other: &Effect,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
+        self.run_effect(chosen, ctx, events)?;
+        if splice_after_suspend(&mut self.suspend_signal, || other.clone()) {
+            return Ok(());
+        }
+        let run = self.run_effect(other, ctx, events);
         self.separated_piles = (Vec::new(), Vec::new());
         run
     }
@@ -18881,11 +18902,7 @@ impl GameState {
                 let one = picked.first().copied().unwrap_or(ids[0]);
                 self.separated_piles =
                     (vec![one], ids.into_iter().filter(|id| *id != one).collect());
-                let run = self
-                    .run_effect(chosen, ctx, events)
-                    .and_then(|()| self.run_effect(other, ctx, events));
-                self.separated_piles = (Vec::new(), Vec::new());
-                run
+                self.run_piles_then_clear(chosen, other, ctx, events)
             }
 
             Effect::ExchangeControlChoosing { filter, with } => self.resolve_exchange_control_choosing(filter, with, ctx, events),
