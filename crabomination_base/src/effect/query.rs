@@ -714,6 +714,8 @@ impl Effect {
         match self {
             Effect::DestroyAllNoRegenGainControllerLifePerManaValue { .. }
             | Effect::EachPlayerCreatesTokenPerControlled { .. }
+            | Effect::SourceEntersTapped
+            | Effect::AsEntersPayLifeOrTapped { .. }
             | Effect::AbandonThisScheme | Effect::GameIsADraw
             | Effect::PumpAttackersThisTurn { .. }
             | Effect::TruceThisTurnAndNext

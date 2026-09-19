@@ -33340,19 +33340,9 @@ pub fn sink_into_stupor() -> CardDefinition {
     let back = CardDefinition {
         name: "Soporific Springs",
         card_types: vec![CardType::Land],
-        // As it enters, you may pay 3 life; otherwise it enters tapped.
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::ChooseMode(vec![
-                Effect::LoseLife {
-                    who: Selector::You,
-                    amount: Value::Const(3),
-                },
-                Effect::Tap {
-                    what: Selector::This,
-                },
-            ]),
-        }],
+        // CR 614.12 — as it enters, you may pay 3 life; otherwise it enters
+        // tapped. A replacement, not a trigger.
+        as_enters_effect: Some(crate::catalog::sets::pay_life_or_enters_tapped(3)),
         activated_abilities: vec![crate::catalog::sets::tap_add(Color::Blue)],
         ..Default::default()
     };

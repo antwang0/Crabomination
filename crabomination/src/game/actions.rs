@@ -4321,23 +4321,32 @@ impl GameState {
         }
         // CR 614 — an "enters untapped" replacement (Spelunking) overrides the
         // enters-tapped effects for lands the static-source's controller owns.
-        if should_tap && self.battlefield[idx].definition.is_land() {
-            let entrant_controller = self.battlefield[idx].controller;
-            let overridden = etb_scan.iter().any(|src| {
-                src.controller == entrant_controller
+        if should_tap
+            && self.battlefield[idx].definition.is_land()
+            && self.lands_enter_untapped_for(self.battlefield[idx].controller)
+        {
+            should_tap = false;
+        }
+        if should_tap {
+            self.battlefield[idx].tapped = true;
+        }
+    }
+
+    /// CR 614 — true when `seat` controls an "enters untapped" replacement
+    /// (Spelunking) that outranks every enters-tapped effect on their lands.
+    /// Shared by `apply_enters_tapped_replacement` and by the as-enters
+    /// "if you don't, it enters tapped" branch, which have to agree.
+    pub(crate) fn lands_enter_untapped_for(&self, seat: usize) -> bool {
+        use crate::effect::StaticEffect;
+        self.battlefield.has_etb_static()
+            && self.battlefield.iter().any(|src| {
+                src.controller == seat
                     && src
                         .definition
                         .static_abilities
                         .iter()
                         .any(|sa| matches!(sa.effect, StaticEffect::LandsEnterUntapped))
-            });
-            if overridden {
-                should_tap = false;
-            }
-        }
-        if should_tap {
-            self.battlefield[idx].tapped = true;
-        }
+            })
     }
 
     /// CR 616.1c / 616.1g — the "enters as a copy" replacement is applied

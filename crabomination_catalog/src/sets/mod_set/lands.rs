@@ -2,7 +2,7 @@
 //! Mirrodin / "indestructible" artifact land cycle.
 //!
 //! * Shocklands — dual land of two basic types; ETB choice "pay 2 life or
-//!   enter tapped" via `shockland_pay_two_or_tap`.
+//!   enter tapped" via `shockland` (CR 614.12, a replacement).
 //! * Fastlands — dual land that ETB-taps once you control four+ lands;
 //!   reuses `fastland_etb_conditional_tap`.
 //! * Artifact lands (Mirrodin cycle) — single-color land that's also an
@@ -10,7 +10,7 @@
 //!   helper doesn't compose `CardType::Artifact` onto a Land.
 
 use super::super::{
-    dual_land_untyped, dual_land_with, fastland_enters_tapped, shockland_pay_two_or_tap,
+    dual_land_untyped, fastland_enters_tapped, shockland,
     tap_add,
 };
 use crate::card::{
@@ -21,73 +21,67 @@ use crate::mana::{Color, ManaCost};
 
 /// Sacred Foundry — RW shockland (Plains/Mountain).
 pub fn sacred_foundry() -> CardDefinition {
-    dual_land_with(
+    shockland(
         "Sacred Foundry",
         LandType::Plains,
         LandType::Mountain,
         Color::White,
         Color::Red,
-        vec![shockland_pay_two_or_tap()],
     )
 }
 
 /// Steam Vents — UR shockland (Island/Mountain).
 pub fn steam_vents() -> CardDefinition {
-    dual_land_with(
+    shockland(
         "Steam Vents",
         LandType::Island,
         LandType::Mountain,
         Color::Blue,
         Color::Red,
-        vec![shockland_pay_two_or_tap()],
     )
 }
 
 /// Stomping Ground — RG shockland (Mountain/Forest).
 pub fn stomping_ground() -> CardDefinition {
-    dual_land_with(
+    shockland(
         "Stomping Ground",
         LandType::Mountain,
         LandType::Forest,
         Color::Red,
         Color::Green,
-        vec![shockland_pay_two_or_tap()],
     )
 }
 
 /// Temple Garden — GW shockland (Forest/Plains).
 pub fn temple_garden() -> CardDefinition {
-    dual_land_with(
+    shockland(
         "Temple Garden",
         LandType::Forest,
         LandType::Plains,
         Color::Green,
         Color::White,
-        vec![shockland_pay_two_or_tap()],
     )
 }
 
 /// Breeding Pool — GU shockland (Forest/Island).
 pub fn breeding_pool() -> CardDefinition {
-    dual_land_with(
+    shockland(
         "Breeding Pool",
         LandType::Forest,
         LandType::Island,
         Color::Green,
         Color::Blue,
-        vec![shockland_pay_two_or_tap()],
     )
 }
 
 /// Blood Crypt — BR shockland (Swamp/Mountain).
 pub fn blood_crypt() -> CardDefinition {
-    dual_land_with(
+    shockland(
         "Blood Crypt",
         LandType::Swamp,
         LandType::Mountain,
         Color::Black,
         Color::Red,
-        vec![shockland_pay_two_or_tap()],
     )
 }
 

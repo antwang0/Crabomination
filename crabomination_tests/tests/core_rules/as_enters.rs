@@ -555,3 +555,118 @@ fn cr_614_12a_a_type_keyed_penalty_never_reads_an_unchosen_type() {
         "CR 614.12a — -1/-1 is on before any SBA check could read an unchosen type"
     );
 }
+
+// ── The pay-life-or-tapped class (CR 614.12 + CR 119.4) ────────────────────
+
+/// The ten shocklands and their nine {3}-life descendants. This was the last
+/// bucket of the 614.12 census and the one with the highest EDHREC ranks
+/// (Watery Grave 52, Godless Shrine 61, Hallowed Fountain 65, Overgrown Tomb
+/// 73), and the consequence the class is named for is here: as a trigger the
+/// land sat on the battlefield **untapped** with the choice still on the
+/// stack, so its controller could hold priority and tap it for mana it should
+/// never have made.
+#[test]
+fn cr_614_12a_a_shockland_resolves_its_choice_inside_the_land_drop() {
+    let lands: [(&str, Factory); 6] = [
+        ("Watery Grave", catalog::watery_grave),
+        ("Godless Shrine", catalog::godless_shrine),
+        ("Hallowed Fountain", catalog::hallowed_fountain),
+        ("Overgrown Tomb", catalog::overgrown_tomb),
+        ("Blood Crypt", catalog::blood_crypt),
+        ("Steam Vents", catalog::steam_vents),
+    ];
+    for (name, factory) in lands {
+        let mut g = two_player_game();
+        let before = g.players[0].life;
+        let id = g.add_card_to_hand(0, factory());
+        g.perform_action(GameAction::PlayLand(id)).expect("land drop is legal");
+        assert!(
+            g.stack.is_empty(),
+            "CR 614.12 — {name} leaves no trigger on the stack, so there is no \
+             window to tap it in"
+        );
+        let land = g.battlefield_find(id).unwrap_or_else(|| panic!("{name} entered"));
+        // Whichever branch the decider took, the land and the life total agree
+        // by the time the drop returns: paid and untapped, or unpaid and tapped.
+        assert_eq!(
+            land.tapped,
+            g.players[0].life == before,
+            "{name}: tapped iff the 2 life was not paid"
+        );
+    }
+}
+
+/// CR 119.4 — a player who cannot pay the life is not asked, and the land
+/// enters tapped. Shocklands are the one land that can kill you, so the floor
+/// matters: at 2 life the payment is legal (life may reach 0 as a cost is
+/// paid, and CR 704.5a kills you afterwards); at 1 it is not.
+#[test]
+fn cr_119_4_a_seat_that_cannot_pay_the_life_enters_the_land_tapped() {
+    let mut g = two_player_game();
+    g.players[0].life = 1;
+    let id = g.add_card_to_hand(0, catalog::watery_grave());
+    g.perform_action(GameAction::PlayLand(id)).expect("land drop is legal");
+    assert_eq!(g.players[0].life, 1, "CR 119.4 — the life was never payable");
+    assert!(
+        g.battlefield_find(id).expect("entered").tapped,
+        "so the land takes the printed downside and enters tapped"
+    );
+}
+
+/// A permanent that *enters* tapped never *becomes* tapped, so the decline
+/// branch must not emit `PermanentTapped` — `Effect::Tap` did, which is what
+/// `Effect::SourceEntersTapped` replaces.
+#[test]
+fn cr_614_12_entering_tapped_is_not_becoming_tapped() {
+    let mut g = two_player_game();
+    g.players[0].life = 1; // forces the decline branch
+    let id = g.add_card_to_hand(0, catalog::watery_grave());
+    let events = g.perform_action(GameAction::PlayLand(id)).expect("land drop is legal");
+    assert!(
+        g.battlefield_find(id).expect("entered").tapped,
+        "it entered tapped"
+    );
+    assert!(
+        !events
+            .iter()
+            .any(|e| matches!(e, GameEvent::PermanentTapped { card_id, .. } if *card_id == id)),
+        "CR 614.12 — entering tapped is not a tap event"
+    );
+}
+
+/// CR 614 — an "enters untapped" replacement (Spelunking) outranks the
+/// decline branch, exactly as it outranks `StaticEffect::EntersTapped`. Both
+/// read the same helper now, so they cannot disagree.
+#[test]
+fn cr_614_spelunking_outranks_the_decline_branch() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::spelunking());
+    g.players[0].life = 1; // forces the decline branch
+    let id = g.add_card_to_hand(0, catalog::watery_grave());
+    g.perform_action(GameAction::PlayLand(id)).expect("land drop is legal");
+    assert!(
+        !g.battlefield_find(id).expect("entered").tapped,
+        "CR 614 — lands you control enter untapped, decline branch or not"
+    );
+}
+
+/// And a `wants_ui` seat is asked rather than answered for: the land drop
+/// parks the two-mode question on `ResumeContext::LandEntry` and finishes the
+/// entry on the answer. `AutoDecider` would have answered mode 0 (pay), so
+/// taking mode 1 here proves the prompt was real.
+#[test]
+fn cr_614_12a_a_ui_seat_is_asked_whether_to_pay_the_shockland() {
+    use crabomination::decision::DecisionAnswer;
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    let id = g.add_card_to_hand(0, catalog::steam_vents());
+    let before = g.players[0].life;
+    g.perform_action(GameAction::PlayLand(id)).expect("land drop is legal");
+    assert!(g.stack.is_empty(), "nothing reaches the stack");
+    assert!(g.pending_decision.is_some(), "the UI seat is asked");
+    g.submit_decision(DecisionAnswer::Mode(1)).expect("decline the payment");
+    let land = g.battlefield_find(id).expect("still on the battlefield");
+    assert!(land.tapped, "declined, so it entered tapped");
+    assert_eq!(g.players[0].life, before, "and no life was paid");
+    assert!(g.pending_decision.is_none(), "the entry finished on the answer");
+}

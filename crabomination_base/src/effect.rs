@@ -9822,6 +9822,35 @@ pub enum Effect {
     /// a seat that can't afford the life is never asked.
     PlayerMayPayLifeElse { who: PlayerRef, life: Value, else_: Box<Effect> },
 
+    /// CR 614.12 + CR 119.4 — "As this land enters, you may pay N life. If
+    /// you don't, it enters tapped." The shocklands and their {3}-life
+    /// descendants, as the replacement they print.
+    ///
+    /// Its own effect rather than `ChooseMode` over `[LoseLife, …]`, because
+    /// `ChooseMode` reads `ctx.mode` — the pick made when the spell or
+    /// trigger went on the stack — and an as-enters replacement has no stack
+    /// item, so it would silently take mode 0 and never ask. And not
+    /// `PlayerMayPayLifeElse`, whose yes/no ask `AutoDecider` **declines**,
+    /// which would put every headless seat's shockland onto the battlefield
+    /// tapped. This asks a two-mode question directly: `AutoDecider` answers
+    /// mode 0 (pay), the bot scores both by outcome, and a `wants_ui` seat
+    /// suspends for a real prompt.
+    ///
+    /// CR 119.4 gates the offer: a seat that cannot pay the life is not
+    /// asked, and the permanent simply enters tapped.
+    AsEntersPayLifeOrTapped { life: Value },
+
+    /// CR 614.12 — the "if you don't, it enters tapped" branch of an
+    /// **as-enters** replacement (the shocklands and their {3}-life
+    /// descendants). Sets the source's tapped flag directly, which is what
+    /// separates it from [`Effect::Tap`]: a permanent that *enters* tapped
+    /// never *becomes* tapped, so no `PermanentTapped` event is emitted and a
+    /// "whenever a permanent becomes tapped" watcher does not see it. Honours
+    /// the CR 614 "lands enter untapped" override (Spelunking) the same way
+    /// `apply_enters_tapped_replacement` does. Only meaningful inside a
+    /// `CardDefinition::as_enters_effect`.
+    SourceEntersTapped,
+
     /// "Each player may exile any number of cards from their graveyard,"
     /// then `then` runs once (Grave Consequences). Each seat picks its own
     /// batch via `Decision::ChooseCards`; unlike

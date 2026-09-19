@@ -1,8 +1,8 @@
 //! Modern-staple sorceries — sweepers, ramp, removal, recursion.
 
 use crate::card::{
-    CardDefinition, CardType, Effect, EventKind, EventScope, EventSpec, Keyword, LandType,
-    SelectionRequirement, Subtypes, TriggeredAbility,
+    CardDefinition, CardType, Effect, Keyword, LandType,
+    SelectionRequirement, Subtypes,
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{LookPick, Duration, PlayerRef, Selector, Value, ZoneDest};
@@ -302,13 +302,8 @@ pub fn sundering_eruption() -> CardDefinition {
     let back = CardDefinition {
         name: "Volcanic Fissure",
         card_types: vec![CardType::Land],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::ChooseMode(vec![
-                Effect::LoseLife { who: Selector::You, amount: Value::Const(3) },
-                Effect::Tap { what: Selector::This },
-            ]),
-        }],
+        // CR 614.12 — pay-or-tapped is a replacement, not a trigger.
+        as_enters_effect: Some(super::super::pay_life_or_enters_tapped(3)),
         activated_abilities: vec![super::super::tap_add(crate::mana::Color::Red)],
         ..Default::default()
     };

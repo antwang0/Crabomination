@@ -453,27 +453,37 @@ pub fn fastland_etb_conditional_tap() -> TriggeredAbility {
     }
 }
 
-/// Shock-land ETB choice — "As this enters, you may pay 2 life. If you don't,
-/// it enters tapped." Modeled as a self-source ETB `ChooseMode` trigger
-/// (mode 0 = pay 2 life, mode 1 = tap self). The default `AutoDecider` and
-/// the simulated bot both pick mode 0, which matches typical play (a single
-/// untap is almost always worth 2 life). Note: this is a triggered ability,
-/// not a true replacement effect — the land is briefly available untapped
-/// before the trigger resolves. Functionally close enough for the demo decks.
-pub fn shockland_pay_two_or_tap() -> TriggeredAbility {
-    TriggeredAbility {
-        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-        effect: Effect::ChooseMode(vec![
-            // Mode 0: Pay 2 life, stay untapped.
-            Effect::LoseLife {
-                who: Selector::You,
-                amount: Value::Const(2),
-            },
-            // Mode 1: enter tapped.
-            Effect::Tap {
-                what: Selector::This,
-            },
-        ]),
+/// "As this land enters, you may pay N life. If you don't, it enters tapped."
+/// — CR 614.12, a **replacement**, so it goes in `as_enters_effect` and not
+/// in `triggered_abilities`.
+///
+/// As a trigger the land sat on the battlefield **untapped** with the choice
+/// still on the stack, and its controller could hold priority and tap it for
+/// mana it should never have made. `Effect::AsEntersPayLifeOrTapped` carries
+/// the whole clause -- the CR 119.4 affordability gate, the two-mode ask, and
+/// the `SourceEntersTapped` decline branch that sets the flag rather than
+/// tapping, because a permanent that *enters* tapped never *becomes* tapped.
+pub fn pay_life_or_enters_tapped(life: i32) -> Effect {
+    Effect::AsEntersPayLifeOrTapped { life: Value::Const(life) }
+}
+
+/// The ten shocklands' spelling of [`pay_life_or_enters_tapped`].
+pub fn shockland_pay_two_or_tap() -> Effect {
+    pay_life_or_enters_tapped(2)
+}
+
+/// A shockland: [`dual_land_with`] carrying no trigger and the CR 614.12
+/// pay-2-life-or-enter-tapped **replacement**.
+pub fn shockland(
+    name: &'static str,
+    type_a: LandType,
+    type_b: LandType,
+    color_a: Color,
+    color_b: Color,
+) -> CardDefinition {
+    CardDefinition {
+        as_enters_effect: Some(shockland_pay_two_or_tap()),
+        ..dual_land_with(name, type_a, type_b, color_a, color_b, vec![])
     }
 }
 

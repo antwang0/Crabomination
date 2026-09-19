@@ -85,6 +85,10 @@ REPLACEMENT = re.compile(
     r"|enters_tapped_unless\(|reveal_or_tapped_land\(|land_type_reveal_land\("
     # The three as-enters appliers `game::as_enters` funnels (CR 614.12).
     r"|as_enters_effect:|enters_as_choice:|enter_modes:"
+    # …and the helpers that carry one, for a DFC whose clause is on the face
+    # the front factory reaches through a call (the reader limitation above).
+    r"|shockland\(|pay_life_or_enters_tapped\(|pay_three_or_tapped\("
+    r"|mdfc_pain_land\(|u_pain_land\("
 )
 
 # The reveal cycle, closed 2026-09-19. `--gate` fails if any of these comes

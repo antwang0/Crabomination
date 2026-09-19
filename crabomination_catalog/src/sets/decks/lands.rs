@@ -7,10 +7,10 @@
 //! lands and tap lands enter tapped via a self-targeting `Tap` trigger.
 
 use super::super::{
-    dual_land_untyped, dual_land_with, enters_tapped, etb_gain_one, etb_surveil_one,
+    dual_land_untyped, enters_tapped, etb_gain_one, etb_surveil_one,
     tapland_typed, tapland_untyped,
     fastland_enters_tapped, hybrid_filter_land, land_type_reveal_land, painland,
-    pay_one_filter_land, reveal_or_tapped_land, shockland_pay_two_or_tap, tap_add,
+    pay_one_filter_land, reveal_or_tapped_land, shockland, tap_add,
     tap_add_colorless, tri_land,
 };
 use crate::card::{
@@ -128,46 +128,42 @@ pub fn cragcrown_pathway() -> CardDefinition {
 // picks mode 0 by default for non-UI players, matching typical play.
 
 pub fn godless_shrine() -> CardDefinition {
-    dual_land_with(
+    shockland(
         "Godless Shrine",
         LandType::Plains,
         LandType::Swamp,
         Color::White,
         Color::Black,
-        vec![shockland_pay_two_or_tap()],
     )
 }
 
 pub fn hallowed_fountain() -> CardDefinition {
-    dual_land_with(
+    shockland(
         "Hallowed Fountain",
         LandType::Plains,
         LandType::Island,
         Color::White,
         Color::Blue,
-        vec![shockland_pay_two_or_tap()],
     )
 }
 
 pub fn watery_grave() -> CardDefinition {
-    dual_land_with(
+    shockland(
         "Watery Grave",
         LandType::Island,
         LandType::Swamp,
         Color::Blue,
         Color::Black,
-        vec![shockland_pay_two_or_tap()],
     )
 }
 
 pub fn overgrown_tomb() -> CardDefinition {
-    dual_land_with(
+    shockland(
         "Overgrown Tomb",
         LandType::Swamp,
         LandType::Forest,
         Color::Black,
         Color::Green,
-        vec![shockland_pay_two_or_tap()],
     )
 }
 

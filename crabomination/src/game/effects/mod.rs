@@ -3423,6 +3423,75 @@ impl GameState {
 
             // CR 119.4 — a *named* player, not the controller, is offered the
             // life payment; declining (or being unable to pay) runs `else_`.
+            Effect::AsEntersPayLifeOrTapped { life } => {
+                // CR 614.12a — asked and answered inside the battlefield hop,
+                // so the permanent is never on the battlefield untapped with
+                // the question still open.
+                use crate::decision::{Decision, DecisionAnswer};
+                let Some(src) = ctx.source else { return Ok(()) };
+                let n = self.evaluate_value(life, ctx).max(0);
+                let seat = ctx.controller;
+                // CR 119.4 — a player who cannot pay the life is not offered
+                // the choice, and takes the printed downside.
+                if self.players.get(seat).is_none_or(|p| p.life < n) {
+                    return self.run_effect(&Effect::SourceEntersTapped, ctx, events);
+                }
+                let decision = Decision::ChooseMode {
+                    source: src,
+                    num_modes: 2,
+                    mode_texts: vec![format!("Pay {n} life"), "Enters tapped".to_string()],
+                };
+                // Same three-way shape as the deferred modal pick below: a
+                // stashed answer on resume, a suspension for a seat that
+                // prompts, the decider for everyone else.
+                let idx = match take_opt_scratch!(self.stashed_resolution_answer) {
+                    Some(DecisionAnswer::Mode(i)) => i.min(1),
+                    Some(_) => 0,
+                    None if self.seat_prompts(seat) => {
+                        self.suspend_signal = Some(Box::new((
+                            decision,
+                            PendingEffectState::ModeAnswerPending { num_modes: 2 },
+                            effect.clone(),
+                        )));
+                        return Ok(());
+                    }
+                    None => match self.decider.decide(&decision) {
+                        DecisionAnswer::Mode(i) => i.min(1),
+                        _ => 0,
+                    },
+                };
+                if idx == 0 {
+                    // CR 119.4 — paying life is losing that much life.
+                    self.run_effect(
+                        &Effect::LoseLife {
+                            who: Selector::You,
+                            amount: crate::effect::Value::Const(n),
+                        },
+                        ctx,
+                        events,
+                    )
+                } else {
+                    self.run_effect(&Effect::SourceEntersTapped, ctx, events)
+                }
+            }
+
+            Effect::SourceEntersTapped => {
+                // CR 614.12 — the entering permanent's own "it enters tapped"
+                // branch. Set the flag; do NOT route through `Effect::Tap`,
+                // whose `PermanentTapped` event says the permanent *became*
+                // tapped, which an entering one never does.
+                let Some(src) = ctx.source else { return Ok(()) };
+                let land = self.battlefield_find(src).is_some_and(|c| c.definition.is_land());
+                let seat = self.battlefield_find(src).map(|c| c.controller);
+                if land && seat.is_some_and(|s| self.lands_enter_untapped_for(s)) {
+                    return Ok(());
+                }
+                if let Some(c) = self.battlefield_find_mut(src) {
+                    c.tapped = true;
+                }
+                Ok(())
+            }
+
             Effect::PlayerMayPayLifeElse { who, life, else_ } => {
                 let Some(seat) = self.resolve_player(who, ctx) else { return Ok(()) };
                 let cost = self.evaluate_value(life, ctx).max(0);

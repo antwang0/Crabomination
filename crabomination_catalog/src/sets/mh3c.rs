@@ -279,18 +279,8 @@ fn mdfc_pain_land(name: &'static str, color: Color) -> CardDefinition {
     CardDefinition {
         name,
         card_types: vec![CardType::Land],
-        triggered_abilities: vec![crate::card::TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::ChooseMode(vec![
-                Effect::LoseLife {
-                    who: Selector::You,
-                    amount: Value::Const(3),
-                },
-                Effect::Tap {
-                    what: Selector::This,
-                },
-            ]),
-        }],
+        // CR 614.12 — pay-or-tapped is a replacement, not a trigger.
+        as_enters_effect: Some(crate::catalog::sets::pay_life_or_enters_tapped(3)),
         activated_abilities: vec![crate::catalog::sets::tap_add(color)],
         ..Default::default()
     }

@@ -142,14 +142,9 @@ fn enters_tapped_unless(description: &'static str, condition: Predicate) -> Stat
 /// "As this enters, you may pay 3 life. If you don't, it enters tapped." —
 /// the shape the catalog's Zendikar Rising pathway backs use (a self-ETB
 /// `ChooseMode`: mode 0 pays the life, mode 1 taps).
-fn pay_three_or_tapped() -> TriggeredAbility {
-    TriggeredAbility {
-        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-        effect: Effect::ChooseMode(vec![
-            Effect::LoseLife { who: Selector::You, amount: Value::Const(3) },
-            Effect::Tap { what: Selector::This },
-        ]),
-    }
+/// CR 614.12 — pay-or-tapped is a replacement, not a trigger.
+fn pay_three_or_tapped() -> Effect {
+    crate::catalog::sets::pay_life_or_enters_tapped(3)
 }
 
 fn mill(n: i32) -> Effect {
@@ -989,7 +984,7 @@ pub fn agadeems_awakening() -> CardDefinition {
     CardDefinition {
         back_face: Some(Box::new(CardDefinition {
             supertypes: vec![],
-            triggered_abilities: vec![pay_three_or_tapped()],
+            as_enters_effect: Some(pay_three_or_tapped()),
             ..land("Agadeem, the Undercrypt", vec![tap_add(Color::Black)])
         })),
         ..spell(
@@ -1712,7 +1707,7 @@ pub fn the_black_gate() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],
         subtypes: Subtypes { land_types: vec![LandType::Gate], ..Default::default() },
-        triggered_abilities: vec![pay_three_or_tapped()],
+        as_enters_effect: Some(pay_three_or_tapped()),
         ..land(
             "The Black Gate",
             vec![
