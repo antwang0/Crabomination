@@ -697,6 +697,77 @@ fn ashiok_plus_one_and_minus_two() {
     assert_eq!(count_named(&g, 0, "Nightmare"), 2);
 }
 
+/// Ashiok's static: a life payment becomes exiling that many cards off the top
+/// of the library — Phyrexian mana and a "Pay 1 life" activation (Yawgmoth's
+/// Bargain) alike. With too small a library the life is paid as usual, and the
+/// replacement doesn't make an unaffordable payment affordable (CR 119.4).
+#[test]
+fn ashiok_life_payments_exile_the_library_instead() {
+    fn with_ashiok(library: usize) -> GameState {
+        let mut g = main_phase();
+        g.add_card_to_battlefield(0, catalog::ashiok_wicked_manipulator());
+        for _ in 0..library {
+            g.add_card_to_library(0, catalog::grizzly_bears());
+        }
+        g
+    }
+    let cast_growth = |g: &mut GameState, bears: CardId| {
+        let growth = g.add_card_to_hand(0, catalog::mutagenic_growth());
+        let r = g.perform_action(GameAction::CastSpell {
+            card_id: growth,
+            target: Some(Target::Permanent(bears)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        });
+        drain_stack(g);
+        r
+    };
+
+    // Phyrexian {G/P} paid with "life": two cards exiled, life untouched.
+    let mut g = with_ashiok(5);
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    cast_growth(&mut g, bears).expect("cast Mutagenic Growth for 2 life");
+    assert_eq!(g.players[0].life, 20, "no life paid");
+    assert_eq!(g.players[0].library.len(), 3);
+    assert_eq!(g.exile.len(), 2, "two cards exiled instead");
+    assert_eq!(g.computed_permanent(bears).unwrap().power, 4);
+
+    // "Pay 1 life: Draw a card" — exile one, draw one.
+    let mut g = with_ashiok(5);
+    let bargain = g.add_card_to_battlefield(0, catalog::yawgmoths_bargain());
+    let hand = g.players[0].hand.len();
+    activate(&mut g, bargain, 0, None);
+    assert_eq!(g.players[0].life, 20);
+    assert_eq!(g.exile.len(), 1);
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+    assert_eq!(g.players[0].library.len(), 3);
+
+    // Library smaller than the payment: the life is paid.
+    let mut g = with_ashiok(1);
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    cast_growth(&mut g, bears).expect("cast");
+    assert_eq!(g.players[0].life, 18);
+    assert_eq!(g.players[0].library.len(), 1);
+    assert!(g.exile.is_empty());
+
+    // CR 119.4 — at 0 life the 1-life payment can't be made at all, Ashiok
+    // or not: the replacement doesn't make a payment affordable.
+    let mut g = with_ashiok(5);
+    g.players[0].life = 0;
+    let bargain = g.add_card_to_battlefield(0, catalog::yawgmoths_bargain());
+    let r = g.perform_action(GameAction::ActivateAbility {
+        card_id: bargain,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    });
+    assert!(r.is_err(), "can't pay 1 life at 0");
+    assert_eq!(g.players[0].library.len(), 5);
+}
+
 // ── Artifacts ────────────────────────────────────────────────────────────────
 
 /// Winged Boots and Brotherhood Regalia grant their keywords; the Regalia's

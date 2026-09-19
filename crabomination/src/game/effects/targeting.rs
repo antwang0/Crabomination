@@ -297,7 +297,19 @@ impl GameState {
         // doc comment): when caller asked us to avoid the trigger source,
         // skip the source on the first pass and only fall back to it if
         // no other legal candidate exists.
-        let is_avoided = |cid: CardId| -> bool { avoid.contains(&cid) };
+        // The avoidance keeps a trigger off *its controller's own* source. A
+        // trigger controlled by an opponent of its source's controller — a
+        // Probing Telepathy copy of an entering creature's ETB (Aboleth
+        // Spawn) — has no reason to spare that source, and sparing it sent a
+        // copied Flametongue Kavu's damage into the copier's own creatures.
+        let hostile_source = avoid_source.is_some_and(|s| {
+            self.battlefield
+                .find_by_id(s)
+                .is_some_and(|c| c.controller != controller && !self.same_team(c.controller, controller))
+        });
+        let is_avoided = |cid: CardId| -> bool {
+            avoid.contains(&cid) && !(hostile_source && Some(cid) == avoid_source)
+        };
         // For friendly pumps (Magecraft / Repartee +1/+1 fan-out, transient
         // PumpPT spells), prefer the highest-power friendly creature so the
         // buff lands on the bot's biggest threat — improves expected value

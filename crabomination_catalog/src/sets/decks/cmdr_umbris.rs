@@ -23,8 +23,9 @@
 //! - "Put there from their library this turn" (The Weaver King, Captain
 //!   N'ghathrod) reads as "put into a graveyard this turn" — the engine tracks
 //!   graveyard arrivals, not their origin zone.
-//! - Aboleth Spawn's Probing Telepathy (copy an opponent's creature's ETB
-//!   trigger) is omitted — there is no "a triggered ability triggers" hook.
+//! - Aboleth Spawn's Probing Telepathy puts the copy on the stack with the
+//!   original (no Aboleth trigger of its own to respond to), and its "you may"
+//!   is asked as the copy resolves rather than as it is made.
 //! - Grell Philosopher: only Grell itself (a Horror) gains the artifact's
 //!   activated abilities, not every Horror you control; the blue-mana-as-any-
 //!   colour rider is omitted.
@@ -812,17 +813,30 @@ pub fn nemesis_of_reason() -> CardDefinition {
 /// "Probing Telepathy — Whenever a creature entering under an opponent's
 /// control causes a triggered ability of that creature to trigger, you may
 /// copy that ability. You may choose new targets for the copy."
-/// Residual: Probing Telepathy is omitted — the engine has no "a triggered
-/// ability triggers" hook to copy from.
+///
+/// Probing Telepathy is `StaticEffect::CopyOpponentsEnteringCreatureTriggers`,
+/// read where an entering creature's own ETB-caused triggers are pushed: each
+/// fire gets a copy controlled by Aboleth's controller, targets picked for
+/// them. Residual: the copy goes on the stack alongside the original rather
+/// than via an Aboleth trigger resolving, and the "you may" is asked as the
+/// copy resolves.
 pub fn aboleth_spawn() -> CardDefinition {
-    creature(
-        "Aboleth Spawn",
-        cost(&[generic(2), u()]),
-        2,
-        3,
-        vec![CreatureType::Fish, CreatureType::Horror],
-        vec![Keyword::Flash, Keyword::Ward(WardCost::Mana(cost(&[generic(2)])))],
-    )
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Probing Telepathy — Whenever a creature entering under an opponent's \
+                control causes a triggered ability of that creature to trigger, you may copy \
+                that ability. You may choose new targets for the copy.",
+            effect: StaticEffect::CopyOpponentsEnteringCreatureTriggers,
+        }],
+        ..creature(
+            "Aboleth Spawn",
+            cost(&[generic(2), u()]),
+            2,
+            3,
+            vec![CreatureType::Fish, CreatureType::Horror],
+            vec![Keyword::Flash, Keyword::Ward(WardCost::Mana(cost(&[generic(2)])))],
+        )
+    }
 }
 
 /// Wharf Infiltrator — {1}{U} Creature — Human Horror 1/1. Skulk. "Whenever

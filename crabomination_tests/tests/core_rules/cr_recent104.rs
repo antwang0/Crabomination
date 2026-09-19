@@ -108,3 +108,62 @@ fn cr_701_27f_legions_landing_survives_an_even_attack() {
         "four triggers, one transform",
     );
 }
+
+// ── Probing Telepathy (Aboleth Spawn): copying an entering creature's own
+//    ETB-caused trigger ──────────────────────────────────────────────────────
+
+/// A 1/1 with "Whenever a creature you control enters, draw a card" — a
+/// trigger the creature's own entry causes, dispatched through the event
+/// pipeline rather than the self-ETB path.
+fn creature_enters_draw_watcher() -> crabomination::card::CardDefinition {
+    use crabomination::card::{CardDefinition, CardType, SelectionRequirement, TriggeredAbility};
+    use crabomination::effect::{Effect, EventKind, EventScope, EventSpec, Predicate, Selector, Value};
+    CardDefinition {
+        name: "Test Watcher",
+        card_types: vec![CardType::Creature],
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature,
+                },
+            ),
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+        }],
+        ..Default::default()
+    }
+}
+
+/// An opponent's Probing Telepathy copies the entrant's *own* ETB-caused
+/// trigger (the copy is theirs: they draw), and never another permanent's
+/// trigger off the same entry (Soul Warden's lifegain stays single).
+#[test]
+fn probing_telepathy_copies_only_the_entrants_own_etb_caused_trigger() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    use crabomination::game::types::{GameAction, TurnStep};
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    stock_libraries(&mut g, 10);
+    g.add_card_to_battlefield(1, catalog::aboleth_spawn());
+    g.add_card_to_battlefield(0, catalog::soul_warden());
+    let watcher = g.add_card_to_hand(0, creature_enters_draw_watcher());
+    let (h0, h1) = (g.players[0].hand.len(), g.players[1].hand.len());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: watcher,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast the free Watcher");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), h0, "the Watcher's own draw replaces it in hand");
+    assert_eq!(g.players[1].hand.len(), h1 + 1, "the copy draws for the Aboleth's controller");
+    assert_eq!(g.players[0].life, 21, "Soul Warden triggers once");
+    assert_eq!(g.players[1].life, 20, "another permanent's trigger isn't copied");
+}

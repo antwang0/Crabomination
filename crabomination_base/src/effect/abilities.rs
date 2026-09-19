@@ -1395,6 +1395,15 @@ pub enum StaticEffect {
     /// ETB triggers — it never suppresses opponents'. Read at ETB-trigger
     /// dispatch via `etb_trigger_multiplier`.
     DoubleControllerEtbTriggers,
+    /// Aboleth Spawn's Probing Telepathy — "Whenever a creature entering
+    /// under an opponent's control causes a triggered ability of that creature
+    /// to trigger, you may copy that ability. You may choose new targets for
+    /// the copy." Read at the three ETB-trigger push sites via
+    /// `entering_trigger_copiers`: each fire of the entering creature's *own*
+    /// ETB-caused trigger gets one extra copy per such static an opponent of
+    /// its controller has, controlled by that opponent (targets picked for
+    /// them), its body wrapped in a "may" asked of them.
+    CopyOpponentsEnteringCreatureTriggers,
     /// "If a triggered ability of an Ally you control triggers, that ability
     /// triggers an additional time." Katara, the Fearless. Read at trigger
     /// dispatch via `ally_trigger_extra_fires`; adds one fire per copy for
@@ -2247,6 +2256,12 @@ pub enum StaticEffect {
     /// Sanctuary). Symmetric; applied at the player branch of the damage
     /// funnel, after prevention shields.
     PlayerDamageBecomesExileFromLibrary,
+    /// CR 614.1a — "If you would pay life while your library has at least
+    /// that many cards in it, exile that many cards from the top of your
+    /// library instead." Ashiok, Wicked Manipulator. Applied at the life-
+    /// *payment* funnel (`replace_life_payment`), never at life loss; the
+    /// CR 119.4 affordability gate (life ≥ amount) is unchanged.
+    PayLifeExilesLibraryTopInstead,
     /// The Mindskinner — "If a source you control would deal damage to an
     /// opponent, prevent that damage and each opponent mills that many
     /// cards." Read at the damage-to-player chokepoint.

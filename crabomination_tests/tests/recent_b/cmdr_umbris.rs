@@ -1132,3 +1132,53 @@ fn cmdr_umbris_opposition_agent_hijacks_a_fetch_land() {
     assert_eq!(g.battlefield_find(island).unwrap().controller, 0);
 }
 
+
+/// Aboleth Spawn's Probing Telepathy: an opponent's creature's ETB is copied,
+/// and the copy is the Aboleth controller's — "draw a card" draws for them
+/// (cast path), and Flametongue Kavu's copy aims its 4 damage at the Kavu's
+/// side (the directly-fired ETB path). Declining the "may" copies nothing, and
+/// the Aboleth controller's own creatures aren't copied.
+#[test]
+fn cmdr_umbris_aboleth_spawn_copies_opponents_etb() {
+    // Cast path: seat 0 casts Elvish Visionary; seat 1's Aboleth copies it.
+    let mut g = game(2);
+    g.add_card_to_battlefield(1, catalog::aboleth_spawn());
+    flood(&mut g, 0);
+    let visionary = g.add_card_to_hand(0, catalog::elvish_visionary());
+    let (h0, h1) = (g.players[0].hand.len(), g.players[1].hand.len());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    cast(&mut g, visionary, None, vec![], None);
+    assert_eq!(g.players[0].hand.len(), h0, "the caster's one draw replaces the Visionary");
+    assert_eq!(g.players[1].hand.len(), h1 + 1, "the Aboleth controller draws from the copy");
+
+    // Declined: no copy draw.
+    let mut g = game(2);
+    g.add_card_to_battlefield(1, catalog::aboleth_spawn());
+    flood(&mut g, 0);
+    let visionary = g.add_card_to_hand(0, catalog::elvish_visionary());
+    let h1 = g.players[1].hand.len();
+    g.decider = Box::new(AutoDecider);
+    cast(&mut g, visionary, None, vec![], None);
+    assert_eq!(g.players[1].hand.len(), h1, "a declined copy draws nothing");
+
+    // Your own creature entering isn't copied.
+    let mut g = game(2);
+    g.add_card_to_battlefield(0, catalog::aboleth_spawn());
+    flood(&mut g, 0);
+    let visionary = g.add_card_to_hand(0, catalog::elvish_visionary());
+    let (h0, h1) = (g.players[0].hand.len(), g.players[1].hand.len());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    cast(&mut g, visionary, None, vec![], None);
+    assert_eq!(g.players[0].hand.len(), h0, "one draw for the caster, no copy");
+    assert_eq!(g.players[1].hand.len(), h1);
+
+    // Fired-ETB path with a target: the copy is seat 1's, so its "target
+    // creature" is picked for seat 1 — the Kavu itself, seat 0's only creature.
+    let mut g = game(2);
+    g.add_card_to_battlefield(1, catalog::aboleth_spawn());
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let kavu = enter(&mut g, catalog::flametongue_kavu());
+    assert!(g.battlefield_find(kavu).is_none(), "Aboleth's copy of the ETB kills the Kavu");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == kavu));
+}
