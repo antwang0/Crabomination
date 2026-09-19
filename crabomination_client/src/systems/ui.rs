@@ -817,12 +817,15 @@ pub fn peek_popup(
 }
 
 /// Marker for the automatic hover card-zoom preview (Arena-style). Stores
-/// the asset path currently shown so `hover_card_preview` can tell when the
-/// hovered card changed (→ rebuild with new art) versus merely moved
-/// (→ reposition the existing node).
+/// the asset path and info lines currently shown so `hover_card_preview` can
+/// tell when the hovered card or its live notes changed (→ rebuild) versus
+/// merely moved (→ reposition the existing node).
 #[derive(Component)]
 pub struct HoverCardPreview {
     path: String,
+    /// The info lines under the art. Live ones (commander damage dealt, type
+    /// overrides) change while the same card stays hovered.
+    info: Vec<(String, bool)>,
 }
 
 pub(crate) const HOVER_PREVIEW_WIDTH: f32 = 230.0;
@@ -1192,11 +1195,12 @@ pub fn hover_card_preview(
     if let Ok((entity, mut node, marker)) = existing.single_mut() {
         node.left = Val::Px(x);
         node.top = Val::Px(y);
-        // Same card still hovered — repositioning above is all we need.
-        if marker.path == path {
+        // Same card, same notes — repositioning above is all we need.
+        if marker.path == path && marker.info == info {
             return;
         }
-        // Hovered card changed — rebuild with the new art below.
+        // Hovered card changed, or a live note did (a commander connected
+        // mid-hover) — rebuild below.
         commands.entity(entity).despawn();
     }
 
@@ -1212,7 +1216,7 @@ pub fn hover_card_preview(
                 ..default()
             },
             Pickable::IGNORE,
-            HoverCardPreview { path: path.clone() },
+            HoverCardPreview { path: path.clone(), info: info.clone() },
             crate::systems::game_ui::InGameRoot,
         ))
         .with_children(|col| {
