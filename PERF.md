@@ -3039,8 +3039,33 @@ Room's leaves it `None`, so the added work on the bench's ~196 k decisions is
 one null discriminant check per activation that takes the life-cost branch at
 all. The reading above says the same thing from the other side.
 
-**Closing re-verification, everything below taken at the final tip
-`5a4bc0d6` after the whole run:** suite **20,273 / 0 / 6**
+**Closing re-verification, taken at `cf9a3ad1` after the CR 614.1c class was
+closed (83 → 0 cards moved from an ETB trigger to
+`StaticEffect::EntersTapped` / `EntersTappedUnless`, across five helper
+cycles and 26 hand-written bodies):** suite **20,327 / 0 / 6**, clippy **0**,
+`--bench` **195,806 / 27.49 / 611.9 / 0 stalls** with both determinism checks
+ok and `peak_rss_mib` 29.6, every mirror column at its ratchet and both 614
+gates clean, CR_COVERAGE 146/146. **Pod smoke at a fresh seed 9103 — 14,000
+games over 2..8 seats, 14,000 DECIDED, every `undecided_by` column zero:**
+
+```text
+seats        2      3      4      5      6      7      8
+turns/game  19.36  32.58  45.60  57.27  64.15  78.18  92.63
+```
+
+**FRONTIER 9104.**
+
+📐 **And the pod table is the record of what that class costs.** Three
+re-blesses across the run, all three justified against the same 14,000-game
+aggregate at seed 9102: the `etb_tap()` conversion moved one seeded game
+**47 → 97 turns** while the aggregate moved ≤ 0.20; the fastland conversion
+moved **three actions** in one game while the aggregate moved ≤ 0.29; and the
+other three commits in the class — 71 cards between them — moved the table
+**not at all**. Every block stayed 2,000/2,000 decided on both sides of every
+one. **The gate exists to make a change visible, and its magnitude says
+nothing about the change's size.**
+
+**An earlier re-verification, at the tip `5a4bc0d6` before that class:** suite **20,273 / 0 / 6**
 (`CRAB_ANSWER_LOG=strict`), clippy **0** over the workspace, `--bench`
 **195,806 / 27.49 / 611.9 / 0 stalls** with `determinism ok (all pairs
 split)`, `thread_determinism ok (3 vs 1)` and `peak_rss_mib` 31.7,
