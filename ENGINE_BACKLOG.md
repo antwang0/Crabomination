@@ -19,6 +19,10 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED 2026-09-19 (the forty-fifth find) — the INVENTED-ability column, built the way this file's own "CLOSED WITH A REASON" note prescribed, and the eleven cards it named](#fixed-2026-09-19-the-forty-fifth-find--the-invented-ability-column-built-the-way-this-files-own-closed-with-a-reason-note-prescribed-and-the-eleven-cards-it-named) | 68 |
+| Bugs & robustness | [OPEN 2026-09-19 — nineteen cube-pool entries are DUPLICATED, so nineteen cards draft at double weight](#open-2026-09-19--nineteen-cube-pool-entries-are-duplicated-so-nineteen-cards-draft-at-double-weight) | 19 |
+| Bugs & robustness | [FIXED 2026-09-19 (the forty-fourth find) — a printed "TARGET opponent" clause modelled as a fan-out is invisible in a duel and hits the whole table in a pod](#fixed-2026-09-19-the-forty-fourth-find--a-printed-target-opponent-clause-modelled-as-a-fan-out-is-invisible-in-a-duel-and-hits-the-whole-table-in-a-pod) | 55 |
+| Bugs & robustness | [FIXED 2026-09-19 (the forty-third find) — a LOOP whose body suspends parks only the BODY, and twenty of them ran on and dropped the rest](#fixed-2026-09-19-the-forty-third-find--a-loop-whose-body-suspends-parks-only-the-body-and-twenty-of-them-ran-on-and-dropped-the-rest) | 90 |
 | Bugs & robustness | [FIXED 2026-09-13 (twenty-sixth find) — the sweep's only surviving cap, and the field in the digest that was bookkeeping rather than progress](#fixed-2026-09-13-twenty-sixth-find--the-sweeps-only-surviving-cap-and-the-field-in-the-digest-that-was-bookkeeping-rather-than-progress) | 80 |
 | Bugs & robustness | [FIXED 2026-09-12 (twenty-fifth find) — nineteen cards print a colour their mana cost cannot carry, and none had an indicator](#fixed-2026-09-12-twenty-fifth-find--nineteen-cards-print-a-colour-their-mana-cost-cannot-carry-and-none-had-an-indicator) | 44 |
 | Bugs & robustness | [FIXED 2026-09-12 (twenty-fourth find) — one `false` for two meanings: a skipped draw eliminated the drawer, and nineteen more draws could not deck anyone](#fixed-2026-09-12-twenty-fourth-find--one-false-for-two-meanings-a-skipped-draw-eliminated-the-drawer-and-nineteen-more-draws-could-not-deck-anyone) | 48 |
@@ -81,6 +85,314 @@ the handoff.
 
 
 # Bugs & robustness
+
+## FIXED 2026-09-19 (the forty-fifth find) — the INVENTED-ability column, built the way this file's own "CLOSED WITH A REASON" note prescribed, and the eleven cards it named
+
+Two mirrors, both of the "ask the printed-clause ratchet the other way" family,
+and both landing on the same class: **a shipped card that does something it
+does not print.** A *missing* clause makes the engine's card weaker than the
+print and shows up eventually as a card that underperforms; an **invented** one
+makes it stronger, and a bot pilots straight into it.
+
+**The method is not new here — the reason it works is.** "CLOSED WITH A REASON
+2026-09-12" (below) killed the obvious move of inverting `audit_oracle_verbs`,
+and its diagnosis was structural: that auditor's `have` set expands helpers
+transitively and consults a global helper table across every set file, an
+over-approximation *on purpose*. Over-approximating `have` costs a false
+negative in the MISSING direction and a false **positive** in the INVENTED one
+— 14,350 rows over 17,026 cards when it was measured. Its closing sentence is
+the spec both new scripts were written to: "an invented-ability column needs a
+`have` set built from the card's OWN literal with no helper expansion and no
+global table — a different reader, not a flag on this one."
+
+- **`scripts/audit_invented_may.py`** — the mirror of `audit_dropped_may`. A
+  body carrying a resolution-time choice (`MayDo`, `MayPay`, `OptionalTargets`,
+  fifteen more) whose printed text has no optional wording at all. **3 → 0**
+  over 948 bodies with a needle, zero false positives at the closing tip.
+- **`scripts/audit_invented_trigger.py`** — a body that writes
+  `EventKind::<Variant>` in its own braces, where the printed text (every face,
+  reminder text kept) carries none of the phrasings that spell that event.
+  **45 → 8 → 0** over 4,103 claims on 3,815 bodies, with 20 rows allowed as
+  documented implementation devices and a staleness half that fails an ALLOW
+  row whose site is gone.
+
+**The eleven cards, and what each was.** Coalition Relic's mandatory
+charge→mana burst wrapped in a `MayDo`, which `AutoDecider` declines, so the
+ability never fired once in bot play. Soulknife Spy gating its printed "draw a
+card" behind an invented `MayPay {U}`. Guardian Scalelord as a declinable
+"gains flying" with no Backup and no reanimation. Treasury Thrull shipping the
+**pre-errata** Gatecrash text — combat damage, mandatory, onto the battlefield
+— where the current oracle is attacks, optional, to hand. Mourning Thrull as a
+haunt card. Sage of the Beyond, Waker of Waves, Lone Rider and Lorehold
+Archivist as whole synthesised cards. Triskaidekaphile and Tome of the Infinite
+with an invented cantrip apiece.
+
+**⚠ Three reader bugs, and every one of them silently scored a card against a
+DIFFERENT card's oracle.** They generalise to any name-keyed audit:
+
+1. **`name:` is not where this catalog keeps the card's name.** Most creature
+   factories spread a constructor — `..creature("Lullmage Mentor", …)` — so the
+   only `name:` in the body belongs to the *token* the card mints, and a
+   `name:`-only walk scores Lullmage Mentor against "Merfolk". Take every
+   string literal and prefer the one whose slug is the `pub fn`'s.
+2. **The slug must fold accents and drop apostrophes.** "Palani's Hatcher"
+   slugs to `palani_s_hatcher` and "Andúril" to `and_ril`, neither of which
+   matches its function, so both fell through to the token-name fallback.
+3. **A phrase set that is too tight manufactures findings on correct cards** —
+   38 of the first 45. One printed clause has many spellings: a
+   leaves-the-battlefield trigger is also "is put into a graveyard from the
+   battlefield", "dies" and "when you lose control of"; an enters trigger is
+   also "puts … onto the battlefield" and "when you play another land"; and
+   "whenever you **play a card**" is one clause the engine must spell as
+   *two* events (`LandPlayed` + `SpellCast`).
+
+📐 **And the class both columns land on already had a name in CARD_BACKLOG —
+"a synthesised card wearing a printed card's name" — with no detector.** Its
+own note says why it survives: the *characteristics* get corrected against
+Scryfall (so `audit_catalog_stats` and `audit_printed_body` read zero) and the
+ability never does, because no column compares abilities. **48 factories
+carry a "synthesised" doc comment under a name Scryfall owns**; these two
+columns caught eleven of them by the shape of the body alone. The rest are a
+reading list, not a proof — the doc comment is the tell, not the finding.
+
+## OPEN 2026-09-19 — nineteen cube-pool entries are DUPLICATED, so nineteen cards draft at double weight
+
+`cube.rs`'s per-colour pools list each factory once. Nineteen of them are
+listed twice: `white_pool` has `descendant_of_storms`, `intervention_pact`,
+`wall_of_omens` and `guardian_scalelord`; `blue_pool` `snapping_drake`, `gush`,
+`snapcaster_mage`; `black_pool` `walking_corpse`, `collective_brutality`,
+`toxic_deluge`, `murderous_cut`, `corpse_dance`, `baleful_mastery`; `red_pool`
+`goblin_balloon_brigade`, `arclight_phoenix`; `green_pool` `elder_gargaroth`,
+`vengevine`. `cube_pool_all` and `all_cube_cards` both dedupe, so the **Vocab
+is unaffected** — but `cube_deck` samples `color_pool(..)` directly through
+`sample_with_cap`, which rolls an index into the raw `Vec`, so each of the
+nineteen is twice as likely to be drafted as its neighbours.
+
+**Not taken this run, deliberately.** The fix is nineteen line deletions plus a
+`no_duplicate_factories_in_any_cube_pool` ratchet, but it changes cube deck
+*composition*, which moves the `cube` and `sealed` absolutes in PERF and
+invalidates any in-flight A/B. `--bench` plays `--decks fixed` and the golden
+traces are fixed too, so neither moves. Take it at the **start** of a run, with
+a fresh base, not beside a perf comparison. The census is four lines of Python
+over `cube.rs` (count identifiers per `*_pool` body).
+
+## FIXED 2026-09-19 (the forty-fourth find) — a printed "TARGET opponent" clause modelled as a fan-out is invisible in a duel and hits the whole table in a pod
+
+`audit_each_opponent.py` asks "the print says each opponent, does the body fan
+out?". **Nobody had asked it the other way**, and the other way is 126 cards:
+a clause printed "**target** opponent discards two cards" modelled as
+`Selector::Player(PlayerRef::EachOpponent)`. In a duel the one opponent *is*
+the target, so every one of them passed its own test. At four seats Blood
+Artist drains 3 a death, Thoughtseize strips every hand and Bojuka Bog exiles
+every graveyard.
+
+`scripts/audit_target_opponent.py` is the ratchet and the whole method: read
+the printed text for a **target** player clause, require that the text has no
+per-opponent clause at all, and look for a fan-out `PlayerRef` in a *recipient*
+position. **126 → 1**; CARD_BACKLOG's "TARGET-clause class" carries the
+per-card work and the four traps.
+
+**The three engine findings, which are the reusable half:**
+
+- ⚠⚠ **A "target player" slot aims at the CASTER unless the seat's
+  `hostile_player_targets` flag is on.** It is on in `EvalWeights::default()`
+  (round 67 adopted it) and off in a bare `two_player_game()`, so 24 tests
+  needed the flag rather than a target. `player_slot_is_hostile` is the list
+  of shapes whose polarity is not in doubt; a variant missing from it aims at
+  the caster in bot play too.
+- ⚠⚠ **`friendliness_of_targeting_children` read `any` over a `Seq`'s
+  children, so a rider aimed at the SAME seat flipped the whole clause.**
+  Oildeep Gearhulk is `Seq[DiscardChosen(target player), Draw(that player)]`:
+  the draw read as a gift, the trigger aimed at its own controller, and the
+  Gearhulk made its **caster** discard. It reads the **first** targeting child
+  now — which keeps Shadrix Silverquill's `Seq[Draw, LoseLife]` mode friendly
+  (the `any` answer) and flips only the shape where a hostile clause comes
+  first. ⚠ The obvious alternative — making the heuristic picker slot-aware
+  (`prefers_friendly_target_for_slot`) — was written and reverted: on a modal
+  body with `mode: None` `slot_owner` resolves to the **first mode**, not the
+  chosen one, and that flipped Shadrix.
+- 📐 **Six variants had no arm for the player slot they can now declare**, and
+  the two catalog-wide ratchets named all six on the first run:
+  `every_declared_target_slot_is_answerable` caught
+  `ExileChosenUntilSourceLeaves` / `ExileFromHandTaxed` /
+  `ExileChosenFromHand`, `every_targeting_spell_or_ability_says_what_it_targets`
+  caught `ExileFromGraveyard` / `Fateseal`, and
+  `cr_601_2c_every_catalog_target_filter_is_surfaced` closed the loop. **A
+  card that declares a slot no walker answers resolves against an empty target
+  list — a silent, total fizzle with nothing logged.**
+
+📐 **And the pair shape that needs a second slot: `ApplyToTargets` cannot
+express it** — it rebinds every supplied target to slot 0.
+`Effect::OptionalTargets { min, body }` is the one that can (Aggressive
+Negotiations: opponent required at slot 0, "up to one target creature you
+control" declinable at slot 1).
+
+## FIXED 2026-09-19 (the forty-third find) — a LOOP whose body suspends parks only the BODY, and twenty of them ran on and dropped the rest
+
+`MayRepeat` (the fifteenth find) and `EachPlayerDoes` each fixed this one
+arm at a time. The sweep that closes the class: every `run_effect` /
+`resolve_effect` lexically inside a loop in the eight engine files, with no
+`suspend_signal` read in that loop — **20 of them were dropping work**, and
+the ratchet at the bottom of this entry now holds the rest at 0 unexplained.
+
+**The shape.** A suspending body sets `suspend_signal = (decision, pending,
+its own remaining effect)` and returns `Ok(())`. The loop around it sees
+`Ok(())`, runs the next iteration — which overwrites the signal — and the
+first iteration's parked work is gone. In a duel "each opponent" is one
+iteration and the defect is invisible; at four seats it drops three
+quarters of the effect.
+
+**The one body:** `effects::splice_after_suspend(&mut self.suspend_signal,
+|| tail)` appends `tail` behind whatever the body parked, and returns true
+when the loop must return. Lazy in the tail, so the un-suspended pass pays
+nothing.
+
+**The rule the fix rests on, and it cost a debugging round:** a parked
+continuation is resumed under the **stack item's** `EffectContext`, not the
+sub-context the loop built. A tail that pins its seat in `ctx.controller`
+or `ctx.trigger_source` resumes as the caster. Every tail here names its
+seat **inside** the effect — `PlayerRef::Seat(q)`, which is what
+`ask_seat_*`'s own `with_asked_seat` does for the arms.
+
+Per-player arms taken: `ForEachOpponent`, `TemptingOffer`, `Punisher`,
+`VillainousChoice`, the `UnlessPlayerPays` sacrifice half, `Repeat`,
+`FlipCoin`, `FlipUntilLoss`, `EachPlayerSacrificesUnlessDiscards`,
+`EachPlayerFlipsCoin`, `EachPlayerDiscardsElseLosesLife`,
+`EachPlayerSacrificesGreatestManaValueUnlessPays`. `ForEachOpponent` and
+`TemptingOffer` had carried a `debug_assert!` as the price of the judgement
+that no catalog body could suspend; `Punisher` and `VillainousChoice` had no
+guard at all. ⚠ **Correction to `26c13acf`'s message**: of those two only
+`Punisher` has a catalog body that suspends today (Mogis, God of Slaughter's
+"sacrifice a creature"). `VillainousChoice`'s one card mints tokens or adds
+counters — so its arm is the same judgement `ForEachOpponent` carried, now
+with an arm instead of an assertion.
+
+**The modal half is the same defect one layer over, and it is duel-visible.**
+A mode that asks parks only itself, so Escalate / Spree / Tiered /
+`ChooseModesCast` / `ChooseModesByPoints` / `ChooseN` / `ChooseUpToN` ran
+their first asking mode and nothing after it, for every `wants_ui` seat —
+i.e. every training seat. A modal tail cannot be a plain `Seq`: each
+target-bearing mode is handed its own slot through `EffectContext.targets`,
+and the resumed context carries the spell's *whole* list, so every remaining
+mode would read slot 0. `Effect::BindTargetSlot { slot, body }` is the pin
+(runtime-only; `scripts/audit_variant_coverage.py` carries a note saying it
+deliberately does **not** flag it — the engine builds it, so it reads as
+live, and a *card* that used one would be the bug), and
+`modal_continuation` builds the tail.
+`ApplyToTargets`, `Vote`'s `AllTied` half and
+`FlipCoinsUntilLoseOrStop`'s tiers are the same shape.
+
+**And the second half of that, which cost a test: a wrapper that rebinds the
+context has to put its binding back around whatever the body parked.**
+`rewrap_parked` does it for `BindTargetSlot` and for `EachPlayerDoes`.
+Without it, `ApplyToTargets` over two targets destroyed the *first* one
+twice — the inner `Seq`'s own tail came back under the caster's context,
+where `Selector::Target(0)` is the spell's first target, not this
+iteration's.
+
+**Two arms had a second defect the splice does not reach**, both from a
+check that straddled the suspend:
+
+- Strongarm Tactics read the graveyard for "did they discard a creature"
+  *before* a suspended discard had moved the card, so a `wants_ui` seat was
+  punished whatever it pitched. The per-seat unit is one `Seq` now (`Seq`
+  carries its own tail), and the threshold is that seat's own graveyard
+  count taken before its own discard — which no other seat can move.
+- Tariff's `MayPay` parked only itself, and the re-run got the stack item's
+  context back, where `SacrificeSource` no longer named that seat's
+  creature. It moves to the two-pass ask/apply split; naming the creature
+  in the apply pass makes that pass choiceless.
+
+**The ratchet:** `scripts/audit_loop_splice.py` walks every
+`run_effect` / `resolve_effect` lexically inside a loop in the eight engine
+files and reports the ones whose loop body never reads `suspend_signal`. An
+inline `&Effect::Variant { … }` whose variant is in the script's short
+`NEVER_ASKS` set is skipped; everything else is a hit or an allowlist entry
+with its reason. It read **18 sites / 18 allowlisted / 0 unexplained** when
+it was written, **15 / 15 / 0** once the `CardId` pin closed three of them,
+and **13 / 13 / 0 / 0 stale** once `BindScratch` closed two more; deleting one
+`splice_after_suspend` call takes it to 1 unexplained, and deleting an
+allowlisted site takes it to 1 stale. ⚠ It does
+**not** see a sequential *pair* — see the last OPEN row.
+
+**OPEN, each waiting on a primitive that does not exist** (the allowlist
+carries these verbatim, so the script stays the index):
+
+- ✅ **CLOSED the same day, and it was the best next primitive here:**
+  `Selector::ExactObjects(Vec<CardId>)` names entities the arm has already
+  resolved, and `Effect::BindTargetObjects { ids, body }` puts objects an arm
+  picked itself back into `ctx.targets`. Between them they closed
+  `Effect::ForEach` over non-player entities, `TurnFaceUpFree`'s `if_cant`
+  (one catalog card casts a spell from exile there) and `EyeOfTheStorm` —
+  the last needs **both** pins, the caster via `EachPlayerDoes` over one seat
+  and the card via `BindTargetObjects`. Nine OPEN rows became six.
+- ✅ **CLOSED, and it was the second-best primitive here:**
+  `Effect::BindScratch { scratch, body }` pins one piece of *resolver*
+  scratch — state on `GameState`, which neither the `EffectContext` nor the
+  two target pins can carry. Three variants, three arms:
+  `ScratchBinding::CurrentVoter` closed `Effect::Vote`'s `VoteTally::PerVote`
+  half and `LastDieRoll` closed `Effect::RollDie`. Six OPEN rows became four.
+  ⚠ **A third variant for `separated_piles` was written and deleted**: the
+  pair form below is fixed by its splice alone, because an ask that parks
+  there is a *stash-and-rerun* (`ask_seat_cards` re-queues the originating
+  effect, so the whole arm replays and re-sets the piles) rather than a
+  continuation that reads them cold. No test could be made to fail, so the
+  variant went.
+  ⚠ **Two things the injection check taught, and neither was the splice.**
+  ① `PerVote` needs a `rewrap_parked` as well as a splice: `current_voter` is
+  restored *before* the return, so the suspending run's own parked half comes
+  back reading the controller. A test cannot see that with a one-choice
+  ballot — the ballot starts with the controller, so the fallback is right by
+  accident; the test votes the first ballot differently so the schedule's
+  first run belongs to another seat. ② `RollDie` needs **no** re-wrap, and
+  that asymmetry is the point: `last_die_roll` is never restored, the loop
+  returns as soon as it splices, and nothing resolves while a decision is
+  pending — so the field still reads that die's face at the resume. Both
+  halves were written, and the one that could not be made to fail was deleted.
+  ⚠ `RollDie` also moved its `DiceRolled` event **ahead** of the results-table
+  dispatch (CR 706.2 / 706.3a: the roll is over and its result fixed before
+  the table is consulted), which is what lets the tail be complete. No catalog
+  card triggers off a results arm, so nothing observes the reorder today.
+- ⏳ `Effect::MayPayRepeatedly`: the arm's resume path is a re-run from the
+  top over the answer log (`answer_already_acted_on`), which a spliced tail
+  would double-count.
+- ⏳ `Effect::SearchExileLinked`: the tail needs the already-exiled picks'
+  `exiled_with` stamps re-applied, which a remaining count cannot carry.
+- ⏳ `Effect::SacrificeAnyNumber` — OPEN **by the catalog**, not by the code:
+  all six `per_each` bodies are choiceless (draw, counters, drain, life), the
+  same judgement `ForEachOpponent` used to carry as a `debug_assert!`. The
+  sacrifices are inline zone moves rather than an `Effect`, so the fix when
+  one stops being choiceless is to **hoist every sacrifice ahead of every
+  payoff** — which is what CR 608.2 says the printed text does anyway — after
+  which the tail is a plain `Seq` of `per_each`. ⚠ That hoist moves
+  `Value::SacrificedCount` inside `per_each` from 1..n to n; no card reads it
+  there today (Last-Ditch Effort's `per_each` is `Noop`).
+- ✅ **The shape the ratchet cannot see — a sequential PAIR — CLOSED for its
+  two known instances.** A loop is only the commonest form of "a second
+  `run_effect` after one that can suspend". The pile splits
+  (`SeparateIntoPiles` and `ChooseOneAmong`, one body now:
+  `run_piles_then_clear`) ran `chosen`, then `other`, then dropped the
+  piles — and a suspend inside `chosen` is `Ok(())`, so `other` ran *before*
+  `chosen` had finished and the clear happened under `chosen`'s
+  continuation, which then resolved `Selector::SeparatedPile` to nothing.
+  Do or Die and Death or Glory destroyed one pile of two. The splice carries
+  `other`. 📐 **And the mirror half — `other` parking, with no splice to hang
+  the piles off — needs nothing, which is worth knowing**: the ask that parks
+  there is a stash-and-rerun, so the arm replays from the top with its answer
+  log and re-sets the piles before reading them. A `BindScratch` re-wrap for
+  the piles was written for that case and could not be made to fail; it was
+  deleted rather than kept. ⚠ The row that described this used to
+  name two variants that **do not exist** (`SeparatePilesChoose`,
+  `PickOnePileThen`); a reader grepping for them found nothing.
+  ⏳ **Detecting the shape generally is still open**: "is this arm's second
+  statement reachable after a suspend" is a dataflow question, not a lexical
+  one, so `audit_loop_splice.py` cannot ask it. What it grew instead is a
+  **staleness check** — an `ALLOW` entry whose site is gone now fails, and it
+  found three dead entries the day it was written.
+- ⏳ The ante branch loop (`effects/mod.rs`, the `AnteTopOfLibrary` arm). Its
+  second pass calls `ante_top_card` *and* runs the branch, so a tail would
+  have to hoist every ante ahead of every branch — a real ordering change
+  for a CR 407 mechanic that no pool plays.
 
 ## FIXED 2026-09-18 (the forty-second find) — the activation with "no mana anywhere" had a rider pip, and the ESTIMATE could not see it
 

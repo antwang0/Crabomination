@@ -175,11 +175,14 @@ pub fn rot_farm_mortipede() -> CardDefinition {
         power: 3,
         toughness: 4,
         triggered_abilities: vec![TriggeredAbility {
+            // CR 603.2c — "whenever ONE OR MORE cards leave your graveyard":
+            // one fire per batch, however many left at once.
             event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl)
                 .with_filter(Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: R::Creature,
-                }),
+                })
+                .once_per_batch(),
             effect: Effect::Seq(vec![
                 Effect::PumpPT {
                     what: Selector::This,
@@ -308,12 +311,12 @@ pub fn cerebral_confiscation() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::ChooseMode(vec![
             Effect::Discard {
-                who: Selector::Player(PlayerRef::EachOpponent),
+                who: crate::effect::shortcut::target_filtered(crate::card::SelectionRequirement::OpponentPlayer),
                 amount: Value::Const(2),
                 random: false,
             },
             Effect::DiscardChosen {
-                from: Selector::Player(PlayerRef::EachOpponent),
+                from: crate::effect::shortcut::target_filtered(crate::card::SelectionRequirement::OpponentPlayer),
                 count: Value::ONE,
                 filter: R::Nonland,
             },
@@ -863,11 +866,14 @@ pub fn frantic_scapegoat() -> CardDefinition {
         triggered_abilities: vec![
             etb(Effect::Suspect { what: Selector::This }),
             TriggeredAbility {
+                // CR 603.2c — "whenever ONE OR MORE other creatures you
+                // control enter": one ask, not one per creature in the batch.
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
                     .with_filter(Predicate::EntityMatches {
                         what: Selector::TriggerSource,
                         filter: R::Creature.and(R::OtherThanSource),
-                    }),
+                    })
+                    .once_per_batch(),
                 effect: Effect::If {
                     // CR 603.4 intervening 'if' — only while this one is
                     // suspected is there anything to move.

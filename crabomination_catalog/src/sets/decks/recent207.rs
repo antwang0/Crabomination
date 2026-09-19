@@ -396,9 +396,11 @@ pub fn harmless_offering() -> CardDefinition {
         name: "Harmless Offering",
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Sorcery],
+        // Two targets: the permanent (slot 0) and the **target opponent**
+        // that gets it (slot 1). `EachOpponent` handed it to the whole table.
         effect: Effect::GainControl {
             what: target_filtered(R::Permanent.and(R::ControlledByYou)),
-            to: Some(PlayerRef::EachOpponent),
+            to: Some(PlayerRef::Target(1)),
             duration: Duration::Permanent,
         },
         ..Default::default()

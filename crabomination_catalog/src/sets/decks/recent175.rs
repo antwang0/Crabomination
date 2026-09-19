@@ -454,12 +454,12 @@ pub fn oildeep_gearhulk() -> CardDefinition {
         ],
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::DiscardChosen {
-                from: Selector::Player(PlayerRef::EachOpponent),
+                from: target_filtered(crate::card::SelectionRequirement::Player),
                 count: Value::ONE,
                 filter: R::Any,
             },
             Effect::Draw {
-                who: Selector::Player(PlayerRef::EachOpponent),
+                who: target_filtered(crate::card::SelectionRequirement::Player),
                 amount: Value::ONE,
             },
         ]))],

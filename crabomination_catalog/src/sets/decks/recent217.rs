@@ -112,7 +112,7 @@ pub fn starseer_mentor() -> CardDefinition {
                 // controller (`You` = that opponent), so they sac/discard their
                 // own; the `otherwise` payoff runs with the source's controller
                 // as context, draining each opponent.
-                chooser: Selector::Player(PlayerRef::EachOpponent),
+                chooser: crate::effect::shortcut::target_filtered(crate::card::SelectionRequirement::OpponentPlayer),
                 options: vec![
                     Effect::Sacrifice {
                         who: Selector::Player(PlayerRef::You),
@@ -126,7 +126,7 @@ pub fn starseer_mentor() -> CardDefinition {
                     },
                 ],
                 otherwise: Box::new(Effect::LoseLife {
-                    who: Selector::Player(PlayerRef::EachOpponent),
+                    who: crate::effect::shortcut::target_filtered(crate::card::SelectionRequirement::OpponentPlayer),
                     amount: Value::Const(3),
                 }),
             },

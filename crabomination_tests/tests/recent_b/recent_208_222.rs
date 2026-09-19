@@ -1548,11 +1548,14 @@ mod recent217 {
     fn starseer_mentor_drains_when_no_dodge() {
         use crabomination::game::effects::EffectContext;
         let mut g = two_player_game();
+        // The default bot profile aims a hostile player slot at an
+        // opponent (`EvalWeights::default()`); a bare test seat does not.
+        g.players[0].hostile_player_targets = true;
         let mentor = g.add_card_to_battlefield(0, catalog::starseer_mentor());
         g.players[1].hand.clear(); // no card to discard, no permanent to sacrifice
         let foe_life = g.players[1].life;
         let effect = catalog::starseer_mentor().triggered_abilities[0].effect.clone();
-        let ctx = EffectContext::for_trigger(mentor, 0, None, 0);
+        let ctx = EffectContext::for_trigger(mentor, 0, Some(Target::Player(1)), 0);
         g.resolve_effect(&effect, &ctx).unwrap();
         assert_eq!(g.players[1].life, foe_life - 3, "no dodge available → opponent loses 3");
     }

@@ -2282,6 +2282,9 @@ fn pinnacle_starcage_exiles_small_permanents() {
 #[test]
 fn temporal_intervention_void_discount_and_discard() {
     let mut g = two_player_game();
+    // The default bot profile aims a hostile player slot at an
+    // opponent (`EvalWeights::default()`); a bare test seat does not.
+    g.players[0].hostile_player_targets = true;
     // A nonland permanent left the battlefield this turn → Void active.
     let token = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     kill(&mut g, token);
@@ -2294,7 +2297,11 @@ fn temporal_intervention_void_discount_and_discard() {
     let nid = g.next_id();
     g.players[1].hand.push(crabomination::card::CardInstance::new(nid, catalog::grizzly_bears(), 1));
     let gy_before = g.players[1].graveyard.len();
-    resolve_targeted(&mut g, 0, def.effect.clone(), &[]);
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mut ctx = crabomination::game::effects::EffectContext::for_ability(src, 0, None);
+    ctx.targets = vec![crabomination::game::types::Target::Player(1)];
+    g.resolve_effect(&def.effect, &ctx).unwrap();
+    drain_stack(&mut g);
     assert_eq!(g.players[1].graveyard.len(), gy_before + 1, "opponent discarded a nonland");
 }
 

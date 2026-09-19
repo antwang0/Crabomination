@@ -98,6 +98,38 @@ fn sneaky_snacker_returns_tapped_on_the_third_draw_of_a_turn() {
     assert!(g.battlefield_find(id).is_some_and(|c| c.tapped), "snacker back, tapped");
 }
 
+// ── Soulknife Spy ──────────────────────────────────────────────────────────
+
+/// "Whenever this creature deals combat damage to a player, draw a card." It
+/// shipped under a printed card's name with an invented `Effect::MayPay {U}`
+/// gating the draw — strictly worse than the print, and a pilot with no blue
+/// mana (or one that simply declined) never drew. Found by
+/// `scripts/audit_invented_may.py`.
+#[test]
+fn soulknife_spy_draws_on_combat_damage_with_no_mana_and_no_choice() {
+    use crabomination::game::{Attack, AttackTarget, GameAction};
+    use crabomination::game::types::TurnStep;
+    let mut g = two_player_game();
+    let spy = g.add_card_to_battlefield(0, catalog::soulknife_spy());
+    g.clear_sickness(spy);
+    g.add_card_to_library(0, catalog::forest());
+    let before = g.players[0].hand.len();
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: spy,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("Spy attacks");
+    while g.step != TurnStep::EndCombat {
+        g.perform_action(GameAction::PassPriority).expect("pass to combat damage");
+    }
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 0, "the draw costs nothing");
+    assert_eq!(g.players[0].hand.len(), before + 1, "combat damage draws a card");
+}
+
 // ── Targeted removal (table) ───────────────────────────────────────────────
 // Each spell targets the opponent's 2/2 Grizzly Bears and kills it, with an
 // optional life delta on the caster.

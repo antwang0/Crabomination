@@ -99,7 +99,7 @@ pub fn ruthless_negotiation() -> CardDefinition {
         keywords: vec![Keyword::Flashback(cost(&[generic(4), b()]))],
         effect: Effect::Seq(vec![
             Effect::ExileFromHand {
-                who: Selector::Player(PlayerRef::EachOpponent),
+                who: crate::effect::shortcut::target_filtered(crate::card::SelectionRequirement::OpponentPlayer),
                 amount: Value::ONE,
             },
             Effect::If {

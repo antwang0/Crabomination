@@ -117,6 +117,9 @@ fn quick_study_draws_two_cards_for_target_player() {
 #[test]
 fn witherbloom_command_choose_two_mill_and_drain() {
     let mut g = two_player_game();
+    // The default bot profile aims a hostile player slot at an
+    // opponent (`EvalWeights::default()`); a bare test seat does not.
+    g.players[0].hostile_player_targets = true;
     // P1 (target player) has at least 3 cards in their library.
     for _ in 0..6 { g.add_card_to_library(1, catalog::island()); }
     let id = g.add_card_to_hand(0, catalog::witherbloom_command());
@@ -129,8 +132,9 @@ fn witherbloom_command_choose_two_mill_and_drain() {
     g.perform_action(GameAction::CastSpellSpree {
         card_id: id,
         spree_modes: vec![0, 3],
+        // Both chosen modes target a player now; each owns a slot in run order.
         target: Some(Target::Player(1)),
-        additional_targets: vec![],
+        additional_targets: vec![Target::Player(1)],
         x_value: None,
     })
     .expect("Witherbloom Command castable for {B}{G} picking modes 0 + 3");
@@ -5020,7 +5024,7 @@ fn tendrils_of_agony_drains_two_with_no_storm() {
     g.spells_cast_this_turn = 0;
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Tendrils castable for {2}{B}{B}");
     drain_stack(&mut g);
@@ -5046,7 +5050,7 @@ fn tendrils_of_agony_storm_drain_scales() {
     g.spells_cast_this_turn = 4;
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Tendrils castable");
     drain_stack(&mut g);

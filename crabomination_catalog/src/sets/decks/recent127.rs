@@ -611,7 +611,7 @@ pub fn binding_negotiation() -> CardDefinition {
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::DiscardChosen {
-            from: Selector::Player(PlayerRef::EachOpponent),
+            from: target_filtered(crate::card::SelectionRequirement::OpponentPlayer),
             count: Value::ONE,
             filter: R::Nonland,
         },

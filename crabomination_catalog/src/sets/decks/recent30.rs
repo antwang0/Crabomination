@@ -499,11 +499,14 @@ pub fn dredgers_insight() -> CardDefinition {
     ..Default::default()
 }))),
             TriggeredAbility {
+                // CR 603.2c — "whenever ONE OR MORE cards leave your graveyard":
+                // one fire per batch, however many left at once.
                 event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl)
                     .with_filter(Predicate::EntityMatches {
                         what: Selector::TriggerSource,
                         filter: SelectionRequirement::Artifact.or(SelectionRequirement::Creature),
-                    }),
+                    })
+                    .once_per_batch(),
                 effect: Effect::GainLife {
                     who: Selector::You,
                     amount: Value::ONE,

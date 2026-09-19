@@ -24,11 +24,14 @@ pub fn insidious_roots() -> CardDefinition {
             R::IsToken.and(R::Creature).and(R::ControlledByYou),
         )],
         triggered_abilities: vec![TriggeredAbility {
+            // CR 603.2c — "whenever ONE OR MORE cards leave your graveyard":
+            // one fire per batch, however many left at once.
             event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl)
                 .with_filter(Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: R::Creature,
-                }),
+                })
+                .once_per_batch(),
             effect: Effect::Seq(vec![
                 Effect::CreateToken {
                     who: PlayerRef::You,

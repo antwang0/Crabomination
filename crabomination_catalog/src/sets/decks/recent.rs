@@ -3056,10 +3056,14 @@ pub fn dour_port_mage() -> CardDefinition {
         power: 1,
         toughness: 3,
         triggered_abilities: vec![TriggeredAbility {
+            // CR 603.2c — "whenever ONE OR MORE other creatures you control
+            // leave the battlefield without dying": one card for the batch,
+            // not one per creature a mass bounce took.
             event: EventSpec::new(
                 EventKind::CreatureLeavesBattlefieldNotDying,
                 EventScope::AnotherOfYours,
-            ),
+            )
+            .once_per_batch(),
             effect: Effect::Draw {
                 who: Selector::You,
                 amount: Value::Const(1),
@@ -3762,7 +3766,7 @@ pub fn thornplate_intimidator() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Offspring(cost(&[generic(3)]))],
         triggered_abilities: vec![etb(Effect::Punisher {
-            chooser: Selector::Player(PlayerRef::EachOpponent),
+            chooser: target_filtered(SelectionRequirement::OpponentPlayer),
             options: vec![
                 Effect::Sacrifice {
                     who: Selector::Player(PlayerRef::You),
@@ -3776,7 +3780,7 @@ pub fn thornplate_intimidator() -> CardDefinition {
                 },
             ],
             otherwise: Box::new(Effect::LoseLife {
-                who: Selector::Player(PlayerRef::EachOpponent),
+                who: target_filtered(SelectionRequirement::OpponentPlayer),
                 amount: Value::Const(3),
             }),
         })],
@@ -4865,7 +4869,7 @@ pub fn skullcap_snail() -> CardDefinition {
         power: 1,
         toughness: 1,
         triggered_abilities: vec![etb(Effect::ExileFromHand {
-            who: Selector::Player(PlayerRef::EachOpponent),
+            who: target_filtered(SelectionRequirement::OpponentPlayer),
             amount: Value::Const(1),
         })],
         ..Default::default()
@@ -7552,7 +7556,7 @@ pub fn vengeful_bloodwitch() -> CardDefinition {
             // its own death too (CR 603.10a self-death funnel).
             event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl),
             effect: Effect::Drain {
-                from: Selector::Player(PlayerRef::EachOpponent),
+                from: target_filtered(SelectionRequirement::OpponentPlayer),
                 to: Selector::You,
                 amount: Value::Const(1),
             },
@@ -7926,7 +7930,7 @@ pub fn gastal_thrillseeker() -> CardDefinition {
         keywords: vec![Keyword::StartYourEngines],
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::DealDamage {
-                to: Selector::Player(PlayerRef::EachOpponent),
+                to: target_filtered(SelectionRequirement::OpponentPlayer),
                 amount: Value::Const(1),
             },
             Effect::GainLife {
@@ -8041,7 +8045,7 @@ pub fn surging_dementia() -> CardDefinition {
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Discard {
-            who: Selector::Player(PlayerRef::EachPlayer),
+            who: target_filtered(SelectionRequirement::Player),
             amount: Value::Const(1),
             random: false,
         },
@@ -9497,7 +9501,7 @@ pub fn essence_depleter() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), colorless(1)]),
             effect: Effect::Drain {
-                from: Selector::Player(PlayerRef::EachOpponent),
+                from: target_filtered(SelectionRequirement::OpponentPlayer),
                 to: Selector::Player(PlayerRef::You),
                 amount: Value::Const(1),
             },
@@ -12775,7 +12779,7 @@ pub fn disciple_of_the_vault() -> CardDefinition {
             effect: Effect::MayDo {
                 description: "target opponent loses 1 life".into(),
                 body: Box::new(Effect::LoseLife {
-                    who: Selector::Player(PlayerRef::EachOpponent),
+                    who: target_filtered(SelectionRequirement::OpponentPlayer),
                     amount: Value::Const(1),
                 }),
             },
@@ -12798,7 +12802,7 @@ pub fn marionette_master() -> CardDefinition {
             },
         ),
         effect: Effect::LoseLife {
-            who: Selector::Player(PlayerRef::EachOpponent),
+            who: target_filtered(SelectionRequirement::OpponentPlayer),
             amount: Value::ManaValueOf(Box::new(Selector::TriggerSource)),
         },
     });

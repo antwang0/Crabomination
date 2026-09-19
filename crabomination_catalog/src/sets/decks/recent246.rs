@@ -72,11 +72,14 @@ pub fn chalk_outline() -> CardDefinition {
         cost: cost(&[generic(3), g()]),
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![TriggeredAbility {
+            // CR 603.2c — "whenever ONE OR MORE cards leave your graveyard":
+            // one fire per batch, however many left at once.
             event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl)
                 .with_filter(crate::effect::Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: R::Creature,
-                }),
+                })
+                .once_per_batch(),
             effect: Effect::Seq(vec![
                 Effect::CreateToken {
                     who: PlayerRef::You,
@@ -107,11 +110,14 @@ pub fn soul_enervation() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             }),
             TriggeredAbility {
+                // CR 603.2c — "whenever ONE OR MORE cards leave your graveyard":
+                // one fire per batch, however many left at once.
                 event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl)
                     .with_filter(crate::effect::Predicate::EntityMatches {
                         what: Selector::TriggerSource,
                         filter: R::Creature,
-                    }),
+                    })
+                    .once_per_batch(),
                 effect: Effect::Drain {
                     from: Selector::Player(PlayerRef::EachOpponent),
                     to: Selector::You,

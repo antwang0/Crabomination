@@ -38,11 +38,19 @@ use crate::card::{
 };
 use crate::effect::{
     AttackingTokenCleanup, Duration, Effect, ManaPayload, PlayerRef,
-    Selector, ZoneDest, ZoneRef,
+    ScratchBinding, Selector, ZoneDest, ZoneRef,
 };
 use crate::decision::{AmountKind, OptionalKind, PayFor, PickValue};
 use crate::game::layers::EffectDuration;
 use crate::mana::Color;
+
+/// What `bind_scratch` displaced, for `restore_scratch` to put back. Not a
+/// `ScratchBinding`: `current_voter` is an `Option` outside a ballot, which the
+/// binding has no way to say.
+enum ScratchSave {
+    CurrentVoter(Option<usize>),
+    LastDieRoll(u8),
+}
 
 /// Continuation for per-player decision loops that suspend mid-iteration:
 /// re-runs `make(seat)` for each not-yet-processed seat once the suspended
@@ -58,6 +66,101 @@ pub(crate) fn per_seat_continuation(rest: &[usize], make: impl Fn(usize) -> Effe
         1 => effs.pop().unwrap_or(Effect::Noop),
         _ => Effect::Seq(effs),
     }
+}
+
+/// The continuation for a modal run: each mode still to come, with its own
+/// target slot pinned *inside* the effect.
+///
+/// A modal arm hands each target-bearing mode its own slot through
+/// `EffectContext.targets`, and a parked continuation is resumed with the
+/// spell's whole target list — so without the pin every remaining mode would
+/// read slot 0. `first_slot` is the slot the next target-bearing mode is owed.
+pub(crate) fn modal_continuation<'a>(
+    rest: impl Iterator<Item = (&'a Effect, Option<usize>)>,
+) -> Effect {
+    Effect::seq(
+        rest.map(|(m, slot)| match slot {
+            Some(s) => Effect::BindTargetSlot { slot: s as u8, body: Box::new(m.clone()) },
+            None => m.clone(),
+        })
+        .collect(),
+    )
+}
+
+/// `modal_continuation` for the arms that hand slots out in run order.
+pub(crate) fn modal_continuation_in_order<'a>(
+    rest: impl Iterator<Item = &'a Effect>,
+    first_slot: usize,
+) -> Effect {
+    let mut slot = first_slot;
+    modal_continuation(rest.map(move |m| {
+        if m.requires_target() {
+            let s = slot;
+            slot += 1;
+            (m, Some(s))
+        } else {
+            (m, None)
+        }
+    }))
+}
+
+/// A `Selector` that resolves to exactly this one entity, for a continuation
+/// that has to re-bind an entity the enclosing loop had already resolved.
+pub(crate) fn selector_for_entity(ent: &EntityRef) -> Selector {
+    match *ent {
+        EntityRef::Player(p) => Selector::Player(PlayerRef::Seat(p)),
+        EntityRef::Permanent(id) | EntityRef::Card(id) => Selector::ExactObjects(vec![id]),
+    }
+}
+
+/// Re-wrap whatever a body just parked, when it suspended, so a wrapper that
+/// rebinds the context keeps its binding across the suspend.
+///
+/// A parked continuation is resumed under the **stack item's**
+/// `EffectContext`. A wrapper that narrows `targets` or moves `controller`
+/// therefore loses its binding the moment anything inside it suspends — the
+/// rest of that body runs as the caster, on the caster's targets. Returns
+/// true when the body suspended.
+pub(crate) fn rewrap_parked(
+    signal: &mut Option<Box<(crate::decision::Decision, PendingEffectState, Effect)>>,
+    wrap: impl FnOnce(Effect) -> Effect,
+) -> bool {
+    let Some(parked) = signal.as_deref_mut() else { return false };
+    let carried = std::mem::replace(&mut parked.2, Effect::Noop);
+    if !matches!(carried, Effect::Noop) {
+        parked.2 = wrap(carried);
+    }
+    true
+}
+
+/// Append `tail` behind the continuation a body just parked, when that body
+/// suspended. Returns true when it did, i.e. when the caller's loop must
+/// return and let the tail resume it.
+///
+/// A suspending body carries only its *own* remaining effect, so a loop that
+/// merely ran on abandoned every iteration after the one that suspended
+/// (CR 101.4 — "each opponent" / "each player" is every one of them, not the
+/// first). The tail must name its seats inside the `Effect`: the parked
+/// continuation is resumed under a rebuilt context, so a seat pinned only in
+/// an `EffectContext` field does not survive the suspension.
+///
+/// `tail` is a closure: the un-suspended pass is the common one and must not
+/// pay for a continuation nobody will run.
+pub(crate) fn splice_after_suspend(
+    signal: &mut Option<Box<(crate::decision::Decision, PendingEffectState, Effect)>>,
+    tail: impl FnOnce() -> Effect,
+) -> bool {
+    let Some(parked) = signal.as_deref_mut() else { return false };
+    let tail = tail();
+    if !matches!(tail, Effect::Noop) {
+        let carried = std::mem::replace(&mut parked.2, Effect::Noop);
+        parked.2 = if matches!(carried, Effect::Noop) {
+            tail
+        } else {
+            Effect::seq(vec![carried, tail])
+        };
+    }
+    true
 }
 
 /// Translate the cast-site `effect::Duration` into the runtime
@@ -697,8 +800,8 @@ impl GameState {
         let mut answers: Vec<(CardId, usize, bool)> = Vec::with_capacity(targets.len());
         for (id, owner_seat) in targets {
             // Ask only when the seat could actually cover it — pool plus
-            // untapped sources (CR 118.6 — you can't choose to pay a cost you
-            // can't pay).
+            // untapped sources (CR 118.3 — a player can't pay a cost
+            // without the resources to pay it fully).
             let can_pay = self.could_pay_cost(owner_seat, cost);
             let paid = can_pay
                 && match self.ask_seat_bool(
@@ -727,16 +830,20 @@ impl GameState {
                 .iter()
                 .filter_map(|id| self.battlefield_find(*id).map(|c| c.controller))
                 .collect();
-            for seat in seats {
-                self.run_effect(
-                    &Effect::Sacrifice {
-                        who: Selector::Player(PlayerRef::Seat(seat)),
-                        count: crate::effect::Value::ONE,
-                        filter: SelectionRequirement::Permanent,
-                    },
-                    ctx,
-                    events,
-                )?;
+            let one_sacrifice = |seat: usize| Effect::Sacrifice {
+                who: Selector::Player(PlayerRef::Seat(seat)),
+                count: crate::effect::Value::ONE,
+                filter: SelectionRequirement::Permanent,
+            };
+            for (i, seat) in seats.iter().copied().enumerate() {
+                self.run_effect(&one_sacrifice(seat), ctx, events)?;
+                // CR 101.4 — every unpaid permanent's controller sacrifices,
+                // not just the ones before the first seat whose pick suspends.
+                if splice_after_suspend(&mut self.suspend_signal, || {
+                    per_seat_continuation(&seats[i + 1..], one_sacrifice)
+                }) {
+                    return Ok(());
+                }
             }
             return Ok(());
         }
@@ -1403,11 +1510,54 @@ impl GameState {
         self.clear_answer_log();
         self.separated_piles =
             if take_first { (first, second) } else { (second, first) };
-        let run = self
-            .run_effect(chosen, ctx, events)
-            .and_then(|()| self.run_effect(other, ctx, events));
+        self.run_piles_then_clear(chosen, other, ctx, events)
+    }
+
+
+    /// Run a pile split's two halves, then drop the piles.
+    ///
+    /// A loop is only the commonest shape of "a second `run_effect` after one
+    /// that can suspend" — this is the pair form. `chosen` asks (a cast, a
+    /// sacrifice) and parks only itself, so `other` was dropped *and* the
+    /// piles it reads were cleared out from under the continuation. The
+    /// splice carries `other`, and the clear waits: `separated_piles` is
+    /// written by whichever arm set it and read by nobody else, so leaving it
+    /// set across the suspension costs nothing.
+    fn run_piles_then_clear(
+        &mut self,
+        chosen: &Effect,
+        other: &Effect,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
+        self.run_effect(chosen, ctx, events)?;
+        if splice_after_suspend(&mut self.suspend_signal, || other.clone()) {
+            return Ok(());
+        }
+        let run = self.run_effect(other, ctx, events);
         self.separated_piles = (Vec::new(), Vec::new());
         run
+    }
+
+    /// Pin one piece of resolver scratch for an `Effect::BindScratch` body,
+    /// handing back what was there for `restore_scratch`.
+    fn bind_scratch(&mut self, scratch: &ScratchBinding) -> ScratchSave {
+        match scratch {
+            ScratchBinding::CurrentVoter(seat) => {
+                ScratchSave::CurrentVoter(self.current_voter.replace(*seat))
+            }
+            ScratchBinding::LastDieRoll(face) => {
+                ScratchSave::LastDieRoll(std::mem::replace(&mut self.last_die_roll, *face))
+            }
+        }
+    }
+
+    /// Put back what `bind_scratch` replaced.
+    fn restore_scratch(&mut self, save: ScratchSave) {
+        match save {
+            ScratchSave::CurrentVoter(prev) => self.current_voter = prev,
+            ScratchSave::LastDieRoll(prev) => self.last_die_roll = prev,
+        }
     }
 
     /// Drop the multi-question replay log — call when a log-using effect
@@ -4384,10 +4534,32 @@ impl GameState {
 
             Effect::ForEach { selector, body } => {
                 let entities = self.resolve_selector(selector, ctx);
-                for ent in entities {
+                for (i, ent) in entities.iter().copied().enumerate() {
                     let mut sub_ctx = ctx.clone();
                     sub_ctx.trigger_source = Some(ent);
                     self.run_effect(body, &sub_ctx, events)?;
+                    // `trigger_source` is a context field, and a parked
+                    // continuation comes back under the stack item's context —
+                    // so this entity's own remainder needs re-binding, and the
+                    // entities after it need splicing, both by naming the
+                    // entity inside the effect.
+                    rewrap_parked(&mut self.suspend_signal, |carried| Effect::ForEach {
+                        selector: selector_for_entity(&ent),
+                        body: Box::new(carried),
+                    });
+                    if splice_after_suspend(&mut self.suspend_signal, || {
+                        Effect::seq(
+                            entities[i + 1..]
+                                .iter()
+                                .map(|e| Effect::ForEach {
+                                    selector: selector_for_entity(e),
+                                    body: body.clone(),
+                                })
+                                .collect(),
+                        )
+                    }) {
+                        return Ok(());
+                    }
                 }
                 Ok(())
             }
@@ -4397,27 +4569,27 @@ impl GameState {
                 for (i, p) in seats.iter().copied().enumerate() {
                     let sub = EffectContext { controller: p, ..ctx.clone() };
                     self.run_effect(body, &sub, events)?;
+                    // Whatever the body parked resumes as the CASTER unless the
+                    // seat is put back around it — the same reason the tail
+                    // below names its seats inside the effect.
+                    rewrap_parked(&mut self.suspend_signal, |carried| {
+                        Effect::EachPlayerDoes {
+                            who: PlayerRef::Seat(p),
+                            body: Box::new(carried),
+                        }
+                    });
                     // A `wants_ui` seat's body suspends, and the loop used to
                     // run on and let the NEXT seat's suspend overwrite the
                     // signal — the first seat's pending decision was dropped
                     // and its half of the effect never happened. `Seq` carries
                     // its tail the same way; here the tail is the seats not yet
                     // reached, each re-seated by a `Seat(q)` fan-out of one.
-                    if let Some((_, _, remaining)) = self.suspend_signal.as_deref_mut() {
-                        let tail = per_seat_continuation(&seats[i + 1..], |q| {
-                            Effect::EachPlayerDoes {
-                                who: PlayerRef::Seat(q),
-                                body: body.clone(),
-                            }
-                        });
-                        if !matches!(tail, Effect::Noop) {
-                            let carried = std::mem::replace(remaining, Effect::Noop);
-                            *remaining = if matches!(carried, Effect::Noop) {
-                                tail
-                            } else {
-                                Effect::seq(vec![carried, tail])
-                            };
-                        }
+                    if splice_after_suspend(&mut self.suspend_signal, || {
+                        per_seat_continuation(&seats[i + 1..], |q| Effect::EachPlayerDoes {
+                            who: PlayerRef::Seat(q),
+                            body: body.clone(),
+                        })
+                    }) {
                         return Ok(());
                     }
                 }
@@ -4426,8 +4598,25 @@ impl GameState {
 
             Effect::Repeat { count, body } => {
                 let n = self.evaluate_value(count, ctx).max(0);
-                for _ in 0..n {
+                for i in 0..n {
                     self.run_effect(body, ctx, events)?;
+                    // The repetitions after a suspending one were dropped.
+                    // `count` is re-evaluated nowhere: the tail carries the
+                    // remainder as a constant, so a body that changes what
+                    // `count` reads doesn't shorten or lengthen the loop.
+                    if splice_after_suspend(&mut self.suspend_signal, || {
+                        let left = n - i - 1;
+                        if left == 0 {
+                            Effect::Noop
+                        } else {
+                            Effect::Repeat {
+                                count: crate::effect::Value::Const(left),
+                                body: body.clone(),
+                            }
+                        }
+                    }) {
+                        return Ok(());
+                    }
                 }
                 Ok(())
             }
@@ -4440,7 +4629,7 @@ impl GameState {
                 // CR 705.3 — `flip_one_coin` applies Krark's-Thumb advantage
                 // (replay + treat as heads if any replay is heads).
                 let n = self.evaluate_value(count, ctx).max(0);
-                for _ in 0..n {
+                for i in 0..n {
                     if self.flip_one_coin(ctx.controller) {
                         // CR 705.1 — the controller won this flip; fire any
                         // "Whenever you win a coin flip" triggers.
@@ -4450,6 +4639,22 @@ impl GameState {
                         // CR 705.1 — the controller lost this flip.
                         events.push(GameEvent::CoinFlipLost { player: ctx.controller });
                         self.run_effect(on_tails, ctx, events)?;
+                    }
+                    // The flips after a suspending branch were dropped; the
+                    // tail flips the remainder when the answer comes back.
+                    if splice_after_suspend(&mut self.suspend_signal, || {
+                        let left = n - i - 1;
+                        if left == 0 {
+                            Effect::Noop
+                        } else {
+                            Effect::FlipCoin {
+                                count: crate::effect::Value::Const(left),
+                                on_heads: on_heads.clone(),
+                                on_tails: on_tails.clone(),
+                            }
+                        }
+                    }) {
+                        return Ok(());
                     }
                 }
                 Ok(())
@@ -4467,8 +4672,23 @@ impl GameState {
                     }
                 }
                 events.push(GameEvent::CoinFlipLost { player: ctx.controller });
-                for _ in 0..wins {
+                for i in 0..wins {
                     self.run_effect(per_win, ctx, events)?;
+                    // The payoffs after a suspending one were dropped; the
+                    // flips are already done, so the tail is a plain repeat.
+                    if splice_after_suspend(&mut self.suspend_signal, || {
+                        let left = wins - i - 1;
+                        if left == 0 {
+                            Effect::Noop
+                        } else {
+                            Effect::Repeat {
+                                count: crate::effect::Value::Const(left as i32),
+                                body: per_win.clone(),
+                            }
+                        }
+                    }) {
+                        return Ok(());
+                    }
                 }
                 Ok(())
             }
@@ -5456,9 +5676,18 @@ impl GameState {
                         break;
                     }
                 }
-                for (threshold, eff) in tiers {
-                    if wins >= *threshold {
-                        self.run_effect(eff, ctx, events)?;
+                let met: Vec<&Effect> = tiers
+                    .iter()
+                    .filter(|(threshold, _)| wins >= *threshold)
+                    .map(|(_, eff)| &**eff)
+                    .collect();
+                for (k, eff) in met.iter().enumerate() {
+                    self.run_effect(eff, ctx, events)?;
+                    // Every met tier fires, including the ones after one that asks.
+                    if splice_after_suspend(&mut self.suspend_signal, || {
+                        Effect::seq(met[k + 1..].iter().map(|e| (*e).clone()).collect())
+                    }) {
+                        return Ok(());
                     }
                 }
                 Ok(())
@@ -5543,48 +5772,73 @@ impl GameState {
                     naturals.sort_unstable_by(|a, b| b.cmp(a));
                     naturals.truncate(n as usize);
                 }
-                // Greatest modified result this roll, for result-gated triggers.
-                let mut high_rolled: u8 = 0;
-                for natural in &naturals {
-                    // CR 706.2 — add the modifier, flooring the modified
-                    // result at 1 (a die result is never reduced below 1).
-                    // The result may exceed `sides`, letting a top "N+"
-                    // arm catch boosted rolls.
-                    let rolled = (*natural as i32 + modifier).max(1).min(u8::MAX as i32) as u8;
-                    high_rolled = high_rolled.max(rolled);
-                    // CR 706.3a — first matching arm fires. If no arm
-                    // matches the roll, the die has no result-table
-                    // effect (per CR 706.3a "If the result was in this
-                    // range, [effect]" — silent on out-of-range rolls).
-                    if let Some((_, _, effect)) =
-                        results.iter().find(|(lo, hi, _)| rolled >= *lo && rolled <= *hi)
-                    {
-                        // CR 706.4 — expose the rolled face to the arm's
-                        // effect via `Value::LastDieRoll`.
-                        self.last_die_roll = rolled;
-                        self.run_effect(effect, ctx, events)?;
-                    }
-                }
-                // CR 706.5 — "if any of the dice show the same number"
-                // (doubles): fires once after the per-die dispatch when two
-                // or more natural faces match.
-                if let Some(doubles_effect) = on_doubles {
-                    let mut sorted = naturals.clone();
-                    sorted.sort_unstable();
-                    if sorted.windows(2).any(|w| w[0] == w[1]) {
-                        self.run_effect(doubles_effect, ctx, events)?;
-                    }
-                }
-                // CR 706.6 — "whenever a player rolls one or more dice" fires
-                // once for the whole roll, after the results resolve. Carries
-                // the greatest result so result-gated triggers ("roll a 5 or
+                // CR 706.2 — add the modifier, flooring the modified result at
+                // 1 (a die result is never reduced below 1). The result may
+                // exceed `sides`, letting a top "N+" arm catch boosted rolls.
+                let rolls: Vec<u8> = naturals
+                    .iter()
+                    .map(|nat| (*nat as i32 + modifier).max(1).min(u8::MAX as i32) as u8)
+                    .collect();
+                // CR 706.2 / 706.3a — the roll is over, and its result fixed,
+                // *before* the results table is consulted, so "whenever a
+                // player rolls one or more dice" has already triggered by the
+                // time an arm runs. One event for the whole roll, carrying the
+                // greatest result so a result-gated trigger ("roll a 5 or
                 // higher") can filter on it via `event_amount`.
                 if n > 0 {
                     events.push(GameEvent::DiceRolled {
                         player: ctx.controller,
                         count: n as u32,
-                        high: high_rolled,
+                        high: rolls.iter().copied().max().unwrap_or(0),
                     });
+                }
+                // CR 706.5 — "if any of the dice show the same number"
+                // (doubles): once, after the per-die dispatch, when two or
+                // more natural faces match.
+                let doubles = on_doubles.as_ref().filter(|_| {
+                    let mut sorted = naturals.clone();
+                    sorted.sort_unstable();
+                    sorted.windows(2).any(|w| w[0] == w[1])
+                });
+                let arm_for = |rolled: u8| {
+                    results.iter().find(|(lo, hi, _)| rolled >= *lo && rolled <= *hi)
+                };
+                for (k, &rolled) in rolls.iter().enumerate() {
+                    // CR 706.3a — the first matching arm fires. No arm matching
+                    // is silent: "If the result was in this range, [effect]".
+                    let Some((_, _, effect)) = arm_for(rolled) else { continue };
+                    // CR 706.4 — expose the rolled face to the arm's effect
+                    // via `Value::LastDieRoll`.
+                    self.last_die_roll = rolled;
+                    self.run_effect(effect, ctx, events)?;
+                    // CR 101.4 — every die's arm happens, including the ones
+                    // after an arm that asks. Each *remaining* arm names its
+                    // own face inside the effect, because by the time the
+                    // continuation reaches it the field has moved on.
+                    //
+                    // This arm's own remainder needs no such wrapper, unlike
+                    // the ballot below: `self.last_die_roll` is never restored
+                    // here, the loop returns as soon as it splices, and nothing
+                    // else resolves while a decision is pending — so the field
+                    // still reads `rolled` when it resumes.
+                    if splice_after_suspend(&mut self.suspend_signal, || {
+                        let mut tail: Vec<Effect> = rolls[k + 1..]
+                            .iter()
+                            .filter_map(|&r| {
+                                arm_for(r).map(|(_, _, e)| Effect::BindScratch {
+                                    scratch: ScratchBinding::LastDieRoll(r),
+                                    body: Box::new(e.clone()),
+                                })
+                            })
+                            .collect();
+                        tail.extend(doubles.map(|d| (**d).clone()));
+                        Effect::seq(tail)
+                    }) {
+                        return Ok(());
+                    }
+                }
+                if let Some(doubles_effect) = doubles {
+                    self.run_effect(doubles_effect, ctx, events)?;
                 }
                 Ok(())
             }
@@ -5760,17 +6014,27 @@ impl GameState {
                         });
                     }
                 }
-                for &i in &run {
-                    if let Some(m) = modes.get(i as usize) {
-                        if m.requires_target() {
-                            let slot = slot_of_mode.get(&i).copied().unwrap_or(0);
-                            let mut sub_ctx = ctx.clone();
-                            sub_ctx.targets =
-                                ctx.targets.get(slot).cloned().into_iter().collect();
-                            self.run_effect(m, &sub_ctx, events)?;
-                        } else {
-                            self.run_effect(m, ctx, events)?;
-                        }
+                for (k, &i) in run.iter().enumerate() {
+                    let Some(m) = modes.get(i as usize) else { continue };
+                    if m.requires_target() {
+                        let slot = slot_of_mode.get(&i).copied().unwrap_or(0);
+                        let mut sub_ctx = ctx.clone();
+                        sub_ctx.targets =
+                            ctx.targets.get(slot).cloned().into_iter().collect();
+                        self.run_effect(m, &sub_ctx, events)?;
+                    } else {
+                        self.run_effect(m, ctx, events)?;
+                    }
+                    // CR 700.2 — the modes after a suspending one were dropped.
+                    if splice_after_suspend(&mut self.suspend_signal, || {
+                        modal_continuation(run[k + 1..].iter().filter_map(|&j| {
+                            let m = modes.get(j as usize)?;
+                            let slot = m.requires_target()
+                                .then(|| slot_of_mode.get(&j).copied().unwrap_or(0));
+                            Some((m, slot))
+                        }))
+                    }) {
+                        return Ok(());
                     }
                 }
                 Ok(())
@@ -5818,15 +6082,25 @@ impl GameState {
                     _ => default,
                 };
                 // Modes are self-targeting (no chosen slots) — run with full ctx.
-                for &i in &run {
-                    if let Some(m) = modes.get(i as usize) {
-                        self.run_effect(m, ctx, events)?;
+                for (k, &i) in run.iter().enumerate() {
+                    let Some(m) = modes.get(i as usize) else { continue };
+                    self.run_effect(m, ctx, events)?;
+                    // CR 700.2 — the modes after a suspending one were dropped.
+                    if splice_after_suspend(&mut self.suspend_signal, || {
+                        modal_continuation(
+                            run[k + 1..].iter().filter_map(|&j| modes.get(j as usize).map(|m| (m, None))),
+                        )
+                    }) {
+                        return Ok(());
                     }
                 }
                 Ok(())
             }
 
             Effect::Escalate { modes, cost } => {
+                // ⚠ CR 702.120a pays the escalate cost *as the spell is
+                // cast*; this arm asks and pays at resolution. That is a
+                // standing approximation, not this change.
                 use crate::decision::{Decision, DecisionAnswer};
                 let source = ctx.source.unwrap_or(CardId(0));
                 // The cast-time `mode` is the base (always-chosen) mode; the
@@ -5878,24 +6152,53 @@ impl GameState {
                 // `affordable_extra` at `usize::MAX`, so a plain `1 +` overflows.
                 run.truncate(1usize.saturating_add(affordable_extra));
                 // Pay the escalate cost once per mode beyond the first.
-                for _ in 1..run.len() {
+                for k in 1..run.len() {
                     self.run_effect(cost, ctx, events)?;
+                    // The printed escalate cost is a discard, which asks — and
+                    // a suspend here used to drop the costs after it *and*
+                    // every mode.
+                    if splice_after_suspend(&mut self.suspend_signal, || {
+                        let left = (run.len() - k - 1) as i32;
+                        let mut tail = Vec::new();
+                        if left > 0 {
+                            tail.push(Effect::Repeat {
+                                count: crate::effect::Value::Const(left),
+                                body: cost.clone(),
+                            });
+                        }
+                        tail.push(modal_continuation_in_order(
+                            run.iter().filter_map(|&i| modes.get(i as usize)),
+                            0,
+                        ));
+                        Effect::seq(tail)
+                    }) {
+                        return Ok(());
+                    }
                 }
                 // Per-mode target slots assigned in run order: the first
                 // target-bearing chosen mode reads ctx.targets[0], the next
                 // ctx.targets[1] (additional_targets), and so on.
                 let mut next_slot = 0usize;
-                for &i in &run {
-                    if let Some(m) = modes.get(i as usize) {
-                        if m.requires_target() {
-                            let mut sub_ctx = ctx.clone();
-                            sub_ctx.targets =
-                                ctx.targets.get(next_slot).cloned().into_iter().collect();
-                            next_slot += 1;
-                            self.run_effect(m, &sub_ctx, events)?;
-                        } else {
-                            self.run_effect(m, ctx, events)?;
-                        }
+                for (k, &i) in run.iter().enumerate() {
+                    let Some(m) = modes.get(i as usize) else { continue };
+                    if m.requires_target() {
+                        let mut sub_ctx = ctx.clone();
+                        sub_ctx.targets =
+                            ctx.targets.get(next_slot).cloned().into_iter().collect();
+                        next_slot += 1;
+                        self.run_effect(m, &sub_ctx, events)?;
+                    } else {
+                        self.run_effect(m, ctx, events)?;
+                    }
+                    // CR 700.2 — a mode that asks (a discard, a sacrifice, a
+                    // search) suspends, and the modes after it were dropped.
+                    if splice_after_suspend(&mut self.suspend_signal, || {
+                        modal_continuation_in_order(
+                            run[k + 1..].iter().filter_map(|&j| modes.get(j as usize)),
+                            next_slot,
+                        )
+                    }) {
+                        return Ok(());
                     }
                 }
                 Ok(())
@@ -5915,17 +6218,28 @@ impl GameState {
                     ctx.spree_modes.clone()
                 };
                 let mut next_slot = 0usize;
-                for &i in &chosen {
-                    if let Some(m) = modes.get(i as usize) {
-                        if m.effect.requires_target() {
-                            let mut sub_ctx = ctx.clone();
-                            sub_ctx.targets =
-                                ctx.targets.get(next_slot).cloned().into_iter().collect();
-                            next_slot += 1;
-                            self.run_effect(&m.effect, &sub_ctx, events)?;
-                        } else {
-                            self.run_effect(&m.effect, ctx, events)?;
-                        }
+                for (k, &i) in chosen.iter().enumerate() {
+                    let Some(m) = modes.get(i as usize) else { continue };
+                    if m.effect.requires_target() {
+                        let mut sub_ctx = ctx.clone();
+                        sub_ctx.targets =
+                            ctx.targets.get(next_slot).cloned().into_iter().collect();
+                        next_slot += 1;
+                        self.run_effect(&m.effect, &sub_ctx, events)?;
+                    } else {
+                        self.run_effect(&m.effect, ctx, events)?;
+                    }
+                    // CR 700.2 — the modes after a suspending one were dropped.
+                    if splice_after_suspend(&mut self.suspend_signal, || {
+                        modal_continuation_in_order(
+                            chosen[k + 1..]
+                                .iter()
+                                .filter_map(|&j| modes.get(j as usize))
+                                .map(|m| &m.effect),
+                            next_slot,
+                        )
+                    }) {
+                        return Ok(());
                     }
                 }
                 Ok(())
@@ -5946,17 +6260,25 @@ impl GameState {
                     ctx.spree_modes.clone()
                 };
                 let mut next_slot = 0usize;
-                for &i in &chosen {
-                    if let Some(m) = modes.get(i as usize) {
-                        if m.requires_target() {
-                            let mut sub_ctx = ctx.clone();
-                            sub_ctx.targets =
-                                ctx.targets.get(next_slot).cloned().into_iter().collect();
-                            next_slot += 1;
-                            self.run_effect(m, &sub_ctx, events)?;
-                        } else {
-                            self.run_effect(m, ctx, events)?;
-                        }
+                for (k, &i) in chosen.iter().enumerate() {
+                    let Some(m) = modes.get(i as usize) else { continue };
+                    if m.requires_target() {
+                        let mut sub_ctx = ctx.clone();
+                        sub_ctx.targets =
+                            ctx.targets.get(next_slot).cloned().into_iter().collect();
+                        next_slot += 1;
+                        self.run_effect(m, &sub_ctx, events)?;
+                    } else {
+                        self.run_effect(m, ctx, events)?;
+                    }
+                    // CR 700.2 — the modes after a suspending one were dropped.
+                    if splice_after_suspend(&mut self.suspend_signal, || {
+                        modal_continuation_in_order(
+                            chosen[k + 1..].iter().filter_map(|&j| modes.get(j as usize)),
+                            next_slot,
+                        )
+                    }) {
+                        return Ok(());
                     }
                 }
                 Ok(())
@@ -7080,6 +7402,51 @@ impl GameState {
                 self.run_effect(body, &sub, events)
             }
 
+            Effect::BindTargetSlot { slot, body } => {
+                // Runtime continuation only: the mode's own target slot moved
+                // to slot 0, which is what the modal arms do inline.
+                let sub = EffectContext {
+                    targets: ctx.targets.get(*slot as usize).cloned().into_iter().collect(),
+                    ..ctx.clone()
+                };
+                self.run_effect(body, &sub, events)?;
+                rewrap_parked(&mut self.suspend_signal, |carried| Effect::BindTargetSlot {
+                    slot: *slot,
+                    body: Box::new(carried),
+                });
+                Ok(())
+            }
+
+            Effect::BindTargetObjects { ids, body } => {
+                // Runtime continuation only: the objects this iteration is
+                // about, as the body's whole target list.
+                let sub = EffectContext {
+                    targets: ids.iter().map(|id| Target::Permanent(*id)).collect(),
+                    ..ctx.clone()
+                };
+                self.run_effect(body, &sub, events)?;
+                rewrap_parked(&mut self.suspend_signal, |carried| {
+                    Effect::BindTargetObjects { ids: ids.clone(), body: Box::new(carried) }
+                });
+                Ok(())
+            }
+
+            Effect::BindScratch { scratch, body } => {
+                // Runtime continuation only: the resolver scratch this
+                // iteration ran under, restored around `body` — and put back
+                // around whatever `body` parks, because a continuation resumes
+                // long after the loop that built it restored the field.
+                let restore = self.bind_scratch(scratch);
+                let r = self.run_effect(body, ctx, events);
+                self.restore_scratch(restore);
+                r?;
+                rewrap_parked(&mut self.suspend_signal, |carried| Effect::BindScratch {
+                    scratch: scratch.clone(),
+                    body: Box::new(carried),
+                });
+                Ok(())
+            }
+
             Effect::ForEachOpponentTarget { body } => {
                 // CR 601.2c — "for each opponent, … up to one target X that
                 // player controls": keep at most one target per controller,
@@ -7109,10 +7476,11 @@ impl GameState {
             }
 
             Effect::ApplyToTargets { effect: inner, .. } => {
-                let targets: Vec<Target> = ctx
+                let targets: Vec<(usize, Target)> = ctx
                     .targets
                     .iter()
-                    .filter(|t| match t {
+                    .enumerate()
+                    .filter(|(_, t)| match *t {
                         Target::Player(p) => *p < self.players.len(),
                         // Accept any still-locatable card target — not just
                         // battlefield permanents — so an inner Move can relocate
@@ -7120,12 +7488,22 @@ impl GameState {
                         // "put a card from your graveyard on top of your library").
                         Target::Permanent(id) => self.find_card_anywhere(*id).is_some(),
                     })
-                    .cloned()
+                    .map(|(i, t)| (i, t.clone()))
                     .collect();
-                for t in targets {
+                for (k, (_, t)) in targets.iter().cloned().enumerate() {
                     let mut sub = ctx.clone();
                     sub.targets = vec![t];
                     self.run_effect(inner, &sub, events)?;
+                    // CR 608.2 — the targets after a suspending one were
+                    // dropped. Each remaining one is pinned by its ORIGINAL
+                    // slot, which is what the resumed context still holds.
+                    if splice_after_suspend(&mut self.suspend_signal, || {
+                        modal_continuation(
+                            targets[k + 1..].iter().map(|(s, _)| (&**inner, Some(*s))),
+                        )
+                    }) {
+                        return Ok(());
+                    }
                 }
                 Ok(())
             }
@@ -9037,7 +9415,8 @@ impl GameState {
             Effect::TurnFaceUpFree { what, if_cant } => {
                 // CR 707.9 — turned up without paying the morph cost; the
                 // megamorph +1/+1 counter still applies (CR 702.36e).
-                for ent in self.resolve_selector(what, ctx) {
+                let ents = self.resolve_selector(what, ctx);
+                for (i, ent) in ents.iter().copied().enumerate() {
                     let Some(cid) = ent.as_permanent_id() else { continue };
                     let Some(c) = self.battlefield_find_mut(cid) else { continue };
                     if !c.face_down {
@@ -9052,6 +9431,32 @@ impl GameState {
                                 ..ctx.clone()
                             };
                             self.run_effect(alt, &sub, events)?;
+                            // `if_cant` casts a spell from exile on one catalog
+                            // card, so it suspends: its own remainder needs
+                            // this permanent back in `targets`, and the
+                            // permanents after it need splicing.
+                            rewrap_parked(&mut self.suspend_signal, |carried| {
+                                Effect::BindTargetObjects {
+                                    ids: vec![cid],
+                                    body: Box::new(carried),
+                                }
+                            });
+                            if splice_after_suspend(&mut self.suspend_signal, || {
+                                let rest: Vec<CardId> = ents[i + 1..]
+                                    .iter()
+                                    .filter_map(|e| e.as_permanent_id())
+                                    .collect();
+                                if rest.is_empty() {
+                                    Effect::Noop
+                                } else {
+                                    Effect::TurnFaceUpFree {
+                                        what: Selector::ExactObjects(rest),
+                                        if_cant: if_cant.clone(),
+                                    }
+                                }
+                            }) {
+                                return Ok(());
+                            }
                         }
                         continue;
                     }
@@ -12583,30 +12988,72 @@ impl GameState {
                     }
                     VoteTally::AllTied => {
                         let best = votes.iter().copied().max().unwrap_or(0);
-                        for (opt, count) in options.iter().zip(&votes) {
-                            if *count == best && best > 0 {
-                                self.run_effect(&opt.effect, ctx, events)?;
+                        let tied: Vec<&Effect> = options
+                            .iter()
+                            .zip(&votes)
+                            .filter(|(_, count)| **count == best && best > 0)
+                            .map(|(opt, _)| &opt.effect)
+                            .collect();
+                        for (k, eff) in tied.iter().enumerate() {
+                            self.run_effect(eff, ctx, events)?;
+                            // CR 701.38 — every tied option happens, including
+                            // the ones after one that asks.
+                            if splice_after_suspend(&mut self.suspend_signal, || {
+                                Effect::seq(tied[k + 1..].iter().map(|e| (*e).clone()).collect())
+                            }) {
+                                return Ok(());
                             }
                         }
                     }
                     VoteTally::PerVote => {
                         // One run per vote, in cast order within each option, so
                         // `PlayerRef::CurrentVoter` names the seat that cast it.
-                        let outer = self.current_voter;
-                        for (idx, opt) in options.iter().enumerate() {
-                            for (seat, pick) in self.last_vote.clone() {
-                                if pick != idx {
-                                    continue;
-                                }
-                                self.current_voter = Some(seat);
-                                let r = self.run_effect(&opt.effect, ctx, events);
-                                if r.is_err() {
-                                    self.current_voter = outer;
-                                    return r;
+                        // The schedule is taken once: a body that votes again
+                        // (or asks, and is resumed) must not re-read
+                        // `self.last_vote`.
+                        let ballots = self.last_vote.clone();
+                        let mut schedule: Vec<(usize, usize)> = Vec::new();
+                        for idx in 0..options.len() {
+                            for &(seat, pick) in &ballots {
+                                if pick == idx {
+                                    schedule.push((idx, seat));
                                 }
                             }
                         }
-                        self.current_voter = outer;
+                        let outer = self.current_voter;
+                        for (k, &(idx, seat)) in schedule.iter().enumerate() {
+                            self.current_voter = Some(seat);
+                            let r = self.run_effect(&options[idx].effect, ctx, events);
+                            self.current_voter = outer;
+                            r?;
+                            // This vote's own remainder is bound to this voter
+                            // too — its `PlayerRef::CurrentVoter` would read
+                            // the controller on resume otherwise.
+                            rewrap_parked(&mut self.suspend_signal, |carried| {
+                                Effect::BindScratch {
+                                    scratch: ScratchBinding::CurrentVoter(seat),
+                                    body: Box::new(carried),
+                                }
+                            });
+                            // CR 101.4 — every vote's effect happens, including
+                            // the ones after a vote whose effect asks. The tail
+                            // names each remaining voter inside the effect:
+                            // a parked continuation resumes with
+                            // `self.current_voter` long since restored.
+                            if splice_after_suspend(&mut self.suspend_signal, || {
+                                Effect::seq(
+                                    schedule[k + 1..]
+                                        .iter()
+                                        .map(|&(i, q)| Effect::BindScratch {
+                                            scratch: ScratchBinding::CurrentVoter(q),
+                                            body: Box::new(options[i].effect.clone()),
+                                        })
+                                        .collect(),
+                                )
+                            }) {
+                                return Ok(());
+                            }
+                        }
                     }
                 }
                 Ok(())
@@ -17973,19 +18420,41 @@ impl GameState {
                     .map(|c| c.id)
                     .collect();
                 let ctx = EffectContext { controller: caster, ..ctx.clone() };
-                for cid in pile {
+                let free_cast = Effect::CastWithoutPayingImmediate {
+                    reduce_generic: 0,
+                    pay_own_cost: false,
+                    what: Selector::Target(0),
+                    source_zone: crate::card::Zone::Exile,
+                    exile_after: false,
+                    copy: true,
+                };
+                // Each free cast picks its own targets and modes, so it can
+                // suspend — and the tail needs BOTH pins back: the caster
+                // (`EachPlayerDoes` over one seat) and the card being cast.
+                let one_cast = |cid: CardId, inner: Effect| Effect::EachPlayerDoes {
+                    who: PlayerRef::Seat(caster),
+                    body: Box::new(Effect::BindTargetObjects {
+                        ids: vec![cid],
+                        body: Box::new(inner),
+                    }),
+                };
+                for (i, cid) in pile.iter().copied().enumerate() {
                     self.run_effect(
-                        &Effect::CastWithoutPayingImmediate {
-                            reduce_generic: 0,
-                                pay_own_cost: false,
-                            what: Selector::Target(0),
-                            source_zone: crate::card::Zone::Exile,
-                            exile_after: false,
-                            copy: true,
-                        },
+                        &free_cast,
                         &EffectContext { targets: vec![Target::Permanent(cid)], ..ctx.clone() },
                         events,
                     )?;
+                    rewrap_parked(&mut self.suspend_signal, |carried| one_cast(cid, carried));
+                    if splice_after_suspend(&mut self.suspend_signal, || {
+                        Effect::seq(
+                            pile[i + 1..]
+                                .iter()
+                                .map(|c| one_cast(*c, free_cast.clone()))
+                                .collect(),
+                        )
+                    }) {
+                        return Ok(());
+                    }
                 }
                 Ok(())
             }
@@ -18560,11 +19029,7 @@ impl GameState {
                 let one = picked.first().copied().unwrap_or(ids[0]);
                 self.separated_piles =
                     (vec![one], ids.into_iter().filter(|id| *id != one).collect());
-                let run = self
-                    .run_effect(chosen, ctx, events)
-                    .and_then(|()| self.run_effect(other, ctx, events));
-                self.separated_piles = (Vec::new(), Vec::new());
-                run
+                self.run_piles_then_clear(chosen, other, ctx, events)
             }
 
             Effect::ExchangeControlChoosing { filter, with } => self.resolve_exchange_control_choosing(filter, with, ctx, events),
@@ -20668,7 +21133,7 @@ impl GameState {
                         _ => None,
                     })
                     .collect();
-                for p in choosers {
+                for (i, p) in choosers.iter().copied().enumerate() {
                     // The chooser evaluates the options with themselves as the
                     // effect controller (so `PlayerRef::You` = the chooser).
                     let opt_ctx = EffectContext { controller: p, ..ctx.clone() };
@@ -20693,6 +21158,21 @@ impl GameState {
                             self.run_effect(otherwise, &pay_ctx, events)?
                         }
                     }
+                    // A chooser's option (a sacrifice, a discard) suspends, and
+                    // without this the choosers after them never got asked.
+                    // The tail is this same arm restricted to one seat, so the
+                    // re-entry re-derives that seat's affordable option against
+                    // the board as it stands then — which is what CR 101.4's
+                    // sequential order means.
+                    if splice_after_suspend(&mut self.suspend_signal, || {
+                        per_seat_continuation(&choosers[i + 1..], |q| Effect::Punisher {
+                            chooser: Selector::Player(PlayerRef::Seat(q)),
+                            options: options.clone(),
+                            otherwise: otherwise.clone(),
+                        })
+                    }) {
+                        return Ok(());
+                    }
                 }
                 Ok(())
             }
@@ -20709,7 +21189,7 @@ impl GameState {
                     })
                     .collect();
                 choosers = self.apnap_sort(choosers);
-                for p in choosers {
+                for (i, p) in choosers.iter().copied().enumerate() {
                     let opt_ctx = EffectContext { controller: p, ..ctx.clone() };
                     // The chooser picks the option that harms them least
                     // (CR 701.55b lets an impossible option be chosen, which
@@ -20718,6 +21198,21 @@ impl GameState {
                     let harm_b = self.villainous_self_harm(option_b, &opt_ctx);
                     let pick = if harm_b < harm_a { option_b } else { option_a };
                     self.run_effect(pick, &opt_ctx, events)?;
+                    // The picked option suspends (an exile-from-graveyard or a
+                    // sacrifice choice) and the choosers after this one were
+                    // dropped. Re-enter this arm per remaining seat so each
+                    // still makes their own CR 701.55 choice.
+                    if splice_after_suspend(&mut self.suspend_signal, || {
+                        per_seat_continuation(&choosers[i + 1..], |q| {
+                            Effect::VillainousChoice {
+                                who: Selector::Player(PlayerRef::Seat(q)),
+                                option_a: option_a.clone(),
+                                option_b: option_b.clone(),
+                            }
+                        })
+                    }) {
+                        return Ok(());
+                    }
                 }
                 Ok(())
             }
@@ -22637,31 +23132,28 @@ impl GameState {
                 // resolved up front: the body may kill one, and the printed
                 // "for each opponent" is fixed as the effect starts.
                 let seats = self.resolve_players(&crate::effect::PlayerRef::EachOpponent, ctx);
-                for opp in seats {
+                for (i, opp) in seats.iter().copied().enumerate() {
                     let opp_ctx = EffectContext {
                         trigger_source: Some(crate::game::effects::EntityRef::Player(opp)),
                         ..ctx.clone()
                     };
                     self.run_effect(body, &opp_ctx, events)?;
-                    // A body that suspends carries only its OWN effect as the
-                    // parked continuation, so iterations after this one are
-                    // abandoned silently — the defect `MayDoRepeatedly` had
-                    // and fixed by splicing (see the `tail_after` idiom in
-                    // that arm, and `SearchUpToN`). Splicing here needs each
-                    // remaining iteration to pin a *different* opponent, and
-                    // `trigger_source` is a context field that no `Effect`
-                    // carries, so the splice needs a wrapper variant.
-                    //
-                    // Not built, because the catalog's one `ForEachOpponent`
-                    // body (Adeline's attacking-token) cannot suspend. This
-                    // assertion is the price of that judgement: the first card
-                    // whose body *can* fails loudly here instead of quietly
-                    // skipping every opponent after the first.
-                    debug_assert!(
-                        self.suspend_signal.is_none(),
-                        "ForEachOpponent body suspended — the remaining opponents \
-                         are being dropped; splice the tail as MayDoRepeatedly does",
-                    );
+                    // A suspended body parks only its OWN effect, so without
+                    // this the opponents after `opp` were dropped. Each
+                    // remaining iteration pins a *different* opponent, and
+                    // `trigger_source` is a context field the parked
+                    // continuation cannot carry — so the tail names its seat
+                    // inside the effect, as `Effect::ForEach` over a
+                    // `PlayerRef::Seat` selector, which is the same
+                    // trigger-source binding this loop uses.
+                    if splice_after_suspend(&mut self.suspend_signal, || {
+                        per_seat_continuation(&seats[i + 1..], |q| Effect::ForEach {
+                            selector: Selector::Player(PlayerRef::Seat(q)),
+                            body: body.clone(),
+                        })
+                    }) {
+                        return Ok(());
+                    }
                 }
                 Ok(())
             }
@@ -22692,27 +23184,28 @@ impl GameState {
                     }
                 }
                 self.clear_answer_log();
-                // Same shape, same judgement, same guard as `ForEachOpponent`
-                // above: three body runs follow each other here, so a suspend
-                // in any of them drops the rest. All four catalog Tempt cards
-                // make tokens or add counters and cannot suspend.
-                let no_suspend = |g: &Self| {
-                    debug_assert!(
-                        g.suspend_signal.is_none(),
-                        "TemptingOffer body suspended — the runs after it are \
-                         being dropped; splice the tail as MayDoRepeatedly does",
-                    );
-                };
-                self.run_effect(body, ctx, events)?;
-                no_suspend(self);
-                for &opp in &acceptors {
-                    let opp_ctx = EffectContext { controller: opp, ..ctx.clone() };
-                    self.run_effect(body, &opp_ctx, events)?;
-                    no_suspend(self);
-                }
-                for _ in 0..acceptors.len() {
-                    self.run_effect(body, ctx, events)?;
-                    no_suspend(self);
+                // "Tempting offer" is an ABILITY WORD (CR 207.2c) with no
+                // rules entry of its own, so the shape is the printed text:
+                // the controller runs the body once, then once per acceptor
+                // for that acceptor, then once more per acceptor. Every run is "the body, under some
+                // controller", so the whole tail is one seat list and a
+                // suspend in run k splices the runs after it back in the same
+                // way `ForEachOpponent` above does.
+                let mut runs = Vec::with_capacity(2 * acceptors.len() + 1);
+                runs.push(ctx.controller);
+                runs.extend(acceptors.iter().copied());
+                runs.extend(std::iter::repeat_n(ctx.controller, acceptors.len()));
+                for (i, seat) in runs.iter().copied().enumerate() {
+                    let run_ctx = EffectContext { controller: seat, ..ctx.clone() };
+                    self.run_effect(body, &run_ctx, events)?;
+                    if splice_after_suspend(&mut self.suspend_signal, || {
+                        per_seat_continuation(&runs[i + 1..], |q| Effect::EachPlayerDoes {
+                            who: PlayerRef::Seat(q),
+                            body: body.clone(),
+                        })
+                    }) {
+                        return Ok(());
+                    }
                 }
                 Ok(())
             }
@@ -23532,22 +24025,30 @@ impl GameState {
             Effect::EachPlayerSacrificesUnlessDiscards => {
                 // Possessed Portal — each player discards a card, or
                 // sacrifices a permanent of their choice if they don't.
-                for p in self.apnap_sort((0..self.players.len()).collect()) {
+                let ask = Effect::MayDiscard {
+                    description: "Discard a card, or sacrifice a permanent?".into(),
+                    count: crate::card::Value::ONE,
+                    then: Box::new(Effect::Noop),
+                    else_: Some(Box::new(Effect::Sacrifice {
+                        who: Selector::Player(crate::effect::PlayerRef::You),
+                        count: crate::card::Value::ONE,
+                        filter: crate::card::SelectionRequirement::Permanent,
+                    })),
+                };
+                let seats = self.apnap_sort((0..self.players.len()).collect());
+                for (i, p) in seats.iter().copied().enumerate() {
                     let sub = EffectContext { controller: p, ..ctx.clone() };
-                    self.run_effect(
-                        &Effect::MayDiscard {
-                            description: "Discard a card, or sacrifice a permanent?".into(),
-                            count: crate::card::Value::ONE,
-                            then: Box::new(Effect::Noop),
-                            else_: Some(Box::new(Effect::Sacrifice {
-                                who: Selector::Player(crate::effect::PlayerRef::You),
-                                count: crate::card::Value::ONE,
-                                filter: crate::card::SelectionRequirement::Permanent,
-                            })),
-                        },
-                        &sub,
-                        events,
-                    )?;
+                    self.run_effect(&ask, &sub, events)?;
+                    // CR 101.4 — both asks here suspend for a `wants_ui`
+                    // seat, so without this only the first seat was asked.
+                    if splice_after_suspend(&mut self.suspend_signal, || {
+                        per_seat_continuation(&seats[i + 1..], |q| Effect::EachPlayerDoes {
+                            who: PlayerRef::Seat(q),
+                            body: Box::new(ask.clone()),
+                        })
+                    }) {
+                        return Ok(());
+                    }
                 }
                 Ok(())
             }
@@ -26193,7 +26694,8 @@ impl GameState {
             // CR 705 — each player flips their own coin; the branch runs with
             // that seat as controller so the body reads "that player".
             Effect::EachPlayerFlipsCoin { who, on_heads, on_tails } => {
-                for p in self.apnap_sort(self.resolve_players(who, ctx)) {
+                let seats = self.apnap_sort(self.resolve_players(who, ctx));
+                for (i, p) in seats.iter().copied().enumerate() {
                     let sub = EffectContext { controller: p, ..ctx.clone() };
                     if self.flip_one_coin(p) {
                         events.push(GameEvent::CoinFlipWon { player: p });
@@ -26201,6 +26703,19 @@ impl GameState {
                     } else {
                         events.push(GameEvent::CoinFlipLost { player: p });
                         self.run_effect(on_tails, &sub, events)?;
+                    }
+                    // CR 101.4 — the seats after a suspending branch still
+                    // flip. Each re-flips its own coin on the continuation,
+                    // which is the point: the flip is theirs, not a replay
+                    // of the seat that suspended.
+                    if splice_after_suspend(&mut self.suspend_signal, || {
+                        per_seat_continuation(&seats[i + 1..], |q| Effect::EachPlayerFlipsCoin {
+                            who: PlayerRef::Seat(q),
+                            on_heads: on_heads.clone(),
+                            on_tails: on_tails.clone(),
+                        })
+                    }) {
+                        return Ok(());
                     }
                 }
                 Ok(())
@@ -27785,24 +28300,62 @@ impl GameState {
             // Strongarm Tactics — the discard is symmetric; the punishment
             // only skips a player who pitched a creature.
             Effect::EachPlayerDiscardsElseLosesLife { life } => {
-                for p in self.apnap_sort((0..self.players.len()).collect()) {
-                    let before = self.players[p].graveyard.len();
-                    self.run_effect(
-                        &Effect::Discard {
+                // The per-seat unit is one `Seq`, not a discard plus a Rust
+                // `if`: the discard suspends for a `wants_ui` seat, and the
+                // life check ran *before* the card had moved — so that seat
+                // was punished whatever it pitched, and every seat after it
+                // was dropped. `Seq` carries its own tail through a suspend,
+                // and the check reads the resolution's discard record, which
+                // a resumed resolution keeps.
+                // Both halves name their seat inside the effect: a resumed
+                // continuation comes back under the stack item's context, so
+                // a `You` here would read the caster, not the discarder.
+                // The threshold is that seat's own graveyard before its own
+                // discard, which nothing between here and its run can move.
+                let creatures_in_graveyard = |g: &Self, p: usize| {
+                    g.players[p].graveyard.iter().filter(|c| c.definition.is_creature()).count()
+                };
+                let life = *life as i32;
+                let per_seat = |before: usize, p: usize| {
+                    Effect::Seq(vec![
+                        Effect::Discard {
                             who: Selector::Player(PlayerRef::Seat(p)),
                             amount: crate::effect::Value::ONE,
                             random: false,
                         },
-                        &EffectContext { controller: p, ..ctx.clone() },
-                        events,
-                    )?;
-                    let pitched_creature = self.players[p]
-                        .graveyard
-                        .iter()
-                        .skip(before)
-                        .any(|c| c.definition.is_creature());
-                    if !pitched_creature {
-                        self.adjust_life(p, -(*life as i32));
+                        Effect::If {
+                            cond: crate::effect::Predicate::SelectorCountAtLeast {
+                                sel: Selector::CardsInZone {
+                                    who: PlayerRef::Seat(p),
+                                    zone: Zone::Graveyard,
+                                    filter: SelectionRequirement::Creature,
+                                },
+                                n: crate::effect::Value::Const(before as i32 + 1),
+                            },
+                            then: Box::new(Effect::Noop),
+                            else_: Box::new(Effect::LoseLife {
+                                who: Selector::Player(PlayerRef::Seat(p)),
+                                amount: crate::effect::Value::Const(life),
+                            }),
+                        },
+                    ])
+                };
+                let seats = self.apnap_sort((0..self.players.len()).collect());
+                let before: Vec<usize> =
+                    seats.iter().map(|&p| creatures_in_graveyard(self, p)).collect();
+                for (i, p) in seats.iter().copied().enumerate() {
+                    let sub = EffectContext { controller: p, ..ctx.clone() };
+                    self.run_effect(&per_seat(before[i], p), &sub, events)?;
+                    // CR 101.4 — and the seats after a suspending discard.
+                    if splice_after_suspend(&mut self.suspend_signal, || {
+                        let rest: Vec<Effect> = seats[i + 1..]
+                            .iter()
+                            .enumerate()
+                            .map(|(k, &q)| per_seat(before[i + 1 + k], q))
+                            .collect();
+                        Effect::seq(rest)
+                    }) {
+                        return Ok(());
                     }
                 }
                 Ok(())
@@ -31515,7 +32068,15 @@ impl GameState {
 
             Effect::EachPlayerSacrificesGreatestManaValueUnlessPays => {
                 // Tariff — one pay-or-sacrifice per player, on their own
-                // biggest creature.
+                // biggest creature. Every ask precedes every payment (the
+                // `Effect::UnlessPlayerPays` shape): a `MayPay` per seat
+                // suspended mid-loop and parked only *itself*, so the seats
+                // after the first `wants_ui` one were never asked — and the
+                // re-run got the stack item's context back, where
+                // `SacrificeSource` no longer named that seat's creature.
+                let source = ctx.source.unwrap_or(CardId(0));
+                let mut cursor = 0;
+                let mut answers: Vec<(usize, CardId, crate::mana::ManaCost, bool)> = Vec::new();
                 for seat in self.apnap_sort((0..self.players.len()).collect()) {
                     if self.players[seat].eliminated {
                         continue;
@@ -31529,17 +32090,33 @@ impl GameState {
                     else {
                         continue;
                     };
+                    // CR 118.3 — a seat that cannot cover it is not asked.
+                    let willing = self.could_pay_cost(seat, &cost)
+                        && match self.ask_seat_bool(
+                            &mut cursor,
+                            seat,
+                            format!("Pay {} to keep it?", cost.summary()),
+                            source,
+                            effect,
+                            OptionalKind::PayMana {
+                                cost: Some(cost.clone()),
+                                purpose: PayFor::KeepSource,
+                            },
+                        ) {
+                            Some(yes) => yes,
+                            None => return Ok(()),
+                        };
+                    answers.push((seat, id, cost, willing));
+                }
+                self.clear_answer_log();
+                for (seat, id, cost, willing) in answers {
+                    if willing && self.pay_mana_cost_with_picks(seat, &cost, None, events) {
+                        continue;
+                    }
+                    // Naming the creature as the source makes the sacrifice
+                    // itself choiceless, so this pass cannot suspend.
                     let sub = EffectContext { controller: seat, source: Some(id), ..ctx.clone() };
-                    self.run_effect(
-                        &Effect::MayPay {
-                            description: format!("Pay {} to keep it?", cost.summary()),
-                            mana_cost: cost,
-                            body: Box::new(Effect::Noop),
-                            else_: Some(Box::new(Effect::SacrificeSource)),
-                        },
-                        &sub,
-                        events,
-                    )?;
+                    self.run_effect(&Effect::SacrificeSource, &sub, events)?;
                 }
                 Ok(())
             }
@@ -36304,6 +36881,17 @@ impl GameState {
                 }
                 out
             }
+
+            Selector::ExactObjects(ids) => ids
+                .iter()
+                .map(|cid| {
+                    if self.battlefield_find(*cid).is_some() {
+                        EntityRef::Permanent(*cid)
+                    } else {
+                        EntityRef::Card(*cid)
+                    }
+                })
+                .collect(),
 
             Selector::SeparatedPile { chosen } => {
                 let pile =

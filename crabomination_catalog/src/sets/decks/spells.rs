@@ -214,7 +214,7 @@ pub fn inquisition_of_kozilek() -> CardDefinition {
         cost: cost(&[b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::DiscardChosen {
-            from: Selector::Player(PlayerRef::EachOpponent),
+            from: target_filtered(SelectionRequirement::Player),
             count: Value::Const(1),
             filter: SelectionRequirement::Nonland.and(SelectionRequirement::ManaValueAtMost(3)),
         },
@@ -462,7 +462,7 @@ pub fn thoughtseize() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::DiscardChosen {
-                from: Selector::Player(PlayerRef::EachOpponent),
+                from: target_filtered(SelectionRequirement::Player),
                 count: Value::Const(1),
                 filter: SelectionRequirement::Nonland,
             },

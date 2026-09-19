@@ -2455,7 +2455,7 @@ pub fn garruk_apex_predator() -> CardDefinition {
             LoyaltyAbility {
                 loyalty_cost: -8,
                 effect: Effect::CreateEmblem {
-                    who: PlayerRef::EachOpponent,
+                    who: PlayerRef::Target(0),
                     name: "Garruk, Apex Predator".into(),
                     triggered: vec![TriggeredAbility {
                         event: EventSpec::new(EventKind::Attacks, EventScope::OpponentControl),

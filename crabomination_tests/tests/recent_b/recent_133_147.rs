@@ -39,6 +39,9 @@ mod recent133 {
     #[test]
     fn eriettes_whisper_discard_and_wicked_role() {
         let mut g = two_player_game();
+        // The default bot profile aims a hostile player slot at an
+        // opponent (`EvalWeights::default()`); a bare test seat does not.
+        g.players[0].hostile_player_targets = true;
         g.step = TurnStep::PreCombatMain;
         g.priority.player_with_priority = 0;
         let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
@@ -50,8 +53,8 @@ mod recent133 {
         g.players[0].mana_pool.add_colorless(3);
         g.perform_action(GameAction::CastSpell {
             card_id: spell,
-            target: Some(Target::Permanent(bear)),
-            additional_targets: vec![],
+            target: Some(Target::Player(1)),
+            additional_targets: vec![Target::Permanent(bear)],
             mode: None,
             x_value: None,
         })

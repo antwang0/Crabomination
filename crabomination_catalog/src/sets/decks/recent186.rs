@@ -58,7 +58,7 @@ pub fn hearthborn_battler() -> CardDefinition {
                 },
             ),
             effect: Effect::DealDamage {
-                to: target_filtered(R::OpponentPlayer),
+                to: target_filtered(crate::card::SelectionRequirement::OpponentPlayer),
                 amount: Value::Const(2),
             },
         }],
@@ -145,12 +145,12 @@ pub fn thought_stalker_warlock() -> CardDefinition {
                 who: PlayerRef::EachOpponent,
             },
             then: Box::new(Effect::DiscardChosen {
-                from: Selector::Player(PlayerRef::EachOpponent),
+                from: target_filtered(crate::card::SelectionRequirement::OpponentPlayer),
                 count: Value::ONE,
                 filter: R::Nonland,
             }),
             else_: Box::new(Effect::Discard {
-                who: Selector::Player(PlayerRef::EachOpponent),
+                who: target_filtered(crate::card::SelectionRequirement::OpponentPlayer),
                 amount: Value::ONE,
                 random: false,
             }),

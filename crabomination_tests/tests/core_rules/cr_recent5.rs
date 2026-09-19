@@ -26,6 +26,9 @@ fn kill(g: &mut GameState, id: CardId) {
 #[test]
 fn cr_702_55_haunt_exiles_and_pays_off_on_haunted_death() {
     let mut g = two_player_game();
+    // The default bot profile aims a hostile player slot at an
+    // opponent (`EvalWeights::default()`); a bare test seat does not.
+    g.players[0].hostile_player_targets = true;
     let hunter = g.add_card_to_battlefield(0, catalog::blind_hunter());
     let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     kill(&mut g, hunter);

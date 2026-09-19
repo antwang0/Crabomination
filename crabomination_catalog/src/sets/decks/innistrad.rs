@@ -2084,7 +2084,10 @@ pub fn willow_geist() -> CardDefinition {
         keywords: vec![Keyword::Trample],
         triggered_abilities: vec![
             TriggeredAbility {
-                event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl),
+                // CR 603.2c — "whenever ONE OR MORE cards leave your graveyard":
+                // one fire per batch, however many left at once.
+                event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl)
+                    .once_per_batch(),
                 effect: Effect::AddCounter {
                     what: Selector::This,
                     kind: CounterType::PlusOnePlusOne,
@@ -3485,7 +3488,7 @@ pub fn no_way_out() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::Discard {
-                who: target_filtered(SelectionRequirement::Player),
+                who: target_filtered(SelectionRequirement::OpponentPlayer),
                 amount: Value::Const(2),
                 random: false,
             },
@@ -3746,7 +3749,7 @@ pub fn aim_for_the_head() -> CardDefinition {
                 what: target_filtered(SelectionRequirement::HasCreatureType(CreatureType::Zombie)),
             },
             Effect::ExileFromHand {
-                who: target_filtered(SelectionRequirement::Player),
+                who: target_filtered(SelectionRequirement::OpponentPlayer),
                 amount: Value::Const(2),
             },
         ]),

@@ -39,6 +39,18 @@ wrong — dangerously so — for the third.
   independently by a concurrent session, which also picked Nuclear Fallout;
   the duplicate was dropped in favour of this one. That is the **fifth**
   same-item collision on this branch in two days.)
+* ⚠ **Four variants this filter deliberately does NOT flag, recorded so the
+  next reader does not go looking for the card that "should" use them.**
+  `Effect::BindTargetSlot`, `Effect::BindTargetObjects`,
+  `Effect::BindScratch` and `Selector::ExactObjects` (2026-09-19) are
+  **runtime-only continuation wrappers**: the suspend splice builds them
+  (`effects/mod.rs`'s `modal_continuation`, `selector_for_entity`,
+  `rewrap_parked`, the `Vote` and `RollDie` tails) so a parked
+  continuation keeps the target slot, the objects or the entity its
+  iteration was handed. The **engine** builds them, which is what this
+  filter's "dead primitive" test asks about, so they read as live — and a
+  *card* that used one would be the bug. `Selector` is not one of the three
+  enums this script walks at all.
 * `Effect::GrantCastBackFromGraveyard` — waiting for a card that **does not
   exist**. It was built for a Pestilent Cauldron whose oracle text was
   fabricated ("If Pestilent Cauldron is in your graveyard, you may cast it

@@ -8911,7 +8911,9 @@ pub fn stiltzkin_moogle_merchant() -> CardDefinition {
                             .and(SelectionRequirement::ControlledByYou)
                             .and(SelectionRequirement::OtherThanSource),
                     },
-                    to: Some(PlayerRef::EachOpponent),
+                    // The permanent is slot 0; the **target opponent** that
+                    // gets it is slot 1.
+                    to: Some(PlayerRef::Target(1)),
                     duration: Duration::Permanent,
                 },
                 Effect::Draw {

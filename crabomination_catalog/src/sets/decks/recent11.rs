@@ -3,9 +3,9 @@
 //! `crabomination/src/tests/recent11.rs`.
 
 use crate::card::{
-    CardDefinition, CardType, SelectionRequirement, Selector, SpellSubtype, Subtypes, Value,
+    CardDefinition, CardType, SelectionRequirement, SpellSubtype, Subtypes, Value,
 };
-use crate::effect::{Effect, PlayerRef};
+use crate::effect::Effect;
 use crate::mana::{b, cost, g, generic};
 
 /// Earthbending Lesson — {3}{G} Sorcery — Lesson. Earthbend 4.
@@ -37,7 +37,7 @@ pub fn dai_li_indoctrination() -> CardDefinition {
         },
         effect: Effect::ChooseMode(vec![
             Effect::DiscardChosen {
-                from: Selector::Player(PlayerRef::EachOpponent),
+                from: crate::effect::shortcut::target_filtered(crate::card::SelectionRequirement::OpponentPlayer),
                 count: Value::ONE,
                 filter: SelectionRequirement::Nonland,
             },

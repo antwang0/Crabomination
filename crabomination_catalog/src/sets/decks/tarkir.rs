@@ -723,7 +723,7 @@ pub fn severance_priest() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Deathtouch],
         triggered_abilities: vec![etb(Effect::ExileChosenUntilSourceLeaves {
-            from: Selector::Player(PlayerRef::EachOpponent),
+            from: target_filtered(SelectionRequirement::OpponentPlayer),
             count: Value::Const(1),
             filter: SelectionRequirement::Nonland,
             return_to: ExileReturnZone::SpiritToken,

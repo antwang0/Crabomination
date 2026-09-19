@@ -1775,7 +1775,7 @@ pub fn enduring_tenacity() -> CardDefinition {
             TriggeredAbility {
                 event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
                 effect: Effect::LoseLife {
-                    who: Selector::Player(PlayerRef::EachOpponent),
+                    who: target_filtered(SelectionRequirement::OpponentPlayer),
                     amount: Value::TriggerEventAmount,
                 },
             },

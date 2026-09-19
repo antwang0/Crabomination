@@ -1526,13 +1526,20 @@ pub fn prismari_painter() -> CardDefinition {
 
 // ── Lorehold Archivist ─────────────────────────────────────────────────────
 
-/// Lorehold Archivist — {1}{R}{W}{2}{R}{W}, 3/2 Spirit Cleric with Vigilance.
-/// "Whenever this creature attacks, return target instant or sorcery
-/// card from your graveyard to your hand."
+/// Lorehold Archivist — {1}{R}{W} 3/2 Dwarf Artificer with First strike and
+/// the prepare spell **Restore Relic** ({2}{R}{W} Sorcery — "exile target
+/// artifact or creature card from your graveyard, create a token that's a
+/// copy of it"). "At the beginning of your upkeep, if there are three or more
+/// artifact and/or creature cards in your graveyard, this creature becomes
+/// prepared."
 ///
-/// Recurring graveyard recursion on attack — pairs well with
-/// Lightning Bolt, Heated Debate, Lash of Malice for an attack-and-
-/// recover engine.
+/// ⚠ It shipped as a *synthesised* card under the printed name — an attack
+/// trigger returning an instant or sorcery to hand, no prepare spell, no
+/// upkeep trigger. Found by `scripts/audit_invented_trigger.py`. The
+/// preparation plumbing is the one `studious_first_year` uses: a
+/// `prepare_spell` on the creature, castable while it carries a
+/// `CounterType::Prepared` counter, except that this one *earns* the counter
+/// at upkeep instead of entering with it.
 pub fn lorehold_archivist() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Archivist",
@@ -1546,17 +1553,58 @@ pub fn lorehold_archivist() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::FirstStrike],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
-            effect: Effect::Move {
-                what: Selector::one_of(Selector::CardsInZone {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::types::TurnStep::Upkeep),
+                EventScope::ActivePlayer,
+            )
+            .with_filter(Predicate::ValueAtLeast(
+                Value::CountOf(Box::new(Selector::CardsInZone {
                     who: PlayerRef::You,
                     zone: crate::card::Zone::Graveyard,
-                    filter: SelectionRequirement::HasCardType(CardType::Instant)
-                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
-                }),
-                to: ZoneDest::Hand(PlayerRef::You),
+                    filter: SelectionRequirement::Artifact
+                        .or(SelectionRequirement::Creature),
+                })),
+                Value::Const(3),
+            )),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::Prepared,
+                amount: Value::Const(1),
             },
         }],
+        prepare_spell: Some(std::sync::Arc::new(CardDefinition {
+            name: "Restore Relic",
+            cost: cost(&[generic(2), r(), w()]),
+            card_types: vec![CardType::Sorcery],
+            effect: Effect::Seq(vec![
+                Effect::CreateTokenCopyOf {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    source: Selector::Target(0),
+                    extra_creature_types: vec![],
+                    extra_card_types: vec![],
+                    override_pt: None,
+                    override_colors: None,
+                    enters_tapped: false,
+                    non_legendary: false,
+                    legendary: false,
+                    extra_keywords: vec![],
+                },
+                // The exile runs *after* the copy so `Target(0)` still names a
+                // graveyard card when `CreateTokenCopyOf` reads its copiable
+                // values (CR 707.2); the board result is the printed one.
+                Effect::Move {
+                    what: target_filtered(
+                        SelectionRequirement::InYourGraveyard.and(
+                            SelectionRequirement::Artifact
+                                .or(SelectionRequirement::Creature),
+                        ),
+                    ),
+                    to: ZoneDest::Exile,
+                },
+            ]),
+            ..Default::default()
+        })),
         ..Default::default()
     }
 }

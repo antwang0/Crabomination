@@ -656,7 +656,7 @@ fn despise_takes_a_creature_from_opp_hand() {
     g.players[0].mana_pool.add(Color::Black, 1);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
     }).expect("Despise castable for {B}");
     drain_stack(&mut g);
 
@@ -674,7 +674,7 @@ fn distress_takes_a_nonland_card_from_opp_hand() {
     g.players[0].mana_pool.add(Color::Black, 2);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
     }).expect("Distress castable for {B}{B}");
     drain_stack(&mut g);
 
@@ -1149,15 +1149,12 @@ fn coalition_relic_taps_to_add_charge_counter() {
 #[test]
 fn coalition_relic_precombat_burst_removes_all_charges_for_mana() {
     use crabomination::card::CounterType;
-    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
     use crabomination::game::types::TurnStep;
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::coalition_relic());
     g.battlefield_find_mut(id).unwrap().add_counters(CounterType::Charge, 4);
     g.active_player_idx = 0;
     g.step = TurnStep::PreCombatMain;
-    // Accept the optional "remove all charges, add a mana each" trigger.
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
     g.fire_step_triggers(TurnStep::PreCombatMain);
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::Charge), 0,
@@ -1167,7 +1164,12 @@ fn coalition_relic_precombat_burst_removes_all_charges_for_mana() {
 }
 
 #[test]
-fn coalition_relic_precombat_burst_can_be_declined() {
+fn coalition_relic_precombat_burst_is_mandatory() {
+    // "At the beginning of your first main phase, remove all charge counters
+    // from this artifact. Add one mana of any color for each charge counter
+    // removed this way." — no "you may". It shipped wrapped in `Effect::MayDo`,
+    // and `AutoDecider` declines every optional trigger, so the ability never
+    // once fired in bot play. Found by `scripts/audit_invented_may.py`.
     use crabomination::card::CounterType;
     use crabomination::game::types::TurnStep;
     let mut g = two_player_game();
@@ -1175,12 +1177,12 @@ fn coalition_relic_precombat_burst_can_be_declined() {
     g.battlefield_find_mut(id).unwrap().add_counters(CounterType::Charge, 2);
     g.active_player_idx = 0;
     g.step = TurnStep::PreCombatMain;
-    // AutoDecider declines the MayDo by default.
+    // No decider script: the default pilot must not be able to opt out.
     g.fire_step_triggers(TurnStep::PreCombatMain);
     drain_stack(&mut g);
-    assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::Charge), 2,
-        "declined — charges kept");
-    assert_eq!(g.players[0].mana_pool.total(), 0, "no mana when declined");
+    assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::Charge), 0,
+        "mandatory — the charges go whether the pilot wants them to or not");
+    assert_eq!(g.players[0].mana_pool.total(), 2, "one mana per charge removed");
 }
 
 #[test]
@@ -1219,6 +1221,58 @@ fn ghost_vacuum_exiles_target_card_from_graveyard() {
         "Bear left the graveyard");
     assert!(g.exile.iter().any(|c| c.id == bear_id),
         "Bear is now in the exile zone");
+    // And it is stamped with the Vacuum, which is what the second ability
+    // returns "each creature card exiled **with this artifact**" by.
+    assert_eq!(
+        g.exile.iter().find(|c| c.id == bear_id).unwrap().exiled_with,
+        Some(vac),
+        "the exile is linked to the source",
+    );
+}
+
+/// "{6}, {T}, Sacrifice this artifact: Put each creature card exiled with this
+/// artifact onto the battlefield under your control with a flying counter on
+/// it. Each of them is a 1/1 Spirit in addition to its other types." The half
+/// that had shipped missing, and the card is in three of the five pod decks.
+#[test]
+fn ghost_vacuum_returns_everything_it_ate_as_flying_spirits() {
+    use crabomination::card::CreatureType;
+    let mut g = two_player_game();
+    let vac = g.add_card_to_battlefield(0, catalog::ghost_vacuum());
+    let bear = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let bolt = g.add_card_to_graveyard(1, catalog::lightning_bolt());
+    // Eat one creature card and one noncreature card.
+    for victim in [bear, bolt] {
+        g.battlefield_find_mut(vac).unwrap().tapped = false;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: vac, ability_index: 0, target: Some(Target::Permanent(victim)),
+            additional_targets: Vec::new(), x_value: None, mode: None })
+        .expect("exile it");
+        drain_stack(&mut g);
+    }
+
+    g.battlefield_find_mut(vac).unwrap().tapped = false;
+    g.players[0].mana_pool.add_colorless(6);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: vac, ability_index: 1, target: None,
+        additional_targets: Vec::new(), x_value: None, mode: None })
+    .expect("{6}, {T}, Sacrifice");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield_find(vac).is_none(), "the Vacuum was the sacrifice cost");
+    // The Bolt is not a creature card, so it stays exiled.
+    assert!(g.exile.iter().any(|c| c.id == bolt), "a noncreature card is not returned");
+
+    let returned = g.battlefield_find(bear).expect("the creature card came back");
+    assert_eq!(returned.controller, 0, "under your control, not its owner's");
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (1, 1), "a 1/1, whatever it printed");
+    assert!(cp.keywords().contains(&Keyword::Flying), "the flying counter");
+    assert!(cp.subtypes().creature_types.contains(&CreatureType::Spirit), "a Spirit");
+    assert!(
+        cp.subtypes().creature_types.contains(&CreatureType::Bear),
+        "**in addition to** its other types",
+    );
 }
 
 #[test]

@@ -2647,6 +2647,9 @@ impl GameState {
                         // enters-tapped one, so re-decide tappedness against the
                         // copied characteristics.
                         self.reapply_enters_tapped_after_copy(card_id);
+                        // CR 306.5b / 310.7 — and the entering counters, for
+                        // the same reason and at the same point.
+                        self.reseed_entering_counters_after_copy(card_id);
                         // CR 707.5 — the copy's own ETB triggers fire. The
                         // list collected above was the copier's (usually
                         // empty); re-read it from the post-copy definition.

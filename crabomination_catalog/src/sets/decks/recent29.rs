@@ -514,7 +514,7 @@ pub fn watcher_of_the_wayside() -> CardDefinition {
         toughness: 2,
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::Mill {
-                who: Selector::Player(PlayerRef::EachOpponent),
+                who: target_filtered(SelectionRequirement::Player),
                 amount: Value::Const(2),
             },
             gain_life(2),

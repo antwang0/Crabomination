@@ -177,3 +177,61 @@ fn cr_116_2j_reveal_conspiracy_is_a_special_action() {
     assert!(g.stack.is_empty(), "special actions don't use the stack");
     assert!(!g.players[0].command[0].face_down);
 }
+
+/// A decider that hands out scripted die faces and defers every other ask to
+/// the `AutoDecider` — a scripted queue can't, since it answers in ask order
+/// and the engine's ask order is not the test's business.
+struct ScriptedDice(Vec<u8>);
+impl crabomination::decision::Decider for ScriptedDice {
+    fn decide(&mut self, decision: &crabomination::decision::Decision) -> DecisionAnswer {
+        match decision {
+            crabomination::decision::Decision::DieRoll { .. } if !self.0.is_empty() => {
+                DecisionAnswer::DieRoll(self.0.remove(0))
+            }
+            other => crabomination::decision::AutoDecider.decide(other),
+        }
+    }
+}
+
+/// CR 101.4 / 706.3a — the results table is consulted once per die, and every
+/// one of those arms happens even when an earlier one asks. Each remaining arm
+/// carries its own face (`Effect::BindScratch`), because `Value::LastDieRoll`
+/// reads `GameState.last_die_roll`, which no `EffectContext` carries and which
+/// the loop has long since moved on.
+#[test]
+fn cr_101_4_every_die_arm_runs_under_its_own_face_when_one_asks() {
+    use crabomination::game::TriggerPush;
+    let mut g = crabomination::game::multi_player_game(2);
+    g.players[0].wants_ui = true;
+    for _ in 0..4 {
+        g.add_card_to_hand(0, crabomination::catalog::lightning_bolt());
+    }
+    let hand = g.players[0].hand.len();
+    let life = g.players[0].life;
+    g.decider = Box::new(ScriptedDice(vec![2, 5]));
+    let src = g.add_card_to_battlefield(0, crabomination::catalog::grizzly_bears());
+    g.stack.push(
+        TriggerPush::new(src, 0, Effect::RollDie {
+            sides: 6,
+            count: Value::Const(2),
+            modifier: Value::ZERO,
+            reroll_at_most: 0,
+            // One arm for both faces, and it asks *then* reads its face. Both
+            // dice park: without the splice the second die's park overwrites
+            // the first's and that gain is lost, and without the re-wrap the
+            // survivor comes back reading the *other* die's face.
+            results: vec![(1, 6, Effect::Seq(vec![
+                Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+                Effect::GainLife {
+                    who: Selector::Player(PlayerRef::You),
+                    amount: Value::LastDieRoll,
+                },
+            ]))],
+            on_doubles: None,
+        })
+        .build(),
+    );
+    crate::multiplayer::resolve_answering(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand - 2, "both dice ran their arm (CR 706.3a)");
+    assert_eq!(g.players[0].life, life + 2 + 5, "each under its own face (CR 706.4 / 101.4)");
+}

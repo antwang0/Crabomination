@@ -176,7 +176,7 @@ pub fn kaitos_pursuit() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::Discard {
-                who: Selector::Player(PlayerRef::EachOpponent),
+                who: target_filtered(crate::card::SelectionRequirement::Player),
                 amount: Value::Const(2),
                 random: false,
             },
@@ -260,8 +260,10 @@ pub fn reito_sentinel() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Defender],
+        // "**Target player** mills three" — the trigger's own slot 0; the
+        // activated ability below has its own.
         triggered_abilities: vec![etb(Effect::Mill {
-            who: Selector::Player(PlayerRef::EachOpponent),
+            who: target_filtered(R::Player),
             amount: Value::Const(3),
         })],
         activated_abilities: vec![ActivatedAbility {

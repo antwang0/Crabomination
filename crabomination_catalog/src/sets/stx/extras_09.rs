@@ -1622,19 +1622,35 @@ pub fn strixhaven_reservoir() -> CardDefinition {
 
 // ── Lone Rider (batch 12, CR 506.5 exerciser) ──────────────────────────────
 
-/// Lone Rider — {1}{W}, 1/1 Human Knight, Haste.
+/// Lone Rider // It That Rides as One — {1}{W} 1/1 Human Knight (EMN), a
+/// transforming DFC. First strike, lifelink; "at the beginning of the end
+/// step, if you gained 3 or more life this turn, transform this creature"
+/// into a 4/4 Eldrazi Horror with first strike, trample and lifelink.
 ///
-/// Printed Oracle (synthesised): "Haste / Whenever this creature attacks
-/// alone, it gets +2/+0 and gains trample until end of turn."
+/// ⚠ It shipped as a *synthesised* card under the printed name — haste and
+/// an "attacks alone" pump, neither of them on the card. Found by
+/// `scripts/audit_invented_trigger.py`; `SelectionRequirement::
+/// IsAttackingAlone` (CR 506.5) keeps its other users.
 ///
-/// First card exercising the new `SelectionRequirement::IsAttackingAlone`
-/// predicate (CR 506.5). The trigger fires on every Attacks event but
-/// is gated by an intervening-if predicate: the trigger is pushed onto
-/// the stack only when this creature is the only declared attacker.
-/// Tests: `lone_rider_pumps_when_attacking_alone`,
-/// `lone_rider_does_not_pump_with_other_attackers`.
+/// The end-step trigger is `EventScope::AnyPlayer`: CR 116.3a's end step
+/// belongs to whoever's turn it is, and the printed clause says "the end
+/// step", not "your end step".
 pub fn lone_rider() -> CardDefinition {
     use crate::card::Predicate;
+    use crate::effect::PlayerRef;
+    use crate::game::types::TurnStep;
+    let it_that_rides_as_one = CardDefinition {
+        name: "It That Rides as One",
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Eldrazi, CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::FirstStrike, Keyword::Trample, Keyword::Lifelink],
+        ..Default::default()
+    };
     CardDefinition {
         name: "Lone Rider",
         cost: cost(&[generic(1), w()]),
@@ -1647,26 +1663,17 @@ pub fn lone_rider() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::FirstStrike, Keyword::Lifelink],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource).with_filter(
-                Predicate::EntityMatches {
-                    what: Selector::This,
-                    filter: SelectionRequirement::IsAttackingAlone,
-                },
-            ),
-            effect: Effect::Seq(vec![
-                Effect::PumpPT {
-                    what: Selector::This,
-                    power: Value::Const(2),
-                    toughness: Value::Const(0),
-                    duration: Duration::EndOfTurn,
-                },
-                Effect::GrantKeyword {
-                    what: Selector::This,
-                    keyword: Keyword::Trample,
-                    duration: Duration::EndOfTurn,
-                },
-            ]),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::End),
+                EventScope::AnyPlayer,
+            )
+            .with_filter(Predicate::LifeGainedThisTurnAtLeast {
+                who: PlayerRef::You,
+                at_least: Value::Const(3),
+            }),
+            effect: Effect::Transform { what: Selector::This },
         }],
+        back_face: Some(Box::new(it_that_rides_as_one)),
         ..Default::default()
     }
 }

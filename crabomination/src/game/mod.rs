@@ -9296,7 +9296,14 @@ impl GameState {
                 vec![]
             }
         };
-        if self.apply_enters_as_copy(id, ctrl, events) && !minted_extra_types.is_empty()
+        let copied = self.apply_enters_as_copy(id, ctrl, events);
+        if copied {
+            // CR 306.5b / 310.7 — a token or moved permanent that entered as a
+            // copy of a planeswalker or battle needs its entering counters
+            // seeded off the *copied* line; see the cast path in `stack.rs`.
+            self.reseed_entering_counters_after_copy(id);
+        }
+        if copied && !minted_extra_types.is_empty()
             && let Some(c) = self.battlefield.find_by_id_mut(id)
         {
             let mut def = (**c.definition).clone();
@@ -16543,14 +16550,47 @@ impl GameState {
         if self.temporary_control.is_empty() {
             return;
         }
-        let mut kept = Vec::new();
-        for tc in std::mem::take(&mut self.temporary_control) {
+        let all = std::mem::take(&mut self.temporary_control);
+        // CR 800.4c's "there is no other effect giving control of that object
+        // to another player in the game" — asked of the *whole* list rather
+        // than of the entries already processed, so it does not depend on the
+        // order control effects were registered in.
+        let survives_elsewhere = |card: CardId, idx: usize| {
+            all.iter()
+                .enumerate()
+                .any(|(j, o)| j != idx && o.card == card && !which.contains(&o.duration))
+        };
+        let mut kept: Vec<TempControl> = Vec::new();
+        for (idx, tc) in all.iter().cloned().enumerate() {
             let on_battlefield = self.battlefield.find_by_id(tc.card).is_some();
             if !on_battlefield {
                 continue; // card left play — nothing to revert
             }
             if which.contains(&tc.duration) {
-                self.change_control(tc.card, tc.original_controller);
+                // CR 800.4c — "If an effect that gives a player still in the
+                // game control of an object ends, there is no other effect
+                // giving control of that object to another player in the
+                // game, and the player who controlled that object by default
+                // has left the game, the object is exiled."
+                //
+                // Without this the object simply stays where it is:
+                // `change_control` refuses the move under CR 800.4b and
+                // returns `None`, so the borrower keeps a permanent for the
+                // rest of the game that the rules say should be gone. The
+                // reachable shape is three-deep — A owns it, B takes it
+                // permanently, C takes it until end of turn, B leaves — which
+                // is why 800.4a's own revert (it only touches permanents the
+                // departing seat controls *right now*) does not cover it.
+                //
+                let default_gone = !self
+                    .players
+                    .get(tc.original_controller)
+                    .is_some_and(|p| p.is_alive());
+                if default_gone && !survives_elsewhere(tc.card, idx) {
+                    self.remove_from_battlefield_to_exile(tc.card);
+                } else {
+                    self.change_control(tc.card, tc.original_controller);
+                }
             } else {
                 kept.push(tc);
             }

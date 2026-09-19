@@ -21,8 +21,11 @@ Four changes, all reversible from `git log -p`, and **no body was edited**:
 
 | Set / topic | Status | Lines |
 | --- | --- | --- |
+| [The fan-out family's third ratchet — "each player" is not "each opponent"](#the-fan-out-familys-third-ratchet--each-player-is-not-each-opponent) | closed — 1 residual | 22 |
+| [The synthesised-name class — 48 factories, and the two columns that can now read them](#the-synthesised-name-class--48-factories-and-the-two-columns-that-can-now-read-them) | open — 11 fixed, 48 to read | 37 |
+| [The TARGET-clause class — 126 cards printed "target opponent" and hit the whole table](#the-target-clause-class--126-cards-printed-target-opponent-and-hit-the-whole-table) | closed — 1 residual | 60 |
 | [Target-deck card defects, and why they are all blocked on one thing](#target-deck-card-defects-and-why-they-are-all-blocked-on-one-thing) | open | 33 |
-| [CR 603.2c batches — the damage half is closed, the graveyard half is filed](#cr-6032c-batches--the-damage-half-is-closed-the-graveyard-half-is-filed) | open | 36 |
+| [CR 603.2c batches — four clauses closed, and the ratchets that hold them](#cr-6032c-batches--four-clauses-closed-and-the-ratchets-that-hold-them) | closed — residuals only | 72 |
 | [The printed-clause ratchet family — one body, and where its needles break](#the-printed-clause-ratchet-family--one-body-and-where-its-needles-break) | open | 58 |
 | [The printed *keyword* and printed *numbers* ratchets — the join, not the text](#the-printed-keyword-and-printed-numbers-ratchets--the-join-not-the-text) | open | 56 |
 | [The two once-a-turn limits, and the one card that cannot carry the flag](#the-two-once-a-turn-limits-and-the-one-card-that-cannot-carry-the-flag) | open | 47 |
@@ -153,37 +156,240 @@ which in a Commander pod is Judith pinging.
 🟡 **Deflecting Swat** still counters only a *spell*; printed is "spell or
 ability", plus "you may choose new targets for it". Unchanged by this pass.
 
-## CR 603.2c batches — the damage half is closed, the graveyard half is filed
+## CR 603.2c batches — four clauses closed, and the ratchets that hold them
 
-`catalog_registration::every_batched_damage_trigger_fires_once_a_batch` ratchets
-the **damage** clause and it is green: Elegy Acolyte, Haliya, Kaito, Kastral,
-Kutzil, Malcolm, Nature's Will and Prosperous Thief took `once_per_batch`
-2026-09-19; Killian's Confidence and Pyrewild Shaman need no flag (a
-`FromYourGraveyard` trigger is deduped by the graveyard walk itself); Quartzwood
-Crasher and Magmatic Galleon are the two signed-off names, both in
-INCOMPLETE_CARDS.
+Four `clause_ratchet` clauses in `core_rules/catalog_registration.rs`, all
+green, all keyed off the **trigger condition** rather than the effect (an
+"…leave your graveyard, this deals 1 damage to each opponent" line belongs to
+the graveyard ratchet, not the damage one):
 
-⏳ **The same defect in the `CardLeftGraveyard` clause is unfixed, and it is 12
-cards.** "Whenever one or more cards leave your graveyard" fires per card today,
-so exiling a five-card graveyard pays five times. `once_per_batch` is the whole
-fix (Attuned Hunter carries it and `cr_603_2c_once_per_batch_fires_once_a_batch_
-and_again_next_batch` proves the mechanism), and the reason it was not taken is
-**pool membership, not difficulty**:
+| ratchet | checked | fixed 2026-09-19 |
+| --- | --- | --- |
+| `every_batched_damage_trigger_fires_once_a_batch` | 20 | 8 |
+| `every_graveyard_leave_trigger_fires_once_a_batch` | 23 | 14 |
+| `every_batched_attack_trigger_fires_once_a_declaration` | 13 | 3 |
+| `every_batched_zone_change_trigger_fires_once_a_batch` | 23 | 5 |
 
-| Card | Pool |
-| --- | --- |
-| Ark of Hunger, Garrison Excavator, Spirit Mascot | SOS |
-| Hardened Academic | cube **and** SOS |
-| Owlin Historian | cube |
-| Chalk Outline, Dredger's Insight, Fuming Effigy, Insidious Roots, Quintorius Field Historian, Rot Farm Mortipede, Soul Enervation, Stonebound Mentor, Willow Geist, Kheru Goldkeeper | none |
+**Damage half.** Elegy Acolyte, Haliya, Kaito, Kastral, Kutzil, Malcolm,
+Nature's Will and Prosperous Thief took `once_per_batch`; the engine's batch
+key gained the damaged subject, so the collapse is one fire **per damaged
+player**. Killian's Confidence and Pyrewild Shaman need no flag — a
+`FromYourGraveyard` trigger is deduped by the graveyard walk itself, which is
+the third spelling the ratchet accepts.
 
-Five of them are in the 2-player pools, so fixing the class moves the committed
-bench invariant and the golden traces — a re-bless the perf work owns, and none
-of the twelve is in a pod deck, so there is no Commander reason to force it now.
-Take the ten pool-free ones any time; take the five with a bench run in hand.
-⚠ A *partial* fix is worse than none here: the ratchet has to go green in one
-step or it acquires five signed-off names that mean "deferred", which is how a
-ratchet stops being read.
+**Graveyard half.** Fourteen cards fired once *per card leaving*, so a
+five-card graveyard exiled at once paid five times (Quintorius made five 3/2
+Spirits where the card makes one). ⚠ Five of the fourteen are in the `cube` /
+SOS pools, which is why the previous pass deferred them — **and the deferral
+was wrong on the facts**: `--bench` reads **195,806 / 27.49 / 611.9 / 0
+stalls**, byte-identical to the committed invariant, because several cards
+leaving one graveyard at once is rare in those pools. *Measure the pool
+question, do not assume it.*
+
+**Attack half.** Attackers are declared simultaneously (CR 508.1), so the
+declaration is one event. Coveted Jewel drew its attacker's controller **nine**
+cards off three unblocked creatures; Reveille Squad asked its controller the
+same untap question once per attacker; Meriadoc Brandybuck carried
+`once_per_turn`, which is the stricter CR 603.3d cap and is *not* printed — a
+second combat made no Food at all. ⚠ **`EventKind::YouAttack` is the better
+spelling and the ratchet accepts it**: it is dispatched once per combat by
+`declare_attackers` and needs no flag (Ancestor Dragon via
+`shortcut::on_you_attack`, Choco, The Ur-Dragon). Only an ability with a
+per-attacker *filter* — "one or more **Halflings** you control" — has to stay
+on `Attacks` and carry the flag. 🟡 Meriadoc is still one fire per
+*declaration* rather than per attacked player: the attack path's batch key is
+`(listener, ability)` with no defender in it, so a pod split across two seats
+makes one Food where the card makes two. The damage path's key does carry the
+subject; the attack path's does not, and that is the next thing to unify.
+
+⚠ **What each ratchet signs off, and none of it is an unbatched trigger.**
+Damage: **Quartzwood Crasher** (wants the batch's summed damage for its X) and
+**Magmatic Galleon** (the clause is not modelled at all), both in
+INCOMPLETE_CARDS. Attack: **Frontier Warmonger** (a `StaticEffect::
+GrantKeywordToAttackers`, not a trigger), **Sabotage Strategist** ("those
+creatures get -1/-0" — one fire per creature is how one instance reaches every
+member of the set; batching it would pump one and leave the rest) and
+**Orim's Prayer** (per-attacker `GainLife 1` sums to the printed amount, and a
+batched count would need "attacking *you*", which no `SelectionRequirement`
+draws). Hedge Shredder and Kaya, Spirits' Justice are not signed off but
+excluded — "put INTO your graveyard from your library" and "put into exile"
+are different events, which is why the graveyard predicate anchors on *leave*.
+
+**Zone-change half.** "Whenever one or more … enter / die / leave the
+battlefield." Blood Spatter Analysis put a bloodstain counter on itself *per
+creature that died*, so one board wipe filled all five and sacrificed it on
+the spot; Chainsaw took a rev counter per body; Dour Port-Mage drew per
+creature a mass bounce took; Aang got an experience counter apiece, and its
+own comment had said so since it shipped; Frantic Scapegoat posed its "you
+may suspect one of the other creatures" ask once per creature entering.
+**Woodland Champion is signed off**: "put *that many* +1/+1 counters" as a
+per-token `+1/+1` sums to exactly the printed count, and batching it would
+need the size of the entering batch, which no `Value` reads.
+
+✅ **`CounterAdded` is CLOSED as a non-question, read rather than assumed.**
+`GameEvent::CounterAdded` carries a `count`, so one placement of three
+counters is one event and "whenever one or more +1/+1 counters are put on
+this creature" already fires once. Eleven cards read as gaps against a naive
+predicate (Benthic Biomancer, Scurry Oak, Evolution Witness, Knighted Myr,
+Pensive Professor, Fetid Gargantua, Dreamdrinker Vampire, Constable of the
+Realm, Wildwood Scourge, Simic Ascendancy, Lonis) and **none of them is one**.
+The only residual is two *different* effects placing counters in one batch,
+which no shipped card produces.
+
+📐 **The shape all four share, and the thing to copy for the next clause:
+anchor the predicate on the TRIGGER CONDITION, not the line.** "…leave your
+graveyard, this deals 1 damage to each opponent" is the graveyard ratchet's
+card and not the damage one; reading the whole line put Ark of Hunger, Fuming
+Effigy and Chandra, Fire Artisan in the wrong list on the first run. What is
+left outside the four clauses: Kaya, Spirits' Justice ("…are put into exile",
+a known residual) and City in a Bottle (a static dressed as a trigger).
+
+## The fan-out family's third ratchet — "each player" is not "each opponent"
+
+`audit_each_opponent.py` asks "the print says each opponent, does the body name
+one?"; `audit_target_opponent.py` asks the mirror. `scripts/audit_each_player.py`
+asks the third question: the fan-out is **present and wrong by one seat** — the
+controller. Both directions are wrong at two seats as well, which is why the
+yield is small: **5 hits, 1 real**, and the script's own docstring records the
+other four so nobody re-triages them (two decompositions, one trigger *scope*,
+one documented friend/foe approximation). It reads **1 / 1 allowlisted / 0
+unexplained / 0 stale** now, with a staleness half like the loop-splice
+ratchet's.
+
+📐 **The real find is the reusable part, and it is about the ratchets rather
+than the card.** **Parallax Nexus** is a *target-clause* defect — "Remove a
+fade counter: **target opponent** exiles a card from their hand", shipped as a
+**discard** by **every** opponent — and `audit_target_opponent.py` could not
+see it, because its precision gate drops any card whose printed text also
+carries a per-opponent clause, and Parallax Nexus's leave-trigger says "each
+player returns to their hand all cards they own exiled with it". **The gate
+that keeps one ratchet honest is the hole in the other**, so run the family,
+not a member. ⏳ Residual on the card: that leave-trigger return is still
+missing — `Effect::ExileFromHand` carries no `exiled_with` stamp for it to
+find.
+
+## The synthesised-name class — 48 factories, and the two columns that can now read them
+
+This file has known the shape since the fifty-fourth pass ("**A synthesised
+card wearing a printed card's name**", below): a printed name, cost, types and
+P/T with an invented ability underneath. Its own note explains why it survives
+review — the *characteristics* get corrected against Scryfall at some point and
+the ability never does, so `audit_catalog_stats` and `audit_printed_body` both
+read zero on the card. **No column compared abilities.** Two now do
+(`audit_invented_may.py`, `audit_invented_trigger.py`; ENGINE_BACKLOG's
+forty-fifth find has the method and the three reader bugs), and between them
+they named eleven, all fixed.
+
+**The remaining reading list is 48 factories whose doc comment says
+"synthesised"/"invented" and whose `name:` is a card Scryfall owns.** It is a
+reading list, not a proof: some of them are correct bodies under a doc that has
+simply gone stale, which is the same trap `audit_doc_drift` measured at 338
+stale comments and 3 real defects. By file, largest first:
+
+```
+15  stx/extras_03.rs       6  stx/extras_04.rs       3  stx/silverquill.rs
+ 7  decks/modern.rs        3  stx/iconic.rs          2  stx/mono.rs
+ 2  eoe.rs                 1 each: one.rs, mod_set/creatures.rs, mod_set/instants.rs,
+                           stx/extras_{01,02,08,09}.rs, stx/lessons.rs, stx/shared.rs,
+                           decks/recent2.rs
+```
+
+The census is ten lines of Python: walk every `pub fn … -> CardDefinition`,
+take the doc comment above it, keep the ones whose comment matches
+`synthesi|invented|made-up`, resolve the card's name the way the two auditors
+do (**every** string literal, prefer the slug that matches the `pub fn`), and
+keep the ones whose name is in `scripts/.scryfall_cache.json`.
+
+⚠ **Work them by reading the oracle against the BODY, never against the doc
+comment** — three of the four cards in the original fifty-fourth-pass batch had
+a comment describing the card the body used to be.
+
+## The TARGET-clause class — 126 cards printed "target opponent" and hit the whole table
+
+**The mirror of `audit_each_opponent.py`, and the half that only bites at three
+seats or more.** A card printed "target opponent discards two cards" modelled as
+`Selector::Player(PlayerRef::EachOpponent)` is *correct in a duel* — one
+opponent is the target — and hits every seat in a pod. That is why 126 of them
+survived review: the duel is the review.
+
+`scripts/audit_target_opponent.py` is the ratchet. A hit needs three things,
+and the third is what keeps the precision up: the printed text names a
+**target** player or opponent (reminder text stripped); the printed text has
+**no** per-opponent clause at all, so nothing in the card a fan-out could
+legitimately be modelling; and the body names a fan-out `PlayerRef` in a
+*recipient* position. Three contexts are deliberately not recipients —
+`Predicate::` / `condition:` (Archive Trap's "if an opponent searched their
+library", Ravenous Trap's graveyard count), `PlayersMayAccept` (Browbeat's
+printed "any player may…") and a `Gift`'s token (the promisee, which the
+engine has no single-recipient shape for).
+
+**Reading: 126 → 1.** The one left is **Consumed by Greed**, and the reason is
+structural: the base effect has one target (the opponent) and the *gifted*
+effect has two (the opponent plus a graveyard creature at slot 0), so giving
+the opponent slot 0 needs the gift branch's slot to move — and slot 1 only
+exists when the gift was promised.
+
+⚠ **The fix is not just a search-and-replace, and four things went wrong that
+the next reader should not rediscover.**
+
+1. **`Selector::Player(PlayerRef::EachOpponent)` is mechanical; a bare
+   `PlayerRef::EachOpponent` is not.** The bare form also appears in
+   `Predicate::` conditions and in `Gift` recipients, where the fan-out is the
+   printed text. 89 cards took the mechanical rewrite; the other 37 were read
+   by hand.
+2. **A card's *other* target slot may belong to a different ability.** An
+   Aura's enchant target and its ETB trigger's target are different slots, so
+   "this card already has a slot 0" is not a blocker — but two clauses in one
+   spell (Eriette's Whisper, Searing Blaze, Harmless Offering, Stiltzkin,
+   Mire's Malice, Aggressive Negotiations) genuinely need the second slot
+   numbered, and `ApplyToTargets` cannot express the pair (it rebinds every
+   supplied target to slot 0). `Effect::OptionalTargets { min, body }` is what
+   can.
+3. **⚠⚠ A "target player" slot aims at the CASTER unless the seat's
+   `hostile_player_targets` flag is on** — it is on in `EvalWeights::default()`
+   (round 67) and off in a bare `two_player_game()`, which is why 24 tests
+   needed the flag set rather than a target passed. Read
+   `player_slot_is_hostile` before assuming the picker will do the right thing.
+4. **⚠ And the classifier that decides the slot's polarity read `any` over a
+   `Seq`'s children.** Oildeep Gearhulk is `Seq[DiscardChosen(target player),
+   Draw(that player)]`; the draw looked like a gift, so the whole trigger aimed
+   at its own controller and the Gearhulk made its **caster** discard.
+   `friendliness_of_targeting_children` reads the **first** targeting child
+   now, which leaves Shadrix Silverquill's `Seq[Draw, LoseLife]` mode friendly
+   and flips this one.
+
+**And five engine walkers had no arm for the slot these cards now declare** —
+caught by `target_walkers::every_declared_target_slot_is_answerable` and
+`cr_601_2c_every_catalog_target_filter_is_surfaced`, which is what those
+ratchets are for: `ExileChosenUntilSourceLeaves`, `ExileFromHandTaxed`,
+`ExileChosenFromHand`, `ExileFromGraveyard`, `Fateseal` and
+`PayLifeRevealExileFromHand`.
+
+**Three of the 126 were in a pod target deck** and so outranked the rest:
+Endurance (Tatyova), Indulgent Tormentor (Judith) and Nihil Spellbomb (Judith).
+Each has an N-seat regression test asserting *one* seat is hit.
+
+⚠ **And the audit grew a SECOND PASS because its own first pass shipped one:
+a filter wider than the print.** `target_filtered(R::Player)` on a card printed
+"**target opponent**" lets the caster aim at themselves — legal to the engine,
+illegal on the card. Seven were shipped: No Way Out, Aim for the Head, Mana
+Clash, Shadow Slice, Tourach, Ashiok's +2 and Lord Xander's two, one of them
+introduced here. Lord Xander's third trigger was the other half of the same
+read: "**defending player** mills half their library" is not a target at all
+and at three seats is not "an opponent" either — it is
+`PlayerRef::DefendingPlayer`. **Reading: 0.**
+
+📐 **Five cards were wrong beyond the targeting**, found by reading the oracle
+while fixing the clause: Collective Defiance had **no escalate at all** and two
+of its three modes were different cards ("each opponent discards three then
+draws three" for "target player discards their hand, then draws that many");
+Relic of Progenitus's `{T}` exiled every opponent's whole graveyard where the
+printed ability exiles **one card** from one; Searing Blaze scaled its player
+half with landfall, which raises only the creature's; Endurance could not
+target its own controller, which is the card's main Modern use; Kaya, Spirits'
+Justice's −2 is still one opponent where the print is one per other player
+(filed in `INCOMPLETE_CARDS.md` — `ForEachOpponentTarget` cannot sit behind a
+fixed slot 0).
 
 ## Target-deck card defects, and why they are all blocked on one thing
 
@@ -195,25 +401,80 @@ every one of them is in the `cube` pool**, which is the finding:
 
 | Card | Decks | Residual |
 | --- | --- | --- |
-| Ghost Vacuum | Hanna, Sigarda, Tatyova | 🟡 the `{6}, {T}, Sacrifice:` half — "put each creature card exiled **with this artifact** onto the battlefield" — is unmodelled. `ExileLink` / `ExileUntilSourceLeaves` is the existing link primitive and would carry it; nothing else is missing |
-| Simian Spirit Guide | Judith | the "exile from hand: add {R}" mana ability needs a from-hand activation zone. In an aristocrats deck it is a vanilla 2/2 today |
-| Sowing Mycospawn | Sigarda | the searched land enters **tapped** and the oracle does not say tapped — a strict nerf, and the card's own comment has said so since it shipped |
-| Delighted Halfling | Sigarda, Tatyova | the legendary-only + uncounterable spend rider is dropped |
-| Obstinate Baloth | Tatyova | the discard-to-battlefield clause is dropped |
-| Spark Double | Tatyova | the planeswalker-copy half is omitted |
-| Wall of Roots | Tatyova | the -0/-1 counter is a permanent `PumpPT` stand-in |
-| Delver of Secrets | Tatyova | the transform half is approximated |
+| ~~Ghost Vacuum~~ | Hanna, Sigarda, Tatyova | ✅ **fixed 2026-09-19, and the sizing a day earlier was WRONG on all three counts.** `Selector::CardExiledWithSource` is already plural (its doc says "that single card" and its body is a `filter().collect()`); `Effect::AddKeywordCounter` is the flying counter; `SetBasePT` + `AddCreatureTypes` are the "1/1 Spirit in addition to its other types". The composition is `ForEach` over the linked exiles — it binds each entity as the body's `TriggerSource` — with an `If` on `Creature` in place of the filtered selector that does not exist. **Zero new primitives.** The first ability moved to `ZoneDest::ExileWithSourceStamp` so the link is there to return by |
+| ~~Simian Spirit Guide~~ | Judith | ✅ **the row was stale** — `from_hand: true, exile_self_cost: true, add_mana([Red])` has shipped, with `modern::coverage_backfill::simian_spirit_guide_pitches_from_hand_for_red` on it. The bot's `available_mana` does not *count* a Spirit Guide in hand, which is a deliberate downward bias, not a missing card |
+| ~~Sowing Mycospawn~~ | Sigarda | ✅ **fixed 2026-09-19** — the tutored land enters untapped, and the assertion is now in the card's own test |
+| ~~Delighted Halfling~~ | Sigarda, Tatyova | ✅ **fixed 2026-09-19** — `SpendRestriction::LegendarySpellUncounterable` (a real restriction *plus* the Cavern-shaped stamp), tested both ways |
+| ~~Obstinate Baloth~~ | Tatyova | ✅ **fixed 2026-09-19** — no primitive was needed: `CardDefinition::opponent_discard_deploys` is Dodecapod's replacement and `add_counters` is a no-op at zero, so the same field carries a counterless deploy. `--bench` byte-identical, fourth in a row |
+| ~~Spark Double~~ | Tatyova | ✅ **fixed 2026-09-19** — all three exceptions had shipped missing, not just one: the filter was creature-only, the extra counter was always `+1/+1`, and `non_legendary` (CR 707.2e, the whole reason the card is a legend-rule dodge) was unset. The planeswalker half needed one engine fix — a copy of a planeswalker was entering with **no** loyalty counters and dying to the first SBA sweep, because the entering counters are seeded off the printed line before the copy rewrites it (`reseed_entering_counters_after_copy`, its own commit) |
+| ~~Wall of Roots~~ | Tatyova | ✅ **fixed 2026-09-19** — `CounterType::MinusZeroMinusOne` already existed and `p_t_delta` already summed it; the card just wasn't using it. The stand-in was invisible to everything that reads, moves, removes or proliferates counters, and applied in layer 7c where a counter applies in 7d. `--bench` byte-identical, third in a row |
+| ~~Delver of Secrets~~ | Tatyova | ✅ **the row was mis-filed** — the transform half is complete (`back_face`, the upkeep trigger, the instant/sorcery test, `Effect::Transform`). What is simplified is the printed "you may reveal", modelled as an intervening-`if`, and that is the **optimal** line rather than a gap: the only rational yes is exactly when the top card is an instant or sorcery, so the modelled card reveals strictly less than a seat that always says yes. The card's own trigger had no test and now has one |
 
-⚠ **The blocker is pool membership, not difficulty.** Each of the eight is a
-card the `cube` deck builder can draw, so changing any of their behavior moves
-the committed bench aggregate and can move a golden trace — a re-bless that
-belongs with a `--release --bench` run in hand, not scattered across eight card
-commits. **Take them as one batch with one bench reading**, in roughly the order
-above (Ghost Vacuum first: three decks, and the primitive exists). Arcane
-Signet, which the same walk flagged in all five decks, was a **stale doc
+⚠⚠ **THE "BLOCKED ON A BENCH RE-BLESS" PREMISE IS FALSE, AND TWO SESSIONS
+FOUND IT INDEPENDENTLY.** All eight are cards the `cube` deck builder can draw,
+so the worry was that a behaviour change to any of them moves the committed
+bench aggregate and a golden trace. **It is a measurement, not a veto**: the
+CR 603.2c graveyard batch above changed five pool cards and `--bench` came back
+byte-identical, and Sowing Mycospawn + Delighted Halfling changed two more with
+the same result (195,806 / 27.49 / 611.9 / 0 stalls, every golden trace held).
+Pool *membership* is not pool *reach* — the bench plays `--decks fixed` and the
+traces are fixed-seed games, and a card has to actually be drawn and played in
+one of them to move a number. **Take the rest one or two at a time with a
+`--bench` reading in hand**, and re-bless only if the reading actually moves.
+⚠⚠ **THE TABLE IS EMPTY, AND ITS OWN SIZINGS WERE THE LAST THING TO GO.**
+Six of the eight are fixed, two were never broken, and **five of the six
+needed no new primitive at all** (the counter type, the
+discard-replacement field and the `non_legendary` flag all already existed and
+the card was not using them; one was a single word), and the sizing above says
+— the counter type, the discard-replacement field, the `non_legendary` flag,
+the plural exile selector, the keyword-counter effect and the base-P/T and
+add-type effects all already existed and the card was simply not using them.
+Only Spark Double needed engine work, and that was one helper. `--bench` came
+back byte-identical after every single one.
+
+⚠⚠ **THREE of the eight rows were wrong about the code, and so was the one
+sizing this file wrote itself.** Simian Spirit Guide and Arcane Signet had
+already shipped; Delver of Secrets' "transform half is approximated" was about
+an optional *reveal* the engine answers optimally, not the transform; and
+Ghost Vacuum — filed here as "three missing pieces, the only real build" —
+needed none of them. **Read the definition before believing the row, and grep
+for the primitive before sizing the build.** Four wrong claims out of eight,
+all of them about code that was already there.
+
+Arcane Signet, which the same walk flagged in all five decks, was a **stale doc
 comment** and nothing else — `tap_add_commander_identity()` has shipped for a
-while; the comment is corrected.
+while; the comment is corrected. Two of the eight rows turning out stale is the
+standing lesson: **read the definition before believing the row.**
 
+## Judith (BR), the pod's losing seat — CLOSED, and what ruled the cards out
+
+**Closed 2026-09-19 by the list retune** (28 of 72 nonbasics), which took
+Judith from 6.2 % to **14.6 %** at four seats and flattened the field to
+40.8/14.6/20.3/24.3. The retune is the record; this section is kept for the
+half that came first and is the reusable part — **the cards were ruled out
+before anything was rebuilt**, which is why the retune was the right lever.
+
+Seed 43, 4,000 four-seat games read Sigarda 42.6 % / Tatyova 26.3 % / Hanna
+23.3 % / **Judith 7.8 %**, and in a *duel* Judith read **23.7 %** against
+Sigarda — so it was never a multiplayer artifact and never a stall (100 % of
+those games decided, `undecided_by` all zero). Then, with no build spent:
+
+* `audit_incomplete`'s structural pass was clean — no dead mode or dead
+  ability in the list.
+* Of the deck's **73 distinct cards**, exactly two carried an approximation
+  note, and both turned out to be non-issues: Arcane Signet's "no identity
+  gate" line was stale, and Chain Lightning's pay-to-copy half is upside the
+  card never gets. Simian Spirit Guide, which the target-deck defect table
+  above listed as a vanilla 2/2, had shipped its pitch ability with a test.
+  **Nothing in the list was worse than printed.**
+* The commander itself was faithful: the +1/+0 anthem is a `PumpPT` static
+  over `Creature ∧ ControlledByYou ∧ OtherThanSource`, and the death trigger
+  is `CreatureDied / YourControl` filtered `NotToken ∧ OtherThanSource`.
+
+📐 **The method, which is the transferable part: price the CARDS before
+rebuilding the LIST.** A deck losing three-to-one has two explanations and
+only one of them is a bug; a card audit is an afternoon and a list rebuild
+re-blesses the pod table.
 ## The printed-clause ratchet family — one body, and where its needles break
 
 `core_rules/catalog_registration.rs` now holds a family of ratchets that all

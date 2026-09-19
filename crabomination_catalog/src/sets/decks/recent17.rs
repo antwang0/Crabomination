@@ -119,8 +119,9 @@ pub fn angel_of_finality() -> CardDefinition {
         power: 3,
         toughness: 4,
         keywords: vec![Keyword::Flying],
+        // "Exile **target player's** graveyard" — one seat, chosen.
         triggered_abilities: vec![etb(Effect::ExilePlayerGraveyard {
-            who: PlayerRef::EachOpponent,
+            who: PlayerRef::Target(0),
             filter: None,
         })],
         ..Default::default()

@@ -662,7 +662,7 @@ pub fn drowned_secrets() -> CardDefinition {
                 },
             ),
             effect: Effect::Mill {
-                who: Selector::Player(PlayerRef::EachOpponent),
+                who: target_filtered(SelectionRequirement::Player),
                 amount: Value::Const(2),
             },
         }],

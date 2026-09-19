@@ -320,7 +320,7 @@ fn rakdos_augermage_mutual_discard() {
     g.add_card_to_hand(1, catalog::grizzly_bears());
     let (h0, h1) = (g.players[0].hand.len(), g.players[1].hand.len());
     g.perform_action(GameAction::ActivateAbility {
-        card_id: mage, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
+        card_id: mage, ability_index: 0, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("activate Augermage (sorcery speed, our main)");
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), h0 - 1, "you discarded one");
@@ -626,7 +626,7 @@ fn nihilistic_glee_discard_drains() {
     g.players[0].mana_pool.add_colorless(2);
     let (l0, l1) = (g.players[0].life, g.players[1].life);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: glee, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
+        card_id: glee, ability_index: 0, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None, mode: None,
     })
     .expect("activate drain");
     drain_stack(&mut g);

@@ -3144,6 +3144,86 @@ fn cr_903_9a_commander_dies_then_returns_as_an_sba() {
     assert!(g.players[0].graveyard.iter().all(|c| c.id != cmd));
 }
 
+/// Put `cmd` from its owner's command zone onto the battlefield, the way the
+/// 903.9a test does — the seating is what the tally is keyed on, not the zone.
+fn command_zone_to_battlefield(g: &mut GameState, seat: usize, cmd: crabomination::card::CardId) {
+    let pos = g.players[seat].command.iter().position(|c| c.id == cmd).expect("in command zone");
+    let card = g.players[seat].command.remove(pos);
+    g.battlefield.push(card);
+    g.clear_sickness(cmd);
+}
+
+/// One seeded swing of `attacker` into `victim`, damage resolved.
+fn swing(g: &mut GameState, attacker: crabomination::card::CardId, victim: usize) {
+    g.priority.player_with_priority = g.active_player_idx;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker,
+        target: AttackTarget::Player(victim),
+    }]))
+    .expect("declare the attack");
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().expect("combat resolves");
+    drain_stack(g);
+}
+
+/// CR 903.10a — the 21 is "by the same commander over the course of the
+/// game", so the tally is a property of the *card* and survives it leaving
+/// the battlefield. A commander that dies, goes to the command zone under
+/// 903.9a and comes back keeps every point it has dealt: the key is
+/// `(victim, CardId)` and a command-zone round trip does not re-issue the id.
+#[test]
+fn cr_903_10a_commander_damage_survives_a_zone_change() {
+    let mut g = multi_player_game(3);
+    let cmd = g.seat_commanders(0, vec![test_commander()])[0];
+    g.active_player_idx = 0;
+    command_zone_to_battlefield(&mut g, 0, cmd);
+    swing(&mut g, cmd, 1);
+    assert_eq!(g.commander_damage.get(&(1, cmd)).copied(), Some(1), "one swing, one point");
+
+    // Round trip: battlefield → graveyard → command zone (CR 903.9a's SBA).
+    let mut evs = vec![];
+    g.destroy_permanent(cmd, false, &mut evs);
+    g.check_state_based_actions();
+    assert!(g.players[0].command.iter().any(|c| c.id == cmd), "back in the command zone");
+    command_zone_to_battlefield(&mut g, 0, cmd);
+    swing(&mut g, cmd, 1);
+
+    assert_eq!(
+        g.commander_damage.get(&(1, cmd)).copied(),
+        Some(2),
+        "the tally is cumulative across the zone change, not restarted",
+    );
+}
+
+/// CR 903.10a — and it survives a *control* change. "The same commander" is
+/// the card its owner designated (CR 903.3, which control does not move), so
+/// a stolen commander's combat damage still lands on the same
+/// `(victim, commander)` row — the thief does not get a fresh 21.
+#[test]
+fn cr_903_10a_commander_damage_survives_a_control_change() {
+    let mut g = multi_player_game(3);
+    let cmd = g.seat_commanders(0, vec![test_commander()])[0];
+    g.active_player_idx = 0;
+    command_zone_to_battlefield(&mut g, 0, cmd);
+    swing(&mut g, cmd, 1);
+    assert_eq!(g.commander_damage.get(&(1, cmd)).copied(), Some(1));
+
+    // Seat 2 takes it and swings at the same victim on their own turn.
+    g.battlefield.iter_mut().find(|c| c.id == cmd).expect("on the battlefield").controller = 2;
+    assert!(g.is_commander(cmd), "designation follows the card, not control (CR 903.3)");
+    g.active_player_idx = 2;
+    g.clear_sickness(cmd);
+    g.battlefield.iter_mut().find(|c| c.id == cmd).unwrap().tapped = false;
+    swing(&mut g, cmd, 1);
+
+    assert_eq!(
+        g.commander_damage.get(&(1, cmd)).copied(),
+        Some(2),
+        "the same commander, so the same row — stealing it does not reset the clock",
+    );
+}
+
 /// CR 903.10a / 704.6c — only *combat* damage from a commander counts
 /// toward 21. Non-combat damage from it (a pinger commander's ability, a
 /// fight) is ordinary damage.
@@ -4084,3 +4164,728 @@ fn cr_800_4a_for_each_opponent_does_not_count_the_departed() {
          is not an opponent who 'can't'",
     );
 }
+
+/// CR 800.4c — "If an effect that gives a player still in the game control of
+/// an object ends, there is no other effect giving control of that object to
+/// another player in the game, and the player who controlled that object by
+/// default has left the game, the object is exiled. This is not a state-based
+/// action. It happens as soon as the control-changing effect ends."
+///
+/// Three deep, which is why CR 800.4a's own revert does not cover it: seat 2
+/// owns the Bears, seat 1 takes them permanently, seat 0 takes them until end
+/// of turn, seat 1 leaves. 800.4a only reverts permanents the departing seat
+/// controls *at that moment*, and seat 1 controls nothing — so the Bears sit
+/// under seat 0 until the Act of Treason ends, and then the seat they would
+/// go back to is not in the game.
+///
+/// `change_control` refuses the move under CR 800.4b and returns `None`, so
+/// without this rule seat 0 keeps a permanent for the rest of the game.
+#[test]
+fn cr_800_4c_control_reverting_to_a_departed_seat_exiles_the_object() {
+    use crabomination::game::types::Target;
+    let mut g = multi_player_game(3);
+    let bears = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    // Seat 1's permanent steal: no reversion entry, which is the whole point.
+    g.battlefield_find_mut(bears).unwrap().controller = 1;
+
+    let treason = g.add_card_to_hand(0, catalog::act_of_treason());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: treason,
+        target: Some(Target::Permanent(bears)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("cast Act of Treason");
+    while !g.stack.is_empty() {
+        g.resolve_top_of_stack().expect("resolve");
+    }
+    assert_eq!(g.battlefield_find(bears).unwrap().controller, 0, "seat 0 has it for the turn");
+
+    g.players[1].life = 0;
+    g.check_state_based_actions();
+    assert!(!g.players[1].is_alive());
+    assert_eq!(
+        g.battlefield_find(bears).unwrap().controller,
+        0,
+        "CR 800.4a leaves it alone — seat 1 controls nothing to revert",
+    );
+
+    g.do_cleanup(&mut vec![]);
+    assert!(
+        g.battlefield_find(bears).is_none(),
+        "CR 800.4c — the default controller is gone, so the object is exiled",
+    );
+    assert!(g.exile.iter().any(|c| c.id == bears), "and exiled is where it went");
+}
+
+/// The control for the rule above: with the default controller still in the
+/// game the reversion is the ordinary one, so 800.4c changes nothing about
+/// any board where nobody has left — which is every duel.
+#[test]
+fn cr_800_4c_an_ordinary_reversion_is_untouched() {
+    use crabomination::game::types::Target;
+    let mut g = multi_player_game(3);
+    let bears = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    g.battlefield_find_mut(bears).unwrap().controller = 1;
+    let treason = g.add_card_to_hand(0, catalog::act_of_treason());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: treason,
+        target: Some(Target::Permanent(bears)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("cast Act of Treason");
+    while !g.stack.is_empty() {
+        g.resolve_top_of_stack().expect("resolve");
+    }
+    g.do_cleanup(&mut vec![]);
+    assert_eq!(
+        g.battlefield_find(bears).unwrap().controller,
+        1,
+        "back to the seat that held it by default",
+    );
+}
+
+// ── CR 101.4 — a per-player loop whose body suspends ───────────────────────
+//
+// "If multiple players would make choices … at the same time, the active
+// player makes any choices required, then each other player in turn order
+// does the same." Every one of them, not the first: a body that suspends
+// (a `wants_ui` seat's discard, sacrifice or exile pick) parks only its
+// *own* remaining effect, so the loop around it used to run on and abandon
+// the seats it had not reached. Invisible in a duel — "each opponent" is
+// one iteration there — and it drops two thirds of a four-seat pod.
+
+/// Resolve the top of the stack to completion, answering every ask the
+/// installed decider would answer. `drain_stack` can't: it passes priority,
+/// and a pending decision is exactly what blocks that.
+pub(crate) fn resolve_answering(g: &mut GameState) {
+    g.resolve_top_of_stack().expect("resolve the trigger");
+    for _ in 0..64 {
+        let Some(pending) = g.pending_decision.as_ref() else { break };
+        let decision = pending.decision.clone();
+        let answer = g.decider.decide(&decision);
+        g.submit_decision(answer).expect("answer the ask");
+    }
+    assert!(g.pending_decision.is_none(), "every ask was answered");
+}
+
+/// Two cards into each opponent's hand, and the hand sizes before the loop.
+fn stock_opponent_hands(g: &mut GameState, seats: std::ops::Range<usize>) -> Vec<usize> {
+    for seat in seats {
+        g.add_card_to_hand(seat, catalog::grizzly_bears());
+        g.add_card_to_hand(seat, catalog::lightning_bolt());
+    }
+    g.players.iter().map(|p| p.hand.len()).collect()
+}
+
+/// CR 101.4 — `ForEachOpponent` over a suspending body reaches every
+/// opponent. The body is bound to its opponent through `Triggerer`, which is
+/// an `EffectContext` field the parked continuation cannot carry, so the
+/// spliced tail names each remaining seat inside the effect instead.
+#[test]
+fn cr_101_4_for_each_opponent_reaches_every_opponent_when_the_body_suspends() {
+    use crabomination::effect::{Effect, Selector, Value};
+    let mut g = multi_player_game(4);
+    for p in g.players.iter_mut() {
+        // Only a `wants_ui` seat suspends, which is what makes the loop's
+        // abandonment observable at all.
+        p.wants_ui = true;
+    }
+    let before = stock_opponent_hands(&mut g, 1..4);
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.stack.push(
+        TriggerPush::new(src, 0, Effect::ForEachOpponent {
+            body: Box::new(Effect::Discard {
+                who: Selector::Player(PlayerRef::Triggerer),
+                amount: Value::Const(1),
+                random: false,
+            }),
+        })
+        .build(),
+    );
+    resolve_answering(&mut g);
+    for (seat, &had) in before.iter().enumerate().skip(1) {
+        assert_eq!(
+            g.players[seat].hand.len(),
+            had - 1,
+            "opponent {seat} discarded one — not just the first opponent",
+        );
+    }
+}
+
+/// CR 101.4 / 701.55 — every chooser makes their own villainous choice even
+/// when the option they pick suspends. The tail re-enters the arm per
+/// remaining seat, so each still chooses for themselves rather than
+/// inheriting the first chooser's pick.
+#[test]
+fn cr_701_55_every_chooser_still_chooses_when_an_option_suspends() {
+    use crabomination::effect::{Effect, Selector, Value};
+    let mut g = multi_player_game(4);
+    for p in g.players.iter_mut() {
+        p.wants_ui = true;
+    }
+    let before = stock_opponent_hands(&mut g, 1..4);
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.stack.push(
+        TriggerPush::new(src, 0, Effect::VillainousChoice {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            option_a: Box::new(Effect::Discard {
+                who: Selector::Player(PlayerRef::You),
+                amount: Value::Const(1),
+                random: false,
+            }),
+            // Ten life against one card: the harm estimate picks the discard,
+            // so every chooser takes the arm that suspends.
+            option_b: Box::new(Effect::LoseLife {
+                who: Selector::Player(PlayerRef::You),
+                amount: Value::Const(10),
+            }),
+        })
+        .build(),
+    );
+    resolve_answering(&mut g);
+    for (seat, &had) in before.iter().enumerate().skip(1) {
+        assert_eq!(g.players[seat].hand.len(), had - 1, "chooser {seat} discarded");
+        assert_eq!(g.players[seat].life, 20, "and nobody was skipped into the life option");
+    }
+}
+
+/// CR 101.4 — a punisher's "unless" option is a choice each opponent makes.
+/// The sacrifice pick suspends for every one of them, and the arm is
+/// re-entered per remaining chooser so the affordable option is re-derived
+/// against the board as it stands then.
+#[test]
+fn cr_101_4_every_punisher_chooser_is_asked_when_the_option_suspends() {
+    use crabomination::effect::{Effect, Selector, Value};
+    let mut g = multi_player_game(4);
+    for p in g.players.iter_mut() {
+        p.wants_ui = true;
+    }
+    for seat in 1..4 {
+        // Two creatures apiece: sacrificing one is a choice, so it suspends.
+        g.add_card_to_battlefield(seat, catalog::grizzly_bears());
+        g.add_card_to_battlefield(seat, catalog::grizzly_bears());
+    }
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.stack.push(
+        TriggerPush::new(src, 0, Effect::Punisher {
+            chooser: Selector::Player(PlayerRef::EachOpponent),
+            options: vec![Effect::Sacrifice {
+                who: Selector::Player(PlayerRef::You),
+                count: Value::Const(1),
+                filter: SelectionRequirement::Creature,
+            }],
+            otherwise: Box::new(Effect::DealDamage {
+                to: Selector::Player(PlayerRef::Triggerer),
+                amount: Value::Const(2),
+            }),
+        })
+        .build(),
+    );
+    resolve_answering(&mut g);
+    for seat in 1..4 {
+        assert_eq!(
+            g.battlefield.iter().filter(|c| c.controller == seat).count(),
+            1,
+            "chooser {seat} sacrificed one of their two",
+        );
+        assert_eq!(g.players[seat].life, 20, "the option was taken, so no punisher damage");
+    }
+}
+
+/// CR 101.4 — a tempting offer's body runs once for the controller, once per
+/// acceptor, then once more per acceptor. Those runs are a seat list like any
+/// other loop's, and a suspend in one of them no longer eats the rest.
+///
+/// "Tempting offer" is an **ability word** (CR 207.2c): it has no individual
+/// rules entry, so the shape is the printed text and the order is 101.4's.
+#[test]
+fn cr_101_4_every_tempting_offer_run_happens_when_the_body_suspends() {
+    use crabomination::effect::{Effect, Selector, Value};
+    let mut g = multi_player_game(4);
+    for p in g.players.iter_mut() {
+        p.wants_ui = true;
+    }
+    let mut before = stock_opponent_hands(&mut g, 1..4);
+    // Seat 0 discards four times: its own run plus one per acceptor.
+    for _ in 0..4 {
+        g.add_card_to_hand(0, catalog::grizzly_bears());
+    }
+    before[0] = g.players[0].hand.len();
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.stack.push(
+        TriggerPush::new(src, 0, Effect::TemptingOffer {
+            body: Box::new(Effect::Discard {
+                who: Selector::Player(PlayerRef::You),
+                amount: Value::Const(1),
+                random: false,
+            }),
+        })
+        .build(),
+    );
+    // `AutoDecider` declines every `OptionalTrigger`, which would leave one
+    // run and nothing to splice; this says yes to the offer and leaves the
+    // discard picks alone.
+    g.decider = Box::new(SayYesToOptional);
+    resolve_answering(&mut g);
+    for (seat, &had) in before.iter().enumerate().skip(1) {
+        assert_eq!(g.players[seat].hand.len(), had - 1, "acceptor {seat}'s own run");
+    }
+    assert_eq!(
+        g.players[0].hand.len(),
+        before[0] - 4,
+        "the controller's run plus one more per acceptor",
+    );
+}
+
+/// CR 101.4 — Strongarm Tactics: "Each player discards a card. Then each
+/// player who didn't discard a creature card this way loses 4 life." Two
+/// defects in one arm: the life check read the graveyard *before* a
+/// suspended discard had moved the card, so a `wants_ui` seat was punished
+/// whatever it pitched, and the seats after it were never asked at all.
+#[test]
+fn cr_101_4_strongarm_tactics_reaches_every_seat_and_reads_what_they_pitched() {
+    use crabomination::effect::Effect;
+    let mut g = multi_player_game(4);
+    for p in g.players.iter_mut() {
+        p.wants_ui = true;
+    }
+    for seat in 0..4 {
+        // Homogeneous hands: `AutoDecider` discards the first card, so what
+        // each seat pitches is fixed. Seats 0-1 pitch a creature, 2-3 don't.
+        let card = |seat: usize| {
+            if seat < 2 { catalog::grizzly_bears() } else { catalog::lightning_bolt() }
+        };
+        g.add_card_to_hand(seat, card(seat));
+        g.add_card_to_hand(seat, card(seat));
+    }
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.stack.push(
+        TriggerPush::new(src, 0, Effect::EachPlayerDiscardsElseLosesLife { life: 4 }).build(),
+    );
+    resolve_answering(&mut g);
+    for seat in 0..4 {
+        assert_eq!(g.players[seat].hand.len(), 1, "seat {seat} discarded");
+    }
+    assert_eq!(g.players[0].life, 20, "pitched a creature");
+    assert_eq!(g.players[1].life, 20, "pitched a creature");
+    assert_eq!(g.players[2].life, 16, "pitched a Bolt");
+    assert_eq!(g.players[3].life, 16, "pitched a Bolt");
+}
+
+/// CR 101.4 — Possessed Portal's end-step tax is every player's. Both of its
+/// asks suspend for a `wants_ui` seat, so the loop used to stop at the first.
+#[test]
+fn cr_101_4_possessed_portal_taxes_every_seat() {
+    use crabomination::effect::Effect;
+    let mut g = multi_player_game(4);
+    for p in g.players.iter_mut() {
+        p.wants_ui = true;
+    }
+    for seat in 0..4 {
+        // Two permanents apiece, so the sacrifice is a choice and suspends.
+        g.add_card_to_battlefield(seat, catalog::grizzly_bears());
+        g.add_card_to_battlefield(seat, catalog::grizzly_bears());
+    }
+    let src = g.add_card_to_battlefield(0, catalog::possessed_portal());
+    g.stack.push(TriggerPush::new(src, 0, Effect::EachPlayerSacrificesUnlessDiscards).build());
+    resolve_answering(&mut g);
+    // `AutoDecider` declines the discard, so every seat takes the sacrifice.
+    for seat in 0..4 {
+        let kept = g.battlefield.iter().filter(|c| c.controller == seat).count();
+        assert_eq!(kept, if seat == 0 { 2 } else { 1 }, "seat {seat} paid the tax");
+    }
+}
+
+/// CR 101.4 — Tariff asks every player, not just the ones before the first
+/// `wants_ui` seat. The asks now all precede the payments, which also fixes
+/// the resume: the parked `MayPay` came back under the stack item's context,
+/// where `SacrificeSource` no longer named that seat's creature.
+#[test]
+fn cr_101_4_tariff_asks_every_seat_and_takes_their_biggest() {
+    use crabomination::effect::Effect;
+    let mut g = multi_player_game(4);
+    for p in g.players.iter_mut() {
+        p.wants_ui = true;
+        // Enough to cover {1}{G}, so CR 118.6 doesn't skip the ask.
+        p.mana_pool.add(crabomination::mana::Color::Green, 1);
+        p.mana_pool.add_colorless(1);
+    }
+    for seat in 0..4 {
+        g.add_card_to_battlefield(seat, catalog::grizzly_bears());
+        g.add_card_to_battlefield(seat, catalog::llanowar_elves());
+    }
+    let src = g.add_card_to_battlefield(0, catalog::tariff());
+    g.stack.push(
+        TriggerPush::new(src, 0, Effect::EachPlayerSacrificesGreatestManaValueUnlessPays).build(),
+    );
+    resolve_answering(&mut g);
+    // `AutoDecider` declines the payment, so every seat loses its Bears and
+    // keeps the Elves.
+    for seat in 0..4 {
+        let names: Vec<&str> = g
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == seat)
+            .map(|c| c.definition.name)
+            .collect();
+        assert!(!names.contains(&"Grizzly Bears"), "seat {seat} sacrificed its biggest");
+        assert!(names.contains(&"Llanowar Elves"), "seat {seat} kept the smaller one");
+    }
+}
+
+/// CR 101.4 — `Effect::Repeat` is the same shape without the seats: the
+/// repetitions after a suspending body were abandoned. The tail carries the
+/// remainder as a constant, so a body that changes what `count` reads
+/// doesn't shorten the loop.
+#[test]
+fn cr_101_4_repeat_finishes_its_repetitions_when_the_body_suspends() {
+    use crabomination::effect::{Effect, Selector, Value};
+    let mut g = multi_player_game(4);
+    g.players[0].wants_ui = true;
+    for _ in 0..4 {
+        g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    }
+    let src = g.add_card_to_battlefield(0, catalog::lightning_bolt());
+    g.stack.push(
+        TriggerPush::new(src, 0, Effect::Repeat {
+            count: Value::Const(3),
+            body: Box::new(Effect::Sacrifice {
+                who: Selector::Player(PlayerRef::You),
+                count: Value::Const(1),
+                filter: SelectionRequirement::Creature,
+            }),
+        })
+        .build(),
+    );
+    resolve_answering(&mut g);
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_creature()).count(),
+        1,
+        "three of the four Bears went, not just the one whose pick suspended",
+    );
+}
+
+// ── CR 700.2 — a modal run whose mode suspends ─────────────────────────────
+
+/// Answers a `ChooseModes` ask with both modes and leaves every other ask to
+/// the `AutoDecider` — a scripted queue would answer them in ask order, and
+/// the engine's ask order is not the test's business.
+struct ChooseBothModes;
+impl crabomination::decision::Decider for ChooseBothModes {
+    fn decide(
+        &mut self,
+        decision: &crabomination::decision::Decision,
+    ) -> DecisionAnswer {
+        match decision {
+            crabomination::decision::Decision::ChooseModes { .. } => {
+                DecisionAnswer::Modes(vec![0, 1])
+            }
+            other => crabomination::decision::AutoDecider.decide(other),
+        }
+    }
+}
+
+/// CR 700.2 — a modal spell's effect is every chosen mode. Escalate has two
+/// loops in one arm:
+/// one escalate cost per extra mode, then one run per mode. The printed cost
+/// is a discard, which asks, so the *first* loop suspended and dropped the
+/// costs after it **and** every mode. The second loop's tail also has to pin
+/// each remaining mode's target slot inside the effect
+/// (`Effect::BindTargetSlot`), because a parked continuation is resumed with
+/// the spell's whole target list.
+#[test]
+fn cr_700_2_escalate_pays_every_cost_and_runs_every_mode_through_a_suspend() {
+    use crabomination::effect::{Effect, Selector, Value};
+    let mut g = multi_player_game(2);
+    g.players[0].wants_ui = true;
+    for _ in 0..5 {
+        g.add_card_to_hand(0, catalog::lightning_bolt());
+    }
+    let hand = g.players[0].hand.len();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let discard_one = Effect::Discard {
+        who: Selector::You,
+        amount: Value::Const(1),
+        random: false,
+    };
+    g.stack.push(
+        TriggerPush::new(src, 0, Effect::Escalate {
+            modes: vec![
+                discard_one.clone(),
+                Effect::Destroy { what: Selector::Target(0) },
+            ],
+            cost: Box::new(discard_one),
+        })
+        .target(Some(crabomination::game::types::Target::Permanent(victim)))
+        .build(),
+    );
+    g.decider = Box::new(ChooseBothModes);
+    resolve_answering(&mut g);
+    assert_eq!(
+        g.players[0].hand.len(),
+        hand - 2,
+        "the escalate cost and mode 0 each took a card",
+    );
+    assert!(
+        g.battlefield_find(victim).is_none(),
+        "mode 1 ran too, and it found its own target slot",
+    );
+}
+
+/// CR 608.2 — `ApplyToTargets` runs its inner effect once per target. An
+/// inner that asks suspended and the targets after it were dropped; each
+/// remaining one is pinned by its original slot, which the resumed context
+/// still holds.
+#[test]
+fn cr_608_2_apply_to_targets_reaches_every_target_when_the_inner_suspends() {
+    use crabomination::card::SelectionRequirement as R;
+    use crabomination::effect::{Effect, Selector, Value};
+    use crabomination::game::types::Target;
+    let mut g = multi_player_game(2);
+    g.players[0].wants_ui = true;
+    for _ in 0..4 {
+        g.add_card_to_hand(0, catalog::lightning_bolt());
+    }
+    let hand = g.players[0].hand.len();
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::llanowar_elves());
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.stack.push(
+        TriggerPush::new(src, 0, Effect::ApplyToTargets {
+            max_targets: 2,
+            min_targets: 2,
+            filter: R::Creature,
+            // The discard is FIRST on purpose: it suspends, so the destroy
+            // after it is what the continuation has to carry — with the
+            // target still pinned, or it destroys the caster's slot-0 target
+            // a second time instead of this one.
+            effect: Box::new(Effect::Seq(vec![
+                Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+                Effect::Destroy { what: Selector::Target(0) },
+            ])),
+        })
+        .target(Some(Target::Permanent(a)))
+        .additional_targets(vec![Target::Permanent(b)])
+        .build(),
+    );
+    resolve_answering(&mut g);
+    assert!(g.battlefield_find(a).is_none(), "the first target");
+    assert!(g.battlefield_find(b).is_none(), "and the one after the suspend");
+    assert_eq!(g.players[0].hand.len(), hand - 2, "one discard per target");
+}
+
+/// CR 101.4 — the other half of a per-seat loop: whatever a seat's body
+/// *parks* has to come back under that seat too. A parked continuation is
+/// resumed with the stack item's context, so the rest of seat 1's body ran
+/// as the caster — every seat's life loss landed on seat 0.
+#[test]
+fn cr_101_4_a_parked_tail_comes_back_under_the_seat_that_parked_it() {
+    use crabomination::effect::{Effect, Selector, Value};
+    let mut g = multi_player_game(3);
+    for p in g.players.iter_mut() {
+        p.wants_ui = true;
+    }
+    let before = stock_opponent_hands(&mut g, 0..3);
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.stack.push(
+        TriggerPush::new(src, 0, Effect::EachPlayerDoes {
+            who: PlayerRef::EachPlayer,
+            // The discard suspends; the life loss after it is what the
+            // continuation has to carry, with its seat still bound.
+            body: Box::new(Effect::Seq(vec![
+                Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+                Effect::LoseLife { who: Selector::You, amount: Value::Const(1) },
+            ])),
+        })
+        .build(),
+    );
+    resolve_answering(&mut g);
+    for (seat, &had) in before.iter().enumerate() {
+        assert_eq!(g.players[seat].hand.len(), had - 1, "seat {seat} discarded");
+        assert_eq!(g.players[seat].life, 19, "and seat {seat} paid its own life");
+    }
+}
+
+/// CR 608.2 — `Effect::ForEach` binds each entity as the body's `Triggerer`,
+/// which is an `EffectContext` field the continuation cannot carry. A body
+/// that asks therefore dropped the entities after it *and* came back bound
+/// to nothing. `Selector::ExactObjects` is what lets the tail name them.
+#[test]
+fn cr_608_2_for_each_reaches_every_entity_when_the_body_suspends() {
+    use crabomination::card::SelectionRequirement as R;
+    use crabomination::effect::{Effect, Selector, Value};
+    let mut g = multi_player_game(2);
+    g.players[0].wants_ui = true;
+    for _ in 0..4 {
+        g.add_card_to_hand(0, catalog::lightning_bolt());
+    }
+    let hand = g.players[0].hand.len();
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    }
+    let src = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    g.stack.push(
+        TriggerPush::new(src, 0, Effect::ForEach {
+            selector: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+            // The discard suspends; the destroy after it is what the
+            // continuation has to carry, with its entity still bound.
+            body: Box::new(Effect::Seq(vec![
+                Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+                Effect::Destroy { what: Selector::TriggerSource },
+            ])),
+        })
+        .build(),
+    );
+    resolve_answering(&mut g);
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.controller == 0).count(),
+        0,
+        "all four creatures were reached, and each destroyed its own",
+    );
+    assert_eq!(g.players[0].hand.len(), hand - 4, "one discard per entity");
+}
+
+/// Votes the first ballot for the second choice and every later one for the
+/// first, so the schedule's first run belongs to a seat that is NOT the
+/// controller — which is where `PlayerRef::CurrentVoter`'s fallback would
+/// otherwise cover for a missing binding.
+struct FirstVoterDiffers(usize);
+impl crabomination::decision::Decider for FirstVoterDiffers {
+    fn decide(
+        &mut self,
+        decision: &crabomination::decision::Decision,
+    ) -> DecisionAnswer {
+        match decision {
+            crabomination::decision::Decision::ChooseOption { .. } => {
+                self.0 += 1;
+                DecisionAnswer::Amount(u32::from(self.0 == 1))
+            }
+            other => crabomination::decision::AutoDecider.decide(other),
+        }
+    }
+}
+
+/// CR 101.4 / 701.38 — a council's dilemma runs one effect per vote cast, and
+/// every one of them happens even when an earlier one asks. The voter is
+/// pinned in `GameState.current_voter`, which no `EffectContext` carries, so
+/// both the spliced tail and the suspending run's own remainder name their
+/// voter inside the effect (`Effect::BindScratch`). Capital Punishment is the
+/// printed shape: at four seats its "death" ballot asks three opponents to
+/// sacrifice, and only the first was ever asked.
+#[test]
+fn cr_701_38_every_vote_resolves_when_an_earlier_votes_effect_suspends() {
+    use crabomination::effect::{Effect, Selector, Value, VoteOption, VoteTally};
+    let mut g = multi_player_game(4);
+    for p in g.players.iter_mut() {
+        p.wants_ui = true;
+    }
+    let before = stock_opponent_hands(&mut g, 0..4);
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Both choices do the same thing, so the schedule is four votes long
+    // however they split; the split only decides whose vote comes first.
+    let body = || {
+        Effect::Seq(vec![
+            Effect::Discard {
+                who: Selector::Player(PlayerRef::CurrentVoter),
+                amount: Value::Const(1),
+                random: false,
+            },
+            // Behind the ask, so it is the *parked* half: without the re-wrap
+            // it comes back with `current_voter` restored and pays the
+            // controller instead.
+            Effect::GainLife {
+                who: Selector::Player(PlayerRef::CurrentVoter),
+                amount: Value::Const(5),
+            },
+        ])
+    };
+    g.stack.push(
+        TriggerPush::new(src, 0, Effect::Vote {
+            options: vec![VoteOption::new("aye", body()), VoteOption::new("nay", body())],
+            tally: VoteTally::PerVote,
+        })
+        .build(),
+    );
+    let life: Vec<i32> = g.players.iter().map(|p| p.life).collect();
+    g.decider = Box::new(FirstVoterDiffers(0));
+    resolve_answering(&mut g);
+    for (seat, &had) in before.iter().enumerate() {
+        assert_eq!(
+            g.players[seat].hand.len(),
+            had - 1,
+            "seat {seat}'s own vote resolved — not just the first voter's",
+        );
+        assert_eq!(
+            g.players[seat].life,
+            life[seat] + 5,
+            "and its parked half came back naming seat {seat}, not the controller",
+        );
+    }
+}
+
+/// The pair form of the same class: `SeparateIntoPiles` runs `chosen`, then
+/// `other`, then drops the piles. A suspend inside `chosen` is `Ok(())`, so
+/// `other` ran *before* `chosen` had finished and the piles were cleared out
+/// from under `chosen`'s continuation — which then resolved
+/// `Selector::SeparatedPile` to nothing.
+#[test]
+fn a_pile_splits_second_half_waits_for_the_first_to_finish() {
+    use crabomination::card::SelectionRequirement as R;
+    use crabomination::effect::{Effect, Selector, Value};
+    let mut g = multi_player_game(2);
+    g.players[0].wants_ui = true;
+    for _ in 0..4 {
+        g.add_card_to_hand(0, catalog::lightning_bolt());
+    }
+    for _ in 0..4 {
+        g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    }
+    let src = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    g.stack.push(
+        TriggerPush::new(src, 0, Effect::SeparateIntoPiles {
+            what: Selector::ControlledBy {
+                who: PlayerRef::Seat(0),
+                filter: R::Creature.and(R::HasCreatureType(
+                    crabomination::card::CreatureType::Bear,
+                )),
+            },
+            splitter: PlayerRef::You,
+            chooser: PlayerRef::You,
+            // The discard suspends, so the destroy after it is what the
+            // continuation carries — and it needs the piles still there.
+            chosen: Box::new(Effect::Seq(vec![
+                Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+                Effect::DestroyNoRegen { what: Selector::SeparatedPile { chosen: true } },
+            ])),
+            other: Box::new(Effect::DestroyNoRegen {
+                what: Selector::SeparatedPile { chosen: false },
+            }),
+        })
+        .build(),
+    );
+    resolve_answering(&mut g);
+    assert_eq!(
+        g.battlefield
+            .iter()
+            .filter(|c| c.controller == 0 && c.definition.name == "Grizzly Bears")
+            .count(),
+        0,
+        "both piles were destroyed — the chosen one's destroy still found it",
+    );
+}
+

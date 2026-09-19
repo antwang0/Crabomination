@@ -256,7 +256,7 @@ pub fn archive_trap() -> CardDefinition {
             ..Default::default()
         },
         effect: Effect::Mill {
-            who: Selector::Player(PlayerRef::EachOpponent),
+            who: target_filtered(SelectionRequirement::OpponentPlayer),
             amount: Value::Const(13),
         },
         alternative_cost: Some(AlternativeCost {

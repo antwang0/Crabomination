@@ -1106,7 +1106,10 @@ pub fn stonebound_mentor() -> CardDefinition {
         power: 3,
         toughness: 3,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl),
+            // CR 603.2c — "whenever ONE OR MORE cards leave your graveyard":
+            // one fire per batch, however many left at once.
+            event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl)
+                .once_per_batch(),
             effect: Effect::Scry {
                 who: PlayerRef::You,
                 amount: Value::Const(1),
@@ -1773,7 +1776,7 @@ pub fn tendrils_of_agony() -> CardDefinition {
         effect: Effect::Repeat {
             count: Value::Sum(vec![Value::StormCount, Value::Const(1)]),
             body: Box::new(Effect::Drain {
-                from: Selector::Player(PlayerRef::EachOpponent),
+                from: target_filtered(SelectionRequirement::Player),
                 to: Selector::You,
                 amount: Value::Const(2),
             }),

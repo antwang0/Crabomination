@@ -2959,6 +2959,10 @@ impl crate::game::GameState {
         // Both riders here are idempotent, so the CR 106.6a count is not read.
         if receipt.side_effects.spent_restrictions.iter().any(|(r, _)| match r {
             SpendRestriction::CreatureOfTypeUncounterable(_) => true,
+            // Delighted Halfling — the legendary spell it funded can't be
+            // countered. `allows` has already refused a nonlegendary one, so
+            // no kind test is owed here (unlike Boseiju's, below).
+            SpendRestriction::LegendarySpellUncounterable => true,
             // Boseiju — only an instant/sorcery funded this way is stamped.
             SpendRestriction::InstantSorceryUncounterable => kind.instant_or_sorcery,
             _ => false,
@@ -4222,6 +4226,33 @@ impl GameState {
             c.tapped = false;
         }
         self.apply_enters_tapped_replacement(card_id);
+    }
+
+    /// CR 306.5b / 310.7 with CR 707 — the *entering* counters are seeded from
+    /// the printed line before the copy replacement rewrites it, so a copier
+    /// that becomes a planeswalker or a battle lands with none of them.
+    ///
+    /// The copier is a creature (Spark Double, Clone), so the seeding pass on
+    /// the way in sees `base_loyalty == 0` and skips; the rewrite then makes it
+    /// a planeswalker with no loyalty counters, and the first SBA sweep kills
+    /// it. Same argument and same place as
+    /// [`reapply_enters_tapped_after_copy`](Self::reapply_enters_tapped_after_copy):
+    /// re-decide against the **copied** characteristics once the copy lands.
+    ///
+    /// Only ever adds — a copier that was already a planeswalker kept its own
+    /// seeding, and this overwrites it with the copied value, which is what
+    /// CR 707.2 says the copy's printed loyalty now is.
+    pub(crate) fn reseed_entering_counters_after_copy(&mut self, card_id: CardId) {
+        use crate::card::CounterType;
+        let Some(c) = self.battlefield_find_mut(card_id) else { return };
+        if c.definition.is_planeswalker() && c.definition.base_loyalty > 0 {
+            let loyalty = c.definition.base_loyalty;
+            c.counters.insert(CounterType::Loyalty, loyalty);
+        }
+        if c.definition.is_battle() && c.definition.defense > 0 {
+            let defense = c.definition.defense;
+            c.counters.insert(CounterType::Defense, defense);
+        }
     }
 
     /// CR 704.5g (Zilortha) — true iff some active `LethalDamageByPower` static

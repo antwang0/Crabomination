@@ -168,6 +168,51 @@ fn obstinate_baloth_gains_four_life_on_etb() {
     assert_eq!(g.players[0].life, life + 4);
 }
 
+/// CR 614 — "If a spell or ability an opponent controls causes you to discard
+/// this card, put it onto the battlefield instead of putting it into your
+/// graveyard." The clause had shipped dropped, which in a format full of
+/// Thoughtseize is most of why the card is played. Dodecapod's replacement
+/// with no counters attached, which is the same field.
+#[test]
+fn obstinate_baloth_deploys_on_an_opponents_discard() {
+    let mut g = two_player_game();
+    let baloth = g.add_card_to_hand(1, catalog::obstinate_baloth());
+    let life = g.players[1].life;
+    // An opponent's spell is what arms the replacement: `resolution_causer`
+    // is the seat the discard is attributed to.
+    let verdict = g.add_card_to_hand(0, catalog::mind_rot());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: verdict,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast the discard spell");
+    drain_stack(&mut g);
+
+    assert!(
+        g.battlefield_find(baloth).is_some(),
+        "deployed instead of binned (CR 614)",
+    );
+    assert!(!g.players[1].graveyard.iter().any(|c| c.id == baloth));
+    assert_eq!(g.players[1].life, life + 4, "and it entered, so the ETB gained 4");
+}
+
+/// Your own discard still bins it — the replacement is opponent-caused only.
+#[test]
+fn obstinate_baloth_is_binned_by_your_own_discard() {
+    let mut g = two_player_game();
+    let baloth = g.add_card_to_hand(0, catalog::obstinate_baloth());
+    let mut events = Vec::new();
+    g.discard_card(0, baloth, &mut events);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == baloth));
+}
+
 #[test]
 fn ravenous_baloth_sacs_a_beast_for_four_life() {
     let mut g = two_player_game();

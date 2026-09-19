@@ -26,6 +26,9 @@ fn advance_to(g: &mut GameState, step: TurnStep) {
 #[test]
 fn shrieking_grotesque_haunts_then_payoff_on_death() {
     let mut g = two_player_game();
+    // The default bot profile aims a hostile player slot at an
+    // opponent (`EvalWeights::default()`); a bare test seat does not.
+    g.players[0].hostile_player_targets = true;
     let grotesque = g.add_card_to_battlefield(0, catalog::shrieking_grotesque());
     let foe = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4, survives
     g.add_card_to_hand(1, catalog::grizzly_bears()); // the one card to discard
@@ -47,42 +50,31 @@ fn shrieking_grotesque_haunts_then_payoff_on_death() {
     assert_eq!(g.players[1].hand.len(), 0, "haunt payoff: opponent discarded");
 }
 
-/// Mourning Thrull's gain-2-and-draw trigger fires on entry.
+/// Mourning Thrull — "whenever this creature deals damage, you gain that
+/// much life". It shipped with an invented ETB and an invented haunt trigger
+/// (`scripts/audit_invented_trigger.py`); the print has neither, and the
+/// lifegain scales with the damage rather than being a flat 2.
 #[test]
-fn mourning_thrull_etb_gain_and_draw() {
-    let mut g = two_player_game();
-    g.add_card_to_library(0, catalog::grizzly_bears());
-    let life = g.players[0].life;
-    let hand = g.players[0].hand.len();
-    g.move_card_to_battlefield_for_test(0, catalog::mourning_thrull());
-    drain_stack(&mut g);
-    assert_eq!(g.players[0].life, life + 2, "ETB gained 2");
-    assert_eq!(g.players[0].hand.len(), hand + 1, "ETB drew a card");
-}
-
-/// Mourning Thrull's haunt body (gain 2, draw 1) fires when the haunted
-/// creature dies, even though the Thrull itself is in exile.
-#[test]
-fn mourning_thrull_haunt_payoff_on_haunted_death() {
+fn mourning_thrull_gains_life_equal_to_the_damage_it_deals() {
     let mut g = two_player_game();
     let thrull = g.add_card_to_battlefield(0, catalog::mourning_thrull());
-    let foe = g.add_card_to_battlefield(1, catalog::serra_angel());
-    for _ in 0..2 { g.add_card_to_library(0, catalog::grizzly_bears()); }
-
-    g.battlefield_find_mut(thrull).unwrap().damage = 1; // lethal vs 1/1
-    let evs = g.check_state_based_actions();
-    g.dispatch_triggers_for_events(&evs);
-    drain_stack(&mut g);
-    assert!(g.exile.iter().any(|c| c.id == thrull));
-
+    g.clear_sickness(thrull);
+    // A +1/+1 counter makes the gain 2 rather than 1, so the assert reads the
+    // *damage* rather than the body's printed power.
+    g.battlefield_find_mut(thrull)
+        .unwrap()
+        .add_counters(crabomination::card::CounterType::PlusOnePlusOne, 1);
     let life = g.players[0].life;
     let hand = g.players[0].hand.len();
-    g.battlefield_find_mut(foe).unwrap().damage = 4;
-    let evs = g.check_state_based_actions();
-    g.dispatch_triggers_for_events(&evs);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: thrull, target: AttackTarget::Player(1),
+    }])).expect("attack");
     drain_stack(&mut g);
-    assert_eq!(g.players[0].life, life + 2, "haunt gained 2");
-    assert_eq!(g.players[0].hand.len(), hand + 1, "haunt drew a card");
+    advance_to(&mut g, TurnStep::CombatDamage);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 2, "gained life equal to the damage dealt");
+    assert_eq!(g.players[0].hand.len(), hand, "no card is drawn — that was invented");
 }
 
 /// A haunt instant resolves its main effect, is exiled haunting a creature

@@ -564,7 +564,12 @@ pub fn blood_spatter_analysis() -> CardDefinition {
         triggered_abilities: vec![
             etb(deal(3, target_filtered(R::Creature.and(R::ControlledByOpponent)))),
             TriggeredAbility {
-                event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer),
+                // CR 603.2c — "whenever ONE OR MORE creatures die": one mill
+                // and one bloodstain counter for the batch. Per-creature, a
+                // board wipe filled the five counters and sacrificed the
+                // enchantment on the spot.
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer)
+                    .once_per_batch(),
                 effect: Effect::Seq(vec![
                     Effect::Mill { who: Selector::You, amount: Value::ONE },
                     Effect::AddCounter {

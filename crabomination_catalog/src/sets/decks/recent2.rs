@@ -152,7 +152,7 @@ pub fn scrabbling_skullcrab() -> CardDefinition {
                     filter: SelectionRequirement::Enchantment,
                 }),
             effect: Effect::Mill {
-                who: Selector::Player(PlayerRef::EachOpponent),
+                who: target_filtered(SelectionRequirement::Player),
                 amount: Value::Const(2),
             },
         }],

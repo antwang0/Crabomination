@@ -1449,13 +1449,17 @@ mod recent207 {
     #[test]
     fn harmless_offering_donates() {
         let mut g = two_player_game();
+        // The default bot profile aims a hostile player slot at an
+        // opponent (`EvalWeights::default()`); a bare test seat does not.
+        g.players[0].hostile_player_targets = true;
         let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
         let s = g.add_card_to_hand(0, catalog::harmless_offering());
         g.players[0].mana_pool.add(Color::Red, 1);
         g.players[0].mana_pool.add_colorless(2);
         g.step = TurnStep::PreCombatMain;
         g.perform_action(GameAction::CastSpell {
-            card_id: s, target: Some(Target::Permanent(mine)), additional_targets: vec![], mode: None, x_value: None,
+            card_id: s, target: Some(Target::Permanent(mine)),
+            additional_targets: vec![Target::Player(1)], mode: None, x_value: None,
         }).expect("cast");
         drain_stack(&mut g);
         assert_eq!(g.battlefield_find(mine).unwrap().controller, 1, "opponent now controls it");

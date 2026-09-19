@@ -645,13 +645,16 @@ pub fn vortex_runner() -> CardDefinition {
 
 // ── Sage of the Beyond (STX-flavor B/U uncommon creature) ───────────────────
 
-/// Sage of the Beyond — {5}{U}{U}, 5/5 Specter Wizard.
-/// "Flying / Whenever this creature deals combat damage to a player,
-/// that player discards a card."
+/// Sage of the Beyond — {5}{U}{U} 5/5 Spirit Giant. Flying; "spells you cast
+/// from anywhere other than your hand cost {2} less to cast"; Foretell {4}{U}.
 ///
-/// Push (modern_decks, NEW, `stx::extras`): A 4/3 evasion-with-discard
-/// trigger. Tests: `sage_of_the_beyond_combat_damage_makes_opp_discard`,
-/// `sage_of_the_beyond_is_a_five_mana_four_three_specter_wizard`.
+/// ⚠ It shipped with an invented "combat damage → that player discards"
+/// trigger and no cost reduction at all. Found by
+/// `scripts/audit_invented_trigger.py`.
+///
+/// 🟡 The reduction is spelled as its two reachable zones — the graveyard and
+/// exile (which is where foretell, plot and adventure casts come from). A cast
+/// from the **command zone** is the residual; see `INCOMPLETE_CARDS.md`.
 pub fn sage_of_the_beyond() -> CardDefinition {
     CardDefinition {
         name: "Sage of the Beyond",
@@ -665,19 +668,16 @@ pub fn sage_of_the_beyond() -> CardDefinition {
         power: 5,
         toughness: 5,
         keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
-            // The damaged player is stored as `Target(0)` on the
-            // trigger (see `fire_combat_damage_to_player_triggers` in
-            // `game/combat.rs:625` which pushes the trigger with
-            // `target: Some(Target::Player(damaged_player))`). Use
-            // `PlayerRef::Target(0)` to reference it.
-            effect: Effect::Discard {
-                who: Selector::Player(PlayerRef::Target(0)),
-                amount: Value::Const(1),
-                random: false,
+        static_abilities: vec![
+            StaticAbility {
+                description: "Spells you cast from your graveyard cost {2} less to cast.",
+                effect: StaticEffect::GraveyardCastCostReduction { amount: 2 },
             },
-        }],
+            StaticAbility {
+                description: "Spells you cast from exile cost {2} less to cast.",
+                effect: StaticEffect::ExileCastCostReduction { amount: 2 },
+            },
+        ],
         ..Default::default()
     }
 }
@@ -866,15 +866,16 @@ pub fn fervent_strike() -> CardDefinition {
 
 // ── Waker of Waves (STX Quandrix rare creature) ────────────────────────────
 
-/// Waker of Waves — {5}{U}{U}, 7/7 Elemental (STX 2021, Quandrix rare).
-/// "Creatures your opponents control get -1/-0. / {1}{U}, Discard this
-/// card: Look at the top two cards of your library. Put one of them into
-/// your hand and the other into your graveyard." The activation is the
-/// channel shape (`from_hand` + `discard_self_cost`), its body a
-/// `LookPick` of two with the rest to the graveyard.
-/// Tests: `waker_of_waves_is_a_five_mana_five_five_elemental`,
-/// `waker_of_waves_etb_loots_two`,
-/// `waker_of_waves_gy_exile_activation_pumps_target_by_five_five`.
+/// Waker of Waves — {5}{U}{U} 7/7 Whale (STX). "Creatures your opponents
+/// control get -1/-0. / {1}{U}, Discard this card: Look at the top two cards
+/// of your library. Put one of them into your hand and the other into your
+/// graveyard." The activation is the channel shape (`from_hand` +
+/// `discard_self_cost`), its body a `LookPick` of two with the rest to the
+/// graveyard.
+///
+/// ⚠ The printed static was missing and an ETB "draw two, discard two" it
+/// does not print stood in its place. Found by
+/// `scripts/audit_invented_trigger.py`.
 pub fn waker_of_waves() -> CardDefinition {
     CardDefinition {
         name: "Waker of Waves",
@@ -913,19 +914,16 @@ pub fn waker_of_waves() -> CardDefinition {
             discard_self_cost: true,
             ..Default::default()
         }],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Seq(vec![
-                Effect::Draw {
-                    who: Selector::You,
-                    amount: Value::Const(2),
-                },
-                Effect::Discard {
-                    who: Selector::You,
-                    amount: Value::Const(2),
-                    random: false,
-                },
-            ]),
+        static_abilities: vec![StaticAbility {
+            description: "Creatures your opponents control get -1/-0.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
+                ),
+                power: -1,
+                toughness: 0,
+            },
         }],
         ..Default::default()
     }

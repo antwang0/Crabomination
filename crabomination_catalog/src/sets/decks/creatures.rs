@@ -388,7 +388,7 @@ pub fn grief() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::DiscardChosen {
-                from: Selector::Player(PlayerRef::EachOpponent),
+                from: target_filtered(SelectionRequirement::OpponentPlayer),
                 count: Value::Const(1),
                 filter: SelectionRequirement::Nonland,
             },
@@ -492,8 +492,14 @@ pub fn endurance() -> CardDefinition {
         keywords: vec![Keyword::Flash, Keyword::Reach],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::ShuffleGraveyardIntoLibrary {
-                who: PlayerRef::EachOpponent,
+            // "**Up to one target player**" — one seat, chosen, and declinable.
+            // It shipped as `EachOpponent`, which is the same object in a duel
+            // and every opponent's graveyard at once in a pod.
+            effect: Effect::OptionalTargets {
+                min: 0,
+                body: Box::new(Effect::ShuffleGraveyardIntoLibrary {
+                    who: PlayerRef::Target(0),
+                }),
             },
         }],
         alternative_cost: Some(AlternativeCost {

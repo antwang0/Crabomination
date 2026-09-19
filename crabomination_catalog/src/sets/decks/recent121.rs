@@ -188,8 +188,10 @@ pub fn cracked_skull() -> CardDefinition {
             to: target_filtered(R::Creature),
         },
         triggered_abilities: vec![
+            // "Look at **target player's** hand …" — the trigger's own slot,
+            // separate from the Aura's enchant target.
             etb(Effect::DiscardChosen {
-                from: Selector::Player(PlayerRef::EachOpponent),
+                from: target_filtered(R::Player),
                 count: Value::ONE,
                 filter: R::Nonland,
             }),

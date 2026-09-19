@@ -1521,7 +1521,7 @@ fn inquisition_of_kozilek_picks_low_cmc_nonland() {
 
     let inq = g.add_card_to_hand(0, catalog::inquisition_of_kozilek());
     g.players[0].mana_pool.add(Color::Black, 1);
-    cast(&mut g, inq);
+    cast_at(&mut g, inq, Target::Player(1));
 
     // Lightning Bolt (CMC 1, nonland) should be the pick. Mahamoti is CMC 5
     // (excluded) and the forest is a land (excluded).
@@ -1538,7 +1538,7 @@ fn thoughtseize_picks_nonland_and_costs_two_life() {
 
     let ts = g.add_card_to_hand(0, catalog::thoughtseize());
     g.players[0].mana_pool.add(Color::Black, 1);
-    cast(&mut g, ts);
+    cast_at(&mut g, ts, Target::Player(1));
 
     assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt),
         "Thoughtseize should pick the nonland Lightning Bolt");
@@ -2547,6 +2547,9 @@ fn watery_grave_pays_two_life_and_stays_untapped() {
 #[test]
 fn cephalid_coliseum_sacrifices_for_each_player_to_draw_then_discard_three() {
     let mut g = two_player_game();
+    // The default bot profile aims a hostile player slot at an
+    // opponent (`EvalWeights::default()`); a bare test seat does not.
+    g.players[0].hostile_player_targets = true;
     let coli = g.add_card_to_battlefield(0, catalog::cephalid_coliseum());
     g.clear_sickness(coli);
     // Coliseum entered tapped via its ETB trigger. Untap it so we can
@@ -2575,7 +2578,7 @@ fn cephalid_coliseum_sacrifices_for_each_player_to_draw_then_discard_three() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: coli,
         ability_index: 1,
-        target: None, additional_targets: Vec::new(), x_value: None , mode: None})
+        target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Cephalid Coliseum's wheel-mini ability should activate");
     drain_stack(&mut g);
 
@@ -2584,12 +2587,12 @@ fn cephalid_coliseum_sacrifices_for_each_player_to_draw_then_discard_three() {
         "Coliseum should be sacrificed");
     assert!(!g.battlefield.iter().any(|c| c.id == coli));
 
-    // Each player drew 3 then discarded 3 — library shrinks by 3,
-    // graveyard grows by ≥3 (their 3 discards; P0 also has Coliseum itself).
-    assert_eq!(g.players[0].library.len(), p0_lib_before - 3);
+    // "**Target player** draws three cards, then discards three cards" — one
+    // seat. It used to read `EachPlayer`, i.e. the whole table.
+    assert_eq!(g.players[0].library.len(), p0_lib_before, "the caster was not targeted");
     assert_eq!(g.players[1].library.len(), p1_lib_before - 3);
-    assert!(g.players[0].graveyard.len() >= p0_grave_before + 3,
-        "P0 should have ≥3 cards in graveyard from discard (plus Coliseum)");
+    assert_eq!(g.players[0].graveyard.len(), p0_grave_before + 1,
+        "only the Coliseum itself reached P0's graveyard");
     assert_eq!(g.players[1].graveyard.len(), p1_grave_before + 3,
         "P1 should have 3 discarded cards in graveyard");
 }
@@ -3573,7 +3576,7 @@ fn inquisition_suspends_for_caster_ui_and_applies_chosen_discard() {
     g.players[0].mana_pool.add(Color::Black, 1);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: inq, target: None, additional_targets: vec![], mode: None, x_value: None,
+        card_id: inq, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Inquisition castable for {B}");
     // First PassPriority lets P1 respond; second resolves the spell.

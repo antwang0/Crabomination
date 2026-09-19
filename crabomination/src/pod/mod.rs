@@ -435,20 +435,56 @@ mod tests {
     #[test]
     fn cr_903_seeded_pod_outcomes_match_the_committed_table() {
         // (seed, winner, turns, actions)
-        // Re-blessed for the auto-targeter's ranked "target opponent": the
-        // same `default_hostile_opponent` the defender already used now fills
-        // an open opponent slot on every cast too, so the two seeded games
-        // that were already off the seat order diverge again (92→63, 79→69
-        // turns; same winners). ⚠ Three games is a re-bless gate, not a
-        // measurement — the aggregate is 32,000 pod games a side, 2/3/4/5
-        // seats at two seeds, and it reads **identical** at two seats (the
-        // control: a duel has one candidate and the ranking never runs),
-        // -0.06/0.00 turns at three, -0.24/-0.17 at four and -0.37/-0.43 at
-        // five, 100 % decided with zero stalls on both sides.
+        // Re-blessed twice on 2026-09-19, and the second one rides the first.
+        // ① **The Judith list's retune** — 28 of its 72 nonbasics changed, so
+        // all three games are different games. Its aggregate is 3,000 games a
+        // configuration at seed 43: Judith 23.2→33.6 % at two seats,
+        // 16.0→26.2 at three and 6.2→14.6 at four, the four-seat field
+        // flattening 43.5/6.2/22.2/28.0 → 40.8/14.6/20.3/24.3, 100 % decided
+        // and zero stalls on both sides.
+        // ② **Two target-deck card defects** — Sowing Mycospawn's tutored land
+        // was entering tapped against its oracle (Sigarda) and Delighted
+        // Halfling's legendary-only + uncounterable rider was dropped
+        // (Sigarda, Tatyova). ⚠ Neither touched `--bench` (195,806 / 27.49 /
+        // 611.9 / 0 stalls, byte-identical) or a golden trace, which is the
+        // answer to "these are cube cards, so they need a bench re-bless":
+        // they are, and it did not move. Against the pre-retune list they
+        // moved this table by four actions in one of three games; against the
+        // retuned one they move it by **nothing**, so the values below are ①'s
+        // unchanged — which is the same reading from the other side.
+        // ⚠ Three games is a re-bless gate, not a measurement — read the
+        // aggregates above, and read the two-seat row as the control.
+        // Re-blessed twice. ① The auto-targeter's ranked "target opponent":
+        // the same `default_hostile_opponent` the defender already used now
+        // fills an open opponent slot on every cast too, so two of the three
+        // seeded games diverged (92→63, 79→69 turns; same winners). The
+        // aggregate behind that one is 32,000 pod games a side — **identical**
+        // at two seats (the control: a duel has one candidate and the ranking
+        // never runs), -0.06/0.00 turns at three, -0.24/-0.17 at four,
+        // -0.37/-0.43 at five. ② Two target-deck card defects fixed (Sowing
+        // Mycospawn's tutored land was entering tapped against its oracle,
+        // Delighted Halfling's legendary-only + uncounterable rider was
+        // dropped): **four actions** in one of the three games, same winners
+        // and same turns everywhere, and the 4,000-game aggregate reads
+        // 39.91 vs 39.90 turns at four seats and 50.15 vs 50.15 at five, deck
+        // shares within noise. ⚠ Neither move touched `--bench` (195,806 /
+        // 27.49 / 611.9 / 0 stalls, byte-identical) or a golden trace, which
+        // is the answer to "these are cube cards, so they need a bench
+        // re-bless": they are, and it did not move.
+        // Re-blessed 2026-09-19 (the target-clause class): three pod-deck
+        // cards stopped fanning a printed "target opponent / target player"
+        // clause out over the whole table — Endurance ("up to one target
+        // player puts their graveyard on the bottom", Tatyova), Indulgent
+        // Tormentor ("unless **target opponent** sacrifices … or pays 3
+        // life", Judith) and Nihil Spellbomb ("exile **target player's**
+        // graveyard", Judith). At two seats each is the same object it always
+        // was; at four it is one seat instead of three, so two of the three
+        // seeded games are different games. ⚠ Three games is a re-bless gate,
+        // not a measurement — the aggregate is in DECK_FEATURES.
         const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
-            (0xC0FFEE, Some(3), 63, 3005),
-            (43, Some(2), 38, 1668),
-            (4242, Some(0), 69, 2882),
+            (0xC0FFEE, Some(1), 55, 2369),
+            (43, Some(3), 47, 2040),
+            (4242, Some(3), 56, 2400),
         ];
         let decks = rofellos_pod(4);
         let t = build_pod_template(&decks);

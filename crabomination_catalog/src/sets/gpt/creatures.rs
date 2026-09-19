@@ -12,19 +12,15 @@ use crate::mana::{Color, b, cost, generic, hybrid, w};
 // `Effect::HauntCreature { body }` performs the exile + death-watch; `body` is
 // the "when the haunted creature dies" effect.
 
-/// Mourning Thrull — {1}{W/B} 1/1 Thrull. Flying, haunt. When it enters or the
-/// creature it haunts dies, you gain 2 life and draw a card.
+/// Mourning Thrull — {1}{W/B} 1/1 Thrull. Flying; "whenever this creature
+/// deals damage, you gain that much life."
+///
+/// ⚠ It shipped as a *haunt* card — an ETB and an on-dies haunt that each
+/// gained 2 life and drew a card — none of which it prints. Found by
+/// `scripts/audit_invented_trigger.py`, whose needle was the invented ETB.
+/// The lifegain is a trigger, not Lifelink: it uses the stack, so a response
+/// can still kill the Thrull's controller before the life arrives.
 pub fn mourning_thrull() -> CardDefinition {
-    let payoff = Effect::Seq(vec![
-        Effect::GainLife {
-            who: Selector::You,
-            amount: Value::Const(2),
-        },
-        Effect::Draw {
-            who: Selector::You,
-            amount: Value::Const(1),
-        },
-    ]);
     CardDefinition {
         name: "Mourning Thrull",
         cost: cost(&[generic(1), hybrid(Color::White, Color::Black)]),
@@ -36,15 +32,13 @@ pub fn mourning_thrull() -> CardDefinition {
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: payoff.clone(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsDamage, EventScope::SelfSource),
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::TriggerEventAmount,
             },
-            on_dies(Effect::HauntCreature {
-                body: Box::new(payoff),
-            }),
-        ],
+        }],
         ..Default::default()
     }
 }
@@ -110,8 +104,10 @@ pub fn shrieking_grotesque() -> CardDefinition {
                 else_: Box::new(Effect::Noop),
             }),
             on_dies(Effect::HauntCreature {
+            // The haunt half prints the same "**target player** discards a
+            // card" as the entry half above.
             body: Box::new(Effect::Discard {
-                who: Selector::Player(PlayerRef::EachOpponent),
+                who: crate::effect::shortcut::target_filtered(crate::card::SelectionRequirement::Player),
                 amount: Value::Const(1),
                 random: false,
             }),
@@ -136,7 +132,7 @@ pub fn cry_of_contrition() -> CardDefinition {
             },
             Effect::HauntCreature {
                 body: Box::new(Effect::Discard {
-                    who: Selector::Player(PlayerRef::EachOpponent),
+                    who: crate::effect::shortcut::target_filtered(crate::card::SelectionRequirement::Player),
                     amount: Value::Const(1),
                     random: false,
                 }),
@@ -197,7 +193,7 @@ pub fn castigate() -> CardDefinition {
             },
             Effect::HauntCreature {
                 body: Box::new(Effect::ExileChosenFromHand {
-                    from: Selector::Player(PlayerRef::EachOpponent),
+                    from: crate::effect::shortcut::target_filtered(crate::card::SelectionRequirement::OpponentPlayer),
                     count: Value::Const(1),
                     filter: SelectionRequirement::Nonland,
                     link_to_source: false,

@@ -240,7 +240,7 @@ pub fn nihilistic_glee() -> CardDefinition {
                 discard_cost: Some((R::Any, 1)),
                 effect: Effect::Seq(vec![
                     Effect::LoseLife {
-                        who: Selector::Player(PlayerRef::EachOpponent),
+                        who: target_filtered(crate::card::SelectionRequirement::OpponentPlayer),
                         amount: Value::ONE,
                     },
                     Effect::GainLife {

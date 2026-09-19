@@ -159,13 +159,16 @@ pub fn aang_airbending_master() -> CardDefinition {
                 ),
             }),
             // "Whenever one or more creatures you control leave the battlefield
-            // without dying, you get an experience counter" — per creature
-            // here (no per-event batching), so a mass bounce over-counts.
+            // without dying, you get an experience counter."
             TriggeredAbility {
+                // CR 603.2c — one experience counter for the batch. This read
+                // per creature until 2026-09-19 and the comment above said so;
+                // `once_per_batch` is what stops a mass bounce over-counting.
                 event: EventSpec::new(
                     EventKind::CreatureLeavesBattlefieldNotDying,
                     EventScope::YourControl,
-                ),
+                )
+                .once_per_batch(),
                 effect: Effect::AddExperience(Value::ONE),
             },
             // "At the beginning of your upkeep, create a 1/1 white Ally

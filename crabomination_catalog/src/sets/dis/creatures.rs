@@ -282,7 +282,6 @@ pub fn sky_hussar() -> CardDefinition {
 /// carries via its die snapshot, CR 603.10.)
 pub fn stalking_vengeance() -> CardDefinition {
     use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
-    use crate::effect::PlayerRef;
     CardDefinition {
         name: "Stalking Vengeance",
         cost: cost(&[generic(5), r(), r()]),
@@ -298,7 +297,7 @@ pub fn stalking_vengeance() -> CardDefinition {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours),
             effect: Effect::DealDamageEqualToPower {
                 source: Selector::TriggerSource,
-                target: Selector::Player(PlayerRef::EachOpponent),
+                target: target_filtered(crate::card::SelectionRequirement::Player),
             },
         }],
         ..Default::default()
@@ -529,7 +528,7 @@ pub fn rakdos_augermage() -> CardDefinition {
                     random: false,
                 },
                 Effect::DiscardChosen {
-                    from: Selector::Player(PlayerRef::EachOpponent),
+                    from: target_filtered(crate::card::SelectionRequirement::OpponentPlayer),
                     count: Value::ONE,
                     filter: SelectionRequirement::Any,
                 },

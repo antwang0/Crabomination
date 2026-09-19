@@ -419,7 +419,10 @@ pub fn ark_of_hunger() -> CardDefinition {
             ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl),
+            // CR 603.2c — "whenever ONE OR MORE cards leave your graveyard":
+            // one fire per batch, however many left at once.
+            event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl)
+                .once_per_batch(),
             effect: Effect::Seq(vec![
                 Effect::DealDamage {
                     to: Selector::Player(PlayerRef::EachOpponent),

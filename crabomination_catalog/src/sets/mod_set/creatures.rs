@@ -2261,13 +2261,35 @@ pub fn spark_double() -> CardDefinition {
             ..Default::default()
         },
         enters_as_copy: Some(EntersAsCopy {
-            filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            // "a creature **or planeswalker** you control" — the planeswalker
+            // half had shipped missing, along with the "and it isn't
+            // legendary" exception (CR 707.2e, which is why the card is a
+            // legend-rule dodge in the first place).
+            filter: SelectionRequirement::Creature
+                .or(SelectionRequirement::Planeswalker)
+                .and(SelectionRequirement::ControlledByYou),
+            non_legendary: true,
+            // "...an additional +1/+1 counter if it's a creature, an
+            // additional loyalty counter if it's a planeswalker." The kind
+            // depends on what it turned into, so it is read off the copy at
+            // resolution rather than fixed here.
             extra_triggered: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: Effect::AddCounter {
-                    what: Selector::This,
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::Const(1),
+                effect: Effect::If {
+                    cond: crate::effect::Predicate::EntityMatches {
+                        what: Selector::This,
+                        filter: SelectionRequirement::Planeswalker,
+                    },
+                    then: Box::new(Effect::AddCounter {
+                        what: Selector::This,
+                        kind: CounterType::Loyalty,
+                        amount: Value::Const(1),
+                    }),
+                    else_: Box::new(Effect::AddCounter {
+                        what: Selector::This,
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::Const(1),
+                    }),
                 },
             }],
             ..Default::default()
@@ -2892,7 +2914,10 @@ pub fn indulgent_tormentor() -> CardDefinition {
                 EventScope::ActivePlayer,
             ),
             effect: Effect::Punisher {
-                chooser: Selector::Player(PlayerRef::EachOpponent),
+                // "**target opponent** sacrifices … or pays 3 life" — one
+                // seat, not the table. `EachOpponent` is the same seat in a
+                // duel and three separate punishers in a four-seat pod.
+                chooser: target_filtered(SelectionRequirement::OpponentPlayer),
                 options: vec![
                     Effect::LoseLife {
                         who: Selector::Player(PlayerRef::You),
@@ -4082,7 +4107,7 @@ pub fn tidehollow_sculler() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::ExileChosenUntilSourceLeaves {
-                from: Selector::Player(PlayerRef::EachOpponent),
+                from: target_filtered(SelectionRequirement::OpponentPlayer),
                 count: Value::Const(1),
                 filter: SelectionRequirement::Nonland,
                 return_to: ExileReturnZone::Hand,
@@ -4185,7 +4210,7 @@ pub fn vendilion_clique() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::BottomChosenFromHandAndDraw {
-                from: Selector::Player(PlayerRef::EachOpponent),
+                from: target_filtered(SelectionRequirement::Player),
                 count: Value::Const(1),
                 filter: SelectionRequirement::Nonland,
             },
@@ -5100,17 +5125,30 @@ pub fn candelabra_of_tawnos() -> CardDefinition {
 
 // ── Guardian Scalelord ──────────────────────────────────────────────────────
 
-/// Guardian Scalelord — {4}{W}, 3/4 Dragon with Flying.
+/// Guardian Scalelord — {4}{W} 3/4 Dragon (MOM). Backup 1 (CR 702.164),
+/// Flying, and "whenever this creature attacks, return target nonland
+/// permanent card with mana value X or less from your graveyard to the
+/// battlefield, where X is this creature's power."
 ///
-/// Oracle: "Flying. Whenever this creature attacks, you may have target
-/// creature you control gain flying until end of turn."
-///
-/// Wired with an `Attacks/SelfSource` trigger that fans out to a
-/// `MayDo(GrantKeyword(Flying, EOT, target friendly creature))`. The
-/// "another" / "you control" rider scopes the auto-target to creatures
-/// the controller owns; the AutoDecider opts in by default (declining
-/// flying-grant is a strict downside).
+/// ⚠ It shipped as an **invented** card under the printed name: a
+/// `MayDo(GrantKeyword(Flying))` on attack, no Backup, and no reanimation at
+/// all. Found by `scripts/audit_invented_may.py` — the `MayDo` was the
+/// needle, the wrong body was what the needle led to. X is the *live* power
+/// (`ManaValueAtMostSourcePower`), so a Backup counter on the Scalelord
+/// itself widens its own trigger.
 pub fn guardian_scalelord() -> CardDefinition {
+    let reanimate = TriggeredAbility {
+        event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+        effect: Effect::Move {
+            what: target_filtered(
+                SelectionRequirement::PermanentCard
+                    .and(SelectionRequirement::Nonland)
+                    .and(SelectionRequirement::InYourGraveyard)
+                    .and(SelectionRequirement::ManaValueAtMostSourcePower),
+            ),
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+        },
+    };
     CardDefinition {
         name: "Guardian Scalelord",
         cost: cost(&[generic(4), w()]),
@@ -5122,20 +5160,16 @@ pub fn guardian_scalelord() -> CardDefinition {
         power: 3,
         toughness: 4,
         keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
-            effect: Effect::MayDo {
-                description: "Target creature you control gains flying until end of turn."
-                    .to_string(),
-                body: Box::new(Effect::GrantKeyword {
-                    what: target_filtered(
-                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-                    ),
-                    keyword: Keyword::Flying,
-                    duration: crate::effect::Duration::EndOfTurn,
-                }),
-            },
-        }],
+        triggered_abilities: vec![
+            // Backup 1 grants everything printed below it: Flying, and the
+            // attack trigger itself (CR 702.164a).
+            crate::effect::shortcut::backup_with(
+                1,
+                vec![Keyword::Flying],
+                vec![reanimate.clone()],
+            ),
+            reanimate,
+        ],
         ..Default::default()
     }
 }
@@ -5311,9 +5345,10 @@ pub fn sowing_mycospawn() -> CardDefinition {
         // shipped as an ETB and the second — the kicked one — did not ship at
         // all, which is what `audit_keyword_drift` named the card for.
         //
-        // ⚠ The land enters TAPPED here and the cached oracle does not say
-        // tapped. Left as it was rather than changed on one reading; no column
-        // compares a value inside an effect, so nothing else will catch it.
+        // The land enters UNTAPPED: the oracle is "search your library for a
+        // land card, put it onto the battlefield, then shuffle" with no
+        // "tapped", and it shipped tapped — a strict nerf that no column
+        // catches, because none of them compares a value inside an effect.
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::SpellCast, EventScope::SelfSource),
@@ -5322,7 +5357,7 @@ pub fn sowing_mycospawn() -> CardDefinition {
                     filter: SelectionRequirement::Land,
                     to: ZoneDest::Battlefield {
                         controller: PlayerRef::You,
-                        tapped: true,
+                        tapped: false,
                     },
                 },
             },
@@ -5614,7 +5649,7 @@ pub fn elite_spellbinder() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::ExileFromHandTaxed {
-                from: Selector::Player(PlayerRef::EachOpponent),
+                from: target_filtered(SelectionRequirement::OpponentPlayer),
                 count: Value::Const(1),
                 filter: SelectionRequirement::Nonland,
                 extra_cost: 2,
@@ -6748,16 +6783,16 @@ pub fn archon_of_cruelty() -> CardDefinition {
     let body = || {
         Effect::Seq(vec![
             Effect::Sacrifice {
-                who: Selector::Player(PlayerRef::EachOpponent),
+                who: target_filtered(SelectionRequirement::OpponentPlayer),
                 count: Value::Const(1),
                 filter: SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
             },
             Effect::LoseLife {
-                who: Selector::Player(PlayerRef::EachOpponent),
+                who: target_filtered(SelectionRequirement::OpponentPlayer),
                 amount: Value::Const(3),
             },
             Effect::DiscardChosen {
-                from: Selector::Player(PlayerRef::EachOpponent),
+                from: target_filtered(SelectionRequirement::OpponentPlayer),
                 count: Value::Const(1),
                 filter: SelectionRequirement::Any,
             },
@@ -8532,7 +8567,7 @@ pub fn mesmeric_fiend() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::ExileChosenUntilSourceLeaves {
-                from: Selector::Player(PlayerRef::EachOpponent),
+                from: target_filtered(SelectionRequirement::OpponentPlayer),
                 count: Value::Const(1),
                 filter: SelectionRequirement::Nonland,
                 return_to: ExileReturnZone::Hand,
@@ -9203,7 +9238,7 @@ pub fn magus_of_the_mirror() -> CardDefinition {
             ])),
             effect: Effect::ExchangeLifeTotals {
                 a: Selector::You,
-                b: Selector::Player(PlayerRef::EachOpponent),
+                b: target_filtered(SelectionRequirement::OpponentPlayer),
             },
             ..Default::default()
         }],
@@ -10061,7 +10096,7 @@ pub fn bloodhusk_ritualist() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Discard {
-                who: Selector::Player(PlayerRef::EachOpponent),
+                who: target_filtered(SelectionRequirement::OpponentPlayer),
                 amount: Value::TimesKicked,
                 random: false,
             },
@@ -10251,7 +10286,7 @@ pub fn gatekeeper_of_malakir() -> CardDefinition {
             effect: Effect::If {
                 cond: Predicate::SpellWasKicked,
                 then: Box::new(Effect::Sacrifice {
-                    who: Selector::Player(PlayerRef::EachOpponent),
+                    who: target_filtered(SelectionRequirement::Player),
                     count: Value::Const(1),
                     filter: SelectionRequirement::Creature,
                 }),

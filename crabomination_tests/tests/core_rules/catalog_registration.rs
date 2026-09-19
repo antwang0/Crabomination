@@ -1934,6 +1934,127 @@ fn every_batched_damage_trigger_fires_once_a_batch() {
     );
 }
 
+/// **A card that prints "whenever one or more cards leave your graveyard"
+/// fires once per batch, not once per card.**
+///
+/// CR 603.2c, the sibling of the damage ratchet above. The engine emits one
+/// `CardLeftGraveyard` per card, so a five-card graveyard exiled at once paid
+/// a card-leaves trigger five times — Quintorius made five 3/2 Spirits where
+/// the printed card makes one. `once_per_batch` is the whole fix and Attuned
+/// Hunter has carried it since the flag existed; the other thirteen had not.
+#[test]
+fn every_graveyard_leave_trigger_fires_once_a_batch() {
+    clause_ratchet(
+        "whenever one or more … leave your graveyard",
+        10,
+        |t, _| {
+            t.lines().map(str::trim).filter_map(|l| l.split_once("whenever one or more")).any(
+                // "leave", not "your graveyard": "one or more land cards are
+                // put INTO your graveyard from your library" (Hedge Shredder)
+                // and "creature cards in your graveyard are put into exile"
+                // (Kaya) are different events with different batching.
+                |(_, rest)| {
+                    rest.split(',').next().is_some_and(|cond| cond.contains("leave your graveyard"))
+                },
+            )
+        },
+        |_, body| body.contains("once_per_batch: true") || body.contains("once_per_turn: true"),
+    );
+}
+
+/// The two names the attack-batch ratchet below signs off, and neither is an
+/// unbatched trigger. **Frontier Warmonger** models "those creatures gain
+/// menace" as `StaticEffect::GrantKeywordToAttackers` — a continuous grant to
+/// the whole attacking set, which is the printed result and not a trigger at
+/// all. **Sabotage Strategist** models "those creatures get -1/-0" as a
+/// per-attacker `PumpPT { what: TriggerSource }`, and firing once per creature
+/// is exactly how one instance reaches every member of the set; batching it
+/// would pump one attacker and leave the rest alone.
+/// **Orim's Prayer** is the third and the reason is arithmetic: "gain 1
+/// life for each attacking creature" as a per-attacker `GainLife 1` sums
+/// to exactly the printed amount, and batching it would need a count of
+/// the creatures attacking *you* — which at N > 2 is not the same as the
+/// creatures attacking, and no `SelectionRequirement` draws that line.
+const ATTACK_BATCH_SIGNED_OFF: &[&str] =
+    &["Frontier Warmonger", "Sabotage Strategist", "Orim's Prayer"];
+
+/// **A card that prints "whenever one or more … attack" fires once per
+/// declaration, not once per attacker.**
+///
+/// CR 603.2c and CR 508.1 — attackers are declared simultaneously, so the
+/// whole declaration is one event. Coveted Jewel drew its attacker's
+/// controller *nine* cards off three unblocked creatures.
+///
+/// ⚠ **`EventKind::YouAttack` is the third accepted spelling and the best
+/// one.** It is dispatched once per combat by `declare_attackers` and needs no
+/// flag; Ancestor Dragon (`shortcut::on_you_attack`), Choco and The Ur-Dragon
+/// all ride it. Only an ability that needs a per-attacker *filter* — "one or
+/// more **Halflings** you control" — has to stay on `Attacks` and carry
+/// `once_per_batch` instead.
+#[test]
+fn every_batched_attack_trigger_fires_once_a_declaration() {
+    clause_ratchet(
+        "whenever one or more … attack",
+        5,
+        |t, _| {
+            t.lines().map(str::trim).filter_map(|l| l.split_once("whenever one or more")).any(
+                |(_, rest)| rest.split(',').next().is_some_and(|cond| cond.contains("attack")),
+            )
+        },
+        |def, body| {
+            ATTACK_BATCH_SIGNED_OFF.contains(&def.name)
+                || body.contains("once_per_batch: true")
+                || body.contains("once_per_turn: true")
+                || body.contains("kind: YouAttack")
+        },
+    );
+}
+
+/// Woodland Champion is the one name the zone-change batch ratchet signs off,
+/// and the reason is arithmetic again: "put **that many** +1/+1 counters on
+/// this creature" as a per-token `+1/+1` sums to exactly the printed count,
+/// and batching it would need the size of the entering batch, which no
+/// `Value` reads.
+const ZONE_BATCH_SIGNED_OFF: &[&str] = &["Woodland Champion"];
+
+/// **A card that prints "whenever one or more … enter / die / leave the
+/// battlefield" fires once per batch, not once per permanent.**
+///
+/// CR 603.2c again, over the zone-change events. Blood Spatter Analysis put a
+/// bloodstain counter on itself *per creature that died*, so one board wipe
+/// filled all five and sacrificed it on the spot; Dour Port-Mage drew a card
+/// per creature a mass bounce took; Aang got an experience counter apiece, and
+/// its own comment had said so since it shipped.
+///
+/// ⚠ **`CounterAdded` is deliberately not in this family.** `GameEvent::
+/// CounterAdded` carries a `count`, so one placement of three counters is one
+/// event and "whenever one or more +1/+1 counters are put on this creature"
+/// already fires once — eleven cards read as gaps against a naive predicate
+/// and none of them is one.
+#[test]
+fn every_batched_zone_change_trigger_fires_once_a_batch() {
+    clause_ratchet(
+        "whenever one or more … enter / die / leave the battlefield",
+        4,
+        |t, _| {
+            t.lines().map(str::trim).filter_map(|l| l.split_once("whenever one or more")).any(
+                |(_, rest)| {
+                    rest.split(',').next().is_some_and(|cond| {
+                        cond.ends_with(" enter")
+                            || cond.ends_with(" die")
+                            || cond.contains("leave the battlefield")
+                    })
+                },
+            )
+        },
+        |def, body| {
+            ZONE_BATCH_SIGNED_OFF.contains(&def.name)
+                || body.contains("once_per_batch: true")
+                || body.contains("once_per_turn: true")
+        },
+    );
+}
+
 // ── The printed *keyword* ratchet — the MISSING direction, restricted ───────
 
 /// The keywords this ratchet checks, as `(scryfall name, does the definition

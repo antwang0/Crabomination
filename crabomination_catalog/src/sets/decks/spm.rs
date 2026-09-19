@@ -438,7 +438,7 @@ pub fn morlun_devourer_of_spiders() -> CardDefinition {
         keywords: vec![Keyword::Lifelink],
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::XFromCost)),
         triggered_abilities: vec![etb(Effect::DealDamage {
-            to: Selector::Player(PlayerRef::EachOpponent),
+            to: target_filtered(crate::card::SelectionRequirement::OpponentPlayer),
             amount: Value::XFromCost,
         })],
         ..Default::default()

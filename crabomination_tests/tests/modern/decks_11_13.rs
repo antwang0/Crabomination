@@ -2351,3 +2351,24 @@ fn decks_11_13_printed_shapes() {
         }
     }
 }
+
+/// "Up to one **target player**" is one seat, and Endurance shipped as
+/// `PlayerRef::EachOpponent` — the same seat in a duel, every opponent's
+/// graveyard at once in a pod.
+#[test]
+fn endurance_shuffles_only_the_targeted_graveyard_at_four_seats() {
+    let mut g = crabomination::game::multi_player_game(4);
+    for seat in 1..4 {
+        g.add_card_to_graveyard(seat, catalog::lightning_bolt());
+    }
+    let id = g.add_card_to_hand(0, catalog::endurance());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    // The target is the ETB trigger's, not the spell's, so the picker fills it.
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Endurance castable for {1}{G}{G}");
+    drain_stack(&mut g);
+    let emptied: Vec<usize> = (1..4).filter(|&s| g.players[s].graveyard.is_empty()).collect();
+    assert_eq!(emptied.len(), 1, "exactly one graveyard went back, not the table's");
+}

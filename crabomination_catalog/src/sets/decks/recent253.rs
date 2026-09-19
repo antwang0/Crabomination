@@ -217,7 +217,7 @@ pub fn rakdos_patron_of_chaos() -> CardDefinition {
                 EventScope::ActivePlayer,
             ),
             effect: Effect::Punisher {
-                chooser: Selector::Player(PlayerRef::EachOpponent),
+                chooser: target_filtered(crate::card::SelectionRequirement::OpponentPlayer),
                 options: vec![Effect::Sacrifice {
                     who: Selector::You,
                     count: Value::Const(2),

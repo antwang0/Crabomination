@@ -1402,7 +1402,7 @@ fn kindlespark_duo_pings_and_untaps_on_noncreature_cast() {
     g.clear_sickness(duo);
     g.players[1].life = 20;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: duo, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
+        card_id: duo, ability_index: 0, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("tap to ping");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, 19, "ping dealt 1");

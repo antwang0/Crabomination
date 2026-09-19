@@ -1335,10 +1335,14 @@ fn gates_ablaze_scales_with_gates() {
 #[test]
 fn undercitys_embrace_edict_and_lifegain() {
     let mut g = two_player_game();
+    // The default bot profile aims a hostile player slot at an
+    // opponent (`EvalWeights::default()`); a bare test seat does not.
+    g.players[0].hostile_player_targets = true;
     g.add_card_to_battlefield(1, catalog::grizzly_bears());
     g.add_card_to_battlefield(0, catalog::craw_wurm()); // 6/4, power >= 4
     let life = g.players[0].life;
-    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    let ctx = crabomination::game::effects::EffectContext::for_spell(
+        0, Some(crabomination::game::types::Target::Player(1)), 0, 0);
     let effect = catalog::undercitys_embrace().effect.clone();
     g.resolve_effect(&effect, &ctx).unwrap();
     assert_eq!(g.battlefield.iter().filter(|c| c.controller == 1 && c.definition.card_types.contains(&CardType::Creature)).count(), 0, "opponent sacrificed their creature");

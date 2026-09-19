@@ -3015,6 +3015,179 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-09-19 (the seventh Commander session, tip `3aca0ddb`) — guardrail, no perf work
+
+Two correctness commits: `Effect::BindScratch` (the resolver scratch a parked
+continuation dropped) and the **target-clause class** — 126 implemented cards
+whose printed "target opponent / target player" clause was modelled as
+`PlayerRef::EachOpponent`. **Neither is a perf change and neither moved a
+number.**
+
+```text
+--bench (release), CRAB_THREAD_CHECK=1:
+  decisions          195,806   byte-identical to the committed invariant
+  turns_per_game       27.49   "
+  decisions_per_game   611.9   "
+  stalls          0 (cap 0 / board 0 / stuck 0 / draw 0)
+  determinism     ok (all pairs split); thread_determinism ok (3 vs 1)
+  peak_rss_mib     25.9
+```
+
+📐 **And the cheap pre-check said so before the build did, which is the
+reusable half**: the bench plays `--decks fixed`, i.e. `bot_ladder::
+archetypes()` — 38 cards, every one of them a vanilla creature, a burn spell
+or a one-clause removal spell. **Not one of the 126 changed cards is in it,
+and not one is in `golden_trace.rs`'s two decks.** The only thing that *could*
+have moved it was the engine half (`friendliness_of_targeting_children` now
+reads the first targeting child of a `Seq` instead of `any`), and the
+archetypes hold no `Seq` whose targeting children disagree. Read the two deck
+lists before predicting a card commit's bench.
+
+**Pod smoke, fresh seeds and nothing re-used:** 12,000 games over 2/3/4/5
+seats at seeds 3201-3203 — **100 % decided, 0 stalls, every `undecided_by`
+column zero**, no panic or error line. Turns a game 18.27-18.50 / 30.29-30.76 /
+41.16-41.59 / 52.38-52.91, i.e. inside the previous session's ranges with a
+small upward drift at 4 and 5 seats — which is the class fix showing up
+exactly where it should: a removal clause that used to hit three seats now
+hits one. **FRONTIER 3204.**
+
+**Deck aggregate** (release-fast, seed 43, 3,000 games, four seats):
+39.8 / 14.7 / 20.0 / 25.5 against the recorded 40.8 / 14.6 / 20.3 / 24.3 —
+inside the noise.
+
+⚠ **The `--bench` and pod numbers were taken at `7f9520ed` and still hold at
+the closing tip**, and the derivation is the one above rather than a re-run:
+the eight cards changed after it (Parallax Nexus, the seven filter
+mismatches) are in **none** of `bot_ladder::archetypes()`,
+`golden_trace.rs`'s two decks or `pod/decks.rs`'s five — and
+`cr_903_seeded_pod_outcomes_match_the_committed_table`, which is a
+cross-process check over three whole pod games, passes unchanged at the tip.
+
+**Assertions sweep, taken at the closing tip** (`overflow` +
+`-C debug-assertions=yes` into `target-audit`, `RUST_MIN_STACK=33554432`):
+**4,000 pod games** over 2/3/4/5 seats at seeds 4101-4102 and **4,080
+two-player games** over `fixed` / `cube` / `sos` / `all` at seed 4101 — no
+panic, no assertion, no overflow, 100 % decided, every `undecided_by` column
+zero. The build is **7m45s** (`release-fast`'s opt settings plus
+overflow checks), i.e. a third of a `release` build: it is the cheap
+robustness gate, not the expensive one.
+
+⚠ **Build economics, measured again on this box (4 cores, 15 GB):** `release`
+bot_ladder **23m24s** after a catalog + engine change; `release-fast` ~13 min;
+the workspace debug suite 95-102 s. ⚠⚠ **And the rule that cost two whole
+builds this session: DO NOT EDIT THE TREE WHILE AN OPTIMIZED BUILD IS
+RUNNING.** rustc reads a crate's sources at the start, so the artifact it
+produces is from the pre-edit tree *and* cargo then re-runs the whole chain.
+Batch every catalog edit, then build once.
+
+### 2026-09-19 (the sixth Commander session, engine tip `feb5714d`) — guardrail, no perf work
+
+The loop-splice class (ENGINE_BACKLOG's forty-third find): twenty loops that
+dropped their remaining iterations when a body suspended, one helper, one
+ratchet. **No perf project, and none of it is on a hot path** — every arm
+gains exactly one `Option::is_some` on the *non*-suspending pass, because
+`splice_after_suspend` takes its tail as a closure and only builds it when
+the signal is set.
+
+```text
+--bench (release), taken at THREE tips this session — after the loop-splice
+class (`1a49709b`), after the CardId pin (`4c4afec6`) and after the pair
+form (`feb5714d`). Identical at all three:
+  decisions          195,806   byte-identical to the committed invariant
+  turns_per_game       27.49   "
+  decisions_per_game   611.9   "
+  stalls          0 (cap 0 / board 0 / stuck 0 / draw 0)
+  determinism     ok (all pairs split); thread_determinism ok (3 vs 1)
+  peak_rss_mib     25.7 / 25.4 / 25.4
+```
+
+**Pod smoke, all three tips, fresh seeds and nothing re-used:** 15,200 games
+over 2/3/4/5 seats at seeds 3101-3112 — **100 % decided, 0 stalls, every
+`undecided_by` column zero**, no panic and no error line in any run
+(redirected to files, then grepped: `rc=$?` after a pipe reads the pipe).
+Turns a game 18.20-18.23 / 30.25-30.54 / 41.36-41.49 / 51.80-52.30, i.e. the
+tips agree inside the seed noise. **FRONTIER 3113.**
+
+⚠ **And the number that makes the rule above actionable: an engine-only
+rebuild is 12m08s where a `crabomination_base` one is ~55 min.** Same box,
+same session, measured on the pair-form commit. The catalog is the whole
+difference.
+
+📐 **The pre-check that made the modal commit safe to predict, and it is
+reusable: read the trace decks and `archetypes()` before reasoning about the
+aggregate.** `golden_trace.rs`'s two decks and `bot_ladder::archetypes()`
+between them hold 34 distinct cards and **not one modal spell**, so CR 700.2's
+change could not reach either — which is why the golden traces were byte-
+identical in the debug suite before the release binary had even finished
+building. Pool membership is still a measurement, not a veto; this is the
+cheaper half of the same rule.
+
+⚠ **The build economics, because they dominated this session's wall clock and
+nobody had written them down.** `crabomination_base` sits under
+`crabomination_catalog`, which is the expensive crate (opt-level 3,
+`codegen-units = 1`, ~25 min on its own here), and `release` finishes with a
+ThinLTO link over the whole program. A cold `release` build measured
+**~55 min** on this box, not CLAUDE.md's 31m32s. So **one edit to
+`effect.rs` costs the entire chain**: batch a session's base-crate edits into
+one commit and take the bench once, at the end. ⚠ And `cargo run --release`
+queued behind a build **re-fingerprints when it takes the lock** — edit the
+tree while it waits and it rebuilds instead of running, silently costing the
+reading you queued.
+
+### 2026-09-19 (the fifth Commander session, tip `HEAD`) — guardrail
+
+CR 603.2c's batch work, 25 catalog cards across three clauses, and a retuned
+pod deck. **The `--bench` invariant is byte-identical at three separate tips**,
+including the one that changed six `cube`/SOS pool cards' behavior:
+
+```text
+--bench (release-fast, this session's three readings all identical):
+  decisions          195,806   byte-identical to the committed invariant
+  turns_per_game       27.49   "
+  decisions_per_game   611.9   "
+  stalls          0 (cap 0 / board 0 / stuck 0 / draw 0)
+  determinism     ok (all pairs split)
+```
+
+**Ir, and it is the clean single-commit A/B**: base `3964e1c5`, candidate
+`a09f4704` — one commit apart, so the reading is the CR 603.2c batch-subject
+change and nothing else. Both `profiling-fast --no-default-features`, separate
+worktrees on one shared target dir, `nm | grep -cE " (T|t) (_)?mi_"` = 0 on
+both, distinct md5s.
+
+```text
+                        3964e1c5          a09f4704          delta
+  fixed              569,009,641       569,150,030       +0.0247 %
+  cube             1,480,034,899     1,480,485,041       +0.0304 %
+  sealed           1,601,529,456     1,601,932,160       +0.0251 %
+```
+
+📐 **All three pools move together by the same ~0.027 %, which by `(-361)`'s
+rule is a CODEGEN row rather than a workload row** — and that is what the
+change is: `combat_trigger_fired_this_step`'s key gains a `BatchSubject`
+field and `fire_combat_damage_triggers` gains a `bool`. The `Vec` itself is
+empty on virtually every board (`clear_cold!` guards it), so nothing here is
+per-permanent work.
+
+The card commits under it are **pure data** (`once_per_batch: true` on 25
+definitions) plus one dispatch-local `Vec<CardId>` behind the graveyard
+phase's existing `has_graveyard_trigger()` gate. Six of the 25 are pool cards
+and the `--bench` counters did not move: several cards leaving one graveyard
+at once, or three unblocked attackers into one seat, are rare in those pools.
+⚠ **That is the correction this session owes the file** — the previous pass
+had deferred the whole graveyard clause *on the assumption* that a pool card's
+behavior change must move the aggregate. Change it, then run `--bench`.
+
+**The pod, 20,000 games over six configurations** (`release-fast`, seed 43,
+3,000 a configuration at 2/3/4/5 seats plus the retune's before/after), 100 %
+decided, 0 undecided, 0 stalls throughout. Judith 6.2 → 14.6 % at four seats;
+turns/game 39.45 → 41.08 there, 52.54 at five seats.
+
+**Assertions sweep** (`overflow` + `-C debug-assertions=yes`): 8,000 pod games
+at 2/3/4/5 seats on fresh seeds 2005-2006 and the two-player grid over
+fixed/cube/sos/all at seed 2005 (4,080 games) — **0 assertions, 0 panics,
+100 % decided**. FRONTIER 2007.
+
 ### 2026-09-18 (the fourth Commander session, tip `06d60b26`) — guardrail
 
 Six Commander rules changes, a bot heuristic and an engine targeting change,

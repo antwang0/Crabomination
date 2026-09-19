@@ -121,9 +121,8 @@ pub fn sheer_drop() -> CardDefinition {
 /// Mire's Malice — {3}{B} Sorcery. Target opponent discards two cards.
 /// Awaken 3—{5}{B}.
 pub fn mires_malice() -> CardDefinition {
-    use crate::effect::Selector;
     let base = Effect::Discard {
-        who: Selector::Player(PlayerRef::EachOpponent),
+        who: target_filtered(crate::card::SelectionRequirement::OpponentPlayer),
         amount: Value::Const(2),
         random: false,
     };
@@ -132,7 +131,8 @@ pub fn mires_malice() -> CardDefinition {
         cost: cost(&[generic(3), b()]),
         card_types: vec![CardType::Sorcery],
         effect: base.clone(),
-        alternative_cost: Some(awaken(3, cost(&[generic(5), b()]), 0, base)),
+        // The discard names slot 0, so awaken's land takes slot 1.
+        alternative_cost: Some(awaken(3, cost(&[generic(5), b()]), 1, base)),
         ..Default::default()
     }
 }
@@ -323,7 +323,6 @@ pub fn tar_snare() -> CardDefinition {
 /// and discards two cards. (The printed "exiles two cards from hand" is
 /// approximated as a discard — no exile-from-hand-by-the-owner primitive.)
 pub fn witness_the_end() -> CardDefinition {
-    use crate::effect::Selector;
     CardDefinition {
         name: "Witness the End",
         cost: cost(&[generic(3), b()]),
@@ -331,12 +330,12 @@ pub fn witness_the_end() -> CardDefinition {
         keywords: vec![Keyword::Devoid],
         effect: Effect::Seq(vec![
             Effect::Discard {
-                who: Selector::Player(PlayerRef::EachOpponent),
+                who: target_filtered(crate::card::SelectionRequirement::OpponentPlayer),
                 amount: Value::Const(2),
                 random: false,
             },
             Effect::LoseLife {
-                who: Selector::Player(PlayerRef::EachOpponent),
+                who: target_filtered(crate::card::SelectionRequirement::OpponentPlayer),
                 amount: Value::Const(2),
             },
         ]),

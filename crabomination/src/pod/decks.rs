@@ -47,27 +47,37 @@ pub const SIGARDA_MAIN: &[CardFactory] = &[
 /// Judith, the Scourge Diva — BR. Commander, then the 99.
 pub const JUDITH_COMMANDERS: &[CardFactory] = &[judith_the_scourge_diva];
 
-/// Judith aristocrats BR: 72 nonbasic cards + 27 basics = 99.
+/// Judith BR: 72 nonbasic cards + 27 basics = 99.
+///
+/// Retuned 2026-09-19 — see PERF/TODO for the measurement that chose this
+/// shape. The first list was cheap cube filler; the obvious repair (a real
+/// aristocrats engine — free sacrifice outlets, drain payoffs, recursive
+/// fodder) measured **worse**, because a one-ply material evaluator cannot
+/// see a value engine: sacrificing a body for one life off each opponent
+/// is material-negative every single time it is asked. What the bot does
+/// pilot is removal, card advantage and fat, so that is what this is — with
+/// Sepulchral Primordial and Gray Merchant for the per-opponent scaling and
+/// Command Beacon for the command zone.
 pub const JUDITH_MAIN: &[CardFactory] = &[
-    arcane_signet, bartizan_bats, bloodchiefs_thirst, bloodrage_brawler, boggart_harbinger,
-    bone_shards, bone_splinters, brain_maggot, cabal_coffers, cabal_ritual, talisman_of_indulgence,
-    carrier_thrall, cathodion, chain_lightning, chromatic_sphere, chromatic_star,
-    cling_to_dust, command_tower, commanders_sphere, crash_through, cremate, crimson_wisps,
-    crush, cryptbreaker, crystalline_crawler, dark_ritual, darkblast, darksteel_colossus,
+    arcane_signet, balefire_dragon, bedevil, blasphemous_act, bloodchiefs_thirst, bone_shards,
+    bone_splinters, burnished_hart, cabal_coffers, cabal_ritual, carrier_thrall, cathodion,
+    chaos_warp, command_beacon, command_tower, commanders_sphere, cryptbreaker, dark_ritual,
     dauthi_voidwalker, den_of_the_bugbear, desperate_ritual, earthshaker_khenra,
-    embereth_shieldbreaker, everflowing_chalice, fanatical_firebrand, festering_mummy,
-    furnace_whelp, goblin_banneret, grim_monolith, guardian_idol, highborn_ghoul, hollow_one,
-    rakdos_signet, indulgent_tormentor, lecturing_scornmage, lightning_mauler, mana_vault,
-    marauding_mako, mind_stone, mortuary_mire, nekrataal, nihil_spellbomb, opal_palace,
-    path_of_ancestry, pia_nalaar,
-    reckless_wurm, restless_vents, royal_assassin, scathing_shadelock, shivan_dragon,
-    simian_spirit_guide, skirk_prospector, slaughter_pact, sokenzan_crucible_of_defiance,
-    sol_ring, spinerock_knoll, takenuma_abandoned_mire, torbran_thane_of_red_fell,
-    universal_automaton, walking_ballista, wayfarers_bauble, weaponcraft_enthusiast,
+    etali_primal_storm, everflowing_chalice, feed_the_swarm, glorybringer, goblin_rabblemaster,
+    grave_pact, gray_merchant_of_asphodel, grim_monolith, guardian_idol, hellrider,
+    indulgent_tormentor, kokusho_the_evening_star, mana_vault, massacre_wurm, midnight_reaper,
+    mind_stone, mortuary_mire, nekrataal, nights_whisper, nihil_spellbomb, noxious_gearhulk,
+    opal_palace, path_of_ancestry, phyrexian_arena, pia_nalaar, rakdos_signet,
+    ravenous_chupacabra, read_the_bones, reckless_wurm, restless_vents, royal_assassin,
+    sepulchral_primordial, sheoldred_whispering_one, shivan_dragon, sign_in_blood,
+    skirk_prospector, skullclamp, slaughter_pact, sokenzan_crucible_of_defiance, sol_ring,
+    solemn_simulacrum, spinerock_knoll, takenuma_abandoned_mire, talisman_of_indulgence,
+    terminate, torbran_thane_of_red_fell, toxic_deluge, walking_ballista, wayfarers_bauble,
+    weaponcraft_enthusiast,
     // Basics: 13 mountain, 14 swamp
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
-    mountain, mountain, mountain, mountain, swamp, swamp, swamp, swamp, swamp, swamp,
-    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    mountain, mountain, mountain, mountain, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
 
 /// Hanna, Ship's Navigator — UW. Commander, then the 99.

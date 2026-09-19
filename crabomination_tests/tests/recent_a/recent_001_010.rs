@@ -270,10 +270,14 @@ mod recent {
     #[test]
     fn thornplate_intimidator_punisher_discard() {
         let mut g = two_player_game();
+        // The default bot profile aims a hostile player slot at an
+        // opponent (`EvalWeights::default()`); a bare test seat does not.
+        g.players[0].hostile_player_targets = true;
         g.players[1].life = 20;
         g.add_card_to_hand(1, catalog::grizzly_bears()); // a card to pitch
         let trig = catalog::thornplate_intimidator().triggered_abilities[0].effect.clone();
-        let ctx = crabomination::game::effects::EffectContext::for_ability(crabomination::card::CardId(0), 0, None);
+        let ctx = crabomination::game::effects::EffectContext::for_ability(
+            crabomination::card::CardId(0), 0, Some(Target::Player(1)));
         g.resolve_effect(&trig, &ctx).unwrap();
         // No nonland permanent to sac, so the opponent discards (no life loss).
         assert_eq!(g.players[1].life, 20, "dodged the life loss");
@@ -3266,7 +3270,7 @@ mod recent {
         g.perform_action(GameAction::ActivateAbility {
             card_id: dep,
             ability_index: 0,
-            target: None,
+            target: Some(Target::Player(1)),
             additional_targets: vec![],
             x_value: None, mode: None,
         }).expect("ability activates");
@@ -6113,6 +6117,9 @@ mod recent {
     #[test]
     fn surging_dementia_each_player_discards() {
         let mut g = two_player_game();
+        // The default bot profile aims a hostile player slot at an
+        // opponent (`EvalWeights::default()`); a bare test seat does not.
+        g.players[0].hostile_player_targets = true;
         for _ in 0..3 { g.add_card_to_hand(0, catalog::forest()); }
         for _ in 0..3 { g.add_card_to_hand(1, catalog::forest()); }
         let dem = g.add_card_to_hand(0, catalog::surging_dementia());
@@ -6120,10 +6127,10 @@ mod recent {
         let h1 = g.players[1].hand.len();
         g.players[0].mana_pool.add(Color::Black, 1);
         g.players[0].mana_pool.add_colorless(1);
-        cast(&mut g, dem);
-        // No copies on top → one discard each (the spell itself left hand to stack).
-        assert_eq!(g.players[1].hand.len(), h1 - 1, "opponent discarded once");
-        assert_eq!(g.players[0].hand.len(), h0 - 1 - 1, "caster lost the spell + a discard");
+        cast_at(&mut g, dem, Target::Player(1));
+        // "**Target player** discards a card" — one seat, not the table.
+        assert_eq!(g.players[1].hand.len(), h1 - 1, "the targeted player discarded once");
+        assert_eq!(g.players[0].hand.len(), h0 - 1, "the caster only lost the spell");
     }
 
     /// Unearth returns the card from the graveyard with haste.

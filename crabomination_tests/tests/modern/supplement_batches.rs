@@ -355,7 +355,7 @@ fn tormods_crypt_exiles_opponent_graveyard() {
     g.clear_sickness(crypt);
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: crypt, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
+        card_id: crypt, ability_index: 0, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Tormod's Crypt activates");
     drain_stack(&mut g);
 
@@ -1638,7 +1638,7 @@ fn mind_sculpt_mills_each_opponent_seven() {
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::CastSpell {
-        card_id: ms, target: None, additional_targets: vec![], mode: None, x_value: None,
+        card_id: ms, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
     }).unwrap();
     drain_stack(&mut g);
     assert_eq!(g.players[1].library.len(), lib_before - 7,
@@ -2518,4 +2518,25 @@ fn overload_cleave_and_gift_are_carried_by_the_cards_that_print_them() {
     let wear = catalog::wear_down();
     let gift = wear.gift.as_ref().expect("Gift a card");
     assert_eq!(gift.label, "a card");
+}
+
+/// "…unless **target opponent** sacrifices a creature or pays 3 life" is one
+/// seat. It shipped as `PlayerRef::EachOpponent`, which is one punisher in a
+/// duel and three separate ones in a four-seat pod.
+#[test]
+fn indulgent_tormentor_punishes_only_the_targeted_opponent_at_four_seats() {
+    use crabomination::game::types::TurnStep;
+    let mut g = crabomination::game::multi_player_game(4);
+    let _torm = g.add_card_to_battlefield(0, catalog::indulgent_tormentor());
+    g.active_player_idx = 0;
+    g.step = TurnStep::Upkeep;
+    g.priority.player_with_priority = 0;
+    let life: Vec<i32> = g.players.iter().map(|p| p.life).collect();
+
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+
+    let paid: Vec<usize> = (1..4).filter(|&s| g.players[s].life < life[s]).collect();
+    assert_eq!(paid.len(), 1, "exactly one opponent was punished, not the table");
+    assert_eq!(g.players[paid[0]].life, life[paid[0]] - 3, "and they paid 3");
 }

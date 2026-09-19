@@ -268,8 +268,8 @@ pub fn emrakul_the_promised_end() -> CardDefinition {
         // control lands on and the natural turn follows it: controlled turn,
         // then their own, the printed sequence.
         triggered_abilities: vec![crate::effect::shortcut::on_cast(Effect::Seq(vec![
-            Effect::ControlPlayerNextTurn { who: PlayerRef::EachOpponent },
-            Effect::TakeExtraTurn { who: PlayerRef::EachOpponent, count: Value::ONE },
+            Effect::ControlPlayerNextTurn { who: PlayerRef::Target(0) },
+            Effect::TakeExtraTurn { who: PlayerRef::Target(0), count: Value::ONE },
         ]))],
         ..Default::default()
     }

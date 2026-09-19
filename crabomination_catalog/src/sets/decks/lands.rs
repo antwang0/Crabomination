@@ -470,11 +470,11 @@ pub fn cephalid_coliseum() -> CardDefinition {
                         to: crate::effect::ZoneDest::Graveyard,
                     },
                     Effect::Draw {
-                        who: Selector::Player(PlayerRef::EachPlayer),
+                        who: target_filtered(crate::card::SelectionRequirement::Player),
                         amount: Value::Const(3),
                     },
                     Effect::Discard {
-                        who: Selector::Player(PlayerRef::EachPlayer),
+                        who: target_filtered(crate::card::SelectionRequirement::Player),
                         amount: Value::Const(3),
                         random: false,
                     },
@@ -966,7 +966,7 @@ fn restless_land(
 /// Restless Reef — U/B. `{2}{U}{B}`: 4/4 deathtouch Shark. Whenever it
 /// attacks, target player mills four.
 pub fn restless_reef() -> CardDefinition {
-    use crate::card::{CreatureType, Keyword, SelectionRequirement as R};
+    use crate::card::{CreatureType, Keyword};
     use crate::effect::shortcut::target_filtered;
     restless_land(
         "Restless Reef",
@@ -978,7 +978,7 @@ pub fn restless_reef() -> CardDefinition {
         vec![CreatureType::Shark],
         vec![Keyword::Deathtouch],
         Effect::Mill {
-            who: target_filtered(R::Player),
+            who: target_filtered(crate::card::SelectionRequirement::Player),
             amount: Value::Const(4),
         },
     )
