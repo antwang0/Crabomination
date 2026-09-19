@@ -591,6 +591,14 @@ mod tests {
     #[test]
     fn cr_903_seeded_pod_outcomes_match_the_committed_table() {
         // (seed, winner, turns, actions)
+        // Re-blessed 2026-09-19 (Shifting Woodland, and the card is less
+        // interesting than how it was found): the census's reader ended a
+        // card's body at the next `pub fn`, so a PRIVATE helper between two
+        // factories was read as part of the preceding card — and the card
+        // after such a helper had its own body hidden. Ending at the next
+        // `fn` of any visibility surfaced one more row, this one.
+        // **Nine actions across two of the three games** (4068 → 4061,
+        // 2542 → 2540), same winners and same turns.
         // Re-blessed 2026-09-19 (the fastlands, same class): "enters tapped
         // unless you control two or fewer other lands" off the trigger and
         // onto `EntersTappedUnless`, 17 call sites through one helper.
@@ -686,8 +694,8 @@ mod tests {
         // 25.1 to 23.6 points (39.8/14.7/20.0/25.5 → 40.9/17.1/17.3/24.7,
         // 3,000 games at seed 43), and games run ~9 % longer.
         const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
-            (0xC0FFEE, Some(1), 97, 4068),
-            (43, Some(3), 63, 2542),
+            (0xC0FFEE, Some(1), 97, 4061),
+            (43, Some(3), 63, 2540),
             (4242, Some(2), 55, 2436),
         ];
         let decks = rofellos_pod(4);

@@ -708,18 +708,15 @@ pub fn shifting_woodland() -> CardDefinition {
                 ..Default::default()
             },
         ],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::If {
-                cond: Predicate::SelectorExists(Selector::EachPermanent(
+        static_abilities: vec![crate::effect::StaticAbility {
+            description: "This land enters tapped unless you control a Forest.",
+            effect: crate::effect::StaticEffect::EntersTappedUnless {
+                applies_to: Selector::This,
+                condition: Predicate::SelectorExists(Selector::EachPermanent(
                     SelectionRequirement::HasLandType(LandType::Forest)
                         .and(SelectionRequirement::ControlledByYou)
                         .and(SelectionRequirement::OtherThanSource),
                 )),
-                then: Box::new(Effect::Noop),
-                else_: Box::new(Effect::Tap {
-                    what: Selector::This,
-                }),
             },
         }],
         ..Default::default()

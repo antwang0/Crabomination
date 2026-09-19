@@ -32,6 +32,10 @@ Columns:
 * **unconditional** — "This land enters tapped." Mostly reached through the
   shared `etb_tap()` helper, so this column is one helper and its call sites
   rather than N hand-written bodies.
+* **invented** — the mirror: a card that SHIPS the replacement and prints no
+  "enters tapped" clause at all. A one-directional ratchet is how a
+  conversion pass quietly hands a card a downside it does not have, so
+  `--gate` fails on this column too.
 
 **The class is CLOSED: this census read 83 when it was written and reads 0.**
 `--gate` therefore fails on ANY row, not only on a regression of the two
@@ -55,6 +59,8 @@ CATALOG = ROOT / "crabomination_catalog/src"
 CACHE = ROOT / "scripts/.scryfall_cache.json"
 
 FN_RE = re.compile(r"pub fn (\w+)\(\) -> CardDefinition \{")
+FN_ANY = re.compile(r"^(?:pub(?:\([^)]*\))? )?fn \w+", re.M)
+COMMENT = re.compile(r"^\s*//.*$", re.M)
 NAME_RE = re.compile(r'name:\s*"((?:[^"\\]|\\.)*)"')
 HELPER_NAME = re.compile(r'\(\s*"((?:[^"\\]|\\.)*)"')
 
@@ -74,6 +80,14 @@ TRIGGER = re.compile(
     r"|shockland_pay_two_or_tap\(|fastland_etb_conditional_tap\("
     r"|pay_three_or_tapped\("
 )
+# The printed clause in ANY inflection, for the mirror column: "this land
+# enters tapped", "artifacts your opponents control enter tapped", "put it
+# onto the battlefield tapped".
+PRINTS_TAPPED = re.compile(
+    r"enters? (?:the battlefield )?tapped|battlefield tapped|\btapped\b[^.]*\btoken\b",
+    re.I,
+)
+
 # A replacement, written out or reached through one of its helpers.
 REPLACEMENT = re.compile(
     r"StaticEffect::(EntersTapped|EntersTappedUnless)"
@@ -112,10 +126,20 @@ def card_bodies(cache):
     out = {}
     for path in sorted(CATALOG.rglob("*.rs")):
         src = path.read_text()
-        fns = [(m.start(), m.group(1)) for m in FN_RE.finditer(src)]
-        for i, (start, ident) in enumerate(fns):
-            stop = fns[i + 1][0] if i + 1 < len(fns) else len(src)
-            body = src[start:stop]
+        # ⚠ The body ends at the next function of ANY visibility, not at the
+        # next `pub fn`. A private helper sitting between two card factories
+        # is otherwise read as part of the preceding card, which both hides
+        # that card's own shape and attributes the helper's to it.
+        bounds = [m.start() for m in FN_ANY.finditer(src)]
+        for m in FN_RE.finditer(src):
+            start, ident = m.start(), m.group(1)
+            stop = next((b for b in bounds if b > start), len(src))
+            # ⚠ Comments out. A doc comment for the NEXT card sits inside this
+            # slice (the boundary is the next `fn`, and the comment precedes
+            # it), and a doc comment that names `StaticEffect::EntersTappedUnless`
+            # is prose, not a shipped ability. Hardened Academic read as an
+            # invented replacement until this line.
+            body = COMMENT.sub("", src[start:stop])
             candidates = [m.group(1) for m in NAME_RE.finditer(body)]
             candidates += [m.group(1) for m in HELPER_NAME.finditer(body)]
             name = next(
@@ -164,6 +188,21 @@ def main():
             r = rank if rank < 10**9 else "-"
             print(f"  {r:>7}  {name}  [{fname}::{ident}]  {clause.strip()}")
 
+    # The mirror column: a card that SHIPS the replacement and prints no
+    # "enters tapped" clause at all. An invented replacement is the same kind
+    # of defect as a missing one, and a one-directional ratchet is how a
+    # conversion pass quietly gives a card a downside it does not have.
+    invented = []
+    for name, (ident, fname, body) in bodies.items():
+        if not REPLACEMENT.search(body):
+            continue
+        entry = cache.get(name)
+        if isinstance(entry, dict) and not PRINTS_TAPPED.search(oracle(entry)):
+            invented.append((name, fname, ident))
+    print(f"\n== invented (ships the replacement, prints no tapped clause): {len(invented)}")
+    for name, fname, ident in sorted(invented):
+        print(f"  {name}  [{fname}::{ident}]")
+
     total = sum(len(v) for v in columns.values())
     cycles = SLOW_LANDS + BATTLE_LANDS
     missing = [n for n in cycles if n not in bodies]
@@ -185,7 +224,9 @@ def main():
     # card that prints "enters tapped" and ships a trigger fails here.
     if total:
         print(f"{total} cards are back on the trigger", file=sys.stderr)
-    return 1 if regressed or missing or total else 0
+    if invented:
+        print(f"{len(invented)} cards ship a replacement they do not print", file=sys.stderr)
+    return 1 if regressed or missing or total or invented else 0
 
 
 if __name__ == "__main__":
