@@ -1560,7 +1560,7 @@ pub fn zenos_yae_galvus() -> CardDefinition {
             keywords: vec![Keyword::Flying],
             triggered_abilities: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::Transformed, EventScope::SelfSource),
-                effect: Effect::RememberPlayerOnSource { who: PlayerRef::EachOpponent },
+                effect: Effect::RememberPlayerOnSource { who: PlayerRef::HostileOpponent },
             }],
             ..Default::default()
         })),

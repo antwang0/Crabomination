@@ -329,7 +329,7 @@ pub fn cursed_rack() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::RememberPlayerOnSource { who: PlayerRef::EachOpponent },
+            effect: Effect::RememberPlayerOnSource { who: PlayerRef::HostileOpponent },
         }],
         static_abilities: vec![StaticAbility {
             description: "The chosen player's maximum hand size is four.",
@@ -642,7 +642,7 @@ pub fn the_rack() -> CardDefinition {
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: Effect::RememberPlayerOnSource { who: PlayerRef::EachOpponent },
+                effect: Effect::RememberPlayerOnSource { who: PlayerRef::HostileOpponent },
             },
             TriggeredAbility {
                 event: EventSpec::new(

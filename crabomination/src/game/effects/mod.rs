@@ -37362,6 +37362,10 @@ impl GameState {
         );
         match pref {
             PlayerRef::You => Some(ctx.controller),
+            // A printed "choose an opponent". One ranked answer, shared with
+            // the bot's attack target and the auto-filled "target opponent",
+            // so a fixed seed reproduces the run; the lone opponent in a duel.
+            PlayerRef::HostileOpponent => self.default_hostile_opponent(ctx.controller),
             PlayerRef::CurrentVoter => Some(self.current_voter.unwrap_or(ctx.controller)),
             PlayerRef::Seat(p) => Some(*p),
             PlayerRef::ActivePlayer => Some(self.active_player_idx),

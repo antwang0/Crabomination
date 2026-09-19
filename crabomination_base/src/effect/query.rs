@@ -215,6 +215,7 @@ fn player_ref_selector(p: &PlayerRef) -> Option<&Selector> {
         | PlayerRef::MostCardsInHand
         | PlayerRef::MostCreatures
         | PlayerRef::ChosenPlayerOfSource
+        | PlayerRef::HostileOpponent
         | PlayerRef::OpponentsWhoVotedDifferently => None,
     }
 }

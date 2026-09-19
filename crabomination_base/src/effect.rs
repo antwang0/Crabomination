@@ -135,6 +135,13 @@ pub enum PlayerRef {
     /// CR 701.38 — each opponent whose vote in the most recent ballot differed
     /// from the effect's controller's (Grudge Keeper).
     OpponentsWhoVotedDifferently,
+    /// A printed "**choose an opponent**" — ONE opponent, picked by the
+    /// effect's controller. Not a fan-out: `GameState::default_hostile_
+    /// opponent` is the engine's single ranked answer for an open choice of
+    /// opponent at 3+ seats (commander-damage race, then lowest life, then
+    /// fewest untapped blockers, ties by seat index), and it is the only
+    /// opponent in a duel. The Rack, Cursed Rack, Pallimud, Booby Trap.
+    HostileOpponent,
 }
 
 impl PlayerRef {

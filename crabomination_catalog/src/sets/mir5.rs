@@ -676,7 +676,7 @@ pub fn reflect_damage() -> CardDefinition {
 pub fn haunting_apparition() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying],
-        as_enters_effect: Some(Effect::RememberPlayerOnSource { who: PlayerRef::EachOpponent }),
+        as_enters_effect: Some(Effect::RememberPlayerOnSource { who: PlayerRef::HostileOpponent }),
         dynamic_pt: Some(crate::card::DynamicPt::ChosenPlayerGraveyardMatching {
             base_p: 1,
             base_t: 2,

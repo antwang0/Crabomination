@@ -1050,7 +1050,7 @@ pub fn cunning() -> CardDefinition {
 pub fn entropic_specter() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying],
-        as_enters_effect: Some(Effect::RememberPlayerOnSource { who: PlayerRef::EachOpponent }),
+        as_enters_effect: Some(Effect::RememberPlayerOnSource { who: PlayerRef::HostileOpponent }),
         dynamic_pt: Some(DynamicPt::ChosenPlayerTally {
             base_p: 0,
             base_t: 0,
@@ -1080,7 +1080,7 @@ pub fn entropic_specter() -> CardDefinition {
 pub fn skyshroud_war_beast() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Trample],
-        as_enters_effect: Some(Effect::RememberPlayerOnSource { who: PlayerRef::EachOpponent }),
+        as_enters_effect: Some(Effect::RememberPlayerOnSource { who: PlayerRef::HostileOpponent }),
         dynamic_pt: Some(DynamicPt::ChosenPlayerTally {
             base_p: 0,
             base_t: 0,

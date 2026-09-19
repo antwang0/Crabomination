@@ -470,7 +470,7 @@ pub fn hand_to_hand() -> CardDefinition {
 pub fn pallimud() -> CardDefinition {
     CardDefinition {
         as_enters_effect: Some(Effect::RememberPlayerOnSource {
-            who: PlayerRef::EachOpponent,
+            who: PlayerRef::HostileOpponent,
         }),
         dynamic_pt: Some(crate::card::DynamicPt::TappedLandsChosenPlayerControls { base_t: 3 }),
         ..creature("Pallimud", cost(&[generic(2), r()]), vec![CreatureType::Beast], 0, 3)
@@ -995,7 +995,7 @@ pub fn booby_trap() -> CardDefinition {
     use crate::effect::StaticEffect;
     CardDefinition {
         as_enters_effect: Some(Effect::Seq(vec![
-            Effect::RememberPlayerOnSource { who: PlayerRef::EachOpponent },
+            Effect::RememberPlayerOnSource { who: PlayerRef::HostileOpponent },
             Effect::NameCard {
                 what: Selector::This,
                 restrict_to: Some(R::Not(Box::new(R::Land.and(R::IsBasicLand)))),

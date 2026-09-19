@@ -5160,4 +5160,63 @@ fn cr_506_2_the_undirected_attacker_count_is_not_the_defender_side_one() {
         ),
         "but none of them at seat 3 — the difference a duel cannot show",
     );
+// ── "Choose an opponent" at 3+ seats (CR 601.2c's singular choice) ──────────
+
+/// A printed "As this ~ enters, **choose an opponent**" names ONE seat. Eight
+/// shipped cards spelled it `PlayerRef::EachOpponent` and resolved it through
+/// the singular `resolve_player`, which is exact in a duel (the set holds one
+/// seat) and in a pod answers with the *first* opponent by seat index — the
+/// choice made by the table's seating rather than by the card's controller.
+/// `PlayerRef::HostileOpponent` is the one ranked answer instead.
+#[test]
+fn cr_614_12a_choose_an_opponent_names_one_seat_and_not_by_seat_order() {
+    let mut g = multi_player_game(4);
+    // Seat 1 is the first opponent by index and the *least* worth choosing;
+    // seat 3 is nearest to dying, which is what the ranked answer reads.
+    g.players[1].life = 20;
+    g.players[2].life = 15;
+    g.players[3].life = 3;
+    let rack = g.move_card_to_battlefield_for_test(0, catalog::the_rack());
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(rack).and_then(|c| c.chosen_player),
+        Some(3),
+        "the lowest-life opponent, not seat 1"
+    );
+}
+
+/// And the duel is unchanged: one opponent means one answer, which is why the
+/// two-player traces do not move.
+#[test]
+fn cr_614_12a_choose_an_opponent_in_a_duel_is_the_lone_opponent() {
+    let mut g = two_player_game();
+    let rack = g.move_card_to_battlefield_for_test(0, catalog::the_rack());
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(rack).and_then(|c| c.chosen_player), Some(1));
+}
+
+/// The defect was silent in release and a `debug_assert!` in debug: a fan-out
+/// ref resolved singularly drops every seat but the first. Pin that none of
+/// the eight is a fan-out any more by entering each in a four-seat pod, which
+/// trips the assertion if one regresses.
+#[test]
+fn cr_800_4_choose_an_opponent_cards_resolve_a_single_seat_in_a_pod() {
+    let choosers: [(&str, fn() -> crabomination::card::CardDefinition); 6] = [
+        ("The Rack", catalog::the_rack),
+        ("Cursed Rack", catalog::cursed_rack),
+        ("Pallimud", catalog::pallimud),
+        ("Haunting Apparition", catalog::haunting_apparition),
+        ("Entropic Specter", catalog::entropic_specter),
+        ("Skyshroud War Beast", catalog::skyshroud_war_beast),
+    ];
+    for (name, factory) in choosers {
+        let mut g = multi_player_game(4);
+        let id = g.move_card_to_battlefield_for_test(0, factory());
+        drain_stack(&mut g);
+        let chosen = g.battlefield_find(id).and_then(|c| c.chosen_player);
+        assert!(
+            matches!(chosen, Some(seat) if seat != 0),
+            "{name} chose one opponent, got {chosen:?}"
+        );
+    }
 }
