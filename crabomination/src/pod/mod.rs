@@ -388,6 +388,36 @@ mod tests {
         assert_eq!((a.winner, a.actions, a.turns), (b.winner, b.actions, b.turns));
     }
 
+    /// The pod's half of the two-player `thread_determinism` gate: a chunk
+    /// split is what a thread count changes, and nothing else, so a run
+    /// split three ways must merge to what one chunk produced.
+    ///
+    /// The per-game seed is `seed_base + i * <golden>` rather than anything
+    /// derived from the worker, which is what makes that true — this is the
+    /// test that says so, and it fails the moment a future scheduler reaches
+    /// for a per-worker stream. `--threads 1/2/3` over 400 four-seat games
+    /// reads byte-identical at the tip; this is the same fact at suite cost.
+    #[test]
+    fn cr_903_a_pod_run_is_independent_of_how_it_is_chunked() {
+        // Three seats and six games: the split is what is under test, not the
+        // sample size, and a four-seat dozen costs the suite 55 s of critical
+        // path for the same fact.
+        let field = pod_field(3);
+        let whole = run_pod_games(&field, 0, 6, 43, 20_000, Pilot::default());
+        let mut split = PodTally { wins: vec![0; 3], ..Default::default() };
+        for first in [0u32, 2, 4] {
+            split.merge(&run_pod_games(&field, first, 2, 43, 20_000, Pilot::default()));
+        }
+        assert_eq!(whole.games, split.games);
+        assert_eq!(whole.wins, split.wins, "the same seats win the same games");
+        assert_eq!(whole.total_turns, split.total_turns);
+        assert_eq!(whole.total_actions, split.total_actions);
+        assert_eq!(whole.undecided(), split.undecided());
+        // And the run is decided end to end, which is the smoke test's own
+        // claim at a size the suite can carry.
+        assert_eq!(whole.undecided(), 0, "six three-seat pods, all decided");
+    }
+
     /// The Commander guardrail the two-player golden traces are, at pod
     /// scale: a committed outcome per fixed seed, so a change that moves pod
     /// play shows up here as a diff rather than as a number in a smoke-test
