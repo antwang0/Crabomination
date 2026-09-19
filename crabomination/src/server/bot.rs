@@ -8282,6 +8282,18 @@ fn sink_sacrifice_cost(ab: &crate::effect::ActivatedAbility, w: &EvalWeights) ->
     if w.sac_sinks_priced { ability_sacrifices_a_permanent(ab) } else { ab.sac_cost }
 }
 
+/// True when an activated ability's whole body is "add mana" — the shape
+/// `pick_sacrifice_value` must leave to the engine's auto-tapper (CR 106.4:
+/// unspent mana empties at the end of each step and phase, so mana made ahead
+/// of a spell is mana thrown away).
+fn ability_is_pure_mana(e: &Effect) -> bool {
+    match e {
+        Effect::AddMana { .. } => true,
+        Effect::Seq(v) => !v.is_empty() && v.iter().all(ability_is_pure_mana),
+        _ => false,
+    }
+}
+
 fn pick_sacrifice_value(state: &GameState, seat: usize, w: &EvalWeights) -> Option<GameAction> {
     let baseline = eval_material(state, seat, w);
     let scan = state.grant_scan();
@@ -8293,6 +8305,30 @@ fn pick_sacrifice_value(state: &GameState, seat: usize, w: &EvalWeights) -> Opti
             // Destroy-shaped sac removal keeps its dedicated trade math
             // (`pick_removal_sacrifice`, earlier in the chain).
             if matches!(&ab.effect, Effect::Destroy { .. } | Effect::DestroyNoRegen { .. }) {
+                continue;
+            }
+            // ⚠ **A SACRIFICE THAT ONLY MAKES MANA IS THE AUTO-TAPPER'S, NOT
+            // A VALUE PLAY.** `main_phase_action_with`'s own note says the bot
+            // deliberately does not pre-tap its sources: the engine pays costs
+            // when a cast needs them, so mana produced *ahead* of a spell has
+            // no sink and the pool empties at the next step. Taking it here is
+            // strictly worse than leaving it — and worse than that, it is
+            // unbounded whenever the fodder renews, because the evaluator
+            // scores the renewal rather than the mana.
+            //
+            // The eight-seat pod cap at `--seed 9101` is exactly that: Basking
+            // Broodscale stolen with New Blood (text-changed into a Vampire)
+            // beside Cordial Vampire, so sacrificing an Eldrazi Spawn for {C}
+            // kills a creature, which counters up every Vampire, which mints
+            // the next Spawn. Every iteration is materially positive — a dozen
+            // bodies gain +1/+1 — so `ev > baseline` held 7,535 times and the
+            // seat never converted. No backstop could see it: the battlefield
+            // never grows and the counters keep CR 104.4's fingerprint moving.
+            //
+            // Lotus Petal is the same rule from the ordinary side, and
+            // `auto_tap_spends_a_land_before_sacrificing_a_mana_source`
+            // already pins that the engine spends a land first.
+            if ability_is_pure_mana(&ab.effect) {
                 continue;
             }
             let target = if ab.effect.requires_target() {
@@ -21724,6 +21760,44 @@ mod tests {
             assert_ne!(card_id, bird,
                 "bot must NOT auto-tap a color-choice mana source (would block on ChooseColor)");
         }
+    }
+
+    /// A sacrifice whose whole body is "add mana" is never a value play: the
+    /// bot does not pre-tap, so mana made ahead of a spell empties at the next
+    /// step (CR 106.4) and the permanent is gone for nothing.
+    ///
+    /// The bug this pins is not the wasted mana, it is that the loop has **no
+    /// bound when the fodder renews**. The eight-seat pod cap at `--seed 9101`
+    /// (pod seed 18045724030442976829) was Basking Broodscale stolen with New
+    /// Blood beside Cordial Vampire: sacrificing an Eldrazi Spawn for {C}
+    /// kills a creature, which counters up every Vampire, which mints the next
+    /// Spawn. `pick_sacrifice_value` scored the +1/+1 counters, not the mana,
+    /// so `ev > baseline` held **7,535 times** and the seat never converted.
+    /// Neither backstop could fire — the battlefield never grows and the
+    /// counters keep CR 104.4's fingerprint moving.
+    #[test]
+    fn a_sacrifice_that_only_makes_mana_is_never_volunteered() {
+        let mut g = two_player_game();
+        g.step = TurnStep::PostCombatMain;
+        // Lotus Petal is the ordinary-card form of the same shape: "Sacrifice
+        // this artifact: Add one mana of any color", and nothing to spend it
+        // on here.
+        let petal = g.add_card_to_battlefield(0, catalog::lotus_petal());
+        g.clear_sickness(petal);
+        let mut bot = HeuristicBot::new();
+        for _ in 0..8 {
+            let Some(action) = bot.next_action(&g, 0) else { break };
+            if let GameAction::ActivateAbility { card_id, .. } = action {
+                assert_ne!(card_id, petal, "the Petal was sacrificed for mana with no sink");
+            }
+            if g.perform_action(action).is_err() {
+                break;
+            }
+        }
+        assert!(
+            g.battlefield_find(petal).is_some(),
+            "a pure-mana sacrifice is the auto-tapper's, not a value play",
+        );
     }
 
     /// The concern that used to live in `is_free_mana_ability`: a generic
