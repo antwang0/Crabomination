@@ -21,7 +21,7 @@ the filter stronger than the compiler — exhaustiveness is satisfied by exactly
 those arms.
 
 Reading at 2026-09-13, over 473 + 987 + 237 = 1,697 variants: **zero dead
-capabilities and FOUR dead primitives** (three of them runtime-only by design) (`GrantCastBackFromGraveyard`, closed
+capabilities and ONE dead primitive** (`GrantCastBackFromGraveyard`, closed
 with a reason below). It was three at 2026-08-28 — one deleted as a duplicate,
 one closed by shipping its card — and the surviving row is the one that is not
 waiting for anything.
@@ -39,17 +39,17 @@ wrong — dangerously so — for the third.
   independently by a concurrent session, which also picked Nuclear Fallout;
   the duplicate was dropped in favour of this one. That is the **fifth**
   same-item collision on this branch in two days.)
-* `Selector::ExactObjects` and `Effect::BindTargetObjects` — **runtime-only by
-  design, 2026-09-19**, same reason as `BindTargetSlot` below: the first names
-  the entities `Effect::ForEach` has not reached yet, the second puts the
-  objects an arm picked itself back into `ctx.targets`. A card never names a
-  `CardId`.
-* `Effect::BindTargetSlot` — **runtime-only by design, 2026-09-19.** It is a
-  continuation wrapper built by the modal arms' suspend splice
-  (`effects/mod.rs::modal_continuation`) and never by a card: it moves one of
-  the spell's target slots to slot 0 so a parked continuation keeps the slot
-  its mode was handed. A card that "used" it would be a bug. Expect it in the
-  dead-primitive column for ever.
+* ⚠ **Three variants this filter deliberately does NOT flag, recorded so the
+  next reader does not go looking for the card that "should" use them.**
+  `Effect::BindTargetSlot`, `Effect::BindTargetObjects` and
+  `Selector::ExactObjects` (2026-09-19) are **runtime-only continuation
+  wrappers**: the suspend splice builds them (`effects/mod.rs`'s
+  `modal_continuation`, `selector_for_entity`, `rewrap_parked`) so a parked
+  continuation keeps the target slot, the objects or the entity its
+  iteration was handed. The **engine** builds them, which is what this
+  filter's "dead primitive" test asks about, so they read as live — and a
+  *card* that used one would be the bug. `Selector` is not one of the three
+  enums this script walks at all.
 * `Effect::GrantCastBackFromGraveyard` — waiting for a card that **does not
   exist**. It was built for a Pestilent Cauldron whose oracle text was
   fabricated ("If Pestilent Cauldron is in your graveyard, you may cast it

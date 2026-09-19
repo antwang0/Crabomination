@@ -131,8 +131,10 @@ i.e. every training seat. A modal tail cannot be a plain `Seq`: each
 target-bearing mode is handed its own slot through `EffectContext.targets`,
 and the resumed context carries the spell's *whole* list, so every remaining
 mode would read slot 0. `Effect::BindTargetSlot { slot, body }` is the pin
-(runtime-only; `scripts/audit_variant_coverage.py` carries it as a
-by-design dead primitive), and `modal_continuation` builds the tail.
+(runtime-only; `scripts/audit_variant_coverage.py` carries a note saying it
+deliberately does **not** flag it — the engine builds it, so it reads as
+live, and a *card* that used one would be the bug), and
+`modal_continuation` builds the tail.
 `ApplyToTargets`, `Vote`'s `AllTied` half and
 `FlipCoinsUntilLoseOrStop`'s tiers are the same shape.
 
