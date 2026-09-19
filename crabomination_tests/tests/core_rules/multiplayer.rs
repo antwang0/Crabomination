@@ -4947,3 +4947,81 @@ fn bond_lands_read_the_live_opponent_count() {
         );
     }
 }
+
+/// CR 701.38a + CR 800.4a — "starting with you, each player votes" counts the
+/// players still **in the game**. A seat that has left is not a player, so it
+/// casts no ballot.
+///
+/// The bug this pins: `Effect::Vote` walked `(controller + i) % n`, which is
+/// every *seat index*, alive or not. CR 800.4g then re-seated the departed
+/// seat's ask onto a live opponent, that opponent answered, and the answer was
+/// tallied as the dead seat's vote — so a four-seat pod down to two still
+/// decided a will-of-the-council four votes to nothing. Invisible in a duel,
+/// where a seat leaving ends the game.
+#[test]
+fn cr_701_38a_a_departed_seat_casts_no_ballot() {
+    use crabomination::effect::{Effect, Selector, Value, VoteOption, VoteTally};
+    let mut g = multi_player_game(4);
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[2].life = 0;
+    g.check_state_based_actions();
+    assert!(!g.players[2].is_alive(), "seat 2 has left the game");
+
+    g.stack.push(
+        TriggerPush::new(src, 0, Effect::Vote {
+            options: vec![
+                VoteOption::new("aye", Effect::Noop),
+                VoteOption::new(
+                    "nay",
+                    Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+                ),
+            ],
+            tally: VoteTally::PerVote,
+        })
+        .build(),
+    );
+    resolve_answering(&mut g);
+
+    let voters: Vec<usize> = g.last_vote.iter().map(|(seat, _)| *seat).collect();
+    assert_eq!(voters.len(), 3, "three players are left, so three votes: {voters:?}");
+    assert!(!voters.contains(&2), "the departed seat voted: {voters:?}");
+    // CR 701.38a's own half: the controller votes first, then turn order,
+    // and turn order *skips* the seat that is gone.
+    assert_eq!(voters, vec![0, 1, 3], "controller first, then the live seats in turn order");
+}
+
+/// CR 800.4a again, one card over: Grenzo's Rebuttal's "the player to their
+/// left" is the next **player**, not the next seat index. With seat 1 gone,
+/// seat 0 strips seat 2 — aiming at the empty board of a departed seat
+/// destroyed nothing at all.
+#[test]
+fn cr_800_4a_the_player_to_your_left_skips_a_departed_seat() {
+    use crabomination::card::SelectionRequirement as R;
+    use crabomination::effect::Effect;
+    let mut g = multi_player_game(4);
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[1].life = 0;
+    g.check_state_based_actions();
+    assert!(!g.players[1].is_alive());
+
+    // One creature apiece on the two seats that are left besides the caster.
+    let two = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    let three = g.add_card_to_battlefield(3, catalog::grizzly_bears());
+    g.stack.push(
+        TriggerPush::new(src, 0, Effect::EachPlayerDestroysChosenFromLeftNeighbor {
+            filters: vec![R::Creature],
+        })
+        .build(),
+    );
+    resolve_answering(&mut g);
+
+    assert!(
+        g.battlefield_find(two).is_none(),
+        "seat 0's left-hand neighbour is seat 2 once seat 1 has left",
+    );
+    assert!(g.battlefield_find(three).is_none(), "and seat 2's is seat 3");
+    assert!(
+        g.battlefield_find(src).is_none(),
+        "and seat 3's is the caster, so the Bears goes too",
+    );
+}

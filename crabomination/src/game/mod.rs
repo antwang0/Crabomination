@@ -5413,6 +5413,39 @@ impl GameState {
         from
     }
 
+    /// CR 800.4a — the seats still **in the game**, in turn order, starting
+    /// with `from` (which is included when it is alive).
+    ///
+    /// The one answer for a printed "starting with you, each player …" and,
+    /// via [`next_alive_seat`](Self::next_alive_seat), for "the player to
+    /// their left". A raw `(from + i) % n` rotation is the same list in a
+    /// two-player game and in a pod that has lost nobody, which is why four
+    /// hand-written ones survived review: CR 701.38a's ballot counted a
+    /// departed seat's vote, and Grenzo's Rebuttal aimed a seat at a
+    /// graveyard-empty neighbour instead of at the next live one.
+    ///
+    /// Not [`apnap_sort`](Self::apnap_sort): APNAP starts at the *active*
+    /// player, and these cards start at the spell's controller, which is only
+    /// the same seat on their own turn.
+    pub(crate) fn seats_in_turn_order_from(&self, from: usize) -> Vec<usize> {
+        let n = self.players.len();
+        let mut out = Vec::with_capacity(n);
+        if self.players.get(from).is_some_and(|p| p.is_alive()) {
+            out.push(from);
+        }
+        let mut seat = from;
+        for _ in 1..n {
+            seat = self.next_alive_seat(seat);
+            // `next_alive_seat` answers `from` when nobody else is left, and a
+            // dead `from` when nobody is left at all — both end the walk.
+            if out.contains(&seat) || !self.players[seat].is_alive() {
+                break;
+            }
+            out.push(seat);
+        }
+        out
+    }
+
     /// Sort `seats` into APNAP order — active player first, then each other
     /// seat in turn order (CR 101.4). Used when a single effect affects
     /// "each player" so simultaneous-ish fan-outs (draws, mills, sacrifices)

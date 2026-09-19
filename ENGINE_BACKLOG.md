@@ -82,10 +82,73 @@ the handoff.
 | Engine mechanics & primitives | [Suggested next-up tasks](#suggested-next-up-tasks) | 1053 |
 | Rules coverage | [MagicCompRules coverage audit](#magiccomprules-coverage-audit) | 312 |
 | Tooling | [Recommender: two builder defects fixed, one lesson recorded](#recommender-two-builder-defects-fixed-one-lesson-recorded) | 17 |
+| Bugs & robustness | [FIXED 2026-09-19 (the forty-seventh find) — six hand-written SEAT-INDEX walks, and the two that let a player who had left the game vote and be voted for](#fixed-2026-09-19-the-forty-seventh-find--six-hand-written-seat-index-walks-and-the-two-that-let-a-player-who-had-left-the-game-vote-and-be-voted-for) | 60 |
 | Bugs & robustness | [The 2026-09-12/13 handoff detail, moved verbatim from TODO's NEXT](#the-2026-09-1213-handoff-detail-moved-verbatim-from-todos-next) | 182 |
 
 
 # Bugs & robustness
+
+## FIXED 2026-09-19 (the forty-seventh find) — six hand-written SEAT-INDEX walks, and the two that let a player who had left the game vote and be voted for
+
+`resolve_players` filters `is_alive()` on every fan-out it answers —
+`EachPlayer`, `EachOpponent`, `EachTeammate`, `EachOpponentExceptTriggerer`,
+`OpponentsWhoVotedDifferently`, all of them. Six arms do not go through it:
+four walk `for seat in 0..self.players.len()` and two walk
+`(ctx.controller + i) % n`. **Both shapes are the same list in a duel and in a
+pod that has lost nobody**, which is why all six survived review, and the
+second shape reads as turn order at a glance while being seat-index order with
+an offset.
+
+Two were live bugs and both are CR 800.4a — "a player who has left the game"
+is not a player:
+
+* **`Effect::Vote`** (CR 701.38a, "starting with you, each player votes").
+  The departed seat's ask was not dropped: CR 800.4g **re-seated it onto a
+  live opponent**, who answered, and `votes[pick] += 1` counted the answer as
+  the dead seat's ballot. A four-seat pod down to two decided a
+  will-of-the-council **four votes to nothing** — and Grudge Keeper's
+  `OpponentsWhoVotedDifferently` read `last_vote` rows for seats that were not
+  in the game. The engine's own re-seating rule is what made the bug
+  *invisible*: nothing ever stalled, nothing was ever unanswered.
+* **`EachPlayerDestroysChosenFromLeftNeighbor`** (Grenzo's Rebuttal, "the
+  permanents controlled by the player to their left"). `neighbor = (seat + 1)
+  % n` is the next seat *index*; with a departed seat between two live ones,
+  the chooser was aimed at a board CR 800.4a had already emptied, so its pick
+  list was empty and the strip did nothing at all. `next_alive_seat` is the
+  printed "player to their left".
+
+Two more were live at the margin and are fixed the same way: **Goblin Game**
+(a departed seat's hidden count entered `fewest`, deciding who paid half their
+life) and **Mind Bomb** / `EachPlayerMayDiscardUpToThenDamage` (offered a
+departed seat a trade its emptied hand could not take, then dealt it the full
+three). Two are latent — `RevealChosenCardsLowestCreaturesEnter`,
+`LivingDeath`/`SacrificeOthersThenReanimate` read zones 800.4a has already
+cleared — and are guarded anyway, because a latent site is a surface, not a
+queue, and the guard is what stops the next card landing on one.
+
+**The fix is one helper, not six patches.**
+`GameState::seats_in_turn_order_from(from)` is the live seats in turn order
+starting at `from` — the one answer for a printed "starting with you, each
+player …", built on `next_alive_seat`, which is also the one answer for "the
+player to their left". It is **not** `apnap_sort`: APNAP starts at the
+*active* player and these cards start at the spell's controller, which is the
+same seat only on their own turn. The two "each player" arms take
+`resolve_players(&PlayerRef::EachPlayer, ctx)` instead, which is CR 101.4's
+order as well as the liveness filter; neither card is in `archetypes()` or in
+a golden trace, so the order change costs no re-bless.
+
+**`scripts/audit_seat_walks.py` is the ratchet**, and its scope is the
+finding's own shape: a seat-index walk is only a finding when its body *asks*
+(`ask_seat_*`) or *accumulates one entry per seat*, because those are the two
+ways a dead seat's participation becomes visible. A walk that merely clears
+per-player state is not one — a departed seat's state still has to be cleared.
+**6 → 0**, and it fails on the next one.
+
+Tests: `core_rules::multiplayer::cr_701_38a_a_departed_seat_casts_no_ballot`
+(three players left, three ballots, and the order is controller-first then the
+live seats) and `::cr_800_4a_the_player_to_your_left_skips_a_departed_seat`
+(seat 0 strips seat 2 when seat 1 is gone, and the chain closes back onto the
+caster).
 
 ## FIXED 2026-09-19 (the forty-sixth find) — a static's filter leaf that the chosen `AffectedPermanents` variant cannot carry is SILENTLY DROPPED, and a dropped leaf widens the static
 

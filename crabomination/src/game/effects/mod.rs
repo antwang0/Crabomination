@@ -4447,8 +4447,13 @@ impl GameState {
             Effect::GoblinGame => {
                 let source = ctx.source.unwrap_or(CardId(0));
                 let mut cursor = 0;
-                let mut counts: Vec<u32> = Vec::new();
-                for seat in 0..self.players.len() {
+                let mut counts: Vec<(usize, u32)> = Vec::new();
+                // CR 800.4a — "each player" is the players still in the game.
+                // A raw `0..players.len()` walk asked a departed seat (CR
+                // 800.4g re-seats it onto a live opponent, who answers), and
+                // that answer then entered `fewest`, so a seat that had been
+                // out for ten turns could decide who paid half their life.
+                for seat in self.resolve_players(&PlayerRef::EachPlayer, ctx) {
                     let hidden = self
                         .ask_seat_amount(
                             &mut cursor,
@@ -4461,10 +4466,10 @@ impl GameState {
                         )
                         .unwrap_or(1)
                         .max(1);
-                    counts.push(hidden);
+                    counts.push((seat, hidden));
                 }
                 self.clear_answer_log();
-                let fewest = counts.iter().copied().min().unwrap_or(1);
+                let fewest = counts.iter().map(|(_, n)| *n).min().unwrap_or(1);
                 let bleed = |g: &mut Self, seat: usize, n: i32, evs: &mut Vec<GameEvent>| {
                     let e = Effect::LoseLife {
                         who: Selector::Player(PlayerRef::Seat(seat)),
@@ -4472,7 +4477,7 @@ impl GameState {
                     };
                     let _ = g.run_effect(&e, ctx, evs);
                 };
-                for (seat, hidden) in counts.clone().into_iter().enumerate() {
+                for (seat, hidden) in counts.clone() {
                     bleed(self, seat, hidden as i32, events);
                     if hidden == fewest {
                         let life = self.players[seat].life.max(0);
@@ -9659,7 +9664,11 @@ impl GameState {
                 // the cheapest revealed creature card(s) hit the battlefield.
                 use crate::decision::{Decision, DecisionAnswer};
                 let mut revealed: Vec<(usize, CardId)> = Vec::new();
-                for seat in 0..self.players.len() {
+                // CR 800.4a — seat order, live seats only. Latent today (a
+                // departed seat's hand is empty, so the `continue` below hid
+                // it) and a finding of `scripts/audit_seat_walks.py` all the
+                // same: the guard is what stops the next card landing on it.
+                for seat in (0..self.players.len()).filter(|s| self.players[*s].is_alive()) {
                     if self.players[seat].hand.is_empty() {
                         continue;
                     }
@@ -10841,7 +10850,11 @@ impl GameState {
                 // split does not move the cap.
                 let mut cursor = 0;
                 let mut answers: Vec<(usize, Vec<CardId>)> = Vec::with_capacity(self.players.len());
-                for p in 0..self.players.len() {
+                // CR 800.4a — a departed seat is not one of "each player". Its
+                // hand is empty (800.4a took it), so the old walk read a cap of
+                // zero, offered nothing, and dealt the full three to a seat
+                // that had left the game.
+                for p in self.resolve_players(&PlayerRef::EachPlayer, ctx) {
                     let hand: Vec<(CardId, String)> = self.players[p]
                         .hand
                         .iter()
@@ -13011,16 +13024,20 @@ impl GameState {
                 if options.is_empty() {
                     return Ok(());
                 }
-                // CR 701.38a — starting with the controller, in turn order.
-                let n = self.players.len();
+                // CR 701.38a — starting with the controller, in turn order,
+                // and CR 800.4a: a seat that has left the game is not a player
+                // and does not vote. The raw rotation this replaces counted a
+                // departed seat's ballot — re-seated onto a live opponent by
+                // CR 800.4g and then tallied as that dead seat's vote, so a
+                // four-seat pod down to two still decided a council's dilemma
+                // four votes to nothing.
                 let mut cursor = 0usize;
                 let mut votes = vec![0u32; options.len()];
                 let ballot: Vec<String> =
                     options.iter().map(|o| o.label.clone()).collect();
                 let source = ctx.source.unwrap_or(CardId(0));
                 let mut cast: Vec<(usize, usize)> = Vec::new();
-                for i in 0..n {
-                    let seat = (ctx.controller + i) % n;
+                for seat in self.seats_in_turn_order_from(ctx.controller) {
                     // CR 701.38 — Brago's Representative-style extra votes.
                     // CR 701.38 — Illusion of Choice answers on the voter's
                     // behalf; the vote is still cast by `seat`.
@@ -13162,7 +13179,6 @@ impl GameState {
             }
 
             Effect::EachPlayerDestroysChosenFromLeftNeighbor { filters } => {
-                let n = self.players.len();
                 let source = ctx.source.unwrap_or(CardId(0));
                 // Each SEAT picks from its left neighbour's board, and every one
                 // of those picks went to `self.decider` — the resolving seat's.
@@ -13172,9 +13188,11 @@ impl GameState {
                 // no seat's legal set moves on a re-run.
                 let mut cursor = 0;
                 let mut doomed: Vec<CardId> = Vec::new();
-                for i in 0..n {
-                    let seat = (ctx.controller + i) % n;
-                    let neighbor = (seat + 1) % n;
+                for seat in self.seats_in_turn_order_from(ctx.controller) {
+                    // CR 800.4a — "the player to their left" is the next
+                    // player, not the next seat index: a departed seat owns no
+                    // permanents, so aiming at one silently destroyed nothing.
+                    let neighbor = self.next_alive_seat(seat);
                     for filter in filters {
                         let legal: Vec<Target> = self
                             .battlefield
@@ -20440,7 +20458,11 @@ impl GameState {
             Effect::LivingDeath => {
                 // 1. Each player exiles all creature cards from their graveyard.
                 let mut exiled: Vec<(usize, CardId)> = Vec::new();
-                for p in 0..self.players.len() {
+                // CR 800.4a — live seats only (seat order kept, so no board
+                // this can reach today enters in a different sequence).
+                let seats: Vec<usize> =
+                    (0..self.players.len()).filter(|s| self.players[*s].is_alive()).collect();
+                for p in seats {
                     let ids: Vec<CardId> = self.players[p]
                         .graveyard
                         .iter()
@@ -20496,7 +20518,8 @@ impl GameState {
                 // 1. Snapshot existing graveyard creature cards per player —
                 //    these are eligible to return; the about-to-die ones won't be.
                 let mut eligible: Vec<(usize, CardId)> = Vec::new();
-                for p in 0..self.players.len() {
+                // CR 800.4a — live seats only, seat order kept.
+                for p in (0..self.players.len()).filter(|s| self.players[*s].is_alive()) {
                     for c in &self.players[p].graveyard {
                         if c.definition.is_creature() {
                             eligible.push((p, c.id));
@@ -26417,10 +26440,8 @@ impl GameState {
                 // Carrion Rats — walk the seats in turn order from the
                 // source's controller and take the first willing payer.
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
-                let seats: Vec<usize> =
-                    (0..self.players.len()).map(|i| (ctx.controller + i) % self.players.len()).collect();
                 let mut cursor = 0;
-                for seat in seats {
+                for seat in self.seats_in_turn_order_from(ctx.controller) {
                     if self.players[seat].graveyard.len() < n {
                         continue;
                     }
@@ -26466,9 +26487,7 @@ impl GameState {
                 // Grave Consequences — every seat is asked (turn order from
                 // the controller); `then` runs regardless of who exiled.
                 let mut cursor = 0usize;
-                let n = self.players.len();
-                for i in 0..n {
-                    let seat = (ctx.controller + i) % n;
+                for seat in self.seats_in_turn_order_from(ctx.controller) {
                     let candidates: Vec<(CardId, String)> = self.players[seat]
                         .graveyard
                         .iter()
