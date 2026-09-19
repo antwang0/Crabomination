@@ -1920,10 +1920,19 @@ impl GameState {
                 // trigger member list, not the board (PERF `(-222)`), unless
                 // an instance grant of the kind is live — a grant can land
                 // on a permanent with no printed trigger.
-                /// One defender-side listener: its source, its effect, and
-                /// the CR 603.3d/603.2c key it fires under (`None` when
-                /// uncapped or granted).
-                type Listener = (CardId, Effect, Option<(usize, bool)>);
+                /// One defender-side listener: its source, its effect, its
+                /// `EventSpec` filter, and the CR 603.3d/603.2c key it fires
+                /// under (`None` when uncapped or granted).
+                ///
+                /// ⚠ **The filter was missing from this tuple and nothing
+                /// else was.** Every other walk in this file carries
+                /// `t.event.filter` to its fire site; this one built its
+                /// listeners without it, so a `.with_filter` on a
+                /// defender-side trigger was accepted by the catalog, type-
+                /// checked, and then silently never consulted — Reveille
+                /// Squad's printed "if this creature is untapped" among them.
+                type Listener =
+                    (CardId, Effect, Option<crate::card::Predicate>, Option<(usize, bool)>);
                 let mut listeners: Vec<Listener> = Vec::new();
                 let listens = |t: &crate::card::TriggeredAbility| {
                     t.event.kind == EventKind::Attacks
@@ -1940,19 +1949,51 @@ impl GameState {
                     }
                     for (i, t) in c.definition.triggered_abilities.iter().enumerate() {
                         if listens(t) {
-                            listeners.push((c.id, t.effect.clone(), once_key(Some(i), t)));
+                            listeners.push((
+                                c.id,
+                                t.effect.clone(),
+                                t.event.filter.clone(),
+                                once_key(Some(i), t),
+                            ));
                         }
                     }
                     if own_attacks_grant {
                         // A granted trigger has no printed index, so it passes
                         // `None` — the dispatcher's `trig_idx < n_printed` rule.
                         self.for_each_granted_trigger_matching(c.id, listens, |t| {
-                            listeners.push((c.id, t.effect.clone(), None))
+                            listeners.push((c.id, t.effect.clone(), t.event.filter.clone(), None))
                         });
                     }
                 };
                 self.battlefield.for_each_triggerer_or_all(own_attacks_grant, visit);
-                for (src, effect, once) in listeners {
+                for (src, effect, filter, once) in listeners {
+                    // CR 603.2 — the trigger's own condition, evaluated
+                    // before the once-key so a declaration the filter rejects
+                    // does not spend the slot (the order every other walk in
+                    // this file uses).
+                    //
+                    // ⚠ **This is evaluated PER ATTACKER, as declared, and
+                    // `self.attacking` is still being filled** — the push a
+                    // few lines above this loop's enclosing `for` is what
+                    // fills it. A predicate that counts the declaration
+                    // (`AttackedWithCountAtLeast` and its defender-side
+                    // sibling) would read a partial batch here, so it belongs
+                    // inside the effect as an `Effect::If`, which resolves off
+                    // the stack after the whole step. The self-source walk
+                    // collects and fires after the batch and can filter on
+                    // counts; this one cannot without moving the pushes, which
+                    // would reorder the stack.
+                    if let Some(predicate) = filter {
+                        let ctx = crate::game::effects::EffectContext {
+                            controller: defender,
+                            source: Some(src),
+                            trigger_source: Some(crate::game::effects::EntityRef::Permanent(id)),
+                            ..crate::game::effects::EffectContext::default()
+                        };
+                        if !self.evaluate_predicate(&predicate, &ctx) {
+                            continue;
+                        }
+                    }
                     // CR 603.3d / 603.2c — one fire a turn, or one a
                     // declaration; `once_per_turn` keys the shared per-turn
                     // set, `once_per_batch` this declaration's own.

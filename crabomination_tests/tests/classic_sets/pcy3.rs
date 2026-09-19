@@ -350,3 +350,34 @@ fn reveille_squad_untaps_your_board_on_their_attack() {
     assert!(!g.battlefield_find(tapped).unwrap().tapped, "the squad woke everyone up");
     assert!(g.battlefield_find(squad).is_some());
 }
+
+/// CR 603.4 — the printed intervening "if": "Whenever one or more creatures
+/// attack you, **if this creature is untapped**, you may untap all creatures
+/// you control." A tapped Squad wakes nobody.
+///
+/// ⚠ Regression. The catalog modelled the condition as an `EventSpec` filter
+/// and the defender-side attack walk was the one walk in `combat.rs` that
+/// built its listeners without carrying `t.event.filter`, so the condition
+/// type-checked and was never consulted — a tapped Squad untapped the board.
+#[test]
+fn cr_603_4_a_tapped_reveille_squad_untaps_nobody() {
+    let mut g = two_player_game();
+    let squad = g.add_card_to_battlefield(0, catalog::reveille_squad());
+    g.battlefield_find_mut(squad).unwrap().tapped = true;
+    let tapped = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(tapped).unwrap().tapped = true;
+    let attacker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.declare_attackers(vec![Attack { attacker, target: AttackTarget::Player(0) }]).expect("attack");
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield_find(tapped).unwrap().tapped,
+        "the Squad was tapped, so the intervening `if` fails and nothing untaps",
+    );
+}
