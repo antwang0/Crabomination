@@ -1234,6 +1234,7 @@ fn is_hard_to_target(k: &crate::card::Keyword) -> bool {
             | ProtectionFromInstants
             | ProtectionFromEverything
             | ProtectionFromOwnColors
+            | ProtectionFromColorsOutsideCommanderIdentity
     )
 }
 

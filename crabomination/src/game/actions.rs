@@ -8288,6 +8288,18 @@ impl GameState {
                     self.players[p].hand.push(card);
                     return Err(GameError::TargetHasProtection(cid));
                 }
+                // CR 702.16 / 903.4 — protection from each colour outside the
+                // controller's commander identity (Commander's Plate): a spell
+                // carrying one such colour can't target it. Colourless spells
+                // have no colour outside the identity and get through.
+                if matches!(kw, Keyword::ProtectionFromColorsOutsideCommanderIdentity) && {
+                    let identity = self.commander_identity_set(target_card.controller);
+                    spell_colors.iter().any(|c| !identity.contains(c))
+                } {
+                    cast_census::rollback(line!());
+                    self.players[p].hand.push(card);
+                    return Err(GameError::TargetHasProtection(cid));
+                }
                 // CR 702.16b — protection from a *filtered* quality
                 // (Empty-Shrine Kannushi, Pledge of Loyalty): the spell is
                 // still in transient ownership, so match it card-side.
@@ -12841,6 +12853,7 @@ impl GameState {
                     | Keyword::ProtectionFromMonocolored
                     | Keyword::ProtectionFromCardType(_)
                     | Keyword::ProtectionFromOwnColors
+                    | Keyword::ProtectionFromColorsOutsideCommanderIdentity
                     | Keyword::ProtectionFromEverything
                     | Keyword::HexproofExceptColors(_)
             )
@@ -12881,6 +12894,12 @@ impl GameState {
             // CR 702.16 — "protection from its colors" (Earnest Fellowship).
             Keyword::ProtectionFromOwnColors => {
                 tgt.colors.iter().any(|c| src.colors.contains(c))
+            }
+            // CR 702.16 / 903.4 — Commander's Plate. One protection per colour
+            // outside the identity, so one such colour on the source is enough.
+            Keyword::ProtectionFromColorsOutsideCommanderIdentity => {
+                let identity = self.commander_identity_set(tgt_controller);
+                src.colors.iter().any(|c| !identity.contains(c))
             }
             Keyword::ProtectionFromCreatures => src_is_creature,
             Keyword::ProtectionFromCreatureType(ty) => src.subtypes().creature_types.contains(ty),

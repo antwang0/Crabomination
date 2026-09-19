@@ -1316,21 +1316,14 @@ impl GameState {
             // wants so a fixing land stays a fixing land in a cube. As a COST
             // that fallback reads as five, and War Room outside a Commander
             // game would charge five life for a card. CR 903.4's count of an
-            // absent commander's identity is zero.
+            // absent commander's identity is zero, which is what the raw
+            // `commander_identity_set` answers — shared with the protection
+            // reading (Commander's Plate) so the two cannot drift apart.
             Value::CommandersColorIdentityCount(who) => self
                 .resolve_players(who, ctx)
                 .first()
-                .and_then(|&seat| self.players.get(seat))
-                .filter(|p| !p.commanders.is_empty())
-                .map(|p| {
-                    let mut set = p.commander_identity;
-                    if set == crate::mana::ColorSet::empty() {
-                        for &id in &p.commanders {
-                            if let Some(c) = self.find_card_anywhere(id) {
-                                set = set.union(crate::format::color_identity(&c.definition));
-                            }
-                        }
-                    }
+                .map(|&seat| {
+                    let set = self.commander_identity_set(seat);
                     crate::mana::Color::ALL.iter().filter(|c| set.contains(**c)).count() as i32
                 })
                 .unwrap_or(0),

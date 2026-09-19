@@ -966,6 +966,7 @@ pub(crate) fn keyword_reminder(kw: &crabomination::card::Keyword) -> Option<&'st
         K::ProtectionFromMulticolored => "Can't be blocked, targeted, or damaged by multicolored sources.",
         K::ProtectionFromMonocolored => "Can't be blocked, targeted, or damaged by monocolored (exactly one color) sources.",
         K::ProtectionFromOwnColors => "Can't be blocked, targeted, or damaged by sources sharing any of this permanent's own colors.",
+        K::ProtectionFromColorsOutsideCommanderIdentity => "Can't be blocked, targeted, or damaged by sources of any color outside its controller's commander color identity.",
         K::ProtectionFromInstants => "Can't be targeted or damaged by instant spells.",
         K::ProtectionFromEverything => "Can't be blocked, targeted, enchanted, equipped, or damaged by anything.",
         K::ProtectionFromManaValueExcept(_) => "Has protection from each mana value other than the named one.",
@@ -1378,6 +1379,9 @@ pub(crate) fn keyword_label(kw: &crabomination::card::Keyword) -> String {
         K::ProtectionFromMulticolored => "Protection from multicolored".into(),
         K::ProtectionFromMonocolored => "Protection from monocolored".into(),
         K::ProtectionFromOwnColors => "Protection from its colors".into(),
+        K::ProtectionFromColorsOutsideCommanderIdentity => {
+            "Protection from each color outside your commander's color identity".into()
+        }
         K::ProtectionFromInstants => "Protection from instants".into(),
         K::ProtectionFromColoredSpells => "Protection from colored spells".into(),
         K::ProtectionFromSpells => "Protection from spells".into(),

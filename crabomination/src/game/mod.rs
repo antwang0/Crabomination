@@ -6091,6 +6091,38 @@ impl GameState {
         crate::mana::Color::ALL.into_iter().filter(|c| set.contains(*c)).collect()
     }
 
+    /// CR 903.4 — `seat`'s commanders' combined colour identity, **raw**: a
+    /// seat with no commander answers the empty set, not all five.
+    ///
+    /// The other half of [`Self::commander_identity_colors`], and the one to
+    /// reach for whenever the identity is read as a *quantity* rather than as
+    /// a permission. That helper's no-commander fallback exists so Command
+    /// Tower stays a fixing land in the two-player cube pool; read as a cost
+    /// it is five life for a card (War Room), and read as a protection set it
+    /// is "protection from each colour outside WUBRG", i.e. none at all.
+    /// Both readings want zero, which is what CR 903.4 says an absent
+    /// commander's identity is.
+    ///
+    /// Same cache-then-walk as the permissive form: `Player::commander_identity`
+    /// is computed as the commanders are seated, and an empty cache is either a
+    /// colourless commander or a snapshot from a build without the field — the
+    /// walk answers both and never runs on the ordinary path.
+    pub fn commander_identity_set(&self, seat: usize) -> crate::mana::ColorSet {
+        let Some(p) = self.players.get(seat) else { return crate::mana::ColorSet::empty() };
+        if p.commanders.is_empty() {
+            return crate::mana::ColorSet::empty();
+        }
+        let mut set = p.commander_identity;
+        if set == crate::mana::ColorSet::empty() {
+            for &id in &p.commanders {
+                if let Some(c) = self.find_card_anywhere(id) {
+                    set = set.union(crate::format::color_identity(&c.definition));
+                }
+            }
+        }
+        set
+    }
+
     /// True if `card_id` is a commander for any player. Used by the
     /// Phase M 21-damage accumulator and by Phase L's cast-from-CZ
     /// (a non-commander has no business hitting that path).
@@ -16487,6 +16519,15 @@ impl GameState {
             ProtectionKind::Color(color) => src_colors.contains(color),
             // CR 702.16 — "protection from its colors" (Earnest Fellowship).
             ProtectionKind::OwnColors => tgt.colors.intersects(src_colors),
+            // CR 702.16 / 903.4 — "protection from each color that's not in
+            // your commander's color identity" (Commander's Plate): one
+            // protection per colour outside the identity, so a source is
+            // stopped as soon as it has ONE such colour. Colourless sources
+            // have none and always get through.
+            ProtectionKind::ColorsOutsideCommanderIdentity => {
+                let identity = self.commander_identity_set(tgt.controller);
+                src_colors.iter().any(|c| !identity.contains(c))
+            }
             // CR 702.16 — protection from creatures prevents all damage from a
             // creature source (Spirit Mantle).
             ProtectionKind::Creatures => src_is_creature,
@@ -17577,6 +17618,14 @@ impl GameState {
                     attacker.controller,
                     None,
                 ),
+                // CR 702.16 / 903.4 — Commander's Plate. Same reason it is
+                // here and not in `can_block_attacker_computed`: the protected
+                // set is the complement of the attacker's controller's
+                // commander identity, which only the game state knows.
+                Keyword::ProtectionFromColorsOutsideCommanderIdentity => {
+                    let identity = self.commander_identity_set(attacker.controller);
+                    blocker_cp.colors.iter().any(|c| !identity.contains(c))
+                }
                 // CR 702.15 — plain landwalk, unless a `LandwalkIgnored`
                 // static blanks that flavour (Great Wall and friends).
                 Keyword::Landwalk(lt) => {
@@ -27843,6 +27892,9 @@ fn static_effect_removes_keyword(
 enum ProtectionKind<'a> {
     Color(&'a crate::mana::Color),
     OwnColors,
+    /// CR 903.4 — protection from every colour *outside* the bearer's
+    /// controller's commander identity (Commander's Plate).
+    ColorsOutsideCommanderIdentity,
     Creatures,
     CreatureType(&'a crate::card::CreatureType),
     Matching(&'a crate::card::SelectionRequirement),
@@ -27860,6 +27912,9 @@ impl<'a> ProtectionKind<'a> {
         Some(match kw {
             Keyword::Protection(c) => Self::Color(c),
             Keyword::ProtectionFromOwnColors => Self::OwnColors,
+            Keyword::ProtectionFromColorsOutsideCommanderIdentity => {
+                Self::ColorsOutsideCommanderIdentity
+            }
             Keyword::ProtectionFromCreatures => Self::Creatures,
             Keyword::ProtectionFromCreatureType(t) => Self::CreatureType(t),
             Keyword::ProtectionFromMatching(f) => Self::Matching(f),
@@ -29693,6 +29748,7 @@ pub fn attacker_block_bar_kw(k: &Keyword) -> bool {
             | Keyword::Intimidate
             | Keyword::Protection(_)
             | Keyword::ProtectionFromOwnColors
+            | Keyword::ProtectionFromColorsOutsideCommanderIdentity
             | Keyword::ProtectionFromCreatureType(_)
             | Keyword::ProtectionFromManaValueExcept(_)
             | Keyword::ProtectionFromManaValueParity { .. }

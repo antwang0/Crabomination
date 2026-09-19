@@ -7,8 +7,9 @@ use crabomination::card::{
 };
 use crabomination::catalog;
 use crabomination::format::Format;
+use crabomination::game::types::Target;
 use crabomination::game::*;
-use crabomination::mana::{cost, g, u, w};
+use crabomination::mana::{b, cost, g, generic, r, u, w};
 
 /// A free-to-name legendary Bear so a seat has a commander to control.
 fn bear_commander() -> CardDefinition {
@@ -243,4 +244,161 @@ fn war_room_taps_for_colourless() {
     .expect("{T}: Add {C}");
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.colorless_amount(), 1);
+}
+
+// ── Protection from each colour outside the commander identity ──────────────
+//
+// `Keyword::ProtectionFromColorsOutsideCommanderIdentity` (Commander's Plate).
+// The protected set is the *complement* of a colour set the game state owns,
+// which makes it the first protection keyword whose answer changes with the
+// seat rather than with the permanent — and the engine asks that question at
+// three separate gates (damage, targeting, blocking), so each gets a test.
+
+/// A creature whose only colour comes from its cost, so the computed colour
+/// is exactly what the pips say.
+fn creature_costing(name: &'static str, c: crabomination::mana::ManaCost) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: c,
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bear], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        ..Default::default()
+    }
+}
+
+/// The bearer: a 2/2 carrying the keyword and nothing else.
+fn plated_bear() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::ProtectionFromColorsOutsideCommanderIdentity],
+        ..creature_costing("Test Plated Bear", cost(&[g()]))
+    }
+}
+
+/// A seat-0 Commander game whose commander is the Azorius (W/U) Bear, so
+/// "inside the identity" and "outside it" are both non-trivial.
+fn azorius_commander_game() -> GameState {
+    let mut g = game_with_format(Format::Commander, 2);
+    g.seat_commanders(0, vec![azorius_commander()]);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g
+}
+
+/// CR 702.16 / CR 903.4 — the damage gate. "Protection from each color that's
+/// not in your commander's color identity" is one protection per colour
+/// outside the identity, so a red source is stopped by a W/U commander's
+/// identity and a white one is not. A colourless source has no colour outside
+/// the identity at all and always gets through (CR 702.16 — protection is
+/// always *from a quality*, and colourless is not one of the five).
+#[test]
+fn cr_903_4_plate_protection_prevents_damage_only_from_off_identity_colours() {
+    let mut g = azorius_commander_game();
+    let bear = g.add_card_to_battlefield(0, plated_bear());
+    let red = g.add_card_to_battlefield(1, creature_costing("Test Red", cost(&[r()])));
+    let white = g.add_card_to_battlefield(1, creature_costing("Test White", cost(&[w()])));
+    let grey = g.add_card_to_battlefield(1, creature_costing("Test Grey", cost(&[generic(2)])));
+
+    assert!(g.damage_prevented_by_protection(red, bear), "red is outside W/U");
+    assert!(!g.damage_prevented_by_protection(white, bear), "white is inside W/U");
+    assert!(!g.damage_prevented_by_protection(grey, bear), "a colourless source has no colour");
+}
+
+/// CR 702.16c — the ability-targeting gate reads the same set.
+#[test]
+fn cr_702_16c_plate_protection_stops_an_off_identity_ability_from_targeting() {
+    let mut g = azorius_commander_game();
+    let bear = g.add_card_to_battlefield(0, plated_bear());
+    let red = g.add_card_to_battlefield(1, creature_costing("Test Red", cost(&[r()])));
+    let blue = g.add_card_to_battlefield(1, creature_costing("Test Blue", cost(&[u()])));
+
+    assert!(g.ability_target_has_protection(&Target::Permanent(bear), red), "red is outside W/U");
+    assert!(
+        !g.ability_target_has_protection(&Target::Permanent(bear), blue),
+        "blue is inside W/U",
+    );
+}
+
+/// CR 702.16b — the blocking gate. The protected creature is the *attacker*
+/// here, and the question is about the blocker's colours; this is the gate the
+/// pure `can_block_attacker_computed` cannot answer, because the identity
+/// lives on the attacker's controller rather than on either permanent.
+#[test]
+fn cr_702_16b_plate_protection_bars_a_block_by_an_off_identity_creature() {
+    let mut g = azorius_commander_game();
+    let attacker = g.add_card_to_battlefield(0, plated_bear());
+    let red = g.add_card_to_battlefield(1, creature_costing("Test Red", cost(&[r()])));
+    let white = g.add_card_to_battlefield(1, creature_costing("Test White", cost(&[w()])));
+
+    assert!(!g.blocker_can_block_attacker(red, attacker), "red is outside W/U");
+    assert!(g.blocker_can_block_attacker(white, attacker), "white is inside W/U");
+}
+
+/// CR 903.4 — a seat with **no commander** has an empty colour identity, so
+/// every colour is outside it and the bearer has protection from all five.
+/// ⚠ This is the reading `GameState::commander_identity_colors` deliberately
+/// does *not* take (it answers all five so Command Tower stays a fixing land
+/// in the two-player pool); read as a protection set that fallback would mean
+/// protection from nothing at all. The raw `commander_identity_set` is what
+/// this keyword asks, and it answers empty.
+#[test]
+fn cr_903_4_plate_protection_covers_every_colour_for_a_seat_with_no_commander() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, plated_bear());
+    for (name, pip) in [
+        ("Test W", w()),
+        ("Test U", u()),
+        ("Test B", b()),
+        ("Test R", r()),
+        ("Test G", crabomination::mana::g()),
+    ] {
+        let src = g.add_card_to_battlefield(1, creature_costing(name, cost(&[pip])));
+        assert!(
+            g.damage_prevented_by_protection(src, bear),
+            "{name}: no commander means every colour is outside the identity",
+        );
+    }
+    let grey = g.add_card_to_battlefield(1, creature_costing("Test Grey", cost(&[generic(2)])));
+    assert!(
+        !g.damage_prevented_by_protection(grey, bear),
+        "and a colourless source still gets through — it has no colour to be protected from",
+    );
+}
+
+/// CR 702.16 — and the fourth gate: a **spell** still in hand is checked
+/// card-side, before it ever reaches the stack, so it needs its own arm and
+/// its own test. Lightning Bolt is red and a W/U identity shuts it out; the
+/// blue counterpart is inside the identity and is let through.
+#[test]
+fn cr_702_16_plate_protection_stops_an_off_identity_spell_at_cast_time() {
+    let mut g = azorius_commander_game();
+    let bear = g.add_card_to_battlefield(0, plated_bear());
+    g.priority.player_with_priority = 1;
+
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(crabomination::mana::Color::Red, 1);
+    let err = g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    });
+    assert!(
+        matches!(err, Err(GameError::TargetHasProtection(_))),
+        "a red spell is outside W/U, got {err:?}",
+    );
+
+    let bounce = g.add_card_to_hand(1, catalog::unsummon());
+    g.players[1].mana_pool.add(crabomination::mana::Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bounce,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("a blue spell is inside W/U");
 }

@@ -77,6 +77,7 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         ProtectionFromMulticolored => "ProMC",
         ProtectionFromMonocolored => "ProM1",
         ProtectionFromOwnColors => "Pro-own",
+        ProtectionFromColorsOutsideCommanderIdentity => "Pro-off-identity",
         ProtectionFromInstants => "ProI",
         ProtectionFromSpells => "ProS",
         ProtectionFromColoredSpells => "ProCS",

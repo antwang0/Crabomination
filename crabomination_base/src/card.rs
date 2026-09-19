@@ -1446,6 +1446,24 @@ pub enum Keyword {
     /// Resolved against the bearer's own computed colours at check time, so a
     /// colour change tracks.
     ProtectionFromOwnColors,
+    /// CR 702.16 / CR 903.4 — "protection from each color that's not in your
+    /// commander's color identity" (Commander's Plate). The protected set is
+    /// the *complement* of a colour set the game state owns, so it is resolved
+    /// at check time against `GameState::commander_identity_set` — the **raw**
+    /// identity, empty for a seat with no commander. A source gets through
+    /// only when every colour it has is inside the identity; a colourless
+    /// source has no colour outside it and always gets through, so a seat with
+    /// no commander has protection from all five colours and from nothing else.
+    ///
+    /// ⚠ **"Your" is read as the bearer's controller, not the granting
+    /// Equipment's.** They differ only after control of the equipped creature
+    /// changes while the Equipment stays attached (Act of Treason on a creature
+    /// wearing the Plate), where the printed card keeps reading the Plate
+    /// controller's commander. Every other protection keyword that consults
+    /// game state does the same (`ProtectionFromMatching` evaluates its filter
+    /// under `tgt.controller`), so this follows the family rather than
+    /// threading a granting source through three check sites.
+    ProtectionFromColorsOutsideCommanderIdentity,
     Indestructible,
     Regenerate(u32),
     Persist,
