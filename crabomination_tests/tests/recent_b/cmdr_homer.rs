@@ -186,7 +186,7 @@ fn homer_landfall_mills_targets_twice_the_sea_life_count() {
     g.add_card_to_battlefield(0, catalog::purple_crystal_crab());
     play_land(&mut g, 0, catalog::forest());
     let milled: Vec<usize> = (0..4).map(|p| gy(&g, p)).collect();
-    assert!(milled.iter().any(|&n| n == 6), "a target milled 6: {milled:?}");
+    assert!(milled.contains(&6), "a target milled 6: {milled:?}");
     assert!(milled.iter().all(|&n| n == 0 || n == 6), "only whole mills: {milled:?}");
 }
 

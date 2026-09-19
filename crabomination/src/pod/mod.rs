@@ -128,6 +128,10 @@ pub fn target_decks() -> Vec<PodDeck> {
         PodDeck { name: "Hanna (UW)", commanders: decks::HANNA_COMMANDERS, main: decks::HANNA_MAIN },
         PodDeck { name: "Tatyova (GU)", commanders: decks::TATYOVA_COMMANDERS, main: decks::TATYOVA_MAIN },
         PodDeck { name: "Krark/Rograkh (R)", commanders: decks::KRARK_COMMANDERS, main: decks::KRARK_MAIN },
+        // Last on purpose, exactly as the Partner seat above is: appending
+        // leaves `pod_field(4)` and `pod_field(5)` — and the committed outcome
+        // table — the games they already were. `--seats 6` is what reaches it.
+        PodDeck { name: "Edgar Markov (BRW)", commanders: decks::EDGAR_COMMANDERS, main: decks::EDGAR_MAIN },
     ]
 }
 
@@ -349,13 +353,16 @@ mod tests {
     /// by a fixture: both commanders start in the command zone, its 99 is 98
     /// (CR 702.124b counts both toward the 100), and the games finish.
     ///
-    /// Krark/Rograkh is last in `target_decks`, so `pod_field(4)` never draws
-    /// it and the committed outcome table is untouched by its existence; this
-    /// test names the field explicitly.
+    /// Krark/Rograkh sits past `pod_field(4)` in `target_decks`, so a four-seat
+    /// pod never draws it and the committed outcome table is untouched by its
+    /// existence; this test names the field explicitly. It is found by its
+    /// *pairing* rather than by position — Edgar Markov was appended after it
+    /// and `last()` silently stopped being the partner seat.
     #[test]
     fn cr_702_124b_a_two_commander_seat_plays_a_pod_game() {
         let field = target_decks();
-        let partner = *field.last().expect("the partner deck is last");
+        let partner =
+            *field.iter().find(|d| d.commanders.len() == 2).expect("a two-commander deck");
         assert_eq!(partner.commanders.len(), 2);
         assert_eq!(partner.card_count(), 100, "CR 702.124b counts both commanders");
 

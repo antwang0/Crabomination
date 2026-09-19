@@ -810,8 +810,10 @@ fn play(g: &mut GameState, def: CardDefinition) -> CardId {
 #[test]
 fn cmdr_teval_lands_enter_tapped_unless() {
     type Setup = fn(&mut GameState);
+    /// (land factory, board setup, does it enter tapped).
+    type TapCase = (fn() -> CardDefinition, Setup, bool);
     let none: Setup = |_| {};
-    let cases: Vec<(fn() -> CardDefinition, Setup, bool)> = vec![
+    let cases: Vec<TapCase> = vec![
         (catalog::haunted_mire, none, true),
         (catalog::contaminated_aquifer, none, true),
         (catalog::memorial_to_folly, none, true),
@@ -849,12 +851,12 @@ fn cmdr_teval_lands_enter_tapped_unless() {
         assert_eq!(g.battlefield_find(id).unwrap().tapped, tapped, "{name}");
     }
     // The pay-3-life lands: the default choice pays and stays untapped.
-    for factory in [catalog::the_black_gate as fn() -> CardDefinition] {
-        let mut g = main_phase();
-        let id = play(&mut g, factory());
-        assert!(!g.battlefield_find(id).unwrap().tapped);
-        assert_eq!(g.players[0].life, 17);
-    }
+    // One card carries the clause today; the loop it used to sit in said
+    // "more are coming" and clippy read it as the tautology it was.
+    let mut g = main_phase();
+    let id = play(&mut g, catalog::the_black_gate());
+    assert!(!g.battlefield_find(id).unwrap().tapped);
+    assert_eq!(g.players[0].life, 17);
 }
 
 /// The colorless utility lands' activations.

@@ -35,6 +35,38 @@ lists were picked.
 | Hanna UW | Hanna, Ship's Navigator | UW | 100 | ✅ complete |
 | Tatyova GU | Tatyova, Benthic Druid | GU | 100 | ✅ complete |
 | Krark/Rograkh R | Krark, the Thumbless **+** Rograkh, Son of Rohgahh (Partner) | R | 98 + 2 | ✅ complete |
+| Edgar Markov BRW | Edgar Markov (Eminence) | BRW | 100 | ✅ complete |
+
+The **sixth** is the pod's first three-colour identity and its first
+**Eminence** commander (CR 113.6b): Edgar Markov's "whenever you cast another
+Vampire spell, if Edgar Markov is in the command zone or on the battlefield,
+create a 1/1 Vampire" runs from the command zone in every game rather than
+only in a unit test, and CR 903.4 is exercised over three colours (Command
+Tower, Arcane Signet, Commander's Sphere, Path of Ancestry and Opal Palace all
+read it). It is **after** `pod_field(5)` in `target_decks`, so the committed
+outcome table and every 2/3/4/5-seat reading are unchanged by its existence;
+`--commander --seats 6` is what reaches it.
+
+⚠⚠ **And the number it produces is a finding about Eminence, not a deck to
+tune.** Edgar wins **52.1 %** of six-seat pods (2,000 games, seed 43; field
+17.6 / 7.8 / 6.8 / 12.5 / 3.1 / **52.1**) — roughly three times a seat's
+share. Two rounds of nerfing said the payoffs are not the cause: cutting the
+seven best tribal payoffs (Shared Animosity, Banner of Kinship, Vampire
+Nocturnus, Sanctum Seeker …) took it **up**, 61.6 → 64.0 %, and only cutting
+**Vampire density** — ten Vampires out for removal and ramp — moved it, 64.0 →
+52.1 %. The engine is the commander: a free 1/1 per Vampire spell, from the
+command zone, from turn one, with no card spent and no commander tax paid.
+None of the other five commanders does anything from the command zone.
+
+⚠ **Six seats is also the pod's only configuration with a non-zero stall
+rate**: 1 action-capped game in 2,000 at seed 43 and 1 in 3,000 at seed 99
+(~0.03 %), against **0 in 3,000 at both four and five seats**. The signature
+is in `CRAB_CAP_DIAG=1` — pod seed `11643393128411363082`, turn 29, 50,002
+actions, and the Krark seat holding **3,990 floating mana** with three
+untapped permanents, i.e. a mana source the bot activates and cannot spend.
+Six-seat games run ~65 turns against ~57 at five, so this is a longer tail
+rather than a new defect; the seed is recorded so the next run can start
+from it.
 
 The fifth is the pod's only **two-commander** seat (CR 702.124b/d): both start
 in the command zone, their CR 903.8 tax and 21-damage tallies are separate,
