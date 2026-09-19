@@ -3853,9 +3853,14 @@ pub fn silverquill_mandate() -> CardDefinition {
         name: "Silverquill Mandate",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::SacrificeAndRemember {
+        // CR 101.4 — "each opponent sacrifices" is a fan-out, and
+        // `SacrificeAndRemember` resolves its `who` singularly.
+        effect: Effect::EachPlayerDoes {
             who: PlayerRef::EachOpponent,
-            filter: SelectionRequirement::Creature,
+            body: Box::new(Effect::SacrificeAndRemember {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Creature,
+            }),
         },
         ..Default::default()
     }

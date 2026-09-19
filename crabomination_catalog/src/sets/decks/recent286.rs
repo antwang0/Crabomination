@@ -319,10 +319,15 @@ pub fn bandits_talent() -> CardDefinition {
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: Effect::DiscardUnlessKind {
+                // CR 101.4 — "each opponent discards …" is a fan-out, and
+                // `DiscardUnlessKind` resolves its `who` singularly.
+                effect: Effect::EachPlayerDoes {
                     who: PlayerRef::EachOpponent,
-                    count: Value::Const(2),
-                    instead: R::Land.negate(),
+                    body: Box::new(Effect::DiscardUnlessKind {
+                        who: PlayerRef::You,
+                        count: Value::Const(2),
+                        instead: R::Land.negate(),
+                    }),
                 },
             },
             TriggeredAbility {

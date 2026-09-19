@@ -535,15 +535,20 @@ pub fn shirei_shizos_caretaker() -> CardDefinition {
 pub fn iwamori_of_the_open_fist() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Trample],
-        triggered_abilities: vec![etb(Effect::PutFromHandOntoBattlefield {
+        // CR 101.4 — "each opponent may put …" is a fan-out, and
+        // `PutFromHandOntoBattlefield` resolves its `who` singularly.
+        triggered_abilities: vec![etb(Effect::EachPlayerDoes {
             who: PlayerRef::EachOpponent,
-            filter: R::Creature.and(R::HasSupertype(Supertype::Legendary)),
-            count: Value::ONE,
-            tapped: false,
-            haste: false,
-            sacrifice_eot: false,
+            body: Box::new(Effect::PutFromHandOntoBattlefield {
+                who: PlayerRef::You,
+                filter: R::Creature.and(R::HasSupertype(Supertype::Legendary)),
+                count: Value::ONE,
+                tapped: false,
+                haste: false,
+                sacrifice_eot: false,
                 return_eot: false,
                 then: None,
+            }),
         })],
         ..legend(
             "Iwamori of the Open Fist",

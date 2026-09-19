@@ -734,7 +734,8 @@ pub fn callous_oppressor() -> CardDefinition {
         keywords: vec![Keyword::MayChooseNotToUntap],
         as_enters_effect: Some(Effect::NameCreatureTypeBy {
             what: Selector::This,
-            who: PlayerRef::EachOpponent,
+            // "AN opponent chooses a creature type" — one seat.
+            who: PlayerRef::HostileOpponent,
         }),
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,

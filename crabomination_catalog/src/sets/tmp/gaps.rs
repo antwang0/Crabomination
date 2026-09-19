@@ -922,7 +922,8 @@ pub fn echo_chamber() -> CardDefinition {
             mana_cost: cost(&[generic(4)]),
             tap_cost: true,
             sorcery_speed: true,
-            effect: Effect::TokenCopyOfOpponentChoice { who: PlayerRef::EachOpponent },
+            // "AN opponent chooses target creature they control" — one seat.
+            effect: Effect::TokenCopyOfOpponentChoice { who: PlayerRef::HostileOpponent },
             ..Default::default()
         }],
     )

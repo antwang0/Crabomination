@@ -873,13 +873,18 @@ pub fn ingenious_mastery() -> CardDefinition {
                     who: Selector::You,
                     amount: Value::Const(3),
                 },
+                // "AN opponent creates two Treasure tokens and they scry 2"
+                // — one seat for both halves. `CreateToken` fans out and gave
+                // every opponent two Treasures; `Scry` resolves singularly and
+                // gave the first one a scry, so the two halves did not even
+                // agree on who "they" was.
                 Effect::CreateToken {
-                    who: PlayerRef::EachOpponent,
+                    who: PlayerRef::HostileOpponent,
                     count: Value::Const(2),
                     definition: std::sync::Arc::new(treasure_token()),
                 },
                 Effect::Scry {
-                    who: PlayerRef::EachOpponent,
+                    who: PlayerRef::HostileOpponent,
                     amount: Value::Const(2),
                 },
             ])),

@@ -4588,9 +4588,11 @@ pub fn myr_custodian() -> CardDefinition {
                 who: PlayerRef::You,
                 amount: Value::Const(2),
             },
-            Effect::Scry {
+            // CR 101.4 — "each opponent may scry 1" is a fan-out, and `Scry`
+            // resolves its `who` singularly.
+            Effect::EachPlayerDoes {
                 who: PlayerRef::EachOpponent,
-                amount: Value::ONE,
+                body: Box::new(Effect::Scry { who: PlayerRef::You, amount: Value::ONE }),
             },
         ]))],
         ..Default::default()
@@ -6552,9 +6554,13 @@ pub fn kaya_intangible_slayer() -> CardDefinition {
                 loyalty_cost: 0,
                 effect: Effect::Seq(vec![
                     draw(2),
-                    Effect::Scry {
+                    // CR 101.4 — "each opponent may scry 1", same fan-out.
+                    Effect::EachPlayerDoes {
                         who: PlayerRef::EachOpponent,
-                        amount: Value::ONE,
+                        body: Box::new(Effect::Scry {
+                            who: PlayerRef::You,
+                            amount: Value::ONE,
+                        }),
                     },
                 ]),
                 ..Default::default()

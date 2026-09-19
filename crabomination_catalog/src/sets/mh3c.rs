@@ -1275,8 +1275,11 @@ pub fn wumpus_aberration() -> CardDefinition {
         keywords: vec![Keyword::Devoid, Keyword::Trample],
         triggered_abilities: vec![on_cast(Effect::If {
             cond: Predicate::CastSpellColorlessManaSpent { spent: false },
+            // "TARGET opponent may put a creature card …" — one seat, and a
+            // chosen one; `EachOpponent` is the whole table in a pod and the
+            // first seat by index in the arm that reads it.
             then: Box::new(Effect::PutFromHandOntoBattlefield {
-                who: PlayerRef::EachOpponent,
+                who: PlayerRef::HostileOpponent,
                 filter: R::Creature,
                 count: Value::Const(1),
                 tapped: false,

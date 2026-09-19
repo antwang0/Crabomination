@@ -5201,7 +5201,8 @@ fn cr_614_12a_choose_an_opponent_in_a_duel_is_the_lone_opponent() {
 /// trips the assertion if one regresses.
 #[test]
 fn cr_800_4_choose_an_opponent_cards_resolve_a_single_seat_in_a_pod() {
-    let choosers: [(&str, fn() -> crabomination::card::CardDefinition); 6] = [
+    type Chooser = (&'static str, fn() -> crabomination::card::CardDefinition);
+    let choosers: [Chooser; 6] = [
         ("The Rack", catalog::the_rack),
         ("Cursed Rack", catalog::cursed_rack),
         ("Pallimud", catalog::pallimud),
@@ -5219,4 +5220,73 @@ fn cr_800_4_choose_an_opponent_cards_resolve_a_single_seat_in_a_pod() {
             "{name} chose one opponent, got {chosen:?}"
         );
     }
+}
+
+/// CR 101.4 — "each opponent …" reaches EVERY opponent. Five shipped cards
+/// spelled the clause `PlayerRef::EachOpponent` on an effect arm that
+/// resolves `who` through the singular `resolve_player`, so in a pod only the
+/// first opponent by seat index was touched. `Effect::EachPlayerDoes` is the
+/// fan-out the arm could not do for itself, and it runs the body in APNAP
+/// order with each seat as its own controller.
+#[test]
+fn cr_101_4_each_opponent_sacrifices_reaches_every_opponent() {
+    let mut g = multi_player_game(4);
+    let mut victims = Vec::new();
+    for seat in 1..4 {
+        victims.push(g.add_card_to_battlefield(seat, catalog::grizzly_bears()));
+    }
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mandate = g.add_card_to_hand(0, catalog::silverquill_mandate());
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Black, 1);
+    cast(&mut g, mandate);
+    drain_stack(&mut g);
+    for (i, v) in victims.iter().enumerate() {
+        assert!(
+            g.battlefield_find(*v).is_none(),
+            "opponent {} sacrificed — not just the first by seat index",
+            i + 1
+        );
+    }
+    assert!(g.battlefield_find(mine).is_some(), "your own creature is untouched");
+}
+
+/// The discard half of the same class, and the one with a countable
+/// observable: "each opponent discards two cards unless they discard a
+/// nonland card" reached one opponent's hand in a pod.
+#[test]
+fn cr_101_4_each_opponent_discards_reaches_every_opponent() {
+    let mut g = multi_player_game(4);
+    for seat in 1..4 {
+        for _ in 0..4 {
+            g.add_card_to_hand(seat, catalog::grizzly_bears());
+        }
+    }
+    let before: Vec<usize> = (0..4).map(|s| g.players[s].hand.len()).collect();
+    g.move_card_to_battlefield_for_test(0, catalog::bandits_talent());
+    drain_stack(&mut g);
+    for (seat, was) in before.iter().enumerate().skip(1) {
+        assert!(
+            g.players[seat].hand.len() < *was,
+            "opponent {seat} discarded — not just the first by seat index"
+        );
+    }
+    assert_eq!(g.players[0].hand.len(), before[0], "you discard nothing");
+    assert!(g.pending_decision.is_none(), "no seat is left mid-discard");
+}
+
+/// And the singular half: "AN opponent chooses a creature type" is one seat,
+/// answered by the ranked helper rather than by seat order.
+#[test]
+fn cr_614_12a_an_opponent_chooses_names_one_seat() {
+    let mut g = multi_player_game(4);
+    g.players[1].life = 20;
+    g.players[2].life = 20;
+    g.players[3].life = 2;
+    let id = g.move_card_to_battlefield_for_test(0, catalog::callous_oppressor());
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield_find(id).and_then(|c| c.chosen_creature_type).is_some(),
+        "CR 614.12a — the type is named as the Oppressor enters"
+    );
 }
