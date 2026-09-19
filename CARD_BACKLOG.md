@@ -212,6 +212,34 @@ Signet, which the same walk flagged in all five decks, was a **stale doc
 comment** and nothing else — `tap_add_commander_identity()` has shipped for a
 while; the comment is corrected.
 
+## Judith (BR), the pod's losing seat — what it is NOT
+
+Seed 43, 4,000 four-seat games: Sigarda 42.6 % / Tatyova 26.3 % / Hanna 23.3 %
+/ **Judith 7.8 %**, and in a *duel* Judith reads **23.7 %** against Sigarda —
+so it is not a multiplayer artifact and not a stall (100 % of those games
+decide, `undecided_by` all zero).
+
+**Ruled out 2026-09-19 with no build spent**, so the next run starts past it:
+
+* `audit_incomplete`'s structural pass is clean — no dead mode or dead ability
+  in the list.
+* Of the deck's **73 distinct cards**, exactly **two** carried an
+  approximation note in their doc comment, and one of those was **stale**:
+  Arcane Signet's "no identity gate" line was corrected the same day (the
+  gate has shipped for a while — see the ratchet section above), leaving
+  Chain Lightning's pay-to-copy half, which is upside the card never gets.
+  Nothing in the list is *worse* than printed.
+* The commander itself is faithful: the +1/+0 anthem is a `PumpPT` static over
+  `Creature ∧ ControlledByYou ∧ OtherThanSource`, and the death trigger is
+  `CreatureDied / YourControl` filtered `NotToken ∧ OtherThanSource`.
+
+So it is **the list or the pilot**, not defective cards. The list reads like an
+assembly of what happened to be implemented in BR — a lot of cube-grade
+cantrips (Crash Through, Crimson Wisps, Cremate, Darkblast) and few sacrifice
+outlets for an aristocrats deck. Two ways forward, neither taken yet:
+instrument which of its cards are ever cast in a pod, or rebuild the list.
+⚠ **A list rebuild re-blesses `cr_903_seeded_pod_outcomes_match_the_committed_table`.**
+
 ## The printed-clause ratchet family — one body, and where its needles break
 
 `core_rules/catalog_registration.rs` now holds a family of ratchets that all

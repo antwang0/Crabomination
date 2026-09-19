@@ -61,10 +61,19 @@ impl GameState {
             // CR 800.4f.
             return AskRoute::CostNotPaid;
         }
-        // CR 800.4g. The object's controller is the one who re-seats the
-        // choice; with the source gone too (an ability resolving off a
-        // permanent that has left), fall back to the seat that still has to
-        // finish resolving, which the caller identifies by holding priority.
+        AskRoute::Seat(self.reseat_ask(seat, source))
+    }
+
+    /// CR 800.4g's re-seating, on its own and **total**: who the object's
+    /// controller hands a departed seat's choice to. Shared by
+    /// [`route_ask`](Self::route_ask) and
+    /// [`route_ask_choice`](Self::route_ask_choice) so neither has to reason
+    /// about an `AskRoute` the other cannot produce.
+    fn reseat_ask(&self, seat: usize, source: crate::card::CardId) -> usize {
+        // The object's controller is the one who re-seats the choice; with the
+        // source gone too (an ability resolving off a permanent that has left),
+        // fall back to the seat that still has to finish resolving, which the
+        // caller identifies by holding priority.
         let controller = self
             .find_card_anywhere(source)
             .map(|c| c.controller)
@@ -74,14 +83,14 @@ impl GameState {
             // The departed chooser was the controller or a teammate: the
             // controller may name any other player, and naming themselves is
             // the one pick that needs no policy.
-            return AskRoute::Seat(controller);
+            return controller;
         }
         // "…that player chooses another opponent if possible" — the ranked
         // pick, so the re-seating is the same question the rest of the engine
         // answers with `default_hostile_opponent` and a fixed seed reproduces
         // it. No opponent left means the controller chooses themselves, which
         // the first sentence of 800.4g allows.
-        AskRoute::Seat(self.default_hostile_opponent(controller).unwrap_or(controller))
+        self.default_hostile_opponent(controller).unwrap_or(controller)
     }
 
     /// Whether an interactive seat should be handed a modal — `wants_ui`,
@@ -104,11 +113,16 @@ impl GameState {
     /// [`route_ask`](Self::route_ask) for a question that is *not* about
     /// paying a cost, which is every ask but the yes/no ones — CR 800.4f
     /// cannot apply, so there is always a seat to ask.
+    ///
+    /// Built on [`reseat_ask`](Self::reseat_ask) rather than by unwrapping
+    /// `route_ask`'s answer: `audit_panics` counts an `unreachable!` as a bare
+    /// panic reachable from self-play, and "the other variant cannot happen
+    /// here" is a claim a total function does not have to make.
     pub(crate) fn route_ask_choice(&self, seat: usize, source: crate::card::CardId) -> usize {
-        match self.route_ask(seat, source, false) {
-            AskRoute::Seat(q) => q,
-            AskRoute::CostNotPaid => unreachable!("route_ask(.., false) never withholds the ask"),
+        if self.players.get(seat).is_none_or(|p| p.is_alive()) {
+            return seat;
         }
+        self.reseat_ask(seat, source)
     }
 }
 
