@@ -1474,3 +1474,66 @@ fn hall_of_heliods_generosity_recurs_an_enchantment_to_the_top() {
         "on top of the library",
     );
 }
+
+// ── EDHREC Commander staples that needed no new primitive ───────────────────
+
+/// Parallel Lives is Doubling Season's token half, and it is controller-
+/// scoped: Dragon Fodder's two Goblins become four for its controller and
+/// stay two for the opponent.
+#[test]
+fn parallel_lives_doubles_only_your_tokens() {
+    let goblins = |g: &crabomination::game::GameState, seat: usize| {
+        g.battlefield
+            .iter()
+            .filter(|c| c.definition.name == "Goblin" && c.controller == seat)
+            .count()
+    };
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.add_card_to_battlefield(0, catalog::parallel_lives());
+
+    let mine = g.add_card_to_hand(0, catalog::dragon_fodder());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: mine, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Dragon Fodder for {1}{R}");
+    drain_stack(&mut g);
+    assert_eq!(goblins(&g, 0), 4, "two Goblins, doubled");
+
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    let theirs = g.add_card_to_hand(1, catalog::dragon_fodder());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: theirs, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("their Dragon Fodder");
+    drain_stack(&mut g);
+    assert_eq!(goblins(&g, 1), 2, "not under their control");
+    assert_eq!(goblins(&g, 0), 4, "and yours are unchanged");
+}
+
+/// Avacyn hands indestructible to every OTHER permanent you control —
+/// permanents, not creatures — and to nothing of the opponent's.
+#[test]
+fn avacyn_makes_your_whole_board_indestructible() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let avacyn = g.add_card_to_battlefield(0, catalog::avacyn_angel_of_hope());
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let rock = g.add_card_to_battlefield(0, catalog::sol_ring());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+
+    let kw = |g: &crabomination::game::GameState, id| {
+        g.computed_permanent(id).unwrap().keywords().contains(&Keyword::Indestructible)
+    };
+    assert!(kw(&g, avacyn), "printed on Avacyn herself");
+    assert!(kw(&g, bears), "a creature");
+    assert!(kw(&g, land), "a land — the filter is permanents, not creatures");
+    assert!(kw(&g, rock), "an artifact");
+    assert!(!kw(&g, theirs), "and nothing of theirs");
+}

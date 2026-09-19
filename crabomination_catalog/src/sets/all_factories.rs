@@ -7666,6 +7666,8 @@ static DECKS: &[Factory] = &[
     super::decks::altar_of_dementia,
     super::decks::sadistic_hypnotist,
     super::decks::sprout_swarm,
+    super::decks::parallel_lives,
+    super::decks::avacyn_angel_of_hope,
     super::decks::quest_for_the_goblin_lord,
     super::decks::quest_for_the_gravelord,
     super::decks::quest_for_the_gemblades,
