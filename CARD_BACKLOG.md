@@ -20,7 +20,7 @@ Four changes, all reversible from `git log -p`, and **no body was edited**:
 | Set / topic | Status | Lines |
 | --- | --- | --- |
 | [Target-deck card defects, and why they are all blocked on one thing](#target-deck-card-defects-and-why-they-are-all-blocked-on-one-thing) | open | 33 |
-| [CR 603.2c batches — both halves closed, and the ratchets that hold them](#cr-6032c-batches--both-halves-closed-and-the-ratchets-that-hold-them) | closed — residuals only | 33 |
+| [CR 603.2c batches — three clauses closed, and the ratchets that hold them](#cr-6032c-batches--three-clauses-closed-and-the-ratchets-that-hold-them) | closed — residuals only | 60 |
 | [The printed-clause ratchet family — one body, and where its needles break](#the-printed-clause-ratchet-family--one-body-and-where-its-needles-break) | open | 58 |
 | [The printed *keyword* and printed *numbers* ratchets — the join, not the text](#the-printed-keyword-and-printed-numbers-ratchets--the-join-not-the-text) | open | 56 |
 | [The two once-a-turn limits, and the one card that cannot carry the flag](#the-two-once-a-turn-limits-and-the-one-card-that-cannot-carry-the-flag) | open | 47 |
@@ -151,10 +151,10 @@ which in a Commander pod is Judith pinging.
 🟡 **Deflecting Swat** still counters only a *spell*; printed is "spell or
 ability", plus "you may choose new targets for it". Unchanged by this pass.
 
-## CR 603.2c batches — both halves closed, and the ratchets that hold them
+## CR 603.2c batches — three clauses closed, and the ratchets that hold them
 
-Two `clause_ratchet` clauses in `core_rules/catalog_registration.rs`, both
-green, both keyed off the **trigger condition** rather than the effect (an
+Three `clause_ratchet` clauses in `core_rules/catalog_registration.rs`, all
+green, all keyed off the **trigger condition** rather than the effect (an
 "…leave your graveyard, this deals 1 damage to each opponent" line belongs to
 the graveyard ratchet, not the damage one):
 
