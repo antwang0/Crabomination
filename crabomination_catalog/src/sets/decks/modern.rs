@@ -12676,7 +12676,7 @@ pub fn ashiok_nightmare_weaver() -> CardDefinition {
             LoyaltyAbility {
                 loyalty_cost: 2,
                 effect: Effect::ExileTopOfLibrary {
-                    who: target_filtered(SelectionRequirement::Player),
+                    who: target_filtered(SelectionRequirement::OpponentPlayer),
                     amount: Value::Const(3),
                     link_to_source: true,
                     face_down: false,
@@ -13043,21 +13043,23 @@ pub fn lord_xander_the_collector() -> CardDefinition {
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
                 effect: Effect::DiscardHalf {
-                    who: target_filtered(SelectionRequirement::Player),
+                    who: target_filtered(SelectionRequirement::OpponentPlayer),
                     rounded_up: false,
                 },
             },
             TriggeredAbility {
                 event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                // "**defending player** mills half their library" — not a
+                // target at all, and at three seats not "an opponent" either.
                 effect: Effect::MillHalf {
-                    who: target_filtered(SelectionRequirement::Player),
+                    who: Selector::Player(PlayerRef::DefendingPlayer),
                     rounded_up: false,
                 },
             },
             TriggeredAbility {
                 event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
                 effect: Effect::SacrificeHalf {
-                    who: target_filtered(SelectionRequirement::Player),
+                    who: target_filtered(SelectionRequirement::OpponentPlayer),
                     filter: SelectionRequirement::Permanent,
                     rounded_up: false,
                 },
@@ -23855,7 +23857,7 @@ pub fn mana_clash() -> CardDefinition {
         cost: cost(&[r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::ManaClash {
-            opponent: target_filtered(SelectionRequirement::Player),
+            opponent: target_filtered(SelectionRequirement::OpponentPlayer),
         },
         ..Default::default()
     }
@@ -44296,7 +44298,7 @@ pub fn shadow_slice() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::LoseLife {
-                who: target_filtered(SelectionRequirement::Player),
+                who: target_filtered(SelectionRequirement::OpponentPlayer),
                 amount: Value::Const(3),
             },
             Effect::Cipher,
@@ -45212,7 +45214,7 @@ pub fn tourach_dread_cantor() -> CardDefinition {
             etb(Effect::If {
                 cond: Predicate::SpellWasKicked,
                 then: Box::new(Effect::Discard {
-                    who: target_filtered(SelectionRequirement::Player),
+                    who: target_filtered(SelectionRequirement::OpponentPlayer),
                     amount: Value::Const(2),
                     random: false,
                 }),

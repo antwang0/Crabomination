@@ -330,6 +330,16 @@ ratchets are for: `ExileChosenUntilSourceLeaves`, `ExileFromHandTaxed`,
 Endurance (Tatyova), Indulgent Tormentor (Judith) and Nihil Spellbomb (Judith).
 Each has an N-seat regression test asserting *one* seat is hit.
 
+⚠ **And the audit grew a SECOND PASS because its own first pass shipped one:
+a filter wider than the print.** `target_filtered(R::Player)` on a card printed
+"**target opponent**" lets the caster aim at themselves — legal to the engine,
+illegal on the card. Seven were shipped: No Way Out, Aim for the Head, Mana
+Clash, Shadow Slice, Tourach, Ashiok's +2 and Lord Xander's two, one of them
+introduced here. Lord Xander's third trigger was the other half of the same
+read: "**defending player** mills half their library" is not a target at all
+and at three seats is not "an opponent" either — it is
+`PlayerRef::DefendingPlayer`. **Reading: 0.**
+
 📐 **Five cards were wrong beyond the targeting**, found by reading the oracle
 while fixing the clause: Collective Defiance had **no escalate at all** and two
 of its three modes were different cards ("each opponent discards three then

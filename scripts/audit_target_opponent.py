@@ -88,6 +88,38 @@ def card_bodies():
     return out
 
 
+# The second pass: the slot exists, and its FILTER is looser than the print.
+# `target_filtered(Player)` on a card printed "**target opponent**" lets the
+# caster aim at themselves — legal to the engine, illegal on the card. Seven
+# of these were shipped, one of them introduced by this audit's own first
+# pass, which is why the check lives here rather than in a scratch script.
+PLAYER_FILTER = re.compile(
+    r"target_filtered\((?:crate::card::)?(?:R|SelectionRequirement)::Player\)"
+)
+OPP_FILTER = re.compile(
+    r"target_filtered\((?:crate::card::)?(?:R|SelectionRequirement)::OpponentPlayer\)"
+)
+TARGET_PLAYER = re.compile(r"target player\b", re.I)
+TARGET_OPPONENT = re.compile(r"target opponent\b", re.I)
+
+
+def filter_mismatches(cache, bodies):
+    """Cards whose player filter is wider or narrower than the printed word."""
+    out = []
+    for name, (ident, path, body) in bodies.items():
+        entry = cache.get(name)
+        if not isinstance(entry, dict):
+            continue
+        text = PAREN.sub(" ", entry.get("oracle_text") or "")
+        says_player = bool(TARGET_PLAYER.search(text))
+        says_opp = bool(TARGET_OPPONENT.search(text))
+        if PLAYER_FILTER.search(body) and says_opp and not says_player:
+            out.append((name, ident, path, "prints 'target opponent', filter is Player"))
+        if OPP_FILTER.search(body) and says_player and not says_opp:
+            out.append((name, ident, path, "prints 'target player', filter is OpponentPlayer"))
+    return out
+
+
 def main():
     cache = json.loads((ROOT / "scripts/.scryfall_cache.json").read_text())
     rows = []
@@ -113,10 +145,14 @@ def main():
     for name, ident, path, needle, clause in sorted(rows):
         print(f"- {name}  [{path.name}::{ident}]  {needle}")
         print(f"    {clause[:150]}")
+    mism = filter_mismatches(cache, card_bodies())
+    for name, ident, path, why in sorted(mism):
+        print(f"! {name}  [{path.name}::{ident}]  {why}")
     print(
-        f"\n{len(rows)} implemented cards print a TARGET player clause and fan out instead"
+        f"\n{len(rows)} implemented cards print a TARGET player clause and fan out "
+        f"instead, {len(mism)} aim a filter the print does not allow"
     )
-    return 1 if rows else 0
+    return 1 if rows or mism else 0
 
 
 if __name__ == "__main__":
