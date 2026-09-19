@@ -139,6 +139,15 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::FREYALISE_COMMANDERS,
             main: decks::FREYALISE_MAIN,
         },
+        // Eighth, appended for the third time for the same reason: the pod's
+        // only **Choose a Background** pair (CR 702.124k), whose second
+        // commander is a legendary enchantment rather than a creature.
+        // `--seats 8` is what reaches it.
+        PodDeck {
+            name: "Zellix + Background (UR)",
+            commanders: decks::ZELLIX_COMMANDERS,
+            main: decks::ZELLIX_MAIN,
+        },
     ]
 }
 
@@ -376,11 +385,17 @@ mod tests {
     /// existence; this test names the field explicitly. It is found by its
     /// *pairing* rather than by position — Edgar Markov was appended after it
     /// and `last()` silently stopped being the partner seat.
+    ///
+    /// ⚠ "Two commanders" stopped being unique when the Choose-a-Background
+    /// seat was appended (CR 702.124k is also a pair), so the shape here is
+    /// the one CR 702.124h names: two *creature* cards, each with Partner.
     #[test]
     fn cr_702_124b_a_two_commander_seat_plays_a_pod_game() {
         let field = target_decks();
-        let partner =
-            *field.iter().find(|d| d.commanders.len() == 2).expect("a two-commander deck");
+        let partner = *field
+            .iter()
+            .find(|d| d.commanders.len() == 2 && d.commanders.iter().all(|f| f().is_creature()))
+            .expect("a two-creature-commander deck");
         assert_eq!(partner.commanders.len(), 2);
         assert_eq!(partner.card_count(), 100, "CR 702.124b counts both commanders");
 
@@ -415,10 +430,13 @@ mod tests {
     #[test]
     fn cr_903_3a_a_planeswalker_commander_seat_plays_a_pod_game() {
         let field = target_decks();
+        // One commander, and it is not a creature: the Background seat's
+        // second commander is also a non-creature, so the arity is what keeps
+        // this pinned to the planeswalker.
         let pw = *field
             .iter()
-            .find(|d| !d.commanders[0]().is_creature())
-            .expect("a non-creature commander");
+            .find(|d| d.commanders.len() == 1 && !d.commanders[0]().is_creature())
+            .expect("a lone non-creature commander");
         assert_eq!(pw.card_count(), 100);
         let def = pw.commanders[0]();
         assert!(def.can_be_commander, "CR 903.3a — the printed permission");
@@ -429,6 +447,60 @@ mod tests {
         assert_eq!(t.players[0].command.len(), 1, "it begins in the command zone");
         assert_eq!(t.players[0].commanders.len(), 1);
         assert_eq!(t.players[0].library.len(), 99);
+
+        let pilots = vec![Pilot::default(); 4];
+        for seed in [0xC0FFEE_u64, 43, 4242] {
+            let o = play_one_pod_game(&t, &pilots, 50_000, seed);
+            assert!(o.winner.is_some(), "seed {seed} left the pod undecided");
+            assert!(o.turns > 0);
+        }
+    }
+
+    /// CR 702.124k — "Choose a Background": two cards lead the deck when one
+    /// has the keyword and the other is a legendary Background enchantment.
+    /// The keyword and `format::is_background_pair` shipped validated and
+    /// never piloted; this is the seat that pilots them.
+    ///
+    /// What this asserts that the Partner test does not: the second commander
+    /// is **not a creature** (CR 702.124k's Background half, which
+    /// `is_legal_commander` rejects on its own), CR 702.124c combines the two
+    /// identities across a creature and an enchantment, and the games finish.
+    /// CR 702.124d's second tally is zero for the whole game by construction
+    /// here — CR 903.10a counts combat damage and an enchantment deals none —
+    /// which is the planeswalker seat's consequence reached from the other
+    /// direction, and why this pair is worth running rather than the mono-red
+    /// Gut + Archaeologist one.
+    #[test]
+    fn cr_702_124k_a_background_pair_plays_a_pod_game() {
+        use crate::card::KeywordSlice;
+        use crate::format::is_legal_commander;
+        let field = target_decks();
+        let bg = *field
+            .iter()
+            .find(|d| d.commanders.len() == 2 && !d.commanders[1]().is_creature())
+            .expect("a Choose-a-Background deck");
+        assert_eq!(bg.card_count(), 100, "CR 903.5a counts both commanders");
+
+        let (lead, back) = (bg.commanders[0](), bg.commanders[1]());
+        assert!(
+            lead.keywords.has_kw(&crate::card::Keyword::ChooseABackground),
+            "CR 702.124k — the first half carries the keyword",
+        );
+        assert!(back.is_enchantment() && back.is_legendary(), "and the second is a legendary enchantment");
+        assert!(
+            !is_legal_commander(&back),
+            "CR 702.124k — a Background is not a commander on its own",
+        );
+        assert!(
+            crate::format::commanders_may_pair(&lead, &back),
+            "but the pair is legal together",
+        );
+
+        let decks = vec![bg, field[0], field[1], field[2]];
+        let t = build_pod_template(&decks);
+        assert_eq!(t.players[0].command.len(), 2, "both begin in the command zone");
+        assert_eq!(t.players[0].commanders.len(), 2);
+        assert_eq!(t.players[0].library.len(), 98);
 
         let pilots = vec![Pilot::default(); 4];
         for seed in [0xC0FFEE_u64, 43, 4242] {

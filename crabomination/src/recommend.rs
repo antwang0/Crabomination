@@ -2484,10 +2484,6 @@ impl ActionCensus {
         Self { on: cap_diag_floor().is_some(), counts: HashMap::default() }
     }
 
-    pub fn is_on(&self) -> bool {
-        self.on
-    }
-
     /// The key for an action *about to be taken*, or `None` when off. Taken
     /// before the action so a cast names the card in the zone it left.
     pub fn key_for(&self, g: &GameState, a: &crate::game::GameAction) -> Option<String> {

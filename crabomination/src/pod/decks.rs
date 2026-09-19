@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Seven hand-picked commanders, each with a 99 drawn from cards this engine
+//! Eight hand-picked commanders, each with a 99 drawn from cards this engine
 //! already implements: legal under CR 903 (100 cards including the commander,
 //! singleton outside basics, every card inside the commander's CR 903.4 color
 //! identity) and Commander-legal per Scryfall's ban list, both of which
@@ -10,11 +10,11 @@
 //! decks is not derivable from the offline Scryfall cache this repo carries,
 //! and a list nobody can verify is worse than one the suite checks every run.
 //! What they keep from the precon idea is what the pod needs — fixed, legal,
-//! seven different color identities, and built to play against each other.
-//! One is a Partner pair (CR 702.124b) and one is a **planeswalker**
-//! (CR 903.3a); both sit past the fourth slot, because `pod_field(n)` takes
-//! the first `n` and appending is what keeps the committed outcome table
-//! from moving.
+//! eight different color identities, and built to play against each other.
+//! One is a Partner pair (CR 702.124b), one is a **planeswalker**
+//! (CR 903.3a) and one is a **Choose a Background** pair (CR 702.124k); all
+//! three sit past the fourth slot, because `pod_field(n)` takes the first `n`
+//! and appending is what keeps the committed outcome table from moving.
 //!
 //! Each list is ~37 lands (12 nonbasic), the format's colorless staples, then
 //! ramp / removal / draw / a creature curve, so bots finish games with them.
@@ -262,4 +262,73 @@ pub const FREYALISE_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest,
     forest, forest, forest, forest, forest, forest, forest, forest, forest,
     forest, forest, forest, forest, forest, forest, forest, forest, forest,
+];
+
+/// Zellix, Sanity Flayer + Passionate Archaeologist — UR, and the pod's only
+/// **Choose a Background** pair (CR 702.124k). Eighth in `target_decks`, so
+/// `--seats 8` is what runs it and every committed 2..7-seat number is
+/// untouched.
+///
+/// It is here for the same reason the Partner seat and the planeswalker seat
+/// are: `Keyword::ChooseABackground` and `format::is_background_pair` had been
+/// validated since they shipped and never *piloted*. Three things fall out of
+/// a Background second commander and none of them is the Partner pair's:
+///
+/// * CR 702.124k's second commander is a legendary **enchantment**, not a
+///   creature — `is_legal_commander` rejects it on its own, and only the pair
+///   check in `validate_commander_deck` lets it in;
+/// * CR 702.124c combines the identities across a creature and an enchantment
+///   ({U} + {R} = Izzet), which is what every "any colour in your commander's
+///   identity" source in the list reads;
+/// * CR 702.124d still keeps the tax and the damage tallies separate, and the
+///   Background's 21-damage tally stays at zero all game for CR 903.10a's
+///   reason — an enchantment deals no combat damage. Same shape as the
+///   planeswalker seat, reached from the other direction.
+///
+/// Zellix's own trigger is the pod half: "whenever **a player** mills one or
+/// more creature cards" is `EventScope::AnyPlayer` with `once_per_batch`
+/// (CR 603.2c), so it reads the whole table rather than its controller.
+pub const ZELLIX_COMMANDERS: &[CardFactory] =
+    &[zellix_sanity_flayer, passionate_archaeologist];
+
+/// Zellix/Archaeologist Izzet: 74 nonbasic cards + 24 basics = 98, plus the
+/// two commanders.
+///
+/// Built to the same measured shape as the Judith and Freyalise retunes —
+/// removal, card advantage and fat, which is what a one-ply material
+/// evaluator can price — rather than to the mill theme Zellix suggests. The
+/// self-mill that is here (Hedron Crab, Careful Study, Faithless Looting)
+/// feeds the Hive Mind trigger without asking the bot to value a graveyard.
+pub const ZELLIX_MAIN: &[CardFactory] = &[
+    // Lands (12 nonbasic + 24 basics = 36)
+    command_tower, path_of_ancestry, opal_palace, otawara_soaring_city, shelldock_isle,
+    den_of_the_bugbear, spinerock_knoll, buried_ruin, inventors_fair, rogues_passage,
+    // The bond cycle's Izzet member — a tapland in a duel and a dual in a pod,
+    // which is the only seat in the field that runs one from the start
+    training_center, evolving_wilds,
+    // Colorless ramp and utility
+    sol_ring, arcane_signet, commanders_sphere, mind_stone, thought_vessel,
+    everflowing_chalice, guardian_idol, mana_vault, grim_monolith, hedron_archive,
+    wayfarers_bauble, palladium_myr, solemn_simulacrum, skullclamp, senseis_divining_top,
+    // The guild pair — both are two-colour in CR 903.4 identity, so they are
+    // legal here where mono-red Krark and mono-green Freyalise take neither
+    izzet_signet, talisman_of_creativity,
+    // Interaction
+    lightning_bolt, shock, abrade, chain_lightning, flame_slash, arc_trail,
+    mizzium_mortars, chaos_warp, blasphemous_act, crush, vandalblast, pongify,
+    rapid_hybridization, rivers_rebuke,
+    // Card advantage and selection
+    brainstorm, consider, careful_study, faithless_looting, light_up_the_stage,
+    tormenting_voice, wheel_of_fortune, curiosity, thieving_magpie,
+    // Bodies and finishers
+    fanatical_firebrand, bloodrage_brawler, goblin_rabblemaster, flametongue_kavu,
+    hedron_crab, benthic_biomancer, tideshaper_mystic, spiketail_hatchling,
+    vodalian_arcanist, myr_retriever, lodestone_golem, air_servant, reckless_wurm,
+    inferno_titan, balefire_dragon, shivan_dragon, terror_of_the_peaks,
+    etali_primal_storm, walking_ballista, cathodion, zealous_conscripts,
+    phantasmal_image,
+    // Basics: 12 island, 12 mountain
+    island, island, island, island, island, island, island, island, island, island,
+    island, island, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain,
 ];
