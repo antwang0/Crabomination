@@ -419,3 +419,69 @@ fn cr_123_name_sticker_renames_is_exclusive_and_comes_off_in_a_hidden_zone() {
     assert_eq!(name(&g, bear), "Grizzly Bears");
     assert!(g.available_name_stickers(0).contains(&1), "the sticker is free again");
 }
+
+/// CR 123.1 / 123.6c — changes from stickers aren't copiable values:
+/// - a copy of a stickered permanent (a new object from its definition, a
+///   Clone-style copy) has the printed name, not the sticker;
+/// - a stickered permanent that becomes a copy keeps its own sticker on the
+///   new name ("start with the object's copiable values, then apply each name
+///   sticker"), and keeps it when the copy effect ends.
+#[test]
+fn cr_123_1_name_stickers_are_not_copiable_values() {
+    use crabomination::effect::{Duration, Effect, Selector};
+    use crabomination::game::effects::EffectContext;
+    use crabomination::game::types::Target;
+    use crabomination::game::*;
+
+    let mut g = two_player_game();
+    g.set_sticker_sheets(0, [0, 1, 2]);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mut ctx = EffectContext::for_spell(0, None, 0, 0);
+    ctx.source = Some(bear);
+    g.resolve_effect(&Effect::PutNameSticker { what: Selector::This, optional: false }, &ctx)
+        .expect("sticker");
+    let name = |g: &GameState, id: CardId| g.find_card_anywhere(id).unwrap().definition.name;
+    assert_eq!(name(&g, bear), "Grizzly Bears Audacious");
+
+    // A new object built from its definition has no sticker.
+    let def = (*g.battlefield_find(bear).unwrap().definition.arc()).clone();
+    let token = g.add_card_to_battlefield(0, def);
+    assert_eq!(name(&g, token), "Grizzly Bears", "a new object doesn't get the sticker");
+
+    // A Clone-style copy reads the copiable values.
+    let copier = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    let mut copy_ctx = EffectContext::for_spell(0, Some(Target::Permanent(bear)), 0, 0);
+    copy_ctx.source = Some(copier);
+    g.resolve_effect(
+        &Effect::BecomeCopyOf {
+            what: Selector::This,
+            source: Selector::Target(0),
+            extra_creature_types: vec![],
+            keep_own_triggered: false,
+            keep_own_activated: false,
+        },
+        &copy_ctx,
+    )
+    .expect("copy");
+    assert_eq!(name(&g, copier), "Grizzly Bears");
+
+    // The stickered bear becomes a copy of Llanowar Elves until end of turn:
+    // its sticker stays on over the new name, and after the effect ends.
+    let elves = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    let mut become_ctx = EffectContext::for_spell(0, Some(Target::Permanent(elves)), 0, 0);
+    become_ctx.source = Some(bear);
+    g.resolve_effect(
+        &Effect::BecomeCopyOfFor {
+            what: Selector::This,
+            source: Selector::Target(0),
+            duration: Duration::EndOfTurn,
+            non_legendary: false,
+        },
+        &become_ctx,
+    )
+    .expect("become a copy");
+    assert_eq!(name(&g, bear), "Llanowar Elves Audacious");
+    let mut events = Vec::new();
+    g.do_cleanup(&mut events);
+    assert_eq!(name(&g, bear), "Grizzly Bears Audacious");
+}

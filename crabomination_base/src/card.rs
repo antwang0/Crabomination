@@ -3592,6 +3592,13 @@ pub struct ExileCountdown {
 pub struct CardDefinition {
     #[serde(with = "crate::static_str_serde")]
     pub name: crate::static_str_serde::StaticStr,
+    /// CR 123.1 — set only on the clone a name sticker makes
+    /// (`CardInstance::put_name_sticker`): the name before any sticker went
+    /// on. Changes from stickers aren't copiable values, so a new object
+    /// built from this definition (a token or spell copy) and a permanent
+    /// becoming a copy of it read [`CardDefinition::copiable`] instead.
+    #[serde(skip)]
+    pub unstickered_name: Option<crate::static_str_serde::StaticStr>,
     pub cost: ManaCost,
     pub supertypes: Vec<Supertype>,
     pub card_types: Vec<CardType>,
@@ -5562,6 +5569,20 @@ pub(crate) mod debug_flag {
 }
 
 impl CardDefinition {
+    /// CR 123.1 / 707.2 — this definition's copiable values: itself, or, on a
+    /// name-stickered definition, the same card with its unstickered name.
+    pub fn copiable(self: &Arc<Self>) -> Arc<Self> {
+        match self.unstickered_name {
+            None => Arc::clone(self),
+            Some(name) => {
+                let mut def = (**self).clone();
+                def.name = name;
+                def.unstickered_name = None;
+                Arc::new(def)
+            }
+        }
+    }
+
     /// `Arc::new(self.clone())` in its own frame: a `CardDefinition` is
     /// 8,232 bytes, and four of them cloned inline were a third of
     /// `run_effect`'s 97 KB frame. Never inline.
@@ -8854,6 +8875,14 @@ impl CardInstance {
 
     pub fn new(id: CardId, definition: impl Into<Arc<CardDefinition>>, owner: usize) -> Self {
         let definition = definition.into();
+        // CR 123.1 — a new object has no stickers: one built from a stickered
+        // definition (a token copy of a stickered permanent) gets its
+        // copiable values.
+        let definition = if definition.unstickered_name.is_some() {
+            definition.copiable()
+        } else {
+            definition
+        };
         let summoning_sick = definition.is_creature();
         let base_loyalty = definition.base_loyalty;
         let is_planeswalker = definition.is_planeswalker();
@@ -9539,10 +9568,34 @@ impl CardInstance {
         stickers.push((sticker, pos));
         let name = crate::sticker::stickered_name(base.name, &stickers);
         let mut def = (*base).clone();
+        def.unstickered_name = Some(base.name);
         def.name = crate::static_str_serde::intern(name);
         self.name_sticker_base = Some(base);
         self.name_stickers = stickers;
         self.set_definition(Arc::new(def));
+    }
+
+    /// CR 123.6c / 707.2 — give this object new copiable values `def` (it
+    /// becomes a copy, or a copy effect on it ends) and keep its own name
+    /// stickers on top: "start with the object's copiable values, then apply
+    /// each name sticker". Without stickers this is `set_definition`.
+    pub fn set_copiable_definition(&mut self, def: Arc<CardDefinition>) {
+        let def = def.copiable();
+        if self.name_stickers.is_empty() {
+            self.set_definition(def);
+            return;
+        }
+        let mut stickered = (*def).clone();
+        stickered.unstickered_name = Some(def.name);
+        stickered.name =
+            crate::static_str_serde::intern(crate::sticker::stickered_name(def.name, &self.name_stickers));
+        self.name_sticker_base = Some(def);
+        self.set_definition(Arc::new(stickered));
+    }
+
+    /// This object's copiable values — its definition without its stickers.
+    pub fn copiable_definition(&self) -> Arc<CardDefinition> {
+        self.definition.arc().copiable()
     }
 
     /// CR 123.5 — stickers are not retained as an object moves to a hidden

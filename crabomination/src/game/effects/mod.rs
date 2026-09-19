@@ -29873,12 +29873,13 @@ impl GameState {
                 // resolution; later changes to the source don't propagate.
                 // The source is usually a permanent, but "a copy of a card you
                 // exiled" (Volatile Chimera) copies a card in another zone.
+                // CR 123.1 — the source's stickers aren't copiable values.
                 let src_def = self
                     .resolve_selector(source, ctx)
                     .into_iter()
                     .find_map(|e| e.as_card_id())
                     .and_then(|id| self.find_card_anywhere(id))
-                    .map(|c| c.definition.arc());
+                    .map(|c| c.copiable_definition());
                 if let Some(src_def) = src_def {
                     for ent in self.resolve_selector(what, ctx) {
                         let Some(cid) = ent.as_permanent_id() else { continue };
@@ -29906,8 +29907,10 @@ impl GameState {
                                 c.face_up_def = Some(std::sync::Arc::new(new_def));
                                 continue;
                             }
-                            let original =
-                                std::mem::replace(c.definition_mut(), std::sync::Arc::new(new_def));
+                            // CR 123.6c — the copier's own name stickers stay
+                            // on over its new copiable values.
+                            let original = c.copiable_definition();
+                            c.set_copiable_definition(std::sync::Arc::new(new_def));
                             // CR 400.7 — in its next zone the object is its
                             // printed card again; `revert_copy_on_leave`
                             // restores this (a dead Clone is a Clone in the
@@ -29941,7 +29944,7 @@ impl GameState {
                 // top card of the library).
                 let src_def = src
                     .and_then(|id| self.find_card_anywhere(id))
-                    .map(|c| c.definition.arc());
+                    .map(|c| c.copiable_definition());
                 let Some(src_def) = src_def else { return Ok(()) };
                 let copy_def = if *non_legendary {
                     let mut d = (*src_def).clone();
@@ -29960,7 +29963,8 @@ impl GameState {
                     let Some(c) = self.battlefield.find_by_id_mut(cid) else {
                         continue;
                     };
-                    let original = std::mem::replace(c.definition_mut(), copy_def.clone());
+                    let original = c.copiable_definition();
+                    c.set_copiable_definition(copy_def.clone());
                     self.temporary_copies.push(crate::game::TempCopy {
                     shapeshifter: false,
                         card: cid,

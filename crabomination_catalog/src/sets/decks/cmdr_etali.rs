@@ -7,8 +7,7 @@
 //!   that one instead of the granted prowl (a card carries one alt cost).
 //! - _____ Goblin: the name stickers are the engine's stand-in sheets (not
 //!   Unfinity's printed inserts), drawn lazily; the sticker's position in the
-//!   name is not offered (it fills the blank); a copy of the Goblin copies its
-//!   stickered name (CR 123.1 says it shouldn't).
+//!   name is not offered (it fills the blank).
 //! - Passionate Archaeologist: gated on your controlling your own commander,
 //!   its trigger is printed on the Background (it deals the damage, once,
 //!   however many commanders you have).

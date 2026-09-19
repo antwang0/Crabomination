@@ -16753,7 +16753,7 @@ impl GameState {
         // The oldest entry holds the original printed definition.
         if let Some(pos) = self.temporary_copies.iter().position(|tc| tc.card == card.id) {
             if let Some(def) = self.temporary_copies[pos].original_def() {
-                card.set_definition(def);
+                card.set_copiable_definition(def);
             }
             retain_cold!(self.temporary_copies, |tc| tc.card != card.id);
         }
@@ -16778,7 +16778,7 @@ impl GameState {
                 if let Some(def) = tc.original_def()
                     && let Some(c) = self.battlefield.find_by_id_mut(tc.card)
                 {
-                    c.set_definition(def);
+                    c.set_copiable_definition(def);
                 }
             } else {
                 kept.push(tc);
