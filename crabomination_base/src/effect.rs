@@ -9249,6 +9249,20 @@ pub enum Effect {
     /// `PreventCombatDamageByTargetThisTurn`.
     PreventAllDamageByTargetThisTurn { target: Selector },
 
+    /// CR 615 — "Prevent all damage that would be dealt this turn by [filter]
+    /// creatures" (Obscuring Haze's "by creatures your opponents control").
+    ///
+    /// The all-damage superset of
+    /// [`PreventAllCombatDamageByMatchingThisTurn`](Self::PreventAllCombatDamageByMatchingThisTurn)
+    /// and the filtered sibling of
+    /// [`PreventAllDamageByTargetThisTurn`](Self::PreventAllDamageByTargetThisTurn).
+    /// The **filter**, not a snapshot of ids: the printed effect asks what a
+    /// source is when the damage would be dealt, so a creature that changes
+    /// controller — or one that enters after this resolves — is covered or
+    /// not by its state then. The controller-relative atoms
+    /// (`ControlledByOpponent`) are evaluated from the seat that resolved it.
+    PreventAllDamageByMatchingThisTurn { filter: crate::card::SelectionRequirement },
+
     /// "You may have `dealer` deal damage equal to its power to `to`. If you
     /// do, `dealer` assigns no combat damage this turn." The Laccolith cycle's
     /// becomes-blocked trigger; declining leaves combat untouched.

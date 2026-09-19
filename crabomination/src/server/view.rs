@@ -3089,7 +3089,8 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         | Effect::PreventAllDamageFromChosenColorThisTurn { .. }
         | Effect::PreventAllDamageByTargetThisTurn { .. }
         | Effect::PreventAllDamageBetweenThisTurn { .. }
-        | Effect::PreventAllCombatDamageByMatchingThisTurn { .. } => "Prevent all damage",
+        | Effect::PreventAllCombatDamageByMatchingThisTurn { .. }
+        | Effect::PreventAllDamageByMatchingThisTurn { .. } => "Prevent all damage",
         Effect::AdvanceClassLevel => "Level up",
         Effect::PutFromHandOntoBattlefield { .. } => "Put a card onto the battlefield",
         Effect::ExileSelfReturnTransformed => "Exile, return transformed",

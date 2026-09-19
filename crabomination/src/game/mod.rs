@@ -1495,6 +1495,19 @@ pub struct ColdState {
     /// alongside the combat-only list.
     #[serde(default)]
     pub(crate) all_damage_prevented_by_this_turn: Vec<CardId>,
+    /// CR 615 — the same shield described by a *filter* rather than by a list
+    /// of ids ("prevent all damage that would be dealt this turn by creatures
+    /// your opponents control" — Obscuring Haze). `(seat, filter)`: the seat
+    /// is the perspective the controller-relative atoms are read from, since
+    /// "your opponents" belongs to whoever resolved it and not to the dealer.
+    ///
+    /// A filter and not a snapshot because the printed effect asks what a
+    /// source *is* when the damage would be dealt: a creature that changes
+    /// controller stops being covered, and one that enters afterwards is.
+    /// Cleared at cleanup with the id lists above.
+    #[serde(default)]
+    pub(crate) all_damage_prevented_by_matching_this_turn:
+        Vec<(usize, crate::card::SelectionRequirement)>,
     /// CR 614 — "if `from` would draw a card, that player skips that draw and
     /// `to` draws instead", as `(from, to)` pairs (Plagiarize). Cleared at
     /// cleanup.
@@ -8317,6 +8330,22 @@ impl GameState {
             })
     }
 
+    /// CR 615 — does `src` match a filter-described "prevent all damage that
+    /// would be dealt by …" shield (Obscuring Haze)?
+    ///
+    /// Empty on every board that has not resolved one, which is nearly all of
+    /// them, so this is a length test before anything else — the damage path
+    /// asks it per damage event.
+    pub(crate) fn all_damage_from_source_matches_a_shield(&self, src: CardId) -> bool {
+        if self.all_damage_prevented_by_matching_this_turn.is_empty() {
+            return false;
+        }
+        let target = crate::game::types::Target::Permanent(src);
+        self.all_damage_prevented_by_matching_this_turn
+            .iter()
+            .any(|(seat, f)| self.evaluate_requirement_static(f, &target, *seat, Some(src)))
+    }
+
     /// CR 615 — true when all combat damage `dealer` would *deal* is prevented
     /// this turn (Azorius Ploy's first clause). Mirror of
     /// `combat_damage_prevented_to_self`.
@@ -8329,6 +8358,7 @@ impl GameState {
         }
         if self.combat_damage_prevented_by_this_turn.contains(&dealer)
             || self.all_damage_prevented_by_this_turn.contains(&dealer)
+            || self.all_damage_from_source_matches_a_shield(dealer)
         {
             return true;
         }

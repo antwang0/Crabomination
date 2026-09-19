@@ -30963,6 +30963,23 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::PreventAllDamageByMatchingThisTurn { filter } => {
+                // CR 615.1 — the all-damage superset of the combat-only fog,
+                // described by a filter rather than by a list of ids so a
+                // source that changes controller (or enters after this
+                // resolves) is judged when the damage would be dealt.
+                // `ctx.controller` is the perspective for "your opponents".
+                if !self
+                    .all_damage_prevented_by_matching_this_turn
+                    .iter()
+                    .any(|(seat, f)| *seat == ctx.controller && f == filter)
+                {
+                    self.all_damage_prevented_by_matching_this_turn
+                        .push((ctx.controller, filter.clone()));
+                }
+                Ok(())
+            }
+
             Effect::PreventAllDamageFromChosenSourceThisTurn { filter, gain_life_from_colors } => {
                 let Some(chosen) = self.choose_damage_prevention_source(filter, ctx) else {
                     return Ok(());
