@@ -82,7 +82,7 @@ the handoff.
 | Engine mechanics & primitives | [Suggested next-up tasks](#suggested-next-up-tasks) | 1053 |
 | Rules coverage | [MagicCompRules coverage audit](#magiccomprules-coverage-audit) | 312 |
 | Tooling | [Recommender: two builder defects fixed, one lesson recorded](#recommender-two-builder-defects-fixed-one-lesson-recorded) | 17 |
-| Bugs & robustness | [OPEN 2026-09-19 (the forty-ninth find) — "enters tapped" is a REPLACEMENT too, and 83 cards ship it as a trigger in a clause the 614.12 audit does not match](#open-2026-09-19-the-forty-ninth-find--enters-tapped-is-a-replacement-too-and-83-cards-ship-it-as-a-trigger-in-a-clause-the-61412-audit-does-not-match) | 83 |
+| Bugs & robustness | [OPEN 2026-09-19 (the forty-ninth find) — "enters tapped" is a REPLACEMENT too, and 83 cards ship it as a trigger in a clause the 614.12 audit does not match](#open-2026-09-19-the-forty-ninth-find--enters-tapped-is-a-replacement-too-and-83-cards-ship-it-as-a-trigger-in-a-clause-the-61412-audit-does-not-match) | 83 → 51 |
 | Bugs & robustness | [OPEN 2026-09-19 (the forty-eighth find) — "As this ~ enters" is a REPLACEMENT and 89 shipped cards model it as an ETB TRIGGER](#open-2026-09-19-the-forty-eighth-find--as-this--enters-is-a-replacement-and-89-shipped-cards-model-it-as-an-etb-trigger) | 89 → 57 |
 | Bugs & robustness | [FIXED 2026-09-19 (the forty-seventh find) — six hand-written SEAT-INDEX walks, and the two that let a player who had left the game vote and be voted for](#fixed-2026-09-19-the-forty-seventh-find--six-hand-written-seat-index-walks-and-the-two-that-let-a-player-who-had-left-the-game-vote-and-be-voted-for) | 60 |
 | Bugs & robustness | [The 2026-09-12/13 handoff detail, moved verbatim from TODO's NEXT](#the-2026-09-1213-handoff-detail-moved-verbatim-from-todos-next) | 182 |
@@ -125,12 +125,31 @@ rather than `>= 3` counting the entrant, which was right only because
 `apply_enters_tapped_replacement` counts *after* the entrant is in
 `self.battlefield`. Both cycles are 10/10 and `--gate` holds them there.
 
-📐 **The unconditional column is one helper, not 56 bodies.** All 64 of it is
-`sets::etb_tap()` and its `etb_tap_then_*` siblings, `TriggeredAbility`s used
-as `triggered_abilities: vec![etb_tap()]`. Converting it means giving the helper a `StaticAbility`
-sibling and moving each call site across — mechanical, but it touches enough
-files to be worth taking as its own commit, and it WILL move the seeded pod
-table (taplands are in every pod deck), so budget the re-bless.
+✅ **The helper-shaped part is DONE and the count reads 83 → 51.** Three
+commits: `slow_land` (10 cards) onto `EntersTappedUnless`; `sets::etb_tap()`
+replaced by `sets::enters_tapped()` across 33 call sites in 17 files,
+including the shared `tri_land` and `cycling_dual` builders and
+`decks::modern`'s local copy (32 cards); and the `etb_tap_then_*` family split
+into `enters_tapped()` plus `etb_{scry,gain,surveil}_one()` behind two
+builders, `tapland_untyped` and `tapland_typed` (26 cards).
+
+⚠ **What is left — 19 conditional, 32 unconditional — is hand-written bodies,
+not helpers**, so the next pass is per-card rather than per-helper.
+
+📐 **And the re-bless was on the middle commit only, which is the reading.**
+`etb_tap()`'s conversion moved the seeded pod table hard — one game 47 → 97
+turns, the largest single move that table has taken — while the seed-9102
+aggregate over 2..8 seats moved at most 0.20 turns with every block
+2,000/2,000 decided. The `etb_tap_then_*` commit, 26 more cards of the same
+shape, moved the table **not at all**. Three games is a gate, not a
+measurement.
+
+⚠ **Four test assertions were holding the trigger shape in place** and were
+corrected rather than deleted: an artifact-land table asserting
+`!triggered_abilities.is_empty()`, an EOE Planet test asserting exactly one
+trigger, a shard tri-land table asserting the same, and a surveil-land test
+that walked INTO the trigger's `Seq` to find the surveil beside the tap. **A
+test that asserts the shape a bug has is a bug with a lock on it.**
 
 ⚠ **A reader fix worth copying into the sibling scripts.** The name-keyed
 walk every script in `scripts/` shares takes the **first** string literal in
