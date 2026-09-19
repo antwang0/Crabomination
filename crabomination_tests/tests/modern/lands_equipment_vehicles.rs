@@ -1537,3 +1537,92 @@ fn avacyn_makes_your_whole_board_indestructible() {
     assert!(kw(&g, rock), "an artifact");
     assert!(!kw(&g, theirs), "and nothing of theirs");
 }
+
+// ── "Enters tapped unless [a board fact]" is a replacement too ──────────────
+
+/// The ten slow lands and the ten battle lands print the same shape of
+/// clause — "this land enters tapped unless [something about your board]" —
+/// and CR 614.1c makes it a replacement. The battle lands always had it; the
+/// slow lands shipped as an `EntersBattlefield` trigger, which leaves the
+/// land on the battlefield untapped with the trigger on the stack.
+#[test]
+fn every_conditional_tapland_taps_by_replacement_not_by_trigger() {
+    let slow: [(Factory, &str); 10] = [
+        (catalog::deathcap_glade, "Deathcap Glade"),
+        (catalog::deserted_beach, "Deserted Beach"),
+        (catalog::dreamroot_cascade, "Dreamroot Cascade"),
+        (catalog::haunted_ridge, "Haunted Ridge"),
+        (catalog::overgrown_farmland, "Overgrown Farmland"),
+        (catalog::rockfall_vale, "Rockfall Vale"),
+        (catalog::shattered_sanctum, "Shattered Sanctum"),
+        (catalog::shipwreck_marsh, "Shipwreck Marsh"),
+        (catalog::stormcarved_coast, "Stormcarved Coast"),
+        (catalog::sundown_pass, "Sundown Pass"),
+    ];
+    let battle: [(Factory, &str); 10] = [
+        (catalog::canopy_vista, "Canopy Vista"),
+        (catalog::cinder_glade, "Cinder Glade"),
+        (catalog::eclipsed_steppe, "Eclipsed Steppe"),
+        (catalog::prairie_stream, "Prairie Stream"),
+        (catalog::radiant_summit, "Radiant Summit"),
+        (catalog::scorched_geyser, "Scorched Geyser"),
+        (catalog::smoldering_marsh, "Smoldering Marsh"),
+        (catalog::sodden_verdure, "Sodden Verdure"),
+        (catalog::sunken_hollow, "Sunken Hollow"),
+        (catalog::vernal_fen, "Vernal Fen"),
+    ];
+    for (factory, name) in slow.iter().chain(battle.iter()) {
+        let def = factory();
+        assert_eq!(def.name, *name);
+        assert!(
+            def.triggered_abilities.is_empty(),
+            "{name}: 'enters tapped unless' is CR 614.1c, not a trigger",
+        );
+        assert_eq!(def.static_abilities.len(), 1, "{name} has the one replacement");
+    }
+    // ⚠ The two families spell their mana differently and that is not a
+    // defect: a slow land prints no basic land type and carries two explicit
+    // `{T}: Add {C}` abilities, while a battle land is a TYPED dual whose
+    // colours also come from its land types, and models the pair as one.
+    for (factory, name) in slow {
+        assert_eq!(factory().activated_abilities.len(), 2, "{name}: two abilities");
+        assert!(factory().subtypes.land_types.is_empty(), "{name}: untyped");
+    }
+    for (factory, name) in battle {
+        assert_eq!(factory().subtypes.land_types.len(), 2, "{name}: a typed dual");
+    }
+}
+
+/// And the behaviour either way round, on the pair whose threshold is the
+/// printed "two or more OTHER lands": tapped on an empty board, and untapped
+/// once two other lands are out — with the land already tapped before
+/// anything resolves.
+#[test]
+fn a_slow_land_reads_the_other_lands_and_is_tapped_on_arrival() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let id = g.add_card_to_hand(0, catalog::deserted_beach());
+    g.perform_action(GameAction::PlayLand(id)).unwrap();
+    assert!(
+        g.battlefield_find(id).unwrap().tapped,
+        "no other lands: tapped, and tapped before anything resolves",
+    );
+
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.add_card_to_battlefield(0, catalog::island());
+    g.add_card_to_battlefield(0, catalog::plains());
+    let id = g.add_card_to_hand(0, catalog::deserted_beach());
+    g.perform_action(GameAction::PlayLand(id)).unwrap();
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(id).unwrap().tapped, "two other lands: untapped");
+
+    // One other land is not two.
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.add_card_to_battlefield(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::deserted_beach());
+    g.perform_action(GameAction::PlayLand(id)).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(id).unwrap().tapped, "one other land: still tapped");
+}
