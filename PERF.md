@@ -3015,6 +3015,48 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-09-19 (the eighth Commander session, tip `2104c659`) — guardrail, no perf work
+
+Six correctness commits and two new catalog ratchets. The engine changes are
+`GameState::seats_in_turn_order_from` (four effect arms), a gated
+`ActionCensus` in the pod loop, and two `resolve_players` swaps; the card
+changes are three bond lands, one consolidated `crowd_land` body, Deflecting
+Swat's whole effect and Perplexing Chimera's second half. **None is a perf
+change and none moved a number.**
+
+```text
+--bench (release-fast), CRAB_THREAD_CHECK=1:
+  decisions          195,806   byte-identical to the committed invariant
+  turns_per_game       27.49   "
+  decisions_per_game   611.9   "
+  stalls          0 (cap 0 / board 0 / stuck 0 / draw 0)
+  determinism     ok (all pairs split); thread_determinism ok (3 vs 1)
+  peak_rss_mib     29.5
+```
+
+📐 **The pre-check again answered before the build did**: the bench plays
+`--decks fixed` = `archetypes()`, and not one of this run's changed cards is
+in it or in `golden_trace.rs`'s two decks. The only engine change that could
+reach it is `seats_in_turn_order_from`, and its four call sites are `Vote`,
+Grenzo's Rebuttal, Carrion Rats and Grave Consequences — none of which any
+archetype holds. ⚠ The reading is `release-fast`, not `release`: the four
+counters are seed-deterministic game quantities and are comparable across
+profiles; the wall-clock and RSS rows are **not** and are recorded here only
+as context.
+
+**Pod smoke, fresh seed, and it is the first one to reach eight seats:**
+2,000 games at each of 2/3/4/5/6/7/8 seats on seed 9101 — **14,000 games,
+13,999 decided**. Turns a game 19.30 / 32.59 / 45.30 / 57.20 / 64.50 / 77.57 /
+92.89; actions a game 499.6 → 7,403.5. **FRONTIER 9102.**
+
+🔎 **The one undecided game is a finding, and the new census named it without
+a second run.** `pod ActionCap seed 18045724030442976829`, turn 59:
+`ActivateAbility#0 Eldrazi Spawn x7535` against a seat holding **pool 7533**,
+and **no Eldrazi Spawn in the board tally** — the exact shape
+`cap_diagnosis`'s header warns it cannot see, which is why `ActionCensus`
+exists. A `sac_cost: true` ability accepted 7,535 times is 7,535 sacrifices of
+a token that supports one. TODO's Commander NEXT item 8 carries the repro.
+
 ### 2026-09-19 (the seventh Commander session, tip `3aca0ddb`) — guardrail, no perf work
 
 Two correctness commits: `Effect::BindScratch` (the resolver scratch a parked
