@@ -3015,7 +3015,7 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
-### 2026-09-19 (the eighth Commander session, tip `2104c659`) — guardrail, no perf work
+### 2026-09-19 (the eighth Commander session, tip `794d0f3f`) — guardrail, no perf work
 
 Six correctness commits and two new catalog ratchets. The engine changes are
 `GameState::seats_in_turn_order_from` (four effect arms), a gated
