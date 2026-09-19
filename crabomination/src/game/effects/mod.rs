@@ -757,16 +757,20 @@ impl GameState {
                 .iter()
                 .filter_map(|id| self.battlefield_find(*id).map(|c| c.controller))
                 .collect();
-            for seat in seats {
-                self.run_effect(
-                    &Effect::Sacrifice {
-                        who: Selector::Player(PlayerRef::Seat(seat)),
-                        count: crate::effect::Value::ONE,
-                        filter: SelectionRequirement::Permanent,
-                    },
-                    ctx,
-                    events,
-                )?;
+            let one_sacrifice = |seat: usize| Effect::Sacrifice {
+                who: Selector::Player(PlayerRef::Seat(seat)),
+                count: crate::effect::Value::ONE,
+                filter: SelectionRequirement::Permanent,
+            };
+            for (i, seat) in seats.iter().copied().enumerate() {
+                self.run_effect(&one_sacrifice(seat), ctx, events)?;
+                // CR 101.4 — every unpaid permanent's controller sacrifices,
+                // not just the ones before the first seat whose pick suspends.
+                if splice_after_suspend(&mut self.suspend_signal, || {
+                    per_seat_continuation(&seats[i + 1..], one_sacrifice)
+                }) {
+                    return Ok(());
+                }
             }
             return Ok(());
         }
@@ -4443,8 +4447,25 @@ impl GameState {
 
             Effect::Repeat { count, body } => {
                 let n = self.evaluate_value(count, ctx).max(0);
-                for _ in 0..n {
+                for i in 0..n {
                     self.run_effect(body, ctx, events)?;
+                    // The repetitions after a suspending one were dropped.
+                    // `count` is re-evaluated nowhere: the tail carries the
+                    // remainder as a constant, so a body that changes what
+                    // `count` reads doesn't shorten or lengthen the loop.
+                    if splice_after_suspend(&mut self.suspend_signal, || {
+                        let left = n - i - 1;
+                        if left == 0 {
+                            Effect::Noop
+                        } else {
+                            Effect::Repeat {
+                                count: crate::effect::Value::Const(left),
+                                body: body.clone(),
+                            }
+                        }
+                    }) {
+                        return Ok(());
+                    }
                 }
                 Ok(())
             }
@@ -4457,7 +4478,7 @@ impl GameState {
                 // CR 705.3 — `flip_one_coin` applies Krark's-Thumb advantage
                 // (replay + treat as heads if any replay is heads).
                 let n = self.evaluate_value(count, ctx).max(0);
-                for _ in 0..n {
+                for i in 0..n {
                     if self.flip_one_coin(ctx.controller) {
                         // CR 705.1 — the controller won this flip; fire any
                         // "Whenever you win a coin flip" triggers.
@@ -4467,6 +4488,22 @@ impl GameState {
                         // CR 705.1 — the controller lost this flip.
                         events.push(GameEvent::CoinFlipLost { player: ctx.controller });
                         self.run_effect(on_tails, ctx, events)?;
+                    }
+                    // The flips after a suspending branch were dropped; the
+                    // tail flips the remainder when the answer comes back.
+                    if splice_after_suspend(&mut self.suspend_signal, || {
+                        let left = n - i - 1;
+                        if left == 0 {
+                            Effect::Noop
+                        } else {
+                            Effect::FlipCoin {
+                                count: crate::effect::Value::Const(left),
+                                on_heads: on_heads.clone(),
+                                on_tails: on_tails.clone(),
+                            }
+                        }
+                    }) {
+                        return Ok(());
                     }
                 }
                 Ok(())
@@ -4484,8 +4521,23 @@ impl GameState {
                     }
                 }
                 events.push(GameEvent::CoinFlipLost { player: ctx.controller });
-                for _ in 0..wins {
+                for i in 0..wins {
                     self.run_effect(per_win, ctx, events)?;
+                    // The payoffs after a suspending one were dropped; the
+                    // flips are already done, so the tail is a plain repeat.
+                    if splice_after_suspend(&mut self.suspend_signal, || {
+                        let left = wins - i - 1;
+                        if left == 0 {
+                            Effect::Noop
+                        } else {
+                            Effect::Repeat {
+                                count: crate::effect::Value::Const(left as i32),
+                                body: per_win.clone(),
+                            }
+                        }
+                    }) {
+                        return Ok(());
+                    }
                 }
                 Ok(())
             }
@@ -23554,22 +23606,30 @@ impl GameState {
             Effect::EachPlayerSacrificesUnlessDiscards => {
                 // Possessed Portal — each player discards a card, or
                 // sacrifices a permanent of their choice if they don't.
-                for p in self.apnap_sort((0..self.players.len()).collect()) {
+                let ask = Effect::MayDiscard {
+                    description: "Discard a card, or sacrifice a permanent?".into(),
+                    count: crate::card::Value::ONE,
+                    then: Box::new(Effect::Noop),
+                    else_: Some(Box::new(Effect::Sacrifice {
+                        who: Selector::Player(crate::effect::PlayerRef::You),
+                        count: crate::card::Value::ONE,
+                        filter: crate::card::SelectionRequirement::Permanent,
+                    })),
+                };
+                let seats = self.apnap_sort((0..self.players.len()).collect());
+                for (i, p) in seats.iter().copied().enumerate() {
                     let sub = EffectContext { controller: p, ..ctx.clone() };
-                    self.run_effect(
-                        &Effect::MayDiscard {
-                            description: "Discard a card, or sacrifice a permanent?".into(),
-                            count: crate::card::Value::ONE,
-                            then: Box::new(Effect::Noop),
-                            else_: Some(Box::new(Effect::Sacrifice {
-                                who: Selector::Player(crate::effect::PlayerRef::You),
-                                count: crate::card::Value::ONE,
-                                filter: crate::card::SelectionRequirement::Permanent,
-                            })),
-                        },
-                        &sub,
-                        events,
-                    )?;
+                    self.run_effect(&ask, &sub, events)?;
+                    // CR 101.4 — both asks here suspend for a `wants_ui`
+                    // seat, so without this only the first seat was asked.
+                    if splice_after_suspend(&mut self.suspend_signal, || {
+                        per_seat_continuation(&seats[i + 1..], |q| Effect::EachPlayerDoes {
+                            who: PlayerRef::Seat(q),
+                            body: Box::new(ask.clone()),
+                        })
+                    }) {
+                        return Ok(());
+                    }
                 }
                 Ok(())
             }
@@ -26212,7 +26272,8 @@ impl GameState {
             // CR 705 — each player flips their own coin; the branch runs with
             // that seat as controller so the body reads "that player".
             Effect::EachPlayerFlipsCoin { who, on_heads, on_tails } => {
-                for p in self.apnap_sort(self.resolve_players(who, ctx)) {
+                let seats = self.apnap_sort(self.resolve_players(who, ctx));
+                for (i, p) in seats.iter().copied().enumerate() {
                     let sub = EffectContext { controller: p, ..ctx.clone() };
                     if self.flip_one_coin(p) {
                         events.push(GameEvent::CoinFlipWon { player: p });
@@ -26220,6 +26281,19 @@ impl GameState {
                     } else {
                         events.push(GameEvent::CoinFlipLost { player: p });
                         self.run_effect(on_tails, &sub, events)?;
+                    }
+                    // CR 101.4 — the seats after a suspending branch still
+                    // flip. Each re-flips its own coin on the continuation,
+                    // which is the point: the flip is theirs, not a replay
+                    // of the seat that suspended.
+                    if splice_after_suspend(&mut self.suspend_signal, || {
+                        per_seat_continuation(&seats[i + 1..], |q| Effect::EachPlayerFlipsCoin {
+                            who: PlayerRef::Seat(q),
+                            on_heads: on_heads.clone(),
+                            on_tails: on_tails.clone(),
+                        })
+                    }) {
+                        return Ok(());
                     }
                 }
                 Ok(())
@@ -27804,24 +27878,62 @@ impl GameState {
             // Strongarm Tactics — the discard is symmetric; the punishment
             // only skips a player who pitched a creature.
             Effect::EachPlayerDiscardsElseLosesLife { life } => {
-                for p in self.apnap_sort((0..self.players.len()).collect()) {
-                    let before = self.players[p].graveyard.len();
-                    self.run_effect(
-                        &Effect::Discard {
+                // The per-seat unit is one `Seq`, not a discard plus a Rust
+                // `if`: the discard suspends for a `wants_ui` seat, and the
+                // life check ran *before* the card had moved — so that seat
+                // was punished whatever it pitched, and every seat after it
+                // was dropped. `Seq` carries its own tail through a suspend,
+                // and the check reads the resolution's discard record, which
+                // a resumed resolution keeps.
+                // Both halves name their seat inside the effect: a resumed
+                // continuation comes back under the stack item's context, so
+                // a `You` here would read the caster, not the discarder.
+                // The threshold is that seat's own graveyard before its own
+                // discard, which nothing between here and its run can move.
+                let creatures_in_graveyard = |g: &Self, p: usize| {
+                    g.players[p].graveyard.iter().filter(|c| c.definition.is_creature()).count()
+                };
+                let life = *life as i32;
+                let per_seat = |before: usize, p: usize| {
+                    Effect::Seq(vec![
+                        Effect::Discard {
                             who: Selector::Player(PlayerRef::Seat(p)),
                             amount: crate::effect::Value::ONE,
                             random: false,
                         },
-                        &EffectContext { controller: p, ..ctx.clone() },
-                        events,
-                    )?;
-                    let pitched_creature = self.players[p]
-                        .graveyard
-                        .iter()
-                        .skip(before)
-                        .any(|c| c.definition.is_creature());
-                    if !pitched_creature {
-                        self.adjust_life(p, -(*life as i32));
+                        Effect::If {
+                            cond: crate::effect::Predicate::SelectorCountAtLeast {
+                                sel: Selector::CardsInZone {
+                                    who: PlayerRef::Seat(p),
+                                    zone: Zone::Graveyard,
+                                    filter: SelectionRequirement::Creature,
+                                },
+                                n: crate::effect::Value::Const(before as i32 + 1),
+                            },
+                            then: Box::new(Effect::Noop),
+                            else_: Box::new(Effect::LoseLife {
+                                who: Selector::Player(PlayerRef::Seat(p)),
+                                amount: crate::effect::Value::Const(life),
+                            }),
+                        },
+                    ])
+                };
+                let seats = self.apnap_sort((0..self.players.len()).collect());
+                let before: Vec<usize> =
+                    seats.iter().map(|&p| creatures_in_graveyard(self, p)).collect();
+                for (i, p) in seats.iter().copied().enumerate() {
+                    let sub = EffectContext { controller: p, ..ctx.clone() };
+                    self.run_effect(&per_seat(before[i], p), &sub, events)?;
+                    // CR 101.4 — and the seats after a suspending discard.
+                    if splice_after_suspend(&mut self.suspend_signal, || {
+                        let rest: Vec<Effect> = seats[i + 1..]
+                            .iter()
+                            .enumerate()
+                            .map(|(k, &q)| per_seat(before[i + 1 + k], q))
+                            .collect();
+                        Effect::seq(rest)
+                    }) {
+                        return Ok(());
                     }
                 }
                 Ok(())
@@ -31514,7 +31626,15 @@ impl GameState {
 
             Effect::EachPlayerSacrificesGreatestManaValueUnlessPays => {
                 // Tariff — one pay-or-sacrifice per player, on their own
-                // biggest creature.
+                // biggest creature. Every ask precedes every payment (the
+                // `Effect::UnlessPlayerPays` shape): a `MayPay` per seat
+                // suspended mid-loop and parked only *itself*, so the seats
+                // after the first `wants_ui` one were never asked — and the
+                // re-run got the stack item's context back, where
+                // `SacrificeSource` no longer named that seat's creature.
+                let source = ctx.source.unwrap_or(CardId(0));
+                let mut cursor = 0;
+                let mut answers: Vec<(usize, CardId, crate::mana::ManaCost, bool)> = Vec::new();
                 for seat in self.apnap_sort((0..self.players.len()).collect()) {
                     if self.players[seat].eliminated {
                         continue;
@@ -31528,17 +31648,33 @@ impl GameState {
                     else {
                         continue;
                     };
+                    // CR 118.6 — a seat that cannot cover it is not asked.
+                    let willing = self.could_pay_cost(seat, &cost)
+                        && match self.ask_seat_bool(
+                            &mut cursor,
+                            seat,
+                            format!("Pay {} to keep it?", cost.summary()),
+                            source,
+                            effect,
+                            OptionalKind::PayMana {
+                                cost: Some(cost.clone()),
+                                purpose: PayFor::KeepSource,
+                            },
+                        ) {
+                            Some(yes) => yes,
+                            None => return Ok(()),
+                        };
+                    answers.push((seat, id, cost, willing));
+                }
+                self.clear_answer_log();
+                for (seat, id, cost, willing) in answers {
+                    if willing && self.pay_mana_cost_with_picks(seat, &cost, None, events) {
+                        continue;
+                    }
+                    // Naming the creature as the source makes the sacrifice
+                    // itself choiceless, so this pass cannot suspend.
                     let sub = EffectContext { controller: seat, source: Some(id), ..ctx.clone() };
-                    self.run_effect(
-                        &Effect::MayPay {
-                            description: format!("Pay {} to keep it?", cost.summary()),
-                            mana_cost: cost,
-                            body: Box::new(Effect::Noop),
-                            else_: Some(Box::new(Effect::SacrificeSource)),
-                        },
-                        &sub,
-                        events,
-                    )?;
+                    self.run_effect(&Effect::SacrificeSource, &sub, events)?;
                 }
                 Ok(())
             }

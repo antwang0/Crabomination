@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED 2026-09-19 (the forty-third find) — a LOOP whose body suspends parks only the BODY, and thirteen of them ran on and dropped the rest](#fixed-2026-09-19-the-forty-third-find--a-loop-whose-body-suspends-parks-only-the-body-and-thirteen-of-them-ran-on-and-dropped-the-rest) | 60 |
 | Bugs & robustness | [FIXED 2026-09-13 (twenty-sixth find) — the sweep's only surviving cap, and the field in the digest that was bookkeeping rather than progress](#fixed-2026-09-13-twenty-sixth-find--the-sweeps-only-surviving-cap-and-the-field-in-the-digest-that-was-bookkeeping-rather-than-progress) | 80 |
 | Bugs & robustness | [FIXED 2026-09-12 (twenty-fifth find) — nineteen cards print a colour their mana cost cannot carry, and none had an indicator](#fixed-2026-09-12-twenty-fifth-find--nineteen-cards-print-a-colour-their-mana-cost-cannot-carry-and-none-had-an-indicator) | 44 |
 | Bugs & robustness | [FIXED 2026-09-12 (twenty-fourth find) — one `false` for two meanings: a skipped draw eliminated the drawer, and nineteen more draws could not deck anyone](#fixed-2026-09-12-twenty-fourth-find--one-false-for-two-meanings-a-skipped-draw-eliminated-the-drawer-and-nineteen-more-draws-could-not-deck-anyone) | 48 |
@@ -81,6 +82,64 @@ the handoff.
 
 
 # Bugs & robustness
+
+## FIXED 2026-09-19 (the forty-third find) — a LOOP whose body suspends parks only the BODY, and thirteen of them ran on and dropped the rest
+
+`MayRepeat` (the fifteenth find) and `EachPlayerDoes` each fixed this one
+arm at a time. The sweep that closes the class: every `for` in
+`effects/mod.rs` with a `run_effect` inside it and no `suspend_signal`
+read — 50 loops, 13 of them reaching a body that can suspend.
+
+**The shape.** A suspending body sets `suspend_signal = (decision, pending,
+its own remaining effect)` and returns `Ok(())`. The loop around it sees
+`Ok(())`, runs the next iteration — which overwrites the signal — and the
+first iteration's parked work is gone. In a duel "each opponent" is one
+iteration and the defect is invisible; at four seats it drops three
+quarters of the effect.
+
+**The one body:** `effects::splice_after_suspend(&mut self.suspend_signal,
+|| tail)` appends `tail` behind whatever the body parked, and returns true
+when the loop must return. Lazy in the tail, so the un-suspended pass pays
+nothing.
+
+**The rule the fix rests on, and it cost a debugging round:** a parked
+continuation is resumed under the **stack item's** `EffectContext`, not the
+sub-context the loop built. A tail that pins its seat in `ctx.controller`
+or `ctx.trigger_source` resumes as the caster. Every tail here names its
+seat **inside** the effect — `PlayerRef::Seat(q)`, which is what
+`ask_seat_*`'s own `with_asked_seat` does for the arms.
+
+Arms taken: `ForEachOpponent`, `TemptingOffer`, `Punisher`,
+`VillainousChoice`, the `UnlessPlayerPays` sacrifice half, `Repeat`,
+`FlipCoin`, `FlipUntilLoss`, `EachPlayerSacrificesUnlessDiscards`,
+`EachPlayerFlipsCoin`, `EachPlayerDiscardsElseLosesLife`,
+`EachPlayerSacrificesGreatestManaValueUnlessPays`. `ForEachOpponent` and
+`TemptingOffer` had carried a `debug_assert!` as the price of the judgement
+that no catalog body could suspend; `Punisher` and `VillainousChoice` had
+no guard and both have catalog bodies that suspend today.
+
+**Two arms had a second defect the splice does not reach**, both from a
+check that straddled the suspend:
+
+- Strongarm Tactics read the graveyard for "did they discard a creature"
+  *before* a suspended discard had moved the card, so a `wants_ui` seat was
+  punished whatever it pitched. The per-seat unit is one `Seq` now (`Seq`
+  carries its own tail), and the threshold is that seat's own graveyard
+  count taken before its own discard — which no other seat can move.
+- Tariff's `MayPay` parked only itself, and the re-run got the stack item's
+  context back, where `SacrificeSource` no longer named that seat's
+  creature. It moves to the two-pass ask/apply split; naming the creature
+  in the apply pass makes that pass choiceless.
+
+**OPEN, both needing a primitive that does not exist:**
+
+- ⏳ `Effect::ForEach` over non-player entities. The tail needs a `Selector`
+  that names a specific `CardId`; none of the 60-odd variants does. Over
+  players it is already covered (`Selector::Player(PlayerRef::Seat(q))`).
+- ⏳ The ante branch loop (`effects/mod.rs`, the `Ante`-optional arm). Its
+  second pass calls `ante_top_card` *and* runs the branch, so a tail would
+  have to hoist every ante ahead of every branch — a real ordering change
+  for a CR 407 mechanic that no pool plays.
 
 ## FIXED 2026-09-18 (the forty-second find) — the activation with "no mana anywhere" had a rider pip, and the ESTIMATE could not see it
 

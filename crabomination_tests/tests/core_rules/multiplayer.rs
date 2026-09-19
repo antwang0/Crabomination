@@ -4448,3 +4448,131 @@ fn cr_701_60_every_tempting_offer_run_happens_when_the_body_suspends() {
         "the controller's run plus one more per acceptor",
     );
 }
+
+/// CR 101.4 — Strongarm Tactics: "Each player discards a card. Then each
+/// player who didn't discard a creature card this way loses 4 life." Two
+/// defects in one arm: the life check read the graveyard *before* a
+/// suspended discard had moved the card, so a `wants_ui` seat was punished
+/// whatever it pitched, and the seats after it were never asked at all.
+#[test]
+fn cr_101_4_strongarm_tactics_reaches_every_seat_and_reads_what_they_pitched() {
+    use crabomination::effect::Effect;
+    let mut g = multi_player_game(4);
+    for p in g.players.iter_mut() {
+        p.wants_ui = true;
+    }
+    for seat in 0..4 {
+        // Homogeneous hands: `AutoDecider` discards the first card, so what
+        // each seat pitches is fixed. Seats 0-1 pitch a creature, 2-3 don't.
+        let card = |seat: usize| {
+            if seat < 2 { catalog::grizzly_bears() } else { catalog::lightning_bolt() }
+        };
+        g.add_card_to_hand(seat, card(seat));
+        g.add_card_to_hand(seat, card(seat));
+    }
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.stack.push(
+        TriggerPush::new(src, 0, Effect::EachPlayerDiscardsElseLosesLife { life: 4 }).build(),
+    );
+    resolve_answering(&mut g);
+    for seat in 0..4 {
+        assert_eq!(g.players[seat].hand.len(), 1, "seat {seat} discarded");
+    }
+    assert_eq!(g.players[0].life, 20, "pitched a creature");
+    assert_eq!(g.players[1].life, 20, "pitched a creature");
+    assert_eq!(g.players[2].life, 16, "pitched a Bolt");
+    assert_eq!(g.players[3].life, 16, "pitched a Bolt");
+}
+
+/// CR 101.4 — Possessed Portal's end-step tax is every player's. Both of its
+/// asks suspend for a `wants_ui` seat, so the loop used to stop at the first.
+#[test]
+fn cr_101_4_possessed_portal_taxes_every_seat() {
+    use crabomination::effect::Effect;
+    let mut g = multi_player_game(4);
+    for p in g.players.iter_mut() {
+        p.wants_ui = true;
+    }
+    for seat in 0..4 {
+        // Two permanents apiece, so the sacrifice is a choice and suspends.
+        g.add_card_to_battlefield(seat, catalog::grizzly_bears());
+        g.add_card_to_battlefield(seat, catalog::grizzly_bears());
+    }
+    let src = g.add_card_to_battlefield(0, catalog::possessed_portal());
+    g.stack.push(TriggerPush::new(src, 0, Effect::EachPlayerSacrificesUnlessDiscards).build());
+    resolve_answering(&mut g);
+    // `AutoDecider` declines the discard, so every seat takes the sacrifice.
+    for seat in 0..4 {
+        let kept = g.battlefield.iter().filter(|c| c.controller == seat).count();
+        assert_eq!(kept, if seat == 0 { 2 } else { 1 }, "seat {seat} paid the tax");
+    }
+}
+
+/// CR 101.4 — Tariff asks every player, not just the ones before the first
+/// `wants_ui` seat. The asks now all precede the payments, which also fixes
+/// the resume: the parked `MayPay` came back under the stack item's context,
+/// where `SacrificeSource` no longer named that seat's creature.
+#[test]
+fn cr_101_4_tariff_asks_every_seat_and_takes_their_biggest() {
+    use crabomination::effect::Effect;
+    let mut g = multi_player_game(4);
+    for p in g.players.iter_mut() {
+        p.wants_ui = true;
+        // Enough to cover {1}{G}, so CR 118.6 doesn't skip the ask.
+        p.mana_pool.add(crabomination::mana::Color::Green, 1);
+        p.mana_pool.add_colorless(1);
+    }
+    for seat in 0..4 {
+        g.add_card_to_battlefield(seat, catalog::grizzly_bears());
+        g.add_card_to_battlefield(seat, catalog::llanowar_elves());
+    }
+    let src = g.add_card_to_battlefield(0, catalog::tariff());
+    g.stack.push(
+        TriggerPush::new(src, 0, Effect::EachPlayerSacrificesGreatestManaValueUnlessPays).build(),
+    );
+    resolve_answering(&mut g);
+    // `AutoDecider` declines the payment, so every seat loses its Bears and
+    // keeps the Elves.
+    for seat in 0..4 {
+        let names: Vec<&str> = g
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == seat)
+            .map(|c| c.definition.name)
+            .collect();
+        assert!(!names.contains(&"Grizzly Bears"), "seat {seat} sacrificed its biggest");
+        assert!(names.contains(&"Llanowar Elves"), "seat {seat} kept the smaller one");
+    }
+}
+
+/// CR 101.4 — `Effect::Repeat` is the same shape without the seats: the
+/// repetitions after a suspending body were abandoned. The tail carries the
+/// remainder as a constant, so a body that changes what `count` reads
+/// doesn't shorten the loop.
+#[test]
+fn cr_101_4_repeat_finishes_its_repetitions_when_the_body_suspends() {
+    use crabomination::effect::{Effect, Selector, Value};
+    let mut g = multi_player_game(4);
+    g.players[0].wants_ui = true;
+    for _ in 0..4 {
+        g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    }
+    let src = g.add_card_to_battlefield(0, catalog::lightning_bolt());
+    g.stack.push(
+        TriggerPush::new(src, 0, Effect::Repeat {
+            count: Value::Const(3),
+            body: Box::new(Effect::Sacrifice {
+                who: Selector::Player(PlayerRef::You),
+                count: Value::Const(1),
+                filter: SelectionRequirement::Creature,
+            }),
+        })
+        .build(),
+    );
+    resolve_answering(&mut g);
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_creature()).count(),
+        1,
+        "three of the four Bears went, not just the one whose pick suspended",
+    );
+}
