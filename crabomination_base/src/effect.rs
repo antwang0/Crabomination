@@ -1048,6 +1048,20 @@ pub enum Value {
     /// "for each of its colors"). Reads printed colors; a colorless/devoid
     /// object counts 0. Breathe Your Last.
     ColorCountOf(Box<Selector>),
+    /// CR 903.4 — the number of distinct colors in a player's commanders'
+    /// color identity. Zero outside a Commander game and zero for a seat
+    /// whose commander is colorless; a two-commander seat reads the union
+    /// (CR 702.124c), which is what `Player::commander_identity` already
+    /// holds. War Room's "Pay life equal to the number of colors in your
+    /// commanders' color identity".
+    ///
+    /// ⚠ **Zero for a seat with no commander, which is NOT what
+    /// `GameState::commander_identity_colors` answers.** That helper returns
+    /// all five colours there on purpose, so
+    /// `ManaPayload::AnyColorInCommanderIdentity` keeps a fixing land fixing
+    /// in a cube. The same fallback read as a *cost* is five life for a card,
+    /// so this variant reads the raw identity instead.
+    CommandersColorIdentityCount(PlayerRef),
     /// Number of distinct colors among the entities the selector resolves to,
     /// unioned across all of them ("there are five colors among permanents you
     /// control" — Case of the Shattered Pact). Contrast `ColorCountOf`, which

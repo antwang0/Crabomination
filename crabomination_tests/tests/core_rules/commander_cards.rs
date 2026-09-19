@@ -8,7 +8,7 @@ use crabomination::card::{
 use crabomination::catalog;
 use crabomination::format::Format;
 use crabomination::game::*;
-use crabomination::mana::{cost, g};
+use crabomination::mana::{cost, g, u, w};
 
 /// A free-to-name legendary Bear so a seat has a commander to control.
 fn bear_commander() -> CardDefinition {
@@ -141,4 +141,106 @@ fn loyal_apprentice_mints_nothing_without_its_commander() {
     advance_to(&mut g, TurnStep::BeginCombat);
     drain_stack(&mut g);
     assert!(thopters(&g, 0).is_empty(), "no commander, no Thopter");
+}
+
+// ── War Room ────────────────────────────────────────────────────────────────
+
+/// A two-colour legendary Bear, so the identity count is a number worth
+/// asserting rather than 0 or 1.
+fn azorius_commander() -> CardDefinition {
+    CardDefinition {
+        name: "Test Azorius Commander",
+        cost: cost(&[w(), u()]),
+        ..bear_commander()
+    }
+}
+
+fn war_room_draw(g: &mut GameState, land: CardId) -> Result<Vec<GameEvent>, GameError> {
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land,
+        ability_index: 1,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+}
+
+/// CR 903.4 — the life paid is the number of colours in the seat's
+/// commanders' colour identity, and it is a **cost**: paid on activation,
+/// before anything resolves.
+#[test]
+fn cr_903_4_war_room_pays_one_life_per_colour_of_the_commanders_identity() {
+    let mut g = game_with_format(Format::Commander, 2);
+    g.seat_commanders(0, vec![azorius_commander()]);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    let land = g.add_card_to_battlefield(0, catalog::war_room());
+    g.players[0].hand.clear();
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(3);
+    let life = g.players[0].life;
+
+    war_room_draw(&mut g, land).expect("{3}, {T}, pay 2 life: draw");
+    assert_eq!(g.players[0].life, life - 2, "two colours, two life");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), 1, "drew a card");
+    assert!(g.battlefield_find(land).unwrap().tapped);
+}
+
+/// The cost gate: a seat that cannot pay cannot activate, and it does not
+/// lose the tap finding out.
+#[test]
+fn war_room_refuses_the_activation_when_the_life_is_not_there() {
+    let mut g = game_with_format(Format::Commander, 2);
+    g.seat_commanders(0, vec![azorius_commander()]);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    let land = g.add_card_to_battlefield(0, catalog::war_room());
+    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].life = 1;
+
+    assert!(matches!(war_room_draw(&mut g, land), Err(GameError::InsufficientLife)));
+    assert!(!g.battlefield_find(land).unwrap().tapped, "the tap is not burned");
+}
+
+/// Outside a Commander game the seat has no commander, so the count is zero
+/// and the ability is a plain `{3}, {T}: Draw a card` — the same reading
+/// `ManaPayload::AnyColorInCommanderIdentity` takes for a seat with no
+/// commander, and what keeps the card playable in a cube.
+#[test]
+fn war_room_costs_no_life_with_no_commander() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let land = g.add_card_to_battlefield(0, catalog::war_room());
+    g.players[0].hand.clear();
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(3);
+    let life = g.players[0].life;
+
+    war_room_draw(&mut g, land).expect("no commander, no life");
+    assert_eq!(g.players[0].life, life);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), 1);
+}
+
+/// And the colourless half is still just a land.
+#[test]
+fn war_room_taps_for_colourless() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let land = g.add_card_to_battlefield(0, catalog::war_room());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("{T}: Add {C}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.colorless_amount(), 1);
 }

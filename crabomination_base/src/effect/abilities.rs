@@ -2969,6 +2969,14 @@ pub struct ActivatedAbility {
     /// a player at 0 or less life can't activate.
     #[serde(default)]
     pub half_life_cost: bool,
+    /// "Pay life equal to [a value]" in the cost line, added to the fixed
+    /// [`Self::life_cost`]. Evaluated once during activation, so the
+    /// pre-flight gate and the payment read the same number even if the
+    /// board moves under them. War Room's "Pay life equal to the number of
+    /// colors in your commanders' color identity"; distinct from
+    /// [`Self::x_life_cost`], which reads the activation's announced X.
+    #[serde(default)]
+    pub life_cost_value: Option<Value>,
     /// "Pay X life" as a variable additional cost, where X is the activation's
     /// chosen `x_value` (CR 107.16). The body reads the same X via
     /// `Value::XFromCost`. Mirrors `energy_x_cost` but drains life. Powers

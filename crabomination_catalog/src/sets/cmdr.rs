@@ -811,6 +811,36 @@ pub fn loyal_apprentice() -> CardDefinition {
     }
 }
 
+/// War Room — Land. "{T}: Add {C}. {3}, {T}, Pay life equal to the number of
+/// colors in your commanders' color identity: Draw a card."
+///
+/// The life is a **cost**, not an effect: it is paid on activation, and a
+/// seat that cannot pay cannot activate (CR 601.2h by way of CR 602.2b).
+/// `ActivatedAbility::life_cost_value` is that cost line, and
+/// `Value::CommandersColorIdentityCount` is the number — CR 903.4, the same
+/// identity `ManaPayload::AnyColorInCommanderIdentity` reads, so a
+/// two-commander seat pays for the union (CR 702.124c) and a colorless
+/// commander pays nothing. Outside a Commander game the seat has no
+/// commander, the count is zero, and the ability is a plain `{3}, {T}: Draw
+/// a card`.
+pub fn war_room() -> CardDefinition {
+    CardDefinition {
+        name: "War Room",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            super::tap_add_colorless(),
+            crate::effect::ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(3)]),
+                life_cost_value: Some(Value::CommandersColorIdentityCount(PlayerRef::You)),
+                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

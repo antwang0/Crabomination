@@ -17396,7 +17396,18 @@ impl GameState {
         // pre-pay check (we want a clean error, not a "you can't pay
         // and just lost a tap" surprise). Activation that gets past
         // this point will deduct the life after tap/mana succeed.
-        if ability.life_cost > 0 && self.players[p].life < ability.life_cost as i32 {
+        // "Pay life equal to [a value]" rides on the same gate (War Room's
+        // "…equal to the number of colors in your commanders' color
+        // identity"). Evaluated ONCE, here, so the gate and the payment
+        // below cannot disagree if the board moves between them.
+        let life_cost = match &ability.life_cost_value {
+            None => ability.life_cost,
+            Some(v) => {
+                let ctx = crate::game::effects::EffectContext::for_ability(card_id, p, None);
+                ability.life_cost.saturating_add(self.evaluate_value(v, &ctx).max(0) as u32)
+            }
+        };
+        if life_cost > 0 && self.players[p].life < life_cost as i32 {
             return Err(GameError::InsufficientLife);
         }
         // Pre-flight variable life-cost gate ("Pay X life", CR 107.16): the
@@ -18597,10 +18608,8 @@ impl GameState {
         // payment is now safe (the pre-flight gate above guaranteed
         // sufficient life). Emits a LifeLost event so trigger / replay
         // observers see the cost.
-        if ability.life_cost > 0
-            && !self.replace_life_payment(p, ability.life_cost, &mut auto_mana_events)
-        {
-            let applied = self.adjust_life_applied(p, -(ability.life_cost as i32));
+        if life_cost > 0 && !self.replace_life_payment(p, life_cost, &mut auto_mana_events) {
+            let applied = self.adjust_life_applied(p, -(life_cost as i32));
             if applied < 0 {
                 auto_mana_events.push(GameEvent::LifeLost {
                     player: p,

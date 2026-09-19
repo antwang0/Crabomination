@@ -9241,7 +9241,8 @@ fn pick_energy_payoff(state: &GameState, seat: usize) -> Option<GameAction> {
             let is_pure = !ab.tap_cost
                 && !ab.sac_cost
                 && ab.mana_cost.symbols.is_empty()
-                && ab.life_cost == 0;
+                && ab.life_cost == 0
+                && ab.life_cost_value.is_none();
             if !is_pure || state.players[seat].energy < amount {
                 continue;
             }
@@ -15677,7 +15678,7 @@ fn pick_converge_prefloat(
     }
     for c in state.battlefield.iter().filter(|c| c.controller == seat && !c.tapped) {
         for (idx, a) in c.definition.activated_abilities.iter().enumerate() {
-            if !is_countable_mana_ability(a) || a.life_cost > 0 {
+            if !is_countable_mana_ability(a) || a.life_cost > 0 || a.life_cost_value.is_some() {
                 continue;
             }
             let (amount, colors, colorless) = mana_ability_output(&a.effect);

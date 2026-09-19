@@ -1310,6 +1310,30 @@ impl GameState {
                 })
                 .max()
                 .unwrap_or(0),
+            // ⚠ NOT `commander_identity_colors`: that helper answers "any
+            // colour" for a seat with no commander, which is the deliberate
+            // pre-Commander approximation `ManaPayload::AnyColorInCommanderIdentity`
+            // wants so a fixing land stays a fixing land in a cube. As a COST
+            // that fallback reads as five, and War Room outside a Commander
+            // game would charge five life for a card. CR 903.4's count of an
+            // absent commander's identity is zero.
+            Value::CommandersColorIdentityCount(who) => self
+                .resolve_players(who, ctx)
+                .first()
+                .and_then(|&seat| self.players.get(seat))
+                .filter(|p| !p.commanders.is_empty())
+                .map(|p| {
+                    let mut set = p.commander_identity;
+                    if set == crate::mana::ColorSet::empty() {
+                        for &id in &p.commanders {
+                            if let Some(c) = self.find_card_anywhere(id) {
+                                set = set.union(crate::format::color_identity(&c.definition));
+                            }
+                        }
+                    }
+                    crate::mana::Color::ALL.iter().filter(|c| set.contains(**c)).count() as i32
+                })
+                .unwrap_or(0),
             Value::ColorCountOf(s) => self
                 .resolve_selector(s, ctx)
                 .into_iter()
