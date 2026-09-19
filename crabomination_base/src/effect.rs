@@ -695,8 +695,10 @@ pub enum Value {
     /// Backed by `Player.cards_discarded_this_turn` (Dihada's Ploy).
     CardsDiscardedThisTurn(PlayerRef),
     /// Cards put into `who`'s graveyard from anywhere this turn (max over
-    /// resolved players). Backed by `Player.cards_to_graveyard_this_turn`
-    /// (Fraying Sanity).
+    /// resolved players). Backed by `Player.cards_to_graveyard_this_turn`, the
+    /// CR 700.4 tally `Predicate::CardsToGraveyardThisTurnAtLeast` reads
+    /// (Fraying Sanity, Cruel Calculations, Welcome the Dead — the last two
+    /// narrow the source zone, which the tally doesn't record).
     CardsPutIntoGraveyardThisTurn(PlayerRef),
     /// Number of card types on the most recently discarded card (Mount
     /// Velus Manticore's "X = the number of card types the discarded card
@@ -1095,13 +1097,6 @@ pub enum Value {
     /// and similar payoffs. Backed by `Player.cards_drawn_this_turn`,
     /// reset on the player's untap.
     CardsDrawnThisTurn(PlayerRef),
-    /// Cards put into `who`'s graveyard from anywhere this turn (CR 700.4
-    /// tally — `Player.cards_to_graveyard_this_turn`, the counter
-    /// `Predicate::CardsToGraveyardThisTurnAtLeast` reads). Welcome the Dead's
-    /// "X is the number of cards that were put into your graveyard from your
-    /// hand or library this turn" (which narrows the source zones; the tally
-    /// doesn't record them, so that card over-counts dying permanents).
-    CardsToGraveyardThisTurn(PlayerRef),
     /// Cards `who` has drawn during the current step. Backed by
     /// `Player.cards_drawn_this_step`, reset on every step change.
     /// Powers Orcish Bowmasters' "except the first one they draw in

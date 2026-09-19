@@ -7,7 +7,7 @@
 //! New primitives this batch added (engine side):
 //! * `Effect::ChooseUnchosenModeThisTurn` — "choose one that hasn't been chosen
 //!   this turn" (Teval's Judgment).
-//! * `Value::CardsToGraveyardThisTurn` — the per-turn graveyard tally as a count
+//! * `Value::CardsPutIntoGraveyardThisTurn` — the per-turn graveyard tally as a count
 //!   (Welcome the Dead).
 //! * `SpendRestriction::ColoredSpellWithoutX` (Titans' Nest).
 //! * `StaticEffect::GraveyardCardsHaveEscapeMatching` — a filtered,
@@ -870,7 +870,7 @@ pub fn midnight_tilling() -> CardDefinition {
 /// hand or library this turn. Flashback {5}{B}.
 ///
 /// Approximation: X is every card put into your graveyard this turn
-/// (`Value::CardsToGraveyardThisTurn`), not only from hand or library.
+/// (`Value::CardsPutIntoGraveyardThisTurn`), not only from hand or library.
 pub fn welcome_the_dead() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flashback(cost(&[generic(5), b()]))],
@@ -884,7 +884,7 @@ pub fn welcome_the_dead() -> CardDefinition {
                 Effect::LoseLife { who: Selector::You, amount: Value::Const(2) },
                 make(
                     TokenDefinition { tapped: true, ..zombie_druid() },
-                    Value::CardsToGraveyardThisTurn(PlayerRef::You),
+                    Value::CardsPutIntoGraveyardThisTurn(PlayerRef::You),
                 ),
             ]),
         )
