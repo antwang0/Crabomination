@@ -4406,12 +4406,14 @@ fn cr_101_4_every_punisher_chooser_is_asked_when_the_option_suspends() {
     }
 }
 
-/// CR 101.4 / 701.60 — a tempting offer's body runs once for the controller,
-/// once per acceptor, then once more per acceptor. Those runs are a seat
-/// list like any other loop's, and a suspend in one of them no longer eats
-/// the rest.
+/// CR 101.4 — a tempting offer's body runs once for the controller, once per
+/// acceptor, then once more per acceptor. Those runs are a seat list like any
+/// other loop's, and a suspend in one of them no longer eats the rest.
+///
+/// "Tempting offer" is an **ability word** (CR 207.2c): it has no individual
+/// rules entry, so the shape is the printed text and the order is 101.4's.
 #[test]
-fn cr_701_60_every_tempting_offer_run_happens_when_the_body_suspends() {
+fn cr_101_4_every_tempting_offer_run_happens_when_the_body_suspends() {
     use crabomination::effect::{Effect, Selector, Value};
     let mut g = multi_player_game(4);
     for p in g.players.iter_mut() {
@@ -4575,4 +4577,114 @@ fn cr_101_4_repeat_finishes_its_repetitions_when_the_body_suspends() {
         1,
         "three of the four Bears went, not just the one whose pick suspended",
     );
+}
+
+// ── CR 700.2 — a modal run whose mode suspends ─────────────────────────────
+
+/// Answers a `ChooseModes` ask with both modes and leaves every other ask to
+/// the `AutoDecider` — a scripted queue would answer them in ask order, and
+/// the engine's ask order is not the test's business.
+struct ChooseBothModes;
+impl crabomination::decision::Decider for ChooseBothModes {
+    fn decide(
+        &mut self,
+        decision: &crabomination::decision::Decision,
+    ) -> DecisionAnswer {
+        match decision {
+            crabomination::decision::Decision::ChooseModes { .. } => {
+                DecisionAnswer::Modes(vec![0, 1])
+            }
+            other => crabomination::decision::AutoDecider.decide(other),
+        }
+    }
+}
+
+/// CR 700.2 — a modal spell's effect is every chosen mode. Escalate has two
+/// loops in one arm:
+/// one escalate cost per extra mode, then one run per mode. The printed cost
+/// is a discard, which asks, so the *first* loop suspended and dropped the
+/// costs after it **and** every mode. The second loop's tail also has to pin
+/// each remaining mode's target slot inside the effect
+/// (`Effect::BindTargetSlot`), because a parked continuation is resumed with
+/// the spell's whole target list.
+#[test]
+fn cr_700_2_escalate_pays_every_cost_and_runs_every_mode_through_a_suspend() {
+    use crabomination::effect::{Effect, Selector, Value};
+    let mut g = multi_player_game(2);
+    g.players[0].wants_ui = true;
+    for _ in 0..5 {
+        g.add_card_to_hand(0, catalog::lightning_bolt());
+    }
+    let hand = g.players[0].hand.len();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let discard_one = Effect::Discard {
+        who: Selector::You,
+        amount: Value::Const(1),
+        random: false,
+    };
+    g.stack.push(
+        TriggerPush::new(src, 0, Effect::Escalate {
+            modes: vec![
+                discard_one.clone(),
+                Effect::Destroy { what: Selector::Target(0) },
+            ],
+            cost: Box::new(discard_one),
+        })
+        .target(Some(crabomination::game::types::Target::Permanent(victim)))
+        .build(),
+    );
+    g.decider = Box::new(ChooseBothModes);
+    resolve_answering(&mut g);
+    assert_eq!(
+        g.players[0].hand.len(),
+        hand - 2,
+        "the escalate cost and mode 0 each took a card",
+    );
+    assert!(
+        g.battlefield_find(victim).is_none(),
+        "mode 1 ran too, and it found its own target slot",
+    );
+}
+
+/// CR 608.2 — `ApplyToTargets` runs its inner effect once per target. An
+/// inner that asks suspended and the targets after it were dropped; each
+/// remaining one is pinned by its original slot, which the resumed context
+/// still holds.
+#[test]
+fn cr_608_2_apply_to_targets_reaches_every_target_when_the_inner_suspends() {
+    use crabomination::card::SelectionRequirement as R;
+    use crabomination::effect::{Effect, Selector, Value};
+    use crabomination::game::types::Target;
+    let mut g = multi_player_game(2);
+    g.players[0].wants_ui = true;
+    for _ in 0..4 {
+        g.add_card_to_hand(0, catalog::lightning_bolt());
+    }
+    let hand = g.players[0].hand.len();
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::llanowar_elves());
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.stack.push(
+        TriggerPush::new(src, 0, Effect::ApplyToTargets {
+            max_targets: 2,
+            min_targets: 2,
+            filter: R::Creature,
+            // The discard is FIRST on purpose: it suspends, so the destroy
+            // after it is what the continuation has to carry — with the
+            // target still pinned, or it destroys the caster's slot-0 target
+            // a second time instead of this one.
+            effect: Box::new(Effect::Seq(vec![
+                Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+                Effect::Destroy { what: Selector::Target(0) },
+            ])),
+        })
+        .target(Some(Target::Permanent(a)))
+        .additional_targets(vec![Target::Permanent(b)])
+        .build(),
+    );
+    resolve_answering(&mut g);
+    assert!(g.battlefield_find(a).is_none(), "the first target");
+    assert!(g.battlefield_find(b).is_none(), "and the one after the suspend");
+    assert_eq!(g.players[0].hand.len(), hand - 2, "one discard per target");
 }

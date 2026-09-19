@@ -6744,6 +6744,14 @@ pub enum Effect {
     /// `body`; the wrapper only feeds the targeting walk (`min_targets_in_mode`
     /// / `target_slot_optional`).
     OptionalTargets { min: u8, body: Box<Effect> },
+    /// Run `body` with the spell's target slot `slot` moved to slot 0.
+    ///
+    /// **Runtime-only** — built by the modal arms' suspend splice, never by a
+    /// card. A modal run gives each target-bearing mode its own slot through
+    /// `EffectContext.targets`, and a parked continuation is resumed with the
+    /// spell's *whole* target list, so the slot has to be named in the effect
+    /// or every remaining mode reads slot 0.
+    BindTargetSlot { slot: u8, body: Box<Effect> },
     /// Eerie Ultimatum — return any number of permanent cards with different
     /// names from the controller's graveyard to the battlefield. The controller
     /// picks at resolution (`Decision::ChooseCards`); duplicate names are
