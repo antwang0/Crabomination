@@ -82,11 +82,69 @@ the handoff.
 | Engine mechanics & primitives | [Suggested next-up tasks](#suggested-next-up-tasks) | 1053 |
 | Rules coverage | [MagicCompRules coverage audit](#magiccomprules-coverage-audit) | 312 |
 | Tooling | [Recommender: two builder defects fixed, one lesson recorded](#recommender-two-builder-defects-fixed-one-lesson-recorded) | 17 |
+| Bugs & robustness | [OPEN 2026-09-19 (the forty-eighth find) — "As this ~ enters" is a REPLACEMENT and 89 shipped cards model it as an ETB TRIGGER](#open-2026-09-19-the-forty-eighth-find--as-this--enters-is-a-replacement-and-89-shipped-cards-model-it-as-an-etb-trigger) | 89 |
 | Bugs & robustness | [FIXED 2026-09-19 (the forty-seventh find) — six hand-written SEAT-INDEX walks, and the two that let a player who had left the game vote and be voted for](#fixed-2026-09-19-the-forty-seventh-find--six-hand-written-seat-index-walks-and-the-two-that-let-a-player-who-had-left-the-game-vote-and-be-voted-for) | 60 |
 | Bugs & robustness | [The 2026-09-12/13 handoff detail, moved verbatim from TODO's NEXT](#the-2026-09-1213-handoff-detail-moved-verbatim-from-todos-next) | 182 |
 
 
 # Bugs & robustness
+
+## OPEN 2026-09-19 (the forty-eighth find) — "As this ~ enters" is a REPLACEMENT and 89 shipped cards model it as an ETB TRIGGER
+
+**CR 614.12** — "Some replacement effects modify how a permanent enters the
+battlefield." **CR 614.12a** — "If a replacement effect that modifies how a
+permanent enters the battlefield requires a choice, that choice is made
+**before** the permanent enters the battlefield." Both verified against
+`MagicCompRules_20260417.txt`.
+
+An `EventKind::EntersBattlefield` trigger is a different object. It puts the
+permanent on the battlefield first, then goes on the stack, and its
+controller gets priority before it resolves. Three consequences, all
+reachable:
+
+1. **A conditional tapper leaves a window.** The land is on the battlefield
+   untapped with the trigger on the stack, so its controller can hold
+   priority and tap it for mana it should never have produced.
+2. **A static keyed on the choice reads an unchosen value.** Engineered
+   Plague's "creatures of the chosen type get -1/-1" is live across at least
+   one state-based-action check before the trigger resolves.
+3. **A copy has no trigger to fire.** CR 614.12's own example is a token copy
+   of Voice of All choosing its colour *as the token is created*.
+
+`scripts/audit_as_enters.py` is the census and the ratchet. **89 cards**, in
+five buckets:
+
+| Bucket | Cards | What it prints |
+| --- | --- | --- |
+| choose-a-type | 27 | "As this ~ enters, choose a creature type" — Cavern of Souls, Metallic Mimic, Obelisk of Urd, Engineered Plague |
+| choose-a-colour | 20 | Coldsteel Heart, Iona, Caged Sun, Heraldic Banner |
+| pay-life-or-tapped | 19 | the ten shocklands (EDHREC 52/61/65/73) and their {3}-life descendants |
+| other | 14 | Cursed Mirror, Devouring Hellion, Grifter's Blade, Molten Sentry |
+| choose-a-name | 9 | Pithing Needle, Meddling Mage, Phyrexian Revoker, Nevermore |
+
+**The one missing primitive, and it is why this is OPEN rather than a batch
+of card edits.** `GameState::apply_enters_tapped_replacement`
+(`actions.rs:4209`) is where a replacement of this shape is applied, and it
+reads a `Predicate`: it can test the game state but **cannot put a question
+to a player**. Every bucket above needs an as-enters replacement that can
+ask.
+
+⚠ **The synchronous shortcut is a REGRESSION, not a shortcut.** The tree has
+precedent for resolving a choice through `self.decider` without a pending
+state (`ManaPayload::AnyColors`, `chosen_mana_color`), and it would work for
+self-play. But a shockland's choice is a real `Decision::ChooseMode` prompt
+in the client **today**; routing it through the decider synchronously would
+take the choice away from a human seat. The fix is a suspendable replacement
+application, and `apply_enters_tapped_replacement` returns `()` from three
+call sites inside `move_card_to`-shaped paths, so that is the work.
+
+**The sub-class that IS closed** is the fifteen "As this land enters, you may
+reveal a [X] card from your hand. If you don't, this land enters tapped"
+lands — no question is asked (the engine's `IfRevealFromHand` peeked and
+always accepted, since declining only buys the printed downside), so a
+`StaticEffect::EntersTappedUnless` over a hand predicate is the whole card.
+`sets::reveal_or_tapped_land` is the one body, and
+`audit_as_enters.py --gate` fails if any of them regresses to a trigger.
 
 ## FIXED 2026-09-19 (the forty-seventh find) — six hand-written SEAT-INDEX walks, and the two that let a player who had left the game vote and be voted for
 
