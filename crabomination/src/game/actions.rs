@@ -3914,6 +3914,10 @@ impl GameState {
             // restores the card unmodified.
             card.may_play_until = None;
             card.granted_alt_cast_cost_eot = None;
+            // CR 305.1 / 110.2 — the player who plays a land controls it. An
+            // opponent-owned card played off a may-play grant (Opposition
+            // Agent, Gonti) otherwise entered under its owner's control.
+            card.controller = p;
             card.face_down = false;
             card.on_adventure = false;
             card.adventuring = false;
@@ -12725,6 +12729,61 @@ impl GameState {
                 .any(|sa| matches!(sa.effect, StaticEffect::OpponentsCantSearchLibraries))
                 && !self.same_team(c.controller, player)
         })
+    }
+
+    /// Opposition Agent — the seat that controls `searcher` while they search
+    /// their library: a live opponent of `searcher` who controls a
+    /// `ControlOpponentsSearches` permanent. With several such opponents
+    /// (multiplayer, two Agents on different sides) the first in APNAP order
+    /// takes the search — CR 722's control effects would timestamp-order
+    /// them, and the engine keeps no timestamp for a static's control grant,
+    /// so APNAP is the deterministic stand-in.
+    pub(crate) fn search_hijacker(&self, searcher: usize) -> Option<usize> {
+        use crate::effect::StaticEffect;
+        let mut seats: Vec<usize> = Vec::new();
+        for c in self.battlefield.iter() {
+            if c.definition
+                .static_abilities
+                .iter()
+                .any(|sa| matches!(sa.effect, StaticEffect::ControlOpponentsSearches))
+                && !self.same_team(c.controller, searcher)
+                && self.players[c.controller].is_alive()
+                && !seats.contains(&c.controller)
+            {
+                seats.push(c.controller);
+            }
+        }
+        if seats.len() > 1 {
+            seats = self.apnap_sort(seats);
+        }
+        seats.first().copied()
+    }
+
+    /// Opposition Agent — a card found by a hijacked search goes to exile
+    /// instead of its destination, and `hijacker` may play it for as long as
+    /// it remains exiled, spending mana as though it were mana of any color
+    /// (the pay-to-cast cost is the mana value as generic — the Gonti /
+    /// Hostage Taker encoding of CR 609.4b).
+    pub(crate) fn exile_found_for_hijacker(
+        &mut self,
+        mut card: crate::card::CardInstance,
+        hijacker: usize,
+        events: &mut Vec<GameEvent>,
+    ) {
+        card.may_play_until = Some(crate::card::MayPlayPermission {
+            player: hijacker,
+            granted_turn: self.turn_number,
+            duration: crate::card::MayPlayDuration::WhileExiled,
+            exile_after: false,
+            miracle: false,
+            pay_life: false,
+        });
+        card.granted_alt_cast_cost_eot = Some(crate::mana::ManaCost::new(vec![
+            crate::mana::generic(card.definition.cost.cmc()),
+        ]));
+        let cid = card.id;
+        self.exile.push(card);
+        events.push(GameEvent::PermanentExiled { card_id: cid });
     }
 
     /// True if `player` controls a permanent granting the broad "ignore

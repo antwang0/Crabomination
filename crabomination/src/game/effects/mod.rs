@@ -22020,6 +22020,13 @@ impl GameState {
                 let picker = picker_ref
                     .and_then(|pr| self.resolve_player(pr, ctx))
                     .unwrap_or(p);
+                // Opposition Agent — an opponent of the searching player who
+                // controls the static controls them while they search: that
+                // seat makes the pick, and a card found in the library is
+                // exiled for it (`SearchPending::hijacked_by`).
+                let hijacked_by =
+                    if include_library { self.search_hijacker(picker) } else { None };
+                let picker = hijacked_by.unwrap_or(picker);
                 // Aven Mindcensor — an opponent's search only sees the top N.
                 let limit = if include_library {
                     self.search_top_limit_for(p).unwrap_or(usize::MAX)
@@ -22105,6 +22112,7 @@ impl GameState {
                     include_hand,
                     include_library,
                     source: ctx.source,
+                    hijacked_by,
                 };
 
                 if self.seat_prompts(picker) {
@@ -22132,6 +22140,7 @@ impl GameState {
                     controller: crate::effect::PlayerRef::Seat(p),
                     tapped: *tapped,
                 };
+                let hijacked_by = self.search_hijacker(p);
                 for lt in [
                     LandType::Plains,
                     LandType::Island,
@@ -22147,6 +22156,12 @@ impl GameState {
                     if let Some(id) = pick
                         && let Some(card) = Self::take_card(&mut self.players[p].library, id)
                     {
+                        // Opposition Agent — each land found is exiled for
+                        // the hijacker instead.
+                        if let Some(h) = hijacked_by {
+                            self.exile_found_for_hijacker(card, h, events);
+                            continue;
+                        }
                         self.place_card_in_dest(card, p, &dest, events);
                         self.scratch.last_moved_cards.push(id);
                     }
@@ -22180,8 +22195,11 @@ impl GameState {
                     .collect();
                 let all: Vec<crate::card::CardId> = candidates.iter().map(|(id, _)| *id).collect();
                 let max = all.len() as u32;
+                // Opposition Agent — the hijacker picks, and keeps (in exile)
+                // everything it finds.
+                let hijacked_by = self.search_hijacker(p);
                 let Some(picked) = self.choose_up_to_cards(
-                    p,
+                    hijacked_by.unwrap_or(p),
                     "Search: take which cards?".into(),
                     ctx.source.unwrap_or(crate::card::CardId(0)),
                     candidates,
@@ -22194,6 +22212,10 @@ impl GameState {
                 };
                 for id in picked {
                     if let Some(card) = Self::take_card(&mut self.players[p].library, id) {
+                        if let Some(h) = hijacked_by {
+                            self.exile_found_for_hijacker(card, h, events);
+                            continue;
+                        }
                         self.place_card_in_dest(card, p, to, events);
                         self.scratch.last_moved_cards.push(id);
                     }

@@ -16,10 +16,8 @@
 //!   equal to its mana value rather than pay its mana cost" (Inside
 //!   Information).
 //!
-//! Skipped:
-//! - Opposition Agent — "you control your opponents while they're searching"
-//!   and the exile-what-they-find replacement need a search-hijack subsystem
-//!   the engine doesn't have; the card is nothing without it.
+//! - `StaticEffect::ControlOpponentsSearches` — Opposition Agent's search
+//!   hijack (`GameState::search_hijacker` + `exile_found_for_hijacker`).
 //!
 //! Residuals (approximations, each also on the card's doc comment):
 //! - "Put there from their library this turn" (The Weaver King, Captain
@@ -43,6 +41,13 @@
 //!   "shares a card type" is the type you picked).
 //! - Stone of Erech exiles opponents' dying *nontoken* creatures (the engine's
 //!   Valentin replacement); a dying token still dies.
+//! - Opposition Agent hijacks the general search resolvers (`Search` and
+//!   everything built on it — tutors, fetch lands, `SearchUpToN`,
+//!   `SearchZones`, `SearchPickedBy` — plus `SearchAnyNumber` and
+//!   `SearchEachBasicLandType`); ~15 bespoke search effects (Signal the Clans,
+//!   Transmute Artifact, the opponent-splits-the-pile searches, ...) still
+//!   resolve un-hijacked. Only cards found in the *library* are exiled — a
+//!   multi-zone search's graveyard/hand find goes where it was headed.
 //! - Mind Flayer's control lasts while it remains on the battlefield (not
 //!   "while you control it"); Elder Brain's trigger also fires attacking a
 //!   planeswalker (reading its controller).
@@ -1863,6 +1868,39 @@ pub fn startled_awake() -> CardDefinition {
             cost(&[generic(2), u(), u()]),
             true,
             Effect::Mill { who: target_filtered(R::OpponentPlayer), amount: Value::Const(13) },
+        )
+    }
+}
+
+/// Opposition Agent — {2}{B} Creature — Human Rogue 3/2. Flash.
+/// "You control your opponents while they're searching their libraries.
+/// While an opponent is searching their library, they exile each card they
+/// find. You may play those cards for as long as they remain exiled, and you
+/// may spend mana as though it were mana of any color to cast them."
+///
+/// `StaticEffect::ControlOpponentsSearches`: the search resolvers route the
+/// pick to this permanent's controller and exile each library find with a
+/// `WhileExiled` may-play grant for them, cast cost = mana value as generic.
+/// The rest of the searching effect (shuffle, a fetch land's life and
+/// sacrifice) still happens. See the module Residuals for the search effects
+/// the hijack doesn't reach.
+pub fn opposition_agent() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "You control your opponents while they're searching their libraries. \
+                          While an opponent is searching their library, they exile each card \
+                          they find. You may play those cards for as long as they remain \
+                          exiled, and you may spend mana as though it were mana of any color \
+                          to cast them.",
+            effect: StaticEffect::ControlOpponentsSearches,
+        }],
+        ..creature(
+            "Opposition Agent",
+            cost(&[generic(2), b()]),
+            3,
+            2,
+            vec![CreatureType::Human, CreatureType::Rogue],
+            vec![Keyword::Flash],
         )
     }
 }

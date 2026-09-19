@@ -799,6 +799,16 @@ pub enum StaticEffect {
     /// library find nothing (CR 701.19 "can't search"). Checked in the
     /// `Effect::Search` resolver alongside Shadow of Doubt's turn-wide lock.
     OpponentsCantSearchLibraries,
+    /// Opposition Agent — "You control your opponents while they're
+    /// searching their libraries. While an opponent is searching their
+    /// library, they exile each card they find. You may play those cards for
+    /// as long as they remain exiled, and you may spend mana as though it were
+    /// mana of any color to cast them." Read by the library-search resolvers
+    /// through `GameState::search_hijacker`: the static's controller answers
+    /// the search pick, and each card found in the library is exiled with a
+    /// `WhileExiled` may-play permission for them (cast cost = mana value as
+    /// generic). No layer effect.
+    ControlOpponentsSearches,
     /// CR 601.2c — the Flagbearer restriction (Standard Bearer, Coalition Honor
     /// Guard, Coalition Flag): while an opponent of this permanent's controller
     /// chooses targets for a spell or ability they control, they must choose at
