@@ -715,6 +715,102 @@ pub fn training_center() -> CardDefinition {
 
 
 
+/// Bastion Protector — {2}{W} Creature — Human Soldier 3/3. "Commander
+/// creatures you control get +2/+2 and have indestructible."
+///
+/// CR 903.3 — `R::IsCommander` is a board fact, so this reads a commander
+/// under anyone's control and the `ControlledByYou` half is the printed
+/// "you control". The printed noun is **Commander creatures**, so the filter
+/// carries `R::Creature` too: a planeswalker commander gets nothing.
+pub fn bastion_protector() -> CardDefinition {
+    CardDefinition {
+        name: "Bastion Protector",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description: "Commander creatures you control get +2/+2 and have indestructible.",
+            effect: StaticEffect::AnthemForFilter {
+                filter: R::IsCommander.and(R::Creature),
+                power: 2,
+                toughness: 2,
+                keywords: vec![Keyword::Indestructible],
+                opponents: false,
+                all_players: false,
+                only_your_turn: false,
+                scale_by_counters_on_self: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Loyal Apprentice — {1}{R} Creature — Human Artificer 2/1 with haste.
+/// "Lieutenant — At the beginning of combat on your turn, if you control your
+/// commander, create a 1/1 colorless Thopter artifact creature token with
+/// flying. That token gains haste until end of turn."
+///
+/// Lieutenant is an ability word (CR 207.2c), so the gate is the printed
+/// "if you control your commander" and nothing else —
+/// `Predicate::ControlsOwnCommander`, the same one Thunderfoot Baloth uses.
+/// The haste is granted to the token rather than printed on it: the token
+/// does not *have* haste, it *gains* it until end of turn, which
+/// `Selector::LastCreatedToken` is exactly for.
+pub fn loyal_apprentice() -> CardDefinition {
+    let thopter = TokenDefinition {
+        name: "Thopter".into(),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Thopter],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Loyal Apprentice",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Artificer],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::BeginCombat),
+                EventScope::YourControl,
+            ),
+            effect: Effect::If {
+                cond: Predicate::ControlsOwnCommander { who: PlayerRef::You },
+                then: Box::new(Effect::Seq(vec![
+                    Effect::CreateToken {
+                        who: PlayerRef::You,
+                        count: Value::ONE,
+                        definition: std::sync::Arc::new(thopter),
+                    },
+                    Effect::GrantKeyword {
+                        what: Selector::LastCreatedToken,
+                        keyword: Keyword::Haste,
+                        duration: Duration::EndOfTurn,
+                    },
+                ])),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

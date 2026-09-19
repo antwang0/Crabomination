@@ -1169,6 +1169,8 @@ static CMDR: &[Factory] = &[
     super::cmdr::sea_of_clouds,
     super::cmdr::bountiful_promenade,
     super::cmdr::training_center,
+    super::cmdr::bastion_protector,
+    super::cmdr::loyal_apprentice,
 ];
 static CN2: &[Factory] = &[
     super::cn2::ballot_broker,
