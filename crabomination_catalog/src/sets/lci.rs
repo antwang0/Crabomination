@@ -5965,6 +5965,8 @@ pub fn kutzil_malamet_exemplar() -> CardDefinition {
             effect: StaticEffect::OpponentsCantCastDuringYourTurn,
         }],
         triggered_abilities: vec![TriggeredAbility {
+            // CR 603.2c — "one or more creatures you control each with power
+            // greater than its base power": one fire per damaged player.
             event: EventSpec::new(
                 EventKind::DealsCombatDamageToPlayer,
                 EventScope::YourControl,
@@ -5972,7 +5974,8 @@ pub fn kutzil_malamet_exemplar() -> CardDefinition {
             .with_filter(Predicate::EntityMatches {
                 what: Selector::TriggerSource,
                 filter: SelectionRequirement::PowerGreaterThanBasePower,
-            }),
+            })
+            .once_per_batch(),
             effect: Effect::Draw {
                 who: Selector::You,
                 amount: Value::Const(1),

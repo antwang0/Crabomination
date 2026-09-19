@@ -84,6 +84,29 @@ pub mod combat_census {
 /// one fire for the batch, not one per dealer.
 type DamageTrigger = (CardId, Effect, usize, Option<crate::card::Predicate>, bool, Option<(usize, bool)>);
 
+/// CR 603.2c — what a "whenever one or more … deal combat damage to X"
+/// trigger batches *over*. All combat damage in a sub-step is dealt at once
+/// (CR 510.4), but each damaged object is its own event: an alpha strike
+/// spread across three seats of a pod is three "one or more creatures you
+/// control deal combat damage to a player" events, not one. The dedupe key
+/// carries it so the engine's per-attacker walk collapses to one fire **per
+/// damaged subject** rather than one for the whole step.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub(crate) enum BatchSubject {
+    Player(usize),
+    Permanent(CardId),
+}
+
+impl BatchSubject {
+    /// The subject a combat-damage dispatch's `default_target` names.
+    fn of(target: &Target) -> Self {
+        match *target {
+            Target::Player(p) => Self::Player(p),
+            Target::Permanent(id) => Self::Permanent(id),
+        }
+    }
+}
+
 /// One SelfSource Attacks trigger `declare_attackers_banded` pushes itself,
 /// before its filter runs post-batch: `(source, effect, controller, filter,
 /// once)` — `once` as in `DamageTrigger`, the CR 603.3d key of an "attacks
@@ -4916,6 +4939,7 @@ impl GameState {
                         Target::Permanent(pw_id),
                         amount,
                         &granted,
+                        true,
                     );
                 }
                 if let Some(p) = spill_to
@@ -5556,6 +5580,7 @@ impl GameState {
             Target::Player(damaged_player),
             damage_amount,
             &granted,
+            true,
         );
         // CR 510 — "whenever combat damage is dealt to you" listeners fire off
         // the *recipient's* own permanents (SelfSource on a permanent the
@@ -5743,6 +5768,7 @@ impl GameState {
             Target::Permanent(damaged_creature),
             damage_amount,
             granted,
+            true,
         );
     }
 
@@ -5765,6 +5791,7 @@ impl GameState {
             Target::Permanent(damaged_creature),
             damage_amount,
             &granted,
+            false,
         );
     }
 
@@ -5787,6 +5814,7 @@ impl GameState {
             Target::Player(damaged_player),
             damage_amount,
             &granted,
+            false,
         );
     }
 
@@ -5825,7 +5853,14 @@ impl GameState {
         default_target: Target,
         damage_amount: u32,
         static_granted: &[crate::card::TriggeredAbility],
+        combat_batch: bool,
     ) {
+        // CR 603.2c / 510.4 — the batch a `once_per_batch` trigger collapses
+        // over. Combat damage in one sub-step is simultaneous, so the whole
+        // per-attacker walk shares a batch, keyed by the damaged subject; a
+        // noncombat delivery is a batch of its own (`None`), which is why it
+        // neither reads nor writes the step-scoped set.
+        let batch_subject = combat_batch.then(|| BatchSubject::of(&default_target));
         // One [`DamageTrigger`] bucket per requested kind; drained in order at
         // the bottom.
         let slot = |k: &EventKind| kinds.iter().position(|want| want == k);
@@ -6169,14 +6204,26 @@ impl GameState {
         if let Some(atk_controller) = attacker_controller
             && self.players[atk_controller].graveyard.has_graveyard_trigger()
         {
+            // Cross-kind dedupe within this one dispatch. A noncombat delivery
+            // has no `batch_subject` and so writes nothing to the step-scoped
+            // set — it *is* its own batch — but it still fires a graveyard
+            // card once, not once per kind in `kinds`.
+            let mut fired_here: Vec<CardId> = Vec::new();
             for (i, kind) in kinds.iter().enumerate() {
-                let mut fired: Vec<(CardId, usize)> = Vec::new();
+                let mut fired: Vec<(CardId, usize, BatchSubject)> = Vec::new();
                 for player in &self.players {
                     if player.id.0 != atk_controller {
                         continue;
                     }
                     for gy_card in &player.graveyard {
-                        if self.combat_trigger_fired_this_step.iter().any(|(c, _)| *c == gy_card.id) {
+                        // Per damaged subject (CR 603.2c): the same graveyard
+                        // card fires again for the next defending seat.
+                        if fired_here.contains(&gy_card.id)
+                            || self
+                                .combat_trigger_fired_this_step
+                                .iter()
+                                .any(|&(c, _, s)| c == gy_card.id && Some(s) == batch_subject)
+                        {
                             continue;
                         }
                         for t in &gy_card.definition.triggered_abilities {
@@ -6189,7 +6236,10 @@ impl GameState {
                                     false,
                                     None,
                                 ));
-                                fired.push((gy_card.id, usize::MAX));
+                                fired_here.push(gy_card.id);
+                                if let Some(subject) = batch_subject {
+                                    fired.push((gy_card.id, usize::MAX, subject));
+                                }
                             }
                         }
                     }
@@ -6269,14 +6319,19 @@ impl GameState {
             // checked after the filter. This hook runs once per dealer, so
             // the batch slot lives on the per-sub-step set.
             if let Some((i, per_turn)) = once {
-                let key = (trig_source, i);
                 if per_turn {
-                    if !self.triggered_once_per_turn_used.insert(key) {
+                    if !self.triggered_once_per_turn_used.insert((trig_source, i)) {
                         continue;
                     }
-                } else if self.combat_trigger_fired_this_step.contains(&key) {
-                    continue;
-                } else {
+                } else if let Some(subject) = batch_subject {
+                    // CR 603.2c — one fire per *damaged subject*, not per
+                    // step: two defending seats in one alpha strike are two
+                    // events. `batch_subject` is `None` for a noncombat
+                    // delivery, where each call already is its own batch.
+                    let key = (trig_source, i, subject);
+                    if self.combat_trigger_fired_this_step.contains(&key) {
+                        continue;
+                    }
                     self.combat_trigger_fired_this_step.push(key);
                 }
             }

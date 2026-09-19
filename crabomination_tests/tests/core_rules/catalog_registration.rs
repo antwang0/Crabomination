@@ -1875,6 +1875,65 @@ fn every_creature_that_prints_lure_carries_it() {
     );
 }
 
+/// Quartzwood Crasher is the one card allowed to miss the batched-damage
+/// ratchet below, and the reason is its X: "create an X/X … where X is the
+/// amount of damage **those creatures** dealt to that player" wants the
+/// *summed* batch, and `Value::TriggerEventAmount` is the one dealer the fire
+/// landed on. `once_per_batch` would make it one token of the wrong size
+/// where today it is the right total across too many tokens; neither is the
+/// card, so it keeps the shape it has until the batch carries a sum.
+/// INCOMPLETE_CARDS names it.
+///
+/// Magmatic Galleon is the other: its batched clause ("whenever one or more
+/// creatures your opponents control are dealt excess noncombat damage, create
+/// a Treasure") is not modelled **at all** — only the ETB half ships — so it
+/// is an absent ability rather than an unbatched one, and belongs to whoever
+/// builds excess-damage tracking. INCOMPLETE_CARDS names it too.
+const BATCHED_DAMAGE_SIGNED_OFF: &[&str] = &["Quartzwood Crasher", "Magmatic Galleon"];
+
+/// **A card that prints "whenever one or more … deal … damage" fires once per
+/// damage batch, not once per dealer.**
+///
+/// CR 603.2c. The engine deals combat damage simultaneously (CR 510.4) but
+/// walks the attackers one at a time, so a trigger without the batch flag
+/// fires once per creature that connected: three Pirates into one seat made
+/// three Treasures where Malcolm makes one per opponent. Wrong at two seats,
+/// and wrong a second way in a pod — the batch keys on the damaged player, so
+/// each defending seat is its own fire.
+///
+/// ⚠ **Three spellings satisfy it.** `once_per_batch` is the primitive;
+/// `once_per_turn` subsumes it (CR 603.3d is the stricter cap); and a
+/// `FromYourGraveyard` trigger is deduped by the graveyard walk in
+/// `fire_combat_damage_triggers` itself, which is how Killian's Confidence and
+/// Pyrewild Shaman are already right without carrying a flag.
+#[test]
+fn every_batched_damage_trigger_fires_once_a_batch() {
+    clause_ratchet(
+        "whenever one or more … deal … damage",
+        10,
+        // Not `own_line`: the clause never starts with "this" or the card's
+        // name, and it needs no self-anchor — a *granted* one ("Commander
+        // creatures you own have '…'", Popular Entertainer) is inside quotes,
+        // which `strip_quoted` has already removed.
+        // The *trigger condition* has to be the damage, not the effect: "one
+        // or more cards leave your graveyard, this deals 1 damage to each
+        // opponent" (Ark of Hunger, Fuming Effigy, Chandra) batches over a
+        // different event and is somebody else's ratchet. The condition ends
+        // at the first comma after the "whenever".
+        |t, _| {
+            t.lines().map(str::trim).filter_map(|l| l.split_once("whenever one or more")).any(
+                |(_, rest)| rest.split(',').next().is_some_and(|cond| cond.contains("damage")),
+            )
+        },
+        |def, body| {
+            BATCHED_DAMAGE_SIGNED_OFF.contains(&def.name)
+                || body.contains("once_per_batch: true")
+                || body.contains("once_per_turn: true")
+                || body.contains("FromYourGraveyard")
+        },
+    );
+}
+
 // ── The printed *keyword* ratchet — the MISSING direction, restricted ───────
 
 /// The keywords this ratchet checks, as `(scryfall name, does the definition

@@ -21,6 +21,8 @@ Four changes, all reversible from `git log -p`, and **no body was edited**:
 
 | Set / topic | Status | Lines |
 | --- | --- | --- |
+| [Target-deck card defects, and why they are all blocked on one thing](#target-deck-card-defects-and-why-they-are-all-blocked-on-one-thing) | open | 33 |
+| [CR 603.2c batches — the damage half is closed, the graveyard half is filed](#cr-6032c-batches--the-damage-half-is-closed-the-graveyard-half-is-filed) | open | 36 |
 | [The printed-clause ratchet family — one body, and where its needles break](#the-printed-clause-ratchet-family--one-body-and-where-its-needles-break) | open | 58 |
 | [The printed *keyword* and printed *numbers* ratchets — the join, not the text](#the-printed-keyword-and-printed-numbers-ratchets--the-join-not-the-text) | open | 56 |
 | [The two once-a-turn limits, and the one card that cannot carry the flag](#the-two-once-a-turn-limits-and-the-one-card-that-cannot-carry-the-flag) | open | 47 |
@@ -139,16 +141,78 @@ point — an alt cost of nothing gated on `Predicate::ControlsOwnCommander`:
 Fierce Guardianship, Deflecting Swat, Deadly Rollick, Flawless Maneuver. All
 four had shipped without it, and three of the four doc comments said so.
 
-⏳ **Obscuring Haze** ({2}{G}, the green member) is the one still missing, and
-its blocker is named: "prevent all damage that would be dealt this turn by
-creatures your opponents control" wants an **all-damage** fog filtered by
-*source*. The engine has `PreventAllCombatDamageByMatchingThisTurn` (combat
-only) and `PreventAllDamageByTargetThisTurn` (one target), and neither is it —
-shipping the combat-only one would silently drop ability damage from
-opponents' creatures, which in a Commander pod is Judith pinging.
+✅ **Obscuring Haze** ({2}{G}, the green member) shipped 2026-09-19 and the
+cycle is complete. Its blocker was the primitive, built first as
+`Effect::PreventAllDamageByMatchingThisTurn` — an all-damage fog described by
+a **filter** rather than by a snapshot of ids, so a source that changes
+controller is judged when the damage would be dealt, and stored as
+`(seat, filter)` because "your opponents" belongs to the resolver. The
+combat-only fog would have dropped ability damage from opponents' creatures,
+which in a Commander pod is Judith pinging.
 
 🟡 **Deflecting Swat** still counters only a *spell*; printed is "spell or
 ability", plus "you may choose new targets for it". Unchanged by this pass.
+
+## CR 603.2c batches — the damage half is closed, the graveyard half is filed
+
+`catalog_registration::every_batched_damage_trigger_fires_once_a_batch` ratchets
+the **damage** clause and it is green: Elegy Acolyte, Haliya, Kaito, Kastral,
+Kutzil, Malcolm, Nature's Will and Prosperous Thief took `once_per_batch`
+2026-09-19; Killian's Confidence and Pyrewild Shaman need no flag (a
+`FromYourGraveyard` trigger is deduped by the graveyard walk itself); Quartzwood
+Crasher and Magmatic Galleon are the two signed-off names, both in
+INCOMPLETE_CARDS.
+
+⏳ **The same defect in the `CardLeftGraveyard` clause is unfixed, and it is 12
+cards.** "Whenever one or more cards leave your graveyard" fires per card today,
+so exiling a five-card graveyard pays five times. `once_per_batch` is the whole
+fix (Attuned Hunter carries it and `cr_603_2c_once_per_batch_fires_once_a_batch_
+and_again_next_batch` proves the mechanism), and the reason it was not taken is
+**pool membership, not difficulty**:
+
+| Card | Pool |
+| --- | --- |
+| Ark of Hunger, Garrison Excavator, Spirit Mascot | SOS |
+| Hardened Academic | cube **and** SOS |
+| Owlin Historian | cube |
+| Chalk Outline, Dredger's Insight, Fuming Effigy, Insidious Roots, Quintorius Field Historian, Rot Farm Mortipede, Soul Enervation, Stonebound Mentor, Willow Geist, Kheru Goldkeeper | none |
+
+Five of them are in the 2-player pools, so fixing the class moves the committed
+bench invariant and the golden traces — a re-bless the perf work owns, and none
+of the twelve is in a pod deck, so there is no Commander reason to force it now.
+Take the ten pool-free ones any time; take the five with a bench run in hand.
+⚠ A *partial* fix is worse than none here: the ratchet has to go green in one
+step or it acquires five signed-off names that mean "deferred", which is how a
+ratchet stops being read.
+
+## Target-deck card defects, and why they are all blocked on one thing
+
+The run rule is "fixing defects in already-implemented cards that appear in a
+target deck outranks new cards". The list was taken 2026-09-19 by reading every
+pod-deck card's own doc comment and body for an admitted approximation
+(`scripts`-style walk, the one in this pass's scratch). **Eight cards, and
+every one of them is in the `cube` pool**, which is the finding:
+
+| Card | Decks | Residual |
+| --- | --- | --- |
+| Ghost Vacuum | Hanna, Sigarda, Tatyova | 🟡 the `{6}, {T}, Sacrifice:` half — "put each creature card exiled **with this artifact** onto the battlefield" — is unmodelled. `ExileLink` / `ExileUntilSourceLeaves` is the existing link primitive and would carry it; nothing else is missing |
+| Simian Spirit Guide | Judith | the "exile from hand: add {R}" mana ability needs a from-hand activation zone. In an aristocrats deck it is a vanilla 2/2 today |
+| Sowing Mycospawn | Sigarda | the searched land enters **tapped** and the oracle does not say tapped — a strict nerf, and the card's own comment has said so since it shipped |
+| Delighted Halfling | Sigarda, Tatyova | the legendary-only + uncounterable spend rider is dropped |
+| Obstinate Baloth | Tatyova | the discard-to-battlefield clause is dropped |
+| Spark Double | Tatyova | the planeswalker-copy half is omitted |
+| Wall of Roots | Tatyova | the -0/-1 counter is a permanent `PumpPT` stand-in |
+| Delver of Secrets | Tatyova | the transform half is approximated |
+
+⚠ **The blocker is pool membership, not difficulty.** Each of the eight is a
+card the `cube` deck builder can draw, so changing any of their behavior moves
+the committed bench aggregate and can move a golden trace — a re-bless that
+belongs with a `--release --bench` run in hand, not scattered across eight card
+commits. **Take them as one batch with one bench reading**, in roughly the order
+above (Ghost Vacuum first: three decks, and the primitive exists). Arcane
+Signet, which the same walk flagged in all five decks, was a **stale doc
+comment** and nothing else — `tap_add_commander_identity()` has shipped for a
+while; the comment is corrected.
 
 ## The printed-clause ratchet family — one body, and where its needles break
 

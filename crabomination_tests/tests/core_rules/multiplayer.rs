@@ -1023,6 +1023,99 @@ fn cr_800_4a_leaving_mid_combat_clears_the_departed_attackers() {
     );
 }
 
+/// A 2/2 whose whole text is "whenever this creature deals combat damage to a
+/// player, draw a card" — a witness for damage actually being assigned.
+fn damage_witness() -> crabomination::card::CardDefinition {
+    use crabomination::card::{CardDefinition, CardType, TriggeredAbility};
+    use crabomination::effect::{EventKind, EventScope, EventSpec};
+    CardDefinition {
+        name: "Test Damage Witness",
+        card_types: vec![CardType::Creature],
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: crabomination::effect::shortcut::draw(1),
+        }],
+        ..Default::default()
+    }
+}
+
+/// CR 800.4e — "If combat damage would be assigned to a player who has left
+/// the game, that damage isn't assigned."
+///
+/// The reachable shape is first strike (CR 702.7b): the first-strike sub-step
+/// kills the defending seat, state-based actions take them out of the game
+/// between the sub-steps, and the ordinary attacker is left pointing at a seat
+/// that is gone. 800.4a's combat sweep is what makes 800.4e true here — the
+/// witness never draws, so nothing was assigned.
+#[test]
+fn cr_800_4e_no_combat_damage_is_assigned_to_a_seat_that_left_mid_combat() {
+    let mut g = multi_player_game(3);
+    let fast = g.add_card_to_battlefield(0, catalog::white_knight());
+    let slow = g.add_card_to_battlefield(0, damage_witness());
+    for id in [fast, slow] {
+        g.clear_sickness(id);
+    }
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    // Exactly lethal to the first strike, so the second sub-step is the one
+    // under test rather than a seat that was already gone.
+    g.players[1].life = 2;
+    let hand_before = g.players[0].hand.len();
+
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: fast, target: AttackTarget::Player(1) },
+        Attack { attacker: slow, target: AttackTarget::Player(1) },
+    ]))
+    .expect("a first-striker and an ordinary attacker at the same seat");
+    g.step = TurnStep::FirstStrikeDamage;
+    g.resolve_first_strike_damage().expect("the first-strike sub-step");
+    drain_stack(&mut g);
+    assert!(!g.players[1].is_alive(), "the first strike took seat 1 out between the sub-steps");
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().expect("the regular sub-step");
+    drain_stack(&mut g);
+
+    assert!(!g.players[1].is_alive(), "the first strike took seat 1 out");
+    assert_eq!(
+        g.players[0].hand.len(),
+        hand_before,
+        "the ordinary attacker assigned nothing to a seat that has left (CR 800.4e)",
+    );
+    assert!(
+        !g.attacking.iter().any(|a| a.attacker == slow),
+        "and it is no longer in combat at all",
+    );
+}
+
+/// CR 800.4k — "If a player who has left the game would begin a turn, that
+/// turn doesn't begin." `next_alive_seat` is the whole implementation and it
+/// had no test naming the rule; a turn handed to a departed seat is a table
+/// that passes priority to nobody.
+#[test]
+fn cr_800_4k_a_departed_seats_turn_does_not_begin() {
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.players[1].life = 0;
+    g.check_state_based_actions();
+    assert!(!g.players[1].is_alive(), "seat 1 is out before its turn would begin");
+
+    for _ in 0..40 {
+        if g.active_player_idx != 0 {
+            break;
+        }
+        let _ = g.advance_step(Vec::new());
+    }
+    assert_eq!(g.active_player_idx, 2, "seat 1's turn does not begin — seat 2 takes it");
+}
+
 /// CR 800.4a, closing sentence — "If the player who left the game had
 /// priority at the time they left, priority passes to the next player in turn
 /// order who's still in the game." Priority gates the table exactly as a
@@ -3526,11 +3619,12 @@ fn command_beacon_moves_the_commander_from_the_command_zone_to_hand() {
 fn cr_118_9_the_free_spell_cycle_needs_a_commander_on_the_battlefield() {
     use crabomination::game::types::Target;
 
-    let cycle: [fn() -> crabomination::card::CardDefinition; 4] = [
+    let cycle: [fn() -> crabomination::card::CardDefinition; 5] = [
         catalog::fierce_guardianship,
         catalog::deflecting_swat,
         catalog::deadly_rollick,
         catalog::flawless_maneuver,
+        catalog::obscuring_haze,
     ];
     for make in cycle {
         let def = make();
@@ -3580,6 +3674,243 @@ fn cr_118_9_the_free_spell_cycle_needs_a_commander_on_the_battlefield() {
     }
     assert!(g.battlefield_find(victim).is_none(), "the Bears are exiled");
     assert_eq!(g.players[0].mana_pool.total(), 0, "and nothing was paid");
+}
+
+/// Obscuring Haze, the cycle's green member and the last to ship: free with a
+/// commander out, and the damage it prevents is **all** damage from the
+/// opponents' creatures, not the combat half. A pod's pinger is what it is
+/// cast against — here Judith, whose death trigger is the damage in question.
+#[test]
+fn obscuring_haze_stops_an_opponents_noncombat_damage_for_the_turn() {
+    use crabomination::game::effects::EntityRef;
+    use crabomination::game::types::Target;
+
+    let mut g = game_with_format(Format::Commander, 4);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let pinger = g.add_card_to_battlefield(1, catalog::judith_the_scourge_diva());
+    let haze = g.add_card_to_hand(0, catalog::obscuring_haze());
+
+    let free_cast = GameAction::CastSpellAlternative {
+        card_id: haze,
+        pitch_card: None,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    };
+    // CR 903.3d — a commander in the command zone is not one you control.
+    g.seat_commanders(0, vec![catalog::sigarda_host_of_herons()]);
+    assert!(g.perform_action(free_cast.clone()).is_err());
+
+    g.players[0].command.clear();
+    let on_bf = g.add_card_to_battlefield(0, catalog::sigarda_host_of_herons());
+    g.players[0].commanders = vec![on_bf];
+    g.perform_action(free_cast).expect("free with a commander out");
+    while !g.stack.is_empty() {
+        g.resolve_top_of_stack().expect("resolve");
+    }
+    assert_eq!(g.players[0].mana_pool.total(), 0, "nothing was paid");
+
+    // The ping the combat-only fog would have let through.
+    let mut evs = vec![];
+    g.deal_damage_to_from(EntityRef::Permanent(mine), 1, Some(pinger), &mut evs);
+    assert_eq!(g.battlefield_find(mine).unwrap().damage, 0, "CR 615 — all damage, not combat");
+    let before = g.players[0].life;
+    g.deal_damage_to_from(EntityRef::Player(0), 1, Some(pinger), &mut evs);
+    assert_eq!(g.players[0].life, before, "and to the caster's face as well");
+    // A third seat's creature is an opponent's too.
+    let theirs = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    assert!(g.combat_damage_prevented_from(theirs), "every opponent, not just the one");
+    // The caster's own is untouched.
+    assert!(!g.combat_damage_prevented_from(mine));
+    let _ = Target::Permanent(mine);
+}
+
+// ── CR 603.2c — "whenever one or more … deal combat damage to a player" ────
+
+/// A 0/1 whose whole text is the batched wording: "Whenever one or more
+/// creatures you control deal combat damage to a player, draw a card."
+fn batch_watcher() -> crabomination::card::CardDefinition {
+    use crabomination::card::{CardDefinition, CardType, TriggeredAbility};
+    use crabomination::effect::{EventKind, EventScope, EventSpec};
+    CardDefinition {
+        name: "Test Batch Watcher",
+        card_types: vec![CardType::Creature],
+        power: 0,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl)
+                .once_per_batch(),
+            effect: crabomination::effect::shortcut::draw(1),
+        }],
+        ..Default::default()
+    }
+}
+
+/// CR 603.2c + CR 510.4 — all combat damage in a sub-step is dealt at once,
+/// but **each damaged player is its own event**: three attackers spread over
+/// two defending seats fire the ability twice, not once (the whole step
+/// collapsed to one) and not three times (one per dealer).
+///
+/// The per-attacker walk is the engine's, not the rules': the dedupe set that
+/// collapses it was keyed by `(listener, ability)` alone, so a pod's alpha
+/// strike across two seats drew one card.
+#[test]
+fn cr_603_2c_a_batched_combat_damage_trigger_fires_once_per_damaged_seat() {
+    let mut g = multi_player_game(3);
+    let watcher = g.add_card_to_battlefield(0, batch_watcher());
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let c = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for id in [watcher, a, b, c] {
+        g.clear_sickness(id);
+    }
+    for _ in 0..8 {
+        let id = g.next_id();
+        g.players[0].add_to_library_top(id, catalog::grizzly_bears());
+    }
+    let hand_before = g.players[0].hand.len();
+
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: a, target: AttackTarget::Player(1) },
+        Attack { attacker: b, target: AttackTarget::Player(1) },
+        Attack { attacker: c, target: AttackTarget::Player(2) },
+    ]))
+    .expect("seat 0 attacks two seats");
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().expect("combat resolves");
+    drain_stack(&mut g);
+
+    assert_eq!(
+        g.players[0].hand.len() - hand_before,
+        2,
+        "one fire per damaged seat: two seats took damage, three creatures dealt it",
+    );
+}
+
+/// The duel control, and the reason the two-player golden traces cannot move:
+/// with one defending player there is one subject, so the key gains a field
+/// whose value never varies and the collapse is the same collapse.
+#[test]
+fn cr_603_2c_a_batched_trigger_still_fires_once_in_a_duel() {
+    let mut g = two_player_game();
+    let watcher = g.add_card_to_battlefield(0, batch_watcher());
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for id in [watcher, a, b] {
+        g.clear_sickness(id);
+    }
+    for _ in 0..8 {
+        let id = g.next_id();
+        g.players[0].add_to_library_top(id, catalog::grizzly_bears());
+    }
+    let hand_before = g.players[0].hand.len();
+
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: a, target: AttackTarget::Player(1) },
+        Attack { attacker: b, target: AttackTarget::Player(1) },
+    ]))
+    .expect("attack");
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().expect("combat resolves");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].hand.len() - hand_before, 1, "two dealers, one event, one draw");
+}
+
+/// A 1/1 Pirate with no text of its own — the batch's other members.
+fn plain_pirate(name: &'static str) -> crabomination::card::CardDefinition {
+    use crabomination::card::{CardDefinition, CardType, CreatureType, Subtypes};
+    CardDefinition {
+        name,
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Pirate], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        ..Default::default()
+    }
+}
+
+/// Malcolm, Keen-Eyed Navigator — "Whenever one or more Pirates you control
+/// deal damage to your opponents, you create a Treasure token **for each
+/// opponent dealt damage**." The count is the number of damaged *opponents*,
+/// which is exactly what CR 603.2c's per-subject batch gives. Before the batch
+/// flag it was one Treasure per Pirate — wrong at two seats as well as in a
+/// pod, and one of the seven `each_opponent` residuals.
+#[test]
+fn cr_603_2c_malcolm_makes_one_treasure_per_damaged_opponent() {
+    let treasures = |g: &GameState| {
+        g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Treasure").count()
+    };
+
+    let mut g = multi_player_game(3);
+    let malcolm = g.add_card_to_battlefield(0, catalog::malcolm_keen_eyed_navigator());
+    let mate = g.add_card_to_battlefield(0, plain_pirate("Test Pirate A"));
+    let landlubber = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for id in [malcolm, mate, landlubber] {
+        g.clear_sickness(id);
+    }
+    assert_eq!(treasures(&g), 0);
+
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: malcolm, target: AttackTarget::Player(1) },
+        Attack { attacker: mate, target: AttackTarget::Player(1) },
+        Attack { attacker: landlubber, target: AttackTarget::Player(2) },
+    ]))
+    .expect("two Pirates into seat 1, a Bear into seat 2");
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().expect("combat resolves");
+    drain_stack(&mut g);
+
+    assert_eq!(
+        treasures(&g),
+        1,
+        "two Pirates hit one opponent — one Treasure; the Bear's seat is not an \
+         opponent *dealt damage by a Pirate* and adds none",
+    );
+}
+
+/// The other half of the same count: a second damaged opponent is a second
+/// event (CR 603.2c), so the same two Pirates split across two seats make two
+/// Treasures. This is the assert the duel cannot make.
+#[test]
+fn cr_603_2c_malcolm_counts_each_damaged_opponent_separately() {
+    let treasures = |g: &GameState| {
+        g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Treasure").count()
+    };
+
+    let mut g = multi_player_game(3);
+    let malcolm = g.add_card_to_battlefield(0, catalog::malcolm_keen_eyed_navigator());
+    let mate = g.add_card_to_battlefield(0, plain_pirate("Test Pirate A"));
+    for id in [malcolm, mate] {
+        g.clear_sickness(id);
+    }
+
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: malcolm, target: AttackTarget::Player(1) },
+        Attack { attacker: mate, target: AttackTarget::Player(2) },
+    ]))
+    .expect("one Pirate at each opponent");
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().expect("combat resolves");
+    drain_stack(&mut g);
+
+    assert_eq!(treasures(&g), 2, "two opponents dealt damage — two Treasures");
 }
 
 // ── CR 800.4f/g — an ask whose seat has left the game ──────────────────────

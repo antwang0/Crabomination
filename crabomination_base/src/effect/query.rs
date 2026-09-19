@@ -1889,7 +1889,8 @@ impl Effect {
             Effect::WheneverCardEntersOpponentGraveyardThisTurn { .. } => false,
             Effect::MayExileSelfReturnNextUpkeepHaste
             | Effect::ReturnSelfAtNextUpkeepTapped
-            | Effect::PreventAllCombatDamageByMatchingThisTurn { .. } => false,
+            | Effect::PreventAllCombatDamageByMatchingThisTurn { .. }
+            | Effect::PreventAllDamageByMatchingThisTurn { .. } => false,
             Effect::PayOrLoseGame { .. } => false,
             Effect::SacrificeAndRemember { who, .. } => player_has_target(who),
             Effect::SacrificeAnyNumber { per_each, .. } => per_each.requires_target(),

@@ -596,10 +596,14 @@ pub fn elegy_acolyte() -> CardDefinition {
         keywords: vec![Keyword::Lifelink],
         triggered_abilities: vec![
             TriggeredAbility {
+                // CR 603.2c — "whenever ONE OR MORE creatures you control deal
+                // combat damage to a player": one fire per damaged player, not
+                // one per dealer.
                 event: EventSpec::new(
                     EventKind::DealsCombatDamageToPlayer,
                     EventScope::YourControl,
-                ),
+                )
+                .once_per_batch(),
                 effect: draw_lose(),
             },
             TriggeredAbility {
@@ -5555,15 +5559,18 @@ pub fn haliya_ascendant_cadet() -> CardDefinition {
         triggered_abilities: vec![
             etb(counter()),
             on_attack(counter()),
-            // "One or more creatures you control with +1/+1 counters deal
-            // combat damage to a player" — fires per such creature here.
+            // CR 603.2c — "one or more creatures you control with +1/+1
+            // counters deal combat damage to a player": one fire per damaged
+            // player. The filter is read against each dealer in turn, so the
+            // first counter-bearing one in the batch opens the fire.
             TriggeredAbility {
                 event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl)
                     .with_filter(Predicate::EntityMatches {
                         what: Selector::TriggerSource,
                         filter: SelectionRequirement::Creature
                             .and(SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne)),
-                    }),
+                    })
+                    .once_per_batch(),
                 effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
             },
         ],

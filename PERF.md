@@ -8829,6 +8829,38 @@ short to say so.
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
 
+### GUARDRAIL — seven Commander/multiplayer rules commits cost **fixed +0.066 / cube +0.038 / sealed -0.050 %**
+
+Not an optimization; the reading that says the rules work did not tax the
+two-player simulator. Base `b7ba4cb8` (a detached worktree, per the rule
+above), candidate `96f7dd75`, both `profiling-fast --no-default-features`,
+`nm | grep -cE " (T|t) (_)?mi_"` = 0 on both, distinct md5s.
+
+```text
+                        b7ba4cb8          96f7dd75          delta
+  fixed              568,694,570       569,071,470       +0.0663 %
+  cube             1,479,362,700     1,479,925,798       +0.0381 %
+  sealed              11,754,670        11,748,763       -0.0503 %
+  `--bench` counters 195,806 / 27.49 / 611.9 / 0 stalls — byte-identical,
+  `determinism ok (all pairs split)`, peak_rss_mib 29.4
+```
+
+The seven are CR 800.4f/g's ask router, `seat_prompts` over 102 sites, CR
+800.4a's `left_game` funnel, `opponents_of`'s alive filter, the combat-damage
+subject binding, CR 613.5's colour gate on the printed fast path, and the
+bot's rider-mana estimate. **Only the last two can touch a duel at all** —
+everything else is gated on "somebody has left the game", which one
+elimination ends in a duel — and the counters say neither changed one.
+
+📐 **The one row that could have cost and did not is the colour gate.**
+`printed_requirement` is asked ~170 k times a six-game `cube` run and the
+gate adds a `Cell` read to its `HasColor` arm; the `card_color_change_
+unscoped` walk behind it is paid **once per filter**, on the `PrintedGates`
+memo its own doc asks for, not once per permanent. A per-permanent form of
+the same gate would have been a whole-battlefield walk inside the walk it is
+pre-testing.
+
+
 ### `(-370)` the CoW unshare materializes with headroom — **fixed -0.023 / cube -0.050 / sealed -0.026 %**
 
 Candidate (S)'s cheap half, one line. `CowBox<Vec<T>>::push`'s unshare path

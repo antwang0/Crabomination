@@ -1012,7 +1012,8 @@ impl GameState {
         if let Some(src) = source
             && (self.damage_sealed_by_aura(src, false)
                 || (!self.damage_cant_be_prevented_this_turn
-                    && self.all_damage_prevented_by_this_turn.contains(&src)))
+                    && (self.all_damage_prevented_by_this_turn.contains(&src)
+                        || self.all_damage_from_source_matches_a_shield(src))))
         {
             return;
         }

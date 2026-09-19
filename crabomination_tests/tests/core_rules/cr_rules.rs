@@ -11706,3 +11706,115 @@ fn cr_602_2b_an_unpayable_activation_does_not_suspend_for_a_ui_seat() {
     );
     assert!(g.battlefield_find(mite).is_some(), "and the Mite was not sacrificed");
 }
+
+// ── CR 615 — an all-damage shield described by a filter ───────────────────
+
+/// A {G} instant whose only text is the new primitive: "Prevent all damage
+/// that would be dealt this turn by creatures your opponents control."
+fn haze_fixture() -> crabomination::card::CardDefinition {
+    use crabomination::card::{CardDefinition, CardType, SelectionRequirement as R};
+    use crabomination::effect::Effect;
+    CardDefinition {
+        name: "Test Haze",
+        cost: crabomination::mana::cost(&[crabomination::mana::g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::PreventAllDamageByMatchingThisTurn {
+            filter: R::Creature.and(R::ControlledByOpponent),
+        },
+        ..Default::default()
+    }
+}
+
+fn cast_haze(g: &mut GameState, seat: usize) {
+    let id = g.add_card_to_hand(seat, haze_fixture());
+    g.players[seat].mana_pool.add(Color::Green, 1);
+    g.priority.player_with_priority = seat;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("cast the haze");
+    while !g.stack.is_empty() {
+        g.resolve_top_of_stack().expect("resolve");
+    }
+}
+
+/// CR 615.1 — the shield covers **noncombat** damage, which is the whole
+/// reason it is not the combat-only fog. An opponent's creature pinging with
+/// an ability deals nothing.
+#[test]
+fn cr_615_1_a_filtered_all_damage_shield_stops_noncombat_damage() {
+    use crabomination::game::effects::EntityRef;
+    let mut g = two_player_game();
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    cast_haze(&mut g, 0);
+
+    let mut evs = vec![];
+    g.deal_damage_to_from(EntityRef::Permanent(mine), 2, Some(theirs), &mut evs);
+    assert_eq!(
+        g.battlefield_find(mine).unwrap().damage,
+        0,
+        "an opponent's creature deals no damage at all (CR 615.1)",
+    );
+    // And the combat half agrees — one shield, both paths.
+    assert!(g.combat_damage_prevented_from(theirs));
+}
+
+/// The control: the caster's own creature is not covered, so the filter is
+/// read from the *resolving* seat's point of view and not the dealer's.
+#[test]
+fn cr_615_1_a_filtered_shield_is_read_from_the_resolvers_seat() {
+    use crabomination::game::effects::EntityRef;
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    cast_haze(&mut g, 0);
+
+    let mut evs = vec![];
+    g.deal_damage_to_from(EntityRef::Permanent(theirs), 2, Some(mine), &mut evs);
+    assert_eq!(
+        g.battlefield_find(theirs).unwrap().damage,
+        2,
+        "the resolver's own creature still deals damage",
+    );
+    assert!(!g.combat_damage_prevented_from(mine));
+}
+
+/// CR 615 — the set is **not** snapshotted at resolution: the shield asks
+/// what a source is when the damage would be dealt, so a creature that comes
+/// under the resolver's control stops being covered and one that leaves it
+/// starts being covered.
+#[test]
+fn cr_615_a_filtered_shield_is_judged_when_the_damage_would_be_dealt() {
+    use crabomination::game::effects::EntityRef;
+    let mut g = two_player_game();
+    let swapped = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let victim = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    cast_haze(&mut g, 0);
+    assert!(g.combat_damage_prevented_from(swapped), "covered while they control it");
+
+    g.battlefield_find_mut(swapped).unwrap().controller = 0;
+    assert!(
+        !g.combat_damage_prevented_from(swapped),
+        "and not covered once the resolver controls it",
+    );
+    let mut evs = vec![];
+    g.deal_damage_to_from(EntityRef::Permanent(victim), 1, Some(swapped), &mut evs);
+    assert_eq!(g.battlefield_find(victim).unwrap().damage, 1);
+}
+
+/// The shield is until-end-of-turn (CR 615.1), so cleanup takes it.
+#[test]
+fn cr_615_a_filtered_shield_ends_at_cleanup() {
+    let mut g = two_player_game();
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    cast_haze(&mut g, 0);
+    assert!(g.combat_damage_prevented_from(theirs));
+    g.do_cleanup(&mut vec![]);
+    assert!(!g.combat_damage_prevented_from(theirs), "one turn only");
+}
