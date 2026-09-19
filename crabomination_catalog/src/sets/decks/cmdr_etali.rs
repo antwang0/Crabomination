@@ -9,9 +9,10 @@
 //!   omitted — a 3/2 first striker.
 //! - Mirror Box: the legend-rule exemption is global (Mirror Gallery's static),
 //!   not yours-only; the same-name +1/+1 scaling is omitted.
-//! - _____ Goblin: no sticker subsystem — the ETB is an optional "add
-//!   {R}{R}{R}" stand-in for a three-vowel name sticker; the Guest type is
-//!   dropped (no `CreatureType::Guest`).
+//! - _____ Goblin: the name stickers are the engine's stand-in sheets (not
+//!   Unfinity's printed inserts), drawn lazily; the sticker's position in the
+//!   name is not offered (it fills the blank); a copy of the Goblin copies its
+//!   stickered name (CR 123.1 says it shouldn't).
 //! - Sanctum of Eternity / Passionate Archaeologist: "commander" is read as
 //!   "a legend you own, while you control your own commander"; the
 //!   Archaeologist's trigger is printed on the Background (it deals the
@@ -1672,29 +1673,34 @@ pub fn hexing_squelcher() -> CardDefinition {
 
 // ── _____ Goblin (Unfinity sticker card) ────────────────────────────────────
 
-/// _____ Goblin — {2}{R} Creature — Goblin Guest 2/2. When this creature
+/// _____ Goblin — {2}{R} Creature — Goblin Guest 1/1. When this creature
 /// enters, you may put a name sticker on it. Add {R} for each unique vowel on
 /// that sticker. (The vowels are A, E, I, O, U, and Y.)
 ///
-/// Approximation: the engine has no sticker subsystem (no sticker sheets, no
-/// name stickers). The ETB is an optional "add {R}{R}{R}" — a stand-in for a
-/// typical three-unique-vowel name sticker — and the name never changes.
-/// Omitted: the Guest creature type (no `CreatureType::Guest`).
+/// `Effect::PutNameSticker` (CR 123.3/123.6): the ballot is the controller's
+/// unused name stickers, richest first, plus "No sticker"; the chosen word
+/// fills the blank ("Audacious Goblin") and the sticker stays taken while the
+/// card is in a public zone. The mana reads `Value::NameStickerUniqueVowels`,
+/// 0 when no sticker went on.
+///
+/// Approximations: the sticker sheets are the engine's stand-in collection
+/// (`sticker::DEFAULT_STICKER_SHEETS`), and the name position isn't offered —
+/// the sticker always fills the blank.
 pub fn blank_goblin() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![etb(Effect::MayDo {
-            description: "Put a name sticker on it (add {R}{R}{R})?".into(),
-            body: Box::new(Effect::AddMana {
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::PutNameSticker { what: Selector::This, optional: true },
+            Effect::AddMana {
                 who: PlayerRef::You,
-                pool: ManaPayload::OfColor(Color::Red, Value::Const(3)),
-            }),
-        })],
+                pool: ManaPayload::OfColor(Color::Red, Value::NameStickerUniqueVowels),
+            },
+        ]))],
         ..c_creature(
             "_____ Goblin",
             cost(&[generic(2), r()]),
-            vec![CreatureType::Goblin],
-            2,
-            2,
+            vec![CreatureType::Goblin, CreatureType::Guest],
+            1,
+            1,
         )
     }
 }

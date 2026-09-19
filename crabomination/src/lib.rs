@@ -8,7 +8,7 @@
 // Re-exported here under their original paths so the rest of the workspace
 // (and external consumers) keep using `crabomination::card`, `::mana`, etc.
 pub use crabomination_base::TurnStep;
-pub use crabomination_base::{card, effect, mana, static_str_serde};
+pub use crabomination_base::{card, effect, mana, static_str_serde, sticker};
 
 /// The card catalog, augmented with the name→factory registry. The registry
 /// lives in this crate (rather than `crabomination_catalog`) because it

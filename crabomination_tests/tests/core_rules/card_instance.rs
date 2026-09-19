@@ -366,3 +366,56 @@ fn toxic_and_modular_see_grants_and_keyword_counters() {
     c.removed_keywords.push(Keyword::Toxic(1));
     assert!(!c.has_toxic(), "a permanent removal did not strip a granted Toxic");
 }
+
+/// CR 123 — the name-sticker primitive (`Effect::PutNameSticker`):
+/// - 123.6b: the word joins the name (no blank here, so at the end), and the
+///   ballot hands a first-option decider the most-unique-vowel sticker;
+/// - 123.3: a sticker on an object you own is not available again;
+/// - 123.3b: nothing happens on an object you don't own;
+/// - 123.5: the sticker survives a public-zone move (and a serde round trip)
+///   but comes off in a hidden zone, freeing it.
+#[test]
+fn cr_123_name_sticker_renames_is_exclusive_and_comes_off_in_a_hidden_zone() {
+    use crabomination::effect::{Effect, PlayerRef, Selector, ZoneDest};
+    use crabomination::game::effects::EffectContext;
+    use crabomination::game::*;
+
+    let mut g = two_player_game();
+    // Stand-in sheets 0-2: Wobbly Audacious Grim / Eerie Fabulous Spry /
+    // Quizzical Bold Tiny. Audacious (4 unique vowels) is id 1.
+    g.set_sticker_sheets(0, [0, 1, 2]);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let sticker = |g: &mut GameState, on: CardId| {
+        let mut ctx = EffectContext::for_spell(0, None, 0, 0);
+        ctx.source = Some(on);
+        g.resolve_effect(&Effect::PutNameSticker { what: Selector::This, optional: false }, &ctx)
+            .expect("sticker");
+    };
+    let name = |g: &GameState, id: CardId| g.find_card_anywhere(id).unwrap().definition.name;
+
+    sticker(&mut g, bear);
+    assert_eq!(name(&g, bear), "Grizzly Bears Audacious");
+    assert!(!g.available_name_stickers(0).contains(&1), "a used sticker is taken");
+    assert_eq!(g.available_name_stickers(0).len(), 8);
+
+    sticker(&mut g, theirs);
+    assert_eq!(name(&g, theirs), "Grizzly Bears", "CR 123.3b: not an object you own");
+    assert_eq!(g.available_name_stickers(0).len(), 8);
+
+    // Public zone: the sticker stays, and a snapshot keeps it.
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    let mut events = Vec::new();
+    g.move_card_to(bear, &ZoneDest::Graveyard, &ctx, &mut events);
+    assert_eq!(name(&g, bear), "Grizzly Bears Audacious");
+    let card = g.find_card_anywhere(bear).unwrap().clone();
+    let back: CardInstance =
+        serde_json::from_str(&serde_json::to_string(&card).unwrap()).expect("round trip");
+    assert_eq!(back.definition.name, "Grizzly Bears Audacious");
+    assert_eq!(back.name_stickers, card.name_stickers);
+
+    // Hidden zone: the sticker comes off and is free again.
+    g.move_card_to(bear, &ZoneDest::Hand(PlayerRef::You), &ctx, &mut events);
+    assert_eq!(name(&g, bear), "Grizzly Bears");
+    assert!(g.available_name_stickers(0).contains(&1), "the sticker is free again");
+}

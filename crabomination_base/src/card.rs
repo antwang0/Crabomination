@@ -354,6 +354,8 @@ pub enum CreatureType {
     Spawn,
     // Unfinity (Quick Fixer).
     Azra, Employee,
+    // Unfinity (_____ Goblin).
+    Guest,
 }
 
 /// Land subtypes (basic land types + others).
@@ -7002,6 +7004,17 @@ pub struct CardCold {
     /// battlefield the engine returns this card to `ExileLink::return_to`.
     /// `None` for ordinary (permanent) exile.
     pub exiled_by: Option<ExileLink>,
+    /// CR 123.6 — the name stickers on this object, `(sticker, position)` in
+    /// timestamp order (the position is the word count the sticker follows,
+    /// CR 123.6b/c). Empty for every object that never met a sticker card.
+    /// Written only by [`CardInstance::put_name_sticker`] /
+    /// [`CardInstance::strip_name_stickers`], both guarded.
+    pub name_stickers: Vec<(crate::sticker::NameStickerId, u8)>,
+    /// The definition the name stickers are applied over — restored when the
+    /// stickers come off (CR 123.5, a move to a hidden zone). `Some` exactly
+    /// while `name_stickers` is non-empty. In-memory only: the wire stores
+    /// its name plus `name_stickers` and re-applies them on load.
+    pub name_sticker_base: Option<Arc<CardDefinition>>,
 }
 
 /// `slice.has_kw(&Keyword::X)` without the out-of-line `Keyword::eq` call.
@@ -9506,6 +9519,40 @@ impl CardInstance {
         Some(name)
     }
 
+    /// CR 123.6 — put name sticker `sticker` on this object after `pos`
+    /// words of its name, which becomes the printed name with every sticker
+    /// on it added (CR 123.6b). The name change is a definition swap: the
+    /// definition the stickers apply over is kept in `name_sticker_base` and
+    /// the active one is a clone carrying the stickered (interned) name.
+    pub fn put_name_sticker(&mut self, sticker: crate::sticker::NameStickerId, pos: u8) {
+        let base = match self.name_sticker_base.clone() {
+            Some(b) => b,
+            None => self.definition.arc(),
+        };
+        let mut stickers = self.name_stickers.clone();
+        stickers.push((sticker, pos));
+        let name = crate::sticker::stickered_name(base.name, &stickers);
+        let mut def = (*base).clone();
+        def.name = crate::static_str_serde::intern(name);
+        self.name_sticker_base = Some(base);
+        self.name_stickers = stickers;
+        self.set_definition(Arc::new(def));
+    }
+
+    /// CR 123.5 — stickers are not retained as an object moves to a hidden
+    /// zone: take them off and restore the unstickered definition. Guarded,
+    /// so an unstickered card (every card in a game without sticker cards)
+    /// pays no CoW unshare.
+    pub fn strip_name_stickers(&mut self) {
+        if self.name_stickers.is_empty() && self.name_sticker_base.is_none() {
+            return;
+        }
+        self.name_stickers.clear();
+        if let Some(base) = self.name_sticker_base.take() {
+            self.set_definition(base);
+        }
+    }
+
     /// CR 710.2 — outside the battlefield only the unflipped characteristics
     /// exist; restore the top face as the card changes zones.
     pub fn revert_flip(&mut self) {
@@ -10262,6 +10309,9 @@ struct CardInstanceWire {
     /// for back-compat.
     #[serde(default)]
     resolve_riders: Option<(bool, bool)>,
+    /// CR 123.6 name stickers, re-applied over `name` on load.
+    #[serde(default)]
+    name_stickers: Vec<(crate::sticker::NameStickerId, u8)>,
 }
 
 impl serde::Serialize for CardInstance {
@@ -10276,6 +10326,8 @@ impl serde::Serialize for CardInstance {
                 .as_ref()
                 .or(self.front_face.as_ref())
                 .or(self.unflipped_def.as_ref())
+                // CR 123.6 — the unstickered name; the stickers ride along.
+                .or(self.name_sticker_base.as_ref())
                 .map(|f| f.name.to_string())
                 .unwrap_or_else(|| self.definition.name.to_string()),
             owner: self.owner,
@@ -10395,6 +10447,7 @@ impl serde::Serialize for CardInstance {
             created_by: self.created_by,
             protected_by: self.protected_by,
             resolve_riders: self.resolve_riders,
+            name_stickers: self.name_stickers.clone(),
         };
         wire.serialize(ser)
     }
@@ -10573,6 +10626,9 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.created_by = wire.created_by;
         c.protected_by = wire.protected_by;
         c.resolve_riders = wire.resolve_riders;
+        for (sticker, pos) in wire.name_stickers {
+            c.put_name_sticker(sticker, pos);
+        }
         Ok(c)
     }
 }

@@ -296,7 +296,9 @@ Each unblocks a large swath of cards.
   "Recently closed"); dungeons ✅ (CR 309); **attractions ✅** (CR 717 — the
   command-zone Attraction deck + junkyard, `Effect::OpenAnAttraction`, the
   precombat-main roll-to-visit turn-based action, and Visit triggers keyed to
-  each card's lit-up numbers). Remaining: conspiracy, sticker (CR 123).
+  each card's lit-up numbers). Stickers 🟡 (CR 123 — **name stickers only**:
+  `crabomination_base::sticker` + `Effect::PutNameSticker`, stand-in sheets;
+  _____ Goblin). Remaining: conspiracy; ability / P-T / art stickers, tickets.
 - ✅ **Emblems** as command-zone objects — `Player.emblems` + `CreateEmblem`,
   carrying both triggered and **static (anthem) abilities** (Vivien Reid's −8;
   synthesized into continuous effects in `gather_continuous_effects`).

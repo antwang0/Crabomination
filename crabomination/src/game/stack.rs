@@ -7594,6 +7594,12 @@ impl GameState {
             self.players[owner].attraction_junkyard.push(card);
             return;
         }
+        // CR 123.5 — stickers are not retained into a hidden zone.
+        if matches!(zone, Zone::Hand | Zone::Library)
+            || (zone == Zone::Graveyard && card.definition.shuffles_into_library_instead)
+        {
+            card.strip_name_stickers();
+        }
         match zone {
             // CR 614.6 — "shuffle into its owner's library instead"
             // (Darksteel Colossus); the card never touches the graveyard.

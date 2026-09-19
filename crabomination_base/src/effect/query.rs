@@ -1038,6 +1038,7 @@ impl Effect {
             Effect::MoveChosenKeyword { from, to, .. } => {
                 sel_has_target(from) || sel_has_target(to)
             }
+            Effect::PutNameSticker { what, .. } => sel_has_target(what),
             Effect::LockActivatedAbilitiesThisTurn { what } => sel_has_target(what),
             Effect::RevealFiveDraftAgainstOpponent => false,
             Effect::EncoreTokens => false,
