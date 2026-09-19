@@ -1382,21 +1382,47 @@ fn gtc10_sylvan_primordial_destroys_and_ramps() {
     assert!(f.tapped, "Forest enters tapped");
 }
 
-/// Treasury Thrull returns a permanent from your graveyard on combat damage.
+/// Treasury Thrull — "whenever this creature **attacks**, you **may** return
+/// target artifact, creature, or enchantment card from your graveyard to
+/// **your hand**". It shipped as the pre-errata Gatecrash text (combat
+/// damage, mandatory, onto the battlefield), which is three drifts in one
+/// clause. Found by `scripts/audit_invented_trigger.py`.
 #[test]
-fn gtc10_treasury_thrull_recurs_on_damage() {
+fn gtc10_treasury_thrull_returns_to_hand_on_attack() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = two_player_game();
     let thrull = g.add_card_to_battlefield(0, catalog::treasury_thrull());
     let dead = g.add_card_to_graveyard(0, catalog::razortip_whip()); // an artifact
+    g.clear_sickness(thrull);
+    // Accept the printed "you may"; `AutoDecider` declines every optional
+    // trigger, which is what the second test below reads.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: thrull, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    // The trigger is on the *attack*, so the card is back before damage.
+    assert!(g.players[0].hand.iter().any(|c| c.id == dead),
+        "the artifact card is in hand, not on the battlefield");
+    assert!(g.battlefield_find(dead).is_none(), "it is NOT reanimated");
+    assert!(g.players[0].graveyard.is_empty());
+}
+
+/// The same trigger is declinable (the printed "you may").
+#[test]
+fn gtc10_treasury_thrull_recursion_is_optional() {
+    let mut g = two_player_game();
+    let thrull = g.add_card_to_battlefield(0, catalog::treasury_thrull());
+    let dead = g.add_card_to_graveyard(0, catalog::razortip_whip());
     g.clear_sickness(thrull);
     advance_to(&mut g, TurnStep::DeclareAttackers);
     g.perform_action(GameAction::DeclareAttackers(vec![Attack {
         attacker: thrull, target: AttackTarget::Player(1),
     }])).expect("attack");
     drain_stack(&mut g);
-    advance_to(&mut g, TurnStep::CombatDamage);
-    drain_stack(&mut g);
-    assert!(g.battlefield_find(dead).is_some(), "artifact returned from graveyard");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == dead),
+        "AutoDecider declines the may; the card stays in the graveyard");
 }
 
 /// Hellkite Tyrant steals all of the damaged player's artifacts.

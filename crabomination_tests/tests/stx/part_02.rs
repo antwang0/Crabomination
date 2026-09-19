@@ -1902,29 +1902,29 @@ fn valor_in_graveyard_grants_first_strike_with_plains() {
 
 // ── Triskaidekaphile (STX 2021) ────────────────────────────────────────────
 
+/// Triskaidekaphile's ETB lifts the maximum hand size — and draws NOTHING.
+/// It shipped with an invented cantrip on the ETB, on a card whose whole
+/// point is hand size. Found by `scripts/audit_invented_trigger.py`.
 #[test]
-fn triskaidekaphile_etb_draws_a_card_and_lifts_max_hand_size() {
-    // ETB body: draw 1 + flip Player.no_maximum_hand_size flag.
-    // Cast via the spell pipeline so the ETB trigger fires.
+fn triskaidekaphile_etb_lifts_max_hand_size_and_draws_nothing() {
     let mut g = two_player_game();
     for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
     let id = g.add_card_to_hand(0, catalog::triskaidekaphile());
     let hand_before = g.players[0].hand.len();
-    let max_before = g.players[0].max_hand_size;
-    assert_eq!(max_before, Some(7), "default max hand size is seven");
+    assert_eq!(g.players[0].max_hand_size, Some(7), "default max hand size is seven");
 
     g.players[0].mana_pool.add(Color::Blue, 2);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
-    .expect("Triskaidekaphile castable for {1}{U}{U}");
+    .expect("Triskaidekaphile castable for {1}{U}");
     drain_stack(&mut g);
 
     assert_eq!(g.players[0].max_hand_size, None,
         "Triskaidekaphile ETB should remove the maximum hand size");
-    // Hand: -1 (cast) + 1 (ETB draw) = 0 net.
-    assert_eq!(g.players[0].hand.len(), hand_before);
+    assert_eq!(g.players[0].hand.len(), hand_before - 1,
+        "the cast left the hand; nothing replaced it");
     assert!(g.battlefield.iter().any(|c| c.id == id),
         "Triskaidekaphile stays on the battlefield");
 }
@@ -2064,28 +2064,38 @@ fn excellent_education_can_target_opponent() {
 
 // ── Sproutback Trudge (STX 2021) ────────────────────────────────────────────
 
+/// Sproutback Trudge — "at the beginning of your end step, if you gained life
+/// this turn, you may cast this creature from your graveyard." It shipped
+/// with an invented ETB lifegain and neither printed ability. Found by
+/// `scripts/audit_invented_trigger.py`. 🟡 The recursion is Gravecrawler's
+/// approximation (pay the cost, move it) rather than a real cast.
 #[test]
-fn sproutback_trudge_gains_life_per_creature_in_graveyard() {
+fn sproutback_trudge_recurs_from_the_graveyard_after_gaining_life() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = two_player_game();
-    // Seed three creature cards in P0's graveyard.
-    g.add_card_to_graveyard(0, catalog::grizzly_bears());
-    g.add_card_to_graveyard(0, catalog::grizzly_bears());
-    g.add_card_to_graveyard(0, catalog::grizzly_bears());
-    // Plus one non-creature for control — shouldn't count.
-    g.add_card_to_graveyard(0, catalog::island());
-
-    let life_before = g.players[0].life;
-    let id = g.add_card_to_hand(0, catalog::sproutback_trudge());
+    let id = g.add_card_to_graveyard(0, catalog::sproutback_trudge());
+    g.active_player_idx = 0;
+    g.players[0].life += 1;
+    g.players[0].life_gained_this_turn += 1;
     for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
     g.players[0].mana_pool.add_colorless(20);
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
-    })
-    .expect("Sproutback Trudge castable for {3}{G}{G}");
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.fire_step_triggers(TurnStep::End);
     drain_stack(&mut g);
+    assert!(g.battlefield_find(id).is_some(), "the Trudge came back");
+}
 
-    assert_eq!(g.players[0].life, life_before + 3,
-        "Sproutback Trudge gains life equal to creature cards in your graveyard (3)");
+/// …and not at all on a turn with no life gained.
+#[test]
+fn sproutback_trudge_stays_down_without_lifegain() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_graveyard(0, catalog::sproutback_trudge());
+    g.active_player_idx = 0;
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(id).is_none(), "no life gained, no recursion");
 }
 
 // ── Deep Analysis (STA reprint) ─────────────────────────────────────────────
@@ -2299,23 +2309,6 @@ fn tribute_to_hunger_no_creature_to_sac_gives_no_life() {
         "no creature to sac → no life gained");
 }
 
-#[test]
-fn sproutback_trudge_with_empty_graveyard_gains_zero_life() {
-    let mut g = two_player_game();
-    let life_before = g.players[0].life;
-    let id = g.add_card_to_hand(0, catalog::sproutback_trudge());
-    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
-    g.players[0].mana_pool.add_colorless(20);
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
-    })
-    .expect("Sproutback Trudge castable for {3}{G}{G}");
-    drain_stack(&mut g);
-
-    assert_eq!(g.players[0].life, life_before,
-        "Sproutback Trudge with empty gy gains 0 life");
-}
-
 // ── Pigment Storm ───────────────────────────────────────────────────────────
 
 #[test]
@@ -2473,26 +2466,35 @@ fn choose_n_decider_overrides_the_default_mode_picks() {
 
 // ── Tome of the Infinite ────────────────────────────────────────────────────
 
+/// Tome of the Infinite resolves onto the battlefield and fires no trigger.
+/// An ETB scry 1 used to sit on it; the printed card has one activated
+/// ability and nothing else. Found by `scripts/audit_invented_trigger.py`.
+/// 🟡 Conjure has no primitive, so the activation's draw is the stand-in.
 #[test]
-fn tome_of_the_infinite_etb_scrys_one() {
+fn tome_of_the_infinite_has_no_enters_trigger() {
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::island());
     let id = g.add_card_to_hand(0, catalog::tome_of_the_infinite());
     for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
     g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
-        card_id: id,
-        target: None,
-        additional_targets: vec![],
-        mode: None,
-        x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
-    .expect("Tome of the Infinite castable for {1}");
+    .expect("Tome of the Infinite castable for {2}{U}");
+    assert_eq!(g.stack.len(), 1, "only the artifact spell — no enters trigger");
     drain_stack(&mut g);
-
-    // Tome is on the battlefield.
+    assert!(g.stack.is_empty(), "…and nothing triggered when it resolved");
     let tome = g.battlefield_find(id).expect("tome on battlefield");
     assert_eq!(tome.controller, 0);
+    let hand_before = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(),
+        x_value: None, mode: None,
+    })
+    .expect("{U}, {T}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "the activation draws");
 }
 
 // ── Drannith Stinger ────────────────────────────────────────────────────────
@@ -3445,38 +3447,40 @@ fn soothing_hush_counters_creature_spell() {
 
 // ── Sage of the Beyond (modern_decks push) ────────────────────────────────
 
+/// Sage of the Beyond — "spells you cast from anywhere other than your hand
+/// cost {2} less to cast". It shipped with an invented "combat damage → that
+/// player discards" trigger and no cost reduction at all. Found by
+/// `scripts/audit_invented_trigger.py`. 🟡 The reduction is spelled as its
+/// two reachable zones (graveyard, exile); the command zone is the residual.
 #[test]
-fn sage_of_the_beyond_combat_damage_makes_opp_discard() {
+fn sage_of_the_beyond_discounts_a_flashback_cast_and_has_no_damage_trigger() {
+    use crabomination::effect::StaticEffect;
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::sage_of_the_beyond());
     g.clear_sickness(id);
-    // Seed opp's hand with a card to discard.
-    let target_card = g.add_card_to_hand(1, catalog::lightning_bolt());
-
-    while g.step != crabomination::game::types::TurnStep::DeclareAttackers {
-        g.perform_action(GameAction::PassPriority).expect("pass priority");
-    }
-    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
-        attacker: id,
-        target: AttackTarget::Player(1),
-    }])).expect("declare attackers");
+    let def = catalog::sage_of_the_beyond();
+    assert!(def.triggered_abilities.is_empty(), "the printed card has no trigger");
+    assert!(def.static_abilities.iter().any(|s| matches!(
+        s.effect, StaticEffect::GraveyardCastCostReduction { amount: 2 })));
+    assert!(def.static_abilities.iter().any(|s| matches!(
+        s.effect, StaticEffect::ExileCastCostReduction { amount: 2 })));
+    // Deep Analysis has Flashback {1}{U} + 3 life; the Sage takes {2} off it,
+    // leaving a single blue pip.
+    let deep = g.add_card_to_graveyard(0, catalog::deep_analysis());
+    for _ in 0..4 { g.add_card_to_library(0, catalog::island()); }
+    g.active_player_idx = 0;
+    g.step = crabomination::game::types::TurnStep::PostCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastFlashback {
+        card_id: deep, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("flashback costs {2} less with the Sage out");
     drain_stack(&mut g);
-
-    // Skip past blockers (none).
-    while g.step != crabomination::game::types::TurnStep::CombatDamage {
-        g.perform_action(GameAction::PassPriority).expect("pass priority");
-    }
-    g.resolve_combat().expect("combat damage");
-    drain_stack(&mut g);
-
-    // Opp discarded a card from hand.
-    let card_in_hand = g.players[1].hand.iter().any(|c| c.id == target_card);
-    let card_in_gy = g.players[1].graveyard.iter().any(|c| c.id == target_card);
-    assert!(
-        !card_in_hand || card_in_gy,
-        "Opp's card discarded (in gy, not hand)"
-    );
+    assert_eq!(g.players[0].hand.len(), hand_before + 2, "Deep Analysis drew two");
 }
+
 
 // ── Frostpyre Arcanist (modern_decks push) ────────────────────────────────
 
@@ -3740,27 +3744,28 @@ fn elite_spellbinder_exiles_opp_nonland_with_owner_may_play_tax() {
 
 // ── Waker of Waves (modern_decks push) ──────────────────────────────────
 
+/// Waker of Waves — "creatures your opponents control get -1/-0". It shipped
+/// with the static missing and an ETB "draw two, discard two" it does not
+/// print standing in its place. Found by
+/// `scripts/audit_invented_trigger.py`.
 #[test]
-fn waker_of_waves_etb_loots_two() {
+fn waker_of_waves_shrinks_only_the_opponents_creatures() {
     let mut g = two_player_game();
-    // Seed library
-    for _ in 0..5 {
-        g.add_card_to_library(0, catalog::island());
-    }
-    // Seed hand with two cards to discard
-    g.add_card_to_hand(0, catalog::grizzly_bears());
-    g.add_card_to_hand(0, catalog::grizzly_bears());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::waker_of_waves());
     for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
     g.players[0].mana_pool.add_colorless(20);
-
     let hand_before = g.players[0].hand.len();
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Waker of Waves castable");
     drain_stack(&mut g);
-    // -1 cast, +2 draw, -2 discard = -1
-    assert_eq!(g.players[0].hand.len(), hand_before - 1);
+    assert_eq!(g.players[0].hand.len(), hand_before - 1, "no loot — that was invented");
+    let theirs_v = g.computed_permanent(theirs).expect("opponent bear");
+    assert_eq!((theirs_v.power, theirs_v.toughness), (1, 2), "-1/-0 on their side");
+    let mine_v = g.computed_permanent(mine).expect("my bear");
+    assert_eq!((mine_v.power, mine_v.toughness), (2, 2), "…and nothing on mine");
 }
 
 // ── Discover the Formula (modern_decks push) ───────────────────────────

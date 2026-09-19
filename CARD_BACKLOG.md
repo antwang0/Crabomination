@@ -20,6 +20,7 @@ Four changes, all reversible from `git log -p`, and **no body was edited**:
 | Set / topic | Status | Lines |
 | --- | --- | --- |
 | [The fan-out family's third ratchet — "each player" is not "each opponent"](#the-fan-out-familys-third-ratchet--each-player-is-not-each-opponent) | closed — 1 residual | 22 |
+| [The synthesised-name class — 48 factories, and the two columns that can now read them](#the-synthesised-name-class--48-factories-and-the-two-columns-that-can-now-read-them) | open — 11 fixed, 48 to read | 37 |
 | [The TARGET-clause class — 126 cards printed "target opponent" and hit the whole table](#the-target-clause-class--126-cards-printed-target-opponent-and-hit-the-whole-table) | closed — 1 residual | 60 |
 | [Target-deck card defects, and why they are all blocked on one thing](#target-deck-card-defects-and-why-they-are-all-blocked-on-one-thing) | open | 33 |
 | [CR 603.2c batches — four clauses closed, and the ratchets that hold them](#cr-6032c-batches--four-clauses-closed-and-the-ratchets-that-hold-them) | closed — residuals only | 72 |
@@ -264,6 +265,42 @@ that keeps one ratchet honest is the hole in the other**, so run the family,
 not a member. ⏳ Residual on the card: that leave-trigger return is still
 missing — `Effect::ExileFromHand` carries no `exiled_with` stamp for it to
 find.
+
+## The synthesised-name class — 48 factories, and the two columns that can now read them
+
+This file has known the shape since the fifty-fourth pass ("**A synthesised
+card wearing a printed card's name**", below): a printed name, cost, types and
+P/T with an invented ability underneath. Its own note explains why it survives
+review — the *characteristics* get corrected against Scryfall at some point and
+the ability never does, so `audit_catalog_stats` and `audit_printed_body` both
+read zero on the card. **No column compared abilities.** Two now do
+(`audit_invented_may.py`, `audit_invented_trigger.py`; ENGINE_BACKLOG's
+forty-fifth find has the method and the three reader bugs), and between them
+they named eleven, all fixed.
+
+**The remaining reading list is 48 factories whose doc comment says
+"synthesised"/"invented" and whose `name:` is a card Scryfall owns.** It is a
+reading list, not a proof: some of them are correct bodies under a doc that has
+simply gone stale, which is the same trap `audit_doc_drift` measured at 338
+stale comments and 3 real defects. By file, largest first:
+
+```
+15  stx/extras_03.rs       6  stx/extras_04.rs       3  stx/silverquill.rs
+ 7  decks/modern.rs        3  stx/iconic.rs          2  stx/mono.rs
+ 2  eoe.rs                 1 each: one.rs, mod_set/creatures.rs, mod_set/instants.rs,
+                           stx/extras_{01,02,08,09}.rs, stx/lessons.rs, stx/shared.rs,
+                           decks/recent2.rs
+```
+
+The census is ten lines of Python: walk every `pub fn … -> CardDefinition`,
+take the doc comment above it, keep the ones whose comment matches
+`synthesi|invented|made-up`, resolve the card's name the way the two auditors
+do (**every** string literal, prefer the slug that matches the `pub fn`), and
+keep the ones whose name is in `scripts/.scryfall_cache.json`.
+
+⚠ **Work them by reading the oracle against the BODY, never against the doc
+comment** — three of the four cards in the original fifty-fourth-pass batch had
+a comment describing the card the body used to be.
 
 ## The TARGET-clause class — 126 cards printed "target opponent" and hit the whole table
 

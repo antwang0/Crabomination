@@ -106,17 +106,14 @@ pub fn sneaky_snacker() -> CardDefinition {
 
 // ── Soulknife Spy (synthesised STX Quandrix/blue Rogue) ───────────────────
 
-/// Soulknife Spy — {2}{U}, 3/2 Human Rogue (synthesised STX flavor).
-/// "Whenever Soulknife Spy deals combat damage to a player, you may
-/// pay {U}. If you do, draw a card."
+/// Soulknife Spy — {2}{U} 3/2 Elf Rogue (AFR). "Whenever this creature deals
+/// combat damage to a player, draw a card."
 ///
-/// Push (modern_decks, NEW, `stx::extras`): Card-velocity attacker
-/// that turns each combat hit into a {U} → draw exchange. Wired via
-/// `DealsCombatDamageToPlayer/SelfSource` trigger + `Effect::MayPay`
-/// for the optional card draw. Tests:
-/// `soulknife_spy_is_a_two_mana_one_three_rogue`,
-/// `soulknife_spy_combat_damage_can_draw_a_card_via_scripted_decider`,
-/// `soulknife_spy_combat_damage_no_pay_skips_draw`.
+/// ⚠ Shipped as a *synthesised* card under a **printed** card's name, with an
+/// invented `Effect::MayPay { {U} }` gating the draw: strictly worse than the
+/// print, and a pilot that declines never drew at all. Cost, type line and
+/// body already matched the real card; only the gate did not.
+/// Found by `scripts/audit_invented_may.py`.
 pub fn soulknife_spy() -> CardDefinition {
     CardDefinition {
         name: "Soulknife Spy",
@@ -130,15 +127,7 @@ pub fn soulknife_spy() -> CardDefinition {
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
-            effect: Effect::MayPay {
-                description: "Pay {U} to draw a card.".into(),
-                mana_cost: cost(&[u()]),
-                body: Box::new(Effect::Draw {
-                    who: Selector::You,
-                    amount: Value::Const(1),
-                }),
-                else_: None,
-            },
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
         }],
         ..Default::default()
     }

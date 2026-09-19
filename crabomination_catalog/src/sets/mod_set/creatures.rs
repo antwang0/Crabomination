@@ -5125,17 +5125,30 @@ pub fn candelabra_of_tawnos() -> CardDefinition {
 
 // ── Guardian Scalelord ──────────────────────────────────────────────────────
 
-/// Guardian Scalelord — {4}{W}, 3/4 Dragon with Flying.
+/// Guardian Scalelord — {4}{W} 3/4 Dragon (MOM). Backup 1 (CR 702.164),
+/// Flying, and "whenever this creature attacks, return target nonland
+/// permanent card with mana value X or less from your graveyard to the
+/// battlefield, where X is this creature's power."
 ///
-/// Oracle: "Flying. Whenever this creature attacks, you may have target
-/// creature you control gain flying until end of turn."
-///
-/// Wired with an `Attacks/SelfSource` trigger that fans out to a
-/// `MayDo(GrantKeyword(Flying, EOT, target friendly creature))`. The
-/// "another" / "you control" rider scopes the auto-target to creatures
-/// the controller owns; the AutoDecider opts in by default (declining
-/// flying-grant is a strict downside).
+/// ⚠ It shipped as an **invented** card under the printed name: a
+/// `MayDo(GrantKeyword(Flying))` on attack, no Backup, and no reanimation at
+/// all. Found by `scripts/audit_invented_may.py` — the `MayDo` was the
+/// needle, the wrong body was what the needle led to. X is the *live* power
+/// (`ManaValueAtMostSourcePower`), so a Backup counter on the Scalelord
+/// itself widens its own trigger.
 pub fn guardian_scalelord() -> CardDefinition {
+    let reanimate = TriggeredAbility {
+        event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+        effect: Effect::Move {
+            what: target_filtered(
+                SelectionRequirement::PermanentCard
+                    .and(SelectionRequirement::Nonland)
+                    .and(SelectionRequirement::InYourGraveyard)
+                    .and(SelectionRequirement::ManaValueAtMostSourcePower),
+            ),
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+        },
+    };
     CardDefinition {
         name: "Guardian Scalelord",
         cost: cost(&[generic(4), w()]),
@@ -5147,20 +5160,16 @@ pub fn guardian_scalelord() -> CardDefinition {
         power: 3,
         toughness: 4,
         keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
-            effect: Effect::MayDo {
-                description: "Target creature you control gains flying until end of turn."
-                    .to_string(),
-                body: Box::new(Effect::GrantKeyword {
-                    what: target_filtered(
-                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-                    ),
-                    keyword: Keyword::Flying,
-                    duration: crate::effect::Duration::EndOfTurn,
-                }),
-            },
-        }],
+        triggered_abilities: vec![
+            // Backup 1 grants everything printed below it: Flying, and the
+            // attack trigger itself (CR 702.164a).
+            crate::effect::shortcut::backup_with(
+                1,
+                vec![Keyword::Flying],
+                vec![reanimate.clone()],
+            ),
+            reanimate,
+        ],
         ..Default::default()
     }
 }

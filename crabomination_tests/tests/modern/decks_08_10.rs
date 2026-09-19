@@ -1149,15 +1149,12 @@ fn coalition_relic_taps_to_add_charge_counter() {
 #[test]
 fn coalition_relic_precombat_burst_removes_all_charges_for_mana() {
     use crabomination::card::CounterType;
-    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
     use crabomination::game::types::TurnStep;
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::coalition_relic());
     g.battlefield_find_mut(id).unwrap().add_counters(CounterType::Charge, 4);
     g.active_player_idx = 0;
     g.step = TurnStep::PreCombatMain;
-    // Accept the optional "remove all charges, add a mana each" trigger.
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
     g.fire_step_triggers(TurnStep::PreCombatMain);
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::Charge), 0,
@@ -1167,7 +1164,12 @@ fn coalition_relic_precombat_burst_removes_all_charges_for_mana() {
 }
 
 #[test]
-fn coalition_relic_precombat_burst_can_be_declined() {
+fn coalition_relic_precombat_burst_is_mandatory() {
+    // "At the beginning of your first main phase, remove all charge counters
+    // from this artifact. Add one mana of any color for each charge counter
+    // removed this way." — no "you may". It shipped wrapped in `Effect::MayDo`,
+    // and `AutoDecider` declines every optional trigger, so the ability never
+    // once fired in bot play. Found by `scripts/audit_invented_may.py`.
     use crabomination::card::CounterType;
     use crabomination::game::types::TurnStep;
     let mut g = two_player_game();
@@ -1175,12 +1177,12 @@ fn coalition_relic_precombat_burst_can_be_declined() {
     g.battlefield_find_mut(id).unwrap().add_counters(CounterType::Charge, 2);
     g.active_player_idx = 0;
     g.step = TurnStep::PreCombatMain;
-    // AutoDecider declines the MayDo by default.
+    // No decider script: the default pilot must not be able to opt out.
     g.fire_step_triggers(TurnStep::PreCombatMain);
     drain_stack(&mut g);
-    assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::Charge), 2,
-        "declined — charges kept");
-    assert_eq!(g.players[0].mana_pool.total(), 0, "no mana when declined");
+    assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::Charge), 0,
+        "mandatory — the charges go whether the pilot wants them to or not");
+    assert_eq!(g.players[0].mana_pool.total(), 2, "one mana per charge removed");
 }
 
 #[test]

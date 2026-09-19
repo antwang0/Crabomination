@@ -1771,25 +1771,25 @@ fn grim_lavamancer_rejects_activation_with_only_one_gy_card() {
         "GY fodder still in place — cost wasn't partially paid");
 }
 
-// ── Guardian Scalelord (M15 / cube card) ────────────────────────────────────
+// ── Guardian Scalelord (MOM) ────────────────────────────────────────────────
+//
+// It shipped as an invented card under a printed name — a declinable "target
+// creature you control gains flying" on attack, no Backup, no reanimation.
+// `scripts/audit_invented_may.py` named it by its `Effect::MayDo`.
 
 #[test]
-fn guardian_scalelord_attack_grants_flying_to_target_friendly() {
+fn guardian_scalelord_attack_reanimates_a_nonland_permanent_card() {
     use crabomination::card::{CreatureType, Keyword};
     use crabomination::game::{Attack, AttackTarget};
     let mut g = two_player_game();
     let scalelord = g.add_card_to_battlefield(0, catalog::guardian_scalelord());
     g.clear_sickness(scalelord);
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    g.clear_sickness(bear);
+    // Grizzly Bears is mana value 2; the Scalelord's power is 3.
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
     drain_stack(&mut g);
-    // Body sanity check.
-    let scalelord_card = g.battlefield_find(scalelord).unwrap();
-    assert!(scalelord_card.has_keyword(&Keyword::Flying));
-    assert!(scalelord_card.definition.subtypes.creature_types.contains(&CreatureType::Dragon));
-
-    // Accept the MayDo rider so the bear actually gets Flying.
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let card = g.battlefield_find(scalelord).unwrap();
+    assert!(card.has_keyword(&Keyword::Flying));
+    assert!(card.definition.subtypes.creature_types.contains(&CreatureType::Dragon));
 
     g.active_player_idx = 0;
     g.step = TurnStep::DeclareAttackers;
@@ -1799,24 +1799,21 @@ fn guardian_scalelord_attack_grants_flying_to_target_friendly() {
         target: AttackTarget::Player(1),
     }])).expect("Scalelord can attack");
     drain_stack(&mut g);
-    // The bear should now have Flying EOT.
-    let bear_card = g.battlefield_find(bear).unwrap();
-    assert!(bear_card.has_keyword(&Keyword::Flying),
-        "Scalelord's attack trigger gave the bear flying");
+    assert!(g.battlefield_find(dead).is_some(),
+        "the attack trigger returns the bear to the battlefield");
+    assert!(g.players[0].graveyard.is_empty(), "…and it leaves the graveyard");
 }
 
 #[test]
-fn guardian_scalelord_declines_optional_grant_by_default() {
-    // AutoDecider defaults to "no" on MayDo (CR 603.2 — the controller
-    // chooses; the bot harness defaults to skipping optional non-cost
-    // riders). The bear should NOT get flying without an explicit yes.
-    use crabomination::card::Keyword;
+fn guardian_scalelord_will_not_reanimate_above_its_power() {
+    // "…with mana value X or less, where X is this creature's power" — the
+    // filter is `ManaValueAtMostSourcePower`, read live off the battlefield.
     use crabomination::game::{Attack, AttackTarget};
     let mut g = two_player_game();
     let scalelord = g.add_card_to_battlefield(0, catalog::guardian_scalelord());
     g.clear_sickness(scalelord);
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    g.clear_sickness(bear);
+    // Wall of Omens is mana value 2; Elder Gargaroth is 5, above power 3.
+    let big = g.add_card_to_graveyard(0, catalog::elder_gargaroth());
     drain_stack(&mut g);
 
     g.active_player_idx = 0;
@@ -1827,8 +1824,38 @@ fn guardian_scalelord_declines_optional_grant_by_default() {
         target: AttackTarget::Player(1),
     }])).expect("Scalelord can attack");
     drain_stack(&mut g);
-    let bear_card = g.battlefield_find(bear).unwrap();
-    assert!(!bear_card.has_keyword(&Keyword::Flying),
-        "AutoDecider declines the MayDo; bear stays grounded");
+    assert!(g.battlefield_find(big).is_none(),
+        "mana value 5 is above the Scalelord's power — nothing to return");
+    assert_eq!(g.players[0].graveyard.len(), 1, "the card stays in the graveyard");
+}
+
+#[test]
+fn guardian_scalelord_backup_1_grants_its_attack_trigger() {
+    // CR 702.164a — Backup N grants the abilities printed below it, the
+    // reanimation trigger included, to another creature until end of turn.
+    use crabomination::card::CounterType;
+    use crabomination::game::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let dead = g.add_card_to_graveyard(0, catalog::memnite());
+    let id = g.add_card_to_hand(0, catalog::guardian_scalelord());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.decider = Box::new(ScriptedDecider::new(vec![
+        DecisionAnswer::Target(Target::Permanent(bear)),
+    ]));
+    cast(&mut g, id);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "Backup 1 puts its counter on the chosen creature");
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear, target: AttackTarget::Player(1),
+    }])).expect("attack with the backed-up bear");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(dead).is_some(),
+        "the granted trigger reanimates off the bear's own power");
 }
 

@@ -410,7 +410,24 @@ ratchet; this is the engineering view of it.
 | Fist of Suns, Leyline of Mutation | "You may pay {W}{U}{B}{R}{G} rather than pay the mana cost for spells you cast" | no primitive for a static alternative cost granted to *other* spells |
 | Maraxus of Keld, Bounty Hunter | not card gaps — the Scryfall cache resolves the name to a different card (one Vanguard avatar, one creature) than the catalog holds | nothing; the rows document the collision |
 
-## Highest-priority single-card gaps
+## The INVENTED-ability columns (2026-09-19) — residuals only
+
+Eleven cards that did something they do not print were rewritten to the
+oracle at the forty-fifth find (ENGINE_BACKLOG has the method and the list).
+Both auditors read **0** at the closing tip:
+
+```
+python3 scripts/audit_invented_may.py      # 0 / 948 bodies with a needle
+python3 scripts/audit_invented_trigger.py  # 0 / 4,103 claims, 20 allowed, 0 stale
+```
+
+Three of the eleven kept a documented residual rather than shipping whole:
+
+| Card | Residual | Why |
+|---|---|---|
+| Sage of the Beyond | "spells you cast **from anywhere other than your hand** cost {2} less" is spelled as its two reachable zones — `GraveyardCastCostReduction` + `ExileCastCostReduction`. A cast from the **command zone** is not discounted | there is no "any zone but hand" cost-reduction static; the two that exist cover flashback/retrace/escape/disturb/aftermath and foretell/plot/adventure/impulse, which is every zone the engine actually casts from outside a Commander game |
+| Sproutback Trudge | the graveyard recursion is Gravecrawler's shape — pay the cost, `Move` to the battlefield — so it is **not a cast**: nothing counters it and no cast trigger sees it. And "this spell costs {X} less to cast, where X is the amount of life you gained this turn" is **absent** | no `StaticEffect` reduces a card's own cost by a `Value`; the `SelfCostReduced*` family is one variant per counted thing (`…PerDiscardThisTurn`, `…PerSpellCastThisTurn`, …). A `SelfCostReducedByValue` would close this one and generalise the whole family |
+| Tome of the Infinite | the activation's `Draw 1` stands in for "conjure a random card from its spellbook" | Alchemy conjure has no primitive (pre-existing row below). The invented ETB scry beside it is gone |
 
 ### Body-only stubs — entire signature ability missing (all ✓ code-verified)
 | Card | Location | Missing |

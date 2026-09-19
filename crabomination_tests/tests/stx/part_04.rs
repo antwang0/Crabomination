@@ -707,23 +707,30 @@ fn quandrix_trampler_enters_with_counter_per_other_creature() {
         "got at least 2 +1/+1 counters for 2 other creatures");
 }
 
+/// Lorehold Archivist — "at the beginning of your upkeep, if there are three
+/// or more artifact and/or creature cards in your graveyard, this creature
+/// becomes prepared." It shipped as a synthesised card: an attack trigger
+/// returning an instant or sorcery to hand, no prepare spell, no upkeep
+/// trigger. Found by `scripts/audit_invented_trigger.py`.
 #[test]
-fn lorehold_archivist_returns_is_on_attack() {
-    use crabomination::game::types::AttackTarget;
+fn lorehold_archivist_becomes_prepared_at_three_gy_cards() {
+    use crabomination::card::CounterType;
     use crabomination::game::TurnStep;
     let mut g = two_player_game();
     let la = g.add_card_to_battlefield(0, catalog::lorehold_archivist());
-    g.clear_sickness(la);
-    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
-    // Switch to declare-attackers step and swing.
-    g.step = TurnStep::DeclareAttackers;
-    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
-        attacker: la,
-        target: AttackTarget::Player(1),
-    }])).expect("attack declared");
+    g.active_player_idx = 0;
+    for _ in 0..2 {
+        g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    }
+    g.fire_step_triggers(TurnStep::Upkeep);
     drain_stack(&mut g);
-    assert!(g.players[0].hand.iter().any(|c| c.id == bolt),
-        "instant returned to hand on attack");
+    assert_eq!(g.battlefield_find(la).unwrap().counter_count(CounterType::Prepared), 0,
+        "two cards is under the printed three");
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(la).unwrap().counter_count(CounterType::Prepared), 1,
+        "three artifact and/or creature cards — it becomes prepared");
 }
 
 #[test]

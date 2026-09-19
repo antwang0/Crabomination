@@ -636,41 +636,38 @@ fn strixhaven_reservoir_taps_for_any_color() {
     assert_eq!(total, 1, "got 1 mana from Reservoir");
 }
 
+/// Lone Rider // It That Rides as One — "at the beginning of the end step,
+/// if you gained 3 or more life this turn, transform this creature." It
+/// shipped as a synthesised "attacks alone" pump under the printed name
+/// (`scripts/audit_invented_trigger.py`); `IsAttackingAlone` keeps its
+/// coverage from Solo Striker below.
 #[test]
-fn lone_rider_pumps_when_attacking_alone() {
-    // Locks in CR 506.5 "attacking alone" predicate. The Lone Rider's
-    // attack-trigger only fires when it's the only declared attacker.
+fn lone_rider_transforms_after_three_life_gained() {
     let mut g = two_player_game();
     let rider = g.add_card_to_battlefield(0, catalog::lone_rider());
-    g.clear_sickness(rider);
-    g.step = TurnStep::DeclareAttackers;
-    g.priority.player_with_priority = 0;
-    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
-        attacker: rider, target: AttackTarget::Player(1),
-    }])).expect("Rider attacks alone");
+    g.active_player_idx = 0;
+    g.players[0].life += 3;
+    g.players[0].life_gained_this_turn += 3;
+    g.fire_step_triggers(TurnStep::End);
     drain_stack(&mut g);
-    let view = g.computed_permanent(rider).expect("Rider on bf");
-    assert_eq!(view.power, 3, "Rider 1 + 2 from alone-attack trigger");
-    assert!(view.keywords().contains(&Keyword::Trample), "Trample EOT granted");
+    let view = g.computed_permanent(rider).expect("still on the battlefield");
+    assert_eq!((view.power, view.toughness), (4, 4), "transformed into the 4/4 back face");
+    assert!(view.keywords().contains(&Keyword::Trample), "the back face has trample");
+    assert!(view.keywords().contains(&Keyword::Lifelink));
 }
 
 #[test]
-fn lone_rider_does_not_pump_with_other_attackers() {
+fn lone_rider_stays_a_one_one_under_three_life() {
     let mut g = two_player_game();
     let rider = g.add_card_to_battlefield(0, catalog::lone_rider());
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    g.clear_sickness(rider);
-    g.clear_sickness(bear);
-    g.step = TurnStep::DeclareAttackers;
-    g.priority.player_with_priority = 0;
-    g.perform_action(GameAction::DeclareAttackers(vec![
-        Attack { attacker: rider, target: AttackTarget::Player(1) },
-        Attack { attacker: bear, target: AttackTarget::Player(1) },
-    ])).expect("Both attack");
+    g.active_player_idx = 0;
+    g.players[0].life += 2;
+    g.players[0].life_gained_this_turn += 2;
+    g.fire_step_triggers(TurnStep::End);
     drain_stack(&mut g);
-    let view = g.computed_permanent(rider).expect("Rider on bf");
-    assert_eq!(view.power, 1, "Rider not pumped (multiple attackers — not 'alone')");
-    assert!(!view.keywords().contains(&Keyword::Trample), "No Trample (not alone)");
+    let view = g.computed_permanent(rider).expect("still on the battlefield");
+    assert_eq!((view.power, view.toughness), (1, 1), "two life is under the printed three");
+    assert!(!view.keywords().contains(&Keyword::Trample));
 }
 
 #[test]

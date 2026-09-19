@@ -19,6 +19,8 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED 2026-09-19 (the forty-fifth find) — the INVENTED-ability column, built the way this file's own "CLOSED WITH A REASON" note prescribed, and the eleven cards it named](#fixed-2026-09-19-the-forty-fifth-find--the-invented-ability-column-built-the-way-this-files-own-closed-with-a-reason-note-prescribed-and-the-eleven-cards-it-named) | 68 |
+| Bugs & robustness | [OPEN 2026-09-19 — nineteen cube-pool entries are DUPLICATED, so nineteen cards draft at double weight](#open-2026-09-19--nineteen-cube-pool-entries-are-duplicated-so-nineteen-cards-draft-at-double-weight) | 19 |
 | Bugs & robustness | [FIXED 2026-09-19 (the forty-fourth find) — a printed "TARGET opponent" clause modelled as a fan-out is invisible in a duel and hits the whole table in a pod](#fixed-2026-09-19-the-forty-fourth-find--a-printed-target-opponent-clause-modelled-as-a-fan-out-is-invisible-in-a-duel-and-hits-the-whole-table-in-a-pod) | 55 |
 | Bugs & robustness | [FIXED 2026-09-19 (the forty-third find) — a LOOP whose body suspends parks only the BODY, and twenty of them ran on and dropped the rest](#fixed-2026-09-19-the-forty-third-find--a-loop-whose-body-suspends-parks-only-the-body-and-twenty-of-them-ran-on-and-dropped-the-rest) | 90 |
 | Bugs & robustness | [FIXED 2026-09-13 (twenty-sixth find) — the sweep's only surviving cap, and the field in the digest that was bookkeeping rather than progress](#fixed-2026-09-13-twenty-sixth-find--the-sweeps-only-surviving-cap-and-the-field-in-the-digest-that-was-bookkeeping-rather-than-progress) | 80 |
@@ -83,6 +85,96 @@ the handoff.
 
 
 # Bugs & robustness
+
+## FIXED 2026-09-19 (the forty-fifth find) — the INVENTED-ability column, built the way this file's own "CLOSED WITH A REASON" note prescribed, and the eleven cards it named
+
+Two mirrors, both of the "ask the printed-clause ratchet the other way" family,
+and both landing on the same class: **a shipped card that does something it
+does not print.** A *missing* clause makes the engine's card weaker than the
+print and shows up eventually as a card that underperforms; an **invented** one
+makes it stronger, and a bot pilots straight into it.
+
+**The method is not new here — the reason it works is.** "CLOSED WITH A REASON
+2026-09-12" (below) killed the obvious move of inverting `audit_oracle_verbs`,
+and its diagnosis was structural: that auditor's `have` set expands helpers
+transitively and consults a global helper table across every set file, an
+over-approximation *on purpose*. Over-approximating `have` costs a false
+negative in the MISSING direction and a false **positive** in the INVENTED one
+— 14,350 rows over 17,026 cards when it was measured. Its closing sentence is
+the spec both new scripts were written to: "an invented-ability column needs a
+`have` set built from the card's OWN literal with no helper expansion and no
+global table — a different reader, not a flag on this one."
+
+- **`scripts/audit_invented_may.py`** — the mirror of `audit_dropped_may`. A
+  body carrying a resolution-time choice (`MayDo`, `MayPay`, `OptionalTargets`,
+  fifteen more) whose printed text has no optional wording at all. **3 → 0**
+  over 948 bodies with a needle, zero false positives at the closing tip.
+- **`scripts/audit_invented_trigger.py`** — a body that writes
+  `EventKind::<Variant>` in its own braces, where the printed text (every face,
+  reminder text kept) carries none of the phrasings that spell that event.
+  **45 → 8 → 0** over 4,103 claims on 3,815 bodies, with 20 rows allowed as
+  documented implementation devices and a staleness half that fails an ALLOW
+  row whose site is gone.
+
+**The eleven cards, and what each was.** Coalition Relic's mandatory
+charge→mana burst wrapped in a `MayDo`, which `AutoDecider` declines, so the
+ability never fired once in bot play. Soulknife Spy gating its printed "draw a
+card" behind an invented `MayPay {U}`. Guardian Scalelord as a declinable
+"gains flying" with no Backup and no reanimation. Treasury Thrull shipping the
+**pre-errata** Gatecrash text — combat damage, mandatory, onto the battlefield
+— where the current oracle is attacks, optional, to hand. Mourning Thrull as a
+haunt card. Sage of the Beyond, Waker of Waves, Lone Rider and Lorehold
+Archivist as whole synthesised cards. Triskaidekaphile and Tome of the Infinite
+with an invented cantrip apiece.
+
+**⚠ Three reader bugs, and every one of them silently scored a card against a
+DIFFERENT card's oracle.** They generalise to any name-keyed audit:
+
+1. **`name:` is not where this catalog keeps the card's name.** Most creature
+   factories spread a constructor — `..creature("Lullmage Mentor", …)` — so the
+   only `name:` in the body belongs to the *token* the card mints, and a
+   `name:`-only walk scores Lullmage Mentor against "Merfolk". Take every
+   string literal and prefer the one whose slug is the `pub fn`'s.
+2. **The slug must fold accents and drop apostrophes.** "Palani's Hatcher"
+   slugs to `palani_s_hatcher` and "Andúril" to `and_ril`, neither of which
+   matches its function, so both fell through to the token-name fallback.
+3. **A phrase set that is too tight manufactures findings on correct cards** —
+   38 of the first 45. One printed clause has many spellings: a
+   leaves-the-battlefield trigger is also "is put into a graveyard from the
+   battlefield", "dies" and "when you lose control of"; an enters trigger is
+   also "puts … onto the battlefield" and "when you play another land"; and
+   "whenever you **play a card**" is one clause the engine must spell as
+   *two* events (`LandPlayed` + `SpellCast`).
+
+📐 **And the class both columns land on already had a name in CARD_BACKLOG —
+"a synthesised card wearing a printed card's name" — with no detector.** Its
+own note says why it survives: the *characteristics* get corrected against
+Scryfall (so `audit_catalog_stats` and `audit_printed_body` read zero) and the
+ability never does, because no column compares abilities. **48 factories
+carry a "synthesised" doc comment under a name Scryfall owns**; these two
+columns caught eleven of them by the shape of the body alone. The rest are a
+reading list, not a proof — the doc comment is the tell, not the finding.
+
+## OPEN 2026-09-19 — nineteen cube-pool entries are DUPLICATED, so nineteen cards draft at double weight
+
+`cube.rs`'s per-colour pools list each factory once. Nineteen of them are
+listed twice: `white_pool` has `descendant_of_storms`, `intervention_pact`,
+`wall_of_omens` and `guardian_scalelord`; `blue_pool` `snapping_drake`, `gush`,
+`snapcaster_mage`; `black_pool` `walking_corpse`, `collective_brutality`,
+`toxic_deluge`, `murderous_cut`, `corpse_dance`, `baleful_mastery`; `red_pool`
+`goblin_balloon_brigade`, `arclight_phoenix`; `green_pool` `elder_gargaroth`,
+`vengevine`. `cube_pool_all` and `all_cube_cards` both dedupe, so the **Vocab
+is unaffected** — but `cube_deck` samples `color_pool(..)` directly through
+`sample_with_cap`, which rolls an index into the raw `Vec`, so each of the
+nineteen is twice as likely to be drafted as its neighbours.
+
+**Not taken this run, deliberately.** The fix is nineteen line deletions plus a
+`no_duplicate_factories_in_any_cube_pool` ratchet, but it changes cube deck
+*composition*, which moves the `cube` and `sealed` absolutes in PERF and
+invalidates any in-flight A/B. `--bench` plays `--decks fixed` and the golden
+traces are fixed too, so neither moves. Take it at the **start** of a run, with
+a fresh base, not beside a perf comparison. The census is four lines of Python
+over `cube.rs` (count identifiers per `*_pool` body).
 
 ## FIXED 2026-09-19 (the forty-fourth find) — a printed "TARGET opponent" clause modelled as a fan-out is invisible in a duel and hits the whole table in a pod
 

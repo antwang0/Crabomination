@@ -6445,37 +6445,36 @@ pub fn coalition_relic() -> CardDefinition {
                 ..Default::default()
             },
         ],
-        // CR 701.x charge→mana burst: at the beginning of your precombat
-        // main phase you may remove all charge counters and add one mana of
-        // any color for each. `AddMana` reads the count before the
+        // Charge→mana burst: "At the beginning of your first main phase,
+        // remove all charge counters from this artifact. Add one mana of any
+        // color for each charge counter removed this way." **Mandatory** —
+        // there is no "you may" on the card. It shipped wrapped in `MayDo`,
+        // and since `AutoDecider` declines every optional trigger the ability
+        // never fired once in bot play. `AddMana` reads the count before the
         // `RemoveCounter` strips them (Seq order), so the mana matches the
-        // charges removed. `MayDo` keeps it optional (AutoDecider declines).
+        // charges removed.
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
                 EventKind::StepBegins(TurnStep::PreCombatMain),
                 EventScope::YourControl,
             ),
-            effect: Effect::MayDo {
-                description: "Remove all charge counters; add a mana of any color for each"
-                    .to_string(),
-                body: Box::new(Effect::Seq(vec![
-                    Effect::AddMana {
-                        who: PlayerRef::You,
-                        pool: ManaPayload::AnyColors(Value::CountersOn {
-                            what: Box::new(Selector::This),
-                            kind: CounterType::Charge,
-                        }),
-                    },
-                    Effect::RemoveCounter {
-                        what: Selector::This,
+            effect: Effect::Seq(vec![
+                Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::AnyColors(Value::CountersOn {
+                        what: Box::new(Selector::This),
                         kind: CounterType::Charge,
-                        amount: Value::CountersOn {
-                            what: Box::new(Selector::This),
-                            kind: CounterType::Charge,
-                        },
+                    }),
+                },
+                Effect::RemoveCounter {
+                    what: Selector::This,
+                    kind: CounterType::Charge,
+                    amount: Value::CountersOn {
+                        what: Box::new(Selector::This),
+                        kind: CounterType::Charge,
                     },
-                ])),
-            },
+                },
+            ]),
         }],
         ..Default::default()
     }

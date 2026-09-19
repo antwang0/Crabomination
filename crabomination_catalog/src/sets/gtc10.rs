@@ -238,9 +238,13 @@ pub fn sylvan_primordial() -> CardDefinition {
     }
 }
 
-/// Treasury Thrull — {4}{W}{B} 4/4 Thrull. Extort; whenever it deals combat
-/// damage to a player, return target artifact, creature, or enchantment card
-/// from your graveyard to the battlefield.
+/// Treasury Thrull — {4}{W}{B} 4/4 Thrull. Extort; "whenever this creature
+/// **attacks**, you **may** return target artifact, creature, or enchantment
+/// card from your graveyard to **your hand**."
+///
+/// ⚠ It shipped as the pre-errata Gatecrash text — combat damage, mandatory,
+/// straight to the battlefield — which is three drifts in one clause and a
+/// strictly stronger card. Found by `scripts/audit_invented_trigger.py`.
 pub fn treasury_thrull() -> CardDefinition {
     CardDefinition {
         name: "Treasury Thrull",
@@ -252,15 +256,17 @@ pub fn treasury_thrull() -> CardDefinition {
         triggered_abilities: vec![
             extort(),
             TriggeredAbility {
-                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
-                effect: Effect::Move {
-                    what: target_filtered(
-                        R::InYourGraveyard.and(R::Artifact.or(R::Creature).or(R::Enchantment)),
-                    ),
-                    to: ZoneDest::Battlefield {
-                        controller: PlayerRef::You,
-                        tapped: false,
-                    },
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::MayDo {
+                    description: "Return target artifact, creature, or enchantment card \
+                                  from your graveyard to your hand."
+                        .to_string(),
+                    body: Box::new(Effect::Move {
+                        what: target_filtered(
+                            R::InYourGraveyard.and(R::Artifact.or(R::Creature).or(R::Enchantment)),
+                        ),
+                        to: ZoneDest::Hand(PlayerRef::You),
+                    }),
                 },
             },
         ],

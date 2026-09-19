@@ -1247,14 +1247,13 @@ pub fn anger() -> CardDefinition {
 
 /// Triskaidekaphile — {1}{U}, 1/3 Human Wizard (STX 2021 rare).
 ///
-/// "When this creature enters, draw a card.
-///  You have no maximum hand size.
+/// "You have no maximum hand size.
 ///  At the beginning of your upkeep, if you have exactly 13 cards in
-///  your hand, you win the game."
+///  your hand, you win the game.
+///  {3}{U}: Draw a card."
 ///
-/// Push (modern_decks, NEW, `stx::extras`): combines three existing
-/// engine primitives:
-/// - **ETB trigger** → `Effect::Draw 1` (standard cantrip body).
+/// Push (modern_decks, NEW, `stx::extras`): combines existing engine
+/// primitives:
 /// - **Static "no maximum hand size"** → `Effect::SetNoMaxHandSize`
 ///   fires on ETB so the controller can hoard cards above 7. The
 ///   cleanup-step discard (CR 514.1) sees `Player.max_hand_size == None`
@@ -1286,16 +1285,13 @@ pub fn triskaidekaphile() -> CardDefinition {
         power: 1,
         toughness: 3,
         triggered_abilities: vec![
-            // ETB: draw a card + flip the "no maximum hand size" flag.
+            // ETB: flip the "no maximum hand size" flag. ⚠ It also drew a
+            // card, which the printed card does not do — an invented cantrip
+            // on a card whose whole point is hand size. Found by
+            // `scripts/audit_invented_trigger.py`.
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: Effect::Seq(vec![
-                    Effect::Draw {
-                        who: Selector::You,
-                        amount: Value::Const(1),
-                    },
-                    Effect::SetNoMaxHandSize { who: Selector::You },
-                ]),
+                effect: Effect::SetNoMaxHandSize { who: Selector::You },
             },
             // Upkeep: if you have exactly 13 cards in hand, you win.
             TriggeredAbility {
@@ -1356,17 +1352,19 @@ pub fn excellent_education() -> CardDefinition {
 
 // ── Sproutback Trudge (STX 2021, mono green) ────────────────────────────────
 
-/// Sproutback Trudge — {7}{G}{G} Creature — Plant, 9/7 (STX 2021 common).
+/// Sproutback Trudge — {7}{G}{G} 9/7 Fungus Beast (STX). Trample; "at the
+/// beginning of your end step, if you gained life this turn, you may cast
+/// this creature from your graveyard."
 ///
-/// "When this creature enters, you gain X life, where X is the number
-/// of creature cards in your graveyard."
+/// ⚠ It shipped with an invented ETB lifegain and neither printed ability.
+/// Found by `scripts/audit_invented_trigger.py`.
 ///
-/// Push (modern_decks, NEW, `stx::extras`): a beefy 5-mana 5/6 Plant
-/// body with an ETB life-gain rider scaling off your graveyard's
-/// creature count. The X value is computed via `Value::CountOf` over
-/// `Selector::CardsInZone { zone: Graveyard, filter: Creature }`. A
-/// grindy late-game reload that pairs well with Witherbloom /
-/// Lorehold gy-fill engines.
+/// 🟡 Two documented approximations, both in `INCOMPLETE_CARDS.md`. The
+/// graveyard recursion is Gravecrawler's shape — pay the cost, move it to the
+/// battlefield — so it is not a *cast*: nothing can counter it and no
+/// cast trigger sees it. And "this spell costs {X} less to cast, where X is
+/// the amount of life you gained this turn" is missing; no `StaticEffect`
+/// reduces a card's own cost by a `Value`.
 pub fn sproutback_trudge() -> CardDefinition {
     use crate::card::Zone;
     use crate::effect::PlayerRef as PR;
@@ -1382,14 +1380,22 @@ pub fn sproutback_trudge() -> CardDefinition {
         toughness: 7,
         keywords: vec![Keyword::Trample],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::GainLife {
-                who: Selector::You,
-                amount: Value::CountOf(Box::new(Selector::CardsInZone {
-                    who: PR::You,
-                    zone: Zone::Graveyard,
-                    filter: SelectionRequirement::Creature,
-                })),
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::types::TurnStep::End),
+                EventScope::FromYourGraveyard,
+            )
+            .with_filter(crate::card::Predicate::LifeGainedThisTurnAtLeast {
+                who: PR::You,
+                at_least: Value::Const(1),
+            }),
+            effect: Effect::MayPay {
+                description: "Cast Sproutback Trudge from your graveyard?".into(),
+                mana_cost: cost(&[generic(7), g(), g()]),
+                body: Box::new(Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Battlefield { controller: PR::You, tapped: false },
+                }),
+                else_: None,
             },
         }],
         ..Default::default()
@@ -1854,13 +1860,8 @@ pub fn tome_of_the_infinite() -> CardDefinition {
             from_hand: false,
             ..Default::default()
         }],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Scry {
-                who: PR::You,
-                amount: Value::Const(1),
-            },
-        }],
+        // ⚠ An ETB scry 1 used to sit here; the printed card has no trigger at
+        // all. Found by `scripts/audit_invented_trigger.py`.
         ..Default::default()
     }
 }
