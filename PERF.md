@@ -3015,7 +3015,7 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
-### 2026-09-19 (the sixth Commander session, tip `1a49709b`) — guardrail, no perf work
+### 2026-09-19 (the sixth Commander session, engine tip `4c4afec6`) — guardrail, no perf work
 
 The loop-splice class (ENGINE_BACKLOG's forty-third find): twenty loops that
 dropped their remaining iterations when a body suspended, one helper, one
@@ -3025,14 +3025,22 @@ gains exactly one `Option::is_some` on the *non*-suspending pass, because
 the signal is set.
 
 ```text
---bench (release, tip 1a49709b):
+--bench (release), taken at TWO tips this session — after the loop-splice
+class (`1a49709b`) and again after the CardId pin (`4c4afec6`). Identical:
   decisions          195,806   byte-identical to the committed invariant
   turns_per_game       27.49   "
   decisions_per_game   611.9   "
   stalls          0 (cap 0 / board 0 / stuck 0 / draw 0)
   determinism     ok (all pairs split); thread_determinism ok (3 vs 1)
-  peak_rss_mib     25.7
+  peak_rss_mib     25.7 / 25.4
 ```
+
+**Pod smoke, both tips, fresh seeds and nothing re-used:** 10,800 games over
+2/3/4/5 seats at seeds 3101-3108 — **100 % decided, 0 stalls, every
+`undecided_by` column zero**, no panic and no error line in any run
+(redirected to files, then grepped: `rc=$?` after a pipe reads the pipe).
+Turns a game 18.20-18.23 / 30.25-30.54 / 41.36-41.49 / 51.80-52.30, i.e. the
+two tips agree inside the seed noise. **FRONTIER 3109.**
 
 📐 **The pre-check that made the modal commit safe to predict, and it is
 reusable: read the trace decks and `archetypes()` before reasoning about the
