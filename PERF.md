@@ -3015,6 +3015,54 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-09-19 (the seventh Commander session, tip `7f9520ed`) — guardrail, no perf work
+
+Two correctness commits: `Effect::BindScratch` (the resolver scratch a parked
+continuation dropped) and the **target-clause class** — 126 implemented cards
+whose printed "target opponent / target player" clause was modelled as
+`PlayerRef::EachOpponent`. **Neither is a perf change and neither moved a
+number.**
+
+```text
+--bench (release), CRAB_THREAD_CHECK=1:
+  decisions          195,806   byte-identical to the committed invariant
+  turns_per_game       27.49   "
+  decisions_per_game   611.9   "
+  stalls          0 (cap 0 / board 0 / stuck 0 / draw 0)
+  determinism     ok (all pairs split); thread_determinism ok (3 vs 1)
+  peak_rss_mib     25.9
+```
+
+📐 **And the cheap pre-check said so before the build did, which is the
+reusable half**: the bench plays `--decks fixed`, i.e. `bot_ladder::
+archetypes()` — 38 cards, every one of them a vanilla creature, a burn spell
+or a one-clause removal spell. **Not one of the 126 changed cards is in it,
+and not one is in `golden_trace.rs`'s two decks.** The only thing that *could*
+have moved it was the engine half (`friendliness_of_targeting_children` now
+reads the first targeting child of a `Seq` instead of `any`), and the
+archetypes hold no `Seq` whose targeting children disagree. Read the two deck
+lists before predicting a card commit's bench.
+
+**Pod smoke, fresh seeds and nothing re-used:** 12,000 games over 2/3/4/5
+seats at seeds 3201-3203 — **100 % decided, 0 stalls, every `undecided_by`
+column zero**, no panic or error line. Turns a game 18.27-18.50 / 30.29-30.76 /
+41.16-41.59 / 52.38-52.91, i.e. inside the previous session's ranges with a
+small upward drift at 4 and 5 seats — which is the class fix showing up
+exactly where it should: a removal clause that used to hit three seats now
+hits one. **FRONTIER 3204.**
+
+**Deck aggregate** (release-fast, seed 43, 3,000 games, four seats):
+39.8 / 14.7 / 20.0 / 25.5 against the recorded 40.8 / 14.6 / 20.3 / 24.3 —
+inside the noise.
+
+⚠ **Build economics, measured again on this box (4 cores, 15 GB):** `release`
+bot_ladder **23m24s** after a catalog + engine change; `release-fast` ~13 min;
+the workspace debug suite 95-102 s. ⚠⚠ **And the rule that cost two whole
+builds this session: DO NOT EDIT THE TREE WHILE AN OPTIMIZED BUILD IS
+RUNNING.** rustc reads a crate's sources at the start, so the artifact it
+produces is from the pre-edit tree *and* cargo then re-runs the whole chain.
+Batch every catalog edit, then build once.
+
 ### 2026-09-19 (the sixth Commander session, engine tip `feb5714d`) — guardrail, no perf work
 
 The loop-splice class (ENGINE_BACKLOG's forty-third find): twenty loops that
