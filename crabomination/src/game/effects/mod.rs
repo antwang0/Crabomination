@@ -60,6 +60,36 @@ pub(crate) fn per_seat_continuation(rest: &[usize], make: impl Fn(usize) -> Effe
     }
 }
 
+/// Append `tail` behind the continuation a body just parked, when that body
+/// suspended. Returns true when it did, i.e. when the caller's loop must
+/// return and let the tail resume it.
+///
+/// A suspending body carries only its *own* remaining effect, so a loop that
+/// merely ran on abandoned every iteration after the one that suspended
+/// (CR 101.4 — "each opponent" / "each player" is every one of them, not the
+/// first). The tail must name its seats inside the `Effect`: the parked
+/// continuation is resumed under a rebuilt context, so a seat pinned only in
+/// an `EffectContext` field does not survive the suspension.
+///
+/// `tail` is a closure: the un-suspended pass is the common one and must not
+/// pay for a continuation nobody will run.
+pub(crate) fn splice_after_suspend(
+    signal: &mut Option<Box<(crate::decision::Decision, PendingEffectState, Effect)>>,
+    tail: impl FnOnce() -> Effect,
+) -> bool {
+    let Some(parked) = signal.as_deref_mut() else { return false };
+    let tail = tail();
+    if !matches!(tail, Effect::Noop) {
+        let carried = std::mem::replace(&mut parked.2, Effect::Noop);
+        parked.2 = if matches!(carried, Effect::Noop) {
+            tail
+        } else {
+            Effect::seq(vec![carried, tail])
+        };
+    }
+    true
+}
+
 /// Translate the cast-site `effect::Duration` into the runtime
 /// `layers::EffectDuration` used by the continuous-effect layer system.
 ///
@@ -4399,21 +4429,12 @@ impl GameState {
                     // and its half of the effect never happened. `Seq` carries
                     // its tail the same way; here the tail is the seats not yet
                     // reached, each re-seated by a `Seat(q)` fan-out of one.
-                    if let Some((_, _, remaining)) = self.suspend_signal.as_deref_mut() {
-                        let tail = per_seat_continuation(&seats[i + 1..], |q| {
-                            Effect::EachPlayerDoes {
-                                who: PlayerRef::Seat(q),
-                                body: body.clone(),
-                            }
-                        });
-                        if !matches!(tail, Effect::Noop) {
-                            let carried = std::mem::replace(remaining, Effect::Noop);
-                            *remaining = if matches!(carried, Effect::Noop) {
-                                tail
-                            } else {
-                                Effect::seq(vec![carried, tail])
-                            };
-                        }
+                    if splice_after_suspend(&mut self.suspend_signal, || {
+                        per_seat_continuation(&seats[i + 1..], |q| Effect::EachPlayerDoes {
+                            who: PlayerRef::Seat(q),
+                            body: body.clone(),
+                        })
+                    }) {
                         return Ok(());
                     }
                 }
@@ -20643,7 +20664,7 @@ impl GameState {
                         _ => None,
                     })
                     .collect();
-                for p in choosers {
+                for (i, p) in choosers.iter().copied().enumerate() {
                     // The chooser evaluates the options with themselves as the
                     // effect controller (so `PlayerRef::You` = the chooser).
                     let opt_ctx = EffectContext { controller: p, ..ctx.clone() };
@@ -20668,6 +20689,21 @@ impl GameState {
                             self.run_effect(otherwise, &pay_ctx, events)?
                         }
                     }
+                    // A chooser's option (a sacrifice, a discard) suspends, and
+                    // without this the choosers after them never got asked.
+                    // The tail is this same arm restricted to one seat, so the
+                    // re-entry re-derives that seat's affordable option against
+                    // the board as it stands then — which is what CR 101.4's
+                    // sequential order means.
+                    if splice_after_suspend(&mut self.suspend_signal, || {
+                        per_seat_continuation(&choosers[i + 1..], |q| Effect::Punisher {
+                            chooser: Selector::Player(PlayerRef::Seat(q)),
+                            options: options.clone(),
+                            otherwise: otherwise.clone(),
+                        })
+                    }) {
+                        return Ok(());
+                    }
                 }
                 Ok(())
             }
@@ -20684,7 +20720,7 @@ impl GameState {
                     })
                     .collect();
                 choosers = self.apnap_sort(choosers);
-                for p in choosers {
+                for (i, p) in choosers.iter().copied().enumerate() {
                     let opt_ctx = EffectContext { controller: p, ..ctx.clone() };
                     // The chooser picks the option that harms them least
                     // (CR 701.55b lets an impossible option be chosen, which
@@ -20693,6 +20729,21 @@ impl GameState {
                     let harm_b = self.villainous_self_harm(option_b, &opt_ctx);
                     let pick = if harm_b < harm_a { option_b } else { option_a };
                     self.run_effect(pick, &opt_ctx, events)?;
+                    // The picked option suspends (an exile-from-graveyard or a
+                    // sacrifice choice) and the choosers after this one were
+                    // dropped. Re-enter this arm per remaining seat so each
+                    // still makes their own CR 701.55 choice.
+                    if splice_after_suspend(&mut self.suspend_signal, || {
+                        per_seat_continuation(&choosers[i + 1..], |q| {
+                            Effect::VillainousChoice {
+                                who: Selector::Player(PlayerRef::Seat(q)),
+                                option_a: option_a.clone(),
+                                option_b: option_b.clone(),
+                            }
+                        })
+                    }) {
+                        return Ok(());
+                    }
                 }
                 Ok(())
             }
@@ -22612,31 +22663,28 @@ impl GameState {
                 // resolved up front: the body may kill one, and the printed
                 // "for each opponent" is fixed as the effect starts.
                 let seats = self.resolve_players(&crate::effect::PlayerRef::EachOpponent, ctx);
-                for opp in seats {
+                for (i, opp) in seats.iter().copied().enumerate() {
                     let opp_ctx = EffectContext {
                         trigger_source: Some(crate::game::effects::EntityRef::Player(opp)),
                         ..ctx.clone()
                     };
                     self.run_effect(body, &opp_ctx, events)?;
-                    // A body that suspends carries only its OWN effect as the
-                    // parked continuation, so iterations after this one are
-                    // abandoned silently — the defect `MayDoRepeatedly` had
-                    // and fixed by splicing (see the `tail_after` idiom in
-                    // that arm, and `SearchUpToN`). Splicing here needs each
-                    // remaining iteration to pin a *different* opponent, and
-                    // `trigger_source` is a context field that no `Effect`
-                    // carries, so the splice needs a wrapper variant.
-                    //
-                    // Not built, because the catalog's one `ForEachOpponent`
-                    // body (Adeline's attacking-token) cannot suspend. This
-                    // assertion is the price of that judgement: the first card
-                    // whose body *can* fails loudly here instead of quietly
-                    // skipping every opponent after the first.
-                    debug_assert!(
-                        self.suspend_signal.is_none(),
-                        "ForEachOpponent body suspended — the remaining opponents \
-                         are being dropped; splice the tail as MayDoRepeatedly does",
-                    );
+                    // A suspended body parks only its OWN effect, so without
+                    // this the opponents after `opp` were dropped. Each
+                    // remaining iteration pins a *different* opponent, and
+                    // `trigger_source` is a context field the parked
+                    // continuation cannot carry — so the tail names its seat
+                    // inside the effect, as `Effect::ForEach` over a
+                    // `PlayerRef::Seat` selector, which is the same
+                    // trigger-source binding this loop uses.
+                    if splice_after_suspend(&mut self.suspend_signal, || {
+                        per_seat_continuation(&seats[i + 1..], |q| Effect::ForEach {
+                            selector: Selector::Player(PlayerRef::Seat(q)),
+                            body: body.clone(),
+                        })
+                    }) {
+                        return Ok(());
+                    }
                 }
                 Ok(())
             }
@@ -22667,27 +22715,27 @@ impl GameState {
                     }
                 }
                 self.clear_answer_log();
-                // Same shape, same judgement, same guard as `ForEachOpponent`
-                // above: three body runs follow each other here, so a suspend
-                // in any of them drops the rest. All four catalog Tempt cards
-                // make tokens or add counters and cannot suspend.
-                let no_suspend = |g: &Self| {
-                    debug_assert!(
-                        g.suspend_signal.is_none(),
-                        "TemptingOffer body suspended — the runs after it are \
-                         being dropped; splice the tail as MayDoRepeatedly does",
-                    );
-                };
-                self.run_effect(body, ctx, events)?;
-                no_suspend(self);
-                for &opp in &acceptors {
-                    let opp_ctx = EffectContext { controller: opp, ..ctx.clone() };
-                    self.run_effect(body, &opp_ctx, events)?;
-                    no_suspend(self);
-                }
-                for _ in 0..acceptors.len() {
-                    self.run_effect(body, ctx, events)?;
-                    no_suspend(self);
+                // CR 701.60a — the controller runs the body once, then once
+                // per acceptor for that acceptor, then once more per acceptor
+                // for the controller. Every run is "the body, under some
+                // controller", so the whole tail is one seat list and a
+                // suspend in run k splices the runs after it back in the same
+                // way `ForEachOpponent` above does.
+                let mut runs = Vec::with_capacity(2 * acceptors.len() + 1);
+                runs.push(ctx.controller);
+                runs.extend(acceptors.iter().copied());
+                runs.extend(std::iter::repeat_n(ctx.controller, acceptors.len()));
+                for (i, seat) in runs.iter().copied().enumerate() {
+                    let run_ctx = EffectContext { controller: seat, ..ctx.clone() };
+                    self.run_effect(body, &run_ctx, events)?;
+                    if splice_after_suspend(&mut self.suspend_signal, || {
+                        per_seat_continuation(&runs[i + 1..], |q| Effect::EachPlayerDoes {
+                            who: PlayerRef::Seat(q),
+                            body: body.clone(),
+                        })
+                    }) {
+                        return Ok(());
+                    }
                 }
                 Ok(())
             }

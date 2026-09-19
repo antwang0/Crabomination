@@ -4257,3 +4257,194 @@ fn cr_800_4c_an_ordinary_reversion_is_untouched() {
         "back to the seat that held it by default",
     );
 }
+
+// ── CR 101.4 — a per-player loop whose body suspends ───────────────────────
+//
+// "If multiple players would make choices … at the same time, the active
+// player makes any choices required, then each other player in turn order
+// does the same." Every one of them, not the first: a body that suspends
+// (a `wants_ui` seat's discard, sacrifice or exile pick) parks only its
+// *own* remaining effect, so the loop around it used to run on and abandon
+// the seats it had not reached. Invisible in a duel — "each opponent" is
+// one iteration there — and it drops two thirds of a four-seat pod.
+
+/// Resolve the top of the stack to completion, answering every ask the
+/// installed decider would answer. `drain_stack` can't: it passes priority,
+/// and a pending decision is exactly what blocks that.
+fn resolve_answering(g: &mut GameState) {
+    g.resolve_top_of_stack().expect("resolve the trigger");
+    for _ in 0..64 {
+        let Some(pending) = g.pending_decision.as_ref() else { break };
+        let decision = pending.decision.clone();
+        let answer = g.decider.decide(&decision);
+        g.submit_decision(answer).expect("answer the ask");
+    }
+    assert!(g.pending_decision.is_none(), "every ask was answered");
+}
+
+/// Two cards into each opponent's hand, and the hand sizes before the loop.
+fn stock_opponent_hands(g: &mut GameState, seats: std::ops::Range<usize>) -> Vec<usize> {
+    for seat in seats {
+        g.add_card_to_hand(seat, catalog::grizzly_bears());
+        g.add_card_to_hand(seat, catalog::lightning_bolt());
+    }
+    g.players.iter().map(|p| p.hand.len()).collect()
+}
+
+/// CR 101.4 — `ForEachOpponent` over a suspending body reaches every
+/// opponent. The body is bound to its opponent through `Triggerer`, which is
+/// an `EffectContext` field the parked continuation cannot carry, so the
+/// spliced tail names each remaining seat inside the effect instead.
+#[test]
+fn cr_101_4_for_each_opponent_reaches_every_opponent_when_the_body_suspends() {
+    use crabomination::effect::{Effect, Selector, Value};
+    let mut g = multi_player_game(4);
+    for p in g.players.iter_mut() {
+        // Only a `wants_ui` seat suspends, which is what makes the loop's
+        // abandonment observable at all.
+        p.wants_ui = true;
+    }
+    let before = stock_opponent_hands(&mut g, 1..4);
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.stack.push(
+        TriggerPush::new(src, 0, Effect::ForEachOpponent {
+            body: Box::new(Effect::Discard {
+                who: Selector::Player(PlayerRef::Triggerer),
+                amount: Value::Const(1),
+                random: false,
+            }),
+        })
+        .build(),
+    );
+    resolve_answering(&mut g);
+    for (seat, &had) in before.iter().enumerate().skip(1) {
+        assert_eq!(
+            g.players[seat].hand.len(),
+            had - 1,
+            "opponent {seat} discarded one — not just the first opponent",
+        );
+    }
+}
+
+/// CR 101.4 / 701.55 — every chooser makes their own villainous choice even
+/// when the option they pick suspends. The tail re-enters the arm per
+/// remaining seat, so each still chooses for themselves rather than
+/// inheriting the first chooser's pick.
+#[test]
+fn cr_701_55_every_chooser_still_chooses_when_an_option_suspends() {
+    use crabomination::effect::{Effect, Selector, Value};
+    let mut g = multi_player_game(4);
+    for p in g.players.iter_mut() {
+        p.wants_ui = true;
+    }
+    let before = stock_opponent_hands(&mut g, 1..4);
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.stack.push(
+        TriggerPush::new(src, 0, Effect::VillainousChoice {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            option_a: Box::new(Effect::Discard {
+                who: Selector::Player(PlayerRef::You),
+                amount: Value::Const(1),
+                random: false,
+            }),
+            // Ten life against one card: the harm estimate picks the discard,
+            // so every chooser takes the arm that suspends.
+            option_b: Box::new(Effect::LoseLife {
+                who: Selector::Player(PlayerRef::You),
+                amount: Value::Const(10),
+            }),
+        })
+        .build(),
+    );
+    resolve_answering(&mut g);
+    for (seat, &had) in before.iter().enumerate().skip(1) {
+        assert_eq!(g.players[seat].hand.len(), had - 1, "chooser {seat} discarded");
+        assert_eq!(g.players[seat].life, 20, "and nobody was skipped into the life option");
+    }
+}
+
+/// CR 101.4 — a punisher's "unless" option is a choice each opponent makes.
+/// The sacrifice pick suspends for every one of them, and the arm is
+/// re-entered per remaining chooser so the affordable option is re-derived
+/// against the board as it stands then.
+#[test]
+fn cr_101_4_every_punisher_chooser_is_asked_when_the_option_suspends() {
+    use crabomination::effect::{Effect, Selector, Value};
+    let mut g = multi_player_game(4);
+    for p in g.players.iter_mut() {
+        p.wants_ui = true;
+    }
+    for seat in 1..4 {
+        // Two creatures apiece: sacrificing one is a choice, so it suspends.
+        g.add_card_to_battlefield(seat, catalog::grizzly_bears());
+        g.add_card_to_battlefield(seat, catalog::grizzly_bears());
+    }
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.stack.push(
+        TriggerPush::new(src, 0, Effect::Punisher {
+            chooser: Selector::Player(PlayerRef::EachOpponent),
+            options: vec![Effect::Sacrifice {
+                who: Selector::Player(PlayerRef::You),
+                count: Value::Const(1),
+                filter: SelectionRequirement::Creature,
+            }],
+            otherwise: Box::new(Effect::DealDamage {
+                to: Selector::Player(PlayerRef::Triggerer),
+                amount: Value::Const(2),
+            }),
+        })
+        .build(),
+    );
+    resolve_answering(&mut g);
+    for seat in 1..4 {
+        assert_eq!(
+            g.battlefield.iter().filter(|c| c.controller == seat).count(),
+            1,
+            "chooser {seat} sacrificed one of their two",
+        );
+        assert_eq!(g.players[seat].life, 20, "the option was taken, so no punisher damage");
+    }
+}
+
+/// CR 101.4 / 701.60 — a tempting offer's body runs once for the controller,
+/// once per acceptor, then once more per acceptor. Those runs are a seat
+/// list like any other loop's, and a suspend in one of them no longer eats
+/// the rest.
+#[test]
+fn cr_701_60_every_tempting_offer_run_happens_when_the_body_suspends() {
+    use crabomination::effect::{Effect, Selector, Value};
+    let mut g = multi_player_game(4);
+    for p in g.players.iter_mut() {
+        p.wants_ui = true;
+    }
+    let mut before = stock_opponent_hands(&mut g, 1..4);
+    // Seat 0 discards four times: its own run plus one per acceptor.
+    for _ in 0..4 {
+        g.add_card_to_hand(0, catalog::grizzly_bears());
+    }
+    before[0] = g.players[0].hand.len();
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.stack.push(
+        TriggerPush::new(src, 0, Effect::TemptingOffer {
+            body: Box::new(Effect::Discard {
+                who: Selector::Player(PlayerRef::You),
+                amount: Value::Const(1),
+                random: false,
+            }),
+        })
+        .build(),
+    );
+    // `AutoDecider` declines every `OptionalTrigger`, which would leave one
+    // run and nothing to splice; this says yes to the offer and leaves the
+    // discard picks alone.
+    g.decider = Box::new(SayYesToOptional);
+    resolve_answering(&mut g);
+    for (seat, &had) in before.iter().enumerate().skip(1) {
+        assert_eq!(g.players[seat].hand.len(), had - 1, "acceptor {seat}'s own run");
+    }
+    assert_eq!(
+        g.players[0].hand.len(),
+        before[0] - 4,
+        "the controller's run plus one more per acceptor",
+    );
+}
