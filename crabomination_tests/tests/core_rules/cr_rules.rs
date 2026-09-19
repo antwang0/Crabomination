@@ -961,8 +961,10 @@ fn cr_702_126_improvise_rejects_nonartifact_helpers() {
 
 // ── CR 611.2c / 613.7c — PumpPT durations ─────────────────────────────────────
 
-/// A `Duration::Permanent` pump (Wall of Roots's -0/-1) must survive the
-/// Cleanup step's EOT-bonus wipe.
+/// A `Duration::Permanent` pump must survive the Cleanup step's EOT-bonus
+/// wipe. (Wall of Roots used to be the example and is not any more — its
+/// -0/-1 is a real counter now — but the duration is still the thing under
+/// test, so the effect is built here rather than taken off a card.)
 #[test]
 fn cr_611_2c_permanent_pump_survives_cleanup() {
     use crabomination::effect::{Duration, Selector, Value};

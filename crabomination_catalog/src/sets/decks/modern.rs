@@ -11998,12 +11998,17 @@ pub fn wall_of_roots() -> CardDefinition {
             discard_cost: None,
             tap_cost: false,
             mana_cost: ManaCost::default(),
+            // "Put a -0/-1 **counter** on this creature: Add {G}." It is a
+            // counter, not a permanent -0/-1 pump: the pump stand-in is
+            // invisible to everything that reads, moves, removes or
+            // proliferates counters, and it applies in layer 7c where a
+            // counter applies in 7d. `CounterType::MinusZeroMinusOne` already
+            // exists and `p_t_delta` already sums it.
             effect: Effect::Seq(vec![
-                Effect::PumpPT {
+                Effect::AddCounter {
                     what: Selector::This,
-                    power: Value::Const(0),
-                    toughness: Value::Const(-1),
-                    duration: Duration::Permanent,
+                    kind: crate::card::CounterType::MinusZeroMinusOne,
+                    amount: Value::ONE,
                 },
                 Effect::AddMana {
                     who: PlayerRef::You,

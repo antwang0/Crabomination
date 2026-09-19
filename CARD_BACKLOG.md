@@ -234,7 +234,7 @@ every one of them is in the `cube` pool**, which is the finding:
 | ~~Delighted Halfling~~ | Sigarda, Tatyova | ✅ **fixed 2026-09-19** — `SpendRestriction::LegendarySpellUncounterable` (a real restriction *plus* the Cavern-shaped stamp), tested both ways |
 | Obstinate Baloth | Tatyova | the discard-to-battlefield clause is dropped. Needs a discard *replacement* keyed on "a spell or ability an opponent controls caused it" |
 | Spark Double | Tatyova | the planeswalker-copy half is omitted |
-| Wall of Roots | Tatyova | the -0/-1 counter is a permanent `PumpPT` stand-in |
+| ~~Wall of Roots~~ | Tatyova | ✅ **fixed 2026-09-19** — `CounterType::MinusZeroMinusOne` already existed and `p_t_delta` already summed it; the card just wasn't using it. The stand-in was invisible to everything that reads, moves, removes or proliferates counters, and applied in layer 7c where a counter applies in 7d. `--bench` byte-identical, third in a row |
 | Delver of Secrets | Tatyova | the transform half is approximated |
 
 ⚠⚠ **THE "BLOCKED ON A BENCH RE-BLESS" PREMISE IS FALSE, AND TWO SESSIONS

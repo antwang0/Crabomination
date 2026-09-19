@@ -299,6 +299,14 @@ fn wall_of_roots_taps_for_green_with_pump_cost() {
     let w = g.battlefield_find(wall).unwrap();
     assert_eq!(w.toughness(), 4,
         "Wall of Roots's activation cost shrinks its toughness by 1");
+    // And it is a **counter**, not a permanent -0/-1 pump: the stand-in it
+    // replaced was invisible to everything that reads, moves, removes or
+    // proliferates counters.
+    assert_eq!(
+        w.counter_count(crabomination::card::CounterType::MinusZeroMinusOne),
+        1,
+        "the cost puts a real -0/-1 counter on it",
+    );
 }
 
 /// Channel: until end of turn, generic shortfall can be paid with life 1:1.
