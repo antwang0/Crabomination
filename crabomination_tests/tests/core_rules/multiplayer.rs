@@ -3526,11 +3526,12 @@ fn command_beacon_moves_the_commander_from_the_command_zone_to_hand() {
 fn cr_118_9_the_free_spell_cycle_needs_a_commander_on_the_battlefield() {
     use crabomination::game::types::Target;
 
-    let cycle: [fn() -> crabomination::card::CardDefinition; 4] = [
+    let cycle: [fn() -> crabomination::card::CardDefinition; 5] = [
         catalog::fierce_guardianship,
         catalog::deflecting_swat,
         catalog::deadly_rollick,
         catalog::flawless_maneuver,
+        catalog::obscuring_haze,
     ];
     for make in cycle {
         let def = make();
@@ -3580,6 +3581,59 @@ fn cr_118_9_the_free_spell_cycle_needs_a_commander_on_the_battlefield() {
     }
     assert!(g.battlefield_find(victim).is_none(), "the Bears are exiled");
     assert_eq!(g.players[0].mana_pool.total(), 0, "and nothing was paid");
+}
+
+/// Obscuring Haze, the cycle's green member and the last to ship: free with a
+/// commander out, and the damage it prevents is **all** damage from the
+/// opponents' creatures, not the combat half. A pod's pinger is what it is
+/// cast against — here Judith, whose death trigger is the damage in question.
+#[test]
+fn obscuring_haze_stops_an_opponents_noncombat_damage_for_the_turn() {
+    use crabomination::game::effects::EntityRef;
+    use crabomination::game::types::Target;
+
+    let mut g = game_with_format(Format::Commander, 4);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let pinger = g.add_card_to_battlefield(1, catalog::judith_the_scourge_diva());
+    let haze = g.add_card_to_hand(0, catalog::obscuring_haze());
+
+    let free_cast = GameAction::CastSpellAlternative {
+        card_id: haze,
+        pitch_card: None,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    };
+    // CR 903.3d — a commander in the command zone is not one you control.
+    g.seat_commanders(0, vec![catalog::sigarda_host_of_herons()]);
+    assert!(g.perform_action(free_cast.clone()).is_err());
+
+    g.players[0].command.clear();
+    let on_bf = g.add_card_to_battlefield(0, catalog::sigarda_host_of_herons());
+    g.players[0].commanders = vec![on_bf];
+    g.perform_action(free_cast).expect("free with a commander out");
+    while !g.stack.is_empty() {
+        g.resolve_top_of_stack().expect("resolve");
+    }
+    assert_eq!(g.players[0].mana_pool.total(), 0, "nothing was paid");
+
+    // The ping the combat-only fog would have let through.
+    let mut evs = vec![];
+    g.deal_damage_to_from(EntityRef::Permanent(mine), 1, Some(pinger), &mut evs);
+    assert_eq!(g.battlefield_find(mine).unwrap().damage, 0, "CR 615 — all damage, not combat");
+    let before = g.players[0].life;
+    g.deal_damage_to_from(EntityRef::Player(0), 1, Some(pinger), &mut evs);
+    assert_eq!(g.players[0].life, before, "and to the caster's face as well");
+    // A third seat's creature is an opponent's too.
+    let theirs = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    assert!(g.combat_damage_prevented_from(theirs), "every opponent, not just the one");
+    // The caster's own is untouched.
+    assert!(!g.combat_damage_prevented_from(mine));
+    let _ = Target::Permanent(mine);
 }
 
 // ── CR 800.4f/g — an ask whose seat has left the game ──────────────────────

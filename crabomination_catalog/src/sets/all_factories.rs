@@ -13051,6 +13051,7 @@ static MOD_SET: &[Factory] = &[
     super::mod_set::mana_drain,
     super::mod_set::fierce_guardianship,
     super::mod_set::deflecting_swat,
+    super::mod_set::obscuring_haze,
     super::mod_set::collective_restraint,
     super::mod_set::luminarch_ascension,
     super::mod_set::psychic_corrosion,

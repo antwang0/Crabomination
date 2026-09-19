@@ -137,13 +137,14 @@ point — an alt cost of nothing gated on `Predicate::ControlsOwnCommander`:
 Fierce Guardianship, Deflecting Swat, Deadly Rollick, Flawless Maneuver. All
 four had shipped without it, and three of the four doc comments said so.
 
-⏳ **Obscuring Haze** ({2}{G}, the green member) is the one still missing, and
-its blocker is named: "prevent all damage that would be dealt this turn by
-creatures your opponents control" wants an **all-damage** fog filtered by
-*source*. The engine has `PreventAllCombatDamageByMatchingThisTurn` (combat
-only) and `PreventAllDamageByTargetThisTurn` (one target), and neither is it —
-shipping the combat-only one would silently drop ability damage from
-opponents' creatures, which in a Commander pod is Judith pinging.
+✅ **Obscuring Haze** ({2}{G}, the green member) shipped 2026-09-19 and the
+cycle is complete. Its blocker was the primitive, built first as
+`Effect::PreventAllDamageByMatchingThisTurn` — an all-damage fog described by
+a **filter** rather than by a snapshot of ids, so a source that changes
+controller is judged when the damage would be dealt, and stored as
+`(seat, filter)` because "your opponents" belongs to the resolver. The
+combat-only fog would have dropped ability damage from opponents' creatures,
+which in a Commander pod is Judith pinging.
 
 🟡 **Deflecting Swat** still counters only a *spell*; printed is "spell or
 ability", plus "you may choose new targets for it". Unchanged by this pass.

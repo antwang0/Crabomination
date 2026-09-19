@@ -507,6 +507,40 @@ pub fn deflecting_swat() -> CardDefinition {
     }
 }
 
+/// Obscuring Haze — {2}{G} Instant. "Prevent all damage that would be dealt
+/// this turn by creatures your opponents control. If you control a commander,
+/// you may cast this spell without paying its mana cost." The green member of
+/// the Commander free-spell cycle, and the last one to ship.
+pub fn obscuring_haze() -> CardDefinition {
+    CardDefinition {
+        name: "Obscuring Haze",
+        // CR 118.9 / 903 — "If you control a commander, you may cast this
+        // spell without paying its mana cost": an alternative cost of nothing,
+        // gated at cast time on `ControlsOwnCommander`. The predicate reads the
+        // caster's *own* designation list, so a stolen commander does not
+        // switch it on (CR 903.3 — the designation follows the card, control
+        // does not), and it is false for every seat in a non-Commander game.
+        alternative_cost: Some(crate::card::AlternativeCost {
+            condition: Some(crate::effect::Predicate::ControlsOwnCommander {
+                who: crate::effect::PlayerRef::You,
+            }),
+            ..Default::default()
+        }),
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Instant],
+        // CR 615 — **all** damage, not the combat half: an opponent's pinger
+        // is exactly what this is cast against in a pod, and the combat-only
+        // fog would let it through. The filter is read from the resolving
+        // seat, so "your opponents" is the caster's opponents and is judged
+        // when the damage would be dealt rather than snapshotted here.
+        effect: Effect::PreventAllDamageByMatchingThisTurn {
+            filter: SelectionRequirement::Creature
+                .and(SelectionRequirement::ControlledByOpponent),
+        },
+        ..Default::default()
+    }
+}
+
 /// Collective Restraint — {3}{U} Enchantment. Domain — creatures can't
 /// attack you unless their controller pays {X} per attacker, X = the number
 /// of basic land types among lands you control.
