@@ -2461,6 +2461,87 @@ fn progress_watch_line(g: &GameState) -> String {
     s
 }
 
+/// What a capped game *did*, as opposed to what its board looks like now.
+///
+/// `cap_diagnosis` samples four zones at the stop point, and its own header
+/// warning says why that is not enough: a loop whose card is in none of them
+/// when the cap fires is invisible in every line it prints. The action the
+/// bot kept taking is never invisible — it is the loop by definition — so
+/// this tallies the performed actions and the capped game names its own
+/// repeat.
+///
+/// Off unless `CRAB_CAP_DIAG` is set; the caller hoists [`Self::armed`] out of
+/// its loop so a live run pays one `bool` test an action and no formatting.
+#[derive(Default)]
+pub struct ActionCensus {
+    on: bool,
+    counts: HashMap<String, usize>,
+}
+
+impl ActionCensus {
+    /// One `OnceLock` read, at the top of a game loop rather than inside it.
+    pub fn armed() -> Self {
+        Self { on: cap_diag_floor().is_some(), counts: HashMap::default() }
+    }
+
+    pub fn is_on(&self) -> bool {
+        self.on
+    }
+
+    /// The key for an action *about to be taken*, or `None` when off. Taken
+    /// before the action so a cast names the card in the zone it left.
+    pub fn key_for(&self, g: &GameState, a: &crate::game::GameAction) -> Option<String> {
+        self.on.then(|| Self::key(g, a))
+    }
+
+    /// Count a key from [`Self::key_for`], once the action is known to have
+    /// been accepted.
+    pub fn bump(&mut self, key: Option<String>) {
+        if let Some(k) = key {
+            *self.counts.entry(k).or_insert(0) += 1;
+        }
+    }
+
+    /// `Variant Card` — the variant name plus the card the action names, and
+    /// the ability index where there is one (two abilities on one permanent
+    /// are two different loops).
+    fn key(g: &GameState, a: &crate::game::GameAction) -> String {
+        use crate::game::GameAction as A;
+        let dbg = format!("{a:?}");
+        let variant = dbg.split(['{', '(', ' ']).next().unwrap_or("?");
+        let (id, idx) = match a {
+            A::ActivateAbility { card_id, ability_index, .. }
+            | A::ActivateAbilityWaterbend { card_id, ability_index, .. }
+            | A::ActivateLoyaltyAbility { card_id, ability_index, .. } => {
+                (Some(*card_id), Some(*ability_index))
+            }
+            A::PlayLand(id) | A::PlayLandBack(id) | A::PlayLandFromGraveyard(id) => {
+                (Some(*id), None)
+            }
+            _ => (a.cast_card_id(), None),
+        };
+        let Some(id) = id else { return variant.to_string() };
+        let name = g
+            .find_card_anywhere(id)
+            .map(|c| c.definition.name.to_string())
+            .unwrap_or_else(|| format!("{id:?}"));
+        match idx {
+            Some(i) => format!("{variant}#{i} {name}"),
+            None => format!("{variant} {name}"),
+        }
+    }
+
+    /// The twelve commonest actions, count-descending then name-ascending so
+    /// two runs of one seed print the same line (the `HashMap` above is an
+    /// unordered container and this is the only place its order is read).
+    pub fn render(&self) -> String {
+        let mut rows: Vec<(&String, &usize)> = self.counts.iter().collect();
+        rows.sort_by(|a, b| b.1.cmp(a.1).then_with(|| a.0.cmp(b.0)));
+        rows.truncate(12);
+        rows.iter().map(|(n, c)| format!("{n} x{c}")).collect::<Vec<_>>().join(", ")
+    }
+}
+
 pub(crate) fn cap_diagnosis(g: &GameState, actions: usize) -> String {
     use crate::game::StackItem;
     use std::fmt::Write;

@@ -207,6 +207,9 @@ pub fn play_one_pod_game(
     let mut bots: Vec<Box<dyn Bot>> =
         pilots.iter().take(g.players.len()).map(|p| p.build()).collect();
     let (mut actions, mut stale) = (0usize, 0usize);
+    // One `OnceLock` read a game, not a bool per action: off, `record` is a
+    // field test and the `Debug` format below never runs.
+    let mut census = crate::recommend::ActionCensus::armed();
     while stop_reason(&g, actions, max_actions, stale).is_none() {
         let mut any = false;
         for (seat, bot) in bots.iter_mut().enumerate() {
@@ -217,6 +220,9 @@ pub fn play_one_pod_game(
             // never polled suppressed every other seat's actions.
             let Some(step) = bot.next_action_settled(&g, seat) else { continue };
             let crate::server::bot::BotStep { action, settled } = step;
+            // Keyed against the pre-action state: a cast names the card while
+            // it is still in the zone it is cast from.
+            let key = census.key_for(&g, &action);
             let ok = if let Some(settled) = settled {
                 g = *settled;
                 true
@@ -230,6 +236,7 @@ pub fn play_one_pod_game(
                 }
             };
             if ok {
+                census.bump(key);
                 any = true;
                 actions += 1;
                 if g.is_game_over() {
@@ -258,7 +265,11 @@ pub fn play_one_pod_game(
     // here: what was an undecided game actually doing. One `OnceLock` read a
     // game, on the undecided ones only.
     if crate::recommend::cap_diag_floor().is_some() && !matches!(stop, StopReason::GameOver) {
-        eprintln!("pod {stop:?} seed {seed}: {}", crate::recommend::cap_diagnosis(&g, actions));
+        eprintln!(
+            "pod {stop:?} seed {seed}: {}\n  actions: {}",
+            crate::recommend::cap_diagnosis(&g, actions),
+            census.render(),
+        );
     }
     PodOutcome { winner: g.game_over.flatten(), actions, turns: g.turn_number, stop }
 }
