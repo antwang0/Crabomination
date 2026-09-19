@@ -199,9 +199,31 @@ in Pairs re-offers the same turn forever.
 — which is why `include_planeswalkers` is a field and not a constant. The
 pair is its own test: one board, opposite expected answers.
 
+### The doubling / tripling replacements (four cards)
+
+Alhammarret's Archive (975), Teferi's Ageless Insight (590), Fiery
+Emancipation (855), City on Fire (874) — two printed clauses across four
+cards, and both clauses needed a primitive the existing family could not
+express.
+
+⚠⚠ **Two `StaticEffect` doc comments named these exact cards, and neither card
+was in the catalog.** `ControllerDrawsDoubled` claimed "Thought Reflection,
+Alhammarret's Archive" and `DoubleDamageDealt` claimed "Fiery Emancipation as
+×2 stacking". Both claims were wrong in the same direction: the named card
+prints something the variant cannot say (the Archive excepts the first draw of
+your draw step, and Fiery Emancipation is ×3, which the funnel's
+`amount << doublers` shift has no exponent for). **A doc-comment example is a
+claim about the catalog, and nothing checks it** — no audit reads prose, so an
+aspirational example ages into a statement that a card is implemented when it
+is not, and worse, into a pre-approved approximation for whoever implements it
+later. Both corrected in the same commit.
+
+The cheap census for the class: grep `StaticEffect`'s doc comments for card
+names and check each against `all_factories`.
+
 ### Still open
 
-**74 of the 82.** `COMMANDER_BACKLOG.md` is generated and goes stale the
+**70 of the 82.** `COMMANDER_BACKLOG.md` is generated and goes stale the
 moment a card lands, so recompute rather than trusting its count:
 `COMMANDER_BACKLOG`'s section 2 minus every name that appears as a string
 literal anywhere in `crabomination_catalog/src` (⚠ **not** as `name: "…"` —
