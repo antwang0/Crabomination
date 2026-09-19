@@ -127,7 +127,7 @@ pub fn barbed_servitor() -> CardDefinition {
             TriggeredAbility {
                 event: EventSpec::new(EventKind::DealtDamage, EventScope::SelfSource),
                 effect: Effect::LoseLife {
-                    who: Selector::Player(PlayerRef::EachOpponent),
+                    who: target_filtered(SelectionRequirement::OpponentPlayer),
                     amount: Value::TriggerEventAmount,
                 },
             },

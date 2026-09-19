@@ -909,14 +909,14 @@ fn bump_in_the_night_drains_three_and_has_flashback() {
     let id = g.add_card_to_hand(0, catalog::bump_in_the_night());
     g.players[0].mana_pool.add(Color::Black, 1);
     let p1 = g.players[1].life;
-    cast(&mut g, id);
+    cast_at(&mut g, id, Target::Player(1));
     assert_eq!(g.players[1].life, p1 - 3, "opponent lost 3 life");
     assert!(g.players[0].graveyard.iter().any(|c| c.id == id), "in graveyard for flashback");
     // Flashback from the graveyard for {5}{R}.
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(5);
     g.perform_action(GameAction::CastFlashback {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
     }).expect("flashback castable");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, p1 - 6, "flashback drained another 3");

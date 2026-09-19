@@ -197,7 +197,7 @@ fn sling_gang_lieutenant_etb_and_sacrifice() {
     let foe_life = g.players[1].life;
     let my_life = g.players[0].life;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: s, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
+        card_id: s, ability_index: 0, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("sac a goblin to drain");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, foe_life - 1, "opp lost 1");

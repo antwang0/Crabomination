@@ -68,14 +68,19 @@ pub fn eriettes_whisper() -> CardDefinition {
         name: "Eriette's Whisper",
         cost: cost(&[generic(3), b()]),
         card_types: vec![CardType::Sorcery],
+        // "**Target opponent** discards two cards. Create a Wicked Role token
+        // attached to up to one **target** creature you control" — two slots.
         effect: Effect::Seq(vec![
             Effect::Discard {
-                who: Selector::Player(PlayerRef::EachOpponent),
+                who: target_filtered(R::OpponentPlayer),
                 amount: Value::Const(2),
                 random: false,
             },
             Effect::CreateTokenAttachedTo {
-                target: target_filtered(R::Creature.and(R::ControlledByYou)),
+                target: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: R::Creature.and(R::ControlledByYou),
+                },
                 definition: std::sync::Arc::new(wicked_role()),
             },
         ]),

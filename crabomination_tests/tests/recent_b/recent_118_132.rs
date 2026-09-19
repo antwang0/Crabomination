@@ -1203,7 +1203,7 @@ mod recent127 {
         g.players[0].mana_pool.add(Color::Black, 2);
         g.perform_action(GameAction::CastSpell {
             card_id: spell,
-            target: None,
+            target: Some(Target::Player(1)),
             additional_targets: vec![],
             mode: None,
             x_value: None,
@@ -1517,7 +1517,7 @@ mod recent128 {
         g.players[0].mana_pool.add(Color::Black, 1);
         g.perform_action(GameAction::CastSpell {
             card_id: spell,
-            target: None,
+            target: Some(Target::Player(1)),
             additional_targets: vec![],
             mode: None,
             x_value: None,

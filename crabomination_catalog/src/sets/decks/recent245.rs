@@ -243,7 +243,7 @@ pub fn unscrupulous_agent() -> CardDefinition {
         power: 1,
         toughness: 1,
         triggered_abilities: vec![etb(Effect::ExileFromHand {
-            who: Selector::Player(PlayerRef::EachOpponent),
+            who: target_filtered(crate::card::SelectionRequirement::OpponentPlayer),
             amount: Value::ONE,
         })],
         ..Default::default()

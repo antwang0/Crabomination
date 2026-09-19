@@ -518,7 +518,7 @@ pub fn mind_sculpt() -> CardDefinition {
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Mill {
-            who: Selector::Player(PlayerRef::EachOpponent),
+            who: target_filtered(SelectionRequirement::OpponentPlayer),
             amount: Value::Const(7),
         },
         ..Default::default()
@@ -1513,7 +1513,7 @@ pub fn traumatize() -> CardDefinition {
         cost: cost(&[generic(3), u(), u()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::MillHalf {
-            who: Selector::Player(PlayerRef::EachOpponent),
+            who: target_filtered(SelectionRequirement::Player),
             rounded_up: false,
         },
         ..Default::default()

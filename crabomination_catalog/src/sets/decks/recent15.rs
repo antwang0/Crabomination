@@ -24,7 +24,7 @@ pub fn shaman_of_the_pack() -> CardDefinition {
         power: 3,
         toughness: 2,
         triggered_abilities: vec![etb(Effect::LoseLife {
-            who: Selector::Player(PlayerRef::EachOpponent),
+            who: crate::effect::shortcut::target_filtered(SelectionRequirement::OpponentPlayer),
             amount: Value::CountMatching {
                 sel: Box::new(Selector::EachPermanent(
                     SelectionRequirement::HasCreatureType(CreatureType::Elf)

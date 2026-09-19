@@ -207,7 +207,7 @@ mod recent149 {
         g.step = TurnStep::PreCombatMain;
         let opp_hand = g.players[1].hand.len();
         g.perform_action(GameAction::CastSpell {
-            card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+            card_id: id, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
         }).expect("cast Psychic Whorl");
         drain_stack(&mut g);
         assert_eq!(g.players[1].hand.len(), opp_hand - 2, "opponent discarded two");

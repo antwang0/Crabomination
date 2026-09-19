@@ -4860,6 +4860,9 @@ fn summon_fenrir_chapter_three_draws_on_greatest_power() {
 #[test]
 fn stiltzkin_donates_and_draws() {
     let mut g = two_player_game();
+    // The default bot profile aims a hostile player slot at an
+    // opponent (`EvalWeights::default()`); a bare test seat does not.
+    g.players[0].hostile_player_targets = true;
     let stiltzkin = g.add_card_to_battlefield(0, catalog::stiltzkin_moogle_merchant());
     g.clear_sickness(stiltzkin);
     let gift = g.add_card_to_battlefield(0, catalog::grizzly_bears());
@@ -4870,7 +4873,8 @@ fn stiltzkin_donates_and_draws() {
     let hand0 = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateAbility {
         card_id: stiltzkin, ability_index: 0,
-        target: Some(Target::Permanent(gift)), additional_targets: vec![], x_value: None, mode: None,
+        target: Some(Target::Permanent(gift)),
+        additional_targets: vec![Target::Player(1)], x_value: None, mode: None,
     }).expect("activate Stiltzkin");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(gift).unwrap().controller, 1, "opponent now controls the gift");

@@ -90,8 +90,10 @@ pub fn sporogenic_infection() -> CardDefinition {
             to: target_filtered(R::Creature),
         },
         triggered_abilities: vec![
+            // "**Target player** sacrifices a creature …" — the trigger's own
+            // slot, separate from the Aura's enchant target.
             etb(Effect::Sacrifice {
-                who: Selector::Player(PlayerRef::EachOpponent),
+                who: target_filtered(R::Player),
                 count: Value::ONE,
                 filter: R::Creature,
             }),

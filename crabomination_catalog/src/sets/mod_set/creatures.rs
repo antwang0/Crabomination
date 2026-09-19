@@ -2914,7 +2914,10 @@ pub fn indulgent_tormentor() -> CardDefinition {
                 EventScope::ActivePlayer,
             ),
             effect: Effect::Punisher {
-                chooser: Selector::Player(PlayerRef::EachOpponent),
+                // "**target opponent** sacrifices … or pays 3 life" — one
+                // seat, not the table. `EachOpponent` is the same seat in a
+                // duel and three separate punishers in a four-seat pod.
+                chooser: target_filtered(SelectionRequirement::OpponentPlayer),
                 options: vec![
                     Effect::LoseLife {
                         who: Selector::Player(PlayerRef::You),
@@ -4104,7 +4107,7 @@ pub fn tidehollow_sculler() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::ExileChosenUntilSourceLeaves {
-                from: Selector::Player(PlayerRef::EachOpponent),
+                from: target_filtered(SelectionRequirement::OpponentPlayer),
                 count: Value::Const(1),
                 filter: SelectionRequirement::Nonland,
                 return_to: ExileReturnZone::Hand,
@@ -4207,7 +4210,7 @@ pub fn vendilion_clique() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::BottomChosenFromHandAndDraw {
-                from: Selector::Player(PlayerRef::EachOpponent),
+                from: target_filtered(SelectionRequirement::Player),
                 count: Value::Const(1),
                 filter: SelectionRequirement::Nonland,
             },
@@ -5637,7 +5640,7 @@ pub fn elite_spellbinder() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::ExileFromHandTaxed {
-                from: Selector::Player(PlayerRef::EachOpponent),
+                from: target_filtered(SelectionRequirement::OpponentPlayer),
                 count: Value::Const(1),
                 filter: SelectionRequirement::Nonland,
                 extra_cost: 2,
@@ -6771,16 +6774,16 @@ pub fn archon_of_cruelty() -> CardDefinition {
     let body = || {
         Effect::Seq(vec![
             Effect::Sacrifice {
-                who: Selector::Player(PlayerRef::EachOpponent),
+                who: target_filtered(SelectionRequirement::OpponentPlayer),
                 count: Value::Const(1),
                 filter: SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
             },
             Effect::LoseLife {
-                who: Selector::Player(PlayerRef::EachOpponent),
+                who: target_filtered(SelectionRequirement::OpponentPlayer),
                 amount: Value::Const(3),
             },
             Effect::DiscardChosen {
-                from: Selector::Player(PlayerRef::EachOpponent),
+                from: target_filtered(SelectionRequirement::OpponentPlayer),
                 count: Value::Const(1),
                 filter: SelectionRequirement::Any,
             },
@@ -8555,7 +8558,7 @@ pub fn mesmeric_fiend() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::ExileChosenUntilSourceLeaves {
-                from: Selector::Player(PlayerRef::EachOpponent),
+                from: target_filtered(SelectionRequirement::OpponentPlayer),
                 count: Value::Const(1),
                 filter: SelectionRequirement::Nonland,
                 return_to: ExileReturnZone::Hand,
@@ -9226,7 +9229,7 @@ pub fn magus_of_the_mirror() -> CardDefinition {
             ])),
             effect: Effect::ExchangeLifeTotals {
                 a: Selector::You,
-                b: Selector::Player(PlayerRef::EachOpponent),
+                b: target_filtered(SelectionRequirement::OpponentPlayer),
             },
             ..Default::default()
         }],
@@ -10084,7 +10087,7 @@ pub fn bloodhusk_ritualist() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Discard {
-                who: Selector::Player(PlayerRef::EachOpponent),
+                who: target_filtered(SelectionRequirement::OpponentPlayer),
                 amount: Value::TimesKicked,
                 random: false,
             },
@@ -10274,7 +10277,7 @@ pub fn gatekeeper_of_malakir() -> CardDefinition {
             effect: Effect::If {
                 cond: Predicate::SpellWasKicked,
                 then: Box::new(Effect::Sacrifice {
-                    who: Selector::Player(PlayerRef::EachOpponent),
+                    who: target_filtered(SelectionRequirement::Player),
                     count: Value::Const(1),
                     filter: SelectionRequirement::Creature,
                 }),

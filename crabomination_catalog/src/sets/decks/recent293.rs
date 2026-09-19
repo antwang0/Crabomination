@@ -173,7 +173,7 @@ pub fn netherborn_phalanx() -> CardDefinition {
 pub fn blind_hunter() -> CardDefinition {
     let drain = Effect::Seq(vec![
         Effect::LoseLife {
-            who: Selector::Player(PlayerRef::EachOpponent),
+            who: target_filtered(crate::card::SelectionRequirement::Player),
             amount: Value::Const(2),
         },
         Effect::GainLife {
@@ -410,7 +410,7 @@ pub fn ghost_council_of_orzhova() -> CardDefinition {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
                 Effect::LoseLife {
-                    who: Selector::Player(PlayerRef::EachOpponent),
+                    who: target_filtered(crate::card::SelectionRequirement::OpponentPlayer),
                     amount: Value::ONE,
                 },
                 Effect::GainLife {
@@ -488,7 +488,7 @@ pub fn nightmare_void() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Dredge(2)],
         effect: Effect::DiscardChosen {
-            from: Selector::Player(PlayerRef::EachOpponent),
+            from: target_filtered(crate::card::SelectionRequirement::Player),
             count: Value::ONE,
             filter: R::Any,
         },
@@ -513,7 +513,7 @@ pub fn vedalken_entrancer() -> CardDefinition {
             mana_cost: cost(&[u()]),
             tap_cost: true,
             effect: Effect::Mill {
-                who: target_filtered(R::Player),
+                who: target_filtered(crate::card::SelectionRequirement::Player),
                 amount: Value::Const(2),
             },
             ..Default::default()

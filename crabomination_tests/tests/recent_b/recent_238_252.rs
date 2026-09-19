@@ -1480,6 +1480,9 @@ mod recent241 {
     #[test]
     fn cerebral_confiscation_discards_two() {
         let mut g = two_player_game();
+        // The default bot profile aims a hostile player slot at an
+        // opponent (`EvalWeights::default()`); a bare test seat does not.
+        g.players[0].hostile_player_targets = true;
         for _ in 0..3 {
             g.add_card_to_hand(1, catalog::grizzly_bears());
         }
@@ -1487,7 +1490,7 @@ mod recent241 {
             crabomination::effect::Effect::ChooseMode(m) => m.clone(),
             _ => panic!("not modal"),
         };
-        let ctx = EffectContext::for_spell(0, None, 0, 0);
+        let ctx = EffectContext::for_spell(0, Some(Target::Player(1)), 0, 0);
         let before = g.players[1].hand.len();
         g.resolve_effect(&modes[0], &ctx).unwrap();
         drain_stack(&mut g);

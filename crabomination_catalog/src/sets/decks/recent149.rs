@@ -154,7 +154,7 @@ pub fn psychic_whorl() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::Discard {
-                who: Selector::Player(PlayerRef::EachOpponent),
+                who: target_filtered(crate::card::SelectionRequirement::OpponentPlayer),
                 amount: crate::card::Value::Const(2),
                 random: false,
             },

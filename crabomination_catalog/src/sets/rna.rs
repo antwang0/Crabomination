@@ -2510,7 +2510,7 @@ pub fn ill_gotten_inheritance() -> CardDefinition {
             mana_cost: cost(&[generic(5), b()]),
             sac_cost: true,
             effect: Effect::Seq(vec![
-                deal(4, target_filtered(R::OpponentPlayer)),
+                deal(4, target_filtered(crate::card::SelectionRequirement::OpponentPlayer)),
                 Effect::GainLife {
                     who: Selector::You,
                     amount: Value::Const(4),
@@ -3149,7 +3149,7 @@ pub fn undercitys_embrace() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::Sacrifice {
-                who: Selector::Player(PlayerRef::EachOpponent),
+                who: target_filtered(crate::card::SelectionRequirement::OpponentPlayer),
                 count: Value::Const(1),
                 filter: R::Creature,
             },

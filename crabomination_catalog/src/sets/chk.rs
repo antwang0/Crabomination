@@ -1766,7 +1766,7 @@ pub fn honden_of_nights_reach() -> CardDefinition {
         supertypes: vec![Supertype::Legendary],
         subtypes: shrine(),
         triggered_abilities: vec![honden_upkeep(Effect::Discard {
-            who: Selector::Player(PlayerRef::EachOpponent),
+            who: target_filtered(SelectionRequirement::OpponentPlayer),
             amount: shrines_you_control(),
             random: false,
         })],
@@ -3308,7 +3308,7 @@ pub fn thief_of_hope() -> CardDefinition {
         toughness: 2,
         triggered_abilities: vec![
             crate::effect::shortcut::spiritcraft(Effect::Drain {
-                from: Selector::Player(PlayerRef::EachOpponent),
+                from: target_filtered(SelectionRequirement::OpponentPlayer),
                 to: Selector::You,
                 amount: Value::ONE,
             }),

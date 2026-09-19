@@ -1320,7 +1320,7 @@ pub fn mirror_universe() -> CardDefinition {
             ])),
             effect: Effect::ExchangeLifeTotals {
                 a: Selector::You,
-                b: Selector::Player(PlayerRef::EachOpponent),
+                b: target_filtered(SelectionRequirement::OpponentPlayer),
             },
             ..Default::default()
         }],

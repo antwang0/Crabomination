@@ -110,8 +110,10 @@ pub fn shrieking_grotesque() -> CardDefinition {
                 else_: Box::new(Effect::Noop),
             }),
             on_dies(Effect::HauntCreature {
+            // The haunt half prints the same "**target player** discards a
+            // card" as the entry half above.
             body: Box::new(Effect::Discard {
-                who: Selector::Player(PlayerRef::EachOpponent),
+                who: crate::effect::shortcut::target_filtered(crate::card::SelectionRequirement::Player),
                 amount: Value::Const(1),
                 random: false,
             }),
@@ -136,7 +138,7 @@ pub fn cry_of_contrition() -> CardDefinition {
             },
             Effect::HauntCreature {
                 body: Box::new(Effect::Discard {
-                    who: Selector::Player(PlayerRef::EachOpponent),
+                    who: crate::effect::shortcut::target_filtered(crate::card::SelectionRequirement::Player),
                     amount: Value::Const(1),
                     random: false,
                 }),
@@ -197,7 +199,7 @@ pub fn castigate() -> CardDefinition {
             },
             Effect::HauntCreature {
                 body: Box::new(Effect::ExileChosenFromHand {
-                    from: Selector::Player(PlayerRef::EachOpponent),
+                    from: crate::effect::shortcut::target_filtered(crate::card::SelectionRequirement::OpponentPlayer),
                     count: Value::Const(1),
                     filter: SelectionRequirement::Nonland,
                     link_to_source: false,

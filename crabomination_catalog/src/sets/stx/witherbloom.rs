@@ -318,7 +318,7 @@ pub fn witherbloom_command() -> CardDefinition {
                 },
                 // Mode 3: each opponent loses 2 life and you gain 2 life.
                 Effect::Drain {
-                    from: Selector::Player(PlayerRef::EachOpponent),
+                    from: target_filtered(SelectionRequirement::Player),
                     to: Selector::You,
                     amount: Value::Const(2),
                 },
@@ -435,10 +435,10 @@ pub fn callous_bloodmage() -> CardDefinition {
                     amount: Value::Const(1),
                 },
             ]),
-            // "Exile target player's graveyard." — EachOpponent stands
-            // in for the target slot (see doc comment).
+            // "Exile **target player's** graveyard" — the only targeting
+            // mode, so it owns slot 0.
             Effect::ExilePlayerGraveyard {
-                who: PlayerRef::EachOpponent,
+                who: PlayerRef::Target(0),
                 filter: None,
             },
         ]))],

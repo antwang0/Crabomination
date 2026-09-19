@@ -66,6 +66,20 @@ neither cycle, and that is the interesting half rather than an omission: both
 are two-colour in CR 903.4 identity (the pips are in the rules text, not the
 mana cost), so `validate_commander_deck` rejects either in a mono-red list.
 
+✅ **Three target-deck cards stopped hitting the whole table (2026-09-19).**
+Endurance ("up to one **target player** puts their graveyard on the bottom",
+Tatyova), Indulgent Tormentor ("unless **target opponent** sacrifices … or pays
+3 life", Judith) and Nihil Spellbomb ("exile **target player's** graveyard",
+Judith) each shipped as `PlayerRef::EachOpponent` — the same seat in a duel,
+three seats in a four-seat pod. They are three of the 126 in CARD_BACKLOG's
+"TARGET-clause class"; each has an N-seat regression test, and the committed
+pod outcome table is re-blessed for them. **Aggregate, seed 43, 3,000 games at
+four seats: field 39.8 / 14.7 / 20.0 / 25.5 against the recorded
+40.8 / 14.6 / 20.3 / 24.3** — inside the noise, 100 % decided, 0 stalls, 41.26
+turns a game. Judith held at 14.7 even though two of the three cards are hers:
+they each got *weaker* (one seat instead of three), which says the retune's
+win rate is not carried by them.
+
 ⏳ **Open deck-quality work**, no engine work needed — and the pod now has a
 number that says which to do first:
 

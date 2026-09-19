@@ -179,7 +179,7 @@ pub fn stormscape_apprentice() -> CardDefinition {
                 tap_cost: true,
                 mana_cost: cost(&[b()]),
                 effect: Effect::LoseLife {
-                    who: Selector::Player(PlayerRef::EachOpponent),
+                    who: target_filtered(SelectionRequirement::Player),
                     amount: Value::Const(1),
                 },
                 ..Default::default()
@@ -282,7 +282,7 @@ pub fn stonehorn_dignitary() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::SkipNextCombatPhase {
-                who: PlayerRef::EachOpponent,
+                who: PlayerRef::Target(0),
             },
         }],
         ..Default::default()

@@ -1072,7 +1072,7 @@ fn ashiok_minus_ten_exiles_opponent_hands_and_graveyards() {
         x_value: None,
         card_id: ashiok,
         ability_index: 2,
-        target: None,
+        target: Some(Target::Player(1)),
     }).expect("Ashiok -10");
     drain_stack(&mut g);
 
@@ -1337,13 +1337,17 @@ fn lord_xander_the_collector_etb_discards_half_opponent_hand() {
 #[test]
 fn lord_xander_attack_mills_half_library() {
     let mut g = two_player_game();
+    // The default bot profile aims a hostile player slot at an
+    // opponent (`EvalWeights::default()`); a bare test seat does not.
+    g.players[0].hostile_player_targets = true;
     g.players[1].library.clear();
     for _ in 0..11 {
         g.add_card_to_library(1, catalog::island());
     }
     let xander = g.add_card_to_battlefield(0, catalog::lord_xander_the_collector());
     let trig = catalog::lord_xander_the_collector().triggered_abilities[1].effect.clone();
-    let ctx = crabomination::game::effects::EffectContext::for_trigger(xander, 0, None, 0);
+    let ctx = crabomination::game::effects::EffectContext::for_trigger(
+        xander, 0, Some(Target::Player(1)), 0);
     g.resolve_effect(&trig, &ctx).unwrap();
     // 11 cards, half rounded down = 5 milled.
     assert_eq!(g.players[1].library.len(), 11 - 5, "milled half (rounded down)");
@@ -1544,12 +1548,12 @@ fn magus_of_the_mirror_exchanges_life_during_upkeep_only() {
     // Outside upkeep (main phase): the activation is rejected by the gate.
     g.step = TurnStep::PreCombatMain;
     assert!(g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).is_err(),
+        card_id: id, ability_index: 0, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None , mode: None}).is_err(),
         "can't activate outside your upkeep");
     // During the controller's upkeep: exchange goes through (and sacrifices Magus).
     g.step = TurnStep::Upkeep;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
+        card_id: id, ability_index: 0, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None , mode: None})
         .expect("activatable during upkeep");
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, 20, "P0 took P1's 20");

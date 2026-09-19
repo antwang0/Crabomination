@@ -226,7 +226,7 @@ pub fn duress() -> CardDefinition {
         cost: cost(&[b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::DiscardChosen {
-            from: Selector::Player(PlayerRef::EachOpponent),
+            from: target_filtered(SelectionRequirement::OpponentPlayer),
             count: Value::Const(1),
             filter: SelectionRequirement::Nonland.and(SelectionRequirement::Noncreature),
         },
@@ -2005,7 +2005,7 @@ pub fn lotus_petal() -> CardDefinition {
 /// real card in multiplayer but gameplay-equivalent in 1v1 against an
 /// opponent with the only relevant graveyard.
 pub fn tormods_crypt() -> CardDefinition {
-    use crate::card::{ActivatedAbility, Zone};
+    use crate::card::ActivatedAbility;
     CardDefinition {
         name: "Tormod's Crypt",
         card_types: vec![CardType::Artifact],
@@ -2014,13 +2014,10 @@ pub fn tormods_crypt() -> CardDefinition {
             discard_cost: None,
             tap_cost: true,
             mana_cost: ManaCost::default(),
-            effect: Effect::Move {
-                what: Selector::CardsInZone {
-                    who: PlayerRef::EachOpponent,
-                    zone: Zone::Graveyard,
-                    filter: SelectionRequirement::Any,
-                },
-                to: ZoneDest::Exile,
+            // "Exile **target player's** graveyard" — one seat, chosen.
+            effect: Effect::ExilePlayerGraveyard {
+                who: PlayerRef::Target(0),
+                filter: None,
             },
             once_per_turn: false,
             sorcery_speed: false,
@@ -2270,18 +2267,12 @@ pub fn bojuka_bog() -> CardDefinition {
             Effect::Tap {
                 what: Selector::This,
             },
-            // Move every card in each opponent's graveyard into exile. Move
-            // accepts both `EntityRef::Permanent` and `EntityRef::Card`, so
-            // it correctly handles graveyard residents (whereas
-            // `Effect::Exile` only operates on permanents on the
-            // battlefield).
-            Effect::Move {
-                what: Selector::CardsInZone {
-                    who: PlayerRef::EachOpponent,
-                    zone: crate::card::Zone::Graveyard,
-                    filter: SelectionRequirement::Any,
-                },
-                to: ZoneDest::Exile,
+            // "Exile **target player's** graveyard" — the dedicated primitive
+            // rather than a `Move` over a zone, because a `Move`'s player slot
+            // reads as friendly to the auto-target walk and this one is hate.
+            Effect::ExilePlayerGraveyard {
+                who: PlayerRef::Target(0),
+                filter: None,
             },
         ]),
     };
@@ -4837,7 +4828,7 @@ pub fn frilled_deathspitter() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealtDamage, EventScope::SelfSource),
             effect: Effect::DealDamage {
-                to: Selector::Player(PlayerRef::EachOpponent),
+                to: target_filtered(SelectionRequirement::OpponentPlayer),
                 amount: Value::Const(2),
             },
         }],
@@ -5837,7 +5828,7 @@ pub fn despise() -> CardDefinition {
         cost: cost(&[b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::DiscardChosen {
-            from: Selector::Player(PlayerRef::EachOpponent),
+            from: target_filtered(SelectionRequirement::OpponentPlayer),
             count: Value::Const(1),
             filter: SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
         },
@@ -5858,7 +5849,7 @@ pub fn distress() -> CardDefinition {
         cost: cost(&[b(), b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::DiscardChosen {
-            from: Selector::Player(PlayerRef::EachOpponent),
+            from: target_filtered(SelectionRequirement::Player),
             count: Value::Const(1),
             filter: SelectionRequirement::Nonland,
         },
@@ -6524,7 +6515,7 @@ pub fn blood_artist() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer),
             effect: Effect::Drain {
-                from: Selector::Player(PlayerRef::EachOpponent),
+                from: target_filtered(SelectionRequirement::Player),
                 to: Selector::You,
                 amount: Value::Const(1),
             },
@@ -7872,7 +7863,7 @@ pub fn bump_in_the_night() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Flashback(cost(&[generic(5), r()]))],
         effect: Effect::LoseLife {
-            who: Selector::Player(PlayerRef::EachOpponent),
+            who: target_filtered(SelectionRequirement::OpponentPlayer),
             amount: Value::Const(3),
         },
         ..Default::default()
@@ -8130,7 +8121,7 @@ pub fn crabomination() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Mill {
-                who: Selector::Player(PlayerRef::EachOpponent),
+                who: target_filtered(SelectionRequirement::OpponentPlayer),
                 amount: Value::Const(3),
             },
         }],
@@ -11552,7 +11543,7 @@ pub fn ravenous_rats() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Discard {
-                who: Selector::Player(PlayerRef::EachOpponent),
+                who: target_filtered(SelectionRequirement::OpponentPlayer),
                 amount: Value::Const(1),
                 random: false,
             },
@@ -11585,7 +11576,7 @@ pub fn brain_maggot() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::ExileChosenUntilSourceLeaves {
-                from: Selector::Player(PlayerRef::EachOpponent),
+                from: target_filtered(SelectionRequirement::OpponentPlayer),
                 count: Value::Const(1),
                 filter: SelectionRequirement::Nonland,
                 return_to: ExileReturnZone::Hand,
@@ -12701,13 +12692,15 @@ pub fn ashiok_nightmare_weaver() -> CardDefinition {
             },
             LoyaltyAbility {
                 loyalty_cost: -10,
+                // "…from **target player's** hand and graveyard" — one seat,
+                // and both halves are the same slot.
                 effect: Effect::Seq(vec![
                     Effect::ExilePlayerGraveyard {
-                        who: PlayerRef::EachOpponent,
+                        who: PlayerRef::Target(0),
                         filter: None,
                     },
                     Effect::ExileHand {
-                        who: PlayerRef::EachOpponent,
+                        who: PlayerRef::Target(0),
                     },
                 ]),
                 ..Default::default()
@@ -12837,13 +12830,15 @@ pub fn collective_brutality() -> CardDefinition {
                     toughness: Value::Const(-2),
                     duration: Duration::EndOfTurn,
                 },
+                // Each target-bearing mode owns a slot in run order, so each
+                // names slot 0 of its own mode.
                 Effect::Discard {
-                    who: Selector::Player(PlayerRef::EachOpponent),
+                    who: target_filtered(SelectionRequirement::OpponentPlayer),
                     amount: Value::Const(1),
                     random: false,
                 },
                 Effect::Drain {
-                    from: Selector::Player(PlayerRef::EachOpponent),
+                    from: target_filtered(SelectionRequirement::OpponentPlayer),
                     to: Selector::You,
                     amount: Value::Const(2),
                 },
@@ -13055,7 +13050,7 @@ pub fn lord_xander_the_collector() -> CardDefinition {
             TriggeredAbility {
                 event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
                 effect: Effect::MillHalf {
-                    who: Selector::Player(PlayerRef::EachOpponent),
+                    who: target_filtered(SelectionRequirement::Player),
                     rounded_up: false,
                 },
             },
@@ -13652,7 +13647,7 @@ pub fn alley_assailant() -> CardDefinition {
             TriggeredAbility {
                 event: EventSpec::new(EventKind::TurnedFaceUp, EventScope::SelfSource),
                 effect: Effect::Drain {
-                    from: Selector::Player(PlayerRef::EachOpponent),
+                    from: target_filtered(SelectionRequirement::OpponentPlayer),
                     to: Selector::You,
                     amount: Value::Const(3),
                 },
@@ -14414,7 +14409,7 @@ pub fn kitesail_freebooter() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![etb(Effect::ExileChosenUntilSourceLeaves {
-            from: Selector::Player(PlayerRef::EachOpponent),
+            from: target_filtered(SelectionRequirement::OpponentPlayer),
             count: Value::Const(1),
             filter: SelectionRequirement::Nonland.and(SelectionRequirement::Noncreature),
             return_to: ExileReturnZone::Hand,
@@ -16019,13 +16014,13 @@ pub fn relic_of_progenitus() -> CardDefinition {
                 discard_cost: None,
                 tap_cost: true,
                 mana_cost: ManaCost::default(),
-                effect: Effect::Move {
-                    what: Selector::CardsInZone {
-                        zone: crate::card::Zone::Graveyard,
-                        who: PlayerRef::EachOpponent,
-                        filter: SelectionRequirement::Any,
-                    },
-                    to: ZoneDest::Exile,
+                // "**Target player** exiles **a card** from their graveyard"
+                // — one seat and one card. It shipped as every opponent's
+                // whole graveyard, which is the second ability's text.
+                effect: Effect::ExileFromGraveyard {
+                    who: PlayerRef::Target(0),
+                    count: Value::Const(1),
+                    filter: SelectionRequirement::Any,
                 },
                 once_per_turn: false,
                 sorcery_speed: false,
@@ -16041,7 +16036,7 @@ pub fn relic_of_progenitus() -> CardDefinition {
                 mana_cost: cost(&[generic(1)]),
                 effect: Effect::Seq(vec![
                     Effect::ForEach {
-                        selector: Selector::Player(PlayerRef::EachPlayer),
+                        selector: target_filtered(SelectionRequirement::Player),
                         body: Box::new(Effect::ShuffleGraveyardIntoLibrary {
                             who: PlayerRef::Triggerer,
                         }),
@@ -20137,7 +20132,7 @@ pub fn thought_erasure() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::DiscardChosen {
-                from: Selector::Player(PlayerRef::EachOpponent),
+                from: target_filtered(SelectionRequirement::OpponentPlayer),
                 count: Value::Const(1),
                 filter: SelectionRequirement::Nonland,
             },
@@ -20688,27 +20683,33 @@ pub fn collective_defiance() -> CardDefinition {
         name: "Collective Defiance",
         cost: cost(&[generic(1), r(), r()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::ChooseMode(vec![
-            Effect::DealDamage {
-                to: target_filtered(SelectionRequirement::Creature),
-                amount: Value::Const(4),
-            },
-            Effect::Seq(vec![
-                Effect::Discard {
-                    who: Selector::Player(PlayerRef::EachOpponent),
-                    amount: Value::Const(3),
-                    random: false,
+        // Escalate {1}, and three modes in printed order. All three halves
+        // shipped wrong: no escalate at all, "each opponent discards three
+        // then draws three" for "target player discards their hand, then
+        // draws that many", and "3 damage to each opponent" for "target
+        // opponent or planeswalker".
+        effect: Effect::Escalate {
+            cost: Box::new(Effect::PayManaOrElse {
+                mana_cost: cost(&[generic(1)]),
+                otherwise: Box::new(Effect::Noop),
+            }),
+            modes: vec![
+                Effect::DiscardHandDrawThatMany {
+                    who: target_filtered(SelectionRequirement::Player),
                 },
-                Effect::Draw {
-                    who: Selector::Player(PlayerRef::EachOpponent),
+                Effect::DealDamage {
+                    to: target_filtered(SelectionRequirement::Creature),
+                    amount: Value::Const(4),
+                },
+                Effect::DealDamage {
+                    to: target_filtered(
+                        SelectionRequirement::OpponentPlayer
+                            .or(SelectionRequirement::Planeswalker),
+                    ),
                     amount: Value::Const(3),
                 },
-            ]),
-            Effect::DealDamage {
-                to: Selector::Player(PlayerRef::EachOpponent),
-                amount: Value::Const(3),
-            },
-        ]),
+            ],
+        },
         ..Default::default()
     }
 }
@@ -20864,9 +20865,15 @@ pub fn searing_blaze() -> CardDefinition {
                 to: target_filtered(SelectionRequirement::Creature),
                 amount: landfall_3_else_1(),
             },
+            // "and 1 damage to **target player or planeswalker**" — a second
+            // slot, and a flat 1: landfall raises only the creature's half.
             Effect::DealDamage {
-                to: Selector::Player(PlayerRef::EachOpponent),
-                amount: landfall_3_else_1(),
+                to: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Player
+                        .or(SelectionRequirement::Planeswalker),
+                },
+                amount: Value::Const(1),
             },
         ]),
         ..Default::default()
@@ -23349,8 +23356,11 @@ pub fn nihil_spellbomb() -> CardDefinition {
                 tap_cost: true,
                 sac_cost: true,
                 effect: Effect::Move {
+                    // "Exile **target player's** graveyard" — one seat, chosen.
+                    // `EachOpponent` is the same graveyard in a duel and the
+                    // whole table's in a pod.
                     what: Selector::CardsInZone {
-                        who: PlayerRef::EachOpponent,
+                        who: PlayerRef::Target(0),
                         zone: Zone::Graveyard,
                         filter: SelectionRequirement::Any,
                     },
@@ -23359,8 +23369,6 @@ pub fn nihil_spellbomb() -> CardDefinition {
                 ..Default::default()
             }
         ],
-        // "When this artifact is put into a graveyard from the battlefield, you
-        // may pay {B}. If you do, draw a card" — shipped missing (the `cnt` audit column, 2026-09-10).
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::PermanentDied, EventScope::SelfSource),
             effect: Effect::MayPay {
@@ -32720,7 +32728,7 @@ pub fn nimana_skydancer() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Flash, Keyword::Flying],
         triggered_abilities: vec![etb(Effect::Mill {
-            who: Selector::Player(PlayerRef::EachOpponent),
+            who: target_filtered(SelectionRequirement::OpponentPlayer),
             amount: Value::Const(2),
         })],
         ..Default::default()
@@ -35093,7 +35101,7 @@ pub fn kindlespark_duo() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             effect: Effect::DealDamage {
-                to: Selector::Player(PlayerRef::EachOpponent),
+                to: target_filtered(SelectionRequirement::OpponentPlayer),
                 amount: Value::Const(1),
             },
             ..Default::default()
@@ -35597,7 +35605,7 @@ pub fn iridescent_vinelasher() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
             effect: Effect::DealDamage {
-                to: Selector::Player(PlayerRef::EachOpponent),
+                to: target_filtered(SelectionRequirement::OpponentPlayer),
                 amount: Value::Const(1),
             },
         }],
@@ -37722,7 +37730,7 @@ pub fn geralfs_messenger() -> CardDefinition {
                 what: Selector::This,
             },
             Effect::LoseLife {
-                who: Selector::Player(PlayerRef::EachOpponent),
+                who: target_filtered(SelectionRequirement::OpponentPlayer),
                 amount: Value::Const(2),
             },
         ]))],
@@ -38027,7 +38035,7 @@ pub fn sling_gang_lieutenant() -> CardDefinition {
                 1,
             )),
             effect: Effect::Drain {
-                from: Selector::Player(PlayerRef::EachOpponent),
+                from: target_filtered(SelectionRequirement::Player),
                 to: Selector::You,
                 amount: Value::Const(1),
             },
@@ -40380,7 +40388,7 @@ pub fn deep_cavern_bat() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::ExileChosenUntilSourceLeaves {
-                from: Selector::Player(PlayerRef::EachOpponent),
+                from: target_filtered(SelectionRequirement::OpponentPlayer),
                 count: Value::Const(1),
                 filter: SelectionRequirement::Nonland,
                 return_to: ExileReturnZone::Hand,
@@ -53141,7 +53149,7 @@ pub fn jace_the_mind_sculptor() -> CardDefinition {
             LoyaltyAbility {
                 loyalty_cost: 2,
                 effect: Effect::Fateseal {
-                    who: PlayerRef::EachOpponent,
+                    who: PlayerRef::Target(0),
                     amount: Value::Const(1),
                 },
                 ..Default::default()
@@ -54363,7 +54371,7 @@ pub fn vein_ripper() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer),
             effect: Effect::Drain {
-                from: Selector::Player(PlayerRef::EachOpponent),
+                from: target_filtered(SelectionRequirement::OpponentPlayer),
                 to: Selector::You,
                 amount: Value::Const(2),
             },
@@ -57786,7 +57794,7 @@ pub fn sanguine_bond() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
             effect: Effect::LoseLife {
-                who: Selector::Player(PlayerRef::EachOpponent),
+                who: target_filtered(SelectionRequirement::OpponentPlayer),
                 amount: Value::TriggerEventAmount,
             },
         }],
@@ -65828,7 +65836,7 @@ pub fn mind_spike() -> CardDefinition {
                     filter: noncreature_nonland.clone(),
                 }),
                 then: Box::new(Effect::DiscardChosen {
-                    from: Selector::Player(PlayerRef::EachOpponent),
+                    from: target_filtered(SelectionRequirement::OpponentPlayer),
                     count: Value::Const(1),
                     filter: noncreature_nonland,
                 }),

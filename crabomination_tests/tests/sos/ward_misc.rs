@@ -14,16 +14,19 @@ use crate::push15_17::place_creature;
 #[test]
 fn red_burn_spells_kill_bear_with_expected_life_riders() {
     // Table-driven: (ctor, red, colorless, mode, caster life delta, opp life delta).
-    // Char: 4 to target, 2 to self. Collective Defiance mode 0: 4 to target
-    // creature. (Searing Blaze deals 1 without landfall — its own test is in
-    // `modern::lands_equipment_vehicles`.)
+    // Char: 4 to target, 2 to self. Collective Defiance's creature mode (index
+    // 1 in printed order): 4 to target creature. (Searing Blaze deals 1
+    // without landfall — its own test is in `modern::lands_equipment_vehicles`.)
     type Ctor = fn() -> crabomination::card::CardDefinition;
     let cases: [(Ctor, u32, u32, Option<usize>, i32, i32, &str); 2] = [
         (catalog::char, 1, 2, None, -2, 0, "Char"),
-        (catalog::collective_defiance, 2, 1, Some(0), 0, 0, "Collective Defiance"),
+        (catalog::collective_defiance, 2, 1, Some(1), 0, 0, "Collective Defiance"),
     ];
     for (ctor, red, colorless, mode, caster_delta, opp_delta, name) in cases {
         let mut g = two_player_game();
+        // The default bot profile aims a hostile player slot at an
+        // opponent (`EvalWeights::default()`); a bare test seat does not.
+        g.players[0].hostile_player_targets = true;
         let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
         g.clear_sickness(bear);
         let id = g.add_card_to_hand(0, ctor());

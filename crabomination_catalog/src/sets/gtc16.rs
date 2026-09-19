@@ -93,8 +93,10 @@ pub fn vizkopa_confessor() -> CardDefinition {
             crate::effect::shortcut::extort(),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                // "**Target opponent** reveals that many cards from their
+                // hand" — one seat, chosen.
                 effect: Effect::PayLifeRevealExileFromHand {
-                    opp: PlayerRef::EachOpponent,
+                    opp: PlayerRef::Target(0),
                 },
             },
         ],

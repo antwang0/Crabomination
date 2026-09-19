@@ -2456,8 +2456,10 @@ pub fn aspect_of_lamprey() -> CardDefinition {
             keywords: vec![Keyword::Lifelink],
             ..Default::default()
         }),
+        // "**Target opponent** discards two cards" — the trigger owns its own
+        // target slot, independent of the Aura's attach target.
         triggered_abilities: vec![etb(Effect::Discard {
-            who: Selector::Player(PlayerRef::EachOpponent),
+            who: target_filtered(SelectionRequirement::OpponentPlayer),
             amount: Value::Const(2),
             random: false,
         })],

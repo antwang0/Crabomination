@@ -1872,11 +1872,9 @@ pub fn measure_of_wickedness() -> CardDefinition {
             },
             crate::card::TriggeredAbility {
                 event: EventSpec::new(EventKind::PutIntoGraveyard, EventScope::YourControl),
-                // Approximation: the printed "target opponent" is modeled as
-                // your opponent (exact at two players).
                 effect: Effect::GainControl {
                     what: Selector::This,
-                    to: Some(PlayerRef::EachOpponent),
+                    to: Some(PlayerRef::Target(0)),
                     duration: Duration::Permanent,
                 },
             },

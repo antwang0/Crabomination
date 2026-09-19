@@ -179,6 +179,9 @@ fn netherborn_phalanx_drains_per_creature() {
 #[test]
 fn blind_hunter_drains_on_enter_and_when_haunted_dies() {
     let mut g = two_player_game();
+    // The default bot profile aims a hostile player slot at an
+    // opponent (`EvalWeights::default()`); a bare test seat does not.
+    g.players[0].hostile_player_targets = true;
     let foe_start = g.players[1].life;
     let my_start = g.players[0].life;
     let hunter = g.add_card_to_battlefield(0, catalog::blind_hunter());
@@ -351,7 +354,7 @@ fn nightmare_void_discards_a_chosen_card() {
     let spell = g.add_card_to_hand(0, catalog::nightmare_void());
     flood(&mut g);
     g.perform_action(GameAction::CastSpell {
-        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+        card_id: spell, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast");
     drain_stack(&mut g);
     assert_eq!(g.players[1].hand.len(), 0, "the chosen card was discarded");

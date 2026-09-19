@@ -520,7 +520,7 @@ pub fn corrupt_court_official() -> CardDefinition {
         power: 1,
         toughness: 1,
         triggered_abilities: vec![etb(Effect::Discard {
-            who: Selector::Player(PlayerRef::EachOpponent),
+            who: target_filtered(SelectionRequirement::OpponentPlayer),
             amount: Value::ONE,
             random: false,
         })],

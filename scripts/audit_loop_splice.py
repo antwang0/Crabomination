@@ -133,10 +133,14 @@ ALLOW = {
         "have to hoist every ante ahead of every branch. CR 407 ante is in "
         "no pool",
     ("FlipCoinsChooseCount", "per_win"):
-        "OPEN: the tail would have to re-flip the remaining coins, and the "
-        "arm's `wins` tally is read after the loop. ⚠ This pair was "
-        "allowlisted under `OpponentRevealsPickToBattlefield` until "
-        "`scope_at` learned to read a multi-line arm pattern",
+        "OPEN by the CATALOG: both cards' `per_win` / `per_loss` are "
+        "choiceless (Yusri draws / deals damage, Fiery Mantle's are `Noop`). "
+        "The fix when one is not: pre-flip every coin and dispatch from the "
+        "list, the same device `RollDie` uses — and that is legal ONLY for "
+        "`stop_on_loss: false`, because a `stop_on_loss` arm that pre-flipped "
+        "would draw RNG it never used and move every downstream stream. ⚠ "
+        "This pair was allowlisted under `OpponentRevealsPickToBattlefield` "
+        "until `scope_at` learned to read a multi-line arm pattern",
     ("FlipCoinsChooseCount", "per_loss"): "ditto",
     ("MayPayRepeatedly", "body"):
         "OPEN: the arm's resume path is a re-run from the top over the "

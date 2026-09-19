@@ -2004,6 +2004,9 @@ mod recent173 {
     #[test]
     fn aggressive_negotiations_exiles_and_counters() {
         let mut g = two_player_game();
+        // The default bot profile aims a hostile player slot at an
+        // opponent (`EvalWeights::default()`); a bare test seat does not.
+        g.players[0].hostile_player_targets = true;
         let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
         g.add_card_to_hand(1, catalog::lightning_bolt()); // nonland
         g.add_card_to_hand(1, catalog::forest());
@@ -2012,7 +2015,7 @@ mod recent173 {
         g.players[0].mana_pool.add_colorless(2);
         g.step = TurnStep::PreCombatMain;
         g.priority.player_with_priority = 0;
-        g.cast_spell(spell, Some(Target::Permanent(mine)), vec![], None, None)
+        g.cast_spell(spell, Some(Target::Player(1)), vec![Target::Permanent(mine)], None, None)
             .expect("cast Aggressive Negotiations");
         drain_stack(&mut g);
         assert!(g.exile.iter().any(|c| c.definition.name == "Lightning Bolt"), "nonland exiled");
@@ -2375,6 +2378,9 @@ mod recent175 {
     #[test]
     fn oildeep_gearhulk_coercive_discard_then_draw() {
         let mut g = two_player_game();
+        // The default bot profile aims a hostile player slot at an
+        // opponent (`EvalWeights::default()`); a bare test seat does not.
+        g.players[0].hostile_player_targets = true;
         let hulk = g.add_card_to_battlefield(0, catalog::oildeep_gearhulk());
         g.add_card_to_hand(1, catalog::lightning_bolt());
         g.add_card_to_library(1, catalog::forest());

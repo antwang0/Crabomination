@@ -1009,7 +1009,7 @@ mod recent185 {
         let hand_before = g.players[0].hand.len();
         g.perform_action(GameAction::CastFlashback {
             card_id: spell,
-            target: None,
+            target: Some(Target::Player(1)),
             additional_targets: vec![],
             mode: None,
             x_value: None,

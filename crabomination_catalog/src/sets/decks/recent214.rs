@@ -197,7 +197,7 @@ pub fn kalastria_highborn() -> CardDefinition {
                 description: "Pay {B} to drain 2?".into(),
                 mana_cost: cost(&[b()]),
                 body: Box::new(Effect::Drain {
-                    from: Selector::Player(PlayerRef::EachOpponent),
+                    from: target_filtered(crate::card::SelectionRequirement::Player),
                     to: Selector::You,
                     amount: Value::Const(2),
                 }),

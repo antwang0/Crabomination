@@ -5003,7 +5003,7 @@ pub fn susurian_voidborn() -> CardDefinition {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl),
             effect: Effect::Seq(vec![
                 Effect::LoseLife {
-                    who: Selector::Player(PlayerRef::EachOpponent),
+                    who: target_filtered(SelectionRequirement::OpponentPlayer),
                     amount: Value::Const(1),
                 },
                 Effect::GainLife {
@@ -5281,7 +5281,7 @@ pub fn terrapact_intimidator() -> CardDefinition {
         power: 2,
         toughness: 1,
         triggered_abilities: vec![etb(Effect::VillainousChoice {
-            who: Selector::Player(PlayerRef::EachOpponent),
+            who: target_filtered(SelectionRequirement::OpponentPlayer),
             option_a: Box::new(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
@@ -6654,7 +6654,7 @@ pub fn temporal_intervention() -> CardDefinition {
             },
         }],
         effect: Effect::DiscardChosen {
-            from: Selector::Player(PlayerRef::EachOpponent),
+            from: target_filtered(SelectionRequirement::OpponentPlayer),
             count: Value::Const(1),
             filter: SelectionRequirement::Nonland,
         },

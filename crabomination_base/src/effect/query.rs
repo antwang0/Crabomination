@@ -856,7 +856,6 @@ impl Effect {
             | Effect::EachOpponentExilesOwnCreature
             | Effect::EachOpponentWithoutLegendaryLoses
             | Effect::UnexpectedResults
-            | Effect::PayLifeRevealExileFromHand { .. }
             | Effect::ChannelLifeForMana
             | Effect::CantLoseThisTurn { .. }
             | Effect::Venture
@@ -1231,7 +1230,7 @@ impl Effect {
             Effect::Cloak { .. } => false,
             Effect::CatchUpBasicLands { .. } => false,
             Effect::ExileUntilDuplicateName { .. } => false,
-            Effect::ExileFromHandTaxed { .. } => false,
+            Effect::ExileFromHandTaxed { from, .. } => sel_has_target(from),
             Effect::Hideaway { .. } => false,
             Effect::NthResolutionThisTurn { branches } => {
                 branches.iter().any(|e| e.requires_target())
@@ -1944,6 +1943,9 @@ impl Effect {
                 player_has_target(who) || value_has_target(count)
             }
             Effect::SkipNextCombatPhase { who } => player_has_target(who),
+            // Vizkopa Confessor's "**target opponent** reveals that many
+            // cards from their hand" — the seat is a target, not a fan-out.
+            Effect::PayLifeRevealExileFromHand { opp } => player_has_target(opp),
             Effect::TakeExtraTurn { who, count } => {
                 player_has_target(who) || value_has_target(count)
             }
@@ -2476,6 +2478,9 @@ impl Effect {
             | Effect::RevealTopOfLibrary { who }
             | Effect::ShuffleLibrary { who }
             | Effect::SkipNextCombatPhase { who }
+            | Effect::PayLifeRevealExileFromHand { opp: who }
+            | Effect::ExileFromGraveyard { who, .. }
+            | Effect::Fateseal { who, .. }
             | Effect::PlayerCantCastMatchingThisTurn { who, .. } => {
                 implicit_player_if_bare_player_ref(who)
             }
@@ -2545,7 +2550,9 @@ impl Effect {
             Effect::DiscardHandDrawThatMany { who } => {
                 sel_filter(who).or_else(|| implicit_player_if_bare_player_field(who))
             }
-            Effect::ExileChosenFromHand { from, .. } => {
+            Effect::ExileChosenFromHand { from, .. }
+            | Effect::ExileChosenUntilSourceLeaves { from, .. }
+            | Effect::ExileFromHandTaxed { from, .. } => {
                 sel_filter(from).or_else(|| implicit_player_if_bare_player_field(from))
             }
             Effect::PutCardFromHandOnTopOfLibrary { who }
@@ -2754,11 +2761,17 @@ impl Effect {
     /// Friendliness of the children that actually declare a target slot,
     /// falling back to every child when none of them target.
     fn friendliness_of_targeting_children(children: &[Effect]) -> bool {
-        let mut targeting = children.iter().filter(|e| e.requires_target()).peekable();
-        if targeting.peek().is_some() {
-            targeting.any(|e| e.prefers_friendly_target())
-        } else {
-            children.iter().any(|e| e.prefers_friendly_target())
+        // **The FIRST targeting child decides, not `any`.** A rider aimed at
+        // the same seat as the clause before it is not a second opinion:
+        // Oildeep Gearhulk is `Seq[DiscardChosen(target player), Draw(that
+        // player)]` and `any` read the draw as a gift, so the picker aimed
+        // the whole trigger at its own controller and the Gearhulk made its
+        // caster discard. Reading the first one keeps Shadrix Silverquill's
+        // `Seq[Draw, LoseLife]` mode friendly, which is what `any` gave it.
+        let mut targeting = children.iter().filter(|e| e.requires_target());
+        match targeting.next() {
+            Some(first) => first.prefers_friendly_target(),
+            None => children.iter().any(|e| e.prefers_friendly_target()),
         }
     }
 
@@ -4439,7 +4452,10 @@ impl Effect {
                 Effect::Discard { who, .. } => sel_find(who, slot),
                 Effect::DiscardAnyNumber { who, .. } => sel_find(who, slot),
                 Effect::DiscardChosen { from, .. }
-                | Effect::DiscardChosenFromRevealed { from, .. } => sel_find(from, slot),
+                | Effect::DiscardChosenFromRevealed { from, .. }
+                | Effect::ExileChosenFromHand { from, .. }
+                | Effect::ExileChosenUntilSourceLeaves { from, .. }
+                | Effect::ExileFromHandTaxed { from, .. } => sel_find(from, slot),
                 Effect::BottomChosenFromHandAndDraw { from, .. }
                 | Effect::TopChosenFromHand { from, .. } => sel_find(from, slot),
                 Effect::SearchSplitOpponentChooses { opponent, .. } => sel_find(opponent, slot),

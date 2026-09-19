@@ -1130,7 +1130,7 @@ pub fn custodi_lich() -> CardDefinition {
             TriggeredAbility {
                 event: EventSpec::new(EventKind::BecameMonarch, EventScope::YourControl),
                 effect: Effect::Sacrifice {
-                    who: Selector::Player(PlayerRef::EachOpponent),
+                    who: target_filtered(crate::card::SelectionRequirement::Player),
                     count: Value::ONE,
                     filter: R::Creature,
                 },

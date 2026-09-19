@@ -26,6 +26,9 @@ fn advance_to(g: &mut GameState, step: TurnStep) {
 #[test]
 fn shrieking_grotesque_haunts_then_payoff_on_death() {
     let mut g = two_player_game();
+    // The default bot profile aims a hostile player slot at an
+    // opponent (`EvalWeights::default()`); a bare test seat does not.
+    g.players[0].hostile_player_targets = true;
     let grotesque = g.add_card_to_battlefield(0, catalog::shrieking_grotesque());
     let foe = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4, survives
     g.add_card_to_hand(1, catalog::grizzly_bears()); // the one card to discard

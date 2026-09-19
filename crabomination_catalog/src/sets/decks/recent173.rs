@@ -151,25 +151,31 @@ pub fn aggressive_negotiations() -> CardDefinition {
         name: "Aggressive Negotiations",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
-            Effect::ExileChosenFromHand {
-                from: Selector::Player(PlayerRef::EachOpponent),
-                count: Value::ONE,
-                filter: R::Nonland,
-                link_to_source: false,
-                face_down: false,
-            },
-            Effect::ApplyToTargets {
-                max_targets: 1,
-                min_targets: 0,
-                filter: R::Creature.and(R::ControlledByYou),
-                effect: Box::new(Effect::AddCounter {
-                    what: Selector::Target(0),
+        // Two slots: the **target opponent** whose hand is exiled from (slot
+        // 0, required) and the "up to one target creature you control" the
+        // counter goes on (slot 1, declinable). `ApplyToTargets` cannot
+        // express that pair — it rebinds every supplied target to slot 0 —
+        // which is why the opponent had been a fan-out.
+        effect: Effect::OptionalTargets {
+            min: 1,
+            body: Box::new(Effect::Seq(vec![
+                Effect::ExileChosenFromHand {
+                    from: Selector::TargetFiltered { slot: 0, filter: R::OpponentPlayer },
+                    count: Value::ONE,
+                    filter: R::Nonland,
+                    link_to_source: false,
+                    face_down: false,
+                },
+                Effect::AddCounter {
+                    what: Selector::TargetFiltered {
+                        slot: 1,
+                        filter: R::Creature.and(R::ControlledByYou),
+                    },
                     kind: crate::card::CounterType::PlusOnePlusOne,
                     amount: Value::ONE,
-                }),
-            },
-        ]),
+                },
+            ])),
+        },
         ..Default::default()
     }
 }

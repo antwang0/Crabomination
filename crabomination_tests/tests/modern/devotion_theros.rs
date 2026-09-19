@@ -761,11 +761,33 @@ fn nihil_spellbomb_exiles_opponent_graveyard() {
     g.add_card_to_graveyard(1, catalog::lightning_bolt());
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: bomb, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
-        .expect("{T},Sac: exile opp graveyard");
+        card_id: bomb, ability_index: 0, target: Some(Target::Player(1)),
+        additional_targets: Vec::new(), x_value: None , mode: None})
+        .expect("{T},Sac: exile target player's graveyard");
     drain_stack(&mut g);
     assert!(g.players[1].graveyard.is_empty(), "opponent graveyard exiled");
     assert!(!g.battlefield.iter().any(|c| c.id == bomb), "spellbomb sacrificed");
+}
+
+/// "Exile **target player's** graveyard" is one seat. It shipped as
+/// `PlayerRef::EachOpponent`, which is the same graveyard in a duel and the
+/// whole table's in a pod.
+#[test]
+fn nihil_spellbomb_exiles_only_the_targeted_graveyard_at_four_seats() {
+    let mut g = crabomination::game::multi_player_game(4);
+    let bomb = g.add_card_to_battlefield(0, catalog::nihil_spellbomb());
+    for seat in 1..4 {
+        g.add_card_to_graveyard(seat, catalog::grizzly_bears());
+    }
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bomb, ability_index: 0, target: Some(Target::Player(2)),
+        additional_targets: Vec::new(), x_value: None , mode: None})
+        .expect("{T},Sac: exile target player's graveyard");
+    drain_stack(&mut g);
+    assert!(g.players[2].graveyard.is_empty(), "the targeted graveyard is exiled");
+    assert_eq!(g.players[1].graveyard.len(), 1, "seat 1 was not targeted");
+    assert_eq!(g.players[3].graveyard.len(), 1, "seat 3 was not targeted");
 }
 
 #[test]

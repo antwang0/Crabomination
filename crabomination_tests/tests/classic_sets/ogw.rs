@@ -430,7 +430,7 @@ fn witness_the_end_discard_two_lose_two() {
     let id = g.add_card_to_hand(0, catalog::witness_the_end());
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add_colorless(3);
-    crabomination::game::cast(&mut g, id);
+    crabomination::game::cast_at(&mut g, id, Target::Player(1));
     assert_eq!(g.players[1].hand.len(), hand_before - 2, "opponent discards two");
     assert_eq!(g.players[1].life, life_before - 2, "opponent loses 2 life");
 }
@@ -1854,7 +1854,7 @@ fn mires_malice_discards_two() {
     g.players[0].mana_pool.add_colorless(3);
     let before = g.players[1].hand.len();
     g.perform_action(GameAction::CastSpell {
-        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+        card_id: spell, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast Mire's Malice");
     drain_stack(&mut g);
     assert_eq!(g.players[1].hand.len(), before - 2, "opponent discards two");
@@ -2263,6 +2263,9 @@ fn comparative_analysis_draws_two() {
 #[test]
 fn mires_malice_awaken_discards_and_animates() {
     let mut g = two_player_game();
+    // The default bot profile aims a hostile player slot at an
+    // opponent (`EvalWeights::default()`); a bare test seat does not.
+    g.players[0].hostile_player_targets = true;
     for _ in 0..3 { g.add_card_to_hand(1, catalog::grizzly_bears()); }
     let before = g.players[1].hand.len();
     let land = g.add_card_to_battlefield(0, catalog::mountain());
@@ -2270,8 +2273,8 @@ fn mires_malice_awaken_discards_and_animates() {
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add_colorless(5);
     g.perform_action(GameAction::CastSpellAlternative {
-        card_id: id, pitch_card: None, target: Some(Target::Permanent(land)),
-        additional_targets: vec![], mode: None, x_value: None,
+        card_id: id, pitch_card: None, target: Some(Target::Player(1)),
+        additional_targets: vec![Target::Permanent(land)], mode: None, x_value: None,
     }).expect("awaken cast");
     drain_stack(&mut g);
     assert_eq!(g.players[1].hand.len(), before - 2, "opponent discarded two");

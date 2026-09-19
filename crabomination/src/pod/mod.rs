@@ -471,10 +471,20 @@ mod tests {
         // 27.49 / 611.9 / 0 stalls, byte-identical) or a golden trace, which
         // is the answer to "these are cube cards, so they need a bench
         // re-bless": they are, and it did not move.
+        // Re-blessed 2026-09-19 (the target-clause class): three pod-deck
+        // cards stopped fanning a printed "target opponent / target player"
+        // clause out over the whole table — Endurance ("up to one target
+        // player puts their graveyard on the bottom", Tatyova), Indulgent
+        // Tormentor ("unless **target opponent** sacrifices … or pays 3
+        // life", Judith) and Nihil Spellbomb ("exile **target player's**
+        // graveyard", Judith). At two seats each is the same object it always
+        // was; at four it is one seat instead of three, so two of the three
+        // seeded games are different games. ⚠ Three games is a re-bless gate,
+        // not a measurement — the aggregate is in DECK_FEATURES.
         const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
-            (0xC0FFEE, Some(1), 55, 2368),
+            (0xC0FFEE, Some(1), 55, 2369),
             (43, Some(3), 47, 2040),
-            (4242, Some(0), 47, 2223),
+            (4242, Some(3), 56, 2400),
         ];
         let decks = rofellos_pod(4);
         let t = build_pod_template(&decks);

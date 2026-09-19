@@ -826,7 +826,7 @@ fn thoughtseize_discards_nonland_and_costs_two_life() {
     g.players[0].mana_pool.add(Color::Black, 1);
     let p0_life = g.players[0].life;
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
     }).expect("Thoughtseize castable for {B}");
     drain_stack(&mut g);
     assert!(g.players[1].graveyard.iter().any(|c| c.id == victim_card),
@@ -839,13 +839,16 @@ fn thoughtseize_discards_nonland_and_costs_two_life() {
 #[test]
 fn searing_blaze_burns_creature_and_player() {
     let mut g = two_player_game();
+    // The default bot profile aims a hostile player slot at an
+    // opponent (`EvalWeights::default()`); a bare test seat does not.
+    g.players[0].hostile_player_targets = true;
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::searing_blaze());
     g.players[0].mana_pool.add(Color::Red, 2);
     let p1_life = g.players[1].life;
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: Some(Target::Permanent(bear)),
-        additional_targets: vec![], mode: None, x_value: None,
+        additional_targets: vec![Target::Player(1)], mode: None, x_value: None,
     }).expect("Searing Blaze castable for {R}{R}");
     drain_stack(&mut g);
     assert!(g.battlefield.iter().any(|c| c.id == bear), "2/2 survives 1 damage");
@@ -857,11 +860,12 @@ fn searing_blaze_burns_creature_and_player() {
     g.players[0].mana_pool.add(Color::Red, 2);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: Some(Target::Permanent(bear)),
-        additional_targets: vec![], mode: None, x_value: None,
+        additional_targets: vec![Target::Player(1)], mode: None, x_value: None,
     }).expect("Searing Blaze castable for {R}{R}");
     drain_stack(&mut g);
     assert!(!g.battlefield.iter().any(|c| c.id == bear), "2/2 dies to 3 damage under landfall");
-    assert_eq!(g.players[1].life, p1_life - 4, "opp takes 1 + 3");
+    // Landfall raises only the creature's half: the player still takes 1.
+    assert_eq!(g.players[1].life, p1_life - 2, "opp takes 1, then 1 again");
 }
 
 /// Inquisition of Kozilek makes an opponent discard a chosen nonland card
@@ -873,7 +877,7 @@ fn inquisition_of_kozilek_discards_low_cmc_nonland() {
     let id = g.add_card_to_hand(0, catalog::inquisition_of_kozilek());
     g.players[0].mana_pool.add(Color::Black, 1);
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
     }).expect("Inquisition castable for {B}");
     drain_stack(&mut g);
     assert!(g.players[1].graveyard.iter().any(|c| c.id == bear),
@@ -884,14 +888,17 @@ fn inquisition_of_kozilek_discards_low_cmc_nonland() {
 #[test]
 fn collective_defiance_mode0_burns_a_creature() {
     let mut g = two_player_game();
+    // The default bot profile aims a hostile player slot at an
+    // opponent (`EvalWeights::default()`); a bare test seat does not.
+    g.players[0].hostile_player_targets = true;
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::collective_defiance());
     g.players[0].mana_pool.add(Color::Red, 2);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: Some(Target::Permanent(bear)),
-        additional_targets: vec![], mode: Some(0), x_value: None,
-    }).expect("Collective Defiance mode 0 castable for {1}{R}{R}");
+        additional_targets: vec![], mode: Some(1), x_value: None,
+    }).expect("Collective Defiance's creature mode castable for {1}{R}{R}");
     drain_stack(&mut g);
     assert!(!g.battlefield.iter().any(|c| c.id == bear), "4 dmg kills the 2/2");
 }
@@ -905,7 +912,7 @@ fn collective_defiance_mode2_burns_opponent() {
     g.players[0].mana_pool.add_colorless(1);
     let p1_life = g.players[1].life;
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: Some(2), x_value: None,
+        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![], mode: Some(2), x_value: None,
     }).expect("Collective Defiance mode 2 castable");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, p1_life - 3, "each opponent takes 3");

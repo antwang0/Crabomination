@@ -19,6 +19,7 @@ Four changes, all reversible from `git log -p`, and **no body was edited**:
 
 | Set / topic | Status | Lines |
 | --- | --- | --- |
+| [The TARGET-clause class — 126 cards printed "target opponent" and hit the whole table](#the-target-clause-class--126-cards-printed-target-opponent-and-hit-the-whole-table) | closed — 1 residual | 60 |
 | [Target-deck card defects, and why they are all blocked on one thing](#target-deck-card-defects-and-why-they-are-all-blocked-on-one-thing) | open | 33 |
 | [CR 603.2c batches — four clauses closed, and the ratchets that hold them](#cr-6032c-batches--four-clauses-closed-and-the-ratchets-that-hold-them) | closed — residuals only | 72 |
 | [The printed-clause ratchet family — one body, and where its needles break](#the-printed-clause-ratchet-family--one-body-and-where-its-needles-break) | open | 58 |
@@ -238,6 +239,83 @@ card and not the damage one; reading the whole line put Ark of Hunger, Fuming
 Effigy and Chandra, Fire Artisan in the wrong list on the first run. What is
 left outside the four clauses: Kaya, Spirits' Justice ("…are put into exile",
 a known residual) and City in a Bottle (a static dressed as a trigger).
+
+## The TARGET-clause class — 126 cards printed "target opponent" and hit the whole table
+
+**The mirror of `audit_each_opponent.py`, and the half that only bites at three
+seats or more.** A card printed "target opponent discards two cards" modelled as
+`Selector::Player(PlayerRef::EachOpponent)` is *correct in a duel* — one
+opponent is the target — and hits every seat in a pod. That is why 126 of them
+survived review: the duel is the review.
+
+`scripts/audit_target_opponent.py` is the ratchet. A hit needs three things,
+and the third is what keeps the precision up: the printed text names a
+**target** player or opponent (reminder text stripped); the printed text has
+**no** per-opponent clause at all, so nothing in the card a fan-out could
+legitimately be modelling; and the body names a fan-out `PlayerRef` in a
+*recipient* position. Three contexts are deliberately not recipients —
+`Predicate::` / `condition:` (Archive Trap's "if an opponent searched their
+library", Ravenous Trap's graveyard count), `PlayersMayAccept` (Browbeat's
+printed "any player may…") and a `Gift`'s token (the promisee, which the
+engine has no single-recipient shape for).
+
+**Reading: 126 → 1.** The one left is **Consumed by Greed**, and the reason is
+structural: the base effect has one target (the opponent) and the *gifted*
+effect has two (the opponent plus a graveyard creature at slot 0), so giving
+the opponent slot 0 needs the gift branch's slot to move — and slot 1 only
+exists when the gift was promised.
+
+⚠ **The fix is not just a search-and-replace, and four things went wrong that
+the next reader should not rediscover.**
+
+1. **`Selector::Player(PlayerRef::EachOpponent)` is mechanical; a bare
+   `PlayerRef::EachOpponent` is not.** The bare form also appears in
+   `Predicate::` conditions and in `Gift` recipients, where the fan-out is the
+   printed text. 89 cards took the mechanical rewrite; the other 37 were read
+   by hand.
+2. **A card's *other* target slot may belong to a different ability.** An
+   Aura's enchant target and its ETB trigger's target are different slots, so
+   "this card already has a slot 0" is not a blocker — but two clauses in one
+   spell (Eriette's Whisper, Searing Blaze, Harmless Offering, Stiltzkin,
+   Mire's Malice, Aggressive Negotiations) genuinely need the second slot
+   numbered, and `ApplyToTargets` cannot express the pair (it rebinds every
+   supplied target to slot 0). `Effect::OptionalTargets { min, body }` is what
+   can.
+3. **⚠⚠ A "target player" slot aims at the CASTER unless the seat's
+   `hostile_player_targets` flag is on** — it is on in `EvalWeights::default()`
+   (round 67) and off in a bare `two_player_game()`, which is why 24 tests
+   needed the flag set rather than a target passed. Read
+   `player_slot_is_hostile` before assuming the picker will do the right thing.
+4. **⚠ And the classifier that decides the slot's polarity read `any` over a
+   `Seq`'s children.** Oildeep Gearhulk is `Seq[DiscardChosen(target player),
+   Draw(that player)]`; the draw looked like a gift, so the whole trigger aimed
+   at its own controller and the Gearhulk made its **caster** discard.
+   `friendliness_of_targeting_children` reads the **first** targeting child
+   now, which leaves Shadrix Silverquill's `Seq[Draw, LoseLife]` mode friendly
+   and flips this one.
+
+**And five engine walkers had no arm for the slot these cards now declare** —
+caught by `target_walkers::every_declared_target_slot_is_answerable` and
+`cr_601_2c_every_catalog_target_filter_is_surfaced`, which is what those
+ratchets are for: `ExileChosenUntilSourceLeaves`, `ExileFromHandTaxed`,
+`ExileChosenFromHand`, `ExileFromGraveyard`, `Fateseal` and
+`PayLifeRevealExileFromHand`.
+
+**Three of the 126 were in a pod target deck** and so outranked the rest:
+Endurance (Tatyova), Indulgent Tormentor (Judith) and Nihil Spellbomb (Judith).
+Each has an N-seat regression test asserting *one* seat is hit.
+
+📐 **Five cards were wrong beyond the targeting**, found by reading the oracle
+while fixing the clause: Collective Defiance had **no escalate at all** and two
+of its three modes were different cards ("each opponent discards three then
+draws three" for "target player discards their hand, then draws that many");
+Relic of Progenitus's `{T}` exiled every opponent's whole graveyard where the
+printed ability exiles **one card** from one; Searing Blaze scaled its player
+half with landfall, which raises only the creature's; Endurance could not
+target its own controller, which is the card's main Modern use; Kaya, Spirits'
+Justice's −2 is still one opponent where the print is one per other player
+(filed in `INCOMPLETE_CARDS.md` — `ForEachOpponentTarget` cannot sit behind a
+fixed slot 0).
 
 ## Target-deck card defects, and why they are all blocked on one thing
 

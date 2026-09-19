@@ -532,7 +532,7 @@ fn archive_trap_free_after_opponent_searches() {
     let fetch = g.add_card_to_battlefield(1, catalog::evolving_wilds());
     g.priority.player_with_priority = 1;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: fetch, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
+        card_id: fetch, ability_index: 0, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("fetch activation");
     drain_stack(&mut g);
     assert!(g.players[1].searched_library_this_turn, "search stamped");
@@ -544,7 +544,7 @@ fn archive_trap_free_after_opponent_searches() {
     }
     let lib_before = g.players[1].library.len();
     g.perform_action(GameAction::CastSpellAlternative {
-        card_id: trap, pitch_card: None, target: None,
+        card_id: trap, pitch_card: None, target: Some(Target::Player(1)),
         additional_targets: vec![], mode: None, x_value: None,
     }).expect("free via trap condition");
     drain_stack(&mut g);
@@ -1132,7 +1132,7 @@ fn traumatize_mills_half_library() {
     let lib = g.players[1].library.len();
     g.players[0].mana_pool.add(Color::Blue, 2);
     g.players[0].mana_pool.add_colorless(3);
-    cast(&mut g, id);
+    cast_at(&mut g, id, Target::Player(1));
     drain_stack(&mut g);
     assert_eq!(g.players[1].library.len(), lib - lib / 2);
 }
@@ -1147,7 +1147,7 @@ fn bruvac_doubles_opponent_mill() {
     let ms = g.add_card_to_hand(0, catalog::mind_sculpt());
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(2);
-    cast(&mut g, ms);
+    cast_at(&mut g, ms, Target::Player(1));
     drain_stack(&mut g);
     assert_eq!(g.players[1].library.len(), lib - 14, "7 doubled to 14");
 }

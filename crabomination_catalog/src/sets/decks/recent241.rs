@@ -311,12 +311,12 @@ pub fn cerebral_confiscation() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::ChooseMode(vec![
             Effect::Discard {
-                who: Selector::Player(PlayerRef::EachOpponent),
+                who: crate::effect::shortcut::target_filtered(crate::card::SelectionRequirement::OpponentPlayer),
                 amount: Value::Const(2),
                 random: false,
             },
             Effect::DiscardChosen {
-                from: Selector::Player(PlayerRef::EachOpponent),
+                from: crate::effect::shortcut::target_filtered(crate::card::SelectionRequirement::OpponentPlayer),
                 count: Value::ONE,
                 filter: R::Nonland,
             },

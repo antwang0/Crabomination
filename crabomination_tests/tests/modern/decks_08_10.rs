@@ -656,7 +656,7 @@ fn despise_takes_a_creature_from_opp_hand() {
     g.players[0].mana_pool.add(Color::Black, 1);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
     }).expect("Despise castable for {B}");
     drain_stack(&mut g);
 
@@ -674,7 +674,7 @@ fn distress_takes_a_nonland_card_from_opp_hand() {
     g.players[0].mana_pool.add(Color::Black, 2);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
     }).expect("Distress castable for {B}{B}");
     drain_stack(&mut g);
 

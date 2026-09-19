@@ -1053,7 +1053,7 @@ pub fn havoc_sower() -> CardDefinition {
 /// target opponent loses that much life.
 pub fn defiant_bloodlord() -> CardDefinition {
     use crate::card::{CreatureType, EventKind, EventScope, EventSpec, TriggeredAbility};
-    use crate::effect::{PlayerRef, Selector, Value};
+    use crate::effect::Value;
     CardDefinition {
         name: "Defiant Bloodlord",
         cost: cost(&[generic(5), b(), b()]),
@@ -1068,7 +1068,7 @@ pub fn defiant_bloodlord() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
             effect: Effect::LoseLife {
-                who: Selector::Player(PlayerRef::EachOpponent),
+                who: target_filtered(crate::card::SelectionRequirement::OpponentPlayer),
                 amount: Value::TriggerEventAmount,
             },
         }],
@@ -1866,7 +1866,7 @@ pub fn blight_herder() -> CardDefinition {
 /// hand, you choose a nonland card and exile it. LTB: that player draws a card.
 pub fn thought_knot_seer() -> CardDefinition {
     use crate::card::{EventKind, EventScope, EventSpec, SelectionRequirement, TriggeredAbility};
-    use crate::effect::{PlayerRef, Selector, Value};
+    use crate::effect::Value;
     CardDefinition {
         name: "Thought-Knot Seer",
         cost: cost(&[generic(3), crate::mana::colorless(1)]),
@@ -1881,7 +1881,7 @@ pub fn thought_knot_seer() -> CardDefinition {
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
                 effect: Effect::ExileChosenFromHand {
-                    from: Selector::Player(PlayerRef::EachOpponent),
+                    from: target_filtered(crate::card::SelectionRequirement::OpponentPlayer),
                     count: Value::Const(1),
                     filter: SelectionRequirement::Nonland,
                     link_to_source: false,
@@ -1895,7 +1895,7 @@ pub fn thought_knot_seer() -> CardDefinition {
                     EventScope::SelfSource,
                 ),
                 effect: Effect::Draw {
-                    who: Selector::Player(PlayerRef::EachOpponent),
+                    who: target_filtered(crate::card::SelectionRequirement::OpponentPlayer),
                     amount: Value::Const(1),
                 },
             },

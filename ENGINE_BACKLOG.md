@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED 2026-09-19 (the forty-fourth find) — a printed "TARGET opponent" clause modelled as a fan-out is invisible in a duel and hits the whole table in a pod](#fixed-2026-09-19-the-forty-fourth-find--a-printed-target-opponent-clause-modelled-as-a-fan-out-is-invisible-in-a-duel-and-hits-the-whole-table-in-a-pod) | 55 |
 | Bugs & robustness | [FIXED 2026-09-19 (the forty-third find) — a LOOP whose body suspends parks only the BODY, and twenty of them ran on and dropped the rest](#fixed-2026-09-19-the-forty-third-find--a-loop-whose-body-suspends-parks-only-the-body-and-twenty-of-them-ran-on-and-dropped-the-rest) | 90 |
 | Bugs & robustness | [FIXED 2026-09-13 (twenty-sixth find) — the sweep's only surviving cap, and the field in the digest that was bookkeeping rather than progress](#fixed-2026-09-13-twenty-sixth-find--the-sweeps-only-surviving-cap-and-the-field-in-the-digest-that-was-bookkeeping-rather-than-progress) | 80 |
 | Bugs & robustness | [FIXED 2026-09-12 (twenty-fifth find) — nineteen cards print a colour their mana cost cannot carry, and none had an indicator](#fixed-2026-09-12-twenty-fifth-find--nineteen-cards-print-a-colour-their-mana-cost-cannot-carry-and-none-had-an-indicator) | 44 |
@@ -82,6 +83,57 @@ the handoff.
 
 
 # Bugs & robustness
+
+## FIXED 2026-09-19 (the forty-fourth find) — a printed "TARGET opponent" clause modelled as a fan-out is invisible in a duel and hits the whole table in a pod
+
+`audit_each_opponent.py` asks "the print says each opponent, does the body fan
+out?". **Nobody had asked it the other way**, and the other way is 126 cards:
+a clause printed "**target** opponent discards two cards" modelled as
+`Selector::Player(PlayerRef::EachOpponent)`. In a duel the one opponent *is*
+the target, so every one of them passed its own test. At four seats Blood
+Artist drains 3 a death, Thoughtseize strips every hand and Bojuka Bog exiles
+every graveyard.
+
+`scripts/audit_target_opponent.py` is the ratchet and the whole method: read
+the printed text for a **target** player clause, require that the text has no
+per-opponent clause at all, and look for a fan-out `PlayerRef` in a *recipient*
+position. **126 → 1**; CARD_BACKLOG's "TARGET-clause class" carries the
+per-card work and the four traps.
+
+**The three engine findings, which are the reusable half:**
+
+- ⚠⚠ **A "target player" slot aims at the CASTER unless the seat's
+  `hostile_player_targets` flag is on.** It is on in `EvalWeights::default()`
+  (round 67 adopted it) and off in a bare `two_player_game()`, so 24 tests
+  needed the flag rather than a target. `player_slot_is_hostile` is the list
+  of shapes whose polarity is not in doubt; a variant missing from it aims at
+  the caster in bot play too.
+- ⚠⚠ **`friendliness_of_targeting_children` read `any` over a `Seq`'s
+  children, so a rider aimed at the SAME seat flipped the whole clause.**
+  Oildeep Gearhulk is `Seq[DiscardChosen(target player), Draw(that player)]`:
+  the draw read as a gift, the trigger aimed at its own controller, and the
+  Gearhulk made its **caster** discard. It reads the **first** targeting child
+  now — which keeps Shadrix Silverquill's `Seq[Draw, LoseLife]` mode friendly
+  (the `any` answer) and flips only the shape where a hostile clause comes
+  first. ⚠ The obvious alternative — making the heuristic picker slot-aware
+  (`prefers_friendly_target_for_slot`) — was written and reverted: on a modal
+  body with `mode: None` `slot_owner` resolves to the **first mode**, not the
+  chosen one, and that flipped Shadrix.
+- 📐 **Six variants had no arm for the player slot they can now declare**, and
+  the two catalog-wide ratchets named all six on the first run:
+  `every_declared_target_slot_is_answerable` caught
+  `ExileChosenUntilSourceLeaves` / `ExileFromHandTaxed` /
+  `ExileChosenFromHand`, `every_targeting_spell_or_ability_says_what_it_targets`
+  caught `ExileFromGraveyard` / `Fateseal`, and
+  `cr_601_2c_every_catalog_target_filter_is_surfaced` closed the loop. **A
+  card that declares a slot no walker answers resolves against an empty target
+  list — a silent, total fizzle with nothing logged.**
+
+📐 **And the pair shape that needs a second slot: `ApplyToTargets` cannot
+express it** — it rebinds every supplied target to slot 0.
+`Effect::OptionalTargets { min, body }` is the one that can (Aggressive
+Negotiations: opponent required at slot 0, "up to one target creature you
+control" declinable at slot 1).
 
 ## FIXED 2026-09-19 (the forty-third find) — a LOOP whose body suspends parks only the BODY, and twenty of them ran on and dropped the rest
 

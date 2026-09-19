@@ -108,6 +108,9 @@ mod recent253 {
     fn rakdos_patron_draws_when_no_sacrifice() {
         use crabomination::game::TurnStep;
         let mut g = two_player_game();
+        // The default bot profile aims a hostile player slot at an
+        // opponent (`EvalWeights::default()`); a bare test seat does not.
+        g.players[0].hostile_player_targets = true;
         let rakdos = g.add_card_to_battlefield(0, catalog::rakdos_patron_of_chaos());
         for _ in 0..2 { g.add_card_to_library(0, catalog::forest()); }
         // Opponent controls only a token (nontoken required) → can't pay.
@@ -120,7 +123,7 @@ mod recent253 {
         };
         g.add_token_to_battlefield(1, &tok);
         let hand_before = g.players[0].hand.len();
-        let ctx = EffectContext::for_trigger(rakdos, 0, None, 0);
+        let ctx = EffectContext::for_trigger(rakdos, 0, Some(Target::Player(1)), 0);
         let trig = catalog::rakdos_patron_of_chaos().triggered_abilities[0].effect.clone();
         g.step = TurnStep::End;
         g.resolve_effect(&trig, &ctx).unwrap();

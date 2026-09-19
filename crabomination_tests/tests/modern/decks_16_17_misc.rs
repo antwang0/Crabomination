@@ -1020,7 +1020,7 @@ fn thought_erasure_strips_nonland_and_surveils() {
     g.players[0].mana_pool.add(Color::Black, 1);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
     }).expect("Thought Erasure castable for {U}{B}");
     drain_stack(&mut g);
 
@@ -1166,7 +1166,7 @@ fn thought_erasure_strips_and_surveils() {
     g.players[0].mana_pool.add(Color::Black, 1);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
     }).expect("Thought Erasure castable");
     drain_stack(&mut g);
 
@@ -2466,17 +2466,21 @@ fn monastery_swiftspear_prowess_pumps_on_instant() {
 #[test]
 fn relic_of_progenitus_exiles_opponent_graveyard() {
     let mut g = two_player_game();
+    // The default bot profile aims a hostile player slot at an
+    // opponent (`EvalWeights::default()`); a bare test seat does not.
+    g.players[0].hostile_player_targets = true;
     g.add_card_to_graveyard(1, catalog::grizzly_bears());
     g.add_card_to_graveyard(1, catalog::lightning_bolt());
     let relic = g.add_card_to_battlefield(0, catalog::relic_of_progenitus());
     g.clear_sickness(relic);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: relic, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
+        card_id: relic, ability_index: 0, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None, mode: None,
     })
-    .expect("Relic {T}: exile a card from each opponent's graveyard");
+    .expect("Relic {T}: target player exiles a card from their graveyard");
     drain_stack(&mut g);
-    assert!(g.players[1].graveyard.is_empty(),
-        "opponent's graveyard exiled by Relic of Progenitus");
+    // "**a card**", not the graveyard: the whole-graveyard sweep is the
+    // second ability ("{1}, Exile this: Exile all graveyards").
+    assert_eq!(g.players[1].graveyard.len(), 1, "exactly one card left the graveyard");
 }
 
 #[test]
