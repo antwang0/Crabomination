@@ -5067,3 +5067,97 @@ fn cr_800_4a_the_player_to_your_left_skips_a_departed_seat() {
         "and seat 3's is the caster, so the Bears goes too",
     );
 }
+
+// ── CR 506.2 — "attacking YOU" is not "attacking" at more than two seats ────
+
+/// Seat 1 swings two creatures at seat 2 and one at seat 0, with seat 0 also
+/// holding a planeswalker under one attacker. Three predicates, three answers,
+/// and at two seats all three would agree.
+fn three_way_attack() -> (GameState, crabomination::card::CardId) {
+    let mut g = multi_player_game(4);
+    let pw = g.add_card_to_battlefield(0, catalog::jace_beleren());
+    let mut swing = Vec::new();
+    for target in [
+        AttackTarget::Player(2),
+        AttackTarget::Player(2),
+        AttackTarget::Player(0),
+        AttackTarget::Planeswalker(pw),
+    ] {
+        let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        g.clear_sickness(a);
+        swing.push(Attack { attacker: a, target });
+    }
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.declare_attackers(swing).expect("declare across three defenders");
+    (g, pw)
+}
+
+/// CR 506.2 — a creature attacking a planeswalker is attacking the
+/// planeswalker, not its controller. `include_planeswalkers` is the printed
+/// difference between Trouble in Pairs ("attacks **you** with two or more
+/// creatures") and Mangara, the Diplomat ("attacking **you and/or
+/// planeswalkers you control**"), and seat 0 is hit by exactly one of each.
+#[test]
+fn cr_506_2_attacked_defender_count_separates_the_player_from_their_planeswalkers() {
+    use crabomination::card::Predicate;
+    let (g, _pw) = three_way_attack();
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    let at = |defender: usize, at_least: u32, include_planeswalkers: bool| {
+        g.evaluate_predicate(
+            &Predicate::AttackedDefenderWithCountAtLeast {
+                who: PlayerRef::Seat(1),
+                defender: PlayerRef::Seat(defender),
+                at_least,
+                include_planeswalkers,
+            },
+            &ctx,
+        )
+    };
+
+    // Seat 0: one attacker on the player, one on their planeswalker.
+    assert!(at(0, 1, false), "one creature is attacking seat 0");
+    assert!(!at(0, 2, false), "the planeswalker's attacker is not attacking seat 0");
+    assert!(at(0, 2, true), "…but it counts once planeswalkers are included");
+    assert!(!at(0, 3, true), "and there are only two either way");
+
+    // Seat 2: two on the player, no planeswalker, so the flag changes nothing.
+    assert!(at(2, 2, false), "two creatures are attacking seat 2");
+    assert!(at(2, 2, true));
+    assert!(!at(2, 3, false), "and not three");
+
+    // Seat 3 was not attacked at all.
+    assert!(!at(3, 1, false), "seat 3 is untouched");
+    assert!(!at(3, 1, true));
+}
+
+/// ⚠ And the whole reason the predicate exists: the *undirected*
+/// `AttackedWithCountAtLeast` counts seat 1's entire declaration and so reads
+/// true for a defender who was never attacked. In a duel there is only one
+/// defender and the two predicates cannot be told apart.
+#[test]
+fn cr_506_2_the_undirected_attacker_count_is_not_the_defender_side_one() {
+    use crabomination::card::Predicate;
+    let (g, _pw) = three_way_attack();
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    assert!(
+        g.evaluate_predicate(
+            &Predicate::AttackedWithCountAtLeast { who: PlayerRef::Seat(1), at_least: 4 },
+            &ctx,
+        ),
+        "seat 1 declared four attackers in total",
+    );
+    assert!(
+        !g.evaluate_predicate(
+            &Predicate::AttackedDefenderWithCountAtLeast {
+                who: PlayerRef::Seat(1),
+                defender: PlayerRef::Seat(3),
+                at_least: 1,
+                include_planeswalkers: true,
+            },
+            &ctx,
+        ),
+        "but none of them at seat 3 — the difference a duel cannot show",
+    );
+}

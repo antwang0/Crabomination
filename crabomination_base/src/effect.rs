@@ -2174,6 +2174,34 @@ pub enum Predicate {
     /// outside a combat with declared attackers. Argent Dais's "whenever two
     /// or more creatures attack" (with `who: ActivePlayer`).
     AttackedWithCountAtLeast { who: PlayerRef, at_least: u32 },
+    /// CR 506.2 / 508.1 — `who` declared at least `at_least` attackers this
+    /// combat **aimed at `defender`**: attacking the player themselves, plus,
+    /// when `include_planeswalkers`, attacking a planeswalker `defender`
+    /// controls. The defender-side refinement of `AttackedWithCountAtLeast`,
+    /// which counts a player's whole declaration wherever it is pointed.
+    ///
+    /// ⚠ **The two are the same predicate in a duel and different ones in a
+    /// pod**, which is the whole reason this exists: an opponent swinging at a
+    /// third player is not attacking you, and at two seats there is no third
+    /// player for the distinction to show up in.
+    ///
+    /// `include_planeswalkers` is a printed difference, not a knob. Trouble in
+    /// Pairs says "attacks **you** with two or more creatures" (false — a
+    /// creature attacking your planeswalker is attacking the planeswalker, CR
+    /// 506.2); Mangara, the Diplomat says "two or more of those creatures are
+    /// attacking **you and/or planeswalkers you control**" (true). A creature
+    /// attacking a Battle counts for neither.
+    ///
+    /// ⚠ Reads `GameState.attacking`, so it is only complete once the whole
+    /// declaration is in — see the note on the defender-side walk in
+    /// `combat.rs`. On a `ControllerAttackedByOpponent` trigger it belongs
+    /// inside the effect (`Effect::If`), not in the `EventSpec` filter.
+    AttackedDefenderWithCountAtLeast {
+        who: PlayerRef,
+        defender: PlayerRef,
+        at_least: u32,
+        include_planeswalkers: bool,
+    },
     /// `who` declared one or more attackers this combat matching `filter`.
     /// Reads `GameState.attacking`; `false` outside a combat with declared
     /// attackers. Gates "Whenever you attack with one or more creatures with

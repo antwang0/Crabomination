@@ -2998,6 +2998,34 @@ impl GameState {
                     .count();
                 count as u32 >= *at_least
             }
+            // CR 506.2 — the same count, restricted to the attackers pointed
+            // at one defender. A Battle is attacked in its own right, so it is
+            // never "attacking you" however the protector is set.
+            Predicate::AttackedDefenderWithCountAtLeast {
+                who,
+                defender,
+                at_least,
+                include_planeswalkers,
+            } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return false };
+                let Some(d) = self.resolve_player(defender, ctx) else { return false };
+                let count = self
+                    .attacking
+                    .iter()
+                    .filter(|a| {
+                        self.battlefield_find(a.attacker).is_some_and(|c| c.controller == p)
+                    })
+                    .filter(|a| match a.target {
+                        crate::game::types::AttackTarget::Player(seat) => seat == d,
+                        crate::game::types::AttackTarget::Planeswalker(pw) => {
+                            *include_planeswalkers
+                                && self.battlefield_find(pw).is_some_and(|c| c.controller == d)
+                        }
+                        crate::game::types::AttackTarget::Battle(_) => false,
+                    })
+                    .count();
+                count as u32 >= *at_least
+            }
             Predicate::AttackedWithCreatureMatching { who, filter } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return false };
                 self.attacking.iter().any(|a| {
