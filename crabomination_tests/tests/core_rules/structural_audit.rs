@@ -536,6 +536,7 @@ fn no_shipped_card_nests_two_answer_log_arms() {
         "PlayerReturnsPermanentUnlessPaysLife",
         "PlayersMayAccept",
         "Process",
+        "PutNameSticker",
         "RemoveCountersToCreateTokens",
         "ReturnEachUnlessPays",
         "ReturnFromGraveyardOpponentChooses",

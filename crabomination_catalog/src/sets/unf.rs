@@ -280,7 +280,7 @@ pub fn lifetime_pass_holder() -> CardDefinition {
         cost: cost(&[b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Zombie],
+            creature_types: vec![CreatureType::Zombie, CreatureType::Guest],
             ..Default::default()
         },
         power: 2,
@@ -413,7 +413,7 @@ pub fn the_most_dangerous_gamer() -> CardDefinition {
         card_types: vec![CardType::Creature],
         supertypes: vec![Supertype::Legendary],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human],
+            creature_types: vec![CreatureType::Human, CreatureType::Guest],
             ..Default::default()
         },
         power: 2,

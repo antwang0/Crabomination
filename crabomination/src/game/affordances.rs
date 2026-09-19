@@ -157,6 +157,7 @@ impl GameState {
         let _ = write!(s, "{:?}|", self.trigger_event_player_scratch);
         let _ = write!(s, "{:?}|", self.last_created_token);
         let _ = write!(s, "{:?}|", self.last_die_roll);
+        let _ = write!(s, "{:?}|", self.last_name_sticker_vowels);
         let _ = write!(s, "{:?}|", self.extra_cast_reduction);
         let _ = write!(s, "{:?}|", self.cast_paid_uncounterable);
         let _ = write!(s, "{:?}|", self.cast_kick_count);

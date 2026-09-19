@@ -2344,6 +2344,11 @@ impl GameState {
         if intended != crate::card::Zone::Battlefield {
             card.revert_flip();
         }
+        // CR 123.5 — stickers are not retained into a hidden zone (and the
+        // sticker is free again, CR 123.3). Guarded inside.
+        if matches!(intended, crate::card::Zone::Hand | crate::card::Zone::Library) {
+            card.strip_name_stickers();
+        }
         match dest {
             ZoneDest::Hand(who) => {
                 let ctx = EffectContext::for_spell(default_player, None, 0, 0);

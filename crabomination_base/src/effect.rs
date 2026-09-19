@@ -1299,6 +1299,10 @@ pub enum Value {
     /// — "the life you lost when it entered" (Soulgorger Orgg). Reads the
     /// source's death LKI too, so a leave trigger still sees it.
     RememberedAmountOfSource,
+    /// CR 123.6e — the unique vowels on the name sticker the most recent
+    /// `Effect::PutNameSticker` in this resolution put on something; 0 when
+    /// it put none ("Add {R} for each unique vowel on that sticker").
+    NameStickerUniqueVowels,
 }
 
 impl Value {
@@ -7995,6 +7999,15 @@ pub enum Effect {
     /// gains it." The controller picks the keyword at resolution; a `from`
     /// that doesn't have it makes the whole thing a no-op.
     MoveChosenKeyword { options: Vec<Keyword>, from: Selector, to: Selector },
+
+    /// CR 123.3 / 123.6 — "(you may) put a name sticker on `what`". The
+    /// controller picks one of the name stickers on their three sheets that
+    /// isn't on an object they own (a ballot ordered most-unique-vowels
+    /// first, so a first-option bot takes the richest sticker; `optional`
+    /// appends a "no sticker" entry). Does nothing on an object the
+    /// controller doesn't own (CR 123.3b). The pick is recorded for
+    /// [`Value::NameStickerUniqueVowels`] (0 when declined / none left).
+    PutNameSticker { what: Selector, optional: bool },
 
     /// Scroll Rack — "Exile any number of cards from your hand face down. Put
     /// that many cards from the top of your library into your hand. Then look

@@ -1782,6 +1782,19 @@ pub struct ColdState {
     /// turn, keyed by (watcher, event subject). Cleared at cleanup.
     #[serde(default)]
     pub(crate) per_subject_trigger_uses: crate::fxhash::HashMap<(CardId, CardId), u8>,
+    /// CR 123.2a/c — the sticker sheets each seat drew for this game, as
+    /// `(seat, sheet ids)`. Drawn lazily by `GameState::sticker_sheets_of`
+    /// the first time a seat is asked to put a sticker on something, so a
+    /// game without sticker cards never writes it.
+    #[serde(default)]
+    pub(crate) sticker_sheets: Vec<(usize, [u8; crate::sticker::SHEETS_PER_PLAYER])>,
+    /// CR 123.6e — the unique vowels on the name sticker the most recent
+    /// `Effect::PutNameSticker` put on something (0 when it put none), read
+    /// by `Value::NameStickerUniqueVowels`. Here rather than on `GameState`
+    /// (`game_state_stays_small`); only a sticker resolution writes it, and
+    /// only when the value changes.
+    #[serde(skip)]
+    pub(crate) last_name_sticker_vowels: u8,
 }
 
 /// A declined optional extra-target slot (CR 601.4d — "up to N targets"),
@@ -6208,6 +6221,69 @@ impl GameState {
                     .push(crate::card::CardInstance::new(id, def, seat));
                 id
             })
+            .collect()
+    }
+
+    /// CR 123.2a/c — the three sticker sheets `seat` has access to this game.
+    /// Every seat brings `sticker::DEFAULT_STICKER_SHEETS` and three of them
+    /// are chosen at random. The draw is lazy — made the first time the
+    /// seat needs its stickers, not at CR 103 game start — so a game with no
+    /// sticker card neither stores sheets nor spends an RNG draw on them (the
+    /// distribution is the same; only the moment the sheets are revealed
+    /// moves).
+    pub fn sticker_sheets_of(&mut self, seat: usize) -> [u8; crate::sticker::SHEETS_PER_PLAYER] {
+        if let Some((_, sheets)) = self.sticker_sheets.iter().find(|(s, _)| *s == seat) {
+            return *sheets;
+        }
+        use rand::seq::SliceRandom;
+        let mut all: Vec<u8> = (0..crate::sticker::DEFAULT_STICKER_SHEETS.len() as u8).collect();
+        all.shuffle(&mut self.rng.draw());
+        let mut sheets = [0u8; crate::sticker::SHEETS_PER_PLAYER];
+        sheets.copy_from_slice(&all[..crate::sticker::SHEETS_PER_PLAYER]);
+        self.sticker_sheets.push((seat, sheets));
+        sheets
+    }
+
+    /// Fix `seat`'s sticker sheets (CR 123.2b's limited-play choice; tests
+    /// and scripted setups). Replaces any earlier draw.
+    pub fn set_sticker_sheets(
+        &mut self,
+        seat: usize,
+        sheets: [u8; crate::sticker::SHEETS_PER_PLAYER],
+    ) {
+        self.sticker_sheets.retain(|(s, _)| *s != seat);
+        self.sticker_sheets.push((seat, sheets));
+    }
+
+    /// CR 123.3 — the name stickers `seat` could put on an object now: those
+    /// on their sheets that aren't currently on any object they own. Only
+    /// public zones can hold a stickered object (CR 123.5 strips stickers
+    /// on the way into a hidden one), so those are the zones scanned.
+    pub fn available_name_stickers(&mut self, seat: usize) -> Vec<crate::sticker::NameStickerId> {
+        let sheets = self.sticker_sheets_of(seat);
+        let mut in_use: Vec<crate::sticker::NameStickerId> = Vec::new();
+        {
+            let mut note = |c: &CardInstance| {
+                if c.owner == seat {
+                    in_use.extend(c.name_stickers.iter().map(|(id, _)| *id));
+                }
+            };
+            self.battlefield.iter().for_each(&mut note);
+            self.exile.iter().for_each(&mut note);
+            for si in &self.stack {
+                if let crate::game::types::StackItem::Spell { card, .. } = si {
+                    note(card);
+                }
+            }
+            for p in &self.players {
+                p.graveyard.iter().for_each(&mut note);
+                p.command.iter().for_each(&mut note);
+            }
+        }
+        sheets
+            .iter()
+            .flat_map(|&s| crate::sticker::name_stickers_on_sheet(s))
+            .filter(|id| !in_use.contains(id))
             .collect()
     }
 

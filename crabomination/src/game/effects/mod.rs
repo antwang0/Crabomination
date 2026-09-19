@@ -3826,6 +3826,62 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::PutNameSticker { what, optional } => {
+                if self.last_name_sticker_vowels != 0 {
+                    self.last_name_sticker_vowels = 0;
+                }
+                let seat = ctx.controller;
+                // CR 123.3b — only on an object the player owns.
+                let Some(obj) = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .find_map(|e| e.as_permanent_id().or_else(|| e.as_card_id()))
+                    .filter(|id| self.find_card_anywhere(*id).is_some_and(|c| c.owner == seat))
+                else {
+                    return Ok(());
+                };
+                // Best payoff first, so a first-option decider takes the
+                // sticker with the most unique vowels (the one payoff name
+                // stickers are printed with so far).
+                let mut stickers = self.available_name_stickers(seat);
+                stickers.sort_by_key(|id| {
+                    std::cmp::Reverse(crate::sticker::unique_vowels(
+                        crate::sticker::name_sticker_text(*id),
+                    ))
+                });
+                if stickers.is_empty() {
+                    return Ok(());
+                }
+                let mut ballot: Vec<String> = stickers
+                    .iter()
+                    .map(|id| crate::sticker::name_sticker_text(*id).to_string())
+                    .collect();
+                if *optional {
+                    ballot.push("No sticker".to_string());
+                }
+                let mut cursor = 0;
+                let Some(idx) = self.ask_seat_option(
+                    &mut cursor,
+                    seat,
+                    "Put a name sticker on it?".to_string(),
+                    ctx.source.unwrap_or(obj),
+                    ballot,
+                    effect,
+                ) else {
+                    return Ok(());
+                };
+                self.clear_answer_log();
+                let Some(&sticker) = stickers.get(idx) else { return Ok(()) };
+                if let Some(c) = self.find_card_anywhere_mut(obj) {
+                    let pos = crate::sticker::default_name_sticker_position(c.definition.name);
+                    c.put_name_sticker(sticker, pos);
+                    self.last_name_sticker_vowels = crate::sticker::unique_vowels(
+                        crate::sticker::name_sticker_text(sticker),
+                    ) as u8;
+                }
+                Ok(())
+            }
+
             Effect::MoveChosenKeyword { options, from, to } => {
                 let Some(loser) =
                     self.resolve_selector(from, ctx).into_iter().find_map(|e| e.as_permanent_id())

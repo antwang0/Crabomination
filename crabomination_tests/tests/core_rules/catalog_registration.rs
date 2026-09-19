@@ -2361,9 +2361,9 @@ const NON_CREATURE_SUBTYPES: &[&str] = &[
 ///   `Eldrazi`.
 ///
 /// `CreatureType` derives `Deserialize`, so "is this printed word a type we
-/// model" is asked of the enum itself rather than a hand-kept list — five
-/// words are genuinely unmodelled today (Astartes, Guest, Rigger, Lobster,
-/// Gamer) and skip out through that.
+/// model" is asked of the enum itself rather than a hand-kept list — four
+/// words are genuinely unmodelled today (Astartes, Rigger, Lobster, Gamer)
+/// and skip out through that.
 #[test]
 fn every_creature_carries_its_printed_subtypes() {
     let cache_path =

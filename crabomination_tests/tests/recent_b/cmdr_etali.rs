@@ -1163,17 +1163,40 @@ fn hexing_squelcher_grants_life_ward_to_your_other_creatures() {
 
 // ── _____ Goblin ────────────────────────────────────────────────────────────
 
-/// _____ Goblin's (approximated) sticker ETB floats {R}{R}{R}.
+/// _____ Goblin: the sticker fills the blank and adds {R} per unique vowel;
+/// the next Goblin can't reuse it (the ballot's best is then a 3-vowel
+/// word); declining keeps the blank name and adds nothing.
 #[test]
-fn blank_goblin_sticker_etb_adds_red() {
+fn blank_goblin_name_sticker_names_it_and_adds_red_per_unique_vowel() {
     let mut g = c_main(2);
-    let id = g.add_card_to_hand(0, catalog::blank_goblin());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(2);
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
-    c_cast_mode(&mut g, id, None);
-    assert!(g.battlefield_find(id).is_some());
-    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 3);
+    // Stand-in sheets 0-2: Wobbly Audacious Grim / Eerie Fabulous Spry /
+    // Quizzical Bold Tiny.
+    g.set_sticker_sheets(0, [0, 1, 2]);
+    let cast_goblin = |g: &mut GameState| {
+        let id = g.add_card_to_hand(0, catalog::blank_goblin());
+        g.players[0].mana_pool = Default::default();
+        g.players[0].mana_pool.add(Color::Red, 1);
+        g.players[0].mana_pool.add_colorless(2);
+        c_cast_mode(g, id, None);
+        let name = g.battlefield_find(id).expect("on the battlefield").definition.name;
+        (id, name, g.players[0].mana_pool.amount(Color::Red))
+    };
+
+    // The auto decider takes the ballot's first (richest) sticker.
+    let (first, name, red) = cast_goblin(&mut g);
+    assert_eq!((name, red), ("Audacious Goblin", 4), "A U I O");
+    let cp = g.computed_permanent(first).unwrap();
+    assert!(cp.subtypes().creature_types.contains(&CreatureType::Guest), "Goblin Guest");
+    assert_eq!((cp.power, cp.toughness), (2, 2));
+
+    // Audacious is on an object seat 0 owns, so it's gone from the ballot.
+    let (_, name, red) = cast_goblin(&mut g);
+    assert_eq!((name, red), ("Fabulous Goblin", 3), "the best sticker left");
+
+    // "No sticker" is the ballot's last entry.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(99)]));
+    let (_, name, red) = cast_goblin(&mut g);
+    assert_eq!((name, red), ("_____ Goblin", 0), "declined: no name, no mana");
 }
 
 // ── Lands ───────────────────────────────────────────────────────────────────

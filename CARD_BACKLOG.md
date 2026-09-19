@@ -3497,7 +3497,17 @@ zero `set_gaps.py` gaps. Urza's Legacy went 106 -> 13 across two waves.
   name/ability/P-T/art stickers. `CR_COVERAGE.md` is otherwise at 145/146.
   Scoping note: name stickers are a text-changing effect (CR 613.1c) and P/T
   stickers are layer 7b, so both could ride the existing layer machinery; the
-  sheet/ticket economy in CR 123.2–123.3 is the bulk of the work. ⏳
+  sheet/ticket economy in CR 123.2–123.3 is the bulk of the work. 🟡
+  **Name stickers ship** (2026-09-19, for _____ Goblin): `sticker.rs` in
+  `crabomination_base` (stand-in sheets — NOT Unfinity's printed inserts —
+  plus the CR 123.6b/c name builder and 123.6e unique-vowel count),
+  `CardCold::name_stickers` (a definition swap carrying the stickered name;
+  stripped into a hidden zone at the two placement funnels, CR 123.5),
+  lazily drawn sheets in `ColdState::sticker_sheets`, and
+  `Effect::PutNameSticker` / `Value::NameStickerUniqueVowels`. Open: ability /
+  P-T / art stickers, `{TK}` tickets, the real sheet list, the name-position
+  choice, and CR 123.1's "not copiable" (a copy of a stickered object copies
+  its stickered name).
 - **Tempest's last three cards: DONE.** Duplicity, Ertai's Meddling and
   Oracle en-Vec all ship; `set_gaps.py tmp` is zero. Ertai's return is a free
   cast from exile with an auto-picked target rather than a literal copy of the
@@ -5703,9 +5713,9 @@ Open follow-ups:
   listeners on *other* permanents — only a death that runs through the action
   path (SBA after a bolt) does. Worth making the fixture helpers dispatch the
   same way so tests don't have to route through combat/burn. ⏳
-- **CR 123 (Stickers) is the last untested CR section.** Nothing about
-  stickers is modelled — name/ability/P-T/art stickers, ticket costs, the
-  sticker-sheet setup in CR 103. Only worth doing alongside Unfinity cards. ⏳
+- **CR 123 (Stickers)** — name stickers ship and carry the section's first
+  test (`cr_123_name_sticker_…` in `core_rules/card_instance.rs`); see the
+  "Tempest down to 3" entry for what's still open. 🟡
 - **`GameState::check_state_based_actions` isn't reached by a bare
   `PassPriority` with an empty stack.** Tests that arm a CR 603.8 state
   trigger have to call it by hand (`classic_sets/wth`'s `settle`). Sized
