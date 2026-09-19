@@ -164,8 +164,10 @@ check that straddled the suspend:
 files and reports the ones whose loop body never reads `suspend_signal`. An
 inline `&Effect::Variant { … }` whose variant is in the script's short
 `NEVER_ASKS` set is skipped; everything else is a hit or an allowlist entry
-with its reason. **0 unexplained**, and deleting one `splice_after_suspend`
-call takes it to 1.
+with its reason. It read **18 sites / 18 allowlisted / 0 unexplained** when
+it was written and **15 / 15 / 0** once the `CardId` pin closed three of
+them; deleting one `splice_after_suspend` call takes it to 1. ⚠ It does
+**not** see a sequential *pair* — see the last OPEN row.
 
 **OPEN, each waiting on a primitive that does not exist** (the allowlist
 carries these verbatim, so the script stays the index):

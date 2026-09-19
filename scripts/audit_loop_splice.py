@@ -26,9 +26,11 @@ reads `suspend_signal`. Two things are not hits:
   body is a token mint today" is a property of the CATALOG, not of the code,
   and a new card can end it.
 
-Reading at the forty-third find: **18 sites, 18 allowlisted, 0
-unexplained** — 9 of the allowlist entries are OPEN, each with the primitive
-it is waiting on (see ENGINE_BACKLOG's forty-third find).
+Reading at the forty-third find's closing tip: **15 sites, 15 allowlisted, 0
+unexplained** — 6 of the allowlist entries are OPEN, each with the primitive
+it is waiting on (see ENGINE_BACKLOG's forty-third find). It read 18/18/0
+before `Selector::ExactObjects` and `Effect::BindTargetObjects` closed three
+of them.
 
 ⚠ **What it does NOT see: a sequential PAIR.** The class is "a second
 `run_effect` after one that can suspend", and a loop is only its commonest
