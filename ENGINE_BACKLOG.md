@@ -19,7 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
-| Bugs & robustness | [FIXED 2026-09-19 (the forty-third find) — a LOOP whose body suspends parks only the BODY, and thirteen of them ran on and dropped the rest](#fixed-2026-09-19-the-forty-third-find--a-loop-whose-body-suspends-parks-only-the-body-and-thirteen-of-them-ran-on-and-dropped-the-rest) | 60 |
+| Bugs & robustness | [FIXED 2026-09-19 (the forty-third find) — a LOOP whose body suspends parks only the BODY, and twenty of them ran on and dropped the rest](#fixed-2026-09-19-the-forty-third-find--a-loop-whose-body-suspends-parks-only-the-body-and-twenty-of-them-ran-on-and-dropped-the-rest) | 90 |
 | Bugs & robustness | [FIXED 2026-09-13 (twenty-sixth find) — the sweep's only surviving cap, and the field in the digest that was bookkeeping rather than progress](#fixed-2026-09-13-twenty-sixth-find--the-sweeps-only-surviving-cap-and-the-field-in-the-digest-that-was-bookkeeping-rather-than-progress) | 80 |
 | Bugs & robustness | [FIXED 2026-09-12 (twenty-fifth find) — nineteen cards print a colour their mana cost cannot carry, and none had an indicator](#fixed-2026-09-12-twenty-fifth-find--nineteen-cards-print-a-colour-their-mana-cost-cannot-carry-and-none-had-an-indicator) | 44 |
 | Bugs & robustness | [FIXED 2026-09-12 (twenty-fourth find) — one `false` for two meanings: a skipped draw eliminated the drawer, and nineteen more draws could not deck anyone](#fixed-2026-09-12-twenty-fourth-find--one-false-for-two-meanings-a-skipped-draw-eliminated-the-drawer-and-nineteen-more-draws-could-not-deck-anyone) | 48 |
@@ -83,7 +83,7 @@ the handoff.
 
 # Bugs & robustness
 
-## FIXED 2026-09-19 (the forty-third find) — a LOOP whose body suspends parks only the BODY, and thirteen of them ran on and dropped the rest
+## FIXED 2026-09-19 (the forty-third find) — a LOOP whose body suspends parks only the BODY, and twenty of them ran on and dropped the rest
 
 `MayRepeat` (the fifteenth find) and `EachPlayerDoes` each fixed this one
 arm at a time. The sweep that closes the class: every `for` in
@@ -115,8 +115,33 @@ Arms taken: `ForEachOpponent`, `TemptingOffer`, `Punisher`,
 `EachPlayerFlipsCoin`, `EachPlayerDiscardsElseLosesLife`,
 `EachPlayerSacrificesGreatestManaValueUnlessPays`. `ForEachOpponent` and
 `TemptingOffer` had carried a `debug_assert!` as the price of the judgement
-that no catalog body could suspend; `Punisher` and `VillainousChoice` had
-no guard and both have catalog bodies that suspend today.
+that no catalog body could suspend; `Punisher` and `VillainousChoice` had no
+guard at all. ⚠ **Correction to `26c13acf`'s message**: of those two only
+`Punisher` has a catalog body that suspends today (Mogis, God of Slaughter's
+"sacrifice a creature"). `VillainousChoice`'s one card mints tokens or adds
+counters — so its arm is the same judgement `ForEachOpponent` carried, now
+with an arm instead of an assertion.
+
+**The modal half is the same defect one layer over, and it is duel-visible.**
+A mode that asks parks only itself, so Escalate / Spree / Tiered /
+`ChooseModesCast` / `ChooseModesByPoints` / `ChooseN` / `ChooseUpToN` ran
+their first asking mode and nothing after it, for every `wants_ui` seat —
+i.e. every training seat. A modal tail cannot be a plain `Seq`: each
+target-bearing mode is handed its own slot through `EffectContext.targets`,
+and the resumed context carries the spell's *whole* list, so every remaining
+mode would read slot 0. `Effect::BindTargetSlot { slot, body }` is the pin
+(runtime-only; `scripts/audit_variant_coverage.py` carries it as a
+by-design dead primitive), and `modal_continuation` builds the tail.
+`ApplyToTargets`, `Vote`'s `AllTied` half and
+`FlipCoinsUntilLoseOrStop`'s tiers are the same shape.
+
+**And the second half of that, which cost a test: a wrapper that rebinds the
+context has to put its binding back around whatever the body parked.**
+`rewrap_parked` does it for `BindTargetSlot` and for `EachPlayerDoes`.
+Without it, `ApplyToTargets` over two targets destroyed the *first* one
+twice — the inner `Seq`'s own tail came back under the caster's context,
+where `Selector::Target(0)` is the spell's first target, not this
+iteration's.
 
 **Two arms had a second defect the splice does not reach**, both from a
 check that straddled the suspend:
@@ -131,12 +156,36 @@ check that straddled the suspend:
   creature. It moves to the two-pass ask/apply split; naming the creature
   in the apply pass makes that pass choiceless.
 
-**OPEN, both needing a primitive that does not exist:**
+**The ratchet:** `scripts/audit_loop_splice.py` walks every
+`run_effect` / `resolve_effect` lexically inside a loop in the eight engine
+files and reports the ones whose loop body never reads `suspend_signal`. An
+inline `&Effect::Variant { … }` whose variant is in the script's short
+`NEVER_ASKS` set is skipped; everything else is a hit or an allowlist entry
+with its reason. **0 unexplained**, and deleting one `splice_after_suspend`
+call takes it to 1.
+
+**OPEN, each waiting on a primitive that does not exist** (the allowlist
+carries these verbatim, so the script stays the index):
 
 - ⏳ `Effect::ForEach` over non-player entities. The tail needs a `Selector`
   that names a specific `CardId`; none of the 60-odd variants does. Over
   players it is already covered (`Selector::Player(PlayerRef::Seat(q))`).
-- ⏳ The ante branch loop (`effects/mod.rs`, the `Ante`-optional arm). Its
+- ⏳ `Effect::Vote` under `VoteTally::PerVote` (`AllTied` is spliced). Each
+  run pins `self.current_voter`, which no `Effect` carries.
+- ⏳ `Effect::RollDie`: each die's result arm runs under its own
+  `self.last_die_roll`, which no `Effect` carries.
+- ⏳ `Effect::TurnFaceUpFree`'s `if_cant` and `Effect::EyeOfTheStorm`: each
+  run pins its own card in `ctx.targets`, and the resumed context carries
+  the stack item's list. `Effect::BindTargetSlot` covers this **only** when
+  the card is already one of the spell's targets, which neither is.
+- ⏳ `Effect::MayPayRepeatedly`: the arm's resume path is a re-run from the
+  top over the answer log (`answer_already_acted_on`), which a spliced tail
+  would double-count.
+- ⏳ `Effect::SearchExileLinked`: the tail needs the already-exiled picks'
+  `exiled_with` stamps re-applied, which a remaining count cannot carry.
+- ⏳ `Effect::SacrificeAnyNumber`: the sacrifices are inline zone moves, not
+  an `Effect`, so a tail cannot carry the ones not yet made.
+- ⏳ The ante branch loop (`effects/mod.rs`, the `AnteTopOfLibrary` arm). Its
   second pass calls `ante_top_card` *and* runs the branch, so a tail would
   have to hoist every ante ahead of every branch — a real ordering change
   for a CR 407 mechanic that no pool plays.

@@ -21,7 +21,7 @@ the filter stronger than the compiler — exhaustiveness is satisfied by exactly
 those arms.
 
 Reading at 2026-09-13, over 473 + 987 + 237 = 1,697 variants: **zero dead
-capabilities and ONE dead primitive** (`GrantCastBackFromGraveyard`, closed
+capabilities and TWO dead primitives** (one of them runtime-only by design) (`GrantCastBackFromGraveyard`, closed
 with a reason below). It was three at 2026-08-28 — one deleted as a duplicate,
 one closed by shipping its card — and the surviving row is the one that is not
 waiting for anything.
@@ -39,6 +39,12 @@ wrong — dangerously so — for the third.
   independently by a concurrent session, which also picked Nuclear Fallout;
   the duplicate was dropped in favour of this one. That is the **fifth**
   same-item collision on this branch in two days.)
+* `Effect::BindTargetSlot` — **runtime-only by design, 2026-09-19.** It is a
+  continuation wrapper built by the modal arms' suspend splice
+  (`effects/mod.rs::modal_continuation`) and never by a card: it moves one of
+  the spell's target slots to slot 0 so a parked continuation keeps the slot
+  its mode was handed. A card that "used" it would be a bug. Expect it in the
+  dead-primitive column for ever.
 * `Effect::GrantCastBackFromGraveyard` — waiting for a card that **does not
   exist**. It was built for a Pestilent Cauldron whose oracle text was
   fabricated ("If Pestilent Cauldron is in your graveyard, you may cast it
