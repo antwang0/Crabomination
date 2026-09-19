@@ -603,7 +603,8 @@ pub fn spawn_alt_cast_modal(
         .players
         .get(cv.your_seat)
         .and_then(|p| {
-            p.hand.iter().find_map(|h| match h {
+            // A commander's alt cost opens this modal from the command zone.
+            p.hand.iter().chain(&p.command).find_map(|h| match h {
                 crabomination::net::HandCardView::Known(k) if k.id == spell_id => {
                     Some((k.alt_cost_needs_pitch, k.alt_cost_label.clone()))
                 }
@@ -746,6 +747,37 @@ pub fn spawn_alt_cast_modal(
         });
 }
 
+/// The alt-cost cast a confirmed modal submits: `CastSpellAlternative` for a
+/// hand card, `CastFromCommandZone { alternative: true }` for a commander
+/// (CR 903.8 — the tax is still added on top of the alternative cost).
+/// Pure helper.
+pub(crate) fn alt_cast_action(
+    spell: CardId,
+    pitch: Option<CardId>,
+    from_command_zone: bool,
+) -> GameAction {
+    if from_command_zone {
+        GameAction::CastFromCommandZone {
+            card_id: spell,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+            alternative: true,
+            pitch_card: pitch,
+        }
+    } else {
+        GameAction::CastSpellAlternative {
+            card_id: spell,
+            pitch_card: pitch,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        }
+    }
+}
+
 /// Click on a pitch button → submit `CastSpellAlternative`. Click cancel →
 /// clear the pending alt-cast.
 pub fn handle_alt_cast_buttons(
@@ -756,21 +788,16 @@ pub fn handle_alt_cast_buttons(
 ) {
     if cancel_q.iter().any(|i| *i == Interaction::Pressed) {
         state.pending = None;
+        state.from_command_zone = false;
         return;
     }
     for (interaction, btn) in &pitch_q {
         if *interaction == Interaction::Pressed
             && let Some(outbox) = &outbox
         {
-            outbox.submit(GameAction::CastSpellAlternative {
-                card_id: btn.spell,
-                pitch_card: btn.pitch,
-                target: None,
-                additional_targets: vec![],
-                mode: None,
-                x_value: None,
-            });
+            outbox.submit(alt_cast_action(btn.spell, btn.pitch, state.from_command_zone));
             state.pending = None;
+            state.from_command_zone = false;
             return;
         }
     }
@@ -1766,10 +1793,36 @@ pub fn cancel_pickers_on_escape(
         return;
     }
     alt_cast.pending = None;
+    alt_cast.from_command_zone = false;
     helper_tap.pending = None;
     spree_cast.pending = None;
     split_cast.pending = None;
     pay_times.pending = None;
     ability_menu.card_id = None;
     hand_menu.card_id = None;
+}
+
+#[cfg(test)]
+mod alt_cast_tests {
+    use super::alt_cast_action;
+    use crabomination::card::CardId;
+    use crabomination::game::GameAction;
+
+    /// A commander's alt cost goes through `CastFromCommandZone` (the engine
+    /// adds the tax and knows the card is in the command zone); a hand card's
+    /// stays `CastSpellAlternative`, which the engine rejects off-hand.
+    #[test]
+    fn command_zone_alt_cast_submits_the_command_zone_action() {
+        let spell = CardId(7);
+        assert!(matches!(
+            alt_cast_action(spell, None, true),
+            GameAction::CastFromCommandZone { card_id, alternative: true, pitch_card: None, .. }
+                if card_id == spell
+        ));
+        assert!(matches!(
+            alt_cast_action(spell, Some(CardId(9)), false),
+            GameAction::CastSpellAlternative { card_id, pitch_card: Some(CardId(9)), .. }
+                if card_id == spell
+        ));
+    }
 }

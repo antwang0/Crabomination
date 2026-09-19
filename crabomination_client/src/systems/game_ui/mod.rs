@@ -4154,6 +4154,7 @@ pub fn handle_game_input(
                         });
                     } else if k.has_alternative_cost && k.alt_cost_available {
                         r.alt_cast.pending = Some(card_id);
+                        r.alt_cast.from_command_zone = false;
                     } else if cv.squadable_hand.contains(&card_id) {
                         r.pay_times.pending =
                             Some((card_id, crate::game::PayTimesMechanic::Squad));
@@ -4377,7 +4378,24 @@ pub fn handle_game_input(
             });
             if has_alt {
                 r.alt_cast.pending = Some(card_id);
+                r.alt_cast.from_command_zone = false;
             }
+        }
+
+        // Right-click (or L) on your own commander in the command zone opens
+        // the same alt-cost modal for dash / offering / Fist of Suns casts
+        // (CR 601.2f); a plain left-click still casts it for its mana cost.
+        if (any_right || kb_alt)
+            && let Some((game_id, cz_card)) = hovered_command_zone.iter().next()
+            && cz_card.owner == your_seat
+            && cv.players[your_seat].command.iter().any(|h| {
+                matches!(h,
+                    crabomination::net::HandCardView::Known(k)
+                    if k.id == game_id.0 && k.has_alternative_cost && k.alt_cost_available)
+            })
+        {
+            r.alt_cast.pending = Some(game_id.0);
+            r.alt_cast.from_command_zone = true;
         }
 
         // Keyboard-specific: C activates Cycling on the selected hand
@@ -4663,8 +4681,8 @@ pub fn handle_game_input(
                         additional_targets: vec![],
                         mode: None,
                         x_value: None,
-                        // The alt-cost commander cast (CR 601.2f) has no
-                        // click path yet; the regular cost is the default.
+                        // The alt-cost cast (CR 601.2f) is the right-click /
+                        // L modal; a left-click pays the regular cost.
                         alternative: false,
                         pitch_card: None,
                     });

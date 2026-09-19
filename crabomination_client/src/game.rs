@@ -407,8 +407,13 @@ pub struct GraveyardBrowserState {
 /// with an `alternative_cost`; the modal then prompts for a pitch card.
 #[derive(Resource, Default)]
 pub struct AltCastState {
-    /// The spell being cast via alt cost (the player's hand card).
+    /// The spell being cast via alt cost (the player's hand card, or their
+    /// commander when `from_command_zone`).
     pub pending: Option<CardId>,
+    /// CR 601.2f / 903.8 — the pending spell is a commander in the command
+    /// zone (dash, offering, Fist of Suns): the modal submits
+    /// `CastFromCommandZone { alternative: true }`, tax included.
+    pub from_command_zone: bool,
 }
 
 /// Split-card half picker (CR 709 / 702.102). Set when the user
