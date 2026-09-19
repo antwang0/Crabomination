@@ -28603,6 +28603,8 @@ fn static_effect_to_effects(
             | StaticEffect::AdditionalVotes(_)
             // Consulted directly in the block-legality walk, not a layer effect.
             | StaticEffect::LandwalkIgnored(_)
+            // Consulted directly at the turn advance, not a layer effect.
+            | StaticEffect::OpponentsSkipExtraTurns
             // Consulted directly by the cast gate, not a layer effect.
             | StaticEffect::OpponentsOneSpellPerTurn
             | StaticEffect::GrantActivatedAbilityFromGraveyard { .. }

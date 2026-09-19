@@ -3204,6 +3204,21 @@ impl GameState {
     /// CR 509.1b — is this landwalk flavor blanked for everyone by a
     /// `LandwalkIgnored` static in play (Great Wall, Deadfall, Quagmire,
     /// Crevasse, Gosta Dirk, Lord Magnus)?
+    /// CR 614 — is an extra turn `seat` would begin replaced with a skip?
+    ///
+    /// True when a permanent **another** seat controls carries
+    /// `StaticEffect::OpponentsSkipExtraTurns` (Trouble in Pairs): the clause
+    /// is "if an **opponent** would begin an extra turn", so its own
+    /// controller's extra turns are untouched. Printed statics only, like
+    /// [`Self::landwalk_ignored`] next to it.
+    pub(crate) fn extra_turn_denied_for(&self, seat: usize) -> bool {
+        self.battlefield
+            .iter()
+            .filter(|c| c.controller != seat)
+            .flat_map(|c| &c.definition.static_abilities)
+            .any(|sa| matches!(sa.effect, crate::effect::StaticEffect::OpponentsSkipExtraTurns))
+    }
+
     pub(crate) fn landwalk_ignored(&self, lt: crate::card::LandType) -> bool {
         self.battlefield
             .iter()

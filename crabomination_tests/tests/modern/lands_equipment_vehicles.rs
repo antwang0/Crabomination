@@ -1975,3 +1975,143 @@ fn mangara_draws_on_an_opponents_second_spell_and_not_their_first() {
     cast_a_bear(&mut g);
     assert_eq!(g.players[0].hand.len(), 1, "and the third does not — it is not the second");
 }
+
+// ── Trouble in Pairs ───────────────────────────────────────────────────────
+
+/// Run to the start of the next turn, so the extra-turn / pass decision at the
+/// turn boundary really happens.
+fn run_to_next_turn(g: &mut GameState) {
+    let started = g.turn_number;
+    for _ in 0..200 {
+        if g.turn_number != started {
+            return;
+        }
+        let _ = g.advance_step(Vec::new());
+        drain_stack(g);
+    }
+    panic!("the turn never ended");
+}
+
+/// CR 614 — "If an opponent would begin an extra turn, that player skips that
+/// turn instead." The charge is still spent, which is what keeps one Time
+/// Warp from re-offering the same extra turn on every pass.
+#[test]
+fn cr_614_trouble_in_pairs_eats_an_opponents_extra_turn() {
+    use crabomination::game::multi_player_game;
+    let mut g = multi_player_game(4);
+    g.add_card_to_battlefield(0, catalog::trouble_in_pairs());
+    g.players[1].extra_turns = 1;
+    g.active_player_idx = 1;
+
+    run_to_next_turn(&mut g);
+    assert_eq!(g.active_player_idx, 2, "the extra turn was skipped, not taken");
+    assert!(!g.current_turn_is_extra);
+    assert_eq!(g.players[1].extra_turns, 0, "and the charge was spent, not left pending");
+}
+
+/// …and it is an **opponent** clause: the enchantment's own controller keeps
+/// their extra turns. Same board, the charge on seat 0 instead.
+#[test]
+fn trouble_in_pairs_leaves_its_own_controllers_extra_turn_alone() {
+    use crabomination::game::multi_player_game;
+    let mut g = multi_player_game(4);
+    g.add_card_to_battlefield(0, catalog::trouble_in_pairs());
+    g.players[0].extra_turns = 1;
+    g.active_player_idx = 0;
+
+    run_to_next_turn(&mut g);
+    assert_eq!(g.active_player_idx, 0, "seat 0 keeps the turn");
+    assert!(g.current_turn_is_extra);
+    assert_eq!(g.players[0].extra_turns, 0);
+}
+
+/// With no Trouble in Pairs out the extra turn is taken normally — the
+/// control that says the two tests above are about the card.
+#[test]
+fn an_extra_turn_is_taken_normally_without_the_enchantment() {
+    use crabomination::game::multi_player_game;
+    let mut g = multi_player_game(4);
+    g.players[1].extra_turns = 1;
+    g.active_player_idx = 1;
+
+    run_to_next_turn(&mut g);
+    assert_eq!(g.active_player_idx, 1, "seat 1 takes its extra turn");
+    assert!(g.current_turn_is_extra);
+}
+
+/// "Whenever an opponent … draws their second card each turn … you draw a
+/// card" — per opponent, on their second draw only.
+#[test]
+fn trouble_in_pairs_draws_on_an_opponents_second_draw() {
+    use crabomination::game::multi_player_game;
+    let mut g = multi_player_game(4);
+    g.add_card_to_battlefield(0, catalog::trouble_in_pairs());
+    g.players[0].hand.clear();
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::plains());
+    }
+    for _ in 0..4 {
+        g.add_card_to_library(1, catalog::forest());
+    }
+    g.players[1].hand.clear();
+
+    let draw_for_seat_one = |g: &mut GameState| {
+        let mut events = Vec::new();
+        g.draw_one(1, &mut events);
+        g.dispatch_triggers_for_events(&events);
+        drain_stack(g);
+    };
+    draw_for_seat_one(&mut g);
+    assert_eq!(g.players[0].hand.len(), 0, "their first draw does nothing");
+    draw_for_seat_one(&mut g);
+    assert_eq!(g.players[0].hand.len(), 1, "their second draws");
+    draw_for_seat_one(&mut g);
+    assert_eq!(g.players[0].hand.len(), 1, "and their third does not");
+}
+
+/// CR 506.2 — "attacks **you** with two or more creatures". Unlike Mangara,
+/// an attacker on a planeswalker you control is **not** attacking you, so one
+/// at the player plus one at the planeswalker is one, not two.
+#[test]
+fn cr_506_2_trouble_in_pairs_does_not_count_an_attack_on_your_planeswalker() {
+    use crabomination::game::multi_player_game;
+    let mut g = multi_player_game(4);
+    g.add_card_to_battlefield(0, catalog::trouble_in_pairs());
+    let pw = g.add_card_to_battlefield(0, catalog::jace_beleren());
+    g.players[0].hand.clear();
+    g.add_card_to_library(0, catalog::plains());
+    let mut swing = Vec::new();
+    for target in [AttackTarget::Player(0), AttackTarget::Planeswalker(pw)] {
+        let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        g.clear_sickness(a);
+        swing.push(Attack { attacker: a, target });
+    }
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.declare_attackers(swing).expect("declare");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.players[0].hand.len(),
+        0,
+        "only one creature is attacking the player — the printed word is \"you\"",
+    );
+
+    // Two at the player is the printed two.
+    let mut g = multi_player_game(4);
+    g.add_card_to_battlefield(0, catalog::trouble_in_pairs());
+    g.players[0].hand.clear();
+    g.add_card_to_library(0, catalog::plains());
+    let mut swing = Vec::new();
+    for _ in 0..2 {
+        let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        g.clear_sickness(a);
+        swing.push(Attack { attacker: a, target: AttackTarget::Player(0) });
+    }
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.declare_attackers(swing).expect("declare");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), 1, "two at the player draws one card");
+}

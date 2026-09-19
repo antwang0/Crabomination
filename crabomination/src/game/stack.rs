@@ -4873,7 +4873,17 @@ impl GameState {
         // turn is starting".
         let ended_turn = self.turn_number;
         let ended_active = active;
-        if self.players[active].is_alive() && self.players[active].extra_turns > 0 {
+        // CR 614 — "If an opponent would begin an extra turn, that player
+        // skips that turn instead" (Trouble in Pairs). A replacement on
+        // *beginning* the turn, so the charge is still spent: without that,
+        // one Time Warp under it would re-offer the same extra turn every
+        // pass and the game would never move on.
+        let takes_extra = self.players[active].is_alive() && self.players[active].extra_turns > 0;
+        let denied = takes_extra && self.extra_turn_denied_for(active);
+        if denied {
+            self.players[active].extra_turns -= 1;
+        }
+        if takes_extra && !denied {
             self.players[active].extra_turns -= 1;
             self.current_turn_is_extra = true;
             self.turn_number += 1;

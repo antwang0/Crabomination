@@ -329,3 +329,67 @@ pub fn mangara_the_diplomat() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Trouble in Pairs — {2}{W}{W} Enchantment. "If an opponent would begin an
+/// extra turn, that player skips that turn instead. Whenever an opponent
+/// attacks you with two or more creatures, draws their second card each turn,
+/// or casts their second spell each turn, you draw a card." (EDHREC 625.)
+///
+/// One printed sentence, three event kinds, three `TriggeredAbility`s — there
+/// is no "or" in an `EventSpec`, and the three are mutually exclusive in
+/// practice anyway (an attack declaration, a draw and a cast are three
+/// different events), so a single turn can legitimately produce three cards.
+///
+/// ⚠ **"attacks **you**" is `include_planeswalkers: false`**, unlike
+/// Mangara's "you and/or planeswalkers you control": a creature attacking your
+/// planeswalker is attacking the planeswalker (CR 506.2). The two cards are
+/// the reason that flag is a flag. The gate is inside the effect for the same
+/// reason as Mangara's — a defender-side filter runs mid-declaration.
+pub fn trouble_in_pairs() -> CardDefinition {
+    let draw = || Effect::Draw { who: Selector::You, amount: Value::ONE };
+    CardDefinition {
+        name: "Trouble in Pairs",
+        cost: cost(&[generic(2), w(), w()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "If an opponent would begin an extra turn, that player skips \
+                          that turn instead.",
+            effect: StaticEffect::OpponentsSkipExtraTurns,
+        }],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::Attacks,
+                    EventScope::ControllerAttackedByOpponent,
+                )
+                .once_per_batch(),
+                effect: Effect::If {
+                    cond: Predicate::AttackedDefenderWithCountAtLeast {
+                        who: PlayerRef::Triggerer,
+                        defender: PlayerRef::You,
+                        at_least: 2,
+                        include_planeswalkers: false,
+                    },
+                    then: Box::new(draw()),
+                    else_: Box::new(Effect::Noop),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::SecondCardDrawnThisTurn,
+                    EventScope::OpponentControl,
+                ),
+                effect: draw(),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::OpponentControl)
+                    .with_filter(Predicate::SpellsCastThisTurnEquals {
+                        who: PlayerRef::Triggerer,
+                        count: Value::Const(2),
+                    }),
+                effect: draw(),
+            },
+        ],
+        ..Default::default()
+    }
+}

@@ -2849,6 +2849,17 @@ pub enum StaticEffect {
     /// Gosta Dirk, Lord Magnus). Global; blanks that one landwalk flavor for
     /// every player's attackers.
     LandwalkIgnored(crate::card::LandType),
+    /// CR 500.7 / 614 — "If an opponent would begin an extra turn, that player
+    /// skips that turn instead" (Trouble in Pairs). A replacement on the
+    /// *beginning* of the turn, so the extra turn is still spent: the charge
+    /// comes off `Player.extra_turns` and the turn passes normally, which is
+    /// what stops a single Time Warp looping forever under it.
+    ///
+    /// "Opponent" is relative to this static's controller, so a seat with one
+    /// of these out still takes its **own** extra turns. Read at the one place
+    /// `extra_turns` is consumed (`stack.rs`'s turn advance), off printed
+    /// static abilities like `LandwalkIgnored`.
+    OpponentsSkipExtraTurns,
     /// Like `GrantActivatedAbility`, but the granting card is active from its
     /// owner's **graveyard** rather than the battlefield ("as long as this card
     /// is in your graveyard, lands you control have …" — Riftstone Portal).
