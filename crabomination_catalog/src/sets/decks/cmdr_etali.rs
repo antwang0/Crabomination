@@ -706,11 +706,6 @@ pub fn hellkite_courser() -> CardDefinition {
 
 /// Sanctum of Eternity — Land. {T}: Add {C}. {2}, {T}: Return target commander
 /// you own from the battlefield to your hand. Activate only during your turn.
-/// Approximation: "commander you own" is approximated as a legendary creature
-/// or planeswalker you own, activatable only while you control your own
-/// commander (`Predicate::ControlsOwnCommander`) — there is no
-/// "is a commander" SelectionRequirement yet, so with your
-/// commander out a different legend you own is also a legal target.
 /// The CR 903.9b hand→command-zone replacement still offers its owner the
 /// command zone instead, as for any commander.
 pub fn sanctum_of_eternity() -> CardDefinition {
@@ -722,17 +717,9 @@ pub fn sanctum_of_eternity() -> CardDefinition {
             ActivatedAbility {
                 tap_cost: true,
                 mana_cost: cost(&[generic(2)]),
-                condition: Some(Predicate::All(vec![
-                    Predicate::IsTurnOf(PlayerRef::You),
-                    Predicate::ControlsOwnCommander { who: PlayerRef::You },
-                ])),
+                condition: Some(Predicate::IsTurnOf(PlayerRef::You)),
                 effect: Effect::Move {
-                    what: target_filtered(
-                        R::Creature
-                            .or(R::Planeswalker)
-                            .and(R::HasSupertype(Supertype::Legendary))
-                            .and(R::OwnedByYou),
-                    ),
+                    what: target_filtered(R::IsCommander.and(R::OwnedByYou)),
                     to: ZoneDest::Hand(PlayerRef::You),
                 },
                 ..Default::default()

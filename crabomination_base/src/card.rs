@@ -2642,10 +2642,12 @@ pub enum SelectionRequirement {
     /// whose `attached_to` points at the candidate. Powers Kestia's
     /// "whenever an enchanted creature … you control attacks" trigger.
     IsEnchanted,
-    /// The permanent is one of its controller's designated commanders
-    /// (`Player.commanders`) — "commanders you control" (Falthis, Shadowcat
-    /// Familiar). A board fact, so it never takes the layer system's
-    /// card-only `CardMatch` route.
+    /// The permanent is a commander — any player's (`Player.commanders`):
+    /// CR 903.3, a commander stays one under another player's control, so
+    /// "commanders you control" pairs this with the controller scope (Falthis,
+    /// Shadowcat Familiar), and "target commander" is this alone (Witch's
+    /// Clinic). A board fact, so it never takes the layer system's card-only
+    /// `CardMatch` route.
     IsCommander,
     /// True for a graveyard card that got there from the battlefield this turn
     /// (`GameState.graveyard_from_battlefield_this_turn`) — Gleancrawler's

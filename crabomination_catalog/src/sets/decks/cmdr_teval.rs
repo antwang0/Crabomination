@@ -1685,8 +1685,6 @@ pub fn nephalia_drownyard() -> CardDefinition {
 
 /// Witch's Clinic — Land. {T}: Add {C}. {2}, {T}: Target commander gains
 /// lifelink until end of turn.
-///
-/// Approximation: "target commander" is "target legendary creature".
 pub fn witchs_clinic() -> CardDefinition {
     land(
         "Witch's Clinic",
@@ -1696,7 +1694,7 @@ pub fn witchs_clinic() -> CardDefinition {
                 mana_cost: cost(&[generic(2)]),
                 tap_cost: true,
                 effect: Effect::GrantKeyword {
-                    what: target_filtered(R::Creature.and(R::HasSupertype(Supertype::Legendary))),
+                    what: target_filtered(R::IsCommander),
                     keyword: Keyword::Lifelink,
                     duration: Duration::EndOfTurn,
                 },

@@ -875,12 +875,25 @@ fn cmdr_teval_utility_land_activations() {
     activate(&mut g, grounds, 1, None);
     assert!(in_exile(&g, a) && in_exile(&g, b));
 
-    // Witch's Clinic: lifelink on a legendary creature.
+    // Witch's Clinic: lifelink on a commander — an opponent's too — and a
+    // legend that isn't one is no target.
     let mut g = main_phase();
     let clinic = g.add_card_to_battlefield(0, catalog::witchs_clinic());
     let konrad = g.add_card_to_battlefield(0, catalog::syr_konrad_the_grim());
-    activate(&mut g, clinic, 1, Some(Target::Permanent(konrad)));
-    assert!(has_keyword(&g, konrad, Keyword::Lifelink));
+    let cmd = g.seat_commanders(1, vec![catalog::grizzly_bears()])[0];
+    let card = g.players[1].command.pop().unwrap();
+    g.battlefield.push(card);
+    let clinic_fires = |g: &GameState, t| {
+        g.would_accept(GameAction::ActivateAbility {
+            card_id: clinic, ability_index: 1, target: Some(Target::Permanent(t)),
+            additional_targets: vec![], x_value: None, mode: None,
+        })
+    };
+    flood(&mut g, 0);
+    assert!(clinic_fires(&g, cmd), "an opponent's commander");
+    assert!(!clinic_fires(&g, konrad), "a legend that isn't a commander");
+    activate(&mut g, clinic, 1, Some(Target::Permanent(cmd)));
+    assert!(has_keyword(&g, cmd, Keyword::Lifelink));
 
     // Memorial to Folly: a creature card back to hand.
     let mut g = main_phase();
