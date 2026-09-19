@@ -824,6 +824,8 @@ pub enum CounterType {
     Rust,
     /// Geyadrone Dihada — marks what her protection ignores and her -7 takes.
     Corruption,
+    /// Edgar Markov's Coffin — its upkeep tally; three transform it back.
+    Bloodline,
 }
 
 /// Every zone a card can occupy.
@@ -2518,6 +2520,14 @@ pub enum SelectionRequirement {
     /// Shares a creature type with the permanent sacrificed to pay this
     /// spell's additional cost (Endemic Plague). Changelings match.
     SharesCreatureTypeWithSacrificed,
+    /// Shares a creature type with the ability's *source*, read from its
+    /// last-known information when it has left the battlefield (Heirloom
+    /// Blade's "a creature card that shares a creature type with it", on the
+    /// dying creature's own trigger). Changelings match everything. A library
+    /// walk concretizes it via
+    /// [`resolve_source_creature_types`](Self::resolve_source_creature_types);
+    /// the source-less card walker reads it as false.
+    SharesCreatureTypeWithSource,
     /// Is of a creature type chosen by an `EachPlayerChoosesCreatureTypeThen`
     /// resolution (Harsh Mercy, Patriarch's Bidding). Changelings match.
     IsTypeChosenThisWay,
@@ -3168,6 +3178,50 @@ impl SelectionRequirement {
                 Self::Or(Box::new(a.resolve_target_name(name)), Box::new(b.resolve_target_name(name)))
             }
             Self::Not(inner) => Self::Not(Box::new(inner.resolve_target_name(name))),
+            other => other.clone(),
+        }
+    }
+
+    /// Does this tree name [`SharesCreatureTypeWithSource`](Self::SharesCreatureTypeWithSource)?
+    pub fn mentions_source_creature_types(&self) -> bool {
+        match self {
+            Self::SharesCreatureTypeWithSource => true,
+            Self::And(a, b) | Self::Or(a, b) => {
+                a.mentions_source_creature_types() || b.mentions_source_creature_types()
+            }
+            Self::Not(inner) => inner.mentions_source_creature_types(),
+            _ => false,
+        }
+    }
+
+    /// Concretize `SharesCreatureTypeWithSource` against the source's types:
+    /// an `Or` of `HasCreatureType` over them, `Any` for a changeling source,
+    /// and "matches nothing" for a source with no creature type. Recurses
+    /// through And/Or/Not. Heirloom Blade.
+    pub fn resolve_source_creature_types(&self, types: &[CreatureType], changeling: bool) -> Self {
+        match self {
+            Self::SharesCreatureTypeWithSource => {
+                if changeling {
+                    Self::Any
+                } else {
+                    types
+                        .iter()
+                        .map(|t| Self::HasCreatureType(*t))
+                        .reduce(|a, b| Self::Or(Box::new(a), Box::new(b)))
+                        .unwrap_or_else(|| Self::Not(Box::new(Self::Any)))
+                }
+            }
+            Self::And(a, b) => Self::And(
+                Box::new(a.resolve_source_creature_types(types, changeling)),
+                Box::new(b.resolve_source_creature_types(types, changeling)),
+            ),
+            Self::Or(a, b) => Self::Or(
+                Box::new(a.resolve_source_creature_types(types, changeling)),
+                Box::new(b.resolve_source_creature_types(types, changeling)),
+            ),
+            Self::Not(inner) => {
+                Self::Not(Box::new(inner.resolve_source_creature_types(types, changeling)))
+            }
             other => other.clone(),
         }
     }

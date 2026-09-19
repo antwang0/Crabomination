@@ -664,6 +664,10 @@ pub enum Value {
     /// opponent has lost this turn" (Spinerock Knoll's hideaway gate).
     /// Backed by `Player.life_lost_this_turn`.
     LifeLostThisTurn(PlayerRef),
+    /// The *sum* of the life the players `who` resolves to lost this turn —
+    /// "the total amount of life your opponents lost this turn" (Florian,
+    /// Voldaren Scion). The summing sibling of `LifeLostThisTurn`'s max.
+    TotalLifeLostThisTurn(PlayerRef),
     /// Damage dealt to a player this turn (`Player.damage_taken_this_turn`) —
     /// "Bloodthirst X, where X is the damage dealt to your opponents this
     /// turn" (Petrified Wood-Kin). Sums across the resolved players.
@@ -2957,6 +2961,12 @@ pub enum EventKind {
     /// new monarch, so `EventScope::OpponentControl` reads "an opponent
     /// becomes the monarch" (Knights of the Black Rose).
     BecameMonarch,
+    /// CR 121 — the turn's *second* card drawn by a player (fired once per
+    /// turn per player, when their `cards_drawn_this_turn` reaches 2); the
+    /// trigger subject is the drawn card. "Whenever an opponent draws their
+    /// second card each turn" (Gleaming Splendor) — per player, so in a pod
+    /// each opponent's second draw triggers separately.
+    SecondCardDrawnThisTurn,
 }
 
 impl EventKind {

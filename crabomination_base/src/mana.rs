@@ -556,6 +556,11 @@ pub enum SpendRestriction {
     /// per-type restriction without Cavern's uncounterable rider
     /// (Eldrazi Temple).
     CreatureOfType(crate::card::CreatureType),
+    /// "Spend this mana only to cast [A], [B], and/or [C] spells" — the
+    /// several-type sibling of `CreatureOfType` (Master of Dark Rites:
+    /// Vampire, Cleric, and/or Demon). A shorter list repeats a type. Reads a
+    /// creature spell's types, as `CreatureOfType` does.
+    CreatureOfAnyTypes([crate::card::CreatureType; 3]),
     /// "Spend this mana only to activate abilities of land sources."
     /// (Sunken Citadel.)
     LandAbilitiesOnly,
@@ -647,6 +652,7 @@ impl SpendRestriction {
             SpendRestriction::CreatureOfTypeUncounterable(_) | SpendRestriction::CreatureOfType(_) => {
                 "only creatures of the chosen type"
             }
+            SpendRestriction::CreatureOfAnyTypes(_) => "only spells of the listed creature types",
             SpendRestriction::LandAbilitiesOnly => "only abilities of lands",
             SpendRestriction::CreatureOnly => "only creature spells",
             SpendRestriction::CreatureSpellsOrAbilities => "only creatures and their abilities",
@@ -708,6 +714,9 @@ impl SpendRestriction {
             SpendRestriction::CreatureOfTypeUncounterable(t)
             | SpendRestriction::CreatureOfType(t) => {
                 kind.changeling || kind.creature_types.contains(&t)
+            }
+            SpendRestriction::CreatureOfAnyTypes(ts) => {
+                kind.changeling || ts.iter().any(|t| kind.creature_types.contains(t))
             }
             SpendRestriction::CreatureOnly => kind.creature,
             SpendRestriction::NoncreatureSpellsOnly => {

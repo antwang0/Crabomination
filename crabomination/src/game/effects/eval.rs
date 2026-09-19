@@ -560,6 +560,11 @@ impl GameState {
                 .map(|&p| self.players[p].life_lost_this_turn as i32)
                 .max()
                 .unwrap_or(0),
+            Value::TotalLifeLostThisTurn(p) => self
+                .resolve_players(p, ctx)
+                .iter()
+                .map(|&p| self.players[p].life_lost_this_turn as i32)
+                .sum(),
             // Summed across the resolved set: "damage dealt to your opponents
             // this turn" counts every opponent's total (Petrified Wood-Kin).
             Value::DamageTakenThisTurn(p) => self
@@ -4867,6 +4872,17 @@ impl GameState {
                         .and_then(|s| s.chosen_card_type.clone())
                         .is_some_and(|t| card.definition.card_types.contains(&t)),
                     R::SameNameAsTarget => false,
+                    // Heirloom Blade — shares a creature type with the
+                    // source, read from its last-known information.
+                    R::SharesCreatureTypeWithSource => source
+                        .and_then(|sid| self.lki_snapshot(sid))
+                        .is_some_and(|s| {
+                            s.has_keyword(&crate::card::Keyword::Changeling)
+                                || card.has_keyword(&crate::card::Keyword::Changeling)
+                                || s.definition.subtypes.creature_types.iter().any(|t| {
+                                    card.definition.subtypes.creature_types.contains(t)
+                                })
+                        }),
                     R::IsSourceChosenCreatureType => source
                         .and_then(|sid| self.find_card_anywhere(sid))
                         .and_then(|s| s.chosen_creature_type)
@@ -5196,7 +5212,8 @@ impl GameState {
             | R::SharesColorWithExiledBySource
             | R::SameNameAsExiledWithSource
             | R::SharesColorWithAttachedHost
-            | R::SharesCreatureTypeWithAttachedHost => false,
+            | R::SharesCreatureTypeWithAttachedHost
+            | R::SharesCreatureTypeWithSource => false,
             // Empty-Shrine Kannushi — printed colours on both sides, since
             // this is consulted from inside the layer gather.
             R::SharesColorWithSacrificed => {

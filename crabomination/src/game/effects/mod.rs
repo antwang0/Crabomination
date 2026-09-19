@@ -29002,6 +29002,25 @@ impl GameState {
                     }
                     None => find,
                 };
+                // Heirloom Blade — "shares a creature type with it", against
+                // the (possibly dead) source's last-known types.
+                let types_resolved;
+                let find: &SelectionRequirement = if find.mentions_source_creature_types() {
+                    let (types, wild) = ctx
+                        .source
+                        .and_then(|s| self.lki_snapshot(s))
+                        .map(|s| {
+                            (
+                                s.definition.subtypes.creature_types.clone(),
+                                s.has_keyword(&crate::card::Keyword::Changeling),
+                            )
+                        })
+                        .unwrap_or_default();
+                    types_resolved = find.resolve_source_creature_types(&types, wild);
+                    &types_resolved
+                } else {
+                    find
+                };
                 let mut revealed = 0usize;
                 let mut found_idx: Option<usize> = None;
                 for i in 0..cap_n.min(self.players[p].library.len()) {
@@ -35768,7 +35787,14 @@ impl GameState {
                 else {
                     return vec![];
                 };
-                let Some(snap) = self.lki_snapshot(anchor) else { return vec![] };
+                // A dead anchor reads its death LKI; a live one (Shared
+                // Animosity's attacker) reads itself — `lki_snapshot` answers
+                // `None` for anything still on the battlefield.
+                let Some(snap) =
+                    self.lki_snapshot(anchor).or_else(|| self.battlefield_find(anchor))
+                else {
+                    return vec![];
+                };
                 let wild = snap.has_keyword(&Keyword::Changeling);
                 let types = snap.definition.subtypes.creature_types.clone();
                 self.battlefield
