@@ -189,6 +189,11 @@ ALLOW = {
     ("triskaidekaphile", "EntersBattlefield"): "'no maximum hand size' flipped as a one-shot on entry",
     ("soul_ransom", "EntersBattlefield"): "'you control enchanted creature' taken at the attach",
     ("threads_of_disloyalty", "EntersBattlefield"): "'you control enchanted creature' taken at the attach",
+    # "You may play an additional land on each of your turns" as a per-turn
+    # grant at upkeep (plus once on entry / level-up) — `decks::cmdr_homer`.
+    ("rites_of_flourishing", "StepBegins(Upkeep)"): "the extra land drop granted each upkeep",
+    ("druid_class", "StepBegins(Upkeep)"): "level 2's extra land drop granted each upkeep",
+    ("exploration_broodship", "StepBegins(Upkeep)"): "the 3+ station extra land drop granted each upkeep",
 }
 
 
