@@ -3,7 +3,9 @@
 Per-set and per-run card residuals: what each closed set still
 approximates, and the remaining gap lists. `INCOMPLETE_CARDS.md` is the
 *generated* index over the same ground (`audit_incomplete`, `audit_stubs`);
-this file is the hand-written context behind it.
+this file is the hand-written context behind it. `COMMANDER_BACKLOG.md` is
+the generated Commander worklist (EDHREC-ranked missing commanders, staples
+and commander-aware cards; `scripts/commander_backlog.py`).
 
 Triaged at the sixty-seventh pass — `TODO.md`'s NEXT had been asking for it.
 Four changes, all reversible from `git log -p`, and **no body was edited**:

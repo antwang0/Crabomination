@@ -437,6 +437,7 @@ fn passionate_archaeologist_burns_for_exile_casts() {
         duration: MayPlayDuration::EndOfThisTurn,
         exile_after: false,
         miracle: false,
+        pay_life: false,
     });
     g.exile.push(card);
     let life = g.players[1].life;
@@ -491,6 +492,7 @@ fn b_grant_free(g: &mut GameState, id: CardId) {
         duration: MayPlayDuration::EndOfThisTurn,
         exile_after: false,
         miracle: false,
+        pay_life: false,
     });
 }
 
