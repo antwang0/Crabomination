@@ -1289,3 +1289,73 @@ fn a_reveal_land_enters_untapped_when_the_hand_can_show_it() {
         );
     }
 }
+
+/// The ten triomes: three basic land types, enters tapped, Cycling {3}, three
+/// single-colour mana abilities in the printed order. ⚠ Cabaretti Courtyard
+/// is deliberately absent — same set, same three colours, and its oracle
+/// sacrifices itself to fetch a basic.
+#[test]
+fn every_triome_carries_its_three_types_and_cycling_three() {
+    use crabomination::card::{Keyword, LandType};
+    let cycle: [(Factory, &str, [LandType; 3], [Color; 3]); 10] = [
+        (catalog::indatha_triome, "Indatha Triome",
+         [LandType::Plains, LandType::Swamp, LandType::Forest],
+         [Color::White, Color::Black, Color::Green]),
+        (catalog::ketria_triome, "Ketria Triome",
+         [LandType::Forest, LandType::Island, LandType::Mountain],
+         [Color::Green, Color::Blue, Color::Red]),
+        (catalog::raugrin_triome, "Raugrin Triome",
+         [LandType::Island, LandType::Mountain, LandType::Plains],
+         [Color::Blue, Color::Red, Color::White]),
+        (catalog::savai_triome, "Savai Triome",
+         [LandType::Mountain, LandType::Plains, LandType::Swamp],
+         [Color::Red, Color::White, Color::Black]),
+        (catalog::zagoth_triome, "Zagoth Triome",
+         [LandType::Swamp, LandType::Forest, LandType::Island],
+         [Color::Black, Color::Green, Color::Blue]),
+        (catalog::jetmirs_garden, "Jetmir's Garden",
+         [LandType::Mountain, LandType::Forest, LandType::Plains],
+         [Color::Red, Color::Green, Color::White]),
+        (catalog::raffines_tower, "Raffine's Tower",
+         [LandType::Plains, LandType::Island, LandType::Swamp],
+         [Color::White, Color::Blue, Color::Black]),
+        (catalog::xanders_lounge, "Xander's Lounge",
+         [LandType::Island, LandType::Swamp, LandType::Mountain],
+         [Color::Blue, Color::Black, Color::Red]),
+        (catalog::ziatoras_proving_ground, "Ziatora's Proving Ground",
+         [LandType::Swamp, LandType::Mountain, LandType::Forest],
+         [Color::Black, Color::Red, Color::Green]),
+        (catalog::sparas_headquarters, "Spara's Headquarters",
+         [LandType::Forest, LandType::Plains, LandType::Island],
+         [Color::Green, Color::White, Color::Blue]),
+    ];
+    for (factory, name, types, colors) in cycle {
+        let def = factory();
+        assert_eq!(def.name, name);
+        assert_eq!(def.subtypes.land_types, types.to_vec(), "{name}'s printed types");
+        assert!(
+            def.keywords.iter().any(|k| matches!(k, Keyword::Cycling(_))),
+            "{name} has cycling",
+        );
+        assert_eq!(def.activated_abilities.len(), 3, "{name} taps for three");
+
+        let mut g = two_player_game();
+        g.step = TurnStep::PreCombatMain;
+        let id = g.add_card_to_hand(0, factory());
+        g.perform_action(GameAction::PlayLand(id)).unwrap();
+        drain_stack(&mut g);
+        assert!(g.battlefield_find(id).unwrap().tapped, "{name} enters tapped");
+        for (i, color) in colors.iter().enumerate() {
+            let mut g = two_player_game();
+            g.step = TurnStep::PreCombatMain;
+            let id = g.add_card_to_battlefield(0, factory());
+            g.perform_action(GameAction::ActivateAbility {
+                card_id: id, ability_index: i, target: None, additional_targets: Vec::new(),
+                x_value: None, mode: None,
+            })
+            .unwrap_or_else(|e| panic!("{name} ability {i}: {e:?}"));
+            drain_stack(&mut g);
+            assert_eq!(g.players[0].mana_pool.amount(*color), 1, "{name} ability {i}");
+        }
+    }
+}

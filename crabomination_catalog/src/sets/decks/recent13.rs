@@ -178,6 +178,46 @@ pub fn sparas_headquarters() -> CardDefinition {
     )
 }
 
+// ── The other four Streets of New Capenna triomes ───────────────────────────
+//
+// Same body as the Ikoria five and as Spara's Headquarters above: three basic
+// land types, enters tapped, Cycling {3}. Type and colour order are the
+// printed ones. ⚠ Cabaretti Courtyard is NOT the fifth — same set, same three
+// colours, and its oracle is "sacrifice it, search for a basic Mountain,
+// Forest, or Plains". Jetmir's Garden is the Naya triome.
+
+pub fn jetmirs_garden() -> CardDefinition {
+    super::modern::triome(
+        "Jetmir's Garden",
+        [LandType::Mountain, LandType::Forest, LandType::Plains],
+        [Color::Red, Color::Green, Color::White],
+    )
+}
+
+pub fn raffines_tower() -> CardDefinition {
+    super::modern::triome(
+        "Raffine's Tower",
+        [LandType::Plains, LandType::Island, LandType::Swamp],
+        [Color::White, Color::Blue, Color::Black],
+    )
+}
+
+pub fn xanders_lounge() -> CardDefinition {
+    super::modern::triome(
+        "Xander's Lounge",
+        [LandType::Island, LandType::Swamp, LandType::Mountain],
+        [Color::Blue, Color::Black, Color::Red],
+    )
+}
+
+pub fn ziatoras_proving_ground() -> CardDefinition {
+    super::modern::triome(
+        "Ziatora's Proving Ground",
+        [LandType::Swamp, LandType::Mountain, LandType::Forest],
+        [Color::Black, Color::Red, Color::Green],
+    )
+}
+
 /// Mishra's Foundry — colorless manland. {T}: Add {C}. {2}: becomes a 2/2
 /// Assembly-Worker until end of turn (still a land). (The "pump an attacking
 /// Assembly-Worker" rider is dropped, as on Mishra's Factory.)
