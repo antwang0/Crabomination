@@ -140,6 +140,28 @@ pins it. **The attacker-side loop had the key all along, which is why nobody
 saw it: the two halves of one rule were written twice and only one was
 finished.**
 
+⚠⚠ **And the second card with that scope had the flag set AND a comment
+claiming the fix.** Coveted Jewel's reads "CR 603.2c — 'whenever ONE OR MORE
+creatures an opponent controls attack you': one fire for the declaration.
+Without the flag three unblocked attackers drew that opponent nine cards." The
+flag was set. The site threw it away. **Nothing caught it because every gate
+in the tree asks whether the CARD is right** — `catalog_registration`'s
+clause-ratchet family included. `cr_603_2c_coveted_jewel_changes_hands_once_a_declaration`
+is the one that asks whether the engine read it.
+
+📐 **`scripts/audit_trigger_once_keys.py` is the ratchet, and it is a
+cross-check rather than a grep**: for every `(EventKind, EventScope)` pair a
+catalog card carries a once key on, is the site that pushes that pair one that
+reads the key? It reads **0 of 31 keyed pairs** at the tip, with **eight**
+latent sites recorded (the `YouAttack` walk, `ControllerDealtCombatDamage`,
+the Room-door and plot walks, the merged-pile `Mutated` walk, the
+instant-or-sorcery damage watcher, and the self-source ETB push, where the
+`multiplier` beside it is Panharmonicon and a once key would be *wrong*). ⚠ A
+latent site is a **surface, not a queue** — `audit_target_walkers`' sixth
+column, same shape. There is nothing to fix until a card asks, and fixing one
+speculatively costs a hot-path read per push for behaviour nothing exercises.
+The audit fires the day a card lands on one.
+
 **⚠ And the rider column found the shape the other two could not: a card
 whose VERB is right.** Mortify prints "destroy target creature or
 enchantment", and it shipped with a "can't be regenerated" rider — with a
