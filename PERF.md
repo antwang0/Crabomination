@@ -3051,11 +3051,23 @@ as context.
 
 🔎 **The one undecided game is a finding, and the new census named it without
 a second run.** `pod ActionCap seed 18045724030442976829`, turn 59:
-`ActivateAbility#0 Eldrazi Spawn x7535` against a seat holding **pool 7533**,
-and **no Eldrazi Spawn in the board tally** — the exact shape
-`cap_diagnosis`'s header warns it cannot see, which is why `ActionCensus`
-exists. A `sac_cost: true` ability accepted 7,535 times is 7,535 sacrifices of
-a token that supports one. TODO's Commander NEXT item 8 carries the repro.
+`p5 ActivateAbility#0 Eldrazi Spawn x7535`, `p5 SubmitDecision x7555`, and
+`p5 pool 7533` — one seat, one loop. (The seat had to be added to the key to
+get that: the first print put a game-wide activation count beside a per-seat
+pool and said nothing about whether they were the same player.)
+
+**And the loop is *voluntary*, which is why nothing caught it.** The
+sacrifice is charged — `activate_ability_inner`'s battlefield branch ends at
+`bf_pos.ok_or(GameError::CardNotOnBattlefield)?`, so a Spawn that is gone
+cannot be activated, and 7,535 accepted activations are 7,535 tokens that
+genuinely entered and were sacrificed. Basking Broodscale reads correct
+against its oracle and `shortcut::graft()` no-ops when empty. So this is a
+real board minting a real token per iteration and a bot taking the
+sacrifice-for-mana every time with nothing to spend it on.
+`mandatory_loop_watch` is CR 104.4b and only sees *mandatory* loops. ⚠ The
+guard belongs in `bot.rs`, which is the `--bench` path, so it needs the
+throughput gate re-taken and not just the suite. TODO's Commander NEXT item 8
+carries the repro.
 
 ### 2026-09-19 (the seventh Commander session, tip `3aca0ddb`) — guardrail, no perf work
 
