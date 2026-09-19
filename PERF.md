@@ -3098,6 +3098,31 @@ step regardless. The arm is gated on `sink::AB_SAC` and **no card in
 📐 **A `bot.rs` change is not automatically a bench risk** — ask which sink
 bit gates the arm and whether the pool can light it.
 
+**The whole seed-9101 sweep re-taken on the fixed binary, because one seat
+count is not a reading.** 2,000 games at each of 2..8 seats, after against
+before, turns a game:
+
+```text
+seats       2      3      4      5      6      7      8
+after   19.33  32.62  45.15  57.21  64.11  77.71  92.84
+before  19.30  32.59  45.30  57.20  64.50  77.57  92.89
+```
+
+**14,000 / 14,000 decided on the fixed side** (13,999 before), every
+`undecided_by` column zero at every seat count on both sides. The largest
+move is -0.39 turns at six seats and the two-seat control is +0.03 — i.e.
+the fix costs the aggregate nothing.
+
+⚠ **And the three-game gate moved far more than that, which is the reading
+to keep.** `cr_903_seeded_pod_outcomes_match_the_committed_table` was
+re-blessed in the fix's own commit: 55→47 turns / 2360→1909 actions,
+101→67 / 3969→2831, 57→49 / 2480→2116 — all three **shorter**, two winners
+held, seed 4242's moved 3→2. **A gate of three games swings hard when the
+fix needs a board state to be present**: the sacrifice outlet has to be out
+with something to feed it, and when it is, the loop was thousands of actions
+long. When the gate and the aggregate disagree, the aggregate wins — the
+gate's job is to make the change *visible*, not to size it.
+
 ### 2026-09-19 (the seventh Commander session, tip `3aca0ddb`) — guardrail, no perf work
 
 Two correctness commits: `Effect::BindScratch` (the resolver scratch a parked
