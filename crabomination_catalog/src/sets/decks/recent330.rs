@@ -10,11 +10,13 @@
 //! already holds this branch's card-shape tables).
 
 use crate::card::{
-    CardDefinition, CardType, CreatureType, Keyword, SelectionRequirement as R, StaticAbility,
-    Subtypes, Supertype,
+    ArtifactSubtype, CardDefinition, CardType, ConditionalEquipBonus, CreatureType, EquipBonus,
+    EquipScale, Keyword, SelectionRequirement as R, StaticAbility, Subtypes, Supertype,
+    TriggeredAbility, Value,
 };
-use crate::effect::StaticEffect;
-use crate::mana::{cost, g, generic, w};
+use crate::effect::shortcut::target_filtered;
+use crate::effect::{Effect, EventKind, EventScope, EventSpec, PlayerRef, StaticEffect};
+use crate::mana::{ManaCost, cost, g, generic, r, w};
 
 /// Parallel Lives — {3}{G} Enchantment. "If an effect would create one or
 /// more tokens under your control, it creates twice that many of those tokens
@@ -74,5 +76,160 @@ pub fn avacyn_angel_of_hope() -> CardDefinition {
             },
         }],
         ..Default::default()
+    }
+}
+
+// ── Equipment ──────────────────────────────────────────────────────────────
+//
+// Four of the top-1000 gap's five Equipment. The fifth, Commander's Plate,
+// reads a colour identity and so lives in `sets::cmdr`.
+//
+// ⚠ Nothing here needed a new primitive, including the two with a **second,
+// restricted equip cost** ("Equip legendary creature {3}. Equip {7}"):
+// `CardDefinition::equip_filtered_cost` already holds a `(filter, cost)` pair
+// and `equip` takes it whenever the host matches, ahead of `Keyword::Equip`.
+// TODO's standing lead listed that as an engine gap; it had shipped.
+
+/// The shared shell: an Artifact — Equipment with one plain equip cost.
+fn equipment(name: &'static str, mana: ManaCost, equip: ManaCost, bonus: EquipBonus) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: mana,
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(equip)],
+        equipped_bonus: Some(bonus),
+        ..Default::default()
+    }
+}
+
+/// Blackblade Reforged — {2} Legendary Artifact — Equipment. "Equipped
+/// creature gets +1/+1 for each land you control. Equip legendary creature
+/// {3}. Equip {7}." (EDHREC 350.)
+///
+/// `EquipScale` counts permanents matching its filter that the **source's**
+/// controller controls, which is the printed "you control" — the Equipment's
+/// controller, not the host's.
+pub fn blackblade_reforged() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        equip_filtered_cost: Some((R::HasSupertype(Supertype::Legendary), cost(&[generic(3)]))),
+        ..equipment(
+            "Blackblade Reforged",
+            cost(&[generic(2)]),
+            cost(&[generic(7)]),
+            EquipBonus {
+                scale: Some(EquipScale {
+                    filter: R::Land,
+                    per_power: 1,
+                    per_toughness: 1,
+                    ..Default::default()
+                }),
+                ..Default::default()
+            },
+        )
+    }
+}
+
+/// Champion's Helm — {3} Artifact — Equipment. "Equipped creature gets +2/+2.
+/// As long as equipped creature is legendary, it has hexproof. Equip {1}."
+/// (EDHREC 745.)
+///
+/// The +2/+2 is unconditional and only the hexproof is gated, so the pump goes
+/// on the bonus and the keyword on a `ConditionalEquipBonus` — a host that
+/// stops being legendary loses the hexproof and keeps the stats.
+pub fn champions_helm() -> CardDefinition {
+    equipment(
+        "Champion's Helm",
+        cost(&[generic(3)]),
+        cost(&[generic(1)]),
+        EquipBonus {
+            power: 2,
+            toughness: 2,
+            conditional: vec![ConditionalEquipBonus {
+                host_filter: R::HasSupertype(Supertype::Legendary),
+                power: 0,
+                toughness: 0,
+                keywords: vec![Keyword::Hexproof],
+                ..Default::default()
+            }],
+            ..Default::default()
+        },
+    )
+}
+
+/// Mithril Coat — {3} Legendary Artifact — Equipment. "Flash. Indestructible.
+/// When Mithril Coat enters, attach it to target legendary creature you
+/// control. Equipped creature has indestructible. Equip {3}." (EDHREC 238.)
+///
+/// Both indestructibles are printed and they are different clauses: the
+/// keyword protects the Coat itself, the `equipped_bonus` protects the host.
+/// The ETB attach is **targeted**, so with no legal legendary creature the
+/// trigger is removed from the stack (CR 603.3d) and the Coat sits there — the
+/// flash-in-response line the card is played for still leaves it on the board.
+pub fn mithril_coat() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        // Explicit, because `equipment`'s shell carries only the equip
+        // keyword and both of these are printed on the Coat itself.
+        keywords: vec![Keyword::Flash, Keyword::Indestructible, Keyword::Equip(cost(&[generic(3)]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::AttachSourceTo {
+                host: target_filtered(
+                    R::Creature.and(R::HasSupertype(Supertype::Legendary)).and(R::ControlledByYou),
+                ),
+            },
+        }],
+        ..equipment(
+            "Mithril Coat",
+            cost(&[generic(3)]),
+            cost(&[generic(3)]),
+            EquipBonus { keywords: vec![Keyword::Indestructible], ..Default::default() },
+        )
+    }
+}
+
+/// The Reaver Cleaver — {2}{R} Legendary Artifact — Equipment. "Equipped
+/// creature gets +1/+1 and has trample and 'Whenever this creature deals
+/// combat damage to a player or planeswalker, create that many Treasure
+/// tokens.' Equip {3}." (EDHREC 537.)
+///
+/// "a player **or planeswalker**" is two event kinds, so it is two granted
+/// abilities; one creature only ever attacks one of the two in a combat, so
+/// they cannot both fire off the same damage. "That many" is the damage
+/// dealt — `Value::TriggerEventAmount`. `triggers_on_equipment` stays false:
+/// CR 702.6e makes the granted ability the *creature's*, so "you" is the
+/// creature's controller.
+pub fn the_reaver_cleaver() -> CardDefinition {
+    let treasures = || Effect::CreateToken {
+        who: PlayerRef::You,
+        count: Value::TriggerEventAmount,
+        definition: std::sync::Arc::new(crate::game::effects::treasure_token()),
+    };
+    let on = |kind: EventKind| TriggeredAbility {
+        event: EventSpec::new(kind, EventScope::SelfSource),
+        effect: treasures(),
+    };
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        ..equipment(
+            "The Reaver Cleaver",
+            cost(&[generic(2), r()]),
+            cost(&[generic(3)]),
+            EquipBonus {
+                power: 1,
+                toughness: 1,
+                keywords: vec![Keyword::Trample],
+                triggered_abilities: vec![
+                    on(EventKind::DealsCombatDamageToPlayer),
+                    on(EventKind::DealsCombatDamageToPlaneswalker),
+                ],
+                ..Default::default()
+            },
+        )
     }
 }

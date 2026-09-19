@@ -841,6 +841,42 @@ pub fn war_room() -> CardDefinition {
     }
 }
 
+/// Commander's Plate — {1} Artifact — Equipment. "Equipped creature gets +3/+3
+/// and has protection from each color that's not in your commander's color
+/// identity. Equip commander {3}. Equip {5}." (EDHREC 478.)
+///
+/// CR 903.4 read as a **protection set**: the keyword resolves against the
+/// raw identity at check time, so it tracks a commander that changes zones and
+/// it is empty — protection from all five colours — for a seat with no
+/// commander at all. Its own keyword rather than a `ProtectionFromMatching`
+/// filter because the protected set is the identity's *complement*, which no
+/// `SelectionRequirement` can name.
+///
+/// "Equip commander {3}" is the ordinary restricted second equip cost:
+/// `equip_filtered_cost` is consulted ahead of `Keyword::Equip`, and
+/// `R::IsCommander` is already a board fact (CR 903.3 — a commander is a
+/// commander in every zone).
+pub fn commanders_plate() -> CardDefinition {
+    CardDefinition {
+        name: "Commander's Plate",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![crate::card::ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(5)]))],
+        equip_filtered_cost: Some((R::IsCommander, cost(&[generic(3)]))),
+        equipped_bonus: Some(crate::card::EquipBonus {
+            power: 3,
+            toughness: 3,
+            keywords: vec![Keyword::ProtectionFromColorsOutsideCommanderIdentity],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -402,3 +402,49 @@ fn cr_702_16_plate_protection_stops_an_off_identity_spell_at_cast_time() {
     })
     .expect("a blue spell is inside W/U");
 }
+
+// ── Commander's Plate ───────────────────────────────────────────────────────
+
+/// CR 903.4 — the card, on a real board: +3/+3 and protection from every
+/// colour outside the W/U commander's identity.
+#[test]
+fn cr_903_4_commanders_plate_grants_the_pump_and_the_off_identity_protection() {
+    let mut g = azorius_commander_game();
+    let cmd = g.add_card_to_battlefield(0, azorius_commander());
+    g.players[0].commanders.push(cmd);
+    let plate = g.add_card_to_battlefield(0, catalog::commanders_plate());
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::Equip { equipment: plate, target: cmd })
+        .expect("Equip commander {3}");
+
+    assert_eq!(pt(&g, cmd), (5, 5), "2/2 under +3/+3");
+    let red = g.add_card_to_battlefield(1, creature_costing("Test Red", cost(&[r()])));
+    let white = g.add_card_to_battlefield(1, creature_costing("Test White", cost(&[w()])));
+    assert!(g.damage_prevented_by_protection(red, cmd), "red is outside W/U");
+    assert!(!g.damage_prevented_by_protection(white, cmd), "white is inside W/U");
+}
+
+/// "Equip commander {3}. Equip {5}." — the restricted cost is the whole point
+/// of the card and it is five mana cheaper than the printed one, so three
+/// colourless equips the commander and refuses anything else.
+#[test]
+fn cr_903_3_commanders_plate_equips_a_commander_for_three_and_anything_else_for_five() {
+    let mut g = azorius_commander_game();
+    let cmd = g.add_card_to_battlefield(0, azorius_commander());
+    g.players[0].commanders.push(cmd);
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let plate = g.add_card_to_battlefield(0, catalog::commanders_plate());
+
+    g.players[0].mana_pool.add_colorless(3);
+    assert!(
+        g.perform_action(GameAction::Equip { equipment: plate, target: bears }).is_err(),
+        "a non-commander pays the printed Equip {{5}}",
+    );
+    g.perform_action(GameAction::Equip { equipment: plate, target: cmd })
+        .expect("Equip commander {3}");
+
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::Equip { equipment: plate, target: bears })
+        .expect("and five moves it to anything");
+    assert_eq!(pt(&g, bears), (5, 5), "the Plate pumps whatever wears it");
+}

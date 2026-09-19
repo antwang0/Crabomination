@@ -1177,6 +1177,7 @@ static CMDR: &[Factory] = &[
     super::cmdr::bastion_protector,
     super::cmdr::loyal_apprentice,
     super::cmdr::war_room,
+    super::cmdr::commanders_plate,
 ];
 static CN2: &[Factory] = &[
     super::cn2::ballot_broker,
@@ -7675,6 +7676,10 @@ static DECKS: &[Factory] = &[
     super::decks::sprout_swarm,
     super::decks::parallel_lives,
     super::decks::avacyn_angel_of_hope,
+    super::decks::blackblade_reforged,
+    super::decks::champions_helm,
+    super::decks::mithril_coat,
+    super::decks::the_reaver_cleaver,
     super::decks::quest_for_the_goblin_lord,
     super::decks::quest_for_the_gravelord,
     super::decks::quest_for_the_gemblades,

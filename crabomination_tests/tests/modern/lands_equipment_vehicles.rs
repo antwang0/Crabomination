@@ -1627,3 +1627,174 @@ fn a_slow_land_reads_the_other_lands_and_is_tapped_on_arrival() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(id).unwrap().tapped, "one other land: still tapped");
 }
+
+// ── The top-1000 Commander Equipment gap ───────────────────────────────────
+
+/// A legendary 2/2 to host the two "Equip legendary creature" cards, so the
+/// restricted cost has something to match and the unrestricted one has
+/// something to be compared against.
+fn legendary_bear() -> crabomination::card::CardDefinition {
+    crabomination::card::CardDefinition {
+        name: "Test Legendary Bear",
+        supertypes: vec![crabomination::card::Supertype::Legendary],
+        ..catalog::grizzly_bears()
+    }
+}
+
+/// Blackblade Reforged: "+1/+1 for each land you control", counted on the
+/// Equipment controller's lands — and the **restricted second equip cost**.
+/// Equip legendary creature {3} beats Equip {7} by four mana, so three
+/// colourless is enough for a legendary host and not for anything else.
+#[test]
+fn blackblade_reforged_scales_with_lands_and_equips_a_legend_for_three() {
+    let mut g = two_player_game();
+    let eq = g.add_card_to_battlefield(0, catalog::blackblade_reforged());
+    let plain = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(3);
+    assert!(
+        g.perform_action(GameAction::Equip { equipment: eq, target: plain }).is_err(),
+        "a nonlegendary host pays the printed Equip {{7}}",
+    );
+
+    let legend = g.add_card_to_battlefield(0, legendary_bear());
+    g.add_card_to_battlefield(0, catalog::island());
+    g.add_card_to_battlefield(0, catalog::plains());
+    g.perform_action(GameAction::Equip { equipment: eq, target: legend })
+        .expect("Equip legendary creature {3}");
+    let cp = g.computed_permanent(legend).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4), "2/2 plus one per land, two lands");
+
+    // The count is live: a third land moves it again.
+    g.add_card_to_battlefield(0, catalog::mountain());
+    let cp = g.computed_permanent(legend).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 5), "three lands");
+}
+
+/// Champion's Helm: the +2/+2 is unconditional and only the hexproof is gated
+/// on the host being legendary, so the two clauses have to come apart.
+#[test]
+fn champions_helm_pumps_anything_and_shields_only_a_legend() {
+    let mut g = two_player_game();
+    let helm = g.add_card_to_battlefield(0, catalog::champions_helm());
+    let plain = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::Equip { equipment: helm, target: plain }).expect("Equip {1}");
+    let cp = g.computed_permanent(plain).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4), "+2/+2 with no legendary gate");
+    assert!(
+        !cp.keywords().contains(&crabomination::card::Keyword::Hexproof),
+        "a nonlegendary host gets no hexproof",
+    );
+
+    let legend = g.add_card_to_battlefield(0, legendary_bear());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::Equip { equipment: helm, target: legend }).expect("re-equip");
+    let cp = g.computed_permanent(legend).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4), "the pump is the same");
+    assert!(
+        cp.keywords().contains(&crabomination::card::Keyword::Hexproof),
+        "and a legendary host also has hexproof",
+    );
+}
+
+/// Cast Mithril Coat for its printed {3} and settle the stack, returning its
+/// battlefield id.
+fn cast_the_coat(g: &mut GameState) -> crabomination::card::CardId {
+    let id = g.add_card_to_hand(0, catalog::mithril_coat());
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Mithril Coat for {3}");
+    drain_stack(g);
+    id
+}
+
+/// Mithril Coat: two printed indestructibles that are different clauses. The
+/// keyword is on the Coat; the `equipped_bonus` is on whatever it is attached
+/// to. The ETB attach finds the legendary creature on its own.
+#[test]
+fn mithril_coat_attaches_itself_and_both_indestructibles_are_real() {
+    use crabomination::card::Keyword;
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let legend = g.add_card_to_battlefield(0, legendary_bear());
+    // ⚠ Cast it: `add_card_to_battlefield` places the instance and fires no
+    // entry event at all, so an ETB trigger tested that way reads as absent.
+    let coat = cast_the_coat(&mut g);
+
+    assert_eq!(
+        g.battlefield_find(coat).unwrap().attached_to,
+        Some(legend),
+        "the enters trigger attached it with no equip cost paid",
+    );
+    assert!(
+        g.computed_permanent(coat).unwrap().keywords().contains(&Keyword::Indestructible),
+        "the Coat's own printed indestructible",
+    );
+    assert!(
+        g.computed_permanent(legend).unwrap().keywords().contains(&Keyword::Indestructible),
+        "and the one it grants its host",
+    );
+    assert!(
+        g.battlefield_find(coat).unwrap().definition.keywords.contains(&Keyword::Flash),
+        "flash is what the card is played for",
+    );
+}
+
+/// With no legendary creature the attach trigger has no legal target, so it is
+/// removed from the stack (CR 603.3d) — and the Coat stays on the battlefield
+/// unattached rather than the trigger taking it anywhere.
+#[test]
+fn cr_603_3d_mithril_coat_stays_put_with_nothing_legendary_to_attach_to() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let coat = cast_the_coat(&mut g);
+    let on = g.battlefield_find(coat).expect("still on the battlefield");
+    assert_eq!(on.attached_to, None, "no legal target, nothing attached");
+}
+
+/// The Reaver Cleaver: +1/+1, trample, and a granted combat-damage trigger
+/// whose count is the damage dealt. CR 702.6e makes the granted ability the
+/// creature's, so the Treasures arrive under the creature's controller.
+#[test]
+fn the_reaver_cleaver_mints_one_treasure_per_point_of_combat_damage() {
+    let mut g = two_player_game();
+    let eq = g.add_card_to_battlefield(0, catalog::the_reaver_cleaver());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::Equip { equipment: eq, target: bear }).expect("Equip {3}");
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "2/2 plus +1/+1");
+    assert!(cp.keywords().contains(&crabomination::card::Keyword::Trample));
+
+    let treasures = |g: &GameState| {
+        g.battlefield.iter().filter(|c| c.definition.name == "Treasure" && c.controller == 0).count()
+    };
+    assert_eq!(treasures(&g), 0, "nothing before combat");
+
+    g.step = TurnStep::PreCombatMain;
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("to attackers");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    for _ in 0..12 {
+        if g.players[1].life < 20 && treasures(&g) > 0 {
+            break;
+        }
+        let _ = g.perform_action(GameAction::PassPriority);
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.players[1].life, 17, "a 3/3 connected");
+    assert_eq!(treasures(&g), 3, "that many Treasures — one per point of damage");
+}
