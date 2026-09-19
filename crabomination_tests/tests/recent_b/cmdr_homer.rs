@@ -131,20 +131,9 @@ fn cmdr_homer_creatures_have_their_printed_bodies() {
     assert!(catalog::iceberg_cancrix().supertypes.contains(&Supertype::Snow));
 }
 
-/// The three pod duals enter tapped in a duel and untapped with two or more
-/// opponents.
-#[test]
-fn cmdr_homer_pod_duals_enter_untapped_only_with_two_opponents() {
-    for make in [catalog::rejuvenating_springs, catalog::undergrowth_stadium, catalog::morphic_pool] {
-        let mut duel = main_phase(2);
-        let a = play_land(&mut duel, 0, make());
-        assert!(duel.battlefield_find(a).unwrap().tapped, "{} tapped in a duel", make().name);
-        let mut pod = main_phase(3);
-        let b = play_land(&mut pod, 0, make());
-        assert!(!pod.battlefield_find(b).unwrap().tapped, "{} untapped in a pod", make().name);
-        assert_eq!(make().activated_abilities.len(), 2);
-    }
-}
+// The three pod duals' tap condition is `core_rules::multiplayer::
+// bond_lands_read_the_live_opponent_count`, one table over all ten of the
+// cycle — they share one body, so they no longer carry three tests.
 
 /// The three copy sorceries make a non-legendary token of a legendary creature;
 /// Irenicus's also grants flying.

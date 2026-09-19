@@ -4889,3 +4889,61 @@ fn a_pile_splits_second_half_waits_for_the_first_to_finish() {
     );
 }
 
+
+/// The ten-card "bond" cycle (Battlebond + Commander Legends): "This land
+/// enters tapped unless you have **two or more opponents**." Its whole text is
+/// a player count, so a duel and a pod are the two answers, and one table over
+/// all ten is the test — they share one body (`sets::cmdr::crowd_land`) and
+/// used to carry three.
+///
+/// CR 800.4a is the third row: an opponent who has left the game is not an
+/// opponent, so a four-seat pod worn down to two players taps the next one.
+#[test]
+fn bond_lands_read_the_live_opponent_count() {
+    type Land = fn() -> crabomination::card::CardDefinition;
+    const CYCLE: [Land; 10] = [
+        catalog::sea_of_clouds,
+        catalog::bountiful_promenade,
+        catalog::morphic_pool,
+        catalog::spire_garden,
+        catalog::luxury_suite,
+        catalog::training_center,
+        catalog::undergrowth_stadium,
+        catalog::rejuvenating_springs,
+        catalog::spectator_seating,
+        catalog::vault_of_champions,
+    ];
+    let play = |g: &mut GameState, def: crabomination::card::CardDefinition| {
+        let id = g.add_card_to_hand(0, def);
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        g.players[0].lands_played_this_turn = 0;
+        g.perform_action(GameAction::PlayLand(id)).expect("play land");
+        id
+    };
+    for make in CYCLE {
+        let name = make().name;
+        assert_eq!(make().activated_abilities.len(), 2, "{name} taps for two colors");
+
+        let mut duel = multi_player_game(2);
+        let a = play(&mut duel, make());
+        assert!(duel.battlefield_find(a).unwrap().tapped, "{name}: one opponent, tapped");
+
+        let mut pod = multi_player_game(3);
+        let b = play(&mut pod, make());
+        assert!(!pod.battlefield_find(b).unwrap().tapped, "{name}: two opponents, untapped");
+
+        // CR 800.4a — two of the four are out, so the count is one again.
+        let mut worn = multi_player_game(4);
+        for seat in [1, 2] {
+            worn.players[seat].life = 0;
+        }
+        worn.check_state_based_actions();
+        assert_eq!(worn.players.iter().filter(|p| p.is_alive()).count(), 2);
+        let c = play(&mut worn, make());
+        assert!(
+            worn.battlefield_find(c).unwrap().tapped,
+            "{name}: a seat that has left is not an opponent",
+        );
+    }
+}

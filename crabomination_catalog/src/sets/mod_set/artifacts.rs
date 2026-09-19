@@ -950,8 +950,9 @@ pub fn arcbound_bruiser() -> CardDefinition {
     }
 }
 
-/// Hedron Archive — {4} Artifact. "{T}: Add {C}{C}." "{T}, Sacrifice this
-/// artifact: Draw two cards."
+/// Hedron Archive — {4} Artifact. "{T}: Add {C}{C}." "{2}, {T}, Sacrifice
+/// this artifact: Draw two cards." (The `{2}` was added with the 2026-09-07
+/// ability-cost column; this line still read the free version.)
 pub fn hedron_archive() -> CardDefinition {
     CardDefinition {
         name: "Hedron Archive",

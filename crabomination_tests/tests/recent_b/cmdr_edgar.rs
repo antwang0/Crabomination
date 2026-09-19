@@ -996,18 +996,8 @@ fn play_land(g: &mut GameState, def: CardDefinition) -> CardId {
     id
 }
 
-/// The Battlebond crowd lands enter tapped in a duel and untapped in a pod.
-#[test]
-fn crowd_lands_enter_untapped_with_two_opponents() {
-    for make in [catalog::vault_of_champions, catalog::luxury_suite, catalog::spectator_seating] {
-        let mut duel = main_phase();
-        let a = play_land(&mut duel, make());
-        assert!(duel.battlefield_find(a).unwrap().tapped, "one opponent: tapped");
-        let mut pod = main_phase_n(4);
-        let b = play_land(&mut pod, make());
-        assert!(!pod.battlefield_find(b).unwrap().tapped, "three opponents: untapped");
-    }
-}
+// The crowd lands' tap condition is `core_rules::multiplayer::
+// bond_lands_read_the_live_opponent_count`, one table over all ten.
 
 /// Haunted Ridge (slow land), Foreboding Ruins (reveal land) and Minas
 /// Tirith (legend check) enter tapped or untapped by their conditions.

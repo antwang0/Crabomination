@@ -666,6 +666,55 @@ pub fn opal_palace() -> CardDefinition {
     }
 }
 
+// ── Multiplayer-native lands: the Battlebond / Commander Legends "bond"
+//    cycle ─────────────────────────────────────────────────────────────────
+
+/// A bond land: "This land enters tapped unless you have two or more
+/// opponents. {T}: Add {a} or {b}."
+///
+/// The cycle's whole text is a *player count*, which is why it lives here
+/// rather than in a set file: in a duel every one of the ten is a tapland and
+/// nothing else, and in a pod every one is a dual. `Value::OpponentCount`
+/// reads the seats still in the game, so a pod that has shrunk back to two
+/// players taps the next one (CR 800.4a leaves no opponent behind).
+pub(crate) fn crowd_land(name: &'static str, a: Color, b_color: Color) -> CardDefinition {
+    CardDefinition {
+        name,
+        card_types: vec![CardType::Land],
+        static_abilities: vec![StaticAbility {
+            description: "This land enters tapped unless you have two or more opponents.",
+            effect: StaticEffect::EntersTappedUnless {
+                applies_to: Selector::This,
+                condition: Predicate::ValueAtLeast(Value::OpponentCount, Value::Const(2)),
+            },
+        }],
+        activated_abilities: vec![super::tap_add(a), super::tap_add(b_color)],
+        ..Default::default()
+    }
+}
+
+/// Sea of Clouds — Land. Enters tapped unless you have two or more opponents.
+/// {T}: Add {W} or {U}.
+pub fn sea_of_clouds() -> CardDefinition {
+    crowd_land("Sea of Clouds", Color::White, Color::Blue)
+}
+
+/// Bountiful Promenade — Land. Enters tapped unless you have two or more
+/// opponents. {T}: Add {G} or {W}.
+pub fn bountiful_promenade() -> CardDefinition {
+    crowd_land("Bountiful Promenade", Color::Green, Color::White)
+}
+
+
+
+/// Training Center — Land. Enters tapped unless you have two or more
+/// opponents. {T}: Add {U} or {R}.
+pub fn training_center() -> CardDefinition {
+    crowd_land("Training Center", Color::Blue, Color::Red)
+}
+
+
+
 #[cfg(test)]
 mod tests {
     use super::*;

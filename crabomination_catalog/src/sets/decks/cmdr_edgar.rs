@@ -1869,21 +1869,10 @@ fn land(name: &'static str) -> CardDefinition {
     }
 }
 
-/// Battlebond "crowd" land: "This land enters tapped unless you have two or
-/// more opponents. {T}: Add {A} or {B}."
-fn crowd_land(name: &'static str, a: Color, b_color: Color) -> CardDefinition {
-    CardDefinition {
-        static_abilities: vec![StaticAbility {
-            description: "This land enters tapped unless you have two or more opponents.",
-            effect: StaticEffect::EntersTappedUnless {
-                applies_to: Selector::This,
-                condition: Predicate::ValueAtLeast(Value::OpponentCount, Value::Const(2)),
-            },
-        }],
-        activated_abilities: vec![super::super::tap_add(a), super::super::tap_add(b_color)],
-        ..land(name)
-    }
-}
+/// Battlebond "crowd" land — the body is `sets::cmdr::crowd_land`, where the
+/// other seven of the ten-card cycle live: what they share is a player count,
+/// not a set.
+use super::super::cmdr::crowd_land;
 
 /// Vault of Champions — Land. Enters tapped unless you have two or more
 /// opponents. {T}: Add {W} or {B}.

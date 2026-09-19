@@ -1767,17 +1767,7 @@ pub fn arena_of_glory() -> CardDefinition {
 /// opponents. `{T}: Add {R} or {G}.` (Battlebond "Luxury Suite" cycle;
 /// `Value::OpponentCount` counts opponents still in the game.)
 pub fn spire_garden() -> CardDefinition {
-    CardDefinition {
-        static_abilities: vec![StaticAbility {
-            description: "This land enters tapped unless you have two or more opponents.",
-            effect: StaticEffect::EntersTappedUnless {
-                applies_to: Selector::This,
-                condition: Predicate::ValueAtLeast(Value::OpponentCount, Value::Const(2)),
-            },
-        }],
-        activated_abilities: vec![tap_add(Color::Red), tap_add(Color::Green)],
-        ..c_land("Spire Garden")
-    }
+    super::super::cmdr::crowd_land("Spire Garden", Color::Red, Color::Green)
 }
 
 /// Rockfall Vale — Land (slow land). This land enters tapped unless you

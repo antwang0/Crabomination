@@ -1166,6 +1166,9 @@ static CMDR: &[Factory] = &[
     super::cmdr::graham_obrien,
     super::cmdr::path_of_ancestry,
     super::cmdr::opal_palace,
+    super::cmdr::sea_of_clouds,
+    super::cmdr::bountiful_promenade,
+    super::cmdr::training_center,
 ];
 static CN2: &[Factory] = &[
     super::cn2::ballot_broker,

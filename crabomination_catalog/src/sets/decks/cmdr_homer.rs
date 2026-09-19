@@ -64,7 +64,7 @@ use crate::effect::{
 use crate::game::effects::treasure_token;
 use crate::game::types::TurnStep;
 use crate::mana::{b, cost, g, generic, hybrid, u, x, Color, ManaCost, SpendRestriction};
-use crate::sets::{tap_add, tap_add_any_color, tap_add_colorless};
+use crate::sets::{tap_add_any_color, tap_add_colorless};
 use std::sync::Arc;
 
 // ── Shared frames ────────────────────────────────────────────────────────────
@@ -176,23 +176,9 @@ fn shapeshifter_token(power: i32, toughness: i32, colors: Vec<Color>) -> TokenDe
     }
 }
 
-/// "This land enters tapped unless you have two or more opponents.
-/// {T}: Add {A} or {B}." — the Commander Legends / Battlebond-style duals.
-fn pod_dual(name: &'static str, a: Color, bb: Color) -> CardDefinition {
-    CardDefinition {
-        name,
-        card_types: vec![CardType::Land],
-        activated_abilities: vec![tap_add(a), tap_add(bb)],
-        static_abilities: vec![StaticAbility {
-            description: "This land enters tapped unless you have two or more opponents.",
-            effect: StaticEffect::EntersTappedUnless {
-                applies_to: Selector::This,
-                condition: Predicate::ValueAtLeast(Value::OpponentCount, Value::Const(2)),
-            },
-        }],
-        ..Default::default()
-    }
-}
+/// The bond cycle's body is `sets::cmdr::crowd_land` — ten cards whose whole
+/// text is a player count, so they share one definition rather than three.
+use super::super::cmdr::crowd_land as pod_dual;
 
 // ── Creatures ────────────────────────────────────────────────────────────────
 
