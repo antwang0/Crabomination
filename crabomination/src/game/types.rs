@@ -1438,6 +1438,7 @@ impl PendingDecision {
             ResumeContext::TriggerOrder { run, .. } => {
                 run.first().map(|c| c.controller).unwrap_or(0)
             }
+            ResumeContext::LandEntry { player, .. } => *player,
             ResumeContext::CleanupDiscard { player } => *player,
             ResumeContext::CombatDamage { player, .. } => *player,
             ResumeContext::CastAdditionalCost { caster, .. } => *caster,
@@ -1770,6 +1771,17 @@ pub enum ResumeContext {
     ActionFloatConfirm {
         actor: usize,
         action: Box<GameAction>,
+    },
+    /// CR 614.12a — a land drop's as-enters replacement is asking its
+    /// `wants_ui` controller (Cavern of Souls' creature type). **Not** a
+    /// replay context: the land is already on the battlefield and the drop is
+    /// spent, so the resume applies the answer and finishes the entry
+    /// (`finish_land_entry`) rather than re-running `PlayLand`.
+    LandEntry {
+        player: usize,
+        card_id: CardId,
+        in_progress: PendingEffectState,
+        remaining: Effect,
     },
     /// CR 702.29e — a `wants_ui` cycler is picking which matching library
     /// card a landcycle / typecycle fetches. The action suspended before any

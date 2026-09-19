@@ -120,7 +120,8 @@ pub mod actions;
 pub mod affordances;
 /// CR 614.12 — the one funnel every battlefield entry applies the
 /// "as this permanent enters" replacements through.
-pub(crate) mod as_enters;
+#[doc(hidden)]
+pub mod as_enters;
 #[doc(hidden)]
 pub mod combat;
 /// CR 800.4f/g — routing an ask whose seat has left the game.
@@ -24138,6 +24139,18 @@ impl GameState {
                 self.continue_ability_resolution_x_into(
                     source, controller, &remaining, target, 0, true, &mut evs,
                 )?;
+                evs
+            }
+            ResumeContext::LandEntry { player, card_id, in_progress, remaining } => {
+                // CR 614.12a — the land's as-enters choice is in. Apply it,
+                // run whatever the replacement still had queued behind the
+                // ask, then finish the entry the drop left half-done. Nothing
+                // is replayed: the land is on the battlefield already.
+                let mut evs = self.apply_pending_effect_answer(in_progress, &answer)?;
+                let ctx = crate::game::effects::EffectContext::for_ability(card_id, player, None);
+                evs.append(&mut self.resolve_effect_resumed(&remaining, &ctx)?);
+                self.apply_as_enters_mode_pickers(card_id);
+                evs.append(&mut self.finish_land_entry(card_id, player));
                 evs
             }
             ResumeContext::Mulligan { player, mulligans_taken, next_player } => {

@@ -2065,6 +2065,20 @@ impl GameState {
     /// permanent's own CDA reads (Ixidron's mass turn-face-down) has already
     /// happened by the time its 0/0 body would be checked.
     pub(crate) fn apply_as_enters_effect(&mut self, card_id: CardId) {
+        self.apply_as_enters_effect_inner(card_id, true);
+    }
+
+    /// As [`apply_as_enters_effect`](Self::apply_as_enters_effect), but leaves
+    /// a suspending seat's ask in `suspend_signal` for the caller to park
+    /// instead of driving it through the decider. Only the land drop uses it:
+    /// it is the one entry path with neither a stack item above it nor a
+    /// replayable action behind it, so its `wants_ui` seat needs a resume
+    /// context of its own (CR 614.12a — Cavern of Souls is *played*).
+    pub(crate) fn apply_as_enters_effect_suspending(&mut self, card_id: CardId) {
+        self.apply_as_enters_effect_inner(card_id, false);
+    }
+
+    fn apply_as_enters_effect_inner(&mut self, card_id: CardId, driven: bool) {
         let Some((effect, controller, x)) = self.battlefield_find(card_id).and_then(|c| {
             c.definition.as_enters_effect.clone().map(|e| (e, c.controller, c.cast_x_value))
         }) else {
@@ -2078,8 +2092,13 @@ impl GameState {
         // (`NameCreatureType`, `ChooseColorForSelf`, `ChooseBasicLandTypeForSource`,
         // `SacrificeAnyNumber`, Devour — 40 shipped cards). Dropping the
         // suspension meant the choice never happened: Cavern of Souls entered
-        // with NO creature type named for every `wants_ui` seat.
-        let _ = self.resolve_effect_driven(&effect, &ctx);
+        // with NO creature type named for every `wants_ui` seat. `!driven` is
+        // the land drop, which parks the signal itself.
+        let _ = if driven {
+            self.resolve_effect_driven(&effect, &ctx)
+        } else {
+            self.resolve_effect(&effect, &ctx)
+        };
     }
 
     /// CR 701.28 — resolve the face a permanent just turned to's

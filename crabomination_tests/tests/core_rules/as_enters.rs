@@ -6,7 +6,7 @@
 
 use crabomination::card::{CardDefinition, CardType, EntersChoiceMode, Keyword};
 use crabomination::catalog;
-use crabomination::effect::Effect;
+use crabomination::effect::{Effect, Selector};
 use crabomination::game::types::Target;
 use crabomination::game::*;
 use crabomination::game::{cast, drain_stack, two_player_game};
@@ -346,4 +346,85 @@ fn cho_mannos_blessing_chooses_as_it_enters() {
         Some(Color::Red),
         "CR 614.12a — the Aura's colour is chosen as it enters"
     );
+}
+
+
+// ── The land drop's suspension (CR 614.12a on a `wants_ui` seat) ────────────
+
+/// A land drop is the one entry path with nowhere to park a continuation: no
+/// stack item above it, and nothing replayable behind it (the land is pushed
+/// and the drop is spent). `ResumeContext::LandEntry` is that place — a
+/// `wants_ui` controller is asked, and the entry finishes on the answer.
+#[test]
+fn cr_614_12a_a_ui_seat_is_asked_for_a_land_drops_as_enters_choice() {
+    use crabomination::card::CreatureType;
+    use crabomination::decision::DecisionAnswer;
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    let id = g.add_card_to_hand(
+        0,
+        CardDefinition {
+            name: "Asking Land",
+            card_types: vec![CardType::Land],
+            as_enters_effect: Some(Effect::NameCreatureType { what: Selector::This }),
+            ..Default::default()
+        },
+    );
+    g.perform_action(GameAction::PlayLand(id)).expect("land drop is legal");
+    assert!(g.stack.is_empty(), "CR 614.12 — a replacement never uses the stack");
+    assert!(g.pending_decision.is_some(), "the UI seat is asked, not answered for");
+    g.submit_decision(DecisionAnswer::CreatureType(CreatureType::Bear)).expect("name Bear");
+    assert_eq!(
+        g.battlefield_find(id).expect("still on the battlefield").chosen_creature_type,
+        Some(CreatureType::Bear),
+        "CR 614.12a — the named type is the one that stuck"
+    );
+    assert!(g.pending_decision.is_none(), "the entry finished on the answer");
+}
+
+/// The rest of the entry is owed after the answer, not before it: a land that
+/// both asks and enters with counters gets its counters on the resume, once,
+/// and its ETB triggers fire there too.
+#[test]
+fn cr_614_12a_a_suspended_land_drop_finishes_its_entry_on_the_answer() {
+    use crabomination::card::{CounterType, CreatureType};
+    use crabomination::decision::DecisionAnswer;
+    use crabomination::effect::Value;
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    let id = g.add_card_to_hand(
+        0,
+        CardDefinition {
+            name: "Asking Depletion Land",
+            card_types: vec![CardType::Land],
+            as_enters_effect: Some(Effect::NameCreatureType { what: Selector::This }),
+            enters_with_counters: Some((CounterType::Depletion, Value::Const(2))),
+            ..Default::default()
+        },
+    );
+    g.perform_action(GameAction::PlayLand(id)).expect("land drop is legal");
+    assert_eq!(
+        g.battlefield_find(id).map(|c| c.counter_count(CounterType::Depletion)),
+        Some(0),
+        "CR 614.12a — the entry is paused at the ask, so nothing after it has run"
+    );
+    g.submit_decision(DecisionAnswer::CreatureType(CreatureType::Bear)).expect("name Bear");
+    let land = g.battlefield_find(id).expect("still on the battlefield");
+    assert_eq!(land.chosen_creature_type, Some(CreatureType::Bear));
+    assert_eq!(
+        land.counter_count(CounterType::Depletion),
+        2,
+        "the printed entering counters land on the resume, exactly once"
+    );
+}
+
+/// A bot seat does not suspend, so the land drop answers through the decider
+/// in one call and never parks anything — the path the simulator takes.
+#[test]
+fn cr_614_12a_a_headless_seats_land_drop_never_parks() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, choose_color_body("As-Enters Land", vec![CardType::Land]));
+    g.perform_action(GameAction::PlayLand(id)).expect("land drop is legal");
+    assert!(g.pending_decision.is_none(), "a headless seat is answered for, not asked");
+    assert!(g.battlefield_find(id).expect("entered").chosen_color.is_some());
 }

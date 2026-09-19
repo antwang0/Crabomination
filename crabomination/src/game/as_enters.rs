@@ -39,9 +39,55 @@ impl GameState {
     /// this funnel, because a token copy's copiable values are what the mint
     /// establishes; the cast path applies it after. See the backlog for the
     /// two paths that still lack it.
-    pub(crate) fn apply_as_enters_replacements(&mut self, card_id: CardId) {
+    #[doc(hidden)] // reachable from the out-of-crate test suite, like `actions`/`stack`
+    pub fn apply_as_enters_replacements(&mut self, card_id: CardId) {
+        if !self.has_as_enters_replacement(card_id) {
+            return;
+        }
         self.apply_as_enters_effect(card_id);
+        self.apply_as_enters_mode_pickers(card_id);
+    }
+
+    /// One battlefield lookup answering "does any of the three appliers have
+    /// anything to do?". Every entry path calls the funnel and almost no
+    /// permanent carries one of these, so the negative is the hot case and it
+    /// costs one lookup rather than three.
+    fn has_as_enters_replacement(&self, card_id: CardId) -> bool {
+        self.battlefield.find_by_id(card_id).is_some_and(|c| {
+            c.definition.as_enters_effect.is_some()
+                || c.definition.enters_as_choice.is_some()
+                || c.definition.enter_modes.is_some()
+        })
+    }
+
+    /// The two mode pickers, which answer through the decider directly and so
+    /// never suspend. Split out so the land drop can run them *after* its
+    /// `as_enters_effect` resumes.
+    pub(crate) fn apply_as_enters_mode_pickers(&mut self, card_id: CardId) {
         self.apply_enters_as_choice(card_id);
         self.apply_enters_mode_choice(card_id);
+    }
+
+    /// CR 614.12a on the land drop: as [`apply_as_enters_replacements`], but
+    /// the free-form replacement's ask is left in `suspend_signal` rather than
+    /// driven through the decider. Returns `true` when it suspended, in which
+    /// case the caller owns parking it — the mode pickers have **not** run and
+    /// the entry is unfinished.
+    ///
+    /// The land drop is the one entry path that needs this. The cast and the
+    /// mint run inside a resolution, which has a stack item to park the
+    /// continuation on; the land drop is an action, and unlike the other
+    /// suspending actions it cannot be replayed — the land is on the
+    /// battlefield and the drop is already spent.
+    pub(crate) fn apply_as_enters_replacements_suspending(&mut self, card_id: CardId) -> bool {
+        if !self.has_as_enters_replacement(card_id) {
+            return false;
+        }
+        self.apply_as_enters_effect_suspending(card_id);
+        if self.suspend_signal.is_some() {
+            return true;
+        }
+        self.apply_as_enters_mode_pickers(card_id);
+        false
     }
 }

@@ -4147,12 +4147,44 @@ impl GameState {
         // the as-enters replacements run here too, before the counters and
         // before the ETB triggers. Cavern of Souls names its creature type
         // as it is *played*, which is the only way it ever enters.
-        self.apply_as_enters_replacements(card_id);
+        //
+        // A `wants_ui` controller is asked rather than answered for, and this
+        // is the one entry path with nowhere to park the continuation — no
+        // stack item above it, and nothing replayable behind it (the land is
+        // pushed and `lands_played_this_turn` is already spent). So park it
+        // on a `LandEntry` resume and finish the entry when the answer lands.
+        if self.apply_as_enters_replacements_suspending(card_id)
+            && let Some(sig) = self.suspend_signal.take()
+        {
+            let (decision, in_progress, remaining) = *sig;
+            self.pending_decision = Some(Box::new(crate::game::types::PendingDecision {
+                decision,
+                resume: crate::game::types::ResumeContext::LandEntry {
+                    player: p,
+                    card_id,
+                    in_progress,
+                    remaining,
+                },
+            }));
+            return Ok(vec![GameEvent::LandPlayed { player: p, card_id, played: true }]);
+        }
+        let mut out = vec![GameEvent::LandPlayed { player: p, card_id, played: true }];
+        out.append(&mut self.finish_land_entry(card_id, p));
+        Ok(out)
+    }
+
+    /// Everything a land drop still owes after its CR 614.12 as-enters
+    /// replacements: the printed entering counters, the self-source ETB
+    /// triggers, a Saga land's first lore counter. Split out because the
+    /// replacement can suspend on a `wants_ui` seat (`ResumeContext::
+    /// LandEntry`), and what is left has to run on the answer rather than be
+    /// replayed.
+    pub(crate) fn finish_land_entry(&mut self, card_id: CardId, p: usize) -> Vec<GameEvent> {
         // CR 614.1c — a printed "enters with N counters" land (the MMQ
         // depletion cycle) gets them off the land drop too, and as part of
         // the entry: before its ETB triggers, like every other entry path.
-        let mut counter_events = Vec::new();
-        self.apply_printed_etb_counters(card_id, &mut counter_events);
+        let mut out = Vec::new();
+        self.apply_printed_etb_counters(card_id, &mut out);
         // Fire self-source ETB triggers for the land (shockland pay-or-tap,
         // surveil-land tap-and-surveil, etc.). The cast path inlines the same
         // logic in `resolve_top_of_stack`; play_land needs an analogous push
@@ -4167,11 +4199,8 @@ impl GameState {
         {
             self.saga_enter_advance(card_id);
         }
-        let mut out =
-            vec![GameEvent::LandPlayed { player: p, card_id, played: true }];
-        out.append(&mut counter_events);
         out.push(GameEvent::PermanentEntered { card_id });
-        Ok(out)
+        out
     }
 
     /// Push the source-itself ETB triggered abilities for a permanent that
