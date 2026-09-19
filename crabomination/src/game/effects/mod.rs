@@ -35570,6 +35570,13 @@ impl GameState {
                 })
                 .map(|c| EntityRef::Permanent(c.id))
                 .collect(),
+            Selector::SoulbondPartner => ctx
+                .source
+                .and_then(|src| self.battlefield.find_by_id(src))
+                .and_then(|c| c.soulbond_partner)
+                .filter(|&partner| self.battlefield.find_by_id(partner).is_some())
+                .map(|partner| vec![EntityRef::Permanent(partner)])
+                .unwrap_or_default(),
             Selector::LastRevealedCard => self
                 .last_revealed_from_hand
                 .map(|(id, _)| vec![EntityRef::Card(id)])

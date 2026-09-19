@@ -2271,7 +2271,20 @@ pub(crate) fn cast_cost_scan(state: &crate::game::GameState) -> u32 {
     let mut m = 0u32;
     for card in state.battlefield.iter() {
         for sa in &card.definition.static_abilities {
-            m |= match sa.effect {
+            // Classify the innermost effect of a gated static (`WhileCondition`
+            // & co.) — a bit only over-approximates, so the gate itself is
+            // left to the consumer (`battlefield_grants_flash` peels it via
+            // `active_static`).
+            let mut eff = &sa.effect;
+            while let SE::WhileClassLevelAtLeast { inner, .. }
+            | SE::WhileYourTurn { inner }
+            | SE::WhileNotYourTurn { inner }
+            | SE::WhileCondition { inner, .. }
+            | SE::WhileCountersAtLeast { inner, .. } = eff
+            {
+                eff = inner;
+            }
+            m |= match *eff {
                 SE::AnyPlayerSpellsHaveFlash { .. }
                 | SE::ControllerSpellsHaveFlash { .. }
                 | SE::ControllerSorceriesAsFlash => cast_static::FLASH,
@@ -12027,16 +12040,20 @@ impl GameState {
         if self.player_locked_to_sorcery_timing(player) {
             return false;
         }
+        // Through `active_static`, so a gated grant (Radagast of Rhosgobel's
+        // "the first creature spell you cast each turn … as though it had
+        // flash", a `WhileCondition`) is honoured while its gate is open.
         self.battlefield.iter().any(|c| {
-            c.definition.static_abilities.iter().any(|sa| match &sa.effect {
-                StaticEffect::AnyPlayerSpellsHaveFlash { filter } => {
+            c.definition.static_abilities.iter().any(|sa| match self.active_static(&sa.effect, c) {
+                None => false,
+                Some(StaticEffect::AnyPlayerSpellsHaveFlash { filter }) => {
                     self.evaluate_requirement_on_card(filter, card, player)
                 }
                 _ if c.controller != player => false,
-                StaticEffect::ControllerSpellsHaveFlash { filter } => {
+                Some(StaticEffect::ControllerSpellsHaveFlash { filter }) => {
                     self.evaluate_requirement_on_card(filter, card, player)
                 }
-                StaticEffect::ControllerSorceriesAsFlash => card.definition.is_sorcery(),
+                Some(StaticEffect::ControllerSorceriesAsFlash) => card.definition.is_sorcery(),
                 _ => false,
             })
         })

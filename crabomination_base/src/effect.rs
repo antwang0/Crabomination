@@ -268,6 +268,11 @@ pub enum Selector {
     /// exile-zone card stamped `exiled_with == ctx.source`. Resolves to that
     /// single card so the activated ability can play it from exile.
     CardExiledWithSource,
+    /// CR 702.95 — the creature the effect's source is paired with by
+    /// soulbond (`CardInstance.soulbond_partner`), while both are on the
+    /// battlefield; empty when unpaired. Mirage Phalanx's "each of those
+    /// creatures has … create a token that's a copy of this creature".
+    SoulbondPartner,
 
     /// The last card the effect's controller drew this turn, if it's still in
     /// their hand (`Player.last_drawn_card`). Sindbad's "discard it if it isn't
@@ -732,6 +737,19 @@ pub enum Value {
     /// takes the max over the resolved seats.
     SpellsCastThisTurnTotal,
     OtherSpellsCastThisTurn(PlayerRef),
+    /// Instant and sorcery spells `who` has cast so far this turn (max over
+    /// the resolved players). Backed by
+    /// `Player.instants_or_sorceries_cast_this_turn` — the `Value` sibling of
+    /// `Predicate::InstantsOrSorceriesCastThisTurnAtLeast` (Rionya, Fire
+    /// Dancer's "one plus the number of instant and sorcery spells you've
+    /// cast this turn").
+    InstantsOrSorceriesCastThisTurn(PlayerRef),
+    /// The total mana value of the spells `who` has cast this turn **other
+    /// than** the source spell (summed over the resolved players). Walks
+    /// `Player.spell_ids_cast_this_turn`; a spell that has since left the
+    /// stack reads its printed mana value, so an X spell counts X = 0 once
+    /// resolved. Call Forth the Tempest.
+    TotalManaValueOfOtherSpellsCastThisTurn(PlayerRef),
     /// Creatures `who` declared as attackers this turn (max over resolved
     /// players). Creatures *put onto the battlefield attacking* don't count,
     /// matching the Windbrisk Heights ruling on "attacked with N creatures".
