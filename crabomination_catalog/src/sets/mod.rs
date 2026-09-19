@@ -409,6 +409,32 @@ pub fn etb_gain_one() -> TriggeredAbility {
 /// Fastland ETB trigger: "ETB tapped unless you control two or fewer other
 /// lands." Counted against the post-ETB battlefield (which already contains
 /// this land), so the threshold is "≥ 4 lands you control".
+/// Fastland, as the CR 614.1c **replacement** it is: "This land enters tapped
+/// unless you control two or fewer other lands."
+///
+/// The condition is the printed one, counting **other** lands, so it does not
+/// depend on whether `apply_enters_tapped_replacement` has already put the
+/// entrant on the battlefield when it counts. See [`enters_tapped`] and
+/// ENGINE_BACKLOG's forty-ninth find for why the trigger form below is wrong.
+pub fn fastland_enters_tapped() -> StaticAbility {
+    StaticAbility {
+        description: "This land enters tapped unless you control two or fewer other lands.",
+        effect: StaticEffect::EntersTappedUnless {
+            applies_to: Selector::This,
+            condition: Predicate::Not(Box::new(Predicate::SelectorCountAtLeast {
+                sel: Selector::EachPermanent(
+                    SelectionRequirement::Land
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                n: Value::Const(3),
+            })),
+        },
+    }
+}
+
+/// ⚠ **The trigger form, and CR 614.1c says it is the wrong one** — see
+/// [`fastland_enters_tapped`].
 pub fn fastland_etb_conditional_tap() -> TriggeredAbility {
     TriggeredAbility {
         event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),

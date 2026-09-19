@@ -591,6 +591,15 @@ mod tests {
     #[test]
     fn cr_903_seeded_pod_outcomes_match_the_committed_table() {
         // (seed, winner, turns, actions)
+        // Re-blessed 2026-09-19 (the fastlands, same class): "enters tapped
+        // unless you control two or fewer other lands" off the trigger and
+        // onto `EntersTappedUnless`, 17 call sites through one helper.
+        // **Three actions in one of the three games** (4071 → 4068) and
+        // nothing else — same winners, same turns — beside the seed-9102
+        // aggregate's largest move of 0.29 turns at eight seats
+        // (19.38/19.36, 32.40/32.40, 45.26/45.24, 57.01/57.08, 64.89/64.87,
+        // 77.66/77.80, 93.43/93.14), every block 2,000/2,000 decided.
+        // `--bench` byte-identical again.
         // Re-blessed 2026-09-19 (CR 614.1c, "enters tapped" is a REPLACEMENT):
         // the shared `etb_tap()` helper and its call sites moved from an
         // `EntersBattlefield` trigger to `StaticEffect::EntersTapped`, so a
@@ -677,7 +686,7 @@ mod tests {
         // 25.1 to 23.6 points (39.8/14.7/20.0/25.5 → 40.9/17.1/17.3/24.7,
         // 3,000 games at seed 43), and games run ~9 % longer.
         const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
-            (0xC0FFEE, Some(1), 97, 4071),
+            (0xC0FFEE, Some(1), 97, 4068),
             (43, Some(3), 63, 2542),
             (4242, Some(2), 55, 2436),
         ];

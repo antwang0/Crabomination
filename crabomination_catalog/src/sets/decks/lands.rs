@@ -9,7 +9,7 @@
 use super::super::{
     dual_land_untyped, dual_land_with, enters_tapped, etb_gain_one, etb_surveil_one,
     tapland_typed, tapland_untyped,
-    fastland_etb_conditional_tap, hybrid_filter_land, land_type_reveal_land, painland,
+    fastland_enters_tapped, hybrid_filter_land, land_type_reveal_land, painland,
     pay_one_filter_land, reveal_or_tapped_land, shockland_pay_two_or_tap, tap_add,
     tap_add_colorless, tri_land,
 };
@@ -28,30 +28,27 @@ use crate::mana::{Color, ManaCost, cost, g, generic, r, u, w};
 // already control 4+ lands (this land plus 3+ others) it taps itself.
 
 pub fn blackcleave_cliffs() -> CardDefinition {
-    dual_land_untyped(
-        "Blackcleave Cliffs",
-        Color::Black,
-        Color::Red,
-        vec![fastland_etb_conditional_tap()],
-    )
+    {
+        let mut d = dual_land_untyped("Blackcleave Cliffs", Color::Black, Color::Red, vec![]);
+        d.static_abilities.push(fastland_enters_tapped());
+        d
+    }
 }
 
 pub fn blooming_marsh() -> CardDefinition {
-    dual_land_untyped(
-        "Blooming Marsh",
-        Color::Black,
-        Color::Green,
-        vec![fastland_etb_conditional_tap()],
-    )
+    {
+        let mut d = dual_land_untyped("Blooming Marsh", Color::Black, Color::Green, vec![]);
+        d.static_abilities.push(fastland_enters_tapped());
+        d
+    }
 }
 
 pub fn copperline_gorge() -> CardDefinition {
-    dual_land_untyped(
-        "Copperline Gorge",
-        Color::Red,
-        Color::Green,
-        vec![fastland_etb_conditional_tap()],
-    )
+    {
+        let mut d = dual_land_untyped("Copperline Gorge", Color::Red, Color::Green, vec![]);
+        d.static_abilities.push(fastland_enters_tapped());
+        d
+    }
 }
 
 // ── Pathways ─────────────────────────────────────────────────────────────────
@@ -2473,8 +2470,10 @@ fn afr_land(
         name,
         card_types: vec![CardType::Land],
         activated_abilities: vec![tap_add(color), animate],
-        triggered_abilities: std::iter::once(fastland_etb_conditional_tap())
-            .chain(attack_effect.map(crate::effect::shortcut::on_attack))
+        static_abilities: vec![fastland_enters_tapped()],
+        triggered_abilities: attack_effect
+            .map(crate::effect::shortcut::on_attack)
+            .into_iter()
             .collect(),
         ..Default::default()
     }
@@ -2549,7 +2548,7 @@ pub fn lair_of_the_hydra() -> CardDefinition {
         name: "Lair of the Hydra",
         card_types: vec![CardType::Land],
         activated_abilities: vec![tap_add(Color::Green), animate],
-        triggered_abilities: vec![fastland_etb_conditional_tap()],
+        static_abilities: vec![fastland_enters_tapped()],
         ..Default::default()
     }
 }

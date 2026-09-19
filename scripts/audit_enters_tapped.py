@@ -70,13 +70,14 @@ TRIGGER = re.compile(
     r"EventKind::EntersBattlefield"
     r"|\betb\(|\betb_tap\(|etb_tap_then_"
     r"|shockland_pay_two_or_tap\(|fastland_etb_conditional_tap\("
-    r"|pay_three_or_tapped\(|tri_land\(|dual_land_with\("
+    r"|pay_three_or_tapped\("
 )
 # A replacement, written out or reached through one of its helpers.
 REPLACEMENT = re.compile(
     r"StaticEffect::(EntersTapped|EntersTappedUnless)"
     r"|enters_tapped_unless\(|reveal_or_tapped_land\(|land_type_reveal_land\("
-    r"|battle_land\(|triome\("
+    r"|battle_land\(|triome\(|tri_land\(|tapland_typed\(|tapland_untyped\("
+    r"|cycling_dual\(|enters_tapped\(|modern_etb_tap\(|fastland_enters_tapped\("
 )
 
 # The two cycles put on the replacement 2026-09-19. `--gate` fails on a

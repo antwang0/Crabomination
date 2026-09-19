@@ -51863,8 +51863,8 @@ pub fn den_of_the_bugbear() -> CardDefinition {
                 ..Default::default()
             },
         ],
+        static_abilities: vec![crate::sets::fastland_enters_tapped()],
         triggered_abilities: vec![
-            crate::sets::fastland_etb_conditional_tap(),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource)
                     .with_filter(Predicate::SourceIsCreature),

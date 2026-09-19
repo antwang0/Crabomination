@@ -10,7 +10,7 @@
 //!   helper doesn't compose `CardType::Artifact` onto a Land.
 
 use super::super::{
-    dual_land_untyped, dual_land_with, fastland_etb_conditional_tap, shockland_pay_two_or_tap,
+    dual_land_untyped, dual_land_with, fastland_enters_tapped, shockland_pay_two_or_tap,
     tap_add,
 };
 use crate::card::{
@@ -95,72 +95,65 @@ pub fn blood_crypt() -> CardDefinition {
 
 /// Seachrome Coast — UW fastland (Plains/Island).
 pub fn seachrome_coast() -> CardDefinition {
-    dual_land_untyped(
-        "Seachrome Coast",
-        Color::White,
-        Color::Blue,
-        vec![fastland_etb_conditional_tap()],
-    )
+    {
+        let mut d = dual_land_untyped("Seachrome Coast", Color::White, Color::Blue, vec![]);
+        d.static_abilities.push(fastland_enters_tapped());
+        d
+    }
 }
 
 /// Darkslick Shores — UB fastland (Island/Swamp).
 pub fn darkslick_shores() -> CardDefinition {
-    dual_land_untyped(
-        "Darkslick Shores",
-        Color::Blue,
-        Color::Black,
-        vec![fastland_etb_conditional_tap()],
-    )
+    {
+        let mut d = dual_land_untyped("Darkslick Shores", Color::Blue, Color::Black, vec![]);
+        d.static_abilities.push(fastland_enters_tapped());
+        d
+    }
 }
 
 /// Spirebluff Canal — UR fastland (Island/Mountain).
 pub fn spirebluff_canal() -> CardDefinition {
-    dual_land_untyped(
-        "Spirebluff Canal",
-        Color::Blue,
-        Color::Red,
-        vec![fastland_etb_conditional_tap()],
-    )
+    {
+        let mut d = dual_land_untyped("Spirebluff Canal", Color::Blue, Color::Red, vec![]);
+        d.static_abilities.push(fastland_enters_tapped());
+        d
+    }
 }
 
 /// Botanical Sanctum — UG fastland (Forest/Island).
 pub fn botanical_sanctum() -> CardDefinition {
-    dual_land_untyped(
-        "Botanical Sanctum",
-        Color::Green,
-        Color::Blue,
-        vec![fastland_etb_conditional_tap()],
-    )
+    {
+        let mut d = dual_land_untyped("Botanical Sanctum", Color::Green, Color::Blue, vec![]);
+        d.static_abilities.push(fastland_enters_tapped());
+        d
+    }
 }
 
 /// Razorverge Thicket — GW fastland (Forest/Plains).
 pub fn razorverge_thicket() -> CardDefinition {
-    dual_land_untyped(
-        "Razorverge Thicket",
-        Color::Green,
-        Color::White,
-        vec![fastland_etb_conditional_tap()],
-    )
+    {
+        let mut d = dual_land_untyped("Razorverge Thicket", Color::Green, Color::White, vec![]);
+        d.static_abilities.push(fastland_enters_tapped());
+        d
+    }
 }
 
 /// Concealed Courtyard — WB fastland (Plains/Swamp).
 pub fn concealed_courtyard() -> CardDefinition {
-    dual_land_untyped(
-        "Concealed Courtyard",
-        Color::White,
-        Color::Black,
-        vec![fastland_etb_conditional_tap()],
-    )
+    {
+        let mut d = dual_land_untyped("Concealed Courtyard", Color::White, Color::Black, vec![]);
+        d.static_abilities.push(fastland_enters_tapped());
+        d
+    }
 }
 
 /// Inspiring Vantage — RW fastland (Mountain/Plains).
 pub fn inspiring_vantage() -> CardDefinition {
-    dual_land_untyped(
-        "Inspiring Vantage",
-        Color::Red,
-        Color::White,
-        vec![fastland_etb_conditional_tap()],
-    )
+    {
+        let mut d = dual_land_untyped("Inspiring Vantage", Color::Red, Color::White, vec![]);
+        d.static_abilities.push(fastland_enters_tapped());
+        d
+    }
 }
 
 // ── Artifact lands (Mirrodin cycle) ──────────────────────────────────────────
