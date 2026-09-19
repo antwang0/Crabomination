@@ -1447,15 +1447,19 @@ pub struct ColdState {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub(crate) extra_mana_on_land_tap_this_turn: Vec<(crate::card::LandType, crate::mana::Color)>,
     /// Transient: combat-damage triggers that already fired during the
-    /// current combat-damage sub-step — `(graveyard card, usize::MAX)` for a
-    /// `FromYourGraveyard` trigger, `(source, index)` for a printed
-    /// `once_per_batch` one. "Whenever one or more creatures you control deal
-    /// combat damage to a player" fires once per damage batch (CR 603.2c),
-    /// but the engine walks attackers one at a time — this set dedupes the
-    /// per-attacker walks. Cleared at the top of each damage sub-step
-    /// (first-strike and regular damage are separate batches).
+    /// current combat-damage sub-step — `(graveyard card, usize::MAX, subject)`
+    /// for a `FromYourGraveyard` trigger, `(source, index, subject)` for a
+    /// printed `once_per_batch` one. "Whenever one or more creatures you
+    /// control deal combat damage to a player" fires once per damage batch
+    /// (CR 603.2c), but the engine walks attackers one at a time — this set
+    /// dedupes the per-attacker walks. The **subject** is the third field
+    /// (`combat::BatchSubject`): each damaged player is its own event, so an
+    /// attack spread across a pod fires once per defending seat and not once
+    /// for the step. Cleared at the top of each damage sub-step (first-strike
+    /// and regular damage are separate batches).
     #[serde(skip)]
-    pub(crate) combat_trigger_fired_this_step: Vec<(CardId, usize)>,
+    pub(crate) combat_trigger_fired_this_step:
+        Vec<(CardId, usize, crate::game::combat::BatchSubject)>,
     /// Transient: `(chosen, other)` for the `Effect::SeparateIntoPiles`
     /// currently running its two bodies. Read by
     /// `Selector::SeparatedPile`; set and cleared inside one resolution.

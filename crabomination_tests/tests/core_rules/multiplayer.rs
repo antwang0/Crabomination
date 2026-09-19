@@ -3636,6 +3636,104 @@ fn obscuring_haze_stops_an_opponents_noncombat_damage_for_the_turn() {
     let _ = Target::Permanent(mine);
 }
 
+// ── CR 603.2c — "whenever one or more … deal combat damage to a player" ────
+
+/// A 0/1 whose whole text is the batched wording: "Whenever one or more
+/// creatures you control deal combat damage to a player, draw a card."
+fn batch_watcher() -> crabomination::card::CardDefinition {
+    use crabomination::card::{CardDefinition, CardType, TriggeredAbility};
+    use crabomination::effect::{EventKind, EventScope, EventSpec};
+    CardDefinition {
+        name: "Test Batch Watcher",
+        card_types: vec![CardType::Creature],
+        power: 0,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl)
+                .once_per_batch(),
+            effect: crabomination::effect::shortcut::draw(1),
+        }],
+        ..Default::default()
+    }
+}
+
+/// CR 603.2c + CR 510.4 — all combat damage in a sub-step is dealt at once,
+/// but **each damaged player is its own event**: three attackers spread over
+/// two defending seats fire the ability twice, not once (the whole step
+/// collapsed to one) and not three times (one per dealer).
+///
+/// The per-attacker walk is the engine's, not the rules': the dedupe set that
+/// collapses it was keyed by `(listener, ability)` alone, so a pod's alpha
+/// strike across two seats drew one card.
+#[test]
+fn cr_603_2c_a_batched_combat_damage_trigger_fires_once_per_damaged_seat() {
+    let mut g = multi_player_game(3);
+    let watcher = g.add_card_to_battlefield(0, batch_watcher());
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let c = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for id in [watcher, a, b, c] {
+        g.clear_sickness(id);
+    }
+    for _ in 0..8 {
+        let id = g.next_id();
+        g.players[0].add_to_library_top(id, catalog::grizzly_bears());
+    }
+    let hand_before = g.players[0].hand.len();
+
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: a, target: AttackTarget::Player(1) },
+        Attack { attacker: b, target: AttackTarget::Player(1) },
+        Attack { attacker: c, target: AttackTarget::Player(2) },
+    ]))
+    .expect("seat 0 attacks two seats");
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().expect("combat resolves");
+    drain_stack(&mut g);
+
+    assert_eq!(
+        g.players[0].hand.len() - hand_before,
+        2,
+        "one fire per damaged seat: two seats took damage, three creatures dealt it",
+    );
+}
+
+/// The duel control, and the reason the two-player golden traces cannot move:
+/// with one defending player there is one subject, so the key gains a field
+/// whose value never varies and the collapse is the same collapse.
+#[test]
+fn cr_603_2c_a_batched_trigger_still_fires_once_in_a_duel() {
+    let mut g = two_player_game();
+    let watcher = g.add_card_to_battlefield(0, batch_watcher());
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for id in [watcher, a, b] {
+        g.clear_sickness(id);
+    }
+    for _ in 0..8 {
+        let id = g.next_id();
+        g.players[0].add_to_library_top(id, catalog::grizzly_bears());
+    }
+    let hand_before = g.players[0].hand.len();
+
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: a, target: AttackTarget::Player(1) },
+        Attack { attacker: b, target: AttackTarget::Player(1) },
+    ]))
+    .expect("attack");
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().expect("combat resolves");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].hand.len() - hand_before, 1, "two dealers, one event, one draw");
+}
+
 // ── CR 800.4f/g — an ask whose seat has left the game ──────────────────────
 
 /// CR 800.4g — "If an object requires a player who has left the game to make
