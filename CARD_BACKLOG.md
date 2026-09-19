@@ -269,11 +269,13 @@ Pool *membership* is not pool *reach* — the bench plays `--decks fixed` and th
 traces are fixed-seed games, and a card has to actually be drawn and played in
 one of them to move a number. **Take the rest one or two at a time with a
 `--bench` reading in hand**, and re-bless only if the reading actually moves.
-⚠ **Not "Ghost Vacuum first" any more** — four of the eight are done, three of
-them needed no primitive at all, and the sizing above says Ghost Vacuum is the
-one that does. Spark Double's planeswalker-copy half and Delver of Secrets'
-transform are the remaining two, and both are a known engine gap (the
-transform-DFC pattern) rather than a card oversight.
+⚠ **Not "Ghost Vacuum first" any more** — five of the eight are done, **four
+of the five needed no engine change at all** (the counter type, the
+discard-replacement field and the `non_legendary` flag all already existed and
+the card was not using them; one was a single word), and the sizing above says
+Ghost Vacuum is the one that does. Delver of Secrets' transform is the other
+survivor and it is the known transform-DFC gap rather than a card oversight.
+`--bench` came back byte-identical after every one of the five.
 
 Arcane Signet, which the same walk flagged in all five decks, was a **stale doc
 comment** and nothing else — `tap_add_commander_identity()` has shipped for a
