@@ -165,6 +165,28 @@ pub fn pod_field(seats: usize) -> Vec<PodDeck> {
 /// `apply_format` runs before the commanders are seated so the 40-life and
 /// multiplayer-draw rules are in place when the zone is populated.
 pub fn build_pod_template(decks: &[PodDeck]) -> GameState {
+    let seats: Vec<SeatDeck<'_>> = decks.iter().map(SeatDeck::from).collect();
+    build_pod_template_from(&seats)
+}
+
+/// One seat's Commander deck by reference — a [`PodDeck`], or a list the
+/// caller owns (a decklist imported in the client). Same shape and same
+/// 100-card contract as [`PodDeck`]; it just doesn't have to be `'static`.
+#[derive(Clone, Copy)]
+pub struct SeatDeck<'a> {
+    pub commanders: &'a [CardFactory],
+    pub main: &'a [CardFactory],
+}
+
+impl From<&PodDeck> for SeatDeck<'static> {
+    fn from(d: &PodDeck) -> Self {
+        SeatDeck { commanders: d.commanders, main: d.main }
+    }
+}
+
+/// [`build_pod_template`] over arbitrary seat decks, so a pod can seat a
+/// player's own list beside the stock [`target_decks`].
+pub fn build_pod_template_from(decks: &[SeatDeck<'_>]) -> GameState {
     let players = (0..decks.len()).map(|i| Player::new(i, format!("Seat {i}"))).collect();
     let mut g = GameState::new(players);
     g.apply_format(crate::format::Format::Commander);

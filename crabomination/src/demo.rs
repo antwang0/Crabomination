@@ -97,7 +97,29 @@ pub fn build_commander_state() -> GameState {
 /// stream.
 pub fn build_commander_state_seeded(seed: u64) -> GameState {
     let decks = crate::pod::pod_field(4);
-    let mut state = crate::pod::build_pod_template(&decks);
+    deal_pod(crate::pod::build_pod_template(&decks), seed)
+}
+
+/// A Commander pod with a player's own deck in seat 0 and `opponents` in
+/// seats 1.. — a 2-, 3- or 4-player game for any `opponents.len()` from 1.
+/// The deck is taken as given; validate it first
+/// ([`crate::decklist::DecklistParse::commander_list`]). Seeded and dealt
+/// exactly as [`build_commander_state_seeded`] is.
+pub fn build_custom_commander_state_seeded(
+    commanders: &[CardFactory],
+    main: &[CardFactory],
+    opponents: &[crate::pod::PodDeck],
+    seed: u64,
+) -> GameState {
+    use crate::pod::SeatDeck;
+    let seats: Vec<SeatDeck<'_>> = std::iter::once(SeatDeck { commanders, main })
+        .chain(opponents.iter().map(|d| SeatDeck { commanders: d.commanders, main: d.main }))
+        .collect();
+    deal_pod(crate::pod::build_pod_template_from(&seats), seed)
+}
+
+/// Pin a pod template's stream to `seed` and shuffle every library off it.
+fn deal_pod(mut state: GameState, seed: u64) -> GameState {
     state.rng.reseed(seed);
     for seat in 0..state.players.len() {
         state.players[seat].name = format!("Player {seat}");

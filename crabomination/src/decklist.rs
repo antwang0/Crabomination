@@ -11,10 +11,30 @@
 //! ```
 //!
 //! Section headers ("Deck", "Mainboard", "Sideboard", "Commander",
-//! "Companion") and comment lines (`#`, `//`) are recognised; Arena's
-//! blank-line-then-more-cards convention also switches to the sideboard.
-//! Unresolvable names are reported rather than dropped silently, so an
-//! import UI can show exactly what's missing from the catalog.
+//! "Companion", "Maybeboard"; a trailing `:` or `(N)` count and a `//` / `#`
+//! comment prefix are tolerated) and comment lines (`#`, `//`) are
+//! recognised; Arena's blank-line-then-more-cards convention also switches to
+//! the sideboard.
+//!
+//! The commander designation (CR 903.3) is kept rather than folded into the
+//! maindeck. Any of these marks a card as a commander:
+//!
+//! ```text
+//! Commander                                  Arena / Moxfield header, leading
+//! 1 Atraxa, Praetors' Voice                  or trailing ("Commander (1)" too)
+//!
+//! 1 Atraxa, Praetors' Voice *CMDR*           Moxfield inline marker
+//! 1x Atraxa, Praetors' Voice (C16) 28 [Commander{top}]   Archidekt category
+//! ```
+//!
+//! A blank line ends a Commander section and returns to the maindeck (Arena's
+//! `Commander` / card / blank / `Deck` export shape). Other trailing export
+//! markers — Moxfield's `*F*`, Archidekt's `[Category]` and `^Tag^` — are
+//! stripped, and a Maybeboard / Considering / Tokens section is skipped.
+//! MTGO's convention (the commander is the sideboard) is recognised by
+//! [`DecklistParse::commander_list`], which is also where a Commander import
+//! is validated. Unresolvable names are reported rather than dropped
+//! silently, so an import UI can show exactly what's missing from the catalog.
 
 use crate::fxhash::HashMap;
 
@@ -28,8 +48,140 @@ pub struct DecklistParse {
     /// CR 717.2 — the supplementary Attraction deck. Attraction cards can't be
     /// in a main deck or sideboard, so they're routed here from any section.
     pub attractions: Vec<CardFactory>,
+    /// CR 903.3 — the cards listed under a Commander header or marked
+    /// `*CMDR*` / `[Commander]`: one, or two for a Partner / Background /
+    /// Doctor's companion pair. The parser only files them; legality is
+    /// [`DecklistParse::commander_list`]'s job.
+    pub commanders: Vec<CardFactory>,
     /// `"4x Snapcaster Mage"`-style entries for names not in the catalog.
     pub unknown: Vec<String>,
+    /// Every sideboard card got there by Arena's blank-line convention alone
+    /// — no `Sideboard` header, no `SB:` prefix. A Commander deck has no
+    /// sideboard (CR 903.5e), so in one a blank line is only grouping.
+    pub sideboard_is_implicit: bool,
+}
+
+/// A decklist read as a Commander deck: the command zone and the rest.
+pub struct CommanderList {
+    pub commanders: Vec<CardFactory>,
+    pub main: Vec<CardFactory>,
+}
+
+impl DecklistParse {
+    /// Read this list as a Commander deck and validate it with
+    /// [`crate::format::validate_commander_deck`]: legal commander(s), a valid
+    /// pair (CR 702.124), 100 cards singleton counting the commanders
+    /// (CR 903.5a/b), and every card inside the combined colour identity
+    /// (CR 903.5c). `Err` carries readable messages, commander errors first.
+    ///
+    /// With no Commander section, MTGO's export convention is honoured: a
+    /// sideboard of one or two legendary cards *is* the command zone. Anything
+    /// else without one is refused — guessing which legend leads a 100-card
+    /// pile is not the importer's call. Unknown names are the caller's to
+    /// report; this reads only the cards that resolved.
+    pub fn commander_list(&self) -> Result<CommanderList, Vec<String>> {
+        let mut commanders = self.commanders.clone();
+        let mut main = self.main.clone();
+        let mut sideboard = self.sideboard.clone();
+        if commanders.is_empty()
+            && (1..=2).contains(&sideboard.len())
+            && sideboard.iter().all(|f| f().is_legendary())
+        {
+            commanders = std::mem::take(&mut sideboard);
+        }
+        if commanders.is_empty() {
+            return Err(vec![
+                "No commander section: list your commander under a `Commander` header \
+                 (or mark it *CMDR*)"
+                    .to_string(),
+            ]);
+        }
+        if self.sideboard_is_implicit {
+            main.append(&mut sideboard);
+        }
+        let deck = crate::format::Deck {
+            main: main.iter().map(|f| f()).collect(),
+            commanders: commanders.iter().map(|f| f()).collect(),
+            sideboard: sideboard.iter().map(|f| f()).collect(),
+        };
+        match crate::format::validate_commander_deck(&deck) {
+            Ok(()) => Ok(CommanderList { commanders, main }),
+            Err((generic, cmd)) => Err(cmd
+                .iter()
+                .map(ToString::to_string)
+                .chain(generic.iter().map(ToString::to_string))
+                .collect()),
+        }
+    }
+}
+
+/// Which part of the list a line belongs to.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Section {
+    Main,
+    Side,
+    Commander,
+    /// Maybeboard / Considering / Tokens: listed, but not part of the deck.
+    Ignored,
+}
+
+/// Recognise a section header, tolerating a trailing `:` or `(N)` count
+/// ("Commander (1)", "Deck:") and a `//` / `#` comment prefix ("// Sideboard").
+/// `None` for anything else, including an ordinary comment.
+fn section_header(line: &str) -> Option<Section> {
+    let mut h = line.trim();
+    for prefix in ["//", "#"] {
+        if let Some(rest) = h.strip_prefix(prefix) {
+            h = rest.trim();
+        }
+    }
+    let h = h.trim_end_matches(':').trim_end();
+    let h = match h.rfind('(') {
+        Some(open)
+            if h.ends_with(')')
+                && open + 1 < h.len() - 1
+                && h[open + 1..h.len() - 1].chars().all(|c| c.is_ascii_digit()) =>
+        {
+            h[..open].trim_end()
+        }
+        _ => h,
+    };
+    match h.to_ascii_lowercase().as_str() {
+        "deck" | "mainboard" | "main" | "maindeck" | "main deck" => Some(Section::Main),
+        "sideboard" | "side" => Some(Section::Side),
+        // CR 717.2 — the Attraction deck is its own supplementary list.
+        // A header is optional: Attraction cards route there from any
+        // section, since they can't legally be anywhere else.
+        "attractions" | "attraction deck" => Some(Section::Main),
+        "commander" | "commanders" => Some(Section::Commander),
+        // Companion: the card still files with the maindeck (no dedicated
+        // outside-the-game zone on import yet).
+        "companion" => Some(Section::Main),
+        "maybeboard" | "maybe" | "considering" | "tokens" => Some(Section::Ignored),
+        _ => None,
+    }
+}
+
+/// Strip trailing export markers — Moxfield's `*F*` / `*CMDR*`, Archidekt's
+/// `[Category]` / `[Commander{top}]` and `^Have,#37d67a^` — and report
+/// whether one of them designated the card a commander.
+fn strip_markers(mut name: &str) -> (&str, bool) {
+    let mut commander = false;
+    loop {
+        let t = name.trim_end();
+        let open = match t.chars().last() {
+            Some(c @ ('*' | '^')) => t[..t.len() - 1].rfind(c),
+            Some(']') => t.rfind('['),
+            _ => None,
+        };
+        // A marker must follow a name, never be the whole line.
+        let Some(open) = open.filter(|&i| i > 0) else { return (t, commander) };
+        let marker = t[open..].to_ascii_lowercase();
+        if marker.contains("cmdr") || marker.contains("commander") {
+            commander = true;
+        }
+        name = &t[..open];
+    }
 }
 
 /// Strip an Arena-style trailing `(SET) 123` / `(SET) 123a` collector
@@ -87,55 +239,50 @@ pub fn parse_decklist(text: &str) -> DecklistParse {
         main: Vec::new(),
         sideboard: Vec::new(),
         attractions: Vec::new(),
+        commanders: Vec::new(),
         unknown: Vec::new(),
+        sideboard_is_implicit: true,
     };
-    let mut in_sideboard = false;
+    let mut section = Section::Main;
     let mut seen_cards = false;
 
     for raw in text.lines() {
         let mut line = raw.trim();
         if line.is_empty() {
-            // Arena convention: the blank line after the maindeck starts
-            // the sideboard. Only once cards have actually been seen, so
-            // leading blank lines don't flip the section.
-            if seen_cards {
-                in_sideboard = true;
+            match section {
+                // Arena convention: the blank line after the maindeck starts
+                // the sideboard. Only once cards have actually been seen, so
+                // leading blank lines don't flip the section.
+                Section::Main if seen_cards => section = Section::Side,
+                // Arena's Commander export is `Commander` / card / blank /
+                // `Deck`; a list that drops the `Deck` header still means the
+                // maindeck follows the blank line.
+                Section::Commander => section = Section::Main,
+                _ => {}
             }
             continue;
         }
-        if line.starts_with('#') || line.starts_with("//") {
+        if let Some(next) = section_header(line) {
+            if next == Section::Side {
+                parse.sideboard_is_implicit = false;
+            }
+            section = next;
             continue;
         }
-        match line.to_ascii_lowercase().as_str() {
-            "deck" | "mainboard" | "main" | "maindeck" => {
-                in_sideboard = false;
-                continue;
-            }
-            "sideboard" | "side" => {
-                in_sideboard = true;
-                continue;
-            }
-            // CR 717.2 — the Attraction deck is its own supplementary list.
-            // A header is optional: Attraction cards route there from any
-            // section, since they can't legally be anywhere else.
-            "attractions" | "attraction deck" => {
-                in_sideboard = false;
-                continue;
-            }
-            // Commander / companion headers: the next line is still a card —
-            // file it with the maindeck (no dedicated zone on import yet).
-            "commander" | "companion" => {
-                in_sideboard = false;
-                continue;
-            }
-            _ => {}
+        if line.starts_with('#') || line.starts_with("//") || section == Section::Ignored {
+            continue;
         }
-        let mut line_is_sideboard = in_sideboard;
+        let mut line_section = section;
         if let Some(rest) = line.strip_prefix("SB:").or_else(|| line.strip_prefix("sb:")) {
-            line_is_sideboard = true;
+            line_section = Section::Side;
+            parse.sideboard_is_implicit = false;
             line = rest.trim_start();
         }
         let (count, name_part) = split_count(line);
+        let (name_part, marked_commander) = strip_markers(name_part);
+        if marked_commander {
+            line_section = Section::Commander;
+        }
         let name = strip_arena_suffix(name_part);
         if name.is_empty() {
             continue;
@@ -158,10 +305,12 @@ pub fn parse_decklist(text: &str) -> DecklistParse {
             Some(&factory) => {
                 let bucket = if !factory().attraction_lights.is_empty() {
                     &mut parse.attractions
-                } else if line_is_sideboard {
-                    &mut parse.sideboard
                 } else {
-                    &mut parse.main
+                    match line_section {
+                        Section::Side => &mut parse.sideboard,
+                        Section::Commander => &mut parse.commanders,
+                        Section::Main | Section::Ignored => &mut parse.main,
+                    }
                 };
                 for _ in 0..count {
                     bucket.push(factory);

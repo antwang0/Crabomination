@@ -160,10 +160,11 @@ pub enum MatchFormat {
     /// so a deck that tests well here is being tested against the same
     /// field the tool reports on.
     Sealed,
-    /// 1v1 Commander: both seats run the Rofellos mono-green
-    /// demo deck. 100-card singleton, 40 life, commander seated in
-    /// the command zone before opening-hand draw. Built via
-    /// `demo::build_commander_state`.
+    /// Commander pod: 100-card singleton, 40 life, commanders seated in
+    /// the command zone before the opening-hand draw. The menu's local
+    /// matches seat a 2-4 player pod (`commander_pod_state`) with the
+    /// human's imported deck or a stock one; a restart / spectate / hosted
+    /// game is the stock 4-player `demo::build_commander_state`.
     Commander,
 }
 
@@ -549,6 +550,71 @@ pub(crate) struct MenuFields {
     deck_path: String,
     focused: FocusedField,
     format: MatchFormat,
+    /// Commander only: seats in the local pod, human included (2-4).
+    pod_size: usize,
+    /// Commander only: which stock decks the bots play.
+    pod_opponents: PodOpponents,
+}
+
+/// The Commander pod sizes the menu offers, human seat included.
+const POD_SIZES: [usize; 3] = [2, 3, 4];
+
+/// The next pod size in the menu's cycle (2 → 3 → 4 → 2).
+fn next_pod_size(n: usize) -> usize {
+    let i = POD_SIZES.iter().position(|&s| s == n).unwrap_or(POD_SIZES.len() - 1);
+    POD_SIZES[(i + 1) % POD_SIZES.len()]
+}
+
+/// Which stock Commander decks ([`crabomination::pod::target_decks`]) the
+/// bots in a local pod play.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub(crate) enum PodOpponents {
+    /// A different deck per bot, drawn at random each match.
+    #[default]
+    Random,
+    /// Every bot plays `target_decks()[i]`.
+    Deck(usize),
+}
+
+impl PodOpponents {
+    /// Cycle Random → deck 0 → deck 1 → … → Random over `n_decks` decks.
+    fn next(self, n_decks: usize) -> PodOpponents {
+        match self {
+            PodOpponents::Random if n_decks > 0 => PodOpponents::Deck(0),
+            PodOpponents::Deck(i) if i + 1 < n_decks => PodOpponents::Deck(i + 1),
+            _ => PodOpponents::Random,
+        }
+    }
+
+    fn label(self) -> String {
+        match self {
+            PodOpponents::Random => "Opponents: Random".to_string(),
+            PodOpponents::Deck(i) => {
+                let decks = crabomination::pod::target_decks();
+                let name = decks.get(i).map_or("?", |d| d.name);
+                format!("Opponents: {name}")
+            }
+        }
+    }
+}
+
+/// The `count` bot decks for a local Commander pod. `Random` deals distinct
+/// decks (the field has eight, the pod at most three bots) off `seed`.
+fn commander_opponents(
+    choice: PodOpponents,
+    count: usize,
+    seed: u64,
+) -> Vec<crabomination::pod::PodDeck> {
+    use rand::SeedableRng;
+    use rand::seq::SliceRandom;
+    let mut field = crabomination::pod::target_decks();
+    match choice {
+        PodOpponents::Deck(i) if i < field.len() => vec![field[i]; count],
+        _ => {
+            field.shuffle(&mut rand::rngs::StdRng::seed_from_u64(seed));
+            (0..count).map(|i| field[i % field.len()]).collect()
+        }
+    }
 }
 
 impl Default for MenuFields {
@@ -582,6 +648,8 @@ impl Default for MenuFields {
             deck_path,
             focused: FocusedField::None,
             format: MatchFormat::default(),
+            pod_size: 4,
+            pod_opponents: PodOpponents::default(),
         }
     }
 }
@@ -633,10 +701,34 @@ struct DownloadProgressText;
 #[derive(Resource, Default)]
 pub struct MenuStatus(pub String);
 
-/// A successfully imported maindeck, consumed by `spawn_inprocess_bot`
+/// A successfully imported deck, consumed by `spawn_inprocess_bot`
 /// (it outranks the format's stock decks, like `DraftedDecks`).
+/// `commanders` is filled only by a Commander-mode import, which seats the
+/// deck in a pod instead of a two-player match.
 #[derive(Resource, Clone)]
-pub struct ImportedDeck(pub Vec<crabomination::cube::CardFactory>);
+pub struct ImportedDeck {
+    pub main: Vec<crabomination::cube::CardFactory>,
+    pub commanders: Vec<crabomination::cube::CardFactory>,
+}
+
+/// The Commander pod options row — hidden unless Commander is selected.
+#[derive(Component)]
+struct PodOptionsRow;
+
+/// Cycles the pod size (2 / 3 / 4 players).
+#[derive(Component)]
+struct PodSizeButton;
+
+/// Cycles the bots' decks (Random / each stock pod deck).
+#[derive(Component)]
+struct PodOpponentsButton;
+
+/// Label of one of the pod cycling buttons.
+#[derive(Component)]
+enum PodLabel {
+    Size,
+    Opponents,
+}
 
 #[derive(Component)]
 struct SpectateBotsButton;
@@ -712,6 +804,8 @@ impl Plugin for MenuPlugin {
                     refresh_field_text,
                     handle_format_toggle,
                     refresh_format_toggle_visuals,
+                    handle_pod_toggles,
+                    refresh_pod_options,
                     handle_action_buttons,
                     refresh_menu_status,
                     update_download_progress,
@@ -817,6 +911,22 @@ fn spawn_menu(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                         format_toggle(row, &tf, MatchFormat::Sos);
                         format_toggle(row, &tf, MatchFormat::Sealed);
                         format_toggle(row, &tf, MatchFormat::Commander);
+                    });
+                    // Commander pod options — shown only while Commander is
+                    // the selected format (`refresh_pod_options`). They
+                    // apply to both "Play vs Bot" and "Play Deck vs Bot".
+                    fmt.spawn((
+                        Node {
+                            flex_direction: FlexDirection::Row,
+                            column_gap: Val::Px(8.0),
+                            display: Display::None,
+                            ..default()
+                        },
+                        PodOptionsRow,
+                    ))
+                    .with_children(|row| {
+                        pod_toggle(row, &tf, PodSizeButton, PodLabel::Size);
+                        pod_toggle(row, &tf, PodOpponentsButton, PodLabel::Opponents);
                     });
                 });
 
@@ -1076,6 +1186,37 @@ fn format_toggle(
         });
 }
 
+/// A cycling toggle in the `format_toggle` style; its label is written by
+/// `refresh_pod_options`.
+fn pod_toggle<M: Component>(
+    parent: &mut ChildSpawnerCommands,
+    tf: &impl Fn(f32) -> TextFont,
+    marker: M,
+    label: PodLabel,
+) {
+    parent
+        .spawn((
+            Button,
+            Node {
+                padding: UiRect::axes(Val::Px(14.0), Val::Px(6.0)),
+                border_radius: BorderRadius::all(RADIUS_BUTTON),
+                ..default()
+            },
+            BackgroundColor(FIELD_BG),
+            HoverTint::new(FIELD_BG),
+            marker,
+        ))
+        .with_children(|b| {
+            b.spawn((
+                Text::new(""),
+                tf(13.0),
+                TextColor(theme::TEXT_PRIMARY),
+                Pickable::IGNORE,
+                label,
+            ));
+        });
+}
+
 fn despawn_menu(mut commands: Commands, q: Query<Entity, With<MenuRoot>>) {
     for e in &q {
         commands.entity(e).despawn();
@@ -1275,6 +1416,46 @@ fn refresh_format_toggle_visuals(
     }
 }
 
+fn handle_pod_toggles(
+    mut fields: ResMut<MenuFields>,
+    size_q: Query<&Interaction, (Changed<Interaction>, With<PodSizeButton>)>,
+    opp_q: Query<&Interaction, (Changed<Interaction>, With<PodOpponentsButton>)>,
+) {
+    if size_q.iter().any(|i| *i == Interaction::Pressed) {
+        fields.pod_size = next_pod_size(fields.pod_size);
+    }
+    if opp_q.iter().any(|i| *i == Interaction::Pressed) {
+        let n = crabomination::pod::target_decks().len();
+        fields.pod_opponents = fields.pod_opponents.next(n);
+    }
+}
+
+/// Show the pod row only under Commander and keep its labels current. Runs
+/// every frame (the row is respawned with the menu, after `MenuFields` last
+/// changed) but writes only on a difference, so change detection stays quiet.
+fn refresh_pod_options(
+    fields: Res<MenuFields>,
+    mut rows: Query<&mut Node, With<PodOptionsRow>>,
+    mut labels: Query<(&PodLabel, &mut Text)>,
+) {
+    let display =
+        if fields.format == MatchFormat::Commander { Display::Flex } else { Display::None };
+    for mut node in &mut rows {
+        if node.display != display {
+            node.display = display;
+        }
+    }
+    for (which, mut text) in &mut labels {
+        let want = match which {
+            PodLabel::Size => format!("Players: {}", fields.pod_size),
+            PodLabel::Opponents => fields.pod_opponents.label(),
+        };
+        if text.0 != want {
+            text.0 = want;
+        }
+    }
+}
+
 /// Mirror the background art-prefetch counters into the menu's progress
 /// line. Empty when idle or done — the line only speaks while the
 /// background thread is actually fetching.
@@ -1374,12 +1555,26 @@ fn handle_action_buttons(
                         parsed.unknown.len(),
                         if more > 0 { format!(" (+{more} more)") } else { String::new() },
                     );
+                } else if format == MatchFormat::Commander {
+                    // CR 903 — the commander section, pair, identity and
+                    // 100-card singleton rules, all checked by the engine.
+                    match parsed.commander_list() {
+                        Err(errs) => status.0 = join_errors(&errs),
+                        Ok(list) => {
+                            status.0.clear();
+                            commands.insert_resource(ImportedDeck {
+                                main: list.main,
+                                commanders: list.commanders,
+                            });
+                            pending.0 = Some((NetMode::LocalBot, format));
+                            next_state.set(AppState::InGame);
+                        }
+                    }
                 } else if let Err(errs) = crabomination::format::validate_deck(
                     &parsed.main.iter().map(|f| f()).collect::<Vec<_>>(),
                     // Validate against the menu's selected format, not a
-                    // hardcoded one — a Commander list is 100-card
-                    // singleton, and Cube/SoS pools play limited-style
-                    // 40-card rules.
+                    // hardcoded one — Cube/SoS pools play limited-style
+                    // 40-card rules. (Commander took the branch above.)
                     match format {
                         MatchFormat::Modern => crabomination::format::Format::Modern,
                         MatchFormat::Commander => crabomination::format::Format::Commander,
@@ -1390,15 +1585,13 @@ fn handle_action_buttons(
                         }
                     },
                 ) {
-                    status.0 = errs
-                        .iter()
-                        .take(3)
-                        .map(|e| e.to_string())
-                        .collect::<Vec<_>>()
-                        .join("; ");
+                    status.0 = join_errors(&errs);
                 } else {
                     status.0.clear();
-                    commands.insert_resource(ImportedDeck(parsed.main));
+                    commands.insert_resource(ImportedDeck {
+                        main: parsed.main,
+                        commanders: Vec::new(),
+                    });
                     pending.0 = Some((NetMode::LocalBot, format));
                     next_state.set(AppState::InGame);
                 }
@@ -1443,6 +1636,11 @@ fn handle_action_buttons(
             next_state.set(AppState::Lobby);
         }
     }
+}
+
+/// The first three validation errors, for the one-line menu status.
+fn join_errors<E: ToString>(errs: &[E]) -> String {
+    errs.iter().take(3).map(ToString::to_string).collect::<Vec<_>>().join("; ")
 }
 
 /// Trim a display name and fall back to "Player" when it's blank, so the
@@ -1663,7 +1861,24 @@ fn spawn_inprocess_bot(world: &mut World, format: MatchFormat) {
     }
     let human_name = menu_player_name(world);
     let imported: Option<ImportedDeck> = world.remove_resource::<ImportedDeck>();
-    let state = if let Some(deck) = imported {
+    let (pod_size, pod_opponents) = world
+        .get_resource::<MenuFields>()
+        .map_or((4, PodOpponents::Random), |f| (f.pod_size, f.pod_opponents));
+    // Commander seats the human's deck — imported, or the first stock pod
+    // deck for "Play vs Bot" — in seat 0 of a 2-4 player pod.
+    let commander_deck = match (&imported, format) {
+        (Some(deck), _) if !deck.commanders.is_empty() => {
+            Some((deck.commanders.clone(), deck.main.clone()))
+        }
+        (None, MatchFormat::Commander) if drafted.is_none() && audit_card.is_none() => {
+            let stock = crabomination::pod::target_decks()[0];
+            Some((stock.commanders.to_vec(), stock.main.to_vec()))
+        }
+        _ => None,
+    };
+    let state = if let Some((commanders, main)) = commander_deck {
+        commander_pod_state(&commanders, &main, pod_size, pod_opponents, &human_name)
+    } else if let Some(deck) = imported {
         // Imported decklist vs. an opponent chosen by the selected
         // format: Sealed rolls a fresh random sealed build (the same
         // generator the recommender's gauntlet uses — this is "how does
@@ -1679,7 +1894,7 @@ fn spawn_inprocess_bot(world: &mut World, format: MatchFormat) {
             (crabomination::demo::brg_combo_deck().to_vec(), "Bot".to_string())
         };
         crabomination::draft::build_draft_match_state(
-            deck.0,
+            deck.main,
             opp_deck,
             human_name.clone(),
             opp_label,
@@ -1718,6 +1933,28 @@ fn spawn_inprocess_bot(world: &mut World, format: MatchFormat) {
     world.insert_resource(NetOutbox::new(tx));
     world.insert_resource(NetInbox(Mutex::new(rx)));
     world.insert_resource(LatestSnapshot(sink));
+}
+
+/// A local Commander pod: `commanders` + `main` in the human's seat 0 and
+/// `pod_size - 1` bots on stock decks, named after the deck they play. The
+/// deal is seeded off the state's own stream, as `build_commander_state` is.
+fn commander_pod_state(
+    commanders: &[crabomination::cube::CardFactory],
+    main: &[crabomination::cube::CardFactory],
+    pod_size: usize,
+    opponents: PodOpponents,
+    human_name: &str,
+) -> GameState {
+    use rand::RngExt;
+    let seed: u64 = rand::rng().random();
+    let bots = commander_opponents(opponents, pod_size.clamp(2, 4) - 1, seed.rotate_left(32));
+    let mut state =
+        crabomination::demo::build_custom_commander_state_seeded(commanders, main, &bots, seed);
+    state.players[0].name = human_name.to_string();
+    for (i, deck) in bots.iter().enumerate() {
+        state.players[i + 1].name = format!("Bot {}: {}", i + 1, deck.name);
+    }
+    state
 }
 
 /// Shared handle to the authoritative engine state for the running
@@ -2070,6 +2307,49 @@ mod tests {
             d.iter().map(|f| f().name).collect::<Vec<_>>()
         };
         assert_ne!(names(&deck), names(&other));
+    }
+
+    #[test]
+    fn pod_toggles_cycle_through_every_choice() {
+        assert_eq!(next_pod_size(2), 3);
+        assert_eq!(next_pod_size(3), 4);
+        assert_eq!(next_pod_size(4), 2);
+        let n = crabomination::pod::target_decks().len();
+        let mut choice = PodOpponents::Random;
+        let mut seen = Vec::new();
+        for _ in 0..=n {
+            choice = choice.next(n);
+            seen.push(choice);
+        }
+        assert_eq!(seen[..n], (0..n).map(PodOpponents::Deck).collect::<Vec<_>>()[..]);
+        assert_eq!(seen[n], PodOpponents::Random);
+        assert_eq!(PodOpponents::Deck(1).label(), "Opponents: Judith (BR)");
+    }
+
+    #[test]
+    fn commander_opponents_are_distinct_when_random_and_fixed_when_chosen() {
+        let names = |v: Vec<crabomination::pod::PodDeck>| v.iter().map(|d| d.name).collect::<Vec<_>>();
+        let random = names(commander_opponents(PodOpponents::Random, 3, 11));
+        assert_eq!(random.len(), 3);
+        let mut dedup = random.clone();
+        dedup.sort_unstable();
+        dedup.dedup();
+        assert_eq!(dedup.len(), 3, "{random:?}");
+        assert_eq!(random, names(commander_opponents(PodOpponents::Random, 3, 11)));
+        assert_eq!(names(commander_opponents(PodOpponents::Deck(2), 2, 11)), ["Hanna (UW)"; 2]);
+    }
+
+    /// The human sits in seat 0 with their own commander, the bots are named
+    /// after their decks, and the pod size is honoured.
+    #[test]
+    fn commander_pod_state_seats_the_human_first() {
+        let stock = crabomination::pod::target_decks()[4];
+        let state = commander_pod_state(stock.commanders, stock.main, 3, PodOpponents::Deck(0), "Ann");
+        assert_eq!(state.players.len(), 3);
+        assert_eq!(state.players[0].name, "Ann");
+        assert_eq!(state.players[0].command.len(), 2, "Krark + Rograkh");
+        assert_eq!(state.players[1].name, "Bot 1: Sigarda (GW)");
+        assert!(state.players.iter().all(|p| p.life == 40));
     }
 }
 

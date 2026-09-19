@@ -214,3 +214,147 @@ fn umori_shared_card_type() {
     mixed.push(catalog::lightning_bolt()); // instant breaks the shared type
     assert!(companion_restriction_met(&umori, &mixed, 60).is_err());
 }
+
+// ── Commander decklist import (CR 903.3 / 903.5) ─────────────────────────────
+
+use crabomination::cube::CardFactory;
+use crabomination::decklist::parse_decklist;
+use crabomination::pod::decks;
+
+/// `1 Name` per card, as an exporter writes a singleton list.
+fn list_lines(cards: &[CardFactory]) -> String {
+    cards.iter().map(|f| format!("1 {}\n", f().name)).collect()
+}
+
+fn names(cards: &[CardFactory]) -> Vec<&'static str> {
+    cards.iter().map(|f| f().name).collect()
+}
+
+/// CR 903.3 — the commander designation survives every common export shape:
+/// Arena/Moxfield's leading `Commander` header (with and without `Deck`, with a
+/// `(1)` count), a trailing header, Moxfield's `*CMDR*`, Archidekt's
+/// `[Commander{top}]` category, and MTGO's commander-as-sideboard. Before, the
+/// header filed the commander with the maindeck and the designation was lost.
+#[test]
+fn commander_sections_parse_in_every_export_shape() {
+    let (cmd, main) = (decks::SIGARDA_COMMANDERS, decks::SIGARDA_MAIN);
+    let cmd_name = cmd[0]().name;
+    let body = list_lines(main);
+    let shapes = [
+        ("arena header", format!("Commander\n1 {cmd_name}\n\nDeck\n{body}")),
+        ("header, no Deck", format!("Commander (1)\n1 {cmd_name}\n\n{body}")),
+        ("trailing header", format!("Deck\n{body}\nCommander:\n1 {cmd_name}\n")),
+        ("moxfield marker", format!("{body}1 {cmd_name} (SNC) 16 *CMDR*\n")),
+        ("archidekt tag", format!("1x {cmd_name} (emn) 1 [Commander{{top}}] ^Have,#37d67a^\n{body}")),
+        ("mtgo sideboard", format!("{body}\n1 {cmd_name}\n")),
+    ];
+    for (shape, text) in shapes {
+        let parsed = parse_decklist(&text);
+        assert!(parsed.unknown.is_empty(), "{shape}: unknown {:?}", parsed.unknown);
+        let list = parsed.commander_list().unwrap_or_else(|e| panic!("{shape}: {e:?}"));
+        assert_eq!(names(&list.commanders), vec![cmd_name], "{shape}");
+        assert_eq!(list.main.len(), 99, "{shape}");
+    }
+
+    // A pair (CR 702.124): Partner, and Choose a Background whose second
+    // commander is a legendary enchantment.
+    for (cmds, main) in [
+        (decks::KRARK_COMMANDERS, decks::KRARK_MAIN),
+        (decks::ZELLIX_COMMANDERS, decks::ZELLIX_MAIN),
+    ] {
+        let text = format!("Commander\n{}\nDeck\n{}", list_lines(cmds), list_lines(main));
+        let list = parse_decklist(&text).commander_list().expect("legal pair");
+        assert_eq!(names(&list.commanders), names(cmds));
+    }
+
+    // Maybeboard cards are not part of the deck; `*F*` foil marks are stripped.
+    let text =
+        format!("Commander\n1 {cmd_name} *F*\n\nDeck\n{body}\nMaybeboard\n1 Lightning Bolt\n");
+    let parsed = parse_decklist(&text);
+    assert_eq!(parsed.main.len(), 99);
+    assert!(parsed.sideboard.is_empty());
+    assert!(parsed.commander_list().is_ok());
+}
+
+/// CR 903.3 / 903.5a / 903.5c / 702.124 — an imported Commander list is
+/// refused with a reason: no commander section, a card outside the
+/// commander's identity, two commanders that can't pair, a short deck, a
+/// commander that isn't legendary.
+#[test]
+fn commander_import_rejects_illegal_lists_with_a_reason() {
+    let (cmd, main) = (decks::SIGARDA_COMMANDERS, decks::SIGARDA_MAIN);
+    let cmd_name = cmd[0]().name;
+    let errs = |text: String| parse_decklist(&text).commander_list().err().unwrap_or_default();
+
+    // A plain 100-card pile: no section, no marker, no MTGO sideboard.
+    let e = errs(format!("1 {cmd_name}\n{}", list_lines(main)));
+    assert!(e.first().is_some_and(|m| m.contains("No commander section")), "{e:?}");
+
+    // Lightning Bolt (red) in a GW deck, in place of one of the 99.
+    let e = errs(format!(
+        "Commander\n1 {cmd_name}\n\nDeck\n{}1 Lightning Bolt\n",
+        list_lines(&main[1..])
+    ));
+    assert!(e.iter().any(|m| m.contains("Lightning Bolt") && m.contains("identity")), "{e:?}");
+
+    // Sigarda and Judith have no pairing ability.
+    let e = errs(format!(
+        "Commander\n1 {cmd_name}\n1 {}\n\nDeck\n{}",
+        decks::JUDITH_COMMANDERS[0]().name,
+        list_lines(&main[1..])
+    ));
+    assert!(e.iter().any(|m| m.contains("can't be commanders together")), "{e:?}");
+
+    // 99 cards including the commander.
+    let e = errs(format!("Commander\n1 {cmd_name}\n\nDeck\n{}", list_lines(&main[1..])));
+    assert!(e.iter().any(|m| m.contains("99 cards")), "{e:?}");
+
+    // A non-legendary "commander".
+    let e = errs(format!("Commander\n1 Grizzly Bears\n\nDeck\n{}", list_lines(main)));
+    assert!(e.iter().any(|m| m.contains("Grizzly Bears")), "{e:?}");
+}
+
+/// A player's own list seats in a 2-, 3- or 4-player pod: seat 0 holds the
+/// imported deck with its commander in the command zone (CR 903.6), every
+/// seat starts at 40 life (CR 903.7), and the opponents are the stock decks.
+#[test]
+fn custom_commander_deck_seats_in_a_pod_of_any_size() {
+    let text = format!(
+        "Commander\n1 {}\n\nDeck\n{}",
+        decks::EDGAR_COMMANDERS[0]().name,
+        list_lines(decks::EDGAR_MAIN)
+    );
+    let list = parse_decklist(&text).commander_list().expect("legal list");
+    let field = crabomination::pod::target_decks();
+    for opponents in 1..=3 {
+        let state = crabomination::demo::build_custom_commander_state_seeded(
+            &list.commanders,
+            &list.main,
+            &field[..opponents],
+            7,
+        );
+        assert_eq!(state.players.len(), opponents + 1);
+        assert!(state.players.iter().all(|p| p.life == 40));
+        let me = &state.players[0];
+        assert_eq!(me.command.len(), 1);
+        assert_eq!(me.command[0].definition.name, "Edgar Markov");
+        assert_eq!(me.library.len(), 99);
+        let opp = &state.players[1];
+        assert_eq!(opp.command[0].definition.name, field[0].commanders[0]().name);
+    }
+    // Seeded: the same seed deals the same library order.
+    let order = |seed| {
+        crabomination::demo::build_custom_commander_state_seeded(
+            &list.commanders,
+            &list.main,
+            &field[..3],
+            seed,
+        )
+        .players[0]
+        .library
+        .iter()
+        .map(|c| c.definition.name)
+        .collect::<Vec<_>>()
+    };
+    assert_eq!(order(3), order(3));
+}
