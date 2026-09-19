@@ -1860,6 +1860,11 @@ fn project_permanent(
                         || (o.definition.is_enchantment() && o.controller == card.controller))
             }),
         can_attack_despite_defender: state.ignores_defender_for_attack(card),
+        goaded_by: card.goaded_by.clone(),
+        attack_target: state.attack_for(card.id).map(|a| a.target),
+        defending_player: state
+            .attack_for(card.id)
+            .and_then(|a| state.defender_for(a.target)),
     }
 }
 

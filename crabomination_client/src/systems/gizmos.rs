@@ -17,6 +17,7 @@ use crate::card::layout::player_hand_anchor;
 use crate::game::{AttackingState, BlockingState, TargetingState};
 use crate::net_plugin::CurrentView;
 use crate::systems::game_ui::PlayerHudPanel;
+use crate::systems::game_ui::table_awareness::seat_color;
 use crate::MainCamera;
 
 /// Scale a colour into the HDR range (linear space, alpha preserved) so it
@@ -579,8 +580,7 @@ pub fn draw_attack_plan_gizmos(
 
     let viewer = cv.your_seat;
     let n_seats = cv.players.len();
-    let yellow = glow(Color::srgb(1.0, 0.88, 0.0), CUE_GLOW);
-    let pending = glow(Color::srgba(1.0, 0.88, 0.0, 0.5), CUE_GLOW);
+    let yellow = Color::srgb(1.0, 0.88, 0.0);
 
     let mut positions: HashMap<CardId, Vec3> = HashMap::new();
     for (t, gid) in &bf_cards {
@@ -591,10 +591,18 @@ pub fn draw_attack_plan_gizmos(
         let Some(&from) = positions.get(attacker) else {
             continue;
         };
+        // In a pod each arrow takes its defending seat's identity colour
+        // (the HUD avatar's), so "which opponent is this aimed at" reads off
+        // the arrow; 1v1 keeps the classic yellow. The pending attacker (next
+        // defender click rebinds it) draws at half alpha.
+        let base = match crate::systems::game_ui::table_awareness::plan_defender(cv, *target) {
+            Some(d) if n_seats > 2 => seat_color(d),
+            _ => yellow,
+        };
         let color = if attacking.last_added == Some(*attacker) {
-            pending
+            glow(base.with_alpha(0.5), CUE_GLOW)
         } else {
-            yellow
+            glow(base, CUE_GLOW)
         };
         // The attacker itself is marked by its crossed-swords overlay (see
         // `draw_attacker_overlays`, which now includes planned attackers), so
@@ -612,7 +620,72 @@ pub fn draw_attack_plan_gizmos(
         };
         if let Some(to) = to {
             gizmos.arrow(from, to, color).with_tip_length(0.7);
+            if matches!(target, AttackTarget::Player(_)) {
+                draw_defender_ring(&mut gizmos, to, color);
+            }
         }
+    }
+}
+
+/// Ring on the table at a defending player's anchor, so the arrowheads of a
+/// multi-attacker plan converge on an unmistakable spot in that seat's area.
+fn draw_defender_ring<G: GizmoConfigGroup>(gizmos: &mut Gizmos<G>, center: Vec3, color: Color) {
+    let n = 24;
+    let r = 1.1;
+    for i in 0..n {
+        let a0 = (i as f32) / (n as f32) * std::f32::consts::TAU;
+        let a1 = ((i + 1) as f32) / (n as f32) * std::f32::consts::TAU;
+        gizmos.line(
+            center + Vec3::new(a0.cos() * r, 0.0, a0.sin() * r),
+            center + Vec3::new(a1.cos() * r, 0.0, a1.sin() * r),
+            color,
+        );
+    }
+}
+
+/// After the declaration, keep one arrow per attacker pointing at what it
+/// is attacking (CR 508.1b — the view's `attack_target`), coloured by the
+/// defending seat. In a pod the swords alone don't say *who* is under fire,
+/// and the defenders each need to know which attackers are theirs to block.
+/// 1v1 skips it: there is only one place an attack can go.
+pub fn draw_declared_attack_arrows(
+    view: Res<CurrentView>,
+    attacking: Res<AttackingState>,
+    bf_cards: Query<(&Transform, &GameCardId), With<BattlefieldCard>>,
+    mut gizmos: Gizmos<AttackPlanGizmos>,
+) {
+    let Some(cv) = &view.0 else { return };
+    let n_seats = cv.players.len();
+    if n_seats <= 2 || cv.game_over.is_some() {
+        return;
+    }
+    if !cv.battlefield.iter().any(|c| c.attacking && c.attack_target.is_some()) {
+        return;
+    }
+    let viewer = cv.your_seat;
+    let mut positions: HashMap<CardId, Vec3> = HashMap::new();
+    for (t, gid) in &bf_cards {
+        positions.insert(gid.0, t.translation + Vec3::Y * 0.18);
+    }
+    for c in cv.battlefield.iter().filter(|c| c.attacking) {
+        // The plan overlay already draws this attacker.
+        if attacking.contains(c.id) {
+            continue;
+        }
+        let (Some(target), Some(&from)) = (c.attack_target, positions.get(&c.id)) else {
+            continue;
+        };
+        let to = match target {
+            AttackTarget::Player(seat) => {
+                let mut p = player_hand_anchor(seat, viewer, n_seats);
+                p.y = 0.3;
+                Some(p)
+            }
+            AttackTarget::Planeswalker(id) | AttackTarget::Battle(id) => positions.get(&id).copied(),
+        };
+        let Some(to) = to else { continue };
+        let base = c.defending_player.map(seat_color).unwrap_or(Color::srgb(1.0, 0.35, 0.05));
+        gizmos.arrow(from, to, glow(base.with_alpha(0.75), CUE_GLOW * 0.8)).with_tip_length(0.6);
     }
 }
 

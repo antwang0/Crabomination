@@ -10,6 +10,7 @@ pub mod hand_menu;
 mod life_graph;
 mod player_stats;
 mod popups;
+pub mod table_awareness;
 
 pub use buttons::{
     handle_audit_buttons, handle_auto_pass_toggle, handle_export_keypress,
@@ -25,6 +26,7 @@ pub use player_stats::{
     update_opponent_panel_tint, update_opponent_stats_rows, update_player_chip_target_outline,
     update_player_stats_chips, LifeFlashTracker,
 };
+pub use table_awareness::TableAwarenessPlugin;
 pub use popups::{
     cancel_pickers_on_escape,
     handle_ability_menu, handle_alt_cast_buttons, handle_helper_tap_buttons,

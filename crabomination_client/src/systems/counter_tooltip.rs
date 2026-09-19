@@ -82,6 +82,24 @@ pub fn update_alt_tooltip(
     // The peek art can't show the *board* context that makes the legend rule
     // (CR 704.5j) bite. When this legendary permanent has a same-named,
     // same-controller twin already in play, warn that one is about to die.
+    // CR 701.38b — name the goaders: the creature must attack each combat
+    // and must pick a player other than them if it can.
+    if !p.goaded_by.is_empty() {
+        let names: Vec<String> = p
+            .goaded_by
+            .iter()
+            .map(|&s| crate::systems::game_ui::table_awareness::seat_label(&cv.players, cv.your_seat, s))
+            .collect();
+        body.push('\n');
+        body.push_str(&goad_tooltip_line(&names));
+    }
+    // CR 508.1b — in a pod, say which player this attacker is attacking.
+    if cv.players.len() > 2
+        && let Some(line) = attack_target_line(p, cv)
+    {
+        body.push('\n');
+        body.push_str(&line);
+    }
     if legend_rule_at_risk(&cv.battlefield, p) {
         body.push_str("\n⚠ legend rule: another copy is in play");
     }
@@ -135,6 +153,47 @@ pub fn update_alt_tooltip(
             Pickable::IGNORE,
         ));
     });
+}
+
+/// "Goaded by Bob" / "Goaded by Bob and Carol" / "Goaded by Bob, Carol and
+/// You", with the CR 701.38b consequence spelled out.
+fn goad_tooltip_line(goaders: &[String]) -> String {
+    let who = match goaders {
+        [] => String::from("an opponent"),
+        [one] => one.clone(),
+        [init @ .., last] => format!("{} and {last}", init.join(", ")),
+    };
+    format!("Goaded by {who} — must attack, and a player other than {} if able", {
+        if goaders.len() == 1 { "them" } else { "any of them" }
+    })
+}
+
+/// "⚔ attacking Bob" / "⚔ attacking Jace (Bob)" for a declared attacker.
+fn attack_target_line(
+    p: &crabomination::net::PermanentView,
+    cv: &crabomination::net::ClientView,
+) -> Option<String> {
+    use crabomination::game::AttackTarget;
+    if !p.attacking {
+        return None;
+    }
+    let seat = |s: usize| crate::systems::game_ui::table_awareness::seat_label(&cv.players, cv.your_seat, s);
+    let what = match p.attack_target? {
+        AttackTarget::Player(s) => seat(s),
+        AttackTarget::Planeswalker(id) | AttackTarget::Battle(id) => {
+            let name = cv
+                .battlefield
+                .iter()
+                .find(|c| c.id == id)
+                .map(|c| c.name.clone())
+                .unwrap_or_else(|| format!("#{}", id.0));
+            match p.defending_player {
+                Some(d) => format!("{name} ({})", seat(d)),
+                None => name,
+            }
+        }
+    };
+    Some(format!("⚔ attacking {what}"))
 }
 
 /// True when this legendary permanent shares its name and controller with
@@ -644,7 +703,9 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
     if p.suspected {
         lines.push(String::from("(suspected — has menace, can't block)"));
     }
-    if p.goaded {
+    // With the goader seats known, `update_alt_tooltip` names them instead
+    // (`goad_tooltip_line`) — it has the player names this body doesn't.
+    if p.goaded && p.goaded_by.is_empty() {
         lines.push(String::from("(goaded — must attack, and not the goader if able)"));
     }
     if p.attack_mandated {
@@ -1617,7 +1678,7 @@ fn counter_reminder(kind: CounterType) -> Option<&'static str> {
 
 #[cfg(test)]
 mod tests {
-    use super::{build_tooltip_body, companion_restriction_text, humanize_keyword_debug, keyword_label, keyword_reminder, legend_rule_at_risk, prevention_summary};
+    use super::{attack_target_line, build_tooltip_body, companion_restriction_text, goad_tooltip_line, humanize_keyword_debug, keyword_label, keyword_reminder, legend_rule_at_risk, prevention_summary};
     use crabomination::card::{CardId, CardType, CounterType, Keyword};
     use crabomination::net::PermanentView;
 
@@ -1748,6 +1809,9 @@ mod tests {
             reconfigurable: false,
             modified: false,
             can_attack_despite_defender: false,
+            goaded_by: vec![],
+            attack_target: None,
+            defending_player: None,
         }
     }
 
@@ -2027,6 +2091,45 @@ mod tests {
         p.blocking_attackers = vec![CardId(7)];
         let body = build_tooltip_body(&p).expect("tooltip should render");
         assert!(body.contains("(blocking #7)"), "got: {body}");
+    }
+
+    #[test]
+    fn goad_tooltip_names_the_goaders() {
+        assert_eq!(
+            goad_tooltip_line(&["Bob".to_string()]),
+            "Goaded by Bob — must attack, and a player other than them if able"
+        );
+        assert_eq!(
+            goad_tooltip_line(&["Bob".to_string(), "Carol".to_string(), "You".to_string()]),
+            "Goaded by Bob, Carol and You — must attack, and a player other than any of them if able"
+        );
+        // Known goaders move the line out of the name-less body.
+        let mut p = make_permanent_view(0, 2);
+        p.goaded = true;
+        p.goaded_by = vec![1];
+        let body = build_tooltip_body(&p).unwrap_or_default();
+        assert!(!body.contains("goaded"), "got: {body}");
+    }
+
+    #[test]
+    fn attack_target_line_names_player_and_planeswalker_owner() {
+        use crabomination::game::AttackTarget;
+        use crabomination::net::ClientView;
+        let mut cv = ClientView { your_seat: 0, ..Default::default() };
+        let mut jace = make_permanent_view(0, 2);
+        jace.id = CardId(50);
+        jace.name = "Jace".to_string();
+        cv.battlefield.push(jace);
+        let mut p = make_permanent_view(0, 2);
+        assert_eq!(attack_target_line(&p, &cv), None, "not attacking");
+        p.attacking = true;
+        p.attack_target = Some(AttackTarget::Player(0));
+        p.defending_player = Some(0);
+        assert_eq!(attack_target_line(&p, &cv).as_deref(), Some("⚔ attacking You"));
+        p.attack_target = Some(AttackTarget::Planeswalker(CardId(50)));
+        p.defending_player = Some(3);
+        // Seat 3 isn't in this bare view, so it falls back to "Seat 3".
+        assert_eq!(attack_target_line(&p, &cv).as_deref(), Some("⚔ attacking Jace (Seat 3)"));
     }
 
     #[test]

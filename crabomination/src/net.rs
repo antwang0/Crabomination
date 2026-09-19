@@ -2177,6 +2177,23 @@ pub struct PermanentView {
     /// `project_permanent`.
     #[serde(default)]
     pub can_attack_despite_defender: bool,
+    /// CR 701.38 — the seats that goaded this creature, in goad order. A
+    /// goaded creature must attack each combat if able, and must attack a
+    /// player *other than* each goader if able (CR 701.38b), so in a pod the
+    /// client needs *who*, not just the `goaded` flag, to say which seats it
+    /// is steered away from. Empty when not goaded.
+    #[serde(default)]
+    pub goaded_by: Vec<usize>,
+    /// CR 508.1b — what this creature is attacking (a player, planeswalker or
+    /// battle) while it is a declared attacker; `None` otherwise. With three
+    /// opponents `attacking` alone can't say which of them is under fire.
+    #[serde(default)]
+    pub attack_target: Option<crate::game::AttackTarget>,
+    /// CR 506.2 — the defending player this attacker's `attack_target`
+    /// belongs to (the player itself, a planeswalker's controller, a battle's
+    /// protector). `None` when not attacking.
+    #[serde(default)]
+    pub defending_player: Option<usize>,
 }
 
 impl PermanentView {

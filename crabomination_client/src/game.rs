@@ -378,6 +378,9 @@ pub struct PendingModalCast {
 #[derive(Resource, Default)]
 pub struct ExileBrowserState {
     pub open: bool,
+    /// Show only the cards this seat owns — set by clicking an opponent
+    /// panel's exile count; `None` (the `V` key, the shared pile) shows all.
+    pub owner: Option<usize>,
 }
 
 /// State for the graveyard card browser popup.
