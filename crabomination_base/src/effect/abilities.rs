@@ -1498,6 +1498,19 @@ pub enum StaticEffect {
     /// Underworld Breach: each nonland card in the controller's graveyard
     /// has escape — its own mana cost plus exile `exile_count` other cards.
     GraveyardCardsHaveEscape { exile_count: u32 },
+    /// The narrowed Underworld Breach: cards in the controller's graveyard
+    /// matching `filter` may be cast for their own mana cost plus exiling
+    /// `exile_count` other graveyard cards — during the controller's own turn
+    /// only when `your_turn_only`. Kotis, Sibsig Champion ("you may cast a
+    /// creature spell from your graveyard by exiling three other cards from
+    /// your graveyard in addition to paying its other costs"). Rides the
+    /// escape cast path (`effective_escape` / `GameAction::CastEscape`).
+    GraveyardCardsHaveEscapeMatching {
+        filter: SelectionRequirement,
+        exile_count: u32,
+        #[serde(default)]
+        your_turn_only: bool,
+    },
     /// CR 508.1 — "No more than `n` creatures can attack you each combat"
     /// (Crawlspace). Enforced when attacks are declared against the source's
     /// controller; planeswalker and battle attacks are unaffected, matching

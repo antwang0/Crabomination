@@ -599,6 +599,11 @@ pub enum SpendRestriction {
     /// "Spend this mana only to cast a multicolored spell." (Pillar of the
     /// Paruns.) Matches a spell with two or more colors.
     MulticoloredSpell,
+    /// "Spend this mana only to cast a spell that's one or more colors
+    /// without {X} in its mana cost." (Titans' Nest.) A colored spell always
+    /// has a colored pip, so `mana_value > 0` is what tells a cast from the
+    /// empty [`SpellKind::default`] no restricted mana may fund.
+    ColoredSpellWithoutX,
     /// "Spend this mana only to cast planeswalker spells." (Interplanar Beacon.)
     PlaneswalkerSpellsOnly,
     /// "Spend this mana only to cast a noncreature spell." (The Emperor of
@@ -655,6 +660,7 @@ impl SpendRestriction {
             SpendRestriction::DragonOrOmenSpell => "only Dragon or Omen spells",
             SpendRestriction::EnchantmentSpell => "only enchantment spells",
             SpendRestriction::MulticoloredSpell => "only multicolored spells",
+            SpendRestriction::ColoredSpellWithoutX => "only colored spells without {X}",
             SpendRestriction::PlaneswalkerSpellsOnly => "only planeswalker spells",
             SpendRestriction::NoncreatureSpellsOnly => "only noncreature spells",
             SpendRestriction::LegendarySpell => "only legendary spells",
@@ -725,6 +731,9 @@ impl SpendRestriction {
             }
             SpendRestriction::EnchantmentSpell => kind.enchantment,
             SpendRestriction::MulticoloredSpell => kind.multicolored,
+            SpendRestriction::ColoredSpellWithoutX => {
+                !kind.colorless && !kind.has_x && !kind.activating_ability && kind.mana_value > 0
+            }
             SpendRestriction::PlaneswalkerSpellsOnly => kind.planeswalker,
             SpendRestriction::LegendarySpell => kind.legendary,
             SpendRestriction::RoomSpellsOrDoors => kind.room_or_door,

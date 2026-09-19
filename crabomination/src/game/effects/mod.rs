@@ -5957,15 +5957,29 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::ChooseUnchosenMode { modes } => {
+            Effect::ChooseUnchosenMode { modes }
+            | Effect::ChooseUnchosenModeThisTurn { modes } => {
                 // CR 700.2 — the controller picks at resolution, restricted to
                 // modes this permanent hasn't chosen before; the pick is
                 // recorded on the source so it can't repeat (Captive Audience).
                 use crate::decision::{Decision, DecisionAnswer};
                 let Some(source) = ctx.source else { return Ok(()) };
+                // "… that hasn't been chosen this turn" (Teval's Judgment): the
+                // record is `[turn as 4 LE bytes] ++ picks`, and a header from
+                // an earlier turn means nothing has been chosen yet this turn.
+                let per_turn = matches!(effect, Effect::ChooseUnchosenModeThisTurn { .. });
+                let stamp = self.turn_number.to_le_bytes();
                 let used: Vec<u8> = self
                     .battlefield_find(source)
-                    .map(|c| c.modes_chosen.clone())
+                    .map(|c| {
+                        if !per_turn {
+                            c.modes_chosen.clone()
+                        } else if c.modes_chosen.len() >= 4 && c.modes_chosen[..4] == stamp {
+                            c.modes_chosen[4..].to_vec()
+                        } else {
+                            Vec::new()
+                        }
+                    })
                     .unwrap_or_default();
                 // The mode is picked here, so its targets are picked here too —
                 // `requires_target` is deliberately false for this variant, so
@@ -6009,6 +6023,10 @@ impl GameState {
                 };
                 let (pick, targets) = available.swap_remove(idx);
                 if let Some(c) = self.battlefield_find_mut(source) {
+                    if per_turn && (c.modes_chosen.len() < 4 || c.modes_chosen[..4] != stamp) {
+                        c.modes_chosen.clear();
+                        c.modes_chosen.extend_from_slice(&stamp);
+                    }
                     c.modes_chosen.push(pick as u8);
                 }
                 let mut mode_ctx = ctx.clone();

@@ -9024,9 +9024,15 @@ impl GameState {
             if c.controller != p {
                 return None;
             }
-            c.definition.static_abilities.iter().find_map(|sa| match sa.effect {
+            c.definition.static_abilities.iter().find_map(|sa| match &sa.effect {
                 StaticEffect::GraveyardCardsHaveEscape { exile_count } => {
-                    Some((card.definition.cost.clone(), exile_count))
+                    Some((card.definition.cost.clone(), *exile_count))
+                }
+                StaticEffect::GraveyardCardsHaveEscapeMatching { filter, exile_count, your_turn_only }
+                    if (!*your_turn_only || self.active_player_idx == p)
+                        && self.evaluate_requirement_on_card(filter, card, p) =>
+                {
+                    Some((card.definition.cost.clone(), *exile_count))
                 }
                 _ => None,
             })
@@ -28317,6 +28323,7 @@ fn static_effect_to_effects(
             | StaticEffect::GraveyardLockdown
             | StaticEffect::GraveyardExileLockdown
             | StaticEffect::GraveyardCardsHaveEscape { .. }
+            | StaticEffect::GraveyardCardsHaveEscapeMatching { .. }
             // AttackerCapAgainstController — enforced in `declare_attackers`;
             // no layer effect.
             | StaticEffect::AttackerCapAgainstController { .. }

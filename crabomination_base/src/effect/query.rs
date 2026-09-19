@@ -440,6 +440,7 @@ impl Effect {
             | Effect::ChooseModesCast { modes, .. }
             | Effect::ChooseModesByPoints { modes, .. }
             | Effect::ChooseUnchosenMode { modes, .. }
+            | Effect::ChooseUnchosenModeThisTurn { modes }
             | Effect::EscalatingThisTurn { modes, .. } => {
                 for e in modes {
                     f(e);
@@ -1327,7 +1328,8 @@ impl Effect {
             | Effect::Tiered { .. }
             | Effect::ChooseModesCast { .. }
             | Effect::ChooseModesByPoints { .. }
-            | Effect::ChooseUnchosenMode { .. } => false,
+            | Effect::ChooseUnchosenMode { .. }
+            | Effect::ChooseUnchosenModeThisTurn { .. } => false,
             Effect::MayDoBy { who, body, .. } => {
                 player_has_target(who) || body.requires_target()
             }
@@ -4152,7 +4154,8 @@ impl Effect {
                     eff_find(accepted, slot, mode, kicked)
                         .or_else(|| eff_find(otherwise, slot, mode, kicked))
                 }
-                Effect::ChooseUnchosenMode { modes } => {
+                Effect::ChooseUnchosenMode { modes }
+                | Effect::ChooseUnchosenModeThisTurn { modes } => {
                     modes.iter().find_map(|m| eff_find(m, slot, None, kicked))
                 }
                 Effect::AnteTopOfLibrary { then, else_, .. } => then

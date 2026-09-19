@@ -1091,6 +1091,13 @@ pub enum Value {
     /// and similar payoffs. Backed by `Player.cards_drawn_this_turn`,
     /// reset on the player's untap.
     CardsDrawnThisTurn(PlayerRef),
+    /// Cards put into `who`'s graveyard from anywhere this turn (CR 700.4
+    /// tally — `Player.cards_to_graveyard_this_turn`, the counter
+    /// `Predicate::CardsToGraveyardThisTurnAtLeast` reads). Welcome the Dead's
+    /// "X is the number of cards that were put into your graveyard from your
+    /// hand or library this turn" (which narrows the source zones; the tally
+    /// doesn't record them, so that card over-counts dying permanents).
+    CardsToGraveyardThisTurn(PlayerRef),
     /// Cards `who` has drawn during the current step. Backed by
     /// `Player.cards_drawn_this_step`, reset on every step change.
     /// Powers Orcish Bowmasters' "except the first one they draw in
@@ -3502,6 +3509,13 @@ pub enum Effect {
     /// `CardInstance.modes_chosen`, and runs it. Does nothing once every mode
     /// has been chosen.
     ChooseUnchosenMode { modes: Vec<Effect> },
+    /// "Choose one that hasn't been chosen **this turn** —" (Teval's Judgment,
+    /// Monument to Endurance). [`Effect::ChooseUnchosenMode`] whose record
+    /// resets each turn: the picks live on the same
+    /// `CardInstance.modes_chosen`, behind a four-byte header holding the turn
+    /// they were made in, and a stale header clears the list on the next
+    /// resolution.
+    ChooseUnchosenModeThisTurn { modes: Vec<Effect> },
     /// "You may [body]" — emit a yes/no decision via
     /// `Decision::OptionalTrigger`. Run `body` only on `Bool(true)`. The
     /// `description` string is shown to the player (and serialized into

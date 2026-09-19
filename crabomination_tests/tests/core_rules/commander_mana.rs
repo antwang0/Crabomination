@@ -617,7 +617,8 @@ fn cr_106_6_every_rider_allows_every_payment() {
                 | CreatureSpellsOrAbilities | NoNonartifactSpells | AbilitiesOnly
                 | LessonSpellsOnly | DevoidSpellsOnly | InstantSorceryUncounterable
                 | EquipmentOnly | ColorlessSpellsOrAbilities | HighMvOrX | DragonOrOmenSpell
-                | EnchantmentSpell | MulticoloredSpell | PlaneswalkerSpellsOnly
+                | EnchantmentSpell | MulticoloredSpell | ColoredSpellWithoutX
+                | PlaneswalkerSpellsOnly
                 | LegendarySpell | NoncreatureSpellsOnly | RoomSpellsOrDoors
                 | FaceDownSpellsOrTurnFaceUp | CreatureHaste | CommanderTypeScry
                 | CommanderCastCounters => {}
@@ -643,6 +644,7 @@ fn cr_106_6_every_rider_allows_every_payment() {
             DragonOrOmenSpell,
             EnchantmentSpell,
             MulticoloredSpell,
+            ColoredSpellWithoutX,
             PlaneswalkerSpellsOnly,
             LegendarySpell,
             NoncreatureSpellsOnly,
@@ -670,4 +672,17 @@ fn cr_106_6_every_rider_allows_every_payment() {
              that reports a label is mana `available_mana` will not count",
         );
     }
+}
+
+/// Titans' Nest — "spend this mana only to cast a spell that's one or more
+/// colors without {X} in its mana cost": a colored spell yes; a colorless
+/// spell, an {X} spell, an ability, or a bare payment no.
+#[test]
+fn colored_spell_without_x_restriction() {
+    let r = SpendRestriction::ColoredSpellWithoutX;
+    assert!(r.allows(&catalog::grizzly_bears().spell_kind()));
+    assert!(!r.allows(&catalog::sol_ring().spell_kind()), "colorless");
+    assert!(!r.allows(&catalog::fireball().spell_kind()), "has {{X}}");
+    assert!(!r.allows(&catalog::forest().ability_spend_kind()), "an ability");
+    assert!(!r.allows(&crabomination::mana::SpellKind::default()), "not a cast");
 }
