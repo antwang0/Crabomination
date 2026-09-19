@@ -50,6 +50,11 @@ pub enum ExtraManaKind {
     /// pip is picked independently by the same needs-aware heuristic as
     /// [`ExtraManaKind::AnyColor`].
     AnyColors(u32),
+    /// A fixed color, but only while the granting source carries at least
+    /// `n` counters of `kind` (Rikala, Homarid King — "if there are three or
+    /// more tide counters on Rikala, add an additional {U}"). Below the
+    /// threshold the grant adds nothing.
+    FixedWhileSourceCounters(crate::mana::Color, CounterType, u32),
 }
 
 /// serde default for `ReplaceDamageToSelfWithCounters.kind` — Phytohydra's
@@ -1406,6 +1411,12 @@ pub enum StaticEffect {
     /// dispatch off the `triggered_by_attack` candidate flag (and the
     /// self-source attack path in `combat.rs`).
     DoubleControllerAttackTriggers,
+    /// Ancient Greenwarden — "If a land entering causes a triggered ability
+    /// of a permanent you control to trigger, that ability triggers an
+    /// additional time." Read at trigger dispatch: a landfall trigger (the
+    /// `triggered_by_land_entry` candidate flag) or an ETB-caused trigger
+    /// whose entering subject is a land gets one extra fire per copy.
+    DoubleControllerLandEntryTriggers,
     /// CR 603.x — the filter-based sibling of `DoubleControllerTriggersOfType`:
     /// "If a triggered ability of a creature you control matching `filter`
     /// triggers, that ability triggers an additional time" (Delney, Streetwise
