@@ -2552,7 +2552,7 @@ pub(crate) fn cap_diagnosis(g: &GameState, actions: usize) -> String {
     use crate::game::StackItem;
     use std::fmt::Write;
 
-    fn tally(names: impl Iterator<Item = String>) -> Vec<(String, usize)> {
+    fn tally_all(names: impl Iterator<Item = String>) -> Vec<(String, usize)> {
         let mut out: Vec<(String, usize)> = Vec::new();
         for n in names {
             match out.iter_mut().find(|(k, _)| *k == n) {
@@ -2560,7 +2560,11 @@ pub(crate) fn cap_diagnosis(g: &GameState, actions: usize) -> String {
                 None => out.push((n, 1)),
             }
         }
-        out.sort_by_key(|b| std::cmp::Reverse(b.1));
+        out.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
+        out
+    }
+    fn tally(names: impl Iterator<Item = String>) -> Vec<(String, usize)> {
+        let mut out = tally_all(names);
         out.truncate(12);
         out
     }
@@ -2654,9 +2658,25 @@ pub(crate) fn cap_diagnosis(g: &GameState, actions: usize) -> String {
     if !on_stack.is_empty() {
         let _ = write!(s, "\n  stack: {}", render(&on_stack));
     }
-    let board = tally(g.battlefield.iter().map(|c| c.definition.name.to_string()));
-    if !board.is_empty() {
-        let _ = write!(s, "\n  board: {}", render(&board));
+    // ⚠ **PER SEAT, AND UNTRUNCATED.** A whole-battlefield tally sorted by
+    // count and cut to twelve rows is the wrong shape for the question a
+    // capped game actually asks — "which seat is looping, off what" — and it
+    // cost this run a second sweep: the eight-seat cap read `p5
+    // ActivateAbility#0 Eldrazi Spawn x7535` while the board line showed no
+    // Eldrazi Spawn at all, because seven Vampires and five Forests pushed
+    // the one-count rows past the cut. The action census names the seat; the
+    // board has to answer for the same seat or the two cannot be read
+    // together.
+    for (seat, _) in g.players.iter().enumerate() {
+        let board = tally_all(
+            g.battlefield
+                .iter()
+                .filter(|c| c.controller == seat)
+                .map(|c| c.definition.name.to_string()),
+        );
+        if !board.is_empty() {
+            let _ = write!(s, "\n  p{seat} board: {}", render(&board));
+        }
     }
     // Linked exiles ("until ~ leaves") name their source: a card whose link
     // points at a permanent that is itself linked back is a return loop.
