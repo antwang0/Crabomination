@@ -4568,16 +4568,21 @@ fn scry_inversion_scrys_and_draws_two() {
 
 // ── Cunning Rhetoric ───────────────────────────────────────────────────────
 
+/// Cunning Rhetoric — "whenever an opponent attacks you and/or one or more
+/// planeswalkers you control, exile the top card of **that player's**
+/// library. You may play that card for as long as it remains exiled, and you
+/// may spend mana as though it were mana of any color to cast it." The
+/// trigger was already right; the payload was a flat drain of 1. Found by
+/// `scripts/audit_synthesised_name.py`.
 #[test]
-/// "Whenever an opponent attacks you .." — the trigger is the attack, not a
-/// cast (it shipped on `SpellCast`; the trigger columns, 2026-09-10). The
-/// payload is still this file's placeholder drain.
-fn cunning_rhetoric_triggers_when_an_opponent_attacks_you() {
+fn cunning_rhetoric_exiles_the_attackers_top_card_and_grants_a_may_play() {
     use crabomination::game::types::{Attack, AttackTarget, TurnStep};
     let mut g = two_player_game();
     let _rhetoric = g.add_card_to_battlefield(0, catalog::cunning_rhetoric());
     let attacker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     g.clear_sickness(attacker);
+    let top = g.add_card_to_library(1, catalog::lightning_bolt());
+    g.add_card_to_library(0, catalog::island()); // ours must be left alone
     let life_us_before = g.players[0].life;
     let life_opp_before = g.players[1].life;
     g.active_player_idx = 1;
@@ -4587,8 +4592,38 @@ fn cunning_rhetoric_triggers_when_an_opponent_attacks_you() {
         attacker, target: AttackTarget::Player(0),
     }])).expect("attack");
     drain_stack(&mut g);
-    assert_eq!(g.players[0].life, life_us_before + 1, "drain gain 1 on being attacked");
-    assert_eq!(g.players[1].life, life_opp_before - 1, "drain loss 1");
+    assert!(g.exile.iter().any(|c| c.id == top),
+        "the ATTACKER's top card is exiled, not ours");
+    assert_eq!(g.players[0].life, life_us_before, "no drain — that was invented");
+    assert_eq!(g.players[1].life, life_opp_before);
+    assert_eq!(g.players[0].library.len(), 1, "our own library is untouched");
+}
+
+/// …and one card a combat, not one a creature (CR 603.2c — "and/or one or
+/// more planeswalkers" is a batch).
+#[test]
+fn cunning_rhetoric_exiles_one_card_for_a_whole_attack() {
+    use crabomination::game::types::{Attack, AttackTarget, TurnStep};
+    let mut g = two_player_game();
+    let _rhetoric = g.add_card_to_battlefield(0, catalog::cunning_rhetoric());
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(a);
+    g.clear_sickness(b);
+    for _ in 0..4 {
+        g.add_card_to_library(1, catalog::lightning_bolt());
+    }
+    let before = g.players[1].library.len();
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: a, target: AttackTarget::Player(0) },
+        Attack { attacker: b, target: AttackTarget::Player(0) },
+    ])).expect("two attackers");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].library.len(), before - 1,
+        "two attackers, one exiled card");
 }
 
 // `frostpyre_arcanist_only_once_each_turn` is deleted with the invented

@@ -3191,37 +3191,15 @@ fn glaring_fleshraker_spawns_on_colorless_cast_and_pings_on_colorless_etb() {
         "each colorless creature entering deals 1 to each opponent");
 }
 
-#[test]
-fn detectives_phoenix_dies_schedules_delayed_return() {
-    let mut g = two_player_game();
-    let phoenix = g.add_card_to_battlefield(0, catalog::detectives_phoenix());
-    g.clear_sickness(phoenix);
-    let dt_before = g.delayed_triggers.len();
-    g.remove_to_graveyard_with_triggers(phoenix);
-    drain_stack(&mut g);
-    // A delayed-return trigger should be scheduled (matches Goryo's
-    // shape — at next end step the body fires).
-    assert!(g.delayed_triggers.len() > dt_before,
-        "Delayed return trigger scheduled");
-}
+// The two `detectives_phoenix_*` tests are deleted with the invented
+// "dies → return to hand at the next end step if you control a Detective"
+// trigger they exercised — a clause the printed card does not have (found by
+// `scripts/audit_synthesised_name.py`). What it does print is Bestow—{R},
+// Collect evidence 6, which has no primitive; the card is 🟡 in
+// `INCOMPLETE_CARDS.md` and its remaining body (2/2 Enchantment Creature with
+// flying and haste) has no behaviour a test could assert that
+// `core_rules` does not already own.
 
-#[test]
-fn detectives_phoenix_returns_at_end_step_only_with_a_detective() {
-    // With a Detective in play the end-step body returns the Phoenix to
-    // hand; the conditional gate (CR 603.4) is satisfied.
-    let mut g = two_player_game();
-    let phoenix = g.add_card_to_battlefield(0, catalog::detectives_phoenix());
-    g.clear_sickness(phoenix);
-    g.add_card_to_battlefield(0, catalog::lonis_genetics_expert()); // Otter Detective
-    g.remove_to_graveyard_with_triggers(phoenix);
-    drain_stack(&mut g);
-    for _ in 0..40 {
-        if g.players[0].hand.iter().any(|c| c.id == phoenix) { break; }
-        g.perform_action(GameAction::PassPriority).unwrap();
-    }
-    assert!(g.players[0].hand.iter().any(|c| c.id == phoenix),
-        "Phoenix returns to hand at end step while a Detective is in play");
-}
 
 #[test]
 fn detectives_phoenix_stays_in_graveyard_without_a_detective() {

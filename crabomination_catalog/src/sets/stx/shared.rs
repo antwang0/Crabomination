@@ -119,9 +119,11 @@ pub fn tend_the_pests() -> CardDefinition {
 
 // ── Spirit Summoning (Lesson) ──────────────────────────────────────────────
 
-/// Spirit Summoning — {2}{R}{W} Sorcery — Lesson. Real Oracle: "Create a
-/// 3/2 red and white Spirit creature token." (No keywords — the previous
-/// synthesized white-lifelink token was wrong.)
+/// Spirit Summoning — {1}{R/W}{R/W} Sorcery — Lesson (STX). "Create a 3/2
+/// red and white Spirit creature token."
+///
+/// ⚠ The doc used to read {2}{R}{W} over a body that already spelled the two
+/// hybrid pips correctly.
 pub fn spirit_summoning() -> CardDefinition {
     let spirit = TokenDefinition {
         name: "Spirit".to_string(),

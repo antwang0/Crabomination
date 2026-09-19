@@ -30,18 +30,16 @@ use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
 
 // ── Sigardian Savior (synthesised STX 2021 white finisher) ────────────────
 
-/// Sigardian Savior — {3}{W}{W}, 3/3 Angel (synthesised STX
-/// white-tribal flavor). "Flying. When this creature enters, return
-/// up to two target creature cards with mana value 2 or less from
-/// your graveyard to the battlefield."
+/// Sigardian Savior — {3}{W}{W} 3/3 Angel with Flying. "When this creature
+/// enters, **if you cast it**, return **up to two** target creature cards
+/// with mana value 2 or less from your graveyard to the battlefield."
 ///
-/// Push (modern_decks, NEW, `stx::extras`): A 5-mana flying body
-/// with a 2-for-1 reanimation rider. The "up to two" multi-target is
-/// approximated as a single target return (engine-wide multi-target
-/// gap). Wired via ETB `Effect::Move` against a creature card in
-/// your graveyard with `ManaValueAtMost(2)`. Tests:
-/// `sigardian_savior_is_a_five_mana_four_four_flying_angel`,
-/// `sigardian_savior_etb_returns_low_mv_creature_card`.
+/// ⚠ Two halves of the printed clause were missing and the doc said the
+/// multi-target one was an "engine-wide gap" — `Effect::ApplyToTargets`
+/// (`min_targets: 0` is "up to N") has covered it for a while, and
+/// `Predicate::TriggerSourceEnteredByCast` is the cast gate, so a reanimated
+/// or tokened Savior no longer re-fires. Found by
+/// `scripts/audit_synthesised_name.py`.
 pub fn sigardian_savior() -> CardDefinition {
     CardDefinition {
         name: "Sigardian Savior",
@@ -55,18 +53,18 @@ pub fn sigardian_savior() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Move {
-                what: Selector::one_of(Selector::CardsInZone {
-                    who: PlayerRef::You,
-                    zone: crate::card::Zone::Graveyard,
-                    filter: SelectionRequirement::Creature
-                        .and(SelectionRequirement::ManaValueAtMost(2)),
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource)
+                .with_filter(Predicate::TriggerSourceEnteredByCast),
+            effect: Effect::ApplyToTargets {
+                max_targets: 2,
+                min_targets: 0,
+                filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::InYourGraveyard)
+                    .and(SelectionRequirement::ManaValueAtMost(2)),
+                effect: Box::new(Effect::Move {
+                    what: Selector::Target(0),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
                 }),
-                to: ZoneDest::Battlefield {
-                    controller: PlayerRef::You,
-                    tapped: false,
-                },
             },
         }],
         ..Default::default()
@@ -185,8 +183,8 @@ pub fn daring_diversion() -> CardDefinition {
 
 // ── Possibility Storm (synthesised STX Prismari reprint flavor) ───────────
 
-/// Possibility Storm — {3}{R}{R} Enchantment (synthesised STX Prismari
-/// reprint flavor of Lorwyn). "Whenever a player casts a spell from
+/// Possibility Storm — {3}{R}{R} Enchantment (Lorwyn). "Whenever a player
+/// casts a spell from
 /// their hand, that player exiles it, then exiles cards from the top
 /// of their library until they exile a card that shares a card type
 /// with it. That player may cast that card without paying its mana
@@ -1749,37 +1747,26 @@ pub fn pop_quiz_lecturer() -> CardDefinition {
 
 // ── Brilliant Restoration ──────────────────────────────────────────────────
 
-/// Brilliant Restoration — {3}{W}{W}{W}{W} Sorcery (synthesised STX
-/// Silverquill flavor). "Return target creature card from your
-/// graveyard to the battlefield. You gain 2 life."
+/// Brilliant Restoration — {3}{W}{W}{W}{W} Sorcery. "Return **all** artifact
+/// and enchantment cards from your graveyard to the battlefield."
 ///
-/// 5-mana reanimation with a lifegain rider — fits Silverquill's
-/// lifegain payoffs (Light of Promise, Promising Duskmage). Wired
-/// as `Seq(Move(target creature in gy → bf), GainLife 2)`.
-/// Tests: `brilliant_restoration_returns_creature_card_and_gains_life`,
-/// `brilliant_restoration_is_a_five_mana_white_sorcery`.
+/// ⚠ It shipped as "return **one target creature** card from your graveyard,
+/// gain 2 life" — a different card at the same cost. Found by
+/// `scripts/audit_synthesised_name.py`. No target and no lifegain: the whole
+/// clause is a mass return of two card types.
 pub fn brilliant_restoration() -> CardDefinition {
     CardDefinition {
         name: "Brilliant Restoration",
         cost: cost(&[generic(3), w(), w(), w(), w()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
-            Effect::Move {
-                what: Selector::one_of(Selector::CardsInZone {
-                    who: PlayerRef::You,
-                    zone: crate::card::Zone::Graveyard,
-                    filter: SelectionRequirement::Creature,
-                }),
-                to: ZoneDest::Battlefield {
-                    controller: PlayerRef::You,
-                    tapped: false,
-                },
+        effect: Effect::Move {
+            what: Selector::CardsInZone {
+                who: PlayerRef::You,
+                zone: crate::card::Zone::Graveyard,
+                filter: SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
             },
-            Effect::GainLife {
-                who: Selector::You,
-                amount: Value::Const(2),
-            },
-        ]),
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+        },
         ..Default::default()
     }
 }

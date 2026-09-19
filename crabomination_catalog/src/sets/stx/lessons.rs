@@ -306,35 +306,45 @@ pub fn mascot_interpretation() -> CardDefinition {
 
 // ── Reduce // Rubble ────────────────────────────────────────────────────────
 
-/// Reduce // Rubble — {2}{U}{2}{R} Sorcery — Lesson (synthesised STX
-/// Lorehold flavor). "Reduce // Rubble deals 3 damage to target
-/// creature or planeswalker. Learn."
+/// Reduce // Rubble — {2}{U} Instant // {2}{R} Sorcery, an **Amonkhet split
+/// card with Aftermath** (CR 702.127). Reduce counters target spell unless
+/// its controller pays {3}; Rubble, castable only from the graveyard and then
+/// exiled, makes up to three target lands not untap during their controller's
+/// next untap step.
 ///
-/// A red Lesson sized for early creature removal + the Learn rider
-/// (approximated as Draw 1 — engine-wide gap). Pairs with Mascot
-/// Interpretation (U) and Guiding Voice (W) as the early Lesson
-/// cycle.
+/// ⚠ It is not a Lesson and it is not in Strixhaven. It shipped here as a
+/// `SpellSubtype::Lesson` sorcery dealing 3 damage plus Learn — an invented
+/// card under a printed name, in the Lessons module, where the module's own
+/// header lists it among the printed Lesson cycle. Found by
+/// `scripts/audit_synthesised_name.py`. It stays in this file so the factory
+/// path does not move; the Lesson tag is gone.
 pub fn reduce_rubble() -> CardDefinition {
+    use crate::card::{SplitCard, SplitHalf};
     CardDefinition {
         name: "Reduce // Rubble",
-        cost: cost(&[generic(2), u(), generic(2), r()]),
-        card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes {
-            spell_subtypes: vec![SpellSubtype::Lesson],
-            ..Default::default()
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::CounterUnlessPaid {
+            what: target_filtered(SelectionRequirement::IsSpellOnStack),
+            mana_cost: cost(&[generic(3)]),
+            exile: false,
+            extra_generic: None,
+            if_paid: None,
         },
-        effect: Effect::Seq(vec![
-            Effect::DealDamage {
-                to: target_filtered(
-                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
-                ),
-                amount: Value::Const(3),
+        split: Some(Box::new(SplitCard {
+            right: SplitHalf {
+                cost: cost(&[generic(2), r()]),
+                card_types: vec![CardType::Sorcery],
+                effect: Effect::ApplyToTargets {
+                    max_targets: 3,
+                    min_targets: 0,
+                    filter: SelectionRequirement::Land,
+                    effect: Box::new(Effect::SkipNextUntap { what: Selector::Target(0) }),
+                },
             },
-            // Learn (CR 701.45) — reveal a Lesson into hand or discard-to-draw.
-            Effect::Learn {
-                who: PlayerRef::You,
-            },
-        ]),
+            fuse: false,
+            aftermath: true,
+        })),
         ..Default::default()
     }
 }

@@ -1069,16 +1069,13 @@ pub fn witherbloom_apprenticeship() -> CardDefinition {
 
 // ── Wandering Mind (STX-flavor Magecraft loot) ─────────────────────────────
 
-/// Wandering Mind — {1}{U}{R} Creature — Spirit Wizard, 2/1 (synthesised STX
-/// Prismari-flavor). "Flying / Magecraft — Whenever you cast or copy an
-/// instant or sorcery spell, scry 1."
+/// Wandering Mind — {1}{U}{R} Creature — **Horror**, 2/1. "Flying. / When
+/// this creature enters, look at the top six cards of your library. You may
+/// reveal a noncreature, nonland card from among them and put it into your
+/// hand. Put the rest on the bottom of your library in a random order."
 ///
-/// Push (modern_decks, NEW, `stx::extras`): Cheap blue flyer with a
-/// scry-per-cast Magecraft rider — turns each instant or sorcery into
-/// a filter for the next draw. Wired via the existing
-/// `effect::shortcut::magecraft(...)` helper. Tests:
-/// `wandering_mind_magecraft_scrys_on_instant_cast`,
-/// `wandering_mind_is_a_two_mana_one_three_flying_spirit_wizard`.
+/// ⚠ The body is the printed card; the doc was still the synthesised one it
+/// replaced (a Spirit Wizard with a Magecraft scry).
 pub fn wandering_mind() -> CardDefinition {
     CardDefinition {
         name: "Wandering Mind",
@@ -1156,19 +1153,13 @@ pub fn lecturing_loxodon() -> CardDefinition {
 
 // ── Sequence Engine (synthesised STX Lorehold tutor) ────────────────────────
 
-/// Sequence Engine — {2}{G} Sorcery (synthesised STX Lorehold
-/// flavor). "Reveal cards from the top of your library until you
-/// reveal an instant or sorcery card. Put it into your hand and the
-/// rest on the bottom of your library in a random order."
+/// Sequence Engine — {2}{G} **Artifact**. "{X}, {T}: Exile target creature
+/// card with mana value X from a graveyard. Create a 0/0 green and blue
+/// Fractal creature token. Put X +1/+1 counters on it. Activate only as a
+/// sorcery."
 ///
-/// Push (modern_decks, NEW, `stx::extras`): A red-white IS tutor —
-/// the Lorehold answer to Mystical Tutor / Vampiric Tutor at a higher
-/// cost. Wired via `Effect::RevealUntilFind { find: IS, to: Hand,
-/// miss_dest: GraveyardOrLibrary }` — misses go to graveyard
-/// (`MissDest::Graveyard`), which is the engine's default reveal
-/// behaviour. Tests:
-/// `sequence_engine_tutors_an_instant_to_hand`,
-/// `sequence_engine_is_a_four_mana_lorehold_sorcery`.
+/// ⚠ The body is the printed card; the doc was still the synthesised one it
+/// replaced (a green sorcery that revealed until an instant or sorcery).
 pub fn sequence_engine() -> CardDefinition {
     CardDefinition {
         name: "Sequence Engine",
@@ -1255,24 +1246,26 @@ pub fn curriculum_crab() -> CardDefinition {
 
 // ── Walk the Plank (synthesised STX-flavor removal) ────────────────────────
 
-/// Pyrotechnics — {4}{R} Sorcery (synthesised STX Prismari-flavor
-/// reprint of the classic burn variant). "Pyrotechnics deals 4 damage
-/// divided as you choose among any number of target creatures and/or
-/// planeswalkers."
+/// Pyrotechnics — {4}{R} Sorcery. "Pyrotechnics deals 4 damage divided as
+/// you choose among **any number of targets**."
 ///
-/// Push (modern_decks): 4 damage divided among up to four creature/
-/// planeswalker targets via `DealDamageDivided` (AutoDecider spreads
-/// evenly). Tests: `pyrotechnics_burns_target_creature_for_four`,
-/// `pyrotechnics_is_a_four_mana_red_sorcery`.
+/// ⚠ The doc used to quote "any number of target creatures and/or
+/// planeswalkers" and the body's filter matched it; the printed filter is
+/// `Any`, so a player is a legal target too. Four is the real ceiling either
+/// way (1 damage minimum a target).
 pub fn pyrotechnics() -> CardDefinition {
     CardDefinition {
         name: "Pyrotechnics",
         cost: cost(&[generic(4), r()]),
         card_types: vec![CardType::Sorcery],
+        // "…divided as you choose among **any number of targets**" — the
+        // printed filter is `Any`, so a player is a legal target too; it
+        // shipped restricted to creatures and planeswalkers. Four is the real
+        // ceiling either way (1 damage minimum a target).
         effect: Effect::DealDamageDivided {
             retaliate_to_source: false,
             total: Value::Const(4),
-            filter: SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+            filter: SelectionRequirement::Any,
             max_targets: 4,
         },
         ..Default::default()
@@ -1344,22 +1337,18 @@ pub fn final_payment() -> CardDefinition {
 
 // ── Witch's Cauldron (synthesised STX Witherbloom artifact) ───────────────
 
-/// Witch's Cauldron — {B} Artifact (synthesised STX Witherbloom).
-/// "{T}, Sacrifice a creature: You gain X life and draw a card, where X
-/// is the sacrificed creature's toughness."
+/// Witch's Cauldron — {B} Artifact (ELD). "{1}{B}, {T}, Sacrifice a
+/// creature: You gain **1** life and draw a card."
 ///
-/// Push (modern_decks, NEW, `stx::extras`): A Witherbloom sac-engine
-/// payoff — turns a fragile creature into life + a card. Wired via
-/// `Effect::SacrificeAndRemember` (resolution-time sacrifice that
-/// stamps `sacrificed_power` / `sacrificed_toughness`) followed by
-/// `Effect::GainLife { amount: Value::SacrificedToughness }`. The
-/// printed "X = sacrificed creature's toughness" rider is **faithfully
-/// wired** — a 2/2 bear → 2 life, a 1/4 Stormwild Capridor → 4 life.
-/// The sac is part of the activation cost (per printed Oracle), but
-/// we resolve it at body-time so the toughness scratch field is set
-/// for the lifegain. Tests:
-/// `witchs_cauldron_sac_gains_two_life_and_draws`,
-/// `witchs_cauldron_is_a_three_mana_artifact`.
+/// ⚠ The body is the printed card and the doc was not: it claimed the
+/// lifegain scaled with the sacrificed creature's toughness and called that
+/// "faithfully wired", over a `GainLife { amount: Const(1) }`. There is no
+/// toughness rider on this card. `INCOMPLETE_CARDS` carried the same claim.
+///
+/// 🟡 The sacrifice is an activation **cost** on the printed card and is
+/// resolved in the body here, so it happens on resolution rather than on
+/// announcement — a response can no longer be made to a creature that is
+/// already gone.
 pub fn witchs_cauldron() -> CardDefinition {
     CardDefinition {
         name: "Witch's Cauldron",
@@ -1451,17 +1440,12 @@ pub fn steady_stance() -> CardDefinition {
 
 // ── Tome of the Guildpact (synthesised STX colorless utility) ──────────────
 
-/// Tome of the Guildpact — {5} Artifact (synthesised STX colorless
-/// utility). Printed: "Whenever you cast a multicolored spell, draw a card.
-/// {T}: Add one mana of any color." Shipped until 2026-09-07 as an invented
-/// "{2}, {T}: Draw a card." under the real name; now the printed card.
+/// Tome of the Guildpact — {5} Artifact — Book. "Whenever you cast a
+/// multicolored spell, draw a card. / {T}: Add one mana of any color."
 ///
-/// Push (modern_decks, NEW, `stx::extras`): A 4-mana-rate cantrip
-/// rock that turns over time into card velocity. Wired as a single
-/// `ActivatedAbility { tap_cost: true, mana_cost: {2}, effect: Draw 1 }`.
-/// Tests:
-/// `tome_of_the_guildpact_is_a_two_mana_artifact`,
-/// `tome_of_the_guildpact_activation_draws_a_card`.
+/// ⚠ It shipped until 2026-09-07 as an invented "{2}, {T}: Draw a card."
+/// under the real name, and the second half of this doc still described that
+/// card afterwards. Both are gone; the body is the printed one.
 pub fn tome_of_the_guildpact() -> CardDefinition {
     CardDefinition {
         name: "Tome of the Guildpact",
@@ -1498,8 +1482,8 @@ pub fn tome_of_the_guildpact() -> CardDefinition {
 
 // ── Revitalize (M19 reprint flavored STX) ──────────────────────────────────
 
-/// Revitalize — {1}{W} Instant (Core Set 2019 reprint, synthesised STX
-/// flavor). "You gain 3 life. Draw a card."
+/// Revitalize — {1}{W} Instant (M19). "You gain 3 life. Draw a card." The
+/// body is the printed card; the doc used to call it a synthesised one.
 ///
 /// Push (modern_decks, NEW, `stx::extras`): Pure white card-velocity-
 /// plus-life — a one-card answer to the early "I'm bleeding" turns
@@ -1527,14 +1511,11 @@ pub fn revitalize() -> CardDefinition {
 
 // ── Grim Bounty (synthesised STX Witherbloom flavor) ───────────────────────
 
-/// Grim Bounty — {2}{B}{B} Instant (synthesised STX Witherbloom flavor).
-/// "Destroy target creature. Create a Treasure token."
+/// Grim Bounty — {2}{B}{B} Sorcery. "Destroy target creature **or
+/// planeswalker**. Create a Treasure token."
 ///
-/// Push (modern_decks, NEW, `stx::extras`): A 4-mana single-target
-/// removal that refunds half its cost via Treasure. Wired as
-/// `Seq(Destroy(target Creature), CreateToken(Treasure))`. Tests:
-/// `grim_bounty_destroys_target_creature_and_creates_treasure`,
-/// `grim_bounty_is_a_four_mana_black_instant`.
+/// ⚠ The planeswalker half of the target filter was missing (the card type
+/// had already been corrected from Instant to Sorcery).
 pub fn grim_bounty() -> CardDefinition {
     use crate::game::effects::treasure_token;
     CardDefinition {
@@ -1543,7 +1524,9 @@ pub fn grim_bounty() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::Destroy {
-                what: target_filtered(SelectionRequirement::Creature),
+                what: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                ),
             },
             Effect::CreateToken {
                 who: PlayerRef::You,
@@ -1807,15 +1790,12 @@ pub fn battle_mammoth() -> CardDefinition {
 
 // ── Mind Drain (synthesised STX Witherbloom flavor) ────────────────────────
 
-/// Mind Drain — {2}{B} Sorcery (synthesised STX Witherbloom flavor).
-/// "Each opponent discards two cards."
+/// Mind Drain — {2}{B} Sorcery. "**Target opponent** discards two cards,
+/// mills a card, and loses 1 life. You gain 1 life."
 ///
-/// Push (modern_decks, NEW, `stx::extras`): A 3-mana symmetric
-/// hand-attack — Mind Rot's "each opp" upgrade. Wired via
-/// `ForEach(EachOpponent) → Discard 2`. AutoDecider picks the first
-/// two cards in each opponent's hand. Tests:
-/// `mind_drain_makes_each_opp_discard_two`,
-/// `mind_drain_is_a_three_mana_black_sorcery`.
+/// ⚠ The body is the printed card — one seat, four clauses. The doc was
+/// still the synthesised one it replaced ("each opponent discards two"),
+/// which is the fan-out the target-clause class fixed.
 pub fn mind_drain() -> CardDefinition {
     CardDefinition {
         name: "Mind Drain",
@@ -1864,9 +1844,11 @@ pub fn hindering_light() -> CardDefinition {
 
 // ── Soul Shatter (STX Lorehold/Witherbloom flavor) ─────────────────────────
 
-/// Soul Shatter — {2}{B} Instant (synthesised STX Lorehold flavor).
-/// "Each opponent sacrifices a creature or planeswalker with the
-/// greatest mana value among permanents that player controls."
+/// Soul Shatter — {2}{B} Instant (THB). "Each opponent sacrifices a creature
+/// or planeswalker with the greatest mana value **among creatures and
+/// planeswalkers they control**." The body is the printed card; the doc used
+/// to call it a synthesised one and to widen the comparison to every
+/// permanent.
 ///
 /// Push (modern_decks): A 4-mana symmetric sweeper — each opp picks
 /// their highest-MV creature/PW to sacrifice. The "greatest mana
@@ -1897,8 +1879,8 @@ pub fn soul_shatter() -> CardDefinition {
 
 // ── Lurking Predators (Onslaught reprint, STX flavor) ──────────────────────
 
-/// Lurking Predators — {4}{G}{G} Enchantment (Onslaught reprint,
-/// synthesised STX Quandrix flavor). "Whenever an opponent casts a
+/// Lurking Predators — {4}{G}{G} Enchantment (Onslaught). "Whenever an
+/// opponent casts a
 /// spell, reveal the top card of your library. If it's a creature
 /// card, put it onto the battlefield. Otherwise, you may put it on the
 /// bottom of your library."
@@ -1946,14 +1928,9 @@ pub fn lurking_predators() -> CardDefinition {
 
 // ── Prowling Caracal (vanilla white aggro body) ────────────────────────────
 
-/// Prowling Caracal — {1}{W} Creature — Cat, 3/1 (synthesised STX
-/// flavor, originally Theros Beyond Death adjacent). Vanilla 3/2
-/// white aggro body — same stat-for-mana as the Watchwolf curve but
-/// mono-white.
-///
-/// Push (modern_decks, NEW, `stx::extras`): Curve-out white creature
-/// for any Silverquill aggro shell. Tests:
-/// `prowling_caracal_is_a_two_mana_three_two_cat`.
+/// Prowling Caracal — {1}{W} Creature — Cat, **3/1** vanilla (M19). The body
+/// is the printed card; the doc used to call it synthesised and to read 3/2
+/// in its prose while the P/T beside it was 3/1.
 pub fn prowling_caracal() -> CardDefinition {
     CardDefinition {
         name: "Prowling Caracal",
@@ -2125,27 +2102,32 @@ pub fn scry_inversion() -> CardDefinition {
 
 // ── Cunning Rhetoric (synthesised STX Silverquill flavor) ──────────────────
 
-/// Cunning Rhetoric — {2}{B} Enchantment (synthesised STX
-/// Silverquill flavor). "Whenever an opponent casts a spell, you gain
-/// 1 life and they lose 1 life."
+/// Cunning Rhetoric — {2}{B} Enchantment. "Whenever an opponent attacks you
+/// and/or one or more planeswalkers you control, exile the top card of that
+/// player's library. You may play that card for as long as it remains exiled,
+/// and you may spend mana as though it were mana of any color to cast it."
 ///
-/// Push (modern_decks, NEW, `stx::extras`): An anti-spell tax that
-/// punishes any opp-cast spell — a Silverquill life-drain payoff
-/// against control / combo decks. Wired via an `EventKind::SpellCast /
-/// OpponentControl` trigger that drains 1 from the triggering player.
-/// Tests: `cunning_rhetoric_drains_on_opp_cast`,
-/// `cunning_rhetoric_is_a_four_mana_wb_enchantment`.
+/// ⚠ The trigger was right and the **effect** was invented: a flat drain of 1.
+/// Found by `scripts/audit_synthesised_name.py`. `ControllerAttackedByOpponent`
+/// binds the attacking creature's controller into slot 0, which is the "that
+/// player's library" the exile reads; `once_per_batch` is CR 603.2c's "and/or
+/// one or more", so an alpha strike is one card, not one a creature.
 pub fn cunning_rhetoric() -> CardDefinition {
     CardDefinition {
         name: "Cunning Rhetoric",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Attacks, EventScope::ControllerAttackedByOpponent),
-            effect: Effect::Drain {
-                from: Selector::Player(PlayerRef::OwnerOf(Box::new(Selector::TriggerSource))),
-                to: Selector::You,
-                amount: Value::Const(1),
+            event: EventSpec::new(EventKind::Attacks, EventScope::ControllerAttackedByOpponent)
+                .once_per_batch(),
+            effect: Effect::ExileTopAndGrantMayPlay {
+                who: PlayerRef::Target(0),
+                count: Value::ONE,
+                duration: crate::card::MayPlayDuration::WhileExiled,
+                pay_any_color: true,
+                max_mana_value: None,
+                pay_own_cost: false,
+                uncast_penalty: None,
             },
         }],
         ..Default::default()
@@ -2215,17 +2197,11 @@ pub fn deans_list() -> CardDefinition {
 
 // ── Inkrise Infiltrator (STX 2021 Silverquill common) ─────────────────────
 
-/// Inkrise Infiltrator — {1}{B}, 1/2 Inkling Rogue (synthesised STX
-/// Silverquill flavor). "Menace. (This creature can't be blocked except
-/// by two or more creatures.)"
+/// Inkrise Infiltrator — {1}{B} 1/2 Human Ninja. "Flying. / {3}{B}: This
+/// creature gets +2/+2 until end of turn."
 ///
-/// Push (modern_decks, NEW, `stx::extras`): A 2-mana evasive Inkling
-/// body that scales with Inkling tribal anthems (Tenured Inkcaster,
-/// Promising Duskmage). Wired with bare `Keyword::Menace` — engine
-/// already enforces menace at combat-blocker validation. Pure vanilla
-/// body, no triggered abilities. Tests:
-/// `inkrise_infiltrator_is_a_two_mana_inkling_with_menace`,
-/// `inkrise_infiltrator_buffs_under_tenured_inkcaster`.
+/// ⚠ The body is the printed card; the doc was still the synthesised one it
+/// replaced (an Inkling Rogue with menace and no activation).
 pub fn inkrise_infiltrator() -> CardDefinition {
     CardDefinition {
         name: "Inkrise Infiltrator",

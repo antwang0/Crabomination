@@ -52,7 +52,6 @@ fn deans_list_takes_top_card_and_mills_rest() {
 fn reanimation_spells_return_creature_to_battlefield() {
     for (def, targeted, life_delta) in [
         (catalog::sigardian_savior(), false, None),
-        (catalog::brilliant_restoration(), false, Some(2)),
         (catalog::witherbloom_necromancy(), true, Some(-2)),
         (catalog::lorehold_resurgence(), true, None),
     ] {
@@ -72,6 +71,33 @@ fn reanimation_spells_return_creature_to_battlefield() {
             assert_eq!(g.players[0].life, life_before + d, "{}: life delta", name);
         }
     }
+}
+
+/// Brilliant Restoration — "return **all** artifact and enchantment cards
+/// from your graveyard to the battlefield". It shipped as a one-target
+/// creature reanimation with a 2-life rider, which is why it was in the
+/// reanimation table above; found by `scripts/audit_synthesised_name.py`.
+#[test]
+fn brilliant_restoration_returns_every_artifact_and_enchantment() {
+    let mut g = two_player_game();
+    let relic = g.add_card_to_graveyard(0, catalog::mind_stone());
+    let other = g.add_card_to_graveyard(0, catalog::sol_ring());
+    let ench = g.add_card_to_graveyard(0, catalog::phyrexian_arena());
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::brilliant_restoration());
+    rainbow_mana(&mut g);
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Brilliant Restoration castable for {3}{W}{W}{W}{W}");
+    drain_stack(&mut g);
+    for id in [relic, other, ench] {
+        assert!(g.battlefield_find(id).is_some(), "every artifact and enchantment came back");
+    }
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bear),
+        "the creature card stays in the graveyard");
+    assert_eq!(g.players[0].life, life_before, "no lifegain — that was invented");
 }
 
 // ── Sneaky Snacker ─────────────────────────────────────────────────────────
@@ -1182,6 +1208,71 @@ fn witherbloom_bramble_creates_pest_and_counters_creatures() {
         "bear has +1/+1 counter from fanout");
 }
 
+// ── Reduce // Rubble (AKH split with Aftermath) ────────────────────────────
+
+/// It shipped as a `SpellSubtype::Lesson` sorcery dealing 3 damage plus
+/// Learn — an invented card under a printed name, filed in the Lessons
+/// module. The real card is an Amonkhet split: Reduce counters unless its
+/// controller pays {3}, and Rubble (aftermath, CR 702.127) locks up to three
+/// lands' next untap. Found by `scripts/audit_synthesised_name.py`.
+#[test]
+fn reduce_counters_a_spell_whose_controller_cannot_pay_three() {
+    use crabomination::game::types::TurnStep;
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    let reduce = g.add_card_to_hand(0, catalog::reduce_rubble());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[1].mana_pool.add(Color::Red, 1); // exactly the Bolt, no {3} spare
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![],
+        mode: None, x_value: None,
+    })
+    .expect("opponent casts the Bolt");
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: reduce, target: Some(Target::Permanent(bolt)), additional_targets: vec![],
+        mode: None, x_value: None,
+    })
+    .expect("Reduce castable for {2}{U}");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt),
+        "the Bolt was countered — its controller could not pay {{3}}");
+    assert_eq!(g.players[0].life, 20, "and it never resolved");
+}
+
+/// Rubble is castable only from the graveyard and is exiled after (CR
+/// 702.127), and it locks up to three lands.
+#[test]
+fn rubble_aftermath_locks_three_lands_next_untap() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::reduce_rubble());
+    let card = g.players[0].remove_from_hand(id).unwrap();
+    g.players[0].graveyard.push(card);
+    let lands: Vec<_> = (0..3).map(|_| g.add_card_to_battlefield(1, catalog::forest())).collect();
+    for &l in &lands {
+        g.battlefield_find_mut(l).unwrap().tapped = true;
+    }
+    rainbow_mana(&mut g);
+    g.perform_action(GameAction::CastAftermath {
+        card_id: id,
+        target: Some(Target::Permanent(lands[0])),
+        additional_targets: vec![Target::Permanent(lands[1]), Target::Permanent(lands[2])],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Rubble castable from the graveyard");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == id), "aftermath exiles the card");
+    for &l in &lands {
+        assert!(g.battlefield_find(l).unwrap().skip_next_untap,
+            "each targeted land skips its next untap");
+    }
+}
+
 // ── Damage marks on a 4/4 Serra Angel (table) ──────────────────────────────
 
 #[test]
@@ -1189,7 +1280,6 @@ fn targeted_damage_marks_on_serra_angel() {
     for (def, dmg) in [
         (catalog::prismari_spark(), 2),
         (catalog::prismari_arsonist(), 2),
-        (catalog::reduce_rubble(), 3),
     ] {
         let name = def.name;
         let mut g = two_player_game();

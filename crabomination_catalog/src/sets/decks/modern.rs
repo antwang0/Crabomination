@@ -16059,11 +16059,14 @@ pub fn relic_of_progenitus() -> CardDefinition {
     }
 }
 
-/// Glaring Fleshraker — {2}{C} Artifact Creature — Construct. 2/2. "When
-/// this creature enters, it deals 2 damage to any target."
+/// Glaring Fleshraker — {2}{C} Creature — Eldrazi Drone, 2/2. "Whenever you
+/// cast a colorless spell, create a 0/1 colorless Eldrazi Spawn creature
+/// token with 'Sacrifice this token: Add {C}.' / Whenever another colorless
+/// creature you control enters, this creature deals 1 damage to each
+/// opponent."
 ///
-/// Synthesised body for the ⏳ cube row. Colorless artifact body with
-/// an ETB ping.
+/// ⚠ The body is the printed card; the doc was still the synthesised one it
+/// replaced (an artifact Construct with a 2-damage ETB ping).
 pub fn glaring_fleshraker() -> CardDefinition {
     CardDefinition {
         name: "Glaring Fleshraker",
@@ -16106,17 +16109,22 @@ pub fn glaring_fleshraker() -> CardDefinition {
     }
 }
 
-/// Detective's Phoenix — {2}{R} Creature — Phoenix. 2/2 Flying Haste.
-/// "When this creature dies, return it to its owner's hand at the
-/// beginning of the next end step."
+/// Detective's Phoenix — {2}{R} Enchantment Creature — Phoenix, 2/2 with
+/// Flying and haste. Printed: "Bestow—{R}, Collect evidence 6. / Enchanted
+/// creature gets +2/+2 and has flying and haste. / You may cast this card
+/// from your graveyard using its bestow ability."
 ///
-/// Synthesised body for the ⏳ cube row. Approximation of the printed
-/// Phoenix recursion: rather than a "return from gy at end step"
-/// trigger, the simpler "dies → bounce to hand at NextEndStep" rider
-/// uses the existing `DelayUntil` primitive.
+/// ⚠ It shipped with an invented "dies → return to hand at the next end step
+/// if you control a Detective" trigger — a clause the card does not print,
+/// with a doc comment calling it "the printed conditional gate". Found by
+/// `scripts/audit_synthesised_name.py`.
+///
+/// 🟡 The body is the printed body and nothing else: Bestow (CR 702.103) has
+/// no `Keyword::Bestow` primitive and Collect evidence has no cost form, so
+/// the whole bestow half — the alternative cost, the Aura mode, its +2/+2 and
+/// keyword grant, and the graveyard-cast permission that hangs off it — is
+/// the named gap. See `INCOMPLETE_CARDS.md`.
 pub fn detectives_phoenix() -> CardDefinition {
-    use crate::effect::shortcut::on_dies;
-    use crate::effect::{DelayedTriggerKind, ZoneDest};
     CardDefinition {
         name: "Detective's Phoenix",
         cost: cost(&[generic(2), r()]),
@@ -16128,23 +16136,6 @@ pub fn detectives_phoenix() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::Haste],
-        // Dies → at the next end step, return to hand *only if* you control a
-        // Detective (the printed conditional gate, CR 603.4 intervening-if at
-        // the delayed trigger's resolution).
-        triggered_abilities: vec![on_dies(Effect::DelayUntil {
-            kind: DelayedTriggerKind::NextEndStep,
-            body: Box::new(Effect::If {
-                cond: crate::effect::Predicate::SelectorExists(Selector::EachPermanent(
-                    SelectionRequirement::HasCreatureType(CreatureType::Detective)
-                        .and(SelectionRequirement::ControlledByYou),
-                )),
-                then: Box::new(Effect::Move {
-                    what: Selector::This,
-                    to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::This))),
-                }),
-                else_: Box::new(Effect::Noop),
-            }),
-        })],
         ..Default::default()
     }
 }
@@ -18483,12 +18474,12 @@ pub fn chainers_edict() -> CardDefinition {
     }
 }
 
-/// Mai, Scornful Striker — {1}{B} Creature — Human Rogue. 2/2 with
-/// Menace. "Whenever this creature attacks, each opponent loses 1
-/// life."
+/// Mai, Scornful Striker — {1}{B} Legendary Creature — Human Noble Ally,
+/// 2/2. "First strike. / Whenever a player casts a noncreature spell, they
+/// lose 2 life."
 ///
-/// Synthesised body for the ⏳ cube row. Menace evasion + life-drip
-/// payoff fills the 2-drop curve in B aggro shells.
+/// ⚠ The body is the printed card; the doc was still the synthesised one it
+/// replaced (a Human Rogue with menace and an attack drain).
 pub fn mai_scornful_striker() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],

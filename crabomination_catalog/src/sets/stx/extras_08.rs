@@ -30,16 +30,20 @@ use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
 
 // ── Silverquill Lecturer (synthesised STX Silverquill) ──────────────────────
 
-/// Silverquill Lecturer — {4}{W}, 3/3 Human Cleric.
+/// Silverquill Lecturer — {4}{W} 3/3 Kor Wizard. "Creature spells you cast
+/// have demonstrate. (Whenever you cast a creature spell, you may copy it. If
+/// you do, choose an opponent to also copy it. Each copy becomes a token.)"
 ///
-/// Printed Oracle (synthesised): "Lifelink / Magecraft — Whenever you
-/// cast or copy an instant or sorcery spell, target creature gets
-/// +1/+1 until end of turn."
+/// ⚠ It shipped with an invented Magecraft pump ("whenever you cast or copy
+/// an instant or sorcery, target creature gets +1/+1") under the printed
+/// name. Found by `scripts/audit_synthesised_name.py`.
 ///
-/// A Silverquill lifelink Magecraft payoff — the body stays a small
-/// 2/2 lifelink, but each spell pumps a chosen creature (often the
-/// Lecturer itself for life cascades). Pairs with Inkling tokens and
-/// Tenured Inkcaster's anthem for explosive lifegain swings.
+/// 🟡 The body is now the printed body and the ability is the named gap.
+/// Granting demonstrate wants a `StaticEffect::YourCreatureSpellsHave…` in
+/// the shape of `YourISSpellsHaveReplicate` — and `Effect::Demonstrate` reads
+/// `ctx.source` as *the spell on the stack*, so it cannot be fired from a
+/// permanent's own `SpellCast` trigger without a `TriggerSource` variant.
+/// Two pieces, one card; see `INCOMPLETE_CARDS.md`.
 pub fn silverquill_lecturer() -> CardDefinition {
     CardDefinition {
         name: "Silverquill Lecturer",
@@ -52,12 +56,6 @@ pub fn silverquill_lecturer() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![],
-        triggered_abilities: vec![magecraft(Effect::PumpPT {
-            what: target_filtered(SelectionRequirement::Creature),
-            power: Value::Const(1),
-            toughness: Value::Const(1),
-            duration: Duration::EndOfTurn,
-        })],
         ..Default::default()
     }
 }

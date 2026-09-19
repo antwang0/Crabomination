@@ -277,6 +277,41 @@ fn cr_603_2c_once_per_batch_fires_once_a_batch_and_again_next_batch() {
     );
 }
 
+/// CR 603.2c on the **defender's** side: "whenever an opponent attacks you
+/// and/or one or more planeswalkers you control" is one trigger a
+/// declaration, not one an attacker.
+///
+/// ⚠ The `ControllerAttackedByOpponent` listener walk in `combat.rs` runs
+/// once per attacker and pushed with **no once-key at all**, so
+/// `once_per_batch` was silently ignored on every card with that scope —
+/// Cunning Rhetoric exiled a card for each attacking creature. The key is
+/// carried through the listener list now, and the batch set is declared
+/// outside the per-attacker loop because the batch is the whole declaration.
+#[test]
+fn cr_603_2c_a_defender_side_attack_trigger_fires_once_a_declaration() {
+    let mut g = two_player_game();
+    let _rhetoric = g.add_card_to_battlefield(0, catalog::cunning_rhetoric());
+    let attackers: Vec<_> =
+        (0..3).map(|_| g.add_card_to_battlefield(1, catalog::grizzly_bears())).collect();
+    for &a in &attackers {
+        g.clear_sickness(a);
+    }
+    for _ in 0..6 {
+        g.add_card_to_library(1, catalog::forest());
+    }
+    let before = g.players[1].library.len();
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareAttackers(
+        attackers.iter().map(|&a| Attack { attacker: a, target: AttackTarget::Player(0) }).collect(),
+    ))
+    .expect("three attackers");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].library.len(), before - 1,
+        "three attackers, one trigger");
+}
+
 /// CR 603.2c — "whenever one or more creatures you control with flying deal
 /// combat damage to a player" (Mu Yanling, Wind Rider) fires once for two
 /// flyers connecting in one damage batch, not once per dealer.

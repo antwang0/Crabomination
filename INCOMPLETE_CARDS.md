@@ -447,6 +447,34 @@ Three of the first eleven kept a documented residual rather than shipping whole:
 | Sproutback Trudge | the graveyard recursion is Gravecrawler's shape — pay the cost, `Move` to the battlefield — so it is **not a cast**: nothing counters it and no cast trigger sees it. And "this spell costs {X} less to cast, where X is the amount of life you gained this turn" is **absent** | no `StaticEffect` reduces a card's own cost by a `Value`; the `SelfCostReduced*` family is one variant per counted thing (`…PerDiscardThisTurn`, `…PerSpellCastThisTurn`, …). A `SelfCostReducedByValue` would close this one and generalise the whole family |
 | Tome of the Infinite | the activation's `Draw 1` stands in for "conjure a random card from its spellbook" | Alchemy conjure has no primitive (pre-existing row below). The invented ETB scry beside it is gone |
 
+## The synthesised-name class (2026-09-19) — closed on the docs, and what it left
+
+`scripts/audit_synthesised_name.py` reads **0**. ⚠ **Read that as a hygiene
+ratchet, not a proof about bodies**: it asks whether a factory's doc comment
+still *claims* to be a synthesised card under a name Scryfall owns. All 27
+rows were read body-against-oracle by hand this run — eight were wrong cards
+and were rewritten, the rest were correct bodies under docs describing the
+card they used to be, which is `audit_doc_drift`'s 338-stale-comments
+population showing up again by a different route.
+
+Wrong bodies fixed: **Cunning Rhetoric** (the trigger was right, the payload
+was a flat drain instead of exile-and-may-play), **Brilliant Restoration**
+(one target creature plus 2 life, where the print returns *all* artifact and
+enchantment cards), **Reduce // Rubble** (a Lesson sorcery dealing 3 damage,
+where the print is an Amonkhet split with Aftermath), **Detective's Phoenix**
+(an invented dies-trigger), **Silverquill Lecturer** (an invented Magecraft
+pump), **Sigardian Savior** (one target, no cast gate), **Grim Bounty** (no
+planeswalker half) and **Pyrotechnics** (creatures and planeswalkers only,
+where the print says any number of *targets*).
+
+Residuals:
+
+| Card | Residual | Why |
+|---|---|---|
+| Detective's Phoenix | the whole **bestow** half — the alternative cost, the Aura mode, its +2/+2 and keyword grant, and the graveyard-cast permission that hangs off it | CR 702.103 Bestow has no `Keyword::Bestow` and Collect evidence has no cost form. The body is the printed 2/2 Enchantment Creature with flying and haste and nothing else |
+| Silverquill Lecturer | "creature spells you cast **have demonstrate**" | two pieces: a `StaticEffect::YourCreatureSpellsHave…` in the shape of `YourISSpellsHaveReplicate`, and a `TriggerSource` variant of `Effect::Demonstrate` — the existing one reads `ctx.source` as *the spell on the stack*, so it cannot fire from a permanent's own `SpellCast` trigger |
+| Witch's Cauldron | the sacrifice is an activation **cost** on the print and is resolved in the body here | it happens on resolution rather than on announcement, so a response can no longer be made to a creature that is already gone. ⚠ Its old row in this file claimed the lifegain scaled with the sacrificed creature's toughness; the printed card gains **1**, the body always did, and the doc comment asserted the opposite |
+
 ### Body-only stubs — entire signature ability missing (all ✓ code-verified)
 | Card | Location | Missing |
 |---|---|---|
@@ -658,7 +686,6 @@ all fixed in one commit (tests re-pinned to the printed costs):
 | Ember Hauler | {2}, sac | {1}, sac |
 | Tome of the Infinite | {2}, {T} (a synthesized cantrip under an Alchemy name) | {U}, {T}; the draw stands in for conjure |
 | Waker of Waves | {2}{U}{U}, discard | {1}{U}, discard |
-| Witch's Cauldron | {T}, sac: gain the toughness, draw | {1}{B}, {T}, sac: gain 1, draw |
 | Tome of the Guildpact | an invented "{2}, {T}: draw" under a real name | "whenever you cast a multicolored spell, draw"; {T}: add any colour |
 | Wizard's Rockets | {T}, sac: one mana of any colour (free) | {X}, {T}, sac: X mana — modelled at X = 1 ({1}), the documented approximation and the one row the column still lists |
 

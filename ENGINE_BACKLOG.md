@@ -120,6 +120,25 @@ global table — a different reader, not a flag on this one."
   the first row (`DestroyNoRegen`) was written for one card and named eight.
   **14 → 0** over 392 bodies with a needle. Rows so far: `DestroyNoRegen`,
   `CantBeRegeneratedThisTurn`, `once_per_turn: true`, `sorcery_speed: true`.
+- **`scripts/audit_synthesised_name.py`** — the fourth column, and the only
+  one that is not about the body: a factory whose **doc comment** still claims
+  to be a synthesised card under a name Scryfall owns. **27 → 0.** Eight were
+  wrong cards; nineteen were correct bodies under a doc describing the card
+  they used to be. ⚠ It is a hygiene ratchet on the docs, not a proof about
+  bodies — the 27 were read body-against-oracle by hand.
+
+📐 **And the DEFENDER-side batching bug the last of them exposed.** Cunning
+Rhetoric prints "whenever an opponent attacks you **and/or one or more**
+planeswalkers you control", so it is one trigger a declaration (CR 603.2c).
+`combat.rs`'s `ControllerAttackedByOpponent` listener walk runs once per
+attacker and pushed with **no once-key at all** — `once_per_batch` was
+silently ignored for every card with that scope, and three attackers exiled
+three cards. The key is carried through the listener list now and the batch
+set is declared outside the per-attacker loop, because the batch is the whole
+declaration. `cr_603_2c_a_defender_side_attack_trigger_fires_once_a_declaration`
+pins it. **The attacker-side loop had the key all along, which is why nobody
+saw it: the two halves of one rule were written twice and only one was
+finished.**
 
 **⚠ And the rider column found the shape the other two could not: a card
 whose VERB is right.** Mortify prints "destroy target creature or

@@ -871,21 +871,13 @@ fn prismari_inventor_magecraft_mints_treasure() {
     assert!(treasures_after > treasures_before, "Inventor minted a Treasure on instant cast");
 }
 
-#[test]
-fn silverquill_lecturer_magecraft_pumps_target_creature() {
-    let mut g = two_player_game();
-    let _sl = g.add_card_to_battlefield(0, catalog::silverquill_lecturer());
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    let p_before = g.battlefield_find(bear).unwrap().power();
-    g.perform_action(GameAction::CastSpell {
-        card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
-    }).expect("Bolt castable");
-    drain_stack(&mut g);
-    let bear_card = g.battlefield_find(bear).unwrap();
-    assert!(bear_card.power() > p_before, "Lecturer Magecraft pumped a friendly creature");
-}
+// `silverquill_lecturer_magecraft_pumps_target_creature` is deleted with the
+// invented Magecraft ability it exercised. The printed card is "creature
+// spells you cast have demonstrate" and nothing else, and granting demonstrate
+// is the named gap in `INCOMPLETE_CARDS.md` — there is no behaviour left on
+// the card to assert, and a test that only reads its P/T would be the pure
+// data test CLAUDE.md forbids. Magecraft itself is covered by the cards that
+// actually print it.
 
 #[test]
 fn lorehold_researcher_dies_returns_instant_from_graveyard() {

@@ -1755,6 +1755,14 @@ impl GameState {
         // today, read so neither walk can drop one silently.
         let own_attacks_grant = self.any_granted_trigger_of_kind(&EventKind::Attacks);
         let own_you_attack_grant = self.any_granted_trigger_of_kind(&EventKind::YouAttack);
+        // CR 603.2c on the DEFENDER's side. The `ControllerAttackedByOpponent`
+        // listener walk below runs once per attacker, and it used to push with
+        // no once-key at all — so "whenever an opponent attacks you **and/or
+        // one or more** planeswalkers you control" fired once a *creature*
+        // rather than once a declaration (Cunning Rhetoric exiled a card per
+        // attacker). Declared out here, not inside the loop, because the batch
+        // is the whole declaration.
+        let mut defender_batch_fired: Vec<(CardId, usize)> = Vec::new();
         for (atk, (static_granted, equip_granted)) in attacks.into_iter().zip(attacker_grants) {
             let id = atk.attacker;
             // Validated above — commit only. Filter by *controller*, not
@@ -1912,7 +1920,11 @@ impl GameState {
                 // trigger member list, not the board (PERF `(-222)`), unless
                 // an instance grant of the kind is live — a grant can land
                 // on a permanent with no printed trigger.
-                let mut listeners: Vec<(CardId, Effect)> = Vec::new();
+                /// One defender-side listener: its source, its effect, and
+                /// the CR 603.3d/603.2c key it fires under (`None` when
+                /// uncapped or granted).
+                type Listener = (CardId, Effect, Option<(usize, bool)>);
+                let mut listeners: Vec<Listener> = Vec::new();
                 let listens = |t: &crate::card::TriggeredAbility| {
                     t.event.kind == EventKind::Attacks
                         && (t.event.scope == crate::effect::EventScope::ControllerAttackedByOpponent
@@ -1926,19 +1938,38 @@ impl GameState {
                     if c.controller != defender {
                         return;
                     }
-                    for t in &c.definition.triggered_abilities {
+                    for (i, t) in c.definition.triggered_abilities.iter().enumerate() {
                         if listens(t) {
-                            listeners.push((c.id, t.effect.clone()));
+                            listeners.push((c.id, t.effect.clone(), once_key(Some(i), t)));
                         }
                     }
                     if own_attacks_grant {
+                        // A granted trigger has no printed index, so it passes
+                        // `None` — the dispatcher's `trig_idx < n_printed` rule.
                         self.for_each_granted_trigger_matching(c.id, listens, |t| {
-                            listeners.push((c.id, t.effect.clone()))
+                            listeners.push((c.id, t.effect.clone(), None))
                         });
                     }
                 };
                 self.battlefield.for_each_triggerer_or_all(own_attacks_grant, visit);
-                for (src, effect) in listeners {
+                for (src, effect, once) in listeners {
+                    // CR 603.3d / 603.2c — one fire a turn, or one a
+                    // declaration; `once_per_turn` keys the shared per-turn
+                    // set, `once_per_batch` this declaration's own.
+                    if let Some((i, per_turn)) = once {
+                        let key = (src, i);
+                        let spent = if per_turn {
+                            !self.triggered_once_per_turn_used.insert(key)
+                        } else if defender_batch_fired.contains(&key) {
+                            true
+                        } else {
+                            defender_batch_fired.push(key);
+                            false
+                        };
+                        if spent {
+                            continue;
+                        }
+                    }
                     self.stack.push(
                         TriggerPush::new(src, defender, effect)
                             .target(Some(Target::Player(p)))
