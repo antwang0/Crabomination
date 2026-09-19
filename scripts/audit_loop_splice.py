@@ -30,6 +30,15 @@ Reading at the forty-third find: **18 sites, 18 allowlisted, 0
 unexplained** — 9 of the allowlist entries are OPEN, each with the primitive
 it is waiting on (see ENGINE_BACKLOG's forty-third find).
 
+⚠ **What it does NOT see: a sequential PAIR.** The class is "a second
+`run_effect` after one that can suspend", and a loop is only its commonest
+shape. `Effect::SeparatePilesChoose` / `PickOnePileThen` each run `chosen`
+then `other` and restore `self.separated_piles` after both — a suspend in
+`chosen` drops `other` *and* clears the piles the continuation would need.
+Recorded in ENGINE_BACKLOG rather than detected here: an "is this arm's
+second statement reachable after a suspend" check is a dataflow question,
+not a lexical one.
+
 **Injection:** deleting the `splice_after_suspend` call from
 `Effect::ForEachOpponent` takes 0 -> **1 unexplained**. A gate that cannot
 fail is worse than no gate; this one can.
@@ -53,7 +62,7 @@ FILES = [
 ]
 
 LOOP_HEAD = re.compile(r"^\s*(?:\}\s*)?(?:for\s|while\s|loop\s*\{)")
-RUN = re.compile(r"self\.(run_effect|resolve_effect\w*)\(")
+RUN = re.compile(r"\b\w+\.(run_effect|resolve_effect\w*)\(")
 ARM = re.compile(r"^\s*(?:\|\s*)?Effect::([A-Za-z0-9_]+)")
 FN = re.compile(r"^\s*(?:pub(?:\(crate\))?\s+)?(?:async\s+)?fn\s+([A-Za-z0-9_]+)")
 LITERAL = re.compile(r"^&Effect::([A-Za-z0-9_]+)")

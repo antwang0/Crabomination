@@ -3015,6 +3015,46 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-09-19 (the sixth Commander session, tip `1a49709b`) — guardrail, no perf work
+
+The loop-splice class (ENGINE_BACKLOG's forty-third find): twenty loops that
+dropped their remaining iterations when a body suspended, one helper, one
+ratchet. **No perf project, and none of it is on a hot path** — every arm
+gains exactly one `Option::is_some` on the *non*-suspending pass, because
+`splice_after_suspend` takes its tail as a closure and only builds it when
+the signal is set.
+
+```text
+--bench (release, tip 1a49709b):
+  decisions          195,806   byte-identical to the committed invariant
+  turns_per_game       27.49   "
+  decisions_per_game   611.9   "
+  stalls          0 (cap 0 / board 0 / stuck 0 / draw 0)
+  determinism     ok (all pairs split); thread_determinism ok (3 vs 1)
+  peak_rss_mib     25.7
+```
+
+📐 **The pre-check that made the modal commit safe to predict, and it is
+reusable: read the trace decks and `archetypes()` before reasoning about the
+aggregate.** `golden_trace.rs`'s two decks and `bot_ladder::archetypes()`
+between them hold 34 distinct cards and **not one modal spell**, so CR 700.2's
+change could not reach either — which is why the golden traces were byte-
+identical in the debug suite before the release binary had even finished
+building. Pool membership is still a measurement, not a veto; this is the
+cheaper half of the same rule.
+
+⚠ **The build economics, because they dominated this session's wall clock and
+nobody had written them down.** `crabomination_base` sits under
+`crabomination_catalog`, which is the expensive crate (opt-level 3,
+`codegen-units = 1`, ~25 min on its own here), and `release` finishes with a
+ThinLTO link over the whole program. A cold `release` build measured
+**~55 min** on this box, not CLAUDE.md's 31m32s. So **one edit to
+`effect.rs` costs the entire chain**: batch a session's base-crate edits into
+one commit and take the bench once, at the end. ⚠ And `cargo run --release`
+queued behind a build **re-fingerprints when it takes the lock** — edit the
+tree while it waits and it rebuilds instead of running, silently costing the
+reading you queued.
+
 ### 2026-09-19 (the fifth Commander session, tip `HEAD`) — guardrail
 
 CR 603.2c's batch work, 25 catalog cards across three clauses, and a retuned

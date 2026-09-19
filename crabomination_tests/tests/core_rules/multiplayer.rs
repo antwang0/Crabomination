@@ -4688,3 +4688,35 @@ fn cr_608_2_apply_to_targets_reaches_every_target_when_the_inner_suspends() {
     assert!(g.battlefield_find(b).is_none(), "and the one after the suspend");
     assert_eq!(g.players[0].hand.len(), hand - 2, "one discard per target");
 }
+
+/// CR 101.4 — the other half of a per-seat loop: whatever a seat's body
+/// *parks* has to come back under that seat too. A parked continuation is
+/// resumed with the stack item's context, so the rest of seat 1's body ran
+/// as the caster — every seat's life loss landed on seat 0.
+#[test]
+fn cr_101_4_a_parked_tail_comes_back_under_the_seat_that_parked_it() {
+    use crabomination::effect::{Effect, Selector, Value};
+    let mut g = multi_player_game(3);
+    for p in g.players.iter_mut() {
+        p.wants_ui = true;
+    }
+    let before = stock_opponent_hands(&mut g, 0..3);
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.stack.push(
+        TriggerPush::new(src, 0, Effect::EachPlayerDoes {
+            who: PlayerRef::EachPlayer,
+            // The discard suspends; the life loss after it is what the
+            // continuation has to carry, with its seat still bound.
+            body: Box::new(Effect::Seq(vec![
+                Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+                Effect::LoseLife { who: Selector::You, amount: Value::Const(1) },
+            ])),
+        })
+        .build(),
+    );
+    resolve_answering(&mut g);
+    for (seat, &had) in before.iter().enumerate() {
+        assert_eq!(g.players[seat].hand.len(), had - 1, "seat {seat} discarded");
+        assert_eq!(g.players[seat].life, 19, "and seat {seat} paid its own life");
+    }
+}

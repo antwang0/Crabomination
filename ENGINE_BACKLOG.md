@@ -86,9 +86,10 @@ the handoff.
 ## FIXED 2026-09-19 (the forty-third find) — a LOOP whose body suspends parks only the BODY, and twenty of them ran on and dropped the rest
 
 `MayRepeat` (the fifteenth find) and `EachPlayerDoes` each fixed this one
-arm at a time. The sweep that closes the class: every `for` in
-`effects/mod.rs` with a `run_effect` inside it and no `suspend_signal`
-read — 50 loops, 13 of them reaching a body that can suspend.
+arm at a time. The sweep that closes the class: every `run_effect` /
+`resolve_effect` lexically inside a loop in the eight engine files, with no
+`suspend_signal` read in that loop — **20 of them were dropping work**, and
+the ratchet at the bottom of this entry now holds the rest at 0 unexplained.
 
 **The shape.** A suspending body sets `suspend_signal = (decision, pending,
 its own remaining effect)` and returns `Ok(())`. The loop around it sees
@@ -109,7 +110,7 @@ or `ctx.trigger_source` resumes as the caster. Every tail here names its
 seat **inside** the effect — `PlayerRef::Seat(q)`, which is what
 `ask_seat_*`'s own `with_asked_seat` does for the arms.
 
-Arms taken: `ForEachOpponent`, `TemptingOffer`, `Punisher`,
+Per-player arms taken: `ForEachOpponent`, `TemptingOffer`, `Punisher`,
 `VillainousChoice`, the `UnlessPlayerPays` sacrifice half, `Repeat`,
 `FlipCoin`, `FlipUntilLoss`, `EachPlayerSacrificesUnlessDiscards`,
 `EachPlayerFlipsCoin`, `EachPlayerDiscardsElseLosesLife`,
@@ -185,6 +186,13 @@ carries these verbatim, so the script stays the index):
   `exiled_with` stamps re-applied, which a remaining count cannot carry.
 - ⏳ `Effect::SacrificeAnyNumber`: the sacrifices are inline zone moves, not
   an `Effect`, so a tail cannot carry the ones not yet made.
+- ⏳ **And the shape the ratchet cannot see: a sequential PAIR.** A loop is
+  only the commonest form of "a second `run_effect` after one that can
+  suspend". `Effect::SeparatePilesChoose` and `PickOnePileThen` each run
+  `chosen` then `other` and restore `self.separated_piles` after both, so a
+  suspend in `chosen` drops `other` *and* clears the piles the continuation
+  would need (`effects/mod.rs` ~1497 and ~18791). Detecting this is a
+  dataflow question, not a lexical one.
 - ⏳ The ante branch loop (`effects/mod.rs`, the `AnteTopOfLibrary` arm). Its
   second pass calls `ante_top_card` *and* runs the branch, so a tail would
   have to hoist every ante ahead of every branch — a real ordering change
