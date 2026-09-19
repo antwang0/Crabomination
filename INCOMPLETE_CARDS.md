@@ -419,12 +419,37 @@ Both auditors read **0** at the closing tip:
 ```
 python3 scripts/audit_invented_may.py      # 0 / 948 bodies with a needle
 python3 scripts/audit_invented_trigger.py  # 0 / 4,103 claims, 20 allowed, 0 stale
-python3 scripts/audit_invented_rider.py    # 0 / 392 bodies with a needle, 3 rule-implied
+python3 scripts/audit_invented_rider.py    # 0 / 1,248 bodies with a needle, 4 rule-implied
+python3 scripts/audit_synthesised_name.py  # 0 / 21,383 documented factories
 ```
 
 The **rider** column is a table — one line per rider — and opened with four
 rows: `DestroyNoRegen`, `CantBeRegeneratedThisTurn`, `once_per_turn: true` and
-`sorcery_speed: true`. It read 14 and closed at 0: eight sweepers and spot
+`sorcery_speed: true`; **ten** more followed, every one of them the mirror of
+a `clause_ratchet` row in `core_rules/catalog_registration.rs`
+(`EntersTapped`, `etb_tap()`, `enters_with_counters: Some(`,
+`Keyword::CantBeCountered`, `HexproofFrom`, `Keyword::MustAttack`,
+`MustBeBlocked`, `PreventUntap`, `Keyword::Unblockable`,
+`Keyword::Defender`), taking the column from 392 bodies to 1,248 and naming
+four more cards:
+
+| Card | Shipped | Prints |
+|---|---|---|
+| Cephalid Coliseum | enters tapped; wheel costs `{2}{U}`; no Threshold gate | no enters-tapped clause; `{U}`; "Activate only if there are seven or more cards in your graveyard" |
+| Glimmerpost | enters tapped (Cloudpost's clause, not its own) | no enters-tapped clause |
+| Deep-Sea Kraken | `CantBeCountered`; Suspend 9—`{1}{U}` | "This creature can't be blocked"; Suspend 9—`{2}{U}` |
+| Gleaming Overseer | `Unblockable` to every Zombie you control | "Zombie **tokens** you control have hexproof and **menace**" |
+
+Two of those were one bug each behind the card. `locus_count_value` is shared
+by Glimmerpost and Cloudpost and filtered to Loci **you control** where both
+print "on the battlefield"; and Gleaming Overseer's token filter was
+*unreachable* until the engine stopped dropping it (ENGINE_BACKLOG, the
+forty-sixth find). ⚠ **A keyword is printed wording**: modular (CR 702.43a)
+and STX's prepared each cost a false positive on the
+`enters_with_counters` row, and "hexproof from" is the modern keywording of
+"can't be the target of …" on three older cards.
+
+It read 14 and closed at 0: eight sweepers and spot
 removal carried a "can't be regenerated" rider nothing printed (Akroma's
 Vengeance, Fumigate, Hush, **Mortify**, Planar Cleansing, Planar Outburst,
 Pure Reflection, Starfall Invocation — Mortify's own test asserted the wrong

@@ -927,7 +927,7 @@ fn wild_mongrel_pumps_via_discard() {
 // ── Modern utility lands and artifacts (modern_decks-10 batch) ──────────────
 
 #[test]
-fn glimmerpost_etbs_tapped_and_grants_one_life() {
+fn glimmerpost_enters_untapped_and_grants_one_life() {
     let mut g = two_player_game();
     let life_before = g.players[0].life;
     let id = g.add_card_to_hand(0, catalog::glimmerpost());
@@ -936,7 +936,9 @@ fn glimmerpost_etbs_tapped_and_grants_one_life() {
     drain_stack(&mut g);
 
     let card = g.battlefield_find(id).expect("Glimmerpost on the battlefield");
-    assert!(card.tapped, "Glimmerpost has the etb-tap trigger");
+    // Cloudpost prints "This land enters tapped"; Glimmerpost does not. The
+    // trigger was invented (`audit_invented_rider.py`, `etb_tap()` row).
+    assert!(!card.tapped, "Glimmerpost has no enters-tapped clause");
     assert_eq!(g.players[0].life, life_before + 1,
         "ETB grants 1 life per Locus — just itself here");
 }
@@ -954,6 +956,28 @@ fn glimmerpost_etb_lifegain_scales_with_locus_count() {
         "two Loci → gain 2 life");
 }
 
+/// Both posts print "for each Locus **on the battlefield**", not "you
+/// control" — the shared `locus_count_value` helper filtered to your own
+/// side, so an opponent's 12-post half went uncounted.
+#[test]
+fn locus_count_spans_the_whole_battlefield() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::cloudpost());
+    let life_before = g.players[0].life;
+    let id = g.add_card_to_hand(0, catalog::glimmerpost());
+    g.perform_action(GameAction::PlayLand(id)).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life_before + 2,
+        "the opponent's Locus counts too");
+
+    let post = g.add_card_to_battlefield(0, catalog::cloudpost());
+    g.battlefield.iter_mut().find(|c| c.id == post).unwrap().tapped = false;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: post, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).unwrap();
+    assert_eq!(g.players[0].mana_pool.total(), 3,
+        "three Loci on the battlefield, one of them the opponent's");
+}
+
 #[test]
 fn cloudpost_mana_scales_with_locus_count() {
     let mut g = two_player_game();
@@ -964,14 +988,13 @@ fn cloudpost_mana_scales_with_locus_count() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).unwrap();
     assert_eq!(g.players[0].mana_pool.total(), 2,
-        "Cloudpost adds {{C}} per Locus you control");
+        "Cloudpost adds {{C}} per Locus on the battlefield");
 }
 
 #[test]
 fn glimmerpost_taps_for_colorless_after_untap() {
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::glimmerpost());
-    // Drop the post-ETB tapped state before activating.
     g.battlefield.iter_mut().find(|c| c.id == id).unwrap().tapped = false;
     let total_before = g.players[0].mana_pool.total();
     g.perform_action(GameAction::ActivateAbility {

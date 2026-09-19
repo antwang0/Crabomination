@@ -103,12 +103,20 @@ def factories(path):
 def main():
     cache = json.load(open(CACHE, encoding="utf-8"))
     rows, by_file = [], Counter()
+    # ⚠ The scanned population is printed, not just the hit count. `over
+    # {len(by_file)} files` read "over 0 files" at zero findings whether the
+    # reader worked or had stopped matching anything at all — a clean
+    # reading and a dead one were the same line.
+    scanned = docs = 0
     for dirpath, _, files in os.walk(CATALOG):
         for f in files:
             if not f.endswith(".rs"):
                 continue
             path = os.path.join(dirpath, f)
             for fn, name, doc, _body in factories(path):
+                scanned += 1
+                if doc.strip():
+                    docs += 1
                 # ① the card's own name is not evidence about the card, and
                 # neither is an inline code span — this script's own file name
                 # contains the tell, so every repair note that cites it read
@@ -146,7 +154,8 @@ def main():
             print(f"{rel}::{fn}\n    {name}")
     print(
         f"# {len(rows)} factories whose doc says synthesised under a name Scryfall "
-        f"owns, over {len(by_file)} files"
+        f"owns, in {len(by_file)} files, over {docs} documented factories "
+        f"({scanned} read)"
     )
     return 1 if ("--check" in sys.argv and rows) else 0
 

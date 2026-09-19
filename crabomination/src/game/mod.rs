@@ -29488,6 +29488,36 @@ pub(crate) fn affected_from_requirement(
             _ => return None,
         }
     }
+    // ⚠⚠ **A leaf the chosen variant cannot carry is a leaf that gets
+    // DROPPED, and a dropped leaf WIDENS the static** — the same failure the
+    // conflict guards above catch, one step later. `AllWithCreatureType` has
+    // no `token` field, so Gleaming Overseer's "Zombie **tokens** you
+    // control" granted to every Zombie you control, its own body included.
+    // The escape hatch is the one already in use: hand the whole tree to the
+    // card-local matcher, which walks `And` honestly.
+    //
+    // `AllWithCreatureType`'s arm asserts `card_types.contains(Creature)`
+    // itself, so `types == [Creature]` is carried, not dropped — and that is
+    // the overwhelmingly common shape (`Creature.and(HasCreatureType(x))`),
+    // which is why it keeps the fast variant.
+    //
+    // ⚠ **`card_match_fallback` returns `None` on a tree that is not
+    // card-only, and `None` here drops the static entirely** — a worse bug
+    // than the widening. It is safe only because every leaf the walk above
+    // accepts is now in `layers::requirement_is_card_only`; `OwnedByYou` was
+    // missing from that list and was added with this fix. A leaf added to the
+    // walk belongs in both places.
+    //
+    // ⚠⚠ **`AllOpponents` is deliberately NOT guarded, and the reason is a
+    // second asymmetry.** It resolves its controller check through
+    // `friendly_seats`, i.e. team-aware; `CardMatch`'s `ControlledByOpponent`
+    // is the plain `card.controller != source_controller`. Routing it to the
+    // fallback would trade a silent widening for a silent *narrowing* in team
+    // play. No shipped static combines `ControlledByOpponent` with a leaf
+    // that variant cannot carry (the catalog's `ControlledByOpponent` sites
+    // are effect selectors, not `applies_to` filters), so the trade is not
+    // worth making until one does — at which point the fix is a `token` field
+    // on `AllOpponents`, not a fallback.
     if opponent {
         // `friendly_seats` is populated by `compute_battlefield` /
         // `apply_enters_tapped_replacement` once the source's team is known
@@ -29500,6 +29530,29 @@ pub(crate) fn affected_from_requirement(
             creature_type,
             counter: counter_filter,
         });
+    }
+    // Past the `opponent` return, so `AllOpponents`' fields are out of scope
+    // and only the two narrow variants below are in play.
+    let inexpressible = || {
+        let out = card_match_fallback(req, source_controller);
+        debug_assert!(
+            out.is_some(),
+            "a leaf the And-walk accepts is not in requirement_is_card_only: {req:?}"
+        );
+        out
+    };
+    let droppable = token_filter.is_some()
+        || colorless_filter
+        || owned_by_controller.is_some()
+        || color_filter.is_some();
+    if counter_filter.is_some() && (droppable || other_than_source || creature_type.is_some()) {
+        return inexpressible();
+    }
+    if creature_type.is_some()
+        && counter_filter.is_none()
+        && (droppable || types.iter().any(|t| *t != CardType::Creature))
+    {
+        return inexpressible();
     }
     if let Some(counter) = counter_filter {
         return Some(AffectedPermanents::AllWithCounter {

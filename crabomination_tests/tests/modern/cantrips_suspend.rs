@@ -85,12 +85,18 @@ fn suspend_keldon_halberdier_resolves() {
     assert!(h.definition.keywords.contains(&Keyword::FirstStrike));
 }
 
-/// Deep-Sea Kraken suspends for {1}{U} and resolves into a 6/6.
+/// Deep-Sea Kraken suspends for {2}{U} — printed, not the {1}{U} it shipped
+/// with — and resolves into an **unblockable** 6/6. It used to carry
+/// `CantBeCountered`, which it does not print at all.
 #[test]
 fn suspend_deep_sea_kraken_resolves() {
+    use crabomination::card::Keyword;
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::deep_sea_kraken());
     g.players[0].mana_pool.add(Color::Blue, 2);
+    assert!(g.perform_action(GameAction::Suspend { card_id: id }).is_err(),
+        "{{2}}{{U}} is not payable out of two blue mana");
+    g.players[0].mana_pool.add(Color::Blue, 1);
     g.perform_action(GameAction::Suspend { card_id: id }).expect("suspend");
     assert_eq!(g.exile.iter().find(|c| c.id == id).unwrap().counter_count(CounterType::Time), 9);
     g.step = TurnStep::Upkeep;
@@ -100,6 +106,10 @@ fn suspend_deep_sea_kraken_resolves() {
     drain_stack(&mut g);
     let k = g.battlefield_find(id).expect("Kraken on battlefield");
     assert_eq!((k.power(), k.toughness()), (6, 6));
+    assert!(k.definition.keywords.contains(&Keyword::Unblockable),
+        "\"This creature can't be blocked\"");
+    assert!(!k.definition.keywords.contains(&Keyword::CantBeCountered),
+        "the Kraken prints nothing about being countered");
 }
 
 /// A creature free-cast off its last Suspend time counter gains haste
@@ -126,7 +136,7 @@ fn suspend_cast_creature_gains_haste() {
 fn suspend_accelerant_ticks_on_opponent_cast() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::deep_sea_kraken());
-    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add(Color::Blue, 3);
     g.perform_action(GameAction::Suspend { card_id: id }).expect("suspend");
     let before = g.exile.iter().find(|c| c.id == id).unwrap().counter_count(CounterType::Time);
     // Player 1 (an opponent of the owner) casts a spell.

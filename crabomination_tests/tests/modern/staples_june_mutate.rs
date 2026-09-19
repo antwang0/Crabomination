@@ -2928,7 +2928,17 @@ fn will_of_the_all_hunter_modes() {
         "two +1/+1 counters when blocking");
 }
 
-/// Gleaming Overseer grants your Zombies hexproof and unblockable, and amasses.
+/// "Zombie **tokens** you control have hexproof and **menace**" — both the
+/// set and the keyword were wrong: it granted `Unblockable` to every Zombie
+/// you control, so the Overseer buffed *itself* and the evasion it handed out
+/// was strictly better than the one it prints.
+///
+/// ⚠ **This also pins the engine half.** `affected_from_requirement` returns
+/// `AllWithCreatureType` for any filter naming a creature type, and that
+/// variant has no `token` field — so writing `IsToken` into the card was not
+/// enough; the leaf was silently dropped and the static stayed wide. The
+/// decomposition now falls back to the card-local matcher whenever a leaf the
+/// chosen variant cannot carry is present.
 #[test]
 fn gleaming_overseer_zombie_anthem() {
     use crabomination::card::{CreatureType, Keyword};
@@ -2942,11 +2952,16 @@ fn gleaming_overseer_zombie_anthem() {
         .map(|c| c.id).expect("Army token");
     let a = g.computed_permanent(army).unwrap();
     assert!(a.subtypes().creature_types.contains(&CreatureType::Zombie), "Army is a Zombie");
-    assert!(a.keywords().contains(&Keyword::Hexproof) && a.keywords().contains(&Keyword::Unblockable),
-        "Zombie Army has hexproof + unblockable");
-    // The Overseer itself is a Zombie too.
+    assert!(a.keywords().contains(&Keyword::Hexproof) && a.keywords().contains(&Keyword::Menace),
+        "Zombie token has hexproof + menace");
+    assert!(!a.keywords().contains(&Keyword::Unblockable),
+        "menace, not unblockable");
+    // The Overseer is a Zombie but not a token, so it grants itself nothing.
     let o = g.computed_permanent(overseer).unwrap();
-    assert!(o.keywords().contains(&Keyword::Hexproof), "Overseer (a Zombie) has hexproof");
+    assert!(!o.keywords().contains(&Keyword::Hexproof),
+        "a nontoken Zombie is outside the printed set");
+    assert!(!o.keywords().contains(&Keyword::Menace),
+        "a nontoken Zombie is outside the printed set");
 }
 
 /// Ferocious Tigorilla enters with a chosen trample or menace counter.

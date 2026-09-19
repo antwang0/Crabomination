@@ -2545,16 +2545,19 @@ fn watery_grave_pays_two_life_and_stays_untapped() {
 }
 
 #[test]
-fn cephalid_coliseum_sacrifices_for_each_player_to_draw_then_discard_three() {
+fn cephalid_coliseum_past_threshold_targets_one_player_to_draw_then_discard_three() {
     let mut g = two_player_game();
     // The default bot profile aims a hostile player slot at an
     // opponent (`EvalWeights::default()`); a bare test seat does not.
     g.players[0].hostile_player_targets = true;
     let coli = g.add_card_to_battlefield(0, catalog::cephalid_coliseum());
     g.clear_sickness(coli);
-    // Coliseum entered tapped via its ETB trigger. Untap it so we can
-    // activate the wheel-mini ability.
-    g.battlefield_find_mut(coli).unwrap().tapped = false;
+    // "Activate only if there are seven or more cards in your graveyard."
+    // Threshold is an ability word with no rules meaning (CR 207.2c); the
+    // printed sentence is the activation restriction (CR 602.5b).
+    for _ in 0..7 {
+        g.add_card_to_graveyard(0, catalog::island());
+    }
 
     // Stock both libraries with enough cards to draw 3 each.
     for _ in 0..6 {
@@ -2572,9 +2575,8 @@ fn cephalid_coliseum_sacrifices_for_each_player_to_draw_then_discard_three() {
     let p0_grave_before = g.players[0].graveyard.len();
     let p1_grave_before = g.players[1].graveyard.len();
 
-    // Pay {2}{U} and tap.
+    // Pay {U} and tap. The cost used to read {2}{U}; the print is {U}.
     g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility {
         card_id: coli,
         ability_index: 1,
@@ -2595,6 +2597,47 @@ fn cephalid_coliseum_sacrifices_for_each_player_to_draw_then_discard_three() {
         "only the Coliseum itself reached P0's graveyard");
     assert_eq!(g.players[1].graveyard.len(), p1_grave_before + 3,
         "P1 should have 3 discarded cards in graveyard");
+}
+
+/// CR 602.5b — an activated ability's printed restriction on its use gates
+/// activation. Cephalid Coliseum's threshold clause was simply missing, and
+/// the doc called shipping the ungated version deliberate.
+#[test]
+fn cephalid_coliseum_wheel_is_gated_below_threshold() {
+    let mut g = two_player_game();
+    g.players[0].hostile_player_targets = true;
+    let coli = g.add_card_to_battlefield(0, catalog::cephalid_coliseum());
+    g.clear_sickness(coli);
+    for _ in 0..6 {
+        g.add_card_to_graveyard(0, catalog::island());
+        g.add_card_to_library(1, catalog::island());
+    }
+    g.players[0].mana_pool.add(Color::Blue, 1);
+
+    let six = g.perform_action(GameAction::ActivateAbility {
+        card_id: coli,
+        ability_index: 1,
+        target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None, mode: None});
+    assert!(six.is_err(), "six cards in the graveyard is below threshold");
+
+    g.add_card_to_graveyard(0, catalog::island());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: coli,
+        ability_index: 1,
+        target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None, mode: None})
+    .expect("the seventh card turns threshold on");
+}
+
+/// Cephalid Coliseum prints no "enters tapped" clause — the trigger was
+/// invented (`audit_invented_rider.py`, `etb_tap()` row).
+#[test]
+fn cephalid_coliseum_enters_untapped() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::cephalid_coliseum());
+    g.perform_action(GameAction::PlayLand(id)).expect("playable as a land");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(id).expect("on the battlefield").tapped,
+        "Cephalid Coliseum has no enters-tapped clause");
 }
 
 #[test]

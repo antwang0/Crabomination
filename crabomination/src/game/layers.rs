@@ -1618,6 +1618,12 @@ pub(crate) fn requirement_is_card_only(req: &SelectionRequirement) -> bool {
         | R::Planeswalker | R::Land | R::Nonland | R::Noncreature | R::IsBasicLand
         | R::IsNonbasicLand | R::IsToken | R::NotToken | R::ControlledByYou
         | R::ControlledByOpponent | R::Colorless => true,
+        // `card.owner` is a `CardInstance` field like `is_token`, and
+        // `requirement_matches_card` has always read it. It was missing here,
+        // so any filter this list could not otherwise flatten was **dropped**
+        // rather than routed — `card_match_fallback` returns `None` on a
+        // non-card-only tree, and `None` means no static at all.
+        R::OwnedByYou => true,
         // Tap state is a live `CardInstance` field, re-read on every layer
         // recompute — safe to route through the dynamic CardMatch path
         // (Augusta, Dean of Order's tapped/untapped anthems).
