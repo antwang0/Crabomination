@@ -249,7 +249,7 @@ every one of them is in the `cube` pool**, which is the finding:
 
 | Card | Decks | Residual |
 | --- | --- | --- |
-| Ghost Vacuum | Hanna, Sigarda, Tatyova | 🟡 the `{6}, {T}, Sacrifice:` half is unmodelled, and **it is the one on this table that is a real build — sized 2026-09-19 so nobody re-sizes it.** The link half exists (`ZoneDest::ExileWithSourceStamp` + `exiled_with`), and **three pieces do not**: ① `Selector::CardExiledWithSource` is documented *singular* ("resolves to that single card", Hideaway's shape) and this wants the whole set; ② there is no **flying counter** — `KeywordCounters` exists on `CardInstance` but no `CounterType` routes into it, so "with a flying counter on it" needs the bridge; ③ "each of them is a 1/1 Spirit **in addition to** its other types" is a layer effect (7b base P/T + a type add) applied to a set the return just produced. ⚠ Weigh it against what it buys: a 7-mana sacrifice ability on a card whose *first* half already works, in three decks |
+| ~~Ghost Vacuum~~ | Hanna, Sigarda, Tatyova | ✅ **fixed 2026-09-19, and the sizing a day earlier was WRONG on all three counts.** `Selector::CardExiledWithSource` is already plural (its doc says "that single card" and its body is a `filter().collect()`); `Effect::AddKeywordCounter` is the flying counter; `SetBasePT` + `AddCreatureTypes` are the "1/1 Spirit in addition to its other types". The composition is `ForEach` over the linked exiles — it binds each entity as the body's `TriggerSource` — with an `If` on `Creature` in place of the filtered selector that does not exist. **Zero new primitives.** The first ability moved to `ZoneDest::ExileWithSourceStamp` so the link is there to return by |
 | ~~Simian Spirit Guide~~ | Judith | ✅ **the row was stale** — `from_hand: true, exile_self_cost: true, add_mana([Red])` has shipped, with `modern::coverage_backfill::simian_spirit_guide_pitches_from_hand_for_red` on it. The bot's `available_mana` does not *count* a Spirit Guide in hand, which is a deliberate downward bias, not a missing card |
 | ~~Sowing Mycospawn~~ | Sigarda | ✅ **fixed 2026-09-19** — the tutored land enters untapped, and the assertion is now in the card's own test |
 | ~~Delighted Halfling~~ | Sigarda, Tatyova | ✅ **fixed 2026-09-19** — `SpendRestriction::LegendarySpellUncounterable` (a real restriction *plus* the Cavern-shaped stamp), tested both ways |
@@ -269,16 +269,25 @@ Pool *membership* is not pool *reach* — the bench plays `--decks fixed` and th
 traces are fixed-seed games, and a card has to actually be drawn and played in
 one of them to move a number. **Take the rest one or two at a time with a
 `--bench` reading in hand**, and re-bless only if the reading actually moves.
-⚠ **Ghost Vacuum is the only one left.** Five of the eight are done, **four
-of the five needed no engine change at all** (the counter type, the
+⚠⚠ **THE TABLE IS EMPTY, AND ITS OWN SIZINGS WERE THE LAST THING TO GO.**
+Six of the eight are fixed, two were never broken, and **five of the six
+needed no new primitive at all** (the counter type, the
 discard-replacement field and the `non_legendary` flag all already existed and
 the card was not using them; one was a single word), and the sizing above says
-Ghost Vacuum is the one that does. `--bench` came back byte-identical after
-every one of the five. ⚠⚠ **And THREE of the eight rows were wrong about the
-code** — Simian Spirit Guide and Arcane Signet had already shipped, and Delver
-of Secrets' "transform half is approximated" was about an optional *reveal*
-the engine answers optimally, not about the transform. **Read the definition
-before believing the row** is now a three-for-eight rate on one table.
+— the counter type, the discard-replacement field, the `non_legendary` flag,
+the plural exile selector, the keyword-counter effect and the base-P/T and
+add-type effects all already existed and the card was simply not using them.
+Only Spark Double needed engine work, and that was one helper. `--bench` came
+back byte-identical after every single one.
+
+⚠⚠ **THREE of the eight rows were wrong about the code, and so was the one
+sizing this file wrote itself.** Simian Spirit Guide and Arcane Signet had
+already shipped; Delver of Secrets' "transform half is approximated" was about
+an optional *reveal* the engine answers optimally, not the transform; and
+Ghost Vacuum — filed here as "three missing pieces, the only real build" —
+needed none of them. **Read the definition before believing the row, and grep
+for the primitive before sizing the build.** Four wrong claims out of eight,
+all of them about code that was already there.
 
 Arcane Signet, which the same walk flagged in all five decks, was a **stale doc
 comment** and nothing else — `tap_add_commander_identity()` has shipped for a

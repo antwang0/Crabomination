@@ -1219,6 +1219,58 @@ fn ghost_vacuum_exiles_target_card_from_graveyard() {
         "Bear left the graveyard");
     assert!(g.exile.iter().any(|c| c.id == bear_id),
         "Bear is now in the exile zone");
+    // And it is stamped with the Vacuum, which is what the second ability
+    // returns "each creature card exiled **with this artifact**" by.
+    assert_eq!(
+        g.exile.iter().find(|c| c.id == bear_id).unwrap().exiled_with,
+        Some(vac),
+        "the exile is linked to the source",
+    );
+}
+
+/// "{6}, {T}, Sacrifice this artifact: Put each creature card exiled with this
+/// artifact onto the battlefield under your control with a flying counter on
+/// it. Each of them is a 1/1 Spirit in addition to its other types." The half
+/// that had shipped missing, and the card is in three of the five pod decks.
+#[test]
+fn ghost_vacuum_returns_everything_it_ate_as_flying_spirits() {
+    use crabomination::card::CreatureType;
+    let mut g = two_player_game();
+    let vac = g.add_card_to_battlefield(0, catalog::ghost_vacuum());
+    let bear = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let bolt = g.add_card_to_graveyard(1, catalog::lightning_bolt());
+    // Eat one creature card and one noncreature card.
+    for victim in [bear, bolt] {
+        g.battlefield_find_mut(vac).unwrap().tapped = false;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: vac, ability_index: 0, target: Some(Target::Permanent(victim)),
+            additional_targets: Vec::new(), x_value: None, mode: None })
+        .expect("exile it");
+        drain_stack(&mut g);
+    }
+
+    g.battlefield_find_mut(vac).unwrap().tapped = false;
+    g.players[0].mana_pool.add_colorless(6);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: vac, ability_index: 1, target: None,
+        additional_targets: Vec::new(), x_value: None, mode: None })
+    .expect("{6}, {T}, Sacrifice");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield_find(vac).is_none(), "the Vacuum was the sacrifice cost");
+    // The Bolt is not a creature card, so it stays exiled.
+    assert!(g.exile.iter().any(|c| c.id == bolt), "a noncreature card is not returned");
+
+    let returned = g.battlefield_find(bear).expect("the creature card came back");
+    assert_eq!(returned.controller, 0, "under your control, not its owner's");
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (1, 1), "a 1/1, whatever it printed");
+    assert!(cp.keywords().contains(&Keyword::Flying), "the flying counter");
+    assert!(cp.subtypes().creature_types.contains(&CreatureType::Spirit), "a Spirit");
+    assert!(
+        cp.subtypes().creature_types.contains(&CreatureType::Bear),
+        "**in addition to** its other types",
+    );
 }
 
 #[test]

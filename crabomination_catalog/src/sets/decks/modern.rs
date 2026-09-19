@@ -7089,32 +7089,75 @@ pub fn ghost_vacuum() -> CardDefinition {
         name: "Ghost Vacuum",
         cost: cost(&[generic(1)]),
         card_types: vec![CardType::Artifact],
-        activated_abilities: vec![ActivatedAbility {
-            energy_cost: 0,
-            discard_cost: None,
-            tap_cost: true,
-            mana_cost: ManaCost::default(),
-            effect: Effect::Move {
-                what: Selector::TargetFiltered {
-                    slot: 0,
-                    filter: SelectionRequirement::Any,
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                // `ExileWithSourceStamp`, not a plain exile: the second
+                // ability below returns "each creature card exiled **with
+                // this artifact**", and `exiled_with` is what links them.
+                effect: Effect::Move {
+                    what: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: SelectionRequirement::Any,
+                    },
+                    to: ZoneDest::ExileWithSourceStamp,
                 },
-                to: ZoneDest::Exile,
+                ..Default::default()
             },
-            once_per_turn: false,
-            sorcery_speed: false,
-            sac_cost: false,
-            condition: None,
-            life_cost: 0,
-            from_graveyard: false,
-            exile_self_cost: false,
-            exile_other_filter: None,
-            self_counter_cost_reduction: None,
-            sac_other_filter: None,
-            tap_other_filter: None,
-            from_hand: false,
-            ..Default::default()
-        }],
+            // "{6}, {T}, Sacrifice this artifact: Put each creature card
+            // exiled with this artifact onto the battlefield under your
+            // control with a flying counter on it. Each of them is a 1/1
+            // Spirit in addition to its other types. Activate only as a
+            // sorcery."
+            //
+            // `ForEach` binds each entity as the body's `TriggerSource`, so
+            // the four clauses all name the card the loop is on. The
+            // creature-card filter is the `If` rather than a filtered
+            // selector — `CardExiledWithSource` has no filtered form and one
+            // gate inside the loop is the same answer.
+            ActivatedAbility {
+                mana_cost: cost(&[generic(6)]),
+                tap_cost: true,
+                sac_cost: true,
+                sorcery_speed: true,
+                effect: Effect::ForEach {
+                    selector: Selector::CardExiledWithSource,
+                    body: Box::new(Effect::If {
+                        cond: crate::effect::Predicate::EntityMatches {
+                            what: Selector::TriggerSource,
+                            filter: SelectionRequirement::Creature,
+                        },
+                        then: Box::new(Effect::Seq(vec![
+                            Effect::Move {
+                                what: Selector::TriggerSource,
+                                to: ZoneDest::Battlefield {
+                                    controller: PlayerRef::You,
+                                    tapped: false,
+                                },
+                            },
+                            Effect::AddKeywordCounter {
+                                what: Selector::TriggerSource,
+                                keyword: Keyword::Flying,
+                                amount: Value::ONE,
+                            },
+                            Effect::SetBasePT {
+                                what: Selector::TriggerSource,
+                                power: Value::ONE,
+                                toughness: Value::ONE,
+                                duration: Duration::Permanent,
+                            },
+                            Effect::AddCreatureTypes {
+                                what: Selector::TriggerSource,
+                                creature_types: vec![CreatureType::Spirit],
+                                duration: Duration::Permanent,
+                            },
+                        ])),
+                        else_: Box::new(Effect::Noop),
+                    }),
+                },
+                ..Default::default()
+            },
+        ],
         ..Default::default()
     }
 }

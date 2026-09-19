@@ -2984,7 +2984,13 @@ impl Effect {
                         controller: PlayerRef::You,
                         ..
                     }
+                    // Both exile destinations: `ExileWithSourceStamp` is
+                    // `Exile` plus an `exiled_with` link (Ghost Vacuum, so its
+                    // second ability can find what the first ate), and a
+                    // classifier that knows only one of them sends the picker
+                    // to the battlefield instead of the graveyard.
                     | ZoneDest::Exile
+                    | ZoneDest::ExileWithSourceStamp
             ),
             Effect::Seq(v) => v.iter().any(|e| e.prefers_graveyard_target()),
             Effect::If { then, else_, .. } => {
