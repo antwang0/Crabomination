@@ -28305,8 +28305,8 @@ pub fn gilded_lotus() -> CardDefinition {
     }
 }
 
-/// Arcane Signet — {2} Artifact. {T}: Add one mana of any color (in your
-/// commander's color identity — approximated as any color, no identity gate).
+/// Arcane Signet — {2} Artifact. {T}: Add one mana of any color in your
+/// commander's color identity (CR 903.4, via `tap_add_commander_identity`).
 pub fn arcane_signet() -> CardDefinition {
     CardDefinition {
         name: "Arcane Signet",

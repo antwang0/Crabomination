@@ -1023,6 +1023,99 @@ fn cr_800_4a_leaving_mid_combat_clears_the_departed_attackers() {
     );
 }
 
+/// A 2/2 whose whole text is "whenever this creature deals combat damage to a
+/// player, draw a card" — a witness for damage actually being assigned.
+fn damage_witness() -> crabomination::card::CardDefinition {
+    use crabomination::card::{CardDefinition, CardType, TriggeredAbility};
+    use crabomination::effect::{EventKind, EventScope, EventSpec};
+    CardDefinition {
+        name: "Test Damage Witness",
+        card_types: vec![CardType::Creature],
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: crabomination::effect::shortcut::draw(1),
+        }],
+        ..Default::default()
+    }
+}
+
+/// CR 800.4e — "If combat damage would be assigned to a player who has left
+/// the game, that damage isn't assigned."
+///
+/// The reachable shape is first strike (CR 702.7b): the first-strike sub-step
+/// kills the defending seat, state-based actions take them out of the game
+/// between the sub-steps, and the ordinary attacker is left pointing at a seat
+/// that is gone. 800.4a's combat sweep is what makes 800.4e true here — the
+/// witness never draws, so nothing was assigned.
+#[test]
+fn cr_800_4e_no_combat_damage_is_assigned_to_a_seat_that_left_mid_combat() {
+    let mut g = multi_player_game(3);
+    let fast = g.add_card_to_battlefield(0, catalog::white_knight());
+    let slow = g.add_card_to_battlefield(0, damage_witness());
+    for id in [fast, slow] {
+        g.clear_sickness(id);
+    }
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    // Exactly lethal to the first strike, so the second sub-step is the one
+    // under test rather than a seat that was already gone.
+    g.players[1].life = 2;
+    let hand_before = g.players[0].hand.len();
+
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: fast, target: AttackTarget::Player(1) },
+        Attack { attacker: slow, target: AttackTarget::Player(1) },
+    ]))
+    .expect("a first-striker and an ordinary attacker at the same seat");
+    g.step = TurnStep::FirstStrikeDamage;
+    g.resolve_first_strike_damage().expect("the first-strike sub-step");
+    drain_stack(&mut g);
+    assert!(!g.players[1].is_alive(), "the first strike took seat 1 out between the sub-steps");
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().expect("the regular sub-step");
+    drain_stack(&mut g);
+
+    assert!(!g.players[1].is_alive(), "the first strike took seat 1 out");
+    assert_eq!(
+        g.players[0].hand.len(),
+        hand_before,
+        "the ordinary attacker assigned nothing to a seat that has left (CR 800.4e)",
+    );
+    assert!(
+        !g.attacking.iter().any(|a| a.attacker == slow),
+        "and it is no longer in combat at all",
+    );
+}
+
+/// CR 800.4k — "If a player who has left the game would begin a turn, that
+/// turn doesn't begin." `next_alive_seat` is the whole implementation and it
+/// had no test naming the rule; a turn handed to a departed seat is a table
+/// that passes priority to nobody.
+#[test]
+fn cr_800_4k_a_departed_seats_turn_does_not_begin() {
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.players[1].life = 0;
+    g.check_state_based_actions();
+    assert!(!g.players[1].is_alive(), "seat 1 is out before its turn would begin");
+
+    for _ in 0..40 {
+        if g.active_player_idx != 0 {
+            break;
+        }
+        let _ = g.advance_step(Vec::new());
+    }
+    assert_eq!(g.active_player_idx, 2, "seat 1's turn does not begin — seat 2 takes it");
+}
+
 /// CR 800.4a, closing sentence — "If the player who left the game had
 /// priority at the time they left, priority passes to the next player in turn
 /// order who's still in the game." Priority gates the table exactly as a
