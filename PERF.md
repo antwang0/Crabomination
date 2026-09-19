@@ -3056,18 +3056,27 @@ a second run.** `pod ActionCap seed 18045724030442976829`, turn 59:
 get that: the first print put a game-wide activation count beside a per-seat
 pool and said nothing about whether they were the same player.)
 
-**And the loop is *voluntary*, which is why nothing caught it.** The
-sacrifice is charged — `activate_ability_inner`'s battlefield branch ends at
-`bf_pos.ok_or(GameError::CardNotOnBattlefield)?`, so a Spawn that is gone
-cannot be activated, and 7,535 accepted activations are 7,535 tokens that
-genuinely entered and were sacrificed. Basking Broodscale reads correct
-against its oracle and `shortcut::graft()` no-ops when empty. So this is a
-real board minting a real token per iteration and a bot taking the
-sacrifice-for-mana every time with nothing to spend it on.
-`mandatory_loop_watch` is CR 104.4b and only sees *mandatory* loops. ⚠ The
-guard belongs in `bot.rs`, which is the `--bench` path, so it needs the
-throughput gate re-taken and not just the suite. TODO's Commander NEXT item 8
-carries the repro.
+**And nothing is broken — it is a real infinite, which is the finding.** The
+sacrifice is charged (`activate_ability_inner`'s battlefield branch ends at
+`bf_pos.ok_or(GameError::CardNotOnBattlefield)?`), Basking Broodscale matches
+its oracle, `shortcut::graft()` no-ops when empty, and **Cordial Vampire is
+exactly its print** — "whenever this creature or another creature dies", no
+Vampire filter. The per-seat board (added for this) closed it: `p5 board: …
+Basking Broodscale x1, Cordial Vampire x1, Eldrazi Spawn x1 …`. p5 had stolen
+p3's Broodscale with **New Blood**, which text-changes it into a Vampire, so:
+sac the Spawn for {C} → a creature died → Cordial Vampire puts a +1/+1 counter
+on each Vampire, Broodscale included → Broodscale mints another Spawn →
+repeat. Every step is correct Magic.
+
+**The bot loops because every iteration is materially positive** — a dozen
+Vampires each gain +1/+1 — so `pick_sacrifice_value`'s `ev > baseline` holds
+forever and it never converts. ⚠ Neither backstop can see it: the battlefield
+never grows (one Spawn at a time) so `MAX_BATTLEFIELD` is untouched, and the
+counters move every iteration so CR 104.4's fingerprint never repeats — the
+diag's `repeats 0/12` is *correct*. The fix is a bot one (a real player takes
+CR 720's shortcut and names a number) and `bot.rs` is the `--bench` path, so
+it needs the throughput gate re-taken. Rate: 1/2,000 at eight seats, 0/12,000
+at 2..7. TODO's Commander NEXT items 7-8 carry the repro.
 
 ### 2026-09-19 (the seventh Commander session, tip `3aca0ddb`) — guardrail, no perf work
 
