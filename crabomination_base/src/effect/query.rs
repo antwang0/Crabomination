@@ -1557,7 +1557,8 @@ impl Effect {
             | Effect::GainAllActivatedAbilitiesOf { what, .. } => sel_has_target(what),
             Effect::AddManaKeptThisTurn { who, .. }
             | Effect::AddManaKeptThisTurnCount { who, .. }
-            | Effect::CommanderToHand { who } => player_has_target(who),
+            | Effect::CommanderToHand { who }
+            | Effect::PutCommanderOntoBattlefield { who, .. } => player_has_target(who),
             Effect::AddManaEqualToPermanentCost { .. } => false,
             Effect::AddMana { who, pool } => {
                 player_has_target(who) || match pool {
@@ -3271,6 +3272,7 @@ impl Effect {
                     ZoneDest::Battlefield { .. } => format!("put {t} onto the battlefield"),
                     ZoneDest::Library { .. } => format!("put {t} into its owner's library"),
                     ZoneDest::Ante => format!("ante {t}"),
+                    ZoneDest::Command => format!("put {t} into the command zone"),
                 }
             }
             Effect::Destroy { .. } | Effect::DestroyAndRemember { .. } => {

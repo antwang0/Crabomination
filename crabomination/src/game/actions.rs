@@ -371,6 +371,33 @@ impl GameState {
         self.effective_alternative_cost_in(p, AltCastZone::Hand, card_id)
     }
 
+    /// The prowl alternative cost a `GrantProwlToSpells` static `p` controls
+    /// gives the spell `card_id` (CR 702.76a: combat damage to a player this
+    /// turn by a creature sharing a creature type with the spell).
+    fn granted_prowl(
+        &self,
+        p: usize,
+        zone: AltCastZone,
+        card_id: CardId,
+    ) -> Option<crate::card::AlternativeCost> {
+        let card = self.alt_cast_source(p, zone).iter().find(|c| c.id == card_id)?;
+        let types = &card.definition.subtypes.creature_types;
+        if types.is_empty() {
+            return None;
+        }
+        let cost = self.battlefield.iter().filter(|c| c.controller == p).find_map(|c| {
+            c.definition.static_abilities.iter().find_map(|sa| match &sa.effect {
+                crate::effect::StaticEffect::GrantProwlToSpells { filter, cost }
+                    if self.evaluate_requirement_on_card(filter, card, p) =>
+                {
+                    Some(cost.clone())
+                }
+                _ => None,
+            })
+        })?;
+        Some(crate::effect::shortcut::prowl(cost, types.clone()))
+    }
+
     /// `effective_alternative_cost` over an explicit source zone — the
     /// grant-from-the-battlefield arms apply to any spell their controller
     /// casts, a commander cast from the command zone included (CR 903.8).
@@ -389,6 +416,11 @@ impl GameState {
             .clone();
         if printed.is_some() {
             return printed;
+        }
+        // CR 702.76 — Hunting Velociraptor: "[filter] spells you cast have
+        // prowl [cost]". The prowl gate reads the spell's own creature types.
+        if let Some(granted) = self.granted_prowl(p, zone, card_id) {
+            return Some(granted);
         }
         let five_color = self.battlefield.iter().any(|c| {
             c.controller == p
@@ -5212,6 +5244,37 @@ impl GameState {
                 }
             }
         }
+        // Exploration Broodship's {8+} band — once during each of your turns,
+        // cast a permanent spell from your graveyard by sacrificing a land in
+        // addition to its other costs. Same hop-into-hand shape as the
+        // branches above; the land is sacrificed once the cast has gone
+        // through (no priority passes in between, so nothing can tell).
+        if !self.players[p].hand.iter().any(|c| c.id == card_id)
+            && let Some((grant, sacrifice)) = self.graveyard_sac_cast_grant(p, card_id)
+        {
+            let card = Self::take_card(&mut self.players[p].graveyard, card_id)
+                .ok_or(GameError::CardNotInHand(card_id))?;
+            self.players[p].hand.push(card);
+            let r = self.cast_spell_with_convoke(
+                card_id, target, additional_targets, mode, x_value, &[], &[], CastFlags::default(),
+            );
+            match r {
+                Err(e) => {
+                    if let Some(card) = Self::take_card(&mut self.players[p].hand, card_id) {
+                        self.players[p].send_to_graveyard(card);
+                    }
+                    return Err(e);
+                }
+                Ok(mut evs) => {
+                    if !self.players[p].hand.iter().any(|c| c.id == card_id) {
+                        self.players[p].graveyard_sac_cast_sources_this_turn.push(grant);
+                        evs.append(&mut self.sacrifice_for_graveyard_cast(p, grant, &sacrifice));
+                        self.entered_from_graveyard_this_turn.insert(card_id);
+                    }
+                    return Ok(evs);
+                }
+            }
+        }
         // Bolas's Citadel — cast a spell off the library top paying life equal
         // to its mana value instead of its mana cost. Hop to hand, pay life,
         // and free-cast; restore the card to the top on failure.
@@ -5354,6 +5417,116 @@ impl GameState {
             events.append(&mut die);
         }
         events.push(GameEvent::Foraged { player: p });
+        events
+    }
+
+    /// Exploration Broodship — the unused `GraveyardCastBySacrificingOncePerTurn`
+    /// grant (its source, and what it has you sacrifice) that lets `p` cast
+    /// `card_id` from their graveyard now: `p`'s turn, the card matches the
+    /// grant's filter and isn't barred from graveyard casts, and `p` controls
+    /// something to sacrifice. Read off printed statics and off the station
+    /// bands whose threshold the source's charge counters meet (CR 721.2a).
+    pub(crate) fn graveyard_sac_cast_grant(
+        &self,
+        p: usize,
+        card_id: CardId,
+    ) -> Option<(CardId, crate::card::SelectionRequirement)> {
+        use crate::effect::StaticEffect;
+        if self.active_player_idx != p {
+            return None;
+        }
+        let card = self.players[p].graveyard.iter().find(|c| c.id == card_id)?;
+        if self.cast_from_zone_blocked(p, &card.definition, crate::card::Zone::Graveyard) {
+            return None;
+        }
+        let used = &self.players[p].graveyard_sac_cast_sources_this_turn;
+        self.battlefield
+            .iter()
+            .filter(|c| c.controller == p && !used.contains(&c.id))
+            .find_map(|c| {
+                let charges = c.counter_count(crate::card::CounterType::Charge);
+                c.definition
+                    .static_abilities
+                    .iter()
+                    .map(|sa| &sa.effect)
+                    .chain(
+                        c.definition
+                            .station
+                            .iter()
+                            .filter(|b| charges >= b.min)
+                            .flat_map(|b| b.statics.iter()),
+                    )
+                    .find_map(|e| match e {
+                        StaticEffect::GraveyardCastBySacrificingOncePerTurn { filter, sacrifice }
+                            if self.evaluate_requirement_on_card(filter, card, p)
+                                && self.battlefield.iter().any(|l| {
+                                    l.controller == p
+                                        && self.evaluate_requirement_static(
+                                            sacrifice,
+                                            &Target::Permanent(l.id),
+                                            p,
+                                            None,
+                                        )
+                                }) =>
+                        {
+                            Some((c.id, sacrifice.clone()))
+                        }
+                        _ => None,
+                    })
+            })
+    }
+
+    /// Pay a graveyard-cast grant's sacrifice: `p` sacrifices one permanent
+    /// matching `filter`. With a choice the decider picks (`ChooseCards`,
+    /// `min == 1`); the candidates are ordered tapped first, then basics, so
+    /// a headless seat gives up the land it has already used.
+    fn sacrifice_for_graveyard_cast(
+        &mut self,
+        p: usize,
+        source: CardId,
+        filter: &crate::card::SelectionRequirement,
+    ) -> Vec<GameEvent> {
+        let mut cands: Vec<(bool, bool, CardId, String)> = self
+            .battlefield
+            .iter()
+            .filter(|c| {
+                c.controller == p
+                    && self.evaluate_requirement_static(filter, &Target::Permanent(c.id), p, None)
+            })
+            .map(|c| {
+                (
+                    !c.tapped,
+                    !c.definition.supertypes.contains(&crate::card::Supertype::Basic),
+                    c.id,
+                    c.definition.name.to_string(),
+                )
+            })
+            .collect();
+        cands.sort();
+        let candidates: Vec<(CardId, String)> =
+            cands.into_iter().map(|(_, _, id, name)| (id, name)).collect();
+        let chosen = match candidates.len() {
+            0 => return Vec::new(),
+            1 => candidates[0].0,
+            _ => match self.decider.decide(&crate::decision::Decision::ChooseCards {
+                source,
+                prompt: "Sacrifice which land?".into(),
+                candidates: candidates.clone(),
+                min: 1,
+                max: 1,
+                eligible: None,
+                value: crate::decision::PickValue::Cost,
+            }) {
+                crate::decision::DecisionAnswer::Cards(ids)
+                    if ids.first().is_some_and(|id| candidates.iter().any(|(c, _)| c == id)) =>
+                {
+                    ids[0]
+                }
+                _ => candidates[0].0,
+            },
+        };
+        let mut events = vec![GameEvent::PermanentSacrificed { card_id: chosen, who: p }];
+        events.append(&mut self.remove_to_graveyard_as_cost(chosen));
         events
     }
 

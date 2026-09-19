@@ -32,27 +32,50 @@ impl GameState {
         seat: usize,
         source: Option<CardId>,
     ) {
-        let Some(player) = self.players.get(seat) else { return };
+        let Some(chosen) =
+            self.choose_commander_in_command_zone(seat, source, "Put which commander into your hand?")
+        else {
+            return;
+        };
+        let Some(pos) = self.players[seat].command.iter().position(|c| c.id == chosen) else {
+            return;
+        };
+        let card = self.players[seat].command.remove(pos);
+        self.players[seat].hand.push(card);
+        self.offboard_keyword_grants = true;
+    }
+
+    /// One of `seat`'s commanders that is in the command zone: the only one,
+    /// or — with two (Partner) — the one the decider picks (`ChooseCards`,
+    /// `min == 1`; a headless seat takes the first). `None` when neither is
+    /// there.
+    fn choose_commander_in_command_zone(
+        &mut self,
+        seat: usize,
+        source: Option<CardId>,
+        prompt: &str,
+    ) -> Option<CardId> {
+        let player = self.players.get(seat)?;
         let candidates: Vec<(CardId, String)> = player
             .command
             .iter()
             .filter(|c| player.commanders.contains(&c.id))
             .map(|c| (c.id, c.definition.name.to_string()))
             .collect();
-        let chosen = match candidates.len() {
-            0 => return,
-            1 => candidates[0].0,
+        match candidates.len() {
+            0 => None,
+            1 => Some(candidates[0].0),
             _ => {
                 let answer = self.decider.decide(&Decision::ChooseCards {
                     source: source.unwrap_or(CardId(0)),
-                    prompt: "Put which commander into your hand?".into(),
+                    prompt: prompt.into(),
                     candidates: candidates.clone(),
                     min: 1,
                     max: 1,
                     eligible: None,
                     value: crate::decision::PickValue::Gain,
                 });
-                match answer {
+                Some(match answer {
                     DecisionAnswer::Cards(ids)
                         if ids.first().is_some_and(|id| {
                             candidates.iter().any(|(c, _)| c == id)
@@ -61,15 +84,77 @@ impl GameState {
                         ids[0]
                     }
                     _ => candidates[0].0,
-                }
+                })
             }
-        };
-        let Some(pos) = self.players[seat].command.iter().position(|c| c.id == chosen) else {
+        }
+    }
+
+    /// `Effect::PutCommanderOntoBattlefield` — Hellkite Courser's "put a
+    /// commander you own from the command zone onto the battlefield. It gains
+    /// haste. Return it to the command zone at the beginning of the next end
+    /// step."
+    ///
+    /// Not a cast (CR 903.8): the commander tax and `commander_cast_count` are
+    /// untouched. The entrant goes on `Selector::LastMoved`.
+    ///
+    /// The return is a CR 603.7a delayed trigger sourced on the commander
+    /// itself, gated on `SourceOnBattlefield`: a commander that already left
+    /// (and went home through CR 903.9) isn't chased into another zone.
+    /// ⚠ The engine keeps one `CardId` across zone changes, so a commander
+    /// that left and was recast the same turn is still returned — the
+    /// CR 400.7 new-object rule is not modelled (as for Sneak Attack's
+    /// sacrifice).
+    pub(crate) fn put_commander_onto_battlefield(
+        &mut self,
+        seat: usize,
+        source: Option<CardId>,
+        haste: bool,
+        return_at_end_step: bool,
+        controller: usize,
+        events: &mut Vec<crate::game::GameEvent>,
+    ) {
+        use crate::effect::{Predicate, Selector, ZoneDest};
+        let Some(chosen) = self.choose_commander_in_command_zone(
+            seat,
+            source,
+            "Put which commander onto the battlefield?",
+        ) else {
             return;
         };
-        let card = self.players[seat].command.remove(pos);
-        self.players[seat].hand.push(card);
+        let Some(card) = Self::take_card(&mut self.players[seat].command, chosen) else {
+            return;
+        };
         self.offboard_keyword_grants = true;
+        self.place_card_in_dest(
+            card,
+            seat,
+            &ZoneDest::Battlefield { controller: PlayerRef::Seat(seat), tapped: false },
+            events,
+        );
+        if self.battlefield_find(chosen).is_none() {
+            return;
+        }
+        self.scratch.last_moved_cards.push(chosen);
+        if haste {
+            self.grant_keyword_eot(chosen, Keyword::Haste);
+        }
+        if return_at_end_step {
+            self.delayed_triggers.push(crate::game::types::DelayedTrigger {
+                controller,
+                source: chosen,
+                kind: crate::game::types::DelayedKind::NextEndStep,
+                effect: Effect::If {
+                    cond: Predicate::SourceOnBattlefield,
+                    then: Box::new(Effect::Move { what: Selector::This, to: ZoneDest::Command }),
+                    else_: Box::new(Effect::Noop),
+                },
+                target: None,
+                bound_token: None,
+                bound_subject: None,
+                fires_once: true,
+                expires_after_turn: None,
+            });
+        }
     }
 }
 

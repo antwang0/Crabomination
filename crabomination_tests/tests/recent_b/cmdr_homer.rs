@@ -821,6 +821,40 @@ fn exploration_broodship_stations_into_a_flier() {
     assert_eq!(g.max_lands_per_turn(0), 2, "the {{3+}} land drop this turn");
 }
 
+/// Exploration Broodship {8+}: once during each of your turns, cast a
+/// permanent spell from your graveyard by sacrificing a land (the chosen one)
+/// in addition to its other costs. Below eight counters, or a second time in
+/// the turn, the graveyard card can't be cast.
+#[test]
+fn exploration_broodship_casts_a_permanent_from_the_graveyard_for_a_land() {
+    let mut g = main_phase(2);
+    let ship = g.add_card_to_battlefield(0, catalog::exploration_broodship());
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    let island = g.add_card_to_battlefield(0, catalog::island());
+    let bears = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let bears2 = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let cast = |g: &mut GameState, card_id| {
+        g.perform_action(GameAction::CastSpell {
+            card_id,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+    };
+    g.players[0].mana_pool.add(Color::Green, 4);
+    g.battlefield_find_mut(ship).unwrap().add_counters(CounterType::Charge, 7);
+    assert!(cast(&mut g, bears).is_err(), "seven counters: the {{8+}} band is off");
+    g.battlefield_find_mut(ship).unwrap().add_counters(CounterType::Charge, 1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![island])]));
+    cast(&mut g, bears).expect("cast from the graveyard");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bears).is_some(), "the Bears resolved");
+    assert!(g.battlefield_find(island).is_none(), "the chosen land was sacrificed");
+    assert!(g.battlefield_find(forest).is_some(), "the other land stays");
+    assert!(cast(&mut g, bears2).is_err(), "once each turn");
+}
+
 /// Firdoch Core taps for any color and animates into a 4/4.
 #[test]
 fn firdoch_core_animates() {

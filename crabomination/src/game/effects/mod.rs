@@ -11376,6 +11376,20 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::PutCommanderOntoBattlefield { who, haste, return_at_end_step } => {
+                if let Some(p) = self.resolve_player(who, ctx) {
+                    self.put_commander_onto_battlefield(
+                        p,
+                        ctx.source,
+                        *haste,
+                        *return_at_end_step,
+                        ctx.controller,
+                        events,
+                    );
+                }
+                Ok(())
+            }
+
             Effect::AddMana { who, pool } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
                 // Unwrap a spend-restriction wrapper. The inner payload

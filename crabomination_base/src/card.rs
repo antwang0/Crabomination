@@ -5772,7 +5772,9 @@ impl CardDefinition {
         for sa in &self.static_abilities {
             match sa.effect {
                 StaticEffect::AllNonlandPermanentsAreLegendary => m |= b::SUPERTYPE_GRANT,
-                StaticEffect::LegendRuleDoesntApply => m |= b::LEGEND_RULE_OFF,
+                // Either scope sets the bit; the SBA reads which one it is.
+                StaticEffect::LegendRuleDoesntApply
+                | StaticEffect::LegendRuleDoesntApplyToYourPermanents => m |= b::LEGEND_RULE_OFF,
                 StaticEffect::LethalDamageByPower { .. } => m |= b::LETHAL_BY_POWER,
                 _ => {}
             }
@@ -7205,6 +7207,8 @@ pub mod gather_spec {
     pub const SELF_BASE_PT_FROM_VALUE: u64 = 1 << 36;
     pub const SET_BASE_PT_FOR_FILTER_FROM_VALUE: u64 = 1 << 37;
     pub const ARTIFACTS_ARE_EQUIPMENT: u64 = 1 << 38;
+    /// `PumpPerSharedType` and `PumpPerSameNameCreatureYouControl` share one
+    /// state-aware per-creature walk, so one bit.
     pub const PUMP_PER_SHARED_TYPE: u64 = 1 << 39;
     /// `AnthemForFilter` and `AnthemForFilterIf` share one walk, so one bit.
     pub const ANTHEM_FILTER: u64 = 1 << 40;
@@ -7322,7 +7326,9 @@ pub fn static_effect_gather_bits(effect: &crate::effect::StaticEffect) -> u64 {
         SE::SelfBasePtFromValue { .. } => g::SELF_BASE_PT_FROM_VALUE,
         SE::SetBasePtForFilterFromValue { .. } => g::SET_BASE_PT_FOR_FILTER_FROM_VALUE,
         SE::ArtifactsAreEquipment => g::ARTIFACTS_ARE_EQUIPMENT,
-        SE::PumpPerSharedType { .. } => g::PUMP_PER_SHARED_TYPE,
+        SE::PumpPerSharedType { .. } | SE::PumpPerSameNameCreatureYouControl { .. } => {
+            g::PUMP_PER_SHARED_TYPE
+        }
         SE::AnthemForFilter { .. } | SE::AnthemForFilterIf { .. } => g::ANTHEM_FILTER,
         _ => 0,
     }

@@ -15,6 +15,10 @@
 //!     Roaming Throne's "this creature is the chosen type".
 //!   - `PlayFromLibraryTop` concretizes `IsSourceChosenCreatureType` against
 //!     the granting permanent's choice — Realmwalker.
+//!   - `StaticEffect::GraveyardCastBySacrificingOncePerTurn`, read off station
+//!     bands too — Exploration Broodship's {8+}.
+//!   - `StaticEffect::LegendRuleDoesntApplyToYourPermanents` — Sakashima's
+//!     exemption is its controller's only.
 //!
 //! Residuals (approximated or omitted clauses — each also noted on its card):
 //!   - Homer, the Hermit: "any number of target players" is capped at four
@@ -22,10 +26,10 @@
 //!   - Cruel Calculations: X counts every card put into the target player's
 //!     graveyard this turn, not only those that came from their library (the
 //!     engine keeps no per-player "milled this turn" tally).
-//!   - Exploration Broodship: the {8+} "once during each of your turns, cast a
-//!     permanent spell from your graveyard by sacrificing a land" is omitted;
-//!     the {3+} extra land drop is granted at the start of each of your turns
-//!     (and the moment the threshold is first crossed) rather than as a static.
+//!   - Exploration Broodship: the {3+} extra land drop is granted at the start
+//!     of each of your turns (and the moment the threshold is first crossed)
+//!     rather than as a static; the {8+} graveyard cast sacrifices its land
+//!     once the cast has gone through rather than mid-cast.
 //!   - Rites of Flourishing / Druid Class level 2: "may play an additional
 //!     land" is granted per turn (upkeep trigger, plus once on entering /
 //!     levelling) rather than as a static the engine re-reads.
@@ -757,7 +761,7 @@ pub fn scuttling_sentinel() -> CardDefinition {
 pub fn sakashima_of_a_thousand_faces() -> CardDefinition {
     let legend_rule = || StaticAbility {
         description: "The \"legend rule\" doesn't apply to permanents you control.",
-        effect: StaticEffect::LegendRuleDoesntApply,
+        effect: StaticEffect::LegendRuleDoesntApplyToYourPermanents,
     };
     CardDefinition {
         keywords: vec![Keyword::Partner],
@@ -1294,8 +1298,11 @@ pub fn altar_of_the_brood() -> CardDefinition {
 
 /// Exploration Broodship — {G} Artifact — Spacecraft. Station. {3+}: you may
 /// play an additional land each turn (granted at the start of each of your
-/// turns and when first stationed past 3). {8+}: 4/4 flying. The {8+} "cast a
-/// permanent spell from your graveyard by sacrificing a land" is omitted.
+/// turns and when first stationed past 3). {8+}: once during each of your
+/// turns, you may cast a permanent spell from your graveyard by sacrificing a
+/// land in addition to paying its other costs; 4/4 flying.
+/// The land is sacrificed right after the cast is made (no priority passes in
+/// between), and you pick it when you control more than one.
 pub fn exploration_broodship() -> CardDefinition {
     let stationed = || Predicate::SourceHasCountersAtLeast { counter: CounterType::Charge, n: 3 };
     let extra_land = || Effect::GrantExtraLandPlay { who: PlayerRef::You, count: Value::ONE };
@@ -1309,6 +1316,10 @@ pub fn exploration_broodship() -> CardDefinition {
             min: 8,
             keywords: vec![Keyword::Flying],
             pt: Some((4, 4)),
+            statics: vec![StaticEffect::GraveyardCastBySacrificingOncePerTurn {
+                filter: R::Permanent,
+                sacrifice: R::Land,
+            }],
             ..Default::default()
         }],
         triggered_abilities: vec![

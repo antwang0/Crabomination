@@ -241,6 +241,43 @@ fn cr_903_8_commander_tax_is_two_generic_per_prior_cast() {
     assert_eq!(cast(&mut g), 4, "printed cost plus the tax");
 }
 
+/// CR 903.8 — putting a commander onto the battlefield from the command zone
+/// (`Effect::PutCommanderOntoBattlefield`) is not a cast, so it adds no tax;
+/// `ZoneDest::Command` moves a permanent straight back to its owner's command
+/// zone with no CR 903.9 prompt, counters gone (CR 400.7).
+#[test]
+fn cr_903_8_putting_a_commander_onto_the_battlefield_is_not_a_cast() {
+    use crabomination::effect::{Effect, PlayerRef, Selector, ZoneDest};
+    use crabomination::game::effects::EffectContext;
+    let mut g = main_phase();
+    let cmd = g.seat_commanders(0, vec![catalog::grizzly_bears()])[0];
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    let put = Effect::PutCommanderOntoBattlefield {
+        who: PlayerRef::You,
+        haste: false,
+        return_at_end_step: false,
+    };
+    g.resolve_effect(&put, &ctx).expect("put");
+    assert!(g.battlefield_find(cmd).is_some(), "on the battlefield");
+    assert!(g.players[0].command.is_empty(), "out of the command zone");
+    g.battlefield_find_mut(cmd).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    let home = EffectContext::for_ability(cmd, 0, None);
+    g.resolve_effect(&Effect::Move { what: Selector::This, to: ZoneDest::Command }, &home)
+        .expect("move");
+    assert!(g.battlefield_find(cmd).is_none());
+    let back = g.players[0].command.iter().find(|c| c.id == cmd).expect("in the command zone");
+    assert_eq!(back.counter_count(CounterType::PlusOnePlusOne), 0, "a new object");
+    mana(&mut g, 0);
+    let before = g.players[0].mana_pool.total();
+    g.perform_action(GameAction::CastFromCommandZone {
+        card_id: cmd, target: None, additional_targets: vec![], mode: None, x_value: None,
+        alternative: false,
+        pitch_card: None,
+    })
+    .expect("cast");
+    assert_eq!(before - g.players[0].mana_pool.total(), 2, "no tax: it was never cast");
+}
+
 /// CR 903.10a — 21 combat damage from one commander eliminates the victim.
 #[test]
 fn cr_903_10a_twenty_one_commander_damage_eliminates() {
