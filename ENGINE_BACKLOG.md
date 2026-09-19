@@ -165,8 +165,10 @@ files and reports the ones whose loop body never reads `suspend_signal`. An
 inline `&Effect::Variant { … }` whose variant is in the script's short
 `NEVER_ASKS` set is skipped; everything else is a hit or an allowlist entry
 with its reason. It read **18 sites / 18 allowlisted / 0 unexplained** when
-it was written and **15 / 15 / 0** once the `CardId` pin closed three of
-them; deleting one `splice_after_suspend` call takes it to 1. ⚠ It does
+it was written, **15 / 15 / 0** once the `CardId` pin closed three of them,
+and **13 / 13 / 0 / 0 stale** once `BindScratch` closed two more; deleting one
+`splice_after_suspend` call takes it to 1 unexplained, and deleting an
+allowlisted site takes it to 1 stale. ⚠ It does
 **not** see a sequential *pair* — see the last OPEN row.
 
 **OPEN, each waiting on a primitive that does not exist** (the allowlist
@@ -180,17 +182,47 @@ carries these verbatim, so the script stays the index):
   (one catalog card casts a spell from exile there) and `EyeOfTheStorm` —
   the last needs **both** pins, the caster via `EachPlayerDoes` over one seat
   and the card via `BindTargetObjects`. Nine OPEN rows became six.
-- ⏳ `Effect::Vote` under `VoteTally::PerVote` (`AllTied` is spliced). Each
-  run pins `self.current_voter`, which no `Effect` carries.
-- ⏳ `Effect::RollDie`: each die's result arm runs under its own
-  `self.last_die_roll`, which no `Effect` carries.
+- ✅ **CLOSED, and it was the second-best primitive here:**
+  `Effect::BindScratch { scratch, body }` pins one piece of *resolver*
+  scratch — state on `GameState`, which neither the `EffectContext` nor the
+  two target pins can carry. Three variants, three arms:
+  `ScratchBinding::CurrentVoter` closed `Effect::Vote`'s `VoteTally::PerVote`
+  half and `LastDieRoll` closed `Effect::RollDie`. Six OPEN rows became four.
+  ⚠ **A third variant for `separated_piles` was written and deleted**: the
+  pair form below is fixed by its splice alone, because an ask that parks
+  there is a *stash-and-rerun* (`ask_seat_cards` re-queues the originating
+  effect, so the whole arm replays and re-sets the piles) rather than a
+  continuation that reads them cold. No test could be made to fail, so the
+  variant went.
+  ⚠ **Two things the injection check taught, and neither was the splice.**
+  ① `PerVote` needs a `rewrap_parked` as well as a splice: `current_voter` is
+  restored *before* the return, so the suspending run's own parked half comes
+  back reading the controller. A test cannot see that with a one-choice
+  ballot — the ballot starts with the controller, so the fallback is right by
+  accident; the test votes the first ballot differently so the schedule's
+  first run belongs to another seat. ② `RollDie` needs **no** re-wrap, and
+  that asymmetry is the point: `last_die_roll` is never restored, the loop
+  returns as soon as it splices, and nothing resolves while a decision is
+  pending — so the field still reads that die's face at the resume. Both
+  halves were written, and the one that could not be made to fail was deleted.
+  ⚠ `RollDie` also moved its `DiceRolled` event **ahead** of the results-table
+  dispatch (CR 706.2 / 706.3a: the roll is over and its result fixed before
+  the table is consulted), which is what lets the tail be complete. No catalog
+  card triggers off a results arm, so nothing observes the reorder today.
 - ⏳ `Effect::MayPayRepeatedly`: the arm's resume path is a re-run from the
   top over the answer log (`answer_already_acted_on`), which a spliced tail
   would double-count.
 - ⏳ `Effect::SearchExileLinked`: the tail needs the already-exiled picks'
   `exiled_with` stamps re-applied, which a remaining count cannot carry.
-- ⏳ `Effect::SacrificeAnyNumber`: the sacrifices are inline zone moves, not
-  an `Effect`, so a tail cannot carry the ones not yet made.
+- ⏳ `Effect::SacrificeAnyNumber` — OPEN **by the catalog**, not by the code:
+  all six `per_each` bodies are choiceless (draw, counters, drain, life), the
+  same judgement `ForEachOpponent` used to carry as a `debug_assert!`. The
+  sacrifices are inline zone moves rather than an `Effect`, so the fix when
+  one stops being choiceless is to **hoist every sacrifice ahead of every
+  payoff** — which is what CR 608.2 says the printed text does anyway — after
+  which the tail is a plain `Seq` of `per_each`. ⚠ That hoist moves
+  `Value::SacrificedCount` inside `per_each` from 1..n to n; no card reads it
+  there today (Last-Ditch Effort's `per_each` is `Noop`).
 - ✅ **The shape the ratchet cannot see — a sequential PAIR — CLOSED for its
   two known instances.** A loop is only the commonest form of "a second
   `run_effect` after one that can suspend". The pile splits
@@ -200,10 +232,19 @@ carries these verbatim, so the script stays the index):
   `chosen` had finished and the clear happened under `chosen`'s
   continuation, which then resolved `Selector::SeparatedPile` to nothing.
   Do or Die and Death or Glory destroyed one pile of two. The splice carries
-  `other` and the clear waits. ⏳ **Detecting the shape generally is still
-  open**: "is this arm's second statement reachable after a suspend" is a
-  dataflow question, not a lexical one, so `audit_loop_splice.py` cannot ask
-  it.
+  `other`. 📐 **And the mirror half — `other` parking, with no splice to hang
+  the piles off — needs nothing, which is worth knowing**: the ask that parks
+  there is a stash-and-rerun, so the arm replays from the top with its answer
+  log and re-sets the piles before reading them. A `BindScratch` re-wrap for
+  the piles was written for that case and could not be made to fail; it was
+  deleted rather than kept. ⚠ The row that described this used to
+  name two variants that **do not exist** (`SeparatePilesChoose`,
+  `PickOnePileThen`); a reader grepping for them found nothing.
+  ⏳ **Detecting the shape generally is still open**: "is this arm's second
+  statement reachable after a suspend" is a dataflow question, not a lexical
+  one, so `audit_loop_splice.py` cannot ask it. What it grew instead is a
+  **staleness check** — an `ALLOW` entry whose site is gone now fails, and it
+  found three dead entries the day it was written.
 - ⏳ The ante branch loop (`effects/mod.rs`, the `AnteTopOfLibrary` arm). Its
   second pass calls `ante_top_card` *and* runs the branch, so a tail would
   have to hoist every ante ahead of every branch — a real ordering change

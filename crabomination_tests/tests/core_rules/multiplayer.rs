@@ -4271,7 +4271,7 @@ fn cr_800_4c_an_ordinary_reversion_is_untouched() {
 /// Resolve the top of the stack to completion, answering every ask the
 /// installed decider would answer. `drain_stack` can't: it passes priority,
 /// and a pending decision is exactly what blocks that.
-fn resolve_answering(g: &mut GameState) {
+pub(crate) fn resolve_answering(g: &mut GameState) {
     g.resolve_top_of_stack().expect("resolve the trigger");
     for _ in 0..64 {
         let Some(pending) = g.pending_decision.as_ref() else { break };
@@ -4760,6 +4760,84 @@ fn cr_608_2_for_each_reaches_every_entity_when_the_body_suspends() {
     assert_eq!(g.players[0].hand.len(), hand - 4, "one discard per entity");
 }
 
+/// Votes the first ballot for the second choice and every later one for the
+/// first, so the schedule's first run belongs to a seat that is NOT the
+/// controller — which is where `PlayerRef::CurrentVoter`'s fallback would
+/// otherwise cover for a missing binding.
+struct FirstVoterDiffers(usize);
+impl crabomination::decision::Decider for FirstVoterDiffers {
+    fn decide(
+        &mut self,
+        decision: &crabomination::decision::Decision,
+    ) -> DecisionAnswer {
+        match decision {
+            crabomination::decision::Decision::ChooseOption { .. } => {
+                self.0 += 1;
+                DecisionAnswer::Amount(u32::from(self.0 == 1))
+            }
+            other => crabomination::decision::AutoDecider.decide(other),
+        }
+    }
+}
+
+/// CR 101.4 / 701.38 — a council's dilemma runs one effect per vote cast, and
+/// every one of them happens even when an earlier one asks. The voter is
+/// pinned in `GameState.current_voter`, which no `EffectContext` carries, so
+/// both the spliced tail and the suspending run's own remainder name their
+/// voter inside the effect (`Effect::BindScratch`). Capital Punishment is the
+/// printed shape: at four seats its "death" ballot asks three opponents to
+/// sacrifice, and only the first was ever asked.
+#[test]
+fn cr_701_38_every_vote_resolves_when_an_earlier_votes_effect_suspends() {
+    use crabomination::effect::{Effect, Selector, Value, VoteOption, VoteTally};
+    let mut g = multi_player_game(4);
+    for p in g.players.iter_mut() {
+        p.wants_ui = true;
+    }
+    let before = stock_opponent_hands(&mut g, 0..4);
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Both choices do the same thing, so the schedule is four votes long
+    // however they split; the split only decides whose vote comes first.
+    let body = || {
+        Effect::Seq(vec![
+            Effect::Discard {
+                who: Selector::Player(PlayerRef::CurrentVoter),
+                amount: Value::Const(1),
+                random: false,
+            },
+            // Behind the ask, so it is the *parked* half: without the re-wrap
+            // it comes back with `current_voter` restored and pays the
+            // controller instead.
+            Effect::GainLife {
+                who: Selector::Player(PlayerRef::CurrentVoter),
+                amount: Value::Const(5),
+            },
+        ])
+    };
+    g.stack.push(
+        TriggerPush::new(src, 0, Effect::Vote {
+            options: vec![VoteOption::new("aye", body()), VoteOption::new("nay", body())],
+            tally: VoteTally::PerVote,
+        })
+        .build(),
+    );
+    let life: Vec<i32> = g.players.iter().map(|p| p.life).collect();
+    g.decider = Box::new(FirstVoterDiffers(0));
+    resolve_answering(&mut g);
+    for (seat, &had) in before.iter().enumerate() {
+        assert_eq!(
+            g.players[seat].hand.len(),
+            had - 1,
+            "seat {seat}'s own vote resolved — not just the first voter's",
+        );
+        assert_eq!(
+            g.players[seat].life,
+            life[seat] + 5,
+            "and its parked half came back naming seat {seat}, not the controller",
+        );
+    }
+}
+
 /// The pair form of the same class: `SeparateIntoPiles` runs `chosen`, then
 /// `other`, then drops the piles. A suspend inside `chosen` is `Ok(())`, so
 /// `other` ran *before* `chosen` had finished and the piles were cleared out
@@ -4810,3 +4888,4 @@ fn a_pile_splits_second_half_waits_for_the_first_to_finish() {
         "both piles were destroyed — the chosen one's destroy still found it",
     );
 }
+

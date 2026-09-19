@@ -26,11 +26,22 @@ reads `suspend_signal`. Two things are not hits:
   body is a token mint today" is a property of the CATALOG, not of the code,
   and a new card can end it.
 
-Reading at the forty-third find's closing tip: **15 sites, 15 allowlisted, 0
-unexplained** — 6 of the allowlist entries are OPEN, each with the primitive
-it is waiting on (see ENGINE_BACKLOG's forty-third find). It read 18/18/0
-before `Selector::ExactObjects` and `Effect::BindTargetObjects` closed three
-of them.
+The staleness half found three entries the day it was written: `TieredPayoff`
+(the variant is gone), `DestroyAllNoRegenGainControllerLifePerManaValue` (the
+arm destroys inline now, no `run_effect` at all) and
+`ExileRandomGraveyardCopyTapped` (its `Move` literal wrapped onto its own
+line, so `NEVER_ASKS` covers it and the entry never matched again).
+
+Reading now: **13 sites, 13 allowlisted, 0 unexplained** — 4 of the
+allowlist entries are OPEN, each with the primitive it is waiting on (see
+ENGINE_BACKLOG's forty-third find). It read 18/18/0 at the find's closing tip,
+15/15/0 once `Selector::ExactObjects` and `Effect::BindTargetObjects` closed
+three of them, and 13/13/0 once `Effect::BindScratch` closed `Vote`'s
+`PerVote` half and `RollDie`.
+
+**An allowlist entry that stops matching fails too.** A site someone fixed
+leaves its reason behind, and a stale reason is worse than none: the next
+reader takes it for a live constraint.
 
 ⚠ **What it does NOT see: a sequential PAIR.** The class is "a second
 `run_effect` after one that can suspend", and a loop is only its commonest
@@ -40,8 +51,9 @@ find them and would not find the next one: "is this arm's second statement
 reachable after a suspend" is a dataflow question, not a lexical one.
 
 **Injection:** deleting the `splice_after_suspend` call from
-`Effect::ForEachOpponent` takes 0 -> **1 unexplained**. A gate that cannot
-fail is worse than no gate; this one can.
+`Effect::ForEachOpponent` takes 0 -> **1 unexplained**, and deleting an
+`ALLOW` entry's site takes it to **1 stale**. A gate that cannot fail is worse
+than no gate; this one can, twice.
 """
 
 import re
@@ -101,14 +113,10 @@ ALLOW = {
     ("PlayersMayAccept", "on_accept"): "the first acceptor returns; the loop ends there",
     ("AnyPlayerMayAccept", "accepted"): "ditto",
     ("AnyPlayerMayExileFromGraveyard", "then"): "ditto",
-    ("TieredPayoff", "eff"): "the first tier met returns",
     # ── The effect run cannot ask ─────────────────────────────────────────
     ("DrainDefendersLandsForManaNextMain", "&ability.effect"):
         "`is_mana_ability_public` gates the pick: CR 605.1a mana abilities "
         "do not use the stack and do not ask",
-    ("DestroyAllNoRegenGainControllerLifePerManaValue", "&Effect::RevealUntilFind {"):
-        "`RevealMissDest::ShuffleIntoLibrary` and a battlefield destination "
-        "are choiceless",
     ("resolve_destroy_targets_polymorph", "&Effect::RevealUntilFind {"): "ditto",
     ("SearchExileLinked", "&Effect::Search {"):
         "the search asks, and the arm is a `for _ in 0..n` over one seat — "
@@ -124,25 +132,27 @@ ALLOW = {
         "OPEN: the second pass antes AND runs the branch, so a tail would "
         "have to hoist every ante ahead of every branch. CR 407 ante is in "
         "no pool",
-    ("Vote", "&opt.effect"):
-        "OPEN for `VoteTally::PerVote` only (`AllTied` is spliced): each run "
-        "pins `self.current_voter`, which no `Effect` carries",
-    ("RollDie", "effect"):
-        "OPEN: each die's arm runs under its own `self.last_die_roll`, which "
-        "no `Effect` carries",
-    ("OpponentRevealsPickToBattlefield", "per_win"):
+    ("FlipCoinsChooseCount", "per_win"):
         "OPEN: the tail would have to re-flip the remaining coins, and the "
-        "arm's `wins` tally is read after the loop",
-    ("OpponentRevealsPickToBattlefield", "per_loss"): "ditto",
+        "arm's `wins` tally is read after the loop. ⚠ This pair was "
+        "allowlisted under `OpponentRevealsPickToBattlefield` until "
+        "`scope_at` learned to read a multi-line arm pattern",
+    ("FlipCoinsChooseCount", "per_loss"): "ditto",
     ("MayPayRepeatedly", "body"):
         "OPEN: the arm's resume path is a re-run from the top over the "
         "answer log (`answer_already_acted_on`), which a spliced tail would "
-        "double-count",
-    ("ExileRandomGraveyardCopyTapped", "&Effect::Move { what: Selector::Target(0), to: ZoneDest::Exile }"):
-        "the move is choiceless; the mint beside it is `NEVER_ASKS`",
+        "double-count. Both catalog bodies are `Effect::Untap`, i.e. "
+        "choiceless, so nothing is reachable through it today",
     ("SacrificeAnyNumber", "per_each"):
-        "OPEN: the sacrifices are inline zone moves, not an `Effect`, so a "
-        "tail cannot carry the ones not yet made",
+        "OPEN by the CATALOG, the same judgement `ForEachOpponent` used to "
+        "carry: all six `per_each` bodies are choiceless today (draw, "
+        "counters, drain, life), so no tail is reachable. The sacrifices are "
+        "inline zone moves rather than an `Effect`, so the fix when one "
+        "stops being choiceless is to HOIST every sacrifice ahead of every "
+        "payoff — which is what CR 608.2 says the printed text does anyway — "
+        "after which the tail is a plain `Seq` of `per_each`. ⚠ That hoist "
+        "moves `Value::SacrificedCount` inside `per_each` from 1..n to n; no "
+        "card reads it there today (Last-Ditch Effort's `per_each` is Noop)",
 }
 
 
@@ -170,11 +180,24 @@ def strip_code(line: str) -> str:
     return "".join(out)
 
 
+ARM_TAIL = re.compile(r"^\s*\}\s*=>")
+
+
 def scope_at(lines, idx):
-    """The nearest enclosing `Effect::` match arm, else the function name."""
+    """The nearest enclosing `Effect::` match arm, else the function name.
+
+    An arm whose pattern is destructured over several lines has its `=>` on
+    the closing brace, not on the `Effect::Variant {` line — so a one-line
+    test walks straight past it and labels the site with whatever arm came
+    before. That mislabelled the `FlipCoinsChooseCount` site as
+    `OpponentRevealsPickToBattlefield`, i.e. sent the reader to an arm with
+    no loop in it at all.
+    """
     for j in range(idx, -1, -1):
         m = ARM.match(lines[j])
-        if m and "=>" in lines[j]:
+        if m and ("=>" in lines[j] or any(
+            ARM_TAIL.match(lines[k]) for k in range(j + 1, min(j + 25, len(lines)))
+        )):
             return m.group(1)
         m = FN.match(lines[j])
         if m:
@@ -223,18 +246,22 @@ def audit(path):
 
 
 def main():
-    unexplained, allowed = [], 0
+    unexplained, matched = [], set()
     for path in FILES:
         for line, scope, arg in audit(path):
             if (scope, arg) in ALLOW:
-                allowed += 1
+                matched.add((scope, arg))
                 continue
             unexplained.append((path, line, scope, arg))
     for path, line, scope, arg in unexplained:
         print(f"{path}:{line}  {scope}  run_effect({arg})")
-    print(f"\n{len(unexplained) + allowed} asking run-in-loop sites, "
-          f"{allowed} allowlisted, {len(unexplained)} unexplained")
-    return 1 if unexplained else 0
+    stale = sorted(set(ALLOW) - matched)
+    for scope, arg in stale:
+        print(f"STALE allowlist entry, the site is gone: {scope}  run_effect({arg})")
+    print(f"\n{len(unexplained) + len(matched)} asking run-in-loop sites, "
+          f"{len(matched)} allowlisted, {len(unexplained)} unexplained, "
+          f"{len(stale)} stale")
+    return 1 if unexplained or stale else 0
 
 
 if __name__ == "__main__":

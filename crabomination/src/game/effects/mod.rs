@@ -38,11 +38,19 @@ use crate::card::{
 };
 use crate::effect::{
     AttackingTokenCleanup, Duration, Effect, ManaPayload, PlayerRef,
-    Selector, ZoneDest, ZoneRef,
+    ScratchBinding, Selector, ZoneDest, ZoneRef,
 };
 use crate::decision::{AmountKind, OptionalKind, PayFor, PickValue};
 use crate::game::layers::EffectDuration;
 use crate::mana::Color;
+
+/// What `bind_scratch` displaced, for `restore_scratch` to put back. Not a
+/// `ScratchBinding`: `current_voter` is an `Option` outside a ballot, which the
+/// binding has no way to say.
+enum ScratchSave {
+    CurrentVoter(Option<usize>),
+    LastDieRoll(u8),
+}
 
 /// Continuation for per-player decision loops that suspend mid-iteration:
 /// re-runs `make(seat)` for each not-yet-processed seat once the suspended
@@ -1505,6 +1513,7 @@ impl GameState {
         self.run_piles_then_clear(chosen, other, ctx, events)
     }
 
+
     /// Run a pile split's two halves, then drop the piles.
     ///
     /// A loop is only the commonest shape of "a second `run_effect` after one
@@ -1528,6 +1537,27 @@ impl GameState {
         let run = self.run_effect(other, ctx, events);
         self.separated_piles = (Vec::new(), Vec::new());
         run
+    }
+
+    /// Pin one piece of resolver scratch for an `Effect::BindScratch` body,
+    /// handing back what was there for `restore_scratch`.
+    fn bind_scratch(&mut self, scratch: &ScratchBinding) -> ScratchSave {
+        match scratch {
+            ScratchBinding::CurrentVoter(seat) => {
+                ScratchSave::CurrentVoter(self.current_voter.replace(*seat))
+            }
+            ScratchBinding::LastDieRoll(face) => {
+                ScratchSave::LastDieRoll(std::mem::replace(&mut self.last_die_roll, *face))
+            }
+        }
+    }
+
+    /// Put back what `bind_scratch` replaced.
+    fn restore_scratch(&mut self, save: ScratchSave) {
+        match save {
+            ScratchSave::CurrentVoter(prev) => self.current_voter = prev,
+            ScratchSave::LastDieRoll(prev) => self.last_die_roll = prev,
+        }
     }
 
     /// Drop the multi-question replay log — call when a log-using effect
@@ -5737,48 +5767,73 @@ impl GameState {
                     naturals.sort_unstable_by(|a, b| b.cmp(a));
                     naturals.truncate(n as usize);
                 }
-                // Greatest modified result this roll, for result-gated triggers.
-                let mut high_rolled: u8 = 0;
-                for natural in &naturals {
-                    // CR 706.2 — add the modifier, flooring the modified
-                    // result at 1 (a die result is never reduced below 1).
-                    // The result may exceed `sides`, letting a top "N+"
-                    // arm catch boosted rolls.
-                    let rolled = (*natural as i32 + modifier).max(1).min(u8::MAX as i32) as u8;
-                    high_rolled = high_rolled.max(rolled);
-                    // CR 706.3a — first matching arm fires. If no arm
-                    // matches the roll, the die has no result-table
-                    // effect (per CR 706.3a "If the result was in this
-                    // range, [effect]" — silent on out-of-range rolls).
-                    if let Some((_, _, effect)) =
-                        results.iter().find(|(lo, hi, _)| rolled >= *lo && rolled <= *hi)
-                    {
-                        // CR 706.4 — expose the rolled face to the arm's
-                        // effect via `Value::LastDieRoll`.
-                        self.last_die_roll = rolled;
-                        self.run_effect(effect, ctx, events)?;
-                    }
-                }
-                // CR 706.5 — "if any of the dice show the same number"
-                // (doubles): fires once after the per-die dispatch when two
-                // or more natural faces match.
-                if let Some(doubles_effect) = on_doubles {
-                    let mut sorted = naturals.clone();
-                    sorted.sort_unstable();
-                    if sorted.windows(2).any(|w| w[0] == w[1]) {
-                        self.run_effect(doubles_effect, ctx, events)?;
-                    }
-                }
-                // CR 706.6 — "whenever a player rolls one or more dice" fires
-                // once for the whole roll, after the results resolve. Carries
-                // the greatest result so result-gated triggers ("roll a 5 or
+                // CR 706.2 — add the modifier, flooring the modified result at
+                // 1 (a die result is never reduced below 1). The result may
+                // exceed `sides`, letting a top "N+" arm catch boosted rolls.
+                let rolls: Vec<u8> = naturals
+                    .iter()
+                    .map(|nat| (*nat as i32 + modifier).max(1).min(u8::MAX as i32) as u8)
+                    .collect();
+                // CR 706.2 / 706.3a — the roll is over, and its result fixed,
+                // *before* the results table is consulted, so "whenever a
+                // player rolls one or more dice" has already triggered by the
+                // time an arm runs. One event for the whole roll, carrying the
+                // greatest result so a result-gated trigger ("roll a 5 or
                 // higher") can filter on it via `event_amount`.
                 if n > 0 {
                     events.push(GameEvent::DiceRolled {
                         player: ctx.controller,
                         count: n as u32,
-                        high: high_rolled,
+                        high: rolls.iter().copied().max().unwrap_or(0),
                     });
+                }
+                // CR 706.5 — "if any of the dice show the same number"
+                // (doubles): once, after the per-die dispatch, when two or
+                // more natural faces match.
+                let doubles = on_doubles.as_ref().filter(|_| {
+                    let mut sorted = naturals.clone();
+                    sorted.sort_unstable();
+                    sorted.windows(2).any(|w| w[0] == w[1])
+                });
+                let arm_for = |rolled: u8| {
+                    results.iter().find(|(lo, hi, _)| rolled >= *lo && rolled <= *hi)
+                };
+                for (k, &rolled) in rolls.iter().enumerate() {
+                    // CR 706.3a — the first matching arm fires. No arm matching
+                    // is silent: "If the result was in this range, [effect]".
+                    let Some((_, _, effect)) = arm_for(rolled) else { continue };
+                    // CR 706.4 — expose the rolled face to the arm's effect
+                    // via `Value::LastDieRoll`.
+                    self.last_die_roll = rolled;
+                    self.run_effect(effect, ctx, events)?;
+                    // CR 101.4 — every die's arm happens, including the ones
+                    // after an arm that asks. Each *remaining* arm names its
+                    // own face inside the effect, because by the time the
+                    // continuation reaches it the field has moved on.
+                    //
+                    // This arm's own remainder needs no such wrapper, unlike
+                    // the ballot below: `self.last_die_roll` is never restored
+                    // here, the loop returns as soon as it splices, and nothing
+                    // else resolves while a decision is pending — so the field
+                    // still reads `rolled` when it resumes.
+                    if splice_after_suspend(&mut self.suspend_signal, || {
+                        let mut tail: Vec<Effect> = rolls[k + 1..]
+                            .iter()
+                            .filter_map(|&r| {
+                                arm_for(r).map(|(_, _, e)| Effect::BindScratch {
+                                    scratch: ScratchBinding::LastDieRoll(r),
+                                    body: Box::new(e.clone()),
+                                })
+                            })
+                            .collect();
+                        tail.extend(doubles.map(|d| (**d).clone()));
+                        Effect::seq(tail)
+                    }) {
+                        return Ok(());
+                    }
+                }
+                if let Some(doubles_effect) = doubles {
+                    self.run_effect(doubles_effect, ctx, events)?;
                 }
                 Ok(())
             }
@@ -7349,6 +7404,22 @@ impl GameState {
                 self.run_effect(body, &sub, events)?;
                 rewrap_parked(&mut self.suspend_signal, |carried| {
                     Effect::BindTargetObjects { ids: ids.clone(), body: Box::new(carried) }
+                });
+                Ok(())
+            }
+
+            Effect::BindScratch { scratch, body } => {
+                // Runtime continuation only: the resolver scratch this
+                // iteration ran under, restored around `body` — and put back
+                // around whatever `body` parks, because a continuation resumes
+                // long after the loop that built it restored the field.
+                let restore = self.bind_scratch(scratch);
+                let r = self.run_effect(body, ctx, events);
+                self.restore_scratch(restore);
+                r?;
+                rewrap_parked(&mut self.suspend_signal, |carried| Effect::BindScratch {
+                    scratch: scratch.clone(),
+                    body: Box::new(carried),
                 });
                 Ok(())
             }
@@ -12913,21 +12984,52 @@ impl GameState {
                     VoteTally::PerVote => {
                         // One run per vote, in cast order within each option, so
                         // `PlayerRef::CurrentVoter` names the seat that cast it.
-                        let outer = self.current_voter;
-                        for (idx, opt) in options.iter().enumerate() {
-                            for (seat, pick) in self.last_vote.clone() {
-                                if pick != idx {
-                                    continue;
-                                }
-                                self.current_voter = Some(seat);
-                                let r = self.run_effect(&opt.effect, ctx, events);
-                                if r.is_err() {
-                                    self.current_voter = outer;
-                                    return r;
+                        // The schedule is taken once: a body that votes again
+                        // (or asks, and is resumed) must not re-read
+                        // `self.last_vote`.
+                        let ballots = self.last_vote.clone();
+                        let mut schedule: Vec<(usize, usize)> = Vec::new();
+                        for idx in 0..options.len() {
+                            for &(seat, pick) in &ballots {
+                                if pick == idx {
+                                    schedule.push((idx, seat));
                                 }
                             }
                         }
-                        self.current_voter = outer;
+                        let outer = self.current_voter;
+                        for (k, &(idx, seat)) in schedule.iter().enumerate() {
+                            self.current_voter = Some(seat);
+                            let r = self.run_effect(&options[idx].effect, ctx, events);
+                            self.current_voter = outer;
+                            r?;
+                            // This vote's own remainder is bound to this voter
+                            // too — its `PlayerRef::CurrentVoter` would read
+                            // the controller on resume otherwise.
+                            rewrap_parked(&mut self.suspend_signal, |carried| {
+                                Effect::BindScratch {
+                                    scratch: ScratchBinding::CurrentVoter(seat),
+                                    body: Box::new(carried),
+                                }
+                            });
+                            // CR 101.4 — every vote's effect happens, including
+                            // the ones after a vote whose effect asks. The tail
+                            // names each remaining voter inside the effect:
+                            // a parked continuation resumes with
+                            // `self.current_voter` long since restored.
+                            if splice_after_suspend(&mut self.suspend_signal, || {
+                                Effect::seq(
+                                    schedule[k + 1..]
+                                        .iter()
+                                        .map(|&(i, q)| Effect::BindScratch {
+                                            scratch: ScratchBinding::CurrentVoter(q),
+                                            body: Box::new(options[i].effect.clone()),
+                                        })
+                                        .collect(),
+                                )
+                            }) {
+                                return Ok(());
+                            }
+                        }
                     }
                 }
                 Ok(())

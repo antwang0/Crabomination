@@ -6770,6 +6770,17 @@ pub enum Effect {
     /// context, so without it the rest of that iteration's body reads the
     /// caster's targets.
     BindTargetObjects { ids: Vec<crate::card::CardId>, body: Box<Effect> },
+    /// Run `body` with one piece of the resolver's per-iteration scratch state
+    /// pinned to the value the iteration that parked it had.
+    ///
+    /// **Runtime-only**, and the third of the `Bind*` family. The other two pin
+    /// `EffectContext.targets`; this one pins state that lives on `GameState`
+    /// instead — the ballot a `VoteTally::PerVote` body runs for, the die face
+    /// a results-table arm runs under.
+    /// A parked continuation resumes long after the loop restored that state,
+    /// so a loop splicing its remaining iterations has to name it *inside* the
+    /// effect.
+    BindScratch { scratch: ScratchBinding, body: Box<Effect> },
     /// Eerie Ultimatum — return any number of permanent cards with different
     /// names from the controller's graveyard to the battlefield. The controller
     /// picks at resolution (`Decision::ChooseCards`); duplicate names are
@@ -9821,6 +9832,18 @@ pub enum VoteTally {
     /// "…each choice with the most votes or tied for most votes" (Council
     /// Guardian): every winning option's effect runs once.
     AllTied,
+}
+
+/// The one piece of resolver scratch an [`Effect::BindScratch`] pins.
+/// Runtime-only: the suspend splices build these, no card does.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ScratchBinding {
+    /// CR 701.38 — the seat whose ballot this `VoteTally::PerVote` run is for,
+    /// read back by [`PlayerRef::CurrentVoter`].
+    CurrentVoter(usize),
+    /// CR 706.3a — the modified result this results-table arm was chosen by,
+    /// read back by `Value::LastDieRoll`.
+    LastDieRoll(u8),
 }
 
 impl Default for Effect {
