@@ -82,12 +82,64 @@ the handoff.
 | Engine mechanics & primitives | [Suggested next-up tasks](#suggested-next-up-tasks) | 1053 |
 | Rules coverage | [MagicCompRules coverage audit](#magiccomprules-coverage-audit) | 312 |
 | Tooling | [Recommender: two builder defects fixed, one lesson recorded](#recommender-two-builder-defects-fixed-one-lesson-recorded) | 17 |
+| Bugs & robustness | [OPEN 2026-09-19 (the forty-ninth find) — "enters tapped" is a REPLACEMENT too, and 83 cards ship it as a trigger in a clause the 614.12 audit does not match](#open-2026-09-19-the-forty-ninth-find--enters-tapped-is-a-replacement-too-and-83-cards-ship-it-as-a-trigger-in-a-clause-the-61412-audit-does-not-match) | 83 |
 | Bugs & robustness | [OPEN 2026-09-19 (the forty-eighth find) — "As this ~ enters" is a REPLACEMENT and 89 shipped cards model it as an ETB TRIGGER](#open-2026-09-19-the-forty-eighth-find--as-this--enters-is-a-replacement-and-89-shipped-cards-model-it-as-an-etb-trigger) | 89 → 57 |
 | Bugs & robustness | [FIXED 2026-09-19 (the forty-seventh find) — six hand-written SEAT-INDEX walks, and the two that let a player who had left the game vote and be voted for](#fixed-2026-09-19-the-forty-seventh-find--six-hand-written-seat-index-walks-and-the-two-that-let-a-player-who-had-left-the-game-vote-and-be-voted-for) | 60 |
 | Bugs & robustness | [The 2026-09-12/13 handoff detail, moved verbatim from TODO's NEXT](#the-2026-09-1213-handoff-detail-moved-verbatim-from-todos-next) | 182 |
 
 
 # Bugs & robustness
+
+## OPEN 2026-09-19 (the forty-ninth find) — "enters tapped" is a REPLACEMENT too, and 83 cards ship it as a trigger in a clause the 614.12 audit does not match
+
+The forty-eighth find's census keys on the printed words **"As … enters"**.
+That is the right needle for CR 614.12 and the wrong one for the class:
+**CR 614.1c** makes *any* effect that modifies how a permanent enters the
+battlefield a replacement, and "This land enters tapped", and "This land
+enters tapped unless [a fact about your board]", are both that. Neither
+opens with "As", so neither appears in that census at all.
+
+`scripts/audit_enters_tapped.py` is the sibling census: **83 cards**, 19
+conditional ("enters tapped unless …") and 64 unconditional.
+
+**What separates this class from its sibling is that nothing is missing.**
+`StaticEffect::EntersTapped` and `StaticEffect::EntersTappedUnless` both
+ship, `GameState::apply_enters_tapped_replacement` applies them inside the
+battlefield hop, and half the tree already uses them. Every row is a catalog
+edit.
+
+🔎 **And the comparison that names the defect is inside one file family, which
+is why it went unseen.** `bfz::lands::battle_land` — "enters tapped unless
+you control two or more **basic** lands" — has been a replacement since it
+was written. `decks::lands::slow_land` — "enters tapped unless you control
+two or more **other** lands" — was an `EntersBattlefield` trigger until
+2026-09-19. Same sentence, same cycle shape, ten cards each, two different
+answers, and the wrong one leaves the land on the battlefield untapped with
+its trigger on the stack: its controller can hold priority and tap it for
+mana it should never have made, and its opponents see an untapped land while
+deciding whether to respond.
+
+**Fixed here:** `slow_land` is now `EntersTappedUnless` over
+`Land ∧ ControlledByYou ∧ OtherThanSource >= 2` — the printed sentence,
+rather than `>= 3` counting the entrant, which was right only because
+`apply_enters_tapped_replacement` counts *after* the entrant is in
+`self.battlefield`. Both cycles are 10/10 and `--gate` holds them there.
+
+📐 **The unconditional column is one helper, not 56 bodies.** All 64 of it is
+`sets::etb_tap()` and its `etb_tap_then_*` siblings, `TriggeredAbility`s used
+as `triggered_abilities: vec![etb_tap()]`. Converting it means giving the helper a `StaticAbility`
+sibling and moving each call site across — mechanical, but it touches enough
+files to be worth taking as its own commit, and it WILL move the seeded pod
+table (taplands are in every pod deck), so budget the re-bless.
+
+⚠ **A reader fix worth copying into the sibling scripts.** The name-keyed
+walk every script in `scripts/` shares takes the **first** string literal in
+a factory body as the card's name. A body that opens with a helper call
+taking a *description* is then filed under that sentence: Shipwreck Marsh
+was keyed as "This land enters tapped unless you control two or more other
+lands", and the gate reported it as "not in the catalog". This script takes
+the first string literal **the Scryfall cache knows**, which removes the
+whole class of miss for one `in cache` test.
 
 ## OPEN 2026-09-19 (the forty-eighth find) — "As this ~ enters" is a REPLACEMENT and 89 shipped cards model it as an ETB TRIGGER
 

@@ -2679,24 +2679,33 @@ pub fn strangled_cemetery() -> CardDefinition {
 /// against the post-ETB battlefield (which already contains this land),
 /// so the untapped threshold is "≥ 3 lands you control".
 pub(crate) fn slow_land(name: &'static str, color_a: Color, color_b: Color) -> CardDefinition {
-    use crate::effect::Predicate;
+    use crate::effect::{Predicate, StaticAbility, StaticEffect};
     CardDefinition {
         name,
         card_types: vec![CardType::Land],
         activated_abilities: vec![tap_add(color_a), tap_add(color_b)],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::If {
-                cond: Predicate::SelectorCountAtLeast {
+        // ⚠ A REPLACEMENT, not a trigger (CR 614.1c). The cycle shipped as an
+        // `EntersBattlefield` trigger, which puts the land on the battlefield
+        // untapped with the trigger on the stack — its controller can hold
+        // priority and tap it for mana it should never have made. Its
+        // neighbour in this file family, `bfz::lands::battle_land`, had the
+        // same clause and the right shape all along.
+        //
+        // `OtherThanSource` is the printed "two or more **other** lands", and
+        // it says so without depending on whether the entrant is already in
+        // `self.battlefield` when `apply_enters_tapped_replacement` counts.
+        static_abilities: vec![StaticAbility {
+            description: "This land enters tapped unless you control two or more other lands.",
+            effect: StaticEffect::EntersTappedUnless {
+                applies_to: Selector::This,
+                condition: Predicate::SelectorCountAtLeast {
                     sel: Selector::EachPermanent(
-                        SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
+                        SelectionRequirement::Land
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::OtherThanSource),
                     ),
-                    n: Value::Const(3),
+                    n: Value::Const(2),
                 },
-                then: Box::new(Effect::Noop),
-                else_: Box::new(Effect::Tap {
-                    what: Selector::This,
-                }),
             },
         }],
         ..Default::default()
@@ -2717,4 +2726,10 @@ pub fn stormcarved_coast() -> CardDefinition {
 }
 pub fn sundown_pass() -> CardDefinition {
     slow_land("Sundown Pass", Color::Red, Color::White)
+}
+pub fn deserted_beach() -> CardDefinition {
+    slow_land("Deserted Beach", Color::White, Color::Blue)
+}
+pub fn overgrown_farmland() -> CardDefinition {
+    slow_land("Overgrown Farmland", Color::Green, Color::White)
 }

@@ -47,6 +47,54 @@ fn battle_land(name: &'static str, types: Vec<LandType>, colors: Vec<Color>) -> 
     }
 }
 
+// The enemy half of the cycle, added 2026-09-19. Type and colour order read
+// from the Scryfall cache; every one is the same `battle_land` body.
+
+/// Eclipsed Steppe — {T}: {W} or {B}.
+pub fn eclipsed_steppe() -> CardDefinition {
+    battle_land(
+        "Eclipsed Steppe",
+        vec![LandType::Plains, LandType::Swamp],
+        vec![Color::White, Color::Black],
+    )
+}
+
+/// Scorched Geyser — {T}: {U} or {R}.
+pub fn scorched_geyser() -> CardDefinition {
+    battle_land(
+        "Scorched Geyser",
+        vec![LandType::Island, LandType::Mountain],
+        vec![Color::Blue, Color::Red],
+    )
+}
+
+/// Vernal Fen — {T}: {B} or {G}.
+pub fn vernal_fen() -> CardDefinition {
+    battle_land(
+        "Vernal Fen",
+        vec![LandType::Swamp, LandType::Forest],
+        vec![Color::Black, Color::Green],
+    )
+}
+
+/// Radiant Summit — {T}: {R} or {W}.
+pub fn radiant_summit() -> CardDefinition {
+    battle_land(
+        "Radiant Summit",
+        vec![LandType::Mountain, LandType::Plains],
+        vec![Color::Red, Color::White],
+    )
+}
+
+/// Sodden Verdure — {T}: {G} or {U}.
+pub fn sodden_verdure() -> CardDefinition {
+    battle_land(
+        "Sodden Verdure",
+        vec![LandType::Forest, LandType::Island],
+        vec![Color::Green, Color::Blue],
+    )
+}
+
 /// Canopy Vista — {T}: {G} or {W}.
 pub fn canopy_vista() -> CardDefinition {
     battle_land(
