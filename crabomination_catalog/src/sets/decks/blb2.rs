@@ -251,11 +251,15 @@ pub fn kastral_the_windcrested() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
+            // CR 603.2c — "whenever ONE OR MORE Birds you control deal combat
+            // damage to a player": one mode choice per damaged player, not one
+            // per Bird that connected.
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl)
                 .with_filter(Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: R::HasCreatureType(CreatureType::Bird),
-                }),
+                })
+                .once_per_batch(),
             effect: Effect::ChooseMode(vec![
                 Effect::MayDo {
                     description: "Put a Bird onto the battlefield?".into(),

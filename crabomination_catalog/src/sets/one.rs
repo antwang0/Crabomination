@@ -6612,12 +6612,15 @@ pub fn kaito_dancing_shadow() -> CardDefinition {
             ..Default::default()
         },
         base_loyalty: 3,
-        // Fires per damaging creature (the printed batch is "one or more").
+        // CR 603.2c — one fire per damaged player. 🟡 "Return ONE OF THEM"
+        // still binds the dealer the batch fired on rather than offering the
+        // whole set: there is no selector for a damage batch's members.
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
                 EventKind::DealsCombatDamageToPlayer,
                 EventScope::YourControl,
-            ),
+            )
+            .once_per_batch(),
             effect: Effect::MayDo {
                 description: "Return the creature to hand for double loyalty use?".into(),
                 body: Box::new(Effect::Seq(vec![

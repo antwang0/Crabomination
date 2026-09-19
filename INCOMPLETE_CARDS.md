@@ -372,13 +372,22 @@ plain missing fan-out:
 
 | Card | Residual |
 |---|---|
-| Malcolm, Keen-Eyed Navigator | "Whenever **one or more** Pirates you control deal damage to your opponents, create a Treasure **for each opponent dealt damage**" is a *batched* damage trigger, and the engine has no batched damage event: it fires per damage event, so three Pirates hitting one player make three Treasures where the card makes one. Wrong at two seats too. Needs a `DealsDamageToPlayer` batch kind. |
+| ~~Malcolm, Keen-Eyed Navigator~~ ✅ **FIXED** | The batched trigger now carries `EventSpec::once_per_batch` and the engine's batch key carries the damaged subject (CR 603.2c), so it fires once per damaged opponent: two Pirates into one seat make one Treasure, one Pirate into each of two seats makes two. Printed is one trigger carrying a count rather than one per seat; nothing counts a trigger and the Treasures match. |
 | Kaya, Spirits' Justice | the −2's "for each other player, exile up to one target creature that player controls" can't take `ForEachOpponentTarget`: slot 0 is a fixed own-creature target and `ApplyToTargets` rebinds every supplied target to slot 0. |
 | Absolute Virtue | "you have protection from each of your opponents" is modelled as `ControllerHasHexproof` — the can't-be-targeted half only, not the damage or aura halves. |
 | Damping Engine | the whole "controls more permanents than each other player" lock, plus its sacrifice-to-ignore rider. |
 | Lavinia, Azorius Renegade | "each opponent can't cast noncreature spells with mana value greater than the number of lands **that player** controls" — a per-opponent threshold. |
 | Spikeshell Harrier | the speed-comparison clause is dropped (the bounce half is complete). |
 | Grim Reminder | not a gap — `Effect::SearchRevealPunishSameNameCasters` is the per-opponent walk, under a name the regex can't see. |
+
+Two residuals the CR 603.2c batch ratchet
+(`catalog_registration::every_batched_damage_trigger_fires_once_a_batch`) signs
+off by name rather than fixes, both filed here:
+
+| Card | Residual |
+| --- | --- |
+| Quartzwood Crasher | 🟡 "create an X/X … where X is the amount of damage **those creatures** dealt to that player" wants the batch's *summed* damage, and `Value::TriggerEventAmount` is the one dealer the fire landed on. It keeps the unbatched shape (one token per trampler, each sized by its own damage — the right total across too many bodies) rather than take `once_per_batch` and mint one token of the wrong size. Needs the batch to carry a sum, which the per-attacker walk cannot do: the later attackers' damage is not dealt yet when the first one's trigger is pushed. |
+| Magmatic Galleon | 🟡 "Whenever one or more creatures your opponents control are dealt **excess** noncombat damage, create a Treasure token" is not modelled at all — only the ETB 5 damage ships. Needs excess-damage tracking (CR 120.3c), which no primitive carries. |
 
 ## CR 903.4 color-identity divergences (from the Scryfall audit)
 

@@ -289,12 +289,16 @@ pub fn prosperous_thief() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Ninjutsu(cost(&[generic(1), u()]))],
         triggered_abilities: vec![TriggeredAbility {
+            // CR 603.2c — "whenever ONE OR MORE Ninja or Rogue creatures you
+            // control deal combat damage to a player": one Treasure per damaged
+            // player, however many of them connected.
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl)
                 .with_filter(crate::effect::Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: R::HasCreatureType(CreatureType::Ninja)
                         .or(R::HasCreatureType(CreatureType::Rogue)),
-                }),
+                })
+                .once_per_batch(),
             effect: mint_treasures(1),
         }],
         ..Default::default()

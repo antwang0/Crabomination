@@ -1212,7 +1212,10 @@ pub fn natures_will() -> CardDefinition {
         cost: cost(&[generic(2), g(), g()]),
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl),
+            // CR 603.2c — one fire per damaged player; the untap half is not
+            // worth repeating once a dealer.
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl)
+                .once_per_batch(),
             effect: Effect::Seq(vec![
                 Effect::Tap {
                     what: Selector::EachPermanent(R::Land.and(R::ControlledByOpponent)),

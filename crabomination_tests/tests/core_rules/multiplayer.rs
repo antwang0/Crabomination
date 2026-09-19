@@ -3734,6 +3734,92 @@ fn cr_603_2c_a_batched_trigger_still_fires_once_in_a_duel() {
     assert_eq!(g.players[0].hand.len() - hand_before, 1, "two dealers, one event, one draw");
 }
 
+/// A 1/1 Pirate with no text of its own — the batch's other members.
+fn plain_pirate(name: &'static str) -> crabomination::card::CardDefinition {
+    use crabomination::card::{CardDefinition, CardType, CreatureType, Subtypes};
+    CardDefinition {
+        name,
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Pirate], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        ..Default::default()
+    }
+}
+
+/// Malcolm, Keen-Eyed Navigator — "Whenever one or more Pirates you control
+/// deal damage to your opponents, you create a Treasure token **for each
+/// opponent dealt damage**." The count is the number of damaged *opponents*,
+/// which is exactly what CR 603.2c's per-subject batch gives. Before the batch
+/// flag it was one Treasure per Pirate — wrong at two seats as well as in a
+/// pod, and one of the seven `each_opponent` residuals.
+#[test]
+fn cr_603_2c_malcolm_makes_one_treasure_per_damaged_opponent() {
+    let treasures = |g: &GameState| {
+        g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Treasure").count()
+    };
+
+    let mut g = multi_player_game(3);
+    let malcolm = g.add_card_to_battlefield(0, catalog::malcolm_keen_eyed_navigator());
+    let mate = g.add_card_to_battlefield(0, plain_pirate("Test Pirate A"));
+    let landlubber = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for id in [malcolm, mate, landlubber] {
+        g.clear_sickness(id);
+    }
+    assert_eq!(treasures(&g), 0);
+
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: malcolm, target: AttackTarget::Player(1) },
+        Attack { attacker: mate, target: AttackTarget::Player(1) },
+        Attack { attacker: landlubber, target: AttackTarget::Player(2) },
+    ]))
+    .expect("two Pirates into seat 1, a Bear into seat 2");
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().expect("combat resolves");
+    drain_stack(&mut g);
+
+    assert_eq!(
+        treasures(&g),
+        1,
+        "two Pirates hit one opponent — one Treasure; the Bear's seat is not an \
+         opponent *dealt damage by a Pirate* and adds none",
+    );
+}
+
+/// The other half of the same count: a second damaged opponent is a second
+/// event (CR 603.2c), so the same two Pirates split across two seats make two
+/// Treasures. This is the assert the duel cannot make.
+#[test]
+fn cr_603_2c_malcolm_counts_each_damaged_opponent_separately() {
+    let treasures = |g: &GameState| {
+        g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Treasure").count()
+    };
+
+    let mut g = multi_player_game(3);
+    let malcolm = g.add_card_to_battlefield(0, catalog::malcolm_keen_eyed_navigator());
+    let mate = g.add_card_to_battlefield(0, plain_pirate("Test Pirate A"));
+    for id in [malcolm, mate] {
+        g.clear_sickness(id);
+    }
+
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: malcolm, target: AttackTarget::Player(1) },
+        Attack { attacker: mate, target: AttackTarget::Player(2) },
+    ]))
+    .expect("one Pirate at each opponent");
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().expect("combat resolves");
+    drain_stack(&mut g);
+
+    assert_eq!(treasures(&g), 2, "two opponents dealt damage — two Treasures");
+}
+
 // ── CR 800.4f/g — an ask whose seat has left the game ──────────────────────
 
 /// CR 800.4g — "If an object requires a player who has left the game to make

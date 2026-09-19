@@ -389,6 +389,13 @@ pub fn malcolm_keen_eyed_navigator() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::Partner],
         triggered_abilities: vec![TriggeredAbility {
+            // CR 603.2c — "whenever ONE OR MORE Pirates you control deal
+            // damage to your opponents, you create a Treasure token FOR EACH
+            // OPPONENT DEALT DAMAGE". The batch keys on the damaged player, so
+            // one fire (one Treasure) per opponent hit is exactly the printed
+            // count — three Pirates into one seat made three Treasures before.
+            // Printed is one trigger with a count rather than one per seat;
+            // nothing in the catalog counts a trigger, and the Treasures match.
             event: EventSpec::new(
                 EventKind::DealsDamageToPlayer,
                 EventScope::YourControl,
@@ -396,7 +403,8 @@ pub fn malcolm_keen_eyed_navigator() -> CardDefinition {
             .with_filter(Predicate::EntityMatches {
                 what: Selector::TriggerSource,
                 filter: SelectionRequirement::HasCreatureType(CreatureType::Pirate),
-            }),
+            })
+            .once_per_batch(),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
