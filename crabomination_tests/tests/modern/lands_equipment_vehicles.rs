@@ -1798,3 +1798,180 @@ fn the_reaver_cleaver_mints_one_treasure_per_point_of_combat_damage() {
     assert_eq!(g.players[1].life, 17, "a 3/3 connected");
     assert_eq!(treasures(&g), 3, "that many Treasures — one per point of damage");
 }
+
+// ── "Whenever an opponent …" watchers, at four seats ───────────────────────
+
+/// Archivist of Oghma: "Whenever an opponent searches their library, you gain
+/// 1 life and draw a card." The scope is per searching player, so each
+/// opponent that tutors is its own trigger — the card is three times itself
+/// in a pod, which is what makes it a staple.
+#[test]
+fn archivist_of_oghma_fires_once_per_opponent_that_searches() {
+    use crabomination::game::multi_player_game;
+    let mut g = multi_player_game(4);
+    g.add_card_to_battlefield(0, catalog::archivist_of_oghma());
+    g.players[0].hand.clear();
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::plains());
+    }
+    let life = g.players[0].life;
+
+    for seat in [1usize, 2, 3] {
+        g.add_card_to_library(seat, catalog::forest());
+        let tutor = g.add_card_to_hand(seat, catalog::lay_of_the_land());
+        g.players[seat].mana_pool.add(Color::Green, 1);
+        g.active_player_idx = seat;
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = seat;
+        g.perform_action(GameAction::CastSpell {
+            card_id: tutor,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("tutor");
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.players[0].life, life + 3, "one life per opponent that searched");
+    assert_eq!(g.players[0].hand.len(), 3, "and one card each");
+}
+
+/// And it watches opponents only — the controller's own tutor is not "an
+/// opponent searches".
+#[test]
+fn archivist_of_oghma_ignores_its_own_controllers_search() {
+    use crabomination::game::multi_player_game;
+    let mut g = multi_player_game(4);
+    g.add_card_to_battlefield(0, catalog::archivist_of_oghma());
+    g.players[0].hand.clear();
+    g.add_card_to_library(0, catalog::forest());
+    let tutor = g.add_card_to_hand(0, catalog::lay_of_the_land());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.step = TurnStep::PreCombatMain;
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: tutor,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("tutor");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life, "no life — you are not your own opponent");
+}
+
+/// Mangara, the Diplomat: "Whenever an opponent attacks with creatures, if two
+/// or more of those creatures are attacking you and/or planeswalkers you
+/// control, draw a card."
+///
+/// At four seats the gate is the point: seat 1 declares three attackers, only
+/// one of them at Mangara's controller, and the card draws nothing. The
+/// undirected "attacked with two or more" would have fired.
+#[test]
+fn cr_506_2_mangara_ignores_an_attack_that_is_mostly_pointed_elsewhere() {
+    use crabomination::game::multi_player_game;
+    let mut g = multi_player_game(4);
+    g.add_card_to_battlefield(0, catalog::mangara_the_diplomat());
+    g.players[0].hand.clear();
+    g.add_card_to_library(0, catalog::plains());
+    let mut swing = Vec::new();
+    for target in [AttackTarget::Player(0), AttackTarget::Player(2), AttackTarget::Player(3)] {
+        let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        g.clear_sickness(a);
+        swing.push(Attack { attacker: a, target });
+    }
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.declare_attackers(swing).expect("declare across three defenders");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), 0, "only one of the three is attacking seat 0");
+}
+
+/// Two at the player draws one card — **one**, not one per attacker: the
+/// trigger is `once_per_batch` (CR 603.2c, one declaration is one event).
+#[test]
+fn cr_603_2c_mangara_draws_one_card_for_a_two_creature_attack_on_its_controller() {
+    use crabomination::game::multi_player_game;
+    let mut g = multi_player_game(4);
+    g.add_card_to_battlefield(0, catalog::mangara_the_diplomat());
+    g.players[0].hand.clear();
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::plains());
+    }
+    let mut swing = Vec::new();
+    for target in [AttackTarget::Player(0), AttackTarget::Player(0), AttackTarget::Player(2)] {
+        let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        g.clear_sickness(a);
+        swing.push(Attack { attacker: a, target });
+    }
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.declare_attackers(swing).expect("declare");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), 1, "one declaration, one card");
+}
+
+/// The planeswalker half of the same clause: one creature at the player and
+/// one at a planeswalker they control is two, because the card says "you
+/// and/or planeswalkers you control".
+#[test]
+fn cr_506_2_mangara_counts_a_planeswalker_attacker_towards_its_two() {
+    use crabomination::game::multi_player_game;
+    let mut g = multi_player_game(4);
+    g.add_card_to_battlefield(0, catalog::mangara_the_diplomat());
+    let pw = g.add_card_to_battlefield(0, catalog::jace_beleren());
+    g.players[0].hand.clear();
+    g.add_card_to_library(0, catalog::plains());
+    let mut swing = Vec::new();
+    for target in [AttackTarget::Player(0), AttackTarget::Planeswalker(pw)] {
+        let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        g.clear_sickness(a);
+        swing.push(Attack { attacker: a, target });
+    }
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.declare_attackers(swing).expect("declare");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), 1, "the planeswalker's attacker counts");
+}
+
+/// The second clause: "Whenever an opponent casts their second spell each
+/// turn, draw a card." Per opponent, and on their second spell only.
+#[test]
+fn mangara_draws_on_an_opponents_second_spell_and_not_their_first() {
+    use crabomination::game::multi_player_game;
+    let mut g = multi_player_game(4);
+    g.add_card_to_battlefield(0, catalog::mangara_the_diplomat());
+    g.players[0].hand.clear();
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::plains());
+    }
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 1;
+    let cast_a_bear = |g: &mut GameState| {
+        let id = g.add_card_to_hand(1, catalog::grizzly_bears());
+        g.players[1].mana_pool.add(Color::Green, 1);
+        g.players[1].mana_pool.add_colorless(1);
+        g.perform_action(GameAction::CastSpell {
+            card_id: id,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("cast a bear");
+        drain_stack(g);
+    };
+    cast_a_bear(&mut g);
+    assert_eq!(g.players[0].hand.len(), 0, "the first spell does nothing");
+    cast_a_bear(&mut g);
+    assert_eq!(g.players[0].hand.len(), 1, "the second draws");
+    cast_a_bear(&mut g);
+    assert_eq!(g.players[0].hand.len(), 1, "and the third does not — it is not the second");
+}

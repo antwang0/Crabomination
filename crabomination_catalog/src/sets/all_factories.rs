@@ -7680,6 +7680,8 @@ static DECKS: &[Factory] = &[
     super::decks::champions_helm,
     super::decks::mithril_coat,
     super::decks::the_reaver_cleaver,
+    super::decks::archivist_of_oghma,
+    super::decks::mangara_the_diplomat,
     super::decks::quest_for_the_goblin_lord,
     super::decks::quest_for_the_gravelord,
     super::decks::quest_for_the_gemblades,

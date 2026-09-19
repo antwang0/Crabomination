@@ -11,8 +11,8 @@
 
 use crate::card::{
     ArtifactSubtype, CardDefinition, CardType, ConditionalEquipBonus, CreatureType, EquipBonus,
-    EquipScale, Keyword, SelectionRequirement as R, StaticAbility, Subtypes, Supertype,
-    TriggeredAbility, Value,
+    EquipScale, Keyword, Predicate, SelectionRequirement as R, Selector, StaticAbility, Subtypes,
+    Supertype, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Effect, EventKind, EventScope, EventSpec, PlayerRef, StaticEffect};
@@ -231,5 +231,101 @@ pub fn the_reaver_cleaver() -> CardDefinition {
                 ..Default::default()
             },
         )
+    }
+}
+
+// ── "Whenever an opponent …" watchers ──────────────────────────────────────
+//
+// Commander staples whose text is keyed on what an *opponent* does. Each fires
+// once per opponent that does the thing, so at four seats they are three times
+// the card they are in a duel — which is the whole reason they are staples.
+
+/// Archivist of Oghma — {1}{W} Creature — Halfling Cleric 2/2. "Flash.
+/// Whenever an opponent searches their library, you gain 1 life and draw a
+/// card." (EDHREC 690.)
+///
+/// `EventScope::OpponentControl` on `PlayerSearchedLibrary` is per searching
+/// player, so three opponents fetching on the same turn is three triggers.
+pub fn archivist_of_oghma() -> CardDefinition {
+    CardDefinition {
+        name: "Archivist of Oghma",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Halfling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PlayerSearchedLibrary, EventScope::OpponentControl),
+            effect: Effect::Seq(vec![
+                Effect::GainLife { who: Selector::You, amount: Value::ONE },
+                Effect::Draw { who: Selector::You, amount: Value::ONE },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Mangara, the Diplomat — {3}{W} Legendary Creature — Human Cleric 2/4.
+/// "Lifelink. Whenever an opponent attacks with creatures, if two or more of
+/// those creatures are attacking you and/or planeswalkers you control, draw a
+/// card. Whenever an opponent casts their second spell each turn, draw a
+/// card." (EDHREC 611.)
+///
+/// ⚠ **The attack gate is inside the effect, not in the `EventSpec` filter,
+/// and that is not a style choice.** A defender-side (`ControllerAttackedBy
+/// Opponent`) trigger's filter is evaluated per attacker while the declaration
+/// is still being committed to `GameState.attacking`, so a count read there
+/// sees a partial batch; an `Effect::If` resolves off the stack after the
+/// whole step. `.once_per_batch()` is what makes it one card a declaration
+/// rather than one a creature (CR 603.2c).
+///
+/// The count is `include_planeswalkers: true` because the card says "you
+/// and/or planeswalkers you control" in as many words.
+pub fn mangara_the_diplomat() -> CardDefinition {
+    let draw = || Effect::Draw { who: Selector::You, amount: Value::ONE };
+    CardDefinition {
+        name: "Mangara, the Diplomat",
+        cost: cost(&[generic(3), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Lifelink],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::Attacks,
+                    EventScope::ControllerAttackedByOpponent,
+                )
+                .once_per_batch(),
+                effect: Effect::If {
+                    cond: Predicate::AttackedDefenderWithCountAtLeast {
+                        who: PlayerRef::Triggerer,
+                        defender: PlayerRef::You,
+                        at_least: 2,
+                        include_planeswalkers: true,
+                    },
+                    then: Box::new(draw()),
+                    else_: Box::new(Effect::Noop),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::OpponentControl)
+                    .with_filter(Predicate::SpellsCastThisTurnEquals {
+                        who: PlayerRef::Triggerer,
+                        count: Value::Const(2),
+                    }),
+                effect: draw(),
+            },
+        ],
+        ..Default::default()
     }
 }
