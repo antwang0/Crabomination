@@ -82,13 +82,74 @@ the handoff.
 | Engine mechanics & primitives | [Suggested next-up tasks](#suggested-next-up-tasks) | 1053 |
 | Rules coverage | [MagicCompRules coverage audit](#magiccomprules-coverage-audit) | 312 |
 | Tooling | [Recommender: two builder defects fixed, one lesson recorded](#recommender-two-builder-defects-fixed-one-lesson-recorded) | 17 |
-| Bugs & robustness | [OPEN 2026-09-19 (the forty-ninth find) — "enters tapped" is a REPLACEMENT too, and 83 cards ship it as a trigger in a clause the 614.12 audit does not match](#fixed-2026-09-19-the-forty-ninth-find--enters-tapped-is-a-replacement-too-and-83-cards-shipped-it-as-a-trigger-in-a-clause-the-61412-audit-cannot-match) | 83 → 0 |
+| Bugs & robustness | [FIXED 2026-09-19 (the fiftieth find) — one of five trigger walks in `declare_attackers` never carried `event.filter`, so a defender-side intervening `if` was written, compiled and ignored](#fixed-2026-09-19-the-fiftieth-find--one-of-five-trigger-walks-in-declare_attackers-never-carried-eventfilter-so-a-defender-side-intervening-if-was-written-compiled-and-ignored) | 1 card, 1 walk |
+| Bugs & robustness | [FIXED 2026-09-19 (the forty-ninth find) — "enters tapped" is a REPLACEMENT too, and 83 cards shipped it as a trigger in a clause the 614.12 audit cannot match](#fixed-2026-09-19-the-forty-ninth-find--enters-tapped-is-a-replacement-too-and-83-cards-shipped-it-as-a-trigger-in-a-clause-the-61412-audit-cannot-match) | 83 → 0 |
 | Bugs & robustness | [OPEN 2026-09-19 (the forty-eighth find) — "As this ~ enters" is a REPLACEMENT and 89 shipped cards model it as an ETB TRIGGER](#open-2026-09-19-the-forty-eighth-find--as-this--enters-is-a-replacement-and-89-shipped-cards-model-it-as-an-etb-trigger) | 89 → 57 |
 | Bugs & robustness | [FIXED 2026-09-19 (the forty-seventh find) — six hand-written SEAT-INDEX walks, and the two that let a player who had left the game vote and be voted for](#fixed-2026-09-19-the-forty-seventh-find--six-hand-written-seat-index-walks-and-the-two-that-let-a-player-who-had-left-the-game-vote-and-be-voted-for) | 60 |
 | Bugs & robustness | [The 2026-09-12/13 handoff detail, moved verbatim from TODO's NEXT](#the-2026-09-1213-handoff-detail-moved-verbatim-from-todos-next) | 182 |
 
 
 # Bugs & robustness
+
+## FIXED 2026-09-19 (the fiftieth find) — one of five trigger walks in `declare_attackers` never carried `event.filter`, so a defender-side intervening `if` was written, compiled and ignored
+
+`declare_attackers` dispatches five families of trigger, each with its own
+walk. Four of them collect `(source, effect, …, t.event.filter.clone(), once_key)`
+and evaluate the filter at the fire site. The
+`EventScope::ControllerAttackedByOpponent` walk collected
+`(source, effect, once_key)` — the filter was simply not in the tuple.
+
+**Nothing anywhere says so.** A `.with_filter` on a defender-side trigger is
+accepted by `EventSpec`, type-checks, survives every catalog ratchet (they
+compare printed text against the *body*, and the filter is present in the
+body), and is then never read. The failure shape is the quiet one: a condition
+that is dropped rather than misread makes a card that does **more** than it
+prints, on a board where the condition was supposed to be false.
+
+One shipped card was on it. **Reveille Squad** prints "Whenever one or more
+creatures attack you, **if this creature is untapped**, you may untap all
+creatures you control", the catalog modelled the intervening `if` correctly as
+`EntityMatches { This, Untapped }`, and a *tapped* Squad untapped the board
+anyway. The regression test cites CR 603.4 and fails against the old tuple.
+
+Three things worth carrying:
+
+* **The census that finds this class is "which walks read `t.event.filter`",
+  not "which cards look wrong".** The catalog was right; the dispatcher was
+  wrong; and no per-card audit can see that, because the per-card view of a
+  dropped filter is a card that behaves like a card without one.
+* **One card in the catalog used the feature, which is why it survived.** A
+  scope with 14 uses and 1 filter is exactly the density where a missing
+  branch never shows up in review.
+* ⚠ **What this walk still cannot do.** It fires *inside* the per-attacker
+  loop, and `GameState.attacking` is filled by that same loop, so a predicate
+  that counts the declaration reads a **partial batch** there. The self-source
+  walk collects and fires after the step and can count; this one would have to
+  move its pushes to match, which reorders the stack. Until then a count gate
+  on a defender-side trigger belongs inside the effect as an `Effect::If`,
+  which resolves after the step is over. Mangara, the Diplomat and Trouble in
+  Pairs are both written that way, and the constraint is in `combat.rs` beside
+  the evaluation as well as here.
+
+### The multiplayer half that came out of the same card pair
+
+`Predicate::AttackedWithCountAtLeast` counts a player's whole declaration,
+wherever it is pointed. **In a duel that is the same question as "how many
+creatures are attacking me"; in a pod it is not**, and both cards that needed
+the second question are Commander cards that would otherwise fire off an
+opponent swinging at a third player. `AttackedDefenderWithCountAtLeast { who,
+defender, at_least, include_planeswalkers }` is the defender-side form.
+
+Its bool is a **printed difference, not a knob**: "attacks **you** with two or
+more creatures" (Trouble in Pairs) is false, because a creature attacking your
+planeswalker is attacking the planeswalker (CR 506.2); "attacking **you and/or
+planeswalkers you control**" (Mangara) is true. Two cards, one clause apart,
+and the pair is the test: the same board draws a card for one and not the
+other.
+
+Same shape as the forty-eighth find's lesson, from the other side: **a
+predicate whose two readings coincide at two seats is a predicate nobody will
+notice is wrong.** Write the test at four.
 
 ## FIXED 2026-09-19 (the forty-ninth find) — "enters tapped" is a REPLACEMENT too, and 83 cards shipped it as a trigger in a clause the 614.12 audit cannot match
 

@@ -127,6 +127,7 @@ Four changes, all reversible from `git log -p`, and **no body was edited**:
 | [Planechase — shipped, with the corners left open](#planechase--shipped-with-the-corners-left-open) | closed — residuals only | 13 |
 | [Planeshift — closed](#planeshift--closed) | closed — residuals only | 3 |
 | [Prophecy — closed](#prophecy--closed) | closed — residuals only | 31 |
+| [The COMMANDER top-1000 gap — eight cards, and the two leads that were already shipped](#the-commander-top-1000-gap--eight-cards-and-the-two-leads-that-were-already-shipped) | open | 8 cards |
 | [Scourge — closed](#scourge--closed) | closed — residuals only | 14 |
 | [Stronghold closed](#stronghold-closed) | closed — residuals only | 27 |
 | [TDM + OTJ closed, BLB/DSK batch](#tdm--otj-closed-blbdsk-batch) | closed — residuals only | 15 |
@@ -136,6 +137,77 @@ Four changes, all reversible from `git log -p`, and **no body was edited**:
 | [Weatherlight closed](#weatherlight-closed) | closed — residuals only | 35 |
 
 # Open
+
+
+## The COMMANDER top-1000 gap — eight cards, and the two leads that were already shipped
+
+`COMMANDER_BACKLOG.md`'s section 2 listed **82** top-1000 staples missing from
+the catalog. Eight closed here, picked as two coherent shapes rather than by
+rank.
+
+### The Equipment cluster (five cards, one commit)
+
+Mithril Coat (238), Blackblade Reforged (350), Commander's Plate (478), The
+Reaver Cleaver (537), Champion's Helm (745) — the whole Equipment slice of the
+top 1000.
+
+⚠⚠ **TODO's standing lead ② was half wrong, and the half it got wrong is the
+transferable part.** It read "`Keyword::Equip` carries ONE cost, so Commander's
+Plate and Blackblade Reforged both need a **restricted second equip cost**".
+`Keyword::Equip` does carry one cost. `CardDefinition` carries three more —
+`equip_filtered_cost: Option<(SelectionRequirement, ManaCost)>`,
+`equip_token_cost`, `equip_sacrifice_filter` — and `equip` consults the
+filtered one ahead of the keyword. **The lead was written off the keyword and
+never off the `CardDefinition`**, so an engine gap was filed against a field
+that had shipped, with two named cards behind it. Before filing a primitive
+against a keyword, read the struct the keyword lives on.
+
+Same again one field over: Blackblade's "+1/+1 for each land you control" is
+`EquipScale` (whose count is the *source's* controller's permanents — the
+printed "you control"), and Champion's Helm's "as long as equipped creature is
+legendary, it has hexproof" is `ConditionalEquipBonus`. Four of the five cards
+needed nothing new.
+
+Only **Commander's Plate** did, and for a reason no `SelectionRequirement` can
+express: its protected set is the *complement* of the commander identity. See
+ENGINE_BACKLOG's protection entry; the trap there is the same one War Room hit
+— `commander_identity_colors` answers all five for a seat with no commander,
+which read as a protection set means no protection at all.
+
+⚠ **The test trap that cost a round:** `add_card_to_battlefield` places the
+instance and fires **no entry event**, so Mithril Coat's ETB attach read as
+unimplemented until the test cast the card for its {3}. A fixture that skips
+the event under test cannot fail for the right reason.
+
+### The "whenever an opponent …" watchers (three cards)
+
+Archivist of Oghma (690), Mangara, the Diplomat (611), Trouble in Pairs (625).
+Commander staples precisely because their text is keyed on what an *opponent*
+does, so they scale with the pod.
+
+Two engine pieces came out of them and both are in ENGINE_BACKLOG's fiftieth
+find: the defender-side trigger walk that silently dropped `event.filter`
+(Reveille Squad was quietly ignoring its printed intervening `if`), and
+`Predicate::AttackedDefenderWithCountAtLeast`, the "attacking **you**" count
+that `AttackedWithCountAtLeast` cannot answer at more than two seats. A third,
+`StaticEffect::OpponentsSkipExtraTurns`, spends the extra-turn charge even
+though the turn is skipped — leave it banked and one Time Warp under Trouble
+in Pairs re-offers the same turn forever.
+
+⚠ Mangara and Trouble in Pairs differ by exactly one printed word —
+"attacking **you and/or planeswalkers you control**" versus "attacks **you**"
+— which is why `include_planeswalkers` is a field and not a constant. The
+pair is its own test: one board, opposite expected answers.
+
+### Still open
+
+**74 of the 82.** `COMMANDER_BACKLOG.md` is generated and goes stale the
+moment a card lands, so recompute rather than trusting its count:
+`COMMANDER_BACKLOG`'s section 2 minus every name that appears as a string
+literal anywhere in `crabomination_catalog/src` (⚠ **not** as `name: "…"` —
+cards built through a per-file `equipment()`/`creature()` helper pass the
+name as an *argument*, and a `name:`-keyed grep reports every one of them as
+missing).
 
 
 ## The LAND-CYCLE class — one body a cycle, and the one that was a rules bug
