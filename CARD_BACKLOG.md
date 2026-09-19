@@ -162,6 +162,7 @@ the graveyard ratchet, not the damage one):
 | --- | --- | --- |
 | `every_batched_damage_trigger_fires_once_a_batch` | 20 | 8 |
 | `every_graveyard_leave_trigger_fires_once_a_batch` | 23 | 14 |
+| `every_batched_attack_trigger_fires_once_a_declaration` | 13 | 3 |
 
 **Damage half.** Elegy Acolyte, Haliya, Kaito, Kastral, Kutzil, Malcolm,
 Nature's Will and Prosperous Thief took `once_per_batch`; the engine's batch
@@ -179,11 +180,43 @@ stalls**, byte-identical to the committed invariant, because several cards
 leaving one graveyard at once is rare in those pools. *Measure the pool
 question, do not assume it.*
 
-⚠ Two names each ratchet signs off, both in INCOMPLETE_CARDS: **Quartzwood
-Crasher** (wants the batch's summed damage for its X) and **Magmatic Galleon**
-(the clause is not modelled at all). Hedge Shredder and Kaya, Spirits' Justice
-are neither — "put INTO your graveyard from your library" and "put into exile"
+**Attack half.** Attackers are declared simultaneously (CR 508.1), so the
+declaration is one event. Coveted Jewel drew its attacker's controller **nine**
+cards off three unblocked creatures; Reveille Squad asked its controller the
+same untap question once per attacker; Meriadoc Brandybuck carried
+`once_per_turn`, which is the stricter CR 603.3d cap and is *not* printed — a
+second combat made no Food at all. ⚠ **`EventKind::YouAttack` is the better
+spelling and the ratchet accepts it**: it is dispatched once per combat by
+`declare_attackers` and needs no flag (Ancestor Dragon via
+`shortcut::on_you_attack`, Choco, The Ur-Dragon). Only an ability with a
+per-attacker *filter* — "one or more **Halflings** you control" — has to stay
+on `Attacks` and carry the flag. 🟡 Meriadoc is still one fire per
+*declaration* rather than per attacked player: the attack path's batch key is
+`(listener, ability)` with no defender in it, so a pod split across two seats
+makes one Food where the card makes two. The damage path's key does carry the
+subject; the attack path's does not, and that is the next thing to unify.
+
+⚠ **What each ratchet signs off, and none of it is an unbatched trigger.**
+Damage: **Quartzwood Crasher** (wants the batch's summed damage for its X) and
+**Magmatic Galleon** (the clause is not modelled at all), both in
+INCOMPLETE_CARDS. Attack: **Frontier Warmonger** (a `StaticEffect::
+GrantKeywordToAttackers`, not a trigger), **Sabotage Strategist** ("those
+creatures get -1/-0" — one fire per creature is how one instance reaches every
+member of the set; batching it would pump one and leave the rest) and
+**Orim's Prayer** (per-attacker `GainLife 1` sums to the printed amount, and a
+batched count would need "attacking *you*", which no `SelectionRequirement`
+draws). Hedge Shredder and Kaya, Spirits' Justice are not signed off but
+excluded — "put INTO your graveyard from your library" and "put into exile"
 are different events, which is why the graveyard predicate anchors on *leave*.
+
+📐 **The shape all three share, and the thing to copy for the next clause:
+anchor the predicate on the TRIGGER CONDITION, not the line.** "…leave your
+graveyard, this deals 1 damage to each opponent" is the graveyard ratchet's
+card and not the damage one; reading the whole line put Ark of Hunger, Fuming
+Effigy and Chandra, Fire Artisan in the wrong list on the first run. The
+remaining unaudited clauses are `CounterAdded` (11 cards — likely already
+right, since `add_counters` emits one event carrying a count), `EntersBattlefield`
+(~4) and `CreatureDied` (~2).
 
 ## Target-deck card defects, and why they are all blocked on one thing
 

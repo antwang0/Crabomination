@@ -544,7 +544,11 @@ pub fn reveille_squad() -> CardDefinition {
             .with_filter(crate::card::Predicate::EntityMatches {
                 what: Selector::This,
                 filter: R::Untapped,
-            }),
+            })
+            // CR 603.2c — one declaration, one ask. The body is idempotent
+            // (untap *all* your creatures), so firing per attacker only meant
+            // asking the controller the same question three times.
+            .once_per_batch(),
             effect: Effect::MayDo {
                 description: "Untap all creatures you control?".to_string(),
                 body: Box::new(Effect::Untap {

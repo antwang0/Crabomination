@@ -20118,8 +20118,12 @@ pub fn coveted_jewel() -> CardDefinition {
                 amount: Value::Const(3),
             }),
             // The attacking creature's controller is bound to target slot 0.
+            // CR 603.2c — "whenever ONE OR MORE creatures an opponent controls
+            // attack you": one fire for the declaration. Without the flag three
+            // unblocked attackers drew that opponent nine cards.
             TriggeredAbility {
-                event: EventSpec::new(EventKind::Attacks, EventScope::ControllerAttackedByOpponent),
+                event: EventSpec::new(EventKind::Attacks, EventScope::ControllerAttackedByOpponent)
+                    .once_per_batch(),
                 effect: Effect::Seq(vec![
                     Effect::GainControl {
                         what: Selector::This,
