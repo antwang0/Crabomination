@@ -5292,3 +5292,67 @@ fn cr_614_12a_an_opponent_chooses_names_one_seat() {
         "CR 614.12a — the type is named as the Oppressor enters"
     );
 }
+
+// ── "Any player may …. If a player does, …" at N seats ────────────────────
+
+/// CR 101.4a — every choice is made before any action is taken, so an
+/// earlier acceptance does not close the offer. Desecration Demon's
+/// 2024-11-08 ruling: "each opponent in turn order may choose to sacrifice a
+/// creature, **even if an opponent already chose** to sacrifice a creature
+/// that combat", and the Demon gets "a maximum of one +1/+1 counter each
+/// combat, no matter how many creatures were sacrificed".
+#[test]
+fn cr_101_4a_every_opponent_is_offered_and_the_consequence_runs_once() {
+    use crabomination::card::CounterType;
+    use crabomination::decision::ScriptedDecider;
+    use crabomination::game::types::TurnStep;
+    let mut g = multi_player_game(4);
+    let demon = g.move_card_to_battlefield_for_test(0, catalog::desecration_demon());
+    let fodder: Vec<_> = (1..4)
+        .map(|s| g.move_card_to_battlefield_for_test(s, catalog::grizzly_bears()))
+        .collect();
+    drain_stack(&mut g);
+    g.decider = Box::new(ScriptedDecider::new(std::iter::repeat_n(DecisionAnswer::Bool(true), 3)));
+    g.active_player_idx = 0;
+    g.step = TurnStep::BeginCombat;
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+
+    for (i, id) in fodder.iter().enumerate() {
+        assert!(
+            g.battlefield_find(*id).is_none(),
+            "opponent {} was offered too, not just the first", i + 1
+        );
+    }
+    let d = g.battlefield_find(demon).expect("Demon survives");
+    assert!(d.tapped, "tapped");
+    assert_eq!(
+        d.counter_count(CounterType::PlusOnePlusOne), 1,
+        "one counter for three sacrifices, not three"
+    );
+}
+
+/// The other half: nobody accepting still runs `otherwise` once, and no seat
+/// is left mid-offer.
+#[test]
+fn cr_101_4a_all_declining_leaves_the_offer_closed() {
+    use crabomination::card::CounterType;
+    use crabomination::decision::ScriptedDecider;
+    use crabomination::game::types::TurnStep;
+    let mut g = multi_player_game(4);
+    let demon = g.move_card_to_battlefield_for_test(0, catalog::desecration_demon());
+    for s in 1..4 {
+        g.move_card_to_battlefield_for_test(s, catalog::grizzly_bears());
+    }
+    drain_stack(&mut g);
+    g.decider = Box::new(ScriptedDecider::new(std::iter::repeat_n(DecisionAnswer::Bool(false), 3)));
+    g.active_player_idx = 0;
+    g.step = TurnStep::BeginCombat;
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+
+    let d = g.battlefield_find(demon).expect("Demon survives");
+    assert!(!d.tapped, "nobody paid, so nothing happened");
+    assert_eq!(d.counter_count(CounterType::PlusOnePlusOne), 0);
+    assert!(g.pending_decision.is_none(), "no seat is left mid-offer");
+}

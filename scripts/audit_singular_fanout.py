@@ -70,14 +70,6 @@ SELECTOR_CONSUMED_SINGLY = (
 # waiting on. `--gate` fails on anything outside this list, and on an entry
 # whose site is gone (a stale allowlist hides the next regression).
 ALLOWLIST = {
-    ("MayDoBy", "longhorn_firebeast"):
-        'printed "ANY opponent may have it deal 5 damage to them. If a player '
-        'does, sacrifice this creature" — ask each seat in turn order, which is '
-        "`AnyPlayerMayExileFromGraveyard`'s shape, not a fan-out. "
-        "⚠ **Whether a SECOND opponent may also take 5 once the creature is "
-        "already sacrificed is a RULING, and the offline Scryfall cache carries "
-        "no rulings** — `EachPlayerDoes` assumes yes and the stop-at-first arm "
-        "assumes no, so this waits on the ruling, not on the code.",
     ("ManifestDread", "unidentified_hovership"):
         'printed "the exiled card\'s OWNER manifests dread" — the ref wanted is '
         "the owner of this Vehicle's linked exile, which no `PlayerRef` names. "

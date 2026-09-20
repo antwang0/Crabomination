@@ -632,20 +632,18 @@ pub fn carrion_wurm() -> CardDefinition {
     )
 }
 
-/// Longhorn Firebeast — {2}{R} 3/2 an opponent can trade 5 life to kill.
+/// Longhorn Firebeast — {2}{R} 3/2 any opponent can take 5 damage to kill.
 pub fn longhorn_firebeast() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![etb(Effect::MayDoBy {
+        triggered_abilities: vec![etb(Effect::PlayersMayAccept {
             who: PlayerRef::EachOpponent,
             description: "Take 5 damage from Longhorn Firebeast to destroy it?".into(),
-            body: Box::new(Effect::Seq(vec![
-                Effect::DealDamage { to: Selector::You, amount: Value::Const(5) },
-                Effect::Sacrifice {
-                    who: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::This))),
-                    count: Value::Const(1),
-                    filter: R::IsSource,
-                },
-            ])),
+            on_accept: Box::new(Effect::DealDamage {
+                to: Selector::Target(0),
+                amount: Value::Const(5),
+            }),
+            if_any: Box::new(Effect::SacrificeSource),
+            otherwise: Box::new(Effect::Noop),
         })],
         ..creature(
             "Longhorn Firebeast",

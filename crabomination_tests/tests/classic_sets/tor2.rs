@@ -275,6 +275,27 @@ fn longhorn_firebeast_can_be_bought_off() {
     assert!(!g.battlefield.iter().any(|c| c.definition.name == "Longhorn Firebeast"));
 }
 
+/// "ANY opponent may have it deal 5 damage to them" is every opponent, not
+/// the first — Vexing Devil's 2018-12-07 ruling on the same template ("each
+/// other opponent in turn order does the same. If any of them do, you
+/// sacrifice"). Two seats take the 5; the Firebeast is sacrificed once.
+#[test]
+fn longhorn_firebeast_offers_every_opponent_and_dies_once() {
+    let mut g = multi_player_game(4);
+    let beast = g.move_card_to_battlefield_for_test(0, catalog::longhorn_firebeast());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),  // P1 takes 5
+        DecisionAnswer::Bool(false), // P2 declines and is still asked
+        DecisionAnswer::Bool(true),  // P3 takes 5 after P1 already bought it
+    ]));
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 20, "the controller is never offered");
+    assert_eq!(g.players[1].life, 15);
+    assert_eq!(g.players[2].life, 20, "declined");
+    assert_eq!(g.players[3].life, 15, "asked after P1 accepted");
+    assert!(g.battlefield_find(beast).is_none(), "sacrificed");
+}
+
 /// Gurzigost eats two graveyard cards each upkeep or dies.
 #[test]
 fn gurzigost_pays_its_upkeep_from_the_graveyard() {

@@ -8287,10 +8287,10 @@ fn rhystic_tax_prompt_routes_to_the_taxed_seat() {
     assert_eq!(g.players[1].mana_pool.total(), 0, "floating mana spent on the tax");
 }
 
-/// Browbeat asks each player in turn; a mid-loop `wants_ui` acceptor takes
-/// the 5 and the controller never draws.
+/// Browbeat asks each player in turn; a `wants_ui` acceptor takes the 5 and
+/// the controller never draws.
 #[test]
-fn browbeat_offer_routes_to_each_seat_and_accept_closes_it() {
+fn browbeat_offer_routes_to_each_seat_and_an_acceptor_suppresses_the_draw() {
     let mut g = two_player_game();
     g.players[0].wants_ui = true;
     g.players[1].wants_ui = true;

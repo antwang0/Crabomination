@@ -792,20 +792,18 @@ pub fn argothian_wurm() -> CardDefinition {
             who: PlayerRef::EachPlayer,
             description: "Sacrifice a land to put Argothian Wurm on top of its owner's library?"
                 .into(),
-            on_accept: Box::new(Effect::Seq(vec![
-                Effect::Sacrifice {
-                    who: Selector::Target(0),
-                    count: Value::ONE,
-                    filter: R::Land,
+            on_accept: Box::new(Effect::Sacrifice {
+                who: Selector::Target(0),
+                count: Value::ONE,
+                filter: R::Land,
+            }),
+            if_any: Box::new(Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Library {
+                    who: PlayerRef::OwnerOf(Box::new(Selector::This)),
+                    pos: LibraryPosition::Top,
                 },
-                Effect::Move {
-                    what: Selector::This,
-                    to: ZoneDest::Library {
-                        who: PlayerRef::OwnerOf(Box::new(Selector::This)),
-                        pos: LibraryPosition::Top,
-                    },
-                },
-            ])),
+            }),
             otherwise: Box::new(Effect::Noop),
         })],
         ..creature("Argothian Wurm", cost(&[generic(3), g()]), vec![CreatureType::Wurm], 6, 6)

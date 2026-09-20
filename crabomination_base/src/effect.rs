@@ -4695,14 +4695,22 @@ pub enum Effect {
     /// (`Value::TriggerEventAmount`). Minds Aglow, Collective Voyage,
     /// Mana-Charged Dragon.
     JoinForces { description: String, body: Box<Effect> },
-    /// "[who] may [accept]. If a player does, run `on_accept` (that player
-    /// bound to slot 0) and stop; if no one does, run `otherwise`." Asked in
-    /// APNAP order via the synchronous decider (same wants_ui gap as
-    /// TemptingOffer). Vexing Devil, Browbeat, Risk Factor.
+    /// "[who] may [accept]. If a player does, [`if_any`]; if no one does,
+    /// [`otherwise`]." Every player in `who` is asked, in APNAP order,
+    /// **whatever the earlier answers were** — Argothian Wurm's ruling
+    /// ("all remaining players still get the option") and Desecration
+    /// Demon's ("each opponent in turn order may choose ... even if an
+    /// opponent already chose"). Each accepter runs `on_accept` with
+    /// themselves bound to slot 0; `if_any` runs **once** however many
+    /// accepted ("a maximum of one +1/+1 counter each combat, no matter how
+    /// many creatures were sacrificed"). CR 101.4a puts every choice before
+    /// every action, which is also what makes a suspend mid-ask replay-safe.
+    /// Vexing Devil, Browbeat, Risk Factor, Desecration Demon.
     PlayersMayAccept {
         who: PlayerRef,
         description: String,
         on_accept: Box<Effect>,
+        if_any: Box<Effect>,
         otherwise: Box<Effect>,
     },
     /// "If a creature would enter the battlefield under an opponent's

@@ -650,6 +650,31 @@ fn argothian_wurm_can_be_bought_off_with_a_land() {
     assert_eq!(g.players[0].library.last().map(|c| c.id), Some(wurm));
 }
 
+/// Argothian Wurm's 2007-02-01 ruling: "If a player elects to sacrifice a
+/// land, Argothian Wurm is put on top of its owner's library, **but then all
+/// remaining players still get the option**." Two seats pay, the tuck happens
+/// once.
+#[test]
+fn argothian_wurm_still_offers_the_seats_after_the_first_buyer() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    use crabomination::game::multi_player_game;
+    let mut g = multi_player_game(4);
+    let lands: Vec<_> =
+        (0..4).map(|s| g.move_card_to_battlefield_for_test(s, catalog::forest())).collect();
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),  // P0, the controller, buys it off
+        DecisionAnswer::Bool(true),  // P1 is still asked and also pays
+        DecisionAnswer::Bool(false),
+        DecisionAnswer::Bool(false),
+    ]));
+    let wurm = g.move_card_to_battlefield_for_test(0, catalog::argothian_wurm());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(lands[0]).is_none(), "P0 paid a land");
+    assert!(g.battlefield_find(lands[1]).is_none(), "P1 was offered after P0 accepted");
+    assert!(g.battlefield_find(lands[2]).is_some(), "P2 declined");
+    assert_eq!(g.players[0].library.last().map(|c| c.id), Some(wurm), "tucked once");
+}
+
 /// Lifeline returns a dead creature at the next end step while another is out.
 #[test]
 fn lifeline_returns_the_dead_at_end_step() {

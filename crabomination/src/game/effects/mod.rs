@@ -23399,13 +23399,16 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::PlayersMayAccept { who, description, on_accept, otherwise } => {
-                // Ask each resolved player in APNAP order (seat-routed —
-                // each player answers their own offer); the first to
-                // accept runs `on_accept` with themselves in slot 0 and the
-                // offer closes. Nobody accepting runs `otherwise`.
+            Effect::PlayersMayAccept { who, description, on_accept, if_any, otherwise } => {
+                // Ask each resolved player in APNAP order (seat-routed — each
+                // player answers their own offer), and ask ALL of them: an
+                // earlier acceptance does not close the offer (Argothian
+                // Wurm, Desecration Demon). CR 101.4a — every choice is made
+                // before any action is taken, so the ask loop applies nothing
+                // and a suspend inside it replays from the answer log.
                 let source = ctx.source.unwrap_or(crate::card::CardId(0));
                 let mut cursor = 0;
+                let mut accepted = Vec::new();
                 for p in self.resolve_players(who, ctx) {
                     let Some(yes) =
                         self.ask_seat_bool(
@@ -23420,18 +23423,25 @@ impl GameState {
                         return Ok(());
                     };
                     if yes {
-                        self.clear_answer_log();
-                        let mut acc_ctx = ctx.clone();
-                        if acc_ctx.targets.is_empty() {
-                            acc_ctx.targets.push(Target::Player(p));
-                        } else {
-                            acc_ctx.targets[0] = Target::Player(p);
-                        }
-                        return self.run_effect(on_accept, &acc_ctx, events);
+                        accepted.push(p);
                     }
                 }
                 self.clear_answer_log();
-                self.run_effect(otherwise, ctx, events)
+                if accepted.is_empty() {
+                    return self.run_effect(otherwise, ctx, events);
+                }
+                // Each accepter pays with themselves in slot 0; the shared
+                // consequence then runs once, however many accepted.
+                for p in accepted {
+                    let mut acc_ctx = ctx.clone();
+                    if acc_ctx.targets.is_empty() {
+                        acc_ctx.targets.push(Target::Player(p));
+                    } else {
+                        acc_ctx.targets[0] = Target::Player(p);
+                    }
+                    self.run_effect(on_accept, &acc_ctx, events)?;
+                }
+                self.run_effect(if_any, ctx, events)
             }
 
             Effect::StealCreatureEtbThisTurn => {

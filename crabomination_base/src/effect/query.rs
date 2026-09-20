@@ -536,8 +536,9 @@ impl Effect {
             | Effect::PlayerMayPayLifeElse { else_, .. } => {
                 f(else_);
             }
-            Effect::PlayersMayAccept { on_accept, otherwise, .. } => {
+            Effect::PlayersMayAccept { on_accept, if_any, otherwise, .. } => {
                 f(on_accept);
+                f(if_any);
                 f(otherwise);
             }
             Effect::TurnFaceUpFree { if_cant: Some(e), .. } => {
@@ -1138,9 +1139,12 @@ impl Effect {
             Effect::TemptingOffer { body } => body.requires_target(),
             Effect::ForEachOpponent { body } => body.requires_target(),
             Effect::JoinForces { body, .. } => body.requires_target(),
-            // The accept branch's slot-0 player is bound at resolution; only
-            // `otherwise` can demand a cast-time target (Browbeat's drawer).
-            Effect::PlayersMayAccept { otherwise, .. } => otherwise.requires_target(),
+            // The accept branch's slot-0 player is bound at resolution; the
+            // two that run in the controller's own context can demand a
+            // cast-time target (Browbeat's drawer).
+            Effect::PlayersMayAccept { if_any, otherwise, .. } => {
+                if_any.requires_target() || otherwise.requires_target()
+            }
             Effect::OnEachSpellCastThisTurn { .. } => false,
             Effect::PutExiledCreatureOntoBattlefield { .. } => false,
             Effect::DeployExiledCreature { what, .. } => sel_has_target(what),
@@ -2707,7 +2711,9 @@ impl Effect {
             Effect::TemptingOffer { body } => body.primary_target_filter(),
             Effect::ForEachOpponent { body } => body.primary_target_filter(),
             Effect::JoinForces { body, .. } => body.primary_target_filter(),
-            Effect::PlayersMayAccept { otherwise, .. } => otherwise.primary_target_filter(),
+            Effect::PlayersMayAccept { if_any, otherwise, .. } => {
+                if_any.primary_target_filter().or_else(|| otherwise.primary_target_filter())
+            }
             Effect::Punisher {
                 options, otherwise, ..
             } => options
@@ -4787,8 +4793,9 @@ impl Effect {
                 Effect::TemptingOffer { body } => eff_find(body, slot, mode, kicked),
                 Effect::ForEachOpponent { body } => eff_find(body, slot, mode, kicked),
                 Effect::JoinForces { body, .. } => eff_find(body, slot, mode, kicked),
-                Effect::PlayersMayAccept { otherwise, .. } => {
-                    eff_find(otherwise, slot, mode, kicked)
+                Effect::PlayersMayAccept { if_any, otherwise, .. } => {
+                    eff_find(if_any, slot, mode, kicked)
+                        .or_else(|| eff_find(otherwise, slot, mode, kicked))
                 }
                 Effect::Punisher {
                     chooser,

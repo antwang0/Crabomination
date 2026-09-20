@@ -347,14 +347,12 @@ pub fn prowling_pangolin() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::PlayersMayAccept {
             who: PlayerRef::EachPlayer,
             description: "Sacrifice two creatures to kill Prowling Pangolin?".into(),
-            on_accept: Box::new(Effect::Seq(vec![
-                Effect::Sacrifice {
-                    who: Selector::Target(0),
-                    count: Value::Const(2),
-                    filter: R::Creature,
-                },
-                Effect::SacrificeSource,
-            ])),
+            on_accept: Box::new(Effect::Sacrifice {
+                who: Selector::Target(0),
+                count: Value::Const(2),
+                filter: R::Creature,
+            }),
+            if_any: Box::new(Effect::SacrificeSource),
             otherwise: Box::new(Effect::Noop),
         })],
         ..creature(

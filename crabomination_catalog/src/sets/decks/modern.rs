@@ -48311,13 +48311,11 @@ pub fn vexing_devil() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::PlayersMayAccept {
             who: PlayerRef::EachOpponent,
             description: "Have Vexing Devil deal 4 damage to you? (it is sacrificed)".into(),
-            on_accept: Box::new(Effect::Seq(vec![
-                Effect::DealDamage {
-                    to: Selector::Target(0),
-                    amount: Value::Const(4),
-                },
-                Effect::SacrificeSource,
-            ])),
+            on_accept: Box::new(Effect::DealDamage {
+                to: Selector::Target(0),
+                amount: Value::Const(4),
+            }),
+            if_any: Box::new(Effect::SacrificeSource),
             otherwise: Box::new(Effect::Noop),
         })],
         ..Default::default()
@@ -48338,6 +48336,7 @@ pub fn browbeat() -> CardDefinition {
                 to: Selector::Target(0),
                 amount: Value::Const(5),
             }),
+            if_any: Box::new(Effect::Noop),
             otherwise: Box::new(Effect::Draw {
                 who: target_filtered(SelectionRequirement::Player),
                 amount: Value::Const(3),
@@ -48362,6 +48361,7 @@ pub fn risk_factor() -> CardDefinition {
                 to: Selector::Target(0),
                 amount: Value::Const(4),
             }),
+            if_any: Box::new(Effect::Noop),
             otherwise: Box::new(Effect::Draw {
                 who: Selector::You,
                 amount: Value::Const(3),
@@ -63513,12 +63513,12 @@ pub fn clackbridge_troll() -> CardDefinition {
                 effect: Effect::PlayersMayAccept {
                     who: PlayerRef::EachOpponent,
                     description: "Sacrifice a creature to Clackbridge Troll?".into(),
-                    on_accept: Box::new(Effect::Seq(vec![
-                        Effect::Sacrifice {
-                            who: Selector::Player(PlayerRef::Target(0)),
-                            count: Value::Const(1),
-                            filter: SelectionRequirement::Creature,
-                        },
+                    on_accept: Box::new(Effect::Sacrifice {
+                        who: Selector::Player(PlayerRef::Target(0)),
+                        count: Value::Const(1),
+                        filter: SelectionRequirement::Creature,
+                    }),
+                    if_any: Box::new(Effect::Seq(vec![
                         Effect::Tap {
                             what: Selector::This,
                         },

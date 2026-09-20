@@ -59,12 +59,14 @@ pub fn desecration_demon() -> CardDefinition {
             effect: Effect::PlayersMayAccept {
                 who: PlayerRef::EachOpponent,
                 description: "Sacrifice a creature to Desecration Demon?".into(),
-                on_accept: Box::new(Effect::Seq(vec![
-                    Effect::Sacrifice {
-                        who: Selector::Player(PlayerRef::Target(0)),
-                        count: Value::ONE,
-                        filter: R::Creature,
-                    },
+                on_accept: Box::new(Effect::Sacrifice {
+                    who: Selector::Player(PlayerRef::Target(0)),
+                    count: Value::ONE,
+                    filter: R::Creature,
+                }),
+                // "A maximum of one +1/+1 counter each combat, no matter how
+                // many creatures were sacrificed" — the 2024-11-08 ruling.
+                if_any: Box::new(Effect::Seq(vec![
                     Effect::Tap {
                         what: Selector::This,
                     },
