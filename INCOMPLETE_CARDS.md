@@ -5,6 +5,15 @@ real-Magic capability** (the canonical example: a card that should be castable
 from the graveyard but isn't). Distinct from *blank* cards (see
 `audit_stubs.rs`) — these look done.
 
+## Reading key — most of the tables here are history, not a worklist
+
+An audit pass lands as a narrative plus a `| Card | Was | Printed |` table of
+what it **fixed**, so a card named in one of those rows is fixed, not open:
+the "Was" column is the old code. Only these are open work — 🟡 rows, a
+"Residue" list under a fixed table, and the numbered `### N. No … primitive`
+sections. Checked 2026-09-20 by matching the ten pod decks' 410 card names
+against this file: 48 mentions, every substantive one a fixed-table row.
+
 ## How this file was produced / how to regenerate
 
 Run the companion auditor:
