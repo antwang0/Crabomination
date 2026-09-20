@@ -82,6 +82,7 @@ the handoff.
 | Engine mechanics & primitives | [Suggested next-up tasks](#suggested-next-up-tasks) | 1053 |
 | Rules coverage | [MagicCompRules coverage audit](#magiccomprules-coverage-audit) | 312 |
 | Tooling | [Recommender: two builder defects fixed, one lesson recorded](#recommender-two-builder-defects-fixed-one-lesson-recorded) | 17 |
+| Bugs & robustness | [FIXED 2026-09-20 (the fifty-fourth find) — "any player may …" closed on the FIRST acceptance, so six of seven seats were never offered and the consequence could run twice](#fixed-2026-09-20-the-fifty-fourth-find--any-player-may--closed-on-the-first-acceptance-so-six-of-seven-seats-were-never-offered-and-the-consequence-could-run-twice) | 7 cards, 1 arm |
 | Bugs & robustness | [FIXED 2026-09-20 (the fifty-third find) — the printed word "another" between two target slots had no way to be said, so a creature fought itself and Cone of Flame dealt 1+2+3 to one permanent](#fixed-2026-09-20-the-fifty-third-find--the-printed-word-another-between-two-target-slots-had-no-way-to-be-said-so-a-creature-fought-itself-and-cone-of-flame-dealt-123-to-one-permanent) | 41 → 0 |
 | Bugs & robustness | [FIXED 2026-09-20 (the fifty-second find) — the filter language has no implicit ZONE, so a printed "target card from a graveyard" was satisfied by a permanent on the battlefield](#fixed-2026-09-20-the-fifty-second-find--the-filter-language-has-no-implicit-zone-so-a-printed-target-card-from-a-graveyard-was-satisfied-by-a-permanent-on-the-battlefield) | 27 → 0 |
 | Bugs & robustness | [FIXED 2026-09-20 (the fifty-first find) — a FAN-OUT `PlayerRef` handed to an arm that resolves it SINGULARLY, nineteen cards, and every one invisible in a duel](#fixed-2026-09-20-the-fifty-first-find--a-fan-out-playerref-handed-to-an-arm-that-resolves-it-singularly-nineteen-cards-and-every-one-invisible-in-a-duel) | 19 sites |
@@ -109,6 +110,52 @@ copies.** `_factory_body` fixed brace matching across them at the
 forty-eighth find; helper inlining and `..delegation` are only in this one.
 Extracting a shared `catalog_bodies.py` would move every audit's count at
 once, so it needs a run that can re-verify each ratchet, not a drive-by.
+
+## FIXED 2026-09-20 (the fifty-fourth find) — "any player may …" closed on the FIRST acceptance, so six of seven seats were never offered and the consequence could run twice
+
+`Effect::PlayersMayAccept` is the arm for the printed template "any player
+may [pay something]. If a player does, [consequence]" — Vexing Devil,
+Browbeat, Argothian Wurm, Desecration Demon, Prowling Pangolin, Clackbridge
+Troll, Risk Factor. It asked the seats in APNAP order and **returned on the
+first yes**. In a duel that is at most one ask wrong. At nine seats it is
+eight.
+
+**The rulings say the opposite, and there are two of them.** Argothian Wurm
+(2007-02-01): "If a player elects to sacrifice a land, Argothian Wurm is put
+on top of its owner's library, **but then all remaining players still get the
+option**." Desecration Demon (2024-11-08): "**Each opponent in turn order may
+choose to sacrifice a creature, even if an opponent already chose** to
+sacrifice a creature that combat. Desecration Demon will have **a maximum of
+one +1/+1 counter** put on it each combat, no matter how many creatures were
+sacrificed." So the template has two halves that the one `on_accept` field
+had conflated: what **each accepter pays**, and the **shared consequence**
+that runs once however many accepted.
+
+**The fix names them.** `on_accept` is now per accepter (that player in slot
+0) and a new `if_any` is the once-only consequence; every one of the seven
+cards was a `Seq[cost, consequence]` that split cleanly down that seam.
+Stop-at-first is no longer representable, which is why this class needs no
+ratchet.
+
+**⚠ And the ask loop had to move before the apply loop, which is a rule and
+not a style choice.** CR 101.4a — "if a player would make a choice while also
+taking an action, all choices are made before the actions are taken." Asking
+and applying in one pass would have been observably wrong *and* unsound: a
+`wants_ui` seat later in the order suspends the resolution, and the replay
+re-runs the whole arm from the answer log. An accepter who had already been
+dealt 4 would have been dealt 4 again on every re-run. Collecting the answers
+first makes the ask phase side-effect-free, which is exactly what the answer
+log's replay assumes. **The CR-correct order and the replay-safe order are
+the same order.**
+
+**Longhorn Firebeast came off `MayDoBy` onto the primitive** — it was
+`audit_singular_fanout`'s surviving row, allowlisted as "waiting on a ruling,
+and the offline Scryfall cache carries no rulings". That column is 19 → 2 →
+**1**. The ruling was two `fetch_oracle.py --rulings` calls away; the flag did
+not exist, so the question had stayed open. 💡 **The cache holds oracle text
+only. A question the printed line cannot answer is a network call, and the
+answer usually already exists on a *different card with the same template* —
+Longhorn Firebeast has no rulings at all, and Vexing Devil's answered it.**
 
 ## FIXED 2026-09-20 (the fifty-third find) — the printed word "another" between two target slots had no way to be said, so a creature fought itself and Cone of Flame dealt 1+2+3 to one permanent
 

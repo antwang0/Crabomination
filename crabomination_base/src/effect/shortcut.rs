@@ -3257,7 +3257,7 @@ pub fn graft() -> TriggeredAbility {
     }
 }
 
-/// Melee (CR 702.122): "Whenever this creature attacks, it gets +1/+1
+/// Melee (CR 702.121): "Whenever this creature attacks, it gets +1/+1
 /// until end of turn for each opponent you attacked this combat."
 /// `Value::OpponentsAttackedThisCombat` counts the distinct defending
 /// seats in the current attack declaration (one in 1v1, more in

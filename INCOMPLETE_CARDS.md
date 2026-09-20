@@ -389,6 +389,34 @@ off by name rather than fixes, both filed here:
 | Quartzwood Crasher | 🟡 "create an X/X … where X is the amount of damage **those creatures** dealt to that player" wants the batch's *summed* damage, and `Value::TriggerEventAmount` is the one dealer the fire landed on. It keeps the unbatched shape (one token per trampler, each sized by its own damage — the right total across too many bodies) rather than take `once_per_batch` and mint one token of the wrong size. Needs the batch to carry a sum, which the per-attacker walk cannot do: the later attackers' damage is not dealt yet when the first one's trigger is pushed. |
 | Magmatic Galleon | 🟡 "Whenever one or more creatures your opponents control are dealt **excess** noncombat damage, create a Treasure token" is not modelled at all — only the ETB 5 damage ships. Needs excess-damage tracking (CR 120.3c), which no primitive carries. |
 
+## Melee is applied off-stack when it is a printed keyword (2026-09-20)
+
+CR 702.121a — "Melee is a **triggered** ability. 'Melee' means 'Whenever this
+creature attacks, it gets +1/+1 until end of turn for each opponent you
+attacked with a creature this combat.'" The engine has two representations of
+it and only one is a trigger:
+
+- `Keyword::Melee` is applied as a **direct pump inside `declare_attackers`**
+  (`combat.rs`, next to the exert and Raid bookkeeping) rather than put on the
+  stack. Wings of the Guard, Grenzo's Ruffians, Deputized Protester.
+- `effect::shortcut::melee()` is the real trigger
+  (`Value::OpponentsAttackedThisCombat`), which is what a card that *grants*
+  melee has to use. Adriana, Captain of the Guard's second line.
+
+The **size** is the same either way — the count is fixed at declaration and
+CR 702.121a's own ruling says it does not matter whether the attackers are
+still attacking, still on the battlefield, or still in the game. What the
+off-stack half rounds off is that the bonus cannot be responded to, is not
+seen by "whenever a player casts a spell or a triggered ability is put onto
+the stack" effects, and survives a Stifle. Both halves do stack, which is CR
+702.121b ("if a creature has multiple instances of melee, each triggers
+separately") — a Wings of the Guard under Adriana gets both, which
+`cr_702_121_melee_counts_opponents_and_each_instance_triggers_separately`
+pins at 1/1 → 5/5 over two attacked opponents.
+
+⚠ The citation was **702.122** in `effect.rs`, `effect/shortcut.rs` and one
+test; 702.122 is *Crew*. Melee is **702.121**. Fixed at the same commit.
+
 ## The zone-blind target class (2026-09-20) — closed, with two handed on
 
 `scripts/audit_target_zone.py`. **The filter language has no implicit zone**:

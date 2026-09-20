@@ -1054,7 +1054,7 @@ mod recent53 {
 
     #[test]
     fn melee_counts_each_opponent_attacked() {
-        // CR 702.122 — in multiplayer, Melee scales with distinct opponents hit.
+        // CR 702.121 — in multiplayer, Melee scales with distinct opponents hit.
         let mut g = crabomination::game::multi_player_game(3);
         let adriana = g.add_card_to_battlefield(0, catalog::adriana_captain_of_the_guard());
         let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears());

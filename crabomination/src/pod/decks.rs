@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Eight hand-picked commanders, each with a 99 drawn from cards this engine
+//! Ten hand-picked commanders, each with a 99 drawn from cards this engine
 //! already implements: legal under CR 903 (100 cards including the commander,
 //! singleton outside basics, every card inside the commander's CR 903.4 color
 //! identity) and Commander-legal per Scryfall's ban list, both of which
@@ -398,4 +398,66 @@ pub const YURIKO_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island,
     island, island, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
     swamp, swamp,
+];
+
+/// Adriana, Captain of the Guard — RW. Commander, then the 99.
+pub const ADRIANA_COMMANDERS: &[CardFactory] = &[adriana_captain_of_the_guard];
+
+/// Adriana Boros: 74 nonbasic cards + 25 basics = 99.
+///
+/// The field's tenth deck and the first built around what only happens at
+/// three seats or more. Every other list wins by killing the seat across the
+/// table faster; this one is 27 cards whose text has no meaning in a duel —
+/// **the monarch** (CR 725), **goad** (CR 701.15), **melee** (CR 702.121),
+/// **will of the council** and **council's dilemma** (CR 701.38), **tempting
+/// offer** and **join forces** (ability words, CR 207.2c), **the initiative**
+/// (CR 726) and **myriad** (CR 702.116). Nine implemented
+/// mechanics that no pod deck had ever piloted, which is why they are here:
+/// a mechanic the field never plays is a mechanic self-play never crashes on.
+///
+/// Adriana herself is the thesis — melee on every creature she controls, so
+/// the pump scales with the number of *distinct opponents attacked*, not with
+/// the number of attackers. Goad supplies those opponents by forcing the
+/// table to swing at each other, and the monarch supplies the cards while
+/// daring them to swing back.
+pub const ADRIANA_MAIN: &[CardFactory] = &[
+    // Lands: 11 nonbasic, one of which is the monarch's own
+    command_tower, path_of_ancestry, sacred_foundry, battlefield_forge, inspiring_vantage,
+    arid_mesa, evolving_wilds, temple_of_triumph, myriad_landscape, throne_of_the_high_city,
+    spectator_seating,
+    // Rocks
+    sol_ring, arcane_signet, boros_signet, commanders_sphere, mind_stone, fellwar_stone,
+    wayfarers_bauble,
+    // The monarch (CR 725): the card engine, and a standing invitation to attack you
+    palace_sentinels, palace_jailer, throne_warden, protector_of_the_crown,
+    crown_hunter_hireling,
+    // Goad (CR 701.15): the opponents Adriana's melee wants attacked
+    grenzo_havoc_raiser, gloin_dwarf_emissary, goblin_racketeer, besmirch, disrupt_decorum,
+    // Melee (CR 702.121) and the rest of the attacks-are-mandatory package.
+    // ⚠ Grand Melee was cut from this slot: its second line ("all creatures
+    // block each combat if able") is symmetric and cancels exactly the attacks
+    // goad and Fumiko force, and the tenth seat cost +26.5 turns/game against
+    // a ~13-turn baseline per added seat while it was in.
+    custodi_soulcaller, deputized_protester, wings_of_the_guard, grenzos_ruffians, impact_tremors,
+    fumiko_the_lowblood, hellraiser_goblin, the_akroan_war,
+    // Voting (CR 701.38) and the two offers (ability words, CR 207.2c), plus
+    // the initiative (CR 726) and myriad (CR 702.116)
+    councils_judgment, custodi_squire, lieutenants_of_the_guard, coercive_portal,
+    tempt_with_glory, tempt_with_vengeance, mana_charged_dragon, caves_of_chaos_adventurer,
+    blade_of_selves,
+    // Removal, including the two sweepers a stalled pod needs
+    swords_to_plowshares, path_to_exile, lightning_bolt, abrade, chaos_warp, vandalblast,
+    wrath_of_god, blasphemous_act,
+    // Card advantage
+    skullclamp, faithless_looting, light_up_the_stage, wheel_of_fortune, senseis_divining_top,
+    // The curve: bodies to attack three ways at once with
+    dragon_fodder, krenkos_command, goblin_rabblemaster, beetleback_chief, goblin_chieftain,
+    goblin_warchief, skirk_prospector, mavren_fein_dusk_apostle, goldnight_commander, hellrider,
+    ranger_of_eos, solemn_simulacrum, archangel_of_tithes,
+    // Finishers
+    warstorm_surge, torbran_thane_of_red_fell, glorybringer,
+    // Basics: 13 mountain, 12 plains
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains,
 ];

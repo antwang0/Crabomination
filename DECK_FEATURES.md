@@ -39,6 +39,7 @@ lists were picked.
 | Freyalise G | Freyalise, Llanowar's Fury (**planeswalker**, CR 903.3a) | G | 100 | ✅ complete |
 | Zellix + Background UR | Zellix, Sanity Flayer **+** Passionate Archaeologist (**Choose a Background**, CR 702.124k) | UR | 98 + 2 | ✅ complete |
 | Yuriko UB | Yuriko, the Tiger's Shadow (**commander ninjutsu**, CR 702.49d) | UB | 100 | ✅ complete |
+| Adriana RW | Adriana, Captain of the Guard (**melee**, CR 702.121) | RW | 100 | ✅ complete |
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not
@@ -67,6 +68,46 @@ free body per Vampire spell from the command zone; Yuriko's is one unblocked
 Ninja draining eight opponents at once. Neither is a card that is strong in
 a duel. The two sit at opposite ends of the field's spread precisely because
 every other seat's clock is per-opponent.
+
+The **tenth** is the first list built around what only happens at three seats
+or more, and it exists because of a census, not a hunch: **not one of the nine
+decks above played a single multiplayer-native mechanic**. The monarch (CR
+725), goad (CR 701.15), melee (CR 702.121), will of the council and council's
+dilemma (CR 701.38, both ability words under CR 207.2c), tempting offer and
+join forces (ability words, CR 207.2c), the initiative (CR 726) and myriad
+(CR 702.116) were all implemented, all tested, and none had ever resolved in
+bot self-play.
+**A mechanic the field never plays is a mechanic self-play never crashes on**,
+which is the whole point of a pod smoke test. Adriana's 99 carries 27 such
+cards. It is **after** `pod_field(9)` for the reason the sixth through ninth
+are; `--commander --seats 10` is what reaches it.
+
+⚠⚠ **The number the tenth seat produces is about the *curve*, not the win
+rate, and one candidate cause was tested and ruled out.** Turns/game is
+linear in seats at **~12.9 a seat** and the tenth adds **+24.4** (98.81 →
+123.46 and 99.44 → 123.57 at two fresh seeds, 1,000 games a block) — roughly
+two seats' worth for one seat. The two seats that *shorten* the curve are
+Edgar (+6.9) and Yuriko (+6.5), the two decks whose clock reads the whole
+table, so the spread is a property of each added list rather than of the
+format: every increment below the ninth is unchanged at the same seed.
+
+The first hypothesis was **Grand Melee**, whose second line ("all creatures
+block each combat if able") is symmetric and cancels exactly the attacks goad
+and Fumiko force. It was cut for Impact Tremors — a clock that reads "each
+opponent", the property Edgar and Yuriko have — and **the A/B refutes it**:
+same seed, same field, one card different, turns/game 124.15 → **123.07**, a
+1.1-turn move. What it did move is the deck, 4.6 → **7.2 %** of ten-seat pods
+against a seat's 10.0 %. 💡 **So the +24.4 is still unexplained**; the
+remaining suspects are Protector of the Crown (a sponge that redirects *all*
+damage dealt to its controller) and the monarch itself, which hands an extra
+card a turn to whoever holds it and so lengthens every seat's game rather
+than this one's. Worth one more A/B, not worth guessing in this file.
+
+Adriana is the thesis rather than the engine: melee on every creature she
+controls, so the pump reads the number of **distinct opponents attacked**, not
+the number of attackers. Goad supplies those opponents by forcing the table to
+swing at each other; the monarch supplies the cards while daring them to swing
+back. Every one of those three clauses is a no-op in a duel.
 
 ⚠ The same run reads Zellix at **0.7 %** and Krark/Rograkh at **1.0 %** at
 nine seats. That is the other half of the same fact — a deck whose clock does

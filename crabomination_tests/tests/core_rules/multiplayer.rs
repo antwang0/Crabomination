@@ -5356,3 +5356,48 @@ fn cr_101_4a_all_declining_leaves_the_offer_closed() {
     assert_eq!(d.counter_count(CounterType::PlusOnePlusOne), 0);
     assert!(g.pending_decision.is_none(), "no seat is left mid-offer");
 }
+
+// ── Melee at N seats (CR 702.121) ─────────────────────────────────────────
+
+/// CR 702.121a — melee counts each *opponent you attacked with a creature*
+/// this combat, not each attacker. The 2016-08-23 ruling is explicit: "if you
+/// attack one player with Wings of the Guard and another player with five
+/// creatures, Wings of the Guard will get +2/+2." And CR 702.121b — "if a
+/// creature has multiple instances of melee, each triggers separately", which
+/// is what Adriana's second line manufactures on a creature that already
+/// prints the keyword.
+#[test]
+fn cr_702_121_melee_counts_opponents_and_each_instance_triggers_separately() {
+    let mut g = multi_player_game(4);
+    let adriana = g.move_card_to_battlefield_for_test(0, catalog::adriana_captain_of_the_guard());
+    let wings = g.move_card_to_battlefield_for_test(0, catalog::wings_of_the_guard());
+    let bear = g.move_card_to_battlefield_for_test(0, catalog::grizzly_bears());
+    drain_stack(&mut g);
+    for id in [adriana, wings, bear] {
+        g.clear_sickness(id);
+    }
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::DeclareAttackers;
+
+    // Two opponents attacked, three attackers — the count is 2, not 3.
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: wings, target: AttackTarget::Player(1) },
+        Attack { attacker: adriana, target: AttackTarget::Player(2) },
+        Attack { attacker: bear, target: AttackTarget::Player(2) },
+    ]))
+    .expect("three attackers across two seats");
+    drain_stack(&mut g);
+
+    let pt = |id| {
+        let c = g.compute_battlefield();
+        let p = c.iter().find(|p| p.id == id).expect("on the battlefield");
+        (p.power, p.toughness)
+    };
+    assert_eq!(pt(adriana), (6, 6), "4/4 + one melee instance x 2 opponents");
+    assert_eq!(
+        pt(wings), (5, 5),
+        "1/1 + TWO instances (printed keyword and Adriana's grant) x 2 opponents",
+    );
+    assert_eq!(pt(bear), (4, 4), "2/2 + the granted instance x 2 opponents");
+}

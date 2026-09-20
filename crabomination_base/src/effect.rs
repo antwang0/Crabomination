@@ -789,7 +789,7 @@ pub enum Value {
     /// matching the Windbrisk Heights ruling on "attacked with N creatures".
     /// Backed by `Player.creatures_attacked_this_turn`.
     CreaturesAttackedWithThisTurn(PlayerRef),
-    /// CR 702.122 (Melee) — the number of distinct opponents the active
+    /// CR 702.121 (Melee) — the number of distinct opponents the active
     /// player attacked this combat, read from the live `GameState.attacking`
     /// declarations (Player / Planeswalker-controller / Battle-protector map
     /// to a defending player). One in a normal 1v1 combat; more in multiplayer

@@ -157,6 +157,17 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::YURIKO_COMMANDERS,
             main: decks::YURIKO_MAIN,
         },
+        // Tenth, appended for the fifth time for the same reason: the pod's
+        // only seat that plays the **multiplayer-native** mechanics — the
+        // monarch (CR 725), goad (CR 701.15), melee (CR 702.121),
+        // voting (CR 701.38), tempting offer and join forces (CR 207.2c),
+        // the initiative (CR 726) and myriad (CR 702.116) — none of which
+        // any of the nine above had ever piloted. `--seats 10` reaches it.
+        PodDeck {
+            name: "Adriana (RW)",
+            commanders: decks::ADRIANA_COMMANDERS,
+            main: decks::ADRIANA_MAIN,
+        },
     ]
 }
 
@@ -585,6 +596,59 @@ mod tests {
 
         let pilots = vec![Pilot::default(); 4];
         for seed in [0xC0FFEE_u64, 43, 4242] {
+            let o = play_one_pod_game(&t, &pilots, 50_000, seed);
+            assert!(o.winner.is_some(), "seed {seed} left the pod undecided");
+            assert!(o.turns > 0);
+        }
+    }
+
+    /// CR 702.121 (Melee) — the tenth seat is the field's only
+    /// multiplayer-native list, so this asserts both halves: its commander
+    /// grants melee to the rest of the board, and the 99 actually carries the
+    /// mechanics that only mean something past two seats. A pod game at four
+    /// seats then has to finish, because none of that code had ever run in
+    /// self-play before this deck existed.
+    #[test]
+    fn cr_702_121_the_multiplayer_native_seat_plays_a_pod_game() {
+        let field = target_decks();
+        let mp = *field.iter().find(|d| d.name.starts_with("Adriana")).expect("the RW seat");
+        assert_eq!(mp.card_count(), 100);
+        let def = mp.commanders[0]();
+        // Melee is modelled as its attack trigger rather than as
+        // `Keyword::Melee` here, because the printed second line grants it.
+        assert!(
+            format!("{:?}", def.triggered_abilities).contains("OpponentsAttackedThisCombat"),
+            "Adriana has melee herself",
+        );
+        assert_eq!(
+            def.static_abilities.len(), 1,
+            "and grants it to the other creatures, which is what makes the 99 wide",
+        );
+
+        // The mechanics the other nine lists never played. Each is a distinct
+        // multiplayer rule, so a miss here means the seat stopped testing it.
+        let texts: Vec<String> =
+            mp.main.iter().map(|f| format!("{:?}", f())).collect();
+        for (mechanic, needle) in [
+            ("the monarch", "Monarch"),
+            ("goad", "Goad"),
+            ("melee", "Melee"),
+            ("voting", "WillOfTheCouncil"),
+            ("tempting offer", "TemptingOffer"),
+            ("join forces", "JoinForces"),
+            ("myriad", "Myriad"),
+        ] {
+            assert!(
+                texts.iter().any(|t| t.contains(needle)),
+                "the 99 stopped carrying {mechanic}",
+            );
+        }
+
+        let decks = vec![mp, field[0], field[1], field[2]];
+        let t = build_pod_template(&decks);
+        assert_eq!(t.players[0].library.len(), 99);
+        let pilots = vec![Pilot::default(); 4];
+        for seed in [0xADD1A_u64, 77, 9001] {
             let o = play_one_pod_game(&t, &pilots, 50_000, seed);
             assert!(o.winner.is_some(), "seed {seed} left the pod undecided");
             assert!(o.turns > 0);
