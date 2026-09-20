@@ -196,9 +196,26 @@ def is_hidden_zone_search(span: str, body: str) -> bool:
     return any(tok in body for tok in SEARCH_PRIMITIVE)
 
 
+# `..creature("Name", …)` — a struct-update base, the card's own helper.
+BASE_NAME = re.compile(r'\.\.\s*\w+\(\s*\n?\s*"([^"]+)"')
+# `fated("Name", …)` as the WHOLE body (after any `use` lines). Anchored on
+# purpose: an unanchored match takes the first nested call with a string
+# first argument, which is the **token** a card mints — Conqueror's Pledge
+# came back as "Kor Soldier" and Urza's Saga as "Construct".
+CALL_NAME = re.compile(
+    r'\A\{\s*(?:use\s[^;]+;\s*)*(?:\w+::)*\w+\(\s*\n?\s*"([^"]+)"'
+)
+
+
 def slug(name):
-    """"Pestilent Cauldron" -> "pestilent_cauldron", the factory-name shape."""
-    return re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_")
+    """"Pestilent Cauldron" -> "pestilent_cauldron", the factory-name shape.
+
+    The apostrophe is **dropped**, not separated: this catalog writes
+    Acolyte's Reward as `acolytes_reward`, so turning `\'` into `_` made the
+    slug preference miss on all 1,162 possessive names and fall back to
+    whichever literal came first.
+    """
+    return re.sub(r"[^a-z0-9]+", "_", name.lower().replace("'", "").replace("\u2019", "")).strip("_")
 
 
 def _brace_body(src, open_at):
@@ -283,18 +300,30 @@ def defs_in(path):
     this catalog's naming convention; fall back to the first only when none
     does, and say so by yielding it anyway (the caller's cache lookup is the
     second filter).
+
+    ⚠ A third of this catalog names the card **positionally**, not with a
+    `name:` field — `..creature("Sidar Jabari", cost(…), …)` as a struct
+    update, or `fated("Fated Conflagration", …)` as the whole body. Keying
+    only on `name:` skipped **7,030 of 22,134 factories**, and every ratchet
+    built on this reader was reporting its column over two thirds of the
+    catalog. `BASE_NAME` and `CALL_NAME` are those two shapes; the
+    struct-update one is the most reliable of the three, because `..helper()`
+    is by construction the card's own base rather than a token it mints.
     """
     src = open(path, encoding="utf-8").read()
     helpers, factories = helper_bodies(src)
     for m in re.finditer(r"pub fn (\w+)\(\) -> CardDefinition \{", src):
         start = m.end() - 1
         body = _brace_body(src, start)
-        names = re.findall(r'name:\s*"([^"]+)"', body)
-        if not names:
-            continue
         fn = m.group(1)
-        own = next((n for n in names if slug(n) == fn), None)
-        yield fn, own or names[0], with_helpers(body, helpers, factories), path
+        field = re.findall(r'name:\s*"([^"]+)"', body)
+        base = BASE_NAME.findall(body)
+        call = CALL_NAME.findall(body)
+        own = next((n for n in field + base + call if slug(n) == fn), None)
+        name = own or (base[:1] or field[:1] or call[:1] or [None])[0]
+        if name is None:
+            continue
+        yield fn, name, with_helpers(body, helpers, factories), path
 
 
 def main():
