@@ -389,6 +389,19 @@ off by name rather than fixes, both filed here:
 | Quartzwood Crasher | 🟡 "create an X/X … where X is the amount of damage **those creatures** dealt to that player" wants the batch's *summed* damage, and `Value::TriggerEventAmount` is the one dealer the fire landed on. It keeps the unbatched shape (one token per trampler, each sized by its own damage — the right total across too many bodies) rather than take `once_per_batch` and mint one token of the wrong size. Needs the batch to carry a sum, which the per-attacker walk cannot do: the later attackers' damage is not dealt yet when the first one's trigger is pushed. |
 | Magmatic Galleon | 🟡 "Whenever one or more creatures your opponents control are dealt **excess** noncombat damage, create a Treasure token" is not modelled at all — only the ETB 5 damage ships. Needs excess-damage tracking (CR 120.3c), which no primitive carries. |
 
+## Cultural Exchange's two player slots (2026-09-20)
+
+"Choose any number of creatures **target player** controls. Choose the same
+number of creatures **another target player** controls. Those players exchange
+control of those creatures." Modelled as `ExchangeControlChoosing` between
+**you** and an opponent, so there are no two player slots at all and the
+printed "another" has nowhere to hang.
+
+⚠ **The narrowing has teeth at N seats**: the printed card can swap two
+*opponents'* creatures, handing one of them a board it never had, and this
+cannot. In a duel the two readings coincide. Allowlisted in
+`audit_another_target` with that reason rather than silently passing.
+
 ## The "defending player" class (2026-09-20) — closed, with two named references and one residual
 
 32 cards print a clause that selects a permanent "defending player controls";

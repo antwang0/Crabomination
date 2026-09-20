@@ -164,6 +164,27 @@ reason rather than forced onto the atom.
 no combat at all. Outside combat there is no defending player, so the spell
 has no legal target and cannot be cast; the test declares an attack first now.
 
+## FIXED 2026-09-20 (the fifty-fifth find, second half) — the 24 "another target" rows it uncovered
+
+`audit_another_target` read **0/0 over 137 cards** before the shared reader
+learned to see positionally-named factories. Over the 194 it actually covers,
+24 rows were open — the same CR 601.2c defect the class had been "closed" on.
+Now 0/0 over 194.
+
+Three source-relative (Avacyn, Guardian Angel could shield herself; Living
+Totem could counter itself; Silent Hallcreeper was already right with
+`IsSource.negate()`, so the audit learned the spelling). Nineteen slots
+across eighteen cards take `OtherThanTargetSlot`, Serpentine Spike's third
+differing from both of the first two.
+
+💡 **The one that needed reading rather than rewriting: Setessan Tactics.**
+Its "another" is inside a **granted** activated ability — "{T}: this creature
+fights another target creature" — so it means other than that ability's
+*source* at activation, not other than a sibling slot, and the creature was a
+legal target for its own fight. **The paragraph split cannot see nesting**,
+which is also why Akroan Conscriptor reads as slot-relative (its preceding
+"target" belongs to heroic's *spell*). Both allowlisted with the reason.
+
 ## FIXED 2026-09-20 (the fifty-fifth find) — the SHARED audit reader was blind to a third of the catalog, so every ratchet built on it reported its column over two thirds of the cards
 
 `audit_dropped_may.defs_in` is the body reader six audits import. It keyed
