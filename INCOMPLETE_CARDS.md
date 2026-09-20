@@ -569,6 +569,7 @@ Three approximations the fixes left standing, each documented at its variant:
 | Scrabbling Claws | 🟡 the first ability prints "**target player** exiles a card from their graveyard" — the *player* is the target and the choice is theirs. It is modelled as "exile target card from a graveyard", now correctly zoned, which is the second ability's wording. |
 | Goblin Welder | 🟡 the second target ("target artifact card in **that player's** graveyard") is auto-picked by `Effect::WeldArtifacts` at highest mana value rather than declared as a target — a cross-target constraint no slot can express today. |
 | Ambush Wolf / Angel of Serenity | 🟡 "up to one" / "up to three **other**" — the Angel's `other` is now in the filter; the Wolf's "up to one" still fizzles the trigger rather than declining it, which differs only when a graveyard is empty. |
+| Agony Warp | 🟡 the **card is correct** (two declared slots, both `Creature`, `-3/-0` and `-0/-3`); the **bot cannot reach it** and it was never cast once in 2,000 ten-seat pod games — the only card of the ten target decks' 1,000 that a run never played. `trick_modes_combat_only` holds any instant with a temporary stat leaf out of every non-combat step regardless of **sign**, and `pick_combat_trick` sums a `Seq` of pumps without reading which **slot** each names, folding it to one `(-3,-3)` aimed at our own creature. Diagnosis and why the real fix needs an A/B: ENGINE_BACKLOG's sixty-third find. |
 
 ## A layer observation, filed by the card that surfaced it (2026-09-20)
 

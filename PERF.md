@@ -9512,6 +9512,41 @@ short to say so.
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
 
+### GUARDRAIL 2026-09-20 — the pod stack fix and the card census move NOTHING, and the pod smoke now runs on a DEBUG build
+
+`--bench` at `88f07f22`, `release-fast`, `CRAB_THREAD_CHECK=1`:
+
+```text
+  decisions          195,806   byte-identical to the committed invariant
+  turns_per_game       27.49   "
+  decisions_per_game   611.9   "
+  stalls          0 (cap 0 / board 0 / stuck 0 / draw 0)
+  games_per_s      519.07   peak_rss_mib 29.2
+  determinism        ok (all pairs split)
+  thread_determinism ok (3 vs 1 threads identical)
+```
+
+Expected to be exactly this and worth the run anyway: the diff touches
+`recommend.rs`'s `ActionCensus` (pod-only), `pod/`, the pod worker's spawn and
+one test. Nothing on the two-player loop, the encoding, the Vocab or a card
+definition — **no net needs retraining as of this commit**.
+
+Suite **20,225 / 0 / 6** (`CRAB_ANSWER_LOG=strict`, `--workspace --exclude
+crabomination_client`), one above the committed 20,224 and that one is the new
+`no_body_reads_a_slot_the_fill_loop_never_reaches`. Clippy **0** over the
+workspace.
+
+**Pod smoke, `release-fast`, seed 9901, 1,000 games at each of 4 / 7 / 10
+seats = 3,000 games: 3,000 decided, every `undecided_by` column zero, zero
+panics.** turns/game 45.58 / 77.75 / 123.84; 302 / 115 / 47 games a second.
+
+⚠ **And the reading that matters more than the numbers: until this commit the
+pod smoke could not be run on a debug build at all** — the worker was on the
+2 MiB `scope.spawn` default and the first game of every batch aborted the
+process (ENGINE_BACKLOG's sixty-second find). Every committed pod figure before
+this one is therefore a statement about `release-fast` and only that. A
+guardrail that is only ever run one way cannot report what it does the other.
+
 ### GUARDRAIL 2026-09-20 — the CR 614.12 class (89 → 7 cards, four engine commits) moved NOTHING the bench can see
 
 `--bench` at `3f50a214`, `CRAB_THREAD_CHECK=1`, `release`:
