@@ -9213,6 +9213,44 @@ short to say so.
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
 
+### GUARDRAIL 2026-09-20 — the CR 614.12 class (89 → 7 cards, four engine commits) moved NOTHING the bench can see
+
+`--bench` at `3f50a214`, `CRAB_THREAD_CHECK=1`, `release`:
+
+```text
+  decisions          195,806   byte-identical to the committed invariant
+  turns_per_game       27.49   "
+  decisions_per_game   611.9   "
+  stalls          0 (cap 0 / board 0 / stuck 0 / draw 0)
+  determinism     ok (all pairs split)
+  thread_determinism ok (3 vs 1 threads identical)
+  peak_rss_mib      25.7-27.8 over two runs
+```
+
+⚠ **This box is a different one: `Intel(R) Xeon(R) @ 2.10GHz`, not the
+SIXTEENTH box's 2.80 GHz.** `games_per_s` 547.9-553.0 and `wall_s` 0.58 are
+NOT comparable to anything above them; the decision count is, because it is
+deterministic and host-independent. **That is the whole reading a card-class
+run needs from `--bench`.**
+
+📐 **And the bench is necessary, not sufficient, when the change is CARDS** —
+`--decks fixed` is basic lands plus 34 spells and holds none of the ten
+shocklands, none of the choose-a-* class, and none of the nineteen
+fan-out-ref cards. The pools that do hold them were run instead:
+
+```text
+--decks cube/sos/sealed, 300 a archetype, fresh seeds 6001-6002
+  15,000 two-player games, 0 undecided, 0 panics
+
+--commander --seats 2..8 --games 2000 --seed 9110 (FRONTIER 9111)
+  14,000 pod games, 2,000/2,000 decided at every seat count,
+  every undecided_by column zero, 0 panics
+  turns/game 19.62 / 32.48 / 45.37 / 57.20 / 65.31 / 77.54 / 93.69
+```
+
+The pod curve is the one to watch: ~12.3 turns a seat above two, which is
+where the concurrent session's five-seed 70,000-game run left it.
+
 ### GUARDRAIL — seven Commander/multiplayer rules commits cost **fixed +0.066 / cube +0.038 / sealed -0.050 %**
 
 Not an optimization; the reading that says the rules work did not tax the
