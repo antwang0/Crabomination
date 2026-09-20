@@ -7692,6 +7692,8 @@ static DECKS: &[Factory] = &[
     super::decks::faeburrow_elder,
     super::decks::displacer_kitten,
     super::decks::teleportation_circle,
+    super::decks::relic_of_legends,
+    super::decks::decanter_of_endless_water,
     super::decks::quest_for_the_goblin_lord,
     super::decks::quest_for_the_gravelord,
     super::decks::quest_for_the_gemblades,

@@ -641,3 +641,67 @@ pub fn teleportation_circle() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── {3} artifacts that tap for any colour, plus a rider ────────────────────
+
+/// The half both share: `{T}: Add one mana of any color.`
+fn tap_for_any_color() -> crate::card::ActivatedAbility {
+    crate::card::ActivatedAbility {
+        tap_cost: true,
+        effect: Effect::AddMana {
+            who: PlayerRef::You,
+            pool: crate::effect::ManaPayload::AnyOneColor(Value::ONE),
+        },
+        ..Default::default()
+    }
+}
+
+/// Relic of Legends — {3} Artifact. "{T}: Add one mana of any color. Tap an
+/// untapped legendary creature you control: Add one mana of any color."
+/// (EDHREC 536.)
+///
+/// ⚠ The second ability taps **another** permanent and not itself, so
+/// `tap_cost` stays false and the filter carries `Untapped` — the printed word
+/// is "an untapped legendary creature", and without it the cost could be paid
+/// by a creature that is already tapped. Two mana a turn off one artifact is
+/// the whole card.
+pub fn relic_of_legends() -> CardDefinition {
+    CardDefinition {
+        name: "Relic of Legends",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![
+            tap_for_any_color(),
+            crate::card::ActivatedAbility {
+                tap_other_filter: Some(
+                    R::Creature
+                        .and(R::HasSupertype(Supertype::Legendary))
+                        .and(R::ControlledByYou)
+                        .and(R::Untapped),
+                ),
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: crate::effect::ManaPayload::AnyOneColor(Value::ONE),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Decanter of Endless Water — {3} Artifact. "You have no maximum hand size.
+/// {T}: Add one mana of any color." (EDHREC 318.)
+pub fn decanter_of_endless_water() -> CardDefinition {
+    CardDefinition {
+        name: "Decanter of Endless Water",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "You have no maximum hand size.",
+            effect: StaticEffect::NoMaximumHandSize,
+        }],
+        activated_abilities: vec![tap_for_any_color()],
+        ..Default::default()
+    }
+}

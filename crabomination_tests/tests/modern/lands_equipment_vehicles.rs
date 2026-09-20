@@ -2501,3 +2501,119 @@ fn cr_603_3d_teleportation_circle_resolves_with_nothing_to_blink() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(circle).is_some(), "the Circle is still there and nothing panicked");
 }
+
+// ── {3} mana artifacts with a rider ────────────────────────────────────────
+
+/// Relic of Legends: two mana a turn off one artifact, because the second
+/// ability taps a **legendary creature you control** rather than the Relic.
+#[test]
+fn relic_of_legends_taps_itself_and_then_a_legend() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let relic = g.add_card_to_battlefield(0, catalog::relic_of_legends());
+    let legend = g.add_card_to_battlefield(0, legendary_bear());
+    g.clear_sickness(legend);
+
+    tap_for_mana(&mut g, relic);
+    assert_eq!(g.players[0].mana_pool.total(), 1, "the Relic's own tap");
+    assert!(g.battlefield_find(relic).unwrap().tapped);
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: relic,
+        ability_index: 1,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("tap a legend for mana");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 2, "and a second off the legend");
+    assert!(g.battlefield_find(legend).unwrap().tapped, "the legend paid the cost");
+}
+
+/// ⚠ The printed cost is "Tap **an untapped** legendary creature you control",
+/// and both words are load-bearing: a nonlegendary creature cannot pay it, and
+/// neither can a legend that is already tapped.
+#[test]
+fn relic_of_legends_second_ability_needs_an_untapped_legend() {
+    let activate = |g: &mut GameState, relic| {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: relic,
+            ability_index: 1,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+    };
+
+    // A nonlegendary creature is not a legal cost.
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let relic = g.add_card_to_battlefield(0, catalog::relic_of_legends());
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bears);
+    assert!(activate(&mut g, relic).is_err(), "Grizzly Bears is not legendary");
+
+    // Nor is a legend that is already tapped.
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let relic = g.add_card_to_battlefield(0, catalog::relic_of_legends());
+    let legend = g.add_card_to_battlefield(0, legendary_bear());
+    g.clear_sickness(legend);
+    g.battlefield_find_mut(legend).unwrap().tapped = true;
+    assert!(activate(&mut g, relic).is_err(), "already tapped, so it cannot be tapped again");
+}
+
+/// Decanter of Endless Water: a mana rock that also turns off the cleanup
+/// discard (CR 514.1).
+#[test]
+fn cr_514_1_decanter_of_endless_water_removes_the_maximum_hand_size() {
+    let mut g = two_player_game();
+    assert_eq!(g.effective_max_hand_size(0), Some(7), "the ordinary maximum, first");
+    g.add_card_to_battlefield(0, catalog::decanter_of_endless_water());
+    assert!(g.effective_max_hand_size(0).is_none(), "no maximum hand size");
+    assert_eq!(g.effective_max_hand_size(1), Some(7), "and it is *your* hand, not theirs");
+}
+
+/// …and end to end through a real cleanup step: eleven cards survive the turn.
+///
+/// ⚠ The library is stocked on purpose. `two_player_game()` starts with an
+/// empty one, so passing priority far enough to reach a cleanup step runs the
+/// seat into its own draw and the turn ends in `GameAlreadyOver` — a fixture
+/// failure that reads exactly like the card not working.
+#[test]
+fn cr_514_1_the_decanter_keeps_eleven_cards_through_cleanup() {
+    let keep = |decanter: bool| {
+        let mut g = two_player_game();
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        if decanter {
+            g.add_card_to_battlefield(0, catalog::decanter_of_endless_water());
+        }
+        for seat in [0usize, 1] {
+            for _ in 0..20 {
+                g.add_card_to_library(seat, catalog::plains());
+            }
+        }
+        g.players[0].hand.clear();
+        for _ in 0..11 {
+            g.add_card_to_hand(0, catalog::grizzly_bears());
+        }
+        let turn = g.turn_number;
+        for _ in 0..80 {
+            if g.turn_number != turn {
+                break;
+            }
+            if g.perform_action(GameAction::PassPriority).is_err() {
+                break;
+            }
+            drain_stack(&mut g);
+        }
+        g.players[0].hand.len()
+    };
+    assert_eq!(keep(true), 11, "no maximum hand size, so nothing is discarded");
+    assert_eq!(keep(false), 7, "and the control discards down to seven");
+}
