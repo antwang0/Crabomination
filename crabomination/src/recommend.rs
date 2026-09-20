@@ -2476,12 +2476,49 @@ fn progress_watch_line(g: &GameState) -> String {
 pub struct ActionCensus {
     on: bool,
     counts: HashMap<String, usize>,
+    /// The same actions keyed by *card* alone, for the question the per-seat
+    /// line cannot answer: which cards a run never played at all.
+    cards: HashMap<String, usize>,
+}
+
+/// An action about to be taken, with the card it names peeled off so
+/// [`ActionCensus::bump`] can count both. Built only when the census is on.
+pub struct CensusKey {
+    line: String,
+    card: Option<String>,
 }
 
 impl ActionCensus {
     /// One `OnceLock` read, at the top of a game loop rather than inside it.
     pub fn armed() -> Self {
-        Self { on: cap_diag_floor().is_some(), counts: HashMap::default() }
+        Self { on: cap_diag_floor().is_some(), ..Default::default() }
+    }
+
+    /// On regardless of `CRAB_CAP_DIAG` — the deck-coverage census, which
+    /// wants every game counted and not just the capped ones.
+    pub fn forced() -> Self {
+        Self { on: true, ..Default::default() }
+    }
+
+    /// How often each card was named by an accepted action. A deck card
+    /// missing from this map was never cast, played or activated in the run.
+    ///
+    /// Read it **by key**, walking a deck list, not by iterating it: this is a
+    /// `HashMap` and its walk order is a hash layout, which is the one thing
+    /// a report must not inherit (`render` below is the only place in the
+    /// type that reads an order, and it sorts first).
+    pub fn card_counts(&self) -> &HashMap<String, usize> {
+        &self.cards
+    }
+
+    /// Fold another game's census in, so a run can total across games.
+    pub fn merge(&mut self, other: &Self) {
+        for (k, n) in &other.counts {
+            *self.counts.entry(k.clone()).or_insert(0) += n;
+        }
+        for (k, n) in &other.cards {
+            *self.cards.entry(k.clone()).or_insert(0) += n;
+        }
     }
 
     /// The key for an action *about to be taken*, or `None` when off. Taken
@@ -2496,22 +2533,28 @@ impl ActionCensus {
         g: &GameState,
         seat: usize,
         a: &crate::game::GameAction,
-    ) -> Option<String> {
-        self.on.then(|| format!("p{seat} {}", Self::key(g, a)))
+    ) -> Option<CensusKey> {
+        self.on.then(|| {
+            let (line, card) = Self::key(g, a);
+            CensusKey { line: format!("p{seat} {line}"), card }
+        })
     }
 
     /// Count a key from [`Self::key_for`], once the action is known to have
     /// been accepted.
-    pub fn bump(&mut self, key: Option<String>) {
-        if let Some(k) = key {
-            *self.counts.entry(k).or_insert(0) += 1;
+    pub fn bump(&mut self, key: Option<CensusKey>) {
+        if let Some(CensusKey { line, card }) = key {
+            *self.counts.entry(line).or_insert(0) += 1;
+            if let Some(c) = card {
+                *self.cards.entry(c).or_insert(0) += 1;
+            }
         }
     }
 
     /// `Variant Card` — the variant name plus the card the action names, and
     /// the ability index where there is one (two abilities on one permanent
     /// are two different loops).
-    fn key(g: &GameState, a: &crate::game::GameAction) -> String {
+    fn key(g: &GameState, a: &crate::game::GameAction) -> (String, Option<String>) {
         use crate::game::GameAction as A;
         let dbg = format!("{a:?}");
         let variant = dbg.split(['{', '(', ' ']).next().unwrap_or("?");
@@ -2526,15 +2569,16 @@ impl ActionCensus {
             }
             _ => (a.cast_card_id(), None),
         };
-        let Some(id) = id else { return variant.to_string() };
-        let name = g
-            .find_card_anywhere(id)
-            .map(|c| c.definition.name.to_string())
-            .unwrap_or_else(|| format!("{id:?}"));
-        match idx {
+        let Some(id) = id else { return (variant.to_string(), None) };
+        // A card the action names but no zone holds any more is an id, not a
+        // name, and must not land in the card census as one.
+        let found = g.find_card_anywhere(id).map(|c| c.definition.name.to_string());
+        let name = found.clone().unwrap_or_else(|| format!("{id:?}"));
+        let line = match idx {
             Some(i) => format!("{variant}#{i} {name}"),
             None => format!("{variant} {name}"),
-        }
+        };
+        (line, found)
     }
 
     /// The twelve commonest actions, count-descending then name-ascending so

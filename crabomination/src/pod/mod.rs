@@ -17,7 +17,7 @@ use rand::{RngExt, SeedableRng};
 use crate::cube::CardFactory;
 use crate::game::GameState;
 use crate::player::Player;
-use crate::recommend::{Pilot, StopReason, stop_reason};
+use crate::recommend::{ActionCensus, Pilot, StopReason, stop_reason};
 use crate::server::bot::Bot;
 
 /// One Commander deck: the commander(s) that start in the command zone plus
@@ -232,6 +232,19 @@ pub fn play_one_pod_game(
     max_actions: usize,
     seed: u64,
 ) -> PodOutcome {
+    play_one_pod_game_censused(template, pilots, max_actions, seed, None)
+}
+
+/// [`play_one_pod_game`] with the action census handed in, so a caller can
+/// total across games. `None` keeps the `CRAB_CAP_DIAG` behaviour: a census
+/// armed for this game only, rendered if the game did not decide.
+pub fn play_one_pod_game_censused(
+    template: &GameState,
+    pilots: &[Pilot],
+    max_actions: usize,
+    seed: u64,
+    into: Option<&mut ActionCensus>,
+) -> PodOutcome {
     crate::server::bot::set_jitter_seed(Some(seed));
     let mut g = template.clone();
     let mut shuffle = StdRng::seed_from_u64(seed);
@@ -260,7 +273,8 @@ pub fn play_one_pod_game(
     let (mut actions, mut stale) = (0usize, 0usize);
     // One `OnceLock` read a game, not a bool per action: off, `record` is a
     // field test and the `Debug` format below never runs.
-    let mut census = crate::recommend::ActionCensus::armed();
+    let mut census =
+        if into.is_some() { ActionCensus::forced() } else { ActionCensus::armed() };
     while stop_reason(&g, actions, max_actions, stale).is_none() {
         let mut any = false;
         for (seat, bot) in bots.iter_mut().enumerate() {
@@ -322,6 +336,9 @@ pub fn play_one_pod_game(
             census.render(),
         );
     }
+    if let Some(total) = into {
+        total.merge(&census);
+    }
     PodOutcome { winner: g.game_over.flatten(), actions, turns: g.turn_number, stop }
 }
 
@@ -339,6 +356,21 @@ pub fn run_pod_games(
     seed_base: u64,
     max_actions: usize,
     pilot: Pilot,
+) -> PodTally {
+    run_pod_games_censused(decks, first, count, seed_base, max_actions, pilot, None)
+}
+
+/// [`run_pod_games`] with an action census totalled across the batch — the
+/// deck-coverage run. Handing one in turns the census on for every game, so
+/// this is the slower path and the smoke test does not take it.
+pub fn run_pod_games_censused(
+    decks: &[PodDeck],
+    first: u32,
+    count: u32,
+    seed_base: u64,
+    max_actions: usize,
+    pilot: Pilot,
+    mut census: Option<&mut ActionCensus>,
 ) -> PodTally {
     let n = decks.len();
     let mut tally = PodTally { wins: vec![0; n], ..Default::default() };
@@ -358,7 +390,13 @@ pub fn run_pod_games(
     for i in first..first.saturating_add(count) {
         let rot = (i as usize) % n;
         let seed = seed_base.wrapping_add(u64::from(i).wrapping_mul(0x9E37_79B9_7F4A_7C15));
-        let o = play_one_pod_game(&templates[rot], &pilots, max_actions, seed);
+        let o = play_one_pod_game_censused(
+            &templates[rot],
+            &pilots,
+            max_actions,
+            seed,
+            census.as_deref_mut(),
+        );
         // Seat `s` in rotation `rot` holds deck `(s + n - rot) % n`.
         let by_deck = PodOutcome { winner: o.winner.map(|s| (s + n - rot) % n), ..o };
         tally.record(&by_deck);

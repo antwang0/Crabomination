@@ -959,6 +959,9 @@ struct Args {
     commander: bool,
     /// `--seats N`: pod size for `--commander` (CR 903 pods are 2..N).
     seats: usize,
+    /// `--card-census`: with `--commander`, also report which cards of each
+    /// target deck the run never played.
+    card_census: bool,
 }
 
 fn parse_args() -> Result<Args, String> {
@@ -973,6 +976,7 @@ fn parse_args() -> Result<Args, String> {
     let mut vs: Option<String> = None;
     let mut peer = false;
     let commander = std::env::args().any(|a| a == "--commander");
+    let card_census = std::env::args().any(|a| a == "--card-census");
     let mut seats = 4usize;
     let mut games = if commander { 300 } else { games };
     let argv: Vec<String> = std::env::args().skip(1).collect();
@@ -1007,6 +1011,7 @@ fn parse_args() -> Result<Args, String> {
             }
             "--bench" => step = 1,
             "--commander" => step = 1,
+            "--card-census" => step = 1,
             "--seats" => seats = need(i)?.parse().map_err(|_| "--seats must be a number")?,
             "-h" | "--help" => {
                 println!(
@@ -1030,6 +1035,7 @@ fn parse_args() -> Result<Args, String> {
                      state divergence aborts the run rather than being averaged in.\n\
                      Run it against a copy of itself first: the null is every pair\n\
                      split at 50.0%. --peer is the far end and is not run by hand.\n\
+                     --card-census with --commander names each deck's unplayed cards\n\
                      --commander runs N-seat Commander pods over the target decks\n\
                      (--seats N, default 4; --games total, default 300; --seed fixes\n\
                      the run) and reports completed games, the undecided breakdown,\n\
@@ -1134,6 +1140,7 @@ fn parse_args() -> Result<Args, String> {
         peer,
         commander,
         seats,
+        card_census,
     })
 }
 
@@ -1146,7 +1153,8 @@ fn parse_args() -> Result<Args, String> {
 /// process (optimized profiles abort), so "it printed a report" is itself
 /// part of the pass condition.
 fn run_commander_pods(args: &Args, threads: usize) -> i32 {
-    use crabomination::pod::{PodTally, pod_field, run_pod_games};
+    use crabomination::pod::{PodTally, pod_field, run_pod_games, run_pod_games_censused};
+    use crabomination::recommend::ActionCensus;
 
     /// The per-game action budget the 2-player ladder uses. A pod runs
     /// longer than a duel, so this is the number the stall rate is read
@@ -1179,20 +1187,48 @@ fn run_commander_pods(args: &Args, threads: usize) -> i32 {
     let started = std::time::Instant::now();
     let chunk = games.div_ceil(threads.max(1) as u32).max(1);
     let mut tally = PodTally { wins: vec![0; seats], ..Default::default() };
+    let mut census = ActionCensus::forced();
     std::thread::scope(|scope| {
         let mut handles = Vec::new();
         let mut first = 0u32;
         while first < games {
             let count = chunk.min(games - first);
             let field = field.clone();
-            let (seed, pilot) = (args.seed, args.a);
-            handles.push(scope.spawn(move || {
-                run_pod_games(&field, first, count, seed, MAX_ACTIONS, pilot)
-            }));
+            let (seed, pilot, want_census) = (args.seed, args.a, args.card_census);
+            // The same 32 MiB every other game worker in the tree already
+            // takes, and for the same reason its siblings give: resolution
+            // recurses through `Effect` trees whose debug-build frames run
+            // the 2 MiB `scope.spawn` default out. `recommend.rs`'s search
+            // workers, the two-player worker below and `deck_gauntlet`'s all
+            // say so in their own comments — the pod worker was added after
+            // them and was the one site left on the default, so at every
+            // seat count from 4 up the FIRST game aborted the process with
+            // "has overflowed its stack" and the Commander smoke could only
+            // ever be run on an optimized build.
+            let spawn = std::thread::Builder::new()
+                .name(format!("pod-{first}"))
+                .stack_size(32 * 1024 * 1024);
+            handles.push(
+                spawn
+                    .spawn_scoped(scope, move || {
+                        let mut c = ActionCensus::forced();
+                        let t = if want_census {
+                            run_pod_games_censused(
+                                &field, first, count, seed, MAX_ACTIONS, pilot, Some(&mut c),
+                            )
+                        } else {
+                            run_pod_games(&field, first, count, seed, MAX_ACTIONS, pilot)
+                        };
+                        (t, c)
+                    })
+                    .expect("spawn pod worker"),
+            );
             first += count;
         }
         for h in handles {
-            tally.merge(&h.join().expect("pod worker"));
+            let (t, c) = h.join().expect("pod worker");
+            tally.merge(&t);
+            census.merge(&c);
         }
     });
     let elapsed = started.elapsed().as_secs_f64();
@@ -1217,6 +1253,9 @@ fn run_commander_pods(args: &Args, threads: usize) -> i32 {
     );
     for (i, d) in field.iter().enumerate() {
         println!("  deck {i}  {:<28} wins {:>5} ({:.1} %)", d.name, tally.wins[i], pct(tally.wins[i]));
+    }
+    if args.card_census {
+        report_card_census(&field, &census);
     }
     // A pod that never decides is a broken pod, not a slow one.
     i32::from(tally.games == 0)
@@ -2442,3 +2481,47 @@ fn main() {
 // `crabomination::recommend` with `paired_stat` and `wilson` themselves —
 // `deck_duel` needs the same estimator, and one copy with its tests beats
 // two that drift.
+
+/// Which cards of each seated deck the run never played.
+///
+/// The pod smoke test answers "did the format survive"; this answers "did the
+/// deck". A card the bot never casts, plays or activates across thousands of
+/// games is not covered by that run whatever its outcome column says — its
+/// cost may be unpayable, its action may never be offered, or the deck may
+/// simply never reach it. The census keys off *accepted* actions, so a card
+/// listed here was never successfully acted on by any seat.
+///
+/// Lands and spells are separated because they fail differently: an unplayed
+/// land is almost always a real gap (the bot plays a land a turn), an unplayed
+/// expensive spell is often just curve.
+fn report_card_census(
+    field: &[crabomination::pod::PodDeck],
+    census: &crabomination::recommend::ActionCensus,
+) {
+    let counts = census.card_counts();
+    println!("  card census: {} distinct cards played", counts.len());
+    for d in field {
+        let mut never: Vec<(&str, bool)> = Vec::new();
+        let mut seen = std::collections::BTreeSet::new();
+        for f in d.commanders.iter().chain(d.main.iter()) {
+            let def = f();
+            if !seen.insert(def.name) {
+                continue;
+            }
+            if !counts.contains_key(def.name) {
+                never.push((def.name, def.card_types.contains(&crabomination::card::CardType::Land)));
+            }
+        }
+        let lands = never.iter().filter(|(_, l)| *l).count();
+        println!(
+            "  {:<28} unplayed {:>3} ({} land / {} spell)",
+            d.name,
+            never.len(),
+            lands,
+            never.len() - lands,
+        );
+        for (name, is_land) in &never {
+            println!("      {} {name}", if *is_land { "land " } else { "spell" });
+        }
+    }
+}

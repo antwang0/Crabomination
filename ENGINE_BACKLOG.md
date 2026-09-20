@@ -98,10 +98,43 @@ the handoff.
 | Bugs & robustness | [FIXED 2026-09-19 (the forty-ninth find) — "enters tapped" is a REPLACEMENT too, and 83 cards shipped it as a trigger in a clause the 614.12 audit cannot match](#fixed-2026-09-19-the-forty-ninth-find--enters-tapped-is-a-replacement-too-and-83-cards-shipped-it-as-a-trigger-in-a-clause-the-61412-audit-cannot-match) | 83 → 0 |
 | Bugs & robustness | [FIXED 2026-09-19/20 (the forty-eighth find) — "As this ~ enters" is a REPLACEMENT and 89 shipped cards modelled it as an ETB TRIGGER: 89 → 6](#fixed-2026-09-1920-the-forty-eighth-find--as-this--enters-is-a-replacement-and-89-shipped-cards-modelled-it-as-an-etb-trigger-89--6) | 89 → 6 |
 | Bugs & robustness | [FIXED 2026-09-19 (the forty-seventh find) — six hand-written SEAT-INDEX walks, and the two that let a player who had left the game vote and be voted for](#fixed-2026-09-19-the-forty-seventh-find--six-hand-written-seat-index-walks-and-the-two-that-let-a-player-who-had-left-the-game-vote-and-be-voted-for) | 60 |
+| Bugs & robustness | [FIXED 2026-09-20 (the sixty-second find) — the pod worker was the one game worker in the tree still on the 2 MiB spawn default, so EVERY Commander pod aborted on a debug build](#fixed-2026-09-20-the-sixty-second-find--the-pod-worker-was-the-one-game-worker-in-the-tree-still-on-the-2-mib-spawn-default-so-every-commander-pod-aborted-on-a-debug-build) | 106 |
 | Bugs & robustness | [The 2026-09-12/13 handoff detail, moved verbatim from TODO's NEXT](#the-2026-09-1213-handoff-detail-moved-verbatim-from-todos-next) | 182 |
 
 
 # Bugs & robustness
+
+## FIXED 2026-09-20 (the sixty-second find) — the pod worker was the one game worker in the tree still on the 2 MiB spawn default, so EVERY Commander pod aborted on a debug build
+
+`run_commander_pods` spawned its workers with a bare `scope.spawn`. Resolution
+recurses through `Effect` trees, an unoptimized frame is several times an
+optimized one, and 2 MiB is not enough for it: at **every** seat count from
+four up, the **first** game of the batch killed the process with
+
+    thread '<unknown>' has overflowed its stack
+    fatal runtime error: stack overflow, aborting
+
+Not a runaway — `RUST_MIN_STACK=4194304` on the unchanged binary plays the
+same games to completion, so it is frame size and not depth. The consequence
+is what matters: the Commander smoke test could only ever be run on an
+**optimized build** (~9 min on this box), while every other correctness check
+in the repo runs on a debug one. A crash-freedom result of "18,000 pod games,
+zero panics" was true of the profile it was measured on and silently
+unavailable on the profile everything else uses.
+
+📐 **The shape is the session's own highest-yield question — "this rule is
+implemented twice, read the second one" — at its fourth site.** Three other
+game workers already take an explicit **32 MiB**, each with a comment saying
+why: `recommend.rs`'s search workers ("Deep SOS effect trees overflow the 2MB
+spawn default under the bot's dry-run recursion"), the two-player worker in
+this same file ("this crashed a 16 000-game run outright") and
+`deck_gauntlet.rs`'s. The pod worker was added after all three and was the one
+site left on the default. The fix is the same 32 MiB, not a new number.
+
+⚠ **And the reason nobody hit it: the pod smoke is the only game loop in the
+tree whose routine invocation is an optimized build.** A guardrail that is
+only ever run one way cannot report what it does the other way — which is the
+general lesson, not the stack size.
 
 ## FIXED 2026-09-20 (the fifty-eighth find) — a printed "may" that belongs to ANOTHER SEAT, asked of the controller, and why "the bot answers the same" hid it
 
