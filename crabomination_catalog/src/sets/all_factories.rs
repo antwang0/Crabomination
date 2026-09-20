@@ -7710,6 +7710,7 @@ static DECKS: &[Factory] = &[
     super::decks::cut_a_deal,
     super::decks::padeem_consul_of_innovation,
     super::decks::cyberdrive_awakener,
+    super::decks::nekusar_the_mindrazer,
     super::decks::quest_for_the_goblin_lord,
     super::decks::quest_for_the_gravelord,
     super::decks::quest_for_the_gemblades,

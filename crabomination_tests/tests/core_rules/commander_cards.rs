@@ -448,3 +448,67 @@ fn cr_903_3_commanders_plate_equips_a_commander_for_three_and_anything_else_for_
         .expect("and five moves it to anything");
     assert_eq!(pt(&g, bears), (5, 5), "the Plate pumps whatever wears it");
 }
+
+// ── Nekusar, the Mindrazer ──────────────────────────────────────────────────
+//
+// Not a card *about* the format — it reads no command zone and no colour
+// identity — but its whole text is about the table, so the only test that
+// says anything is a multi-seat one. It lives here because this is where the
+// branch's multi-seat card tests are.
+
+/// "Whenever an opponent draws a card, Nekusar deals 1 damage to that player."
+/// ⚠ "that player", not "each opponent": at four seats one opponent's draw
+/// costs that opponent one life and the other two nothing.
+#[test]
+fn nekusar_pings_only_the_opponent_who_drew() {
+    let mut g = multi_player_game(4);
+    g.step = TurnStep::PreCombatMain;
+    g.add_card_to_battlefield(0, catalog::nekusar_the_mindrazer());
+    for seat in 0..4 {
+        g.add_card_to_library(seat, catalog::grizzly_bears());
+    }
+    let before: Vec<i32> = g.players.iter().map(|p| p.life).collect();
+
+    let mut events = Vec::new();
+    g.draw_one(2, &mut events);
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[2].life, before[2] - 1, "the drawer takes 1");
+    for seat in [0usize, 1, 3] {
+        assert_eq!(g.players[seat].life, before[seat], "seat {seat} is untouched");
+    }
+}
+
+/// "At the beginning of each player's draw step, that player draws an
+/// additional card" — the symmetric half, which helps Nekusar's controller
+/// too. One extra card for whoever's draw step it is, and nobody else.
+#[test]
+fn nekusar_draws_an_extra_card_for_whoevers_draw_step_it_is() {
+    let mut g = multi_player_game(4);
+    g.add_card_to_battlefield(0, catalog::nekusar_the_mindrazer());
+    for seat in 0..4 {
+        for _ in 0..5 {
+            g.add_card_to_library(seat, catalog::grizzly_bears());
+        }
+        g.players[seat].hand.clear();
+    }
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::Upkeep;
+
+    let hands: Vec<usize> = g.players.iter().map(|p| p.hand.len()).collect();
+    while g.step != TurnStep::PreCombatMain {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+    drain_stack(&mut g);
+
+    assert_eq!(
+        g.players[1].hand.len(),
+        hands[1] + 2,
+        "the active player's own draw plus Nekusar's extra",
+    );
+    for seat in [0usize, 2, 3] {
+        assert_eq!(g.players[seat].hand.len(), hands[seat], "seat {seat} draws nothing");
+    }
+}
