@@ -82,6 +82,7 @@ the handoff.
 | Engine mechanics & primitives | [Suggested next-up tasks](#suggested-next-up-tasks) | 1053 |
 | Rules coverage | [MagicCompRules coverage audit](#magiccomprules-coverage-audit) | 312 |
 | Tooling | [Recommender: two builder defects fixed, one lesson recorded](#recommender-two-builder-defects-fixed-one-lesson-recorded) | 17 |
+| Bugs & robustness | [FIXED 2026-09-20 (the fifty-eighth find) — a printed "may" that belongs to ANOTHER SEAT, asked of the controller, and why "the bot answers the same" hid it](#fixed-2026-09-20-the-fifty-eighth-find--a-printed-may-that-belongs-to-another-seat-asked-of-the-controller-and-why-the-bot-answers-the-same-hid-it) | 1 card, 115 checked |
 | Engine mechanics & primitives | [FIXED 2026-09-20 (the fifty-seventh find) — exert was AUTOMATIC and its bonus was not LINKED, so Glorybringer bought a skipped untap over an empty board](#fixed-2026-09-20-the-fifty-seventh-find--exert-was-automatic-and-its-bonus-was-not-linked-so-glorybringer-bought-a-skipped-untap-over-an-empty-board) | 6 cards |
 | Bugs & robustness | [FIXED 2026-09-20 (the fifty-sixth find) — "defending player" is ONE seat and 32 cards had it as "any opponent", including three that were worse than imprecise](#fixed-2026-09-20-the-fifty-sixth-find--defending-player-is-one-seat-and-32-cards-had-it-as-any-opponent-including-three-that-were-worse-than-imprecise) | 32 → 0 |
 | Tooling | [FIXED 2026-09-20 (the fifty-fifth find) — the SHARED audit reader was blind to a third of the catalog, so every ratchet built on it reported its column over two thirds of the cards](#fixed-2026-09-20-the-fifty-fifth-find--the-shared-audit-reader-was-blind-to-a-third-of-the-catalog-so-every-ratchet-built-on-it-reported-its-column-over-two-thirds-of-the-cards) | 7,030 → 0 skipped |
@@ -97,6 +98,51 @@ the handoff.
 
 
 # Bugs & robustness
+
+## FIXED 2026-09-20 (the fifty-eighth find) — a printed "may" that belongs to ANOTHER SEAT, asked of the controller, and why "the bot answers the same" hid it
+
+`Effect::MayDo` and `Effect::MayPay` put their question to
+`ctx.controller` — the player resolving the effect. When the card says
+"**target opponent** may …", "**that player** may …" or "**each player**
+may …", that is the wrong seat, and the seat-routed siblings
+(`MayDoBy`, `MayPayBy`, or `EachPlayerDoes`, which re-seats
+`ctx.controller` per player) are what the text asks for.
+
+`scripts/audit_may_seat.py` is the census and the gate — the **third**
+column of the `may` family, after `audit_dropped_may` ("is the printed may
+in the body at all?") and `audit_invented_may` ("is the body's may
+printed?"). Neither of those asks *whose* it is. **1 row across 115 cards
+with such a clause**, now 0.
+
+🔎 **Divine Gambit, and the two things that hid it.**
+
+1. **The body was already right.** Its printed rider is "That player may put
+   a permanent card from their hand onto the battlefield", and the body named
+   that player in *both* halves — `ControllerOf(Target(0))` for which hand the
+   card comes from and for whose battlefield it lands on. The permanent went
+   to the right player. Only the *choice* was taken from them, which no
+   outcome assertion can see.
+2. **`AutoDecider` declines every optional body**, so in self-play the two
+   seats "agree" and no aggregate moves. ⚠ The comment shipped with the card
+   made exactly that argument for leaving it: *"the auto outcomes are
+   equivalent since both perspectives align on declining the gift-back."*
+   They align for the AutoDecider. They do not align for a `wants_ui` seat —
+   a human opponent was never offered their own gift-back — nor for a
+   `ScriptedDecider`, a net policy, or a pod whose seats answer differently.
+   **"The bot answers the same" is not "the question goes to the right
+   player."**
+
+📐 **The instrument that makes "who is asked" observable is a `wants_ui`
+seat.** The engine answers a headless seat itself and suspends for a UI one,
+so a test that sets `wants_ui` on *only* the opponent turns the routing into
+a state check: `g.pending_decision.is_some()` iff the question reached them.
+Checked against the old body — it fails there and passes on the fix. An
+outcome-only test passes either way, which is why this survived two of them.
+
+⚠ **The needle excludes an intervening "you".** "At the beginning of each
+opponent's upkeep, **you** may …" and "For each opponent, **you** may …" are
+the controller's choice; four of the first eight rows were that shape, and a
+census that counts them reports a class four times its size.
 
 ### The reader, and the one lead it leaves
 
