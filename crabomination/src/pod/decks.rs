@@ -332,3 +332,70 @@ pub const ZELLIX_MAIN: &[CardFactory] = &[
     island, island, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain, mountain, mountain, mountain,
 ];
+
+/// Yuriko, the Tiger's Shadow — UB, and the pod's first seat led by a
+/// commander whose printed ability is used **from the command zone by an
+/// action rather than by a cast**. Ninth in `target_decks`, so `--seats 9` is
+/// what runs it and every committed 2..8-seat number is untouched.
+///
+/// It is here for the reason the Partner, planeswalker and Background seats
+/// are: `Keyword::CommanderNinjutsu` (CR 702.49d) had been validated since it
+/// shipped and never *piloted*. Three things fall out of it and none is any
+/// other seat's:
+///
+/// * CR 702.49d is the one command-zone route that is **not** a cast, so the
+///   CR 903.8 tax never applies to it — `commander_cast_count` stays where it
+///   was and the ninja is free after the first, which is the whole reason the
+///   variant exists;
+/// * it needs an *unblocked attacker* to return, so the deck is built around
+///   creatures that cannot be blocked rather than around big ones, and the
+///   bot's `pick_ninjutsu` only offers the swap when the ninja hits at least
+///   as hard or carries an attack/combat-damage trigger;
+/// * Yuriko's own trigger — "whenever a Ninja you control deals combat damage
+///   to a player, reveal the top card of your library … each opponent loses
+///   life equal to that card's mana value" — is a **pod** clause: one
+///   connection drains the whole table, so its rate scales with the seat
+///   count where every other seat's damage does not.
+///
+/// The 99 is the field's shape: ~36 lands, the colorless staples, the Dimir
+/// Signet and Talisman, then removal, card advantage and a few finishers,
+/// which is what a one-ply material evaluator can price (DECK_FEATURES has
+/// the measurement that settled that).
+pub const YURIKO_COMMANDERS: &[CardFactory] = &[yuriko_the_tigers_shadow];
+
+/// Yuriko Dimir: 76 nonbasic cards + 23 basics = 99.
+pub const YURIKO_MAIN: &[CardFactory] = &[
+    // Lands (13 nonbasic + 23 basics = 36)
+    command_tower, path_of_ancestry, opal_palace, otawara_soaring_city,
+    takenuma_abandoned_mire, drowned_catacomb, watery_grave, darkslick_shores,
+    underground_river, dimir_guildgate, shelldock_isle, evolving_wilds,
+    // The one land that turns a stalled board back into a ninjutsu trigger
+    rogues_passage,
+    // Colorless ramp and utility
+    sol_ring, arcane_signet, commanders_sphere, mind_stone, thought_vessel,
+    everflowing_chalice, wayfarers_bauble, senseis_divining_top, skullclamp, mana_vault,
+    // The guild pair — both two-colour in CR 903.4 identity
+    dimir_signet, talisman_of_dominance,
+    // Ninjas: the payoff half of the deck, and what Yuriko's trigger counts
+    dokuchi_silencer, inkrise_infiltrator, moon_circuit_hacker, nashi_searcher_in_the_dark,
+    nezumi_prowler, satoru_the_infiltrator, silver_fur_master, skullsnatcher,
+    biting_palm_ninja, mistblade_shinobi, prosperous_thief, ninja_of_the_deep_hours,
+    higure_the_still_wind, ink_eyes_servant_of_oni,
+    // Enablers: cheap bodies that connect, which is what ninjutsu returns
+    changeling_outcast, tormented_soul, slither_blade, triton_shorestalker,
+    invisible_stalker, gingerbrute, faerie_seer, spectral_sailor, vault_skirge,
+    baleful_strix, dimir_infiltrator, looter_il_kor,
+    // Interaction, including the two sweepers that break a stalled pod
+    pongify, rapid_hybridization, bloodchiefs_thirst, feed_the_swarm, slaughter_pact,
+    go_for_the_throat, cast_down, murder, bone_shards, agony_warp, toxic_deluge, damnation,
+    // Card advantage and one counter
+    counterspell, brainstorm, consider, nights_whisper, sign_in_blood, careful_study,
+    phyrexian_arena, read_the_bones,
+    // Finishers
+    gray_merchant_of_asphodel, massacre_wurm, sheoldred_whispering_one,
+    consecrated_sphinx, hypnotic_specter,
+    // Basics: 12 island, 11 swamp
+    island, island, island, island, island, island, island, island, island, island,
+    island, island, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp,
+];

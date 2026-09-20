@@ -148,6 +148,15 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ZELLIX_COMMANDERS,
             main: decks::ZELLIX_MAIN,
         },
+        // Ninth, appended for the fourth time for the same reason: the pod's
+        // only **commander ninjutsu** seat (CR 702.49d), and the only one
+        // whose commander leaves the command zone by an action that is not a
+        // cast. `--seats 9` is what reaches it.
+        PodDeck {
+            name: "Yuriko (UB)",
+            commanders: decks::YURIKO_COMMANDERS,
+            main: decks::YURIKO_MAIN,
+        },
     ]
 }
 
@@ -523,6 +532,56 @@ mod tests {
         assert_eq!(t.players[0].command.len(), 2, "both begin in the command zone");
         assert_eq!(t.players[0].commanders.len(), 2);
         assert_eq!(t.players[0].library.len(), 98);
+
+        let pilots = vec![Pilot::default(); 4];
+        for seed in [0xC0FFEE_u64, 43, 4242] {
+            let o = play_one_pod_game(&t, &pilots, 50_000, seed);
+            assert!(o.winner.is_some(), "seed {seed} left the pod undecided");
+            assert!(o.turns > 0);
+        }
+    }
+
+    /// CR 702.49d — **commander ninjutsu**: the one route out of the command
+    /// zone that is not a cast, so CR 903.8's tax never applies to it. The
+    /// keyword shipped validated and, until this seat, was never piloted.
+    ///
+    /// What this asserts that no other seat does: the commander begins in the
+    /// command zone like any other, its `commander_cast_count` is untouched
+    /// by the ninjutsu route, and the deck finishes seeded games. The 21-damage
+    /// tally is live here where the planeswalker and Background seats have it
+    /// at zero — a Ninja that connects is combat damage from a commander
+    /// (CR 903.10a) — which is the third corner of the same square.
+    #[test]
+    fn cr_702_49d_a_commander_ninjutsu_seat_plays_a_pod_game() {
+        use crate::card::{Keyword, KeywordSlice};
+        let field = target_decks();
+        let nin = *field
+            .iter()
+            .find(|d| {
+                d.commanders.len() == 1
+                    && d.commanders[0]()
+                        .keywords
+                        .iter()
+                        .any(|k| matches!(k, Keyword::CommanderNinjutsu(_)))
+            })
+            .expect("a commander-ninjutsu deck");
+        assert_eq!(nin.card_count(), 100);
+        let def = nin.commanders[0]();
+        assert!(def.is_creature(), "CR 702.49d rides a creature");
+        assert!(
+            !def.keywords.has_kw(&Keyword::Ninjutsu(Default::default())),
+            "the command-zone keyword is its own, not plain ninjutsu",
+        );
+
+        let decks = vec![nin, field[0], field[1], field[2]];
+        let t = build_pod_template(&decks);
+        assert_eq!(t.players[0].command.len(), 1, "it begins in the command zone");
+        assert_eq!(t.players[0].commanders.len(), 1);
+        assert_eq!(t.players[0].library.len(), 99);
+        assert!(
+            t.commander_cast_count.is_empty(),
+            "CR 903.8's tally starts empty and ninjutsu never adds to it",
+        );
 
         let pilots = vec![Pilot::default(); 4];
         for seed in [0xC0FFEE_u64, 43, 4242] {

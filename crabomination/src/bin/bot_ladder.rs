@@ -1153,7 +1153,9 @@ fn run_commander_pods(args: &Args, threads: usize) -> i32 {
     /// against rather than a number to raise when games cap out.
     const MAX_ACTIONS: usize = 50_000;
 
-    let seats = args.seats.clamp(2, 8);
+    // The ceiling is the number of target decks: `pod_field` cycles the list
+    // above it, so a tenth seat is a mirror rather than a new list.
+    let seats = args.seats.clamp(2, crabomination::pod::target_decks().len());
     // The net observation encoder is fixed at two seats — `encode_state_inner`
     // reads the opponent as `1 - seat` — so an MCTS/net pilot in a 4-seat pod
     // would index out of bounds rather than play badly. Refusing here is the

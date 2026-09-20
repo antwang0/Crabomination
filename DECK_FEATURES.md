@@ -38,6 +38,24 @@ lists were picked.
 | Edgar Markov BRW | Edgar Markov (Eminence) | BRW | 100 | ✅ complete |
 | Freyalise G | Freyalise, Llanowar's Fury (**planeswalker**, CR 903.3a) | G | 100 | ✅ complete |
 | Zellix + Background UR | Zellix, Sanity Flayer **+** Passionate Archaeologist (**Choose a Background**, CR 702.124k) | UR | 98 + 2 | ✅ complete |
+| Yuriko UB | Yuriko, the Tiger's Shadow (**commander ninjutsu**, CR 702.49d) | UB | 100 | ✅ complete |
+
+The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
+the only one whose commander leaves the command zone by an action that is not
+a cast, so CR 903.8's tax never applies to that route — `commander_cast_count`
+stays where it was and every ninja after the first is free. It is **after**
+`pod_field(8)` in `target_decks` for the reason the sixth, seventh and eighth
+are, so every committed 2..8-seat number is unchanged; `--commander --seats 9`
+is what reaches it, and `bot_ladder`'s seat clamp is now the length of
+`target_decks()` rather than a literal 8.
+
+Its 99 is built around *connecting* rather than around size: fourteen Ninjas,
+twelve one- and two-mana creatures that cannot be blocked or fly, and Rogue's
+Passage for the board that stalls. Yuriko's own trigger is the pod half —
+"whenever a Ninja you control deals combat damage to a player … **each
+opponent** loses life equal to that card's mana value" — so one connection
+drains the whole table and its rate scales with the seat count where every
+other seat's damage does not.
 
 The **sixth** is the pod's first three-colour identity and its first
 **Eminence** commander (CR 113.6b): Edgar Markov's "whenever you cast another
