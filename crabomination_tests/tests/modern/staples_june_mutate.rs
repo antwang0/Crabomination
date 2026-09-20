@@ -2449,9 +2449,8 @@ fn lavabrink_venturer_parity_protection() {
         let mut g = two_player_game();
         // Venturer belongs to player 1; the active player 0 (with priority)
         // tries to target it.
-        let venturer = g.add_card_to_battlefield(1, catalog::lavabrink_venturer());
         g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Mode(mode)]));
-        g.fire_self_etb_triggers(venturer, 1);
+        let venturer = g.add_card_to_battlefield_entering(1, catalog::lavabrink_venturer());
         drain_stack(&mut g);
         let expect_odd = mode == 1;
         assert!(g.computed_permanent(venturer).unwrap().keywords()

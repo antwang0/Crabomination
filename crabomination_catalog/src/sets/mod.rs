@@ -464,7 +464,18 @@ pub fn fastland_etb_conditional_tap() -> TriggeredAbility {
 /// the `SourceEntersTapped` decline branch that sets the flag rather than
 /// tapping, because a permanent that *enters* tapped never *becomes* tapped.
 pub fn pay_life_or_enters_tapped(life: i32) -> Effect {
-    Effect::AsEntersPayLifeOrTapped { life: Value::Const(life) }
+    // CR 119.4 gates the offer: a seat that cannot pay the life is not asked,
+    // and the land simply enters tapped.
+    Effect::If {
+        cond: Predicate::PlayerLifeAtLeast { who: PlayerRef::You, life },
+        then: Box::new(Effect::AsEntersChooseMode(vec![
+            // Mode 0: pay the life (CR 119.4 — paying life is losing it).
+            Effect::LoseLife { who: Selector::You, amount: Value::Const(life) },
+            // Mode 1: enter tapped.
+            Effect::SourceEntersTapped,
+        ])),
+        else_: Box::new(Effect::SourceEntersTapped),
+    }
 }
 
 /// The ten shocklands' spelling of [`pay_life_or_enters_tapped`].

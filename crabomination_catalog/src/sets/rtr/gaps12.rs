@@ -163,16 +163,11 @@ pub fn tablet_of_the_guilds() -> CardDefinition {
         name: "Tablet of the Guilds",
         cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact],
-        triggered_abilities: vec![
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: Effect::ChooseTwoColorsForSource,
-            },
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl),
-                effect: Effect::GainLifePerChosenColorOfCast,
-            },
-        ],
+        as_enters_effect: Some(Effect::ChooseTwoColorsForSource),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl),
+            effect: Effect::GainLifePerChosenColorOfCast,
+        }],
         ..Default::default()
     }
 }

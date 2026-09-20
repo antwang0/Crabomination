@@ -15,6 +15,9 @@ use crabomination::game::{cast, drain_stack, two_player_game};
 /// `[(&str, fn() -> CardDefinition); N]` trips `clippy::type_complexity`; the
 /// same alias is what `counters.rs` and `structural_audit.rs` use.
 type Factory = fn() -> CardDefinition;
+/// One row of the stamp table: name, factory, and what the entry must have
+/// written on the instance by the time it returns.
+type Stamped = (&'static str, Factory, fn(&crabomination::card::CardInstance) -> bool);
 
 /// A permanent whose whole body is an as-enters "choose a color" replacement
 /// (Coldsteel Heart's shape), typed by the caller so the same body can be a
@@ -669,4 +672,86 @@ fn cr_614_12a_a_ui_seat_is_asked_whether_to_pay_the_shockland() {
     assert!(land.tapped, "declined, so it entered tapped");
     assert_eq!(g.players[0].life, before, "and no life was paid");
     assert!(g.pending_decision.is_none(), "the entry finished on the answer");
+}
+
+// ── The "other" bucket's convertible members (CR 614.12) ───────────────────
+
+/// Eight more as-enters clauses that were ETB triggers, each stamping a value
+/// the permanent's own static ability then reads: the chosen opponent (both
+/// Racks), a basic land type (Realmwright, Roots of Life), two colours
+/// (Tablet of the Guilds), a number (Sanctum Prelate), a creature to protect
+/// (Dauntless Bodyguard) and a parity (Lavabrink Venturer). Asserted the same
+/// way as the other classes — stamped by the time the entry returns, with
+/// nothing on the stack to carry it.
+#[test]
+fn cr_614_12a_the_remaining_as_enters_stamps_happen_inside_the_entry() {
+    let mut g = two_player_game();
+    // Dauntless Bodyguard needs another creature to name.
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let stamped: [Stamped; 7] = [
+        ("Cursed Rack", catalog::cursed_rack, |c| c.chosen_player.is_some()),
+        ("The Rack", catalog::the_rack, |c| c.chosen_player.is_some()),
+        ("Realmwright", catalog::realmwright, |c| c.chosen_land_type.is_some()),
+        ("Roots of Life", catalog::roots_of_life, |c| c.chosen_land_type.is_some()),
+        ("Tablet of the Guilds", catalog::tablet_of_the_guilds, |c| {
+            c.chosen_colors.len() == 2
+        }),
+        ("Sanctum Prelate", catalog::sanctum_prelate, |c| c.chosen_number.is_some()),
+        ("Dauntless Bodyguard", catalog::dauntless_bodyguard, |c| {
+            c.chosen_permanent.is_some()
+        }),
+    ];
+    for (name, factory, stamped_ok) in stamped {
+        let id = g.move_card_to_battlefield_for_test(0, factory());
+        let inst = g.battlefield_find(id).unwrap_or_else(|| panic!("{name} entered"));
+        assert!(stamped_ok(inst), "CR 614.12a — {name} stamps its choice as it enters");
+        assert!(g.stack.is_empty(), "CR 614.12 — {name} leaves no trigger behind");
+    }
+}
+
+/// Lavabrink Venturer's "choose odd or even" is the one that needed the new
+/// primitive. `Effect::ChooseMode` reads `ctx.mode` — the pick made when the
+/// spell went on the stack — and an as-enters replacement has no stack item
+/// of its own, so it silently took mode 0 (even) and the decider was never
+/// consulted. `AsEntersChooseMode` asks, so a scripted mode 1 sticks.
+///
+/// ⚠ The ask goes through the decider here rather than suspending: only the
+/// LAND DROP has a resume context for an as-enters question
+/// (`ResumeContext::LandEntry`). The cast, move and mint paths still drive
+/// the ask through `resolve_effect_driven`, which is the standing behaviour
+/// for all forty-odd `as_enters_effect` cards and is recorded as such.
+#[test]
+fn cr_614_12a_lavabrink_venturer_asks_for_its_parity() {
+    use crabomination::card::Keyword;
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::lavabrink_venturer());
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(crabomination::mana::Color::White, 1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(1)]));
+    cast(&mut g, id);
+    let cp = g.computed_permanent(id).expect("the Venturer entered");
+    assert!(
+        cp.keywords()
+            .iter()
+            .any(|k| matches!(k, Keyword::ProtectionFromManaValueParity { odd: true })),
+        "CR 614.12a — the chosen parity is the one that stuck, not a silent mode 0"
+    );
+}
+
+/// And the default is unchanged: no script, mode 0, which is "even".
+#[test]
+fn cr_614_12a_lavabrink_venturers_default_parity_is_mode_zero() {
+    use crabomination::card::Keyword;
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::lavabrink_venturer());
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(crabomination::mana::Color::White, 1);
+    cast(&mut g, id);
+    let cp = g.computed_permanent(id).expect("the Venturer entered");
+    assert!(
+        cp.keywords()
+            .iter()
+            .any(|k| matches!(k, Keyword::ProtectionFromManaValueParity { odd: false })),
+    );
 }

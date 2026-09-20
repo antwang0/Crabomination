@@ -63363,7 +63363,10 @@ pub fn lavabrink_venturer() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        triggered_abilities: vec![etb(Effect::ChooseMode(vec![
+        // CR 614.12a — the parity is chosen AS it enters, so the choice has
+        // to be asked at resolution: `ChooseMode` would read `ctx.mode` off a
+        // stack item that does not exist and take "even" every time.
+        as_enters_effect: Some(Effect::AsEntersChooseMode(vec![
             // mode 0 = even (zero is even), mode 1 = odd
             Effect::GrantKeyword {
                 what: Selector::This,
@@ -63375,7 +63378,7 @@ pub fn lavabrink_venturer() -> CardDefinition {
                 keyword: Keyword::ProtectionFromManaValueParity { odd: true },
                 duration: Duration::Permanent,
             },
-        ]))],
+        ])),
         ..Default::default()
     }
 }

@@ -351,7 +351,8 @@ impl Effect {
     pub fn for_each_inner<'a>(&'a self, f: &mut impl FnMut(&'a Effect)) {
         match self {
             Effect::Seq(v)
-            | Effect::ChooseMode(v) => {
+            | Effect::ChooseMode(v)
+            | Effect::AsEntersChooseMode(v) => {
                 for e in v {
                     f(e);
                 }
@@ -715,7 +716,6 @@ impl Effect {
             Effect::DestroyAllNoRegenGainControllerLifePerManaValue { .. }
             | Effect::EachPlayerCreatesTokenPerControlled { .. }
             | Effect::SourceEntersTapped
-            | Effect::AsEntersPayLifeOrTapped { .. }
             | Effect::AbandonThisScheme | Effect::GameIsADraw
             | Effect::PumpAttackersThisTurn { .. }
             | Effect::TruceThisTurnAndNext
@@ -1324,7 +1324,9 @@ impl Effect {
             Effect::RollDie { count, results, .. } => {
                 value_has_target(count) || results.iter().any(|(_, _, e)| e.requires_target())
             }
-            Effect::ChooseMode(modes) => modes.iter().any(|e| e.requires_target()),
+            Effect::ChooseMode(modes) | Effect::AsEntersChooseMode(modes) => {
+                modes.iter().any(|e| e.requires_target())
+            }
             Effect::ChooseN { modes, .. } => modes.iter().any(|e| e.requires_target()),
             // ChooseUpToN's modes are self-targeting (chosen at resolution).
             Effect::ChooseUpToN { .. } => false,

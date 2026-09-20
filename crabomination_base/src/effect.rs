@@ -9822,23 +9822,21 @@ pub enum Effect {
     /// a seat that can't afford the life is never asked.
     PlayerMayPayLifeElse { who: PlayerRef, life: Value, else_: Box<Effect> },
 
-    /// CR 614.12 + CR 119.4 — "As this land enters, you may pay N life. If
-    /// you don't, it enters tapped." The shocklands and their {3}-life
-    /// descendants, as the replacement they print.
+    /// CR 614.12a — a modal choice made **as a permanent enters**, asked at
+    /// resolution rather than read off the stack item.
     ///
-    /// Its own effect rather than `ChooseMode` over `[LoseLife, …]`, because
-    /// `ChooseMode` reads `ctx.mode` — the pick made when the spell or
-    /// trigger went on the stack — and an as-enters replacement has no stack
-    /// item, so it would silently take mode 0 and never ask. And not
-    /// `PlayerMayPayLifeElse`, whose yes/no ask `AutoDecider` **declines**,
-    /// which would put every headless seat's shockland onto the battlefield
-    /// tapped. This asks a two-mode question directly: `AutoDecider` answers
-    /// mode 0 (pay), the bot scores both by outcome, and a `wants_ui` seat
-    /// suspends for a real prompt.
+    /// [`Effect::ChooseMode`] cannot do this: it reads `ctx.mode`, the pick
+    /// made when the spell or trigger went on the stack, and an as-enters
+    /// replacement has no stack item — so it silently takes mode 0 and never
+    /// asks. Nor can a yes/no `May*` node stand in, because `AutoDecider`
+    /// **declines** every `OptionalTrigger`, which would take the downside
+    /// branch for every headless seat. This raises its own two-or-more-mode
+    /// question: `AutoDecider` answers mode 0, the bot scores each mode by
+    /// outcome, and a `wants_ui` seat suspends for a real prompt.
     ///
-    /// CR 119.4 gates the offer: a seat that cannot pay the life is not
-    /// asked, and the permanent simply enters tapped.
-    AsEntersPayLifeOrTapped { life: Value },
+    /// The shocklands' "you may pay 2 life, if you don't it enters tapped",
+    /// Lavabrink Venturer's odd-or-even, Roots of Life's Island-or-Swamp.
+    AsEntersChooseMode(Vec<Effect>),
 
     /// CR 614.12 — the "if you don't, it enters tapped" branch of an
     /// **as-enters** replacement (the shocklands and their {3}-life

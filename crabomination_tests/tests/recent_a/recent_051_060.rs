@@ -650,9 +650,9 @@ mod recent53 {
     #[test]
     fn sanctum_prelate_locks_chosen_mana_value() {
         let mut g = two_player_game();
-        let prelate = g.add_card_to_battlefield(0, catalog::sanctum_prelate());
         g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(1)]));
-        g.fire_self_etb_triggers(prelate, 0);
+        let prelate = g.add_card_to_battlefield_entering(0, catalog::sanctum_prelate());
+        let _ = prelate;
         drain_stack(&mut g);
         assert_eq!(g.battlefield_find(prelate).unwrap().chosen_number, Some(1));
 
@@ -1838,9 +1838,8 @@ mod recent56 {
     fn dauntless_bodyguard_grants_indestructible_to_chosen() {
         let mut g = two_player_game();
         let ward = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-        let guard = g.add_card_to_battlefield(0, catalog::dauntless_bodyguard());
+        let guard = g.add_card_to_battlefield_entering(0, catalog::dauntless_bodyguard());
         // ETB: choose the ward (only other creature) as the protected creature.
-        g.fire_self_etb_triggers(guard, 0);
         drain_stack(&mut g);
         assert_eq!(g.battlefield_find(guard).unwrap().chosen_permanent, Some(ward), "remembered the ward");
         // Sacrifice the guard → the chosen creature gains indestructible.
@@ -1985,8 +1984,7 @@ mod recent56 {
         let mut g = two_player_game();
         g.players[0].starting_life = 40;
         let ward = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-        let guard = g.add_card_to_battlefield(0, catalog::dauntless_bodyguard());
-        g.fire_self_etb_triggers(guard, 0);
+        let guard = g.add_card_to_battlefield_entering(0, catalog::dauntless_bodyguard());
         drain_stack(&mut g);
         let json = serde_json::to_string(&g).expect("serialize");
         let g2: GameState = serde_json::from_str(&json).expect("deserialize");

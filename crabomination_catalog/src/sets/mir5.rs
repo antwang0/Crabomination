@@ -456,8 +456,8 @@ pub fn prismatic_circle() -> CardDefinition {
 /// the named type.
 pub fn roots_of_life() -> CardDefinition {
     CardDefinition {
+        as_enters_effect: Some(Effect::ChooseBasicLandTypeForSource),
         triggered_abilities: vec![
-            crate::effect::shortcut::etb(Effect::ChooseBasicLandTypeForSource),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::Tapped, EventScope::OpponentControl)
                     .with_filter(Predicate::EntityMatchesAny {

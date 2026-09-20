@@ -327,10 +327,7 @@ pub fn coral_helm() -> CardDefinition {
 /// Cursed Rack — the chosen opponent plays with a four-card hand.
 pub fn cursed_rack() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::RememberPlayerOnSource { who: PlayerRef::HostileOpponent },
-        }],
+        as_enters_effect: Some(Effect::RememberPlayerOnSource { who: PlayerRef::HostileOpponent }),
         static_abilities: vec![StaticAbility {
             description: "The chosen player's maximum hand size is four.",
             effect: StaticEffect::ChosenPlayerMaxHandSize(4),
@@ -639,11 +636,10 @@ pub fn tawnoss_weaponry() -> CardDefinition {
 /// The Rack — the chosen opponent bleeds for every card they're missing.
 pub fn the_rack() -> CardDefinition {
     CardDefinition {
+        as_enters_effect: Some(Effect::RememberPlayerOnSource {
+            who: PlayerRef::HostileOpponent,
+        }),
         triggered_abilities: vec![
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: Effect::RememberPlayerOnSource { who: PlayerRef::HostileOpponent },
-            },
             TriggeredAbility {
                 event: EventSpec::new(
                     EventKind::StepBegins(TurnStep::Upkeep),

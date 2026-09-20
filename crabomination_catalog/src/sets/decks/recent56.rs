@@ -7,7 +7,7 @@ use crate::card::{
     EventScope, EventSpec, Keyword, Predicate, SelectionRequirement as R, Selector, StaticAbility,
     StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{cast_is_noncreature, etb, target_filtered};
+use crate::effect::shortcut::{cast_is_noncreature, target_filtered};
 use crate::effect::{Duration, PlayerRef, PlayerStaticTarget};
 use crate::game::types::TurnStep;
 use crate::mana::{Color, b, cost, g, generic, w};
@@ -238,9 +238,9 @@ pub fn dauntless_bodyguard() -> CardDefinition {
         },
         power: 2,
         toughness: 1,
-        triggered_abilities: vec![etb(Effect::ChoosePermanentForSource {
+        as_enters_effect: Some(Effect::ChoosePermanentForSource {
             filter: R::Creature.and(R::ControlledByYou),
-        })],
+        }),
         activated_abilities: vec![ActivatedAbility {
             sac_cost: true,
             effect: Effect::GrantKeyword {

@@ -245,7 +245,7 @@ pub fn realmwright() -> CardDefinition {
         subtypes: creatures(vec![CreatureType::Vedalken, CreatureType::Wizard]),
         power: 1,
         toughness: 1,
-        triggered_abilities: vec![etb(Effect::ChooseBasicLandTypeForSource)],
+        as_enters_effect: Some(Effect::ChooseBasicLandTypeForSource),
         static_abilities: vec![StaticAbility {
             description: "Lands you control are the chosen type in addition to their other types.",
             effect: StaticEffect::LandsYouControlAreChosenType,

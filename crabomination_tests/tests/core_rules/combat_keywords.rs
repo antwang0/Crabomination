@@ -1419,8 +1419,10 @@ fn cr_702_16e_parity_protection_prevents_combat_damage() {
     let mut g = two_player_game();
     // Player 0 attacks with Grizzly Bears (mana value 2 — even).
     let atk = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    let venturer = g.add_card_to_battlefield(1, catalog::lavabrink_venturer()); // 3/3
+    // CR 614.12 — the parity is an as-enters replacement now; script the
+    // answer first and enter through the fixture that applies it.
     g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Mode(0)])); // even
+    let venturer = g.add_card_to_battlefield_entering(1, catalog::lavabrink_venturer()); // 3/3
     g.fire_self_etb_triggers(venturer, 1);
     drain_stack(&mut g);
     g.clear_sickness(atk);
