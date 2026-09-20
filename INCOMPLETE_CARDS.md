@@ -1599,8 +1599,11 @@ Tasigur (Splice / Delve).
   the primitive. Detention Sphere (2026-09-09): mandatory *and* able to
   target itself — the printed "not named Detention Sphere" is
   `OtherThanSource` now, the may restored. The rest of that cluster, read
-  the same day: Fiend Hunter's filter is `ControlledByOpponent` (never its
-  own, so the may is moot in 1v1), Mistbreath Elder's bounce is printed
+  the same day: Fiend Hunter's filter was `ControlledByOpponent` then, so the
+  may was moot — ⚠ **the filter is `OtherThanSource` since 2026-09-20** (the
+  fifty-third find; the printed clause is "another target creature", which
+  includes one of yours), so the may is a live choice again and the row
+  above stands on its own. Mistbreath Elder's bounce is printed
   mandatory (the may is on the "otherwise" fallback the doc approximates),
   Cloudstone Curio already carries `MayReturnSharingPermanentType` (the
   auditor's token list does not see it), and Restoration Angel / Felidar

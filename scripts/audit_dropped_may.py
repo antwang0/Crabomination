@@ -150,6 +150,10 @@ ORACLE_SKIP = (
     "you may choose new targets",
     "you may reveal",          # most reveals are engine-implicit
     "as you may",
+    # CR 103.6 — a Leyline's "you may begin the game with it on the
+    # battlefield" is a *pre-game* permission, not a resolution choice the
+    # effect tree owns, and no `May…` wrapper could carry it.
+    "you may begin the game",
 )
 
 # A "you may … rather than pay this spell's mana cost" is an alternative cost
