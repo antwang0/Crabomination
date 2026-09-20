@@ -6444,6 +6444,61 @@ Strixhaven coverage push). Remaining gaps:
 
 ## Discovered engine follow-ups (claude/modern_decks)
 
+### The fifth fan-out ratchet: "another" in a TRIGGER clause
+
+`scripts/audit_another_trigger.py`. The family's targeting half is
+`audit_another_target.py` (another **target**); this is the event half —
+"Whenever **another** creature you control dies" is an `EventSpec` scope, not a
+targeting clause, and getting it wrong makes the permanent fire off **itself**.
+
+**Five cards fixed, and only two of the five were observable** — Agent Venom
+drew a card and lost a life on its own death, Cloud Cover offered to bounce
+itself when an opponent targeted it. The other three (Vengeful Townsfolk,
+Zodiark, Sunstrike Legionnaire) put a counter on, or untapped, a permanent that
+had already left or had just entered untapped. **They were fixed anyway:
+"nothing can see it" is a property of today's effect, not of the clause**, and
+the next effect to read that counter would have inherited the bug silently.
+
+⚠⚠ **The reader took four passes to become trustworthy, and every pass was a
+false-positive class rather than a catalog defect. That ratio is the finding.**
+
+1. **221 rows.** "another" is shared by two *opposite* printed clauses: Blood
+   Artist's "Blood Artist **or** another creature dies" and Boros Elite's
+   "…**and** at least two **other** creatures attack" both name the source and
+   then widen, so firing off the source is right.
+2. **99 rows.** The needle was matching the trigger's **effect**, not its
+   event — "When this creature enters, destroy all **other** creatures you
+   control". A printed trigger is "Whenever &lt;event&gt;, &lt;effect&gt;."; the
+   needle belongs left of that comma.
+3. **43 rows.** A card's helper is part of its body, and for trigger scopes the
+   helper is usually in **another file**: Pitiless Plunderer's whole ability is
+   `on_other_dies(mint_treasures(1))` and `on_other_dies` is where the
+   `AnotherOfYours` lives. (The concurrent session hit the same-file half of
+   this in `audit_dropped_may` the same day.)
+4. **28 rows.** **Four** encodings say "not me", and a gate that knows fewer
+   reports correct cards: the scope `AnotherOfYours`, an `OtherThanSource`
+   filter, `Predicate::Not(TriggerSourceIsSelf)` (Last Laugh), and a scope
+   whose own *name* carries "Other" (`YourOtherSourceDamagedOpponent`, Talon of
+   Pain).
+
+**A new ratchet's first number is a measure of the ratchet.** Each of those
+four cuts came from reading a row and finding the card already right — and the
+20 rows that remain are allowlisted with a per-card reason, each one a limit
+the gate cannot express ("other" qualifying a zone, a player or an ordinal; a
+source the event can never reach).
+
+⚠ The reverse direction (body excludes the source, print never says "another")
+is counted and **not printed**: 276 rows, because the needle is body-wide and
+an `OtherThanSource` in an anthem or an activated ability scores against a
+trigger that had no reason to say it. A ratchet that prints 276 rows nobody
+reads teaches the next run to skip its output.
+
+⚠ And one bug in the audit's own bookkeeping, worth naming because it defeats
+the mechanism rather than a row: the stale check compared `ALLOW` against a
+list its own entries could never reach (the loop `continue`d before recording
+them), so all 21 reasons read as stale. **A ratchet that cries "stale" on every
+one of its own reasons teaches the next run to ignore the word.**
+
 - **Noticed but not tackled this run:**
   - `Effect::ExileAndReturnToOwner` (every blink: Flicker, Ghostly Flicker,
     Conjurer's Closet, Displacer Kitten, Teleportation Circle) **keeps the

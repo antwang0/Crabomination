@@ -237,10 +237,15 @@ pub fn caldera_kavu() -> CardDefinition {
 pub fn cloud_cover() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
+            // ⚠ "**another** permanent you control": the scope's own doc says
+            // it fires for any permanent you control "including the source",
+            // so an opponent targeting Cloud Cover itself offered to bounce
+            // it. `audit_another_trigger.py`.
             event: EventSpec::new(
                 EventKind::BecameTarget,
                 EventScope::YourPermanentTargetedByOpponent,
-            ),
+            )
+            .with_filter(Predicate::Not(Box::new(Predicate::TriggerSourceIsSelf))),
             effect: Effect::MayDo {
                 description: "Return that permanent to its owner's hand?".into(),
                 body: Box::new(Effect::Move {

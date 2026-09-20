@@ -520,3 +520,25 @@ fn agent_venom_draws_on_nontoken_death() {
     assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew a card");
     assert_eq!(g.players[0].life, life_before - 1, "lost 1 life");
 }
+
+/// …and the printed word is "**another** nontoken creature", so Agent Venom's
+/// own death draws nothing.
+///
+/// ⚠ Regression. The trigger shipped as `CreatureDied / YourControl` with a
+/// nontoken filter and no self-exclusion, so the Agent drew a card and lost a
+/// life when it died — the cantrip fired off the body that owned it.
+/// `scripts/audit_another_trigger.py` is the ratchet.
+#[test]
+fn agent_venom_draws_nothing_for_its_own_death() {
+    let mut g = two_player_game();
+    let venom = g.add_card_to_battlefield(0, catalog::agent_venom());
+    g.add_card_to_library(0, catalog::forest());
+    let hand_before = g.players[0].hand.len();
+    let life_before = g.players[0].life;
+    let mut evs = g.remove_to_graveyard_with_triggers(venom);
+    evs.push(GameEvent::CreatureDied { card_id: venom });
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before, "\"another\" is not itself");
+    assert_eq!(g.players[0].life, life_before, "and no life lost either");
+}

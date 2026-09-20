@@ -2019,8 +2019,19 @@ pub fn sunstrike_legionnaire() -> CardDefinition {
             effect: StaticEffect::PreventUntap { applies_to: Selector::This },
         }],
         triggered_abilities: vec![TriggeredAbility {
+            // ⚠ "whenever **another** creature enters" — the Legionnaire's own
+            // entry fired this too. It untaps a permanent that entered
+            // untapped, so nothing is observable; the shape is fixed anyway,
+            // because "nothing can see it" is a property of today's effect and
+            // not of the clause. `audit_another_trigger.py`.
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnyPlayer).with_filter(
-                Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature },
+                Predicate::All(vec![
+                    Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: R::Creature,
+                    },
+                    Predicate::Not(Box::new(Predicate::TriggerSourceIsSelf)),
+                ]),
             ),
             effect: Effect::Untap { what: Selector::This, up_to: None },
         }],

@@ -1226,10 +1226,13 @@ pub fn agent_venom() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flash, Keyword::Menace],
         triggered_abilities: vec![TriggeredAbility {
+            // ⚠ "**another** nontoken creature": `YourControl` fires off the
+            // source's own death too, so Agent Venom drew a card and lost a
+            // life when it died. `audit_another_trigger.py`.
             event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl).with_filter(
                 Predicate::EntityMatches {
                     what: Selector::TriggerSource,
-                    filter: R::NotToken,
+                    filter: R::NotToken.and(R::OtherThanSource),
                 },
             ),
             effect: Effect::Seq(vec![

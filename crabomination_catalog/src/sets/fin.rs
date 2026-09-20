@@ -7469,7 +7469,11 @@ pub fn zodiark_umbral_god() -> CardDefinition {
                 rounded_up: false,
             }),
             TriggeredAbility {
-                event: EventSpec::new(EventKind::CreatureSacrificed, EventScope::AnyPlayer),
+                // ⚠ "a player sacrifices **another** creature": Zodiark is
+                // indestructible but can still be sacrificed, and without
+                // the exclusion its own sacrifice fired this.
+                event: EventSpec::new(EventKind::CreatureSacrificed, EventScope::AnyPlayer)
+                    .with_filter(Predicate::Not(Box::new(Predicate::TriggerSourceIsSelf))),
                 effect: Effect::AddCounter {
                     what: Selector::This,
                     kind: CounterType::PlusOnePlusOne,

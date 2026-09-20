@@ -47,7 +47,14 @@ pub fn vengeful_townsfolk() -> CardDefinition {
         // batch (a lone self-death is a no-op counter on the departing card,
         // so no filter).
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl).once_per_batch(),
+            // ⚠ "one or more **other** creatures you control die": without
+            // the exclusion the Townsfolk's own death fires it too. The
+            // counter lands on a permanent that has left, so nothing is
+            // observable today — which is exactly why it would have
+            // stayed wrong. `audit_another_trigger.py`.
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl)
+                .with_filter(Predicate::Not(Box::new(Predicate::TriggerSourceIsSelf)))
+                .once_per_batch(),
             effect: Effect::AddCounter {
                 what: Selector::This,
                 kind: CounterType::PlusOnePlusOne,
