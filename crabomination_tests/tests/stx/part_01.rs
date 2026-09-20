@@ -5604,3 +5604,42 @@ fn wandering_mind_digs_six_for_a_noncreature_nonland_card() {
     assert!(g.players[0].hand.iter().any(|c| c.id == bolt), "the one noncreature, nonland card came to hand");
     assert_eq!(g.players[0].hand.len(), hand + 1);
 }
+
+/// ⚠ The gift-back's "may" belongs to the **target's controller**, not to the
+/// Divine Gambit caster, and the shipped body asked the caster until
+/// 2026-09-20. The body always named the right player in both of its halves
+/// (`ControllerOf(Target(0))`); only the ASK was misrouted, which is what
+/// made it invisible to every test that used one decider for the whole table.
+///
+/// A `wants_ui` seat is the instrument: the engine answers headless seats
+/// itself and suspends for a UI one, so making ONLY the opponent `wants_ui`
+/// turns "who is asked" into an observable — the resolution stops iff the
+/// question went to them.
+#[test]
+fn divine_gambits_gift_back_asks_the_targets_controller_not_the_caster() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.add_card_to_hand(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::divine_gambit());
+    g.players[0].mana_pool.add(Color::White, 2);
+    // Only the opponent has a UI. If the caster were asked, nothing would
+    // suspend and the resolution would run to completion.
+    g.players[1].wants_ui = true;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Divine Gambit castable");
+    drain_stack(&mut g);
+
+    assert!(g.exile.iter().any(|c| c.id == bear), "the exile half still happened");
+    assert!(
+        g.pending_decision.is_some(),
+        "the gift-back suspended on the OPPONENT's ask — the caster is headless here",
+    );
+}

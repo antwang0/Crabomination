@@ -330,19 +330,31 @@ pub fn divine_gambit() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         // Push (modern_decks, batch 77): both printed clauses now ship.
         // Body 1: exile target nonland permanent. Body 2: the target's
-        // *controller* may put a permanent card from their hand onto
-        // the battlefield. Body 2 wraps a Move(hand → battlefield) inside
-        // `Effect::MayDo`. AutoDecider's default `Bool(false)` declines
-        // the gift-back — matches the engine-level "auto-pessimistic"
-        // behavior (the Divine Gambit caster wouldn't want their opp to
-        // gift themselves a new threat for free). `ScriptedDecider::
-        // new([Bool(true)])` exercises the printed "opp accepts" path.
-        // The MayDo question is technically asked of ctx.controller
-        // (= Divine Gambit caster) rather than the target's controller
-        // — but the auto outcomes are equivalent since both perspectives
-        // align on declining the gift-back. The card picker for the
-        // hand → bf move auto-selects the highest-CMC permanent card via
-        // `Selector::take`'s sort.
+        // *controller* may put a permanent card from their hand onto the
+        // battlefield.
+        //
+        // ⚠ Body 2 is `MayDoBy`, and it used to be `MayDo`. The comment that
+        // stood here said the question was "technically asked of
+        // ctx.controller (= the Divine Gambit caster) rather than the
+        // target's controller — but the auto outcomes are equivalent since
+        // both perspectives align on declining the gift-back". They align
+        // only for the AutoDecider: a `wants_ui` opponent was never offered
+        // their own gift-back, the caster was asked instead, and any decider
+        // that answers per seat (scripted, net, a human on one seat of a pod)
+        // gets the wrong seat's answer. The body already named the right
+        // player in both of its halves via `ControllerOf(Target(0))` — only
+        // the ASK was misrouted, which is what made it invisible.
+        //
+        // `Target(0)` still resolves after body 1 has exiled it: targets live
+        // on the stack item, and `MayDoBy`'s own doc comment covers exactly
+        // this shape (Ghost Quarter's `Seq[Destroy target land,
+        // MayDoBy{ControllerOf(Target(0)), …}]`), carrying the seat rather
+        // than the selector across a suspend.
+        //
+        // The AutoDecider still declines, so the default line is unchanged;
+        // `ScriptedDecider::new([Bool(true)])` exercises the accept path. The
+        // card picker for the hand → bf move auto-selects the highest-CMC
+        // permanent card via `Selector::take`'s sort.
         effect: Effect::Seq(vec![
             Effect::Move {
                 what: target_filtered(
@@ -350,7 +362,8 @@ pub fn divine_gambit() -> CardDefinition {
                 ),
                 to: ZoneDest::Exile,
             },
-            Effect::MayDo {
+            Effect::MayDoBy {
+                who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
                 description: "Put a permanent card from your hand onto the battlefield?".into(),
                 body: Box::new(Effect::Move {
                     what: Selector::take(
