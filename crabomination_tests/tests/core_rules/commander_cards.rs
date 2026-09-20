@@ -9,7 +9,7 @@ use crabomination::catalog;
 use crabomination::format::Format;
 use crabomination::game::types::Target;
 use crabomination::game::*;
-use crabomination::mana::{b, cost, g, generic, r, u, w};
+use crabomination::mana::{Color, b, cost, g, generic, r, u, w};
 
 /// A free-to-name legendary Bear so a seat has a commander to control.
 fn bear_commander() -> CardDefinition {
@@ -511,4 +511,79 @@ fn nekusar_draws_an_extra_card_for_whoevers_draw_step_it_is() {
     for seat in [0usize, 2, 3] {
         assert_eq!(g.players[seat].hand.len(), hands[seat], "seat {seat} draws nothing");
     }
+}
+
+// ── Kenrith, the Returned King ──────────────────────────────────────────────
+
+fn activate(g: &mut GameState, id: CardId, i: usize, target: Option<Target>) -> Result<Vec<GameEvent>, GameError> {
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id,
+        ability_index: i,
+        target,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+}
+
+/// "{R}: **All** creatures gain trample and haste until end of turn" — every
+/// seat's creatures, not the controller's. The one clause on Kenrith with no
+/// target, and the one a two-seat test would half-answer.
+#[test]
+fn kenrith_grants_trample_and_haste_to_every_seats_creatures() {
+    let mut g = multi_player_game(4);
+    g.step = TurnStep::PreCombatMain;
+    let kenrith = g.add_card_to_battlefield(0, catalog::kenrith_the_returned_king());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    activate(&mut g, kenrith, 0, None).expect("{R}");
+    drain_stack(&mut g);
+    for id in [mine, theirs] {
+        assert!(has_kw(&g, id, Keyword::Trample), "trample");
+        assert!(has_kw(&g, id, Keyword::Haste), "haste");
+    }
+}
+
+/// "{2}{W}: **Target player** gains 5 life" and "{3}{U}: Target player draws a
+/// card" — both can aim at an opponent, which is the whole point of the card.
+#[test]
+fn kenrith_can_aim_its_gifts_at_an_opponent() {
+    let mut g = multi_player_game(4);
+    g.step = TurnStep::PreCombatMain;
+    let kenrith = g.add_card_to_battlefield(0, catalog::kenrith_the_returned_king());
+    g.add_card_to_library(2, catalog::grizzly_bears());
+    g.players[2].hand.clear();
+    let life = g.players[2].life;
+    g.players[0].mana_pool.add_colorless(5);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+
+    activate(&mut g, kenrith, 2, Some(Target::Player(2))).expect("{2}{W} at seat 2");
+    drain_stack(&mut g);
+    assert_eq!(g.players[2].life, life + 5, "the opponent gains the life");
+
+    activate(&mut g, kenrith, 3, Some(Target::Player(2))).expect("{3}{U} at seat 2");
+    drain_stack(&mut g);
+    assert_eq!(g.players[2].hand.len(), 1, "and draws the card");
+}
+
+/// "{4}{B}: Put target creature card from **a** graveyard onto the
+/// battlefield under **its owner's** control" — any graveyard, and the
+/// creature lands under its owner rather than under Kenrith's controller.
+#[test]
+fn kenrith_reanimates_into_its_owners_control() {
+    let mut g = multi_player_game(4);
+    g.step = TurnStep::PreCombatMain;
+    let kenrith = g.add_card_to_battlefield(0, catalog::kenrith_the_returned_king());
+    let corpse = g.add_card_to_graveyard(2, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(4);
+    g.players[0].mana_pool.add(Color::Black, 1);
+
+    activate(&mut g, kenrith, 4, Some(Target::Permanent(corpse))).expect("{4}{B}");
+    drain_stack(&mut g);
+    let back = g.battlefield_find(corpse).expect("on the battlefield");
+    assert_eq!(back.controller, 2, "under its OWNER's control, not the activator's");
+    assert!(g.players[2].graveyard.is_empty(), "and it left that graveyard");
 }

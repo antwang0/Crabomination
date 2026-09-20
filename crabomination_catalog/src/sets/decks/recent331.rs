@@ -23,11 +23,13 @@
 //! branch's multi-seat card tests.
 
 use crate::card::{
-    CardDefinition, CardType, CreatureType, Selector, Subtypes, Supertype, TriggeredAbility, Value,
+    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Keyword,
+    SelectionRequirement as R, Selector, Subtypes, Supertype, TriggeredAbility, Value,
 };
-use crate::effect::{Effect, EventKind, EventScope, EventSpec, PlayerRef};
+use crate::effect::shortcut::target_filtered;
+use crate::effect::{Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, ZoneDest};
 use crate::game::types::TurnStep;
-use crate::mana::{b, cost, generic, r, u};
+use crate::mana::{b, cost, g, generic, r, u, w};
 
 /// Nekusar, the Mindrazer — {2}{U}{B}{R} Legendary Creature — Zombie Wizard
 /// 2/4. "At the beginning of each player's draw step, that player draws an
@@ -74,6 +76,82 @@ pub fn nekusar_the_mindrazer() -> CardDefinition {
                     amount: Value::Const(1),
                 },
             },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Kenrith, the Returned King — {4}{W} Legendary Creature — Human Noble 5/5,
+/// with five activated abilities and nothing else. (EDHREC's 20th most-built
+/// commander, and the highest-ranked one this module could reach.)
+///
+/// ⚠ **Every clause reads the whole table and none of them says "you".**
+/// "**All** creatures gain trample and haste" is every seat's, not the
+/// controller's; "**target player** gains 5 life" and "target player draws a
+/// card" can aim at an opponent, which is what makes Kenrith a group-hug
+/// commander rather than a five-colour value engine; and "put target creature
+/// card from **a** graveyard onto the battlefield **under its owner's
+/// control**" is two table-facing halves at once — any graveyard, and the
+/// creature goes to whoever owns it rather than to Kenrith's controller.
+///
+/// No new primitive: `Selector::EachPermanent` without a controller scope is
+/// "all creatures", `PlayerRef::Target(0)` is the printed "target player", and
+/// `ZoneDest::Battlefield { controller: PlayerRef::OwnerOfMoved }` is the
+/// owner's-control clause.
+pub fn kenrith_the_returned_king() -> CardDefinition {
+    let ability = |mana, effect| ActivatedAbility { mana_cost: mana, effect, ..Default::default() };
+    CardDefinition {
+        name: "Kenrith, the Returned King",
+        cost: cost(&[generic(4), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Noble],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        activated_abilities: vec![
+            ability(
+                cost(&[r()]),
+                Effect::GrantKeywords {
+                    what: Selector::EachPermanent(R::Creature),
+                    keywords: vec![Keyword::Trample, Keyword::Haste],
+                    duration: Duration::EndOfTurn,
+                },
+            ),
+            ability(
+                cost(&[generic(1), g()]),
+                Effect::AddCounter {
+                    what: target_filtered(R::Creature),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+            ),
+            ability(
+                cost(&[generic(2), w()]),
+                Effect::GainLife {
+                    who: Selector::Player(PlayerRef::Target(0)),
+                    amount: Value::Const(5),
+                },
+            ),
+            ability(
+                cost(&[generic(3), u()]),
+                Effect::Draw {
+                    who: Selector::Player(PlayerRef::Target(0)),
+                    amount: Value::ONE,
+                },
+            ),
+            ability(
+                cost(&[generic(4), b()]),
+                Effect::Move {
+                    what: target_filtered(R::Creature.and(R::InGraveyard)),
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::OwnerOfMoved,
+                        tapped: false,
+                    },
+                },
+            ),
         ],
         ..Default::default()
     }
