@@ -85,7 +85,7 @@ the handoff.
 | Bugs & robustness | [FIXED 2026-09-20 (the fifty-first find) — a FAN-OUT `PlayerRef` handed to an arm that resolves it SINGULARLY, nineteen cards, and every one invisible in a duel](#fixed-2026-09-20-the-fifty-first-find--a-fan-out-playerref-handed-to-an-arm-that-resolves-it-singularly-nineteen-cards-and-every-one-invisible-in-a-duel) | 19 sites |
 | Bugs & robustness | [FIXED 2026-09-19 (the fiftieth find) — one of five trigger walks in `declare_attackers` never carried `event.filter`, so a defender-side intervening `if` was written, compiled and ignored](#fixed-2026-09-19-the-fiftieth-find--one-of-five-trigger-walks-in-declare_attackers-never-carried-eventfilter-so-a-defender-side-intervening-if-was-written-compiled-and-ignored) | 1 card, 1 walk |
 | Bugs & robustness | [FIXED 2026-09-19 (the forty-ninth find) — "enters tapped" is a REPLACEMENT too, and 83 cards shipped it as a trigger in a clause the 614.12 audit cannot match](#fixed-2026-09-19-the-forty-ninth-find--enters-tapped-is-a-replacement-too-and-83-cards-shipped-it-as-a-trigger-in-a-clause-the-61412-audit-cannot-match) | 83 → 0 |
-| Bugs & robustness | [FIXED 2026-09-19/20 (the forty-eighth find) — "As this ~ enters" is a REPLACEMENT and 89 shipped cards modelled it as an ETB TRIGGER: 89 → 7](#fixed-2026-09-1920-the-forty-eighth-find--as-this--enters-is-a-replacement-and-89-shipped-cards-modelled-it-as-an-etb-trigger-89--7) | 89 → 7 |
+| Bugs & robustness | [FIXED 2026-09-19/20 (the forty-eighth find) — "As this ~ enters" is a REPLACEMENT and 89 shipped cards modelled it as an ETB TRIGGER: 89 → 6](#fixed-2026-09-1920-the-forty-eighth-find--as-this--enters-is-a-replacement-and-89-shipped-cards-modelled-it-as-an-etb-trigger-89--6) | 89 → 6 |
 | Bugs & robustness | [FIXED 2026-09-19 (the forty-seventh find) — six hand-written SEAT-INDEX walks, and the two that let a player who had left the game vote and be voted for](#fixed-2026-09-19-the-forty-seventh-find--six-hand-written-seat-index-walks-and-the-two-that-let-a-player-who-had-left-the-game-vote-and-be-voted-for) | 60 |
 | Bugs & robustness | [The 2026-09-12/13 handoff detail, moved verbatim from TODO's NEXT](#the-2026-09-1213-handoff-detail-moved-verbatim-from-todos-next) | 182 |
 
@@ -301,7 +301,7 @@ lands", and the gate reported it as "not in the catalog". This script takes
 the first string literal **the Scryfall cache knows**, which removes the
 whole class of miss for one `in cache` test.
 
-## FIXED 2026-09-19/20 (the forty-eighth find) — "As this ~ enters" is a REPLACEMENT and 89 shipped cards modelled it as an ETB TRIGGER: 89 → 7
+## FIXED 2026-09-19/20 (the forty-eighth find) — "As this ~ enters" is a REPLACEMENT and 89 shipped cards modelled it as an ETB TRIGGER: 89 → 6
 
 **CR 614.12** — "Some replacement effects modify how a permanent enters the
 battlefield." **CR 614.12a** — "If a replacement effect that modifies how a
@@ -354,12 +354,14 @@ choose-a-* buckets is now a catalog edit with no engine work behind it. The
 count moved **89 → 57** the same day (choose-a-name 9 and choose-a-colour 20
 closed, choose-a-type 27 → 23).
 
-✅✅ **CLOSED 2026-09-20: 89 → 7, and the remaining seven each need more
+✅✅ **CLOSED 2026-09-20: 89 → 6, and the remaining six each need more
 than a field move** (a copy — Cursed Mirror; a coin flip — Molten Sentry; a
-random pick — Haktos; a reflexive attach — Grifter's Blade; entering
-counters — Crowd-Control Warden; and Devouring Hellion / Rescuer Sphinx,
-which ship through `devour` and a reflexive ETB and are documented
-approximations already).
+random pick — Haktos; a reflexive attach — Grifter's Blade; and Devouring
+Hellion / Rescuer Sphinx, which ship through `devour` and a reflexive ETB
+and are documented approximations already). Crowd-Control Warden's enters
+half converted; its "or is turned face up" half stays a trigger, because
+the engine has no as-turns-face-up applier — one sentence, two clauses, and
+only one of them has a home.
 
 📐 **The wiring was the gap, not the primitive, and the funnel is the fix.**
 `game::as_enters::apply_as_enters_replacements` is the one call every

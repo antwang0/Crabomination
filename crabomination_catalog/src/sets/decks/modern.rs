@@ -13770,13 +13770,15 @@ pub fn crowd_control_warden() -> CardDefinition {
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Disguise(cost(&[generic(3), gw(), gw()]))],
-        triggered_abilities: vec![
-            etb(pump()),
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::TurnedFaceUp, EventScope::SelfSource),
-                effect: pump(),
-            },
-        ],
+        // CR 614.12 — the enters half is a replacement. (The turned-face-up
+        // half stays a trigger: CR 701.28's as-turns-face-up sibling of
+        // `as_enters_effect` is not wired, and the two halves are separate
+        // clauses of one sentence.)
+        as_enters_effect: Some(pump()),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::TurnedFaceUp, EventScope::SelfSource),
+            effect: pump(),
+        }],
         ..Default::default()
     }
 }

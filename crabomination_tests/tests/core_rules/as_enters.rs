@@ -755,3 +755,25 @@ fn cr_614_12a_lavabrink_venturers_default_parity_is_mode_zero() {
             .any(|k| matches!(k, Keyword::ProtectionFromManaValueParity { odd: false })),
     );
 }
+
+/// Crowd-Control Warden is the census's last straightforward row: "As this
+/// creature enters **or is turned face up**, put X +1/+1 counters on it."
+/// The enters half is the replacement; the counters are on it before the
+/// first SBA sweep, with nothing on the stack. (The turned-face-up half
+/// stays a trigger — the engine has no as-turns-face-up applier.)
+#[test]
+fn cr_614_12_crowd_control_warden_counts_as_it_enters() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    }
+    let id = g.move_card_to_battlefield_for_test(0, catalog::crowd_control_warden());
+    let inst = g.battlefield_find(id).expect("the Warden entered");
+    assert_eq!(
+        inst.counter_count(CounterType::PlusOnePlusOne),
+        3,
+        "CR 614.12 — one counter per other creature, counted as it enters"
+    );
+    assert!(g.stack.is_empty(), "no trigger carries it");
+}
