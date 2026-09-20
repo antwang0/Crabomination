@@ -797,9 +797,11 @@ pub fn mercadias_downfall() -> CardDefinition {
         cost(&[generic(2), r()]),
         Effect::PumpPT {
             what: Selector::EachPermanent(R::IsAttacking),
-            // "Defending player" reads as the opponent — exact heads-up.
             power: Value::CountMatching {
-                sel: Box::new(Selector::EachPermanent(R::Land.and(R::ControlledByOpponent))),
+                sel: Box::new(Selector::ControlledBy {
+                    who: PlayerRef::DefendingPlayer,
+                    filter: R::Land,
+                }),
                 filter: R::Not(Box::new(R::IsBasicLand)),
             },
             toughness: Value::ZERO,

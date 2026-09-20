@@ -299,9 +299,9 @@ pub fn gouged_zealot() -> CardDefinition {
             ),
             effect: Effect::DealDamage {
                 amount: Value::ONE,
-                to: Selector::EachMatching {
-                    zone: ZoneRef::Battlefield,
-                    filter: R::Creature.and(R::ControlledByOpponent),
+                to: Selector::ControlledBy {
+                    who: PlayerRef::DefendingPlayer,
+                    filter: R::Creature,
                 },
             },
         }],

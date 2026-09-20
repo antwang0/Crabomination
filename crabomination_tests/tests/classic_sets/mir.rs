@@ -1279,13 +1279,28 @@ fn unerring_sling_fires_for_the_helpers_power() {
 }
 
 /// Yare turns a defender into a one-creature wall.
+///
+/// CR 506.2 — "target creature **defending player** controls" needs a
+/// defending player, so the spell is castable only once an attack is
+/// declared. It used to be castable on an empty combat against any
+/// opponent's creature, which is the same thing only in a duel.
 #[test]
 fn yare_lets_one_blocker_eat_the_attack() {
     let mut g = two_player_game();
     let defender = ready(&mut g, 1, catalog::femeref_scouts());
+    let attacker = ready(&mut g, 0, catalog::grizzly_bears());
     let spell = g.add_card_to_hand(0, catalog::yare());
     g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add_colorless(2);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("seat 1 is now the defending player");
+    drain_stack(&mut g);
     cast(&mut g, spell, Some(Target::Permanent(defender))).expect("cast");
     drain_stack(&mut g);
     let cp = g.computed_permanent(defender).unwrap();

@@ -5401,3 +5401,40 @@ fn cr_702_121_melee_counts_opponents_and_each_instance_triggers_separately() {
     );
     assert_eq!(pt(bear), (4, 4), "2/2 + the granted instance x 2 opponents");
 }
+
+/// CR 506.2 — the cards that print "defending player controls" only differ
+/// from "an opponent controls" at three seats or more, so this is where the
+/// class is pinned. Cyclops Gladiator's attack fight may choose a creature
+/// the seat it is attacking controls, and nothing a bystander controls.
+#[test]
+fn cr_506_2_an_attack_clause_reaches_only_the_seat_being_attacked() {
+    use crabomination::decision::ScriptedDecider;
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = multi_player_game(4);
+    let cyclops = g.move_card_to_battlefield_for_test(0, catalog::cyclops_gladiator());
+    let theirs = g.move_card_to_battlefield_for_test(1, catalog::grizzly_bears());
+    let bystander = g.move_card_to_battlefield_for_test(2, catalog::grizzly_bears());
+    drain_stack(&mut g);
+    g.decider = Box::new(ScriptedDecider::new(
+        std::iter::repeat_with(|| DecisionAnswer::Bool(true)).take(4),
+    ));
+    g.clear_sickness(cyclops);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: cyclops,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack seat 1");
+    drain_stack(&mut g);
+
+    // 4/4 fights a 2/2: the defending seat's bear dies, seat 2's does not.
+    let death = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&death);
+    assert!(g.battlefield_find(theirs).is_none(), "the defending seat's creature was fought");
+    assert!(
+        g.battlefield_find(bystander).is_some(),
+        "CR 506.2 — seat 2 is an opponent but is not the defending player",
+    );
+}

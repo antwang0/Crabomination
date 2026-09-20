@@ -196,7 +196,7 @@ pub fn skymark_roc() -> CardDefinition {
             body: Box::new(Effect::Move {
                 what: target_filtered(
                     R::Creature
-                        .and(R::ControlledByOpponent)
+                        .and(R::ControlledByDefendingPlayer)
                         .and(R::ToughnessAtMost(2)),
                 ),
                 to: crate::effect::ZoneDest::Hand(PlayerRef::OwnerOfMoved),

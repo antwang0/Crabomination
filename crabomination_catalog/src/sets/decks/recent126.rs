@@ -94,7 +94,7 @@ pub fn spring_splasher() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect: Effect::PumpPT {
-                what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+                what: target_filtered(R::Creature.and(R::ControlledByDefendingPlayer)),
                 power: Value::Const(-3),
                 toughness: Value::ZERO,
                 duration: Duration::EndOfTurn,

@@ -374,7 +374,7 @@ pub fn fear_of_falling() -> CardDefinition {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect: Effect::Seq(vec![
                 Effect::PumpPT {
-                    what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+                    what: target_filtered(R::Creature.and(R::ControlledByDefendingPlayer)),
                     power: Value::Const(-2),
                     toughness: Value::Const(0),
                     duration: Duration::UntilNextTurn,

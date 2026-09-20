@@ -37604,7 +37604,16 @@ impl GameState {
                         Target::Player(p) => Some(*p),
                         _ => None,
                     })
-                }),
+                })
+                // CR 506.2 — the last two shapes, shared with the
+                // `ControlledByDefendingPlayer` filter so the two never
+                // disagree: an **Aura or Equipment** source, whose host is
+                // the attacker (Kusari-Gama, Pretender's Claim), and an
+                // **instant** cast during combat, which has no attacker of
+                // its own and reads the combat's single defender (Yare,
+                // Mercadia's Downfall). Both previously answered `None`,
+                // so the clause did nothing at all.
+                .or_else(|| self.defending_player_in_combat(ctx.source)),
             PlayerRef::OwnerOf(sel) => self
                 .resolve_selector(sel, ctx)
                 .into_iter()

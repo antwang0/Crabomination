@@ -1252,7 +1252,7 @@ pub fn goblin_vandal() -> CardDefinition {
             body: Box::new(Effect::Seq(vec![
                 Effect::Destroy {
                     what: target_filtered(
-                        R::Artifact.and(R::ControlledByYou.negate()),
+                        R::Artifact.and(R::ControlledByDefendingPlayer),
                     ),
                 },
                 Effect::GrantKeyword {

@@ -3444,6 +3444,35 @@ impl GameState {
         attacker.and_then(|id| self.attack_for(id)).and_then(|a| self.defender_for(a.target))
     }
 
+    /// [`defending_player_for_source`](Self::defending_player_for_source),
+    /// then the combat itself. A clause can print "defending player" on
+    /// something that is not the attacker — an **instant** cast during combat
+    /// (Yare, Blaze of Glory) or a trigger that fires off *another* creature's
+    /// attack (Nazahn, whose "whenever an equipped creature you control
+    /// attacks" leaves `source` sitting at home). CR 506.2 defines the
+    /// defending player relative to an attacking creature, so the clause is
+    /// answerable exactly when this combat has **one** defender; two makes it
+    /// ambiguous and the filter takes nothing, which is the safe direction —
+    /// a narrowing cannot make an illegal play.
+    ///
+    /// Separate from the strict walk on purpose: `OwnedByDefendingPlayer`
+    /// keeps the answers it already gave, so no shipped trace moves.
+    pub(crate) fn defending_player_in_combat(&self, source: Option<CardId>) -> Option<usize> {
+        if let Some(d) = self.defending_player_for_source(source) {
+            return Some(d);
+        }
+        let mut only = None;
+        for a in self.attacking.iter() {
+            let d = self.defender_for(a.target)?;
+            match only {
+                None => only = Some(d),
+                Some(p) if p == d => {}
+                Some(_) => return None,
+            }
+        }
+        only
+    }
+
     pub(crate) fn requirement_on_permanent(
         &self,
         req: &SelectionRequirement,
@@ -3935,7 +3964,7 @@ impl GameState {
             // defending player controls" means; the owned-by arm above is for
             // the clauses that reach a hidden zone.
             R::ControlledByDefendingPlayer => {
-                let Some(defender) = self.defending_player_for_source(source) else {
+                let Some(defender) = self.defending_player_in_combat(source) else {
                     return false;
                 };
                 match target {

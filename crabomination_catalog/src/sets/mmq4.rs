@@ -211,7 +211,10 @@ pub fn pretenders_claim() -> CardDefinition {
             triggered_abilities: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource),
                 effect: Effect::Tap {
-                    what: Selector::EachPermanent(R::Land.and(R::ControlledByOpponent)),
+                    what: Selector::ControlledBy {
+                        who: PlayerRef::DefendingPlayer,
+                        filter: R::Land,
+                    },
                 },
             }],
             ..Default::default()

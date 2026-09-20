@@ -140,7 +140,7 @@ pub fn thunder_lasso() -> CardDefinition {
             power: 1,
             toughness: 1,
             triggered_abilities: vec![on_attack(Effect::Tap {
-                what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+                what: target_filtered(R::Creature.and(R::ControlledByDefendingPlayer)),
             })],
             ..Default::default()
         }),

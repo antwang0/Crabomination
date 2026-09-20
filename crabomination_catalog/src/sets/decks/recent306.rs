@@ -497,7 +497,7 @@ pub fn blaze_of_glory() -> CardDefinition {
         cast_only_before_blockers: true,
         effect: Effect::Seq(vec![
             Effect::GrantKeyword {
-                what: target_filtered(R::Creature),
+                what: target_filtered(R::Creature.and(R::ControlledByDefendingPlayer)),
                 keyword: Keyword::CanBlockAnyNumber,
                 duration: Duration::EndOfTurn,
             },

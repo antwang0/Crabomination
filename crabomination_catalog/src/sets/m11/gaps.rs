@@ -430,7 +430,7 @@ pub fn ancient_hellkite() -> CardDefinition {
                 filter: R::IsAttacking,
             }),
             effect: Effect::DealDamage {
-                to: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+                to: target_filtered(R::Creature.and(R::ControlledByDefendingPlayer)),
                 amount: Value::Const(1),
             },
             ..Default::default()
@@ -453,7 +453,7 @@ pub fn cyclops_gladiator() -> CardDefinition {
             description: "Fight target creature defending player controls".into(),
             body: Box::new(Effect::Fight {
                 attacker: Selector::This,
-                defender: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+                defender: target_filtered(R::Creature.and(R::ControlledByDefendingPlayer)),
             }),
         })],
         ..creature(

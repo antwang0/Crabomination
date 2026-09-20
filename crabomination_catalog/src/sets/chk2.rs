@@ -1793,14 +1793,20 @@ pub fn kusari_gama() -> CardDefinition {
                     EventKind::DealsCombatDamageToCreature,
                     EventScope::SelfSource,
                 ),
-                // "Each other creature defending player controls" — read as the
-                // opponent's non-blocking creatures (exact at two players).
+                // CR 506.2 — "defending player" via the *blocker that was
+                // damaged*, which this trigger binds as slot 0 and whose
+                // controller is that player by definition. `DefendingPlayer`
+                // itself cannot answer here: a `DealsCombatDamageToCreature`
+                // body resolves after the combat teardown, so the attack
+                // record the seat would be read from is already gone.
+                // ⚠ "Each **other** creature" is still approximated as the
+                // non-blocking ones, so a second, undamaged blocker is
+                // spared where the printed card splashes onto it.
                 effect: Effect::DealDamage {
-                    to: Selector::EachPermanent(
-                        R::Creature
-                            .and(R::ControlledByOpponent)
-                            .and(R::Not(Box::new(R::IsBlocking))),
-                    ),
+                    to: Selector::ControlledBy {
+                        who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+                        filter: R::Creature.and(R::Not(Box::new(R::IsBlocking))),
+                    },
                     amount: Value::TriggerEventAmount,
                 },
             }],

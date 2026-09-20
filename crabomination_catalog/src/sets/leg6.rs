@@ -747,7 +747,7 @@ pub fn floral_spuzzem() -> CardDefinition {
                     Effect::Destroy {
                         what: Selector::TargetFiltered {
                             slot: 0,
-                            filter: R::Artifact.and(R::ControlledByOpponent),
+                            filter: R::Artifact.and(R::ControlledByDefendingPlayer),
                         },
                     },
                     Effect::GrantKeyword {

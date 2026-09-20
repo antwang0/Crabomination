@@ -259,7 +259,7 @@ pub fn nazahn_revered_bladesmith() -> CardDefinition {
                 effect: Effect::MayDo {
                     description: "Tap target creature an opponent controls".into(),
                     body: Box::new(Effect::Tap {
-                        what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+                        what: target_filtered(R::Creature.and(R::ControlledByDefendingPlayer)),
                     }),
                 },
             },

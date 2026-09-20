@@ -140,7 +140,7 @@ pub fn kukemssa_pirates() -> CardDefinition {
             description: "Gain control of target artifact defending player controls?".into(),
             body: Box::new(Effect::Seq(vec![
                 Effect::GainControl {
-                    what: target_filtered(R::Artifact.and(R::OwnedByDefendingPlayer)),
+                    what: target_filtered(R::Artifact.and(R::ControlledByDefendingPlayer)),
                     to: None,
                     duration: Duration::Permanent,
                 },

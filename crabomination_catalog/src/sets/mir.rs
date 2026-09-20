@@ -527,7 +527,7 @@ pub fn sidar_jabari() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],
         triggered_abilities: vec![on_attack(Effect::Tap {
-            what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+            what: target_filtered(R::Creature.and(R::ControlledByDefendingPlayer)),
         })],
         ..askari(
             "Sidar Jabari",

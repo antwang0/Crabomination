@@ -69,7 +69,7 @@ fn on_attack_goad() -> TriggeredAbility {
     on_attack(Effect::MayDo {
         description: "Goad target creature defending player controls".to_string(),
         body: Box::new(Effect::Goad {
-            what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+            what: target_filtered(R::Creature.and(R::ControlledByDefendingPlayer)),
         }),
     })
 }

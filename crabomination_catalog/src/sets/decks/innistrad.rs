@@ -4983,8 +4983,12 @@ pub fn purifying_dragon() -> CardDefinition {
                 what: Selector::Target(0),
                 filter: SelectionRequirement::HasCreatureType(CreatureType::Zombie),
             },
+            // Slot 0 is declared here, in the arm the walkers read:
+            // `primary_target_filter` looks at `then` and then `else_`, never
+            // inside `cond`, so a bare `Target(0)` in all three left the
+            // trigger demanding a target it had no filter for.
             then: Box::new(Effect::DealDamage {
-                to: Selector::Target(0),
+                to: target_filtered(SelectionRequirement::Creature.and(SelectionRequirement::ControlledByDefendingPlayer)),
                 amount: Value::Const(2),
             }),
             else_: Box::new(Effect::DealDamage {

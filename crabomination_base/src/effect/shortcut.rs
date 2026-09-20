@@ -378,7 +378,7 @@ pub fn provoke() -> TriggeredAbility {
         effect: Effect::Provoke {
             what: target_filtered(
                 SelectionRequirement::Creature
-                    .and(SelectionRequirement::ControlledByOpponent),
+                    .and(SelectionRequirement::ControlledByDefendingPlayer),
             ),
         },
     }

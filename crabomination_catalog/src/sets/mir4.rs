@@ -515,7 +515,7 @@ pub fn yare() -> CardDefinition {
         cost(&[generic(2), w()]),
         Effect::Seq(vec![
             Effect::PumpPT {
-                what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+                what: target_filtered(R::Creature.and(R::ControlledByDefendingPlayer)),
                 power: Value::Const(3),
                 toughness: Value::ZERO,
                 duration: Duration::EndOfTurn,
