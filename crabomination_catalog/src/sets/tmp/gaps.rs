@@ -889,7 +889,7 @@ pub fn phyrexian_splicer() -> CardDefinition {
                 },
                 to: Selector::TargetFiltered {
                     slot: 1,
-                    filter: crate::card::SelectionRequirement::Creature,
+                    filter: crate::card::SelectionRequirement::Creature.and(crate::card::SelectionRequirement::OtherThanTargetSlot(0)),
                 },
             },
             ..Default::default()

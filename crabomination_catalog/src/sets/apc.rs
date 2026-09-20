@@ -335,7 +335,7 @@ pub fn consume_strength() -> CardDefinition {
         Effect::Seq(vec![
             pump_target(2, 2),
             Effect::PumpPT {
-                what: Selector::TargetFiltered { slot: 1, filter: R::Creature },
+                what: Selector::TargetFiltered { slot: 1, filter: R::Creature.and(R::OtherThanTargetSlot(0))},
                 power: Value::Const(-2),
                 toughness: Value::Const(-2),
                 duration: Duration::EndOfTurn,
@@ -384,7 +384,7 @@ pub fn dwarven_landslide() -> CardDefinition {
                 Effect::If {
                     cond: Predicate::SpellWasKicked,
                     then: Box::new(Effect::Destroy {
-                        what: Selector::TargetFiltered { slot: 1, filter: R::Land },
+                        what: Selector::TargetFiltered { slot: 1, filter: R::Land.and(R::OtherThanTargetSlot(0))},
                     }),
                     else_: Box::new(Effect::Noop),
                 },
@@ -617,7 +617,7 @@ pub fn jilt() -> CardDefinition {
                 Effect::If {
                     cond: Predicate::SpellWasKicked,
                     then: Box::new(Effect::DealDamage {
-                        to: Selector::TargetFiltered { slot: 1, filter: R::Creature },
+                        to: Selector::TargetFiltered { slot: 1, filter: R::Creature.and(R::OtherThanTargetSlot(0))},
                         amount: Value::Const(2),
                     }),
                     else_: Box::new(Effect::Noop),

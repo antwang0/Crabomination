@@ -994,7 +994,7 @@ pub fn rushing_river() -> CardDefinition {
                     then: Box::new(Effect::Move {
                         what: Selector::TargetFiltered {
                             slot: 1,
-                            filter: R::Permanent.and(R::Nonland),
+                            filter: R::Permanent.and(R::Nonland).and(R::OtherThanTargetSlot(0)),
                         },
                         to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(1)))),
                     }),
@@ -1022,7 +1022,7 @@ pub fn magma_burst() -> CardDefinition {
                     then: Box::new(Effect::DealDamage {
                         to: Selector::TargetFiltered {
                             slot: 1,
-                            filter: R::Creature.or(R::Player).or(R::Planeswalker),
+                            filter: R::Creature.or(R::Player).or(R::Planeswalker).and(R::OtherThanTargetSlot(0)),
                         },
                         amount: Value::Const(3),
                     }),

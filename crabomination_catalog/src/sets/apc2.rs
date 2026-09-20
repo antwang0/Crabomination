@@ -735,7 +735,7 @@ pub fn captains_maneuver() -> CardDefinition {
                 target: target_any(),
                 to: Selector::TargetFiltered {
                     slot: 1,
-                    filter: R::Creature.or(R::Player).or(R::Planeswalker),
+                    filter: R::Creature.or(R::Player).or(R::Planeswalker).and(R::OtherThanTargetSlot(0)),
                 },
                 amount: Value::XFromCost,
             },

@@ -1771,6 +1771,84 @@ mod another_target {
         assert!(g.players[0].hand.iter().any(|c| c.id == id), "and the spell goes back to hand");
     }
 
+    /// CR 601.2c, the two-slot shape, which is the commonest one in this
+    /// class: "target creature gets +2/+2. **Another** target creature gets
+    /// -2/-2." One creature in both slots would be a legal pick that nets to
+    /// nothing, and the auto-targeter had no preference against it.
+    #[test]
+    fn cr_601_2c_a_two_slot_pump_rejects_one_object_in_both() {
+        let mut g = two_player_game();
+        let only = g.add_card_to_battlefield(1, bear("Lonely Bear"));
+        let id = g.add_card_to_hand(0, catalog::consume_strength());
+        g.players[0].mana_pool.add(Color::Black, 1);
+        g.players[0].mana_pool.add(Color::Green, 1);
+        g.players[0].mana_pool.add_colorless(1);
+        let r = g.perform_action(GameAction::CastSpell {
+            card_id: id,
+            target: Some(Target::Permanent(only)),
+            additional_targets: vec![Target::Permanent(only)],
+            mode: None,
+            x_value: None,
+        });
+        assert!(r.is_err(), "both slots on one creature must be rejected: {r:?}");
+
+        // Two different creatures is the legal cast, so the rejection above
+        // is the word "another" and not the spell.
+        let other = g.add_card_to_battlefield(1, bear("Second Bear"));
+        g.perform_action(GameAction::CastSpell {
+            card_id: id,
+            target: Some(Target::Permanent(only)),
+            additional_targets: vec![Target::Permanent(other)],
+            mode: None,
+            x_value: None,
+        })
+        .expect("two distinct creatures are legal");
+    }
+
+    /// And the nested shape: Setessan Tactics grants "{T}: this creature
+    /// fights **another** target creature", where "another" is other than the
+    /// creature holding the granted ability — its source, not a sibling slot.
+    /// Without it the creature was a legal target for its own fight.
+    #[test]
+    fn cr_601_2c_a_granted_fight_cannot_name_its_own_source() {
+        let mut g = two_player_game();
+        let fighter = g.add_card_to_battlefield(0, bear("Striver"));
+        let prey = g.add_card_to_battlefield(1, bear("Prey"));
+        g.clear_sickness(fighter);
+        let id = g.add_card_to_hand(0, catalog::setessan_tactics());
+        g.players[0].mana_pool.add(Color::Green, 1);
+        g.players[0].mana_pool.add_colorless(1);
+        g.perform_action(GameAction::CastSpell {
+            card_id: id,
+            target: Some(Target::Permanent(fighter)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("strive for one target");
+        drain_stack(&mut g);
+
+        // The granted ability is the fighter's only activated one.
+        let self_fight = g.perform_action(GameAction::ActivateAbility {
+            card_id: fighter,
+            ability_index: 0,
+            target: Some(Target::Permanent(fighter)),
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        });
+        assert!(self_fight.is_err(), "a creature cannot fight itself: {self_fight:?}");
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: fighter,
+            ability_index: 0,
+            target: Some(Target::Permanent(prey)),
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+        .expect("another creature is the legal target");
+    }
+
     /// The same cast with three different objects is legal, so the rejection
     /// above is the word "another" and not the spell.
     #[test]

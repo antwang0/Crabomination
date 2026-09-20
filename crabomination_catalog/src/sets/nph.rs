@@ -1266,7 +1266,7 @@ pub fn leeching_bite() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
             Effect::PumpPT {
-                what: Selector::TargetFiltered { slot: 1, filter: R::Creature },
+                what: Selector::TargetFiltered { slot: 1, filter: R::Creature.and(R::OtherThanTargetSlot(0))},
                 power: Value::Const(-1),
                 toughness: Value::Const(-1),
                 duration: Duration::EndOfTurn,

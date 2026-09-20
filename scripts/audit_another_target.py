@@ -62,7 +62,15 @@ _adm = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_adm)
 
 # Every way a definition can say "not this one".
-OTHER_TOKENS = ("OtherThanSource", "other_than_source")
+# Every way a definition can say "not this one". `IsSource.negate()` is
+# the same predicate written the other way round (both arms answer true
+# for a source-less walk), so it closes the row just as well.
+OTHER_TOKENS = (
+    "OtherThanSource",
+    "other_than_source",
+    "IsSource.negate()",
+    "Not(Box::new(R::IsSource))",
+)
 
 # Rows where "another" is satisfied without the atom, or where the atom is the
 # wrong question. Keyed on the factory ident, which no body can shadow; a
@@ -109,6 +117,27 @@ SLOT_ALLOWLIST = {
     "pit_fight": "slot 0 is 'you control' and slot 1 'an opponent controls'",
     "domri_rade": "the -2 is modelled as you-control vs opponent-controls",
     "ulvenwald_tracker": "same disjoint pair",
+    "akroan_conscriptor": (
+        "**misclassified by the paragraph split**: the `target` before "
+        "\"another target creature\" is heroic's trigger condition (\"a spell "
+        "that **targets** this creature\"), which is the *spell's* slot, not "
+        "one of this ability's. Source-relative, and it carries "
+        "`OtherThanSource`"
+    ),
+    "setessan_tactics": (
+        "the \"another\" is inside a **granted activated ability** (\"{T}: "
+        "this creature fights another target creature\"), whose source at "
+        "activation is the fighter — source-relative, and it carries "
+        "`OtherThanSource`. The paragraph split cannot see the nesting: the "
+        "earlier \"target creatures\" is the strive spell's own slot"
+    ),
+    "cultural_exchange": (
+        "printed \"target player\" / \"another target player\", modelled as "
+        "`ExchangeControlChoosing` between **you** and an opponent, so there "
+        "are no two player slots to hang the atom on. ⚠ That is a narrowing "
+        "with teeth at N seats — the printed card can swap two *opponents'* "
+        "creatures and this cannot; INCOMPLETE_CARDS carries it"
+    ),
     "stiltzkin_moogle_merchant": (
         "slot 0 is a **player** and slot 1 a permanent, so they are never the "
         "same object; the printed 'another' is source-relative and the filter "

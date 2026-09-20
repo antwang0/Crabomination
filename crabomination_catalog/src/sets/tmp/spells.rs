@@ -326,7 +326,7 @@ pub fn legerdemain() -> CardDefinition {
         cost(&[generic(2), u(), u()]),
         Effect::ExchangeControl {
             a: Selector::TargetFiltered { slot: 0, filter: R::Artifact.or(R::Creature) },
-            b: Selector::TargetFiltered { slot: 1, filter: R::Artifact.or(R::Creature) },
+            b: Selector::TargetFiltered { slot: 1, filter: R::Artifact.or(R::Creature).and(R::OtherThanTargetSlot(0))},
         },
     )
 }
@@ -514,7 +514,7 @@ pub fn deadshot() -> CardDefinition {
         Effect::Seq(vec![
             Effect::Tap { what: target_filtered(R::Creature) },
             Effect::DealDamage {
-                to: Selector::TargetFiltered { slot: 1, filter: R::Creature },
+                to: Selector::TargetFiltered { slot: 1, filter: R::Creature.and(R::OtherThanTargetSlot(0))},
                 amount: Value::PowerOf(Box::new(Selector::Target(0))),
             },
         ]),

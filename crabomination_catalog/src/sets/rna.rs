@@ -5224,7 +5224,7 @@ pub fn combine_guildmage() -> CardDefinition {
                     },
                     to: Selector::TargetFiltered {
                         slot: 1,
-                        filter: R::Creature.and(R::ControlledByYou),
+                        filter: R::Creature.and(R::ControlledByYou).and(R::OtherThanTargetSlot(0)),
                     },
                     counter: CounterType::PlusOnePlusOne,
                     amount: Value::ONE,

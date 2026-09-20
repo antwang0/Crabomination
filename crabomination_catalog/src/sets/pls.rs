@@ -717,7 +717,7 @@ pub fn falling_timber() -> CardDefinition {
                 Effect::If {
                     cond: Predicate::SpellWasKicked,
                     then: Box::new(Effect::PreventCombatDamageByTargetThisTurn {
-                        target: Selector::TargetFiltered { slot: 1, filter: R::Creature },
+                        target: Selector::TargetFiltered { slot: 1, filter: R::Creature.and(R::OtherThanTargetSlot(0))},
                     }),
                     else_: Box::new(Effect::Noop),
                 },

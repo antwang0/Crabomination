@@ -387,7 +387,7 @@ pub fn fall_of_the_hammer() -> CardDefinition {
             source: target_filtered(R::Creature.and(R::ControlledByYou)),
             target: Selector::TargetFiltered {
                 slot: 1,
-                filter: R::Creature,
+                filter: R::Creature.and(R::OtherThanTargetSlot(0)),
             },
         },
     )

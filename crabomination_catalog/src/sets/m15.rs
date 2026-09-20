@@ -314,7 +314,7 @@ pub fn living_totem() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::MayDo {
             description: "Put a +1/+1 counter on another target creature?".into(),
             body: Box::new(Effect::AddCounter {
-                what: target_filtered(R::Creature),
+                what: target_filtered(R::Creature.and(R::OtherThanSource)),
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::Const(1),
             }),
@@ -2302,7 +2302,9 @@ pub fn avacyn_guardian_angel() -> CardDefinition {
             ActivatedAbility {
                 mana_cost: cost(&[generic(1), w()]),
                 effect: Effect::PreventAllDamageFromChosenColorThisTurn {
-                    target: target_filtered(R::Creature),
+                    // "**another** target creature" — CR 601.2c; without
+                    // it Avacyn shields herself, which is a legal pick.
+                    target: target_filtered(R::Creature.and(R::OtherThanSource)),
                 },
                 ..Default::default()
             },

@@ -492,7 +492,10 @@ pub fn setessan_tactics() -> CardDefinition {
                     tap_cost: true,
                     effect: Effect::Fight {
                         attacker: Selector::This,
-                        defender: target_filtered(R::Creature),
+                        // "fights **another** target creature" — the source of
+                        // the granted ability is the fighter, so without this
+                        // the creature is a legal target for its own fight.
+                        defender: target_filtered(R::Creature.and(R::OtherThanSource)),
                     },
                     ..Default::default()
                 }),

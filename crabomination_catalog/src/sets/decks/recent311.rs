@@ -1226,7 +1226,7 @@ pub fn stand_together() -> CardDefinition {
             Effect::AddCounter {
                 what: Selector::TargetFiltered {
                     slot: 1,
-                    filter: R::Creature,
+                    filter: R::Creature.and(R::OtherThanTargetSlot(0)),
                 },
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::Const(2),

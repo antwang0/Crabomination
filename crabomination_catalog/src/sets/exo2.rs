@@ -1434,7 +1434,7 @@ pub fn kor_chant() -> CardDefinition {
         cost(&[generic(2), w()]),
         Effect::RedirectNextDamageTo {
             what: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) },
-            to: Selector::TargetFiltered { slot: 1, filter: R::Creature.and(R::OtherThanSource) },
+            to: Selector::TargetFiltered { slot: 1, filter: R::Creature.and(R::OtherThanSource).and(R::OtherThanTargetSlot(0))},
         },
     )
 }

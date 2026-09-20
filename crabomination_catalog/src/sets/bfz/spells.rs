@@ -410,11 +410,11 @@ pub fn serpentine_spike() -> CardDefinition {
                     amount: Value::Const(2),
                 },
                 Effect::DealDamage {
-                    to: Selector::TargetFiltered { slot: 1, filter: R::Creature },
+                    to: Selector::TargetFiltered { slot: 1, filter: R::Creature.and(R::OtherThanTargetSlot(0))},
                     amount: Value::Const(3),
                 },
                 Effect::DealDamage {
-                    to: Selector::TargetFiltered { slot: 2, filter: R::Creature },
+                    to: Selector::TargetFiltered { slot: 2, filter: R::Creature.and(R::OtherThanTargetSlot(0)).and(R::OtherThanTargetSlot(1))},
                     amount: Value::Const(4),
                 },
             ]),

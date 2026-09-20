@@ -291,7 +291,7 @@ pub fn withdraw() -> CardDefinition {
                 who: PlayerRef::ControllerOf(Box::new(Selector::Target(1))),
                 cost: WardCost::Mana(cost(&[generic(1)])),
                 then: Box::new(Effect::Move {
-                    what: Selector::TargetFiltered { slot: 1, filter: R::Creature },
+                    what: Selector::TargetFiltered { slot: 1, filter: R::Creature.and(R::OtherThanTargetSlot(0))},
                     to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(1)))),
                 }),
                 if_paid: None,
@@ -308,7 +308,7 @@ pub fn steal_strength() -> CardDefinition {
         Effect::Seq(vec![
             pump_target(1, 1),
             Effect::PumpPT {
-                what: Selector::TargetFiltered { slot: 1, filter: R::Creature },
+                what: Selector::TargetFiltered { slot: 1, filter: R::Creature.and(R::OtherThanTargetSlot(0))},
                 power: Value::Const(-1),
                 toughness: Value::Const(-1),
                 duration: Duration::EndOfTurn,
