@@ -710,3 +710,51 @@ fn phelddagrif_bounces_itself_and_offers_the_opponent_the_draw() {
     assert!(g.players[0].hand.iter().all(|c| c.definition.name != "Grizzly Bears"),
         "and seat 0 did not");
 }
+
+// ── Miirym, Sentinel Wyrm ───────────────────────────────────────────────────
+
+fn dragons(g: &GameState, seat: usize) -> usize {
+    g.battlefield
+        .iter()
+        .filter(|c| {
+            c.controller == seat
+                && c.definition.subtypes.creature_types.contains(&CreatureType::Dragon)
+        })
+        .count()
+}
+
+/// Miirym copies another **nontoken** Dragon you control as it enters, and
+/// the copy is **not legendary**.
+///
+/// ⚠ Both riders are load-bearing and the test pins both. If the trigger
+/// fired on tokens, the copy would itself be a Dragon entering under your
+/// control and the engine would be right to fire again forever. If the copy
+/// kept its legendary supertype, CR 704.5j would put one of the pair into the
+/// graveyard as soon as state-based actions ran — the copy of a *legendary*
+/// Dragon is exactly the case that matters.
+#[test]
+fn miirym_copies_a_nontoken_dragon_once_and_not_as_a_legend() {
+    let mut g = multi_player_game(4);
+    g.step = TurnStep::PreCombatMain;
+    g.add_card_to_battlefield(0, catalog::miirym_sentinel_wyrm());
+    assert_eq!(dragons(&g, 0), 1, "Miirym is the only Dragon so far");
+
+    // A legendary Dragon: the copy must drop the supertype or CR 704.5j eats
+    // one of them.
+    let original = g.add_card_to_battlefield(0, catalog::shivan_dragon());
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: original }]);
+    drain_stack(&mut g);
+
+    assert_eq!(dragons(&g, 0), 3, "Miirym, the Dragon, and exactly one copy");
+    let copies: Vec<_> = g
+        .battlefield
+        .iter()
+        .filter(|c| c.is_token && c.definition.name == "Shivan Dragon")
+        .collect();
+    assert_eq!(copies.len(), 1, "one token copy");
+    assert!(!copies[0].definition.is_legendary(), "and it is not legendary");
+
+    // The token's own entry must not have fired the trigger again.
+    drain_stack(&mut g);
+    assert_eq!(dragons(&g, 0), 3, "nontoken-only: the copy does not copy itself");
+}

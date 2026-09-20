@@ -7714,6 +7714,7 @@ static DECKS: &[Factory] = &[
     super::decks::kenrith_the_returned_king,
     super::decks::zedruu_the_greathearted,
     super::decks::phelddagrif,
+    super::decks::miirym_sentinel_wyrm,
     super::decks::quest_for_the_goblin_lord,
     super::decks::quest_for_the_gravelord,
     super::decks::quest_for_the_gemblades,

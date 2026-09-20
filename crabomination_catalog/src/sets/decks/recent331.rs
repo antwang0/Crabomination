@@ -25,10 +25,12 @@
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Keyword,
     SelectionRequirement as R, Selector, Subtypes, Supertype, TokenDefinition, TriggeredAbility,
-    Value,
+    Value, WardCost,
 };
 use crate::effect::shortcut::target_filtered;
-use crate::effect::{Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, ZoneDest};
+use crate::effect::{
+    Duration, Effect, EventKind, EventScope, EventSpec, Predicate, PlayerRef, ZoneDest,
+};
 use crate::game::types::TurnStep;
 use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
@@ -298,6 +300,60 @@ pub fn phelddagrif() -> CardDefinition {
                 ]),
             ),
         ],
+        ..Default::default()
+    }
+}
+
+/// Miirym, Sentinel Wyrm — {3}{G}{U}{R} Legendary Creature — Dragon Spirit
+/// 6/6. "Flying, ward {2}. Whenever another **nontoken** Dragon you control
+/// enters, create a token that's a copy of it, except the token isn't
+/// legendary." (EDHREC's 28th most-built commander.)
+///
+/// ⚠ Two riders on the trigger and both are load-bearing. **Nontoken** is
+/// what stops the copy from copying itself into an unbounded loop — the token
+/// it makes is a Dragon you control entering, and without `R::IsToken.negate()`
+/// the engine would be right to fire again forever. **Except the token isn't
+/// legendary** is `non_legendary: true`: a legendary copy would meet its
+/// original under CR 704.5j and one of the two would be put into the
+/// graveyard immediately, which is the whole card undone.
+///
+/// `Selector::TriggerSource` is the Dragon that entered, so the copy is of
+/// the right object without a target slot.
+pub fn miirym_sentinel_wyrm() -> CardDefinition {
+    CardDefinition {
+        name: "Miirym, Sentinel Wyrm",
+        cost: cost(&[generic(3), g(), u(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dragon, CreatureType::Spirit],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Flying, Keyword::Ward(WardCost::Mana(cost(&[generic(2)])))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::HasCreatureType(CreatureType::Dragon)
+                        .and(R::OtherThanSource)
+                        .and(R::IsToken.negate()),
+                }),
+            effect: Effect::CreateTokenCopyOf {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                source: Selector::TriggerSource,
+                extra_creature_types: Vec::new(),
+                extra_card_types: Vec::new(),
+                override_pt: None,
+                override_colors: None,
+                enters_tapped: false,
+                non_legendary: true,
+                legendary: false,
+                extra_keywords: Vec::new(),
+            },
+        }],
         ..Default::default()
     }
 }
