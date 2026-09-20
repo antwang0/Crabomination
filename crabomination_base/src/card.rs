@@ -2990,6 +2990,14 @@ pub enum SelectionRequirement {
     /// `InGraveyard`; used by impulse "if you don't cast it" fallbacks
     /// (Chandra, Torch of Defiance) to detect an uncast exiled card.
     InExile,
+    /// True when the candidate is a permanent **on the battlefield**. The
+    /// on-board half of a mixed clause — "target creatures from the
+    /// battlefield **and/or** creature cards from graveyards" (Angel of
+    /// Serenity), "target artifact card in a graveyard **or** artifact on the
+    /// battlefield" (Daretti's ultimate). Without it the on-board half has to
+    /// be written zone-free, and a zone-free half is satisfied by a card in
+    /// hand, in exile and in a library too.
+    OnBattlefield,
     /// True when the candidate is an exile-zone card stamped
     /// `exiled_with == source` — "target creature card exiled with [this]"
     /// (The Darkness Crystal's recursion).

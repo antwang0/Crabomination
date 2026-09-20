@@ -9125,11 +9125,11 @@ fn effect_returns_self_to_battlefield(eff: &Effect) -> bool {
 }
 
 /// True if a `SelectionRequirement` tree constrains its target to a card in a
-/// graveyard (`InYourGraveyard` / `InGraveyard`).
+/// graveyard (`InYourGraveyard` / `InGraveyard` / `InOpponentGraveyard`).
 fn filter_targets_graveyard(req: &crate::card::SelectionRequirement) -> bool {
     use crate::card::SelectionRequirement as R;
     match req {
-        R::InYourGraveyard | R::InGraveyard => true,
+        R::InYourGraveyard | R::InGraveyard | R::InOpponentGraveyard => true,
         R::And(a, b) | R::Or(a, b) => filter_targets_graveyard(a) || filter_targets_graveyard(b),
         _ => false,
     }

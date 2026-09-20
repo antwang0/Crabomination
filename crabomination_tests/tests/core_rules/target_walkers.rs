@@ -479,6 +479,54 @@ mod offboard_gate {
         );
     }
 
+    /// `OnBattlefield` is the on-board half of a **mixed** clause — "target
+    /// creatures from the battlefield and/or creature cards from graveyards"
+    /// (Angel of Serenity). The union reaches both zones and neither of the
+    /// other three: a creature card in hand, in exile or in a library is not
+    /// a legal target for either half.
+    #[test]
+    fn a_mixed_battlefield_or_graveyard_filter_reaches_exactly_those_two_zones() {
+        let mut g = two_player_game();
+        let live = g.add_card_to_battlefield(1, bear("Live Bear"));
+        let gy = g.add_card_to_graveyard(1, bear("Graveyard Bear"));
+        let ex = g.add_card_to_exile(1, bear("Exiled Bear"));
+        let hand = g.add_card_to_hand(1, bear("Hand Bear"));
+        let mixed = R::Creature
+            .and(R::OnBattlefield.or(R::InGraveyard));
+        let exile_it = Effect::Exile {
+            what: Selector::TargetFiltered { slot: 0, filter: mixed },
+        };
+        let legal = g.enumerate_legal_targets(&exile_it, 0);
+        assert!(legal.contains(&Target::Permanent(live)), "battlefield half: {legal:?}");
+        assert!(legal.contains(&Target::Permanent(gy)), "graveyard half: {legal:?}");
+        assert!(
+            !legal.contains(&Target::Permanent(ex)) && !legal.contains(&Target::Permanent(hand)),
+            "neither half reaches exile or a hand: {legal:?}"
+        );
+    }
+
+    /// The other direction: `OnBattlefield` alone rejects the off-board card
+    /// a zone-free filter would have accepted.
+    #[test]
+    fn on_battlefield_alone_rejects_an_offboard_card() {
+        let mut g = two_player_game();
+        let gy = g.add_card_to_graveyard(0, bear("Graveyard Bear"));
+        let bf_only = Effect::Exile {
+            what: Selector::TargetFiltered {
+                slot: 0,
+                filter: R::Creature.and(R::OnBattlefield),
+            },
+        };
+        assert!(
+            !g.enumerate_legal_targets(&bf_only, 0).contains(&Target::Permanent(gy)),
+            "a graveyard card is not on the battlefield"
+        );
+        assert!(
+            g.auto_target_for_effect(&bf_only, 0).is_none(),
+            "and the picker agrees there is no target"
+        );
+    }
+
     /// Reanimation keeps the walk without naming a zone: the classifier
     /// (`prefers_graveyard_target`) is the other half of the gate.
     #[test]
