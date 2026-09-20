@@ -5004,7 +5004,7 @@ fn sacrifice_keep_value(state: &GameState, id: crate::card::CardId, w: &EvalWeig
 /// choice), give up the **least** valuable. Player targets fall back to the
 /// **lowest-life** opponent (most progress toward a kill), then to the first
 /// legal option.
-fn decide_choose_target(
+pub fn decide_choose_target(
     state: &GameState,
     seat: usize,
     legal: &[crate::game::types::Target],

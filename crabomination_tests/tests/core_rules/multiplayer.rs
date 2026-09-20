@@ -5515,3 +5515,40 @@ fn cr_701_38a_a_council_vote_runs_in_turn_order_from_the_controller() {
         "and a permanent with the most votes was exiled",
     );
 }
+
+/// The bot half of a council ballot, asserted rather than assumed. A
+/// will-of-the-council ballot is a `Decision::ChooseTarget` whose candidate
+/// list is built from the **controller's** perspective ("a nonland permanent
+/// you don't control"), so an opponent votes from a list that can contain its
+/// own permanents. `decide_choose_target` prefers a permanent the voter does
+/// not control and only gives up its own when every candidate is its own —
+/// which is the right answer for a ballot, an edict and free-floating removal
+/// alike.
+#[test]
+fn a_council_ballot_never_votes_for_the_voters_own_permanent_when_another_is_legal() {
+    use crabomination::decision::DecisionAnswer;
+    use crabomination::game::types::Target;
+    use crabomination::server::bot::{decide_choose_target, EvalWeights};
+    let mut g = multi_player_game(4);
+    let mine = g.move_card_to_battlefield_for_test(1, catalog::grizzly_bears());
+    let theirs = g.move_card_to_battlefield_for_test(2, catalog::serra_angel());
+    drain_stack(&mut g);
+
+    // Seat 1 votes from a ballot holding its own Bears and seat 2's Angel.
+    let legal = vec![Target::Permanent(mine), Target::Permanent(theirs)];
+    let w = EvalWeights::default();
+    let answer = decide_choose_target(&g, 1, &legal, &w);
+    assert_eq!(
+        answer,
+        DecisionAnswer::Target(Target::Permanent(theirs)),
+        "vote for the permanent you do not control",
+    );
+
+    // With only its own on the ballot it has to pick one, and does.
+    let only_mine = vec![Target::Permanent(mine)];
+    assert_eq!(
+        decide_choose_target(&g, 1, &only_mine, &w),
+        DecisionAnswer::Target(Target::Permanent(mine)),
+        "and a ballot of only your own still returns a legal vote",
+    );
+}

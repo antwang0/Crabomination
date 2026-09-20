@@ -185,14 +185,19 @@ Every seat votes exactly once in either order and the same card is exiled;
 only the *sequence* moves, and with it what a later voter knows. The test
 reads the ballot order out of the decider's `asked` log.
 
-💡 **The bot half is a lead, not a fix.** A council ballot is a
-`Decision::ChooseTarget` over the candidate permanents. `AutoDecider` answers
-`legal.first()`; the bot's hostile-target ranking picks the *strongest*
-permanent on a list defined from the **controller's** perspective, so an
-opponent voting from "a nonland permanent you don't control" can rank its own
-best permanent top. The vote is legal and terminates either way, which is
-exactly why 10,000 pod games never saw it — **a crash-freedom smoke cannot
-find a bad decision, only an impossible one.**
+⚠ **A bot-half lead was filed here and then checked and withdrawn.** A
+council ballot is a `Decision::ChooseTarget` over the candidate permanents,
+and the worry was that the bot's hostile ranking would pick the *strongest*
+permanent on a list defined from the **controller's** perspective — so an
+opponent voting from "a nonland permanent you don't control" would rank its
+own best permanent top. `decide_choose_target` does the opposite: it prefers
+a permanent the voter does **not** control and only gives up its own when
+every candidate is its own. Its doc opens "(votes, edicts, free-floating
+removal)". Now pinned by
+`a_council_ballot_never_votes_for_the_voters_own_permanent_when_another_is_legal`.
+💡 **Read the policy before filing the lead** — `AutoDecider`'s
+`legal.first()` is not what a bot seat does, and the two are easy to
+conflate.
 
 ## FIXED 2026-09-20 (the sixtieth find) — CR 800.4a: fourteen walks handed a DEPARTED seat a role, and `LowestLife` gave it one every single time
 
