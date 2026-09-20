@@ -3044,6 +3044,20 @@ games, all ten blocks 1,000/1,000 decided, every `undecided_by` column zero,
 zero panics.** turns/game 19.53 / 45.46 / 64.63 / 93.27 / **125.48** and
 19.20 / 45.16 / 65.38 / 93.36 / **122.94**.
 
+⚠ **Re-taken after the exert commit, which is the one that touches the cube
+pool** (five of the six exert cards are in it, so the two-player pools are the
+guardrail that could have caught it and `--bench` is not):
+
+```text
+--bench          decisions 195,806 / 27.49 / 611.9 / 0 stalls — still byte-identical
+                 determinism ok; thread_determinism ok (3 vs 1); peak_rss_mib 29.2
+two-player pools 4 fresh seeds x cube/sos/sealed x 300 an archetype = 30,000 games
+                 0 panics, 0 caps, 0 board caps, 0 stuck; 7 draws (0.023 %, one sealed block)
+pod              2/4/6/8/10 seats x 1,000, seed 9400 = 5,000 games, all 5 blocks
+                 1,000/1,000 decided, every undecided_by column zero, zero panics
+                 turns/game 19.49 / 44.94 / 64.94 / 92.50 / 122.68 — the curve is unmoved
+```
+
 📐 **The pre-check, one row per site.** ① `PlayersMayAccept` now collects
 every answer before applying any, so the loop runs twice over a set that is
 at most the seat count — and it is unreachable from `archetypes()`, whose

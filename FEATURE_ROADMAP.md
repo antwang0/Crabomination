@@ -411,6 +411,12 @@ Each a small targeted feature; sweep batch by batch.
   graveyard-activated abilities, the client hover panel labels them).
 - **Combat-flavor:** ✅ Bushido, Flanking, Rampage, Provoke, Battle Cry, Exalted,
   Frenzy, Melee, Dash, Boast, Afflict, Enlist, Mobilize, Myriad, Amass,
+  **Exert** (CR 701.43 — an *optional cost to attack* per CR 508.1g, announced
+  by `GameAction::DeclareAttackersExerting`; the "when you do" is **linked**
+  (CR 701.43d / 607.2h) and rides `EventKind::Exerted`, so an unexerted attack
+  gets neither the bonus nor the skipped untap. A silent declaration falls to
+  `exert_pays_off`, which takes it only when the linked bonus can do something;
+  the `wants_ui` modal is the residual, in INCOMPLETE_CARDS),
   Assigns-combat-damage-by-toughness (`AssignsCombatDamageByToughness`, CR 510.1c
   — Doran, Tapestry Warden, Bill the Pony).
 - **Value/ETB:** ✅ Investigate, Fabricate, Riot, Raid, Afterlife, Explore, Squad,

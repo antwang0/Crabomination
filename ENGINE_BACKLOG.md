@@ -82,6 +82,7 @@ the handoff.
 | Engine mechanics & primitives | [Suggested next-up tasks](#suggested-next-up-tasks) | 1053 |
 | Rules coverage | [MagicCompRules coverage audit](#magiccomprules-coverage-audit) | 312 |
 | Tooling | [Recommender: two builder defects fixed, one lesson recorded](#recommender-two-builder-defects-fixed-one-lesson-recorded) | 17 |
+| Engine mechanics & primitives | [FIXED 2026-09-20 (the fifty-seventh find) — exert was AUTOMATIC and its bonus was not LINKED, so Glorybringer bought a skipped untap over an empty board](#fixed-2026-09-20-the-fifty-seventh-find--exert-was-automatic-and-its-bonus-was-not-linked-so-glorybringer-bought-a-skipped-untap-over-an-empty-board) | 6 cards |
 | Bugs & robustness | [FIXED 2026-09-20 (the fifty-sixth find) — "defending player" is ONE seat and 32 cards had it as "any opponent", including three that were worse than imprecise](#fixed-2026-09-20-the-fifty-sixth-find--defending-player-is-one-seat-and-32-cards-had-it-as-any-opponent-including-three-that-were-worse-than-imprecise) | 32 → 0 |
 | Tooling | [FIXED 2026-09-20 (the fifty-fifth find) — the SHARED audit reader was blind to a third of the catalog, so every ratchet built on it reported its column over two thirds of the cards](#fixed-2026-09-20-the-fifty-fifth-find--the-shared-audit-reader-was-blind-to-a-third-of-the-catalog-so-every-ratchet-built-on-it-reported-its-column-over-two-thirds-of-the-cards) | 7,030 → 0 skipped |
 | Bugs & robustness | [FIXED 2026-09-20 (the fifty-fourth find) — "any player may …" closed on the FIRST acceptance, so six of seven seats were never offered and the consequence could run twice](#fixed-2026-09-20-the-fifty-fourth-find--any-player-may--closed-on-the-first-acceptance-so-six-of-seven-seats-were-never-offered-and-the-consequence-could-run-twice) | 7 cards, 1 arm |
@@ -112,6 +113,43 @@ copies.** `_factory_body` fixed brace matching across them at the
 forty-eighth find; helper inlining and `..delegation` are only in this one.
 Extracting a shared `catalog_bodies.py` would move every audit's count at
 once, so it needs a run that can re-verify each ratchet, not a drive-by.
+
+## FIXED 2026-09-20 (the fifty-seventh find) — exert was AUTOMATIC and its bonus was not LINKED, so Glorybringer bought a skipped untap over an empty board
+
+CR 701.43d — "you may exert this creature as it attacks" is an **optional
+cost to attack** (CR 508.1g), chosen as attackers are declared, and the "when
+you do" printed in the same paragraph is a **linked** ability (CR 607.2h).
+The engine had neither half: `Keyword::Exert` auto-exerted every attacker
+that carried it, and the bonus rode a plain `SelfSource` `Attacks` trigger.
+The two only agreed because the cost was never declined.
+
+`EventKind::Exerted` + `shortcut::on_exert` are the linked pair, and
+`GameAction::DeclareAttackersExerting { attacks, exert }` is the
+announcement — beside `DeclareAttackersBanded` and for the recorded reason:
+`Attack` is `Copy` and built at ~1,400 sites, so the choice belongs on the
+declaration, not on the attacker. `declare_attackers_full` is the shared
+body and the two older entries pass `None`.
+
+📐📐 **THE POLICY IS ONLY ANSWERABLE BECAUSE THE BONUS IS LINKED.** With a
+silent declaration the engine takes the exert when `exert_pays_off` says the
+linked bonus can do something — a bonus that needs a target and has none is
+a skipped untap bought for nothing. That question **cannot be asked** of the
+old model: an unconditional `Attacks` trigger carries nothing that says which
+trigger the exert was buying. **Making the ability linked is what made the
+heuristic possible, not just what made the rule right.**
+
+⚠ **Three citations were wrong and one of them headed a whole set file.** The
+comments cited CR 702.137 (Boast) and CR 702.83 (Afflict); exert is 701.43.
+`akh/mod.rs`'s section header documented the auto-exert idiom for every card
+in the set.
+
+⚠ **Residual: the ask.** A `wants_ui` seat cannot decline an exert its policy
+would take — no `Decision` is surfaced at declare-attackers time. Same gap
+`DeclareAttackersBanded` has for bands. INCOMPLETE_CARDS carries it.
+
+💡 `every_self_source_trigger_kind_reaches_a_dispatcher` caught the new kind
+on the first suite run, which is exactly what that ratchet is for; `Exerted`
+joins its UNPROVEN list naming the gate that dispatches it.
 
 ## FIXED 2026-09-20 (the fifty-sixth find) — "defending player" is ONE seat and 32 cards had it as "any opponent", including three that were worse than imprecise
 

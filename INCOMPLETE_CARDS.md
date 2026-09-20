@@ -433,6 +433,25 @@ creature at any time. A combat with **two** different defenders leaves the
 clause ambiguous and the filter takes nothing; the printed cards predate
 multiplayer templating and the CR gives no tiebreak.
 
+## Exert: the cost is announced, the modal is not (2026-09-20)
+
+CR 508.1g / 701.43d. `GameAction::DeclareAttackersExerting { attacks, exert }`
+carries the announcement and `EventKind::Exerted` carries the linked "when you
+do", so a creature that attacks without paying gets neither the bonus nor the
+skipped untap. All six exert cards are on it.
+
+⚠ **What is left is the ask.** A declaration that does not announce the cost
+falls to `exert_pays_off` — take the exert when the linked bonus has a legal
+target or needs none — which is a policy, not a choice. A `wants_ui` seat
+therefore cannot decline an exert its policy would take, or take one its
+policy declines, because no `Decision` is surfaced at declare-attackers time.
+The shape for it is a per-attacker ask inside the declaration, and it is the
+same gap `DeclareAttackersBanded` has for bands.
+
+💡 The policy is answerable *only because the bonus is linked*: with the old
+unconditional `Attacks` trigger there was nothing on the card that said which
+trigger the exert was buying.
+
 ## Melee is applied off-stack when it is a printed keyword (2026-09-20)
 
 CR 702.121a — "Melee is a **triggered** ability. 'Melee' means 'Whenever this
