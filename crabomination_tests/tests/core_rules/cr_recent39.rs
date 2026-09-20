@@ -91,6 +91,10 @@ fn cr_610_3c_linked_exile_returns_to_its_owner() {
     let mut g = main_phase();
     let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let hunter = g.add_card_to_battlefield(0, catalog::fiend_hunter());
+    // Fiend Hunter's exile is a printed "you may"; accept it.
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new(
+        std::iter::repeat_with(|| crabomination::decision::DecisionAnswer::Bool(true)).take(4),
+    ));
     use crabomination::game::effects::EffectContext;
     let mut ctx =
         EffectContext::for_spell_with_source(hunter, "Fiend Hunter", 0, None, vec![], 0, 0, 0, 0);

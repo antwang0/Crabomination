@@ -240,10 +240,13 @@ pub fn beastmaster_ascension() -> CardDefinition {
                     filter: SelectionRequirement::Creature,
                 },
             ),
-            effect: Effect::AddCounter {
-                what: Selector::This,
-                kind: crate::card::CounterType::Quest,
-                amount: Value::Const(1),
+            effect: Effect::MayDo {
+                description: "Put a quest counter on Beastmaster Ascension?".into(),
+                body: Box::new(Effect::AddCounter {
+                    what: Selector::This,
+                    kind: crate::card::CounterType::Quest,
+                    amount: Value::Const(1),
+                }),
             },
         }],
         static_abilities: vec![StaticAbility {

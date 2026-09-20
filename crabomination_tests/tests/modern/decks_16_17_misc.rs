@@ -1441,6 +1441,10 @@ fn fiend_hunter_exiles_opponent_creature() {
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     g.clear_sickness(bear);
     let id = g.add_card_to_hand(0, catalog::fiend_hunter());
+    // The printed "you may" is now asked; accept it.
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new(
+        std::iter::repeat_with(|| crabomination::decision::DecisionAnswer::Bool(true)).take(4),
+    ));
     g.players[0].mana_pool.add(Color::White, 2);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::CastSpell {

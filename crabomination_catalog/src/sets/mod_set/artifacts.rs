@@ -1641,16 +1641,19 @@ pub fn isochron_scepter() -> CardDefinition {
         card_types: vec![CardType::Artifact],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::ExileTaggedWithSource {
-                what: Selector::take(
-                    Selector::CardsInZone {
-                        who: PlayerRef::You,
-                        zone: Zone::Hand,
-                        filter: SelectionRequirement::HasCardType(CardType::Instant)
-                            .and(SelectionRequirement::ManaValueAtMost(2)),
-                    },
-                    Value::Const(1),
-                ),
+            effect: Effect::MayDo {
+                description: "Imprint: exile an instant with mana value 2 or less from your hand?".into(),
+                body: Box::new(Effect::ExileTaggedWithSource {
+                    what: Selector::take(
+                        Selector::CardsInZone {
+                            who: PlayerRef::You,
+                            zone: Zone::Hand,
+                            filter: SelectionRequirement::HasCardType(CardType::Instant)
+                                .and(SelectionRequirement::ManaValueAtMost(2)),
+                        },
+                        Value::Const(1),
+                    ),
+                }),
             },
         }],
         activated_abilities: vec![ActivatedAbility {
@@ -1689,17 +1692,20 @@ pub fn chrome_mox() -> CardDefinition {
         card_types: vec![CardType::Artifact],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::ExileTaggedWithSource {
-                what: Selector::take(
-                    Selector::CardsInZone {
-                        who: PlayerRef::You,
-                        zone: Zone::Hand,
-                        filter: SelectionRequirement::Land
-                            .negate()
-                            .and(SelectionRequirement::Artifact.negate()),
-                    },
-                    Value::Const(1),
-                ),
+            effect: Effect::MayDo {
+                description: "Imprint: exile a nonartifact, nonland card from your hand?".into(),
+                body: Box::new(Effect::ExileTaggedWithSource {
+                    what: Selector::take(
+                        Selector::CardsInZone {
+                            who: PlayerRef::You,
+                            zone: Zone::Hand,
+                            filter: SelectionRequirement::Land
+                                .negate()
+                                .and(SelectionRequirement::Artifact.negate()),
+                        },
+                        Value::Const(1),
+                    ),
+                }),
             },
         }],
         activated_abilities: vec![ActivatedAbility {

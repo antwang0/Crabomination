@@ -21479,15 +21479,24 @@ pub fn fiend_hunter() -> CardDefinition {
         toughness: 3,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::ExileUntilSourceLeaves {
-                // "**another** target creature": any but this one. Without
-                // the restriction the Hunter could exile *itself*, which
-                // leaves the battlefield, which returns it, which triggers
-                // again — the printed word is the whole of what stops it.
-                what: target_filtered(
-                    SelectionRequirement::Creature.and(SelectionRequirement::OtherThanSource),
-                ),
-                return_to: ExileReturnZone::Battlefield,
+            // "**you may** exile another target creature". The "may" matters:
+            // the printed clause targets any creature, so a mandatory version
+            // exiles the Hunter's own when that is the only other one on the
+            // board. `removal_targets_own_permanent` is the bot screen that
+            // now gets to say no.
+            effect: Effect::MayDo {
+                description: "Exile another target creature?".into(),
+                body: Box::new(Effect::ExileUntilSourceLeaves {
+                    // "**another** target creature": any but this one. Without
+                    // the restriction the Hunter could exile *itself*, which
+                    // leaves the battlefield, which returns it, which triggers
+                    // again — the printed word is the whole of what stops it.
+                    what: target_filtered(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::OtherThanSource),
+                    ),
+                    return_to: ExileReturnZone::Battlefield,
+                }),
             },
         }],
         ..Default::default()

@@ -1293,6 +1293,10 @@ fn beastmaster_ascension_accrues_quest_counter_on_attack() {
     use crabomination::game::types::{AttackTarget, Attack};
     let mut g = two_player_game();
     let asc = g.add_card_to_battlefield(0, catalog::beastmaster_ascension());
+    // The printed "you may" is now asked; accept it.
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new(
+        std::iter::repeat_with(|| crabomination::decision::DecisionAnswer::Bool(true)).take(4),
+    ));
     let atk = g.add_card_to_battlefield(0, body("Bear", 2, 2, vec![]));
     g.clear_sickness(atk);
     advance_to(&mut g, TurnStep::DeclareAttackers);

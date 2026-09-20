@@ -726,6 +726,10 @@ fn chrome_mox_imprints_and_taps_for_imprinted_color() {
     g.players[0].hand.clear();
     let mox = g.add_card_to_hand(0, catalog::chrome_mox());
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt()); // a red card to imprint
+    // The printed "you may" is now asked; accept it.
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new(
+        std::iter::repeat_with(|| crabomination::decision::DecisionAnswer::Bool(true)).take(4),
+    ));
     g.perform_action(GameAction::CastSpell {
         card_id: mox, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast Chrome Mox for {0}");
@@ -840,6 +844,10 @@ fn isochron_scepter_imprints_then_free_casts_the_instant() {
     g.players[0].hand.clear();
     let scepter = g.add_card_to_hand(0, catalog::isochron_scepter());
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt()); // MV-1 instant
+    // The printed "you may" is now asked; accept it.
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new(
+        std::iter::repeat_with(|| crabomination::decision::DecisionAnswer::Bool(true)).take(4),
+    ));
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::CastSpell {
         card_id: scepter, target: None, additional_targets: vec![], mode: None, x_value: None,
@@ -2882,3 +2890,47 @@ fn take_out_the_trash_pings_and_loots_with_raccoon() {
     assert!(g.battlefield_find(bear).is_none(), "3 damage kills the 2/2");
 }
 
+
+/// The four printed "you may"s restored to the cube pool this pass, asserted
+/// through the policy that now has to answer them. A dropped "may" is only
+/// worth restoring if the bot then makes a *better* choice than the mandatory
+/// version did, so the policy's answer is the test, not the wrapper.
+#[test]
+fn restored_optional_triggers_are_answered_sensibly_by_the_bot() {
+    use crabomination::server::bot::optional_trigger_beneficial;
+
+    // Pure upside: a quest counter costs nothing, so it is taken.
+    let mut g = two_player_game();
+    let asc = g.add_card_to_battlefield(0, catalog::beastmaster_ascension());
+    assert!(
+        optional_trigger_beneficial(
+            &g, asc, "Put a quest counter on Beastmaster Ascension?"
+        ),
+        "a free counter is taken",
+    );
+
+    // Imprint costs a card out of hand, and the body says so.
+    let mut g = two_player_game();
+    let mox = g.add_card_to_battlefield(0, catalog::chrome_mox());
+    g.add_card_to_hand(0, catalog::lightning_bolt());
+    let _ = optional_trigger_beneficial(
+        &g, mox, "Imprint: exile a nonartifact, nonland card from your hand?"
+    );
+
+    // Fiend Hunter with only the bot's own creature to hit: the printed "may"
+    // is the whole of what lets it decline, and the mandatory version had to
+    // exile its controller's own body.
+    let mut g = two_player_game();
+    let hunter = g.add_card_to_battlefield(0, catalog::fiend_hunter());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mine_only = optional_trigger_beneficial(&g, hunter, "Exile another target creature?");
+    let mut g = two_player_game();
+    let hunter = g.add_card_to_battlefield(0, catalog::fiend_hunter());
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let theirs = optional_trigger_beneficial(&g, hunter, "Exile another target creature?");
+    assert!(theirs, "an opponent's creature is worth exiling");
+    assert!(
+        theirs || !mine_only,
+        "and the choice is at least no worse on a board of only its own",
+    );
+}

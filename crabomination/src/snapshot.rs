@@ -632,6 +632,10 @@ mod tests {
         g.players[0].hand.clear();
         let mox = g.add_card_to_hand(0, catalog::chrome_mox());
         let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+        // Imprint is a printed "you may"; accept it.
+        g.decider = Box::new(crate::decision::ScriptedDecider::new(
+            std::iter::repeat_with(|| crate::decision::DecisionAnswer::Bool(true)).take(4),
+        ));
         g.priority.player_with_priority = 0;
         g.active_player_idx = 0;
         g.perform_action(GameAction::CastSpell {
