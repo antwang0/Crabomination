@@ -535,12 +535,19 @@ pub fn tymaret_calls_the_dead() -> CardDefinition {
                 who: Selector::You,
                 amount: Value::Const(3),
             },
+            // "Then **you may** exile a creature or enchantment card from your
+            // graveyard. If you do, create a 2/2 Zombie." Exiling is a real
+            // cost — it is a reanimation target spent — so the choice is the
+            // card, not decoration. The `If` below stays: with nothing in the
+            // graveyard there is nothing to be asked about.
             Effect::If {
                 cond: Predicate::SelectorExists(Selector::EachMatching {
                     zone: crate::effect::ZoneRef::Graveyard(PlayerRef::You),
                     filter: SelectionRequirement::Creature.or(SelectionRequirement::Enchantment),
                 }),
-                then: Box::new(Effect::Seq(vec![
+                then: Box::new(Effect::MayDo {
+                    description: "Exile a creature or enchantment card from your graveyard for a Zombie?".into(),
+                    body: Box::new(Effect::Seq(vec![
                     Effect::Move {
                         what: Selector::Take {
                             inner: Box::new(Selector::EachMatching {
@@ -568,7 +575,8 @@ pub fn tymaret_calls_the_dead() -> CardDefinition {
                             ..Default::default()
                         }),
                     },
-                ])),
+                    ])),
+                }),
                 else_: Box::new(Effect::Noop),
             },
         ])

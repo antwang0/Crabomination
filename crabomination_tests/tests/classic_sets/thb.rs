@@ -424,6 +424,10 @@ fn tymaret_calls_the_dead_chapters() {
         g.add_card_to_library(0, catalog::grizzly_bears());
     }
     let saga = g.add_card_to_hand(0, catalog::tymaret_calls_the_dead());
+    // "Then **you may** exile a creature or enchantment card"; accept it.
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new(
+        std::iter::repeat_with(|| crabomination::decision::DecisionAnswer::Bool(true)).take(6),
+    ));
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::CastSpell {

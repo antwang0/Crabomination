@@ -164,6 +164,13 @@ ORACLE_SKIP = (
     # cast/activate …" is a permission on *how you pay*, announced with the
     # payment, not a choice the resolving effect owns.
     "you may spend mana",
+    # "You may activate one of its loyalty abilities …" (The Chain Veil) is a
+    # **permission** granted for the turn, exercised by taking an action
+    # later, not a choice the resolving effect owns.
+    "you may activate",
+    # Conspiracy draft-time text ("immediately after the draft, you may …")
+    # describes a step this engine has no zone for at all.
+    "immediately after the draft",
     # CR 508.1g / 701.43d — "you may exert this creature as it attacks" is an
     # **optional cost to attack**, announced as attackers are declared
     # (`GameAction::DeclareAttackersExerting`, or the engine's policy when the
