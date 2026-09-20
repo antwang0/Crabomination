@@ -2450,6 +2450,14 @@ pub enum SelectionRequirement {
     /// ability (Satyr Firedancer). Reads
     /// `GameState.trigger_event_player_scratch`; false outside a trigger.
     ControlledByTriggerPlayer,
+    /// CR 506.2 / 508.1a — **controlled** by the player (or planeswalker's
+    /// controller) the effect's source is attacking, or, for an Aura or
+    /// Equipment source, the player its host is attacking. "Target creature
+    /// defending player controls" — provoke, Cyclops Gladiator, Blaze of
+    /// Glory. In a duel this is the same set as `ControlledByOpponent`; at
+    /// three seats or more it is one seat of several. False outside combat or
+    /// when the source is not attacking.
+    ControlledByDefendingPlayer,
     /// CR 108.3 — the object's owner is you (regardless of who controls it).
     /// Gruul Charm's "gain control of all permanents you own".
     OwnedByYou,
@@ -3526,6 +3534,9 @@ fn controller_suffix(r: &SelectionRequirement) -> Option<String> {
         SelectionRequirement::YouPlayer => Some("you".to_string()),
         SelectionRequirement::ControlledByOpponent => Some("an opponent controls".to_string()),
         SelectionRequirement::ControlledByTriggerPlayer => Some("that player controls".to_string()),
+        SelectionRequirement::ControlledByDefendingPlayer => {
+            Some("defending player controls".to_string())
+        }
         _ => None,
     }
 }

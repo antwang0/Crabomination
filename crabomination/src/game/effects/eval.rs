@@ -3431,6 +3431,19 @@ impl GameState {
     /// suite and `scripts/robustness_grid.sh` are the ratchet that keeps
     /// [`printed_requirement`](Self::printed_requirement) in step with it.
     #[inline]
+    /// CR 506.2 — the player `source` is attacking, or, for an Aura or
+    /// Equipment source, the player its host is attacking. `None` outside
+    /// combat and whenever neither is an attacker.
+    pub(crate) fn defending_player_for_source(&self, source: Option<CardId>) -> Option<usize> {
+        let attacker = source.filter(|id| self.attack_for(*id).is_some()).or_else(|| {
+            source
+                .and_then(|id| self.battlefield_find(id))
+                .and_then(|c| c.attached_to)
+                .filter(|id| self.attack_for(*id).is_some())
+        });
+        attacker.and_then(|id| self.attack_for(id)).and_then(|a| self.defender_for(a.target))
+    }
+
     pub(crate) fn requirement_on_permanent(
         &self,
         req: &SelectionRequirement,
@@ -3907,23 +3920,34 @@ impl GameState {
                 }
             }
             R::OwnedByDefendingPlayer => {
-                // The source may be the attacker itself or an Aura/Equipment
-                // riding one, so fall through to the attachment host.
-                let attacker = source.filter(|id| self.attack_for(*id).is_some()).or_else(|| {
-                    source
-                        .and_then(|id| self.battlefield_find(id))
-                        .and_then(|c| c.attached_to)
-                        .filter(|id| self.attack_for(*id).is_some())
-                });
-                let Some(defender) =
-                    attacker.and_then(|id| self.attack_for(id)).and_then(|a| self.defender_for(a.target))
-                else {
+                let Some(defender) = self.defending_player_for_source(source) else {
                     return false;
                 };
                 match target {
                     Target::Permanent(cid) => {
                         self.find_card_anywhere(*cid).is_some_and(|c| c.owner == defender)
                     }
+                    Target::Player(p) => *p == defender,
+                }
+            }
+            // CR 506.2 / 508.1a — the *controlled by* sibling. `ControlledBy…`
+            // reads the battlefield controller, which is what "target creature
+            // defending player controls" means; the owned-by arm above is for
+            // the clauses that reach a hidden zone.
+            R::ControlledByDefendingPlayer => {
+                let Some(defender) = self.defending_player_for_source(source) else {
+                    return false;
+                };
+                match target {
+                    Target::Permanent(cid) => match self.bf_hint_or_find(*cid, hint) {
+                        Some(c) => c.controller == defender,
+                        // CR 108.4 — off the battlefield there is no
+                        // controller; the owner stands in, as the sibling
+                        // arms do.
+                        None => {
+                            self.find_card_anywhere(*cid).is_some_and(|c| c.owner == defender)
+                        }
+                    },
                     Target::Player(p) => *p == defender,
                 }
             }
@@ -5206,7 +5230,7 @@ impl GameState {
             R::OwnedByYou => card.owner == controller,
             // Source-less path: the defending player needs the ability's
             // source, which only `evaluate_requirement_static` carries.
-            R::OwnedByDefendingPlayer => false,
+            R::OwnedByDefendingPlayer | R::ControlledByDefendingPlayer => false,
             R::Creature => {
                 // CR 604.3 — Grist is a creature everywhere but the battlefield.
                 card.definition.is_creature()

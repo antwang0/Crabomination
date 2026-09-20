@@ -1866,3 +1866,80 @@ mod another_target {
         assert!(r.is_err(), "one creature cannot be both slots: {r:?}");
     }
 }
+
+/// CR 506.2 / 508.1a — "defending player" is *one* seat, which only a pod can
+/// tell apart from "an opponent".
+mod defending_player {
+    use crabomination::card::{CardDefinition, CardType, SelectionRequirement as R};
+    use crabomination::game::types::{Attack, AttackTarget, GameAction, Target, TurnStep};
+    use crabomination::game::*;
+
+    fn bear(name: &'static str) -> CardDefinition {
+        CardDefinition {
+            name,
+            card_types: vec![CardType::Creature],
+            power: 2,
+            toughness: 2,
+            ..Default::default()
+        }
+    }
+
+    /// At four seats, attacking one opponent makes exactly that seat the
+    /// defending player: a creature the *other* two opponents control is not
+    /// "defending player controls", though it is "an opponent controls".
+    #[test]
+    fn controlled_by_defending_player_is_one_seat_of_three() {
+        let mut g = multi_player_game(4);
+        let attacker = g.add_card_to_battlefield(0, bear("Attacker"));
+        let theirs = g.add_card_to_battlefield(1, bear("Defender's Bear"));
+        let bystander = g.add_card_to_battlefield(2, bear("Bystander's Bear"));
+        g.clear_sickness(attacker);
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.step = TurnStep::DeclareAttackers;
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+            attacker,
+            target: AttackTarget::Player(1),
+        }]))
+        .expect("seat 0 attacks seat 1");
+
+        let ask = |id| {
+            g.evaluate_requirement_static(
+                &R::Creature.and(R::ControlledByDefendingPlayer),
+                &Target::Permanent(id),
+                0,
+                Some(attacker),
+            )
+        };
+        assert!(ask(theirs), "seat 1 is the defending player");
+        assert!(!ask(bystander), "seat 2 is an opponent but is NOT defending");
+        // The atom it replaces cannot tell them apart, which is the bug.
+        let opp = |id| {
+            g.evaluate_requirement_static(
+                &R::Creature.and(R::ControlledByOpponent),
+                &Target::Permanent(id),
+                0,
+                Some(attacker),
+            )
+        };
+        assert!(opp(theirs) && opp(bystander), "`an opponent controls` takes both");
+    }
+
+    /// False outside combat and false for a source that is not attacking —
+    /// the clause has no defending player to name.
+    #[test]
+    fn controlled_by_defending_player_is_false_when_the_source_is_not_attacking() {
+        let mut g = multi_player_game(4);
+        let idle = g.add_card_to_battlefield(0, bear("Idle"));
+        let theirs = g.add_card_to_battlefield(1, bear("Their Bear"));
+        assert!(
+            !g.evaluate_requirement_static(
+                &R::ControlledByDefendingPlayer,
+                &Target::Permanent(theirs),
+                0,
+                Some(idle),
+            ),
+            "nobody is attacking, so nobody is the defending player",
+        );
+    }
+}
