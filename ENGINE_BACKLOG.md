@@ -6983,6 +6983,16 @@ one of its own reasons teaches the next run to ignore the word.**
     (`prefers_friendly_target_for_slot`) is the shape, and it was written and
     reverted once already this branch because `slot_owner` resolves a modal
     body's first *mode* rather than the chosen one.
+    ⚠⚠ **PRICED: 531 cards.** `structural_audit::friendly_filtered_slot_with_a_hostile_verb_census`
+    (an `#[ignore]` census, run it with `--run-ignored all --no-capture`) counts
+    every card pairing a `ControlledByYou` target slot with a verb the
+    classifier calls hostile. **Reading the slot's filter would change the
+    auto-target seat preference on all 531**, which is a 2-player bot-policy
+    change: it re-blesses golden traces and has to be measured against the
+    committed `--bench` invariant. That is a run of its own, not a rider on a
+    card commit — and the number is why. **A gap worth fixing and a gap worth
+    fixing *now* are different questions, and a census is what separates
+    them.**
   - `Effect::ExileAndReturnToOwner` (every blink: Flicker, Ghostly Flicker,
     Conjurer's Closet, Displacer Kitten, Teleportation Circle) **keeps the
     permanent's `CardId` across the blink** — it moves the same instance out

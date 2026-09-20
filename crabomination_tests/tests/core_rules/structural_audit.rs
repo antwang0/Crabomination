@@ -1286,3 +1286,72 @@ fn every_printed_you_may_is_a_choice() {
     );
 }
 
+
+// ── Census: a friendly-filtered slot whose verb reads hostile ──────────────
+
+/// ⚠ **A census, not a gate.** It prints the size of a known bot-quality gap
+/// so the next run can price the fix instead of guessing at it.
+///
+/// `auto_target_for_effect_*` picks a seat to prefer from
+/// `Effect::prefers_friendly_target`, which classifies the **verb**. When the
+/// slot's own filter already says `ControlledByYou`, the verb cannot be wrong
+/// about whose permanent it is — but the picker does not read the filter, so a
+/// verb that defaults to hostile (every blink: `ExileAndReturnToOwner`,
+/// `ExileReturnToOwnerNextEndStep`) ranks the opponent's board first and, on a
+/// `min_targets: 0` slot, declines rather than pick your own creature. Eerie
+/// Interlude and Hide on the Ceiling are both on it.
+///
+/// The fix is **not** "make blink friendly": the same effects are used
+/// hostilely (Mystifying Maze blinks an *attacking* creature), so the answer
+/// has to come from the slot's filter. What that costs is the number below —
+/// every one of these cards would have its auto-target seat preference change,
+/// which is a 2-player bot-policy change and re-blesses golden traces. Price
+/// it before taking it.
+///
+/// Run: `cargo nextest run -p crabomination_tests --test core_rules \
+///   -E 'test(friendly_filtered_slot)' --run-ignored all --no-capture`
+#[test]
+#[ignore = "census; prints, run manually with --run-ignored all --nocapture"]
+fn friendly_filtered_slot_with_a_hostile_verb_census() {
+    use crabomination::card::SelectionRequirement as R;
+
+    /// Does this requirement force "a permanent you control" on every branch?
+    fn forces_your_control(req: &R) -> bool {
+        match req {
+            R::ControlledByYou => true,
+            R::And(a, b) => forces_your_control(a) || forces_your_control(b),
+            R::Or(a, b) => forces_your_control(a) && forces_your_control(b),
+            _ => false,
+        }
+    }
+
+    let mut seen: HashSet<&'static str> = HashSet::new();
+    let mut hits: Vec<&'static str> = Vec::new();
+    for factory in all_known_factories() {
+        let def = factory();
+        if !seen.insert(def.name) {
+            continue;
+        }
+        let mut effects: Vec<&crabomination::effect::Effect> = vec![&def.effect];
+        effects.extend(def.triggered_abilities.iter().map(|t| &t.effect));
+        effects.extend(def.activated_abilities.iter().map(|a| &a.effect));
+        for eff in effects {
+            if eff.prefers_friendly_target() {
+                continue;
+            }
+            if eff.primary_target_filter().is_some_and(forces_your_control) {
+                hits.push(def.name);
+                break;
+            }
+        }
+    }
+    hits.sort_unstable();
+    println!(
+        "\n{} cards pair a `ControlledByYou` target slot with a verb the \
+         classifier calls hostile.\n",
+        hits.len(),
+    );
+    for n in &hits {
+        println!("  {n}");
+    }
+}
