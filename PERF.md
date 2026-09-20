@@ -3015,6 +3015,43 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-09-20 (the eleventh Commander session, CLOSING tip) — guardrail, no perf work
+
+Eight bug classes, one rules feature, one pod deck and ~50 card edits later,
+at the tip:
+
+```text
+--bench (release-fast, CRAB_THREAD_CHECK=1)
+  decisions          195,806   byte-identical to the committed invariant
+  turns_per_game       27.49   "
+  decisions_per_game   611.9   "
+  stalls          0 (cap 0 / board 0 / stuck 0 / draw 0)
+  determinism     ok (all pairs split); thread_determinism ok (3 vs 1)
+  peak_rss_mib     29.3
+
+two-player pools  4 fresh seeds (3301-3304) x cube/sos/sealed x 300 an
+                  archetype = 30,000 games, 0 panics, 0 caps, 0 board caps,
+                  0 stuck; 3 draws (0.010 %, one sealed block) — CR 104.4 is
+                  an outcome
+
+pod               2 fresh seeds (9800/9801) x 2..10 seats x 1,000 = 18,000
+                  games, all 18 blocks 1,000/1,000 decided, every
+                  undecided_by column zero, zero panics
+                  turns/game 19.92 32.69 45.43 57.69 64.92 77.95 93.50 99.29 123.77
+                             19.45 32.20 45.01 56.99 64.72 77.16 92.48 99.64 123.63
+```
+
+📐📐 **THE GUARDRAIL LESSON OF THE WHOLE SESSION, STATED ONCE.** `--bench`
+came back byte-identical at 195,806 after **every** commit, including the six
+that changed how a cube card plays and the one that rewrote exert. That is
+not reassurance and was never evidence: `--decks fixed` is four hand-built
+archetypes and holds almost none of the ~50 cards this run touched. The
+30,000-game pool run is the only two-player guardrail with anything to say
+about them, and the 18,000-game pod run is the only one that exercises an
+elimination — which is what half this session's finds were about. **Pick the
+guardrail by what the diff touched.** A byte-identical bench is a statement
+about the fixed pool and nothing else.
+
 ### 2026-09-20 (the eleventh Commander session) — guardrail, no perf work
 
 Three rules/bug classes ("any player may" asking every seat, 7 cards; the

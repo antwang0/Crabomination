@@ -97,7 +97,10 @@ and Fumiko force. It was cut for Impact Tremors — a clock that reads "each
 opponent", the property Edgar and Yuriko have — and **the A/B refutes it**:
 same seed, same field, one card different, turns/game 124.15 → **123.07**, a
 1.1-turn move. What it did move is the deck, 4.6 → **7.2 %** of ten-seat pods
-against a seat's 10.0 %. 💡 **So the +24.4 is still unexplained**; the
+against a seat's 10.0 %. ⚠ Two later runs at fresh seeds read **5.0 %** and
+**4.7 %** over 1,000 games each, so the 7.2 % was a 500-game reading and the
+seat sits around **5 %** — a third of par, and the field's slowest list.
+💡 **So the +24.4 is still unexplained**; the
 remaining suspects are Protector of the Crown (a sponge that redirects *all*
 damage dealt to its controller) and the monarch itself, which hands an extra
 card a turn to whoever holds it and so lengthens every seat's game rather
