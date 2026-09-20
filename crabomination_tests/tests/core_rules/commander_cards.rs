@@ -5,6 +5,7 @@
 use crabomination::card::{
     CardDefinition, CardId, CardType, CreatureType, Keyword, Subtypes, Supertype,
 };
+use crabomination::decision::{DecisionAnswer, ScriptedDecider};
 use crabomination::catalog;
 use crabomination::format::Format;
 use crabomination::game::types::Target;
@@ -639,4 +640,73 @@ fn zedruu_counts_only_what_it_gave_away() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, life + 1, "X is one: the Bears it gave away");
     assert_eq!(g.players[0].hand.len(), 1, "and one card, before the turn's own draw");
+}
+
+// ── Phelddagrif ─────────────────────────────────────────────────────────────
+
+/// Each of Phelddagrif's three abilities pairs a benefit for its controller
+/// with a gift the OPPONENT receives, and the three gifts take three
+/// different shapes: a token the opponent creates, life the opponent gains,
+/// and a draw the opponent chooses.
+#[test]
+fn phelddagrif_gives_each_gift_to_the_targeted_opponent() {
+    let hippos = |g: &GameState, seat: usize| {
+        g.battlefield
+            .iter()
+            .filter(|c| c.definition.name == "Hippo" && c.controller == seat)
+            .count()
+    };
+    let mut g = multi_player_game(4);
+    g.step = TurnStep::PreCombatMain;
+    let hippo_dad = g.add_card_to_battlefield(0, catalog::phelddagrif());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    let life = g.players[2].life;
+
+    activate(&mut g, hippo_dad, 0, Some(Target::Player(2))).expect("{G}");
+    drain_stack(&mut g);
+    assert!(has_kw(&g, hippo_dad, Keyword::Trample), "it gets the trample");
+    assert_eq!(hippos(&g, 2), 1, "seat 2 creates the Hippo");
+    assert_eq!(hippos(&g, 0), 0, "and seat 0 does not");
+
+    activate(&mut g, hippo_dad, 1, Some(Target::Player(2))).expect("{W}");
+    drain_stack(&mut g);
+    assert!(has_kw(&g, hippo_dad, Keyword::Flying), "it gets the flying");
+    assert_eq!(g.players[2].life, life + 2, "seat 2 gains the life");
+}
+
+/// "{U}: Return Phelddagrif to its owner's hand. Target opponent **may** draw
+/// a card." ⚠ Two things worth pinning here. The "may" is the OPPONENT's, so
+/// the ask is routed to them (`MayDoBy`, not `MayDo`) — and the engine's
+/// `AutoDecider` **declines** every optional body, so the default path is a
+/// bounce with no draw. The gift only lands when the asked seat says yes,
+/// which is what the scripted half asserts.
+#[test]
+fn phelddagrif_bounces_itself_and_offers_the_opponent_the_draw() {
+    let setup = || {
+        let mut g = multi_player_game(4);
+        g.step = TurnStep::PreCombatMain;
+        let id = g.add_card_to_battlefield(0, catalog::phelddagrif());
+        g.add_card_to_library(2, catalog::grizzly_bears());
+        g.players[2].hand.clear();
+        g.players[0].mana_pool.add(Color::Blue, 1);
+        (g, id)
+    };
+
+    // Declined (the AutoDecider's answer): the bounce still happens.
+    let (mut g, hippo_dad) = setup();
+    activate(&mut g, hippo_dad, 2, Some(Target::Player(2))).expect("{U}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(hippo_dad).is_none(), "it left the battlefield");
+    assert_eq!(g.players[2].hand.len(), 0, "a declined 'may' draws nothing");
+
+    // Accepted: the opponent takes the card, and it is the OPPONENT's draw.
+    let (mut g, hippo_dad) = setup();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    activate(&mut g, hippo_dad, 2, Some(Target::Player(2))).expect("{U}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(hippo_dad).is_none(), "it still left");
+    assert_eq!(g.players[2].hand.len(), 1, "seat 2 drew");
+    assert!(g.players[0].hand.iter().all(|c| c.definition.name != "Grizzly Bears"),
+        "and seat 0 did not");
 }

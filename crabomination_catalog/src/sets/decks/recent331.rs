@@ -24,12 +24,13 @@
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Keyword,
-    SelectionRequirement as R, Selector, Subtypes, Supertype, TriggeredAbility, Value,
+    SelectionRequirement as R, Selector, Subtypes, Supertype, TokenDefinition, TriggeredAbility,
+    Value,
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, ZoneDest};
 use crate::game::types::TurnStep;
-use crate::mana::{b, cost, g, generic, r, u, w};
+use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 /// Nekusar, the Mindrazer — {2}{U}{B}{R} Legendary Creature — Zombie Wizard
 /// 2/4. "At the beginning of each player's draw step, that player draws an
@@ -208,6 +209,95 @@ pub fn zedruu_the_greathearted() -> CardDefinition {
             },
             ..Default::default()
         }],
+        ..Default::default()
+    }
+}
+
+/// Phelddagrif — {1}{G}{W}{U} Legendary Creature — Phelddagrif 4/4. Three
+/// activated abilities, each of which pairs a small benefit for its
+/// controller with a **gift to an opponent**:
+///
+/// * `{G}`: trample until end of turn. Target opponent creates a 1/1 green
+///   Hippo creature token.
+/// * `{W}`: flying until end of turn. Target opponent gains 2 life.
+/// * `{U}`: return Phelddagrif to its owner's hand. Target opponent **may**
+///   draw a card.
+///
+/// The original group-hug card, and the one that shows the three shapes a
+/// gift takes: a token the *opponent* creates (`CreateToken { who:
+/// Target(0) }`), life the opponent gains, and a draw the opponent **chooses**
+/// — `Effect::MayDoBy`, because the printed "may" belongs to the opponent and
+/// not to the activating player. A plain `MayDo` would ask the wrong seat.
+pub fn phelddagrif() -> CardDefinition {
+    let hippo = || TokenDefinition {
+        name: "Hippo".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Hippo],
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    let ability = |mana, effect| ActivatedAbility { mana_cost: mana, effect, ..Default::default() };
+    let self_keyword = |kw| Effect::GrantKeyword {
+        what: Selector::This,
+        keyword: kw,
+        duration: Duration::EndOfTurn,
+    };
+    CardDefinition {
+        name: "Phelddagrif",
+        cost: cost(&[generic(1), g(), w(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phelddagrif],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        activated_abilities: vec![
+            ability(
+                cost(&[g()]),
+                Effect::Seq(vec![
+                    self_keyword(Keyword::Trample),
+                    Effect::CreateToken {
+                        who: PlayerRef::Target(0),
+                        count: Value::ONE,
+                        definition: std::sync::Arc::new(hippo()),
+                    },
+                ]),
+            ),
+            ability(
+                cost(&[w()]),
+                Effect::Seq(vec![
+                    self_keyword(Keyword::Flying),
+                    Effect::GainLife {
+                        who: Selector::Player(PlayerRef::Target(0)),
+                        amount: Value::Const(2),
+                    },
+                ]),
+            ),
+            ability(
+                cost(&[u()]),
+                Effect::Seq(vec![
+                    Effect::Move {
+                        what: Selector::This,
+                        to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+                    },
+                    Effect::MayDoBy {
+                        who: PlayerRef::Target(0),
+                        description: "Draw a card?".into(),
+                        body: Box::new(Effect::Draw {
+                            who: Selector::Player(PlayerRef::Target(0)),
+                            amount: Value::ONE,
+                        }),
+                    },
+                ]),
+            ),
+        ],
         ..Default::default()
     }
 }
