@@ -2532,6 +2532,7 @@ static DECKS: &[Factory] = &[
     super::decks::plagued_rusalka,
     super::decks::dragonmaster_outcast,
     super::decks::cloud_of_faeries,
+    super::decks::tainted_remedy,
     super::decks::languish,
     super::decks::lay_down_arms,
     super::decks::merfolk_branchwalker,

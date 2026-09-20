@@ -191,10 +191,14 @@ pub fn erebos_god_of_the_dead() -> CardDefinition {
                     threshold: 5,
                 },
             },
+            // ⚠ The print is "**Your opponents** can't gain life", and this
+            // shipped as `Controller` with a `description` that agreed with
+            // the bug — Erebos stopped its own controller gaining life, which
+            // is the reverse of the card. `audit_player_static_target.py`.
             StaticAbility {
-                description: "You can't gain life.",
+                description: "Your opponents can't gain life.",
                 effect: StaticEffect::PlayerCannotGainLife {
-                    target: PlayerStaticTarget::Controller,
+                    target: PlayerStaticTarget::EachOpponent,
                 },
             },
         ],

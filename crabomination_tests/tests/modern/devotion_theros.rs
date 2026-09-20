@@ -75,13 +75,63 @@ fn nylea_becomes_a_creature_at_five_devotion_and_anthems_others() {
     assert_eq!(bcp.toughness, 2);
 }
 
+/// Erebos, God of the Dead prints "**Your opponents** can't gain life."
+///
+/// ⚠ Regression, and it replaces a test that asserted the opposite. The card
+/// shipped as `PlayerCannotGainLife { target: Controller }` with a
+/// `description` reading "You can't gain life", and the test agreed with both
+/// — so the card stopped its own controller gaining life and nothing in the
+/// repo disagreed with it except the printed card.
+/// `scripts/audit_player_static_target.py` is the ratchet.
 #[test]
-fn erebos_prevents_controller_life_gain() {
+fn erebos_stops_your_opponents_gaining_life_not_you() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::erebos_god_of_the_dead());
-    let before = g.players[0].life;
+
+    let theirs = g.players[1].life;
+    g.adjust_life(1, 5);
+    assert_eq!(g.players[1].life, theirs, "an opponent gains nothing");
+
+    let yours = g.players[0].life;
     g.adjust_life(0, 5);
-    assert_eq!(g.players[0].life, before, "Erebos stops your life gain");
+    assert_eq!(g.players[0].life, yours + 5, "and you gain normally");
+}
+
+/// The same clause at four seats, where "your opponents" is three players and
+/// the duel's single opponent cannot tell a fan-out from a mistake.
+#[test]
+fn erebos_stops_every_opponent_in_a_pod() {
+    use crabomination::game::multi_player_game;
+    let mut g = multi_player_game(4);
+    g.add_card_to_battlefield(0, catalog::erebos_god_of_the_dead());
+    for seat in [1usize, 2, 3] {
+        let before = g.players[seat].life;
+        g.adjust_life(seat, 4);
+        assert_eq!(g.players[seat].life, before, "seat {seat} gains nothing");
+    }
+    let yours = g.players[0].life;
+    g.adjust_life(0, 4);
+    assert_eq!(g.players[0].life, yours + 4, "and the controller is untouched");
+}
+
+/// Tainted Remedy — {2}{B}. "If an opponent would gain life, that player loses
+/// that much life instead." CR 614 replacement: the gain is not merely
+/// stopped, it is reversed, which is what separates it from Erebos's clause
+/// and from the `PlayerCannotGainLife` approximation an engine doc comment
+/// used to offer for it.
+#[test]
+fn cr_614_tainted_remedy_turns_an_opponents_life_gain_into_a_loss() {
+    use crabomination::game::multi_player_game;
+    let mut g = multi_player_game(4);
+    g.add_card_to_battlefield(0, catalog::tainted_remedy());
+
+    let before = g.players[1].life;
+    g.adjust_life(1, 5);
+    assert_eq!(g.players[1].life, before - 5, "reversed, not merely prevented");
+
+    let yours = g.players[0].life;
+    g.adjust_life(0, 5);
+    assert_eq!(g.players[0].life, yours + 5, "your own gain is untouched");
 }
 
 // ── CR 508.0 — "attacks only alone" (Master of Cruelties) ─────────────────────

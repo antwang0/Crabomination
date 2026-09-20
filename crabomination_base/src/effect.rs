@@ -180,8 +180,16 @@ pub enum PlayerStaticTarget {
     /// life" applied to the controller-only side. Rare.
     Controller,
     /// Each opponent of the source's controller — the default for the
-    /// printed "your opponents can't gain life" wording (Erebos,
-    /// Rampaging Ferocidon, Tainted Remedy approximation).
+    /// printed "your opponents can't gain life" wording (Erebos, God of the
+    /// Dead).
+    ///
+    /// ⚠ **This used to offer itself as a "Tainted Remedy approximation",
+    /// which it is not.** Tainted Remedy turns an opponent's life gain into a
+    /// *loss*; `PlayerCannotGainLife` merely stops it. The correct primitive —
+    /// `StaticEffect::LifeGainBecomesLoss` — was already two files away, so
+    /// the note offered a strictly weaker shape for a card the engine could
+    /// model exactly. A doc comment is not the place to settle how a card that
+    /// does not exist yet will be approximated.
     EachOpponent,
     /// Every player on the table — Sulfuric Vortex (each player can't
     /// gain life), Stigma Lasher's "permanents you control share the

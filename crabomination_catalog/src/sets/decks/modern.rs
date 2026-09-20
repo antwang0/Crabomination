@@ -4200,6 +4200,31 @@ pub fn cloud_of_faeries() -> CardDefinition {
     }
 }
 
+/// Tainted Remedy — {2}{B} Enchantment (ORI). "If an opponent would gain
+/// life, that player loses that much life instead."
+///
+/// CR 614 life-gain replacement. `StaticEffect::LifeGainBecomesLoss` was
+/// written for this card and had shipped without it — ⚠ and a doc comment on
+/// `PlayerStaticTarget::EachOpponent` had meanwhile offered
+/// `PlayerCannotGainLife` as a "Tainted Remedy approximation", which merely
+/// stops the gain where the card reverses it. The exact primitive was two
+/// files away the whole time (`audit_doc_card_names.py`).
+pub fn tainted_remedy() -> CardDefinition {
+    CardDefinition {
+        name: "Tainted Remedy",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "If an opponent would gain life, that player loses that much \
+                          life instead.",
+            effect: StaticEffect::LifeGainBecomesLoss {
+                target: crate::effect::PlayerStaticTarget::EachOpponent,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Languish — {2}{B}{B} Sorcery. All creatures get -4/-4 until end of turn.
 ///
 /// Sweeper: shrink everyone by -4/-4 EOT, killing X/4-and-below
