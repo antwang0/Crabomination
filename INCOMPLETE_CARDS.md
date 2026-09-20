@@ -443,6 +443,25 @@ Three approximations the fixes left standing, each documented at its variant:
 | Goblin Welder | 🟡 the second target ("target artifact card in **that player's** graveyard") is auto-picked by `Effect::WeldArtifacts` at highest mana value rather than declared as a target — a cross-target constraint no slot can express today. |
 | Ambush Wolf / Angel of Serenity | 🟡 "up to one" / "up to three **other**" — the Angel's `other` is now in the filter; the Wolf's "up to one" still fizzles the trigger rather than declining it, which differs only when a graveyard is empty. |
 
+## A layer observation, filed by the card that surfaced it (2026-09-20)
+
+**Cyberdrive Awakener** animates each *noncreature* artifact you control into
+a 4/4 with `Effect::BecomeCreature` (not `BecomeCreatureLosingTypes` — the
+printed line adds the creature type and keeps the artifact one, which the test
+asserts). Its own static, "Other artifact creatures you control have flying",
+then does **not** reach the Sol Ring it just animated, although a permanent
+that was *printed* an artifact creature does get the keyword.
+
+🔎 That is a **layer** question, not a card gap: a
+`StaticEffect::GrantKeyword { applies_to: EachPermanent(filter) }` whose
+filter names a card type does not see a type another continuous effect added
+in layer 4 (CR 613.1d, and the dependency in CR 613.8). Nothing else in the
+catalog pairs an animate-all with a type-filtered anthem on the same card, so
+this is the first place it shows. The card is complete and its test says both
+halves; the interaction is the open item, and it wants a run that can price
+re-evaluating `applies_to` against computed characteristics rather than
+printed ones.
+
 ## The "another target" class (2026-09-20) — closed, with four approximations named
 
 `scripts/audit_another_target.py`, and ENGINE_BACKLOG's fifty-third find.
