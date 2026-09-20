@@ -214,13 +214,35 @@ def is_hidden_zone_search(span: str, body: str) -> bool:
 
 # `..creature("Name", …)` — a struct-update base, the card's own helper.
 BASE_NAME = re.compile(r'\.\.\s*\w+\(\s*\n?\s*"([^"]+)"')
-# `fated("Name", …)` as the WHOLE body (after any `use` lines). Anchored on
-# purpose: an unanchored match takes the first nested call with a string
-# first argument, which is the **token** a card mints — Conqueror's Pledge
-# came back as "Kor Soldier" and Urza's Saga as "Construct".
-CALL_NAME = re.compile(
-    r'\A\{\s*(?:use\s[^;]+;\s*)*(?:\w+::)*\w+\(\s*\n?\s*"([^"]+)"'
-)
+def call_names(body):
+    """Names from `ident("Name", …)` calls at the body's **own** depth.
+
+    `fated("Fated Conflagration", …)` is the whole body; `spell("Will of the
+    Sultai", …)` is the tail expression after a `let`. Both are the card's own
+    helper. Depth is what separates them from the **token** a card mints,
+    which is always nested inside a struct literal or another call — an
+    unanchored regex took Conqueror's Pledge for "Kor Soldier" and Urza's Saga
+    for "Construct", and an anchored one missed every body with a `let` in
+    front of the call (126 factories).
+    """
+    out, depth, i = [], 0, 0
+    while i < len(body):
+        c = body[i]
+        if c in "([{":
+            depth += 1
+        elif c in ")]}":
+            depth -= 1
+        elif depth == 1 and (c.isalpha() or c == "_"):
+            ident = re.match(r"[A-Za-z_]\w*", body[i:]).group(0)
+            j = i + len(ident)
+            m = re.match(r'\s*\(\s*\n?\s*"([^"]+)"', body[j:])
+            # `.method("…")` and `field: name("…")` are not the card's helper.
+            if m and not body[:i].rstrip().endswith((".", ":")):
+                out.append(m.group(1))
+            i = j
+            continue
+        i += 1
+    return out
 
 
 def slug(name):
@@ -334,7 +356,7 @@ def defs_in(path):
         fn = m.group(1)
         field = re.findall(r'name:\s*"([^"]+)"', body)
         base = BASE_NAME.findall(body)
-        call = CALL_NAME.findall(body)
+        call = call_names(body)
         own = next((n for n in field + base + call if slug(n) == fn), None)
         name = own or (base[:1] or field[:1] or call[:1] or [None])[0]
         if name is None:

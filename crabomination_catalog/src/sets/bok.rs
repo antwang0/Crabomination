@@ -1358,8 +1358,17 @@ pub fn stream_of_consciousness() -> CardDefinition {
 pub fn toils_of_night_and_day() -> CardDefinition {
     let flip = |slot: u8| {
         // "target permanent" — without the filter the slot enumerates against
-        // `Any`, which also matches a player.
-        let what = || Selector::TargetFiltered { slot, filter: R::Permanent };
+        // `Any`, which also matches a player. CR 601.2c: the printed
+        // "**another** target permanent" forbids slot 1 from naming slot 0's
+        // object, which two instances of "target" would otherwise allow.
+        let what = move || Selector::TargetFiltered {
+            slot,
+            filter: if slot == 0 {
+                R::Permanent
+            } else {
+                R::Permanent.and(R::OtherThanTargetSlot(0))
+            },
+        };
         Effect::ChooseMode(vec![
             Effect::Tap { what: what() },
             Effect::Untap { what: what(), up_to: None },
