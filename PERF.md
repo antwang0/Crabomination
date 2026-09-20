@@ -9512,6 +9512,39 @@ short to say so.
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
 
+### GUARDRAIL 2026-09-20 — the multi-slot trick fix moves SEVEN cards and NONE of them is in a pool
+
+`--bench` on the fix, `release-fast`, `CRAB_THREAD_CHECK=1`:
+
+```text
+  decisions          195,806   byte-identical to the committed invariant
+  turns_per_game       27.49   "
+  decisions_per_game   611.9   "
+  stalls          0 (cap 0 / board 0 / stuck 0 / draw 0)
+  games_per_s      504.49   peak_rss_mib 29.8
+  determinism        ok (all pairs split)
+  thread_determinism ok (3 vs 1 threads identical)
+```
+
+⚠ **`is_combat_trick` runs on every hand card of every game, two-player
+included, so byte-identical here is necessary and not sufficient** — NEXT's own
+rule that `--bench` reads `--decks fixed` and says nothing about a card change.
+The pools it cannot reach: **10,000 games over cube / sos / sealed (400 a
+archetype, seed 31337), 0 undecided, 0 panics.** And the reason both are clean
+is measured rather than argued: the seven cards whose classification moved
+(Agony Warp, Consume Strength, Leeching Bite, Schismotivate, Seeds of Strength,
+Skulduggery, Steal Strength) appear **nowhere** in `crabomination/src` outside
+`pod/decks.rs`, so none is in `cube`, `sos`, `sealed` or `fixed`.
+
+Suite **20,229 / 0 / 7**, clippy **0** over the workspace, and
+`cargo check --profile release-fast -p crabomination --bin bot_ladder` clean —
+the one gate in the loop that sees `debug-assertions = false`.
+
+**Pod, `release-fast`, seed 9902, 10 seats x 2,000 games: 2,000 decided, every
+`undecided_by` column zero, zero panics.** Same seed before and after the fix:
+**434 distinct cards played with Agony Warp unplayed → 435, all ten target
+decks complete.**
+
 ### GUARDRAIL 2026-09-20 — the pod stack fix and the card census move NOTHING, and the pod smoke now runs on a DEBUG build
 
 `--bench` at `88f07f22`, `release-fast`, `CRAB_THREAD_CHECK=1`:

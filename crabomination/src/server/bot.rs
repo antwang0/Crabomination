@@ -16924,10 +16924,24 @@ fn action_outcome_is_temporary(state: &GameState, action: &GameAction) -> bool {
     contains_temporary_leaf(mode_branch(&card.definition.effect, mode))
 }
 
-/// A pure temporary-pump instant aimed at a target creature (Giant
+/// A pure temporary-pump instant aimed at **one** target creature (Giant
 /// Growth, Infuriate): the whole effect tree is target pumps with an
-/// end-of-turn/combat duration. Anything with riders (draw, damage,
-/// counters, keyword grants) stays castable on the normal schedule.
+/// end-of-turn/combat duration, all naming the same slot. Anything with
+/// riders (draw, damage, counters, keyword grants) stays castable on the
+/// normal schedule.
+///
+/// The caller drops a trick from the hand sweep **unconditionally**, so this
+/// answering `true` means `pick_combat_trick` is the card's only route onto
+/// the stack. That is why the single-slot condition is part of the
+/// definition and not a refinement of it: `pick_combat_trick`'s
+/// `pump_amounts` sums a `Seq` without reading which slot each clause names,
+/// so a **two-target** pump folds into one total aimed at one creature and
+/// can never be picked. Agony Warp ("target creature gets -3/-0; target
+/// creature gets -0/-3") was both — dropped from the sweep here and
+/// unpickable there — and so was castable by no path at all: zero casts in
+/// 2,000 ten-seat pod games, the only card of the ten target decks' 1,000
+/// that a run never played. A multi-slot pump is not a trick; it is removal,
+/// and it belongs on the normal schedule.
 fn is_combat_trick(def: &CardDefinition) -> bool {
     use crate::card::CardType;
     use crate::effect::{Duration, Selector};
@@ -16945,7 +16959,27 @@ fn is_combat_trick(def: &CardDefinition) -> bool {
             _ => false,
         }
     }
-    all_temp_pumps(&def.effect)
+    /// Every slot a pump clause names. More than one and `pick_combat_trick`
+    /// cannot evaluate the card, because its amounts fold across the `Seq`.
+    fn pump_slots(e: &Effect, out: &mut Vec<u8>) {
+        match e {
+            Effect::PumpPT { what, .. } => match what {
+                Selector::Target(n) => out.push(*n),
+                Selector::TargetFiltered { slot, .. } => out.push(*slot),
+                _ => {}
+            },
+            Effect::Seq(v) => v.iter().for_each(|x| pump_slots(x, out)),
+            _ => {}
+        }
+    }
+    if !all_temp_pumps(&def.effect) {
+        return false;
+    }
+    let mut slots = Vec::new();
+    pump_slots(&def.effect, &mut slots);
+    slots.sort_unstable();
+    slots.dedup();
+    slots.len() <= 1
 }
 
 /// After blocks are in: cast a held pump trick when it flips a fight our
@@ -23418,6 +23452,95 @@ mod tests {
         assert!(is_combat_trick(&catalog::giant_growth()));
         assert!(!is_combat_trick(&catalog::lightning_bolt()), "burn is not a trick");
         assert!(!is_combat_trick(&catalog::grizzly_bears()));
+    }
+
+    /// A pump naming TWO slots is not a trick — it is removal, and calling it
+    /// one made it castable by no path at all.
+    ///
+    /// The hand sweep drops a trick unconditionally, so `pick_combat_trick`
+    /// is the only route onto the stack for one; and that function's
+    /// `pump_amounts` sums a `Seq` without reading which slot each clause
+    /// names, so Agony Warp's -3/-0 (slot 0) and -0/-3 (slot 1) folded into
+    /// one (-3,-3) aimed at our OWN creature, which never flips a fight.
+    /// Result: zero casts in 2,000 ten-seat pod games — the only card of the
+    /// ten target decks' 1,000 that a run never played (`--card-census`,
+    /// 2026-09-20). Giant Growth stays a trick, which is the half that must
+    /// not move: it is single-slot.
+    #[test]
+    fn a_two_target_pump_is_removal_not_a_trick() {
+        let warp = catalog::agony_warp();
+        assert!(
+            !is_combat_trick(&warp),
+            "Agony Warp names two target slots, so `pick_combat_trick` cannot evaluate it \
+             and the hand sweep must not drop it"
+        );
+        // The single-slot shape is untouched: one pump, one slot, still held
+        // for the fight window.
+        assert!(is_combat_trick(&catalog::giant_growth()));
+    }
+
+    /// The blast radius of the rule above, over the whole catalog: **seven**
+    /// cards stop being tricks, and none of them is in a two-player pool.
+    ///
+    /// `is_combat_trick` runs on every hand card of every game, two-player
+    /// included, so the blast radius is a claim that has to be measured and
+    /// not reasoned. Reasoning got it wrong: a source census keyed on the
+    /// literal `slot:` spelling said "one card", and this test said seven.
+    /// The six it missed are the "another target creature" cycle, and one of
+    /// them is the case that makes this a WRONG action rather than a missed
+    /// one — **Seeds of Strength** is three separate +1/+1 pumps on three
+    /// creatures, which `pump_amounts` folded into **+3/+3 on one**, a 3x
+    /// over-valuation the trick picker then acted on. The mixed-sign cycle
+    /// (Consume Strength, Leeching Bite, Schismotivate, Skulduggery, Steal
+    /// Strength) folds to (0,0) instead, so those were only ever missed.
+    ///
+    /// None of the seven appears anywhere in `crabomination/src` outside
+    /// `pod/decks.rs` (Agony Warp), so none is in `cube`, `sos`, `sealed` or
+    /// `fixed` — which is why the golden traces do not move. A new name here
+    /// is a two-player behaviour change and needs its own bench reading.
+    #[test]
+    fn the_multi_slot_exclusion_moves_only_cards_outside_the_two_player_pools() {
+        let mut moved = Vec::new();
+        for f in crate::catalog::all_known_factories() {
+            let def = f();
+            if !def.card_types.contains(&crate::card::CardType::Instant) {
+                continue;
+            }
+            // Entirely target pumps (the old classifier) but not a trick now.
+            let all_pumps = {
+                fn go(e: &Effect) -> bool {
+                    use crate::effect::{Duration, Selector};
+                    match e {
+                        Effect::PumpPT {
+                            what: Selector::Target(_) | Selector::TargetFiltered { .. },
+                            duration: Duration::EndOfTurn | Duration::EndOfCombat,
+                            ..
+                        } => true,
+                        Effect::Seq(v) => !v.is_empty() && v.iter().all(go),
+                        _ => false,
+                    }
+                }
+                go(&def.effect)
+            };
+            if all_pumps && !is_combat_trick(&def) {
+                moved.push(def.name);
+            }
+        }
+        moved.sort_unstable();
+        assert_eq!(
+            moved,
+            vec![
+                "Agony Warp",
+                "Consume Strength",
+                "Leeching Bite",
+                "Schismotivate",
+                "Seeds of Strength",
+                "Skulduggery",
+                "Steal Strength",
+            ],
+            "a new name here is a card leaving the trick window, and if it is in cube / sos / \
+             sealed / fixed it is a two-player behaviour change that needs its own bench reading"
+        );
     }
 
     /// The bot holds Giant Growth in its main phase (a sorcery-speed pump

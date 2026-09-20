@@ -98,59 +98,75 @@ the handoff.
 | Bugs & robustness | [FIXED 2026-09-19 (the forty-ninth find) — "enters tapped" is a REPLACEMENT too, and 83 cards shipped it as a trigger in a clause the 614.12 audit cannot match](#fixed-2026-09-19-the-forty-ninth-find--enters-tapped-is-a-replacement-too-and-83-cards-shipped-it-as-a-trigger-in-a-clause-the-61412-audit-cannot-match) | 83 → 0 |
 | Bugs & robustness | [FIXED 2026-09-19/20 (the forty-eighth find) — "As this ~ enters" is a REPLACEMENT and 89 shipped cards modelled it as an ETB TRIGGER: 89 → 6](#fixed-2026-09-1920-the-forty-eighth-find--as-this--enters-is-a-replacement-and-89-shipped-cards-modelled-it-as-an-etb-trigger-89--6) | 89 → 6 |
 | Bugs & robustness | [FIXED 2026-09-19 (the forty-seventh find) — six hand-written SEAT-INDEX walks, and the two that let a player who had left the game vote and be voted for](#fixed-2026-09-19-the-forty-seventh-find--six-hand-written-seat-index-walks-and-the-two-that-let-a-player-who-had-left-the-game-vote-and-be-voted-for) | 60 |
-| Bugs & robustness | [OPEN 2026-09-20 (the sixty-third find) — a target-deck card that is UNCASTABLE, and the hold/pick pair that makes it so](#open-2026-09-20-the-sixty-third-find--a-target-deck-card-that-is-uncastable-and-the-holdpick-pair-that-makes-it-so) | 106 |
+| Bugs & robustness | [FIXED 2026-09-20 (the sixty-third find) — a target-deck card CASTABLE BY NO PATH, and the multi-target pump the trick picker folded onto one creature](#fixed-2026-09-20-the-sixty-third-find--a-target-deck-card-castable-by-no-path-and-the-multi-target-pump-the-trick-picker-folded-onto-one-creature) | 106 |
 | Bugs & robustness | [FIXED 2026-09-20 (the sixty-second find) — the pod worker was the one game worker in the tree still on the 2 MiB spawn default, so EVERY Commander pod aborted on a debug build](#fixed-2026-09-20-the-sixty-second-find--the-pod-worker-was-the-one-game-worker-in-the-tree-still-on-the-2-mib-spawn-default-so-every-commander-pod-aborted-on-a-debug-build) | 106 |
 | Bugs & robustness | [The 2026-09-12/13 handoff detail, moved verbatim from TODO's NEXT](#the-2026-09-1213-handoff-detail-moved-verbatim-from-todos-next) | 182 |
 
 
 # Bugs & robustness
 
-## OPEN 2026-09-20 (the sixty-third find) — a target-deck card that is UNCASTABLE, and the hold/pick pair that makes it so
+## FIXED 2026-09-20 (the sixty-third find) — a target-deck card CASTABLE BY NO PATH, and the multi-target pump the trick picker folded onto one creature
 
 `--card-census` (new, `bot_ladder --commander --card-census`) totals the action
 census by card and names, per seated deck, what a run never cast, played or
-activated. **10-seat pods, 2,000 games, seed 9902, 434 distinct cards played:
-nine of the ten target decks played every single card in the list.** The tenth
-left exactly one — **Yuriko's Agony Warp, never cast once in 2,000 games.**
-Not variance: Yuriko is seated every game of a ten-seat pod, and a 40-game run
-at a different seed named the same single card.
+activated. **10-seat pods, 2,000 games, seed 9902: nine of the ten target decks
+played every single card in the list.** The tenth left exactly one — **Yuriko's
+Agony Warp, never cast once.** Not variance; a 40-game run at another seed
+named the same single card.
 
 The card is modelled correctly (`Seq[PumpPT{-3/-0, slot 0}, PumpPT{-0/-3,
-slot 1}]`, both slots declared, both `Creature`) — it is the bot that cannot
-reach it, through **two** sign-and-slot-blind folds:
+slot 1}]`, both slots declared). It was **castable by no path at all**, which
+takes two halves and both are in `bot.rs`:
 
-1. `trick_modes_combat_only` drops any *instant* whose effect
-   `contains_temp_stat_leaf` from the menu outside
-   `DeclareBlockers`/`FirstStrikeDamage`/`CombatDamage`. That predicate matches
-   `PumpPT{EndOfTurn}` **regardless of sign**, so a shrink — which is removal,
-   not a telegraphed pump — is held back on the reasoning written for a pump.
+1. The hand sweep drops `is_combat_trick(&c.definition)` **unconditionally**,
+   with no step check — so a "pure temp-pump instant" never reaches the
+   candidate menu in any step, and `pick_combat_trick` is its only route onto
+   the stack. (The `trick_modes_combat_only` gate further down *does* carry a
+   step check; it is not what closes this door, and an earlier draft of this
+   entry said it was.)
 2. `pick_combat_trick`'s `pump_amounts` **sums a `Seq` without reading which
    slot each clause names**, so Agony Warp folds to a single `(-3, -3)` and is
    then asked whether it flips a fight *our* creature is losing. It never does.
 
-⚠ **The fold is behaviorally inert today, which is why this is recorded and not
-patched.** `(-3,-3)` on our own creature fails the same test that `None` fails,
-so making `pump_amounts` slot-aware changes no action now. A census of the
-catalog found **two** instants with two-or-more `PumpPT` clauses naming two or
-more distinct slots — Agony Warp and Dissection Practice — and the second never
-reaches `pump_amounts` at all (its `Seq` carries a life-drain clause, so the
-`?` bails on the first element). A guard there would only pay if a future card
-put two *positive* pumps on different slots, where the sum would be applied to
-one creature and would be a wrong action rather than a missed one.
+Fix: a multi-slot pump is not a trick. `is_combat_trick` now also requires
+every pump clause to name the **same** slot, so the seven-card "another target
+creature" family falls through to the ordinary menu and is cast as the removal
+it is. Before/after on the identical seed: **434 distinct cards played, Agony
+Warp unplayed → 435, all ten decks complete.**
 
-📐 **The general shape, and the part worth fixing: the hold predicate is `any`
-and the pick predicate is `all`.** `contains_temp_stat_leaf` matches an effect
-tree that contains *any* temporary stat change; `is_combat_trick`'s
-`all_temp_pumps` matches only a tree that is *entirely* constant pumps. An
-instant between the two is held out of every main phase by the first and
-refused by the second. The real fix is per-slot trick evaluation (each slot
-aimed at its own creature, a shrink scored as removal), which touches an
-**adopted, A/B-measured** weight (`trick_modes_combat_only`, +3.6 at round 66)
-and so needs its own A/B rather than a drive-by.
+⚠⚠ **The blast radius was SEVEN cards and reasoning said one.** A source census
+keyed on the literal `slot:` spelling found two candidates and concluded "one
+card can move". The catalog-wide test written to *measure* the same claim
+returned seven: Agony Warp, Consume Strength, Leeching Bite, Schismotivate,
+Seeds of Strength, Skulduggery, Steal Strength. **A blast radius is measured
+over the catalog, never derived from a grep** — this is the same lesson as the
+shared-reader find, one level up.
 
-✅ Safe to do without one: Agony Warp is in **no** two-player pool (`cube.rs`
-does not list it; its only mention outside the catalog is `pod/decks.rs`), so a
-fix scoped to the multi-slot shape cannot move a golden trace.
+🔎 **And the sixth card is why this is a WRONG action and not only a missed
+one.** The mixed-sign cycle (Consume Strength, Leeching Bite, Schismotivate,
+Skulduggery, Steal Strength) folds to `(0,0)`, so those were merely never
+picked. **Seeds of Strength is three separate `+1/+1` pumps on three
+creatures**, which `pump_amounts` folded into **`+3/+3` on one** — a 3x
+over-valuation the picker would act on. A fold that loses a sign is a missed
+play; a fold that adds across targets is a misplay.
+
+✅ **Measured, not argued: none of the seven is in a two-player pool.** Six
+appear nowhere in `crabomination/src` at all and Agony Warp only in
+`pod/decks.rs`, so none is in `cube` / `sos` / `sealed` / `fixed`. `--bench`
+came back byte-identical (195,806 / 27.49 / 611.9 / 0 stalls, `determinism ok`,
+`thread_determinism ok`) and 10,000 two-player games over the three pools the
+bench cannot reach were all decided with zero panics.
+`the_multi_slot_exclusion_moves_only_cards_outside_the_two_player_pools` pins
+the seven names so an eighth has to arrive with its own bench reading.
+
+📐 **The shape left behind, still open and now harmless: the HOLD predicate is
+`any` and the PICK predicate is `all`.** `contains_temp_stat_leaf` matches a
+tree containing *any* temporary stat change; `all_temp_pumps` matches only one
+that is *entirely* constant pumps. An instant between the two is held out of
+the main phase by `trick_modes_combat_only` and refused by the trick picker.
+Per-slot trick evaluation (each slot aimed at its own creature, a shrink scored
+as removal) would let these cards be *tricks* rather than merely castable, and
+it touches an adopted A/B-measured weight, so it needs its own A/B.
 
 ## FIXED 2026-09-20 (the sixty-second find) — the pod worker was the one game worker in the tree still on the 2 MiB spawn default, so EVERY Commander pod aborted on a debug build
 
