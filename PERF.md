@@ -3078,6 +3078,20 @@ statement of what it covers: `--decks fixed` is four hand-built archetypes and
 holds none of the ~45 cards this run touched. The 30,000-game pool run is the
 only guardrail here with anything to say about them.
 
+⚠ **And once more after the CR 800.4a seat-walk fixes**, which are the ones a
+pod exercises hardest — every elimination is a chance for a departed seat to
+be picked:
+
+```text
+--bench          decisions 195,806 / 27.49 / 0 stalls — byte-identical
+                 determinism ok; thread_determinism ok (3 vs 1)
+pod              2 seeds x 2/4/6/8/10 seats x 1,000 = 10,000 games, all ten
+                 blocks 1,000/1,000 decided, every undecided_by column zero,
+                 zero panics; turns/game 19.34 / 44.98 / 64.75 / 92.66 / 122.39
+                 and 18.91 / 45.08 / 64.42 / 93.64 / 124.84 — unmoved
+two-player       2 seeds x cube/sos/sealed x 300 = 15,000 games, 0 panics, 0 undecided
+```
+
 📐 **The pre-check, one row per site.** ① `PlayersMayAccept` now collects
 every answer before applying any, so the loop runs twice over a set that is
 at most the seat count — and it is unreachable from `archetypes()`, whose

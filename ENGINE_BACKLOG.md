@@ -83,6 +83,7 @@ the handoff.
 | Rules coverage | [MagicCompRules coverage audit](#magiccomprules-coverage-audit) | 312 |
 | Tooling | [Recommender: two builder defects fixed, one lesson recorded](#recommender-two-builder-defects-fixed-one-lesson-recorded) | 17 |
 | Bugs & robustness | [FIXED 2026-09-20 (the fifty-eighth find) — a printed "may" that belongs to ANOTHER SEAT, asked of the controller, and why "the bot answers the same" hid it](#fixed-2026-09-20-the-fifty-eighth-find--a-printed-may-that-belongs-to-another-seat-asked-of-the-controller-and-why-the-bot-answers-the-same-hid-it) | 1 card, 115 checked |
+| Bugs & robustness | [FIXED 2026-09-20 (the sixtieth find) — CR 800.4a: fourteen walks handed a DEPARTED seat a role, and `LowestLife` gave it one every single time](#fixed-2026-09-20-the-sixtieth-find--cr-8004a-fourteen-walks-handed-a-departed-seat-a-role-and-lowestlife-gave-it-one-every-single-time) | 14 → 0 |
 | Bugs & robustness | [FIXED 2026-09-20 (the fifty-ninth find) — "mill, THEN return" was choosing BEFORE the mill, because a clause with no printed "target" was a cast-time target](#fixed-2026-09-20-the-fifty-ninth-find--mill-then-return-was-choosing-before-the-mill-because-a-clause-with-no-printed-target-was-a-cast-time-target) | 6 → 0 |
 | Bugs & robustness | [FIXED 2026-09-20 (the fifty-eighth find) — six printed "you may"s dropped in the CUBE pool, and restoring one is two edits because the second is the POLICY](#fixed-2026-09-20-the-fifty-eighth-find--six-printed-you-mays-dropped-in-the-cube-pool-and-restoring-one-is-two-edits-because-the-second-is-the-policy) | 242 → 213 |
 | Engine mechanics & primitives | [FIXED 2026-09-20 (the fifty-seventh find) — exert was AUTOMATIC and its bonus was not LINKED, so Glorybringer bought a skipped untap over an empty board](#fixed-2026-09-20-the-fifty-seventh-find--exert-was-automatic-and-its-bonus-was-not-linked-so-glorybringer-bought-a-skipped-untap-over-an-empty-board) | 6 cards |
@@ -161,6 +162,44 @@ copies.** `_factory_body` fixed brace matching across them at the
 forty-eighth find; helper inlining and `..delegation` are only in this one.
 Extracting a shared `catalog_bodies.py` would move every audit's count at
 once, so it needs a run that can re-verify each ratchet, not a drive-by.
+
+## FIXED 2026-09-20 (the sixtieth find) — CR 800.4a: fourteen walks handed a DEPARTED seat a role, and `LowestLife` gave it one every single time
+
+A player who has left the game is not a player. The seat stays in `players`
+with `eliminated` set, so any walk that asks "which player has the most/least
+X" — or falls back to "an opponent" — has to exclude it. Fourteen did not, and
+**not one of them can be wrong in a duel**, where the elimination ends the
+game. In a pod they are live from the first kill onwards.
+
+**The sharp one is `PlayerRef::LowestLife`.** A departed seat is at or below
+zero life, so it was *always* the lowest — Loxodon Peacekeeper handed its
+creature to a player who had left, every upkeep.
+
+📐📐 **THE SHAPE OF THE CLASS IS "THE RULE WAS KNOWN AND APPLIED ONCE."**
+`PlayerWithMostLife` — the same question, one enum variant over — already
+filtered `is_alive()` and already read `effective_life`. Its four siblings
+(`LowestLife`, `HighestLife`, `MostCardsInHand`, `MostCreatures`) did
+neither, and the two life ones read raw `.life`, so Two-Headed Giant's shared
+pool disagreed with itself depending on which ref a card happened to use.
+**When one member of a family carries a guard, the audit question is not
+"is this right" but "do its siblings do the same thing".**
+
+Nine more were `(0..players.len()).find(|s| !same_team(s, controller))`, the
+open-coded "an opponent" fallback — and `default_hostile_opponent`'s own doc
+already said `first_opponent_of` "keeps naming a player who has left, which
+every caller then has to reject". The helper existed; the callers were never
+migrated. Three of the nine pick a **defending player** for a token entering
+attacking, where a departed seat is not a legal attack target at all.
+
+`GameState::living_seats` is the shared source now. `audit_seat_walks` gains
+a **second column**: the first catches a loop that hands a dead seat a
+*question*, this one a walk that hands it a *role*. Both 0.
+
+⚠ The pick shape needed its own matcher — a pick is an expression, not a
+block, so the block-body reader the first column uses finds nothing — and the
+window has to read **backwards** as well, because a guard can sit on the line
+above (`first_opponent_of` binds its `alive` closure there and was a false
+positive until the window grew).
 
 ## FIXED 2026-09-20 (the fifty-ninth find) — "mill, THEN return" was choosing BEFORE the mill, because a clause with no printed "target" was a cast-time target
 
