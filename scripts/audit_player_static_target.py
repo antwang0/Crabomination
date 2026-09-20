@@ -37,8 +37,16 @@ SRC = ROOT / "crabomination_catalog/src"
 
 FN_RE = re.compile(r"^pub fn (\w+)\(\) -> CardDefinition", re.M)
 NAME_RE = re.compile(r'name:\s*"((?:[^"\\]|\\.)*)"')
-# Cards built through a per-file helper pass the name as the first argument.
-HELPER_NAME_RE = re.compile(r'\(\s*"((?:[^"\\]|\\.)*)"')
+# Cards built through a per-file helper pass the name as an argument to a
+# struct-update tail call: `..equipment("Mithril Coat", …)`.
+#
+# ⚠ **Anchored on the `..`, not on "the first string literal in the body".**
+# That looser shape mis-files a factory whose body opens with a `description:`
+# string, and mis-files it under a *name that belongs to another card* — the
+# concurrent session hit the same thing from the other end and got Longhorn
+# Firebeast reported as Gurzigost. A row filed under the wrong card is worse
+# than a missed row: it sends the next reader to a card that is fine.
+HELPER_NAME_RE = re.compile(r'\.\.\s*\w+\(\s*"((?:[^"\\]|\\.)*)"')
 PAREN = re.compile(r"\([^)]*\)")
 TARGET_RE = re.compile(r"PlayerStaticTarget::(\w+)")
 

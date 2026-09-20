@@ -3226,6 +3226,63 @@ with something to feed it, and when it is, the loop was thousands of actions
 long. When the gate and the aggregate disagree, the aggregate wins — the
 gate's job is to make the change *visible*, not to size it.
 
+### 2026-09-19/20 (the eighth Commander session) — guardrail, no perf work
+
+Seven engine commits and fourteen cards, none of them a perf change:
+`Keyword::ProtectionFromColorsOutsideCommanderIdentity` (CR 903.4 read as a
+protection set), the defender-side attack walk's dropped `event.filter`,
+`Predicate::AttackedDefenderWithCountAtLeast`,
+`StaticEffect::OpponentsSkipExtraTurns`,
+`ControllerDrawsDoubledExceptFirstEachDrawStep`,
+`MultiplyDamageFromYourSources`, and the Erebos seat-set inversion.
+
+```text
+--bench (release, 3 threads and 1 thread):
+  decisions          195,806   byte-identical to the committed invariant
+  turns_per_game       27.49   "
+  decisions_per_game   611.9   "
+  stalls          0 (cap 0 / board 0 / stuck 0 / draw 0)
+  determinism     ok (all pairs split), same at --threads 1
+  peak_rss_mib     25.7      (host: Xeon @ 2.10GHz, 3 threads)
+```
+
+📐 **The one commit that could have moved it was the damage multiplier, and
+the reason it did not is worth keeping.** `MultiplyDamageFromYourSources` adds
+a whole-battlefield walk to `scale_damage_to_inner` — on the face of it a new
+cost on every damage event. It is unreachable on the bench pool: that function
+runs only behind `damage_scaling_in_scope()`, which is false unless a scaling
+static is on the board, and `archetypes()` holds none. **A new branch inside a
+gated body is priced by the gate, not by the body**; read which gate stands in
+front of a hot-path edit before predicting its bench.
+
+⚠ And the gate is also what caught the bug: `scale_damage_to`'s fast path
+carries `debug_assert_eq!(slow_path == amount)`, which fired "left: 9, right:
+3" the first time the new static was on a board and absent from
+`static_effect_scales_damage`. A scaling static missing from that list is
+silently inert in release and loud in tests.
+
+**Pod smoke, a FRESH seed and nothing re-used:** 4,900 games at seed **9103**,
+700 at each of 2..8 seats — **100 % decided, 0 undecided, every `undecided_by`
+column zero** (draw / action cap / board cap / no legal move), no panic or
+error line. ⚠ Every optimized profile is `panic = "abort"`, so a panic would
+have ended the process rather than printing; all seven runs produced their
+full summary.
+
+Turns a game 19.10 / 32.36 / 45.34 / 57.58 / 63.78 / 78.27 / 92.24, against
+the seventh session's 19.37 / 32.35 / 45.30 / 56.88 / 64.74 / 77.85 / 93.34 at
+seed 9102 — within a point at every seat count, on a different seed. **FRONTIER
+9104.**
+
+Golden traces 12/12. Suite **20,146 / 0 / 6** at the merged tip
+(`--workspace --exclude crabomination_client`; 20,138 at my own last commit,
+before the concurrent session's next batch landed). ⚠ **Quote the exclusion
+with the number**: `crabomination_client` holds exactly 200 `#[test]`s, so a
+session that can build the Bevy stack reads 200 higher off the same tree, and
+the two readings looked like a 200-test regression for two commits this run.
+Workspace clippy 0. `cargo check --profile release-fast -p crabomination --bin
+bot_ladder` clean, which is the only gate in the loop that sees
+`debug-assertions = false`.
+
 ### 2026-09-19 (the seventh Commander session, tip `3aca0ddb`) — guardrail, no perf work
 
 Two correctness commits: `Effect::BindScratch` (the resolver scratch a parked
