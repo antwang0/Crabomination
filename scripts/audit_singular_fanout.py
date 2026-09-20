@@ -57,16 +57,27 @@ FAN_OUT = [
 
 ARM_HEAD = re.compile(r"^(\s*)Effect::(\w+)\s*[{(]", re.M)
 
+# The SELECTOR half of the same class: an arm that takes its `who` as a
+# `Selector` and consumes only the first entity. `Selector::Player(<fan-out>)`
+# in such a field has the identical failure — exact in a duel, first seat in a
+# pod. Detected the same way, matched against a different spelling.
+SELECTOR_CONSUMED_SINGLY = (
+    "resolve_selector(who, ctx).into_iter().next()",
+    "resolve_selector(who, ctx).first()",
+)
+
 # Sites left on a fan-out ref ON PURPOSE, each with the reason and what it is
 # waiting on. `--gate` fails on anything outside this list, and on an entry
 # whose site is gone (a stale allowlist hides the next regression).
 ALLOWLIST = {
     ("MayDoBy", "longhorn_firebeast"):
         'printed "ANY opponent may have it deal 5 damage to them. If a player '
-        'does, sacrifice this creature" — ask each seat in turn order and STOP '
-        "at the first acceptance, which is `AnyPlayerMayExileFromGraveyard`'s "
-        "shape, not a fan-out. `EachPlayerDoes` would let a later seat take 5 "
-        "for a creature already sacrificed. Needs the arm, not the ref.",
+        'does, sacrifice this creature" — ask each seat in turn order, which is '
+        "`AnyPlayerMayExileFromGraveyard`'s shape, not a fan-out. "
+        "⚠ **Whether a SECOND opponent may also take 5 once the creature is "
+        "already sacrificed is a RULING, and the offline Scryfall cache carries "
+        "no rulings** — `EachPlayerDoes` assumes yes and the stop-at-first arm "
+        "assumes no, so this waits on the ruling, not on the code.",
     ("ManifestDread", "unidentified_hovership"):
         'printed "the exiled card\'s OWNER manifests dread" — the ref wanted is '
         "the owner of this Vehicle's linked exile, which no `PlayerRef` names. "
@@ -87,14 +98,30 @@ def singular_arms():
     return out
 
 
-def fan_out_sites(names):
+def singular_selector_arms():
+    """{effect name} for arms whose `who: Selector` is consumed first-only."""
+    src = EFFECTS.read_text()
+    heads = [(m.start(), m.group(2)) for m in ARM_HEAD.finditer(src)]
+    out = set()
+    for i, (start, name) in enumerate(heads):
+        stop = heads[i + 1][0] if i + 1 < len(heads) else len(src)
+        body = src[start:stop]
+        if any(pat in body for pat in SELECTOR_CONSUMED_SINGLY):
+            out.add(name)
+    return out
+
+
+def fan_out_sites(names, selector_names=frozenset()):
     """[(effect, ref, file, line)] for catalog sites filling `who` with one."""
     alt = "|".join(sorted(names))
     refs = "|".join(FAN_OUT)
     # `Effect::Name { … who: PlayerRef::Each… }` — the field may sit on its own
-    # line, so allow anything but a closing brace in between.
+    # line, so allow anything but a closing brace in between. The selector half
+    # is the same clause wrapped: `who: Selector::Player(PlayerRef::Each…)`.
+    alts = "|".join(sorted(selector_names)) or "(?!)"
     pat = re.compile(
-        rf"Effect::({alt})\s*\{{[^}}]*?who:\s*PlayerRef::({refs})\b",
+        rf"Effect::({alt})\s*\{{[^}}]*?who:\s*PlayerRef::({refs})\b"
+        rf"|Effect::({alts})\s*\{{[^}}]*?who:\s*Selector::Player\(PlayerRef::({refs})\b",
         re.S,
     )
     hits = []
@@ -102,7 +129,9 @@ def fan_out_sites(names):
         src = path.read_text()
         for m in pat.finditer(src):
             line = src[: m.start()].count("\n") + 1
-            hits.append((m.group(1), m.group(2), path.relative_to(ROOT), line))
+            effect = m.group(1) or m.group(3)
+            ref = m.group(2) or m.group(4)
+            hits.append((effect, ref, path.relative_to(ROOT), line))
     return hits
 
 
@@ -129,8 +158,12 @@ def factory_at(path, line):
 def main():
     gate = "--gate" in sys.argv[1:]
     names = singular_arms()
-    hits = fan_out_sites(names)
-    print(f"{len(names)} effect arms resolve their `who` singularly.")
+    sel_names = singular_selector_arms()
+    hits = fan_out_sites(names, sel_names)
+    print(
+        f"{len(names)} effect arms resolve their `who` singularly, "
+        f"{len(sel_names)} more consume a `who: Selector` first-only."
+    )
     unexpected, seen = [], set()
     for effect, ref, path, line in sorted(hits, key=lambda h: (h[0], str(h[2]), h[3])):
         card = factory_at(path, line)
