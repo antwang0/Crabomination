@@ -3039,6 +3039,24 @@ Room's leaves it `None`, so the added work on the bench's ~196 k decisions is
 one null discriminant check per activation that takes the life-cost branch at
 all. The reading above says the same thing from the other side.
 
+**The robustness sweep, and it is the largest Commander self-play run this
+branch has taken: 70,000 pod games, zero undecided, zero panics.** Five fresh
+seeds (9104-9108) × seven seat counts (2..8) × 2,000 games, on the tip that
+carries the whole 614.1c conversion. **Every one of the 35 blocks reports
+2,000/2,000 decided with every `undecided_by` column zero**, and a panic
+would have taken the process with it (`panic = "abort"` on `release-fast`),
+so the absence of a missing block is the crash-freedom result. Mean turns a
+game over the five seeds:
+
+```text
+seats        2      3      4      5      6      7      8
+turns/game  19.45  32.51  45.31  56.94  64.39  77.80  92.58
+```
+
+**FRONTIER 9109.** 📐 The seat-count curve is the thing to keep: it is
+essentially linear in seats (~12.2 turns a seat above two), and a run that
+moves it is doing something to the *format*, not to a card.
+
 **Closing re-verification, taken at `cf9a3ad1` after the CR 614.1c class was
 closed (83 → 0 cards moved from an ETB trigger to
 `StaticEffect::EntersTapped` / `EntersTappedUnless`, across five helper
