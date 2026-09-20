@@ -87,6 +87,7 @@ SOURCE_ALLOWLIST = {
         "narrowing never allows an illegal play"
     ),
     "nessian_wilds_ravager": "same narrowing, same reason",
+    "brash_taunter": "same narrowing, same reason — an activated fight slot",
     "etched_slith": (
         "the whole 'when you do, remove a counter from another target "
         "permanent or opponent' clause is unmodelled — `audit_incomplete`'s "

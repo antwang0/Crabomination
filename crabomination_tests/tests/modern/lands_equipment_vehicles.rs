@@ -2691,3 +2691,366 @@ fn thousand_year_elixir_untaps_a_creature_for_one_and_a_tap() {
     assert!(!g.battlefield_find(theirs).unwrap().tapped, "untapped, and it is not yours");
     assert!(g.battlefield_find(elixir).unwrap().tapped, "the Elixir paid its own tap");
 }
+
+// ── COMMANDER_BACKLOG top-1000, 2026-09-20 batch ────────────────────────────
+
+/// "Whenever a creature you control deals combat damage to a player, you **may**
+/// draw a card." Printed "a creature", not "one or more", so two connecting
+/// creatures are two triggers (CR 603.2c) — the count is what this asserts.
+#[test]
+fn reconnaissance_mission_draws_once_per_connecting_creature() {
+    use crabomination::game::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::reconnaissance_mission());
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(a);
+    g.clear_sickness(b);
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Bool(true),
+    ]));
+    let hand = g.players[0].hand.len();
+    g.attacking = vec![
+        Attack { attacker: a, target: AttackTarget::Player(1) },
+        Attack { attacker: b, target: AttackTarget::Player(1) },
+    ];
+    g.step = TurnStep::CombatDamage;
+    g.active_player_idx = 0;
+    g.resolve_combat().expect("combat damage");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 2, "one card per connecting creature");
+}
+
+/// "Whenever a creature you control dies, you gain 1 life and draw a card."
+#[test]
+fn moldervine_reclamation_drains_and_draws_on_your_creature_dying() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::moldervine_reclamation());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::forest());
+    let (life, hand) = (g.players[0].life, g.players[0].hand.len());
+    g.battlefield_find_mut(bear).unwrap().damage = 99;
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 1);
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+}
+
+/// "Whenever a creature you control enters, draw a card if its power is 3 or
+/// greater. **Otherwise**, put two +1/+1 counters on it." The branches are
+/// exclusive, so the small creature must draw nothing.
+#[test]
+fn tribute_to_the_world_tree_branches_on_the_entering_creature() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::tribute_to_the_world_tree());
+    g.add_card_to_library(0, catalog::forest());
+    let hand = g.players[0].hand.len();
+
+    // Cast it, so the real ETB event dispatches to the watcher.
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let small = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: small, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast the 2/2");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand, "a 2/2 draws nothing");
+    assert_eq!(
+        g.battlefield_find(small)
+            .and_then(|c| c.counters.get(&CounterType::PlusOnePlusOne).copied())
+            .unwrap_or(0),
+        2,
+        "it gets two +1/+1 counters instead",
+    );
+
+    let big = g.add_card_to_hand(0, catalog::craw_wurm());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: big, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast the 6/4");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "a 6/4 draws");
+    assert_eq!(
+        g.battlefield_find(big)
+            .and_then(|c| c.counters.get(&CounterType::PlusOnePlusOne).copied())
+            .unwrap_or(0),
+        0,
+        "and gets no counters",
+    );
+}
+
+/// "Whenever a Dragon you control enters, it deals X damage to any target,
+/// where X is the number of Dragons you control" — the entering Dragon counts
+/// itself, so one Dragon on an empty board deals 1.
+#[test]
+fn dragon_tempest_counts_the_entering_dragon() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::dragon_tempest());
+    let life = g.players[1].life;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let d = g.add_card_to_hand(0, catalog::shivan_dragon());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: d, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast the Dragon");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 1, "one Dragon, one damage");
+    assert!(
+        g.battlefield_find(d).is_some_and(|c| c.granted_keywords_eot.contains(&crabomination::card::Keyword::Haste)
+            || c.definition.keywords.contains(&crabomination::card::Keyword::Haste)),
+        "and the flying half granted haste",
+    );
+}
+
+/// "Whenever **one or more** artifact creatures you control deal combat damage
+/// to a player, draw a card" — CR 603.2c, so two Thopters into one player is
+/// one card, not two.
+#[test]
+fn thopter_spy_network_draws_once_a_batch() {
+    use crabomination::game::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::thopter_spy_network());
+    let a = g.add_card_to_battlefield(0, catalog::ornithopter());
+    let b = g.add_card_to_battlefield(0, catalog::ornithopter());
+    g.clear_sickness(a);
+    g.clear_sickness(b);
+    // Ornithopter is 0/2; give both a body so the damage lands.
+    for id in [a, b] {
+        g.battlefield_find_mut(id).unwrap().pump(2, 0);
+    }
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let hand = g.players[0].hand.len();
+    g.attacking = vec![
+        Attack { attacker: a, target: AttackTarget::Player(1) },
+        Attack { attacker: b, target: AttackTarget::Player(1) },
+    ];
+    g.step = TurnStep::CombatDamage;
+    g.active_player_idx = 0;
+    g.resolve_combat().expect("combat damage");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "one card for the whole batch");
+}
+
+/// Witch's Cottage: the conditional entry is a **replacement** and the
+/// recursion is a real trigger beside it, gated on the same predicate — and
+/// the filter names **your graveyard**, so a creature on the battlefield is
+/// not a legal target for it.
+#[test]
+fn witchs_cottage_enters_tapped_without_three_other_swamps() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::witchs_cottage());
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::PlayLand(id)).expect("a land");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(id).unwrap().tapped, "fewer than three other Swamps");
+    assert!(g.players[0].library.is_empty(), "and the trigger's `if` did not fire");
+}
+
+#[test]
+fn witchs_cottage_with_three_other_swamps_enters_untapped_and_recurs() {
+    let mut g = two_player_game();
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::swamp());
+    }
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let live = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::witchs_cottage());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.perform_action(GameAction::PlayLand(id)).expect("a land");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(id).unwrap().tapped, "three other Swamps, so untapped");
+    assert!(g.battlefield_find(live).is_some(), "the live creature is not a legal target");
+    assert_eq!(
+        g.players[0].library.last().map(|c| c.id),
+        Some(dead),
+        "the graveyard creature goes on top",
+    );
+}
+
+/// "Whenever this creature is dealt damage, it deals that much damage to
+/// target opponent" — on an indestructible 1/1, which is the whole card.
+#[test]
+fn brash_taunter_reflects_damage_at_an_opponent() {
+    let mut g = two_player_game();
+    let taunter = g.add_card_to_battlefield(0, catalog::brash_taunter());
+    let life = g.players[1].life;
+    let mut ev = Vec::new();
+    g.deal_damage_to_from(crabomination::game::effects::EntityRef::Permanent(taunter), 5, None, &mut ev);
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 5, "five in, five at the opponent");
+    assert!(g.battlefield_find(taunter).is_some(), "and it is indestructible");
+}
+
+/// Void Rend: "This spell can't be countered. Destroy target nonland
+/// permanent." The uncounterable half is what makes it a staple.
+#[test]
+fn void_rend_cannot_be_countered_and_kills_a_nonland() {
+    let mut g = two_player_game();
+    let target = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let land = g.add_card_to_battlefield(1, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::void_rend());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    assert!(
+        g.perform_action(GameAction::CastSpell {
+            card_id: id,
+            target: Some(Target::Permanent(land)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .is_err(),
+        "a land is not a legal target",
+    );
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(target)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("nonland permanent");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(target).is_none(), "destroyed");
+    assert!(
+        catalog::void_rend().keywords.contains(&crabomination::card::Keyword::CantBeCountered),
+        "and it can't be countered",
+    );
+}
+
+/// "At the beginning of **each** combat, double the power and toughness of
+/// each creature you control" — each creature doubles its *own* P/T, so a
+/// 2/2 and a 6/4 are 4/4 and 12/8, not both the same.
+#[test]
+fn unnatural_growth_doubles_each_creature_by_its_own_power() {
+    use crabomination::game::TurnStep;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::unnatural_growth());
+    let small = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let big = g.add_card_to_battlefield(0, catalog::craw_wurm());
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    let pt = |id| {
+        let c = g.computed_permanent(id).expect("on the battlefield");
+        (c.power, c.toughness)
+    };
+    assert_eq!(pt(small), (4, 4), "the 2/2 doubles to 4/4");
+    assert_eq!(pt(big), (12, 8), "and the 6/4 to 12/8");
+}
+
+/// "Whenever Ayara **or another** black creature you control enters, each
+/// opponent loses 1 life and you gain 1 life." The scope already includes the
+/// source, so Ayara's own entry fires it — and the drain is per opponent.
+#[test]
+fn ayara_drains_on_her_own_entry() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let id = g.add_card_to_hand(0, catalog::ayara_first_of_locthwain());
+    g.players[0].mana_pool.add(Color::Black, 3);
+    let (mine, theirs) = (g.players[0].life, g.players[1].life);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast Ayara");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, theirs - 1, "each opponent loses 1");
+    assert_eq!(g.players[0].life, mine + 1, "and you gain 1");
+}
+
+/// Cut a Deal draws one card per opponent, so it is a cantrip in a duel and a
+/// three-for-one in a four-seat pod — the count is the card.
+#[test]
+fn cut_a_deal_draws_one_card_per_opponent() {
+    let mut g = crabomination::game::multi_player_game(4);
+    for seat in 0..4 {
+        for _ in 0..5 {
+            g.add_card_to_library(seat, catalog::plains());
+        }
+    }
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    let id = g.add_card_to_hand(0, catalog::cut_a_deal());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let before: Vec<usize> = (0..4).map(|s| g.players[s].hand.len()).collect();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast Cut a Deal");
+    drain_stack(&mut g);
+    // -1 for the spell itself, +3 for the three opponents who drew.
+    assert_eq!(g.players[0].hand.len(), before[0] - 1 + 3, "three opponents, three cards");
+    for seat in 1..4 {
+        assert_eq!(g.players[seat].hand.len(), before[seat] + 1, "each opponent drew one");
+    }
+}
+
+/// Padeem draws only while **you** hold the greatest-mana-value artifact, and
+/// the printed "or tied for" is what the comparison has to allow.
+#[test]
+fn padeem_draws_only_while_you_hold_the_biggest_artifact() {
+    use crabomination::game::TurnStep;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::padeem_consul_of_innovation());
+    g.add_card_to_battlefield(0, catalog::sol_ring());
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    g.active_player_idx = 0;
+    let hand = g.players[0].hand.len();
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "your one-mana Sol Ring is the greatest");
+
+    // An opponent's bigger artifact turns it off.
+    g.add_card_to_battlefield(1, catalog::hedron_archive());
+    let hand = g.players[0].hand.len();
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand, "theirs is bigger, so no draw");
+}
+
+/// "Each **noncreature** artifact you control becomes a 4/4 artifact creature
+/// until end of turn" — and it keeps the artifact type, so the anthem above it
+/// gives the animated Signet flying on the same resolution.
+#[test]
+fn cyberdrive_awakener_animates_your_noncreature_artifacts() {
+    let mut g = two_player_game();
+    let ring = g.add_card_to_battlefield(0, catalog::sol_ring());
+    let awakener = g.add_card_to_battlefield(0, catalog::cyberdrive_awakener());
+    g.fire_self_etb_triggers(awakener, 0);
+    drain_stack(&mut g);
+    let c = g.computed_permanent(ring).expect("on the battlefield");
+    assert_eq!((c.power, c.toughness), (4, 4), "the Sol Ring is a 4/4");
+    assert!(
+        g.computed_permanent(ring).is_some_and(|c| c.card_types().contains(&CardType::Artifact)),
+        "and it keeps the artifact type — `BecomeCreature`, not `BecomeCreatureLosingTypes`",
+    );
+    // The anthem half, on a permanent that was *printed* an artifact creature.
+    let thopter = g.add_card_to_battlefield(0, catalog::ornithopter());
+    assert!(
+        g.computed_permanent(thopter)
+            .is_some_and(|c| c.keywords().contains(&crabomination::card::Keyword::Flying)),
+        "other artifact creatures you control have flying",
+    );
+}

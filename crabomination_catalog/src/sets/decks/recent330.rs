@@ -765,3 +765,529 @@ pub fn thousand_year_elixir() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── COMMANDER_BACKLOG top-1000, 2026-09-20 batch ────────────────────────────
+// Seven rows off section 2 that needed no new primitive. Two of them are the
+// first users of this run's two: Witch's Cottage names **your graveyard** in a
+// target clause (the fifty-second find) and Brash Taunter prints "another
+// target creature" (the fifty-third).
+
+/// Reconnaissance Mission — {2}{U}{U} Enchantment. "Whenever a creature you
+/// control deals combat damage to a player, you may draw a card. Cycling {2}."
+/// (EDHREC 894.)
+///
+/// Printed "**a** creature", not "one or more", so no `once_per_batch`: an
+/// alpha strike draws one card per connecting creature (CR 603.2c).
+pub fn reconnaissance_mission() -> CardDefinition {
+    CardDefinition {
+        name: "Reconnaissance Mission",
+        cost: cost(&[generic(2), u(), u()]),
+        card_types: vec![CardType::Enchantment],
+        keywords: vec![Keyword::Cycling(cost(&[generic(2)]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl),
+            effect: Effect::MayDo {
+                description: "Draw a card?".into(),
+                body: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Moldervine Reclamation — {3}{B}{G} Enchantment. "Whenever a creature you
+/// control dies, you gain 1 life and draw a card." (EDHREC 986.)
+pub fn moldervine_reclamation() -> CardDefinition {
+    CardDefinition {
+        name: "Moldervine Reclamation",
+        cost: cost(&[generic(3), crate::mana::b(), g()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl),
+            effect: Effect::Seq(vec![
+                Effect::GainLife { who: Selector::You, amount: Value::ONE },
+                Effect::Draw { who: Selector::You, amount: Value::ONE },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Tribute to the World Tree — {G}{G}{G} Enchantment. "Whenever a creature you
+/// control enters, draw a card if its power is 3 or greater. Otherwise, put
+/// two +1/+1 counters on it." (EDHREC 609.)
+///
+/// One trigger with two branches, not two triggers: the printed "otherwise"
+/// makes them exclusive, and both read the *entering* creature.
+pub fn tribute_to_the_world_tree() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Tribute to the World Tree",
+        cost: cost(&[g(), g(), g()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Creature,
+                }),
+            effect: Effect::If {
+                cond: Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Creature.and(R::PowerAtLeast(3)),
+                },
+                then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                else_: Box::new(Effect::AddCounter {
+                    what: Selector::TriggerSource,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(2),
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Dragon Tempest — {1}{R} Enchantment. "Whenever a creature you control with
+/// flying enters, it gains haste until end of turn. Whenever a Dragon you
+/// control enters, it deals X damage to any target, where X is the number of
+/// Dragons you control." (EDHREC 847.)
+///
+/// Two separate triggers, and a Dragon with flying fires both.
+pub fn dragon_tempest() -> CardDefinition {
+    use crate::effect::{Duration, shortcut::target_any};
+    CardDefinition {
+        name: "Dragon Tempest",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: R::Creature.and(R::HasKeyword(Keyword::Flying)),
+                    }),
+                effect: Effect::GrantKeyword {
+                    what: Selector::TriggerSource,
+                    keyword: Keyword::Haste,
+                    duration: Duration::EndOfTurn,
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: R::HasCreatureType(CreatureType::Dragon),
+                    }),
+                effect: Effect::DealDamage {
+                    to: target_any(),
+                    // "the number of Dragons you control" — counted as the
+                    // trigger resolves, so the entering Dragon is included.
+                    amount: Value::CountMatching {
+                        sel: Box::new(Selector::EachPermanent(
+                            R::HasCreatureType(CreatureType::Dragon).and(R::ControlledByYou),
+                        )),
+                        filter: R::Any,
+                    },
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Thopter Spy Network — {2}{U}{U} Enchantment. "At the beginning of your
+/// upkeep, if you control an artifact, create a 1/1 colorless Thopter artifact
+/// creature token with flying. Whenever one or more artifact creatures you
+/// control deal combat damage to a player, draw a card." (EDHREC 940.)
+///
+/// The second ability *does* print "one or more", so it carries
+/// `once_per_batch` (CR 603.2c): three Thopters connecting with one player is
+/// one card, and with two players it is two.
+pub fn thopter_spy_network() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    let thopter = TokenDefinition {
+        name: "Thopter".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Thopter],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Flying],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Thopter Spy Network",
+        cost: cost(&[generic(2), u(), u()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(crate::game::types::TurnStep::Upkeep),
+                    EventScope::YourControl,
+                )
+                .with_filter(Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(R::Artifact.and(R::ControlledByYou)),
+                    n: Value::ONE,
+                }),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: std::sync::Arc::new(thopter),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: R::Artifact.and(R::Creature),
+                    })
+                    .once_per_batch(),
+                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Witch's Cottage — Land — Swamp. "This land enters tapped unless you control
+/// three or more other Swamps. When this land enters untapped, you may put
+/// target creature card from your graveyard on top of your library."
+/// (EDHREC 887.)
+///
+/// Mystic Sanctuary's shape in black, and the two things it keeps from that
+/// card: the conditional entry is a **replacement** (CR 614.1c,
+/// `EntersTappedUnless`) and the recursion is a real trigger beside it, whose
+/// intervening `if` is the same predicate. ⚠ The filter names **your
+/// graveyard** — without the zone the same requirement is met by a creature on
+/// the battlefield (ENGINE_BACKLOG's fifty-second find).
+pub fn witchs_cottage() -> CardDefinition {
+    use crate::card::{ActivatedAbility, LandType};
+    use crate::effect::{LibraryPosition, ManaPayload, ZoneDest};
+    use crate::mana::Color;
+    // "three or more OTHER Swamps" — four including this one.
+    let four_swamps = || Predicate::SelectorCountAtLeast {
+        sel: Selector::EachPermanent(
+            R::HasLandType(LandType::Swamp).and(R::ControlledByYou),
+        ),
+        n: Value::Const(4),
+    };
+    CardDefinition {
+        name: "Witch's Cottage",
+        card_types: vec![CardType::Land],
+        subtypes: Subtypes {
+            land_types: vec![LandType::Swamp],
+            ..Default::default()
+        },
+        static_abilities: vec![StaticAbility {
+            description: "This land enters tapped unless you control three or more other Swamps.",
+            effect: StaticEffect::EntersTappedUnless {
+                applies_to: Selector::This,
+                condition: four_swamps(),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::OfColor(Color::Black, Value::ONE),
+            },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::If {
+                cond: four_swamps(),
+                then: Box::new(Effect::MayDo {
+                    description: "Put a creature card from your graveyard on top of your library?"
+                        .into(),
+                    body: Box::new(Effect::Move {
+                        what: target_filtered(R::Creature.from_your_graveyard()),
+                        to: ZoneDest::Library { who: PlayerRef::You, pos: LibraryPosition::Top },
+                    }),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Brash Taunter — {4}{R} 1/1 Goblin. "Indestructible. Whenever this creature
+/// is dealt damage, it deals that much damage to target opponent. {2}{R}, {T}:
+/// This creature fights another target creature." (EDHREC 791.)
+///
+/// The first ability is the pod half: an indestructible 1/1 that redirects
+/// every point it takes at **one** opponent, so its rate is per-fight rather
+/// than per-table. ⚠ The fight's printed clause is "**another** target
+/// creature" and is narrowed here to a creature you don't control, for the
+/// reason `scripts/audit_another_target.py`'s allowlist records: a mandatory
+/// fight slot with nothing else legal hands the bot its own creature, and a
+/// narrowing cannot make an illegal play.
+pub fn brash_taunter() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Brash Taunter",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Indestructible],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealtDamage, EventScope::SelfSource),
+            effect: Effect::DealDamage {
+                to: target_filtered(R::OpponentPlayer),
+                amount: Value::TriggerEventAmount,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), r()]),
+            tap_cost: true,
+            effect: Effect::Fight {
+                attacker: Selector::This,
+                defender: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Void Rend — {W}{U}{B} Instant. "This spell can't be countered. Destroy
+/// target nonland permanent." (EDHREC 765.)
+pub fn void_rend() -> CardDefinition {
+    CardDefinition {
+        name: "Void Rend",
+        cost: cost(&[w(), u(), crate::mana::b()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::CantBeCountered],
+        effect: Effect::Destroy { what: target_filtered(R::Nonland.and(R::Permanent)) },
+        ..Default::default()
+    }
+}
+
+/// Unnatural Growth — {1}{G}{G}{G}{G} Enchantment. "At the beginning of each
+/// combat, double the power and toughness of each creature you control until
+/// end of turn." (EDHREC 442.)
+///
+/// **Each** combat, so `EventScope::AnyPlayer` — in a pod that is one doubling
+/// per seat's combat, which is where the card's Commander rank comes from.
+/// Zopandrel's shape: a `ForEach` that adds each creature's own P/T back to
+/// itself, read per-creature off the loop binding rather than once.
+pub fn unnatural_growth() -> CardDefinition {
+    use crate::effect::Duration;
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Unnatural Growth",
+        cost: cost(&[generic(1), g(), g(), g(), g()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::BeginCombat),
+                EventScope::AnyPlayer,
+            ),
+            effect: Effect::ForEach {
+                selector: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                body: Box::new(Effect::PumpPT {
+                    what: Selector::TriggerSource,
+                    power: Value::PowerOf(Box::new(Selector::TriggerSource)),
+                    toughness: Value::ToughnessOf(Box::new(Selector::TriggerSource)),
+                    duration: Duration::EndOfTurn,
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ayara, First of Locthwain — {B}{B}{B} 2/3 Legendary Elf Noble. "Whenever
+/// Ayara or another black creature you control enters, each opponent loses 1
+/// life and you gain 1 life. {T}, Sacrifice another black creature: Draw a
+/// card." (EDHREC 854.)
+///
+/// "Ayara **or another**" is exactly `EventScope::YourControl` — the scope
+/// already includes the source, so no second trigger. The drain is
+/// per-opponent, which is the pod half.
+pub fn ayara_first_of_locthwain() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::mana::{Color, b};
+    CardDefinition {
+        name: "Ayara, First of Locthwain",
+        cost: cost(&[b(), b(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Noble],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Creature.and(R::HasColor(Color::Black)),
+                }),
+            effect: crate::effect::shortcut::drain(1),
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            // "another black creature" — `sac_other_filter` cannot name the
+            // source, which is the printed "another".
+            sac_other_filter: Some((R::Creature.and(R::HasColor(Color::Black)), 1)),
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Tempt with Discovery — {3}{G} Sorcery. "**Tempting offer** — Search your
+/// library for a land card and put it onto the battlefield. Each opponent may
+/// search their library for a land card and put it onto the battlefield. For
+/// each opponent who searches a library this way, search your library for a
+/// land card and put it onto the battlefield." (EDHREC 870.)
+///
+/// `Effect::TemptingOffer` is the whole clause (CR 207.2c): the body runs for
+/// the controller, each opponent may copy it, and the controller re-runs it
+/// once per acceptor. A five-seat pod where everyone accepts is five lands.
+pub fn tempt_with_discovery() -> CardDefinition {
+    use crate::effect::ZoneDest;
+    CardDefinition {
+        name: "Tempt with Discovery",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::TemptingOffer {
+            body: Box::new(Effect::Search {
+                who: PlayerRef::You,
+                filter: R::Land,
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Cut a Deal — {2}{W} Sorcery. "Each opponent draws a card, then you draw a
+/// card for each opponent who drew a card this way." (EDHREC 990.)
+///
+/// Nobody may decline, so "each opponent who drew" is the opponent count —
+/// `Value::OpponentCount`, which is 1 in a duel and scales with the pod.
+pub fn cut_a_deal() -> CardDefinition {
+    CardDefinition {
+        name: "Cut a Deal",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Draw {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::ONE,
+            },
+            Effect::Draw { who: Selector::You, amount: Value::OpponentCount },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Padeem, Consul of Innovation — {3}{U} 1/4 Legendary Vedalken Artificer.
+/// "Artifacts you control have hexproof. At the beginning of your upkeep, if
+/// you control the artifact with the greatest mana value or tied for the
+/// greatest mana value, draw a card." (EDHREC 909.)
+///
+/// The tie is what the comparison has to allow, so it is "the greatest among
+/// **your** artifacts is at least the greatest among **all** artifacts" —
+/// `Value::HighestManaValueAmong` on both sides of `Predicate::ValueAtLeast`.
+/// ⚠ With no artifact anywhere both sides are 0 and the gate would pass, so
+/// the intervening `if` also asks that you control one.
+pub fn padeem_consul_of_innovation() -> CardDefinition {
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Padeem, Consul of Innovation",
+        cost: cost(&[generic(3), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vedalken, CreatureType::Artificer],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        static_abilities: vec![StaticAbility {
+            description: "Artifacts you control have hexproof.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(R::Artifact.and(R::ControlledByYou)),
+                keyword: Keyword::Hexproof,
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::YourControl,
+            )
+            .with_filter(Predicate::All(vec![
+                Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(R::Artifact.and(R::ControlledByYou)),
+                    n: Value::ONE,
+                },
+                Predicate::ValueAtLeast(
+                    Value::HighestManaValueAmong(Box::new(Selector::EachPermanent(
+                        R::Artifact.and(R::ControlledByYou),
+                    ))),
+                    Value::HighestManaValueAmong(Box::new(Selector::EachPermanent(R::Artifact))),
+                ),
+            ])),
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Cyberdrive Awakener — {5}{U} 4/4 Artifact Creature — Construct. "Flying.
+/// Other artifact creatures you control have flying. When this creature
+/// enters, each noncreature artifact you control becomes a 4/4 artifact
+/// creature until end of turn." (EDHREC 1003.)
+///
+/// `BecomeCreature`, not `BecomeCreatureLosingTypes`: the printed line adds
+/// the creature type and keeps the artifact one, which is also why the
+/// animated Signets pick up the anthem above them on the same resolution.
+pub fn cyberdrive_awakener() -> CardDefinition {
+    use crate::effect::{Duration, shortcut::etb};
+    CardDefinition {
+        name: "Cyberdrive Awakener",
+        cost: cost(&[generic(5), u()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Construct],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![StaticAbility {
+            description: "Other artifact creatures you control have flying.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    R::Artifact.and(R::Creature).and(R::ControlledByYou).and(R::OtherThanSource),
+                ),
+                keyword: Keyword::Flying,
+            },
+        }],
+        triggered_abilities: vec![etb(Effect::BecomeCreature {
+            what: Selector::EachPermanent(
+                R::Artifact.and(R::Creature.negate()).and(R::ControlledByYou),
+            ),
+            power: Value::Const(4),
+            toughness: Value::Const(4),
+            creature_types: vec![],
+            keywords: vec![],
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
