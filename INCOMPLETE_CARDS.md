@@ -433,6 +433,33 @@ creature at any time. A combat with **two** different defenders leaves the
 clause ambiguous and the filter takes nothing; the printed cards predate
 multiplayer templating and the CR gives no tiebreak.
 
+## Non-targeted clauses that still declare a target slot (2026-09-20)
+
+69 non-Aura cards print no "target" anywhere and still carry a
+`target_filtered` slot. The **six** where the target provably cannot see what
+the clause is about are fixed and gated by
+`scripts/audit_resolution_order.py` (a mill or surveil that fills the zone
+the same resolution then reaches into). What remains is a census, not a
+defect list:
+
+- **The karoo shape** — "when this land enters, return a land you control to
+  its owner's hand": Azorius Chancery, Boros Garrison, Dimir Aqueduct,
+  Golgari Rot Farm, Gruul Turf, Izzet Boilerworks, Rakdos Carnarium, Selesnya
+  Sanctuary, Simic Growth Chamber, plus Kor Skyfisher, Whitemane Lion,
+  Species Gorger and the Planeshift gainlands (Fleetfoot Panther, Horned
+  Kavu, Lava Zombie, Silver Drake, Shivan Wurm, Sawtooth Loon, …).
+- ⚠ **What it rounds off**: the choice is made when the trigger goes on the
+  stack rather than on resolution, so it fizzles if the chosen permanent
+  leaves in response where the printed trigger would pick another; and a
+  permanent with **shroud** cannot be chosen at all, because a target slot
+  is a target.
+- These are all "a permanent **you control**", so the practical exposure is
+  narrow — your own shroud creature, or your own permanent bounced in
+  response to your own trigger.
+
+Left as a census on purpose: nothing here is wrong on a still board, and a
+ratchet whose rows are not bugs is one nobody closes.
+
 ## Exert: the cost is announced, the modal is not (2026-09-20)
 
 CR 508.1g / 701.43d. `GameAction::DeclareAttackersExerting { attacks, exert }`

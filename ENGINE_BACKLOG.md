@@ -83,6 +83,8 @@ the handoff.
 | Rules coverage | [MagicCompRules coverage audit](#magiccomprules-coverage-audit) | 312 |
 | Tooling | [Recommender: two builder defects fixed, one lesson recorded](#recommender-two-builder-defects-fixed-one-lesson-recorded) | 17 |
 | Bugs & robustness | [FIXED 2026-09-20 (the fifty-eighth find) — a printed "may" that belongs to ANOTHER SEAT, asked of the controller, and why "the bot answers the same" hid it](#fixed-2026-09-20-the-fifty-eighth-find--a-printed-may-that-belongs-to-another-seat-asked-of-the-controller-and-why-the-bot-answers-the-same-hid-it) | 1 card, 115 checked |
+| Bugs & robustness | [FIXED 2026-09-20 (the fifty-ninth find) — "mill, THEN return" was choosing BEFORE the mill, because a clause with no printed "target" was a cast-time target](#fixed-2026-09-20-the-fifty-ninth-find--mill-then-return-was-choosing-before-the-mill-because-a-clause-with-no-printed-target-was-a-cast-time-target) | 6 → 0 |
+| Bugs & robustness | [FIXED 2026-09-20 (the fifty-eighth find) — six printed "you may"s dropped in the CUBE pool, and restoring one is two edits because the second is the POLICY](#fixed-2026-09-20-the-fifty-eighth-find--six-printed-you-mays-dropped-in-the-cube-pool-and-restoring-one-is-two-edits-because-the-second-is-the-policy) | 242 → 213 |
 | Engine mechanics & primitives | [FIXED 2026-09-20 (the fifty-seventh find) — exert was AUTOMATIC and its bonus was not LINKED, so Glorybringer bought a skipped untap over an empty board](#fixed-2026-09-20-the-fifty-seventh-find--exert-was-automatic-and-its-bonus-was-not-linked-so-glorybringer-bought-a-skipped-untap-over-an-empty-board) | 6 cards |
 | Bugs & robustness | [FIXED 2026-09-20 (the fifty-sixth find) — "defending player" is ONE seat and 32 cards had it as "any opponent", including three that were worse than imprecise](#fixed-2026-09-20-the-fifty-sixth-find--defending-player-is-one-seat-and-32-cards-had-it-as-any-opponent-including-three-that-were-worse-than-imprecise) | 32 → 0 |
 | Tooling | [FIXED 2026-09-20 (the fifty-fifth find) — the SHARED audit reader was blind to a third of the catalog, so every ratchet built on it reported its column over two thirds of the cards](#fixed-2026-09-20-the-fifty-fifth-find--the-shared-audit-reader-was-blind-to-a-third-of-the-catalog-so-every-ratchet-built-on-it-reported-its-column-over-two-thirds-of-the-cards) | 7,030 → 0 skipped |
@@ -159,6 +161,78 @@ copies.** `_factory_body` fixed brace matching across them at the
 forty-eighth find; helper inlining and `..delegation` are only in this one.
 Extracting a shared `catalog_bodies.py` would move every audit's count at
 once, so it needs a run that can re-verify each ratchet, not a drive-by.
+
+## FIXED 2026-09-20 (the fifty-ninth find) — "mill, THEN return" was choosing BEFORE the mill, because a clause with no printed "target" was a cast-time target
+
+CR 608.2 — a spell resolves in printed order. "Mill three cards, **then** you
+may return a creature or land card from your graveyard to your hand" is one
+resolution, and the return looks at the graveyard the mill has just filled.
+The clause prints no "target" anywhere. Six cards modelled it as
+`target_filtered(… .from_your_graveyard())`, which CR 601.2c chooses **as the
+spell is cast** — against the graveyard as it was before the spell resolved.
+
+**The proof was one probe.** Grapple with the Past over an empty graveyard:
+graveyard 0 → 4, hand unchanged. The spell was a three-card self-mill and
+nothing else, every time the graveyard started empty.
+
+The idiom that works was already in the catalog for the same clause — Corpse
+Churn's `MayDo` around a `Move` whose `what` is `Selector::one_of` over
+`CardsInZone { Graveyard }`, resolved when the arm runs. Grapple with the
+Past, Liliana the Last Hope's −2, Vanille, Acolyte of Affliction, Overlord of
+the Balemurk and Tyvar's −2. `scripts/audit_resolution_order.py`, **0 / 23**.
+
+💡 **Three of the six came from the ratchet, not from the census that started
+it.** The hand census keyed on "mill N cards"; the ratchet keys on "fills a
+zone, then reaches into it", which also catches surveil, explore and the
+enters-or-attacks phrasing. **Write the audit against the *shape* of the bug,
+not against the wording of the example that found it.**
+
+⚠ **THE SHARP HALF OF A WIDER CLASS, AND THE SPLIT IS THE POINT.** 69
+non-Aura cards print no "target" and still declare a target slot. The
+dominant shape is the karoo lands — "when this land enters, return a land you
+control to its owner's hand", Azorius Chancery and its nine siblings, Kor
+Skyfisher, Whitemane Lion, the Planeshift gainlands. Those diverge only when
+the chosen permanent leaves in response, or when it has shroud and so cannot
+be targeted at all. Nothing about them is provably wrong on a still board, so
+they are this census and not rows in a gate: **a ratchet that cannot say
+which of its rows are bugs is a ratchet nobody will close.** (Auras are not
+in the 69 — CR 303.4c makes an Aura spell target, which is why "Enchant
+creature" prints no target word.)
+
+## FIXED 2026-09-20 (the fifty-eighth find) — six printed "you may"s dropped in the CUBE pool, and restoring one is two edits because the second is the POLICY
+
+The cube pool is the two-player simulator's own deck space, so a dropped
+choice there is a defect on the trained path. Chrome Mox and Isochron Scepter
+ate a card from hand on every entry; Fiend Hunter's "you may exile **another**
+target creature" targets *any* creature, so on a board whose only other
+creature was its controller's it exiled its own; Mask of Memory and
+Restoration Angel were mandatory; Beastmaster Ascension was pure upside and
+wrapped for tidiness.
+
+📐📐 **THE WRAPPER IS NOT THE FIX — THE ANSWER IS.** `AutoDecider` declines
+*every* `OptionalTrigger`, so wrapping a beneficial ability in `MayDo` and
+walking away turns the card off. What decides these in self-play is
+`optional_trigger_beneficial`, and Mask of Memory proved the point: its body
+is `Seq[Draw 2, Discard 1]`, `effect_imposes_self_cost` folds a `Seq` with
+`any`, and a self-discard is on its list — so the wrapper alone would have
+left the Equipment a vanilla +0/+0. **A loot is not a cost.**
+`is_net_positive_loot` says so for the self-contained draw/discard shape
+drawing strictly more than it discards, and for nothing else.
+
+💡 The new rows are asserted through the *policy*, not through the wrapper's
+existence, which is the only test that can tell a restored choice from a
+disabled card.
+
+⚠ Two rows in the same column were **false positives** and close with a
+conditioned exemption instead: `MillThenToHandN` builds its `ChooseCards`
+with `min: 0` (the printed "any number", and what makes Nashi's "if you put
+no cards into your hand this way" branch reachable), and "you may spend mana
+as though" is CR 106.6 provenance. With the exert phrase, 242 → 213.
+
+⚠ `ScriptedDecider` falls back to `AutoDecider` when its script runs out, so
+scripting *four* bools where the card asks one ate the following discard's
+card pick — caught as `DecisionAnswerMismatch`, which is the engine's own
+guard and not a test bug.
 
 ## FIXED 2026-09-20 (the fifty-seventh find) — exert was AUTOMATIC and its bonus was not LINKED, so Glorybringer bought a skipped untap over an empty board
 

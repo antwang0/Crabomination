@@ -3058,6 +3058,26 @@ pod              2/4/6/8/10 seats x 1,000, seed 9400 = 5,000 games, all 5 blocks
                  turns/game 19.49 / 44.94 / 64.94 / 92.50 / 122.68 — the curve is unmoved
 ```
 
+⚠⚠ **Re-taken again after the cube-pool card work** — the exert feature, six
+restored "you may"s and six resolution-order fixes all change how cards in
+the **cube** pool play, which is the two-player simulator's own deck space:
+
+```text
+--bench          decisions 195,806 / 27.49 / 611.9 / 0 stalls — still byte-identical
+                 determinism ok; thread_determinism ok (3 vs 1); peak_rss_mib 28.9
+two-player pools 4 fresh seeds x cube/sos/sealed x 300 an archetype = 30,000 games
+                 0 panics, 0 caps, 0 board caps, 0 stuck; 3 draws (0.010 %)
+pod              4/8/10 seats x 1,000, seed 9500 = 3,000 games, all decided,
+                 every undecided_by column zero, zero panics
+                 turns/game 45.18 / 93.74 / 122.70 — unmoved
+```
+
+💡 **`--bench` has now been byte-identical across three commits that each
+changed how a cube card plays.** That is not reassurance, it is the measured
+statement of what it covers: `--decks fixed` is four hand-built archetypes and
+holds none of the ~45 cards this run touched. The 30,000-game pool run is the
+only guardrail here with anything to say about them.
+
 📐 **The pre-check, one row per site.** ① `PlayersMayAccept` now collects
 every answer before applying any, so the loop runs twice over a set that is
 at most the seat count — and it is unreachable from `archetypes()`, whose
