@@ -3274,6 +3274,35 @@ with something to feed it, and when it is, the loop was thousands of actions
 long. When the gate and the aggregate disagree, the aggregate wins — the
 gate's job is to make the change *visible*, not to size it.
 
+### 2026-09-20 (the eighth Commander session, FINAL tip) — guardrail, no perf work
+
+Re-taken after the session's last five commits (the blink pair, two mana
+artifacts, two cards the engine had already documented, and the fifth
+fan-out ratchet's five trigger fixes), which the earlier block predates.
+
+```text
+--bench (release-fast):
+  decisions          195,806   byte-identical to the committed invariant
+  turns_per_game       27.49   "
+  decisions_per_game   611.9   "
+  stalls          0 (cap 0 / board 0 / stuck 0 / draw 0)
+  determinism     ok (all pairs split)
+```
+
+**Pod smoke, FRESH seed 9117, 2..9 seats × 600 games = 4,800:** every block
+**100 % decided, 0 undecided, every `undecided_by` column zero**, no panic or
+error line. Turns a game 19.48 / 32.15 / 44.35 / 56.53 / 64.30 / 77.01 / 92.12
+/ 97.80 — on the same ~12-turns-a-seat line the 70,000-game sweep established.
+**FRONTIER 9118.**
+
+Suite **20,190 / 0 / 6** (`--exclude crabomination_client`), clippy **0**,
+`cargo check --profile release-fast` clean.
+
+⚠ The five trigger fixes in that last batch each *narrow* a trigger (a source
+no longer fires off itself), so the only direction they could move a pod
+number is fewer triggers — and the turn curve is unmoved at every seat count,
+which is the expected reading for five cards none of the pod decks runs.
+
 ### 2026-09-20 (the eighth Commander session, closing) — guardrail, no perf work
 
 Re-taken at the merged tip `80f0eeb7`, after the session's remaining work
