@@ -587,3 +587,56 @@ fn kenrith_reanimates_into_its_owners_control() {
     assert_eq!(back.controller, 2, "under its OWNER's control, not the activator's");
     assert!(g.players[2].graveyard.is_empty(), "and it left that graveyard");
 }
+
+// ── Zedruu the Greathearted ─────────────────────────────────────────────────
+
+/// Zedruu's X is "permanents you **own** that your **opponents control**" —
+/// a set that stays empty until something is given away, and the one clause
+/// on any of these cards that needs ownership and control to be different
+/// things.
+#[test]
+fn zedruu_counts_only_what_it_gave_away() {
+    let mut g = multi_player_game(4);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let zedruu = g.add_card_to_battlefield(0, catalog::zedruu_the_greathearted());
+    let gift = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // A permanent seat 2 both owns and controls must not count for Zedruu.
+    g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    g.players[0].hand.clear();
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: zedruu,
+        ability_index: 0,
+        target: Some(Target::Player(2)),
+        additional_targets: vec![Target::Permanent(gift)],
+        x_value: None,
+        mode: None,
+    })
+    .expect("{U}{R}{W}: hand the Bears to seat 2");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(gift).unwrap().controller,
+        2,
+        "seat 2 controls it now",
+    );
+
+    // ⚠ Stop IN the upkeep, not at the draw step: entering Draw takes the
+    // turn-based draw too, and a hand of two would not say whose card was
+    // whose.
+    let life = g.players[0].life;
+    g.step = TurnStep::Untap;
+    while g.step != TurnStep::Upkeep {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 1, "X is one: the Bears it gave away");
+    assert_eq!(g.players[0].hand.len(), 1, "and one card, before the turn's own draw");
+}

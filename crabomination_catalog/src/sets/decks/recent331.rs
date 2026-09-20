@@ -156,3 +156,58 @@ pub fn kenrith_the_returned_king() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Zedruu the Greathearted — {1}{U}{R}{W} Legendary Creature — Minotaur Monk
+/// 2/4. "At the beginning of your upkeep, you gain X life and draw X cards,
+/// where X is the number of permanents you own that your opponents control.
+/// {U}{R}{W}: Target opponent gains control of target permanent you control."
+///
+/// The archetypal group-hug commander, and the one whose text cannot be
+/// written at all without the distinction between **owning** and
+/// **controlling** a permanent: X counts `OwnedByYou ∧ ControlledByOpponent`,
+/// a set that is empty in every game where nobody has given anything away.
+///
+/// The activated ability is Donate's effect with Donate's two target slots —
+/// slot 0 the opponent, slot 1 the permanent — so `GainControl { to:
+/// Some(PlayerRef::Target(0)) }` over a `TargetFiltered { slot: 1 }`. ⚠ The
+/// duration is `Permanent`: the printed card gives the permanent away for
+/// good, which is what makes X grow rather than reset.
+pub fn zedruu_the_greathearted() -> CardDefinition {
+    let given_away = || {
+        Value::count(Selector::EachPermanent(
+            R::OwnedByYou.and(R::ControlledByOpponent),
+        ))
+    };
+    CardDefinition {
+        name: "Zedruu the Greathearted",
+        cost: cost(&[generic(1), u(), r(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Minotaur, CreatureType::Monk],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::YourControl,
+            ),
+            effect: Effect::Seq(vec![
+                Effect::GainLife { who: Selector::You, amount: given_away() },
+                Effect::Draw { who: Selector::You, amount: given_away() },
+            ]),
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[u(), r(), w()]),
+            effect: Effect::GainControl {
+                what: Selector::TargetFiltered { slot: 1, filter: R::ControlledByYou },
+                to: Some(PlayerRef::Target(0)),
+                duration: Duration::Permanent,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
