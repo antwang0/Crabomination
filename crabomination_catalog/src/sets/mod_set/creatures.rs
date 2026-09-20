@@ -338,24 +338,30 @@ pub fn restoration_angel() -> CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Flash],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Seq(vec![
-                Effect::Exile {
-                    what: target_filtered(
-                        SelectionRequirement::Creature
-                            .and(SelectionRequirement::ControlledByYou)
-                            .and(
-                                SelectionRequirement::HasCreatureType(CreatureType::Angel).negate(),
-                            ),
-                    ),
-                },
-                Effect::Move {
-                    what: Selector::Target(0),
-                    to: ZoneDest::Battlefield {
-                        controller: PlayerRef::You,
-                        tapped: false,
+            // "**you may** exile target non-Angel creature you control, then
+            // return that card to the battlefield." A mandatory blink is a
+            // real cost on a creature carrying counters or an Aura.
+            effect: Effect::MayDo {
+                description: "Exile and return a creature you control?".into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Exile {
+                        what: target_filtered(
+                            SelectionRequirement::Creature
+                                .and(SelectionRequirement::ControlledByYou)
+                                .and(
+                                    SelectionRequirement::HasCreatureType(CreatureType::Angel).negate(),
+                                ),
+                        ),
                     },
-                },
-            ]),
+                    Effect::Move {
+                        what: Selector::Target(0),
+                        to: ZoneDest::Battlefield {
+                            controller: PlayerRef::You,
+                            tapped: false,
+                        },
+                    },
+                ])),
+            },
         }],
         ..Default::default()
     }

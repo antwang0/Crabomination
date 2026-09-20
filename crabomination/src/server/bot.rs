@@ -4653,6 +4653,30 @@ fn find_maydo_body<'a>(eff: &'a Effect, desc: &str) -> Option<&'a Effect> {
 /// Whether `eff` (a "you may" body) imposes a clear cost on its controller —
 /// losing life, sacrificing, or discarding. Conservative: the bot declines
 /// such triggers rather than paying for an effect it can't value-judge.
+/// A `Seq` made only of the bot's own draws and discards, drawing strictly
+/// more than it discards. CR-wise it is not a cost at all; the cards are the
+/// point and the discard is the rate.
+fn is_net_positive_loot(v: &[Effect]) -> bool {
+    use crate::effect::{PlayerRef, Selector};
+    let is_you = |sel: &Selector| {
+        matches!(sel, Selector::You) || matches!(sel, Selector::Player(PlayerRef::You))
+    };
+    let (mut drawn, mut binned) = (0i64, 0i64);
+    use crate::effect::Value;
+    for e in v {
+        match e {
+            Effect::Draw { who, amount: Value::Const(n) } if is_you(who) => {
+                drawn += i64::from(*n)
+            }
+            Effect::Discard { who, amount: Value::Const(n), .. } if is_you(who) => {
+                binned += i64::from(*n)
+            }
+            _ => return false,
+        }
+    }
+    drawn > binned && binned > 0
+}
+
 fn effect_imposes_self_cost(eff: &Effect) -> bool {
     use crate::effect::{PlayerRef, Selector};
     let hits_self = |sel: &Selector| {
@@ -4674,6 +4698,13 @@ fn effect_imposes_self_cost(eff: &Effect) -> bool {
         Effect::SacrificeAndRemember { .. } => true,
         Effect::SacrificeAnyNumber { who, .. } => matches!(who, PlayerRef::You),
         Effect::PayLifeLookTake { who } => matches!(who, PlayerRef::You),
+        // A **loot** is not a cost: "you may draw two cards. If you do,
+        // discard a card" (Mask of Memory) is net +1 card, and the blanket
+        // `any` below reads its discard and declines the whole ability,
+        // which leaves the Equipment a vanilla +0/+0. Only the self-contained
+        // draw/discard shape qualifies, and only when it draws more than it
+        // discards — anything else keeps the conservative answer.
+        Effect::Seq(v) if is_net_positive_loot(v) => false,
         Effect::Seq(v) => v.iter().any(effect_imposes_self_cost),
         Effect::ChooseMode(v)
         | Effect::ChooseN { modes: v, .. }

@@ -302,6 +302,10 @@ fn restoration_angel_blinks_a_friendly_non_angel() {
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.clear_sickness(bear);
     let angel = g.add_card_to_hand(0, catalog::restoration_angel());
+    // The printed "you may" is now asked; accept it.
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new(
+        std::iter::repeat_with(|| crabomination::decision::DecisionAnswer::Bool(true)).take(4),
+    ));
     g.players[0].mana_pool.add_colorless(3);
     g.players[0].mana_pool.add(Color::White, 1);
     // Cast — auto-target heuristic picks the bear (the only legal non-Angel

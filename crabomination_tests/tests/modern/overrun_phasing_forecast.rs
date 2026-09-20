@@ -2917,6 +2917,26 @@ fn restored_optional_triggers_are_answered_sensibly_by_the_bot() {
         &g, mox, "Imprint: exile a nonartifact, nonland card from your hand?"
     );
 
+    // A loot is net +1 card, not a cost: the blanket self-cost screen read
+    // Mask of Memory's discard and would have declined the whole ability,
+    // leaving the Equipment a vanilla +0/+0.
+    let mut g = two_player_game();
+    let mask = g.add_card_to_battlefield(0, catalog::mask_of_memory());
+    assert!(
+        optional_trigger_beneficial(&g, mask, "Draw two cards, then discard a card?"),
+        "draw two discard one is taken",
+    );
+
+    // Restoration Angel's blink is not on the self-cost list at all, so the
+    // wrapper does not turn the card off — it only lets a seat decline.
+    let mut g = two_player_game();
+    let angel = g.add_card_to_battlefield(0, catalog::restoration_angel());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert!(
+        optional_trigger_beneficial(&g, angel, "Exile and return a creature you control?"),
+        "the blink is still taken",
+    );
+
     // Fiend Hunter with only the bot's own creature to hit: the printed "may"
     // is the whole of what lets it decline, and the mandatory version had to
     // exile its controller's own body.

@@ -29237,17 +29237,23 @@ pub fn mask_of_memory() -> CardDefinition {
         cost(&[generic(1)]),
         0,
         0,
-        Effect::Seq(vec![
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(2),
-            },
-            Effect::Discard {
-                who: Selector::You,
-                amount: Value::Const(1),
-                random: false,
-            },
-        ]),
+        // "**you may** draw two cards. If you do, discard a card." The draw
+        // and the discard are one choice, and declining is a real line when
+        // the hand is what you want to keep.
+        Effect::MayDo {
+            description: "Draw two cards, then discard a card?".into(),
+            body: Box::new(Effect::Seq(vec![
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                },
+                Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                    random: false,
+                },
+            ])),
+        },
     )
 }
 

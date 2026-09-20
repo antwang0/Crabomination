@@ -381,6 +381,12 @@ fn mask_of_memory_draws_two_discards_one() {
     g.battlefield_find_mut(mask).unwrap().attached_to = Some(attacker);
     for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
     g.clear_sickness(attacker);
+    // The printed "you may" is now asked; accept it. Exactly one answer —
+    // `ScriptedDecider` falls back to `AutoDecider` once the script runs out,
+    // and the discard that follows wants a card, not a bool.
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
     while g.step != TurnStep::DeclareAttackers {
         g.perform_action(GameAction::PassPriority).expect("pass");
     }
