@@ -94,6 +94,22 @@ the handoff.
 
 # Bugs & robustness
 
+### The reader, and the one lead it leaves
+
+Both of this run's censuses import `audit_dropped_may`'s body reader, which
+got two fixes of its own: a factory's **same-file helpers** are part of its
+body (all five Primordials read as a dropped "you may" while `primordial_etb`
+wrapped every one in `min_targets: 0`), and so is the factory it delegates to
+with `..other_factory()` (Junk Diver carries Myr Retriever's whole shape).
+A Leyline's "you may begin the game with it on the battlefield" is a CR 103.6
+pre-game permission and is skipped: twelve false positives, 190 -> 178.
+
+💡 **The lead is that the other ten `audit_*.py` readers are separate
+copies.** `_factory_body` fixed brace matching across them at the
+forty-eighth find; helper inlining and `..delegation` are only in this one.
+Extracting a shared `catalog_bodies.py` would move every audit's count at
+once, so it needs a run that can re-verify each ratchet, not a drive-by.
+
 ## FIXED 2026-09-20 (the fifty-third find) — the printed word "another" between two target slots had no way to be said, so a creature fought itself and Cone of Flame dealt 1+2+3 to one permanent
 
 CR 601.2c lets two separate instances of the word "target" on one object name

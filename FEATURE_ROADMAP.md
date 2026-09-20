@@ -177,7 +177,17 @@ Each unblocks a large swath of cards.
   "choose targets as it resolves". The prevention sibling ships as
   `Effect::PreventNextDamageDivided` (Serra's Hymn), sharing the same
   `Decision::DivideDamage`.
-- 🟡 **Targeting refinements:** resolution-time legality re-check (608.2b) ships
+- 🟡 **Targeting refinements:** **CR 601.2c's cross-slot restrictions** both
+  ship as `SelectionRequirement` atoms read out of
+  `GameState::target_slots_scratch`: `SameControllerAsTargetSlot` ("two target
+  creatures controlled by the same player") and, since 2026-09-20,
+  `OtherThanTargetSlot` — the printed word "**another**" between two slots
+  (ENGINE_BACKLOG's fifty-third find; `scripts/audit_another_target.py` is the
+  ratchet). The cast path, the activation path and the auto-picker all enforce
+  them; the picker's `already_picked` was only ever a preference.
+  `SelectionRequirement::OnBattlefield` is the on-board half of a **mixed**
+  zone clause, whose graveyard half `scripts/audit_target_zone.py` ratchets
+  (the fifty-second find). Resolution-time legality re-check (608.2b) ships
   for single/multi-target spells and Auras, and now resolves `{X}`-from-cost
   target filters (Hearth Kami's "artifact with mana value X" via
   `ManaValueExactlyXFromCost`). "Up to N targets" ships via
