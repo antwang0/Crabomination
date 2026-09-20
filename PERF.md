@@ -3274,6 +3274,43 @@ with something to feed it, and when it is, the loop was thousands of actions
 long. When the gate and the aggregate disagree, the aggregate wins — the
 gate's job is to make the change *visible*, not to size it.
 
+### 2026-09-20 (the eighth Commander session, closing) — guardrail, no perf work
+
+Re-taken at the merged tip `80f0eeb7`, after the session's remaining work
+(`ManaPayload::OneOfEachColorAmongYourPermanents`, the blink pair, two mana
+artifacts, two cards the engine had already documented) and the concurrent
+run's commits merged in.
+
+```text
+--bench (release, 3 threads):
+  decisions          195,806   byte-identical to the committed invariant
+  turns_per_game       27.49   "
+  decisions_per_game   611.9   "
+  stalls          0 (cap 0 / board 0 / stuck 0 / draw 0)
+  determinism     ok (all pairs split)
+  peak_rss_mib     25.9      (host: Xeon @ 2.10GHz)
+```
+
+**Pod smoke, FRESH seed 9115:** 4,900 games, 700 at each of 2..8 seats —
+**100 % decided, 0 undecided, every `undecided_by` column zero**, no panic or
+error line (and every optimized profile is `panic = "abort"`, so a panic ends
+the process rather than printing). Turns a game 18.93 / 32.72 / 46.05 / 56.78 /
+64.06 / 76.61 / 93.88, within 0.8 of the seed-9110 reading at every seat count.
+**FRONTIER 9116.**
+
+Suite **20,175 / 0 / 6** (`--workspace --exclude crabomination_client`),
+workspace clippy **0**, `cargo check --profile release-fast -p crabomination
+--bin bot_ladder` clean, golden traces 12/12, and every ratchet column at its
+floor (`player_static_target` 1-allowlisted, `doc_card_names` gate 0,
+`target_opponent` 1 known, `each_player` 1-allowlisted, `loop_splice`
+13/13/0/0, `keyword_value` 0 of 780, `panics` 0 bare).
+
+⚠ **Twenty-one cards and seven engine primitives moved no committed number,
+and the pre-check said so before the build did:** not one of the twenty-one is
+in `bot_ladder::archetypes()`, `golden_trace.rs` or `pod::decks`, and the one
+edit on a hot path (the damage multiplier's battlefield walk) sits behind
+`damage_scaling_in_scope()`, which `archetypes()` never opens.
+
 ### 2026-09-19/20 (the eighth Commander session) — guardrail, no perf work
 
 Seven engine commits and fourteen cards, none of them a perf change:
