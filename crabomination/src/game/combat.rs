@@ -975,6 +975,47 @@ impl GameState {
         self.declare_attackers_banded(attacks, vec![])
     }
 
+    /// CR 701.43d — is exerting `id` worth its cost to `controller`?
+    ///
+    /// The bonus is a *linked* `Exerted` trigger (CR 607.2h), so "worth it"
+    /// is answerable from the card: a bonus that needs a target and has none
+    /// is a skipped untap bought for nothing, which is exactly what the
+    /// blanket auto-exert did to Glory-bringer over an empty board. Anything
+    /// that needs no target is taken — these bonuses are pure upside, and the
+    /// untap is paid a turn later.
+    fn exert_pays_off(&self, id: CardId, controller: usize) -> bool {
+        let Some(card) = self.battlefield_find(id) else { return false };
+        let mut linked = card
+            .definition
+            .triggered_abilities
+            .iter()
+            .filter(|t| t.event.kind == EventKind::Exerted)
+            .peekable();
+        // No linked bonus at all: the keyword is then a pure downside and
+        // there is no reason to pay it.
+        if linked.peek().is_none() {
+            return false;
+        }
+        linked.any(|t| {
+            !t.effect.requires_target()
+                || !self.enumerate_legal_targets_xc(&t.effect, controller, Some(id), 0, 0).is_empty()
+        })
+    }
+
+    /// CR 508.1g — [`declare_attackers_banded`] with the optional costs to
+    /// attack announced in the same step. `exert` is the set of chosen
+    /// attackers that pay exert; a creature outside it does not, whatever its
+    /// keyword says.
+    ///
+    /// [`declare_attackers_banded`]: Self::declare_attackers_banded
+    pub fn declare_attackers_exerting(
+        &mut self,
+        attacks: Vec<Attack>,
+        exert: Vec<CardId>,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        self.declare_attackers_full(attacks, vec![], Some(exert))
+    }
+
     /// [`declare_attackers`] with CR 702.22c attacking bands announced in the
     /// same step. Each `bands` entry lists one band's members.
     ///
@@ -984,6 +1025,19 @@ impl GameState {
         attacks: Vec<Attack>,
         bands: Vec<Vec<CardId>>,
     ) -> Result<Vec<GameEvent>, GameError> {
+        self.declare_attackers_full(attacks, bands, None)
+    }
+
+    /// The body of the three declare-attackers entries. `exert` is `None`
+    /// when no optional cost was announced, which leaves the choice to
+    /// [`exert_pays_off`](Self::exert_pays_off).
+    pub fn declare_attackers_full(
+        &mut self,
+        attacks: Vec<Attack>,
+        bands: Vec<Vec<CardId>>,
+        exert: Option<Vec<CardId>>,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        let exert = exert.as_deref();
         if self.step != TurnStep::DeclareAttackers {
             return Err(GameError::WrongStep { actual: self.step });
         }
@@ -1790,6 +1844,17 @@ impl GameState {
             );
             let decayed = dfacts.decayed;
             let granted: Vec<crate::card::TriggeredAbility> = self.granted_triggers(id).cloned().collect();
+            // CR 701.43 / 508.1g — Exert is an **optional cost to attack**,
+            // chosen as attackers are declared. `exert` carries the active
+            // player's announcement (`DeclareAttackersExerting`); with none,
+            // the engine takes it only when the linked CR 701.43d bonus can
+            // actually do something, which is what `exert_pays_off` states.
+            // Read before the `&mut` below, which the policy walk cannot share.
+            let exerted_now = dfacts.exert
+                && match exert {
+                    Some(chosen) => chosen.contains(&id),
+                    None => self.exert_pays_off(id, p),
+                };
             let card = self
                 .battlefield
                 .iter_mut()
@@ -1801,12 +1866,8 @@ impl GameState {
                 // "becomes tapped" event so Tapped triggers fire (Magda).
                 events.push(GameEvent::PermanentTapped { card_id: id, actor: None, as_attacker: true });
             }
-            // CR 702.83 — Exert. We auto-exert any attacking creature with
-            // the keyword (the "you may" choice is collapsed; the AutoDecider
-            // would have no policy and a real exert is almost always taken for
-            // its bonus). The creature won't untap next untap step. Its exert
-            // bonus rides its normal SelfSource Attacks trigger.
-            if dfacts.exert {
+            // The creature then skips its next untap step.
+            if exerted_now {
                 card.skip_next_untap = true;
             }
             // CR 702.121 — Melee: +1/+1 until end of turn per opponent attacked.
@@ -1841,6 +1902,14 @@ impl GameState {
                 // routed through the unified `dispatch_triggers_for_events`
                 // path off the `AttackerDeclared` event — pushing them
                 // here too would double-fire the ability.
+                // CR 701.43d — the linked "when you do" rides `Exerted`, so it
+                // fires only for a creature that actually paid the cost.
+                if t.event.kind == EventKind::Exerted
+                    && t.event.scope == crate::effect::EventScope::SelfSource
+                    && exerted_now
+                {
+                    triggers.push((src, t.effect.clone(), p, t.event.filter.clone(), once_key(idx, t)));
+                }
                 if t.event.kind == EventKind::Attacks
                     && t.event.scope == crate::effect::EventScope::SelfSource
                 {

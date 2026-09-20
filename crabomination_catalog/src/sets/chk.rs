@@ -3577,14 +3577,21 @@ pub fn mistblade_shinobi() -> CardDefinition {
         keywords: vec![Keyword::Ninjutsu(cost(&[u()]))],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
-            // "…return target creature **that player** controls" — see
-            // Throat Slitter for why `ControlledByOpponent` is not that.
-            effect: Effect::Move {
-                what: target_filtered(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByTriggerPlayer),
-                ),
-                to: crate::effect::ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+            // "…**you may** return target creature **that player** controls"
+            // — see Throat Slitter for why `ControlledByOpponent` is not the
+            // second half. The "may" is the first: a mandatory bounce has to
+            // take a legal target when one exists, and returning a creature
+            // its controller wants recast is a real reason to decline.
+            effect: Effect::MayDo {
+                description: "Return target creature that player controls to its owner's hand?"
+                    .into(),
+                body: Box::new(Effect::Move {
+                    what: target_filtered(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByTriggerPlayer),
+                    ),
+                    to: crate::effect::ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+                }),
             },
         }],
         ..Default::default()

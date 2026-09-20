@@ -1025,6 +1025,13 @@ pub enum GameAction {
     /// same defender (CR 702.22d). Plain `DeclareAttackers` is this with no
     /// bands.
     DeclareAttackersBanded { attacks: Vec<Attack>, bands: Vec<Vec<CardId>> },
+    /// CR 508.1g — declare attackers and, in the same announcement, the
+    /// **optional costs to attack** that are being paid. `exert` is the set
+    /// of chosen attackers that pay exert (CR 701.43d); a creature outside it
+    /// does not exert, whatever its keyword says, and so gets neither the
+    /// skipped untap nor the linked "when you do" bonus. Plain
+    /// `DeclareAttackers` leaves the choice to the engine's policy.
+    DeclareAttackersExerting { attacks: Vec<Attack>, exert: Vec<CardId> },
     DeclareBlockers(Vec<(CardId, CardId)>),
     ActivateLoyaltyAbility { card_id: CardId, ability_index: usize, target: Option<Target>, #[serde(default)] x_value: Option<u32> },
     CastFlashback { card_id: CardId, target: Option<Target>, #[serde(default)] additional_targets: Vec<Target>, mode: Option<usize>, x_value: Option<u32> },

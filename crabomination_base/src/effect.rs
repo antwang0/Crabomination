@@ -2656,6 +2656,14 @@ pub enum EventKind {
     SpellCopied,
     /// A creature was declared as an attacker.
     Attacks,
+    /// CR 701.43d — the creature was **exerted** as it attacked. "You may
+    /// exert this creature as it attacks" is an optional cost to attack (CR
+    /// 508.1g) and the "when you do" printed in the same paragraph is a
+    /// *linked* ability (CR 607.2h), so the bonus rides this rather than a
+    /// plain `Attacks` trigger: a creature that attacks without being exerted
+    /// gets neither the skipped untap nor the bonus. Glorybringer,
+    /// Ahn-Crop Crasher, Glory-Bound Initiate.
+    Exerted,
     /// CR 508 — "Whenever you attack": fires **once** per combat for the
     /// attacking player when they declare one or more attackers, regardless of
     /// how many. Use a `SelfSource`/`YourControl` trigger over this instead of

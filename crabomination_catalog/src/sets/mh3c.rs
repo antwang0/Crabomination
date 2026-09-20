@@ -8,7 +8,7 @@ use crate::card::{
     StaticAbility, Subtypes, TokenDefinition, Zone,
 };
 use crate::effect::shortcut::{
-    adapt, battle_cry, etb, evolve, exalted, on_attack, on_cast, on_dies, target_any,
+    adapt, battle_cry, etb, evolve, exalted, on_cast, on_exert, on_dies, target_any,
     target_filtered,
 };
 use crate::effect::{LookPick, 
@@ -100,7 +100,7 @@ pub fn hydra_trainer() -> CardDefinition {
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Exert],
-        triggered_abilities: vec![on_attack(Effect::PumpPT {
+        triggered_abilities: vec![on_exert(Effect::PumpPT {
             what: target_filtered(R::Creature),
             power: Value::TotalCountersOn {
                 what: Box::new(Selector::EachPermanent(R::ControlledByYou)),

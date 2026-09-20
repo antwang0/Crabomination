@@ -4448,15 +4448,14 @@ pub fn glorybringer() -> CardDefinition {
         },
         power: 4,
         toughness: 4,
-        // Exert (CR 702.137) — the 4 damage is the exert BONUS, not an
-        // unconditional attack trigger: the engine auto-exerts an attacking
-        // creature with `Keyword::Exert` (it skips its next untap) and fires
-        // its `SelfSource` `Attacks` trigger as the bonus, which is the idiom
-        // `akh/mod.rs` documents. Without the keyword the dragon dealt 4 every
-        // attack and untapped anyway.
+        // Exert (CR 701.43) — the 4 damage is the exert BONUS, and CR 701.43d
+        // makes it a **linked** "when you do" (CR 607.2h): `Keyword::Exert`
+        // offers the optional cost to attack (CR 508.1g) and the trigger
+        // below rides `Exerted`, so an attack that does not pay it gets
+        // neither the damage nor the skipped untap.
         keywords: vec![Keyword::Flying, Keyword::Haste, Keyword::Exert],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            event: EventSpec::new(EventKind::Exerted, EventScope::SelfSource),
             effect: Effect::DealDamage {
                 // "target **non-Dragon** creature an opponent controls" — the
                 // clause that stops it from shooting a rival Dragon, and the

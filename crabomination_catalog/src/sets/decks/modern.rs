@@ -10573,8 +10573,9 @@ pub fn ahn_crop_crasher() -> CardDefinition {
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Haste, Keyword::Exert],
+        // CR 701.43d — the linked "when you do", so it rides `Exerted`.
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            event: EventSpec::new(EventKind::Exerted, EventScope::SelfSource),
             effect: Effect::GrantKeyword {
                 what: target_filtered(SelectionRequirement::Creature),
                 keyword: Keyword::CantBlock,

@@ -768,3 +768,46 @@ fn matsu_tribe_sniper_locks_the_flier_it_pings() {
     assert!(d.tapped, "tapped by the trigger");
     assert!(d.skip_next_untap, "and it skips its next untap");
 }
+
+/// Mistblade Shinobi's connection trigger is a **"you may"**, and the engine
+/// had it as a mandatory bounce. Declining leaves the creature where it is;
+/// accepting returns it. (The "that player controls" half is Throat Slitter's
+/// test — `ControlledByTriggerPlayer`, not "an opponent".)
+#[test]
+fn mistblade_shinobi_offers_the_bounce_rather_than_forcing_it() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    use crabomination::game::multi_player_game;
+    use crabomination::game::types::{Attack, AttackTarget, GameAction, TurnStep};
+
+    let run = |yes: bool| {
+        let mut g = multi_player_game(4);
+        let ninja = g.move_card_to_battlefield_for_test(0, catalog::mistblade_shinobi());
+        let theirs = g.move_card_to_battlefield_for_test(1, catalog::grizzly_bears());
+        let bystander = g.move_card_to_battlefield_for_test(2, catalog::grizzly_bears());
+        drain_stack(&mut g);
+        g.clear_sickness(ninja);
+        g.decider = Box::new(ScriptedDecider::new(
+            std::iter::repeat_with(move || DecisionAnswer::Bool(yes)).take(4),
+        ));
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.step = TurnStep::DeclareAttackers;
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+            attacker: ninja,
+            target: AttackTarget::Player(1),
+        }]))
+        .expect("attack seat 1");
+        while g.step != TurnStep::End {
+            g.advance_step(vec![]).expect("advance");
+            drain_stack(&mut g);
+        }
+        (g.battlefield_find(theirs).is_some(), g.battlefield_find(bystander).is_some())
+    };
+
+    let (kept, bystander_kept) = run(false);
+    assert!(kept, "declining the \"may\" leaves the creature on the battlefield");
+    assert!(bystander_kept, "and seat 2 was never in scope");
+    let (bounced, bystander_kept) = run(true);
+    assert!(!bounced, "accepting returns the damaged seat's creature");
+    assert!(bystander_kept, "still only that player's creature");
+}

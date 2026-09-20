@@ -2507,6 +2507,10 @@ fn every_self_source_trigger_kind_reaches_a_dispatcher() {
         ("DealsDamageToCreature", "combat.rs fire_noncombat_damage_triggers"),
         // "Whenever you attack" — pushed by `declare_attackers` off the batch.
         ("YouAttack", "combat.rs declare_attackers"),
+        // CR 701.43d — the linked exert bonus, pushed by the same walk
+        // that queues the `Attacks` triggers, gated on the creature
+        // having actually paid the CR 508.1g optional cost.
+        ("Exerted", "combat.rs declare_attackers, the exerted_now gate"),
         // CR 700.4 — the LKI death path collects the dying permanent's own
         // triggers directly (`stack.rs`, beside `CreatureDied` /
         // `PermanentLeavesBattlefield`, which the chain does name).

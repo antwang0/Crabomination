@@ -10,7 +10,7 @@ use crate::card::{
     CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope, EventSpec,
     ExileReturnZone, Keyword, Predicate, SelectionRequirement, Subtypes, TriggeredAbility,
 };
-use crate::effect::shortcut::{embalm, etb, eternalize, on_attack, target_any, target_filtered};
+use crate::effect::shortcut::{embalm, etb, eternalize, on_exert, target_any, target_filtered};
 use crate::effect::{Duration, PlayerRef, Selector, Value, ZoneDest};
 use crate::mana::{b, cost, g, generic, r, u, w};
 
@@ -351,9 +351,13 @@ pub fn champion_of_wits() -> CardDefinition {
     c
 }
 
-// ── Exert (CR 702.137) ───────────────────────────────────────────────────────
-// The engine auto-exerts an attacking creature with `Keyword::Exert` (it skips
-// its next untap) and fires its SelfSource Attacks trigger as the exert bonus.
+// ── Exert (CR 701.43) ────────────────────────────────────────────────────────
+// `Keyword::Exert` offers the **optional cost to attack** (CR 508.1g), chosen
+// as attackers are declared; the bonus is the *linked* "when you do" (CR
+// 701.43d / 607.2h) and rides `EventKind::Exerted` via `on_exert`, so an
+// attack that does not pay the cost gets neither the bonus nor the skipped
+// untap. With no announced choice the engine takes the exert only when the
+// bonus can do something (`exert_pays_off`).
 
 /// Tah-Crop Elite — {3}{W} 2/2 Bird Warrior, Flying. Exert as it attacks:
 /// creatures you control get +1/+1 until end of turn.
@@ -369,7 +373,7 @@ pub fn tah_crop_elite() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::Exert],
-        triggered_abilities: vec![on_attack(Effect::PumpPT {
+        triggered_abilities: vec![on_exert(Effect::PumpPT {
             what: Selector::EachPermanent(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
             ),
@@ -395,7 +399,7 @@ pub fn glory_bound_initiate() -> CardDefinition {
         power: 3,
         toughness: 1,
         keywords: vec![Keyword::Exert],
-        triggered_abilities: vec![on_attack(Effect::Seq(vec![
+        triggered_abilities: vec![on_exert(Effect::Seq(vec![
             Effect::PumpPT {
                 what: Selector::This,
                 power: Value::Const(1),
@@ -464,7 +468,7 @@ pub fn hooded_brawler() -> CardDefinition {
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Exert],
-        triggered_abilities: vec![on_attack(Effect::PumpPT {
+        triggered_abilities: vec![on_exert(Effect::PumpPT {
             what: Selector::This,
             power: Value::Const(2),
             toughness: Value::Const(2),

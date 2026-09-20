@@ -1887,3 +1887,96 @@ fn guardian_scalelord_backup_1_grants_its_attack_trigger() {
         "the granted trigger reanimates off the bear's own power");
 }
 
+
+/// CR 508.1g / 701.43 — exert is an **optional cost to attack**, so a
+/// declaration that does not announce it gets neither the skipped untap nor
+/// the linked CR 701.43d bonus. The engine auto-exerted every attacker with
+/// the keyword, which collapsed the choice away.
+#[test]
+fn cr_508_1g_declining_the_exert_skips_the_cost_and_the_bonus() {
+    let mut g = two_player_game();
+    let crasher = g.add_card_to_battlefield(0, catalog::ahn_crop_crasher());
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers_exerting(
+        vec![Attack { attacker: crasher, target: AttackTarget::Player(1) }],
+        vec![], // the cost is declined
+    )
+    .expect("attacking without exerting is legal");
+    drain_stack(&mut g);
+
+    let c = g.battlefield.iter().find(|c| c.id == crasher).unwrap();
+    assert!(c.tapped, "attacking still taps it (CR 508.1f is not the cost)");
+    assert!(!c.skip_next_untap, "the cost was not paid, so it untaps normally");
+    assert!(
+        !g.computed_permanent(blocker)
+            .expect("still there")
+            .keywords()
+            .contains(&crabomination::card::Keyword::CantBlock),
+        "CR 701.43d — the linked bonus is not a plain attack trigger",
+    );
+}
+
+/// And announcing it pays both halves, which is the same creature and the
+/// same attack as the test above.
+#[test]
+fn cr_508_1g_announcing_the_exert_pays_the_cost_and_the_bonus() {
+    let mut g = two_player_game();
+    let crasher = g.add_card_to_battlefield(0, catalog::ahn_crop_crasher());
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers_exerting(
+        vec![Attack { attacker: crasher, target: AttackTarget::Player(1) }],
+        vec![crasher],
+    )
+    .expect("exerting is legal");
+    drain_stack(&mut g);
+
+    assert!(
+        g.battlefield.iter().find(|c| c.id == crasher).unwrap().skip_next_untap,
+        "the cost was paid",
+    );
+    assert!(
+        g.computed_permanent(blocker)
+            .expect("still there")
+            .keywords()
+            .contains(&crabomination::card::Keyword::CantBlock),
+        "and the linked bonus resolved",
+    );
+}
+
+/// The policy behind an unannounced declaration, and the defect it fixes:
+/// Glorybringer's bonus needs a non-Dragon creature an opponent controls, so
+/// over a board with none the exert buys nothing and is not taken. It used to
+/// skip its untap every swing regardless.
+#[test]
+fn cr_508_1g_an_unannounced_exert_is_declined_when_the_bonus_has_no_target() {
+    let mut g = two_player_game();
+    let dragon = g.add_card_to_battlefield(0, catalog::glorybringer());
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![Attack { attacker: dragon, target: AttackTarget::Player(1) }])
+        .expect("attacks");
+    drain_stack(&mut g);
+    assert!(
+        !g.battlefield.iter().find(|c| c.id == dragon).unwrap().skip_next_untap,
+        "an empty board buys nothing, so the optional cost is not paid",
+    );
+
+    // With a legal target on the board the same declaration takes it.
+    let mut g = two_player_game();
+    let dragon = g.add_card_to_battlefield(0, catalog::glorybringer());
+    let prey = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![Attack { attacker: dragon, target: AttackTarget::Player(1) }])
+        .expect("attacks");
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield.iter().find(|c| c.id == dragon).unwrap().skip_next_untap,
+        "a legal target makes the bonus worth the untap",
+    );
+    assert!(g.battlefield_find(prey).is_none(), "and the 4 damage killed the 2/2");
+}

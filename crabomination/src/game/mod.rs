@@ -18570,6 +18570,9 @@ impl GameState {
             GameAction::DeclareAttackersBanded { attacks, bands } => {
                 self.declare_attackers_banded(attacks, bands)
             }
+            GameAction::DeclareAttackersExerting { attacks, exert } => {
+                self.declare_attackers_exerting(attacks, exert)
+            }
             GameAction::DeclareBlockers(assignments) => self.declare_blockers(assignments),
             GameAction::PassPriority => self.pass_priority(),
             // Unreachable: the `if let` 400 lines up returns for this

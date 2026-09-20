@@ -309,6 +309,17 @@ pub fn on_attack(effect: Effect) -> TriggeredAbility {
         effect,
     }
 }
+/// CR 701.43d — the **exert bonus**: "you may exert this creature as it
+/// attacks. When you do, `effect`." The two are a linked pair (CR 607.2h), so
+/// this rides `EventKind::Exerted` rather than `Attacks`: an attack without
+/// the optional cost (CR 508.1g) gets neither the bonus nor the skipped
+/// untap. Pair it with `Keyword::Exert`, which is what offers the cost.
+pub fn on_exert(effect: Effect) -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::Exerted, EventScope::SelfSource),
+        effect,
+    }
+}
 /// "Whenever you attack, `effect`" (CR 508) — fires once per combat for the
 /// attacking player, regardless of attacker count (Razorkin Hordecaller).
 pub fn on_you_attack(effect: Effect) -> TriggeredAbility {

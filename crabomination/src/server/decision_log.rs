@@ -133,7 +133,8 @@ fn is_noop(action: &GameAction) -> bool {
     match action {
         GameAction::PassPriority => true,
         GameAction::DeclareAttackers(a) => a.is_empty(),
-        GameAction::DeclareAttackersBanded { attacks, .. } => attacks.is_empty(),
+        GameAction::DeclareAttackersBanded { attacks, .. }
+        | GameAction::DeclareAttackersExerting { attacks, .. } => attacks.is_empty(),
         GameAction::DeclareBlockers(b) => b.is_empty(),
         _ => false,
     }

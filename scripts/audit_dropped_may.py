@@ -78,6 +78,12 @@ RESOLVER_OPTIONAL = {
     # Effect variant: (the oracle phrase it covers, the helper that makes the
     # arm optional)
     "PutFromHandOntoBattlefield": ("you may put", "choose_up_to_cards"),
+    # "You may put any number of … from among them into your hand" (Nashi,
+    # Gather the Pack, Smuggler's Surprise). The arm builds its
+    # `Decision::ChooseCards` with `min: 0`, so taking none is available and
+    # is what makes Nashi's "if you put no cards into your hand this way"
+    # branch reachable at all.
+    "MillThenToHandN": ("you may put", "min: 0"),
 }
 
 # ⚠ **`LookPickToHand` IS THE NEXT ONE AND IT IS NOT SAFE AT THIS GRANULARITY
@@ -154,6 +160,16 @@ ORACLE_SKIP = (
     # battlefield" is a *pre-game* permission, not a resolution choice the
     # effect tree owns, and no `May…` wrapper could carry it.
     "you may begin the game",
+    # CR 106.6 — "you may spend mana as though it were mana of any colour to
+    # cast/activate …" is a permission on *how you pay*, announced with the
+    # payment, not a choice the resolving effect owns.
+    "you may spend mana",
+    # CR 508.1g / 701.43d — "you may exert this creature as it attacks" is an
+    # **optional cost to attack**, announced as attackers are declared
+    # (`GameAction::DeclareAttackersExerting`, or the engine's policy when the
+    # declaration is silent). The effect tree carries only the *linked* "when
+    # you do", which rides `EventKind::Exerted` and so cannot fire without it.
+    "you may exert",
 )
 
 # A "you may … rather than pay this spell's mana cost" is an alternative cost
