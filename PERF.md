@@ -3039,6 +3039,16 @@ Room's leaves it `None`, so the added work on the bench's ~196 k decisions is
 one null discriminant check per activation that takes the life-cost branch at
 all. The reading above says the same thing from the other side.
 
+**And the NON-Commander side of the same conversion, which is where the 83
+converted taplands actually live:** `--bench` plays `--decks fixed`, whose
+pool is basic lands and 34 spells, so it could not reach one of them — the
+cube, SOS and sealed pools can. Four fresh seeds (5001-5004) × three pools ×
+300 games an archetype: **30,000 two-player games, 0 undecided, 0 panics**
+(2,400 cube / 1,500 sos / 3,600 sealed a seed). 📐 **A byte-identical
+`--bench` is a statement about the FIXED pool and nothing else**; when a
+change touches cards, the pools that hold them have to be run too, and they
+are cheap — the whole grid is under 15 seconds.
+
 **The robustness sweep, and it is the largest Commander self-play run this
 branch has taken: 70,000 pod games, zero undecided, zero panics.** Five fresh
 seeds (9104-9108) × seven seat counts (2..8) × 2,000 games, on the tip that
