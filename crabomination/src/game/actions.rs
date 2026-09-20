@@ -2475,6 +2475,9 @@ fn payload_yields_multiple(pool: &crate::effect::ManaPayload) -> bool {
         | ManaPayload::AnyColorAmongLegendaries
         | ManaPayload::AnyColorAmongExiledWithSource
         | ManaPayload::AnyColorAmongYourPermanents
+        // Vivid adds up to five pips and asks nobody; "multiple" here is
+        // about the count, not about the choice.
+        | ManaPayload::OneOfEachColorAmongYourPermanents
         | ManaPayload::DraftNotedColorOfSource => true,
         ManaPayload::Colors(cs) => cs.len() > 1,
         ManaPayload::OfColors(cs, _) => cs.len() > 1,
@@ -3834,6 +3837,7 @@ pub(crate) fn payload_produced_colors(pool: &ManaPayload) -> crate::mana::ColorS
         ManaPayload::AnyColorAmongLegendaries
         | ManaPayload::AnyColorAmongExiledWithSource
         | ManaPayload::AnyColorAmongYourPermanents
+        | ManaPayload::OneOfEachColorAmongYourPermanents
         | ManaPayload::AnyTypeTriggerSourceProduces
         | ManaPayload::AnyTypeSacrificedLandProduces => ColorSet::empty(),
         // Devotion-scaled: it can make `color`, but only the controller

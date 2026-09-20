@@ -2270,3 +2270,96 @@ fn fiery_emancipation_does_not_triple_an_opponents_damage() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, before - 3, "their source, their damage");
 }
+
+// ── Vivid — one mana of EACH colour among your permanents ──────────────────
+
+fn tap_for_mana(g: &mut GameState, id: crabomination::card::CardId) {
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("Vivid tap");
+    drain_stack(g);
+}
+
+fn pool(g: &GameState, seat: usize) -> Vec<(Color, u32)> {
+    [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green]
+        .into_iter()
+        .map(|c| (c, g.players[seat].mana_pool.amount(c)))
+        .filter(|(_, n)| *n > 0)
+        .collect()
+}
+
+/// Bloom Tender: "For **each** color among permanents you control, add one
+/// mana of that color." A mono-green board taps for {G}; adding a white and a
+/// blue permanent makes the same Elf tap for {W}{U}{G}.
+///
+/// ⚠ This is the clause that separates Vivid from Meteor Crater's "choose a
+/// color of a permanent you control": the two agree exactly on a one-colour
+/// board, so the single-colour case cannot tell them apart.
+#[test]
+fn bloom_tender_adds_one_mana_of_each_colour_among_your_permanents() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let tender = g.add_card_to_battlefield(0, catalog::bloom_tender());
+    g.clear_sickness(tender);
+    tap_for_mana(&mut g, tender);
+    assert_eq!(pool(&g, 0), vec![(Color::Green, 1)], "the Elf is the only permanent, and it is green");
+
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let tender = g.add_card_to_battlefield(0, catalog::bloom_tender());
+    g.clear_sickness(tender);
+    g.add_card_to_battlefield(0, catalog::grizzly_bears()); // green
+    g.add_card_to_battlefield(0, catalog::savannah_lions()); // white
+    g.add_card_to_battlefield(0, catalog::delver_of_secrets()); // blue
+    tap_for_mana(&mut g, tender);
+    assert_eq!(
+        pool(&g, 0),
+        vec![(Color::White, 1), (Color::Blue, 1), (Color::Green, 1)],
+        "one of EACH colour, not one chosen from among them",
+    );
+}
+
+/// An opponent's colours are not "among permanents you control", and a
+/// colourless board produces nothing at all.
+#[test]
+fn bloom_tender_reads_only_your_own_board() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let tender = g.add_card_to_battlefield(0, catalog::bloom_tender());
+    g.clear_sickness(tender);
+    g.add_card_to_battlefield(1, catalog::savannah_lions()); // theirs, white
+    tap_for_mana(&mut g, tender);
+    assert_eq!(pool(&g, 0), vec![(Color::Green, 1)], "their white is not yours");
+}
+
+/// Faeburrow Elder prints a **0/0** body and lives on its own pump: it is
+/// itself a G/W permanent you control, so it is a 2/2 on an otherwise empty
+/// board — and grows with each new colour.
+#[test]
+fn faeburrow_elder_is_a_two_two_alone_and_grows_with_each_colour() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let elder = g.add_card_to_battlefield(0, catalog::faeburrow_elder());
+    let cp = g.computed_permanent(elder).expect("a 0/0 must not have died");
+    assert_eq!((cp.power, cp.toughness), (2, 2), "its own two colours");
+    assert!(cp.keywords().contains(&crabomination::card::Keyword::Vigilance));
+
+    g.add_card_to_battlefield(0, catalog::delver_of_secrets()); // blue
+    let cp = g.computed_permanent(elder).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "a third colour");
+
+    // And the mana ability reads the same set.
+    g.clear_sickness(elder);
+    tap_for_mana(&mut g, elder);
+    assert_eq!(
+        pool(&g, 0),
+        vec![(Color::White, 1), (Color::Blue, 1), (Color::Green, 1)],
+        "the pump and the mana read one colour set",
+    );
+}

@@ -11874,25 +11874,26 @@ impl GameState {
                             events.push(GameEvent::ManaAdded { player: p, color, source: ctx.source });
                         }
                     }
+                    // Vivid (Bloom Tender, Faeburrow Elder) — one mana of
+                    // EACH colour among your permanents, no choice to make.
+                    // Shares `colors_among_your_permanents` with the arm
+                    // below so the two readings of "among permanents you
+                    // control" cannot drift; they differ only in what they do
+                    // with the set.
+                    ManaPayload::OneOfEachColorAmongYourPermanents => {
+                        for col in self.colors_among_your_permanents(p) {
+                            self.players[p].mana_pool.add(col, mult);
+                            events.push(GameEvent::ManaAdded {
+                                player: p,
+                                color: col,
+                                source: ctx.source,
+                            });
+                        }
+                    }
                     ManaPayload::AnyColorAmongYourPermanents => {
                         // Meteor Crater — union of the computed colors among
                         // permanents you control; no mana off a colorless board.
-                        let mut legal: Vec<Color> = Vec::new();
-                        let mine: Vec<CardId> = self
-                            .battlefield
-                            .iter()
-                            .filter(|c| c.controller == p)
-                            .map(|c| c.id)
-                            .collect();
-                        for id in mine {
-                            if let Some(cp) = self.computed_permanent(id) {
-                                for col in cp.colors {
-                                    if !legal.contains(&col) {
-                                        legal.push(col);
-                                    }
-                                }
-                            }
-                        }
+                        let legal: Vec<Color> = self.colors_among_your_permanents(p);
                         if !legal.is_empty() {
                             let color = if legal.len() == 1 {
                                 legal[0]

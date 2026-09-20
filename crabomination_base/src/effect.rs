@@ -2533,6 +2533,17 @@ pub enum ManaPayload {
     /// "Choose a color of a permanent you control. Add one mana of that color"
     /// (Meteor Crater). Colorless-only boards produce nothing.
     AnyColorAmongYourPermanents,
+    /// **Vivid** — "For **each** color among permanents you control, add one
+    /// mana of that color" (Bloom Tender, Faeburrow Elder).
+    ///
+    /// ⚠ Not [`Self::AnyColorAmongYourPermanents`], which reads the same
+    /// colour set and adds **one** mana chosen from it. This adds one of every
+    /// colour in the set, so a five-colour board taps a 1/1 Elf for `{W}{U}{B}
+    /// {R}{G}`; the two differ by everything at more than one colour, and
+    /// agree exactly at one, which is where a mistake would hide. There is no
+    /// choice to make, so no seat is asked. A colourless board produces
+    /// nothing.
+    OneOfEachColorAmongYourPermanents,
     /// Player chooses a color, then adds mana of that color equal to their
     /// devotion to it (CR 700.5). Nykthos, Shrine to Nyx's second ability.
     DevotionOfChosenColor,

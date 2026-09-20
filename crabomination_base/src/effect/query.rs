@@ -1575,7 +1575,8 @@ impl Effect {
                     ManaPayload::AnyTypeTriggerSourceProduces
                     | ManaPayload::AnyTypeSacrificedLandProduces
                     | ManaPayload::AnyColorAmongExiledWithSource
-                    | ManaPayload::AnyColorAmongYourPermanents => false,
+                    | ManaPayload::AnyColorAmongYourPermanents
+                    | ManaPayload::OneOfEachColorAmongYourPermanents => false,
                     ManaPayload::Restricted(inner, _)
                     | ManaPayload::RestrictedToChosenType(inner)
                     | ManaPayload::RestrictedToChosenTypePlain(inner) => match inner.as_ref() {

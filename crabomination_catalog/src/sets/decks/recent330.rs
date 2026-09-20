@@ -493,3 +493,84 @@ pub fn city_on_fire() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Vivid: one mana of EACH colour among your permanents ───────────────────
+
+/// The ability both cards print: "**Vivid** — {T}: For each color among
+/// permanents you control, add one mana of that color."
+///
+/// ⚠ Not `ManaPayload::AnyColorAmongYourPermanents` (Meteor Crater), which
+/// reads the same colour set and adds **one** mana chosen from it. These two
+/// agree exactly on a one-colour board and differ by everything above it,
+/// which is where the mistake would hide.
+fn vivid_tap() -> crate::card::ActivatedAbility {
+    crate::card::ActivatedAbility {
+        tap_cost: true,
+        effect: Effect::AddMana {
+            who: PlayerRef::You,
+            pool: crate::effect::ManaPayload::OneOfEachColorAmongYourPermanents,
+        },
+        ..Default::default()
+    }
+}
+
+/// The count both cards scale on: distinct colours among permanents you
+/// control. `Selector::EachPermanent(ControlledByYou)` reads **computed**
+/// colours, so a permanent made another colour counts as that colour — the
+/// same set the mana ability taps for.
+fn colors_among_your_permanents() -> Value {
+    Value::DistinctColorsAmong(Box::new(Selector::EachPermanent(R::ControlledByYou)))
+}
+
+/// Bloom Tender — {1}{G} Creature — Elf Druid 1/1. "Vivid — {T}: For each
+/// color among permanents you control, add one mana of that color."
+/// (EDHREC 257, the highest-ranked card left in the top-1000 gap.)
+pub fn bloom_tender() -> CardDefinition {
+    CardDefinition {
+        name: "Bloom Tender",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![vivid_tap()],
+        ..Default::default()
+    }
+}
+
+/// Faeburrow Elder — {1}{G}{W} Creature — Treefolk Druid 0/0. "Vigilance.
+/// This creature gets +1/+1 for each color among permanents you control.
+/// {T}: For each color among permanents you control, add one mana of that
+/// color." (EDHREC 501.)
+///
+/// ⚠ The printed body is **0/0** and the card survives only on the pump —
+/// itself is a permanent you control, so a G/W Elder is at least 2/2 on an
+/// otherwise empty board. A 0/0 printed body with a live self-anthem is the
+/// shape where a layer bug is a state-based death rather than a wrong number.
+pub fn faeburrow_elder() -> CardDefinition {
+    CardDefinition {
+        name: "Faeburrow Elder",
+        cost: cost(&[generic(1), g(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Treefolk, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![Keyword::Vigilance],
+        static_abilities: vec![StaticAbility {
+            description: "This creature gets +1/+1 for each color among permanents you control.",
+            effect: StaticEffect::PumpSelfByValue {
+                amount: colors_among_your_permanents(),
+                per_power: 1,
+                per_toughness: 1,
+            },
+        }],
+        activated_abilities: vec![vivid_tap()],
+        ..Default::default()
+    }
+}

@@ -6092,6 +6092,34 @@ impl GameState {
         crate::mana::Color::ALL.into_iter().filter(|c| set.contains(*c)).collect()
     }
 
+    /// The union of the **computed** colours among permanents `p` controls,
+    /// in the order first seen.
+    ///
+    /// One walk for the two payloads that read "among permanents you control"
+    /// and then disagree about what to do with the set:
+    /// `AnyColorAmongYourPermanents` (Meteor Crater) picks one,
+    /// `OneOfEachColorAmongYourPermanents` (Vivid — Bloom Tender, Faeburrow
+    /// Elder) adds one of each. Shared so the *set* cannot come out different
+    /// in the two places, which is the half neither card's test would catch.
+    ///
+    /// Computed, not printed: a permanent made another colour by an effect
+    /// counts as that colour.
+    pub(crate) fn colors_among_your_permanents(&self, p: usize) -> Vec<crate::mana::Color> {
+        let mut out: Vec<crate::mana::Color> = Vec::new();
+        let mine: Vec<CardId> =
+            self.battlefield.iter().filter(|c| c.controller == p).map(|c| c.id).collect();
+        for id in mine {
+            if let Some(cp) = self.computed_permanent(id) {
+                for col in cp.colors {
+                    if !out.contains(&col) {
+                        out.push(col);
+                    }
+                }
+            }
+        }
+        out
+    }
+
     /// CR 903.4 — `seat`'s commanders' combined colour identity, **raw**: a
     /// seat with no commander answers the empty set, not all five.
     ///
