@@ -13,9 +13,9 @@ mechanic a card leans on, not a verdict on what it needs.
 | Top 100 Commander cards by EDHREC rank | 100 / 100 |
 | Top 250 Commander cards by EDHREC rank | 250 / 250 |
 | Top 500 Commander cards by EDHREC rank | 497 / 500 |
-| Top 1000 Commander cards by EDHREC rank | 953 / 1000 |
-| Top 2000 Commander cards by EDHREC rank | 1707 / 2000 |
-| Top 5000 Commander cards by EDHREC rank | 3491 / 5000 |
+| Top 1000 Commander cards by EDHREC rank | 954 / 1000 |
+| Top 2000 Commander cards by EDHREC rank | 1708 / 2000 |
+| Top 5000 Commander cards by EDHREC rank | 3493 / 5000 |
 | Top 100 commanders by decks built | 47 / 100 |
 | Top 300 commanders by decks built | 127 / 300 |
 
@@ -205,7 +205,7 @@ A partner pair lists only its missing halves.
 | 296 | Silas Renn, Seeker Adept | 8,908 | BU | Legendary Artifact Creature — Human | partner |
 | 297 | Myrel, Shield of Argive | 8,878 | W | Legendary Creature — Human Soldier |  |
 
-## 2. Top 1000 Commander cards not in the catalog (47)
+## 2. Top 1000 Commander cards not in the catalog (46)
 
 | EDHREC rank | Card | Cost | Type | Flags |
 | --- | --- | --- | --- | --- |
@@ -232,7 +232,6 @@ A partner pair lists only its missing halves.
 | 857 | Boromir, Warden of the Tower | {2}{W} | Legendary Creature — Human Soldier |  |
 | 872 | Beseech the Mirror | {1}{B}{B}{B} | Sorcery |  |
 | 880 | Bear Umbra | {2}{G}{G} | Enchantment — Aura |  |
-| 882 | Thousand-Year Elixir | {3} | Artifact |  |
 | 883 | Descent into Avernus | {2}{R} | Enchantment |  |
 | 885 | Throne of Eldraine | {5} | Legendary Artifact |  |
 | 891 | Grim Hireling | {3}{B} | Creature — Tiefling Rogue |  |
