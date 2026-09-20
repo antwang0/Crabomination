@@ -57,6 +57,22 @@ opponent** loses life equal to that card's mana value" — so one connection
 drains the whole table and its rate scales with the seat count where every
 other seat's damage does not.
 
+⚠⚠ **And the number says that prediction was right, which makes it a finding
+about the clause rather than a deck to tune.** Yuriko wins **30.0 %** of
+nine-seat pods (2,000 games, seed 9113; field 11.7 / 3.2 / 4.5 / 6.0 / 1.0 /
+37.1 / 5.8 / 0.7 / **30.0**), against a seat's share of 11.1 % — second only
+to Edgar Markov, and for the same structural reason the Edgar row records:
+**a payoff that reads the whole table grows with the table.** Edgar's is a
+free body per Vampire spell from the command zone; Yuriko's is one unblocked
+Ninja draining eight opponents at once. Neither is a card that is strong in
+a duel. The two sit at opposite ends of the field's spread precisely because
+every other seat's clock is per-opponent.
+
+⚠ The same run reads Zellix at **0.7 %** and Krark/Rograkh at **1.0 %** at
+nine seats. That is the other half of the same fact — a deck whose clock does
+not scale simply never gets there — and not (on this evidence) a defect in
+either list; both are 100 % decided and neither stalls.
+
 The **sixth** is the pod's first three-colour identity and its first
 **Eminence** commander (CR 113.6b): Edgar Markov's "whenever you cast another
 Vampire spell, if Edgar Markov is in the command zone or on the battlefield,

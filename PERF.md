@@ -3015,6 +3015,54 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-09-20 (the tenth Commander session) — guardrail, no perf work
+
+Two rules classes (a zone-blind target filter, 27 cards; the printed word
+"another" between two target slots, 32 cards), two new `SelectionRequirement`
+atoms, a ninth pod deck, and three sites in the engine's target machinery.
+**Three of those could have moved a number and none did:**
+
+```text
+--bench (release-fast), CRAB_THREAD_CHECK=1, after the whole run:
+  decisions          195,806   byte-identical to the committed invariant
+  turns_per_game       27.49   "
+  decisions_per_game   611.9   "
+  stalls          0 (cap 0 / board 0 / stuck 0 / draw 0)
+  determinism     ok (all pairs split); thread_determinism ok (3 vs 1)
+  peak_rss_mib     29.7
+```
+
+📐 **The pre-check, one row per site.** ① The auto-picker
+(`auto_targets_for_effect_all_slots_kicked`) gained a cross-slot check that
+runs **per battlefield permanent per slot** — the walk PERF's candidates head
+prices at 26.6 requirement evaluations a call. It is gated on a *per-slot*
+`SelectionRequirement::mentions_cross_slot()`, so a filter with no such atom
+pays one bool, the `filled` vector is never built, and nothing in
+`archetypes()` carries one. ② The activation path gained a
+`target_slots_scratch` stamp, which would otherwise run on **every mana
+ability**; it is skipped outright when the activation has no targets, which
+is what a land tap is. ③ Two new enum variants in `SelectionRequirement` are
+match arms, not work.
+
+⚠ **The catalog side cannot reach `--bench` and the cards say so**: `--decks
+fixed` is basic lands and 34 spells, and not one of this run's 53 changed
+cards is among them. Seven *are* in the cube pool (Cremate, Cling to Dust,
+Reclaim, Surgical Extraction, The Eldest Reborn, Ghost Vacuum, Scavenging
+Ooze — plus Fiend Hunter, Flickerwisp, Heliod and Hostage Taker from the
+second class), so a `--decks cube` reading would move, correctly: those cards
+were making illegal plays.
+
+**Commander pod smoke, two fresh seeds.** 9112 × 500 games × 2..9 seats =
+4,000, and 9113 × 2,000 × 2..9 = **16,000**; every block 100 % decided, every
+`undecided_by` column zero, zero panics (`panic = "abort"`, so a complete
+block *is* the crash-freedom result). turns/game at 9113: 19.61 / 32.62 /
+45.15 / 57.05 / 64.23 / 76.89 / 93.58 / **99.02** — the ninth seat sits on the
+same ~12-turns-a-seat line the eighth did, which is the curve a run that did
+something to the *format* would bend.
+
+⚠ Box: Intel Xeon @ **2.10 GHz**, 4 cores. Wall clock here is not comparable
+to anything in PERF above the ninth session's entry; the decision count is.
+
 ### 2026-09-19 (the ninth Commander session, tip `05246e24`) — guardrail, no perf work
 
 Five land cycles consolidated onto one body each (32 cards re-pointed, 19
