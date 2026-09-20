@@ -389,6 +389,60 @@ off by name rather than fixes, both filed here:
 | Quartzwood Crasher | 🟡 "create an X/X … where X is the amount of damage **those creatures** dealt to that player" wants the batch's *summed* damage, and `Value::TriggerEventAmount` is the one dealer the fire landed on. It keeps the unbatched shape (one token per trampler, each sized by its own damage — the right total across too many bodies) rather than take `once_per_batch` and mint one token of the wrong size. Needs the batch to carry a sum, which the per-attacker walk cannot do: the later attackers' damage is not dealt yet when the first one's trigger is pushed. |
 | Magmatic Galleon | 🟡 "Whenever one or more creatures your opponents control are dealt **excess** noncombat damage, create a Treasure token" is not modelled at all — only the ETB 5 damage ships. Needs excess-damage tracking (CR 120.3c), which no primitive carries. |
 
+## The zone-blind target class (2026-09-20) — closed, with two handed on
+
+`scripts/audit_target_zone.py`. **The filter language has no implicit zone**:
+`legal_targets_for_filter` applies the same `SelectionRequirement` to every
+zone an effect can reach, so `target_filtered(R::Creature)` on a printed
+"target creature card **from your graveyard**" is satisfied by a creature on
+the *battlefield* — and `auto_target_for_effect` walks the battlefield first.
+27 cards when the audit was written, **0** now (`--gate` fails on any row).
+
+What made it a class rather than a list is that half of it was **invisible in
+self-play**: `Effect::prefers_graveyard_target` sends the picker to the
+graveyard for a `Move` to your hand, to your battlefield, or to exile, so
+those cards mostly did the right thing for the wrong reason and only misfired
+when every graveyard was empty. The other half has no such classifier — every
+`Move` to a **library**, and every bespoke effect — and misfired always.
+Mortuary Mire (a Judith pod-deck land) tucked live creatures; Cremate exiled a
+permanent off the battlefield for {B}; Scrabbling Claws, Ghost Vacuum, Ambush
+Wolf, Leonin of the Lost Pride and Break Ties were the same shape.
+
+- The filter says the zone with `from_your_graveyard()` /
+  `from_any_graveyard()` / `InOpponentGraveyard`, or the effect variant
+  carries it in its own name.
+- A **mixed** clause ("from the battlefield and/or from graveyards") needs
+  `SelectionRequirement::OnBattlefield` for its on-board half; without it that
+  half is zone-free and reaches a hand, a library and exile as well. Angel of
+  Serenity and Daretti's ultimate are the two.
+- **Exile is the same defect and a much rarer wording.** Two rows, and a
+  clause can name both zones: Sorceress's Schemes returns "target instant or
+  sorcery card from your graveyard **or** exiled card with flashback you
+  own", and a body that says the first is not a body that says the second —
+  the audit asks for every zone a clause names, not the first.
+- Hand and library were measured and are empty.
+- Two exemptions, both conditioned on the engine arm and re-checked every run:
+  `Effect::CommandTheDreadhorde` and `Effect::WeldArtifacts` build their own
+  candidate lists out of `players[*].graveyard`, so no filter can aim them at
+  the battlefield.
+
+⚠ **Two rows are handed to `audit_incomplete`, not fixed**: the clause is not
+modelled at all, so there is no filter to correct.
+
+| Card | Residual |
+| --- | --- |
+| Rootcoil Creeper | 🟡 two of its three abilities are missing: the graveyard-restricted "add two mana of any one color", and "{G}{U}, {T}, Exile this creature: Return **target card with flashback you own from exile** to your hand". Only the any-colour mana ability ships. |
+| Bloodthirsty Adversary | 🟡 the kicker payoff — "exile up to that many target instant and/or sorcery cards with mana value 3 or less from your graveyard and copy them" — is not modelled; only `Multikicker` and the +1/+1 counters ship. |
+| Rydia, Summoner of Mist | 🟡 the **Summon** ability ("{X}, {T}: Return target Saga card with mana value X from your graveyard to the battlefield with a finality counter on it") is not modelled; only the landfall loot ships. |
+
+Three approximations the fixes left standing, each documented at its variant:
+
+| Card | Residual |
+| --- | --- |
+| Scrabbling Claws | 🟡 the first ability prints "**target player** exiles a card from their graveyard" — the *player* is the target and the choice is theirs. It is modelled as "exile target card from a graveyard", now correctly zoned, which is the second ability's wording. |
+| Goblin Welder | 🟡 the second target ("target artifact card in **that player's** graveyard") is auto-picked by `Effect::WeldArtifacts` at highest mana value rather than declared as a target — a cross-target constraint no slot can express today. |
+| Ambush Wolf / Angel of Serenity | 🟡 "up to one" / "up to three **other**" — the Angel's `other` is now in the filter; the Wolf's "up to one" still fizzles the trigger rather than declining it, which differs only when a graveyard is empty. |
+
 ## CR 903.4 color-identity divergences (from the Scryfall audit)
 
 `cr_903_4_computed_color_identity_matches_scryfall` (core_rules /

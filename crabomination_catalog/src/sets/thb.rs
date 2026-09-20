@@ -1977,7 +1977,8 @@ pub fn leonin_of_the_lost_pride() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
             effect: Effect::Move {
-                what: target_filtered(SelectionRequirement::Any),
+                // "from an **opponent's** graveyard".
+                what: target_filtered(SelectionRequirement::InOpponentGraveyard),
                 to: ZoneDest::Exile,
             },
         }],

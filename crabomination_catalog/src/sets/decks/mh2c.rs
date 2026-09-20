@@ -511,7 +511,9 @@ pub fn landscaper_colos() -> CardDefinition {
         toughness: 6,
         keywords: vec![basic_landcycling(cost(&[generic(1), w()]))],
         triggered_abilities: vec![etb(Effect::Move {
-            what: target_filtered(R::OwnedByYou.negate()),
+            // "target card from an **opponent's graveyard**" — the zone and
+            // the owner in one atom.
+            what: target_filtered(R::InOpponentGraveyard),
             to: ZoneDest::Library {
                 who: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
                 pos: crate::effect::LibraryPosition::Bottom,

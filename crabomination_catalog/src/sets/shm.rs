@@ -99,7 +99,7 @@ pub fn disturbing_plot() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Conspire],
         effect: Effect::Move {
-            what: target_filtered(SelectionRequirement::Creature),
+            what: target_filtered(SelectionRequirement::Creature.from_any_graveyard()),
             to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
         },
         ..Default::default()
@@ -117,7 +117,8 @@ pub fn mine_excavation() -> CardDefinition {
         effect: Effect::Move {
             what: target_filtered(
                 SelectionRequirement::HasCardType(CardType::Artifact)
-                    .or(SelectionRequirement::HasCardType(CardType::Enchantment)),
+                    .or(SelectionRequirement::HasCardType(CardType::Enchantment))
+                    .from_any_graveyard(),
             ),
             to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
         },

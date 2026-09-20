@@ -76,7 +76,7 @@ pub fn break_ties() -> CardDefinition {
                 what: target_filtered(R::Enchantment),
             },
             Effect::Move {
-                what: target_filtered(R::Any),
+                what: target_filtered(R::Any.from_any_graveyard()),
                 to: ZoneDest::Exile,
             },
         ]),

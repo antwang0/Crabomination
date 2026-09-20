@@ -761,7 +761,7 @@ pub fn scour_the_desert() -> CardDefinition {
                 definition: std::sync::Arc::new(bird),
             },
             Effect::Move {
-                what: target_filtered(R::Creature),
+                what: target_filtered(R::Creature.from_your_graveyard()),
                 to: ZoneDest::Exile,
             },
         ]),

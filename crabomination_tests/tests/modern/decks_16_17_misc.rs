@@ -1368,12 +1368,17 @@ fn kari_zev_creates_ragavan_on_attack() {
 
 // ── Scavenging Ooze ─────────────────────────────────────────────────────────
 
+/// "{G}: Exile target card from a graveyard. If it was a creature card, put a
+/// +1/+1 counter on this creature and you gain 1 life." The exile is the
+/// ability — it shipped as the payoff alone, so the Ooze grew off an empty
+/// graveyard — and the payoff is conditioned on what was exiled.
 #[test]
-fn scavenging_ooze_gains_counter_and_life() {
+fn scavenging_ooze_exiles_a_creature_card_then_grows() {
     use crabomination::card::CounterType;
     let mut g = two_player_game();
     let ooze = g.add_card_to_battlefield(0, catalog::scavenging_ooze());
     g.clear_sickness(ooze);
+    let dead = g.add_card_to_graveyard(1, catalog::grizzly_bears());
     g.players[0].mana_pool.add(Color::Green, 1);
     let life_before = g.players[0].life;
 
@@ -1387,11 +1392,45 @@ fn scavenging_ooze_gains_counter_and_life() {
     .expect("Scavenging Ooze ability activates");
     drain_stack(&mut g);
 
+    assert!(g.exile.iter().any(|c| c.id == dead), "the graveyard creature is exiled");
     let counters = g.battlefield.iter().find(|c| c.id == ooze)
         .and_then(|c| c.counters.get(&CounterType::PlusOnePlusOne).copied())
         .unwrap_or(0);
     assert_eq!(counters, 1, "Ooze should have one +1/+1 counter");
     assert_eq!(g.players[0].life, life_before + 1, "Should gain 1 life");
+}
+
+/// The other half of the same ability: a noncreature card is still exiled and
+/// the Ooze gets nothing.
+#[test]
+fn scavenging_ooze_exiling_a_noncreature_card_grows_nothing() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    let ooze = g.add_card_to_battlefield(0, catalog::scavenging_ooze());
+    g.clear_sickness(ooze);
+    let bolt = g.add_card_to_graveyard(1, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    let life_before = g.players[0].life;
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ooze,
+        ability_index: 0,
+        target: None,
+        additional_targets: Vec::new(),
+        x_value: None, mode: None,
+    })
+    .expect("Scavenging Ooze ability activates");
+    drain_stack(&mut g);
+
+    assert!(g.exile.iter().any(|c| c.id == bolt), "the graveyard instant is exiled");
+    assert_eq!(
+        g.battlefield.iter().find(|c| c.id == ooze)
+            .and_then(|c| c.counters.get(&CounterType::PlusOnePlusOne).copied())
+            .unwrap_or(0),
+        0,
+        "no counter for a noncreature card",
+    );
+    assert_eq!(g.players[0].life, life_before, "and no life");
 }
 
 // ── Push XVII continued: ETB creatures ─────────────────────────────────────

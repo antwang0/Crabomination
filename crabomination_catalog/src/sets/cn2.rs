@@ -900,7 +900,12 @@ pub fn daretti_ingenious_iconoclast() -> CardDefinition {
                 effect: Effect::CreateTokenCopyOf {
                     who: PlayerRef::You,
                     count: Value::Const(3),
-                    source: target_filtered(R::Artifact),
+                    // "target artifact card **in a graveyard** or artifact
+                    // **on the battlefield**" — a mixed clause, and neither
+                    // half reaches a hand, a library or exile.
+                    source: target_filtered(
+                        R::Artifact.and(R::OnBattlefield.or(R::InGraveyard)),
+                    ),
                     extra_creature_types: vec![],
                     extra_card_types: vec![],
                     override_pt: None,

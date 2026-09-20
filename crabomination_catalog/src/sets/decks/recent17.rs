@@ -218,7 +218,7 @@ pub fn ambush_wolf() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Flash],
         triggered_abilities: vec![etb(Effect::Move {
-            what: target_filtered(SelectionRequirement::Any),
+            what: target_filtered(SelectionRequirement::Any.from_any_graveyard()),
             to: ZoneDest::Exile,
         })],
         ..Default::default()
@@ -605,7 +605,7 @@ pub fn scrabbling_claws() -> CardDefinition {
             ActivatedAbility {
                 tap_cost: true,
                 effect: Effect::Move {
-                    what: target_filtered(SelectionRequirement::Any),
+                    what: target_filtered(SelectionRequirement::Any.from_any_graveyard()),
                     to: ZoneDest::Exile,
                 },
                 ..Default::default()
@@ -615,7 +615,7 @@ pub fn scrabbling_claws() -> CardDefinition {
                 sac_cost: true,
                 effect: Effect::Seq(vec![
                     Effect::Move {
-                        what: target_filtered(SelectionRequirement::Any),
+                        what: target_filtered(SelectionRequirement::Any.from_any_graveyard()),
                         to: ZoneDest::Exile,
                     },
                     Effect::Draw {

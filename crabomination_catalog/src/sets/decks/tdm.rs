@@ -2616,7 +2616,9 @@ pub fn shiko_paragon_of_the_way() -> CardDefinition {
             Effect::Move {
                 what: Selector::TargetFiltered {
                     slot: 0,
-                    filter: R::Not(Box::new(R::Land)).and(R::ManaValueAtMost(3)),
+                    filter: R::Not(Box::new(R::Land))
+                        .and(R::ManaValueAtMost(3))
+                        .from_your_graveyard(),
                 },
                 to: ZoneDest::Exile,
             },

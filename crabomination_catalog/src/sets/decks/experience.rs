@@ -174,7 +174,7 @@ pub fn meren_of_clan_nel_toth() -> CardDefinition {
                         Value::ControllerExperience,
                     ),
                     then: Box::new(Effect::Move {
-                        what: target_filtered(R::Creature.and(R::OwnedByYou)),
+                        what: target_filtered(R::Creature.from_your_graveyard()),
                         to: ZoneDest::Battlefield {
                             controller: PlayerRef::You,
                             tapped: false,

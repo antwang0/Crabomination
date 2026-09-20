@@ -172,7 +172,7 @@ pub fn the_eldest_reborn() -> CardDefinition {
             (
                 3,
                 Effect::Move {
-                    what: target_filtered(creature_or_pw),
+                    what: target_filtered(creature_or_pw.from_any_graveyard()),
                     to: ZoneDest::Battlefield {
                         controller: PlayerRef::You,
                         tapped: false,

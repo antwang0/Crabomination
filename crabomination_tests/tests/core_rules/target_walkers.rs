@@ -479,6 +479,89 @@ mod offboard_gate {
         );
     }
 
+    /// The zone class, as shipped cards: a printed "target card **from a
+    /// graveyard**" whose filter named no zone was satisfied by a permanent
+    /// on the battlefield, and the picker preferred one wherever
+    /// `prefers_graveyard_target` did not fire (every `Move` to a library,
+    /// and every clause the classifier cannot see). Cremate exiled a
+    /// permanent for {B}; Mortuary Mire tucked live creatures.
+    ///
+    /// Both halves, because the negative one alone passes vacuously: over a
+    /// board with no graveyard there is no target at all, and over the same
+    /// board with one card in each graveyard the pick is that card.
+    #[test]
+    fn a_graveyard_clause_never_reaches_the_battlefield() {
+        use crabomination::catalog;
+        use crabomination::effect::Effect;
+
+        fn artifact(name: &'static str) -> CardDefinition {
+            CardDefinition { name, card_types: vec![CardType::Artifact], ..Default::default() }
+        }
+        let mode = |e: &Effect, i: usize| match e {
+            Effect::ChooseMode(v) => v[i].clone(),
+            other => other.clone(),
+        };
+        let cases: Vec<(&str, Effect)> = vec![
+            ("Cremate", catalog::cremate().effect.clone()),
+            ("Cling to Dust", catalog::cling_to_dust().effect.clone()),
+            ("Reclaim", catalog::reclaim().effect.clone()),
+            ("Surgical Extraction", catalog::surgical_extraction().effect.clone()),
+            ("Break Ties", mode(&catalog::break_ties().effect, 2)),
+            ("Mine Excavation", catalog::mine_excavation().effect.clone()),
+            ("Disturbing Plot", catalog::disturbing_plot().effect.clone()),
+            ("Scour the Desert", catalog::scour_the_desert().effect.clone()),
+            ("Ambush Wolf", catalog::ambush_wolf().triggered_abilities[0].effect.clone()),
+            (
+                "Leonin of the Lost Pride",
+                catalog::leonin_of_the_lost_pride().triggered_abilities[0].effect.clone(),
+            ),
+            ("Landscaper Colos", catalog::landscaper_colos().triggered_abilities[0].effect.clone()),
+            ("Mortuary Mire", catalog::mortuary_mire().triggered_abilities[0].effect.clone()),
+            ("Shiko", catalog::shiko_paragon_of_the_way().triggered_abilities[0].effect.clone()),
+            ("The Eldest Reborn", catalog::the_eldest_reborn().saga_chapters[2].1.clone()),
+            ("Ghost Vacuum", catalog::ghost_vacuum().activated_abilities[0].effect.clone()),
+            ("Scrabbling Claws", catalog::scrabbling_claws().activated_abilities[0].effect.clone()),
+            ("Scavenging Ooze", catalog::scavenging_ooze().activated_abilities[0].effect.clone()),
+            (
+                "Barkform Harvester",
+                catalog::barkform_harvester().activated_abilities[0].effect.clone(),
+            ),
+            (
+                "Cursecloth Wrappings",
+                catalog::cursecloth_wrappings().activated_abilities[0].effect.clone(),
+            ),
+        ];
+
+        // A full board, both seats, and nothing in any graveyard.
+        let mut g = two_player_game();
+        for seat in 0..2 {
+            g.add_card_to_battlefield(seat, bear("Board Bear"));
+            g.add_card_to_battlefield(seat, artifact("Board Relic"));
+        }
+        for (name, eff) in &cases {
+            assert_eq!(
+                g.auto_target_for_effect(eff, 0),
+                None,
+                "{name}: a graveyard clause found a target with every graveyard empty",
+            );
+        }
+
+        // Same board, one creature card and one artifact card per graveyard.
+        let mut gy = Vec::new();
+        for seat in 0..2 {
+            gy.push(g.add_card_to_graveyard(seat, bear("Dead Bear")));
+            gy.push(g.add_card_to_graveyard(seat, artifact("Dead Relic")));
+        }
+        for (name, eff) in &cases {
+            let picked = g.auto_target_for_effect(eff, 0);
+            let id = match picked {
+                Some(Target::Permanent(id)) => id,
+                other => panic!("{name}: expected a graveyard card, got {other:?}"),
+            };
+            assert!(gy.contains(&id), "{name}: picked {id:?}, which is not a graveyard card");
+        }
+    }
+
     /// `OnBattlefield` is the on-board half of a **mixed** clause — "target
     /// creatures from the battlefield and/or creature cards from graveyards"
     /// (Angel of Serenity). The union reaches both zones and neither of the

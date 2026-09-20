@@ -222,31 +222,45 @@ HELPER_DEPTH = 2
 
 
 def helper_bodies(src):
-    """`{name: body}` for every `fn` in the file that is not a card factory."""
-    out = {}
+    """`({helper: body}, {factory: body})` for the file's `fn`s.
+
+    The two maps are inlined on different triggers: a helper on any call, a
+    factory only in struct-update position (`..myr_retriever()`), which is how
+    this catalog spells "this card is that one with three fields changed"
+    (Junk Diver / Myr Retriever). A factory name can also appear as an
+    ordinary call — a token's definition, a land cycle's base — and inlining
+    it there would hide a finding rather than clear one.
+    """
+    helpers, factories = {}, {}
     for m in re.finditer(r"\bfn (\w+)\s*(?:<[^>]*>)?\s*\(", src):
         i = src.find("{", m.end())
         if i < 0:
             continue
-        # A factory is inlined by nobody — it takes no arguments and returns a
-        # whole definition — and skipping it keeps the map small.
-        if re.match(r"pub fn \w+\(\) -> CardDefinition \{", src[m.start() - 4 : i + 1]):
-            continue
-        out[m.group(1)] = _brace_body(src, i)
-    return out
+        target = (
+            factories
+            if re.match(r"pub fn \w+\(\) -> CardDefinition \{", src[m.start() - 4 : i + 1])
+            else helpers
+        )
+        target[m.group(1)] = _brace_body(src, i)
+    return helpers, factories
 
 
-def with_helpers(body, helpers):
-    """`body` plus the bodies of the same-file helpers it calls, transitively."""
+def with_helpers(body, helpers, factories):
+    """`body` plus the same-file bodies it builds itself out of."""
     seen, frontier, parts = set(), [body], [body]
     for _ in range(HELPER_DEPTH):
         nxt = []
         for chunk in frontier:
-            for call in re.findall(r"\b(\w+)\s*\(", chunk):
-                if call in seen or call not in helpers:
+            calls = set(re.findall(r"\b(\w+)\s*\(", chunk))
+            bases = set(re.findall(r"\.\.\s*(\w+)\s*\(\s*\)", chunk))
+            for call in calls | bases:
+                if call in seen:
+                    continue
+                body_of = helpers.get(call) or (factories.get(call) if call in bases else None)
+                if body_of is None:
                     continue
                 seen.add(call)
-                nxt.append(helpers[call])
+                nxt.append(body_of)
         if not nxt:
             break
         parts.extend(nxt)
@@ -267,7 +281,7 @@ def defs_in(path):
     second filter).
     """
     src = open(path, encoding="utf-8").read()
-    helpers = helper_bodies(src)
+    helpers, factories = helper_bodies(src)
     for m in re.finditer(r"pub fn (\w+)\(\) -> CardDefinition \{", src):
         start = m.end() - 1
         body = _brace_body(src, start)
@@ -276,7 +290,7 @@ def defs_in(path):
             continue
         fn = m.group(1)
         own = next((n for n in names if slug(n) == fn), None)
-        yield fn, own or names[0], with_helpers(body, helpers), path
+        yield fn, own or names[0], with_helpers(body, helpers, factories), path
 
 
 def main():

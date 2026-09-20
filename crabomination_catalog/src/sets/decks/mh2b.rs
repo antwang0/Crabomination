@@ -1692,7 +1692,7 @@ pub fn echoing_return() -> CardDefinition {
         effect: Effect::Move {
             what: Selector::SharingNameWith(Box::new(Selector::TargetFiltered {
                 slot: 0,
-                filter: R::Creature,
+                filter: R::Creature.from_your_graveyard(),
             })),
             to: ZoneDest::Hand(PlayerRef::You),
         },

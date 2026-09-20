@@ -80,7 +80,11 @@ pub fn angel_of_serenity() -> CardDefinition {
             effect: Effect::ApplyToTargets {
                 max_targets: 3,
                 min_targets: 0,
-                filter: R::Creature,
+                // "up to three **other** target creatures from the
+                // battlefield **and/or** creature cards from graveyards".
+                filter: R::Creature
+                    .and(R::OtherThanSource)
+                    .and(R::OnBattlefield.or(R::InGraveyard)),
                 effect: Box::new(Effect::ExileUntilSourceLeaves {
                     what: Selector::Target(0),
                     return_to: ExileReturnZone::Hand,

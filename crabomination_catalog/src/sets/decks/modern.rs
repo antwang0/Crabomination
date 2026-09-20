@@ -7107,7 +7107,7 @@ pub fn ghost_vacuum() -> CardDefinition {
                 effect: Effect::Move {
                     what: Selector::TargetFiltered {
                         slot: 0,
-                        filter: SelectionRequirement::Any,
+                        filter: SelectionRequirement::Any.from_any_graveyard(),
                     },
                     to: ZoneDest::ExileWithSourceStamp,
                 },
@@ -7433,7 +7433,7 @@ pub fn cling_to_dust() -> CardDefinition {
         keywords: vec![Keyword::Escape(cost(&[generic(3), b()]), 5)],
         effect: Effect::Seq(vec![
             Effect::Move {
-                what: target_filtered(SelectionRequirement::Any),
+                what: target_filtered(SelectionRequirement::Any.from_any_graveyard()),
                 to: ZoneDest::Exile,
             },
             Effect::If {
@@ -11345,7 +11345,7 @@ pub fn cremate() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::Move {
-                what: target_filtered(SelectionRequirement::Any),
+                what: target_filtered(SelectionRequirement::Any.from_any_graveyard()),
                 to: ZoneDest::Exile,
             },
             Effect::Draw {
@@ -21323,11 +21323,10 @@ pub fn wight_of_the_reliquary() -> CardDefinition {
 /// {G}: Exile target card from a graveyard. If it was a creature card, put
 /// a +1/+1 counter on Scavenging Ooze and you gain 1 life.
 ///
-/// Approximation: {G}, tap: add a +1/+1 counter on this and gain 1 life
-/// (the graveyard-exile targeting is collapsed — no "target card in a
-/// graveyard" selector yet).
+/// The payoff is conditioned on what was exiled, read off slot 0 after the
+/// move the way Cling to Dust reads it.
 pub fn scavenging_ooze() -> CardDefinition {
-    use crate::card::{ActivatedAbility, CounterType};
+    use crate::card::{ActivatedAbility, CounterType, Predicate};
     CardDefinition {
         name: "Scavenging Ooze",
         cost: cost(&[generic(1), g()]),
@@ -21343,14 +21342,27 @@ pub fn scavenging_ooze() -> CardDefinition {
             discard_cost: None,
             mana_cost: cost(&[g()]),
             effect: Effect::Seq(vec![
-                Effect::AddCounter {
-                    what: Selector::This,
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::Const(1),
+                Effect::Move {
+                    what: target_filtered(SelectionRequirement::Any.from_any_graveyard()),
+                    to: ZoneDest::Exile,
                 },
-                Effect::GainLife {
-                    who: Selector::You,
-                    amount: Value::Const(1),
+                Effect::If {
+                    cond: Predicate::EntityMatches {
+                        what: Selector::Target(0),
+                        filter: SelectionRequirement::Creature,
+                    },
+                    then: Box::new(Effect::Seq(vec![
+                        Effect::AddCounter {
+                            what: Selector::This,
+                            kind: CounterType::PlusOnePlusOne,
+                            amount: Value::Const(1),
+                        },
+                        Effect::GainLife {
+                            who: Selector::You,
+                            amount: Value::Const(1),
+                        },
+                    ])),
+                    else_: Box::new(Effect::Noop),
                 },
             ]),
             once_per_turn: false,
@@ -47184,9 +47196,10 @@ pub fn surgical_extraction() -> CardDefinition {
         cost: ManaCost::new(vec![phyrexian(Color::Black)]),
         card_types: vec![CardType::Instant],
         effect: Effect::ExileSameNameAsTarget {
-            what: target_filtered(SelectionRequirement::Not(Box::new(
-                SelectionRequirement::IsBasicLand,
-            ))),
+            what: target_filtered(
+                SelectionRequirement::Not(Box::new(SelectionRequirement::IsBasicLand))
+                    .from_any_graveyard(),
+            ),
         },
         ..Default::default()
     }

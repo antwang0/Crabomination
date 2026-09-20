@@ -4445,10 +4445,17 @@ pub fn sorceresss_schemes() -> CardDefinition {
         keywords: vec![Keyword::Flashback(cost(&[generic(4), r()]))],
         effect: Effect::Seq(vec![
             Effect::Move {
+                // "target instant or sorcery card **from your graveyard** or
+                // **exiled card with flashback you own**" — two zones in one
+                // clause, and a filter that names only the first is satisfied
+                // by a battlefield permanent for the second.
                 what: target_filtered(
                     SelectionRequirement::HasCardType(CardType::Instant)
                         .or(SelectionRequirement::HasCardType(CardType::Sorcery))
-                        .from_your_graveyard(),
+                        .from_your_graveyard()
+                        .or(SelectionRequirement::HasFlashback
+                            .and(SelectionRequirement::InExile)
+                            .and(SelectionRequirement::OwnedByYou)),
                 ),
                 to: ZoneDest::Hand(PlayerRef::You),
             },

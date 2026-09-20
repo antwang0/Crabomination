@@ -31,7 +31,7 @@ pub fn barkform_harvester() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2)]),
             effect: Effect::Move {
-                what: target_filtered(R::Any),
+                what: target_filtered(R::Any.from_your_graveyard()),
                 to: ZoneDest::Library {
                     who: PlayerRef::You,
                     pos: LibraryPosition::Bottom,

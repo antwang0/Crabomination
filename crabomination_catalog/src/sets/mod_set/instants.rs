@@ -1706,7 +1706,7 @@ pub fn reclaim() -> CardDefinition {
         cost: cost(&[g()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Move {
-            what: target_filtered(SelectionRequirement::Any),
+            what: target_filtered(SelectionRequirement::Any.from_your_graveyard()),
             to: ZoneDest::Library {
                 who: PlayerRef::You,
                 pos: LibraryPosition::Top,

@@ -526,7 +526,10 @@ pub fn cursecloth_wrappings() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             effect: Effect::GrantEmbalmThisTurn {
-                what: Selector::TargetFiltered { slot: 0, filter: R::Creature },
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: R::Creature.from_your_graveyard(),
+                },
             },
             ..Default::default()
         }],
