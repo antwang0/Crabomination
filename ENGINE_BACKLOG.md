@@ -82,6 +82,7 @@ the handoff.
 | Engine mechanics & primitives | [Suggested next-up tasks](#suggested-next-up-tasks) | 1053 |
 | Rules coverage | [MagicCompRules coverage audit](#magiccomprules-coverage-audit) | 312 |
 | Tooling | [Recommender: two builder defects fixed, one lesson recorded](#recommender-two-builder-defects-fixed-one-lesson-recorded) | 17 |
+| Bugs & robustness | [FIXED 2026-09-20 (the fifty-second find) — the filter language has no implicit ZONE, so a printed "target card from a graveyard" was satisfied by a permanent on the battlefield](#fixed-2026-09-20-the-fifty-second-find--the-filter-language-has-no-implicit-zone-so-a-printed-target-card-from-a-graveyard-was-satisfied-by-a-permanent-on-the-battlefield) | 27 → 0 |
 | Bugs & robustness | [FIXED 2026-09-20 (the fifty-first find) — a FAN-OUT `PlayerRef` handed to an arm that resolves it SINGULARLY, nineteen cards, and every one invisible in a duel](#fixed-2026-09-20-the-fifty-first-find--a-fan-out-playerref-handed-to-an-arm-that-resolves-it-singularly-nineteen-cards-and-every-one-invisible-in-a-duel) | 19 sites |
 | Bugs & robustness | [FIXED 2026-09-19 (the fiftieth find) — one of five trigger walks in `declare_attackers` never carried `event.filter`, so a defender-side intervening `if` was written, compiled and ignored](#fixed-2026-09-19-the-fiftieth-find--one-of-five-trigger-walks-in-declare_attackers-never-carried-eventfilter-so-a-defender-side-intervening-if-was-written-compiled-and-ignored) | 1 card, 1 walk |
 | Bugs & robustness | [FIXED 2026-09-19 (the forty-ninth find) — "enters tapped" is a REPLACEMENT too, and 83 cards shipped it as a trigger in a clause the 614.12 audit cannot match](#fixed-2026-09-19-the-forty-ninth-find--enters-tapped-is-a-replacement-too-and-83-cards-shipped-it-as-a-trigger-in-a-clause-the-61412-audit-cannot-match) | 83 → 0 |
@@ -91,6 +92,60 @@ the handoff.
 
 
 # Bugs & robustness
+
+## FIXED 2026-09-20 (the fifty-second find) — the filter language has no implicit ZONE, so a printed "target card from a graveyard" was satisfied by a permanent on the battlefield
+
+`legal_targets_for_filter` applies one `SelectionRequirement` to every zone an
+effect can reach. That is deliberate — it is what lets one filter describe a
+reanimation target and a battlefield target alike — and it means a filter that
+does not *name* a zone accepts a card in any of them. Twenty-seven implemented
+cards printed a target clause that named a graveyard and shipped a filter that
+did not.
+
+`scripts/audit_target_zone.py` is the census and the ratchet (`--gate`): it
+reads each card's oracle for a **target clause whose noun is a card and whose
+head names a zone**, cuts the clause at its destination ("to your hand", "onto
+the battlefield") so a destination zone is never mistaken for a source, skips a
+clause whose target is a *player*, and then asks the factory body — helpers and
+`..other_factory()` delegation inlined — whether it names that zone at all.
+
+🔎 **Half the class was invisible in self-play, and that is what made it a
+class rather than a list.** `Effect::prefers_graveyard_target` sends the
+auto-picker to a graveyard for a `Move` to your hand, to your battlefield or to
+exile, so those cards did the right thing for the wrong reason: the filter
+still accepted a battlefield permanent, and the picker only chose one when
+every graveyard was empty. The other half has no such classifier — every `Move`
+to a **library**, and every bespoke effect — and misfired on every resolution.
+**Mortuary Mire**, in the Judith pod deck, put a *live* creature on top of its
+controller's library every time it entered; **Cremate** exiled a permanent off
+the battlefield for {B}.
+
+📐 **A mixed clause needs an on-board atom, and the language had none.**
+"Exile up to three other target creatures **from the battlefield and/or**
+creature cards from graveyards" (Angel of Serenity) and "target artifact card
+in a graveyard **or** artifact on the battlefield" (Daretti's ultimate) have to
+say both halves, and writing the on-board half zone-free makes it reach a hand,
+a library and exile too. `SelectionRequirement::OnBattlefield` is three
+evaluator arms — the hinted permanent walk answers the constant it already
+holds, the id walk asks the battlefield, and the loose-`CardInstance` path
+(a library hit, a revealed card) is never handed one. It is not an off-board
+zone, so `mentions_offboard_zone` is unchanged and an `Or` with a graveyard
+atom still opens the off-board walk.
+
+⚠ **Three rows are `audit_incomplete`'s, not this audit's**, and the script
+prints them in their own block: Bloodthirsty Adversary, Rydia and Rootcoil
+Creeper do not model the clause at all, so there is no filter to correct. Two
+more are exempt because the **arm** owns the zone — `CommandTheDreadhorde` and
+`WeldArtifacts` build their candidate lists straight out of
+`players[*].graveyard` — and the exemption is conditioned on the arm still
+naming a graveyard, re-checked on every run.
+
+📐 **Exile is the same defect and a much rarer wording, and one clause names
+both zones.** Sorceress's Schemes returns "target instant or sorcery card from
+your graveyard **or** exiled card with flashback you own": a body that says the
+first is not a body that says the second, so the audit asks for every zone a
+clause names rather than the first one it finds. Hand and library were measured
+and are empty.
 
 ## FIXED 2026-09-20 (the fifty-first find) — a FAN-OUT `PlayerRef` handed to an arm that resolves it SINGULARLY, nineteen cards, and every one invisible in a duel
 
