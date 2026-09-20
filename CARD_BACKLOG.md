@@ -221,9 +221,46 @@ later. Both corrected in the same commit.
 The cheap census for the class: grep `StaticEffect`'s doc comments for card
 names and check each against `all_factories`.
 
+### Vivid, blink, and two mana rocks (six more)
+
+Bloom Tender (257, the highest-ranked card that was left), Faeburrow Elder
+(501), Displacer Kitten (550), Teleportation Circle (992), Relic of Legends
+(536), Decanter of Endless Water (318).
+
+One primitive between them — `ManaPayload::OneOfEachColorAmongYourPermanents`
+(Vivid). ⚠ `AnyColorAmongYourPermanents` already existed and is **not** it:
+Meteor Crater reads the same colour set and adds *one* mana chosen from it.
+**The two agree exactly on a one-colour board**, so a mono-colour test cannot
+tell them apart — which is where the mistake would have lived, and is what the
+injection run confirms. The colour-union walk is shared
+(`GameState::colors_among_your_permanents`) so the two arms can disagree about
+what to do with the set but not about the set.
+
+### Cards the engine had already documented (two, and a vein)
+
+`scripts/audit_doc_card_names.py`'s 28 rows are mostly design rationale, but a
+few name a primitive that fits the absent card exactly — **a shipped ability
+with no card on it**. Boon Reflection (`LifeGainMultiplier`, whose doc has said
+"Rhox Faithmender / Boon Reflection" since it was written) and Thousand-Year
+Elixir (EDHREC 882; `ControllerCreatureAbilitiesAsThoughHaste`, documented as
+"Tyvar, Jubilant Brawler; **Thousand-Year Elixir kin**") are the first two, and
+Tainted Remedy above was the third. **The census is a card queue as well as a
+ratchet**: a doc that names a card is a primitive someone already matched to
+it.
+
+### Two fixture traps, both of which fail like a card
+
+* `add_card_to_battlefield` fires **no entry event** — an ETB trigger tested
+  through it reads as unimplemented (Mithril Coat).
+* `two_player_game()` starts with an **empty library** — a test that passes
+  priority as far as a cleanup step runs the seat into its own draw and ends
+  in `GameAlreadyOver` (Decanter of Endless Water). That one was only obvious
+  because **the control failed too**; a turn-wheel test without a control
+  cannot tell a fixture fault from a card fault.
+
 ### Still open
 
-**70 of the 82.** `COMMANDER_BACKLOG.md` is generated and goes stale the
+**64 of the 82.** `COMMANDER_BACKLOG.md` is generated and goes stale the
 moment a card lands, so recompute rather than trusting its count:
 `COMMANDER_BACKLOG`'s section 2 minus every name that appears as a string
 literal anywhere in `crabomination_catalog/src` (⚠ **not** as `name: "…"` —

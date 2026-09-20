@@ -705,3 +705,63 @@ pub fn decanter_of_endless_water() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Cards the engine already documented and had never shipped ──────────────
+//
+// `scripts/audit_doc_card_names.py` lists card names cited in a `StaticEffect`
+// / `Effect` / `Keyword` doc comment and absent from the catalog. Most are
+// harmless design rationale, but a few name a primitive that fits the card
+// exactly — a shipped ability with no card on it. These are those.
+
+/// Boon Reflection — {4}{W} Enchantment. "If you would gain life, you gain
+/// twice that much life instead."
+///
+/// `StaticEffect::LifeGainMultiplier`'s own doc has said "Rhox Faithmender /
+/// Boon Reflection" since it was written; only the Faithmender shipped.
+pub fn boon_reflection() -> CardDefinition {
+    CardDefinition {
+        name: "Boon Reflection",
+        cost: cost(&[generic(4), w()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "If you would gain life, you gain twice that much life instead.",
+            effect: StaticEffect::LifeGainMultiplier {
+                target: PlayerStaticTarget::Controller,
+                factor: 2,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Thousand-Year Elixir — {3} Artifact. "You may activate abilities of
+/// creatures you control as though those creatures had haste. {1}, {T}: Untap
+/// target creature." (EDHREC 882.)
+///
+/// `StaticEffect::ControllerCreatureAbilitiesAsThoughHaste` was documented as
+/// "Tyvar, Jubilant Brawler; **Thousand-Year Elixir kin**" — the Elixir is the
+/// card the ability is named after and was the one not in the catalog.
+///
+/// ⚠ The two halves are independent and only the first is the famous one: the
+/// static exempts the controller's creatures from CR 602.5g's summoning-
+/// sickness gate on `{T}` costs, and the untap is an ordinary targeted ability
+/// that works on anyone's creature.
+pub fn thousand_year_elixir() -> CardDefinition {
+    CardDefinition {
+        name: "Thousand-Year Elixir",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "You may activate abilities of creatures you control as though \
+                          those creatures had haste.",
+            effect: StaticEffect::ControllerCreatureAbilitiesAsThoughHaste,
+        }],
+        activated_abilities: vec![crate::card::ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            tap_cost: true,
+            effect: Effect::Untap { what: target_filtered(R::Creature), up_to: None },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

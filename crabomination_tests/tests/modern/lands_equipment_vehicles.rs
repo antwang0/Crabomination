@@ -2617,3 +2617,77 @@ fn cr_514_1_the_decanter_keeps_eleven_cards_through_cleanup() {
     assert_eq!(keep(true), 11, "no maximum hand size, so nothing is discarded");
     assert_eq!(keep(false), 7, "and the control discards down to seven");
 }
+
+// ── Cards the engine documented and had never shipped ──────────────────────
+
+/// Boon Reflection: "If you would gain life, you gain twice that much life
+/// instead." `StaticEffect::LifeGainMultiplier`'s doc named this card and
+/// Rhox Faithmender; only the Faithmender was in the catalog.
+#[test]
+fn cr_614_boon_reflection_doubles_your_life_gain_only() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::boon_reflection());
+
+    let yours = g.players[0].life;
+    g.adjust_life(0, 4);
+    assert_eq!(g.players[0].life, yours + 8, "twice that much");
+
+    let theirs = g.players[1].life;
+    g.adjust_life(1, 4);
+    assert_eq!(g.players[1].life, theirs + 4, "and it is *your* life gain, not the table's");
+}
+
+/// Thousand-Year Elixir: "You may activate abilities of creatures you control
+/// as though those creatures had haste."
+///
+/// CR 602.5g bars a summoning-sick creature from paying a `{T}` cost. The
+/// Elixir exempts the controller's creatures; the test is that the *same*
+/// activation fails before it lands and succeeds after.
+#[test]
+fn cr_602_5g_thousand_year_elixir_exempts_the_summoning_sickness_gate() {
+    let mut g = two_player_game();
+    let dancer = g.add_card_to_battlefield(0, catalog::sinew_dancer());
+    let target = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(6);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let act = |g: &mut GameState| {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: dancer,
+            ability_index: 0,
+            target: Some(Target::Permanent(target)),
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+    };
+    assert!(act(&mut g).is_err(), "a sick creature can't tap-activate (CR 602.5g)");
+    g.add_card_to_battlefield(0, catalog::thousand_year_elixir());
+    act(&mut g).expect("the Elixir's static exempts the gate");
+}
+
+/// …and its second half is an ordinary targeted untap, which works on anyone's
+/// creature — the two clauses are independent.
+#[test]
+fn thousand_year_elixir_untaps_a_creature_for_one_and_a_tap() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let elixir = g.add_card_to_battlefield(0, catalog::thousand_year_elixir());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(theirs).unwrap().tapped = true;
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: elixir,
+        ability_index: 0,
+        target: Some(Target::Permanent(theirs)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("{1}, {T}: Untap target creature");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(theirs).unwrap().tapped, "untapped, and it is not yours");
+    assert!(g.battlefield_find(elixir).unwrap().tapped, "the Elixir paid its own tap");
+}
