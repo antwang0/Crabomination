@@ -17312,31 +17312,56 @@ impl GameState {
         // "any target"). Spell casts already validate this in `cast_spell`;
         // activated abilities went unchecked, which let bots/UIs aim a
         // Wasteland at a Plains. Mirror the cast-side gate for parity.
-        if let Some(tgt) = &target
-            && let Some(filter) = ability
-                .effect
-                .target_filter_for_slot_in_mode(0, chosen_mode)
-                .map(|f| f.resolve_x(x_value.unwrap_or(0)))
-            && !self.evaluate_requirement_static(&filter, tgt, p, Some(card_id))
-        {
-            return Err(GameError::SelectionRequirementViolated);
-        }
-
-        // Two-target activated abilities (Autumn-Tail): validate slots 1+ the
-        // same way — legality (hexproof/shroud/…) plus the per-slot filter.
-        for (i, tgt) in additional_targets.iter().enumerate() {
-            self.check_target_legality(tgt, p)?;
-            if self.ability_target_has_protection(tgt, card_id) {
-                return Err(GameError::TargetHasProtection(card_id));
-            }
-            if let Some(filter) = ability
-                .effect
-                .target_filter_for_slot((i + 1) as u8)
-                .map(|f| f.resolve_x(x_value.unwrap_or(0)))
-                && !self.evaluate_requirement_static(&filter, tgt, p, Some(card_id))
-            {
-                return Err(GameError::SelectionRequirementViolated);
-            }
+        //
+        // Cross-slot filters read the whole chosen slot vector rather than
+        // their own target, so stamp it the way `cast_spell` does — an
+        // activated "another target" (Simic Guildmage's counter move) is
+        // otherwise validated against an empty scratch and passes whatever it
+        // was aimed at. Skipped entirely for an untargeted activation, which
+        // is every mana ability and so most of this function's traffic; the
+        // whole block is one expression so the stamp is cleared once.
+        let target_violation = if target.is_none() && additional_targets.is_empty() {
+            None
+        } else {
+            self.target_slots_scratch = std::iter::once(target.clone())
+                .chain(additional_targets.iter().cloned().map(Some))
+                .collect();
+            let violation = (|| {
+                if let Some(tgt) = &target
+                    && let Some(filter) = ability
+                        .effect
+                        .target_filter_for_slot_in_mode(0, chosen_mode)
+                        .map(|f| f.resolve_x(x_value.unwrap_or(0)))
+                    && !self.evaluate_requirement_static(&filter, tgt, p, Some(card_id))
+                {
+                    return Some(GameError::SelectionRequirementViolated);
+                }
+                // Two-target activated abilities (Autumn-Tail): validate slots
+                // 1+ the same way — legality (hexproof/shroud/…) plus the
+                // per-slot filter.
+                for (i, tgt) in additional_targets.iter().enumerate() {
+                    if let Err(e) = self.check_target_legality(tgt, p) {
+                        return Some(e);
+                    }
+                    if self.ability_target_has_protection(tgt, card_id) {
+                        return Some(GameError::TargetHasProtection(card_id));
+                    }
+                    if let Some(filter) = ability
+                        .effect
+                        .target_filter_for_slot((i + 1) as u8)
+                        .map(|f| f.resolve_x(x_value.unwrap_or(0)))
+                        && !self.evaluate_requirement_static(&filter, tgt, p, Some(card_id))
+                    {
+                        return Some(GameError::SelectionRequirementViolated);
+                    }
+                }
+                None
+            })();
+            self.target_slots_scratch.clear();
+            violation
+        };
+        if let Some(e) = target_violation {
+            return Err(e);
         }
         // CR 601.2c — Flagbearer applies to activated abilities too. Skipped
         // outright when nothing was targeted: `flagbearer_violation` answers

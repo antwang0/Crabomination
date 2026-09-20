@@ -3293,6 +3293,13 @@ impl GameState {
                     None => true,
                 }
             }
+            R::Or(a, b) => {
+                self.cross_slot_targets_ok(a, target, slots)
+                    || self.cross_slot_targets_ok(b, target, slots)
+            }
+            R::OtherThanTargetSlot(slot) => {
+                slots.get(*slot as usize).and_then(|t| t.as_ref()).is_none_or(|o| o != target)
+            }
             _ => true,
         }
     }
@@ -3849,6 +3856,15 @@ impl GameState {
                 };
                 match self.target_slots_scratch.get(*slot as usize).and_then(|t| t.as_ref()) {
                     Some(other) => ctrl_of(other).is_some() && ctrl_of(other) == ctrl_of(target),
+                    None => true,
+                }
+            }
+            // CR 601.2c — "**another** target": not the object slot N already
+            // holds. Same scratch, same vacuous answer while that slot is
+            // unchosen.
+            R::OtherThanTargetSlot(slot) => {
+                match self.target_slots_scratch.get(*slot as usize).and_then(|t| t.as_ref()) {
+                    Some(other) => other != target,
                     None => true,
                 }
             }
@@ -4744,6 +4760,16 @@ impl GameState {
                         Some(src_id) => *cid != src_id,
                         None => true,
                     },
+                    // CR 601.2c — "**another** target": the battlefield walker
+                    // reads the same stamp the cast/activation validator
+                    // leaves, so the UI's candidate list and the picker agree
+                    // with the gate that will judge them. Vacuously true when
+                    // nothing is stamped, which is every non-targeting walk.
+                    R::OtherThanTargetSlot(slot) => self
+                        .target_slots_scratch
+                        .get(*slot as usize)
+                        .and_then(|t| t.as_ref())
+                        .is_none_or(|o| *o != Target::Permanent(*cid)),
                     R::NotSourcesChosenPermanent => source
                         .and_then(|s| self.battlefield_find(s))
                         .and_then(|s| s.chosen_permanent)
@@ -5353,7 +5379,9 @@ impl GameState {
             }
             // Concretized before the walk (`choose_damage_prevention_source`)
             // and slot-aware (`cross_slot_targets_ok`) respectively.
-            R::SharesColorWithManaSpent | R::SameControllerAsTargetSlot(_) => true,
+            R::SharesColorWithManaSpent
+            | R::SameControllerAsTargetSlot(_)
+            | R::OtherThanTargetSlot(_) => true,
             R::SharesColorWithPermanentYouControl => {
                 let colors = card.definition.printed_colors();
                 !colors.is_empty()

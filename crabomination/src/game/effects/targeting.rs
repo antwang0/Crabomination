@@ -780,8 +780,25 @@ impl GameState {
                 Some(r) => r,
                 None => break,
             };
+            // CR 601.2c — a cross-slot filter ("**another** target", "with
+            // the same controller") reads the slots already chosen. The cast
+            // validator stamps `target_slots_scratch` for that; this walk has
+            // its picks in hand instead, so it passes them explicitly.
+            // Without it the "another" half was answered vacuously here and
+            // then rejected by the validator, which is a bot action that
+            // fails rather than a target it avoids.
+            // Asked once per slot, not once per candidate: the walk below
+            // runs per battlefield permanent and all but a handful of filters
+            // carry no cross-slot atom at all.
+            let cross = req.mentions_cross_slot();
+            let filled: Vec<Option<Target>> = if cross {
+                std::iter::once(slot_0.clone()).chain(additional.iter().cloned().map(Some)).collect()
+            } else {
+                Vec::new()
+            };
             let is_legal = |t: &Target| -> bool {
                 self.evaluate_requirement_static(req, t, controller, source)
+                    && (!cross || self.cross_slot_targets_ok(req, t, &filled))
                     && self.check_target_legality(t, controller).is_ok()
             };
             // The battlefield candidate walk below already holds each
@@ -810,10 +827,14 @@ impl GameState {
                     return false;
                 }
                 self.requirement_on_permanent(req, c, controller, source, &gates)
+                    && (!cross
+                        || self.cross_slot_targets_ok(req, &Target::Permanent(c.id), &filled))
                     && self.check_target_legality(&Target::Permanent(c.id), controller).is_ok()
             };
             let is_legal_gy = |c: &CardInstance| -> bool {
                 self.requirement_on_graveyard_card(req, c, controller, source)
+                    && (!cross
+                        || self.cross_slot_targets_ok(req, &Target::Permanent(c.id), &filled))
                     && self.check_target_legality(&Target::Permanent(c.id), controller).is_ok()
             };
             let pick = {

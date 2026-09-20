@@ -1727,3 +1727,56 @@ fn a_layer_5_colour_change_reaches_the_printed_fast_path() {
         "Darkest Hour makes it black, and the enumerator has to see that",
     );
 }
+
+/// CR 601.2c — the printed word "**another**" between two target slots. Two
+/// separate instances of "target" on one object may otherwise name the same
+/// thing, so the restriction has to live in the filter:
+/// `SelectionRequirement::OtherThanTargetSlot(n)` reads the slot vector the
+/// cast and activation validators stamp into `target_slots_scratch`, the same
+/// way `SameControllerAsTargetSlot` does.
+mod another_target {
+    use crabomination::card::{CardDefinition, CardType, SelectionRequirement as R};
+    use crabomination::effect::{Effect, Selector};
+    use crabomination::game::*;
+
+    fn bear(name: &'static str) -> CardDefinition {
+        CardDefinition {
+            name,
+            card_types: vec![CardType::Creature],
+            power: 2,
+            toughness: 2,
+            ..Default::default()
+        }
+    }
+
+    /// The auto-picker enforces it, not only the validator: before this it
+    /// merely *preferred* an unpicked permanent (`already_picked`), and its
+    /// mandatory-slot fallback deliberately reused one — so a board with one
+    /// legal object handed the same one to both slots and the cast that
+    /// followed was rejected.
+    #[test]
+    fn cr_601_2c_the_auto_picker_will_not_fill_two_slots_with_one_object() {
+        let mut g = two_player_game();
+        let eff = Effect::Seq(vec![
+            Effect::Tap {
+                what: Selector::TargetFiltered { slot: 0, filter: R::Creature },
+            },
+            Effect::Untap {
+                what: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: R::Creature.and(R::OtherThanTargetSlot(0)),
+                },
+                up_to: None,
+            },
+        ]);
+        let only = g.add_card_to_battlefield(0, bear("Lonely Bear"));
+        let (slot0, extra) = g.auto_targets_for_effect_all_slots(&eff, 0, None);
+        assert_eq!(slot0, Some(Target::Permanent(only)));
+        assert!(extra.is_empty(), "one object cannot fill the second slot: {extra:?}");
+
+        g.add_card_to_battlefield(0, bear("Second Bear"));
+        let (slot0, extra) = g.auto_targets_for_effect_all_slots(&eff, 0, None);
+        assert_eq!(extra.len(), 1, "two objects fill both slots");
+        assert_ne!(Some(extra[0].clone()), slot0, "and they are different objects");
+    }
+}

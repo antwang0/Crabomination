@@ -2569,6 +2569,15 @@ pub enum SelectionRequirement {
     /// by the same player" — Barrin's Spite). Vacuously true while that slot
     /// is unchosen, so it never blocks the first pick.
     SameControllerAsTargetSlot(u8),
+    /// CR 601.2c — the printed word "**another**" between two target slots:
+    /// not the object already chosen for slot `.0` ("target creature fights
+    /// **another** target creature"). Two separate instances of "target" may
+    /// otherwise name one object, so without this the same creature fought
+    /// itself and Cone of Flame dealt 1+2+3 to one permanent. Vacuously true
+    /// while that slot is unchosen, so it never blocks the first pick — the
+    /// sibling of `SameControllerAsTargetSlot` and read the same way, out of
+    /// `GameState::target_slots_scratch`.
+    OtherThanTargetSlot(u8),
     /// The permanent's mana value equals the evaluating player's unspent
     /// (floating) mana — Glissa Sunseeker.
     ManaValueEqualsYourUnspentMana,
@@ -3373,6 +3382,25 @@ impl SelectionRequirement {
             Self::And(a, b) | Self::Or(a, b) => {
                 a.mentions_offboard_zone() || b.mentions_offboard_zone()
             }
+            _ => false,
+        }
+    }
+
+    /// True when the filter contains a **cross-slot** atom — one answered
+    /// against the other chosen targets (`SameControllerAsTargetSlot`,
+    /// `OtherThanTargetSlot`) rather than against the candidate alone.
+    ///
+    /// Asked once per slot so the per-candidate walk can skip
+    /// `cross_slot_targets_ok` entirely: that walk runs once per battlefield
+    /// permanent per slot, and all but a handful of filters carry no such
+    /// atom.
+    pub fn mentions_cross_slot(&self) -> bool {
+        match self {
+            Self::SameControllerAsTargetSlot(_) | Self::OtherThanTargetSlot(_) => true,
+            Self::And(a, b) | Self::Or(a, b) => {
+                a.mentions_cross_slot() || b.mentions_cross_slot()
+            }
+            Self::Not(a) => a.mentions_cross_slot(),
             _ => false,
         }
     }
