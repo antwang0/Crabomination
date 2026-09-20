@@ -965,8 +965,13 @@ impl GameState {
         if !self.in_damage_redirect
             && let EntityRef::Permanent(cid) = ent
             && self.battlefield_find(cid).is_some_and(|c| c.definition.is_creature())
-            && let Some(martyr) =
-                (0..self.players.len()).find(|&p| self.players[p].creature_damage_to_you_this_turn)
+            // CR 800.4a — damage is never redirected to a seat that has left.
+            // Collected rather than iterated: the `let` chain holds the
+            // iterator's borrow of `self` across the body, which then writes
+            // `in_damage_redirect`.
+            && let Some(martyr) = (0..self.players.len()).find(|&p| {
+                self.players[p].is_alive() && self.players[p].creature_damage_to_you_this_turn
+            })
         {
             self.in_damage_redirect = true;
             self.deal_damage_to_from(EntityRef::Player(martyr), amount, source, events);

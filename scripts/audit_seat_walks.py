@@ -34,6 +34,19 @@ entry per seat**, because those are the two ways a dead seat's participation
 becomes visible. A walk that only clears per-player state is not a finding —
 a departed seat's state still has to be cleared.
 
+⚠ **A second column, added 2026-09-20: walks that PICK one seat.** The loops
+above hand a dead seat a question; these hand a dead seat a *role* — "the
+player with the lowest life", "an opponent", "the graveyard with the most
+matches". `PlayerRef::LowestLife` was the sharp one: a departed seat is at or
+below zero life, so it was **always** the answer, from the first elimination
+onwards. `PlayerWithMostLife` had the guard and its four siblings did not,
+which is the shape of the whole class — the rule was known and applied once.
+
+The safe sources here are `GameState::living_seats` (the seats still in the
+game, in seat order) and `default_hostile_opponent` (the ranked "an opponent"
+that nine `find(|s| !same_team(..))` fallbacks were still open-coding, each
+naming a seat that had left).
+
 Run: `python3 scripts/audit_seat_walks.py`   (exit 1 on any finding)
 """
 
@@ -61,7 +74,21 @@ ASKS = re.compile(r"ask_seat_\w+|seat_prompts|ask_player")
 # reaches a tally (`fewest`, a ballot, an ordered list).
 TALLIES = re.compile(r"\.push\(\(\s*\w+\s*,|votes\[|counts\.push|answers\.push")
 # What makes a walk legitimate.
-GUARD = re.compile(r"is_alive\(\)|\.eliminated|left_game|seats_in_turn_order_from|resolve_players\(")
+GUARD = re.compile(
+    r"is_alive\(\)|\.eliminated|left_game|seats_in_turn_order_from|resolve_players\(|living_seats\("
+)
+
+# ── The second column: a walk that PICKS one seat ──────────────────────────
+# `(0..players.len())` followed by a combinator that returns ONE index. The
+# body of a pick is an expression, not a block, so it needs its own shapes.
+PICK = re.compile(
+    r"\(0\s*\.\.\s*(?:self\.)?players\.len\(\)\)\s*\n?\s*"
+    r"(?:\.filter\([^\n]*\)\s*\n?\s*)*"
+    r"\.(min_by_key|max_by_key|min_by|max_by|find|position|fold)\b"
+)
+# A pick that only locates a card/object rather than choosing a participant
+# is not a finding: a departed seat's zones are still searched by id.
+PICK_EXEMPT = re.compile(r"\.iter\(\)\.any\(\|c\||card_id|\.id ==")
 
 
 def body_of(src, start):
@@ -90,7 +117,7 @@ def enclosing_arm(src, at):
 
 
 def main():
-    findings = []
+    findings, picks = [], []
     for rel in FILES:
         path = ROOT / rel
         src = path.read_text()
@@ -112,12 +139,25 @@ def main():
                 line = src[: m.start()].count("\n") + 1
                 findings.append((rel, line, enclosing_arm(src, m.start()), m.group(0).strip()))
 
+        for m in PICK.finditer(src):
+            # The guard can sit just ABOVE the pick — `first_opponent_of`
+            # binds an `alive` closure on the line before it.
+            window = src[max(0, m.start() - 200) : m.end() + 260]
+            if GUARD.search(window) or PICK_EXEMPT.search(window):
+                continue
+            line = src[: m.start()].count("\n") + 1
+            picks.append((rel, line, enclosing_arm(src, m.start()), m.group(0).split("\n")[0].strip()))
+
     for rel, line, arm, text in findings:
         print(f"- {rel}:{line}  {arm}\n    {text}")
     print(
         f"\n{len(findings)} seat-index walks that ask or tally without a CR 800.4a guard"
     )
-    return 1 if findings else 0
+    print("\n# and the picks — walks that hand ONE departed seat a role:")
+    for rel, line, arm, text in picks:
+        print(f"- {rel}:{line}  {arm}\n    {text}")
+    print(f"\n{len(picks)} seat-index walks that PICK one seat without a CR 800.4a guard")
+    return 1 if (findings or picks) else 0
 
 
 if __name__ == "__main__":

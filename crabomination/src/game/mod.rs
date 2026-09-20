@@ -5821,6 +5821,14 @@ impl GameState {
     /// loaded. Outside 2HG the `Option` rejects every team, so the chase
     /// never happens.
     #[inline]
+    /// CR 800.4a — the seats still in the game, in seat order. A player who
+    /// has lost stays in `players` with `eliminated` set, so any walk that
+    /// asks "which player has the most/least X" has to start here: a departed
+    /// seat is at or below zero life and would otherwise always be "lowest".
+    pub fn living_seats(&self) -> impl Iterator<Item = usize> + '_ {
+        (0..self.players.len()).filter(move |p| self.players[*p].is_alive())
+    }
+
     pub fn effective_life(&self, seat: usize) -> i32 {
         if let Some(t) =
             self.teams.iter().find(|t| t.shared_life.is_some() && t.members.contains(&seat))
@@ -19481,7 +19489,10 @@ impl GameState {
         // CR 614 — Shared Fate: the draw becomes "exile the top card of one of
         // your opponents' libraries face down; you may play it from exile".
         if global_static(&crate::effect::StaticEffect::SharedFate) {
-            let victim = (0..self.players.len())
+            // CR 800.4a — "one of your opponents' libraries", and a seat
+            // that has left the game is not one of them.
+            let victim = self
+                .living_seats()
                 .find(|q| *q != p && !self.players[*q].library.is_empty());
             let Some(victim) = victim else { return DrawOutcome::Skipped };
             if self.players[victim].library.is_empty() {

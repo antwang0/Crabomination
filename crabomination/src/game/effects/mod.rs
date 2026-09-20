@@ -3387,7 +3387,8 @@ impl GameState {
             // with the top card of your library (CR 407.3).
             Effect::TakeAnteCardForLibraryTop { who } => {
                 let Some(seat) = self.resolve_player(who, ctx) else { return Ok(()) };
-                let from = (0..self.players.len()).find(|p| !self.players[*p].ante.is_empty());
+                // CR 800.4a — a departed seat's ante left the game with it.
+                let from = self.living_seats().find(|p| !self.players[*p].ante.is_empty());
                 let (Some(from), false) = (from, self.players[seat].library.is_empty()) else {
                     return Ok(());
                 };
@@ -19402,9 +19403,9 @@ impl GameState {
                         .and_then(|src| self.attacking.iter().find(|a| a.attacker == src))
                         .map(|a| a.target)
                         .or_else(|| {
-                            (0..self.players.len())
-                                .find(|&q| !self.same_team(q, p))
-                                .map(AttackTarget::Player)
+                            // CR 506.2 / 800.4a — a seat that has left the
+                            // game is not a legal defending player.
+                            self.default_hostile_opponent(p).map(AttackTarget::Player)
                         }),
                 };
                 let Some(target) = target else { return Ok(()); };
@@ -19457,9 +19458,9 @@ impl GameState {
                         .and_then(|src| self.attacking.iter().find(|a| a.attacker == src))
                         .map(|a| a.target)
                         .or_else(|| {
-                            (0..self.players.len())
-                                .find(|&q| !self.same_team(q, controller))
-                                .map(AttackTarget::Player)
+                            // CR 506.2 / 800.4a — a seat that has left the
+                            // game is not a legal defending player.
+                            self.default_hostile_opponent(controller).map(AttackTarget::Player)
                         });
                     let Some(target) = target else { continue };
                     if let Some(c) = self.battlefield.find_by_id_mut(id) {
@@ -21631,9 +21632,9 @@ impl GameState {
                     .and_then(|src| self.attacking.iter().find(|a| a.attacker == src))
                     .map(|a| a.target)
                     .or_else(|| {
-                        (0..self.players.len())
-                            .find(|&q| !self.same_team(q, p))
-                            .map(AttackTarget::Player)
+                        // CR 506.2 / 800.4a — a departed seat is not a legal
+                        // defending player.
+                        self.default_hostile_opponent(p).map(AttackTarget::Player)
                     });
                 let dest = ZoneDest::Battlefield { controller: PlayerRef::Seat(p), tapped: true };
                 self.move_card_to(cid, &dest, ctx, events);
@@ -23522,7 +23523,7 @@ impl GameState {
             Effect::LookTopExileOneMayPlay { count, who } => {
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
                 let opp = self.resolve_player(who, ctx).or_else(|| {
-                    (0..self.players.len()).find(|s| !self.same_team(*s, ctx.controller))
+                    self.default_hostile_opponent(ctx.controller)
                 });
                 let Some(opp) = opp else { return Ok(()) };
                 let top: Vec<crate::card::CardId> =
@@ -23664,7 +23665,8 @@ impl GameState {
                 if want == 0 {
                     return Ok(());
                 }
-                let best = (0..self.players.len()).max_by_key(|p| {
+                // CR 800.4a — a departed seat's graveyard is not a candidate.
+                let best = self.living_seats().max_by_key(|p| {
                     self.players[*p]
                         .graveyard
                         .iter()
@@ -23752,7 +23754,7 @@ impl GameState {
                 let who = self
                     .resolve_player(&crate::effect::PlayerRef::Target(0), ctx)
                     .or_else(|| {
-                        (0..self.players.len()).find(|s| !self.same_team(*s, ctx.controller))
+                        self.default_hostile_opponent(ctx.controller)
                     });
                 let Some(who) = who else { return Ok(()) };
                 // Heuristic feed: the target's nonland hand names, most
@@ -23872,7 +23874,7 @@ impl GameState {
                 let who = self
                     .resolve_player(&crate::effect::PlayerRef::Target(0), ctx)
                     .or_else(|| {
-                        (0..self.players.len()).find(|s| !self.same_team(*s, ctx.controller))
+                        self.default_hostile_opponent(ctx.controller)
                     });
                 let Some(who) = who else { return Ok(()) };
                 // Feed the namer the target's densest nonland name across the
@@ -23907,7 +23909,7 @@ impl GameState {
                 let who = self
                     .resolve_player(&crate::effect::PlayerRef::Target(0), ctx)
                     .or_else(|| {
-                        (0..self.players.len()).find(|s| !self.same_team(*s, ctx.controller))
+                        self.default_hostile_opponent(ctx.controller)
                     });
                 let Some(who) = who else { return Ok(()) };
                 // Feed the namer the target's nonland hand names — the hand is
@@ -24318,7 +24320,7 @@ impl GameState {
                 let opp = self
                     .resolve_player(&crate::effect::PlayerRef::Target(0), ctx)
                     .or_else(|| {
-                        (0..self.players.len()).find(|s| !self.same_team(*s, ctx.controller))
+                        self.default_hostile_opponent(ctx.controller)
                     });
                 let Some(opp) = opp else { return Ok(()) };
                 let revealed: Vec<crate::card::CardId> = self.players[opp]
@@ -24473,7 +24475,7 @@ impl GameState {
                 // puts the best creature onto the battlefield, rest to gy.
                 let opp = self
                     .resolve_player(&crate::effect::PlayerRef::Target(0), ctx)
-                    .or_else(|| (0..self.players.len()).find(|s| !self.same_team(*s, ctx.controller)));
+                    .or_else(|| self.default_hostile_opponent(ctx.controller));
                 let mut entered: Vec<CardId> = Vec::new();
                 for p in [opp, Some(ctx.controller)].into_iter().flatten() {
                     let top: Vec<CardId> =
@@ -24683,7 +24685,7 @@ impl GameState {
             Effect::IsperiaReveal => {
                 
                 let Some(opp) = self.resolve_player(&PlayerRef::DefendingPlayer, ctx)
-                    .or_else(|| (0..self.players.len()).find(|s| !self.same_team(*s, ctx.controller)))
+                    .or_else(|| self.default_hostile_opponent(ctx.controller))
                 else { return Ok(()) };
                 // The namer picks (heuristic: the defender's densest nonland name,
                 // guaranteeing a hit when a nonland card is present).
@@ -24815,7 +24817,7 @@ impl GameState {
             Effect::FertileImagination { per } => {
                 use crate::card::{CardType, CreatureType, Subtypes, TokenDefinition};
                 let Some(opp) = self.resolve_player(&crate::effect::PlayerRef::Target(0), ctx)
-                    .or_else(|| (0..self.players.len()).find(|s| !self.same_team(*s, ctx.controller)))
+                    .or_else(|| self.default_hostile_opponent(ctx.controller))
                 else { return Ok(()) };
                 let chosen = self.choose_a_card_type(ctx.source.unwrap_or(CardId(0)));
                 let matches = self.players[opp].hand.iter()
@@ -25030,9 +25032,9 @@ impl GameState {
                         .and_then(|e| e.as_permanent_id())
                         .and_then(|src| self.attacking.iter().find(|a| a.attacker == src).map(|a| a.target))
                         .or_else(|| {
-                            (0..self.players.len())
-                                .find(|&q| !self.same_team(q, p))
-                                .map(AttackTarget::Player)
+                            // CR 506.2 — a seat that has left the game is not
+                            // a legal attack target.
+                            self.default_hostile_opponent(p).map(AttackTarget::Player)
                         });
                     let dest = ZoneDest::Battlefield {
                         controller: crate::effect::PlayerRef::Seat(p),
@@ -27286,7 +27288,8 @@ impl GameState {
                 // body runs under the upkeep player's control.
                 let seat = self.active_player_idx;
                 let mine = self.player_tally(seat, *tally);
-                let lead = (0..self.players.len())
+                let lead = self
+                    .living_seats()
                     .filter(|&q| !self.same_team(q, seat))
                     .filter(|&q| self.player_tally(q, *tally) > mine)
                     .max_by_key(|&q| self.player_tally(q, *tally));
@@ -29319,7 +29322,7 @@ impl GameState {
                 if n == 0 {
                     return Ok(());
                 }
-                let opp = (0..self.players.len()).find(|s| !self.same_team(*s, p));
+                let opp = self.default_hostile_opponent(p);
                 let top: Vec<(CardId, bool, u32)> = self.players[p].library[..n]
                     .iter()
                     .map(|c| (c.id, c.definition.is_land(), c.definition.cost.cmc()))
@@ -37464,17 +37467,28 @@ impl GameState {
                 .map(|c| c.owner),
             PlayerRef::CounteredSpellController => self.countered_spell_controller,
             PlayerRef::AcceptingPlayer => self.accepting_player,
+            // ⚠ CR 800.4a — a player who leaves the game is no longer a
+            // player, so every extremum below walks `living_seats` rather than
+            // `0..players.len()`. The seat stays in the vector with
+            // `eliminated` set, and a departed one is at or below zero life,
+            // which made it *always* the lowest. Unreachable in a duel, where
+            // the game ends with the elimination; live from the first one in a
+            // pod. `PlayerWithMostLife` already had the filter.
+            //
             // Ties go to the earliest seat (stands in for "you choose one").
-            PlayerRef::LowestLife => (0..self.players.len()).min_by_key(|p| self.players[*p].life),
+            PlayerRef::LowestLife => {
+                self.living_seats().min_by_key(|p| self.effective_life(*p))
+            }
             // `max_by_key` returns the *last* maximum; fold keeps the earliest.
-            PlayerRef::HighestLife => (0..self.players.len()).fold(None::<usize>, |best, p| {
+            PlayerRef::HighestLife => self.living_seats().fold(None::<usize>, |best, p| {
                 match best {
-                    Some(b) if self.players[b].life >= self.players[p].life => Some(b),
+                    Some(b) if self.effective_life(b) >= self.effective_life(p) => Some(b),
                     _ => Some(p),
                 }
             }),
             // `max_by_key` returns the *last* maximum; fold keeps the earliest.
-            PlayerRef::MostCardsInHand => (0..self.players.len())
+            PlayerRef::MostCardsInHand => self
+                .living_seats()
                 .fold(None::<usize>, |best, p| match best {
                     Some(b) if self.players[b].hand.len() >= self.players[p].hand.len() => Some(b),
                     _ => Some(p),
@@ -37487,7 +37501,7 @@ impl GameState {
                         .filter(|c| c.controller == p && c.definition.is_creature())
                         .count()
                 };
-                (0..self.players.len()).fold(None::<usize>, |best, p| match best {
+                self.living_seats().fold(None::<usize>, |best, p| match best {
                     Some(b) if count(b) >= count(p) => Some(b),
                     _ => Some(p),
                 })

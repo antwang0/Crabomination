@@ -5438,3 +5438,40 @@ fn cr_506_2_an_attack_clause_reaches_only_the_seat_being_attacked() {
         "CR 506.2 — seat 2 is an opponent but is not the defending player",
     );
 }
+
+/// CR 800.4a — a player who leaves the game is no longer a player, so a
+/// "player with the most/least X" reference must not find them. The seat
+/// stays in `players` with `eliminated` set, and four of the five extremum
+/// `PlayerRef`s walked `0..players.len()` with no filter. `LowestLife` is the
+/// one that bites every time: a departed seat is at or below zero life, so it
+/// is *always* the lowest.
+#[test]
+fn cr_800_4a_an_extremum_player_ref_skips_a_seat_that_left_the_game() {
+    use crabomination::effect::PlayerRef;
+    use crabomination::game::effects::EffectContext;
+    let mut g = multi_player_game(4);
+    g.players[0].life = 20;
+    g.players[1].life = 5;
+    g.players[2].life = 30;
+    g.players[3].life = 0;
+    g.players[3].eliminated = true;
+
+    // Give the departed seat what would make it win every extremum.
+    for _ in 0..5 {
+        g.add_card_to_hand(3, catalog::grizzly_bears());
+    }
+    g.move_card_to_battlefield_for_test(3, catalog::grizzly_bears());
+    g.move_card_to_battlefield_for_test(3, catalog::grizzly_bears());
+    drain_stack(&mut g);
+
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    let ask = |r: PlayerRef| g.resolve_players(&r, &ctx).first().copied();
+    assert_eq!(ask(PlayerRef::LowestLife), Some(1), "the dead seat is not the lowest");
+    assert_eq!(ask(PlayerRef::HighestLife), Some(2), "and the highest is still seat 2");
+    assert_ne!(
+        ask(PlayerRef::MostCardsInHand),
+        Some(3),
+        "a departed seat's hand is not in the running either",
+    );
+    assert_ne!(ask(PlayerRef::MostCreatures), Some(3), "nor its board");
+}
