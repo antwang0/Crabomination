@@ -3015,6 +3015,49 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-09-20 (the eleventh Commander session) — guardrail, no perf work
+
+Three rules/bug classes ("any player may" asking every seat, 7 cards; the
+defending player as a filter, 32 cards; a shared audit reader blind to a
+third of the catalog), one new `SelectionRequirement` atom, one new
+`PlayersMayAccept` field, and a **tenth pod deck**. Nothing moved:
+
+```text
+--bench (release-fast), CRAB_THREAD_CHECK=1, at the closing tip:
+  decisions          195,806   byte-identical to the committed invariant
+  turns_per_game       27.49   "
+  decisions_per_game   611.9   "
+  stalls          0 (cap 0 / board 0 / stuck 0 / draw 0)
+  determinism     ok (all pairs split); thread_determinism ok (3 vs 1)
+  peak_rss_mib     28.7
+```
+
+⚠⚠ **And `--bench` was NOT the guardrail that mattered this time**, because
+`--decks fixed` holds none of the 39 cards this run changed. The pools that
+do: **4 fresh seeds x cube/sos/sealed x 300 games an archetype = 30,000
+two-player games, 0 panics, 0 stalls, 0 action caps, 0 board caps.** The
+four undecided games (0.013 %, sealed, two seeds) are all `draw` — CR 104.4
+is an outcome, not a hang.
+
+**Pod: 2 fresh seeds (9300/9301) x 2/4/6/8/10 seats x 1,000 games = 10,000
+games, all ten blocks 1,000/1,000 decided, every `undecided_by` column zero,
+zero panics.** turns/game 19.53 / 45.46 / 64.63 / 93.27 / **125.48** and
+19.20 / 45.16 / 65.38 / 93.36 / **122.94**.
+
+📐 **The pre-check, one row per site.** ① `PlayersMayAccept` now collects
+every answer before applying any, so the loop runs twice over a set that is
+at most the seat count — and it is unreachable from `archetypes()`, whose
+four decks carry none of the seven cards. ② `defending_player_in_combat`
+adds a walk over `self.attacking` **only when the strict source walk misses**
+— which, for every attack trigger, it does not; the fallback is unreachable
+on the hot path. ③ One new enum variant is a match arm, not work.
+
+📐📐 **The reusable half is about which guardrail answers which question.**
+A byte-identical `--bench` says the fixed pool is unmoved and says nothing
+else. This run changed 39 cards, and the only run that could have caught a
+regression in them is the one that shuffles them into a deck. **Pick the
+guardrail by what the diff touched, not by what is cheapest to run.**
+
 ### 2026-09-20 (the tenth Commander session) — guardrail, no perf work
 
 Two rules classes (a zone-blind target filter, 27 cards; the printed word

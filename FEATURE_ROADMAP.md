@@ -44,6 +44,7 @@ Per-deck card completion lives in `DECK_FEATURES.md`.
 ### Multiplayer foundation (CR 800-series)
 | Feature | State | Where |
 |---|---|---|
+| CR 506.2 the **defending player** as a filter | ✅ | `SelectionRequirement::ControlledByDefendingPlayer` + `defending_player_in_combat` (`effects/eval.rs`), which `PlayerRef::DefendingPlayer` also ends in so the two cannot disagree. 32 cards printed the clause and were modelled `ControlledByOpponent` — exact in a duel, one seat of several in a pod; `scripts/audit_defending_player.py` is the ratchet at 0/32. The clause is not always on the attacker: an instant cast in combat, an Aura/Equipment whose host attacks, and a trigger firing off another creature's attack all resolve through the host-then-single-defender fallbacks, and a post-teardown trigger (Kusari-Gama) reads the damaged blocker's controller instead |
 | N seats (2..N), turn rotation, APNAP ordering | ✅ | `game/mod.rs`, `multi_player_game`; tests in `core_rules/multiplayer.rs` (76) and `cr_801.rs` |
 | Attack any opponent / their planeswalkers, per-attacker defender | ✅ | `game/combat.rs` |
 | CR 601.2c "for each opponent, … target X *that player* controls" | ✅ | `Effect::ForEachOpponentTarget` — a constraint on the chosen set (one target per controller, capped at the opponent count), enforced by the auto-target picker, the cast path and resolution. The five Primordials, Grasp of Fate, Omega, Tempted by the Oriq; tests in `core_rules/per_opponent_targets.rs` |

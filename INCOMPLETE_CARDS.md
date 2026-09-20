@@ -389,6 +389,37 @@ off by name rather than fixes, both filed here:
 | Quartzwood Crasher | 🟡 "create an X/X … where X is the amount of damage **those creatures** dealt to that player" wants the batch's *summed* damage, and `Value::TriggerEventAmount` is the one dealer the fire landed on. It keeps the unbatched shape (one token per trampler, each sized by its own damage — the right total across too many bodies) rather than take `once_per_batch` and mint one token of the wrong size. Needs the batch to carry a sum, which the per-attacker walk cannot do: the later attackers' damage is not dealt yet when the first one's trigger is pushed. |
 | Magmatic Galleon | 🟡 "Whenever one or more creatures your opponents control are dealt **excess** noncombat damage, create a Treasure token" is not modelled at all — only the ETB 5 damage ships. Needs excess-damage tracking (CR 120.3c), which no primitive carries. |
 
+## The "defending player" class (2026-09-20) — closed, with two named references and one residual
+
+32 cards print a clause that selects a permanent "defending player controls";
+all are on `SelectionRequirement::ControlledByDefendingPlayer` now.
+`scripts/audit_defending_player.py` gates it. Two rows answer the seat by a
+**different, equally exact reference** rather than by the atom, and both are
+allowlisted with the reason:
+
+- **Tromokratis** — "can't be blocked unless all creatures defending player
+  controls block it" is `Keyword::CantBeBlockedUnlessAllBlock`, and CR
+  509.1b's loop in `combat.rs` scopes it with `defender_for(atk.target)`,
+  per attack. Exact at any seat count.
+- **Kusari-Gama** — its `DealsCombatDamageToCreature` body resolves *after*
+  the combat teardown, so no attack record is left to read the seat from.
+  The trigger binds the damaged **blocker** as slot 0 and that creature's
+  controller is the defending player by definition.
+
+⚠ **One residual, unrelated to the seat.** Kusari-Gama's "each **other**
+creature defending player controls" is approximated as *the non-blocking
+ones*, so a second blocker that was not the one damaged is spared where the
+printed card splashes onto it. Pre-existing, and orthogonal to this class.
+
+⚠ **Two cards can only be cast during combat and always could have been.**
+Yare and Mercadia's Downfall are instants whose only reference is "defending
+player", which CR 506.2 defines relative to an attacking creature. With no
+attack declared they have no legal target and cannot be cast — correct, and
+a change from the previous behaviour, which let them name any opponent's
+creature at any time. A combat with **two** different defenders leaves the
+clause ambiguous and the filter takes nothing; the printed cards predate
+multiplayer templating and the CR gives no tiebreak.
+
 ## Melee is applied off-stack when it is a printed keyword (2026-09-20)
 
 CR 702.121a — "Melee is a **triggered** ability. 'Melee' means 'Whenever this

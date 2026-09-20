@@ -82,6 +82,8 @@ the handoff.
 | Engine mechanics & primitives | [Suggested next-up tasks](#suggested-next-up-tasks) | 1053 |
 | Rules coverage | [MagicCompRules coverage audit](#magiccomprules-coverage-audit) | 312 |
 | Tooling | [Recommender: two builder defects fixed, one lesson recorded](#recommender-two-builder-defects-fixed-one-lesson-recorded) | 17 |
+| Bugs & robustness | [FIXED 2026-09-20 (the fifty-sixth find) — "defending player" is ONE seat and 32 cards had it as "any opponent", including three that were worse than imprecise](#fixed-2026-09-20-the-fifty-sixth-find--defending-player-is-one-seat-and-32-cards-had-it-as-any-opponent-including-three-that-were-worse-than-imprecise) | 32 → 0 |
+| Tooling | [FIXED 2026-09-20 (the fifty-fifth find) — the SHARED audit reader was blind to a third of the catalog, so every ratchet built on it reported its column over two thirds of the cards](#fixed-2026-09-20-the-fifty-fifth-find--the-shared-audit-reader-was-blind-to-a-third-of-the-catalog-so-every-ratchet-built-on-it-reported-its-column-over-two-thirds-of-the-cards) | 7,030 → 0 skipped |
 | Bugs & robustness | [FIXED 2026-09-20 (the fifty-fourth find) — "any player may …" closed on the FIRST acceptance, so six of seven seats were never offered and the consequence could run twice](#fixed-2026-09-20-the-fifty-fourth-find--any-player-may--closed-on-the-first-acceptance-so-six-of-seven-seats-were-never-offered-and-the-consequence-could-run-twice) | 7 cards, 1 arm |
 | Bugs & robustness | [FIXED 2026-09-20 (the fifty-third find) — the printed word "another" between two target slots had no way to be said, so a creature fought itself and Cone of Flame dealt 1+2+3 to one permanent](#fixed-2026-09-20-the-fifty-third-find--the-printed-word-another-between-two-target-slots-had-no-way-to-be-said-so-a-creature-fought-itself-and-cone-of-flame-dealt-123-to-one-permanent) | 41 → 0 |
 | Bugs & robustness | [FIXED 2026-09-20 (the fifty-second find) — the filter language has no implicit ZONE, so a printed "target card from a graveyard" was satisfied by a permanent on the battlefield](#fixed-2026-09-20-the-fifty-second-find--the-filter-language-has-no-implicit-zone-so-a-printed-target-card-from-a-graveyard-was-satisfied-by-a-permanent-on-the-battlefield) | 27 → 0 |
@@ -110,6 +112,90 @@ copies.** `_factory_body` fixed brace matching across them at the
 forty-eighth find; helper inlining and `..delegation` are only in this one.
 Extracting a shared `catalog_bodies.py` would move every audit's count at
 once, so it needs a run that can re-verify each ratchet, not a drive-by.
+
+## FIXED 2026-09-20 (the fifty-sixth find) — "defending player" is ONE seat and 32 cards had it as "any opponent", including three that were worse than imprecise
+
+CR 506.2 — the defending player is the one player being attacked, or the
+controller of the attacked planeswalker or battle. The filter language had
+`OwnedByDefendingPlayer` (for clauses reaching a hidden zone) and
+`PlayerRef::DefendingPlayer` (for the seat itself) but nothing that said
+"controlled by that seat" about a permanent, so 32 cards that print the
+clause were modelled `ControlledByOpponent`. Exact in a duel, which is why
+every one of them passed its two-player test; one seat of several in a pod.
+
+`SelectionRequirement::ControlledByDefendingPlayer` is the atom.
+`scripts/audit_defending_player.py` is the ratchet, **0 / 32**, with landwalk
+cut before the match (149 rows of "can't be blocked as long as defending
+player controls an Island", which the combat engine decides per attack).
+
+**Two shared helpers cover eight cards** — `shortcut::provoke()` and cn2's
+`on_attack_goad()` — so a third of the class was two lines.
+
+**Three rows were not merely imprecise.** Blaze of Glory carried *no*
+controller filter, so its forced block could land on the caster's own
+creature. Kukemssa Pirates read owner where the card says controls. Purifying
+Dragon declared its target slot in neither arm of its `If`, and
+`primary_target_filter` reads `then` then `else_` and never looks inside
+`cond` — a trigger that reported `requires_target` with no filter to pick
+one. 💡 **The `target_walkers` invariant is one-directional: it proves every
+`TargetFiltered { slot }` is answerable, not that every `Target(n)` has a
+`TargetFiltered` somewhere.** The reverse walk is an open lead.
+
+📐📐 **THE CLAUSE IS NOT ALWAYS ON THE ATTACKER, AND THAT IS THE DESIGN
+POINT.** Four shapes print "defending player" from something that is not
+attacking: an **instant** cast during combat (Yare, Mercadia's Downfall), an
+**Aura or Equipment** whose host is the attacker (Pretender's Claim), a
+trigger that fires off *another* creature's attack (Nazahn), and a
+**post-teardown** trigger whose attack record is already gone (Kusari-Gama).
+`defending_player_in_combat` answers the first three — the attachment's host,
+then the combat's **single** defender, two defenders being ambiguous and
+taking nothing — and `PlayerRef::DefendingPlayer` now ends in the same call
+so the filter and the player-ref cannot disagree. All three previously
+answered `None`, which means the clause did nothing at all. The strict walk
+stays for `OwnedByDefendingPlayer`, so no answer it already gave moves.
+
+⚠ **Kusari-Gama is the fourth and needs a different reference entirely**: the
+trigger binds the damaged **blocker** as slot 0, and that creature's
+controller *is* the defending player by definition, so
+`ControllerOf(Target(0))` is exact at any seat count. Allowlisted with that
+reason rather than forced onto the atom.
+
+⚠ **One test asserted a wrong premise and had to move.** Yare was cast with
+no combat at all. Outside combat there is no defending player, so the spell
+has no legal target and cannot be cast; the test declares an attack first now.
+
+## FIXED 2026-09-20 (the fifty-fifth find) — the SHARED audit reader was blind to a third of the catalog, so every ratchet built on it reported its column over two thirds of the cards
+
+`audit_dropped_may.defs_in` is the body reader six audits import. It keyed
+every card on a `name: "…"` field literal and `continue`d when it found none.
+**A third of this catalog has none**: it names the card positionally, as a
+struct-update base (`..creature("Sidar Jabari", …)`) or as a helper call that
+is the whole body (`fated("Fated Conflagration", …)`). **7,030 of 22,134
+factories were never walked.**
+
+With both shapes read it is 22,134 of 22,134, and three ratchets move off
+zero:
+
+| ratchet | was | now |
+|---|---|---|
+| `audit_another_target` | 0 / 0 over 137 cards | **3 source-relative, 21 slot-relative** over 194 |
+| `audit_dropped_may` | 178 over ~12k checked | **242** over 18,183 |
+| `audit_target_zone` | 0 modelled over 455 clauses | 0 modelled, **3 unmodelled**, over 641 |
+
+The three invented-* columns stay at 0, so those classes really were closed.
+
+📐📐 **VALIDATE THE ATTRIBUTION, NOT THE COUNT — both traps were invisible in
+the totals.** ① An unanchored call match takes the first *nested* call with a
+leading string argument, which is the **token** a card mints: Conqueror's
+Pledge came back as "Kor Soldier" and Urza's Saga as "Construct". A token
+name that also happened to be a card name would have scored the card against
+a stranger's oracle silently. ② `slug` turned the apostrophe into `_`, so
+"Acolyte's Reward" slugged to `acolyte_s_reward` and never matched
+`acolytes_reward` — the "prefer the literal whose slug matches the function
+name" rule was therefore failing on **all 1,162 possessive names** and
+falling back to whichever literal came first. Both were found by asking how
+many yielded names slug-match their factory (21,667 of 21,966 now), which is
+a question the row counts cannot answer.
 
 ## FIXED 2026-09-20 (the fifty-fourth find) — "any player may …" closed on the FIRST acceptance, so six of seven seats were never offered and the consequence could run twice
 
