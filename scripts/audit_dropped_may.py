@@ -197,6 +197,63 @@ def slug(name):
     return re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_")
 
 
+def _brace_body(src, open_at):
+    """The `{…}` block starting at `open_at`, by brace matching."""
+    depth, i = 0, open_at
+    while i < len(src):
+        if src[i] == "{":
+            depth += 1
+        elif src[i] == "}":
+            depth -= 1
+            if depth == 0:
+                return src[open_at : i + 1]
+        i += 1
+    return src[open_at:]
+
+
+# A card factory that builds its ability through a same-file helper carries
+# none of the helper's shape in its own body, so a `min_targets: 0` or a
+# `MayDo` one call down reads as a dropped "may". The Primordial cycle was the
+# whole of it when this was written: `primordial_etb` wraps every one of the
+# five in `ApplyToTargets { min_targets: 0, .. }` and all five were findings.
+# Inline every same-file `fn` the body names, twice, so a helper that calls a
+# helper (the cycle bodies in `decks/lands.rs`) resolves too.
+HELPER_DEPTH = 2
+
+
+def helper_bodies(src):
+    """`{name: body}` for every `fn` in the file that is not a card factory."""
+    out = {}
+    for m in re.finditer(r"\bfn (\w+)\s*(?:<[^>]*>)?\s*\(", src):
+        i = src.find("{", m.end())
+        if i < 0:
+            continue
+        # A factory is inlined by nobody — it takes no arguments and returns a
+        # whole definition — and skipping it keeps the map small.
+        if re.match(r"pub fn \w+\(\) -> CardDefinition \{", src[m.start() - 4 : i + 1]):
+            continue
+        out[m.group(1)] = _brace_body(src, i)
+    return out
+
+
+def with_helpers(body, helpers):
+    """`body` plus the bodies of the same-file helpers it calls, transitively."""
+    seen, frontier, parts = set(), [body], [body]
+    for _ in range(HELPER_DEPTH):
+        nxt = []
+        for chunk in frontier:
+            for call in re.findall(r"\b(\w+)\s*\(", chunk):
+                if call in seen or call not in helpers:
+                    continue
+                seen.add(call)
+                nxt.append(helpers[call])
+        if not nxt:
+            break
+        parts.extend(nxt)
+        frontier = nxt
+    return "\n".join(parts)
+
+
 def defs_in(path):
     """(fn_name, card_name, body, path) for every `pub fn … -> CardDefinition`.
 
@@ -210,24 +267,16 @@ def defs_in(path):
     second filter).
     """
     src = open(path, encoding="utf-8").read()
+    helpers = helper_bodies(src)
     for m in re.finditer(r"pub fn (\w+)\(\) -> CardDefinition \{", src):
         start = m.end() - 1
-        depth, i = 0, start
-        while i < len(src):
-            if src[i] == "{":
-                depth += 1
-            elif src[i] == "}":
-                depth -= 1
-                if depth == 0:
-                    break
-            i += 1
-        body = src[start : i + 1]
+        body = _brace_body(src, start)
         names = re.findall(r'name:\s*"([^"]+)"', body)
         if not names:
             continue
         fn = m.group(1)
         own = next((n for n in names if slug(n) == fn), None)
-        yield fn, own or names[0], body, path
+        yield fn, own or names[0], with_helpers(body, helpers), path
 
 
 def main():
