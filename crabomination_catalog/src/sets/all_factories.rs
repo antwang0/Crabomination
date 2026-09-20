@@ -7690,6 +7690,8 @@ static DECKS: &[Factory] = &[
     super::decks::city_on_fire,
     super::decks::bloom_tender,
     super::decks::faeburrow_elder,
+    super::decks::displacer_kitten,
+    super::decks::teleportation_circle,
     super::decks::quest_for_the_goblin_lord,
     super::decks::quest_for_the_gravelord,
     super::decks::quest_for_the_gemblades,

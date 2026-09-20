@@ -574,3 +574,70 @@ pub fn faeburrow_elder() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Blink: exile a permanent you control, then return it ───────────────────
+//
+// Two cards, one `Effect::ExileAndReturnToOwner`, and the same "up to one
+// target" wrapper. ⚠ **"Up to one target" is `OptionalTargets { min: 0 }`,
+// not an absent target**: the trigger still goes on the stack with a slot the
+// controller may decline, and with `min: 1` a board holding nothing legal
+// would remove the trigger (CR 603.3d) instead of resolving it emptily.
+
+/// The shared body: blink the permanent in slot 0, or nothing.
+fn blink_up_to_one(filter: R) -> Effect {
+    Effect::OptionalTargets {
+        min: 0,
+        body: Box::new(Effect::ExileAndReturnToOwner { what: target_filtered(filter) }),
+    }
+}
+
+/// Displacer Kitten — {3}{U} Creature — Cat Beast 2/2. "Avoidance — Whenever
+/// you cast a noncreature spell, exile up to one target nonland permanent you
+/// control, then return that card to the battlefield under its owner's
+/// control." (EDHREC 550.)
+///
+/// The trigger is on the **cast**, so it resolves above the spell that caused
+/// it — which is the whole card: the blinked permanent's enters trigger
+/// happens before the noncreature spell resolves.
+pub fn displacer_kitten() -> CardDefinition {
+    CardDefinition {
+        name: "Displacer Kitten",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat, CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Noncreature,
+                },
+            ),
+            effect: blink_up_to_one(R::Nonland.and(R::ControlledByYou)),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Teleportation Circle — {3}{W} Enchantment. "At the beginning of your end
+/// step, exile up to one target artifact or creature you control, then return
+/// that card to the battlefield under its owner's control." (EDHREC 992.)
+pub fn teleportation_circle() -> CardDefinition {
+    CardDefinition {
+        name: "Teleportation Circle",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::End),
+                EventScope::YourControl,
+            ),
+            effect: blink_up_to_one(R::Artifact.or(R::Creature).and(R::ControlledByYou)),
+        }],
+        ..Default::default()
+    }
+}

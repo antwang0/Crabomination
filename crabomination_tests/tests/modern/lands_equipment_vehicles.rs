@@ -2363,3 +2363,141 @@ fn faeburrow_elder_is_a_two_two_alone_and_grows_with_each_colour() {
         "the pump and the mana read one colour set",
     );
 }
+
+// ── Blink — exile a permanent you control, then return it ──────────────────
+
+// The observable signature of a blink in this engine: the permanent comes
+// back **untapped, with its counters gone and summoning sickness back** — CR
+// 400.7's "new object" in every respect a card can read.
+//
+// ⚠ **Not by `CardId`.** `Effect::ExileAndReturnToOwner` moves the same
+// instance out and back, so the handle survives; the *state* does not. See
+// ENGINE_BACKLOG on what that costs.
+//
+// ⚠ And both cards say "up to **one target** [permanent] you control", so on
+// a board with two legal ones the auto-picker chooses. A test that names the
+// expected victim asserts the picker's heuristic, not the card.
+
+/// Displacer Kitten: "Whenever you cast a **noncreature** spell, exile up to
+/// one target nonland permanent you control, then return it."
+#[test]
+fn displacer_kitten_blinks_on_a_noncreature_spell() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.add_card_to_battlefield(0, catalog::displacer_kitten());
+    // The only other nonland permanent, so the picker has one real choice
+    // besides the Kitten itself — and a counter to lose either way.
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bears).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    g.battlefield_find_mut(bears).unwrap().tapped = true;
+
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast a noncreature spell");
+    drain_stack(&mut g);
+
+    let blinked = g.battlefield.iter().any(|c| {
+        c.controller == 0 && !c.tapped && c.counter_count(CounterType::PlusOnePlusOne) == 0
+            && c.definition.name == "Grizzly Bears"
+    });
+    let kitten_blinked = g
+        .battlefield
+        .iter()
+        .any(|c| c.definition.name == "Displacer Kitten" && c.summoning_sick);
+    assert!(
+        blinked || kitten_blinked,
+        "one of the two nonland permanents came back reset",
+    );
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.controller == 0).count(),
+        2,
+        "and nothing was lost on the way",
+    );
+}
+
+/// …and **not** on a creature spell: "noncreature" is the printed word and is
+/// the whole restriction on the trigger.
+#[test]
+fn displacer_kitten_ignores_a_creature_spell() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.add_card_to_battlefield(0, catalog::displacer_kitten());
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bears).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    g.battlefield_find_mut(bears).unwrap().tapped = true;
+
+    let more = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: more,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast a creature spell");
+    drain_stack(&mut g);
+
+    let b = g.battlefield_find(bears).expect("still there");
+    assert!(b.tapped, "still tapped");
+    assert_eq!(b.counter_count(CounterType::PlusOnePlusOne), 1, "and still counting");
+}
+
+/// Teleportation Circle blinks at the beginning of **your** end step. Only the
+/// Sol Ring is legal (the Circle is an enchantment), so this one can name its
+/// victim.
+#[test]
+fn teleportation_circle_blinks_an_artifact_at_your_end_step() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.add_card_to_battlefield(0, catalog::teleportation_circle());
+    let ring = g.add_card_to_battlefield(0, catalog::sol_ring());
+    g.battlefield_find_mut(ring).unwrap().tapped = true;
+
+    while g.step != TurnStep::End {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+    drain_stack(&mut g);
+
+    let back = g
+        .battlefield
+        .iter()
+        .find(|c| c.definition.name == "Sol Ring")
+        .expect("it came back");
+    assert!(!back.tapped, "it returned untapped — the tap did not come with it");
+}
+
+/// ⚠ "Up to one target" with nothing legal must still **resolve**, not be
+/// removed from the stack: `min: 0` means the trigger has no target to miss
+/// (CR 603.3d applies only when every required target is illegal). The Circle
+/// alone is the case — an Enchantment is neither an artifact nor a creature.
+#[test]
+fn cr_603_3d_teleportation_circle_resolves_with_nothing_to_blink() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let circle = g.add_card_to_battlefield(0, catalog::teleportation_circle());
+
+    while g.step != TurnStep::End {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(circle).is_some(), "the Circle is still there and nothing panicked");
+}

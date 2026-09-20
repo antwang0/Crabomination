@@ -6317,6 +6317,20 @@ Strixhaven coverage push). Remaining gaps:
 ## Discovered engine follow-ups (claude/modern_decks)
 
 - **Noticed but not tackled this run:**
+  - `Effect::ExileAndReturnToOwner` (every blink: Flicker, Ghostly Flicker,
+    Conjurer's Closet, Displacer Kitten, Teleportation Circle) **keeps the
+    permanent's `CardId` across the blink** — it moves the same instance out
+    and back. CR 400.7's "new object" holds for everything a card can read
+    (tapped, counters, attachments, summoning sickness, damage all reset by
+    the move) and fails only for the handle, so anything keyed on the id — a
+    delayed trigger, an `exiled_with` link, a "that creature" reference held
+    across the blink — still matches where the rules say it should have lost
+    track. ⚠ Unobservable on every shipped user, because all of them are
+    friendly self-blinks; the card that would expose it is one that blinks to
+    *break* such a link. The variant's doc said "the returned card is a new
+    object" flatly until 2026-09-20, which is the claim worth not making
+    twice: **a doc that states the rule rather than the implementation reads
+    as a guarantee.**
   - `Effect::ChooseUnchosenMode` auto-picks the first unused mode for bots and
     for a `wants_ui` seat alike (it uses the synchronous decider rather than a
     suspend). A human controller should get the real modal.

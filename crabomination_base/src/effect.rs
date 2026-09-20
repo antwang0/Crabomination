@@ -9242,7 +9242,21 @@ pub enum Effect {
     /// resolves off the death/leave LKI snapshot when it has already gone.
     ExileTokensSharingNameWith { what: Selector },
     /// "Exile `what`, then return it to the battlefield under its owner's
-    /// control" — an immediate blink (Flicker). Tokens cease to exist.
+    /// control" — an immediate blink (Flicker, Ghostly Flicker, Conjurer's
+    /// Closet, Displacer Kitten, Teleportation Circle). Tokens cease to exist
+    /// (CR 111.7).
+    ///
+    /// ⚠ **CR 400.7's "new object" holds for everything a card can read —
+    /// tapped state, counters, attachments, summoning sickness, damage — but
+    /// NOT for the `CardId`.** The resolver moves the same instance out and
+    /// back, so the handle survives the blink. The doc here used to say "the
+    /// returned card is a new object" flatly, which is the claim that matters
+    /// and is false in one respect: anything keyed on the id (a delayed
+    /// trigger, an `exiled_with` link, a "that creature" reference held across
+    /// the blink) still matches where the rules say it should have lost track.
+    /// Every shipped user of this effect is a friendly self-blink where that
+    /// cannot be observed; a card that blinks to *break* such a link needs the
+    /// id to change first.
     ExileAndReturnToOwner { what: Selector },
     /// CR 120.4a — "deal `amount` damage to `to`; excess damage is dealt to
     /// `excess_to` instead." The split happens before the damage event, so the

@@ -32710,7 +32710,11 @@ impl GameState {
 
             Effect::ExileAndReturnToOwner { what } => {
                 // Flicker — an immediate blink. Tokens cease to exist (CR
-                // 111.7), and the returned card is a new object.
+                // 111.7). ⚠ The returned card is a new object in every respect
+                // a card can read (the move resets tapped/counters/attachments
+                // /sickness) but keeps its `CardId`: this moves the same
+                // instance out and back. See the variant's doc for what that
+                // costs.
                 for ent in self.resolve_selector(what, ctx) {
                     let Some(cid) = ent.as_permanent_id() else { continue };
                     let Some(card) = self.battlefield_find(cid) else { continue };
