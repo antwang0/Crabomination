@@ -832,6 +832,11 @@ pub enum CounterType {
     /// carrying one; Toxrill, the Corrosive shrinks each opponent's creature
     /// by -1/-1 per counter.
     Slime,
+    /// Descent into Avernus's descent counters — two a turn, and the tally is
+    /// both the Treasure each player makes and the damage each player takes.
+    /// Its own kind rather than `Charge`: the printed word is what a "remove a
+    /// charge counter" cost or a charge-counter payoff would look for.
+    Descent,
 }
 
 /// Every zone a card can occupy.

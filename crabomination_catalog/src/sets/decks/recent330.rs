@@ -1291,3 +1291,81 @@ pub fn cyberdrive_awakener() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Symmetric escalation: the whole table, growing every turn ──────────────
+
+/// Descent into Avernus — {2}{R} Enchantment. "At the beginning of your
+/// upkeep, put two descent counters on this enchantment. Then each player
+/// creates X Treasure tokens and this enchantment deals X damage to each
+/// player, where X is the number of descent counters on this enchantment."
+/// (EDHREC 883.)
+///
+/// ⚠ **Symmetric, and that is the card**: X is read *after* the two counters
+/// go on, both clauses read the same X, and "each player" includes its own
+/// controller. At four seats it is eight Treasures and eight damage split
+/// across the table on the second upkeep — the scaling is why it is a
+/// Commander card and why the test is a four-seat game.
+///
+/// `CounterType::Descent` is its own kind rather than `Charge`: the printed
+/// word is what a "remove a charge counter" cost would look for.
+pub fn descent_into_avernus() -> CardDefinition {
+    let x = || Value::CountersOn {
+        what: Box::new(Selector::This),
+        kind: crate::card::CounterType::Descent,
+    };
+    CardDefinition {
+        name: "Descent into Avernus",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::Upkeep),
+                EventScope::YourControl,
+            ),
+            effect: Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: Selector::This,
+                    kind: crate::card::CounterType::Descent,
+                    amount: Value::Const(2),
+                },
+                Effect::CreateToken {
+                    who: PlayerRef::EachPlayer,
+                    count: x(),
+                    definition: std::sync::Arc::new(crate::game::effects::treasure_token()),
+                },
+                Effect::DealDamage {
+                    to: Selector::Player(PlayerRef::EachPlayer),
+                    amount: x(),
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Eerie Interlude — {2}{W} Instant. "Exile any number of target creatures you
+/// control. Return those cards to the battlefield under their owner's control
+/// at the beginning of the next end step." (EDHREC 971.)
+///
+/// ⚠ **The deferred return is the point, and it is what separates this from
+/// the immediate blink above.** A board wipe resolves while the creatures are
+/// in exile, so they come back at the end step having missed it — a flicker
+/// that returned them straight away would save nothing. `min_targets: 0`
+/// because "any number" includes none.
+pub fn eerie_interlude() -> CardDefinition {
+    CardDefinition {
+        name: "Eerie Interlude",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ApplyToTargets {
+            max_targets: 8,
+            min_targets: 0,
+            filter: R::Creature.and(R::ControlledByYou),
+            effect: Box::new(Effect::ExileReturnToOwnerNextEndStep {
+                what: Selector::Target(0),
+                tapped: false,
+            }),
+        },
+        ..Default::default()
+    }
+}

@@ -447,6 +447,7 @@ fn counter_token(kind: CounterType) -> &'static str {
         CounterType::Corruption => "Corruption",
         CounterType::Bloodline => "Bloodline",
         CounterType::Slime => "Slime",
+        CounterType::Descent => "Descent",
         CounterType::Winch => "Winch",
         CounterType::Wind => "Wind",
         CounterType::Pressure => "Pressure",

@@ -3054,3 +3054,146 @@ fn cyberdrive_awakener_animates_your_noncreature_artifacts() {
         "other artifact creatures you control have flying",
     );
 }
+
+// ── Descent into Avernus — symmetric, and it grows ─────────────────────────
+
+/// "Put two descent counters on this. **Then** each player creates X Treasure
+/// tokens and this deals X damage to each player, where X is the number of
+/// descent counters."
+///
+/// ⚠ Four seats, because the whole card is that "each player" is the table:
+/// the first upkeep is 2 Treasures and 2 damage **each**, including the
+/// controller's own. And X is read after the counters go on, so the first
+/// trigger is 2 and not 0.
+#[test]
+fn descent_into_avernus_pays_and_burns_the_whole_table_including_you() {
+    use crabomination::card::CounterType;
+    use crabomination::game::multi_player_game;
+    let mut g = multi_player_game(4);
+    g.active_player_idx = 0;
+    g.step = TurnStep::Untap;
+    g.priority.player_with_priority = 0;
+    let descent = g.add_card_to_battlefield(0, catalog::descent_into_avernus());
+    for seat in 0..4 {
+        for _ in 0..30 {
+            g.add_card_to_library(seat, catalog::plains());
+        }
+    }
+    let life: Vec<i32> = (0..4).map(|s| g.players[s].life).collect();
+
+    while g.step != TurnStep::PreCombatMain {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+        drain_stack(&mut g);
+    }
+
+    assert_eq!(
+        g.battlefield_find(descent).unwrap().counter_count(CounterType::Descent),
+        2,
+        "two counters went on first",
+    );
+    for (seat, &before) in life.iter().enumerate() {
+        let treasures = g
+            .battlefield
+            .iter()
+            .filter(|c| c.definition.name == "Treasure" && c.controller == seat)
+            .count();
+        assert_eq!(treasures, 2, "seat {seat} made X = 2 Treasures");
+        assert_eq!(g.players[seat].life, before - 2, "seat {seat} took X = 2 damage");
+    }
+
+    // ⚠ And the escalation, which is the whole card: the controller's *next*
+    // upkeep puts two more counters on and then reads X = 4, so the table
+    // takes 4 more each. A test that stops at the first trigger cannot tell
+    // "X is the counter count" from "X is 2".
+    g.active_player_idx = 0;
+    g.step = TurnStep::Untap;
+    g.priority.player_with_priority = 0;
+    while g.step != TurnStep::PreCombatMain {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+        drain_stack(&mut g);
+    }
+    assert_eq!(
+        g.battlefield_find(descent).unwrap().counter_count(CounterType::Descent),
+        4,
+        "two more counters",
+    );
+    for (seat, &before) in life.iter().enumerate() {
+        let treasures = g
+            .battlefield
+            .iter()
+            .filter(|c| c.definition.name == "Treasure" && c.controller == seat)
+            .count();
+        assert_eq!(treasures, 6, "seat {seat}: 2 then 4");
+        assert_eq!(g.players[seat].life, before - 6, "seat {seat}: 2 then 4 damage");
+    }
+}
+
+/// Eerie Interlude saves the team from a wrath: the creatures sit in exile
+/// while the sweeper resolves and come back at the end step.
+///
+/// ⚠ The assertion is the *survival*, not the flicker. A blink that returned
+/// them immediately would pass "it came back" and fail the card — so the
+/// wrath resolves in between.
+#[test]
+fn eerie_interlude_returns_the_team_after_the_wrath_resolves() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for _ in 0..20 {
+        g.add_card_to_library(0, catalog::plains());
+        g.add_card_to_library(1, catalog::plains());
+    }
+    let interlude = g.add_card_to_hand(0, catalog::eerie_interlude());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    // ⚠ Targets passed explicitly, as the precedent (Hide on the Ceiling)
+    // does. "Any number of target creatures" is `min_targets: 0`, and the
+    // auto-picker legitimately answers *none* — a deferred blink reads as
+    // hostile to the heuristic while the filter is `ControlledByYou`, so it
+    // finds nothing it wants and declines. That is a bot-quality gap in the
+    // whole `min_targets: 0` friendly-blink family, not something this card
+    // introduces; ENGINE_BACKLOG carries it.
+    g.perform_action(GameAction::CastSpell {
+        card_id: interlude,
+        target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Eerie Interlude");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.definition.name == "Grizzly Bears").count(),
+        0,
+        "both are in exile while the window is open",
+    );
+
+    // The sweeper resolves into an empty board.
+    let wrath = g.add_card_to_hand(0, catalog::wrath_of_god());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: wrath,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Wrath of God");
+    drain_stack(&mut g);
+
+    while g.step != TurnStep::End {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+        drain_stack(&mut g);
+    }
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.definition.name == "Grizzly Bears").count(),
+        2,
+        "both came back at the end step, having missed the wrath",
+    );
+}

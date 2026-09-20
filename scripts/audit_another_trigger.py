@@ -62,14 +62,6 @@ PRINT_ANOTHER = re.compile(
 ANOTHER_WORD = re.compile(r"\b(?:another|other)\b", re.I)
 
 
-def event_clause_says_another(text):
-    """True when some trigger's EVENT clause (up to its first comma) says
-    "another"/"other" and does not also name the source beside it."""
-    for m in PRINT_ANOTHER.finditer(text):
-        clause = m.group(1)
-        if ANOTHER_WORD.search(clause) and not SELF_INCLUSIVE.search(clause):
-            return clause.strip()
-    return None
 # ⚠⚠ **"another" does not always EXCLUDE the source, and the commonest printed
 # shape that contains it INCLUDES the source.** Blood Artist is "Whenever Blood
 # Artist **or** another creature dies"; Boros Elite is "Whenever Boros Elite
@@ -84,6 +76,16 @@ SELF_INCLUSIVE = re.compile(
     r"|\b(?:another|other)\s+\w[\w\s]{0,30}?\bor\s+this\b",
     re.I,
 )
+
+def event_clause_says_another(text):
+    """True when some trigger's EVENT clause (up to its first comma) says
+    "another"/"other" and does not also name the source beside it."""
+    for m in PRINT_ANOTHER.finditer(text):
+        clause = m.group(1)
+        if ANOTHER_WORD.search(clause) and not SELF_INCLUSIVE.search(clause):
+            return clause.strip()
+    return None
+
 
 # ⚠ **Four encodings say "not me", and a gate that knows fewer reports correct
 # cards.** Each of these was found by reading a row the audit produced and

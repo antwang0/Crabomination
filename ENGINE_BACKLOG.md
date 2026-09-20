@@ -6968,6 +6968,21 @@ them), so all 21 reasons read as stale. **A ratchet that cries "stale" on every
 one of its own reasons teaches the next run to ignore the word.**
 
 - **Noticed but not tackled this run:**
+  - ⚠ **A `min_targets: 0` FRIENDLY blink auto-targets to nothing, so a bot
+    casting one gets no effect.** `Effect::ExileReturnToOwnerNextEndStep`
+    (and the immediate `ExileAndReturnToOwner`) are not in
+    `prefers_friendly_target`, so they fall to the hostile default; with a
+    `ControlledByYou` filter the picker finds nothing it wants and, because
+    "any number of target creatures" is `min_targets: 0`, legitimately answers
+    **none**. Eerie Interlude, Hide on the Ceiling and the whole family are
+    affected — every existing test passes its targets explicitly, which is why
+    no suite catches it. ⚠ **Not fixable by flipping the classifier**: the same
+    effects are used hostilely (Mystifying Maze blinks an *attacking*
+    creature), so "blink" is genuinely dual-use and the answer has to come from
+    the slot's filter, not from the verb. The slot-aware picker
+    (`prefers_friendly_target_for_slot`) is the shape, and it was written and
+    reverted once already this branch because `slot_owner` resolves a modal
+    body's first *mode* rather than the chosen one.
   - `Effect::ExileAndReturnToOwner` (every blink: Flicker, Ghostly Flicker,
     Conjurer's Closet, Displacer Kitten, Teleportation Circle) **keeps the
     permanent's `CardId` across the blink** — it moves the same instance out

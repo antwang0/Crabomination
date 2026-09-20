@@ -7710,6 +7710,8 @@ static DECKS: &[Factory] = &[
     super::decks::cut_a_deal,
     super::decks::padeem_consul_of_innovation,
     super::decks::cyberdrive_awakener,
+    super::decks::descent_into_avernus,
+    super::decks::eerie_interlude,
     super::decks::nekusar_the_mindrazer,
     super::decks::kenrith_the_returned_king,
     super::decks::zedruu_the_greathearted,
