@@ -82,14 +82,77 @@ the handoff.
 | Engine mechanics & primitives | [Suggested next-up tasks](#suggested-next-up-tasks) | 1053 |
 | Rules coverage | [MagicCompRules coverage audit](#magiccomprules-coverage-audit) | 312 |
 | Tooling | [Recommender: two builder defects fixed, one lesson recorded](#recommender-two-builder-defects-fixed-one-lesson-recorded) | 17 |
+| Bugs & robustness | [FIXED 2026-09-20 (the fifty-first find) — a FAN-OUT `PlayerRef` handed to an arm that resolves it SINGULARLY, nineteen cards, and every one invisible in a duel](#fixed-2026-09-20-the-fifty-first-find--a-fan-out-playerref-handed-to-an-arm-that-resolves-it-singularly-nineteen-cards-and-every-one-invisible-in-a-duel) | 19 sites |
 | Bugs & robustness | [FIXED 2026-09-19 (the fiftieth find) — one of five trigger walks in `declare_attackers` never carried `event.filter`, so a defender-side intervening `if` was written, compiled and ignored](#fixed-2026-09-19-the-fiftieth-find--one-of-five-trigger-walks-in-declare_attackers-never-carried-eventfilter-so-a-defender-side-intervening-if-was-written-compiled-and-ignored) | 1 card, 1 walk |
 | Bugs & robustness | [FIXED 2026-09-19 (the forty-ninth find) — "enters tapped" is a REPLACEMENT too, and 83 cards shipped it as a trigger in a clause the 614.12 audit cannot match](#fixed-2026-09-19-the-forty-ninth-find--enters-tapped-is-a-replacement-too-and-83-cards-shipped-it-as-a-trigger-in-a-clause-the-61412-audit-cannot-match) | 83 → 0 |
-| Bugs & robustness | [OPEN 2026-09-19 (the forty-eighth find) — "As this ~ enters" is a REPLACEMENT and 89 shipped cards model it as an ETB TRIGGER](#open-2026-09-19-the-forty-eighth-find--as-this--enters-is-a-replacement-and-89-shipped-cards-model-it-as-an-etb-trigger) | 89 → 57 |
+| Bugs & robustness | [FIXED 2026-09-19/20 (the forty-eighth find) — "As this ~ enters" is a REPLACEMENT and 89 shipped cards modelled it as an ETB TRIGGER: 89 → 7](#fixed-2026-09-1920-the-forty-eighth-find--as-this--enters-is-a-replacement-and-89-shipped-cards-modelled-it-as-an-etb-trigger-89--7) | 89 → 7 |
 | Bugs & robustness | [FIXED 2026-09-19 (the forty-seventh find) — six hand-written SEAT-INDEX walks, and the two that let a player who had left the game vote and be voted for](#fixed-2026-09-19-the-forty-seventh-find--six-hand-written-seat-index-walks-and-the-two-that-let-a-player-who-had-left-the-game-vote-and-be-voted-for) | 60 |
 | Bugs & robustness | [The 2026-09-12/13 handoff detail, moved verbatim from TODO's NEXT](#the-2026-09-1213-handoff-detail-moved-verbatim-from-todos-next) | 182 |
 
 
 # Bugs & robustness
+
+## FIXED 2026-09-20 (the fifty-first find) — a FAN-OUT `PlayerRef` handed to an arm that resolves it SINGULARLY, nineteen cards, and every one invisible in a duel
+
+`GameState::resolve_player` answers a fan-out ref (`EachOpponent`,
+`EachPlayer`, `EachTeammate`, …) with the **first seat of its set** and drops
+the rest. That is exact while the set holds one player — which is what
+`EachOpponent` is at two seats — and it is a defect the moment it holds two.
+`resolve_player` carries a `debug_assert!` saying exactly this, and the
+assertion is loud **only when a game actually reaches the arm**: the pod
+sweep runs eight decks, so a card outside them never trips it.
+
+`scripts/audit_singular_fanout.py` closes that coverage gap statically. It
+pairs the **102 effect arms** in `game/effects/mod.rs` whose body calls
+`self.resolve_player(who` with the catalog sites that hand one of them a
+fan-out ref. Nineteen sites, in two kinds:
+
+**① A printed "choose an opponent" decided by SEAT ORDER (8).** The clause
+names one seat and the controller picks it; `EachOpponent` made the table's
+seating pick instead. `PlayerRef::HostileOpponent` is the ref the clause
+wanted — not a fan-out, answered by `default_hostile_opponent`, which is
+already the bot's attack target and the auto-filled "target opponent", and
+in a duel is the lone opponent so nothing about 1v1 moves. The Rack, Cursed
+Rack, Pallimud, Haunting Apparition, Entropic Specter, Skyshroud War Beast
+(the last four are `*/*` bodies sized off the chosen player, so the wrong
+seat is the wrong P/T), Booby Trap, and Shinryu, Transcendent Rival — whose
+"when the chosen player loses the game, **you win the game**" picked seat
+order in a pod.
+
+**② A printed "each opponent …" that reached ONE opponent (5), plus four
+more singular clauses (3) and one card with both defects in one line.**
+`Effect::EachPlayerDoes` is the fan-out the arm cannot do for itself — APNAP
+order, each seat as its own controller, and the suspend-splice so a
+`wants_ui` seat does not strand the seats behind it. Silverquill Mandate
+(each opponent sacrifices a creature), Bandit's Talent (each opponent
+discards two unless they discard a nonland), Iwamori of the Open Fist, Myr
+Custodian and Kaya, Intangible Slayer's 0 (each opponent may scry 1).
+Callous Oppressor, Echo Chamber and Wumpus Aberration are singular clauses
+and take `HostileOpponent`. **Ingenious Mastery had both**: "an opponent
+creates two Treasure tokens and they scry 2" gave *every* opponent two
+Treasures (`CreateToken` does fan out) and the *first* one a scry, so the
+two halves did not even agree on who "they" was.
+
+⚠ Two sites stay, allowlisted with their reason; `--gate` fails on a stale
+entry as well as a new one. **Longhorn Firebeast** — "ANY opponent may have
+it deal 5 damage to them. If a player does, sacrifice this creature" is
+ask-in-turn-order-and-**stop**, which is `AnyPlayerMayExileFromGraveyard`'s
+shape; `EachPlayerDoes` would let a later seat take 5 for a creature already
+sacrificed, so it needs the arm, not the ref. **Unidentified Hovership** —
+"the exiled card's OWNER manifests dread" wants a ref no `PlayerRef` names.
+
+💡 **The ranked answer is aimed at HOSTILE clauses, and two of the sites are
+gifts.** Ingenious Mastery's Treasures and Echo Chamber's token go to the
+opponent `default_hostile_opponent` ranks as the biggest threat, which is
+the wrong end for a drawback. The rules only say the controller chooses, so
+this is a bot-policy refinement (a `default_least_hostile_opponent` sibling),
+not a rules bug — but it is the next thing to do here.
+
+📐 **A reader lesson that cost a wrong allowlist key.** Keying a site on the
+first string literal in its body files a factory that ends in
+`..creature("Name", …)` rather than opening with a `name:` field under the
+**previous** factory's name — Longhorn Firebeast came back as "Gurzigost".
+This script keys on the `fn` ident, which no body can shadow.
 
 ## FIXED 2026-09-19 (the fiftieth find) — one of five trigger walks in `declare_attackers` never carried `event.filter`, so a defender-side intervening `if` was written, compiled and ignored
 
@@ -238,7 +301,7 @@ lands", and the gate reported it as "not in the catalog". This script takes
 the first string literal **the Scryfall cache knows**, which removes the
 whole class of miss for one `in cache` test.
 
-## OPEN 2026-09-19 (the forty-eighth find) — "As this ~ enters" is a REPLACEMENT and 89 shipped cards model it as an ETB TRIGGER
+## FIXED 2026-09-19/20 (the forty-eighth find) — "As this ~ enters" is a REPLACEMENT and 89 shipped cards modelled it as an ETB TRIGGER: 89 → 7
 
 **CR 614.12** — "Some replacement effects modify how a permanent enters the
 battlefield." **CR 614.12a** — "If a replacement effect that modifies how a
@@ -291,26 +354,71 @@ choose-a-* buckets is now a catalog edit with no engine work behind it. The
 count moved **89 → 57** the same day (choose-a-name 9 and choose-a-colour 20
 closed, choose-a-type 27 → 23).
 
-**What is actually still blocked is one bucket.**
-`pay-life-or-tapped` (19 cards, the ten shocklands among them) is a choice
-about a *cost*, not about the board, and `apply_enters_tapped_replacement`'s
-`Predicate` cannot express it. 💡 **The lead, not yet taken:** it may not
-need a new primitive either — `as_enters_effect` can ask, and
-`Effect::MayDoElse { body: LoseLife 2, else_: Tap(This) }` under an
-`Effect::If` on the life total is the printed line (CR 119.4 — paying life
-*is* losing that much, and a player below the amount cannot pay). What has
-to be checked before writing it is **where the funnel runs relative to
-`apply_enters_tapped_replacement` and to the ETB trigger gather**: the
-permanent must never be on the battlefield untapped with a priority window
-open, which is the whole point of the class.
+✅✅ **CLOSED 2026-09-20: 89 → 7, and the remaining seven each need more
+than a field move** (a copy — Cursed Mirror; a coin flip — Molten Sentry; a
+random pick — Haktos; a reflexive attach — Grifter's Blade; entering
+counters — Crowd-Control Warden; and Devouring Hellion / Rescuer Sphinx,
+which ship through `devour` and a reflexive ETB and are documented
+approximations already).
 
-⚠ **And the synchronous shortcut is still a REGRESSION, whichever applier is
-used.** The tree has precedent for resolving a choice through `self.decider`
-with no pending state (`ManaPayload::AnyColors`, `chosen_mana_color`), and it
-would work for self-play — but a shockland's choice is a real
-`Decision::ChooseMode` prompt in the client **today**, and routing it through
-the decider takes that choice away from a human seat. `resolve_effect_driven`
-is the path that keeps it.
+📐 **The wiring was the gap, not the primitive, and the funnel is the fix.**
+`game::as_enters::apply_as_enters_replacements` is the one call every
+battlefield entry makes. Before it, the three appliers were wired to
+different subsets of the four hops — the **land drop applied none of them**,
+and a land is only ever played, so Cavern of Souls, Secluded Courtyard and
+Three Tree City had nowhere to make their choice at all; a **reanimated**
+Corrupted Shapeshifter chose no body and died as a 0/0; and the **token
+mint** applied none, which is consequence ③ above, CR 614.12's own worked
+example.
+
+⚠⚠ **THE LAND DROP IS THE ONE ENTRY PATH THAT CANNOT REPLAY, AND IT NEEDED
+ITS OWN RESUME CONTEXT.** `apply_as_enters_effect` drives its suspension
+through the decider whenever nothing above it can park a continuation, which
+is right for the move and the mint (both run inside a resolution) and takes
+the choice away from a human seat on the drop. Every other suspending action
+(`ActionSearchPick`, `ActivateAbilityChoice`, …) suspends *before* anything
+is paid and is replayed verbatim; here the land is on the battlefield and
+`lands_played_this_turn` is already spent. `ResumeContext::LandEntry` is a
+**continuation**, not a replay: it applies the answer and runs
+`actions::finish_land_entry` — printed entering counters, self-source ETB
+triggers, a Saga land's first lore counter — exactly once.
+
+⚠⚠ **TWO VEHICLES FOR THE pay-life-or-tapped BUCKET WERE TRIED AND BOTH WERE
+WRONG, AND BOTH REASONS GENERALISE.** `Effect::PlayerMayPayLifeElse` is the
+printed line and asks correctly — and `AutoDecider` **declines every
+`OptionalTrigger`**, so every headless seat's shockland came down tapped:
+eleven tests red and a whole-pool behaviour change. `Effect::ChooseMode`
+keeps `AutoDecider`'s mode 0 and the bot's outcome scoring — and it reads
+`ctx.mode`, the pick made when the spell or trigger went **on the stack**,
+so with no stack item above it it silently takes mode 0 and never asks at
+all. **A modal effect that works inside a resolution does not automatically
+work inside an entry.** `Effect::AsEntersChooseMode(Vec<Effect>)` is the
+primitive that does: a stashed answer on resume, a suspension for a seat
+that prompts, the decider for everyone else. Lavabrink Venturer's
+odd-or-even was the second card to walk into the same trap.
+
+📐 **And a permanent that ENTERS tapped never BECOMES tapped.**
+`Effect::SourceEntersTapped` sets the flag rather than going through
+`Effect::Tap`, whose `PermanentTapped` event any "whenever a permanent
+becomes tapped" watcher would have seen. It honours the CR 614 "lands enter
+untapped" override (Spelunking) through `lands_enter_untapped_for`, which
+`apply_enters_tapped_replacement` reads too, so the two cannot disagree.
+
+⚠ **THE RESIDUAL, RECORDED RATHER THAN FIXED: `as_enters_effect` asks a
+`wants_ui` seat for real only on the LAND DROP.** The cast, move and mint
+paths still drive the ask through `resolve_effect_driven` and the decider —
+the standing behaviour for all forty-odd `as_enters_effect` cards since
+before this class was opened, and one resume context each to close. It is a
+human-seat UX gap, not a rules gap: the choice is made, in the right place,
+before the permanent enters.
+
+⚠ **And a fixture gotcha that cost three separate rounds of red tests.**
+`add_card_to_battlefield` deliberately skips every entry replacement, so a
+test that set a chosen value by calling `fire_self_etb_triggers` after it
+stops setting anything the moment the card's choice becomes a replacement.
+`GameState::add_card_to_battlefield_entering` is the sibling of the existing
+`..._with_counters` fixture, and it has to be called with the decider
+**already scripted**, because the choice is made inside it.
 
 **The sub-class that IS closed** is the fifteen "As this land enters, you may
 reveal a [X] card from your hand. If you don't, this land enters tapped"

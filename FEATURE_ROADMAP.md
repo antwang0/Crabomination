@@ -71,6 +71,7 @@ Per-deck card completion lives in `DECK_FEATURES.md`.
 | CR 800.4i last-known information about a departed player | ⚠ *by unreachability* | Not modelled: a departed seat's zones are emptied by `objects_leave_with_player`, so a count derived from them reads 0 rather than the last known value. Near-unreachable — `resolve_players_unranged` filters `is_alive()` out of **every** fan-out (`EachPlayer`, `EachOpponent`, `EachOpponentExceptTriggerer`, `OpponentsWhoVotedDifferently`), so only an effect naming a *specific* departed seat could see it. 800.4i's second sentence (actions a departed player took) already works: `spell_names_cast_this_turn` and the rest live on `PlayerData` and are not cleared |
 | CR 101.4 a per-player fan-out finishes when a body **suspends** | ✅ | `effects/mod.rs::splice_after_suspend` — a suspending body parks only its own remaining effect, so the loop around it used to abandon every seat it had not reached. Invisible in a duel (one iteration), three quarters of a four-seat pod. Twenty arms taken; the tail has to name its seats **inside** the effect (`PlayerRef::Seat(q)`) because a parked continuation resumes under the stack item's context. Ratcheted by `scripts/audit_loop_splice.py` (13/13/0, plus a staleness half that fails on an allowlist entry whose site is gone). `Effect::BindScratch` is the sibling pin for state that lives on `GameState` rather than in the context — the ballot a `VoteTally::PerVote` run belongs to, a results-table arm's die face — and closed `Vote`'s `PerVote` half and `RollDie`. The sequential *pair* (`run_piles_then_clear`) is the same defect without a loop and is closed by its splice alone. The arms still open are in ENGINE_BACKLOG's forty-third find |
 | Multiplayer mulligan, no first-turn draw skip at 3+ | ✅ | `core_rules/multiplayer.rs` |
+| A printed "**choose an opponent**" clause resolves to ONE seat | ✅ | `PlayerRef::HostileOpponent` → `mod.rs::default_hostile_opponent`. Nineteen catalog sites handed a **fan-out** ref to an effect arm that resolves `who` through the singular `resolve_player`, which answers with the first seat of the set and drops the rest — exact in a duel, seat order deciding the controller's choice in a pod, and for five of them ("each opponent sacrifices / discards / may scry") only ONE opponent was reached at all. `Effect::EachPlayerDoes` is the fan-out those arms cannot do for themselves. Ratcheted by `scripts/audit_singular_fanout.py`, which pairs the 102 singular-resolving arms with the catalog sites that feed one: **19 → 2**, both allowlisted with their reason. ENGINE_BACKLOG's fifty-first find |
 | A printed "**target** opponent / target player" clause resolves to ONE seat | ✅ | `scripts/audit_target_opponent.py` — the mirror of `audit_each_opponent`, and the half that only bites at 3+ seats: 126 implemented cards modelled the clause as `PlayerRef::EachOpponent`, which is the same object in a duel and the whole table in a pod (Blood Artist draining 3 a death, Thoughtseize stripping every hand, Bojuka Bog exiling every graveyard). 126 → **1** (Consumed by Greed, whose gift branch already owns slot 0). Three were in a target deck (Endurance, Indulgent Tormentor, Nihil Spellbomb) and carry N-seat regression tests. CARD_BACKLOG's "TARGET-clause class" has the four traps, including the two engine ones: a player slot aims at the **caster** unless the seat's `hostile_player_targets` flag is on (it is, in `EvalWeights::default()`), and `friendliness_of_targeting_children` read `any` over a `Seq`'s children, so a rider aimed at the same seat ("…then draws a card") made the whole clause read as a gift |
 
 ### Commander-variant mechanics
@@ -128,6 +129,22 @@ Each unblocks a large swath of cards.
    `MayReplaceDrawWithTutor` and `MayReplaceDrawWithRevealUntilKind`). Still to generalize: as-a-copy ETB. A *general* as-enters one-shot now
    ships (`CardDefinition.as_enters_effect`, resolved pre-SBA — Ixidron). (Devouring Hellion / Rescuer Sphinx's
    as-enters reflexive shape now ship via `devour` / a reflexive ETB.)
+   **CR 614.12 is a closed class as of 2026-09-20 (ENGINE_BACKLOG's
+   forty-eighth find, 89 → 7).** `game::as_enters::apply_as_enters_replacements`
+   is the ONE funnel all four battlefield-entry paths run — the cast
+   (`stack.rs`), the universal move (`effects/movement.rs`), the **land drop**
+   (`actions.rs::play_land`) and the **token mint** (`mod.rs::
+   mint_token_with_counters`); before it, each of the three appliers was wired
+   to a different subset, so a played Cavern of Souls named nothing and a
+   token copy had no trigger to fire (CR 614.12's own example).
+   `ResumeContext::LandEntry` is the land drop's continuation — the one entry
+   path that can neither park on a stack item nor be replayed — and
+   `actions::finish_land_entry` is what it resumes into.
+   `Effect::AsEntersChooseMode` is the modal ask that works without a stack
+   item (`Effect::ChooseMode` reads `ctx.mode`, which an entry does not have),
+   and `Effect::SourceEntersTapped` the "it enters tapped" branch that emits
+   no tap event. ⚠ A `wants_ui` seat is asked for real only on the land drop;
+   the other three paths still drive the ask through `resolve_effect_driven`.
 2. ✅ **Multi-pick / "choose N" decisions.** `Decision::ChooseModes`;
    pick-from-revealed via `Effect::LookPickToHand` (Impulse, Strategic Planning).
 3. ✅ **Player-chosen combat damage assignment order.**
