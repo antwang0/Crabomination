@@ -1035,13 +1035,43 @@ fn glorybringer_attack_deals_4_damage_to_opponent_creature() {
     // Grizzly Bears has 2 toughness; 4 damage kills it
     assert!(g.players[1].graveyard.iter().any(|c| c.id == opp_creature),
         "Glorybringer should deal 4 damage to the targeted creature, killing it");
-    // CR 702.137 — the damage is the EXERT bonus, so it is PAID for: the dragon
+    // CR 701.43 — the damage is the EXERT bonus, so it is PAID for: the dragon
     // does not untap next untap step. It shipped without `Keyword::Exert`, so
     // the 4 damage was free on every attack (the keyword column of
     // `scripts/audit_printed_body.py`).
     assert!(
         g.battlefield_find(glory).unwrap().skip_next_untap,
         "Glorybringer exerted, so it skips its next untap",
+    );
+}
+
+/// "target **non-Dragon** creature an opponent controls" — the printed
+/// restriction on the exert bonus. With a Dragon as the only creature an
+/// opponent controls the trigger has no legal target at all.
+#[test]
+fn glorybringer_cannot_shoot_a_dragon() {
+    use crabomination::game::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let glory = g.add_card_to_battlefield(0, catalog::glorybringer());
+    g.clear_sickness(glory);
+    let opp_dragon = g.add_card_to_battlefield(1, catalog::shivan_dragon());
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: glory,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("Glorybringer attacks");
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield_find(opp_dragon).is_some(),
+        "a Dragon is not a legal target for Glorybringer's exert bonus",
+    );
+    assert_eq!(
+        g.battlefield_find(opp_dragon).unwrap().damage,
+        0,
+        "no damage is dealt to a Dragon",
     );
 }
 

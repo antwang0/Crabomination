@@ -1069,6 +1069,10 @@ fn mortuary_mire_etb_taps_and_recurs_creature_card() {
     let mut g = two_player_game();
     let _grave_creature = g.add_card_to_graveyard(0, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::mortuary_mire());
+    // "you **may** put target creature card …" — take the choice.
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
 
     g.perform_action(GameAction::PlayLand(id))
         .expect("Mortuary Mire is a playable land");
@@ -1081,6 +1085,30 @@ fn mortuary_mire_etb_taps_and_recurs_creature_card() {
         .expect("Library should not be empty");
     assert_eq!(top.definition.name, "Grizzly Bears",
         "ETB places the creature card on top of library");
+}
+
+/// "put target creature card **from your graveyard** on top of your library".
+/// The filter language has no implicit zone, so without `from_your_graveyard`
+/// the same requirement is met by a creature on the battlefield — and
+/// `auto_target_for_effect` prefers one, which turned a recursion land into a
+/// tuck. With an empty graveyard the trigger must find nothing.
+#[test]
+fn mortuary_mire_cannot_tuck_a_creature_off_the_battlefield() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let ogre = g.add_card_to_battlefield(1, catalog::gray_ogre());
+    let id = g.add_card_to_hand(0, catalog::mortuary_mire());
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
+
+    g.perform_action(GameAction::PlayLand(id))
+        .expect("Mortuary Mire is a playable land");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield_find(bear).is_some(), "own creature stays on the battlefield");
+    assert!(g.battlefield_find(ogre).is_some(), "opposing creature stays on the battlefield");
+    assert!(g.players[0].library.is_empty(), "nothing was put on top of the library");
 }
 
 #[test]

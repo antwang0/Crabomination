@@ -793,9 +793,32 @@ fn indulgent_tormentor_controller_draws_when_opponent_cant_pay() {
 /// With the graveyard-source preference in `auto_target_for_effect`,
 /// Eternal Witness's ETB now picks a card out of YOUR graveyard
 /// automatically — the trigger no longer requires UI to land its
-/// gameplay-default behavior.
+/// gameplay-default behavior. The current oracle is errata'd to "you **may**
+/// return target card", so the target is still chosen on the stack and the
+/// choice is taken at resolution.
 #[test]
 fn eternal_witness_etb_returns_graveyard_card_via_auto_target() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let id = g.add_card_to_hand(0, catalog::eternal_witness());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Eternal Witness castable for {1}{G}{G}");
+    drain_stack(&mut g);
+
+    assert!(g.players[0].hand.iter().any(|c| c.id == bolt),
+        "Bolt should auto-return from graveyard to hand");
+}
+
+/// Declining Eternal Witness's errata'd "you may" leaves the targeted card in
+/// the graveyard — the trigger still targeted, so this is the resolution
+/// choice and not a fizzle.
+#[test]
+fn eternal_witness_return_is_optional() {
     let mut g = two_player_game();
     let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
     let id = g.add_card_to_hand(0, catalog::eternal_witness());
@@ -807,8 +830,8 @@ fn eternal_witness_etb_returns_graveyard_card_via_auto_target() {
     }).expect("Eternal Witness castable for {1}{G}{G}");
     drain_stack(&mut g);
 
-    assert!(g.players[0].hand.iter().any(|c| c.id == bolt),
-        "Bolt should auto-return from graveyard to hand");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bolt),
+        "declined return leaves the Bolt in the graveyard");
 }
 
 #[test]
@@ -1993,7 +2016,9 @@ fn bloodghast_returns_from_graveyard_when_you_play_a_land() {
         .unwrap();
     g.players[0].graveyard.push(card);
 
-    // P0 plays a Forest. The landfall trigger should reanimate Bloodghast.
+    // P0 plays a Forest. The landfall trigger should reanimate Bloodghast —
+    // the printed "you **may** return" is a real ask, so take it.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
     let forest = g.add_card_to_hand(0, catalog::forest());
     g.perform_action(GameAction::PlayLand(forest)).unwrap();
     drain_stack(&mut g);
@@ -2002,6 +2027,24 @@ fn bloodghast_returns_from_graveyard_when_you_play_a_land() {
         "Bloodghast should return to the battlefield on landfall");
     assert!(!g.players[0].graveyard.iter().any(|c| c.id == bg_id),
         "Bloodghast should no longer be in the graveyard");
+}
+
+/// "Landfall — Whenever a land you control enters, you **may** return this
+/// card from your graveyard to the battlefield." Declining leaves it dead:
+/// the trigger fired, the choice was made, and nothing moved.
+#[test]
+fn bloodghast_landfall_return_is_optional_and_declining_leaves_it_in_the_graveyard() {
+    let mut g = two_player_game();
+    let bg_id = g.add_card_to_graveyard(0, catalog::bloodghast());
+    // `AutoDecider` declines every optional trigger, which is the "no" answer.
+    let forest = g.add_card_to_hand(0, catalog::forest());
+    g.perform_action(GameAction::PlayLand(forest)).unwrap();
+    drain_stack(&mut g);
+
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bg_id),
+        "declined landfall return leaves Bloodghast in the graveyard");
+    assert!(!g.battlefield.iter().any(|c| c.id == bg_id),
+        "declined landfall return puts nothing on the battlefield");
 }
 
 /// Bloodghast can't block and gains haste only while an opponent is at ≤10 life.

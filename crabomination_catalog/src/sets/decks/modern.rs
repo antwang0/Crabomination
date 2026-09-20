@@ -10373,10 +10373,10 @@ pub fn fiery_impulse() -> CardDefinition {
 /// Mire enters, you may put target creature card from your graveyard
 /// on top of your library. {T}: Add {B}.
 ///
-/// Reanimator dual-purpose land: a Swamp that recurs a creature on
-/// entry. The "may" is auto-resolved — AutoDecider's graveyard-target
-/// preference (the same one used by Raise Dead) picks a creature card
-/// when one is available; otherwise the trigger fizzles benignly.
+/// Reanimator dual-purpose land: a Swamp that recurs a creature on entry.
+/// ⚠ The filter names **your graveyard**: without the zone the same
+/// requirement is satisfied by a creature on the battlefield, and the
+/// auto-targeter prefers one — the land was tucking live creatures.
 pub fn mortuary_mire() -> CardDefinition {
     use crate::card::ActivatedAbility;
     use crate::effect::LibraryPosition;
@@ -10389,12 +10389,18 @@ pub fn mortuary_mire() -> CardDefinition {
             // ETB optional graveyard recursion of a creature card.
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: Effect::Move {
-                    what: target_filtered(SelectionRequirement::Creature),
-                    to: ZoneDest::Library {
-                        who: PlayerRef::You,
-                        pos: LibraryPosition::Top,
-                    },
+                effect: Effect::MayDo {
+                    description: "Put the targeted creature card on top of your library?"
+                        .into(),
+                    body: Box::new(Effect::Move {
+                        what: target_filtered(
+                            SelectionRequirement::Creature.from_your_graveyard(),
+                        ),
+                        to: ZoneDest::Library {
+                            who: PlayerRef::You,
+                            pos: LibraryPosition::Top,
+                        },
+                    }),
                 },
             },
         ],

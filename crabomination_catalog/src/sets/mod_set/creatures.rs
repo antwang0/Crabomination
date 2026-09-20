@@ -2791,8 +2791,11 @@ pub fn simian_spirit_guide() -> CardDefinition {
     }
 }
 
-/// Eternal Witness — {1}{G}{G}, 2/1 Human Shaman. ETB: return target card
-/// from your graveyard to your hand. Pure recursion.
+/// Eternal Witness — {1}{G}{G}, 2/1 Human Shaman. ETB: you may return target
+/// card from your graveyard to your hand. Pure recursion. The "may" is
+/// **errata**, not the printed 5DN text — the current oracle reads "you may
+/// return", so the target is still chosen on the stack and the choice comes
+/// at resolution.
 pub fn eternal_witness() -> CardDefinition {
     CardDefinition {
         name: "Eternal Witness",
@@ -2811,11 +2814,14 @@ pub fn eternal_witness() -> CardDefinition {
             // graveyard, whatever evaluate_requirement_static walks).
             // `auto_target_for_effect` falls through to graveyards when
             // no battlefield permanent matches.
-            effect: Effect::Move {
-                what: target_filtered(
-                    SelectionRequirement::Player.negate().from_your_graveyard(),
-                ),
-                to: ZoneDest::Hand(PlayerRef::You),
+            effect: Effect::MayDo {
+                description: "Return the targeted card to your hand?".into(),
+                body: Box::new(Effect::Move {
+                    what: target_filtered(
+                        SelectionRequirement::Player.negate().from_your_graveyard(),
+                    ),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                }),
             },
         }],
         ..Default::default()
@@ -3847,12 +3853,19 @@ pub fn bloodghast() -> CardDefinition {
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::LandPlayed, EventScope::FromYourGraveyard),
-            effect: Effect::Move {
-                what: Selector::This,
-                to: ZoneDest::Battlefield {
-                    controller: PlayerRef::You,
-                    tapped: false,
-                },
+            // "…you **may** return this card from your graveyard to the
+            // battlefield." The printed choice, not a formality: the return
+            // is the only way back and a controller with a sacrifice payoff
+            // parked on the stack can want it to stay dead.
+            effect: Effect::MayDo {
+                description: "Return Bloodghast to the battlefield?".into(),
+                body: Box::new(Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
+                }),
             },
         }],
         ..Default::default()
@@ -4412,8 +4425,9 @@ pub fn phyrexian_obliterator() -> CardDefinition {
 
 // ── Glorybringer ───────────────────────────────────────────────────────────
 
-/// Glorybringer — {3}{R}{R}, 4/4 Dragon with Flying and Haste. Whenever
-/// this attacks, deal 4 damage to target creature an opponent controls.
+/// Glorybringer — {3}{R}{R}, 4/4 Dragon with Flying and Haste. Exert as it
+/// attacks: deal 4 damage to target **non-Dragon** creature an opponent
+/// controls.
 pub fn glorybringer() -> CardDefinition {
     CardDefinition {
         name: "Glorybringer",
@@ -4435,8 +4449,15 @@ pub fn glorybringer() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect: Effect::DealDamage {
+                // "target **non-Dragon** creature an opponent controls" — the
+                // clause that stops it from shooting a rival Dragon, and the
+                // only printed restriction on the exert bonus.
                 to: target_filtered(
-                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent)
+                        .and(
+                            SelectionRequirement::HasCreatureType(CreatureType::Dragon).negate(),
+                        ),
                 ),
                 amount: Value::Const(4),
             },
