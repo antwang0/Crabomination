@@ -663,9 +663,17 @@ pub fn oakheart_dryads() -> CardDefinition {
 /// mills two.
 pub fn thassas_devourer() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![constellation(Effect::Mill {
-            who: Selector::Target(0),
-            amount: Value::Const(2),
+        // "…**target player** mills two cards." A bare `Selector::Target(0)`
+        // declares the slot nowhere, so the target walker falls back to
+        // `SelectionRequirement::Any` — which happens to enumerate the two
+        // players here, but says nothing about the clause. `TargetPlayerThen`
+        // is the primitive that declares it (Vault Plunderer's shape).
+        triggered_abilities: vec![constellation(Effect::TargetPlayerThen {
+            filter: R::Player,
+            then: Box::new(Effect::Mill {
+                who: Selector::Target(0),
+                amount: Value::Const(2),
+            }),
         })],
         ..nyx_creature(
             "Thassa's Devourer",

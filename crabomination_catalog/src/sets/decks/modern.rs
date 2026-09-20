@@ -30057,10 +30057,17 @@ pub fn falkenrath_noble() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer),
-            effect: Effect::Drain {
-                from: Selector::Target(0),
-                to: Selector::You,
-                amount: Value::Const(1),
+            // "…**target player** loses 1 life and you gain 1 life." The
+            // trigger's own event binds the dying *creature*, so the clause
+            // needs its own slot; a bare `Selector::Target(0)` declares none
+            // and leans on the walker's `Any` fallback.
+            effect: Effect::TargetPlayerThen {
+                filter: SelectionRequirement::Player,
+                then: Box::new(Effect::Drain {
+                    from: Selector::Target(0),
+                    to: Selector::You,
+                    amount: Value::Const(1),
+                }),
             },
         }],
         ..Default::default()

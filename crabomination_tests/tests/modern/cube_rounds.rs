@@ -2507,3 +2507,24 @@ fn cube_rounds_printed_shapes() {
         }
     }
 }
+
+/// CR 601.2c — "Whenever this or another creature dies, **target player**
+/// loses 1 life and you gain 1 life", on the **auto** path. The card's other
+/// test scripts `DecisionAnswer::Target`; this one lets the headless picker
+/// choose, which is the route a bot seat takes.
+#[test]
+fn falkenrath_noble_drains_a_targeted_player_on_each_death() {
+    let mut g = two_player_game();
+    g.move_card_to_battlefield_for_test(0, catalog::falkenrath_noble());
+    let victim = g.move_card_to_battlefield_for_test(1, catalog::grizzly_bears());
+    drain_stack(&mut g);
+    let (l0, l1) = (g.players[0].life, g.players[1].life);
+
+    let mut ev = Vec::new();
+    g.destroy_permanent(victim, false, &mut ev);
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].life, l0 + 1, "you gain 1");
+    assert_eq!(g.players[1].life, l1 - 1, "and the targeted player loses 1");
+}

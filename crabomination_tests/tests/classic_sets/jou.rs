@@ -1029,3 +1029,23 @@ fn jou3_stat_lines() {
     }
     assert_eq!(catalog::ajani_mentor_of_heroes().base_loyalty, 4);
 }
+
+/// CR 601.2c — "Constellation — … **target player** mills two cards", on the
+/// **auto** path: no seat scripts the target, so this is the self-play route
+/// rather than the scripted one the card's other coverage takes.
+#[test]
+fn thassas_devourer_constellation_mills_a_targeted_player() {
+    let mut g = main_phase();
+    for _ in 0..8 {
+        g.add_card_to_library(1, catalog::grizzly_bears());
+    }
+    cast(&mut g, catalog::thassas_devourer(), None, 4, &[(Color::Blue, 1)]);
+    let after_self = g.players[1].graveyard.len();
+    assert!(after_self > 0, "its own entry is a constellation trigger and it mills");
+    // A second enchantment entering fires it again.
+    cast(&mut g, catalog::skybind(), None, 3, &[(Color::White, 2)]);
+    assert!(
+        g.players[1].graveyard.len() > after_self,
+        "and the second enchantment mills again",
+    );
+}
