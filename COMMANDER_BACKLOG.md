@@ -12,10 +12,10 @@ mechanic a card leans on, not a verdict on what it needs.
 | --- | --- |
 | Top 100 Commander cards by EDHREC rank | 100 / 100 |
 | Top 250 Commander cards by EDHREC rank | 250 / 250 |
-| Top 500 Commander cards by EDHREC rank | 496 / 500 |
-| Top 1000 Commander cards by EDHREC rank | 939 / 1000 |
-| Top 2000 Commander cards by EDHREC rank | 1693 / 2000 |
-| Top 5000 Commander cards by EDHREC rank | 3477 / 5000 |
+| Top 500 Commander cards by EDHREC rank | 497 / 500 |
+| Top 1000 Commander cards by EDHREC rank | 953 / 1000 |
+| Top 2000 Commander cards by EDHREC rank | 1707 / 2000 |
+| Top 5000 Commander cards by EDHREC rank | 3491 / 5000 |
 | Top 100 commanders by decks built | 47 / 100 |
 | Top 300 commanders by decks built | 127 / 300 |
 
@@ -205,19 +205,17 @@ A partner pair lists only its missing halves.
 | 296 | Silas Renn, Seeker Adept | 8,908 | BU | Legendary Artifact Creature — Human | partner |
 | 297 | Myrel, Shield of Argive | 8,878 | W | Legendary Creature — Human Soldier |  |
 
-## 2. Top 1000 Commander cards not in the catalog (61)
+## 2. Top 1000 Commander cards not in the catalog (47)
 
 | EDHREC rank | Card | Cost | Type | Flags |
 | --- | --- | --- | --- | --- |
 | 409 | Lotho, Corrupt Shirriff | {W}{B} | Legendary Creature — Halfling Rogue |  |
-| 442 | Unnatural Growth | {1}{G}{G}{G}{G} | Enchantment |  |
 | 465 | Treasure Vault |  | Artifact Land |  |
 | 480 | Plaza of Heroes |  | Land |  |
 | 560 | Nesting Grounds |  | Land |  |
 | 561 | Second Harvest | {2}{G}{G} | Instant |  |
 | 574 | Champion of Lambholt | {1}{G}{G} | Creature — Human Warrior |  |
 | 582 | Saw in Half | {2}{B} | Instant |  |
-| 609 | Tribute to the World Tree | {G}{G}{G} | Enchantment |  |
 | 610 | Cloud Key | {3} | Artifact |  |
 | 621 | Torment of Hailfire | {X}{B}{B} | Sorcery |  |
 | 641 | Ozolith, the Shattered Spire | {1}{G} | Legendary Artifact |  |
@@ -225,36 +223,27 @@ A partner pair lists only its missing halves.
 | 664 | Imp's Mischief | {1}{B} | Instant |  |
 | 698 | Curse of Opulence | {R} | Enchantment — Aura Curse |  |
 | 714 | Archaeomancer's Map | {2}{W} | Artifact |  |
-| 765 | Void Rend | {W}{U}{B} | Instant |  |
 | 787 | Inkshield | {3}{W}{B} | Instant |  |
 | 790 | Peregrin Took | {2}{G} | Legendary Creature — Halfling Citizen |  |
-| 791 | Brash Taunter | {4}{R} | Creature — Goblin |  |
 | 800 | High Tide | {U} | Instant |  |
 | 803 | Flowering of the White Tree | {W}{W} | Legendary Enchantment |  |
 | 819 | The World Tree |  | Land |  |
 | 824 | Ashaya, Soul of the Wild | {3}{G}{G} | Legendary Creature — Elemental |  |
-| 847 | Dragon Tempest | {1}{R} | Enchantment |  |
-| 854 | Ayara, First of Locthwain | {B}{B}{B} | Legendary Creature — Elf Noble |  |
 | 857 | Boromir, Warden of the Tower | {2}{W} | Legendary Creature — Human Soldier |  |
-| 870 | Tempt with Discovery | {3}{G} | Sorcery | multiplayer |
 | 872 | Beseech the Mirror | {1}{B}{B}{B} | Sorcery |  |
 | 880 | Bear Umbra | {2}{G}{G} | Enchantment — Aura |  |
 | 882 | Thousand-Year Elixir | {3} | Artifact |  |
 | 883 | Descent into Avernus | {2}{R} | Enchantment |  |
 | 885 | Throne of Eldraine | {5} | Legendary Artifact |  |
-| 887 | Witch's Cottage |  | Land — Swamp |  |
 | 891 | Grim Hireling | {3}{B} | Creature — Tiefling Rogue |  |
-| 894 | Reconnaissance Mission | {2}{U}{U} | Enchantment |  |
 | 897 | Ojer Taq, Deepest Foundation // Temple of Civilization |  | Legendary Creature — God // Land |  |
 | 899 | Xorn | {2}{R} | Creature — Elemental |  |
 | 904 | Forsaken Monument | {5} | Legendary Artifact |  |
-| 909 | Padeem, Consul of Innovation | {3}{U} | Legendary Creature — Vedalken Artificer |  |
 | 913 | Excalibur, Sword of Eden | {12} | Legendary Artifact — Equipment |  |
 | 914 | Raise the Palisade | {4}{U} | Sorcery |  |
 | 916 | Jaheira, Friend of the Forest | {2}{G} | Legendary Creature — Human Elf Druid | partner |
 | 923 | Archway of Innovation |  | Land |  |
 | 936 | Ripples of Potential | {1}{U} | Instant |  |
-| 940 | Thopter Spy Network | {2}{U}{U} | Enchantment |  |
 | 945 | Promise of Loyalty | {4}{W} | Sorcery |  |
 | 967 | Cabaretti Courtyard |  | Land |  |
 | 971 | Eerie Interlude | {2}{W} | Instant |  |
@@ -262,12 +251,9 @@ A partner pair lists only its missing halves.
 | 981 | Inspiring Statuary | {3} | Artifact |  |
 | 982 | Moraug, Fury of Akoum | {4}{R}{R} | Legendary Creature — Minotaur Warrior |  |
 | 983 | Kodama of the East Tree | {4}{G}{G} | Legendary Creature — Spirit | partner |
-| 986 | Moldervine Reclamation | {3}{B}{G} | Enchantment |  |
 | 988 | Mirror Entity | {2}{W} | Creature — Shapeshifter |  |
-| 990 | Cut a Deal | {2}{W} | Sorcery | multiplayer |
 | 996 | Mechanized Production | {2}{U}{U} | Enchantment — Aura |  |
 | 998 | Mines of Moria |  | Legendary Land |  |
-| 1003 | Cyberdrive Awakener | {5}{U} | Artifact Creature — Construct |  |
 | 1006 | Combat Celebrant | {2}{R} | Creature — Human Warrior |  |
 | 1008 | Thriving Isle |  | Land |  |
 

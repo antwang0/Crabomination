@@ -3000,8 +3000,8 @@ fn cut_a_deal_draws_one_card_per_opponent() {
     drain_stack(&mut g);
     // -1 for the spell itself, +3 for the three opponents who drew.
     assert_eq!(g.players[0].hand.len(), before[0] - 1 + 3, "three opponents, three cards");
-    for seat in 1..4 {
-        assert_eq!(g.players[seat].hand.len(), before[seat] + 1, "each opponent drew one");
+    for (seat, was) in before.iter().enumerate().skip(1) {
+        assert_eq!(g.players[seat].hand.len(), was + 1, "each opponent drew one");
     }
 }
 
