@@ -4443,11 +4443,14 @@ pub fn nessian_wilds_ravager() -> CardDefinition {
         toughness: 6,
         activated_abilities: vec![monstrosity(cost(&[generic(6), g(), g()]), 5)],
         triggered_abilities: vec![on_becomes_monstrous(Effect::MayDo {
-            description: "have it fight target creature you don't control".into(),
+            description: "have it fight a creature you don't control".into(),
             body: Box::new(Effect::Fight {
                 attacker: Selector::This,
+                // 🟡 Narrowed from "another target creature" for the reason
+                // Atzocan Archer's comment gives.
                 defender: target_filtered(
-                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
                 ),
             }),
         })],
@@ -4691,11 +4694,19 @@ pub fn atzocan_archer() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Reach],
         triggered_abilities: vec![etb(Effect::MayDo {
-            description: "have it fight target creature you don't control".into(),
+            description: "have it fight a creature you don't control".into(),
             body: Box::new(Effect::Fight {
                 attacker: Selector::This,
+                // 🟡 Printed is "**another** target creature", which includes
+                // one of your own. Narrowed on purpose: the "may" is answered
+                // by `optional_trigger_beneficial`, which takes a body with no
+                // self-cost, and the picker's last-resort rank would then hand
+                // a mandatory defender slot the bot's *own* creature on a board
+                // with no opposing one. A narrowing never allows an illegal
+                // play; `audit_another_target`'s allowlist carries the reason.
                 defender: target_filtered(
-                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
                 ),
             }),
         })],
@@ -21468,8 +21479,12 @@ pub fn fiend_hunter() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::ExileUntilSourceLeaves {
+                // "**another** target creature": any but this one. Without
+                // the restriction the Hunter could exile *itself*, which
+                // leaves the battlefield, which returns it, which triggers
+                // again — the printed word is the whole of what stops it.
                 what: target_filtered(
-                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+                    SelectionRequirement::Creature.and(SelectionRequirement::OtherThanSource),
                 ),
                 return_to: ExileReturnZone::Battlefield,
             },
@@ -44325,10 +44340,13 @@ pub fn last_thoughts() -> CardDefinition {
 /// individually declinable via `MayDo`.
 pub fn hidden_strings() -> CardDefinition {
     let half = |slot: u8, untap: bool| {
-        let what = Selector::TargetFiltered {
-            slot,
-            filter: SelectionRequirement::Permanent,
-        };
+        // "…tap or untap target permanent, then … **another** target
+        // permanent": the second slot is the one carrying the restriction.
+        let mut filter = SelectionRequirement::Permanent;
+        if slot > 0 {
+            filter = filter.and(SelectionRequirement::OtherThanTargetSlot(slot - 1));
+        }
+        let what = Selector::TargetFiltered { slot, filter };
         let body = if untap {
             Effect::Untap { what, up_to: None }
         } else {
@@ -46958,8 +46976,13 @@ pub fn hostage_taker() -> CardDefinition {
         toughness: 3,
         triggered_abilities: vec![crate::effect::shortcut::etb(Effect::Seq(vec![
             Effect::ExileUntilSourceLeaves {
+                // "**another** target creature or artifact" — the Taker is a
+                // creature, and exiling itself is the same leave-and-return
+                // loop Fiend Hunter had.
                 what: crate::effect::shortcut::target_filtered(
-                    SelectionRequirement::Creature.or(SelectionRequirement::Artifact),
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Artifact)
+                        .and(SelectionRequirement::OtherThanSource),
                 ),
                 return_to: crate::card::ExileReturnZone::Battlefield,
             },
@@ -64873,7 +64896,11 @@ pub fn clash_of_titans() -> CardDefinition {
             attacker: target_filtered(SelectionRequirement::Creature),
             defender: Selector::TargetFiltered {
                 slot: 1,
-                filter: SelectionRequirement::Creature.and(SelectionRequirement::OtherThanSource),
+                // "**another** target creature" is other than the creature in
+                // slot 0, not other than the instant that says it —
+                // `OtherThanSource` was a no-op here.
+                filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::OtherThanTargetSlot(0)),
             },
         },
         ..Default::default()

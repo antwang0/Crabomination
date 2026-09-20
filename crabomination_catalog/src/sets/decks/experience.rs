@@ -75,7 +75,12 @@ pub fn ezuri_claw_of_progress() -> CardDefinition {
                     EventScope::ActivePlayer,
                 ),
                 effect: Effect::AddCounter {
-                    what: target_filtered(R::Creature),
+                    // "**another** target creature **you control**" — both
+                    // halves were missing, so Ezuri grew himself, or an
+                    // opponent's creature.
+                    what: target_filtered(
+                        R::Creature.and(R::ControlledByYou).and(R::OtherThanSource),
+                    ),
                     kind: CounterType::PlusOnePlusOne,
                     amount: Value::ControllerExperience,
                 },

@@ -438,7 +438,12 @@ pub fn north_pole_patrol() -> CardDefinition {
             ActivatedAbility {
                 tap_cost: true,
                 effect: Effect::Untap {
-                    what: target_filtered(SelectionRequirement::ControlledByYou),
+                    // "Untap **another** target permanent you control."
+                    what: target_filtered(
+                        SelectionRequirement::Permanent
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::OtherThanSource),
+                    ),
                     up_to: None,
                 },
                 ..Default::default()

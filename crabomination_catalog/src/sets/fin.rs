@@ -4510,8 +4510,12 @@ pub fn rinoa_heartilly() -> CardDefinition {
             TriggeredAbility {
                 event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
                 effect: Effect::PumpPT {
+                    // "**another** target creature you control" — Rinoa is
+                    // attacking and was a legal target for her own pump.
                     what: target_filtered(
-                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::OtherThanSource),
                     ),
                     power: Value::CountMatching {
                         sel: Box::new(Selector::EachPermanent(

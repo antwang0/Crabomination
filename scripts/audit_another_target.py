@@ -16,24 +16,30 @@ splits them by where the *other* object comes from:
 * **slot-relative** — the ability already targeted something earlier in the
   same paragraph ("target creature you control fights **another** target
   creature"), so "another" means "not the object chosen for that other slot".
-  No `SelectionRequirement` can say that today: the requirement walker is
-  handed one candidate and never the picks already made. `already_picked` in
-  `auto_targets_for_effect_all_slots_kicked` is a *preference*, not a
-  constraint, so the duplicate is merely unlikely rather than illegal.
+  `SelectionRequirement::OtherThanTargetSlot(n)` says that, the sibling of
+  `SameControllerAsTargetSlot`: both read `GameState::target_slots_scratch`,
+  which the cast and activation validators stamp with the whole chosen
+  vector. `already_picked` in `auto_targets_for_effect_all_slots_kicked` was
+  only ever a *preference*, so before this the duplicate was merely unlikely
+  rather than illegal; that walk now runs `cross_slot_targets_ok` over the
+  slots it has filled.
 
     python3 scripts/audit_another_target.py           # both columns
     python3 scripts/audit_another_target.py --count   # just the totals
-    python3 scripts/audit_another_target.py --gate    # exit 1 on a source-relative row
+    python3 scripts/audit_another_target.py --gate    # exit 1 on any open row
 
 ⚠ The split is by **paragraph**, not by sentence: Drooling Groodion's
 "Another target creature gets -2/-2" is its own sentence and the slot it
 refers to is in the one before it, on the same printed line.
 
-⚠ Two rows are neither, and both are listed under source-relative with the
-approximation named: Jackdaw Savior's "another" is other than the creature
-that *died*, and Blade of Shared Souls' is other than the creature the
-Equipment is attached to. `OtherThanSource` is right for those whenever the
-source is that object and harmlessly wrong otherwise.
+⚠ Two allowlists carry the rows that are neither, each with its reason, and
+`--gate` fails on a **stale** entry as well as on a new finding. Jackdaw
+Savior's "another" is other than the creature that *died* and Blade of Shared
+Souls' is other than the creature the Equipment is attached to — neither is
+the source; Fiendish Panda's non-Bear filter already excludes it; Etched
+Slith's clause is unmodelled and belongs to `audit_incomplete`. On the
+slot-relative side, a pair of slots that cannot name one object ("you
+control" against "an opponent controls") costs nothing.
 
 Reads `scripts/.scryfall_cache.json` (offline) and `audit_dropped_may`'s body
 reader.
@@ -58,6 +64,57 @@ _spec.loader.exec_module(_adm)
 # Every way a definition can say "not this one".
 OTHER_TOKENS = ("OtherThanSource", "other_than_source")
 
+# Rows where "another" is satisfied without the atom, or where the atom is the
+# wrong question. Keyed on the factory ident, which no body can shadow; a
+# stale entry fails `--gate` the same way a new finding does.
+SOURCE_ALLOWLIST = {
+    "fiendish_panda": (
+        "the filter already excludes it: the Panda is a Bear Demon and the "
+        "clause is 'another target **non-Bear** creature card'"
+    ),
+    "jackdaw_savior": (
+        "'another' is other than the creature that **died**, not other than "
+        "the Savior — the two coincide only when the Savior itself dies, and "
+        "no requirement names the trigger source"
+    ),
+    "blade_of_shared_souls": (
+        "'another' is other than the creature the Equipment is **attached "
+        "to**, which is not the source either"
+    ),
+    "atzocan_archer": (
+        "narrowed to 'a creature you don't control' on purpose — a mandatory "
+        "fight slot would otherwise hand the bot its own creature; the "
+        "narrowing never allows an illegal play"
+    ),
+    "nessian_wilds_ravager": "same narrowing, same reason",
+    "etched_slith": (
+        "the whole 'when you do, remove a counter from another target "
+        "permanent or opponent' clause is unmodelled — `audit_incomplete`'s "
+        "row, not this one"
+    ),
+}
+
+# Slot-relative rows whose two slots cannot name one object anyway, so the
+# printed "another" costs nothing. Same keying and the same staleness rule.
+SLOT_ALLOWLIST = {
+    "comet_storm": (
+        "one `ApplyToTargets` instance, so CR 115.3's within-one-instance "
+        "distinctness already forbids the repeat (`distinct_target_count`)"
+    ),
+    "biomantic_mastery": (
+        "both slots are `PlayerRef::Target(n)` inside a `Value`, so no slot "
+        "filter exists to hang a requirement on"
+    ),
+    "pit_fight": "slot 0 is 'you control' and slot 1 'an opponent controls'",
+    "domri_rade": "the -2 is modelled as you-control vs opponent-controls",
+    "ulvenwald_tracker": "same disjoint pair",
+    "stiltzkin_moogle_merchant": (
+        "slot 0 is a **player** and slot 1 a permanent, so they are never the "
+        "same object; the printed 'another' is source-relative and the filter "
+        "carries it"
+    ),
+}
+
 
 def split_class(oracle):
     """`(source_rows, slot_rows)` — the paragraphs naming "another target"."""
@@ -79,6 +136,7 @@ def main():
             lower.setdefault(k.split(" // ")[0].lower(), v)
 
     src_hits, slot_hits, checked = [], [], 0
+    seen_fns = {}
     for dirpath, _, files in os.walk(CATALOG):
         for f in files:
             if not f.endswith(".rs"):
@@ -93,10 +151,15 @@ def main():
                 checked += 1
                 source, slot = split_class(oracle)
                 rel = os.path.relpath(path, ROOT)
-                if source and not any(t in body for t in OTHER_TOKENS):
+                seen_fns[fn] = True
+                if (
+                    source
+                    and fn not in SOURCE_ALLOWLIST
+                    and not any(t in body for t in OTHER_TOKENS)
+                ):
                     src_hits.append((name, fn, rel, source[0][:90]))
-                # A slot-relative row is a finding whatever the body says:
-                # nothing in the filter language can express it yet.
+                if fn in SLOT_ALLOWLIST or "OtherThanTargetSlot" in body:
+                    continue
                 for p in slot:
                     slot_hits.append((name, fn, rel, p[:90]))
 
@@ -111,10 +174,17 @@ def main():
             print(f"{path}::{fn}\n    {name}: “{para}”")
     print(
         f"# {len(src_hits)} source-relative without `OtherThanSource`, "
-        f"{len(slot_hits)} slot-relative (no primitive), {checked} cards printing "
+        f"{len(slot_hits)} slot-relative still open, {checked} cards printing "
         f"\"another target\""
     )
-    if "--gate" in sys.argv and src_hits:
+    stale = [
+        k
+        for k in list(SOURCE_ALLOWLIST) + list(SLOT_ALLOWLIST)
+        if not seen_fns.get(k)
+    ]
+    for k in stale:
+        print(f"# allowlist entry `{k}` names no card here any more", file=sys.stderr)
+    if "--gate" in sys.argv and (src_hits or slot_hits or stale):
         sys.exit(1)
 
 

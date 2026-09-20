@@ -82,6 +82,7 @@ the handoff.
 | Engine mechanics & primitives | [Suggested next-up tasks](#suggested-next-up-tasks) | 1053 |
 | Rules coverage | [MagicCompRules coverage audit](#magiccomprules-coverage-audit) | 312 |
 | Tooling | [Recommender: two builder defects fixed, one lesson recorded](#recommender-two-builder-defects-fixed-one-lesson-recorded) | 17 |
+| Bugs & robustness | [FIXED 2026-09-20 (the fifty-third find) — the printed word "another" between two target slots had no way to be said, so a creature fought itself and Cone of Flame dealt 1+2+3 to one permanent](#fixed-2026-09-20-the-fifty-third-find--the-printed-word-another-between-two-target-slots-had-no-way-to-be-said-so-a-creature-fought-itself-and-cone-of-flame-dealt-123-to-one-permanent) | 41 → 0 |
 | Bugs & robustness | [FIXED 2026-09-20 (the fifty-second find) — the filter language has no implicit ZONE, so a printed "target card from a graveyard" was satisfied by a permanent on the battlefield](#fixed-2026-09-20-the-fifty-second-find--the-filter-language-has-no-implicit-zone-so-a-printed-target-card-from-a-graveyard-was-satisfied-by-a-permanent-on-the-battlefield) | 27 → 0 |
 | Bugs & robustness | [FIXED 2026-09-20 (the fifty-first find) — a FAN-OUT `PlayerRef` handed to an arm that resolves it SINGULARLY, nineteen cards, and every one invisible in a duel](#fixed-2026-09-20-the-fifty-first-find--a-fan-out-playerref-handed-to-an-arm-that-resolves-it-singularly-nineteen-cards-and-every-one-invisible-in-a-duel) | 19 sites |
 | Bugs & robustness | [FIXED 2026-09-19 (the fiftieth find) — one of five trigger walks in `declare_attackers` never carried `event.filter`, so a defender-side intervening `if` was written, compiled and ignored](#fixed-2026-09-19-the-fiftieth-find--one-of-five-trigger-walks-in-declare_attackers-never-carried-eventfilter-so-a-defender-side-intervening-if-was-written-compiled-and-ignored) | 1 card, 1 walk |
@@ -92,6 +93,62 @@ the handoff.
 
 
 # Bugs & robustness
+
+## FIXED 2026-09-20 (the fifty-third find) — the printed word "another" between two target slots had no way to be said, so a creature fought itself and Cone of Flame dealt 1+2+3 to one permanent
+
+CR 601.2c lets two separate instances of the word "target" on one object name
+the **same** thing; the word "another" is what forbids it, and the filter
+language could say that only about the *source*
+(`SelectionRequirement::OtherThanSource`). 41 implemented cards print
+"another target" and the census splits them by where the *other* object comes
+from — `scripts/audit_another_target.py`, which reads the oracle by
+**paragraph** rather than by sentence (Drooling Groodion's "Another target
+creature gets -2/-2" is its own sentence and the slot it refers to is in the
+one before it, on the same printed line).
+
+**① Source-relative (18), and two of them were loops.** Nothing else in the
+ability is targeted, so "another" can only mean "not this permanent" —
+`OtherThanSource`, which 810 cards already carry. **Fiend Hunter** and
+**Hostage Taker** exile "another target creature", were legal targets for
+themselves, and exiling yourself *is* leaving the battlefield, which returns
+the card, which triggers the exile again. Flickerwisp blinked itself, Heliod
+gave itself lifelink, Garruk's +1 destroyed Garruk, Ezuri grew himself (and an
+opponent's creature — the "you control" half was missing too). Four of them
+had been written as "you don't control" instead, which is a *different*
+restriction that happens to imply this one; the printed clause is wider.
+
+**② Slot-relative (23), and this one needed a primitive.**
+`SelectionRequirement::OtherThanTargetSlot(u8)` is the sibling of
+`SameControllerAsTargetSlot`: both read `GameState::target_slots_scratch`,
+which the cast validator already stamped with the whole chosen slot vector.
+Three things had to be wired for it to bite everywhere:
+
+- the **activation** path had no stamp at all, so an activated "another"
+  (Simic Guildmage, Ral Zarek's +1) validated against an empty vector;
+- the **auto-picker** (`auto_targets_for_effect_all_slots_kicked`) only ever
+  *preferred* an unpicked permanent (`already_picked`), and its mandatory-slot
+  fallback deliberately reused one — so on a board with a single legal object
+  the bot built a target set the validator then rejected. It runs
+  `cross_slot_targets_ok` over the slots it has filled now;
+- `cross_slot_targets_ok` itself had no `Or` arm, so a cross-slot atom under
+  one was dropped.
+
+📐 **Two defects found by reading the slot numbers rather than the filters.**
+Markov Retribution's damage source and its recipient were **both**
+`target_filtered(…)`, which is `slot: 0` — the Vampire was dealing its damage
+to itself, "another" or not. Clash of Titans carried `OtherThanSource` on slot
+1, which is a no-op on an instant: the thing it must differ from is slot 0.
+
+⚠ **Two allowlists, both keyed on the factory ident and both stale-checked by
+`--gate`.** A pair of slots that cannot name one object costs nothing (Pit
+Fight's "you control" against "an opponent controls"; Stiltzkin's player slot
+against a permanent slot), and neither does one `ApplyToTargets` instance,
+where CR 115.3's within-one-instance rule already forbids the repeat (Comet
+Storm). On the source side: Fiendish Panda's non-Bear filter already excludes
+the Panda, Jackdaw Savior's "another" is other than the creature that *died*
+and Blade of Shared Souls' is other than the creature the Equipment is
+attached to — neither is the source, and no requirement names either — and
+Etched Slith's whole clause is unmodelled, which is `audit_incomplete`'s row.
 
 ## FIXED 2026-09-20 (the fifty-second find) — the filter language has no implicit ZONE, so a printed "target card from a graveyard" was satisfied by a permanent on the battlefield
 

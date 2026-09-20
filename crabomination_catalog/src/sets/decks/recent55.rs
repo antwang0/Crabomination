@@ -199,7 +199,10 @@ pub fn saheeli_sublime_artificer() -> CardDefinition {
                 },
                 source: Selector::TargetFiltered {
                     slot: 1,
-                    filter: R::Creature.or(R::Artifact).and(R::ControlledByYou),
+                    filter: R::Creature
+                        .or(R::Artifact)
+                        .and(R::ControlledByYou)
+                        .and(R::OtherThanTargetSlot(0)),
                 },
                 duration: Duration::EndOfTurn,
                 non_legendary: false,

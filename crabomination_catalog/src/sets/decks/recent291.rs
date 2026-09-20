@@ -647,7 +647,9 @@ pub fn simic_guildmage() -> CardDefinition {
                     },
                     to: Selector::TargetFiltered {
                         slot: 1,
-                        filter: R::Creature,
+                        filter: R::Creature
+                            .and(R::OtherThanTargetSlot(0))
+                            .and(R::SameControllerAsTargetSlot(0)),
                     },
                     kind: CounterType::PlusOnePlusOne,
                     amount: Value::ONE,
@@ -663,7 +665,9 @@ pub fn simic_guildmage() -> CardDefinition {
                     },
                     to: Selector::TargetFiltered {
                         slot: 1,
-                        filter: R::Permanent,
+                        filter: R::Permanent
+                            .and(R::OtherThanTargetSlot(0))
+                            .and(R::SameControllerAsTargetSlot(0)),
                     },
                 },
                 ..Default::default()

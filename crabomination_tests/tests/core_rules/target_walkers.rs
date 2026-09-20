@@ -1736,8 +1736,10 @@ fn a_layer_5_colour_change_reaches_the_printed_fast_path() {
 /// way `SameControllerAsTargetSlot` does.
 mod another_target {
     use crabomination::card::{CardDefinition, CardType, SelectionRequirement as R};
+    use crabomination::catalog;
     use crabomination::effect::{Effect, Selector};
     use crabomination::game::*;
+    use crabomination::mana::Color;
 
     fn bear(name: &'static str) -> CardDefinition {
         CardDefinition {
@@ -1749,11 +1751,68 @@ mod another_target {
         }
     }
 
-    /// The auto-picker enforces it, not only the validator: before this it
-    /// merely *preferred* an unpicked permanent (`already_picked`), and its
-    /// mandatory-slot fallback deliberately reused one — so a board with one
-    /// legal object handed the same one to both slots and the cast that
-    /// followed was rejected.
+    /// Cone of Flame: "1 damage to any target, 2 damage to **another** target,
+    /// and 3 damage to **a third** target." One creature cannot eat all six.
+    #[test]
+    fn cr_601_2c_cone_of_flame_rejects_one_object_in_three_slots() {
+        let mut g = two_player_game();
+        let only = g.add_card_to_battlefield(1, bear("Lonely Bear"));
+        let id = g.add_card_to_hand(0, catalog::cone_of_flame());
+        g.players[0].mana_pool.add(Color::Red, 2);
+        g.players[0].mana_pool.add_colorless(3);
+        let r = g.perform_action(GameAction::CastSpell {
+            card_id: id,
+            target: Some(Target::Permanent(only)),
+            additional_targets: vec![Target::Permanent(only), Target::Permanent(only)],
+            mode: None,
+            x_value: None,
+        });
+        assert!(r.is_err(), "three slots on one object must be rejected: {r:?}");
+        assert!(g.players[0].hand.iter().any(|c| c.id == id), "and the spell goes back to hand");
+    }
+
+    /// The same cast with three different objects is legal, so the rejection
+    /// above is the word "another" and not the spell.
+    #[test]
+    fn cr_601_2c_cone_of_flame_takes_three_different_targets() {
+        let mut g = two_player_game();
+        let a = g.add_card_to_battlefield(1, bear("Bear A"));
+        let b = g.add_card_to_battlefield(1, bear("Bear B"));
+        let c = g.add_card_to_battlefield(1, bear("Bear C"));
+        let id = g.add_card_to_hand(0, catalog::cone_of_flame());
+        g.players[0].mana_pool.add(Color::Red, 2);
+        g.players[0].mana_pool.add_colorless(3);
+        g.perform_action(GameAction::CastSpell {
+            card_id: id,
+            target: Some(Target::Permanent(a)),
+            additional_targets: vec![Target::Permanent(b), Target::Permanent(c)],
+            mode: None,
+            x_value: None,
+        })
+        .expect("three distinct targets are legal");
+        drain_stack(&mut g);
+        assert!(g.battlefield_find(b).is_none(), "2 damage kills a 2/2");
+        assert!(g.battlefield_find(c).is_none(), "3 damage kills a 2/2");
+    }
+
+    /// Fiend Hunter: "When this creature enters, you may exile **another**
+    /// target creature." Without the word it was a legal target for itself,
+    /// and exiling itself is the leave-the-battlefield trigger that returns
+    /// it — an ETB loop on an empty board.
+    #[test]
+    fn cr_601_2c_fiend_hunter_is_not_its_own_target() {
+        let mut g = two_player_game();
+        let fh = g.add_card_to_battlefield(0, catalog::fiend_hunter());
+        g.fire_self_etb_triggers(fh, 0);
+        drain_stack(&mut g);
+        assert!(g.battlefield_find(fh).is_some(), "the Hunter stays on the battlefield");
+        assert!(g.exile.is_empty(), "and nothing is exiled");
+    }
+
+    /// The auto-picker enforces it too, not only the validator: before this it
+    /// merely *preferred* an unpicked permanent (`already_picked`), so a board
+    /// with one legal object handed the same one to both slots and the cast
+    /// that followed was rejected.
     #[test]
     fn cr_601_2c_the_auto_picker_will_not_fill_two_slots_with_one_object() {
         let mut g = two_player_game();
@@ -1778,5 +1837,32 @@ mod another_target {
         let (slot0, extra) = g.auto_targets_for_effect_all_slots(&eff, 0, None);
         assert_eq!(extra.len(), 1, "two objects fill both slots");
         assert_ne!(Some(extra[0].clone()), slot0, "and they are different objects");
+    }
+
+    /// An **activated** ability's slots are stamped too — the cast path had
+    /// `target_slots_scratch` and the activation path did not, so a
+    /// two-target activated "another" (Simic Guildmage's counter move) was
+    /// validated against an empty vector and accepted one creature twice.
+    #[test]
+    fn cr_601_2c_an_activated_ability_stamps_its_slots() {
+        use crabomination::card::CounterType;
+        let mut g = two_player_game();
+        let mage = g.add_card_to_battlefield(0, catalog::simic_guildmage());
+        g.clear_sickness(mage);
+        let from = g.add_card_to_battlefield(0, bear("Counter Bear"));
+        g.battlefield_find_mut(from)
+            .expect("on the battlefield")
+            .add_counters(CounterType::PlusOnePlusOne, 1);
+        g.players[0].mana_pool.add(Color::Green, 1);
+        g.players[0].mana_pool.add_colorless(1);
+        let r = g.perform_action(GameAction::ActivateAbility {
+            card_id: mage,
+            ability_index: 0,
+            target: Some(Target::Permanent(from)),
+            additional_targets: vec![Target::Permanent(from)],
+            x_value: None,
+            mode: None,
+        });
+        assert!(r.is_err(), "one creature cannot be both slots: {r:?}");
     }
 }

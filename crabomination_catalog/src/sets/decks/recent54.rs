@@ -500,7 +500,11 @@ pub fn bioshift() -> CardDefinition {
             },
             to: Selector::TargetFiltered {
                 slot: 1,
-                filter: R::Creature,
+                // "onto **another** target creature **with the same
+                // controller**" — both halves of the clause.
+                filter: R::Creature
+                    .and(R::OtherThanTargetSlot(0))
+                    .and(R::SameControllerAsTargetSlot(0)),
             },
         },
         ..Default::default()

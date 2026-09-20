@@ -280,7 +280,9 @@ pub fn ral_zarek() -> CardDefinition {
                     Effect::Untap {
                         what: Selector::TargetFiltered {
                             slot: 1,
-                            filter: R::Permanent,
+                            // "Tap target permanent, then untap **another**
+                            // target permanent."
+                            filter: R::Permanent.and(R::OtherThanTargetSlot(0)),
                         },
                         up_to: None,
                     },

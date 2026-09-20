@@ -216,7 +216,11 @@ pub fn breaking_of_the_fellowship() -> CardDefinition {
                 },
                 target: Selector::TargetFiltered {
                     slot: 1,
-                    filter: R::Creature.and(R::ControlledByOpponent),
+                    // "**another** target creature **that player** controls".
+                    filter: R::Creature
+                        .and(R::ControlledByOpponent)
+                        .and(R::SameControllerAsTargetSlot(0))
+                        .and(R::OtherThanTargetSlot(0)),
                 },
             },
             Effect::RingTempts {

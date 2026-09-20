@@ -3353,7 +3353,12 @@ pub fn band_together() -> CardDefinition {
                 Effect::DealDamageEqualToPower {
                     source: Selector::TargetFiltered {
                         slot: 1,
-                        filter: mine.clone(),
+                        // "…each deal damage … to **another** target
+                        // creature": the recipient is slot 0, so the two
+                        // sources are what must differ from it. Slot 2 also
+                        // differs from slot 1 — "up to two target creatures"
+                        // is one instance of the word (CR 115.3).
+                        filter: mine.clone().and(R::OtherThanTargetSlot(0)),
                     },
                     target: Selector::TargetFiltered {
                         slot: 0,
@@ -3363,7 +3368,9 @@ pub fn band_together() -> CardDefinition {
                 Effect::DealDamageEqualToPower {
                     source: Selector::TargetFiltered {
                         slot: 2,
-                        filter: mine,
+                        filter: mine
+                            .and(R::OtherThanTargetSlot(0))
+                            .and(R::OtherThanTargetSlot(1)),
                     },
                     target: Selector::Target(0),
                 },

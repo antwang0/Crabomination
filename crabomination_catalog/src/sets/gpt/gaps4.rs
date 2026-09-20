@@ -121,7 +121,7 @@ pub fn schismotivate() -> CardDefinition {
             Effect::PumpPT {
                 what: Selector::TargetFiltered {
                     slot: 1,
-                    filter: R::Creature,
+                    filter: R::Creature.and(R::OtherThanTargetSlot(0)),
                 },
                 power: Value::Const(-4),
                 toughness: Value::ZERO,

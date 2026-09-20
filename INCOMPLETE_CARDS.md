@@ -443,6 +443,40 @@ Three approximations the fixes left standing, each documented at its variant:
 | Goblin Welder | 🟡 the second target ("target artifact card in **that player's** graveyard") is auto-picked by `Effect::WeldArtifacts` at highest mana value rather than declared as a target — a cross-target constraint no slot can express today. |
 | Ambush Wolf / Angel of Serenity | 🟡 "up to one" / "up to three **other**" — the Angel's `other` is now in the filter; the Wolf's "up to one" still fizzles the trigger rather than declining it, which differs only when a graveyard is empty. |
 
+## The "another target" class (2026-09-20) — closed, with four approximations named
+
+`scripts/audit_another_target.py`, and ENGINE_BACKLOG's fifty-third find.
+41 cards print "another target"; the census splits them by where the *other*
+object comes from and both columns are now 0.
+
+Four rows are allowlisted on the **source-relative** side with their reasons,
+and two of them are real approximations rather than false positives:
+
+| Card | Residual |
+| --- | --- |
+| Jackdaw Savior | 🟡 "another" is other than the creature that **died**, not other than the Savior. The two coincide only when the Savior itself dies; no `SelectionRequirement` names the trigger source, so the restriction is dropped. |
+| Blade of Shared Souls | 🟡 "another" is other than the creature the Equipment is **attached to**, which is not the source either. Same gap, same missing ref. |
+| Etched Slith | 🟡 the whole "when you do, remove a counter from another target permanent or opponent" clause is unmodelled — only the +1/+1 counter ships. |
+| Fiendish Panda | ✅ not a gap: the printed filter is "another target **non-Bear** creature card" and the Panda is a Bear Demon, so the type line already excludes it. |
+| Atzocan Archer / Nessian Wilds Ravager | 🟡 "may have it fight **another** target creature" is narrowed to "a creature you don't control" **on purpose**. The "may" is answered by `optional_trigger_beneficial`, which takes a body with no self-cost; the picker's last-resort rank then hands a mandatory defender slot the bot's *own* creature on a board with no opposing one. A narrowing never allows an illegal play, which is what this class is about. |
+
+Five are allowlisted on the **slot-relative** side because the two slots
+cannot name one object: Pit Fight, Go for Blood's shape, Domri Rade's −2 and
+Ulvenwald Tracker are all "you control" against "an opponent controls";
+Stiltzkin, Moogle Merchant's slot 0 is a *player*; Comet Storm is one
+`ApplyToTargets` instance, where CR 115.3 already forbids the repeat.
+
+⚠ **Four fight cards are approximations in the other direction and stay.**
+Domri's −2, Ulvenwald Tracker, Atzocan Archer and Nessian Wilds Ravager all
+print "another target creature", which includes one of your own;
+`OtherThanTargetSlot(0)` (or `OtherThanSource`) is the faithful filter and
+each was tried. **A `Fight` defender slot is classified hostile, so the
+picker ranks an own creature last — but "last" is still "picked" on a
+mandatory slot with nothing else legal**, so the faithful filter hands the
+bot a strictly losing fight on an empty opposing board. A narrowing cannot
+make an illegal play; widening here makes a legal bad one. The rules argument
+is real and the fix belongs with the bot's fight evaluation, not the filter.
+
 ## CR 903.4 color-identity divergences (from the Scryfall audit)
 
 `cr_903_4_computed_color_identity_matches_scryfall` (core_rules /

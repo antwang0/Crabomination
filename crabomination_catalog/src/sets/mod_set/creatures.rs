@@ -384,7 +384,11 @@ pub fn flickerwisp() -> CardDefinition {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
                 Effect::Exile {
-                    what: target_filtered(SelectionRequirement::Permanent),
+                    // "**another** target permanent" — not the Wisp.
+                    what: target_filtered(
+                        SelectionRequirement::Permanent
+                            .and(SelectionRequirement::OtherThanSource),
+                    ),
                 },
                 Effect::DelayUntil {
                     kind: DelayedTriggerKind::NextEndStep,
@@ -2860,7 +2864,12 @@ pub fn heliod_sun_crowned() -> CardDefinition {
             tap_cost: false,
             mana_cost: cost(&[generic(1), w()]),
             effect: Effect::GrantKeyword {
-                what: target_filtered(SelectionRequirement::Creature),
+                // "**Another** target creature gains lifelink" — a God with
+                // lifelink is not what the card prints.
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
                 keyword: Keyword::Lifelink,
                 duration: crate::effect::Duration::EndOfTurn,
             },

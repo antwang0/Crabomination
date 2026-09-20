@@ -20,7 +20,7 @@ pub fn carom() -> CardDefinition {
                 },
                 to: Selector::TargetFiltered {
                     slot: 1,
-                    filter: R::Creature,
+                    filter: R::Creature.and(R::OtherThanTargetSlot(0)),
                 },
                 amount: Value::ONE,
             },

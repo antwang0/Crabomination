@@ -762,14 +762,19 @@ pub fn cone_of_flame() -> CardDefinition {
             Effect::DealDamage {
                 to: Selector::TargetFiltered {
                     slot: 1,
-                    filter: SelectionRequirement::Any,
+                    filter: SelectionRequirement::Any
+                        .and(SelectionRequirement::OtherThanTargetSlot(0)),
                 },
                 amount: Value::Const(2),
             },
             Effect::DealDamage {
                 to: Selector::TargetFiltered {
                     slot: 2,
-                    filter: SelectionRequirement::Any,
+                    // "1 damage to any target, 2 to **another** target, and 3
+                    // to **a third** target": three different objects.
+                    filter: SelectionRequirement::Any
+                        .and(SelectionRequirement::OtherThanTargetSlot(0))
+                        .and(SelectionRequirement::OtherThanTargetSlot(1)),
                 },
                 amount: Value::Const(3),
             },

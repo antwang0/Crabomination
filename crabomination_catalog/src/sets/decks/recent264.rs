@@ -416,7 +416,8 @@ pub fn cosmic_hunger() -> CardDefinition {
                 slot: 1,
                 filter: R::Creature
                     .or(R::Planeswalker)
-                    .or(R::HasCardType(CardType::Battle)),
+                    .or(R::HasCardType(CardType::Battle))
+                    .and(R::OtherThanTargetSlot(0)),
             },
         },
         ..Default::default()
@@ -500,7 +501,11 @@ pub fn phyrexian_pegasus() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![on_attack(Effect::GrantKeyword {
-            what: target_filtered(R::IsAttacking.and(R::HasKeyword(Keyword::Flying).negate())),
+            what: target_filtered(
+                R::IsAttacking
+                    .and(R::HasKeyword(Keyword::Flying).negate())
+                    .and(R::OtherThanSource),
+            ),
             keyword: Keyword::Flying,
             duration: Duration::EndOfTurn,
         })],

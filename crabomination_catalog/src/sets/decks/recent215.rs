@@ -129,7 +129,11 @@ pub fn extravagant_replication() -> CardDefinition {
             effect: Effect::CreateTokenCopyOf {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                source: target_filtered(R::Nonland.and(R::Permanent).and(R::ControlledByYou)),
+                // "a copy of **another** target nonland permanent you
+                // control" — the enchantment is one of them.
+                source: target_filtered(
+                    R::Nonland.and(R::Permanent).and(R::ControlledByYou).and(R::OtherThanSource),
+                ),
                 extra_creature_types: vec![],
                 extra_card_types: vec![],
                 override_pt: None,

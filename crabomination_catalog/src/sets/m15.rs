@@ -2414,7 +2414,9 @@ pub fn garruk_apex_predator() -> CardDefinition {
             LoyaltyAbility {
                 loyalty_cost: 1,
                 effect: Effect::Destroy {
-                    what: target_filtered(R::Planeswalker),
+                    // "+1: Destroy **another** target planeswalker" — Garruk
+                    // is one, and the printed word is what stops him.
+                    what: target_filtered(R::Planeswalker.and(R::OtherThanSource)),
                 },
                 ..Default::default()
             },

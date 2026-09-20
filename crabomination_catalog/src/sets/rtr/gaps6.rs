@@ -159,7 +159,7 @@ pub fn rites_of_reaping() -> CardDefinition {
             Effect::PumpPT {
                 what: Selector::TargetFiltered {
                     slot: 1,
-                    filter: R::Creature,
+                    filter: R::Creature.and(R::OtherThanTargetSlot(0)),
                 },
                 power: Value::Const(-3),
                 toughness: Value::Const(-3),

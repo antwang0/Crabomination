@@ -118,10 +118,19 @@ pub fn markov_retribution() -> CardDefinition {
                     duration: crate::effect::Duration::EndOfTurn,
                 },
                 Effect::DealDamageEqualToPower {
-                    source: target_filtered(
-                        R::HasCreatureType(CreatureType::Vampire).and(R::ControlledByYou),
-                    ),
-                    target: target_filtered(R::Creature),
+                    source: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: R::HasCreatureType(CreatureType::Vampire)
+                            .and(R::ControlledByYou),
+                    },
+                    // Both halves read `target_filtered`, which is slot **0**
+                    // — the Vampire was dealing its damage to itself. The
+                    // recipient is its own slot, and "another" keeps it off
+                    // the Vampire.
+                    target: Selector::TargetFiltered {
+                        slot: 1,
+                        filter: R::Creature.and(R::OtherThanTargetSlot(0)),
+                    },
                 },
             ],
             min: 1,

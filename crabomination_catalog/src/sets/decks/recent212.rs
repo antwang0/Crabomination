@@ -28,7 +28,9 @@ pub fn goblin_smuggler() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             effect: Effect::GrantKeyword {
-                what: target_filtered(R::Creature.and(R::PowerAtMost(2))),
+                what: target_filtered(
+                    R::Creature.and(R::PowerAtMost(2)).and(R::OtherThanSource),
+                ),
                 keyword: Keyword::Unblockable,
                 duration: Duration::EndOfTurn,
             },
@@ -153,7 +155,12 @@ pub fn ingenious_leonin() -> CardDefinition {
             mana_cost: cost(&[generic(3), w()]),
             effect: Effect::Seq(vec![
                 Effect::AddCounter {
-                    what: target_filtered(R::Creature.and(R::ControlledByYou).and(R::IsAttacking)),
+                    what: target_filtered(
+                        R::Creature
+                            .and(R::ControlledByYou)
+                            .and(R::IsAttacking)
+                            .and(R::OtherThanSource),
+                    ),
                     kind: CounterType::PlusOnePlusOne,
                     amount: Value::ONE,
                 },

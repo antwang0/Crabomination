@@ -3653,7 +3653,8 @@ pub fn itzquinth_firstborn_of_gishath() -> CardDefinition {
                     },
                     target: Selector::TargetFiltered {
                         slot: 1,
-                        filter: SelectionRequirement::Creature,
+                        filter: SelectionRequirement::Creature
+                            .and(SelectionRequirement::OtherThanTargetSlot(0)),
                     },
                 }),
             }),
