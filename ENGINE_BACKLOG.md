@@ -83,6 +83,7 @@ the handoff.
 | Rules coverage | [MagicCompRules coverage audit](#magiccomprules-coverage-audit) | 312 |
 | Tooling | [Recommender: two builder defects fixed, one lesson recorded](#recommender-two-builder-defects-fixed-one-lesson-recorded) | 17 |
 | Bugs & robustness | [FIXED 2026-09-20 (the fifty-eighth find) — a printed "may" that belongs to ANOTHER SEAT, asked of the controller, and why "the bot answers the same" hid it](#fixed-2026-09-20-the-fifty-eighth-find--a-printed-may-that-belongs-to-another-seat-asked-of-the-controller-and-why-the-bot-answers-the-same-hid-it) | 1 card, 115 checked |
+| Bugs & robustness | [FIXED 2026-09-20 (the sixty-first find) — CR 701.38a: the council vote ran in SEAT-INDEX order because the rule is implemented twice and only one half used the helper](#fixed-2026-09-20-the-sixty-first-find--cr-70138a-the-council-vote-ran-in-seat-index-order-because-the-rule-is-implemented-twice-and-only-one-half-used-the-helper) | 1 arm |
 | Bugs & robustness | [FIXED 2026-09-20 (the sixtieth find) — CR 800.4a: fourteen walks handed a DEPARTED seat a role, and `LowestLife` gave it one every single time](#fixed-2026-09-20-the-sixtieth-find--cr-8004a-fourteen-walks-handed-a-departed-seat-a-role-and-lowestlife-gave-it-one-every-single-time) | 14 → 0 |
 | Bugs & robustness | [FIXED 2026-09-20 (the fifty-ninth find) — "mill, THEN return" was choosing BEFORE the mill, because a clause with no printed "target" was a cast-time target](#fixed-2026-09-20-the-fifty-ninth-find--mill-then-return-was-choosing-before-the-mill-because-a-clause-with-no-printed-target-was-a-cast-time-target) | 6 → 0 |
 | Bugs & robustness | [FIXED 2026-09-20 (the fifty-eighth find) — six printed "you may"s dropped in the CUBE pool, and restoring one is two edits because the second is the POLICY](#fixed-2026-09-20-the-fifty-eighth-find--six-printed-you-mays-dropped-in-the-cube-pool-and-restoring-one-is-two-edits-because-the-second-is-the-policy) | 242 → 213 |
@@ -162,6 +163,36 @@ copies.** `_factory_body` fixed brace matching across them at the
 forty-eighth find; helper inlining and `..delegation` are only in this one.
 Extracting a shared `catalog_bodies.py` would move every audit's count at
 once, so it needs a run that can re-verify each ratchet, not a drive-by.
+
+## FIXED 2026-09-20 (the sixty-first find) — CR 701.38a: the council vote ran in SEAT-INDEX order because the rule is implemented twice and only one half used the helper
+
+"Starting with you, **in turn order**." `Effect::Vote` walks
+`seats_in_turn_order_from(ctx.controller)`. `run_council_card_vote` — the
+will-of-the-council half of the same rule, shared by
+`WillOfTheCouncilExile` and `WillOfTheCouncilOnCards` — built
+`vec![controller]` then `opponents_of(controller)`, which is seat-index
+order. The two agree only when the controller is seat 0; at four seats a
+controller on seat 2 voted **2, 0, 1, 3** where turn order is **2, 3, 0, 1**.
+
+📐📐 **THIS IS THE SAME QUESTION AS THE SIXTIETH FIND, ONE RULE OVER: when a
+rule is implemented twice, read the second implementation.** `PlayerWithMostLife`
+had the alive filter and its four siblings did not; `Effect::Vote` had the
+turn-order helper and its sibling did not. Neither is a subtle bug — both are
+a correct answer that was written once and then re-derived.
+
+⚠ **The tally cannot see it, so neither can a test that reads the tally.**
+Every seat votes exactly once in either order and the same card is exiled;
+only the *sequence* moves, and with it what a later voter knows. The test
+reads the ballot order out of the decider's `asked` log.
+
+💡 **The bot half is a lead, not a fix.** A council ballot is a
+`Decision::ChooseTarget` over the candidate permanents. `AutoDecider` answers
+`legal.first()`; the bot's hostile-target ranking picks the *strongest*
+permanent on a list defined from the **controller's** perspective, so an
+opponent voting from "a nonland permanent you don't control" can rank its own
+best permanent top. The vote is legal and terminates either way, which is
+exactly why 10,000 pod games never saw it — **a crash-freedom smoke cannot
+find a bad decision, only an impossible one.**
 
 ## FIXED 2026-09-20 (the sixtieth find) — CR 800.4a: fourteen walks handed a DEPARTED seat a role, and `LowestLife` gave it one every single time
 

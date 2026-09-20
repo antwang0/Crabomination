@@ -330,10 +330,12 @@ fn gift_consumed_by_greed_promised_edict_and_return() {
     g.players[0].mana_pool.add(Color::Black, 2);
     g.players[0].mana_pool.add_colorless(1);
     g.step = TurnStep::PreCombatMain;
+    // Slot 0 is the **target opponent**, slot 1 the graveyard creature.
     g.perform_action(GameAction::CastGift {
         card_id: spell,
-        target: Some(Target::Permanent(gy)),
-        additional_targets: vec![], mode: None, x_value: None,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![Target::Permanent(gy)],
+        mode: None, x_value: None,
     }).expect("cast Consumed by Greed (gift)");
     drain_stack(&mut g);
     assert!(g.battlefield_find(big).is_none(), "greatest-power creature sacrificed");
@@ -4001,4 +4003,34 @@ fn miracle_sorcery_castable_outside_sorcery_timing() {
     .expect("miracle cast ignores the sorcery-speed gate (CR 702.94e)");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, opp_life - 1, "X=1 miracle Bonfire resolved");
+}
+
+/// CR 115.1 — "**Target** opponent sacrifices a creature with the greatest
+/// power among creatures they control" is one opponent. Modelled as
+/// `EachOpponent` it was the same seat in a duel and the whole table in a
+/// pod, turning a one-creature edict into a board sweep.
+#[test]
+fn consumed_by_greed_edicts_one_opponent_not_the_table() {
+    use crabomination::game::multi_player_game;
+    let mut g = multi_player_game(4);
+    let theirs = g.move_card_to_battlefield_for_test(1, catalog::grizzly_bears());
+    let bystander_a = g.move_card_to_battlefield_for_test(2, catalog::grizzly_bears());
+    let bystander_b = g.move_card_to_battlefield_for_test(3, catalog::grizzly_bears());
+    drain_stack(&mut g);
+    let spell = g.add_card_to_hand(0, catalog::consumed_by_greed());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast targeting seat 1");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield_find(theirs).is_none(), "the targeted opponent sacrificed");
+    assert!(g.battlefield_find(bystander_a).is_some(), "seat 2 keeps its creature");
+    assert!(g.battlefield_find(bystander_b).is_some(), "and so does seat 3");
 }

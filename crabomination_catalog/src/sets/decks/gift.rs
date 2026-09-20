@@ -415,8 +415,11 @@ pub fn dewdrop_cure() -> CardDefinition {
 /// if the gift was promised, also return target creature card from your
 /// graveyard to your hand.
 pub fn consumed_by_greed() -> CardDefinition {
+    // "**Target** opponent sacrifices …" — one opponent, chosen at cast time.
+    // `EachOpponent` is the same seat in a duel and the whole table in a pod,
+    // which turned a one-creature edict into a board sweep.
     let edict = || Effect::SacrificeGreatestMV {
-        who: Selector::Player(PlayerRef::EachOpponent),
+        who: target_filtered(SelectionRequirement::OpponentPlayer),
         count: Value::Const(1),
         filter: SelectionRequirement::Creature,
         by_power: true,
@@ -431,9 +434,10 @@ pub fn consumed_by_greed() -> CardDefinition {
             gifted_effect: Effect::Seq(vec![
                 opponent_draws_one(),
                 edict(),
+                // Slot 1: the opponent above is slot 0 now.
                 Effect::Move {
                     what: Selector::TargetFiltered {
-                        slot: 0,
+                        slot: 1,
                         filter: SelectionRequirement::Creature
                             .and(SelectionRequirement::InYourGraveyard),
                     },
