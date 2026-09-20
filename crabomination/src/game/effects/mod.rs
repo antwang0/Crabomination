@@ -1123,8 +1123,13 @@ impl GameState {
         effect: &Effect,
     ) {
         let Some(&first) = candidates.first() else { return };
-        let mut seats = vec![ctx.controller];
-        seats.extend(self.opponents_of(ctx.controller));
+        // CR 701.38a — "starting with you, **in turn order**".
+        // `controller + opponents_of(controller)` is seat-INDEX order, which
+        // is the same list only when the controller is seat 0: at four seats
+        // a controller on seat 2 votes 2, 0, 1, 3 where turn order is
+        // 2, 3, 0, 1. `Effect::Vote`, the other half of the same rule,
+        // already used this helper — the sibling did not.
+        let seats = self.seats_in_turn_order_from(ctx.controller);
         let legal: Vec<Target> = candidates.iter().map(|id| Target::Permanent(*id)).collect();
         let mut tally: crate::fxhash::HashMap<CardId, u32> = crate::fxhash::HashMap::default();
         // Every ballot went to `self.decider` — the resolving seat's — so the

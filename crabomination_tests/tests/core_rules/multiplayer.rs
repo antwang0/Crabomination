@@ -5475,3 +5475,43 @@ fn cr_800_4a_an_extremum_player_ref_skips_a_seat_that_left_the_game() {
     );
     assert_ne!(ask(PlayerRef::MostCreatures), Some(3), "nor its board");
 }
+
+/// CR 701.38a — a vote proceeds "starting with you, **in turn order**".
+/// `Effect::Vote` used the turn-order helper; the will-of-the-council half
+/// built `controller + opponents_of(controller)`, which is seat-INDEX order
+/// and the same list only when the controller is seat 0. The ballots are
+/// logged in the order they are cast, so the order is observable.
+#[test]
+fn cr_701_38a_a_council_vote_runs_in_turn_order_from_the_controller() {
+    use crabomination::decision::ScriptedDecider;
+    let mut g = multi_player_game(4);
+    // Seat 2 resolves the vote; turn order from there is 2, 3, 0, 1.
+    for s in [0usize, 1, 3] {
+        g.move_card_to_battlefield_for_test(s, catalog::grizzly_bears());
+    }
+    drain_stack(&mut g);
+    g.decider = Box::new(ScriptedDecider::new([]));
+    let ctx = crabomination::game::effects::EffectContext::for_spell(2, None, 0, 0);
+    g.resolve_effect(&catalog::councils_judgment().effect, &ctx).expect("vote resolves");
+
+    // Each ballot's prompt names the seat it is cast on behalf of, so the
+    // decider's `asked` log is the order in which the council voted.
+    let order: Vec<usize> = match g.decider.kind() {
+        crabomination::decision::DeciderKind::Scripted { asked, .. } => asked
+            .iter()
+            .filter_map(|d| match d {
+                crabomination::decision::Decision::ChooseTarget { description, .. } => description
+                    .rsplit_once("on P")
+                    .and_then(|(_, tail)| tail.split('\'').next())
+                    .and_then(|t| t.parse::<usize>().ok()),
+                _ => None,
+            })
+            .collect(),
+        _ => Vec::new(),
+    };
+    assert_eq!(order, vec![2, 3, 0, 1], "CR 701.38a — turn order from the controller");
+    assert!(
+        g.exile.iter().any(|c| c.definition.name == "Grizzly Bears"),
+        "and a permanent with the most votes was exiled",
+    );
+}
