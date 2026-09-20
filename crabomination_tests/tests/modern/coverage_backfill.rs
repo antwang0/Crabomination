@@ -1389,8 +1389,14 @@ fn grapple_with_the_past_mills_then_returns_a_creature() {
     let id = g.add_card_to_hand(0, catalog::grapple_with_the_past());
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(1);
+    // The return is a resolution-time "you may", not a cast-time target: the
+    // printed clause mills first and chooses from the graveyard afterwards.
+    let _ = angel;
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new(
+        std::iter::repeat_with(|| crabomination::decision::DecisionAnswer::Bool(true)).take(4),
+    ));
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Permanent(angel)),
+        card_id: id, target: None,
         additional_targets: vec![], mode: None, x_value: None,
     }).expect("castable");
     drain_stack(&mut g);

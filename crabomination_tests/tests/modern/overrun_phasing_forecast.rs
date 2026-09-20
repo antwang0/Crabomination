@@ -2934,3 +2934,72 @@ fn restored_optional_triggers_are_answered_sensibly_by_the_bot() {
         "and the choice is at least no worse on a board of only its own",
     );
 }
+
+/// CR 608.2 — "Mill three cards, **then** you may return a creature or land
+/// card from your graveyard to your hand" resolves in printed order, so the
+/// return sees the three cards the mill just put there. Modelled as a
+/// cast-time target it saw the *pre-mill* graveyard instead, and an empty one
+/// made the spell a pure three-card self-mill: the graveyard went 0 -> 4 and
+/// the hand did not move.
+#[test]
+fn cr_608_2_grapple_returns_a_card_the_mill_just_supplied() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.players[0].graveyard.clear();
+    for _ in 0..6 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    let id = g.add_card_to_hand(0, catalog::grapple_with_the_past());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.decider = Box::new(ScriptedDecider::new(
+        std::iter::repeat_with(|| DecisionAnswer::Bool(true)).take(4),
+    ));
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("castable over an empty graveyard");
+    drain_stack(&mut g);
+
+    // The Grapple itself left the hand; what is in it now can only have come
+    // from the graveyard, which only the mill filled.
+    assert!(
+        g.players[0].hand.iter().any(|c| c.definition.name == "Grizzly Bears"),
+        "a creature the mill supplied came back, over a graveyard that was empty at cast time",
+    );
+}
+
+/// Overlord of the Balemurk mills four and then returns "a **non-Avatar**
+/// creature card or a planeswalker card". It is itself an Avatar Horror, so
+/// the printed exclusion is what stops it recurring itself out of the
+/// graveyard its own mill filled — and the return only sees that graveyard
+/// because it resolves there rather than being chosen at cast time.
+#[test]
+fn overlord_of_the_balemurk_returns_a_non_avatar_from_the_mill() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.players[0].graveyard.clear();
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    // An Avatar in the graveyard the clause must refuse.
+    let avatar = g.add_card_to_graveyard(0, catalog::overlord_of_the_balemurk());
+    g.decider = Box::new(ScriptedDecider::new(
+        std::iter::repeat_with(|| DecisionAnswer::Bool(true)).take(4),
+    ));
+    g.move_card_to_battlefield_for_test(0, catalog::overlord_of_the_balemurk());
+    drain_stack(&mut g);
+
+    assert!(
+        g.players[0].hand.iter().any(|c| c.definition.name == "Grizzly Bears"),
+        "a creature the mill supplied came back",
+    );
+    assert!(
+        g.players[0].graveyard.iter().any(|c| c.id == avatar),
+        "and the Avatar stayed put — the printed exclusion is not decoration",
+    );
+}

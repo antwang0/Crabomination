@@ -1272,12 +1272,22 @@ pub fn grapple_with_the_past() -> CardDefinition {
                 who: Selector::You,
                 amount: Value::Const(3),
             },
-            Effect::Move {
-                what: target_filtered(
-                    SelectionRequirement::Creature.or(SelectionRequirement::Land)
-                        .from_your_graveyard(),
-                ),
-                to: ZoneDest::Hand(PlayerRef::You),
+            // "…**then** you may return a creature or land card from your
+            // graveyard" — not targeted, and it resolves AFTER the mill. As a
+            // cast-time target it was chosen against the pre-mill graveyard,
+            // so an empty one made the spell a pure three-card self-mill.
+            // Corpse Churn's idiom, which is the same clause.
+            Effect::MayDo {
+                description: "Return a creature or land card from your graveyard to your hand?"
+                    .into(),
+                body: Box::new(Effect::Move {
+                    what: Selector::one_of(Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: crate::card::Zone::Graveyard,
+                        filter: SelectionRequirement::Creature.or(SelectionRequirement::Land),
+                    }),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                }),
             },
         ]),
         ..Default::default()

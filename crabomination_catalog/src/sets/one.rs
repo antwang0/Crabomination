@@ -6038,12 +6038,16 @@ pub fn tyvar_jubilant_brawler() -> CardDefinition {
                     },
                     Effect::MayDo {
                         description: "Return a creature with mana value 2 or less?".into(),
+                        // Not targeted, and it resolves after the mill of
+                        // three, so a cast-time target saw the pre-mill
+                        // graveyard.
                         body: Box::new(Effect::Move {
-                            what: target_filtered(
-                                SelectionRequirement::Creature
-                                    .and(SelectionRequirement::InYourGraveyard)
+                            what: Selector::one_of(Selector::CardsInZone {
+                                who: PlayerRef::You,
+                                zone: crate::card::Zone::Graveyard,
+                                filter: SelectionRequirement::Creature
                                     .and(SelectionRequirement::ManaValueAtMost(2)),
-                            ),
+                            }),
                             to: ZoneDest::Battlefield {
                                 controller: PlayerRef::You,
                                 tapped: false,

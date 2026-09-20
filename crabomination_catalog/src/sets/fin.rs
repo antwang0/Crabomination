@@ -795,10 +795,15 @@ pub fn vanille_cheerful_lcie() -> CardDefinition {
                     who: Selector::You,
                     amount: Value::Const(2),
                 },
+                // "…**then** return a permanent card from your graveyard" —
+                // not targeted, and it resolves after the mill, so a
+                // cast-time target could not see the two cards just milled.
                 Effect::Move {
-                    what: target_filtered(
-                        SelectionRequirement::Permanent.and(SelectionRequirement::InYourGraveyard),
-                    ),
+                    what: Selector::one_of(Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: crate::card::Zone::Graveyard,
+                        filter: SelectionRequirement::Permanent,
+                    }),
                     to: ZoneDest::Hand(PlayerRef::You),
                 },
             ])),

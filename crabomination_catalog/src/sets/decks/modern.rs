@@ -29393,12 +29393,20 @@ pub fn liliana_the_last_hope() -> CardDefinition {
                         who: Selector::You,
                         amount: Value::Const(2),
                     },
-                    Effect::Move {
-                        what: target_filtered(
-                            SelectionRequirement::Creature
-                                .from_your_graveyard(),
-                        ),
-                        to: ZoneDest::Hand(PlayerRef::You),
+                    // "…**then** you may return a creature card from your
+                    // graveyard" — not targeted, and it resolves after the
+                    // mill. A cast-time target saw the pre-mill graveyard.
+                    Effect::MayDo {
+                        description: "Return a creature card from your graveyard to your hand?"
+                            .into(),
+                        body: Box::new(Effect::Move {
+                            what: Selector::one_of(Selector::CardsInZone {
+                                who: PlayerRef::You,
+                                zone: crate::card::Zone::Graveyard,
+                                filter: SelectionRequirement::Creature,
+                            }),
+                            to: ZoneDest::Hand(PlayerRef::You),
+                        }),
                     },
                 ]),
             },
@@ -40169,11 +40177,21 @@ pub fn overlord_of_the_balemurk() -> CardDefinition {
             who: Selector::You,
             amount: Value::Const(4),
         },
-        Effect::Move {
-            what: target_filtered(
-                SelectionRequirement::Creature.and(SelectionRequirement::InGraveyard),
-            ),
-            to: ZoneDest::Hand(PlayerRef::You),
+        // "…**then** you may return a non-Avatar creature card or a
+        // planeswalker card from your graveyard" — not targeted, and it
+        // resolves after the mill of four that is the whole point of it.
+        Effect::MayDo {
+            description: "Return a creature or planeswalker card from your graveyard?".into(),
+            body: Box::new(Effect::Move {
+                what: Selector::one_of(Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: crate::card::Zone::Graveyard,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasCreatureType(CreatureType::Avatar).negate())
+                        .or(SelectionRequirement::Planeswalker),
+                }),
+                to: ZoneDest::Hand(PlayerRef::You),
+            }),
         },
     ]);
     CardDefinition {

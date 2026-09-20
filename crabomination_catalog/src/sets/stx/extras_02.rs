@@ -924,11 +924,19 @@ pub fn acolyte_of_affliction() -> CardDefinition {
                     who: Selector::You,
                     amount: Value::Const(2),
                 },
-                Effect::Move {
-                    what: target_filtered(
-                        SelectionRequirement::Permanent.and(SelectionRequirement::InYourGraveyard),
-                    ),
-                    to: ZoneDest::Hand(PlayerRef::You),
+                // "…**then** you may return a permanent card from your
+                // graveyard" — not targeted, and it resolves after the mill.
+                Effect::MayDo {
+                    description: "Return a permanent card from your graveyard to your hand?"
+                        .into(),
+                    body: Box::new(Effect::Move {
+                        what: Selector::one_of(Selector::CardsInZone {
+                            who: PlayerRef::You,
+                            zone: crate::card::Zone::Graveyard,
+                            filter: SelectionRequirement::Permanent,
+                        }),
+                        to: ZoneDest::Hand(PlayerRef::You),
+                    }),
                 },
             ]),
         }],

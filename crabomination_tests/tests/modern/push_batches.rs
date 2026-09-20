@@ -879,9 +879,15 @@ fn liliana_last_hope_minus_two_mills_and_returns_a_creature() {
     let lily = g.add_card_to_battlefield(0, catalog::liliana_the_last_hope());
     for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
     let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    // The return is a resolution-time "you may" over the post-mill graveyard,
+    // not a cast-time target.
+    let _: Option<Target> = None;
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new(
+        std::iter::repeat_with(|| crabomination::decision::DecisionAnswer::Bool(true)).take(4),
+    ));
     g.perform_action(GameAction::ActivateLoyaltyAbility {
             x_value: None,
-        card_id: lily, ability_index: 1, target: Some(Target::Permanent(dead)),
+        card_id: lily, ability_index: 1, target: None,
     }).expect("Lily -2");
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == dead), "returned the creature to hand");
