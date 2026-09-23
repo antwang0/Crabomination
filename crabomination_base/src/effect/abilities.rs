@@ -532,6 +532,10 @@ pub enum StaticEffect {
     /// (Doc Aurlock — "Plotting cards from your hand costs {2} less"). Applied
     /// in `plot_card`; clamped at the generic pip.
     PlotCostReduction { amount: u32 },
+    /// "Ninjutsu abilities you activate cost {N} less to activate" (Silver-Fur
+    /// Master). Applied in `ninjutsu`, commander ninjutsu included; clamped
+    /// at the generic pip.
+    NinjutsuCostReduction { amount: u32 },
     /// Like `CostReduction`, but only on turns other than the controller's
     /// (Naiad of Hidden Coves — "During turns other than yours, spells you
     /// cast cost {1} less"). Applied in `cost_reduction_for_spell` when the

@@ -20719,6 +20719,21 @@ impl GameState {
                     .and_then(|c| ninjutsu_cost(c, true))
             })
             .ok_or(GameError::CardNotInHand(ninja))?;
+        // Silver-Fur Master — "Ninjutsu abilities you activate cost {1} less."
+        let reduction: u32 = self
+            .battlefield
+            .iter()
+            .filter(|s| s.controller == p)
+            .flat_map(|s| &s.definition.static_abilities)
+            .filter_map(|sa| match sa.effect {
+                crate::effect::StaticEffect::NinjutsuCostReduction { amount } => Some(amount),
+                _ => None,
+            })
+            .sum();
+        let mut cost = cost;
+        if reduction > 0 {
+            cost.reduce_generic(reduction);
+        }
         // CR 602.2b — mana abilities may be activated while paying, so the
         // cost auto-taps like every other one. Paying out of the pool alone
         // made the ability unreachable for a seat that doesn't pre-float.
@@ -28663,6 +28678,7 @@ fn static_effect_to_effects(
             | StaticEffect::GraveyardCastCostReduction { .. }
             | StaticEffect::ExileCastCostReduction { .. }
             | StaticEffect::PlotCostReduction { .. }
+            | StaticEffect::NinjutsuCostReduction { .. }
             | StaticEffect::CostReductionDuringOpponentsTurn { .. }
             | StaticEffect::CostReductionNthSpell { .. }
             | StaticEffect::CostReductionFirstCreatureSpell { .. }
