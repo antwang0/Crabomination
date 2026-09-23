@@ -1172,6 +1172,10 @@ pub enum StaticEffect {
     /// ability at index ≥ printed_count on each of the controller's graveyard
     /// creature cards.
     GraveyardCreaturesHaveScavenge,
+    /// CR 702.141 — "Each [filter] card in your graveyard has encore {X},
+    /// where X is its mana value." Sliver Gravemother. Surfaced beside the
+    /// scavenge grant as a virtual `from_graveyard` ability.
+    GraveyardCardsHaveEncore { filter: SelectionRequirement },
     /// "If one or more tokens would be created under your control, twice
     /// that many tokens are created instead." Used by Adrix and Nev,
     /// Twincasters (Quandrix uncommon legendary). Doubling Season uses a
@@ -1294,6 +1298,10 @@ pub enum StaticEffect {
     /// same-name group controlled by this permanent's controller, and still
     /// applies to everyone else's.
     LegendRuleDoesntApplyToYourPermanents,
+    /// CR 704.5j — "the 'legend rule' doesn't apply to [filter] you control"
+    /// (Sliver Gravemother: Slivers). Matching permanents of this permanent's
+    /// controller sit out the SBA; the rest of their legendaries still group.
+    LegendRuleDoesntApplyToYourMatching(SelectionRequirement),
     /// "Prevent all combat damage that would be dealt to this creature by
     /// creatures blocking it." The narrower sibling of
     /// `PreventAllCombatDamageToThis` — only strikes-back from this creature's
@@ -2471,6 +2479,10 @@ pub enum StaticEffect {
     /// Djinn Illuminatus — "each instant and sorcery spell you cast has
     /// replicate; the replicate cost equals its mana cost" (CR 702.107).
     YourISSpellsHaveReplicate,
+    /// Hatchery Sliver — "each [filter] spell you cast has replicate; the
+    /// replicate cost is equal to its mana cost" (CR 702.107). The filtered
+    /// sibling of `YourISSpellsHaveReplicate`.
+    YourSpellsHaveReplicate { filter: SelectionRequirement },
     /// Experiment Kraj — the source has all activated abilities of each other
     /// creature with a +1/+1 counter on it. Surfaced as virtual abilities by
     /// `granted_abilities_for`, like Necrotic Ooze's graveyard sibling.

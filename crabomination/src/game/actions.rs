@@ -3035,6 +3035,20 @@ impl crate::game::GameState {
         {
             out.push(crate::effect::shortcut::scavenge(card.definition.cost.clone()));
         }
+        // Sliver Gravemother — encore {X}, X = the card's mana value.
+        let encore = self.battlefield.iter().any(|c| {
+            c.controller == owner
+                && c.definition.static_abilities.iter().any(|sa| match &sa.effect {
+                    StaticEffect::GraveyardCardsHaveEncore { filter } => {
+                        self.evaluate_requirement_on_card(filter, card, owner)
+                    }
+                    _ => false,
+                })
+        });
+        if encore {
+            let mv = card.definition.cost.cmc();
+            out.push(crate::effect::shortcut::encore(crate::mana::cost(&[crate::mana::generic(mv)])));
+        }
         out
     }
 
@@ -6021,19 +6035,19 @@ impl GameState {
         x_value: Option<u32>,
     ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
-        let def = self
+        let card = self
             .players[p]
             .hand
             .iter()
             .find(|c| c.id == card_id)
-            .map(|c| &c.definition)
             .ok_or(GameError::CardNotInHand(card_id))?;
-        // Djinn Illuminatus grants replicate to the caster's instants and
-        // sorceries, with the spell's own mana cost as the replicate cost.
+        let def = &card.definition;
+        // Djinn Illuminatus / Hatchery Sliver grant replicate, with the
+        // spell's own mana cost as the replicate cost.
         let mana_replicate = def
             .replicate_cost()
             .cloned()
-            .or_else(|| self.granted_replicate_cost(p, def));
+            .or_else(|| self.granted_replicate_cost(p, card));
         let energy_per = def.replicate_energy_cost();
         let tap_filter = def.replicate_tap_filter().cloned();
         // Energy-paid replicate (Reiterating Bolt) must have the energy up front.

@@ -4037,6 +4037,14 @@ impl GameState {
                     .contains(cid),
                 Target::Player(_) => false,
             },
+            R::DamagedAPlayerThisTurn => match target {
+                Target::Permanent(cid) => self.bf_hint_or_find(*cid, hint).is_some_and(|c| {
+                    self.players.iter().enumerate().any(|(p, pl)| {
+                        p != c.controller && pl.creatures_that_damaged_me_this_turn.contains(cid)
+                    })
+                }),
+                Target::Player(_) => false,
+            },
             R::PlayerDamagedBySourceThisTurn => match target {
                 Target::Player(p) => source.is_some_and(|s| {
                     self.players[*p].creatures_that_damaged_me_this_turn.contains(&s)
@@ -5093,14 +5101,25 @@ impl GameState {
                     // Shares a creature type with the source: the live
                     // permanent (Haunted One's granted trigger), else its
                     // last-known information (Heirloom Blade's dying host).
+                    // A live side answers with its layer-4 types (Titan of
+                    // Littjara's chosen type, Rukarumel's grant); no static
+                    // reads this leaf, so the layer view cannot recurse here.
                     R::SharesCreatureTypeWithSource => source
                         .and_then(|sid| self.battlefield_find(sid).or_else(|| self.lki_snapshot(sid)))
                         .is_some_and(|s| {
-                            s.has_keyword(&crate::card::Keyword::Changeling)
-                                || card.has_keyword(&crate::card::Keyword::Changeling)
-                                || s.definition.subtypes.creature_types.iter().any(|t| {
-                                    card.definition.subtypes.creature_types.contains(t)
-                                })
+                            let types = |c: &CardInstance| match self.computed_permanent(c.id) {
+                                Some(cp) => (
+                                    cp.subtypes().creature_types.to_vec(),
+                                    cp.keywords().contains(&crate::card::Keyword::Changeling),
+                                ),
+                                None => (
+                                    c.definition.subtypes.creature_types.to_vec(),
+                                    c.has_keyword(&crate::card::Keyword::Changeling),
+                                ),
+                            };
+                            let (theirs, wild_s) = types(s);
+                            let (mine, wild_c) = types(card);
+                            wild_s || wild_c || theirs.iter().any(|t| mine.contains(t))
                         }),
                     R::IsSourceChosenCreatureType => source
                         .and_then(|sid| self.find_card_anywhere(sid))
@@ -5790,7 +5809,7 @@ impl GameState {
             | R::CastSorceryThisTurn
             | R::SpellTargetsOnlySource
             | R::SpellWithSingleTarget
-            | R::DealtDamageToControllerThisTurn | R::IsBestowed
+            | R::DealtDamageToControllerThisTurn | R::DamagedAPlayerThisTurn | R::IsBestowed
             | R::EquippedByAtLeast(_) | R::IsModified | R::DealtDamageThisTurn
             | R::DamagedBySourceThisTurn | R::DealtDamageToSourceThisTurn
             | R::BlockingOrBlockedBySource
