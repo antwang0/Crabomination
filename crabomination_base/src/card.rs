@@ -6365,16 +6365,18 @@ impl CardDefinition {
         let colors = self.printed_color_set();
         let creature = self.is_creature();
         let artifact = self.is_artifact();
+        let kindred = self.card_types.contains(&CardType::Kindred);
         crate::mana::SpellKind {
             wants_converge: self.wants_converge(),
             instant_or_sorcery: self.is_instant() || self.is_sorcery(),
             artifact,
-            creature_types: if creature {
+            creature_types: if creature || kindred {
                 smallvec::SmallVec::from_slice(&self.subtypes.creature_types)
             } else {
                 smallvec::SmallVec::new()
             },
-            changeling: creature && self.keywords.has_kw(&Keyword::Changeling),
+            changeling: (creature || kindred) && self.keywords.has_kw(&Keyword::Changeling),
+            kindred,
             land_ability: false,
             creature,
             creature_ability: false,

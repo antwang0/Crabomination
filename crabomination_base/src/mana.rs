@@ -578,14 +578,17 @@ pub enum SpendRestriction {
     /// Spending it stamps the cast uncounterable via
     /// [`PaymentSideEffects::spent_restrictions`].
     CreatureOfTypeUncounterable(crate::card::CreatureType),
-    /// "Spend this mana only to cast [type] creature spells" — the plain
-    /// per-type restriction without Cavern's uncounterable rider
-    /// (Eldrazi Temple).
+    /// "Spend this mana only to cast [type] spells" (Voldaren Estate, Giada,
+    /// Eldrazi Temple): a Kindred spell of the type counts (CR 308.3).
     CreatureOfType(crate::card::CreatureType),
+    /// "Spend this mana only to cast a creature spell of [type]" (The
+    /// Seedcore; Unclaimed Territory and Secluded Courtyard's chosen type) —
+    /// `CreatureOfType` limited to creature spells.
+    CreatureSpellOfType(crate::card::CreatureType),
     /// "Spend this mana only to cast [A], [B], and/or [C] spells" — the
     /// several-type sibling of `CreatureOfType` (Master of Dark Rites:
-    /// Vampire, Cleric, and/or Demon). A shorter list repeats a type. Reads a
-    /// creature spell's types, as `CreatureOfType` does.
+    /// Vampire, Cleric, and/or Demon). A shorter list repeats a type. Unlike
+    /// `CreatureOfType` a Kindred noncreature spell of a listed type counts.
     CreatureOfAnyTypes([crate::card::CreatureType; 3]),
     /// "Spend this mana only to activate abilities of land sources."
     /// (Sunken Citadel.)
@@ -688,9 +691,9 @@ impl SpendRestriction {
         Some(match self {
             SpendRestriction::InstantSorceryOnly => "only instants and sorceries",
             SpendRestriction::ArtifactOnly => "only artifacts",
-            SpendRestriction::CreatureOfTypeUncounterable(_) | SpendRestriction::CreatureOfType(_) => {
-                "only creatures of the chosen type"
-            }
+            SpendRestriction::CreatureOfTypeUncounterable(_)
+            | SpendRestriction::CreatureSpellOfType(_) => "only creatures of the chosen type",
+            SpendRestriction::CreatureOfType(_) => "only spells of the chosen type",
             SpendRestriction::CreatureOfAnyTypes(_) => "only spells of the listed creature types",
             SpendRestriction::LandAbilitiesOnly => "only abilities of lands",
             SpendRestriction::CreatureOnly => "only creature spells",
@@ -756,7 +759,10 @@ impl SpendRestriction {
             SpendRestriction::LandAbilitiesOnly => kind.land_ability,
             SpendRestriction::NoNonartifactSpells => !kind.casting_nonartifact_spell,
             SpendRestriction::CreatureOfTypeUncounterable(t)
-            | SpendRestriction::CreatureOfType(t) => {
+            | SpendRestriction::CreatureSpellOfType(t) => {
+                kind.creature && (kind.changeling || kind.creature_types.contains(&t))
+            }
+            SpendRestriction::CreatureOfType(t) => {
                 kind.changeling || kind.creature_types.contains(&t)
             }
             SpendRestriction::CreatureOfAnyTypes(ts) => {
@@ -845,6 +851,10 @@ pub struct SpellKind {
     pub creature_types: smallvec::SmallVec<[crate::card::CreatureType; 4]>,
     /// The spell is a Changeling (every creature type, CR 702.73).
     pub changeling: bool,
+    /// A Kindred spell (CR 308.3): `creature_types` / `changeling` describe it
+    /// too, though it isn't a creature — "[type] spells" count it, "[type]
+    /// creature spells" don't.
+    pub kindred: bool,
     /// Activating an ability of a land source (Sunken Citadel).
     pub land_ability: bool,
     /// Casting a creature spell (Ancient Ziggurat).

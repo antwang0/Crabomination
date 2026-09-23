@@ -613,7 +613,8 @@ fn cr_106_6_every_rider_allows_every_payment() {
             use SpendRestriction::*;
             match r {
                 InstantSorceryOnly | ArtifactOnly | CreatureOfTypeUncounterable(_)
-                | CreatureOfType(_) | CreatureOfAnyTypes(_) | LandAbilitiesOnly | CreatureOnly
+                | CreatureOfType(_) | CreatureSpellOfType(_) | CreatureOfAnyTypes(_)
+                | LandAbilitiesOnly | CreatureOnly
                 | CreatureSpellsOrAbilities | NoNonartifactSpells | AbilitiesOnly
                 | LessonSpellsOnly | DevoidSpellsOnly | InstantSorceryUncounterable
                 | EquipmentOnly | ColorlessSpellsOrAbilities | HighMvOrX | DragonOrOmenSpell
@@ -631,6 +632,7 @@ fn cr_106_6_every_rider_allows_every_payment() {
             ArtifactOnly,
             CreatureOfTypeUncounterable(CreatureType::Bear),
             CreatureOfType(CreatureType::Bear),
+            CreatureSpellOfType(CreatureType::Bear),
             CreatureOfAnyTypes([CreatureType::Bear, CreatureType::Elf, CreatureType::Elf]),
             LandAbilitiesOnly,
             CreatureOnly,
@@ -790,4 +792,21 @@ fn cr_106_6_castle_garenbrig_pays_a_big_creature() {
     .expect("the castle's six pays for the Wurm");
     drain_stack(&mut g);
     assert!(g.battlefield.iter().any(|c| c.id == id));
+}
+
+/// CR 308.3 / 106.6 — a Kindred spell carries creature types, so "[type]
+/// spells" mana (Master of Dark Rites, Voldaren Estate) pays for a Kindred
+/// Goblin instant while "creature spell of [type]" mana (Cavern of Souls,
+/// Unclaimed Territory, The Seedcore) still doesn't.
+#[test]
+fn cr_308_3_kindred_spells_count_for_type_spell_mana_not_creature_mana() {
+    use crabomination::card::CreatureType as T;
+    let tarfire = catalog::tarfire().spell_kind();
+    let spells = SpendRestriction::CreatureOfAnyTypes([T::Goblin, T::Goblin, T::Goblin]);
+    assert!(spells.allows(&tarfire), "a Goblin spell");
+    assert!(SpendRestriction::CreatureOfType(T::Goblin).allows(&tarfire));
+    assert!(!SpendRestriction::CreatureOfTypeUncounterable(T::Goblin).allows(&tarfire));
+    assert!(!SpendRestriction::CreatureSpellOfType(T::Goblin).allows(&tarfire));
+    let bolt = catalog::lightning_bolt().spell_kind();
+    assert!(!spells.allows(&bolt), "a plain instant has no creature type");
 }

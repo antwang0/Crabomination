@@ -11614,7 +11614,7 @@ impl GameState {
                             .and_then(|c| c.chosen_creature_type);
                         (
                             inner.as_ref(),
-                            chosen.map(crate::mana::SpendRestriction::CreatureOfType),
+                            chosen.map(crate::mana::SpendRestriction::CreatureSpellOfType),
                         )
                     }
                     // Throne of Eldraine: bound to the source's chosen color.
