@@ -154,14 +154,16 @@ pub fn avatar_of_fury() -> CardDefinition {
     }
 }
 
-/// Avatar of Might — {6}{G}{G} 8/8. Cheap when you're being run over.
+/// Avatar of Might — {6}{G}{G} 8/8. Cheap when you're being run over: some
+/// opponent has four more creatures than you — i.e. whoever has the most
+/// does (CR 800.4: one seat, not the table's first opponent).
 pub fn avatar_of_might() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Trample],
         self_cost_reduction_if: Some((
             Predicate::ValueAtLeast(
                 Value::Diff(
-                    Box::new(Value::CreatureCountControlledBy(PlayerRef::EachOpponent)),
+                    Box::new(Value::CreatureCountControlledBy(PlayerRef::MostCreatures)),
                     Box::new(Value::CreatureCountControlledBy(PlayerRef::You)),
                 ),
                 Value::Const(4),

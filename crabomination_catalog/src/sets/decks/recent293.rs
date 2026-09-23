@@ -156,9 +156,12 @@ pub fn netherborn_phalanx() -> CardDefinition {
         toughness: 4,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::LoseLife {
-                who: Selector::Player(PlayerRef::EachOpponent),
-                amount: Value::CreatureCountControlledBy(PlayerRef::EachOpponent),
+            effect: Effect::ForEach {
+                selector: Selector::Player(PlayerRef::EachOpponent),
+                body: Box::new(Effect::LoseLife {
+                    who: Selector::Player(PlayerRef::Triggerer),
+                    amount: Value::CreatureCountControlledBy(PlayerRef::Triggerer),
+                }),
             },
         }],
         activated_abilities: vec![transmute(cost(&[generic(1), b(), b()]), 6)],

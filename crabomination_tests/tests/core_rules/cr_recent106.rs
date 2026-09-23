@@ -19,6 +19,10 @@
 //! CR 603.2c — "whenever one or more creatures deal combat damage to you" is
 //! one event per damage step, and its filter applies: the combat hook for
 //! `ControllerDealtCombatDamage` fired once per dealer with both dropped.
+//!
+//! CR 800.4 — a value that reads ONE player can't be handed "each opponent":
+//! `resolve_player` answers the first seat and drops the rest (a 21-seat
+//! debug pod aborted on Phyrexian Swarmlord's `PoisonCountersOf(EachOpponent)`).
 
 use crabomination::card::SelectionRequirement;
 use crabomination::catalog;
@@ -192,4 +196,93 @@ fn cr_603_2c_damage_to_you_triggers_once_per_swing() {
         drain_stack(&mut g);
     }
     assert_eq!(g.players[0].life, 20 - 4 + 1, "both connected; one trigger for the swing");
+}
+
+/// The `Value` variants whose evaluator reads a single player
+/// (`resolve_player`). Given a multi-player ref they silently read one seat.
+const SINGLE_PLAYER_VALUES: &[&str] = &[
+    "ArtifactsEnteredThisTurn",
+    "CardTypesInGraveyard",
+    "CardsDrawnThisStep",
+    "CardsDrawnThisTurn",
+    "CreatureCountControlledBy",
+    "CreaturesDiedThisTurn",
+    "DistinctManaValuesInGraveyard",
+    "DistinctPowersAmongCreaturesControlled",
+    "DistinctTwoColorPairsControlled",
+    "DomainCount",
+    "GreatestManaValueAmongPermanents",
+    "GreatestManaValueInGraveyard",
+    "GreatestToxicAmongControlled",
+    "HalfLibrarySizeRoundedUp",
+    "HalfLifeRoundedUp",
+    "LandsPlayedThisTurn",
+    "LibrarySizeOf",
+    "LifeOf",
+    "MountsVehiclesEnteredThisTurn",
+    "MulticoloredSpellsCastThisTurn",
+    "NonbasicLandCountControlledBy",
+    "PermanentCountControlledBy",
+    "PermanentsSacrificedThisTurn",
+    "PlayerSpeed",
+    "PoisonCountersOf",
+    "SnowPermanentCountControlledBy",
+    "UnlockedDoorsControlled",
+];
+const MULTI_PLAYER_REFS: &[&str] =
+    &["EachOpponent", "EachPlayer", "EachTeammate", "EachOpponentExceptTriggerer", "EachPlayerWithoutMaxSpeed"];
+
+fn single_player_value_misuse(v: &serde_json::Value, out: &mut Vec<String>) {
+    match v {
+        serde_json::Value::Object(map) => {
+            for (k, inner) in map {
+                if SINGLE_PLAYER_VALUES.contains(&k.as_str())
+                    && let serde_json::Value::String(r) = inner
+                    && MULTI_PLAYER_REFS.contains(&r.as_str())
+                {
+                    out.push(format!("{k}({r})"));
+                }
+                single_player_value_misuse(inner, out);
+            }
+        }
+        serde_json::Value::Array(items) => items.iter().for_each(|i| single_player_value_misuse(i, out)),
+        _ => {}
+    }
+}
+
+#[test]
+fn cr_800_4_no_single_player_value_reads_each_opponent() {
+    let mut bad = Vec::new();
+    for factory in catalog::all_known_factories() {
+        let def = factory();
+        let json = serde_json::to_value(&def).expect("definition serializes");
+        let mut hits = Vec::new();
+        single_player_value_misuse(&json, &mut hits);
+        for h in hits {
+            bad.push(format!("{}: {h}", def.name));
+        }
+    }
+    bad.sort();
+    bad.dedup();
+    assert!(bad.is_empty(), "single-player values given a multi-player ref ({}): {bad:#?}", bad.len());
+}
+
+/// CR 800.4 — "each opponent loses 1 life for each creature *they* control"
+/// is per opponent: Netherborn Phalanx used to charge everyone the first
+/// opponent's creature count.
+#[test]
+fn cr_800_4_netherborn_phalanx_charges_each_opponent_their_own_count() {
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    for _ in 0..2 {
+        g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    }
+    let (l1, l2) = (g.players[1].life, g.players[2].life);
+    let id = g.add_card_to_battlefield_entering(0, catalog::netherborn_phalanx());
+    g.fire_self_etb_triggers(id, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, l1 - 2);
+    assert_eq!(g.players[2].life, l2, "no creatures, no loss");
 }

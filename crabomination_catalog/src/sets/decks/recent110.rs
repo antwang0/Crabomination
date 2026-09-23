@@ -710,7 +710,7 @@ pub fn runeflare_trap() -> CardDefinition {
 
 /// Molten Psyche — {1}{R}{R} Sorcery. Each player shuffles their hand into
 /// their library and draws that many. Metalcraft — each opponent takes
-/// damage equal to their cards drawn this turn (exact in 1v1).
+/// damage equal to the cards *that player* drew this turn.
 pub fn molten_psyche() -> CardDefinition {
     CardDefinition {
         name: "Molten Psyche",
@@ -724,9 +724,12 @@ pub fn molten_psyche() -> CardDefinition {
                 cond: Predicate::MetalcraftActive {
                     who: PlayerRef::You,
                 },
-                then: Box::new(Effect::DealDamage {
-                    to: Selector::Player(PlayerRef::EachOpponent),
-                    amount: Value::CardsDrawnThisTurn(PlayerRef::EachOpponent),
+                then: Box::new(Effect::ForEach {
+                    selector: Selector::Player(PlayerRef::EachOpponent),
+                    body: Box::new(Effect::DealDamage {
+                        to: Selector::Player(PlayerRef::Triggerer),
+                        amount: Value::CardsDrawnThisTurn(PlayerRef::Triggerer),
+                    }),
                 }),
                 else_: Box::new(Effect::Noop),
             },

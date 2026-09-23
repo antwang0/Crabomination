@@ -561,7 +561,7 @@ pub fn chained_throatseeker() -> CardDefinition {
             effect: StaticEffect::SelfHasKeywordWhilePredicate {
                 keyword: Keyword::CantAttack,
                 condition: Predicate::Not(Box::new(Predicate::ValueAtLeast(
-                    Value::PoisonCountersOf(PlayerRef::EachOpponent),
+                    Value::PoisonCountersAmong(PlayerRef::EachOpponent),
                     Value::ONE,
                 ))),
             },
@@ -1799,7 +1799,7 @@ pub fn greenhilt_trainee() -> CardDefinition {
 
 /// "An opponent is poisoned."
 fn an_opponent_is_poisoned() -> Predicate {
-    Predicate::ValueAtLeast(Value::PoisonCountersOf(PlayerRef::EachOpponent), Value::ONE)
+    Predicate::ValueAtLeast(Value::PoisonCountersAmong(PlayerRef::EachOpponent), Value::ONE)
 }
 
 /// Viridian Betrayers — infect once the poison starts flowing.
@@ -1828,7 +1828,7 @@ pub fn mycosynth_fiend() -> CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "This creature gets +1/+1 for each poison counter your opponents have.",
             effect: StaticEffect::PumpSelfByValue {
-                amount: Value::PoisonCountersOf(PlayerRef::EachOpponent),
+                amount: Value::PoisonCountersAmong(PlayerRef::EachOpponent),
                 per_power: 1,
                 per_toughness: 1,
             },
@@ -1854,7 +1854,7 @@ pub fn phyrexian_swarmlord() -> CardDefinition {
             ),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
-                count: Value::PoisonCountersOf(PlayerRef::EachOpponent),
+                count: Value::PoisonCountersAmong(PlayerRef::EachOpponent),
                 definition: std::sync::Arc::new(TokenDefinition {
                     name: "Phyrexian Insect".into(),
                     power: 1,
