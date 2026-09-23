@@ -1538,6 +1538,30 @@ mod recent99 {
         assert!(master != ninja && bear != master);
     }
 
+    /// Silver-Fur Master's "ninjutsu abilities you activate cost {1} less":
+    /// Ninja of the Deep Hours ({1}{U}) comes in for {U} alone.
+    #[test]
+    fn silver_fur_master_discounts_ninjutsu() {
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(0, catalog::silver_fur_master());
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.clear_sickness(bear);
+        let ninja = g.add_card_to_hand(0, catalog::ninja_of_the_deep_hours());
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.step = TurnStep::DeclareAttackers;
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+            attacker: bear,
+            target: AttackTarget::Player(1),
+        }]))
+        .expect("attack");
+        g.step = TurnStep::DeclareBlockers;
+        g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 1);
+        g.perform_action(GameAction::Ninjutsu { ninja, returning: bear })
+            .expect("{U} is enough");
+        assert!(g.battlefield_find(ninja).is_some());
+    }
+
     /// Generous Visitor puts a counter when you cast an enchantment spell.
     #[test]
     fn generous_visitor_counters_on_enchantment_cast() {

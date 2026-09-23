@@ -33,9 +33,9 @@ pub fn guardian_kirin() -> CardDefinition {
     }
 }
 
-/// Silver-Fur Master — {U}{B} 2/2 Rat Ninja. Ninjutsu {U}{B}. Other Ninja and
-/// Rogue creatures you control get +1/+1. (The "your Ninjutsu costs {1} less"
-/// rider is omitted — no activated-cost-reduction static for Ninjutsu yet.)
+/// Silver-Fur Master — {U}{B} 2/2 Rat Ninja. Ninjutsu {U}{B}. Ninjutsu
+/// abilities you activate cost {1} less to activate. Other Ninja and Rogue
+/// creatures you control get +1/+1.
 pub fn silver_fur_master() -> CardDefinition {
     CardDefinition {
         name: "Silver-Fur Master",
@@ -49,6 +49,9 @@ pub fn silver_fur_master() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Ninjutsu(cost(&[u(), b()]))],
         static_abilities: vec![crate::effect::StaticAbility {
+            description: "Ninjutsu abilities you activate cost {1} less to activate.",
+            effect: StaticEffect::NinjutsuCostReduction { amount: 1 },
+        }, crate::effect::StaticAbility {
             description: "Other Ninja and Rogue creatures you control get +1/+1.",
             effect: StaticEffect::PumpPT {
                 applies_to: Selector::EachPermanent(
