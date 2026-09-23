@@ -1113,3 +1113,144 @@ fn accursed_duneyard_regenerates_vampires() {
     assert!(g.battlefield_find(seeker).is_some(), "regenerated");
     assert!(g.battlefield_find(bears).is_none());
 }
+
+// ── Blood Rites (`decks::cmdr_clavileno`) ─────────────────────────────────────
+
+/// Vona destroys a nonland permanent for 7 life, only during your turn.
+#[test]
+fn vona_pays_seven_life_on_your_turn_only() {
+    let mut g = main_phase();
+    let vona = g.add_card_to_battlefield(0, catalog::vona_butcher_of_magan());
+    g.clear_sickness(vona);
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let life = g.players[0].life;
+    activate_at(&mut g, vona, 0, Some(Target::Permanent(theirs))).expect("your turn");
+    assert!(g.battlefield_find(theirs).is_none());
+    assert_eq!(g.players[0].life, life - 7);
+    g.battlefield_find_mut(vona).unwrap().tapped = false;
+    g.active_player_idx = 1;
+    let other = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    assert!(activate_at(&mut g, vona, 0, Some(Target::Permanent(other))).is_err());
+}
+
+/// Bloodtracker grows for {B} and 2 life, and draws a card per counter as it
+/// leaves (CR 603.10 — read off its last-known information).
+#[test]
+fn bloodtracker_draws_per_counter_on_leaving() {
+    let mut g = main_phase();
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let tracker = g.add_card_to_battlefield(0, catalog::bloodtracker());
+    activate(&mut g, tracker, 0).unwrap();
+    activate(&mut g, tracker, 0).unwrap();
+    assert_eq!(pt(&g, tracker), (4, 4));
+    let hand = g.players[0].hand.len();
+    let murder = g.add_card_to_hand(0, catalog::murder());
+    flood(&mut g, 0);
+    cast_spell(&mut g, murder, Some(Target::Permanent(tracker))).unwrap();
+    assert_eq!(g.players[0].hand.len(), hand + 2);
+}
+
+/// Dusk Legion Sergeant hands each nontoken Vampire persist for the turn: one
+/// that dies comes back with a -1/-1 counter.
+#[test]
+fn dusk_legion_sergeant_grants_persist() {
+    let mut g = main_phase();
+    let sergeant = g.add_card_to_battlefield(0, catalog::dusk_legion_sergeant());
+    let vamp = g.add_card_to_battlefield(0, catalog::vona_butcher_of_magan());
+    activate(&mut g, sergeant, 0).unwrap();
+    assert!(g.battlefield_find(sergeant).is_none(), "sacrificed as the cost");
+    assert!(has_kw(&g, vamp, Keyword::Persist));
+    let murder = g.add_card_to_hand(0, catalog::murder());
+    flood(&mut g, 0);
+    cast_spell(&mut g, murder, Some(Target::Permanent(vamp))).unwrap();
+    let back = g.battlefield_find(vamp).expect("persisted");
+    assert_eq!(back.counter_count(CounterType::MinusOneMinusOne), 1);
+}
+
+/// Order of Sacred Dusk has exalted and gives it to the other Vampires: a lone
+/// Vampire attacker gets +1/+1 from each instance (CR 702.83b).
+#[test]
+fn order_of_sacred_dusk_spreads_exalted() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::order_of_sacred_dusk());
+    let martyr = g.add_card_to_battlefield(0, catalog::martyr_of_dusk());
+    let life = g.players[1].life;
+    swing(&mut g, &[martyr]);
+    assert_eq!(g.players[1].life, life - 4, "2 power + the Order's exalted + its own");
+}
+
+/// Redemption Choir returns a small permanent card only while coven holds.
+#[test]
+fn redemption_choir_needs_coven() {
+    let mut g = main_phase();
+    let signet = g.add_card_to_graveyard(0, catalog::arcane_signet());
+    let choir = g.add_card_to_hand(0, catalog::redemption_choir());
+    flood(&mut g, 0);
+    cast_spell(&mut g, choir, Some(Target::Permanent(signet))).unwrap();
+    assert!(g.battlefield_find(signet).is_none(), "no coven: the Choir alone");
+
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let signet = g.add_card_to_graveyard(0, catalog::arcane_signet());
+    let choir = g.add_card_to_hand(0, catalog::redemption_choir());
+    flood(&mut g, 0);
+    cast_spell(&mut g, choir, Some(Target::Permanent(signet))).unwrap();
+    assert!(g.battlefield_find(signet).is_some(), "powers 1, 2, 3: coven");
+}
+
+/// Martyr of Dusk leaves a lifelinking Vampire; Timothar exiles it into a Bat
+/// that brings it back tapped when it connects.
+#[test]
+fn timothar_turns_a_dead_vampire_into_a_bat_that_returns_it() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::timothar_baron_of_bats());
+    let martyr = g.add_card_to_battlefield(0, catalog::martyr_of_dusk());
+    script(&mut g, vec![DecisionAnswer::Bool(true)]);
+    let murder = g.add_card_to_hand(0, catalog::murder());
+    flood(&mut g, 0);
+    cast_spell(&mut g, murder, Some(Target::Permanent(martyr))).unwrap();
+    assert_eq!(tokens_named(&g, 0, "Vampire"), 1, "the Martyr's own token");
+    assert!(g.exile.iter().any(|c| c.id == martyr), "exiled for the Bat");
+    let bat = g
+        .battlefield
+        .iter()
+        .find(|c| c.is_token && c.definition.name == "Bat")
+        .map(|c| c.id)
+        .expect("a Bat");
+    swing(&mut g, &[bat]);
+    assert!(g.battlefield_find(bat).is_none(), "the Bat is sacrificed");
+    assert!(g.battlefield_find(martyr).is_some_and(|c| c.tapped), "the Martyr returns tapped");
+}
+
+/// Foul Rebirth (the Adventure) trades a non-Demon for a 4/3 Vampire Demon.
+#[test]
+fn promise_of_aclazotz_foul_rebirth_makes_a_demon() {
+    let mut g = main_phase();
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let promise = g.add_card_to_hand(0, catalog::promise_of_aclazotz());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastAdventure {
+        card_id: promise,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast the Adventure");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bears).is_none());
+    assert_eq!(tokens_named(&g, 0, "Vampire Demon"), 1);
+}
+
+/// Bloodline Necromancer returns a Vampire or Wizard from your graveyard.
+#[test]
+fn bloodline_necromancer_returns_a_vampire() {
+    let mut g = main_phase();
+    let dead = g.add_card_to_graveyard(0, catalog::vona_butcher_of_magan());
+    script(&mut g, vec![DecisionAnswer::Bool(true)]);
+    etb(&mut g, catalog::bloodline_necromancer());
+    assert!(g.battlefield_find(dead).is_some());
+}

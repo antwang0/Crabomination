@@ -55,7 +55,7 @@ use std::sync::Arc;
 
 // ── Shared shapes ────────────────────────────────────────────────────────────
 
-fn creature(
+pub(super) fn creature(
     name: &'static str,
     mana: ManaCost,
     power: i32,
@@ -78,7 +78,7 @@ fn creature(
     }
 }
 
-fn legend(mut card: CardDefinition) -> CardDefinition {
+pub(super) fn legend(mut card: CardDefinition) -> CardDefinition {
     card.supertypes = vec![Supertype::Legendary];
     card
 }
@@ -106,7 +106,7 @@ fn permanent(name: &'static str, mana: ManaCost, kind: CardType) -> CardDefiniti
     }
 }
 
-fn vampire() -> R {
+pub(super) fn vampire() -> R {
     R::HasCreatureType(CreatureType::Vampire)
 }
 
@@ -160,7 +160,7 @@ fn vampire_token(
 }
 
 /// 1/1 white Vampire with lifelink (Elenda, March of the Canonized, …).
-fn white_lifelinker() -> TokenDefinition {
+pub(super) fn white_lifelinker() -> TokenDefinition {
     vampire_token(1, 1, vec![Color::White], vec![], vec![Keyword::Lifelink], false)
 }
 
@@ -175,7 +175,7 @@ fn black_flyer() -> TokenDefinition {
 }
 
 /// 4/3 white and black Vampire Demon with flying.
-fn vampire_demon(tapped: bool) -> TokenDefinition {
+pub(super) fn vampire_demon(tapped: bool) -> TokenDefinition {
     vampire_token(
         4,
         3,
@@ -194,11 +194,11 @@ fn mint(who: PlayerRef, count: Value, token: TokenDefinition) -> Effect {
     }
 }
 
-fn mint_one(token: TokenDefinition) -> Effect {
+pub(super) fn mint_one(token: TokenDefinition) -> Effect {
     mint(PlayerRef::You, Value::ONE, token)
 }
 
-fn draw(who: Selector, n: Value) -> Effect {
+pub(super) fn draw(who: Selector, n: Value) -> Effect {
     Effect::Draw { who, amount: n }
 }
 
