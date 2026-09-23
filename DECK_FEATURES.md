@@ -42,6 +42,7 @@ lists were picked.
 | Adriana RW | Adriana, Captain of the Guard (**melee**, CR 702.121) | RW | 100 | ✅ complete |
 | **Sultai Arisen** (TDC precon) BGU | Teval, the Balanced Scale | BGU | 100 | 🟡 all 100 implemented, 8 carry residuals (below) |
 | **Mind Flayarrrs** (CLB precon) UB | Captain N'ghathrod | UB | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
+| **Blood Rites** (LCC precon) WB | Clavileño, First of the Blessed | WB | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not
@@ -81,9 +82,8 @@ hundredth (Lord of the Forsaken) needing one primitive,
 106.6 / 601.2a). It is the pod's graveyard seat: Kotis's once-a-turn
 graveyard cast, Steward of the Harvest's granted land abilities, Teval's
 "cards leave your graveyard" tokens. After `pod_field(10)`; `--seats 11`
-reaches it. Next precons by `scripts/precon_scan.py`: Blood Rites (LCC, 9
-missing), Heads I Win, Tails You Lose (SLD, 9), Wretched Ranks (FDC, 9 —
-releases 2026-10-02).
+reaches it. Next precons by `scripts/precon_scan.py`: Heads I Win, Tails You
+Lose (SLD, 9 missing), Wretched Ranks (FDC, 9 — releases 2026-10-02).
 
 🟡 **Residuals in the list** (each also on its card's doc): Welcome the Dead
 (X counts every card binned this turn, not only from hand/library), Colossal
@@ -116,6 +116,23 @@ rider), Psionic Ritual (no tap-a-Horror replicate), Herald's Horn (no upkeep
 reveal), Overcharged Amalgam (counters spells only, not abilities), plus
 Exotic Orchard / Myriad Landscape as in Sultai Arisen. Sewer Nemesis always
 chooses an opponent.
+
+The **thirteenth** is the third official precon, **Blood Rites** (Lost Caverns
+of Ixalan Commander, 2023), MTGJSON's `BloodRites_LCC` card for card;
+`--seats 13` reaches it. Nine missing cards, one new primitive
+(`Effect::ExileLinkedTo`, Timothar's Bat) — and one bug class found on the
+way: **persist and undying read only printed keywords**, so every grant
+(Undying Evil, Mikaeus, Haunted One, Dusk Legion Sergeant) was cosmetic.
+Voldaren Estate got its Vampire-only mana and per-Vampire discount back.
+First reading (13 seats, 1,000 games, seed 9930): all decided, every card of
+all thirteen lists played (610 distinct), Clavileño **27.0 %** against a
+seat's 7.7 % — the Edgar finding again: a Vampire payoff that drains the
+whole table grows with the table.
+
+🟡 **Residuals in the list**: Master of Dark Rites (the restriction reads a
+creature spell's types, so a Demon *noncreature* spell can't use it), New
+Blood (the text change is approximated), Secluded Courtyard (only the cast
+half of the restriction), Myriad Landscape (any two basics).
 
 The **tenth** is the first list built around what only happens at three seats
 or more, and it exists because of a census, not a hunch: **not one of the nine

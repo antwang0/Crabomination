@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Ten hand-picked commanders plus two official preconstructed lists, each a
+//! Ten hand-picked commanders plus three official preconstructed lists, each a
 //! 99 of cards this engine implements: legal under CR 903 (100 cards
 //! including the commander, singleton outside basics, every card inside the
 //! commander's CR 903.4 color identity) and Commander-legal per Scryfall's
@@ -8,8 +8,8 @@
 //!
 //! The ten were built by hand because the offline Scryfall cache cannot say
 //! how a precon splits into decks; MTGJSON's deck files can, and the eleventh
-//! and twelfth (Sultai Arisen, Mind Flayarrrs) are taken from one card for
-//! card. What all of them keep
+//! through thirteenth (Sultai Arisen, Mind Flayarrrs, Blood Rites) are taken
+//! from one card for card. What all of them keep
 //! from the precon idea is what the pod needs — fixed, legal, varied color
 //! identities, and built to play against each other.
 //! One is a Partner pair (CR 702.124b), one is a **planeswalker**
@@ -522,4 +522,35 @@ pub const NGHATHROD_MAIN: &[CardFactory] = &[
     // Basics: 9 island, 11 swamp
     island, island, island, island, island, island, island, island, island, swamp, swamp, swamp,
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+/// Clavileño, First of the Blessed — WB. Commander, then the 99.
+pub const CLAVILENO_COMMANDERS: &[CardFactory] = &[clavileno_first_of_the_blessed];
+
+/// **Blood Rites**, The Lost Caverns of Ixalan Commander precon (LCC,
+/// 2023-11-17), exactly as MTGJSON's `BloodRites_LCC` prints it: 78 nonbasic
+/// cards + 21 basics = 99. Vampire aristocrats that turn Vampires into
+/// Demons; the pod's third official list.
+pub const CLAVILENO_MAIN: &[CardFactory] = &[
+    carmen_cruel_skymarcher, charismatic_conqueror, elendas_hierophant, march_of_the_canonized,
+    redemption_choir, dusk_legion_sergeant, master_of_dark_rites, promise_of_aclazotz,
+    order_of_sacred_dusk, austere_command, kindred_boon, mavren_fein_dusk_apostle,
+    radiant_destiny, welcoming_vampire, bloodghast, bloodtracker, butcher_of_malakir,
+    champion_of_dusk, cordial_vampire, crossway_troublemakers, damn, drana_liberator_of_malakir,
+    exquisite_blood, glass_cast_heart, new_blood, nighthawk_scavenger, olivias_wrath,
+    pact_of_the_serpent, patron_of_the_vein, sanctum_seeker, timothar_baron_of_bats,
+    twilight_prophet, yahenni_undying_partisan, elenda_the_dusk_rose, sorin_lord_of_innistrad,
+    utter_end, vona_butcher_of_magan, blade_of_the_bloodchief, isolated_chapel,
+    shineshadow_snarl, temple_of_silence, vault_of_the_archangel, voldaren_estate,
+    windbrisk_heights, martyr_of_dusk, return_to_dust, swords_to_plowshares, blood_artist,
+    bloodline_necromancer, dusk_legion_zealot, falkenrath_noble, indulgent_aristocrat,
+    oathsworn_vampire, village_rites, viscera_seer, bartolome_del_presidio, cruel_celebrant,
+    etchings_of_the_chosen, legion_lieutenant, arcane_signet, commanders_sphere, heirloom_blade,
+    mind_stone, orzhov_signet, sol_ring, swiftfoot_boots, talisman_of_hierarchy,
+    wayfarers_bauble, bojuka_bog, command_tower, myriad_landscape, orzhov_basilica,
+    path_of_ancestry, rogues_passage, secluded_courtyard, tainted_field,
+    temple_of_the_false_god, unclaimed_territory,
+    // Basics: 8 plains, 13 swamp
+    plains, plains, plains, plains, plains, plains, plains, plains, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];

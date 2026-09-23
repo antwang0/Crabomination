@@ -183,6 +183,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::NGHATHROD_COMMANDERS,
             main: decks::NGHATHROD_MAIN,
         },
+        // Thirteenth: the third official precon (Blood Rites, LCC), Vampire
+        // aristocrats. `--seats 13`.
+        PodDeck {
+            name: "Clavileño (WB)",
+            commanders: decks::CLAVILENO_COMMANDERS,
+            main: decks::CLAVILENO_MAIN,
+        },
     ]
 }
 
@@ -655,8 +662,8 @@ mod tests {
         }
     }
 
-    /// CR 903.5a/c — the eleventh and twelfth seats are official precons taken
-    /// card for card (Sultai Arisen, Mind Flayarrrs). They seat what no
+    /// CR 903.5a/c — the eleventh to thirteenth seats are official precons
+    /// taken card for card (Sultai Arisen, Mind Flayarrrs, Blood Rites). They seat what no
     /// hand-built list did — graveyard casts (Kotis, CR 601.2a), graveyard-only
     /// mana (Lord of the Forsaken, CR 106.6), a pay-one-of-three additional
     /// cost (Dusk Mangler, CR 601.2b), a trigger that works while suspended
@@ -664,7 +671,11 @@ mod tests {
     #[test]
     fn cr_903_5a_the_official_precon_seats_play_pod_games() {
         let field = target_decks();
-        for (name, seeds) in [("Teval", [0x7E7A1_u64, 78, 9002]), ("N'ghathrod", [0xC1B, 79, 9003])] {
+        for (name, seeds) in [
+            ("Teval", [0x7E7A1_u64, 78, 9002]),
+            ("N'ghathrod", [0xC1B, 79, 9003]),
+            ("Clavileño", [0xB100D, 80, 9004]),
+        ] {
             let precon = *field.iter().find(|d| d.name.starts_with(name)).expect("the precon seat");
             assert_eq!(precon.card_count(), 100);
             let decks = vec![precon, field[0], field[1], field[2]];
