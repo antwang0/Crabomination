@@ -512,6 +512,38 @@ fn lord_of_the_forsaken_mana_only_funds_graveyard_casts() {
     assert_eq!(g.players[0].mana_pool.total(), 0);
 }
 
+/// CR 106.7 — Exotic Orchard makes a color "a land an opponent controls could
+/// produce": a nonbasic's mana abilities count, and with no such land (or
+/// only another Orchard facing it, the rule's own example) it makes nothing.
+#[test]
+fn cr_106_7_exotic_orchard_reads_opponents_lands() {
+    let tap = |g: &mut GameState, id| {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: id,
+            ability_index: 0,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+        .expect("tap");
+        drain_stack(g);
+    };
+    let mut g = main_phase();
+    let orchard = g.add_card_to_battlefield(0, catalog::exotic_orchard());
+    g.add_card_to_battlefield(1, catalog::exotic_orchard());
+    tap(&mut g, orchard);
+    assert_eq!(g.players[0].mana_pool.total(), 0, "Orchard facing Orchard makes nothing");
+
+    let mut g = main_phase();
+    let orchard = g.add_card_to_battlefield(0, catalog::exotic_orchard());
+    g.add_card_to_battlefield(1, catalog::hinterland_harbor());
+    tap(&mut g, orchard);
+    let pool = &g.players[0].mana_pool;
+    assert_eq!(pool.total(), 1);
+    assert_eq!(pool.amount(Color::Green) + pool.amount(Color::Blue), 1, "only {{G}} or {{U}}");
+}
+
 /// Tormod makes one tapped Zombie per batch of cards leaving your graveyard.
 #[test]
 fn tormod_makes_a_tapped_zombie() {

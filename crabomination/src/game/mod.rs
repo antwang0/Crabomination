@@ -124,6 +124,8 @@ pub mod affordances;
 pub mod as_enters;
 #[doc(hidden)]
 pub mod combat;
+// CR 106.7 — "could produce" mana.
+mod could_produce;
 /// CR 800.4f/g — routing an ask whose seat has left the game.
 pub(crate) mod departed;
 #[doc(hidden)]
