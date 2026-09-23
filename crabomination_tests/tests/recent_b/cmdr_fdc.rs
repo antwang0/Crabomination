@@ -634,3 +634,122 @@ fn cr_903_3_norns_choirmaster_proliferates_on_commander_attacks() {
     combat(&mut g, vec![Attack { attacker: cmd, target: AttackTarget::Player(1) }], 0, |_| {});
     assert_eq!(g.players[1].poison_counters, after_entry + 1);
 }
+
+/// Each creature shrinks by ITS controller's poison count, not the table's.
+#[test]
+fn phyresis_outbreak_shrinks_by_each_controllers_poison() {
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[1].poison_counters = 2;
+    let a = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let b = g.add_card_to_battlefield(2, catalog::hill_giant());
+    let mine = g.add_card_to_battlefield(0, catalog::hill_giant());
+    let spell = g.add_card_to_hand(0, catalog::phyresis_outbreak());
+    cast(&mut g, spell, &[]);
+    assert!(g.battlefield_find(a).is_none(), "3 poison: -3/-3 kills the 3/3");
+    assert_eq!(pt(&g, b), (2, 2), "1 poison");
+    assert_eq!(pt(&g, mine), (3, 3));
+}
+
+/// CR 122.1f — every opponent's poison counts, summed across the table.
+#[test]
+fn vishgraz_grows_with_the_tables_poison_and_makes_mites() {
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.players[1].poison_counters = 2;
+    g.players[2].poison_counters = 3;
+    g.players[0].poison_counters = 5;
+    let v = etb(&mut g, catalog::vishgraz_the_doomhive());
+    assert_eq!(pt(&g, v), (8, 8), "2 + 3, not its own 5");
+    assert_eq!(count_named(&g, 0, "Phyrexian Mite"), 3);
+}
+
+/// CR 603.2c — "to one or more players" is one batch however many seats
+/// were hit: two attackers at two players proliferate once.
+#[test]
+fn cr_603_2c_contaminant_grafter_proliferates_once_across_players() {
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.add_card_to_battlefield(0, catalog::contaminant_grafter());
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[1].poison_counters = 1;
+    g.players[2].poison_counters = 1;
+    combat(
+        &mut g,
+        vec![
+            Attack { attacker: a, target: AttackTarget::Player(1) },
+            Attack { attacker: b, target: AttackTarget::Player(2) },
+        ],
+        0,
+        |_| {},
+    );
+    assert_eq!((g.players[1].poison_counters, g.players[2].poison_counters), (2, 2), "one proliferate");
+}
+
+/// CR 702.166 — corrupted: one creature from your graveyard, plus one from
+/// each opponent at three or more poison (the other opponent's is left).
+#[test]
+fn cr_702_166_geths_summons_takes_from_each_corrupted_opponent() {
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let mine = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_graveyard(1, catalog::hill_giant());
+    let safe = g.add_card_to_graveyard(2, catalog::hill_giant());
+    g.players[1].poison_counters = 3;
+    let spell = g.add_card_to_hand(0, catalog::geths_summons());
+    cast(&mut g, spell, &[]);
+    assert_eq!(g.battlefield_find(mine).map(|c| c.controller), Some(0));
+    assert_eq!(g.battlefield_find(theirs).map(|c| c.controller), Some(0));
+    assert!(g.battlefield_find(safe).is_none());
+}
+
+/// CR 702.166 — dying while an opponent is corrupted exiles it and rebuys a
+/// card per corrupted opponent.
+#[test]
+fn cr_702_166_glissas_retriever_rebuys_per_corrupted_opponent() {
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let r = g.add_card_to_battlefield(0, catalog::glissas_retriever());
+    for _ in 0..3 {
+        g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    }
+    g.players[1].poison_counters = 3;
+    g.players[2].poison_counters = 4;
+    let hand = g.players[0].hand.len();
+    let murder = g.add_card_to_hand(0, catalog::murder());
+    cast(&mut g, murder, &[Target::Permanent(r)]);
+    assert!(g.exile.iter().any(|c| c.id == r), "exiled, not in the graveyard");
+    assert_eq!(g.players[0].hand.len(), hand + 2, "two corrupted opponents");
+}
+
+/// X is the mana spent; each corrupted opponent adds another Wurm.
+#[test]
+fn wurmquake_makes_x_x_wurms_per_corrupted_opponent() {
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[1].poison_counters = 3;
+    let spell = g.add_card_to_hand(0, catalog::wurmquake());
+    g.players[0].mana_pool.add(Color::Green, 6);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast for six");
+    drain_stack(&mut g);
+    let wurms: Vec<_> = g.battlefield.iter().filter(|c| c.definition.name == "Phyrexian Wurm").map(|c| c.id).collect();
+    assert_eq!(wurms.len(), 2);
+    assert!(wurms.iter().all(|&w| pt(&g, w) == (6, 6)));
+}

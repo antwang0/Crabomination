@@ -3,13 +3,13 @@
 //! `tests/recent_b/cmdr_fdc.rs` (the precon-batch module).
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CreatureType, EventKind, EventScope, EventSpec,
+    ActivatedAbility, CardDefinition, Zone, CardType, CreatureType, EventKind, EventScope, EventSpec,
     Keyword, SelectionRequirement as R, Selector, Subtypes, TokenDefinition, TriggeredAbility,
     Value,
 };
 use crate::catalog::sets::enters_tapped;
 use crate::effect::shortcut::etb;
-use crate::effect::{Effect, ManaPayload, PlayerRef, Predicate};
+use crate::effect::{Effect, ManaPayload, PlayerRef, Predicate, ZoneDest};
 use crate::mana::{Color, b, cost, g, generic, w};
 use std::sync::Arc;
 
@@ -140,5 +140,220 @@ pub fn norns_choirmaster() -> CardDefinition {
             5,
             4,
         )
+    }
+}
+
+/// Phyresis Outbreak — a poison counter for each opponent, then each of
+/// their creatures shrinks by its own controller's poison count.
+pub fn phyresis_outbreak() -> CardDefinition {
+    let poison = || {
+        Value::Negate(Box::new(Value::PoisonCountersOf(PlayerRef::ControllerOf(Box::new(
+            Selector::TriggerSource,
+        )))))
+    };
+    CardDefinition {
+        name: "Phyresis Outbreak",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::AddPoison { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::ONE },
+            Effect::ForEach {
+                selector: Selector::EachPermanent(R::Creature.and(R::ControlledByOpponent)),
+                body: Box::new(Effect::PumpPT {
+                    what: Selector::TriggerSource,
+                    power: poison(),
+                    toughness: poison(),
+                    duration: crate::effect::Duration::EndOfTurn,
+                }),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Vishgraz, the Doomhive — three toxic Mites, and +1/+1 for every poison
+/// counter across its controller's opponents.
+pub fn vishgraz_the_doomhive() -> CardDefinition {
+    let mite = Arc::new(TokenDefinition {
+        name: "Phyrexian Mite".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Mite],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Toxic(1), Keyword::CantBlock],
+        ..Default::default()
+    });
+    CardDefinition {
+        supertypes: vec![crate::card::Supertype::Legendary],
+        keywords: vec![Keyword::Menace, Keyword::Toxic(1)],
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(3),
+            definition: mite,
+        })],
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "Vishgraz gets +1/+1 for each poison counter your opponents have.",
+            effect: crate::card::StaticEffect::PumpSelfByValue {
+                amount: Value::PoisonCountersAmong(PlayerRef::EachOpponent),
+                per_power: 1,
+                per_toughness: 1,
+            },
+        }],
+        ..creature(
+            "Vishgraz, the Doomhive",
+            cost(&[generic(2), w(), b(), g()]),
+            vec![CreatureType::Phyrexian, CreatureType::Insect],
+            3,
+            3,
+        )
+    }
+}
+
+fn corrupted_opponents() -> Value {
+    Value::PlayersWithPoisonAtLeast { who: PlayerRef::EachOpponent, at_least: 3 }
+}
+
+/// Contaminant Grafter — proliferate once per combat it connects, and a
+/// corrupted end-step card plus an optional land drop.
+pub fn contaminant_grafter() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Trample, Keyword::Toxic(1)],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl)
+                    .once_per_batch_across_players(),
+                effect: Effect::Proliferate,
+            },
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(crate::game::types::TurnStep::End),
+                    EventScope::YourControl,
+                )
+                .with_filter(corrupted()),
+                effect: Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::ONE },
+                    Effect::PutFromHandOntoBattlefield {
+                        who: PlayerRef::You,
+                        filter: R::Land,
+                        count: Value::ONE,
+                        tapped: false,
+                        haste: false,
+                        sacrifice_eot: false,
+                        return_eot: false,
+                        then: None,
+                    },
+                ]),
+            },
+        ],
+        ..creature(
+            "Contaminant Grafter",
+            cost(&[generic(4), g()]),
+            vec![CreatureType::Phyrexian, CreatureType::Druid],
+            5,
+            5,
+        )
+    }
+}
+
+/// Geth's Summons — a creature back from your graveyard, and one from each
+/// corrupted opponent's. ⚠ Both picks are made at resolution rather than
+/// targeted, and "three or more poison as you cast" is read then too.
+pub fn geths_summons() -> CardDefinition {
+    let to_you = || ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false };
+    let one_from = |who: PlayerRef| Effect::MoveChosen {
+        from: Selector::CardsInZone { who, zone: Zone::Graveyard, filter: R::Creature },
+        filter: None,
+        count: Value::ONE,
+        up_to: true,
+        to: to_you(),
+    };
+    CardDefinition {
+        name: "Geth's Summons",
+        cost: cost(&[generic(2), b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            one_from(PlayerRef::You),
+            Effect::ForEachOpponent {
+                body: Box::new(Effect::If {
+                    cond: Predicate::ValueAtLeast(
+                        Value::PoisonCountersOf(PlayerRef::Triggerer),
+                        Value::Const(3),
+                    ),
+                    then: Box::new(one_from(PlayerRef::Triggerer)),
+                    else_: Box::new(Effect::Noop),
+                }),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Glissa's Retriever — haste, toxic 3, evasion, and a corrupted death that
+/// exiles it to rebuy a card per corrupted opponent. ⚠ The rebuy is picked
+/// at resolution of the one trigger, not targeted by a reflexive one.
+pub fn glissas_retriever() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Haste, Keyword::Toxic(3), Keyword::CantBeBlockedByPowerAtMost(2)],
+        triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::If {
+            cond: corrupted(),
+            then: Box::new(Effect::Seq(vec![
+                Effect::Move { what: Selector::This, to: ZoneDest::Exile },
+                Effect::MoveChosen {
+                    from: Selector::CardsInZone { who: PlayerRef::You, zone: Zone::Graveyard, filter: R::Any },
+                    filter: None,
+                    count: corrupted_opponents(),
+                    up_to: true,
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+            ])),
+            else_: Box::new(Effect::Noop),
+        })],
+        ..creature(
+            "Glissa's Retriever",
+            cost(&[generic(5), g()]),
+            vec![CreatureType::Phyrexian, CreatureType::Beast],
+            6,
+            6,
+        )
+    }
+}
+
+/// Wurmquake — an X/X toxic Wurm for the mana spent (flashback counts), and
+/// one more per corrupted opponent.
+pub fn wurmquake() -> CardDefinition {
+    let wurm = Arc::new(TokenDefinition {
+        name: "Phyrexian Wurm".into(),
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Wurm],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Trample, Keyword::Toxic(1)],
+        ..Default::default()
+    });
+    let x = || Value::CastSpellManaSpent;
+    CardDefinition {
+        name: "Wurmquake",
+        cost: cost(&[generic(4), g(), g()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Flashback(cost(&[generic(8), g(), g()]))],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Sum(vec![Value::ONE, corrupted_opponents()]),
+                definition: wurm,
+            },
+            Effect::PumpPT {
+                what: Selector::LastCreatedTokens,
+                power: x(),
+                toughness: x(),
+                duration: crate::effect::Duration::Permanent,
+            },
+        ]),
+        ..Default::default()
     }
 }
