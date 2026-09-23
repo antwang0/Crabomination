@@ -6828,6 +6828,10 @@ pub enum Effect {
     /// Gain control of the resolved permanents for as long as the effect's
     /// source remains on the battlefield (Sower of Temptation).
     GainControlWhileSourceRemains { what: Selector },
+    /// CR 611.2c — "gain control of `what` for as long as you control this
+    /// creature" (Master Thief): the steal also ends when the source changes
+    /// controller, not only when it leaves. Swept with Vedalken Shackles.
+    GainControlWhileYouControlSource { what: Selector },
     /// CR 611.2c — "gain control of `what` for as long as this permanent
     /// remains tapped" (Vedalken Shackles). The steal unwinds in the SBA
     /// sweep once the source untaps or leaves; while it holds something the

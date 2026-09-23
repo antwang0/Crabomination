@@ -1126,3 +1126,21 @@ fn whispersteel_dagger_casts_from_the_hit_players_graveyard() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(piker).map(|c| c.controller), Some(0));
 }
+
+/// CR 611.2c — "for as long as you control" ends when the Thief changes
+/// hands, not only when it leaves.
+#[test]
+fn cr_611_2c_master_thiefs_steal_ends_when_it_changes_hands() {
+    let mut g = main_phase();
+    let ring = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let thief = g.add_card_to_hand(0, catalog::master_thief());
+    cast(&mut g, thief, &[]);
+    assert_eq!(g.battlefield_find(ring).map(|c| c.controller), Some(0));
+    let steal = g.add_card_to_hand(1, catalog::act_of_treason());
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    try_cast(&mut g, 1, steal, &[Target::Permanent(thief)]).expect("Act of Treason on the Thief");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(thief).map(|c| c.controller), Some(1));
+    assert_eq!(g.battlefield_find(ring).map(|c| c.controller), Some(1), "the Ring went home");
+}

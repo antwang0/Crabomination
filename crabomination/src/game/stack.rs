@@ -5996,7 +5996,10 @@ impl GameState {
         // CR 611.2c — "for as long as this artifact remains tapped" (Vedalken
         // Shackles) / "for as long as that Aura is attached to it" (Eriette)
         // steals end the moment the source stops meeting the clause.
-        if self.temporary_control.iter().any(|tc| tc.while_source_tapped || tc.while_source_attached)
+        if self
+            .temporary_control
+            .iter()
+            .any(|tc| tc.while_source_tapped || tc.while_source_attached || tc.while_you_control_source)
         {
             let mut kept = Vec::new();
             for tc in std::mem::take(&mut self.temporary_control) {
@@ -6005,6 +6008,10 @@ impl GameState {
                     && (!tc.while_source_attached
                         || tc.source.and_then(|s| self.battlefield_find(s)).is_some_and(|c| {
                             c.attached_to == Some(tc.card)
+                        }))
+                    && (!tc.while_you_control_source
+                        || tc.source.and_then(|s| self.battlefield_find(s)).is_some_and(|src| {
+                            self.battlefield_find(tc.card).is_some_and(|c| c.controller == src.controller)
                         }));
                 if holds {
                     kept.push(tc);

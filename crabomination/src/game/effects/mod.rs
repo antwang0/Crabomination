@@ -17576,6 +17576,7 @@ impl GameState {
                             source: None,
                             while_source_tapped: false,
                             while_source_attached: false,
+                            while_you_control_source: false,
                         });
                     }
                 }
@@ -17599,6 +17600,31 @@ impl GameState {
                             source: Some(src),
                             while_source_tapped: false,
                             while_source_attached: false,
+                            while_you_control_source: false,
+                        });
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::GainControlWhileYouControlSource { what } => {
+                // CR 611.2c — the SBA sweep (`stack.rs`, beside Shackles)
+                // hands it back once the source leaves or changes hands.
+                let Some(src) = ctx.source else { return Ok(()) };
+                let new_ctrl = ctx.controller;
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    if let Some(prev) = self.change_control(cid, new_ctrl)
+                        && !self.temporary_control.iter().any(|t| t.card == cid)
+                    {
+                        self.temporary_control.push(crate::game::TempControl {
+                            card: cid,
+                            original_controller: prev,
+                            duration: crate::effect::Duration::Permanent,
+                            source: Some(src),
+                            while_source_tapped: false,
+                            while_source_attached: false,
+                            while_you_control_source: true,
                         });
                     }
                 }
@@ -17674,6 +17700,7 @@ impl GameState {
                         source: Some(aura),
                         while_source_tapped: false,
                         while_source_attached: true,
+                        while_you_control_source: false,
                     });
                 }
                 Ok(())
@@ -17698,6 +17725,7 @@ impl GameState {
                         source: Some(aura),
                         while_source_tapped: false,
                         while_source_attached: true,
+                        while_you_control_source: false,
                     });
                 }
                 Ok(())
@@ -17720,6 +17748,7 @@ impl GameState {
                             source: Some(src),
                             while_source_tapped: true,
                             while_source_attached: false,
+                            while_you_control_source: false,
                         });
                     }
                 }
@@ -25835,6 +25864,7 @@ impl GameState {
                             source: None,
                             while_source_tapped: false,
                             while_source_attached: false,
+                            while_you_control_source: false,
                         });
                     }
                     if let Some(c) = self.battlefield_find_mut(*cid) {

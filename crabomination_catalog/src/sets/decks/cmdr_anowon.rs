@@ -137,12 +137,10 @@ pub fn marang_river_prowler() -> CardDefinition {
     }
 }
 
-/// Master Thief — steal an artifact for as long as it stays. ⚠ The steal
-/// ends when Master Thief leaves the battlefield, not when you lose control
-/// of it.
+/// Master Thief — steal an artifact for as long as you control the Thief.
 pub fn master_thief() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![etb(Effect::GainControlWhileSourceRemains {
+        triggered_abilities: vec![etb(Effect::GainControlWhileYouControlSource {
             what: target_filtered(R::Artifact),
         })],
         ..rogue("Master Thief", cost(&[generic(2), u(), u()]), vec![CreatureType::Human], 2, 2)

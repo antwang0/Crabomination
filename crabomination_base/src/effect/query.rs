@@ -1801,6 +1801,7 @@ impl Effect {
                 sel_has_target(what) || to.as_ref().is_some_and(player_has_target)
             }
             Effect::GainControlWhileSourceRemains { what }
+            | Effect::GainControlWhileYouControlSource { what }
             | Effect::GainControlWhileSourceTapped { what }
             | Effect::CounterAbilityAndDestroySource { what }
             | Effect::WeldArtifacts { what } => sel_has_target(what),
@@ -2348,6 +2349,7 @@ impl Effect {
             | Effect::CopySpellMayChooseTargets { what, .. }
             | Effect::GainControl { what, .. }
             | Effect::GainControlWhileSourceRemains { what }
+            | Effect::GainControlWhileYouControlSource { what }
             | Effect::GainControlWhileSourceTapped { what }
             | Effect::GrantKeywordWhileSourceTapped { what, .. }
             | Effect::SacrificeThenRevealUntilSharedType { what }
@@ -4581,6 +4583,7 @@ impl Effect {
                         .then_some(&IMPLICIT_OPPONENT_TARGET)
                 }),
                 Effect::GainControlWhileSourceRemains { what }
+                | Effect::GainControlWhileYouControlSource { what }
                 | Effect::GainControlWhileSourceTapped { what }
                 | Effect::GrantKeywordWhileSourceTapped { what, .. }
                 | Effect::SacrificeThenRevealUntilSharedType { what }

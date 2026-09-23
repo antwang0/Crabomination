@@ -3618,6 +3618,10 @@ pub(crate) struct TempControl {
     /// stays attached to `card`. Swept alongside `while_source_tapped`.
     #[serde(default)]
     pub(crate) while_source_attached: bool,
+    /// Master Thief: the steal holds only while `source`'s controller still
+    /// controls `card`. Swept alongside `while_source_tapped`.
+    #[serde(default)]
+    pub(crate) while_you_control_source: bool,
 }
 
 /// A triggered ability a resolution granted to a permanent for a while —
