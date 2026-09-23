@@ -18231,6 +18231,26 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::CopySpellTargeting { what, target } => {
+                let Some(spell_id) =
+                    self.resolve_selector(what, ctx).into_iter().find_map(|e| e.as_card_id())
+                else {
+                    return Ok(());
+                };
+                let Some(aim) = self.resolve_selector(target, ctx).into_iter().find_map(|e| {
+                    e.as_permanent_id()
+                }) else {
+                    return Ok(());
+                };
+                let before = self.stack.len();
+                self.copy_stack_spell(spell_id, 1, false, events);
+                if self.stack.len() > before
+                    && let Some(StackItem::Spell { target: t, .. }) = self.stack.last_mut()
+                {
+                    *t = Some(Target::Permanent(aim));
+                }
+                Ok(())
+            }
             Effect::CopySpellForEachOtherLegalCreature { what } => {
                 // Ink-Treader Nephilim. One copy per other creature the spell
                 // could target; each copy is retargeted to its own creature.

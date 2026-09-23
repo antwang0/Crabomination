@@ -1743,6 +1743,7 @@ impl Effect {
             | Effect::ReturnSelfDeployBlocker
             | Effect::TokenUnlessOpponentLetsYouDraw { .. } => false,
             Effect::CopySpellForEachOtherLegalCreature { what }
+            | Effect::CopySpellTargeting { what, .. }
             | Effect::EyeOfTheStorm { what }
             | Effect::SearchOpponentLibraryForSameName { what } => sel_has_target(what),
             Effect::SearchSameNameToBattlefield { who, what } => {
@@ -2358,6 +2359,7 @@ impl Effect {
             Effect::MayReturnSharingPermanentType { with: what }
             | Effect::ChangeTargetOfAbility { what }
             | Effect::CopySpellForEachOtherLegalCreature { what }
+            | Effect::CopySpellTargeting { what, .. }
             | Effect::EyeOfTheStorm { what }
             | Effect::SearchOpponentLibraryForSameName { what } => sel_filter(what),
             Effect::RevealLibraryNamedCountPunish { who, .. }
@@ -4586,6 +4588,7 @@ impl Effect {
                 | Effect::ReturnSelfDeployBlocker
                 | Effect::TokenUnlessOpponentLetsYouDraw { .. } => None,
                 Effect::CopySpellForEachOtherLegalCreature { what }
+                | Effect::CopySpellTargeting { what, .. }
                 | Effect::EyeOfTheStorm { what }
                 | Effect::SearchOpponentLibraryForSameName { what }
                 | Effect::GainControlAndReattachAura { what } => sel_find(what, slot),

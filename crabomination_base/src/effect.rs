@@ -5833,6 +5833,10 @@ pub enum Effect {
     /// Ink-Treader Nephilim — copy the resolved spell once for each other
     /// creature it could legally target, each copy aimed at a different one.
     CopySpellForEachOtherLegalCreature { what: Selector },
+    /// Copy the spell `what` resolves to once, aimed at the object `target`
+    /// resolves to — Frontline Heroism's "then copy that spell. The copy
+    /// targets that token."
+    CopySpellTargeting { what: Selector, target: Selector },
     /// Mimeofacture — search the resolved permanent's controller's library for
     /// a card with that permanent's name and put it onto the battlefield under
     /// *your* control; then that player shuffles.
