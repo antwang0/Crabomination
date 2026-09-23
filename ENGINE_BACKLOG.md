@@ -8975,7 +8975,7 @@ finds, so only these survived the compaction.
   cost" rider; Conduit of Worlds ships only the play-lands-from-graveyard static
   (not the {T} cast-from-graveyard half); Lord Skitter's Rat-ETB exiles a card
   rather than "up to one target"; Llanowar Greenwidow drops the Domain cost
-  reduction + the exile-if-it-would-leave rider. Newer wave: Sunfall's Incubate
+  reduction (its exile-if-it-would-leave rider ships, `ExileIfLeavesBattlefield`). Newer wave: Sunfall's Incubate
   now ships (`Effect::Incubate`, CR 701.53); Ossification is modeled as a standalone O-Ring (no enchant-a-basic
   rider); Steamcore Scholar drops the "unless you discard an I/S or flyer"
   reprieve; Subterranean Schooner explores any creature you control (not
