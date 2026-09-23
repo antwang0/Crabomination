@@ -979,31 +979,28 @@ fn snapcaster_mage_etb_grants_may_play() {
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Snapcaster Mage"));
 }
 
-/// Snapcaster Mage: has Flash keyword.
-/// Grisly Salvage: mills 5 then scries 1.
+/// Grisly Salvage: mill five, then a creature or land card from among the
+/// milled cards goes to hand — not a card that was already in the yard.
 #[test]
-fn grisly_salvage_mills_five_and_scries() {
+fn grisly_salvage_mills_five_and_keeps_a_creature_or_land() {
     let mut g = two_player_game();
-    for _ in 0..8 {
-        g.add_card_to_library(0, catalog::forest());
+    let old = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::lightning_bolt());
     }
+    g.add_card_to_library(0, catalog::forest());
     let id = g.add_card_to_hand(0, catalog::grisly_salvage());
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add(Color::Green, 1);
-    let lib_before = g.players[0].library.len();
-    let yard_before = g.players[0].graveyard.len();
-
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Grisly Salvage castable for {B}{G}");
     drain_stack(&mut g);
 
-    // Mill 5 puts 5 cards in graveyard (plus the spell itself = 6).
-    assert!(g.players[0].graveyard.len() >= yard_before + 5,
-        "should mill at least 5 cards into graveyard");
-    // Library lost 5 from mill (+1 from scry bottom potentially).
-    assert!(g.players[0].library.len() <= lib_before - 5,
-        "library should shrink by at least 5");
+    assert!(g.players[0].library.is_empty(), "five milled");
+    let hand: Vec<_> = g.players[0].hand.iter().map(|c| c.definition.name).collect();
+    assert_eq!(hand, ["Forest"], "the milled land, not the Bears already there");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == old));
 }
 
 /// Thought Erasure: discard a nonland card + surveil 1.
@@ -1171,25 +1168,6 @@ fn thought_erasure_strips_and_surveils() {
     drain_stack(&mut g);
 
     assert!(g.players[1].hand.len() < hand_before, "opponent lost a card");
-}
-
-#[test]
-fn grisly_salvage_mills_and_draws() {
-    let mut g = two_player_game();
-    for _ in 0..10 {
-        g.add_card_to_library(0, catalog::island());
-    }
-    let id = g.add_card_to_hand(0, catalog::grisly_salvage());
-    g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add(Color::Green, 1);
-    let gy_before = g.players[0].graveyard.len();
-
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
-    }).expect("Grisly Salvage castable");
-    drain_stack(&mut g);
-
-    assert!(g.players[0].graveyard.len() > gy_before, "cards milled to graveyard");
 }
 
 // ── Chain Lightning ─────────────────────────────────────────────────────────

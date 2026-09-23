@@ -20121,28 +20121,18 @@ pub fn torsten_founder_of_benalia() -> CardDefinition {
     }
 }
 
-/// Grisly Salvage — {B}{G} Instant. Mill 5, then return a creature or
-/// land card from among them to your hand.
-///
-/// Approximation: Mill 5 + Scry 1. The "pick a creature or land from
-/// among the milled" is approximated by the Scry — you get to choose
-/// whether the next draw is what you want, preserving the
-/// selection-after-mill gameplay pattern.
+/// Grisly Salvage — {B}{G} Instant. Mill five cards. You may put a creature
+/// or land card from among them into your hand.
 pub fn grisly_salvage() -> CardDefinition {
     CardDefinition {
         name: "Grisly Salvage",
         cost: cost(&[b(), g()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Seq(vec![
-            Effect::Mill {
-                who: Selector::You,
-                amount: Value::Const(5),
-            },
-            Effect::Scry {
-                who: PlayerRef::You,
-                amount: Value::Const(1),
-            },
-        ]),
+        effect: Effect::MillThenToHand {
+            amount: Value::Const(5),
+            filter: SelectionRequirement::Creature.or(SelectionRequirement::Land),
+            otherwise: None,
+        },
         ..Default::default()
     }
 }

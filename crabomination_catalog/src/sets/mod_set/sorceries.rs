@@ -1260,8 +1260,8 @@ pub fn gerrards_wisdom() -> CardDefinition {
     }
 }
 
-/// Grapple with the Past — {1}{G} Sorcery. Mill three cards, then return a
-/// creature or land card from your graveyard to your hand.
+/// Grapple with the Past — {1}{G} Instant. Mill three cards, then you may
+/// return a creature or land card from your graveyard to your hand.
 pub fn grapple_with_the_past() -> CardDefinition {
     CardDefinition {
         name: "Grapple with the Past",
