@@ -633,7 +633,10 @@ fn necromantic_selection_wipes_and_reanimates_one() {
     assert_eq!(creatures.len(), 1, "one comes back");
     assert_eq!(creatures[0].controller, 0, "under your control");
     let back = creatures[0].id;
-    assert!(g.computed_permanent(back).unwrap().subtypes().creature_types.contains(&CreatureType::Zombie));
+    let cp = g.computed_permanent(back).unwrap();
+    assert!(cp.subtypes().creature_types.contains(&CreatureType::Zombie));
+    assert!(cp.colors.contains(Color::Black), "a black Zombie in addition to green");
+    assert!(cp.colors.contains(Color::Green));
     assert!(in_exile(&g, spell), "exiles itself");
     let _ = theirs;
 }

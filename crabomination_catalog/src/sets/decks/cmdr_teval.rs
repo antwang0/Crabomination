@@ -32,8 +32,8 @@
 //! * Lethal Scheme — the convoking creatures don't connive (the engine doesn't
 //!   remember which creatures convoked a spell).
 //! * Welcome the Dead — a surveil isn't counted toward X.
-//! * Necromantic Selection — the returned creature becomes a Zombie but not black
-//!   (and so does any other creature you reanimated earlier that turn).
+//! * Necromantic Selection — any other creature you reanimated earlier that turn
+//!   also becomes a black Zombie.
 //! * Agadeem's Awakening — the returns are picked at resolution, not targeted.
 //! * Palantír of Orthanc / Midnight Clock / The Soul Stone — influence and hour
 //!   counters (and the harnessed state) are charge counters; The Soul Stone has
@@ -930,10 +930,14 @@ pub fn welcome_the_dead() -> CardDefinition {
 /// your control. It's a black Zombie in addition to its other colors and types.
 /// Exile Necromantic Selection.
 ///
-/// Approximations: the returned creature becomes a Zombie but not black; the
-/// Zombie type lands on every creature you control that entered from a
-/// graveyard this turn (normally just the one returned).
+/// Approximation: the black Zombie rider lands on every creature you control
+/// that entered from a graveyard this turn (normally just the one returned).
 pub fn necromantic_selection() -> CardDefinition {
+    let returned = || {
+        Selector::EachPermanent(
+            R::Creature.and(R::ControlledByYou).and(R::EnteredFromGraveyardThisTurn),
+        )
+    };
     CardDefinition {
         exile_on_resolve: true,
         ..spell(
@@ -955,11 +959,15 @@ pub fn necromantic_selection() -> CardDefinition {
                 // `LastMoved`, so it is read as the creature you control that
                 // entered from a graveyard this turn.
                 Effect::AddCreatureTypes {
-                    what: Selector::EachPermanent(
-                        R::Creature.and(R::ControlledByYou).and(R::EnteredFromGraveyardThisTurn),
-                    ),
+                    what: returned(),
                     creature_types: vec![CreatureType::Zombie],
                     duration: Duration::Permanent,
+                },
+                Effect::BecomeColor {
+                    what: returned(),
+                    colors: vec![Color::Black],
+                    duration: Duration::Permanent,
+                    additive: true,
                 },
             ]),
         )
