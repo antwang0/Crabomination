@@ -14846,7 +14846,12 @@ impl GameState {
                         card.chosen_player.map(|seat| self.player_tally(seat, what) as i32).unwrap_or(0);
                     if power_only { (base_p + n, base_t) } else { (base_p + n, base_t + n) }
                 }
-                crate::card::DynamicPt::ChosenPlayerGraveyardMatching { base_p, base_t, filter } => {
+                crate::card::DynamicPt::ChosenPlayerGraveyardMatching {
+                    base_p,
+                    base_t,
+                    filter,
+                    scales_toughness,
+                } => {
                     let n = card
                         .chosen_player
                         .map(|seat| {
@@ -14857,7 +14862,7 @@ impl GameState {
                                 .count() as i32
                         })
                         .unwrap_or(0);
-                    (base_p + n, base_t)
+                    (base_p + n, if scales_toughness { base_t + n } else { base_t })
                 }
                 crate::card::DynamicPt::TappedLandsChosenPlayerControls { base_t } => {
                     let n = card

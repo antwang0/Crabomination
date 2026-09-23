@@ -5218,10 +5218,14 @@ pub enum DynamicPt {
     /// remembered player's graveyard (Haunting Apparition — "1 plus the number
     /// of green creature cards in the chosen player's graveyard"). The
     /// filtered sibling of `ChosenPlayerTally`'s fixed tallies.
+    /// `scales_toughness`: toughness is `base_t` plus the same count (Sewer
+    /// Nemesis's "power and toughness are each equal to …").
     ChosenPlayerGraveyardMatching {
         base_p: i32,
         base_t: i32,
         filter: SelectionRequirement,
+        #[serde(default)]
+        scales_toughness: bool,
     },
     TappedLandsChosenPlayerControls { base_t: i32 },
     /// `inner` during the controller's turn, `base_p`/`base_t` on every other

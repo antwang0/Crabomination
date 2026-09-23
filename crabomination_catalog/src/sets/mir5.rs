@@ -681,6 +681,7 @@ pub fn haunting_apparition() -> CardDefinition {
             base_p: 1,
             base_t: 2,
             filter: R::Creature.and(R::HasColor(Color::Green)),
+            scales_toughness: false,
         }),
         ..creature(
             "Haunting Apparition",
