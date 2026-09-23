@@ -35,6 +35,10 @@ use serde_json::Value;
 /// in **both** directions, so an entry whose card stopped having a dead mode
 /// fails too rather than quietly licensing a future one.
 pub const REVIEWED_DEAD_MODES: &[(&str, &str)] = &[(
+    "Hullbreaker Horror",
+    "\"Choose up to one\" — choosing neither mode is the empty arm, which is \
+     the printed card and not a gap",
+), (
     "Elite Interceptor",
     "\"You may tap or untap target creature\" — declining is the empty arm, \
      which is the printed card and not a gap",

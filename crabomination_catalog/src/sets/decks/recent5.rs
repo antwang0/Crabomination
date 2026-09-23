@@ -213,8 +213,10 @@ pub fn venser_shaper_savant() -> CardDefinition {
 }
 
 /// Hullbreaker Horror — {5}{U}{U} 7/8 Kraken, Flash, can't be countered.
-/// Whenever you cast a spell, you may return target nonland permanent to its
-/// owner's hand. (The "return target spell you don't control" mode is dropped.)
+/// Whenever you cast a spell, choose up to one — • Return target spell you
+/// don't control to its owner's hand. • Return target nonland permanent to its
+/// owner's hand. ("Up to one" is a third, empty mode; the spell mode rides
+/// the countered-spell-to-hand path, as Reprieve does.)
 pub fn hullbreaker_horror() -> CardDefinition {
     CardDefinition {
         name: "Hullbreaker Horror",
@@ -229,15 +231,22 @@ pub fn hullbreaker_horror() -> CardDefinition {
         keywords: vec![Keyword::Flash, Keyword::CantBeCountered],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl),
-            effect: Effect::MayDo {
-                description: "Return target nonland permanent to its owner's hand".into(),
-                body: Box::new(Effect::Move {
+            effect: Effect::ChooseMode(vec![
+                Effect::Move {
                     what: target_filtered(
                         SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
                     ),
                     to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
-                }),
-            },
+                },
+                Effect::CounterSpellToZone {
+                    what: target_filtered(
+                        SelectionRequirement::IsSpellOnStack
+                            .and(SelectionRequirement::ControlledByYou.negate()),
+                    ),
+                    zone: crate::effect::CounteredSpellZone::OwnerHand,
+                },
+                Effect::Noop,
+            ]),
         }],
         ..Default::default()
     }

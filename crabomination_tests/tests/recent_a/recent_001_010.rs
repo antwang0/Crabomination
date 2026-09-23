@@ -9493,7 +9493,10 @@ mod recent5 {
     }
 
     /// Hullbreaker Horror ships flash + can't-be-countered and bounces a permanent
-    /// when you cast a spell.
+    /// or an opponent's spell when you cast a spell. CR 700.2a / 608.2b — a
+    /// modal trigger's target is the chosen mode's (bug fix: triggers were
+    /// auto-targeted, and re-checked at resolution, against mode 0's filter,
+    /// so a later mode's target fizzled).
     #[test]
     fn hullbreaker_horror_bounces_on_spell_cast() {
         let h = catalog::hullbreaker_horror();
@@ -9506,7 +9509,7 @@ mod recent5 {
         g.priority.player_with_priority = 0;
         g.players[0].mana_pool.add(Color::Red, 1);
         g.decider = Box::new(ScriptedDecider::new([
-            DecisionAnswer::Bool(true),
+            DecisionAnswer::Mode(0),
             DecisionAnswer::Target(Target::Permanent(victim)),
         ]));
         g.perform_action(GameAction::CastSpell {
@@ -9514,6 +9517,33 @@ mod recent5 {
         }).expect("cast a spell");
         drain_stack(&mut g);
         assert!(g.players[1].hand.iter().any(|c| c.id == victim), "Hullbreaker bounced the permanent");
+
+        // The other mode: an opponent's spell goes back to its owner's hand.
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(0, catalog::hullbreaker_horror());
+        g.add_card_to_library(1, catalog::island());
+        g.add_card_to_library(1, catalog::island());
+        let div = g.add_card_to_hand(1, catalog::divination());
+        g.active_player_idx = 1;
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 1;
+        g.players[1].mana_pool.add(Color::Blue, 3);
+        g.perform_action(GameAction::CastSpell {
+            card_id: div, target: None, additional_targets: vec![], mode: None, x_value: None,
+        }).expect("opponent casts Divination");
+        g.priority.player_with_priority = 0;
+        let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+        g.players[0].mana_pool.add(Color::Red, 1);
+        g.decider = Box::new(ScriptedDecider::new([
+            DecisionAnswer::Mode(1),
+            DecisionAnswer::Target(Target::Permanent(div)),
+        ]));
+        g.perform_action(GameAction::CastSpell {
+            card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+        }).expect("respond with Bolt");
+        drain_stack(&mut g);
+        assert!(g.players[1].hand.iter().any(|c| c.id == div), "Divination went back to hand");
+        assert_eq!(g.players[1].library.len(), 2, "and drew nothing");
     }
 
     /// Drown in Sorrow sweeps small creatures with -2/-2 and scries.
