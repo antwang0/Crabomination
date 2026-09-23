@@ -18852,6 +18852,14 @@ impl GameState {
             }
         }
 
+        // CR 106.6 — "spend only mana of the chosen color": last, so taxes and
+        // reductions land first and every remaining generic pip is recoloured.
+        if ability.spend_only_chosen_color
+            && let Some(color) = self.battlefield_find(card_id).and_then(|c| c.chosen_color)
+        {
+            effective_mana_cost = effective_mana_cost.generic_as(color);
+        }
+
         // CR 601.2g — float-spend confirmation. Before tapping anything, if the
         // activator has pre-existing floating mana the mana cost could either
         // spend or avoid (untapped sources can cover it), ask first. Nothing is

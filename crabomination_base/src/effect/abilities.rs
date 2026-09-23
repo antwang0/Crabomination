@@ -3042,6 +3042,12 @@ pub struct ActivatedAbility {
     /// The announced X becomes that many coloured pips instead of generic.
     #[serde(default)]
     pub x_mana_color: Option<crate::mana::Color>,
+    /// CR 106.6 — "Spend only mana of the chosen color to activate this
+    /// ability" (Throne of Eldraine). The final cost's generic pips become
+    /// pips of the source's chosen color: paying {3} with only that color's
+    /// mana IS paying three of its pips. No chosen color leaves it unchanged.
+    #[serde(default)]
+    pub spend_only_chosen_color: bool,
     /// True if this ability is activated from the controller's graveyard
     /// rather than the battlefield. The activation walker searches the
     /// graveyard for the source instead of the battlefield. Used by

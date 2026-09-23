@@ -453,6 +453,21 @@ impl ManaCost {
         }
     }
 
+    /// Every generic pip as that many pips of `color` — a cost that may be
+    /// paid only with `color` mana (Throne of Eldraine's draw ability).
+    pub fn generic_as(&self, color: Color) -> ManaCost {
+        ManaCost {
+            symbols: self
+                .symbols
+                .iter()
+                .flat_map(|s| match s {
+                    ManaSymbol::Generic(n) => vec![ManaSymbol::Colored(color); *n as usize],
+                    other => vec![*other],
+                })
+                .collect(),
+        }
+    }
+
     /// Subtract `amount` from this cost's total Generic pips, clamping at
     /// zero. Colored / colorless / hybrid / Phyrexian / snow / X pips are
     /// untouched — CR 601.2f and CR 117.7c forbid cost reductions from
