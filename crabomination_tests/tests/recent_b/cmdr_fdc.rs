@@ -61,7 +61,7 @@ fn combat(
     let active = g.active_player_idx;
     g.step = TurnStep::DeclareAttackers;
     g.priority.player_with_priority = active;
-    g.declare_attackers(attacks).expect("attack");
+    g.perform_action(GameAction::DeclareAttackers(attacks)).expect("attack");
     drain_stack(g);
     g.priority.player_with_priority = responder;
     mid(g);
@@ -563,4 +563,295 @@ fn vivid_lands_spend_charge_counters_for_any_color() {
             mode: None,
         })
         .is_err());
+}
+
+// ── Corrupting Influence (Ixhel, Scion of Atraxa) ───────────────────────────
+
+/// CR 122.1f / 704.5c — poison counters on every player, and proliferate
+/// adds one more of each kind already there.
+#[test]
+fn ichor_rats_poisons_everyone_and_glistening_sphere_proliferates() {
+    let mut g = main_phase();
+    etb(&mut g, catalog::ichor_rats());
+    assert_eq!((g.players[0].poison_counters, g.players[1].poison_counters), (1, 1));
+    let sphere = etb(&mut g, catalog::glistening_sphere());
+    assert!(g.battlefield_find(sphere).unwrap().tapped);
+    assert!(g.players[1].poison_counters >= 2, "proliferate hit the opponent");
+}
+
+/// CR 702.166 — corrupted gates the three-mana ability on an opponent at
+/// three poison.
+#[test]
+fn cr_702_166_glistening_sphere_corrupted_mana_needs_three_poison() {
+    let mut g = main_phase();
+    let sphere = g.add_card_to_battlefield(0, catalog::glistening_sphere());
+    let tap3 = |g: &mut GameState| {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: sphere,
+            ability_index: 1,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+    };
+    assert!(tap3(&mut g).is_err());
+    g.players[1].poison_counters = 3;
+    tap3(&mut g).expect("corrupted");
+    let pool = &g.players[0].mana_pool;
+    let total: u32 = [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green]
+        .iter()
+        .map(|c| pool.amount(*c))
+        .sum();
+    assert_eq!(total, 3);
+}
+
+/// CR 903.3 — a commander of yours attacking proliferates; another creature
+/// attacking does not.
+#[test]
+fn cr_903_3_norns_choirmaster_proliferates_on_commander_attacks() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::norns_choirmaster());
+    let cmd = g.seat_commanders(0, vec![catalog::grizzly_bears()])[0];
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastFromCommandZone {
+        card_id: cmd,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+        alternative: false,
+        pitch_card: None,
+    })
+    .expect("cast the commander");
+    drain_stack(&mut g);
+    g.players[1].poison_counters = 1;
+    let after_entry = g.players[1].poison_counters;
+    let giant = g.add_card_to_battlefield(0, catalog::hill_giant());
+    combat(&mut g, vec![Attack { attacker: giant, target: AttackTarget::Player(1) }], 0, |_| {});
+    assert_eq!(g.players[1].poison_counters, after_entry, "not a commander");
+    g.step = TurnStep::PreCombatMain;
+    combat(&mut g, vec![Attack { attacker: cmd, target: AttackTarget::Player(1) }], 0, |_| {});
+    assert_eq!(g.players[1].poison_counters, after_entry + 1);
+}
+
+/// Each creature shrinks by ITS controller's poison count, not the table's.
+#[test]
+fn phyresis_outbreak_shrinks_by_each_controllers_poison() {
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[1].poison_counters = 2;
+    let a = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let b = g.add_card_to_battlefield(2, catalog::hill_giant());
+    let mine = g.add_card_to_battlefield(0, catalog::hill_giant());
+    let spell = g.add_card_to_hand(0, catalog::phyresis_outbreak());
+    cast(&mut g, spell, &[]);
+    assert!(g.battlefield_find(a).is_none(), "3 poison: -3/-3 kills the 3/3");
+    assert_eq!(pt(&g, b), (2, 2), "1 poison");
+    assert_eq!(pt(&g, mine), (3, 3));
+}
+
+/// CR 122.1f — every opponent's poison counts, summed across the table.
+#[test]
+fn vishgraz_grows_with_the_tables_poison_and_makes_mites() {
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.players[1].poison_counters = 2;
+    g.players[2].poison_counters = 3;
+    g.players[0].poison_counters = 5;
+    let v = etb(&mut g, catalog::vishgraz_the_doomhive());
+    assert_eq!(pt(&g, v), (8, 8), "2 + 3, not its own 5");
+    assert_eq!(count_named(&g, 0, "Phyrexian Mite"), 3);
+}
+
+/// CR 603.2c — "to one or more players" is one batch however many seats
+/// were hit: two attackers at two players proliferate once.
+#[test]
+fn cr_603_2c_contaminant_grafter_proliferates_once_across_players() {
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.add_card_to_battlefield(0, catalog::contaminant_grafter());
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[1].poison_counters = 1;
+    g.players[2].poison_counters = 1;
+    combat(
+        &mut g,
+        vec![
+            Attack { attacker: a, target: AttackTarget::Player(1) },
+            Attack { attacker: b, target: AttackTarget::Player(2) },
+        ],
+        0,
+        |_| {},
+    );
+    assert_eq!((g.players[1].poison_counters, g.players[2].poison_counters), (2, 2), "one proliferate");
+}
+
+/// CR 702.166 — corrupted: one creature from your graveyard, plus one from
+/// each opponent at three or more poison (the other opponent's is left).
+#[test]
+fn cr_702_166_geths_summons_takes_from_each_corrupted_opponent() {
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let mine = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_graveyard(1, catalog::hill_giant());
+    let safe = g.add_card_to_graveyard(2, catalog::hill_giant());
+    g.players[1].poison_counters = 3;
+    let spell = g.add_card_to_hand(0, catalog::geths_summons());
+    cast(&mut g, spell, &[]);
+    assert_eq!(g.battlefield_find(mine).map(|c| c.controller), Some(0));
+    assert_eq!(g.battlefield_find(theirs).map(|c| c.controller), Some(0));
+    assert!(g.battlefield_find(safe).is_none());
+}
+
+/// CR 702.166 — dying while an opponent is corrupted exiles it and rebuys a
+/// card per corrupted opponent.
+#[test]
+fn cr_702_166_glissas_retriever_rebuys_per_corrupted_opponent() {
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let r = g.add_card_to_battlefield(0, catalog::glissas_retriever());
+    for _ in 0..3 {
+        g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    }
+    g.players[1].poison_counters = 3;
+    g.players[2].poison_counters = 4;
+    let hand = g.players[0].hand.len();
+    let murder = g.add_card_to_hand(0, catalog::murder());
+    cast(&mut g, murder, &[Target::Permanent(r)]);
+    assert!(g.exile.iter().any(|c| c.id == r), "exiled, not in the graveyard");
+    assert_eq!(g.players[0].hand.len(), hand + 2, "two corrupted opponents");
+}
+
+/// X is the mana spent; each corrupted opponent adds another Wurm.
+#[test]
+fn wurmquake_makes_x_x_wurms_per_corrupted_opponent() {
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[1].poison_counters = 3;
+    let spell = g.add_card_to_hand(0, catalog::wurmquake());
+    g.players[0].mana_pool.add(Color::Green, 6);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast for six");
+    drain_stack(&mut g);
+    let wurms: Vec<_> = g.battlefield.iter().filter(|c| c.definition.name == "Phyrexian Wurm").map(|c| c.id).collect();
+    assert_eq!(wurms.len(), 2);
+    assert!(wurms.iter().all(|&w| pt(&g, w) == (6, 6)));
+}
+
+/// CR 702.166 — at your end step each corrupted opponent exiles their top
+/// card, which you may cast spending mana as though it were any color; an
+/// opponent below three poison exiles nothing.
+#[test]
+fn cr_702_166_ixhel_exiles_from_corrupted_opponents_and_casts_with_any_mana() {
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.add_card_to_battlefield(0, catalog::ixhel_scion_of_atraxa());
+    let bears = g.add_card_to_library(1, catalog::goblin_piker());
+    let kept = g.add_card_to_library(2, catalog::goblin_piker());
+    g.players[1].poison_counters = 3;
+    g.step = TurnStep::PostCombatMain;
+    let _ = g.advance_step(Vec::new());
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bears));
+    assert!(g.players[2].library.iter().any(|c| c.id == kept), "not corrupted");
+    // Next main phase: cast the red Piker with green mana.
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: bears,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast from exile with any-color mana");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bears).map(|c| c.controller), Some(0));
+}
+
+/// An opponent whose creatures hit you gets one poison counter per batch;
+/// attacking a poisoned player draws the attacker a card (CR 506.2).
+#[test]
+fn norns_decree_poisons_attackers_and_rewards_attacking_the_poisoned() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::norns_decree());
+    // Seat 1 attacks seat 0 with two creatures: one poison counter.
+    g.active_player_idx = 1;
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    for _ in 0..3 {
+        g.add_card_to_library(1, catalog::forest());
+    }
+    let hand1 = g.players[1].hand.len();
+    combat(
+        &mut g,
+        vec![
+            Attack { attacker: a, target: AttackTarget::Player(0) },
+            Attack { attacker: b, target: AttackTarget::Player(0) },
+        ],
+        1,
+        |_| {},
+    );
+    assert_eq!(g.players[1].poison_counters, 1);
+    assert_eq!(g.players[1].hand.len(), hand1, "seat 0 wasn't poisoned");
+    // Seat 0 attacks the now-poisoned seat 1 and draws.
+    g.active_player_idx = 0;
+    let giant = g.add_card_to_battlefield(0, catalog::hill_giant());
+    g.add_card_to_library(0, catalog::forest());
+    let hand0 = g.players[0].hand.len();
+    combat(&mut g, vec![Attack { attacker: giant, target: AttackTarget::Player(1) }], 0, |_| {});
+    assert_eq!(g.players[0].hand.len(), hand0 + 1);
+}
+
+/// Rulings 2023-02-04 — the Grafted trigger: moving the Equipment to another
+/// creature, or the Equipment leaving, sacrifices the old host; the host
+/// leaving on its own does nothing more.
+#[test]
+fn grafted_equipment_sacrifices_the_host_it_leaves() {
+    let mut g = main_phase();
+    let exo = g.add_card_to_battlefield(0, catalog::grafted_exoskeleton());
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::hill_giant());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::Equip { equipment: exo, target: a }).expect("equip a");
+    drain_stack(&mut g);
+    assert_eq!(pt(&g, a), (4, 4));
+    assert!(g.computed_permanent(a).unwrap().keywords().contains(&Keyword::Infect));
+    flood(&mut g, 0);
+    g.perform_action(GameAction::Equip { equipment: exo, target: b }).expect("move to b");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).is_none(), "the old host was sacrificed");
+    assert!(g.battlefield_find(b).is_some());
+    // The Equipment leaving takes its host with it.
+    let shatter = g.add_card_to_hand(0, catalog::shatter());
+    cast(&mut g, shatter, &[Target::Permanent(exo)]);
+    assert!(g.battlefield_find(b).is_none(), "the host was sacrificed as the Equipment left");
+
+    // Grafted Wargear shares the rider.
+    let mut g = main_phase();
+    let wg = g.add_card_to_battlefield(0, catalog::grafted_wargear());
+    let c = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let d = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::Equip { equipment: wg, target: c }).expect("equip");
+    drain_stack(&mut g);
+    g.perform_action(GameAction::Equip { equipment: wg, target: d }).expect("re-equip");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(c).is_none());
 }

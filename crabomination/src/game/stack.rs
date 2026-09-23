@@ -7091,8 +7091,11 @@ impl GameState {
             .collect()
         };
         for id in stale_equipment_links {
-            if let Some(c) = self.battlefield.find_by_id_mut(id) {
-                c.attached_to = None;
+            if let Some(c) = self.battlefield.find_by_id_mut(id)
+                && let Some(host) = c.attached_to.take()
+            {
+                let (def, ctrl) = (std::sync::Arc::clone(&c.definition), c.controller);
+                self.note_unattached(id, &def, ctrl, host);
             }
         }
 
@@ -7528,6 +7531,9 @@ impl GameState {
         // CR 400.7 — see `place_card_at_resolved_zone`: the bounced card is
         // a new object in hand (damage is reset where it next enters).
         card.tapped = false;
+        if let Some(host) = card.attached_to {
+            self.note_unattached(card.id, &card.definition, card.controller, host);
+        }
         card.leave_battlefield_state();
         if card.controller < self.players.len() {
             self.players[card.controller].permanent_left_battlefield_this_turn = true;
@@ -7673,6 +7679,9 @@ impl GameState {
         // cap (Golgari Thug, cube seed 702; ENGINE_BACKLOG 2026-09-08).
         if zone != Zone::Battlefield {
             card.tapped = false;
+            if let Some(host) = card.attached_to {
+                self.note_unattached(card.id, &card.definition, card.controller, host);
+            }
             card.leave_battlefield_state();
         }
         // CR 717.6 — an Astrotorium-backed Attraction card bound for anywhere

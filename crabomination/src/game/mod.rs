@@ -130,6 +130,7 @@ mod could_produce;
 mod enter_attacking;
 // CR 102.2 — "an opponent controls N or more …", read per opponent.
 mod opponent_controls;
+mod unattach;
 /// CR 800.4f/g — routing an ask whose seat has left the game.
 pub(crate) mod departed;
 #[doc(hidden)]
@@ -20395,7 +20396,11 @@ impl GameState {
         let Some(c) = self.battlefield.find_by_id_mut(equipment) else {
             return Err(GameError::CardNotOnBattlefield(equipment));
         };
-        c.attached_to = Some(target);
+        let old = c.attached_to.replace(target);
+        if let Some(host) = old.filter(|&h| h != target) {
+            let (def, ctrl) = (std::sync::Arc::clone(&c.definition), c.controller);
+            self.note_unattached(equipment, &def, ctrl, host);
+        }
         Ok(vec![GameEvent::AttachmentMoved {
             attachment: equipment,
             attached_to: Some(target),

@@ -1527,6 +1527,16 @@ impl GameState {
                 .resolve_player(p, ctx)
                 .map(|p| self.players[p].poison_counters as i32)
                 .unwrap_or(0),
+            Value::PoisonCountersAmong(who) => self
+                .resolve_players(who, ctx)
+                .iter()
+                .map(|&p| self.players[p].poison_counters as i32)
+                .sum(),
+            Value::PlayersWithPoisonAtLeast { who, at_least } => self
+                .resolve_players(who, ctx)
+                .iter()
+                .filter(|&&p| self.players[p].poison_counters >= *at_least)
+                .count() as i32,
             Value::OpponentsWhoLostLifeThisTurn => self
                 .opponents_of(ctx.controller)
                 .into_iter()
@@ -3046,6 +3056,10 @@ impl GameState {
                     .count();
                 count as u32 >= *at_least
             }
+            Predicate::AnAttackedPlayerHasPoisonAtLeast { at_least } => self.attacking.iter().any(|a| {
+                matches!(a.target, crate::game::types::AttackTarget::Player(p)
+                    if self.players.get(p).is_some_and(|pl| pl.poison_counters >= *at_least))
+            }),
             Predicate::AttackedWithCreatureMatching { who, filter } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return false };
                 self.attacking.iter().any(|a| {

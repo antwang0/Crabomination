@@ -19171,7 +19171,12 @@ impl GameState {
                 None => None,
             };
             match detach.and_then(|id| self.battlefield.find_by_id_mut(id)) {
-                Some(c) => c.attached_to = None,
+                Some(c) => {
+                    if let Some(host) = c.attached_to.take() {
+                        let (id, def, ctrl) = (c.id, std::sync::Arc::clone(&c.definition), c.controller);
+                        self.note_unattached(id, &def, ctrl, host);
+                    }
+                }
                 None => return Err(GameError::SelectionRequirementViolated),
             }
         }

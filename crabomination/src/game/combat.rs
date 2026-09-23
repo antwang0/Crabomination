@@ -95,6 +95,8 @@ type DamageTrigger = (CardId, Effect, usize, Option<crate::card::Predicate>, boo
 pub(crate) enum BatchSubject {
     Player(usize),
     Permanent(CardId),
+    /// Every damaged player at once — `EventSpec::batch_across_players`.
+    AnyPlayer,
 }
 
 impl BatchSubject {
@@ -6489,11 +6491,22 @@ impl GameState {
                     if !self.triggered_once_per_turn_used.insert((trig_source, i)) {
                         continue;
                     }
-                } else if let Some(subject) = batch_subject {
+                } else if let Some(mut subject) = batch_subject {
                     // CR 603.2c — one fire per *damaged subject*, not per
                     // step: two defending seats in one alpha strike are two
                     // events. `batch_subject` is `None` for a noncombat
                     // delivery, where each call already is its own batch.
+                    // "…to one or more players" batches over the seats too.
+                    if matches!(subject, BatchSubject::Player(_))
+                        && self.battlefield_find(trig_source).is_some_and(|c| {
+                            c.definition
+                                .triggered_abilities
+                                .get(i)
+                                .is_some_and(|t| t.event.batch_across_players)
+                        })
+                    {
+                        subject = BatchSubject::AnyPlayer;
+                    }
                     let key = (trig_source, i, subject);
                     if self.combat_trigger_fired_this_step.contains(&key) {
                         continue;

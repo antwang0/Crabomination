@@ -245,6 +245,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::AESI_COMMANDERS,
             main: decks::AESI_MAIN,
         },
+        // Twentieth: the tenth official list (Corrupting Influence, ONC) —
+        // the field's poison deck: toxic, infect, proliferate. `--seats 20`.
+        PodDeck {
+            name: "Ixhel (WBG)",
+            commanders: decks::IXHEL_COMMANDERS,
+            main: decks::IXHEL_MAIN,
+        },
     ]
 }
 

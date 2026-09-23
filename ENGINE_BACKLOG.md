@@ -7969,8 +7969,8 @@ one of its own reasons teaches the next run to ignore the word.**
   - **Price of Progress / Pyromancer Ascension / Tibalt's Trickery /
     Daretti, Scrap Savant** — per-player-scaled damage, quest-counter spell
     copying, counter-and-cascade-from-exile, and a planeswalker, respectively.
-  - **Grafted Wargear** — equip {0} with "when unattached, sacrifice the
-    creature" (no on-unequip sacrifice hook yet).
+  - ✅ **Grafted Wargear** — the unattach rider ships (2026-09-23,
+    `EquipBonus::sacrifice_host_when_unattached`, `game/unattach.rs`).
 - ⏳ **Discovered this run (modern_decks staples/cleave/multi-pick run):**
   - **Engineered Explosives / Zabaz** — both need a counter snapshot that
     survives the source's sacrifice-as-cost: EE's "destroy each nonland

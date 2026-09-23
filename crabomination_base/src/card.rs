@@ -4981,6 +4981,11 @@ pub struct EquipBonus {
     /// so the 704.5m sweep skips that host entirely.
     #[serde(default)]
     pub protection_keeps_auras: bool,
+    /// "Whenever this Equipment becomes unattached from a permanent,
+    /// sacrifice that permanent" (Grafted Wargear, Grafted Exoskeleton) —
+    /// queued by `GameState::note_unattached` at every unattach site.
+    #[serde(default)]
+    pub sacrifice_host_when_unattached: bool,
     /// CR 702.16k — "This effect doesn't remove this Aura" (Pledge of
     /// Loyalty): the narrower sibling of `protection_keeps_auras`, exempting
     /// only the granting Aura itself from the 704.5m shed.

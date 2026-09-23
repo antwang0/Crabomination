@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Ten hand-picked commanders plus nine official preconstructed lists, each a
+//! Ten hand-picked commanders plus ten official preconstructed lists, each a
 //! 99 of cards this engine implements: legal under CR 903 (100 cards
 //! including the commander, singleton outside basics, every card inside the
 //! commander's CR 903.4 color identity) and Commander-legal per Scryfall's
@@ -8,10 +8,11 @@
 //!
 //! The ten were built by hand because the offline Scryfall cache cannot say
 //! how a precon splits into decks; MTGJSON's deck files can, and the eleventh
-//! through nineteenth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
+//! through twentieth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
 //! Win, Tails You Lose, Goblin Storm, Foundations Commander's Wretched Ranks,
-//! Tramplesaurus Rex and Keen Engineering, and Commander Legends' Reap the
-//! Tides) are taken from one card for card. What all of them keep
+//! Tramplesaurus Rex and Keen Engineering, Commander Legends' Reap the Tides
+//! and Phyrexia: All Will Be One's Corrupting Influence) are taken from one
+//! card for card. What all of them keep
 //! from the precon idea is what the pod needs — fixed, legal, varied color
 //! identities, and built to play against each other.
 //! One is a Partner pair (CR 702.124b), one is a **planeswalker**
@@ -726,4 +727,33 @@ pub const AESI_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
     forest, forest, forest, island, island, island, island, island, island, island, island, island,
     island, island, island, island, island, island,
+];
+
+pub const IXHEL_COMMANDERS: &[CardFactory] = &[ixhel_scion_of_atraxa];
+
+/// **Corrupting Influence**, the Phyrexia: All Will Be One Commander deck
+/// (ONC, 2023-02-10), exactly as MTGJSON's `CorruptingInfluence_ONC` prints
+/// it: 79 nonbasic cards + 6 Plains + 6 Swamps + 8 Forests = 99.
+/// Abzan poison: toxic and infect creatures, proliferate, and corrupted
+/// payoffs keyed to opponents at three poison counters.
+pub const IXHEL_MAIN: &[CardFactory] = &[
+    bilious_skulldweller, blight_mamba, blightbelly_rat, cankerbloom, contaminant_grafter,
+    evolution_sage, glissas_retriever, grateful_apparition, ichor_rats, ichorclaw_myr,
+    mycosynth_fiend, myr_convert, norns_choirmaster, pestilent_syphoner, phyrexian_swarmlord,
+    plague_myr, plague_stinger, scavenging_ooze, venomous_brutalizer, viridian_corrupter,
+    vishgraz_the_doomhive, windborn_muse, caress_of_phyrexia, culling_ritual, cultivate,
+    expand_the_sphere, feed_the_infection, fumigate, geths_summons, infectious_inquiry,
+    merciless_eviction, nights_whisper, noxious_assault, painful_truths, phyresis_outbreak,
+    phyrexian_rebirth, unnatural_restoration, vat_emergence, wurmquake, beast_within, carrion_call,
+    mortify, noxious_revival, putrefy, swords_to_plowshares, vraskas_fall, ghostly_prison,
+    moldervine_reclamation, norns_decree, arcane_signet, chromatic_lantern, commanders_sphere,
+    contagion_clasp, fellwar_stone, glistening_sphere, golgari_signet, grafted_exoskeleton,
+    norns_annex, phyrexian_atlas, sol_ring, trailblazers_boots, bojuka_bog, canopy_vista,
+    command_tower, exotic_orchard, fortified_village, karns_bastion, krosan_verge,
+    myriad_landscape, necroblossom_snarl, path_of_ancestry, sandsteppe_citadel, shineshadow_snarl,
+    sungrass_prairie, tainted_field, tainted_wood, temple_of_malady, temple_of_plenty,
+    temple_of_silence,
+    // Basics: 6 plains, 6 swamp, 8 forest
+    plains, plains, plains, plains, plains, plains, swamp, swamp, swamp, swamp, swamp, swamp,
+    forest, forest, forest, forest, forest, forest, forest, forest,
 ];
