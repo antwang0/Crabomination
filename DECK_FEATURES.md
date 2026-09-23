@@ -48,6 +48,7 @@ lists were picked.
 | **Wretched Ranks** (FDC precon) B | Ghoulcaller Gisa | B | 100 | ✅ complete |
 | **Tramplesaurus Rex** (FDC precon) G | Ghalta, Primal Hunger | G | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Keen Engineering** (FDC precon) U | Sai, Master Thopterist | U | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
+| **Reap the Tides** (CMR precon) GU | Aesi, Tyrant of Gyre Strait | GU | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not
@@ -210,6 +211,21 @@ Residual: **Steel Hellkite** reads `creatures_that_damaged_me_this_turn`, which
 also holds noncombat damage. Seed 9990, 1,000 games at 18 seats: **998
 decided, 1 action cap, 1 board cap, zero panics**; Sai wins 3.1 %;
 `--card-census` 892 distinct, every card of all eighteen lists played.
+
+The **nineteenth** is Commander Legends' **Reap the Tides**
+(`ReapTheTides_CMR`): Simic lands-matter under Aesi. Twelve cards were
+missing (`precon_scan` read thirteen: its factory regex missed a
+`-> crate::card::CardDefinition` signature, so wwk2's Terastodon looked
+absent — fixed). No new primitive: emerge, retrace, Fact or Fiction's pile
+split, kicker and the Seedborn-style filtered untap all existed. Residual:
+**Stumpsquall Hydra** puts all X counters on itself and then moves any onto
+commanders *you control* (the headless seat spreads them); an opponent's
+commander, which "any number of commanders" allows, is never offered. Seed
+9999, 1,000 games at 19 seats: **997 decided, 2 action caps (419-457-turn
+games at the 95,000 budget), 1 board cap, zero panics**; Aesi wins 5.1 %;
+`--card-census` 940 distinct, every card of all nineteen lists played. The
+board cap is legitimate: a Krenko seat doubling to 1,214 Goblins behind the
+Sai seat's Propaganda, whose tax lets six Mountains send three a turn.
 
 ⚠ **The board cap was a bot bug, not a loop.** A Krenko seat sent all 292
 of its Goblins at one player on 24 life each turn while two others sat on
