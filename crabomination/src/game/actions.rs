@@ -1134,6 +1134,7 @@ pub(crate) fn flashback_additional_costs(
         .map(|c| match c {
             A::DiscardXFromCost => A::Discard { count: x, filter: None },
             A::DiscardXRandomFromCost => A::DiscardRandom { count: x },
+            A::PayLifeX => A::PayLife { amount: x },
             A::ExileFromGraveyardXFromCost { filter } => {
                 A::ExileFromGraveyard { filter: filter.clone(), count: x }
             }
@@ -8722,6 +8723,10 @@ impl GameState {
                         count,
                     };
                 }
+                // "Pay X life" (Toxic Deluge).
+                crate::card::AdditionalCastCost::PayLifeX => {
+                    *c = crate::card::AdditionalCastCost::PayLife { amount: x_value.unwrap_or(0) };
+                }
                 // "Discard X cards" (Sickening Dreams, the Torment Dreams
                 // cycle) — X is the cast's chosen X.
                 crate::card::AdditionalCastCost::DiscardXFromCost => {
@@ -9308,6 +9313,7 @@ impl GameState {
             // before it reaches payment; a raw instance means X = 0.
             A::DiscardXFromCost
             | A::DiscardXRandomFromCost
+            | A::PayLifeX
             | A::ExileFromGraveyardXFromCost { .. } => true,
             // "Sacrifice one or more" — zero is a legal choice, so the cost
             // is always payable (the cast pipeline concretizes it into a
@@ -9522,6 +9528,7 @@ impl GameState {
                 | A::SacrificeAll { .. }
                 | A::DiscardXFromCost
                 | A::DiscardXRandomFromCost
+                | A::PayLifeX
                 | A::ExileFromGraveyardXFromCost { .. } => {}
                 A::SacrificePermanent { filter, count } => {
                     // Honor the player's explicit pick(s) when present and
