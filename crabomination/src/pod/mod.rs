@@ -252,6 +252,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::IXHEL_COMMANDERS,
             main: decks::IXHEL_MAIN,
         },
+        // Twenty-first: the eleventh official list (Sneak Attack, ZNC) —
+        // Dimir Rogues that mill what they hit. `--seats 21`.
+        PodDeck {
+            name: "Anowon (UB)",
+            commanders: decks::ANOWON_COMMANDERS,
+            main: decks::ANOWON_MAIN,
+        },
     ]
 }
 

@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Ten hand-picked commanders plus ten official preconstructed lists, each a
+//! Ten hand-picked commanders plus eleven official preconstructed lists, each a
 //! 99 of cards this engine implements: legal under CR 903 (100 cards
 //! including the commander, singleton outside basics, every card inside the
 //! commander's CR 903.4 color identity) and Commander-legal per Scryfall's
@@ -8,11 +8,11 @@
 //!
 //! The ten were built by hand because the offline Scryfall cache cannot say
 //! how a precon splits into decks; MTGJSON's deck files can, and the eleventh
-//! through twentieth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
+//! through twenty-first (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
 //! Win, Tails You Lose, Goblin Storm, Foundations Commander's Wretched Ranks,
 //! Tramplesaurus Rex and Keen Engineering, Commander Legends' Reap the Tides
-//! and Phyrexia: All Will Be One's Corrupting Influence) are taken from one
-//! card for card. What all of them keep
+//! Phyrexia: All Will Be One's Corrupting Influence and Zendikar Rising's
+//! Sneak Attack) are taken from one card for card. What all of them keep
 //! from the precon idea is what the pod needs — fixed, legal, varied color
 //! identities, and built to play against each other.
 //! One is a Partner pair (CR 702.124b), one is a **planeswalker**
@@ -756,4 +756,31 @@ pub const IXHEL_MAIN: &[CardFactory] = &[
     // Basics: 6 plains, 6 swamp, 8 forest
     plains, plains, plains, plains, plains, plains, swamp, swamp, swamp, swamp, swamp, swamp,
     forest, forest, forest, forest, forest, forest, forest, forest,
+];
+
+pub const ANOWON_COMMANDERS: &[CardFactory] = &[anowon_the_ruin_thief];
+
+/// **Sneak Attack**, the Zendikar Rising Commander deck (ZNC, 2020-09-25),
+/// exactly as MTGJSON's `SneakAttack_ZNC` prints it: 69 nonbasic cards +
+/// 15 Islands + 15 Swamps = 99. Dimir Rogues: evasive attackers that
+/// mill the players they hit, and payoffs keyed to full graveyards.
+pub const ANOWON_MAIN: &[CardFactory] = &[
+    lazav_dimir_mastermind, enigma_thief, scourge_of_fleets, gonti_lord_of_luxury, nighthowler,
+    ogre_slumlord, sepulchral_primordial, consuming_aberration, notion_thief,
+    oona_queen_of_the_fae, sygg_river_cutthroat, faerie_vandal, invisible_stalker, latchkey_faerie,
+    marang_river_prowler, master_thief, nightveil_sprite, slither_blade, triton_shorestalker,
+    whirler_rogue, changeling_outcast, frogtosser_banneret, marsh_flitter, oonas_blackguard,
+    stinkdrinker_bandit, syr_konrad_the_grim, zulaport_cutthroat, merfolk_windrobber,
+    sure_footed_infiltrator, soaring_thought_thief, notorious_throng, stolen_identity,
+    in_garruks_wake, necromantic_selection, distant_melody, open_into_wonder, endless_obedience,
+    rise_from_the_grave, extract_from_darkness, fated_return, silumgars_command, spinal_embrace,
+    aetherize, fact_or_fiction, murder, price_of_fame, soul_manipulation, whispersteel_dagger,
+    blackblade_reforged, bonehoard, obelisk_of_urd, scytheclaw, arcane_signet, commanders_sphere,
+    dimir_keyrune, dimir_locket, dimir_signet, heirloom_blade, mind_stone, sol_ring,
+    military_intelligence, command_tower, dimir_aqueduct, dimir_guildgate, dismal_backwater,
+    jwar_isle_refuge, myriad_landscape, rogues_passage, submerged_boneyard,
+    // Basics: 15 island, 15 swamp
+    island, island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp,
 ];
