@@ -61,7 +61,7 @@ fn combat(
     let active = g.active_player_idx;
     g.step = TurnStep::DeclareAttackers;
     g.priority.player_with_priority = active;
-    g.declare_attackers(attacks).expect("attack");
+    g.perform_action(GameAction::DeclareAttackers(attacks)).expect("attack");
     drain_stack(g);
     g.priority.player_with_priority = responder;
     mid(g);
@@ -563,4 +563,74 @@ fn vivid_lands_spend_charge_counters_for_any_color() {
             mode: None,
         })
         .is_err());
+}
+
+// ── Corrupting Influence (Ixhel, Scion of Atraxa) ───────────────────────────
+
+/// CR 122.1f / 704.5c — poison counters on every player, and proliferate
+/// adds one more of each kind already there.
+#[test]
+fn ichor_rats_poisons_everyone_and_glistening_sphere_proliferates() {
+    let mut g = main_phase();
+    etb(&mut g, catalog::ichor_rats());
+    assert_eq!((g.players[0].poison_counters, g.players[1].poison_counters), (1, 1));
+    let sphere = etb(&mut g, catalog::glistening_sphere());
+    assert!(g.battlefield_find(sphere).unwrap().tapped);
+    assert!(g.players[1].poison_counters >= 2, "proliferate hit the opponent");
+}
+
+/// CR 702.166 — corrupted gates the three-mana ability on an opponent at
+/// three poison.
+#[test]
+fn cr_702_166_glistening_sphere_corrupted_mana_needs_three_poison() {
+    let mut g = main_phase();
+    let sphere = g.add_card_to_battlefield(0, catalog::glistening_sphere());
+    let tap3 = |g: &mut GameState| {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: sphere,
+            ability_index: 1,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+    };
+    assert!(tap3(&mut g).is_err());
+    g.players[1].poison_counters = 3;
+    tap3(&mut g).expect("corrupted");
+    let pool = &g.players[0].mana_pool;
+    let total: u32 = [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green]
+        .iter()
+        .map(|c| pool.amount(*c))
+        .sum();
+    assert_eq!(total, 3);
+}
+
+/// CR 903.3 — a commander of yours attacking proliferates; another creature
+/// attacking does not.
+#[test]
+fn cr_903_3_norns_choirmaster_proliferates_on_commander_attacks() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::norns_choirmaster());
+    let cmd = g.seat_commanders(0, vec![catalog::grizzly_bears()])[0];
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastFromCommandZone {
+        card_id: cmd,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+        alternative: false,
+        pitch_card: None,
+    })
+    .expect("cast the commander");
+    drain_stack(&mut g);
+    g.players[1].poison_counters = 1;
+    let after_entry = g.players[1].poison_counters;
+    let giant = g.add_card_to_battlefield(0, catalog::hill_giant());
+    combat(&mut g, vec![Attack { attacker: giant, target: AttackTarget::Player(1) }], 0, |_| {});
+    assert_eq!(g.players[1].poison_counters, after_entry, "not a commander");
+    g.step = TurnStep::PreCombatMain;
+    combat(&mut g, vec![Attack { attacker: cmd, target: AttackTarget::Player(1) }], 0, |_| {});
+    assert_eq!(g.players[1].poison_counters, after_entry + 1);
 }
