@@ -3056,6 +3056,10 @@ impl GameState {
                     .count();
                 count as u32 >= *at_least
             }
+            Predicate::AnAttackedPlayerHasPoisonAtLeast { at_least } => self.attacking.iter().any(|a| {
+                matches!(a.target, crate::game::types::AttackTarget::Player(p)
+                    if self.players.get(p).is_some_and(|pl| pl.poison_counters >= *at_least))
+            }),
             Predicate::AttackedWithCreatureMatching { who, filter } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return false };
                 self.attacking.iter().any(|a| {

@@ -2215,6 +2215,11 @@ pub enum Predicate {
     /// outside a combat with declared attackers. Argent Dais's "whenever two
     /// or more creatures attack" (with `who: ActivePlayer`).
     AttackedWithCountAtLeast { who: PlayerRef, at_least: u32 },
+    /// CR 506.2 — some player a creature is attacking this combat (directly;
+    /// attacking a planeswalker attacks the planeswalker) has at least
+    /// `at_least` poison counters. Norn's Decree's "if one or more players
+    /// being attacked are poisoned".
+    AnAttackedPlayerHasPoisonAtLeast { at_least: u32 },
     /// CR 506.2 / 508.1 — `who` declared at least `at_least` attackers this
     /// combat **aimed at `defender`**: attacking the player themselves, plus,
     /// when `include_planeswalkers`, attacking a planeswalker `defender`
