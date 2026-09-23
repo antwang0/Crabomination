@@ -1469,6 +1469,31 @@ pub fn colored_cost_reduction_for_spell(
     out
 }
 
+/// Both colored cost statics, in order: `ColoredCostReduction`'s pips come
+/// off, then each `PhyrexianPipForSpells` (the Defilers) turns one remaining
+/// pip of its color Phyrexian — the optional "pay 2 life, {C} less".
+pub(crate) fn apply_colored_cost_statics(
+    state: &crate::game::GameState,
+    caster: usize,
+    card: &crate::card::CardInstance,
+    cost: &mut crate::mana::ManaCost,
+) {
+    use crate::effect::StaticEffect;
+    cost.reduce_by_cost(&colored_cost_reduction_for_spell(state, caster, card));
+    for src in &state.battlefield {
+        if src.controller != caster {
+            continue;
+        }
+        for sa in &src.definition.static_abilities {
+            if let StaticEffect::PhyrexianPipForSpells { filter, color } = &sa.effect
+                && state.evaluate_requirement_on_card(filter, card, caster)
+            {
+                cost.phyrexianize_one(*color);
+            }
+        }
+    }
+}
+
 /// CR 601.2f — the COLORED half of static cost *increases*
 /// (`StaticEffect::ColoredSpellTax`, the Invasion Leech cycle). Only the
 /// source's controller pays it. Callers append the returned pips to the cost
@@ -2287,7 +2312,7 @@ pub(crate) mod cast_static {
     pub const FLASH: u32 = 1 << 0;
     /// `ColoredSpellTax` (the Leech cycle).
     pub const COLORED_TAX: u32 = 1 << 1;
-    /// `ColoredCostReduction`.
+    /// `ColoredCostReduction` / `PhyrexianPipForSpells`.
     pub const COLORED_REDUCTION: u32 = 1 << 2;
     /// `SpellCostFloor` (Trinisphere).
     pub const COST_FLOOR: u32 = 1 << 3;
@@ -2327,7 +2352,9 @@ pub(crate) fn cast_cost_scan(state: &crate::game::GameState) -> u32 {
                 | SE::ControllerSpellsHaveFlash { .. }
                 | SE::ControllerSorceriesAsFlash => cast_static::FLASH,
                 SE::ColoredSpellTax { .. } => cast_static::COLORED_TAX,
-                SE::ColoredCostReduction { .. } => cast_static::COLORED_REDUCTION,
+                SE::ColoredCostReduction { .. } | SE::PhyrexianPipForSpells { .. } => {
+                    cast_static::COLORED_REDUCTION
+                }
                 SE::SpellCostFloor { .. } => cast_static::COST_FLOOR,
                 SE::GrantConvokeToSpells { .. } => cast_static::GRANT_CONVOKE,
                 SE::NoncreatureSpellsCantBeCastIf { .. }
@@ -8840,12 +8867,15 @@ impl GameState {
             cost.reduce_generic(reduction);
         }
         debug_assert!(
-            cost_statics & cast_static::COLORED_REDUCTION != 0
-                || colored_cost_reduction_for_spell(self, p, &card).symbols.is_empty(),
-            "cast_cost_scan missed a ColoredCostReduction",
+            cost_statics & cast_static::COLORED_REDUCTION != 0 || {
+                let mut probe = cost.clone();
+                apply_colored_cost_statics(self, p, &card, &mut probe);
+                probe == cost
+            },
+            "cast_cost_scan missed a colored cost static",
         );
         if cost_statics & cast_static::COLORED_REDUCTION != 0 {
-            cost.reduce_by_cost(&colored_cost_reduction_for_spell(self, p, &card));
+            apply_colored_cost_statics(self, p, &card, &mut cost);
         }
         // Colored-aware target-conditional reduction (Brush Off's "{1}{U}
         // less if it targets an instant or sorcery spell") — mandatory per
@@ -10614,7 +10644,7 @@ impl GameState {
         if reduction > 0 {
             cost.reduce_generic(reduction);
         }
-        cost.reduce_by_cost(&colored_cost_reduction_for_spell(self, p, &card));
+        apply_colored_cost_statics(self, p, &card, &mut cost);
         apply_spell_cost_floor(self, &mut cost);
         let snapshot = self.snapshot_payment_state(p);
         let forced_only = self.players[p].manual_mana;
@@ -10811,7 +10841,7 @@ impl GameState {
         if reduction > 0 {
             cost.reduce_generic(reduction);
         }
-        cost.reduce_by_cost(&colored_cost_reduction_for_spell(self, p, &card));
+        apply_colored_cost_statics(self, p, &card, &mut cost);
         // Catalyst Stone — flashback-specific shifts, applied after the
         // generic reductions so the tax can't be reduced away.
         let (fb_less, fb_more) = self.flashback_cost_shift(p);
@@ -11109,7 +11139,7 @@ impl GameState {
         if reduction > 0 {
             cost.reduce_generic(reduction);
         }
-        cost.reduce_by_cost(&colored_cost_reduction_for_spell(self, p, &card));
+        apply_colored_cost_statics(self, p, &card, &mut cost);
         apply_spell_cost_floor(self, &mut cost);
         let mut kind = card.definition.spell_kind();
         kind.from_graveyard = true;
@@ -11206,7 +11236,7 @@ impl GameState {
         if reduction > 0 {
             cost.reduce_generic(reduction);
         }
-        cost.reduce_by_cost(&colored_cost_reduction_for_spell(self, p, &card));
+        apply_colored_cost_statics(self, p, &card, &mut cost);
         apply_spell_cost_floor(self, &mut cost);
         let forced_only = self.players[p].manual_mana;
         let mut kind = card.definition.spell_kind();
@@ -11819,7 +11849,7 @@ impl GameState {
         if reduction > 0 {
             cost.reduce_generic(reduction);
         }
-        cost.reduce_by_cost(&colored_cost_reduction_for_spell(self, p, &card));
+        apply_colored_cost_statics(self, p, &card, &mut cost);
         apply_spell_cost_floor(self, &mut cost);
 
         // Pay. On failure put the card back in the command zone.

@@ -472,6 +472,11 @@ pub enum StaticEffect {
     /// `ManaCost::reduce_by_cost`, so an unmatched colored pip falls back to
     /// removing one generic instead. Mandatory, like every cost reduction.
     ColoredCostReduction { filter: SelectionRequirement, less: crate::mana::ManaCost },
+    /// CR 601.2f / 118.3 — "As an additional cost to cast [filter] spells, you
+    /// may pay 2 life. Those spells cost {C} less to cast if you paid life
+    /// this way" (the Defiler cycle). One `{C}` pip becomes `{C/P}`: the
+    /// payment already pays that with 2 life exactly when `C` is missing.
+    PhyrexianPipForSpells { filter: SelectionRequirement, color: crate::mana::Color },
     /// CR 601.2f — "[filter] spells you cast cost `more` more to cast", where
     /// `more` names COLORED pips (the Invasion Leech cycle's "{W} more"). Only
     /// the source's controller pays it; applied before any reduction so a

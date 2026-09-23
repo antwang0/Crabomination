@@ -28678,6 +28678,7 @@ fn static_effect_to_effects(
             | StaticEffect::CostReduction { .. }
             | StaticEffect::AllPlayersSpellsCostLess { .. }
             | StaticEffect::ColoredCostReduction { .. }
+            | StaticEffect::PhyrexianPipForSpells { .. }
             | StaticEffect::ColoredSpellTax { .. }
             | StaticEffect::NamedSpellCostReduction { .. }
             | StaticEffect::FaceDownSpellsCostLess { .. }

@@ -453,6 +453,17 @@ impl ManaCost {
         }
     }
 
+    /// The first `{color}` pip as `{color/P}`; false when there is none.
+    pub fn phyrexianize_one(&mut self, color: Color) -> bool {
+        match self.symbols.iter_mut().find(|s| **s == ManaSymbol::Colored(color)) {
+            Some(s) => {
+                *s = ManaSymbol::Phyrexian(color);
+                true
+            }
+            None => false,
+        }
+    }
+
     /// Every generic pip as that many pips of `color` — a cost that may be
     /// paid only with `color` mana (Throne of Eldraine's draw ability).
     pub fn generic_as(&self, color: Color) -> ManaCost {
