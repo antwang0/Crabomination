@@ -354,9 +354,6 @@ pub fn sidisi_brood_tyrant() -> CardDefinition {
 /// River Kelpie — {3}{U}{U} Creature — Beast 3/3. Whenever this creature or
 /// another permanent enters from a graveyard, draw a card. Whenever a player
 /// casts a spell from a graveyard, draw a card. Persist.
-///
-/// Approximation: the cast trigger reads "a spell not cast from its owner's
-/// hand", so exile casts fire it too.
 pub fn river_kelpie() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Persist],
@@ -374,12 +371,8 @@ pub fn river_kelpie() -> CardDefinition {
                 effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
             },
             TriggeredAbility {
-                event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer).with_filter(
-                    Predicate::EntityMatches {
-                        what: Selector::TriggerSource,
-                        filter: R::SpellNotCastFromHand,
-                    },
-                ),
+                event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer)
+                    .with_filter(Predicate::CastSpellFromGraveyard),
                 effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
             },
         ],

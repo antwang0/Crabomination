@@ -232,6 +232,41 @@ fn river_kelpie_draws_off_graveyard_entries_and_casts() {
     assert_eq!(g.players[0].hand.len(), hand + 2, "drew for the graveyard cast");
 }
 
+/// River Kelpie's cast trigger is "from a graveyard" only (bug fix: it read
+/// "not from hand", so every commander cast from the command zone drew).
+/// Breathless Knight's "entered from a graveyard" rider likewise ignores a
+/// token (it read "not cast from hand" too).
+#[test]
+fn river_kelpie_ignores_a_command_zone_cast() {
+    let mut g = main_phase();
+    stock_libraries(&mut g, 10);
+    g.add_card_to_battlefield(0, catalog::river_kelpie());
+    let knight = g.add_card_to_battlefield(0, catalog::breathless_knight());
+    let cmd = g.seat_commanders(0, vec![catalog::grizzly_bears()])[0];
+    flood(&mut g, 0);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::CastFromCommandZone {
+        card_id: cmd,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+        alternative: false,
+        pitch_card: None,
+    })
+    .expect("cast the commander");
+    drain_stack(&mut g);
+    assert!(on_battlefield(&g, cmd));
+    assert_eq!(g.players[0].hand.len(), hand, "a command-zone cast is not a graveyard cast");
+    let knight_counters = |g: &GameState| {
+        g.battlefield_find(knight).unwrap().counter_count(CounterType::PlusOnePlusOne)
+    };
+    assert_eq!(knight_counters(&g), 0, "nor did it enter from a graveyard");
+    let spawn = g.add_card_to_hand(0, catalog::raise_the_alarm());
+    cast_with(&mut g, spawn, None, None);
+    assert_eq!(knight_counters(&g), 0, "tokens don't come from a graveyard");
+}
+
 /// Kotis lets a creature be cast from the graveyard by exiling three other
 /// cards, and grows when it does.
 #[test]

@@ -86,13 +86,12 @@ graveyard cast, Steward of the Harvest's granted land abilities, Teval's
 reaches it. Next by `scripts/precon_scan.py`: Wretched Ranks (FDC, 9 —
 releases 2026-10-02), Goblin Storm (SLD, 10).
 
-🟡 **Residuals in the list** (each also on its card's doc): Welcome the Dead
-(X counts every card binned this turn, not only from hand/library), Colossal
-Grave-Reaver (returns the first milled creature, not a chosen one), River
-Kelpie (exile casts fire the cast trigger), Lethal Scheme (convokers don't
-connive), Shigeki (the kept land passes through the graveyard), Cephalid
-Coliseum (the sacrifice is folded into resolution). Steward of the Harvest and Life from the Loam pick at resolution
-rather than target.
+🟡 **Residuals in the list** (each also on its card's doc): Colossal
+Grave-Reaver (returns the first milled creature, not a chosen one), Lethal
+Scheme (convokers don't connive), Shigeki (the kept land passes through the
+graveyard), Cephalid Coliseum (the sacrifice is folded into resolution).
+Steward of the Harvest and Life from the Loam pick at resolution rather than
+target.
 
 The **twelfth** is the second official precon, **Mind Flayarrrs** (Commander
 Legends: Battle for Baldur's Gate, 2022), MTGJSON's `MindFlayarrrs_CLB` card
