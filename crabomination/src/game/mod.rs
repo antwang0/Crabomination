@@ -26633,6 +26633,32 @@ impl GameState {
             });
             return Ok(events);
         }
+        // Rousing Refrain (`Effect::ExileSelfSuspended`) — no fuse, so the
+        // count is the card's printed suspend N (CR 702.62a: exiled with time
+        // counters and suspend, it is suspended). A copy clears the flag and
+        // ceases to exist below.
+        if self.exile_resolving_spell_with_countdown {
+            self.exile_resolving_spell_with_countdown = false;
+            let suspend_n = card.definition.keywords.iter().find_map(|k| match k {
+                crate::card::Keyword::Suspend(n, _) => Some(*n),
+                _ => None,
+            });
+            if let Some(n) = suspend_n
+                && !card.is_token
+            {
+                let mut card = card;
+                let card_id = card.id;
+                card.add_counters(crate::card::CounterType::Time, n);
+                self.exile.push(card);
+                events.push(GameEvent::PermanentExiled { card_id });
+                events.push(GameEvent::CounterAdded {
+                    card_id,
+                    counter_type: crate::card::CounterType::Time,
+                    count: n,
+                });
+                return Ok(events);
+            }
+        }
         // CR 614.6 — an instant/sorcery bound for the graveyard is exiled
         // instead under Rest in Peace / Leyline of the Void.
         self.route_to_graveyard(card, &mut events);

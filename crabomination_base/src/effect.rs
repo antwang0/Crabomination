@@ -8270,6 +8270,11 @@ pub enum Effect {
     /// counters on it (All Hallow's Eve). The upkeep tick and the payoff live
     /// on the definition; this only starts the fuse.
     ExileSelfWithCountdown,
+    /// CR 702.62a — "Exile [this] with N time counters on it" on a spell that
+    /// has suspend N (Rousing Refrain): the resolving spell is exiled instead
+    /// of going to the graveyard with its printed suspend N time counters, so
+    /// it is suspended again. A copy just ceases to exist (CR 707.10a).
+    ExileSelfSuspended,
 
     /// CR 702.18 — "You gain shroud until end of turn" (Gilded Light). No
     /// player, `who` included, may target them for the rest of the turn.

@@ -749,6 +749,7 @@ impl Effect {
             | Effect::EnterExilingGraveyardCreaturesForCounters { .. }
             | Effect::AsEntersExileFromYourGraveyard { .. }
             | Effect::ExileSelfWithCountdown
+            | Effect::ExileSelfSuspended
             | Effect::DestroyEachUnlessPaysLife { .. }
             | Effect::VentureInto { .. }
             | Effect::TakeInitiative { .. }

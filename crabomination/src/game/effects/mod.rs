@@ -4209,6 +4209,12 @@ impl GameState {
                 Ok(())
             }
 
+            // The disposal path reads the flag with the card's own suspend N.
+            Effect::ExileSelfSuspended => {
+                self.exile_resolving_spell_with_countdown = true;
+                Ok(())
+            }
+
             Effect::ExileSelfWithCountdown => {
                 // A resolving spell isn't in a zone yet, so the fuse is lit by
                 // the post-resolution disposal path.
