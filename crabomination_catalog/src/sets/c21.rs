@@ -175,7 +175,7 @@ pub fn blighted_woodland() -> CardDefinition {
                 mana_cost: cost(&[generic(3), g()]),
                 tap_cost: true,
                 sac_cost: true,
-                effect: fetch_two_basics(),
+                effect: fetch_two_basics(false),
                 ..Default::default()
             },
         ],
@@ -185,8 +185,8 @@ pub fn blighted_woodland() -> CardDefinition {
 
 /// Myriad Landscape — Land, enters tapped. {T}: Add {C}. {2},{T},Sacrifice
 /// this land: Search your library for up to two basic land cards that share
-/// a land type, put them onto the battlefield tapped, then shuffle. (The
-/// "share a land type" rider is approximated as any two basics.)
+/// a land type, put them onto the battlefield tapped, then shuffle. The second
+/// pick must share a land type with the first.
 pub fn myriad_landscape() -> CardDefinition {
     CardDefinition {
         name: "Myriad Landscape",
@@ -198,7 +198,7 @@ pub fn myriad_landscape() -> CardDefinition {
                 mana_cost: cost(&[generic(2)]),
                 tap_cost: true,
                 sac_cost: true,
-                effect: fetch_two_basics(),
+                effect: fetch_two_basics(true),
                 ..Default::default()
             },
         ],
@@ -206,16 +206,25 @@ pub fn myriad_landscape() -> CardDefinition {
     }
 }
 
-fn fetch_two_basics() -> Effect {
-    let search = || Effect::Search {
+/// "Up to two basic land cards", the second sharing a land type with the
+/// first when `share_type`.
+fn fetch_two_basics(share_type: bool) -> Effect {
+    let search = |filter| Effect::Search {
         who: PlayerRef::You,
-        filter: SelectionRequirement::IsBasicLand,
+        filter,
         to: ZoneDest::Battlefield {
             controller: PlayerRef::You,
             tapped: true,
         },
     };
-    Effect::Seq(vec![search(), search()])
+    Effect::Seq(vec![
+        search(SelectionRequirement::IsBasicLand),
+        search(if share_type {
+            SelectionRequirement::IsBasicLand.and(SelectionRequirement::SharesLandTypeWithLastMoved)
+        } else {
+            SelectionRequirement::IsBasicLand
+        }),
+    ])
 }
 
 // ── Onslaught cycling lands (mono, enter tapped, Cycling {C}) ──────────────

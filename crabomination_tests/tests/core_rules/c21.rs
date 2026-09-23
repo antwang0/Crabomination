@@ -131,6 +131,35 @@ fn blighted_woodland_fetches_two_basics() {
     assert!(g.battlefield_find(f2).is_some_and(|c| c.tapped), "basic 2 tapped in");
 }
 
+/// Myriad Landscape's two basics must share a land type: after a Forest, an
+/// Island is not a legal second pick, a second Forest is.
+#[test]
+fn myriad_landscape_second_basic_shares_a_land_type() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    for (second_is_forest, lands) in [(false, 1), (true, 2)] {
+        let mut g = two_player_game();
+        let forest = g.add_card_to_library(0, catalog::forest());
+        let island = g.add_card_to_library(0, catalog::island());
+        let forest2 = g.add_card_to_library(0, catalog::forest());
+        let second = if second_is_forest { forest2 } else { island };
+        g.decider = Box::new(ScriptedDecider::new([
+            DecisionAnswer::Search(Some(forest)),
+            DecisionAnswer::Search(Some(second)),
+        ]));
+        let id = g.add_card_to_battlefield(0, catalog::myriad_landscape());
+        g.battlefield_find_mut(id).unwrap().tapped = false;
+        g.players[0].mana_pool.add_colorless(2);
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: id, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
+        })
+        .expect("sac fetch");
+        drain_stack(&mut g);
+        let fetched = [forest, island, forest2].iter().filter(|c| g.battlefield_find(**c).is_some()).count();
+        assert_eq!(fetched, lands, "second pick a Forest: {second_is_forest}");
+        assert!(g.battlefield_find(island).is_none(), "an Island never shares Forest's type");
+    }
+}
+
 /// Barren Moor can be cycled from hand for {2}.
 #[test]
 fn barren_moor_cycles() {

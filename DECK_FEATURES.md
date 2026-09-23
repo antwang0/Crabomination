@@ -89,10 +89,8 @@ Lose (SLD, 9 missing), Wretched Ranks (FDC, 9 — releases 2026-10-02).
 (X counts every card binned this turn, not only from hand/library), Colossal
 Grave-Reaver (returns the first milled creature, not a chosen one), River
 Kelpie (exile casts fire the cast trigger), Lethal Scheme (convokers don't
-connive), Necromantic Selection (the Zombie isn't made black), Shigeki (the
-kept land passes through the graveyard), Myriad Landscape (any two basics,
-not two sharing a type), Cephalid Coliseum (the sacrifice is folded into
-resolution). Steward of the Harvest and Life from the Loam pick at resolution
+connive), Shigeki (the kept land passes through the graveyard), Cephalid
+Coliseum (the sacrifice is folded into resolution). Steward of the Harvest and Life from the Loam pick at resolution
 rather than target.
 
 The **twelfth** is the second official precon, **Mind Flayarrrs** (Commander
@@ -109,13 +107,10 @@ First reading (12 seats, 1,000 games, seed 9920): all decided, every card of
 all twelve lists played (566 distinct), N'ghathrod **10.3 %** against a
 seat's 8.3 %, Teval 4.5 %.
 
-🟡 **Residuals in the list**: Captain N'ghathrod ("put there from their
-library this turn" reads "put into a graveyard this turn"), Grell
-Philosopher (only Grell gains the artifact's abilities; no blue-as-any
-rider), Psionic Ritual (no tap-a-Horror replicate), Herald's Horn (no upkeep
-reveal), Overcharged Amalgam (counters spells only, not abilities), plus
-Exotic Orchard / Myriad Landscape as in Sultai Arisen. Sewer Nemesis always
-chooses an opponent.
+🟡 **Residuals in the list**: Grell Philosopher (only Grell gains the
+artifact's abilities; no blue-as-any rider), Psionic Ritual (no tap-a-Horror
+replicate), Herald's Horn (no upkeep reveal), Overcharged Amalgam (counters
+spells only, not abilities). Sewer Nemesis always chooses an opponent.
 
 The **thirteenth** is the third official precon, **Blood Rites** (Lost Caverns
 of Ixalan Commander, 2023), MTGJSON's `BloodRites_LCC` card for card;
@@ -132,7 +127,7 @@ whole table grows with the table.
 🟡 **Residuals in the list**: Master of Dark Rites (the restriction reads a
 creature spell's types, so a Demon *noncreature* spell can't use it), New
 Blood (the text change is approximated), Secluded Courtyard (only the cast
-half of the restriction), Myriad Landscape (any two basics).
+half of the restriction).
 
 The **tenth** is the first list built around what only happens at three seats
 or more, and it exists because of a census, not a hunch: **not one of the nine
