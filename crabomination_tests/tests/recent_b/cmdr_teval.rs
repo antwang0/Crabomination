@@ -414,6 +414,74 @@ fn lord_of_extinction_counts_all_graveyards() {
     assert_eq!((cp.power, cp.toughness), (3, 3));
 }
 
+/// Lord of the Forsaken: "{B}, Sacrifice another creature: Target player
+/// mills three cards."
+#[test]
+fn lord_of_the_forsaken_sacrifices_to_mill_a_target_player() {
+    let mut g = main_phase();
+    let lord = g.add_card_to_battlefield(0, catalog::lord_of_the_forsaken());
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for _ in 0..4 {
+        g.add_card_to_library(1, catalog::forest());
+    }
+    let before = g.players[1].graveyard.len();
+    activate(&mut g, lord, 0, Some(Target::Player(1)));
+    assert!(in_graveyard(&g, 0, bears), "the other creature is the cost");
+    assert!(on_battlefield(&g, lord));
+    assert_eq!(g.players[1].graveyard.len(), before + 3);
+}
+
+/// Lord of the Forsaken's "Pay 1 life: Add {C}. Spend this mana only to cast
+/// a spell from your graveyard" — a CR 106.6 spend restriction keyed on the
+/// zone the spell is cast from (CR 601.2a): a hand cast can't use it, a
+/// flashback cast can.
+#[test]
+fn lord_of_the_forsaken_mana_only_funds_graveyard_casts() {
+    let mut g = main_phase();
+    let lord = g.add_card_to_battlefield(0, catalog::lord_of_the_forsaken());
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let life = g.players[0].life;
+    for _ in 0..2 {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: lord,
+            ability_index: 1,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+        .expect("pay 1 life: add {C}");
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.players[0].life, life - 2);
+    let ring = g.add_card_to_hand(0, catalog::sol_ring());
+    let cast = |g: &mut GameState, card_id| {
+        g.perform_action(GameAction::CastSpell {
+            card_id,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+    };
+    assert!(cast(&mut g, ring).is_err(), "a hand cast can't spend it");
+    // Faithless Looting's flashback is {2}{R}: the two restricted {C} pay
+    // the generic half.
+    let looting = g.add_card_to_graveyard(0, catalog::faithless_looting());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastFlashback {
+        card_id: looting,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("flashback funded by the graveyard-only mana");
+    assert_eq!(g.players[0].mana_pool.total(), 0);
+}
+
 /// Tormod makes one tapped Zombie per batch of cards leaving your graveyard.
 #[test]
 fn tormod_makes_a_tapped_zombie() {

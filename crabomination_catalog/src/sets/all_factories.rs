@@ -1616,6 +1616,7 @@ static DECKS: &[Factory] = &[
     super::decks::diviner_of_mist,
     super::decks::lost_monarch_of_ifnir,
     super::decks::lord_of_extinction,
+    super::decks::lord_of_the_forsaken,
     super::decks::tormod_the_desecrator,
     super::decks::amphin_mutineer,
     super::decks::lethal_scheme,

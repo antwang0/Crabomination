@@ -769,6 +769,44 @@ pub fn lord_of_extinction() -> CardDefinition {
     }
 }
 
+/// Lord of the Forsaken — {4}{B}{B} Creature — Demon 6/6. Flying, trample.
+/// {B}, Sacrifice another creature: Target player mills three cards. Pay 1
+/// life: Add {C}. Spend this mana only to cast a spell from your graveyard.
+pub fn lord_of_the_forsaken() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Trample],
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[b()]),
+                sac_other_filter: Some((R::Creature, 1)),
+                effect: Effect::Mill {
+                    who: target_filtered(R::Player),
+                    amount: Value::Const(3),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                life_cost: 1,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Restricted(
+                        Box::new(ManaPayload::Colorless(Value::ONE)),
+                        SpendRestriction::SpellFromGraveyard,
+                    ),
+                },
+                ..Default::default()
+            },
+        ],
+        ..creature(
+            "Lord of the Forsaken",
+            cost(&[generic(4), b(), b()]),
+            vec![CreatureType::Demon],
+            6,
+            6,
+        )
+    }
+}
+
 /// Tormod, the Desecrator — {3}{B} Legendary Creature — Zombie Wizard 4/2.
 /// Whenever one or more cards leave your graveyard, create a tapped 2/2 black
 /// Zombie creature token. Partner.
