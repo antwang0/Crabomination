@@ -302,6 +302,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::FREYALISE_C14_COMMANDERS,
             main: decks::FREYALISE_C14_MAIN,
         },
+        // Twenty-eighth: the eighteenth official list (Animated Army, BLC)
+        // — the field's first Gruul seat. `--seats 28`.
+        PodDeck {
+            name: "Bello (RG)",
+            commanders: decks::BELLO_COMMANDERS,
+            main: decks::BELLO_MAIN,
+        },
     ]
 }
 

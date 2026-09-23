@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Ten hand-picked commanders plus seventeen official preconstructed lists, each a
+//! Ten hand-picked commanders plus eighteen official preconstructed lists, each a
 //! 99 of cards this engine implements: legal under CR 903 (100 cards
 //! including the commander, singleton outside basics, every card inside the
 //! commander's CR 903.4 color identity) and Commander-legal per Scryfall's
@@ -8,15 +8,15 @@
 //!
 //! The ten were built by hand because the offline Scryfall cache cannot say
 //! how a precon splits into decks; MTGJSON's deck files can, and the eleventh
-//! through twenty-seventh (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
+//! through twenty-eighth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
 //! Win, Tails You Lose, Goblin Storm, Foundations Commander's Wretched Ranks,
 //! Tramplesaurus Rex and Keen Engineering, Commander Legends' Reap the Tides,
 //! Phyrexia: All Will Be One's Corrupting Influence, Zendikar Rising's Sneak
 //! Attack, Tarkir: Dragonstorm's Jeskai Striker, Commander Masters' Sliver
 //! Swarm, Outlaws of Thunder Junction's Quick Draw, Commander 2017's
-//! Vampiric Bloodlust, Foundations Commander's Calling All Angels and
-//! Commander 2014's Guided by Nature) are taken from one card for card. What
-//! all of them keep
+//! Vampiric Bloodlust, Foundations Commander's Calling All Angels,
+//! Commander 2014's Guided by Nature and Bloomburrow Commander's Animated
+//! Army) are taken from one card for card. What all of them keep
 //! from the precon idea is what the pod needs — fixed, legal, varied color
 //! identities, and built to play against each other.
 //! One is a Partner pair (CR 702.124b), one is a **planeswalker**
@@ -959,4 +959,33 @@ pub const FREYALISE_C14_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
     forest, forest, forest,
+];
+
+pub const BELLO_COMMANDERS: &[CardFactory] = &[bello_bard_of_the_brambles];
+
+/// **Animated Army**, the Bloomburrow Commander deck (BLC, 2024-08-02),
+/// exactly as MTGJSON's `AnimatedArmy_BLC` prints it: 81 nonbasic cards +
+/// 10 Forests + 8 Mountains = 99. Gruul artifacts and enchantments that
+/// Bello animates on its turn — the field's first RG identity.
+pub const BELLO_MAIN: &[CardFactory] = &[
+    wildsear_scouring_maw, domri_anarch_of_bolas, etali_primal_storm, prosperous_bandit,
+    pyreswipe_hawk, alchemists_talent, berserkers_onslaught, outpost_siege, rain_of_riches,
+    chaos_warp, sunbirds_invocation, gratuitous_violence, warstorm_surge, starstorm,
+    lotus_cobra, evercoat_ursine, brightcap_badger, trailtracker_scout, thickest_in_the_thicket,
+    ghalta_primal_hunger, esikas_chariot, unnatural_growth, greater_good,
+    kodama_of_the_east_tree, grothama_all_devouring, rampaging_baloths, bootleggers_stash,
+    primeval_bounty, gilded_lotus, spine_of_ish_sah, temple_of_abandon, karplusan_forest,
+    exotic_orchard, sheltered_thicket, game_trail, raging_ravine, copperline_gorge,
+    mossfire_valley, cinder_glade, rootbound_crag, mosswort_bridge, blasphemous_act,
+    llanowar_loamspeaker, tendershoot_dryad, goreclaw_terror_of_qal_sisma, path_of_discovery,
+    decimate, rolling_hamsphere, teapot_slinger, explore, farseek, cultivate,
+    grumgully_the_generous, wandertale_mentor, thought_vessel, arcane_signet, wooded_ridgeline,
+    big_score, abrade, rampant_growth, sakura_tribe_elder, beast_within, garruks_packleader,
+    harmonize, garruks_uprising, gruul_signet, burnished_hart, hedron_archive, fellwar_stone,
+    thran_dynamo, sol_ring, mind_stone, talisman_of_impulse, terramorphic_expanse,
+    path_of_ancestry, gruul_turf, evolving_wilds, forgotten_cave, tranquil_thicket,
+    command_tower, reliquary_tower,
+    // Basics: 10 forest, 8 mountain
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain,
 ];
