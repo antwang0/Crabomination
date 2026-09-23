@@ -55,6 +55,7 @@ lists were picked.
 | **Sliver Swarm** (CMM precon) WUBRG | Sliver Gravemother | WUBRG | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Quick Draw** (OTC precon) UR | Stella Lee, Wild Card | UR | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Vampiric Bloodlust** (C17 precon) BRW | Edgar Markov | BRW | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
+| **Calling All Angels** (FDC precon) W | Giada, Font of Hope | W | 100 | ✅ complete |
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not
@@ -286,6 +287,24 @@ Seed 10041, 300 games at 23 seats: **298 decided, 2 action caps, zero panics,
 every card of all twenty-three lists but one played** (Narset's Reversal);
 Gravemother wins 5.7 %, and **40.4 %** of four-seat pods beside Shiko /
 Anowon / Ixhel (seed 10043, 1,000 games, all decided).
+
+The **twenty-sixth** is Foundations Commander's **Calling All Angels**
+(`CallingAllAngels_FDC`), the field's first mono-white identity: Giada's
+growing Angels, lieutenants, the monarch. Seventeen cards were missing; one
+primitive, `Predicate::ControlsLandsWithSameNameAtLeast` (Endless Atlas — the
+largest same-name group of YOUR lands; `SharesNameWithAnotherPermanent` read
+every player's and summed across names). Firemane Commando's other-player half
+is an `AnyPlayer` observer — writing it found **Tomik, Wielder of Law**'s
+attack trigger dead since it shipped (`OpponentControl` is a scope the attack
+dispatch never consults for a non-active listener). No residuals.
+Seed 10061, 1,000 games at 26 seats: **944 decided, 56 action caps, 0 board
+caps, zero panics, every card of all twenty-six lists played** (1,303
+distinct); Giada wins **11.5 %** there and **68.6 %** of four-seat pods beside
+Hanna / Sigarda / Clavileño (seed 10062, all decided) — a strength reading
+like Edgar's Eminence, not a bug: the cost reducers stack on a commander that
+makes every Angel bigger. The action caps are long stalls, not loops: the one
+read (game 3) had Clavileño at 4,729 life off Exquisite Blood — each of
+twenty-five opponents' life loss is a gain — and twenty seats still alive.
 
 The **twenty-fifth** is Commander 2017's **Vampiric Bloodlust**
 (`VampiricBloodlust_C17`) — Edgar Markov's own precon, so the field now seats
