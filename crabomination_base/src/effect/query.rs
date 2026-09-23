@@ -533,6 +533,7 @@ impl Effect {
                 f(noncreature);
             }
             Effect::MayCastPermanentFromHandFree { else_, .. }
+            | Effect::MayCastFromHandFreeMatching { else_, .. }
             | Effect::PlayerMayPayLifeElse { else_, .. } => {
                 f(else_);
             }
@@ -810,6 +811,7 @@ impl Effect {
             | Effect::PlotSpellOnResolve { .. }
             | Effect::PutLandsFromHandOntoBattlefieldTapped { .. }
             | Effect::MayCastPermanentFromHandFree { .. }
+            | Effect::MayCastFromHandFreeMatching { .. }
             | Effect::PreventNextDamageToYouFromChosenSourceWithRider { .. }
             | Effect::SacrificeSourceUnlessReturn { .. }
             | Effect::SacrificeSourceUnlessCost { .. }

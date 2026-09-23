@@ -9,6 +9,7 @@
 mod commander;
 mod delayed;
 mod eval;
+mod free_cast;
 mod fight_each;
 pub(crate) use eval::PrintedGates;
 pub(crate) mod events;
@@ -5285,57 +5286,30 @@ impl GameState {
             // (if you decline / can't) drop a land instead.
             Effect::MayCastPermanentFromHandFree { max_mv, else_ } => {
                 let cap = self.evaluate_value(max_mv, ctx).max(0) as u32;
+                self.may_cast_from_hand_free(
+                    |c| c.definition.is_permanent() && c.definition.cost.cmc() <= cap,
+                    "Cast a permanent spell for free?",
+                    else_,
+                    ctx,
+                    effect,
+                    events,
+                )
+            }
+
+            Effect::MayCastFromHandFreeMatching { filter, max_mv, else_ } => {
+                let cap = self.evaluate_value(max_mv, ctx);
                 let me = ctx.controller;
-                let candidates: Vec<(CardId, String)> = self.players[me]
-                    .hand
-                    .iter()
-                    .filter(|c| c.definition.is_permanent() && c.definition.cost.cmc() <= cap)
-                    .map(|c| (c.id, c.definition.name.to_string()))
-                    .collect();
-                let auto = candidates
-                    .iter()
-                    .max_by_key(|(id, _)| {
-                        self.players[me]
-                            .hand
-                            .iter()
-                            .find(|c| c.id == *id)
-                            .map(|c| c.definition.cost.cmc())
-                            .unwrap_or(0)
-                    })
-                    .map(|(id, _)| vec![*id])
-                    .unwrap_or_default();
-                let picked = if candidates.is_empty() {
-                    Vec::new()
-                } else {
-                    let Some(p) = self.choose_up_to_cards(
-                        me,
-                        "Cast a permanent spell for free?".into(),
-                        ctx.source.unwrap_or(CardId(0)),
-                        candidates,
-                        1,
-                        PickValue::Gain,
-                        effect,
-                        auto,
-                    ) else {
-                        return Ok(());
-                    };
-                    p
-                };
-                if let Some(pick) = picked.first().copied() {
-                    return self.run_effect(
-                        &Effect::CastWithoutPayingImmediate {
-                            what: Selector::Target(0),
-                            source_zone: crate::card::Zone::Hand,
-                            exile_after: false,
-                            copy: false,
-                            reduce_generic: 0,
-                                pay_own_cost: false,
-                        },
-                        &EffectContext { targets: vec![Target::Permanent(pick)], ..ctx.clone() },
-                        events,
-                    );
-                }
-                self.run_effect(else_, ctx, events)
+                self.may_cast_from_hand_free(
+                    |c| {
+                        (c.definition.cost.cmc() as i32) <= cap
+                            && crate::game::layers::requirement_matches_card(filter, c, me)
+                    },
+                    "Cast a spell for free?",
+                    else_,
+                    ctx,
+                    effect,
+                    events,
+                )
             }
 
             // The Gitrog — "put up to N land cards from your hand onto the

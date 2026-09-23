@@ -4539,6 +4539,11 @@ pub enum Effect {
     /// your hand without paying its mana cost. If you don't, `else_`"
     /// (Kellan, the Kid).
     MayCastPermanentFromHandFree { max_mv: Value, else_: Box<Effect> },
+    /// The general form: "you may cast a [filter] spell with mana value
+    /// `max_mv` or less from your hand without paying its mana cost. If you
+    /// don't, `else_`" (Baral and Kari Zev's "lesser mana value that shares a
+    /// card type"). `filter` is read off the hand card.
+    MayCastFromHandFreeMatching { filter: SelectionRequirement, max_mv: Value, else_: Box<Effect> },
     /// Process (Battle for Zendikar / OGW) — "you may put up to `count` cards
     /// an opponent owns from exile into that player's graveyard. If you do,
     /// [`then`]." The controller is asked yes/no (`Decision::OptionalTrigger`);
