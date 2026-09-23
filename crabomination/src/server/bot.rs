@@ -6461,8 +6461,9 @@ pub(super) fn cast_candidates<'a>(
                     None => continue,
                 }
             } else if mode_effect.requires_target() {
-                let (t, extras) =
-                    state.auto_targets_for_effect_all_slots(mode_effect, seat, mode);
+                let (t, extras) = state.auto_targets_for_effect_all_slots_x(
+                    mode_effect, seat, mode, false, None, x_value,
+                );
                 if t.is_none() {
                     continue;
                 }
@@ -15632,6 +15633,18 @@ pub fn max_affordable_x_for_def(
     if let Some(cap) = creature_only_x_damage_cap(state, seat, def) {
         return affordable.min(cap);
     }
+    // Finale of Promise: X only has to reach the biggest instant / sorcery in
+    // the graveyard — unless it can reach ten, where the copies start.
+    if matches!(def.effect, Effect::FinaleOfPromise) && affordable < 10 {
+        let biggest = state.players[seat]
+            .graveyard
+            .iter()
+            .filter(|c| c.definition.is_instant() || c.definition.is_sorcery())
+            .map(|c| c.definition.cost.cmc())
+            .max()
+            .unwrap_or(0);
+        return affordable.min(biggest);
+    }
     affordable
 }
 
@@ -21902,6 +21915,23 @@ mod tests {
         };
         assert!(offered(4), "{{1}}{{R}} + buyback {{2}} off four");
         assert!(!offered(2), "not off two");
+    }
+
+    /// Finale of Promise's targets are graveyard cards "with mana value X or
+    /// less", so they are picked at the X the bot will pay (bug fix: picked at
+    /// no X, no card qualified and the Finale was never offered); X stops at
+    /// the biggest one below ten.
+    #[test]
+    fn bot_aims_finale_of_promise_at_its_x() {
+        let mut g = two_player_game();
+        let fin = g.add_card_to_hand(0, catalog::finale_of_promise());
+        let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+        g.players[0].mana_pool.add(crate::mana::Color::Red, 6);
+        let offered = cast_candidates(&g, 0, &EvalWeights::default(), None).into_iter().any(|(a, _)| {
+            matches!(a, GameAction::CastSpell { card_id, target: Some(Target::Permanent(t)), x_value: Some(1), .. }
+                if card_id == fin && t == bolt)
+        });
+        assert!(offered, "Finale aimed at the Bolt for X = 1");
     }
 
     /// Entwine (CR 702.42), squad (702.157), fuse (702.102), casualty

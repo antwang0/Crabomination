@@ -750,6 +750,21 @@ impl GameState {
         kicked: bool,
         source: Option<CardId>,
     ) -> (Option<Target>, Vec<Target>) {
+        self.auto_targets_for_effect_all_slots_x(eff, controller, mode, kicked, source, None)
+    }
+
+    /// [`Self::auto_targets_for_effect_all_slots_kicked`] with the cast's X
+    /// known: a slot filter that names X ("mana value X or less" — Finale of
+    /// Promise) is read at that X instead of at no X, where nothing matched.
+    pub fn auto_targets_for_effect_all_slots_x(
+        &self,
+        eff: &Effect,
+        controller: usize,
+        mode: Option<usize>,
+        kicked: bool,
+        source: Option<CardId>,
+        x: Option<u32>,
+    ) -> (Option<Target>, Vec<Target>) {
         // Slot 0 — if it carries its own numbered `TargetFiltered` filter
         // (Rabid Bite's friendly-creature power source lives in slot 0,
         // inside `Value::PowerOf`), pick it by that filter in the loop
@@ -784,6 +799,8 @@ impl GameState {
                 Some(r) => r,
                 None => break,
             };
+            let req_at_x = x.filter(|_| req.names_x_or_converge()).map(|x| req.resolve_x(x));
+            let req = req_at_x.as_ref().unwrap_or(req);
             // CR 601.2c — a cross-slot filter ("**another** target", "with
             // the same controller") reads the slots already chosen. The cast
             // validator stamps `target_slots_scratch` for that; this walk has
