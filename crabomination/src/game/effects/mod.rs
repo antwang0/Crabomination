@@ -21441,6 +21441,20 @@ impl GameState {
                             self.run_effect(otherwise, &pay_ctx, events)?
                         }
                     }
+                    // The chooser's parked remainder resumes under the stack item's
+                    // context unless re-bound: an option ran as the chooser, the
+                    // payoff with the chooser as `Triggerer`.
+                    let chose = picked.is_some();
+                    rewrap_parked(&mut self.suspend_signal, |carried| {
+                        if chose {
+                            Effect::EachPlayerDoes { who: PlayerRef::Seat(p), body: Box::new(carried) }
+                        } else {
+                            Effect::ForEach {
+                                selector: Selector::Player(PlayerRef::Seat(p)),
+                                body: Box::new(carried),
+                            }
+                        }
+                    });
                     // A chooser's option (a sacrifice, a discard) suspends, and
                     // without this the choosers after them never got asked.
                     // The tail is this same arm restricted to one seat, so the
@@ -21481,6 +21495,12 @@ impl GameState {
                     let harm_b = self.villainous_self_harm(option_b, &opt_ctx);
                     let pick = if harm_b < harm_a { option_b } else { option_a };
                     self.run_effect(pick, &opt_ctx, events)?;
+                    // The seat's own parked remainder resumes as the caster unless it is
+                    // re-seated, like `EachPlayerDoes` does.
+                    rewrap_parked(&mut self.suspend_signal, |carried| Effect::EachPlayerDoes {
+                        who: PlayerRef::Seat(p),
+                        body: Box::new(carried),
+                    });
                     // The picked option suspends (an exile-from-graveyard or a
                     // sacrifice choice) and the choosers after this one were
                     // dropped. Re-enter this arm per remaining seat so each
@@ -23439,6 +23459,14 @@ impl GameState {
                         ..ctx.clone()
                     };
                     self.run_effect(body, &opp_ctx, events)?;
+                    // This opponent's own parked remainder comes back under the
+                    // stack item's context, so it is re-bound to the seat the
+                    // same way the tail below is (Geth's Summons' corrupted
+                    // pick resumed reading no `Triggerer` and leaked its answer).
+                    rewrap_parked(&mut self.suspend_signal, |carried| Effect::ForEach {
+                        selector: Selector::Player(PlayerRef::Seat(opp)),
+                        body: Box::new(carried),
+                    });
                     // A suspended body parks only its OWN effect, so without
                     // this the opponents after `opp` were dropped. Each
                     // remaining iteration pins a *different* opponent, and
@@ -23499,6 +23527,12 @@ impl GameState {
                 for (i, seat) in runs.iter().copied().enumerate() {
                     let run_ctx = EffectContext { controller: seat, ..ctx.clone() };
                     self.run_effect(body, &run_ctx, events)?;
+                    // The seat's own parked remainder resumes as the caster unless it is
+                    // re-seated, like `EachPlayerDoes` does.
+                    rewrap_parked(&mut self.suspend_signal, |carried| Effect::EachPlayerDoes {
+                        who: PlayerRef::Seat(seat),
+                        body: Box::new(carried),
+                    });
                     if splice_after_suspend(&mut self.suspend_signal, || {
                         per_seat_continuation(&runs[i + 1..], |q| Effect::EachPlayerDoes {
                             who: PlayerRef::Seat(q),
@@ -24353,6 +24387,12 @@ impl GameState {
                     self.run_effect(&ask, &sub, events)?;
                     // CR 101.4 — both asks here suspend for a `wants_ui`
                     // seat, so without this only the first seat was asked.
+                    // The seat's own parked remainder resumes as the caster unless it is
+                    // re-seated, like `EachPlayerDoes` does.
+                    rewrap_parked(&mut self.suspend_signal, |carried| Effect::EachPlayerDoes {
+                        who: PlayerRef::Seat(p),
+                        body: Box::new(carried),
+                    });
                     if splice_after_suspend(&mut self.suspend_signal, || {
                         per_seat_continuation(&seats[i + 1..], |q| Effect::EachPlayerDoes {
                             who: PlayerRef::Seat(q),
@@ -27013,6 +27053,12 @@ impl GameState {
                     // flip. Each re-flips its own coin on the continuation,
                     // which is the point: the flip is theirs, not a replay
                     // of the seat that suspended.
+                    // The seat's own parked remainder resumes as the caster unless it is
+                    // re-seated, like `EachPlayerDoes` does.
+                    rewrap_parked(&mut self.suspend_signal, |carried| Effect::EachPlayerDoes {
+                        who: PlayerRef::Seat(p),
+                        body: Box::new(carried),
+                    });
                     if splice_after_suspend(&mut self.suspend_signal, || {
                         per_seat_continuation(&seats[i + 1..], |q| Effect::EachPlayerFlipsCoin {
                             who: PlayerRef::Seat(q),

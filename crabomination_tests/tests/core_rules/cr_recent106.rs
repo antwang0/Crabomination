@@ -25,6 +25,11 @@
 //! debug pod aborted on Phyrexian Swarmlord's `PoisonCountersOf(EachOpponent)`).
 //! The same holds for a predicate's `who`; "if an opponent …" is
 //! `Predicate::ForAnyPlayer`.
+//!
+//! CR 608.2 — a per-player loop whose body asks a prompting seat parks the
+//! rest of that body; it must resume bound to the same player. Six loops
+//! resumed it under the stack item's context (`ForEachOpponent` lost its
+//! `Triggerer`, five others their seat as controller).
 
 use crabomination::card::SelectionRequirement;
 use crabomination::catalog;
@@ -357,4 +362,50 @@ fn cr_800_4_for_any_player_asks_every_opponent() {
     assert!(!g.evaluate_predicate(&pred, &ctx));
     g.players[2].spells_cast_this_turn = 3;
     assert!(g.evaluate_predicate(&pred, &ctx), "the second opponent counts");
+}
+
+#[test]
+fn cr_608_2_a_parked_per_opponent_body_resumes_bound_to_its_opponent() {
+    use crabomination::decision::{Decision, DecisionAnswer};
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[1].poison_counters = 3;
+    let mine = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_graveyard(1, catalog::serra_angel());
+    let spell = g.add_card_to_hand(0, catalog::geths_summons());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].wants_ui = true;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    let mut asked = 0;
+    for _ in 0..12 {
+        let Some(p) = g.pending_decision.as_ref() else {
+            if g.stack.is_empty() {
+                break;
+            }
+            g.perform_action(GameAction::PassPriority).expect("pass");
+            continue;
+        };
+        let answer = match &p.decision {
+            Decision::ChooseCards { candidates, .. } => {
+                asked += 1;
+                DecisionAnswer::Cards(candidates.iter().take(1).map(|(id, _)| *id).collect())
+            }
+            other => panic!("unexpected ask {other:?}"),
+        };
+        g.perform_action(GameAction::SubmitDecision(answer)).expect("answer");
+    }
+    g.players[0].wants_ui = false;
+    assert_eq!(asked, 2, "one pick from each graveyard");
+    assert_eq!(g.battlefield_find(mine).map(|c| c.controller), Some(0));
+    assert_eq!(g.battlefield_find(theirs).map(|c| c.controller), Some(0), "the corrupted opponent's Angel");
 }
