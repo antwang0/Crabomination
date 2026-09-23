@@ -419,27 +419,27 @@ fn auto_tap_reaches_a_rider_source() {
     assert_eq!(g.stack.len(), 2, "spell + scry trigger");
 }
 
-/// A real restriction stays opaque to the auto-tapper — it can't know whether
-/// what it is funding is allowed, so it leaves the source for the controller.
+/// A real restriction is honoured by the auto-payer: Ancient Ziggurat ("spend
+/// this mana only to cast creature spells") pays for Llanowar Elves and not
+/// for Lightning Bolt. (It used to be skipped outright — see
+/// `cr_106_6_a_restricted_source_pays_a_matching_spell`.)
 #[test]
-fn auto_tap_still_skips_a_real_restriction() {
-    let (mut g, _cmd) = commander_game();
-    // Ancient Ziggurat: "{T}: Add one mana of any color. Spend this mana only
-    // to cast creature spells."
-    let zig = g.add_card_to_battlefield(0, catalog::ancient_ziggurat());
-    g.battlefield_find_mut(zig).unwrap().tapped = false;
-    let elves = g.add_card_to_hand(0, catalog::llanowar_elves());
-    assert!(
-        g.perform_action(GameAction::CastSpell {
-            card_id: elves,
-            target: None,
+fn auto_tap_honours_a_real_restriction() {
+    for (spell, castable) in [(catalog::llanowar_elves(), true), (catalog::lightning_bolt(), false)] {
+        let (mut g, _cmd) = commander_game();
+        let zig = g.add_card_to_battlefield(0, catalog::ancient_ziggurat());
+        g.battlefield_find_mut(zig).unwrap().tapped = false;
+        let id = g.add_card_to_hand(0, spell);
+        let target = (!castable).then_some(Target::Player(1));
+        let r = g.perform_action(GameAction::CastSpell {
+            card_id: id,
+            target,
             additional_targets: vec![],
             mode: None,
             x_value: None,
-        })
-        .is_err(),
-        "a restricted source is not auto-tapped",
-    );
+        });
+        assert_eq!(r.is_ok(), castable, "castable: {castable}");
+    }
 }
 
 // ── CR 903.4 — an identity with no colours in it ──────────────────────────
@@ -739,4 +739,31 @@ fn view_commander_damage_carries_source_id_and_attacked_player() {
     let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let view = crabomination::server::view::project(&g, 1);
     assert_eq!(view.battlefield.iter().find(|p| p.id == bears).unwrap().attack_target, None);
+}
+
+/// CR 106.6 — the auto-payer taps a spend-restricted source when the spell
+/// may spend its mana (bug fix: restricted sources were never auto-tapped, so
+/// Secluded Courtyard was a colorless land to every bot). A Courtyard naming
+/// Vampire pays Vampire Nighthawk's second {B}, not Hypnotic Specter's.
+#[test]
+fn cr_106_6_a_restricted_source_pays_a_matching_spell() {
+    for (spell, castable) in [(catalog::vampire_nighthawk(), true), (catalog::hypnotic_specter(), false)] {
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(0, catalog::swamp());
+        g.add_card_to_battlefield(0, catalog::plains());
+        let court = g.add_card_to_battlefield(0, catalog::secluded_courtyard());
+        g.battlefield_find_mut(court).unwrap().chosen_creature_type = Some(CreatureType::Vampire);
+        let id = g.add_card_to_hand(0, spell);
+        let r = g.perform_action(GameAction::CastSpell {
+            card_id: id,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        });
+        assert_eq!(r.is_ok(), castable, "castable: {castable}");
+        if !castable {
+            assert!(!g.battlefield_find(court).unwrap().tapped, "a failed payment untaps");
+        }
+    }
 }

@@ -832,6 +832,13 @@ mod tests {
     #[test]
     fn cr_903_seeded_pod_outcomes_match_the_committed_table() {
         // (seed, winner, turns, actions)
+        // Re-blessed 2026-09-23 (CR 106.6, the payment floats a spend-
+        // restricted source the spell may spend): seed 4242 55→53 turns /
+        // 2436→2318 actions, same winner; the other two unmoved. Aggregate,
+        // 2,000 games a seat count at seed 9971, before/after: 19.48/19.46,
+        // 32.33/32.32, 45.12/45.11, 57.00/57.01, 64.47/64.46, 77.53/77.56,
+        // 93.79/93.86, every block 2,000/2,000 decided; 13 seats (500, seed
+        // 9972) 162.15/161.86. `--bench` byte-identical.
         // Re-blessed 2026-09-19 (Shifting Woodland, and the card is less
         // interesting than how it was found): the census's reader ended a
         // card's body at the next `pub fn`, so a PRIVATE helper between two
@@ -937,7 +944,7 @@ mod tests {
         const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
             (0xC0FFEE, Some(1), 97, 4061),
             (43, Some(3), 63, 2540),
-            (4242, Some(2), 55, 2436),
+            (4242, Some(2), 53, 2318),
         ];
         let decks = rofellos_pod(4);
         let t = build_pod_template(&decks);

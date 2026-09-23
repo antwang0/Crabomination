@@ -3860,8 +3860,9 @@ pub(crate) fn payload_produced_colors(pool: &ManaPayload) -> crate::mana::ColorS
         // A rider is spendable on anything, so its source auto-taps like
         // an unrestricted one (Path of Ancestry is a land with no other
         // ability — leaving it out made it produce nothing for a bot).
-        // A real restriction stays opaque: the auto-tapper can't know
-        // whether what it is funding is allowed.
+        // A real restriction stays opaque to the table: the auto-tapper can't
+        // know what it is funding. A payment that comes up short retries with
+        // them floated (`pay_with_restricted_sources`), where the kind is known.
         ManaPayload::Restricted(inner, r) if r.is_rider() => {
             payload_produced_colors(inner)
         }
@@ -14276,10 +14277,98 @@ impl GameState {
                     }
                 }
                 crate::game::pay_census::record_kind(line!(), cost, kind, Some(&e));
+                if let Some(receipt) = self.pay_with_restricted_sources(payer, cost, kind, &snapshot) {
+                    return Ok(receipt);
+                }
                 self.restore_payment_state(payer, snapshot);
                 Err(GameError::Mana(e))
             }
         }
+    }
+
+    /// CR 106.6 — the auto-tapper never taps a source whose mana carries a
+    /// real spend restriction (Secluded Courtyard, Unclaimed Territory,
+    /// Castle Garenbrig): it can't know what it is funding. The payment can:
+    /// when the ordinary attempt came up short, float the payer's untapped
+    /// restricted sources that `kind` may spend — one more each try, each
+    /// asked for a colour the cost still lacks — and pay again. Only this
+    /// failure path pays for the walk; `None` leaves the caller to restore.
+    fn pay_with_restricted_sources(
+        &mut self,
+        payer: usize,
+        cost: &crate::mana::ManaCost,
+        kind: &crate::mana::SpellKind,
+        snapshot: &PaymentSnapshot,
+    ) -> Option<PaymentReceipt> {
+        use crate::mana::{ColorSet, SpendRestriction as SR};
+        let mut sources: Vec<(CardId, usize, ColorSet)> = Vec::new();
+        for c in self.battlefield.iter().filter(|c| c.controller == payer && !c.tapped) {
+            for (idx, a) in c.definition.activated_abilities.iter().enumerate() {
+                if !crate::game::mana_shape::is_countable_mana_ability(a) {
+                    continue;
+                }
+                let Effect::AddMana { pool, .. } = &a.effect else { continue };
+                let (inner, allowed) = match pool {
+                    ManaPayload::Restricted(inner, r) if !r.is_rider() => (inner, r.allows(kind)),
+                    ManaPayload::RestrictedToChosenType(inner) => {
+                        (inner, c.chosen_creature_type.is_some_and(|t| SR::CreatureOfTypeUncounterable(t).allows(kind)))
+                    }
+                    ManaPayload::RestrictedToChosenTypePlain(inner) => {
+                        (inner, c.chosen_creature_type.is_some_and(|t| SR::CreatureOfType(t).allows(kind)))
+                    }
+                    _ => continue,
+                };
+                if allowed {
+                    let mut colors = ColorSet::empty();
+                    crate::game::mana_shape::accumulate_payload_colors(inner, &mut colors);
+                    sources.push((c.id, idx, colors));
+                    break;
+                }
+            }
+        }
+        if sources.is_empty() {
+            return None;
+        }
+        for k in 1..=sources.len() {
+            self.restore_payment_state(payer, snapshot.clone());
+            let mut events = Vec::new();
+            for &(id, idx, colors) in &sources[..k] {
+                let pool = &self.players[payer].mana_pool;
+                let want = cost
+                    .symbols
+                    .iter()
+                    .filter_map(|s| match s {
+                        crate::mana::ManaSymbol::Colored(c) if colors.contains(*c) => Some(*c),
+                        _ => None,
+                    })
+                    .find(|c| {
+                        let need = cost.symbols.iter().filter(|s| matches!(s, crate::mana::ManaSymbol::Colored(x) if x == c)).count() as u32;
+                        pool.amount(*c) < need
+                    })
+                    .or_else(|| colors.iter().next())
+                    .unwrap_or(ManaColor::White);
+                let mut b: Box<dyn crate::decision::Decider + Send + Sync> =
+                    Box::new(crate::decision::OneColorDecider::default());
+                b.rearm_script(crate::decision::DecisionAnswer::Color(want));
+                let prev_decider = std::mem::replace(&mut self.decider, b);
+                let prev_wants_ui = self.players[payer].wants_ui;
+                self.players[payer].wants_ui = false;
+                let _ = self.activate_ability_into(id, idx, None, Vec::new(), None, None, &mut events);
+                self.decider = prev_decider;
+                self.players[payer].wants_ui = prev_wants_ui;
+            }
+            events.extend(self.auto_tap_for_cost_filtered(
+                payer,
+                cost,
+                kind.creature_mana_only,
+                kind.wants_converge,
+            ));
+            let pool_before = self.players[payer].mana_pool.clone();
+            if let Ok(side_effects) = self.players[payer].mana_pool.pay_for_spell(cost, kind) {
+                return Some(PaymentReceipt { auto_events: events, side_effects, pool_before });
+            }
+        }
+        None
     }
 
     /// True if `player` controls an untapped mana source that *could have
