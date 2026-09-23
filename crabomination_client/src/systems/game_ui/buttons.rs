@@ -14,14 +14,13 @@
 use bevy::prelude::*;
 use crabomination::game::{GameAction, TurnStep};
 
-use crate::menu::AppState;
 use crate::net_plugin::{CurrentView, NetOutbox};
 use crate::theme::{self, HoverTint};
 
 use super::{
     AttackAllButton, AttackAllPanel, AttackButtonLabel, AuditMarkVerifiedButton, AuditSkipButton,
     AutoPassButton, AutoPassButtonLabel, ButtonState, EndTurnButton, ExportStateButton,
-    FastForward, LeaveButton, NextTurnButton, PassButtonLabel, PassButtonUrgent,
+    FastForward, NextTurnButton, PassButtonLabel, PassButtonUrgent,
     PassPriorityButton, PlayerHudPanel, SurrenderButton, SurrenderButtonLabel, SurrenderConfirm,
 };
 
@@ -302,11 +301,14 @@ pub fn handle_export_keypress(
     // guard's third field would have made.
     debug_console: Res<crate::systems::debug_console::DebugConsoleState>,
     chat: Res<crate::systems::chat::ChatInputState>,
+    mut settings: ResMut<crate::systems::quality::SettingsOpen>,
 ) {
     if state.active || debug_console.card_input_focused || chat.open {
         return;
     }
     if keyboard.just_pressed(KeyCode::KeyX) || btns.export {
+        // The button is in the Esc menu, which draws over the prompt.
+        settings.0 = false;
         crate::systems::export_prompt::open_export_prompt(&mut state);
     }
 }
@@ -359,27 +361,22 @@ pub fn handle_reveal_conspiracy_keypress(
     }
 }
 
-// ── Surrender / Leave ──────────────────────────────────────────────────────────
+// ── Surrender ──────────────────────────────────────────────────────────────────
 
-/// Drive the two match-exit buttons:
-/// * **Surrender** — concede the game (CR 104.3a). Guarded by a two-click
-///   confirm: the first press arms it (and the label flips to a prompt); a
-///   second press within [`SURRENDER_CONFIRM_SECS`] submits
-///   [`GameAction::Concede`]. A lone first press lapses silently so it can't
-///   surrender a later game.
-/// * **Leave Match** — return to the main menu; the `OnExit(InGame)`
-///   `teardown_net_session` drops the connection.
-#[allow(clippy::too_many_arguments)]
-pub fn handle_surrender_leave_buttons(
+/// Drive the Esc menu's **Surrender** button — concede the game (CR
+/// 104.3a). Guarded by a two-click confirm: the first press arms it (and the
+/// label flips to a prompt); a second press within
+/// [`SURRENDER_CONFIRM_SECS`] submits [`GameAction::Concede`] and closes the
+/// menu. A lone first press lapses silently so it can't surrender a later
+/// game. (Leaving the match is the menu's "Leave Game".)
+pub fn handle_surrender_button(
     time: Res<Time>,
     view: Res<CurrentView>,
     outbox: Option<Res<NetOutbox>>,
     mut confirm: ResMut<SurrenderConfirm>,
-    mut next_state: ResMut<NextState<AppState>>,
-    mut pending: ResMut<crate::menu::PendingNetMode>,
     surrender_btn: Query<&Interaction, (Changed<Interaction>, With<SurrenderButton>)>,
-    leave_btn: Query<&Interaction, (Changed<Interaction>, With<LeaveButton>)>,
     mut label_q: Query<&mut Text, With<SurrenderButtonLabel>>,
+    mut settings: ResMut<crate::systems::quality::SettingsOpen>,
 ) {
     let now = time.elapsed_secs();
 
@@ -389,16 +386,6 @@ pub fn handle_surrender_leave_buttons(
     {
         confirm.armed_until = None;
         set_surrender_label(&mut label_q, "Surrender");
-    }
-
-    if leave_btn.iter().any(|i| *i == Interaction::Pressed) {
-        confirm.armed_until = None;
-        set_surrender_label(&mut label_q, "Surrender");
-        // Mirror the settings-modal "Leave Game": drop any queued mode so the
-        // next menu visit starts clean. `OnExit(InGame)` disconnects.
-        pending.0 = None;
-        next_state.set(AppState::Menu);
-        return;
     }
 
     if surrender_btn.iter().any(|i| *i == Interaction::Pressed) {
@@ -417,6 +404,9 @@ pub fn handle_surrender_leave_buttons(
                 }
                 confirm.armed_until = None;
                 set_surrender_label(&mut label_q, "Surrender");
+                // The button lives in the Esc menu, which draws over the
+                // game-over screen the concession brings up.
+                settings.0 = false;
             }
         }
     }

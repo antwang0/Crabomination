@@ -73,7 +73,7 @@ use systems::game_ui::{
     setup_game_hud,
     spawn_ability_menu, spawn_alt_cast_modal, sync_command_zone, sync_flipped_hand_cards,
     sync_game_visuals,
-    handle_audit_buttons, handle_surrender_leave_buttons, pulse_urgent_pass_button,
+    handle_audit_buttons, handle_surrender_button, pulse_urgent_pass_button,
     sync_audit_buttons, sync_player_hud_seat,
     sync_hint_chip_visibility, trigger_reveal_animation, update_attack_all_visibility,
     update_attack_button_label,
@@ -421,7 +421,8 @@ fn main() {
         .init_resource::<layout_harness::ScreenshotClock>()
         .add_systems(
             Update,
-            layout_harness::capture_screenshot.run_if(in_state(AppState::InGame)),
+            (layout_harness::open_settings_for_screenshot, layout_harness::capture_screenshot)
+                .run_if(in_state(AppState::InGame)),
         )
         .add_systems(Startup, setup)
         .add_systems(Startup, maximize_window)
@@ -484,7 +485,7 @@ fn main() {
         // click → save + return to picker.
         .add_systems(
             Update,
-            (sync_audit_buttons, handle_audit_buttons, handle_surrender_leave_buttons)
+            (sync_audit_buttons, handle_audit_buttons, handle_surrender_button)
                 .run_if(in_state(AppState::InGame)),
         )
         // Button polling runs first so handle_game_input can read latched state.

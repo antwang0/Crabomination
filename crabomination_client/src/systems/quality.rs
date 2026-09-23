@@ -1,9 +1,10 @@
 //! Settings menu — animation-speed slider + render-quality preset
 //! toggles. Hidden by default; opened and closed by Esc via
 //! [`close_settings_on_esc`] / [`open_settings_on_esc`], which sit at
-//! opposite ends of the `systems::esc` precedence order. The on-screen
-//! Pass/End/Next/Export buttons live in `game_ui` and stay out of this
-//! menu.
+//! opposite ends of the `systems::esc` precedence order. The in-turn
+//! Pass/End/Next/Auto-pass buttons live in `game_ui`'s action column; the
+//! occasional ones — Export State, Surrender, Leave Game — are here, which
+//! keeps that column (in the table's near-left corner) short.
 
 use bevy::prelude::*;
 
@@ -172,6 +173,64 @@ pub fn setup_quality_panel(
                         p.spawn((Text::new(q.label()), tf(12.0), TextColor(theme::TEXT_PRIMARY)));
                     });
                 }
+            });
+
+            // ── Match ─────────────────────────────────────────────────
+            // Export State (also X) and Surrender (two-click confirm). Their
+            // handlers are `game_ui::buttons`' — they find the buttons by
+            // component, wherever the buttons sit — and close this menu
+            // when they act, since the export prompt and the game-over
+            // screen draw beneath it.
+            p.spawn((
+                Text::new("Match"),
+                tf(11.0),
+                TextColor(theme::TEXT_SECONDARY),
+            ));
+            p.spawn(Node {
+                flex_direction: FlexDirection::Row,
+                column_gap: Val::Px(8.0),
+                ..default()
+            })
+            .with_children(|row| {
+                row.spawn((
+                    Button,
+                    Node {
+                        padding: UiRect::axes(Val::Px(12.0), Val::Px(6.0)),
+                        border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
+                        ..default()
+                    },
+                    BackgroundColor(theme::BUTTON_NEUTRAL_BG),
+                    HoverTint::new(theme::BUTTON_NEUTRAL_BG),
+                    crate::systems::game_ui::ExportStateButton,
+                ))
+                .with_children(|b| {
+                    b.spawn((
+                        Text::new("Export State (X)"),
+                        tf(12.0),
+                        TextColor(theme::TEXT_PRIMARY),
+                        Pickable::IGNORE,
+                    ));
+                });
+                row.spawn((
+                    Button,
+                    Node {
+                        padding: UiRect::axes(Val::Px(12.0), Val::Px(6.0)),
+                        border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
+                        ..default()
+                    },
+                    BackgroundColor(theme::BUTTON_DANGER_BG),
+                    HoverTint::new(theme::BUTTON_DANGER_BG),
+                    crate::systems::game_ui::SurrenderButton,
+                ))
+                .with_children(|b| {
+                    b.spawn((
+                        Text::new("Surrender"),
+                        tf(12.0),
+                        TextColor(theme::TEXT_PRIMARY),
+                        Pickable::IGNORE,
+                        crate::systems::game_ui::SurrenderButtonLabel,
+                    ));
+                });
             });
 
             // Bottom row: "Leave Game" on the left (disconnect + return

@@ -15,7 +15,7 @@ pub mod table_awareness;
 pub use buttons::{
     handle_audit_buttons, handle_auto_pass_toggle, handle_export_keypress,
     handle_planar_die_keypress, handle_reveal_conspiracy_keypress,
-    handle_surrender_leave_buttons,
+    handle_surrender_button,
     poll_action_buttons, poll_player_chip_clicks, pulse_urgent_pass_button, sync_audit_buttons,
     update_attack_all_visibility, update_attack_button_label, update_pass_button,
 };
@@ -412,12 +412,13 @@ pub struct AutoPassButtonLabel;
 #[derive(Component)]
 pub struct NextTurnButton;
 
+/// "Export State" — in the Esc menu (the X hotkey does the same).
 #[derive(Component)]
 pub struct ExportStateButton;
 
-/// "Surrender" button — concedes the match (CR 104.3a). Guarded by a
-/// two-click confirm (see [`SurrenderConfirm`]) so a stray click can't throw
-/// the game.
+/// "Surrender" button in the Esc menu — concedes the match (CR 104.3a).
+/// Guarded by a two-click confirm (see [`SurrenderConfirm`]) so a stray
+/// click can't throw the game.
 #[derive(Component)]
 pub struct SurrenderButton;
 
@@ -426,10 +427,6 @@ pub struct SurrenderButton;
 #[derive(Component)]
 pub struct SurrenderButtonLabel;
 
-/// "Leave Match" button — abandons the match and returns to the main menu.
-/// `OnExit(AppState::InGame)` (`teardown_net_session`) drops the connection.
-#[derive(Component)]
-pub struct LeaveButton;
 
 /// Two-click arming state for the Surrender button. The first click arms it
 /// (and the label changes to a confirm prompt) until `armed_until`; a second
@@ -598,45 +595,62 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
     // current step's background (not just its text). `update_phase_chart`
     // rewrites the text label with a leading "▶" / "  " marker so the
     // active step is recognisable in peripheral vision without colour.
-    commands
+    //
+    // The chart heads the left control column; the action buttons stack
+    // under it (below). Both sit high on the left edge, where the table is
+    // at its narrowest in the view: in the near-left corner the buttons cost
+    // a pod's cards about a sixth of their size (`card::framing::hud_rects`).
+    let left_column = commands
         .spawn((
             Node {
                 position_type: PositionType::Absolute,
                 top: Val::Px(110.0),
                 left: Val::Px(10.0),
                 flex_direction: FlexDirection::Column,
-                padding: UiRect::all(Val::Px(6.0)),
-                row_gap: Val::Px(2.0),
-                min_width: Val::Px(118.0),
+                row_gap: Val::Px(8.0),
+                align_items: AlignItems::FlexStart,
                 ..default()
             },
-            BackgroundColor(theme::HUD_BG),
             InGameRoot,
         ))
-        .with_children(|p| {
-            for (step, _) in PHASE_CHART_STEPS {
-                // `Button` so a click can cycle the step's priority stop
-                // (see `phase_bar::handle_phase_chart_clicks`).
-                p.spawn((
-                    Button,
-                    Node {
-                        padding: UiRect::axes(Val::Px(4.0), Val::Px(1.0)),
-                        border_radius: BorderRadius::all(Val::Px(2.0)),
-                        ..default()
-                    },
-                    BackgroundColor(Color::NONE),
-                    PhaseStepLabel(*step),
-                ))
-                .with_children(|row| {
-                    row.spawn((
-                        Text::new(format!("   {}", step_short_label(*step))),
-                        tf(12.0),
-                        TextColor(theme::TEXT_MUTED),
-                        Pickable::IGNORE,
-                    ));
-                });
-            }
-        });
+        .id();
+    commands.entity(left_column).with_children(|col| {
+        col
+            .spawn((
+                Node {
+                    flex_direction: FlexDirection::Column,
+                    padding: UiRect::all(Val::Px(6.0)),
+                    row_gap: Val::Px(2.0),
+                    min_width: Val::Px(118.0),
+                    ..default()
+                },
+                BackgroundColor(theme::HUD_BG),
+            ))
+            .with_children(|p| {
+                for (step, _) in PHASE_CHART_STEPS {
+                    // `Button` so a click can cycle the step's priority stop
+                    // (see `phase_bar::handle_phase_chart_clicks`).
+                    p.spawn((
+                        Button,
+                        Node {
+                            padding: UiRect::axes(Val::Px(4.0), Val::Px(1.0)),
+                            border_radius: BorderRadius::all(Val::Px(2.0)),
+                            ..default()
+                        },
+                        BackgroundColor(Color::NONE),
+                        PhaseStepLabel(*step),
+                    ))
+                    .with_children(|row| {
+                        row.spawn((
+                            Text::new(format!("   {}", step_short_label(*step))),
+                            tf(12.0),
+                            TextColor(theme::TEXT_MUTED),
+                            Pickable::IGNORE,
+                        ));
+                    });
+                }
+            });
+    });
 
     // Top-right: opponent status panel. Background starts neutral and only
     // flips to the red HUD_BG_DANGER variant when the viewer is genuinely
@@ -738,20 +752,12 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
             });
         });
 
-    // Bottom-left: action buttons in a vertical column. Stacking them
-    // along the left edge (below the phase chart) keeps the entire
-    // bottom-center clear for the hand fan, which is the highest-
-    // traffic part of the screen during play.
+    // Action buttons, under the phase chart in the left control column.
+    // Only the in-turn actions live here: Export State, Surrender and Leave
+    // are in the Esc menu (`quality::setup_quality_panel`). The bottom
+    // centre stays clear for the hand fan.
     commands
-        .spawn((
-            Node {
-                position_type: PositionType::Absolute,
-                bottom: Val::Px(10.0),
-                left: Val::Px(10.0),
-                ..default()
-            },
-            InGameRoot,
-        ))
+        .entity(left_column)
         .with_children(|wrap| {
             wrap.spawn((
                 Node {
@@ -843,25 +849,6 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                     ));
                 });
 
-                p.spawn((
-                    Node {
-                        padding: UiRect::all(Val::Px(8.0)),
-                        border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
-                        ..default()
-                    },
-                    BackgroundColor(theme::BUTTON_NEUTRAL_BG),
-                    HoverTint::new(theme::BUTTON_NEUTRAL_BG),
-                    Button,
-                    ExportStateButton,
-                ))
-                .with_children(|p| {
-                    p.spawn((
-                        Text::new("Export State (X)"),
-                        tf(13.0),
-                        TextColor(theme::TEXT_PRIMARY),
-                    ));
-                });
-
                 // Audit-mode buttons. Display::None by default; the
                 // `sync_audit_buttons` system flips them visible
                 // whenever `AuditTarget.0.is_some()`.
@@ -899,49 +886,6 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                 .with_children(|p| {
                     p.spawn((
                         Text::new("Skip"),
-                        tf(13.0),
-                        TextColor(theme::TEXT_PRIMARY),
-                    ));
-                });
-
-                // Match-exit controls, kept at the bottom of the strip and
-                // visually separated (danger red / neutral) so they're not
-                // mistaken for in-turn actions.
-                p.spawn((
-                    Node {
-                        padding: UiRect::all(Val::Px(8.0)),
-                        margin: UiRect::top(Val::Px(8.0)),
-                        border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
-                        ..default()
-                    },
-                    BackgroundColor(theme::BUTTON_DANGER_BG),
-                    HoverTint::new(theme::BUTTON_DANGER_BG),
-                    Button,
-                    SurrenderButton,
-                ))
-                .with_children(|p| {
-                    p.spawn((
-                        Text::new("Surrender"),
-                        tf(13.0),
-                        TextColor(theme::TEXT_PRIMARY),
-                        SurrenderButtonLabel,
-                    ));
-                });
-
-                p.spawn((
-                    Node {
-                        padding: UiRect::all(Val::Px(8.0)),
-                        border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
-                        ..default()
-                    },
-                    BackgroundColor(theme::BUTTON_NEUTRAL_BG),
-                    HoverTint::new(theme::BUTTON_NEUTRAL_BG),
-                    Button,
-                    LeaveButton,
-                ))
-                .with_children(|p| {
-                    p.spawn((
-                        Text::new("Leave Match"),
                         tf(13.0),
                         TextColor(theme::TEXT_PRIMARY),
                     ));

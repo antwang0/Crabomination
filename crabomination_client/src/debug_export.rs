@@ -1,6 +1,6 @@
 //! Game-state export to `<repo>/debug/state-*.json`.
 //!
-//! Triggered from the in-game HUD's "Export State" button (or the `X` key).
+//! Triggered from the Esc menu's "Export State" button (or the `X` key).
 //! Writes the current `ClientView` as pretty-printed JSON so a player can
 //! attach a precise board snapshot to a bug report. Each export is paired
 //! with a free-form message describing the bug ("Vandalblast targeting

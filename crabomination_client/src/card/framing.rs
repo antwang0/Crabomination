@@ -59,16 +59,19 @@ pub fn hand_zoom_for(logical_height: f32) -> f32 {
 /// the top corner panels while its wide near edge only has to clear the
 /// action buttons.
 pub fn hud_rects(viewport: Vec2, n_seats: usize) -> [Rect; 5] {
-    let (w, h) = (viewport.x, viewport.y);
+    let w = viewport.x;
     // One 45 px row per opponent under a turn-order strip in a pod.
     let opp_panel_h = if n_seats > 2 { 30.0 + 45.0 * (n_seats - 1) as f32 } else { 70.0 };
     [
         // Player panel: turn line, phase strip and a row of stat chips.
         Rect::new(0.0, 0.0, 1090.0_f32.min(w - 470.0), 100.0),
-        // Phase chart under it.
+        // The left control column under it: the phase chart, then the
+        // action buttons (Pass, End Turn, Next Turn, Auto-pass; the
+        // occasional ones are in the Esc menu). High on the left edge, where
+        // the table is narrow in the view: in the near-left corner these
+        // buttons cost a pod's cards 88 → 99 px at 1920x1080.
         Rect::new(0.0, 100.0, 146.0, 346.0),
-        // Action buttons, bottom-left.
-        Rect::new(0.0, h - 296.0, 180.0, h),
+        Rect::new(0.0, 346.0, 180.0, 516.0),
         // Opponent panel, top-right, with the game log hanging under it.
         Rect::new(w - 460.0, 0.0, w, opp_panel_h),
         Rect::new(w - 292.0, opp_panel_h, w, opp_panel_h + 436.0),
@@ -110,45 +113,55 @@ fn clear(cards: &[([Vec3; 8], bool)], cam: &Transform, viewport: Vec2, hud: &[Re
     })
 }
 
-/// The closest pose, looking down [`VIEW_DIRECTION`], that keeps
-/// the representative board on screen and clear of the HUD. At each
-/// distance the look-at point is tried centred first, then nudged in
-/// widening steps; a bisection on the distance keeps the closest distance
-/// some nudge clears.
+/// The pose, looking down [`VIEW_DIRECTION`], that keeps the representative
+/// board on screen and clear of the HUD and makes its hardest-to-read card
+/// as large as it can be. For each look-at offset (a grid, in table units per
+/// unit of distance) a bisection finds the closest distance that clears; the
+/// offset whose smallest reference card (each seat's middle creature) comes
+/// out largest wins. Taking the closest distance alone let the view slide
+/// toward the viewer once the near corner had room, growing the viewer's
+/// cards at the far seats' expense.
 pub fn fit_pose(n_seats: usize, viewport: Vec2) -> Transform {
     let back = VIEW_DIRECTION.normalize();
-    let cards = fit_cards(&sample_board(n_seats, hand_zoom_for(viewport.y)));
+    let board = sample_board(n_seats, hand_zoom_for(viewport.y));
+    let cards = fit_cards(&board);
+    let references: Vec<[Vec3; 8]> =
+        board.iter().filter(|c| c.reference).map(|c| corners(&c.transform, 0.0)).collect();
     let hud = hud_rects(viewport, n_seats);
     let pose = |target: Vec3, d: f32| {
         Transform::from_translation(target + back * d).looking_at(target, Vec3::Y)
     };
-    // Nudges in table units per unit of distance, nearest first.
-    let mut nudges: Vec<Vec2> = Vec::new();
+    let smallest_card = |cam: &Transform| {
+        let p = Projector::new(cam, viewport);
+        references.iter().filter_map(|c| p.rect_of(c)).map(|r| r.width()).fold(f32::INFINITY, f32::min)
+    };
+    let mut best: Option<(f32, Transform)> = None;
     for i in -8..=8 {
         for j in -6..=6 {
-            nudges.push(Vec2::new(i as f32 * 0.02, j as f32 * 0.02));
-        }
-    }
-    nudges.sort_by(|a, b| a.length().total_cmp(&b.length()));
-    let placement = |d: f32| {
-        nudges.iter().map(|n| Vec3::new(n.x * d, 0.0, n.y * d)).find(|t| {
-            clear(&cards, &pose(*t, d), viewport, &hud)
-        })
-    };
-    let (mut lo, mut hi) = (5.0_f32, 400.0_f32);
-    let mut best = (Vec3::ZERO, hi);
-    // 18 halvings of 395 units: 1.5 thousandths of a unit.
-    for _ in 0..18 {
-        let mid = 0.5 * (lo + hi);
-        match placement(mid) {
-            Some(t) => {
-                best = (t, mid);
-                hi = mid;
+            let nudge = Vec2::new(i as f32, j as f32) * 0.02;
+            let target = |d: f32| Vec3::new(nudge.x * d, 0.0, nudge.y * d);
+            let clears = |d: f32| clear(&cards, &pose(target(d), d), viewport, &hud);
+            let (mut lo, mut hi) = (5.0_f32, 400.0_f32);
+            if !clears(hi) {
+                continue;
             }
-            None => lo = mid,
+            // 16 halvings of 395 units: six thousandths of a unit.
+            for _ in 0..16 {
+                let mid = 0.5 * (lo + hi);
+                if clears(mid) {
+                    hi = mid;
+                } else {
+                    lo = mid;
+                }
+            }
+            let cam = pose(target(hi), hi);
+            let score = smallest_card(&cam);
+            if best.is_none_or(|(s, _)| score > s) {
+                best = Some((score, cam));
+            }
         }
     }
-    pose(best.0, best.1)
+    best.map_or_else(|| pose(Vec3::ZERO, 400.0), |(_, cam)| cam)
 }
 
 /// World → logical-pixel projection for a camera at `cam`: the same
@@ -239,8 +252,8 @@ pub struct Placed {
     /// Pile height above the table (0 for a single card).
     pub height: f32,
     /// An untapped creature in the middle of its row — the card whose
-    /// on-screen size the budget reports for its seat.
-    #[cfg_attr(not(test), allow(dead_code))]
+    /// on-screen size the fit maximises (the smallest seat's) and the budget
+    /// reports for its seat.
     pub reference: bool,
 }
 
@@ -392,17 +405,18 @@ mod tests {
         // of the window, the viewer's hand over their own land row, and a
         // pod's far boards 3.5 cards wide.
         let floor = |seats: usize, vp: Vec2| match (seats, vp.x as u32, vp.y as u32) {
-            (2, 1280, 720) => 72.0,
-            (2, 1920, 1080) => 120.0,
-            (2, 2560, 1080) => 120.0,
-            (2, 3840, 2160) => 260.0,
-            // Pods seat two to an edge. That table is bound by width, and
-            // the HUD's action-button column is what binds it: without that
-            // column these read 99/84 at 1920x1080 (the game log is next,
-            // 92/87 without it).
-            (_, 1280, 720) => 44.0,
-            (_, 1920, 1080) => 83.0,
-            (_, 2560, 1080) => 105.0,
+            (2, 1280, 720) => 73.0,
+            (2, 1920, 1080) => 125.0,
+            (2, 2560, 1080) => 131.0,
+            (2, 3840, 2160) => 270.0,
+            // Pods seat two to an edge, a table bound by width. With the
+            // action buttons moved up under the phase chart (from the
+            // near-left corner, where they cost 88 → 99 px here), the game
+            // log is what binds a pod next (96/89 px without it) and the
+            // phase chart a 1v1 (136/124 px).
+            (_, 1280, 720) => 45.0,
+            (_, 1920, 1080) => 95.0,
+            (_, 2560, 1080) => 102.0,
             _ => 205.0,
         };
         for (seats, vp, b) in &fitted {

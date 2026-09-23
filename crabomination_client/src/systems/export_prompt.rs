@@ -1,5 +1,5 @@
 //! "Describe the bug" prompt that appears after the user hits the
-//! Export State HUD button (or `X`). While active it captures keyboard
+//! Esc menu's Export State button (or `X`). While active it captures keyboard
 //! input so the user can type a message; pressing Enter writes the
 //! `<turn>-<step>-<unix>.json` file via [`crate::debug_export`], pressing
 //! Escape cancels.

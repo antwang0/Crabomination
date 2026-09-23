@@ -7,7 +7,7 @@
 //! primary window once the view has been up for `--screenshot-delay` seconds
 //! (default 8, for card art to stream in) and then exits. `--window <WxH>`
 //! opens the window at that size instead of maximized, so one machine can
-//! render several aspect ratios.
+//! render several aspect ratios. `--settings-open` opens the Esc menu.
 //!
 //!     cargo run --profile play -p crabomination_client -- \
 //!         --layout-fixture 4 --window 1920x1080 --screenshot /tmp/pod.png
@@ -25,6 +25,9 @@ pub struct HarnessArgs {
     pub screenshot_delay: f32,
     /// Forced window size (logical px); skips `maximize_window`.
     pub window: Option<(u32, u32)>,
+    /// `--settings-open`: open the Esc menu once the view is up, so a
+    /// screenshot can show it.
+    pub settings_open: bool,
 }
 
 impl HarnessArgs {
@@ -44,6 +47,7 @@ impl HarnessArgs {
                 let (w, h) = v.split_once('x')?;
                 Some((w.parse().ok()?, h.parse().ok()?))
             }),
+            settings_open: args.iter().any(|a| a == "--settings-open"),
         }
     }
 }
@@ -118,6 +122,19 @@ pub fn fixture_state(seats: usize) -> GameState {
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     g
+}
+
+/// `--settings-open`: open the Esc menu the first frame a view is up.
+pub fn open_settings_for_screenshot(
+    args: Res<HarnessArgs>,
+    view: Res<crate::net_plugin::CurrentView>,
+    mut settings: ResMut<crate::systems::quality::SettingsOpen>,
+    mut done: Local<bool>,
+) {
+    if args.settings_open && !*done && view.0.is_some() {
+        settings.0 = true;
+        *done = true;
+    }
 }
 
 /// Seconds since the first view arrived; `None` until then.
