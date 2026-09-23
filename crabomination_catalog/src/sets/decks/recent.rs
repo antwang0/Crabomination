@@ -4545,25 +4545,22 @@ pub fn tail_swipe() -> CardDefinition {
     }
 }
 
-/// Lightning Axe — {R} Instant. (As an additional cost, discard a card.)
-/// Deals 5 damage to target creature. (The "or pay {5}" alternative is
-/// omitted — the discard is taken at resolution, Deadly-Dispute style.)
+/// Lightning Axe — {R} Instant. As an additional cost, discard a card or pay
+/// {5}. Deals 5 damage to target creature. (The "or pay {5}" alternative is
+/// omitted.)
 pub fn lightning_axe() -> CardDefinition {
     CardDefinition {
         name: "Lightning Axe",
         cost: cost(&[r()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Seq(vec![
-            Effect::Discard {
-                who: Selector::You,
-                amount: Value::Const(1),
-                random: false,
-            },
-            Effect::DealDamage {
-                to: target_filtered(SelectionRequirement::Creature),
-                amount: Value::Const(5),
-            },
-        ]),
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::Discard {
+            count: 1,
+            filter: None,
+        }],
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Creature),
+            amount: Value::Const(5),
+        },
         ..Default::default()
     }
 }
@@ -5202,24 +5199,27 @@ pub fn mizzium_skin() -> CardDefinition {
     }
 }
 
-/// Demand Answers — {1}{R} Instant. (As an additional cost, discard a card —
-/// the "sacrifice an artifact" alternative is omitted.) Draw two cards.
+/// Demand Answers — {1}{R} Instant. As an additional cost, sacrifice an
+/// artifact or discard a card. Draw two cards.
 pub fn demand_answers() -> CardDefinition {
     CardDefinition {
         name: "Demand Answers",
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Seq(vec![
-            Effect::Discard {
-                who: Selector::You,
-                amount: Value::Const(1),
-                random: false,
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::OneOf(vec![
+            crate::card::AdditionalCastCost::SacrificePermanent {
+                filter: SelectionRequirement::Artifact,
+                count: 1,
             },
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(2),
+            crate::card::AdditionalCastCost::Discard {
+                count: 1,
+                filter: None,
             },
-        ]),
+        ])],
+        effect: Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(2),
+        },
         ..Default::default()
     }
 }

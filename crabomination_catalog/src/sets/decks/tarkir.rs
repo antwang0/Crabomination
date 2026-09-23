@@ -1974,19 +1974,16 @@ pub fn worthy_cost() -> CardDefinition {
         name: "Worthy Cost",
         cost: cost(&[b()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
-            Effect::Sacrifice {
-                who: Selector::You,
-                count: Value::Const(1),
-                filter: SelectionRequirement::Creature,
-            },
-            Effect::Move {
-                what: target_filtered(
-                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
-                ),
-                to: ZoneDest::Exile,
-            },
-        ]),
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::SacrificePermanent {
+            filter: SelectionRequirement::Creature,
+            count: 1,
+        }],
+        effect: Effect::Move {
+            what: target_filtered(
+                SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+            ),
+            to: ZoneDest::Exile,
+        },
         ..Default::default()
     }
 }
@@ -3393,12 +3390,11 @@ pub fn duty_beyond_death() -> CardDefinition {
         name: "Duty Beyond Death",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Instant],
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::SacrificePermanent {
+            filter: SelectionRequirement::Creature,
+            count: 1,
+        }],
         effect: Effect::Seq(vec![
-            Effect::Sacrifice {
-                who: Selector::You,
-                count: Value::Const(1),
-                filter: SelectionRequirement::Creature,
-            },
             Effect::GrantKeyword {
                 what: your_creatures(),
                 keyword: Keyword::Indestructible,

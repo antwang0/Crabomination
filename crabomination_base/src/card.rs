@@ -4894,6 +4894,10 @@ pub enum AdditionalCastCost {
     /// life". Paid immediately during casting, so any "loses life" watcher
     /// fires before the spell resolves.
     PayLife { amount: u32 },
+    /// "As an additional cost to cast this spell, pay X life" (Toxic Deluge):
+    /// concretized to `PayLife { amount: X }` from the cast's X before payment,
+    /// so CR 119.4's "life ≥ X" gates the cast.
+    PayLifeX,
     /// "As an additional cost to cast this spell, exile [count] [filter]
     /// permanent(s) you control." (Necrotic Fumes.) Auto-picker exiles the
     /// cheapest matches (tokens first, then lowest mana value); a `wants_ui`

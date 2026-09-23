@@ -181,30 +181,26 @@ fn thopter_token() -> TokenDefinition {
     }
 }
 
-/// Reshape — {X}{U}{U} Sorcery. Sac an artifact; fetch an artifact with
-/// mana value X or less onto the battlefield.
+/// Reshape — {X}{U}{U} Sorcery. As an additional cost, sacrifice an artifact.
+/// Fetch an artifact with mana value X or less onto the battlefield.
 pub fn reshape() -> CardDefinition {
     CardDefinition {
         name: "Reshape",
         cost: cost(&[x(), u(), u()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
-            // Additional cost folded into resolution (Thud pattern).
-            Effect::Sacrifice {
-                who: Selector::You,
-                count: Value::ONE,
-                filter: SelectionRequirement::Artifact,
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::SacrificePermanent {
+            filter: SelectionRequirement::Artifact,
+            count: 1,
+        }],
+        effect: Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::Artifact
+                .and(SelectionRequirement::ManaValueAtMostXFromCost),
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::You,
+                tapped: false,
             },
-            Effect::Search {
-                who: PlayerRef::You,
-                filter: SelectionRequirement::Artifact
-                    .and(SelectionRequirement::ManaValueAtMostXFromCost),
-                to: ZoneDest::Battlefield {
-                    controller: PlayerRef::You,
-                    tapped: false,
-                },
-            },
-        ]),
+        },
         ..Default::default()
     }
 }

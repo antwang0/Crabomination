@@ -11993,3 +11993,29 @@ fn cr_602_2b_birthing_pod_sacrifices_on_activation() {
     assert!(g.battlefield_find(three).is_some(), "mana value 2 + 1");
     assert!(g.battlefield_find(angel).is_none());
 }
+
+/// CR 119.4 / 601.2b — Toxic Deluge's "pay X life" is a cost: paid on cast,
+/// and X can't exceed the caster's life total. It used to be lost at
+/// resolution, so X = 25 at 20 life was castable (and killed the caster).
+#[test]
+fn cr_119_4_toxic_deluge_pays_x_life_on_cast() {
+    let mut g = two_player_game();
+    g.players[0].life = 20;
+    let deluge = g.add_card_to_hand(0, catalog::toxic_deluge());
+    let cast = |g: &mut GameState, x: u32| {
+        g.players[0].mana_pool.add(Color::Black, 3);
+        g.perform_action(GameAction::CastSpell {
+            card_id: deluge,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: Some(x),
+        })
+    };
+    assert!(cast(&mut g, 25).is_err(), "can't pay 25 life at 20");
+    g.players[0].mana_pool.empty();
+    cast(&mut g, 3).expect("cast for X = 3");
+    assert_eq!(g.players[0].life, 17, "paid on cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 17, "and not again on resolution");
+}

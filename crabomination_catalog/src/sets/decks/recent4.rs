@@ -448,23 +448,20 @@ pub fn final_parting() -> CardDefinition {
 }
 
 /// Altar's Reap — {1}{B} Instant. As an additional cost, sacrifice a creature.
-/// Draw two cards. (The additional sacrifice is modeled at resolution.)
+/// Draw two cards.
 pub fn altars_reap() -> CardDefinition {
     CardDefinition {
         name: "Altar's Reap",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Seq(vec![
-            Effect::Sacrifice {
-                who: Selector::You,
-                count: Value::ONE,
-                filter: SelectionRequirement::Creature,
-            },
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(2),
-            },
-        ]),
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::SacrificePermanent {
+            filter: SelectionRequirement::Creature,
+            count: 1,
+        }],
+        effect: Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(2),
+        },
         ..Default::default()
     }
 }

@@ -2819,18 +2819,15 @@ pub fn electric_revelation() -> CardDefinition {
         name: "Electric Revelation",
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Instant],
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::Discard {
+            count: 1,
+            filter: None,
+        }],
         keywords: vec![Keyword::Flashback(cost(&[generic(3), r()]))],
-        effect: Effect::Seq(vec![
-            Effect::Discard {
-                who: Selector::You,
-                amount: Value::Const(1),
-                random: false,
-            },
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(2),
-            },
-        ]),
+        effect: Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(2),
+        },
         ..Default::default()
     }
 }

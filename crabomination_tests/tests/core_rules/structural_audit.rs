@@ -465,8 +465,8 @@ fn no_aura_spells_an_entry_effect_after_its_attach() {
     );
 }
 /// CR 601.2b / 602.2b — "sacrifice a …" printed in a spell's additional cost or
-/// an ability's cost line is paid on cast / activation. Thirty-one cards spelled
-/// it as the first step of the effect (`SacrificeAndRemember` / `Sacrifice`), so a
+/// an ability's cost line is paid on cast / activation. Forty-six cards spelled
+/// it (or a discard / life cost) as the first step of the effect, so a
 /// creatureless Fling or Village Rites resolved for free, a countered one
 /// cost nothing, and Birthing Pod needed a hand-written activation gate. The
 /// costs are `AdditionalCastCost::SacrificePermanent` / `sac_other_filter`,
@@ -477,6 +477,27 @@ fn no_aura_spells_an_entry_effect_after_its_attach() {
 fn no_cost_sacrifice_is_spelled_as_the_first_step_of_the_effect() {
     use crabomination::effect::{Effect, PlayerRef, Selector};
     const EFFECT_SACRIFICES: &[&str] = &["Rupture", "Witherbloom Wickering"];
+    // Spells whose opening "you sacrifice / discard" is printed as an effect,
+    // or (Grab the Prize) whose payoff reads the discard, which a cost-time
+    // discard doesn't yet record.
+    const SPELL_OPENERS: &[&str] = &[
+        "Bound // Determined",
+        "Contract from Below",
+        "Cycle of Renewal",
+        "Entish Restoration",
+        "Faithless Salvaging",
+        "Fast // Furious",
+        "Grab the Prize",
+        "Inkling Tutor (b179)",
+        "Peer Past the Veil",
+        "Planar Engineering",
+        "Prismari Iteration",
+        "Recall",
+        "Roiling Regrowth",
+        "Romantic Rendezvous",
+        "Tolarian Winds",
+        "Witherbloom Necrofeast",
+    ];
     let opens_with_own_sac = |e: &Effect| {
         let first = match e {
             Effect::Seq(steps) => steps.first(),
@@ -491,7 +512,19 @@ fn no_cost_sacrifice_is_spelled_as_the_first_step_of_the_effect() {
         if !seen.insert(def.name) || EFFECT_SACRIFICES.contains(&def.name) {
             continue;
         }
-        if opens_with_own_sac(&def.effect) {
+        let spell_first = match &def.effect {
+            Effect::Seq(steps) => steps.first(),
+            _ => None,
+        };
+        if opens_with_own_sac(&def.effect)
+            || def.additional_cast_cost.is_empty()
+                && !SPELL_OPENERS.contains(&def.name)
+                && matches!(
+                    spell_first,
+                    Some(Effect::Sacrifice { who: Selector::You, .. })
+                        | Some(Effect::Discard { who: Selector::You, .. })
+                )
+        {
             bad.push(format!("{} (spell)", def.name));
         }
         for (i, ab) in def.activated_abilities.iter().enumerate() {
