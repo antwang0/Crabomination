@@ -6063,6 +6063,7 @@ mod spec {
     pub const BACK: u32 = 1 << 13;
     pub const ALT_COST: u32 = 1 << 14;
     pub const SPLICE: u32 = 1 << 19;
+    pub const REPLICATE: u32 = 1 << 22;
     // any zone
     /// A live `may_play_until` permission for this seat, on a card wherever
     /// `Effect::GrantMayPlay` stamped it — exile or any player's graveyard.
@@ -6166,6 +6167,9 @@ fn hand_specialties(state: &GameState, seat: usize, facts: &BoardFacts) -> u32 {
                 Keyword::Conspire => spec::CONSPIRE,
                 Keyword::Kicker(_) | Keyword::Offspring(_) => spec::KICKER,
                 Keyword::Multikicker(_) => spec::MULTIKICKER,
+                Keyword::Replicate(_) | Keyword::ReplicateEnergy(_) | Keyword::ReplicateTap(_) => {
+                    spec::REPLICATE
+                }
                 Keyword::Splice(..) => spec::SPLICE,
                 _ => 0,
             };
@@ -6981,6 +6985,43 @@ fn cast_candidates<'a>(
         };
         for times in (1..=4u32).rev() {
             let action = GameAction::CastSpellMultikicked {
+                card_id: c.id,
+                times,
+                target: target.clone(),
+                additional_targets: additional_targets.clone(),
+                mode: None,
+                x_value: None,
+            };
+            if GameState::would_accept_on(state, action.clone()) {
+                castable.push((action, true));
+                break;
+            }
+        }
+    }
+    });
+
+    // Replicate (CR 702.107a): the most copies affordable (probed 4 → 1),
+    // printed replicate only — a granted one (Djinn Illuminatus) is not
+    // offered. Scored like multikicker, so the plain cast still competes.
+    gated_block!(mask, spec::REPLICATE, castable, {
+    for c in state.players[seat].hand.iter().filter(|c| {
+        let d = &c.definition;
+        d.replicate_cost().is_some()
+            || d.replicate_energy_cost().is_some()
+            || d.replicate_tap_filter().is_some()
+    }) {
+        let effect = &c.definition.effect;
+        let (target, additional_targets) = if effect.requires_target() {
+            let (t, extras) = state.auto_targets_for_effect_all_slots(effect, seat, None);
+            if t.is_none() {
+                continue;
+            }
+            (t, extras)
+        } else {
+            (None, vec![])
+        };
+        for times in (1..=4u32).rev() {
+            let action = GameAction::CastSpellReplicate {
                 card_id: c.id,
                 times,
                 target: target.clone(),
@@ -15172,6 +15213,7 @@ fn ward_gate_ok(state: &GameState, seat: usize, action: &GameAction) -> bool {
         | GameAction::CastSpellKicked { card_id, target, additional_targets, .. }
         | GameAction::CastSpellKickers { card_id, target, additional_targets, .. }
         | GameAction::CastSpellMultikicked { card_id, target, additional_targets, .. }
+        | GameAction::CastSpellReplicate { card_id, target, additional_targets, .. }
         | GameAction::CastBestow { card_id, target, additional_targets, .. }
         | GameAction::CastAdventure { card_id, target, additional_targets, .. }
         | GameAction::CastOmen { card_id, target, additional_targets, .. }
@@ -17723,7 +17765,8 @@ fn score_candidate(state: &GameState, seat: usize, action: &GameAction, w: &Eval
         GameAction::CastSpellConspire { card_id, target, .. } => (*card_id, target.clone(), 3, 0),
         GameAction::CastSpellKicked { card_id, target, .. } => (*card_id, target.clone(), 3, 0),
         GameAction::CastSpellKickers { card_id, target, .. } => (*card_id, target.clone(), 3, 0),
-        GameAction::CastSpellMultikicked { card_id, target, times, .. } => {
+        GameAction::CastSpellMultikicked { card_id, target, times, .. }
+        | GameAction::CastSpellReplicate { card_id, target, times, .. } => {
             (*card_id, target.clone(), 3, *times)
         }
         GameAction::CastBestow { card_id, target, .. } => (*card_id, target.clone(), 3, 0),
@@ -21503,6 +21546,28 @@ mod tests {
             let _ = g.perform_action(action);
         }
         panic!("bot never escaped");
+    }
+
+    /// CR 702.107a — the bot pays replicate (bug fix: no candidate block built
+    /// `CastSpellReplicate`, so every replicate card was cast bare).
+    #[test]
+    fn bot_replicates_train_of_thought() {
+        let mut g = two_player_game();
+        let train = g.add_card_to_hand(0, catalog::train_of_thought());
+        for _ in 0..6 {
+            g.add_card_to_library(0, catalog::island());
+        }
+        g.players[0].mana_pool.add(crate::mana::Color::Blue, 6);
+        let mut bot = HeuristicBot::new();
+        for _ in 0..16 {
+            let action = bot.next_action(&g, 0).expect("bot should act");
+            if let GameAction::CastSpellReplicate { card_id, times, .. } = action {
+                assert_eq!((card_id, times), (train, 2), "base + two replications = six mana");
+                return;
+            }
+            let _ = g.perform_action(action);
+        }
+        panic!("bot never replicated");
     }
 
     /// CR 702.183 — the bot casts an Omen half as removal (Petty Revenge on
