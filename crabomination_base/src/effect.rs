@@ -3276,6 +3276,12 @@ pub struct EventSpec {
     /// (Attuned Hunter's "one or more cards leave your graveyard").
     #[serde(default)]
     pub once_per_batch: bool,
+    /// With `once_per_batch` on a combat-damage kind: the batch is every
+    /// player dealt damage in the sub-step, not each one — "deal combat
+    /// damage to **one or more players**" (Contaminant Grafter) fires once
+    /// where "to a player" fires per damaged seat.
+    #[serde(default)]
+    pub batch_across_players: bool,
     /// "This ability triggers only N times each turn" counted per event
     /// subject (Nadu's granted trigger is per creature). `None` = uncapped.
     #[serde(default)]
@@ -3358,6 +3364,7 @@ impl EventSpec {
             filter: None,
             once_per_turn: false,
             once_per_batch: false,
+            batch_across_players: false,
             per_subject_cap: None,
             actor_is_opponent: false,
             exclude_attacker_taps: false,
@@ -3421,6 +3428,13 @@ impl EventSpec {
     /// "Whenever one or more …" — once per batch of simultaneous events.
     pub fn once_per_batch(mut self) -> Self {
         self.once_per_batch = true;
+        self
+    }
+    /// "…deal combat damage to one or more players" — once per combat-damage
+    /// sub-step however many players were hit (CR 603.2c).
+    pub fn once_per_batch_across_players(mut self) -> Self {
+        self.once_per_batch = true;
+        self.batch_across_players = true;
         self
     }
     /// Cap how many times this trigger fires per distinct subject per turn
