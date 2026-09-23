@@ -43,11 +43,32 @@ pub fn urzas_incubator() -> CardDefinition {
     )
 }
 
-/// Herald's Horn — {3} Artifact. Choose a creature type. Creatures you control
-/// of the chosen type cost {1} less to cast. (The upkeep "look at the top card,
-/// reveal a chosen-type creature to hand" rider is approximated as dropped.)
+/// Herald's Horn — {3} Artifact. As this artifact enters, choose a creature
+/// type. Creature spells you cast of the chosen type cost {1} less to cast. At
+/// the beginning of your upkeep, look at the top card of your library. If it's
+/// a creature card of the chosen type, you may reveal it and put it into your
+/// hand.
 pub fn heralds_horn() -> CardDefinition {
-    incubator("Herald's Horn", &[generic(3)], vec![CardType::Artifact], 1)
+    use crate::card::{EventKind, EventScope, EventSpec, Predicate, TriggeredAbility, Value};
+    use crate::effect::{PlayerRef, ZoneDest};
+    use crate::game::types::TurnStep;
+    let top = || Selector::TopOfLibrary { who: PlayerRef::You, count: Value::ONE };
+    let mut horn = incubator("Herald's Horn", &[generic(3)], vec![CardType::Artifact], 1);
+    horn.triggered_abilities.push(TriggeredAbility {
+        event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+        effect: Effect::If {
+            cond: Predicate::EntityMatches {
+                what: top(),
+                filter: R::Creature.and(R::IsSourceChosenCreatureType),
+            },
+            then: Box::new(Effect::MayDo {
+                description: "Reveal it and put it into your hand?".into(),
+                body: Box::new(Effect::Move { what: top(), to: ZoneDest::Hand(PlayerRef::You) }),
+            }),
+            else_: Box::new(Effect::Noop),
+        },
+    });
+    horn
 }
 
 /// Seismic Assault — {R}{R}{R} Enchantment. Discard a land card: Seismic Assault

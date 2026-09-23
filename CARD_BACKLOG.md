@@ -1924,7 +1924,6 @@ list wearing a test's clothes. Re-run the probe from the fourth pass's shape
   Case of the Trampled Garden [beginning of your end step] wants StepBegins(End)
   Case of the Uneaten Feast [beginning of your end step] wants StepBegins(End)
   Eccentric Apprentice [beginning of combat on your turn] wants StepBegins(BeginCombat)
-  Herald's Horn [beginning of your upkeep] wants StepBegins(Upkeep)
   Iroh, Tea Master [beginning of combat on your turn] wants StepBegins(BeginCombat)
   Overlord of the Balemurk [beginning of your end step] wants StepBegins(End)
   Overlord of the Boilerbilges [beginning of your end step] wants StepBegins(End)

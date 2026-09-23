@@ -865,6 +865,26 @@ mod recent86 {
         }).is_err(), "off-type spell isn't reduced, so one green alone is insufficient");
     }
 
+    /// Herald's Horn's upkeep look: a chosen-type creature on top may go to
+    /// hand; anything else stays on top.
+    #[test]
+    fn heralds_horn_upkeep_takes_a_chosen_type_creature() {
+        use crabomination::game::types::TurnStep;
+        for (top, taken) in [(catalog::llanowar_elves(), true), (catalog::grizzly_bears(), false)] {
+            let mut g = two_player_game();
+            let horn = g.add_card_to_battlefield(0, catalog::heralds_horn());
+            enter_choosing(&mut g, horn, CreatureType::Elf);
+            let top = g.add_card_to_library(0, top);
+            g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+            g.active_player_idx = 0;
+            g.step = TurnStep::Upkeep;
+            g.fire_step_triggers(TurnStep::Upkeep);
+            drain_stack(&mut g);
+            assert_eq!(g.players[0].hand.iter().any(|c| c.id == top), taken);
+            assert_eq!(g.players[0].library.iter().any(|c| c.id == top), !taken);
+        }
+    }
+
     /// CR 601.2f / 117.7c — a cost reduction only removes generic mana; colored
     /// pips survive. Urza's Incubator naming Elf can't waive Llanowar Elves' {G}.
     #[test]
