@@ -1649,6 +1649,8 @@ pub(crate) fn requirement_is_card_only(req: &SelectionRequirement) -> bool {
         // Read against printed P/T + counters on each layer recompute (the
         // same approximation `CardMatchPowerGated` uses) — Tapestry Warden.
         R::ToughnessGreaterThanPower => true,
+        // Mana value is a printed characteristic, read like the type leaves.
+        R::ManaValueAtMost(_) | R::ManaValueAtLeast(_) => true,
         R::And(a, b) | R::Or(a, b) => {
             requirement_is_card_only(a) && requirement_is_card_only(b)
         }
@@ -1763,6 +1765,11 @@ pub(crate) fn requirement_matches_card(
         // A card that names itself in its own printed filter (Gravebane
         // Zombie's dies-replacement).
         R::HasName(n) => def.name == n,
+        // Bello, Bard of the Brambles' "with mana value 4 or greater" is
+        // `Not(ManaValueAtMost(3))`: with no arm here the leaf fell to
+        // `false` and the `Not` animated every artifact — Mind Stone too.
+        R::ManaValueAtMost(n) => def.cost.cmc() <= *n,
+        R::ManaValueAtLeast(n) => def.cost.cmc() >= *n,
         _ => false,
     }
 }
