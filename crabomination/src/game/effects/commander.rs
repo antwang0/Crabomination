@@ -12,6 +12,19 @@ use crate::game::types::TriggerPush;
 use crate::mana::{SpellKind, SpendRestriction};
 
 impl GameState {
+    /// CR 903.3 / 202.3 — the greatest printed mana value among `seat`'s
+    /// commanders, in whatever zone each is; 0 with none.
+    pub(crate) fn greatest_commander_mana_value(&self, seat: usize) -> u32 {
+        self.players.get(seat).map_or(0, |p| {
+            p.commanders
+                .iter()
+                .filter_map(|&id| self.find_card_anywhere(id))
+                .map(|c| c.definition.cost.cmc())
+                .max()
+                .unwrap_or(0)
+        })
+    }
+
     /// CR 903.8 / Command Beacon — move one of `seat`'s commanders from the
     /// command zone to their hand.
     ///

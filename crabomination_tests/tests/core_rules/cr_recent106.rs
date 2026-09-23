@@ -12,6 +12,9 @@
 //!
 //! CR 701.14 — "each of those tokens fights a different one of those
 //! creatures" (`Effect::CreateTokensToFightEach`, Ezuri's Predation).
+//!
+//! CR 903.3 — "the greatest mana value among your commanders" reads every
+//! commander in every zone (`Value::GreatestCommanderManaValue`).
 
 use crabomination::card::SelectionRequirement;
 use crabomination::catalog;
@@ -123,4 +126,19 @@ fn cr_701_14_each_token_fights_a_different_creature() {
     assert_eq!(beasts.len(), 2, "one per opposing creature");
     let damage: Vec<u32> = beasts.iter().map(|c| c.damage).collect();
     assert!(damage.contains(&2) && damage.contains(&3), "each fought a different one: {damage:?}");
+}
+
+#[test]
+fn cr_903_3_greatest_commander_mana_value_reads_every_zone() {
+    use crabomination::card::Value;
+    use crabomination::effect::PlayerRef;
+    let mut g = two_player_game();
+    let v = Value::GreatestCommanderManaValue(PlayerRef::You);
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    let is = |g: &GameState, n| g.evaluate_predicate(&Predicate::ValueEquals(v.clone(), Value::Const(n)), &ctx);
+    assert!(is(&g, 0), "no commander");
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let angel = g.add_card_to_graveyard(0, catalog::serra_angel());
+    g.players[0].commanders.extend([bears, angel]);
+    assert!(is(&g, 5), "the Angel in the graveyard still counts");
 }

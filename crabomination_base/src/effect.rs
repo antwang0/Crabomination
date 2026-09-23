@@ -1081,6 +1081,10 @@ pub enum Value {
     /// in a cube. The same fallback read as a *cost* is five life for a card,
     /// so this variant reads the raw identity instead.
     CommandersColorIdentityCount(PlayerRef),
+    /// The greatest mana value among the player's commanders, wherever they
+    /// are (CR 903.3 — a commander is a commander in every zone; CR 202.3 —
+    /// printed mana value). Zero with no commander (Tangleweave Armor).
+    GreatestCommanderManaValue(PlayerRef),
     /// Number of distinct colors among the entities the selector resolves to,
     /// unioned across all of them ("there are five colors among permanents you
     /// control" — Case of the Shattered Pact). Contrast `ColorCountOf`, which

@@ -1328,6 +1328,10 @@ impl GameState {
             // absent commander's identity is zero, which is what the raw
             // `commander_identity_set` answers — shared with the protection
             // reading (Commander's Plate) so the two cannot drift apart.
+            Value::GreatestCommanderManaValue(who) => self
+                .resolve_players(who, ctx)
+                .first()
+                .map_or(0, |&seat| self.greatest_commander_mana_value(seat) as i32),
             Value::CommandersColorIdentityCount(who) => self
                 .resolve_players(who, ctx)
                 .first()
