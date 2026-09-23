@@ -324,6 +324,21 @@ pub fn enters_tapped() -> StaticAbility {
     }
 }
 
+/// "This land enters tapped unless you control a [land type]" (the Eldraine
+/// castles) — the CR 614.12 replacement, like [`enters_tapped`], not an ETB
+/// trigger that taps the land after it could already have made mana.
+pub fn enters_tapped_unless_you_control(land: crate::card::LandType) -> StaticAbility {
+    StaticAbility {
+        description: "This land enters tapped unless you control the named land type.",
+        effect: StaticEffect::EntersTappedUnless {
+            applies_to: Selector::This,
+            condition: Predicate::SelectorExists(Selector::EachPermanent(
+                SelectionRequirement::HasLandType(land).and(SelectionRequirement::ControlledByYou),
+            )),
+        },
+    }
+}
+
 /// ⚠ **The trigger form, and CR 614.1c says it is the wrong one** — see
 /// [`enters_tapped`]. Kept only for the `etb_tap_then_*` siblings, whose
 /// "then" half really is a trigger.

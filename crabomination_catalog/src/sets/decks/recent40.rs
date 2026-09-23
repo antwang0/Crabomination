@@ -37,21 +37,6 @@ fn tap_for_colorless(n: u32) -> ActivatedAbility {
     }
 }
 
-/// SelfSource ETB trigger: enter tapped unless you control a land of `gate`.
-fn enters_tapped_unless_land(gate: LandType) -> TriggeredAbility {
-    TriggeredAbility {
-        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-        effect: Effect::If {
-            cond: Predicate::SelectorExists(Selector::EachPermanent(
-                R::HasLandType(gate).and(R::ControlledByYou),
-            )),
-            then: Box::new(Effect::Noop),
-            else_: Box::new(Effect::Tap {
-                what: Selector::This,
-            }),
-        },
-    }
-}
 
 /// Ancient Tomb — `{T}: Add {C}{C}. This land deals 2 damage to you.`
 pub fn ancient_tomb() -> CardDefinition {
@@ -155,7 +140,7 @@ pub fn castle_locthwain() -> CardDefinition {
     CardDefinition {
         name: "Castle Locthwain",
         card_types: vec![CardType::Land],
-        triggered_abilities: vec![enters_tapped_unless_land(LandType::Swamp)],
+        static_abilities: vec![crate::catalog::sets::enters_tapped_unless_you_control(LandType::Swamp)],
         activated_abilities: vec![
             tap_for(Color::Black),
             ActivatedAbility {
@@ -196,7 +181,7 @@ pub fn castle_ardenvale() -> CardDefinition {
     CardDefinition {
         name: "Castle Ardenvale",
         card_types: vec![CardType::Land],
-        triggered_abilities: vec![enters_tapped_unless_land(LandType::Plains)],
+        static_abilities: vec![crate::catalog::sets::enters_tapped_unless_you_control(LandType::Plains)],
         activated_abilities: vec![
             tap_for(Color::White),
             ActivatedAbility {
