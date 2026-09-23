@@ -105,6 +105,20 @@ the handoff.
 
 # Bugs & robustness
 
+## OPEN 2026-09-23 — cast variants NO bot ever emits
+
+`GameAction::is_cast` lists 47 variants; `server/bot.rs` builds none of
+these (grep `GameAction::<V>` in `bot.rs`): **retrace, replicate, casualty,
+buyback, entwine, bargain, squad, foretell (`CastForetold`), mutate, fuse
+(`CastSplitFused`), room doors, waterbend, sacrifice-reduce, flashback-tap**.
+The engine paths exist and the client can take them; a bot plays the card
+only through its plain cast, or not at all. **Escape** was the same until
+`2f504ffb` (pod cards: From the Catacombs, Woe Strider, Kotis). None of the
+rest is in a pod list today (script: grep each keyword in the bodies of the
+factories `pod/decks.rs` names) — take each when a target deck needs it, as
+a `spec` bit + a `gated_block`, and add it to `score_candidate` /
+`ward_gate_ok` (their `_` arms score 0 and skip the ward check).
+
 ## FIXED 2026-09-20 (the sixty-third find) — a target-deck card CASTABLE BY NO PATH, and the multi-target pump the trick picker folded onto one creature
 
 `--card-census` (new, `bot_ladder --commander --card-census`) totals the action
