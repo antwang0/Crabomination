@@ -491,8 +491,8 @@ pub fn boommobile() -> CardDefinition {
 
 /// Howlsquad Heavy — {2}{R} 2/3 Goblin Mercenary. Start your engines! Other
 /// Goblins you control have haste. Beginning of combat on your turn: create a
-/// 1/1 red Goblin. Max speed — {T}: Add {R} for each Goblin you control.
-/// (The token's "attacks this combat if able" rider is dropped.)
+/// 1/1 red Goblin that attacks this combat if able. Max speed — {T}: Add {R}
+/// for each Goblin you control.
 pub fn howlsquad_heavy() -> CardDefinition {
     let goblin = || TokenDefinition {
         name: "Goblin".into(),
@@ -533,11 +533,18 @@ pub fn howlsquad_heavy() -> CardDefinition {
                 EventKind::StepBegins(TurnStep::BeginCombat),
                 EventScope::YourControl,
             ),
-            effect: Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::ONE,
-                definition: std::sync::Arc::new(goblin()),
-            },
+            effect: Effect::Seq(vec![
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: std::sync::Arc::new(goblin()),
+                },
+                Effect::GrantKeyword {
+                    what: Selector::LastCreatedToken,
+                    keyword: Keyword::MustAttack,
+                    duration: crate::effect::Duration::EndOfCombat,
+                },
+            ]),
         }],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,

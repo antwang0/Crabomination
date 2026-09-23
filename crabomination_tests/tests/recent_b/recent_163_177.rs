@@ -1150,6 +1150,16 @@ mod recent167 {
         let goblin = g.add_card_to_battlefield(0, catalog::mogg_fanatic()); // a Goblin
         assert!(g.computed_permanent(goblin).unwrap().keywords().contains(&Keyword::Haste),
             "other Goblins gain haste");
+        // The combat token attacks this combat if able (CR 508.1d).
+        g.active_player_idx = 0;
+        g.step = TurnStep::BeginCombat;
+        g.fire_step_triggers(TurnStep::BeginCombat);
+        drain_stack(&mut g);
+        let token = g.battlefield.iter().find(|c| c.is_token).expect("a Goblin token").id;
+        assert!(g.computed_permanent(token).unwrap().keywords().contains(&Keyword::MustAttack));
+        g.step = TurnStep::DeclareAttackers;
+        g.priority.player_with_priority = 0;
+        assert!(g.perform_action(GameAction::DeclareAttackers(vec![])).is_err(), "it must attack");
     }
 
     /// Boosted Sloop loots (draw then discard) whenever you attack. The trigger is
