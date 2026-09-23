@@ -34058,8 +34058,11 @@ impl GameState {
             Effect::Unattach { what } => {
                 for ent in self.resolve_selector(what, ctx) {
                     let Some(id) = ent.as_permanent_id() else { continue };
-                    if let Some(c) = self.battlefield_find_mut(id) {
-                        c.attached_to = None;
+                    if let Some(c) = self.battlefield_find_mut(id)
+                        && let Some(host) = c.attached_to.take()
+                    {
+                        let (def, ctrl) = (std::sync::Arc::clone(&c.definition), c.controller);
+                        self.note_unattached(id, &def, ctrl, host);
                     }
                 }
                 Ok(())

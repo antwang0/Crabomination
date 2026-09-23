@@ -2089,7 +2089,9 @@ impl GameState {
             self.revert_copy_on_leave(&mut card);
             card.damage = 0;
             card.tapped = false;
-            card.attached_to = None;
+            if let Some(host) = card.attached_to.take() {
+                self.note_unattached(card.id, &card.definition, card.controller, host);
+            }
             // CR 506.4 — A permanent leaving the battlefield is removed
             // from combat. The helper prunes `self.attacking` and
             // `self.block_map` so the post-move combat state stays

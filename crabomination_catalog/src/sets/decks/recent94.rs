@@ -22,17 +22,14 @@ fn equipment_you_control() -> Selector {
 
 // ── Equipment ────────────────────────────────────────────────────────────────
 
-/// Grafted Wargear — {3} Equipment. Equipped creature gets +3/+2. Equip {0}.
-/// (The "becomes unattached → sacrifice that permanent" rider is dropped.)
+/// Grafted Wargear — {3} Equipment. Equipped creature gets +3/+2; whenever it
+/// becomes unattached from a permanent, sacrifice that permanent. Equip {0}.
 pub fn grafted_wargear() -> CardDefinition {
-    simple_equipment(
-        "Grafted Wargear",
-        cost(&[generic(3)]),
-        cost(&[]),
-        3,
-        2,
-        vec![],
-    )
+    let mut d = simple_equipment("Grafted Wargear", cost(&[generic(3)]), cost(&[]), 3, 2, vec![]);
+    if let Some(b) = d.equipped_bonus.as_mut() {
+        b.sacrifice_host_when_unattached = true;
+    }
+    d
 }
 
 /// Bloodforged Battle-Axe — {1} Equipment. Equipped creature gets +2/+0.
