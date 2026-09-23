@@ -1,7 +1,7 @@
-//! Commander: the Keen Engineering precon's missing cards (FDC, Sai, Master
-//! Thopterist — `decks::cmdr_sai`).
+//! Commander: precon batches — Keen Engineering (FDC, Sai, `decks::cmdr_sai`)
+//! and Reap the Tides (CMR, Aesi, `decks::cmdr_aesi`).
 
-use crabomination::card::{CardDefinition, CardId, Keyword};
+use crabomination::card::{CardDefinition, CardId, CounterType, Keyword};
 use crabomination::catalog;
 use crabomination::game::types::{Attack, AttackTarget, GameAction, Target, TurnStep};
 use crabomination::game::*;
@@ -325,4 +325,242 @@ fn steel_hellkite_sweeps_mana_value_x_from_the_players_it_hit() {
     assert!(g.battlefield_find(hit_land).is_some(), "a land");
     assert!(g.battlefield_find(safe_bears).is_some(), "seat 2 wasn't hit");
     assert!(activate(&mut g, kite, 1, Some(4)).is_err(), "once each turn");
+}
+
+// ── Reap the Tides (Aesi, Tyrant of Gyre Strait) ────────────────────────────
+
+/// CR 702.119a — emerge: sacrifice a creature and pay the emerge cost less its
+/// mana value; the cast trigger still taps.
+#[test]
+fn cr_702_119a_elder_deep_fiend_emerges_off_a_sacrifice_and_taps() {
+    let mut g = main_phase();
+    let giant = g.add_card_to_battlefield(0, catalog::hill_giant());
+    let enemy = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let fiend = g.add_card_to_hand(0, catalog::elder_deep_fiend());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: fiend,
+        pitch_card: Some(giant),
+        target: Some(Target::Permanent(enemy)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("emerge for {1}{U}{U}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(giant).is_none(), "the Giant paid for it");
+    assert!(g.battlefield_find(fiend).is_some());
+    assert!(g.battlefield_find(enemy).unwrap().tapped, "the cast trigger tapped it");
+}
+
+#[test]
+fn memorial_to_genius_enters_tapped_and_cashes_in_for_two() {
+    let mut g = main_phase();
+    let m = etb(&mut g, catalog::memorial_to_genius());
+    assert!(g.battlefield_find(m).unwrap().tapped);
+    g.battlefield.find_by_id_mut(m).unwrap().tapped = false;
+    for _ in 0..2 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let hand = g.players[0].hand.len();
+    activate(&mut g, m, 1, None).expect("sac for cards");
+    assert_eq!(g.players[0].hand.len(), hand + 2);
+}
+
+/// Green and blue each pump; a green-and-blue creature gets both. Green/blue
+/// creatures untap on another player's untap step (CR 502.3).
+#[test]
+fn murkfiend_liege_pumps_simic_and_untaps_on_other_turns() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::murkfiend_liege());
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let piker = g.add_card_to_battlefield(0, catalog::goblin_piker());
+    let ooze = g.add_card_to_battlefield(0, catalog::murkfiend_liege());
+    assert_eq!(pt(&g, bears), (4, 4), "one anthem from each Liege");
+    assert_eq!(pt(&g, piker), (2, 1), "red, no pump");
+    assert_eq!(pt(&g, ooze), (6, 6), "the other Liege's two anthems");
+    for id in [bears, piker] {
+        g.battlefield.find_by_id_mut(id).unwrap().tapped = true;
+    }
+    g.active_player_idx = 1;
+    g.do_untap();
+    assert!(!g.battlefield_find(bears).unwrap().tapped);
+    assert!(g.battlefield_find(piker).unwrap().tapped);
+}
+
+/// A card per opposing noncreature spell; discard three to blink it, back
+/// tapped at the next end step.
+#[test]
+fn nezahal_draws_off_opposing_spells_and_blinks_for_three_cards() {
+    let mut g = main_phase();
+    let nez = g.add_card_to_battlefield(0, catalog::nezahal_primal_tide());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    let hand = g.players[0].hand.len();
+    try_cast(&mut g, 1, bolt, &[Target::Player(0)]).expect("bolt");
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+
+    let mut g = main_phase();
+    let nez2 = g.add_card_to_battlefield(0, catalog::nezahal_primal_tide());
+    let _ = nez;
+    for _ in 0..3 {
+        g.add_card_to_hand(0, catalog::forest());
+    }
+    activate(&mut g, nez2, 0, None).expect("discard three");
+    assert!(g.battlefield.iter().all(|c| c.definition.name != "Nezahal, Primal Tide"), "exiled");
+    g.step = TurnStep::PostCombatMain;
+    let _ = g.advance_step(Vec::new());
+    drain_stack(&mut g);
+    let back = g.battlefield.iter().find(|c| c.definition.name == "Nezahal, Primal Tide").expect("back");
+    assert!(back.tapped);
+}
+
+/// Kicked, every creature but Merfolk, Krakens, Leviathans, Octopuses and
+/// Serpents goes home — Slinn Voda itself stays.
+#[test]
+fn slinn_voda_kicked_bounces_all_but_the_sea() {
+    let mut g = main_phase();
+    let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let kraken = g.add_card_to_battlefield(1, catalog::trench_behemoth());
+    let voda = g.add_card_to_hand(0, catalog::slinn_voda_the_rising_deep());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpellKicked {
+        card_id: voda,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("kicked");
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == bears));
+    assert!(g.battlefield_find(kraken).is_some() && g.battlefield_find(voda).is_some());
+}
+
+#[test]
+fn sphinx_of_uthuun_splits_five_between_hand_and_graveyard() {
+    let mut g = main_phase();
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    let (hand, gy) = (g.players[0].hand.len(), g.players[0].graveyard.len());
+    etb(&mut g, catalog::sphinx_of_uthuun());
+    assert_eq!(g.players[0].hand.len() - hand + g.players[0].graveyard.len() - gy, 5);
+    assert!(g.players[0].hand.len() > hand);
+}
+
+#[test]
+fn spitting_image_copies_a_creature() {
+    let mut g = main_phase();
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let spell = g.add_card_to_hand(0, catalog::spitting_image());
+    cast(&mut g, spell, &[Target::Permanent(giant)]);
+    assert_eq!(count_named(&g, 0, "Hill Giant"), 1);
+}
+
+/// With no commander of yours in play every counter stays on the Hydra; with
+/// one, the headless seat spreads them.
+#[test]
+fn stumpsquall_hydra_shares_x_counters_with_your_commander() {
+    let mut g = main_phase();
+    let hydra = g.add_card_to_hand(0, catalog::stumpsquall_hydra());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: hydra,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(4),
+    })
+    .expect("X = 4");
+    drain_stack(&mut g);
+    assert_eq!(pt(&g, hydra), (5, 5));
+
+    let mut g = main_phase();
+    let cmd = g.seat_commanders(0, vec![catalog::grizzly_bears()])[0];
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastFromCommandZone {
+        card_id: cmd,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+        alternative: false,
+        pitch_card: None,
+    })
+    .expect("cast the commander");
+    drain_stack(&mut g);
+    let hydra = g.add_card_to_hand(0, catalog::stumpsquall_hydra());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: hydra,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(4),
+    })
+    .expect("X = 4");
+    drain_stack(&mut g);
+    let on = |id| g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne);
+    assert_eq!(on(hydra) + on(cmd), 4);
+    assert!(on(cmd) > 0, "the commander got a share");
+}
+
+/// Return a land: untap and hexproof. Landfall: an opposing creature must
+/// attack on its controller's next turn.
+#[test]
+fn trench_behemoth_untaps_for_a_land_and_forces_an_attack() {
+    let mut g = main_phase();
+    let tb = g.add_card_to_battlefield(0, catalog::trench_behemoth());
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    g.battlefield.find_by_id_mut(tb).unwrap().tapped = true;
+    activate(&mut g, tb, 0, None).expect("return a land");
+    assert!(g.players[0].hand.iter().any(|c| c.id == forest));
+    assert!(!g.battlefield_find(tb).unwrap().tapped);
+    assert!(g.computed_permanent(tb).unwrap().keywords().contains(&Keyword::Hexproof));
+    let enemy = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.perform_action(GameAction::PlayLand(forest)).expect("landfall");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(enemy).unwrap().keywords().contains(&Keyword::MustAttack));
+}
+
+/// Two charge counters, one spent per off-color mana; none left, no ability.
+#[test]
+fn vivid_lands_spend_charge_counters_for_any_color() {
+    let mut g = main_phase();
+    let creek = g.add_card_to_hand(0, catalog::vivid_creek());
+    g.perform_action(GameAction::PlayLand(creek)).expect("play it");
+    drain_stack(&mut g);
+    let land = g.battlefield_find(creek).unwrap();
+    assert!(land.tapped);
+    assert_eq!(land.counter_count(CounterType::Charge), 2);
+    for n in [1, 0] {
+        g.battlefield.find_by_id_mut(creek).unwrap().tapped = false;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: creek,
+            ability_index: 1,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+        .expect("any color");
+        assert_eq!(g.battlefield_find(creek).unwrap().counter_count(CounterType::Charge), n);
+    }
+    g.battlefield.find_by_id_mut(creek).unwrap().tapped = false;
+    assert!(g
+        .perform_action(GameAction::ActivateAbility {
+            card_id: creek,
+            ability_index: 1,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+        .is_err());
 }
