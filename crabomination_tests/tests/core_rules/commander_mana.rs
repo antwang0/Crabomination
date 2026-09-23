@@ -613,7 +613,8 @@ fn cr_106_6_every_rider_allows_every_payment() {
             use SpendRestriction::*;
             match r {
                 InstantSorceryOnly | ArtifactOnly | CreatureOfTypeUncounterable(_)
-                | CreatureOfType(_) | CreatureSpellOfType(_) | CreatureOfAnyTypes(_)
+                | CreatureOfType(_) | CreatureSpellOfType(_) | CreatureOfTypeOrItsAbility(_)
+                | CreatureOfAnyTypes(_)
                 | LandAbilitiesOnly | CreatureOnly
                 | CreatureSpellsOrAbilities | NoNonartifactSpells | AbilitiesOnly
                 | LessonSpellsOnly | DevoidSpellsOnly | InstantSorceryUncounterable
@@ -633,6 +634,7 @@ fn cr_106_6_every_rider_allows_every_payment() {
             CreatureOfTypeUncounterable(CreatureType::Bear),
             CreatureOfType(CreatureType::Bear),
             CreatureSpellOfType(CreatureType::Bear),
+            CreatureOfTypeOrItsAbility(CreatureType::Bear),
             CreatureOfAnyTypes([CreatureType::Bear, CreatureType::Elf, CreatureType::Elf]),
             LandAbilitiesOnly,
             CreatureOnly,
@@ -809,4 +811,52 @@ fn cr_308_3_kindred_spells_count_for_type_spell_mana_not_creature_mana() {
     assert!(!SpendRestriction::CreatureSpellOfType(T::Goblin).allows(&tarfire));
     let bolt = catalog::lightning_bolt().spell_kind();
     assert!(!spells.allows(&bolt), "a plain instant has no creature type");
+}
+
+/// A creature of `t` with "{W}: you gain 1 life".
+fn lifegain_body(name: &'static str, t: CreatureType) -> CardDefinition {
+    use crabomination::effect::{ActivatedAbility, Effect, Selector, Value};
+    CardDefinition {
+        name,
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![t], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[crabomination::mana::w()]),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::ONE },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// CR 106.6 — Secluded Courtyard's mana also funds "an ability of a creature
+/// of the chosen type": a Vampire's {W} ability, not a Bear's.
+#[test]
+fn cr_106_6_secluded_courtyard_pays_its_types_abilities() {
+    for (t, payable) in [(CreatureType::Vampire, true), (CreatureType::Bear, false)] {
+        let mut g = two_player_game();
+        let court = g.add_card_to_battlefield(0, catalog::secluded_courtyard());
+        g.battlefield_find_mut(court).unwrap().chosen_creature_type = Some(CreatureType::Vampire);
+        let body = g.add_card_to_battlefield(0, lifegain_body("Test Body", t));
+        let r = g.perform_action(GameAction::ActivateAbility {
+            card_id: body,
+            ability_index: 0,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        });
+        assert_eq!(r.is_ok(), payable, "{t:?}");
+    }
+}
+
+/// CR 106.6 — "[type] spell" mana is for spells only: a Vampire's ability is
+/// not a Vampire spell (Voldaren Estate).
+#[test]
+fn cr_106_6_type_spell_mana_does_not_pay_that_types_abilities() {
+    let kind = lifegain_body("Test Body", CreatureType::Vampire).ability_spend_kind();
+    assert!(!SpendRestriction::CreatureOfType(CreatureType::Vampire).allows(&kind));
+    assert!(SpendRestriction::CreatureOfTypeOrItsAbility(CreatureType::Vampire).allows(&kind));
 }
