@@ -943,6 +943,34 @@ fn cmdr_umbris_psionic_ritual_copies_a_sorcery() {
     assert_eq!(g.players[0].hand.len(), hand - 1 + 2, "the copied Divination drew two");
 }
 
+/// CR 702.107a — Psionic Ritual's replicate is paid by tapping an untapped
+/// Horror per copy: one Horror buys one copy, and a second copy needs a
+/// second untapped Horror.
+#[test]
+fn cr_702_107a_psionic_ritual_replicates_by_tapping_horrors() {
+    let mut g = game(2);
+    let div = g.add_card_to_graveyard(1, catalog::divination());
+    g.add_card_to_graveyard(1, catalog::divination());
+    let mut horror = catalog::grizzly_bears();
+    horror.subtypes.creature_types = vec![CreatureType::Horror];
+    let h = g.add_card_to_battlefield(0, horror);
+    flood(&mut g, 0);
+    let s = g.add_card_to_hand(0, catalog::psionic_ritual());
+    let replicate = |times| GameAction::CastSpellReplicate {
+        card_id: s,
+        times,
+        target: Some(Target::Permanent(div)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    };
+    assert!(g.perform_action(replicate(2)).is_err(), "one Horror can't pay twice");
+    assert!(!g.battlefield_find(h).unwrap().tapped, "the failed cast rolled back");
+    g.perform_action(replicate(1)).expect("replicate once");
+    assert!(g.battlefield_find(h).unwrap().tapped, "the Horror paid for the copy");
+    assert_eq!(g.stack.len(), 2, "the Ritual and one copy");
+}
+
 /// Cut Your Losses mills half the target's library.
 #[test]
 fn cmdr_umbris_cut_your_losses_mills_half() {

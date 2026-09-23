@@ -1813,9 +1813,9 @@ pub fn distant_melody() -> CardDefinition {
 /// Psionic Ritual — {4}{U}{U} Sorcery. "Replicate—Tap an untapped Horror you
 /// control. Exile target instant or sorcery card from a graveyard and copy it.
 /// You may cast the copy without paying its mana cost. Exile Psionic Ritual."
-/// Residual: the tap-a-Horror replicate cost is omitted.
 pub fn psionic_ritual() -> CardDefinition {
     CardDefinition {
+        keywords: vec![Keyword::ReplicateTap(Box::new(R::HasCreatureType(CreatureType::Horror)))],
         exile_on_resolve: true,
         ..spell(
             "Psionic Ritual",

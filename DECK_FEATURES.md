@@ -109,8 +109,8 @@ all twelve lists played (566 distinct), N'ghathrod **10.3 %** against a
 seat's 8.3 %, Teval 4.5 %.
 
 🟡 **Residuals in the list**: Grell Philosopher (only Grell gains the
-artifact's abilities; no blue-as-any rider), Psionic Ritual (no tap-a-Horror
-replicate). Sewer Nemesis always chooses an opponent.
+artifact's abilities; no blue-as-any rider). Sewer Nemesis always chooses an
+opponent.
 
 The **thirteenth** is the third official precon, **Blood Rites** (Lost Caverns
 of Ixalan Commander, 2023), MTGJSON's `BloodRites_LCC` card for card;
