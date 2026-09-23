@@ -634,21 +634,12 @@ pub fn witherbloom_pestkeeper() -> CardDefinition {
             mana_cost: cost(&[generic(1), b(), g()]),
             // Sac a Pest you control (`filter` constrains the picker) and
             // then ship -2/-2 to the target creature.
-            effect: Effect::Seq(vec![
-                Effect::Sacrifice {
-                    who: Selector::You,
-                    count: Value::Const(1),
-                    filter: SelectionRequirement::Creature
-                        .and(SelectionRequirement::HasCreatureType(CreatureType::Pest))
-                        .and(SelectionRequirement::ControlledByYou),
-                },
-                Effect::PumpPT {
-                    what: target_filtered(SelectionRequirement::Creature),
-                    power: Value::Const(-2),
-                    toughness: Value::Const(-2),
-                    duration: Duration::EndOfTurn,
-                },
-            ]),
+            effect: Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-2),
+                toughness: Value::Const(-2),
+                duration: Duration::EndOfTurn,
+            },
             once_per_turn: false,
             sorcery_speed: false,
             sac_cost: false,
@@ -658,7 +649,11 @@ pub fn witherbloom_pestkeeper() -> CardDefinition {
             exile_self_cost: false,
             exile_other_filter: None,
             self_counter_cost_reduction: None,
-            sac_other_filter: None,
+            sac_other_filter: Some((
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::HasCreatureType(CreatureType::Pest)),
+                1,
+            )),
             tap_other_filter: None,
             from_hand: false,
             ..Default::default()
@@ -1620,22 +1615,14 @@ pub fn witherbloom_pestbroker() -> CardDefinition {
             from_graveyard: false,
             sorcery_speed: false,
             once_per_turn: false,
-            effect: Effect::Seq(vec![
-                Effect::Sacrifice {
-                    who: Selector::You,
-                    count: Value::Const(1),
-                    filter: SelectionRequirement::HasCreatureType(CreatureType::Pest)
-                        .and(SelectionRequirement::ControlledByYou),
-                },
-                Effect::PumpPT {
-                    what: target_filtered(SelectionRequirement::Creature),
-                    power: Value::Const(-1),
-                    toughness: Value::Const(-1),
-                    duration: crate::effect::Duration::EndOfTurn,
-                },
-            ]),
+            effect: Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-1),
+                toughness: Value::Const(-1),
+                duration: crate::effect::Duration::EndOfTurn,
+            },
             self_counter_cost_reduction: None,
-            sac_other_filter: None,
+            sac_other_filter: Some((SelectionRequirement::HasCreatureType(CreatureType::Pest), 1)),
             tap_other_filter: None,
             from_hand: false,
             ..Default::default()
@@ -5391,7 +5378,11 @@ pub fn pest_conservator() -> CardDefinition {
             exile_self_cost: false,
             exile_other_filter: None,
             self_counter_cost_reduction: None,
-            sac_other_filter: None,
+            sac_other_filter: Some((
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::HasCreatureType(CreatureType::Pest)),
+                1,
+            )),
             tap_other_filter: None,
             from_hand: false,
             // Sacrifice a Pest you control as the activated ability's
@@ -5399,19 +5390,10 @@ pub fn pest_conservator() -> CardDefinition {
             // sac and the draw still resolves (resolve-time picker vs
             // cost-time pre-pay shape — same trade as Witherbloom
             // Pestkeeper).
-            effect: Effect::Seq(vec![
-                Effect::Sacrifice {
-                    who: Selector::You,
-                    count: Value::Const(1),
-                    filter: SelectionRequirement::Creature
-                        .and(SelectionRequirement::HasCreatureType(CreatureType::Pest))
-                        .and(SelectionRequirement::ControlledByYou),
-                },
-                Effect::Draw {
-                    who: Selector::You,
-                    amount: Value::Const(1),
-                },
-            ]),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
             ..Default::default()
         }],
         ..Default::default()

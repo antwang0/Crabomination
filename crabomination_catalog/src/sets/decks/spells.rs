@@ -191,12 +191,10 @@ pub fn thud() -> CardDefinition {
             filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
             count: 1,
         }],
-        effect: Effect::Seq(vec![
-            Effect::DealDamage {
-                to: Selector::Target(0),
-                amount: Value::SacrificedPower,
-            },
-        ]),
+        effect: Effect::DealDamage {
+            to: Selector::Target(0),
+            amount: Value::SacrificedPower,
+        },
         ..Default::default()
     }
 }

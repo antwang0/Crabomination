@@ -6949,12 +6949,10 @@ pub fn krark_clan_ironworks() -> CardDefinition {
             mana_cost: ManaCost::default(),
             // "Sacrifice an artifact" is the cost (`sac_other_filter`), which
             // gates the activation. It never picks the Ironworks itself.
-            effect: Effect::Seq(vec![
-                Effect::AddMana {
-                    who: PlayerRef::You,
-                    pool: ManaPayload::Colorless(Value::Const(2)),
-                },
-            ]),
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colorless(Value::Const(2)),
+            },
             once_per_turn: false,
             sorcery_speed: false,
             sac_cost: false,
@@ -7197,11 +7195,9 @@ pub fn bone_splinters() -> CardDefinition {
             filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
             count: 1,
         }],
-        effect: Effect::Seq(vec![
-            Effect::Destroy {
-                what: target_filtered(SelectionRequirement::Creature),
-            },
-        ]),
+        effect: Effect::Destroy {
+            what: target_filtered(SelectionRequirement::Creature),
+        },
         ..Default::default()
     }
 }
@@ -7717,12 +7713,10 @@ pub fn goblin_grenade() -> CardDefinition {
             filter: SelectionRequirement::HasCreatureType(CreatureType::Goblin),
             count: 1,
         }],
-        effect: Effect::Seq(vec![
-            Effect::DealDamage {
-                to: Selector::Target(0),
-                amount: Value::Const(5),
-            },
-        ]),
+        effect: Effect::DealDamage {
+            to: Selector::Target(0),
+            amount: Value::Const(5),
+        },
         ..Default::default()
     }
 }
@@ -11051,12 +11045,10 @@ pub fn fling() -> CardDefinition {
             filter: SelectionRequirement::Creature,
             count: 1,
         }],
-        effect: Effect::Seq(vec![
-            Effect::DealDamage {
-                to: Selector::Target(0),
-                amount: Value::SacrificedPower,
-            },
-        ]),
+        effect: Effect::DealDamage {
+            to: Selector::Target(0),
+            amount: Value::SacrificedPower,
+        },
         ..Default::default()
     }
 }
@@ -11292,12 +11284,10 @@ pub fn village_rites() -> CardDefinition {
             filter: SelectionRequirement::Creature,
             count: 1,
         }],
-        effect: Effect::Seq(vec![
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(2),
-            },
-        ]),
+        effect: Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(2),
+        },
         ..Default::default()
     }
 }
@@ -32335,16 +32325,14 @@ pub fn kazuuls_fury() -> CardDefinition {
             filter: SelectionRequirement::Creature,
             count: 1,
         }],
-        effect: Effect::Seq(vec![
-            Effect::DealDamage {
-                to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
-                ),
-                amount: Value::SacrificedPower,
-            },
-        ]),
+        effect: Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Player)
+                    .or(SelectionRequirement::Planeswalker),
+            ),
+            amount: Value::SacrificedPower,
+        },
         back_face: Some(Box::new(znr_mdfc_land("Kazuul's Cliffs", Color::Red))),
         ..Default::default()
     }

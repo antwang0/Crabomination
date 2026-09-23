@@ -5094,16 +5094,14 @@ pub fn prime_speaker_vannifar() -> CardDefinition {
             tap_cost: true,
             sorcery_speed: true,
             sac_other_filter: Some((R::Creature, 1)),
-            effect: Effect::Seq(vec![
-                Effect::Search {
-                    who: PlayerRef::You,
-                    filter: R::Creature.and(R::ManaValueEqualsSacrificedPlus(1)),
-                    to: ZoneDest::Battlefield {
-                        controller: PlayerRef::You,
-                        tapped: false,
-                    },
+            effect: Effect::Search {
+                who: PlayerRef::You,
+                filter: R::Creature.and(R::ManaValueEqualsSacrificedPlus(1)),
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
                 },
-            ]),
+            },
             ..Default::default()
         }],
         ..body(

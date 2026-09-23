@@ -795,20 +795,18 @@ pub fn korozda_guildmage() -> CardDefinition {
             ActivatedAbility {
                 mana_cost: cost(&[generic(2), b(), g()]),
                 sac_other_filter: Some((R::Creature.and(R::NotToken), 1)),
-                effect: E::Seq(vec![
-                    E::CreateToken {
-                        who: PlayerRef::You,
-                        count: Value::SacrificedToughness,
-                        definition: std::sync::Arc::new(token(
-                            "Saproling",
-                            1,
-                            1,
-                            vec![Color::Green],
-                            CreatureType::Saproling,
-                            vec![],
-                        )),
-                    },
-                ]),
+                effect: E::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::SacrificedToughness,
+                    definition: std::sync::Arc::new(token(
+                        "Saproling",
+                        1,
+                        1,
+                        vec![Color::Green],
+                        CreatureType::Saproling,
+                        vec![],
+                    )),
+                },
                 ..Default::default()
             },
         ],

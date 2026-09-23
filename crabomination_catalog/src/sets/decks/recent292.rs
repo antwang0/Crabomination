@@ -164,12 +164,10 @@ pub fn fiery_conclusion() -> CardDefinition {
             filter: R::Creature,
             count: 1,
         }],
-        effect: Effect::Seq(vec![
-            Effect::DealDamage {
-                to: Selector::Target(0),
-                amount: Value::Const(5),
-            },
-        ]),
+        effect: Effect::DealDamage {
+            to: Selector::Target(0),
+            amount: Value::Const(5),
+        },
         ..Default::default()
     }
 }

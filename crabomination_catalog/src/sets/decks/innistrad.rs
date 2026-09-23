@@ -1194,12 +1194,10 @@ pub fn vivisection() -> CardDefinition {
             filter: SelectionRequirement::Creature,
             count: 1,
         }],
-        effect: Effect::Seq(vec![
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(3),
-            },
-        ]),
+        effect: Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(3),
+        },
         ..Default::default()
     }
 }
@@ -1354,13 +1352,11 @@ pub fn eaten_alive() -> CardDefinition {
             filter: SelectionRequirement::Creature,
             pay: 4,
         }],
-        effect: Effect::Seq(vec![
-            Effect::Exile {
-                what: target_filtered(
-                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
-                ),
-            },
-        ]),
+        effect: Effect::Exile {
+            what: target_filtered(
+                SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+            ),
+        },
         ..Default::default()
     }
 }

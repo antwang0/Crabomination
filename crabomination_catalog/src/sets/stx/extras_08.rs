@@ -1087,23 +1087,17 @@ pub fn lorehold_treasure_smith() -> CardDefinition {
             condition: None,
             sorcery_speed: false,
             once_per_turn: false,
-            effect: Effect::Seq(vec![
-                Effect::Sacrifice {
-                    who: Selector::You,
-                    count: Value::Const(1),
-                    filter: SelectionRequirement::HasArtifactSubtype(
-                        crate::card::ArtifactSubtype::Treasure,
-                    ),
-                },
-                Effect::PumpPT {
-                    what: Selector::This,
-                    power: Value::Const(1),
-                    toughness: Value::Const(1),
-                    duration: Duration::EndOfTurn,
-                },
-            ]),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
             self_counter_cost_reduction: None,
-            sac_other_filter: None,
+            sac_other_filter: Some((
+                SelectionRequirement::HasArtifactSubtype(crate::card::ArtifactSubtype::Treasure),
+                1,
+            )),
             tap_other_filter: None,
             from_hand: false,
             ..Default::default()

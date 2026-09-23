@@ -12,14 +12,6 @@ use crate::effect::{PlayerRef, ZoneDest};
 use crate::mana::{Color, b, cost, g, generic};
 
 /// Sacrifice a creature you control (folded as an activated-cost first step).
-fn sac_your_creature() -> Effect {
-    Effect::Sacrifice {
-        who: Selector::You,
-        count: Value::Const(1),
-        filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-    }
-}
-
 /// Endless Cockroaches — {1}{B}{B} 1/1 Insect. When it dies, return it to its
 /// owner's hand.
 pub fn endless_cockroaches() -> CardDefinition {
@@ -119,14 +111,12 @@ pub fn sadistic_hypnotist() -> CardDefinition {
         toughness: 2,
         activated_abilities: vec![ActivatedAbility {
             sorcery_speed: true,
-            effect: Effect::Seq(vec![
-                sac_your_creature(),
-                Effect::Discard {
-                    who: target_filtered(SelectionRequirement::Player),
-                    amount: Value::Const(2),
-                    random: false,
-                },
-            ]),
+            sac_other_filter: Some((SelectionRequirement::Creature, 1)),
+            effect: Effect::Discard {
+                who: target_filtered(SelectionRequirement::Player),
+                amount: Value::Const(2),
+                random: false,
+            },
             ..Default::default()
         }],
         ..Default::default()

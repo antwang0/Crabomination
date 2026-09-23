@@ -465,8 +465,8 @@ fn no_aura_spells_an_entry_effect_after_its_attach() {
     );
 }
 /// CR 601.2b / 602.2b — "sacrifice a …" printed in a spell's additional cost or
-/// an ability's cost line is paid on cast / activation. Twenty-five cards spelled
-/// it as the first step of the effect (`SacrificeAndRemember`), so a
+/// an ability's cost line is paid on cast / activation. Thirty-one cards spelled
+/// it as the first step of the effect (`SacrificeAndRemember` / `Sacrifice`), so a
 /// creatureless Fling or Village Rites resolved for free, a countered one
 /// cost nothing, and Birthing Pod needed a hand-written activation gate. The
 /// costs are `AdditionalCastCost::SacrificePermanent` / `sac_other_filter`,
@@ -475,7 +475,7 @@ fn no_aura_spells_an_entry_effect_after_its_attach() {
 /// the synthesised Witherbloom Wickering's (an instant's opening sentence).
 #[test]
 fn no_cost_sacrifice_is_spelled_as_the_first_step_of_the_effect() {
-    use crabomination::effect::{Effect, PlayerRef};
+    use crabomination::effect::{Effect, PlayerRef, Selector};
     const EFFECT_SACRIFICES: &[&str] = &["Rupture", "Witherbloom Wickering"];
     let opens_with_own_sac = |e: &Effect| {
         let first = match e {
@@ -495,7 +495,13 @@ fn no_cost_sacrifice_is_spelled_as_the_first_step_of_the_effect() {
             bad.push(format!("{} (spell)", def.name));
         }
         for (i, ab) in def.activated_abilities.iter().enumerate() {
-            if opens_with_own_sac(&ab.effect) {
+            let first = match &ab.effect {
+                Effect::Seq(steps) => steps.first(),
+                other => Some(other),
+            };
+            if opens_with_own_sac(&ab.effect)
+                || matches!(first, Some(Effect::Sacrifice { who: Selector::You, .. }))
+            {
                 bad.push(format!("{} (ability {i})", def.name));
             }
         }

@@ -1362,17 +1362,15 @@ pub fn birthing_pod() -> CardDefinition {
             // Pod was an instant-speed sacrifice outlet.
             sorcery_speed: true,
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
-            effect: Effect::Seq(vec![
-                Effect::Search {
-                    who: PlayerRef::You,
-                    filter: SelectionRequirement::Creature
-                        .and(SelectionRequirement::ManaValueEqualsSacrificedPlus(1)),
-                    to: ZoneDest::Battlefield {
-                        controller: PlayerRef::You,
-                        tapped: false,
-                    },
+            effect: Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::ManaValueEqualsSacrificedPlus(1)),
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
                 },
-            ]),
+            },
             ..Default::default()
         }],
         ..Default::default()

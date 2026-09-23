@@ -690,8 +690,8 @@ pub fn deadly_dispute() -> CardDefinition {
         card_types: vec![CardType::Instant],
         additional_cast_cost: vec![crate::card::AdditionalCastCost::SacrificePermanent {
             filter: SelectionRequirement::Creature
-                    .or(SelectionRequirement::Artifact)
-                    .and(SelectionRequirement::ControlledByYou),
+                .or(SelectionRequirement::Artifact)
+                .and(SelectionRequirement::ControlledByYou),
             count: 1,
         }],
         effect: Effect::Seq(vec![
@@ -1665,12 +1665,10 @@ pub fn costly_plunder() -> CardDefinition {
             filter: SelectionRequirement::Creature.or(SelectionRequirement::Artifact),
             count: 1,
         }],
-        effect: Effect::Seq(vec![
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(2),
-            },
-        ]),
+        effect: Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(2),
+        },
         ..Default::default()
     }
 }

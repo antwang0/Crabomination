@@ -1481,14 +1481,6 @@ pub fn prismari_painter() -> CardDefinition {
             tap_cost: true,
             mana_cost: ManaCost::default(),
             effect: Effect::Seq(vec![
-                Effect::Sacrifice {
-                    who: Selector::You,
-                    count: Value::Const(1),
-                    filter: SelectionRequirement::HasArtifactSubtype(
-                        crate::card::ArtifactSubtype::Treasure,
-                    )
-                    .and(SelectionRequirement::ControlledByYou),
-                },
                 Effect::AddMana {
                     who: PlayerRef::You,
                     pool: ManaPayload::AnyOneColor(Value::Const(1)),
@@ -1507,7 +1499,10 @@ pub fn prismari_painter() -> CardDefinition {
             exile_self_cost: false,
             exile_other_filter: None,
             self_counter_cost_reduction: None,
-            sac_other_filter: None,
+            sac_other_filter: Some((
+                SelectionRequirement::HasArtifactSubtype(crate::card::ArtifactSubtype::Treasure),
+                1,
+            )),
             tap_other_filter: None,
             from_hand: false,
             ..Default::default()

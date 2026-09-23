@@ -577,12 +577,10 @@ pub fn lifes_legacy() -> CardDefinition {
             filter: SelectionRequirement::Creature,
             count: 1,
         }],
-        effect: Effect::Seq(vec![
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::SacrificedPower,
-            },
-        ]),
+        effect: Effect::Draw {
+            who: Selector::You,
+            amount: Value::SacrificedPower,
+        },
         ..Default::default()
     }
 }

@@ -11630,13 +11630,11 @@ pub fn ghoulcaller_gisa() -> CardDefinition {
             mana_cost: cost(&[b()]),
             tap_cost: true,
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
-            effect: Effect::Seq(vec![
-                Effect::CreateToken {
-                    who: PlayerRef::You,
-                    count: Value::SacrificedPower,
-                    definition: std::sync::Arc::new(black_zombie_token()),
-                },
-            ]),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::SacrificedPower,
+                definition: std::sync::Arc::new(black_zombie_token()),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -11772,24 +11770,25 @@ pub fn geralf_visionary_stitcher() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[u()]),
             tap_cost: true,
-            sac_other_filter: Some((SelectionRequirement::Creature.and(SelectionRequirement::IsToken.negate()), 1)),
-            effect: Effect::Seq(vec![
-                Effect::CreateToken {
-                    who: PlayerRef::You,
-                    count: Value::Const(1),
-                    definition: std::sync::Arc::new(TokenDefinition {
-                        name: "Zombie".into(),
-                        card_types: vec![CardType::Creature],
-                        colors: vec![crate::mana::Color::Blue],
-                        subtypes: Subtypes {
-                            creature_types: vec![CreatureType::Zombie],
-                            ..Default::default()
-                        },
-                        dynamic_pt: Some((Value::SacrificedToughness, Value::SacrificedToughness)),
+            sac_other_filter: Some((
+                SelectionRequirement::Creature.and(SelectionRequirement::IsToken.negate()),
+                1,
+            )),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: std::sync::Arc::new(TokenDefinition {
+                    name: "Zombie".into(),
+                    card_types: vec![CardType::Creature],
+                    colors: vec![crate::mana::Color::Blue],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Zombie],
                         ..Default::default()
-                    }),
-                },
-            ]),
+                    },
+                    dynamic_pt: Some((Value::SacrificedToughness, Value::SacrificedToughness)),
+                    ..Default::default()
+                }),
+            },
             ..Default::default()
         }],
         ..Default::default()
