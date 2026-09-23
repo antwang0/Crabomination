@@ -3302,16 +3302,21 @@ pub enum TriggerZone {
     CommandZoneToo,
     /// From its owner's command zone and nowhere else.
     CommandZoneOnly,
+    /// CR 702.62b — from exile while the card is suspended (it has suspend
+    /// and a time counter) and nowhere else: Nihilith's "if this card is
+    /// suspended". Gathered by the dispatch's suspended-exile walk.
+    WhileSuspended,
 }
 
 impl TriggerZone {
     /// True if the trigger functions while its card is in the command zone.
     pub fn in_command_zone(self) -> bool {
-        !matches!(self, Self::Printed)
+        matches!(self, Self::CommandZoneToo | Self::CommandZoneOnly)
     }
-    /// True if the command zone is the *only* place it functions.
+    /// True if the trigger does *not* function from the battlefield: the
+    /// command zone is the only place (Oloro), or exile while suspended.
     pub fn command_zone_only(self) -> bool {
-        matches!(self, Self::CommandZoneOnly)
+        matches!(self, Self::CommandZoneOnly | Self::WhileSuspended)
     }
 }
 
@@ -3355,6 +3360,12 @@ impl EventSpec {
     /// (Oloro, Ageless Ascetic's second upkeep trigger).
     pub fn command_zone_only(mut self) -> Self {
         self.zone = TriggerZone::CommandZoneOnly;
+        self
+    }
+    /// CR 702.62b — functions from exile while suspended, nowhere else
+    /// (Nihilith).
+    pub fn while_suspended(mut self) -> Self {
+        self.zone = TriggerZone::WhileSuspended;
         self
     }
     /// "Whenever a [filter] deals damage …" — gate on the damage's dealer.
@@ -4189,6 +4200,10 @@ pub enum Effect {
     /// `then` when the controller can afford it (bots/tests always take the
     /// upside); no-op otherwise. Jolted Awake's energy reanimation.
     PayEnergyValue { amount: Value, then: Box<Effect> },
+    /// CR 702.62 — remove a time counter from the resolving ability's source
+    /// if it is a suspended card in exile; removing the last casts it through
+    /// the suspend funnel. Nihilith's graveyard accelerant.
+    RemoveTimeCounterFromSuspendedSource,
     /// CR 701.56 — `who` time travels: for each permanent they control and each
     /// suspended card they own (in exile) with one or more time counters, they
     /// may add or remove a time counter. The bot heuristic removes one from

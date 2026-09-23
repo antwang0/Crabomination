@@ -22348,6 +22348,48 @@ impl GameState {
                 }
             }
         }
+        // CR 702.62b — a suspended card's `TriggerZone::WhileSuspended`
+        // triggers function from exile (Nihilith). Most exiled cards carry no
+        // counter at all, so the bag test answers first.
+        for card in self.exile.iter().filter(|c| {
+            !c.counters.is_empty()
+                && c.counter_count(crate::card::CounterType::Time) > 0
+                && c.definition.keywords.iter().any(|k| matches!(k, crate::card::Keyword::Suspend(..)))
+        }) {
+            for ta in &card.definition.triggered_abilities {
+                if ta.event.zone != crate::effect::TriggerZone::WhileSuspended {
+                    continue;
+                }
+                // One trigger per card: a mill reports both `CardMilled` and
+                // `CardPutIntoGraveyard`, and both are "put into a graveyard".
+                let mut seen: Vec<crate::game::effects::EntityRef> = Vec::new();
+                for ev in events {
+                    if crate::game::effects::event_matches_spec(self, ev, &ta.event, card) {
+                        let subject = crate::game::effects::event_subject(ev, &ta.event.kind);
+                        if let Some(s) = subject {
+                            if seen.contains(&s) {
+                                continue;
+                            }
+                            seen.push(s);
+                        }
+                        candidates.push(TriggerCandidate {
+                            actor: None,
+                            source: card.id,
+                            effect: ta.effect.clone(),
+                            controller: card.owner,
+                            filter: ta.event.filter.clone(),
+                            subject,
+                            event_amount: self.event_amount_for(ev),
+                            triggered_by_etb: false,
+                            triggered_by_death: false,
+                            triggered_by_attack: false,
+                            triggered_by_land_entry: false,
+                            from_mana_ability: false,
+                        });
+                    }
+                }
+            }
+        }
         // Walk every player's hand for `PutIntoHandFromGraveyard` SelfSource
         // triggers: the card has already been moved to hand by the time the
         // event dispatches, so it fires from there (Golgari Brownscale's "gain

@@ -8379,6 +8379,15 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::RemoveTimeCounterFromSuspendedSource => {
+                if let Some(id) = ctx.source
+                    && self.exile.iter().any(|c| c.id == id)
+                {
+                    let mut evs = self.remove_suspend_time_counter(id);
+                    events.append(&mut evs);
+                }
+                Ok(())
+            }
             Effect::TimeTravel { who } => {
                 let Some(p) = self
                     .resolve_selector(&Selector::Player(who.clone()), ctx)

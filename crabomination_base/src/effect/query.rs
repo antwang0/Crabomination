@@ -718,6 +718,7 @@ impl Effect {
             | Effect::EachPlayerCreatesTokenPerControlled { .. }
             | Effect::SourceEntersTapped
             | Effect::AbandonThisScheme | Effect::GameIsADraw
+            | Effect::RemoveTimeCounterFromSuspendedSource
             | Effect::PumpAttackersThisTurn { .. }
             | Effect::TruceThisTurnAndNext
             | Effect::MayRepeat { .. }
