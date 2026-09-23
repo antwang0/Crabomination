@@ -49,6 +49,7 @@ lists were picked.
 | **Tramplesaurus Rex** (FDC precon) G | Ghalta, Primal Hunger | G | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Keen Engineering** (FDC precon) U | Sai, Master Thopterist | U | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Reap the Tides** (CMR precon) GU | Aesi, Tyrant of Gyre Strait | GU | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
+| **Corrupting Influence** (ONC precon) WBG | Ixhel, Scion of Atraxa | WBG | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not
@@ -226,6 +227,25 @@ games at the 95,000 budget), 1 board cap, zero panics**; Aesi wins 5.1 %;
 `--card-census` 940 distinct, every card of all nineteen lists played. The
 board cap is legitimate: a Krenko seat doubling to 1,214 Goblins behind the
 Sai seat's Propaganda, whose tax lets six Mountains send three a turn.
+
+The **twentieth** is Phyrexia: All Will Be One's **Corrupting Influence**
+(`CorruptingInfluence_ONC`): Abzan poison under Ixhel — the field's first
+deck that wins by CR 704.5c. Thirteen cards were missing and they took five
+primitives, each general: `Value::PoisonCountersAmong` / `PlayersWithPoisonAtLeast`
+(`PoisonCountersOf` reads one seat, so "your opponents' poison" and "each
+corrupted opponent" were wrong at a table), `EventSpec::once_per_batch_across_players`
+(CR 603.2c "to one or more players" — Contaminant Grafter), `Predicate::AnAttackedPlayerHasPoisonAtLeast`
+(Norn's Decree) and `EquipBonus::sacrifice_host_when_unattached` (`game/unattach.rs`,
+queued at all seven unattach sites) — which also restored **Grafted Wargear**'s
+dropped rider. Residuals: **Geth's Summons** and **Glissa's Retriever** pick
+their cards at resolution instead of targeting (the Summons reads poison then,
+not as it is cast), and **Ixhel** exiles face up (hidden information only).
+Seed 10020, 1,000 games at 20 seats: **999 decided, 1 action cap (427 turns at
+the 100,000 budget), 0 board caps, zero panics**; Ixhel wins 5.0 %;
+`--card-census` 999 distinct, every card of all twenty lists played. In
+four-seat pods (`--pod-decks`, seed 10021, 1,000 each, all decided) Ixhel
+wins 16.8 % beside the FDC trio — where **Ghalta takes 60.7 %**, a deck-strength
+reading worth a look — and 13.9 % beside Sigarda / Edgar / Clavileño.
 
 ⚠ **The board cap was a bot bug, not a loop.** A Krenko seat sent all 292
 of its Goblins at one player on 24 life each turn while two others sat on

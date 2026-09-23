@@ -4586,8 +4586,6 @@ Shipped: `DynamicPt::CardTypesInControllerGraveyard` (Nethergoyf),
   rider (the searched card isn't a target, so it lands unattached). Needs a
   `Search`-then-`Attach` variant that threads the found card into a follow-up
   attach.
-- **Grafted Wargear unattach → sacrifice.** The "whenever this becomes unattached,
-  sacrifice that permanent" rider is dropped — no unattach-event trigger yet.
 - **Nazahn "Hammer of Nazahn to battlefield" branch.** Modeled as a plain tutor to
   hand; the named-card-to-battlefield special case is elided.
 - **O-Naginata attach restriction.** "Attach only to a creature with power 3+" is
