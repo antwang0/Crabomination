@@ -1,16 +1,16 @@
 //! The Commander pod's target decks.
 //!
-//! Ten hand-picked commanders, each with a 99 drawn from cards this engine
-//! already implements: legal under CR 903 (100 cards including the commander,
-//! singleton outside basics, every card inside the commander's CR 903.4 color
-//! identity) and Commander-legal per Scryfall's ban list, both of which
-//! `pod::tests` asserts rather than trusts.
+//! Ten hand-picked commanders plus one official preconstructed list, each a
+//! 99 of cards this engine implements: legal under CR 903 (100 cards
+//! including the commander, singleton outside basics, every card inside the
+//! commander's CR 903.4 color identity) and Commander-legal per Scryfall's
+//! ban list, both of which `pod::tests` asserts rather than trusts.
 //!
-//! They are not official preconstructed lists: a precon's partition into four
-//! decks is not derivable from the offline Scryfall cache this repo carries,
-//! and a list nobody can verify is worse than one the suite checks every run.
-//! What they keep from the precon idea is what the pod needs — fixed, legal,
-//! eight different color identities, and built to play against each other.
+//! The ten were built by hand because the offline Scryfall cache cannot say
+//! how a precon splits into decks; MTGJSON's deck files can, and the eleventh
+//! (Sultai Arisen) is taken from one card for card. What all of them keep
+//! from the precon idea is what the pod needs — fixed, legal, varied color
+//! identities, and built to play against each other.
 //! One is a Partner pair (CR 702.124b), one is a **planeswalker**
 //! (CR 903.3a) and one is a **Choose a Background** pair (CR 702.124k); all
 //! three sit past the fourth slot, because `pod_field(n)` takes the first `n`
@@ -460,4 +460,36 @@ pub const ADRIANA_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain, mountain, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains, plains, plains,
+];
+
+/// Teval, the Balanced Scale — BGU. Commander, then the 99.
+pub const TEVAL_COMMANDERS: &[CardFactory] = &[teval_the_balanced_scale];
+
+/// **Sultai Arisen**, the Tarkir: Dragonstorm Commander precon (TDC,
+/// 2025-04-11), exactly as printed — MTGJSON's `SultaiArisen_TDC` list:
+/// 84 nonbasic cards + 15 basics = 99. The pod's first official list, and
+/// its graveyard seat: self-mill, "cards leave your graveyard" payoffs,
+/// graveyard casts (Kotis, Lord of the Forsaken's graveyard-only mana).
+pub const TEVAL_MAIN: &[CardFactory] = &[
+    kotis_sibsig_champion, diviner_of_mist, afterlife_from_the_loam, tevals_judgment,
+    welcome_the_dead, floral_evoker, steward_of_the_harvest, will_of_the_sultai,
+    colossal_grave_reaver, gravecrawler, life_from_the_loam, casualties_of_war, amphin_mutineer,
+    river_kelpie, dauthi_voidwalker, disciple_of_bolas, junji_the_midnight_sky, lethal_scheme,
+    living_death, lord_of_the_forsaken, necromantic_selection, necropolis_fiend,
+    noxious_gearhulk, ob_nixilis_the_fallen, tasigur_the_golden_fang, woe_strider,
+    avenger_of_zendikar, conduit_of_worlds, multani_yavimayas_avatar, shigeki_jukai_visionary,
+    consuming_aberration, jarad_golgari_lich_lord, lord_of_extinction, meren_of_clan_nel_toth,
+    command_beacon, crypt_of_agadeem, darkwater_catacombs, dreamroot_cascade, drownyard_temple,
+    exotic_orchard, fetid_pools, hinterland_harbor, llanowar_wastes, sunken_hollow,
+    temple_of_malady, woodland_cemetery, essence_anchor, arcane_signet, sol_ring, command_tower,
+    forbidden_alchemy, hedron_crab, treasure_cruise, wonder, phyrexian_reclamation,
+    reassembling_skeleton, stitchers_supplier, victimize, kishla_skimmer, crawling_sensation,
+    cultivate, farseek, grapple_with_the_past, harrow, opulent_palace, rampant_growth,
+    sakura_tribe_elder, satyr_wayfinder, springbloom_druid, tear_asunder, timeless_witness,
+    grisly_salvage, nyx_weaver, putrefy, skull_prophet, millikin, cephalid_coliseum,
+    contaminated_aquifer, foreboding_landscape, golgari_rot_farm, haunted_mire,
+    memorial_to_folly, myriad_landscape, terramorphic_expanse,
+    // Basics: 4 island, 5 swamp, 6 forest
+    island, island, island, island, swamp, swamp, swamp, swamp, swamp, forest, forest, forest,
+    forest, forest, forest,
 ];

@@ -40,6 +40,7 @@ lists were picked.
 | Zellix + Background UR | Zellix, Sanity Flayer **+** Passionate Archaeologist (**Choose a Background**, CR 702.124k) | UR | 98 + 2 | ✅ complete |
 | Yuriko UB | Yuriko, the Tiger's Shadow (**commander ninjutsu**, CR 702.49d) | UB | 100 | ✅ complete |
 | Adriana RW | Adriana, Captain of the Guard (**melee**, CR 702.121) | RW | 100 | ✅ complete |
+| **Sultai Arisen** (TDC precon) BGU | Teval, the Balanced Scale | BGU | 100 | 🟡 all 100 implemented, 8 carry residuals (below) |
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not
@@ -68,6 +69,29 @@ free body per Vampire spell from the command zone; Yuriko's is one unblocked
 Ninja draining eight opponents at once. Neither is a card that is strong in
 a duel. The two sit at opposite ends of the field's spread precisely because
 every other seat's clock is per-opponent.
+
+The **eleventh** is the first **official precon**, Sultai Arisen (Tarkir:
+Dragonstorm Commander, 2025), taken card for card from MTGJSON's
+`SultaiArisen_TDC` deck file — the offline Scryfall cache can't say how a
+precon splits into decks, MTGJSON can. A scan of every MTGJSON Commander deck
+against the catalog ranked it first: 99 of 100 already implemented, the
+hundredth (Lord of the Forsaken) needing one primitive,
+`SpendRestriction::SpellFromGraveyard` + `SpellKind::from_graveyard` (CR
+106.6 / 601.2a). It is the pod's graveyard seat: Kotis's once-a-turn
+graveyard cast, Steward of the Harvest's granted land abilities, Teval's
+"cards leave your graveyard" tokens. After `pod_field(10)`; `--seats 11`
+reaches it. Next precons by the same scan: Mind Flayarrrs (CLB, 7 missing),
+Blood Rites (LCC, 9).
+
+🟡 **Residuals in the list** (each also on its card's doc): Welcome the Dead
+(X counts every card binned this turn, not only from hand/library), Colossal
+Grave-Reaver (returns the first milled creature, not a chosen one), River
+Kelpie (exile casts fire the cast trigger), Lethal Scheme (convokers don't
+connive), Necromantic Selection (the Zombie isn't made black), Shigeki (the
+kept land passes through the graveyard), Myriad Landscape (any two basics,
+not two sharing a type), Cephalid Coliseum (the sacrifice is folded into
+resolution). Steward of the Harvest and Life from the Loam pick at resolution
+rather than target.
 
 The **tenth** is the first list built around what only happens at three seats
 or more, and it exists because of a census, not a hunch: **not one of the nine

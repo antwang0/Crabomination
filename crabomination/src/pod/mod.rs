@@ -168,6 +168,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ADRIANA_COMMANDERS,
             main: decks::ADRIANA_MAIN,
         },
+        // Eleventh, appended for the sixth time for the same reason: the
+        // pod's first **official precon** (Sultai Arisen, TDC) and its
+        // graveyard seat. `--seats 11` reaches it.
+        PodDeck {
+            name: "Teval (BGU)",
+            commanders: decks::TEVAL_COMMANDERS,
+            main: decks::TEVAL_MAIN,
+        },
     ]
 }
 
@@ -634,6 +642,27 @@ mod tests {
 
         let pilots = vec![Pilot::default(); 4];
         for seed in [0xC0FFEE_u64, 43, 4242] {
+            let o = play_one_pod_game(&t, &pilots, 50_000, seed);
+            assert!(o.winner.is_some(), "seed {seed} left the pod undecided");
+            assert!(o.turns > 0);
+        }
+    }
+
+    /// CR 903.5a/c — the eleventh seat is an official precon (Sultai Arisen)
+    /// taken card for card, and the field's graveyard deck: graveyard casts
+    /// (Kotis, CR 601.2a) and graveyard-only mana (Lord of the Forsaken, CR
+    /// 106.6) run in self-play only because it seats them. A four-seat pod
+    /// with it has to finish.
+    #[test]
+    fn cr_903_5a_the_official_precon_seat_plays_a_pod_game() {
+        let field = target_decks();
+        let teval = *field.iter().find(|d| d.name.starts_with("Teval")).expect("the BGU seat");
+        assert_eq!(teval.card_count(), 100);
+        let decks = vec![teval, field[0], field[1], field[2]];
+        let t = build_pod_template(&decks);
+        assert_eq!(t.players[0].library.len(), 99);
+        let pilots = vec![Pilot::default(); 4];
+        for seed in [0x7E7A1_u64, 78, 9002] {
             let o = play_one_pod_game(&t, &pilots, 50_000, seed);
             assert!(o.winner.is_some(), "seed {seed} left the pod undecided");
             assert!(o.turns > 0);
