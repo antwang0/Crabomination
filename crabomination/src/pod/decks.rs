@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Ten hand-picked commanders plus eleven official preconstructed lists, each a
+//! Ten hand-picked commanders plus twelve official preconstructed lists, each a
 //! 99 of cards this engine implements: legal under CR 903 (100 cards
 //! including the commander, singleton outside basics, every card inside the
 //! commander's CR 903.4 color identity) and Commander-legal per Scryfall's
@@ -8,11 +8,12 @@
 //!
 //! The ten were built by hand because the offline Scryfall cache cannot say
 //! how a precon splits into decks; MTGJSON's deck files can, and the eleventh
-//! through twenty-first (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
+//! through twenty-second (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
 //! Win, Tails You Lose, Goblin Storm, Foundations Commander's Wretched Ranks,
 //! Tramplesaurus Rex and Keen Engineering, Commander Legends' Reap the Tides
-//! Phyrexia: All Will Be One's Corrupting Influence and Zendikar Rising's
-//! Sneak Attack) are taken from one card for card. What all of them keep
+//! Phyrexia: All Will Be One's Corrupting Influence, Zendikar Rising's Sneak
+//! Attack and Tarkir: Dragonstorm's Jeskai Striker) are taken from one card
+//! for card. What all of them keep
 //! from the precon idea is what the pod needs — fixed, legal, varied color
 //! identities, and built to play against each other.
 //! One is a Partner pair (CR 702.124b), one is a **planeswalker**
@@ -783,4 +784,34 @@ pub const ANOWON_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island, island,
     island, island, island, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
     swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const SHIKO_COMMANDERS: &[CardFactory] = &[shiko_and_narset_unified];
+
+/// **Jeskai Striker**, the Tarkir: Dragonstorm Commander deck (TDC,
+/// 2025-04-11), exactly as MTGJSON's `JeskaiStriker_TDC` prints it: 85
+/// nonbasic cards + 4 Plains + 5 Islands + 5 Mountains = 99. Jeskai
+/// spellslinging: flurry, prowess Monks and free casts off instants and
+/// sorceries.
+pub const SHIKO_MAIN: &[CardFactory] = &[
+    elsha_threefold_master, aligned_heart, tempest_technique, adaptive_training_post,
+    transcendent_dragon, voracious_bibliophile, caldera_pyremaw, transforming_flourish,
+    will_of_the_jeskai, vanquish_the_horde, narsets_reversal, dismantling_wave,
+    mangara_the_diplomat, monastery_mentor, ancestral_vision, archmage_emeritus, barals_expertise,
+    curse_of_the_swine, haughty_djinn, lier_disciple_of_the_drowned, rite_of_replication,
+    sublime_epiphany, electrodominance, manaform_hellkite, baral_and_kari_zev, expansion_explosion,
+    magma_opus, prismari_command, time_wipe, velomachus_lorehold, veyran_voice_of_duality,
+    whirlwind_of_thought, adarkar_wastes, battlefield_forge, cascade_bluffs, clifftop_retreat,
+    exotic_orchard, ferrous_lake, glacial_fortress, irrigated_farmland, prairie_stream,
+    rugged_prairie, shivan_reef, skycloud_expanse, sulfur_falls, temple_of_enlightenment,
+    temple_of_epiphany, temple_of_triumph, young_pyromancer, goblin_electromancer, arcane_signet,
+    sol_ring, command_tower, ghostly_prison, swords_to_plowshares, compulsive_research, consider,
+    deep_analysis, frantic_search, opt, ponder, pongify, preordain, think_twice, abrade, big_score,
+    curse_of_opulence, faithless_looting, guttersnipe, mana_geyser, shiny_impetus,
+    storm_kiln_artist, evolving_wilds, mystic_monastery, expressive_iteration,
+    third_path_iconoclast, azorius_signet, boros_signet, fellwar_stone, izzet_signet,
+    talisman_of_progress, ash_barrens, path_of_ancestry, perilous_landscape, reliquary_tower,
+    // Basics: 4 plains, 5 island, 5 mountain
+    plains, plains, plains, plains, island, island, island, island, island, mountain, mountain,
+    mountain, mountain, mountain,
 ];

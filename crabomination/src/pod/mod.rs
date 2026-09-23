@@ -259,6 +259,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ANOWON_COMMANDERS,
             main: decks::ANOWON_MAIN,
         },
+        // Twenty-second: the twelfth official list (Jeskai Striker, TDC) —
+        // spellslinging and flurry. `--seats 22`.
+        PodDeck {
+            name: "Shiko and Narset (URW)",
+            commanders: decks::SHIKO_COMMANDERS,
+            main: decks::SHIKO_MAIN,
+        },
     ]
 }
 
