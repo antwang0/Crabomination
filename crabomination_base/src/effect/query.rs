@@ -1584,7 +1584,8 @@ impl Effect {
                     | ManaPayload::OneOfEachColorAmongYourPermanents => false,
                     ManaPayload::Restricted(inner, _)
                     | ManaPayload::RestrictedToChosenType(inner)
-                    | ManaPayload::RestrictedToChosenTypePlain(inner) => match inner.as_ref() {
+                    | ManaPayload::RestrictedToChosenTypePlain(inner)
+                    | ManaPayload::RestrictedToChosenColorMono(inner) => match inner.as_ref() {
                         ManaPayload::Colorless(v)
                         | ManaPayload::AnyOneColor(v)
                         | ManaPayload::AnyColors(v)

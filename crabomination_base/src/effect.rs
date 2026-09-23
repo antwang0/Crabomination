@@ -2571,6 +2571,9 @@ pub enum ManaPayload {
     /// Like `RestrictedToChosenType`, without Cavern's uncounterable rider
     /// (Unclaimed Territory — "creature spell of the chosen type").
     RestrictedToChosenTypePlain(Box<ManaPayload>),
+    /// Like `RestrictedToChosenType`, restricted to monocolored spells of the
+    /// source's chosen color (Throne of Eldraine). Unrestricted with none.
+    RestrictedToChosenColorMono(Box<ManaPayload>),
     /// Add one mana of the color stamped on the source's `chosen_color`
     /// (Coldsteel Heart, choose-a-color rocks). Falls back to colorless when
     /// no color was chosen.

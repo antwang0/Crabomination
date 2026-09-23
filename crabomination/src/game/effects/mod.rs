@@ -11606,6 +11606,17 @@ impl GameState {
                             chosen.map(crate::mana::SpendRestriction::CreatureOfType),
                         )
                     }
+                    // Throne of Eldraine: bound to the source's chosen color.
+                    ManaPayload::RestrictedToChosenColorMono(inner) => {
+                        let chosen = ctx
+                            .source
+                            .and_then(|cid| self.battlefield_find(cid))
+                            .and_then(|c| c.chosen_color);
+                        (
+                            inner.as_ref(),
+                            chosen.map(crate::mana::SpendRestriction::MonocoloredSpellOf),
+                        )
+                    }
                     other => (other, None),
                 };
                 // CR 701.10f / 614.5 — mana-production multiplier (Mana
@@ -12177,7 +12188,8 @@ impl GameState {
                     }
                     ManaPayload::Restricted(..)
                     | ManaPayload::RestrictedToChosenType(..)
-                    | ManaPayload::RestrictedToChosenTypePlain(..) => {
+                    | ManaPayload::RestrictedToChosenTypePlain(..)
+                    | ManaPayload::RestrictedToChosenColorMono(..) => {
                         // One unwrap above already stripped the restriction;
                         // no card nests wrappers, so a doubly-wrapped payload
                         // is malformed — ignore it rather than panic.

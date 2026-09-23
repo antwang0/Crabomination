@@ -2490,7 +2490,8 @@ fn payload_yields_multiple(pool: &crate::effect::ManaPayload) -> bool {
         | ManaPayload::Colorless(_)
         | ManaPayload::ChosenColorOfSource => false,
         ManaPayload::Restricted(inner, _) | ManaPayload::RestrictedToChosenType(inner)
-                    | ManaPayload::RestrictedToChosenTypePlain(inner) => {
+                    | ManaPayload::RestrictedToChosenTypePlain(inner)
+                    | ManaPayload::RestrictedToChosenColorMono(inner) => {
             payload_yields_multiple(inner)
         }
     }
@@ -3866,7 +3867,8 @@ pub(crate) fn payload_produced_colors(pool: &ManaPayload) -> crate::mana::ColorS
         }
         ManaPayload::Restricted(_, _)
         | ManaPayload::RestrictedToChosenType(_)
-        | ManaPayload::RestrictedToChosenTypePlain(_) => ColorSet::empty(),
+        | ManaPayload::RestrictedToChosenTypePlain(_)
+        | ManaPayload::RestrictedToChosenColorMono(_) => ColorSet::empty(),
         // Instance-dependent (the chosen color isn't known at the
         // definition level), so it's not part of the static auto-tap
         // signature; the controller taps it deliberately.

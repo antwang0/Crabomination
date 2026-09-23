@@ -622,7 +622,7 @@ fn cr_106_6_every_rider_allows_every_payment() {
                 | LegendarySpell | LegendarySpellUncounterable | NoncreatureSpellsOnly
                 | RoomSpellsOrDoors
                 | FaceDownSpellsOrTurnFaceUp | CreatureHaste | CommanderTypeScry
-                | CommanderCastCounters | SpellFromGraveyard => {}
+                | CommanderCastCounters | SpellFromGraveyard | MonocoloredSpellOf(_) => {}
             }
         }
         use SpendRestriction::*;
@@ -657,6 +657,7 @@ fn cr_106_6_every_rider_allows_every_payment() {
             CommanderTypeScry,
             CommanderCastCounters,
             SpellFromGraveyard,
+            MonocoloredSpellOf(crabomination::mana::Color::Red),
         ]
     };
     // A spanning-enough set of payments: a creature spell, a noncreature

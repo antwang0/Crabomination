@@ -648,6 +648,10 @@ pub enum SpendRestriction {
     /// "Spend this mana only to cast a spell from your graveyard." (Lord of
     /// the Forsaken.) Reads [`SpellKind::from_graveyard`].
     SpellFromGraveyard,
+    /// "Spend this mana only to cast monocolored spells of that color"
+    /// (Throne of Eldraine). The color is the source's chosen one, bound when
+    /// the mana is made (`ManaPayload::RestrictedToChosenColorMono`).
+    MonocoloredSpellOf(Color),
 }
 
 impl SpendRestriction {
@@ -687,6 +691,7 @@ impl SpendRestriction {
                 "only face-down casts or turning face up"
             }
             SpendRestriction::SpellFromGraveyard => "only spells cast from your graveyard",
+            SpendRestriction::MonocoloredSpellOf(_) => "only monocolored spells of the chosen color",
             // Riders, not restrictions — the mana spends freely.
             SpendRestriction::InstantSorceryUncounterable
             | SpendRestriction::CreatureHaste
@@ -764,6 +769,9 @@ impl SpendRestriction {
                 kind.face_down || kind.turning_face_up
             }
             SpendRestriction::SpellFromGraveyard => kind.from_graveyard,
+            SpendRestriction::MonocoloredSpellOf(c) => {
+                !kind.activating_ability && kind.colors == ColorSet::single(c)
+            }
             // CR 106.6 names three shapes for a mana source's rider — an
             // additional effect, a delayed triggered ability, and a
             // restriction. Only the third narrows what the mana may pay for,
@@ -878,6 +886,9 @@ pub struct SpellKind {
     /// permission: flashback, escape, Muldrotha, …). Set by the cast paths,
     /// never by `CardDefinition::spell_kind`. Read by `SpellFromGraveyard`.
     pub from_graveyard: bool,
+    /// The spell's colors (empty for an ability). Read by
+    /// `MonocoloredSpellOf`.
+    pub colors: ColorSet,
 }
 
 /// WUBRG index for a color — used to bucket restricted mana per color.
