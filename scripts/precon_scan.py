@@ -69,7 +69,9 @@ def main():
         print("commanders:", ", ".join(slug(c["name"].split(" // ")[0]) for c in deck["commander"]))
         main = [c["name"] for c in deck["mainBoard"] for _ in range(c.get("count", 1))]
         print(f"main ({len(main)}):", ", ".join(slug(n.split(" // ")[0]) for n in main))
-        print("missing:", [n for n in set(main) if not present(n)])
+        # The commanders too: the first draft checked only the 99 and called a
+        # list complete whose partner pair wasn't in the catalog at all.
+        print("missing:", sorted({n for n in cards(deck) if not present(n)}))
         return 0
     rows = []
     for d in fetch("DeckList.json"):
