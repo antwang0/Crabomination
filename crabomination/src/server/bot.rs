@@ -3072,6 +3072,9 @@ impl HeuristicBot {
                     };
                     Some(BotStep::plain(GameAction::DeclareBlockers(blocks)))
                 } else if state.blockers_declared() && state.stack.is_empty() {
+                    if let Some(a) = super::combat_only::pick_combat_only_spell(state, seat, &self.weights) {
+                        return Some(BotStep::plain(a));
+                    }
                     // Post-block priority: a held pump trick that flips a
                     // fight one of our blockers is losing. `pick_combat_trick`
                     // dry-runs the trick to gate it, so `Probed` carries the
@@ -3092,6 +3095,9 @@ impl HeuristicBot {
                 if is_active && state.blockers_declared() && state.stack.is_empty() =>
             {
                 if let Some(a) = pick_ninjutsu(state, seat) {
+                    return Some(BotStep::plain(a));
+                }
+                if let Some(a) = super::combat_only::pick_combat_only_spell(state, seat, &self.weights) {
                     return Some(BotStep::plain(a));
                 }
                 Some(
@@ -6309,7 +6315,7 @@ fn mana_only_alt_cost(a: &crate::card::AlternativeCost) -> bool {
 
 // `SweepMana<'a>` is invariant over `'a` (its `OnceCell` holds borrows of the
 // board), so the shared handle's lifetime has to be named rather than elided.
-fn cast_candidates<'a>(
+pub(super) fn cast_candidates<'a>(
     state: &'a GameState,
     seat: usize,
     w: &EvalWeights,
@@ -14965,7 +14971,7 @@ pub fn can_afford_in_state(
 /// stay *lazy*: `pick_combat_trick` runs on every tick and usually filters
 /// its hand down to nothing first, and an eager read there costs more than
 /// the per-card reads it saves (measured +0.35 % Ir, PERF.md pass 40).
-struct SweepMana<'a> {
+pub(super) struct SweepMana<'a> {
     state: &'a GameState,
     seat: usize,
     cell: std::cell::OnceCell<AvailableMana>,
