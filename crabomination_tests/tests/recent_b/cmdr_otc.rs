@@ -398,3 +398,20 @@ fn arcane_bombardment_builds_a_free_copy_pile() {
     bolt_face(&mut g);
     assert_eq!(g.players[1].life, 20 - 5 - 3, "only the first spell each turn");
 }
+
+/// CR 601.2b — Finale of Promise's slots read the cast's X ("mana value X or
+/// less"): with X given, the all-slots picker finds the graveyard instant and
+/// sorcery; without it that atom matches nothing, which is why no bot cast it.
+#[test]
+fn finale_of_promise_targets_read_the_casts_x() {
+    let mut g = main_phase();
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let div = g.add_card_to_graveyard(0, catalog::divination());
+    let finale = catalog::finale_of_promise().effect;
+    let (t, extra) = g.auto_targets_for_effect_all_slots_x(&finale, 0, None, false, None, Some(3));
+    assert_eq!(t, Some(Target::Permanent(bolt)));
+    assert_eq!(extra, vec![Target::Permanent(div)]);
+    let (t, _) = g.auto_targets_for_effect_all_slots_x(&finale, 0, None, false, None, Some(2));
+    assert_eq!(t, Some(Target::Permanent(bolt)), "X = 2: the Bolt still fits");
+    assert_eq!(g.auto_targets_for_effect_all_slots(&finale, 0, None).0, None, "no X: nothing");
+}
