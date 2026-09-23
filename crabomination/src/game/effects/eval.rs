@@ -1983,6 +1983,18 @@ impl GameState {
                         .any(|c| c.controller == p && self.players[p].commanders.contains(&c.id))
                 })
             }
+            Predicate::ControlsLandsWithSameNameAtLeast { who, at_least } => {
+                self.resolve_players(who, ctx).into_iter().any(|p| {
+                    let mut names: Vec<&str> = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| c.controller == p && c.definition.is_land())
+                        .map(|c| c.definition.name)
+                        .collect();
+                    names.sort_unstable();
+                    names.chunk_by(|a, b| a == b).any(|g| g.len() as u32 >= *at_least)
+                })
+            }
             Predicate::SpeedAtLeast { who, speed } => self
                 .resolve_players(who, ctx)
                 .into_iter()

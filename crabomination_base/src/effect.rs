@@ -1534,6 +1534,10 @@ pub enum Predicate {
     /// A commander an opponent has stolen is not one you control, and with
     /// two commanders either one satisfies it.
     ControlsOwnCommander { who: PlayerRef },
+    /// `who` controls `at_least` lands that share one name (Endless Atlas —
+    /// "three or more lands with the same name"): the largest same-name
+    /// group, not a total across names.
+    ControlsLandsWithSameNameAtLeast { who: PlayerRef, at_least: u32 },
     /// CR 702.179 — `who`'s speed is at least `speed` (0–4). "Max speed —"
     /// abilities use `speed: 4`; "as long as your speed is N or higher" uses
     /// the listed threshold. Backed by `Player.speed`.
