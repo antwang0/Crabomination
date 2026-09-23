@@ -44,7 +44,7 @@ def fetch(name, sub=""):
 def catalog_names():
     names = set()
     name_pat = re.compile(r'name:\s*"((?:[^"\\]|\\.)*)"')
-    fn_pat = re.compile(r"pub fn (\w+)\(\) -> CardDefinition")
+    fn_pat = re.compile(r"pub fn (\w+)\(\) -> (?:crate::card::)?CardDefinition")
     for dp, _, fs in os.walk(CATALOG):
         for f in fs:
             if f.endswith(".rs"):
