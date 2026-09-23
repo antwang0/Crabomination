@@ -753,3 +753,69 @@ fn wurmquake_makes_x_x_wurms_per_corrupted_opponent() {
     assert_eq!(wurms.len(), 2);
     assert!(wurms.iter().all(|&w| pt(&g, w) == (6, 6)));
 }
+
+/// CR 702.166 — at your end step each corrupted opponent exiles their top
+/// card, which you may cast spending mana as though it were any color; an
+/// opponent below three poison exiles nothing.
+#[test]
+fn cr_702_166_ixhel_exiles_from_corrupted_opponents_and_casts_with_any_mana() {
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.add_card_to_battlefield(0, catalog::ixhel_scion_of_atraxa());
+    let bears = g.add_card_to_library(1, catalog::goblin_piker());
+    let kept = g.add_card_to_library(2, catalog::goblin_piker());
+    g.players[1].poison_counters = 3;
+    g.step = TurnStep::PostCombatMain;
+    let _ = g.advance_step(Vec::new());
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bears));
+    assert!(g.players[2].library.iter().any(|c| c.id == kept), "not corrupted");
+    // Next main phase: cast the red Piker with green mana.
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: bears,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast from exile with any-color mana");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bears).map(|c| c.controller), Some(0));
+}
+
+/// An opponent whose creatures hit you gets one poison counter per batch;
+/// attacking a poisoned player draws the attacker a card (CR 506.2).
+#[test]
+fn norns_decree_poisons_attackers_and_rewards_attacking_the_poisoned() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::norns_decree());
+    // Seat 1 attacks seat 0 with two creatures: one poison counter.
+    g.active_player_idx = 1;
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    for _ in 0..3 {
+        g.add_card_to_library(1, catalog::forest());
+    }
+    let hand1 = g.players[1].hand.len();
+    combat(
+        &mut g,
+        vec![
+            Attack { attacker: a, target: AttackTarget::Player(0) },
+            Attack { attacker: b, target: AttackTarget::Player(0) },
+        ],
+        1,
+        |_| {},
+    );
+    assert_eq!(g.players[1].poison_counters, 1);
+    assert_eq!(g.players[1].hand.len(), hand1, "seat 0 wasn't poisoned");
+    // Seat 0 attacks the now-poisoned seat 1 and draws.
+    g.active_player_idx = 0;
+    let giant = g.add_card_to_battlefield(0, catalog::hill_giant());
+    g.add_card_to_library(0, catalog::forest());
+    let hand0 = g.players[0].hand.len();
+    combat(&mut g, vec![Attack { attacker: giant, target: AttackTarget::Player(1) }], 0, |_| {});
+    assert_eq!(g.players[0].hand.len(), hand0 + 1);
+}

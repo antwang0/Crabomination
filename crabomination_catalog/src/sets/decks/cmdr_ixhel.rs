@@ -357,3 +357,76 @@ pub fn wurmquake() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Ixhel, Scion of Atraxa — flying, vigilance, toxic 2; at your end step each
+/// corrupted opponent exiles their top card for you to play, spending mana as
+/// though it were any color. ⚠ The card is exiled face up (hidden
+/// information only — who may play it is unchanged).
+pub fn ixhel_scion_of_atraxa() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![crate::card::Supertype::Legendary],
+        keywords: vec![Keyword::Flying, Keyword::Vigilance, Keyword::Toxic(2)],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::types::TurnStep::End),
+                EventScope::YourControl,
+            )
+            .with_filter(corrupted()),
+            effect: Effect::ForEachOpponent {
+                body: Box::new(Effect::If {
+                    cond: Predicate::ValueAtLeast(
+                        Value::PoisonCountersOf(PlayerRef::Triggerer),
+                        Value::Const(3),
+                    ),
+                    then: Box::new(Effect::ExileTopAndGrantMayPlay {
+                        who: PlayerRef::Triggerer,
+                        count: Value::ONE,
+                        duration: crate::card::MayPlayDuration::WhileExiled,
+                        pay_any_color: true,
+                        max_mana_value: None,
+                        pay_own_cost: false,
+                        uncast_penalty: None,
+                    }),
+                    else_: Box::new(Effect::Noop),
+                }),
+            },
+        }],
+        ..creature(
+            "Ixhel, Scion of Atraxa",
+            cost(&[generic(1), w(), b(), g()]),
+            vec![CreatureType::Phyrexian, CreatureType::Angel],
+            2,
+            5,
+        )
+    }
+}
+
+/// Norn's Decree — an opponent whose creatures connect with you gets a
+/// poison counter, and a player who attacks a poisoned player draws.
+pub fn norns_decree() -> CardDefinition {
+    CardDefinition {
+        name: "Norn's Decree",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            // CR 603.2c — one per batch; the damaged player is you and the
+            // dealer's controller is bound as the Triggerer.
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::AnyPlayer)
+                    .dealt_by(R::ControlledByOpponent)
+                    .with_filter(Predicate::SamePlayer(PlayerRef::TriggerEventPlayer, PlayerRef::You))
+                    .once_per_batch(),
+                effect: Effect::AddPoison {
+                    who: Selector::Player(PlayerRef::Triggerer),
+                    amount: Value::ONE,
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::YouAttack, EventScope::AnyPlayer)
+                    .with_filter(Predicate::AnAttackedPlayerHasPoisonAtLeast { at_least: 1 }),
+                effect: Effect::Draw { who: Selector::Player(PlayerRef::ActivePlayer), amount: Value::ONE },
+            },
+        ],
+        ..Default::default()
+    }
+}

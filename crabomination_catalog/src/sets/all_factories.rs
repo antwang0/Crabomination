@@ -1608,6 +1608,8 @@ static DECKS: &[Factory] = &[
     super::decks::geths_summons,
     super::decks::glissas_retriever,
     super::decks::wurmquake,
+    super::decks::ixhel_scion_of_atraxa,
+    super::decks::norns_decree,
     super::decks::homer_the_hermit,
     super::decks::rikala_homarid_king,
     super::decks::gandalf_shadows_foe,
