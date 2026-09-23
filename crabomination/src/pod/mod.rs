@@ -217,6 +217,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ZADA_COMMANDERS,
             main: decks::ZADA_MAIN,
         },
+        // Sixteenth: the sixth official list (Wretched Ranks, FDC) — mono-black
+        // Zombie tokens, the field's first 33-basic mana base. `--seats 16`.
+        PodDeck {
+            name: "Gisa (B)",
+            commanders: decks::GISA_COMMANDERS,
+            main: decks::GISA_MAIN,
+        },
     ]
 }
 
@@ -689,9 +696,9 @@ mod tests {
         }
     }
 
-    /// CR 903.5a/c — the eleventh to fifteenth seats are official lists
+    /// CR 903.5a/c — the eleventh to sixteenth seats are official lists
     /// taken card for card (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
-    /// Win, Tails You Lose, Goblin Storm). They seat what no
+    /// Win, Tails You Lose, Goblin Storm, Wretched Ranks). They seat what no
     /// hand-built list did — graveyard casts (Kotis, CR 601.2a), graveyard-only
     /// mana (Lord of the Forsaken, CR 106.6), a pay-one-of-three additional
     /// cost (Dusk Mangler, CR 601.2b), a trigger that works while suspended
@@ -705,6 +712,7 @@ mod tests {
             ("Clavileño", [0xB100D, 80, 9004]),
             ("Zndrsplt", [0xC0141, 81, 9005]),
             ("Zada", [0x2ADA, 82, 9006]),
+            ("Gisa", [0x6154, 83, 9007]),
         ] {
             let precon = *field.iter().find(|d| d.name.starts_with(name)).expect("the precon seat");
             assert_eq!(precon.card_count(), 100);

@@ -614,3 +614,31 @@ pub const ZADA_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain, mountain,
 ];
+
+pub const GISA_COMMANDERS: &[CardFactory] = &[ghoulcaller_gisa];
+
+/// **Wretched Ranks**, the Foundations Commander deck (FDC, 2026-10-02),
+/// exactly as MTGJSON's `WretchedRanks_FDC` prints it: 66 nonbasic cards +
+/// 33 Swamps = 99. Mono-black Zombies: token makers, sacrifice outlets and
+/// Gisa turning the horde into more of itself.
+pub const GISA_MAIN: &[CardFactory] = &[
+    army_of_the_damned, ayara_first_of_locthwain, bad_moon, cemetery_reaper,
+    champion_of_the_perished, cryptbreaker, death_baron, diregraf_colossus,
+    endless_ranks_of_the_dead, god_eternal_bontu, grave_titan, graveborn_muse, gravecrawler,
+    headless_rider, josu_vess_lich_knight, kalitas_traitor_of_ghet, lilianas_mastery,
+    lilianas_reaver, lord_of_the_undead, midnight_reaper, mutilate, necrotic_hex,
+    open_the_graves, oversold_cemetery, phyrexian_arena, razorlash_transmogrant,
+    zul_ashur_lich_lord, castle_locthwain, geier_reach_sanitarium, ambitions_cost,
+    carrion_feeder, cemetery_recruitment, consumed_by_greed, consuming_corruption,
+    eternal_taskmaster, fleshbag_marauder, go_for_the_throat, gray_merchant_of_asphodel,
+    lord_of_the_accursed, marchesas_decree, mire_triton, moan_of_the_unhallowed, nights_whisper,
+    noxious_ghoul, sign_in_blood, soulless_one, syphon_flesh, tendrils_of_corruption,
+    undead_augur, undead_butler, undead_warchief, vengeful_dead, wight_of_precinct_six,
+    withering_torment, arcane_signet, bontus_monument, charcoal_diamond, commanders_sphere,
+    infernal_idol, mind_stone, patchwork_banner, sol_ring, barren_moor, bojuka_bog,
+    memorial_to_folly, witchs_cottage,
+    // Basics: 33 swamp
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];

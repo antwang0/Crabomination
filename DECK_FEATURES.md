@@ -45,6 +45,7 @@ lists were picked.
 | **Blood Rites** (LCC precon) WB | Clavileño, First of the Blessed | WB | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Heads I Win, Tails You Lose** (SLD) UR | Zndrsplt, Eye of Wisdom **+** Okaun, Eye of Chaos (Partner with) | UR | 98 + 2 | ✅ complete |
 | **Goblin Storm** (SLD) R | Zada, Hedron Grinder | R | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
+| **Wretched Ranks** (FDC precon) B | Ghoulcaller Gisa | B | 100 | ✅ complete |
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not
@@ -84,8 +85,9 @@ hundredth (Lord of the Forsaken) needing one primitive,
 106.6 / 601.2a). It is the pod's graveyard seat: Kotis's once-a-turn
 graveyard cast, Steward of the Harvest's granted land abilities, Teval's
 "cards leave your graveyard" tokens. After `pod_field(10)`; `--seats 11`
-reaches it. Next by `scripts/precon_scan.py`: Wretched Ranks (FDC, 9 —
-releases 2026-10-02), Goblin Storm (SLD, 10).
+reaches it. The next two by `scripts/precon_scan.py` became seats 15 and
+16 (below); after them the scan reads 12 missing (Keen Engineering,
+Tramplesaurus Rex, both FDC).
 
 🟡 **Residuals in the list** (each also on its card's doc): Colossal
 Grave-Reaver (returns the first milled creature, not a chosen one), Lethal
@@ -156,6 +158,22 @@ Myriad, Mobilize, Ninjutsu, two put-a-card-in-attacking effects) emitted
 9960). Fixed at every site at once (`game/enter_attacking.rs`); the same
 seed now reads **991 / 1,000 decided, board cap 0, action cap 9** (0.9 %,
 all 272-323-turn attrition games, as at fourteen seats); Zada wins 4.2 %.
+
+The **sixteenth** is Foundations Commander's **Wretched Ranks** (MTGJSON's
+`WretchedRanks_FDC`, 2026-10-02 — the list is published ahead of release):
+mono-black Zombies, 33 Swamps. Nine cards were missing; one needed a
+primitive, Razorlash Transmogrant's "costs {4} less if an opponent controls
+four or more nonbasic lands" — `Predicate::AnOpponentControlsAtLeast`,
+asked of each opponent on their own (CR 102.2), and
+`ActivatedAbility::cost_reduction_if`. Seed 9970, 1,000 games at 16 seats:
+**976 decided, 24 action caps (2.4 %), 0 board caps, zero panics**; Gisa
+wins 10.5 %; `--card-census` 784 distinct, Gisa's 100 all played. ⚠ **At
+sixteen seats the flat cap lands inside an ordinary game:** a capped game at
+turn 249 is only ~15 turns per seat, libraries still 54-74 cards, boards
+live — not the lands-only attrition of fourteen seats. The 16-seat mean is
+31,037 actions. Left at 50,000 by the cap's own contract (it is what the
+stall rate is read against); a budget that scales with seats is the lever if
+the field grows further.
 
 The **tenth** is the first list built around what only happens at three seats
 or more, and it exists because of a census, not a hunch: **not one of the nine
