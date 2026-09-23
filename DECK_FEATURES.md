@@ -130,9 +130,7 @@ all thirteen lists played (610 distinct), Clavileño **27.0 %** against a
 seat's 7.7 % — the Edgar finding again: a Vampire payoff that drains the
 whole table grows with the table.
 
-🟡 **Residuals in the list**: New
-Blood (the text change is approximated), Secluded Courtyard (only the cast
-half of the restriction).
+🟡 **Residuals in the list**: New Blood (the text change is approximated).
 
 The **fourteenth** is the Secret Lair **Heads I Win, Tails You Lose** list
 (SLD, 2022), MTGJSON's `HeadsIWinTailsYouLose_SLD` card for card — coin
