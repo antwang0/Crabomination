@@ -2172,13 +2172,17 @@ impl GameState {
                     continue;
                 }
             }
-            let auto_target =
-                self.auto_target_for_effect_avoiding(&effect, controller, Some(source));
+            let (mode, auto_target) =
+                self.trigger_mode_and_target(&effect, controller, Some(source));
             // CR 115.1c — fill any additional "up to N target" slots (Lagorin's
             // "put a +1/+1 counter on each of up to two target Mounts and/or
             // Vehicles"), same as the self-source ETB path.
-            let additional =
-                self.auto_extra_targets_for(&effect, source, controller, auto_target.clone());
+            let additional = self.auto_extra_targets_for(
+                effect.targeting_view(mode),
+                source,
+                controller,
+                auto_target.clone(),
+            );
             // Isshin / Windcrag Siege (Mardu): a self-source attack trigger of a
             // permanent you control fires an additional time per doubler.
             let fires = 1
@@ -2194,6 +2198,7 @@ impl GameState {
                     TriggerPush::new(source, controller, effect)
                         .target(auto_target)
                         .additional_targets(additional)
+                        .mode(mode)
                         .build(),
                 );
             }
@@ -2255,7 +2260,7 @@ impl GameState {
                         continue;
                     }
                 }
-                let auto_target = self.auto_target_for_effect_avoiding(&effect, ctrl, Some(src));
+                let (mode, auto_target) = self.trigger_mode_and_target(&effect, ctrl, Some(src));
                 // Isshin / Fractured Realm: an attack-caused trigger of a
                 // permanent you control fires an additional time per doubler.
                 let fires = 1
@@ -2264,8 +2269,9 @@ impl GameState {
                 for (effect, auto_target) in
                     std::iter::repeat_n((effect, auto_target), fires)
                 {
-                    self.stack
-                        .push(TriggerPush::new(src, ctrl, effect).target(auto_target).build());
+                    self.stack.push(
+                        TriggerPush::new(src, ctrl, effect).target(auto_target).mode(mode).build(),
+                    );
                 }
             }
         }
@@ -5772,13 +5778,15 @@ impl GameState {
         };
         self.battlefield.for_each_triggerer_or_all(own_grant, visit);
         for (listener, effect, controller) in listeners {
-            let auto_target = self.auto_target_for_effect_avoiding(&effect, controller, Some(listener));
+            let (mode, auto_target) =
+                self.trigger_mode_and_target(&effect, controller, Some(listener));
             // Bind the creature that dealt the damage as `Selector::TriggerSource`
             // so "whenever a creature deals combat damage to you, destroy it"
             // clauses can reference the dealer (Teysa, Envoy of Ghosts).
             self.stack.push(
                 TriggerPush::new(listener, controller, effect)
                     .target(auto_target)
+                    .mode(mode)
                     .trigger_source(Some(crate::game::effects::EntityRef::Permanent(source)))
                     .event_amount(damage_amount)
                     .build(),
@@ -6500,7 +6508,10 @@ impl GameState {
             // Steel's "destroy up to one artifact") — for those, auto-pick
             // instead of mis-binding slot 0 to the damaged player. A slot-0
             // filter that can't match a player is the precise tell.
-            let slot0_filter = effect.target_filter_for_slot_in_mode_kicked(0, None, false);
+            // CR 700.2a — a modal trigger's mode first; the slot is its mode's.
+            let mode = self.pick_trigger_mode(&effect, trig_source, controller);
+            let view = effect.targeting_view(mode);
+            let slot0_filter = view.target_filter_for_slot_in_mode_kicked(0, None, false);
             let slot0_rejects_player = slot0_filter.is_some_and(|f| !f.can_match_player());
             // A slot 0 that explicitly accepts a player is the damaged player
             // ("exile the top seven of that player's library" — Lord of the
@@ -6508,13 +6519,13 @@ impl GameState {
             // otherwise trip `prefers_graveyard_target`).
             let slot0_accepts_player = slot0_filter.is_some_and(|f| f.can_match_player());
             let target = if !slot0_accepts_player
-                && (effect.prefers_graveyard_target() || slot0_rejects_player)
+                && (view.prefers_graveyard_target() || slot0_rejects_player)
             {
                 // Concretize any X-from-cost gate against the damage dealt
                 // (Venerable Warsinger's "mana value X or less, where X is
                 // the damage this creature dealt to that player").
                 self.auto_target_for_effect_avoiding_set_x(
-                    &effect,
+                    view,
                     controller,
                     &[trig_source],
                     damage_amount,
@@ -6548,6 +6559,7 @@ impl GameState {
             self.stack.push(
                 TriggerPush::new(trig_source, controller, effect)
                     .target(target)
+                    .mode(mode)
                     .trigger_source(dealer)
                     .trigger_player(match default_target {
                         Target::Player(p) => Some(p),

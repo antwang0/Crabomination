@@ -6575,10 +6575,11 @@ impl GameState {
             })
             .unwrap_or_default();
         for effect in unlock_triggers {
-            let auto_target = self.auto_target_for_effect(&effect, controller);
+            let (mode, auto_target) = self.trigger_mode_and_target(&effect, controller, None);
             self.stack.push(
                 TriggerPush::new(card_id, controller, effect)
                     .target(auto_target)
+                    .mode(mode)
                     .build(),
             );
         }
@@ -7457,8 +7458,8 @@ impl GameState {
         effects: Vec<crate::effect::Effect>,
     ) {
         for effect in effects {
-            let auto_target =
-                self.auto_target_for_effect_avoiding(&effect, controller, Some(card_id));
+            let (mode, auto_target) =
+                self.trigger_mode_and_target(&effect, controller, Some(card_id));
             self.push_pending_trigger(
                 crate::game::types::PendingTriggerPush {
                     from_mana_ability: false,
@@ -7471,7 +7472,7 @@ impl GameState {
                     effect,
                     subject: Some(crate::game::effects::EntityRef::Card(card_id)),
                     event_amount: 0,
-                    mode: None,
+                    mode,
                     intervening_if: None,
                 },
                 auto_target,
@@ -10539,16 +10540,21 @@ impl GameState {
                     continue;
                 }
             }
-            let auto_target =
-                self.auto_target_for_effect_avoiding(&effect, controller, Some(source));
+            let (mode, auto_target) =
+                self.trigger_mode_and_target(&effect, controller, Some(source));
             // CR 115.1c — maximize an "up to N target" self-cast trigger
             // (Twisted Riddlekeeper's "tap up to two target permanents") by
             // filling slots 1.. with distinct picks, mirroring the ETB path.
-            let additional =
-                self.auto_extra_targets_for(&effect, source, controller, auto_target.clone());
+            let additional = self.auto_extra_targets_for(
+                effect.targeting_view(mode),
+                source,
+                controller,
+                auto_target.clone(),
+            );
             self.stack.push(
                 TriggerPush::new(source, controller, effect)
                     .target(auto_target)
+                    .mode(mode)
                     .additional_targets(additional)
                     .x_value(cast_x)
                     // Self-cast trigger: carry the cast card's id so

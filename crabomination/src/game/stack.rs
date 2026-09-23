@@ -251,6 +251,25 @@ impl GameState {
         None
     }
 
+    /// CR 700.2a — pick a directly-pushed trigger's mode, then auto-target the
+    /// picked mode (a targetless mode takes no target). A non-modal effect is
+    /// `(None, auto_target_for_effect_avoiding(effect))`, as these sites were.
+    pub(crate) fn trigger_mode_and_target(
+        &mut self,
+        effect: &Effect,
+        controller: usize,
+        source: Option<CardId>,
+    ) -> (Option<usize>, Option<crate::game::types::Target>) {
+        let mode = self.pick_trigger_mode(effect, source.unwrap_or(CardId(0)), controller);
+        let view = effect.targeting_view(mode);
+        let target = if !std::ptr::eq(view, effect) && !view.requires_target() {
+            None
+        } else {
+            self.auto_target_for_effect_avoiding(view, controller, source)
+        };
+        (mode, target)
+    }
+
     /// Unwrap reflexive-payment wrappers (`MayDo`/`MayPay*`/`PayEnergy*`) and
     /// the cost-capture wrappers the activation path adds
     /// (`WithSacrificedPt`/`WithTappedPower`) to find a nested `ChooseMode`.
@@ -6768,11 +6787,12 @@ impl GameState {
                         continue;
                     }
                 }
-                let auto_target =
-                    self.auto_target_for_effect_avoiding(&effect, controller, Some(source));
+                let (mode, auto_target) =
+                    self.trigger_mode_and_target(&effect, controller, Some(source));
                 self.stack.push(
                     TriggerPush::new(source, controller, effect)
                         .target(auto_target)
+                        .mode(mode)
                         .trigger_source(Some(crate::game::effects::EntityRef::Permanent(id)))
                         .event_amount(died_ev_amount)
                         .build(),
@@ -7475,11 +7495,11 @@ impl GameState {
             // Fire Valentin's reflexive "when you do, …" for the static's
             // controller (CR 603.x reflexive trigger off the replacement).
             if let Some((_src, controller, Some(effect))) = valentin_redirect {
-                let auto_target =
-                    self.auto_target_for_effect_avoiding(&effect, controller, None);
+                let (mode, auto_target) = self.trigger_mode_and_target(&effect, controller, None);
                 self.stack.push(
                     TriggerPush::new(id, controller, effect)
                         .target(auto_target)
+                        .mode(mode)
                         .build(),
                 );
             }
@@ -7997,11 +8017,12 @@ impl GameState {
             // The target is still picked per fire: the stack grows between
             // them, so the two pushes need not agree.
             for effect in std::iter::repeat_n(effect, fires) {
-                let auto_target =
-                    self.auto_target_for_effect_avoiding(&effect, controller, Some(source));
+                let (mode, auto_target) =
+                    self.trigger_mode_and_target(&effect, controller, Some(source));
                 self.stack.push(
                     TriggerPush::new(source, controller, effect)
                         .target(auto_target)
+                        .mode(mode)
                         .trigger_source(Some(crate::game::effects::EntityRef::Permanent(id)))
                         .build(),
                 );

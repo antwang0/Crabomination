@@ -10175,6 +10175,22 @@ mod recent6 {
         assert_eq!(g.computed_permanent(foe).unwrap().toughness, 1, "2/2 → 2/1 from -1/-1");
     }
 
+    /// CR 700.2 — a modal death trigger asks for its mode (bug fix: the death,
+    /// attack and damage push sites never picked one, so Shambling Ghast
+    /// always took mode 0 and could never make its Treasure).
+    #[test]
+    fn cr_700_2_shambling_ghast_can_choose_the_treasure() {
+        let mut g = two_player_game();
+        let ghast = g.add_card_to_battlefield(0, catalog::shambling_ghast());
+        let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(1)]));
+        let ctx = crabomination::game::effects::EffectContext::for_trigger(ghast, 0, Some(Target::Permanent(ghast)), 0);
+        g.resolve_effect(&crabomination::effect::Effect::DestroyNoRegen { what: crabomination::card::Selector::Target(0) }, &ctx).unwrap();
+        drain_stack(&mut g);
+        assert!(g.battlefield.iter().any(|c| c.definition.name == "Treasure"), "made a Treasure");
+        assert_eq!(g.computed_permanent(foe).unwrap().toughness, 2, "and shrank nothing");
+    }
+
     /// Priest of Forgotten Gods: sac two creatures → opponent loses 2 + sacrifices,
     /// you draw a card.
     #[test]
