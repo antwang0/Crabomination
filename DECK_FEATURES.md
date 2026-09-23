@@ -41,6 +41,7 @@ lists were picked.
 | Yuriko UB | Yuriko, the Tiger's Shadow (**commander ninjutsu**, CR 702.49d) | UB | 100 | ✅ complete |
 | Adriana RW | Adriana, Captain of the Guard (**melee**, CR 702.121) | RW | 100 | ✅ complete |
 | **Sultai Arisen** (TDC precon) BGU | Teval, the Balanced Scale | BGU | 100 | 🟡 all 100 implemented, 8 carry residuals (below) |
+| **Mind Flayarrrs** (CLB precon) UB | Captain N'ghathrod | UB | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not
@@ -80,8 +81,9 @@ hundredth (Lord of the Forsaken) needing one primitive,
 106.6 / 601.2a). It is the pod's graveyard seat: Kotis's once-a-turn
 graveyard cast, Steward of the Harvest's granted land abilities, Teval's
 "cards leave your graveyard" tokens. After `pod_field(10)`; `--seats 11`
-reaches it. Next precons by the same scan: Mind Flayarrrs (CLB, 7 missing),
-Blood Rites (LCC, 9).
+reaches it. Next precons by `scripts/precon_scan.py`: Blood Rites (LCC, 9
+missing), Heads I Win, Tails You Lose (SLD, 9), Wretched Ranks (FDC, 9 —
+releases 2026-10-02).
 
 🟡 **Residuals in the list** (each also on its card's doc): Welcome the Dead
 (X counts every card binned this turn, not only from hand/library), Colossal
@@ -92,6 +94,28 @@ kept land passes through the graveyard), Myriad Landscape (any two basics,
 not two sharing a type), Cephalid Coliseum (the sacrifice is folded into
 resolution). Steward of the Harvest and Life from the Loam pick at resolution
 rather than target.
+
+The **twelfth** is the second official precon, **Mind Flayarrrs** (Commander
+Legends: Battle for Baldur's Gate, 2022), MTGJSON's `MindFlayarrrs_CLB` card
+for card; `--seats 12` reaches it. Its seven missing cards took four
+primitives, each built generally: `AdditionalCastCost::OneOf` (Dusk Mangler,
+CR 601.2b), `TriggerZone::WhileSuspended` (Nihilith, CR 702.62b),
+`Effect::ExileIfLeavesBattlefield` (From the Catacombs — and four cards that
+approximated the same clause: Geth, Whip of Erebos, Gruesome Encore,
+Llanowar Greenwidow) and `DynamicPt::ChosenPlayerGraveyardMatching`'s
+`scales_toughness` (Sewer Nemesis). Haunted One also exposed
+`SharesCreatureTypeWithSource` answering false for any living source.
+First reading (12 seats, 1,000 games, seed 9920): all decided, every card of
+all twelve lists played (566 distinct), N'ghathrod **10.3 %** against a
+seat's 8.3 %, Teval 4.5 %.
+
+🟡 **Residuals in the list**: Captain N'ghathrod ("put there from their
+library this turn" reads "put into a graveyard this turn"), Grell
+Philosopher (only Grell gains the artifact's abilities; no blue-as-any
+rider), Psionic Ritual (no tap-a-Horror replicate), Herald's Horn (no upkeep
+reveal), Overcharged Amalgam (counters spells only, not abilities), plus
+Exotic Orchard / Myriad Landscape as in Sultai Arisen. Sewer Nemesis always
+chooses an opponent.
 
 The **tenth** is the first list built around what only happens at three seats
 or more, and it exists because of a census, not a hunch: **not one of the nine

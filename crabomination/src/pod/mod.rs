@@ -176,6 +176,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::TEVAL_COMMANDERS,
             main: decks::TEVAL_MAIN,
         },
+        // Twelfth, appended for the seventh time: the second official precon
+        // (Mind Flayarrrs, CLB), Horror mill-and-steal. `--seats 12`.
+        PodDeck {
+            name: "N'ghathrod (UB)",
+            commanders: decks::NGHATHROD_COMMANDERS,
+            main: decks::NGHATHROD_MAIN,
+        },
     ]
 }
 
@@ -648,24 +655,27 @@ mod tests {
         }
     }
 
-    /// CR 903.5a/c — the eleventh seat is an official precon (Sultai Arisen)
-    /// taken card for card, and the field's graveyard deck: graveyard casts
-    /// (Kotis, CR 601.2a) and graveyard-only mana (Lord of the Forsaken, CR
-    /// 106.6) run in self-play only because it seats them. A four-seat pod
-    /// with it has to finish.
+    /// CR 903.5a/c — the eleventh and twelfth seats are official precons taken
+    /// card for card (Sultai Arisen, Mind Flayarrrs). They seat what no
+    /// hand-built list did — graveyard casts (Kotis, CR 601.2a), graveyard-only
+    /// mana (Lord of the Forsaken, CR 106.6), a pay-one-of-three additional
+    /// cost (Dusk Mangler, CR 601.2b), a trigger that works while suspended
+    /// (Nihilith, CR 702.62b) — so a four-seat pod with each has to finish.
     #[test]
-    fn cr_903_5a_the_official_precon_seat_plays_a_pod_game() {
+    fn cr_903_5a_the_official_precon_seats_play_pod_games() {
         let field = target_decks();
-        let teval = *field.iter().find(|d| d.name.starts_with("Teval")).expect("the BGU seat");
-        assert_eq!(teval.card_count(), 100);
-        let decks = vec![teval, field[0], field[1], field[2]];
-        let t = build_pod_template(&decks);
-        assert_eq!(t.players[0].library.len(), 99);
-        let pilots = vec![Pilot::default(); 4];
-        for seed in [0x7E7A1_u64, 78, 9002] {
-            let o = play_one_pod_game(&t, &pilots, 50_000, seed);
-            assert!(o.winner.is_some(), "seed {seed} left the pod undecided");
-            assert!(o.turns > 0);
+        for (name, seeds) in [("Teval", [0x7E7A1_u64, 78, 9002]), ("N'ghathrod", [0xC1B, 79, 9003])] {
+            let precon = *field.iter().find(|d| d.name.starts_with(name)).expect("the precon seat");
+            assert_eq!(precon.card_count(), 100);
+            let decks = vec![precon, field[0], field[1], field[2]];
+            let t = build_pod_template(&decks);
+            assert_eq!(t.players[0].library.len(), 99);
+            let pilots = vec![Pilot::default(); 4];
+            for seed in seeds {
+                let o = play_one_pod_game(&t, &pilots, 50_000, seed);
+                assert!(o.winner.is_some(), "{name} seed {seed} left the pod undecided");
+                assert!(o.turns > 0);
+            }
         }
     }
 

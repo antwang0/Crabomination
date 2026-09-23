@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Ten hand-picked commanders plus one official preconstructed list, each a
+//! Ten hand-picked commanders plus two official preconstructed lists, each a
 //! 99 of cards this engine implements: legal under CR 903 (100 cards
 //! including the commander, singleton outside basics, every card inside the
 //! commander's CR 903.4 color identity) and Commander-legal per Scryfall's
@@ -8,7 +8,8 @@
 //!
 //! The ten were built by hand because the offline Scryfall cache cannot say
 //! how a precon splits into decks; MTGJSON's deck files can, and the eleventh
-//! (Sultai Arisen) is taken from one card for card. What all of them keep
+//! and twelfth (Sultai Arisen, Mind Flayarrrs) are taken from one card for
+//! card. What all of them keep
 //! from the precon idea is what the pod needs — fixed, legal, varied color
 //! identities, and built to play against each other.
 //! One is a Partner pair (CR 702.124b), one is a **planeswalker**
@@ -492,4 +493,33 @@ pub const TEVAL_MAIN: &[CardFactory] = &[
     // Basics: 4 island, 5 swamp, 6 forest
     island, island, island, island, swamp, swamp, swamp, swamp, swamp, forest, forest, forest,
     forest, forest, forest,
+];
+
+/// Captain N'ghathrod — UB. Commander, then the 99.
+pub const NGHATHROD_COMMANDERS: &[CardFactory] = &[captain_nghathrod];
+
+/// **Mind Flayarrrs**, the Commander Legends: Battle for Baldur's Gate precon
+/// (CLB, 2022-06-10), exactly as MTGJSON's `MindFlayarrrs_CLB` prints it:
+/// 79 nonbasic cards + 20 basics = 99. Horror tribal that mills opponents and
+/// takes what lands in their graveyards; the pod's second official list.
+pub const NGHATHROD_MAIN: &[CardFactory] = &[
+    chasm_skulker, forgotten_creation, grazilaxx_illithid_scholar, hullbreaker_horror,
+    mind_flayer, overcharged_amalgam, sludge_monster, wharf_infiltrator, dark_hatchling,
+    dross_harvester, guiltfeeder, hunted_horror, nighthowler, nihilith, sewer_nemesis,
+    woe_strider, consuming_aberration, nemesis_of_reason, phyrexian_revoker, psychosis_crawler,
+    spellskite, dauthi_horror, dusk_mangler, phyrexian_rager, plague_spitter,
+    ravenous_chupacabra, fractured_sanity, crippling_fear, hex, in_garruks_wake, feed_the_swarm,
+    syphon_mind, extract_from_darkness, pull_from_tomorrow, curtains_call, memory_plunder,
+    fact_or_fiction, drown_in_the_loch, arcane_signet, mind_stone, dimir_keyrune, dimir_signet,
+    everflowing_chalice, heralds_horn, lightning_greaves, mindcrank, sol_ring,
+    talisman_of_dominance, thought_vessel, leyline_of_anticipation, reflections_of_littjara,
+    black_market, choked_estuary, creeping_tar_pit, darkwater_catacombs, drownyard_temple,
+    exotic_orchard, nephalia_drownyard, river_of_tears, sunken_hollow, temple_of_deceit,
+    command_tower, ash_barrens, dimir_aqueduct, myriad_landscape, path_of_ancestry,
+    port_of_karfell, rogues_passage, tainted_isle, temple_of_the_false_god,
+    zellix_sanity_flayer, haunted_one, aboleth_spawn, endless_evil, grell_philosopher,
+    psionic_ritual, brainstealer_dragon, from_the_catacombs, uchuulon,
+    // Basics: 9 island, 11 swamp
+    island, island, island, island, island, island, island, island, island, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
