@@ -804,6 +804,37 @@ fn tomik_has_affinity_for_planeswalkers() {
     );
 }
 
+/// CR 603.4 — an opponent's attack with two or more creatures at you costs
+/// them 3 life and draws you a card; one attacker doesn't. (The trigger
+/// used to be scoped to a listener the attack dispatch never consulted.)
+#[test]
+fn tomik_punishes_an_opponent_attacking_with_two() {
+    use crabomination::game::types::{Attack, AttackTarget, GameAction};
+    let setup = |attackers: usize| {
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(0, catalog::tomik_wielder_of_law());
+        g.add_card_to_library(0, catalog::forest());
+        let ids: Vec<_> = (0..attackers)
+            .map(|_| {
+                let id = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+                g.clear_sickness(id);
+                id
+            })
+            .collect();
+        g.active_player_idx = 1;
+        g.step = TurnStep::DeclareAttackers;
+        g.priority.player_with_priority = 1;
+        g.perform_action(GameAction::DeclareAttackers(
+            ids.into_iter().map(|attacker| Attack { attacker, target: AttackTarget::Player(0) }).collect(),
+        ))
+        .expect("attack");
+        drain_stack(&mut g);
+        (g.players[1].life, g.players[0].hand.len())
+    };
+    assert_eq!(setup(2), (17, 1), "two attackers: lose 3, draw 1");
+    assert_eq!(setup(1), (20, 0), "one attacker: nothing");
+}
+
 /// Public Thoroughfare comes down tapped and demands a tap to stay.
 #[test]
 fn public_thoroughfare_enters_tapped_and_taxes_you() {

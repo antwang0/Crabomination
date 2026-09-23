@@ -847,15 +847,26 @@ pub fn tomik_wielder_of_law() -> CardDefinition {
             },
             1,
         )),
+        // An observer of another player's attack declaration: `YouAttack`
+        // fires for non-active listeners only at `AnyPlayer` scope (an
+        // `OpponentControl` scope never fired at all). CR 603.4 — "if two or
+        // more of those creatures are attacking you and/or planeswalkers you
+        // control" is read off the finished declaration.
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::YouAttack, EventScope::OpponentControl)
-                .with_filter(Predicate::AttackedWithCountAtLeast {
-                    who: PlayerRef::Triggerer,
-                    at_least: 2,
-                }),
+            event: EventSpec::new(EventKind::YouAttack, EventScope::AnyPlayer).with_filter(
+                Predicate::All(vec![
+                    Predicate::Not(Box::new(Predicate::IsTurnOf(PlayerRef::You))),
+                    Predicate::AttackedDefenderWithCountAtLeast {
+                        who: PlayerRef::ActivePlayer,
+                        defender: PlayerRef::You,
+                        at_least: 2,
+                        include_planeswalkers: true,
+                    },
+                ]),
+            ),
             effect: Effect::Seq(vec![
                 Effect::LoseLife {
-                    who: Selector::Player(PlayerRef::Triggerer),
+                    who: Selector::Player(PlayerRef::ActivePlayer),
                     amount: Value::Const(3),
                 },
                 draw(1),
