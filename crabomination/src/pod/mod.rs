@@ -67,13 +67,23 @@ pub struct PodTally {
     pub no_legal_move: u32,
     pub total_turns: u64,
     pub total_actions: u64,
+    /// The single longest game's `(actions, turns)` — a cap is read against
+    /// this: a capped game near it is a long game, one far below it a loop.
+    pub longest: (usize, u32),
+    /// `(game index, turns, actions)` of every undecided game, so a stall can
+    /// be replayed (`bot_ladder --commander --first I --games 1`).
+    pub undecided_games: Vec<(u32, u32, usize)>,
 }
 
 impl PodTally {
-    fn record(&mut self, o: &PodOutcome) {
+    fn record(&mut self, index: u32, o: &PodOutcome) {
         self.games += 1;
         self.total_turns += u64::from(o.turns);
         self.total_actions += o.actions as u64;
+        self.longest = self.longest.max((o.actions, o.turns));
+        if !(o.stop == StopReason::GameOver && o.winner.is_some()) {
+            self.undecided_games.push((index, o.turns, o.actions));
+        }
         match o.stop {
             StopReason::GameOver => match o.winner {
                 Some(s) => {
@@ -111,6 +121,9 @@ impl PodTally {
         self.no_legal_move += other.no_legal_move;
         self.total_turns += other.total_turns;
         self.total_actions += other.total_actions;
+        self.longest = self.longest.max(other.longest);
+        self.undecided_games.extend_from_slice(&other.undecided_games);
+        self.undecided_games.sort_unstable();
     }
 
     pub fn mean_turns(&self) -> f64 {
@@ -421,7 +434,7 @@ pub fn run_pod_games_censused(
         );
         // Seat `s` in rotation `rot` holds deck `(s + n - rot) % n`.
         let by_deck = PodOutcome { winner: o.winner.map(|s| (s + n - rot) % n), ..o };
-        tally.record(&by_deck);
+        tally.record(i, &by_deck);
     }
     tally
 }

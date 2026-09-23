@@ -962,6 +962,9 @@ struct Args {
     /// `--card-census`: with `--commander`, also report which cards of each
     /// target deck the run never played.
     card_census: bool,
+    /// `--first I`: with `--commander`, start at game index `I` — with
+    /// `--games 1`, replays exactly the game an undecided line names.
+    first_game: u32,
 }
 
 fn parse_args() -> Result<Args, String> {
@@ -978,6 +981,7 @@ fn parse_args() -> Result<Args, String> {
     let commander = std::env::args().any(|a| a == "--commander");
     let card_census = std::env::args().any(|a| a == "--card-census");
     let mut seats = 4usize;
+    let mut first_game = 0u32;
     let mut games = if commander { 300 } else { games };
     let argv: Vec<String> = std::env::args().skip(1).collect();
     let mut i = 0;
@@ -1013,6 +1017,9 @@ fn parse_args() -> Result<Args, String> {
             "--commander" => step = 1,
             "--card-census" => step = 1,
             "--seats" => seats = need(i)?.parse().map_err(|_| "--seats must be a number")?,
+            "--first" => {
+                first_game = need(i)?.parse().map_err(|_| "--first must be a number")?
+            }
             "-h" | "--help" => {
                 println!(
                     "bot_ladder [--a PROFILE] [--b PROFILE] [--games N] [--seed N] [--threads N]\n\
@@ -1039,7 +1046,9 @@ fn parse_args() -> Result<Args, String> {
                      --commander runs N-seat Commander pods over the target decks\n\
                      (--seats N, default 4; --games total, default 300; --seed fixes\n\
                      the run) and reports completed games, the undecided breakdown,\n\
-                     turns/game and wins by deck. Zero panics is the pass condition."
+                     turns/game and wins by deck. Zero panics is the pass condition.\n\
+                     --first I with --commander starts at game index I (replay one\n\
+                     undecided game with --first I --games 1)."
                 );
                 std::process::exit(0);
             }
@@ -1141,6 +1150,7 @@ fn parse_args() -> Result<Args, String> {
         commander,
         seats,
         card_census,
+        first_game,
     })
 }
 
@@ -1190,9 +1200,10 @@ fn run_commander_pods(args: &Args, threads: usize) -> i32 {
     let mut census = ActionCensus::forced();
     std::thread::scope(|scope| {
         let mut handles = Vec::new();
-        let mut first = 0u32;
-        while first < games {
-            let count = chunk.min(games - first);
+        let mut first = args.first_game;
+        let end = args.first_game.saturating_add(games);
+        while first < end {
+            let count = chunk.min(end - first);
             let field = field.clone();
             let (seed, pilot, want_census) = (args.seed, args.a, args.card_census);
             // The same 32 MiB every other game worker in the tree already
@@ -1247,10 +1258,15 @@ fn run_commander_pods(args: &Args, threads: usize) -> i32 {
         tally.draws, tally.action_capped, tally.board_capped, tally.no_legal_move,
     );
     println!(
-        "  turns/game {:.2}   actions/game {:.1}",
+        "  turns/game {:.2}   actions/game {:.1}   longest {} actions / {} turns",
         tally.mean_turns(),
         tally.total_actions as f64 / f64::from(tally.games.max(1)),
+        tally.longest.0,
+        tally.longest.1,
     );
+    for (i, turns, actions) in &tally.undecided_games {
+        println!("  undecided game {i}: {turns} turns, {actions} actions (--first {i} --games 1)");
+    }
     for (i, d) in field.iter().enumerate() {
         println!("  deck {i}  {:<28} wins {:>5} ({:.1} %)", d.name, tally.wins[i], pct(tally.wins[i]));
     }
