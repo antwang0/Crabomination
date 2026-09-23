@@ -147,22 +147,19 @@ pub fn tempered_steel() -> CardDefinition {
 /// creature type. Creatures you control of the chosen type get +1/+1. As long
 /// as you have the city's blessing, they also have vigilance.
 ///
-/// Ascend is checked as it enters and at your upkeep (Twilight Prophet's
-/// shape), not continuously.
+/// Ascend (a static ability, CR 702.131b) is checked at your upkeep — before
+/// any attack the vigilance is for — rather than continuously. No enters
+/// check: the choice is the only thing that happens as it enters (CR 614.12).
 pub fn radiant_destiny() -> CardDefinition {
     use crate::card::{EventKind, EventScope, EventSpec, Predicate, TriggeredAbility};
-    let ascend = |event| TriggeredAbility {
-        event: EventSpec::new(event, EventScope::YourControl),
-        effect: Effect::Ascend { who: PlayerRef::You },
-    };
     CardDefinition {
-        triggered_abilities: vec![
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: Effect::Ascend { who: PlayerRef::You },
-            },
-            ascend(EventKind::StepBegins(crate::game::TurnStep::Upkeep)),
-        ],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::Upkeep),
+                EventScope::YourControl,
+            ),
+            effect: Effect::Ascend { who: PlayerRef::You },
+        }],
         name: "Radiant Destiny",
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Enchantment],
