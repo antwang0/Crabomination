@@ -347,9 +347,6 @@ pub fn siege_gang_lieutenant() -> CardDefinition {
 /// choose a color. {T}: Add four mana of the chosen color. Spend this mana only
 /// to cast monocolored spells of that color. {3}, {T}: Draw two cards. Spend
 /// only mana of the chosen color to activate this ability.
-///
-/// Approximation: the draw ability's "only mana of the chosen color" payment
-/// rider is not enforced.
 pub fn throne_of_eldraine() -> CardDefinition {
     let pip = || Effect::AddMana {
         who: PlayerRef::You,
@@ -371,6 +368,7 @@ pub fn throne_of_eldraine() -> CardDefinition {
                 mana_cost: cost(&[generic(3)]),
                 tap_cost: true,
                 effect: Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+                spend_only_chosen_color: true,
                 ..Default::default()
             },
         ],
