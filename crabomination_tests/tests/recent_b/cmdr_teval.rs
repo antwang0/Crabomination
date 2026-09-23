@@ -382,6 +382,10 @@ fn shigeki_digs_a_land_and_bins_the_rest() {
     assert!(in_hand(&g, 0, shigeki), "returned to hand as a cost");
     assert!(g.battlefield_find(land).is_some_and(|c| c.tapped), "land in tapped");
     assert_eq!(g.players[0].graveyard.len(), 3);
+    assert!(
+        !g.players[0].milled_ids_this_turn.contains(&land),
+        "the land goes straight from the library, never through the graveyard"
+    );
 }
 
 /// Floral Evoker grows on landfall and pitches a creature to return a land.

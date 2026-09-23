@@ -551,9 +551,8 @@ pub fn the_scarab_god() -> CardDefinition {
 /// Discard this card: Return X target nonlegendary cards from your graveyard to
 /// your hand.
 ///
-/// Approximations: the four cards are milled and the land then moved out of the
-/// graveyard (so it briefly passes through it); the Channel returns are picked
-/// at resolution rather than targeted.
+/// Approximation: the Channel returns are picked at resolution rather than
+/// targeted.
 pub fn shigeki_jukai_visionary() -> CardDefinition {
     CardDefinition {
         card_types: vec![CardType::Enchantment, CardType::Creature],
@@ -562,16 +561,14 @@ pub fn shigeki_jukai_visionary() -> CardDefinition {
                 mana_cost: cost(&[generic(1), g()]),
                 tap_cost: true,
                 return_self_cost: true,
-                effect: Effect::Seq(vec![
-                    mill(4),
-                    Effect::MoveChosen {
-                        from: Selector::LastMoved,
-                        filter: Some(R::Land),
-                        count: Value::ONE,
-                        up_to: true,
-                        to: to_battlefield(true),
-                    },
-                ]),
+                effect: Effect::LookPickToHand(Box::new(crate::effect::LookPick {
+                    count: Value::Const(4),
+                    pick_filter: Some(R::Land),
+                    optional: true,
+                    picked_lands_to_battlefield: true,
+                    rest_to_graveyard: true,
+                    ..Default::default()
+                })),
                 ..Default::default()
             },
             ActivatedAbility {
