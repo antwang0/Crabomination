@@ -47,6 +47,7 @@ lists were picked.
 | **Goblin Storm** (SLD) R | Zada, Hedron Grinder | R | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Wretched Ranks** (FDC precon) B | Ghoulcaller Gisa | B | 100 | ✅ complete |
 | **Tramplesaurus Rex** (FDC precon) G | Ghalta, Primal Hunger | G | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
+| **Keen Engineering** (FDC precon) U | Sai, Master Thopterist | U | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not
@@ -88,8 +89,8 @@ graveyard cast, Steward of the Harvest's granted land abilities, Teval's
 "cards leave your graveyard" tokens. After `pod_field(10)`; `--seats 11`
 reaches it. The next two by `scripts/precon_scan.py` became seats 15 and
 16, and Tramplesaurus Rex (FDC, 12) seat 17 (below); after them the scan
-reads Keen Engineering (FDC, 12) and then 13 (Reap the Tides, Corrupting
-Influence, Sliver Swarm).
+read Keen Engineering (FDC, 12, seat 18) and then 13 (Reap the Tides,
+Corrupting Influence, Sliver Swarm).
 
 🟡 **Residuals in the list** (each also on its card's doc): Colossal
 Grave-Reaver (returns the first milled creature, not a chosen one), Lethal
@@ -194,6 +195,29 @@ game cut short, not a stall. `bot_ladder`'s pod budget is now 50,000 up to
 ten seats and 5,000 a seat above (readings at 2..10 unchanged): seed 9941
 decides 1,000 / 1,000 at 11, 14, 15, 16 and 17 seats, the longest 17-seat
 game 71,689 of 85,000.
+
+The **eighteenth** is Foundations Commander's **Keen Engineering**
+(`KeenEngineering_FDC`): mono-blue artifacts under Sai, 34 Islands. Twelve
+cards were missing; four needed engine work, each general —
+`Effect::ReselectAttackTarget` (Misleading Signpost, CR 508.1b: one
+`ChooseOption` ask, a headless seat sends the attacker at its ranked hostile
+opponent and never at itself), `SelectionRequirement::ControllerDamagedBySourceThisTurn`
+(Steel Hellkite), `ExtraManaKind::MirrorColorless` reaching nonland
+permanents (Forsaken Monument's "tap a permanent for {C}"), and
+`StaticEffect::PreventUntapGlobal` honouring an Aura's `AttachedTo(This)`
+(Fall from Favor — it fell to `_ => false`, so the lock never held).
+Residual: **Steel Hellkite** reads `creatures_that_damaged_me_this_turn`, which
+also holds noncombat damage. Seed 9990, 1,000 games at 18 seats: **998
+decided, 1 action cap, 1 board cap, zero panics**; Sai wins 3.1 %;
+`--card-census` 892 distinct, every card of all eighteen lists played.
+
+⚠ **The board cap was a bot bug, not a loop.** A Krenko seat sent all 292
+of its Goblins at one player on 24 life each turn while two others sat on
+40, so it killed one seat a turn until Krenko's doubling passed the 1,024-
+permanent bound. `server/pod_attack.rs::spread_face_attacks` now sends the
+attackers past a kill (with one blocker's margin per untapped creature) at
+the next opponent by `hostile_opponent_score`; the same game now decides.
+A duel returns before allocating, so `--bench` is byte-identical.
 
 The **tenth** is the first list built around what only happens at three seats
 or more, and it exists because of a census, not a hunch: **not one of the nine
