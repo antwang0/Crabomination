@@ -1750,7 +1750,7 @@ pub fn blazing_crescendo() -> CardDefinition {
                 duration: MayPlayDuration::EndOfControllersNextTurn,
                 pay_any_color: false,
                 max_mana_value: None,
-                pay_own_cost: false,
+                pay_own_cost: true,
                 uncast_penalty: None,
             },
         ]),
@@ -3035,7 +3035,7 @@ pub fn sword_of_forge_and_frontier() -> CardDefinition {
                         duration: crate::card::MayPlayDuration::EndOfThisTurn,
                         pay_any_color: false,
                         max_mana_value: None,
-                        pay_own_cost: false,
+                        pay_own_cost: true,
                         uncast_penalty: None,
                     },
                     Effect::GrantExtraLandPlay {

@@ -128,6 +128,20 @@ the handoff.
   corrupted three-of-one-color; both work when activated directly. The fix is a
   state-aware check where the table is built (the condition reads the board), not
   in the definition-only predicate.
+- ✅ **"You may play that card" cast for FREE on 43 cards.** `ExileTopAndGrantMayPlay`
+  and `GrantMayPlay` default `pay_own_cost` to a free cast, right only when the
+  Oracle says "without paying its mana cost"; forty impulse cards (Abbot of Keral
+  Keep, Ragavan, Jeska's Will, Harnfel, Bonehoard Dracosaur, Sword of Forge and
+  Frontier, …) and three may-play grants (Snapcaster Mage's {0} flashback, Radiant
+  Scrollwielder, Containment Construct) had it. CR 601.2f: a permission is not an
+  alternative cost. `scripts/audit_free_impulse.py` holds the class at zero. Found
+  by reading `pay_own_cost`'s doc while wiring Stella Lee — not by a pod, because a
+  free spell is a strictly better bot.
+- ✅ **Two cards castable by no bot path, from the 22- and 24-seat censuses.**
+  Narset's Reversal: `effect_counters_spells` read only a `Seq`'s first step, and
+  Reversal copies before it bounces. Finale of Promise: the all-slots auto-targeter
+  never concretized `ManaValueAtMostXFromCost` (CR 601.2b), so its graveyard slots
+  matched nothing — `auto_targets_for_effect_all_slots_x` now takes the cast's X.
 
 ## FIXED 2026-09-23 (the residual session) — three bug CLASSES a precon's residual list led to
 

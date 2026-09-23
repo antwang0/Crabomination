@@ -860,7 +860,7 @@ pub fn abbot_of_keral_keep() -> CardDefinition {
                     duration: crate::card::MayPlayDuration::EndOfThisTurn,
                     pay_any_color: false,
                     max_mana_value: None,
-                    pay_own_cost: false,
+                    pay_own_cost: true,
                     uncast_penalty: None,
                 },
             },
@@ -11623,11 +11623,9 @@ pub fn sudden_edict() -> CardDefinition {
 ///
 /// Wired with the same `Effect::GrantMayPlay { exile_after: true,
 /// duration: EndOfThisTurn }` shape that powers Flashback (the spell) and
-/// Lorehold the Historian's miracle grant. Approximation: the cast pays
-/// `{0}` (no `MayPlayPermission.alt_cost`-equals-mana-cost primitive
-/// today), which is strictly stronger than the printed "flashback cost
-/// equals its mana cost". The play pattern — recover one IS spell from
-/// your gy for one turn — is preserved.
+/// Lorehold the Historian's miracle grant, with `pay_own_cost` so the cast
+/// pays the card's mana cost (CR 702.34a — the flashback cost here). It used
+/// to cast for {0}.
 pub fn snapcaster_mage() -> CardDefinition {
     use crate::card::{Keyword, Zone};
     CardDefinition {
@@ -11656,7 +11654,7 @@ pub fn snapcaster_mage() -> CardDefinition {
                 duration: crate::card::MayPlayDuration::EndOfThisTurn,
                 to_owner: false,
                 exile_after: true,
-                pay_own_cost: false,
+                pay_own_cost: true,
                 any_color: false,
             },
         }],
@@ -23135,7 +23133,7 @@ pub fn robber_of_the_rich() -> CardDefinition {
                     who: PlayerRef::You,
                     count: Value::Const(1),
                     duration: MayPlayDuration::EndOfThisTurn,
-                    pay_any_color: false,
+                    pay_any_color: true,
                     max_mana_value: None,
                     pay_own_cost: false,
                     uncast_penalty: None,
@@ -45515,7 +45513,7 @@ pub fn containment_construct() -> CardDefinition {
                         duration: MayPlayDuration::EndOfThisTurn,
                         to_owner: false,
                         exile_after: false,
-                        pay_own_cost: false,
+                        pay_own_cost: true,
                         any_color: false,
                     },
                 ])),
@@ -54613,7 +54611,7 @@ pub fn questing_druid() -> CardDefinition {
                 duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
                 pay_any_color: false,
                 max_mana_value: None,
-                pay_own_cost: false,
+                pay_own_cost: true,
                 uncast_penalty: None,
             },
         })),

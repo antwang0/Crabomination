@@ -511,6 +511,30 @@ fn abbot_of_keral_keep_exiles_top_and_grants_play() {
     assert!(exiled.may_play_until.is_some(), "exiled card is playable");
 }
 
+/// CR 601.2f — "you may play that card" grants permission, not a free cast:
+/// the exiled Shock still costs {R} (it used to be cast for nothing).
+#[test]
+fn abbot_of_keral_keep_impulse_still_costs_mana() {
+    let mut g = two_player_game();
+    let top = g.add_card_to_library(0, catalog::shock());
+    g.add_card_to_library(0, catalog::forest());
+    let id = g.add_card_to_hand(0, catalog::abbot_of_keral_keep());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Abbot");
+    drain_stack(&mut g);
+    let from_exile = GameAction::CastFromZoneWithoutPaying {
+        card_id: top, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    };
+    assert!(g.perform_action(from_exile.clone()).is_err(), "no mana: no Shock");
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(from_exile).expect("{R} pays for it");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 18);
+}
+
 /// Eidolon of the Great Revel burns the caster of a cheap spell, not an
 /// expensive one.
 #[test]

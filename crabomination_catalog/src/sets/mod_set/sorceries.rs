@@ -1417,7 +1417,7 @@ pub fn jeskas_will() -> CardDefinition {
                         duration: MayPlayDuration::EndOfThisTurn,
                         pay_any_color: false,
                         max_mana_value: None,
-                        pay_own_cost: false,
+                        pay_own_cost: true,
                         uncast_penalty: None,
                     },
                 ]
