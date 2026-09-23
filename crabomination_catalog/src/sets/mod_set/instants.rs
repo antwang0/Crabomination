@@ -615,39 +615,26 @@ pub fn pyrokinesis() -> CardDefinition {
     }
 }
 
-/// Bone Shards — {B} Instant. As an additional cost, sacrifice a creature
+/// Bone Shards — {B} Sorcery. As an additional cost, sacrifice a creature
 /// or discard a card. Destroy target creature.
-///
-/// The modal additional cost is wired as a `ChooseMode([Sacrifice, Discard])`
-/// run before the destroy. Mode 0 sacs a creature; mode 1 discards a card.
-/// Either way the destroy then resolves on the targeted creature. This
-/// reuses the same "cost-as-first-step" pattern as Thud, Plunge into
-/// Darkness, and Crop Rotation — the engine doesn't yet model true
-/// additional costs paid at cast time, but folding them into the
-/// resolution sequence is gameplay-equivalent for the bulk of plays.
-/// AutoDecider picks mode 0 (sacrifice) by default.
 pub fn bone_shards() -> CardDefinition {
     CardDefinition {
         name: "Bone Shards",
         cost: cost(&[b()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
-            Effect::ChooseMode(vec![
-                Effect::Sacrifice {
-                    who: Selector::You,
-                    count: Value::Const(1),
-                    filter: SelectionRequirement::Creature,
-                },
-                Effect::Discard {
-                    who: Selector::You,
-                    amount: Value::Const(1),
-                    random: false,
-                },
-            ]),
-            Effect::Destroy {
-                what: target_filtered(SelectionRequirement::Creature),
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::OneOf(vec![
+            crate::card::AdditionalCastCost::SacrificePermanent {
+                filter: SelectionRequirement::Creature,
+                count: 1,
             },
-        ]),
+            crate::card::AdditionalCastCost::Discard {
+                count: 1,
+                filter: None,
+            },
+        ])],
+        effect: Effect::Destroy {
+            what: target_filtered(SelectionRequirement::Creature),
+        },
         ..Default::default()
     }
 }

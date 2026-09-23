@@ -288,14 +288,11 @@ pub fn launch_party() -> CardDefinition {
         name: "Launch Party",
         cost: cost(&[generic(3), b()]),
         card_types: vec![CardType::Instant],
-        // The additional sacrifice is folded into resolution (the Thud/Bone
-        // Shards pattern — the engine has no true cast-time additional cost).
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::SacrificePermanent {
+            filter: R::Creature,
+            count: 1,
+        }],
         effect: Effect::Seq(vec![
-            Effect::Sacrifice {
-                who: Selector::You,
-                count: Value::ONE,
-                filter: R::Creature,
-            },
             Effect::Destroy {
                 what: target_filtered(R::Creature),
             },

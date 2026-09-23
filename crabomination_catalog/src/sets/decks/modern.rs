@@ -1782,26 +1782,19 @@ pub fn karakas() -> CardDefinition {
 
 /// Cathartic Reunion — {1}{R} Sorcery. As an additional cost to cast this
 /// spell, discard two cards. Draw three cards.
-///
-/// The "additional cost" is folded into resolution as the spell's first
-/// step (matching Crop Rotation's sacrifice-as-resolution shape). Net
-/// gameplay: discard 2 → draw 3, identical to Oracle for the standard line.
 pub fn cathartic_reunion() -> CardDefinition {
     CardDefinition {
         name: "Cathartic Reunion",
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
-            Effect::Discard {
-                who: Selector::You,
-                amount: Value::Const(2),
-                random: false,
-            },
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(3),
-            },
-        ]),
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::Discard {
+            count: 2,
+            filter: None,
+        }],
+        effect: Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(3),
+        },
         ..Default::default()
     }
 }
@@ -3419,54 +3412,40 @@ pub fn tragic_slip() -> CardDefinition {
 
 // ── Red discard-loot ─────────────────────────────────────────────────────────
 
-/// Tormenting Voice — {1}{R} Sorcery. Discard a card, then draw two cards.
-///
-/// Same shape as Cathartic Reunion, but the additional cost is reduced from
-/// "discard two" to "discard one" so the card is just a +0 net hand size
-/// shuffle instead of a graveyard-fill payload. Modeled cost-as-first-step
-/// (discard then draw) — gameplay-equivalent for the deterministic case.
+/// Tormenting Voice — {1}{R} Sorcery. As an additional cost to cast this
+/// spell, discard a card. Draw two cards.
 pub fn tormenting_voice() -> CardDefinition {
     CardDefinition {
         name: "Tormenting Voice",
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
-            Effect::Discard {
-                who: Selector::You,
-                amount: Value::Const(1),
-                random: false,
-            },
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(2),
-            },
-        ]),
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::Discard {
+            count: 1,
+            filter: None,
+        }],
+        effect: Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(2),
+        },
         ..Default::default()
     }
 }
 
-/// Wild Guess — {R}{R} Sorcery. Discard a card, then draw two cards.
-///
-/// Printed as "as an additional cost to cast this spell, discard a card. Draw
-/// two cards", which the engine models the same way it models Tormenting
-/// Voice: a `Seq` of discard-then-draw at resolution. The difference from a
-/// true additional cost is that an empty hand does not stop the cast.
+/// Wild Guess — {R}{R} Sorcery. As an additional cost to cast this spell,
+/// discard a card. Draw two cards.
 pub fn wild_guess() -> CardDefinition {
     CardDefinition {
         name: "Wild Guess",
         cost: cost(&[r(), r()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
-            Effect::Discard {
-                who: Selector::You,
-                amount: Value::Const(1),
-                random: false,
-            },
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(2),
-            },
-        ]),
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::Discard {
+            count: 1,
+            filter: None,
+        }],
+        effect: Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(2),
+        },
         ..Default::default()
     }
 }
@@ -3474,23 +3453,20 @@ pub fn wild_guess() -> CardDefinition {
 /// Thrill of Possibility — {1}{R} Instant. As an additional cost to cast
 /// this spell, discard a card. Draw two cards.
 ///
-/// Instant-speed Tormenting Voice — same shape, different timing.
+/// Instant-speed Tormenting Voice.
 pub fn thrill_of_possibility() -> CardDefinition {
     CardDefinition {
         name: "Thrill of Possibility",
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Seq(vec![
-            Effect::Discard {
-                who: Selector::You,
-                amount: Value::Const(1),
-                random: false,
-            },
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(2),
-            },
-        ]),
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::Discard {
+            count: 1,
+            filter: None,
+        }],
+        effect: Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(2),
+        },
         ..Default::default()
     }
 }
@@ -10237,20 +10213,18 @@ pub fn crumble_to_dust() -> CardDefinition {
 /// sacrifice a land. Search your library for up to two basic land cards
 /// and put them onto the battlefield. Then shuffle.
 ///
-/// Sac-as-additional-cost folded into resolution. Produces +1 net mana
-/// (sac one, fetch two untapped). Both fetched lands are searched
-/// individually so the decider can pick different basics each step.
+/// Both fetched lands are searched individually so the decider can pick
+/// different basics each step.
 pub fn harrow() -> CardDefinition {
     CardDefinition {
         name: "Harrow",
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Instant],
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::SacrificePermanent {
+            filter: SelectionRequirement::Land,
+            count: 1,
+        }],
         effect: Effect::Seq(vec![
-            Effect::Sacrifice {
-                who: Selector::You,
-                count: Value::Const(1),
-                filter: SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
-            },
             Effect::Search {
                 who: PlayerRef::You,
                 filter: SelectionRequirement::IsBasicLand,
@@ -11913,37 +11887,23 @@ pub fn wall_of_omens() -> CardDefinition {
 
 /// Toxic Deluge — {2}{B} Sorcery. "As an additional cost to cast
 /// this spell, pay X life. All creatures get -X/-X until end of turn."
-///
-/// Approximation: the cost-as-life payment is folded into resolution
-/// (cost-as-first-step model) — at resolution we pay `XFromCost` life
-/// and then apply `-X/-X` to each creature. Hits indestructibles only
-/// to shrink them, but kills creatures with toughness ≤ X. The cost
-/// model collapses the "pay life as additional cost" gate; the
-/// gameplay outcome (a one-sided wrath scaled by X life paid) is
-/// preserved.
 pub fn toxic_deluge() -> CardDefinition {
     CardDefinition {
         name: "Toxic Deluge",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
-            // Pay X life as additional cost (cost-as-first-step).
-            Effect::LoseLife {
-                who: Selector::You,
-                amount: Value::XFromCost,
-            },
-            // Each creature gets -X/-X EOT (read live from the spell's
-            // X paid via `XFromCost`).
-            Effect::ForEach {
-                selector: Selector::EachPermanent(SelectionRequirement::Creature),
-                body: Box::new(Effect::PumpPT {
-                    what: Selector::TriggerSource,
-                    power: Value::Diff(Box::new(Value::Const(0)), Box::new(Value::XFromCost)),
-                    toughness: Value::Diff(Box::new(Value::Const(0)), Box::new(Value::XFromCost)),
-                    duration: Duration::EndOfTurn,
-                }),
-            },
-        ]),
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::PayLifeX],
+        effect: // Each creature gets -X/-X EOT (read live from the spell's
+        // X paid via `XFromCost`).
+        Effect::ForEach {
+            selector: Selector::EachPermanent(SelectionRequirement::Creature),
+            body: Box::new(Effect::PumpPT {
+                what: Selector::TriggerSource,
+                power: Value::Diff(Box::new(Value::Const(0)), Box::new(Value::XFromCost)),
+                toughness: Value::Diff(Box::new(Value::Const(0)), Box::new(Value::XFromCost)),
+                duration: Duration::EndOfTurn,
+            }),
+        },
         ..Default::default()
     }
 }
