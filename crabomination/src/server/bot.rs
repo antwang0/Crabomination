@@ -10505,9 +10505,36 @@ fn pick_attacks_inner(state: &GameState, seat: usize, guard: bool) -> Vec<Attack
     // Remaining attackers go at the player — at a table, the surplus past a
     // kill spills to the next opponent.
     super::pod_attack::spread_face_attacks(state, seat, target_player, attackers, &mut attacks);
+    // CR 701.15b — then a goaded attacker aimed at its goader goes at another
+    // opponent when one exists.
+    for a in attacks.iter_mut() {
+        if let AttackTarget::Player(p) = a.target {
+            a.target = AttackTarget::Player(goad_legal_target(state, seat, a.attacker, p));
+        }
+    }
     // Last, because the tax depends on what each attacker is aimed at.
     trim_attacks_to_payable_tax(state, seat, statics, &mut attacks);
     attacks
+}
+
+/// CR 701.15b — a goaded creature "attacks a player other than the goading
+/// player if able". The picker aims the whole declaration at one player; a
+/// goaded attacker aimed at its goader while another opponent could be
+/// attacked makes the engine reject the **whole** batch, so each such
+/// attacker is sent at the next live, non-goading opponent instead (15
+/// rejected declarations in 40 eighteen-seat pod games, each a lost combat).
+fn goad_legal_target(state: &GameState, seat: usize, id: CardId, preferred: usize) -> usize {
+    let Some(c) = state.battlefield_find(id) else { return preferred };
+    if !c.goaded_by.contains(&preferred) {
+        return preferred;
+    }
+    let n = state.players.len();
+    (1..n)
+        .map(|i| (seat + i) % n)
+        .find(|&q| {
+            !state.same_team(seat, q) && state.players[q].is_alive() && !c.goaded_by.contains(&q)
+        })
+        .unwrap_or(preferred)
 }
 
 /// CR 508.1d — a creature the rules oblige to attack, read off the
@@ -20959,6 +20986,27 @@ mod tests {
             !attacks.iter().any(|a| a.attacker == aura),
             "a bestowed Aura cannot attack: {attacks:?}",
         );
+        let mut g2 = g.clone();
+        g2.declare_attackers(attacks).expect("the plan is legal");
+    }
+
+    /// CR 701.15b — a goaded creature attacks a player other than its goader
+    /// if able. The planner aimed the whole declaration at one player (here
+    /// the monarch, who is also the goader), and the engine rejected the
+    /// batch — a lost combat, 15 times in 40 eighteen-seat pod games.
+    #[test]
+    fn bot_sends_a_goaded_attacker_away_from_its_goader() {
+        let mut g = crate::game::multi_player_game(3);
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.clear_sickness(bear);
+        g.battlefield_find_mut(bear).unwrap().goaded_by = vec![1];
+        g.monarch = Some(1);
+        g.step = TurnStep::DeclareAttackers;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        let attacks = pick_attacks(&g, 0);
+        let aimed = attacks.iter().find(|a| a.attacker == bear).map(|a| a.target);
+        assert_eq!(aimed, Some(AttackTarget::Player(2)), "{attacks:?}");
         let mut g2 = g.clone();
         g2.declare_attackers(attacks).expect("the plan is legal");
     }
