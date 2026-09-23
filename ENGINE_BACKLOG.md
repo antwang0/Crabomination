@@ -122,8 +122,8 @@ the handoff.
   `trigger_mode_and_target`; tests `cr_700_2_shambling_ghast_*`, Hullbreaker's.
 - **Spend-restricted mana never paid** (auto-tap skipped every real
   restriction): a short payment now floats matching restricted sources
-  (`pay_with_restricted_sources`, CR 106.6). ⚠ Still skipped: a restricted
-  source whose ability costs mana (Castle Garenbrig).
+  (`pay_with_restricted_sources`, CR 106.6), mana-costed ones (Castle
+  Garenbrig) last.
 - Also: granted persist/undying (the other session), escape and replicate bot
   candidates. Open from the same sweep: Terror of the Peaks' life tax on
   targeting (no life-tax-on-targeting primitive), Conduit of Worlds' tap

@@ -767,3 +767,27 @@ fn cr_106_6_a_restricted_source_pays_a_matching_spell() {
         }
     }
 }
+
+/// CR 106.6 / 605.3a — a restricted source whose ability costs mana joins the
+/// retry too: Castle Garenbrig's {2}{G}{G} for six creature-only {G} pays a
+/// seven-drop creature off five lands and itself.
+#[test]
+fn cr_106_6_castle_garenbrig_pays_a_big_creature() {
+    let mut g = two_player_game();
+    for _ in 0..4 {
+        g.add_card_to_battlefield(0, catalog::forest());
+    }
+    g.add_card_to_battlefield(0, catalog::castle_garenbrig());
+    let id = g.add_card_to_hand(0, catalog::craw_wurm()); // {4}{G}{G}
+    // Four Forests + Garenbrig's {G} is five mana: short of six without the castle.
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("the castle's six pays for the Wurm");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == id));
+}

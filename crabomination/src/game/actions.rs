@@ -14313,10 +14313,28 @@ impl GameState {
         snapshot: &PaymentSnapshot,
     ) -> Option<PaymentReceipt> {
         use crate::mana::{ColorSet, SpendRestriction as SR};
-        let mut sources: Vec<(CardId, usize, ColorSet)> = Vec::new();
+        // The failed attempt may have tapped a restricted source for its
+        // ordinary mana (Castle Garenbrig's {G}): read the board it started from.
+        self.restore_payment_state(payer, snapshot.clone());
+        // `(id, ability, colours, costs mana)` — a source whose ability costs
+        // mana (Castle Garenbrig's {2}{G}{G} for six) is tried after the free
+        // ones; its activation pays that from the rest of the board.
+        let mut sources: Vec<(CardId, usize, ColorSet, bool)> = Vec::new();
         for c in self.battlefield.iter().filter(|c| c.controller == payer && !c.tapped) {
             for (idx, a) in c.definition.activated_abilities.iter().enumerate() {
-                if !crate::game::mana_shape::is_countable_mana_ability(a) {
+                let costs_mana = !a.mana_cost.symbols.is_empty();
+                let countable = if costs_mana {
+                    matches!(a.effect, Effect::AddMana { .. })
+                        && crate::game::mana_shape::is_countable_mana_ability(
+                            &crate::effect::ActivatedAbility {
+                                mana_cost: crate::mana::ManaCost::default(),
+                                ..a.clone()
+                            },
+                        )
+                } else {
+                    crate::game::mana_shape::is_countable_mana_ability(a)
+                };
+                if !countable {
                     continue;
                 }
                 let Effect::AddMana { pool, .. } = &a.effect else { continue };
@@ -14333,7 +14351,7 @@ impl GameState {
                 if allowed {
                     let mut colors = ColorSet::empty();
                     crate::game::mana_shape::accumulate_payload_colors(inner, &mut colors);
-                    sources.push((c.id, idx, colors));
+                    sources.push((c.id, idx, colors, costs_mana));
                     break;
                 }
             }
@@ -14341,10 +14359,11 @@ impl GameState {
         if sources.is_empty() {
             return None;
         }
+        sources.sort_by_key(|s| s.3);
         for k in 1..=sources.len() {
             self.restore_payment_state(payer, snapshot.clone());
             let mut events = Vec::new();
-            for &(id, idx, colors) in &sources[..k] {
+            for &(id, idx, colors, _) in &sources[..k] {
                 let pool = &self.players[payer].mana_pool;
                 let want = cost
                     .symbols
