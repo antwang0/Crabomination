@@ -32,11 +32,12 @@ sys.path.insert(0, os.path.join(ROOT, "scripts"))
 from pod_deck_candidates import slug  # noqa: E402
 
 
-def fetch(name):
+def fetch(name, sub=""):
+    """`sub` is MTGJSON's directory: deck files live under `decks/`, the list at the root."""
     os.makedirs(CACHE, exist_ok=True)
     path = os.path.join(CACHE, name)
     if not os.path.exists(path):
-        subprocess.run(["curl", "-sSf", "-o", path, f"{BASE}/{name}"], check=True)
+        subprocess.run(["curl", "-sSf", "-o", path, f"{BASE}/{sub}{name}"], check=True)
     return json.load(open(path, encoding="utf-8"))["data"]
 
 
@@ -64,7 +65,7 @@ def main():
     have = catalog_names()
     present = lambda n: any(k in have for k in (n, n.split(" // ")[0], slug(n.split(" // ")[0])))
     if "--deck" in sys.argv:
-        deck = fetch(sys.argv[sys.argv.index("--deck") + 1] + ".json")
+        deck = fetch(sys.argv[sys.argv.index("--deck") + 1] + ".json", "decks/")
         print("commanders:", ", ".join(slug(c["name"].split(" // ")[0]) for c in deck["commander"]))
         main = [c["name"] for c in deck["mainBoard"] for _ in range(c.get("count", 1))]
         print(f"main ({len(main)}):", ", ".join(slug(n.split(" // ")[0]) for n in main))
@@ -75,7 +76,7 @@ def main():
         if d["type"] != "Commander Deck" or "Collector" in d["name"]:
             continue
         try:
-            names = cards(fetch(d["fileName"] + ".json"))
+            names = cards(fetch(d["fileName"] + ".json", "decks/"))
         except subprocess.CalledProcessError:
             print("fetch failed:", d["fileName"], file=sys.stderr)
             continue
