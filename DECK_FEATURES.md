@@ -109,8 +109,7 @@ seat's 8.3 %, Teval 4.5 %.
 
 🟡 **Residuals in the list**: Grell Philosopher (only Grell gains the
 artifact's abilities; no blue-as-any rider), Psionic Ritual (no tap-a-Horror
-replicate), Overcharged Amalgam (counters
-spells only, not abilities). Sewer Nemesis always chooses an opponent.
+replicate). Sewer Nemesis always chooses an opponent.
 
 The **thirteenth** is the third official precon, **Blood Rites** (Lost Caverns
 of Ixalan Commander, 2023), MTGJSON's `BloodRites_LCC` card for card;

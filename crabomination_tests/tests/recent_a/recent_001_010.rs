@@ -6024,15 +6024,29 @@ mod recent {
         assert_eq!(g.computed_permanent(mm).map(|c| (c.power, c.toughness)), Some((5, 5)));
     }
 
-    /// Overcharged Amalgam exploits then counters a spell.
+    /// Overcharged Amalgam's exploit payoff counters an activated ability, not
+    /// only a spell (Mind Stone's draw is countered: no card).
     #[test]
-    fn overcharged_amalgam_counters_via_exploit() {
-        let oa = catalog::overcharged_amalgam();
-        assert!(oa.keywords.contains(&Keyword::Flash) && oa.keywords.contains(&Keyword::Flying));
-        assert!(matches!(oa.triggered_abilities[0].effect,
-            crabomination::effect::Effect::CounterSpell { .. } | crabomination::effect::Effect::MayDo { .. }
-            | crabomination::effect::Effect::Seq(_)),
-            "exploit wires a counter payoff");
+    fn overcharged_amalgam_counters_an_ability() {
+        use crabomination::game::types::{StackItem, Target};
+        let mut g = two_player_game();
+        let oa = g.add_card_to_battlefield(0, catalog::overcharged_amalgam());
+        let stone = g.add_card_to_battlefield(1, catalog::mind_stone());
+        g.players[1].mana_pool.add_colorless(1);
+        g.add_card_to_library(1, catalog::island());
+        g.priority.player_with_priority = 1;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: stone, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
+        })
+        .expect("activate the draw/sac ability");
+        assert!(matches!(g.stack.last(), Some(StackItem::Trigger { source, .. }) if *source == stone));
+        let exploit = catalog::overcharged_amalgam().triggered_abilities[0].effect.clone();
+        g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+            crabomination::decision::DecisionAnswer::Bool(true),
+        ]));
+        let ctx = crabomination::game::effects::EffectContext::for_trigger(oa, 0, Some(Target::Permanent(stone)), 0);
+        g.resolve_effect(&exploit, &ctx).unwrap();
+        assert!(g.stack.is_empty(), "the ability was countered");
     }
 
     /// Hobbling Zombie leaves a decayed Zombie when it dies.

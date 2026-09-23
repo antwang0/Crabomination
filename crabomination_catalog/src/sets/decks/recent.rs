@@ -12183,8 +12183,8 @@ pub fn moldgraf_millipede() -> CardDefinition {
 }
 
 /// Overcharged Amalgam — {2}{U}{U} 3/3 Zombie Horror. Flash, flying. Exploit;
-/// when it exploits a creature, counter target spell. (The "or activated /
-/// triggered ability" sub-mode is approximated to spells.)
+/// when it exploits a creature, counter target spell, activated ability, or
+/// triggered ability.
 pub fn overcharged_amalgam() -> CardDefinition {
     use crate::effect::shortcut::exploit;
     CardDefinition {
@@ -12198,8 +12198,10 @@ pub fn overcharged_amalgam() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flash, Keyword::Flying],
-        triggered_abilities: vec![exploit(Effect::CounterSpell {
-            what: target_filtered(SelectionRequirement::IsSpellOnStack),
+        triggered_abilities: vec![exploit(Effect::CounterSpellOrAbility {
+            what: target_filtered(
+                SelectionRequirement::IsSpellOnStack.or(SelectionRequirement::HasAbilityOnStack),
+            ),
         })],
         ..Default::default()
     }
