@@ -5437,8 +5437,8 @@ pub fn malcator_purity_overseer() -> CardDefinition {
 }
 
 /// Geth, Thane of Contracts — {1}{B}{B} 3/4. Other creatures you control get
-/// -1/-1. {1}{B}{B}, {T}, sorcery: reanimate a creature from your graveyard.
-/// (The "exile it if it would leave" rider is a finality counter.)
+/// -1/-1. {1}{B}{B}, {T}, sorcery: reanimate a creature from your graveyard;
+/// if it would leave the battlefield, it's exiled instead.
 pub fn geth_thane_of_contracts() -> CardDefinition {
     CardDefinition {
         name: "Geth, Thane of Contracts",
@@ -5477,11 +5477,7 @@ pub fn geth_thane_of_contracts() -> CardDefinition {
                         tapped: false,
                     },
                 },
-                Effect::AddCounter {
-                    what: Selector::LastMoved,
-                    kind: CounterType::Finality,
-                    amount: Value::ONE,
-                },
+                Effect::ExileIfLeavesBattlefield { what: Selector::LastMoved },
             ]),
             ..Default::default()
         }],

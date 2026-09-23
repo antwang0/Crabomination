@@ -286,8 +286,9 @@ pub fn spear_of_heliod() -> CardDefinition {
 
 /// Whip of Erebos — {2}{B}{B} Legendary Enchantment. Creatures you control
 /// have lifelink. {2}{B}{B}, {T}: Return target creature card from your
-/// graveyard to the battlefield. It gains haste. Exile it at the next end
-/// step.
+/// graveyard to the battlefield. It gains haste. Exile it at the beginning
+/// of the next end step. If it would leave the battlefield, exile it instead
+/// of putting it anywhere else.
 pub fn whip_of_erebos() -> CardDefinition {
     use crate::effect::{DelayedTriggerKind, ZoneDest};
     CardDefinition {
@@ -315,6 +316,7 @@ pub fn whip_of_erebos() -> CardDefinition {
                     keyword: Keyword::Haste,
                     duration: Duration::EndOfTurn,
                 },
+                Effect::ExileIfLeavesBattlefield { what: Selector::Target(0) },
                 Effect::DelayUntil {
                     kind: DelayedTriggerKind::NextEndStep,
                     body: Box::new(Effect::Move {

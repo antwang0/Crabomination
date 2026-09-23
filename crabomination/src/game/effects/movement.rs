@@ -2722,7 +2722,38 @@ impl GameState {
         });
     }
 
+    /// CR 614 — [`Effect::ExileIfLeavesBattlefield`]: a replacement bound
+    /// to `id` rewriting its next trip off the battlefield to exile.
+    /// [`on_left_battlefield`](Self::on_left_battlefield) drops it, since
+    /// the object that comes back is a new one (CR 400.7).
+    pub(crate) fn exile_if_leaves_battlefield(&mut self, id: CardId) {
+        use crate::card::Zone;
+        use crate::replacement::{ReplacementEffect, ReplacementId, ReplacementSource};
+        if self.battlefield_find(id).is_none() {
+            return;
+        }
+        self.register_replacement(ReplacementEffect {
+            id: ReplacementId(0),
+            source: ReplacementSource::Card(id),
+            from: Some(Zone::Battlefield),
+            to_zones: vec![Zone::Graveyard, Zone::Hand, Zone::Library],
+            redirect_to: Zone::Exile,
+            optional: false,
+        });
+    }
+
     pub(crate) fn on_left_battlefield(&mut self, id: CardId, events: &mut Vec<GameEvent>) {
+        // CR 400.7 — a leaves-the-battlefield replacement bound to this
+        // object (`exile_if_leaves_battlefield`) is spent with it.
+        if self.replacement_effects.iter().any(|r| {
+            r.from == Some(crate::card::Zone::Battlefield)
+                && r.source == crate::replacement::ReplacementSource::Card(id)
+        }) {
+            self.replacement_effects.retain(|r| {
+                r.from != Some(crate::card::Zone::Battlefield)
+                    || r.source != crate::replacement::ReplacementSource::Card(id)
+            });
+        }
         self.return_linked_exiles(id, events);
         // CR 702.26 — permanents phased out "until [this] leaves the
         // battlefield" (Out of Time) phase in now.

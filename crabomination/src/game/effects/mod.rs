@@ -12424,6 +12424,14 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ExileIfLeavesBattlefield { what } => {
+                for ent in self.resolve_selector(what, ctx) {
+                    if let Some(cid) = ent.as_permanent_id() {
+                        self.exile_if_leaves_battlefield(cid);
+                    }
+                }
+                Ok(())
+            }
             Effect::ExileIfWouldDieThisTurn { what } => {
                 // Install an until-end-of-turn death replacement on each
                 // resolved permanent. `remove_from_battlefield_to_graveyard_raw`

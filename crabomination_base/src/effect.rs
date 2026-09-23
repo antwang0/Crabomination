@@ -5569,6 +5569,12 @@ pub enum Effect {
     /// later combat / removal too, not just the spell's own damage. Used by
     /// Wilt in the Heat (paired with a `DealDamage`).
     ExileIfWouldDieThisTurn { what: Selector },
+    /// CR 614 — "If [it] would leave the battlefield, exile it instead of
+    /// putting it anywhere else." Registers a replacement bound to each
+    /// resolved permanent (battlefield → graveyard / hand / library becomes
+    /// exile) that lapses when that object leaves (CR 400.7). From the
+    /// Catacombs, Whip of Erebos, Geth, Gruesome Encore, Llanowar Greenwidow.
+    ExileIfLeavesBattlefield { what: Selector },
     /// "Target instant/sorcery card in your graveyard gains flashback until
     /// end of turn; its flashback cost equals its mana cost." Installs an
     /// until-end-of-turn `granted_flashback_eot` (= the card's own mana

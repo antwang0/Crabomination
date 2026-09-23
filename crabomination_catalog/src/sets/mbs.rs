@@ -646,7 +646,7 @@ pub fn gruesome_encore() -> CardDefinition {
                 keyword: Keyword::Haste,
                 duration: Duration::EndOfTurn,
             },
-            Effect::ExileIfWouldDieThisTurn { what: Selector::LastMoved },
+            Effect::ExileIfLeavesBattlefield { what: Selector::LastMoved },
             Effect::DelayUntilWithCapture {
                 kind: crate::effect::DelayedTriggerKind::NextEndStep,
                 capture: Selector::LastMoved,

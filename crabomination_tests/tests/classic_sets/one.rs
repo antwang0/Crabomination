@@ -2827,7 +2827,9 @@ fn malcator_end_step_golem_gate() {
     assert_eq!(golems(&g), 2, "end-step golem after 3 artifacts");
 }
 
-/// Geth's anthem shrinks others; his reanimation stamps a finality counter.
+/// Geth's anthem shrinks others; his reanimation carries no finality counter
+/// (the "exile if it would leave" rider is its own replacement — CR 614,
+/// `core_rules::cr_recent105`).
 #[test]
 fn geth_anthem_and_reanimate() {
     let mut g = two_player_game();
@@ -2848,7 +2850,7 @@ fn geth_anthem_and_reanimate() {
     drain_stack(&mut g);
     let angel = g.battlefield.iter().find(|c| c.definition.name == "Serra Angel")
         .expect("reanimated");
-    assert_eq!(angel.counter_count(CounterType::Finality), 1, "finality rider");
+    assert_eq!(angel.counter_count(CounterType::Finality), 0, "not a counter");
 }
 
 /// Ichorplate Golem bumps entering oil creatures and anthems oil carriers.
