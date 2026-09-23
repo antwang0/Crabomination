@@ -130,8 +130,7 @@ all thirteen lists played (610 distinct), Clavileño **27.0 %** against a
 seat's 7.7 % — the Edgar finding again: a Vampire payoff that drains the
 whole table grows with the table.
 
-🟡 **Residuals in the list**: Master of Dark Rites (the restriction reads a
-creature spell's types, so a Demon *noncreature* spell can't use it), New
+🟡 **Residuals in the list**: New
 Blood (the text change is approximated), Secluded Courtyard (only the cast
 half of the restriction).
 
