@@ -413,3 +413,33 @@ fn cr_106_6_throne_of_eldraine_draws_only_on_chosen_color_mana() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand + 2);
 }
+
+/// CR 702.124c — Partner with: a prompting seat says yes, the search suspends
+/// for its pick, and the resumed trigger fetches the partner without leaving
+/// the "may" answer in the log.
+#[test]
+fn partner_with_search_resumes_clean_for_a_prompting_seat() {
+    use crabomination::decision::Decision;
+    let mut g = main_phase();
+    g.players[0].wants_ui = true;
+    let zndr = g.add_card_to_library(0, catalog::zndrsplt_eye_of_wisdom());
+    g.add_card_to_library(0, catalog::island());
+    let okaun = g.add_card_to_hand(0, catalog::okaun_eye_of_chaos());
+    flood(&mut g);
+    cast(&mut g, okaun, None);
+    for _ in 0..6 {
+        let Some(pending) = g.pending_decision.as_ref() else { break };
+        let answer = match &pending.decision {
+            Decision::ChooseTarget { .. } => DecisionAnswer::Target(Target::Player(0)),
+            Decision::SearchLibrary { .. } => DecisionAnswer::Search(Some(zndr)),
+            Decision::ChooseCards { candidates, .. } => {
+                DecisionAnswer::Cards(candidates.iter().take(1).map(|(id, _)| *id).collect())
+            }
+            _ => DecisionAnswer::Bool(true),
+        };
+        g.submit_decision(answer).expect("answer");
+        drain_stack(&mut g);
+    }
+    assert!(g.pending_decision.is_none());
+    assert!(g.players[0].hand.iter().any(|c| c.id == zndr), "Zndrsplt fetched");
+}

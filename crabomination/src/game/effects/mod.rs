@@ -6506,7 +6506,12 @@ impl GameState {
             Effect::MayDoBy { who, description, body } => {
                 // "That player may …" — ask `who`, then run the body as them.
                 let Some(seat) = self.resolve_player(who, ctx) else { return Ok(()) };
-                if seat == ctx.controller {
+                // The controller's own "may" is `MayDo`'s — unless this is the
+                // replay of an ask CR 800.4g re-seated ONTO the controller (the
+                // asked player had left the game): that answer is in the log,
+                // which `MayDo` doesn't read, so it leaked and the controller
+                // was asked twice.
+                if seat == ctx.controller && self.scratch.resolution_answer_log.is_empty() {
                     return self.run_effect(
                         &Effect::MayDo { description: description.clone(), body: body.clone() },
                         ctx,

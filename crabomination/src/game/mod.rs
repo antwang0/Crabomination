@@ -26194,6 +26194,11 @@ impl GameState {
                 self.battlefield_find(*tid).is_none()
                     || filter_fails(self)
                     || self.check_target_legality_with_source(t, caster, Some(card.id)).is_err()
+            } else if let Target::Player(p) = t
+                && self.players.get(*p).is_some_and(|pl| !pl.is_alive())
+            {
+                // CR 800.4a — its target player has left the game.
+                true
             } else {
                 card.is_token && filter_fails(self)
             };
@@ -26793,6 +26798,12 @@ impl GameState {
         // converge — before evaluating; an unresolved `ManaValueAtMost
         // Converged` reads false-for-everything and fizzled every
         // correctly-chosen Sundering Archaic target.
+        // CR 800.4a — a target player who has left the game is illegal too.
+        if let Some(Target::Player(p)) = target.as_ref()
+            && self.players.get(*p).is_some_and(|pl| !pl.is_alive())
+        {
+            return Ok(());
+        }
         let resolved_target = match target.as_ref() {
             // The chosen mode's filter (CR 700.2a): a later mode's target
             // checked against mode 0's filter fizzled every such trigger.

@@ -1033,10 +1033,13 @@ mod tests {
         // X to the toughest opposing creature instead of its spare mana, so
         // Judith's Deluge is a sweeper; seed 4242 is the same winner two
         // turns sooner.
+        // Re-blessed 2026-09-23 (CR 800.4a): a player who has left the game is
+        // no longer a legal target, so nothing is aimed at a departed seat and
+        // a trigger that was is countered. Seeds 43 and 4242: same winners.
         const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
             (0xC0FFEE, Some(1), 52, 2248),
-            (43, Some(3), 50, 2107),
-            (4242, Some(2), 51, 2238),
+            (43, Some(3), 57, 2394),
+            (4242, Some(2), 53, 2245),
         ];
         let decks = rofellos_pod(4);
         let t = build_pod_template(&decks);

@@ -5557,3 +5557,70 @@ fn a_council_ballot_never_votes_for_the_voters_own_permanent_when_another_is_leg
         "and a ballot of only your own still returns a legal vote",
     );
 }
+
+/// CR 800.4a / 608.2b — a player who has left the game is an illegal target:
+/// Okaun's Partner-with trigger aimed at a seat that then leaves is countered
+/// on resolution. It used to resolve, re-seat the departed target's "may"
+/// onto its controller (CR 800.4g) and search the departed seat's library.
+#[test]
+fn cr_608_2b_a_trigger_aimed_at_a_departed_player_is_countered() {
+    use crabomination::decision::DecisionAnswer;
+    let mut g = multi_player_game(3);
+    for p in g.players.iter_mut() {
+        p.wants_ui = true;
+    }
+    g.add_card_to_library(1, catalog::zndrsplt_eye_of_wisdom());
+    let okaun = g.add_card_to_battlefield(0, catalog::okaun_eye_of_chaos());
+    g.fire_self_etb_triggers(okaun, 0);
+    if g.pending_decision.is_some() {
+        g.submit_decision(DecisionAnswer::Target(Target::Player(1))).expect("aim at seat 1");
+    }
+    // "Target player": aim it at seat 1 whatever the auto-target picked.
+    match g.stack.last_mut() {
+        Some(crabomination::game::types::StackItem::Trigger { target, .. }) => {
+            *target = Some(Target::Player(1));
+        }
+        other => panic!("the trigger waits on the stack, got {other:?}"),
+    }
+    g.players[1].life = 0;
+    g.check_state_based_actions();
+    assert!(!g.players[1].is_alive());
+    g.resolve_top_of_stack().expect("resolve");
+    assert!(g.pending_decision.is_none(), "nobody is asked: the trigger was countered");
+    assert!(g.stack.is_empty());
+}
+
+/// CR 800.4g — a "that player may" re-seated ONTO its controller (the
+/// departed chooser was a teammate) is asked once. The replay used to fall into `MayDo`, which
+/// doesn't read the answer log: the controller was asked a second time and
+/// the first answer leaked (`CRAB_ANSWER_LOG=strict`, a 25-seat debug pod).
+#[test]
+fn cr_800_4g_a_may_reseated_onto_its_controller_is_asked_once() {
+    use crabomination::decision::DecisionAnswer;
+    use crabomination::effect::{Effect, PlayerRef, Selector, Value};
+    let mut g = multi_player_game(3);
+    for p in g.players.iter_mut() {
+        p.wants_ui = true;
+    }
+    g.assign_teams(vec![vec![0, 1], vec![2]]).unwrap();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[1].eliminated = true;
+    let life = g.players[0].life;
+    g.stack.push(
+        crabomination::game::types::TriggerPush::new(
+            bear,
+            0,
+            Effect::MayDoBy {
+                who: PlayerRef::Seat(1),
+                description: "Gain 1?".into(),
+                body: Box::new(Effect::GainLife { who: Selector::You, amount: Value::ONE }),
+            },
+        )
+        .build(),
+    );
+    g.resolve_top_of_stack().expect("resolve");
+    assert_eq!(g.pending_decision.as_ref().map(|p| p.acting_player()), Some(0), "re-seated on seat 0");
+    g.submit_decision(DecisionAnswer::Bool(true)).expect("yes");
+    assert!(g.pending_decision.is_none(), "asked once");
+    assert_eq!(g.players[0].life, life + 1);
+}

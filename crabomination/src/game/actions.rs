@@ -12722,6 +12722,12 @@ impl GameState {
             return Err(GameError::InvalidTarget);
         }
         let cid = match target {
+            // CR 800.4a / 608.2b — a player who has left the game is no longer
+            // a legal target: an ability aimed at them is countered on
+            // resolution rather than re-seated onto someone else.
+            Target::Player(p) if self.players.get(*p).is_some_and(|pl| !pl.is_alive()) => {
+                return Err(GameError::InvalidTarget);
+            }
             Target::Player(p) => {
                 if self.player_has_static_shroud(*p)
                     || (*p != caster
