@@ -10721,9 +10721,24 @@ fn trim_attacks_to_payable_tax(
     // Measured against the engine's auto-tap, not estimated — see
     // `payable_generic_budget` for why an over-counted budget is a rejected
     // declaration rather than an optimistic bot.
-    let budget = payable_generic_budget(state, seat, total);
+    let mut budget = payable_generic_budget(state, seat, total);
     if total <= budget {
         return;
+    }
+    // At a table, a tax is usually one player's (Ghostly Prison taxes attacks
+    // on *its controller*): aim each taxed attacker at the cheapest legal
+    // defender before dropping anyone. A must-attacker the engine calls able
+    // because some opponent is free to attack was otherwise dropped, and the
+    // batch rejected whole (CR 508.1d).
+    if super::pod_attack::retarget_taxed_attacks(state, seat, statics, &keyword_tax, attacks) {
+        let total = state.attack_tax_for(attacks, statics, keyword_tax);
+        if total == 0 {
+            return;
+        }
+        budget = payable_generic_budget(state, seat, total);
+        if total <= budget {
+            return;
+        }
     }
     // Per-attacker taxes, reached only on a taxed board the bot can't pay
     // for outright. The tax is additive per attacker with no cross terms

@@ -80,6 +80,50 @@ pub(crate) fn spread_face_attacks(
     out.extend(free[next..].iter().map(|&id| at(id, first)));
 }
 
+/// CR 508.1g — re-aim each attacker whose declared player costs a tax at the
+/// cheapest defender it may legally attack instead (a goader only if nothing
+/// else is open, CR 701.15b). Returns whether any attack moved. A duel has
+/// one defender and never moves.
+pub(crate) fn retarget_taxed_attacks(
+    state: &GameState,
+    seat: usize,
+    statics: u32,
+    keyword_tax: &impl Fn(CardId) -> u32,
+    attacks: &mut [Attack],
+) -> bool {
+    if state.players.len() <= 2 {
+        return false;
+    }
+    let defenders = state.attackable_players_for(seat);
+    let tax = |a: &Attack| state.attack_tax_for(std::slice::from_ref(a), statics, keyword_tax);
+    let mut moved = false;
+    for a in attacks.iter_mut() {
+        let AttackTarget::Player(_) = a.target else { continue };
+        let now = tax(a);
+        if now == 0 {
+            continue;
+        }
+        let Some(c) = state.battlefield.find_by_id(a.attacker) else { continue };
+        let kws = state.computed_permanent(a.attacker).map(|cp| cp.keywords().to_vec()).unwrap_or_default();
+        let best = defenders
+            .iter()
+            .copied()
+            .filter(|&d| state.attacker_target_block(seat, a.attacker, &kws, Some(d)).is_none())
+            .map(|d| {
+                let cost = tax(&Attack { attacker: a.attacker, target: AttackTarget::Player(d) });
+                (c.goaded_by.contains(&d), cost, d)
+            })
+            .min();
+        if let Some((_, cost, d)) = best
+            && cost < now
+        {
+            a.target = AttackTarget::Player(d);
+            moved = true;
+        }
+    }
+    moved
+}
+
 /// A defender whose board prohibits *some* attackers ("creatures with power
 /// 2 or less can't attack you") — the spill would have to ask which, so it
 /// leaves that seat alone.
@@ -149,5 +193,30 @@ mod tests {
         let mut out = Vec::new();
         spread_face_attacks(&g, 0, 1, bears, &mut out);
         assert_eq!(aimed(&out), [0, 6, 0, 0]);
+    }
+
+    /// CR 508.1d / 508.1g — a Juggernaut must attack if able, and it is able:
+    /// Ghostly Prison taxes only attacks on *its* controller. With no mana the
+    /// planner used to aim it at the Prison, drop it for the tax, and have the
+    /// empty declaration rejected — the bot's whole combat, twice in 40
+    /// eighteen-seat games.
+    #[test]
+    fn a_must_attacker_goes_around_a_tax_it_cannot_pay() {
+        let mut g = multi_player_game(3);
+        g.add_card_to_battlefield(1, crate::catalog::ghostly_prison());
+        let jugg = g.add_card_to_battlefield(0, crate::catalog::juggernaut());
+        g.clear_sickness(jugg);
+        g.monarch = Some(1); // the planner's defender is the Prison's controller
+        g.active_player_idx = 0;
+        g.step = TurnStep::DeclareAttackers;
+        g.priority.player_with_priority = 0;
+        let attacks = crate::server::bot::pick_attacks(&g, 0);
+        assert_eq!(
+            attacks.iter().find(|a| a.attacker == jugg).map(|a| a.target),
+            Some(AttackTarget::Player(2)),
+            "{attacks:?}"
+        );
+        let mut g2 = g.clone();
+        g2.declare_attackers(attacks).expect("a legal declaration");
     }
 }

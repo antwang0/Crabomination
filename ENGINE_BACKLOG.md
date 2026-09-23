@@ -116,11 +116,12 @@ the handoff.
 - ✅ **CR 701.15b — the bot aimed a goaded attacker at its goader**, and the engine
   rejected the whole declaration: 12 lost combats in 40 eighteen-seat games (seed
   9990). `goad_legal_target` re-aims after `pod_attack::spread_face_attacks`.
-- 🔴 OPEN — **the search's attack menu can still leave a forced attacker home**:
-  `repair_attack_subsets` restores an obliged attacker only if the *greedy*
-  declaration has it, so an empty subset stays empty when greedy lacks it too (2
-  `CannotAttack` rejections in the same 40 games; the bot recovers next poll). One
-  stale-attacker rejection (`CardNotOnBattlefield`) in the same run.
+- ✅ **A must-attacker dropped for a tax it didn't have to pay** (2 `CannotAttack`
+  rejections in the same 40 games — first misread as the attack menu). The engine calls
+  a creature able if *some* opponent can be attacked affordably; Ghostly Prison taxes
+  only attacks on its controller, but the planner aimed everything at one taxed seat and
+  the tax trim dropped the forced attacker. `pod_attack::retarget_taxed_attacks` re-aims
+  a taxed attacker at the cheapest legal defender first: 0 rejections in those 40 games.
 - 🔴 OPEN — **a mana ability with an activation `condition` is never auto-tapped.**
   `mana_shape::is_countable_mana_ability` excludes any `condition`, so the payment
   planner skips Whisperer of the Wilds' ferocious {G}{G} and Glistening Sphere's
