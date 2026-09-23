@@ -385,3 +385,31 @@ fn throne_of_eldraine_mana_is_chosen_color_monocolored_only() {
     cast(&mut g, bombardiers, None);
     assert!(g.battlefield_find(bombardiers).is_some(), "a mono-red spell can");
 }
+
+/// CR 106.6 — Throne of Eldraine's draw ability takes only mana of the chosen
+/// color: three blue can't pay it, three red can.
+#[test]
+fn cr_106_6_throne_of_eldraine_draws_only_on_chosen_color_mana() {
+    let mut g = main_phase();
+    let throne = g.add_card_to_battlefield(0, catalog::throne_of_eldraine());
+    g.battlefield_find_mut(throne).unwrap().chosen_color = Some(Color::Red);
+    let draw = GameAction::ActivateAbility {
+        card_id: throne,
+        ability_index: 1,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    };
+    for _ in 0..2 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    g.players[0].mana_pool.add(Color::Blue, 3);
+    assert!(g.perform_action(draw.clone()).is_err(), "blue mana can't pay it");
+    g.players[0].mana_pool.empty();
+    g.players[0].mana_pool.add(Color::Red, 3);
+    let hand = g.players[0].hand.len();
+    g.perform_action(draw).expect("red mana can");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 2);
+}

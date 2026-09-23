@@ -5728,7 +5728,7 @@ pub fn the_seedcore() -> CardDefinition {
                     who: PlayerRef::You,
                     pool: crate::effect::ManaPayload::Restricted(
                         Box::new(crate::effect::ManaPayload::AnyOneColor(Value::ONE)),
-                        crate::mana::SpendRestriction::CreatureOfType(CreatureType::Phyrexian),
+                        crate::mana::SpendRestriction::CreatureSpellOfType(CreatureType::Phyrexian),
                     ),
                 },
                 ..Default::default()

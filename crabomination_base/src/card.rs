@@ -6365,16 +6365,18 @@ impl CardDefinition {
         let colors = self.printed_color_set();
         let creature = self.is_creature();
         let artifact = self.is_artifact();
+        let kindred = self.card_types.contains(&CardType::Kindred);
         crate::mana::SpellKind {
             wants_converge: self.wants_converge(),
             instant_or_sorcery: self.is_instant() || self.is_sorcery(),
             artifact,
-            creature_types: if creature {
+            creature_types: if creature || kindred {
                 smallvec::SmallVec::from_slice(&self.subtypes.creature_types)
             } else {
                 smallvec::SmallVec::new()
             },
-            changeling: creature && self.keywords.has_kw(&Keyword::Changeling),
+            changeling: (creature || kindred) && self.keywords.has_kw(&Keyword::Changeling),
+            kindred,
             land_ability: false,
             creature,
             creature_ability: false,
@@ -6407,10 +6409,18 @@ impl CardDefinition {
     /// Spend-restriction context for activating an ability of this card
     /// ("… or activate abilities of artifacts" — Power Depot).
     pub fn ability_spend_kind(&self) -> crate::mana::SpellKind {
+        let creature = self.is_creature();
         crate::mana::SpellKind {
             artifact: self.is_artifact(),
             land_ability: self.is_land(),
-            creature_ability: self.is_creature(),
+            creature_ability: creature,
+            // The source's types, for "an ability of a creature of [type]".
+            creature_types: if creature {
+                smallvec::SmallVec::from_slice(&self.subtypes.creature_types)
+            } else {
+                smallvec::SmallVec::new()
+            },
+            changeling: creature && self.keywords.has_kw(&Keyword::Changeling),
             activating_ability: true,
             equipment: self.is_equipment(),
             ..Default::default()

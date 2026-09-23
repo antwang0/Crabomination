@@ -472,6 +472,11 @@ pub enum StaticEffect {
     /// `ManaCost::reduce_by_cost`, so an unmatched colored pip falls back to
     /// removing one generic instead. Mandatory, like every cost reduction.
     ColoredCostReduction { filter: SelectionRequirement, less: crate::mana::ManaCost },
+    /// CR 601.2f / 118.3 — "As an additional cost to cast [filter] spells, you
+    /// may pay 2 life. Those spells cost {C} less to cast if you paid life
+    /// this way" (the Defiler cycle). One `{C}` pip becomes `{C/P}`: the
+    /// payment already pays that with 2 life exactly when `C` is missing.
+    PhyrexianPipForSpells { filter: SelectionRequirement, color: crate::mana::Color },
     /// CR 601.2f — "[filter] spells you cast cost `more` more to cast", where
     /// `more` names COLORED pips (the Invasion Leech cycle's "{W} more"). Only
     /// the source's controller pays it; applied before any reduction so a
@@ -3042,6 +3047,12 @@ pub struct ActivatedAbility {
     /// The announced X becomes that many coloured pips instead of generic.
     #[serde(default)]
     pub x_mana_color: Option<crate::mana::Color>,
+    /// CR 106.6 — "Spend only mana of the chosen color to activate this
+    /// ability" (Throne of Eldraine). The final cost's generic pips become
+    /// pips of the source's chosen color: paying {3} with only that color's
+    /// mana IS paying three of its pips. No chosen color leaves it unchanged.
+    #[serde(default)]
+    pub spend_only_chosen_color: bool,
     /// True if this ability is activated from the controller's graveyard
     /// rather than the battlefield. The activation walker searches the
     /// graveyard for the source instead of the battlefield. Used by

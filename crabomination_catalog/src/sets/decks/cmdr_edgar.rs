@@ -10,9 +10,6 @@
 //!   order (the engine's gift model has no recipient choice).
 //! - **Gleaming Splendor** — "two target players" are two player slots; the
 //!   engine does not require them to be distinct.
-//! - **Master of Dark Rites** — the Vampire/Cleric/Demon restriction reads a
-//!   creature spell's types, so a noncreature Kindred Vampire spell can't spend
-//!   it.
 //! - **Necropotence** — the exiled card is exiled face up, and it returns at
 //!   the next end step (any player's), not strictly "your next end step".
 //! - **Drana and Linvala** — the "spend mana as though it were mana of any
@@ -390,8 +387,7 @@ pub fn sanctum_seeker() -> CardDefinition {
 
 /// Master of Dark Rites — {B} Creature — Vampire Cleric 1/1. "{T}, Sacrifice
 /// another creature: Add {B}{B}{B}. Spend this mana only to cast Vampire,
-/// Cleric, and/or Demon spells." (The restriction reads a creature spell's
-/// types — see the module residuals.)
+/// Cleric, and/or Demon spells." (A Kindred spell counts — `SpellKind.kindred`.)
 pub fn master_of_dark_rites() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![ActivatedAbility {

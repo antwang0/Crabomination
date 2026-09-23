@@ -64,9 +64,9 @@ pub fn su_chi() -> CardDefinition {
 }
 
 /// Secluded Courtyard — Land. As it enters, choose a creature type. {T}: Add
-/// {C}. {T}: Add one mana of any color, spendable only on a creature spell of
-/// the chosen type. (The "or activate an ability of a creature of the chosen
-/// type" half of the restriction is approximated to the cast clause.)
+/// {C}. {T}: Add one mana of any color. Spend this mana only to cast a
+/// creature spell of the chosen type or activate an ability of a creature or
+/// creature card of the chosen type.
 pub fn secluded_courtyard() -> CardDefinition {
     CardDefinition {
         name: "Secluded Courtyard",
@@ -87,7 +87,7 @@ pub fn secluded_courtyard() -> CardDefinition {
                 tap_cost: true,
                 effect: Effect::AddMana {
                     who: PlayerRef::You,
-                    pool: ManaPayload::RestrictedToChosenTypePlain(Box::new(
+                    pool: ManaPayload::RestrictedToChosenTypeOrAbility(Box::new(
                         ManaPayload::AnyOneColor(Value::Const(1)),
                     )),
                 },

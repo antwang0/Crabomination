@@ -11614,7 +11614,19 @@ impl GameState {
                             .and_then(|c| c.chosen_creature_type);
                         (
                             inner.as_ref(),
-                            chosen.map(crate::mana::SpendRestriction::CreatureOfType),
+                            chosen.map(crate::mana::SpendRestriction::CreatureSpellOfType),
+                        )
+                    }
+                    // Secluded Courtyard: the chosen type's creature spells
+                    // and its creatures' abilities.
+                    ManaPayload::RestrictedToChosenTypeOrAbility(inner) => {
+                        let chosen = ctx
+                            .source
+                            .and_then(|cid| self.battlefield_find(cid))
+                            .and_then(|c| c.chosen_creature_type);
+                        (
+                            inner.as_ref(),
+                            chosen.map(crate::mana::SpendRestriction::CreatureOfTypeOrItsAbility),
                         )
                     }
                     // Throne of Eldraine: bound to the source's chosen color.
@@ -12200,6 +12212,7 @@ impl GameState {
                     ManaPayload::Restricted(..)
                     | ManaPayload::RestrictedToChosenType(..)
                     | ManaPayload::RestrictedToChosenTypePlain(..)
+                    | ManaPayload::RestrictedToChosenTypeOrAbility(..)
                     | ManaPayload::RestrictedToChosenColorMono(..) => {
                         // One unwrap above already stripped the restriction;
                         // no card nests wrappers, so a doubly-wrapped payload
