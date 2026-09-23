@@ -3816,6 +3816,9 @@ impl GameState {
             R::IsAttackingYou => Some(self.creature_is_attacking_seat(cid, controller)),
             R::OtherThanSource => Some(source.is_none_or(|s| cid != s)),
             R::IsSource => Some(source == Some(cid)),
+            R::PutOntoBattlefieldBySource => {
+                Some(source.is_some() && card.put_onto_battlefield_by == source)
+            }
             R::IsSpellOnStack => Some(self.stack.iter().any(
                 |si| matches!(si, StackItem::Spell { card: c, .. } if c.id == cid),
             )),
@@ -4961,6 +4964,10 @@ impl GameState {
                         .and_then(|s| s.chosen_permanent)
                         .is_none_or(|chosen| *cid != chosen),
                     R::IsSource => source == Some(*cid),
+                    R::PutOntoBattlefieldBySource => {
+                        source.is_some()
+                            && self.battlefield_find(*cid).is_some_and(|c| c.put_onto_battlefield_by == source)
+                    }
                     R::NotSacrificedThisResolution => {
                         !self.scratch.cards_sacrificed_this_resolution.contains(cid)
                     }
@@ -5752,6 +5759,7 @@ impl GameState {
             R::NotSourcesChosenPermanent => true,
             // A card in another zone is never the battlefield source.
             R::IsSource => false,
+            R::PutOntoBattlefieldBySource => false,
             R::NotSacrificedThisResolution => {
                 !self.scratch.cards_sacrificed_this_resolution.contains(&card.id)
             }

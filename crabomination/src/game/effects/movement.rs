@@ -2826,6 +2826,7 @@ impl GameState {
                 || c.cast_via_flashback
                 || c.cast_from_suspend
                 || c.cast_from_escape
+                || c.put_onto_battlefield_by.is_some()
             {
                 let c = &mut **c;
                 c.cast_from_hand = false;
@@ -2835,6 +2836,7 @@ impl GameState {
                 c.cast_via_flashback = false;
                 c.cast_from_suspend = false;
                 c.cast_from_escape = false;
+                c.put_onto_battlefield_by = None;
             }
         }
         // CR 611.2c — continuous effects aimed at this specific permanent

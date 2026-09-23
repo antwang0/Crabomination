@@ -2999,6 +2999,10 @@ pub enum SelectionRequirement {
     /// *is* the ability's source. Lets a cost name the permanent itself
     /// ("Return this enchantment to its owner's hand:" — Attunement).
     IsSource,
+    /// The candidate permanent was put onto the battlefield by the ability's
+    /// source (`CardData::put_onto_battlefield_by`) — Kodama of the East
+    /// Tree's "if it wasn't put onto the battlefield with this ability".
+    PutOntoBattlefieldBySource,
     /// True when the candidate card is currently in some player's graveyard
     /// zone. Used to restrict zone-spanning trigger targets — e.g.
     /// Ascendant Dustspeaker / Lorehold Acolyte's "exile up to one target
@@ -8290,6 +8294,10 @@ pub struct CardData {
     /// Treasure provenance fell during its payment). Read by
     /// `Predicate::CastWithTreasureMana`. Not serialized.
     pub cast_with_treasure_mana: bool,
+    /// The source whose `PutFromHandOntoBattlefield` put this permanent onto
+    /// the battlefield; cleared as it leaves (CR 400.7). Read by
+    /// `SelectionRequirement::PutOntoBattlefieldBySource`. Not serialized.
+    pub put_onto_battlefield_by: Option<CardId>,
     /// CR 702.187 — true if this card was cast from a graveyard for its Mayhem
     /// cost. Read by `Predicate::SpellWasMayhem` so "if this spell's mayhem cost
     /// was paid" riders (Sandman's Quicksand) can branch. Cleared off the stack.
@@ -9107,6 +9115,7 @@ impl CardInstance {
             plot_on_resolve: false,
             exile_with_on_resolve: None,
             cast_with_treasure_mana: false,
+            put_onto_battlefield_by: None,
             cast_via_mayhem: false,
             cast_via_waterbend: false,
             cast_collected_evidence: false,

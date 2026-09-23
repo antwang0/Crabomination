@@ -21717,6 +21717,13 @@ impl GameState {
                     // Only move cards that are still in the hand and match.
                     if !self.players[p].hand.iter().any(|c| c.id == cid) { continue; }
                     self.move_card_to(cid, &dest, ctx, events);
+                    // Kodama of the East Tree's loop guard reads who put it
+                    // here; stamped after the move, which starts the object.
+                    if let Some(src) = ctx.source
+                        && let Some(c) = self.battlefield_find_mut(cid)
+                    {
+                        c.put_onto_battlefield_by = Some(src);
+                    }
                     // Expose the entrant on `Selector::LastMoved` so the
                     // "if you do" rider can reach it (Oviya's counters).
                     self.scratch.last_moved_cards.push(cid);
