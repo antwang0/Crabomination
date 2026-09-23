@@ -9512,6 +9512,26 @@ short to say so.
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
 
+### GUARDRAIL 2026-09-23 — five precons, the overkill spill, the combat-only window
+
+`--bench`, `release-fast`, `CRAB_THREAD_CHECK=1`, at `a8205adc`:
+
+```text
+  decisions          195,806   byte-identical to the committed invariant
+  turns_per_game       27.49   "
+  decisions_per_game   611.9   "
+  stalls          0 (cap 0 / board 0 / stuck 0 / draw 0)
+  determinism     ok (all pairs split); thread_determinism ok (3 vs 1)
+  peak_rss_mib     32.4
+
+bench_ab.py, 16 pairs, A = 828a2b6b (this session's start), B = a8205adc
+  games/s  A median 453.61 / B median 455.86   paired B/A median +1.20 %, sd 5.40
+```
+
+No regression: the spill (`server/pod_attack.rs`) returns before allocating at
+two seats, the combat-only pick is a hand walk that finds nothing in the fixed
+pool, and the batch/unattach hooks are behind flags no fixed-pool card sets.
+
 ### GUARDRAIL 2026-09-20 — the multi-slot trick fix moves SEVEN cards and NONE of them is in a pool
 
 `--bench` on the fix, `release-fast`, `CRAB_THREAD_CHECK=1`:
