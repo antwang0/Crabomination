@@ -8262,6 +8262,11 @@ pub struct CardData {
     /// "whenever you cast a spell from your library" payoffs (Melek, Izzet
     /// Paragon). Cleared when the card leaves the stack.
     pub cast_from_library: bool,
+    /// True if this card was cast from a graveyard on its current trip
+    /// through the stack (flashback, escape, retrace, a graveyard-cast grant).
+    /// Kept on the permanent it becomes, like `cast_from_hand`. River
+    /// Kelpie's "whenever a player casts a spell from a graveyard".
+    pub cast_from_graveyard: bool,
     /// One-shot permission to cast this MDFC's **back face from the
     /// graveyard**. Set by `Effect::GrantCastBackFromGraveyard` once the card
     /// is in the graveyard; consumed (cleared) by `cast_spell_back_face` when
@@ -9054,6 +9059,7 @@ impl CardInstance {
             cast_collected_evidence: false,
             cast_from_exile: false,
             cast_from_library: false,
+            cast_from_graveyard: false,
             may_cast_back_from_graveyard: false,
             chosen_creature_type: None,
             chosen_land_type: None,
@@ -10286,6 +10292,8 @@ struct CardInstanceWire {
     #[serde(default)]
     cast_from_library: bool,
     #[serde(default)]
+    cast_from_graveyard: bool,
+    #[serde(default)]
     modes_chosen: Vec<u8>,
     #[serde(default)]
     may_cast_back_from_graveyard: bool,
@@ -10548,6 +10556,7 @@ impl serde::Serialize for CardInstance {
             cast_collected_evidence: self.cast_collected_evidence,
             cast_from_exile: self.cast_from_exile,
             cast_from_library: self.cast_from_library,
+            cast_from_graveyard: self.cast_from_graveyard,
             modes_chosen: self.modes_chosen.clone(),
             may_cast_back_from_graveyard: self.may_cast_back_from_graveyard,
             chosen_creature_type: self.chosen_creature_type,
@@ -10710,6 +10719,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.cast_collected_evidence = wire.cast_collected_evidence;
         c.cast_from_exile = wire.cast_from_exile;
         c.cast_from_library = wire.cast_from_library;
+        c.cast_from_graveyard = wire.cast_from_graveyard;
         c.modes_chosen = wire.modes_chosen;
         c.chosen_creature_type = wire.chosen_creature_type;
         c.chosen_land_type = wire.chosen_land_type;

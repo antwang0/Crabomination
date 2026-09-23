@@ -1966,6 +1966,10 @@ pub enum Predicate {
     /// Melek, Izzet Paragon's "whenever you cast an instant or sorcery spell
     /// from your library, copy it".
     CastSpellFromLibrary,
+    /// True if the just-cast spell (via `ctx.trigger_source`) was cast from a
+    /// graveyard — reads `StackItem::Spell.card.cast_from_graveyard`. River
+    /// Kelpie's "whenever a player casts a spell from a graveyard".
+    CastSpellFromGraveyard,
     /// True if `ctx.source` (the listening permanent's id) is currently
     /// in the engine's `permanents_gained_counter_this_turn` set — i.e.
     /// the listening permanent has had one or more counters put on it

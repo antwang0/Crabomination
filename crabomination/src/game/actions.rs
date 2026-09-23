@@ -7015,6 +7015,7 @@ impl GameState {
         card.cast_from_hand = true;
         card.cast_from_exile = false;
         card.cast_from_library = self.casting_hop == Some((card_id, crate::game::HopFrom::LibraryTop));
+        card.cast_from_graveyard = self.casting_hop == Some((card_id, crate::game::HopFrom::Graveyard));
         card.adventuring = true;
         let mut events = receipt.auto_events;
         events.push(GameEvent::SpellCast { player: p, card_id, face: CastFace::Front });
@@ -7087,6 +7088,7 @@ impl GameState {
         card.cast_from_hand = true;
         card.cast_from_exile = false;
         card.cast_from_library = self.casting_hop == Some((card_id, crate::game::HopFrom::LibraryTop));
+        card.cast_from_graveyard = self.casting_hop == Some((card_id, crate::game::HopFrom::Graveyard));
         card.omen_casting = true;
         let mut events = receipt.auto_events;
         events.push(GameEvent::SpellCast { player: p, card_id, face: CastFace::Front });
@@ -7258,6 +7260,7 @@ impl GameState {
         card.cast_from_hand = true;
         card.cast_from_exile = false;
         card.cast_from_library = self.casting_hop == Some((card_id, crate::game::HopFrom::LibraryTop));
+        card.cast_from_graveyard = self.casting_hop == Some((card_id, crate::game::HopFrom::Graveyard));
         card.split_cast = Some(if fused { 2 } else { 1 });
         let mut events = receipt.auto_events;
         events.push(GameEvent::SpellCast { player: p, card_id, face: CastFace::Front });
@@ -7335,6 +7338,7 @@ impl GameState {
         let mut card = Self::take_card(&mut self.players[p].graveyard, card_id)
             .ok_or(GameError::CardNotInGraveyard(card_id))?;
         card.cast_from_hand = false;
+        card.cast_from_graveyard = true;
         card.split_cast = Some(1);
         let mut events = receipt.auto_events;
         events.push(GameEvent::SpellCast { player: p, card_id, face: CastFace::Front });
@@ -7917,6 +7921,7 @@ impl GameState {
         card.cast_from_hand = true;
         card.cast_from_exile = false;
         card.cast_from_library = self.casting_hop == Some((card_id, crate::game::HopFrom::LibraryTop));
+        card.cast_from_graveyard = self.casting_hop == Some((card_id, crate::game::HopFrom::Graveyard));
         // CR 701.67 — a mandatory "waterbend {N}" rider is paid even on the
         // plain cast path; only the optional "you may waterbend" form is
         // skippable. When no explicit amount arrived via CastSpellWaterbend,
@@ -10608,6 +10613,7 @@ impl GameState {
         // and payment side effects may have reshuffled the graveyard.
         let mut card = Self::take_card(&mut self.players[p].graveyard, card_id)
             .ok_or(GameError::CardNotInHand(card_id))?;
+        card.cast_from_graveyard = true;
         self.players[p].cards_left_graveyard_this_turn =
             self.players[p].cards_left_graveyard_this_turn.saturating_add(1);
         self.entered_from_graveyard_this_turn.insert(card_id);
@@ -11008,6 +11014,7 @@ impl GameState {
             .take_from_playable_graveyard(p, card_id)
             .ok_or(GameError::CardNotInHand(card_id))?;
         self.entered_from_graveyard_this_turn.insert(card_id);
+        card.cast_from_graveyard = true;
         card.cast_via_flashback = !plain_graveyard_cast;
         // CR 702.187 — a Mayhem cast stamps the spell so "if the mayhem cost
         // was paid" riders can branch at resolution (Sandman's Quicksand).
@@ -11100,8 +11107,9 @@ impl GameState {
         // resolution and can be retraced again.
         // Re-locate by id: payment + the land discard above ran after the
         // initial scan and can reshuffle the graveyard.
-        let card = Self::take_card(&mut self.players[p].graveyard, card_id)
+        let mut card = Self::take_card(&mut self.players[p].graveyard, card_id)
             .ok_or(GameError::CardNotInHand(card_id))?;
+        card.cast_from_graveyard = true;
         self.players[p].cards_left_graveyard_this_turn =
             self.players[p].cards_left_graveyard_this_turn.saturating_add(1);
         events.push(GameEvent::CardLeftGraveyard { player: p, card_id });
@@ -11203,6 +11211,7 @@ impl GameState {
         // Stamp the escape-cast flag so the "sacrifice unless it escaped"
         // ETB rider on Kroxa/Uro sees this entered via Escape.
         card.cast_from_escape = true;
+        card.cast_from_graveyard = true;
         if let Some(src) = once_grant {
             self.players[p].graveyard_sac_cast_sources_this_turn.push(src);
         }
@@ -11469,6 +11478,7 @@ impl GameState {
         // Stamp the cast-zone flag for "cast a spell from exile" payoffs.
         card.cast_from_exile = matches!(source_zone, Zone::Exile);
         card.cast_from_library = matches!(source_zone, Zone::Library);
+        card.cast_from_graveyard = matches!(source_zone, Zone::Graveyard);
         // Route to exile on resolve when the granting effect demands it
         // (Nita's "if would go to graveyard, exile instead").
         if exile_after {
@@ -12155,6 +12165,7 @@ impl GameState {
         card.cast_from_hand = from_hand;
         card.cast_from_exile = false;
         card.cast_from_library = from_hand && self.casting_hop == Some((card_id, crate::game::HopFrom::LibraryTop));
+        card.cast_from_graveyard = from_hand && self.casting_hop == Some((card_id, crate::game::HopFrom::Graveyard));
         if alt.evoke_sacrifice {
             card.evoked = true;
         }

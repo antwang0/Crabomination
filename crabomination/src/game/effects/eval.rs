@@ -2665,6 +2665,15 @@ impl GameState {
                     _ => false,
                 })
             }
+            Predicate::CastSpellFromGraveyard => {
+                let Some(EntityRef::Card(cid)) = ctx.trigger_source else {
+                    return false;
+                };
+                self.stack.iter().any(|si| match si {
+                    StackItem::Spell { card, .. } if card.id == cid => card.cast_from_graveyard,
+                    _ => false,
+                })
+            }
             Predicate::CastSpellFromLibrary => {
                 let Some(EntityRef::Card(cid)) = ctx.trigger_source else {
                     return false;
@@ -2812,7 +2821,7 @@ impl GameState {
                     _ => return false,
                 };
                 self.entered_from_graveyard_this_turn.contains(&cid)
-                    || self.battlefield_find(cid).is_some_and(|c| !c.cast_from_hand)
+                    || self.battlefield_find(cid).is_some_and(|c| c.cast_from_graveyard)
             }
             Predicate::TriggerSourceEnteredByCast => {
                 let cid = match ctx.trigger_source {

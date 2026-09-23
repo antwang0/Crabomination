@@ -2820,6 +2820,7 @@ impl GameState {
             if c.cast_from_hand
                 || c.cast_from_exile
                 || c.cast_from_library
+                || c.cast_from_graveyard
                 || c.cast_via_flashback
                 || c.cast_from_suspend
                 || c.cast_from_escape
@@ -2828,6 +2829,7 @@ impl GameState {
                 c.cast_from_hand = false;
                 c.cast_from_exile = false;
                 c.cast_from_library = false;
+                c.cast_from_graveyard = false;
                 c.cast_via_flashback = false;
                 c.cast_from_suspend = false;
                 c.cast_from_escape = false;
