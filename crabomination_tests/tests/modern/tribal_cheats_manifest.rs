@@ -210,15 +210,16 @@ fn cursecatcher_taxes_instant() {
     assert_eq!(g.players[1].life, 20, "Bolt never resolved");
 }
 
-/// Galerider Sliver gives every Sliver flying (yours and opponents').
+/// Galerider Sliver gives the Slivers you control flying, not an opponent's.
 #[test]
-fn galerider_sliver_grants_flying_to_all_slivers() {
+fn galerider_sliver_grants_flying_to_your_slivers() {
     use crabomination::card::Keyword;
     let mut g = two_player_game();
-    g.add_card_to_battlefield(0, catalog::galerider_sliver());
+    let own = g.add_card_to_battlefield(0, catalog::galerider_sliver());
     let opp_sliver = g.add_card_to_battlefield(1, catalog::heart_sliver());
-    assert!(g.computed_permanent(opp_sliver).unwrap().keywords().contains(&Keyword::Flying),
-        "opponent's Sliver also gains flying");
+    assert!(g.computed_permanent(own).unwrap().keywords().contains(&Keyword::Flying));
+    assert!(!g.computed_permanent(opp_sliver).unwrap().keywords().contains(&Keyword::Flying),
+        "\"Sliver creatures you control\" — an opponent's Sliver doesn't fly");
 }
 
 /// Heart Sliver gives all Slivers haste.

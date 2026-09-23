@@ -1209,38 +1209,6 @@ fn baral_and_kari_zev_casts_a_lesser_instant_free_or_makes_ragavan() {
 /// does an opponent who attacks them.
 #[test]
 fn curse_of_opulence_pays_the_curser_and_the_attacker() {
-// ── Sliver Swarm (Sliver Gravemother) ───────────────────────────────────────
-
-use crabomination::card::CreatureType;
-use crabomination::decision::{DecisionAnswer, ScriptedDecider};
-
-fn has_type(g: &GameState, id: CardId, t: CreatureType) -> bool {
-    g.computed_permanent(id).is_some_and(|c| c.subtypes().creature_types.contains(&t))
-}
-
-/// CR 704.5j — the legend rule sits out for your legendary Slivers only: two
-/// Gravemothers both stay, two copies of a non-Sliver legend still collapse.
-#[test]
-fn cr_704_5j_gravemother_spares_legendary_slivers_only() {
-    let mut g = main_phase();
-    let a = g.add_card_to_battlefield(0, catalog::sliver_gravemother());
-    let b = g.add_card_to_battlefield(0, catalog::sliver_gravemother());
-    let x = g.add_card_to_battlefield(0, catalog::anowon_the_ruin_thief());
-    let y = g.add_card_to_battlefield(0, catalog::anowon_the_ruin_thief());
-    g.check_state_based_actions();
-    assert!(g.battlefield_find(a).is_some() && g.battlefield_find(b).is_some());
-    assert_eq!(
-        [x, y].iter().filter(|id| g.battlefield_find(**id).is_some()).count(),
-        1,
-        "the non-Sliver legends still obey the rule"
-    );
-}
-
-/// CR 702.141 — a Sliver creature card in your graveyard has encore {X}, X its
-/// mana value: one hasty attacking token copy per opponent. A non-Sliver
-/// creature card gets nothing.
-#[test]
-fn cr_702_141_gravemother_grants_encore_x_to_sliver_cards() {
     let mut g = multi_player_game(3);
     g.active_player_idx = 0;
     g.step = TurnStep::PreCombatMain;
@@ -1360,6 +1328,67 @@ fn will_of_the_jeskai_grants_flashback_with_a_commander() {
     flood(&mut g, 0);
     g.perform_action(GameAction::CastFromCommandZone {
         card_id: cmd,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+        alternative: false,
+        pitch_card: None,
+    })
+    .expect("commander");
+    drain_stack(&mut g);
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let will = g.add_card_to_hand(0, catalog::will_of_the_jeskai());
+    cast(&mut g, will, &[]);
+    let life = g.players[1].life;
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastFlashback {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("flashback Bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 3);
+}
+
+// ── Sliver Swarm (Sliver Gravemother) ───────────────────────────────────────
+
+use crabomination::card::CreatureType;
+use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+
+fn has_type(g: &GameState, id: CardId, t: CreatureType) -> bool {
+    g.computed_permanent(id).is_some_and(|c| c.subtypes().creature_types.contains(&t))
+}
+
+/// CR 704.5j — the legend rule sits out for your legendary Slivers only: two
+/// Gravemothers both stay, two copies of a non-Sliver legend still collapse.
+#[test]
+fn cr_704_5j_gravemother_spares_legendary_slivers_only() {
+    let mut g = main_phase();
+    let a = g.add_card_to_battlefield(0, catalog::sliver_gravemother());
+    let b = g.add_card_to_battlefield(0, catalog::sliver_gravemother());
+    let x = g.add_card_to_battlefield(0, catalog::anowon_the_ruin_thief());
+    let y = g.add_card_to_battlefield(0, catalog::anowon_the_ruin_thief());
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(a).is_some() && g.battlefield_find(b).is_some());
+    assert_eq!(
+        [x, y].iter().filter(|id| g.battlefield_find(**id).is_some()).count(),
+        1,
+        "the non-Sliver legends still obey the rule"
+    );
+}
+
+/// CR 702.141 — a Sliver creature card in your graveyard has encore {X}, X its
+/// mana value: one hasty attacking token copy per opponent. A non-Sliver
+/// creature card gets nothing.
+#[test]
+fn cr_702_141_gravemother_grants_encore_x_to_sliver_cards() {
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
     g.add_card_to_battlefield(0, catalog::sliver_gravemother());
     let s = g.add_card_to_graveyard(0, catalog::capricious_sliver());
     let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
@@ -1634,26 +1663,6 @@ fn pillar_of_origins_funds_only_the_chosen_type() {
         additional_targets: vec![],
         mode: None,
         x_value: None,
-        alternative: false,
-        pitch_card: None,
-    })
-    .expect("commander");
-    drain_stack(&mut g);
-    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
-    let will = g.add_card_to_hand(0, catalog::will_of_the_jeskai());
-    cast(&mut g, will, &[]);
-    let life = g.players[1].life;
-    flood(&mut g, 0);
-    g.perform_action(GameAction::CastFlashback {
-        card_id: bolt,
-        target: Some(Target::Player(1)),
-        additional_targets: vec![],
-        mode: None,
-        x_value: None,
-    })
-    .expect("flashback Bolt");
-    drain_stack(&mut g);
-    assert_eq!(g.players[1].life, life - 3);
     })
     .expect("{1} + the Pillar's green");
 }
