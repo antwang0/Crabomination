@@ -1758,6 +1758,10 @@ pub enum Keyword {
     /// or a transient grant from a pump spell (Duel Tactics, Volley
     /// Veteran). Enforced inside `declare_blockers` — any blocker
     /// declaration involving a creature with this keyword is rejected.
+    /// CR 701.16 — "can't be sacrificed" (Assault Suit's equipped creature).
+    /// Read by the sacrifice funnels: effect candidates, `sacrifice_one`, and
+    /// the activation-cost sacrifice walkers.
+    CantBeSacrificed,
     CantBlock,
     /// CR 509.1b — "This creature can't block creatures with power N or
     /// greater" (Ironclaw Orcs, Ironclaw Buzzardiers). Enforced against the

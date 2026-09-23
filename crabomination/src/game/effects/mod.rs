@@ -2692,7 +2692,18 @@ impl GameState {
     /// `PermanentSacrificed`) and route it to the graveyard, firing dies/LTB
     /// triggers. Shared by the auto-pick path and the interactive
     /// `SacrificePending` resume so both behave identically.
+    /// CR 701.16 — false for a permanent with `Keyword::CantBeSacrificed`
+    /// (Assault Suit), read off the layer view so a granted one counts.
+    pub(crate) fn can_be_sacrificed(&self, id: CardId) -> bool {
+        !self
+            .computed_permanent(id)
+            .is_some_and(|c| c.keywords().contains(&crate::card::Keyword::CantBeSacrificed))
+    }
+
     pub fn sacrifice_one(&mut self, id: CardId, who: usize, events: &mut Vec<GameEvent>) {
+        if !self.can_be_sacrificed(id) {
+            return;
+        }
         // Stamp the resolution scratch so `Value::Sacrificed*` and the
         // `ManaValue*Sacrificed*` filters read this sacrifice (Kethek's
         // "lesser mana value" dig).
@@ -2749,6 +2760,7 @@ impl GameState {
                         player,
                         source,
                     )
+                    && self.can_be_sacrificed(c.id)
             })
             .map(|c| c.id)
             .collect()
@@ -28876,25 +28888,78 @@ impl GameState {
             // Harsh Mercy / Patriarch's Bidding — every seat names a type in
             // APNAP order, then the body reads the union. Multi-seat picks go
             // through the synchronous decider (same gap as TemptingOffer).
-            Effect::EachPlayerChoosesCreatureTypeThen { then } => {
+            Effect::EachPlayerChoosesCreatureTypeThen { then, per_player } => {
                 use crate::decision::{Decision, DecisionAnswer};
-                let seats = self.apnap_sort((0..self.players.len()).collect());
-                let mut chosen: Vec<crate::card::CreatureType> = Vec::new();
+                let seats = self.apnap_sort(self.living_seats().collect());
+                let mut chosen: Vec<(usize, crate::card::CreatureType)> = Vec::new();
                 for p in seats {
-                    let decision = Decision::ChooseCreatureType {
-                        excluded: Vec::new(),
-                        source: ctx.source.unwrap_or(CardId(0)),
-                        suggestions: self.creature_type_suggestions(p),
-                    };
-                    if let DecisionAnswer::CreatureType(ct) = self.decider.decide(&decision)
-                        && !chosen.contains(&ct)
+                    let suggestions = self.creature_type_suggestions(p);
+                    // The headless default names Demon for everyone; a seat
+                    // with no one to ask names its own most common type.
+                    let pick = if matches!(self.decider.kind(), crate::decision::DeciderKind::Auto)
                     {
-                        chosen.push(ct);
+                        suggestions.first().copied()
+                    } else {
+                        let decision = Decision::ChooseCreatureType {
+                            excluded: Vec::new(),
+                            source: ctx.source.unwrap_or(CardId(0)),
+                            suggestions,
+                        };
+                        match self.decider.decide(&decision) {
+                            DecisionAnswer::CreatureType(ct) => Some(ct),
+                            _ => None,
+                        }
+                    };
+                    if let Some(ct) = pick {
+                        chosen.push((p, ct));
                     }
                 }
-                self.scratch.chosen_creature_types_scratch = chosen;
-                let r = self.run_effect(then, ctx, events);
+                let r = if *per_player {
+                    // Grave Sifter — each player acts on their own pick, as
+                    // `You`, in APNAP order.
+                    let mut r = Ok(());
+                    for (p, ct) in chosen {
+                        self.scratch.chosen_creature_types_scratch = vec![ct];
+                        let mut sub = ctx.clone();
+                        sub.controller = p;
+                        r = self.run_effect(then, &sub, events);
+                        if r.is_err() {
+                            break;
+                        }
+                    }
+                    r
+                } else {
+                    let mut union: Vec<crate::card::CreatureType> = Vec::new();
+                    for (_, ct) in chosen {
+                        if !union.contains(&ct) {
+                            union.push(ct);
+                        }
+                    }
+                    self.scratch.chosen_creature_types_scratch = union;
+                    self.run_effect(then, ctx, events)
+                };
                 self.scratch.chosen_creature_types_scratch.clear();
+                r
+            }
+
+            Effect::ChooseOpponentThen { then } => {
+                // The opponent with the fewest creatures, turn order breaking
+                // ties: the gift goes where it helps least.
+                let pick = self
+                    .seats_in_turn_order_from(ctx.controller)
+                    .into_iter()
+                    .filter(|&p| p != ctx.controller && !self.same_team(p, ctx.controller))
+                    .filter(|&p| self.players[p].is_alive())
+                    .min_by_key(|&p| {
+                        self.battlefield
+                            .iter()
+                            .filter(|c| c.controller == p && c.definition.is_creature())
+                            .count()
+                    });
+                let Some(pick) = pick else { return Ok(()) };
+                let prev = self.scratch.chosen_opponent_scratch.replace(pick);
+                let r = self.run_effect(then, ctx, events);
+                self.scratch.chosen_opponent_scratch = prev;
                 r
             }
 
@@ -37780,11 +37845,13 @@ impl GameState {
                     _ => None,
                 }
             }
-            PlayerRef::ChosenPlayerOfSource => ctx.source.and_then(|s| {
-                self.battlefield_find(s)
-                    .or_else(|| self.died_card_snapshots.get(&s))
-                    .or_else(|| self.leaves_bf_lki.get(&s))
-                    .and_then(|c| c.chosen_player)
+            PlayerRef::ChosenPlayerOfSource => self.scratch.chosen_opponent_scratch.or_else(|| {
+                ctx.source.and_then(|s| {
+                    self.battlefield_find(s)
+                        .or_else(|| self.died_card_snapshots.get(&s))
+                        .or_else(|| self.leaves_bf_lki.get(&s))
+                        .and_then(|c| c.chosen_player)
+                })
             }),
             PlayerRef::OpponentOf(inner) => {
                 let of = self.resolve_player(inner, ctx)?;

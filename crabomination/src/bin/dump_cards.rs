@@ -197,7 +197,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         | Keyword::SurvivesSplitLethalDamage
         | Keyword::DamageBecomesMinusCounters
         | Keyword::Regenerate(_) | Keyword::Unblockable | Keyword::CantBeCountered
-        | Keyword::Recursion | Keyword::Inspired | Keyword::CantBlock
+        | Keyword::Recursion | Keyword::Inspired | Keyword::CantBlock | Keyword::CantBeSacrificed
         | Keyword::CantBlockPowerAtLeast(_)
         | Keyword::CantBlockPowerAtMost(_)
         | Keyword::CantBlockMatching(_)

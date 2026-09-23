@@ -1979,6 +1979,11 @@ pub struct ResolutionScratch {
     /// (Harsh Mercy, Patriarch's Bidding). Cleared when the body finishes.
     #[serde(default)]
     pub(crate) chosen_creature_types_scratch: Vec<crate::card::CreatureType>,
+    /// The opponent an `Effect::ChooseOpponentThen` named, read by
+    /// `PlayerRef::ChosenPlayerOfSource` while a resolving spell's source is
+    /// held off to the side (Sylvan Offering). Cleared after the body.
+    #[serde(default)]
+    pub(crate) chosen_opponent_scratch: Option<usize>,
     /// Transient: the card name chosen by an `Effect::NameCard` within the
     /// current resolution. Read by `SelectionRequirement::NamedBySource` so a
     /// reveal-until-the-named-card chain (Spoils of the Vault) can match even

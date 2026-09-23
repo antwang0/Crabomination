@@ -507,6 +507,11 @@ impl GameState {
                 .map(|&p| self.players[p].hand.len() as i32)
                 .max()
                 .unwrap_or(0),
+            Value::OpponentsWithHandSizeAtLeast(n) => self
+                .opponents_of(ctx.controller)
+                .into_iter()
+                .filter(|&p| self.players[p].is_alive() && self.players[p].hand.len() >= *n as usize)
+                .count() as i32,
             Value::OpponentsWithHandSizeAtMost(n) => {
                 let me = ctx.controller;
                 let teammates = self.teammates(me);
@@ -1018,6 +1023,18 @@ impl GameState {
                 .unwrap_or(0),
             Value::SacrificedTotalPower => self.sacrificed_total_power,
             Value::SacrificedCount => self.sacrificed_count as i32,
+            Value::SacrificedThisResolutionBy { who, filter } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return 0 };
+                self.scratch
+                    .cards_sacrificed_this_resolution
+                    .iter()
+                    .filter_map(|id| self.died_card_snapshots.get(id))
+                    .filter(|c| {
+                        c.controller == p
+                            && crate::game::layers::requirement_matches_card(filter, c, p)
+                    })
+                    .count() as i32
+            }
             Value::TappedForCostPower => self.tapped_for_cost_power.unwrap_or(0),
             Value::SacrificedToughness => self.sacrificed_toughness.unwrap_or(0),
             Value::SacrificedManaValue => self.sacrificed_mana_value.unwrap_or(0) as i32,

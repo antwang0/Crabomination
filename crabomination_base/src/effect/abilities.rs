@@ -3162,6 +3162,11 @@ pub struct ActivatedAbility {
     /// payment time (Skeleton Scavengers). Defaults to None.
     #[serde(default)]
     pub mana_cost_per_self_counter: Option<crate::card::CounterType>,
+    /// "This ability costs {1} more to activate for each [value]", read from
+    /// the activator's side at payment time (Loreseeker's Stone: cards in
+    /// your hand). Defaults to None.
+    #[serde(default)]
+    pub mana_cost_increase: Option<Value>,
     /// "This ability costs {1} less to activate for each [filter] you
     /// control" — generic-only reduction counted off the activator's
     /// battlefield at payment time (the Kamigawa channel lands' legendary

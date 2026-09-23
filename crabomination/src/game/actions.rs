@@ -18080,6 +18080,11 @@ impl GameState {
         // `ChooseTarget` and replay the activation with the pick. Bots,
         // multi-sacrifice (count > 1), and "no real choice" keep the
         // lowest-power auto-pick (so the activator keeps better creatures).
+        // CR 701.16 — a permanent that can't be sacrificed can't pay a
+        // "Sacrifice this" cost (Assault Suit's equipped creature).
+        if ability.sac_cost && !self.can_be_sacrificed(card_id) {
+            return Err(GameError::SelectionRequirementViolated);
+        }
         let sac_other_picks: Vec<CardId> = if let Some((filter, count)) =
             ability.sac_other_filter.as_ref()
         {
@@ -18103,6 +18108,7 @@ impl GameState {
                 .iter()
                 .filter(|c| c.id != card_id && c.controller == p)
                 .filter(|c| !needs_attached_to_source || c.attached_to == Some(card_id))
+                .filter(|c| self.can_be_sacrificed(c.id))
                 .filter(|c| !needs_host_of_source || host == Some(c.id))
                 .map(|c| c.id)
                 .collect::<Vec<_>>()
@@ -18708,6 +18714,14 @@ impl GameState {
             let count = src.counter_count(kind);
             if count > 0 {
                 effective_mana_cost.add_generic(count);
+            }
+        }
+        // "Costs {1} more to activate for each [value]" (Loreseeker's Stone).
+        if let Some(v) = &ability.mana_cost_increase {
+            let ctx = crate::game::effects::EffectContext::for_ability(card_id, p, None);
+            let n = self.evaluate_value(v, &ctx).max(0) as u32;
+            if n > 0 {
+                effective_mana_cost.add_generic(n);
             }
         }
         // "Costs {1} less for each [kind] counter on [filter] you control"

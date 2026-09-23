@@ -1655,7 +1655,7 @@ fn every_wrapper_the_census_recurses_into_surfaces_its_slot_filter() {
             who: me(), then: b(aimed()),
         }),
         ("EachPlayerChoosesCreatureTypeThen",
-            Effect::EachPlayerChoosesCreatureTypeThen { then: b(aimed()) }),
+            Effect::EachPlayerChoosesCreatureTypeThen { then: b(aimed()), per_player: false }),
         ("RevealDrawnCardThenIf", Effect::RevealDrawnCardThenIf {
             filter: R::Creature, then: b(aimed()),
         }),

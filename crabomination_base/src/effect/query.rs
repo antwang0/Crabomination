@@ -492,6 +492,7 @@ impl Effect {
             | Effect::RevealUntilNonlandThen { then, .. }
             | Effect::ChooseCreatureTypeThen { then, .. }
             | Effect::EachPlayerChoosesCreatureTypeThen { then, .. }
+            | Effect::ChooseOpponentThen { then }
             | Effect::RevealDrawnCardThenIf { then, .. }
             | Effect::Parley { then, .. }
             | Effect::RevealAnyNumberFromHand { then, .. }
@@ -805,7 +806,8 @@ impl Effect {
             | Effect::AnyLifeGainPunishedThisTurn { .. } => false,
             Effect::RevealUntilNonlandThen { then }
             | Effect::ChooseCreatureTypeThen { then, .. }
-            | Effect::EachPlayerChoosesCreatureTypeThen { then } => then.requires_target(),
+            | Effect::EachPlayerChoosesCreatureTypeThen { then, .. }
+            | Effect::ChooseOpponentThen { then } => then.requires_target(),
             Effect::NextSpellCantBeCountered { .. } => false,
             Effect::Noop
             | Effect::LicidDetach
@@ -4890,7 +4892,8 @@ impl Effect {
                 Effect::PayPerCounterOrSacrifice { then, .. }
                 | Effect::RevealUntilNonlandThen { then }
                 | Effect::ChooseCreatureTypeThen { then, .. }
-                | Effect::EachPlayerChoosesCreatureTypeThen { then }
+                | Effect::EachPlayerChoosesCreatureTypeThen { then, .. }
+                | Effect::ChooseOpponentThen { then }
                 | Effect::RevealDrawnCardThenIf { then, .. }
                 | Effect::AnyPlayerMayExileFromGraveyard { then, .. }
                 | Effect::EachPlayerMayExileAnyNumberFromGraveyard { then } => {

@@ -761,6 +761,7 @@ pub fn harsh_mercy() -> CardDefinition {
             then: Box::new(Effect::DestroyNoRegen {
                 what: Selector::EachPermanent(R::Creature.and(R::IsTypeChosenThisWay.negate())),
             }),
+            per_player: false,
         },
     )
 }
@@ -785,6 +786,7 @@ pub fn patriarchs_bidding() -> CardDefinition {
                     },
                 }),
             }),
+            per_player: false,
         },
     )
 }

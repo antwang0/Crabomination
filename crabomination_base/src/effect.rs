@@ -674,6 +674,9 @@ pub enum Value {
     /// cards in hand. Powers "draw an additional card for each opponent who
     /// has one or fewer cards in hand" (Bandit's Talent, level 3).
     OpponentsWithHandSizeAtMost(u32),
+    /// Opponents of the controller holding at least N cards (Wolfcaller's
+    /// Howl).
+    OpponentsWithHandSizeAtLeast(u32),
     /// CR 700.2 — how many modes were chosen for the resolved spell (Riku of
     /// Many Paths reads the triggering spell's mode count).
     ModesChosenOf(Box<Selector>),
@@ -956,6 +959,10 @@ pub enum Value {
     /// resolution) sacrificed — "for each creature sacrificed this way"
     /// (Vicious Betrayal). Reads `GameState.sacrificed_count`.
     SacrificedCount,
+    /// Permanents `who` sacrificed during this resolution that matched
+    /// `filter` as they were sacrificed — "for each land sacrificed this way,
+    /// its controller may search …" (Wave of Vitriol).
+    SacrificedThisResolutionBy { who: PlayerRef, filter: SelectionRequirement },
     /// CR 702.184a — power of the creature tapped to pay a Station ability's
     /// cost, carried to resolution by `Effect::WithTappedPower`.
     TappedForCostPower,
@@ -8069,7 +8076,20 @@ pub enum Effect {
     /// APNAP order and the union is published for the body through
     /// `SelectionRequirement::IsTypeChosenThisWay`. Harsh Mercy,
     /// Patriarch's Bidding.
-    EachPlayerChoosesCreatureTypeThen { then: Box<Effect> },
+    EachPlayerChoosesCreatureTypeThen {
+        then: Box<Effect>,
+        /// Run `then` once per player instead, as that player (`You`) with
+        /// only their own pick published — "each player chooses a creature
+        /// type and returns … of that type" (Grave Sifter).
+        #[serde(default)]
+        per_player: bool,
+    },
+    /// "Choose an opponent. [then]" — not a target (CR 115.10 doesn't apply):
+    /// the controller names an opponent, stamped on the source's
+    /// `chosen_player` for `PlayerRef::ChosenPlayerOfSource` inside `then`.
+    /// The pick is the opponent with the fewest creatures (the gift goes
+    /// where it helps least); turn order breaks ties. Sylvan Offering.
+    ChooseOpponentThen { then: Box<Effect> },
     /// Skyserpent Seeker-style ramp: reveal from the top of your library until
     /// you reveal `count` land cards; put those lands onto the battlefield
     /// (`tapped`), and put the rest on the bottom of your library in a random
