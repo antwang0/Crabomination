@@ -1014,10 +1014,14 @@ mod tests {
         // cast creatureless; seed 0xC0FFEE is the same winner 45 turns sooner.
         // Aggregate within noise (3,000 games, seed 43: Judith 16.9 → 17.1 %,
         // 44.90 → 44.96 turns).
+        // Re-blessed 2026-09-23 (Toxic Deluge's X): the bot sizes a pay-X-life
+        // X to the toughest opposing creature instead of its spare mana, so
+        // Judith's Deluge is a sweeper; seed 4242 is the same winner two
+        // turns sooner.
         const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
             (0xC0FFEE, Some(1), 52, 2248),
             (43, Some(3), 50, 2107),
-            (4242, Some(2), 53, 2318),
+            (4242, Some(2), 51, 2238),
         ];
         let decks = rofellos_pod(4);
         let t = build_pod_template(&decks);

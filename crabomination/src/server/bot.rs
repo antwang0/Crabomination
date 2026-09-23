@@ -15585,6 +15585,24 @@ pub fn max_affordable_x_for_def(
     if !x_relevant(def) {
         return 0;
     }
+    // X paid in LIFE, not mana (Toxic Deluge's "pay X life"): enough to clear
+    // the toughest opposing creature, keeping five life in hand.
+    if def
+        .additional_cast_cost
+        .iter()
+        .any(|c| matches!(c, crate::card::AdditionalCastCost::PayLifeX))
+    {
+        let spare = (state.players[seat].life - 5).max(0) as u32;
+        let need = state
+            .battlefield
+            .iter()
+            .filter(|c| !state.same_team(c.controller, seat) && c.definition.is_creature())
+            .filter_map(|c| state.computed_permanent(c.id))
+            .map(|cp| cp.toughness.max(0) as u32)
+            .max()
+            .unwrap_or(0);
+        return need.min(spare);
+    }
     // Everything the seat could still produce, not just what's floating --
     // see `available_mana`. Sizing X off the floating pool alone only
     // worked back when the bot tapped out before deciding anything.
@@ -22898,6 +22916,21 @@ mod tests {
     /// `c.controller`, so the stolen land is invisible to bot 0 and
     /// the bot falls through to its castable-spell branch (or
     /// `PassPriority`).
+    /// Toxic Deluge's X is paid in life: sized to the toughest opposing
+    /// creature, never off the mana pool, and capped to keep five life.
+    #[test]
+    fn toxic_deluge_x_is_sized_from_life_not_mana() {
+        let mut g = crate::game::two_player_game();
+        g.players[0].mana_pool.add(crate::mana::Color::Black, 10);
+        let w = EvalWeights::default();
+        let deluge = crate::catalog::toxic_deluge();
+        assert_eq!(max_affordable_x_for_def(&g, 0, &deluge, 0, &w), 0, "nothing to kill");
+        g.add_card_to_battlefield(1, crate::catalog::serra_angel());
+        assert_eq!(max_affordable_x_for_def(&g, 0, &deluge, 0, &w), 4);
+        g.players[0].life = 7;
+        assert_eq!(max_affordable_x_for_def(&g, 0, &deluge, 0, &w), 2, "keeps five life");
+    }
+
     #[test]
     fn max_affordable_x_returns_zero_for_non_x_spells() {
         let mut g = two_player_game();
