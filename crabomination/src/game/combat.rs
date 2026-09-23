@@ -1043,6 +1043,11 @@ impl GameState {
         if self.step != TurnStep::DeclareAttackers {
             return Err(GameError::WrongStep { actual: self.step });
         }
+        // A combat whose end-of-combat step was never left (a caller that
+        // jumped the step) is over by now: CR 511.3's removal, late.
+        if self.combat_damage_dealt() {
+            self.remove_all_from_combat();
+        }
         // Master Warcraft — an outside chooser declares in the active
         // player's place; the attackers are still the active player's
         // creatures, so only the *submitter* changes.
@@ -3129,6 +3134,9 @@ impl GameState {
     /// `advance_step`'s recycled one (PERF `(-225)`), so the damage step's
     /// `reserve(32)` lands on capacity the scratch already has.
     pub fn resolve_combat_into(&mut self, events: &mut Vec<GameEvent>) -> Result<(), GameError> {
+        if self.combat_damage_dealt() {
+            return Ok(());
+        }
         let computed = self.combat_damage_computed();
         // CR 510.5: in the regular combat damage step, every attacking and
         // blocking creature that didn't deal damage in the first-strike step
@@ -3146,12 +3154,27 @@ impl GameState {
         }
 
         self.check_state_based_actions_into(events);
+        self.clear_combat_damage_plan();
+        self.set_combat_damage_dealt(true);
+        // CR 511.3 — attackers and blockers stay in combat through the end of
+        // combat step; `remove_all_from_combat` runs as that step ends.
+        events.push(GameEvent::CombatResolved);
+        Ok(())
+    }
 
-        self.attacking.clear();
+    /// CR 511.3 — "As the end of combat step ends, all creatures, battles,
+    /// and planeswalkers are removed from combat." Also CR 724.1b's
+    /// end-the-turn teardown.
+    pub(crate) fn remove_all_from_combat(&mut self) {
+        if !self.attacking.is_empty() {
+            self.attacking.clear();
+        }
         // Dropped, not cleared — a cleared `HashMap` keeps its table and
         // every later `GameState::clone` re-allocates it (see `resolve_effect`'s
         // per-resolution reset).
-        self.block_map = Default::default();
+        if !self.block_map.is_empty() {
+            self.block_map = Default::default();
+        }
         // Both are `ColdState` fields; an unguarded `clear` on a combat
         // boundary deep-copies the whole cold group (PERF, twenty-eighth
         // pass's rule, restated in the thirty-third's Log block).
@@ -3161,8 +3184,8 @@ impl GameState {
         if !self.attack_bands.is_empty() {
             clear_cold!(self.attack_bands);
         }
-        self.clear_combat_damage_plan();
         self.blockers_declared = false;
+        self.set_combat_damage_dealt(false);
         // CR 702.39 — provoke's "block this combat" requirement ends here.
         // Gated: the write is a `DerefMut` on a CoW `CardData`, so clearing
         // the `None` almost every permanent already holds deep-copied the
@@ -3172,9 +3195,6 @@ impl GameState {
                 c.must_block = None;
             }
         }
-
-        events.push(GameEvent::CombatResolved);
-        Ok(())
     }
 
     /// CR 702.15 — does `defender` control a land with the given land type?

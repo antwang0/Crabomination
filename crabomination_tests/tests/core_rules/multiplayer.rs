@@ -3207,6 +3207,11 @@ fn swing(g: &mut GameState, attacker: crabomination::card::CardId, victim: usize
     g.step = TurnStep::CombatDamage;
     g.resolve_combat().expect("combat resolves");
     drain_stack(g);
+    // CR 511.3 — leave the end of combat step so the attacker is removed from
+    // combat before the next swing.
+    g.step = TurnStep::EndCombat;
+    let _ = g.advance_step(Vec::new());
+    drain_stack(g);
 }
 
 /// CR 903.10a — the 21 is "by the same commander over the course of the

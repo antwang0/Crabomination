@@ -535,6 +535,7 @@ impl GameState {
         // effects whenever we leave EndCombat — including into an additional
         // combat phase, since each combat phase has its own end.
         if self.step == TurnStep::EndCombat {
+            self.remove_all_from_combat();
             self.expire_end_of_combat_effects();
             self.revert_temporary_control(&[crate::effect::Duration::EndOfCombat]);
             self.revert_temporary_copies(&[crate::effect::Duration::EndOfCombat]);
@@ -3249,6 +3250,7 @@ impl GameState {
         self.blocked_attackers.clear();
         clear_cold!(self.attack_bands);
         self.blockers_declared = false;
+        self.set_combat_damage_dealt(false);
         // CR 724.1d — the turn skips straight to the cleanup step.
         self.step = TurnStep::End;
         self.advance_step(events)
