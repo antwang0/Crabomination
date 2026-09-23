@@ -1091,6 +1091,33 @@ impl GameState {
                 mvs.dedup();
                 mvs.len() as i32
             }
+            Value::DistinctManaValuesInGraveyardMatching { who, filter } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return 0 };
+                let mut mvs: Vec<u32> = self.players[p]
+                    .graveyard
+                    .iter()
+                    .filter(|c| {
+                        self.evaluate_requirement_static(
+                            filter,
+                            &crate::game::Target::Permanent(c.id),
+                            ctx.controller,
+                            ctx.source,
+                        )
+                    })
+                    .map(|c| c.definition.cost.cmc())
+                    .collect();
+                mvs.sort_unstable();
+                mvs.dedup();
+                mvs.len() as i32
+            }
+            Value::CommanderCastsFromCommandZone(who) => {
+                let Some(p) = self.resolve_player(who, ctx) else { return 0 };
+                self.players[p]
+                    .commanders
+                    .iter()
+                    .map(|id| self.commander_cast_count.get(id).copied().unwrap_or(0) as i32)
+                    .sum()
+            }
             Value::DistinctManaValuesInGraveyard(who) => {
                 let Some(p) = self.resolve_player(who, ctx) else { return 0 };
                 let mut mvs: Vec<u32> = self.players[p]

@@ -1051,6 +1051,14 @@ pub enum Value {
     /// Aven Heartstabber ("five or more mana values among cards in your
     /// graveyard").
     DistinctManaValuesInGraveyard(PlayerRef),
+    /// Distinct mana values among cards matching `filter` in `who`'s
+    /// graveyard — Eris, Roar of the Storm ("for each different mana value
+    /// among instant and sorcery cards in your graveyard").
+    DistinctManaValuesInGraveyardMatching { who: PlayerRef, filter: SelectionRequirement },
+    /// CR 903.8 — times `who` has cast their commander(s) from the command
+    /// zone this game, summed over both partners (the commander-tax count;
+    /// Thunderclap Drake's copies).
+    CommanderCastsFromCommandZone(PlayerRef),
     /// Greatest power among creatures the controller controls *and* creature
     /// cards in the controller's graveyard (0 if none). Ambitious Dragonborn
     /// enters with X +1/+1 counters equal to this.
