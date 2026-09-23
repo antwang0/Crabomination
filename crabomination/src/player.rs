@@ -148,6 +148,13 @@ pub struct PlayerCold {
     /// still a commander, so the entry survives zone changes.
     #[serde(default)]
     pub commanders: Vec<CardId>,
+    /// Transient: this seat's cast in flight spent mana from a Treasure (the
+    /// pool's `treasure` provenance fell during payment). Consumed by
+    /// `finalize_cast`, which stamps `CardData::cast_with_treasure_mana`. On
+    /// the seat rather than `GameState`, which is size-capped; read before it
+    /// is written so an ordinary cast never unshares the seat.
+    #[serde(skip)]
+    pub cast_paid_with_treasure: bool,
     /// CR 903.4a — this seat's combined commander colour identity, computed
     /// once as the commanders are seated because identity is established
     /// before the game and never changes. Cached because the walk behind it

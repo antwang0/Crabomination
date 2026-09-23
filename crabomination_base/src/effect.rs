@@ -1545,6 +1545,10 @@ pub enum Predicate {
     /// "three or more lands with the same name"): the largest same-name
     /// group, not a total across names.
     ControlsLandsWithSameNameAtLeast { who: PlayerRef, at_least: u32 },
+    /// Mana from a Treasure was spent to cast the spell `what` resolves to
+    /// (Alchemist's Talent, Rain of Riches — on a `SpellCast` trigger,
+    /// `Selector::TriggerSource`).
+    CastWithTreasureMana { what: Selector },
     /// CR 702.179 — `who`'s speed is at least `speed` (0–4). "Max speed —"
     /// abilities use `speed: 4`; "as long as your speed is N or higher" uses
     /// the listed threshold. Backed by `Player.speed`.

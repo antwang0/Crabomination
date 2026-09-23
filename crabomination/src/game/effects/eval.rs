@@ -2000,6 +2000,11 @@ impl GameState {
                         .any(|c| c.controller == p && self.players[p].commanders.contains(&c.id))
                 })
             }
+            Predicate::CastWithTreasureMana { what } => self
+                .resolve_selector(what, ctx)
+                .into_iter()
+                .filter_map(|e| e.as_card_id())
+                .any(|id| self.find_card_anywhere(id).is_some_and(|c| c.cast_with_treasure_mana)),
             Predicate::ControlsLandsWithSameNameAtLeast { who, at_least } => {
                 self.resolve_players(who, ctx).into_iter().any(|p| {
                     let mut names: Vec<&str> = self

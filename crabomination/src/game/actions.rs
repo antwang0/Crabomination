@@ -3114,6 +3114,12 @@ impl crate::game::GameState {
         }) {
             self.cast_paid_uncounterable = true;
         }
+        // Alchemist's Talent / Rain of Riches — "if mana from a Treasure was
+        // spent to cast it": the pool's Treasure provenance fell.
+        let p = self.priority.player_with_priority;
+        if receipt.pool_before.treasure_amount() > self.players[p].mana_pool.treasure_amount() {
+            self.players[p].cast_paid_with_treasure = true;
+        }
         // Generator Servant — mana spent on a creature spell grants it haste.
         if kind.creature && receipt.side_effects.spent(SpendRestriction::CreatureHaste) {
             let p = self.priority.player_with_priority;
@@ -10130,6 +10136,12 @@ impl GameState {
         };
         let uncounterable = self.caster_grants_uncounterable_with_x(p, &card, x_value)
             || std::mem::take(&mut self.cast_paid_uncounterable);
+        // Written only when set: `card` is a CoW handle and the write unshares.
+        let mut card = card;
+        if self.players[p].cast_paid_with_treasure {
+            self.players[p].cast_paid_with_treasure = false;
+            card.cast_with_treasure_mana = true;
+        }
 
         let was_creature_spell = !card.casting_alt_half() && card.definition.is_creature();
         // CR 702.146e — casting a daybound spell while it's neither day nor
@@ -16810,6 +16822,15 @@ impl GameState {
         // creature, instead of this frame paying a second whole-game gather.
         // Nothing has moved mana at the point it fills this in.
         let mut before: Option<crate::mana::ManaPool> = None;
+        // A Treasure's mana is marked the same way, from the pool total —
+        // the Treasure has been sacrificed by the time the mana is there.
+        let treasure_before = self
+            .battlefield
+            .find_by_id(card_id)
+            .filter(|c| {
+                c.definition.subtypes.artifact_subtypes.contains(&crate::card::ArtifactSubtype::Treasure)
+            })
+            .map(|_| self.players[p].mana_pool.total());
         let out = self.activate_ability_inner(
             card_id,
             ability_index,
@@ -16834,6 +16855,13 @@ impl GameState {
             let d = pool.colorless_amount().saturating_sub(before.colorless_amount());
             if d > 0 {
                 pool.mark_from_creature(None, d);
+            }
+        }
+        if let Some(total) = treasure_before {
+            let pool = &mut self.players[p].mana_pool;
+            let d = pool.total().saturating_sub(total);
+            if d > 0 {
+                pool.mark_from_treasure(d);
             }
         }
         out

@@ -989,6 +989,19 @@ pub struct ManaPool {
     /// the same conservative spirit as `snow`.
     #[serde(default)]
     creature: [u32; 6],
+    /// Provenance counter: how much of the pool (any bucket) came from a
+    /// Treasure's mana ability. Freely spendable; read only to tell whether
+    /// "mana from a Treasure was spent to cast" a spell (Alchemist's Talent,
+    /// Rain of Riches). Clamped to the pool's total after every spend like
+    /// `snow`, so a pool that still holds as much mana as it had Treasure
+    /// mana is read as not having spent it. Skipped when zero on the wire,
+    /// so snapshots without a Treasure are byte-identical.
+    #[serde(default, skip_serializing_if = "is_zero_u32")]
+    treasure: u32,
+}
+
+fn is_zero_u32(n: &u32) -> bool {
+    *n == 0
 }
 
 /// Index into [`ManaPool::creature`] for a color (5 = colorless).
@@ -1105,6 +1118,7 @@ impl ManaPool {
         for n in self.creature.iter_mut() {
             *n *= 2;
         }
+        self.treasure *= 2;
     }
 
     /// Add mana that a creature produced (`None` color = colorless). Ordinary
@@ -1145,6 +1159,23 @@ impl ManaPool {
             self.creature[idx] = self.creature[idx].min(*self.slot(c));
         }
         self.creature[5] = self.creature[5].min(self.colorless);
+        // Every spend path that re-clamps creature provenance re-clamps this
+        // one too — one call site list for both.
+        if self.treasure > 0 {
+            self.treasure = self.treasure.min(self.total());
+        }
+    }
+
+    /// Tag `amount` mana just added as Treasure-produced (the mana-ability
+    /// activation path, from the pool delta — the Treasure is gone by then).
+    pub fn mark_from_treasure(&mut self, amount: u32) {
+        self.treasure += amount;
+        self.clamp_creature();
+    }
+
+    /// Treasure-produced mana floating (see the field).
+    pub fn treasure_amount(&self) -> u32 {
+        self.treasure
     }
 
     /// Add mana from a snow source. The mana is both colored and snow.
@@ -1770,6 +1801,7 @@ impl ManaPool {
             && self.restricted.is_empty()
             && self.restricted_colorless.is_empty()
             && self.creature.iter().all(|&n| n == 0)
+            && self.treasure == 0
     }
 
     /// Fold every bucket of `other` into this pool (colors, colorless, snow,
@@ -1790,6 +1822,7 @@ impl ManaPool {
         for (i, n) in other.creature.iter().enumerate() {
             self.creature[i] += *n;
         }
+        self.treasure += other.treasure;
         for (n, r) in &other.restricted_colorless {
             self.add_restricted_colorless(*n, *r);
         }

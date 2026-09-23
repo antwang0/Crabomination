@@ -8286,6 +8286,10 @@ pub struct CardData {
     /// instant/sorcery; as it resolves it is exiled "with" that permanent
     /// instead of going to the graveyard. Not serialized; taken on resolution.
     pub exile_with_on_resolve: Option<CardId>,
+    /// Mana from a Treasure was spent to cast this spell (the pool's
+    /// Treasure provenance fell during its payment). Read by
+    /// `Predicate::CastWithTreasureMana`. Not serialized.
+    pub cast_with_treasure_mana: bool,
     /// CR 702.187 — true if this card was cast from a graveyard for its Mayhem
     /// cost. Read by `Predicate::SpellWasMayhem` so "if this spell's mayhem cost
     /// was paid" riders (Sandman's Quicksand) can branch. Cleared off the stack.
@@ -9102,6 +9106,7 @@ impl CardInstance {
             feather_exile_return: false,
             plot_on_resolve: false,
             exile_with_on_resolve: None,
+            cast_with_treasure_mana: false,
             cast_via_mayhem: false,
             cast_via_waterbend: false,
             cast_collected_evidence: false,
