@@ -2261,9 +2261,7 @@ pub fn greater_good() -> CardDefinition {
 /// Bojuka Bog — Land. Bojuka Bog enters tapped. When Bojuka Bog enters,
 /// exile target opponent's graveyard.
 ///
-/// We approximate "exile target player's graveyard" as "exile each card in
-/// each opponent's graveyard" via `ForEach` + `Exile`. The ETB-tapped piece
-/// reuses the existing `etb_tap` self-source trigger pattern.
+/// `ExilePlayerGraveyard` on the target (one player, CR 115.1); enters tapped.
 pub fn bojuka_bog() -> CardDefinition {
     use crate::card::ActivatedAbility;
     let etb = TriggeredAbility {

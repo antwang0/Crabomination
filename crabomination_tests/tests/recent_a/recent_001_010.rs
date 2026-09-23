@@ -5635,16 +5635,48 @@ mod recent {
         assert!(tok.definition.subtypes.creature_types.contains(&CreatureType::Frog));
     }
 
-    /// Voldaren Estate's {5},{T} ability creates a Blood token.
+    /// Voldaren Estate's Blood ability costs {1} less per Vampire you control,
+    /// and its any-color mana only pays for a Vampire spell.
     #[test]
     fn voldaren_estate_makes_blood() {
+        use crabomination::game::types::GameAction;
+        let activate = |g: &mut GameState, id, index| {
+            g.perform_action(GameAction::ActivateAbility {
+                card_id: id,
+                ability_index: index,
+                target: None,
+                additional_targets: vec![],
+                x_value: None,
+                mode: None,
+            })
+        };
         let mut g = two_player_game();
-        g.add_card_to_battlefield(0, catalog::voldaren_estate());
+        let estate = g.add_card_to_battlefield(0, catalog::voldaren_estate());
+        for _ in 0..3 {
+            g.add_card_to_battlefield(0, catalog::vona_butcher_of_magan());
+        }
+        g.players[0].mana_pool.add_colorless(2);
         let before = g.battlefield.iter().filter(|c| c.is_token).count();
-        let eff = catalog::voldaren_estate().activated_abilities[2].effect.clone();
-        let ctx = crabomination::game::effects::EffectContext::for_ability(crabomination::card::CardId(0), 0, None);
-        g.resolve_effect(&eff, &ctx).unwrap();
+        activate(&mut g, estate, 2).expect("{5} less three Vampires");
+        drain_stack(&mut g);
         assert_eq!(g.battlefield.iter().filter(|c| c.is_token).count(), before + 1);
+
+        let mut g = two_player_game();
+        let estate = g.add_card_to_battlefield(0, catalog::voldaren_estate());
+        activate(&mut g, estate, 1).expect("pay 1 life: any color");
+        drain_stack(&mut g);
+        let bears = g.add_card_to_hand(0, catalog::llanowar_elves());
+        assert!(
+            g.perform_action(GameAction::CastSpell {
+                card_id: bears,
+                target: None,
+                additional_targets: vec![],
+                mode: None,
+                x_value: None,
+            })
+            .is_err(),
+            "an Elf isn't a Vampire spell",
+        );
     }
 
     /// Sigarda's Vanguard grants double strike on enter.

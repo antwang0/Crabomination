@@ -11260,8 +11260,8 @@ pub fn croaking_counterpart() -> CardDefinition {
 }
 
 /// Voldaren Estate — Land. {T}: Add {C}. {T}, Pay 1 life: Add one mana of any
-/// color. {5}, {T}: Create a Blood token. (The "only for Vampire spells" spend
-/// restriction and per-Vampire cost reduction are approximated away.)
+/// color; spend it only on a Vampire spell. {5}, {T}: Create a Blood token;
+/// {1} less for each Vampire you control.
 pub fn voldaren_estate() -> CardDefinition {
     use crate::card::ActivatedAbility;
     use crate::effect::ManaPayload;
@@ -11275,13 +11275,24 @@ pub fn voldaren_estate() -> CardDefinition {
                 life_cost: 1,
                 effect: Effect::AddMana {
                     who: PlayerRef::You,
-                    pool: ManaPayload::AnyOneColor(Value::Const(1)),
+                    pool: ManaPayload::Restricted(
+                        Box::new(ManaPayload::AnyOneColor(Value::Const(1))),
+                        crate::mana::SpendRestriction::CreatureOfType(
+                            crate::card::CreatureType::Vampire,
+                        ),
+                    ),
                 },
                 ..Default::default()
             },
             ActivatedAbility {
                 mana_cost: cost(&[generic(5)]),
                 tap_cost: true,
+                cost_reduction_per: Some(
+                    crate::card::SelectionRequirement::HasCreatureType(
+                        crate::card::CreatureType::Vampire,
+                    )
+                    .and(crate::card::SelectionRequirement::ControlledByYou),
+                ),
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
