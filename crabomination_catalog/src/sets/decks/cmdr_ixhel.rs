@@ -430,3 +430,26 @@ pub fn norns_decree() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Grafted Exoskeleton — +2/+2 and infect, and the host is sacrificed when
+/// the Equipment comes off it.
+pub fn grafted_exoskeleton() -> CardDefinition {
+    CardDefinition {
+        name: "Grafted Exoskeleton",
+        cost: cost(&[generic(4)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![crate::card::ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
+        equipped_bonus: Some(crate::card::EquipBonus {
+            power: 2,
+            toughness: 2,
+            keywords: vec![Keyword::Infect],
+            sacrifice_host_when_unattached: true,
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}

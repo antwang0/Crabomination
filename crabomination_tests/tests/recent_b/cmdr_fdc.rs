@@ -819,3 +819,39 @@ fn norns_decree_poisons_attackers_and_rewards_attacking_the_poisoned() {
     combat(&mut g, vec![Attack { attacker: giant, target: AttackTarget::Player(1) }], 0, |_| {});
     assert_eq!(g.players[0].hand.len(), hand0 + 1);
 }
+
+/// Rulings 2023-02-04 — the Grafted trigger: moving the Equipment to another
+/// creature, or the Equipment leaving, sacrifices the old host; the host
+/// leaving on its own does nothing more.
+#[test]
+fn grafted_equipment_sacrifices_the_host_it_leaves() {
+    let mut g = main_phase();
+    let exo = g.add_card_to_battlefield(0, catalog::grafted_exoskeleton());
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::hill_giant());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::Equip { equipment: exo, target: a }).expect("equip a");
+    drain_stack(&mut g);
+    assert_eq!(pt(&g, a), (4, 4));
+    assert!(g.computed_permanent(a).unwrap().keywords().contains(&Keyword::Infect));
+    flood(&mut g, 0);
+    g.perform_action(GameAction::Equip { equipment: exo, target: b }).expect("move to b");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).is_none(), "the old host was sacrificed");
+    assert!(g.battlefield_find(b).is_some());
+    // The Equipment leaving takes its host with it.
+    let shatter = g.add_card_to_hand(0, catalog::shatter());
+    cast(&mut g, shatter, &[Target::Permanent(exo)]);
+    assert!(g.battlefield_find(b).is_none(), "the host was sacrificed as the Equipment left");
+
+    // Grafted Wargear shares the rider.
+    let mut g = main_phase();
+    let wg = g.add_card_to_battlefield(0, catalog::grafted_wargear());
+    let c = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let d = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::Equip { equipment: wg, target: c }).expect("equip");
+    drain_stack(&mut g);
+    g.perform_action(GameAction::Equip { equipment: wg, target: d }).expect("re-equip");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(c).is_none());
+}

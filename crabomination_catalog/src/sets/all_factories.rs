@@ -1610,6 +1610,7 @@ static DECKS: &[Factory] = &[
     super::decks::wurmquake,
     super::decks::ixhel_scion_of_atraxa,
     super::decks::norns_decree,
+    super::decks::grafted_exoskeleton,
     super::decks::homer_the_hermit,
     super::decks::rikala_homarid_king,
     super::decks::gandalf_shadows_foe,
