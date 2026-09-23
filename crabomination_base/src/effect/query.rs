@@ -415,6 +415,7 @@ impl Effect {
             | Effect::OnYourNextExhaustActivationThisTurn { body, .. }
             | Effect::OnYourNextAttackThisTurn { body, .. }
             | Effect::OnYourNextInstantSorceryThisTurn { body, .. }
+            | Effect::OnYourNextSpellOfTypeThisTurn { body, .. }
             | Effect::OnYourNextNamedSpellThisTurn { body, .. }
             | Effect::WhenTargetLeavesBattlefieldThisTurn { body, .. }
             | Effect::AtEachCombatThisTurn { body, .. }
@@ -1366,6 +1367,7 @@ impl Effect {
             | Effect::OnYourNextExhaustActivationThisTurn { body }
             | Effect::OnYourNextAttackThisTurn { body }
             | Effect::OnYourNextInstantSorceryThisTurn { body }
+            | Effect::OnYourNextSpellOfTypeThisTurn { body, .. }
             | Effect::OnEachSpellYouCastUntilEndOfYourNextTurn { body }
             | Effect::OnYourNextNamedSpellThisTurn { body } => body.requires_target(),
             Effect::SearchSplitWithOpponent { .. } => false,
@@ -2685,6 +2687,7 @@ impl Effect {
             | Effect::OnYourNextExhaustActivationThisTurn { body }
             | Effect::OnYourNextAttackThisTurn { body }
             | Effect::OnYourNextInstantSorceryThisTurn { body }
+            | Effect::OnYourNextSpellOfTypeThisTurn { body, .. }
             | Effect::OnEachSpellYouCastUntilEndOfYourNextTurn { body }
             | Effect::OnYourNextNamedSpellThisTurn { body }
             | Effect::Repeat { body, .. }
@@ -4807,6 +4810,7 @@ impl Effect {
                 | Effect::OnYourNextExhaustActivationThisTurn { body }
                 | Effect::OnYourNextAttackThisTurn { body }
                 | Effect::OnYourNextInstantSorceryThisTurn { body }
+                | Effect::OnYourNextSpellOfTypeThisTurn { body, .. }
                 | Effect::OnEachSpellYouCastUntilEndOfYourNextTurn { body }
                 | Effect::OnYourNextNamedSpellThisTurn { body }
                 | Effect::OptionalTargets { body, .. }

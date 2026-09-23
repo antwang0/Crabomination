@@ -1333,6 +1333,9 @@ pub enum DelayedKind {
     /// "When you next cast an instant or sorcery spell this turn, copy that
     /// spell" (Mercurial Spelldancer). Non-matching casts leave it armed.
     YourNextInstantSorceryCastThisTurn,
+    /// `Effect::OnYourNextSpellOfTypeThisTurn` — consumed only by the
+    /// controller's next cast of this card type (Smoldering Stagecoach).
+    YourNextSpellOfTypeThisTurn(crate::card::CardType),
     /// "When you cast a spell with the chosen name for the first time this
     /// turn, …" (CR 603.7e, name-gated). Fires once on the controller's next
     /// cast whose name matches the source's `named_card`; non-matching casts

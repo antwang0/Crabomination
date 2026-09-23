@@ -13421,13 +13421,19 @@ impl GameState {
                     dt.kind,
                     crate::game::types::DelayedKind::YourNextSpellCastThisTurn
                         | crate::game::types::DelayedKind::YourNextInstantSorceryCastThisTurn
+                        | crate::game::types::DelayedKind::YourNextSpellOfTypeThisTurn(_)
                 )
         };
         if self.delayed_triggers.iter().any(watches_cast) {
-            let cast_is_is = self.find_card_anywhere(cast_card).is_some_and(|c| {
-                c.definition.card_types.contains(&crate::card::CardType::Instant)
-                    || c.definition.card_types.contains(&crate::card::CardType::Sorcery)
-            });
+            // A `Copy` mask: the closures below must not borrow `self`.
+            let mut cast_types = crate::card::CardTypeSet::empty();
+            if let Some(c) = self.find_card_anywhere(cast_card) {
+                for t in &c.definition.card_types {
+                    cast_types.insert(t);
+                }
+            }
+            let cast_is_is = cast_types.contains(&crate::card::CardType::Instant)
+                || cast_types.contains(&crate::card::CardType::Sorcery);
             let fires = |dt: &crate::game::types::DelayedTrigger| {
                 dt.controller == controller
                     && (matches!(
@@ -13437,7 +13443,12 @@ impl GameState {
                         && matches!(
                             dt.kind,
                             crate::game::types::DelayedKind::YourNextInstantSorceryCastThisTurn
-                        )))
+                        ))
+                        || matches!(
+                            dt.kind,
+                            crate::game::types::DelayedKind::YourNextSpellOfTypeThisTurn(ref t)
+                                if cast_types.contains(t)
+                        ))
             };
             if self.delayed_triggers.iter().any(fires) {
                 let (next_cast, rest): (Vec<_>, Vec<_>) =

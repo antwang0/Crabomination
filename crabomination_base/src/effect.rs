@@ -8883,6 +8883,15 @@ pub enum Effect {
     OnYourNextInstantSorceryThisTurn {
         body: Box<Effect>,
     },
+    /// CR 603.7e — one-shot "when you next cast a spell of `card_type` this
+    /// turn, [body]"; the cast spell is `Selector::TriggerSource`. Casts of
+    /// any other type leave it armed, so Smoldering Stagecoach's "the next
+    /// instant spell and the next sorcery spell you cast this turn each have
+    /// cascade" is two of these, each consumed only by its own type.
+    OnYourNextSpellOfTypeThisTurn {
+        card_type: crate::card::CardType,
+        body: Box<Effect>,
+    },
     /// "When you cast a spell with the chosen name for the first time this
     /// turn, [body]." Like `OnYourNextSpellCastThisTurn` but only fires for a
     /// cast whose name matches the source's `named_card`; other casts don't
