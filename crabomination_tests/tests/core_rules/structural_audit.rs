@@ -492,6 +492,7 @@ fn no_cost_sacrifice_is_spelled_as_the_first_step_of_the_effect() {
         "Peer Past the Veil",
         "Planar Engineering",
         "Prismari Iteration",
+        "Pyretic Charge",
         "Recall",
         "Roiling Regrowth",
         "Romantic Rendezvous",
