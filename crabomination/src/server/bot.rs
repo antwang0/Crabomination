@@ -10262,7 +10262,7 @@ fn pick_attacks_inner(state: &GameState, seat: usize, guard: bool) -> Vec<Attack
     // Use the damage-aware value so toughness-attackers (Doran,
     // High Alert) are weighed by what they actually deal.
     let total_raw_power: i32 =
-        raw_attackers.iter().map(|c| attacker_damage_value(state, c.id)).sum();
+        raw_attackers.iter().map(|c| attacker_damage_value(state, c.id)).fold(0, i32::saturating_add);
     let lethal_swing = total_raw_power >= opp_life;
     // Race math: compare full-out clocks. We strike first
     // (it's our combat), so strictly fewer turns-to-lethal
@@ -14072,7 +14072,7 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
         .iter()
         .filter(|a| a.target == AttackTarget::Player(seat))
         .map(|a| a.power)
-        .sum();
+        .fold(0, i32::saturating_add);
     // Planeswalker defense (CR 306.7): for each planeswalker we control that
     // is being attacked, if the attackers aimed at it would deal lethal
     // (total power ≥ its loyalty), mark those attackers so the chump-block
@@ -14542,7 +14542,7 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
                 .filter(|(bid, _)| *bid == b_id)
                 .filter_map(|(_, aid)| attacker_info.iter().find(|a| a.id == *aid))
                 .map(|a| a.power)
-                .sum();
+                .fold(0, i32::saturating_add);
             let mut spare = extra_capacity(b_id);
             for atk in &attacker_info {
                 let a_id = &atk.id;
@@ -14550,7 +14550,7 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
                     break;
                 }
                 if atk.deathtouch
-                    || taken + atk.power >= b_tough
+                    || taken.saturating_add(atk.power) >= b_tough
                     || assignments.iter().any(|(bid, aid)| *bid == b_id && aid == a_id)
                     || assignments.iter().any(|(_, aid)| aid == a_id)
                     || (atk.flying && !b_flying && !b_reach)
@@ -14560,7 +14560,7 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
                     continue;
                 }
                 assignments.push((b_id, *a_id));
-                taken += atk.power;
+                taken = taken.saturating_add(atk.power);
                 spare = spare.saturating_sub(1);
             }
         }

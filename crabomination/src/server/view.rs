@@ -301,7 +301,7 @@ fn combat_preview(state: &GameState) -> Option<crate::net::CombatPreview> {
             }
             // Unblocked: full damage to the defending player or planeswalker
             // (×2 for double strike).
-            let face = a_power * strikes;
+            let face = a_power.saturating_mul(strikes);
             match atk.target {
                 AttackTarget::Player(p) => {
                     *dmg.entry(p).or_insert(0) += face;
@@ -367,7 +367,7 @@ fn combat_preview(state: &GameState) -> Option<crate::net::CombatPreview> {
                 share
             };
             let total_blocker_power: i32 =
-                blockers.iter().filter(|b| deals_back(b)).map(|b| power_vs_this(b)).sum();
+                blockers.iter().filter(|b| deals_back(b)).map(|b| power_vs_this(b)).fold(0, i32::saturating_add);
             let dt_blocker = blockers.iter().any(|b| {
                 power_vs_this(b) > 0 && kw(b, &Keyword::Deathtouch) && deals_back(b)
             });
@@ -386,8 +386,8 @@ fn combat_preview(state: &GameState) -> Option<crate::net::CombatPreview> {
                 let assign_to_block: i32 = blockers
                     .iter()
                     .map(|b| if kw(a, &Keyword::Deathtouch) { 1 } else { b.toughness.max(0) })
-                    .sum();
-                let overflow = (a_power - assign_to_block).max(0);
+                    .fold(0, i32::saturating_add);
+                let overflow = a_power.saturating_sub(assign_to_block).max(0);
                 // Double strike (CR 702.4): a second damage step. If the first
                 // strike killed every blocker, the whole power tramples through;
                 // otherwise the survivors soak the same lethal again.
@@ -422,14 +422,16 @@ fn combat_preview(state: &GameState) -> Option<crate::net::CombatPreview> {
             }
             if lifelink {
                 // A double striker deals (and so lifelinks for) its power twice.
-                *lifegain.entry(a.controller).or_insert(0) += a_power * strikes;
+                let gain = lifegain.entry(a.controller).or_insert(0);
+                *gain = gain.saturating_add(a_power.saturating_mul(strikes));
             }
             // Blockers with lifelink gain their controller life for the
             // damage they deal to the attacker (a first-struck-dead blocker
             // deals none).
             for b in &blockers {
                 if kw(b, &Keyword::Lifelink) && deals_back(b) {
-                    *lifegain.entry(b.controller).or_insert(0) += b.power.max(0);
+                    let gain = lifegain.entry(b.controller).or_insert(0);
+                    *gain = gain.saturating_add(b.power.max(0));
                 }
             }
         }
@@ -694,7 +696,7 @@ fn project_player(
             .filter_map(|c| state.computed_permanent(c.id).map(|cp| cp.power))
     };
     let ferocious_active = controlled_creature_powers().any(|p| p >= 4);
-    let formidable_active = controlled_creature_powers().sum::<i32>() >= 8;
+    let formidable_active = controlled_creature_powers().fold(0, i32::saturating_add) >= 8;
     let hellbent_active = player.hand.is_empty();
     // CR 611.2 — per-turn spell-cast locks in play, and whether this player has
     // already cast a spell of each locked category this turn.

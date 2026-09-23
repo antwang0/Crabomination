@@ -52,7 +52,7 @@ pub(crate) fn spread_face_attacks(
             .filter(|c| c.controller == d && !c.tapped && c.definition.is_creature())
             .count();
         powers.sort_unstable_by(|a, b| b.cmp(a));
-        powers.iter().skip(blockers).sum::<i32>() >= state.effective_life(d).max(1)
+        powers.iter().skip(blockers).fold(0i32, |a, &p| a.saturating_add(p)) >= state.effective_life(d).max(1)
     };
     let mut next = 0;
     let mut first_powers: Vec<i32> = pinned.iter().map(|&id| power(id)).collect();

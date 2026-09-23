@@ -941,6 +941,10 @@ fn every_pump_goes_through_the_saturating_helper() {
 /// everywhere; the difference of two life totals widens to `i64` instead,
 /// because both ends saturate and the clamp is applied after.
 ///
+/// A `.sum()` within three lines of a power / toughness read counts too: the
+/// 25-seat debug pod overflowed the block planner's incoming-damage sum
+/// (`.map(|a| a.power).sum()`), which no single-line pattern could see.
+///
 /// ⚠ Test modules are skipped by BRACE MATCHING, not by cutting the file at
 /// the first `#[cfg(test)]`: `bot.rs` has one at line 5,592 of 24,419, so the
 /// cut version of this walk would read a fifth of the file that matters most.
@@ -988,6 +992,9 @@ fn no_saturating_quantity_is_summed_with_plain_arithmetic() {
                 let src = std::fs::read_to_string(&p).expect("utf-8");
                 let spans = test_spans(&src);
                 let mut at = 0usize;
+                // The last few live lines: an iterator chain puts `.sum()` a
+                // line or three below the `.map(|a| a.power)` it adds up.
+                let mut recent: std::collections::VecDeque<&str> = Default::default();
                 for (i, line) in src.lines().enumerate() {
                     let start = at;
                     at += line.len() + 1;
@@ -995,10 +1002,24 @@ fn no_saturating_quantity_is_summed_with_plain_arithmetic() {
                         continue;
                     }
                     let t = line.trim();
-                    if t.starts_with("//") || t.contains("saturating_") {
+                    if t.starts_with("//") {
+                        continue;
+                    }
+                    recent.push_back(t);
+                    if recent.len() > 4 {
+                        recent.pop_front();
+                    }
+                    if t.contains("saturating_") {
                         continue;
                     }
                     if ARITH.iter().chain(TOTALS.iter()).any(|pat| t.contains(pat)) {
+                        out.push(format!("{}:{} — {t}", p.display(), i + 1));
+                    }
+                    // `.sum()` over a chain that reads a power or toughness —
+                    // a block planner's incoming damage, a board's total power.
+                    if (t.contains(".sum()") || t.contains(".sum::<i32>()"))
+                        && recent.iter().any(|l| l.contains("power") || l.contains("toughness"))
+                    {
                         out.push(format!("{}:{} — {t}", p.display(), i + 1));
                     }
                 }

@@ -623,7 +623,7 @@ impl GameState {
             .map(|c| (c.id, c.definition.name.to_string()))
             .collect();
         let reachable: i32 =
-            pool.iter().filter_map(|(id, _)| self.computed_permanent(*id)).map(|c| c.power).sum();
+            pool.iter().filter_map(|(id, _)| self.computed_permanent(*id)).map(|c| c.power).fold(0, i32::saturating_add);
         let picks = if reachable < need {
             Vec::new()
         } else {
@@ -641,7 +641,7 @@ impl GameState {
             .unwrap_or_default()
         };
         let paid: i32 =
-            picks.iter().filter_map(|id| self.computed_permanent(*id)).map(|c| c.power).sum();
+            picks.iter().filter_map(|id| self.computed_permanent(*id)).map(|c| c.power).fold(0, i32::saturating_add);
         if paid >= need && !picks.is_empty() {
             for id in picks {
                 self.sacrifice_one(id, p, events);

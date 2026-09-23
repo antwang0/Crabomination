@@ -9669,7 +9669,7 @@ impl GameState {
                     };
                     self.sacrificed_count = chosen.len() as u32;
                     self.sacrificed_total_power =
-                        chosen.iter().map(|c| c.1 as i32).sum();
+                        chosen.iter().map(|c| c.1 as i32).fold(0, i32::saturating_add);
                     for (idx, (id, power, is_creature, tough, mv, is_artifact, is_vehicle, colors)) in
                         chosen.into_iter().enumerate()
                     {
