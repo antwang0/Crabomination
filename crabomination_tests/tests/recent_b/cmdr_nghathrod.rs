@@ -1,4 +1,5 @@
-//! Commander: the Mind Flayarrrs precon's missing cards (`decks::cmdr_nghathrod`).
+//! Commander: the Mind Flayarrrs precon's missing cards (`decks::cmdr_nghathrod`),
+//! then Tramplesaurus Rex's (`decks::cmdr_ghalta`).
 
 use crabomination::card::{CardId, CounterType, Keyword};
 use crabomination::catalog;
@@ -257,4 +258,236 @@ fn captain_nghathrod_steals_milled_not_discarded() {
     drain_stack(&mut g);
     let bears = g.battlefield.iter().find(|c| c.definition.name == "Grizzly Bears");
     assert_eq!(bears.map(|c| c.controller), Some(0), "the milled Bears come over");
+}
+
+// ── Tramplesaurus Rex (FDC, Ghalta, Primal Hunger) ──────────────────────────
+
+use crabomination::game::types::{Attack, AttackTarget};
+
+fn green(g: &mut GameState, seat: usize) {
+    g.players[seat].mana_pool.add(Color::Green, 12);
+    g.players[seat].mana_pool.add_colorless(12);
+}
+
+fn cast_green(g: &mut GameState, card_id: CardId, target: Option<Target>, more: Vec<Target>) {
+    green(g, g.priority.player_with_priority);
+    g.perform_action(GameAction::CastSpell { card_id, target, additional_targets: more, mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(g);
+}
+
+fn named(g: &GameState, name: &str) -> usize {
+    g.battlefield.iter().filter(|c| c.definition.name == name).count()
+}
+
+/// Seat 0 attacks seat 1 with `attacker`, unblocked, through end of combat.
+fn swing(g: &mut GameState, attacker: CardId) {
+    g.clear_sickness(attacker);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![Attack { attacker, target: AttackTarget::Player(1) }]).expect("attack");
+    drain_stack(g);
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no blocks");
+    while g.step != TurnStep::EndCombat {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(g);
+    }
+}
+
+/// CR 506.3 — Arachnogenesis counts the creatures attacking *you*: two of
+/// three attackers in a three-player game.
+#[test]
+fn cr_506_3_arachnogenesis_counts_only_your_attackers() {
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 0;
+    let ids: Vec<_> = (0..3).map(|_| g.add_card_to_battlefield(1, catalog::grizzly_bears())).collect();
+    g.set_attacking(vec![
+        Attack { attacker: ids[0], target: AttackTarget::Player(0) },
+        Attack { attacker: ids[1], target: AttackTarget::Player(0) },
+        Attack { attacker: ids[2], target: AttackTarget::Player(2) },
+    ]);
+    let spell = g.add_card_to_hand(0, catalog::arachnogenesis());
+    cast_green(&mut g, spell, None, vec![]);
+    assert_eq!(named(&g, "Spider"), 2);
+}
+
+/// Colossal Majesty draws only while you control a power-4 creature.
+#[test]
+fn colossal_majesty_needs_a_big_creature() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::colossal_majesty());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let hand = g.players[0].hand.len();
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand);
+    g.add_card_to_battlefield(0, catalog::surrak_and_goreclaw());
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+}
+
+/// Curious Altisaur draws when a Dinosaur connects.
+#[test]
+fn curious_altisaur_draws_on_dinosaur_damage() {
+    let mut g = main_phase();
+    let saur = g.add_card_to_battlefield(0, catalog::curious_altisaur());
+    g.add_card_to_library(0, catalog::forest());
+    let hand = g.players[0].hand.len();
+    swing(&mut g, saur);
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+}
+
+/// Dungrove Elder is as big as your Forests.
+#[test]
+fn dungrove_elder_counts_forests() {
+    let mut g = main_phase();
+    let elder = g.add_card_to_battlefield(0, catalog::dungrove_elder());
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::forest());
+    }
+    g.add_card_to_battlefield(1, catalog::forest());
+    let cp = g.computed_permanent(elder).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3));
+    assert!(cp.keywords().contains(&Keyword::Hexproof));
+}
+
+/// Ezuri's Predation: a Beast per opposing creature, each fighting its own.
+#[test]
+fn ezuris_predation_beasts_fight_each_opposing_creature() {
+    let mut g = main_phase();
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::ezuris_predation());
+    cast_green(&mut g, spell, None, vec![]);
+    assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none());
+    assert_eq!(named(&g, "Phyrexian Beast"), 2);
+}
+
+/// Monstrous Onslaught divides your biggest creature's power.
+#[test]
+fn monstrous_onslaught_divides_the_greatest_power() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::surrak_and_goreclaw());
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::monstrous_onslaught());
+    cast_green(&mut g, spell, Some(Target::Permanent(a)), vec![Target::Permanent(b)]);
+    assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none(), "6 split 3/3");
+}
+
+/// Surrak and Goreclaw: another nontoken creature enters with a counter,
+/// haste and trample; a token gets only the trample.
+#[test]
+fn surrak_and_goreclaw_pumps_nontoken_arrivals() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::surrak_and_goreclaw());
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    cast_green(&mut g, bears, None, vec![]);
+    let cp = g.computed_permanent(bears).unwrap();
+    assert_eq!(cp.power, 3);
+    assert!(cp.keywords().contains(&Keyword::Haste) && cp.keywords().contains(&Keyword::Trample));
+    let spell = g.add_card_to_hand(0, catalog::ezuris_predation());
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    cast_green(&mut g, spell, None, vec![]);
+    let beast = g.battlefield.iter().find(|c| c.definition.name == "Phyrexian Beast").unwrap().id;
+    assert_eq!(g.battlefield_find(beast).unwrap().counter_count(CounterType::PlusOnePlusOne), 0);
+}
+
+/// CR 903.3 — Tangleweave Armor's Germ is as big as your biggest commander.
+#[test]
+fn cr_903_3_tangleweave_armor_sizes_off_the_commander() {
+    let mut g = main_phase();
+    let ghalta = g.add_card_to_graveyard(0, catalog::ghalta_primal_hunger());
+    g.players[0].commanders.push(ghalta);
+    let armor = g.add_card_to_hand(0, catalog::tangleweave_armor());
+    cast_green(&mut g, armor, None, vec![]);
+    let germ = g.battlefield.iter().find(|c| c.definition.name == "Phyrexian Germ").expect("germ").id;
+    let cp = g.computed_permanent(germ).unwrap();
+    assert_eq!((cp.power, cp.toughness), (12, 12));
+}
+
+/// Thickest in the Thicket doubles a creature's power, then draws two at
+/// your end step while you hold the biggest creature.
+#[test]
+fn thickest_in_the_thicket_doubles_and_draws() {
+    let mut g = main_phase();
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for _ in 0..2 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let spell = g.add_card_to_hand(0, catalog::thickest_in_the_thicket());
+    cast_green(&mut g, spell, None, vec![]);
+    assert_eq!(g.computed_permanent(bears).unwrap().power, 4);
+    let hand = g.players[0].hand.len();
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 2);
+}
+
+/// Whiptongue Hydra destroys every flyer and grows by the count.
+#[test]
+fn whiptongue_hydra_grows_by_the_flyers_it_kills() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(1, catalog::serra_angel());
+    g.add_card_to_battlefield(1, catalog::serra_angel());
+    g.add_card_to_battlefield(0, catalog::serra_angel());
+    let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let hydra = g.add_card_to_hand(0, catalog::whiptongue_hydra());
+    cast_green(&mut g, hydra, None, vec![]);
+    assert_eq!(named(&g, "Serra Angel"), 0);
+    assert!(g.battlefield_find(bears).is_some());
+    assert_eq!(g.battlefield_find(hydra).unwrap().counter_count(CounterType::PlusOnePlusOne), 3);
+}
+
+/// Whisperer of the Wilds adds {G}{G} only while ferocious.
+#[test]
+fn whisperer_of_the_wilds_ferocious_mana() {
+    let activate = |g: &mut GameState, id| {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: id,
+            ability_index: 1,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+    };
+    let mut g = main_phase();
+    let w = g.add_card_to_battlefield(0, catalog::whisperer_of_the_wilds());
+    g.clear_sickness(w);
+    assert!(activate(&mut g, w).is_err(), "no power-4 creature");
+    g.add_card_to_battlefield(0, catalog::surrak_and_goreclaw());
+    activate(&mut g, w).expect("ferocious");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 2);
+}
+
+/// Yeva gives green creature spells flash — not white ones.
+#[test]
+fn yeva_flashes_green_creatures_only() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::yeva_natures_herald());
+    g.step = TurnStep::End;
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    cast_green(&mut g, bears, None, vec![]);
+    assert!(g.battlefield_find(bears).is_some(), "green: flash");
+    let angel = g.add_card_to_hand(0, catalog::serra_angel());
+    g.players[0].mana_pool.add(Color::White, 2);
+    green(&mut g, 0);
+    assert!(
+        g.perform_action(GameAction::CastSpell {
+            card_id: angel,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .is_err(),
+        "white: no flash"
+    );
 }
