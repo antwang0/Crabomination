@@ -184,7 +184,8 @@ impl GameState {
     /// graveyard-cast permission hopped it into hand (CR 601.2a).
     pub fn spell_kind_for(&self, seat: usize, card: &CardInstance) -> SpellKind {
         let mut kind = card.definition.spell_kind();
-        kind.from_graveyard = self.casting_from_graveyard == Some(card.id);
+        kind.from_graveyard =
+            self.casting_hop == Some((card.id, crate::game::HopFrom::Graveyard));
         kind.commander = self
             .players
             .get(seat)

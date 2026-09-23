@@ -5213,11 +5213,11 @@ impl GameState {
             let card = Self::take_card(&mut self.players[p].graveyard, card_id)
                 .ok_or(GameError::CardNotInHand(card_id))?;
             self.players[p].hand.push(card);
-            self.casting_from_graveyard = Some(card_id);
+            self.casting_hop = Some((card_id, crate::game::HopFrom::Graveyard));
             let r = self.cast_spell_with_convoke(
                 card_id, target, additional_targets, mode, x_value, &[], &[], CastFlags::default(),
             );
-            self.casting_from_graveyard = None;
+            self.casting_hop = None;
             match &r {
                 Err(_) => {
                     if let Some(card) = Self::take_card(&mut self.players[p].hand, card_id) {
@@ -5247,11 +5247,11 @@ impl GameState {
                 .ok_or(GameError::CardNotInHand(card_id))?;
             card.pending_etb_counters.push((crate::card::CounterType::Finality, 1));
             self.players[p].hand.push(card);
-            self.casting_from_graveyard = Some(card_id);
+            self.casting_hop = Some((card_id, crate::game::HopFrom::Graveyard));
             let r = self.cast_spell_with_convoke(
                 card_id, target, additional_targets, mode, x_value, &[], &[], CastFlags::default(),
             );
-            self.casting_from_graveyard = None;
+            self.casting_hop = None;
             match &r {
                 Err(_) => {
                     if let Some(mut card) = Self::take_card(&mut self.players[p].hand, card_id) {
@@ -5282,11 +5282,11 @@ impl GameState {
                 .ok_or(GameError::CardNotInHand(card_id))?;
             card.pending_etb_counters.push((crate::card::CounterType::Finality, 1));
             self.players[p].hand.push(card);
-            self.casting_from_graveyard = Some(card_id);
+            self.casting_hop = Some((card_id, crate::game::HopFrom::Graveyard));
             let r = self.cast_spell_with_convoke(
                 card_id, target, additional_targets, mode, x_value, &[], &[], CastFlags::default(),
             );
-            self.casting_from_graveyard = None;
+            self.casting_hop = None;
             match r {
                 Err(e) => {
                     if let Some(mut card) = Self::take_card(&mut self.players[p].hand, card_id) {
@@ -5313,11 +5313,11 @@ impl GameState {
             let card = Self::take_card(&mut self.players[p].graveyard, card_id)
                 .ok_or(GameError::CardNotInHand(card_id))?;
             self.players[p].hand.push(card);
-            self.casting_from_graveyard = Some(card_id);
+            self.casting_hop = Some((card_id, crate::game::HopFrom::Graveyard));
             let r = self.cast_spell_with_convoke(
                 card_id, target, additional_targets, mode, x_value, &[], &[], CastFlags::default(),
             );
-            self.casting_from_graveyard = None;
+            self.casting_hop = None;
             match r {
                 Err(e) => {
                     if let Some(card) = Self::take_card(&mut self.players[p].hand, card_id) {
@@ -5379,11 +5379,11 @@ impl GameState {
             self.players[p].hand.push(card);
             // The cast pipeline runs from hand, so record the true origin for
             // "cast a spell from your library" payoffs (Melek).
-            self.casting_from_library_top = Some(card_id);
+            self.casting_hop = Some((card_id, crate::game::HopFrom::LibraryTop));
             let r = self.cast_spell_with_convoke(
                 card_id, target, additional_targets, mode, x_value, &[], &[], CastFlags::default(),
             );
-            self.casting_from_library_top = None;
+            self.casting_hop = None;
             if r.is_err() {
                 if let Some(card) = Self::take_card(&mut self.players[p].hand, card_id) {
                     self.players[p].library.insert(0, card);
@@ -6979,7 +6979,7 @@ impl GameState {
         let mut card = self.players[p].remove_from_hand(card_id).ok_or(GameError::CardNotInHand(card_id))?;
         card.cast_from_hand = true;
         card.cast_from_exile = false;
-        card.cast_from_library = self.casting_from_library_top == Some(card_id);
+        card.cast_from_library = self.casting_hop == Some((card_id, crate::game::HopFrom::LibraryTop));
         card.adventuring = true;
         let mut events = receipt.auto_events;
         events.push(GameEvent::SpellCast { player: p, card_id, face: CastFace::Front });
@@ -7051,7 +7051,7 @@ impl GameState {
         let mut card = self.players[p].remove_from_hand(card_id).ok_or(GameError::CardNotInHand(card_id))?;
         card.cast_from_hand = true;
         card.cast_from_exile = false;
-        card.cast_from_library = self.casting_from_library_top == Some(card_id);
+        card.cast_from_library = self.casting_hop == Some((card_id, crate::game::HopFrom::LibraryTop));
         card.omen_casting = true;
         let mut events = receipt.auto_events;
         events.push(GameEvent::SpellCast { player: p, card_id, face: CastFace::Front });
@@ -7222,7 +7222,7 @@ impl GameState {
         let mut card = self.players[p].remove_from_hand(card_id).ok_or(GameError::CardNotInHand(card_id))?;
         card.cast_from_hand = true;
         card.cast_from_exile = false;
-        card.cast_from_library = self.casting_from_library_top == Some(card_id);
+        card.cast_from_library = self.casting_hop == Some((card_id, crate::game::HopFrom::LibraryTop));
         card.split_cast = Some(if fused { 2 } else { 1 });
         let mut events = receipt.auto_events;
         events.push(GameEvent::SpellCast { player: p, card_id, face: CastFace::Front });
@@ -7881,7 +7881,7 @@ impl GameState {
         cast_census::add(1);
         card.cast_from_hand = true;
         card.cast_from_exile = false;
-        card.cast_from_library = self.casting_from_library_top == Some(card_id);
+        card.cast_from_library = self.casting_hop == Some((card_id, crate::game::HopFrom::LibraryTop));
         // CR 701.67 — a mandatory "waterbend {N}" rider is paid even on the
         // plain cast path; only the optional "you may waterbend" form is
         // skippable. When no explicit amount arrived via CastSpellWaterbend,
@@ -12064,7 +12064,7 @@ impl GameState {
         let from_hand = zone == AltCastZone::Hand;
         card.cast_from_hand = from_hand;
         card.cast_from_exile = false;
-        card.cast_from_library = from_hand && self.casting_from_library_top == Some(card_id);
+        card.cast_from_library = from_hand && self.casting_hop == Some((card_id, crate::game::HopFrom::LibraryTop));
         if alt.evoke_sacrifice {
             card.evoked = true;
         }

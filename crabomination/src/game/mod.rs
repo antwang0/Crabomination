@@ -2091,6 +2091,14 @@ pub struct ResolutionScratch {
     pub(crate) resolving_spell_snapshot: Option<std::sync::Arc<ResolvingSpell>>,
 }
 
+/// Where a card hopped into hand for the cast pipeline really came from
+/// ([`GameState::casting_hop`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum HopFrom {
+    LibraryTop,
+    Graveyard,
+}
+
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct GameState {
     pub players: Vec<Player>,
@@ -2307,16 +2315,15 @@ pub struct GameState {
     /// Transient scratch — `#[serde(skip)]`.
     #[serde(skip)]
     pub expend_prev_total: u32,
-    /// The card currently being cast off the library top (CR 401.6). The
-    /// cast pipeline runs from hand, so this scratch preserves the true origin
-    /// for "cast a spell from your library" payoffs. Transient.
+    /// The card a cast permission has hopped into hand for the normal cast
+    /// pipeline, and where it really came from: the library top (CR 401.6,
+    /// "cast a spell from your library" payoffs) or a graveyard (Muldrotha,
+    /// Noctis, Osteomancer Adept, Exploration Broodship — read by
+    /// `spell_kind_for` for `SpellKind::from_graveyard`). One slot, because
+    /// `GameState` is size-capped (`cow::tests::game_state_stays_small`).
+    /// Transient.
     #[serde(skip)]
-    pub(crate) casting_from_library_top: Option<CardId>,
-    /// The card a graveyard-cast permission (Muldrotha, Noctis, Osteomancer
-    /// Adept, Exploration Broodship) has hopped into hand for the cast
-    /// pipeline — `spell_kind_for` reads it for `SpellKind::from_graveyard`.
-    #[serde(skip)]
-    pub(crate) casting_from_graveyard: Option<CardId>,
+    pub(crate) casting_hop: Option<(CardId, HopFrom)>,
     /// Total spells cast during the previous turn (snapshotted from
     /// `spells_cast_this_turn` at Cleanup). Drives the classic Innistrad
     /// werewolf transform check ("if no spells were cast last turn …").
@@ -3777,8 +3784,7 @@ impl Clone for GameState {
             noncreature_spells_cast_this_turn: self.noncreature_spells_cast_this_turn,
             mana_spent_on_spells_this_turn: self.mana_spent_on_spells_this_turn,
             expend_prev_total: self.expend_prev_total,
-            casting_from_library_top: self.casting_from_library_top,
-            casting_from_graveyard: self.casting_from_graveyard,
+            casting_hop: self.casting_hop,
             spells_cast_last_turn: self.spells_cast_last_turn,
             permanents_to_graveyard_this_turn: self.permanents_to_graveyard_this_turn,
             sacrificed_power: self.sacrificed_power,
@@ -3985,8 +3991,7 @@ impl GameState {
             noncreature_spells_cast_this_turn: 0,
             mana_spent_on_spells_this_turn: 0,
             expend_prev_total: 0,
-            casting_from_library_top: None,
-            casting_from_graveyard: None,
+            casting_hop: None,
             spells_cast_last_turn: 0,
             permanents_to_graveyard_this_turn: 0,
             delayed_triggers: Vec::new(),
