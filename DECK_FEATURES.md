@@ -43,6 +43,7 @@ lists were picked.
 | **Sultai Arisen** (TDC precon) BGU | Teval, the Balanced Scale | BGU | 100 | 🟡 all 100 implemented, 8 carry residuals (below) |
 | **Mind Flayarrrs** (CLB precon) UB | Captain N'ghathrod | UB | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
 | **Blood Rites** (LCC precon) WB | Clavileño, First of the Blessed | WB | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
+| **Heads I Win, Tails You Lose** (SLD) UR | Zndrsplt, Eye of Wisdom **+** Okaun, Eye of Chaos (Partner with) | UR | 98 + 2 | ✅ complete |
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not
@@ -82,8 +83,8 @@ hundredth (Lord of the Forsaken) needing one primitive,
 106.6 / 601.2a). It is the pod's graveyard seat: Kotis's once-a-turn
 graveyard cast, Steward of the Harvest's granted land abilities, Teval's
 "cards leave your graveyard" tokens. After `pod_field(10)`; `--seats 11`
-reaches it. Next precons by `scripts/precon_scan.py`: Heads I Win, Tails You
-Lose (SLD, 9 missing), Wretched Ranks (FDC, 9 — releases 2026-10-02).
+reaches it. Next by `scripts/precon_scan.py`: Wretched Ranks (FDC, 9 —
+releases 2026-10-02), Goblin Storm (SLD, 10).
 
 🟡 **Residuals in the list** (each also on its card's doc): Welcome the Dead
 (X counts every card binned this turn, not only from hand/library), Colossal
@@ -127,6 +128,22 @@ whole table grows with the table.
 creature spell's types, so a Demon *noncreature* spell can't use it), New
 Blood (the text change is approximated), Secluded Courtyard (only the cast
 half of the restriction).
+
+The **fourteenth** is the Secret Lair **Heads I Win, Tails You Lose** list
+(SLD, 2022), MTGJSON's `HeadsIWinTailsYouLose_SLD` card for card — coin
+flips, and the pod's "Partner with" pair (CR 702.124j). Its commanders were
+missing too (the scanner checked only the 99; fixed). Daretti's -10 emblem
+exposed the emblem matcher's hand-kept ten-kind whitelist.
+
+⚠⚠ **And fourteen seats is where the flat 50,000-action cap starts to bite:
+1 game in 1,000, at two seeds.** Both capped games are *long*, not looping —
+309 and 314 turns against a 170 mean, 9-10 of 14 players still alive, empty
+hands, boards of lands after the sweepers, priority passes spread evenly
+across seats; libraries of 20-60 cards would have ended them by decking.
+The new `longest` column says why it starts here: the longest game runs
+1.7-2.8x the mean at every seat count (42,266 actions at 13 seats), and the
+14-seat mean is 24,196. Recorded, not "fixed" by raising the cap — a
+stalled attrition board at fourteen players is the finding.
 
 The **tenth** is the first list built around what only happens at three seats
 or more, and it exists because of a census, not a hunch: **not one of the nine

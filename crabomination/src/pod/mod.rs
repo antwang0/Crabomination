@@ -203,6 +203,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::CLAVILENO_COMMANDERS,
             main: decks::CLAVILENO_MAIN,
         },
+        // Fourteenth: the fourth official list (Heads I Win, Tails You Lose,
+        // SLD) — coin flips, and the pod's "Partner with" pair. `--seats 14`.
+        PodDeck {
+            name: "Zndrsplt/Okaun (UR)",
+            commanders: decks::ZNDRSPLT_COMMANDERS,
+            main: decks::ZNDRSPLT_MAIN,
+        },
     ]
 }
 
@@ -675,8 +682,9 @@ mod tests {
         }
     }
 
-    /// CR 903.5a/c — the eleventh to thirteenth seats are official precons
-    /// taken card for card (Sultai Arisen, Mind Flayarrrs, Blood Rites). They seat what no
+    /// CR 903.5a/c — the eleventh to fourteenth seats are official lists
+    /// taken card for card (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
+    /// Win, Tails You Lose). They seat what no
     /// hand-built list did — graveyard casts (Kotis, CR 601.2a), graveyard-only
     /// mana (Lord of the Forsaken, CR 106.6), a pay-one-of-three additional
     /// cost (Dusk Mangler, CR 601.2b), a trigger that works while suspended
@@ -688,12 +696,13 @@ mod tests {
             ("Teval", [0x7E7A1_u64, 78, 9002]),
             ("N'ghathrod", [0xC1B, 79, 9003]),
             ("Clavileño", [0xB100D, 80, 9004]),
+            ("Zndrsplt", [0xC0141, 81, 9005]),
         ] {
             let precon = *field.iter().find(|d| d.name.starts_with(name)).expect("the precon seat");
             assert_eq!(precon.card_count(), 100);
             let decks = vec![precon, field[0], field[1], field[2]];
             let t = build_pod_template(&decks);
-            assert_eq!(t.players[0].library.len(), 99);
+            assert_eq!(t.players[0].library.len(), 100 - precon.commanders.len());
             let pilots = vec![Pilot::default(); 4];
             for seed in seeds {
                 let o = play_one_pod_game(&t, &pilots, 50_000, seed);

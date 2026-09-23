@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Ten hand-picked commanders plus three official preconstructed lists, each a
+//! Ten hand-picked commanders plus four official preconstructed lists, each a
 //! 99 of cards this engine implements: legal under CR 903 (100 cards
 //! including the commander, singleton outside basics, every card inside the
 //! commander's CR 903.4 color identity) and Commander-legal per Scryfall's
@@ -8,8 +8,8 @@
 //!
 //! The ten were built by hand because the offline Scryfall cache cannot say
 //! how a precon splits into decks; MTGJSON's deck files can, and the eleventh
-//! through thirteenth (Sultai Arisen, Mind Flayarrrs, Blood Rites) are taken
-//! from one card for card. What all of them keep
+//! through fourteenth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
+//! Win, Tails You Lose) are taken from one card for card. What all of them keep
 //! from the precon idea is what the pod needs — fixed, legal, varied color
 //! identities, and built to play against each other.
 //! One is a Partner pair (CR 702.124b), one is a **planeswalker**
@@ -553,4 +553,34 @@ pub const CLAVILENO_MAIN: &[CardFactory] = &[
     // Basics: 8 plains, 13 swamp
     plains, plains, plains, plains, plains, plains, plains, plains, swamp, swamp, swamp, swamp,
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+/// Zndrsplt, Eye of Wisdom **+** Okaun, Eye of Chaos — UR, a "Partner with"
+/// pair (CR 702.124j). Both commanders, then the 98.
+pub const ZNDRSPLT_COMMANDERS: &[CardFactory] = &[zndrsplt_eye_of_wisdom, okaun_eye_of_chaos];
+
+/// **Heads I Win, Tails You Lose**, the Secret Lair Commander deck (SLD,
+/// 2022-04-22), exactly as MTGJSON's `HeadsIWinTailsYouLose_SLD` prints it:
+/// 98 cards. Coin flips; the pod's fourth official list and its first
+/// "Partner with" pair.
+pub const ZNDRSPLT_MAIN: &[CardFactory] = &[
+    daretti_scrap_savant, ral_zarek, goblin_kaboomist, krark_the_thumbless, niv_mizzet_parun,
+    spark_double, frenetic_sliver, goblin_archaeologist, karplusan_minotaur, tavern_scoundrel,
+    tribute_mage, bloodsworn_steward, goblin_engineer, the_locust_god, yusri_fortunes_flame,
+    mogg_assassin, sakashima_the_impostor, stitch_in_time, blasphemous_act, fabricate,
+    fiery_gambit, chandras_ignition, gamble, reshape, seize_the_day, ponder, preordain,
+    serum_visions, slip_through_space, squees_revenge, vandalblast, negate, chaos_warp,
+    whir_of_invention, counterspell, long_term_plans, muddle_the_mixture, temur_battle_rage,
+    krarks_thumb, izzet_signet, lightning_greaves, mind_stone, swiftfoot_boots,
+    sword_of_vengeance, thought_vessel, whispersilk_cloak, boompile, commanders_plate,
+    embercleave, shadowspear, arcane_signet, crooked_scales, sol_ring, talisman_of_creativity,
+    propaganda, mirror_march, chance_encounter, footfall_crater, impulsive_maneuvers,
+    planar_chaos, risky_move, temple_of_epiphany, wandering_fumarole, buried_ruin,
+    great_furnace, izzet_boilerworks, myriad_landscape, path_of_ancestry, rogues_passage,
+    academy_ruins, cascade_bluffs, desolate_lighthouse, exotic_orchard, flamekin_village,
+    inventors_fair, shivan_reef, spinerock_knoll, sulfur_falls, tolaria_west, training_center,
+    command_tower, reliquary_tower, temple_of_the_false_god,
+    // Basics
+    island, island, island, island, island, island, island, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain,
 ];
