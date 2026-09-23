@@ -2232,7 +2232,7 @@ pub fn sync_game_visuals(
             commands.entity(entity).despawn();
         } else {
             let base = deck_position(pile.owner, viewer, n_seats);
-            let y = pile.index as f32 * DECK_CARD_Y_STEP + 0.01;
+            let y = pile.index as f32 * crate::card::pile_step(size) + 0.01;
             let pos = Vec3::new(base.x, y, base.z);
             transform.translation = pos;
             lift.base_translation = pos;
@@ -2250,7 +2250,7 @@ pub fn sync_game_visuals(
             let base = deck_position(seat, viewer, n_seats);
             let rot = back_face_rotation(seat, viewer, n_seats);
             for i in current..target_size {
-                let y = i as f32 * DECK_CARD_Y_STEP + 0.01;
+                let y = i as f32 * crate::card::pile_step(target_size) + 0.01;
                 let pos = Vec3::new(base.x, y, base.z);
                 commands.spawn((
                     Mesh3d(card_assets_ref.card_mesh.clone()),
@@ -2458,7 +2458,7 @@ pub fn sync_game_visuals(
     // Top-of-deck position for the viewer (used as the destination of a
     // mulligan put-back animation and the start of fetch/tutor animations).
     let viewer_deck_base = deck_position(viewer, viewer, n_seats);
-    let viewer_deck_top_y = (viewer_lib_size as f32) * DECK_CARD_Y_STEP + 0.5;
+    let viewer_deck_top_y = crate::card::pile_height(viewer_lib_size) + 0.5;
     let viewer_deck_top = Vec3::new(viewer_deck_base.x, viewer_deck_top_y, viewer_deck_base.z);
     let viewer_deck_back_rot = back_face_rotation(viewer, viewer, n_seats);
 
@@ -2497,7 +2497,7 @@ pub fn sync_game_visuals(
             }))
             .collect();
         let deck_base = deck_position(viewer, viewer, n_seats);
-        let deck_y = viewer_lib_size as f32 * DECK_CARD_Y_STEP + 0.5;
+        let deck_y = crate::card::pile_height(viewer_lib_size) + 0.5;
         let deck_pos = Vec3::new(deck_base.x, deck_y, deck_base.z);
         for (slot, card_view) in viewer_hand.iter().enumerate() {
             use crabomination::net::HandCardView;
@@ -2835,7 +2835,7 @@ pub fn sync_game_visuals(
                     .find(|p| p.seat == seat)
                     .map(|p| p.library.size)
                     .unwrap_or(0);
-                let y = (opp_deck_size as f32) * DECK_CARD_Y_STEP + 0.5;
+                let y = crate::card::pile_height(opp_deck_size) + 0.5;
                 let pos = Vec3::new(opp_deck_base.x, y, opp_deck_base.z);
                 (pos, back_face_rotation(seat, viewer, n_seats))
             };
@@ -2896,7 +2896,7 @@ pub fn sync_game_visuals(
             let base = deck_position(seat, viewer, n_seats);
             let lib_size = cv.players.iter().find(|p| p.seat == seat)
                 .map(|p| p.library.size).unwrap_or(0);
-            let y = lib_size as f32 * DECK_CARD_Y_STEP + 0.5;
+            let y = crate::card::pile_height(lib_size) + 0.5;
             (Vec3::new(base.x, y, base.z), back_face_rotation(seat, viewer, n_seats))
         };
 

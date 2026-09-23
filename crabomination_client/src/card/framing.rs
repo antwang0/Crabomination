@@ -11,7 +11,7 @@
 
 use bevy::prelude::*;
 
-use super::components::{CARD_HEIGHT, CARD_WIDTH, DECK_CARD_Y_STEP};
+use super::components::{CARD_HEIGHT, CARD_WIDTH, pile_height};
 use super::layout::{
     bf_card_transform, command_zone_card_transform, deck_position, exile_position,
     graveyard_position, hand_card_transform,
@@ -221,7 +221,7 @@ const _: () = assert!(TAPPED[0] != 2 && TAPPED[1] != 2, "slot 2 is the reference
 const BACK_GROUPS: usize = 7;
 const VIEWER_HAND: usize = 7;
 const OPP_HAND: usize = 5;
-const LIBRARY: usize = 60;
+const LIBRARY: usize = 99;
 
 /// One card of the representative board.
 #[derive(Clone, Copy, Debug)]
@@ -260,7 +260,7 @@ pub fn sample_board(n_seats: usize, hand_zoom: f32) -> Vec<Placed> {
             out.push(card(seat, Role::Hand, hand_card_transform(seat, 0, n_seats, slot, hand, zoom)));
         }
         out.push(Placed {
-            height: LIBRARY as f32 * DECK_CARD_Y_STEP,
+            height: pile_height(LIBRARY),
             ..card(seat, Role::Pile, flat(deck_position(seat, 0, n_seats)))
         });
         out.push(card(seat, Role::Pile, flat(graveyard_position(seat, 0, n_seats))));
@@ -382,16 +382,17 @@ mod tests {
         // Floors: what this layout measured when it landed, less a few
         // percent. Before the fit, the fixed camera gave 121 px (1v1) and
         // 80 px (pod) at 1920x1080, with the opponent's hand off the top
-        // of the window and the viewer's hand over their own land row.
+        // of the window, the viewer's hand over their own land row, and a
+        // pod's far boards 3.5 cards wide.
         let floor = |seats: usize, vp: Vec2| match (seats, vp.x as u32, vp.y as u32) {
             (2, 1280, 720) => 72.0,
             (2, 1920, 1080) => 120.0,
             (2, 2560, 1080) => 120.0,
             (2, 3840, 2160) => 260.0,
-            (_, 1280, 720) => 45.0,
-            (_, 1920, 1080) => 82.0,
-            (_, 2560, 1080) => 90.0,
-            _ => 195.0,
+            (_, 1280, 720) => 52.0,
+            (_, 1920, 1080) => 95.0,
+            (_, 2560, 1080) => 102.0,
+            _ => 215.0,
         };
         for (seats, vp, b) in &fitted {
             assert!(
@@ -399,8 +400,7 @@ mod tests {
                 "{seats} seats at {vp}: viewer cards shrank to {:.0} px", b.viewer_card_px,
             );
             // Only the viewer's hand runs off the window (its lower half).
-            let hand = if *seats == 2 { VIEWER_HAND } else { 0 };
-            assert!(b.off_screen <= hand, "{seats} seats at {vp}: {} cards off screen", b.off_screen);
+            assert!(b.off_screen <= VIEWER_HAND, "{seats} seats at {vp}: {} cards off screen", b.off_screen);
             // The hand no longer covers the land row: under a tenth of the
             // row's area (it covered 55% at 1920x1080 before the hand moved).
             let row_area = BACK_GROUPS as f32 * b.viewer_card_px.powi(2) * CARD_HEIGHT / CARD_WIDTH;

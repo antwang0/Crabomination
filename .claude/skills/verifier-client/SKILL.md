@@ -5,14 +5,44 @@ description: >-
   Bevy 0.18 GUI). Launches the release build, drives it with synthetic input,
   and screen-captures the window so HUD/3-D changes can actually be observed.
   Use when the verify/run flow needs to LOOK at the game client. LOCAL ONLY —
-  requires a Windows desktop with a real GPU + interactive display; does NOT
-  work in headless/remote (cloud routine) environments.
+  needs a real GPU + display (the in-client --layout-fixture/--screenshot
+  harness works on any OS; driving a live match with synthetic input is the
+  Windows path); does NOT work in headless/remote (cloud routine) environments.
 ---
 
 # Visually verifying crabomination_client
 
 The surface is pixels. You launch the app, drive it to where the changed UI
 renders, and screen-capture the window. Captured PNGs are the evidence.
+
+## Any OS with a display: the in-client harness (try this first)
+
+For layout and HUD checks the client can stage a board and capture itself
+(`crabomination_client/src/layout_harness.rs`), which needs no OS screenshot
+tooling and captures only the game's own framebuffer:
+
+```sh
+cargo build --profile play -p crabomination_client
+cd crabomination_client   # assets resolve from here
+../target/play/crabomination_client --layout-fixture 4 --window 1920x1080 \
+    --screenshot /tmp/pod.png            # exits by itself after the capture
+```
+
+- `--layout-fixture 2|3|4` boots a fixed mid-game board (full hands, land and
+  creature rows, graveyards, exile; a Commander pod for 3-4), paused on the
+  viewer's main phase, so two builds render the same table. The hand fan
+  renders, unlike the `--load-state` fallback below.
+- `--window WxH` pins the logical window size (skips maximize), so one machine
+  renders several aspects; `--screenshot-delay S` (default 8) waits for card
+  art to stream in.
+- The PNG is in physical pixels (window × display scale); downscale before
+  `Read` (`magick in.png -resize 1920x out.png`).
+- Verified on Linux/Wayland (KDE) with an NVIDIA GPU, 2026-09-23. For numbers
+  rather than pictures, `cargo test -p crabomination_client framing::tests::budget
+  -- --nocapture` prints card sizes per window without a display.
+
+The Windows procedure below still applies when you need to drive a live match
+with synthetic input.
 
 ## Environment requirement (read first)
 

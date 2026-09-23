@@ -6,6 +6,22 @@ pub const CARD_HEIGHT: f32 = CARD_WIDTH * 88.0 / 63.0;
 pub const CARD_THICKNESS: f32 = 0.02;
 
 pub const DECK_CARD_Y_STEP: f32 = CARD_THICKNESS * 1.5;
+/// Tallest a library pile is drawn: 40 cards' worth. A Commander library is
+/// 99 cards, and at a card's thickness each it stood three units tall — a
+/// black block that reached from a pod's far edge up into the HUD band and
+/// told nothing the HUD's library count doesn't. Past 40 cards the step
+/// shrinks instead.
+pub const MAX_PILE_HEIGHT: f32 = 40.0 * DECK_CARD_Y_STEP;
+
+/// Height step between the cards of a `size`-card library pile.
+pub fn pile_step(size: usize) -> f32 {
+    DECK_CARD_Y_STEP.min(MAX_PILE_HEIGHT / size.max(1) as f32)
+}
+
+/// Height of a `size`-card library pile's top.
+pub fn pile_height(size: usize) -> f32 {
+    size as f32 * pile_step(size)
+}
 
 pub const HOVER_LIFT_AMOUNT: f32 = 0.6;
 pub const HOVER_LIFT_SPEED: f32 = 8.0;

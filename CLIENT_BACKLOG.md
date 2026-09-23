@@ -305,7 +305,10 @@ Cross-references the detailed entries below where one exists.
   commits) is worth shipping ahead of the full plan.
 - 🟡 **Battlefield organization at scale** — ✅ identical tokens cascade
   into piles with a ×N count chip (`creature_card_transform` +
-  `token_badge.rs`); same-name lands already stacked. Remaining ⏳: a
+  `token_badge.rs`); same-name lands already stacked. ✅ A pod's far
+  seats keep their piles and hand in a row behind their board, so each far
+  board has its whole column: 5.6 cards wide at 4 players, up from 3.5, where
+  six creatures overlapped. Remaining ⏳: a
   visible aura/equipment → host link (today attachment info lives only in
   tooltips).
 - 🟡 **Cost-payment feedback** — ✅ the manual-tap banner live-updates
@@ -564,5 +567,17 @@ bottom player panel collides with the stack panel + AttackAllPanel;
 at 1440p+ everything sits in a small island. Audit `Val::Px` →
 `Val::Percent` / `Val::Vw` / `Val::Vh` per panel and add a `UiScale`
 resource. Subsumes the existing "Responsive Stack Display" entry above.
+
+🟡 **The table half is done (2026-09-23); the HUD half is not.** The camera
+is now fitted to the window (`card/framing.rs`): the closest pose that keeps
+a busy board on screen and clear of the corner panels, refit on resize. With
+the opponent's 1v1 hand moved beside their deck, the viewer's hand off their
+land row, and a pod's far piles moved behind their boards, cards at
+1920x1080 went 121 → 125 px (1v1) and 80 → 99 px (pod), and 242 → 270 /
+160 → 232 px at 4K; `framing::tests::budget` gates the numbers. The panels
+themselves are untouched and still fixed-px: at 1280x720 the ~1075 px player
+panel and the opponent panel overlap, and the fit only knows the panels by
+the nominal rects in `framing::hud_rects` — a slot system that reported real
+rects would let it use space an empty log or a short chip row leaves.
 
 ---
