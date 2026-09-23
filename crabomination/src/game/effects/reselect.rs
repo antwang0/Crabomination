@@ -24,7 +24,7 @@ impl GameState {
         let Some(slot) = self.attacking.iter().position(|a| a.attacker == attacker) else { return };
         let Some(owner) = self.battlefield_find(attacker).map(|c| c.controller) else { return };
         let chooser = ctx.controller;
-        let current = self.attacking[slot].target.clone();
+        let current = self.attacking[slot].target;
 
         let mut seats = self.opponents_of(owner);
         let hostile = self.default_hostile_opponent(chooser);
