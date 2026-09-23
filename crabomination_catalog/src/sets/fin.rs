@@ -9442,7 +9442,7 @@ pub fn ultima_origin_of_oblivion() -> CardDefinition {
                 description: "Whenever you tap a land for {C}, add an additional {C}.",
                 effect: StaticEffect::ExtraManaOnLandTap {
                     enchanted_only: false,
-                    filter: SelectionRequirement::ControlledByYou,
+                    filter: SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
                     extra: ExtraManaKind::MirrorColorless,
                     while_monarch: false,
                 },

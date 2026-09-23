@@ -3610,9 +3610,10 @@ impl crate::game::GameState {
             return;
         }
         let Some(land) = self.battlefield.find_by_id(land_id) else { return };
-        if !land.definition.is_land() {
-            return;
-        }
+        // Every kind but `MirrorColorless` is a land grant; that one lets its
+        // `filter` say which permanents count (Ultima: lands; Forsaken
+        // Monument: any permanent).
+        let is_land = land.definition.is_land();
         let land = land.clone();
         let grants: Vec<(crate::card::CardId, ExtraManaKind)> = self
             .battlefield
@@ -3630,6 +3631,9 @@ impl crate::game::GameState {
                 if *while_monarch && self.monarch != Some(src.controller) {
                     return None;
                 }
+                if !is_land && !matches!(extra, ExtraManaKind::MirrorColorless) {
+                    return None;
+                }
                 (crate::game::layers::requirement_matches_card(filter, &land, src.controller))
                     .then_some((src.id, *extra))
             })
@@ -3637,6 +3641,9 @@ impl crate::game::GameState {
         // Bubbling Muck — the turn-scoped floating version of the same grant.
         let mut grants = grants;
         for (land_type, color) in self.extra_mana_on_land_tap_this_turn.clone() {
+            if !is_land {
+                break;
+            }
             if land.definition.subtypes.land_types.contains(&land_type) {
                 grants.push((land_id, ExtraManaKind::Fixed(color)));
             }

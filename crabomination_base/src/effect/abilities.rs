@@ -36,8 +36,9 @@ pub enum ExtraManaKind {
     Fixed(crate::mana::Color),
     /// The source's ETB-chosen color (Utopia Sprawl).
     ChosenColor,
-    /// One {C}, only when the tap produced colorless mana (Ultima's
-    /// "whenever you tap a land for {C}, add an additional {C}").
+    /// One {C}, only when the tap produced colorless mana — however much
+    /// (Forsaken Monument's ruling). The one kind whose `filter` may match a
+    /// nonland: Ultima says "a land", Forsaken Monument "a permanent".
     MirrorColorless,
     /// One mana of any color, chosen by the controller at tap time (Buried in
     /// the Garden — "adds an additional one mana of any color").
@@ -2089,7 +2090,8 @@ pub enum StaticEffect {
     /// seat's untap step rather than only the static's controller's, and can
     /// be gated on `condition` (evaluated from the source). Intruder Alarm
     /// ("creatures don't untap"), Walking Dream ("doesn't untap if an
-    /// opponent controls two or more creatures").
+    /// opponent controls two or more creatures"), and an Aura's
+    /// `AttachedTo(This)` (Fall from Favor).
     PreventUntapGlobal {
         applies_to: Selector,
         #[serde(default)]

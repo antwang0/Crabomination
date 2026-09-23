@@ -3554,6 +3554,9 @@ impl GameState {
                 StaticEffect::PreventUntapGlobal { applies_to, condition } => {
                     let hits = match applies_to {
                         Selector::This => c.id == card_id,
+                        Selector::AttachedTo(inner) if matches!(**inner, Selector::This) => {
+                            c.attached_to == Some(card_id)
+                        }
                         Selector::EachPermanent(req) => self.evaluate_requirement(
                             req,
                             &crate::game::types::Target::Permanent(card_id),
