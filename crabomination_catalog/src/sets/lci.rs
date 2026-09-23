@@ -2755,7 +2755,7 @@ pub fn bonehoard_dracosaur() -> CardDefinition {
                     duration: crate::card::MayPlayDuration::EndOfThisTurn,
                     pay_any_color: false,
                     max_mana_value: None,
-                    pay_own_cost: false,
+                    pay_own_cost: true,
                     uncast_penalty: None,
                 },
                 Effect::If {

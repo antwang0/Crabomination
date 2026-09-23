@@ -112,7 +112,7 @@ pub fn breyas_apprentice() -> CardDefinition {
                     duration: MayPlayDuration::EndOfControllersNextTurn,
                     pay_any_color: false,
                     max_mana_value: None,
-                    pay_own_cost: false,
+                    pay_own_cost: true,
                     uncast_penalty: None,
                 },
                 Effect::PumpPT {

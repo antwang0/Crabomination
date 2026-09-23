@@ -7838,7 +7838,7 @@ pub enum Effect {
         duration: crate::card::MayPlayDuration,
         /// "You may cast" *paying* the card's cost as generic — the
         /// any-type-mana pay-to-cast rider (Nassari, Dean of Expression).
-        /// `false` keeps the free-cast grant (Robber of the Rich).
+        /// `false` keeps the free-cast grant (Urza, Lord High Artificer; Kotis).
         #[serde(default)]
         pay_any_color: bool,
         /// Only cards at or under this mana value get the permission — the
@@ -7850,7 +7850,10 @@ pub enum Effect {
         /// impulse-draw grant (Light Up the Stage, Reckless Impulse,
         /// Wrenn's Resolve). Stamps the card's actual cost as its alt-cast
         /// cost so the may-play isn't a free cast. Mutually exclusive with
-        /// `pay_any_color`; `false` keeps the free-cast default.
+        /// `pay_any_color`; `false` keeps the free-cast default. ⚠ That
+        /// default is only right when the Oracle says "without paying its
+        /// mana cost": forty impulse cards had it and were cast for nothing
+        /// (`scripts/audit_free_impulse.py` checks the class).
         #[serde(default)]
         pay_own_cost: bool,
         /// "If you don't [cast it], …" fallback (Chandra, Torch of

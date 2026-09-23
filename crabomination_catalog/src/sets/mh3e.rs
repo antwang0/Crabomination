@@ -75,7 +75,7 @@ pub fn unstable_amulet() -> CardDefinition {
                 duration: MayPlayDuration::EndOfThisTurn,
                 pay_any_color: false,
                 max_mana_value: None,
-                pay_own_cost: false,
+                pay_own_cost: true,
                 uncast_penalty: None,
             },
             ..Default::default()
@@ -332,7 +332,7 @@ pub fn glimpse_the_impossible() -> CardDefinition {
             duration: MayPlayDuration::EndOfThisTurn,
             pay_any_color: false,
             max_mana_value: None,
-            pay_own_cost: false,
+            pay_own_cost: true,
             uncast_penalty: Some(Box::new(Effect::Seq(vec![
                 Effect::Move {
                     what: Selector::Target(0),

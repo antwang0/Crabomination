@@ -4185,7 +4185,7 @@ pub fn emberheart_challenger() -> CardDefinition {
                 duration: MayPlayDuration::EndOfThisTurn,
                 pay_any_color: false,
                 max_mana_value: None,
-                pay_own_cost: false,
+                pay_own_cost: true,
                 uncast_penalty: None,
             }),
         ],
@@ -4335,7 +4335,7 @@ pub fn galvanic_relay() -> CardDefinition {
             duration: MayPlayDuration::EndOfControllersNextTurn,
             pay_any_color: false,
             max_mana_value: None,
-            pay_own_cost: false,
+            pay_own_cost: true,
             uncast_penalty: None,
         },
         ..Default::default()
@@ -5355,7 +5355,7 @@ pub fn inti_seneschal_of_the_sun() -> CardDefinition {
                     duration: MayPlayDuration::EndOfControllersNextTurn,
                     pay_any_color: false,
                     max_mana_value: None,
-                    pay_own_cost: false,
+                    pay_own_cost: true,
                     uncast_penalty: None,
                 },
             },
@@ -6189,7 +6189,7 @@ pub fn hugs_grisly_guardian() -> CardDefinition {
             duration: MayPlayDuration::EndOfControllersNextTurn,
             pay_any_color: false,
             max_mana_value: None,
-            pay_own_cost: false,
+            pay_own_cost: true,
             uncast_penalty: None,
         })],
         ..Default::default()
@@ -7245,7 +7245,7 @@ pub fn cori_mountain_monastery() -> CardDefinition {
                     duration: MayPlayDuration::EndOfControllersNextTurn,
                     pay_any_color: false,
                     max_mana_value: None,
-                    pay_own_cost: false,
+                    pay_own_cost: true,
                     uncast_penalty: None,
                 },
                 ..Default::default()
@@ -10675,7 +10675,7 @@ pub fn unlucky_witness() -> CardDefinition {
             duration: MayPlayDuration::EndOfControllersNextTurn,
             pay_any_color: false,
             max_mana_value: None,
-            pay_own_cost: false,
+            pay_own_cost: true,
             uncast_penalty: None,
         })],
         ..Default::default()
