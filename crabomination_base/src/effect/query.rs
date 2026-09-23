@@ -1587,6 +1587,7 @@ impl Effect {
                     ManaPayload::Restricted(inner, _)
                     | ManaPayload::RestrictedToChosenType(inner)
                     | ManaPayload::RestrictedToChosenTypePlain(inner)
+                    | ManaPayload::RestrictedToChosenTypeOrAbility(inner)
                     | ManaPayload::RestrictedToChosenColorMono(inner) => match inner.as_ref() {
                         ManaPayload::Colorless(v)
                         | ManaPayload::AnyOneColor(v)

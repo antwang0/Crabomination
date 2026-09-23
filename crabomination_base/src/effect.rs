@@ -2594,6 +2594,10 @@ pub enum ManaPayload {
     /// Like `RestrictedToChosenType`, without Cavern's uncounterable rider
     /// (Unclaimed Territory — "creature spell of the chosen type").
     RestrictedToChosenTypePlain(Box<ManaPayload>),
+    /// `RestrictedToChosenTypePlain` that also funds abilities of creatures
+    /// of the chosen type (Secluded Courtyard's "or activate an ability of a
+    /// creature or creature card of the chosen type").
+    RestrictedToChosenTypeOrAbility(Box<ManaPayload>),
     /// Like `RestrictedToChosenType`, restricted to monocolored spells of the
     /// source's chosen color (Throne of Eldraine). Unrestricted with none.
     RestrictedToChosenColorMono(Box<ManaPayload>),

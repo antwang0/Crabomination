@@ -2518,6 +2518,7 @@ fn payload_yields_multiple(pool: &crate::effect::ManaPayload) -> bool {
         | ManaPayload::ChosenColorOfSource => false,
         ManaPayload::Restricted(inner, _) | ManaPayload::RestrictedToChosenType(inner)
                     | ManaPayload::RestrictedToChosenTypePlain(inner)
+                    | ManaPayload::RestrictedToChosenTypeOrAbility(inner)
                     | ManaPayload::RestrictedToChosenColorMono(inner) => {
             payload_yields_multiple(inner)
         }
@@ -3903,6 +3904,7 @@ pub(crate) fn payload_produced_colors(pool: &ManaPayload) -> crate::mana::ColorS
         ManaPayload::Restricted(_, _)
         | ManaPayload::RestrictedToChosenType(_)
         | ManaPayload::RestrictedToChosenTypePlain(_)
+        | ManaPayload::RestrictedToChosenTypeOrAbility(_)
         | ManaPayload::RestrictedToChosenColorMono(_) => ColorSet::empty(),
         // Instance-dependent (the chosen color isn't known at the
         // definition level), so it's not part of the static auto-tap
@@ -14381,8 +14383,13 @@ impl GameState {
                         (inner, c.chosen_creature_type.is_some_and(|t| SR::CreatureOfTypeUncounterable(t).allows(kind)))
                     }
                     ManaPayload::RestrictedToChosenTypePlain(inner) => {
-                        (inner, c.chosen_creature_type.is_some_and(|t| SR::CreatureOfType(t).allows(kind)))
+                        (inner, c.chosen_creature_type.is_some_and(|t| SR::CreatureSpellOfType(t).allows(kind)))
                     }
+                    ManaPayload::RestrictedToChosenTypeOrAbility(inner) => (
+                        inner,
+                        c.chosen_creature_type
+                            .is_some_and(|t| SR::CreatureOfTypeOrItsAbility(t).allows(kind)),
+                    ),
                     _ => continue,
                 };
                 if allowed {

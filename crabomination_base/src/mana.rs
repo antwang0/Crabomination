@@ -585,6 +585,9 @@ pub enum SpendRestriction {
     /// Seedcore; Unclaimed Territory and Secluded Courtyard's chosen type) —
     /// `CreatureOfType` limited to creature spells.
     CreatureSpellOfType(crate::card::CreatureType),
+    /// "…a creature spell of [type] or activate an ability of a creature or
+    /// creature card of [type]" (Secluded Courtyard's chosen type).
+    CreatureOfTypeOrItsAbility(crate::card::CreatureType),
     /// "Spend this mana only to cast [A], [B], and/or [C] spells" — the
     /// several-type sibling of `CreatureOfType` (Master of Dark Rites:
     /// Vampire, Cleric, and/or Demon). A shorter list repeats a type. Unlike
@@ -693,6 +696,9 @@ impl SpendRestriction {
             SpendRestriction::ArtifactOnly => "only artifacts",
             SpendRestriction::CreatureOfTypeUncounterable(_)
             | SpendRestriction::CreatureSpellOfType(_) => "only creatures of the chosen type",
+            SpendRestriction::CreatureOfTypeOrItsAbility(_) => {
+                "only creatures of the chosen type and their abilities"
+            }
             SpendRestriction::CreatureOfType(_) => "only spells of the chosen type",
             SpendRestriction::CreatureOfAnyTypes(_) => "only spells of the listed creature types",
             SpendRestriction::LandAbilitiesOnly => "only abilities of lands",
@@ -762,11 +768,17 @@ impl SpendRestriction {
             | SpendRestriction::CreatureSpellOfType(t) => {
                 kind.creature && (kind.changeling || kind.creature_types.contains(&t))
             }
+            SpendRestriction::CreatureOfTypeOrItsAbility(t) => {
+                (kind.creature || kind.creature_ability)
+                    && (kind.changeling || kind.creature_types.contains(&t))
+            }
+            // Spells only: an ability's `SpellKind` carries its source's types.
             SpendRestriction::CreatureOfType(t) => {
-                kind.changeling || kind.creature_types.contains(&t)
+                !kind.activating_ability && (kind.changeling || kind.creature_types.contains(&t))
             }
             SpendRestriction::CreatureOfAnyTypes(ts) => {
-                kind.changeling || ts.iter().any(|t| kind.creature_types.contains(t))
+                !kind.activating_ability
+                    && (kind.changeling || ts.iter().any(|t| kind.creature_types.contains(t)))
             }
             SpendRestriction::CreatureOnly => kind.creature,
             SpendRestriction::NoncreatureSpellsOnly => {
@@ -785,8 +797,9 @@ impl SpendRestriction {
             SpendRestriction::HighMvOrX => kind.mana_value >= 5 || kind.has_x,
             SpendRestriction::DragonOrOmenSpell => {
                 kind.omen
-                    || kind.changeling
-                    || kind.creature_types.contains(&crate::card::CreatureType::Dragon)
+                    || !kind.activating_ability
+                        && (kind.changeling
+                            || kind.creature_types.contains(&crate::card::CreatureType::Dragon))
             }
             SpendRestriction::EnchantmentSpell => kind.enchantment,
             SpendRestriction::MulticoloredSpell => kind.multicolored,
