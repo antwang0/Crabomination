@@ -1,4 +1,5 @@
-//! Commander: the Teval, the Balanced Scale batch (`decks::cmdr_teval`).
+//! Commander: the Teval, the Balanced Scale batch (`decks::cmdr_teval`), and
+//! the Wretched Ranks precon's missing cards (`decks::cmdr_gisa`), at the end.
 
 use crabomination::card::{CardDefinition, CardId, CardType, CounterType, CreatureType, Keyword};
 use crabomination::catalog;
@@ -1219,4 +1220,172 @@ fn cmdr_teval_dimir_mana_lands() {
     tap(&mut g, ruins, 1).expect("filter");
     let pool = &g.players[0].mana_pool;
     assert_eq!(pool.amount(Color::Blue) + pool.amount(Color::Black), 2);
+}
+
+// ── Wretched Ranks (FDC, Ghoulcaller Gisa) ─────────────────────────────────
+
+fn zombies(g: &GameState, seat: usize) -> Vec<CardId> {
+    g.battlefield
+        .iter()
+        .filter(|c| c.controller == seat && c.is_token && c.definition.name == "Zombie")
+        .map(|c| c.id)
+        .collect()
+}
+
+/// Army of the Damned and Necrotic Hex make their Zombies tapped; the Hex
+/// takes six creatures from every player, the caster included.
+#[test]
+fn army_of_the_damned_and_necrotic_hex_make_tapped_zombies() {
+    let mut g = main_phase();
+    let army = g.add_card_to_hand(0, catalog::army_of_the_damned());
+    cast_with(&mut g, army, None, None);
+    let z = zombies(&g, 0);
+    assert_eq!(z.len(), 13);
+    assert!(z.iter().all(|&id| g.battlefield_find(id).unwrap().tapped));
+
+    let mut g = main_phase();
+    for _ in 0..8 {
+        g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    }
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let hex = g.add_card_to_hand(0, catalog::necrotic_hex());
+    cast_with(&mut g, hex, None, None);
+    assert_eq!(count_named(&g, 1, "Grizzly Bears"), 2, "eight less six");
+    assert_eq!(count_named(&g, 0, "Grizzly Bears"), 0, "the caster sacrifices too");
+    let z = zombies(&g, 0);
+    assert_eq!(z.len(), 6);
+    assert!(z.iter().all(|&id| g.battlefield_find(id).unwrap().tapped));
+}
+
+/// Endless Ranks of the Dead adds half your Zombies, rounded down, each upkeep.
+#[test]
+fn endless_ranks_of_the_dead_adds_half_rounded_down() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::endless_ranks_of_the_dead());
+    for _ in 0..5 {
+        g.add_card_to_battlefield(0, catalog::razorlash_transmogrant());
+    }
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(zombies(&g, 0).len(), 2, "5 / 2 = 2");
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(zombies(&g, 0).len(), 5, "7 / 2 = 3 more");
+}
+
+/// Infernal Idol taps for {B} and cashes in for two cards and 2 life.
+#[test]
+fn infernal_idol_draws_two_for_two_life() {
+    let mut g = main_phase();
+    let idol = g.add_card_to_battlefield(0, catalog::infernal_idol());
+    for _ in 0..2 {
+        g.add_card_to_library(0, catalog::swamp());
+    }
+    let (hand, life) = (g.players[0].hand.len(), g.players[0].life);
+    activate(&mut g, idol, 1, None);
+    assert_eq!(g.players[0].hand.len(), hand + 2);
+    assert_eq!(g.players[0].life, life - 2);
+    assert!(!on_battlefield(&g, idol), "sacrificed");
+}
+
+/// Josu Vess brings eight menacing Zombie Knights only when kicked.
+#[test]
+fn josu_vess_makes_knights_only_when_kicked() {
+    let knights = |g: &GameState| g.battlefield.iter().filter(|c| c.definition.name == "Zombie Knight").count();
+    let mut g = main_phase();
+    let josu = g.add_card_to_hand(0, catalog::josu_vess_lich_knight());
+    cast_with(&mut g, josu, None, None);
+    assert_eq!(knights(&g), 0);
+
+    let mut g = main_phase();
+    let josu = g.add_card_to_hand(0, catalog::josu_vess_lich_knight());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpellKicked {
+        card_id: josu,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("kicked");
+    drain_stack(&mut g);
+    assert_eq!(knights(&g), 8);
+    let k = g.battlefield.iter().find(|c| c.definition.name == "Zombie Knight").unwrap().id;
+    assert!(g.computed_permanent(k).unwrap().keywords().contains(&Keyword::Menace));
+}
+
+/// Liliana's Reaver: a connecting hit makes the player discard and gives
+/// you a tapped Zombie.
+#[test]
+fn lilianas_reaver_discards_and_makes_a_zombie() {
+    let mut g = main_phase();
+    let reaver = g.add_card_to_battlefield(0, catalog::lilianas_reaver());
+    g.add_card_to_hand(1, catalog::swamp());
+    swing(&mut g, reaver);
+    assert!(g.players[1].hand.is_empty(), "discarded");
+    let z = zombies(&g, 0);
+    assert_eq!(z.len(), 1);
+    assert!(g.battlefield_find(z[0]).unwrap().tapped);
+}
+
+/// Open the Graves answers a nontoken creature's death, not a token's.
+#[test]
+fn open_the_graves_counts_only_nontoken_deaths() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::open_the_graves());
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast_with(&mut g, bolt, Some(Target::Permanent(bears)), None);
+    let z = zombies(&g, 0);
+    assert_eq!(z.len(), 1);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast_with(&mut g, bolt, Some(Target::Permanent(z[0])), None);
+    assert!(zombies(&g, 0).is_empty(), "a token's death makes nothing");
+}
+
+/// CR 102.2 — Razorlash Transmogrant returns from the graveyard with a
+/// +1/+1 counter; the ability costs {4} less only while one opponent has four
+/// nonbasic lands.
+#[test]
+fn cr_102_2_razorlash_transmogrant_discounts_against_nonbasics() {
+    let pay_bb = |g: &mut GameState, id| {
+        g.players[0].mana_pool.empty();
+        g.players[0].mana_pool.add(Color::Black, 2);
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: id,
+            ability_index: 0,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+    };
+    let mut g = main_phase();
+    let razor = g.add_card_to_graveyard(0, catalog::razorlash_transmogrant());
+    for _ in 0..3 {
+        g.add_card_to_battlefield(1, catalog::tundra());
+    }
+    assert!(pay_bb(&mut g, razor).is_err(), "three nonbasics: full price");
+    g.add_card_to_battlefield(1, catalog::tundra());
+    pay_bb(&mut g, razor).expect("four: {B}{B}");
+    drain_stack(&mut g);
+    let back = g.battlefield_find(razor).expect("returned");
+    assert_eq!(back.counter_count(CounterType::PlusOnePlusOne), 1);
+    assert!(g.computed_permanent(razor).unwrap().keywords().contains(&Keyword::CantBlock));
+}
+
+/// Syphon Flesh: a Zombie for each creature actually sacrificed.
+#[test]
+fn syphon_flesh_counts_what_was_sacrificed() {
+    let mut g = multi_player_game(4);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::syphon_flesh());
+    cast_with(&mut g, spell, None, None);
+    assert_eq!(zombies(&g, 0).len(), 2, "seat 3 had nothing to sacrifice");
+    assert!(on_battlefield(&g, mine), "each OTHER player");
 }
