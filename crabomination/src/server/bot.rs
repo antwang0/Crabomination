@@ -4119,7 +4119,10 @@ fn pick_prepare_response(state: &GameState, seat: usize, w: &EvalWeights) -> Opt
 }
 
 /// True when the effect tree's primary action counters a spell (the shapes
-/// a dedicated counterspell card uses — not buried `MayDo` riders).
+/// a dedicated counterspell card uses — not buried `MayDo` riders). Any
+/// unconditional step of a `Seq` counts: Narset's Reversal copies the spell
+/// *before* it bounces it, so reading only the first step left it castable
+/// by no path (a 22-seat `--card-census` found it unplayed).
 fn effect_counters_spells(eff: &Effect) -> bool {
     match eff {
         Effect::CounterSpell { .. }
@@ -4127,7 +4130,7 @@ fn effect_counters_spells(eff: &Effect) -> bool {
         | Effect::CounterSpellToZone { .. }
         | Effect::CounterUnlessPaid { .. }
         | Effect::CounterUnless { .. } => true,
-        Effect::Seq(v) => v.first().is_some_and(effect_counters_spells),
+        Effect::Seq(v) => v.iter().any(effect_counters_spells),
         _ => false,
     }
 }
@@ -26679,6 +26682,16 @@ mod stack_response_tests {
             matches!(action, GameAction::ActivateLoyaltyAbility { ability_index: 1, .. }),
             "enemy power covers the loyalty: spend it down, got {action:?}"
         );
+    }
+
+    /// CR 701.6a — Narset's Reversal counters (to hand) as its second step;
+    /// the response picker must still see a counterspell, while a buried
+    /// `MayDo` counter rider stays out.
+    #[test]
+    fn a_counter_after_a_copy_step_is_still_a_counterspell() {
+        assert!(effect_counters_spells(&catalog::narsets_reversal().effect));
+        assert!(effect_counters_spells(&catalog::counterspell().effect));
+        assert!(!effect_counters_spells(&catalog::lightning_bolt().effect));
     }
 
     /// The counter bar drops when the hand clogs: a mid-size threat that a
