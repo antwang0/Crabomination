@@ -8070,6 +8070,15 @@ impl GameState {
         p < 64 && self.acted_on_own_turn_mask & (1u64 << p) != 0
     }
 
+    /// Record a milled card for `PutIntoGraveyardFromLibraryThisTurn` — every
+    /// `GameEvent::CardMilled` emission site calls this beside its push, so a
+    /// same-resolution read (The Weaver King's mill-then-steal) sees it.
+    pub(crate) fn note_milled(&mut self, seat: usize, card: CardId) {
+        if let Some(pl) = self.players.get_mut(seat) {
+            pl.milled_ids_this_turn.insert(card);
+        }
+    }
+
     /// Remove one time counter from a suspended card in exile; when the last
     /// is removed, free-cast it from exile (CR 702.62e–f). Shared by the
     /// upkeep tick (`process_suspend`) and accelerants (Deep-Sea Kraken).
@@ -19662,6 +19671,7 @@ impl GameState {
                         let card = self.players[p].library.remove(0);
                         let cid = card.id;
                         if !self.route_to_graveyard(card, events) {
+                            self.note_milled(p, cid);
                             events.push(GameEvent::CardMilled { player: p, card_id: cid });
                         }
                     }
@@ -20151,6 +20161,7 @@ impl GameState {
             let card = self.players[p].library.remove(0);
             let cid = card.id;
             self.players[p].send_to_graveyard(card);
+            self.note_milled(p, cid);
             events.push(GameEvent::CardMilled { player: p, card_id: cid });
         }
         // Return the dredge card from the graveyard to its owner's hand.

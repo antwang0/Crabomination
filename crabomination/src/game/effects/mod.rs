@@ -5504,6 +5504,7 @@ impl GameState {
                     let milled_insect = card.definition.subtypes.creature_types.contains(&CreatureType::Insect)
                         && (card.definition.is_creature() || card.definition.creature_off_battlefield);
                     if !self.route_to_graveyard(card, events) {
+                        self.note_milled(p, cid);
                         events.push(GameEvent::CardMilled { player: p, card_id: cid });
                     }
                     if !milled_insect {
@@ -8007,6 +8008,7 @@ impl GameState {
                         let card = self.players[p].library.remove(0);
                         let cid = card.id;
                         if !self.route_to_graveyard(card, events) {
+                            self.note_milled(p, cid);
                             events.push(GameEvent::CardMilled { player: p, card_id: cid });
                         }
                         self.scratch.last_moved_cards.push(cid);
@@ -8713,6 +8715,7 @@ impl GameState {
                     for id in ranked.into_iter().take(k) {
                         if let Some(card) = Self::take_card(&mut self.players[p].library, id) {
                             self.players[p].graveyard.push(card);
+                            self.note_milled(p, id);
                             events.push(GameEvent::CardMilled { player: p, card_id: id });
                         }
                     }
@@ -8785,6 +8788,7 @@ impl GameState {
                         .unwrap_or_default();
                     if let Some(card) = Self::take_card(&mut self.players[p].library, top) {
                         self.players[p].graveyard.push(card);
+                        self.note_milled(p, top);
                         events.push(GameEvent::CardMilled { player: p, card_id: top });
                     }
                     for color in colors {
@@ -9237,6 +9241,7 @@ impl GameState {
                             let card = self.players[p].library.remove(0);
                             let cid = card.id;
                             if !self.route_to_graveyard(card, events) {
+                                self.note_milled(p, cid);
                                 events.push(GameEvent::CardMilled { player: p, card_id: cid });
                             }
                             // Stash the milled id so a follow-up
@@ -9261,6 +9266,7 @@ impl GameState {
                     let is_land = card.definition.is_land();
                     let is_creature = card.definition.is_creature();
                     if !self.route_to_graveyard(card, events) {
+                        self.note_milled(p, cid);
                         events.push(GameEvent::CardMilled { player: p, card_id: cid });
                     }
                     self.scratch.last_moved_cards.push(cid);
@@ -9291,6 +9297,7 @@ impl GameState {
                                 matched += 1;
                             }
                             if !self.route_to_graveyard(card, events) {
+                                self.note_milled(p, cid);
                                 events.push(GameEvent::CardMilled { player: p, card_id: cid });
                             }
                             self.scratch.last_moved_cards.push(cid);
@@ -9322,6 +9329,7 @@ impl GameState {
                     let card = self.players[p].library.remove(0);
                     let cid = card.id;
                     if !self.route_to_graveyard(card, events) {
+                        self.note_milled(p, cid);
                         events.push(GameEvent::CardMilled { player: p, card_id: cid });
                     }
                     milled.push(cid);
@@ -9375,6 +9383,7 @@ impl GameState {
                     let card = self.players[p].library.remove(0);
                     let cid = card.id;
                     if !self.route_to_graveyard(card, events) {
+                        self.note_milled(p, cid);
                         events.push(GameEvent::CardMilled { player: p, card_id: cid });
                     }
                     milled.push(cid);
@@ -13265,6 +13274,7 @@ impl GameState {
                 let deployable = card.definition.is_creature()
                     && card.definition.power <= self.evaluate_value(max_power, ctx);
                 self.players[seat].graveyard.push(card);
+                self.note_milled(seat, id);
                 events.push(GameEvent::CardMilled { player: seat, card_id: id });
                 if deployable {
                     self.move_card_to(
@@ -14018,6 +14028,7 @@ impl GameState {
                 for card in top {
                     let cid = card.id;
                     if !self.route_to_graveyard(card, events) {
+                        self.note_milled(seat, cid);
                         events.push(GameEvent::CardMilled { player: seat, card_id: cid });
                     }
                 }
@@ -25105,6 +25116,7 @@ impl GameState {
                     let cid = card.id;
                     let is_creature = card.definition.is_creature();
                     if !self.route_to_graveyard(card, events) {
+                        self.note_milled(p, cid);
                         events.push(GameEvent::CardMilled { player: p, card_id: cid });
                     }
                     if is_creature {
@@ -29865,6 +29877,7 @@ impl GameState {
                     match miss_dest {
                         crate::effect::RevealMissDest::Graveyard => {
                             if !self.route_to_graveyard(card, events) {
+                                self.note_milled(p, cid);
                                 events.push(GameEvent::CardMilled { player: p, card_id: cid });
                             }
                         }
@@ -37990,6 +38003,7 @@ impl GameState {
                             }
                             let cid = card.id;
                             if !self.route_to_graveyard(card, events) {
+                                self.note_milled(p, cid);
                                 events.push(GameEvent::CardMilled { player: p, card_id: cid });
                             }
                             self.scratch.last_moved_cards.push(cid);
@@ -38028,6 +38042,7 @@ impl GameState {
                     types.push(card.definition.card_types.clone());
                     let cid = card.id;
                     if !self.route_to_graveyard(card, events) {
+                        self.note_milled(p, cid);
                         events.push(GameEvent::CardMilled { player: p, card_id: cid });
                     }
                 }

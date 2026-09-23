@@ -2702,6 +2702,10 @@ pub enum SelectionRequirement {
     /// The card reached a graveyard from *anywhere* this turn (Reenact the
     /// Crime). Backed by `Player.graveyard_ids_this_turn`.
     PutIntoGraveyardThisTurn,
+    /// The card was milled this turn — put into a graveyard from a library
+    /// (Captain N'ghathrod's "put there from their library this turn").
+    /// Backed by `Player.milled_ids_this_turn`; surveil isn't counted.
+    PutIntoGraveyardFromLibraryThisTurn,
     /// True when the candidate permanent has an Equipment attached
     /// (CR 301.5 "equipped"). Battlefield-only. Kor Duelist.
     IsEquipped,

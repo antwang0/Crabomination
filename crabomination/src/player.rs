@@ -320,6 +320,11 @@ pub struct PlayerData {
     /// Crime).
     #[serde(default)]
     pub graveyard_ids_this_turn: crate::game::types::IdSet<CardId>,
+    /// Ids of the cards milled into this graveyard this turn, recorded by
+    /// `GameState::note_milled` beside every `GameEvent::CardMilled` push.
+    /// Backs `PutIntoGraveyardFromLibraryThisTurn`.
+    #[serde(default)]
+    pub milled_ids_this_turn: crate::game::types::IdSet<CardId>,
     /// One-shot "next instant/sorcery you cast this turn costs {N} less"
     /// discounts (Thundertrap Trainer). Each entry is `(amount, granted_at)`
     /// where `granted_at` is `instants_or_sorceries_cast_this_turn` at grant
@@ -1309,6 +1314,7 @@ impl Player {
             cards_to_graveyard_this_turn: 0,
             creature_cards_to_graveyard_this_turn: 0,
             graveyard_ids_this_turn: Default::default(),
+            milled_ids_this_turn: Default::default(),
             instants_or_sorceries_cast_this_turn: 0,
             spells_cast_from_hand_this_turn: 0,
             extra_plus_one_counters_this_turn: 0,

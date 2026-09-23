@@ -4883,6 +4883,7 @@ impl GameState {
                         let card = self.players[p].library.remove(0);
                         let cid = card.id;
                         if !self.route_to_graveyard(card, events) {
+                            self.note_milled(p, cid);
                             events.push(GameEvent::CardMilled { player: p, card_id: cid });
                         }
                     }

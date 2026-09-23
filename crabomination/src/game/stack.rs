@@ -3327,6 +3327,7 @@ impl GameState {
             let cid = card.id;
             let is_land = card.definition.card_types.contains(&CardType::Land);
             if !self.route_to_graveyard(card, &mut events) {
+                self.note_milled(p, cid);
                 events.push(GameEvent::CardMilled { player: p, card_id: cid });
             }
             if !is_land {
@@ -4361,6 +4362,9 @@ impl GameState {
             pl.cards_to_graveyard_this_turn = 0;
             pl.creature_cards_to_graveyard_this_turn = 0;
             pl.graveyard_ids_this_turn.clear();
+            if !pl.milled_ids_this_turn.is_empty() {
+                pl.milled_ids_this_turn.clear();
+            }
             pl.descended_this_turn = false;
             pl.descend_count_this_turn = 0;
             if !pl.discarded_this_turn.is_empty() {

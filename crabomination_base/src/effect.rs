@@ -733,6 +733,10 @@ pub enum Value {
     /// (Fraying Sanity, Cruel Calculations, Welcome the Dead — the last two
     /// narrow the source zone, which the tally doesn't record).
     CardsPutIntoGraveyardThisTurn(PlayerRef),
+    /// Cards put into `who`'s graveyard from their hand (discarded) or
+    /// library (milled) this turn — Welcome the Dead's X. Surveil isn't
+    /// counted.
+    CardsPutIntoGraveyardFromHandOrLibraryThisTurn(PlayerRef),
     /// Number of card types on the most recently discarded card (Mount
     /// Velus Manticore's "X = the number of card types the discarded card
     /// has"). Backed by `GameState.last_discarded_card_types`.

@@ -1182,6 +1182,15 @@ impl GameState {
                 .map(|p| self.players[p].cards_discarded_this_turn as i32)
                 .max()
                 .unwrap_or(0),
+            Value::CardsPutIntoGraveyardFromHandOrLibraryThisTurn(who) => self
+                .resolve_players(who, ctx)
+                .into_iter()
+                .map(|p| {
+                    let pl = &self.players[p];
+                    (pl.milled_ids_this_turn.len() + pl.discarded_this_turn.len()) as i32
+                })
+                .max()
+                .unwrap_or(0),
             Value::CardsPutIntoGraveyardThisTurn(who) => self
                 .resolve_players(who, ctx)
                 .into_iter()
@@ -4485,6 +4494,9 @@ impl GameState {
                     R::PutIntoGraveyardThisTurn => {
                         self.players.iter().any(|p| p.graveyard_ids_this_turn.contains(cid))
                     }
+                    R::PutIntoGraveyardFromLibraryThisTurn => {
+                        self.players.iter().any(|p| p.milled_ids_this_turn.contains(cid))
+                    }
                     // CR 603.4 — entered this turn (stamped on every ETB).
                     R::EnteredThisTurn => card.entered_turn == Some(self.turn_number),
                     R::EnteredFromGraveyardThisTurn => {
@@ -5253,6 +5265,9 @@ impl GameState {
             }
             R::PutIntoGraveyardThisTurn => {
                 self.players.iter().any(|p| p.graveyard_ids_this_turn.contains(&card.id))
+            }
+            R::PutIntoGraveyardFromLibraryThisTurn => {
+                self.players.iter().any(|p| p.milled_ids_this_turn.contains(&card.id))
             }
             R::ControlledByTriggerPlayer => {
                 self.trigger_event_player_scratch == Some(card.controller)

@@ -1414,6 +1414,7 @@ impl GameState {
                             let card = self.players[o].library.remove(0);
                             let cid = card.id;
                             if !self.route_to_graveyard(card, events) {
+                                self.note_milled(o, cid);
                                 events.push(GameEvent::CardMilled { player: o, card_id: cid });
                             }
                         }
