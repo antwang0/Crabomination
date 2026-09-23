@@ -6065,6 +6065,13 @@ mod spec {
     pub const SPLICE: u32 = 1 << 19;
     pub const REPLICATE: u32 = 1 << 22;
     pub const BUYBACK: u32 = 1 << 23;
+    pub const ENTWINE: u32 = 1 << 24;
+    pub const SQUAD: u32 = 1 << 25;
+    pub const FUSE: u32 = 1 << 26;
+    /// Casualty / bargain: an optional sacrifice the bot pays with a token.
+    pub const SAC_EXTRA: u32 = 1 << 27;
+    // graveyard
+    pub const GY_RETRACE: u32 = 1 << 28;
     // any zone
     /// A live `may_play_until` permission for this seat, on a card wherever
     /// `Effect::GrantMayPlay` stamped it — exile or any player's graveyard.
@@ -6172,6 +6179,9 @@ fn hand_specialties(state: &GameState, seat: usize, facts: &BoardFacts) -> u32 {
                     spec::REPLICATE
                 }
                 Keyword::Buyback(_) => spec::BUYBACK,
+                Keyword::Entwine(_) => spec::ENTWINE,
+                Keyword::Squad(_) => spec::SQUAD,
+                Keyword::Casualty(_) | Keyword::Bargain => spec::SAC_EXTRA,
                 Keyword::Splice(..) => spec::SPLICE,
                 _ => 0,
             };
@@ -6206,6 +6216,9 @@ fn hand_specialties(state: &GameState, seat: usize, facts: &BoardFacts) -> u32 {
         if def.split.as_deref().is_some_and(|s| !s.aftermath) {
             m |= spec::SPLIT;
         }
+        if def.split.as_deref().is_some_and(|s| s.fuse) {
+            m |= spec::FUSE;
+        }
         if def.back_face.is_some() {
             m |= spec::BACK;
         }
@@ -6236,6 +6249,7 @@ fn graveyard_specialties(state: &GameState, seat: usize) -> u32 {
                 | Keyword::Mayhem(_)
                 | Keyword::Harmonize(_) => spec::GY_RECAST,
                 Keyword::Escape(..) => spec::GY_ESCAPE,
+                Keyword::Retrace => spec::GY_RETRACE,
                 _ => 0,
             };
         }
@@ -7054,6 +7068,167 @@ fn cast_candidates<'a>(
             (None, vec![])
         };
         let action = GameAction::CastSpellBuyback {
+            card_id: c.id,
+            target,
+            additional_targets,
+            mode: None,
+            x_value: None,
+        };
+        if GameState::would_accept_on(state, action.clone()) {
+            castable.push((action, true));
+        }
+    }
+    });
+
+    // Entwine (CR 702.42), squad (CR 702.157), fuse (CR 702.102): optional
+    // costs that only add, offered beside the plain cast when affordable and
+    // scored like a kicker. Squad probes the most copies affordable (3 → 1).
+    gated_block!(mask, spec::ENTWINE | spec::SQUAD | spec::FUSE, castable, {
+    for c in state.players[seat].hand.iter() {
+        let def = &c.definition;
+        let entwine = def.has_entwine().is_some();
+        let squad = def.squad_cost().is_some();
+        let fuse = def.split.as_deref().is_some_and(|s| s.fuse);
+        if !(entwine || squad || fuse) {
+            continue;
+        }
+        let effect = &def.effect;
+        let (target, additional_targets) = if effect.requires_target() {
+            let (t, extras) = state.auto_targets_for_effect_all_slots(effect, seat, None);
+            if t.is_none() {
+                continue;
+            }
+            (t, extras)
+        } else {
+            (None, vec![])
+        };
+        let mut offers: Vec<GameAction> = Vec::new();
+        if entwine {
+            offers.push(GameAction::CastSpellEntwine {
+                card_id: c.id,
+                target: target.clone(),
+                additional_targets: additional_targets.clone(),
+                mode: None,
+                x_value: None,
+            });
+        }
+        if fuse {
+            offers.push(GameAction::CastSplitFused {
+                card_id: c.id,
+                target: target.clone(),
+                additional_targets: additional_targets.clone(),
+                mode: None,
+                x_value: None,
+            });
+        }
+        for action in offers {
+            if GameState::would_accept_on(state, action.clone()) {
+                castable.push((action, true));
+            }
+        }
+        if squad {
+            for times in (1..=3u32).rev() {
+                let action = GameAction::CastSpellSquad {
+                    card_id: c.id,
+                    times,
+                    target: target.clone(),
+                    additional_targets: additional_targets.clone(),
+                    mode: None,
+                    x_value: None,
+                };
+                if GameState::would_accept_on(state, action.clone()) {
+                    castable.push((action, true));
+                    break;
+                }
+            }
+        }
+    }
+    });
+
+    // Casualty (CR 702.153) and bargain (CR 702.166): an optional sacrifice
+    // the bot pays only with a token it can spare — the weakest creature token
+    // (casualty needs power N or more), or any non-Treasure token for bargain.
+    gated_block!(mask, spec::SAC_EXTRA, castable, {
+    for c in state.players[seat].hand.iter() {
+        let def = &c.definition;
+        let casualty = def.casualty_cost();
+        let bargain = def.keywords.contains(&crate::card::Keyword::Bargain);
+        if casualty.is_none() && !bargain {
+            continue;
+        }
+        let fodder = state
+            .battlefield
+            .iter()
+            .filter(|p| p.controller == seat && p.is_token)
+            .filter(|p| match casualty {
+                Some(n) => {
+                    p.definition.is_creature()
+                        && state.computed_permanent(p.id).is_some_and(|cp| cp.power >= n as i32)
+                }
+                None => p.definition.name != "Treasure",
+            })
+            .min_by_key(|p| (state.computed_permanent(p.id).map_or(0, |cp| cp.power), p.id))
+            .map(|p| p.id);
+        let Some(fodder) = fodder else { continue };
+        let effect = &def.effect;
+        let (target, additional_targets) = if effect.requires_target() {
+            let (t, extras) = state.auto_targets_for_effect_all_slots(effect, seat, None);
+            if t.is_none() {
+                continue;
+            }
+            (t, extras)
+        } else {
+            (None, vec![])
+        };
+        let action = if casualty.is_some() {
+            GameAction::CastSpellCasualty {
+                card_id: c.id,
+                sacrifice: fodder,
+                target,
+                additional_targets,
+                mode: None,
+                x_value: None,
+            }
+        } else {
+            GameAction::CastSpellBargain {
+                card_id: c.id,
+                sacrifice: Some(fodder),
+                target,
+                additional_targets,
+                mode: None,
+                x_value: None,
+            }
+        };
+        if GameState::would_accept_on(state, action.clone()) {
+            castable.push((action, true));
+        }
+    }
+    });
+
+    // Retrace (CR 702.81): recast a graveyard card by discarding a land card —
+    // offered only with a land to spare (a second land in hand, or the land
+    // drop already made this turn).
+    gated_block!(mask, spec::GY_RETRACE, castable, {
+    let lands_in_hand =
+        state.players[seat].hand.iter().filter(|c| c.definition.is_land()).count();
+    let spare_land = lands_in_hand >= 2
+        || (lands_in_hand == 1 && state.players[seat].lands_played_this_turn > 0);
+    for c in state.players[seat]
+        .graveyard
+        .iter()
+        .filter(|c| spare_land && c.definition.keywords.contains(&crate::card::Keyword::Retrace))
+    {
+        let effect = &c.definition.effect;
+        let (target, additional_targets) = if effect.requires_target() {
+            let (t, extras) = state.auto_targets_for_effect_all_slots(effect, seat, None);
+            if t.is_none() {
+                continue;
+            }
+            (t, extras)
+        } else {
+            (None, vec![])
+        };
+        let action = GameAction::CastRetrace {
             card_id: c.id,
             target,
             additional_targets,
@@ -15244,6 +15419,12 @@ fn ward_gate_ok(state: &GameState, seat: usize, action: &GameAction) -> bool {
         | GameAction::CastSpellMultikicked { card_id, target, additional_targets, .. }
         | GameAction::CastSpellReplicate { card_id, target, additional_targets, .. }
         | GameAction::CastSpellBuyback { card_id, target, additional_targets, .. }
+        | GameAction::CastSpellEntwine { card_id, target, additional_targets, .. }
+        | GameAction::CastSpellSquad { card_id, target, additional_targets, .. }
+        | GameAction::CastSplitFused { card_id, target, additional_targets, .. }
+        | GameAction::CastSpellCasualty { card_id, target, additional_targets, .. }
+        | GameAction::CastSpellBargain { card_id, target, additional_targets, .. }
+        | GameAction::CastRetrace { card_id, target, additional_targets, .. }
         | GameAction::CastBestow { card_id, target, additional_targets, .. }
         | GameAction::CastAdventure { card_id, target, additional_targets, .. }
         | GameAction::CastOmen { card_id, target, additional_targets, .. }
@@ -17794,7 +17975,15 @@ fn score_candidate(state: &GameState, seat: usize, action: &GameAction, w: &Eval
         GameAction::CastSpellSpree { card_id, target, .. } => (*card_id, target.clone(), 0, 0),
         GameAction::CastSpellConspire { card_id, target, .. } => (*card_id, target.clone(), 3, 0),
         GameAction::CastSpellKicked { card_id, target, .. }
-        | GameAction::CastSpellBuyback { card_id, target, .. } => (*card_id, target.clone(), 3, 0),
+        | GameAction::CastSpellBuyback { card_id, target, .. }
+        | GameAction::CastSpellEntwine { card_id, target, .. }
+        | GameAction::CastSplitFused { card_id, target, .. }
+        | GameAction::CastSpellCasualty { card_id, target, .. }
+        | GameAction::CastSpellBargain { card_id, target, .. } => (*card_id, target.clone(), 3, 0),
+        GameAction::CastSpellSquad { card_id, target, times, .. } => {
+            (*card_id, target.clone(), 3, *times)
+        }
+        GameAction::CastRetrace { card_id, target, .. } => (*card_id, target.clone(), 0, 0),
         GameAction::CastSpellKickers { card_id, target, .. } => (*card_id, target.clone(), 3, 0),
         GameAction::CastSpellMultikicked { card_id, target, times, .. }
         | GameAction::CastSpellReplicate { card_id, target, times, .. } => {
@@ -21616,6 +21805,51 @@ mod tests {
         };
         assert!(offered(4), "{{1}}{{R}} + buyback {{2}} off four");
         assert!(!offered(2), "not off two");
+    }
+
+    /// Entwine (CR 702.42), squad (702.157), fuse (702.102), casualty
+    /// (702.153), bargain (702.166) and retrace (702.81) are offered when
+    /// payable (bug fix: no candidate block built any of them). Casualty and
+    /// bargain spend only a token.
+    #[test]
+    fn bot_offers_optional_cost_casts() {
+        use crate::mana::Color;
+        let offers = |g: &GameState| cast_candidates(g, 0, &EvalWeights::default(), None);
+        let flood = |g: &mut GameState| {
+            for c in [Color::Blue, Color::Black, Color::Red, Color::Green] {
+                g.players[0].mana_pool.add(c, 4);
+            }
+        };
+        let token = |g: &mut GameState| {
+            let t = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+            g.battlefield_find_mut(t).unwrap().is_token = true;
+        };
+        let has = |g: &GameState, f: &dyn Fn(&GameAction) -> bool| offers(g).iter().any(|(a, _)| f(a));
+
+        let mut g = two_player_game();
+        g.add_card_to_hand(0, catalog::shriveling_rot());
+        g.add_card_to_hand(0, catalog::sicarian_infiltrator());
+        g.add_card_to_hand(0, catalog::toil_trouble());
+        g.add_card_to_graveyard(0, catalog::grizzly_bears());
+        g.add_card_to_hand(0, catalog::a_little_chat());
+        g.add_card_to_hand(0, catalog::back_for_seconds());
+        flood(&mut g);
+        assert!(has(&g, &|a| matches!(a, GameAction::CastSpellEntwine { .. })), "entwine");
+        assert!(has(&g, &|a| matches!(a, GameAction::CastSpellSquad { times, .. } if *times >= 2)), "squad");
+        assert!(has(&g, &|a| matches!(a, GameAction::CastSplitFused { .. })), "fuse");
+        assert!(!has(&g, &|a| matches!(a, GameAction::CastSpellCasualty { .. })), "no token, no casualty");
+        assert!(!has(&g, &|a| matches!(a, GameAction::CastSpellBargain { .. })), "no token, no bargain");
+        token(&mut g);
+        assert!(has(&g, &|a| matches!(a, GameAction::CastSpellCasualty { .. })), "casualty");
+        assert!(has(&g, &|a| matches!(a, GameAction::CastSpellBargain { .. })), "bargain");
+
+        let mut g = two_player_game();
+        g.add_card_to_graveyard(0, catalog::formless_genesis());
+        g.add_card_to_hand(0, catalog::forest());
+        flood(&mut g);
+        assert!(!has(&g, &|a| matches!(a, GameAction::CastRetrace { .. })), "the only land isn't spare");
+        g.add_card_to_hand(0, catalog::forest());
+        assert!(has(&g, &|a| matches!(a, GameAction::CastRetrace { .. })), "retrace");
     }
 
     /// CR 702.183 — the bot casts an Omen half as removal (Petty Revenge on
