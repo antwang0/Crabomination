@@ -50,7 +50,7 @@ lists were picked.
 | **Keen Engineering** (FDC precon) U | Sai, Master Thopterist | U | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Reap the Tides** (CMR precon) GU | Aesi, Tyrant of Gyre Strait | GU | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Corrupting Influence** (ONC precon) WBG | Ixhel, Scion of Atraxa | WBG | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
-| **Sneak Attack** (ZNC precon) UB | Anowon, the Ruin Thief | UB | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
+| **Sneak Attack** (ZNC precon) UB | Anowon, the Ruin Thief | UB | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not
@@ -250,9 +250,9 @@ Dimir Rogues under Anowon. Fifteen cards were missing; two primitives:
 trigger read the FIRST dealer's damage; Anowon mills the batch's total) and
 `Value::GreatestGraveyardSizeAmong` ("an opponent has eight or more cards in
 their graveyard" read only the first opponent — Jace's Phantasm fixed with
-it). Residuals: **Master Thief**'s steal ends when it leaves, not when you
-lose control of it; **Whispersteel Dagger** opens every creature card in the
-graveyard, not one. Seed 10031, 1,000 games at 21 seats: **996 decided, 4
+it). Residual: **Whispersteel Dagger** opens every creature card in the
+graveyard, not one (Master Thief's "for as long as you control" is exact since
+`Effect::GainControlWhileYouControlSource`). Seed 10031, 1,000 games at 21 seats: **996 decided, 4
 action caps, 0 board caps, zero panics**; Anowon wins 7.9 %, and 32.8 % of
 four-seat pods beside Teval / N'ghathrod / Ixhel (seed 10032, all decided).
 ⚠ **The census found a card castable by no path: Spinal Embrace** ("cast
