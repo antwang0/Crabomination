@@ -840,6 +840,8 @@ pub enum CounterType {
     /// Corpse counter — From the Catacombs marks what it reanimated; a
     /// "creature with a corpse counter" payoff would read it (CLB).
     Corpse,
+    /// Rally counter — Aligned Heart's flurry tally (TDC).
+    Rally,
 }
 
 /// Every zone a card can occupy.
