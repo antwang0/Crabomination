@@ -43289,9 +43289,9 @@ pub fn leonin_warleader() -> CardDefinition {
 /// +1/+1. Tap five untapped Vampires you control: Gain control of target
 /// creature, and it becomes a Vampire in addition to its other types — which
 /// matters on this card specifically, because the stolen creature then feeds
-/// the +1/+1 anthem AND the next activation's five-Vampire tap cost. The rider
-/// shipped dropped; `Effect::AddCreatureTypes` is the layer-4 additive form
-/// (CR 205.1b / 613.4) and has been there since Jenova.
+/// the +1/+1 anthem AND the next activation's five-Vampire tap cost. The type
+/// change is `Effect::AddCreatureTypes`, the layer-4 additive form (CR 205.1b
+/// / 613.4).
 pub fn captivating_vampire() -> CardDefinition {
     CardDefinition {
         name: "Captivating Vampire",
