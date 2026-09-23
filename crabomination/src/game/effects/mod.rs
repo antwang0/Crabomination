@@ -9,6 +9,7 @@
 mod commander;
 mod delayed;
 mod eval;
+mod fight_each;
 pub(crate) use eval::PrintedGates;
 pub(crate) mod events;
 mod movement;
@@ -7728,6 +7729,10 @@ impl GameState {
                 }
                 self.check_state_based_actions_into(events);
                 Ok(())
+            }
+
+            Effect::CreateTokensToFightEach { filter, definition } => {
+                self.create_tokens_to_fight_each(filter, definition, ctx, events)
             }
 
             Effect::Fight { attacker, defender } => {

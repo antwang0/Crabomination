@@ -1429,6 +1429,7 @@ impl Effect {
             Effect::Fight { attacker, defender } => {
                 sel_has_target(attacker) || sel_has_target(defender)
             }
+            Effect::CreateTokensToFightEach { .. } => false,
             Effect::DealDamageEqualToPower { source, target } => {
                 sel_has_target(source) || sel_has_target(target)
             }

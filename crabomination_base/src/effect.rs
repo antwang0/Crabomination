@@ -4009,6 +4009,14 @@ pub enum Effect {
     /// Chelonian Tackle, STX Decisive Denial mode 1, and similar
     /// fight-style green/quandrix removal.
     Fight { attacker: Selector, defender: Selector },
+    /// "For each [filter] creature, create a `definition` token. Each of those
+    /// tokens fights a different one of those creatures" (Ezuri's Predation,
+    /// CR 701.14). The creatures are read at resolution from the controller's
+    /// view; a token doubler's extra tokens are created but fight nothing.
+    CreateTokensToFightEach {
+        filter: crate::card::SelectionRequirement,
+        definition: std::sync::Arc<crate::card::TokenDefinition>,
+    },
     /// One-sided fight — `source` deals damage equal to its power to `target`
     /// (no back-swing). Damage carries `source` so lifelink / deathtouch /
     /// wither apply (CR 701.12-style but unidirectional). No-ops if either

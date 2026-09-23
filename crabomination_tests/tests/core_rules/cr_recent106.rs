@@ -9,6 +9,9 @@
 //!
 //! CR 506.3 — "creatures attacking you" are those whose defender is you, not
 //! every attacker at the table (`SelectionRequirement::IsAttackingYou`).
+//!
+//! CR 701.14 — "each of those tokens fights a different one of those
+//! creatures" (`Effect::CreateTokensToFightEach`, Ezuri's Predation).
 
 use crabomination::card::SelectionRequirement;
 use crabomination::catalog;
@@ -87,4 +90,37 @@ fn cr_506_3_attacking_you_is_not_attacking_someone_else() {
     let ctx = EffectContext::for_spell(1, None, 0, 0);
     let none = Predicate::ValueEquals(count, Value::Const(0));
     assert!(g.evaluate_predicate(&none, &ctx), "the attacker is attacked by none");
+}
+
+#[test]
+fn cr_701_14_each_token_fights_a_different_creature() {
+    use crabomination::card::{CardType, TokenDefinition};
+    use crabomination::effect::Effect;
+    use std::sync::Arc;
+    let mut g = multi_player_game(3);
+    let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let giant = g.add_card_to_battlefield(2, catalog::hill_giant());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let beast = Arc::new(TokenDefinition {
+        name: "Phyrexian Beast".into(),
+        power: 4,
+        toughness: 4,
+        card_types: vec![CardType::Creature],
+        ..Default::default()
+    });
+    let effect = Effect::CreateTokensToFightEach {
+        filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+        definition: beast,
+    };
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    let evs = g.resolve_effect(&effect, &ctx).expect("resolve");
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bears).is_none(), "4 damage kills the Bears");
+    assert!(g.battlefield_find(giant).is_none(), "and the 3/3 Giant");
+    assert!(g.battlefield_find(mine).is_some(), "your own creatures aren't prey");
+    let beasts: Vec<_> = g.battlefield.iter().filter(|c| c.definition.name == "Phyrexian Beast").collect();
+    assert_eq!(beasts.len(), 2, "one per opposing creature");
+    let damage: Vec<u32> = beasts.iter().map(|c| c.damage).collect();
+    assert!(damage.contains(&2) && damage.contains(&3), "each fought a different one: {damage:?}");
 }
