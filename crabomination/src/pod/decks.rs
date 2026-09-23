@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Ten hand-picked commanders plus fifteen official preconstructed lists, each a
+//! Ten hand-picked commanders plus sixteen official preconstructed lists, each a
 //! 99 of cards this engine implements: legal under CR 903 (100 cards
 //! including the commander, singleton outside basics, every card inside the
 //! commander's CR 903.4 color identity) and Commander-legal per Scryfall's
@@ -8,13 +8,13 @@
 //!
 //! The ten were built by hand because the offline Scryfall cache cannot say
 //! how a precon splits into decks; MTGJSON's deck files can, and the eleventh
-//! through twenty-fifth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
+//! through twenty-sixth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
 //! Win, Tails You Lose, Goblin Storm, Foundations Commander's Wretched Ranks,
 //! Tramplesaurus Rex and Keen Engineering, Commander Legends' Reap the Tides,
 //! Phyrexia: All Will Be One's Corrupting Influence, Zendikar Rising's Sneak
 //! Attack, Tarkir: Dragonstorm's Jeskai Striker, Commander Masters' Sliver
-//! Swarm, Outlaws of Thunder Junction's Quick Draw and Commander 2017's
-//! Vampiric Bloodlust) are taken from one card for card. What all of them keep
+//! Swarm, Outlaws of Thunder Junction's Quick Draw, Commander 2017's
+//! Vampiric Bloodlust and Foundations Commander's Calling All Angels) are taken from one card for card. What all of them keep
 //! from the precon idea is what the pod needs — fixed, legal, varied color
 //! identities, and built to play against each other.
 //! One is a Partner pair (CR 702.124b), one is a **planeswalker**
@@ -901,4 +901,32 @@ pub const EDGAR_C17_MAIN: &[CardFactory] = &[
     // Basics: 8 swamp, 4 mountain, 3 plains
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, mountain, mountain, mountain,
     mountain, plains, plains, plains,
+];
+
+pub const GIADA_COMMANDERS: &[CardFactory] = &[giada_font_of_hope];
+
+/// **Calling All Angels**, the Foundations Commander deck (FDC), exactly as
+/// MTGJSON's `CallingAllAngels_FDC` prints it: 67 nonbasic cards + 32
+/// Plains = 99. Mono-white Angels: Giada's growing entries, lieutenants, the
+/// monarch, and the field's first mono-white identity.
+pub const GIADA_MAIN: &[CardFactory] = &[
+    always_watching, angel_of_the_ruins, angelic_destiny, angelic_field_marshal, angelic_sleuth,
+    archangel_of_tithes, austere_command, bishop_of_wings, cleansing_nova, court_of_grace,
+    day_of_judgment, emeria_shepherd, exemplar_of_light, fateful_absence, firemane_commando,
+    grasp_of_fate, herald_of_eternal_dawn, herald_of_war, linvala_the_preserver,
+    lyra_dawnbringer, merchant_of_truth, metropolis_reformer, norns_choirmaster,
+    reya_dawnbringer, righteous_valkyrie, search_the_premises, sephara_skys_blade,
+    seraph_of_the_sword, serra_avenger, speaker_of_the_heavens, sunblast_angel,
+    wojek_investigator, endless_atlas, metallic_mimic, tome_of_legends, vanquishers_banner,
+    bonders_enclave, war_room, angel_of_finality, angel_of_vitality, cut_a_deal, dazzling_angel,
+    defy_death, destroy_evil, exorcise, inspiring_overseer, invoke_the_divine,
+    secret_rendezvous, segovian_angel, starnheim_aspirant, swords_to_plowshares,
+    thraben_watcher, valorous_stance, vanguard_seraph, youthful_valkyrie, arcane_signet,
+    commanders_sphere, heraldic_banner, marble_diamond, mind_stone, patchwork_banner, sol_ring,
+    swiftfoot_boots, radiant_fountain, secluded_steppe, seraph_sanctuary,
+    temple_of_the_false_god,
+    // Basics: 32 plains
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
 ];

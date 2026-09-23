@@ -288,6 +288,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::EDGAR_C17_COMMANDERS,
             main: decks::EDGAR_C17_MAIN,
         },
+        // Twenty-sixth: the sixteenth official list (Calling All Angels, FDC)
+        // — the field's first mono-white seat. `--seats 26`.
+        PodDeck {
+            name: "Giada (W)",
+            commanders: decks::GIADA_COMMANDERS,
+            main: decks::GIADA_MAIN,
+        },
     ]
 }
 
