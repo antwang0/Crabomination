@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Flag `Effect::ExileTopAndGrantMayPlay` sites that grant a FREE cast
-(`pay_own_cost: false`, `pay_any_color: false`) on a card whose Oracle text
-never says "without paying" — the impulse-draw class that cast for nothing.
+"""Flag `Effect::ExileTopAndGrantMayPlay` / `Effect::GrantMayPlay` sites that
+grant a FREE cast (`pay_own_cost: false` and no any-color rider) on a card
+whose Oracle text never says "without paying" — the impulse-draw class that
+cast for nothing (forty-three cards, fixed 2026-09-23).
 
 Offline: reads scripts/.scryfall_cache.json. Exit status 1 when any site is
 flagged; `ALLOW` lists the fns whose free grant is conditional or correct but
@@ -24,13 +25,15 @@ def oracle(name):
 bad = []
 for f in glob.glob("crabomination_catalog/src/**/*.rs", recursive=True):
     s = open(f).read()
-    for m in re.finditer(r"ExileTopAndGrantMayPlay\s*\{", s):
+    for m in re.finditer(r"\b(?:ExileTopAndGrantMayPlay|GrantMayPlay)\s*\{", s):
+        if s[s.rfind("\n", 0, m.start()) + 1:m.start()].lstrip().startswith("//"):
+            continue
         i, depth = m.end(), 1
         while depth and i < len(s):
             depth += {"{": 1, "}": -1}.get(s[i], 0)
             i += 1
         blk = s[m.start():i]
-        if "pay_own_cost: false" not in blk or "pay_any_color: true" in blk:
+        if "pay_own_cost: false" not in blk or re.search(r"\b(pay_any_color|any_color): true", blk):
             continue
         fn_at = s.rfind("pub fn ", 0, m.start())
         fn = re.match(r"pub fn (\w+)", s[fn_at:]).group(1)
