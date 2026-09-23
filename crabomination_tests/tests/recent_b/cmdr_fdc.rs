@@ -1144,3 +1144,212 @@ fn cr_611_2c_master_thiefs_steal_ends_when_it_changes_hands() {
     assert_eq!(g.battlefield_find(thief).map(|c| c.controller), Some(1));
     assert_eq!(g.battlefield_find(ring).map(|c| c.controller), Some(1), "the Ring went home");
 }
+
+// ── Jeskai Striker (Shiko and Narset, Unified) ──────────────────────────────
+
+/// CR 603.4 — counters stop at three; spending them copies the next instant.
+#[test]
+fn adaptive_training_post_banks_three_and_copies_the_next_instant() {
+    let mut g = main_phase();
+    let post = g.add_card_to_battlefield(0, catalog::adaptive_training_post());
+    for _ in 0..4 {
+        let s = g.add_card_to_hand(0, catalog::opt());
+        g.add_card_to_library(0, catalog::island());
+        g.add_card_to_library(0, catalog::island());
+        cast(&mut g, s, &[]);
+    }
+    assert_eq!(g.battlefield_find(post).unwrap().counter_count(CounterType::Charge), 3);
+    activate(&mut g, post, 0, None).expect("remove three");
+    let life = g.players[1].life;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, &[Target::Player(1)]);
+    assert_eq!(g.players[1].life, life - 6, "copied");
+}
+
+/// Flurry: the second spell each turn adds a rally counter, then a Monk for
+/// each counter.
+#[test]
+fn aligned_heart_makes_a_monk_per_rally_counter() {
+    let mut g = main_phase();
+    let heart = g.add_card_to_battlefield(0, catalog::aligned_heart());
+    for _ in 0..2 {
+        let s = g.add_card_to_hand(0, catalog::opt());
+        g.add_card_to_library(0, catalog::island());
+        g.add_card_to_library(0, catalog::island());
+        cast(&mut g, s, &[]);
+    }
+    assert_eq!(g.battlefield_find(heart).unwrap().counter_count(CounterType::Rally), 1);
+    assert_eq!(count_named(&g, 0, "Monk"), 1);
+}
+
+/// The first instant each turn offers a free instant of lesser mana value
+/// from hand; with none, First Mate Ragavan arrives hasty.
+#[test]
+fn baral_and_kari_zev_casts_a_lesser_instant_free_or_makes_ragavan() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::baral_and_kari_zev());
+    let opt = g.add_card_to_hand(0, catalog::opt());
+    for _ in 0..8 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let fof = g.add_card_to_hand(0, catalog::fact_or_fiction());
+    cast(&mut g, fof, &[]);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == opt), "Opt (MV 1 < 4) was cast free");
+    assert_eq!(count_named(&g, 0, "First Mate Ragavan"), 0);
+
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::baral_and_kari_zev());
+    let shock = g.add_card_to_hand(0, catalog::shock());
+    cast(&mut g, shock, &[Target::Player(1)]);
+    let rag = g.battlefield.iter().find(|c| c.definition.name == "First Mate Ragavan").expect("Ragavan").id;
+    assert!(g.computed_permanent(rag).unwrap().keywords().contains(&Keyword::Haste));
+}
+
+/// CR 506.2 — you get a Gold whenever the cursed player is attacked, and so
+/// does an opponent who attacks them.
+#[test]
+fn curse_of_opulence_pays_the_curser_and_the_attacker() {
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let curse = g.add_card_to_hand(0, catalog::curse_of_opulence());
+    cast(&mut g, curse, &[Target::Player(2)]);
+    g.active_player_idx = 1;
+    let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    combat(&mut g, vec![Attack { attacker: bears, target: AttackTarget::Player(2) }], 1, |_| {});
+    assert_eq!(count_named(&g, 0, "Gold"), 1);
+    assert_eq!(count_named(&g, 1, "Gold"), 1);
+}
+
+/// Cycling it destroys every artifact and enchantment.
+#[test]
+fn dismantling_wave_cycles_into_a_sweep() {
+    let mut g = main_phase();
+    let wave = g.add_card_to_hand(0, catalog::dismantling_wave());
+    let ring = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let mine = g.add_card_to_battlefield(0, catalog::aligned_heart());
+    g.add_card_to_library(0, catalog::island());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::Cycle { card_id: wave, x_value: None }).expect("cycle");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ring).is_none() && g.battlefield_find(mine).is_none());
+}
+
+/// Explosion: X damage to any target, and a target player draws X.
+#[test]
+fn explosion_deals_x_and_draws_x() {
+    let mut g = main_phase();
+    let card = g.add_card_to_hand(0, catalog::expansion_explosion());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let hand = g.players[0].hand.len();
+    let life = g.players[1].life;
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSplitRight {
+        card_id: card,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![Target::Player(0)],
+        mode: None,
+        x_value: Some(2),
+    })
+    .expect("Explosion, X = 2");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 2);
+    assert_eq!(g.players[0].hand.len(), hand - 1 + 2);
+}
+
+/// Goaded while enchanted, and a Treasure for the Aura's controller each time
+/// the creature attacks.
+#[test]
+fn shiny_impetus_goads_and_pays_treasure() {
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::shiny_impetus());
+    cast(&mut g, aura, &[Target::Permanent(victim)]);
+    assert_eq!(pt(&g, victim), (4, 4));
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
+    let _ = g.advance_step(Vec::new());
+    drain_stack(&mut g);
+    assert_eq!(g.step, TurnStep::BeginCombat);
+    assert!(g.battlefield_find(victim).unwrap().cold_any(|k| k.goaded_by.contains(&0)), "goaded by seat 0");
+    combat(&mut g, vec![Attack { attacker: victim, target: AttackTarget::Player(2) }], 1, |_| {});
+    assert_eq!(count_named(&g, 0, "Treasure"), 1);
+}
+
+/// Cast with flash in response, it counters the spell into exile and casts
+/// it for its controller... for you, free.
+#[test]
+fn transcendent_dragon_steals_the_spell_it_counters() {
+    let mut g = main_phase();
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    let bears = g.add_card_to_hand(1, catalog::grizzly_bears());
+    flood(&mut g, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bears,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast bears");
+    g.priority.player_with_priority = 0;
+    let dragon = g.add_card_to_hand(0, catalog::transcendent_dragon());
+    cast(&mut g, dragon, &[]);
+    assert_eq!(g.battlefield_find(bears).map(|c| c.controller), Some(0), "cast free by the Dragon's controller");
+}
+
+/// A card per target of each spell cast.
+#[test]
+fn voracious_bibliophile_draws_per_target() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::voracious_bibliophile());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let hand = g.players[0].hand.len();
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, &[Target::Player(1)]);
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+}
+
+/// With a commander in play both modes run: flashback for instants and
+/// sorceries in your graveyard.
+#[test]
+fn will_of_the_jeskai_grants_flashback_with_a_commander() {
+    let mut g = main_phase();
+    let cmd = g.seat_commanders(0, vec![catalog::grizzly_bears()])[0];
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastFromCommandZone {
+        card_id: cmd,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+        alternative: false,
+        pitch_card: None,
+    })
+    .expect("commander");
+    drain_stack(&mut g);
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let will = g.add_card_to_hand(0, catalog::will_of_the_jeskai());
+    cast(&mut g, will, &[]);
+    let life = g.players[1].life;
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastFlashback {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("flashback Bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 3);
+}
