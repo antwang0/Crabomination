@@ -196,3 +196,192 @@ fn daretti_scrap_savant_abilities() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(ring).is_some(), "the emblem returned it");
 }
+
+// ── Goblin Storm (`decks::cmdr_zada`) ─────────────────────────────────────────
+
+fn cast(g: &mut GameState, card_id: CardId, target: Option<Target>) {
+    g.perform_action(GameAction::CastSpell {
+        card_id,
+        target,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .unwrap_or_else(|e| panic!("cast: {e:?}"));
+    drain_stack(g);
+}
+
+/// Battle Hymn adds {R} per creature you control.
+#[test]
+fn battle_hymn_counts_your_creatures() {
+    let mut g = main_phase();
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    }
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let hymn = g.add_card_to_hand(0, catalog::battle_hymn());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    cast(&mut g, hymn, None);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 3);
+}
+
+/// CR 702.142 — Broadside Bombardiers boasts only after attacking: 2 plus the
+/// sacrificed permanent's mana value to any target.
+#[test]
+fn broadside_bombardiers_boasts_for_two_plus_mana_value() {
+    let mut g = main_phase();
+    let bomb = g.add_card_to_battlefield(0, catalog::broadside_bombardiers());
+    let signet = g.add_card_to_battlefield(0, catalog::arcane_signet());
+    let boast = |g: &mut GameState| {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: bomb,
+            ability_index: 0,
+            target: Some(Target::Player(1)),
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+    };
+    assert!(boast(&mut g).is_err(), "hasn't attacked");
+    g.battlefield_find_mut(bomb).unwrap().attacked_this_turn = true;
+    let life = g.players[1].life;
+    boast(&mut g).expect("boast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(signet).is_none());
+    assert_eq!(g.players[1].life, life - 4, "2 + Arcane Signet's 2");
+}
+
+/// Castle Embereth enters tapped without a Mountain (a CR 614.12 replacement)
+/// and pumps your team.
+#[test]
+fn castle_embereth_needs_a_mountain_and_pumps() {
+    let mut g = main_phase();
+    let castle = g.add_card_to_hand(0, catalog::castle_embereth());
+    g.perform_action(GameAction::PlayLand(castle)).expect("play");
+    assert!(g.battlefield_find(castle).unwrap().tapped);
+
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::mountain());
+    let castle = g.add_card_to_hand(0, catalog::castle_embereth());
+    g.perform_action(GameAction::PlayLand(castle)).expect("play");
+    assert!(!g.battlefield_find(castle).unwrap().tapped, "a Mountain: untapped");
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    activate(&mut g, castle, 1, None);
+    assert_eq!(g.computed_permanent(bears).unwrap().power, 3);
+}
+
+/// Frontline Heroism makes a hasty Soldier and aims a copy of a
+/// single-creature spell at it.
+#[test]
+fn frontline_heroism_copies_onto_a_new_soldier() {
+    let mut g = main_phase();
+    let heroism = g.add_card_to_hand(0, catalog::frontline_heroism());
+    flood(&mut g);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    cast(&mut g, heroism, None);
+    let soldiers = |g: &GameState| {
+        g.battlefield.iter().filter(|c| c.definition.name == "Soldier").map(|c| c.id).collect::<Vec<_>>()
+    };
+    assert_eq!(soldiers(&g).len(), 1);
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let growth = g.add_card_to_hand(0, catalog::giant_growth());
+    cast(&mut g, growth, Some(Target::Permanent(bears)));
+    assert_eq!(g.computed_permanent(bears).unwrap().power, 5);
+    let fresh = *soldiers(&g).last().unwrap();
+    assert_eq!(soldiers(&g).len(), 2);
+    assert_eq!(g.computed_permanent(fresh).unwrap().power, 4, "the copy hit the new Soldier");
+}
+
+/// General Kreat pings each opponent when another creature enters.
+#[test]
+fn general_kreat_pings_on_entry() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::general_kreat_the_boltbringer());
+    let life = g.players[1].life;
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    flood(&mut g);
+    g.players[0].mana_pool.add(Color::Green, 2);
+    cast(&mut g, bears, None);
+    assert_eq!(g.players[1].life, life - 1);
+}
+
+/// Kher Keep makes the named Kobold token.
+#[test]
+fn kher_keep_makes_kobolds() {
+    let mut g = main_phase();
+    let keep = g.add_card_to_battlefield(0, catalog::kher_keep());
+    activate(&mut g, keep, 1, None);
+    let kobold = g.battlefield.iter().find(|c| c.is_token).expect("a token");
+    assert_eq!(kobold.definition.name, "Kobolds of Kher Keep");
+    assert_eq!((kobold.definition.power, kobold.definition.toughness), (0, 1));
+}
+
+/// Rundvelt Hordemaster pumps the other Goblins, and a Goblin's death exiles
+/// the top card — castable when it's a Goblin creature.
+#[test]
+fn rundvelt_hordemaster_lords_and_digs_on_goblin_death() {
+    let mut g = main_phase();
+    let master = g.add_card_to_battlefield(0, catalog::rundvelt_hordemaster());
+    let kreat = g.add_card_to_battlefield(0, catalog::general_kreat_the_boltbringer());
+    assert_eq!(g.computed_permanent(kreat).unwrap().power, 3);
+    assert_eq!(g.computed_permanent(master).unwrap().power, 1, "other Goblins only");
+    let top = g.add_card_to_library(0, catalog::broadside_bombardiers());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    flood(&mut g);
+    cast(&mut g, bolt, Some(Target::Permanent(kreat)));
+    let exiled = g.exile.iter().find(|c| c.id == top).expect("exiled the top card");
+    assert!(exiled.may_play_until.is_some(), "a Goblin creature: castable");
+}
+
+/// Siege-Gang Lieutenant's lieutenant trigger needs your commander.
+#[test]
+fn siege_gang_lieutenant_needs_the_commander() {
+    let goblins = |g: &GameState| g.battlefield.iter().filter(|c| c.definition.name == "Goblin").count();
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::siege_gang_lieutenant());
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    assert_eq!(goblins(&g), 0, "no commander");
+    let zada = g.add_card_to_battlefield(0, catalog::zada_hedron_grinder());
+    g.players[0].commanders.push(zada);
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    assert_eq!(goblins(&g), 2);
+    let tok = g.battlefield.iter().find(|c| c.definition.name == "Goblin").unwrap().id;
+    assert!(keywords(&g, tok).contains(&Keyword::Haste));
+}
+
+/// Throne of Eldraine's four mana pay only for a monocolored spell of the
+/// chosen color.
+#[test]
+fn throne_of_eldraine_mana_is_chosen_color_monocolored_only() {
+    let mut g = main_phase();
+    let throne = g.add_card_to_battlefield(0, catalog::throne_of_eldraine());
+    g.battlefield_find_mut(throne).unwrap().chosen_color = Some(Color::Red);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: throne,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("tap for four");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.restricted_total(), 4);
+    let ring = g.add_card_to_hand(0, catalog::sol_ring());
+    assert!(
+        g.perform_action(GameAction::CastSpell {
+            card_id: ring,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .is_err(),
+        "a colorless spell can't use it"
+    );
+    let bombardiers = g.add_card_to_hand(0, catalog::broadside_bombardiers());
+    cast(&mut g, bombardiers, None);
+    assert!(g.battlefield_find(bombardiers).is_some(), "a mono-red spell can");
+}
