@@ -143,11 +143,26 @@ pub fn tempered_steel() -> CardDefinition {
     }
 }
 
-/// Radiant Destiny — {2}{W} Enchantment. As it enters, choose a creature type.
-/// Creatures you control of the chosen type get +1/+1. (Ascend + the "with
-/// city's blessing, they also have vigilance" rider are dropped.)
+/// Radiant Destiny — {2}{W} Enchantment. Ascend. As it enters, choose a
+/// creature type. Creatures you control of the chosen type get +1/+1. As long
+/// as you have the city's blessing, they also have vigilance.
+///
+/// Ascend is checked as it enters and at your upkeep (Twilight Prophet's
+/// shape), not continuously.
 pub fn radiant_destiny() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, Predicate, TriggeredAbility};
+    let ascend = |event| TriggeredAbility {
+        event: EventSpec::new(event, EventScope::YourControl),
+        effect: Effect::Ascend { who: PlayerRef::You },
+    };
     CardDefinition {
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::Ascend { who: PlayerRef::You },
+            },
+            ascend(EventKind::StepBegins(crate::game::TurnStep::Upkeep)),
+        ],
         name: "Radiant Destiny",
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Enchantment],
@@ -163,6 +178,17 @@ pub fn radiant_destiny() -> CardDefinition {
                 exclude_source: false,
                 opponents: false,
                 per_counter: None,
+            },
+        }, StaticAbility {
+            description: "As long as you have the city's blessing, they also have vigilance.",
+            effect: StaticEffect::WhileCondition {
+                condition: Predicate::HasCityBlessing { who: PlayerRef::You },
+                inner: Box::new(StaticEffect::GrantKeyword {
+                    applies_to: Selector::EachPermanent(
+                        R::Creature.and(R::ControlledByYou).and(R::IsSourceChosenCreatureType),
+                    ),
+                    keyword: Keyword::Vigilance,
+                }),
             },
         }],
         ..Default::default()

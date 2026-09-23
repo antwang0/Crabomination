@@ -500,6 +500,18 @@ mod recent82 {
         g.battlefield_find_mut(rd).unwrap().chosen_creature_type = Some(CreatureType::Bear);
         let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
         assert_eq!(g.computed_permanent(bear).unwrap().power, 3, "chosen-type Bear gets +1/+1");
+        let vigilant = |g: &GameState, id| g.computed_permanent(id).unwrap().keywords().contains(&Keyword::Vigilance);
+        let elf = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+        assert!(!vigilant(&g, bear), "no vigilance without the city's blessing");
+        // CR 702.131 — ten permanents: ascend at the upkeep check.
+        for _ in 0..8 {
+            g.add_card_to_battlefield(0, catalog::forest());
+        }
+        g.step = TurnStep::Upkeep;
+        g.fire_step_triggers(TurnStep::Upkeep);
+        drain_stack(&mut g);
+        assert!(g.players[0].city_blessing);
+        assert!(vigilant(&g, bear) && !vigilant(&g, elf), "the chosen type gains vigilance");
     }
 
     #[test]
