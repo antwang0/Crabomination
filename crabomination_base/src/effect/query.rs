@@ -394,6 +394,7 @@ impl Effect {
             | Effect::BindTargetObjects { body, .. }
             | Effect::BindScratch { body, .. }
             | Effect::OptionalTargets { body, .. }
+            | Effect::WithX { body, .. }
             | Effect::OathCatchUp { body, .. }
             | Effect::OnAttackedUntilYourNextTurn { body, .. }
             | Effect::OnMatchingAttacksThisTurn { body, .. }
@@ -1368,6 +1369,7 @@ impl Effect {
             | Effect::BindScratch { body, .. } => body.requires_target(),
             Effect::MayPayX { body, .. } => body.requires_target(),
             Effect::OptionalTargets { body, .. } => body.requires_target(),
+            Effect::WithX { body, .. } => body.requires_target(),
             Effect::WithSacrificedPt { body, .. } => body.requires_target(),
             Effect::WithTappedPower { body, .. } => body.requires_target(),
             Effect::OnYourNextSpellCastThisTurn { body }
@@ -2627,6 +2629,7 @@ impl Effect {
                 body.primary_target_filter()
             }
             Effect::OptionalTargets { body, .. } => body.primary_target_filter(),
+            Effect::WithX { body, .. } => body.primary_target_filter(),
             // The copy *source* is the targeted slot ("becomes a copy of
             // target land").
             Effect::BecomeCopyOf { source, .. } | Effect::BecomeCopyOfFor { source, .. } => {
@@ -3087,6 +3090,7 @@ impl Effect {
             // see `core_rules::target_walkers::
             // every_reachable_reanimation_is_visible_to_the_offboard_gate`.
             Effect::OptionalTargets { body, .. } => body.prefers_graveyard_target(),
+            Effect::WithX { body, .. } => body.prefers_graveyard_target(),
             Effect::DelayUntilWithCapture { body, .. }
             | Effect::DelayUntil { body, .. }
             | Effect::Repeat { body, .. }
@@ -3967,6 +3971,7 @@ impl Effect {
             | Effect::BindTargetObjects { body, .. }
             | Effect::BindScratch { body, .. }
             | Effect::OptionalTargets { body, .. }
+            | Effect::WithX { body, .. }
             | Effect::MayPayX { body, .. }
             | Effect::MayPay { body, .. }
             | Effect::MayPayBy { body, .. }
@@ -4826,6 +4831,7 @@ impl Effect {
                 | Effect::OnEachSpellYouCastUntilEndOfYourNextTurn { body }
                 | Effect::OnYourNextNamedSpellThisTurn { body }
                 | Effect::OptionalTargets { body, .. }
+                | Effect::WithX { body, .. }
                 | Effect::DelayUntilWithCapture { body, .. }
                 | Effect::DelayUntil { body, .. } => eff_find(body, slot, mode, kicked),
                 Effect::PayEnergy { then, .. }
@@ -5065,6 +5071,7 @@ impl Effect {
             | Effect::TargetsExactlyX { body }
             | Effect::CapTargetsAt { body, .. }
             | Effect::OptionalTargets { body, .. }
+            | Effect::WithX { body, .. }
             | Effect::MayPayX { body, .. }
             | Effect::MayPay { body, .. }
             | Effect::MayPayBy { body, .. }

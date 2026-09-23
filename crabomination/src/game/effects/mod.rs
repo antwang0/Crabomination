@@ -7543,6 +7543,10 @@ impl GameState {
             // Transparent at resolution — the wrapper only marks slots optional
             // for the targeting walk; the body's selectors no-op on absent slots.
             Effect::OptionalTargets { body, .. } => self.run_effect(body, ctx, events),
+            Effect::WithX { x, body } => {
+                let x = self.evaluate_value(x, ctx).max(0) as u32;
+                self.run_effect(body, &EffectContext { x_value: x, ..ctx.clone() }, events)
+            }
             // Both cap the supplied slots at the paid X; they differ only in
             // whether the targeting walk treats slots below X as optional.
             Effect::CapTargetsAtX { body } | Effect::TargetsExactlyX { body } => {

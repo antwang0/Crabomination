@@ -7088,6 +7088,12 @@ pub enum Effect {
     /// `body`; the wrapper only feeds the targeting walk (`min_targets_in_mode`
     /// / `target_slot_optional`).
     OptionalTargets { min: u8, body: Box<Effect> },
+    /// Run `body` with the context's X set to `x` (evaluated first), so an
+    /// X-relative filter in it (`ManaValueAtMostXFromCost`) reads a number
+    /// the card names instead of a cast's X — Kodama of the East Tree's
+    /// "a permanent card with equal or lesser mana value" than the entrant:
+    /// `WithX { x: ManaValueOf(TriggerSource), body }`.
+    WithX { x: Value, body: Box<Effect> },
     /// Run `body` with the spell's target slot `slot` moved to slot 0.
     ///
     /// **Runtime-only** — built by the modal arms' suspend splice, never by a

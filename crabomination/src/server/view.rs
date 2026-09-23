@@ -2786,6 +2786,7 @@ fn structural_children(effect: &Effect) -> Vec<&Effect> {
         | Effect::CapTargetsAtX { body }
         | Effect::TargetsExactlyX { body }
         | Effect::OptionalTargets { body, .. }
+        | Effect::WithX { body, .. }
         | Effect::ForEach { body, .. }
         | Effect::Repeat { body, .. }
         | Effect::Reflexive { body } => vec![body],
@@ -2882,7 +2883,8 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         // whose whole effect sits under one reads "Activate".
         Effect::Reflexive { body }
         | Effect::MayPayX { body, .. }
-        | Effect::OptionalTargets { body, .. } => ability_effect_label(body),
+        | Effect::OptionalTargets { body, .. }
+        | Effect::WithX { body, .. } => ability_effect_label(body),
         Effect::MayDiscard { then, .. }
         | Effect::MayTap { then, .. }
         | Effect::MaySacrifice { then, .. }
