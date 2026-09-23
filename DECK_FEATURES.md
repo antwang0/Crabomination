@@ -44,6 +44,7 @@ lists were picked.
 | **Mind Flayarrrs** (CLB precon) UB | Captain N'ghathrod | UB | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
 | **Blood Rites** (LCC precon) WB | Clavileño, First of the Blessed | WB | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Heads I Win, Tails You Lose** (SLD) UR | Zndrsplt, Eye of Wisdom **+** Okaun, Eye of Chaos (Partner with) | UR | 98 + 2 | ✅ complete |
+| **Goblin Storm** (SLD) R | Zada, Hedron Grinder | R | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not
@@ -142,6 +143,19 @@ The new `longest` column says why it starts here: the longest game runs
 1.7-2.8x the mean at every seat count (42,266 actions at 13 seats), and the
 14-seat mean is 24,196. Recorded, not "fixed" by raising the cap — a
 stalled attrition board at fourteen players is the finding.
+
+The **fifteenth** is the Secret Lair **Goblin Storm** list (MTGJSON's
+`GoblinStorm_SLD`): rituals, Zada copying a one-target spell onto every
+creature, and General Kreat's Goblin-per-attacking-Goblin. Residual: Throne
+of Eldraine's draw ability doesn't enforce "spend only mana of the chosen
+color". ⚠⚠ **Its first 15-seat run found a CR 508.4 bug in the engine, not
+the deck:** every "put onto the battlefield attacking" site (token-attacking,
+Myriad, Mobilize, Ninjutsu, two put-a-card-in-attacking effects) emitted
+`AttackerDeclared`, so Kreat's attack trigger fired for its own tokens —
+922 Goblins on one seat by turn 57, eight board-capped games in 1,000 (seed
+9960). Fixed at every site at once (`game/enter_attacking.rs`); the same
+seed now reads **991 / 1,000 decided, board cap 0, action cap 9** (0.9 %,
+all 272-323-turn attrition games, as at fourteen seats); Zada wins 4.2 %.
 
 The **tenth** is the first list built around what only happens at three seats
 or more, and it exists because of a census, not a hunch: **not one of the nine

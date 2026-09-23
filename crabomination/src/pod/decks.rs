@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Ten hand-picked commanders plus four official preconstructed lists, each a
+//! Ten hand-picked commanders plus five official preconstructed lists, each a
 //! 99 of cards this engine implements: legal under CR 903 (100 cards
 //! including the commander, singleton outside basics, every card inside the
 //! commander's CR 903.4 color identity) and Commander-legal per Scryfall's
@@ -8,8 +8,8 @@
 //!
 //! The ten were built by hand because the offline Scryfall cache cannot say
 //! how a precon splits into decks; MTGJSON's deck files can, and the eleventh
-//! through fourteenth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
-//! Win, Tails You Lose) are taken from one card for card. What all of them keep
+//! through fifteenth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
+//! Win, Tails You Lose, Goblin Storm) are taken from one card for card. What all of them keep
 //! from the precon idea is what the pod needs — fixed, legal, varied color
 //! identities, and built to play against each other.
 //! One is a Partner pair (CR 702.124b), one is a **planeswalker**
@@ -583,4 +583,34 @@ pub const ZNDRSPLT_MAIN: &[CardFactory] = &[
     // Basics
     island, island, island, island, island, island, island, mountain, mountain, mountain,
     mountain, mountain, mountain, mountain, mountain,
+];
+
+/// Zada, Hedron Grinder — mono-R. Commander, then the 99.
+pub const ZADA_COMMANDERS: &[CardFactory] = &[zada_hedron_grinder];
+
+/// **Goblin Storm**, the Secret Lair Commander deck (SLD, 2026-05-18), exactly
+/// as MTGJSON's `GoblinStorm_SLD` prints it: 77 nonbasic cards + 22 Mountains
+/// = 99. Goblins, rituals and spells aimed at Zada that copy onto the team.
+pub const ZADA_MAIN: &[CardFactory] = &[
+    krenko_mob_boss, pashalik_mons, brightstone_ritual, broadside_bombardiers,
+    conspicuous_snoop, empty_the_warrens, grapeshot, skirk_prospector, roaming_throne,
+    skullclamp, sol_ring, blasphemous_act, chaos_warp, frontline_heroism, goblin_bombardment,
+    goblin_chieftain, goblin_dark_dwellers, goblin_lackey, goblin_trashmaster,
+    great_train_heist, grenzo_havoc_raiser, howlsquad_heavy, past_in_flames,
+    redcap_gutter_dweller, rundvelt_hordemaster, searslicer_goblin, siege_gang_commander,
+    siege_gang_lieutenant, idol_of_oblivion, ruby_medallion, throne_of_eldraine, arena_of_glory,
+    castle_embereth, den_of_the_bugbear, fountainport, kher_keep, spinerock_knoll, war_room,
+    shinka_the_bloodsoaked_keep, ancestors_aid, battle_hymn, boggart_shenanigans, crimson_wisps,
+    daring_discovery, dragon_fodder, expedite, faithless_looting, fists_of_flame,
+    gempalm_incinerator, general_kreat_the_boltbringer, glimpse_the_impossible,
+    goblin_bushwhacker, goblin_matron, goblin_negotiation, goblin_warchief, haze_of_rage,
+    impact_tremors, impulsive_pilferer, krenkos_command, mana_geyser, mogg_war_marshal,
+    quest_for_the_goblin_lord, renegade_tactics, sazacaps_brew, seething_song,
+    spreading_insurrection, storm_kiln_artist, vandalblast, wild_ride, witchs_mark,
+    swiftfoot_boots, dwarven_mine, forgotten_cave, goblin_burrows, hidden_volcano,
+    reliquary_tower, smoldering_crater,
+    // Basics: 22 mountain
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain,
 ];

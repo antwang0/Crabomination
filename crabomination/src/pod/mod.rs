@@ -210,6 +210,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ZNDRSPLT_COMMANDERS,
             main: decks::ZNDRSPLT_MAIN,
         },
+        // Fifteenth: the fifth official list (Goblin Storm, SLD) — rituals and
+        // Zada's copy-onto-the-team. `--seats 15`.
+        PodDeck {
+            name: "Zada (R)",
+            commanders: decks::ZADA_COMMANDERS,
+            main: decks::ZADA_MAIN,
+        },
     ]
 }
 
@@ -682,9 +689,9 @@ mod tests {
         }
     }
 
-    /// CR 903.5a/c — the eleventh to fourteenth seats are official lists
+    /// CR 903.5a/c — the eleventh to fifteenth seats are official lists
     /// taken card for card (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
-    /// Win, Tails You Lose). They seat what no
+    /// Win, Tails You Lose, Goblin Storm). They seat what no
     /// hand-built list did — graveyard casts (Kotis, CR 601.2a), graveyard-only
     /// mana (Lord of the Forsaken, CR 106.6), a pay-one-of-three additional
     /// cost (Dusk Mangler, CR 601.2b), a trigger that works while suspended
@@ -697,6 +704,7 @@ mod tests {
             ("N'ghathrod", [0xC1B, 79, 9003]),
             ("Clavileño", [0xB100D, 80, 9004]),
             ("Zndrsplt", [0xC0141, 81, 9005]),
+            ("Zada", [0x2ADA, 82, 9006]),
         ] {
             let precon = *field.iter().find(|d| d.name.starts_with(name)).expect("the precon seat");
             assert_eq!(precon.card_count(), 100);
