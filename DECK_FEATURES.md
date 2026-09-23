@@ -50,6 +50,7 @@ lists were picked.
 | **Keen Engineering** (FDC precon) U | Sai, Master Thopterist | U | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Reap the Tides** (CMR precon) GU | Aesi, Tyrant of Gyre Strait | GU | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Corrupting Influence** (ONC precon) WBG | Ixhel, Scion of Atraxa | WBG | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
+| **Sneak Attack** (ZNC precon) UB | Anowon, the Ruin Thief | UB | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not
@@ -243,6 +244,23 @@ the 100,000 budget), 0 board caps, zero panics**; Ixhel wins 5.0 %;
 four-seat pods (`--pod-decks`, seed 10021, 1,000 each, all decided) Ixhel
 wins 16.8 % beside the FDC trio — where **Ghalta takes 60.7 %**, a deck-strength
 reading worth a look — and 13.9 % beside Sigarda / Edgar / Clavileño.
+
+The **twenty-first** is Zendikar Rising's **Sneak Attack** (`SneakAttack_ZNC`):
+Dimir Rogues under Anowon. Fifteen cards were missing; two primitives:
+`EventSpec::once_per_batch_summing_damage` (CR 603.2c — a batched combat
+trigger read the FIRST dealer's damage; Anowon mills the batch's total) and
+`Value::GreatestGraveyardSizeAmong` ("an opponent has eight or more cards in
+their graveyard" read only the first opponent — Jace's Phantasm fixed with
+it). Residuals: **Master Thief**'s steal ends when it leaves, not when you
+lose control of it; **Whispersteel Dagger** opens every creature card in the
+graveyard, not one. Seed 10031, 1,000 games at 21 seats: **996 decided, 4
+action caps, 0 board caps, zero panics**; Anowon wins 7.9 %, and 32.8 % of
+four-seat pods beside Teval / N'ghathrod / Ixhel (seed 10032, all decided).
+⚠ **The census found a card castable by no path: Spinal Embrace** ("cast
+this spell only during combat" — the default profile's combat window casts
+pump tricks only, and the main-phase cast is refused). `server/combat_only.rs`
+gives such a spell the post-block window; the same seed then played **every
+card of all twenty-one lists** (1,043 distinct, 997 decided).
 
 ⚠ **The board cap was a bot bug, not a loop.** A Krenko seat sent all 292
 of its Goblins at one player on 24 life each turn while two others sat on
