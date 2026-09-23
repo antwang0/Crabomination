@@ -2565,6 +2565,10 @@ pub enum SelectionRequirement {
     /// Shares a creature type with the permanent sacrificed to pay this
     /// spell's additional cost (Endemic Plague). Changelings match.
     SharesCreatureTypeWithSacrificed,
+    /// Shares a land type with the card this resolution last moved — the
+    /// earlier pick of a two-step search (Myriad Landscape's "two basic land
+    /// cards that share a land type"). True when nothing has moved yet.
+    SharesLandTypeWithLastMoved,
     /// Shares a creature type with the ability's *source*, read from its
     /// last-known information when it has left the battlefield (Heirloom
     /// Blade's "a creature card that shares a creature type with it", on the

@@ -5421,6 +5421,13 @@ impl GameState {
                                 .any(|t| mine.contains(t))
                     })
             }
+            R::SharesLandTypeWithLastMoved => {
+                let mine = &card.definition.subtypes.land_types;
+                self.scratch.last_moved_cards.first().is_none_or(|&id| {
+                    self.find_card_anywhere(id)
+                        .is_some_and(|c| c.definition.subtypes.land_types.iter().any(|t| mine.contains(t)))
+                })
+            }
             // Harsh Mercy — "of a type chosen this way".
             R::IsTypeChosenThisWay => {
                 card.definition.keywords.has_kw(&crate::card::Keyword::Changeling)
