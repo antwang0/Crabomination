@@ -280,6 +280,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::STELLA_COMMANDERS,
             main: decks::STELLA_MAIN,
         },
+        // Twenty-fifth: the fifteenth official list (Vampiric Bloodlust,
+        // C17) — Edgar's own precon, the field's second Edgar seat, with the
+        // curses that pay whoever attacks the cursed player. `--seats 25`.
+        PodDeck {
+            name: "Edgar Markov C17 (BRW)",
+            commanders: decks::EDGAR_C17_COMMANDERS,
+            main: decks::EDGAR_C17_MAIN,
+        },
     ]
 }
 

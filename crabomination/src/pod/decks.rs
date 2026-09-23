@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Ten hand-picked commanders plus fourteen official preconstructed lists, each a
+//! Ten hand-picked commanders plus fifteen official preconstructed lists, each a
 //! 99 of cards this engine implements: legal under CR 903 (100 cards
 //! including the commander, singleton outside basics, every card inside the
 //! commander's CR 903.4 color identity) and Commander-legal per Scryfall's
@@ -8,12 +8,13 @@
 //!
 //! The ten were built by hand because the offline Scryfall cache cannot say
 //! how a precon splits into decks; MTGJSON's deck files can, and the eleventh
-//! through twenty-fourth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
+//! through twenty-fifth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
 //! Win, Tails You Lose, Goblin Storm, Foundations Commander's Wretched Ranks,
 //! Tramplesaurus Rex and Keen Engineering, Commander Legends' Reap the Tides,
 //! Phyrexia: All Will Be One's Corrupting Influence, Zendikar Rising's Sneak
 //! Attack, Tarkir: Dragonstorm's Jeskai Striker, Commander Masters' Sliver
-//! Swarm and Outlaws of Thunder Junction's Quick Draw) are taken from one card for card. What all of them keep
+//! Swarm, Outlaws of Thunder Junction's Quick Draw and Commander 2017's
+//! Vampiric Bloodlust) are taken from one card for card. What all of them keep
 //! from the precon idea is what the pod needs — fixed, legal, varied color
 //! identities, and built to play against each other.
 //! One is a Partner pair (CR 702.124b), one is a **planeswalker**
@@ -870,4 +871,34 @@ pub const STELLA_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     island, island, island, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+];
+
+pub const EDGAR_C17_COMMANDERS: &[CardFactory] = &[edgar_markov];
+
+/// **Vampiric Bloodlust**, the Commander 2017 deck (C17, 2017-08-25), exactly
+/// as MTGJSON's `VampiricBloodlust_C17` prints it: 84 nonbasic cards + 8
+/// Swamps + 4 Mountains + 3 Plains = 99. Mardu Vampires under Edgar Markov —
+/// the precon the hand-built Edgar seat was modelled on, curses and all.
+pub const EDGAR_C17_MAIN: &[CardFactory] = &[
+    licia_sanguine_tribune, mathas_fiend_seeker, kheru_mind_eater, patron_of_the_vein,
+    bloodsworn_steward, crimson_honor_guard, anowon_the_ruin_sage, bloodlord_of_vaasgoth,
+    blood_baron_of_vizkopa, butcher_of_malakir, captivating_vampire, dark_impostor,
+    drana_kalastria_bloodchief, malakir_bloodwitch, sangromancer, skeletal_vampire,
+    vein_drinker, bloodline_necromancer, blood_artist, bloodhusk_ritualist, falkenrath_noble,
+    pawn_of_ulamog, vampire_nighthawk, rakish_heir, stromkirk_captain, tithe_drinker,
+    new_blood, disrupt_decorum, kindred_charge, fell_the_mighty, blood_tribute,
+    consuming_vapors, damnable_pact, merciless_eviction, ambitions_cost, read_the_bones,
+    syphon_mind, teferis_protection, crackling_doom, return_to_dust, swords_to_plowshares,
+    go_for_the_throat, skeletal_scrying, mortify, blade_of_the_bloodchief, door_of_destinies,
+    well_of_lost_dreams, heirloom_blade, boros_signet, orzhov_signet, rakdos_signet,
+    skullclamp, sol_ring, worn_powerstone, kindred_boon, blind_obedience, black_market,
+    sanguine_bond, underworld_connections, outpost_siege, curse_of_vitality,
+    curse_of_disturbance, path_of_ancestry, akoum_refuge, bloodfell_caves, bojuka_bog,
+    boros_garrison, boros_guildgate, cinder_barrens, command_tower, evolving_wilds,
+    forsaken_sanctuary, kabira_crossroads, nomad_outpost, opal_palace, orzhov_basilica,
+    orzhov_guildgate, rakdos_carnarium, rakdos_guildgate, scoured_barrens, stone_quarry,
+    terramorphic_expanse, urborg_volcano, wind_scarred_crag,
+    // Basics: 8 swamp, 4 mountain, 3 plains
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, mountain, mountain, mountain,
+    mountain, plains, plains, plains,
 ];
