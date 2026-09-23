@@ -540,8 +540,15 @@ fn cmdr_umbris_brainstealer_dragon_steals_and_bills() {
 fn cmdr_umbris_grell_philosopher_borrows_abilities() {
     let mut g = game(2);
     g.add_card_to_battlefield(1, catalog::mind_stone());
+    let mut horror = catalog::grizzly_bears();
+    horror.subtypes.creature_types = vec![CreatureType::Horror];
+    let other = g.add_card_to_battlefield(0, horror);
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let grell = enter(&mut g, catalog::grell_philosopher());
-    assert!(!g.battlefield_find(grell).unwrap().granted_activated_eot.is_empty());
+    // "Each Horror you control" — Grell and the other Horror, not the Bears.
+    for (id, horror) in [(grell, true), (other, true), (bears, false)] {
+        assert_eq!(!g.battlefield_find(id).unwrap().granted_activated_eot.is_empty(), horror);
+    }
 }
 
 /// Intellect Devourer holds a card from each opponent that you may cast.

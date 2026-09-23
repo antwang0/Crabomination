@@ -1028,12 +1028,15 @@ pub fn brainstealer_dragon() -> CardDefinition {
 /// each Horror you control gains all activated abilities of target artifact
 /// an opponent controls until end of turn. You may spend blue mana as though
 /// it were mana of any color to activate those abilities."
-/// Approximation: only Grell itself (a Horror) gains the abilities; the
-/// blue-mana rider is omitted.
+/// Residual: the blue-mana rider is omitted.
 pub fn grell_philosopher() -> CardDefinition {
     let tinker = || Effect::GainAllActivatedAbilitiesOf {
         what: target_filtered(R::Artifact.and(R::ControlledByOpponent)),
         duration: Duration::EndOfTurn,
+        to: Some(Selector::ControlledBy {
+            who: PlayerRef::You,
+            filter: R::HasCreatureType(CreatureType::Horror),
+        }),
     };
     CardDefinition {
         triggered_abilities: vec![
