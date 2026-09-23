@@ -19487,7 +19487,7 @@ impl GameState {
             }
 
             Effect::CreateTokenAttacking { who, count, definition, cleanup, defender } => {
-                use crate::game::types::{Attack, AttackTarget};
+                use crate::game::types::AttackTarget;
                 // Only meaningful while a combat is in progress.
                 if self.attacking.is_empty() {
                     return Ok(());
@@ -19520,12 +19520,7 @@ impl GameState {
                     let id = self.mint_token_onto_battlefield(def.clone(), p, true, events);
                     // Join combat tapped + attacking (CR 508.3a) — bypasses the
                     // declare-attackers timing/sickness gates, like Ninjutsu.
-                    if self.battlefield.find_by_id(id).is_some() {
-                        self.attacking.push(Attack { attacker: id, target });
-                        if let Some(c) = self.battlefield.find_by_id_mut(id) {
-                            c.attacked_this_turn = true;
-                        }
-                        events.push(GameEvent::AttackerDeclared(id));
+                    if self.put_into_combat_attacking(id, target) {
                         // Mobilize/Myriad temporary tokens leave at end of combat.
                         if !matches!(cleanup, AttackingTokenCleanup::None) {
                             self.attacking_token_cleanup.push((id, *cleanup));
@@ -19536,7 +19531,7 @@ impl GameState {
             }
 
             Effect::JoinCombatAttacking { what } => {
-                use crate::game::types::{Attack, AttackTarget};
+                use crate::game::types::AttackTarget;
                 // Only meaningful while a combat is in progress.
                 if self.attacking.is_empty() {
                     return Ok(());
@@ -19565,16 +19560,14 @@ impl GameState {
                     let Some(target) = target else { continue };
                     if let Some(c) = self.battlefield.find_by_id_mut(id) {
                         c.tapped = true;
-                        c.attacked_this_turn = true;
                     }
-                    self.attacking.push(Attack { attacker: id, target });
-                    events.push(GameEvent::AttackerDeclared(id));
+                    self.put_into_combat_attacking(id, target);
                 }
                 Ok(())
             }
 
             Effect::Myriad => {
-                use crate::game::types::{Attack, AttackTarget};
+                use crate::game::types::AttackTarget;
                 // Source must currently be attacking a player.
                 let Some(src) = ctx.source else { return Ok(()); };
                 let Some(src_attack) = self.attacking.iter().find(|a| a.attacker == src) else {
@@ -19600,12 +19593,7 @@ impl GameState {
                     .collect();
                 for opp in opps {
                     let id = self.mint_token_onto_battlefield(def.clone(), ctrl, true, events);
-                    if self.battlefield.find_by_id(id).is_some() {
-                        self.attacking.push(Attack { attacker: id, target: AttackTarget::Player(opp) });
-                        if let Some(c) = self.battlefield_find_mut(id) {
-                            c.attacked_this_turn = true;
-                        }
-                        events.push(GameEvent::AttackerDeclared(id));
+                    if self.put_into_combat_attacking(id, AttackTarget::Player(opp)) {
                         self.attacking_token_cleanup
                             .push((id, AttackingTokenCleanup::ExileAtEndOfCombat));
                     }
@@ -21677,7 +21665,7 @@ impl GameState {
 
             Effect::DeployCreatureFromHandAttacking { filter, return_to_hand_eot } => {
                 
-                use crate::game::types::{Attack, AttackTarget};
+                use crate::game::types::AttackTarget;
                 // Only meaningful mid-combat (the source is attacking).
                 if self.attacking.is_empty() {
                     return Ok(());
@@ -21741,11 +21729,7 @@ impl GameState {
                 if let Some(target) = target
                     && !self.attacking.iter().any(|a| a.attacker == cid)
                 {
-                    if let Some(c) = self.battlefield.find_by_id_mut(cid) {
-                        c.attacked_this_turn = true;
-                    }
-                    self.attacking.push(Attack { attacker: cid, target });
-                    events.push(GameEvent::AttackerDeclared(cid));
+                    self.put_into_combat_attacking(cid, target);
                 }
                 if *return_to_hand_eot {
                     self.delayed_triggers.push(crate::game::types::DelayedTrigger {
@@ -25101,7 +25085,7 @@ impl GameState {
             }
 
             Effect::LookTopMayDeployAttacking { count, filter } => {
-                use crate::game::types::{Attack, AttackTarget};
+                use crate::game::types::AttackTarget;
                 // Only meaningful mid-combat.
                 if self.attacking.is_empty() {
                     return Ok(());
@@ -25142,14 +25126,9 @@ impl GameState {
                     };
                     self.move_card_to(id, &dest, ctx, events);
                     if let Some(target) = target
-                        && self.battlefield.find_by_id(id).is_some()
+                        && self.put_into_combat_attacking(id, target)
                     {
-                        self.attacking.push(Attack { attacker: id, target });
-                        if let Some(c) = self.battlefield_find_mut(id) {
-                            c.attacked_this_turn = true;
-                        }
                         self.grant_keyword_eot(id, crate::card::Keyword::Indestructible);
-                        events.push(GameEvent::AttackerDeclared(id));
                     }
                 }
                 // Bottom the rest in a random order (CR 401.4).

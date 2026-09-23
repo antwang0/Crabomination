@@ -135,6 +135,7 @@ mod cr_recent102;
 mod cr_recent103;
 mod cr_recent104;
 mod cr_recent105;
+mod cr_recent106;
 mod cr_recent99;
 mod block_trigger_selectors;
 mod target_walkers;

@@ -126,6 +126,8 @@ pub mod as_enters;
 pub mod combat;
 // CR 106.7 — "could produce" mana.
 mod could_produce;
+// CR 508.4 — put onto the battlefield attacking, never declared.
+mod enter_attacking;
 /// CR 800.4f/g — routing an ask whose seat has left the game.
 pub(crate) mod departed;
 #[doc(hidden)]
@@ -20754,13 +20756,7 @@ impl GameState {
         }
         // It enters attacking the same defender the returned creature was
         // attacking — bypassing the declare-attackers timing/sickness gates.
-        if self.battlefield.find_by_id(ninja).is_some() {
-            self.attacking.push(Attack { attacker: ninja, target: atk.target });
-            if let Some(c) = self.battlefield.find_by_id_mut(ninja) {
-                c.attacked_this_turn = true;
-            }
-            events.push(GameEvent::AttackerDeclared(ninja));
-        }
+        self.put_into_combat_attacking(ninja, atk.target);
         Ok(events)
     }
 
