@@ -5208,9 +5208,11 @@ impl GameState {
             let card = Self::take_card(&mut self.players[p].graveyard, card_id)
                 .ok_or(GameError::CardNotInHand(card_id))?;
             self.players[p].hand.push(card);
+            self.casting_from_graveyard = Some(card_id);
             let r = self.cast_spell_with_convoke(
                 card_id, target, additional_targets, mode, x_value, &[], &[], CastFlags::default(),
             );
+            self.casting_from_graveyard = None;
             match &r {
                 Err(_) => {
                     if let Some(card) = Self::take_card(&mut self.players[p].hand, card_id) {
@@ -5240,9 +5242,11 @@ impl GameState {
                 .ok_or(GameError::CardNotInHand(card_id))?;
             card.pending_etb_counters.push((crate::card::CounterType::Finality, 1));
             self.players[p].hand.push(card);
+            self.casting_from_graveyard = Some(card_id);
             let r = self.cast_spell_with_convoke(
                 card_id, target, additional_targets, mode, x_value, &[], &[], CastFlags::default(),
             );
+            self.casting_from_graveyard = None;
             match &r {
                 Err(_) => {
                     if let Some(mut card) = Self::take_card(&mut self.players[p].hand, card_id) {
@@ -5273,9 +5277,11 @@ impl GameState {
                 .ok_or(GameError::CardNotInHand(card_id))?;
             card.pending_etb_counters.push((crate::card::CounterType::Finality, 1));
             self.players[p].hand.push(card);
+            self.casting_from_graveyard = Some(card_id);
             let r = self.cast_spell_with_convoke(
                 card_id, target, additional_targets, mode, x_value, &[], &[], CastFlags::default(),
             );
+            self.casting_from_graveyard = None;
             match r {
                 Err(e) => {
                     if let Some(mut card) = Self::take_card(&mut self.players[p].hand, card_id) {
@@ -5302,9 +5308,11 @@ impl GameState {
             let card = Self::take_card(&mut self.players[p].graveyard, card_id)
                 .ok_or(GameError::CardNotInHand(card_id))?;
             self.players[p].hand.push(card);
+            self.casting_from_graveyard = Some(card_id);
             let r = self.cast_spell_with_convoke(
                 card_id, target, additional_targets, mode, x_value, &[], &[], CastFlags::default(),
             );
+            self.casting_from_graveyard = None;
             match r {
                 Err(e) => {
                     if let Some(card) = Self::take_card(&mut self.players[p].hand, card_id) {
@@ -7270,7 +7278,14 @@ impl GameState {
         };
         apply_spell_cost_floor(self, &mut cost);
         let forced_only = self.players[p].manual_mana;
-        let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
+        // The aftermath half is an instant or sorcery cast from the graveyard.
+        let kind = crate::mana::SpellKind {
+            instant_or_sorcery: true,
+            casting_nonartifact_spell: true,
+            from_graveyard: true,
+            ..Default::default()
+        };
+        let receipt = self.try_pay_with_auto_tap_kind(p, &cost, forced_only, &kind)?;
         self.pay_life_cost(p, receipt.side_effects.life_lost);
         let mana_spent = receipt
             .pool_before
@@ -10481,7 +10496,10 @@ impl GameState {
         apply_spell_cost_floor(self, &mut cost);
         let snapshot = self.snapshot_payment_state(p);
         let forced_only = self.players[p].manual_mana;
-        let spell_kind = card.definition.spell_kind();
+        // CR 601.2a — a graveyard cast; "your graveyard" excludes a pooled
+        // opponent's (Shaman's Trance).
+        let mut spell_kind = card.definition.spell_kind();
+        spell_kind.from_graveyard = card.owner == p;
         let receipt = self.try_pay_after_snapshot_mode(
             p, &cost, snapshot, forced_only, &spell_kind, None,
         )?;
@@ -10681,7 +10699,10 @@ impl GameState {
             cost.reduce_generic(fb_less);
         }
         apply_spell_cost_floor(self, &mut cost);
-        let spell_kind = card.definition.spell_kind();
+        // CR 601.2a — a graveyard cast; "your graveyard" excludes a pooled
+        // opponent's (Shaman's Trance).
+        let mut spell_kind = card.definition.spell_kind();
+        spell_kind.from_graveyard = card.owner == p;
         // CR 601.2g — float-spend confirmation. Nothing is mutated yet (the
         // card is still in the graveyard; additional costs unpaid), so suspend
         // cleanly and replay the whole flashback on answer.
@@ -10837,7 +10858,10 @@ impl GameState {
 
         let forced_only = self.players[p].manual_mana;
         let snapshot = self.snapshot_payment_state(p);
-        let spell_kind = card.definition.spell_kind();
+        // CR 601.2a — a graveyard cast; "your graveyard" excludes a pooled
+        // opponent's (Shaman's Trance).
+        let mut spell_kind = card.definition.spell_kind();
+        spell_kind.from_graveyard = card.owner == p;
         let receipt = self.try_pay_after_snapshot_mode(
             p, &cost, snapshot, forced_only, &spell_kind, None,
         )?;
@@ -10963,7 +10987,9 @@ impl GameState {
         }
         cost.reduce_by_cost(&colored_cost_reduction_for_spell(self, p, &card));
         apply_spell_cost_floor(self, &mut cost);
-        let receipt = self.try_pay_with_auto_tap(p, &cost)?;
+        let mut kind = card.definition.spell_kind();
+        kind.from_graveyard = true;
+        let receipt = self.try_pay_with_auto_tap_kind(p, &cost, false, &kind)?;
         self.pay_life_cost(p, receipt.side_effects.life_lost);
         let mana_spent = receipt
             .pool_before
@@ -11058,7 +11084,9 @@ impl GameState {
         cost.reduce_by_cost(&colored_cost_reduction_for_spell(self, p, &card));
         apply_spell_cost_floor(self, &mut cost);
         let forced_only = self.players[p].manual_mana;
-        let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
+        let mut kind = card.definition.spell_kind();
+        kind.from_graveyard = true;
+        let receipt = self.try_pay_with_auto_tap_kind(p, &cost, forced_only, &kind)?;
         self.pay_life_cost(p, receipt.side_effects.life_lost);
         let mana_spent = receipt
             .pool_before

@@ -645,6 +645,9 @@ pub enum SpendRestriction {
     /// Unrestricted spend; the counters ride the cast card's
     /// `pending_etb_counters`.
     CommanderCastCounters,
+    /// "Spend this mana only to cast a spell from your graveyard." (Lord of
+    /// the Forsaken.) Reads [`SpellKind::from_graveyard`].
+    SpellFromGraveyard,
 }
 
 impl SpendRestriction {
@@ -683,6 +686,7 @@ impl SpendRestriction {
             SpendRestriction::FaceDownSpellsOrTurnFaceUp => {
                 "only face-down casts or turning face up"
             }
+            SpendRestriction::SpellFromGraveyard => "only spells cast from your graveyard",
             // Riders, not restrictions — the mana spends freely.
             SpendRestriction::InstantSorceryUncounterable
             | SpendRestriction::CreatureHaste
@@ -759,6 +763,7 @@ impl SpendRestriction {
             SpendRestriction::FaceDownSpellsOrTurnFaceUp => {
                 kind.face_down || kind.turning_face_up
             }
+            SpendRestriction::SpellFromGraveyard => kind.from_graveyard,
             // CR 106.6 names three shapes for a mana source's rider — an
             // additional effect, a delayed triggered ability, and a
             // restriction. Only the third narrows what the mana may pay for,
@@ -869,6 +874,10 @@ pub struct SpellKind {
     /// property of the game, not of the card), so the cast paths set it via
     /// `GameState::spell_kind_for`. Read by Opal Palace's provenance rider.
     pub commander: bool,
+    /// CR 601.2a — the spell is being cast from its caster's graveyard (any
+    /// permission: flashback, escape, Muldrotha, …). Set by the cast paths,
+    /// never by `CardDefinition::spell_kind`. Read by `SpellFromGraveyard`.
+    pub from_graveyard: bool,
 }
 
 /// WUBRG index for a color — used to bucket restricted mana per color.

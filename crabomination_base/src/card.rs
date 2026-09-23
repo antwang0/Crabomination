@@ -6360,6 +6360,7 @@ impl CardDefinition {
             // A property of the game, not the card — `GameState::spell_kind_for`
             // sets it.
             commander: false,
+            from_graveyard: false,
         }
     }
 

@@ -2310,6 +2310,11 @@ pub struct GameState {
     /// for "cast a spell from your library" payoffs. Transient.
     #[serde(skip)]
     pub(crate) casting_from_library_top: Option<CardId>,
+    /// The card a graveyard-cast permission (Muldrotha, Noctis, Osteomancer
+    /// Adept, Exploration Broodship) has hopped into hand for the cast
+    /// pipeline — `spell_kind_for` reads it for `SpellKind::from_graveyard`.
+    #[serde(skip)]
+    pub(crate) casting_from_graveyard: Option<CardId>,
     /// Total spells cast during the previous turn (snapshotted from
     /// `spells_cast_this_turn` at Cleanup). Drives the classic Innistrad
     /// werewolf transform check ("if no spells were cast last turn …").
@@ -3771,6 +3776,7 @@ impl Clone for GameState {
             mana_spent_on_spells_this_turn: self.mana_spent_on_spells_this_turn,
             expend_prev_total: self.expend_prev_total,
             casting_from_library_top: self.casting_from_library_top,
+            casting_from_graveyard: self.casting_from_graveyard,
             spells_cast_last_turn: self.spells_cast_last_turn,
             permanents_to_graveyard_this_turn: self.permanents_to_graveyard_this_turn,
             sacrificed_power: self.sacrificed_power,
@@ -3978,6 +3984,7 @@ impl GameState {
             mana_spent_on_spells_this_turn: 0,
             expend_prev_total: 0,
             casting_from_library_top: None,
+            casting_from_graveyard: None,
             spells_cast_last_turn: 0,
             permanents_to_graveyard_this_turn: 0,
             delayed_triggers: Vec::new(),

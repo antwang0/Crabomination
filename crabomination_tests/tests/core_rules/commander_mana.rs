@@ -622,7 +622,7 @@ fn cr_106_6_every_rider_allows_every_payment() {
                 | LegendarySpell | LegendarySpellUncounterable | NoncreatureSpellsOnly
                 | RoomSpellsOrDoors
                 | FaceDownSpellsOrTurnFaceUp | CreatureHaste | CommanderTypeScry
-                | CommanderCastCounters => {}
+                | CommanderCastCounters | SpellFromGraveyard => {}
             }
         }
         use SpendRestriction::*;
@@ -656,6 +656,7 @@ fn cr_106_6_every_rider_allows_every_payment() {
             CreatureHaste,
             CommanderTypeScry,
             CommanderCastCounters,
+            SpellFromGraveyard,
         ]
     };
     // A spanning-enough set of payments: a creature spell, a noncreature

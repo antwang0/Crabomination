@@ -180,9 +180,11 @@ impl GameState {
 
 impl GameState {
     /// `CardDefinition::spell_kind` plus the one field only the game can fill:
-    /// CR 903.3 — whether `card` is `seat`'s own commander.
+    /// CR 903.3 — whether `card` is `seat`'s own commander — and whether a
+    /// graveyard-cast permission hopped it into hand (CR 601.2a).
     pub fn spell_kind_for(&self, seat: usize, card: &CardInstance) -> SpellKind {
         let mut kind = card.definition.spell_kind();
+        kind.from_graveyard = self.casting_from_graveyard == Some(card.id);
         kind.commander = self
             .players
             .get(seat)
