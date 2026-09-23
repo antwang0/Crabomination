@@ -105,6 +105,32 @@ the handoff.
 
 # Bugs & robustness
 
+## FIXED 2026-09-23 (the residual session) — three bug CLASSES a precon's residual list led to
+
+- **Cast origin read as "not from hand".** `Predicate::CastFromGraveyard`,
+  River Kelpie's cast trigger and `TriggerSourceEnteredFromGraveyard` all read
+  `!cast_from_hand`, which every **command-zone** cast (and exile, library,
+  token, land) satisfies: Ash Zealot hit every commander caster, Kelpie drew
+  for every commander cast. Now `CardInstance/EffectContext::cast_from_graveyard`,
+  set on every graveyard cast path; cards that MEAN "not from hand"
+  (Antiquities on the Loose, Delayed Blast Fireball) say `Not(CastFromHand)`.
+- **Modal triggers.** Targets were chosen for the whole `ChooseMode` (its first
+  targeting mode) before the pick, the CR 608.2b re-check read mode 0's
+  filter, and seven direct push sites (death, attack, combat damage, damage
+  listeners, cast-self, room unlock, redirect) never asked for a mode at all —
+  Shambling Ghast could never make its Treasure. `Effect::targeting_view` +
+  `trigger_mode_and_target`; tests `cr_700_2_shambling_ghast_*`, Hullbreaker's.
+- **Spend-restricted mana never paid** (auto-tap skipped every real
+  restriction): a short payment now floats matching restricted sources
+  (`pay_with_restricted_sources`, CR 106.6). ⚠ Still skipped: a restricted
+  source whose ability costs mana (Castle Garenbrig).
+- Also: granted persist/undying (the other session), escape and replicate bot
+  candidates. Open from the same sweep: Terror of the Peaks' life tax on
+  targeting (no life-tax-on-targeting primitive), Conduit of Worlds' tap
+  ability (needs a lock applied *when the granted card is cast*), Lethal
+  Scheme's connive (convokers on the resolving spell), Colossal Grave-Reaver's
+  pick (mill BATCHES aren't delimited in `milled_ids_this_turn`).
+
 ## OPEN 2026-09-23 — cast variants NO bot ever emits
 
 `GameAction::is_cast` lists 47 variants; `server/bot.rs` builds none of
