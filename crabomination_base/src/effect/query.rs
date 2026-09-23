@@ -1169,6 +1169,7 @@ impl Effect {
             | Effect::PlayerGainsShroudThisTurn { .. } => false,
             Effect::RedirectDamageToThisThisTurn { to } => sel_has_target(to),
             Effect::RedirectNextCombatDamageToController { what } => sel_has_target(what),
+            Effect::ReselectAttackTarget { what } => sel_has_target(what),
             Effect::RevealDrawnCardThenIf { then, .. } => then.requires_target(),
             Effect::MayDealPowerThenNoCombatDamage { dealer, to } => {
                 sel_has_target(dealer) || sel_has_target(to)
@@ -2184,6 +2185,7 @@ impl Effect {
         match self {
             Effect::MayDealPowerThenNoCombatDamage { to, .. } => sel_filter(to),
             Effect::TapAndHoldWhileSourceTapped { what }
+            | Effect::ReselectAttackTarget { what }
             | Effect::GrantSacrificedLandTypesLandwalk { what, .. } => sel_filter(what),
             Effect::SwapBlockAssignments { a, b } => sel_filter(a).or_else(|| sel_filter(b)),
             // The Aura slot is the targeted one; the host is usually `This`
@@ -4309,7 +4311,8 @@ impl Effect {
                 Effect::ExileAllCopiesOfTargetName { what }
                 | Effect::ExileTokensSharingNameWith { what }
                 | Effect::DestroyAllSharingNameWith { what }
-                | Effect::ExileAndReturnToOwner { what } => sel_find(what, slot),
+                | Effect::ExileAndReturnToOwner { what }
+                | Effect::ReselectAttackTarget { what } => sel_find(what, slot),
                 Effect::RedirectNextDamageBackAtSource { what, to } => {
                     sel_find(what, slot).or_else(|| sel_find(to, slot))
                 }

@@ -4877,6 +4877,10 @@ pub enum Effect {
     /// that can't be blocked. No blocker is assigned, so nothing deals or is
     /// dealt combat damage by the block.
     AttackingCreaturesBecomeBlocked,
+    /// "You may reselect which player or permanent [what] is attacking"
+    /// (Misleading Signpost). Ignores attack restrictions and costs, and is
+    /// not a new attack (no "whenever … attacks" trigger) — the rulings.
+    ReselectAttackTarget { what: Selector },
     /// Gonti, Lord of Luxury's ETB: look at the top `count` cards of `who`'s
     /// library, exile one face down (auto-pick: highest MV) with a
     /// while-exiled cast permission for you, and bottom the rest randomly.

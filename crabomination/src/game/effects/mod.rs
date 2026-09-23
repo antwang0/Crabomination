@@ -13,6 +13,7 @@ mod fight_each;
 pub(crate) use eval::PrintedGates;
 pub(crate) mod events;
 mod movement;
+mod reselect;
 mod targeting;
 /// The target enumerator's call-site census — see
 /// [`targeting::call_site_census`]. Re-exported for `bot_ladder` under the
@@ -9917,6 +9918,11 @@ impl GameState {
                         },
                     },
                 ));
+                Ok(())
+            }
+
+            Effect::ReselectAttackTarget { what } => {
+                self.reselect_attack_target(what, ctx, effect);
                 Ok(())
             }
 
