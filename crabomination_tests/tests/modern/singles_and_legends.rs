@@ -230,15 +230,16 @@ fn monument_to_endurance_fires_a_fresh_mode_on_each_discard() {
 // ── Exotic Orchard ──────────────────────────────────────────────────────────
 
 #[test]
-fn exotic_orchard_taps_for_any_color() {
+fn exotic_orchard_taps_for_an_opposing_lands_color() {
     let mut g = two_player_game();
     let eo = g.add_card_to_battlefield(0, catalog::exotic_orchard());
+    g.add_card_to_battlefield(1, catalog::forest());
     g.perform_action(GameAction::ActivateAbility {
         card_id: eo, ability_index: 0,
         target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("tap for mana");
     drain_stack(&mut g);
-    assert!(g.players[0].mana_pool.total() > 0, "Should produce mana");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1, "the opponent's Forest's color");
 }
 
 // ── Master of Death ─────────────────────────────────────────────────────────

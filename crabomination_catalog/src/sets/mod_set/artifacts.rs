@@ -520,14 +520,8 @@ pub fn cankerbloom() -> CardDefinition {
 /// Fellwar Stone — {2} Artifact. {T}: Add one mana of any color a land an
 /// opponent controls could produce.
 ///
-/// Push (modern_decks batch 117): the "matches an opponent's land
-/// colors" restriction is now wired faithfully via the new
-/// `ManaPayload::AnyColorOpponentCouldProduce` primitive. Resolution
-/// scans opponents' battlefield for basic-typed lands (Plains, Island,
-/// Swamp, Mountain, Forest), builds the legal-color set from those
-/// types, and the activator picks one color from that set. If no
-/// opponent controls a basic-typed land, falls back to colorless
-/// (matches the "never silently no-op" convention for mana abilities).
+/// `ManaPayload::AnyColorOpponentCouldProduce` (CR 106.7, `game::could_produce`):
+/// the opposing lands' mana abilities and basic types; none → no mana.
 pub fn fellwar_stone() -> CardDefinition {
     CardDefinition {
         name: "Fellwar Stone",

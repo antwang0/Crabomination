@@ -1664,25 +1664,18 @@ fn fellwar_stone_taps_for_any_color() {
     assert_eq!(pool.amount(Color::Green), 0);
 }
 
+/// CR 106.7 — with no opposing land there is no type of mana Fellwar Stone
+/// could produce, so the activation makes nothing (it used to fall back to
+/// {C}).
 #[test]
-fn fellwar_stone_falls_back_to_colorless_when_no_opp_basic_lands() {
-    // No opp lands → pool gains 1 colorless (so the activation isn't
-    // a silent no-op). Matches the "never silently no-op" convention.
+fn cr_106_7_fellwar_stone_makes_nothing_without_opposing_lands() {
     let mut g = two_player_game();
     let stone = g.add_card_to_battlefield(0, catalog::fellwar_stone());
     g.battlefield_find_mut(stone).unwrap().summoning_sick = false;
-    // Opp has no battlefield permanents at all.
     g.perform_action(GameAction::ActivateAbility {
         card_id: stone, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Fellwar Stone activates with no opp lands");
-    let pool = &g.players[0].mana_pool;
-    assert_eq!(pool.total(), 1, "Pool has exactly 1 mana");
-    // Colorless fallback — none of the colored amounts increment.
-    assert_eq!(pool.amount(Color::White), 0);
-    assert_eq!(pool.amount(Color::Blue), 0);
-    assert_eq!(pool.amount(Color::Black), 0);
-    assert_eq!(pool.amount(Color::Red), 0);
-    assert_eq!(pool.amount(Color::Green), 0);
+    assert_eq!(g.players[0].mana_pool.total(), 0);
 }
 
 #[test]
