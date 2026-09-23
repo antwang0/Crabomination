@@ -1487,20 +1487,10 @@ pub(crate) fn emblem_event_matches(
     spec: &EventSpec,
     controller: usize,
 ) -> bool {
-    let kind_ok = matches!(
-        (&spec.kind, event),
-        (EventKind::LifeGained, GameEvent::LifeGained { .. })
-            | (EventKind::LifeLost, GameEvent::LifeLost { .. })
-            | (EventKind::CardDrawn, GameEvent::CardDrawn { .. })
-            | (EventKind::FirstCardDrawnThisTurn, GameEvent::FirstCardDrawnThisTurn { .. })
-            | (EventKind::SecondCardDrawnThisTurn, GameEvent::SecondCardDrawnThisTurn { .. })
-            | (EventKind::CardDiscarded, GameEvent::CardDiscarded { .. })
-            | (EventKind::SpellCast, GameEvent::SpellCast { .. })
-            | (EventKind::LandPlayed, GameEvent::LandPlayed { .. })
-            | (EventKind::CreatureDied, GameEvent::CreatureDied { .. })
-            | (EventKind::Attacks, GameEvent::AttackerDeclared(_))
-    );
-    if !kind_ok {
+    // The battlefield walk's own kind matcher, not a second list: a hand-kept
+    // whitelist of ten kinds left every other emblem trigger dead (Daretti,
+    // Scrap Savant's "whenever an artifact is put into your graveyard").
+    if !event_kind_matches(state, event, spec, None) {
         return false;
     }
     match spec.scope {
