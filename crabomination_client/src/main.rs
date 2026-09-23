@@ -791,6 +791,7 @@ fn main() {
                 crate::systems::camera_zoom::camera_focus_hotkeys,
                 crate::systems::camera_zoom::camera_zoom,
                 crate::systems::eliminated::sync_eliminated_shrouds,
+                crate::systems::table_tint::sync_seat_tints,
             )
                 .chain()
                 .run_if(in_state(AppState::InGame)),

@@ -1,6 +1,7 @@
 pub mod animate;
 pub mod camera_zoom;
 pub mod eliminated;
+pub mod table_tint;
 pub mod chat;
 pub mod commander_ui;
 pub mod counter_coins;

@@ -1043,6 +1043,51 @@ pub fn seat_board_outline(seat: usize, viewer: usize, n_seats: usize) -> (Vec3, 
     )
 }
 
+// ── Seat regions (table tint) ────────────────────────────────────────────────
+
+/// How far a seat region runs out from the table centre: past everything the
+/// camera frames, to the ground plane's edge (`main::setup`, 90 × 90).
+const REGION_REACH: f32 = 45.0;
+/// Plain table left between two seats' regions, so the boundary reads.
+pub const REGION_SEAM: f32 = 0.4;
+
+/// The part of the table (XZ) that belongs to `seat`: its half in 1v1, its
+/// quadrant in a 4-player pod (half the far edge each at 3 players; the near
+/// edge is the viewer's), its column in 5-6. Regions run from the table's
+/// centre lines out past the frame and stop [`REGION_SEAM`]/2 short of each
+/// other. `systems::table_tint` shades each in its seat colour.
+pub fn seat_region(seat: usize, viewer: usize, n_seats: usize) -> Rect {
+    let r = REGION_REACH;
+    let s = REGION_SEAM * 0.5;
+    // X span for a seat sitting left (−1), centre (0) or right (+1).
+    let lateral = |side: f32| -> (f32, f32) {
+        if side < 0.0 {
+            (-r, -s)
+        } else if side > 0.0 {
+            (s, r)
+        } else {
+            (-r, r)
+        }
+    };
+    let (x0, x1, near) = if let Some(f) = pod_frame(seat, viewer, n_seats) {
+        let side = if f.shift.x.abs() < 0.1 { 0.0 } else { f.shift.x.signum() };
+        let (x0, x1) = lateral(side);
+        (x0, x1, f.yaw.abs() < 1.0)
+    } else if n_seats <= 2 {
+        (-r, r, is_viewer(seat, viewer))
+    } else {
+        // Columns along each edge; the outermost reach the table's side.
+        let spot = seat_spot(seat, viewer, n_seats);
+        let (_, col, cols) = seat_slot(seat, viewer, n_seats);
+        let col_w = 2.0 * MULTI_HALF_X / cols.max(1) as f32;
+        let x0 = if col == 0 { -r } else { spot.col_center - col_w * 0.5 + s };
+        let x1 = if col + 1 == cols { r } else { spot.col_center + col_w * 0.5 - s };
+        (x0, x1, spot.z_sign > 0.0)
+    };
+    let (z0, z1) = if near { (s, r) } else { (-r, -s) };
+    Rect::new(x0, z0, x1, z1)
+}
+
 // ── Stack cards ──────────────────────────────────────────────────────────────
 
 /// World transform for a card occupying slot `idx` of a stack of `total`
@@ -1191,6 +1236,32 @@ mod tests {
             let g = graveyard_position(s, 0, 4);
             assert!(d.x.abs() <= MULTI_HALF_X + 0.01, "deck off table: {}", d.x);
             assert!(g.x.abs() <= MULTI_HALF_X + 0.01, "graveyard off table: {}", g.x);
+        }
+    }
+
+    #[test]
+    fn seat_regions_tile_the_table_without_overlap() {
+        // Each seat's tint region holds its board and piles, and no two
+        // regions touch (a seam of plain table runs between them).
+        for n in [2usize, 3, 4, 5, 6] {
+            let regions: Vec<Rect> = (0..n).map(|s| seat_region(s, 0, n)).collect();
+            for (i, a) in regions.iter().enumerate() {
+                for (j, b) in regions.iter().enumerate().skip(i + 1) {
+                    assert!(a.intersect(*b).is_empty(), "n={n}: regions {i} and {j} overlap");
+                }
+                let xz = |p: Vec3| Vec2::new(p.x, p.z);
+                if n > 2 {
+                    let board = board_footprint(i, 0, n);
+                    assert!(
+                        a.contains(board.min + Vec2::splat(REGION_SEAM))
+                            && a.contains(board.max - Vec2::splat(REGION_SEAM)),
+                        "n={n}: seat {i}'s board isn't in its region",
+                    );
+                }
+                for pile in [deck_position(i, 0, n), graveyard_position(i, 0, n)] {
+                    assert!(a.contains(xz(pile)), "n={n}: seat {i}'s pile {pile} is outside its region");
+                }
+            }
         }
     }
 
