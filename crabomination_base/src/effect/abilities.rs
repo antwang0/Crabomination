@@ -3141,6 +3141,12 @@ pub struct ActivatedAbility {
     /// control a creature with a +1/+1 counter on it"). Defaults to None.
     #[serde(default)]
     pub cost_reduction_if_control: Option<(SelectionRequirement, u32)>,
+    /// "This ability costs {N} less to activate if [predicate]" — a flat
+    /// generic-only reduction, evaluated for the activator at payment time
+    /// (Razorlash Transmogrant's "if an opponent controls four or more
+    /// nonbasic lands"). Defaults to None.
+    #[serde(default)]
+    pub cost_reduction_if: Option<(crate::effect::Predicate, u32)>,
     /// "This ability costs {1} less to activate for each [filter] card in your
     /// graveyard" — generic-only reduction counted off the activator's
     /// graveyard at payment time (Battlefield Butcher). Defaults to None.

@@ -2950,6 +2950,9 @@ impl GameState {
                         && count_creatures(i, self) > your_creatures
                 })
             }
+            Predicate::AnOpponentControlsAtLeast { filter, n } => {
+                self.an_opponent_controls_at_least(ctx.controller, filter, *n, ctx.source)
+            }
             Predicate::AnOpponentHasMoreCardsInHand => {
                 let you = ctx.controller;
                 let your_hand = self.players[you].hand.len();

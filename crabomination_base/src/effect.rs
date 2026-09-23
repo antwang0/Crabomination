@@ -2150,6 +2150,11 @@ pub enum Predicate {
     /// creatures. Linvala, the Preserver's second ETB ("if an opponent
     /// controls more creatures than you, create a 3/3 Angel").
     AnOpponentControlsMoreCreatures,
+    /// True if a single opponent of `ctx.controller` controls at least `n`
+    /// permanents matching `filter` — per opponent, not summed across the
+    /// table (CR 102.2: "an opponent"). The Modern Horizons 3 cycle's "if an
+    /// opponent controls four or more nonbasic lands" (Razorlash Transmogrant).
+    AnOpponentControlsAtLeast { filter: crate::card::SelectionRequirement, n: u32 },
     /// True if any opponent of `ctx.controller` has strictly more cards in
     /// hand. Beza, the Bounding Spring's "draw a card if an opponent has more
     /// cards in hand than you".

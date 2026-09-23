@@ -18656,6 +18656,14 @@ impl GameState {
                 effective_mana_cost.reduce_generic(*n);
             }
         }
+        // "Costs {N} less to activate if [predicate]" (Razorlash
+        // Transmogrant's "if an opponent controls four or more nonbasic lands").
+        if let Some((cond, n)) = &ability.cost_reduction_if {
+            let ctx = crate::game::effects::EffectContext::for_trigger(card_id, p, None, 0);
+            if self.evaluate_predicate(cond, &ctx) {
+                effective_mana_cost.reduce_generic(*n);
+            }
+        }
         // "Costs {X} less to activate, where X is this creature's power"
         // (The Dominion Bracelet, granted to its bearer).
         if ability.cost_reduction_per_equipped_power {
