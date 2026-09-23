@@ -1203,6 +1203,15 @@ pub enum Value {
     /// The player's poison counters (Vraska's −9 "counters equal to the
     /// difference" top-up).
     PoisonCountersOf(PlayerRef),
+    /// CR 122.1f — the poison counters of every player `who` resolves to,
+    /// summed (Vishgraz's "for each poison counter your opponents have").
+    /// `PoisonCountersOf` reads one player.
+    PoisonCountersAmong(PlayerRef),
+    /// How many of the players `who` resolves to have at least `at_least`
+    /// poison counters — the count Corrupted scales by at a table ("for each
+    /// opponent who has three or more poison counters": Wurmquake, Glissa's
+    /// Retriever).
+    PlayersWithPoisonAtLeast { who: PlayerRef, at_least: u32 },
     /// How many of the controller's opponents lost life this turn (Kaito,
     /// Bane of Nightmares' 0).
     OpponentsWhoLostLifeThisTurn,
