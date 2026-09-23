@@ -1377,6 +1377,11 @@ pub enum Predicate {
     Not(Box<Predicate>),
     All(Vec<Predicate>),
     Any(Vec<Predicate>),
+    /// True if `pred` holds for **some** player `who` names, each checked with
+    /// that player bound as `PlayerRef::Triggerer` — "if an opponent [did X]"
+    /// (Mindbreak Trap, Guul Draz Specter). A single-player predicate handed
+    /// `EachOpponent` reads only the first seat (CR 800.4); this asks each.
+    ForAnyPlayer { who: PlayerRef, pred: Box<Predicate> },
     /// At least one entity matches the selector.
     SelectorExists(Selector),
     /// Selector resolves to at least `n` entities.

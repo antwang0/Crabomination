@@ -2947,6 +2947,10 @@ impl GameState {
                 }
                 max_opp_lands > your_lands
             }
+            Predicate::ForAnyPlayer { who, pred } => self.resolve_players(who, ctx).into_iter().any(|p| {
+                let bound = EffectContext { trigger_source: Some(EntityRef::Player(p)), ..ctx.clone() };
+                self.evaluate_predicate(pred, &bound)
+            }),
             Predicate::AnOpponentHasMoreLife => {
                 let you = ctx.controller;
                 let your_life = self.players[you].life;
