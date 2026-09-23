@@ -9077,8 +9077,14 @@ pub enum Effect {
     ExileTopGreatestManaValueTakesExtraTurn,
     /// "This creature gains all activated abilities of target creature until
     /// end of turn" (Quicksilver Elemental) — the grants are stamped onto the
-    /// source's `granted_activated_eot`.
-    GainAllActivatedAbilitiesOf { what: Selector, duration: Duration },
+    /// source's `granted_activated_eot`, or onto each permanent `to` names
+    /// ("each Horror you control gains…", Grell Philosopher).
+    GainAllActivatedAbilitiesOf {
+        what: Selector,
+        duration: Duration,
+        #[serde(default)]
+        to: Option<Selector>,
+    },
     /// CR 701.12 — "Its controller chooses target permanent another player
     /// controls that shares a card type with it. Exchange control of those
     /// permanents." (Confusion in the Ranks.) The partner is picked as the

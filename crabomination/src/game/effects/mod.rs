@@ -2957,13 +2957,19 @@ impl GameState {
         &mut self,
         what: &Selector,
         duration: &crate::effect::Duration,
+        to: Option<&Selector>,
         ctx: &EffectContext,
     ) -> Result<(), GameError> {
         let eot = matches!(
             duration,
             crate::effect::Duration::EndOfTurn | crate::effect::Duration::EndOfCombat
         );
-        let Some(src) = ctx.source else { return Ok(()) };
+        let recipients: Vec<CardId> = match to {
+            Some(sel) => {
+                self.resolve_selector(sel, ctx).into_iter().filter_map(|e| e.as_permanent_id()).collect()
+            }
+            None => ctx.source.into_iter().collect(),
+        };
         let mut granted = Vec::new();
         for ent in self.resolve_selector(what, ctx) {
             let (EntityRef::Permanent(id) | EntityRef::Card(id)) = ent else { continue };
@@ -2972,11 +2978,13 @@ impl GameState {
             }
             granted.extend(self.granted_abilities_for(id));
         }
-        if let Some(c) = self.battlefield_find_mut(src) {
-            if eot {
-                c.granted_activated_eot.extend(granted);
-            } else {
-                c.granted_activated_abilities.extend(granted);
+        for rid in recipients {
+            if let Some(c) = self.battlefield_find_mut(rid) {
+                if eot {
+                    c.granted_activated_eot.extend(granted.iter().cloned());
+                } else {
+                    c.granted_activated_abilities.extend(granted.iter().cloned());
+                }
             }
         }
         Ok(())
@@ -34547,8 +34555,8 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::GainAllActivatedAbilitiesOf { what, duration } => {
-                self.gain_all_activated_abilities_of(what, duration, ctx)
+            Effect::GainAllActivatedAbilitiesOf { what, duration, to } => {
+                self.gain_all_activated_abilities_of(what, duration, to.as_ref(), ctx)
             }
 
             Effect::BottomThenRevealUntilCreature { what } => {

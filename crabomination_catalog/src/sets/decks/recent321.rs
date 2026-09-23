@@ -140,6 +140,7 @@ pub fn quicksilver_elemental() -> CardDefinition {
             effect: Effect::GainAllActivatedAbilitiesOf {
                 what: target_filtered(R::Creature),
                 duration: Duration::EndOfTurn,
+                to: None,
             },
             ..Default::default()
         }],
