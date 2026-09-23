@@ -592,19 +592,28 @@ fn lethal_scheme_and_midnight_tilling() {
     assert!(in_hand(&g, 0, keep));
 }
 
-/// Welcome the Dead counts the discard and anything else binned this turn.
+/// Welcome the Dead counts cards put into your graveyard from your hand or
+/// library this turn — two milled earlier plus its own discard — and not a
+/// creature that died.
 #[test]
 fn welcome_the_dead_makes_zombies_for_cards_binned_this_turn() {
     let mut g = main_phase();
     stock_libraries(&mut g, 5);
     g.add_card_to_library(0, catalog::grizzly_bears());
-    g.players[0].cards_to_graveyard_this_turn = 2;
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    let mill = crabomination::effect::Effect::Mill {
+        who: crabomination::effect::Selector::You,
+        amount: crabomination::card::Value::Const(2),
+    };
+    g.resolve_effect(&mill, &ctx).expect("mill");
+    let dies = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    g.remove_from_battlefield_to_graveyard_raw(dies);
     let spell = g.add_card_to_hand(0, catalog::welcome_the_dead());
     cast_with(&mut g, spell, None, None);
     assert_eq!(g.players[0].life, 18);
     let zombies: Vec<_> =
         g.battlefield.iter().filter(|c| c.definition.name == "Zombie Druid").collect();
-    assert_eq!(zombies.len(), 3, "two earlier plus the discard");
+    assert_eq!(zombies.len(), 3, "two milled plus the discard; the dead Elves don't count");
     assert!(zombies.iter().all(|z| z.tapped));
 }
 

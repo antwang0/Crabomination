@@ -228,3 +228,33 @@ fn haunted_one_pumps_the_commanders_tribe_when_it_taps() {
     assert_eq!(p(&g, bears), 2, "a Bear shares no type");
     assert!(g.computed_permanent(horror).unwrap().keywords().contains(&Keyword::Undying));
 }
+
+/// Captain N'ghathrod's end step takes only a card "put there from their
+/// library this turn": a milled creature, not one the opponent discarded.
+#[test]
+fn captain_nghathrod_steals_milled_not_discarded() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::captain_nghathrod());
+    let discarded = g.add_card_to_hand(1, catalog::serra_angel());
+    let ctx = EffectContext::for_spell(1, None, 0, 0);
+    g.resolve_effect(
+        &Effect::Discard { who: Selector::You, amount: crabomination::card::Value::ONE, random: false },
+        &ctx,
+    )
+    .expect("discard");
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == discarded));
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(discarded).is_none(), "a discard isn't from the library");
+
+    g.add_card_to_library(1, catalog::grizzly_bears());
+    g.resolve_effect(
+        &Effect::Mill { who: Selector::You, amount: crabomination::card::Value::ONE },
+        &ctx,
+    )
+    .expect("mill");
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    let bears = g.battlefield.iter().find(|c| c.definition.name == "Grizzly Bears");
+    assert_eq!(bears.map(|c| c.controller), Some(0), "the milled Bears come over");
+}

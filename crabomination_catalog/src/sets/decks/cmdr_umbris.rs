@@ -21,8 +21,7 @@
 //!
 //! Residuals (approximations, each also on the card's doc comment):
 //! - "Put there from their library this turn" (The Weaver King, Captain
-//!   N'ghathrod) reads as "put into a graveyard this turn" — the engine tracks
-//!   graveyard arrivals, not their origin zone.
+//!   N'ghathrod) counts mills; a surveil isn't recorded.
 //! - Aboleth Spawn's Probing Telepathy puts the copy on the stack with the
 //!   original (no Aboleth trigger of its own to respond to), and its "you may"
 //!   is asked as the copy resolves rather than as it is made.
@@ -315,8 +314,8 @@ pub fn gollum_the_abandoned() -> CardDefinition {
 /// "Whenever The Weaver King deals combat damage to a player, they mill that
 /// many cards. Then for each opponent, put a creature card from that player's
 /// graveyard that was put there from their library this turn onto the
-/// battlefield under your control." Approximation: "put there from their
-/// library this turn" reads as "put into a graveyard this turn".
+/// battlefield under your control." "Put there from their library this turn"
+/// is `PutIntoGraveyardFromLibraryThisTurn`, recorded as the mill happens.
 pub fn the_weaver_king() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
@@ -332,7 +331,7 @@ pub fn the_weaver_king() -> CardDefinition {
                             inner: Box::new(Selector::CardsInZone {
                                 who: PlayerRef::Triggerer,
                                 zone: crate::card::Zone::Graveyard,
-                                filter: R::Creature.and(R::PutIntoGraveyardThisTurn),
+                                filter: R::Creature.and(R::PutIntoGraveyardFromLibraryThisTurn),
                             }),
                             count: Box::new(Value::ONE),
                         },
@@ -390,8 +389,9 @@ pub fn the_master_of_lake_town() -> CardDefinition {
 /// combat damage to a player, that player mills that many cards. At the
 /// beginning of your end step, choose target artifact or creature card in an
 /// opponent's graveyard that was put there from their library this turn. Put
-/// it onto the battlefield under your control." Approximation: "put there from
-/// their library this turn" reads as "put into a graveyard this turn".
+/// it onto the battlefield under your control." "Put there from their library
+/// this turn" is `PutIntoGraveyardFromLibraryThisTurn` (milled; a surveil
+/// isn't counted).
 pub fn captain_nghathrod() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![StaticAbility {
@@ -418,7 +418,7 @@ pub fn captain_nghathrod() -> CardDefinition {
                     what: target_filtered(
                         artifact_or_creature()
                             .and(R::InOpponentGraveyard)
-                            .and(R::PutIntoGraveyardThisTurn),
+                            .and(R::PutIntoGraveyardFromLibraryThisTurn),
                     ),
                     to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
                 },

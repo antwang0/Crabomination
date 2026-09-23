@@ -31,8 +31,7 @@
 //!   control* dealt combat damage to a player".
 //! * Lethal Scheme — the convoking creatures don't connive (the engine doesn't
 //!   remember which creatures convoked a spell).
-//! * Welcome the Dead — X counts every card put into your graveyard this turn,
-//!   not only those from your hand or library.
+//! * Welcome the Dead — a surveil isn't counted toward X.
 //! * Necromantic Selection — the returned creature becomes a Zombie but not black
 //!   (and so does any other creature you reanimated earlier that turn).
 //! * Agadeem's Awakening — the returns are picked at resolution, not targeted.
@@ -904,8 +903,8 @@ pub fn midnight_tilling() -> CardDefinition {
 /// where X is the number of cards that were put into your graveyard from your
 /// hand or library this turn. Flashback {5}{B}.
 ///
-/// Approximation: X is every card put into your graveyard this turn
-/// (`Value::CardsPutIntoGraveyardThisTurn`), not only from hand or library.
+/// X is `Value::CardsPutIntoGraveyardFromHandOrLibraryThisTurn` — discards
+/// and mills (a surveil isn't counted).
 pub fn welcome_the_dead() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flashback(cost(&[generic(5), b()]))],
@@ -919,7 +918,7 @@ pub fn welcome_the_dead() -> CardDefinition {
                 Effect::LoseLife { who: Selector::You, amount: Value::Const(2) },
                 make(
                     TokenDefinition { tapped: true, ..zombie_druid() },
-                    Value::CardsPutIntoGraveyardThisTurn(PlayerRef::You),
+                    Value::CardsPutIntoGraveyardFromHandOrLibraryThisTurn(PlayerRef::You),
                 ),
             ]),
         )
