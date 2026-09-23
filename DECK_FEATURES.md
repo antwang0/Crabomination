@@ -52,6 +52,7 @@ lists were picked.
 | **Corrupting Influence** (ONC precon) WBG | Ixhel, Scion of Atraxa | WBG | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Sneak Attack** (ZNC precon) UB | Anowon, the Ruin Thief | UB | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Jeskai Striker** (TDC precon) URW | Shiko and Narset, Unified | URW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
+| **Sliver Swarm** (CMM precon) WUBRG | Sliver Gravemother | WUBRG | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not
@@ -261,6 +262,25 @@ this spell only during combat" — the default profile's combat window casts
 pump tricks only, and the main-phase cast is refused). `server/combat_only.rs`
 gives such a spell the post-block window; the same seed then played **every
 card of all twenty-one lists** (1,043 distinct, 997 decided).
+
+The **twenty-third** is Commander Masters' **Sliver Swarm** (`SliverSwarm_CMM`),
+the field's first five-color list. Thirteen cards were missing; the
+primitives, each general: `StaticEffect::LegendRuleDoesntApplyToYourMatching`
+(CR 704.5j, Gravemother's Slivers), `GraveyardCardsHaveEncore` (CR 702.141,
+encore {X} = mana value, beside Varolz's scavenge grant),
+`YourSpellsHaveReplicate` (CR 702.107 — Hatchery; the bot now offers a
+*granted* replicate, Djinn Illuminatus's included) and
+`SelectionRequirement::DamagedAPlayerThisTurn`. Two latent bugs surfaced:
+`SharesCreatureTypeWithSource` read the printed line on both sides, so a
+chosen or granted type never counted (Titan of Littjara), and Galerider Sliver
+gave every player's Slivers flying (Spiteful and Lavabelly could not aim at a
+planeswalker either). Residual: **Descendants' Fury**'s "one of them" is any
+creature of yours that damaged a player this turn — the engine removes
+attackers from combat as regular damage is dealt (ENGINE_BACKLOG, CR 511.3).
+Seed 10041, 300 games at 23 seats: **298 decided, 2 action caps, zero panics,
+every card of all twenty-three lists but one played** (Narset's Reversal);
+Gravemother wins 5.7 %, and **40.4 %** of four-seat pods beside Shiko /
+Anowon / Ixhel (seed 10043, 1,000 games, all decided).
 
 ⚠ **The board cap was a bot bug, not a loop.** A Krenko seat sent all 292
 of its Goblins at one player on 24 life each turn while two others sat on
