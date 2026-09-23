@@ -550,9 +550,12 @@ pub fn flash() -> CardDefinition {
 /// Lure of Prey — {2}{G}{G}: a free green body, once they've committed one.
 pub fn lure_of_prey() -> CardDefinition {
     CardDefinition {
-        cast_condition: Some(Predicate::SpellsCastThisTurnAtLeast {
+        cast_condition: Some(Predicate::ForAnyPlayer {
             who: PlayerRef::EachOpponent,
-            at_least: Value::ONE,
+            pred: Box::new(Predicate::SpellsCastThisTurnAtLeast {
+                who: PlayerRef::Triggerer,
+                at_least: Value::ONE,
+            }),
         }),
         ..instant(
             "Lure of Prey",

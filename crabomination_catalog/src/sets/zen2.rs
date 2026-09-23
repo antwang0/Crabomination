@@ -153,9 +153,12 @@ pub fn mindbreak_trap() -> CardDefinition {
         "Mindbreak Trap",
         cost(&[generic(2), u(), u()]),
         cost(&[]),
-        Predicate::SpellsCastThisTurnAtLeast {
+        Predicate::ForAnyPlayer {
             who: PlayerRef::EachOpponent,
-            at_least: Value::Const(3),
+            pred: Box::new(Predicate::SpellsCastThisTurnAtLeast {
+                who: PlayerRef::Triggerer,
+                at_least: Value::Const(3),
+            }),
         },
         Effect::ApplyToTargets {
             max_targets: 3,
@@ -211,7 +214,10 @@ pub fn baloth_cage_trap() -> CardDefinition {
         "Baloth Cage Trap",
         cost(&[generic(3), g(), g()]),
         cost(&[generic(1), g()]),
-        Predicate::ArtifactEnteredThisTurn { who: PlayerRef::EachOpponent },
+        Predicate::ForAnyPlayer {
+            who: PlayerRef::EachOpponent,
+            pred: Box::new(Predicate::ArtifactEnteredThisTurn { who: PlayerRef::Triggerer }),
+        },
         mint_token(
             TokenDefinition {
                 name: "Beast".into(),
@@ -1341,7 +1347,10 @@ pub fn guul_draz_specter() -> CardDefinition {
             effect: StaticEffect::PumpSelfIf {
                 power: 3,
                 toughness: 3,
-                condition: Predicate::HellbentActive { who: PlayerRef::EachOpponent },
+                condition: Predicate::ForAnyPlayer {
+                    who: PlayerRef::EachOpponent,
+                    pred: Box::new(Predicate::HellbentActive { who: PlayerRef::Triggerer }),
+                },
                 keywords: vec![],
             },
         }],

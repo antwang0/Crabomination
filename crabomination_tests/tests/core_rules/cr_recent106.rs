@@ -23,6 +23,8 @@
 //! CR 800.4 — a value that reads ONE player can't be handed "each opponent":
 //! `resolve_player` answers the first seat and drops the rest (a 21-seat
 //! debug pod aborted on Phyrexian Swarmlord's `PoisonCountersOf(EachOpponent)`).
+//! The same holds for a predicate's `who`; "if an opponent …" is
+//! `Predicate::ForAnyPlayer`.
 
 use crabomination::card::SelectionRequirement;
 use crabomination::catalog;
@@ -229,6 +231,53 @@ const SINGLE_PLAYER_VALUES: &[&str] = &[
     "SnowPermanentCountControlledBy",
     "UnlockedDoorsControlled",
 ];
+/// The `Predicate` variants whose `who` field is read as a single player.
+const SINGLE_PLAYER_PREDICATES: &[&str] = &[
+    "ActivatedLoyaltyThisTurn",
+    "AnotherCreatureEnteredThisTurn",
+    "ArtifactEnteredThisTurn",
+    "AttackedDefenderWithCountAtLeast",
+    "AttackedWithCountAtLeast",
+    "AttackedWithCreatureMatching",
+    "AttackedWithTotalPowerAtLeast",
+    "CelebrationActive",
+    "CommittedCrimeThisTurn",
+    "ControlsEachGreatestPowerCreature",
+    "ControlsGreatestPowerCreature",
+    "ControlsOutlaw",
+    "CorruptedActive",
+    "CovenActive",
+    "CreatureEnteredThisTurn",
+    "CreaturesCastThisTurnAtLeast",
+    "CreaturesDiedThisTurnAtLeast",
+    "DeliriumActive",
+    "DescendActive",
+    "DescendedThisTurn",
+    "DistinctCounterKindsAmongCreaturesAtLeast",
+    "DistinctUnlockedDoorNamesAtLeast",
+    "FaceDownActivityThisTurn",
+    "FerociousActive",
+    "FirstLifeGainThisTurn",
+    "FormidableActive",
+    "HellbentActive",
+    "InstantsOrSorceriesCastThisTurnAtLeast",
+    "LifeGainedThisTurnAtLeast",
+    "MetalcraftActive",
+    "NoSpellCastFromHandThisTurn",
+    "NoncreatureSpellsCastThisTurnAtLeast",
+    "OilActivityThisTurn",
+    "OwnsSourceNamedCardInEveryZone",
+    "PermanentsSacrificedThisTurnAtLeast",
+    "PlaneswalkerEnteredThisTurn",
+    "PlayerIsOpponent",
+    "RevoltActive",
+    "SacrificedArtifactThisTurn",
+    "SpellsCastThisTurnAtLeast",
+    "SpellsCastThisTurnEquals",
+    "ThresholdActive",
+    "UnlockedDoorsControlledAtLeast",
+    "VoidActive",
+];
 const MULTI_PLAYER_REFS: &[&str] =
     &["EachOpponent", "EachPlayer", "EachTeammate", "EachOpponentExceptTriggerer", "EachPlayerWithoutMaxSpeed"];
 
@@ -242,6 +291,12 @@ fn single_player_value_misuse(v: &serde_json::Value, out: &mut Vec<String>) {
                 {
                     out.push(format!("{k}({r})"));
                 }
+                if SINGLE_PLAYER_PREDICATES.contains(&k.as_str())
+                    && let Some(serde_json::Value::String(r)) = inner.get("who")
+                    && MULTI_PLAYER_REFS.contains(&r.as_str())
+                {
+                    out.push(format!("{k} {{ who: {r} }}"));
+                }
                 single_player_value_misuse(inner, out);
             }
         }
@@ -251,7 +306,7 @@ fn single_player_value_misuse(v: &serde_json::Value, out: &mut Vec<String>) {
 }
 
 #[test]
-fn cr_800_4_no_single_player_value_reads_each_opponent() {
+fn cr_800_4_no_single_player_value_or_predicate_reads_each_opponent() {
     let mut bad = Vec::new();
     for factory in catalog::all_known_factories() {
         let def = factory();
@@ -285,4 +340,21 @@ fn cr_800_4_netherborn_phalanx_charges_each_opponent_their_own_count() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, l1 - 2);
     assert_eq!(g.players[2].life, l2, "no creatures, no loss");
+}
+
+/// CR 800.4 — "if an opponent cast three or more spells this turn" asks every
+/// opponent: Mindbreak Trap's alternative cost used to read only the first.
+#[test]
+fn cr_800_4_for_any_player_asks_every_opponent() {
+    use crabomination::card::Value;
+    use crabomination::effect::PlayerRef;
+    let mut g = multi_player_game(3);
+    let pred = Predicate::ForAnyPlayer {
+        who: PlayerRef::EachOpponent,
+        pred: Box::new(Predicate::SpellsCastThisTurnAtLeast { who: PlayerRef::Triggerer, at_least: Value::Const(3) }),
+    };
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    assert!(!g.evaluate_predicate(&pred, &ctx));
+    g.players[2].spells_cast_this_turn = 3;
+    assert!(g.evaluate_predicate(&pred, &ctx), "the second opponent counts");
 }
