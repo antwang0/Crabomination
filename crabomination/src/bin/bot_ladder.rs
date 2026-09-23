@@ -965,6 +965,10 @@ struct Args {
     /// `--first I`: with `--commander`, start at game index `I` — with
     /// `--games 1`, replays exactly the game an undecided line names.
     first_game: u32,
+    /// `--pod-decks I,J,..`: with `--commander`, seat exactly these target
+    /// decks (1-based, as the tally numbers them) instead of the first
+    /// `--seats` — the official precons at a real four-seat table.
+    pod_decks: Option<Vec<usize>>,
 }
 
 fn parse_args() -> Result<Args, String> {
@@ -982,6 +986,7 @@ fn parse_args() -> Result<Args, String> {
     let card_census = std::env::args().any(|a| a == "--card-census");
     let mut seats = 4usize;
     let mut first_game = 0u32;
+    let mut pod_decks = None;
     let mut games = if commander { 300 } else { games };
     let argv: Vec<String> = std::env::args().skip(1).collect();
     let mut i = 0;
@@ -1017,6 +1022,11 @@ fn parse_args() -> Result<Args, String> {
             "--commander" => step = 1,
             "--card-census" => step = 1,
             "--seats" => seats = need(i)?.parse().map_err(|_| "--seats must be a number")?,
+            "--pod-decks" => {
+                let list: Result<Vec<usize>, _> =
+                    need(i)?.split(',').map(|x| x.trim().parse::<usize>()).collect();
+                pod_decks = Some(list.map_err(|_| "--pod-decks wants I,J,.. (1-based)")?);
+            }
             "--first" => {
                 first_game = need(i)?.parse().map_err(|_| "--first must be a number")?
             }
@@ -1048,7 +1058,9 @@ fn parse_args() -> Result<Args, String> {
                      the run) and reports completed games, the undecided breakdown,\n\
                      turns/game and wins by deck. Zero panics is the pass condition.\n\
                      --first I with --commander starts at game index I (replay one\n\
-                     undecided game with --first I --games 1)."
+                     undecided game with --first I --games 1).\n\
+                     --pod-decks I,J,.. with --commander seats exactly those target\n\
+                     decks (1-based, the tally's numbering) instead of the first N."
                 );
                 std::process::exit(0);
             }
@@ -1151,6 +1163,7 @@ fn parse_args() -> Result<Args, String> {
         seats,
         card_census,
         first_game,
+        pod_decks,
     })
 }
 
@@ -1179,7 +1192,18 @@ fn run_commander_pods(args: &Args, threads: usize) -> i32 {
 
     // The ceiling is the number of target decks: `pod_field` cycles the list
     // above it, so a tenth seat is a mirror rather than a new list.
-    let seats = args.seats.clamp(2, crabomination::pod::target_decks().len());
+    let all = crabomination::pod::target_decks();
+    let picked = match &args.pod_decks {
+        Some(ix) => {
+            if ix.len() < 2 || ix.iter().any(|&i| i == 0 || i > all.len()) {
+                eprintln!("error: --pod-decks wants 2+ indices in 1..={}", all.len());
+                return 2;
+            }
+            Some(ix.iter().map(|&i| all[i - 1]).collect::<Vec<_>>())
+        }
+        None => None,
+    };
+    let seats = picked.as_ref().map_or(args.seats.clamp(2, all.len()), Vec::len);
     // The net observation encoder is fixed at two seats — `encode_state_inner`
     // reads the opponent as `1 - seat` — so an MCTS/net pilot in a 4-seat pod
     // would index out of bounds rather than play badly. Refusing here is the
@@ -1193,7 +1217,7 @@ fn run_commander_pods(args: &Args, threads: usize) -> i32 {
         );
         return 2;
     }
-    let field = pod_field(seats);
+    let field = picked.unwrap_or_else(|| pod_field(seats));
     let max_actions = MAX_ACTIONS.max(seats * ACTIONS_PER_SEAT);
     let games = args.games as u32;
     println!(
