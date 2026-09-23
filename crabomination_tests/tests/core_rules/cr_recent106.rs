@@ -6,6 +6,9 @@
 //!
 //! CR 102.2 — "an opponent controls four or more nonbasic lands" asks each
 //! opponent on their own (`Predicate::AnOpponentControlsAtLeast`).
+//!
+//! CR 506.3 — "creatures attacking you" are those whose defender is you, not
+//! every attacker at the table (`SelectionRequirement::IsAttackingYou`).
 
 use crabomination::card::SelectionRequirement;
 use crabomination::catalog;
@@ -58,4 +61,30 @@ fn cr_102_2_an_opponent_controls_at_least_counts_per_opponent() {
         g.add_card_to_battlefield(2, catalog::tundra());
     }
     assert!(g.evaluate_predicate(&pred, &ctx), "one opponent has four");
+}
+
+#[test]
+fn cr_506_3_attacking_you_is_not_attacking_someone_else() {
+    use crabomination::card::Value;
+    use crabomination::effect::Selector;
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 1;
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.set_attacking(vec![
+        Attack { attacker: a, target: AttackTarget::Player(0) },
+        Attack { attacker: b, target: AttackTarget::Player(2) },
+    ]);
+    let count = Value::CountMatching {
+        sel: Box::new(Selector::EachPermanent(SelectionRequirement::IsAttackingYou)),
+        filter: SelectionRequirement::Creature,
+    };
+    for seat in [0, 2] {
+        let ctx = EffectContext::for_spell(seat, None, 0, 0);
+        let one = Predicate::ValueEquals(count.clone(), Value::Const(1));
+        assert!(g.evaluate_predicate(&one, &ctx), "seat {seat} is attacked by one");
+    }
+    let ctx = EffectContext::for_spell(1, None, 0, 0);
+    let none = Predicate::ValueEquals(count, Value::Const(0));
+    assert!(g.evaluate_predicate(&none, &ctx), "the attacker is attacked by none");
 }

@@ -3717,6 +3717,7 @@ impl GameState {
             R::Untapped => Some(!card.tapped),
             R::EnteredThisTurn => Some(card.entered_turn == Some(self.turn_number)),
             R::IsAttacking => Some(self.attacking.iter().any(|a| a.attacker == cid)),
+            R::IsAttackingYou => Some(self.creature_is_attacking_seat(cid, controller)),
             R::OtherThanSource => Some(source.is_none_or(|s| cid != s)),
             R::IsSource => Some(source == Some(cid)),
             R::IsSpellOnStack => Some(self.stack.iter().any(
@@ -4477,6 +4478,7 @@ impl GameState {
                     R::ProducesColorless => card.definition.produces_colorless(),
                     R::IsSnow => card.definition.is_snow(),
                     R::IsAttacking => self.attacking.iter().any(|a| a.attacker == card.id),
+                    R::IsAttackingYou => self.creature_is_attacking_seat(card.id, controller),
                     R::IsUnblocked => {
                         self.attacking.iter().any(|a| a.attacker == card.id)
                             && !self.blocked_attackers.contains(&card.id)
@@ -5719,6 +5721,7 @@ impl GameState {
             // is never listed — this stays false there (Static Snare's affinity
             // "for each attacking creature" reads it from the affinity counter).
             R::IsAttacking => self.attacking.iter().any(|a| a.attacker == card.id),
+            R::IsAttackingYou => self.creature_is_attacking_seat(card.id, controller),
             // A battlefield instance carries this flag directly (Rowdy Research's
             // "{1} less for each creature that attacked this turn" affinity).
             R::AttackedThisTurn => card.attacked_this_turn,

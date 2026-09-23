@@ -29517,7 +29517,7 @@ fn requirement_live_leaves(req: &SelectionRequirement) -> u8 {
     match req {
         R::IsModified => 1,
         R::IsEquipped | R::EquippedByAtLeast(_) => 2,
-        R::IsAttacking => 4,
+        R::IsAttacking | R::IsAttackingYou => 4,
         R::And(a, b) | R::Or(a, b) => requirement_live_leaves(a) | requirement_live_leaves(b),
         R::Not(inner) => requirement_live_leaves(inner),
         _ => 0,

@@ -2631,6 +2631,11 @@ pub enum SelectionRequirement {
     /// A snow permanent/card (CR 205.4g — the Snow supertype). Break the Ice.
     IsSnow,
     IsAttacking,
+    /// An attacking creature whose defender is the evaluating player — "creatures
+    /// attacking you" (CR 506.3: attacking *you*, not a planeswalker or battle
+    /// of yours). In a pod, a creature attacking someone else is not one of
+    /// them (Arachnogenesis).
+    IsAttackingYou,
     /// An attacking creature that hasn't been blocked (CR 509.1h). Reads live
     /// combat state — Sneak's "return an unblocked creature you control".
     IsUnblocked,

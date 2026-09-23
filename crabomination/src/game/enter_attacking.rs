@@ -5,6 +5,8 @@
 //! here so none emits `GameEvent::AttackerDeclared` — the event the Attacks
 //! triggers read. A General Kreat with a Goblin army otherwise minted a
 //! token per token per attack, without bound.
+//!
+//! Also the CR 506.3 read of an attack's defender ("creatures attacking you").
 
 use super::GameState;
 use super::types::{Attack, AttackTarget};
@@ -18,5 +20,11 @@ impl GameState {
         c.attacked_this_turn = true;
         self.attacking.push(Attack { attacker: id, target });
         true
+    }
+
+    /// Whether `id` is attacking the player `seat` itself (CR 506.3) — not
+    /// a planeswalker or battle of theirs.
+    pub(crate) fn creature_is_attacking_seat(&self, id: CardId, seat: usize) -> bool {
+        self.attacking.iter().any(|a| a.attacker == id && a.target == AttackTarget::Player(seat))
     }
 }
