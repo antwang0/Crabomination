@@ -10,6 +10,7 @@ mod cmdr_nghathrod;
 mod cmdr_zndrsplt;
 mod cmdr_fdc;
 mod cmdr_otc;
+mod cmdr_angels;
 mod dsk2;
 mod dsk_rooms;
 mod recent_118_132;
