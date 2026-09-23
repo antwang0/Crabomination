@@ -8656,6 +8656,12 @@ impl GameState {
                         count: x_value.unwrap_or(0),
                     };
                 }
+                // CR 601.2b — the caster picks one option now (Dusk Mangler).
+                crate::card::AdditionalCastCost::OneOf(options) => {
+                    if let Some(pick) = self.pick_one_of_cost(p, options) {
+                        *c = pick;
+                    }
+                }
                 _ => {}
             }
         }
@@ -9288,7 +9294,45 @@ impl GameState {
             }
             // Handing an opponent life is always payable.
             A::OpponentGainsLife { .. } => true,
+            A::OneOf(options) => options
+                .iter()
+                .any(|o| self.additional_costs_payable(p, std::slice::from_ref(o))),
         })
+    }
+
+    /// CR 601.2b — which option of a [`OneOf`](crate::card::AdditionalCastCost::OneOf)
+    /// `p` pays: the first payable in the order the caster loses least —
+    /// a token to sacrifice, life with 10 to spare, a card from hand, a
+    /// nontoken sacrifice, then life. Deterministic, so a replay agrees.
+    pub(crate) fn pick_one_of_cost(
+        &self,
+        p: usize,
+        options: &[crate::card::AdditionalCastCost],
+    ) -> Option<crate::card::AdditionalCastCost> {
+        use crate::card::AdditionalCastCost as A;
+        let life = self.players.get(p)?.life;
+        let rank = |o: &A| -> u8 {
+            match o {
+                A::SacrificePermanent { filter, .. }
+                    if self.battlefield.iter().any(|c| {
+                        c.controller == p
+                            && c.is_token
+                            && self.evaluate_requirement_static_on(filter, c, p, None)
+                    }) =>
+                {
+                    0
+                }
+                A::PayLife { amount } if life - *amount as i32 >= 10 => 1,
+                A::Discard { .. } | A::DiscardRandom { .. } => 2,
+                A::PayLife { .. } => 4,
+                _ => 3,
+            }
+        };
+        options
+            .iter()
+            .filter(|o| self.additional_costs_payable(p, std::slice::from_ref(o)))
+            .min_by_key(|o| rank(o))
+            .cloned()
     }
 
     /// CR 701.59 — can `p`'s graveyard supply cards with total mana value ≥
@@ -9741,6 +9785,17 @@ impl GameState {
                                 player: p,
                                 amount: (-applied) as u32,
                             });
+                        }
+                    }
+                }
+                // Normally concretized before payment; pay the pick here too.
+                A::OneOf(options) => {
+                    if let Some(pick) = self.pick_one_of_cost(p, options) {
+                        let (mut ev, sp) =
+                            self.pay_additional_costs(p, &[pick], chosen_override.take(), None);
+                        events.append(&mut ev);
+                        if sac_power.is_none() {
+                            sac_power = sp;
                         }
                     }
                 }

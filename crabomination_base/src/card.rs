@@ -4904,6 +4904,11 @@ pub enum AdditionalCastCost {
     /// "As an additional cost, an opponent gains N life" (Roar of Jukai's
     /// splice cost). Always payable; the caster's first opponent gains it.
     OpponentGainsLife { amount: u32 },
+    /// CR 601.2b — "sacrifice a creature, discard a card, or pay 4 life"
+    /// (Dusk Mangler): the caster pays exactly one of the options. Payable
+    /// when any option is; the cast pipeline concretizes it to one option
+    /// (`GameState::pick_one_of_cost`) before anything is paid.
+    OneOf(Vec<AdditionalCastCost>),
 }
 
 /// The static bonus an Equipment confers on the creature it's attached to.
