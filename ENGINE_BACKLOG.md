@@ -148,12 +148,14 @@ the handoff.
   restriction): a short payment now floats matching restricted sources
   (`pay_with_restricted_sources`, CR 106.6), mana-costed ones (Castle
   Garenbrig) last.
-- **Costs spelled as effects.** 31 cards paid a printed sacrifice COST as the
-  first step of resolution (`SacrificeAndRemember` / `Sacrifice` / a `Move`):
-  a creatureless Fling or Village Rites resolved for free, a countered one
-  cost nothing, Birthing Pod and Krark-Clan Ironworks needed hand-written
-  activation gates. Now `AdditionalCastCost::SacrificePermanent` /
-  `sac_other_filter` / `sac_cost`, which already carried the victim's stats;
+- **Costs spelled as effects.** 46 cards paid a printed sacrifice / discard /
+  life COST as the first step of resolution: a creatureless Fling, a
+  handless Wild Guess or an X-above-your-life Toxic Deluge was castable, a
+  countered one cost nothing, Birthing Pod and Krark-Clan Ironworks needed
+  hand-written activation gates. Now `AdditionalCastCost::SacrificePermanent`
+  / `Discard` / `OneOf` / the new `PayLifeX`, `sac_other_filter`, `sac_cost`
+  (the cost paths already carried the victim's stats); Grab the Prize waits on
+  a cost-time discard record, Devouring Greed on a per-Spirit count;
   `structural_audit::no_cost_sacrifice_is_spelled_as_the_first_step_of_the_effect`
   keeps it out. Residual: `sac_other_filter` never picks the source, so
   "Sacrifice a creature:" on a creature (Viscera Seer, Hypnotist, Korozda
