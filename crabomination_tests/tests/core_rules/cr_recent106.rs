@@ -15,6 +15,10 @@
 //!
 //! CR 903.3 — "the greatest mana value among your commanders" reads every
 //! commander in every zone (`Value::GreatestCommanderManaValue`).
+//!
+//! CR 603.2c — "whenever one or more creatures deal combat damage to you" is
+//! one event per damage step, and its filter applies: the combat hook for
+//! `ControllerDealtCombatDamage` fired once per dealer with both dropped.
 
 use crabomination::card::SelectionRequirement;
 use crabomination::catalog;
@@ -141,4 +145,51 @@ fn cr_903_3_greatest_commander_mana_value_reads_every_zone() {
     let angel = g.add_card_to_graveyard(0, catalog::serra_angel());
     g.players[0].commanders.extend([bears, angel]);
     assert!(is(&g, 5), "the Angel in the graveyard still counts");
+}
+
+#[test]
+fn cr_603_2c_damage_to_you_triggers_once_per_swing() {
+    use crabomination::card::{
+        CardDefinition, CardType, EventKind, EventScope, EventSpec, SelectionRequirement, TriggeredAbility, Value,
+    };
+    use crabomination::effect::{Effect, Selector};
+    // "Whenever one or more creatures an opponent controls deal combat damage
+    // to you, you gain 1 life."
+    let ward = CardDefinition {
+        name: "Batch Ward (test)",
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::ControllerDealtCombatDamage, EventScope::SelfSource)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::ControlledByOpponent,
+                })
+                .once_per_batch(),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::ONE },
+        }],
+        ..Default::default()
+    };
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, ward);
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(a);
+    g.clear_sickness(b);
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: a, target: AttackTarget::Player(0) },
+        Attack { attacker: b, target: AttackTarget::Player(0) },
+    ]))
+    .expect("attack");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no blocks");
+    while g.step != TurnStep::EndCombat {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.players[0].life, 20 - 4 + 1, "both connected; one trigger for the swing");
 }

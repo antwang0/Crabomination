@@ -5758,7 +5758,13 @@ impl GameState {
         // kind is live — none in the catalog today, read so the walk cannot
         // drop one silently.
         let own_grant = self.any_granted_trigger_of_kind(&EventKind::ControllerDealtCombatDamage);
-        let mut listeners: Vec<(CardId, Effect, usize)> = Vec::new();
+        // `(listener, effect, controller, filter, batch index)`: the printed
+        // trigger's filter and "one or more" batch slot are honored here as
+        // the dispatcher would (Norn's Decree: one poison counter for a whole
+        // swing, and only for an opponent's creatures) — this hook used to
+        // fire once per dealer with both dropped.
+        type Listener = (CardId, Effect, usize, Option<crate::effect::Predicate>, Option<usize>);
+        let mut listeners: Vec<Listener> = Vec::new();
         let listens = |ta: &crate::card::TriggeredAbility| {
             ta.event.kind == EventKind::ControllerDealtCombatDamage
                 && ta.event.scope == crate::effect::EventScope::SelfSource
@@ -5767,19 +5773,44 @@ impl GameState {
             if c.controller != damaged_player {
                 return;
             }
-            for ta in &c.definition.triggered_abilities {
+            for (i, ta) in c.definition.triggered_abilities.iter().enumerate() {
                 if listens(ta) {
-                    listeners.push((c.id, ta.effect.clone(), c.controller));
+                    listeners.push((
+                        c.id,
+                        ta.effect.clone(),
+                        c.controller,
+                        ta.event.filter.clone(),
+                        ta.event.once_per_batch.then_some(i),
+                    ));
                 }
             }
             if own_grant {
                 self.for_each_granted_trigger_matching(c.id, listens, |ta| {
-                    listeners.push((c.id, ta.effect.clone(), c.controller))
+                    listeners.push((c.id, ta.effect.clone(), c.controller, ta.event.filter.clone(), None))
                 });
             }
         };
         self.battlefield.for_each_triggerer_or_all(own_grant, visit);
-        for (listener, effect, controller) in listeners {
+        for (listener, effect, controller, filter, batch) in listeners {
+            let dealer = Some(crate::game::effects::EntityRef::Permanent(source));
+            if let Some(f) = &filter {
+                let ctx = crate::game::effects::EffectContext::for_intervening_filter(
+                    controller,
+                    listener,
+                    dealer,
+                    damage_amount,
+                );
+                if !self.evaluate_predicate(f, &ctx) {
+                    continue;
+                }
+            }
+            if let Some(i) = batch {
+                let key = (listener, i, BatchSubject::Player(damaged_player));
+                if self.combat_trigger_fired_this_step.contains(&key) {
+                    continue;
+                }
+                self.combat_trigger_fired_this_step.push(key);
+            }
             let (mode, auto_target) =
                 self.trigger_mode_and_target(&effect, controller, Some(listener));
             // Bind the creature that dealt the damage as `Selector::TriggerSource`
