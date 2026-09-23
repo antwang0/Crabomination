@@ -53,6 +53,7 @@ lists were picked.
 | **Sneak Attack** (ZNC precon) UB | Anowon, the Ruin Thief | UB | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Jeskai Striker** (TDC precon) URW | Shiko and Narset, Unified | URW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Sliver Swarm** (CMM precon) WUBRG | Sliver Gravemother | WUBRG | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
+| **Vampiric Bloodlust** (C17 precon) BRW | Edgar Markov | BRW | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not
@@ -281,6 +282,27 @@ Seed 10041, 300 games at 23 seats: **298 decided, 2 action caps, zero panics,
 every card of all twenty-three lists but one played** (Narset's Reversal);
 Gravemother wins 5.7 %, and **40.4 %** of four-seat pods beside Shiko /
 Anowon / Ixhel (seed 10043, 1,000 games, all decided).
+
+The **twenty-fifth** is Commander 2017's **Vampiric Bloodlust**
+(`VampiricBloodlust_C17`) — Edgar Markov's own precon, so the field now seats
+two Edgars. Sixteen cards were missing; the primitives:
+`Effect::SpellEntersWithCounters` (Bloodlord's granted bloodthirst),
+`Predicate::PlayerControlsACommander` (CR 903.3, Crimson Honor Guard) — and
+`YouControlACommander` now counts **any** player's commander, as the CR's "a
+commander" does (a stolen one never satisfied Akroma's / Jeska's Will),
+`Selector::PowerAbove` (Fell the Mighty: threshold read once, every match picked
+before any dies), `StaticEffect::SelfCostReducedByValue` (Licia) and
+`CreateTokenCopiesHasteSac.exile` (Kindred Charge). `Effect::ExileFromHand`
+used to take `hand[0]` from everyone; a bot seat now chooses (Kheru Mind-Eater,
+Ashiok). Residuals: **Bloodlord of Vaasgoth**'s granted bloodthirst is checked
+as its cast trigger resolves; **Mathas, Fiend Seeker**'s bounty grant lasts only
+while Mathas stays; **Kheru Mind-Eater** exiles face up. Seed 10051, 300 games
+at 25 seats: **289 decided, 10 action caps, 1 board cap, zero panics**; the
+C17 Edgar wins 12.3 % and every one of its cards was played. ⚠ The board cap
+is **not a loop**: Gravemother's encore at 24 opponents made 21 Brood Sliver
+tokens, and 21 Broods × ~40 connecting Slivers minted 813 tokens in one combat.
+Four-seat pods beside hand-built Edgar / Gravemother / Clavileño (seed 10052,
+1,000 games, all decided): C17 Edgar 19.6 %, hand-built Edgar **41.3 %**.
 
 ⚠ **The board cap was a bot bug, not a loop.** A Krenko seat sent all 292
 of its Goblins at one player on 24 life each turn while two others sat on
