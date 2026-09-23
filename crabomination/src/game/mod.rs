@@ -23132,11 +23132,11 @@ impl GameState {
                 Some(crate::game::effects::EntityRef::Player(p)) => Some(p),
                 _ => None,
             };
-            let needs = pending.effect.requires_target();
+            let needs = pending.effect.targeting_view(pending.mode).requires_target();
             let wants_ui = !force_auto && self.seat_prompts(pending.controller);
             if needs && wants_ui {
                 let legal = self.enumerate_legal_targets_xc(
-                    &pending.effect,
+                    pending.effect.targeting_view(pending.mode),
                     pending.controller,
                     Some(pending.source),
                     pending.x_value,
@@ -23149,7 +23149,7 @@ impl GameState {
                 // blocking the game on an unanswerable picker.
                 if legal.is_empty() {
                     let auto = self.auto_target_for_effect_avoiding_set_xc(
-                        &pending.effect,
+                        pending.effect.targeting_view(pending.mode),
                         pending.controller,
                         &[pending.source],
                         pending.x_value,
@@ -23201,6 +23201,7 @@ impl GameState {
                 // `build_cube_state_seeded(62)` is that board.
                 let zone_filter = pending
                     .effect
+                    .targeting_view(pending.mode)
                     .primary_target_filter()
                     .is_some_and(|f| f.mentions_offboard_zone());
                 let offboard = if zone_filter { offboard } else { Vec::new() };
@@ -23209,7 +23210,7 @@ impl GameState {
                 // rather than posing an unanswerable picker.
                 if clickable.is_empty() && offboard.is_empty() {
                     let auto = self.auto_target_for_effect_avoiding_set_xc(
-                        &pending.effect,
+                        pending.effect.targeting_view(pending.mode),
                         pending.controller,
                         &[pending.source],
                         pending.x_value,
@@ -23260,7 +23261,7 @@ impl GameState {
                         // "Up to one target …" triggers (Ennis, Debate
                         // Moderator's ETB) may be declined — the trigger
                         // then resolves targetless as a no-op.
-                        optional: pending.effect.target_slot_optional(0, None),
+                        optional: pending.effect.targeting_view(pending.mode).target_slot_optional(0, None),
                         extra_cast_slot: false,
                         source: pending.source,
                         legal: clickable,
@@ -23311,7 +23312,7 @@ impl GameState {
             let auto = needs
                 .then(|| {
                     self.auto_target_for_effect_avoiding_set_xc(
-                        &pending.effect,
+                        pending.effect.targeting_view(pending.mode),
                         pending.controller,
                         &avoid,
                         pending.x_value,
@@ -26700,8 +26701,10 @@ impl GameState {
         // Converged` reads false-for-everything and fizzled every
         // correctly-chosen Sundering Archaic target.
         let resolved_target = match target.as_ref() {
+            // The chosen mode's filter (CR 700.2a): a later mode's target
+            // checked against mode 0's filter fizzled every such trigger.
             Some(t) => match effect
-                .target_filter_for_slot(0)
+                .target_filter_for_slot_in_mode(0, Some(mode))
                 .map(|f| f.resolve_x(x_value).resolve_converge(converged_value))
             {
                 Some(filter)

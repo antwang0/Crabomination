@@ -4524,18 +4524,22 @@ impl GameState {
                 // Source was sacrificed; remaining fires are moot.
                 return;
             }
-            let auto_target = self.auto_target_for_effect_avoiding_set_x(
-                &effect,
-                controller,
-                &[card_id],
-                cast_x,
-            );
+            // CR 700.2b — modal ETB trigger mode pick at push-time, ahead of
+            // the targets, which are the chosen mode's (CR 700.2a).
+            let mode = self.pick_trigger_mode(&effect, card_id, controller);
+            let view = effect.targeting_view(mode);
+            // A picked mode with no target takes none — the picker's bare-`Any`
+            // fallback would hand it a player the resolution then rejects.
+            let untargeted_mode = !std::ptr::eq(view, &effect) && !view.requires_target();
+            let auto_target = if untargeted_mode {
+                None
+            } else {
+                self.auto_target_for_effect_avoiding_set_x(view, controller, &[card_id], cast_x)
+            };
             // CR 115.1c — maximize an "up to N target" self-source ETB trigger
             // (Gavony Silversmith) by filling slots 1.. with distinct picks.
             let additional =
-                self.auto_extra_targets_for(&effect, card_id, controller, auto_target.clone());
-            // CR 700.2b — modal ETB trigger mode pick at push-time.
-            let mode = self.pick_trigger_mode(&effect, card_id, controller);
+                self.auto_extra_targets_for(view, card_id, controller, auto_target.clone());
             for _ in 0..multiplier {
                 self.stack.push(
                     TriggerPush::new(card_id, controller, effect.clone())
@@ -13638,16 +13642,18 @@ impl GameState {
             if once_per_turn {
                 self.triggered_once_per_turn_used.insert(once_key);
             }
-            let auto_target = self.auto_target_for_effect_avoiding(
-                &effect,
-                listener_controller,
-                Some(source),
-            );
             // CR 700.2b — pick the mode at push time if the trigger is modal.
             // Powers Prismari Apprentice's modal Magecraft (Scry 1 / +1/+0 EOT):
             // AutoDecider picks mode 0 (Scry); ScriptedDecider::new([Mode(1)])
-            // exercises the pump branch.
+            // exercises the pump branch. The mode comes first: its targets are
+            // the chosen mode's (CR 700.2a).
             let mode = self.pick_trigger_mode(&effect, source, listener_controller);
+            let view = effect.targeting_view(mode);
+            let auto_target = if !std::ptr::eq(view, &effect) && !view.requires_target() {
+                None
+            } else {
+                self.auto_target_for_effect_avoiding(view, listener_controller, Some(source))
+            };
             // The cast spell's mana value, so "where X is that spell's mana
             // value" riders scale (Shark Typhoon).
             let spell_mv = self

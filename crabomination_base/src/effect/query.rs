@@ -4001,6 +4001,16 @@ impl Effect {
         )
     }
 
+    /// The effect a trigger's targets are chosen for: the picked mode of a
+    /// top-level `ChooseMode` (CR 700.2a — modes are chosen before targets),
+    /// else the whole effect. A deferred or absent pick keeps the whole effect.
+    pub fn targeting_view(&self, mode: Option<usize>) -> &Effect {
+        match (self, mode) {
+            (Effect::ChooseMode(modes), Some(m)) => modes.get(m).unwrap_or(self),
+            _ => self,
+        }
+    }
+
     /// Walk the effect tree and return the first `SelectionRequirement` bound
     /// to the target slot `slot`, if any. Used for cast-time target validation.
     ///
