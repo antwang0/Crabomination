@@ -51,6 +51,7 @@ lists were picked.
 | **Reap the Tides** (CMR precon) GU | Aesi, Tyrant of Gyre Strait | GU | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Corrupting Influence** (ONC precon) WBG | Ixhel, Scion of Atraxa | WBG | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Sneak Attack** (ZNC precon) UB | Anowon, the Ruin Thief | UB | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
+| **Jeskai Striker** (TDC precon) URW | Shiko and Narset, Unified | URW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not
@@ -268,6 +269,22 @@ permanent bound. `server/pod_attack.rs::spread_face_attacks` now sends the
 attackers past a kill (with one blocker's margin per untapped creature) at
 the next opponent by `hostile_opponent_score`; the same game now decides.
 A duel returns before allocating, so `--bench` is byte-identical.
+
+The **twenty-second** is Tarkir: Dragonstorm's **Jeskai Striker**
+(`JeskaiStriker_TDC`): flurry spells under Shiko and Narset. Fifteen cards
+were missing; two primitives: `CounterType::Rally` (Aligned Heart's flurry
+tally) and `Effect::MayCastFromHandFreeMatching` (a filtered free cast from
+hand, shared with Kellan). Residuals: **Shiny Impetus** re-goads
+at each beginning of combat rather than holding one continuous goad while
+attached; **Tempest Technique**'s storm copies keep the original's target.
+Seed 10041, 1,000 games at 22 seats: **995 decided, 5 action caps (432-511
+turns), 0 board caps, zero panics**; Shiko wins 1.2 %, and 28.9 % of four-seat
+pods beside Zellix / Zndrsplt / Hanna (seed 10042, all decided).
+⚠ **The census found one card no bot cast: Narset's Reversal.** The response
+picker's `effect_counters_spells` read only a `Seq`'s first step, and Reversal
+copies before it bounces. Any top-level step now counts; the same seed then
+played **every card of all twenty-two lists** (1,100 distinct), and `--bench`
+stayed byte-identical.
 
 The **tenth** is the first list built around what only happens at three seats
 or more, and it exists because of a census, not a hunch: **not one of the nine
