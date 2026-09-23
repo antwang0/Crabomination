@@ -231,6 +231,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::GHALTA_COMMANDERS,
             main: decks::GHALTA_MAIN,
         },
+        // Eighteenth: the eighth official list (Keen Engineering, FDC) —
+        // mono-blue artifacts and Vehicles. `--seats 18`.
+        PodDeck {
+            name: "Sai (U)",
+            commanders: decks::SAI_COMMANDERS,
+            main: decks::SAI_MAIN,
+        },
     ]
 }
 

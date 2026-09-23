@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Ten hand-picked commanders plus five official preconstructed lists, each a
+//! Ten hand-picked commanders plus eight official preconstructed lists, each a
 //! 99 of cards this engine implements: legal under CR 903 (100 cards
 //! including the commander, singleton outside basics, every card inside the
 //! commander's CR 903.4 color identity) and Commander-legal per Scryfall's
@@ -8,8 +8,10 @@
 //!
 //! The ten were built by hand because the offline Scryfall cache cannot say
 //! how a precon splits into decks; MTGJSON's deck files can, and the eleventh
-//! through fifteenth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
-//! Win, Tails You Lose, Goblin Storm) are taken from one card for card. What all of them keep
+//! through eighteenth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
+//! Win, Tails You Lose, Goblin Storm, and Foundations Commander's Wretched
+//! Ranks, Tramplesaurus Rex and Keen Engineering) are taken from one card for
+//! card. What all of them keep
 //! from the precon idea is what the pod needs — fixed, legal, varied color
 //! identities, and built to play against each other.
 //! One is a Partner pair (CR 702.124b), one is a **planeswalker**
@@ -670,4 +672,31 @@ pub const GHALTA_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+];
+
+pub const SAI_COMMANDERS: &[CardFactory] = &[sai_master_thopterist];
+
+/// **Keen Engineering**, the Foundations Commander deck (FDC, 2026-10-02),
+/// exactly as MTGJSON's `KeenEngineering_FDC` prints it: 65 nonbasic cards +
+/// 34 Islands = 99. Mono-blue artifacts: Thopters off every artifact cast,
+/// mana rocks, and Vehicles for Sai's fliers to crew.
+pub const SAI_MAIN: &[CardFactory] = &[
+    all_is_dust, broodstar, kappa_cannoneer, master_of_etherium, master_transmuter,
+    misleading_signpost, pull_from_tomorrow, research_thief, shimmer_dragon, thopter_fabricator,
+    thopter_spy_network, thought_monitor, vedalken_archmage, adaptive_omnitool,
+    cultivators_caravan, darksteel_juggernaut, duplicant, forsaken_monument,
+    graaz_unstoppable_juggernaut, mazemind_tome, minds_eye, myr_battlesphere, nettlecyst,
+    nevinyrrals_disk, psychosis_crawler, scrawling_crawler, skysovereign_consul_flagship,
+    steel_hellkite, steel_overseer, war_room, aetherize, counterspell, etherium_sculptor,
+    fall_from_favor, launch_mishap, memory_guardian, negate, padeem_consul_of_innovation,
+    propaganda, tamiyos_logbook, thirst_for_knowledge, thoughtcast, whirler_rogue,
+    aether_spellbomb, arcane_signet, chief_of_the_foundry, foundry_inspector, hedron_archive,
+    ichor_wellspring, meteor_golem, mind_stone, myr_retriever, ornithopter_of_paradise,
+    palladium_myr, shimmer_myr, silver_myr, sol_ring, soul_guide_lantern, spire_golem,
+    thought_vessel, buried_ruin, darksteel_citadel, foundry_of_the_consuls, lonely_sandbar,
+    remote_isle,
+    // Basics: 34 island
+    island, island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island,
 ];
