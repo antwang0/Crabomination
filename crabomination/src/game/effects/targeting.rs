@@ -333,8 +333,12 @@ impl GameState {
         };
         let mut primary_candidates = collect_legal_on_player(primary_player);
         if prefer_friendly && !primary_candidates.is_empty() {
-            // Sort by descending power so the strongest creature wins.
-            primary_candidates.sort_by_key(|c| std::cmp::Reverse(c.1));
+            // Sort by descending power so the strongest creature wins — except
+            // a Zada, which copies a spell aimed only at it onto every other
+            // creature it could target, so it outranks any single body.
+            let fans_out =
+                |cid: CardId| self.battlefield.find_by_id(cid).is_some_and(copies_to_the_team);
+            primary_candidates.sort_by_cached_key(|c| (!fans_out(c.0), std::cmp::Reverse(c.1)));
         } else {
             // Hostile pick: un-warded first, then the biggest threat.
             // The power term was missing until 2026-08-22, so removal took
@@ -926,7 +930,7 @@ impl GameState {
                     // (PERF (-78)'s test 1). `min()` keeps the first of equal
                     // keys and the key ends in the id, so ties cannot happen;
                     // `<` reproduces it either way.
-                    let mut best: Option<(u8, i32, CardId)> = None;
+                    let mut best: Option<(u8, bool, i32, CardId)> = None;
                     for c in self.battlefield.iter() {
                         if already_picked.contains(&c.id) || !is_legal_bf(c) {
                             continue;
@@ -935,15 +939,19 @@ impl GameState {
                             .computed_permanent(c.id)
                             .map(|cp| cp.power)
                             .unwrap_or(c.definition.power);
-                        let key = (rank(c.id, c.controller), -power, c.id);
+                        // Zada first among friendly picks (`copies_to_the_team`).
+                        let fan = prefer_friendly
+                            && c.controller == controller
+                            && copies_to_the_team(c);
+                        let key = (rank(c.id, c.controller), !fan, -power, c.id);
                         if best.is_none_or(|b| key < b) {
                             best = Some(key);
                         }
                     }
                     match best {
                         // Never spend an optional slot on the wrong side.
-                        Some((2, _, _)) if optional => {}
-                        Some((_, _, id)) => found = Some(Target::Permanent(id)),
+                        Some((2, ..)) if optional => {}
+                        Some((.., id)) => found = Some(Target::Permanent(id)),
                         None if optional => {}
                         None => {
                             // Mandatory slot: allow reuse of an
@@ -1057,4 +1065,13 @@ pub mod call_site_census {
         out.sort_by_key(|(_, _, n)| std::cmp::Reverse(*n));
         out
     }
+}
+
+/// Zada, Hedron Grinder: a spell aimed only at it is copied onto every other
+/// creature it could target, so a friendly pick outranks any single body.
+fn copies_to_the_team(c: &CardInstance) -> bool {
+    c.definition
+        .triggered_abilities
+        .iter()
+        .any(|t| matches!(t.effect, Effect::CopyForEachOtherTargetableCreature))
 }

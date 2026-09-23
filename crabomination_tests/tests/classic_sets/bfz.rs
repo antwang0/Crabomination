@@ -585,6 +585,19 @@ fn zada_copies_a_self_targeting_pump_for_each_other_creature() {
     assert_eq!(g.computed_permanent(theirs).unwrap().power, 2, "not an opponent's creature");
 }
 
+/// The auto-targeter aims a friendly pump at Zada over a bigger body: aimed
+/// there it lands on every creature.
+#[test]
+fn auto_target_aims_a_pump_at_zada() {
+    let mut g = two_player_game();
+    let _big = g.add_card_to_battlefield(0, catalog::craw_wurm());
+    let zada = g.add_card_to_battlefield(0, catalog::zada_hedron_grinder());
+    let pump = catalog::giant_growth();
+    assert_eq!(g.auto_target_for_effect(&pump.effect, 0), Some(Target::Permanent(zada)));
+    let (slot0, _) = g.auto_targets_for_effect_all_slots(&pump.effect, 0, None);
+    assert_eq!(slot0, Some(Target::Permanent(zada)), "the slot walk the bot casts through");
+}
+
 /// Gruesome Slaughter turns your colorless creatures into pingers for the turn.
 #[test]
 fn gruesome_slaughter_grants_a_tap_to_ping() {
