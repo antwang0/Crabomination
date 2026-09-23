@@ -29459,6 +29459,7 @@ fn static_effect_to_effects(
             | StaticEffect::SelfCostReducedPerSpellCastThisTurn { .. }
             | StaticEffect::SelfCostReducedPerCreatureAttackedThisTurn { .. }
             | StaticEffect::SelfCostReducedPerOpponent { .. }
+            | StaticEffect::SelfCostReducedByValue { .. }
             // SelfCostReducedIfControlEach (Of One Mind) — read off the spell.
             | StaticEffect::SelfCostReducedIfControlEach { .. }
             // SelfCostReducedIf (Gigastorm Titan) — read off the spell.

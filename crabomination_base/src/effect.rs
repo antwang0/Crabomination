@@ -561,6 +561,10 @@ pub enum Selector {
     /// names a `CardId`, and `scripts/audit_variant_coverage.py` carries this
     /// as a by-design dead primitive.
     ExactObjects(Vec<crate::card::CardId>),
+    /// The permanents `inner` picks whose power is greater than `than`,
+    /// evaluated once before any is affected — "destroy all creatures with
+    /// power greater than target creature's power" (Fell the Mighty).
+    PowerAbove { inner: Box<Selector>, than: Box<Value> },
 
     /// No entities (placeholder/default).
     None,
@@ -1933,6 +1937,10 @@ pub enum Predicate {
     /// when any battlefield permanent the effect's controller controls is
     /// one of their designated commanders (`Player.commanders`).
     YouControlACommander,
+    /// "Unless they control a commander" (Crimson Honor Guard) — true when
+    /// every player `who` names controls a permanent that is any player's
+    /// commander (CR 903.3).
+    PlayerControlsACommander { who: PlayerRef },
     /// True if the spell pointed to by `ctx.trigger_source` (the just-cast
     /// spell driving a `SpellCast` trigger) has at least one `{X}` symbol
     /// in its mana cost. Used by Quandrix's "whenever you cast a spell
@@ -5825,6 +5833,10 @@ pub enum Effect {
     /// stack for as long as it's there (Judith, Carnage Connoisseur).
     /// Recorded in `GameState.spell_keyword_grants`.
     GrantKeywordsToSpell { what: Selector, keywords: Vec<Keyword> },
+    /// "That creature enters with N additional [kind] counters" on a spell
+    /// still on the stack — stamps the spell's `pending_etb_counters`
+    /// (Bloodlord of Vaasgoth's granted bloodthirst).
+    SpellEntersWithCounters { what: Selector, kind: crate::card::CounterType, amount: Value },
     /// "Exile target [permanent], then search its owner's graveyard, hand,
     /// and library for any number of cards with the same name as that
     /// [permanent] and exile them. Then that player shuffles." Crumble to
@@ -7276,6 +7288,10 @@ pub enum Effect {
         who: PlayerRef,
         count: Value,
         source: Selector,
+        /// Exile the tokens at the next end step instead of sacrificing them
+        /// (Kindred Charge) — no dies triggers.
+        #[serde(default)]
+        exile: bool,
     },
     /// Sin, Spira's Punishment — exile a permanent card from `who`'s graveyard
     /// at random, then create a tapped token that's a copy of it. If the
@@ -10593,6 +10609,7 @@ pub fn static_effect_is_self_cost_reduction(effect: &StaticEffect) -> bool {
             | SE::SelfCostReducedByDevotion { .. }
             | SE::SelfCostReducedIfControlEach { .. }
             | SE::SelfCostReducedIf { .. }
+            | SE::SelfCostReducedByValue { .. }
             | SE::SelfCostReducedPerDiscardThisTurn { .. }
             | SE::SelfCostReducedPerOpponent { .. }
             | SE::SelfCostReducedPerSpellCastThisTurn { .. }

@@ -4817,6 +4817,7 @@ pub fn the_fire_crystal() -> CardDefinition {
                 source: target_filtered(
                     SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                 ),
+                exile: false,
             },
             ..Default::default()
         }],

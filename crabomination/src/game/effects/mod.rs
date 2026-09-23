@@ -9215,17 +9215,53 @@ impl GameState {
             }
 
             Effect::ExileFromHand { who, amount } => {
-                // Player exiles `amount` cards from their hand. Auto-picks by
-                // hand order (a wants_ui client could surface a picker; the
-                // bot harness only cares which cards leave). Ashiok −3.
+                // The exiling player picks, asked as a discard-shaped choice
+                // (a bot sheds its least useful cards — Ashiok −3, Kheru
+                // Mind-Eater). A prompting seat keeps hand order: a UI picker
+                // is the follow-up.
                 let n = self.evaluate_value(amount, ctx).max(0) as usize;
                 for ent in self.resolve_selector(who, ctx) {
                     if let EntityRef::Player(p) = ent {
-                        for _ in 0..n {
-                            let Some(cid) = self.players[p].hand.first().map(|c| c.id) else {
+                        let count = n.min(self.players[p].hand.len());
+                        if count == 0 {
+                            continue;
+                        }
+                        let mut picks: Vec<CardId> = Vec::new();
+                        if !self.seat_prompts(p) {
+                            let hand: Vec<(CardId, String)> = self.players[p]
+                                .hand
+                                .iter()
+                                .map(|c| (c.id, c.definition.name.to_string()))
+                                .collect();
+                            if let crate::decision::DecisionAnswer::Discard(ids) =
+                                self.decider.decide(&crate::decision::Decision::Discard {
+                                    player: p,
+                                    count: count as u32,
+                                    hand: hand.clone(),
+                                })
+                            {
+                                for id in ids {
+                                    if hand.iter().any(|(h, _)| *h == id) && !picks.contains(&id) {
+                                        picks.push(id);
+                                    }
+                                }
+                            }
+                        }
+                        for c in self.players[p].hand.iter() {
+                            if picks.len() >= count {
                                 break;
+                            }
+                            if !picks.contains(&c.id) {
+                                picks.push(c.id);
+                            }
+                        }
+                        picks.truncate(count);
+                        for cid in picks {
+                            let Some(i) = self.players[p].hand.iter().position(|c| c.id == cid)
+                            else {
+                                continue;
                             };
-                            let card = self.players[p].hand.remove(0);
+                            let card = self.players[p].hand.remove(i);
                             self.place_card_in_dest(card, p, &ZoneDest::Exile, events);
                             self.scratch.last_moved_cards.push(cid);
                         }
@@ -16075,6 +16111,24 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::SpellEntersWithCounters { what, kind, amount } => {
+                let n = self.evaluate_value(amount, ctx).max(0) as u32;
+                if n == 0 {
+                    return Ok(());
+                }
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_card_id() else { continue };
+                    for it in self.stack.iter_mut() {
+                        if let StackItem::Spell { card, .. } = it
+                            && card.id == cid
+                        {
+                            card.pending_etb_counters.push((*kind, n));
+                        }
+                    }
+                }
+                Ok(())
+            }
+
             Effect::BecomeChosenColor { what, duration } => {
                 let duration_kind = self.effect_duration_for(*duration, ctx.controller);
                 let source = ctx.source.unwrap_or(CardId(0));
@@ -19829,7 +19883,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::CreateTokenCopiesHasteSac { who, count, source } => {
+            Effect::CreateTokenCopiesHasteSac { who, count, source, exile } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
                 let mut n = self.evaluate_value(count, ctx).max(0) as u32;
                 for _ in 0..self.token_doublers_for(p) {
@@ -19852,7 +19906,7 @@ impl GameState {
                         controller: p,
                         source: tid,
                         kind: crate::game::types::DelayedKind::NextEndStep,
-                        effect: Effect::SacrificeSource,
+                        effect: if *exile { Effect::ExileSource } else { Effect::SacrificeSource },
                         target: None,
                         bound_token: None,
                         bound_subject: None,
@@ -37377,6 +37431,20 @@ impl GameState {
                 .map(EntityRef::Player)
                 .collect(),
 
+            // Fell the Mighty — the threshold is read once, then every match
+            // is picked before any of them is affected.
+            Selector::PowerAbove { inner, than } => {
+                let than = self.evaluate_value(than, ctx);
+                self.resolve_selector(inner, ctx)
+                    .into_iter()
+                    .filter(|e| match e {
+                        EntityRef::Permanent(id) => {
+                            self.computed_permanent(*id).is_some_and(|c| c.power > than)
+                        }
+                        _ => false,
+                    })
+                    .collect()
+            }
             Selector::MatchingAmong { inner, filter } => {
                 let all = self.resolve_selector(inner, ctx);
                 all.into_iter()

@@ -297,6 +297,7 @@ pub fn orthion_hero_of_lavabrink() -> CardDefinition {
             who: PlayerRef::You,
             count: Value::Const(n),
             source: target_filtered(a_another_creature_you_control()),
+            exile: false,
         },
         ..Default::default()
     };

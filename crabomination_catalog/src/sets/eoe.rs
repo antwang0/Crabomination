@@ -7933,6 +7933,7 @@ pub fn devastating_onslaught() -> CardDefinition {
                 SelectionRequirement::ControlledByYou
                     .and(SelectionRequirement::Artifact.or(SelectionRequirement::Creature)),
             ),
+            exile: false,
         },
         ..Default::default()
     }

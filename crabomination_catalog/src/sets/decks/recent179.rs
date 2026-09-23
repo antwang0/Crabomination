@@ -350,6 +350,7 @@ pub fn electroduplicate() -> CardDefinition {
             who: PlayerRef::You,
             count: Value::ONE,
             source: target_filtered(R::Creature.and(R::ControlledByYou)),
+            exile: false,
         },
         ..Default::default()
     }

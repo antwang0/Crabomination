@@ -641,6 +641,9 @@ impl Effect {
                 | Selector::SharingColorWith(i) => sel_has_target(i),
                 Selector::Both(a, b) => sel_has_target(a) || sel_has_target(b),
                 Selector::MatchingAmong { inner, .. } => sel_has_target(inner),
+                Selector::PowerAbove { inner, than } => {
+                    sel_has_target(inner) || value_has_target(than)
+                }
                 Selector::Take { inner, count } | Selector::TakeRandom { inner, count } => {
                     sel_has_target(inner) || value_has_target(count)
                 }
@@ -1267,7 +1270,8 @@ impl Effect {
             Effect::Meld { .. } => false,
             Effect::SpellsCostLessThisTurn { .. } => false,
             Effect::FaceDownSpellsCostLessThisTurn { .. } => false,
-            Effect::GrantKeywordsToSpell { what, .. } => sel_has_target(what),
+            Effect::GrantKeywordsToSpell { what, .. }
+            | Effect::SpellEntersWithCounters { what, .. } => sel_has_target(what),
             Effect::CastFromHandWithoutPaying { .. } => false,
             // The *chosen source* is a choice, not a target (CR 615.7) — but
             // `to` is where the shield lands and `redirect_to` is where the
@@ -1990,7 +1994,7 @@ impl Effect {
             }
             Effect::CreateEmblem { who, .. } => player_has_target(who),
             Effect::CreateTokenCopyOf { who, count, source, .. }
-            | Effect::CreateTokenCopiesHasteSac { who, count, source } => {
+            | Effect::CreateTokenCopiesHasteSac { who, count, source, .. } => {
                 player_has_target(who) || value_has_target(count) || sel_has_target(source)
             }
             Effect::GrantTriggeredAbility { what, .. } => sel_has_target(what),
@@ -2179,6 +2183,7 @@ impl Effect {
                 Selector::CardsInZone { filter, .. } => Some(filter),
                 Selector::TargetFiltered { filter, .. } => Some(filter),
                 Selector::MatchingAmong { inner, .. }
+                | Selector::PowerAbove { inner, .. }
                 | Selector::Take { inner, .. }
                 | Selector::TakeRandom { inner, .. } => {
                     sel_filter(inner)
@@ -4081,6 +4086,9 @@ impl Effect {
                 | Selector::Take { inner, .. }
                 | Selector::TakeRandom { inner, .. } => {
                     sel_find(inner, slot)
+                }
+                Selector::PowerAbove { inner, than } => {
+                    sel_find(inner, slot).or_else(|| val_find(than, slot))
                 }
                 Selector::TakeWithSumCap { inner, .. } => sel_find(inner, slot),
                 // A bare `PlayerRef::Target(n)` inside any player-reading

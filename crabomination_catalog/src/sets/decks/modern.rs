@@ -18167,6 +18167,7 @@ pub fn heat_shimmer() -> CardDefinition {
             who: PlayerRef::You,
             count: Value::Const(1),
             source: target_filtered(SelectionRequirement::Creature),
+            exile: false,
         },
         ..Default::default()
     }

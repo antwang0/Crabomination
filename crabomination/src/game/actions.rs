@@ -2182,6 +2182,13 @@ fn self_cost_reduction_from_card(
                 }
                 true
             }
+            // "costs {1} less for each [value]" (Licia: life gained this turn).
+            StaticEffect::SelfCostReducedByValue { amount } => {
+                let ctx = crate::game::effects::EffectContext::for_ability(card.id, caster, None);
+                let n = state.evaluate_value(amount, &ctx).max(0) as u32;
+                reduction = reduction.saturating_add(n);
+                true
+            }
             // "costs {N} less per card you've discarded this turn" (Hollow One).
             StaticEffect::SelfCostReducedPerDiscardThisTurn { per } => {
                 reduction = reduction

@@ -1676,6 +1676,7 @@ pub fn terra_magical_adept() -> CardDefinition {
                         .and(R::ControlledByYou)
                         .and(R::Not(Box::new(R::HasSupertype(Supertype::Legendary)))),
                 ),
+                exile: false,
             },
             Effect::AddCountersUpTo {
                 what: Selector::LastCreatedTokens,

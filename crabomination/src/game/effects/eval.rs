@@ -2872,11 +2872,18 @@ impl GameState {
                 };
                 self.battlefield_find(cid).is_some_and(|c| c.entered_by_cast)
             }
-            Predicate::YouControlACommander => {
-                let ids = &self.players[ctx.controller].commanders;
-                self.battlefield
-                    .iter()
-                    .any(|c| c.controller == ctx.controller && ids.contains(&c.id))
+            // CR 903.3 — "a commander" is any player's: a stolen commander
+            // counts for its new controller.
+            Predicate::YouControlACommander => self
+                .battlefield
+                .iter()
+                .any(|c| c.controller == ctx.controller && self.is_commander(c.id)),
+            Predicate::PlayerControlsACommander { who } => {
+                let seats = self.resolve_players(who, ctx);
+                !seats.is_empty()
+                    && seats.iter().all(|&p| {
+                        self.battlefield.iter().any(|c| c.controller == p && self.is_commander(c.id))
+                    })
             }
             Predicate::SpellWasKickedWith(n) => ctx.kicked_options.contains(n),
             Predicate::SpellWasKicked => {

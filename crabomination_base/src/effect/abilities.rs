@@ -724,6 +724,10 @@ pub enum StaticEffect {
     /// — your opponents control 3+ creatures). The predicate is evaluated at
     /// cost time with the caster as controller. Generic-only, clamped.
     SelfCostReducedIf { condition: Predicate, amount: u32 },
+    /// "This spell costs {1} less to cast for each [amount]" with the count
+    /// read off a `Value` from the caster's side (Licia, Sanguine Tribune:
+    /// life gained this turn).
+    SelfCostReducedByValue { amount: Value },
     /// "Each player can't cast more than one spell each turn" (Rule of Law,
     /// Eidolon of Rhetoric, Archon of Emeria). Enforced at the central
     /// `perform_action` cast gate against `Player.spells_cast_this_turn`.
