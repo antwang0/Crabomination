@@ -7,6 +7,7 @@ mod blb3;
 mod recent329;
 mod cmdr_teval;
 mod cmdr_nghathrod;
+mod cmdr_zndrsplt;
 mod dsk2;
 mod dsk_rooms;
 mod recent_118_132;
