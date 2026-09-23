@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Ten hand-picked commanders plus thirteen official preconstructed lists, each a
+//! Ten hand-picked commanders plus fourteen official preconstructed lists, each a
 //! 99 of cards this engine implements: legal under CR 903 (100 cards
 //! including the commander, singleton outside basics, every card inside the
 //! commander's CR 903.4 color identity) and Commander-legal per Scryfall's
@@ -8,12 +8,12 @@
 //!
 //! The ten were built by hand because the offline Scryfall cache cannot say
 //! how a precon splits into decks; MTGJSON's deck files can, and the eleventh
-//! through twenty-third (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
+//! through twenty-fourth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
 //! Win, Tails You Lose, Goblin Storm, Foundations Commander's Wretched Ranks,
 //! Tramplesaurus Rex and Keen Engineering, Commander Legends' Reap the Tides,
 //! Phyrexia: All Will Be One's Corrupting Influence, Zendikar Rising's Sneak
-//! Attack, Tarkir: Dragonstorm's Jeskai Striker and Commander Masters' Sliver
-//! Swarm) are taken from one card for card. What all of them keep
+//! Attack, Tarkir: Dragonstorm's Jeskai Striker, Commander Masters' Sliver
+//! Swarm and Outlaws of Thunder Junction's Quick Draw) are taken from one card for card. What all of them keep
 //! from the precon idea is what the pod needs — fixed, legal, varied color
 //! identities, and built to play against each other.
 //! One is a Partner pair (CR 702.124b), one is a **planeswalker**
@@ -842,4 +842,32 @@ pub const GRAVEMOTHER_MAIN: &[CardFactory] = &[
     seaside_citadel, secluded_courtyard, unclaimed_territory,
     // Basics: 2 plains, 2 island, 2 swamp, 2 mountain, 3 forest
     plains, plains, island, island, swamp, swamp, mountain, mountain, forest, forest, forest,
+];
+
+pub const STELLA_COMMANDERS: &[CardFactory] = &[stella_lee_wild_card];
+
+/// **Quick Draw**, the Outlaws of Thunder Junction Commander deck (OTC,
+/// 2024-04-19), exactly as MTGJSON's `QuickDraw_OTC` prints it: 72 nonbasic
+/// cards + 14 Islands + 13 Mountains = 99. Izzet spellslinging: second-spell
+/// payoffs, storm and cascade, and copies off the commander.
+pub const STELLA_MAIN: &[CardFactory] = &[
+    eris_roar_of_the_storm, archmage_emeritus, barals_expertise, tezzerets_gambit,
+    midnight_clock, haughty_djinn, dig_through_time, winged_boots, talrand_sky_summoner,
+    octavia_living_thesis, thunderclap_drake, lock_and_load, forgers_foundry,
+    finale_of_revelation, curse_of_the_swine, mizzixs_mastery, chaos_warp,
+    crackling_spellslinger, pyretic_charge, smoldering_stagecoach, elemental_eruption,
+    rousing_refrain, cursed_mirror, bloodthirsty_adversary, finale_of_promise,
+    arcane_bombardment, niv_mizzet_parun, kaza_roil_chaser, shark_typhoon, galvanic_iteration,
+    epic_experiment, veyran_voice_of_duality, leyline_dowser, exotic_orchard, shivan_reef,
+    sulfur_falls, frostboil_snarl, temple_of_epiphany, cascade_bluffs, ferrous_lake,
+    treasure_cruise, preordain, ponder, murmuring_mystic, deep_analysis, radical_idea, opt,
+    think_twice, arcane_denial, pteramander, vandalblast, pongify, serum_visions,
+    faithless_looting, big_score, storm_kiln_artist, young_pyromancer, electrostatic_field,
+    guttersnipe, volcanic_torrent, windfall, goblin_electromancer, third_path_iconoclast,
+    expressive_iteration, arcane_signet, izzet_signet, sol_ring, command_tower,
+    temple_of_the_false_god, reliquary_tower, izzet_boilerworks, propaganda,
+    // Basics: 14 island, 13 mountain
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain,
 ];

@@ -273,6 +273,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::GRAVEMOTHER_COMMANDERS,
             main: decks::GRAVEMOTHER_MAIN,
         },
+        // Twenty-fourth: the fourteenth official list (Quick Draw, OTC) —
+        // Izzet storm and cascade under Stella Lee. `--seats 24`.
+        PodDeck {
+            name: "Stella Lee (UR)",
+            commanders: decks::STELLA_COMMANDERS,
+            main: decks::STELLA_MAIN,
+        },
     ]
 }
 
