@@ -2387,6 +2387,11 @@ pub enum SelectionRequirement {
     /// The *player* target was dealt damage by the evaluating source this turn
     /// (Wicked Akuba's "target player dealt damage by this creature this turn").
     PlayerDamagedBySourceThisTurn,
+    /// The permanent's controller was dealt damage by the evaluating source
+    /// this turn, whoever controlled the permanent then (Steel Hellkite's
+    /// ruling). ⚠ Reads `creatures_that_damaged_me_this_turn`, which also
+    /// holds noncombat damage.
+    ControllerDamagedBySourceThisTurn,
     HasColor(Color),
     HasKeyword(Keyword),
     /// Has Toxic N for any N (CR 702.180). The parameter-agnostic sibling of
