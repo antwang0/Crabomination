@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Ten hand-picked commanders plus eight official preconstructed lists, each a
+//! Ten hand-picked commanders plus nine official preconstructed lists, each a
 //! 99 of cards this engine implements: legal under CR 903 (100 cards
 //! including the commander, singleton outside basics, every card inside the
 //! commander's CR 903.4 color identity) and Commander-legal per Scryfall's
@@ -8,10 +8,10 @@
 //!
 //! The ten were built by hand because the offline Scryfall cache cannot say
 //! how a precon splits into decks; MTGJSON's deck files can, and the eleventh
-//! through eighteenth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
-//! Win, Tails You Lose, Goblin Storm, and Foundations Commander's Wretched
-//! Ranks, Tramplesaurus Rex and Keen Engineering) are taken from one card for
-//! card. What all of them keep
+//! through nineteenth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
+//! Win, Tails You Lose, Goblin Storm, Foundations Commander's Wretched Ranks,
+//! Tramplesaurus Rex and Keen Engineering, and Commander Legends' Reap the
+//! Tides) are taken from one card for card. What all of them keep
 //! from the precon idea is what the pod needs — fixed, legal, varied color
 //! identities, and built to play against each other.
 //! One is a Partner pair (CR 702.124b), one is a **planeswalker**
@@ -699,4 +699,31 @@ pub const SAI_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island, island,
     island, island, island, island, island, island, island, island, island, island, island, island,
     island, island, island, island, island, island, island, island, island, island,
+];
+
+pub const AESI_COMMANDERS: &[CardFactory] = &[aesi_tyrant_of_gyre_strait];
+
+/// **Reap the Tides**, the Commander Legends deck (CMR, 2020-11-20), exactly
+/// as MTGJSON's `ReapTheTides_CMR` prints it: 69 nonbasic cards + 15 Forests +
+/// 15 Islands = 99. Simic lands-matter: ramp spells and landfall draws into
+/// big blue-green creatures.
+pub const AESI_MAIN: &[CardFactory] = &[
+    coiling_oracle, eternal_witness, ramunap_excavator, reclamation_sage, stumpsquall_hydra,
+    yavimaya_elder, fathom_mage, sharktocrab, wickerbough_elder, acidic_slime,
+    meloku_the_clouded_mirror, mulldrifter, murkfiend_liege, sporemound, rampaging_baloths,
+    shipbreaker_kraken, avenger_of_zendikar, meteor_golem, molimo_maro_sorcerer,
+    nezahal_primal_tide, scourge_of_fleets, simic_sky_swallower, sphinx_of_uthuun, trench_behemoth,
+    tromokratis, verdant_suns_avatar, elder_deep_fiend, slinn_voda_the_rising_deep,
+    stormtide_leviathan, terastodon, arcane_denial, counterspell, growth_spiral, into_the_roil,
+    peel_from_reality, simic_charm, beast_within, fact_or_fiction, explore, rampant_growth,
+    compulsive_research, cultivate, kodamas_reach, search_for_tomorrow, harmonize, whelming_wave,
+    urban_evolution, spitting_image, ior_ruin_expedition, khalni_heart_expedition,
+    retreat_to_kazandu, sol_ring, simic_signet, swiftfoot_boots, seers_sundial, blighted_woodland,
+    command_tower, coral_atoll, evolving_wilds, jungle_basin, memorial_to_genius, reliquary_tower,
+    simic_growth_chamber, simic_guildgate, terramorphic_expanse, thornwood_falls, vivid_creek,
+    vivid_grove, woodland_stream,
+    // Basics: 15 forest, 15 island
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island,
 ];

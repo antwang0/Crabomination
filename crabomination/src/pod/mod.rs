@@ -238,6 +238,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SAI_COMMANDERS,
             main: decks::SAI_MAIN,
         },
+        // Nineteenth: the ninth official list (Reap the Tides, CMR) — Simic
+        // lands-matter under Aesi. `--seats 19`.
+        PodDeck {
+            name: "Aesi (GU)",
+            commanders: decks::AESI_COMMANDERS,
+            main: decks::AESI_MAIN,
+        },
     ]
 }
 
