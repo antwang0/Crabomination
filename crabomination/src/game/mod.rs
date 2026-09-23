@@ -16692,19 +16692,22 @@ impl GameState {
     pub(crate) fn granted_replicate_cost(
         &self,
         caster: usize,
-        def: &CardDefinition,
+        card: &crate::card::CardInstance,
     ) -> Option<crate::mana::ManaCost> {
-        if !def.card_types.iter().any(|t| {
-            matches!(t, crate::card::CardType::Instant | crate::card::CardType::Sorcery)
-        }) {
-            return None;
-        }
+        use crate::effect::StaticEffect;
+        let def = &card.definition;
+        let instant_sorcery = def.is_instant() || def.is_sorcery();
         self.battlefield
             .iter()
             .any(|c| {
                 c.controller == caster
-                    && c.definition.static_abilities.iter().any(|sa| {
-                        matches!(sa.effect, crate::effect::StaticEffect::YourISSpellsHaveReplicate)
+                    && c.definition.static_abilities.iter().any(|sa| match &sa.effect {
+                        StaticEffect::YourISSpellsHaveReplicate => instant_sorcery,
+                        // Hatchery Sliver — "each Sliver spell you cast".
+                        StaticEffect::YourSpellsHaveReplicate { filter } => {
+                            self.evaluate_requirement_on_card(filter, card, caster)
+                        }
+                        _ => false,
                     })
             })
             .then(|| def.cost.clone())
@@ -28917,6 +28920,7 @@ fn static_effect_to_effects(
             // YourISSpellsHaveReplicate — read on the replicate cast path;
             // no continuous-layer effect.
             | StaticEffect::YourISSpellsHaveReplicate
+            | StaticEffect::YourSpellsHaveReplicate { .. }
             // HasActivatedAbilitiesOfCounteredCreatures — surfaced as virtual
             // activated abilities, not a layer effect.
             | StaticEffect::HasActivatedAbilitiesOfCounteredCreatures
@@ -28949,6 +28953,7 @@ fn static_effect_to_effects(
             // SBA; PreventAllDamageToAndFrom — read by the damage funnel.
             | StaticEffect::LegendRuleDoesntApply
             | StaticEffect::LegendRuleDoesntApplyToYourPermanents
+            | StaticEffect::LegendRuleDoesntApplyToYourMatching(_)
             | StaticEffect::PreventAllDamageToAndFromEnchanted
             | StaticEffect::PreventAllDamageToEnchanted
             | StaticEffect::PreventAllDamageByEnchanted
@@ -29391,6 +29396,7 @@ fn static_effect_to_effects(
             | StaticEffect::OpponentExtraDrawsRedirected
             // Varolz — surfaced as granted graveyard abilities, not a layer.
             | StaticEffect::GraveyardCreaturesHaveScavenge
+            | StaticEffect::GraveyardCardsHaveEncore { .. }
             // ProliferateTwice / PoisonCappedAtOnePerTurn — consulted at the
             // proliferate resolver / `add_poison` funnel.
             | StaticEffect::ProliferateTwice

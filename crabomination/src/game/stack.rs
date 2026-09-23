@@ -6284,26 +6284,32 @@ impl GameState {
             // loss conditions, the Aura/Equipment sweeps) still runs. The bit
             // says one of the two is on the board; which, and whose, is read
             // here, only then.
-            let (legend_rule_off, exempt_controllers) = if scan.legend_rule_off {
+            // Sliver Gravemother scopes it further, to matching permanents.
+            let (legend_rule_off, exempt_controllers, exempt_matching) = if scan.legend_rule_off {
                 use crate::effect::StaticEffect;
                 let mut global = false;
                 let mut exempt: SmallVec<[usize; 4]> = SmallVec::new();
+                let mut matching: SmallVec<[(usize, &crate::card::SelectionRequirement); 2]> =
+                    SmallVec::new();
                 for c in self.battlefield.iter() {
                     for sa in &c.definition.static_abilities {
-                        match sa.effect {
+                        match &sa.effect {
                             StaticEffect::LegendRuleDoesntApply => global = true,
                             StaticEffect::LegendRuleDoesntApplyToYourPermanents
                                 if !exempt.contains(&c.controller) =>
                             {
                                 exempt.push(c.controller)
                             }
+                            StaticEffect::LegendRuleDoesntApplyToYourMatching(f) => {
+                                matching.push((c.controller, f))
+                            }
                             _ => {}
                         }
                     }
                 }
-                (global, exempt)
+                (global, exempt, matching)
             } else {
-                (false, SmallVec::new())
+                (false, SmallVec::new(), SmallVec::new())
             };
             let mut out = Vec::new();
             // A group needs two members, so one printed legendary on the
@@ -6320,6 +6326,11 @@ impl GameState {
                     .filter(|c| is_legendary(c))
                     // Aeve — "isn't legendary if it's a token".
                     .filter(|c| !(c.is_token && c.definition.nonlegendary_as_token))
+                    .filter(|c| {
+                        !exempt_matching.iter().any(|&(p, f)| {
+                            p == c.controller && self.evaluate_requirement_static_on(f, c, p, None)
+                        })
+                    })
                     .collect();
                 by_id.sort_by_key(|b| std::cmp::Reverse(b.id));
                 for &c in &by_id {

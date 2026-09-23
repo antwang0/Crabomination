@@ -1209,6 +1209,38 @@ fn baral_and_kari_zev_casts_a_lesser_instant_free_or_makes_ragavan() {
 /// does an opponent who attacks them.
 #[test]
 fn curse_of_opulence_pays_the_curser_and_the_attacker() {
+// ── Sliver Swarm (Sliver Gravemother) ───────────────────────────────────────
+
+use crabomination::card::CreatureType;
+use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+
+fn has_type(g: &GameState, id: CardId, t: CreatureType) -> bool {
+    g.computed_permanent(id).is_some_and(|c| c.subtypes().creature_types.contains(&t))
+}
+
+/// CR 704.5j — the legend rule sits out for your legendary Slivers only: two
+/// Gravemothers both stay, two copies of a non-Sliver legend still collapse.
+#[test]
+fn cr_704_5j_gravemother_spares_legendary_slivers_only() {
+    let mut g = main_phase();
+    let a = g.add_card_to_battlefield(0, catalog::sliver_gravemother());
+    let b = g.add_card_to_battlefield(0, catalog::sliver_gravemother());
+    let x = g.add_card_to_battlefield(0, catalog::anowon_the_ruin_thief());
+    let y = g.add_card_to_battlefield(0, catalog::anowon_the_ruin_thief());
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(a).is_some() && g.battlefield_find(b).is_some());
+    assert_eq!(
+        [x, y].iter().filter(|id| g.battlefield_find(**id).is_some()).count(),
+        1,
+        "the non-Sliver legends still obey the rule"
+    );
+}
+
+/// CR 702.141 — a Sliver creature card in your graveyard has encore {X}, X its
+/// mana value: one hasty attacking token copy per opponent. A non-Sliver
+/// creature card gets nothing.
+#[test]
+fn cr_702_141_gravemother_grants_encore_x_to_sliver_cards() {
     let mut g = multi_player_game(3);
     g.active_player_idx = 0;
     g.step = TurnStep::PreCombatMain;
@@ -1328,6 +1360,276 @@ fn will_of_the_jeskai_grants_flashback_with_a_commander() {
     flood(&mut g, 0);
     g.perform_action(GameAction::CastFromCommandZone {
         card_id: cmd,
+    g.add_card_to_battlefield(0, catalog::sliver_gravemother());
+    let s = g.add_card_to_graveyard(0, catalog::capricious_sliver());
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(3);
+    let short = g.perform_action(GameAction::ActivateAbility {
+        card_id: s,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    });
+    assert!(short.is_err(), "X = 4, not 3");
+    assert!(activate(&mut g, bear, 0, None).is_err(), "not a Sliver");
+    activate(&mut g, s, 0, None).expect("encore {4}");
+    assert_eq!(count_named(&g, 0, "Capricious Sliver"), 2, "one per opponent");
+    assert!(g.exile.iter().any(|c| c.id == s));
+}
+
+/// Rukarumel — Slivers and nontoken creatures you control take the chosen
+/// type; a non-Sliver token does not. {3}, {T} makes a Sliver.
+#[test]
+fn rukarumel_types_your_slivers_and_nontoken_creatures() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::CreatureType(CreatureType::Elf)]));
+    let ruk = g.add_card_to_hand(0, catalog::rukarumel_biologist());
+    cast(&mut g, ruk, &[]);
+    assert!(has_type(&g, bear, CreatureType::Elf));
+    assert!(!has_type(&g, theirs, CreatureType::Elf), "only yours");
+    g.clear_sickness(ruk);
+    activate(&mut g, ruk, 0, None).expect("{3}, {T}");
+    let token = g
+        .battlefield
+        .iter()
+        .find(|c| c.is_token && c.controller == 0)
+        .map(|c| c.id)
+        .expect("a Sliver token");
+    assert!(has_type(&g, token, CreatureType::Sliver));
+    assert!(has_type(&g, token, CreatureType::Elf), "a Sliver token is typed too");
+}
+
+/// Capricious Sliver — a connecting Sliver exiles your top card, playable.
+#[test]
+fn capricious_sliver_impulse_draws_on_a_hit() {
+    let mut g = main_phase();
+    let s = g.add_card_to_battlefield(0, catalog::capricious_sliver());
+    let top = g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+    combat(&mut g, vec![Attack { attacker: s, target: AttackTarget::Player(1) }], 0, |_| {});
+    assert!(g.exile.iter().any(|c| c.id == top));
+}
+
+/// Descendants' Fury — sacrifice the connecting Sliver; reveal past the
+/// non-Slivers to the next Sliver creature card, which enters; the misses
+/// go to the bottom.
+#[test]
+fn descendants_fury_trades_a_connecting_sliver_for_the_next_one() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::descendants_fury());
+    let s = g.add_card_to_battlefield(0, catalog::hollowhead_sliver());
+    g.add_card_to_library(0, catalog::island());
+    let miss = g.add_card_to_library(0, catalog::grizzly_bears());
+    let hit = g.add_card_to_library(0, catalog::capricious_sliver());
+    g.add_card_to_library(0, catalog::island());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    combat(&mut g, vec![Attack { attacker: s, target: AttackTarget::Player(1) }], 0, |_| {});
+    assert!(g.battlefield_find(s).is_none(), "sacrificed");
+    assert!(g.battlefield_find(hit).is_some(), "the next Sliver entered");
+    assert_eq!(g.players[0].library.len(), 3);
+    assert!(g.players[0].library.iter().skip(1).any(|c| c.id == miss), "the Bears went under");
+}
+
+/// Firewake Sliver — every player's Sliver creatures have haste; any Sliver
+/// can be sacrificed for +2/+2 on a Sliver.
+#[test]
+fn firewake_sliver_hastes_all_slivers_and_sacs_for_a_pump() {
+    let mut g = main_phase();
+    let f = g.add_card_to_battlefield(0, catalog::firewake_sliver());
+    let theirs = g.add_card_to_battlefield(1, catalog::hollowhead_sliver());
+    assert!(g.computed_permanent(theirs).unwrap().keywords().contains(&Keyword::Haste));
+    let s = g.add_card_to_battlefield(0, catalog::capricious_sliver());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: f,
+        ability_index: 0,
+        target: Some(Target::Permanent(s)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("{1}, sacrifice");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(f).is_none());
+    assert_eq!(pt(&g, s), (5, 5));
+}
+
+/// For the Ancestors — every card of the chosen type among the top six goes
+/// to hand; the other four go under.
+#[test]
+fn for_the_ancestors_takes_the_chosen_type_from_six() {
+    let mut g = main_phase();
+    let mut slivers = vec![];
+    for i in 0..7 {
+        let id = if i % 3 == 0 {
+            g.add_card_to_library(0, catalog::capricious_sliver())
+        } else {
+            g.add_card_to_library(0, catalog::island())
+        };
+        if i % 3 == 0 && i < 6 {
+            slivers.push(id);
+        }
+    }
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::CreatureType(CreatureType::Sliver)]));
+    let spell = g.add_card_to_hand(0, catalog::for_the_ancestors());
+    cast(&mut g, spell, &[]);
+    assert!(slivers.iter().all(|id| g.players[0].hand.iter().any(|c| c.id == *id)));
+    assert_eq!(g.players[0].hand.len(), 2, "the seventh card's Sliver stays");
+}
+
+/// CR 702.107 — Hatchery Sliver grants replicate to Sliver spells at their
+/// own mana cost; each copy of a permanent spell becomes a token.
+#[test]
+fn cr_702_107_hatchery_sliver_replicates_a_sliver_spell() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::hatchery_sliver());
+    let spell = g.add_card_to_hand(0, catalog::capricious_sliver());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpellReplicate {
+        card_id: spell,
+        times: 2,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("replicate twice");
+    drain_stack(&mut g);
+    assert_eq!(count_named(&g, 0, "Capricious Sliver"), 3);
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    flood(&mut g, 0);
+    let not_a_sliver = g.perform_action(GameAction::CastSpellReplicate {
+        card_id: bear,
+        times: 1,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    });
+    assert!(not_a_sliver.is_err() || count_named(&g, 0, "Grizzly Bears") <= 1);
+}
+
+/// Hollowhead Sliver — your Slivers rummage.
+#[test]
+fn hollowhead_sliver_grants_tap_discard_draw() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::hollowhead_sliver());
+    let s = g.add_card_to_battlefield(0, catalog::capricious_sliver());
+    g.clear_sickness(s);
+    g.add_card_to_hand(0, catalog::island());
+    let drawn = g.add_card_to_library(0, catalog::forest());
+    activate(&mut g, s, 0, None).expect("{T}, discard");
+    assert!(g.players[0].hand.iter().any(|c| c.id == drawn));
+    assert_eq!(g.players[0].graveyard.len(), 1);
+}
+
+/// CR 702.131 / 701.43 — a blocked Sliver afflicts 2; a nontoken Sliver dying
+/// amasses Slivers 2 (a 0/0 Sliver Army with two counters).
+#[test]
+fn lazotep_sliver_afflicts_and_amasses_slivers() {
+    let mut g = main_phase();
+    let l = g.add_card_to_battlefield(0, catalog::lazotep_sliver());
+    let wall = g.add_card_to_battlefield(1, catalog::hill_giant());
+    g.clear_sickness(l);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: l,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    let life = g.players[1].life;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![(wall, l)])).expect("block");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 2, "afflict 2");
+    g.step = TurnStep::PostCombatMain;
+    g.priority.player_with_priority = 0;
+    let s = g.add_card_to_battlefield(0, catalog::hatchery_sliver());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, &[Target::Permanent(s)]);
+    let army = g
+        .battlefield
+        .iter()
+        .find(|c| c.is_token && c.controller == 0)
+        .map(|c| c.id)
+        .expect("an Army");
+    assert!(has_type(&g, army, CreatureType::Sliver));
+    assert_eq!(pt(&g, army), (2, 2));
+}
+
+/// Regal Sliver — the first Sliver in makes you the monarch; the next pumps.
+#[test]
+fn regal_sliver_crowns_then_pumps() {
+    let mut g = main_phase();
+    let r = etb(&mut g, catalog::regal_sliver());
+    assert_eq!(g.monarch, Some(0));
+    assert_eq!(pt(&g, r), (3, 3));
+    etb(&mut g, catalog::capricious_sliver());
+    assert_eq!(pt(&g, r), (4, 4));
+}
+
+/// CR 701.38 — each Sliver of yours entering goads an opposing creature.
+#[test]
+fn cr_701_38_taunting_sliver_goads_on_entry() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let t = g.add_card_to_hand(0, catalog::taunting_sliver());
+    cast(&mut g, t, &[]);
+    assert!(g.battlefield_find(bear).unwrap().goaded_by.contains(&0));
+}
+
+/// Titan of Littjara — it is the chosen type; entering, it loots once per
+/// other creature of yours sharing a type with it.
+#[test]
+fn titan_of_littjara_loots_per_creature_sharing_its_type() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::capricious_sliver());
+    g.add_card_to_battlefield(0, catalog::hollowhead_sliver());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::CreatureType(CreatureType::Sliver),
+        DecisionAnswer::Bool(true),
+    ]));
+    let titan = g.add_card_to_hand(0, catalog::titan_of_littjara());
+    cast(&mut g, titan, &[]);
+    assert!(has_type(&g, titan, CreatureType::Sliver));
+    assert_eq!(g.players[0].hand.len(), 1, "drew two, discarded one");
+    assert_eq!(g.players[0].graveyard.len(), 1);
+}
+
+/// Pillar of Origins — its mana casts a creature of the chosen type only.
+#[test]
+fn pillar_of_origins_funds_only_the_chosen_type() {
+    let mut g = main_phase();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::CreatureType(CreatureType::Sliver)]));
+    let pillar = g.add_card_to_hand(0, catalog::pillar_of_origins());
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, pillar, &[]);
+    g.players[0].mana_pool.empty();
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let cast_with_pillar = |g: &mut GameState, id: CardId| {
+        g.perform_action(GameAction::CastSpell {
+            card_id: id,
+            target: Some(Target::Player(1)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+    };
+    assert!(cast_with_pillar(&mut g, bolt).is_err(), "not a Sliver creature spell");
+    let s = g.add_card_to_hand(0, catalog::hatchery_sliver());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: s,
         target: None,
         additional_targets: vec![],
         mode: None,
@@ -1352,4 +1654,6 @@ fn will_of_the_jeskai_grants_flashback_with_a_commander() {
     .expect("flashback Bolt");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, life - 3);
+    })
+    .expect("{1} + the Pillar's green");
 }

@@ -6135,6 +6135,8 @@ struct BoardFacts {
     prepared: bool,
     /// A `GraveyardCardsHaveEscape*` static is on the board (Kotis).
     grants_escape: bool,
+    /// A replicate-granting static is on the board (Hatchery Sliver).
+    grants_replicate: bool,
 }
 
 impl BoardFacts {
@@ -6144,6 +6146,7 @@ impl BoardFacts {
             grants_convoke: false,
             prepared: false,
             grants_escape: false,
+            grants_replicate: false,
         };
         for c in state.battlefield.iter() {
             if c.controller != seat {
@@ -6157,6 +6160,9 @@ impl BoardFacts {
                     SE::GrantConvokeToSpells { .. } => f.grants_convoke = true,
                     SE::GraveyardCardsHaveEscape { .. }
                     | SE::GraveyardCardsHaveEscapeMatching { .. } => f.grants_escape = true,
+                    SE::YourISSpellsHaveReplicate | SE::YourSpellsHaveReplicate { .. } => {
+                        f.grants_replicate = true
+                    }
                     _ => {}
                 }
             }
@@ -6236,6 +6242,9 @@ fn hand_specialties(state: &GameState, seat: usize, facts: &BoardFacts) -> u32 {
     // card, which ran a whole-battlefield walk once per card per tick.
     if facts.grants_convoke {
         m |= spec::CONVOKE;
+    }
+    if facts.grants_replicate {
+        m |= spec::REPLICATE;
     }
     m
 }
@@ -7023,14 +7032,15 @@ pub(super) fn cast_candidates<'a>(
     });
 
     // Replicate (CR 702.107a): the most copies affordable (probed 4 → 1),
-    // printed replicate only — a granted one (Djinn Illuminatus) is not
-    // offered. Scored like multikicker, so the plain cast still competes.
+    // printed or granted (Djinn Illuminatus, Hatchery Sliver). Scored like
+    // multikicker, so the plain cast still competes.
     gated_block!(mask, spec::REPLICATE, castable, {
     for c in state.players[seat].hand.iter().filter(|c| {
         let d = &c.definition;
         d.replicate_cost().is_some()
             || d.replicate_energy_cost().is_some()
             || d.replicate_tap_filter().is_some()
+            || (facts.grants_replicate && state.granted_replicate_cost(seat, c).is_some())
     }) {
         let effect = &c.definition.effect;
         let (target, additional_targets) = if effect.requires_target() {
@@ -8035,7 +8045,7 @@ fn sink_facts(state: &GameState, seat: usize, have: &SweepMana<'_>) -> u32 {
     // One grant scan for the whole tail. Six generators built their own; the
     // gates now skip all six on a board with nothing for them.
     let scan = state.grant_scan();
-    let mut scavenge_grant = false;
+    let mut gy_ability_grant = false;
     for c in state.battlefield.iter().filter(|c| c.controller == seat) {
         let def = &c.definition;
         if def.is_planeswalker() {
@@ -8056,11 +8066,12 @@ fn sink_facts(state: &GameState, seat: usize, have: &SweepMana<'_>) -> u32 {
         if c.face_down && c.face_up_def.is_some() {
             m |= sink::FACE_DOWN;
         }
-        scavenge_grant = scavenge_grant
+        gy_ability_grant = gy_ability_grant
             || def.static_abilities.iter().any(|sa| {
                 matches!(
                     sa.effect,
                     crate::effect::StaticEffect::GraveyardCreaturesHaveScavenge
+                        | crate::effect::StaticEffect::GraveyardCardsHaveEncore { .. }
                 )
             });
         for (_, ab) in usable_abilities(state, c, &scan) {
@@ -8093,7 +8104,7 @@ fn sink_facts(state: &GameState, seat: usize, have: &SweepMana<'_>) -> u32 {
             || c.cold_any(|k| {
                 !k.granted_activated_abilities.is_empty() || !k.granted_activated_eot.is_empty()
             })
-            || (scavenge_grant && c.definition.is_creature())
+            || (gy_ability_grant && c.definition.is_creature())
         {
             m |= sink::GY_RECUR;
             break;

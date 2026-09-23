@@ -2763,6 +2763,12 @@ pub enum SelectionRequirement {
     /// powers Spear of Heliod's "destroy target creature that dealt damage
     /// to you this turn".
     DealtDamageToControllerThisTurn,
+    /// The candidate creature dealt damage to a player other than its
+    /// controller this turn — "one of them" after "whenever one or more
+    /// creatures you control deal combat damage to a player" (Descendants'
+    /// Fury). Reads every seat's
+    /// `creatures_that_damaged_me_this_turn`. Battlefield-only.
+    DamagedAPlayerThisTurn,
     /// CR 506.5: "A creature attacks alone if it's the only creature
     /// declared as an attacker during the declare attackers step. A
     /// creature is attacking alone if it's attacking but no other
@@ -5908,7 +5914,8 @@ impl CardDefinition {
                 StaticEffect::AllNonlandPermanentsAreLegendary => m |= b::SUPERTYPE_GRANT,
                 // Either scope sets the bit; the SBA reads which one it is.
                 StaticEffect::LegendRuleDoesntApply
-                | StaticEffect::LegendRuleDoesntApplyToYourPermanents => m |= b::LEGEND_RULE_OFF,
+                | StaticEffect::LegendRuleDoesntApplyToYourPermanents
+                | StaticEffect::LegendRuleDoesntApplyToYourMatching(_) => m |= b::LEGEND_RULE_OFF,
                 StaticEffect::LethalDamageByPower { .. } => m |= b::LETHAL_BY_POWER,
                 _ => {}
             }

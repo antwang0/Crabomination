@@ -41558,7 +41558,7 @@ pub fn cursecatcher() -> CardDefinition {
     }
 }
 
-/// Galerider Sliver — {U} 1/1 Sliver. All Sliver creatures have flying.
+/// Galerider Sliver — {U} 1/1 Sliver. Sliver creatures you control have flying.
 pub fn galerider_sliver() -> CardDefinition {
     use crate::card::StaticAbility;
     use crate::effect::StaticEffect;
@@ -41573,11 +41573,13 @@ pub fn galerider_sliver() -> CardDefinition {
         power: 1,
         toughness: 1,
         static_abilities: vec![StaticAbility {
-            description: "All Slivers have flying.",
+            description: "Sliver creatures you control have flying.",
             effect: StaticEffect::GrantKeyword {
-                applies_to: Selector::EachPermanent(SelectionRequirement::HasCreatureType(
-                    CreatureType::Sliver,
-                )),
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Sliver)
+                        .and(SelectionRequirement::Creature)
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
                 keyword: Keyword::Flying,
             },
         }],
@@ -58313,7 +58315,8 @@ pub fn thorncaster_sliver() -> CardDefinition {
 }
 
 /// Lavabelly Sliver — {1}{R}{W} 2/2. Slivers you control have "When this
-/// creature enters, it deals 1 damage to target player and you gain 1 life."
+/// creature enters, it deals 1 damage to target player or planeswalker and
+/// you gain 1 life."
 pub fn lavabelly_sliver() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![StaticAbility {
@@ -58323,7 +58326,9 @@ pub fn lavabelly_sliver() -> CardDefinition {
                     .and(SelectionRequirement::ControlledByYou),
                 ability: Box::new(etb(Effect::Seq(vec![
                     Effect::DealDamage {
-                        to: target_filtered(SelectionRequirement::Player),
+                        to: target_filtered(
+                            SelectionRequirement::Player.or(SelectionRequirement::Planeswalker),
+                        ),
                         amount: Value::Const(1),
                     },
                     Effect::GainLife {
@@ -58338,7 +58343,8 @@ pub fn lavabelly_sliver() -> CardDefinition {
 }
 
 /// Spiteful Sliver — {2}{R} 2/2. Slivers you control have "Whenever this
-/// creature is dealt damage, it deals that much damage to target player."
+/// creature is dealt damage, it deals that much damage to target player or
+/// planeswalker."
 pub fn spiteful_sliver() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![StaticAbility {
@@ -58349,7 +58355,9 @@ pub fn spiteful_sliver() -> CardDefinition {
                 ability: Box::new(TriggeredAbility {
                     event: EventSpec::new(EventKind::DealtDamage, EventScope::SelfSource),
                     effect: Effect::DealDamage {
-                        to: target_filtered(SelectionRequirement::Player),
+                        to: target_filtered(
+                            SelectionRequirement::Player.or(SelectionRequirement::Planeswalker),
+                        ),
                         amount: Value::TriggerEventAmount,
                     },
                 }),
