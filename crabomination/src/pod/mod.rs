@@ -224,6 +224,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::GISA_COMMANDERS,
             main: decks::GISA_MAIN,
         },
+        // Seventeenth: the seventh official list (Tramplesaurus Rex, FDC) —
+        // mono-green stompy, the field's biggest commander. `--seats 17`.
+        PodDeck {
+            name: "Ghalta (G)",
+            commanders: decks::GHALTA_COMMANDERS,
+            main: decks::GHALTA_MAIN,
+        },
     ]
 }
 
@@ -696,9 +703,9 @@ mod tests {
         }
     }
 
-    /// CR 903.5a/c — the eleventh to sixteenth seats are official lists
+    /// CR 903.5a/c — the eleventh to seventeenth seats are official lists
     /// taken card for card (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
-    /// Win, Tails You Lose, Goblin Storm, Wretched Ranks). They seat what no
+    /// Win, Tails You Lose, Goblin Storm, Wretched Ranks, Tramplesaurus Rex). They seat what no
     /// hand-built list did — graveyard casts (Kotis, CR 601.2a), graveyard-only
     /// mana (Lord of the Forsaken, CR 106.6), a pay-one-of-three additional
     /// cost (Dusk Mangler, CR 601.2b), a trigger that works while suspended
@@ -713,6 +720,7 @@ mod tests {
             ("Zndrsplt", [0xC0141, 81, 9005]),
             ("Zada", [0x2ADA, 82, 9006]),
             ("Gisa", [0x6154, 83, 9007]),
+            ("Ghalta", [0x6A17A, 84, 9008]),
         ] {
             let precon = *field.iter().find(|d| d.name.starts_with(name)).expect("the precon seat");
             assert_eq!(precon.card_count(), 100);

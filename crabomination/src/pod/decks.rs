@@ -642,3 +642,32 @@ pub const GISA_MAIN: &[CardFactory] = &[
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
     swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const GHALTA_COMMANDERS: &[CardFactory] = &[ghalta_primal_hunger];
+
+/// **Tramplesaurus Rex**, the Foundations Commander deck (FDC, 2026-10-02),
+/// exactly as MTGJSON's `TramplesaurusRex_FDC` prints it: 67 nonbasic cards +
+/// 32 Forests = 99. Mono-green stompy: mana creatures, big Dinosaurs and a
+/// twelve-drop commander that costs {X} less for their power.
+pub const GHALTA_MAIN: &[CardFactory] = &[
+    arachnogenesis, arasta_of_the_endless_web, beast_whisperer, birds_of_paradise,
+    carnage_tyrant, curious_altisaur, dungrove_elder, elder_gargaroth, ezuris_predation,
+    gigantosaurus, hulking_raptor, loot_exuberant_explorer, managorger_hydra,
+    overwhelming_stampede, pugnacious_hammerskull, regal_imperiosaur, rhonas_the_indomitable,
+    ripjaw_raptor, rishkars_expertise, scavenging_ooze, scrapshooter, shamanic_revelation,
+    steel_leaf_champion, surrak_and_goreclaw, surrak_the_hunt_caller, tangleweave_armor,
+    thickest_in_the_thicket, unnatural_growth, verdant_suns_avatar, whiptongue_hydra,
+    yeva_natures_herald, bonders_enclave, mosswort_bridge, scavenger_grounds, war_room,
+    witchs_clinic, beast_within, bite_down, challenger_troll, clifftop_lookout,
+    collective_resistance, colossal_majesty, elemental_bond, elvish_mystic, fyndhorn_elves,
+    garruks_packleader, garruks_uprising, goreclaw_terror_of_qal_sisma, harmonize,
+    ilysian_caryatid, kenriths_transformation, llanowar_elves, llanowar_tribe,
+    monstrous_onslaught, paradise_druid, ram_through, rishkar_peema_renegade,
+    tamiyos_safekeeping, terrian_world_tyrant, thrashing_brontodon, whisperer_of_the_wilds,
+    commanders_sphere, rhonass_monument, sol_ring, swiftfoot_boots, rogues_passage,
+    tranquil_thicket,
+    // Basics: 32 forest
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+];

@@ -46,6 +46,7 @@ lists were picked.
 | **Heads I Win, Tails You Lose** (SLD) UR | Zndrsplt, Eye of Wisdom **+** Okaun, Eye of Chaos (Partner with) | UR | 98 + 2 | ✅ complete |
 | **Goblin Storm** (SLD) R | Zada, Hedron Grinder | R | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Wretched Ranks** (FDC precon) B | Ghoulcaller Gisa | B | 100 | ✅ complete |
+| **Tramplesaurus Rex** (FDC precon) G | Ghalta, Primal Hunger | G | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not
@@ -86,8 +87,9 @@ hundredth (Lord of the Forsaken) needing one primitive,
 graveyard cast, Steward of the Harvest's granted land abilities, Teval's
 "cards leave your graveyard" tokens. After `pod_field(10)`; `--seats 11`
 reaches it. The next two by `scripts/precon_scan.py` became seats 15 and
-16 (below); after them the scan reads 12 missing (Keen Engineering,
-Tramplesaurus Rex, both FDC).
+16, and Tramplesaurus Rex (FDC, 12) seat 17 (below); after them the scan
+reads Keen Engineering (FDC, 12) and then 13 (Reap the Tides, Corrupting
+Influence, Sliver Swarm).
 
 🟡 **Residuals in the list** (each also on its card's doc): Colossal
 Grave-Reaver (returns the first milled creature, not a chosen one), Lethal
@@ -174,6 +176,24 @@ live — not the lands-only attrition of fourteen seats. The 16-seat mean is
 31,037 actions. Left at 50,000 by the cap's own contract (it is what the
 stall rate is read against); a budget that scales with seats is the lever if
 the field grows further.
+
+The **seventeenth** is Foundations Commander's **Tramplesaurus Rex**
+(`TramplesaurusRex_FDC`): mono-green stompy under Ghalta. Twelve cards were
+missing and three needed primitives, each built for its class —
+`SelectionRequirement::IsAttackingYou` (CR 506.3: Arachnogenesis counts the
+creatures attacking *you*, not the table's attackers),
+`Effect::CreateTokensToFightEach` (CR 701.14: Ezuri's Predation) and
+`Value::GreatestCommanderManaValue` (CR 903.3: Tangleweave Armor). Residual:
+Monstrous Onslaught reads X at resolution, not as it is cast. Seed 9980,
+1,000 games at 17 seats: **1,000 decided, zero panics**; Ghalta wins 8.2 %;
+`--card-census` 841 distinct, every list fully played.
+
+⚠⚠ **The seventeenth seat retired the flat action cap.** Capped games went
+0.4 / 2.4 / 6.8 % at 15 / 16 / 17 seats and every one read was an ordinary
+game cut short, not a stall. `bot_ladder`'s pod budget is now 50,000 up to
+ten seats and 5,000 a seat above (readings at 2..10 unchanged): seed 9941
+decides 1,000 / 1,000 at 11, 14, 15, 16 and 17 seats, the longest 17-seat
+game 71,689 of 85,000.
 
 The **tenth** is the first list built around what only happens at three seats
 or more, and it exists because of a census, not a hunch: **not one of the nine
