@@ -135,12 +135,13 @@ the handoff.
 
 `GameAction::is_cast` lists 47 variants; `server/bot.rs` builds none of
 these (grep `GameAction::<V>` in `bot.rs`): **retrace, casualty,
-buyback, entwine, bargain, squad, foretell (`CastForetold`), mutate, fuse
+entwine, bargain, squad, foretell (`CastForetold`), mutate, fuse
 (`CastSplitFused`), room doors, waterbend, sacrifice-reduce, flashback-tap**.
 The engine paths exist and the client can take them; a bot plays the card
-only through its plain cast, or not at all. **Escape** and **replicate**
-were the same until 2026-09-23 (pod cards: From the Catacombs, Woe Strider,
-Kotis, Psionic Ritual; granted replicate is still not offered). None of the
+only through its plain cast, or not at all. **Escape**, **replicate** and
+**buyback** were the same until 2026-09-23 (pod cards: From the Catacombs,
+Woe Strider, Kotis, Psionic Ritual, Haze of Rage; granted replicate is still
+not offered). None of the
 rest is in a pod list today (script: grep each keyword in the bodies of the
 factories `pod/decks.rs` names) — take each when a target deck needs it, as
 a `spec` bit + a `gated_block`, and add it to `score_candidate` /

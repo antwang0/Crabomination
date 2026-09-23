@@ -6064,6 +6064,7 @@ mod spec {
     pub const ALT_COST: u32 = 1 << 14;
     pub const SPLICE: u32 = 1 << 19;
     pub const REPLICATE: u32 = 1 << 22;
+    pub const BUYBACK: u32 = 1 << 23;
     // any zone
     /// A live `may_play_until` permission for this seat, on a card wherever
     /// `Effect::GrantMayPlay` stamped it — exile or any player's graveyard.
@@ -6170,6 +6171,7 @@ fn hand_specialties(state: &GameState, seat: usize, facts: &BoardFacts) -> u32 {
                 Keyword::Replicate(_) | Keyword::ReplicateEnergy(_) | Keyword::ReplicateTap(_) => {
                     spec::REPLICATE
                 }
+                Keyword::Buyback(_) => spec::BUYBACK,
                 Keyword::Splice(..) => spec::SPLICE,
                 _ => 0,
             };
@@ -7033,6 +7035,33 @@ fn cast_candidates<'a>(
                 castable.push((action, true));
                 break;
             }
+        }
+    }
+    });
+
+    // Buyback (CR 702.27): the spell comes back to hand; offered beside the
+    // plain cast and scored like a kicker, so spare mana buys it back.
+    gated_block!(mask, spec::BUYBACK, castable, {
+    for c in state.players[seat].hand.iter().filter(|c| c.definition.has_buyback().is_some()) {
+        let effect = &c.definition.effect;
+        let (target, additional_targets) = if effect.requires_target() {
+            let (t, extras) = state.auto_targets_for_effect_all_slots(effect, seat, None);
+            if t.is_none() {
+                continue;
+            }
+            (t, extras)
+        } else {
+            (None, vec![])
+        };
+        let action = GameAction::CastSpellBuyback {
+            card_id: c.id,
+            target,
+            additional_targets,
+            mode: None,
+            x_value: None,
+        };
+        if GameState::would_accept_on(state, action.clone()) {
+            castable.push((action, true));
         }
     }
     });
@@ -15214,6 +15243,7 @@ fn ward_gate_ok(state: &GameState, seat: usize, action: &GameAction) -> bool {
         | GameAction::CastSpellKickers { card_id, target, additional_targets, .. }
         | GameAction::CastSpellMultikicked { card_id, target, additional_targets, .. }
         | GameAction::CastSpellReplicate { card_id, target, additional_targets, .. }
+        | GameAction::CastSpellBuyback { card_id, target, additional_targets, .. }
         | GameAction::CastBestow { card_id, target, additional_targets, .. }
         | GameAction::CastAdventure { card_id, target, additional_targets, .. }
         | GameAction::CastOmen { card_id, target, additional_targets, .. }
@@ -17763,7 +17793,8 @@ fn score_candidate(state: &GameState, seat: usize, action: &GameAction, w: &Eval
         GameAction::CastGift { card_id, target, .. } => (*card_id, target.clone(), 3, 0),
         GameAction::CastSpellSpree { card_id, target, .. } => (*card_id, target.clone(), 0, 0),
         GameAction::CastSpellConspire { card_id, target, .. } => (*card_id, target.clone(), 3, 0),
-        GameAction::CastSpellKicked { card_id, target, .. } => (*card_id, target.clone(), 3, 0),
+        GameAction::CastSpellKicked { card_id, target, .. }
+        | GameAction::CastSpellBuyback { card_id, target, .. } => (*card_id, target.clone(), 3, 0),
         GameAction::CastSpellKickers { card_id, target, .. } => (*card_id, target.clone(), 3, 0),
         GameAction::CastSpellMultikicked { card_id, target, times, .. }
         | GameAction::CastSpellReplicate { card_id, target, times, .. } => {
@@ -21568,6 +21599,23 @@ mod tests {
             let _ = g.perform_action(action);
         }
         panic!("bot never replicated");
+    }
+
+    /// CR 702.27 — a buyback cast is a candidate when the extra cost is
+    /// affordable (bug fix: no block built `CastSpellBuyback`, so Haze of Rage
+    /// was a one-shot for every bot).
+    #[test]
+    fn bot_offers_buyback_when_affordable() {
+        let offered = |red: u32| {
+            let mut g = two_player_game();
+            let haze = g.add_card_to_hand(0, catalog::haze_of_rage());
+            g.players[0].mana_pool.add(crate::mana::Color::Red, red);
+            cast_candidates(&g, 0, &EvalWeights::default(), None).iter().any(|(a, _)| {
+                matches!(a, GameAction::CastSpellBuyback { card_id, .. } if *card_id == haze)
+            })
+        };
+        assert!(offered(4), "{{1}}{{R}} + buyback {{2}} off four");
+        assert!(!offered(2), "not off two");
     }
 
     /// CR 702.183 — the bot casts an Omen half as removal (Petty Revenge on
