@@ -7,6 +7,7 @@
 //! [`GameEvent`]s.
 
 mod commander;
+mod damage_draw;
 mod delayed;
 mod eval;
 mod free_cast;
@@ -35041,6 +35042,10 @@ impl GameState {
                     }
                 }
                 Ok(())
+            }
+
+            Effect::EachPlayerDrawsDamageTheyDealtToSource => {
+                self.each_player_draws_damage_they_dealt_to_source(ctx, events)
             }
 
             Effect::RevealTopMayCastOneFree { count, max_mv } => {

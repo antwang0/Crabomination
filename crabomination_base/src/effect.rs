@@ -7848,6 +7848,10 @@ pub enum Effect {
     /// mana cost. Put the rest on the bottom." (Sunbird's Invocation, CR
     /// 601.2 — cast from the library.) One cast at most; lands are skipped.
     RevealTopMayCastOneFree { count: Value, max_mv: Value },
+    /// "Each player draws cards equal to the amount of damage dealt to [the
+    /// source] this turn by sources they controlled." (Grothama,
+    /// All-Devouring's leaves-the-battlefield trigger.)
+    EachPlayerDrawsDamageTheyDealtToSource,
 
     /// Exile the top card of `who`'s library and stamp a may-play
     /// permission on it for `duration`. Used by Conspiracy Theorist,

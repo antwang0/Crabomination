@@ -1858,6 +1858,7 @@ impl Effect {
             Effect::Cascade { .. } => false,
             Effect::Ripple { .. } => false,
             Effect::RevealTopMayCastOneFree { .. } => false,
+            Effect::EachPlayerDrawsDamageTheyDealtToSource => false,
             Effect::Sacrifice { who, count, .. } => sel_has_target(who) || value_has_target(count),
             Effect::PlayerExilesPermanents { count, .. }
             | Effect::PlayerReturnsPermanentsToHand { count, .. } => value_has_target(count),
