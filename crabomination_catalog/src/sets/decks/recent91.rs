@@ -90,9 +90,9 @@ fn insect_token() -> TokenDefinition {
     }
 }
 
-/// The Locust God — {4}{U}{R} 4/4 God, flying & haste. Draw a card → 1/1 U/R
-/// Insect flier with haste. {2}{U}{R}: draw a card, then discard a card. (The
-/// dies → return-to-hand-at-next-end-step recursion clause is dropped.)
+/// The Locust God — {4}{U}{R} 4/4 God, flying. Draw a card → 1/1 U/R Insect
+/// flier with haste. {2}{U}{R}: draw a card, then discard a card. When it dies,
+/// return it to its owner's hand at the beginning of the next end step.
 pub fn the_locust_god() -> CardDefinition {
     CardDefinition {
         name: "The Locust God",

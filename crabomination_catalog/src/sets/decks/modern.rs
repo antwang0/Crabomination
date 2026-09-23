@@ -44222,7 +44222,8 @@ pub fn lightning_mauler() -> CardDefinition {
 }
 
 /// Delighted Halfling — {G} 1/2 Halfling Citizen. {T}: Add {C}. {T}: Add one
-/// mana of any color. (The "legendary-only + uncounterable" spend rider is dropped.)
+/// mana of any color. Spend this mana only to cast a legendary spell, and that
+/// spell can't be countered.
 pub fn delighted_halfling() -> CardDefinition {
     CardDefinition {
         name: "Delighted Halfling",
