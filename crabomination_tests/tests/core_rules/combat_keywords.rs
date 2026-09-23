@@ -1621,3 +1621,52 @@ fn cr_725_4_monarch_leaving_on_their_turn_passes_the_crown() {
     g.concede(0);
     assert_eq!(g.monarch, Some(1), "next in turn order takes it");
 }
+
+// ── CR 511.3 — combatants leave combat as the end of combat step ENDS ──────
+
+/// CR 511.3 — attackers are still attacking after combat damage and through
+/// the end of combat step, so an "at end of combat" trigger counts them
+/// (CR 511.2); they are removed from combat only as that step ends. The
+/// engine used to tear combat down as regular damage was dealt.
+#[test]
+fn cr_511_3_attackers_stay_in_combat_through_end_of_combat() {
+    use crabomination::card::{EventKind, EventScope, EventSpec, SelectionRequirement as R};
+    use crabomination::effect::{Effect, Selector, Value};
+    let counter = body(
+        "Combat Tallier",
+        0,
+        4,
+        vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::EndCombat), EventScope::YourControl),
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::CountOf(Box::new(Selector::EachPermanent(R::IsAttacking))),
+            },
+        }],
+    );
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, counter);
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(a);
+    g.clear_sickness(b);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: a, target: AttackTarget::Player(1) },
+        Attack { attacker: b, target: AttackTarget::Player(1) },
+    ]))
+    .expect("attack");
+    drain_stack(&mut g);
+    let life = g.players[0].life;
+    advance_to(&mut g, TurnStep::EndCombat);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 16, "damage was dealt once");
+    assert_eq!(g.players[0].life, life + 2, "both attackers still attacking at end of combat");
+    let attacking = |g: &GameState, id| {
+        g.evaluate_requirement_static(&R::IsAttacking, &crabomination::game::Target::Permanent(id), 0, None)
+    };
+    assert!(attacking(&g, a));
+    advance_to(&mut g, TurnStep::PostCombatMain);
+    assert!(!attacking(&g, a) && !attacking(&g, b), "removed from combat as the step ended");
+    assert_eq!(g.players[1].life, 16);
+}

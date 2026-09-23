@@ -276,8 +276,11 @@ encore {X} = mana value, beside Varolz's scavenge grant),
 chosen or granted type never counted (Titan of Littjara), and Galerider Sliver
 gave every player's Slivers flying (Spiteful and Lavabelly could not aim at a
 planeswalker either). Residual: **Descendants' Fury**'s "one of them" is any
-creature of yours that damaged a player this turn — the engine removes
-attackers from combat as regular damage is dealt (ENGINE_BACKLOG, CR 511.3).
+attacker of yours that has damaged a player this turn, not only this batch's.
+⚠ It also found an engine-wide rules bug: attackers were removed from combat
+as regular damage was dealt, so every post-damage and "at end of combat" read
+of the attackers saw none — fixed (CR 511.3, `combat.rs::remove_all_from_combat`,
+run as the end of combat step ends).
 Seed 10041, 300 games at 23 seats: **298 decided, 2 action caps, zero panics,
 every card of all twenty-three lists but one played** (Narset's Reversal);
 Gravemother wins 5.7 %, and **40.4 %** of four-seat pods beside Shiko /

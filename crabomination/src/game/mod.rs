@@ -2258,7 +2258,8 @@ pub struct GameState {
     /// Which damage step (`FirstStrikeDamage` / `CombatDamage`) the cached
     /// combat-damage choices above belong to. Lets the gather pass reset the
     /// caches once when moving from the first-strike step to the regular step,
-    /// without wiping them on a mid-step decision resume.
+    /// without wiping them on a mid-step decision resume. `Some(EndCombat)`
+    /// marks regular combat damage as dealt — see `combat_damage_dealt`.
     #[serde(skip, default)]
     pub(crate) combat_damage_plan_step: Option<TurnStep>,
     /// Set to true once `declare_blockers` has been called during the current DeclareBlockers step.
@@ -17434,6 +17435,21 @@ impl GameState {
         }
     }
 
+    /// Regular combat damage has been dealt this combat (CR 510). Combatants
+    /// stay in combat until the end of combat step ends (CR 511.3), so this
+    /// is what keeps a second `resolve_combat` in the same combat a no-op.
+    /// Rides `combat_damage_plan_step`'s spare value: `GameState` is
+    /// size-capped (`cow::tests::game_state_stays_small`).
+    pub(crate) fn combat_damage_dealt(&self) -> bool {
+        self.combat_damage_plan_step == Some(TurnStep::EndCombat)
+    }
+    pub(crate) fn set_combat_damage_dealt(&mut self, dealt: bool) {
+        if dealt {
+            self.combat_damage_plan_step = Some(TurnStep::EndCombat);
+        } else if self.combat_damage_dealt() {
+            self.combat_damage_plan_step = None;
+        }
+    }
     pub fn blockers_declared(&self) -> bool {
         self.blockers_declared
     }

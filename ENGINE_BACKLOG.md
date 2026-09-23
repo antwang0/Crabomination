@@ -167,6 +167,27 @@ the handoff.
   Scheme's connive (convokers on the resolving spell), Colossal Grave-Reaver's
   pick (mill BATCHES aren't delimited in `milled_ids_this_turn`).
 
+## FIXED 2026-09-23 (the Commander routine) — combat was torn down as regular damage was dealt (CR 511.3)
+
+`resolve_combat_into` cleared `attacking`, `block_map`, blocked attackers,
+bands, `blockers_declared` and provoke right after regular combat damage, so
+the rest of the combat damage step and the whole end of combat step saw no
+combat: an "at end of combat" trigger counting or exiling attacking creatures
+found none, and a combat-damage trigger body filtering `IsAttacking` matched
+nothing (found by Descendants' Fury). CR 511.3: "As the end of combat step
+ends, all creatures, battles, and planeswalkers are removed from combat." Now
+`remove_all_from_combat`, called by `advance_step` leaving `EndCombat` (and at
+a stale combat's next declaration). A second `resolve_combat` in one combat is
+a no-op via `combat_damage_dealt()`, which rides `combat_damage_plan_step`'s
+spare value (`GameState` is size-capped). Golden traces unchanged; test
+`core_rules::combat_keywords::cr_511_3_attackers_stay_in_combat_through_end_of_combat`.
+
+Also this session: `Effect::ExileFromHand` took `hand[0]` from everyone — a
+non-prompting seat now answers a discard-shaped choice; a prompting seat
+still takes hand order (**open**: a UI picker). `SharesCreatureTypeWithSource`
+read printed types on both sides (fixed: live permanents answer with layer-4
+types). `YouControlACommander` read only your own designations (fixed).
+
 ## OPEN 2026-09-23 — cast variants NO bot ever emits
 
 `GameAction::is_cast` lists 47 variants; `server/bot.rs` builds none of

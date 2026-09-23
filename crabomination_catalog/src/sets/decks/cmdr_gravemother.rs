@@ -153,10 +153,9 @@ pub fn descendants_fury() -> CardDefinition {
         name: "Descendants' Fury",
         cost: cost(&[generic(3), r()]),
         card_types: vec![CardType::Enchantment],
-        // CR 603.2c — once per damaged player. "One of them" is read as a
-        // creature of yours that dealt a player damage this turn: the engine
-        // tears combat down as regular damage is dealt, so `IsAttacking` is
-        // already false when this resolves.
+        // CR 603.2c — once per damaged player. "One of them" is an attacking
+        // creature of yours that has damaged a player this turn (so a double
+        // striker's first-step hit also qualifies in the regular step).
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl)
                 .once_per_batch(),
@@ -166,7 +165,7 @@ pub fn descendants_fury() -> CardDefinition {
                     Effect::Sacrifice {
                         who: Selector::You,
                         count: Value::ONE,
-                        filter: R::Creature.and(R::DamagedAPlayerThisTurn),
+                        filter: R::Creature.and(R::IsAttacking).and(R::DamagedAPlayerThisTurn),
                     },
                     Effect::If {
                         cond: Predicate::PlayerSacrificedThisResolution(PlayerRef::You),
