@@ -855,3 +855,274 @@ fn grafted_equipment_sacrifices_the_host_it_leaves() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(c).is_none());
 }
+
+// ── Sneak Attack (Anowon, the Ruin Thief) ───────────────────────────────────
+
+/// CR 603.2c — one fire per damaged player, milling the batch's TOTAL Rogue
+/// damage, and one card however many creatures were milled.
+#[test]
+fn cr_603_2c_anowon_mills_the_batch_total_and_draws_once() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::anowon_the_ruin_thief());
+    let a = g.add_card_to_battlefield(0, catalog::nightveil_sprite());
+    let b = g.add_card_to_battlefield(0, catalog::nightveil_sprite());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for _ in 0..8 {
+        g.add_card_to_library(1, catalog::grizzly_bears());
+    }
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let hand = g.players[0].hand.len();
+    combat(
+        &mut g,
+        vec![
+            Attack { attacker: a, target: AttackTarget::Player(1) },
+            Attack { attacker: b, target: AttackTarget::Player(1) },
+            Attack { attacker: bear, target: AttackTarget::Player(1) },
+        ],
+        0,
+        |_| {},
+    );
+    // Two pumped Sprites (2 each) are Rogues; the Bears (2) are not.
+    assert_eq!(g.players[1].graveyard.len(), 4, "milled 2 + 2");
+    assert_eq!(g.players[0].hand.len(), hand + 1, "one draw for the batch");
+}
+
+/// CR 601.2c — for each opponent, up to one of their nonland permanents.
+#[test]
+fn enigma_thief_bounces_one_permanent_from_each_opponent() {
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    let x = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let y = g.add_card_to_battlefield(2, catalog::hill_giant());
+    etb(&mut g, catalog::enigma_thief());
+    assert!(g.players[1].hand.iter().any(|c| c.id == x));
+    assert!(g.players[2].hand.iter().any(|c| c.id == y));
+}
+
+/// Cast from the graveyard only while a black or green permanent is yours.
+#[test]
+fn marang_river_prowler_recasts_from_the_graveyard_with_a_black_permanent() {
+    let mut g = main_phase();
+    let p = g.add_card_to_graveyard(0, catalog::marang_river_prowler());
+    let recast = |g: &mut GameState| {
+        flood(g, 0);
+        g.perform_action(GameAction::CastFlashback {
+            card_id: p,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+    };
+    assert!(recast(&mut g).is_err(), "no black or green permanent");
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    recast(&mut g).expect("a green permanent");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(p).is_some());
+}
+
+#[test]
+fn master_thief_steals_an_artifact() {
+    let mut g = main_phase();
+    let ring = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let thief = g.add_card_to_hand(0, catalog::master_thief());
+    cast(&mut g, thief, &[]);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(ring).map(|c| c.controller), Some(0));
+}
+
+/// "An opponent has eight or more" is any opponent, not the first one
+/// (CR 102.2): seat 2's graveyard enables the sacrifice while seat 1's is empty.
+#[test]
+fn cr_102_2_merfolk_windrobber_reads_any_opponents_graveyard() {
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let w = g.add_card_to_battlefield(0, catalog::merfolk_windrobber());
+    g.add_card_to_library(0, catalog::island());
+    assert!(activate(&mut g, w, 0, None).is_err());
+    for _ in 0..8 {
+        g.add_card_to_graveyard(2, catalog::island());
+    }
+    activate(&mut g, w, 0, None).expect("seat 2 has eight");
+    assert!(g.battlefield_find(w).is_none());
+}
+
+/// X target creatures become unblockable and draw on a hit this turn.
+#[test]
+fn open_into_wonder_makes_x_creatures_unblockable_card_drawers() {
+    let mut g = main_phase();
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::hill_giant());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let spell = g.add_card_to_hand(0, catalog::open_into_wonder());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)],
+        mode: None,
+        x_value: Some(2),
+    })
+    .expect("X = 2");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(b).unwrap().keywords().contains(&Keyword::Unblockable));
+    let hand = g.players[0].hand.len();
+    combat(
+        &mut g,
+        vec![
+            Attack { attacker: a, target: AttackTarget::Player(1) },
+            Attack { attacker: b, target: AttackTarget::Player(1) },
+        ],
+        0,
+        |_| {},
+    );
+    assert_eq!(g.players[0].hand.len(), hand + 2);
+}
+
+/// {2} cheaper when the target is legendary.
+#[test]
+fn price_of_fame_is_cheaper_on_a_legend() {
+    let mut g = main_phase();
+    let legend = g.add_card_to_battlefield(1, catalog::anowon_the_ruin_thief());
+    let spell = g.add_card_to_hand(0, catalog::price_of_fame());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(legend)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("{1}{B} against a legend");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(legend).is_none());
+}
+
+/// A creature from ANY graveyard, under your control, a black Zombie too.
+#[test]
+fn rise_from_the_grave_reanimates_as_a_black_zombie() {
+    let mut g = main_phase();
+    let giant = g.add_card_to_graveyard(1, catalog::hill_giant());
+    let spell = g.add_card_to_hand(0, catalog::rise_from_the_grave());
+    cast(&mut g, spell, &[Target::Permanent(giant)]);
+    let cp = g.computed_permanent(giant).expect("on the battlefield");
+    assert_eq!(g.battlefield_find(giant).unwrap().controller, 0);
+    assert!(cp.subtypes().creature_types.contains(&crabomination::card::CreatureType::Zombie));
+    assert!(cp.colors.contains(Color::Black) && cp.colors.contains(Color::Red));
+}
+
+/// A hit halves the player's life, rounded up.
+#[test]
+fn scytheclaw_halves_the_life_of_the_player_it_hits() {
+    let mut g = main_phase();
+    etb(&mut g, catalog::scytheclaw());
+    let germ = g.battlefield.iter().find(|c| c.definition.name == "Phyrexian Germ").unwrap().id;
+    assert_eq!(pt(&g, germ), (1, 1));
+    g.players[1].life = 40;
+    combat(&mut g, vec![Attack { attacker: germ, target: AttackTarget::Player(1) }], 0, |_| {});
+    assert_eq!(g.players[1].life, 19, "40 - 1 = 39, then 20 of it");
+}
+
+/// Rogues attacking mill each opponent two, once per declaration.
+#[test]
+fn soaring_thought_thief_mills_once_per_rogue_attack() {
+    let mut g = main_phase();
+    let t = g.add_card_to_battlefield(0, catalog::soaring_thought_thief());
+    let s = g.add_card_to_battlefield(0, catalog::nightveil_sprite());
+    for _ in 0..10 {
+        g.add_card_to_library(1, catalog::island());
+    }
+    g.add_card_to_library(0, catalog::island());
+    combat(
+        &mut g,
+        vec![
+            Attack { attacker: t, target: AttackTarget::Player(1) },
+            Attack { attacker: s, target: AttackTarget::Player(1) },
+        ],
+        0,
+        |_| {},
+    );
+    assert_eq!(g.players[1].graveyard.len(), 2);
+    for _ in 0..6 {
+        g.add_card_to_graveyard(1, catalog::island());
+    }
+    assert_eq!(pt(&g, s).0, 2, "an opponent at eight: Rogues +1/+0");
+}
+
+/// Choose one or both (CR 700.2) — both modes, two targets.
+#[test]
+fn soul_manipulation_counters_and_rebuys() {
+    let mut g = main_phase();
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    let bears = g.add_card_to_hand(1, catalog::grizzly_bears());
+    flood(&mut g, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bears,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast bears");
+    g.priority.player_with_priority = 0;
+    let sm = g.add_card_to_hand(0, catalog::soul_manipulation());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: sm,
+        spree_modes: vec![0, 1],
+        target: Some(Target::Permanent(bears)),
+        additional_targets: vec![Target::Permanent(dead)],
+        x_value: None,
+    })
+    .expect("both modes");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bears), "countered");
+    assert!(g.players[0].hand.iter().any(|c| c.id == dead), "rebought");
+}
+
+#[test]
+fn sure_footed_infiltrator_taps_another_rogue_to_slip_through() {
+    let mut g = main_phase();
+    let inf = g.add_card_to_battlefield(0, catalog::sure_footed_infiltrator());
+    assert!(activate(&mut g, inf, 0, None).is_err(), "no other Rogue");
+    let s = g.add_card_to_battlefield(0, catalog::nightveil_sprite());
+    activate(&mut g, inf, 0, None).expect("tap the Sprite");
+    assert!(g.battlefield_find(s).unwrap().tapped);
+    assert!(g.computed_permanent(inf).unwrap().keywords().contains(&Keyword::Unblockable));
+}
+
+/// A hit opens that player's graveyard for a creature spell this turn, any
+/// color of mana.
+#[test]
+fn whispersteel_dagger_casts_from_the_hit_players_graveyard() {
+    let mut g = main_phase();
+    let dagger = g.add_card_to_battlefield(0, catalog::whispersteel_dagger());
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::Equip { equipment: dagger, target: bears }).expect("equip");
+    drain_stack(&mut g);
+    let piker = g.add_card_to_graveyard(1, catalog::goblin_piker());
+    combat(&mut g, vec![Attack { attacker: bears, target: AttackTarget::Player(1) }], 0, |_| {});
+    g.step = TurnStep::PostCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: piker,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast the Piker with black mana");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(piker).map(|c| c.controller), Some(0));
+}

@@ -121,6 +121,12 @@ the handoff.
   declaration has it, so an empty subset stays empty when greedy lacks it too (2
   `CannotAttack` rejections in the same 40 games; the bot recovers next poll). One
   stale-attacker rejection (`CardNotOnBattlefield`) in the same run.
+- 🔴 OPEN — **a mana ability with an activation `condition` is never auto-tapped.**
+  `mana_shape::is_countable_mana_ability` excludes any `condition`, so the payment
+  planner skips Whisperer of the Wilds' ferocious {G}{G} and Glistening Sphere's
+  corrupted three-of-one-color; both work when activated directly. The fix is a
+  state-aware check where the table is built (the condition reads the board), not
+  in the definition-only predicate.
 
 ## FIXED 2026-09-23 (the residual session) — three bug CLASSES a precon's residual list led to
 

@@ -1492,6 +1492,10 @@ pub fn gruul_locket() -> CardDefinition {
 pub fn simic_locket() -> CardDefinition {
     locket("Simic Locket", Color::Green, Color::Blue)
 }
+/// Dimir Locket (GRN) — the same Locket, blue-black.
+pub fn dimir_locket() -> CardDefinition {
+    locket("Dimir Locket", Color::Blue, Color::Black)
+}
 
 /// Aeromunculus — {1}{G}{U} 2/3 Homunculus Mutant with flying. {2}{G}{U}: Adapt 1.
 pub fn aeromunculus() -> CardDefinition {
