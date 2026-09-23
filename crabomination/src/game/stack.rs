@@ -6148,7 +6148,9 @@ impl GameState {
         // (Young Wolf with a +1/+1 counter that takes three -1/-1 counters
         // dies for good). Only the Persist/Undying return reads it, and only
         // for a card whose *printed* keywords carry one, so the map holds
-        // exactly those cards; every other lookup misses and is unused.
+        // exactly those cards; every other lookup misses and is unused. A
+        // *granted* persist/undying (`has_death_return_keyword`) reads the
+        // current pile instead — the pre-sweep nuance is printed-only.
         let pre_sba_pm_counters: crate::fxhash::HashMap<CardId, (u32, u32)> =
             if scan.persist_undying {
                 self.battlefield
@@ -6642,8 +6644,8 @@ impl GameState {
                         // dying source itself fails the filter.
                         .map(|t| (c.id, t.effect.clone(), c.controller, t.event.filter.clone()))
                         .collect();
-                    let has_persist = c.definition.keywords.has_kw(&Keyword::Persist);
-                    let has_undying = c.definition.keywords.has_kw(&Keyword::Undying);
+                    let has_persist = self.has_death_return_keyword(c, &Keyword::Persist);
+                    let has_undying = self.has_death_return_keyword(c, &Keyword::Undying);
                     // CR 704.8 — read the pre-sweep pile, not the post-122.3 one.
                     let (minus, plus) = pre_sba_pm_counters.get(&c.id).copied().unwrap_or((
                         c.counter_count(crate::card::CounterType::MinusOneMinusOne),
@@ -7876,8 +7878,8 @@ impl GameState {
             .find_by_id(id)
             .map(|c| {
                 (
-                    c.definition.keywords.has_kw(&Keyword::Persist),
-                    c.definition.keywords.has_kw(&Keyword::Undying),
+                    self.has_death_return_keyword(c, &Keyword::Persist),
+                    self.has_death_return_keyword(c, &Keyword::Undying),
                     c.counter_count(crate::card::CounterType::MinusOneMinusOne),
                     c.counter_count(crate::card::CounterType::PlusOnePlusOne),
                     c.owner,
@@ -8018,6 +8020,15 @@ impl GameState {
     /// battlefield.
     /// `info` bundles `(has_persist, has_undying, minus_counter_count,
     /// plus_counter_count)` captured from the dying card before removal.
+    /// CR 702.79 / 702.93 — does `c` have persist / undying right now: printed,
+    /// or granted (Undying Evil, Dusk Legion Sergeant, Haunted One, Mikaeus).
+    /// The printed read answers first; the layered one is paid only by a dying
+    /// permanent that doesn't print it.
+    pub(crate) fn has_death_return_keyword(&self, c: &CardInstance, kw: &Keyword) -> bool {
+        c.definition.keywords.has_kw(kw)
+            || self.computed_permanent(c.id).is_some_and(|cp| cp.keywords().contains(kw))
+    }
+
     pub(crate) fn return_persist_undying(
         &mut self,
         id: CardId,

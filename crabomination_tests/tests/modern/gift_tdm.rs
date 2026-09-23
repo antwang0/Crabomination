@@ -3007,6 +3007,17 @@ fn undying_evil_grants_undying_eot() {
     drain_stack(&mut g);
     assert!(g.computed_permanent(bears).unwrap().keywords().contains(&Keyword::Undying),
         "creature gained undying");
+    // CR 702.93a — and the granted keyword works: the death returns it with a
+    // +1/+1 counter. (Persist/undying used to read only printed keywords.)
+    let murder = g.add_card_to_hand(0, catalog::murder());
+    g.players[0].mana_pool.add(Color::Black, 3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: murder, target: Some(Target::Permanent(bears)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Murder castable");
+    drain_stack(&mut g);
+    let back = g.battlefield_find(bears).expect("undying returned it");
+    assert_eq!(back.counter_count(crabomination::card::CounterType::PlusOnePlusOne), 1);
 }
 
 #[test]
