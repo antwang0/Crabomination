@@ -8278,6 +8278,10 @@ pub struct CardData {
     /// resolver exiles it plotted (CR 702.170) instead of routing it to the
     /// graveyard. Not serialized; cleared off the stack.
     pub plot_on_resolve: bool,
+    /// Forger's Foundry — the permanent whose rider mana funded this stacked
+    /// instant/sorcery; as it resolves it is exiled "with" that permanent
+    /// instead of going to the graveyard. Not serialized; taken on resolution.
+    pub exile_with_on_resolve: Option<CardId>,
     /// CR 702.187 — true if this card was cast from a graveyard for its Mayhem
     /// cost. Read by `Predicate::SpellWasMayhem` so "if this spell's mayhem cost
     /// was paid" riders (Sandman's Quicksand) can branch. Cleared off the stack.
@@ -9093,6 +9097,7 @@ impl CardInstance {
             cast_via_flashback: false,
             feather_exile_return: false,
             plot_on_resolve: false,
+            exile_with_on_resolve: None,
             cast_via_mayhem: false,
             cast_via_waterbend: false,
             cast_collected_evidence: false,

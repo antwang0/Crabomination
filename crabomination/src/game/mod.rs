@@ -26480,6 +26480,24 @@ impl GameState {
         // Divergent Equation, Settle the Score's printed rider.
         // Bump the owner's `cards_exiled_this_turn` so the Ennis-style
         // "cards put into exile this turn" payoffs see the exile.
+        // Forger's Foundry — "you may exile that spell instead": taken while
+        // the caster still controls the Foundry (its second ability casts
+        // from among the cards exiled with it); otherwise the graveyard, where
+        // Eris / Octavia / Stagecoach count it. No prompt — see DECK_FEATURES.
+        if let Some(foundry) = card.exile_with_on_resolve
+            && !card.is_token
+            && self.battlefield.find_by_id(foundry).is_some_and(|f| f.controller == caster)
+        {
+            let mut card = card;
+            let card_id = card.id;
+            card.exile_with_on_resolve = None;
+            card.exiled_with = Some(foundry);
+            self.players[caster].cards_exiled_this_turn =
+                self.players[caster].cards_exiled_this_turn.saturating_add(1);
+            self.exile.push(card);
+            events.push(GameEvent::PermanentExiled { card_id });
+            return Ok(events);
+        }
         if card.definition.exile_on_resolve {
             self.players[caster].cards_exiled_this_turn =
                 self.players[caster].cards_exiled_this_turn.saturating_add(1);

@@ -237,6 +237,17 @@ impl GameState {
                     .push((crate::card::CounterType::PlusOnePlusOne, n));
             }
         }
+        // Forger's Foundry — the same provenance hook: the rider names the
+        // cast object (CR 106.6), so it rides the card like Opal Palace's.
+        if kind.instant_or_sorcery
+            && card.definition.cost.cmc() <= 3
+            && spent.spent(SpendRestriction::SmallInstantSorceryExileInstead)
+        {
+            card.exile_with_on_resolve = self.restricted_mana_source(
+                self.priority.player_with_priority,
+                SpendRestriction::SmallInstantSorceryExileInstead,
+            );
+        }
         if kind.creature {
             spent.spent_count(SpendRestriction::CommanderTypeScry)
         } else {
