@@ -6540,6 +6540,7 @@ impl GameState {
                     }
                     let key = (trig_source, i, subject);
                     if self.combat_trigger_fired_this_step.contains(&key) {
+                        self.add_to_batched_damage(trig_source, i, &default_target, damage_amount);
                         continue;
                     }
                     self.combat_trigger_fired_this_step.push(key);
@@ -6617,6 +6618,30 @@ impl GameState {
                     .event_amount(damage_amount)
                     .build(),
             );
+        }
+    }
+}
+
+impl GameState {
+    /// `EventSpec::batch_sums_damage` — a later dealer in an already-fired
+    /// batch adds its damage to the fire on the stack, so the one trigger
+    /// reads the batch's total. A no-op for every other batched trigger.
+    fn add_to_batched_damage(&mut self, src: CardId, idx: usize, to: &Target, amount: u32) {
+        let sums = self.battlefield_find(src).is_some_and(|c| {
+            c.definition.triggered_abilities.get(idx).is_some_and(|t| t.event.batch_sums_damage)
+        });
+        let Target::Player(p) = *to else { return };
+        if !sums {
+            return;
+        }
+        if let Some(StackItem::Trigger { event_amount, x_value, .. }) =
+            self.stack.iter_mut().rev().find(|si| {
+                matches!(si, StackItem::Trigger { source, trigger_player, .. }
+                    if *source == src && *trigger_player == Some(p))
+            })
+        {
+            *event_amount += amount;
+            *x_value += amount;
         }
     }
 }

@@ -3291,6 +3291,12 @@ pub struct EventSpec {
     /// where "to a player" fires per damaged seat.
     #[serde(default)]
     pub batch_across_players: bool,
+    /// With `once_per_batch` on a combat-damage kind: the one fire's
+    /// `TriggerEventAmount` is the batch's total damage to that player, not
+    /// the first dealer's — "mills a card for each 1 damage dealt to them"
+    /// (Anowon, the Ruin Thief).
+    #[serde(default)]
+    pub batch_sums_damage: bool,
     /// "This ability triggers only N times each turn" counted per event
     /// subject (Nadu's granted trigger is per creature). `None` = uncapped.
     #[serde(default)]
@@ -3374,6 +3380,7 @@ impl EventSpec {
             once_per_turn: false,
             once_per_batch: false,
             batch_across_players: false,
+            batch_sums_damage: false,
             per_subject_cap: None,
             actor_is_opponent: false,
             exclude_attacker_taps: false,
@@ -3444,6 +3451,12 @@ impl EventSpec {
     pub fn once_per_batch_across_players(mut self) -> Self {
         self.once_per_batch = true;
         self.batch_across_players = true;
+        self
+    }
+    /// Once per batch, with the batch's summed damage as the event amount.
+    pub fn once_per_batch_summing_damage(mut self) -> Self {
+        self.once_per_batch = true;
+        self.batch_sums_damage = true;
         self
     }
     /// Cap how many times this trigger fires per distinct subject per turn
