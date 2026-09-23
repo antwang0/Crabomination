@@ -56,6 +56,7 @@ lists were picked.
 | **Quick Draw** (OTC precon) UR | Stella Lee, Wild Card | UR | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Vampiric Bloodlust** (C17 precon) BRW | Edgar Markov | BRW | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Calling All Angels** (FDC precon) W | Giada, Font of Hope | W | 100 | ✅ complete |
+| **Guided by Nature** (C14 precon) G | Freyalise, Llanowar's Fury (**planeswalker**) | G | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not
@@ -326,6 +327,26 @@ is **not a loop**: Gravemother's encore at 24 opponents made 21 Brood Sliver
 tokens, and 21 Broods × ~40 connecting Slivers minted 813 tokens in one combat.
 Four-seat pods beside hand-built Edgar / Gravemother / Clavileño (seed 10052,
 1,000 games, all decided): C17 Edgar 19.6 %, hand-built Edgar **41.3 %**.
+
+The **twenty-seventh** is Commander 2014's **Guided by Nature**
+(`GuidedByNature_C14`) — mono-green Elves under Freyalise, the field's second
+planeswalker commander (the hand-built Freyalise seat is its model). Sixteen
+cards were missing; the primitives: `Keyword::CantBeSacrificed` (CR 701.16 —
+Assault Suit; honored by effect sacrifices, `sacrifice_one` and both
+activation-cost sacrifice walkers), `EachPlayerChoosesCreatureTypeThen.per_player`
+(Grave Sifter — each player acts on their own pick; departed seats no longer
+choose, and a headless seat names its own commonest type rather than Demon,
+which also fixes Harsh Mercy / Patriarch's Bidding in bot play),
+`Effect::ChooseOpponentThen` (Sylvan Offering), `Value::OpponentsWithHandSizeAtLeast`,
+`Value::SacrificedThisResolutionBy` (Wave of Vitriol) and
+`ActivatedAbility.mana_cost_increase` (Loreseeker's Stone). Residuals:
+**Sylvan Offering**'s opponent is the engine's pick (fewest creatures); **Siege
+Behemoth** always assigns as though unblocked. Seed 10081, 300 games at 27
+seats: **278 decided, 22 action caps, zero panics**, every C14 card played;
+the caps are attrition (game 297: 18 of 27 seats alive at turn 351) — the cap
+rate climbs with seats (0.6 % at 15, 3.3 % at 25, 7.3 % at 27) and was left
+alone. Four-seat pods beside Freyalise / Ghalta / Aesi (seed 10082, 1,000
+games, all decided): C14 Freyalise 11.8 %, Ghalta **67.4 %**.
 
 ⚠ **The board cap was a bot bug, not a loop.** A Krenko seat sent all 292
 of its Goblins at one player on 24 life each turn while two others sat on
