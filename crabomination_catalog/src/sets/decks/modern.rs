@@ -25658,7 +25658,7 @@ pub fn jaces_phantasm() -> CardDefinition {
             description: "Gets +4/+4 while an opponent has ten or more cards in their graveyard.",
             effect: StaticEffect::PumpSelfIf {
                 condition: Predicate::ValueAtLeast(
-                    Value::GraveyardSizeOf(PlayerRef::EachOpponent),
+                    Value::GreatestGraveyardSizeAmong(PlayerRef::EachOpponent),
                     Value::Const(10),
                 ),
                 power: 4,

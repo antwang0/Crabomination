@@ -807,6 +807,11 @@ pub enum Value {
     /// `Sum` totals them (Cogwork Grinder). Zero outside a drafted game.
     DraftNoteNumber { agg: DraftNoteAgg },
     GraveyardSizeOf(PlayerRef),
+    /// The largest graveyard among the players `who` resolves to — "an
+    /// opponent has N or more cards in their graveyard" is this against N
+    /// (Jace's Phantasm, Merfolk Windrobber, Soaring Thought-Thief).
+    /// `GraveyardSizeOf` reads one seat, the first of a fan-out.
+    GreatestGraveyardSizeAmong(PlayerRef),
     /// Number of cards in `who`'s graveyard matching `filter`. Powers
     /// "equal to the number of Arcane cards in your graveyard" (Ire of
     /// Kaminari) and similar graveyard-count payoffs.

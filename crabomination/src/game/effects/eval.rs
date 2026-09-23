@@ -781,6 +781,12 @@ impl GameState {
                 .map(|c| c.crewed_by.len() as i32)
                 .unwrap_or(0),
             Value::GraveyardSizeOf(p) => self.resolve_player(p, ctx).map(|p| self.players[p].graveyard.len() as i32).unwrap_or(0),
+            Value::GreatestGraveyardSizeAmong(who) => self
+                .resolve_players(who, ctx)
+                .iter()
+                .map(|&p| self.players[p].graveyard.len() as i32)
+                .max()
+                .unwrap_or(0),
             Value::GraveyardsWithAtLeast(n) => self
                 .players
                 .iter()
