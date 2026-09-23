@@ -5037,10 +5037,11 @@ impl GameState {
                         .and_then(|s| s.chosen_card_type.clone())
                         .is_some_and(|t| card.definition.card_types.contains(&t)),
                     R::SameNameAsTarget => false,
-                    // Heirloom Blade — shares a creature type with the
-                    // source, read from its last-known information.
+                    // Shares a creature type with the source: the live
+                    // permanent (Haunted One's granted trigger), else its
+                    // last-known information (Heirloom Blade's dying host).
                     R::SharesCreatureTypeWithSource => source
-                        .and_then(|sid| self.lki_snapshot(sid))
+                        .and_then(|sid| self.battlefield_find(sid).or_else(|| self.lki_snapshot(sid)))
                         .is_some_and(|s| {
                             s.has_keyword(&crate::card::Keyword::Changeling)
                                 || card.has_keyword(&crate::card::Keyword::Changeling)
