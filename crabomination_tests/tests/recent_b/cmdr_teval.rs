@@ -256,10 +256,25 @@ fn kotis_casts_a_creature_from_the_graveyard_and_grows() {
     assert!(fodder.iter().all(|id| in_exile(&g, *id)));
     assert_eq!(g.battlefield_find(kotis).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
 
-    // Not on an opponent's turn.
+    // "Once during each of your turns": the grant is spent for this turn.
     let other = g.add_card_to_graveyard(0, catalog::llanowar_elves());
     let fodder: Vec<CardId> =
         (0..3).map(|_| g.add_card_to_graveyard(0, catalog::forest())).collect();
+    flood(&mut g, 0);
+    let again = |g: &mut GameState, fodder: &[CardId]| {
+        g.perform_action(GameAction::CastEscape {
+            card_id: other,
+            exile_cards: fodder.to_vec(),
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+    };
+    assert!(again(&mut g, &fodder).is_err(), "second graveyard cast in one turn");
+
+    // Not on an opponent's turn either.
+    g.players[0].graveyard_sac_cast_sources_this_turn.clear();
     g.active_player_idx = 1;
     g.priority.player_with_priority = 0;
     assert!(g

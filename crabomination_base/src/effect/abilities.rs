@@ -1577,11 +1577,15 @@ pub enum StaticEffect {
     /// creature spell from your graveyard by exiling three other cards from
     /// your graveyard in addition to paying its other costs"). Rides the
     /// escape cast path (`effective_escape` / `GameAction::CastEscape`).
+    /// `once_per_turn`: each source's grant is spent by one cast a turn
+    /// (Kotis's "once during each of your turns").
     GraveyardCardsHaveEscapeMatching {
         filter: SelectionRequirement,
         exile_count: u32,
         #[serde(default)]
         your_turn_only: bool,
+        #[serde(default)]
+        once_per_turn: bool,
     },
     /// CR 508.1 — "No more than `n` creatures can attack you each combat"
     /// (Crawlspace). Enforced when attacks are declared against the source's

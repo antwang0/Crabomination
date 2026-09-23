@@ -11039,8 +11039,8 @@ impl GameState {
             .position(|c| c.id == card_id)
             .ok_or(GameError::CardNotInHand(card_id))?;
         let card = self.players[p].graveyard[graveyard_pos].clone();
-        let (escape_cost, exile_count) = self
-            .effective_escape(&card, p)
+        let (escape_cost, exile_count, once_grant) = self
+            .effective_escape_grant(&card, p)
             .ok_or(GameError::SorcerySpeedOnly)?;
         // Sigarda's Aid — a battlefield static can grant flash timing to
         // matching spells (Auras + Equipment). Serpent of the Pass — a
@@ -11108,6 +11108,9 @@ impl GameState {
         // Stamp the escape-cast flag so the "sacrifice unless it escaped"
         // ETB rider on Kroxa/Uro sees this entered via Escape.
         card.cast_from_escape = true;
+        if let Some(src) = once_grant {
+            self.players[p].graveyard_sac_cast_sources_this_turn.push(src);
+        }
         self.entered_from_graveyard_this_turn.insert(card_id);
         self.players[p].cards_left_graveyard_this_turn =
             self.players[p].cards_left_graveyard_this_turn.saturating_add(1);

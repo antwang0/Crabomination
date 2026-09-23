@@ -16,7 +16,6 @@
 //! Residuals (approximated or omitted clauses — each also on its card):
 //! * Colossal Grave-Reaver — "put one of them onto the battlefield" puts the
 //!   first creature card of the milled batch, not one of the controller's choice.
-//! * Kotis — the graveyard cast isn't limited to once per turn.
 //! * Syr Konrad — "from anywhere other than the battlefield" reads as "not put
 //!   into a graveyard from the battlefield earlier this turn".
 //! * The Scarab God — the token is a Zombie *in addition to* its copied
@@ -398,18 +397,19 @@ pub fn river_kelpie() -> CardDefinition {
 /// graveyard, put two +1/+1 counters on Kotis.
 ///
 /// The graveyard cast is `StaticEffect::GraveyardCardsHaveEscapeMatching` (the
-/// escape cast path, your turn only), which stamps the creature as having
-/// entered from a graveyard. Approximation: it isn't limited to once per turn.
+/// escape cast path, your turn only, once per turn), which stamps the creature
+/// as having entered from a graveyard.
 pub fn kotis_sibsig_champion() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![StaticAbility {
-            description: "During your turn, you may cast a creature spell from your graveyard \
-                          by exiling three other cards from your graveyard in addition to \
-                          paying its other costs.",
+            description: "Once during each of your turns, you may cast a creature spell from \
+                          your graveyard by exiling three other cards from your graveyard in \
+                          addition to paying its other costs.",
             effect: StaticEffect::GraveyardCardsHaveEscapeMatching {
                 filter: R::Creature,
                 exile_count: 3,
                 your_turn_only: true,
+                once_per_turn: true,
             },
         }],
         triggered_abilities: vec![TriggeredAbility {

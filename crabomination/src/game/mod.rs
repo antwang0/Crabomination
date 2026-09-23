@@ -9255,26 +9255,43 @@ impl GameState {
         card: &crate::card::CardInstance,
         p: usize,
     ) -> Option<(crate::mana::ManaCost, u32)> {
+        self.effective_escape_grant(card, p).map(|(c, n, _)| (c, n))
+    }
+
+    /// [`effective_escape`](Self::effective_escape) plus the source of a
+    /// once-per-turn grant it came from (Kotis), which the cast must spend.
+    /// A grant already spent this turn is skipped.
+    pub(crate) fn effective_escape_grant(
+        &self,
+        card: &crate::card::CardInstance,
+        p: usize,
+    ) -> Option<(crate::mana::ManaCost, u32, Option<CardId>)> {
         use crate::effect::StaticEffect;
         if let Some((c, n)) = card.definition.has_escape() {
-            return Some((c.clone(), n));
+            return Some((c.clone(), n, None));
         }
         if card.definition.is_land() {
             return None;
         }
+        let used = &self.players.get(p)?.graveyard_sac_cast_sources_this_turn;
         self.battlefield.iter().find_map(|c| {
             if c.controller != p {
                 return None;
             }
             c.definition.static_abilities.iter().find_map(|sa| match &sa.effect {
                 StaticEffect::GraveyardCardsHaveEscape { exile_count } => {
-                    Some((card.definition.cost.clone(), *exile_count))
+                    Some((card.definition.cost.clone(), *exile_count, None))
                 }
-                StaticEffect::GraveyardCardsHaveEscapeMatching { filter, exile_count, your_turn_only }
-                    if (!*your_turn_only || self.active_player_idx == p)
-                        && self.evaluate_requirement_on_card(filter, card, p) =>
+                StaticEffect::GraveyardCardsHaveEscapeMatching {
+                    filter,
+                    exile_count,
+                    your_turn_only,
+                    once_per_turn,
+                } if (!*your_turn_only || self.active_player_idx == p)
+                    && !(*once_per_turn && used.contains(&c.id))
+                    && self.evaluate_requirement_on_card(filter, card, p) =>
                 {
-                    Some((card.definition.cost.clone(), *exile_count))
+                    Some((card.definition.cost.clone(), *exile_count, once_per_turn.then_some(c.id)))
                 }
                 _ => None,
             })
