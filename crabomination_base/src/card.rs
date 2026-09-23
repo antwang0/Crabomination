@@ -837,6 +837,9 @@ pub enum CounterType {
     /// Its own kind rather than `Charge`: the printed word is what a "remove a
     /// charge counter" cost or a charge-counter payoff would look for.
     Descent,
+    /// Corpse counter — From the Catacombs marks what it reanimated; a
+    /// "creature with a corpse counter" payoff would read it (CLB).
+    Corpse,
 }
 
 /// Every zone a card can occupy.
