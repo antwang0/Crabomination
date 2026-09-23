@@ -44292,8 +44292,8 @@ pub fn voracious_hydra() -> CardDefinition {
 
 /// Archangel of Tithes — {1}{W}{W}{W} 3/5 flying. While untapped, creatures can't
 /// attack you/your planeswalkers without paying {1} each (CR 508.1g); while
-/// attacking, creatures can't block without paying {1} each (CR 509.1d). (The
-/// attack-tax's untapped gate is approximated as always-on.)
+/// attacking, creatures can't block without paying {1} each (CR 509.1d). The
+/// untapped gate is the tax's amount: {1} while it is untapped, else nothing.
 pub fn archangel_of_tithes() -> CardDefinition {
     CardDefinition {
         name: "Archangel of Tithes",
@@ -44310,9 +44310,16 @@ pub fn archangel_of_tithes() -> CardDefinition {
             StaticAbility {
                 description: "Creatures can't attack you or planeswalkers you control unless their controller pays {1} for each.",
                 effect: StaticEffect::AttackTaxToController {
-                    amount: Value::Const(1),
+                    amount: Value::IfPred {
+                        pred: Box::new(crate::effect::Predicate::EntityMatches {
+                            what: Selector::This,
+                            filter: SelectionRequirement::Untapped,
+                        }),
+                        then: Box::new(Value::Const(1)),
+                        else_: Box::new(Value::Const(0)),
+                    },
                     protect_planeswalkers: true,
-                                    filter: None,
+                    filter: None,
                 },
             },
             StaticAbility {

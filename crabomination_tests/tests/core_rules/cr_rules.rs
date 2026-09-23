@@ -681,6 +681,29 @@ fn cr_509_1d_block_tax_inactive_when_not_attacking() {
     g.declare_blockers(vec![(blocker, attacker)]).expect("no tax when Archangel isn't attacking");
 }
 
+/// CR 508.1g — Archangel of Tithes' attack tax lasts only "as long as it is
+/// untapped": a tapped Archangel taxes nothing (bug fix: the gate was
+/// approximated as always-on).
+#[test]
+fn cr_508_1g_archangel_attack_tax_needs_it_untapped() {
+    use crabomination::game::types::Attack;
+    for (tapped, legal) in [(false, false), (true, true)] {
+        let mut g = two_player_game();
+        let angel = g.add_card_to_battlefield(1, catalog::archangel_of_tithes());
+        g.battlefield_find_mut(angel).unwrap().tapped = tapped;
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.clear_sickness(bear);
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.step = TurnStep::DeclareAttackers;
+        let r = g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+            attacker: bear,
+            target: AttackTarget::Player(1),
+        }]));
+        assert_eq!(r.is_ok(), legal, "Archangel tapped: {tapped} (no mana to pay a tax)");
+    }
+}
+
 // ── CR 702.46 — Cipher ────────────────────────────────────────────────────────
 
 /// A Cipher spell exiles encoded on a creature; when that creature deals combat
