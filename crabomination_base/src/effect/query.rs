@@ -1611,6 +1611,7 @@ impl Effect {
             | Effect::CantBeRegeneratedThisTurn { what }
             | Effect::ExileIfWouldDieThisTurn { what }
             | Effect::ExileIfLeavesBattlefield { what }
+            | Effect::ExileLinkedTo { what, .. }
             | Effect::GrantDamageExilesVictimThisTurn { what }
             | Effect::GrantDamageDeniesRegenerationThisTurn { what }
             | Effect::WhenTargetLeavesBattlefieldThisTurn { what, .. }
@@ -2297,6 +2298,7 @@ impl Effect {
             | Effect::CantBeRegeneratedThisTurn { what }
             | Effect::ExileIfWouldDieThisTurn { what }
             | Effect::ExileIfLeavesBattlefield { what }
+            | Effect::ExileLinkedTo { what, .. }
             | Effect::GrantDamageExilesVictimThisTurn { what }
             | Effect::GrantDamageDeniesRegenerationThisTurn { what }
             | Effect::WhenTargetLeavesBattlefieldThisTurn { what, .. }
@@ -4529,6 +4531,7 @@ impl Effect {
                 | Effect::Unattach { what }
                 | Effect::ExileIfWouldDieThisTurn { what }
                 | Effect::ExileIfLeavesBattlefield { what }
+                | Effect::ExileLinkedTo { what, .. }
                 | Effect::GrantDamageExilesVictimThisTurn { what }
                 | Effect::GrantDamageDeniesRegenerationThisTurn { what }
                 | Effect::WhenTargetLeavesBattlefieldThisTurn { what, .. }

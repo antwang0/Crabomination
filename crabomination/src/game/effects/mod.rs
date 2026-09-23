@@ -12442,6 +12442,22 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ExileLinkedTo { what, link } => {
+                let Some(link) = self.resolve_selector(link, ctx).into_iter().find_map(|e| match e {
+                    EntityRef::Card(id) | EntityRef::Permanent(id) => Some(id),
+                    _ => None,
+                }) else {
+                    return Ok(());
+                };
+                for ent in self.resolve_selector(what, ctx) {
+                    let (EntityRef::Card(cid) | EntityRef::Permanent(cid)) = ent else { continue };
+                    self.move_card_to(cid, &ZoneDest::Exile, ctx, events);
+                    if let Some(c) = self.exile.iter_mut().find(|c| c.id == cid) {
+                        c.exiled_with = Some(link);
+                    }
+                }
+                Ok(())
+            }
             Effect::ExileIfLeavesBattlefield { what } => {
                 for ent in self.resolve_selector(what, ctx) {
                     if let Some(cid) = ent.as_permanent_id() {

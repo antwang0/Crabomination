@@ -5594,6 +5594,11 @@ pub enum Effect {
     /// exile) that lapses when that object leaves (CR 400.7). From the
     /// Catacombs, Whip of Erebos, Geth, Gruesome Encore, Llanowar Greenwidow.
     ExileIfLeavesBattlefield { what: Selector },
+    /// Exile each card `what` resolves to, linked to the object `link`
+    /// resolves to (its `exiled_with`), so that object's own
+    /// `Selector::CardExiledWithSource` finds it later — Timothar's Bat
+    /// returning the Vampire exiled with it.
+    ExileLinkedTo { what: Selector, link: Selector },
     /// "Target instant/sorcery card in your graveyard gains flashback until
     /// end of turn; its flashback cost equals its mana cost." Installs an
     /// until-end-of-turn `granted_flashback_eot` (= the card's own mana
