@@ -152,6 +152,11 @@ pub(crate) struct GrantScan<'a> {
         &'a CardInstance,
         Option<PrintedGrantFilter>,
     )>,
+    /// Live `ControlledHaveAbilitiesOfExiledWithSource`: `(filter, source
+    /// controller, source id)` — the recipients are the controller's
+    /// permanents matching `filter`, the abilities those of the cards exiled
+    /// with the source.
+    exiled_with: Vec<(&'a crate::card::SelectionRequirement, usize, CardId)>,
     /// Live `GrantActivatedAbilityFromGraveyard`: `(filter, ability, owning
     /// seat, source id)`.
     graveyard: Vec<(
@@ -15472,6 +15477,10 @@ impl GameState {
                 // wrapper ("Threshold — this creature has '…'"); unwrap it
                 // and honour the gate.
                 let Some(inner) = self.active_static(&sa.effect, src) else { continue };
+                if let StaticEffect::ControlledHaveAbilitiesOfExiledWithSource { filter } = inner {
+                    scan.exiled_with.push((filter, src.controller, src.id));
+                    continue;
+                }
                 let StaticEffect::GrantActivatedAbility { applies_to, ability, condition } = inner
                 else {
                     continue;
@@ -15816,6 +15825,7 @@ impl GameState {
     #[inline]
     pub(crate) fn grants_nothing(&self, me: &CardInstance, scan: &GrantScan<'_>) -> bool {
         (scan.statics.is_empty()
+            && scan.exiled_with.is_empty()
             && scan.equipment.is_empty()
             && scan.soulbond.is_empty()
             && scan.graveyard.is_empty()
@@ -15863,6 +15873,9 @@ impl GameState {
             if eq.attached_to == Some(me.id) {
                 return false;
             }
+        }
+        if scan.exiled_with.iter().any(|(_, ctrl, _)| *ctrl == me.controller) {
+            return false;
         }
         for (src, partner, _) in &scan.soulbond {
             if *src == me.id || *partner == me.id {
@@ -16148,6 +16161,18 @@ impl GameState {
                         out.push(ab);
                     }
                 }
+            }
+        }
+        // Steward of the Harvest — the source's controller's matching
+        // permanents have the activated abilities of the cards exiled with it.
+        for (filter, ctrl, src) in &scan.exiled_with {
+            if me.controller != *ctrl
+                || !self.evaluate_requirement_static_on(filter, me, *ctrl, Some(*src))
+            {
+                continue;
+            }
+            for exiled in self.exile.iter().filter(|e| e.exiled_with == Some(*src)) {
+                out.extend(exiled.definition.activated_abilities.iter());
             }
         }
         // CR 702.95 — Soulbond-granted activated abilities (Deadeye Navigator's

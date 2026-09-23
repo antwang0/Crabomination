@@ -363,15 +363,30 @@ fn floral_evoker_landfall_and_land_recursion() {
     assert!(g.battlefield_find(dead).is_some_and(|c| c.tapped));
 }
 
-/// Steward of the Harvest exiles up to three lands and wields their abilities.
+/// Steward of the Harvest exiles up to three lands, and "creatures you
+/// control" — not only the Steward — have their activated abilities.
 #[test]
 fn steward_of_the_harvest_borrows_exiled_land_abilities() {
     let mut g = main_phase();
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let drownyard = g.add_card_to_graveyard(0, catalog::nephalia_drownyard());
     let steward = etb(&mut g, catalog::steward_of_the_harvest());
     assert!(in_exile(&g, drownyard));
-    let granted = g.granted_abilities_for(steward);
-    assert_eq!(granted.len(), 2, "{{T}}: Add {{C}} and the mill ability");
+    for id in [steward, bears] {
+        assert_eq!(g.granted_abilities_for(id).len(), 2, "{{T}}: Add {{C}} and the mill ability");
+    }
+    assert!(g.granted_abilities_for(theirs).is_empty(), "an opponent's creature gets nothing");
+    // The Bears activate Drownyard's "{1}{U}{B}, {T}: Target player mills
+    // three cards."
+    for _ in 0..3 {
+        g.add_card_to_library(1, catalog::forest());
+    }
+    let before = g.players[1].graveyard.len();
+    g.battlefield_find_mut(bears).unwrap().summoning_sick = false;
+    activate(&mut g, bears, 1, Some(Target::Player(1)));
+    assert_eq!(g.players[1].graveyard.len(), before + 3);
+    assert!(g.battlefield_find(bears).unwrap().tapped);
 }
 
 /// Diviner of Mist's attack mills four and casts a cheap sorcery free, exiling it.

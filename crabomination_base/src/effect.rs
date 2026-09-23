@@ -10453,7 +10453,9 @@ pub fn static_effect_is_self_cost_reduction(effect: &StaticEffect) -> bool {
 pub fn static_effect_grants_activated(effect: &StaticEffect) -> bool {
     use StaticEffect as SE;
     match effect {
-        SE::GrantActivatedAbility { .. } => true,
+        SE::GrantActivatedAbility { .. } | SE::ControlledHaveAbilitiesOfExiledWithSource { .. } => {
+            true
+        }
         SE::WhileClassLevelAtLeast { inner, .. }
         | SE::WhileYourTurn { inner }
         | SE::WhileNotYourTurn { inner }

@@ -28919,6 +28919,7 @@ fn static_effect_to_effects(
             | StaticEffect::PreventDamageToThisRedirect
             | StaticEffect::HasActivatedAbilitiesOfLibraryTop { .. }
             | StaticEffect::CounteredCreaturesHaveAbilitiesOfExiledWithSource
+            | StaticEffect::ControlledHaveAbilitiesOfExiledWithSource { .. }
             | StaticEffect::MayCastPermanentsFromGraveyard
             | StaticEffect::PlayExiledWithSourceForLife
             | StaticEffect::GraveyardCastWithLifeSurcharge { .. }

@@ -23,9 +23,8 @@
 //! * Shigeki — the "rest into your graveyard" is modelled as milling all four and
 //!   then moving the land, so the land briefly passes through the graveyard
 //!   (a "cards leave your graveyard" payoff sees it).
-//! * Steward of the Harvest — only the Steward itself (not every creature you
-//!   control) has the exiled lands' activated abilities; the exile is a
-//!   resolution-time pick rather than a target.
+//! * Steward of the Harvest — the exile is a resolution-time pick rather than a
+//!   target.
 //! * River Kelpie — "casts a spell from a graveyard" also fires on exile casts
 //!   (`SpellNotCastFromHand`).
 //! * Lost Monarch of Ifnir — the second-main trigger reads "a Zombie *you
@@ -642,9 +641,8 @@ pub fn floral_evoker() -> CardDefinition {
 /// Creatures you control have all activated abilities of all land cards exiled
 /// with this creature.
 ///
-/// Approximations: only the Steward itself has the exiled lands' activated
-/// abilities (`HasActivatedAbilitiesOfExiledWithSelf`); the exile is a
-/// resolution-time pick rather than targets.
+/// The grant is `ControlledHaveAbilitiesOfExiledWithSource`. Approximation:
+/// the exile is a resolution-time pick rather than targets.
 pub fn steward_of_the_harvest() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![etb(Effect::MoveChosen {
@@ -655,9 +653,9 @@ pub fn steward_of_the_harvest() -> CardDefinition {
             to: ZoneDest::ExileWithSourceStamp,
         })],
         static_abilities: vec![StaticAbility {
-            description: "This creature has all activated abilities of all land cards exiled \
-                          with it.",
-            effect: StaticEffect::HasActivatedAbilitiesOfExiledWithSelf,
+            description: "Creatures you control have all activated abilities of all land \
+                          cards exiled with this creature.",
+            effect: StaticEffect::ControlledHaveAbilitiesOfExiledWithSource { filter: R::Creature },
         }],
         ..creature(
             "Steward of the Harvest",
