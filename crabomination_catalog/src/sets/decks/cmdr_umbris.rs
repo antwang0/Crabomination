@@ -25,13 +25,7 @@
 //! - Aboleth Spawn's Probing Telepathy puts the copy on the stack with the
 //!   original (no Aboleth trigger of its own to respond to), and its "you may"
 //!   is asked as the copy resolves rather than as it is made.
-//! - Grell Philosopher: only Grell itself (a Horror) gains the artifact's
-//!   activated abilities, not every Horror you control; the blue-mana-as-any-
-//!   colour rider is omitted.
-//! - Defiler of Flesh's optional "pay 2 life, {B} less" additional cost is
-//!   omitted (the cast trigger ships).
-//! - Psionic Ritual's "Replicate — tap an untapped Horror" is omitted (the
-//!   engine's replicate is mana-only).
+//! - Grell Philosopher: the blue-mana-as-any-colour rider is omitted.
 //! - Arvinox exiles face up (the look/face-down part is informational only).
 //! - Panharmonicon doubles ETB-caused triggers from any permanent entering,
 //!   not just artifacts and creatures.
@@ -1090,12 +1084,16 @@ pub fn intellect_devourer() -> CardDefinition {
 /// Those spells cost {B} less to cast if you paid life this way. Whenever you
 /// cast a black permanent spell, target creature you control gets +1/+1 and
 /// gains menace until end of turn."
-/// Residual: the optional pay-2-life discount is omitted.
 pub fn defiler_of_flesh() -> CardDefinition {
+    let black_permanent = || R::HasColor(Color::Black).and(R::PermanentCard);
     CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Black permanent spells may pay 2 life for {B}.",
+            effect: StaticEffect::PhyrexianPipForSpells { filter: black_permanent(), color: Color::Black },
+        }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
-                Predicate::CastSpellMatches(R::HasColor(Color::Black).and(R::PermanentCard)),
+                Predicate::CastSpellMatches(black_permanent()),
             ),
             effect: Effect::Seq(vec![
                 Effect::PumpPT {

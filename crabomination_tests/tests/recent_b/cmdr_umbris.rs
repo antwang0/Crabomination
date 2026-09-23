@@ -583,6 +583,25 @@ fn cmdr_umbris_defiler_of_flesh_pumps() {
     assert_eq!(total, 4 + 1 + 1, "one creature got +1/+1");
 }
 
+/// CR 601.2f / 118.3 — Defiler of Flesh: a black permanent spell may pay 2
+/// life for one {B}. One black short, the Fenlurker ({B}{B}) still resolves
+/// and costs 2 life; with both black it costs none.
+#[test]
+fn cr_601_2f_defiler_of_flesh_trades_two_life_for_a_black_pip() {
+    let mut g = game(2);
+    g.add_card_to_battlefield(0, catalog::defiler_of_flesh());
+    let lurker = g.add_card_to_hand(0, catalog::yaroks_fenlurker());
+    let life = g.players[0].life;
+    g.players[0].mana_pool.add(Color::Black, 1);
+    cast(&mut g, lurker, None, vec![], None);
+    assert!(g.battlefield_find(lurker).is_some(), "{{B}} + 2 life paid {{B}}{{B}}");
+    assert_eq!(g.players[0].life, life - 2);
+    let second = g.add_card_to_hand(0, catalog::yaroks_fenlurker());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    cast(&mut g, second, None, vec![], None);
+    assert_eq!(g.players[0].life, life - 2, "mana on hand: no life");
+}
+
 /// Arvinox is a creature only while you control three permanents you don't
 /// own; its end step takes the bottom of each opponent's library.
 #[test]
