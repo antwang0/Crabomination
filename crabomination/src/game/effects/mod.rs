@@ -15,6 +15,7 @@ pub(crate) use eval::PrintedGates;
 pub(crate) mod events;
 mod movement;
 mod reselect;
+mod reveal_cast;
 mod targeting;
 /// The target enumerator's call-site census — see
 /// [`targeting::call_site_census`]. Re-exported for `bot_ladder` under the
@@ -35029,6 +35030,10 @@ impl GameState {
                     }
                 }
                 Ok(())
+            }
+
+            Effect::RevealTopMayCastOneFree { count, max_mv } => {
+                self.reveal_top_may_cast_one_free(count, max_mv, ctx, effect, events)
             }
 
             Effect::Ripple { n } => {

@@ -7833,6 +7833,11 @@ pub enum Effect {
     /// rippled copy ripples again) falls out of the cast path naturally — the
     /// shortcut [`ripple`] wires the SpellCast/SelfSource trigger.
     Ripple { n: Value },
+    /// "Reveal the top `count` cards of your library. You may cast a spell
+    /// with mana value `max_mv` or less from among them without paying its
+    /// mana cost. Put the rest on the bottom." (Sunbird's Invocation, CR
+    /// 601.2 — cast from the library.) One cast at most; lands are skipped.
+    RevealTopMayCastOneFree { count: Value, max_mv: Value },
 
     /// Exile the top card of `who`'s library and stamp a may-play
     /// permission on it for `duration`. Used by Conspiracy Theorist,
