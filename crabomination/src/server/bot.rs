@@ -6073,6 +6073,8 @@ mod spec {
     pub const GY_AFTERMATH: u32 = 1 << 15;
     pub const GY_RECAST: u32 = 1 << 16;
     pub const GY_BACK: u32 = 1 << 17;
+    /// Printed escape in the graveyard, or a board grant of it (Kotis).
+    pub const GY_ESCAPE: u32 = 1 << 21;
     /// The one graveyard loop that carries flashback, disturb, mayhem,
     /// harmonize and the `from_graveyard` activated abilities.
     pub const GY_LOOP: u32 = GY_RECAST;
@@ -6116,21 +6118,33 @@ struct BoardFacts {
     grants_convoke: bool,
     /// Some permanent carries a prepared inset spell.
     prepared: bool,
+    /// A `GraveyardCardsHaveEscape*` static is on the board (Kotis).
+    grants_escape: bool,
 }
 
 impl BoardFacts {
     fn gather(state: &GameState, seat: usize) -> Self {
-        let mut f = BoardFacts { repartee: false, grants_convoke: false, prepared: false };
+        let mut f = BoardFacts {
+            repartee: false,
+            grants_convoke: false,
+            prepared: false,
+            grants_escape: false,
+        };
         for c in state.battlefield.iter() {
             if c.controller != seat {
                 continue;
             }
             f.repartee = f.repartee
                 || c.definition.triggered_abilities.iter().any(is_repartee_trigger);
-            f.grants_convoke = f.grants_convoke
-                || c.definition.static_abilities.iter().any(|sa| {
-                    matches!(sa.effect, crate::effect::StaticEffect::GrantConvokeToSpells { .. })
-                });
+            for sa in c.definition.static_abilities.iter() {
+                use crate::effect::StaticEffect as SE;
+                match sa.effect {
+                    SE::GrantConvokeToSpells { .. } => f.grants_convoke = true,
+                    SE::GraveyardCardsHaveEscape { .. }
+                    | SE::GraveyardCardsHaveEscapeMatching { .. } => f.grants_escape = true,
+                    _ => {}
+                }
+            }
             f.prepared = f.prepared
                 || (c.definition.prepare_spell.is_some()
                     && c.counter_count(crate::card::CounterType::Prepared) > 0);
@@ -6215,6 +6229,7 @@ fn graveyard_specialties(state: &GameState, seat: usize) -> u32 {
                 | Keyword::Disturb(_)
                 | Keyword::Mayhem(_)
                 | Keyword::Harmonize(_) => spec::GY_RECAST,
+                Keyword::Escape(..) => spec::GY_ESCAPE,
                 _ => 0,
             };
         }
@@ -6298,6 +6313,11 @@ fn cast_candidates<'a>(
     let facts = BoardFacts::gather(state, seat);
     let mask = hand_specialties(state, seat, &facts)
         | graveyard_specialties(state, seat)
+        | if facts.grants_escape && !state.players[seat].graveyard.is_empty() {
+            spec::GY_ESCAPE
+        } else {
+            0
+        }
         | if w.may_play { may_play_specialty(state, seat) } else { 0 }
         | if facts.prepared { spec::PREPARED } else { 0 };
     let has_repartee = facts.repartee;
@@ -7298,6 +7318,42 @@ fn cast_candidates<'a>(
             };
             castable.push((action, false));
         }
+    }
+    });
+
+    // Escape (CR 702.138): printed or granted (Kotis). The exiled cards are
+    // the cheapest others — lands first, then by mana value — keeping any
+    // other recastable card; `would_accept` enforces cost, timing and count.
+    gated_block!(mask, spec::GY_ESCAPE, castable, {
+    let gy = &state.players[seat].graveyard;
+    for c in gy.iter() {
+        let Some((cost, n, _)) = state.effective_escape_grant(c, seat) else { continue };
+        if !colors_coverable(&cost, have_mana.get()) {
+            continue;
+        }
+        let mut fodder: Vec<&crate::card::CardInstance> = gy
+            .iter()
+            .filter(|o| o.id != c.id && state.effective_escape_grant(o, seat).is_none())
+            .collect();
+        if fodder.len() < n as usize {
+            continue;
+        }
+        fodder.sort_by_key(|o| (!o.definition.is_land(), o.definition.cost.cmc(), o.id));
+        let exile_cards: Vec<CardId> = fodder.iter().take(n as usize).map(|o| o.id).collect();
+        let (target, additional_targets) = if c.definition.effect.requires_target() {
+            let (t, extras) =
+                state.auto_targets_for_effect_all_slots(&c.definition.effect, seat, None);
+            if t.is_none() {
+                continue;
+            }
+            (t, extras)
+        } else {
+            (None, vec![])
+        };
+        let action = GameAction::CastEscape {
+            card_id: c.id, exile_cards, target, additional_targets, mode: None, x_value: None,
+        };
+        castable.push((action, false));
     }
     });
 
@@ -15123,6 +15179,7 @@ fn ward_gate_ok(state: &GameState, seat: usize, action: &GameAction) -> bool {
         | GameAction::CastSplitRight { card_id, target, additional_targets, .. }
         | GameAction::CastAftermath { card_id, target, additional_targets, .. }
         | GameAction::CastFlashback { card_id, target, additional_targets, .. }
+        | GameAction::CastEscape { card_id, target, additional_targets, .. }
         | GameAction::CastMayhem { card_id, target, additional_targets, .. }
         | GameAction::CastHarmonize { card_id, target, additional_targets, .. }
         | GameAction::CastSpellAlternative { card_id, target, additional_targets, .. }
@@ -17676,6 +17733,7 @@ fn score_candidate(state: &GameState, seat: usize, action: &GameAction, w: &Eval
         GameAction::CastSplitRight { card_id, target, .. }
         | GameAction::CastAftermath { card_id, target, .. }
         | GameAction::CastFlashback { card_id, target, .. }
+        | GameAction::CastEscape { card_id, target, .. }
         | GameAction::CastMayhem { card_id, target, .. }
         | GameAction::CastHarmonize { card_id, target, .. }
         | GameAction::CastDisturb { card_id, target, .. }
@@ -21415,6 +21473,36 @@ mod tests {
             let _ = g.perform_action(action);
         }
         panic!("bot never cast the Mayhem spell");
+    }
+
+    /// CR 702.138 — the bot escapes a graveyard card, exiling lands before
+    /// spells (bug fix: no candidate block built `CastEscape`, so no bot ever
+    /// escaped — From the Catacombs, Woe Strider, Kotis's grant).
+    #[test]
+    fn bot_escapes_from_graveyard_exiling_lands_first() {
+        let mut g = two_player_game();
+        let strider = g.add_card_to_graveyard(0, catalog::woe_strider());
+        let lands: Vec<_> = (0..4).map(|_| g.add_card_to_graveyard(0, catalog::island())).collect();
+        let keep = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+        g.players[0].mana_pool.add(crate::mana::Color::Black, 2);
+        g.players[0].mana_pool.add_colorless(3);
+        // After combat, so the summon-sick hold doesn't defer the body.
+        g.step = crate::game::types::TurnStep::PostCombatMain;
+        let mut bot = HeuristicBot::new();
+        for _ in 0..16 {
+            let action = bot.next_action(&g, 0).expect("bot should act");
+            if let GameAction::CastEscape { card_id, ref exile_cards, .. } = action {
+                assert_eq!(card_id, strider);
+                assert_eq!(exile_cards, &lands, "the four lands, not the Bolt");
+                g.perform_action(action).expect("escape");
+                crate::game::drain_stack(&mut g);
+                assert!(g.battlefield_find(strider).is_some());
+                assert!(g.players[0].graveyard.iter().any(|c| c.id == keep));
+                return;
+            }
+            let _ = g.perform_action(action);
+        }
+        panic!("bot never escaped");
     }
 
     /// CR 702.183 — the bot casts an Omen half as removal (Petty Revenge on
