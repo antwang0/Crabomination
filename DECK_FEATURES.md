@@ -53,6 +53,7 @@ lists were picked.
 | **Sneak Attack** (ZNC precon) UB | Anowon, the Ruin Thief | UB | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Jeskai Striker** (TDC precon) URW | Shiko and Narset, Unified | URW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Sliver Swarm** (CMM precon) WUBRG | Sliver Gravemother | WUBRG | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
+| **Quick Draw** (OTC precon) UR | Stella Lee, Wild Card | UR | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Vampiric Bloodlust** (C17 precon) BRW | Edgar Markov | BRW | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
@@ -330,6 +331,30 @@ picker's `effect_counters_spells` read only a `Seq`'s first step, and Reversal
 copies before it bounces. Any top-level step now counts; the same seed then
 played **every card of all twenty-two lists** (1,100 distinct), and `--bench`
 stayed byte-identical.
+
+The **twenty-fourth** is Outlaws of Thunder Junction's **Quick Draw**
+(`QuickDraw_OTC`): Izzet storm and cascade under Stella Lee. Fifteen cards
+were missing; five primitives: `Effect::OnYourNextSpellOfTypeThisTurn` (CR
+603.7e — Smoldering Stagecoach's separate instant and sorcery cascades),
+`Value::DistinctManaValuesInGraveyardMatching` (Eris) and
+`Value::CommanderCastsFromCommandZone` (CR 903.8, Thunderclap Drake),
+`Effect::ExileSelfSuspended` (CR 702.62a, Rousing Refrain) and
+`SpendRestriction::SmallInstantSorceryExileInstead` (CR 106.6, Forger's
+Foundry). Residuals: **Crackling Spellslinger**'s storm count is read as its
+copy trigger resolves, not as the spell is cast; **Forger's Foundry**'s "may
+exile" has no prompt (it exiles while you still control the Foundry, else the
+graveyard, where Eris / Octavia / Stagecoach count it).
+Seed 10051, 1,000 games at 24 seats: **979 decided, 20 action caps (all long
+board stalls at the per-seat cap, 311-489 turns), 1 board cap, zero panics**;
+the board cap is Sliver Gravemother's hive — twenty Brood Slivers make twenty
+tokens per connecting Sliver, real exponential growth like Krenko's. Stella
+wins 0.9 % there and 22.7 % of four-seat pods beside Zellix / Zndrsplt /
+Shiko (seed 10052, all decided). ⚠ **The census found Finale of Promise cast
+by no bot**: the all-slots auto-targeter never concretized its "mana value X
+or less" slots (CR 601.2b), so it had no target; with the cast's X passed
+through, the same seed played **every card of all twenty-four lists** (1,200
+distinct). Wiring Stella's impulse draw also turned up the free-impulse class
+(ENGINE_BACKLOG): forty-three "you may play that card" grants cast for {0}.
 
 The **tenth** is the first list built around what only happens at three seats
 or more, and it exists because of a census, not a hunch: **not one of the nine
