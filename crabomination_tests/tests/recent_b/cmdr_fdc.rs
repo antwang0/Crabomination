@@ -1959,3 +1959,289 @@ fn vein_drinker_fights_and_grows() {
     assert!(g.battlefield_find(bear).is_none());
     assert_eq!(pt(&g, v), (5, 5));
 }
+
+// ── Guided By Nature (Freyalise, Llanowar's Fury, C14) ─────────────────────
+
+fn equip(g: &mut GameState, gear: CardId, onto: CardId) {
+    flood(g, 0);
+    g.perform_action(GameAction::Equip { equipment: gear, target: onto }).expect("equip");
+    drain_stack(g);
+}
+
+/// CR 701.16 — Assault Suit: the equipped creature can't be sacrificed (an
+/// edict finds nothing), and it can't attack the Suit's controller after it
+/// is lent out at an opponent's upkeep.
+#[test]
+fn cr_701_16_assault_suit_blocks_sacrifice_and_lends_the_creature() {
+    let mut g = main_phase();
+    let suit = g.add_card_to_battlefield(0, catalog::assault_suit());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    equip(&mut g, suit, bear);
+    assert_eq!(pt(&g, bear), (4, 4));
+    g.priority.player_with_priority = 1;
+    let edict = g.add_card_to_hand(1, catalog::diabolic_edict());
+    try_cast(&mut g, 1, edict, &[Target::Player(0)]).expect("edict");
+    assert!(g.battlefield_find(bear).is_some(), "can't be sacrificed");
+    // Seat 1's upkeep: lend it.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    g.active_player_idx = 1;
+    g.step = TurnStep::Untap;
+    let _ = g.advance_step(Vec::new());
+    drain_stack(&mut g);
+    let c = g.battlefield_find(bear).unwrap();
+    assert_eq!(c.controller, 1);
+    assert!(!c.tapped, "untapped as it is lent");
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    let at_owner = g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear,
+        target: AttackTarget::Player(0),
+    }]));
+    assert!(at_owner.is_err(), "can't attack the Suit's controller");
+}
+
+/// Creeperhulk — a creature of yours becomes a 5/5 trampler.
+#[test]
+fn creeperhulk_makes_a_five_five_trampler() {
+    let mut g = main_phase();
+    let hulk = g.add_card_to_battlefield(0, catalog::creeperhulk());
+    let elf = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: hulk,
+        ability_index: 0,
+        target: Some(Target::Permanent(elf)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("{1}{G}");
+    drain_stack(&mut g);
+    assert_eq!(pt(&g, elf), (5, 5));
+    assert!(g.computed_permanent(elf).unwrap().keywords().contains(&Keyword::Trample));
+}
+
+/// Drove of Elves counts your green permanents, itself included.
+#[test]
+fn drove_of_elves_counts_green_permanents() {
+    let mut g = main_phase();
+    let d = g.add_card_to_battlefield(0, catalog::drove_of_elves());
+    g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    g.add_card_to_battlefield(0, catalog::sol_ring());
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    assert_eq!(pt(&g, d), (2, 2));
+}
+
+/// Grave Sifter — each player returns the cards of their own named type.
+#[test]
+fn grave_sifter_returns_each_players_own_type() {
+    let mut g = main_phase();
+    let e1 = g.add_card_to_graveyard(0, catalog::llanowar_elves());
+    let e2 = g.add_card_to_graveyard(0, catalog::elvish_mystic());
+    let b0 = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let b1 = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let e3 = g.add_card_to_graveyard(1, catalog::llanowar_elves());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::CreatureType(CreatureType::Elf),
+        DecisionAnswer::CreatureType(CreatureType::Bear),
+    ]));
+    etb(&mut g, catalog::grave_sifter());
+    let in_hand = |g: &GameState, p: usize, id| g.players[p].hand.iter().any(|c| c.id == id);
+    assert!(in_hand(&g, 0, e1) && in_hand(&g, 0, e2) && !in_hand(&g, 0, b0));
+    assert!(in_hand(&g, 1, b1) && !in_hand(&g, 1, e3));
+}
+
+/// Grim Flowering draws per creature card in your graveyard.
+#[test]
+fn grim_flowering_draws_per_creature_card() {
+    let mut g = main_phase();
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::hill_giant());
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let spell = g.add_card_to_hand(0, catalog::grim_flowering());
+    cast(&mut g, spell, &[]);
+    assert_eq!(g.players[0].hand.len(), 2);
+}
+
+/// Haunted Fengraf — the only creature card comes back.
+#[test]
+fn haunted_fengraf_returns_a_creature_card() {
+    let mut g = main_phase();
+    let f = g.add_card_to_battlefield(0, catalog::haunted_fengraf());
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    activate(&mut g, f, 1, None).expect("{3}, {T}, sacrifice");
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear));
+}
+
+/// Hunting Triad makes three Elf Warriors.
+#[test]
+fn hunting_triad_makes_three_elf_warriors() {
+    let mut g = main_phase();
+    let spell = g.add_card_to_hand(0, catalog::hunting_triad());
+    cast(&mut g, spell, &[]);
+    assert_eq!(count_named(&g, 0, "Elf Warrior"), 3);
+}
+
+/// Lifeblood Hydra — X counters; dying, it pays out its power.
+#[test]
+fn lifeblood_hydra_pays_its_power_on_death() {
+    let mut g = main_phase();
+    let h = g.add_card_to_hand(0, catalog::lifeblood_hydra());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: h,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(3),
+    })
+    .expect("X = 3");
+    drain_stack(&mut g);
+    assert_eq!(pt(&g, h), (3, 3));
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let (life, hand) = (g.players[0].life, g.players[0].hand.len());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, &[Target::Permanent(h)]);
+    assert_eq!(g.players[0].life, life + 3);
+    assert_eq!(g.players[0].hand.len(), hand + 3);
+}
+
+/// Loreseeker's Stone costs {1} more per card in hand.
+#[test]
+fn loreseekers_stone_is_taxed_by_hand_size() {
+    let mut g = main_phase();
+    let s = g.add_card_to_battlefield(0, catalog::loreseekers_stone());
+    g.add_card_to_hand(0, catalog::forest());
+    g.add_card_to_hand(0, catalog::forest());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let go = |g: &mut GameState| {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: s,
+            ability_index: 0,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+    };
+    g.players[0].mana_pool.add_colorless(4);
+    assert!(go(&mut g).is_err(), "{{3}} + 2 for the hand");
+    g.players[0].mana_pool.add_colorless(1);
+    go(&mut g).expect("{{5}}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), 5);
+}
+
+/// Siege Behemoth — while it attacks, a blocked creature of yours hits the
+/// player anyway.
+#[test]
+fn siege_behemoth_lets_blocked_creatures_hit_the_player() {
+    let mut g = main_phase();
+    let s = g.add_card_to_battlefield(0, catalog::siege_behemoth());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let wall = g.add_card_to_battlefield(1, catalog::wall_of_stone());
+    g.clear_sickness(s);
+    g.clear_sickness(bear);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: s, target: AttackTarget::Player(1) },
+        Attack { attacker: bear, target: AttackTarget::Player(1) },
+    ]))
+    .expect("attack");
+    drain_stack(&mut g);
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![(wall, bear)])).expect("block the Bears");
+    while g.step != TurnStep::EndCombat {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.players[1].life, 20 - 7 - 2);
+}
+
+/// Sylvan Offering — you and an opponent each get an X/X Treefolk and X Elf
+/// Warriors.
+#[test]
+fn sylvan_offering_gifts_both_halves() {
+    let mut g = main_phase();
+    let spell = g.add_card_to_hand(0, catalog::sylvan_offering());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(2),
+    })
+    .expect("X = 2");
+    drain_stack(&mut g);
+    for p in [0, 1] {
+        assert_eq!(count_named(&g, p, "Elf Warrior"), 2);
+        let tf = g
+            .battlefield
+            .iter()
+            .find(|c| c.controller == p && c.definition.name == "Treefolk")
+            .map(|c| c.id)
+            .expect("a Treefolk");
+        assert_eq!(pt(&g, tf), (2, 2));
+    }
+}
+
+/// Wave of Vitriol — artifacts, enchantments and nonbasic lands go; each land
+/// buys its controller a tapped basic.
+#[test]
+fn wave_of_vitriol_trades_nonbasics_for_basics() {
+    let mut g = main_phase();
+    let ring = g.add_card_to_battlefield(0, catalog::sol_ring());
+    let tower = g.add_card_to_battlefield(1, catalog::command_tower());
+    let forest = g.add_card_to_battlefield(1, catalog::forest());
+    let basic = g.add_card_to_library(1, catalog::island());
+    let spell = g.add_card_to_hand(0, catalog::wave_of_vitriol());
+    cast(&mut g, spell, &[]);
+    assert!(g.battlefield_find(ring).is_none() && g.battlefield_find(tower).is_none());
+    assert!(g.battlefield_find(forest).is_some());
+    let b = g.battlefield_find(basic).expect("fetched");
+    assert!(b.tapped && b.controller == 1);
+}
+
+/// Wolfcaller's Howl — a Wolf per opponent with four or more cards.
+#[test]
+fn wolfcallers_howl_counts_full_hands() {
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.add_card_to_battlefield(0, catalog::wolfcallers_howl());
+    for _ in 0..4 {
+        g.add_card_to_hand(1, catalog::forest());
+    }
+    for _ in 0..3 {
+        g.add_card_to_hand(2, catalog::forest());
+    }
+    g.add_card_to_library(0, catalog::forest());
+    g.step = TurnStep::Untap;
+    let _ = g.advance_step(Vec::new());
+    drain_stack(&mut g);
+    assert_eq!(count_named(&g, 0, "Wolf"), 1);
+}
+
+/// Wren's Run Packmaster — champions an Elf; its Wolves have deathtouch.
+#[test]
+fn wrens_run_packmaster_champions_an_elf_and_arms_wolves() {
+    let mut g = main_phase();
+    let elf = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    let pm = g.add_card_to_hand(0, catalog::wrens_run_packmaster());
+    cast(&mut g, pm, &[]);
+    assert!(g.battlefield_find(pm).is_some(), "an Elf was championed");
+    assert!(g.exile.iter().any(|c| c.id == elf));
+    activate(&mut g, pm, 0, None).expect("{2}{G}");
+    let wolf = g.battlefield.iter().find(|c| c.definition.name == "Wolf").map(|c| c.id).unwrap();
+    assert!(g.computed_permanent(wolf).unwrap().keywords().contains(&Keyword::Deathtouch));
+}
