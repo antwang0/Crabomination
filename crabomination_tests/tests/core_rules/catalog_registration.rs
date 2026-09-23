@@ -892,6 +892,7 @@ const FREE_ACTIVATION_ALLOWED: &[(&str, &str)] = &[
     ("Dark Maze", "printed `{0}: This creature can attack this turn as though …`"),
     ("Flowstone Hellion", "printed `{0}: This creature gets +1/-1 until end of turn.`"),
     ("Frenetic Efreet", "printed `{0}: Flip a coin. …`"),
+    ("Frenetic Sliver", "printed `{0}:` flip granted to all Slivers — a win exiles the Sliver, a loss sacrifices it, so each activation removes its source"),
     ("Hopping Automaton", "printed `{0}: This creature gets -1/-1 and gains flying …`"),
     ("Knowledge Vault", "printed `{0}: Sacrifice this artifact. If you do, …` — the sacrifice is its first step"),
     ("Lancers en-Kor", "printed `{0}:` damage-shift (the en-Kor cycle)"),
