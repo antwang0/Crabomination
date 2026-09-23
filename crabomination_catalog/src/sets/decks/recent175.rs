@@ -480,11 +480,8 @@ pub fn repurposing_bay() -> CardDefinition {
             tap_cost: true,
             mana_cost: cost(&[generic(2)]),
             sorcery_speed: true,
+            sac_other_filter: Some((R::Artifact, 1)),
             effect: Effect::Seq(vec![
-                Effect::SacrificeAndRemember {
-                    who: PlayerRef::You,
-                    filter: R::Artifact.and(R::OtherThanSource),
-                },
                 Effect::Search {
                     who: PlayerRef::You,
                     filter: R::Artifact.and(R::ManaValueEqualsSacrificedPlus(1)),

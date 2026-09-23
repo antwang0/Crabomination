@@ -5737,20 +5737,18 @@ pub fn concentrate() -> CardDefinition {
 /// a creature. You gain life equal to the sacrificed creature's
 /// toughness. Destroy target creature an opponent controls.
 ///
-/// Sac is folded as the first step (cost-as-first-step approximation);
-/// `SacrificeAndRemember` records the toughness so the lifegain reads
-/// `Value::SacrificedToughness` exactly.
+/// The sacrifice is a cast-time cost; its toughness reaches the lifegain via
+/// `Value::SacrificedToughness`.
 pub fn severed_strands() -> CardDefinition {
-    use crate::effect::PlayerRef;
     CardDefinition {
         name: "Severed Strands",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Sorcery],
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::SacrificePermanent {
+            filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            count: 1,
+        }],
         effect: Effect::Seq(vec![
-            Effect::SacrificeAndRemember {
-                who: PlayerRef::You,
-                filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-            },
             Effect::GainLife {
                 who: Selector::You,
                 amount: Value::SacrificedToughness,
@@ -6949,23 +6947,9 @@ pub fn krark_clan_ironworks() -> CardDefinition {
             discard_cost: None,
             tap_cost: false,
             mana_cost: ManaCost::default(),
-            // The "sacrifice an artifact" cost folds into the resolved
-            // effect. The activated ability needs a target so the human
-            // picker can pick *which* artifact to sac; the bot's
-            // auto-target picks the first sacrificeable artifact.
-            // The sacrifice is the activation cost. It is spelled in the effect
-            // (the payoff reads what was sacrificed), which does **not** gate
-            // the activation — so without this condition a bot could activate
-            // it with nothing to sacrifice, for ever.
-            condition: Some(Predicate::SelectorExists(Selector::EachPermanent(
-                SelectionRequirement::Artifact.and(SelectionRequirement::ControlledByYou),
-            ))),
+            // "Sacrifice an artifact" is the cost (`sac_other_filter`), which
+            // gates the activation. It never picks the Ironworks itself.
             effect: Effect::Seq(vec![
-                Effect::SacrificeAndRemember {
-                    who: PlayerRef::You,
-                    filter: SelectionRequirement::Artifact
-                        .and(SelectionRequirement::ControlledByYou),
-                },
                 Effect::AddMana {
                     who: PlayerRef::You,
                     pool: ManaPayload::Colorless(Value::Const(2)),
@@ -6979,7 +6963,7 @@ pub fn krark_clan_ironworks() -> CardDefinition {
             exile_self_cost: false,
             exile_other_filter: None,
             self_counter_cost_reduction: None,
-            sac_other_filter: None,
+            sac_other_filter: Some((SelectionRequirement::Artifact, 1)),
             tap_other_filter: None,
             from_hand: false,
             ..Default::default()
@@ -7204,20 +7188,16 @@ pub fn stone_rain() -> CardDefinition {
 
 /// Bone Splinters — {B} Sorcery. As an additional cost, sacrifice a
 /// creature. Destroy target creature.
-///
-/// Sac-as-additional-cost folded into resolution via `SacrificeAndRemember`
-/// — the bot picks the lowest-power eligible creature first. Same shape
-/// as Severed Strands but no lifegain.
 pub fn bone_splinters() -> CardDefinition {
     CardDefinition {
         name: "Bone Splinters",
         cost: cost(&[b()]),
         card_types: vec![CardType::Sorcery],
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::SacrificePermanent {
+            filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            count: 1,
+        }],
         effect: Effect::Seq(vec![
-            Effect::SacrificeAndRemember {
-                who: PlayerRef::You,
-                filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-            },
             Effect::Destroy {
                 what: target_filtered(SelectionRequirement::Creature),
             },
@@ -7727,17 +7707,17 @@ pub fn miscalculation() -> CardDefinition {
 }
 
 /// Goblin Grenade — {R} Sorcery. As an additional cost, sacrifice a Goblin.
-/// Deal 5 damage to any target. (Sac is modeled at resolution like Fling.)
+/// Deal 5 damage to any target.
 pub fn goblin_grenade() -> CardDefinition {
     CardDefinition {
         name: "Goblin Grenade",
         cost: cost(&[r()]),
         card_types: vec![CardType::Sorcery],
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::SacrificePermanent {
+            filter: SelectionRequirement::HasCreatureType(CreatureType::Goblin),
+            count: 1,
+        }],
         effect: Effect::Seq(vec![
-            Effect::SacrificeAndRemember {
-                who: PlayerRef::You,
-                filter: SelectionRequirement::HasCreatureType(CreatureType::Goblin),
-            },
             Effect::DealDamage {
                 to: Selector::Target(0),
                 amount: Value::Const(5),
@@ -11067,11 +11047,11 @@ pub fn fling() -> CardDefinition {
         name: "Fling",
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Instant],
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::SacrificePermanent {
+            filter: SelectionRequirement::Creature,
+            count: 1,
+        }],
         effect: Effect::Seq(vec![
-            Effect::SacrificeAndRemember {
-                who: PlayerRef::You,
-                filter: SelectionRequirement::Creature,
-            },
             Effect::DealDamage {
                 to: Selector::Target(0),
                 amount: Value::SacrificedPower,
@@ -11308,11 +11288,11 @@ pub fn village_rites() -> CardDefinition {
         name: "Village Rites",
         cost: cost(&[b()]),
         card_types: vec![CardType::Instant],
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::SacrificePermanent {
+            filter: SelectionRequirement::Creature,
+            count: 1,
+        }],
         effect: Effect::Seq(vec![
-            Effect::SacrificeAndRemember {
-                who: PlayerRef::You,
-                filter: SelectionRequirement::Creature,
-            },
             Effect::Draw {
                 who: Selector::You,
                 amount: Value::Const(2),
@@ -32344,18 +32324,18 @@ fn znr_painland_back(name: &'static str, color: Color) -> CardDefinition {
     }
 }
 
-/// Kazuul's Fury // Kazuul's Cliffs — {2}{R} Instant. Sacrifice a creature;
-/// deal damage equal to its power to any target.
+/// Kazuul's Fury // Kazuul's Cliffs — {2}{R} Instant. As an additional cost,
+/// sacrifice a creature; deal damage equal to its power to any target.
 pub fn kazuuls_fury() -> CardDefinition {
     CardDefinition {
         name: "Kazuul's Fury",
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Instant],
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::SacrificePermanent {
+            filter: SelectionRequirement::Creature,
+            count: 1,
+        }],
         effect: Effect::Seq(vec![
-            Effect::SacrificeAndRemember {
-                who: PlayerRef::You,
-                filter: SelectionRequirement::Creature,
-            },
             Effect::DealDamage {
                 to: target_filtered(
                     SelectionRequirement::Creature

@@ -681,23 +681,20 @@ pub fn bloodchiefs_thirst() -> CardDefinition {
     }
 }
 
-/// Deadly Dispute — {1}{B} Sorcery. As an additional cost, sacrifice an
+/// Deadly Dispute — {1}{B} Instant. As an additional cost, sacrifice an
 /// artifact or creature. Draw two cards and create a Treasure token.
-///
-/// Sac-as-additional-cost is folded into the resolved effect (cost-as-
-/// first-step pattern, matching Thud / Cephalid Coliseum).
 pub fn deadly_dispute() -> CardDefinition {
     CardDefinition {
         name: "Deadly Dispute",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Seq(vec![
-            Effect::SacrificeAndRemember {
-                who: PlayerRef::You,
-                filter: SelectionRequirement::Creature
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::SacrificePermanent {
+            filter: SelectionRequirement::Creature
                     .or(SelectionRequirement::Artifact)
                     .and(SelectionRequirement::ControlledByYou),
-            },
+            count: 1,
+        }],
+        effect: Effect::Seq(vec![
             Effect::Draw {
                 who: Selector::You,
                 amount: Value::Const(2),
@@ -1657,18 +1654,18 @@ pub fn frost_breath() -> CardDefinition {
     }
 }
 
-/// Costly Plunder — {1}{B} Instant. Sacrifice an artifact or creature; draw
-/// two cards.
+/// Costly Plunder — {1}{B} Instant. As an additional cost, sacrifice an
+/// artifact or creature. Draw two cards.
 pub fn costly_plunder() -> CardDefinition {
     CardDefinition {
         name: "Costly Plunder",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Instant],
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::SacrificePermanent {
+            filter: SelectionRequirement::Creature.or(SelectionRequirement::Artifact),
+            count: 1,
+        }],
         effect: Effect::Seq(vec![
-            Effect::SacrificeAndRemember {
-                who: PlayerRef::You,
-                filter: SelectionRequirement::Creature.or(SelectionRequirement::Artifact),
-            },
             Effect::Draw {
                 who: Selector::You,
                 amount: Value::Const(2),

@@ -153,18 +153,18 @@ pub fn fists_of_the_anvil() -> CardDefinition {
     }
 }
 
-/// Fiery Conclusion — {1}{R} Instant. Sacrifice a creature as an additional
-/// cost (modeled at resolution, per the Fling idiom); deal 5 to target creature.
+/// Fiery Conclusion — {1}{R} Instant. As an additional cost, sacrifice a
+/// creature. Deal 5 damage to target creature.
 pub fn fiery_conclusion() -> CardDefinition {
     CardDefinition {
         name: "Fiery Conclusion",
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Instant],
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::SacrificePermanent {
+            filter: R::Creature,
+            count: 1,
+        }],
         effect: Effect::Seq(vec![
-            Effect::SacrificeAndRemember {
-                who: PlayerRef::You,
-                filter: R::Creature,
-            },
             Effect::DealDamage {
                 to: Selector::Target(0),
                 amount: Value::Const(5),

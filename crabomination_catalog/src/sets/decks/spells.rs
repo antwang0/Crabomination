@@ -180,18 +180,18 @@ pub fn summoners_pact() -> CardDefinition {
 
 /// Thud — {R} Sorcery. As an additional cost, sacrifice a creature. Thud
 /// deals damage equal to the sacrificed creature's power to any target.
-/// The sacrifice is a real cast-time cost (`AdditionalCastCost`), threading
-/// the fodder's power into the spell's X (read by `Value::XFromCost`).
+/// The sacrifice is a cast-time cost (`AdditionalCastCost`); its power
+/// reaches the damage via `Value::SacrificedPower`.
 pub fn thud() -> CardDefinition {
     CardDefinition {
         name: "Thud",
         cost: cost(&[r()]),
         card_types: vec![CardType::Sorcery],
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::SacrificePermanent {
+            filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            count: 1,
+        }],
         effect: Effect::Seq(vec![
-            Effect::SacrificeAndRemember {
-                who: PlayerRef::You,
-                filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-            },
             Effect::DealDamage {
                 to: Selector::Target(0),
                 amount: Value::SacrificedPower,

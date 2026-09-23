@@ -5782,10 +5782,19 @@ mod recent {
         let mut g = two_player_game();
         let gisa = g.add_card_to_battlefield(0, catalog::ghoulcaller_gisa());
         g.add_card_to_battlefield(0, catalog::serra_angel()); // power 4 to sacrifice
+        g.clear_sickness(gisa);
         let before = g.battlefield.iter().filter(|c| c.is_token).count();
-        let eff = catalog::ghoulcaller_gisa().activated_abilities[0].effect.clone();
-        let ctx = crabomination::game::effects::EffectContext::for_ability(gisa, 0, None);
-        g.resolve_effect(&eff, &ctx).unwrap();
+        g.players[0].mana_pool.add(Color::Black, 1);
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: gisa,
+            ability_index: 0,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+        .expect("{B}, {T}, sacrifice the Angel");
+        drain_stack(&mut g);
         assert_eq!(g.battlefield.iter().filter(|c| c.is_token).count(), before + 4, "4 Zombies");
     }
 
@@ -5841,9 +5850,18 @@ mod recent {
         let geralf = g.add_card_to_battlefield(0, catalog::geralf_visionary_stitcher());
         // Only one other creature, a 4/4, so the sacrifice is deterministic.
         g.add_card_to_battlefield(0, catalog::serra_angel());
-        let eff = catalog::geralf_visionary_stitcher().activated_abilities[0].effect.clone();
-        let ctx = crabomination::game::effects::EffectContext::for_ability(geralf, 0, None);
-        g.resolve_effect(&eff, &ctx).unwrap();
+        g.clear_sickness(geralf);
+        g.players[0].mana_pool.add(Color::Blue, 1);
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: geralf,
+            ability_index: 0,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+        .expect("{U}, {T}, sacrifice the Angel");
+        drain_stack(&mut g);
         let tok = g.battlefield.iter().find(|c| c.is_token).map(|c| c.id).unwrap();
         let cp = g.computed_permanent(tok).unwrap();
         assert_eq!((cp.power, cp.toughness), (4, 4), "X = sacrificed toughness");

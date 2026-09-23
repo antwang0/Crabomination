@@ -988,8 +988,13 @@ mod tests {
         // Re-blessed 2026-09-23 (overkill spill, `server/pod_attack.rs`):
         // face attackers past a kill now go at the next opponent instead of
         // piling onto one seat; seed 43 is the same winner 13 turns sooner.
+        // Re-blessed 2026-09-23 (sacrifice costs): Bone Splinters and Village
+        // Rites (Judith) sacrifice on cast, not at resolution, so they can't be
+        // cast creatureless; seed 0xC0FFEE is the same winner 45 turns sooner.
+        // Aggregate within noise (3,000 games, seed 43: Judith 16.9 → 17.1 %,
+        // 44.90 → 44.96 turns).
         const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
-            (0xC0FFEE, Some(1), 97, 4061),
+            (0xC0FFEE, Some(1), 52, 2248),
             (43, Some(3), 50, 2107),
             (4242, Some(2), 53, 2318),
         ];

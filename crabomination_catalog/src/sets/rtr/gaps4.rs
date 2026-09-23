@@ -762,6 +762,7 @@ pub fn nivix_guildmage() -> CardDefinition {
 /// +1/+1 and gains intimidate until end of turn.` `{2}{B}{G}, Sacrifice a
 /// nontoken creature: Create X 1/1 green Saproling tokens, where X is the
 /// sacrificed creature's toughness.`
+/// Approximation: the sacrifice cost never picks the Guildmage itself.
 pub fn korozda_guildmage() -> CardDefinition {
     CardDefinition {
         name: "Korozda Guildmage",
@@ -793,11 +794,8 @@ pub fn korozda_guildmage() -> CardDefinition {
             },
             ActivatedAbility {
                 mana_cost: cost(&[generic(2), b(), g()]),
+                sac_other_filter: Some((R::Creature.and(R::NotToken), 1)),
                 effect: E::Seq(vec![
-                    E::SacrificeAndRemember {
-                        who: PlayerRef::You,
-                        filter: R::Creature.and(R::NotToken),
-                    },
                     E::CreateToken {
                         who: PlayerRef::You,
                         count: Value::SacrificedToughness,

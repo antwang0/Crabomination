@@ -11935,3 +11935,61 @@ fn cr_712_delver_transforms_on_an_instant_but_not_on_a_land() {
     assert_eq!((cp.power, cp.toughness), (3, 2));
     assert!(cp.keywords().contains(&crabomination::card::Keyword::Flying));
 }
+
+/// CR 601.2b / 601.2h — a spell's "as an additional cost, sacrifice" is paid
+/// as it is cast: Fling can't be cast without a creature, and the creature is
+/// gone while Fling is still on the stack. It used to be taken at resolution,
+/// so a creatureless Fling resolved for nothing and a countered one cost
+/// nothing.
+#[test]
+fn cr_601_2h_fling_sacrifices_on_cast() {
+    let mut g = two_player_game();
+    let fling = g.add_card_to_hand(0, catalog::fling());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    let cast = |g: &mut GameState| {
+        g.perform_action(GameAction::CastSpell {
+            card_id: fling,
+            target: Some(Target::Player(1)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+    };
+    assert!(cast(&mut g).is_err(), "no creature to sacrifice");
+    let angel = g.add_card_to_battlefield(0, catalog::serra_angel());
+    cast(&mut g).expect("cast");
+    assert!(g.battlefield_find(angel).is_none(), "sacrificed on cast");
+    let life = g.players[1].life;
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 4, "the sacrificed Angel's power");
+}
+
+/// CR 602.2b — an ability's sacrifice is paid on activation: Birthing Pod
+/// can't be activated without a creature, and the Bear is gone before the
+/// search resolves (which still reads its mana value).
+#[test]
+fn cr_602_2b_birthing_pod_sacrifices_on_activation() {
+    let mut g = two_player_game();
+    let pod = g.add_card_to_battlefield(0, catalog::birthing_pod());
+    let activate = |g: &mut GameState| {
+        g.players[0].mana_pool.add(Color::Green, 2);
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: pod,
+            ability_index: 0,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+    };
+    assert!(activate(&mut g).is_err(), "no creature to sacrifice");
+    g.players[0].mana_pool.empty();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let angel = g.add_card_to_library(0, catalog::serra_angel());
+    let three = g.add_card_to_library(0, catalog::gray_ogre());
+    activate(&mut g).expect("activate");
+    assert!(g.battlefield_find(bear).is_none(), "sacrificed on activation");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(three).is_some(), "mana value 2 + 1");
+    assert!(g.battlefield_find(angel).is_none());
+}

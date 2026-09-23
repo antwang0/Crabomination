@@ -1190,11 +1190,11 @@ pub fn vivisection() -> CardDefinition {
         name: "Vivisection",
         cost: cost(&[generic(3), u()]),
         card_types: vec![CardType::Sorcery],
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::SacrificePermanent {
+            filter: SelectionRequirement::Creature,
+            count: 1,
+        }],
         effect: Effect::Seq(vec![
-            Effect::SacrificeAndRemember {
-                who: PlayerRef::You,
-                filter: SelectionRequirement::Creature,
-            },
             Effect::Draw {
                 who: Selector::You,
                 amount: Value::Const(3),
@@ -1344,16 +1344,17 @@ pub fn arrogant_outlaw() -> CardDefinition {
 
 /// Eaten Alive — {B} Sorcery. As an additional cost, sacrifice a creature or
 /// pay {3}{B}. Exile target creature or planeswalker.
+/// Approximation: the alternative is paid as {4} (`SacrificeOrPay` is generic).
 pub fn eaten_alive() -> CardDefinition {
     CardDefinition {
         name: "Eaten Alive",
         cost: cost(&[b()]),
         card_types: vec![CardType::Sorcery],
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::SacrificeOrPay {
+            filter: SelectionRequirement::Creature,
+            pay: 4,
+        }],
         effect: Effect::Seq(vec![
-            Effect::SacrificeAndRemember {
-                who: PlayerRef::You,
-                filter: SelectionRequirement::Creature,
-            },
             Effect::Exile {
                 what: target_filtered(
                     SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),

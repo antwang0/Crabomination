@@ -464,6 +464,52 @@ fn no_aura_spells_an_entry_effect_after_its_attach() {
         bad.join("\n  "),
     );
 }
+/// CR 601.2b / 602.2b — "sacrifice a …" printed in a spell's additional cost or
+/// an ability's cost line is paid on cast / activation. Twenty-five cards spelled
+/// it as the first step of the effect (`SacrificeAndRemember`), so a
+/// creatureless Fling or Village Rites resolved for free, a countered one
+/// cost nothing, and Birthing Pod needed a hand-written activation gate. The
+/// costs are `AdditionalCastCost::SacrificePermanent` / `sac_other_filter`,
+/// which carry the victim's stats to resolution; a body that OPENS with a
+/// self-sacrifice is that shape again. Rupture's sacrifice is its effect, as is
+/// the synthesised Witherbloom Wickering's (an instant's opening sentence).
+#[test]
+fn no_cost_sacrifice_is_spelled_as_the_first_step_of_the_effect() {
+    use crabomination::effect::{Effect, PlayerRef};
+    const EFFECT_SACRIFICES: &[&str] = &["Rupture", "Witherbloom Wickering"];
+    let opens_with_own_sac = |e: &Effect| {
+        let first = match e {
+            Effect::Seq(steps) => steps.first(),
+            other => Some(other),
+        };
+        matches!(first, Some(Effect::SacrificeAndRemember { who: PlayerRef::You, .. }))
+    };
+    let mut seen: HashSet<&'static str> = HashSet::new();
+    let mut bad: Vec<String> = Vec::new();
+    for factory in all_known_factories() {
+        let def = factory();
+        if !seen.insert(def.name) || EFFECT_SACRIFICES.contains(&def.name) {
+            continue;
+        }
+        if opens_with_own_sac(&def.effect) {
+            bad.push(format!("{} (spell)", def.name));
+        }
+        for (i, ab) in def.activated_abilities.iter().enumerate() {
+            if opens_with_own_sac(&ab.effect) {
+                bad.push(format!("{} (ability {i})", def.name));
+            }
+        }
+    }
+    bad.sort();
+    assert!(
+        bad.is_empty(),
+        "{} effect(s) open with a self-sacrifice — make it the cost \
+         (`AdditionalCastCost::SacrificePermanent` / `sac_other_filter`):\n  {}",
+        bad.len(),
+        bad.join("\n  "),
+    );
+}
+
 /// The resolution answer log is ONE channel per resolution, and a nested
 /// asking arm does not get a fresh one: `run_effect` recursion keeps the same
 /// `resolution_depth`, so an inner arm's `cursor = 0` replays whatever the outer

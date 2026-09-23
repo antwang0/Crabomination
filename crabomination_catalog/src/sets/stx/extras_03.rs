@@ -1344,11 +1344,6 @@ pub fn final_payment() -> CardDefinition {
 /// lifegain scaled with the sacrificed creature's toughness and called that
 /// "faithfully wired", over a `GainLife { amount: Const(1) }`. There is no
 /// toughness rider on this card. `INCOMPLETE_CARDS` carried the same claim.
-///
-/// 🟡 The sacrifice is an activation **cost** on the printed card and is
-/// resolved in the body here, so it happens on resolution rather than on
-/// announcement — a response can no longer be made to a creature that is
-/// already gone.
 pub fn witchs_cauldron() -> CardDefinition {
     CardDefinition {
         name: "Witch's Cauldron",
@@ -1359,18 +1354,7 @@ pub fn witchs_cauldron() -> CardDefinition {
             discard_cost: None,
             tap_cost: true,
             mana_cost: cost(&[generic(1), b()]),
-            // Approximate "sacrifice a creature" as part of the effect
-            // body: at resolution, sacrifice one creature you control
-            // (using SacrificeAndRemember so we capture its toughness
-            // for the lifegain scaling), then gain life = toughness +
-            // draw a card. The auto-sac picker chooses the smallest
-            // matching creature.
             effect: Effect::Seq(vec![
-                Effect::SacrificeAndRemember {
-                    who: PlayerRef::You,
-                    filter: SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou),
-                },
                 Effect::GainLife {
                     who: Selector::You,
                     amount: Value::Const(1),
@@ -1389,7 +1373,7 @@ pub fn witchs_cauldron() -> CardDefinition {
             exile_self_cost: false,
             exile_other_filter: None,
             self_counter_cost_reduction: None,
-            sac_other_filter: None,
+            sac_other_filter: Some((SelectionRequirement::Creature, 1)),
             tap_other_filter: None,
             from_hand: false,
             ..Default::default()

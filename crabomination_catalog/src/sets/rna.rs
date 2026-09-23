@@ -5093,11 +5093,8 @@ pub fn prime_speaker_vannifar() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             sorcery_speed: true,
+            sac_other_filter: Some((R::Creature, 1)),
             effect: Effect::Seq(vec![
-                Effect::SacrificeAndRemember {
-                    who: PlayerRef::You,
-                    filter: R::Creature.and(R::OtherThanSource),
-                },
                 Effect::Search {
                     who: PlayerRef::You,
                     filter: R::Creature.and(R::ManaValueEqualsSacrificedPlus(1)),

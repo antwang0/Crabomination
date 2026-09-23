@@ -10879,18 +10879,18 @@ pub fn cobblebrute() -> CardDefinition {
     }
 }
 
-/// Reckoner's Bargain — {1}{B} Instant. Sacrifice an artifact or creature (taken
-/// at resolution); gain life equal to its mana value and draw two cards.
+/// Reckoner's Bargain — {1}{B} Instant. As an additional cost, sacrifice an
+/// artifact or creature. Gain life equal to its mana value and draw two cards.
 pub fn reckoners_bargain() -> CardDefinition {
     CardDefinition {
         name: "Reckoner's Bargain",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Instant],
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::SacrificePermanent {
+            filter: SelectionRequirement::Artifact.or(SelectionRequirement::Creature),
+            count: 1,
+        }],
         effect: Effect::Seq(vec![
-            Effect::SacrificeAndRemember {
-                who: PlayerRef::You,
-                filter: SelectionRequirement::Artifact.or(SelectionRequirement::Creature),
-            },
             Effect::GainLife {
                 who: Selector::You,
                 amount: Value::SacrificedManaValue,
@@ -11629,12 +11629,8 @@ pub fn ghoulcaller_gisa() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[b()]),
             tap_cost: true,
+            sac_other_filter: Some((SelectionRequirement::Creature, 1)),
             effect: Effect::Seq(vec![
-                Effect::SacrificeAndRemember {
-                    who: PlayerRef::You,
-                    filter: SelectionRequirement::Creature
-                        .and(SelectionRequirement::OtherThanSource),
-                },
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::SacrificedPower,
@@ -11776,13 +11772,8 @@ pub fn geralf_visionary_stitcher() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[u()]),
             tap_cost: true,
+            sac_other_filter: Some((SelectionRequirement::Creature.and(SelectionRequirement::IsToken.negate()), 1)),
             effect: Effect::Seq(vec![
-                Effect::SacrificeAndRemember {
-                    who: PlayerRef::You,
-                    filter: SelectionRequirement::Creature
-                        .and(SelectionRequirement::IsToken.negate())
-                        .and(SelectionRequirement::OtherThanSource),
-                },
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),

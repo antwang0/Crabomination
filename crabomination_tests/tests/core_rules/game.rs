@@ -2582,6 +2582,11 @@ fn cephalid_coliseum_past_threshold_targets_one_player_to_draw_then_discard_thre
         ability_index: 1,
         target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Cephalid Coliseum's wheel-mini ability should activate");
+    // CR 602.2b — the sacrifice is a cost: paid on activation, not on resolution.
+    assert!(
+        g.players[0].graveyard.iter().any(|c| c.id == coli),
+        "sacrificed while the ability is still on the stack"
+    );
     drain_stack(&mut g);
 
     // Coliseum sacrificed to its own graveyard.

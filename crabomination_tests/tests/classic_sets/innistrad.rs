@@ -270,15 +270,31 @@ fn dissipate_exiles() {
 #[test]
 fn vivisection_sac_and_draw() {
     let mut g = two_player_game();
+    let viv = g.add_card_to_hand(0, catalog::vivisection());
+    g.players[0].mana_pool.add(Color::Blue, 4);
+    assert!(sorcery(&mut g, viv, None).is_err(), "CR 601.2b: no creature, no cast");
     let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     for _ in 0..3 {
         g.add_card_to_library(0, catalog::island());
     }
     let hand_before = g.players[0].hand.len();
-    g.resolve_effect(&catalog::vivisection().effect, &ctx0(&g)).unwrap();
+    sorcery(&mut g, viv, None).expect("cast");
+    assert!(g.battlefield_find(fodder).is_none(), "sacrificed as the spell is cast");
     drain_stack(&mut g);
-    assert!(g.battlefield_find(fodder).is_none(), "creature sacrificed");
-    assert_eq!(g.players[0].hand.len(), hand_before + 3);
+    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 3);
+}
+
+/// Cast `id` from hand in the active player's main phase.
+fn sorcery(g: &mut GameState, id: crabomination::card::CardId, target: Option<Target>) -> Result<(), GameError> {
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .map(|_| ())
 }
 
 // ── Black ──────────────────────────────────────────────────────────────────
@@ -363,12 +379,21 @@ fn eaten_alive_exiles() {
     let mut g = two_player_game();
     let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let foe = g.add_card_to_battlefield(1, catalog::serra_angel());
-    let mut ctx = ctx0(&g);
-    ctx.targets = vec![Target::Permanent(foe)];
-    g.resolve_effect(&catalog::eaten_alive().effect, &ctx).unwrap();
+    let eat = g.add_card_to_hand(0, catalog::eaten_alive());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    sorcery(&mut g, eat, Some(Target::Permanent(foe))).expect("cast");
+    assert!(g.battlefield_find(fodder).is_none(), "sacrificed as the spell is cast");
     drain_stack(&mut g);
-    assert!(g.battlefield_find(fodder).is_none(), "sacrificed");
     assert!(g.exile.iter().any(|c| c.id == foe), "target exiled");
+    // With no creature to sacrifice, the other half is paid in mana.
+    let foe2 = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let eat2 = g.add_card_to_hand(0, catalog::eaten_alive());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    assert!(sorcery(&mut g, eat2, Some(Target::Permanent(foe2))).is_err(), "{{B}} alone is short");
+    g.players[0].mana_pool.add(Color::Black, 5);
+    sorcery(&mut g, eat2, Some(Target::Permanent(foe2))).expect("cast paying the alternative");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == foe2));
 }
 
 /// Gluttonous Guest mints a Blood on entry and gains life when one is sacked.

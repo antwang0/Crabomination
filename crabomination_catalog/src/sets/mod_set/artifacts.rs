@@ -1348,15 +1348,9 @@ pub fn disrupting_scepter() -> CardDefinition {
 /// creature card with mana value equal to 1 plus the sacrificed creature's
 /// mana value, put it onto the battlefield, then shuffle."
 ///
-/// The sacrifice is modeled as the first step of the *effect*
-/// (`SacrificeAndRemember`) rather than a cost, so the sacrificed creature's
-/// mana value is recorded on the resolution scratch and read by the
-/// `ManaValueEqualsSacrificedPlus(1)` search filter in the same resolution
-/// (a stacked activated ability's effect resolves after the cost-time scratch
-/// would have been cleared). Activation is gated on controlling a creature so
-/// it can't fire as a free tutor.
+/// The sacrifice is the activation cost (`sac_other_filter`); its mana value
+/// reaches the `ManaValueEqualsSacrificedPlus(1)` search at resolution.
 pub fn birthing_pod() -> CardDefinition {
-    use crate::effect::Predicate;
     CardDefinition {
         name: "Birthing Pod",
         cost: cost(&[generic(3), phyrexian(Color::Green)]),
@@ -1367,17 +1361,8 @@ pub fn birthing_pod() -> CardDefinition {
             // "Activate only as a sorcery." — the rider was missing, so the
             // Pod was an instant-speed sacrifice outlet.
             sorcery_speed: true,
-            condition: Some(Predicate::SelectorCountAtLeast {
-                sel: Selector::EachPermanent(
-                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-                ),
-                n: Value::Const(1),
-            }),
+            sac_other_filter: Some((SelectionRequirement::Creature, 1)),
             effect: Effect::Seq(vec![
-                Effect::SacrificeAndRemember {
-                    who: PlayerRef::You,
-                    filter: SelectionRequirement::Creature,
-                },
                 Effect::Search {
                     who: PlayerRef::You,
                     filter: SelectionRequirement::Creature

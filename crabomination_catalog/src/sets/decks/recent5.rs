@@ -429,11 +429,11 @@ pub fn neoform() -> CardDefinition {
         name: "Neoform",
         cost: cost(&[g(), u()]),
         card_types: vec![CardType::Sorcery],
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::SacrificePermanent {
+            filter: SelectionRequirement::Creature,
+            count: 1,
+        }],
         effect: Effect::Seq(vec![
-            Effect::SacrificeAndRemember {
-                who: PlayerRef::You,
-                filter: SelectionRequirement::Creature,
-            },
             Effect::Search {
                 who: PlayerRef::You,
                 filter: SelectionRequirement::Creature
@@ -468,11 +468,11 @@ pub fn eldritch_evolution() -> CardDefinition {
         name: "Eldritch Evolution",
         cost: cost(&[generic(1), g(), g()]),
         card_types: vec![CardType::Sorcery],
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::SacrificePermanent {
+            filter: SelectionRequirement::Creature,
+            count: 1,
+        }],
         effect: Effect::Seq(vec![
-            Effect::SacrificeAndRemember {
-                who: PlayerRef::You,
-                filter: SelectionRequirement::Creature,
-            },
             Effect::Search {
                 who: PlayerRef::You,
                 filter: SelectionRequirement::Creature
@@ -548,11 +548,11 @@ pub fn momentous_fall() -> CardDefinition {
         name: "Momentous Fall",
         cost: cost(&[generic(2), g(), g()]),
         card_types: vec![CardType::Instant],
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::SacrificePermanent {
+            filter: SelectionRequirement::Creature,
+            count: 1,
+        }],
         effect: Effect::Seq(vec![
-            Effect::SacrificeAndRemember {
-                who: PlayerRef::You,
-                filter: SelectionRequirement::Creature,
-            },
             Effect::Draw {
                 who: Selector::You,
                 amount: Value::SacrificedPower,
@@ -573,11 +573,11 @@ pub fn lifes_legacy() -> CardDefinition {
         name: "Life's Legacy",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Sorcery],
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::SacrificePermanent {
+            filter: SelectionRequirement::Creature,
+            count: 1,
+        }],
         effect: Effect::Seq(vec![
-            Effect::SacrificeAndRemember {
-                who: PlayerRef::You,
-                filter: SelectionRequirement::Creature,
-            },
             Effect::Draw {
                 who: Selector::You,
                 amount: Value::SacrificedPower,

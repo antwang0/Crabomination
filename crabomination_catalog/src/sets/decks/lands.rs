@@ -427,10 +427,7 @@ pub fn cavern_of_souls() -> CardDefinition {
 ///
 /// It does **not** enter tapped, and the second ability costs {U}, not
 /// {2}{U} — both were invented here (`audit_invented_rider.py`, `etb_tap()`
-/// row). The sacrifice is folded into the resolved effect via a `Move` to
-/// graveyard before the draw / discard fires — a faithful approximation
-/// since the only non-cost interaction it changes is "destroy in response
-/// before sacrifice", which the bot/UI never attempts.
+/// row).
 pub fn cephalid_coliseum() -> CardDefinition {
     CardDefinition {
         name: "Cephalid Coliseum",
@@ -456,13 +453,6 @@ pub fn cephalid_coliseum() -> CardDefinition {
                 tap_cost: true,
                 mana_cost: cost(&[u()]),
                 effect: Effect::Seq(vec![
-                    // Sacrifice as additional cost — modelled as the first
-                    // step of the resolved effect (the bot never tries to
-                    // respond to the trigger anyway).
-                    Effect::Move {
-                        what: Selector::This,
-                        to: crate::effect::ZoneDest::Graveyard,
-                    },
                     Effect::Draw {
                         who: target_filtered(crate::card::SelectionRequirement::Player),
                         amount: Value::Const(3),
@@ -475,7 +465,7 @@ pub fn cephalid_coliseum() -> CardDefinition {
                 ]),
                 once_per_turn: false,
                 sorcery_speed: false,
-                sac_cost: false,
+                sac_cost: true,
                 // "Threshold — … Activate only if there are seven or more
                 // cards in your graveyard." Threshold is an ability word
                 // with no rules meaning (CR 207.2c); the printed sentence is
