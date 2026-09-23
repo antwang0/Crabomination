@@ -1170,6 +1170,12 @@ fn run_commander_pods(args: &Args, threads: usize) -> i32 {
     /// longer than a duel, so this is the number the stall rate is read
     /// against rather than a number to raise when games cap out.
     const MAX_ACTIONS: usize = 50_000;
+    /// ...up to ten seats. Past that the budget grows by a ten-seat pod's
+    /// share per seat, so it stays a per-player budget. A flat cap stopped
+    /// measuring stalls there: capped games at 16 and 17 seats were ordinary
+    /// ones (~15 turns a seat, libraries 54-74 cards, live boards) and the
+    /// cap rate went 0.4 / 2.4 / 6.8 % at 15 / 16 / 17 seats.
+    const ACTIONS_PER_SEAT: usize = MAX_ACTIONS / 10;
 
     // The ceiling is the number of target decks: `pod_field` cycles the list
     // above it, so a tenth seat is a mirror rather than a new list.
@@ -1188,6 +1194,7 @@ fn run_commander_pods(args: &Args, threads: usize) -> i32 {
         return 2;
     }
     let field = pod_field(seats);
+    let max_actions = MAX_ACTIONS.max(seats * ACTIONS_PER_SEAT);
     let games = args.games as u32;
     println!(
         "commander: {seats}-seat pods, {games} games on {threads} threads, seed {}, decks: {}",
@@ -1225,10 +1232,10 @@ fn run_commander_pods(args: &Args, threads: usize) -> i32 {
                         let mut c = ActionCensus::forced();
                         let t = if want_census {
                             run_pod_games_censused(
-                                &field, first, count, seed, MAX_ACTIONS, pilot, Some(&mut c),
+                                &field, first, count, seed, max_actions, pilot, Some(&mut c),
                             )
                         } else {
-                            run_pod_games(&field, first, count, seed, MAX_ACTIONS, pilot)
+                            run_pod_games(&field, first, count, seed, max_actions, pilot)
                         };
                         (t, c)
                     })
