@@ -145,6 +145,132 @@ fn opp_x_offset(seat: usize, viewer: usize, n_seats: usize) -> f32 {
     (idx as f32 - center) * OPP_X_SPREAD
 }
 
+// ── Pod seating (3-4 players) ────────────────────────────────────────────────
+//
+// A pod sits two to a long edge, the way four people share a rectangular
+// table: the viewer front-left, then clockwise the seat across on the left,
+// the one across on the right, and the one beside the viewer on the right
+// (three players make a triangle: the viewer front-centre, two across).
+// Every seat lays out in its own frame exactly as the viewer does on the
+// near edge of a 1v1 table — creature and land rows toward the centre,
+// graveyard and deck in a strip on its left, command zone and (for
+// opponents) the face-down hand in a strip on its right — and the frame
+// turns that layout to face the table centre from the seat's edge.
+//
+// It replaces the viewer alone on the near edge with all three opponents
+// across the far one: three far boards a few cards wide, a camera that had
+// to frame the whole far edge, and empty table either side of the viewer.
+// Seating players around all four edges measured the same card size (the
+// HUD's side columns bound both at ~90 px at 1920x1080) but put two boards
+// sideways between those columns; two to a side keeps every card upright.
+
+/// Where a pod seat sits: the rotation about Y that turns the viewer's
+/// near-edge layout to face the table centre from this seat's edge, how far
+/// that edge's centre line sits from the table centre, and where along the
+/// edge the seat's column is.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct SeatFrame {
+    pub yaw: f32,
+    pub offset: f32,
+    /// Half-length of the seat's board along its edge.
+    pub half: f32,
+    /// Table-plane shift of the whole seat along its edge.
+    pub shift: Vec3,
+}
+
+impl SeatFrame {
+    pub fn rotation(&self) -> Quat {
+        Quat::from_rotation_y(self.yaw)
+    }
+
+    /// A seat-local point (the seat's edge toward +Z, the table centre
+    /// toward −Z, as for the viewer) on the table.
+    pub fn point(&self, local: Vec3) -> Vec3 {
+        self.rotation() * (local + Vec3::Z * self.offset) + self.shift
+    }
+
+    pub fn place(&self, local: Transform) -> Transform {
+        Transform {
+            translation: self.point(local.translation),
+            rotation: self.rotation() * local.rotation,
+            scale: local.scale,
+        }
+    }
+
+    /// The seat-local point at table point `world` ([`Self::point`]'s inverse).
+    #[cfg(test)]
+    fn local(&self, world: Vec3) -> Vec3 {
+        self.rotation().inverse() * (world - self.shift) - Vec3::Z * self.offset
+    }
+
+    /// Seat-local X of the pile strips either side of the board.
+    fn strip_x(&self) -> f32 {
+        self.half + CARD_WIDTH * 0.5
+    }
+}
+
+/// Half-length of a pod seat's board: five groups a row before a row wraps.
+const POD_HALF: f32 = 10.3;
+/// Centre of a pod seat's column: its board plus a pile strip either side.
+const POD_COLUMN_X: f32 = POD_HALF + CARD_WIDTH + 0.2;
+/// How far each edge of a pod table sits back from the centre line. A pod
+/// is bound by width (the HUD's side columns), so it has height to spare,
+/// and the gap gives a wrapped creature row a whole card's depth instead of
+/// the shingle a 1v1 board settles for.
+const POD_EDGE_GAP: f32 = CARD_HEIGHT * 0.75;
+/// Step between the cards of an opponent's face-down hand, toward its owner.
+const POD_HAND_STEP: f32 = 0.2;
+
+/// The frame of `seat` in a 3-4 player pod; `None` for other table sizes.
+pub fn pod_frame(seat: usize, viewer: usize, n_seats: usize) -> Option<SeatFrame> {
+    if !(3..=4).contains(&n_seats) {
+        return None;
+    }
+    // Clockwise from the viewer: `(yaw, column)`, column −1 left, +1 right.
+    let k = (seat + n_seats - viewer % n_seats) % n_seats;
+    let (yaw, column) = match (n_seats, k) {
+        (4, 0) => (0.0, -1.0),
+        (4, 1) => (PI, -1.0),
+        (4, 2) => (PI, 1.0),
+        (4, _) => (0.0, 1.0),
+        (_, 0) => (0.0, 0.0),
+        (_, 1) => (PI, -1.0),
+        _ => (PI, 1.0),
+    };
+    Some(SeatFrame {
+        yaw,
+        offset: POD_EDGE_GAP,
+        half: POD_HALF,
+        shift: Vec3::X * column * POD_COLUMN_X,
+    })
+}
+
+/// Rotation turning a seat-local offset to the table: the pod frame's, or a
+/// half turn for the far edge of the two-edge layouts.
+fn seat_rotation(seat: usize, viewer: usize, n_seats: usize) -> Quat {
+    match pod_frame(seat, viewer, n_seats) {
+        Some(f) => f.rotation(),
+        None if seat_spot(seat, viewer, n_seats).z_sign < 0.0 => Quat::from_rotation_y(PI),
+        None => Quat::IDENTITY,
+    }
+}
+
+/// Where the camera parks to look at `seat`'s board from behind its edge
+/// (the seat-focus hotkeys): `(look_at, eye)`.
+pub fn seat_focus(seat: usize, viewer: usize, n_seats: usize) -> (Vec3, Vec3) {
+    let (look_at, back) = match pod_frame(seat, viewer, n_seats) {
+        Some(f) => (f.point(Vec3::new(0.0, 0.0, 6.0)), f.rotation() * Vec3::new(0.0, 20.0, 14.0)),
+        None => {
+            let spot = seat_spot(seat, viewer, n_seats);
+            (
+                Vec3::new(spot.board_center, 0.0, spot.z_sign * 6.0),
+                Vec3::new(0.0, 20.0, spot.z_sign * 14.0),
+            )
+        }
+    };
+    (look_at, look_at + back)
+}
+
 // ── Two-per-side seating (3+ players) ──────────────────────────────────────────
 //
 // For 3+ players the table is rectangular with players on the two long
@@ -158,12 +284,12 @@ fn opp_x_offset(seat: usize, viewer: usize, n_seats: usize) -> f32 {
 /// Usable half-width (X) of the whole table for 1-/2-player games — the
 /// distance the piles sit at today.
 const TABLE_HALF_X: f32 = DECK_X;
-/// Half-width of a 3+ player table. The far edge splits it into columns (a
-/// third each in a 4-player pod), so it trades far boards' width against
-/// card size: the camera has to fit the whole far edge, and the far edge is
-/// what binds. 27 measured best (`framing` budget): 100 px cards at
-/// 1920x1080 with 5.6-card far boards; 30 gave 87 px, 24 gave the same
-/// cards on 4.9-card boards.
+/// Half-width of a 5-6 player table, split into columns along both edges.
+/// (3-4 player pods lay out by seat frame instead, see [`pod_frame`].) The
+/// camera has to fit the whole far edge, so this trades far boards' width
+/// against card size; 27 measured best when 4-player pods used this layout
+/// (`framing` budget): 30 gave 87 px cards at 1920x1080, 24 the same cards
+/// on narrower boards.
 const MULTI_HALF_X: f32 = 27.0;
 /// Gap kept between adjacent columns so neighbouring boards don't touch.
 const COL_MARGIN: f32 = 0.6;
@@ -334,16 +460,14 @@ fn far_pile_slot(seat: usize, viewer: usize, n_seats: usize, i: usize) -> Vec3 {
     Vec3::new(x, 0.0, -FAR_PILE_Z)
 }
 
-/// True when `seat` is the only seat on its table edge (the viewer in a
-/// 3-4 player pod), so the edge has room beside its pile strip.
-fn alone_on_edge(seat: usize, viewer: usize, n_seats: usize) -> bool {
-    seat_slot(seat, viewer, n_seats).2 == 1
-}
 
 // ── Pile positions ───────────────────────────────────────────────────────────
 
 /// Bottom-card position of `seat`'s deck pile.
 pub fn deck_position(seat: usize, viewer: usize, n_seats: usize) -> Vec3 {
+    if let Some(f) = pod_frame(seat, viewer, n_seats) {
+        return f.point(Vec3::new(-f.strip_x(), 0.0, DECK_Z));
+    }
     if n_seats <= 2 {
         let sign = z_sign(seat, viewer);
         let x = if is_viewer(seat, viewer) {
@@ -362,6 +486,9 @@ pub fn deck_position(seat: usize, viewer: usize, n_seats: usize) -> Vec3 {
 
 /// Bottom-card position of `seat`'s graveyard pile.
 pub fn graveyard_position(seat: usize, viewer: usize, n_seats: usize) -> Vec3 {
+    if let Some(f) = pod_frame(seat, viewer, n_seats) {
+        return f.point(Vec3::new(-f.strip_x(), 0.0, GRAVEYARD_Z));
+    }
     if n_seats <= 2 {
         let sign = z_sign(seat, viewer);
         let x = if is_viewer(seat, viewer) {
@@ -385,12 +512,9 @@ pub fn exile_position(n_seats: usize) -> Vec3 {
     if n_seats <= 2 {
         return Vec3::new(EXILE_X, 0.0, EXILE_Z);
     }
-    if alone_on_edge(0, 0, n_seats) {
-        // On the viewer's edge, mirroring their command zone across the
-        // board: the far columns now run the table's full width, so the
-        // table's midline edge (the old spot) is inside a far board.
-        let cmd = command_zone_card_transform(0, 0, n_seats, 0).translation;
-        return Vec3::new(-cmd.x, 0.0, cmd.z);
+    if let Some(f) = pod_frame(0, 0, n_seats) {
+        // The viewer's right strip, behind their command zone.
+        return f.point(Vec3::new(f.strip_x(), 0.0, DECK_Z));
     }
     // 5-6 players share both edges: just past the table's right edge.
     Vec3::new(MULTI_HALF_X + CARD_WIDTH * 0.6, 0.0, EXILE_Z)
@@ -407,6 +531,12 @@ pub fn command_zone_card_transform(
     slot: usize,
 ) -> Transform {
     let y = CARD_THICKNESS * (slot as f32) * 2.0;
+    if let Some(f) = pod_frame(seat, viewer, n_seats) {
+        // The seat's right strip, level with its graveyard across the board.
+        return f.place(
+            Transform::from_xyz(f.strip_x(), y, GRAVEYARD_Z).with_rotation(face_rotation(1.0)),
+        );
+    }
     if n_seats <= 2 {
         let sign = z_sign(seat, viewer);
         let x = if is_viewer(seat, viewer) {
@@ -424,14 +554,6 @@ pub fn command_zone_card_transform(
     }
     let spot = seat_spot(seat, viewer, n_seats);
     let x = pile_x(seat, viewer, &spot, CARD_WIDTH * 0.5);
-    if alone_on_edge(seat, viewer, n_seats) {
-        // The viewer alone on the front edge: beside the graveyard, one
-        // slot further out. Past the deck (the old spot) it was the nearest
-        // thing on the table, and the camera had to back off to frame it.
-        let out = outward_sign(&spot, seat, viewer);
-        return Transform::from_xyz(x + out * FAR_PILE_STEP, y, spot.z_sign * GRAVEYARD_Z)
-            .with_rotation(face_rotation(spot.z_sign));
-    }
     // Several seats share this edge (5-6 players): the third slot of the
     // outer pile strip, past the deck toward the player (graveyard z 4.0 →
     // deck z 9.5 → command z 15.0).
@@ -443,7 +565,10 @@ pub fn command_zone_card_transform(
 /// opponent hand back, graveyard pile). Keyed on the seat's table edge, so
 /// far-edge piles face that player while front-edge piles face the camera.
 pub fn back_face_rotation(seat: usize, viewer: usize, n_seats: usize) -> Quat {
-    face_rotation(seat_spot(seat, viewer, n_seats).z_sign)
+    match pod_frame(seat, viewer, n_seats) {
+        Some(f) => f.rotation() * face_rotation(1.0),
+        None => face_rotation(seat_spot(seat, viewer, n_seats).z_sign),
+    }
 }
 
 /// How far (in Z) to pull the hand anchor toward the table center from
@@ -470,6 +595,10 @@ const OPP_HAND_STEP: f32 = CARD_WIDTH * 0.18;
 /// (gizmo arrows raise it to ~0.2–0.3; the combat lurch keeps attackers
 /// gliding flat at Y=0), so only X/Z are meaningful here.
 pub fn player_hand_anchor(seat: usize, viewer: usize, n_seats: usize) -> Vec3 {
+    if let Some(f) = pod_frame(seat, viewer, n_seats) {
+        let z = if seat == viewer { HAND_CENTER_Z } else { FAR_HAND_Z } - HAND_ANCHOR_PULLBACK;
+        return f.point(Vec3::new(0.0, 0.01, z));
+    }
     let spot = seat_spot(seat, viewer, n_seats);
     let z = if spot.z_sign > 0.0 {
         HAND_CENTER_Z - HAND_ANCHOR_PULLBACK
@@ -514,11 +643,15 @@ pub fn hand_card_transform(
         let z = viewer_zoom;
         // Shift the whole fan to the viewer's board centre (0 in 1-/2-player
         // games, off to the front-left edge in a 3+ player pod).
-        let x = offset * spacing * z + spot.board_center;
+        // A pod seat's frame places the fan under its own board (the
+        // viewer's frame is unrotated, so this only moves it).
+        let seat_origin = pod_frame(seat, viewer, n_seats)
+            .map_or(Vec3::X * spot.board_center, |f| f.point(Vec3::ZERO));
+        let x = offset * spacing * z + seat_origin.x;
         let y = HAND_Y * z - offset.abs() * HAND_FAN_Y_DROP * z;
         // Pull the hand a fraction closer to the camera as it scales up
         // so the (now larger) cards don't poke up into the battlefield.
-        let world_z = HAND_CENTER_Z + (z - 1.0) * 1.5 + z_offset * CARD_THICKNESS * 4.0;
+        let world_z = HAND_CENTER_Z + (z - 1.0) * 1.5 + z_offset * CARD_THICKNESS * 4.0 + seat_origin.z;
         let rot_z = -offset * HAND_FAN_ANGLE;
         Transform::from_xyz(x, y, world_z)
             .with_rotation(Quat::from_rotation_x(HAND_TILT_X) * Quat::from_rotation_z(rot_z))
@@ -537,6 +670,17 @@ pub fn hand_card_transform(
         let z = spot.z_sign * DECK_Z;
         Transform::from_xyz(x, slot as f32 * CARD_THICKNESS * 2.0, z)
             .with_rotation(face_rotation(spot.z_sign))
+    } else if let Some(f) = pod_frame(seat, viewer, n_seats) {
+        // An opponent's hand: a face-down stack in the seat's right strip,
+        // each card a little further toward its owner so the count reads.
+        f.place(
+            Transform::from_xyz(
+                f.strip_x(),
+                slot as f32 * CARD_THICKNESS * 2.0,
+                DECK_Z + slot as f32 * POD_HAND_STEP,
+            )
+            .with_rotation(face_rotation(1.0)),
+        )
     } else if in_far_pile_row(seat, viewer, n_seats) {
         // A far seat's hand: a compact face-down spread in its pile row,
         // stepping inward from the slot after the command zone.
@@ -662,6 +806,13 @@ pub fn bf_card_transform(
     back_row: bool,
     tapped: bool,
 ) -> Transform {
+    let tap = |rot: Quat| if tapped { Quat::from_rotation_y(-FRAC_PI_2) * rot } else { rot };
+    if let Some(f) = pod_frame(seat, viewer, n_seats) {
+        let (x, z) = row_position(slot, total, back_row, f.half, f.offset);
+        let local = Transform::from_xyz(x, BF_Y + slot as f32 * BF_SLOT_Y_STEP, z)
+            .with_rotation(tap(face_rotation(1.0)));
+        return f.place(local);
+    }
     let spot = seat_spot(seat, viewer, n_seats);
     let half = board_half_for(&spot, n_seats);
     let x_base = if n_seats <= 2 {
@@ -669,44 +820,41 @@ pub fn bf_card_transform(
     } else {
         spot.board_center
     };
+    let (x, row_z) = row_position(slot, total, back_row, half, 0.0);
+    let z = spot.z_sign * row_z;
+    Transform::from_xyz(x_base + x, BF_Y + slot as f32 * BF_SLOT_Y_STEP, z)
+        .with_rotation(tap(face_rotation(spot.z_sign)))
+}
 
-    let (x, row_z) = if back_row {
+/// Seat-local `(x, z)` of slot `slot` of a row of `total` groups on a board
+/// of half-width `half`: X from the board's centre, Z out from the table
+/// centre toward the seat. `inward_room` is how much further than
+/// [`BF_ROW_MIN_Z`] a wrapped creature row may reach toward the centre line
+/// (a pod's edge gap), up to a whole card's depth per row.
+fn row_position(slot: usize, total: usize, back_row: bool, half: f32, inward_room: f32) -> (f32, f32) {
+    let (rows, per_row) = front_row_shape(total, half);
+    let row = (slot / per_row.max(1)).min(rows - 1);
+    let col = slot - row * per_row;
+    // The last row takes the remainder; earlier rows are full.
+    let row_count = if row + 1 == rows { total - row * per_row } else { per_row };
+    let offset = col as f32 - (row_count as f32 - 1.0) / 2.0;
+    let x = offset * bf_spacing_col(row_count, half);
+    if back_row {
         // The back row used to compress without limit: eight land groups in
         // 1v1 already sat 2.91 apart against a 3.0-wide card, and twenty sat
         // 1.07 apart — an unreadable smear. It wraps on the same
         // `MIN_WRAP_SPACING` rule as the front row, stepping *outward* (away
         // from the table centre) so it never reaches into the creature band.
-        let (rows, per_row) = front_row_shape(total, half);
-        let row = (slot / per_row.max(1)).min(rows - 1);
-        let col = slot - row * per_row;
-        let row_count = if row + 1 == rows { total - row * per_row } else { per_row };
-        let offset = col as f32 - (row_count as f32 - 1.0) / 2.0;
-        (
-            x_base + offset * bf_spacing_col(row_count, half),
-            BF_LAND_Z + row as f32 * row_wrap_dz(rows),
-        )
+        (x, BF_LAND_Z + row as f32 * row_wrap_dz(rows))
     } else {
-        let (rows, per_row) = front_row_shape(total, half);
-        let row = (slot / per_row.max(1)).min(rows - 1);
-        let col = slot - row * per_row;
-        // The last row takes the remainder; earlier rows are full.
-        let row_count = if row + 1 == rows { total - row * per_row } else { per_row };
-        let offset = col as f32 - (row_count as f32 - 1.0) / 2.0;
-        (
-            x_base + offset * bf_spacing_col(row_count, half),
-            BF_CREATURE_Z - row as f32 * row_wrap_dz(rows),
-        )
-    };
-    let z = spot.z_sign * row_z;
-
-    let base_rot = face_rotation(spot.z_sign);
-    let rot = if tapped {
-        Quat::from_rotation_y(-FRAC_PI_2) * base_rot
-    } else {
-        base_rot
-    };
-
-    Transform::from_xyz(x, BF_Y + slot as f32 * BF_SLOT_Y_STEP, z).with_rotation(rot)
+        let dz = if rows <= 1 {
+            0.0
+        } else {
+            ((BF_CREATURE_Z - BF_ROW_MIN_Z + inward_room) / (rows as f32 - 1.0))
+                .min(CARD_HEIGHT + 0.3)
+        };
+        (x, BF_CREATURE_Z - row as f32 * dz)
+    }
 }
 
 /// True if this permanent lays out in the back row (lands + support).
@@ -851,12 +999,12 @@ pub fn creature_card_transform(
         creature_group_info_from_view(battlefield, owner, card_id)?;
     let base =
         bf_card_transform(owner, viewer, n_seats, group_slot, total_groups, false, tapped);
-    let sign = seat_spot(owner, viewer, n_seats).z_sign;
-    let stagger = Vec3::new(
-        index as f32 * LAND_STACK_OFFSET_X * sign,
-        index as f32 * CARD_THICKNESS * 1.5,
-        index as f32 * LAND_STACK_OFFSET_Z * sign,
-    );
+    let stagger = seat_rotation(owner, viewer, n_seats)
+        * Vec3::new(
+            index as f32 * LAND_STACK_OFFSET_X,
+            index as f32 * CARD_THICKNESS * 1.5,
+            index as f32 * LAND_STACK_OFFSET_Z,
+        );
     Some(Transform {
         translation: base.translation + stagger,
         rotation: base.rotation,
@@ -868,6 +1016,15 @@ pub fn creature_card_transform(
 /// y = 0, spanning the column width and both battlefield rows plus a small
 /// margin. Used by the active-seat glow and the eliminated-player shroud.
 pub fn seat_board_outline(seat: usize, viewer: usize, n_seats: usize) -> (Vec3, Vec3) {
+    if let Some(f) = pod_frame(seat, viewer, n_seats) {
+        let half = f.half + 0.8;
+        // A wrapped creature row may use the edge gap, up to the centre line.
+        let near = BF_ROW_MIN_Z - CARD_HEIGHT * 0.5 - f.offset;
+        let far = BF_LAND_Z + CARD_HEIGHT * 0.5 + 0.4;
+        let a = f.point(Vec3::new(-half, 0.0, near));
+        let b = f.point(Vec3::new(half, 0.0, far));
+        return (a.min(b), a.max(b));
+    }
     let spot = seat_spot(seat, viewer, n_seats);
     let half = board_half_for(&spot, n_seats) + 0.8;
     let x_base = if n_seats <= 2 {
@@ -913,12 +1070,12 @@ pub fn back_row_card_transform(
     let base = bf_card_transform(owner, viewer, n_seats, group_slot, total_groups, true, false);
     // Stagger pulls subsequent cards toward the back of the row (toward the
     // owner's edge of the table) so each card's name strip stays visible.
-    let sign = seat_spot(owner, viewer, n_seats).z_sign;
-    let stagger = Vec3::new(
-        index as f32 * LAND_STACK_OFFSET_X * sign,
-        index as f32 * CARD_THICKNESS * 1.5,
-        index as f32 * LAND_STACK_OFFSET_Z * sign,
-    );
+    let stagger = seat_rotation(owner, viewer, n_seats)
+        * Vec3::new(
+            index as f32 * LAND_STACK_OFFSET_X,
+            index as f32 * CARD_THICKNESS * 1.5,
+            index as f32 * LAND_STACK_OFFSET_Z,
+        );
     Some(Transform {
         translation: base.translation + stagger,
         rotation: base.rotation,
@@ -943,16 +1100,20 @@ mod tests {
     }
 
     #[test]
-    fn four_player_viewer_alone_in_front() {
-        // viewer=0: front = {0}, back = {1, 2, 3} — opponents never occupy
-        // the viewer's edge in pods of 4 or fewer.
-        let front: Vec<bool> = (0..4).map(|s| seat_spot(s, 0, 4).z_sign > 0.0).collect();
-        assert_eq!(front, vec![true, false, false, false]);
-        // The lone front column gets the full board cap, not a half-table split.
-        assert_eq!(seat_spot(0, 0, 4).board_half, BOARD_HALF_CAP);
-        assert_eq!(seat_spot(0, 0, 4).board_center, 0.0);
+    fn four_player_pod_sits_two_to_an_edge() {
+        // Clockwise from the viewer at front-left: far-left, far-right,
+        // front-right — for every viewer, since seating is viewer-relative.
+        for viewer in 0..4 {
+            let at = |k: usize| {
+                let f = pod_frame((viewer + k) % 4, viewer, 4).unwrap();
+                (f.yaw.abs() > 1.0, f.shift.x.signum())
+            };
+            assert_eq!(at(0), (false, -1.0), "the viewer is front-left");
+            assert_eq!(at(1), (true, -1.0), "the next seat is across on the left");
+            assert_eq!(at(2), (true, 1.0), "then across on the right");
+            assert_eq!(at(3), (false, 1.0), "then beside the viewer on the right");
+        }
     }
-
     #[test]
     fn six_player_falls_back_to_two_per_side() {
         let fronts = (0..6).filter(|&s| seat_spot(s, 0, 6).z_sign > 0.0).count();
@@ -960,45 +1121,51 @@ mod tests {
     }
 
     #[test]
-    fn lone_front_column_keeps_piles_near_the_board() {
-        // The viewer's piles must sit just outside the board cap, not out at
-        // the MULTI_HALF_X table edge where the camera can't see them.
-        let d = deck_position(0, 0, 4);
-        assert!(
-            d.x.abs() <= BOARD_HALF_CAP + PILE_STRIP + 0.01,
-            "viewer deck at x={} drifted off toward the table edge",
-            d.x,
-        );
-        assert!(d.x.abs() >= BOARD_HALF_CAP - 0.01, "deck must clear the board area");
+    fn pod_piles_sit_beside_their_board() {
+        // Every pod seat's deck and graveyard sit in the strip just past its
+        // board's edge — not out at a table edge the camera has to reach.
+        for n in [3usize, 4] {
+            for s in 0..n {
+                let f = pod_frame(s, 0, n).unwrap();
+                for pile in [deck_position(s, 0, n), graveyard_position(s, 0, n)] {
+                    let x = f.local(pile).x.abs();
+                    assert!(
+                        x >= f.half + CARD_WIDTH * 0.5 - 0.01 && x <= f.half + CARD_WIDTH + 0.01,
+                        "n={n} seat {s}: a pile at local x={x} isn't beside the board",
+                    );
+                }
+            }
+        }
     }
-
     #[test]
     fn four_player_columns_dont_overlap_and_stay_on_table() {
-        // Group seats by edge; within an edge no two columns may overlap, and
-        // every column must stay inside the table half-width.
-        for &front in &[true, false] {
-            let cols: Vec<(f32, f32)> = (0..4)
-                .map(|s| seat_spot(s, 0, 4))
-                .filter(|sp| (sp.z_sign > 0.0) == front)
-                .map(|sp| (sp.col_center, sp.half_width))
-                .collect();
-            for (c, h) in &cols {
-                assert!(
-                    c.abs() + h <= MULTI_HALF_X + 0.01,
-                    "column center {c} ± {h} runs off the table",
-                );
-            }
-            for i in 0..cols.len() {
-                for j in (i + 1)..cols.len() {
-                    let (ci, hi) = cols[i];
-                    let (cj, hj) = cols[j];
-                    let gap = (ci - cj).abs();
-                    assert!(gap >= hi + hj, "columns {ci} and {cj} overlap (gap {gap})");
+        // No two seats' boards overlap, and every board stays on the table.
+        for n in [3usize, 4, 5, 6] {
+            let boards: Vec<Rect> = (0..n).map(|s| board_footprint(s, 0, n)).collect();
+            for (i, a) in boards.iter().enumerate() {
+                assert!(a.min.x >= -MULTI_HALF_X - 0.01 && a.max.x <= MULTI_HALF_X + 0.01, "n={n} seat {i} off the table");
+                for (j, b) in boards.iter().enumerate().skip(i + 1) {
+                    assert!(a.intersect(*b).is_empty(), "n={n}: seats {i} and {j} overlap: {a:?} {b:?}");
                 }
             }
         }
     }
 
+    /// Where `seat`'s battlefield cards can lie on the table (XZ): its rows'
+    /// card edges, from the innermost wrapped creature row out to a wrapped
+    /// second land row.
+    fn board_footprint(seat: usize, viewer: usize, n: usize) -> Rect {
+        let far = BF_LAND_Z + row_wrap_dz(2) + CARD_HEIGHT * 0.5;
+        if let Some(f) = pod_frame(seat, viewer, n) {
+            let edge = f.half - 0.3;
+            let a = f.point(Vec3::new(-edge, 0.0, -f.offset));
+            let b = f.point(Vec3::new(edge, 0.0, far));
+            return Rect::from_corners(Vec2::new(a.x, a.z), Vec2::new(b.x, b.z));
+        }
+        let sp = seat_spot(seat, viewer, n);
+        let (z0, z1) = if sp.z_sign > 0.0 { (0.0, far) } else { (-far, 0.0) };
+        Rect::new(sp.board_center - sp.board_half, z0, sp.board_center + sp.board_half, z1)
+    }
     #[test]
     fn viewer_always_on_front_edge() {
         for n in 2..=6 {
@@ -1010,11 +1177,13 @@ mod tests {
 
     #[test]
     fn three_player_puts_both_opponents_across() {
-        // n=3: front = {viewer}, back = {V+1, V+2}.
-        let fronts: Vec<bool> = (0..3).map(|s| seat_spot(s, 0, 3).z_sign > 0.0).collect();
-        assert_eq!(fronts, vec![true, false, false]);
+        // A triangle: the viewer front-centre, the next seat across on the
+        // left, the last across on the right.
+        let f = |s: usize| pod_frame(s, 0, 3).unwrap();
+        assert_eq!((f(0).yaw, f(0).shift.x), (0.0, 0.0));
+        assert!(f(1).yaw.abs() > 1.0 && f(1).shift.x < 0.0);
+        assert!(f(2).yaw.abs() > 1.0 && f(2).shift.x > 0.0);
     }
-
     #[test]
     fn piles_stay_on_table_for_four_players() {
         for s in 0..4 {
@@ -1034,16 +1203,7 @@ mod tests {
         // not on X alone.
         let rect = |c: Vec3, w: f32, h: f32| Rect::from_center_size(Vec2::new(c.x, c.z), Vec2::new(w, h));
         for n in [3usize, 4, 5, 6] {
-            let boards: Vec<Rect> = (0..n)
-                .map(|s| {
-                    let sp = seat_spot(s, 0, n);
-                    // Rows run from the table centre line (the innermost
-                    // wrapped creature row) out to a wrapped second land row.
-                    let depth = BF_LAND_Z + row_wrap_dz(2) + CARD_HEIGHT * 0.5;
-                    let (z0, z1) = if sp.z_sign > 0.0 { (0.0, depth) } else { (-depth, 0.0) };
-                    Rect::new(sp.board_center - sp.board_half, z0, sp.board_center + sp.board_half, z1)
-                })
-                .collect();
+            let boards: Vec<Rect> = (0..n).map(|s| board_footprint(s, 0, n)).collect();
             for s in 0..n {
                 let cmd = command_zone_card_transform(s, 0, n, 0);
                 let mut piles = vec![
@@ -1053,11 +1213,17 @@ mod tests {
                 ];
                 if s != 0 {
                     for slot in 0..7 {
-                        let h = hand_card_transform(s, 0, n, slot, 7, 1.0).translation;
-                        if h.y < 1.0 {
-                            // A flat spread (far seats); a raised fan is
-                            // above the table, not on it.
-                            piles.push(("hand", rect(h, CARD_WIDTH, CARD_HEIGHT)));
+                        let h = hand_card_transform(s, 0, n, slot, 7, 1.0);
+                        if h.translation.y < 1.0 {
+                            // A flat stack or spread; a raised fan is above
+                            // the table, not on it. A card lying across the
+                            // table (a side seat) swaps its footprint.
+                            let (w, d) = if (h.rotation * Vec3::Y).x.abs() > 0.5 {
+                                (CARD_HEIGHT, CARD_WIDTH)
+                            } else {
+                                (CARD_WIDTH, CARD_HEIGHT)
+                            };
+                            piles.push(("hand", rect(h.translation, w, d)));
                         }
                     }
                 }
@@ -1090,44 +1256,31 @@ mod tests {
 
     #[test]
     fn crowded_front_row_wraps_toward_centre() {
-        // A narrow 4-player back column with 8 creature groups must wrap
-        // into two rows instead of compressing below MIN_WRAP_SPACING.
-        let seat = 2; // a back-edge column in a 4-player pod
-        let n = 4;
-        let total = 8;
-        let spot = seat_spot(seat, 0, n);
-        let zs: Vec<f32> =
-            (0..total).map(|s| bf_card_transform(seat, 0, n, s, total, false, false).translation.z).collect();
-        let mut rows: Vec<f32> = zs.clone();
+        // A pod board with 8 creature groups must wrap into two rows instead
+        // of compressing below MIN_WRAP_SPACING, the wrap stepping toward the
+        // table centre — a whole card deep, since a pod has the edge gap for
+        // it — and every group staying on its own board.
+        let (seat, n, total) = (2, 4, 8); // far-right in a 4-player pod
+        let f = pod_frame(seat, 0, n).unwrap();
+        let local: Vec<Vec3> = (0..total)
+            .map(|s| f.local(bf_card_transform(seat, 0, n, s, total, false, false).translation))
+            .collect();
+        let mut rows: Vec<f32> = local.iter().map(|p| p.z).collect();
         rows.sort_by(f32::total_cmp);
         rows.dedup_by(|a, b| (*a - *b).abs() < 1e-3);
-        assert_eq!(rows.len(), 2, "8 groups in a narrow column form two rows, got z rows {rows:?}");
-        // Wrapped row steps toward the table centre (|z| shrinks for a back seat).
-        assert!(rows.iter().any(|z| (z + spot.z_sign * BF_CREATURE_Z).abs() > 1.0));
-        // Every group stays inside its column and keeps readable spacing.
-        for s in 0..total {
-            let t = bf_card_transform(seat, 0, n, s, total, false, false);
-            assert!(
-                (t.translation.x - spot.board_center).abs() <= spot.board_half + 0.01,
-                "slot {s} leaks out of its column",
-            );
+        assert_eq!(rows.len(), 2, "8 groups form two rows, got local z rows {rows:?}");
+        assert!(rows[0] < BF_CREATURE_Z, "the wrap steps toward the centre: {rows:?}");
+        assert!(rows[1] - rows[0] >= CARD_HEIGHT, "wrapped rows don't overlap: {rows:?}");
+        for (s, p) in local.iter().enumerate() {
+            assert!(p.x.abs() + CARD_WIDTH * 0.5 <= f.half + 0.01, "slot {s} leaks off its board");
         }
-        // Wrapping must beat single-row compression decisively — a very
-        // narrow column can't always reach the full readability floor with
-        // rows capped at MAX_WRAP_ROWS, but two rows ≈ double the spacing.
-        let single_row = bf_spacing_col(total, spot.board_half);
-        for pair in [(0usize, 1usize), (4, 5)] {
-            let a = bf_card_transform(seat, 0, n, pair.0, total, false, false).translation;
-            let b = bf_card_transform(seat, 0, n, pair.1, total, false, false).translation;
-            assert!(
-                (b.x - a.x).abs() >= single_row * 1.8,
-                "wrapped spacing {} is not meaningfully better than compressed {}",
-                (b.x - a.x).abs(),
-                single_row,
-            );
+        // Wrapping must beat single-row compression decisively.
+        let single_row = bf_spacing_col(total, f.half);
+        for (a, b) in [(0usize, 1usize), (4, 5)] {
+            let gap = (local[b].x - local[a].x).abs();
+            assert!(gap >= single_row * 1.8, "wrapped spacing {gap} vs compressed {single_row}");
         }
     }
-
     #[test]
     fn crowded_rows_shingle_instead_of_z_fighting() {
         // Regression: eight land groups in 1v1 compress below CARD_WIDTH,
@@ -1196,6 +1349,25 @@ mod tests {
     #[test]
     fn wrapped_rows_stay_on_their_own_side_of_the_table() {
         let half_depth = CARD_HEIGHT * 0.5;
+        // Pods: however crowded, no seat's rows cross the table's centre
+        // line into the opposite edge's half.
+        for n in [3usize, 4] {
+            for total in 1..=24usize {
+                for back_row in [false, true] {
+                    for seat in 0..n {
+                        let f = pod_frame(seat, 0, n).unwrap();
+                        let sign = if f.yaw.abs() > 1.0 { -1.0 } else { 1.0 };
+                        for slot in 0..total {
+                            let z = bf_card_transform(seat, 0, n, slot, total, back_row, false).translation.z;
+                            assert!(
+                                sign * z - half_depth >= -1e-3,
+                                "n={n} seat {seat} slot {slot}/{total} crosses the centre line",
+                            );
+                        }
+                    }
+                }
+            }
+        }
         for total in 1..=24usize {
             for back_row in [false, true] {
                 for seat in 0..2 {

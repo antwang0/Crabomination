@@ -305,10 +305,12 @@ Cross-references the detailed entries below where one exists.
   commits) is worth shipping ahead of the full plan.
 - 🟡 **Battlefield organization at scale** — ✅ identical tokens cascade
   into piles with a ×N count chip (`creature_card_transform` +
-  `token_badge.rs`); same-name lands already stacked. ✅ A pod's far
-  seats keep their piles and hand in a row behind their board, so each far
-  board has its whole column: 5.6 cards wide at 4 players, up from 3.5, where
-  six creatures overlapped. Remaining ⏳: a
+  `token_badge.rs`); same-name lands already stacked. ✅ Pods seat two to
+  an edge (`layout::pod_frame`; three players make a triangle), each seat
+  laid out like a 1v1 near edge with a pile strip either side: five groups a
+  row on every board, up from three and a half on each far board when all
+  three opponents shared the far edge, and a wrapped creature row gets a
+  whole card of depth instead of a shingle. Remaining ⏳: a
   visible aura/equipment → host link (today attachment info lives only in
   tooltips).
 - 🟡 **Cost-payment feedback** — ✅ the manual-tap banner live-updates
@@ -571,13 +573,16 @@ resource. Subsumes the existing "Responsive Stack Display" entry above.
 🟡 **The table half is done (2026-09-23); the HUD half is not.** The camera
 is now fitted to the window (`card/framing.rs`): the closest pose that keeps
 a busy board on screen and clear of the corner panels, refit on resize. With
-the opponent's 1v1 hand moved beside their deck, the viewer's hand off their
-land row, and a pod's far piles moved behind their boards, cards at
-1920x1080 went 121 → 125 px (1v1) and 80 → 99 px (pod), and 242 → 270 /
-160 → 232 px at 4K; `framing::tests::budget` gates the numbers. The panels
-themselves are untouched and still fixed-px: at 1280x720 the ~1075 px player
-panel and the opponent panel overlap, and the fit only knows the panels by
-the nominal rects in `framing::hud_rects` — a slot system that reported real
-rects would let it use space an empty log or a short chip row leaves.
+the opponent's 1v1 hand moved beside their deck and the viewer's hand off
+their land row, 1v1 cards at 1920x1080 went 121 → 125 px (242 → 270 at 4K);
+pods, now seated two to an edge, went 80 → 86 px (160 → 212 at 4K) with
+every board wider. `framing::tests::budget` gates the numbers. The panels
+themselves are untouched and still fixed-px, and **they are now what bounds
+the table**: a pod is limited by width, and without the bottom-left
+action-button column its cards would read 99 px at 1920x1080 (92 px without
+the game log instead). At 1280x720 the ~1075 px player panel and the
+opponent panel overlap. The fit only knows the panels by the nominal rects
+in `framing::hud_rects` — a slot system that reported real rects would let
+it use space an empty log or a short chip row leaves.
 
 ---

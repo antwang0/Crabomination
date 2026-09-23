@@ -28,6 +28,13 @@ pub fn legacy_pose(n_seats: usize) -> Transform {
     Transform::from_translation(pos).looking_at(Vec3::ZERO, Vec3::Y)
 }
 
+/// The direction the home pose looks from (table point → camera): the 1v1
+/// camera's 66° pitch, for every table size. The viewer's hand is tilted to
+/// face it (`layout::HAND_TILT_X`), and pods sit two to an edge like a
+/// wider 1v1 table; the old pod pitch (62°, from (0, 46, 24)) put the hand
+/// over the viewer's land row.
+const VIEW_DIRECTION: Vec3 = Vec3::new(0.0, 32.0, 14.0);
+
 /// The camera's resting pose for a table of `n_seats` in a window of
 /// `viewport` logical pixels.
 pub fn home_pose(n_seats: usize, viewport: Vec2) -> Transform {
@@ -103,13 +110,13 @@ fn clear(cards: &[([Vec3; 8], bool)], cam: &Transform, viewport: Vec2, hud: &[Re
     })
 }
 
-/// The closest pose, looking down the legacy pose's direction, that keeps
+/// The closest pose, looking down [`VIEW_DIRECTION`], that keeps
 /// the representative board on screen and clear of the HUD. At each
 /// distance the look-at point is tried centred first, then nudged in
 /// widening steps; a bisection on the distance keeps the closest distance
 /// some nudge clears.
 pub fn fit_pose(n_seats: usize, viewport: Vec2) -> Transform {
-    let back = legacy_pose(n_seats).translation.normalize();
+    let back = VIEW_DIRECTION.normalize();
     let cards = fit_cards(&sample_board(n_seats, hand_zoom_for(viewport.y)));
     let hud = hud_rects(viewport, n_seats);
     let pose = |target: Vec3, d: f32| {
@@ -389,10 +396,14 @@ mod tests {
             (2, 1920, 1080) => 120.0,
             (2, 2560, 1080) => 120.0,
             (2, 3840, 2160) => 260.0,
-            (_, 1280, 720) => 52.0,
-            (_, 1920, 1080) => 95.0,
-            (_, 2560, 1080) => 102.0,
-            _ => 215.0,
+            // Pods seat two to an edge. That table is bound by width, and
+            // the HUD's action-button column is what binds it: without that
+            // column these read 99/84 at 1920x1080 (the game log is next,
+            // 92/87 without it).
+            (_, 1280, 720) => 44.0,
+            (_, 1920, 1080) => 83.0,
+            (_, 2560, 1080) => 105.0,
+            _ => 205.0,
         };
         for (seats, vp, b) in &fitted {
             assert!(

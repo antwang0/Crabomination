@@ -121,10 +121,8 @@ pub fn camera_focus_hotkeys(
 /// Over-the-shoulder pose for a focused seat: hovering behind that seat's
 /// table edge, looking down at the middle of their board rows.
 fn focus_pose(seat: usize, viewer: usize, n_seats: usize) -> Transform {
-    let spot = crate::card::layout::seat_spot(seat, viewer, n_seats);
-    let look_at = Vec3::new(spot.board_center, 0.0, spot.z_sign * 6.0);
-    let pos = look_at + Vec3::new(0.0, 20.0, spot.z_sign * 14.0);
-    Transform::from_translation(pos).looking_at(look_at, Vec3::Y)
+    let (look_at, eye) = crate::card::layout::seat_focus(seat, viewer, n_seats);
+    Transform::from_translation(eye).looking_at(look_at, Vec3::Y)
 }
 
 /// Last computed focus point, held across frames so the zoom stays put
