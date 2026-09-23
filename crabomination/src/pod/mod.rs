@@ -295,6 +295,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::GIADA_COMMANDERS,
             main: decks::GIADA_MAIN,
         },
+        // Twenty-seventh: the seventeenth official list (Guided by Nature, C14) —
+        // mono-green Elves under a planeswalker commander. `--seats 27`.
+        PodDeck {
+            name: "Freyalise C14 (G)",
+            commanders: decks::FREYALISE_C14_COMMANDERS,
+            main: decks::FREYALISE_C14_MAIN,
+        },
     ]
 }
 

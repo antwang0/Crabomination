@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Ten hand-picked commanders plus sixteen official preconstructed lists, each a
+//! Ten hand-picked commanders plus seventeen official preconstructed lists, each a
 //! 99 of cards this engine implements: legal under CR 903 (100 cards
 //! including the commander, singleton outside basics, every card inside the
 //! commander's CR 903.4 color identity) and Commander-legal per Scryfall's
@@ -8,13 +8,15 @@
 //!
 //! The ten were built by hand because the offline Scryfall cache cannot say
 //! how a precon splits into decks; MTGJSON's deck files can, and the eleventh
-//! through twenty-sixth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
+//! through twenty-seventh (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
 //! Win, Tails You Lose, Goblin Storm, Foundations Commander's Wretched Ranks,
 //! Tramplesaurus Rex and Keen Engineering, Commander Legends' Reap the Tides,
 //! Phyrexia: All Will Be One's Corrupting Influence, Zendikar Rising's Sneak
 //! Attack, Tarkir: Dragonstorm's Jeskai Striker, Commander Masters' Sliver
 //! Swarm, Outlaws of Thunder Junction's Quick Draw, Commander 2017's
-//! Vampiric Bloodlust and Foundations Commander's Calling All Angels) are taken from one card for card. What all of them keep
+//! Vampiric Bloodlust, Foundations Commander's Calling All Angels and
+//! Commander 2014's Guided by Nature) are taken from one card for card. What
+//! all of them keep
 //! from the precon idea is what the pod needs — fixed, legal, varied color
 //! identities, and built to play against each other.
 //! One is a Partner pair (CR 702.124b), one is a **planeswalker**
@@ -929,4 +931,32 @@ pub const GIADA_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const FREYALISE_C14_COMMANDERS: &[CardFactory] = &[freyalise_llanowars_fury];
+
+/// **Guided by Nature**, the Commander 2014 deck (C14, 2014-11-07), exactly as
+/// MTGJSON's `GuidedByNature_C14` prints it: 74 nonbasic cards + 25
+/// Forests = 99. Mono-green Elves under the field's second planeswalker
+/// commander (CR 903.3a).
+pub const FREYALISE_C14_MAIN: &[CardFactory] = &[
+    elvish_mystic, elvish_skysweeper, essence_warden, joraga_warcaller, llanowar_elves,
+    sylvan_safekeeper, elvish_visionary, priest_of_titania, sylvan_ranger, thornweald_archer,
+    wellwisher, farhaven_elf, imperious_perfect, reclamation_sage, timberwatch_elf,
+    titanias_chosen, wood_elves, elvish_archdruid, ezuri_renegade_leader, drove_of_elves,
+    immaculate_magistrate, wrens_run_packmaster, lys_alana_huntmaster, masked_admirers,
+    wolfbriar_elemental, creeperhulk, silklash_spider, titania_protector_of_argoth,
+    grave_sifter, primordial_sage, rampaging_baloths, soul_of_the_harvest, thunderfoot_baloth,
+    siege_behemoth, tornado_elemental, terastodon, lifeblood_hydra, hunting_triad, whirlwind,
+    overwhelming_stampede, overrun, grim_flowering, collective_unconscious, desert_twister,
+    wave_of_vitriol, praetors_counsel, sylvan_offering, harrow, fresh_meat, skullclamp,
+    sol_ring, emerald_medallion, moss_diamond, swiftfoot_boots, commanders_sphere,
+    assault_suit, seers_sundial, predator_flagship, loreseekers_stone, beastmaster_ascension,
+    song_of_the_dryads, wolfcallers_howl, crystal_vein, evolving_wilds, gargoyle_castle,
+    ghost_quarter, haunted_fengraf, havenwood_battleground, jungle_basin, myriad_landscape,
+    oran_rief_the_vastwood, slippery_karst, terramorphic_expanse, tranquil_thicket,
+    // Basics: 25 forest
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest,
 ];
