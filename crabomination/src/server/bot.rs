@@ -10502,13 +10502,9 @@ fn pick_attacks_inner(state: &GameState, seat: usize, guard: bool) -> Vec<Attack
         }
         attackers = remaining;
     }
-    // Remaining attackers go at the player.
-    for id in attackers {
-        attacks.push(Attack {
-            attacker: id,
-            target: AttackTarget::Player(target_player),
-        });
-    }
+    // Remaining attackers go at the player — at a table, the surplus past a
+    // kill spills to the next opponent.
+    super::pod_attack::spread_face_attacks(state, seat, target_player, attackers, &mut attacks);
     // Last, because the tax depends on what each attacker is aimed at.
     trim_attacks_to_payable_tax(state, seat, statics, &mut attacks);
     attacks

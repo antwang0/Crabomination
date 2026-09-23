@@ -5356,30 +5356,34 @@ impl GameState {
             if q == seat || !self.players[q].is_alive() || self.same_team(seat, q) {
                 continue;
             }
-            // Only a commander `seat` controls can add to the tally; one in
-            // the command zone is a reason to cast it, not to pick a defender.
-            let race = self.players[seat]
-                .commanders
-                .iter()
-                .filter(|&&cmd| {
-                    self.battlefield.iter().any(|c| c.id == cmd && c.controller == seat)
-                })
-                .map(|&cmd| self.commander_damage.get(&(q, cmd)).copied().unwrap_or(0))
-                .max()
-                .unwrap_or(0);
-            let untapped = self
-                .battlefield
-                .iter()
-                .filter(|c| c.controller == q && !c.tapped && c.definition.is_creature())
-                .count();
-            let score = i64::from(race) * 3
-                + i64::from(100 - self.effective_life(q).clamp(0, 100)) * 2
-                + (10 - untapped.min(10)) as i64;
+            let score = self.hostile_opponent_score(seat, q);
             if best.is_none_or(|(b, _)| score > b) {
                 best = Some((score, q));
             }
         }
         best.map(|(_, q)| q)
+    }
+
+    /// [`default_hostile_opponent`](Self::default_hostile_opponent)'s ranking
+    /// of opponent `q` from `seat`'s chair — higher is the better defender.
+    pub(crate) fn hostile_opponent_score(&self, seat: usize, q: usize) -> i64 {
+        // Only a commander `seat` controls can add to the tally; one in
+        // the command zone is a reason to cast it, not to pick a defender.
+        let race = self.players[seat]
+            .commanders
+            .iter()
+            .filter(|&&cmd| self.battlefield.iter().any(|c| c.id == cmd && c.controller == seat))
+            .map(|&cmd| self.commander_damage.get(&(q, cmd)).copied().unwrap_or(0))
+            .max()
+            .unwrap_or(0);
+        let untapped = self
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == q && !c.tapped && c.definition.is_creature())
+            .count();
+        i64::from(race) * 3
+            + i64::from(100 - self.effective_life(q).clamp(0, 100)) * 2
+            + (10 - untapped.min(10)) as i64
     }
 
     /// CR 800.4j — the seat that actually receives priority when `seat` would.

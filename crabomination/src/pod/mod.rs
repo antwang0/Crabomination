@@ -957,9 +957,12 @@ mod tests {
         // the aggregate moved with them: the four-seat spread TIGHTENS from
         // 25.1 to 23.6 points (39.8/14.7/20.0/25.5 → 40.9/17.1/17.3/24.7,
         // 3,000 games at seed 43), and games run ~9 % longer.
+        // Re-blessed 2026-09-23 (overkill spill, `server/pod_attack.rs`):
+        // face attackers past a kill now go at the next opponent instead of
+        // piling onto one seat; seed 43 is the same winner 13 turns sooner.
         const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
             (0xC0FFEE, Some(1), 97, 4061),
-            (43, Some(3), 63, 2540),
+            (43, Some(3), 50, 2107),
             (4242, Some(2), 53, 2318),
         ];
         let decks = rofellos_pod(4);
