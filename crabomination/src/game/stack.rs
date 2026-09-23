@@ -2354,6 +2354,7 @@ impl GameState {
                     // counters if you cast it from your hand" reads the cast
                     // zone via `Predicate::CastFromHand`.
                     let cast_from_hand = card.cast_from_hand;
+                    let cast_from_graveyard = card.cast_from_graveyard;
                     let mut card = card;
                     // CR 608.3a — a permanent spell enters under the control
                     // of its caster (matters for casts of opponent-owned
@@ -2595,6 +2596,7 @@ impl GameState {
                             mana_spent,
                         );
                         etb_ctx.cast_from_hand = cast_from_hand;
+                        etb_ctx.cast_from_graveyard = cast_from_graveyard;
                         let base = self.evaluate_value(&value, &etb_ctx);
                         if base > 0 {
                             // CR 614.16: counter-doubling replacement effects
@@ -2911,6 +2913,7 @@ impl GameState {
                                 ctx.kicked_options = c.kicked_options.clone();
                                 ctx.bargained = c.bargained;
                                 ctx.cast_from_hand = c.cast_from_hand;
+                                ctx.cast_from_graveyard = c.cast_from_graveyard;
                                 ctx.cast_via_mayhem = c.cast_via_mayhem;
                             }
                             if !self.evaluate_predicate(pred, &ctx) {

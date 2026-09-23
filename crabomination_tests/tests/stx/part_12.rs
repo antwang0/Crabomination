@@ -852,6 +852,7 @@ fn until_end_of_combat_expires_when_combat_phase_ends() {
         mana_spent_by_color: Vec::new(),
         source_name: None,
         cast_from_hand: true,
+        cast_from_graveyard: false,
         event_amount: 0,
         kicked: false,
         kicked_options: Vec::new(),

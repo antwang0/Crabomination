@@ -4445,6 +4445,7 @@ impl GameState {
             ctx.kick_count = c.kick_count;
             ctx.bargained = c.bargained;
             ctx.cast_from_hand = c.cast_from_hand;
+            ctx.cast_from_graveyard = c.cast_from_graveyard;
             ctx.mana_spent_by_color = c.cast_mana_spent_by_color.to_vec();
         }
         ctx
@@ -10515,6 +10516,7 @@ impl GameState {
                     mana_spent_by_color: Vec::new(),
                     source_name: None,
                     cast_from_hand: true,
+                    cast_from_graveyard: false,
                     event_amount: 0,
                     kicked: false,
                     kicked_options: Vec::new(),
@@ -11921,6 +11923,7 @@ impl GameState {
                 mana_spent_by_color: Vec::new(),
                 source_name: None,
                 cast_from_hand: true,
+                cast_from_graveyard: false,
                 event_amount: 0,
                 kicked: false,
                 kicked_options: Vec::new(),
@@ -13438,16 +13441,16 @@ impl GameState {
         // actual cast: cascade / flashback / exile casts read `false`,
         // which stops "spells you cast from your hand have cascade" from
         // re-triggering on the spells it cascades into.
-        let cast_from_hand = self
+        let (cast_from_hand, cast_from_graveyard) = self
             .stack
             .iter()
             .find_map(|item| match item {
                 crate::game::types::StackItem::Spell { card, .. } if card.id == cast_card => {
-                    Some(card.cast_from_hand)
+                    Some((card.cast_from_hand, card.cast_from_graveyard))
                 }
                 _ => None,
             })
-            .unwrap_or(true);
+            .unwrap_or((true, false));
         // Walk every permanent on the battlefield — `YourControl` triggers
         // fire from the caster's permanents, while `OpponentControl` triggers
         // fire from non-caster permanents (Wandering Archaic etc.). The
@@ -13612,6 +13615,7 @@ impl GameState {
                     mana_spent_by_color: Vec::new(),
                     source_name: None,
                     cast_from_hand,
+                    cast_from_graveyard,
                     event_amount: 0,
                     kicked: false,
                     kicked_options: Vec::new(),
@@ -17384,6 +17388,7 @@ impl GameState {
                 mana_spent_by_color: Vec::new(),
                 source_name: None,
                 cast_from_hand: true,
+                cast_from_graveyard: false,
                 event_amount: 0,
                 kicked: false,
                 kicked_options: Vec::new(),

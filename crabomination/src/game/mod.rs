@@ -26238,6 +26238,7 @@ impl GameState {
             ctx.bargained = card.bargained;
             ctx.cast_via_mayhem = card.cast_via_mayhem;
             ctx.cast_via_waterbend = card.cast_via_waterbend;
+            ctx.cast_from_graveyard = card.cast_from_graveyard;
             ctx.cast_collected_evidence = card.cast_collected_evidence;
             ctx.entwined = card.entwined;
             ctx.spree_modes = card.spree_modes.clone();
@@ -26278,18 +26279,21 @@ impl GameState {
             && card.split_cast == Some(2)
             && let Some(split) = card.definition.split.as_ref()
         {
-            let right_ctx = EffectContext::for_spell_with_source_and_origin(
-                card.id,
-                card.definition.name,
-                caster,
-                additional_targets.first().cloned(),
-                Vec::new(),
-                mode,
-                x_value,
-                converged_value,
-                mana_spent,
-                card.cast_from_hand,
-            );
+            let right_ctx = EffectContext {
+                cast_from_graveyard: card.cast_from_graveyard,
+                ..EffectContext::for_spell_with_source_and_origin(
+                    card.id,
+                    card.definition.name,
+                    caster,
+                    additional_targets.first().cloned(),
+                    Vec::new(),
+                    mode,
+                    x_value,
+                    converged_value,
+                    mana_spent,
+                    card.cast_from_hand,
+                )
+            };
             let res = if stage == 1 {
                 self.resolve_effect_resumed(effect, &right_ctx)
             } else {
@@ -26310,18 +26314,21 @@ impl GameState {
             for (i, spliced) in
                 card.spliced_effects.clone().into_iter().enumerate().skip(start)
             {
-                let splice_ctx = EffectContext::for_spell_with_source_and_origin(
-                    card.id,
-                    card.definition.name,
-                    caster,
-                    additional_targets.get(i).cloned(),
-                    Vec::new(),
-                    mode,
-                    x_value,
-                    converged_value,
-                    mana_spent,
-                    card.cast_from_hand,
-                );
+                let splice_ctx = EffectContext {
+                    cast_from_graveyard: card.cast_from_graveyard,
+                    ..EffectContext::for_spell_with_source_and_origin(
+                        card.id,
+                        card.definition.name,
+                        caster,
+                        additional_targets.get(i).cloned(),
+                        Vec::new(),
+                        mode,
+                        x_value,
+                        converged_value,
+                        mana_spent,
+                        card.cast_from_hand,
+                    )
+                };
                 let res = if Some(i) == resumed_splice {
                     self.resolve_effect_resumed(effect, &splice_ctx)
                 } else {
@@ -26728,6 +26735,7 @@ impl GameState {
             // "Escapes with …" / cast-zone riders (Tizerus Charger) read
             // the source's cast zone through `Predicate::CastFromGraveyard`.
             ctx.cast_from_hand = src.cast_from_hand;
+            ctx.cast_from_graveyard = src.cast_from_graveyard;
             // CR 701.59 — a self-ETB trigger reads whether the collect-evidence
             // cost was paid ("if evidence was collected" — Crimestopper Sprite).
             ctx.cast_collected_evidence = src.cast_collected_evidence;

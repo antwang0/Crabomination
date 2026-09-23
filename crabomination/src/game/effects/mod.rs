@@ -260,6 +260,10 @@ pub struct EffectContext {
     /// non-spell contexts (triggers, activated abilities) since those
     /// don't have a "cast zone" concept.
     pub cast_from_hand: bool,
+    /// True if the resolving spell was cast from a graveyard
+    /// (`CardInstance.cast_from_graveyard`); read by
+    /// `Predicate::CastFromGraveyard`. False outside a spell resolution.
+    pub cast_from_graveyard: bool,
     /// Per-event amount of the firing event (life gained, life lost,
     /// damage dealt, cards drawn, …). Set on trigger resolutions from
     /// the event payload (`StackItem::Trigger.event_amount`) so trigger
@@ -320,6 +324,7 @@ impl EffectContext {
             mana_spent_by_color: Vec::new(),
             source_name: None,
             cast_from_hand: true,
+            cast_from_graveyard: false,
             event_amount: 0,
             kicked: false,
             kicked_options: Vec::new(),
@@ -405,6 +410,7 @@ impl EffectContext {
             mana_spent_by_color: Vec::new(),
             source_name: Some(spell_name),
             cast_from_hand,
+            cast_from_graveyard: false,
             event_amount: 0,
             kicked: false,
             kicked_options: Vec::new(),
@@ -435,6 +441,7 @@ impl EffectContext {
             mana_spent_by_color: Vec::new(),
             source_name: None,
             cast_from_hand: true,
+            cast_from_graveyard: false,
             event_amount: 0,
             kicked: false,
             kicked_options: Vec::new(),
@@ -464,6 +471,7 @@ impl EffectContext {
             mana_spent_by_color: Vec::new(),
             source_name: None,
             cast_from_hand: true,
+            cast_from_graveyard: false,
             event_amount: 0,
             kicked: false,
             kicked_options: Vec::new(),
@@ -562,6 +570,7 @@ impl EffectContext {
             mana_spent_by_color: Vec::new(),
             source_name: None,
             cast_from_hand: true,
+            cast_from_graveyard: false,
             event_amount,
             kicked: false,
             kicked_options: Vec::new(),

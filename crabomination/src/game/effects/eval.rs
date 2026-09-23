@@ -2779,16 +2779,11 @@ impl GameState {
             Predicate::CausedByOpponentSpellOrAbility => self
                 .resolution_causer
                 .is_some_and(|c| self.opponents_of(ctx.controller).contains(&c)),
-            Predicate::CastFromGraveyard => {
-                // Read directly off the resolution context. Stamped by
-                // `for_spell_with_source` from the resolving
-                // `CardInstance.cast_from_hand` flag. Non-spell
-                // contexts default `cast_from_hand` to true, so this
-                // predicate is `False` for triggers and activated
-                // abilities — which matches the printed wording
-                // ("cast from a graveyard" is a spell-only concept).
-                !ctx.cast_from_hand
-            }
+            // Stamped from the resolving spell's `cast_from_graveyard` flag;
+            // false outside a spell resolution ("cast from a graveyard" is a
+            // spell-only concept). It read `!cast_from_hand`, which a cast
+            // from exile, the library or the command zone also satisfies.
+            Predicate::CastFromGraveyard => ctx.cast_from_graveyard,
             Predicate::IsFirstCombatPhaseThisTurn => self.combat_phases_this_turn <= 1,
             Predicate::IsFirstEndStepThisTurn => self.end_steps_this_turn <= 1,
             Predicate::IsFirstUpkeepThisTurn => self.upkeep_steps_this_turn <= 1,

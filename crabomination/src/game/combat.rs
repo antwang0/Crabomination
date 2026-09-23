@@ -2140,6 +2140,7 @@ impl GameState {
                     mana_spent_by_color: Vec::new(),
                     source_name: None,
                     cast_from_hand: true,
+                    cast_from_graveyard: false,
                     event_amount: 0,
                     kicked: false,
                     kicked_options: Vec::new(),

@@ -758,3 +758,28 @@ fn miirym_copies_a_nontoken_dragon_once_and_not_as_a_legend() {
     drain_stack(&mut g);
     assert_eq!(dragons(&g, 0), 3, "nontoken-only: the copy does not copy itself");
 }
+
+/// CR 903.8 / 601.2a — a spell cast from the command zone was not cast from a
+/// graveyard (bug fix: `Predicate::CastFromGraveyard` read "not cast from
+/// hand", so Ash Zealot dealt 3 to every player who cast their commander).
+#[test]
+fn a_command_zone_cast_is_not_a_graveyard_cast() {
+    let mut g = commander_game();
+    g.add_card_to_battlefield(1, catalog::ash_zealot());
+    let cmd = g.players[0].command[0].id;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastFromCommandZone {
+        card_id: cmd,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+        alternative: false,
+        pitch_card: None,
+    })
+    .expect("cast the commander");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(cmd).is_some());
+    assert_eq!(g.players[0].life, life, "Ash Zealot stays quiet");
+}

@@ -1872,10 +1872,8 @@ pub fn dueling_coach() -> CardDefinition {
 /// would go.)"
 ///
 /// Push (modern_decks): cast-from-graveyard rider is **now wired** via
-/// the new `Predicate::CastFromGraveyard` (reads
-/// `EffectContext.cast_from_hand`, which is stamped from the resolving
-/// `CardInstance.cast_from_hand` flag — flashback / Yawgmoth's Will
-/// style casts set it to false). The body is now `Effect::If` keyed off
+/// `Predicate::CastFromGraveyard` (reads `EffectContext.cast_from_graveyard`,
+/// stamped from the resolving `CardInstance.cast_from_graveyard`). The body is now `Effect::If` keyed off
 /// the predicate: if cast from graveyard, run two CopySpell calls; else
 /// run one. Tests: `increasing_vengeance_copies_target_instant` (regular
 /// hand cast → single copy),
