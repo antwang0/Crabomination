@@ -1666,3 +1666,296 @@ fn pillar_of_origins_funds_only_the_chosen_type() {
     })
     .expect("{1} + the Pillar's green");
 }
+
+// ── Vampiric Bloodlust (Edgar Markov, C17) ──────────────────────────────────
+
+fn pass_to_end_step(g: &mut GameState) {
+    while g.step != TurnStep::End {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(g);
+    }
+    drain_stack(g);
+}
+
+/// Bloodlord of Vaasgoth — a Vampire creature spell cast after an opponent
+/// took damage enters with three +1/+1 counters; a non-Vampire does not.
+#[test]
+fn bloodlord_grants_bloodthirst_to_vampire_spells() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::bloodlord_of_vaasgoth());
+    let vamp = g.add_card_to_hand(0, catalog::kheru_mind_eater());
+    cast(&mut g, vamp, &[]);
+    assert_eq!(pt(&g, vamp), (1, 3), "no opponent was dealt damage");
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, &[Target::Player(1)]);
+    let vamp2 = g.add_card_to_hand(0, catalog::vein_drinker());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    cast(&mut g, vamp2, &[]);
+    cast(&mut g, bear, &[]);
+    assert_eq!(pt(&g, vamp2), (7, 7));
+    assert_eq!(pt(&g, bear), (2, 2));
+}
+
+/// Consuming Vapors — the victim picks; you gain its toughness; rebound
+/// exiles the card.
+#[test]
+fn consuming_vapors_edicts_for_toughness_and_rebounds() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(1, catalog::hill_giant());
+    let spell = g.add_card_to_hand(0, catalog::consuming_vapors());
+    let life = g.players[0].life;
+    cast(&mut g, spell, &[Target::Player(1)]);
+    assert_eq!(count_named(&g, 1, "Hill Giant"), 0);
+    assert_eq!(g.players[0].life, life + 3);
+    assert!(g.exile.iter().any(|c| c.id == spell), "rebound");
+}
+
+/// CR 903.3 — Crimson Honor Guard burns the turn's player unless they
+/// control a commander (anyone's).
+#[test]
+fn cr_903_3_crimson_honor_guard_spares_a_player_with_a_commander() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::crimson_honor_guard());
+    let life = g.players[0].life;
+    pass_to_end_step(&mut g);
+    assert_eq!(g.players[0].life, life - 4);
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::crimson_honor_guard());
+    let stolen = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[1].commanders.push(stolen);
+    let life = g.players[0].life;
+    pass_to_end_step(&mut g);
+    assert_eq!(g.players[0].life, life, "an opponent's commander counts");
+}
+
+/// CR 506.2 — Curse of Disturbance / Vitality: seat 1 attacking the cursed
+/// seat 2 pays both the curse's owner and the attacker.
+#[test]
+fn curses_pay_the_owner_and_an_attacking_opponent() {
+    for (curse, zombie) in [
+        (catalog::curse_of_disturbance as fn() -> CardDefinition, true),
+        (catalog::curse_of_vitality, false),
+    ] {
+        let mut g = multi_player_game(3);
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        let c = g.add_card_to_hand(0, curse());
+        cast(&mut g, c, &[Target::Player(2)]);
+        g.active_player_idx = 1;
+        let atk = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        let (l0, l1) = (g.players[0].life, g.players[1].life);
+        combat(&mut g, vec![Attack { attacker: atk, target: AttackTarget::Player(2) }], 1, |_| {});
+        if zombie {
+            assert_eq!(count_named(&g, 0, "Zombie"), 1);
+            assert_eq!(count_named(&g, 1, "Zombie"), 1);
+        } else {
+            assert_eq!((g.players[0].life, g.players[1].life), (l0 + 2, l1 + 2));
+        }
+    }
+}
+
+/// Dark Impostor — exiles a creature, grows, and borrows its activated
+/// abilities.
+#[test]
+fn dark_impostor_borrows_an_exiled_creatures_ability() {
+    let mut g = main_phase();
+    let imp = g.add_card_to_battlefield(0, catalog::dark_impostor());
+    let sorc = g.add_card_to_battlefield(1, catalog::prodigal_sorcerer());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: imp,
+        ability_index: 0,
+        target: Some(Target::Permanent(sorc)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("exile the Sorcerer");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == sorc));
+    assert_eq!(pt(&g, imp), (3, 3));
+    g.clear_sickness(imp);
+    let life = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: imp,
+        ability_index: 1,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("the borrowed ping");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 1);
+}
+
+/// Drana — X shrinks a creature's toughness and grows Drana's power.
+#[test]
+fn drana_trades_toughness_for_power() {
+    let mut g = main_phase();
+    let d = g.add_card_to_battlefield(0, catalog::drana_kalastria_bloodchief());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: d,
+        ability_index: 0,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        x_value: Some(2),
+        mode: None,
+    })
+    .expect("X = 2");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none());
+    assert_eq!(pt(&g, d), (6, 4));
+}
+
+/// Fell the Mighty — every creature with power greater than the target's.
+#[test]
+fn fell_the_mighty_destroys_the_bigger_creatures() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let other = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let spell = g.add_card_to_hand(0, catalog::fell_the_mighty());
+    cast(&mut g, spell, &[Target::Permanent(bear)]);
+    assert!(g.battlefield_find(bear).is_some() && g.battlefield_find(other).is_some());
+    assert!(g.battlefield_find(giant).is_none());
+}
+
+/// Kheru Mind-Eater — the player it hits exiles a card of their choice; you
+/// may cast it.
+#[test]
+fn kheru_mind_eater_takes_a_card_you_may_cast() {
+    let mut g = main_phase();
+    let k = g.add_card_to_battlefield(0, catalog::kheru_mind_eater());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    combat(&mut g, vec![Attack { attacker: k, target: AttackTarget::Player(1) }], 0, |_| {});
+    assert!(g.exile.iter().any(|c| c.id == bolt));
+    g.step = TurnStep::PostCombatMain;
+    g.priority.player_with_priority = 0;
+    let life = g.players[1].life;
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast from exile");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 3);
+}
+
+/// Kindred Charge — a hasty copy of each creature of the chosen type, exiled
+/// (not sacrificed) at the next end step.
+#[test]
+fn kindred_charge_copies_the_chosen_type_then_exiles_the_copies() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::hill_giant());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::CreatureType(CreatureType::Bear)]));
+    let spell = g.add_card_to_hand(0, catalog::kindred_charge());
+    cast(&mut g, spell, &[]);
+    assert_eq!(count_named(&g, 0, "Grizzly Bears"), 4);
+    assert_eq!(count_named(&g, 0, "Hill Giant"), 1);
+    pass_to_end_step(&mut g);
+    assert_eq!(count_named(&g, 0, "Grizzly Bears"), 2);
+    assert!(g.players[0].graveyard.iter().all(|c| c.definition.name != "Grizzly Bears"));
+}
+
+/// Licia — {1} cheaper per life gained this turn; pay 5 life for three
+/// counters, once, on your turn only.
+#[test]
+fn licia_discounts_by_life_gained_and_grows_once_a_turn() {
+    let mut g = main_phase();
+    g.players[0].life_gained_this_turn = 3;
+    let licia = g.add_card_to_hand(0, catalog::licia_sanguine_tribune());
+    for c in [Color::Red, Color::White, Color::Black] {
+        g.players[0].mana_pool.add(c, 1);
+    }
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: licia,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("{5} less 3");
+    drain_stack(&mut g);
+    let pay = |g: &mut GameState| {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: licia,
+            ability_index: 0,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+    };
+    pay(&mut g).expect("pay 5 life");
+    drain_stack(&mut g);
+    assert_eq!(pt(&g, licia), (7, 7));
+    assert!(pay(&mut g).is_err(), "once each turn");
+}
+
+/// Mathas — the bounty lands on an opposing creature; when it dies, its
+/// controller's opponents each draw and gain 2.
+#[test]
+fn mathas_bounty_pays_the_opponents_of_the_dead_creatures_controller() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::mathas_fiend_seeker());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    pass_to_end_step(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::Bounty), 1);
+    g.step = TurnStep::PostCombatMain;
+    g.priority.player_with_priority = 0;
+    let (life, hand) = (g.players[0].life, g.players[0].hand.len());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, &[Target::Permanent(bear)]);
+    assert_eq!(g.players[0].life, life + 2);
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+}
+
+/// Outpost Siege — Khans impulse-draws each upkeep.
+#[test]
+fn outpost_siege_khans_exiles_the_top_card_each_upkeep() {
+    let mut g = main_phase();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(0)]));
+    let siege = g.add_card_to_hand(0, catalog::outpost_siege());
+    cast(&mut g, siege, &[]);
+    let top = g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+    g.step = TurnStep::Untap;
+    let _ = g.advance_step(Vec::new());
+    drain_stack(&mut g);
+    assert_eq!(g.step, TurnStep::Upkeep);
+    assert!(g.exile.iter().any(|c| c.id == top));
+}
+
+/// Vein Drinker — it fights, and grows when a creature it damaged dies.
+#[test]
+fn vein_drinker_fights_and_grows() {
+    let mut g = main_phase();
+    let v = g.add_card_to_battlefield(0, catalog::vein_drinker());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(v);
+    flood(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: v,
+        ability_index: 0,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("{R}, {T}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none());
+    assert_eq!(pt(&g, v), (5, 5));
+}
