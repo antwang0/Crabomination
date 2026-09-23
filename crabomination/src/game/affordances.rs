@@ -1156,6 +1156,7 @@ impl GameState {
             .filter(|c| {
                 c.definition.replicate_cost().is_some()
                     || c.definition.replicate_energy_cost().is_some()
+                    || c.definition.replicate_tap_filter().is_some()
                     || self.granted_replicate_cost(caster, &c.definition).is_some()
             })
             .map(|c| {

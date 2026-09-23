@@ -5991,16 +5991,51 @@ impl GameState {
             .cloned()
             .or_else(|| self.granted_replicate_cost(p, def));
         let energy_per = def.replicate_energy_cost();
+        let tap_filter = def.replicate_tap_filter().cloned();
         // Energy-paid replicate (Reiterating Bolt) must have the energy up front.
         if let Some(n) = energy_per
             && self.players[p].energy < n.saturating_mul(times)
         {
             return Err(GameError::InsufficientEnergy);
         }
+        // Tap-paid replicate (Psionic Ritual): `times` untapped matching
+        // permanents, the first in battlefield order.
+        let tappers: Vec<CardId> = match &tap_filter {
+            Some(f) if times > 0 => {
+                let ids: Vec<CardId> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| {
+                        c.controller == p
+                            && !c.tapped
+                            && self.evaluate_requirement_static(f, &Target::Permanent(c.id), p, None)
+                    })
+                    .take(times as usize)
+                    .map(|c| c.id)
+                    .collect();
+                if ids.len() < times as usize {
+                    return Err(GameError::SelectionRequirementViolated);
+                }
+                ids
+            }
+            _ => Vec::new(),
+        };
+        // Tapped ahead of the base cost so auto-pay can't tap them for mana
+        // first; `cast_atomically` rolls the taps back if the cast fails.
+        let mut tap_events = Vec::new();
+        for id in tappers {
+            if let Some(c) = self.battlefield_find_mut(id) {
+                c.tapped = true;
+                tap_events.push(GameEvent::PermanentTapped { card_id: id, actor: None, as_attacker: false });
+            }
+        }
         // Base cost first (pip-aware), then the replicate cost `times` times.
         let mut events = self.cast_spell(card_id, target, additional_targets, mode, x_value)?;
+        events.splice(0..0, tap_events);
         if times > 0 {
-            if let Some(n) = energy_per {
+            if tap_filter.is_some() {
+                // Tap-paid: the taps went ahead of the base cost.
+            } else if let Some(n) = energy_per {
                 self.spend_energy(p, n.saturating_mul(times));
             } else if let Some(replicate) = mana_replicate {
                 let mut combined = crate::mana::ManaCost { symbols: Vec::new() };

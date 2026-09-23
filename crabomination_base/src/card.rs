@@ -2062,6 +2062,10 @@ pub enum Keyword {
     /// "Replicate—Pay {E}×N" (Reiterating Bolt). Same copy-per-payment rule as
     /// `Replicate`; the cast path charges `N` energy per replication.
     ReplicateEnergy(u32),
+    /// Replicate whose cost is tapping an untapped permanent you control
+    /// matching the filter, once per copy: "Replicate—Tap an untapped Horror
+    /// you control" (Psionic Ritual).
+    ReplicateTap(Box<SelectionRequirement>),
     /// CR 702.78 — Conspire. An optional additional cast cost on an
     /// instant/sorcery: as you cast it, you may tap two untapped creatures you
     /// control that each share a color with the spell. Doing so copies the
@@ -6699,6 +6703,12 @@ impl CardDefinition {
     pub fn replicate_energy_cost(&self) -> Option<u32> {
         self.keywords.iter().find_map(|kw| {
             if let Keyword::ReplicateEnergy(n) = kw { Some(*n) } else { None }
+        })
+    }
+    /// The permanent a `Keyword::ReplicateTap` card taps per replication.
+    pub fn replicate_tap_filter(&self) -> Option<&SelectionRequirement> {
+        self.keywords.iter().find_map(|kw| {
+            if let Keyword::ReplicateTap(f) = kw { Some(&**f) } else { None }
         })
     }
     /// CR 702.35 — the Madness cost if this card has `Keyword::Madness`.
