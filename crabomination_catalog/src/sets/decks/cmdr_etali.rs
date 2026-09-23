@@ -1135,9 +1135,8 @@ pub fn tibalts_trickery() -> CardDefinition {
 /// 5 damage to each opponent and each creature they control instead. Foretell
 /// {4}{R}{R}.
 ///
-/// Approximation: "cast from exile" reads the resolving spell's
-/// `!cast_from_hand` (`Predicate::CastFromGraveyard`, which is "not cast from
-/// hand" — Antiquities on the Loose uses it the same way). The printed exile
+/// Approximation: "cast from exile" reads "not cast from hand"
+/// (`Not(Predicate::CastFromHand)`, as Antiquities on the Loose). The printed exile
 /// casts (foretold, impulse, free cast from exile) all qualify. A cast from a
 /// graveyard or library, or a copy, also gets the 5-damage branch.
 pub fn delayed_blast_fireball() -> CardDefinition {
@@ -1153,7 +1152,7 @@ pub fn delayed_blast_fireball() -> CardDefinition {
         card_types: vec![CardType::Instant],
         foretell_cost: Some(cost(&[generic(4), r(), r()])),
         effect: Effect::If {
-            cond: Predicate::CastFromGraveyard,
+            cond: Predicate::Not(Box::new(Predicate::CastFromHand)),
             then: Box::new(blast(5)),
             else_: Box::new(blast(2)),
         },

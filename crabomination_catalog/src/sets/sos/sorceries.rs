@@ -240,8 +240,7 @@ pub fn practiced_offense() -> CardDefinition {
 /// counter on each Spirit you control. / Flashback {4}{W}{W}."
 ///
 /// Push (modern_decks): the "if cast from anywhere other than your
-/// hand" rider is **now wired** via the new
-/// `Predicate::CastFromGraveyard` (reads
+/// hand" rider is **now wired** via `Not(Predicate::CastFromHand)` (reads
 /// `EffectContext.cast_from_hand`, which is stamped at spell-
 /// resolution time from the resolving `CardInstance.cast_from_hand`
 /// flag). On the flashback cast the predicate is true → the engine
@@ -283,7 +282,7 @@ pub fn antiquities_on_the_loose() -> CardDefinition {
                 definition: std::sync::Arc::new(spirit_token()),
             },
             Effect::If {
-                cond: Predicate::CastFromGraveyard,
+                cond: Predicate::Not(Box::new(Predicate::CastFromHand)),
                 then: Box::new(Effect::ForEach {
                     selector: Selector::EachPermanent(
                         SelectionRequirement::Creature
