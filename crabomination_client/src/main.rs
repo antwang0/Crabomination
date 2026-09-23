@@ -29,6 +29,7 @@ mod debug_export;
 #[cfg(not(target_arch = "wasm32"))]
 mod embedded_assets;
 mod game;
+mod layout_harness;
 mod menu;
 mod net_plugin;
 mod render_quality;
@@ -267,7 +268,10 @@ fn main() {
     };
     let initial_anim_speed = AnimationSpeed(gameplay.animation_speed.clamp(0.25, 4.0));
     let cfg_window_mode = gfx.window_mode;
-    let (cfg_window_w, cfg_window_h) = (gfx.window_width, gfx.window_height);
+    let harness = layout_harness::HarnessArgs::parse(&std::env::args().skip(1).collect::<Vec<_>>());
+    // `--window WxH` pins the size (and skips `maximize_window`) so the
+    // layout harness can render one aspect ratio after another.
+    let (cfg_window_w, cfg_window_h) = harness.window.unwrap_or((gfx.window_width, gfx.window_height));
     let cfg_quality = gfx.render_quality;
 
     // Custom Default asset source: it wraps the normal file reader and
@@ -413,6 +417,12 @@ fn main() {
         .insert_resource(initial_stops)
         .insert_resource(menu::CliBootHint(load_state_arg))
         .insert_resource(menu::CliBootFormat(play_format_arg))
+        .insert_resource(harness.clone())
+        .init_resource::<layout_harness::ScreenshotClock>()
+        .add_systems(
+            Update,
+            layout_harness::capture_screenshot.run_if(in_state(AppState::InGame)),
+        )
         .add_systems(Startup, setup)
         .add_systems(Startup, maximize_window)
         // Resolution-driven hand zoom + 2-D UI scale — both run every
@@ -1217,20 +1227,10 @@ fn apply_render_quality_change(
     }
 }
 
-/// Pick a hand-zoom factor from the primary window's logical height.
-/// 1.0 at 1440p+, ramping up on smaller displays so the viewer's hand
-/// stays roughly the same apparent size regardless of resolution.
-/// Conservative curve — earlier values overflowed the play area into
-/// the corner HUD panels at 1080p, so we keep the multiplier small
-/// and only bump it for genuinely-small displays.
+/// Pick a hand-zoom factor from the primary window's logical height
+/// (`framing::hand_zoom_for`, which the camera fit also sizes the hand by).
 fn pick_hand_zoom(logical_height: f32) -> f32 {
-    if logical_height >= 1080.0 {
-        1.0
-    } else if logical_height >= 800.0 {
-        1.15
-    } else {
-        1.30
-    }
+    card::framing::hand_zoom_for(logical_height)
 }
 
 /// Maximize the primary window on startup so the client opens sized to the
@@ -1239,8 +1239,12 @@ fn pick_hand_zoom(logical_height: f32) -> f32 {
 /// frame, filling the monitor's work area — adapts to any resolution.
 fn maximize_window(
     store: Option<Res<config::ConfigStore>>,
+    harness: Res<layout_harness::HarnessArgs>,
     mut windows: Query<&mut Window, With<bevy::window::PrimaryWindow>>,
 ) {
+    if harness.window.is_some() {
+        return;
+    }
     // Skipped when the user picked an explicit resolution in Settings
     // (`maximize_on_launch` flips off there) or chose borderless mode.
     let g = store.as_ref().map(|s| &s.0.graphics);

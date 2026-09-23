@@ -135,6 +135,9 @@ pub enum NetMode {
     /// inspection mode (no live server; the HUD is read-only). Used for
     /// reproducing reported bugs from a saved state.
     LoadDebugState { path: std::path::PathBuf },
+    /// `--layout-fixture <seats>`: a local match from the layout harness's
+    /// fixed busy board (`layout_harness::fixture_state`).
+    LayoutFixture { seats: usize },
     /// Re-claim a seat in a still-running match after a crash/restart,
     /// using the resume token persisted under
     /// `net_plugin::RESUME_STORAGE_KEY`. No session is spawned here —
@@ -826,10 +829,17 @@ fn apply_cli_boot_hint(
     mut pending: ResMut<PendingNetMode>,
     mut next_state: ResMut<NextState<AppState>>,
     fields: Res<MenuFields>,
+    mut harness: ResMut<crate::layout_harness::HarnessArgs>,
 ) {
     // `--play <format>` boots a local-bot match of that format directly.
     if let Some(format) = boot_format.0.take() {
         pending.0 = Some((NetMode::LocalBot, format));
+        next_state.set(AppState::InGame);
+        return;
+    }
+    if let Some(seats) = harness.fixture_seats.take() {
+        let format = if seats > 2 { MatchFormat::Commander } else { MatchFormat::Modern };
+        pending.0 = Some((NetMode::LayoutFixture { seats }, format));
         next_state.set(AppState::InGame);
         return;
     }
@@ -1707,6 +1717,9 @@ pub fn start_net_session_from_menu(world: &mut World) {
     match mode {
         NetMode::LocalBot => spawn_inprocess_bot(world, format),
         NetMode::SpectateBots => spawn_spectate_bots(world, format),
+        NetMode::LayoutFixture { seats } => {
+            spawn_restored_state(world, crate::layout_harness::fixture_state(seats), 0);
+        }
         NetMode::LoadDebugState { path } => match spawn_loaded_debug_state(world, &path) {
             Ok(()) => eprintln!("net: loaded debug state from {}", path.display()),
             Err(e) => {
@@ -2084,6 +2097,27 @@ fn spawn_host_lan(world: &mut World, port: u16, format: MatchFormat) -> std::io:
 /// `ClientView` is seeded into `CurrentView` directly, no `NetOutbox` is
 /// installed (so the input handler bails out), and the player can poke
 /// around the board but not advance it.
+/// Run `state` as a live local match with the human in `viewer_seat` and a
+/// HeuristicBot in every other seat (a restored pod keeps all its seats).
+fn spawn_restored_state(world: &mut World, state: GameState, viewer_seat: usize) {
+    let (server_seat, ClientChannel { tx, rx }) = seat_pair();
+    let sink: SnapshotSink = Arc::new(Mutex::new(SnapshotSinkState::default()));
+    let sink_for_match = Arc::clone(&sink);
+    let mut human = Some(server_seat);
+    let occupants: Vec<SeatOccupant> = (0..state.players.len())
+        .map(|seat| match human.take_if(|_| seat == viewer_seat) {
+            Some(h) => SeatOccupant::Human(h),
+            None => SeatOccupant::Bot(Box::new(HeuristicBot::new())),
+        })
+        .collect();
+    std::thread::spawn(move || {
+        run_match_full(state, occupants, vec![], Some(sink_for_match));
+    });
+    world.insert_resource(NetOutbox::new(tx));
+    world.insert_resource(NetInbox(Mutex::new(rx)));
+    world.insert_resource(LatestSnapshot(sink));
+}
+
 fn spawn_loaded_debug_state(world: &mut World, path: &std::path::Path) -> std::io::Result<()> {
     let export = crate::debug_export::load_debug_export(path)
         .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
@@ -2117,31 +2151,7 @@ fn spawn_loaded_debug_state(world: &mut World, path: &std::path::Path) -> std::i
         };
 
     if let Some((restored, dropped_triggers, source_label)) = restored_with_dropped {
-        // Spawn a live match seated as the original viewer; the second
-        // seat is filled by a HeuristicBot so the user can play forward.
-        let viewer_seat = export.view.your_seat;
-        let bot_seat = if viewer_seat == 0 { 1 } else { 0 };
-        let (server_seat, ClientChannel { tx, rx }) = seat_pair();
-        let sink: SnapshotSink = Arc::new(Mutex::new(SnapshotSinkState::default()));
-        let sink_for_match = Arc::clone(&sink);
-        let occupants = if viewer_seat == 0 {
-            vec![
-                SeatOccupant::Human(server_seat),
-                SeatOccupant::Bot(Box::new(HeuristicBot::new())),
-            ]
-        } else {
-            vec![
-                SeatOccupant::Bot(Box::new(HeuristicBot::new())),
-                SeatOccupant::Human(server_seat),
-            ]
-        };
-        let _ = bot_seat;
-        std::thread::spawn(move || {
-            run_match_full(restored, occupants, vec![], Some(sink_for_match));
-        });
-        world.insert_resource(NetOutbox::new(tx));
-        world.insert_resource(NetInbox(Mutex::new(rx)));
-        world.insert_resource(LatestSnapshot(sink));
+        spawn_restored_state(world, restored, export.view.your_seat);
         if let Some(mut log) = world.get_resource_mut::<crate::game::GameLog>() {
             log.push(log_prefix);
             if let Some(note) = bug_note {

@@ -4,7 +4,7 @@
 //! part of the board under the cursor — or onto the battlefield card the
 //! cursor/keyboard is highlighting — keeping the same viewing angle but
 //! roughly halving the distance. Releasing Ctrl lerps the camera back to
-//! its fixed home pose. This is purely a client-side view convenience;
+//! its home pose. This is purely a client-side view convenience;
 //! it touches nothing but the camera `Transform`.
 //!
 //! The focus point under the cursor is raycast against the table plane
@@ -18,40 +18,53 @@ use crate::MainCamera;
 use crate::card::{BattlefieldCard, CardHovered};
 use crate::systems::kb_cursor::KeyboardSelected;
 
-/// Default "home" camera position for 1-/2-player tables (matches the spawn
-/// in `main::setup`).
-const CAM_HOME_POS: Vec3 = Vec3::new(0.0, 32.0, 14.0);
-/// Pulled-back home pose for 3+ player tables, so the wider two-per-side
-/// seating fits in frame.
-const CAM_HOME_POS_MULTI: Vec3 = Vec3::new(0.0, 46.0, 24.0);
 /// Fraction of the home distance used when zoomed (smaller = closer).
 const CAM_ZOOM_SCALE: f32 = 0.45;
 /// Lerp rate toward the target pose (per second, exponential approach).
 const CAM_LERP_SPEED: f32 = 7.0;
 
-/// Current camera "home" pose, adjusted by [`adjust_camera_home_for_seats`]
-/// based on the player count. A resource (not a const) so the pulled-back
-/// multiplayer pose can take effect once the first view arrives.
+/// The camera's resting pose, refit by [`adjust_camera_home_for_seats`]
+/// whenever the seat count or the window size changes
+/// ([`crate::card::framing::home_pose`]: the closest pose that keeps the
+/// table on screen and clear of the HUD).
 #[derive(Resource)]
-pub struct CameraHome(pub Vec3);
+pub struct CameraHome {
+    pub pose: Transform,
+    /// The table point the home pose looks at.
+    pub target: Vec3,
+    /// `(seats, logical window size)` the pose was fit for.
+    fitted_for: Option<(usize, UVec2)>,
+}
 
 impl Default for CameraHome {
     fn default() -> Self {
-        Self(CAM_HOME_POS)
+        let pose = crate::card::framing::legacy_pose(2);
+        Self { pose, target: Vec3::ZERO, fitted_for: None }
     }
 }
 
-/// Pull the camera home pose back for 3+ player tables so the wider
-/// two-per-side seating fits in frame; keep the historical pose for 1v1.
+/// Refit the home pose for the current seat count and window size. The fit
+/// is a few milliseconds and only runs when either changes.
 pub fn adjust_camera_home_for_seats(
     view: Res<crate::net_plugin::CurrentView>,
+    windows: Query<&Window, With<bevy::window::PrimaryWindow>>,
     mut home: ResMut<CameraHome>,
 ) {
     let Some(cv) = &view.0 else { return };
-    let desired = if cv.players.len() > 2 { CAM_HOME_POS_MULTI } else { CAM_HOME_POS };
-    if home.0 != desired {
-        home.0 = desired;
+    let Ok(window) = windows.single() else { return };
+    let size = window.resolution.size();
+    if size.x < 1.0 || size.y < 1.0 {
+        return;
     }
+    let key = (cv.players.len(), size.as_uvec2());
+    if home.fitted_for == Some(key) {
+        return;
+    }
+    let pose = crate::card::framing::home_pose(key.0, size);
+    // The fit looks down the pose's forward axis at the table plane.
+    let forward = pose.forward();
+    let target = pose.translation + forward * (-pose.translation.y / forward.y);
+    *home = CameraHome { pose, target, fitted_for: Some(key) };
 }
 
 /// Seat the camera is parked on via the seat-focus hotkeys (`1`–`6`).
@@ -149,8 +162,10 @@ pub fn camera_zoom(
 ) {
     let Ok((mut cam_xform, camera)) = camera.single_mut() else { return };
 
-    let home_pos = home_pose.0;
-    let home = Transform::from_translation(home_pos).looking_at(Vec3::ZERO, Vec3::Y);
+    let home = home_pose.pose;
+    // The home pose's offset from the point it looks at: a zoom keeps the
+    // angle and scales the distance.
+    let home_offset = home.translation - home_pose.target;
 
     let ctrl_held =
         keyboard.pressed(KeyCode::ControlLeft) || keyboard.pressed(KeyCode::ControlRight);
@@ -167,7 +182,7 @@ pub fn camera_zoom(
             zoom.focus = point;
         }
         // (else: keep the previously stored focus)
-        let pos = zoom.focus + home_pos * CAM_ZOOM_SCALE;
+        let pos = zoom.focus + home_offset * CAM_ZOOM_SCALE;
         Transform::from_translation(pos).looking_at(zoom.focus, Vec3::Y)
     } else if let (Some(seat), Some(cv)) = (focus_seat.0, view.0.as_ref()) {
         // Seat focus (hotkeys 1-6): hold-Ctrl inspection still wins above.

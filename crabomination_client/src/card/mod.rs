@@ -1,4 +1,5 @@
 mod components;
+pub mod framing;
 pub mod layout;
 mod mesh;
 pub mod mipmap;

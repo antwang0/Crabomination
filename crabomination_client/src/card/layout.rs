@@ -33,7 +33,12 @@ fn hand_spacing(total: usize) -> f32 {
     }
 }
 
-const HAND_CENTER_Z: f32 = 12.0;
+/// The viewer's hand line. Far enough in front of the back row that the
+/// fan's top edge (with its lower half off the bottom of the window, see
+/// `framing::HAND_VISIBLE`) clears the land row instead of covering it.
+const HAND_CENTER_Z: f32 = 14.0;
+/// A far-edge opponent's face-down fan (3+ players), past their land row.
+const FAR_HAND_Z: f32 = 14.0;
 const HAND_Y: f32 = CARD_HEIGHT / 2.0;
 // Tilt so the card face points at the camera (0, 32, 14).
 // Camera direction from scene: normalize(0, 32, 14) = (0, 0.916, 0.401).
@@ -156,7 +161,7 @@ const TABLE_HALF_X: f32 = DECK_X;
 /// Wider half-width used for 3+ player tables, so two columns per edge each
 /// get room for a board, hand, and a pile strip without the front hands
 /// overlapping at the centre. Paired with a pulled-back multiplayer camera
-/// (`CAM_HOME_POS_MULTI` in `systems::camera_zoom`).
+/// (`framing::home_pose` fits the camera to it).
 const MULTI_HALF_X: f32 = 30.0;
 /// Gap kept between adjacent columns so neighbouring boards don't touch.
 const COL_MARGIN: f32 = 0.6;
@@ -378,6 +383,10 @@ pub fn back_face_rotation(seat: usize, viewer: usize, n_seats: usize) -> Quat {
 /// the hand fan's resting line, so combat lunges and targeting arrows
 /// land just in front of the fan rather than buried under the cards.
 const HAND_ANCHOR_PULLBACK: f32 = 2.5;
+/// 1v1 opponent hand: the first card's centre sits this far past the table's
+/// pile line, and each further card steps this far again.
+const OPP_HAND_INSET: f32 = CARD_WIDTH * 1.2;
+const OPP_HAND_STEP: f32 = CARD_WIDTH * 0.18;
 
 /// World anchor for `seat`'s on-table "presence" — the center of their
 /// hand fan, pulled slightly toward the table center. Used as the 3-D
@@ -398,7 +407,7 @@ pub fn player_hand_anchor(seat: usize, viewer: usize, n_seats: usize) -> Vec3 {
     let z = if spot.z_sign > 0.0 {
         HAND_CENTER_Z - HAND_ANCHOR_PULLBACK
     } else {
-        -(HAND_CENTER_Z + 2.0) + HAND_ANCHOR_PULLBACK
+        -FAR_HAND_Z + HAND_ANCHOR_PULLBACK
     };
     Vec3::new(spot.board_center, 0.01, z)
 }
@@ -447,6 +456,20 @@ pub fn hand_card_transform(
         Transform::from_xyz(x, y, world_z)
             .with_rotation(Quat::from_rotation_x(HAND_TILT_X) * Quat::from_rotation_z(rot_z))
             .with_scale(Vec3::splat(z))
+    } else if n_seats <= 2 {
+        // 1v1: the opponent's hand is a count, not information, so it sits
+        // as a tight face-down spread beside their deck, outboard of the
+        // pile strip, rather than as a full fan past their land row. The
+        // window is short of height, not width: the fan cost the table
+        // ~5 units of depth (and ran under the HUD's top band), where the
+        // spread costs a few units of width the window has spare.
+        // Across from their piles (the viewer-left / opponent-right
+        // diagonal), where the viewer's own deck sits on the near edge: the
+        // corner beyond the piles is under the HUD's game log.
+        let x = -(DECK_X + OPP_HAND_INSET + slot as f32 * OPP_HAND_STEP);
+        let z = spot.z_sign * DECK_Z;
+        Transform::from_xyz(x, slot as f32 * CARD_THICKNESS * 2.0, z)
+            .with_rotation(face_rotation(spot.z_sign))
     } else {
         // Opponent fans are informational (face-down backs), so compact
         // them to their own column: in a pod, neighbouring back-edge seats
@@ -462,7 +485,7 @@ pub fn hand_card_transform(
         let y = HAND_Y + 3.0 - offset.abs() * HAND_FAN_Y_DROP;
         // Far edge fans away from the camera (−Z), the viewer's edge toward it
         // (+Z); cards stack toward their owner's side of the table either way.
-        let base_z = if spot.z_sign > 0.0 { HAND_CENTER_Z + 2.0 } else { -(HAND_CENTER_Z + 2.0) };
+        let base_z = spot.z_sign * FAR_HAND_Z;
         let z = base_z + spot.z_sign * (z_offset * CARD_THICKNESS * 4.0);
         let tilt = if spot.z_sign > 0.0 { HAND_TILT_X } else { -HAND_TILT_X };
         let rot_z = offset * HAND_FAN_ANGLE;
@@ -1095,8 +1118,9 @@ mod tests {
     fn opponent_hands_stay_inside_their_columns() {
         // Regression: with the historical 7-card fan width, adjacent
         // back-edge opponents' hands overlapped in a 4-player pod. Every
-        // card of a big hand must stay within its seat's column, and 1v1
-        // must keep the historical spacing exactly.
+        // card of a big hand must stay within its seat's column. In 1v1 the
+        // hand is a compact spread past the table's pile line, clear of
+        // every board row.
         for n in [3usize, 4] {
             for seat in 1..n {
                 let spot = seat_spot(seat, 0, n);
@@ -1109,9 +1133,19 @@ mod tests {
                 }
             }
         }
-        let a = hand_card_transform(1, 0, 2, 0, 7, 1.0).translation.x;
-        let b = hand_card_transform(1, 0, 2, 1, 7, 1.0).translation.x;
-        assert!(((b - a).abs() - HAND_CARD_SPACING).abs() < 1e-4, "1v1 spacing unchanged");
+        // The outer edge of the 1v1 rows: their centres stop at
+        // DECK_X − CARD_WIDTH/2 (`board_half_for`).
+        let row_edge = DECK_X;
+        let mut last: Option<f32> = None;
+        for slot in 0..10 {
+            let t = hand_card_transform(1, 0, 2, slot, 10, 1.0).translation;
+            assert!(t.x.abs() - CARD_WIDTH * 0.5 >= row_edge, "1v1 slot {slot} at x={} over a row", t.x);
+            assert!(t.z < 0.0, "the opponent's hand stays on their half");
+            if let Some(prev) = last {
+                assert!((t.x - prev).abs() >= OPP_HAND_STEP - 1e-4, "cards step apart so the count reads");
+            }
+            last = Some(t.x);
+        }
     }
 
     #[test]
