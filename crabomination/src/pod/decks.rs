@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Ten hand-picked commanders plus twelve official preconstructed lists, each a
+//! Ten hand-picked commanders plus thirteen official preconstructed lists, each a
 //! 99 of cards this engine implements: legal under CR 903 (100 cards
 //! including the commander, singleton outside basics, every card inside the
 //! commander's CR 903.4 color identity) and Commander-legal per Scryfall's
@@ -8,12 +8,12 @@
 //!
 //! The ten were built by hand because the offline Scryfall cache cannot say
 //! how a precon splits into decks; MTGJSON's deck files can, and the eleventh
-//! through twenty-second (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
+//! through twenty-third (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
 //! Win, Tails You Lose, Goblin Storm, Foundations Commander's Wretched Ranks,
-//! Tramplesaurus Rex and Keen Engineering, Commander Legends' Reap the Tides
+//! Tramplesaurus Rex and Keen Engineering, Commander Legends' Reap the Tides,
 //! Phyrexia: All Will Be One's Corrupting Influence, Zendikar Rising's Sneak
-//! Attack and Tarkir: Dragonstorm's Jeskai Striker) are taken from one card
-//! for card. What all of them keep
+//! Attack, Tarkir: Dragonstorm's Jeskai Striker and Commander Masters' Sliver
+//! Swarm) are taken from one card for card. What all of them keep
 //! from the precon idea is what the pod needs — fixed, legal, varied color
 //! identities, and built to play against each other.
 //! One is a Partner pair (CR 702.124b), one is a **planeswalker**
@@ -814,4 +814,32 @@ pub const SHIKO_MAIN: &[CardFactory] = &[
     // Basics: 4 plains, 5 island, 5 mountain
     plains, plains, plains, plains, island, island, island, island, island, mountain, mountain,
     mountain, mountain, mountain,
+];
+
+pub const GRAVEMOTHER_COMMANDERS: &[CardFactory] = &[sliver_gravemother];
+
+/// **Sliver Swarm**, the Commander Masters deck (CMM, 2023-08-04), exactly as
+/// MTGJSON's `SliverSwarm_CMM` prints it: 88 nonbasic cards + 11 basics
+/// = 99. Five-color Slivers: lords that grant to the whole hive, and a
+/// commander that re-buys the dead ones with encore.
+pub const GRAVEMOTHER_MAIN: &[CardFactory] = &[
+    rukarumel_biologist, regal_sliver, taunting_sliver, titan_of_littjara, lazotep_sliver,
+    capricious_sliver, descendants_fury, for_the_ancestors, hatchery_sliver, bonescythe_sliver,
+    cleansing_nova, harsh_mercy, galerider_sliver, synapse_sliver, crippling_fear,
+    syphon_sliver, spiteful_sliver, brood_sliver, megantic_sliver, realmwalker,
+    cloudshredder_sliver, decimate, sliver_hivelord, icon_of_ancestry, vanquishers_banner,
+    canopy_vista, cinder_glade, exotic_orchard, irrigated_farmland, prairie_stream,
+    scattered_groves, sheltered_thicket, smoldering_marsh, sunken_hollow, arcane_signet,
+    fellwar_stone, sol_ring, ash_barrens, command_tower, path_of_ancestry, constricting_sliver,
+    sentinel_sliver, sinew_sliver, diffusion_sliver, distant_melody, shifting_sliver, windfall,
+    winged_sliver, clot_sliver, crypt_sliver, blade_sliver, blur_sliver, bonesplitter_sliver,
+    cleaving_sliver, hollowhead_sliver, striking_sliver, two_headed_sliver, cultivate, farseek,
+    gemhide_sliver, manaweft_sliver, might_sliver, natures_lore, quick_sliver, three_visits,
+    venom_sliver, crystalline_sliver, firewake_sliver, harmonic_sliver, hibernation_sliver,
+    lavabelly_sliver, necrotic_sliver, heralds_horn, pillar_of_origins, flood_plain,
+    frontier_bivouac, grasslands, jungle_shrine, mountain_valley, mystic_monastery,
+    nomad_outpost, opulent_palace, rocky_tar_pit, sandsteppe_citadel, savage_lands,
+    seaside_citadel, secluded_courtyard, unclaimed_territory,
+    // Basics: 2 plains, 2 island, 2 swamp, 2 mountain, 3 forest
+    plains, plains, island, island, swamp, swamp, mountain, mountain, forest, forest, forest,
 ];

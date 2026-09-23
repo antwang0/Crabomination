@@ -266,6 +266,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SHIKO_COMMANDERS,
             main: decks::SHIKO_MAIN,
         },
+        // Twenty-third: the thirteenth official list (Sliver Swarm, CMM) — the
+        // field's five-color deck, Slivers granting to the hive. `--seats 23`.
+        PodDeck {
+            name: "Sliver Gravemother (WUBRG)",
+            commanders: decks::GRAVEMOTHER_COMMANDERS,
+            main: decks::GRAVEMOTHER_MAIN,
+        },
     ]
 }
 
