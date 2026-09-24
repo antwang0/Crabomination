@@ -68,6 +68,7 @@ lists were picked.
 | **Graveyard Overdrive** (M3C precon) BRG | Disa the Restless | BRG | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Sworn to Darkness** (C14 precon) B | Ob Nixilis of the Black Oath (**planeswalker**) | B | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Seize Control** (C15 precon) UR | Mizzix of the Izmagnus | UR | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
+| **Rebellion Rising** (ONC precon) RW | Neyali, Suns' Vanguard | RW | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Call the Spirits** (C15 precon) WB | Daxos the Returned | WB | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Peer Through Time** (C14 precon) U | Teferi, Temporal Archmage (**planeswalker**) | U | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Quantum Quandrix** (C21 precon) GU | Adrix and Nev, Twincasters | GU | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
@@ -535,6 +536,26 @@ one choice among the four non-targeting combinations; **Sandstone Oracle**'s
 opponent is the one with the most cards in hand. Debug pods beside Adrix and Nev /
 Meren / Gisela / Judith (seeds 9251/9252, 60 games) decided 60/60 with zero
 panics, and a 120-game census (seed 9253) leaves no card unplayed.
+
+The **forty-first** is Phyrexia: All Will Be One Commander's **Rebellion Rising**
+(`RebellionRising_ONC`) — Boros tokens and Equipment under Neyali, Suns'
+Vanguard. Seventeen cards were missing, the commander among them; the
+primitives: `MayPlayDuration::TurnsHolderAttacksWithAToken` (Neyali's "during
+any turn you attacked with a token, you may play that card" — the turn sweep
+parks the grant and a declared token attacker re-arms it, CR 508.1),
+`SelectionRequirement::IsAttackingAnOpponent` (Roar of Resistance),
+`SelectionRequirement::Unattached` and `CounterType::Story`. ⚠ **The census
+found Clever Concealment castable by no bot path**: nothing answered a
+sweeper with a protective instant. `pick_sweeper_shield` resolves the
+opponent's top spell in a clone and, when it would take two or more of our
+nonland permanents, casts a phase-out / indestructible instant aimed at every
+own-side slot. Residuals: **Collective Effort**'s escalate is paid at
+resolution, **Goldwardens' Gambit** hands each token your best unattached
+Equipment (no pick), **Neyali** counts a token attacking a planeswalker as
+attacking a player. Four-seat pods beside Adriana / Giada / Gisela (seed
+10131, 1,000 games, 999 decided + 1 draw, every card played): Neyali 13.0 %.
+Seed 10141, 300 games at 43 seats: **299 decided + 1 draw, 0 caps, zero
+panics** (230.8 k actions/game, 427 s on 4 threads). `--bench` byte-identical.
 
 The **forty-second** is Commander 2014's **Peer Through Time**
 (`PeerThroughTime_C14`) — mono-blue control under Teferi, Temporal Archmage,
