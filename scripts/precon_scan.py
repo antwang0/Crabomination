@@ -46,12 +46,15 @@ def catalog_names():
     names = set()
     name_pat = re.compile(r'name:\s*"((?:[^"\\]|\\.)*)"')
     fn_pat = re.compile(r"pub fn (\w+)\(\) -> (?:crate::card::)?CardDefinition")
+    # A factory whose body is one helper call naming the card: `karoo("Karoo", …)`.
+    helper_pat = re.compile(r'-> (?:crate::card::)?CardDefinition \{\s*[\w:]+\(\s*"((?:[^"\\]|\\.)*)"')
     for dp, _, fs in os.walk(CATALOG):
         for f in fs:
             if f.endswith(".rs"):
                 src = open(os.path.join(dp, f), encoding="utf-8").read()
                 names.update(m.group(1).replace("\\'", "'") for m in name_pat.finditer(src))
                 names.update(fn_pat.findall(src))
+                names.update(helper_pat.findall(src))
     return names
 
 
