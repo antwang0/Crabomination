@@ -8119,6 +8119,11 @@ pub enum Effect {
     /// The pick is the opponent with the fewest creatures (the gift goes
     /// where it helps least); turn order breaks ties. Sylvan Offering.
     ChooseOpponentThen { then: Box<Effect> },
+    /// "That player [does body]" — run `body` with `who` as its controller,
+    /// so `You` / a controller-side choice reads that player (Skullwinder's
+    /// "that player returns a card from their graveyard to their hand").
+    /// No-op when `who` resolves to nobody or to a seat that has left.
+    AsPlayer { who: PlayerRef, body: Box<Effect> },
     /// Skyserpent Seeker-style ramp: reveal from the top of your library until
     /// you reveal `count` land cards; put those lands onto the battlefield
     /// (`tapped`), and put the rest on the bottom of your library in a random

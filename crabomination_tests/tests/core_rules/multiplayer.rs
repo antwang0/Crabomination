@@ -5654,3 +5654,38 @@ fn cr_800_4g_a_may_reseated_onto_its_controller_is_asked_once() {
     assert!(g.pending_decision.is_none(), "asked once");
     assert_eq!(g.players[0].life, life + 1);
 }
+
+/// "Choose an opponent. That player returns a card from their graveyard to
+/// their hand" — `Effect::AsPlayer` hands the body to the chosen seat, so the
+/// return reads *their* graveyard, not the caster's (CR 109.5: "you" in an
+/// effect run for another player means that player).
+#[test]
+fn as_player_runs_the_body_for_the_chosen_opponent() {
+    use crabomination::card::{CardDefinition, CardType, SelectionRequirement as R};
+    use crabomination::effect::{Effect, Value};
+    use crabomination::mana::Color;
+    let mut g = multi_player_game(3);
+    let spell = g.add_card_to_hand(0, CardDefinition {
+        name: "Gift of Memory",
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ChooseOpponentThen {
+            then: Box::new(Effect::AsPlayer {
+                who: PlayerRef::ChosenPlayerOfSource,
+                body: Box::new(Effect::ReturnGraveyardCardsToHand { filter: R::Any, max: Value::Const(1) }),
+            }),
+        },
+        ..Default::default()
+    });
+    let mine = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == theirs), "seat 1 got its own card back");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == mine), "the caster's graveyard is untouched");
+}

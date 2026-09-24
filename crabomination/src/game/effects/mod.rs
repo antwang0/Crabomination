@@ -16,6 +16,7 @@ mod fight_each;
 pub(crate) use eval::PrintedGates;
 pub(crate) mod events;
 mod movement;
+mod player_scope;
 mod reselect;
 mod reveal_cast;
 mod targeting;
@@ -28964,6 +28965,8 @@ impl GameState {
                 self.scratch.chosen_creature_types_scratch.clear();
                 r
             }
+
+            Effect::AsPlayer { who, body } => self.run_as_player(who, body, ctx, events),
 
             Effect::ChooseOpponentThen { then } => {
                 // The opponent with the fewest creatures, turn order breaking

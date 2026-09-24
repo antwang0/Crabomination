@@ -494,6 +494,7 @@ impl Effect {
             | Effect::ChooseCreatureTypeThen { then, .. }
             | Effect::EachPlayerChoosesCreatureTypeThen { then, .. }
             | Effect::ChooseOpponentThen { then }
+            | Effect::AsPlayer { body: then, .. }
             | Effect::RevealDrawnCardThenIf { then, .. }
             | Effect::Parley { then, .. }
             | Effect::RevealAnyNumberFromHand { then, .. }
@@ -809,6 +810,7 @@ impl Effect {
             | Effect::ChooseCreatureTypeThen { then, .. }
             | Effect::EachPlayerChoosesCreatureTypeThen { then, .. }
             | Effect::ChooseOpponentThen { then } => then.requires_target(),
+            Effect::AsPlayer { who, body } => player_has_target(who) || body.requires_target(),
             Effect::NextSpellCantBeCountered { .. } => false,
             Effect::Noop
             | Effect::LicidDetach
@@ -4913,6 +4915,7 @@ impl Effect {
                 | Effect::ChooseCreatureTypeThen { then, .. }
                 | Effect::EachPlayerChoosesCreatureTypeThen { then, .. }
                 | Effect::ChooseOpponentThen { then }
+                | Effect::AsPlayer { body: then, .. }
                 | Effect::RevealDrawnCardThenIf { then, .. }
                 | Effect::AnyPlayerMayExileFromGraveyard { then, .. }
                 | Effect::EachPlayerMayExileAnyNumberFromGraveyard { then } => {
