@@ -29,6 +29,7 @@ mod cmdr_teferi;
 mod cmdr_lorehold;
 mod cmdr_fae;
 mod cmdr_kalemne;
+mod cmdr_kardur;
 mod cmdr_breya;
 mod dsk2;
 mod dsk_rooms;
