@@ -429,10 +429,10 @@ pub fn strata_scythe() -> CardDefinition {
         })],
         equipped_bonus: Some(EquipBonus {
             scale: Some(EquipScale {
-                filter: R::Land.and(R::SameNameAsExiledWithSource),
+                filter: R::Land,
                 per_power: 1,
                 per_toughness: 1,
-                count_all_controllers: true,
+                count_named_like_exiled_with_source: true,
                 ..Default::default()
             }),
             ..Default::default()

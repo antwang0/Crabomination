@@ -5202,6 +5202,13 @@ pub struct EquipScale {
     /// where X is the number of creature cards in its controller's graveyard").
     #[serde(default)]
     pub count_host_controller_graveyard: Option<SelectionRequirement>,
+    /// When true, the count is the permanents on the battlefield matching
+    /// `filter` whose name is one of the cards exiled with this source
+    /// (Strata Scythe's imprint). The exile zone is read once, not per
+    /// candidate — a per-permanent `SameNameAsExiledWithSource` leaf walked
+    /// the whole exile zone for every land, every layer pass.
+    #[serde(default)]
+    pub count_named_like_exiled_with_source: bool,
 }
 
 /// Characteristic-defining dynamic P/T formula. Read by

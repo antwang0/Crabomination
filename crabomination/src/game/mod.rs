@@ -12436,6 +12436,31 @@ impl GameState {
                                         .any(|t| host_types.contains(t)))
                         })
                         .count() as i32
+                } else if scale.count_named_like_exiled_with_source {
+                    let names: SmallVec<[&str; 2]> = self
+                        .exile
+                        .iter()
+                        .filter(|c| c.exiled_with == Some(card.id))
+                        .map(|c| c.definition.name)
+                        .collect();
+                    if names.is_empty() {
+                        0
+                    } else {
+                        let gates = crate::game::effects::PrintedGates::default();
+                        self.battlefield
+                            .iter()
+                            .filter(|c| {
+                                names.contains(&c.definition.name)
+                                    && self.requirement_on_permanent(
+                                        &scale.filter,
+                                        c,
+                                        card.controller,
+                                        Some(card.id),
+                                        &gates,
+                                    )
+                            })
+                            .count() as i32
+                    }
                 } else if scale.count_host_colors {
                     // "+1/+1 for each of the host's colors" (Blessing of the
                     // Nephilim) — read the host's printed colors.
