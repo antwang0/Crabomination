@@ -526,6 +526,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::KYNAIOS_COMMANDERS,
             main: decks::KYNAIOS_MAIN,
         },
+        // Fifty-eighth: the forty-eighth official list (Devour for Power, CMD)
+        // — Sultai graveyard value under The Mimeoplasm. `--seats 58`.
+        PodDeck {
+            name: "The Mimeoplasm (BGU)",
+            commanders: decks::MIMEOPLASM_COMMANDERS,
+            main: decks::MIMEOPLASM_MAIN,
+        },
     ]
 }
 
@@ -1054,6 +1061,7 @@ mod tests {
             ("Kardur", [0xCA2D, 87, 9011]),
             ("Kaalia", [0xCAA1, 88, 9012]),
             ("Zedruu", [0x2ED7, 89, 9013]),
+            ("The Mimeoplasm", [0x3133, 90, 9014]),
         ] {
             let precon = *field.iter().find(|d| d.name.starts_with(name)).expect("the precon seat");
             assert_eq!(precon.card_count(), 100);

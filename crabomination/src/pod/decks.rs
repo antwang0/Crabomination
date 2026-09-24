@@ -1825,3 +1825,30 @@ pub const KYNAIOS_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, island, island, island, island, island,
     mountain, mountain, mountain, mountain, mountain, forest, forest, forest, forest, forest,
 ];
+
+pub const MIMEOPLASM_COMMANDERS: &[CardFactory] = &[the_mimeoplasm];
+
+/// **Devour for Power**, the Commander (2011) Sultai deck (CMD, 2011-06-17),
+/// exactly as MTGJSON's `DevourForPower_CMD` prints it: 72 nonbasic cards +
+/// 8 Forests + 8 Islands + 11 Swamps = 99. Graveyard value under The
+/// Mimeoplasm, with Damia and Vorosh in the 99.
+pub const MIMEOPLASM_MAIN: &[CardFactory] = &[
+    nezumi_graverobber, skullbriar_the_walking_grave, riddlekeeper, fleshbag_marauder,
+    eternal_witness, troll_ascetic, yavimaya_elder, solemn_simulacrum, brawn, wonder,
+    sewer_nemesis, gravedigger, lhurgoyf, dreamborn_muse, mortivore, desecrator_hag,
+    mulldrifter, acidic_slime, vulturous_zombie, dark_hatchling, extractor_demon,
+    scythe_specter, wrexial_the_risen_deep, vorosh_the_hunter, triskelavus, slipstream_eel,
+    butcher_of_malakir, patron_of_the_nezumi, damia_sage_of_stone, szadek_lord_of_secrets,
+    avatar_of_woe, artisan_of_kozilek, minds_aglow, shared_trauma, sign_in_blood,
+    stitch_together, cultivate, windfall, buried_alive, syphon_mind, unnerve,
+    rise_from_the_grave, syphon_flesh, living_death, tribute_to_the_wild, spell_crumple,
+    fact_or_fiction, relic_crush, sol_ring, dimir_signet, golgari_signet, lightning_greaves,
+    simic_signet, oblivion_stone, vow_of_wildness, vow_of_flight, vow_of_malice, memory_erosion,
+    grave_pact, barren_moor, command_tower, dimir_aqueduct, dreadship_reef, golgari_rot_farm,
+    jwar_isle_refuge, lonely_sandbar, rupture_spire, simic_growth_chamber,
+    svogthos_the_restless_tomb, temple_of_the_false_god, terramorphic_expanse, tranquil_thicket,
+    // Basics: 8 forest, 8 island, 11 swamp
+    forest, forest, forest, forest, forest, forest, forest, forest, island, island, island,
+    island, island, island, island, island, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp,
+];
