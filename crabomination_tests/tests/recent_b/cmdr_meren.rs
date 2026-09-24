@@ -299,16 +299,45 @@ fn tribute_to_the_wild_takes_from_each_opponent() {
     assert!(g.battlefield_find(x).is_none() && g.battlefield_find(y).is_none());
 }
 
-/// Default modes: you draw and lose 1, -2/-2 on a creature, a creature card back.
+/// CR 700.2d — one of each mode: you draw and lose 1, -2/-2 on a creature, a
+/// creature card back.
 #[test]
-fn wretched_confluence_default_modes() {
+fn wretched_confluence_one_of_each_mode() {
     let mut g = main_phase(2);
     g.add_card_to_library(0, catalog::swamp());
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let dead = g.add_card_to_graveyard(0, catalog::hill_giant());
     let wc = g.add_card_to_hand(0, catalog::wretched_confluence());
-    cast(&mut g, wc, &[Target::Player(0), Target::Permanent(bear), Target::Permanent(dead)]);
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: wc,
+        spree_modes: vec![0, 1, 2],
+        target: Some(Target::Player(0)),
+        additional_targets: vec![Target::Permanent(bear), Target::Permanent(dead)],
+        x_value: None,
+    })
+    .expect("three modes");
+    drain_stack(&mut g);
     assert!(g.battlefield_find(bear).is_none());
     assert!(g.players[0].hand.iter().any(|c| c.id == dead));
     assert_eq!(g.players[0].life, 19);
 }
+
+/// CR 700.2d — "choose three": two picks, even of a repeatable mode, are
+/// not a legal cast.
+#[test]
+fn wretched_confluence_needs_exactly_three_picks() {
+    let mut g = main_phase(2);
+    let big = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let wc = g.add_card_to_hand(0, catalog::wretched_confluence());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: wc,
+        spree_modes: vec![1, 1],
+        target: Some(Target::Permanent(big)),
+        additional_targets: vec![Target::Permanent(big)],
+        x_value: None,
+    })
+    .expect_err("choose three: two modes is not enough");
+}
+

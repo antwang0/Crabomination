@@ -2,10 +2,7 @@
 //! Nel Toth) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_meren.rs`.
 //!
-//! Residuals (each also on its card):
-//! - **Wretched Confluence** — the mode picks are the card's default (a card
-//!   for you, -2/-2 on a creature, a creature card back); `ChooseN` has no
-//!   cast-time mode choice.
+//! No open residuals.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope,
@@ -366,15 +363,15 @@ pub fn vivid_marsh() -> CardDefinition {
     super::cmdr_aesi::vivid("Vivid Marsh", Color::Black)
 }
 
-/// Wretched Confluence — choose three, repeats allowed (CR 700.2d). Default
-/// picks: draw-and-lose for you, -2/-2 on a creature, a creature card back.
+/// Wretched Confluence — choose three, repeats allowed (CR 700.2d): target
+/// player draws and loses 1; target creature gets -2/-2; return target
+/// creature card from your graveyard to your hand.
 pub fn wretched_confluence() -> CardDefinition {
     CardDefinition {
         name: "Wretched Confluence",
         cost: cost(&[generic(3), b(), b()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::ChooseN {
-            picks: vec![0, 1, 2],
+        effect: Effect::ChooseModesCast {
             modes: vec![
                 Effect::Seq(vec![
                     Effect::Draw { who: target_filtered(R::Player), amount: Value::Const(1) },
@@ -391,6 +388,9 @@ pub fn wretched_confluence() -> CardDefinition {
                     to: ZoneDest::Hand(PlayerRef::You),
                 },
             ],
+            min: 3,
+            max: 3,
+            allow_repeats: true,
         },
         ..Default::default()
     }

@@ -3,9 +3,6 @@
 //! `tests/recent_b/cmdr_daxos.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Righteous Confluence** — the three picks are offered as one choice of
-//!   the four non-targeting combinations (Knights and life); the "exile target
-//!   enchantment" mode is not offered.
 //! - **Sandstone Oracle** — the chosen opponent is the one with the most cards
 //!   in hand (the pick that draws the most).
 
@@ -283,28 +280,26 @@ pub fn oreskos_explorer() -> CardDefinition {
     }
 }
 
-/// Righteous Confluence — choose three, repeats allowed: a 2/2 vigilant
-/// Knight, exile target enchantment, gain 5 life. Offered as one choice of
-/// the non-targeting combinations; the exile mode is not offered (residual).
+/// Righteous Confluence — choose three, repeats allowed (CR 700.2d): a 2/2
+/// vigilant Knight, exile target enchantment, gain 5 life.
 pub fn righteous_confluence() -> CardDefinition {
-    let knights = |n: i32| Effect::CreateToken {
-        who: PlayerRef::You,
-        count: Value::Const(n),
-        definition: token("Knight", vec![Color::White], CreatureType::Knight, 2, 2, vec![Keyword::Vigilance]),
-    };
-    let life = |n: i32| Effect::GainLife { who: Selector::You, amount: Value::Const(n) };
     CardDefinition {
         name: "Righteous Confluence",
         cost: cost(&[generic(3), w(), w()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::ChooseN {
-            picks: vec![0],
+        effect: Effect::ChooseModesCast {
             modes: vec![
-                knights(3),
-                Effect::Seq(vec![knights(2), life(5)]),
-                Effect::Seq(vec![knights(1), life(10)]),
-                life(15),
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: token("Knight", vec![Color::White], CreatureType::Knight, 2, 2, vec![Keyword::Vigilance]),
+                },
+                Effect::Exile { what: target_filtered(R::Enchantment) },
+                Effect::GainLife { who: Selector::You, amount: Value::Const(5) },
             ],
+            min: 3,
+            max: 3,
+            allow_repeats: true,
         },
         ..Default::default()
     }

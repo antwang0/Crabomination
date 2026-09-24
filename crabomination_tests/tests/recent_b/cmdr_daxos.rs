@@ -105,7 +105,12 @@ fn daxoss_torment_becomes_a_hasty_flying_demon() {
 fn deadly_tempest_charges_each_player_for_their_own_creatures() {
     let mut g = main_phase(3);
     let conf = g.add_card_to_hand(0, catalog::righteous_confluence());
-    cast(&mut g, conf, &[]);
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: conf, spree_modes: vec![0, 0, 0], target: None, additional_targets: vec![], x_value: None,
+    })
+    .expect("CR 700.2d — the Knight mode three times");
+    drain_stack(&mut g);
     assert_eq!(count_named(&g, 0, "Knight"), 3);
     g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let life = [g.players[0].life, g.players[1].life, g.players[2].life];
