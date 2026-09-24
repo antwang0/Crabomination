@@ -3013,3 +3013,31 @@ pub const ESHKI_MAIN: &[CardFactory] = &[
     island, island, island, mountain, mountain, mountain, mountain, mountain, mountain, forest,
     forest, forest, forest, forest,
 ];
+
+pub const KITT_COMMANDERS: &[CardFactory] = &[kitt_kanto_mayhem_diva];
+
+/// **Cabaretti Cacophony**, the Streets of New Capenna Commander Naya deck
+/// (NCC, 2022-04-29), exactly as MTGJSON's `CabarettiCacophony_NCC` prints it:
+/// 83 nonbasic cards + 8 Forests + 4 Plains + 4 Mountains = 99. Citizens,
+/// alliance and goad under Kitt Kanto, Mayhem Diva.
+pub const KITT_MAIN: &[CardFactory] = &[
+    phabine_bosss_confidant, leafkin_druid, sakura_tribe_elder, agitator_ant,
+    bess_soul_nourisher, champion_of_lambholt, magus_of_the_wheel, orzhov_advokist,
+    rumor_gatherer, scute_swarm, selvala_explorer_returned, wood_elves, zurzoth_chaos_rider,
+    arasta_of_the_endless_web, life_of_the_party, master_of_ceremonies, rose_room_treasurer,
+    sizzling_soloist, bosss_chauffeur, gahiji_honored_one, kazuul_tyrant_of_the_cliffs,
+    thunderfoot_baloth, cabaretti_confluence, camaraderie, cultivate, fell_the_mighty,
+    harmonize, indulge_excess, martial_coup, seize_the_spotlight, shamanic_revelation, sylvan_offering,
+    viviens_stampede, artifact_mutation, aura_mutation, beast_within, boros_charm,
+    cabaretti_charm, crash_the_party, call_the_coppercoats, grand_crescendo,
+    march_of_the_multitudes, path_to_exile, sol_ring, arcane_signet, bloodthirsty_blade,
+    fellwar_stone, idol_of_oblivion, commanders_sphere, scepter_of_celebration, false_floor,
+    intangible_virtue, awakening_zone, beastmaster_ascension, duelists_heritage, killer_service,
+    prosperous_partnership, felidar_retreat, outpost_siege, assemble_the_legion,
+    sandwurm_convergence, ash_barrens, cabaretti_courtyard, canopy_vista, castle_ardenvale,
+    castle_embereth, cinder_glade, command_tower, exotic_orchard, fortified_village, game_trail,
+    jungle_shrine, mossfire_valley, myriad_landscape, naya_panorama, path_of_ancestry,
+    rugged_prairie, sungrass_prairie, temple_of_triumph, thriving_bluff, thriving_grove,
+    thriving_heath, windbrisk_heights, plains, plains, plains, plains, mountain, mountain,
+    mountain, mountain, forest, forest, forest, forest, forest, forest, forest, forest,
+];

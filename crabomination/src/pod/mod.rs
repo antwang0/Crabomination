@@ -820,6 +820,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ESHKI_COMMANDERS,
             main: decks::ESHKI_MAIN,
         },
+        // Ninety-eighth: the eighty-eighth official list (Cabaretti Cacophony, NCC).
+        // `--pod-decks 98`.
+        PodDeck {
+            name: "Kitt Kanto, Mayhem Diva (RGW)",
+            commanders: decks::KITT_COMMANDERS,
+            main: decks::KITT_MAIN,
+        },
     ]
 }
 
