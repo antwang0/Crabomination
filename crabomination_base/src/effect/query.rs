@@ -1922,6 +1922,7 @@ impl Effect {
                     || else_.as_ref().is_some_and(|e| e.requires_target())
             }
             Effect::RevealTopOpponentChoosesToHand { .. }
+            | Effect::RevealTopEachOpponentChoosesToHand { .. }
             | Effect::ReturnFromGraveyardOpponentChooses { .. }
             | Effect::ReturnFromExileWithCounter { .. } => false,
             Effect::BecomeMonarch { who } | Effect::Ascend { who } => player_has_target(who),

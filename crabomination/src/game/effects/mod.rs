@@ -26606,6 +26606,67 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::RevealTopEachOpponentChoosesToHand { count, pick_filter } => {
+                use rand::seq::SliceRandom;
+                let p = ctx.controller;
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                let revealed: Vec<CardId> =
+                    self.players[p].library.iter().take(n).map(|c| c.id).collect();
+                if revealed.is_empty() {
+                    return Ok(());
+                }
+                let mut eligible: Vec<(CardId, String, u32)> = revealed
+                    .iter()
+                    .filter_map(|id| self.players[p].library.iter().find(|c| c.id == *id))
+                    .filter(|c| self.evaluate_requirement_on_card(pick_filter, c, p))
+                    .map(|c| (c.id, c.definition.name.to_string(), c.definition.cost.cmc()))
+                    .collect();
+                eligible.sort_by_key(|(_, _, mv)| *mv);
+                // Turn order, starting with the next seat after the caster.
+                let seats = self.players.len();
+                let choosers: Vec<usize> = (1..seats)
+                    .map(|k| (p + k) % seats)
+                    .filter(|q| !self.same_team(*q, p) && self.players[*q].is_alive())
+                    .collect();
+                let mut cursor = 0usize;
+                let mut chosen: Vec<CardId> = Vec::new();
+                for q in choosers {
+                    let left: Vec<(CardId, String)> = eligible
+                        .iter()
+                        .filter(|(id, _, _)| !chosen.contains(id))
+                        .map(|(id, name, _)| (*id, name.clone()))
+                        .collect();
+                    let Some(&(first, _)) = left.first() else { break };
+                    let Some(picked) = self.ask_seat_cards_logged(
+                        &mut cursor,
+                        q,
+                        "Choose a revealed card for its owner".to_string(),
+                        ctx.source.unwrap_or(CardId(0)),
+                        left,
+                        1,
+                        1,
+                        PickValue::Cost,
+                        effect,
+                        vec![first],
+                    ) else {
+                        return Ok(());
+                    };
+                    chosen.push(picked.first().copied().unwrap_or(first));
+                }
+                self.clear_answer_log();
+                for id in &chosen {
+                    self.move_card_to(*id, &ZoneDest::Hand(PlayerRef::You), ctx, events);
+                }
+                let mut rest: Vec<CardId> =
+                    revealed.into_iter().filter(|id| !chosen.contains(id)).collect();
+                rest.shuffle(&mut self.rng.draw());
+                let bottom = ZoneDest::Library { who: PlayerRef::You, pos: crate::effect::LibraryPosition::Bottom };
+                for id in rest {
+                    self.move_card_to(id, &bottom, ctx, events);
+                }
+                Ok(())
+            }
+
             Effect::RevealTopOpponentChoosesToHand {
                 count,
                 counter,

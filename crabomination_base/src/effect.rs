@@ -8738,6 +8738,12 @@ pub enum Effect {
     /// Karn, Scion of Urza's +1 (reveal two, opponent chooses, exile the
     /// other with a silver counter). A UI opponent is prompted; a bot chooser
     /// gives the controller the lowest-mana-value card.
+    /// "Reveal the top `count` cards of your library. Starting with the next
+    /// opponent in turn order, each opponent chooses a different [pick_filter]
+    /// card from among them. Put the chosen cards into your hand and the rest
+    /// on the bottom of your library in a random order" (Manifold Insights).
+    /// A bot opponent hands over the lowest-mana-value card left.
+    RevealTopEachOpponentChoosesToHand { count: Value, pick_filter: SelectionRequirement },
     RevealTopOpponentChoosesToHand {
         count: Value,
         counter: Option<crate::card::CounterType>,
