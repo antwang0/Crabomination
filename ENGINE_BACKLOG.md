@@ -186,6 +186,18 @@ the handoff.
   keeps it out. Residual: `sac_other_filter` never picks the source, so
   "Sacrifice a creature:" on a creature (Viscera Seer, Hypnotist, Korozda
   Guildmage) can't sacrifice itself.
+- **Departed players (CR 800.4a), found by a 25-seat DEBUG pod.** A player
+  who had left was still a legal target, so a trigger aimed at them resolved
+  and CR 800.4g re-seated its "may" onto the controller — whose replay fell
+  from `MayDoBy` into `MayDo` (stash-only) and leaked the logged answer.
+  `check_target_legality` + both CR 608.2b re-checks now reject a departed
+  player; `MayDoBy` hands off only when not replaying.
+- **Power sums overflowed** (same pod): the block planner's
+  `.map(|a| a.power).sum()` on a saturated power; ten sums/products now
+  saturate and the audit's look-back catches the multi-line form.
+- **An X spell's targets were picked with no X**: "mana value X or less"
+  matched nothing, so Finale of Promise was the one card of 1,197 a 24-seat
+  census never played (`auto_targets_for_effect_all_slots_x`).
 - Also: granted persist/undying (the other session), escape and replicate bot
   candidates. Open from the same sweep: Terror of the Peaks' life tax on
   targeting (no life-tax-on-targeting primitive), Conduit of Worlds' tap
