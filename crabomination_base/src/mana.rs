@@ -593,6 +593,10 @@ pub enum SpendRestriction {
     /// Vampire, Cleric, and/or Demon). A shorter list repeats a type. Unlike
     /// `CreatureOfType` a Kindred noncreature spell of a listed type counts.
     CreatureOfAnyTypes([crate::card::CreatureType; 3]),
+    /// "Spend this mana only to cast instant, sorcery, [A], and [B] spells"
+    /// (Séance Board: Demon and Spirit). A Kindred spell of a listed type
+    /// counts, as for `CreatureOfAnyTypes`.
+    InstantSorceryOrTypes([crate::card::CreatureType; 2]),
     /// "Spend this mana only to activate abilities of land sources."
     /// (Sunken Citadel.)
     LandAbilitiesOnly,
@@ -711,6 +715,9 @@ impl SpendRestriction {
             }
             SpendRestriction::CreatureOfType(_) => "only spells of the chosen type",
             SpendRestriction::CreatureOfAnyTypes(_) => "only spells of the listed creature types",
+            SpendRestriction::InstantSorceryOrTypes(_) => {
+                "only instants, sorceries and spells of the listed creature types"
+            }
             SpendRestriction::LandAbilitiesOnly => "only abilities of lands",
             SpendRestriction::CreatureOnly => "only creature spells",
             SpendRestriction::CreatureSpellsOrAbilities => "only creatures and their abilities",
@@ -791,6 +798,12 @@ impl SpendRestriction {
             SpendRestriction::CreatureOfAnyTypes(ts) => {
                 !kind.activating_ability
                     && (kind.changeling || ts.iter().any(|t| kind.creature_types.contains(t)))
+            }
+            SpendRestriction::InstantSorceryOrTypes(ts) => {
+                !kind.activating_ability
+                    && (kind.instant_or_sorcery
+                        || kind.changeling
+                        || ts.iter().any(|t| kind.creature_types.contains(t)))
             }
             SpendRestriction::CreatureOnly => kind.creature,
             SpendRestriction::NoncreatureSpellsOnly => {

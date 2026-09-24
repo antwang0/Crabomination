@@ -655,7 +655,7 @@ fn cr_106_6_every_rider_allows_every_payment() {
             match r {
                 InstantSorceryOnly | ArtifactOnly | CreatureOfTypeUncounterable(_)
                 | CreatureOfType(_) | CreatureSpellOfType(_) | CreatureOfTypeOrItsAbility(_)
-                | CreatureOfAnyTypes(_)
+                | CreatureOfAnyTypes(_) | InstantSorceryOrTypes(_)
                 | LandAbilitiesOnly | CreatureOnly
                 | CreatureSpellsOrAbilities | NoNonartifactSpells | AbilitiesOnly
                 | LessonSpellsOnly | DevoidSpellsOnly | InstantSorceryUncounterable
@@ -679,6 +679,7 @@ fn cr_106_6_every_rider_allows_every_payment() {
             CreatureSpellOfType(CreatureType::Bear),
             CreatureOfTypeOrItsAbility(CreatureType::Bear),
             CreatureOfAnyTypes([CreatureType::Bear, CreatureType::Elf, CreatureType::Elf]),
+            InstantSorceryOrTypes([CreatureType::Demon, CreatureType::Spirit]),
             LandAbilitiesOnly,
             CreatureOnly,
             CreatureSpellsOrAbilities,
