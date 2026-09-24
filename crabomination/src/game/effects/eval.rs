@@ -1216,6 +1216,10 @@ impl GameState {
                     .filter(|&&(c, creature)| creature && c == p)
                     .count() as i32
             }
+            Value::PermanentsDestroyedThisResolutionControlledBy(who) => {
+                let Some(p) = self.resolve_player(who, ctx) else { return 0 };
+                self.scratch.destroyed_controllers_this_resolution.iter().filter(|&&(c, _)| c == p).count() as i32
+            }
             Value::ConvergedValue => ctx.converged_value as i32,
             Value::CardTypesInGraveyard(who) => self
                 .resolve_player(who, ctx)

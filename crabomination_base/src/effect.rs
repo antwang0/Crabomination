@@ -1410,6 +1410,11 @@ pub enum Value {
     /// included. Deadly Tempest's "each player loses life equal to the number
     /// of creatures they controlled that were destroyed this way".
     CreaturesDestroyedThisResolutionControlledBy(PlayerRef),
+    /// Every permanent destroyed so far this resolution that `who` controlled
+    /// as it was destroyed, of any type — From the Ashes's "for each land
+    /// destroyed this way, its controller may search". Reads the same scratch
+    /// as `CreaturesDestroyedThisResolutionControlledBy`.
+    PermanentsDestroyedThisResolutionControlledBy(PlayerRef),
     /// Number of snow permanents (CR 205.4g — supertype Snow) controlled by
     /// the resolved player. Powers Skred ("deals damage to target creature
     /// equal to the number of snow permanents you control") and other
