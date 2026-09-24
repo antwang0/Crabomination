@@ -2627,3 +2627,35 @@ pub const GIMBAL_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, forest, forest, forest, forest,
     forest, forest, forest,
 ];
+
+pub const DIHADA_COMMANDERS: &[CardFactory] = &[dihada_binder_of_wills];
+
+/// **Legends' Legacy**, the Dominaria United Commander Mardu deck (DMC,
+/// 2022-09-09), exactly as MTGJSON's `LegendsLegacy_DMC` prints it: 83
+/// nonbasic cards + 6 Plainss + 5 Swamps + 5 Mountains = 99. Legends under Dihada, Binder of Wills, a
+/// planeswalker commander.
+pub const DIHADA_MAIN: &[CardFactory] = &[
+    adriana_captain_of_the_guard, alesha_who_smiles_at_death, anafenza_kin_tree_spirit,
+    arvad_the_cursed, ashling_the_pilgrim, bell_borca_spectral_sergeant, captain_lannery_storm,
+    kothophed_soul_hoarder, drana_liberator_of_malakir, etali_primal_storm,
+    garna_the_bloodflame, jazal_goldmane, josu_vess_lich_knight, kari_zev_skyship_raider,
+    krenko_tin_street_kingpin, neheb_dreadhorde_champion, odric_lunarch_marshal,
+    tajic_blade_of_the_legion, teshar_ancestors_apostle, traxos_scourge_of_kroog,
+    zetalpa_primal_dawn, primevals_glorious_rebirth, urzas_ruinous_blast, faithless_looting,
+    kayas_wrath, nights_whisper, read_the_bones, ambitions_cost, bedevil, generous_gift,
+    heros_downfall, mortify, thrill_of_possibility, unbreakable_formation, wear_tear,
+    blackblade_reforged, bontus_monument, commanders_sphere, arcane_signet, fellwar_stone,
+    hazorets_monument, hedron_archive, heros_blade, heroes_podium, honor_worn_shaku,
+    oketras_monument, sol_ring, sword_of_the_chosen, tenza_godos_maul, the_circle_of_loyalty,
+    day_of_destiny, battlefield_forge, bojuka_bog, boros_garrison, command_tower,
+    dragonskull_summit, evolving_wilds, foreboding_ruins, geier_reach_sanitarium,
+    mikokoro_center_of_the_sea, mobilized_district, nomad_outpost, orzhov_basilica,
+    rakdos_carnarium, reliquary_tower, shivan_gorge, shizo_deaths_storehouse, smoldering_marsh,
+    temple_of_malice, temple_of_silence, temple_of_triumph, terramorphic_expanse,
+    tyrite_sanctum, caves_of_koilos, shanid_sleepers_scourge, zeriam_golden_wind,
+    bladewing_deathless_tyrant, cadric_soul_kindler, gerrards_hourglass_pendant,
+    moira_urborg_haunt, the_peregrine_dynamo, verrak_warped_sengir, the_reaver_cleaver,
+    // Basics: 6 plains, 5 swamp, 5 mountain
+    plains, plains, plains, plains, plains, plains, swamp, swamp, swamp, swamp, swamp, mountain,
+    mountain, mountain, mountain, mountain,
+];

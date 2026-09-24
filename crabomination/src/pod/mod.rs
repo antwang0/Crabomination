@@ -722,6 +722,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::GIMBAL_COMMANDERS,
             main: decks::GIMBAL_MAIN,
         },
+        // Eighty-fifth: the seventy-fifth official list (Legends' Legacy,
+        // DMC) — Mardu legends under Dihada, Binder of Wills, a planeswalker
+        // commander. `--pod-decks 85`.
+        PodDeck {
+            name: "Dihada, Binder of Wills (RWB)",
+            commanders: decks::DIHADA_COMMANDERS,
+            main: decks::DIHADA_MAIN,
+        },
     ]
 }
 
