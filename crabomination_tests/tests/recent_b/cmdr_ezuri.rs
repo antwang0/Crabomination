@@ -165,6 +165,15 @@ fn llanowar_reborn_grafts_onto_an_entering_creature() {
     cast(&mut g, bear, None).expect("bear");
     assert_eq!(pt(&g, bear), (3, 3));
     assert_eq!(g.battlefield_find(land).expect("land").counter_count(CounterType::PlusOnePlusOne), 0);
+    // CR 603.4 — emptied, it no longer triggers at all (an empty grafter used
+    // to put a dead trigger on the stack for every creature entering).
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell { card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("bear");
+    g.perform_action(GameAction::PassPriority).expect("pass");
+    g.perform_action(GameAction::PassPriority).expect("pass");
+    assert!(g.stack.is_empty(), "no graft trigger without a counter");
 }
 
 #[test]

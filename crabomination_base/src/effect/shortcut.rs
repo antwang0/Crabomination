@@ -3243,19 +3243,27 @@ pub fn offering(
 }
 
 /// Graft N (CR 702.58) — the trigger half: "Whenever another creature
-/// enters, you may move a +1/+1 counter from this creature onto it."
-/// Pair with `enters_with_counters: Some((PlusOnePlusOne, Const(n)))`.
-/// The counter only moves while this creature still has one (the
-/// `MoveCounter` is a no-op once empty).
+/// enters, **if this permanent has a +1/+1 counter on it**, you may move a
+/// +1/+1 counter from this permanent onto that creature." Pair with
+/// `enters_with_counters: Some((PlusOnePlusOne, Const(n)))`. The intervening
+/// if (CR 603.4) matters at a big table: without it an empty grafter
+/// triggered on every creature entering — 47 dead Llanowar Reborn triggers
+/// on one stack in a 33-seat pod.
 pub fn graft() -> TriggeredAbility {
     use crate::card::{EventKind, EventScope, EventSpec};
     TriggeredAbility {
         event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnyPlayer)
-            .with_filter(Predicate::EntityMatches {
-                what: Selector::TriggerSource,
-                filter: SelectionRequirement::Creature
-                    .and(SelectionRequirement::OtherThanSource),
-            }),
+            .with_filter(Predicate::All(vec![
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::OtherThanSource),
+                },
+                Predicate::EntityMatches {
+                    what: Selector::This,
+                    filter: SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne),
+                },
+            ])),
         effect: Effect::MayDo {
             description: "Move a +1/+1 counter from this creature onto it".into(),
             body: Box::new(Effect::MoveCounter {
