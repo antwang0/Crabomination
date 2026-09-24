@@ -1286,7 +1286,8 @@ fn known_card_in(card: &CardInstance, state: Option<&crate::game::GameState>) ->
             .is_some_and(|g| g.gifted_effect.requires_target()),
         has_convoke: card.definition.keywords.contains(&crate::card::Keyword::Convoke)
             || state.is_some_and(|st| st.spell_granted_convoke(card.owner, card)),
-        has_improvise: card.definition.keywords.contains(&crate::card::Keyword::Improvise),
+        has_improvise: card.definition.keywords.contains(&crate::card::Keyword::Improvise)
+            || state.is_some_and(|st| st.spell_granted_improvise(card.owner, card)),
         has_waterbend: card.definition.waterbend.is_some(),
         waterbend_amount: card.definition.waterbend.as_ref().and_then(|wb| match wb.amount {
             crate::effect::Value::Const(n) => Some(n.max(0) as u32),

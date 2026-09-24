@@ -12020,6 +12020,12 @@ impl GameState {
                 self.grant_next_spell_affinity(ctx.controller);
                 Ok(())
             }
+            Effect::ExileTopPushingLuck { stop_at, limit, then } => {
+                if self.exile_top_pushing_luck(ctx.controller, *stop_at, *limit, events) {
+                    self.run_effect(then, ctx, events)?;
+                }
+                Ok(())
+            }
             Effect::PutCommanderOntoBattlefield { who, haste, return_at_end_step } => {
                 if let Some(p) = self.resolve_player(who, ctx) {
                     self.put_commander_onto_battlefield(
@@ -38186,6 +38192,10 @@ impl GameState {
                 // Walk the IDs captured in `exiled_card_ids_this_resolution` and
                 // look them up in the exile zone, filtering via the card-level
                 // evaluator (the cards aren't on the battlefield).
+                // CR 107.3 — the filter may name the resolution's X (Rashmi
+                // and Ragavan's "mana value less than" rides `WithX`), and the
+                // card-level evaluator has no context to read it from.
+                let filter = &filter.resolve_x(ctx.x_value);
                 let ids = self.scratch.exiled_card_ids_this_resolution.clone();
                 let mut out: Vec<EntityRef> = Vec::new();
                 for cid in ids {

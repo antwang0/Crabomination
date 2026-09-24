@@ -40,6 +40,26 @@ impl GameState {
     /// affinity for artifacts. Keyed, like `pending_spell_discounts`, on the
     /// spells-cast tally so it lapses with the next spell; the count itself is
     /// taken at cast time by `cost_reduction_for_spell`.
+    /// Dance with Calamity — exile `seat`'s top card while the exiled total
+    /// mana value is below `stop_at`; true when that total is `limit` or
+    /// less. `place_card_in_dest` records each card for
+    /// `Selector::ExiledThisResolution`.
+    pub(crate) fn exile_top_pushing_luck(
+        &mut self,
+        seat: usize,
+        stop_at: u32,
+        limit: u32,
+        events: &mut Vec<crate::game::types::GameEvent>,
+    ) -> bool {
+        let mut total = 0u32;
+        while total < stop_at && !self.players[seat].library.is_empty() {
+            let card = self.players[seat].library.remove(0);
+            total += card.definition.cost.cmc();
+            self.place_card_in_dest(card, seat, &crate::effect::ZoneDest::Exile, events);
+        }
+        total <= limit
+    }
+
     pub(crate) fn grant_next_spell_affinity(&mut self, seat: usize) {
         if let Some(p) = self.players.get_mut(seat) {
             let at = p.spells_cast_this_turn;

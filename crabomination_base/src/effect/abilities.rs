@@ -3027,6 +3027,9 @@ pub enum StaticEffect {
     /// "[filter] spells you cast have convoke" (CR 702.51 — Chief Engineer).
     /// Consulted by the convoke cast path alongside the printed keyword.
     GrantConvokeToSpells { filter: SelectionRequirement },
+    /// "[filter] spells you cast have improvise" (CR 702.126 — Inspiring
+    /// Statuary). Rides the convoke grant's cast gate and helper paths.
+    GrantImproviseToSpells { filter: SelectionRequirement },
     /// "If a source would deal damage to the attached creature, prevent N of
     /// that damage, where N is the number of `filter` permanents the source's
     /// controller controls." Shield of the Avatar.

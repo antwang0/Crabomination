@@ -1240,3 +1240,105 @@ fn cr_707_9b_a_copy_except_it_isnt_a_creature() {
     assert!(c.definition.card_types.contains(&CardType::Artifact));
     assert!(!c.definition.card_types.contains(&CardType::Creature));
 }
+
+// ── Primitives for Tinker Time (MOC, Gimbal) ──────────────────────────────
+
+/// CR 702.126a — "nonartifact spells you cast have improvise" (Inspiring
+/// Statuary): artifacts tap for the generic part of a granted spell, and an
+/// artifact spell gets no help.
+#[test]
+fn cr_702_126a_a_granted_improvise_taps_artifacts() {
+    use crabomination::card::{SelectionRequirement as R, StaticAbility, StaticEffect};
+    let statuary = CardDefinition {
+        name: "Test Statuary",
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "Nonartifact spells you cast have improvise.",
+            effect: StaticEffect::GrantImproviseToSpells { filter: R::Not(Box::new(R::Artifact)) },
+        }],
+        ..Default::default()
+    };
+    let mut g = commander_game();
+    let helper = g.add_card_to_battlefield(0, statuary);
+    let thopter = g.add_card_to_battlefield(0, catalog::ornithopter());
+    // Grizzly Bears ({1}{G}): the Statuary pays the {1}.
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    assert!(g.helper_tap_candidates(0, bear).contains(&helper));
+    g.perform_action(GameAction::CastSpellConvoke {
+        card_id: bear,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+        convoke_creatures: vec![helper],
+    })
+    .expect("improvised");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some());
+    assert!(g.battlefield_find(helper).unwrap().tapped);
+    // An artifact spell isn't granted it.
+    let stone = g.add_card_to_hand(0, catalog::mind_stone());
+    assert!(g.helper_tap_candidates(0, stone).is_empty(), "{thopter:?} can't help an artifact");
+}
+
+/// CR 107.3 + 406 — "exile the top card as many times as you choose; if the
+/// total mana value is 13 or less, [then]" (Dance with Calamity): the exile
+/// stops at the engine's stop point, and `then` runs only under the limit.
+#[test]
+fn exile_top_pushing_luck_runs_its_body_under_the_limit() {
+    use crabomination::effect::{Effect, Selector, Value};
+    use crabomination::game::effects::EffectContext;
+    let gain = || Box::new(Effect::GainLife { who: Selector::You, amount: Value::ONE });
+    let mut g = commander_game();
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    let life = g.players[0].life;
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(&Effect::ExileTopPushingLuck { stop_at: 3, limit: 4, then: gain() }, &ctx)
+        .expect("resolve");
+    assert_eq!(g.players[0].library.len(), 1, "two Bears reach the stop point");
+    assert_eq!(g.players[0].life, life + 1, "four is within the limit");
+    g.resolve_effect(&Effect::ExileTopPushingLuck { stop_at: 3, limit: 1, then: gain() }, &ctx)
+        .expect("resolve");
+    assert_eq!(g.players[0].life, life + 1, "over the limit");
+}
+
+/// CR 107.3 — a "cards exiled this way" filter that names X reads the
+/// resolution's X (Rashmi and Ragavan's `WithX` "mana value less than"); it
+/// used to see no X and match nothing.
+#[test]
+fn cr_107_3_an_exiled_this_way_filter_reads_x() {
+    use crabomination::card::SelectionRequirement as R;
+    use crabomination::effect::{Effect, Selector, Value};
+    use crabomination::game::effects::EffectContext;
+    let mut g = commander_game();
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    let exile_and_count = |x: i32| {
+        Effect::Seq(vec![
+            Effect::ExileTopOfLibrary {
+                who: Selector::You,
+                amount: Value::ONE,
+                link_to_source: false,
+                face_down: false,
+            },
+            Effect::WithX {
+                x: Value::Const(x),
+                body: Box::new(Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::CountOf(Box::new(Selector::ExiledThisResolution {
+                        filter: R::ManaValueAtMostXFromCost,
+                    })),
+                }),
+            },
+        ])
+    };
+    let life = g.players[0].life;
+    g.resolve_effect(&exile_and_count(2), &ctx).expect("resolve");
+    assert_eq!(g.players[0].life, life + 1, "mana value 2 is at most X = 2");
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.resolve_effect(&exile_and_count(1), &ctx).expect("resolve");
+    assert_eq!(g.players[0].life, life + 1, "but not at most X = 1");
+}

@@ -1259,7 +1259,8 @@ impl GameState {
         };
         let convoke = card.definition.keywords.contains(&Keyword::Convoke)
             || self.spell_granted_convoke(seat, card);
-        let improvise = card.definition.keywords.contains(&Keyword::Improvise);
+        let improvise = card.definition.keywords.contains(&Keyword::Improvise)
+            || self.spell_granted_improvise(seat, card);
         let waterbend = card.definition.waterbend.is_some();
         if !convoke && !improvise && !waterbend {
             return Vec::new();
@@ -1289,6 +1290,7 @@ impl GameState {
                 c.definition.keywords.contains(&Keyword::Convoke)
                     || c.definition.keywords.contains(&Keyword::Improvise)
                     || self.spell_granted_convoke(caster, c)
+                    || self.spell_granted_improvise(caster, c)
             })
             .map(|c| {
                 let needs_target = c.definition.effect.requires_target();

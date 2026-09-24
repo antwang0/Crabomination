@@ -2436,7 +2436,7 @@ pub(crate) mod cast_static {
     pub const COLORED_REDUCTION: u32 = 1 << 2;
     /// `SpellCostFloor` (Trinisphere).
     pub const COST_FLOOR: u32 = 1 << 3;
-    /// `GrantConvokeToSpells`.
+    /// `GrantConvokeToSpells` / `GrantImproviseToSpells`.
     pub const GRANT_CONVOKE: u32 = 1 << 4;
     /// `NoncreatureSpellsCantBeCastIf` / `NoncreatureSpellsWithChosenManaValueCantBeCast`
     /// (Gaddock Teeg, Sanctum Prelate).
@@ -2476,7 +2476,9 @@ pub(crate) fn cast_cost_scan(state: &crate::game::GameState) -> u32 {
                     cast_static::COLORED_REDUCTION
                 }
                 SE::SpellCostFloor { .. } => cast_static::COST_FLOOR,
-                SE::GrantConvokeToSpells { .. } => cast_static::GRANT_CONVOKE,
+                SE::GrantConvokeToSpells { .. } | SE::GrantImproviseToSpells { .. } => {
+                    cast_static::GRANT_CONVOKE
+                }
                 SE::NoncreatureSpellsCantBeCastIf { .. }
                 | SE::NoncreatureSpellsWithChosenManaValueCantBeCast => {
                     cast_static::NONCREATURE_LOCK
@@ -8012,6 +8014,21 @@ impl GameState {
         })
     }
 
+    /// CR 702.126 — true when a `StaticEffect::GrantImproviseToSpells`
+    /// permanent `p` controls (Inspiring Statuary) grants improvise to this
+    /// spell.
+    pub(crate) fn spell_granted_improvise(&self, p: usize, card: &CardInstance) -> bool {
+        self.battlefield.iter().any(|c| {
+            c.controller == p
+                && c.definition.static_abilities.iter().any(|sa| match &sa.effect {
+                    crate::effect::StaticEffect::GrantImproviseToSpells { filter } => {
+                        crate::game::layers::requirement_matches_card(filter, card, p)
+                    }
+                    _ => false,
+                })
+        })
+    }
+
     /// Internal cast-spell helper with optional convoke creatures and delve
     /// cards. Each convoke creature must be untapped + controlled by the
     /// caster + the spell must have `Keyword::Convoke`; each tap adds {1}
@@ -8508,7 +8525,9 @@ impl GameState {
         let has_convoke = card.definition.keywords.has_kw(&crate::card::Keyword::Convoke)
             || (cost_statics & cast_static::GRANT_CONVOKE != 0
                 && self.spell_granted_convoke(p, &card));
-        let has_improvise = card.definition.keywords.has_kw(&crate::card::Keyword::Improvise);
+        let has_improvise = card.definition.keywords.has_kw(&crate::card::Keyword::Improvise)
+            || (cost_statics & cast_static::GRANT_CONVOKE != 0
+                && self.spell_granted_improvise(p, &card));
         // CR 701.67 — waterbend helpers ride the same `convoke_creatures` slot;
         // any untapped artifact or creature you control may tap to pay {1} of
         // the waterbend sub-cost. Count is clamped to the waterbend amount below.

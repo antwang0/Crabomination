@@ -504,6 +504,7 @@ impl Effect {
             | Effect::EachOtherPlayerMayDraw { per_draw: then }
             | Effect::RevealDrawnCardThenIf { then, .. }
             | Effect::Parley { then, .. }
+            | Effect::ExileTopPushingLuck { then, .. }
             | Effect::RevealAnyNumberFromHand { then, .. }
             | Effect::PayPerCounterOrSacrifice { then, .. }
             | Effect::AnyPlayerMayExileFromGraveyard { then, .. }
@@ -2165,7 +2166,9 @@ impl Effect {
             Effect::Balance | Effect::BalanceMatching { .. } => false,
             Effect::GenesisWave => false,
             Effect::ShuffleHandsDrawSame { who } => player_has_target(who),
-            Effect::RevealAnyNumberFromHand { then, .. } | Effect::Parley { then } => {
+            Effect::RevealAnyNumberFromHand { then, .. }
+            | Effect::Parley { then }
+            | Effect::ExileTopPushingLuck { then, .. } => {
                 then.requires_target()
             }
             Effect::DestroyEachMatchingWithManaValue { .. }
@@ -2734,6 +2737,7 @@ impl Effect {
             // cast prompt narrows correctly when the inner effect needs
             // a target (e.g. "you may sacrifice [target permanent]").
             Effect::Parley { then: body }
+            | Effect::ExileTopPushingLuck { then: body, .. }
             | Effect::RevealAnyNumberFromHand { then: body, .. }
             | Effect::MayExileSelfThen { body }
             | Effect::MayExileFromYourGraveyard { then: body, .. }
@@ -4358,6 +4362,7 @@ impl Effect {
                 Effect::MayDoBy { who, body, .. } => pref_find(who, slot)
                     .or_else(|| eff_find(body, slot, None, kicked)),
                 Effect::Parley { then: body }
+                | Effect::ExileTopPushingLuck { then: body, .. }
                 | Effect::RevealAnyNumberFromHand { then: body, .. }
                 | Effect::MayDo { body, .. }
                 | Effect::CapTargetsAtX { body }

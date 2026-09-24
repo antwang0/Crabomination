@@ -4708,6 +4708,13 @@ pub enum Effect {
         #[serde(default)]
         face_down: bool,
     },
+    /// "As many times as you choose, you may exile the top card of your
+    /// library. If the total mana value of the cards exiled this way is
+    /// `limit` or less, [`then`]" (Dance with Calamity). The controller keeps
+    /// exiling while the running total is below `stop_at` (the engine's stop
+    /// point, not a choice); the cards are recorded for
+    /// `Selector::ExiledThisResolution`.
+    ExileTopPushingLuck { stop_at: u32, limit: u32, then: Box<Effect> },
     /// "If a source you control would deal noncombat damage to a permanent or
     /// player this turn, it deals that much damage plus `amount` instead"
     /// (Taii Wakeen, Perfect Shot). Turn-scoped, stacking across activations.

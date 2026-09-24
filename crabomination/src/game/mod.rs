@@ -29513,6 +29513,7 @@ fn static_effect_to_effects(
             | StaticEffect::UntapOnlyChosenTypeWhileUntapped
             | StaticEffect::MostPermanentsCantPlay
             | StaticEffect::GrantConvokeToSpells { .. }
+            | StaticEffect::GrantImproviseToSpells { .. }
             | StaticEffect::DoubleDamageToOpponents
             | StaticEffect::DoubleDamageFromCreaturesEnteredThisTurn
             | StaticEffect::DoubleDamageFromControlledCreatures

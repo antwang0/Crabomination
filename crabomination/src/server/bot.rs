@@ -6521,7 +6521,9 @@ impl BoardFacts {
             for sa in c.definition.static_abilities.iter() {
                 use crate::effect::StaticEffect as SE;
                 match sa.effect {
-                    SE::GrantConvokeToSpells { .. } => f.grants_convoke = true,
+                    SE::GrantConvokeToSpells { .. } | SE::GrantImproviseToSpells { .. } => {
+                        f.grants_convoke = true
+                    }
                     SE::GraveyardCardsHaveEscape { .. }
                     | SE::GraveyardCardsHaveEscapeMatching { .. } => f.grants_escape = true,
                     SE::YourISSpellsHaveReplicate | SE::YourSpellsHaveReplicate { .. } => {
@@ -7033,7 +7035,8 @@ pub(super) fn cast_candidates<'a>(
     for c in state.players[seat].hand.iter() {
         let convoke = c.definition.keywords.has_kw(&crate::card::Keyword::Convoke)
             || (facts.grants_convoke && state.spell_granted_convoke(seat, c));
-        let improvise = c.definition.keywords.has_kw(&crate::card::Keyword::Improvise);
+        let improvise = c.definition.keywords.has_kw(&crate::card::Keyword::Improvise)
+            || (facts.grants_convoke && state.spell_granted_improvise(seat, c));
         if !convoke && !improvise {
             continue;
         }
