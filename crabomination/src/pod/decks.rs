@@ -3161,3 +3161,31 @@ pub const ESTRID_MAIN: &[CardFactory] = &[
     island, island, island, island, forest, forest, forest, forest, forest, forest, forest,
     forest,
 ];
+
+pub const KATHRIL_COMMANDERS: &[CardFactory] = &[kathril_aspect_warper];
+
+/// **Symbiotic Swarm**, the Ikoria Commander deck (C20, 2020-04-17), exactly
+/// as MTGJSON's `SymbioticSwarm_C20` prints it: 81 nonbasic cards +
+/// 7 Plains + 7 Swamps + 4 Forests = 99. Abzan keyword counters under Kathril, Aspect Warper.
+pub const KATHRIL_MAIN: &[CardFactory] = &[
+    ajani_unyielding, tayam_luminous_enigma, nikara_lair_scavenger, yannik_scavenging_sentinel,
+    avenging_huntbonder, cartographers_hawk, vitality_hunter, daring_fiendbonder,
+    slippery_bogbonder, akroma_angel_of_wrath, angel_of_finality, cataclysmic_gearhulk,
+    kalemnes_captain, odric_lunarch_marshal, reveillark, solemn_recruit, sunblast_angel,
+    zetalpa_primal_dawn, cairn_wanderer, soul_of_innistrad, soulflayer, hornet_queen,
+    majestic_myriarch, splinterfright, archon_of_valors_reach, karametra_god_of_harvests,
+    void_beckoner, titanoth_rex, aerial_responder, vampire_nighthawk, acidic_slime,
+    sakura_tribe_elder, satyr_wayfinder, skullwinder, nyx_weaver, selective_adaptation,
+    ever_after, duneblast, unbreakable_bond, unburial_rites, cultivate, harmonize,
+    obscuring_haze, blood_curdle, abzan_charm, deathsprout, despark, grisly_salvage,
+    netherborn_altar, mimic_vat, bonders_ornament, arcane_signet, commanders_sphere, sol_ring,
+    swiftfoot_boots, together_forever, abzan_ascendancy, deadbridge_chant, martial_impetus,
+    parasitic_impetus, predatory_impetus, nesting_grounds, canopy_vista, caves_of_koilos,
+    exotic_orchard, gavony_township, grim_backwoods, sungrass_prairie, blighted_woodland,
+    command_tower, golgari_rot_farm, krosan_verge, memorial_to_folly, myriad_landscape,
+    orzhov_basilica, sandsteppe_citadel, selesnya_sanctuary, blossoming_sands, evolving_wilds,
+    jungle_hollow, scoured_barrens,
+    // Basics: 7 plains, 7 swamp, 4 forest
+    plains, plains, plains, plains, plains, plains, plains, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, forest, forest, forest, forest,
+];

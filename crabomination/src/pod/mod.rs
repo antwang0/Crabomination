@@ -858,6 +858,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ESTRID_COMMANDERS,
             main: decks::ESTRID_MAIN,
         },
+        // Hundred-and-third: the ninety-third official list (Symbiotic Swarm,
+        // C20) — Abzan keyword counters under Kathril, Aspect Warper.
+        // `--pod-decks 103`.
+        PodDeck {
+            name: "Kathril, Aspect Warper (WBG)",
+            commanders: decks::KATHRIL_COMMANDERS,
+            main: decks::KATHRIL_MAIN,
+        },
     ]
 }
 
@@ -1406,6 +1414,8 @@ mod tests {
             ("Kasla", [0xCA51, 104, 9028]),
             // CR 903.9 — Myth Unbound's command-zone draws, Empyrial Storm's copies.
             ("Estrid", [0xE571, 105, 9029]),
+            // CR 122.1b — keyword counters from the graveyard (Kathril).
+            ("Kathril", [0xCA7B, 106, 9030]),
         ] {
             let precon = *field.iter().find(|d| d.name.starts_with(name)).expect("the precon seat");
             assert_eq!(precon.card_count(), 100);
