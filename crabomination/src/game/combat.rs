@@ -1969,6 +1969,13 @@ impl GameState {
             // CR 702.142 — record that this creature attacked (gates Boast).
             card.attacked_this_turn = true;
             card.attacked_own_turn = true;
+            // Territorial Hellkite's record of whom it attacked this combat.
+            if let AttackTarget::Player(d) = atk.target
+                && card.cold_any(|k| k.combat_defenders.as_ref().is_some_and(|v| !v.contains(&d)))
+                && let Some(v) = card.combat_defenders.as_mut()
+            {
+                v.push(d);
+            }
             self.attacking.push(atk);
             // Raid (CR 702.108 ability word): the controller attacked this turn.
             self.players[p].attacked_this_turn = true;

@@ -11210,6 +11210,29 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ChooseRandomOpponentNotAttackedLastCombat => {
+                // Territorial Hellkite: last combat's record, then arm a fresh
+                // one for this combat (declare attackers fills it).
+                use rand::RngExt;
+                let Some(src) = ctx.source else { return Ok(()) };
+                let Some(c) = self.battlefield_find(src) else { return Ok(()) };
+                let me = c.controller;
+                let attacked: Vec<usize> = c.combat_defenders.clone().unwrap_or_default();
+                let opps: smallvec::SmallVec<[usize; 8]> = self
+                    .living_seats()
+                    .filter(|&q| !self.same_team(me, q) && !attacked.contains(&q))
+                    .collect();
+                let pick = (!opps.is_empty()).then(|| opps[self.rng.draw().random_range(0..opps.len())]);
+                if let Some(c) = self.battlefield_find_mut(src) {
+                    c.chosen_player = pick;
+                    c.combat_defenders = Some(Vec::new());
+                }
+                if pick.is_none() {
+                    self.run_effect(&Effect::Tap { what: Selector::This }, ctx, events)?;
+                }
+                Ok(())
+            }
+
             Effect::GoadWhile { what, hold } => {
                 // CR 701.15 / 611.2b — a goad held by a condition rather than
                 // the goader's next turn; `goaders` reads it while it holds.

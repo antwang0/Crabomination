@@ -7378,6 +7378,11 @@ pub struct CardCold {
     /// rather than until the goader's next turn (Hot Pursuit, Immortal
     /// Obligation). Read through `GameState::goaders`, never directly.
     pub goad_holds: Vec<(usize, GoadHold)>,
+    /// Territorial Hellkite — `Some` while this creature tracks the players
+    /// it attacks in its controller's current combat (armed by
+    /// `Effect::ChooseRandomOpponentNotAttackedLastCombat`, filled at declare
+    /// attackers); `None` for every other creature.
+    pub combat_defenders: Option<Vec<usize>>,
     /// CR 702.171 — the creatures that have saddled this permanent this turn
     /// (the riders tapped by a Saddle activation). Read by
     /// `Effect::ExileAndReturnSelfWithSaddler` for "exile it and up to one
@@ -10800,6 +10805,8 @@ struct CardInstanceWire {
     goad_for_the_game: bool,
     #[serde(default)]
     goad_holds: Vec<(usize, GoadHold)>,
+    #[serde(default)]
+    combat_defenders: Option<Vec<usize>>,
     /// CR 701.31 monstrous flag. `#[serde(default)]` so older snapshots load
     /// as `false`.
     #[serde(default)]
@@ -11006,6 +11013,7 @@ impl serde::Serialize for CardInstance {
             goaded_by: self.goaded_by.clone(),
             goad_for_the_game: self.goad_for_the_game,
             goad_holds: self.goad_holds.clone(),
+            combat_defenders: self.combat_defenders.clone(),
             monstrous: self.monstrous,
             renowned: self.renowned,
             suspected: self.suspected,
@@ -11175,6 +11183,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.goaded_by = wire.goaded_by;
         c.goad_for_the_game = wire.goad_for_the_game;
         c.goad_holds = wire.goad_holds;
+        c.combat_defenders = wire.combat_defenders;
         c.monstrous = wire.monstrous;
         c.renowned = wire.renowned;
         c.suspected = wire.suspected;

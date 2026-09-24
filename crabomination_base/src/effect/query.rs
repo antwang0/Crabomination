@@ -2097,6 +2097,7 @@ impl Effect {
             | Effect::EachPlayerMayCounterForPeace { .. }
             | Effect::EachPlayerMayCounterThenGoad { .. }
             | Effect::OpponentsChooseSilenceOrSnitch { .. }
+            | Effect::ChooseRandomOpponentNotAttackedLastCombat
             | Effect::EachPlayerMayDrawThenTakersGainLife { .. }
             | Effect::ChooseAttackDirection
             | Effect::ChooseAttackDirectionUntilYourNextTurn

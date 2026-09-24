@@ -4864,6 +4864,11 @@ pub enum Effect {
     /// CR 701.15 / 611.2b — `Goad` that lasts as long as `hold` does rather
     /// than until the goader's next turn (Hot Pursuit, Immortal Obligation).
     GoadWhile { what: Selector, hold: GoadLasts },
+    /// Territorial Hellkite — choose an opponent at random that the source
+    /// didn't attack during its controller's last combat and remember it as the
+    /// source's `chosen_player` (its `MustAttackChosenPlayer` target); with none
+    /// to choose, forget the choice and tap the source.
+    ChooseRandomOpponentNotAttackedLastCombat,
     /// "[what] can't attack you or planeswalkers you control" for `duration`
     /// — `Keyword::CantAttackPlayer` naming the resolving controller.
     GrantCantAttackYou { what: Selector, duration: Duration },
