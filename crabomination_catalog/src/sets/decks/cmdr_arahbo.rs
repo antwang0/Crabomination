@@ -15,7 +15,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{etb, spell_mastery_gate, target_filtered};
 use crate::effect::{
-    Effect, EventKind, EventScope, EventSpec, ManaPayload, PlayerRef, Predicate, ZoneDest,
+    Effect, EventKind, EventScope, EventSpec, PlayerRef, Predicate, ZoneDest,
 };
 use crate::game::TurnStep;
 use crate::mana::{Color, ManaCost, cost, g, generic, w};
@@ -326,33 +326,7 @@ pub fn quietus_spike() -> CardDefinition {
 /// Saltcrusted Steppe — {T}: {C}; {1}, {T}: a storage counter; {1}, remove
 /// X storage counters: X mana in any mix of {G} and {W}.
 pub fn saltcrusted_steppe() -> CardDefinition {
-    CardDefinition {
-        name: "Saltcrusted Steppe",
-        card_types: vec![CardType::Land],
-        activated_abilities: vec![
-            crate::sets::tap_add_colorless(),
-            ActivatedAbility {
-                mana_cost: cost(&[generic(1)]),
-                tap_cost: true,
-                effect: Effect::AddCounter {
-                    what: Selector::This,
-                    kind: CounterType::Storage,
-                    amount: Value::ONE,
-                },
-                ..Default::default()
-            },
-            ActivatedAbility {
-                mana_cost: cost(&[generic(1)]),
-                remove_counter_x: Some(CounterType::Storage),
-                effect: Effect::AddMana {
-                    who: PlayerRef::You,
-                    pool: ManaPayload::OfColors(vec![Color::Green, Color::White], Value::XFromCost),
-                },
-                ..Default::default()
-            },
-        ],
-        ..Default::default()
-    }
+    crate::sets::storage_land("Saltcrusted Steppe", Color::Green, Color::White)
 }
 
 /// Seht's Tiger — flash; you gain protection from the color of your choice

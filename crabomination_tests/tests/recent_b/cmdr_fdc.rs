@@ -3759,3 +3759,167 @@ fn primal_genesis_cards() {
     cast(&mut g, v, &[]);
     assert_eq!(g.players[0].hand.len(), hand - 1 + 1);
 }
+
+// ── Breed Lethality (C16, Atraxa, Praetors' Voice) ──────────────────────────
+
+/// CR 509.1b — Champion of Lambholt: a creature with less power than the
+/// Champion can't block your creatures; an equal one can.
+#[test]
+fn cr_509_1b_champion_of_lambholt_bars_smaller_blockers() {
+    let mut g = main_phase();
+    let champ = g.add_card_to_battlefield(0, catalog::champion_of_lambholt());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield.find_by_id_mut(champ).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    assert_eq!(pt(&g, champ), (3, 3));
+    let small = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let big = g.add_card_to_battlefield(1, catalog::hill_giant());
+    g.clear_sickness(bear);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    assert!(g.perform_action(GameAction::DeclareBlockers(vec![(small, bear)])).is_err());
+    g.perform_action(GameAction::DeclareBlockers(vec![(big, bear)])).expect("a 3-power blocker");
+}
+
+/// Manifold Insights — each opponent (one here) hands over a nonland card;
+/// the other revealed cards go to the bottom.
+#[test]
+fn manifold_insights_takes_an_opponents_pick() {
+    let mut g = main_phase();
+    let island = g.add_card_to_library(0, catalog::island());
+    let giant = g.add_card_to_library(0, catalog::hill_giant());
+    let bear = g.add_card_to_library(0, catalog::grizzly_bears());
+    let m = g.add_card_to_hand(0, catalog::manifold_insights());
+    cast(&mut g, m, &[]);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear), "the cheapest nonland is handed over");
+    assert!(g.players[0].hand.iter().all(|c| c.id != island && c.id != giant));
+    assert_eq!(g.players[0].library.len(), 2);
+}
+
+/// The rest of Breed Lethality, one assertion each.
+#[test]
+fn breed_lethality_cards() {
+    // Cauldron of Souls: persist brings a bolted creature back.
+    let mut g = main_phase();
+    let c = g.add_card_to_battlefield(0, catalog::cauldron_of_souls());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: c,
+        ability_index: 0,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("persist");
+    drain_stack(&mut g);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, &[Target::Permanent(bear)]);
+    assert_eq!(count_named(&g, 0, "Grizzly Bears"), 1, "persist returned it");
+
+    // Deepglow Skate doubles counters.
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield.find_by_id_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    let sk = g.add_card_to_hand(0, catalog::deepglow_skate());
+    cast(&mut g, sk, &[Target::Permanent(bear)]);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 4);
+
+    // Duneblast: one creature survives.
+    let mut g = main_phase();
+    for seat in [0, 1] {
+        g.add_card_to_battlefield(seat, catalog::grizzly_bears());
+        g.add_card_to_battlefield(seat, catalog::hill_giant());
+    }
+    let d = g.add_card_to_hand(0, catalog::duneblast());
+    cast(&mut g, d, &[]);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.is_creature()).count(), 1);
+
+    // Juniper Order Ranger + Enduring Scalelord: an entering creature feeds both.
+    let mut g = main_phase();
+    let ranger = g.add_card_to_battlefield(0, catalog::juniper_order_ranger());
+    let lord = g.add_card_to_battlefield(0, catalog::enduring_scalelord());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Bool(true)]));
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    cast(&mut g, bear, &[]);
+    assert_eq!(pt(&g, bear), (3, 3));
+    assert_eq!(pt(&g, ranger), (3, 5));
+    assert!(g.battlefield_find(lord).unwrap().counter_count(CounterType::PlusOnePlusOne) >= 1);
+
+    // Festercreep shrinks everything else.
+    let mut g = main_phase();
+    let f = g.add_card_to_hand(0, catalog::festercreep());
+    cast(&mut g, f, &[]);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    activate(&mut g, f, 0, None).expect("remove the counter");
+    assert_eq!(pt(&g, bear), (1, 1));
+
+    // Ikra: a connecting creature gains you its toughness.
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::ikra_shidiqi_the_usurper());
+    let giant = g.add_card_to_battlefield(0, catalog::hill_giant());
+    combat(&mut g, vec![Attack { attacker: giant, target: AttackTarget::Player(1) }], 0, |_| {});
+    assert_eq!(g.players[0].life, 23);
+
+    // Ishai grows when an opponent casts.
+    let mut g = main_phase();
+    let ishai = g.add_card_to_battlefield(0, catalog::ishai_ojutai_dragonspeaker());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.priority.player_with_priority = 1;
+    try_cast(&mut g, 1, bolt, &[Target::Player(0)]).expect("opponent casts");
+    assert_eq!(g.battlefield_find(ishai).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+
+    // Reyhan passes a dead creature's counters on.
+    let mut g = main_phase();
+    let rey = g.add_card_to_hand(0, catalog::reyhan_last_of_the_abzan());
+    cast(&mut g, rey, &[]);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield.find_by_id_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let bolt2 = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, &[Target::Permanent(bear)]);
+    cast(&mut g, bolt2, &[Target::Permanent(bear)]);
+    assert_eq!(g.battlefield_find(rey).unwrap().counter_count(CounterType::PlusOnePlusOne), 5);
+
+    // Dreadship Reef and Murmuring Bosk.
+    let mut g = main_phase();
+    let bosk = g.add_card_to_hand(0, catalog::murmuring_bosk());
+    g.perform_action(GameAction::PlayLand(bosk)).expect("land");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bosk).unwrap().tapped, "no Treefolk to reveal");
+    let reef = g.add_card_to_battlefield(0, catalog::dreadship_reef());
+    assert_eq!(g.battlefield_find(reef).unwrap().definition.activated_abilities.len(), 3);
+
+    // Mirrorweave: every other creature copies the target.
+    let mut g = main_phase();
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mw = g.add_card_to_hand(0, catalog::mirrorweave());
+    cast(&mut g, mw, &[Target::Permanent(giant)]);
+    assert_eq!(count_named(&g, 0, "Hill Giant"), 1);
+
+    // Citadel Siege (Khans default): two counters at your combat.
+    let mut g = main_phase();
+    let s = g.add_card_to_hand(0, catalog::citadel_siege());
+    cast(&mut g, s, &[]);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let ev = g.advance_step(Vec::new()).expect("to combat");
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+
+    // Duelist's Heritage: an attacker gains double strike.
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::duelists_heritage());
+    let giant = g.add_card_to_battlefield(0, catalog::hill_giant());
+    combat(&mut g, vec![Attack { attacker: giant, target: AttackTarget::Player(1) }], 0, |_| {});
+    assert_eq!(g.players[1].life, 14);
+}

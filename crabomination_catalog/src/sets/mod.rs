@@ -77,24 +77,56 @@ pub fn no_abilities() -> Vec<ActivatedAbility> {
 /// two `{T}: Add {color}, this land deals 1 damage to you` abilities. No basic
 /// land types; enters untapped. Adarkar Wastes, Underground River, etc.
 pub fn painland(name: &'static str, color_a: Color, color_b: Color) -> CardDefinition {
-    let colored = |color: Color| ActivatedAbility {
-        tap_cost: true,
-        effect: Effect::Seq(vec![
-            Effect::AddMana {
-                who: PlayerRef::You,
-                pool: ManaPayload::Colors(vec![color]),
-            },
-            Effect::DealDamage {
-                to: Selector::You,
-                amount: Value::Const(1),
-            },
-        ]),
-        ..Default::default()
-    };
     CardDefinition {
         name,
         card_types: vec![CardType::Land],
-        activated_abilities: vec![tap_add_colorless(), colored(color_a), colored(color_b)],
+        activated_abilities: vec![tap_add_colorless(), pain_tap(color_a), pain_tap(color_b)],
+        ..Default::default()
+    }
+}
+
+/// `{T}: Add {color}. This land deals 1 damage to you.` — the painland pip.
+pub fn pain_tap(color: Color) -> ActivatedAbility {
+    ActivatedAbility {
+        tap_cost: true,
+        effect: Effect::Seq(vec![
+            Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colors(vec![color]) },
+            Effect::DealDamage { to: Selector::You, amount: Value::Const(1) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// The Time Spiral two-color storage lands (Saltcrusted Steppe, Dreadship
+/// Reef, …): `{T}: Add {C}.`, `{1}, {T}: Put a storage counter on this land.`,
+/// `{1}, Remove X storage counters: Add X mana in any combination of {A}
+/// and/or {B}.`
+pub fn storage_land(name: &'static str, a: Color, b: Color) -> CardDefinition {
+    CardDefinition {
+        name,
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            tap_add_colorless(),
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1)]),
+                tap_cost: true,
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: crate::card::CounterType::Storage,
+                    amount: Value::ONE,
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1)]),
+                remove_counter_x: Some(crate::card::CounterType::Storage),
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::OfColors(vec![a, b], Value::XFromCost),
+                },
+                ..Default::default()
+            },
+        ],
         ..Default::default()
     }
 }
