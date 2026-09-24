@@ -205,6 +205,13 @@ the handoff.
   suspend-only card (no mana cost) had no other way in. `server/suspend.rs` suspends
   one in the main phase; the census counts a suspend or a foretell as a play. A
   suspend card *with* a cost is still only cast (Aeon Chronicler's Suspend X is open).
+- ✅ New for Exquisite Invention (C18, Saheeli): `Effect::CastCommanderWithoutPaying`
+  via `cast_from_command_zone_as` (no printed cost, no timing check, the CR 903.8 tax
+  still owed — Geode Golem); `Effect::NextSpellHasAffinityForArtifacts` +
+  `Player::pending_affinity_next_spell` (counted as the spell is cast, CR 702.41a);
+  `Duration::UntilEndOfYourNextTurn` — `EffectDuration::UntilEndOfYourNextTurn` and a
+  `TempControl::installed` stamp, both ended in the cleanup of the controller's next turn
+  (Treasure Nabber, CR 611.2b); `LookTopPutMatchingOntoBattlefield::rest_to_graveyard`.
 - ✅ **Found by Urza's Iron Alliance (BRC, Urza):** an any-kind "remove a counter" cost
   (`remove_counter_among_filter` with no kind) summed the ordinary counter bag only, so
   keyword counters could never pay it (CR 122.1b — Hexavus); it now counts them and drains

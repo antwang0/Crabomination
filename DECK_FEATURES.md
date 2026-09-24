@@ -104,6 +104,7 @@ lists were picked.
 | **Phantom Premonition** (KHC precon) WU | Ranar the Ever-Watchful | WU | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Hatsune Miku** (SLD precon) GW | Trostani, Selesnya's Voice | GW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Exit from Exile** (CLB precon) RG | Faldorn, Dread Wolf Herald | RG | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
+| **Exquisite Invention** (C18 precon) UR | Saheeli, the Gifted (**planeswalker**) | UR | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not
@@ -1074,6 +1075,24 @@ Reflection doubles Trostani / Angelic Chorus life per creature, and Storm Herd
 at ~1,000+ life makes that many Pegasi in one resolution, past
 `MAX_BATTLEFIELD` (1,024). The cards are right; the bound is the simulator's.
 `--bench` byte-identical.
+
+The **seventy-fifth** is Commander 2018's **Exquisite Invention**
+(`ExquisiteInvention_C18`) — Izzet artifacts under Saheeli, the Gifted, the
+sixth planeswalker commander (seat 71 before rebasing over Hatsune Miku, Exit
+from Exile, Undead Unleashed and Call for Backup). Seventeen cards were missing; the primitives:
+`Effect::CastCommanderWithoutPaying` (Geode Golem — the tax is still owed, CR
+903.8), `Effect::NextSpellHasAffinityForArtifacts` (Saheeli's +1, counted at
+cast, CR 702.41a), `Duration::UntilEndOfYourNextTurn` for layer effects and
+control steals (Treasure Nabber, CR 611.2b) and
+`LookTopPutMatchingOntoBattlefield::rest_to_graveyard` (Saheeli's Directive).
+Residuals: **Brudiclad**'s model token is your greatest-power one; **Prototype
+Portal** imprints the first artifact card in hand; **Tawnos, Urza's
+Apprentice** copies as Strionic Resonator does (the target is the source
+permanent, the copy keeps its targets).
+Four-seat pods beside Ranar / Urza / Anikthea (seed 10160, 1,000 games, all
+decided): Saheeli 11.2 %; a 300-game census (seed 10161) leaves no card of the
+four unplayed; 12 seats (71..60 as numbered then, seed 10162): 200 / 200 decided. `--bench`
+byte-identical.
 
 The **sixtieth** is the Starter Commander Decks' **Token Triumph**
 (`TokenTriumph_SCD`) — Selesnya tokens and anthems under Emmara, Soul of the
