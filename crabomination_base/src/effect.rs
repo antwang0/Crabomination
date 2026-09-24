@@ -132,6 +132,10 @@ pub enum PlayerRef {
     /// by [`Effect::RememberPlayerOnSource`]) — "that player" on a later
     /// trigger. Soul Scourge, Laquatus's Champion.
     ChosenPlayerOfSource,
+    /// "Choose an opponent **at random**" (Raving Dead) — a live opponent
+    /// drawn from the game's RNG. A fresh draw each time it is resolved, so
+    /// it belongs in a one-shot slot such as `Effect::RememberPlayerOnSource`.
+    RandomOpponent,
     /// CR 701.38 — each opponent whose vote in the most recent ballot differed
     /// from the effect's controller's (Grudge Keeper).
     OpponentsWhoVotedDifferently,

@@ -211,6 +211,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         | Keyword::MustBeBlocked | Keyword::AllMustBlock
         | Keyword::MustAttack | Keyword::MustBlock | Keyword::MustAttackOrBlock
         | Keyword::MustAttackIfAnotherAttacks
+        | Keyword::MustAttackChosenPlayer
         | Keyword::CantBlockCreatureType(_)
         | Keyword::AssignsDamageAsThoughUnblocked
         | Keyword::CantAttackUnlessDefenderIsMonarch

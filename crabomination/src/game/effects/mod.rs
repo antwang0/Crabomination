@@ -37929,6 +37929,13 @@ impl GameState {
                     _ => None,
                 }
             }
+            PlayerRef::RandomOpponent => {
+                use rand::RngExt;
+                let me = ctx.controller;
+                let opps: smallvec::SmallVec<[usize; 8]> =
+                    self.living_seats().filter(|&q| !self.same_team(me, q)).collect();
+                (!opps.is_empty()).then(|| opps[self.rng.draw().random_range(0..opps.len())])
+            }
             PlayerRef::ChosenPlayerOfSource => self.scratch.chosen_opponent_scratch.or_else(|| {
                 ctx.source.and_then(|s| {
                     self.battlefield_find(s)

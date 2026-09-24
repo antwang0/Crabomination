@@ -1188,6 +1188,7 @@ impl GameState {
                         Keyword::MustAttack,
                         Keyword::MustAttackOrBlock,
                         Keyword::MustAttackIfAnotherAttacks,
+                        Keyword::MustAttackChosenPlayer,
                     ]));
             if requirement || !groups.is_empty() {
                 return (g.compute_battlefield(), requirement);
@@ -1446,6 +1447,25 @@ impl GameState {
                         // CR 508.1d — Ekundu Cyclops only has to join an
                         // attack someone else already started.
                         Keyword::MustAttackIfAnotherAttacks => must_if_another = true,
+                        // CR 508.1d — Raving Dead: attack the chosen
+                        // opponent if able, so that attack is the only legal
+                        // one for it while that seat is a live opponent.
+                        Keyword::MustAttackChosenPlayer => {
+                            if let Some(q) = c.chosen_player
+                                && self.players.get(q).is_some_and(|pl| pl.is_alive())
+                                && !self.same_team(p, q)
+                            {
+                                must_attack = true;
+                                if let Some(atk) = attacks.iter().find(|a| a.attacker == c.id)
+                                    && atk.target != AttackTarget::Player(q)
+                                {
+                                    return Err(attack_reject(
+                                        line!(),
+                                        GameError::InvalidAttackTarget(q),
+                                    ));
+                                }
+                            }
+                        }
                         _ => {}
                     }
                 }

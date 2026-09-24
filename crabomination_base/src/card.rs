@@ -2018,6 +2018,11 @@ pub enum Keyword {
     /// able" (Ekundu Cyclops) — a one-directional `MustAttack` that only
     /// binds once some other creature its controller controls is declared.
     MustAttackIfAnotherAttacks,
+    /// CR 508.1d — "attacks that player this combat if able" (Raving Dead):
+    /// a `MustAttack` that also names the defender, the opponent stamped in
+    /// the bearer's `chosen_player`. Enforced on the controller's turn while
+    /// that seat is a live opponent; with no such seat it binds nothing.
+    MustAttackChosenPlayer,
     /// "Attacks or blocks this turn if able" (Hustle). Satisfied by either;
     /// enforced as `MustAttack` on the bearer's controller's turn and as
     /// `MustBlock` otherwise.

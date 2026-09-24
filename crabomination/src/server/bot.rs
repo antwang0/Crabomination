@@ -10643,6 +10643,11 @@ fn pick_attacks_inner(state: &GameState, seat: usize, guard: bool) -> Vec<Attack
         if let AttackTarget::Player(p) = a.target {
             a.target = AttackTarget::Player(goad_legal_target(state, seat, a.attacker, p));
         }
+        // CR 508.1d — Raving Dead attacks its chosen opponent if able; any
+        // other aim makes the engine reject the whole declaration.
+        if let Some(q) = chosen_attack_target(state, seat, a.attacker) {
+            a.target = AttackTarget::Player(q);
+        }
     }
     // Last, because the tax depends on what each attacker is aimed at.
     trim_attacks_to_payable_tax(state, seat, statics, &mut attacks);
@@ -10669,6 +10674,17 @@ fn goad_legal_target(state: &GameState, seat: usize, id: CardId, preferred: usiz
         .unwrap_or(preferred)
 }
 
+/// The live opponent a `MustAttackChosenPlayer` creature (Raving Dead) is
+/// bound to attack, stamped in its `chosen_player`.
+fn chosen_attack_target(state: &GameState, seat: usize, id: CardId) -> Option<usize> {
+    let c = state.battlefield_find(id)?;
+    if !c.definition.keywords.has_kw(&crate::card::Keyword::MustAttackChosenPlayer) {
+        return None;
+    }
+    c.chosen_player
+        .filter(|&q| state.players.get(q).is_some_and(|pl| pl.is_alive()) && !state.same_team(seat, q))
+}
+
 /// CR 508.1d — a creature the rules oblige to attack, read off the
 /// **computed** keyword set because that is where the engine reads it.
 ///
@@ -10684,6 +10700,7 @@ fn must_attack(
     kws.has_kw(&Keyword::MustAttack)
         || kws.has_kw(&Keyword::MustAttackOrBlock)
         || (kws.has_kw(&Keyword::MustAttackIfAnotherAttacks) && others_attacking)
+        || (kws.has_kw(&Keyword::MustAttackChosenPlayer) && c.chosen_player.is_some())
         || c.cold_any(|k| !k.goaded_by.is_empty())
 }
 
@@ -10726,6 +10743,7 @@ fn attack_requirement_present(state: &GameState) -> bool {
             Keyword::MustAttack,
             Keyword::MustAttackOrBlock,
             Keyword::MustAttackIfAnotherAttacks,
+            Keyword::MustAttackChosenPlayer,
         ])
 }
 
