@@ -7969,6 +7969,24 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::DealDamageFrom { source, to, amount } => {
+                let Some(src_id) = self.resolve_selector(source, ctx).into_iter().find_map(|e| e.as_card_id())
+                else {
+                    return Ok(());
+                };
+                let n = self.evaluate_value(amount, ctx);
+                if n <= 0 {
+                    return Ok(());
+                }
+                for tgt in self.resolve_selector(to, ctx) {
+                    if matches!(tgt, EntityRef::Permanent(_) | EntityRef::Player(_)) {
+                        self.deal_damage_to_from(tgt, n as u32, Some(src_id), events);
+                    }
+                }
+                self.check_state_based_actions_into(events);
+                Ok(())
+            }
+
             Effect::DealDamageEqualToPowerToEach { source, targets, each_opponent } => {
                 let Some(src_id) = self
                     .resolve_selector(source, ctx)

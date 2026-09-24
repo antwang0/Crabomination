@@ -1466,6 +1466,9 @@ impl Effect {
             Effect::DealDamageEqualToPower { source, target } => {
                 sel_has_target(source) || sel_has_target(target)
             }
+            Effect::DealDamageFrom { source, to, amount } => {
+                sel_has_target(source) || sel_has_target(to) || value_has_target(amount)
+            }
             Effect::DealDamageEqualToPowerToEach { source, targets, .. } => {
                 sel_has_target(source) || sel_has_target(targets)
             }
@@ -2322,6 +2325,7 @@ impl Effect {
             Effect::DealDamageEqualToPower { target, .. } => {
                 sel_filter(target).or_else(|| implicit_any_target_if_bare(target))
             }
+            Effect::DealDamageFrom { source, to, .. } => sel_filter(to).or_else(|| sel_filter(source)),
             // Land hosing targets the land slot (Tide Shaper's kicked mode).
             Effect::BecomeBasicLand { what, .. } | Effect::GainLandType { what, .. } => {
                 sel_filter(what)
@@ -2958,6 +2962,7 @@ impl Effect {
                 | Effect::DealDamage { .. }
                 | Effect::DealDamageDivided { .. }
                 | Effect::DealDamageEqualToPower { .. }
+                | Effect::DealDamageFrom { .. }
                 | Effect::LoseLife { .. }
                 | Effect::Drain { .. }
                 | Effect::DrainLifeLost { .. }
@@ -3498,6 +3503,7 @@ impl Effect {
             | Effect::CounterSpellExileNameLock { .. } => "counter target spell".into(),
             Effect::Fight { .. } => "fight".into(),
             Effect::DealDamageEqualToPower { .. } => "deal damage equal to power".into(),
+            Effect::DealDamageFrom { .. } => "deal damage".into(),
             Effect::DealDamageEqualToPowerToEach { .. }
             | Effect::EachDealsDamageEqualToPower { .. } => {
                 "deal damage equal to power to each".into()
@@ -3900,6 +3906,7 @@ impl Effect {
             // Vengeance, Pyrogoyf): with no arm here the picker skipped
             // players and aimed at a creature — often the dealer itself.
             Effect::DealDamageEqualToPower { target, .. }
+            | Effect::DealDamageFrom { to: target, .. }
             | Effect::EachDealsDamageEqualToPower { target, .. } => match target {
                 Selector::TargetFiltered { filter, .. } => filter.can_match_player(),
                 Selector::Target(_) => true,
@@ -4558,6 +4565,9 @@ impl Effect {
                 }
                 Effect::DealDamageEqualToPower { source, target } => {
                     sel_find(source, slot).or_else(|| sel_find(target, slot))
+                }
+                Effect::DealDamageFrom { source, to, .. } => {
+                    sel_find(to, slot).or_else(|| sel_find(source, slot))
                 }
                 Effect::DealDamageEqualToPowerToEach {
                     source, targets, ..

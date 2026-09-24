@@ -4999,7 +4999,9 @@ impl GameState {
                     SE::OpponentsWhoAttackedCantCast => cast_lock::ATTACKED,
                     SE::PlayersActOnlyOnTheirOwnTurn => cast_lock::OWN_TURN_ACT,
                     SE::PlayersCastOnlyOnOwnTurn => cast_lock::OWN_TURN_CAST,
-                    SE::OpponentsCantCastDuringYourTurn | SE::OpponentsCantActDuringYourTurn => {
+                    SE::OpponentsCantCastDuringYourTurn
+                    | SE::OpponentsCantCastDuringYourTurnWhileAttached
+                    | SE::OpponentsCantActDuringYourTurn => {
                         cast_lock::DURING_YOUR_TURN
                     }
                     SE::PlayersCantCastDuringCombat | SE::OpponentsCantCastDuringCombat => {
@@ -5271,12 +5273,13 @@ impl GameState {
                 && !self.same_team(caster, active)
                 && self.battlefield.iter().any(|c| {
                     c.controller == active
-                        && c.definition.static_abilities.iter().any(|sa| {
-                            matches!(
-                                sa.effect,
-                                StaticEffect::OpponentsCantCastDuringYourTurn
-                                    | StaticEffect::OpponentsCantActDuringYourTurn
-                            )
+                        && c.definition.static_abilities.iter().any(|sa| match sa.effect {
+                            StaticEffect::OpponentsCantCastDuringYourTurn
+                            | StaticEffect::OpponentsCantActDuringYourTurn => true,
+                            StaticEffect::OpponentsCantCastDuringYourTurnWhileAttached => {
+                                c.attached_to.is_some()
+                            }
+                            _ => false,
                         })
                 });
             if locked {
@@ -29768,6 +29771,9 @@ fn static_effect_to_effects(
             // DamageCantBePrevented — consulted in `apply_prevention_shields`
             // via `damage_cant_be_prevented_now` (Sulfuric Vortex); no layer.
             | StaticEffect::DamageCantBePrevented
+            // AllDamageDealtAsThoughWither — consulted by the damage funnel and
+            // combat damage via `all_damage_is_wither_now`; no layer.
+            | StaticEffect::AllDamageDealtAsThoughWither
             // Excruciator — source-scoped, consulted in `apply_prevention_shields`.
             | StaticEffect::SourceDamageCantBePrevented
             | StaticEffect::PreventTargetingDamageWhileYouControlAnotherCreature
@@ -30061,6 +30067,7 @@ fn static_effect_to_effects(
             | StaticEffect::TaxOpponentSpellsTargeting { .. }
             | StaticEffect::TaxOpponentSpellsTargetingThis { .. }
             | StaticEffect::OpponentsCantCastDuringYourTurn
+            | StaticEffect::OpponentsCantCastDuringYourTurnWhileAttached
             // PlayersCastOnlyOnOwnTurn (Dosan) — consulted at the cast
             // dispatch; no layer effect.
             | StaticEffect::PlayersCastOnlyOnOwnTurn

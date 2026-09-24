@@ -3144,6 +3144,7 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
             "Change card types"
         }
         Effect::DealDamageEqualToPower { .. } => "Deal damage equal to power",
+        Effect::DealDamageFrom { .. } => "Deal damage",
         Effect::ExileTaggedWithSource { .. } | Effect::ExileWithSource { .. } => "Exile",
         Effect::PhaseOut { .. } => "Phase out",
         Effect::TapAndUntapLock { .. } => "Tap and lock down",

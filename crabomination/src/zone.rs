@@ -867,6 +867,7 @@ fn card_has_prevent_static(c: &CardInstance) -> bool {
                 | S::PreventDamageByRemovingCounters { .. }
                 | S::PreventDamageToThisRedirect
                 | S::PreventAllDamageToControllerFromOthersSources
+                | S::AllDamageDealtAsThoughWither
         )
     })
 }

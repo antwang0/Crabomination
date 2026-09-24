@@ -854,6 +854,9 @@ pub enum CounterType {
     /// Strife counter — Crescendo of War adds one each upkeep and pumps
     /// attackers (and your blockers) per counter.
     Strife,
+    /// Fury counter — Charging Cinderhorn gains one at each end step in which
+    /// no creature attacked, and burns that player for the count.
+    Fury,
     /// Bribery counter — Gwafa Hazid, Profiteer's mark: a creature carrying
     /// one can't attack or block while Gwafa's static says so.
     Bribery,

@@ -4021,6 +4021,7 @@ impl GameState {
         // Eight attackers covers an alpha strike; a wider one spills to the
         // heap exactly as before. NOT a `reserve`: this removes the
         // allocation rather than moving it, so `(-80)`'s floor doesn't apply.
+        let all_wither = self.all_damage_is_wither_now();
         let attacker_infos: SmallVec<[AttackerInfo; 8]> = self
             .attacking
             .iter()
@@ -4039,7 +4040,7 @@ impl GameState {
                     has_lifelink: kws.has_kw(&Keyword::Lifelink),
                     has_deathtouch: kws.has_kw(&Keyword::Deathtouch),
                     has_infect: kws.has_kw(&Keyword::Infect),
-                    has_wither: kws.has_kw(&Keyword::Wither),
+                    has_wither: all_wither || kws.has_kw(&Keyword::Wither),
                     toxic: toxic_poison_value(kws),
                     assigns_as_unblocked: kws
                         .has_kw(&Keyword::AssignsDamageAsThoughUnblocked),
@@ -4532,7 +4533,8 @@ impl GameState {
                         if dmg == 0 {
                             continue;
                         }
-                        let infect = bc.keywords().has_kw(&Keyword::Infect)
+                        let infect = all_wither
+                            || bc.keywords().has_kw(&Keyword::Infect)
                             || bc.keywords().has_kw(&Keyword::Wither);
                         let hit = self.turn_damage_redirect_for(atk.id).unwrap_or(atk.id);
                         if let Some(attacker) = self.battlefield_find_mut(hit) {

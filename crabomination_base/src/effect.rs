@@ -736,6 +736,10 @@ pub enum Value {
     /// resolved players, so `EachPlayer` reads "the most combat damage any one
     /// player was dealt this turn" (Sidequest: Play Blitzball).
     CombatDamageTakenThisTurn(PlayerRef),
+    /// How many of the resolved players were dealt combat damage this turn
+    /// (`combat_damage_taken_this_turn > 0`) — "the number of opponents that
+    /// were dealt combat damage this turn" (Tymna the Weaver).
+    PlayersDealtCombatDamageThisTurn(PlayerRef),
     /// Total damage dealt to the ability's source permanent this turn
     /// (`CardInstance.damage_dealt_to_this_turn`) — "if 4 or more damage was
     /// dealt to it this turn" (Rushing-Tide Zubera). Reads death-time LKI so a
@@ -4178,6 +4182,12 @@ pub enum Effect {
     /// selector resolves to no permanent. Stew the Coneys, Tail Swipe,
     /// Pounce, Friendly Rivalry's per-fighter swing.
     DealDamageEqualToPower { source: Selector, target: Selector },
+    /// The permanent `source` resolves to (LKI once it has left) deals
+    /// `amount` damage to each entity `to` resolves to — "it deals that much
+    /// damage to the chosen player" (Saskia the Unyielding), where "it" is
+    /// the trigger's creature, not the ability's source. The damage carries
+    /// that creature, so its lifelink, deathtouch and infect apply.
+    DealDamageFrom { source: Selector, to: Selector, amount: Value },
     /// The `source` permanent deals damage equal to its power to each entity
     /// `targets` resolves to (the source is always excluded), and — when
     /// `each_opponent` — to each opponent of the source's controller. Power is

@@ -62,6 +62,9 @@ pub(crate) mod prevent_static {
     pub const THIS_REDIRECT: u32 = 1 << 10;
     /// `PreventAllDamageToControllerFromOthersSources` (Energy Field).
     pub const FROM_OTHERS: u32 = 1 << 11;
+    /// `AllDamageDealtAsThoughWither` (Everlasting Torment) — not a shield,
+    /// but it rides this lane so the damage funnel's read stays one walk.
+    pub const ALL_WITHER: u32 = 1 << 12;
 }
 
 /// See [`prevent_static`]. One battlefield walk; `u32::MAX` is the ungated
@@ -99,6 +102,7 @@ pub(crate) fn prevent_static_scan(state: &GameState) -> u32 {
                 SE::PreventDamageByRemovingCounters { .. } => prevent_static::REMOVE_COUNTERS,
                 SE::PreventDamageToThisRedirect => prevent_static::THIS_REDIRECT,
                 SE::PreventAllDamageToControllerFromOthersSources => prevent_static::FROM_OTHERS,
+                SE::AllDamageDealtAsThoughWither => prevent_static::ALL_WITHER,
                 _ => 0,
             };
         }
@@ -107,6 +111,12 @@ pub(crate) fn prevent_static_scan(state: &GameState) -> u32 {
 }
 
 impl GameState {
+    /// Everlasting Torment — is every source's damage dealt as though it had
+    /// wither right now? One lane read on a board without it.
+    pub(crate) fn all_damage_is_wither_now(&self) -> bool {
+        prevent_static_scan(self) & prevent_static::ALL_WITHER != 0
+    }
+
     /// CR 614.9 — if damage aimed at `ent` (a player, or a permanent that
     /// player controls) is covered by a `RedirectDamageToSelf` static
     /// CR 614.9 — the standing turn-scoped redirect registered for `cid`
@@ -1323,8 +1333,9 @@ impl GameState {
         // CR 702.80a / 702.90e — wither/infect damage to a creature lands as
         // -1/-1 counters instead of marked damage; CR 702.2c — nonzero
         // deathtouch damage flags the creature for the destroy SBA.
-        let source_has_wither =
-            source_has_infect || src_kws.has_kw(&crate::card::Keyword::Wither);
+        let source_has_wither = source_has_infect
+            || src_kws.has_kw(&crate::card::Keyword::Wither)
+            || self.all_damage_is_wither_now();
         let mut source_has_deathtouch = src_kws.has_kw(&crate::card::Keyword::Deathtouch);
         // Pestilent Spirit — "instant and sorcery spells you control have
         // deathtouch." The resolving I/S caster's seat is stamped in

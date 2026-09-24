@@ -977,6 +977,11 @@ pub enum StaticEffect {
     /// `apply_prevention_shields` bypasses all shields while any source on the
     /// battlefield has this. Sulfuric Vortex, Sunspine Lynx, Everlasting Torment.
     DamageCantBePrevented,
+    /// CR 702.80a (by reference) — "All damage is dealt as though its source
+    /// had wither" (Everlasting Torment): damage to a creature from any source
+    /// lands as -1/-1 counters. Read by the noncombat damage funnel and both
+    /// combat-damage legs through `all_damage_is_wither_now`.
+    AllDamageDealtAsThoughWither,
     /// CR 615.12 (source-scoped) — "Damage that would be dealt by this
     /// [permanent] can't be prevented." Only bypasses shields when the damage
     /// source is the permanent carrying the static (Excruciator), unlike the
@@ -2906,6 +2911,11 @@ pub enum StaticEffect {
     /// "Your opponents can't cast spells during your turn." Voice of
     /// Victory. Gated at the cast-action dispatch.
     OpponentsCantCastDuringYourTurn,
+    /// "As long as this Equipment is attached to a creature, your opponents
+    /// can't cast spells during your turn." (Conqueror's Flail.) The
+    /// `OpponentsCantCastDuringYourTurn` lock, live only while the source is
+    /// attached.
+    OpponentsCantCastDuringYourTurnWhileAttached,
     /// CR 601 — "Players can cast spells only during their own turns." Dosan
     /// the Falling Leaf. Symmetric: gated at the cast dispatch for *every*
     /// seat that isn't the active player, including the static's controller.
