@@ -596,6 +596,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::BRIMAZ_COMMANDERS,
             main: decks::BRIMAZ_MAIN,
         },
+        // Sixty-eighth: the fifty-eighth official list (Enduring
+        // Enchantments, CMM) — Abzan enchantments and Sagas under Anikthea.
+        // `--seats 68`.
+        PodDeck {
+            name: "Anikthea, Hand of Erebos (WBG)",
+            commanders: decks::ANIKTHEA_COMMANDERS,
+            main: decks::ANIKTHEA_MAIN,
+        },
     ]
 }
 

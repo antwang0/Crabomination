@@ -2116,3 +2116,34 @@ pub const BRIMAZ_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const ANIKTHEA_COMMANDERS: &[CardFactory] = &[anikthea_hand_of_erebos];
+
+/// **Enduring Enchantments**, the Commander Masters Abzan deck (CMM,
+/// 2023-08-04), exactly as MTGJSON's `EnduringEnchantments_CMM` prints it:
+/// 80 nonbasic cards + 6 Plains + 5 Swamps + 8 Forests = 99. Sagas,
+/// enchantresses and constellation under Anikthea, Hand of Erebos.
+pub const ANIKTHEA_MAIN: &[CardFactory] = &[
+    narci_fable_singer, battle_at_the_helvault, boon_of_the_spirit_realm, ondu_spiritdancer,
+    cacophony_unleashed, demon_of_fates_design, ghoulish_impetus, composer_of_spring,
+    nyxborn_behemoth, archon_of_suns_grace, felidar_retreat, grasp_of_fate,
+    heliod_god_of_the_sun, mesa_enchantress, sigil_of_the_empty_throne, starfield_mystic,
+    starfield_of_nyx, cunning_rhetoric, doomwake_giant, dreadhorde_invasion,
+    erebos_bleak_hearted, abundance, arasta_of_the_endless_web, courser_of_kruphix,
+    dryad_of_the_ilysian_grove, eidolon_of_blossoms, enchantresss_presence,
+    herald_of_the_pantheon, the_mending_of_dominaria, sanctum_weaver, sandwurm_convergence,
+    setessan_champion, verduran_enchantress, battle_for_bretagard, calix_destinys_hand,
+    culling_ritual, miraris_wake, sythis_harvests_hand, canopy_vista, exotic_orchard,
+    fortified_village, necroblossom_snarl, shineshadow_snarl, sungrass_prairie,
+    temple_of_malady, temple_of_plenty, temple_of_silence, path_to_exile,
+    extinguish_all_hope, kodamas_reach, arcane_signet, sol_ring, ash_barrens, command_tower,
+    cast_out, love_song_of_night_and_day, omen_of_the_sun, spirited_companion,
+    the_eldest_reborn, mindwrack_harpy, the_binding_of_the_titans, destiny_spinner, farseek,
+    font_of_fertility, greater_tanuki, khalni_heart_expedition, nessian_wanderer,
+    omen_of_the_hunt, rampant_growth, binding_the_old_gods, jukai_naturalist, nyx_weaver,
+    satyr_enchanter, golgari_rot_farm, krosan_verge, orzhov_basilica, sandsteppe_citadel,
+    selesnya_sanctuary, tainted_field, tainted_wood,
+    // Basics: 6 plains, 5 swamp, 8 forest
+    plains, plains, plains, plains, plains, plains, swamp, swamp, swamp, swamp, swamp, forest,
+    forest, forest, forest, forest, forest, forest, forest,
+];
