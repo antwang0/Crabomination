@@ -3396,6 +3396,36 @@ fn cr_702_115_myriad_copies_attack_each_other_opponent_then_exile() {
     assert!(!g.exile.iter().any(|c| c.id == copy_id), "exiled token ceased to exist");
 }
 
+/// CR 702.116a + 800.4a — a seat that has left the game is no longer an
+/// opponent, so myriad mints no copy attacking it (it used to walk every seat
+/// index, eliminated or not).
+#[test]
+fn cr_702_116a_myriad_skips_a_seat_that_left_the_game() {
+    use crabomination::card::{CardDefinition, CardType};
+    let mut g = multi_player_game(4);
+    let m = g.add_card_to_battlefield(0, CardDefinition {
+        name: "Myriad Marauder",
+        card_types: vec![CardType::Creature],
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![crabomination::effect::shortcut::myriad()],
+        ..Default::default()
+    });
+    g.clear_sickness(m);
+    g.concede(3);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: m, target: AttackTarget::Player(1),
+    }])).expect("attack seat 1");
+    drain_stack(&mut g);
+    let copies: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Myriad Marauder").map(|c| c.id).collect();
+    assert_eq!(copies.len(), 1, "one copy, for seat 2 only");
+    assert!(g.attacking().iter().any(|a| a.attacker == copies[0] && a.target == AttackTarget::Player(2)));
+}
+
 // ── CR 810 — Two-Headed Giant ────────────────────────────────────────────────
 
 /// CR 810.4/810.9 — a team shares one 30-life pool, and damage dealt to each

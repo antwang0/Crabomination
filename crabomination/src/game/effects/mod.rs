@@ -19707,10 +19707,10 @@ impl GameState {
                 };
                 let def = self.battlefield_find(src).map(|c| c.definition.arc());
                 let Some(def) = def else { return Ok(()); };
-                // CR 702.115b — one copy per opponent other than the defender.
-                let opps: Vec<usize> = (0..self.players.len())
-                    .filter(|&q| !self.same_team(q, ctrl) && q != defending)
-                    .collect();
+                // CR 702.116a — one copy per opponent other than the defender;
+                // a seat that has left the game is no opponent (CR 800.4a).
+                let mut opps = self.opponents_of(ctrl);
+                opps.retain(|&q| q != defending);
                 for opp in opps {
                     let id = self.mint_token_onto_battlefield(def.clone(), ctrl, true, events);
                     if self.put_into_combat_attacking(id, AttackTarget::Player(opp)) {
