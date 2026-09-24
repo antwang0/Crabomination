@@ -582,6 +582,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ISPERIA_COMMANDERS,
             main: decks::ISPERIA_MAIN,
         },
+        // Sixty-sixth: the fifty-sixth official list (Arcane Wizardry, C17)
+        // — Grixis Wizards under Inalla, Archmage Ritualist. `--seats 66`.
+        PodDeck {
+            name: "Inalla, Archmage Ritualist (UBR)",
+            commanders: decks::INALLA_COMMANDERS,
+            main: decks::INALLA_MAIN,
+        },
     ]
 }
 

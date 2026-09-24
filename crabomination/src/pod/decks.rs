@@ -2057,3 +2057,32 @@ pub const ISPERIA_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, island, island, island, island, island, island, island,
     island, island, island, island, island, island, island, island,
 ];
+
+pub const INALLA_COMMANDERS: &[CardFactory] = &[inalla_archmage_ritualist];
+
+/// **Arcane Wizardry**, the Commander 2017 deck (C17, 2017-08-25), exactly as
+/// MTGJSON's `ArcaneWizardry_C17` prints it: 79 nonbasic cards + 10 Islands +
+/// 6 Swamps + 4 Mountains = 99. Grixis Wizards under Inalla, Archmage
+/// Ritualist, whose eminence copies each Wizard that enters.
+pub const INALLA_MAIN: &[CardFactory] = &[
+    kess_dissident_mage, mairsil_the_pretender, galecaster_colossus, magus_of_the_mind,
+    portal_mage, vindictive_lich, izzet_chemister, taigam_sidisis_hand, havengul_lich,
+    marchesa_the_black_rose, vela_the_night_clad, arcanis_the_omnipotent, azami_lady_of_scrolls,
+    body_double, harbinger_of_the_tides, serendib_sorcerer, apprentice_necromancer,
+    magus_of_the_abyss, puppeteer_clique, etherium_horn_sorcerer, mercurial_chemister,
+    nin_the_pain_artist, niv_mizzet_the_firemind, shadowmage_infiltrator, bloodline_necromancer,
+    archaeomancer, merchant_of_secrets, sea_gate_oracle, corpse_augur, izzet_chronarch,
+    nivix_guildmage, kindred_dominance, clone_legion, spelltwine, decree_of_pain,
+    necromantic_selection, comet_storm, polymorphists_jest, chaos_warp, memory_plunder,
+    silumgars_command, into_the_roil, opportunity, reality_shift, go_for_the_throat,
+    cauldron_dance, crosiss_charm, rakdos_charm, terminate, nevinyrrals_disk,
+    mirror_of_the_forebears, commanders_sphere, darksteel_ingot, fellwar_stone, sol_ring,
+    unstable_obelisk, worn_powerstone, shifting_shadow, curse_of_verbosity,
+    curse_of_disturbance, curse_of_opulence, exotic_orchard, mystifying_maze, path_of_ancestry,
+    command_tower, crumbling_necropolis, dimir_aqueduct, dismal_backwater, evolving_wilds,
+    grixis_panorama, izzet_boilerworks, jwar_isle_refuge, rakdos_carnarium, swiftwater_cliffs,
+    temple_of_the_false_god, terramorphic_expanse, vivid_crag, vivid_creek, vivid_marsh,
+    // Basics: 10 island, 6 swamp, 4 mountain
+    island, island, island, island, island, island, island, island, island, island, swamp,
+    swamp, swamp, swamp, swamp, swamp, mountain, mountain, mountain, mountain,
+];
