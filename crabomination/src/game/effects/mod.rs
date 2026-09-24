@@ -37719,6 +37719,16 @@ impl GameState {
             //
             // `source` first so no working self-trigger moves; the fallback
             // only fires where the answer was empty.
+            Selector::AttackedBySource => ctx
+                .source
+                .and_then(|src| self.attacking.iter().find(|a| a.attacker == src))
+                .map(|a| match a.target {
+                    crate::game::types::AttackTarget::Player(p) => EntityRef::Player(p),
+                    crate::game::types::AttackTarget::Planeswalker(id)
+                    | crate::game::types::AttackTarget::Battle(id) => EntityRef::Permanent(id),
+                })
+                .into_iter()
+                .collect(),
             Selector::BlockedAttacker => {
                 let blocked_by = |blocker: CardId| -> Vec<EntityRef> {
                     self.attackers_blocked_by(blocker)

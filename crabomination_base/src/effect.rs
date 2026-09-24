@@ -263,6 +263,10 @@ pub enum Selector {
     /// `GameState.block_map[source]`. Used by "whenever this blocks a creature,
     /// [affect that creature]" triggers (Wall of Frost).
     BlockedAttacker,
+    /// CR 506.3/508.1b — the player, planeswalker or battle the source
+    /// creature is attacking (Mage Slayer's "the player or planeswalker it's
+    /// attacking"). Empty when the source isn't attacking.
+    AttackedBySource,
     /// The mirror of `BlockedAttacker`: every creature currently blocking the
     /// source attacker (reverse-lookup of `GameState.block_map`). Used by
     /// "whenever this becomes blocked by a creature, [affect that creature]"
