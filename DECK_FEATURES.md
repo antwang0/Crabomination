@@ -1076,10 +1076,11 @@ at ~1,000+ life makes that many Pegasi in one resolution, past
 `MAX_BATTLEFIELD` (1,024). The cards are right; the bound is the simulator's.
 `--bench` byte-identical.
 
-The **seventy-fifth** is Commander 2018's **Exquisite Invention**
+The **seventy-sixth** is Commander 2018's **Exquisite Invention**
 (`ExquisiteInvention_C18`) — Izzet artifacts under Saheeli, the Gifted, the
 sixth planeswalker commander (seat 71 before rebasing over Hatsune Miku, Exit
-from Exile, Undead Unleashed and Call for Backup). Seventeen cards were missing; the primitives:
+from Exile, Undead Unleashed, Call for Backup and Squirreled
+Away). Seventeen cards were missing; the primitives:
 `Effect::CastCommanderWithoutPaying` (Geode Golem — the tax is still owed, CR
 903.8), `Effect::NextSpellHasAffinityForArtifacts` (Saheeli's +1, counted at
 cast, CR 702.41a), `Duration::UntilEndOfYourNextTurn` for layer effects and
