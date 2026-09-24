@@ -866,6 +866,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::KATHRIL_COMMANDERS,
             main: decks::KATHRIL_MAIN,
         },
+        // Hundred-and-fourth: the ninety-fourth official list (Draconic Rage,
+        // AFC) — Gruul dragons and dice under Vrondiss, Rage of Ancients.
+        // `--pod-decks 104`.
+        PodDeck {
+            name: "Vrondiss, Rage of Ancients (RG)",
+            commanders: decks::DRACONIC_RAGE_COMMANDERS,
+            main: decks::DRACONIC_RAGE_MAIN,
+        },
     ]
 }
 

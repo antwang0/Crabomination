@@ -3189,3 +3189,27 @@ pub const KATHRIL_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, swamp, swamp, swamp, swamp, swamp,
     swamp, swamp, forest, forest, forest, forest,
 ];
+
+pub const DRACONIC_RAGE_COMMANDERS: &[CardFactory] = &[vrondiss_rage_of_ancients];
+
+/// Draconic Rage (AFC, 2021), card for card: Vrondiss's Gruul dragons and dice.
+pub const DRACONIC_RAGE_MAIN: &[CardFactory] = &[
+    bogardan_hellkite, demanding_dragon, dragonmaster_outcast, hoard_smelter_dragon,
+    opportunistic_dragon, scourge_of_valkas, shivan_hellkite, skyline_despot, skyship_stalker,
+    taurean_mauler, terror_of_mount_velus, thunderbreak_regent, chameleon_colossus,
+    atarka_world_render, anger, dragonlords_servant, savage_ventmaw, dragonspeaker_shaman,
+    chain_reaction, rishkars_expertise, shamanic_revelation, rile, cultivate, explore,
+    rampant_growth, magmaquake, spit_flame, decree_of_savagery, kindred_summons,
+    return_of_the_wildspeaker, beast_within, return_to_nature, dragons_hoard, arcane_signet,
+    commanders_sphere, gruul_signet, heirloom_blade, sol_ring, gratuitous_violence,
+    outpost_siege, warstorm_surge, colossal_majesty, garruks_uprising, cinder_glade,
+    crucible_of_the_spirit_dragon, exotic_orchard, game_trail, haven_of_the_spirit_dragon,
+    mossfire_valley, mosswort_bridge, command_tower, desert, gruul_turf, path_of_ancestry,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, klauth_unrivaled_ancient,
+    berserkers_frenzy, chaos_dragon, maddening_hex, vengeful_ancestor, bag_of_tricks,
+    druid_of_purification, indomitable_might, neverwinter_hydra, wild_endeavor,
+    dragonborn_champion, klauths_will, wulfgar_of_icewind_dale, barbarian_class,
+    earth_cult_elemental, component_pouch, sword_of_hours, underdark_rift,
+];
