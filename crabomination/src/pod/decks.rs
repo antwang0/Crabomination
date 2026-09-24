@@ -2659,3 +2659,33 @@ pub const DIHADA_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, swamp, swamp, swamp, swamp, swamp, mountain,
     mountain, mountain, mountain, mountain,
 ];
+
+pub const DINA_COMMANDERS: &[CardFactory] = &[dina_essence_brewer];
+
+/// **Witherbloom Pestilence**, the Secrets of Strixhaven Commander deck (SOC,
+/// 2026-04-24), exactly as MTGJSON's `WitherbloomPestilence_SOC` prints it:
+/// 83 nonbasic cards + 8 Swamps + 8 Forests = 99. Golgari Pests and
+/// sacrifice under Dina, Essence Brewer.
+pub const DINA_MAIN: &[CardFactory] = &[
+    gorma_the_gullet, merchant_of_venom, defiling_daemogoth, ominous_harvest,
+    stensian_sanguinist, feral_appetite, pest_rescuer, ribtruss_roaster, eccentric_pestfinder,
+    immoral_bargain, turbulent_fen, ophiomancer, toxic_deluge, tendershoot_dryad,
+    fabled_passage, blight_mound, bloodghast, final_act, jadar_ghoulcaller_of_nephalia,
+    nether_traitor, priest_of_forgotten_gods, smothering_abomination, veinwitch_coven,
+    witch_of_the_moors, woe_strider, yahenni_undying_partisan, awakening_zone,
+    blossoming_bogbeast, gilded_goose, mycoloth, ohran_frostfang, pest_infestation,
+    trudge_garden, assassins_trophy, beledros_witherbloom, casualties_of_war, creakwood_liege,
+    culling_ritual, gyome_master_chef, mazirek_kraul_death_priest, wight_of_the_reliquary,
+    witherbloom_command, exotic_orchard, festering_thicket, grim_backwoods, high_market,
+    llanowar_wastes, necroblossom_snarl, temple_of_malady, twilight_mire, vernal_fen,
+    viridescent_bog, woodland_cemetery, arcane_signet, sol_ring, command_tower, teachers_pest,
+    witherbloom_charm, terramorphic_expanse, titans_grave, blood_artist, infernal_grasp,
+    morbid_opportunist, nights_whisper, pawn_of_ulamog, plumb_the_forbidden,
+    umbral_collar_zealot, viscera_seer, zulaport_cutthroat, cultivate, elvish_mystic,
+    sakura_tribe_elder, springbloom_druid, deadly_brew, dina_soul_steeper,
+    moldervine_reclamation, mortality_spear, haywire_mite, bojuka_bog, haunted_mire,
+    path_of_ancestry, study_hall, witherbloom_campus,
+    // Basics: 8 swamp, 8 forest
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, forest, forest, forest, forest,
+    forest, forest, forest, forest,
+];

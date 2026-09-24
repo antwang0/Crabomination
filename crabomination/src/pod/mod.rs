@@ -730,6 +730,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::DIHADA_COMMANDERS,
             main: decks::DIHADA_MAIN,
         },
+        // Eighty-sixth: the seventy-sixth official list (Witherbloom
+        // Pestilence, SOC) — Golgari Pests and sacrifice under Dina.
+        // `--pod-decks 86`.
+        PodDeck {
+            name: "Dina, Essence Brewer (BG)",
+            commanders: decks::DINA_COMMANDERS,
+            main: decks::DINA_MAIN,
+        },
     ]
 }
 
