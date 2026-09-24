@@ -556,3 +556,36 @@ fn cr_608_2_a_parked_as_player_body_resumes_as_that_player() {
     assert_eq!(asked, 1);
     assert!(g.players[1].hand.iter().any(|c| c.id == theirs));
 }
+
+/// CR 702.74a — an evoked creature's controller *sacrifices* it: its
+/// leave-the-battlefield trigger fires (it used to be moved to the
+/// graveyard, outside the sacrifice funnel, and the trigger was lost).
+#[test]
+fn cr_702_74a_an_evoked_creature_is_sacrificed() {
+    use crabomination::card::{CardDefinition, CardType, EventKind, EventScope, EventSpec, TriggeredAbility};
+    use crabomination::effect::{Effect, Selector, Value};
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let evoker = g.add_card_to_hand(0, CardDefinition {
+        name: "Parting Gift",
+        cost: crabomination::mana::cost(&[crabomination::mana::generic(5)]),
+        card_types: vec![CardType::Creature],
+        power: 1,
+        toughness: 1,
+        alternative_cost: Some(crabomination::effect::shortcut::evoke(crabomination::mana::cost(&[crabomination::mana::generic(1)]))),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+        }],
+        ..Default::default()
+    });
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: evoker, pitch_card: None, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("evoke");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(evoker).is_none());
+    assert_eq!(g.players[0].life, 23, "the leave trigger fired");
+}

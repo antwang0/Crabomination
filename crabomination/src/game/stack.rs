@@ -2770,12 +2770,14 @@ impl GameState {
 
                     // Evoke: schedule a self-sacrifice trigger that resolves
                     // AFTER the ETB triggers (so the ETB exile happens first,
-                    // then the creature sacrifices itself).
+                    // then the creature sacrifices itself). CR 702.74a says
+                    // *sacrifices* — a plain move to the graveyard skipped the
+                    // sacrifice funnel, so leave-the-battlefield triggers
+                    // (Spitebellows) and sacrifice payoffs never saw it.
                     if evoked {
                         self.stack.push(
-                        TriggerPush::new(card_id, caster, Effect::Move {
+                        TriggerPush::new(card_id, caster, Effect::SacrificePermanent {
                             what: crate::effect::Selector::This,
-                            to: crate::effect::ZoneDest::Graveyard,
                         })
                         .build(),
                         );
@@ -4354,6 +4356,7 @@ impl GameState {
             let pl = &mut **pl;
             pl.was_dealt_damage_this_turn = false;
             pl.damage_taken_this_turn = 0;
+            pl.greatest_hit_this_turn = 0;
             pl.combat_damage_taken_this_turn = 0;
             pl.token_copy_replacement_used_this_turn = false;
             pl.poison_capped_this_turn = false;
