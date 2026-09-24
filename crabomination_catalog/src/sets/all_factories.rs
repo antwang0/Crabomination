@@ -2018,7 +2018,6 @@ static DECKS: &[Factory] = &[
     super::decks::greater_tanuki,
     super::decks::highcliff_felidar,
     super::decks::komainu_battle_armor,
-    super::decks::mirror_entity,
     super::decks::nacatl_war_pride,
     super::decks::pack_leader,
     super::decks::showdown_of_the_skalds,

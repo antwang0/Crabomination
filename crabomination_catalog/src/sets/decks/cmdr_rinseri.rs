@@ -23,7 +23,7 @@ use crate::card::{
 use crate::effect::shortcut::{etb, on_attack, target_any, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, Predicate, ZoneDest};
 use crate::game::types::TurnStep;
-use crate::mana::{Color, cost, g, generic, hybrid, r, w, x};
+use crate::mana::{Color, cost, g, generic, hybrid, r, w};
 use crate::sets::tap_add_colorless;
 use std::sync::Arc;
 
@@ -443,32 +443,6 @@ pub fn komainu_battle_armor() -> CardDefinition {
         }),
         triggered_abilities: vec![goad_them()],
         ..creature("Komainu Battle Armor", cost(&[generic(2), r()]), vec![CreatureType::Dog], 2, 2)
-    }
-}
-
-/// Mirror Entity — changeling; {X}: until end of turn, your creatures have
-/// base power and toughness X/X and gain all creature types.
-pub fn mirror_entity() -> CardDefinition {
-    CardDefinition {
-        keywords: vec![Keyword::Changeling],
-        activated_abilities: vec![ActivatedAbility {
-            mana_cost: cost(&[x()]),
-            effect: Effect::Seq(vec![
-                Effect::SetBasePT {
-                    what: yours(R::Creature),
-                    power: Value::XFromCost,
-                    toughness: Value::XFromCost,
-                    duration: Duration::EndOfTurn,
-                },
-                Effect::GrantKeyword {
-                    what: yours(R::Creature),
-                    keyword: Keyword::Changeling,
-                    duration: Duration::EndOfTurn,
-                },
-            ]),
-            ..Default::default()
-        }],
-        ..creature("Mirror Entity", cost(&[generic(2), w()]), vec![CreatureType::Shapeshifter], 1, 1)
     }
 }
 
