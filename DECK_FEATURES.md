@@ -67,6 +67,7 @@ lists were picked.
 | **Plunder the Graves** (C15 precon) BG | Meren of Clan Nel Toth | BG | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Graveyard Overdrive** (M3C precon) BRG | Disa the Restless | BRG | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Sworn to Darkness** (C14 precon) B | Ob Nixilis of the Black Oath (**planeswalker**) | B | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
+| **Seize Control** (C15 precon) UR | Mizzix of the Izmagnus | UR | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not
@@ -499,6 +500,23 @@ Four-seat pods of the new seats: seed 9321 (Ezuri / Gisela / Daretti /
 Strefan, 1,000 games, all decided) — Gisela **68.4 %**, Strefan 16.8 %, Ezuri
 13.0 %, Daretti 1.8 %; seed 9322 (Meren / Ob / Disa / Gisa and Geralf, 1,000
 games, 997 decided, 3 rule draws) — Meren 8.9 %. `--bench` byte-identical.
+
+The **thirty-eighth** is Commander 2015's **Seize Control** (`SeizeControl_C15`)
+— Izzet spells under Mizzix of the Izmagnus (seat 38; the seat commit's message
+says "thirty-fifth", from before two rebases). Fifteen cards were missing; the
+primitives: `Effect::GainControlOfSpell` (Aethersnatch — the spell resolves
+under its new controller, CR 608.3) and `StaticEffect::ChosenColorsSpellCostReduction`
+(Seal of the Guildpact). ⚠ **The census found three cards castable by no bot
+path**: "each of X targets" (Meteor Blast, and Doppelgang before it) never built
+a legal cast because the slot walker fills every slot — `exactly_x_targets`
+picks distinct targets and sets X to their count; and the response picker's
+`effect_counters_spells` read neither a `ChooseN`'s default picks (Mystic
+Confluence) nor a spell steal (Aethersnatch). Residual: **Mystic Confluence**
+runs its default picks (counter unless {3}, draw two). Four-seat Izzet pods
+beside Zellix / Zndrsplt / Stella (seed 10111, 1,000 games, all decided, every
+Mizzix card played): Mizzix 16.2 %. Seed 10121, 300 games at 38 seats: **300
+decided, 0 caps, zero panics** (190.6 k actions/game, 1,038 s on 4 threads).
+`--bench` byte-identical.
 
 ⚠ **The board cap was a bot bug, not a loop.** A Krenko seat sent all 292
 of its Goblins at one player on 24 life each turn while two others sat on
