@@ -5552,6 +5552,18 @@ impl GameState {
         {
             return no(line!());
         }
+        // Bothersome Quasit — an opponent's goaded creature can't block. Same
+        // presence gate; the goad walk runs only on a board that plays it.
+        if self.block_even_mv_lock_in_scope()
+            && self.battlefield.iter().any(|c| {
+                c.definition.static_abilities.iter().any(|sa| {
+                    matches!(sa.effect, crate::effect::StaticEffect::OpponentsGoadedCreaturesCantBlock)
+                }) && !self.same_team(c.controller, owner)
+            })
+            && self.is_goaded(blocker)
+        {
+            return no(line!());
+        }
         // One walk. Everything below reads only the blocker's own computed
         // keywords and the board, never the attacker.
         let mut control_count: Option<(crate::card::SelectionRequirement, u32, bool)> = None;

@@ -4920,6 +4920,12 @@ pub enum Effect {
     /// "…is goaded for the rest of the game" (Nettling Nuisance): `Goad`, and
     /// the goad never expires.
     GoadForTheGame { what: Selector },
+    /// Firkraag — "whenever one or more [attackers] you control attack an
+    /// opponent, goad target creature that player controls": once per such
+    /// opponent, goad the engine's pick of their creatures (greatest power
+    /// among those not already goaded by you). Fired off a once-per-batch
+    /// `Attacks` trigger.
+    GoadACreatureOfEachOpponentAttackedBy { attackers: SelectionRequirement },
     /// CR 701.15 / 611.2b — `Goad` that lasts as long as `hold` does rather
     /// than until the goader's next turn (Hot Pursuit, Immortal Obligation).
     GoadWhile { what: Selector, hold: GoadLasts },
@@ -6309,6 +6315,10 @@ pub enum Effect {
     /// Pushed onto `Player.turn_spell_discounts`, consulted by
     /// `cost_reduction_for_spell`, cleared at cleanup (CR 514.2).
     SpellsCostLessThisTurn { filter: SelectionRequirement, amount: u32 },
+    /// "Until your next turn, [filter] spells `who` casts cost {amount} less
+    /// to cast" (Will Kenrith's −2) — the discount mirror of
+    /// `SpellTaxUntilYourNextTurn`, expiring at the controller's untap.
+    SpellDiscountUntilYourNextTurn { who: PlayerRef, amount: u32, filter: SelectionRequirement },
     /// "Face-down spells you cast this turn cost {amount} less to cast"
     /// (Goblin Maskmaker). Bumps `Player.face_down_discount_this_turn`, read
     /// by `face_down_cast_cost` and cleared at cleanup (CR 514.2).

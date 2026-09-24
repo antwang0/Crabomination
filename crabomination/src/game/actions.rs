@@ -1496,7 +1496,10 @@ pub(crate) fn extra_cost_for_spell_over<'a>(
     // Turn-scoped taxes (Elspeth Conquers Death II): opponents of the
     // entry's controller pay until that player's next turn.
     for t in &state.turn_scoped_spell_taxes {
-        if t.controller != caster && state.evaluate_requirement_on_card(&t.filter, card, caster) {
+        if t.discount_for.is_none()
+            && t.controller != caster
+            && state.evaluate_requirement_on_card(&t.filter, card, caster)
+        {
             tax += t.amount;
         }
     }
@@ -2040,6 +2043,13 @@ pub(crate) fn cost_reduction_for_spell_full_over<'a>(
     for (filter, amount) in &state.players[caster].turn_spell_discounts {
         if state.evaluate_requirement_on_card(filter, card, caster) {
             reduction = reduction.saturating_add(*amount);
+        }
+    }
+    // "Until your next turn, … spells that player casts cost {N} less"
+    // (Will Kenrith's −2): a discount-form turn-scoped entry.
+    for t in &state.turn_scoped_spell_taxes {
+        if t.discount_for == Some(caster) && state.evaluate_requirement_on_card(&t.filter, card, caster) {
+            reduction = reduction.saturating_add(t.amount);
         }
     }
     // Transient "sacrifice any number, {N} less each" additional-cost

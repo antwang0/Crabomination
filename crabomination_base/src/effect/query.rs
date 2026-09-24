@@ -1399,6 +1399,8 @@ impl Effect {
                 first.requires_target() || second.requires_target()
             }
             Effect::EachPlayerRollsSourceCantAttackHighest { .. } => false,
+            Effect::GoadACreatureOfEachOpponentAttackedBy { .. } => false,
+            Effect::SpellDiscountUntilYourNextTurn { who, .. } => player_has_target(who),
             Effect::ChooseMode(modes) | Effect::AsEntersChooseMode(modes) => {
                 modes.iter().any(|e| e.requires_target())
             }

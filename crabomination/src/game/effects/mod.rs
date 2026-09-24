@@ -18,6 +18,7 @@ mod free_cast;
 mod graveyard_swap;
 mod graveyard_spread;
 mod dice_choices;
+mod goad_attacked;
 mod fight_each;
 pub(crate) use eval::PrintedGates;
 pub(crate) mod events;
@@ -11604,6 +11605,9 @@ impl GameState {
             Effect::PutAnyNumberFromGraveyardOnTop { filter } => {
                 self.put_any_number_from_graveyard_on_top(filter, effect, ctx, events)
             }
+            Effect::GoadACreatureOfEachOpponentAttackedBy { attackers } => {
+                self.goad_a_creature_of_each_opponent_attacked_by(attackers, ctx)
+            }
             Effect::RollTwoDiceAssign { sides, first, second } => {
                 self.roll_two_dice_assign(*sides, first, second, ctx, events)
             }
@@ -22680,6 +22684,18 @@ impl GameState {
                     controller: ctx.controller,
                     amount: *amount,
                     filter: filter.clone(),
+                    discount_for: None,
+                });
+                Ok(())
+            }
+
+            Effect::SpellDiscountUntilYourNextTurn { who, amount, filter } => {
+                let Some(q) = self.resolve_player(who, ctx) else { return Ok(()) };
+                self.turn_scoped_spell_taxes.push(crate::game::TurnScopedSpellTax {
+                    controller: ctx.controller,
+                    amount: *amount,
+                    filter: filter.clone(),
+                    discount_for: Some(q),
                 });
                 Ok(())
             }

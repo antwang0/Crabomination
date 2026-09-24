@@ -3748,6 +3748,11 @@ pub struct TurnScopedSpellTax {
     pub(crate) controller: usize,
     pub(crate) amount: u32,
     pub(crate) filter: crate::card::SelectionRequirement,
+    /// `Some(p)`: a *discount* for player `p`'s matching spells instead of a
+    /// tax on the controller's opponents (Will Kenrith's −2 — "until your next
+    /// turn, … spells that player casts cost {2} less"). Same expiry.
+    #[serde(default)]
+    pub(crate) discount_for: Option<usize>,
 }
 
 /// A pending copy-reversion entry — see `GameState.temporary_copies`.
@@ -11521,7 +11526,8 @@ impl GameState {
     }
 
     /// Does any battlefield permanent carry Void Winnower's block half
-    /// (`OpponentsCantBlockWithEvenMv`)? One card in the catalog has it, so
+    /// (`OpponentsCantBlockWithEvenMv`) or Bothersome Quasit's
+    /// (`OpponentsGoadedCreaturesCantBlock`)? Two cards in the catalog, so
     /// the answer is `false` on every ordinary board — but
     /// [`blocker_self_block`](Self::blocker_self_block) asked it with a whole
     /// battlefield walk per *even-mana-value* blocker, i.e. on half of every
@@ -11536,7 +11542,11 @@ impl GameState {
         self.presence_gate(PresenceGate::BlockEvenMv, || {
             self.battlefield.iter().any(|c| {
                 c.definition.static_abilities.iter().any(|sa| {
-                    matches!(sa.effect, crate::effect::StaticEffect::OpponentsCantBlockWithEvenMv)
+                    matches!(
+                        sa.effect,
+                        crate::effect::StaticEffect::OpponentsCantBlockWithEvenMv
+                            | crate::effect::StaticEffect::OpponentsGoadedCreaturesCantBlock
+                    )
                 })
             })
         })
@@ -30395,6 +30405,10 @@ fn static_effect_to_effects(
             | StaticEffect::OpponentsCantCastEvenMv
             | StaticEffect::OpponentsCantCastNoncreatureAboveLandCount
             | StaticEffect::OpponentsCantBlockWithEvenMv
+            | StaticEffect::OpponentsGoadedCreaturesCantBlock
+            // Board-wide goad — read by `goad::goaders`; no layer.
+            | StaticEffect::OpponentCreaturesWithLesserPowerAreGoaded
+            | StaticEffect::OthersNamedLikeThisAreGoaded
             // Attack-permission static, read in `ignores_defender_for_attack`.
             | StaticEffect::CanAttackIgnoringDefenderWhile { .. }
             // Drannith Magistrate — cast-legality gate in `cast_from_zone_blocked`.

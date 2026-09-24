@@ -358,6 +358,8 @@ pub enum CreatureType {
     Guest,
     // Commander 2019 (Doomed Artisan's tokens).
     Sculpture,
+    // Commander Legends: Battle for Baldur's Gate (Death Kiss).
+    Beholder,
 }
 
 /// Land subtypes (basic land types + others).

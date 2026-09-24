@@ -281,6 +281,18 @@ pub enum StaticEffect {
     /// Void Winnower — "Your opponents can't block with creatures with even
     /// mana values" (zero is even). Consulted in the block-legality check.
     OpponentsCantBlockWithEvenMv,
+    /// "Goaded creatures your opponents control can't block" (Bothersome
+    /// Quasit). Shares Void Winnower's block-lock presence gate.
+    OpponentsGoadedCreaturesCantBlock,
+    /// CR 701.15 — "Creatures your opponents control with power less than
+    /// [this]'s power are goaded" (Baeloth Barrityl). Read by
+    /// `GameState::goaders`; the powers compared are each instance's own
+    /// (printed, pumps, counters), not layer anthems, so goad never asks the
+    /// layer system.
+    OpponentCreaturesWithLesserPowerAreGoaded,
+    /// CR 701.15 — "Other creatures with the same name as this creature are
+    /// goaded" (Mocking Doppelganger's copy rider). Read by `goaders`.
+    OthersNamedLikeThisAreGoaded,
     /// "Each [creature_type] creature gets +P/+T for each *other*
     /// [creature_type] on the battlefield" (Sliver Legion). State-aware:
     /// gathered with the live battlefield count, one effect per matching
