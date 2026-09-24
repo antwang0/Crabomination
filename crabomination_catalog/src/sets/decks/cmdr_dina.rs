@@ -203,16 +203,16 @@ pub fn feral_appetite() -> CardDefinition {
         ],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), g()]),
+            // The target's slot has to be declared by an effect the cast walk
+            // surfaces, so the exile comes first and the check reads the card
+            // where it went ("if it was a creature card").
             effect: Effect::Seq(vec![
+                Effect::Exile { what: target_filtered(R::InGraveyard) },
                 Effect::If {
-                    cond: Predicate::EntityMatches {
-                        what: target_filtered(R::InGraveyard),
-                        filter: R::Creature,
-                    },
+                    cond: Predicate::EntityMatches { what: Selector::Target(0), filter: R::Creature },
                     then: Box::new(pests(Value::ONE)),
                     else_: Box::new(Effect::Noop),
                 },
-                Effect::Exile { what: Selector::Target(0) },
             ]),
             ..Default::default()
         }],
