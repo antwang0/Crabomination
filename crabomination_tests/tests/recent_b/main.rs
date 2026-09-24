@@ -27,6 +27,7 @@ mod cmdr_wyleth;
 mod cmdr_teferi;
 mod cmdr_lorehold;
 mod cmdr_fae;
+mod cmdr_kalemne;
 mod dsk2;
 mod dsk_rooms;
 mod recent_118_132;
