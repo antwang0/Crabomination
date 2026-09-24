@@ -4273,7 +4273,11 @@ fn effect_copies_target_spell(eff: &Effect) -> bool {
         | Effect::CopySpellMayChooseTargets { .. }
         | Effect::CopySpellWithRiders { .. } => true,
         Effect::TemptingOffer { body } => effect_copies_target_spell(body),
-        Effect::Seq(v) => v.first().is_some_and(effect_copies_target_spell),
+        // Wild Ricochet retargets the spell before it copies it.
+        Effect::Seq(v) => match v.as_slice() {
+            [Effect::ChooseNewTargetsForSpell { .. }, copy, ..] => effect_copies_target_spell(copy),
+            _ => v.first().is_some_and(effect_copies_target_spell),
+        },
         _ => false,
     }
 }
@@ -27209,6 +27213,35 @@ mod stack_response_tests {
             pick_stack_response(&g, 0, &w).expect("clogged hand counters").action();
         assert!(
             matches!(action, GameAction::CastSpell { card_id, .. } if card_id == counter),
+            "got {action:?}"
+        );
+    }
+
+    /// CR 707.10 / 115.7 — Wild Ricochet retargets, then copies: the same
+    /// copy window takes it for the bot's own Divination.
+    #[test]
+    fn copy_response_takes_a_retarget_then_copy_spell() {
+        use crate::mana::Color;
+        let mut g = two_player_game();
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        let ricochet = g.add_card_to_hand(0, catalog::wild_ricochet());
+        let div = g.add_card_to_hand(0, catalog::divination());
+        g.players[0].mana_pool.add(Color::Blue, 3);
+        g.players[0].mana_pool.add(Color::Red, 4);
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::CastSpell {
+            card_id: div,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("Divination");
+        let action = pick_copy_response(&g, 0, &EvalWeights::default()).expect("copy it");
+        assert!(
+            matches!(action, GameAction::CastSpell { card_id, target: Some(Target::Permanent(t)), .. }
+                if card_id == ricochet && t == div),
             "got {action:?}"
         );
     }
