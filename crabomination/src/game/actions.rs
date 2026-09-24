@@ -9320,11 +9320,19 @@ impl GameState {
     /// cost, so the activator keeps their higher-power creatures. Ties keep the
     /// candidates' (battlefield) order via a stable sort.
     pub(crate) fn auto_pick_lowest_power(&self, candidates: &[CardId], count: usize) -> Vec<CardId> {
-        let mut ranked: Vec<(CardId, i32)> = candidates
+        // Power first, then — among equals — a token before a card and the
+        // cheaper card before the dearer: a 2/2 legend worth five mana went
+        // to Blood Bairn ahead of a Grizzly Bears because it sat first on the
+        // board. A commander is the last thing fed to a cost.
+        let mut ranked: Vec<(CardId, (bool, i32, bool, u32))> = candidates
             .iter()
-            .filter_map(|id| self.battlefield_find(*id).map(|c| (*id, c.power())))
+            .filter_map(|id| {
+                self.battlefield_find(*id).map(|c| {
+                    (*id, (self.is_commander(*id), c.power(), !c.is_token, c.definition.cost.cmc()))
+                })
+            })
             .collect();
-        ranked.sort_by_key(|(_, pow)| *pow);
+        ranked.sort_by_key(|(_, key)| *key);
         ranked.into_iter().take(count).map(|(id, _)| id).collect()
     }
 
