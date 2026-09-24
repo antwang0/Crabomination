@@ -2359,3 +2359,31 @@ pub const HAZEL_MAIN: &[CardFactory] = &[
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, forest, forest, forest, forest, forest,
     forest, forest, forest, forest,
 ];
+
+pub const SAHEELI_COMMANDERS: &[CardFactory] = &[saheeli_the_gifted];
+
+/// **Exquisite Invention**, the Commander 2018 deck (C18, 2018-08-10), exactly
+/// as MTGJSON's `ExquisiteInvention_C18` prints it: 72 nonbasic cards + 15
+/// Islands + 12 Mountains = 99. Izzet artifacts under Saheeli, the Gifted — a
+/// planeswalker commander.
+pub const SAHEELI_MAIN: &[CardFactory] = &[
+    maverick_thopterist, soul_of_new_phyrexia, inkwell_leviathan, sharding_sphinx,
+    hellkite_igniter, bosh_iron_golem, darksteel_juggernaut, duplicant, myr_battlesphere,
+    psychosis_crawler, scuttling_doom_engine, steel_hellkite, thopter_assembly,
+    etherium_sculptor, whirler_rogue, chief_of_the_foundry, pilgrims_eye, saheelis_artistry,
+    blasphemous_act, reverse_engineer, tidings, chaos_warp, magmaquake, into_the_roil,
+    thirst_for_knowledge, blinkmoth_urn, mimic_vat, mirrorworks, prototype_portal,
+    unwinding_clock, commanders_sphere, dreamstone_hedron, hedron_archive, izzet_signet,
+    magnifying_glass, mind_stone, prismatic_lens, scrabbling_claws, sol_ring, swiftfoot_boots,
+    unstable_obelisk, vessel_of_endless_rest, worn_powerstone, darksteel_citadel, great_furnace,
+    seat_of_the_synod, thopter_spy_network, buried_ruin, command_tower, foundry_of_the_consuls,
+    highland_lake, izzet_boilerworks, izzet_guildgate, swiftwater_cliffs,
+    brudiclad_telchor_engineer, tawnos_urzas_apprentice, echo_storm, vedalken_humiliator,
+    enchanters_bane, saheelis_directive, treasure_nabber, varchild_betrayer_of_kjeldor,
+    ancient_stone_idol, coveted_jewel, endless_atlas, retrofitter_foundry, aether_gale,
+    loyal_drake, loyal_apprentice, geode_golem, thopter_engineer, forge_of_heroes,
+    // Basics: 15 island, 12 mountain
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain,
+];

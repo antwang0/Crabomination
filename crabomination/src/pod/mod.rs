@@ -654,6 +654,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::HAZEL_COMMANDERS,
             main: decks::HAZEL_MAIN,
         },
+        // Seventy-sixth: the sixty-sixth official list (Exquisite Invention,
+        // C18) — Izzet artifacts under Saheeli, the Gifted, a planeswalker
+        // commander. `--pod-decks 76`.
+        PodDeck {
+            name: "Saheeli, the Gifted (UR)",
+            commanders: decks::SAHEELI_COMMANDERS,
+            main: decks::SAHEELI_MAIN,
+        },
     ]
 }
 
