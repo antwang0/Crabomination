@@ -39,6 +39,7 @@ mod cmdr_breya;
 mod cmdr_yidris;
 mod cmdr_mimeoplasm;
 mod cmdr_valgavoth;
+mod cmdr_riku;
 mod dsk2;
 mod dsk_rooms;
 mod recent_118_132;
