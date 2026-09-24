@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Ten hand-picked commanders plus forty official preconstructed lists, each a
+//! Ten hand-picked commanders plus forty-three official preconstructed lists, each a
 //! 99 of cards this engine implements: legal under CR 903 (100 cards
 //! including the commander, singleton outside basics, every card inside the
 //! commander's CR 903.4 color identity) and Commander-legal per Scryfall's
@@ -8,7 +8,7 @@
 //!
 //! The ten were built by hand because the offline Scryfall cache cannot say
 //! how a precon splits into decks; MTGJSON's deck files can, and the eleventh
-//! through fiftieth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
+//! through fifty-third (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
 //! Win, Tails You Lose, Goblin Storm, Foundations Commander's Wretched Ranks,
 //! Tramplesaurus Rex and Keen Engineering, Commander Legends' Reap the Tides,
 //! Phyrexia: All Will Be One's Corrupting Influence, Zendikar Rising's Sneak
@@ -26,8 +26,9 @@
 //! Through Time, Commander 2021's Lorehold Legacies, Commander (2011)'s
 //! Counterpunch, Wilds of Eldraine Commander's Fae Dominion, Commander 2015's
 //! Wade into Battle, Commander Legends' Arm for Battle, Commander 2016's Invent
-//! Superiority, Secret Lair's Chaos Incarnate and Aetherdrift Commander's
-//! Eternal Might) are taken from one card for card. What all of them keep
+//! Superiority and Entropic Uprising, Secret Lair's Chaos Incarnate,
+//! Aetherdrift Commander's Eternal Might, Commander 2017's Feline Ferocity and
+//! Commander (2011)'s Heavenly Inferno) are taken from one card for card. What all of them keep
 //! from the precon idea is what the pod needs — fixed, legal, varied color
 //! identities, and built to play against each other.
 //! One is a Partner pair (CR 702.124b), one is a **planeswalker**
@@ -1679,4 +1680,30 @@ pub const ARAHBO_MAIN: &[CardFactory] = &[
     // Basics: 7 plains, 6 forest
     plains, plains, plains, plains, plains, plains, plains,
     forest, forest, forest, forest, forest, forest,
+];
+
+pub const KAALIA_COMMANDERS: &[CardFactory] = &[kaalia_of_the_vast];
+
+/// **Heavenly Inferno**, the Commander (2011) Mardu deck (CMD, 2011-06-17),
+/// exactly as MTGJSON's `HeavenlyInferno_CMD` prints it: 75 nonbasic cards +
+/// 8 Plains + 8 Swamps + 8 Mountains = 99. Angels, Demons and Dragons cheated in by Kaalia.
+pub const KAALIA_MAIN: &[CardFactory] = &[
+    mother_of_runes, orzhov_guildmage, boros_guildmage, gwyllion_hedge_mage, duergar_hedge_mage,
+    lightkeeper_of_emeria, razorjaw_oni, anger, voice_of_all, dragon_whelp, furnace_whelp,
+    serra_angel, shattered_angel, fallen_angel, basandra_battle_seraph, oni_of_wild_places,
+    mana_charged_dragon, oros_the_avenger, malfegor, angelic_arbiter, archangel_of_strife,
+    tariel_reckoner_of_souls, angel_of_despair, bladewing_the_risen, avatar_of_slaughter,
+    akroma_angel_of_fury, reiver_demon, dread_cacodemon, syphon_mind, diabolic_tutor,
+    evincars_justice, syphon_flesh, akromas_vengeance, death_by_dragons, earthquake, path_to_exile,
+    bathe_in_light, terminate, orims_thunder, mortify, congregate, return_to_dust, sulfurous_blast,
+    wrecking_ball, master_warcraft, cleansing_beam, comet_storm, sol_ring, armillary_sphere,
+    boros_signet, lightning_greaves, orzhov_signet, rakdos_signet, darksteel_ingot, soul_snare,
+    vow_of_duty, vow_of_malice, vow_of_lightning, stranglehold, pyrohemia, righteous_cause,
+    akoum_refuge, barren_moor, bojuka_bog, boros_garrison, command_tower, evolving_wilds,
+    forgotten_cave, molten_slagheap, orzhov_basilica, rakdos_carnarium, rupture_spire,
+    secluded_steppe, vivid_meadow, zoetic_cavern,
+    // Basics: 8 plains, 8 swamp, 8 mountain
+    plains, plains, plains, plains, plains, plains, plains, plains, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain,
 ];

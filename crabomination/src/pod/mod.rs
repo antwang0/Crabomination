@@ -491,6 +491,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ARAHBO_COMMANDERS,
             main: decks::ARAHBO_MAIN,
         },
+        // Fifty-third: the forty-third official list (Heavenly Inferno, CMD)
+        // — Mardu Angels, Demons and Dragons under Kaalia. `--seats 53`.
+        PodDeck {
+            name: "Kaalia of the Vast (RWB)",
+            commanders: decks::KAALIA_COMMANDERS,
+            main: decks::KAALIA_MAIN,
+        },
     ]
 }
 
@@ -1001,6 +1008,7 @@ mod tests {
             ("Teferi", [0x7EFE41, 85, 9009]),
             ("Kalemne", [0xCA1E, 86, 9010]),
             ("Kardur", [0xCA2D, 87, 9011]),
+            ("Kaalia", [0xCAA1, 88, 9012]),
         ] {
             let precon = *field.iter().find(|d| d.name.starts_with(name)).expect("the precon seat");
             assert_eq!(precon.card_count(), 100);
