@@ -33856,6 +33856,9 @@ impl GameState {
                 pay_own_cost,
                 uncast_penalty,
             } => {
+                if *duration == crate::card::MayPlayDuration::UntilYourNextEndStep {
+                    self.step_bounded_may_play = true;
+                }
                 // Atomic helper: move the top `count` cards of `who`'s library
                 // to exile and stamp `may_play_until` on each in one step.
                 // The top of the library is index 0 (see `Player::draw_top`
@@ -34892,6 +34895,9 @@ impl GameState {
                             });
                         }
                     }
+                }
+                if *duration == crate::card::MayPlayDuration::UntilYourNextEndStep {
+                    self.step_bounded_may_play = true;
                 }
                 Ok(())
             }

@@ -1025,6 +1025,11 @@ pub enum MayPlayDuration {
     /// reveal-on-draw offer can't be banked for a later phase with more
     /// information. Also swept at turn end like `EndOfThisTurn`.
     EndOfThisStep,
+    /// "...until your next end step" (Riveteers Charm, Haste Magic, Opera
+    /// Love Song, Unlucky Witness) — cleared as the holder's next end step
+    /// begins, by the step-transition sweep (`clear_step_bounded_may_play`),
+    /// so it is gated by the same `step_bounded_may_play` flag.
+    UntilYourNextEndStep,
 }
 
 /// Per-instance permission for "you may cast that card without paying its

@@ -4971,6 +4971,8 @@ impl GameState {
                         ended_active == perm.player && ended_turn > perm.granted_turn
                     }
                     crate::card::MayPlayDuration::WhileExiled => false,
+                    // Swept as the holder's end step begins, not here.
+                    crate::card::MayPlayDuration::UntilYourNextEndStep => false,
                     // Step-bounded miracle windows are also dead by turn end.
                     crate::card::MayPlayDuration::EndOfThisStep => true,
                 };
