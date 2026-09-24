@@ -3306,3 +3306,42 @@ fn bot_phases_out_its_board_under_a_wrath() {
         "every Giant survives"
     );
 }
+
+// ── Arm for Battle (CMR, Wyleth) — the exact-rule tests; the card batch is
+// in `cmdr_wyleth.rs` ───────────────────────────────────────────────────────
+
+fn cast_on_opponents_turn(g: &mut GameState, id: CardId, targets: &[Target]) -> Result<(), String> {
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    try_cast(g, 0, id, targets)
+}
+
+/// Timely Ward — flash only when it targets a commander (CR 702.8 / 903.3).
+#[test]
+fn timely_ward_flashes_onto_a_commander_only() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let ward = g.add_card_to_hand(0, catalog::timely_ward());
+    assert!(cast_on_opponents_turn(&mut g, ward, &[Target::Permanent(bear)]).is_err());
+    g.players[0].commanders.push(bear);
+    cast_on_opponents_turn(&mut g, ward, &[Target::Permanent(bear)]).expect("flash onto the commander");
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Indestructible));
+}
+
+/// CR 603.2 / 704.3 — an Equipment's "whenever equipped creature is dealt
+/// damage" triggers on the damage that kills its host (Blazing Sunsteel),
+/// as a printed one does (Boros Reckoner): the trigger is checked before
+/// state-based actions.
+#[test]
+fn cr_603_2_an_equipment_damage_trigger_survives_lethal_damage() {
+    let mut g = main_phase();
+    let ss = g.add_card_to_battlefield(0, catalog::blazing_sunsteel());
+    let giant = g.add_card_to_battlefield(0, catalog::hill_giant());
+    equip(&mut g, ss, giant);
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.priority.player_with_priority = 1;
+    try_cast(&mut g, 1, bolt, &[Target::Permanent(giant)]).expect("bolt");
+    assert!(g.battlefield_find(giant).is_none(), "the Giant died");
+    assert_eq!(g.players[1].life, 17, "and still dealt the 3 back");
+}

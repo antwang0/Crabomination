@@ -2,11 +2,9 @@
 //! Steel) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_wyleth.rs`.
 //!
-//! Residuals (each also on its card):
-//! - **Dawn Charm** — the counter mode takes a spell that targets you *or a
-//!   permanent you control* (Hindering Light's filter), not only you.
-//! - **Timely Ward** — flash is offered while any commander is on the
-//!   battlefield, not only when the Aura targets one.
+//! No residuals: Dawn Charm's counter mode reads a spell that targets *you*
+//! (`SpellTargetsMatching(Player & ControlledByYou)`), and Timely Ward's flash
+//! is checked against its declared target (`SelfFlashIfTargets`).
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
@@ -109,7 +107,11 @@ pub fn dawn_charm() -> CardDefinition {
         effect: Effect::ChooseMode(vec![
             Effect::PreventAllCombatDamageThisTurn,
             Effect::Regenerate { what: target_filtered(R::Creature) },
-            Effect::CounterSpell { what: target_filtered(R::SpellTargetsControllerOrControlled) },
+            Effect::CounterSpell {
+                what: target_filtered(R::IsSpellOnStack.and(R::SpellTargetsMatching(Box::new(
+                    R::Player.and(R::ControlledByYou),
+                )))),
+            },
         ]),
         ..Default::default()
     }
@@ -424,15 +426,13 @@ pub fn tiana_ships_caretaker() -> CardDefinition {
     }
 }
 
-/// Timely Ward — enchanted creature has indestructible; flash while it
-/// targets a commander (here: while any commander is on the battlefield).
+/// Timely Ward — enchanted creature has indestructible; flash when it
+/// targets a commander.
 pub fn timely_ward() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "You may cast this spell as though it had flash if it targets a commander.",
-            effect: StaticEffect::SelfFlashIf {
-                condition: Predicate::SelectorExists(Selector::EachPermanent(R::Creature.and(R::IsCommander))),
-            },
+            effect: StaticEffect::SelfFlashIfTargets { filter: R::IsCommander },
         }],
         ..aura(
             "Timely Ward",
