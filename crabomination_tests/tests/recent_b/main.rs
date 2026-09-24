@@ -61,6 +61,7 @@ mod cmdr_willowdusk;
 mod cmdr_mishra;
 mod cmdr_gimbal;
 mod cmdr_dihada;
+mod cmdr_dina;
 mod dsk2;
 mod dsk_rooms;
 mod recent_118_132;
