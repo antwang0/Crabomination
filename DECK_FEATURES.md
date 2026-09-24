@@ -90,6 +90,7 @@ lists were picked.
 | **Call for Backup** (MOC precon) RGW | Bright-Palm, Soul Awakener | RGW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **World Shaper** (EOC precon) BRG | Hearthhull, the Worldseed | BRG | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
 | **Peace Offering** (BLC precon) GWU | Ms. Bumbleflower | GWU | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
+| **Nature of the Beast** (C13 precon) RGW | Marath, Will of the Wild | RGW | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Enduring Enchantments** (CMM precon) WBG | Anikthea, Hand of Erebos | WBG | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
 | **Open Hostility** (C16 precon) WBRG | Saskia the Unyielding | WBRG | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Devour for Power** (CMD precon) BGU | The Mimeoplasm | BGU | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
@@ -1341,6 +1342,23 @@ Loyalty**, **Tamiyo** (INCOMPLETE_CARDS). A 200-game census beside
 Hearthhull / Bright-Palm / Brimaz (seed 9551) decided 200/200 with zero
 panics and no card of the four lists unplayed, Ms. Bumbleflower winning
 38.0 %. `--bench` byte-identical.
+
+The **eighty-eighth** is Commander 2013's **Nature of the Beast**
+(`NatureOfTheBeast_C13`) — Naya big creatures under Marath, Will of the
+Wild (seat 83 before rebasing over four other lists). Sixteen cards were
+missing; the primitives: **Mystic Barrier**'s CR 508.1a "attack only the
+nearest opponent in the chosen direction" (`game/mystic_barrier.rs`, riding
+the CR 803 attack-left/right walk so the declaration gate and the bot's
+`attackable_players_for` agree),
+`Value::PermanentsDestroyedThisResolutionControlledBy` (From the Ashes), and
+`Selector::TopOfLibrary` fanning out over "each player" (Naya Soulbeast).
+⚠ **No bot path spent Marath's counters**: "{X}, remove X counters" had no X
+chooser; `server/x_counter_sink.rs` dry-runs every mode at every payable X.
+Residuals: **Fiery Justice**, **Magus of the Arena**, **Naya Soulbeast**.
+A 200-game census beside Ms. Bumbleflower / Hearthhull / Bright-Palm (seed
+9561) decided 200/200 with zero panics; Marath won 4-6 %, and **Fireball
+went uncast** — the bot's any-target burn goes face-first and fires only for
+lethal (TODO open queue).
 
 The **sixty-eighth** is Commander Masters' **Enduring Enchantments**
 (`EnduringEnchantments_CMM`) — Abzan Sagas, enchantresses and constellation
