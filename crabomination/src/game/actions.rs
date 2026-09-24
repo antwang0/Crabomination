@@ -9845,15 +9845,16 @@ impl GameState {
                 // Knowledge-only when a matching card is in hand; the pay
                 // half was already folded into the cost.
                 A::RevealFromHandOrPay { .. } => {}
-                // The revealed card stays in hand; stamp its power for the
-                // body (Titan's Presence). Reveal the biggest match.
+                // The revealed card stays in hand; stamp its power and mana
+                // value for the body. Each value reads the best match for it
+                // (Titan's Presence: power; Disaster Radius: mana value).
                 A::RevealFromHand { filter } => {
-                    self.revealed_for_cost_power = self.players[p]
-                        .hand
-                        .iter()
-                        .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
-                        .map(|c| c.definition.power)
-                        .max();
+                    let hand = &self.players[p].hand;
+                    let matches = || hand.iter().filter(|c| self.evaluate_requirement_on_card(filter, c, p));
+                    let clamp = |v: i32| v.clamp(i32::from(i16::MIN), i32::from(i16::MAX)) as i16;
+                    self.revealed_for_cost = matches().map(|c| c.definition.power).max().map(|pw| {
+                        (clamp(pw), clamp(matches().map(|c| c.definition.cost.cmc() as i32).max().unwrap_or(0)))
+                    });
                 }
                 A::ExileFromGraveyardOrPay { filter, count, .. } => {
                     // With enough matching graveyard cards the exile half is

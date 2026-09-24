@@ -136,7 +136,7 @@ impl GameState {
         let _ = write!(s, "{:?}|", self.scratch.resolving_spell_snapshot);
         let coll = h(&s);
         let _ = write!(s, "{:?}|", self.sacrificed_power);
-        let _ = write!(s, "{:?}|", self.revealed_for_cost_power);
+        let _ = write!(s, "{:?}|", self.revealed_for_cost);
         let _ = write!(s, "{:?}|", self.sacrificed_total_power);
         let _ = write!(s, "{:?}|", self.sacrificed_count);
         let _ = write!(s, "{:?}|", self.sacrificed_toughness);

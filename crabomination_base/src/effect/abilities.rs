@@ -1776,6 +1776,10 @@ pub enum StaticEffect {
     /// you control on any player's turn any time you could cast an instant."
     /// (Teferi, Temporal Archmage's emblem.) Read by `activate_loyalty_ability`.
     LoyaltyAbilitiesAtInstantSpeed,
+    /// CR 615 — "If a spell you control would deal damage to an opponent,
+    /// prevent that damage. Create a `token` for each 1 damage prevented this
+    /// way." (Hostility.) Applied in the noncombat damage funnel.
+    SpellDamageToOpponentsBecomesTokens { token: std::sync::Arc<crate::card::TokenDefinition> },
     /// CR 602.5 / 614 — "Activated abilities cost {N} more to activate
     /// unless they're mana abilities." Applies to every player's
     /// activations (Suppression Field).

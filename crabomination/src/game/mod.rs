@@ -2364,10 +2364,12 @@ pub struct GameState {
     /// read by `Value::SacrificedPower` (e.g. Thud). Reset between
     /// independent spell/ability resolutions.
     pub(crate) sacrificed_power: Option<i32>,
-    /// Power of the card revealed to pay an `AdditionalCastCost::RevealFromHand`
-    /// on the resolving spell (Titan's Presence). Read by
-    /// `Value::RevealedForCostPower`.
-    pub(crate) revealed_for_cost_power: Option<i32>,
+    /// (power, mana value) of the card revealed to pay an
+    /// `AdditionalCastCost::RevealFromHand` on the resolving spell, each the
+    /// best match for the value it feeds (Titan's Presence reads power,
+    /// Disaster Radius mana value).
+    /// `i16` pair: an `(i32, i32)` put `GameState` over its size cap.
+    pub(crate) revealed_for_cost: Option<(i16, i16)>,
     /// Summed power of EVERY permanent sacrificed to pay this resolution's
     /// costs (Soulblast's "total power of the sacrificed creatures"), where
     /// `sacrificed_power` holds only the first.
@@ -3812,7 +3814,7 @@ impl Clone for GameState {
             spells_cast_last_turn: self.spells_cast_last_turn,
             permanents_to_graveyard_this_turn: self.permanents_to_graveyard_this_turn,
             sacrificed_power: self.sacrificed_power,
-            revealed_for_cost_power: self.revealed_for_cost_power,
+            revealed_for_cost: self.revealed_for_cost,
             sacrificed_total_power: self.sacrificed_total_power,
             sacrificed_count: self.sacrificed_count,
             sacrificed_was_artifact: self.sacrificed_was_artifact,
@@ -4020,7 +4022,7 @@ impl GameState {
             permanents_to_graveyard_this_turn: 0,
             delayed_triggers: Vec::new(),
             sacrificed_power: None,
-            revealed_for_cost_power: None,
+            revealed_for_cost: None,
             sacrificed_total_power: 0,
             sacrificed_count: 0,
             sacrificed_was_artifact: None,
@@ -29394,6 +29396,8 @@ fn static_effect_to_effects(
             // Consulted at ETB placement / by `activate_loyalty_ability`.
             | StaticEffect::CreaturesEnterAsCopyOf { .. }
             | StaticEffect::LoyaltyAbilitiesAtInstantSpeed
+            // Consulted in the noncombat damage funnel.
+            | StaticEffect::SpellDamageToOpponentsBecomesTokens { .. }
             // Recomputed live in `compute_battlefield`, not here.
             | StaticEffect::SelfHasKeywordWhile { .. }
             | StaticEffect::SelfHasKeywordWhilePredicate { .. }

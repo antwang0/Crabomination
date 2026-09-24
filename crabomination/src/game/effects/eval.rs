@@ -516,17 +516,17 @@ impl GameState {
                 let mine = self.player_tally(ctx.controller, *tally);
                 self.living_seats().filter(|&p| self.player_tally(p, *tally) > mine).count() as i32
             }
-            Value::OpponentsWithHandSizeAtMost(n) => {
-                let me = ctx.controller;
-                let teammates = self.teammates(me);
-                self.players
-                    .iter()
-                    .enumerate()
-                    .filter(|(i, pl)| {
-                        *i != me && !teammates.contains(i) && pl.hand.len() <= *n as usize
-                    })
-                    .count() as i32
-            }
+            // CR 800.4a — a player who has left the game is nobody's opponent.
+            Value::OpponentsWithHandSizeAtMost(n) => self
+                .opponents_of(ctx.controller)
+                .into_iter()
+                .filter(|&o| self.players[o].hand.len() <= *n as usize)
+                .count() as i32,
+            Value::OpponentsBelowHalfStartingLife => self
+                .opponents_of(ctx.controller)
+                .into_iter()
+                .filter(|&o| self.effective_life(o) * 2 < self.players[o].starting_life)
+                .count() as i32,
             Value::OpponentCount => self.opponents_of(ctx.controller).len() as i32,
             Value::CreaturesExiledFromControlThisTurn(who) => self
                 .resolve_players(who, ctx)
@@ -1033,7 +1033,8 @@ impl GameState {
                 };
                 self.graveyard_cards_named(name)
             }
-            Value::RevealedForCostPower => self.revealed_for_cost_power.unwrap_or(0),
+            Value::RevealedForCostPower => self.revealed_for_cost.map_or(0, |(p, _)| i32::from(p)),
+            Value::RevealedForCostManaValue => self.revealed_for_cost.map_or(0, |(_, mv)| i32::from(mv)),
             Value::GreatestManaValueAmongPermanents(who) => self
                 .resolve_player(who, ctx)
                 .map(|p| {

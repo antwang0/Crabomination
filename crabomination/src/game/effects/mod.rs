@@ -24,6 +24,7 @@ mod player_scope;
 mod reselect;
 mod reveal_cast;
 mod reveal_until;
+mod spell_damage;
 mod static_copy;
 mod targeting;
 /// The target enumerator's call-site census — see

@@ -1104,6 +1104,14 @@ impl GameState {
         {
             return;
         }
+        // CR 615 / 616.1 — Hostility turns a spell's damage to an opponent
+        // into tokens (prevention first: the damaged player orders it ahead
+        // of any doubler).
+        if let EntityRef::Player(p) = ent
+            && self.spell_damage_becomes_tokens(source, p, amount, events)
+        {
+            return;
+        }
         // CR 702.16j — a player with protection from a card type (Serra's
         // Emissary) takes no damage from a source of that type.
         if let (EntityRef::Player(p), Some(src)) = (ent, source) {

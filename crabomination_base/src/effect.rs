@@ -682,6 +682,10 @@ pub enum Value {
     /// cards in hand. Powers "draw an additional card for each opponent who
     /// has one or fewer cards in hand" (Bandit's Talent, level 3).
     OpponentsWithHandSizeAtMost(u32),
+    /// The number of the source controller's opponents whose life total is
+    /// less than half their starting life total (Anya, Merciless Angel;
+    /// CR 103.4 — 20 in a duel, 40 in Commander).
+    OpponentsBelowHalfStartingLife,
     /// Opponents of the controller holding at least N cards (Wolfcaller's
     /// Howl).
     OpponentsWithHandSizeAtLeast(u32),
@@ -952,6 +956,9 @@ pub enum Value {
     /// The power of the card revealed to pay this cast's
     /// `AdditionalCastCost::RevealFromHand` (Titan's Presence). 0 with no reveal.
     RevealedForCostPower,
+    /// The mana value of that revealed card (Disaster Radius); the reveal
+    /// picks the match with the greatest mana value for it.
+    RevealedForCostManaValue,
     SacrificedPower,
     /// How many counters the current resolution removed via
     /// `Effect::RemoveCountersUpTo` — "for each counter removed this way"
