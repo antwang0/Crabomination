@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Ten hand-picked commanders plus thirty-two official preconstructed lists, each a
+//! Ten hand-picked commanders plus thirty-four official preconstructed lists, each a
 //! 99 of cards this engine implements: legal under CR 903 (100 cards
 //! including the commander, singleton outside basics, every card inside the
 //! commander's CR 903.4 color identity) and Commander-legal per Scryfall's
@@ -8,7 +8,7 @@
 //!
 //! The ten were built by hand because the offline Scryfall cache cannot say
 //! how a precon splits into decks; MTGJSON's deck files can, and the eleventh
-//! through forty-second (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
+//! through forty-fourth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
 //! Win, Tails You Lose, Goblin Storm, Foundations Commander's Wretched Ranks,
 //! Tramplesaurus Rex and Keen Engineering, Commander Legends' Reap the Tides,
 //! Phyrexia: All Will Be One's Corrupting Influence, Zendikar Rising's Sneak
@@ -22,8 +22,9 @@
 //! Scratch and Sworn to Darkness, Innistrad: Crimson Vow Commander's Vampiric
 //! Bloodline, Commander 2015's Plunder the Graves and Seize Control,
 //! Commander 2021's Quantum Quandrix, Commander 2015's Call the Spirits,
-//! Phyrexia: All Will Be One's Rebellion Rising and Commander 2014's Peer
-//! Through Time) are taken from one card for card. What all of them keep
+//! Phyrexia: All Will Be One's Rebellion Rising, Commander 2014's Peer
+//! Through Time, Commander 2021's Lorehold Legacies and Commander (2011)'s
+//! Counterpunch) are taken from one card for card. What all of them keep
 //! from the precon idea is what the pod needs — fixed, legal, varied color
 //! identities, and built to play against each other.
 //! One is a Partner pair (CR 702.124b), one is a **planeswalker**
@@ -1419,4 +1420,31 @@ pub const OSGIR_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain, plains, plains, plains, plains, plains, plains, plains,
     plains,
+];
+
+pub const GHAVE_COMMANDERS: &[CardFactory] = &[ghave_guru_of_spores];
+
+/// **Counterpunch**, the Commander (2011) deck (CMD, 2011-06-17), exactly as
+/// MTGJSON's `Counterpunch_CMD` prints it: 73 nonbasic cards + 8 Swamps +
+/// 10 Forests + 8 Plains = 99. Abzan Saprolings and +1/+1 counters under
+/// Ghave, Guru of Spores.
+pub const GHAVE_MAIN: &[CardFactory] = &[
+    aquastrand_spider, deadly_recluse, sakura_tribe_elder, scavenging_ooze, monk_realist,
+    selesnya_evangel, golgari_guildmage, selesnya_guildmage, nantuko_husk, fertilid,
+    spawnwrithe, vampire_nighthawk, spike_feeder, yavimaya_elder, squallmonger, penumbra_spider,
+    sigil_captain, shriekmaw, dark_hatchling, teneb_the_harvester, hornet_queen,
+    vish_kal_blood_arbiter, symbiotic_wurm, celestial_force, karador_ghost_chieftain,
+    chorus_of_the_conclave, alliance_of_arms, cultivate, harmonize, syphon_flesh,
+    bestial_menace, hex, hour_of_reckoning, death_mutation, storm_herd, doom_blade,
+    tribute_to_the_wild, footbottom_feast, afterlife, mortify, nemesis_trap, cobra_trap,
+    skullclamp, sol_ring, golgari_signet, lightning_greaves, orzhov_signet, selesnya_signet,
+    darksteel_ingot, acorn_catapult, soul_snare, fists_of_ironwood, necrogenesis, vow_of_malice,
+    awakening_zone, vow_of_wildness, oblivion_ring, vow_of_duty, attrition, aura_shards,
+    barren_moor, command_tower, evolving_wilds, golgari_rot_farm, orzhov_basilica,
+    rupture_spire, secluded_steppe, selesnya_sanctuary, temple_of_the_false_god,
+    tranquil_thicket, vivid_grove, vivid_marsh, vivid_meadow,
+    // Basics: 8 swamp, 10 forest, 8 plains
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    plains, plains, plains, plains, plains, plains, plains, plains,
 ];

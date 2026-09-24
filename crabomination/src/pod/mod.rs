@@ -428,6 +428,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::OSGIR_COMMANDERS,
             main: decks::OSGIR_MAIN,
         },
+        // Forty-fourth: the thirty-fourth official list (Counterpunch, CMD) —
+        // Abzan Saprolings under Ghave, Guru of Spores. `--seats 44`.
+        PodDeck {
+            name: "Ghave, Guru of Spores (WBG)",
+            commanders: decks::GHAVE_COMMANDERS,
+            main: decks::GHAVE_MAIN,
+        },
     ]
 }
 
