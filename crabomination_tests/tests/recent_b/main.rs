@@ -37,6 +37,7 @@ mod cmdr_lathliss;
 mod cmdr_nelly;
 mod cmdr_eshki;
 mod cmdr_estrid;
+mod cmdr_jirina;
 mod cmdr_galea;
 mod cmdr_chishiro;
 mod cmdr_emmara;
