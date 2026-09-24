@@ -50,7 +50,7 @@ fn tapland(name: &'static str, a: Color, bb: Color) -> CardDefinition {
     }
 }
 
-fn curse(name: &'static str, mana: crate::mana::ManaCost, each: impl Fn(PlayerRef) -> Effect) -> CardDefinition {
+pub(super) fn curse(name: &'static str, mana: crate::mana::ManaCost, each: impl Fn(PlayerRef) -> Effect) -> CardDefinition {
     CardDefinition {
         name,
         cost: mana,

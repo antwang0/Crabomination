@@ -3345,3 +3345,244 @@ fn cr_603_2_an_equipment_damage_trigger_survives_lethal_damage() {
     assert!(g.battlefield_find(giant).is_none(), "the Giant died");
     assert_eq!(g.players[1].life, 17, "and still dealt the 3 back");
 }
+
+// ── Feline Ferocity (C17, Arahbo, Roar of the World) ────────────────────────
+
+/// CR 614.1a — Alms Collector replaces an opponent's two-card draw with one
+/// card each.
+#[test]
+fn cr_614_1a_alms_collector_splits_an_opponents_big_draw() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::alms_collector());
+    for seat in [0, 1] {
+        for _ in 0..3 {
+            g.add_card_to_library(seat, catalog::island());
+        }
+    }
+    let d = g.add_card_to_hand(1, catalog::divination());
+    let (mine, theirs) = (g.players[0].hand.len(), g.players[1].hand.len());
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    try_cast(&mut g, 1, d, &[]).expect("Divination");
+    assert_eq!((g.players[0].hand.len(), g.players[1].hand.len()), (mine + 1, theirs));
+}
+
+/// CR 509.1b / 506.2 — Mirri: while she attacks, an opponent blocks with at
+/// most one creature; while she is tapped, only one creature can attack her
+/// controller.
+#[test]
+fn cr_509_1b_mirri_limits_blockers_and_attackers() {
+    let mut g = main_phase();
+    let mirri = g.add_card_to_battlefield(0, catalog::mirri_weatherlight_duelist());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let (a, b) = (
+        g.add_card_to_battlefield(1, catalog::grizzly_bears()),
+        g.add_card_to_battlefield(1, catalog::grizzly_bears()),
+    );
+    for c in [mirri, bear] {
+        g.clear_sickness(c);
+    }
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: mirri, target: AttackTarget::Player(1) },
+        Attack { attacker: bear, target: AttackTarget::Player(1) },
+    ]))
+    .expect("attack");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    assert!(g.perform_action(GameAction::DeclareBlockers(vec![(a, mirri), (b, bear)])).is_err());
+    g.perform_action(GameAction::DeclareBlockers(vec![(a, bear)])).expect("one blocker is fine");
+    // Next turn, Mirri still tapped: two attackers at her controller fail.
+    let mut g = main_phase();
+    let mirri = g.add_card_to_battlefield(0, catalog::mirri_weatherlight_duelist());
+    g.battlefield.find_by_id_mut(mirri).unwrap().tapped = true;
+    for c in [a, b] {
+        let _ = c;
+    }
+    let x = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let y = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(x);
+    g.clear_sickness(y);
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    assert!(g
+        .perform_action(GameAction::DeclareAttackers(vec![
+            Attack { attacker: x, target: AttackTarget::Player(0) },
+            Attack { attacker: y, target: AttackTarget::Player(0) },
+        ]))
+        .is_err());
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: x,
+        target: AttackTarget::Player(0),
+    }]))
+    .expect("one attacker is fine");
+}
+
+/// CR 702.16b — Seht's Tiger: protection from the hostile color keeps a red
+/// burn spell from targeting you.
+#[test]
+fn cr_702_16b_sehts_tiger_shields_you_from_a_color() {
+    let mut g = main_phase();
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    let t = g.add_card_to_hand(0, catalog::sehts_tiger());
+    cast(&mut g, t, &[]);
+    g.priority.player_with_priority = 1;
+    assert!(try_cast(&mut g, 1, bolt, &[Target::Player(0)]).is_err(), "red can't target me");
+}
+
+/// Divine Reckoning — each player keeps one creature and the rest are
+/// destroyed (CR 701.8: indestructible survives).
+#[test]
+fn divine_reckoning_destroys_all_but_one_each() {
+    let mut g = main_phase();
+    let keep = g.add_card_to_battlefield(0, catalog::hill_giant());
+    let lost = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let their_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let d = g.add_card_to_hand(0, catalog::divine_reckoning());
+    cast(&mut g, d, &[]);
+    assert!(g.battlefield_find(keep).is_some() && g.battlefield_find(theirs).is_some());
+    assert!(g.battlefield_find(lost).is_none() && g.battlefield_find(their_bear).is_none());
+}
+
+/// The rest of Feline Ferocity, one assertion each.
+#[test]
+fn feline_ferocity_cards() {
+    // Curse of Bounty: attacking the cursed player untaps your nonland stuff.
+    let mut g = main_phase();
+    let curse = g.add_card_to_hand(0, catalog::curse_of_bounty());
+    cast(&mut g, curse, &[Target::Player(1)]);
+    let rock = g.add_card_to_battlefield(0, catalog::sol_ring());
+    g.battlefield.find_by_id_mut(rock).unwrap().tapped = true;
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    combat(&mut g, vec![Attack { attacker: bear, target: AttackTarget::Player(1) }], 0, |_| {});
+    assert!(!g.battlefield_find(rock).unwrap().tapped);
+
+    // Hungry Lynx: the opponent gets a Rat at your end step.
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::hungry_lynx());
+    pass_to_end_step(&mut g);
+    assert_eq!(count_named(&g, 1, "Rat"), 1);
+
+    // Jedit: attacking makes a Cat Warrior.
+    let mut g = main_phase();
+    let j = g.add_card_to_battlefield(0, catalog::jedit_ojanen_of_efrava());
+    combat(&mut g, vec![Attack { attacker: j, target: AttackTarget::Player(1) }], 0, |_| {});
+    assert_eq!(count_named(&g, 0, "Cat Warrior"), 1);
+
+    // Kindred Summons: two Cats on board find two Cat cards.
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::hungry_lynx());
+    g.add_card_to_battlefield(0, catalog::sunspear_shikari());
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::sehts_tiger());
+    g.add_card_to_library(0, catalog::alms_collector());
+    let ks = g.add_card_to_hand(0, catalog::kindred_summons());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::CreatureType(
+        crabomination::card::CreatureType::Cat,
+    )]));
+    cast(&mut g, ks, &[]);
+    assert!(count_named(&g, 0, "Seht's Tiger") == 1 && count_named(&g, 0, "Alms Collector") == 1);
+
+    // Nissa's Pilgrimage: one Forest in play, one in hand.
+    let mut g = main_phase();
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let np = g.add_card_to_hand(0, catalog::nissas_pilgrimage());
+    let hand = g.players[0].hand.len();
+    cast(&mut g, np, &[]);
+    assert_eq!((count_named(&g, 0, "Forest"), g.players[0].hand.len()), (1, hand));
+
+    // Qasali Slingers: entering may destroy an artifact.
+    let mut g = main_phase();
+    let rock = g.add_card_to_battlefield(1, catalog::sol_ring());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let q = g.add_card_to_hand(0, catalog::qasali_slingers());
+    cast(&mut g, q, &[]);
+    assert!(g.battlefield_find(rock).is_none());
+
+    // Quietus Spike: the hit halves the player's life, rounded up.
+    let mut g = main_phase();
+    let spike = g.add_card_to_battlefield(0, catalog::quietus_spike());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    equip(&mut g, spike, bear);
+    combat(&mut g, vec![Attack { attacker: bear, target: AttackTarget::Player(1) }], 0, |_| {});
+    assert_eq!(g.players[1].life, 9, "20 - 2 = 18, then half of 18 lost");
+
+    // Saltcrusted Steppe: bank two, cash them as green and white.
+    let mut g = main_phase();
+    let s = g.add_card_to_battlefield(0, catalog::saltcrusted_steppe());
+    g.battlefield.find_by_id_mut(s).unwrap().add_counters(CounterType::Storage, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: s,
+        ability_index: 2,
+        target: None,
+        additional_targets: vec![],
+        x_value: Some(2),
+        mode: None,
+    })
+    .expect("cash in");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(s).unwrap().counter_count(CounterType::Storage), 0);
+
+    // Spirit of the Hearth: you have hexproof.
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::spirit_of_the_hearth());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.priority.player_with_priority = 1;
+    assert!(try_cast(&mut g, 1, bolt, &[Target::Player(0)]).is_err());
+
+    // Sunspear Shikari: first strike and lifelink only while equipped.
+    let mut g = main_phase();
+    let s = g.add_card_to_battlefield(0, catalog::sunspear_shikari());
+    assert!(!g.computed_permanent(s).unwrap().keywords().contains(&Keyword::Lifelink));
+    let sledge = g.add_card_to_battlefield(0, catalog::behemoth_sledge());
+    equip(&mut g, sledge, s);
+    let kw = g.computed_permanent(s).unwrap().keywords().to_vec();
+    assert!(kw.contains(&Keyword::FirstStrike) && kw.contains(&Keyword::Trample));
+    assert_eq!(pt(&g, s), (4, 4));
+
+    // Traverse the Outlands: X = greatest power (3) basics onto the field.
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::hill_giant());
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let t = g.add_card_to_hand(0, catalog::traverse_the_outlands());
+    cast(&mut g, t, &[]);
+    assert_eq!(count_named(&g, 0, "Forest"), 3);
+}
+
+/// Stalking Leonin — once, exile an attacker the chosen opponent controls.
+#[test]
+fn stalking_leonin_exiles_the_chosen_attacker() {
+    let mut g = main_phase();
+    let leo = g.add_card_to_hand(0, catalog::stalking_leonin());
+    cast(&mut g, leo, &[]);
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    g.clear_sickness(giant);
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: giant,
+        target: AttackTarget::Player(0),
+    }]))
+    .expect("attack");
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: leo,
+        ability_index: 0,
+        target: Some(Target::Permanent(giant)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("reveal");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == giant));
+}
