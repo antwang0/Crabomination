@@ -1875,3 +1875,4 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Enchanter's Bane | Endless Punishment (DSC) | the damage comes from the Bane, not the enchantment. |
 | 🟡 Star Athlete | Endless Punishment (DSC) | "up to one target" always takes a target when one exists. |
 | 🟡 Spiked Corridor // Torture Pit | Endless Punishment (DSC) | Torture Pit's +2 also reaches permanents opponents control (the shared `NoncombatDamageToOpponentsBonus`). |
+| 🟡 Duneblast | Breed Lethality (C16) | the survivor is the chooser's pick among all creatures, and one always survives when any exist ("up to one" never picks none). |
