@@ -2409,6 +2409,10 @@ pub enum SelectionRequirement {
     /// Reparations). The self-side mirror of `OpponentPlayer`; teammates
     /// don't match.
     YouPlayer,
+    /// The owner of the effect's source, as a player target — "target player
+    /// other than this artifact's owner" is `Player.and(Not(SourceOwnerPlayer))`
+    /// (Crown of Doom).
+    SourceOwnerPlayer,
     /// "Target opponent who has/controls at least `by` more (or `fewer`)
     /// `what` than you do" — the EXO Keeper and Oath cycles' catch-up
     /// restriction, checked as the target is chosen.

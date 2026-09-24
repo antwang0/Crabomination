@@ -1759,6 +1759,14 @@ pub enum StaticEffect {
     /// has madness. The madness cost is equal to its mana cost." (Falkenrath
     /// Gorger.) Consulted where a discard looks for a madness cost.
     OwnedCardsHaveMadness { filter: SelectionRequirement },
+    /// CR 707.2 / 614.1c — "[filter] creatures you control enter as a copy of
+    /// `of`" (Infinite Reflection: nontoken creatures, the enchanted creature;
+    /// Essence of the Wild: creatures, this). Applied where `enters_as_copy` is.
+    CreaturesEnterAsCopyOf { filter: SelectionRequirement, of: crate::effect::Selector },
+    /// CR 606.3 override — "You may activate loyalty abilities of planeswalkers
+    /// you control on any player's turn any time you could cast an instant."
+    /// (Teferi, Temporal Archmage's emblem.) Read by `activate_loyalty_ability`.
+    LoyaltyAbilitiesAtInstantSpeed,
     /// CR 602.5 / 614 — "Activated abilities cost {N} more to activate
     /// unless they're mana abilities." Applies to every player's
     /// activations (Suppression Field).

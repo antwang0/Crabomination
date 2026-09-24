@@ -650,7 +650,9 @@ impl Effect {
                 Selector::PowerAbove { inner, than } => {
                     sel_has_target(inner) || value_has_target(than)
                 }
-                Selector::Take { inner, count } | Selector::TakeRandom { inner, count } => {
+                Selector::Take { inner, count }
+                | Selector::TakeRandom { inner, count }
+                | Selector::TakeGreatestPower { inner, count } => {
                     sel_has_target(inner) || value_has_target(count)
                 }
                 Selector::TakeWithSumCap {
@@ -1687,6 +1689,9 @@ impl Effect {
             Effect::MustBlockTarget { blocker, attacker } => {
                 sel_has_target(blocker) || sel_has_target(attacker)
             }
+            Effect::MustAttackPlayerThisTurn { attacker, defender } => {
+                sel_has_target(attacker) || sel_has_target(defender)
+            }
             Effect::PreventNextFromChosenSourceToTeam { amount, to, .. } => {
                 value_has_target(amount) || sel_has_target(to)
             }
@@ -2208,7 +2213,8 @@ impl Effect {
                 Selector::MatchingAmong { inner, .. }
                 | Selector::PowerAbove { inner, .. }
                 | Selector::Take { inner, .. }
-                | Selector::TakeRandom { inner, .. } => {
+                | Selector::TakeRandom { inner, .. }
+                | Selector::TakeGreatestPower { inner, .. } => {
                     sel_filter(inner)
                 }
                 Selector::TakeWithSumCap { inner, .. } => sel_filter(inner),
@@ -2284,6 +2290,7 @@ impl Effect {
             Effect::MustBlockTarget { blocker, attacker } => {
                 sel_filter(blocker).or_else(|| sel_filter(attacker))
             }
+            Effect::MustAttackPlayerThisTurn { attacker, .. } => sel_filter(attacker),
             Effect::DealDamageEqualToPower { target, .. } => {
                 sel_filter(target).or_else(|| implicit_any_target_if_bare(target))
             }
@@ -4124,7 +4131,8 @@ impl Effect {
                 Selector::Both(a, b) => sel_find(a, slot).or_else(|| sel_find(b, slot)),
                 Selector::MatchingAmong { inner, .. }
                 | Selector::Take { inner, .. }
-                | Selector::TakeRandom { inner, .. } => {
+                | Selector::TakeRandom { inner, .. }
+                | Selector::TakeGreatestPower { inner, .. } => {
                     sel_find(inner, slot)
                 }
                 Selector::PowerAbove { inner, than } => {
@@ -4493,6 +4501,9 @@ impl Effect {
                 Effect::MustBlockTarget { blocker, attacker } => {
                     sel_find(blocker, slot).or_else(|| sel_find(attacker, slot))
                 }
+                Effect::MustAttackPlayerThisTurn { attacker, defender } => {
+                    sel_find(attacker, slot).or_else(|| sel_find(defender, slot))
+                }
                 // Two-slot effects whose slots carry their own filters:
                 // Crooked Scales picks an opponent's creature and one of
                 // yours, Phyrexian Splicer moves a keyword between two.
@@ -4631,7 +4642,12 @@ impl Effect {
                 // `to: Target(n)` declares slot `n` as a player target — the
                 // recipient's only mention (Risky Move's "that opponent gains
                 // control of that creature").
-                Effect::GainControl { what, to, .. } => sel_find(what, slot).or_else(|| {
+                // A recipient read out of a selector (`ControllerOf(TargetFiltered
+                // {..})`) carries its own filter — Crown of Doom's "target player
+                // other than this artifact's owner".
+                Effect::GainControl { what, to, .. } => sel_find(what, slot)
+                    .or_else(|| to.as_ref().and_then(player_ref_selector).and_then(|s| sel_find(s, slot)))
+                    .or_else(|| {
                     to.as_ref()
                         .is_some_and(|p| matches!(p, PlayerRef::Target(n) if *n == slot))
                         .then_some(&IMPLICIT_OPPONENT_TARGET)

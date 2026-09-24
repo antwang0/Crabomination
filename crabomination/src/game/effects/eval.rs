@@ -3888,7 +3888,9 @@ impl GameState {
             R::InExile => Some(!on_bf && self.exile.iter().any(|c| c.id == cid)),
             R::OnBattlefield => Some(on_bf),
             // A card is never a player, whichever seat the arm asks about.
-            R::OpponentPlayer | R::YouPlayer | R::PlayerAttackedThisTurn => Some(false),
+            R::OpponentPlayer | R::YouPlayer | R::SourceOwnerPlayer | R::PlayerAttackedThisTurn => {
+                Some(false)
+            }
             _ => None,
         }
     }
@@ -3988,6 +3990,8 @@ impl GameState {
                 matches!(target, Target::Player(p) if !self.same_team(*p, controller))
             }
             R::YouPlayer => matches!(target, Target::Player(p) if *p == controller),
+            R::SourceOwnerPlayer => matches!(target, Target::Player(p)
+                if source.and_then(|s| self.find_card_owner(s)) == Some(*p)),
             R::OpponentTallyDiffers { what, by, fewer } => {
                 let Target::Player(p) = target else { return false };
                 if self.same_team(*p, controller) {
@@ -5423,6 +5427,7 @@ impl GameState {
             R::Player
             | R::OpponentPlayer
             | R::YouPlayer
+            | R::SourceOwnerPlayer
             | R::OpponentTallyDiffers { .. }
             | R::PlayerAttackedThisTurn => false,
             // Combinators recurse into the inner walk: the public entry has

@@ -23998,8 +23998,9 @@ impl GameState {
         // The Wandering Emperor may activate at instant speed (any time you
         // could cast an instant — i.e. while holding priority) the turn it
         // entered. Having priority is implied by reaching this action.
-        let flash_loyalty_window = self.battlefield[pos].definition.flash_loyalty
-            && self.battlefield[pos].entered_turn == Some(self.turn_number);
+        let flash_loyalty_window = (self.battlefield[pos].definition.flash_loyalty
+            && self.battlefield[pos].entered_turn == Some(self.turn_number))
+            || self.loyalty_at_instant_speed(p);
         if !flash_loyalty_window && !self.can_cast_sorcery_speed(p) {
             return Err(GameError::SorcerySpeedOnly);
         }
@@ -29351,6 +29352,9 @@ fn static_effect_to_effects(
             | StaticEffect::MatchingArtifactsAreEquipment { .. }
             // Consulted by `discard_card`'s madness lookup.
             | StaticEffect::OwnedCardsHaveMadness { .. }
+            // Consulted at ETB placement / by `activate_loyalty_ability`.
+            | StaticEffect::CreaturesEnterAsCopyOf { .. }
+            | StaticEffect::LoyaltyAbilitiesAtInstantSpeed
             // Recomputed live in `compute_battlefield`, not here.
             | StaticEffect::SelfHasKeywordWhile { .. }
             | StaticEffect::SelfHasKeywordWhilePredicate { .. }

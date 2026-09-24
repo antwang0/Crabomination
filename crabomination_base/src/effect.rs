@@ -513,6 +513,10 @@ pub enum Selector {
     /// Like `Take` but picks `count` entities uniformly at random instead of
     /// the first in resolution order (Capricious Hellraiser's random exile).
     TakeRandom { inner: Box<Selector>, count: Box<Value> },
+    /// Like `Take` but keeps the `count` entities with the greatest power
+    /// (ties keep resolution order) — the auto-pick for "exile up to two
+    /// creature cards" whose total power sizes a token (Stitcher Geralf).
+    TakeGreatestPower { inner: Box<Selector>, count: Box<Value> },
 
     /// Walk `inner` in iteration order, accumulating `value_of_each`
     /// per entity, and take entities greedily while the running sum
@@ -9864,6 +9868,11 @@ pub enum Effect {
     /// CR 509.1c — the two-slot sibling: "`blocker` blocks `attacker` this
     /// turn if able", where the attacker is itself chosen (Feral Contest).
     MustBlockTarget { blocker: Selector, attacker: Selector },
+
+    /// CR 508.1d — "`attacker` attacks `defender` this turn if able" (Dulcet
+    /// Sirens): stamps the player on the creature's `chosen_player` and grants
+    /// `Keyword::MustAttackChosenPlayer` until end of turn.
+    MustAttackPlayerThisTurn { attacker: Selector, defender: Selector },
 
     /// "Destroy `what`. For each permanent put into a graveyard this way, its
     /// controller creates a token" (Terastodon). Victims that survive the

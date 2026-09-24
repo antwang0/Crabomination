@@ -24,6 +24,7 @@ mod player_scope;
 mod reselect;
 mod reveal_cast;
 mod reveal_until;
+mod static_copy;
 mod targeting;
 /// The target enumerator's call-site census — see
 /// [`targeting::call_site_census`]. Re-exported for `bot_ladder` under the
@@ -2000,7 +2001,9 @@ impl GameState {
             .battlefield
             .find_by_id(card_id)
             .and_then(|c| c.definition.enters_as_copy.clone());
-        let Some(spec) = spec else { return false };
+        let Some(spec) = spec else {
+            return self.apply_static_enters_as_copy(card_id, controller, events);
+        };
         // Capture the copier's own printed name before the copy rewrite, for
         // the CR 707.2 name-retention exception (Mockingbird).
         let original_name: &'static str = self
@@ -11627,6 +11630,43 @@ impl GameState {
                     }
                 }
                 Ok(())
+            }
+
+            Effect::MustAttackPlayerThisTurn { attacker, defender } => {
+                // CR 508.1d — the named player is the one it must attack; the
+                // requirement itself is `MustAttackChosenPlayer`'s, for the turn.
+                let Some(q) = self
+                    .resolve_selector(defender, ctx)
+                    .into_iter()
+                    .find_map(|e| match e {
+                        EntityRef::Player(q) => Some(q),
+                        _ => None,
+                    })
+                else {
+                    return Ok(());
+                };
+                let ids: Vec<CardId> = self
+                    .resolve_selector(attacker, ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_permanent_id())
+                    .collect();
+                for cid in &ids {
+                    if let Some(c) = self.battlefield_find_mut(*cid) {
+                        c.chosen_player = Some(q);
+                    }
+                }
+                if ids.is_empty() {
+                    return Ok(());
+                }
+                self.run_effect(
+                    &Effect::GrantKeyword {
+                        what: Selector::ExactObjects(ids),
+                        keyword: crate::card::Keyword::MustAttackChosenPlayer,
+                        duration: crate::effect::Duration::EndOfTurn,
+                    },
+                    ctx,
+                    events,
+                )
             }
 
             Effect::MustBlockTarget { blocker, attacker } => {
@@ -37746,6 +37786,21 @@ impl GameState {
                 }
                 let mut all = self.resolve_selector(inner, ctx);
                 all.shuffle(&mut self.rng.draw());
+                all.truncate(n);
+                all
+            }
+
+            Selector::TakeGreatestPower { inner, count } => {
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                let mut all = self.resolve_selector(inner, ctx);
+                // Stable sort: equal powers keep resolution order.
+                all.sort_by_key(|e| {
+                    std::cmp::Reverse(
+                        e.as_card_id()
+                            .and_then(|id| self.find_card_anywhere(id))
+                            .map_or(i32::MIN, |c| c.definition.power),
+                    )
+                });
                 all.truncate(n);
                 all
             }
