@@ -121,6 +121,7 @@ lists were picked.
 | **Planeswalker Party** (CMM precon) URW | Commodore Guff (**planeswalker**) | URW | 100 | 🟡 all 100 implemented, 7 carry residuals (below) |
 | **Death Toll** (DSC precon) BG | Winter, Cynical Opportunist | BG | 100 | 🟡 all 100 implemented, 6 carry residuals (below) |
 | **Mind Seize** (C13 precon) UBR | Jeleva, Nephalia's Scourge | UBR | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
+| **20 Ways to Win** (SLD) WUBRG | Go-Shintai of Life's Origin | WUBRG | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not
@@ -1178,6 +1179,23 @@ pods beside Sigarda / Teval / Disa (seed 11088, 1,000 games, all decided):
 Breena 25.1 %; census: no card of the four unplayed; 6 and 8 seats and a
 Strixhaven-only pod (seed 11089): 3,000 / 3,000 decided after the fix.
 `--bench` byte-identical.
+
+The **ninety-second** is the Secret Lair **20 Ways to Win** (`20WaysToWin_SLD`)
+— alternate win conditions, Gates and Shrines under Go-Shintai of Life's
+Origin, reached by `--pod-decks 92`. Seventeen cards were missing; Tragic
+Arrogance landed with Silverquill Statement meanwhile, so sixteen are this
+seat's (`cmdr_goshintai.rs`). The primitives:
+`StaticEffect::MatchingEnterUntapped` (Gond Gate — `enters_untapped_override`
+is now the one card-aware check on both enters-tapped paths),
+`Predicate::ControlsSameNamedAtLeast` (Mechanized Production),
+`Value::CardTypesAmongPermanentsAndGraveyard` (Happily Ever After) and
+`Effect::SacrificeAllButOnePerTypeYouChoose` — Tragic Arrogance's caster now
+keeps its own best of each type and leaves each opponent the weakest (it kept
+everyone's best). Residual: **Gond Gate**'s second ability makes any color.
+Pods (release, seed 10251, 1,000 games beside Jeleva / Winter / Faldorn):
+1,000/1,000 decided, no card of the four lists unplayed, Go-Shintai 15.5 %
+(Winter 60.8 % — its end-step reanimation is the strongest engine in these
+fields). `--bench` byte-identical.
 
 The **eighty-ninth** is Commander 2013's **Mind Seize** (`MindSeize_C13`) —
 Grixis spells, theft and wheels under Jeleva, Nephalia's Scourge, reached by

@@ -1945,6 +1945,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Old Stickfingers | Death Toll (DSC) | reveals until one creature card X times, bottoming each run of misses before the next. |
 | 🟡 True-Name Nemesis | Mind Seize (C13) | the chosen player is the engine's most hostile opponent, not the controller's pick. |
 | 🟡 Eye of Doom | Mind Seize (C13) | each player's doom counter goes on the nonland permanent the engine picks. |
+| 🟡 Gond Gate | 20 Ways to Win (SLD) | "any color a Gate you control could produce" makes any color. |
 | 🟡 Chandra, Legacy of Fire | Planeswalker Party (CMM) | the 0 removes a loyalty counter from each planeswalker you control with two or more, not "any number of permanents" chosen. |
 | 🟡 Guff Rewrites History | Planeswalker Party (CMM) | only opponents' permanents are chosen (never your own); the exiled lands go to the bottom in exile order. |
 | 🟡 Leori, Sparktouched Hunter | Planeswalker Party (CMM) | the planeswalker type is the one most common among yours on the battlefield and in hand, not a free choice. |
