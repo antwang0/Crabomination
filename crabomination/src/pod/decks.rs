@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Ten hand-picked commanders plus twenty-eight official preconstructed lists, each a
+//! Ten hand-picked commanders plus thirty official preconstructed lists, each a
 //! 99 of cards this engine implements: legal under CR 903 (100 cards
 //! including the commander, singleton outside basics, every card inside the
 //! commander's CR 903.4 color identity) and Commander-legal per Scryfall's
@@ -8,7 +8,7 @@
 //!
 //! The ten were built by hand because the offline Scryfall cache cannot say
 //! how a precon splits into decks; MTGJSON's deck files can, and the eleventh
-//! through thirty-eighth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
+//! through fortieth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
 //! Win, Tails You Lose, Goblin Storm, Foundations Commander's Wretched Ranks,
 //! Tramplesaurus Rex and Keen Engineering, Commander Legends' Reap the Tides,
 //! Phyrexia: All Will Be One's Corrupting Influence, Zendikar Rising's Sneak
@@ -20,8 +20,9 @@
 //! Horizons 3 Commander's Graveyard Overdrive, Commander 2015's Swell the
 //! Host, Secret Lair's Angels: They're Just Like Us, Commander 2014's Built From
 //! Scratch and Sworn to Darkness, Innistrad: Crimson Vow Commander's Vampiric
-//! Bloodline and Commander 2015's Plunder the Graves and Seize Control) are
-//! taken from one card for card. What all of them keep
+//! Bloodline, Commander 2015's Plunder the Graves and Seize Control,
+//! Commander 2021's Quantum Quandrix and Commander 2015's Call the Spirits)
+//! are taken from one card for card. What all of them keep
 //! from the precon idea is what the pod needs — fixed, legal, varied color
 //! identities, and built to play against each other.
 //! One is a Partner pair (CR 702.124b), one is a **planeswalker**
@@ -1304,4 +1305,32 @@ pub const ADRIX_NEV_MAIN: &[CardFactory] = &[
     // Basics: 11 forest, 10 island
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
     island, island, island, island, island, island, island, island, island, island,
+];
+
+pub const DAXOS_COMMANDERS: &[CardFactory] = &[daxos_the_returned];
+
+/// **Call the Spirits**, the Commander 2015 deck (C15, 2015-11-13), exactly as
+/// MTGJSON's `CallTheSpirits_C15` prints it: 75 nonbasic cards + 11 Plains +
+/// 13 Swamps = 99. Orzhov enchantments under Daxos the Returned, whose
+/// experience counters size his Spirit tokens.
+pub const DAXOS_MAIN: &[CardFactory] = &[
+    oreskos_explorer, karlov_of_the_ghost_council, underworld_coinsmith, burnished_hart,
+    bastion_protector, dawnglare_invoker, ghostblade_eidolon, kor_sanctifiers, monk_idealist,
+    mesa_enchantress, nighthowler, corpse_augur, fate_unraveler, ajanis_chosen, doomwake_giant,
+    dreadbringer_lampads, celestial_ancient, celestial_archon, herald_of_the_host,
+    banshee_of_the_dread_choir, thief_of_blood, treasury_thrull, sandstone_oracle,
+    silent_sentinel, teysa_envoy_of_ghosts, ancient_craving, gild, dawn_to_dusk,
+    righteous_confluence, open_the_vaults, deadly_tempest, death_grasp, sol_ring,
+    wayfarers_bauble, lightning_greaves, orzhov_signet, thought_vessel, crystal_chimes,
+    orzhov_cluestone, phyrexian_reclamation, seal_of_cleansing, grave_peril, banishing_light,
+    cage_of_hands, karmic_justice, vow_of_duty, fallen_ideal, seal_of_doom, vow_of_malice,
+    aura_of_silence, grasp_of_fate, shielded_by_faith, phyrexian_arena, underworld_connections,
+    daxoss_torment, marshals_anthem, dictate_of_heliod, sigil_of_the_empty_throne, black_market,
+    necromancers_covenant, barren_moor, command_tower, evolving_wilds, ghost_quarter,
+    new_benalia, orzhov_basilica, orzhov_guildgate, rogues_passage, scoured_barrens,
+    secluded_steppe, tainted_field, temple_of_the_false_god, terramorphic_expanse, vivid_marsh,
+    vivid_meadow,
+    // Basics: 11 plains, 13 swamp
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];

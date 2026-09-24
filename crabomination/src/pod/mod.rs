@@ -400,6 +400,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ADRIX_NEV_COMMANDERS,
             main: decks::ADRIX_NEV_MAIN,
         },
+        // Fortieth: the thirtieth official list (Call the Spirits, C15) —
+        // Orzhov enchantments under Daxos the Returned. `--seats 40`.
+        PodDeck {
+            name: "Daxos the Returned (WB)",
+            commanders: decks::DAXOS_COMMANDERS,
+            main: decks::DAXOS_MAIN,
+        },
     ]
 }
 
