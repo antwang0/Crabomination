@@ -385,3 +385,30 @@ fn soul_of_eternity_tracks_your_life() {
     g.players[0].life = 7;
     assert_eq!(pt(&g, soul), (7, 7));
 }
+
+/// CR 117.3c — the activator gets priority back, so a bot could stack
+/// Aetherflux Reservoir shots forever (a 6-seat pod held 5,486 of them at the
+/// action cap). A bot seat lets its own shot resolve before firing again.
+#[test]
+fn bot_lets_its_own_aetherflux_shot_resolve_first() {
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    let mut g = pod(3);
+    for s in 0..3 {
+        g.players[s].wants_ui = true;
+    }
+    g.players[0].life = 100_000;
+    g.add_card_to_battlefield(0, catalog::aetherflux_reservoir());
+    let mut bots = [HeuristicBot::new(), HeuristicBot::new(), HeuristicBot::new()];
+    for _ in 0..200 {
+        for (seat, bot) in bots.iter_mut().enumerate() {
+            if let Some(a) = bot.next_action(&g, seat) {
+                let _ = g.perform_action(a);
+            }
+            assert!(g.stack.len() <= 1, "shots stacked: {}", g.stack.len());
+        }
+        if g.is_game_over() {
+            break;
+        }
+    }
+    assert!(g.is_game_over(), "two 50-point shots end a three-seat game");
+}

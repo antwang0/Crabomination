@@ -3005,8 +3005,27 @@ impl Bot for HeuristicBot {
     /// self-play caller adopts it instead of paying for a second execution
     /// of the same action (see [`Bot::next_action_settled`]).
     fn next_action_settled(&mut self, state: &GameState, seat: usize) -> Option<BotStep> {
-        state.with_frozen_layers(|state| self.next_action_inner(state, seat))
+        let step = state.with_frozen_layers(|state| self.next_action_inner(state, seat))?;
+        Some(if stacks_onto_own_activation(state, seat, &step.action) {
+            BotStep::plain(GameAction::PassPriority)
+        } else {
+            step
+        })
     }
+}
+
+/// CR 117.3c — activating an ability hands priority back to its activator, so
+/// a free repeatable ability (Aetherflux Reservoir's pay-50-life shot) could
+/// be stacked forever without one copy resolving. A seat whose own ability
+/// from this source is on top lets it resolve first; it gets priority back
+/// after, and can activate again then.
+fn stacks_onto_own_activation(state: &GameState, seat: usize, action: &GameAction) -> bool {
+    let GameAction::ActivateAbility { card_id, .. } = action else { return false };
+    matches!(
+        state.stack.last(),
+        Some(crate::game::types::StackItem::Trigger { source, controller, .. })
+            if *source == *card_id && *controller == seat
+    )
 }
 
 impl HeuristicBot {

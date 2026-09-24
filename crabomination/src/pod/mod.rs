@@ -1286,6 +1286,9 @@ mod tests {
     #[test]
     fn cr_903_seeded_pod_outcomes_match_the_committed_table() {
         // (seed, winner, turns, actions)
+        // Re-blessed 2026-09-24 (CR 117.3c, a bot seat lets its own ability
+        // from a source resolve before activating it again): seed 43
+        // 2394→2395 actions, same winner and turns; the other two unmoved.
         // Re-blessed 2026-09-24 (CR 119.3, "you gain life equal to the life
         // lost this way" gains the table's total): Judith's Gray Merchant and
         // Kokusho drain three opponents, so seed 0xC0FFEE is 52→44 turns /
@@ -1418,7 +1421,7 @@ mod tests {
         // a trigger that was is countered. Seeds 43 and 4242: same winners.
         const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
             (0xC0FFEE, Some(1), 44, 1829),
-            (43, Some(3), 57, 2394),
+            (43, Some(3), 57, 2395),
             (4242, Some(2), 53, 2245),
         ];
         let decks = rofellos_pod(4);
