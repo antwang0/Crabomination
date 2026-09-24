@@ -4748,6 +4748,16 @@ pub enum Effect {
     /// controls can't attack you or planeswalkers you control until your
     /// next turn." The creature is the taker's greatest-power one.
     EachPlayerMayCounterForPeace { counters: u32 },
+    /// CR 901.9 — `who` rolls the planar die as an effect (Fractured
+    /// Powerstone): no surcharge, no timing gate. A blank does nothing, chaos
+    /// ensues, or `who` planeswalks. Outside Planechase only "whenever chaos
+    /// ensues" triggers and the roll itself can matter.
+    RollPlanarDie { who: PlayerRef },
+    /// CR 701.31 — `who` planeswalks (Path of the Schemer's will of the
+    /// planeswalkers).
+    Planeswalk { who: PlayerRef },
+    /// CR 309.6 / 901.9b — chaos ensues for `who` (Path of the Schemer).
+    ChaosEnsues { who: PlayerRef },
     /// CR 701.60 — *suspect* each creature `what` resolves to: set its
     /// `suspected` flag so it gains menace and can't block (injected as
     /// computed keywords). Repeat Offender, Reasonable Doubt.

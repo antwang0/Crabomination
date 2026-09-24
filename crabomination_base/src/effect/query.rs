@@ -2066,6 +2066,9 @@ impl Effect {
             Effect::PreventAllCombatDamageToPlayerThisTurn { .. }
             | Effect::PreventAllDamageToPlayerThisTurn { .. }
             | Effect::EachPlayerMayCounterForPeace { .. } => false,
+            Effect::RollPlanarDie { who } | Effect::Planeswalk { who } | Effect::ChaosEnsues { who } => {
+                player_has_target(who)
+            }
             Effect::SacrificeSourceUnlessPayManaValue | Effect::SacrificeSourceUnlessPay { .. } => false,
             Effect::PreventAllCombatDamageInvolving { target } => sel_has_target(target),
             Effect::PreventCombatDamageToTargetThisTurn { target } => sel_has_target(target),

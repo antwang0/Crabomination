@@ -29,6 +29,7 @@ mod life_loss_grants;
 mod spell_damage;
 mod static_copy;
 mod table_choices;
+mod planar;
 mod politics;
 mod targeting;
 /// The target enumerator's call-site census — see
@@ -32211,6 +32212,27 @@ impl GameState {
                     if let EntityRef::Player(p) = e {
                         self.players[p].attack_lure = Some((src, turn));
                     }
+                }
+                Ok(())
+            }
+
+            Effect::RollPlanarDie { who } => {
+                for p in self.resolve_players(who, ctx) {
+                    self.roll_planar_die_for_effect(p, events);
+                }
+                Ok(())
+            }
+
+            Effect::Planeswalk { who } => {
+                for p in self.resolve_players(who, ctx) {
+                    self.planeswalk(p);
+                }
+                Ok(())
+            }
+
+            Effect::ChaosEnsues { who } => {
+                for p in self.resolve_players(who, ctx) {
+                    self.chaos_ensues(p);
                 }
                 Ok(())
             }

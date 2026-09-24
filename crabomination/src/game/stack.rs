@@ -1546,14 +1546,7 @@ impl GameState {
         self.players[seat].planar_die_rolls_this_turn = surcharge.saturating_add(1);
         // CR 901.9d — the planar die fires "whenever you roll dice" triggers
         // but has no numeric result, so `last_die_roll` is left alone.
-        let face = match self.decider.decide(&crate::decision::Decision::DieRoll {
-            player: seat,
-            sides: 6,
-        }) {
-            crate::decision::DecisionAnswer::DieRoll(1) => PlanarFace::Planeswalker,
-            crate::decision::DecisionAnswer::DieRoll(2) => PlanarFace::Chaos,
-            _ => PlanarFace::Blank,
-        };
+        let face = self.planar_die_face(seat);
         // CR 901.9d — no numeric result, so the reported high is 0.
         let events = vec![GameEvent::DiceRolled { player: seat, count: 1, high: 0 }];
         match face {

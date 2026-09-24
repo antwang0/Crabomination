@@ -662,3 +662,34 @@ fn cr_608_2_table_choices_spend_their_answer_log() {
         drain_stack(&mut g);
     }
 }
+
+/// CR 901.9 / 701.31 — the planar die rolled as an effect (Fractured
+/// Powerstone) planeswalks on its Planeswalker face, and `Effect::Planeswalk`
+/// turns the next plane up without a roll.
+#[test]
+fn cr_901_9_an_effect_rolls_the_planar_die_and_planeswalks() {
+    use crabomination::card::{CardDefinition, CardType};
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    use crabomination::effect::{Effect, PlayerRef};
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.seat_planar_deck(0, vec![catalog::naar_isle(), catalog::the_hippodrome()]);
+    g.set_starting_plane(0);
+    let plane = |g: &GameState| g.face_up_planes().first().and_then(|&id| g.find_card_anywhere(id)).map(|c| c.definition.name);
+    assert_eq!(plane(&g), Some("Naar Isle"));
+    let spell = |effect| CardDefinition { name: "Planar Test", card_types: vec![CardType::Sorcery], effect, ..Default::default() };
+    let roll = g.add_card_to_hand(0, spell(Effect::RollPlanarDie { who: PlayerRef::You }));
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::DieRoll(1)]));
+    g.perform_action(GameAction::CastSpell { card_id: roll, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(plane(&g), Some("The Hippodrome"), "the Planeswalker face planeswalked");
+    let walk = g.add_card_to_hand(0, spell(Effect::Planeswalk { who: PlayerRef::You }));
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: walk, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(plane(&g), Some("Naar Isle"));
+}

@@ -30077,6 +30077,8 @@ fn static_effect_to_effects(
             // Hand-zone grant, consulted by `landcycle_card` / the view.
             | StaticEffect::GrantTypecyclingToHandCards { .. }
             | StaticEffect::GrantCyclingToYourHandCards { .. }
+            // Read at `planar_die_face`.
+            | StaticEffect::ExtraPlanarDie
             // CR 605.1b — resolved at the mana-ability fast path.
             | StaticEffect::ExtraManaOnLandTap { .. }
             // ETB-counter replacement, read at `chosen_type_etb_counter_specs`.
