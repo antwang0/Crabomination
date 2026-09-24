@@ -798,6 +798,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ZINNIA_COMMANDERS,
             main: decks::ZINNIA_MAIN,
         },
+        // Ninety-fifth: the eighty-fifth official list (Reign of Dragons,
+        // FDC) — mono-red Dragons under Lathliss. `--pod-decks 95`.
+        PodDeck {
+            name: "Lathliss, Dragon Queen (R)",
+            commanders: decks::LATHLISS_COMMANDERS,
+            main: decks::LATHLISS_MAIN,
+        },
     ]
 }
 

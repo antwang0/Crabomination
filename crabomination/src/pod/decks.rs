@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Ten hand-picked commanders plus seventy-eight official preconstructed lists, each a
+//! Ten hand-picked commanders plus eighty-five official preconstructed lists, each a
 //! 99 of cards this engine implements: legal under CR 903 (100 cards
 //! including the commander, singleton outside basics, every card inside the
 //! commander's CR 903.4 color identity) and Commander-legal per Scryfall's
@@ -8,7 +8,7 @@
 //!
 //! The ten were built by hand because the offline Scryfall cache cannot say
 //! how a precon splits into decks; MTGJSON's deck files can, and the eleventh
-//! through eighty-eighth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
+//! through ninety-fifth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
 //! Win, Tails You Lose, Goblin Storm, Foundations Commander's Wretched Ranks,
 //! Tramplesaurus Rex and Keen Engineering, Commander Legends' Reap the Tides,
 //! Phyrexia: All Will Be One's Corrupting Influence, Zendikar Rising's Sneak
@@ -48,9 +48,12 @@
 //! Commander's Mishra's Burnished Banner, March of the Machine Commander's
 //! Tinker Time, Dominaria United Commander's Legends' Legacy, Secrets of
 //! Strixhaven Commander's Witherbloom Pestilence, the Starter Commander Decks'
-//! Draconic Destruction and Commander 2013's Nature of the Beast) are taken
-//! from
-//! one card for card. What all of them keep
+//! Draconic Destruction, Commander 2013's Nature of the Beast and Mind
+//! Seize, Commander 2021's Silverquill Statement, Commander Masters'
+//! Planeswalker Party, Secret Lair's 20 Ways to Win, Murders at Karlov Manor
+//! Commander's Blame Game, Bloomburrow Commander's Family Matters and
+//! Foundations Commander's Reign of Dragons) are taken from one card for
+//! card. What all of them keep
 //! from the precon idea is what the pod needs — fixed, legal, varied color
 //! identities, and built to play against each other.
 //! One is a Partner pair (CR 702.124b), one is a **planeswalker**
@@ -2923,4 +2926,32 @@ pub const ZINNIA_MAIN: &[CardFactory] = &[
     // Basics: 5 plains, 4 island, 4 mountain
     plains, plains, plains, plains, plains, island, island, island, island, mountain, mountain,
     mountain, mountain,
+];
+
+pub const LATHLISS_COMMANDERS: &[CardFactory] = &[lathliss_dragon_queen];
+
+/// **Reign of Dragons**, the Foundations Commander deck (FDC, 2024-11-15),
+/// exactly as MTGJSON's `ReignOfDragons_FDC` prints it: 67 nonbasic
+/// cards + 32 Mountains = 99. Mono-red Dragons under Lathliss, Dragon Queen.
+pub const LATHLISS_MAIN: &[CardFactory] = &[
+    atsushi_the_blazing_sky, blasphemous_act, chain_reaction, chandras_ignition, chaos_warp,
+    count_on_luck, crucible_of_fire, cursed_mirror, dragon_tempest, dragonhawk_fates_tempest,
+    dragonmaster_outcast, drakuseth_maw_of_flames, the_elder_dragon_war,
+    goddric_cloaked_reveler, goldlust_triad, hellkite_charger, hit_the_mother_lode,
+    leyline_tyrant, magmaquake, minion_of_the_mighty, nogi_draco_zealot, orb_of_dragonkind,
+    outpost_siege, parapet_thrasher, sarkhan_dragon_ascendant, scourge_of_the_throne,
+    scourge_of_valkas, shivan_devastator, spit_flame, taurean_mauler, terror_of_mount_velus,
+    thunderbreak_regent, thundermane_dragon, tyrants_familiar, utvara_hellkite, warstorm_surge,
+    basilisk_collar, dragons_hoard, bonders_enclave, haven_of_the_spirit_dragon,
+    spinerock_knoll, war_room, abrade, anger, bitter_reunion, breaching_dragonstorm,
+    breath_weapon, carnelian_orb_of_dragonkind, dragonlords_servant, dragonspeaker_shaman,
+    firespitter_whelp, lightning_bolt, mana_geyser, rapacious_dragon, skyline_despot,
+    thrill_of_possibility, unexpected_windfall, arcane_signet, commanders_sphere,
+    dragonstorm_globe, fire_diamond, hazorets_monument, heralds_horn, sol_ring, swiftfoot_boots,
+    forgotten_cave, temple_of_the_false_god,
+    // Basics: 32 mountain
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain,
 ];
