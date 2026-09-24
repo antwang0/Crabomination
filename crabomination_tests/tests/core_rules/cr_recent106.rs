@@ -629,3 +629,35 @@ fn cr_205_4e_a_legendary_sorcery_needs_a_legendary_creature_or_planeswalker() {
     cast(&mut g, first).expect("a legendary creature lets it be cast");
     drain_stack(&mut g);
 }
+
+/// CR 608.2 — once every seat has answered a table choice, its replay log is
+/// spent. Dredge the Mire and Explosion of Riches left their answers behind,
+/// which a strict debug pod caught (seed 9291). Nextest runs each test in its
+/// own process, so the strict leak check (read once) is switched on here.
+#[test]
+fn cr_608_2_table_choices_spend_their_answer_log() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    // SAFETY: set before any thread reads the environment.
+    unsafe { std::env::set_var("CRAB_ANSWER_LOG", "strict") };
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    for seat in 0..3 {
+        g.add_card_to_library(seat, catalog::plains());
+        g.add_card_to_graveyard(seat, catalog::grizzly_bears());
+    }
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Bool(true)]));
+    for spell in [catalog::explosion_of_riches(), catalog::dredge_the_mire()] {
+        let id = g.add_card_to_hand(0, spell);
+        for c in [crabomination::mana::Color::Blue, crabomination::mana::Color::Black, crabomination::mana::Color::Red] {
+            g.players[0].mana_pool.add(c, 10);
+        }
+        g.players[0].mana_pool.add_colorless(10);
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::CastSpell {
+            card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+        })
+        .expect("cast");
+        drain_stack(&mut g);
+    }
+}
