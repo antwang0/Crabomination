@@ -6819,7 +6819,8 @@ impl GameState {
         if self.players[seat].token_copy_replacement_used_this_turn {
             return None;
         }
-        self.battlefield
+        let aura = self
+            .battlefield
             .iter()
             .filter(|c| c.controller == seat)
             .find(|c| {
@@ -6827,7 +6828,29 @@ impl GameState {
                     matches!(sa.effect, StaticEffect::FirstTokensEachTurnBecomeCopiesOfAttached)
                 })
             })
-            .and_then(|c| c.attached_to)
+            .and_then(|c| c.attached_to);
+        if aura.is_some() || self.active_player_idx != seat {
+            return aura;
+        }
+        // Esix — on its controller's turn, a creature other than Esix: the
+        // engine picks the greatest mana value, on anyone's side.
+        let esix = self.battlefield.iter().find(|c| {
+            c.controller == seat
+                && c.definition.static_abilities.iter().any(|sa| {
+                    matches!(
+                        self.active_static(&sa.effect, c),
+                        Some(StaticEffect::FirstTokensOnYourTurnBecomeCopiesOfChosen)
+                    )
+                })
+        })?;
+        self.battlefield
+            .iter()
+            .filter(|c| c.id != esix.id && c.definition.is_creature())
+            .fold(None::<&crate::card::CardInstance>, |best, c| match best {
+                Some(b) if b.definition.cost.cmc() >= c.definition.cost.cmc() => Some(b),
+                _ => Some(c),
+            })
+            .map(|c| c.id)
     }
 
     /// Number of `StaticEffect::DoubleCounters` permanents `seat` controls
@@ -28989,6 +29012,7 @@ fn static_effect_to_effects(
             // via `GameState::token_doublers_for(seat)`; no layer effect.
             | StaticEffect::DoubleTokens
             | StaticEffect::FirstTokensEachTurnBecomeCopiesOfAttached
+            | StaticEffect::FirstTokensOnYourTurnBecomeCopiesOfChosen
             // DoubleCounters / ExtraPlusOneCounters — read at counter-add
             // resolution via `GameState::scaled_counter_count`; no layer effect.
             | StaticEffect::DoubleCounters

@@ -1195,6 +1195,14 @@ pub enum StaticEffect {
     /// (Moonlit Meditation). A once-per-turn CR 614 replacement on the token
     /// batch, keyed off the Aura's host; declines when the Aura is unattached.
     FirstTokensEachTurnBecomeCopiesOfAttached,
+    /// "The first time you would create one or more tokens during each of
+    /// your turns, you may instead choose a creature other than [this] and
+    /// create that many tokens that are copies of that creature" (Esix,
+    /// Fractal Bloom). The same once-per-turn CR 614 replacement as
+    /// `FirstTokensEachTurnBecomeCopiesOfAttached`, on its controller's turn
+    /// only; the engine picks the creature of greatest mana value (any
+    /// controller's) and declines when there is none.
+    FirstTokensOnYourTurnBecomeCopiesOfChosen,
     /// "If one or more counters would be put on a permanent you control,
     /// twice that many of those counters are put on that permanent instead."
     /// The counter-half of CR 614.16, matching Doubling Season / Branching

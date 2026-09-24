@@ -19,6 +19,7 @@ mod cmdr_daretti;
 mod cmdr_ob_nixilis;
 mod cmdr_strefan;
 mod cmdr_meren;
+mod cmdr_quandrix;
 mod dsk2;
 mod dsk_rooms;
 mod recent_118_132;
