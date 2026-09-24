@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Ten hand-picked commanders plus seventy-one official preconstructed lists, each a
+//! Ten hand-picked commanders plus seventy-two official preconstructed lists, each a
 //! 99 of cards this engine implements: legal under CR 903 (100 cards
 //! including the commander, singleton outside basics, every card inside the
 //! commander's CR 903.4 color identity) and Commander-legal per Scryfall's
@@ -8,7 +8,7 @@
 //!
 //! The ten were built by hand because the offline Scryfall cache cannot say
 //! how a precon splits into decks; MTGJSON's deck files can, and the eleventh
-//! through eighty-first (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
+//! through eighty-second (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
 //! Win, Tails You Lose, Goblin Storm, Foundations Commander's Wretched Ranks,
 //! Tramplesaurus Rex and Keen Engineering, Commander Legends' Reap the Tides,
 //! Phyrexia: All Will Be One's Corrupting Influence, Zendikar Rising's Sneak
@@ -43,8 +43,8 @@
 //! Call for Backup, Bloomburrow Commander's Squirreled Away, Commander
 //! 2018's Exquisite Invention, Duskmourn Commander's Death Toll, Commander
 //! 2021's Witherbloom Witchcraft, Edge of Eternities Commander's World
-//! Shaper, Commander 2018's Nature's Vengeance and Commander 2013's Evasive
-//! Maneuvers) are taken
+//! Shaper, Commander 2018's Nature's Vengeance, Commander 2013's Evasive
+//! Maneuvers and Bloomburrow Commander's Peace Offering) are taken
 //! from
 //! one card for card. What all of them keep
 //! from the precon idea is what the pod needs — fixed, legal, varied color
@@ -2534,4 +2534,35 @@ pub const DEREVI_MAIN: &[CardFactory] = &[
     // Basics: 7 plains, 7 island, 6 forest
     forest, forest, forest, forest, forest, forest, island, island, island, island, island, island,
     island, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const BUMBLEFLOWER_COMMANDERS: &[CardFactory] = &[ms_bumbleflower];
+
+/// **Peace Offering**, the Bloomburrow Commander deck (BLC, 2024-08-02),
+/// exactly as MTGJSON's `PeaceOffering_BLC` prints it: 87 nonbasic
+/// cards + 4 Plains + 4 Islands + 4 Forests = 99. Bant group hug and politics
+/// under Ms. Bumbleflower.
+pub const BUMBLEFLOWER_MAIN: &[CardFactory] = &[
+    mr_foxglove, tamiyo_field_researcher, tenuous_truce, loran_of_the_third_path,
+    steelburr_champion, tempt_with_bunnies, perch_protection, sunscorch_regent,
+    promise_of_loyalty, hoofprints_of_the_stag, mangara_the_diplomat, realm_cloaked_giant,
+    sphinx_of_enlightenment, forgotten_ancient, bloodroot_apothecary, communal_brewing,
+    managorger_hydra, rishkar_peema_renegade, rites_of_flourishing, tempt_with_discovery,
+    kalonian_hydra, faeburrow_elder, exotic_orchard, simic_ascendancy, ghirapur_orrery,
+    psychosis_crawler, adarkar_wastes, temple_of_enlightenment, seachrome_coast,
+    glacial_fortress, hinterland_harbor, razorverge_thicket, flooded_grove, skycloud_expanse,
+    canopy_vista, prairie_stream, brushland, temple_of_mystery, yavimaya_coast,
+    overflowing_basin, sungrass_prairie, sunpetal_grove, triskaidekaphile, octomancer,
+    twenty_toed_toad, intellectual_offering, illusionists_gambit, body_of_knowledge,
+    chasm_skulker, perplexing_test, jolrael_mwonvuli_recluse, fishers_talent,
+    selvala_explorer_returned, kwain_itinerant_meddler, coveted_jewel, temple_of_plenty,
+    generous_gift, swords_to_plowshares, secret_rendezvous, baird_steward_of_argive,
+    an_offer_you_cant_refuse, wizard_class, cultivate, farseek, broken_wings, spore_frog,
+    wear_down, peerless_recycling, coiling_oracle, riot_control, martial_impetus, jolly_gerbils,
+    long_rivers_pull, thought_vessel, arcane_signet, swiftfoot_boots, fellwar_stone, sol_ring,
+    mind_stone, thriving_heath, thriving_isle, thriving_grove, terramorphic_expanse,
+    command_tower, evolving_wilds, reliquary_tower, seaside_citadel,
+    // Basics: 4 plains, 4 island, 4 forest
+    plains, plains, plains, plains, island, island, island, island, forest, forest, forest,
+    forest,
 ];

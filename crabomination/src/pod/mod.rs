@@ -699,6 +699,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::DEREVI_COMMANDERS,
             main: decks::DEREVI_MAIN,
         },
+        // Eighty-second: the seventy-second official list (Peace Offering, BLC)
+        // — Bant group hug under Ms. Bumbleflower. `--pod-decks 82`.
+        PodDeck {
+            name: "Ms. Bumbleflower (GWU)",
+            commanders: decks::BUMBLEFLOWER_COMMANDERS,
+            main: decks::BUMBLEFLOWER_MAIN,
+        },
     ]
 }
 
