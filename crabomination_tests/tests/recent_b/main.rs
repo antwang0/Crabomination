@@ -28,6 +28,7 @@ mod cmdr_hashaton;
 mod cmdr_obuun;
 mod cmdr_kynaios;
 mod cmdr_rinseri;
+mod cmdr_brimaz;
 mod cmdr_emmara;
 mod cmdr_teferi;
 mod cmdr_lorehold;
