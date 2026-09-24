@@ -3298,3 +3298,33 @@ pub const FIRKRAAG_MAIN: &[CardFactory] = &[
     mocking_doppelganger, bothersome_quasit, death_kiss, loot_dispute, spectacular_showdown,
     angler_turtle,
 ];
+
+pub const ZHULODOK_COMMANDERS: &[CardFactory] = &[zhulodok_void_gorger];
+
+/// **Eldrazi Unbound**, the Commander Masters colorless deck (CMM,
+/// 2023-08-04), exactly as MTGJSON's `EldraziUnbound_CMM` prints it: 84
+/// nonbasic cards + 15 Wastess = 99. Colorless Eldrazi ramp under Zhulodok,
+/// Void Gorger.
+pub const ZHULODOK_MAIN: &[CardFactory] = &[
+    omarthis_ghostfire_initiate, kozilek_the_great_distortion, abstruse_archaic,
+    calamity_of_the_titans, desecrate_reality, flayer_of_loyalties, rise_of_the_eldrazi,
+    skittering_cicada, ugins_mastery, darksteel_monolith, all_is_dust, endbringer, endless_one,
+    it_that_betrays, matter_reshaper, oblivion_sower, ugin_the_ineffable, ancient_stone_idol,
+    duplicant, endless_atlas, forsaken_monument, hangarback_walker, investigators_journal,
+    kaldra_compleat, mazemind_tome, metalwork_colossus, mirage_mirror, myriad_construct,
+    mystic_forge, perilous_vault, phyrexian_triniform, solemn_simulacrum, soul_of_new_phyrexia,
+    steel_hellkite, stonecoil_serpent, transmogrifying_wand, arch_of_orazca, blast_zone,
+    bonders_enclave, geier_reach_sanitarium, mirrorpool, ruins_of_oran_rief, scavenger_grounds,
+    sea_gate_wreckage, shrine_of_the_forsaken_gods, tyrite_sanctum, war_room, burnished_hart,
+    geode_golem, lightning_greaves, meteor_golem, sol_ring, thought_vessel, thran_dynamo,
+    unstable_obelisk, reliquary_tower, rogues_passage, artisan_of_kozilek, bane_of_bala_ged,
+    not_of_this_world, spatial_contortion, titans_presence, warping_wail, crashing_drawbridge,
+    dreamstone_hedron, everflowing_chalice, fireshrieker, hedron_archive, mind_stone,
+    ornithopter_of_paradise, palladium_myr, scaretiller, suspicious_bookcase, worn_powerstone,
+    arcane_lighthouse, eldrazi_temple, forge_of_heroes, guildless_commons, mage_ring_network,
+    temple_of_the_false_god, tomb_of_the_spirit_dragon, urzas_mine, urzas_power_plant,
+    urzas_tower,
+    // Basics: 15 wastes
+    wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes,
+    wastes, wastes, wastes, wastes,
+];

@@ -898,6 +898,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::FIRKRAAG_COMMANDERS,
             main: decks::FIRKRAAG_MAIN,
         },
+        // Hundred-and-eighth: the ninety-eighth official list (Eldrazi
+        // Unbound, CMM) — colorless Eldrazi ramp under Zhulodok, Void Gorger.
+        // `--pod-decks 108`.
+        PodDeck {
+            name: "Zhulodok, Void Gorger (C)",
+            commanders: decks::ZHULODOK_COMMANDERS,
+            main: decks::ZHULODOK_MAIN,
+        },
     ]
 }
 
