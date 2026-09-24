@@ -868,8 +868,14 @@ impl GameState {
                         || self.cross_slot_targets_ok(req, &Target::Permanent(c.id), &filled))
                     && self.check_target_legality(&Target::Permanent(c.id), controller).is_ok()
             };
+            // CR 115.3 — one "up to N target cards" names N different
+            // cards: a card an earlier slot already took is not a candidate
+            // (Ever After filled both slots with one creature card, and the
+            // cast was rejected every time).
             let is_legal_gy = |c: &CardInstance| -> bool {
-                self.requirement_on_graveyard_card(req, c, controller, source)
+                slot_0 != Some(Target::Permanent(c.id))
+                    && !additional.contains(&Target::Permanent(c.id))
+                    && self.requirement_on_graveyard_card(req, c, controller, source)
                     && (!cross
                         || self.cross_slot_targets_ok(req, &Target::Permanent(c.id), &filled))
                     && self.check_target_legality(&Target::Permanent(c.id), controller).is_ok()

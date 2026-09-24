@@ -206,3 +206,16 @@ fn abzan_ascendancy_and_ever_after() {
     assert!(g.battlefield_find(bear).is_some());
     assert_eq!(g.players[0].library.last().map(|c| c.id), Some(ea), "bottom of its owner's library");
 }
+
+/// CR 115.3 — "up to two target creature cards": the bot names two
+/// different cards, or one when only one exists (it used to fill both slots
+/// with the same card, and the cast was always rejected).
+#[test]
+fn ever_after_names_distinct_cards() {
+    let mut g = pod(2);
+    let wurm = g.add_card_to_graveyard(0, catalog::craw_wurm());
+    let ea = catalog::ever_after();
+    let (t, extra) = g.auto_targets_for_effect_all_slots(&ea.effect, 0, None);
+    assert_eq!(t, Some(Target::Permanent(wurm)));
+    assert!(extra.is_empty(), "{extra:?}");
+}
