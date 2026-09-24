@@ -33,6 +33,7 @@ mod cmdr_brightpalm;
 mod cmdr_hearthhull;
 mod cmdr_bumbleflower;
 mod cmdr_marath;
+mod cmdr_lathliss;
 mod cmdr_emmara;
 mod cmdr_teferi;
 mod cmdr_lorehold;
