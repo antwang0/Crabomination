@@ -21461,6 +21461,8 @@ impl GameState {
                 };
                 for id in picked {
                     self.move_card_to(id, to, ctx, events);
+                    // `Selector::LastMoved` — "those cards" (Ghouls' Night Out).
+                    self.scratch.last_moved_cards.push(id);
                 }
                 Ok(())
             }
