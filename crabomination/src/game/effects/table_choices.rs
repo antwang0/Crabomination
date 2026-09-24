@@ -1,7 +1,7 @@
 //! Multiplayer table effects where each player makes their own choice:
 //! Archfiend of Depravity, Dredge the Mire, Explosion of Riches, Scythe
 //! Specter. Each asks every seat first (log-replayed, so a prompting seat can
-//! suspend) and acts after the last answer.
+//! suspend), clears the answer log, then acts.
 
 use crate::card::{CardId, SelectionRequirement};
 use crate::decision::{OptionalKind, PickValue};
@@ -90,6 +90,7 @@ impl GameState {
             };
             picks.extend(ids.first().copied());
         }
+        self.clear_answer_log();
         if picks.is_empty() {
             return Ok(());
         }
@@ -126,6 +127,7 @@ impl GameState {
                 drawers.push(q);
             }
         }
+        self.clear_answer_log();
         for q in drawers {
             if self.draw_one_or_deck(q, events) {
                 self.run_effect(per_draw, ctx, events)?;
