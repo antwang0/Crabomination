@@ -9820,8 +9820,22 @@ fn pick_removal_ping(state: &GameState, seat: usize) -> Option<GameAction> {
             if !matches!(to, Selector::Target(_)) {
                 continue;
             }
+            // A repeatable life-paid shot (Aetherflux Reservoir) is lethal too
+            // when the seat can pay for every shot the kill takes and keep a
+            // margin: the loop resolves one shot at a time (CR 117.3c).
+            let life_cost = ab.life_cost as i32;
+            let affordable_kill = |life: i32| {
+                *n > 0
+                    && life_cost > 0
+                    && !ab.tap_cost
+                    && state.players[seat].life - life_cost * ((life + *n - 1) / *n) > 10
+            };
             for opp in 0..state.players.len() {
-                if state.same_team(opp, seat) || state.players[opp].life > *n {
+                if state.same_team(opp, seat) || !state.players[opp].is_alive() {
+                    continue;
+                }
+                let life = state.players[opp].life;
+                if life > *n && !affordable_kill(life) {
                     continue;
                 }
                 let action = GameAction::ActivateAbility {
@@ -9858,6 +9872,17 @@ fn pick_removal_ping(state: &GameState, seat: usize) -> Option<GameAction> {
             }
             for (foe, foe_pow) in &foes {
                 let Some(cp) = state.computed_permanent(*foe) else { continue };
+                // Damage never destroys an indestructible creature (CR 702.12b):
+                // aiming lethal damage at one is a wasted activation, and a
+                // repeatable one (Aetherflux Reservoir at Zetalpa) spun a pod
+                // to the action cap.
+                if cp.keywords().contains(&crate::card::Keyword::Indestructible)
+                    || state
+                        .battlefield_find(*foe)
+                        .is_some_and(|c| c.counter_count(crate::card::CounterType::Indestructible) > 0)
+                {
+                    continue;
+                }
                 // Remaining toughness after damage already marked this turn
                 // (CR 120.6) — a ping that wouldn't kill a fresh creature can
                 // still finish one that's been chipped in combat.

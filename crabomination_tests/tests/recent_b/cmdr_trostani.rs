@@ -429,3 +429,21 @@ fn a_token_batch_stops_at_the_board_bound() {
     let n = named(&g, 0, "Pegasus").len();
     assert_eq!(n, crabomination::recommend::MAX_BATTLEFIELD + 1);
 }
+
+/// CR 702.12b — damage never destroys an indestructible creature, so the bot
+/// aims Aetherflux Reservoir at the last opponent's face when it can afford
+/// every shot the kill takes (a pod spun 3,512 shots into Zetalpa).
+#[test]
+fn bot_shoots_face_not_an_indestructible_creature() {
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    let mut g = pod(2);
+    g.players[0].life = 1_000;
+    g.players[1].life = 120;
+    g.add_card_to_battlefield(0, catalog::aetherflux_reservoir());
+    g.add_card_to_battlefield(1, catalog::darksteel_colossus());
+    let a = HeuristicBot::new().next_action(&g, 0);
+    assert!(
+        matches!(a, Some(GameAction::ActivateAbility { target: Some(Target::Player(1)), .. })),
+        "{a:?}"
+    );
+}
