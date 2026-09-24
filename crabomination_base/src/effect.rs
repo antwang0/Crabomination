@@ -9884,6 +9884,10 @@ pub enum Effect {
     /// emits `GameEvent::DamagePrevented`, which
     /// `EventKind::DamageToPlayerPrevented` reads.
     PreventAllDamageToPlayerThisTurn { who: PlayerRef },
+    /// CR 508.1d — "During `who`'s next turn, creatures that player controls
+    /// attack [this] if able" (Gideon Jura's +2). Sets each resolved player's
+    /// `attack_lure` to the source; the declaration enforces it.
+    LureCreaturesToSourceNextTurn { who: Selector },
 
     /// CR 701.16 — "[source's controller] sacrifices [the source] unless they
     /// pay {X}, where X is its mana value." The pay-or-sacrifice threat used by

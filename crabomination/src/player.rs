@@ -253,6 +253,12 @@ pub struct PlayerCold {
     /// their pool. Empty in every non-drafted game.
     #[serde(default)]
     pub draft_notes: crate::draft::DraftNotes,
+    /// CR 508.1d — "during [this player]'s next turn, creatures they control
+    /// attack [permanent] if able" (Gideon Jura's +2): the permanent and the
+    /// turn number the lure was set on. Read by `GameState::attack_lure_of`,
+    /// cleared at the end of this player's next turn.
+    #[serde(default)]
+    pub attack_lure: Option<(crate::card::CardId, u32)>,
 }
 
 /// A seat's mutable state. Reached only through [`Player`], which owns it

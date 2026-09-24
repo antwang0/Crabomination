@@ -124,6 +124,8 @@ pub mod affordances;
 pub mod as_enters;
 #[doc(hidden)]
 pub mod combat;
+// CR 508.1d — "attack [this] if able" during a player's next turn.
+mod attack_lure;
 // CR 106.7 — "could produce" mana.
 mod could_produce;
 // CR 508.4 — put onto the battlefield attacking, never declared.

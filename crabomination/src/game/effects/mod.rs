@@ -32184,6 +32184,17 @@ impl GameState {
                 self.each_player_may_counter_for_peace(*counters, effect, ctx, events)
             }
 
+            Effect::LureCreaturesToSourceNextTurn { who } => {
+                let Some(src) = ctx.source else { return Ok(()) };
+                let turn = self.turn_number;
+                for e in self.resolve_selector(who, ctx) {
+                    if let EntityRef::Player(p) = e {
+                        self.players[p].attack_lure = Some((src, turn));
+                    }
+                }
+                Ok(())
+            }
+
             Effect::PreventAllDamageToPlayerThisTurn { who } => {
                 for p in self.resolve_players(who, ctx) {
                     self.players[p].all_damage_prevented_this_turn = true;

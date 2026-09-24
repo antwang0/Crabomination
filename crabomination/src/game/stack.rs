@@ -4945,6 +4945,7 @@ impl GameState {
         // turn is starting".
         let ended_turn = self.turn_number;
         let ended_active = active;
+        self.expire_attack_lure(ended_active, ended_turn);
         // CR 614 — "If an opponent would begin an extra turn, that player
         // skips that turn instead" (Trouble in Pairs). A replacement on
         // *beginning* the turn, so the charge is still spent: without that,

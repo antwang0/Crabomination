@@ -1205,6 +1205,7 @@ impl GameState {
         let (computed, attack_requirement) = self.with_frozen_layers(|g| {
             let requirement = has_legal_target
                 && (g.battlefield.iter().any(|c| c.cold_any(|k| !k.goaded_by.is_empty()))
+                    || g.attack_lure_of(p).is_some()
                     || g.board_keyword_in_scope(&[
                         Keyword::MustAttack,
                         Keyword::MustAttackOrBlock,
@@ -1446,6 +1447,24 @@ impl GameState {
                     && !attacks.iter().any(|a| a.attacker == id)
                 {
                     return Err(attack_reject(line!(), GameError::CannotAttack(id)));
+                }
+            }
+        }
+
+        // CR 508.1d — a lure (Gideon Jura's +2): every creature able to attack
+        // must, and at the lure. Can't be satisfied → no requirement, so this
+        // runs only while the lured permanent is still an attackable walker.
+        if let Some(pw) = self.attack_lure_of(p) {
+            if let Some(bad) = attacks.iter().find(|a| a.target != AttackTarget::Planeswalker(pw)) {
+                return Err(attack_reject(line!(), GameError::CannotAttack(bad.attacker)));
+            }
+            for c in &self.battlefield {
+                if c.controller == p
+                    && c.definition.is_creature()
+                    && able_to_attack(c)
+                    && !attacks.iter().any(|a| a.attacker == c.id)
+                {
+                    return Err(attack_reject(line!(), GameError::CannotAttack(c.id)));
                 }
             }
         }

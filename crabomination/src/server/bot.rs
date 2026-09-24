@@ -10994,6 +10994,10 @@ fn pick_attacks_inner(state: &GameState, seat: usize, guard: bool) -> Vec<Attack
         if let Some(q) = chosen_attack_target(state, seat, a.attacker) {
             a.target = AttackTarget::Player(q);
         }
+        // CR 508.1d — and a lured seat attacks the lure (Gideon Jura).
+        if let Some(pw) = state.attack_lure_of(seat) {
+            a.target = AttackTarget::Planeswalker(pw);
+        }
     }
     // Last, because the tax depends on what each attacker is aimed at.
     trim_attacks_to_payable_tax(state, seat, statics, &mut attacks);
@@ -11071,7 +11075,7 @@ fn restore_forced_attackers(
     power_caps: &[usize],
     attackers: &mut Vec<CardId>,
 ) {
-    if !attack_requirement_present(state) {
+    if !attack_requirement_present(state) && state.attack_lure_of(seat).is_none() {
         return;
     }
     let statics = crate::game::combat::attack_static_scan(state);
@@ -11103,6 +11107,8 @@ fn restore_forced_attackers_unchecked(
     statics: u32,
     attackers: &mut Vec<CardId>,
 ) {
+    // CR 508.1d — a lure (Gideon Jura's +2) obliges every able creature.
+    let lured = state.attack_lure_of(seat).is_some();
     loop {
         let mut added = false;
         for c in state.battlefield.iter() {
@@ -11114,7 +11120,7 @@ fn restore_forced_attackers_unchecked(
             // exists" is just a non-empty batch; spelled as the engine
             // spells it so the two read alike.
             let others = attackers.iter().any(|id| *id != c.id);
-            if !must_attack(c, cp.keywords(), others)
+            if !(lured || must_attack(c, cp.keywords(), others))
                 || !state.attacker_is_able(seat, c, Some(&cp), power_caps, statics)
             {
                 continue;
