@@ -3037,3 +3037,242 @@ fn bot_casts_meteor_blast_confluence_and_aethersnatch() {
         }
     }
 }
+
+// ── Rebellion Rising (ONC, Neyali, Suns' Vanguard) ──────────────────────────
+
+fn soldier_token(g: &mut GameState, seat: usize) -> CardId {
+    use crabomination::card::{CardType, CreatureType, Subtypes, TokenDefinition};
+    let id = g.add_token_to_battlefield(
+        seat,
+        &TokenDefinition {
+            name: "Soldier".into(),
+            power: 1,
+            toughness: 1,
+            card_types: vec![CardType::Creature],
+            subtypes: Subtypes { creature_types: vec![CreatureType::Soldier], ..Default::default() },
+            ..Default::default()
+        },
+    );
+    g.clear_sickness(id);
+    id
+}
+
+fn advance_to_turn_of(g: &mut GameState, seat: usize) {
+    loop {
+        let ev = g.advance_step(Vec::new()).expect("step");
+        g.dispatch_triggers_for_events(&ev);
+        drain_stack(g);
+        if g.active_player_idx == seat && g.step == TurnStep::PreCombatMain {
+            break;
+        }
+    }
+}
+
+/// CR 508.1 — Neyali's exiled card is playable only during turns you
+/// attacked with a token: armed as it resolves, dormant on the next turn,
+/// armed again when a token is declared as an attacker. Attacking tokens
+/// have double strike.
+#[test]
+fn cr_508_1_neyali_plays_on_turns_a_token_attacked() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::neyali_suns_vanguard());
+    let top = g.add_card_to_library(0, catalog::grizzly_bears());
+    for _ in 0..6 {
+        g.add_card_to_library(0, catalog::island());
+        g.add_card_to_library(1, catalog::island());
+    }
+    let t = soldier_token(&mut g, 0);
+    let armed = |g: &GameState| {
+        g.exile.iter().find(|c| c.id == top).and_then(|c| c.may_play_until).map(|p| p.player)
+    };
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: t,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(t).unwrap().keywords().contains(&Keyword::DoubleStrike));
+    assert_eq!(armed(&g), Some(0), "playable this turn");
+    advance_to_turn_of(&mut g, 1);
+    assert_ne!(armed(&g), Some(0), "dormant on a turn with no token attack");
+    advance_to_turn_of(&mut g, 0);
+    assert_ne!(armed(&g), Some(0), "not yet — no token has attacked");
+    g.clear_sickness(t);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: t,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack again");
+    drain_stack(&mut g);
+    assert_eq!(armed(&g), Some(0), "armed again");
+}
+
+/// Roar of Resistance — tokens have haste; the paid trigger pumps only
+/// creatures attacking an opponent.
+#[test]
+fn roar_of_resistance_pumps_attackers_of_opponents() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::roar_of_resistance());
+    let t = soldier_token(&mut g, 0);
+    assert!(g.computed_permanent(t).unwrap().keywords().contains(&Keyword::Haste));
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    flood(&mut g, 0);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: t,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(pt(&g, t), (3, 1));
+}
+
+/// Staff of the Storyteller — a Spirit on entry, a story counter per token
+/// batch, and a counter pays for a card.
+#[test]
+fn staff_of_the_storyteller_counts_token_batches() {
+    let mut g = main_phase();
+    g.add_card_to_library(0, catalog::island());
+    let s = g.add_card_to_hand(0, catalog::staff_of_the_storyteller());
+    cast(&mut g, s, &[]);
+    assert_eq!(count_named(&g, 0, "Spirit"), 1);
+    assert_eq!(g.battlefield_find(s).unwrap().counter_count(CounterType::Story), 1);
+    let before = g.players[0].hand.len();
+    activate(&mut g, s, 0, None).expect("draw");
+    assert_eq!(g.players[0].hand.len(), before + 1);
+    assert_eq!(g.battlefield_find(s).unwrap().counter_count(CounterType::Story), 0);
+}
+
+/// Goldwardens' Gambit — affinity for Equipment; five hasty Rebels, each
+/// taking a free Equipment.
+#[test]
+fn goldwardens_gambit_suits_up_its_rebels() {
+    let mut g = main_phase();
+    let a = g.add_card_to_battlefield(0, catalog::mace_of_the_valiant());
+    let b = g.add_card_to_battlefield(0, catalog::mace_of_the_valiant());
+    let gg = g.add_card_to_hand(0, catalog::goldwardens_gambit());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: gg,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("{6}{R}{R} less two");
+    drain_stack(&mut g);
+    assert_eq!(count_named(&g, 0, "Rebel"), 5);
+    for e in [a, b] {
+        let host = g.battlefield_find(e).unwrap().attached_to.expect("attached");
+        assert_eq!(g.battlefield_find(host).unwrap().definition.name, "Rebel");
+    }
+}
+
+/// Call the Coppercoats — a Soldier per creature the targeted opponent has.
+#[test]
+fn call_the_coppercoats_matches_the_opponents_board() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let c = g.add_card_to_hand(0, catalog::call_the_coppercoats());
+    cast(&mut g, c, &[Target::Player(1)]);
+    assert_eq!(count_named(&g, 0, "Human Soldier"), 2);
+}
+
+/// The rest of Rebellion Rising, one assertion each.
+#[test]
+fn rebellion_rising_cards() {
+    // Collective Effort's base mode: destroy a power-4 creature.
+    let mut g = main_phase();
+    let big = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let ogre = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let e = g.add_card_to_hand(0, catalog::collective_effort());
+    cast(&mut g, e, &[Target::Permanent(ogre)]);
+    assert!(g.battlefield_find(ogre).is_none() && g.battlefield_find(big).is_some());
+
+    // Elspeth Tirel's −5 keeps lands, tokens and herself.
+    let mut g = main_phase();
+    let el = g.add_card_to_battlefield(0, catalog::elspeth_tirel());
+    g.battlefield.find_by_id_mut(el).unwrap().add_counters(CounterType::Loyalty, 5);
+    let land = g.add_card_to_battlefield(1, catalog::island());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let tok = soldier_token(&mut g, 1);
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: el,
+        ability_index: 2,
+        target: None,
+        x_value: None,
+    })
+    .expect("−5");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none());
+    assert!(g.battlefield_find(land).is_some() && g.battlefield_find(tok).is_some());
+
+    // For Mirrodin!: Kemba's Banner arrives on a Rebel, +1/+1 per creature.
+    let mut g = main_phase();
+    let k = g.add_card_to_hand(0, catalog::kembas_banner());
+    cast(&mut g, k, &[]);
+    let rebel = g.battlefield_find(k).unwrap().attached_to.expect("on the Rebel");
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert_eq!(pt(&g, rebel), (4, 4));
+
+    // Harmonious Archon: non-Archons are base 3/3; two Humans.
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let a = g.add_card_to_hand(0, catalog::harmonious_archon());
+    cast(&mut g, a, &[]);
+    assert_eq!((pt(&g, bear), count_named(&g, 0, "Human")), ((3, 3), 2));
+    assert_eq!(pt(&g, a), (4, 5));
+
+    // Hate Mirage: hasty copies of two opposing creatures.
+    let mut g = main_phase();
+    let x = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let y = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let h = g.add_card_to_hand(0, catalog::hate_mirage());
+    cast(&mut g, h, &[Target::Permanent(x), Target::Permanent(y)]);
+    assert_eq!((count_named(&g, 0, "Hill Giant"), count_named(&g, 0, "Grizzly Bears")), (1, 1));
+
+    // Mace of the Valiant: a charge counter per entering creature.
+    let mut g = main_phase();
+    let m = g.add_card_to_battlefield(0, catalog::mace_of_the_valiant());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    equip(&mut g, m, bear);
+    let b2 = g.add_card_to_hand(0, catalog::grizzly_bears());
+    cast(&mut g, b2, &[]);
+    assert_eq!(pt(&g, bear), (3, 3));
+
+    // Otharri: an experience counter, then that many attacking Rebels.
+    let mut g = main_phase();
+    let o = g.add_card_to_battlefield(0, catalog::otharri_suns_glory());
+    combat(&mut g, vec![Attack { attacker: o, target: AttackTarget::Player(1) }], 0, |_| {});
+    assert_eq!(count_named(&g, 0, "Rebel"), 1);
+
+    // Prava: tokens +1/+4 on your turn only.
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::prava_of_the_steel_legion());
+    let t = soldier_token(&mut g, 0);
+    assert_eq!(pt(&g, t), (2, 5));
+    g.active_player_idx = 1;
+    assert_eq!(pt(&g, t), (1, 1));
+
+    // Silverwing Squadron: */* = your creatures; a Knight per opponent.
+    let mut g = main_phase();
+    let s = g.add_card_to_battlefield(0, catalog::silverwing_squadron());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert_eq!(pt(&g, s), (2, 2));
+    combat(&mut g, vec![Attack { attacker: s, target: AttackTarget::Player(1) }], 0, |_| {});
+    assert_eq!(count_named(&g, 0, "Knight"), 1);
+
+    // Vulshok Factory: {R} and a counter; the sacrifice makes a 1/1 Golem.
+    let mut g = main_phase();
+    let f = g.add_card_to_battlefield(0, catalog::vulshok_factory());
+    activate(&mut g, f, 0, None).expect("tap for R");
+    g.battlefield.find_by_id_mut(f).unwrap().tapped = false;
+    activate(&mut g, f, 1, None).expect("make a Golem");
+    let golem = g.battlefield.iter().find(|c| c.definition.name == "Golem").unwrap().id;
+    assert_eq!(pt(&g, golem), (1, 1));
+}
