@@ -12469,11 +12469,14 @@ impl GameState {
                                 (scale.count_all_controllers || c.controller == card.controller)
                                     && !(scale.exclude_host && c.id == target)
                                     && !(scale.exclude_source && c.id == card.id)
+                                    // The equipment is the source, so a
+                                    // source-relative leaf reads it (Strata
+                                    // Scythe's imprinted name).
                                     && self.requirement_on_permanent(
                                         &scale.filter,
                                         c,
                                         card.controller,
-                                        None,
+                                        Some(card.id),
                                         &gates,
                                     )
                             })
