@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Ten hand-picked commanders plus seventy official preconstructed lists, each a
+//! Ten hand-picked commanders plus seventy-one official preconstructed lists, each a
 //! 99 of cards this engine implements: legal under CR 903 (100 cards
 //! including the commander, singleton outside basics, every card inside the
 //! commander's CR 903.4 color identity) and Commander-legal per Scryfall's
@@ -8,7 +8,7 @@
 //!
 //! The ten were built by hand because the offline Scryfall cache cannot say
 //! how a precon splits into decks; MTGJSON's deck files can, and the eleventh
-//! through eightieth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
+//! through eighty-first (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
 //! Win, Tails You Lose, Goblin Storm, Foundations Commander's Wretched Ranks,
 //! Tramplesaurus Rex and Keen Engineering, Commander Legends' Reap the Tides,
 //! Phyrexia: All Will Be One's Corrupting Influence, Zendikar Rising's Sneak
@@ -43,7 +43,8 @@
 //! Call for Backup, Bloomburrow Commander's Squirreled Away, Commander
 //! 2018's Exquisite Invention, Duskmourn Commander's Death Toll, Commander
 //! 2021's Witherbloom Witchcraft, Edge of Eternities Commander's World
-//! Shaper and Commander 2018's Nature's Vengeance) are taken
+//! Shaper, Commander 2018's Nature's Vengeance and Commander 2013's Evasive
+//! Maneuvers) are taken
 //! from
 //! one card for card. What all of them keep
 //! from the precon idea is what the pod needs — fixed, legal, varied color
@@ -2505,4 +2506,32 @@ pub const WINDGRACE_MAIN: &[CardFactory] = &[
     // Basics: 6 swamp, 5 mountain, 7 forest
     swamp, swamp, swamp, swamp, swamp, swamp, mountain, mountain, mountain, mountain, mountain,
     forest, forest, forest, forest, forest, forest, forest,
+];
+
+pub const DEREVI_COMMANDERS: &[CardFactory] = &[derevi_empyrial_tactician];
+
+/// **Evasive Maneuvers**, the Commander 2013 deck (C13, 2013-11-01), exactly
+/// as MTGJSON's `EvasiveManeuvers_C13` prints it: 79 nonbasic cards +
+/// 7 Plains + 7 Islands + 6 Forests = 99. Bant tempo, curses and
+/// tap/untap tricks under Derevi, Empyrial Tactician.
+pub const DEREVI_MAIN: &[CardFactory] = &[
+    acidic_slime, aerie_mystics, angel_of_finality, azami_lady_of_scrolls, bane_of_progress,
+    deceiver_exarch, diviner_spirit, djinn_of_infinite_deceits, dungeon_geists, farhaven_elf,
+    fiend_hunter, flickerwisp, hada_spy_patrol, karmic_guide, kazandu_tuskcaller,
+    lu_xun_scholar_general, mirror_entity, mistmeadow_witch, murkfiend_liege, phantom_nantuko,
+    pilgrims_eye, roon_of_the_hidden_realm, rubinia_soulsinger, selesnya_guildmage,
+    skyward_eye_prophets, stonecloaker, thornwind_faeries, winged_coatl, wonder,
+    borrowing_100_000_arrows, kirtars_wrath, restore, tempt_with_glory, wash_out, aethermages_touch,
+    arcane_denial, blue_suns_zenith, krosan_grip, selesnya_charm, unexpectedly_absent,
+    azorius_keyrune, basalt_monolith, conjurers_closet, darksteel_ingot, leonin_bladetrap,
+    selesnya_signet, simic_signet, sol_ring, surveyors_scope, swiftfoot_boots, sword_of_the_paruns,
+    thousand_year_elixir, thunderstaff, control_magic, curse_of_inertia, curse_of_predation,
+    curse_of_the_forsaken, darksteel_mutation, flickerform, leafdrake_roost, presence_of_gond,
+    azorius_chancery, azorius_guildgate, bant_panorama, command_tower, evolving_wilds,
+    faerie_conclave, opal_palace, rupture_spire, saltcrusted_steppe, seaside_citadel,
+    secluded_steppe, sejiri_refuge, selesnya_guildgate, selesnya_sanctuary, simic_guildgate,
+    temple_of_the_false_god, terramorphic_expanse, transguild_promenade,
+    // Basics: 7 plains, 7 island, 6 forest
+    forest, forest, forest, forest, forest, forest, island, island, island, island, island, island,
+    island, plains, plains, plains, plains, plains, plains, plains,
 ];

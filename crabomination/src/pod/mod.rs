@@ -692,6 +692,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::WINDGRACE_COMMANDERS,
             main: decks::WINDGRACE_MAIN,
         },
+        // Eighty-first: the seventy-first official list (Evasive Maneuvers,
+        // C13) — Bant tempo and curses under Derevi. `--pod-decks 81`.
+        PodDeck {
+            name: "Derevi, Empyrial Tactician (GWU)",
+            commanders: decks::DEREVI_COMMANDERS,
+            main: decks::DEREVI_MAIN,
+        },
     ]
 }
 
@@ -1228,6 +1235,7 @@ mod tests {
             ("Wilhelt", [0x3117, 95, 9019]),
             ("Hazel", [0x4A2E, 96, 9020]),
             ("Lord Windgrace", [0x7D18, 97, 9021]),
+            ("Derevi", [0xDE7E, 98, 9022]),
         ] {
             let precon = *field.iter().find(|d| d.name.starts_with(name)).expect("the precon seat");
             assert_eq!(precon.card_count(), 100);
