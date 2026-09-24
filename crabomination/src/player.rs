@@ -694,6 +694,11 @@ pub struct PlayerData {
     /// reset at the turn boundary.
     #[serde(default)]
     pub life_alt_next_spell_this_turn: bool,
+    /// The players this player attacked during their most recent turn (CR
+    /// 508.1). Cleared as their next turn begins — O-Kagachi's "if that player
+    /// attacked you during their last turn".
+    #[serde(default)]
+    pub attacked_players_this_turn: Vec<usize>,
     /// Creatures exiled from under this player's control this turn (Vren, the
     /// Relentless' end-step Rat count). Reset at the turn boundary.
     #[serde(default)]
@@ -1389,6 +1394,7 @@ impl Player {
             free_exile_cast_used_this_turn: false,
             life_alt_cast_used_this_turn: false,
             life_alt_next_spell_this_turn: false,
+            attacked_players_this_turn: Vec::new(),
             creatures_exiled_from_control_this_turn: 0,
             descended_this_turn: false,
             descend_count_this_turn: 0,

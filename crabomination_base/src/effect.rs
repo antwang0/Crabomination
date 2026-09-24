@@ -8862,6 +8862,13 @@ pub enum Effect {
     /// for one type; the pick takes the highest mana value per type.
     ReturnOnePerPermanentType { life_per_card: i32 },
 
+    /// "Choose a nonland permanent you don't control, then each other player
+    /// chooses a nonland permanent they don't control that hasn't been chosen
+    /// this way. Destroy all other nonland permanents" (Fortunate Few). Each
+    /// seat, in turn order from the controller, spares the lowest-mana-value
+    /// candidate.
+    EachPlayerSparesOneTheyDontControl,
+
     /// The end of an "until your next turn" `GrantActivatedAbilityToMatching`
     /// with `Duration::Permanent`: strips `ability` from every matching
     /// permanent's granted list. Scheduled by a `DelayUntil` (Song of

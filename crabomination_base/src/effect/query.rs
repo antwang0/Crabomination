@@ -1208,6 +1208,7 @@ impl Effect {
             | Effect::GrantActivatedAbilityToMatching { .. }
             | Effect::RevokeGrantedActivatedAbility { .. }
             | Effect::NextSpellThisTurnMayCostLife { .. }
+            | Effect::EachPlayerSparesOneTheyDontControl
             | Effect::ReturnOnePerPermanentType { .. }
             | Effect::DistributeCountersFromSource { .. }
             | Effect::PlayerGainsShroudThisTurn { .. }

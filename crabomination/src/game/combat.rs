@@ -1980,6 +1980,11 @@ impl GameState {
             // Raid (CR 702.108 ability word): the controller attacked this turn.
             self.players[p].attacked_this_turn = true;
             self.players[p].creatures_attacked_this_turn += 1;
+            if let AttackTarget::Player(d) = atk.target
+                && !self.players[p].attacked_players_this_turn.contains(&d)
+            {
+                self.players[p].attacked_players_this_turn.push(d);
+            }
             // Neyali's "during any turn you attacked with a token" grants
             // wake for this seat (CR 508.1: a declared attacker).
             if card.is_token {

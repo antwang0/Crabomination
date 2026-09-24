@@ -23802,9 +23802,13 @@ impl GameState {
             // "lesser mana value than that artifact") read this scratch
             // during legal-target enumeration below.
             self.trigger_event_amount_scratch = pending.event_amount;
+            // A player subject names the seat; otherwise the event's actor does
+            // (the caster, for "becomes the target of a spell an opponent
+            // controls" — Scalelord Reckoner's "that player"). Without the
+            // actor a `ControlledByTriggerPlayer` target had no candidate here.
             self.trigger_event_player_scratch = match pending.subject {
                 Some(crate::game::effects::EntityRef::Player(p)) => Some(p),
-                _ => None,
+                _ => pending.actor,
             };
             let needs = pending.effect.targeting_view(pending.mode).requires_target();
             let wants_ui = !force_auto && self.seat_prompts(pending.controller);

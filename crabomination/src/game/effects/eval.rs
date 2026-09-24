@@ -2030,7 +2030,14 @@ impl GameState {
                                 ctx.controller,
                                 ctx.source,
                             ),
-                        EntityRef::Player(_) => matches!(filter, SelectionRequirement::Player),
+                        // A player answers the player atoms too ("a player who
+                        // attacked you" — O-Kagachi), not only a bare `Player`.
+                        EntityRef::Player(p) => self.evaluate_requirement_static(
+                            filter,
+                            &Target::Player(p),
+                            ctx.controller,
+                            ctx.source,
+                        ),
                     })
             }
             Predicate::EntityMatchesAny { what, filter } => self
@@ -2040,7 +2047,9 @@ impl GameState {
                     EntityRef::Permanent(cid) | EntityRef::Card(cid) => {
                         self.evaluate_requirement_static(filter, &Target::Permanent(cid), ctx.controller, ctx.source)
                     }
-                    EntityRef::Player(_) => matches!(filter, SelectionRequirement::Player),
+                    EntityRef::Player(p) => {
+                        self.evaluate_requirement_static(filter, &Target::Player(p), ctx.controller, ctx.source)
+                    }
                 }),
             Predicate::LifeGainedThisTurnAtLeast { who, at_least } => {
                 let n = self.evaluate_value(at_least, ctx).max(0) as u32;
@@ -4005,9 +4014,11 @@ impl GameState {
             R::InExile => Some(!on_bf && self.exile.iter().any(|c| c.id == cid)),
             R::OnBattlefield => Some(on_bf),
             // A card is never a player, whichever seat the arm asks about.
-            R::OpponentPlayer | R::YouPlayer | R::SourceOwnerPlayer | R::PlayerAttackedThisTurn => {
-                Some(false)
-            }
+            R::OpponentPlayer
+            | R::YouPlayer
+            | R::SourceOwnerPlayer
+            | R::PlayerAttackedThisTurn
+            | R::PlayerAttackedYouLastTurn => Some(false),
             _ => None,
         }
     }
@@ -4102,6 +4113,9 @@ impl GameState {
             // Fire and Brimstone — "target player who attacked this turn".
             R::PlayerAttackedThisTurn => {
                 matches!(target, Target::Player(p) if self.players[*p].attacked_this_turn)
+            }
+            R::PlayerAttackedYouLastTurn => {
+                matches!(target, Target::Player(p) if self.players[*p].attacked_players_this_turn.contains(&controller))
             }
             R::OpponentPlayer => {
                 matches!(target, Target::Player(p) if !self.same_team(*p, controller))
@@ -5561,7 +5575,8 @@ impl GameState {
             | R::YouPlayer
             | R::SourceOwnerPlayer
             | R::OpponentTallyDiffers { .. }
-            | R::PlayerAttackedThisTurn => false,
+            | R::PlayerAttackedThisTurn
+            | R::PlayerAttackedYouLastTurn => false,
             // Combinators recurse into the inner walk: the public entry has
             // already decided this card is not a battlefield permanent, and
             // re-asking per leaf would pay that lookup once a leaf.

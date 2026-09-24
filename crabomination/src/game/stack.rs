@@ -4373,6 +4373,9 @@ impl GameState {
             me.speed_increased_this_turn = false;
             // Raid (CR 702.108): the active player hasn't attacked yet this turn.
             me.attacked_this_turn = false;
+            if !me.attacked_players_this_turn.is_empty() {
+                me.attacked_players_this_turn.clear();
+            }
             // "Until your next turn" player grants expire at their owner's untap
             // (Blossoming Calm's hexproof).
             me.hexproof_until_next_turn = false;

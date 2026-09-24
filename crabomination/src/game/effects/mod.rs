@@ -3869,6 +3869,34 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::EachPlayerSparesOneTheyDontControl => {
+                let n = self.players.len();
+                let mut spared: Vec<CardId> = Vec::new();
+                for i in 0..n {
+                    let q = (ctx.controller + i) % n;
+                    if !self.players[q].is_alive() {
+                        continue;
+                    }
+                    let pick = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| c.controller != q && !c.definition.is_land() && !spared.contains(&c.id))
+                        .min_by_key(|c| (c.definition.cost.cmc(), c.id))
+                        .map(|c| c.id);
+                    spared.extend(pick);
+                }
+                let doomed: Vec<CardId> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| !c.definition.is_land() && !spared.contains(&c.id))
+                    .map(|c| c.id)
+                    .collect();
+                for id in doomed {
+                    self.destroy_permanent(id, false, events);
+                }
+                Ok(())
+            }
+
             Effect::NextSpellThisTurnMayCostLife { who } => {
                 if let Some(p) = self.resolve_player(who, ctx) {
                     self.players[p].life_alt_next_spell_this_turn = true;

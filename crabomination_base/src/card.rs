@@ -2789,6 +2789,10 @@ pub enum SelectionRequirement {
     /// A player who attacked this turn (Fire and Brimstone). Only meaningful
     /// against a player target.
     PlayerAttackedThisTurn,
+    /// A player who attacked the source's controller during that player's most
+    /// recent turn (O-Kagachi, Vengeful Kami). Reads
+    /// `Player::attacked_players_this_turn`, cleared as their next turn begins.
+    PlayerAttackedYouLastTurn,
     /// The candidate is (one of) the colour the source permanent chose as it
     /// entered (`CardInstance.chosen_color` — Story Circle's Circle-of-
     /// Protection shield). False when the source never chose one.
