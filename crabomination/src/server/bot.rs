@@ -4532,6 +4532,30 @@ fn land_enters_tapped(def: &crate::card::CardDefinition) -> bool {
         .any(|s| matches!(s.effect, crate::card::StaticEffect::EntersTapped { .. }))
 }
 
+/// A karoo (Gruul Turf): "when this enters, return a land you control to its
+/// owner's hand". With no other land under the seat's control it can only
+/// return itself, so the drop is a no-op the bot would repeat every turn.
+fn bounces_a_land_on_entry(def: &CardDefinition) -> bool {
+    use crate::card::SelectionRequirement as R;
+    use crate::effect::{EventKind, EventScope, Selector, ZoneDest};
+    fn names_land(r: &R) -> bool {
+        match r {
+            R::Land => true,
+            R::And(a, b) => names_land(a) || names_land(b),
+            _ => false,
+        }
+    }
+    def.triggered_abilities.iter().any(|t| {
+        matches!(t.event.kind, EventKind::EntersBattlefield)
+            && matches!(t.event.scope, EventScope::SelfSource)
+            && matches!(
+                &t.effect,
+                Effect::Move { what: Selector::TargetFiltered { filter, .. }, to: ZoneDest::Hand(_) }
+                    if names_land(filter)
+            )
+    })
+}
+
 fn pick_land_to_play(state: &GameState, seat: usize, w: &EvalWeights) -> Option<CardId> {
     use crate::mana::{Color, ColorSet};
     const WUBRG: [Color; 5] =
@@ -4569,12 +4593,14 @@ fn pick_land_to_play(state: &GameState, seat: usize, w: &EvalWeights) -> Option<
         return None;
     }
 
-    // Colors already producible from battlefield lands the bot controls.
-    let have = state
+    // Colors already producible from battlefield lands the bot controls, and
+    // whether it controls a land at all: a karoo with no other land to return
+    // bounces itself (`bounces_a_land_on_entry`), which is not a drop.
+    let (have, no_land_yet) = state
         .battlefield
         .iter()
         .filter(|c| c.controller == seat && c.definition.is_land())
-        .fold(ColorSet::empty(), |acc, c| acc.union(land_color_output(&c.definition)));
+        .fold((ColorSet::empty(), true), |(acc, _), c| (acc.union(land_color_output(&c.definition)), false));
     // Colors the bot's nonland hand cards want to be cast.
     let mut want = ColorSet::empty();
     for c in state.players[seat].hand.iter().filter(|c| !c.definition.is_land()) {
@@ -4601,6 +4627,9 @@ fn pick_land_to_play(state: &GameState, seat: usize, w: &EvalWeights) -> Option<
     if !w.land_urgency {
         let mut best: Option<(CardId, usize)> = None;
         for c in state.players[seat].hand.iter().filter(|c| c.definition.is_land()) {
+            if no_land_yet && bounces_a_land_on_entry(&c.definition) {
+                continue;
+            }
             if !state.would_accept(GameAction::PlayLand(c.id)) {
                 continue;
             }
@@ -4653,6 +4682,9 @@ fn pick_land_to_play(state: &GameState, seat: usize, w: &EvalWeights) -> Option<
 
     let mut best: Option<(CardId, i32)> = None;
     for c in state.players[seat].hand.iter().filter(|c| c.definition.is_land()) {
+        if no_land_yet && bounces_a_land_on_entry(&c.definition) {
+            continue;
+        }
         if !state.would_accept(GameAction::PlayLand(c.id)) {
             continue;
         }
@@ -26513,6 +26545,29 @@ mod stack_response_tests {
         g.add_card_to_hand(0, catalog::grizzly_bears()); // wants green
         assert_eq!(pick_land_to_play(&g, 0, &EvalWeights::default()), Some(forest),
             "fixes the missing green over the off-color Mountain");
+    }
+
+    /// A karoo with no other land to return would bounce itself. Regression:
+    /// a Commander seat played Gruul Turf as its only land every turn for
+    /// twenty turns with basics in hand, and the pod ended in a no-progress
+    /// draw. Once a land is down, the karoo is a normal drop again.
+    #[test]
+    fn bot_does_not_play_a_karoo_onto_an_empty_board() {
+        for w in [EvalWeights::default(), EvalWeights { land_urgency: false, ..EvalWeights::default() }] {
+            let mut g = two_player_game();
+            g.priority.player_with_priority = 0;
+            g.active_player_idx = 0;
+            g.add_card_to_hand(0, catalog::gruul_turf());
+            let forest = g.add_card_to_hand(0, catalog::forest());
+            assert_eq!(pick_land_to_play(&g, 0, &w), Some(forest));
+            let mut alone = two_player_game();
+            alone.priority.player_with_priority = 0;
+            alone.active_player_idx = 0;
+            alone.add_card_to_hand(0, catalog::gruul_turf());
+            assert_eq!(pick_land_to_play(&alone, 0, &w), None, "it would only return itself");
+            alone.add_card_to_battlefield(0, catalog::forest());
+            assert!(pick_land_to_play(&alone, 0, &w).is_some(), "a land to return");
+        }
     }
 
     /// `land_urgency` sequences the tapland: with nothing castable it is

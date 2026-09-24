@@ -1091,7 +1091,9 @@ pub fn play_one_pod_game_censused(
     // `CRAB_CAP_DIAG` is the two-player loop's knob and it says the same thing
     // here: what was an undecided game actually doing. One `OnceLock` read a
     // game, on the undecided ones only.
-    if crate::recommend::cap_diag_floor().is_some() && !matches!(stop, StopReason::GameOver) {
+    // A draw (CR 104.4a) is undecided too, so it gets the board as well.
+    let undecided = !matches!(stop, StopReason::GameOver) || g.game_over == Some(None);
+    if crate::recommend::cap_diag_floor().is_some() && undecided {
         eprintln!(
             "pod {stop:?} seed {seed}: {}\n  actions: {}",
             crate::recommend::cap_diagnosis(&g, actions),
