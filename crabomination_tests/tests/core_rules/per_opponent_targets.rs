@@ -148,3 +148,29 @@ fn cr_601_2c_a_cast_cannot_name_one_opponent_twice() {
     assert_eq!(g.battlefield_find(b1).expect("stolen").controller, 0);
     assert_eq!(g.battlefield_find(a2).expect("untouched").controller, 1);
 }
+
+/// CR 601.2c — "two target creatures" needs two: Windborne Charge with one
+/// creature named is not a legal cast (Hex's six, Aether Gale's six, the same).
+#[test]
+fn cr_601_2c_a_fixed_target_count_is_a_minimum() {
+    use crabomination::game::types::{GameAction, Target, TurnStep};
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let charge = g.add_card_to_hand(0, catalog::windborne_charge());
+    let cast = |g: &mut GameState, targets: Vec<Target>| {
+        g.players[0].mana_pool.add(crabomination::mana::Color::White, 4);
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::CastSpell {
+            card_id: charge,
+            target: targets.first().cloned(),
+            additional_targets: targets.into_iter().skip(1).collect(),
+            mode: None,
+            x_value: None,
+        })
+    };
+    assert!(cast(&mut g, vec![Target::Permanent(a)]).is_err(), "one target is not two");
+    assert!(g.players[0].hand.iter().any(|c| c.id == charge), "the card stays in hand");
+    cast(&mut g, vec![Target::Permanent(a), Target::Permanent(b)]).expect("two targets");
+}

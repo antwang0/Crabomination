@@ -8397,6 +8397,18 @@ impl GameState {
             }
         }
 
+        // CR 601.2c — "N target …" needs N targets (Aether Gale's six): a
+        // multi-target instance whose printed minimum is two or more can't be
+        // cast with fewer. (A single required slot is checked where it binds.)
+        if let Some(m) = card.definition.effect.min_targets_in_mode(mode)
+            && m >= 2
+            && usize::from(target.is_some()) + additional_targets.len() < usize::from(m)
+        {
+            cast_census::rollback(line!());
+            self.players[p].hand.push(card);
+            return Err(GameError::InvalidTarget);
+        }
+
         // CR 601.2c — "for each opponent, … target X that player controls"
         // (`Effect::ForEachOpponentTarget`): the same cross-target shape one
         // step stricter, on the target's *controller* rather than the target.
