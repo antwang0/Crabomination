@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Ten hand-picked commanders plus twenty-one official preconstructed lists, each a
+//! Ten hand-picked commanders plus twenty-two official preconstructed lists, each a
 //! 99 of cards this engine implements: legal under CR 903 (100 cards
 //! including the commander, singleton outside basics, every card inside the
 //! commander's CR 903.4 color identity) and Commander-legal per Scryfall's
@@ -8,7 +8,7 @@
 //!
 //! The ten were built by hand because the offline Scryfall cache cannot say
 //! how a precon splits into decks; MTGJSON's deck files can, and the eleventh
-//! through thirty-first (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
+//! through thirty-second (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
 //! Win, Tails You Lose, Goblin Storm, Foundations Commander's Wretched Ranks,
 //! Tramplesaurus Rex and Keen Engineering, Commander Legends' Reap the Tides,
 //! Phyrexia: All Will Be One's Corrupting Influence, Zendikar Rising's Sneak
@@ -16,8 +16,9 @@
 //! Swarm, Outlaws of Thunder Junction's Quick Draw, Commander 2017's
 //! Vampiric Bloodlust, Foundations Commander's Calling All Angels,
 //! Commander 2014's Guided by Nature, Bloomburrow Commander's Animated Army,
-//! Secret Lair's Grave Danger, Commander 2014's Forged in Stone and Modern
-//! Horizons 3 Commander's Graveyard Overdrive) are taken
+//! Secret Lair's Grave Danger, Commander 2014's Forged in Stone, Modern
+//! Horizons 3 Commander's Graveyard Overdrive and Commander 2015's Swell the
+//! Host) are taken
 //! from one card for card. What all of them keep
 //! from the precon idea is what the pod needs — fixed, legal, varied color
 //! identities, and built to play against each other.
@@ -1076,4 +1077,32 @@ pub const DISA_MAIN: &[CardFactory] = &[
     // Basics: 4 swamp, 3 mountain, 5 forest
     swamp, swamp, swamp, swamp, mountain, mountain, mountain, forest, forest, forest, forest,
     forest,
+];
+
+pub const EZURI_COMMANDERS: &[CardFactory] = &[ezuri_claw_of_progress];
+
+/// **Swell the Host**, the Commander 2015 deck (C15, 2015-11-13), exactly as
+/// MTGJSON's `SwellTheHost_C15` prints it: 74 nonbasic cards + 14 Forests +
+/// 11 Islands = 99. Simic +1/+1 counters and experience: Ezuri grows a small
+/// board, myriad and Snakes spread it around the table.
+pub const EZURI_MAIN: &[CardFactory] = &[
+    experiment_one, elvish_visionary, sakura_tribe_elder, plaxmanta, coiling_oracle,
+    caller_of_the_claw, loaming_shaman, noble_quarry, skullwinder, viridian_shaman,
+    eternal_witness, ohran_viper, kaseto_orochi_archmage, lorescale_coatl, trygon_predator,
+    cold_eyed_selkie, wistful_selkie, solemn_simulacrum, forgotten_ancient, patagia_viper,
+    thelonite_hermit, ninja_of_the_deep_hours, chameleon_colossus, mystic_snake,
+    stingerfling_spider, broodbirth_viper, illusory_ambusher, mulldrifter, arbor_colossus,
+    great_oak_guardian, bane_of_progress, prime_speaker_zegana, caller_of_the_pack, rampant_growth,
+    kodamas_reach, overrun, desert_twister, verdant_confluence, biomantic_mastery,
+    ezuris_predation, rapid_hybridization, arachnogenesis, krosan_grip, snakeform, cobra_trap,
+    mirror_match, synthetic_destiny, sol_ring, simic_signet, swiftfoot_boots, thought_vessel,
+    simic_keyrune, sword_of_vengeance, bident_of_thassa, scytheclaw, orochi_hatchery,
+    beastmaster_ascension, day_of_the_dragons, command_beacon, command_tower, evolving_wilds,
+    high_market, llanowar_reborn, mosswort_bridge, novijen_heart_of_progress,
+    oran_rief_the_vastwood, reliquary_tower, simic_growth_chamber, simic_guildgate,
+    terramorphic_expanse, thornwood_falls, vivid_creek, vivid_grove, zoetic_cavern,
+    // Basics: 14 forest, 11 island
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, island, island, island, island, island, island, island, island, island, island,
+    island,
 ];

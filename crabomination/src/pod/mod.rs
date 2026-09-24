@@ -330,6 +330,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::DISA_COMMANDERS,
             main: decks::DISA_MAIN,
         },
+        // Thirty-second: the twenty-second official list (Swell the Host, C15) —
+        // Simic counters and myriad. `--seats 32`.
+        PodDeck {
+            name: "Ezuri, Claw of Progress (GU)",
+            commanders: decks::EZURI_COMMANDERS,
+            main: decks::EZURI_MAIN,
+        },
     ]
 }
 
