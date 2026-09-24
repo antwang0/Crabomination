@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Ten hand-picked commanders plus nineteen official preconstructed lists, each a
+//! Ten hand-picked commanders plus twenty official preconstructed lists, each a
 //! 99 of cards this engine implements: legal under CR 903 (100 cards
 //! including the commander, singleton outside basics, every card inside the
 //! commander's CR 903.4 color identity) and Commander-legal per Scryfall's
@@ -8,16 +8,16 @@
 //!
 //! The ten were built by hand because the offline Scryfall cache cannot say
 //! how a precon splits into decks; MTGJSON's deck files can, and the eleventh
-//! through twenty-ninth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
+//! through thirtieth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
 //! Win, Tails You Lose, Goblin Storm, Foundations Commander's Wretched Ranks,
 //! Tramplesaurus Rex and Keen Engineering, Commander Legends' Reap the Tides,
 //! Phyrexia: All Will Be One's Corrupting Influence, Zendikar Rising's Sneak
 //! Attack, Tarkir: Dragonstorm's Jeskai Striker, Commander Masters' Sliver
 //! Swarm, Outlaws of Thunder Junction's Quick Draw, Commander 2017's
 //! Vampiric Bloodlust, Foundations Commander's Calling All Angels,
-//! Commander 2014's Guided by Nature, Bloomburrow Commander's Animated Army
-//! and Secret Lair's Grave Danger) are taken from one card for card. What all
-//! of them keep
+//! Commander 2014's Guided by Nature, Bloomburrow Commander's Animated Army,
+//! Secret Lair's Grave Danger and Commander 2014's Forged in Stone) are taken
+//! from one card for card. What all of them keep
 //! from the precon idea is what the pod needs — fixed, legal, varied color
 //! identities, and built to play against each other.
 //! One is a Partner pair (CR 702.124b), one is a **planeswalker**
@@ -1017,4 +1017,31 @@ pub const GISA_GERALF_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     island, island, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const NAHIRI_COMMANDERS: &[CardFactory] = &[nahiri_the_lithomancer];
+
+/// **Forged in Stone**, the Commander 2014 deck (C14, 2014-11-07), exactly as
+/// MTGJSON's `ForgedInStone_C14` prints it: 67 nonbasic cards + 32
+/// basics = 99. Mono-white Equipment and tokens under Nahiri, the field's
+/// third planeswalker commander (CR 903.3a).
+pub const NAHIRI_MAIN: &[CardFactory] = &[
+    containment_priest, whitemane_lion, grand_abolisher, kor_sanctifiers, mentor_of_the_meek,
+    flickerwisp, hallowed_spiritkeeper, kemba_kha_regent, silverblade_paladin,
+    skyhunter_skirmisher, angelic_field_marshal, celestial_crusader, jazal_goldmane,
+    geist_honored_monk, requiem_angel, adarkar_valkyrie, sun_titan, sunblast_angel,
+    twilight_shepherd, angel_of_the_dire_hour, serra_avatar, gift_of_estates,
+    spectral_procession, fell_the_mighty, nomads_assembly, deploy_to_the_front, martial_coup,
+    decree_of_justice, brave_the_elements, condemn, afterlife, midnight_haunting, oblation,
+    wing_shards, benevolent_offering, comeuppance, return_to_dust, white_suns_zenith,
+    masterwork_of_ingenuity, skullclamp, sol_ring, marble_diamond, mask_of_memory,
+    pearl_medallion, swiftfoot_boots, commanders_sphere, loxodon_warhammer, strata_scythe,
+    sword_of_vengeance, assault_suit, bonehoard, moonsilver_spear, argentum_armor,
+    loreseekers_stone, armistice, mobilization, sacred_mesa, marshals_anthem, cathars_crusade,
+    true_conviction, arcane_lighthouse, drifting_meadow, emeria_the_sky_ruin, ghost_quarter,
+    karoo_land, secluded_steppe, temple_of_the_false_god,
+    // Basics: 32 plains
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
 ];

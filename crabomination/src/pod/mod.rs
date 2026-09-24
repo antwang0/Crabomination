@@ -316,6 +316,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::GISA_GERALF_COMMANDERS,
             main: decks::GISA_GERALF_MAIN,
         },
+        // Thirtieth: the twentieth official list (Forged in Stone, C14) —
+        // mono-white Equipment under a planeswalker commander. `--seats 30`.
+        PodDeck {
+            name: "Nahiri (W)",
+            commanders: decks::NAHIRI_COMMANDERS,
+            main: decks::NAHIRI_MAIN,
+        },
     ]
 }
 
