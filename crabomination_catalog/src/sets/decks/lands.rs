@@ -572,7 +572,7 @@ fn lorwyn_hideaway_land(
 }
 
 /// Mosswort Bridge — hideaway land; plays the hidden card if creatures you
-/// control have total power 8 or greater.
+/// control have total power 10 or greater.
 pub fn mosswort_bridge() -> CardDefinition {
     lorwyn_hideaway_land(
         "Mosswort Bridge",
@@ -582,7 +582,7 @@ pub fn mosswort_bridge() -> CardDefinition {
             Value::PowerOf(Box::new(Selector::EachPermanent(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
             ))),
-            Value::Const(8),
+            Value::Const(10),
         ),
     )
 }

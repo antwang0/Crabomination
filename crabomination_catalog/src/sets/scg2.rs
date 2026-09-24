@@ -688,9 +688,15 @@ pub fn forgotten_ancient() -> CardDefinition {
                     EventKind::StepBegins(TurnStep::Upkeep),
                     EventScope::SelfSource,
                 ),
-                effect: Effect::DistributeCountersFromSource {
-                    kind: CounterType::PlusOnePlusOne,
-                    filter: R::Creature.and(R::OtherThanSource),
+                // "You may move any number": the spread goes to your own
+                // creatures only — handing counters to an opponent is never
+                // the pick, and the engine's split is all-or-nothing.
+                effect: Effect::MayDo {
+                    description: "Move the +1/+1 counters onto your other creatures?".into(),
+                    body: Box::new(Effect::DistributeCountersFromSource {
+                        kind: CounterType::PlusOnePlusOne,
+                        filter: R::Creature.and(R::OtherThanSource).and(R::ControlledByYou),
+                    }),
                 },
             },
         ],

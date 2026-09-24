@@ -4457,8 +4457,8 @@ pub fn ember_swallower() -> CardDefinition {
     }
 }
 
-/// Arbor Colossus — {2}{G}{G}{G} 6/6 Reach. {6}{G}: Monstrosity 3. When it becomes
-/// monstrous, destroy target creature with flying.
+/// Arbor Colossus — {2}{G}{G}{G} 6/6 Reach. {3}{G}{G}{G}: Monstrosity 3. When it becomes
+/// monstrous, destroy target creature with flying an opponent controls.
 pub fn arbor_colossus() -> CardDefinition {
     use crate::effect::shortcut::{monstrosity, on_becomes_monstrous};
     CardDefinition {
@@ -4476,7 +4476,8 @@ pub fn arbor_colossus() -> CardDefinition {
         triggered_abilities: vec![on_becomes_monstrous(Effect::Destroy {
             what: target_filtered(
                 SelectionRequirement::Creature
-                    .and(SelectionRequirement::HasKeyword(Keyword::Flying)),
+                    .and(SelectionRequirement::HasKeyword(Keyword::Flying))
+                    .and(SelectionRequirement::ControlledByOpponent),
             ),
         })],
         ..Default::default()
@@ -5402,9 +5403,9 @@ pub fn farseek() -> CardDefinition {
     }
 }
 
-/// Sakura-Tribe Elder — {1}{G} Creature — Snake. 1/1. {T}, Sacrifice
-/// this: search your library for a basic land card, put it onto the
-/// battlefield tapped.
+/// Sakura-Tribe Elder — {1}{G} Creature — Snake Shaman. 1/1. Sacrifice this:
+/// search your library for a basic land card, put it onto the battlefield
+/// tapped. No {T} in the cost, so it chumps and then sacrifices.
 pub fn sakura_tribe_elder() -> CardDefinition {
     use crate::card::ActivatedAbility;
     CardDefinition {
@@ -5420,7 +5421,7 @@ pub fn sakura_tribe_elder() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
-            tap_cost: true,
+            tap_cost: false,
             mana_cost: ManaCost::default(),
             effect: search_to_battlefield(SelectionRequirement::IsBasicLand, true),
             once_per_turn: false,
@@ -6262,7 +6263,7 @@ pub fn lotus_field() -> CardDefinition {
     }
 }
 
-/// Evolving Wilds — Land. Evolving Wilds enters tapped. {T}, Sacrifice
+/// Evolving Wilds — Land. {T}, Sacrifice
 /// Evolving Wilds: Search your library for a basic land card, put it
 /// onto the battlefield tapped, then shuffle.
 ///
@@ -6302,7 +6303,6 @@ pub fn evolving_wilds() -> CardDefinition {
             from_hand: false,
             ..Default::default()
         }],
-        static_abilities: vec![modern_etb_tap()],
         ..Default::default()
     }
 }

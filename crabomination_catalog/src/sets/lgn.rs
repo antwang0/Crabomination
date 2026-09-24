@@ -2170,15 +2170,14 @@ pub fn willbender() -> CardDefinition {
 
 // ── Wave 3 ──────────────────────────────────────────────────────────────────
 
-/// Caller of the Claw — a flash Elf that pays out for the turn's carnage.
-/// (The count is the turn's creature deaths under your control; the printed
-/// nontoken rider isn't tracked separately.)
+/// Caller of the Claw — a flash Elf that pays out for the turn's carnage:
+/// a Bear per nontoken creature put into your graveyard this turn.
 pub fn caller_of_the_claw() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flash],
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
-            count: Value::CreaturesDiedThisTurn(PlayerRef::You),
+            count: Value::CreatureDeathsThisTurnMatching { filter: R::NotToken.and(R::OwnedByYou) },
             definition: std::sync::Arc::new(bear_token()),
         })],
         ..creature("Caller of the Claw", cost(&[generic(2), g()]), vec![CreatureType::Elf], 2, 2)

@@ -1788,3 +1788,12 @@ Tasigur (Splice / Delve).
   Dwarf→Warlock, Rhino→Bard, Kor→Warlock, Gorgon→Snake, …
 
 For the full machine-generated list, run the auditor (`--comments-only`).
+
+### Swell the Host (C15, pod seat 30) — open residuals, 2026-09-24
+
+| Card | Gap |
+|---|---|
+| 🟡 Loaming Shaman | "any number of target cards from target player's graveyard" shuffles the **whole** graveyard back; no pick. Needs a multi-target any-number graveyard selector. |
+| 🟡 Forgotten Ancient | "move any number of +1/+1 counters" is all-or-nothing, spread evenly over your other creatures (`DistributeCountersFromSource`); no per-recipient amounts. |
+| 🟡 Verdant Confluence | modes are the default picks (two counters, two basics); `ChooseN` has no cast-time mode choice. |
+| 🟡 Skullwinder | "choose an opponent" is the engine's pick (fewest creatures). |

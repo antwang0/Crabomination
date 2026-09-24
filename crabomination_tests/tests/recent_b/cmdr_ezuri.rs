@@ -343,3 +343,78 @@ fn zoetic_cavern_hides_as_a_creature_and_flips_back_to_a_land() {
     let types = c.card_types();
     assert!(types.contains(&CardType::Land) && !types.contains(&CardType::Creature));
 }
+
+// ── Defects in the list's already-shipped cards ─────────────────────────────
+
+/// Bug fix: the cost is "Sacrifice this creature" — no {T} — so a summoning
+/// sick Elder can ramp (it was gated on `tap_cost`).
+#[test]
+fn sakura_tribe_elder_sacrifices_while_summoning_sick() {
+    let mut g = main_phase(2);
+    g.add_card_to_library(0, catalog::forest());
+    let e = g.add_card_to_battlefield(0, catalog::sakura_tribe_elder());
+    g.battlefield_find_mut(e).expect("elder").summoning_sick = true;
+    activate(&mut g, e, None);
+    assert!(g.battlefield_find(e).is_none());
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Forest"));
+}
+
+/// Bug fix: Evolving Wilds itself enters untapped (only the fetched land is tapped).
+#[test]
+fn evolving_wilds_enters_untapped() {
+    let mut g = main_phase(2);
+    let w = g.add_card_to_hand(0, catalog::evolving_wilds());
+    g.perform_action(GameAction::PlayLand(w)).expect("land");
+    assert!(!g.battlefield_find(w).expect("wilds").tapped);
+}
+
+/// Bug fix: "target artifact or enchantment *that player* controls" — at a
+/// four-seat table the damaged player's, not any opponent's.
+#[test]
+fn trygon_predator_hits_the_damaged_players_artifact() {
+    let mut g = main_phase(3);
+    let t = g.add_card_to_battlefield(0, catalog::trygon_predator());
+    let other = g.add_card_to_battlefield(2, catalog::ornithopter());
+    let hit = g.add_card_to_battlefield(1, catalog::ornithopter());
+    g.battlefield_find_mut(other).expect("thopter").tapped = true;
+    g.battlefield_find_mut(hit).expect("thopter").tapped = true;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    combat(&mut g, vec![(t, 1)], 1, vec![]);
+    assert!(g.battlefield_find(hit).is_none(), "the damaged player's artifact");
+    assert!(g.battlefield_find(other).is_some(), "not the other opponent's");
+}
+
+/// Bug fix: the Ancient's upkeep spread goes to your own creatures, never an
+/// opponent's.
+#[test]
+fn forgotten_ancient_feeds_only_your_creatures() {
+    let mut g = main_phase(2);
+    let a = g.add_card_to_battlefield(0, catalog::forgotten_ancient());
+    g.battlefield_find_mut(a).expect("ancient").add_counters(CounterType::PlusOnePlusOne, 2);
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.step = TurnStep::Untap;
+    while g.step != TurnStep::Draw {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+    }
+    assert_eq!(pt(&g, mine), (4, 4));
+    assert_eq!(pt(&g, theirs), (2, 2));
+}
+
+/// Bug fix: only *nontoken* creatures put into your graveyard count.
+#[test]
+fn caller_of_the_claw_counts_nontoken_deaths_only() {
+    let mut g = main_phase(2);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let caller = g.add_card_to_hand(0, catalog::caller_of_the_claw());
+    let wrath = g.add_card_to_hand(0, catalog::wrath_of_god());
+    let spell = g.add_card_to_hand(0, catalog::raise_the_alarm());
+    cast(&mut g, spell, None).expect("two tokens");
+    cast(&mut g, wrath, None).expect("wrath");
+    assert!(g.battlefield_find(bear).is_none());
+    cast(&mut g, caller, None).expect("caller");
+    let bears = g.battlefield.iter().filter(|c| c.is_token && c.definition.name == "Bear").count();
+    assert_eq!(bears, 1, "one nontoken creature died; the two Soldiers don't count");
+}

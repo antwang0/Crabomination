@@ -5801,8 +5801,7 @@ pub fn hauntwoods_shrieker() -> CardDefinition {
 
 /// Trygon Predator — {1}{G}{U} 2/3 Beast with Flying. Whenever it deals combat
 /// damage to a player, you may destroy target artifact or enchantment that
-/// player controls. (The "may" + "that player controls" rider is approximated
-/// as destroy target artifact/enchantment an opponent controls.)
+/// player controls.
 pub fn trygon_predator() -> CardDefinition {
     use crate::card::{
         CreatureType, EventKind, EventScope, EventSpec, Keyword, SelectionRequirement as R,
@@ -5826,7 +5825,7 @@ pub fn trygon_predator() -> CardDefinition {
                 description: "Destroy target artifact or enchantment that player controls?".into(),
                 body: Box::new(Effect::Destroy {
                     what: target_filtered(
-                        R::Artifact.or(R::Enchantment).and(R::ControlledByOpponent),
+                        R::Artifact.or(R::Enchantment).and(R::ControlledByTriggerPlayer),
                     ),
                 }),
             },
