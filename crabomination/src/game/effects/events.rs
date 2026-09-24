@@ -312,6 +312,7 @@ fn reference_event_kind_matches(
         // Any damage to a player, combat or not (Quest for Pure Flame).
         (EventKind::PlayerDamaged, GameEvent::DamageDealt { to_player: Some(_), .. }) => true,
         (EventKind::LifeGained, GameEvent::LifeGained { .. }) => true,
+        (EventKind::DamageToPlayerPrevented, GameEvent::DamagePrevented { to_player: Some(_), .. }) => true,
         (EventKind::ScriedOrSurveiled, GameEvent::ScriedOrSurveiled { .. }) => true,
         (
             EventKind::OpponentCausedYouToDiscard,
@@ -507,6 +508,7 @@ pub(crate) fn event_kind_fans_out(kind: &EventKind) -> bool {
             | EventKind::AttacksAndIsntBlocked
             | EventKind::LifeGained
             | EventKind::LifeLost
+            | EventKind::DamageToPlayerPrevented
             | EventKind::EnergyGained
             | EventKind::WonCoinFlip
             | EventKind::LostCoinFlip
@@ -1243,7 +1245,8 @@ pub(crate) fn event_actor(state: &GameState, event: &GameEvent) -> Option<usize>
 
 fn event_player(event: &GameEvent) -> Option<usize> {
     match event {
-        GameEvent::CardDrawn { player, .. }
+        GameEvent::DamagePrevented { to_player: Some(player), .. }
+        | GameEvent::CardDrawn { player, .. }
         | GameEvent::FirstCardDrawnThisTurn { player, .. }
         | GameEvent::SecondCardDrawnThisTurn { player, .. }
         | GameEvent::CardDiscarded { player, .. }

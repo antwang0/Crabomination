@@ -400,6 +400,7 @@ impl Effect {
             | Effect::OathCatchUp { body, .. }
             | Effect::OnAttackedUntilYourNextTurn { body, .. }
             | Effect::OnMatchingAttacksThisTurn { body, .. }
+            | Effect::OnMatchingBlocksThisTurn { body, .. }
             | Effect::WithSacrificedPt { body, .. }
             | Effect::WithTappedPower { body, .. }
             | Effect::DelayUntil { body, .. }
@@ -993,7 +994,7 @@ impl Effect {
             // Random graveyard pick at resolution — no cast-time target.
             Effect::ExileRandomGraveyardCopyTapped { .. } => false,
             // Registers a floating trigger; no cast-time target.
-            Effect::OnMatchingAttacksThisTurn { .. } => false,
+            Effect::OnMatchingAttacksThisTurn { .. } | Effect::OnMatchingBlocksThisTurn { .. } => false,
             Effect::SeparateIntoPiles { what, splitter, chooser, .. } => {
                 sel_has_target(what) || player_has_target(splitter) || player_has_target(chooser)
             }
@@ -2053,7 +2054,9 @@ impl Effect {
             // The queued body picks its own targets when the draw is replaced.
             Effect::ReplaceYourNextDrawThisTurn { .. } => false,
             Effect::PreventCombatDamageExceptDealtBy { .. } => false,
-            Effect::PreventAllCombatDamageToPlayerThisTurn { .. } => false,
+            Effect::PreventAllCombatDamageToPlayerThisTurn { .. }
+            | Effect::PreventAllDamageToPlayerThisTurn { .. }
+            | Effect::EachPlayerMayCounterForPeace { .. } => false,
             Effect::SacrificeSourceUnlessPayManaValue | Effect::SacrificeSourceUnlessPay { .. } => false,
             Effect::PreventAllCombatDamageInvolving { target } => sel_has_target(target),
             Effect::PreventCombatDamageToTargetThisTurn { target } => sel_has_target(target),

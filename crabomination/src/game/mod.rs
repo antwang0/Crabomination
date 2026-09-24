@@ -21411,6 +21411,44 @@ impl GameState {
                 }
             }
         }
+        // "Until end of turn, whenever a [filter] creature blocks, …"
+        // (Benefactor's Draught). `Blocks` is reached by `BlockerDeclared`
+        // alone, so its bit is the scan; one trigger per declared blocker.
+        if batch_bits & const { crate::effect::EventKind::Blocks.bit() } != 0
+            && self
+                .delayed_triggers
+                .iter()
+                .any(|dt| matches!(dt.kind, crate::game::types::DelayedKind::MatchingCreatureBlocksThisTurn(_)))
+        {
+            let mut blockers: Vec<CardId> = events
+                .iter()
+                .filter_map(|e| match e {
+                    GameEvent::BlockerDeclared { blocker, .. } => Some(*blocker),
+                    _ => None,
+                })
+                .collect();
+            blockers.dedup();
+            let watchers: Vec<crate::game::types::DelayedTrigger> = self
+                .delayed_triggers
+                .iter()
+                .filter(|dt| matches!(dt.kind, crate::game::types::DelayedKind::MatchingCreatureBlocksThisTurn(_)))
+                .cloned()
+                .collect();
+            for dt in watchers {
+                let crate::game::types::DelayedKind::MatchingCreatureBlocksThisTurn(ref filt) = dt.kind else {
+                    continue;
+                };
+                for &b in &blockers {
+                    if self.battlefield_find(b).is_some_and(|c| self.evaluate_requirement_on_card(filt, c, dt.controller)) {
+                        self.stack.push(
+                            TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
+                                .trigger_source(Some(crate::game::effects::EntityRef::Permanent(b)))
+                                .build(),
+                        );
+                    }
+                }
+            }
+        }
         // Turn-scoped "whenever a creature you control enters this turn"
         // delayed triggers (CR 603.4 — First Day of Class). Fire once per
         // entering creature controlled by the trigger's controller; the
@@ -28024,6 +28062,7 @@ fn event_amount(event: &GameEvent) -> u32 {
         | GameEvent::PaidLife { amount, .. }
         | GameEvent::DamageDealt { amount, .. }
         | GameEvent::PoisonAdded { amount, .. }
+        | GameEvent::DamagePrevented { amount, .. }
         | GameEvent::EnergyGained { amount, .. } => *amount,
         GameEvent::DiscardedBatch { count, .. } => *count,
         GameEvent::CounterAdded { count, .. } => *count,

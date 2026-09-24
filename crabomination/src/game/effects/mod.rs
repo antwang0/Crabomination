@@ -28,6 +28,7 @@ mod life_loss_grants;
 mod spell_damage;
 mod static_copy;
 mod table_choices;
+mod politics;
 mod targeting;
 /// The target enumerator's call-site census — see
 /// [`targeting::call_site_census`]. Re-exported for `bot_ladder` under the
@@ -28723,6 +28724,21 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::OnMatchingBlocksThisTurn { filter, body } => {
+                self.delayed_triggers.push(crate::game::types::DelayedTrigger {
+                    controller: ctx.controller,
+                    source: ctx.source.unwrap_or(CardId(0)),
+                    kind: crate::game::types::DelayedKind::MatchingCreatureBlocksThisTurn(filter.clone()),
+                    effect: (**body).clone(),
+                    target: None,
+                    bound_token: None,
+                    bound_subject: None,
+                    fires_once: false,
+                    expires_after_turn: None,
+                });
+                Ok(())
+            }
+
             Effect::OnMatchingAttacksThisTurn { filter, body } => {
                 self.delayed_triggers.push(crate::game::types::DelayedTrigger {
                     controller: ctx.controller,
@@ -32036,6 +32052,17 @@ impl GameState {
                 // CR 615.1 fog with a per-dealer exception (Inspire Awe).
                 self.prevent_combat_damage_this_turn = true;
                 self.prevent_combat_damage_except = Some(except.clone());
+                Ok(())
+            }
+
+            Effect::EachPlayerMayCounterForPeace { counters } => {
+                self.each_player_may_counter_for_peace(*counters, effect, ctx, events)
+            }
+
+            Effect::PreventAllDamageToPlayerThisTurn { who } => {
+                for p in self.resolve_players(who, ctx) {
+                    self.players[p].all_damage_prevented_this_turn = true;
+                }
                 Ok(())
             }
 

@@ -681,6 +681,10 @@ pub struct PlayerData {
     /// them is prevented. Cleared when their turn begins.
     #[serde(default)]
     pub protected_from_everything: bool,
+    /// "Prevent all damage that would be dealt to you this turn" (Selfless
+    /// Squire). Cleared at cleanup.
+    #[serde(default)]
+    pub all_damage_prevented_this_turn: bool,
     /// CR 702.16 — "you gain protection from the color of your choice until
     /// end of turn" (Seht's Tiger): sources of these colors can't target this
     /// player and their damage to them is prevented. Cleared at cleanup.
@@ -1347,6 +1351,7 @@ impl Player {
             searched_library_this_turn: false,
             shroud_this_turn: false,
             protected_from_everything: false,
+            all_damage_prevented_this_turn: false,
             protection_colors_eot: crate::mana::ColorSet::empty(),
             block_cap_this_combat: None,
             cards_exiled_this_turn: 0,

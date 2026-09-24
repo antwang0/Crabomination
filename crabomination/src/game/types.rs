@@ -1359,6 +1359,9 @@ pub enum DelayedKind {
     /// any player's — with the attacker as the trigger source; the body runs
     /// for the registering controller. Expires at cleanup.
     MatchingCreatureAttacksThisTurn(crate::card::SelectionRequirement),
+    /// `Effect::OnMatchingBlocksThisTurn` — fires per declared blocker that
+    /// matches; the blocker is the trigger source. Expires at cleanup.
+    MatchingCreatureBlocksThisTurn(crate::card::SelectionRequirement),
     /// "When [that permanent] leaves the battlefield, …" — fires when the
     /// watched card leaves the battlefield, any turn (not turn-scoped).
     /// Hofri Ghostforge's token rider.

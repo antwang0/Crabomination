@@ -431,9 +431,10 @@ impl GameState {
             return 0;
         }
         // Protection from everything (The One Ring) — all damage to the
-        // player is prevented until their next turn.
+        // player is prevented until their next turn; Selfless Squire's
+        // "prevent all damage that would be dealt to you this turn".
         if let EntityRef::Player(p) = ent
-            && self.players[p].protected_from_everything
+            && (self.players[p].protected_from_everything || self.players[p].all_damage_prevented_this_turn)
         {
             if amount > 0 {
                 events.push(GameEvent::DamagePrevented { amount, to_player: Some(p), to_card: None });

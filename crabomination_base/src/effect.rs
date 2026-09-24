@@ -3236,6 +3236,12 @@ pub enum EventKind {
     /// for every permanent carrying it as any player leaves; the departing
     /// player's own permanents are gone with them.
     PlayerLeftGame,
+    /// CR 615 — damage that would have been dealt to a player was prevented
+    /// (Selfless Squire's "whenever damage that would be dealt to you is
+    /// prevented"). Matched to `GameEvent::DamagePrevented` with a player;
+    /// the event amount is the damage prevented, and the scope reads that
+    /// player.
+    DamageToPlayerPrevented,
 }
 
 impl EventKind {
@@ -4724,6 +4730,11 @@ pub enum Effect {
     /// "[what] can't attack you or planeswalkers you control" for `duration`
     /// — `Keyword::CantAttackPlayer` naming the resolving controller.
     GrantCantAttackYou { what: Selector, duration: Duration },
+    /// Orzhov Advokist — "each player may put `counters` +1/+1 counters on a
+    /// creature they control. If a player does, creatures that player
+    /// controls can't attack you or planeswalkers you control until your
+    /// next turn." The creature is the taker's greatest-power one.
+    EachPlayerMayCounterForPeace { counters: u32 },
     /// CR 701.60 — *suspect* each creature `what` resolves to: set its
     /// `suspected` flag so it gains menace and can't block (injected as
     /// computed keywords). Repeat Offender, Reasonable Doubt.
@@ -8287,6 +8298,12 @@ pub enum Effect {
     /// player's qualifying attacker; the attacker is bound as
     /// `Selector::TriggerSource`. Summon: Leviathan II/III.
     OnMatchingAttacksThisTurn { filter: SelectionRequirement, body: Box<Effect> },
+    /// "Until end of turn, whenever a creature matching `filter` blocks,
+    /// [body]" — the block-side sibling of `OnMatchingAttacksThisTurn`
+    /// (Benefactor's Draught's "a creature an opponent controls"). `filter`
+    /// reads from the registering controller; the blocker is bound as
+    /// `Selector::TriggerSource`.
+    OnMatchingBlocksThisTurn { filter: SelectionRequirement, body: Box<Effect> },
     /// "Whenever a creature blocks this turn, its controller gets `amount`
     /// poison counters" (Noxious Assault). Turn-scoped flag consumed at
     /// blocker declaration.
@@ -9831,6 +9848,11 @@ pub enum Effect {
     /// player(s) in `GameState.combat_damage_prevented_to_players_this_turn`;
     /// the combat resolver zeroes any combat hit aimed at them.
     PreventAllCombatDamageToPlayerThisTurn { who: PlayerRef },
+    /// CR 615 — "Prevent all damage that would be dealt to you this turn"
+    /// (Selfless Squire): combat or not, from any source. Each prevention
+    /// emits `GameEvent::DamagePrevented`, which
+    /// `EventKind::DamageToPlayerPrevented` reads.
+    PreventAllDamageToPlayerThisTurn { who: PlayerRef },
 
     /// CR 701.16 — "[source's controller] sacrifices [the source] unless they
     /// pay {X}, where X is its mana value." The pay-or-sacrifice threat used by

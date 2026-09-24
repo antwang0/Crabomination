@@ -852,6 +852,9 @@ pub enum CounterType {
     /// Strife counter — Crescendo of War adds one each upkeep and pumps
     /// attackers (and your blockers) per counter.
     Strife,
+    /// Bribery counter — Gwafa Hazid, Profiteer's mark: a creature carrying
+    /// one can't attack or block while Gwafa's static says so.
+    Bribery,
 }
 
 /// Every zone a card can occupy.

@@ -4398,6 +4398,7 @@ impl GameState {
             pl.warped_spell_this_turn = false;
             pl.searched_library_this_turn = false;
             pl.shroud_this_turn = false;
+            pl.all_damage_prevented_this_turn = false;
             if !pl.protection_colors_eot.is_empty() {
                 pl.protection_colors_eot = crate::mana::ColorSet::empty();
             }
@@ -4820,6 +4821,7 @@ impl GameState {
                         | crate::game::types::DelayedKind::YourNextSpellOfTypeThisTurn(_)
                         | crate::game::types::DelayedKind::EachCombatThisTurn
                         | crate::game::types::DelayedKind::MatchingCreatureAttacksThisTurn(_)
+                        | crate::game::types::DelayedKind::MatchingCreatureBlocksThisTurn(_)
                         | crate::game::types::DelayedKind::SourceDealsDamageThisTurn(_)
                         | crate::game::types::DelayedKind::SourceDealsCombatDamageToPlayerThisTurn(_)
                         | crate::game::types::DelayedKind::YouGainLifeThisTurn
