@@ -3573,6 +3573,24 @@ impl SelectionRequirement {
         }
     }
 
+    /// True when the filter holds an atom answered against the ability's
+    /// source (its chosen color, its exiled card, its host) — the atoms the
+    /// source-less card walker answers `false`. Recurses through And/Or/Not.
+    pub fn mentions_source_context(&self) -> bool {
+        match self {
+            Self::HasChosenColorOfSource
+            | Self::HasChosenLandTypeOfSource
+            | Self::SharesColorWithExiledBySource
+            | Self::SameNameAsExiledWithSource
+            | Self::SharesColorWithAttachedHost
+            | Self::SharesCreatureTypeWithAttachedHost
+            | Self::SharesCreatureTypeWithSource => true,
+            Self::And(a, b) | Self::Or(a, b) => a.mentions_source_context() || b.mentions_source_context(),
+            Self::Not(a) => a.mentions_source_context(),
+            _ => false,
+        }
+    }
+
     /// True when the filter can match an object on the stack (a spell or an
     /// ability) — candidates no battlefield/graveyard/exile walk sees.
     /// Recurses through And/Or/Not.
@@ -7019,6 +7037,18 @@ pub fn facedown_creature_definition() -> CardDefinition {
     }
 }
 
+/// The face-down Forest land Yedora, Grave Gardener returns a creature as:
+/// nameless, colorless, a Forest with no other types or abilities (its
+/// {T}: Add {G} is the basic land type's intrinsic ability, CR 305.6).
+pub fn facedown_forest_definition() -> CardDefinition {
+    CardDefinition {
+        name: "",
+        card_types: vec![CardType::Land],
+        subtypes: Subtypes { land_types: vec![LandType::Forest], ..Default::default() },
+        ..Default::default()
+    }
+}
+
 /// CR 702.166c — a face-down permanent cast/manifested via Disguise (or Cloak)
 /// is a 2/2 colorless creature with ward {2}.
 pub fn facedown_disguise_definition() -> CardDefinition {
@@ -9762,6 +9792,17 @@ impl CardInstance {
         } else {
             facedown_creature_definition()
         }));
+        self.face_down = true;
+    }
+
+    /// Turn this card face down as a Forest land (Yedora, Grave Gardener).
+    /// No-op if already face down.
+    pub fn turn_face_down_as_forest(&mut self) {
+        if self.face_up_def.is_some() {
+            return;
+        }
+        self.face_up_def = Some(self.definition.arc());
+        self.set_definition(Arc::new(facedown_forest_definition()));
         self.face_down = true;
     }
 

@@ -6510,7 +6510,7 @@ impl BoardFacts {
             grants_escape: false,
             grants_replicate: false,
             grants_gy_cast: false,
-            grants_alt_cost: false,
+            grants_alt_cost: state.players[seat].life_alt_next_spell_this_turn,
         };
         for c in state.battlefield.iter() {
             if c.controller != seat {

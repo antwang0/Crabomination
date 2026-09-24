@@ -21887,8 +21887,12 @@ impl GameState {
                     let mut pw_ctrl = None;
                     let mut acted = None;
                     let mut land_ctrl = None;
+                    let mut creature_ctrl = None;
                     if let Some(c) = self.battlefield_find_mut(*card_id) {
                         c.entered_turn = Some(turn);
+                        if c.definition.is_creature() {
+                            creature_ctrl = Some(c.controller);
+                        }
                         c.battlefield_timestamp = ts;
                         if c.face_down {
                             face_down_ctrl = Some(c.controller);
@@ -21921,6 +21925,14 @@ impl GameState {
                     // takes.
                     if let Some(p) = pw_ctrl {
                         self.players[p].planeswalkers_entered_this_turn += 1;
+                    }
+                    // "Creatures that entered under your control this turn": a
+                    // resolving creature spell reaches only this funnel; the
+                    // token and zone-move paths stamped it already.
+                    if let Some(p) = creature_ctrl
+                        && !self.players[p].creatures_entered_this_turn.contains(card_id)
+                    {
+                        self.players[p].creatures_entered_this_turn.push(*card_id);
                     }
                     // CR 708 — track "a permanent entered face down under your
                     // control this turn" (Oblivious Bookworm).

@@ -1195,6 +1195,8 @@ impl Effect {
             | Effect::ExileFaceDownDrawPile { .. }
             | Effect::GrantActivatedAbilityToMatching { .. }
             | Effect::RevokeGrantedActivatedAbility { .. }
+            | Effect::NextSpellThisTurnMayCostLife { .. }
+            | Effect::ReturnOnePerPermanentType { .. }
             | Effect::DistributeCountersFromSource { .. }
             | Effect::PlayerGainsShroudThisTurn { .. }
             | Effect::PlayerGainsProtectionFromChosenColor { .. }
@@ -1669,6 +1671,7 @@ impl Effect {
             | Effect::GrantHarmonizeThisTurn { what }
             | Effect::GrantMiracle { what, .. }
             | Effect::Exile { what }
+            | Effect::ReturnFaceDownAsForest { what }
             | Effect::ExileWithSource { what }
             | Effect::RemoveAllCountersDiscountNextSpell { what }
             | Effect::ExileSameNameAsTarget { what }
@@ -2398,6 +2401,7 @@ impl Effect {
             | Effect::GrantHarmonizeThisTurn { what }
             | Effect::GrantMiracle { what, .. }
             | Effect::Exile { what }
+            | Effect::ReturnFaceDownAsForest { what }
             | Effect::ExileWithSource { what }
             | Effect::RemoveAllCountersDiscountNextSpell { what }
             | Effect::ExileSameNameAsTarget { what }
@@ -4695,6 +4699,7 @@ impl Effect {
                 | Effect::GrantEmbalmThisTurn { what }
                 | Effect::GrantMiracle { what, .. }
                 | Effect::Exile { what }
+            | Effect::ReturnFaceDownAsForest { what }
                 | Effect::ChangeSpellTarget { what }
                 | Effect::CounterSpell { what }
                 | Effect::CounterSpellIfNameExiledWithSource { what }

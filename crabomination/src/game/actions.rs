@@ -531,6 +531,14 @@ impl GameState {
                 ..Default::default()
             });
         }
+        // Marshland Bloodcaster — the next spell this turn may be paid for
+        // with life equal to its mana value.
+        if self.players[p].life_alt_next_spell_this_turn {
+            return Some(crate::card::AlternativeCost {
+                life_cost: card.definition.cost.cmc(),
+                ..Default::default()
+            });
+        }
         // Demon of Fate's Design — once during each of your turns, pay life
         // equal to the spell's mana value rather than its mana cost.
         if self.active_player_idx == p
@@ -7190,7 +7198,9 @@ impl GameState {
                 c.reduce_generic(morph_discount);
                 Some(c)
             }
-            None if real.is_creature() => Some(real.cost.clone()),
+            // A face-down Forest (Yedora) is not a manifested card: only a
+            // morph-family cost turns it up.
+            None if real.is_creature() && !c.definition.is_land() => Some(real.cost.clone()),
             None => None,
         }
     }
@@ -10431,6 +10441,10 @@ impl GameState {
             let me = &mut *self.players[p];
             me.spells_cast_this_turn += 1;
             me.spells_cast_this_game_turn += 1;
+            // Marshland Bloodcaster's option covers the next spell only.
+            if me.life_alt_next_spell_this_turn {
+                me.life_alt_next_spell_this_turn = false;
+            }
             if card.definition.card_types.contains(&crate::card::CardType::Sorcery) {
                 me.sorceries_cast_this_turn += 1;
             }

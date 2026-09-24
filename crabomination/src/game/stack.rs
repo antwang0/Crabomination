@@ -4474,6 +4474,7 @@ impl GameState {
             // Warped Space's once-per-turn free cast from exile.
             pl.free_exile_cast_used_this_turn = false;
             pl.life_alt_cast_used_this_turn = false;
+            pl.life_alt_next_spell_this_turn = false;
             pl.creatures_exiled_from_control_this_turn = 0;
             // CR 401.6 — turn-scoped play-from-top permission ends at cleanup.
             pl.play_from_top_this_turn = false;

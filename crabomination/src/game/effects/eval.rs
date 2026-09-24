@@ -436,18 +436,10 @@ impl GameState {
                     if let Some(c) = self.battlefield_find(cid) {
                         return Some(self.effective_power(c));
                     }
-                    if let Some(c) = self.exile.iter().find(|c| c.id == cid) {
-                        return Some(c.definition.power);
-                    }
-                    for p in &self.players {
-                        if let Some(c) = p.graveyard.iter().find(|c| c.id == cid) {
-                            return Some(c.definition.power);
-                        }
-                        if let Some(c) = p.hand.iter().find(|c| c.id == cid) {
-                            return Some(c.definition.power);
-                        }
-                    }
-                    None
+                    // Every other zone — the library and the stack included
+                    // (Sapling of Colfenor reads a revealed top card) — at
+                    // the printed value.
+                    self.find_card_anywhere(cid).map(|c| c.definition.power)
                 })
                 .sum(),
             Value::ToughnessOf(s) => self.resolve_selector(s, ctx).iter()
@@ -464,18 +456,10 @@ impl GameState {
                     if let Some(c) = self.battlefield_find(cid) {
                         return Some(self.effective_toughness(c));
                     }
-                    if let Some(c) = self.exile.iter().find(|c| c.id == cid) {
-                        return Some(c.definition.toughness);
-                    }
-                    for p in &self.players {
-                        if let Some(c) = p.graveyard.iter().find(|c| c.id == cid) {
-                            return Some(c.definition.toughness);
-                        }
-                        if let Some(c) = p.hand.iter().find(|c| c.id == cid) {
-                            return Some(c.definition.toughness);
-                        }
-                    }
-                    None
+                    // Every other zone — the library and the stack included
+                    // (Sapling of Colfenor reads a revealed top card) — at
+                    // the printed value.
+                    self.find_card_anywhere(cid).map(|c| c.definition.toughness)
                 })
                 .sum(),
             Value::MarkedDamageOn(s) => self
@@ -1605,6 +1589,16 @@ impl GameState {
                     })
                     .count() as i32
             }
+            // A token that left has ceased to exist and is not found; one still
+            // here is a token. Either way it is not counted.
+            Value::NontokenCreaturesEnteredThisTurn(p) => {
+                let Some(seat) = self.resolve_player(p, ctx) else { return 0 };
+                self.players[seat]
+                    .creatures_entered_this_turn
+                    .iter()
+                    .filter(|id| self.find_card_anywhere(**id).is_some_and(|c| !c.is_token))
+                    .count() as i32
+            }
             // Selvala, Eager Trailblazer — distinct computed powers.
             Value::DistinctPowersAmongCreaturesControlled(p) => {
                 let Some(seat) = self.resolve_player(p, ctx) else { return 0 };
@@ -2560,6 +2554,17 @@ impl GameState {
                 let Some(EntityRef::Card(cid)) = ctx.trigger_source else {
                     return false;
                 };
+                // A filter read against the trigger's source ("a spell of the
+                // chosen color" — Paradise Plume) needs the source-aware walker;
+                // the card walker answers those atoms `false`.
+                if filter.mentions_source_context() {
+                    return self.evaluate_requirement_static(
+                        filter,
+                        &Target::Permanent(cid),
+                        ctx.controller,
+                        ctx.source,
+                    );
+                }
                 self.stack.iter().any(|si| match si {
                     StackItem::Spell { card, .. } if card.id == cid => {
                         self.evaluate_requirement_on_card(filter, card, ctx.controller)

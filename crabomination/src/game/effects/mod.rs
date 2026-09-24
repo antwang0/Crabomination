@@ -3856,6 +3856,64 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::NextSpellThisTurnMayCostLife { who } => {
+                if let Some(p) = self.resolve_player(who, ctx) {
+                    self.players[p].life_alt_next_spell_this_turn = true;
+                }
+                Ok(())
+            }
+
+            Effect::ReturnFaceDownAsForest { what } => {
+                let ids: Vec<CardId> =
+                    self.resolve_selector(what, ctx).into_iter().filter_map(|e| e.as_card_id()).collect();
+                for cid in ids {
+                    let Some(owner) = self
+                        .players
+                        .iter()
+                        .position(|pl| pl.graveyard.iter().any(|c| c.id == cid))
+                    else {
+                        continue;
+                    };
+                    if let Some(c) = self.players[owner].graveyard.iter_mut().find(|c| c.id == cid) {
+                        c.turn_face_down_as_forest();
+                    }
+                    let dest = ZoneDest::Battlefield {
+                        controller: crate::effect::PlayerRef::Seat(owner),
+                        tapped: false,
+                    };
+                    self.move_card_to(cid, &dest, ctx, events);
+                }
+                Ok(())
+            }
+
+            Effect::ReturnOnePerPermanentType { life_per_card } => {
+                use crate::card::CardType as T;
+                let p = ctx.controller;
+                let mut picked: Vec<CardId> = Vec::new();
+                for t in [T::Artifact, T::Battle, T::Creature, T::Enchantment, T::Land, T::Planeswalker] {
+                    let best = self.players[p]
+                        .graveyard
+                        .iter()
+                        .filter(|c| c.definition.card_types.contains(&t) && !picked.contains(&c.id))
+                        .max_by_key(|c| (c.definition.cost.cmc(), std::cmp::Reverse(c.id)))
+                        .map(|c| c.id);
+                    picked.extend(best);
+                }
+                let dest = ZoneDest::Battlefield { controller: crate::effect::PlayerRef::Seat(p), tapped: false };
+                for &cid in &picked {
+                    self.move_card_to(cid, &dest, ctx, events);
+                }
+                let loss = life_per_card.saturating_mul(picked.len() as i32);
+                if loss > 0 {
+                    self.run_effect(
+                        &Effect::LoseLife { who: Selector::Player(crate::effect::PlayerRef::Seat(p)), amount: crate::effect::Value::Const(loss) },
+                        ctx,
+                        events,
+                    )?;
+                }
+                Ok(())
+            }
+
             Effect::RevokeGrantedActivatedAbility { filter, ability } => {
                 let ids: Vec<CardId> = self
                     .resolve_selector(&Selector::EachPermanent(filter.clone()), ctx)

@@ -1256,6 +1256,9 @@ pub enum Value {
     /// Fleshwright's "+1/+1 counter for each other Zombie that entered the
     /// battlefield under your control this turn".
     OtherCreaturesOfTypeEnteredThisTurn(crate::card::CreatureType),
+    /// Nontoken creatures that entered under `who`'s control this turn
+    /// (Gyome, Master Chef's end-step Food count).
+    NontokenCreaturesEnteredThisTurn(PlayerRef),
     /// The number of distinct power values among creatures `0` controls
     /// ("one mana of that color for each different power among creatures you
     /// control" — Selvala, Eager Trailblazer).
@@ -8672,6 +8675,21 @@ pub enum Effect {
         ability: Box<crate::effect::ActivatedAbility>,
         duration: Duration,
     },
+
+    /// "Rather than pay the mana cost of the next spell you cast this turn,
+    /// you may pay life equal to that spell's mana value" (Marshland
+    /// Bloodcaster). Arms `Player::life_alt_next_spell_this_turn`; the next
+    /// spell `who` casts this turn spends it, paid that way or not.
+    NextSpellThisTurnMayCostLife { who: PlayerRef },
+    /// "Return it to the battlefield face down under its owner's control.
+    /// It's a Forest land" (Yedora, Grave Gardener) — every card `what`
+    /// resolves to in a graveyard enters as a nameless face-down Forest.
+    ReturnFaceDownAsForest { what: Selector },
+    /// "For each permanent type, return up to one card of that type from your
+    /// graveyard to the battlefield. You lose `life_per_card` life for each
+    /// card returned this way" (Revival Experiment, CR 110.4). A card counts
+    /// for one type; the pick takes the highest mana value per type.
+    ReturnOnePerPermanentType { life_per_card: i32 },
 
     /// The end of an "until your next turn" `GrantActivatedAbilityToMatching`
     /// with `Duration::Permanent`: strips `ability` from every matching
