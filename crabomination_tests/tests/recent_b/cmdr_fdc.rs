@@ -4452,3 +4452,197 @@ fn exit_from_exile_batch() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(hf).unwrap().tapped);
 }
+
+// ── Death Toll (Winter, Cynical Opportunist) ────────────────────────────────
+
+/// Four card types in seat 0's graveyard (creature, instant, land, sorcery);
+/// returns the creature card.
+fn delirium_yard(g: &mut GameState) -> CardId {
+    let giant = g.add_card_to_graveyard(0, catalog::hill_giant());
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.add_card_to_graveyard(0, catalog::forest());
+    g.add_card_to_graveyard(0, catalog::divination());
+    giant
+}
+
+fn to_end_step(g: &mut GameState) {
+    g.step = TurnStep::PostCombatMain;
+    let ev = g.advance_step(Vec::new()).expect("to the end step");
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(g);
+}
+
+/// CR 603.2c / 603.10 — Polluted Cistern: one milling batch is one trigger,
+/// and the drain is the number of card types among the milled cards.
+#[test]
+fn cr_603_2c_polluted_cistern_drains_by_card_types_milled() {
+    let mut g = main_phase();
+    let id = g.add_card_to_hand(0, catalog::polluted_cistern_dim_oubliette());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastRoomDoor { card_id: id, right: false }).expect("cast Cistern");
+    drain_stack(&mut g);
+    for c in [catalog::grizzly_bears(), catalog::hill_giant(), catalog::forest(), catalog::island()] {
+        g.add_card_to_library(0, c);
+    }
+    etb(&mut g, catalog::carrion_grub());
+    assert_eq!(g.players[0].graveyard.len(), 4);
+    assert_eq!(g.players[1].life, 18, "creature and land: two types, one trigger");
+}
+
+/// CR 207.2c (delirium) — Winter's end step exiles four card types' worth
+/// of its controller's graveyard to return the best permanent card with a
+/// finality counter.
+#[test]
+fn cr_207_2c_winter_returns_a_permanent_card_with_a_finality_counter() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::winter_cynical_opportunist());
+    let giant = delirium_yard(&mut g);
+    to_end_step(&mut g);
+    let back = g.battlefield_find(giant).expect("the Giant came back");
+    assert_eq!(back.counter_count(CounterType::Finality), 1);
+    assert!(g.players[0].graveyard.is_empty(), "the other three types were exiled");
+
+    // Without delirium nothing happens.
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::winter_cynical_opportunist());
+    let giant = g.add_card_to_graveyard(0, catalog::hill_giant());
+    to_end_step(&mut g);
+    assert!(g.battlefield_find(giant).is_none());
+}
+
+/// CR 401.6 — Into the Pit: a spell (not a land) off the top, paid for with
+/// a nonland permanent as well.
+#[test]
+fn cr_401_6_into_the_pit_casts_from_the_top_by_sacrificing() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::into_the_pit());
+    let ring = g.add_card_to_battlefield(0, catalog::sol_ring());
+    let bears = g.add_card_to_library(0, catalog::grizzly_bears());
+    let forest = g.add_card_to_library(0, catalog::forest());
+    try_cast(&mut g, 0, bears, &[]).expect("cast off the top");
+    assert!(g.battlefield_find(bears).is_some());
+    assert!(g.battlefield_find(ring).is_none(), "Sol Ring was the sacrifice");
+    assert!(g.perform_action(GameAction::PlayLand(forest)).is_err(), "spells only");
+}
+
+/// CR 305.1 — Titania plays Forests (only) from the graveyard, and each
+/// Forest makes a 5/3 Elemental.
+#[test]
+fn cr_305_1_titania_plays_forests_from_the_graveyard() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::titania_natures_force());
+    let island = g.add_card_to_graveyard(0, catalog::island());
+    let forest = g.add_card_to_graveyard(0, catalog::forest());
+    assert!(g.perform_action(GameAction::PlayLandFromGraveyard(island)).is_err());
+    g.perform_action(GameAction::PlayLandFromGraveyard(forest)).expect("a Forest");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(forest).is_some());
+    assert_eq!(count_named(&g, 0, "Elemental"), 1);
+}
+
+/// The rest of Death Toll's new cards, one play pattern each.
+#[test]
+fn death_toll_batch() {
+    // Demonic Covenant: a Demon each end step, sacrificed when the two milled
+    // cards share all their card types.
+    let mut g = main_phase();
+    let cov = g.add_card_to_battlefield(0, catalog::demonic_covenant());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::hill_giant());
+    to_end_step(&mut g);
+    assert_eq!(count_named(&g, 0, "Demon"), 1);
+    assert!(g.battlefield_find(cov).is_none(), "two creatures: sacrificed");
+    let mut g = main_phase();
+    let cov = g.add_card_to_battlefield(0, catalog::demonic_covenant());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::forest());
+    to_end_step(&mut g);
+    assert!(g.battlefield_find(cov).is_some());
+
+    // Carrion Grub: +X/+0 from the graveyard's biggest creature.
+    let mut g = main_phase();
+    g.add_card_to_graveyard(0, catalog::hill_giant());
+    let grub = g.add_card_to_battlefield(0, catalog::carrion_grub());
+    assert_eq!(pt(&g, grub), (3, 5));
+
+    // Deathcap Cultivator gains deathtouch with delirium.
+    let mut g = main_phase();
+    let dc = g.add_card_to_battlefield(0, catalog::deathcap_cultivator());
+    assert!(!g.computed_permanent(dc).unwrap().keywords().contains(&Keyword::Deathtouch));
+    delirium_yard(&mut g);
+    assert!(g.computed_permanent(dc).unwrap().keywords().contains(&Keyword::Deathtouch));
+
+    // Deluge of Doom: -4/-4 with four types in the yard.
+    let mut g = main_phase();
+    delirium_yard(&mut g);
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let d = g.add_card_to_hand(0, catalog::deluge_of_doom());
+    cast(&mut g, d, &[]);
+    assert!(g.battlefield_find(giant).is_none());
+
+    // Convert to Slime: delirium makes an Ooze the size of what died.
+    let mut g = main_phase();
+    delirium_yard(&mut g);
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let ring = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let cts = g.add_card_to_hand(0, catalog::convert_to_slime());
+    cast(&mut g, cts, &[Target::Permanent(ring), Target::Permanent(giant)]);
+    assert!(g.battlefield_find(giant).is_none());
+    let ooze = g.battlefield.iter().find(|c| c.definition.name == "Ooze").map(|c| c.id).expect("an Ooze");
+    assert_eq!(pt(&g, ooze), (5, 5), "Sol Ring 1 + Hill Giant 4");
+
+    // Ishkanah: three Spiders with delirium.
+    let mut g = main_phase();
+    delirium_yard(&mut g);
+    let i = g.add_card_to_hand(0, catalog::ishkanah_grafwidow());
+    cast(&mut g, i, &[]);
+    assert_eq!(count_named(&g, 0, "Spider"), 3);
+
+    // Moldgraf Monstrosity returns two creature cards when it dies.
+    let mut g = main_phase();
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::hill_giant());
+    let m = g.add_card_to_battlefield(0, catalog::moldgraf_monstrosity());
+    let d = g.add_card_to_hand(0, catalog::murder());
+    cast(&mut g, d, &[Target::Permanent(m)]);
+    assert!(g.exile.iter().any(|c| c.id == m));
+    assert_eq!(count_named(&g, 0, "Grizzly Bears") + count_named(&g, 0, "Hill Giant"), 2);
+
+    // Old Stickfingers: X = 2 mills two creature cards and counts them.
+    let mut g = main_phase();
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::hill_giant());
+    let os = g.add_card_to_hand(0, catalog::old_stickfingers());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: os,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(2),
+    })
+    .expect("X = 2");
+    drain_stack(&mut g);
+    assert_eq!(pt(&g, os), (2, 2));
+
+    // Rendmaw: a goaded tapped Bird for each player on entry.
+    let mut g = main_phase();
+    etb(&mut g, catalog::rendmaw_creaking_nest());
+    let birds: Vec<_> = g.battlefield.iter().filter(|c| c.definition.name == "Bird").collect();
+    assert_eq!(birds.len(), 2);
+    assert!(birds.iter().all(|c| c.tapped && !c.goaded_by.is_empty()));
+
+    // Wrenn and Seven's +1 keeps the lands and bins the rest.
+    let mut g = main_phase();
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::hill_giant());
+    let w = g.add_card_to_battlefield(0, catalog::wrenn_and_seven());
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: w, ability_index: 0, target: None, x_value: None })
+        .expect("+1");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), 2);
+    assert_eq!(g.players[0].graveyard.len(), 2);
+}
