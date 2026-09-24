@@ -2632,6 +2632,13 @@ impl GameState {
         } else {
             Vec::new()
         };
+        // CR 614.13 — the token riders below apply once to the tokens *this*
+        // call mints. A resumed resolution keeps `last_created_tokens` (it is
+        // the same resolution), so reading the whole list re-applied Chatterfang
+        // to every earlier segment's tokens — its own riders included — on each
+        // resume, doubling the board per answer: a bot's lookahead through
+        // Insatiable Frugivore's repeat never came back (pod seed 9531).
+        let tokens_mark = self.scratch.last_created_tokens.len();
         let ran = self.run_effect(effect, ctx, &mut events);
         if swap_targets {
             self.scratch.resolution_targets = prev_targets;
@@ -2677,11 +2684,11 @@ impl GameState {
         // Nothing minted, nothing to ride along — and the walk below opens
         // with a `collect()` that is empty on every resolution that created
         // no token, which is nearly all of them.
-        let minted_for: Vec<usize> = if self.scratch.last_created_tokens.is_empty() {
+        let minted_now = self.scratch.last_created_tokens.get(tokens_mark..).unwrap_or(&[]);
+        let minted_for: Vec<usize> = if minted_now.is_empty() {
             Vec::new()
         } else {
-            let mut v: Vec<usize> = self
-                .scratch.last_created_tokens
+            let mut v: Vec<usize> = minted_now
                 .iter()
                 .filter_map(|id| self.battlefield_find(*id).map(|c| c.controller))
                 .collect();
@@ -2694,6 +2701,8 @@ impl GameState {
             // `p`; count before the riders mint their own.
             let minted_count = self
                 .scratch.last_created_tokens
+                .get(tokens_mark..)
+                .unwrap_or(&[])
                 .iter()
                 .filter(|id| {
                     self.battlefield_find(**id).is_some_and(|c| c.controller == p)

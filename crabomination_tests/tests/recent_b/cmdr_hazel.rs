@@ -268,3 +268,35 @@ fn odd_acorn_gang_draws_when_squirrels_connect() {
     }
     assert_eq!(g.players[0].hand.len(), hand + 1);
 }
+
+/// CR 614.13 — Chatterfang's Squirrels ride each token creation once. A
+/// prompting seat's Frugivore repeat resumes the same resolution per answer;
+/// the rider used to re-count every earlier token (its own Squirrels too) on
+/// each resume and doubled the board per answer — a bot lookahead never
+/// returned. Three repeats: four Foods, four Squirrels.
+#[test]
+fn chatterfang_rides_each_resumed_segment_once() {
+    use crabomination::decision::Decision;
+    let mut g = pod(2);
+    g.players[0].wants_ui = true;
+    g.add_card_to_battlefield(0, catalog::chatterfang_squirrel_general());
+    for _ in 0..9 {
+        g.add_card_to_graveyard(0, catalog::island());
+    }
+    let f = g.add_card_to_hand(0, catalog::insatiable_frugivore());
+    cast(&mut g, f, &[]);
+    for _ in 0..40 {
+        let Some(pending) = g.pending_decision.as_ref() else { break };
+        let answer = match &pending.decision {
+            Decision::ChooseCards { candidates, .. } => {
+                DecisionAnswer::Cards(candidates.iter().take(3).map(|(id, _)| *id).collect())
+            }
+            _ => DecisionAnswer::Bool(true),
+        };
+        g.submit_decision(answer).expect("answer");
+        drain_stack(&mut g);
+    }
+    assert!(g.pending_decision.is_none());
+    assert_eq!(named(&g, 0, "Food").len(), 4);
+    assert_eq!(named(&g, 0, "Squirrel").len(), 4);
+}
