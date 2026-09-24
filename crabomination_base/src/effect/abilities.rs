@@ -1025,6 +1025,11 @@ pub enum StaticEffect {
     /// per card) while dynamic ones scale off the controller's board — Sphere
     /// of Safety = number of enchantments you control. Copies stack. Paid from
     /// the pool, auto-tapping mana sources for any shortfall.
+    /// Onakke Oathkeeper — "creatures can't attack planeswalkers you control
+    /// unless their controller pays {N} for each creature they control
+    /// that's attacking a planeswalker you control" (CR 508.1g). The
+    /// planeswalker-only sibling of `AttackTaxToController`.
+    AttackTaxOnYourPlaneswalkers { amount: Value },
     AttackTaxToController {
         amount: Value,
         protect_planeswalkers: bool,
@@ -3109,6 +3114,10 @@ pub enum StaticEffect {
     /// player skips that turn instead" (Gerrard's Hourglass Pendant): binds
     /// its controller too.
     PlayersSkipExtraTurns,
+    /// Oath of Teferi — "you may activate the loyalty abilities of
+    /// planeswalkers you control twice each turn rather than only once"
+    /// (CR 606.3).
+    LoyaltyAbilitiesTwiceEachTurn,
     /// Like `GrantActivatedAbility`, but the granting card is active from its
     /// owner's **graveyard** rather than the battlefield ("as long as this card
     /// is in your graveyard, lands you control have …" — Riftstone Portal).

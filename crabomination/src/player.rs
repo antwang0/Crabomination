@@ -95,6 +95,18 @@ pub enum LossCause {
     Other,
 }
 
+/// One pending loyalty-ability copy grant (see
+/// `PlayerCold::loyalty_copy_grants`).
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct LoyaltyCopyGrant {
+    /// Copies made per activation.
+    pub copies: u32,
+    /// Only planeswalkers of this type (Leori); `None` is any.
+    pub subtype: Option<crate::card::PlaneswalkerSubtype>,
+    /// Consumed by the first activation it copies ("the next").
+    pub once: bool,
+}
+
 /// The rarely-written, heap-owning tail of a seat: registries only a handful
 /// of cards touch, plus the seat's name. Held behind one CoW handle so a
 /// `PlayerData` unshare — 24,852 of them per six bench games — bumps a
@@ -411,6 +423,13 @@ pub struct PlayerData {
     /// of the CR 606.3 one-per-planeswalker limit. Cleared each turn.
     #[serde(default)]
     pub extra_loyalty_activations: u32,
+    /// "Copy the next loyalty ability you activate this turn" (Jaya's
+    /// Phoenix, Repeated Reverberation) and Leori, Sparktouched Hunter's
+    /// type-scoped "whenever you activate an ability of a planeswalker of
+    /// that type, copy that ability". Read as each loyalty ability goes on
+    /// the stack; cleared at cleanup.
+    #[serde(default)]
+    pub loyalty_copy_grants: Vec<LoyaltyCopyGrant>,
     /// Whether this player has activated a loyalty ability this turn (The
     /// Chain Veil's end-step "if you didn't …" check). Cleared each turn.
     #[serde(default)]
@@ -1317,6 +1336,7 @@ impl Player {
             creature_spells_as_flash_this_turn: false,
             cast_from_graveyard_top_this_turn: false,
             extra_loyalty_activations: 0,
+            loyalty_copy_grants: Vec::new(),
             activated_loyalty_this_turn: false,
             spells_cast_this_turn: 0,
             sorceries_cast_this_turn: 0,

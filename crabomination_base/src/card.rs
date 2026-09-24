@@ -469,6 +469,8 @@ pub enum PlaneswalkerSubtype {
     Freyalise,
     // C18 planeswalker commander (Lord Windgrace).
     Windgrace,
+    // CMM (Planeswalker Party): Commodore Guff, Vronos, Masked Inquisitor.
+    Guff, Vronos,
 }
 
 /// All subtype categories collected into one struct for CardDefinition.

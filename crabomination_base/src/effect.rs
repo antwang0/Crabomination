@@ -4853,6 +4853,27 @@ pub enum Effect {
     /// Mystic Barrier — "choose left or right", stamped on the source (left:
     /// toward the next seat, the CR 803.1a direction; right: the previous).
     ChooseAttackDirection,
+    /// Teyo, Geometric Tactician's −2 — "choose left or right. Until your
+    /// next turn, each player may attack only the nearest opponent in the
+    /// last chosen direction and planeswalkers controlled by that opponent."
+    /// The Mystic Barrier restriction without a permanent: stamped on
+    /// `ColdState::temporary_attack_direction` and lifted as the
+    /// controller's next turn begins.
+    ChooseAttackDirectionUntilYourNextTurn,
+    /// "Copy the next loyalty ability you activate this turn" `copies` times
+    /// (Jaya's Phoenix: once; Repeated Reverberation: twice). Adds a one-shot
+    /// `LoyaltyCopyGrant` to the controller.
+    CopyNextLoyaltyAbility { copies: u32 },
+    /// Leori, Sparktouched Hunter — "choose a planeswalker type. Until end of
+    /// turn, whenever you activate an ability of a planeswalker of that type,
+    /// copy that ability." The type is the one most common among the
+    /// planeswalkers the controller has on the battlefield and in hand.
+    CopyLoyaltyAbilitiesOfChosenTypeThisTurn,
+    /// Guff Rewrites History — each resolved permanent's owner shuffles it
+    /// into their library; each player who controlled one exiles from the
+    /// top until a nonland card, puts the rest on the bottom in a random
+    /// order, and may cast that card without paying its mana cost.
+    ShuffleInThenCastFromTopFree { what: Selector },
     /// CR 901.9 — `who` rolls the planar die as an effect (Fractured
     /// Powerstone): no surcharge, no timing gate. A blank does nothing, chaos
     /// ensues, or `who` planeswalks. Outside Planechase only "whenever chaos

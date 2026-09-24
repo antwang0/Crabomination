@@ -2079,7 +2079,11 @@ impl Effect {
             | Effect::PreventAllDamageToPlayerThisTurn { .. }
             | Effect::EachPlayerMayCounterForPeace { .. }
             | Effect::EachPlayerMayDrawThenTakersGainLife { .. }
-            | Effect::ChooseAttackDirection => false,
+            | Effect::ChooseAttackDirection
+            | Effect::ChooseAttackDirectionUntilYourNextTurn
+            | Effect::CopyNextLoyaltyAbility { .. }
+            | Effect::CopyLoyaltyAbilitiesOfChosenTypeThisTurn => false,
+            Effect::ShuffleInThenCastFromTopFree { what } => sel_has_target(what),
             Effect::RollPlanarDie { who } | Effect::Planeswalk { who } | Effect::ChaosEnsues { who } => {
                 player_has_target(who)
             }

@@ -29,6 +29,7 @@ impl GameState {
                     .any(|sa| matches!(sa.effect, StaticEffect::AttackOnlyNearestOpponentInChosenDirection))
             })
             .map(|c| if c.modes_chosen.first() == Some(&1) { -1 } else { 1 })
+            .or(self.temporary_attack_direction.map(|(step, _)| step as isize))
     }
 
     /// The only seat the active player may attack under a Barrier:

@@ -278,7 +278,9 @@ pub(crate) fn attack_static_scan(state: &GameState) -> u32 {
                 SE::CreaturesCantAttackController { .. } => {
                     attack_static::CANT_ATTACK_CONTROLLER
                 }
-                SE::AttackTaxToController { .. } => attack_static::ATTACK_TAX,
+                SE::AttackTaxToController { .. } | SE::AttackTaxOnYourPlaneswalkers { .. } => {
+                    attack_static::ATTACK_TAX
+                }
                 _ => 0,
             };
         }
@@ -5796,6 +5798,7 @@ impl GameState {
                     .any(|sa| matches!(
                         sa.effect,
                         crate::effect::StaticEffect::AttackTaxToController { .. }
+                            | crate::effect::StaticEffect::AttackTaxOnYourPlaneswalkers { .. }
                     ))),
             "attack_static_scan missed an attack tax",
         );
@@ -5854,6 +5857,13 @@ impl GameState {
                         // The attacker, for a per-attacker amount (Nils's
                         // "X is the number of counters on that creature").
                         ctx.trigger_source = Some(crate::game::effects::EntityRef::Permanent(atk.attacker));
+                        total_tax += self.evaluate_value(amount, &ctx).max(0) as u32;
+                    }
+                    if let crate::effect::StaticEffect::AttackTaxOnYourPlaneswalkers { amount } = &sa.effect
+                        && at_planeswalker
+                    {
+                        let mut ctx = crate::game::effects::EffectContext::for_spell(d, None, 0, 0);
+                        ctx.source = Some(c.id);
                         total_tax += self.evaluate_value(amount, &ctx).max(0) as u32;
                     }
                 }

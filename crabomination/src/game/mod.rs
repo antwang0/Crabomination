@@ -135,6 +135,7 @@ mod token_replacement;
 // CR 205.4e — a legendary instant or sorcery needs a legendary creature or planeswalker.
 mod legendary_spell;
 mod mystic_barrier;
+mod loyalty_copy;
 mod spree_targets;
 // CR 102.2 — "an opponent controls N or more …", read per opponent.
 mod milled_play;
@@ -1406,6 +1407,10 @@ pub struct TurnRegistries {
 
 #[derive(Clone, Default, serde::Serialize, serde::Deserialize)]
 pub struct ColdState {
+    /// Teyo, Geometric Tactician's −2: `(step, seat)` — the Mystic Barrier
+    /// attack direction (+1 left, -1 right) until `seat`'s next turn.
+    #[serde(default)]
+    pub temporary_attack_direction: Option<(i8, usize)>,
     /// CR 801.2c — the range matrix, recomputed as each turn begins so a
     /// player leaving the game only shifts ranges on the next turn.
     /// `range_matrix[a][b]` is "b is within a's range". Empty means unlimited.
@@ -24377,6 +24382,7 @@ impl GameState {
         // printed override.
         let allowed = if self.battlefield[pos].definition.loyalty_twice_each_turn
             || self.battlefield[pos].loyalty_twice_this_turn
+            || self.loyalty_twice_each_turn_for(p)
         {
             2
         } else {
@@ -24593,6 +24599,8 @@ impl GameState {
                 .x_value(x)
                 .build(),
         );
+        // Jaya's Phoenix / Leori / Repeated Reverberation copies.
+        self.copy_loyalty_ability_for_grants(p, card_id);
         // CR 702.21a — Ward fires on a spell *or ability* an opponent
         // controls, and a loyalty ability is an activated ability
         // (CR 606.1). Pushed above the just-queued ability so the ward
@@ -29535,6 +29543,7 @@ fn static_effect_to_effects(
             // Consulted directly at the turn advance, not a layer effect.
             | StaticEffect::OpponentsSkipExtraTurns
             | StaticEffect::PlayersSkipExtraTurns
+            | StaticEffect::LoyaltyAbilitiesTwiceEachTurn
             // Read by the damage funnels (`scale_damage_to`), not a layer effect.
             | StaticEffect::MultiplyDamageFromYourSources { .. }
             // Consulted directly by the cast gate, not a layer effect.
@@ -29676,6 +29685,7 @@ fn static_effect_to_effects(
             | StaticEffect::LifeGainBecomesLoss { .. }
             // AttackTaxToController — consulted in declare_attackers; no layer.
             | StaticEffect::AttackTaxToController { .. }
+            | StaticEffect::AttackTaxOnYourPlaneswalkers { .. }
             // CreaturesCantAttackController — consulted in declare_attackers; no layer.
             | StaticEffect::CreaturesCantAttackController { .. }
             // LegendRuleDoesntApply (Mirror Gallery) — read by the CR 704.5j

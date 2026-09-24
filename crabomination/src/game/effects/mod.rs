@@ -32384,6 +32384,24 @@ impl GameState {
                 self.choose_attack_direction(ctx);
                 Ok(())
             }
+            Effect::ChooseAttackDirectionUntilYourNextTurn => {
+                self.choose_attack_direction_until_next_turn(ctx);
+                Ok(())
+            }
+            Effect::CopyNextLoyaltyAbility { copies } => {
+                self.grant_loyalty_copies(ctx.controller, *copies, None, true);
+                Ok(())
+            }
+            Effect::CopyLoyaltyAbilitiesOfChosenTypeThisTurn => {
+                self.grant_loyalty_copies_of_chosen_type(ctx.controller);
+                Ok(())
+            }
+            Effect::ShuffleInThenCastFromTopFree { what } => {
+                let ids: Vec<CardId> =
+                    self.resolve_selector(what, ctx).iter().filter_map(|e| e.as_permanent_id()).collect();
+                self.shuffle_in_then_cast_from_top_free(&ids, ctx, events);
+                Ok(())
+            }
 
             Effect::LureCreaturesToSourceNextTurn { who } => {
                 let Some(src) = ctx.source else { return Ok(()) };

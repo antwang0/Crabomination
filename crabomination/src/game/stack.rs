@@ -900,6 +900,9 @@ impl GameState {
                     // The Chain Veil's banked activations and the
                     // "did you activate a loyalty ability" flag are per-turn.
                     pl.extra_loyalty_activations = 0;
+                    if !pl.loyalty_copy_grants.is_empty() {
+                        pl.loyalty_copy_grants.clear();
+                    }
                     pl.activated_loyalty_this_turn = false;
                     pl.tapped_land_for_mana_this_turn = false;
                 }
@@ -4533,6 +4536,10 @@ impl GameState {
         self.nonland_permanent_left_bf_this_turn = false;
         if self.greatest_exiled_mv_this_turn != 0 {
             self.greatest_exiled_mv_this_turn = 0;
+        }
+        // Teyo's −2 lasts until its controller's next turn.
+        if matches!(self.temporary_attack_direction, Some((_, s)) if s == p) {
+            self.temporary_attack_direction = None;
         }
         // Reset the "cards exiled this turn" tally; powers Strixhaven
         // "if one or more cards were put into exile this turn" payoffs

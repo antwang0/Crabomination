@@ -1571,6 +1571,7 @@ fn project_permanent(
         loyalty_uses_remaining: card.definition.is_planeswalker().then(|| {
             let allowed: u8 = if card.definition.loyalty_twice_each_turn
                 || card.loyalty_twice_this_turn
+                || state.loyalty_twice_each_turn_for(card.controller)
             {
                 2
             } else {

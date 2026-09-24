@@ -1454,3 +1454,164 @@ fn cr_406_the_greatest_exiled_mana_value_is_noted_this_turn() {
     note(&mut g);
     assert_eq!(g.players[0].life, life, "a new turn forgets");
 }
+
+// ── Primitives for Planeswalker Party (CMM, Commodore Guff) ───────────────
+
+/// A 5-loyalty test planeswalker whose +1 gains a life and whose type is `t`.
+fn life_walker(t: crabomination::card::PlaneswalkerSubtype) -> CardDefinition {
+    use crabomination::card::LoyaltyAbility;
+    use crabomination::effect::{Effect, Selector, Value};
+    CardDefinition {
+        name: "Test Life Walker",
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes { planeswalker_subtypes: vec![t], ..Default::default() },
+        base_loyalty: 5,
+        loyalty_abilities: vec![LoyaltyAbility {
+            loyalty_cost: 1,
+            effect: Effect::GainLife { who: Selector::You, amount: Value::ONE },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+fn plus_one(g: &mut GameState, id: CardId) -> Result<(), String> {
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: id, ability_index: 0, target: None, x_value: None })
+        .map(|_| ())
+        .map_err(|e| format!("{e:?}"))?;
+    drain_stack(g);
+    Ok(())
+}
+
+/// CR 606.3 — "you may activate the loyalty abilities of planeswalkers you
+/// control twice each turn" (Oath of Teferi): a second activation is legal, a
+/// third is not.
+#[test]
+fn cr_606_3_loyalty_abilities_twice_each_turn() {
+    use crabomination::card::{PlaneswalkerSubtype, StaticAbility, StaticEffect};
+    let mut g = commander_game();
+    let pw = g.add_card_to_battlefield(0, life_walker(PlaneswalkerSubtype::Jace));
+    plus_one(&mut g, pw).expect("first");
+    assert!(plus_one(&mut g, pw).is_err(), "once without the Oath");
+    g.add_card_to_battlefield(
+        0,
+        CardDefinition {
+            name: "Test Oath",
+            card_types: vec![CardType::Enchantment],
+            static_abilities: vec![StaticAbility { description: "", effect: StaticEffect::LoyaltyAbilitiesTwiceEachTurn }],
+            ..Default::default()
+        },
+    );
+    plus_one(&mut g, pw).expect("second");
+    assert!(plus_one(&mut g, pw).is_err(), "not a third");
+}
+
+/// CR 707.10 — "copy the next loyalty ability you activate this turn"
+/// (Jaya's Phoenix): the copy resolves too, and the grant is spent.
+#[test]
+fn cr_707_10_the_next_loyalty_ability_is_copied_once() {
+    use crabomination::card::PlaneswalkerSubtype;
+    use crabomination::effect::Effect;
+    use crabomination::game::effects::EffectContext;
+    let mut g = commander_game();
+    let a = g.add_card_to_battlefield(0, life_walker(PlaneswalkerSubtype::Jace));
+    let b = g.add_card_to_battlefield(0, life_walker(PlaneswalkerSubtype::Chandra));
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(&Effect::CopyNextLoyaltyAbility { copies: 1 }, &ctx).expect("grant");
+    let life = g.players[0].life;
+    plus_one(&mut g, a).expect("copied");
+    assert_eq!(g.players[0].life, life + 2);
+    plus_one(&mut g, b).expect("not copied");
+    assert_eq!(g.players[0].life, life + 3, "the grant was spent");
+}
+
+/// CR 707.10 — Leori's type-scoped copies: every ability of a planeswalker
+/// of the chosen type this turn, and none of another type.
+#[test]
+fn cr_707_10_copies_of_one_planeswalker_type() {
+    use crabomination::card::PlaneswalkerSubtype;
+    use crabomination::effect::Effect;
+    use crabomination::game::effects::EffectContext;
+    let mut g = commander_game();
+    let jace = g.add_card_to_battlefield(0, life_walker(PlaneswalkerSubtype::Jace));
+    let jace2 = g.add_card_to_battlefield(0, life_walker(PlaneswalkerSubtype::Jace));
+    let chandra = g.add_card_to_battlefield(0, life_walker(PlaneswalkerSubtype::Chandra));
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(&Effect::CopyLoyaltyAbilitiesOfChosenTypeThisTurn, &ctx).expect("grant");
+    let life = g.players[0].life;
+    plus_one(&mut g, jace).expect("Jace");
+    plus_one(&mut g, jace2).expect("Jace again");
+    plus_one(&mut g, chandra).expect("Chandra");
+    assert_eq!(g.players[0].life, life + 2 + 2 + 1, "both Jaces copied (the most common type)");
+}
+
+/// CR 508.1a — "until your next turn, each player may attack only the
+/// nearest opponent in the last chosen direction" (Teyo's −2): with no
+/// Barrier on the battlefield, seat 1 is the only legal defender for seat 0.
+#[test]
+fn cr_508_1a_a_temporary_attack_direction() {
+    use crabomination::effect::Effect;
+    use crabomination::game::effects::EffectContext;
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = game_with_format(Format::Commander, 4);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(&Effect::ChooseAttackDirectionUntilYourNextTurn, &ctx).expect("left");
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.step = TurnStep::DeclareAttackers;
+    let at = |seat| GameAction::DeclareAttackers(vec![Attack { attacker: bear, target: AttackTarget::Player(seat) }]);
+    assert!(!g.would_accept(at(2)), "seat 2 is not the nearest to the left");
+    assert!(g.would_accept(at(1)));
+}
+
+/// CR 508.1g — "creatures can't attack planeswalkers you control unless
+/// their controller pays {1} for each" (Onakke Oathkeeper): attacking the
+/// player is free, the planeswalker costs {1}.
+#[test]
+fn cr_508_1g_a_tax_on_attacking_planeswalkers_only() {
+    use crabomination::card::{PlaneswalkerSubtype, StaticAbility, StaticEffect};
+    use crabomination::effect::Value;
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = commander_game();
+    g.add_card_to_battlefield(
+        1,
+        CardDefinition {
+            name: "Test Oathkeeper",
+            card_types: vec![CardType::Enchantment],
+            static_abilities: vec![StaticAbility {
+                description: "",
+                effect: StaticEffect::AttackTaxOnYourPlaneswalkers { amount: Value::ONE },
+            }],
+            ..Default::default()
+        },
+    );
+    let pw = g.add_card_to_battlefield(1, life_walker(PlaneswalkerSubtype::Jace));
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.step = TurnStep::DeclareAttackers;
+    let at = |t| GameAction::DeclareAttackers(vec![Attack { attacker: bear, target: t }]);
+    assert!(!g.would_accept(at(AttackTarget::Planeswalker(pw))), "no {{1}} in pool");
+    assert!(g.would_accept(at(AttackTarget::Player(1))));
+    g.players[0].mana_pool.add_colorless(1);
+    assert!(g.would_accept(at(AttackTarget::Planeswalker(pw))));
+}
+
+/// CR 701.24 — Guff Rewrites History's shuffle-in: the permanent goes into
+/// its owner's library and its controller casts the top nonland card free.
+#[test]
+fn a_permanent_shuffled_in_is_replaced_by_a_free_cast_off_the_top() {
+    use crabomination::effect::{Effect, Selector};
+    use crabomination::game::effects::EffectContext;
+    let mut g = commander_game();
+    let ring = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    let ctx = EffectContext { targets: vec![Target::Permanent(ring)], ..ctx };
+    g.resolve_effect(&Effect::ShuffleInThenCastFromTopFree { what: Selector::Target(0) }, &ctx).expect("resolve");
+    drain_stack(&mut g);
+    // The Ring is its library's only card, so it comes straight back.
+    assert!(g.battlefield_find(ring).is_some_and(|c| c.controller == 1), "shuffled in and recast");
+}
