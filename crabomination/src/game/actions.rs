@@ -4180,6 +4180,14 @@ impl GameState {
         card_id: CardId,
     ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
+        // Coram, the Undertaker — a land milled into any graveyard this turn,
+        // when Crucible's own-graveyard route doesn't cover it.
+        if !(self.player_may_play_lands_from_graveyard(p)
+            && self.players[p].graveyard.iter().any(|c| c.id == card_id))
+            && let Some(r) = self.try_play_milled_land(card_id)
+        {
+            return r;
+        }
         if !self.can_cast_sorcery_speed(p) {
             return Err(GameError::SorcerySpeedOnly);
         }
@@ -4206,7 +4214,7 @@ impl GameState {
     /// `play_land_from_graveyard`: applies Damping Sphere mana downgrades,
     /// pushes the card to the battlefield, fires ETB triggers, and returns
     /// the land-played events.
-    fn place_land_card(
+    pub(crate) fn place_land_card(
         &mut self,
         p: usize,
         mut card: crate::card::CardInstance,
@@ -5317,11 +5325,19 @@ impl GameState {
                 }
             }
         }
+        // Coram, the Undertaker — a card milled into ANY graveyard this turn.
+        let p = self.priority.player_with_priority;
+        if !self.players[p].hand.iter().any(|c| c.id == card_id)
+            && self.milled_play_owner(p, card_id).is_some()
+            && let Some(r) =
+                self.try_cast_milled(card_id, target.clone(), additional_targets.clone(), mode, x_value)
+        {
+            return r;
+        }
         // Muldrotha — cast a permanent spell of each permanent type from
         // your graveyard during each of your turns. Hop the card into hand
         // for the normal cast pipeline; restore on failure, record the
         // consumed permanent type on success.
-        let p = self.priority.player_with_priority;
         if !self.players[p].hand.iter().any(|c| c.id == card_id)
             && !self.players[p].graveyard.iter().any(|c| {
                 c.id == card_id

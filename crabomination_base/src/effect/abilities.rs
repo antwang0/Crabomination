@@ -1787,6 +1787,11 @@ pub enum StaticEffect {
     /// permanent type from your graveyard." Muldrotha, the Gravetide
     /// (checked in `cast_spell`; per-type-per-turn tally on the player).
     MayCastPermanentsFromGraveyard,
+    /// "During each of your turns, you may play a land and cast a spell from
+    /// among cards in graveyards that were put there from libraries this
+    /// turn." (Coram, the Undertaker.) Any graveyard; a one-land, one-spell
+    /// budget per turn (`game/milled_play.rs`).
+    MayPlayCardsMilledThisTurn,
     /// "During your turn, you may play cards exiled with this. If you cast a
     /// spell this way, pay life equal to its mana value rather than pay its
     /// mana cost." (Valgavoth, Terror Eater.) Read by

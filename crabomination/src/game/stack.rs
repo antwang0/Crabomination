@@ -4289,6 +4289,10 @@ impl GameState {
         if !self.players[p].graveyard_cast_types_this_turn.is_empty() {
             self.players[p].graveyard_cast_types_this_turn.clear();
         }
+        if self.players[p].milled_spell_cast_this_turn || self.players[p].milled_land_played_this_turn {
+            self.players[p].milled_spell_cast_this_turn = false;
+            self.players[p].milled_land_played_this_turn = false;
+        }
         if !self.players[p].graveyard_sac_cast_sources_this_turn.is_empty() {
             self.players[p].graveyard_sac_cast_sources_this_turn.clear();
         }

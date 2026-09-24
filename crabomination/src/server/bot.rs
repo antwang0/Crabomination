@@ -6176,7 +6176,8 @@ impl BoardFacts {
                     SE::MayCastPermanentsFromGraveyard
                     | SE::PlayCardsFromGraveyardDuringYourTurn
                     | SE::GraveyardCastOncePerTurn { .. }
-                    | SE::GraveyardCastBySacrificingOncePerTurn { .. } => f.grants_gy_cast = true,
+                    | SE::GraveyardCastBySacrificingOncePerTurn { .. }
+                    | SE::MayPlayCardsMilledThisTurn => f.grants_gy_cast = true,
                     _ => {}
                 }
             }
@@ -7683,6 +7684,33 @@ pub(super) fn cast_candidates<'a>(
         };
         castable.push((action, false));
     }
+    // Coram, the Undertaker — a spell milled into ANY graveyard this turn.
+    if facts.grants_gy_cast
+        && !state.players[seat].milled_spell_cast_this_turn
+        && state.has_milled_play_permission(seat)
+    {
+        for owner in 0..state.players.len() {
+            for c in state.players[owner].graveyard.iter() {
+                if c.definition.is_land() || state.milled_play_owner(seat, c.id).is_none() {
+                    continue;
+                }
+                let (target, additional_targets) = if c.definition.effect.requires_target() {
+                    let (t, extras) =
+                        state.auto_targets_for_effect_all_slots(&c.definition.effect, seat, None);
+                    if t.is_none() {
+                        continue;
+                    }
+                    (t, extras)
+                } else {
+                    (None, vec![])
+                };
+                castable.push((
+                    GameAction::CastSpell { card_id: c.id, target, additional_targets, mode: None, x_value: None },
+                    false,
+                ));
+            }
+        }
+    }
     });
 
     // MDFC back faces (CR 712): cast the back of a hand MDFC, or the back of a
@@ -8284,6 +8312,26 @@ fn main_phase_action_with(
         let action = GameAction::PlayLandFromGraveyard(land.id);
         if let Some(g) = GameState::accept_on(state, action.clone()) {
             return BotStep { action, settled: Some(Box::new(g)) };
+        }
+    }
+
+    // Coram, the Undertaker: a land milled into any graveyard this turn.
+    if can_play_land
+        && !state.players[seat].milled_land_played_this_turn
+        && state.has_milled_play_permission(seat)
+    {
+        let milled_land = (0..state.players.len()).find_map(|o| {
+            state.players[o]
+                .graveyard
+                .iter()
+                .find(|c| c.definition.is_land() && state.milled_play_owner(seat, c.id).is_some())
+                .map(|c| c.id)
+        });
+        if let Some(land) = milled_land {
+            let action = GameAction::PlayLandFromGraveyard(land);
+            if let Some(g) = GameState::accept_on(state, action.clone()) {
+                return BotStep { action, settled: Some(Box::new(g)) };
+            }
         }
     }
 
