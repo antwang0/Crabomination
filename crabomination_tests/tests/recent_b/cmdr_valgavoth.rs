@@ -1,7 +1,8 @@
 //! Commander: the Endless Punishment precon (DSC, Valgavoth,
 //! `decks::cmdr_valgavoth`) and the primitives it needed.
 
-use crabomination::card::{CardDefinition, CardId, CardType, CreatureType, Subtypes};
+use crabomination::card::{CardDefinition, CardId, CardType, CounterType, CreatureType, Keyword, Subtypes};
+use crabomination::effect::{Effect, PlayerRef, Selector, Value};
 use crabomination::catalog;
 use crabomination::game::types::{GameAction, Target, TurnStep};
 use crabomination::game::*;
@@ -48,4 +49,31 @@ fn cr_106_6_instant_sorcery_demon_or_spirit_mana() {
     g.players[0].mana_pool.add_restricted(Color::Red, 1, restricted);
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
     cast(&mut g, 0, bolt, Some(Target::Player(1))).expect("an instant can");
+}
+
+/// CR 702.62 — "exile it with three time counters on it" as it resolves: the
+/// card is suspended again, and the upkeeps tick it back into a free cast.
+#[test]
+fn cr_702_62_a_spell_that_suspends_itself() {
+    let spell = || CardDefinition {
+        name: "Test Sentence",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Suspend(3, cost(&[generic(1)]))],
+        exile_on_resolve_time_counters: 3,
+        effect: Effect::LoseLife { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::ONE },
+        ..Default::default()
+    };
+    let mut g = pod(2);
+    let s = g.add_card_to_hand(0, spell());
+    g.players[0].mana_pool.add_colorless(1);
+    let life = g.players[1].life;
+    cast(&mut g, 0, s, None).expect("cast");
+    let exiled = g.exile.iter().find(|c| c.id == s).expect("exiled");
+    assert_eq!(exiled.counter_count(CounterType::Time), 3);
+    for _ in 0..3 {
+        g.process_suspend();
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.players[1].life, life - 2, "cast again off its last counter");
 }

@@ -26990,9 +26990,14 @@ impl GameState {
             self.players[owner].library.push(card);
             return Ok(events);
         }
-        if card.definition.exile_on_resolve {
+        if card.definition.exile_on_resolve || card.definition.exile_on_resolve_time_counters > 0 {
             self.players[caster].cards_exiled_this_turn =
                 self.players[caster].cards_exiled_this_turn.saturating_add(1);
+            let mut card = card;
+            let n = card.definition.exile_on_resolve_time_counters;
+            if n > 0 && !card.is_token {
+                card.add_counters(crate::card::CounterType::Time, n);
+            }
             self.exile.push(card);
             return Ok(events);
         }

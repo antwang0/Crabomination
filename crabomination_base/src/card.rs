@@ -859,6 +859,8 @@ pub enum CounterType {
     Bribery,
     /// Hoofprint counter — Hoofprints of the Stag's tally of cards drawn.
     Hoofprint,
+    /// Soul counter — Séance Board's morbid tally, the mana it taps for.
+    Soul,
 }
 
 /// Every zone a card can occupy.
@@ -4157,6 +4159,10 @@ pub struct CardDefinition {
     /// instead of the graveyard.
     #[serde(default)]
     pub library_bottom_on_resolve: bool,
+    /// CR 702.62 — "Exile [this] with N time counters on it" as it resolves
+    /// (Suspended Sentence): with suspend on the card, it is suspended again.
+    #[serde(default)]
+    pub exile_on_resolve_time_counters: u32,
     /// CR 601.2b — "You may cast this spell as though it had flash if you pay
     /// [cost] more to cast it" (the Invasion "or Flight" cycle). The surcharge
     /// is only owed when the spell is actually cast outside sorcery timing.
