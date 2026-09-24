@@ -393,6 +393,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::MIZZIX_COMMANDERS,
             main: decks::MIZZIX_MAIN,
         },
+        // Thirty-ninth: the twenty-ninth official list (Quantum Quandrix,
+        // C21) — Simic Fractals under a token doubler. `--seats 39`.
+        PodDeck {
+            name: "Adrix and Nev (GU)",
+            commanders: decks::ADRIX_NEV_COMMANDERS,
+            main: decks::ADRIX_NEV_MAIN,
+        },
     ]
 }
 

@@ -1276,3 +1276,32 @@ pub const MIZZIX_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain, mountain,
 ];
+
+pub const ADRIX_NEV_COMMANDERS: &[CardFactory] = &[adrix_and_nev_twincasters];
+
+/// **Quantum Quandrix**, the Commander 2021 deck (C21, 2021-04-23), exactly as
+/// MTGJSON's `QuantumQuandrix_C21` prints it: 78 nonbasic cards + 21
+/// basics = 99. Simic Fractals and token doubling under Adrix and Nev,
+/// Twincasters.
+pub const ADRIX_NEV_MAIN: &[CardFactory] = &[
+    garruk_primal_hunter, esix_fractal_bloom, curiosity_crafter, deekah_fractal_theorist,
+    spawning_kraken, guardian_augmenter, ruxa_patient_professor, desolation_twin,
+    champion_of_wits, crafty_cutpurse, reef_worm, arashi_the_sky_asunder, forgotten_ancient,
+    hornet_nest, hornet_queen, hydra_broodmaster, incubation_druid, kazandu_tuskcaller,
+    managorger_hydra, rampaging_baloths, terastodon, kaseto_orochi_archmage, master_biomancer,
+    biomathematician, quandrix_cultivator, zimone_quandrix_prodigy, coiling_oracle,
+    plaxcaster_frogling, trygon_predator, replication_technique, oversimplify,
+    curse_of_the_swine, rite_of_replication, shamanic_revelation, spitting_image, golden_ratio,
+    rampant_growth, incubation_incongruity, perplexing_test, theoretical_duplication,
+    return_of_the_wildspeaker, biomass_mutation, eureka_moment, rapid_hybridization,
+    beast_within, krosan_grip, fractal_harness, sequence_engine, geometric_nexus,
+    idol_of_oblivion, arcane_signet, simic_signet, sol_ring, paradox_zone, primal_empathy,
+    exotic_orchard, lumbering_falls, mosswort_bridge, oran_rief_the_vastwood, temple_of_mystery,
+    yavimaya_coast, quandrix_campus, study_hall, blighted_woodland, command_tower,
+    llanowar_reborn, lonely_sandbar, myriad_landscape, novijen_heart_of_progress, opal_palace,
+    simic_growth_chamber, temple_of_the_false_god, tranquil_thicket, commanders_insight,
+    ezuris_predation, kodamas_reach, nissas_expedition, rogues_passage,
+    // Basics: 11 forest, 10 island
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    island, island, island, island, island, island, island, island, island, island,
+];
