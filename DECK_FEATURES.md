@@ -113,6 +113,7 @@ lists were picked.
 | **Family Matters** (BLC precon) URW | Zinnia, Valley's Voice | URW | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Virtue and Valor** (WOC precon) GW | Ellivere of the Wild Court | GW | 100 | 🟡 all 100 implemented, 7 carry residuals (below) |
 | **Divine Convocation** (MOC precon) URW | Kasla, the Broken Halo | URW | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
+| **Symbiotic Swarm** (C20 precon) WBG | Kathril, Aspect Warper | WBG | 100 | 🟡 all 100 implemented, 6 carry residuals (below) |
 | **Hatsune Miku** (SLD precon) GW | Trostani, Selesnya's Voice | GW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Witherbloom Witchcraft** (C21 precon) BG | Willowdusk, Essence Seer | BG | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Witherbloom Pestilence** (SOC precon) BG | Dina, Essence Brewer | BG | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
@@ -1569,6 +1570,27 @@ Eshki / Nelly / Go-Shintai (seed 10241): 1,000 / 1,000, 15.3 %; census (seed
 10242): no card of the four unplayed; strict debug pods (seeds 10244-10246, 4
 and 6 seats): 180 / 180. `--bench` byte-identical; cube/sos/sealed (seed 10243):
 7,500 decided.
+
+The **hundred-and-third** is Ikoria Commander's **Symbiotic Swarm**
+(`SymbioticSwarm_C20`) — Abzan keyword counters under Kathril, Aspect
+Warper. Nineteen cards were missing; the primitives
+(`game/effects/keyword_gifts.rs`): `Effect::KeywordCountersFromGraveyard`
+(Kathril), `GainKeywordsYourCreaturesHave` (Majestic Myriarch),
+`RevealTopChooseByKeyword` (Selective Adaptation), `MoveCountersFromAmongOnto`
+and `MoveOneCounter`; `ChooseCardTypeAmongForSource` +
+`StaticEffect::NoOneCastsChosenCardType` (Archon of Valor's Reach, on Iona's
+cast-lock lane); delve-linked cards and
+`Value::CardsExiledWithSourceMatching` (Soulflayer, CR 702.66);
+`Predicate::TriggerSourceHadCounters` (Nikara, CR 603.10 LKI). Cairn
+Wanderer is one `PumpTeamIf` per keyword. ⚠ **An "up to N target cards"
+slot named one graveyard card twice** (CR 115.3): Ever After was never cast
+until the graveyard sweep skipped cards an earlier slot took. Residuals:
+**Cairn Wanderer**, **Slippery Bogbonder**, **Tayam**, **Vitality Hunter**,
+**Yannik**, **Archon of Valor's Reach** (INCOMPLETE_CARDS). Release pods
+beside Kasla / Ellivere / Zinnia (seed 10302, 1,000 games): 1,000 decided,
+Kathril 21.8 %, and the census leaves no card of the four lists unplayed;
+strict debug pods (seeds 10303/10304, 120 games) decided 120/120. Suite
+21,600 / 0; `--bench` byte-identical.
 
 The **hundred-and-first** is March of the Machine Commander's **Divine
 Convocation** (`DivineConvocation_MOC`) — Jeskai convoke under Kasla, the
