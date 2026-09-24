@@ -1535,3 +1535,33 @@ pub const WYLETH_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains,
 ];
+
+pub const BREYA_COMMANDERS: &[CardFactory] = &[breya_etherium_shaper];
+
+/// **Invent Superiority**, the Commander 2016 deck (C16, 2016-11-11), exactly
+/// as MTGJSON's `InventSuperiority_C16` prints it: 81 nonbasic cards +
+/// 18 basics = 99. Four-colour artifacts under Breya,
+/// Etherium Shaper — the pod's first four-colour identity.
+pub const BREYA_MAIN: &[CardFactory] = &[
+    daretti_scrap_savant, myr_retriever, chief_engineer, etherium_sculptor, vedalken_engineer,
+    slobad_goblin_tinkerer, baleful_strix, akiri_line_slinger, armory_automaton, shimmer_myr,
+    master_of_etherium, trinket_mage, magus_of_the_will, hanna_ships_navigator,
+    silas_renn_seeker_adept, sydri_galvanic_genius, etched_oracle, solemn_simulacrum,
+    sanctum_gargoyle, faerie_artisans, bruse_tarl_boorish_herder, ethersworn_adjudicator,
+    sphinx_summoner, jor_kadeen_the_prevailer, soul_of_new_phyrexia, godo_bandit_warlord,
+    hellkite_tyrant, sharuum_the_hegemon, myr_battlesphere, hellkite_igniter, filigree_angel,
+    whipflare, parting_thoughts, trash_for_treasure, beacon_of_unrest, migratory_route,
+    open_the_vaults, phyrexian_rebirth, grave_upheaval, coastal_breach, grip_of_phyresis,
+    ancient_excavation, read_the_runes, trial_error, everflowing_chalice, skullclamp, sol_ring,
+    dispellers_capsule, executioners_capsule, cranial_plating, fellwar_stone, ichor_wellspring,
+    mycosynth_wellspring, swiftfoot_boots, thopter_foundry, commanders_sphere,
+    loxodon_warhammer, bonehoard, nevinyrrals_disk, trading_post, blinkmoth_urn,
+    darksteel_citadel, seat_of_the_synod, curse_of_vengeance, arcane_sanctum, ash_barrens,
+    azorius_chancery, boros_garrison, buried_ruin, command_tower, crumbling_necropolis,
+    dimir_aqueduct, evolving_wilds, exotic_orchard, mystic_monastery, nomad_outpost,
+    rakdos_carnarium, rupture_spire, temple_of_the_false_god, terramorphic_expanse,
+    transguild_promenade,
+    // Basics: 5 plains, 5 island, 4 swamp, 4 mountain
+    plains, plains, plains, plains, plains, island, island, island, island, island, swamp,
+    swamp, swamp, swamp, mountain, mountain, mountain, mountain,
+];

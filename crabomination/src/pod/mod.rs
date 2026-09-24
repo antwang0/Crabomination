@@ -456,6 +456,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::WYLETH_COMMANDERS,
             main: decks::WYLETH_MAIN,
         },
+        // Forty-eighth: the thirty-eighth official list (Invent Superiority,
+        // C16) — four-colour artifacts under Breya. `--seats 48`.
+        PodDeck {
+            name: "Breya, Etherium Shaper (WUBR)",
+            commanders: decks::BREYA_COMMANDERS,
+            main: decks::BREYA_MAIN,
+        },
     ]
 }
 
