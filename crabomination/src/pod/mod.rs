@@ -39,12 +39,21 @@ impl PodDeck {
     }
 }
 
+/// The total-action backstop, as a multiple of the play budget: a game that
+/// passes this many times per allowed play is stuck, whatever its plays say.
+/// Passes run ~10-65 per play from four seats to thirty-four.
+const PASSES_PER_PLAY_BACKSTOP: usize = 200;
+
 /// One finished pod game.
 #[derive(Debug, Clone, Copy)]
 pub struct PodOutcome {
     /// The surviving seat, or `None` for a draw or an undecided game.
     pub winner: Option<usize>,
     pub actions: usize,
+    /// The accepted actions that were not a priority pass. Passes are
+    /// ~90 % of a 34-seat game (every stack item and step waits on every
+    /// live seat), so they grow with seats squared; plays grow with seats.
+    pub plays: usize,
     pub turns: u32,
     pub stop: StopReason,
 }
@@ -67,6 +76,7 @@ pub struct PodTally {
     pub no_legal_move: u32,
     pub total_turns: u64,
     pub total_actions: u64,
+    pub total_plays: u64,
     /// The single longest game's `(actions, turns)` — a cap is read against
     /// this: a capped game near it is a long game, one far below it a loop.
     pub longest: (usize, u32),
@@ -80,6 +90,7 @@ impl PodTally {
         self.games += 1;
         self.total_turns += u64::from(o.turns);
         self.total_actions += o.actions as u64;
+        self.total_plays += o.plays as u64;
         self.longest = self.longest.max((o.actions, o.turns));
         if !(o.stop == StopReason::GameOver && o.winner.is_some()) {
             self.undecided_games.push((index, o.turns, o.actions));
@@ -121,6 +132,7 @@ impl PodTally {
         self.no_legal_move += other.no_legal_move;
         self.total_turns += other.total_turns;
         self.total_actions += other.total_actions;
+        self.total_plays += other.total_plays;
         self.longest = self.longest.max(other.longest);
         self.undecided_games.extend_from_slice(&other.undecided_games);
         self.undecided_games.sort_unstable();
@@ -430,6 +442,8 @@ pub fn play_one_pod_game(
 /// [`play_one_pod_game`] with the action census handed in, so a caller can
 /// total across games. `None` keeps the `CRAB_CAP_DIAG` behaviour: a census
 /// armed for this game only, rendered if the game did not decide.
+/// `max_actions` is the budget in plays (non-pass actions); see
+/// `PodOutcome::plays`.
 pub fn play_one_pod_game_censused(
     template: &GameState,
     pilots: &[Pilot],
@@ -462,13 +476,18 @@ pub fn play_one_pod_game_censused(
 
     let mut bots: Vec<Box<dyn Bot>> =
         pilots.iter().take(g.players.len()).map(|p| p.build()).collect();
-    let (mut actions, mut stale) = (0usize, 0usize);
+    let (mut actions, mut plays, mut stale) = (0usize, 0usize, 0usize);
     let (diag_floor, mut diag_said) = (crate::recommend::cap_diag_floor().flatten(), false);
     // One `OnceLock` read a game, not a bool per action: off, `record` is a
     // field test and the `Debug` format below never runs.
     let mut census =
         if into.is_some() { ActionCensus::forced() } else { ActionCensus::armed() };
-    while stop_reason(&g, actions, max_actions, stale).is_none() {
+    // The budget counts plays, not priority passes (`PodOutcome::plays`), with
+    // a total-action backstop far above anything a play budget allows.
+    let spent = |actions: usize, plays: usize| {
+        if actions >= max_actions.saturating_mul(PASSES_PER_PLAY_BACKSTOP) { max_actions } else { plays }
+    };
+    while stop_reason(&g, spent(actions, plays), max_actions, stale).is_none() {
         let mut any = false;
         for (seat, bot) in bots.iter_mut().enumerate() {
             // Eliminated seats are polled like any other: the bot answers
@@ -478,6 +497,7 @@ pub fn play_one_pod_game_censused(
             // never polled suppressed every other seat's actions.
             let Some(step) = bot.next_action_settled(&g, seat) else { continue };
             let crate::server::bot::BotStep { action, settled } = step;
+            let is_pass = matches!(action, crate::game::GameAction::PassPriority);
             // Keyed against the pre-action state: a cast names the card while
             // it is still in the zone it is cast from.
             let key = census.key_for(&g, seat, &action);
@@ -497,6 +517,7 @@ pub fn play_one_pod_game_censused(
                 census.bump(key);
                 any = true;
                 actions += 1;
+                plays += usize::from(!is_pass);
                 if g.is_game_over() {
                     break;
                 }
@@ -524,7 +545,7 @@ pub fn play_one_pod_game_censused(
         }
     }
     crate::server::bot::set_jitter_seed(None);
-    let stop = stop_reason(&g, actions, max_actions, stale).unwrap_or(StopReason::NoLegalMove);
+    let stop = stop_reason(&g, spent(actions, plays), max_actions, stale).unwrap_or(StopReason::NoLegalMove);
     // `CRAB_CAP_DIAG` is the two-player loop's knob and it says the same thing
     // here: what was an undecided game actually doing. One `OnceLock` read a
     // game, on the undecided ones only.
@@ -538,7 +559,7 @@ pub fn play_one_pod_game_censused(
     if let Some(total) = into {
         total.merge(&census);
     }
-    PodOutcome { winner: g.game_over.flatten(), actions, turns: g.turn_number, stop }
+    PodOutcome { winner: g.game_over.flatten(), actions, plays, turns: g.turn_number, stop }
 }
 
 /// Play games `first .. first + count`, rotating the decks through the seats

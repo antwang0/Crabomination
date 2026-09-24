@@ -1179,16 +1179,16 @@ fn run_commander_pods(args: &Args, threads: usize) -> i32 {
     use crabomination::pod::{PodTally, pod_field, run_pod_games, run_pod_games_censused};
     use crabomination::recommend::ActionCensus;
 
-    /// The per-game action budget the 2-player ladder uses. A pod runs
-    /// longer than a duel, so this is the number the stall rate is read
-    /// against rather than a number to raise when games cap out.
-    const MAX_ACTIONS: usize = 50_000;
-    /// ...up to ten seats. Past that the budget grows by a ten-seat pod's
-    /// share per seat, so it stays a per-player budget. A flat cap stopped
-    /// measuring stalls there: capped games at 16 and 17 seats were ordinary
-    /// ones (~15 turns a seat, libraries 54-74 cards, live boards) and the
-    /// cap rate went 0.4 / 2.4 / 6.8 % at 15 / 16 / 17 seats.
-    const ACTIONS_PER_SEAT: usize = MAX_ACTIONS / 10;
+    /// The per-game budget, in **plays** — accepted actions that are not a
+    /// priority pass — per seat. It used to be 50,000 *actions* (5,000 a seat
+    /// above ten), and passes are what grow: every stack item and step waits
+    /// on every live seat, so actions/game went 1,921 / 7,098 / 29,654 /
+    /// 73,911 at 4 / 8 / 16 / 24 seats (seed 9306) while plays went 190 /
+    /// 397 / 891 / 1,505. The cap rate climbed with seats (12.7 % at 29,
+    /// 32 % at 34) on games that were ordinary ones cut short — 16 of 34
+    /// seats alive at turn 489, ~90 % of the actions passes. A thousand plays
+    /// a seat is 5x a four-seat game's and still measures a stall.
+    const PLAYS_PER_SEAT: usize = 1_000;
 
     // The ceiling is the number of target decks: `pod_field` cycles the list
     // above it, so a tenth seat is a mirror rather than a new list.
@@ -1218,7 +1218,7 @@ fn run_commander_pods(args: &Args, threads: usize) -> i32 {
         return 2;
     }
     let field = picked.unwrap_or_else(|| pod_field(seats));
-    let max_actions = MAX_ACTIONS.max(seats * ACTIONS_PER_SEAT);
+    let max_actions = seats.max(4) * PLAYS_PER_SEAT;
     let games = args.games as u32;
     println!(
         "commander: {seats}-seat pods, {games} games on {threads} threads, seed {}, decks: {}",
@@ -1289,9 +1289,10 @@ fn run_commander_pods(args: &Args, threads: usize) -> i32 {
         tally.draws, tally.action_capped, tally.board_capped, tally.no_legal_move,
     );
     println!(
-        "  turns/game {:.2}   actions/game {:.1}   longest {} actions / {} turns",
+        "  turns/game {:.2}   actions/game {:.1}   plays/game {:.1}   longest {} actions / {} turns",
         tally.mean_turns(),
         tally.total_actions as f64 / f64::from(tally.games.max(1)),
+        tally.total_plays as f64 / f64::from(tally.games.max(1)),
         tally.longest.0,
         tally.longest.1,
     );
