@@ -23774,6 +23774,11 @@ impl GameState {
                 self.run_effect(if_any, ctx, events)
             }
 
+            Effect::StealOpponentTokensThisTurn => {
+                self.players[ctx.controller].steals_opponent_tokens_this_turn = true;
+                Ok(())
+            }
+
             Effect::StealCreatureEtbThisTurn => {
                 let p = ctx.controller;
                 if !self.creature_etb_steal_this_turn.contains(&p) {

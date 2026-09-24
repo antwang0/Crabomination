@@ -1068,7 +1068,7 @@ impl Effect {
             Effect::RevealTopToHandLoseMv { .. } => false,
             Effect::PutFromHandOrGraveyardOntoBattlefield { .. } => false,
             Effect::ReturnExiledBySourceToBattlefield { .. } => false,
-            Effect::StealCreatureEtbThisTurn => false,
+            Effect::StealCreatureEtbThisTurn | Effect::StealOpponentTokensThisTurn => false,
             // Sundering Titan auto-picks one land per basic type at resolution.
             Effect::DestroyLandOfEachBasicType => false,
             // Untargeted mass destroy keyed on a mana-value count.

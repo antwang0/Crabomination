@@ -4912,6 +4912,11 @@ pub enum Effect {
     /// control this turn, it enters under your control instead." Gather
     /// Specimens (CR 614 control-ETB replacement; expires at cleanup).
     StealCreatureEtbThisTurn,
+    /// "Each token that would be created under an opponent's control this
+    /// turn is created under your control instead" (Crafty Cutpurse, CR 614).
+    /// Sets the controller's `steals_opponent_tokens_this_turn`, read by the
+    /// token mint funnel; expires at the next untap.
+    StealOpponentTokensThisTurn,
     /// "You may put a card matching `filter` from your hand or graveyard
     /// onto the battlefield." Dakkon, Shadow Slayer −6. Auto-pick: the
     /// highest-MV match; a `wants_ui` controller picks (or declines) via

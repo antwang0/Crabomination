@@ -4359,6 +4359,7 @@ impl GameState {
             pl.greatest_hit_this_turn = 0;
             pl.combat_damage_taken_this_turn = 0;
             pl.token_copy_replacement_used_this_turn = false;
+            pl.steals_opponent_tokens_this_turn = false;
             pl.poison_capped_this_turn = false;
             pl.lost_life_this_turn = false;
             pl.life_lost_this_turn = 0;

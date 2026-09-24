@@ -97,3 +97,16 @@ fn cr_614_first_tokens_on_your_turn_become_copies_of_the_chosen_creature() {
     run(&mut g, 0, &soldiers(1));
     assert_eq!(named(&g, 0, "Soldier").len(), 1, "only during your turn");
 }
+
+/// CR 614 — after the steal, a token an opponent would create this turn is
+/// created under the thief's control (and owned by it, CR 111.2).
+#[test]
+fn cr_614_an_opponents_tokens_are_created_under_the_thiefs_control() {
+    let mut g = pod(3);
+    run(&mut g, 0, &Effect::StealOpponentTokensThisTurn);
+    run(&mut g, 2, &soldiers(2));
+    assert_eq!(named(&g, 0, "Soldier").len(), 2);
+    assert!(named(&g, 2, "Soldier").is_empty());
+    run(&mut g, 0, &soldiers(1));
+    assert_eq!(named(&g, 0, "Soldier").len(), 3, "your own tokens stay yours");
+}

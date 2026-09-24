@@ -570,6 +570,10 @@ pub struct PlayerData {
     /// copies" replacement has already fired this turn.
     #[serde(default)]
     pub token_copy_replacement_used_this_turn: bool,
+    /// Crafty Cutpurse — tokens an opponent would create this turn are
+    /// created under this player's control instead (CR 614).
+    #[serde(default)]
+    pub steals_opponent_tokens_this_turn: bool,
     /// True if this player has lost life this turn (damage or direct life
     /// loss). Set in `adjust_life` on a negative delta, reset at the active
     /// player's `do_untap`. Powers Spectacle (CR 702.111). Defaults to false
@@ -1308,6 +1312,7 @@ impl Player {
             greatest_hit_this_turn: 0,
             combat_damage_taken_this_turn: 0,
             token_copy_replacement_used_this_turn: false,
+            steals_opponent_tokens_this_turn: false,
             lost_life_this_turn: false,
             play_from_top_this_turn: false,
             cast_from_library_top_this_turn: false,

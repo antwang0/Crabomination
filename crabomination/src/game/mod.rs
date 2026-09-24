@@ -9581,6 +9581,21 @@ impl GameState {
         // CR 111.2 — a token's owner is the player under whose control it
         // actually entered, so a stolen mint belongs to the thief.
         let ctrl = self.apply_etb_control_replacement(&inst, controller);
+        // Crafty Cutpurse — an opponent's token is created under the thief's
+        // control; the first such seat in turn order from the active player.
+        let ctrl = if self.players.iter().any(|p| p.steals_opponent_tokens_this_turn) {
+            let n = self.players.len();
+            (0..n)
+                .map(|i| (self.active_player_idx + i) % n)
+                .find(|&q| {
+                    self.players[q].steals_opponent_tokens_this_turn
+                        && self.players[q].is_alive()
+                        && !self.same_team(q, ctrl)
+                })
+                .unwrap_or(ctrl)
+        } else {
+            ctrl
+        };
         inst.owner = ctrl;
         inst.controller = ctrl;
         inst.tapped = tapped;
