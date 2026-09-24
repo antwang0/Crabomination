@@ -1944,6 +1944,13 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Old Stickfingers | Death Toll (DSC) | reveals until one creature card X times, bottoming each run of misses before the next. |
 | 🟡 True-Name Nemesis | Mind Seize (C13) | the chosen player is the engine's most hostile opponent, not the controller's pick. |
 | 🟡 Eye of Doom | Mind Seize (C13) | each player's doom counter goes on the nonland permanent the engine picks. |
+| 🟡 Chandra, Legacy of Fire | Planeswalker Party (CMM) | the 0 removes a loyalty counter from each planeswalker you control with two or more, not "any number of permanents" chosen. |
+| 🟡 Guff Rewrites History | Planeswalker Party (CMM) | only opponents' permanents are chosen (never your own); the exiled lands go to the bottom in exile order. |
+| 🟡 Leori, Sparktouched Hunter | Planeswalker Party (CMM) | the planeswalker type is the one most common among yours on the battlefield and in hand, not a free choice. |
+| 🟡 Narset of the Ancient Way | Planeswalker Party (CMM) | the −2's damage target is chosen as it's activated, not by a reflexive trigger. |
+| 🟡 Repeated Reverberation | Planeswalker Party (CMM) | the instant, sorcery and loyalty-ability halves are three separate "next" riders; each can fire. |
+| 🟡 Sparkshaper Visionary | Planeswalker Party (CMM) | all or none of your planeswalkers become Birds; they keep their colours and lack the scry trigger. |
+| 🟡 Vronos, Masked Inquisitor | Planeswalker Party (CMM) | the +1 phases out every other planeswalker you control, not up to two targets. |
 | 🟡 Bell Borca, Spectral Sergeant | Legends' Legacy (DMC) | the noted mana values are every card exiled this turn (through the two exile funnels), including those exiled before Bell Borca entered. |
 | 🟡 Bladewing, Deathless Tyrant | Legends' Legacy (DMC) | combat damage to a planeswalker doesn't trigger it. |
 | 🟡 The Peregrine Dynamo | Legends' Legacy (DMC) | as Strionic Resonator: the target is the ability's source permanent, and the copy keeps its targets. |

@@ -213,6 +213,16 @@ the handoff.
   type gate like the creature-type one (`gate_types`); it is on the layers' hot path
   and moves any 2-player game with an animated land under an anthem, so it needs its
   own bench reading.
+- ✅ New for Planeswalker Party (CMM, Guff), in `game/loyalty_copy.rs`:
+  `StaticEffect::LoyaltyAbilitiesTwiceEachTurn` (Oath of Teferi, CR 606.3 — read by
+  `activate_loyalty` and the client view); `PlayerCold::loyalty_copy_grants` with
+  `Effect::CopyNextLoyaltyAbility` / `CopyLoyaltyAbilitiesOfChosenTypeThisTurn`
+  (Jaya's Phoenix, Repeated Reverberation, Leori — CR 707.10, cleared at cleanup);
+  `Effect::ChooseAttackDirectionUntilYourNextTurn` over
+  `ColdState::temporary_attack_direction` (Teyo, CR 508.1a);
+  `StaticEffect::AttackTaxOnYourPlaneswalkers` (Onakke, CR 508.1g);
+  `Effect::ShuffleInThenCastFromTopFree` (Guff Rewrites History);
+  `PlaneswalkerSubtype::{Guff, Vronos}`.
 - ✅ New for Legends' Legacy (DMC, Dihada): `GameEvent::AbilityActivated` carries
   `life_paid` (the event amount), `EventKind::AbilityActivatedWithLifePaid` (Verrak,
   CR 602.2 + 119.4); `StaticEffect::PlayersSkipExtraTurns` (Gerrard's Hourglass

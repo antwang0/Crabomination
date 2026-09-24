@@ -117,6 +117,7 @@ lists were picked.
 | **Mishra's Burnished Banner** (BRC precon) UBR | Mishra, Eminent One | UBR | 100 | 🟡 all 100 implemented, 6 carry residuals (below) |
 | **Tinker Time** (MOC precon) GUR | Gimbal, Gremlin Prodigy | GUR | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Legends' Legacy** (DMC precon) RWB | Dihada, Binder of Wills (**planeswalker**) | RWB | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
+| **Planeswalker Party** (CMM precon) URW | Commodore Guff (**planeswalker**) | URW | 100 | 🟡 all 100 implemented, 7 carry residuals (below) |
 | **Death Toll** (DSC precon) BG | Winter, Cynical Opportunist | BG | 100 | 🟡 all 100 implemented, 6 carry residuals (below) |
 | **Mind Seize** (C13 precon) UBR | Jeleva, Nephalia's Scourge | UBR | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 
@@ -1213,6 +1214,28 @@ Four-seat pods beside Ranar / Urza / Anikthea (seed 10160, 1,000 games, all
 decided): Saheeli 11.2 %; a 300-game census (seed 10161) leaves no card of the
 four unplayed; 12 seats (71..60 as numbered then, seed 10162): 200 / 200 decided. `--bench`
 byte-identical.
+
+The **ninety-first** is Commander Masters' **Planeswalker Party**
+(`PlaneswalkerParty_CMM`) — Jeskai superfriends under Commodore Guff, the
+eighth planeswalker commander. Seventeen cards were missing; the primitives
+(new module `game/loyalty_copy.rs`): `StaticEffect::LoyaltyAbilitiesTwiceEachTurn`
+(Oath of Teferi, CR 606.3), loyalty-ability copy grants —
+`Effect::CopyNextLoyaltyAbility` (Jaya's Phoenix, Repeated Reverberation) and
+`Effect::CopyLoyaltyAbilitiesOfChosenTypeThisTurn` (Leori), CR 707.10 —
+`Effect::ChooseAttackDirectionUntilYourNextTurn` (Teyo, CR 508.1a, the Mystic
+Barrier walk without a permanent), `StaticEffect::AttackTaxOnYourPlaneswalkers`
+(Onakke Oathkeeper, CR 508.1g) and `Effect::ShuffleInThenCastFromTopFree` (Guff
+Rewrites History). Residuals: **Chandra, Legacy of Fire**'s 0 takes one loyalty
+from each walker with two or more; **Guff Rewrites History** picks opponents'
+permanents only; **Leori**'s type is the most common one you have; **Narset of the
+Ancient Way**'s −2 target is chosen on activation; **Repeated Reverberation**'s
+three halves are separate riders; **Sparkshaper Visionary** turns all or none;
+**Vronos**'s +1 phases out all your other walkers.
+Four-seat pods beside Marath / Atarka / Dina (seed 10200, 1,000 games, all
+decided): Guff 38.4 %; a 300-game census (seed 10201) leaves none of Guff's cards
+unplayed (Marath's and Atarka's lists each leave one — theirs); 12 seats (89..78 at
+the time, seed 10202): 199 decided and one genuine draw (game 53, CR 104.4a — game over, no
+winner). `--bench` byte-identical.
 
 The **eighty-fifth** is Dominaria United Commander's **Legends' Legacy**
 (`LegendsLegacy_DMC`) — Mardu legends under Dihada, Binder of Wills, the
