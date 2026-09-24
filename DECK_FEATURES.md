@@ -105,6 +105,7 @@ lists were picked.
 | **Urza's Iron Alliance** (BRC precon) WUB | Urza, Chief Artificer | WUB | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Phantom Premonition** (KHC precon) WU | Ranar the Ever-Watchful | WU | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Squirreled Away** (BLC precon) BG | Hazel of the Rootbloom | BG | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
+| **Evasive Maneuvers** (C13 precon) GWU | Derevi, Empyrial Tactician | GWU | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Hatsune Miku** (SLD precon) GW | Trostani, Selesnya's Voice | GW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Witherbloom Witchcraft** (C21 precon) BG | Willowdusk, Essence Seer | BG | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Exit from Exile** (CLB precon) RG | Faldorn, Dread Wolf Herald | RG | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
@@ -1229,6 +1230,24 @@ three. Release pods beside Ranar / Saskia / Valgavoth (seed 9531, 1,000 games):
 1,000 decided, Hazel 14.5 %; a 300-game census (seed 9532) leaves no card of
 Hazel's list unplayed; strict debug pods (seeds 9533/9534, 120 games) decided
 120/120. `--bench` byte-identical.
+
+The **eighty-first** is Commander 2013's **Evasive Maneuvers**
+(`EvasiveManeuvers_C13`) — Bant tempo, curses and tap/untap tricks under Derevi,
+Empyrial Tactician. Nineteen cards were missing; the primitives:
+`LibraryPosition::BeneathTopX` (Unexpectedly Absent — `FromTop` with the
+resolving spell's X) and `Value::PlayersWithLandsAtLeastMore` (Surveyor's
+Scope); Hada Spy Patrol rides `level_bands`. ⚠ **`move_card_to` never looked in
+the command zone**, so Derevi's "put Derevi onto the battlefield from the command
+zone" did nothing; a card may now move *itself* out of it — a broader search let
+a flicker's delayed return pull a commander home again (CR 400.7), which the
+committed seeded-pod table caught. ⚠ **The bot cursed itself**: "enchant player"
+Auras aimed their player slot at the caster; `Attach` now marks the slot
+hostile. Residual: Curse of Inertia's tap-or-untap is the engine's pick. Release
+pods beside Hazel / Ranar / Saskia (seed 9541, 1,000 games): 1,000 decided —
+Derevi 3.0 % (4.5 % beside Teferi / Kalemne / Zedruu, seed 9545: a tempo list the
+bot pilots poorly); a 300-game census (seed 9542) leaves no card unplayed;
+strict debug pods (seeds 9543/9544, 120 games) decided 120/120. `--bench`
+byte-identical.
 
 The **seventy-ninth** is Edge of Eternities Commander's **World Shaper**
 (`WorldShaper_EOC`) — Jund land sacrifice under Hearthhull, the Worldseed, a
