@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Ten hand-picked commanders plus sixty-five official preconstructed lists, each a
+//! Ten hand-picked commanders plus sixty-nine official preconstructed lists, each a
 //! 99 of cards this engine implements: legal under CR 903 (100 cards
 //! including the commander, singleton outside basics, every card inside the
 //! commander's CR 903.4 color identity) and Commander-legal per Scryfall's
@@ -8,7 +8,7 @@
 //!
 //! The ten were built by hand because the offline Scryfall cache cannot say
 //! how a precon splits into decks; MTGJSON's deck files can, and the eleventh
-//! through seventy-fifth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
+//! through seventy-ninth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
 //! Win, Tails You Lose, Goblin Storm, Foundations Commander's Wretched Ranks,
 //! Tramplesaurus Rex and Keen Engineering, Commander Legends' Reap the Tides,
 //! Phyrexia: All Will Be One's Corrupting Influence, Zendikar Rising's Sneak
@@ -40,7 +40,10 @@
 //! Kaldheim Commander's Phantom Premonition, Secret Lair's Hatsune Miku,
 //! Commander Legends: Battle for Baldur's Gate's Exit from Exile, Innistrad: Midnight
 //! Hunt Commander's Undead Unleashed, March of the Machine Commander's
-//! Call for Backup and Bloomburrow Commander's Squirreled Away) are taken
+//! Call for Backup, Bloomburrow Commander's Squirreled Away, Commander
+//! 2018's Exquisite Invention, Duskmourn Commander's Death Toll, Commander
+//! 2021's Witherbloom Witchcraft and Edge of Eternities Commander's World
+//! Shaper) are taken
 //! from
 //! one card for card. What all of them keep
 //! from the precon idea is what the pod needs — fixed, legal, varied color
@@ -2444,4 +2447,34 @@ pub const WILLOWDUSK_MAIN: &[CardFactory] = &[
     // Basics: 11 swamp, 11 forest
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, forest, forest,
     forest, forest, forest, forest, forest, forest, forest, forest, forest,
+];
+
+pub const HEARTHHULL_COMMANDERS: &[CardFactory] = &[hearthhull_the_worldseed];
+
+/// **World Shaper**, the Edge of Eternities Commander deck (EOC,
+/// 2025-08-01), exactly as MTGJSON's `WorldShaper_EOC` prints it: 82
+/// nonbasic cards + 1 Wastes + 5 Swamps + 3 Mountains + 8 Forests = 99. Jund
+/// land sacrifice under Hearthhull, the Worldseed.
+pub const HEARTHHULL_MAIN: &[CardFactory] = &[
+    szarel_genesis_shepherd, eumidian_wastewaker, evendo_brushrazer, planetary_annihilation,
+    baloth_prime, exploration_broodship, horizon_explorer, scouring_swarm, eumidian_hatchery,
+    festering_thicket, vernal_fen, fabled_passage, braids_arisen_nightmare, god_eternal_bontu,
+    blasphemous_act, hammer_of_purphoros, moraug_fury_of_akoum, augur_of_autumn,
+    centaur_vinecrasher, formless_genesis, loamcrafter_faun, multani_yavimayas_avatar,
+    oracle_of_mul_daya, pest_infestation, rampaging_baloths, splendid_reclamation,
+    tireless_tracker, titania_protector_of_argoth, world_breaker, escape_to_the_wilds,
+    gaze_of_granite, the_gitrog_monster, korvold_fae_cursed_king, mazirek_kraul_death_priest,
+    omnath_locus_of_rage, soul_of_windgrace, windgraces_judgment, worldsouls_rage,
+    canyon_slough, cinder_glade, karplusan_forest, llanowar_wastes, sheltered_thicket,
+    smoldering_marsh, sulfurous_springs, twilight_mire, viridescent_bog, farseek,
+    springbloom_druid, binding_the_old_gods, arcane_signet, sol_ring, command_tower,
+    mountain_valley, terramorphic_expanse, infernal_grasp, nights_whisper, sprouting_goblin,
+    aftermath_analyst, beast_within, cultivate, groundskeeper, harrow, natures_lore,
+    roiling_regrowth, satyr_wayfinder, skyshroud_claim, tear_asunder, juri_master_of_the_revue,
+    mayhem_devil, putrefy, rakdos_charm, uurg_spawn_of_turg, bojuka_bog, cabaretti_courtyard,
+    dakmor_salvage, escape_tunnel, evolving_wilds, maestros_theater, myriad_landscape,
+    riveteers_overlook, rocky_tar_pit,
+    // Basics: 1 wastes, 5 swamp, 3 mountain, 8 forest
+    swamp, swamp, swamp, swamp, swamp, mountain, mountain, mountain, forest, forest, forest,
+    forest, forest, forest, forest, forest, wastes,
 ];

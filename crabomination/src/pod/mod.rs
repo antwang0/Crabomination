@@ -677,6 +677,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::WILLOWDUSK_COMMANDERS,
             main: decks::WILLOWDUSK_MAIN,
         },
+        // Seventy-ninth: the sixty-ninth official list (World Shaper, EOC) —
+        // Jund land sacrifice under Hearthhull. `--pod-decks 79`.
+        PodDeck {
+            name: "Hearthhull, the Worldseed (BRG)",
+            commanders: decks::HEARTHHULL_COMMANDERS,
+            main: decks::HEARTHHULL_MAIN,
+        },
     ]
 }
 
