@@ -99,6 +99,7 @@ lists were picked.
 | **Endless Punishment** (DSC precon) BR | Valgavoth, Harrower of Souls | BR | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Arcane Wizardry** (C17 precon) UBR | Inalla, Archmage Ritualist | UBR | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Urza's Iron Alliance** (BRC precon) WUB | Urza, Chief Artificer | WUB | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
+| **Phantom Premonition** (KHC precon) WU | Ranar the Ever-Watchful | WU | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Hatsune Miku** (SLD precon) GW | Trostani, Selesnya's Voice | GW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
@@ -973,6 +974,36 @@ offers the first matching card of the six and bottoms the rest in exile order;
 Four-seat pods beside Brimaz / Inalla / Isperia (seed 10150, 1,000 games,
 all decided): Urza 41.7 %; a 300-game census (seed 10151) leaves no card of the
 four unplayed; 12 seats (68..57 as numbered before rebasing over Enduring Enchantments, seed 10152): 200 / 200 decided. `--bench`
+byte-identical.
+
+The **seventieth** is Kaldheim Commander's **Phantom Premonition**
+(`PhantomPremonition_KHC`) — Azorius foretell and flicker under Ranar the
+Ever-Watchful. Sixteen cards were missing (Inspired Sphinx and Thunderclap
+Wyvern landed with First Flight first). ⚠⚠ **No bot path foretold a card or
+cast a foretold one**, so all thirteen foretell cards in the catalog were plain
+hard-casts in self-play: the bot now foretells when its main phase would pass
+(`server/foretell.rs`) and casts foretold cards through the exile enumeration.
+⚠ **CR 702.143a — the foretell action demanded sorcery speed**; it is legal any
+time its owner has priority during their turn. The primitives:
+`EventKind::CardsExiledFromHandOrByYou` (cards leaving a hand for exile, and
+permanents a player's spells and abilities exile, tallied at the exile
+chokepoints and synthesized once per player per dispatch with the count —
+Ranar, Hero of Bretagard), `StaticEffect::FirstForetellEachTurnFree`,
+`Effect::ForetellFromHand` + granted foretell costs (Ethereal Valkyrie — either
+cost may be paid), `Value::ForetoldCardsOwnedInExile`,
+`SpendRestriction::ForetellOnly` (Niko; foretold casts now pay with the spell's
+own kind, so restricted mana sees them), `R::HasForetell`,
+`R::ExiledInsteadOfDyingThisTurn` (Cosmic Intervention),
+`Effect::ExileFromHandCopyCreature` (Arcane Artisan) and `CounterType::Night`.
+The census then found **Eerie Interlude unplayed**: the sweeper-shield response
+knew phasing and indestructible only; an exile-until-end-step blink now counts.
+A strict debug pod beside Inalla / Anikthea / Urza (seed 9524) caught **the
+`AB_TOKEN` gate dropping Heliod's {2}{W}{W} under Mirari's Wake** — extra mana on
+a land tap now widens the bot's colour budget. Residual: Cosmic Intervention's
+replacement covers the permanents you control as it resolves. Release pods
+beside Saskia / Inalla / Kaalia (seed 9521, 1,000 games): 1,000 decided, Ranar
+52.2 %; a 300-game census (seed 9522) leaves no card of the four unplayed;
+strict debug pods (seeds 9523/9524, 120 games) decided 120/120. `--bench`
 byte-identical.
 
 The **seventy-first** is the Secret Lair **Hatsune Miku** deck
