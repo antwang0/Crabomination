@@ -533,6 +533,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::MIMEOPLASM_COMMANDERS,
             main: decks::MIMEOPLASM_MAIN,
         },
+        // Fifty-ninth: the forty-ninth official list (Endless Punishment, DSC)
+        // — Rakdos punisher under Valgavoth, Harrower of Souls. `--seats 59`.
+        PodDeck {
+            name: "Valgavoth, Harrower of Souls (BR)",
+            commanders: decks::VALGAVOTH_COMMANDERS,
+            main: decks::VALGAVOTH_MAIN,
+        },
     ]
 }
 

@@ -1852,3 +1852,33 @@ pub const MIMEOPLASM_MAIN: &[CardFactory] = &[
     island, island, island, island, island, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
     swamp, swamp, swamp, swamp,
 ];
+
+pub const VALGAVOTH_COMMANDERS: &[CardFactory] = &[valgavoth_harrower_of_souls];
+
+/// **Endless Punishment**, the Duskmourn Commander deck (DSC, 2024-09-27),
+/// exactly as MTGJSON's `EndlessPunishment_DSC` prints it: 83 nonbasic cards
+/// + 8 Swamps + 8 Mountains = 99. Rakdos punisher under Valgavoth, Harrower
+/// of Souls: opponents lose life on their own turns and can't gain it.
+pub const VALGAVOTH_MAIN: &[CardFactory] = &[
+    the_lord_of_pain, persistent_constrictor, sadistic_shell_game, suspended_sentence,
+    barbflare_gremlin, gleeful_arsonist, spiked_corridor_torture_pit, star_athlete, seance_board, bedevil,
+    mogis_god_of_slaughter, braids_arisen_nightmare, decree_of_pain, fate_unraveler,
+    kederekt_parasite, mask_of_griselbrand, massacre_girl, massacre_wurm, nightshade_harvester,
+    blasphemous_act, brash_taunter, chaos_warp, combustible_gearhulk, enchanters_bane,
+    harsh_mentor, rampaging_ferocidon, tectonic_giant, florian_voldaren_scion,
+    kaervek_the_merciless, rakdos_lord_of_riots, spiteful_visions, stormfist_crusader,
+    theater_of_horrors, vial_smasher_the_fierce, basilisk_collar, solemn_simulacrum,
+    blackcleave_cliffs, canyon_slough, dragonskull_summit, exotic_orchard, foreboding_ruins,
+    graven_cairns, shadowblood_ridge, shivan_gorge, smoldering_marsh, spinerock_knoll,
+    sulfurous_springs, temple_of_malice, witchs_clinic, fear_of_burning_alive, grab_the_prize,
+    terramorphic_expanse, blood_pact, blood_seeker, feed_the_swarm, arcane_signet,
+    lightning_greaves, sol_ring, command_tower, bastion_of_remembrance, blood_artist,
+    falkenrath_noble, gray_merchant_of_asphodel, infernal_grasp, morbid_opportunist,
+    sign_in_blood, syr_konrad_the_grim, light_up_the_stage, kardur_doomscourge, mayhem_devil,
+    rakdos_charm, fellwar_stone, mind_stone, rakdos_signet, talisman_of_indulgence,
+    thought_vessel, ash_barrens, bloodfell_caves, evolving_wilds, geothermal_bog,
+    leechridden_swamp, tainted_peak, temple_of_the_false_god,
+    // Basics: 8 swamp, 8 mountain
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain,
+];
