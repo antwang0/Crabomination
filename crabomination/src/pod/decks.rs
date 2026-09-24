@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Ten hand-picked commanders plus twenty official preconstructed lists, each a
+//! Ten hand-picked commanders plus twenty-one official preconstructed lists, each a
 //! 99 of cards this engine implements: legal under CR 903 (100 cards
 //! including the commander, singleton outside basics, every card inside the
 //! commander's CR 903.4 color identity) and Commander-legal per Scryfall's
@@ -8,7 +8,7 @@
 //!
 //! The ten were built by hand because the offline Scryfall cache cannot say
 //! how a precon splits into decks; MTGJSON's deck files can, and the eleventh
-//! through thirtieth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
+//! through thirty-first (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
 //! Win, Tails You Lose, Goblin Storm, Foundations Commander's Wretched Ranks,
 //! Tramplesaurus Rex and Keen Engineering, Commander Legends' Reap the Tides,
 //! Phyrexia: All Will Be One's Corrupting Influence, Zendikar Rising's Sneak
@@ -16,7 +16,8 @@
 //! Swarm, Outlaws of Thunder Junction's Quick Draw, Commander 2017's
 //! Vampiric Bloodlust, Foundations Commander's Calling All Angels,
 //! Commander 2014's Guided by Nature, Bloomburrow Commander's Animated Army,
-//! Secret Lair's Grave Danger and Commander 2014's Forged in Stone) are taken
+//! Secret Lair's Grave Danger, Commander 2014's Forged in Stone and Modern
+//! Horizons 3 Commander's Graveyard Overdrive) are taken
 //! from one card for card. What all of them keep
 //! from the precon idea is what the pod needs — fixed, legal, varied color
 //! identities, and built to play against each other.
@@ -1044,4 +1045,35 @@ pub const NAHIRI_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const DISA_COMMANDERS: &[CardFactory] = &[disa_the_restless];
+
+/// **Graveyard Overdrive**, the Modern Horizons 3 Commander deck (M3C,
+/// 2024-06-14), exactly as MTGJSON's `GraveyardOverdrive_M3C` prints it:
+/// 87 nonbasic cards + 12 basics = 99. Jund Lhurgoyfs off a full graveyard —
+/// the field's first BRG identity.
+pub const DISA_MAIN: &[CardFactory] = &[
+    coram_the_undertaker, bloodbraid_challenger, broodmate_tyrant, tempt_with_mayhem,
+    gluttonous_hellkite, pyrogoyf, polygoyf, barrowgoyf, sawhorn_nemesis, infested_thrinax,
+    final_act, siege_gang_lieutenant, tarmogoyf_nest, exterminator_magmarch,
+    liliana_deaths_majesty, maelstrom_pulse, junji_the_midnight_sky, garruk_apex_predator,
+    the_reaver_cleaver, temple_of_malady, deadbridge_chant, kolaghans_command,
+    izoni_thousand_eyed, lhurgoyf, selvala_heart_of_the_wilds, kessig_wolf_run,
+    archon_of_cruelty, maskwood_nexus, grist_the_hunger_tide, ignoble_hierarch, necrogoyf,
+    mortivore, chandras_ignition, viridescent_bog, find_finality, mossfire_valley,
+    ziatora_the_incinerator, canyon_slough, cinder_glade, exotic_orchard, shadowblood_ridge,
+    sheltered_thicket, smoldering_marsh, temple_of_abandon, temple_of_malice, raging_ravine,
+    terminate, demolition_field, command_tower, twisted_landscape, grisly_salvage,
+    yavimaya_elder, bituminous_blast, bloodbraid_elf, eternal_witness, savage_lands,
+    tainted_wood, burnished_hart, deathreap_ritual, arcane_signet, syr_konrad_the_grim,
+    grapple_with_the_past, dakmor_salvage, accursed_marauder, brawn, faithless_looting,
+    rampant_growth, anger, tranquil_thicket, stitchers_supplier, graveshifter,
+    talisman_of_resilience, altar_of_the_goyf, syphon_mind, talisman_of_indulgence,
+    sakura_tribe_elder, terramorphic_expanse, tainted_peak, riveteers_overlook, riveteers_charm,
+    forgotten_cave, path_of_ancestry, lightning_greaves, myriad_landscape, sol_ring,
+    talisman_of_impulse, evolving_wilds,
+    // Basics: 4 swamp, 3 mountain, 5 forest
+    swamp, swamp, swamp, swamp, mountain, mountain, mountain, forest, forest, forest, forest,
+    forest,
 ];

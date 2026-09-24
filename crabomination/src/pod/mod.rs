@@ -323,6 +323,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::NAHIRI_COMMANDERS,
             main: decks::NAHIRI_MAIN,
         },
+        // Thirty-first: the twenty-first official list (Graveyard Overdrive,
+        // M3C) — the field's first Jund seat. `--seats 31`.
+        PodDeck {
+            name: "Disa (BRG)",
+            commanders: decks::DISA_COMMANDERS,
+            main: decks::DISA_MAIN,
+        },
     ]
 }
 
