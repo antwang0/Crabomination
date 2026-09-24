@@ -927,7 +927,7 @@ mod tests {
             ("Zada", [0x2ADA, 82, 9006]),
             ("Gisa", [0x6154, 83, 9007]),
             ("Ghalta", [0x6A17A, 84, 9008]),
-            // CR 903.3a — the second planeswalker commander, and a lieutenant.
+            // CR 903.3a — a planeswalker commander with a lieutenant in its 99.
             ("Teferi", [0x7EFE41, 85, 9009]),
         ] {
             let precon = *field.iter().find(|d| d.name.starts_with(name)).expect("the precon seat");

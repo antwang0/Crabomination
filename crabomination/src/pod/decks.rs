@@ -1370,7 +1370,7 @@ pub const TEFERI_COMMANDERS: &[CardFactory] = &[teferi_temporal_archmage];
 
 /// **Peer Through Time**, the Commander 2014 mono-blue deck (C14,
 /// 2014-11-07), exactly as MTGJSON's `PeerThroughTime_C14` prints it:
-/// 68 nonbasic cards + 31 Islands = 99. Teferi is the pod's second
+/// 68 nonbasic cards + 31 Islands = 99. Teferi is the pod's fifth
 /// planeswalker commander (CR 903.3a); Stormsurge Kraken is its lieutenant.
 pub const TEFERI_MAIN: &[CardFactory] = &[
     azure_mage, fathom_seer, fog_bank, willbender, dulcet_sirens, riptide_survivor, sea_gate_oracle,

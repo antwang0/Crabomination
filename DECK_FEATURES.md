@@ -535,7 +535,7 @@ panics, and a 120-game census (seed 9253) leaves no card unplayed.
 
 The **forty-second** is Commander 2014's **Peer Through Time**
 (`PeerThroughTime_C14`) — mono-blue control under Teferi, Temporal Archmage,
-the pod's second planeswalker commander, with Stormsurge Kraken as its
+the pod's fifth planeswalker commander, with Stormsurge Kraken as its
 lieutenant. Seventeen cards were missing; the primitives:
 `StaticEffect::CreaturesEnterAsCopyOf` (Infinite Reflection, CR 707.2 — the
 static sibling of `enters_as_copy`), `StaticEffect::LoyaltyAbilitiesAtInstantSpeed`
