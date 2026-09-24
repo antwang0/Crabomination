@@ -31,6 +31,7 @@ mod cmdr_rinseri;
 mod cmdr_brimaz;
 mod cmdr_brightpalm;
 mod cmdr_hearthhull;
+mod cmdr_bumbleflower;
 mod cmdr_emmara;
 mod cmdr_teferi;
 mod cmdr_lorehold;
