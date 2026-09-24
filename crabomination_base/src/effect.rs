@@ -677,6 +677,13 @@ pub enum Value {
     /// in Kind: "each player's life total becomes the lowest life total
     /// among all players").
     LowestLifeTotal,
+    /// The lowest life total among the controller's opponents still in the
+    /// game; 0 with none. Breena's "more life than another of your opponents".
+    LowestOpponentLife,
+    /// The most permanents matching the filter any one opponent of the
+    /// controller controls; 0 with none. Boreas Charger's "an opponent who
+    /// controls more lands than you".
+    MostControlledByAnOpponent(crate::card::SelectionRequirement),
     /// The highest life total among all (alive) players. Sorin, Grim
     /// Nemesis −9.
     HighestLifeTotal,
@@ -3402,6 +3409,13 @@ pub enum EventScope {
     /// one or more planeswalkers you control". Same dispatcher as
     /// `ControllerAttackedByOpponent`, gated on the attack target.
     ControllerPlaneswalkerAttackedByOpponent,
+    /// CR 508.1 — "Whenever a player attacks one of your opponents" (Breena,
+    /// the Demagogue; Combat Calligrapher): once per declaration per opponent
+    /// of the source's controller who is attacked, whoever the attacking
+    /// player is. Used with `EventKind::Attacks`; the dispatcher binds the
+    /// attacking player into the target slot (`PlayerRef::Target(0)`) and the
+    /// attacked opponent as the trigger source (`PlayerRef::Triggerer`).
+    OpponentOfYoursAttacked,
     /// The creature the source Aura was attached to has died (left the
     /// battlefield). Matches a `CreatureDied` event whose subject is recorded
     /// in `GameState.auras_at_death` as having carried the source Aura.

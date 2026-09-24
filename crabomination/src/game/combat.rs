@@ -2224,6 +2224,55 @@ impl GameState {
         // the dispatcher). The hardcoded `is_event_hardcoded` check only
         // marks SelfSource Attacks as already handled.
 
+        // CR 508.1 — "whenever a player attacks one of your opponents" (Breena,
+        // Combat Calligrapher): once per attacked player per listener, for
+        // every listener that player is an opponent of. The attacking player
+        // rides the target slot, the attacked player the trigger source.
+        if any_attackers {
+            let mut defended: Vec<usize> = Vec::new();
+            for a in self.attacking.iter() {
+                if let AttackTarget::Player(d) = a.target
+                    && !defended.contains(&d)
+                {
+                    defended.push(d);
+                }
+            }
+            defended.sort_unstable();
+            let listens = |t: &crate::card::TriggeredAbility| {
+                t.event.kind == EventKind::Attacks
+                    && t.event.scope == crate::effect::EventScope::OpponentOfYoursAttacked
+            };
+            let mut listeners: Vec<(CardId, usize, Effect, Option<crate::card::Predicate>)> = Vec::new();
+            for c in self.battlefield.iter() {
+                for t in c.definition.triggered_abilities.iter().filter(|t| listens(t)) {
+                    listeners.push((c.id, c.controller, t.effect.clone(), t.event.filter.clone()));
+                }
+            }
+            for d in defended {
+                for (src, ctrl, effect, filter) in &listeners {
+                    if *ctrl == d || self.same_team(*ctrl, d) || !self.players[*ctrl].is_alive() {
+                        continue;
+                    }
+                    let ctx = crate::game::effects::EffectContext {
+                        controller: *ctrl,
+                        source: Some(*src),
+                        targets: vec![Target::Player(p)],
+                        trigger_source: Some(crate::game::effects::EntityRef::Player(d)),
+                        ..crate::game::effects::EffectContext::default()
+                    };
+                    if filter.as_ref().is_some_and(|f| !self.evaluate_predicate(f, &ctx)) {
+                        continue;
+                    }
+                    self.stack.push(
+                        TriggerPush::new(*src, *ctrl, effect.clone())
+                            .target(Some(Target::Player(p)))
+                            .trigger_source(Some(crate::game::effects::EntityRef::Player(d)))
+                            .build(),
+                    );
+                }
+            }
+        }
+
         // "Whenever one or more …" slots spent by this declaration.
         let mut batch_fired: Vec<(CardId, usize)> = Vec::new();
         for (source, effect, controller, filter, once) in triggers {
@@ -5802,6 +5851,9 @@ impl GameState {
                     {
                         let mut ctx = crate::game::effects::EffectContext::for_spell(d, None, 0, 0);
                         ctx.source = Some(c.id);
+                        // The attacker, for a per-attacker amount (Nils's
+                        // "X is the number of counters on that creature").
+                        ctx.trigger_source = Some(crate::game::effects::EntityRef::Permanent(atk.attacker));
                         total_tax += self.evaluate_value(amount, &ctx).max(0) as u32;
                     }
                 }

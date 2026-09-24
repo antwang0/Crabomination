@@ -1104,7 +1104,8 @@ fn event_matches_spec_rest(
         // listeners get the attacker's controller bound into the target
         // slot), so the unified dispatcher must not also fire it.
         EventScope::ControllerAttackedByOpponent
-        | EventScope::ControllerPlaneswalkerAttackedByOpponent => false,
+        | EventScope::ControllerPlaneswalkerAttackedByOpponent
+        | EventScope::OpponentOfYoursAttacked => false,
         // "When enchanted creature dies / is dealt damage" — the subject must
         // be enchanted by this source Aura. Deaths read the death-time snapshot
         // (`auras_at_death`, since the host has already left); other events read
@@ -1537,7 +1538,8 @@ pub(crate) fn emblem_event_matches(
         | EventScope::OpponentSourceDamagedYou
         | EventScope::YourOtherSourceDamagedOpponent
         | EventScope::ControllerAttackedByOpponent
-        | EventScope::ControllerPlaneswalkerAttackedByOpponent => false,
+        | EventScope::ControllerPlaneswalkerAttackedByOpponent
+        | EventScope::OpponentOfYoursAttacked => false,
     }
 }
 

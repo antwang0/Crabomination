@@ -1020,7 +1020,8 @@ impl GameState {
             | EventScope::YourOtherSourceDamagedOpponent
             | EventScope::YouTapped => false, // event-based
             EventScope::ControllerAttackedByOpponent
-            | EventScope::ControllerPlaneswalkerAttackedByOpponent => false, // combat-based
+            | EventScope::ControllerPlaneswalkerAttackedByOpponent
+        | EventScope::OpponentOfYoursAttacked => false, // combat-based
         };
         // One board-level scan for the whole walk: the per-card shim rebuilds
         // it, so asking it per battlefield permanent is O(cards²).

@@ -1692,6 +1692,26 @@ impl GameState {
                 .map(|p| p.life)
                 .min()
                 .unwrap_or(0),
+            Value::LowestOpponentLife => self
+                .opponents_of(ctx.controller)
+                .into_iter()
+                .map(|q| self.players[q].life)
+                .min()
+                .unwrap_or(0),
+            Value::MostControlledByAnOpponent(filter) => self
+                .opponents_of(ctx.controller)
+                .into_iter()
+                .map(|q| {
+                    self.battlefield
+                        .iter()
+                        .filter(|c| {
+                            c.controller == q
+                                && self.evaluate_requirement_static(filter, &Target::Permanent(c.id), q, ctx.source)
+                        })
+                        .count() as i32
+                })
+                .max()
+                .unwrap_or(0),
             Value::HighestLifeTotal => self
                 .players
                 .iter()
