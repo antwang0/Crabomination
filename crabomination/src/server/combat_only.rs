@@ -1,8 +1,9 @@
 //! A spell castable only during combat (Spinal Embrace) has one window, and
 //! the default profile's combat window casts pure pump tricks only — so
 //! without this such a card was castable by no path (never cast in 1,000
-//! 21-seat pods, seed 10031). Mirror Match ("cast only during the declare
-//! blockers step") rides the same window once something attacks the seat.
+//! 21-seat pods, seed 10031). Mirror Match and Illusionist's Gambit ("cast
+//! only during the declare blockers step") ride the same window once
+//! something attacks the seat.
 
 use super::bot::{EvalWeights, cast_candidates};
 use crate::game::GameState;
@@ -15,9 +16,16 @@ pub(super) fn pick_combat_only_spell(state: &GameState, seat: usize, w: &EvalWei
     let hand = &state.players[seat].hand;
     let attacked = || state.attacking().iter().any(|a| state.defender_for(a.target) == Some(seat));
     // Mirror Match copies what attacks *you*: worth its six mana only then.
+    // Illusionist's Gambit turns an attack aimed at you: its cast condition
+    // names the declare blockers step (never cast in 300 four-seat pods,
+    // seed 10126, before this).
+    let blockers_step_only = |def: &crate::card::CardDefinition| {
+        def.cast_condition.as_ref().is_some_and(names_declare_blockers)
+    };
     let combat_only = |def: &crate::card::CardDefinition| {
         def.cast_only_during_combat
-            || (matches!(def.effect, crate::effect::Effect::CopyAttackersAsBlockers) && attacked())
+            || ((matches!(def.effect, crate::effect::Effect::CopyAttackersAsBlockers) || blockers_step_only(def))
+                && attacked())
     };
     if !hand.iter().any(|c| combat_only(&c.definition)) {
         return None;
@@ -30,6 +38,16 @@ pub(super) fn pick_combat_only_spell(state: &GameState, seat: usize, w: &EvalWei
                 if hand.iter().any(|c| c.id == *card_id && combat_only(&c.definition)))
         })
         .find(|a| state.would_accept(a.clone()))
+}
+
+/// Does a cast condition require the declare blockers step?
+fn names_declare_blockers(p: &crate::effect::Predicate) -> bool {
+    use crate::effect::Predicate as P;
+    match p {
+        P::CurrentStepIs(crate::game::types::TurnStep::DeclareBlockers) => true,
+        P::All(ps) => ps.iter().any(names_declare_blockers),
+        _ => false,
+    }
 }
 
 #[cfg(test)]
@@ -85,5 +103,26 @@ mod tests {
         g.priority.player_with_priority = 0;
         let picked = pick_combat_only_spell(&g, 0, &w);
         assert!(matches!(picked, Some(A::CastSpell { card_id, .. }) if card_id == mm));
+    }
+
+    /// Illusionist's Gambit is cast by the attacked seat once blocks are in,
+    /// and turns the attack away from it.
+    #[test]
+    fn illusionists_gambit_is_cast_when_attacked() {
+        use crate::game::types::{Attack, AttackTarget, GameAction as A};
+        let mut g = crate::game::multi_player_game(3);
+        g.active_player_idx = 1;
+        let gambit = g.add_card_to_hand(0, crate::catalog::illusionists_gambit());
+        let giant = g.add_card_to_battlefield(1, crate::catalog::hill_giant());
+        g.clear_sickness(giant);
+        g.players[0].mana_pool.add(Color::Blue, 4);
+        g.step = TurnStep::DeclareAttackers;
+        g.priority.player_with_priority = 1;
+        g.perform_action(A::DeclareAttackers(vec![Attack { attacker: giant, target: AttackTarget::Player(0) }]))
+            .expect("attack seat 0");
+        g.step = TurnStep::DeclareBlockers;
+        g.priority.player_with_priority = 0;
+        let picked = pick_combat_only_spell(&g, 0, &EvalWeights::default());
+        assert!(matches!(picked, Some(A::CastSpell { card_id, .. }) if card_id == gambit), "{picked:?}");
     }
 }
