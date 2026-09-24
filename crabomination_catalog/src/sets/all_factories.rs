@@ -2275,7 +2275,6 @@ static DECKS: &[Factory] = &[
     super::decks::ms_bumbleflower,
     super::decks::nelly_borca_impulsive_accuser,
     super::decks::agitator_ant,
-    super::decks::bloodthirsty_blade,
     super::decks::darien_king_of_kjeldor,
     super::decks::feather_radiant_arbiter,
     super::decks::fiendish_duo,

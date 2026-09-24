@@ -151,7 +151,7 @@ fn nils_counters_a_creature_of_each_player() {
 }
 
 /// CR 701.15 — Bloodthirsty Blade moves onto an opponent's creature and
-/// goads it at each beginning of combat.
+/// goads it (by static, `decks::cmdr_nelly`).
 #[test]
 fn bloodthirsty_blade_goads_its_host() {
     let mut g = pod(3);
@@ -164,7 +164,7 @@ fn bloodthirsty_blade_goads_its_host() {
     g.step = TurnStep::BeginCombat;
     g.fire_step_triggers(TurnStep::BeginCombat);
     drain_stack(&mut g);
-    assert!(g.battlefield_find(bear).unwrap().goaded_by.contains(&0));
+    assert!(g.goaded_by_player(g.battlefield_find(bear).unwrap(), 0));
 }
 
 /// Parasitic Impetus drains the host's controller when it attacks.

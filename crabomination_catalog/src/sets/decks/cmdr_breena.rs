@@ -24,8 +24,8 @@
 use std::sync::Arc;
 
 use crate::card::{
-    ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,
-    EquipBonus, EventKind, EventScope, EventSpec, Keyword, LandType, SelectionRequirement as R, Selector,
+    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,
+    EventKind, EventScope, EventSpec, Keyword, LandType, SelectionRequirement as R, Selector,
     StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{etb, target_filtered};
@@ -73,13 +73,6 @@ fn opponent_attacked() -> EventSpec {
 
 /// A goad renewed at each beginning of combat on the attached creature —
 /// the "equipped / enchanted creature is goaded" static, approximated.
-fn goad_attached() -> TriggeredAbility {
-    TriggeredAbility {
-        event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::AnyPlayer),
-        effect: Effect::Goad { what: Selector::AttachedTo(Box::new(Selector::This)) },
-    }
-}
-
 fn your_end_step() -> EventSpec {
     EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer)
 }
@@ -141,26 +134,6 @@ pub fn author_of_shadows() -> CardDefinition {
             3,
             3,
         )
-    }
-}
-
-/// Bloodthirsty Blade — equipped creature gets +2/+0 and is goaded; {1}: attach
-/// to target creature an opponent controls, sorcery speed.
-pub fn bloodthirsty_blade() -> CardDefinition {
-    CardDefinition {
-        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
-        equipped_bonus: Some(EquipBonus { power: 2, ..Default::default() }),
-        triggered_abilities: vec![goad_attached()],
-        activated_abilities: vec![ActivatedAbility {
-            mana_cost: cost(&[generic(1)]),
-            sorcery_speed: true,
-            effect: Effect::Attach {
-                what: Selector::This,
-                to: target_filtered(R::Creature.and(R::ControlledByOpponent)),
-            },
-            ..Default::default()
-        }],
-        ..artifact("Bloodthirsty Blade", cost(&[generic(2)]))
     }
 }
 
@@ -436,16 +409,18 @@ pub fn parasitic_impetus() -> CardDefinition {
         card_types: vec![CardType::Enchantment],
         subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
         effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
-        static_abilities: vec![StaticAbility {
-            description: "Enchanted creature gets +2/+2.",
-            effect: StaticEffect::PumpPT {
-                applies_to: Selector::AttachedTo(Box::new(Selector::This)),
-                power: 2,
-                toughness: 2,
+        static_abilities: vec![
+            StaticAbility {
+                description: "Enchanted creature gets +2/+2.",
+                effect: StaticEffect::PumpPT {
+                    applies_to: Selector::AttachedTo(Box::new(Selector::This)),
+                    power: 2,
+                    toughness: 2,
+                },
             },
-        }],
+            StaticAbility { description: "Enchanted creature is goaded.", effect: StaticEffect::AttachedIsGoaded },
+        ],
         triggered_abilities: vec![
-            goad_attached(),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::Attacks, EventScope::EnchantedBySource),
                 effect: Effect::Drain {
