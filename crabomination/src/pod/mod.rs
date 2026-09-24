@@ -372,6 +372,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::OB_NIXILIS_COMMANDERS,
             main: decks::OB_NIXILIS_MAIN,
         },
+        // Thirty-sixth: the twenty-sixth official list (Vampiric Bloodline,
+        // VOC) — Rakdos Vampires and Blood tokens. `--seats 36`.
+        PodDeck {
+            name: "Strefan, Maurer Progenitor (BR)",
+            commanders: decks::STREFAN_COMMANDERS,
+            main: decks::STREFAN_MAIN,
+        },
     ]
 }
 

@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Ten hand-picked commanders plus twenty-four official preconstructed lists, each a
+//! Ten hand-picked commanders plus twenty-six official preconstructed lists, each a
 //! 99 of cards this engine implements: legal under CR 903 (100 cards
 //! including the commander, singleton outside basics, every card inside the
 //! commander's CR 903.4 color identity) and Commander-legal per Scryfall's
@@ -8,7 +8,7 @@
 //!
 //! The ten were built by hand because the offline Scryfall cache cannot say
 //! how a precon splits into decks; MTGJSON's deck files can, and the eleventh
-//! through thirty-fourth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
+//! through thirty-sixth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
 //! Win, Tails You Lose, Goblin Storm, Foundations Commander's Wretched Ranks,
 //! Tramplesaurus Rex and Keen Engineering, Commander Legends' Reap the Tides,
 //! Phyrexia: All Will Be One's Corrupting Influence, Zendikar Rising's Sneak
@@ -18,9 +18,9 @@
 //! Commander 2014's Guided by Nature, Bloomburrow Commander's Animated Army,
 //! Secret Lair's Grave Danger, Commander 2014's Forged in Stone, Modern
 //! Horizons 3 Commander's Graveyard Overdrive, Commander 2015's Swell the
-//! Host, Secret Lair's Angels: They're Just Like Us and Commander 2014's Built
-//! From Scratch) are taken
-//! from one card for card. What all of them keep
+//! Host, Secret Lair's Angels: They're Just Like Us, Commander 2014's Built From
+//! Scratch and Sworn to Darkness, and Innistrad: Crimson Vow Commander's
+//! Vampiric Bloodline) are taken from one card for card. What all of them keep
 //! from the precon idea is what the pod needs — fixed, legal, varied color
 //! identities, and built to play against each other.
 //! One is a Partner pair (CR 702.124b), one is a **planeswalker**
@@ -1189,4 +1189,34 @@ pub const OB_NIXILIS_MAIN: &[CardFactory] = &[
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
     swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const STREFAN_COMMANDERS: &[CardFactory] = &[strefan_maurer_progenitor];
+
+/// **Vampiric Bloodline**, the Innistrad: Crimson Vow Commander deck (VOC,
+/// 2021-11-19), exactly as MTGJSON's `VampiricBloodline_VOC` prints it:
+/// 74 nonbasic cards + 14 Swamps + 11 Mountains = 99. Rakdos Vampires and
+/// Blood tokens under Strefan; Kamber and Laurine ride along as a "Partner
+/// with" pair in the 99.
+pub const STREFAN_MAIN: &[CardFactory] = &[
+    timothar_baron_of_bats, crossway_troublemakers, kamber_the_plunderer, shadowgrange_archfiend,
+    laurine_the_diversion, markov_enforcer, midnight_arsonist, scion_of_opulence,
+    anowon_the_ruin_sage, bloodlord_of_vaasgoth, bloodtracker, butcher_of_malakir,
+    champion_of_dusk, cordial_vampire, dark_impostor, malakir_bloodwitch, necropolis_regent,
+    nirkana_revenant, patron_of_the_vein, sanctum_seeker, stromkirk_condemned, anjes_ravager,
+    bloodsworn_steward, crimson_honor_guard, falkenrath_gorger, stromkirk_occultist,
+    vampiric_dragon, bloodtithe_harvester, blood_artist, bloodline_necromancer, falkenrath_noble,
+    indulgent_aristocrat, vampire_nighthawk, rakish_heir, stromkirk_captain, olivias_wrath,
+    predators_hour, imposing_grandeur, sinister_waltz, damnable_pact, avacyns_judgment,
+    blasphemous_act, mob_rule, ancient_craving, feed_the_swarm, nights_whisper, vandalblast,
+    urge_to_feed, rakdos_charm, glass_cast_heart, arcane_signet, charcoal_diamond,
+    commanders_sphere, fire_diamond, rakdos_signet, sol_ring, swiftfoot_boots, unstable_obelisk,
+    arterial_alchemy, underworld_connections, molten_echoes, stensia_masquerade, exotic_orchard,
+    foreboding_ruins, shadowblood_ridge, smoldering_marsh, temple_of_malice, command_tower,
+    myriad_landscape, path_of_ancestry, rakdos_carnarium, tainted_peak, temple_of_the_false_god,
+    unclaimed_territory,
+    // Basics: 14 swamp, 11 mountain
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain,
 ];
