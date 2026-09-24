@@ -4889,3 +4889,161 @@ fn mind_seize_batch() {
     activate(&mut g, uf, 1, None).expect("{7}, {T}");
     assert_eq!(count_named(&g, 0, "Assembly-Worker"), 1);
 }
+
+// ── 20 Ways to Win (Go-Shintai of Life's Origin) ────────────────────────────
+
+fn to_upkeep(g: &mut GameState) {
+    g.step = TurnStep::Untap;
+    let ev = g.advance_step(Vec::new()).expect("to upkeep");
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(g);
+}
+
+/// CR 614.1c — Gond Gate: Gates you control enter untapped, other taplands
+/// still don't.
+#[test]
+fn cr_614_1c_gond_gate_lets_gates_enter_untapped() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::gond_gate());
+    let sea = g.add_card_to_hand(0, catalog::sea_gate());
+    g.perform_action(GameAction::PlayLand(sea)).expect("land");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(sea).unwrap().tapped, "a Gate");
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::gond_gate());
+    let tree = g.add_card_to_hand(0, catalog::the_world_tree());
+    g.perform_action(GameAction::PlayLand(tree)).expect("land");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(tree).unwrap().tapped, "not a Gate");
+}
+
+/// CR 701.21a — Tragic Arrogance: its caster keeps their own best of each
+/// type and leaves each opponent the weakest.
+#[test]
+fn cr_701_21a_tragic_arrogance_keeps_your_best_and_their_worst() {
+    let mut g = main_phase();
+    let my_giant = g.add_card_to_battlefield(0, catalog::hill_giant());
+    let my_bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let their_giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let their_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let ta = g.add_card_to_hand(0, catalog::tragic_arrogance());
+    cast(&mut g, ta, &[]);
+    assert!(g.battlefield_find(my_giant).is_some() && g.battlefield_find(my_bear).is_none());
+    assert!(g.battlefield_find(their_bear).is_some() && g.battlefield_find(their_giant).is_none());
+}
+
+/// CR 104.2b — the alternate wins: Revel in Riches at ten Treasures,
+/// Mechanized Production at eight same-named artifacts, Happily Ever After
+/// with five colors, six card types and full life.
+#[test]
+fn cr_104_2b_twenty_ways_to_win() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::revel_in_riches());
+    for _ in 0..9 {
+        let d = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        g.battlefield.find_by_id_mut(d).unwrap().damage = 5;
+    }
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    cast(&mut g, bolt, &[Target::Permanent(bear)]);
+    let treasures = g.battlefield.iter().filter(|c| c.definition.name == "Treasure").count();
+    assert!(treasures >= 10, "{treasures} Treasures");
+    to_upkeep(&mut g);
+    assert!(g.is_game_over(), "ten Treasures win");
+
+    let mut g = main_phase();
+    let ring = g.add_card_to_battlefield(0, catalog::sol_ring());
+    for _ in 0..6 {
+        g.add_card_to_battlefield(0, catalog::sol_ring());
+    }
+    let mp = g.add_card_to_hand(0, catalog::mechanized_production());
+    cast(&mut g, mp, &[Target::Permanent(ring)]);
+    to_upkeep(&mut g);
+    assert!(g.is_game_over(), "the eighth Sol Ring wins");
+
+    let mut g = main_phase();
+    for c in [
+        catalog::savannah_lions(),
+        catalog::coral_merfolk(),
+        catalog::grizzly_bears(),
+        catalog::hill_giant(),
+        catalog::sol_ring(),
+    ] {
+        g.add_card_to_battlefield(0, c);
+    }
+    g.add_card_to_battlefield(0, catalog::forest());
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.add_card_to_graveyard(0, catalog::divination());
+    for s in 0..2 {
+        g.add_card_to_library(s, catalog::island());
+    }
+    let hea = g.add_card_to_hand(0, catalog::happily_ever_after());
+    cast(&mut g, hea, &[]);
+    assert_eq!(g.players[0].life, 25);
+    to_upkeep(&mut g);
+    assert!(!g.is_game_over(), "no black permanent yet");
+    g.add_card_to_battlefield(0, catalog::gravedigger());
+    to_upkeep(&mut g);
+    assert!(g.is_game_over(), "five colors, six types, full life");
+}
+
+/// The rest of 20 Ways to Win's new cards, one play pattern each.
+#[test]
+fn twenty_ways_to_win_batch() {
+    // Baldur's Gate: X mana for the other Gates.
+    let mut g = main_phase();
+    let bg = g.add_card_to_battlefield(0, catalog::baldurs_gate());
+    g.add_card_to_battlefield(0, catalog::sea_gate());
+    g.add_card_to_battlefield(0, catalog::cliffgate());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Red)]));
+    activate(&mut g, bg, 1, None).expect("{2}, {T}");
+    assert!(g.players[0].mana_pool.total() >= 2);
+
+    // Heap Gate: tap another Gate for a Treasure.
+    let mut g = main_phase();
+    let hg = g.add_card_to_battlefield(0, catalog::heap_gate());
+    g.add_card_to_battlefield(0, catalog::sea_gate());
+    activate(&mut g, hg, 2, None).expect("Treasure");
+    assert_eq!(count_named(&g, 0, "Treasure"), 1);
+
+    // Go-Shintai makes a Shrine as it enters.
+    let mut g = main_phase();
+    let gs = g.add_card_to_hand(0, catalog::go_shintai_of_lifes_origin());
+    cast(&mut g, gs, &[]);
+    assert_eq!(count_named(&g, 0, "Shrine"), 1);
+
+    // Mayael's Aria: counters at 5 power, 10 life at 10.
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::mayaels_aria());
+    let big = g.add_card_to_battlefield(0, catalog::craw_wurm());
+    to_upkeep(&mut g);
+    assert_eq!(g.battlefield_find(big).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+
+    // Liliana's Contract draws four and costs four.
+    let mut g = main_phase();
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let lc = g.add_card_to_hand(0, catalog::lilianas_contract());
+    cast(&mut g, lc, &[]);
+    assert_eq!(g.players[0].hand.len(), 4);
+    assert_eq!(g.players[0].life, 16);
+
+    // The World Tree: six lands tap for any color.
+    let mut g = main_phase();
+    let tree = g.add_card_to_battlefield(0, catalog::the_world_tree());
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    assert!(g.granted_abilities_for(forest).is_empty(), "two lands");
+    for _ in 0..4 {
+        g.add_card_to_battlefield(0, catalog::forest());
+    }
+    assert_eq!(g.granted_abilities_for(forest).len(), 1, "six lands");
+    let _ = tree;
+
+    // Trace of Abundance: shroud and an extra mana.
+    let mut g = main_phase();
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let t = g.add_card_to_hand(0, catalog::trace_of_abundance());
+    cast(&mut g, t, &[Target::Permanent(land)]);
+    assert!(g.computed_permanent(land).unwrap().keywords().contains(&Keyword::Shroud));
+}

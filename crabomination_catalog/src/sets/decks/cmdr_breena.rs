@@ -535,13 +535,16 @@ pub fn tempting_contract() -> CardDefinition {
 
 /// Tragic Arrogance — for each player an artifact, a creature, an enchantment
 /// and a planeswalker are kept; everything else nonland is sacrificed.
-/// Residual: each player's own highest-mana-value permanent of each type.
+/// Residual: the engine picks — the caster's own best of each type, each
+/// opponent's weakest.
 pub fn tragic_arrogance() -> CardDefinition {
     CardDefinition {
         name: "Tragic Arrogance",
         cost: cost(&[generic(3), w(), w()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::SacrificeAllButOnePerType { who: Selector::Player(PlayerRef::EachPlayer), include_land: false },
+        // The caster chooses for every player: its own best of each type, an
+        // opponent's weakest (`SacrificeAllButOnePerTypeYouChoose`).
+        effect: Effect::SacrificeAllButOnePerTypeYouChoose { who: Selector::Player(PlayerRef::EachPlayer) },
         ..Default::default()
     }
 }

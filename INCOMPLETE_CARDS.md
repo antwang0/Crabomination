@@ -1908,7 +1908,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Guardian Archon | Silverquill Statement (C21) | protection from the chosen player is hexproof and indestructible on the permanent; your own protection isn't modeled; the choice is the engine's most hostile opponent. |
 | 🟡 Inkshield | Silverquill Statement (C21) | the Inklings count the unblocked power attacking you as it resolves, not the damage prevented. |
 | 🟡 Nils, Discipline Enforcer | Silverquill Statement (C21) | each player's counter goes on their first creature, chosen rather than targeted. |
-| 🟡 Tragic Arrogance | Silverquill Statement (C21) | each player keeps their own highest-mana-value permanent of each type; the caster doesn't choose. |
+| 🟡 Tragic Arrogance | Silverquill Statement (C21) | the engine chooses for the caster: its own best of each type, each opponent's weakest (lowest mana value). |
 | 🟡 Victory Chimes | Silverquill Statement (C21) | the mana always goes to you, not a player of your choice. |
 | 🟡 Descendants' Fury | Sliver Swarm (CMM) | "one of them" is any attacker of yours that damaged a player this turn, not only this combat-damage batch's. |
 | 🟡 Bloodlord of Vaasgoth | Vampiric Bloodlust (C17) | the granted bloodthirst is checked as the cast trigger resolves, not as the creature enters. |
