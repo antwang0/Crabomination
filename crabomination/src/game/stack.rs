@@ -914,6 +914,13 @@ impl GameState {
                     CleanupOutcome::TurnOver => return self.advance_step(events),
                 }
             }
+            TurnStep::PostCombatMain => {
+                // CR 505.1a / 603.2 — "at the beginning of your postcombat
+                // main phase" (Survival, Tymna the Weaver, Florian). Each
+                // postcombat main — an extra combat's too — begins anew.
+                self.fire_step_triggers(TurnStep::PostCombatMain);
+                self.give_priority_to_active();
+            }
             TurnStep::EndCombat => {
                 // CR 511.1 — "at end of combat" triggers, including the
                 // `DelayedKind::EndOfCombat` queue (Triton Tactics, Fortune).
