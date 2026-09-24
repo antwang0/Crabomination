@@ -74,6 +74,7 @@ lists were picked.
 | **Quantum Quandrix** (C21 precon) GU | Adrix and Nev, Twincasters | GU | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Lorehold Legacies** (C21 precon) RW | Osgir, the Reconstructor | RW | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Counterpunch** (CMD precon) WBG | Ghave, Guru of Spores | WBG | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
+| **Wade into Battle** (C15 precon) RW | Kalemne, Disciple of Iroas | RW | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not
@@ -627,6 +628,21 @@ Debug pods beside Daxos / Ixhel / Edgar / Sigarda (seeds 9261/9262, 60 games)
 decided 60/60, zero panics; after the picker fix a 120-game census (seed 9263)
 leaves no card unplayed. Ghave wins 0–4 % of those pods. `--bench`
 byte-identical.
+
+The **forty-sixth** is Commander 2015's **Wade into Battle**
+(`WadeIntoBattle_C15`) — Boros Giants under Kalemne, Disciple of Iroas.
+Thirteen cards were missing; the primitives: `StaticEffect::SpellDamageToOpponentsBecomesTokens`
+(Hostility, CR 615 — in the noncombat damage funnel ahead of any doubler, CR
+616.1), `Value::OpponentsBelowHalfStartingLife` (Anya) and
+`Value::RevealedForCostManaValue` (Disaster Radius). Residual: **Dream
+Pillager**'s exiled cards may be played, not only cast. ⚠ **Its first debug
+pod found an Aura bug with Peer Through Time's Fool's Demise**: the SBA
+exemption for an Aura whose own trigger is on the stack (Animate Dead) also
+kept an *attached* Aura whose host had left, the host returned with its old
+id and re-acquired it, and Bottle Gnomes looped 4,543 sacrifices — a
+30,757-action cap (CR 704.5m / 400.7; fixed). Seed 10311, 1,000 six-seat pods
+(Kalemne ×2, Teferi, Osgir, Neyali, Daxos): **1,000 decided, every card of the
+six lists played**; `--bench` byte-identical.
 
 ⚠ **The board cap was a bot bug, not a loop.** A Krenko seat sent all 292
 of its Goblins at one player on 24 life each turn while two others sat on
