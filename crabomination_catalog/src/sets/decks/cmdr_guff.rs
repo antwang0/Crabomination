@@ -173,7 +173,6 @@ pub fn chandra_awakened_inferno() -> CardDefinition {
                         },
                         Effect::DealDamage { to: Selector::Target(0), amount: Value::XFromCost },
                     ]),
-                    ..Default::default()
                 },
             ],
         )
