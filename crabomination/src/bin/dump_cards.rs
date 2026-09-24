@@ -256,6 +256,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         | Keyword::PreventDamageFromMatching(_)
         | Keyword::CantBeTargetedByAbilitiesFromMatching(_)
         | Keyword::CantBeBlockedExceptBy(_) | Keyword::CantBeBlockedBy(_)
+        | Keyword::CantBeBlockedExceptByWhilePowerAtMost(_, _)
         | Keyword::CantBeBlockedByMoreThanOne | Keyword::CantBeBlockedExceptByN(_)
         | Keyword::CantBeBlockedByPowerLess
         | Keyword::CantBeBlockedByPowerAtMost(_)
@@ -268,6 +269,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         | Keyword::CantBeEquipped
         | Keyword::AttackCostBounce(_)
         | Keyword::CantBeBlockedByPowerLessThanCount(_)
+        | Keyword::CantBeBlockedByPowerLessThanGreatestAmong(_)
         | Keyword::CantBeBlockedUnlessAllBlock
         | Keyword::HexproofUnlessAttackingOrBlocking
         | Keyword::CanBlockOnlyFlying

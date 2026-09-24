@@ -2262,6 +2262,18 @@ pub enum Keyword {
     /// the attacker controller's count of matching permanents, so it's
     /// enforced in the stateful `declare_blockers` path (CR 509.1b).
     CantBeBlockedByPowerLessThanCount(Box<SelectionRequirement>),
+    /// "Creatures with power less than [the greatest power among `filter`
+    /// permanents you control] can't block creatures you control" (Champion
+    /// of Lambholt, granted with the filter naming it — several Champions
+    /// demand the greatest of their powers). Stateful, so enforced beside
+    /// `CantBeBlockedByPowerLessThanCount` in `declare_blockers` (CR 509.1b).
+    CantBeBlockedByPowerLessThanGreatestAmong(Box<SelectionRequirement>),
+    /// CR 509.1b — "can't be blocked except by [filter]" only while this
+    /// creature's power is `max` or less (Sidar Kondo of Jamuraa: creatures
+    /// without flying or reach can't block creatures with power 2 or less).
+    /// The power is the attacker's computed power at block declaration, so the
+    /// grant itself needs no power filter the layers can't route.
+    CantBeBlockedExceptByWhilePowerAtMost(u32, Box<SelectionRequirement>),
     /// CR 509.1b — "This creature can't be blocked unless all creatures
     /// defending player controls block it" (Tromokratis). Enforced against
     /// the finished block assignment in `declare_blockers`.

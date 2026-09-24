@@ -18054,6 +18054,19 @@ impl GameState {
                 Keyword::CantBeBlockedUnlessDefenderSharedType(n) => {
                     self.greatest_shared_type_count(defender) < *n as usize
                 }
+                // CR 509.1b — Champion of Lambholt.
+                Keyword::CantBeBlockedByPowerLessThanGreatestAmong(f) => {
+                    let most = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| {
+                            c.controller == attacker.controller
+                                && self.evaluate_requirement_static_on(f.as_ref(), c, attacker.controller, None)
+                        })
+                        .filter_map(|c| self.computed_permanent(c.id).map(|cp| cp.power))
+                        .max();
+                    most.is_some_and(|p| blocker_cp.power < p)
+                }
                 // CR 509.1b — Kraken of the Straits.
                 Keyword::CantBeBlockedByPowerLessThanCount(f) => {
                     let n = self
@@ -30535,6 +30548,7 @@ pub fn attacker_block_bar_kw(k: &Keyword) -> bool {
             | Keyword::CantBeBlockedIfControllerCastSpells(_)
             | Keyword::CantBeBlockedUnlessDefenderSharedType(_)
             | Keyword::CantBeBlockedByPowerLessThanCount(_)
+            | Keyword::CantBeBlockedByPowerLessThanGreatestAmong(_)
             // `can_block_attacker_computed`'s attacker pass.
             | Keyword::Unblockable
             | Keyword::ProtectionFromCreatures
@@ -30558,6 +30572,7 @@ pub fn attacker_block_bar_kw(k: &Keyword) -> bool {
             | Keyword::ProtectionFromMonocolored
             | Keyword::ProtectionFromCardType(_)
             | Keyword::CantBeBlockedExceptBy(_)
+            | Keyword::CantBeBlockedExceptByWhilePowerAtMost(_, _)
             | Keyword::CantBeBlockedBy(_)
     )
 }
@@ -30875,6 +30890,17 @@ pub fn can_block_attacker_computed(
                     blocker_enchanted,
                     filter,
                 ) =>
+            {
+                return false;
+            }
+            Keyword::CantBeBlockedExceptByWhilePowerAtMost(max, filter)
+                if attacker_power <= *max as i32
+                    && !blocker_matches_block_filter(
+                        blocker,
+                        blocker_computed,
+                        blocker_enchanted,
+                        filter,
+                    ) =>
             {
                 return false;
             }
