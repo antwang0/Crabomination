@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Ten hand-picked commanders plus twenty-six official preconstructed lists, each a
+//! Ten hand-picked commanders plus twenty-seven official preconstructed lists, each a
 //! 99 of cards this engine implements: legal under CR 903 (100 cards
 //! including the commander, singleton outside basics, every card inside the
 //! commander's CR 903.4 color identity) and Commander-legal per Scryfall's
@@ -8,7 +8,7 @@
 //!
 //! The ten were built by hand because the offline Scryfall cache cannot say
 //! how a precon splits into decks; MTGJSON's deck files can, and the eleventh
-//! through thirty-sixth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
+//! through thirty-seventh (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
 //! Win, Tails You Lose, Goblin Storm, Foundations Commander's Wretched Ranks,
 //! Tramplesaurus Rex and Keen Engineering, Commander Legends' Reap the Tides,
 //! Phyrexia: All Will Be One's Corrupting Influence, Zendikar Rising's Sneak
@@ -19,8 +19,8 @@
 //! Secret Lair's Grave Danger, Commander 2014's Forged in Stone, Modern
 //! Horizons 3 Commander's Graveyard Overdrive, Commander 2015's Swell the
 //! Host, Secret Lair's Angels: They're Just Like Us, Commander 2014's Built From
-//! Scratch and Sworn to Darkness, and Innistrad: Crimson Vow Commander's
-//! Vampiric Bloodline) are taken from one card for card. What all of them keep
+//! Scratch and Sworn to Darkness, Innistrad: Crimson Vow Commander's Vampiric
+//! Bloodline and Commander 2015's Plunder the Graves) are taken from one card for card. What all of them keep
 //! from the precon idea is what the pod needs — fixed, legal, varied color
 //! identities, and built to play against each other.
 //! One is a Partner pair (CR 702.124b), one is a **planeswalker**
@@ -1219,4 +1219,31 @@ pub const STREFAN_MAIN: &[CardFactory] = &[
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
     swamp, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain,
+];
+
+pub const MEREN_COMMANDERS: &[CardFactory] = &[meren_of_clan_nel_toth];
+
+/// **Plunder the Graves**, the Commander 2015 deck (C15, 2015-11-13), exactly
+/// as MTGJSON's `PlunderTheGraves_C15` prints it: 74 nonbasic cards + 13
+/// Swamps + 12 Forests = 99. Golgari sacrifice and recursion: Meren's
+/// experience counters return what died.
+pub const MEREN_MAIN: &[CardFactory] = &[
+    sakura_tribe_elder, satyr_wayfinder, viridian_emissary, wall_of_blossoms, viridian_zealot,
+    korozda_guildmage, lotleth_troll, blood_bairn, phyrexian_rager, skullwinder, wood_elves,
+    eternal_witness, corpse_augur, centaur_vinecrasher, bloodspore_thrinax,
+    jarad_golgari_lich_lord, shriekmaw, indrik_stomphowler, kessig_cagebreakers,
+    banshee_of_the_dread_choir, phyrexian_plaguelord, acidic_slime, mycoloth,
+    mazirek_kraul_death_priest, vulturous_zombie, great_oak_guardian, champion_of_stray_souls,
+    extractor_demon, thief_of_blood, pathbreaker_ibex, cloudthresher, butcher_of_malakir,
+    eater_of_hope, scourge_of_nel_toth, caller_of_the_pack, terastodon, verdant_force, mulch,
+    victimize, primal_growth, ambitions_cost, sever_the_bloodline, barter_in_blood,
+    rise_from_the_grave, spider_spawning, overwhelming_stampede, dread_summons, altars_reap,
+    tribute_to_the_wild, golgari_charm, grisly_salvage, putrefy, wretched_confluence, skullclamp,
+    sol_ring, golgari_signet, lightning_greaves, thought_vessel, bonehoard, eldrazi_monument,
+    diabolic_servitude, command_tower, evolving_wilds, golgari_guildgate, golgari_rot_farm,
+    grim_backwoods, high_market, jungle_hollow, polluted_mire, slippery_karst, tainted_wood,
+    terramorphic_expanse, vivid_grove, vivid_marsh,
+    // Basics: 13 swamp, 12 forest
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
 ];

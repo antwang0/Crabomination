@@ -379,6 +379,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::STREFAN_COMMANDERS,
             main: decks::STREFAN_MAIN,
         },
+        // Thirty-seventh: the twenty-seventh official list (Plunder the
+        // Graves, C15) — Golgari sacrifice and recursion. `--seats 37`.
+        PodDeck {
+            name: "Meren of Clan Nel Toth (BG)",
+            commanders: decks::MEREN_COMMANDERS,
+            main: decks::MEREN_MAIN,
+        },
     ]
 }
 
