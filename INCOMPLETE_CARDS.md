@@ -1851,3 +1851,5 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Collective Effort | Rebellion Rising (ONC) | escalate is paid as it resolves (the standing `Escalate` approximation), tapping your first untapped creature. |
 | 🟡 Goldwardens' Gambit | Rebellion Rising (ONC) | each token takes your highest-mana-value unattached Equipment; no pick, and an attached one is never moved. |
 | 🟡 Neyali, Suns' Vanguard | Rebellion Rising (ONC) | "tokens attack a player" also counts tokens attacking a planeswalker an opponent controls. |
+| 🟡 Divine Reckoning | Feline Ferocity (C17) | each player keeps their highest-mana-value creature (the engine's pick, as Deadly Vanity). |
+| 🟡 Stalking Leonin | Feline Ferocity (C17) | the opponent is chosen openly by the engine (the one with the fewest creatures), not secretly by the player. |
