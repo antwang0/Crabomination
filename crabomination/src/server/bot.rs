@@ -4345,11 +4345,14 @@ fn pick_combat_only_instant(state: &GameState, seat: usize, w: &EvalWeights) -> 
     // CR 506.4 — "target attacking creature" has no legal target outside
     // combat, so such an instant shares the window (Nemesis Trap was cast by
     // no path in 120 four-seat pods, seed 9263).
+    // "Attacking or blocking" (Devouring Light) is combat-only too: an `Or`
+    // counts when both of its sides do.
     fn requires_attacker(r: &crate::card::SelectionRequirement) -> bool {
         use crate::card::SelectionRequirement as R;
         match r {
-            R::IsAttacking | R::IsAttackingYou => true,
+            R::IsAttacking | R::IsAttackingYou | R::IsBlocking => true,
             R::And(a, b) => requires_attacker(a) || requires_attacker(b),
+            R::Or(a, b) => requires_attacker(a) && requires_attacker(b),
             _ => false,
         }
     }
@@ -27422,6 +27425,28 @@ mod stack_response_tests {
         assert!(
             matches!(action, GameAction::CastSpell { card_id, target: Some(Target::Permanent(t)), .. }
                 if card_id == trap && t == dragon),
+            "got {action:?}"
+        );
+    }
+
+    /// CR 506.4 — "target attacking or blocking creature" (Devouring Light)
+    /// is combat-only too, so it rides the same window.
+    #[test]
+    fn an_attacking_or_blocking_instant_is_cast_at_the_attacker() {
+        use crate::mana::Color;
+        let mut g = two_player_game();
+        g.active_player_idx = 1;
+        g.step = TurnStep::DeclareAttackers;
+        g.priority.player_with_priority = 0;
+        let light = g.add_card_to_hand(0, catalog::devouring_light());
+        g.players[0].mana_pool.add(Color::White, 3);
+        let dragon = g.add_card_to_battlefield(1, catalog::shivan_dragon());
+        g.clear_sickness(dragon);
+        g.set_attacking(vec![Attack { attacker: dragon, target: AttackTarget::Player(0) }]);
+        let action = pick_combat_only_instant(&g, 0, &EvalWeights::default()).expect("cast it");
+        assert!(
+            matches!(action, GameAction::CastSpell { card_id, target: Some(Target::Permanent(t)), .. }
+                if card_id == light && t == dragon),
             "got {action:?}"
         );
     }
