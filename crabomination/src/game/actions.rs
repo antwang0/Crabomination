@@ -3429,6 +3429,28 @@ impl crate::game::GameState {
         base.map(|m| (m + increase).saturating_sub(reduction))
     }
 
+    /// Whether `player` may play the land `card_id` from their graveyard: any
+    /// land under `player_may_play_lands_from_graveyard`, or one matching a
+    /// `MayPlayLandsFromGraveyardMatching` filter (Titania's Forests).
+    pub fn player_may_play_land_from_graveyard(&self, player: usize, card_id: CardId) -> bool {
+        use crate::effect::StaticEffect;
+        if self.player_may_play_lands_from_graveyard(player) {
+            return true;
+        }
+        let Some(card) = self.players[player].graveyard.iter().find(|c| c.id == card_id) else {
+            return false;
+        };
+        self.battlefield.iter().any(|c| {
+            c.controller == player
+                && c.definition.static_abilities.iter().any(|sa| match &sa.effect {
+                    StaticEffect::MayPlayLandsFromGraveyardMatching(f) => {
+                        self.evaluate_requirement_on_card(f, card, player)
+                    }
+                    _ => false,
+                })
+        })
+    }
+
     /// CR 305 — Whether `player` may play lands from their graveyard
     /// (Crucible of Worlds, Ramunap Excavator) via a
     /// `StaticEffect::MayPlayLandsFromGraveyard` permanent.
@@ -4254,7 +4276,7 @@ impl GameState {
         let p = self.priority.player_with_priority;
         // Coram, the Undertaker — a land milled into any graveyard this turn,
         // when Crucible's own-graveyard route doesn't cover it.
-        if !(self.player_may_play_lands_from_graveyard(p)
+        if !(self.player_may_play_land_from_graveyard(p, card_id)
             && self.players[p].graveyard.iter().any(|c| c.id == card_id))
             && let Some(r) = self.try_play_milled_land(card_id)
         {
@@ -4266,7 +4288,7 @@ impl GameState {
         if !self.can_player_play_land(p) {
             return Err(GameError::AlreadyPlayedLand);
         }
-        if !self.player_may_play_lands_from_graveyard(p) {
+        if !self.player_may_play_land_from_graveyard(p, card_id) {
             return Err(GameError::CardNotInHand(card_id));
         }
         if !self.players[p]
@@ -5587,6 +5609,7 @@ impl GameState {
             && self.library_top_playable(p, card_id)
         {
             let capped = self.library_top_cast_is_capped(p, card_id);
+            let sac = self.library_top_sacrifice_grant(p, card_id);
             let card = self.players[p].library.remove(0);
             self.players[p].hand.push(card);
             // The cast pipeline runs from hand, so record the true origin for
@@ -5602,6 +5625,12 @@ impl GameState {
                 }
             } else if capped {
                 self.players[p].cast_from_library_top_this_turn = true;
+            }
+            // Into the Pit's additional cost, paid as the cast completes.
+            if let (Ok(evs), Some((src, filter))) = (&r, sac) {
+                let mut evs = evs.clone();
+                evs.extend(self.sacrifice_for_library_top_cast(p, src, &filter));
+                return Ok(evs);
             }
             return r;
         }
@@ -5891,6 +5920,21 @@ impl GameState {
                     | StaticEffect::PlayFromLibraryTopPayLife { filter } => {
                         self.evaluate_requirement_on_card(filter, card, p)
                     }
+                    // Into the Pit — spells only, and only while there is
+                    // something to sacrifice.
+                    StaticEffect::PlayFromLibraryTopBySacrificing { filter, sacrifice } => {
+                        !card.definition.is_land()
+                            && self.evaluate_requirement_on_card(filter, card, p)
+                            && self.battlefield.iter().any(|b| {
+                                b.controller == p
+                                    && self.evaluate_requirement_static(
+                                        sacrifice,
+                                        &Target::Permanent(b.id),
+                                        p,
+                                        None,
+                                    )
+                            })
+                    }
                     // Johann — the once-per-turn grant lapses after the first
                     // top-of-library cast this turn.
                     StaticEffect::PlayFromLibraryTopOncePerTurn { filter } => {
@@ -5899,6 +5943,89 @@ impl GameState {
                     _ => false,
                 })
         })
+    }
+
+    /// Into the Pit's additional cost: sacrifice one permanent `p` controls
+    /// matching `filter`. The candidates are offered tokens first, then by
+    /// mana value, with the granting permanent last; the seat's decider picks.
+    fn sacrifice_for_library_top_cast(
+        &mut self,
+        p: usize,
+        source: CardId,
+        filter: &crate::card::SelectionRequirement,
+    ) -> Vec<GameEvent> {
+        let mut cands: Vec<(bool, bool, u32, CardId, String)> = self
+            .battlefield
+            .iter()
+            .filter(|c| {
+                c.controller == p
+                    && self.evaluate_requirement_static(filter, &Target::Permanent(c.id), p, None)
+            })
+            .map(|c| {
+                (c.id == source, !c.is_token, c.definition.cost.cmc(), c.id, c.definition.name.to_string())
+            })
+            .collect();
+        cands.sort();
+        let candidates: Vec<(CardId, String)> =
+            cands.into_iter().map(|(_, _, _, id, name)| (id, name)).collect();
+        let chosen = match candidates.len() {
+            0 => return Vec::new(),
+            1 => candidates[0].0,
+            _ => match self.decider.decide(&crate::decision::Decision::ChooseCards {
+                source,
+                prompt: "Sacrifice which permanent?".into(),
+                candidates: candidates.clone(),
+                min: 1,
+                max: 1,
+                eligible: None,
+                value: crate::decision::PickValue::Cost,
+            }) {
+                crate::decision::DecisionAnswer::Cards(ids)
+                    if ids.first().is_some_and(|id| candidates.iter().any(|(c, _)| c == id)) =>
+                {
+                    ids[0]
+                }
+                _ => candidates[0].0,
+            },
+        };
+        let mut events = vec![GameEvent::PermanentSacrificed { card_id: chosen, who: p }];
+        events.append(&mut self.remove_to_graveyard_as_cost(chosen));
+        events
+    }
+
+    /// Into the Pit — when the only grant covering the top card `card_id` is a
+    /// `PlayFromLibraryTopBySacrificing`, its source and sacrifice filter
+    /// (the cast must also sacrifice a matching permanent).
+    fn library_top_sacrifice_grant(
+        &self,
+        p: usize,
+        card_id: CardId,
+    ) -> Option<(CardId, crate::card::SelectionRequirement)> {
+        use crate::effect::StaticEffect;
+        let card = self.players[p].library.first().filter(|c| c.id == card_id)?;
+        if self.players[p].play_from_top_this_turn {
+            return None;
+        }
+        let mut sac = None;
+        for c in self.battlefield.iter().filter(|c| c.controller == p) {
+            for sa in &c.definition.static_abilities {
+                match &sa.effect {
+                    StaticEffect::PlayFromLibraryTop { filter }
+                    | StaticEffect::PlayFromLibraryTopOncePerTurn { filter }
+                        if self.evaluate_requirement_on_card(filter, card, p) =>
+                    {
+                        return None;
+                    }
+                    StaticEffect::PlayFromLibraryTopBySacrificing { filter, sacrifice }
+                        if sac.is_none() && self.evaluate_requirement_on_card(filter, card, p) =>
+                    {
+                        sac = Some((c.id, sacrifice.clone()));
+                    }
+                    _ => {}
+                }
+            }
+        }
+        sac
     }
 
     /// Bolas's Citadel — if `card_id` is the top card of `p`'s library, covered

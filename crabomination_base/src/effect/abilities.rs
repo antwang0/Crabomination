@@ -1605,6 +1605,14 @@ pub enum StaticEffect {
     /// its mana value instead of its mana cost (Bolas's Citadel). Lands are
     /// still played for free. Read by the cast-from-top path.
     PlayFromLibraryTopPayLife { filter: crate::card::SelectionRequirement },
+    /// "You may cast [filter] spells from the top of your library by
+    /// sacrificing a [sacrifice] permanent in addition to paying their other
+    /// costs" (Into the Pit). Spells only — no land plays. Read by the
+    /// cast-from-top path (`library_top_sacrifice_grant`).
+    PlayFromLibraryTopBySacrificing {
+        filter: crate::card::SelectionRequirement,
+        sacrifice: crate::card::SelectionRequirement,
+    },
     /// "Creatures you control with +1/+1 counters on them have all
     /// activated abilities of all creature cards exiled with [the
     /// source]." Agatha's Soul Cauldron — the exile-zone sibling of
@@ -2665,6 +2673,9 @@ pub enum StaticEffect {
     /// `PlayLandFromGraveyard` action: a land in the controller's graveyard
     /// becomes a legal land play (still bound by the one-land-per-turn cap).
     MayPlayLandsFromGraveyard,
+    /// `MayPlayLandsFromGraveyard` for lands matching the filter only —
+    /// Titania, Nature's Force's "you may play Forests from your graveyard".
+    MayPlayLandsFromGraveyardMatching(SelectionRequirement),
     /// "During your turn, you may play cards from your graveyard" (Hades,
     /// Sorcerer of Eld). The broad sibling of `MayPlayLandsFromGraveyard`:
     /// covers casts as well as land plays, and only on the controller's turn.

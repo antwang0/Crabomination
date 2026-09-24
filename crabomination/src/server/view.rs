@@ -605,6 +605,7 @@ fn known_library_top(
         && (has_static(&|e| matches!(e, StaticEffect::PlayFromLibraryTop { .. }
                 | StaticEffect::PlayFromLibraryTopOncePerTurn { .. }
                 | StaticEffect::PlayFromLibraryTopPayLife { .. }
+                | StaticEffect::PlayFromLibraryTopBySacrificing { .. }
                 | StaticEffect::MayLookAtOwnLibraryTop))
             || state.players[player_seat].play_from_top_this_turn);
     if revealed_to_all || owner_may_look {

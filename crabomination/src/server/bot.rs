@@ -8736,9 +8736,19 @@ fn main_phase_action_with(
     // Crucible of Worlds / Ramunap Excavator: replay a land from the
     // graveyard if no hand land was played (CR 305 land-from-gy permission).
     if can_play_land
-        && state.player_may_play_lands_from_graveyard(seat)
-        && let Some(land) =
-            state.players[seat].graveyard.iter().find(|c| c.definition.is_land())
+        && (state.player_may_play_lands_from_graveyard(seat)
+            || state.battlefield.iter().any(|c| {
+                c.controller == seat
+                    && c.definition.static_abilities.iter().any(|sa| {
+                        matches!(
+                            sa.effect,
+                            crate::effect::StaticEffect::MayPlayLandsFromGraveyardMatching(_)
+                        )
+                    })
+            }))
+        && let Some(land) = state.players[seat].graveyard.iter().find(|c| {
+            c.definition.is_land() && state.player_may_play_land_from_graveyard(seat, c.id)
+        })
     {
         let action = GameAction::PlayLandFromGraveyard(land.id);
         if let Some(g) = GameState::accept_on(state, action.clone()) {

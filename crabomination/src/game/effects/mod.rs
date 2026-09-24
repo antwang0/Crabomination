@@ -15,6 +15,7 @@ mod delayed;
 mod eval;
 mod free_cast;
 mod graveyard_swap;
+mod graveyard_spread;
 mod fight_each;
 pub(crate) use eval::PrintedGates;
 pub(crate) mod events;
@@ -11431,6 +11432,9 @@ impl GameState {
             Effect::ReturnTargetCardsAtRandom { count } => self.return_target_cards_at_random(count, ctx, events),
             Effect::PutAnyNumberFromGraveyardOnTop { filter } => {
                 self.put_any_number_from_graveyard_on_top(filter, effect, ctx, events)
+            }
+            Effect::ExileTypeSpreadReturnPermanent { min_types } => {
+                self.exile_type_spread_return_permanent(*min_types, ctx, events)
             }
             Effect::ChooseGraveyardCreaturesEachMayReturn => {
                 self.choose_graveyard_creatures_each_may_return(ctx, events)

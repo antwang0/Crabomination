@@ -2789,6 +2789,22 @@ impl GameState {
                     _ => false,
                 })
             }
+            Predicate::TwoShareAllCardTypes(what) => {
+                let sets: Vec<Vec<crate::card::CardType>> = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .filter_map(|e| match e {
+                        EntityRef::Card(id) | EntityRef::Permanent(id) => self.find_card_anywhere(id),
+                        _ => None,
+                    })
+                    .map(|c| {
+                        let mut t = c.definition.card_types.clone();
+                        t.sort_by_key(|x| format!("{x:?}"));
+                        t
+                    })
+                    .collect();
+                sets.iter().enumerate().any(|(i, a)| sets[i + 1..].contains(a))
+            }
             Predicate::FirstSpellCastFromExileThisTurn => {
                 self.evaluate_predicate(&Predicate::CastSpellFromExile, ctx)
                     && self.players[ctx.controller].spells_cast_from_exile_this_turn == 1

@@ -1989,7 +1989,8 @@ impl Effect {
             Effect::RevealUntilLandsToBattlefield { .. }
             | Effect::RevealUntilOneToBattlefieldRestBottom { .. } => false,
             Effect::CopyAttackersAsBlockers => false,
-            Effect::ChooseGraveyardCreaturesEachMayReturn => false,
+            Effect::ChooseGraveyardCreaturesEachMayReturn
+            | Effect::ExileTypeSpreadReturnPermanent { .. } => false,
             Effect::ReturnTargetCardsAtRandom { .. } => false,
             Effect::EachPlayerRecyclesArtifacts => false,
             Effect::OpponentChoosesPermanentThen { .. } => false,

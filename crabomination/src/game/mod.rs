@@ -22498,13 +22498,18 @@ impl GameState {
                         ) => *from,
                         _ => card.controller,
                     };
+                    let event_amount = if ta.event.batch_counts_card_types {
+                        self.batch_card_type_count(events, &ta.event, card)
+                    } else {
+                        self.event_amount_for(ev)
+                    };
                     candidates.push(TriggerCandidate {
                         source: trig_source,
                         effect: ta.effect.clone(),
                         controller,
                         filter: ta.event.filter.clone(),
                         subject,
-                        event_amount: self.event_amount_for(ev),
+                        event_amount,
                         triggered_by_etb: matches!(ev, GameEvent::PermanentEntered { .. }),
                         triggered_by_death: matches!(
                             ev,
@@ -27873,6 +27878,36 @@ impl GameState {
     /// did not: both are push-only, so a card that has just arrived there —
     /// which is what `on_left_battlefield` and the death paths ask about — hits
     /// on the first comparison instead of the last (PERF `(-325)`).
+    /// `EventSpec::batch_counts_card_types` — the number of card types among
+    /// the cards of every event in `events` that `spec` matches (CR 603.2c:
+    /// the one trigger sees the whole batch).
+    pub(crate) fn batch_card_type_count(
+        &self,
+        events: &[GameEvent],
+        spec: &crate::effect::EventSpec,
+        source: &CardInstance,
+    ) -> u32 {
+        let mut types: Vec<crate::card::CardType> = Vec::new();
+        for ev in events {
+            if !crate::game::effects::events::event_matches_spec(self, ev, spec, source) {
+                continue;
+            }
+            let id = match crate::game::effects::event_subject(ev, &spec.kind) {
+                Some(crate::game::effects::EntityRef::Card(id))
+                | Some(crate::game::effects::EntityRef::Permanent(id)) => id,
+                _ => continue,
+            };
+            if let Some(c) = self.find_card_anywhere(id) {
+                for t in &c.definition.card_types {
+                    if !types.contains(t) {
+                        types.push(t.clone());
+                    }
+                }
+            }
+        }
+        types.len() as u32
+    }
+
     pub fn find_card_anywhere(&self, id: CardId) -> Option<&CardInstance> {
         if let Some(c) = self.battlefield_find(id) {
             return Some(c);
@@ -29538,6 +29573,7 @@ fn static_effect_to_effects(
             | StaticEffect::MayPlotFromLibraryTop
             | StaticEffect::PlayFromLibraryTopOncePerTurn { .. }
             | StaticEffect::PlayFromLibraryTopPayLife { .. }
+            | StaticEffect::PlayFromLibraryTopBySacrificing { .. }
             | StaticEffect::TopOfLibraryRevealed
             | StaticEffect::MayLookAtOwnLibraryTop
             | StaticEffect::AllLibraryTopsRevealed
@@ -29832,6 +29868,7 @@ fn static_effect_to_effects(
             // MayPlayLandsFromGraveyard — consulted by the land-play paths
             // via `player_may_play_lands_from_graveyard`; no layer effect.
             | StaticEffect::MayPlayLandsFromGraveyard
+            | StaticEffect::MayPlayLandsFromGraveyardMatching(_)
             | StaticEffect::FirstMatchingSpellEachTurnCostsLess { .. }
             | StaticEffect::PlayCardsFromGraveyardDuringYourTurn
             // MayReturnFromGraveyardInsteadOfLearn — consulted at the top of
