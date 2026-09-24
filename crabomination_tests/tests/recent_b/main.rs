@@ -22,6 +22,7 @@ mod cmdr_meren;
 mod cmdr_quandrix;
 mod layer_stateful_filters;
 mod cmdr_daxos;
+mod cmdr_ghave;
 mod dsk2;
 mod dsk_rooms;
 mod recent_118_132;
