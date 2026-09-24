@@ -205,6 +205,17 @@ the handoff.
   suspend-only card (no mana cost) had no other way in. `server/suspend.rs` suspends
   one in the main phase; the census counts a suspend or a foretell as a play. A
   suspend card *with* a cost is still only cast (Aeon Chronicler's Suspend X is open).
+- ✅ **Found by Arcane Wizardry (C17, Inalla):** The Abyss destroyed *every* nonartifact
+  creature of the active player — it is one, of their choice (`PlayerChoosesToDestroy`);
+  "tap N untapped [X] you control" never let the source pay, though its doc said it
+  could (Inalla is one of its five Wizards, Crookclaw Elder one of its two Birds); both
+  death funnels (`stack.rs`, lethal damage and destroy/sacrifice) pushed a trigger with
+  its first target slot only (CR 115.1c); and `auto_extra_distinct_slot_targets` offered
+  only the first opponent — at four seats Vindictive Lich's three modes found one
+  player. It now offers every live opponent, the most hostile first, and a `ChooseN`
+  never reuses a player (CR 700.2). New: `EntersAsCopy::from_graveyards`,
+  `GraveyardCastOncePerTurn::exile_after`, `HasActivatedAbilitiesOfOwnedExiledWithCounter`
+  + `CounterType::Cage` (AddCounter reaches exile, CR 122.1).
 - ✅ New for Entropic Uprising / Endless Punishment: `EventKind::PlayerLeftGame` (CR
   800.4a), `Effect::PlayersControlEachOthersNextTurn` (CR 722),
   `Effect::ManifestFromGraveyard` (CR 701.40), `SpendRestriction::InstantSorceryOrTypes`

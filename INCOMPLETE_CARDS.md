@@ -1879,5 +1879,9 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Vial Smasher the Fierce | Entropic Uprising (C16) | the random opponent is always dealt the damage, never one of their planeswalkers. |
 | 🟡 Blood Tyrant | Entropic Uprising (C16) | grows by the number of living players, not the life actually lost. |
 | 🟡 Star Athlete | Endless Punishment (DSC) | "up to one target" always takes a target when one exists. |
+| 🟡 Mairsil, the Pretender | Arcane Wizardry (C17) | a borrowed ability can be activated any number of times a turn, not once; the cage takes the highest-mana-value artifact or creature card. |
+| 🟡 Magus of the Abyss | Arcane Wizardry (C17) | "target … of their choice" is a choice, not a target: a hexproof creature can still be picked (The Abyss likewise). |
+| 🟡 Shifting Shadow | Arcane Wizardry (C17) | reveals from the Aura controller's library; the new creature enters before the old one is destroyed. |
+| 🟡 Vindictive Lich | Arcane Wizardry (C17) | always all three modes, in a fixed order (lose five, discard two, sacrifice); a mode with no fresh opponent does nothing. |
 | 🟡 Spiked Corridor // Torture Pit | Endless Punishment (DSC) | Torture Pit's +2 also reaches permanents opponents control (the shared `NoncombatDamageToOpponentsBonus`). |
 | 🟡 Duneblast | Breed Lethality (C16) | the survivor is the chooser's pick among all creatures, and one always survives when any exist ("up to one" never picks none). |

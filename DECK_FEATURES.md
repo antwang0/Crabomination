@@ -95,6 +95,7 @@ lists were picked.
 | **Invent Superiority** (C16 precon) WUBR | Breya, Etherium Shaper | WUBR | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Entropic Uprising** (C16 precon) UBRG | Yidris, Maelstrom Wielder | UBRG | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Endless Punishment** (DSC precon) BR | Valgavoth, Harrower of Souls | BR | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
+| **Arcane Wizardry** (C17 precon) UBR | Inalla, Archmage Ritualist | UBR | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not
@@ -928,6 +929,31 @@ Four-seat pods beside Ghired / Zedruu / Arahbo (seed 10132, 1,000
 games, all decided): Valgavoth 47.1 %; a 300-game census (seed 10133) leaves no
 card of the four lists unplayed; 12 seats (57..46, seed 10134): 200 / 200
 decided (seat numbers as they were then). `--bench` byte-identical.
+
+The **sixty-sixth** is Commander 2017's **Arcane Wizardry**
+(`ArcaneWizardry_C17`) — Grixis Wizards under Inalla, Archmage Ritualist (seat 64
+before rebasing over Open Hostility and First Flight), whose eminence copies each nontoken Wizard that enters (from the command zone too).
+Sixteen cards were missing; the primitives: `EntersAsCopy::from_graveyards`
+(Body Double), `GraveyardCastOncePerTurn::exile_after` (Kess),
+`Effect::PlayerChoosesToDestroy` (Magus of the Abyss) and
+`StaticEffect::HasActivatedAbilitiesOfOwnedExiledWithCounter` + `CounterType::Cage`
+with `AddCounter` reaching exile (Mairsil, CR 122.1). It found four engine
+bugs: ⚠ **The Abyss destroyed every nonartifact creature** of the active player
+(it is one, of their choice); "tap N untapped [X] you control" never let the
+source pay (Inalla is one of its five Wizards; Crookclaw Elder one of its two
+Birds); ⚠⚠ **both death funnels pushed a trigger with its first target slot
+only** (CR 115.1c), and the slot filler offered only the *first* opponent — a
+two-seat assumption, so Vindictive Lich's "each mode must target a different
+player" hit one seat at four. Residuals: **Mairsil** activates a borrowed
+ability any number of times a turn and cages the highest-mana-value card;
+**Magus of the Abyss**'s pick is a choice, so hexproof doesn't stop it;
+**Shifting Shadow** reveals from the Aura controller's library and the new
+creature enters before the old one is destroyed; **Vindictive Lich** always
+picks all three modes in a fixed order. Four-seat pods beside Rin and Seri /
+Riku / Atraxa (seed 10140, 1,000 games, all decided): Inalla 7.8 % — Rin and
+Seri take 53 %; a 300-game census (seed 10141) leaves no card of the four
+unplayed; 12 seats (64..53 as numbered then, seed 10142): 200 / 200 decided. `--bench`
+byte-identical.
 
 The **sixtieth** is the Starter Commander Decks' **Token Triumph**
 (`TokenTriumph_SCD`) — Selesnya tokens and anthems under Emmara, Soul of the
