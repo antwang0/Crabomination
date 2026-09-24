@@ -6749,6 +6749,26 @@ impl GameState {
                     }
                 }
             }
+            // CR 702.95 + 603.10a — a Soulbond-granted "when this creature
+            // dies" (Breathkeeper Seraph) fires off either paired creature;
+            // the pair is read before the death unpairs it. Gated on the
+            // dying creature's own link, so an unpaired death pays one load.
+            if !dies_suppressed
+                && let Some(partner) = self.battlefield.find_by_id(id).and_then(|c| c.soulbond_partner)
+            {
+                for holder in [id, partner] {
+                    let Some(bonus) =
+                        self.battlefield.find_by_id(holder).and_then(|c| c.definition.soulbond_bonus.as_ref())
+                    else {
+                        continue;
+                    };
+                    for ta in &bonus.triggered_abilities {
+                        if ta.event.kind == EventKind::CreatureDied {
+                            die_triggers.push((id, ta.effect.clone(), controller_idx, ta.event.filter.clone()));
+                        }
+                    }
+                }
+            }
             // Bump the controller's per-turn died-creature tally for
             // Witherbloom "if a creature died under your control this
             // turn" payoffs (Essenceknit Scholar).
