@@ -137,6 +137,7 @@ lists were picked.
 | **20 Ways to Win** (SLD) WUBRG | Go-Shintai of Life's Origin | WUBRG | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Cabaretti Cacophony** (NCC precon) RGW | Kitt Kanto, Mayhem Diva | RGW | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
 | **Draconic Rage** (AFC precon) RG | Vrondiss, Rage of Ancients | RG | 100 | 🟡 all 100 implemented, 6 carry residuals (below) |
+| **Draconic Dissent** (CLB precon) UR | Firkraag, Cunning Instigator | UR | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not
@@ -1250,6 +1251,28 @@ no actor). Residual: **Orator of Ojutai** reads board and hand instead of a
 reveal. Four-seat pods beside Sigarda / Teval / Disa (seed 11092, 1,000 games,
 all decided): The Ur-Dragon 25.1 %; census: no card of the four unplayed; 6
 and 8 seats (seed 11093) 2,000 / 2,000 decided. `--bench` byte-identical.
+
+The **hundred-and-seventh** is Commander Legends: Battle for Baldur's Gate's
+**Draconic Dissent** (`DraconicDissent_CLB`) — Izzet goad and Dragons under
+Firkraag, Cunning Instigator, reached by `--pod-decks 107`. Eighteen cards
+were missing; Psychic Impetus landed with Aura of Courage meanwhile, so
+seventeen are this seat's (`cmdr_firkraag.rs`). The primitives: a fourth goad
+source, board-wide statics read by `GameState::goaders` —
+`OpponentCreaturesWithLesserPowerAreGoaded` (Baeloth) and
+`OthersNamedLikeThisAreGoaded` (Mocking Doppelganger's copy rider), compared
+on each instance's own power so goad never re-enters the layer system;
+`OpponentsGoadedCreaturesCantBlock` (Bothersome Quasit, behind Void
+Winnower's block-lock presence gate); `Effect::GoadACreatureOfEachOpponentAttackedBy`
+(`effects/goad_attacked.rs`); `Effect::SpellDiscountUntilYourNextTurn` (Will
+Kenrith's −2, a discount-form `TurnScopedSpellTax`); `CreatureType::Beholder`.
+Residuals: **Baeloth** compares powers without static anthems; **Firkraag**'s
+goaded creature is the engine's pick and "had to attack" reads as goaded or
+must-attack; **Rowan Kenrith**'s +2 lasts until your next turn and reaches
+the creatures the target has at resolution; **Stuffy Doll**'s player is the
+most hostile opponent. Pods (release, seed 10321, 1,000 games beside
+Vrondiss / Galea / Killian): 1,000/1,000 decided, no card of the four lists
+unplayed, Firkraag 29.5 %; 8 seats (seed 10322) 500/500 decided. `--bench`
+byte-identical.
 
 The **hundred-and-fourth** is Adventures in the Forgotten Realms Commander's
 **Draconic Rage** (`DraconicRage_AFC`) — Gruul dragons and dice under Vrondiss,
