@@ -191,6 +191,25 @@ the handoff.
   `flash_additional_cost` (CR 601.2b), `EventKind::EnchantedPlayerLeftGame` +
   `CounterType::Spite` (CR 800.4a). Bot: a declare-blockers-step spell (Illusionist's
   Gambit) rides `pick_combat_only_spell` when the seat is attacked.
+- ✅ **A mana source paying for its own {1} overflowed the stack** (Entropic Uprising's
+  first 1,000-game pod, CR 601.2g): `activate_ability_inner` snapshotted before the
+  {T}/{Q} costs, so the auto-payer could tap the source being activated to pay its own
+  generic cost and recurse. The snapshot is now taken after them; replay test
+  `pod::tests::a_mana_source_paying_for_itself_does_not_overflow`.
+- ✅ **SpellCast triggers never named their caster** (The Lord of Pain, CR 603.2):
+  `fire_spell_cast_triggers` aimed with no `trigger_event_player_scratch` and pushed no
+  `trigger_player`, so `ControlledByTriggerPlayer` ("another target player") excluded
+  nobody at targeting and failed its own target at resolution. Both now read the
+  caster; `cr_603_2_spell_cast_trigger_excludes_the_caster_as_another_player`.
+- ✅ **No bot path suspended a card** (Wheel of Fate unplayed in the census): a
+  suspend-only card (no mana cost) had no other way in. `server/suspend.rs` suspends
+  one in the main phase; the census counts a suspend or a foretell as a play. A
+  suspend card *with* a cost is still only cast (Aeon Chronicler's Suspend X is open).
+- ✅ New for Entropic Uprising / Endless Punishment: `EventKind::PlayerLeftGame` (CR
+  800.4a), `Effect::PlayersControlEachOthersNextTurn` (CR 722),
+  `Effect::ManifestFromGraveyard` (CR 701.40), `SpendRestriction::InstantSorceryOrTypes`
+  (CR 106.6), `CardDefinition::exile_on_resolve_time_counters` + `CounterType::Soul`
+  (CR 702.62), `Effect::EachPlayerChoosesToDestroy` (Sadistic Shell Game).
 - ✅ **A graveyard-exile cost naming X refused every card** (Osgir, the Reconstructor's
   "{X}, {T}, Exile an artifact card with mana value X"): `exile_other_filter` evaluated
   `ManaValueExactlyXFromCost` without the activation's X; it now resolves it first.

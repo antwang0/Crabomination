@@ -4,7 +4,8 @@
 //!
 //! Residuals (each also on its card):
 //! - **Aeon Chronicler** — no Suspend X: the engine's suspend takes no X and
-//!   bots never suspend, so its time-counter draw never comes up.
+//!   bots suspend only cards with no mana cost, so its time-counter draw never
+//!   comes up.
 //! - **Vial Smasher the Fierce** — the random opponent is always dealt the
 //!   damage, never one of their planeswalkers.
 //! - **Blood Tyrant** — grows by the number of living players, not the life

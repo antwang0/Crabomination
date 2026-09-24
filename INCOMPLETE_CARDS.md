@@ -1866,3 +1866,10 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Stalking Leonin | Feline Ferocity (C17) | the opponent is chosen openly by the engine (the one with the fewest creatures), not secretly by the player. |
 | 🟡 Cliffside Rescuer | Primal Genesis (C19) | protection from each opponent is protection from what opponents control (`ProtectionFromMatching(ControlledByOpponent)`). |
 | 🟡 Tahngarth, First Mate | Primal Genesis (C19) | it attacks its new controller's default opponent, not a chosen player that opponent is attacking. |
+| 🟡 Aeon Chronicler | Entropic Uprising (C16) | no Suspend X: suspend takes no X, and bots suspend only cards with no mana cost, so the time-counter draw never comes up. |
+| 🟡 Vial Smasher the Fierce | Entropic Uprising (C16) | the random opponent is always dealt the damage, never one of their planeswalkers. |
+| 🟡 Blood Tyrant | Entropic Uprising (C16) | grows by the number of living players, not the life actually lost. |
+| 🟡 Barbflare Gremlin | Endless Punishment (DSC) | the damage comes from the Gremlin, not the tapped land. |
+| 🟡 Enchanter's Bane | Endless Punishment (DSC) | the damage comes from the Bane, not the enchantment. |
+| 🟡 Star Athlete | Endless Punishment (DSC) | "up to one target" always takes a target when one exists. |
+| 🟡 Spiked Corridor // Torture Pit | Endless Punishment (DSC) | Torture Pit's +2 also reaches permanents opponents control (the shared `NoncombatDamageToOpponentsBonus`). |

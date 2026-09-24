@@ -87,6 +87,8 @@ lists were picked.
 | **Arm for Battle** (CMR precon) RW | Wyleth, Soul of Steel | RW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Fae Dominion** (WOC precon) UB | Tegwyll, Duke of Splendor | UB | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Invent Superiority** (C16 precon) WUBR | Breya, Etherium Shaper | WUBR | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
+| **Entropic Uprising** (C16 precon) UBRG | Yidris, Maelstrom Wielder | UBRG | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
+| **Endless Punishment** (DSC precon) BR | Valgavoth, Harrower of Souls | BR | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not
@@ -847,6 +849,42 @@ byte-identical.
 log): 60 games, **60 decided, 0 caps, zero panics** — 608 turns, 350 k actions
 and 2,979 plays a game, the longest 891 turns; four-seat pods (seed 9412, 400
 games) all decided. `--bench` byte-identical throughout.
+The **fifty-first** is Commander 2016's **Entropic Uprising**
+(`EntropicUprising_C16`) — four-colour (UBRG) cascade and chaos under Yidris,
+Maelstrom Wielder. Seventeen cards were missing; the primitives:
+`EventKind::PlayerLeftGame` (Blood Tyrant, queued from the CR 800.4a funnel),
+`Effect::PlayersControlEachOthersNextTurn` (Cruel Entertainment, CR 722) and
+`Effect::ManifestFromGraveyard` (Ghastly Conscription, CR 701.40). ⚠⚠ **Its
+first 1,000-game pod found a stack overflow**: a mana source whose own {T}
+ability cost {1} paid that {1} by tapping itself, recursing through
+`activate_ability_inner` until the stack blew; the pre-activation snapshot is
+now taken after the {T}/{Q} costs are paid (CR 601.2g), with a replay test
+(`pod::tests::a_mana_source_paying_for_itself_does_not_overflow`). ⚠ **Its
+census found Wheel of Fate unplayed**: no bot path suspended a card, and
+suspend-only cards (no mana cost) had no other way in —
+`server/suspend.rs` now suspends them, and the census counts a suspend or a
+foretell as a play. Residuals: **Aeon Chronicler** has no Suspend X;
+**Vial Smasher** never hits a planeswalker; **Blood Tyrant** grows by the
+living players, not the life lost. Four-seat pods beside Breya / Tegwyll /
+Adrix (seed 10129, 1,000 games, all decided): Yidris 28.6 %; the census (seed
+10130) leaves no card unplayed.
+
+The **fifty-ninth** is Duskmourn Commander's **Endless Punishment**
+(`EndlessPunishment_DSC`) — Rakdos punisher under Valgavoth, Harrower of Souls
+(seat 57 before rebasing over Stalwart Unity and Devour for Power). Fifteen cards were missing; the primitives: `SpendRestriction::InstantSorceryOrTypes`
+(Séance Board, CR 106.6), `CardDefinition::exile_on_resolve_time_counters` +
+`CounterType::Soul` (Suspended Sentence, CR 702.62), and
+`Effect::EachPlayerChoosesToDestroy` (Sadistic Shell Game). ⚠ **The Lord of
+Pain found spell-cast triggers blind to their caster** (CR 603.2): the cast
+trigger aimed with no event player set and stamped none on the stack item, so
+"another target player" could never exclude the caster — now both are the
+caster. Residuals: **Barbflare Gremlin**'s and **Enchanter's Bane**'s damage
+comes from them, not the land / the enchantment; **Star Athlete**'s "up to
+one" always takes a target; **Torture Pit**'s +2 also reaches opponents'
+permanents. Four-seat pods beside Ghired / Zedruu / Arahbo (seed 10132, 1,000
+games, all decided): Valgavoth 47.1 %; a 300-game census (seed 10133) leaves no
+card of the four lists unplayed; 12 seats (57..46, seed 10134): 200 / 200
+decided (seat numbers as they were then). `--bench` byte-identical.
 
 ⚠ **The board cap was a bot bug, not a loop.** A Krenko seat sent all 292
 of its Goblins at one player on 24 life each turn while two others sat on
