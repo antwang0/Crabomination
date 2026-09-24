@@ -693,3 +693,50 @@ fn cr_901_9_an_effect_rolls_the_planar_die_and_planeswalks() {
     drain_stack(&mut g);
     assert_eq!(plane(&g), Some("Naar Isle"));
 }
+
+/// CR 601.2c / 700.2 — a multi-mode cast validates each target against the
+/// mode that owns it: choosing modes 1 and 2 of a "choose two" spell puts
+/// mode 1's player target in slot 0, not under mode 0's spell filter.
+#[test]
+fn cr_700_2_each_chosen_mode_validates_its_own_target() {
+    use crabomination::card::{CardDefinition, CardType, CounterType};
+    use crabomination::effect::{Effect, Value};
+    use crabomination::game::types::Target;
+    use crabomination::effect::shortcut::target_filtered;
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, CardDefinition {
+        name: "Two-Mode Test",
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseModesCast {
+            modes: vec![
+                Effect::CounterSpell { what: target_filtered(SelectionRequirement::IsSpellOnStack) },
+                Effect::GainLife { who: target_filtered(SelectionRequirement::Player), amount: Value::Const(3) },
+                Effect::AddCounter {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+            ],
+            min: 2,
+            max: 2,
+            allow_repeats: false,
+        },
+        ..Default::default()
+    });
+    let life = g.players[1].life;
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: spell,
+        spree_modes: vec![1, 2],
+        target: Some(Target::Player(1)),
+        additional_targets: vec![Target::Permanent(bear)],
+        x_value: None,
+    })
+    .expect("each target is checked against its own mode");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life + 3);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}

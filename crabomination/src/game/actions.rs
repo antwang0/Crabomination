@@ -8811,9 +8811,14 @@ impl GameState {
             }
             .unwrap_or(&card.definition.effect);
             let slot_bad = |slot: u8, tgt: &Target| {
-                target_effect
-                    .target_filter_for_slot_in_mode_kicked(slot, mode, kicked)
-                    .map(|f| f.resolve_x(x_value.unwrap_or(0)))
+                crate::game::spree_targets::chosen_mode_slot_filter(
+                    target_effect,
+                    &card.spree_modes,
+                    slot,
+                    kicked,
+                )
+                .unwrap_or_else(|| target_effect.target_filter_for_slot_in_mode_kicked(slot, mode, kicked))
+                .map(|f| f.resolve_x(x_value.unwrap_or(0)))
                     .is_some_and(|filter| {
                         !self.evaluate_requirement_static(&filter, tgt, p, Some(card.id))
                     })

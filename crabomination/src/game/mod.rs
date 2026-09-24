@@ -134,6 +134,7 @@ mod enter_attacking;
 mod token_replacement;
 // CR 205.4e — a legendary instant or sorcery needs a legendary creature or planeswalker.
 mod legendary_spell;
+mod spree_targets;
 // CR 102.2 — "an opponent controls N or more …", read per opponent.
 mod milled_play;
 mod opponent_controls;
