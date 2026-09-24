@@ -134,3 +134,21 @@ pub(crate) fn wicked_role() -> TokenDefinition {
     }];
     t
 }
+
+/// Virtuous Role: enchanted creature gets +1/+1 for each enchantment you
+/// control.
+pub(crate) fn virtuous_role() -> TokenDefinition {
+    role_aura(
+        "Virtuous",
+        Color::White,
+        EquipBonus {
+            scale: Some(crate::card::EquipScale {
+                filter: crate::card::SelectionRequirement::Enchantment,
+                per_power: 1,
+                per_toughness: 1,
+                ..Default::default()
+            }),
+            ..Default::default()
+        },
+    )
+}
