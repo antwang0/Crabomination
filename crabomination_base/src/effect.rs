@@ -1842,6 +1842,10 @@ pub enum Predicate {
         colors: Vec<Color>,
         types: Vec<crate::card::CardType>,
     },
+    /// `who` has cast at most `n` spells of `card_type` this turn, the spell
+    /// being cast included — "whenever you cast your first enchantment spell
+    /// each turn" is `n: 1` as a cast-trigger filter (Tuvasa the Sunlit).
+    SpellsOfTypeCastThisTurnAtMost { who: PlayerRef, card_type: crate::card::CardType, n: u32 },
     /// "[who] has been dealt damage by `at_least` different creatures this
     /// turn" (Inferno Trap). Reads `Player.creatures_that_damaged_me_this_turn`.
     DamagedByCreaturesThisTurnAtLeast { who: PlayerRef, at_least: u32 },
@@ -3238,6 +3242,11 @@ pub enum EventKind {
     /// `EventScope::YourControl` so the unlocker's permanents trigger. Matched
     /// to `GameEvent::RoomFullyUnlocked`.
     RoomFullyUnlocked,
+    /// CR 903.9 — "whenever your commander is put into the command zone from
+    /// anywhere" (Myth Unbound). Pair with `EventScope::YourControl`: the
+    /// commander's owner drives it. Matched to
+    /// `GameEvent::CommanderPutIntoCommandZone`.
+    CommanderPutIntoCommandZone,
     /// MKM — "whenever you solve a Case" (Case File Auditor). Fired with the
     /// solved Case as the subject; pair with `EventScope::YourControl` so the
     /// solver's permanents trigger. Matched to `GameEvent::CaseSolved`.
@@ -4875,6 +4884,10 @@ pub enum Effect {
     /// source's `chosen_player` (its `MustAttackChosenPlayer` target); with none
     /// to choose, forget the choice and tap the source.
     ChooseRandomOpponentNotAttackedLastCombat,
+    /// "You may attach to it any number of [what]" — the controller chooses
+    /// which of the permanents `what` resolves to become attached to `to`
+    /// (Bruna, Light of Alabaster; Heavenly Blademaster).
+    AttachAnyNumberTo { what: Selector, to: Selector },
     /// "[what] can't attack you or planeswalkers you control" for `duration`
     /// — `Keyword::CantAttackPlayer` naming the resolving controller.
     GrantCantAttackYou { what: Selector, duration: Duration },
@@ -11235,6 +11248,7 @@ pub fn static_affects_spell_cost(effect: &StaticEffect) -> bool {
         | SE::CostReductionPerControllerExperience { .. }
         | SE::CostReductionPerCounterOnSource { .. }
         | SE::CostReductionTargetingFilter { .. }
+        | SE::CostReductionForYourSpellsTargetingThis { .. }
         | SE::CostReductionWhile { .. }
         | SE::ExileCastCostReduction { .. }
         | SE::FirstMatchingSpellEachTurnCostsLess { .. }

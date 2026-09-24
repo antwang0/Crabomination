@@ -945,6 +945,7 @@ fn mana_summary_of(def: &crate::card::CardDefinition) -> Option<u64> {
                 flags |= mana_summary::COUNTER_GRANT
             }
             SE::ExileDyingOpponentCreatures { .. }
+            | SE::ExileDyingOpponentCreaturesGrowingThis
             | SE::DiesToLibraryTopInstead { .. }
             | SE::DiesToOwnersHandInstead { .. }
             | SE::ExileCardsBoundForGraveyard { .. } => flags |= mana_summary::DEATH_REDIRECT,
@@ -1919,6 +1920,14 @@ pub(crate) fn cost_reduction_for_spell_full_over<'a>(
                     if state.evaluate_requirement_static(target_filter, tgt, caster, Some(card.id)) {
                         reduction += amount;
                     }
+                }
+                // Elderwood Scion: your spells targeting this permanent cost
+                // {amount} less (the tax half is `TaxOpponentSpellsTargetingThis`).
+                StaticEffect::CostReductionForYourSpellsTargetingThis { amount }
+                    if src.controller == caster
+                        && matches!(target, Some(crate::game::Target::Permanent(pid)) if *pid == src.id) =>
+                {
+                    reduction += amount;
                 }
                 StaticEffect::ChosenTypeSpellCostReduction { amount }
                     if src.controller == caster

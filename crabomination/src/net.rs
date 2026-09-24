@@ -2847,6 +2847,7 @@ pub enum GameEventWire {
     VehicleCrewed { vehicle: CardId },
     MountSaddled { mount: CardId },
     RoomFullyUnlocked { room: CardId },
+    CommanderPutIntoCommandZone { card_id: CardId },
     CaseSolved { case: CardId },
     PoisonAdded { player: usize, amount: u32 },
     MonarchChanged { player: usize },
@@ -3194,6 +3195,9 @@ impl From<&GameEvent> for GameEventWire {
             GameEvent::RoomFullyUnlocked { room, .. } => {
                 GameEventWire::RoomFullyUnlocked { room: *room }
             }
+            GameEvent::CommanderPutIntoCommandZone { card_id, .. } => {
+                GameEventWire::CommanderPutIntoCommandZone { card_id: *card_id }
+            }
             GameEvent::CaseSolved { case, .. } => GameEventWire::CaseSolved { case: *case },
             GameEvent::MountSaddled { mount, .. } => {
                 GameEventWire::MountSaddled { mount: *mount }
@@ -3491,6 +3495,7 @@ impl GameEventWire {
             E::VehicleCrewed { vehicle, .. } => format!("{} crewed", name(*vehicle)),
             E::MountSaddled { mount } => format!("{} saddled", name(*mount)),
             E::RoomFullyUnlocked { room } => format!("{} fully unlocked", name(*room)),
+            E::CommanderPutIntoCommandZone { card_id } => format!("{} returned to the command zone", name(*card_id)),
             E::CaseSolved { case } => format!("{} solved", name(*case)),
             E::PoisonAdded { player, amount } => format!("{} +{amount} poison", pn(*player)),
             E::MonarchChanged { player } => format!("{} becomes the monarch", pn(*player)),

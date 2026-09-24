@@ -2410,6 +2410,12 @@ impl GameState {
                 .resolve_players(who, ctx)
                 .into_iter()
                 .any(|p| self.players[p].cast_blue_or_black_this_turn),
+            Predicate::SpellsOfTypeCastThisTurnAtMost { who, card_type, n } => {
+                self.resolve_players(who, ctx).into_iter().all(|p| {
+                    self.players[p].spell_casts_this_turn.iter().filter(|c| c.card_types.contains(card_type)).count()
+                        <= *n as usize
+                })
+            }
             Predicate::CastSpellThisTurnWith { who, colors, types } => {
                 self.resolve_players(who, ctx).into_iter().any(|p| {
                     self.players[p].spell_casts_this_turn.iter().any(|c| {

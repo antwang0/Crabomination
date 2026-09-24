@@ -134,6 +134,7 @@ pub(crate) fn event_kind_bits(event: &GameEvent) -> u128 {
         E::PaidLife { .. } => bits!(K::PaidLife),
         E::VehicleCrewed { .. } | E::MountSaddled { .. } => bits!(K::CrewsOrSaddles),
         E::RoomFullyUnlocked { .. } => bits!(K::RoomFullyUnlocked),
+        E::CommanderPutIntoCommandZone { .. } => bits!(K::CommanderPutIntoCommandZone),
         E::CaseSolved { .. } => bits!(K::CaseSolved),
         E::PermanentPhasedIn { .. } => bits!(K::PhasesIn),
         E::PermanentPhasedOut { .. } => bits!(K::PhasesOut),
@@ -380,6 +381,7 @@ fn reference_event_kind_matches(
             GameEvent::VehicleCrewed { .. } | GameEvent::MountSaddled { .. },
         ) => true,
         (EventKind::RoomFullyUnlocked, GameEvent::RoomFullyUnlocked { .. }) => true,
+        (EventKind::CommanderPutIntoCommandZone, GameEvent::CommanderPutIntoCommandZone { .. }) => true,
         (EventKind::CaseSolved, GameEvent::CaseSolved { .. }) => true,
         (EventKind::PhasesIn, GameEvent::PermanentPhasedIn { .. }) => true,
         (EventKind::PhasesOut, GameEvent::PermanentPhasedOut { .. }) => true,
@@ -1341,6 +1343,8 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         // DSK Eerie — the unlocking player drives "whenever you fully unlock
         // a Room" (YourControl scope).
         GameEvent::RoomFullyUnlocked { controller, .. } => Some(*controller),
+        // CR 903.9 — "your commander": its owner.
+        GameEvent::CommanderPutIntoCommandZone { owner, .. } => Some(*owner),
         // MKM — the solving player drives "whenever you solve a Case".
         GameEvent::CaseSolved { controller, .. } => Some(*controller),
         _ => None,
@@ -1405,6 +1409,7 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         // was fully unlocked.
         GameEvent::TurnedFaceUp { card_id } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::RoomFullyUnlocked { room, .. } => Some(EntityRef::Permanent(*room)),
+        GameEvent::CommanderPutIntoCommandZone { card_id, .. } => Some(EntityRef::Card(*card_id)),
         GameEvent::CaseSolved { case, .. } => Some(EntityRef::Permanent(*case)),
         // Enrage: the subject is the damaged permanent, so trigger bodies
         // referencing `Selector::TriggerSource` (and the implicit
@@ -1825,6 +1830,7 @@ mod tests {
             E::AuraAttached { aura: c, attached_to: mine },
             E::VehicleCrewed { vehicle: c, crew: vec![mine] },
             E::RoomFullyUnlocked { room: c, controller: 0 },
+            E::CommanderPutIntoCommandZone { card_id: c, owner: 0 },
             E::CaseSolved { case: c, controller: 0 },
             E::PoisonAdded { player: 0, amount: 1 },
             E::MonarchChanged { player: 0 },
@@ -1956,6 +1962,7 @@ mod tests {
             K::TokenCreated,
             K::DoorUnlocked,
             K::RoomFullyUnlocked,
+            K::CommanderPutIntoCommandZone,
             K::CaseSolved,
             K::LandPutIntoGraveyard,
             K::PutIntoGraveyard,

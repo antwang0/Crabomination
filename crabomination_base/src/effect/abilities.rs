@@ -631,6 +631,10 @@ pub enum StaticEffect {
     /// `TaxOpponentSpellsTargeting`: the tax applies only when the chosen
     /// target is the source permanent itself. Read in `extra_cost_for_spell`.
     TaxOpponentSpellsTargetingThis { amount: u32 },
+    /// Elderwood Scion — "spells you cast that target this creature cost
+    /// {amount} less". Read with the cast's chosen target by
+    /// `cost_reduction_for_spell`.
+    CostReductionForYourSpellsTargetingThis { amount: u32 },
     /// "Each [`spell_filter`] spell costs {1} more to cast for each
     /// [`count_filter`] its controller controls" (Hum of the Radix). The tax
     /// scales off the *caster's* board, not the source's, and applies to every
@@ -2981,6 +2985,11 @@ pub enum StaticEffect {
         #[serde(default)]
         when_you_do: Option<Box<Effect>>,
     },
+    /// CR 614 — "If a creature an opponent controls would die, instead exile it
+    /// and put a number of +1/+1 counters equal to that creature's power on
+    /// this creature" (Ravenous Slime). Tokens too; the counters are part of
+    /// the replacement, not a trigger.
+    ExileDyingOpponentCreaturesGrowingThis,
     /// CR 702.15 — "Instant and sorcery spells you control have lifelink."
     /// Consulted in the non-combat damage path (`deal_damage_to_from`): when
     /// an instant/sorcery spell whose controller has this static deals damage,

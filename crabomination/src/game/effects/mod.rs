@@ -8,6 +8,7 @@
 
 mod combat_copies;
 mod commander;
+mod attach_choice;
 mod copy_redirect;
 mod damage_draw;
 mod exile_power;
@@ -28242,6 +28243,8 @@ impl GameState {
                 }
                 Ok(())
             }
+
+            Effect::AttachAnyNumberTo { what, to } => self.attach_any_number_to(what, to, effect, ctx, events),
 
             Effect::Attach { what, to } => {
                 // CR 303.4a — the anchor may be a player ("enchant player":

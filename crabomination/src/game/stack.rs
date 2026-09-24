@@ -5877,6 +5877,14 @@ impl GameState {
     /// is asked through `Decision::CommanderRedirect` (`would_be` is the zone
     /// it stays in on a "no"); a declined commander is remembered in
     /// `commander_return_declined` until it turns up in some other zone.
+    /// CR 903.9 — queue `GameEvent::CommanderPutIntoCommandZone` for the next
+    /// trigger dispatch. Both routes into the command zone (the 903.9a SBA and
+    /// the 903.9b replacement) run where no event list is in hand, so the
+    /// event rides the queue every dispatch drains first.
+    pub(crate) fn note_commander_to_command_zone(&mut self, card_id: CardId, owner: usize) {
+        self.scratch.pending_cost_events.push(GameEvent::CommanderPutIntoCommandZone { card_id, owner });
+    }
+
     fn commander_zone_return_sba(&mut self) {
         use crate::card::Zone;
         for owner in 0..self.players.len() {
@@ -5914,6 +5922,7 @@ impl GameState {
                     card.exiled_with = None;
                     self.players[owner].command.push(card);
                     self.offboard_keyword_grants = true;
+                    self.note_commander_to_command_zone(id, owner);
                 }
             }
         }
@@ -7611,6 +7620,24 @@ impl GameState {
             } else {
                 None
             };
+            // Ravenous Slime — the token-inclusive sibling, which grows its
+            // source by the creature's power instead of a reflexive trigger.
+            let slime_redirect: Option<CardId> = if redirects
+                && valentin_redirect.is_none()
+                && card.definition.is_creature()
+            {
+                self.battlefield.iter().find_map(|src| {
+                    (src.controller != card.controller
+                        && !self.same_team(src.controller, card.controller)
+                        && src.definition.static_abilities.iter().any(|sa| {
+                            matches!(sa.effect, crate::effect::StaticEffect::ExileDyingOpponentCreaturesGrowingThis)
+                        }))
+                    .then_some(src.id)
+                })
+            } else {
+                None
+            };
+            let slime_power = card.power().max(0) as u32;
             // CR 614 — "If this permanent would be put into a graveyard, put
             // it on top of its owner's library instead" (Pulmonic Sliver's
             // Sliver-wide grant; the "may" is auto-taken).
@@ -7664,6 +7691,7 @@ impl GameState {
                 || self.turn.dies_to_exile_eot.contains(&id)
                 || card.definition.dies_to_exile
                 || valentin_redirect.is_some()
+                || slime_redirect.is_some()
             {
                 crate::card::Zone::Exile
             } else if library_top_redirect || card.definition.dies_to_library_bottom {
@@ -7727,6 +7755,13 @@ impl GameState {
             self.place_card_at_resolved_zone(card, resolved);
             let mut events = Vec::new();
             self.on_left_battlefield(id, &mut events);
+            // Ravenous Slime's counters, when the creature really went to exile.
+            if let (Some(src), crate::card::Zone::Exile) = (slime_redirect, resolved)
+                && slime_power > 0
+                && let Some(s) = self.battlefield_find_mut(src)
+            {
+                s.add_counters(crate::card::CounterType::PlusOnePlusOne, slime_power);
+            }
             // Fire Valentin's reflexive "when you do, …" for the static's
             // controller (CR 603.x reflexive trigger off the replacement).
             if let Some((_src, controller, Some(effect))) = valentin_redirect {
@@ -7976,8 +8011,12 @@ impl GameState {
             // bottom / shuffled, extend the type.
             Zone::Library => self.players[owner].library.insert(0, card),
             Zone::Command => {
+                let id = card.id;
                 self.players[owner].command.push(card);
                 self.offboard_keyword_grants = true;
+                if self.players[owner].commanders.contains(&id) {
+                    self.note_commander_to_command_zone(id, owner);
+                }
             }
             Zone::Ante => self.players[owner].ante.push(card),
             Zone::Battlefield | Zone::Stack => {

@@ -2100,6 +2100,7 @@ impl Effect {
             | Effect::EachPlayerMayCounterThenGoad { .. }
             | Effect::OpponentsChooseSilenceOrSnitch { .. }
             | Effect::ChooseRandomOpponentNotAttackedLastCombat
+            | Effect::AttachAnyNumberTo { .. }
             | Effect::EachOpponentChooses { .. }
             | Effect::EachPlayerMayDrawThenTakersGainLife { .. }
             | Effect::ChooseAttackDirection

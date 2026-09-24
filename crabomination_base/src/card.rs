@@ -471,6 +471,8 @@ pub enum PlaneswalkerSubtype {
     Windgrace,
     // CMM (Planeswalker Party): Commodore Guff, Vronos, Masked Inquisitor.
     Guff, Vronos,
+    // C18 planeswalker commander (Adaptive Enchantment).
+    Estrid,
 }
 
 /// All subtype categories collected into one struct for CardDefinition.
@@ -888,6 +890,9 @@ pub enum CounterType {
     /// Duty counter — Immortal Obligation's mark: goaded, and can't attack or
     /// block against the obligation's caster, while it's there.
     Duty,
+    /// Slumber counter — Arixmethes, Slumbering Isle is a land, not a
+    /// creature, while it has one.
+    Slumber,
 }
 
 /// Every zone a card can occupy.

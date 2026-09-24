@@ -2131,7 +2131,9 @@ pub struct ResolutionScratch {
     /// Life-payment events (Phyrexian pips, "pay N life" costs) queued by
     /// `pay_receipt_life` mid-cast and drained into the action's event batch
     /// at the end of `perform_action`, so paid life fires life-loss triggers
-    /// (CR 118.8 / 119.3c) after the cast completes (CR 601.3e).
+    /// (CR 118.8 / 119.3c) after the cast completes (CR 601.3e). Also carries
+    /// `CommanderPutIntoCommandZone` from the two command-zone routes, which
+    /// hold no event list of their own.
     #[serde(skip, default)]
     pub(crate) pending_cost_events: Vec<GameEvent>,
     /// CR 603.3 — the own dies / leaves triggers of a permanent that left as a
@@ -29498,6 +29500,7 @@ fn static_effect_to_effects(
             | StaticEffect::CostReductionFirstInstantOrSorcery { .. }
             | StaticEffect::CostReductionFirstInstantOrSorceryPerValue { .. }
             | StaticEffect::CostReductionTargetingFilter { .. }
+            | StaticEffect::CostReductionForYourSpellsTargetingThis { .. }
             | StaticEffect::AdditionalCostAfterFirstSpell { .. }
             | StaticEffect::AdditionalCost { .. }
             | StaticEffect::OpponentSpellsCostMore { .. }
@@ -30179,6 +30182,7 @@ fn static_effect_to_effects(
             // ExileDyingOpponentCreatures (Valentin) — consulted in
             // `remove_from_battlefield_to_graveyard_raw`; no layer effect.
             | StaticEffect::ExileDyingOpponentCreatures { .. }
+            | StaticEffect::ExileDyingOpponentCreaturesGrowingThis
             // YourInstantSorcerySpellsHaveLifelink (Radiant Scrollwielder) —
             // consulted in the non-combat damage path; no layer effect.
             | StaticEffect::YourInstantSorcerySpellsHaveLifelink

@@ -2886,6 +2886,11 @@ pub enum GameEvent {
     /// open). `controller` is the unlocking player. Drives "whenever you fully
     /// unlock a Room" triggers.
     RoomFullyUnlocked { room: CardId, controller: usize },
+    /// CR 903.9 — `owner`'s commander `card_id` was just put into the command
+    /// zone, by the CR 903.9a SBA or the 903.9b replacement. Drives "whenever
+    /// your commander is put into the command zone from anywhere" (Myth
+    /// Unbound).
+    CommanderPutIntoCommandZone { card_id: CardId, owner: usize },
     /// MKM — `case` was just solved by `controller`. Drives "whenever you solve
     /// a Case" triggers (Case File Auditor).
     CaseSolved { case: CardId, controller: usize },
