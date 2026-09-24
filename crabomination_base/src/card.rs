@@ -4277,6 +4277,10 @@ pub struct CardDefinition {
     /// Defaults to `false` via `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub exile_on_resolve: bool,
+    /// Cards exiled to pay this spell's delve are linked to it
+    /// (`exiled_with`), for Soulflayer's keyword check.
+    #[serde(default)]
+    pub links_delved_cards: bool,
     /// "Put [this] on the bottom of its owner's library" as the spell
     /// finishes resolving (Spell Crumple): the resolved card goes there
     /// instead of the graveyard.

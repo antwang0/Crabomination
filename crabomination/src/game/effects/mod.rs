@@ -36,6 +36,7 @@ mod planar;
 mod foretell;
 mod hand_exile;
 mod attach_from_zone;
+pub(crate) mod keyword_gifts;
 mod politics;
 mod targeting;
 /// The target enumerator's call-site census — see
@@ -34732,6 +34733,36 @@ impl GameState {
                 self.reveal_top_put_attached(count, filter, ctx, events);
                 Ok(())
             }
+            Effect::KeywordCountersFromGraveyard { keywords } => {
+                self.keyword_counters_from_graveyard(keywords, ctx, events)
+            }
+            Effect::GainKeywordsYourCreaturesHave { what, keywords } => {
+                self.gain_keywords_your_creatures_have(what, keywords, ctx, events)
+            }
+            Effect::RevealTopChooseByKeyword { count, keywords } => {
+                self.reveal_top_choose_by_keyword(count, keywords, ctx, events)
+            }
+            Effect::MoveCountersFromAmongOnto { onto } => self.move_counters_from_among_onto(onto, ctx, events),
+            Effect::MoveOneCounter { from, to } => self.move_one_counter(from, to, ctx, events),
+            Effect::ChooseCardTypeAmongForSource(options) => {
+                use crate::decision::{Decision, DecisionAnswer};
+                let Some(source) = ctx.source else { return Ok(()) };
+                if options.is_empty() {
+                    return Ok(());
+                }
+                let n = match self.decider.decide(&Decision::ChooseMode {
+                    source,
+                    num_modes: options.len(),
+                    mode_texts: options.iter().map(|t| format!("{t:?}")).collect(),
+                }) {
+                    DecisionAnswer::Mode(m) => m.min(options.len() - 1),
+                    _ => 0,
+                };
+                if let Some(c) = self.battlefield_find_mut(source) {
+                    c.chosen_card_type = Some(options[n].clone());
+                }
+                Ok(())
+            }
             Effect::NextSpellGainsConvokeThisTurn => {
                 self.players[ctx.controller].next_spell_convoke_this_turn = true;
                 Ok(())
@@ -37891,6 +37922,30 @@ impl GameState {
                 .map(EntityRef::Permanent)
                 .into_iter()
                 .collect(),
+            Selector::GreatestPowerTopN { filter, count } => {
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                let p = ctx.controller;
+                let mut ids: Vec<(CardId, i32)> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == p && self.evaluate_requirement_on_card(filter, c, p))
+                    .map(|c| (c.id, self.computed_permanent(c.id).map(|cp| cp.power).unwrap_or(0)))
+                    .collect();
+                ids.sort_by_key(|(_, pw)| std::cmp::Reverse(*pw));
+                ids.into_iter().take(n).map(|(id, _)| EntityRef::Permanent(id)).collect()
+            }
+            Selector::PlayersControlling(filter) => {
+                let n = self.players.len();
+                (0..n)
+                    .filter(|&p| self.players[p].is_alive())
+                    .filter(|&p| {
+                        self.battlefield
+                            .iter()
+                            .any(|c| c.controller == p && self.evaluate_requirement_on_card(filter, c, p))
+                    })
+                    .map(EntityRef::Player)
+                    .collect()
+            }
             Selector::CreaturesThatConvokedSource => {
                 let Some(src) = ctx.source else { return Vec::new() };
                 self.convoked_by

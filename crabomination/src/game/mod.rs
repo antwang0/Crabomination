@@ -5068,7 +5068,7 @@ impl GameState {
                     | SE::OneNonartifactSpellPerTurn => cast_lock::ONE_SPELL,
                     SE::CantCastSharingColorWithLastCastSpell => cast_lock::MANA_MAZE,
                     SE::NoSpellOrNonbasicLandSharingAPermanentName => cast_lock::NAME,
-                    SE::OpponentsCantCastChosenColor => cast_lock::CHOSEN_COLOR,
+                    SE::OpponentsCantCastChosenColor | SE::NoOneCastsChosenCardType => cast_lock::CHOSEN_COLOR,
                     SE::OpponentsCantCastEvenMv => cast_lock::EVEN_MV,
                     SE::OpponentsCantCastNoncreatureAboveLandCount => cast_lock::ABOVE_LANDS,
                     SE::MostPermanentsCantPlay => cast_lock::DAMPING,
@@ -5231,6 +5231,19 @@ impl GameState {
                         .any(|sa| matches!(sa.effect, StaticEffect::OpponentsCantCastChosenColor))
             });
             if locked {
+                return Some(GameError::SilencedThisTurn);
+            }
+            // Archon of Valor's Reach — no player casts the chosen type.
+            let types: &[crate::card::CardType] =
+                cast_card.map(|c| c.definition.card_types.as_slice()).unwrap_or(&[]);
+            let barred = self.battlefield.iter().any(|c| {
+                c.chosen_card_type.as_ref().is_some_and(|t| types.contains(t))
+                    && c.definition
+                        .static_abilities
+                        .iter()
+                        .any(|sa| matches!(sa.effect, StaticEffect::NoOneCastsChosenCardType))
+            });
+            if barred {
                 return Some(GameError::SilencedThisTurn);
             }
         }
@@ -30067,6 +30080,7 @@ fn static_effect_to_effects(
             // OpponentsCantCastChosenColor (Iona) — gated at the cast
             // dispatch; no layer effect.
             | StaticEffect::OpponentsCantCastChosenColor
+            | StaticEffect::NoOneCastsChosenCardType
             // Melira's poison / -1/-1 locks — consulted at their funnels.
             | StaticEffect::PlayerCannotGetPoison
             | StaticEffect::NoMinusCountersOnYourCreatures

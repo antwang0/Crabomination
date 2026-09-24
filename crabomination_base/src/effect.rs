@@ -327,6 +327,12 @@ pub enum Selector {
     /// CR 702.51 — the creatures that convoked the effect's source as it was
     /// cast this turn (Venerated Loxodon).
     CreaturesThatConvokedSource,
+    /// Each player who controls a permanent matching the filter (Bonder's
+    /// Ornament).
+    PlayersControlling(SelectionRequirement),
+    /// The controller's `count` greatest-power permanents matching `filter`
+    /// — the engine's pick for "up to X target creatures" (Vitality Hunter).
+    GreatestPowerTopN { filter: SelectionRequirement, count: Value },
 
     /// All cards moved by `Effect::Move` (and Mill / Exile shortcuts)
     /// in the current resolution. Used by Practiced Scrollsmith,
@@ -1389,6 +1395,9 @@ pub enum Value {
     /// `what` resolves to — "as long as this creature is enchanted by exactly
     /// two Auras" (Timber Paladin).
     AttachmentsOn { what: Box<Selector>, filter: SelectionRequirement },
+    /// Cards in exile linked to the source (`exiled_with`) matching `filter` —
+    /// Soulflayer's delved creature cards.
+    CardsExiledWithSourceMatching(SelectionRequirement),
     /// CR 706.4 — the result of the most recent die roll in this resolution.
     /// Set by the `Effect::RollDie` resolver just before it runs each result-
     /// table arm, so an inner effect can reference the rolled face ("create
@@ -1746,6 +1755,9 @@ pub enum Predicate {
     /// intervening-'if' half of "…if [this] is still on the battlefield"
     /// (Shirei, Shizo's Caretaker's delayed return).
     SourceOnBattlefield,
+    /// The trigger's leaving permanent had one or more counters on it as it
+    /// left (CR 603.10 — its last-known information; Nikara, Lair Scavenger).
+    TriggerSourceHadCounters,
     /// CR 400.7 — the source is on the battlefield as the SAME object a
     /// delayed trigger was scheduled for: its `battlefield_timestamp` (stamped
     /// fresh on every entry) still equals the recorded one. A card keeps its
@@ -10566,6 +10578,25 @@ pub enum Effect {
     /// "The next spell you cast this turn has convoke" (CR 702.51 — Wand of
     /// the Worldsoul, Flockchaser Phantom).
     NextSpellGainsConvokeThisTurn,
+    /// For each of `keywords` a creature card in your graveyard has, a counter
+    /// of it on a creature you control; then a +1/+1 counter on the source per
+    /// counter placed (Kathril, Aspect Warper).
+    KeywordCountersFromGraveyard { keywords: Vec<crate::card::Keyword> },
+    /// `what` gains until end of turn each of `keywords` that a creature you
+    /// control has (Majestic Myriarch).
+    GainKeywordsYourCreaturesHave { what: Selector, keywords: Vec<crate::card::Keyword> },
+    /// Reveal the top `count`; choose a different card for each of `keywords`
+    /// it has; one chosen permanent card onto the battlefield, the other
+    /// chosen cards to hand, the rest to the graveyard (Selective Adaptation).
+    RevealTopChooseByKeyword { count: Value, keywords: Vec<crate::card::Keyword> },
+    /// Move the counters on the other creatures you control onto `onto`
+    /// (Slippery Bogbonder).
+    MoveCountersFromAmongOnto { onto: Selector },
+    /// Move one counter of any kind from `from` onto `to` (Nesting Grounds).
+    MoveOneCounter { from: Selector, to: Selector },
+    /// "As this enters, choose one of `options`" — stamps
+    /// `CardInstance.chosen_card_type` (Archon of Valor's Reach).
+    ChooseCardTypeAmongForSource(Vec<crate::card::CardType>),
 
     /// "For each planeswalker you control, you may activate one of its loyalty
     /// abilities this turn as though none of its loyalty abilities have been

@@ -1593,6 +1593,14 @@ impl GameState {
                 }
                 seen.len() as i32
             }
+            Value::CardsExiledWithSourceMatching(filter) => {
+                let Some(src) = ctx.source else { return 0 };
+                self.exile
+                    .iter()
+                    .filter(|c| c.exiled_with == Some(src))
+                    .filter(|c| self.evaluate_requirement_on_card(filter, c, ctx.controller))
+                    .count() as i32
+            }
             Value::CardsExiledWithSourceCount => {
                 let Some(src) = ctx.source else { return 0; };
                 self.exile.iter().filter(|c| c.exiled_with == Some(src)).count() as i32
@@ -3070,6 +3078,15 @@ impl GameState {
                 };
                 self.entered_from_graveyard_this_turn.contains(&cid)
                     || self.battlefield_find(cid).is_some_and(|c| c.cast_from_graveyard)
+            }
+            Predicate::TriggerSourceHadCounters => {
+                let cid = match ctx.trigger_source {
+                    Some(EntityRef::Card(c)) | Some(EntityRef::Permanent(c)) => c,
+                    _ => return false,
+                };
+                self.died_card_snapshots
+                    .get(&cid)
+                    .is_some_and(|c| !c.counters.is_empty() || !c.keyword_counters.is_empty())
             }
             Predicate::TriggerSourceEnteredByCast => {
                 let cid = match ctx.trigger_source {

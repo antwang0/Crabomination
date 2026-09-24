@@ -560,6 +560,9 @@ pub enum StaticEffect {
     /// Mystic, CR 702.89) — read by `apply_umbra_armor` for the host's
     /// controller.
     AurasOnYourPermanentsHaveUmbraArmor,
+    /// "Players can't cast spells of the chosen type" (Archon of Valor's
+    /// Reach) — the source's `chosen_card_type`, for every player.
+    NoOneCastsChosenCardType,
     /// Generic cost reduction for the controller's Plot activations from hand
     /// (Doc Aurlock — "Plotting cards from your hand costs {2} less"). Applied
     /// in `plot_card`; clamped at the generic pip.

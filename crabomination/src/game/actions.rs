@@ -9590,7 +9590,8 @@ impl GameState {
         // (CR 702.66: they're exiled as part of paying the cost). Bumps the
         // per-turn exile tally so "if cards were exiled this turn" payoffs see
         // them.
-        let stamp = card.definition.graveyard_exile_discount.is_some().then_some(card.id);
+        let stamp = (card.definition.graveyard_exile_discount.is_some() || card.definition.links_delved_cards)
+            .then_some(card.id);
         for cid in delve_cards {
             if let Some(mut exiled) = Self::take_card(&mut self.players[p].graveyard, *cid) {
                 // "Exiled with" the spell, which keeps its id as a permanent.
