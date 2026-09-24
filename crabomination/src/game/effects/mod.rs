@@ -28707,6 +28707,10 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::RevealUntilOneToBattlefieldRestBottom { filter, damage_controller } => {
+                self.reveal_until_one_to_battlefield_rest_bottom(filter, *damage_controller, ctx, events)
+            }
+
             Effect::RevealUntilMatchingToBattlefield { filter, count } => {
                 self.reveal_until_matching_to_battlefield(filter, count, ctx, events)
             }

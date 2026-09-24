@@ -8219,6 +8219,12 @@ pub enum Effect {
     /// rest into your library" (Synthetic Destiny). Stops early on an empty
     /// library.
     RevealUntilMatchingToBattlefield { filter: SelectionRequirement, count: Value },
+    /// "Reveal cards from the top of your library until you reveal a
+    /// [filter] card. Put that card onto the battlefield and the rest on the
+    /// bottom of your library in a random order" — and, with
+    /// `damage_controller`, "this deals damage to you equal to the number of
+    /// cards revealed this way" (Audacious Reshapers).
+    RevealUntilOneToBattlefieldRestBottom { filter: SelectionRequirement, damage_controller: bool },
     /// "Until your next turn, whenever a creature attacks you or a
     /// planeswalker you control, [body]" — registers a floating trigger;
     /// the attacker is bound as `Selector::TriggerSource`. Tamiyo +2.

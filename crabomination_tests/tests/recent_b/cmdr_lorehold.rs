@@ -3,7 +3,8 @@
 
 use crabomination::card::{CardDefinition, CardId, CardType, SelectionRequirement as R, StaticAbility};
 use crabomination::catalog;
-use crabomination::effect::StaticEffect;
+use crabomination::effect::{Effect, StaticEffect};
+use crabomination::game::effects::EffectContext;
 use crabomination::game::types::{Attack, AttackTarget, GameAction, TurnStep};
 use crabomination::game::*;
 
@@ -61,4 +62,28 @@ fn cr_615_a_filtered_shield_prevents_combat_damage_to_its_matches() {
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     blocked_combat(&mut g, sable, bear);
     assert!(g.battlefield_find(sable).is_none(), "an opponent's shield doesn't cover it");
+}
+
+/// Reveal until an artifact: it enters, the misses go to the bottom, and the
+/// controller takes damage equal to every card revealed.
+#[test]
+fn reveal_until_an_artifact_bottoms_the_rest_and_hurts_you() {
+    let mut g = pod(2);
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::bronze_sable());
+    g.add_card_to_library(0, catalog::island());
+    let top: Vec<&str> = g.players[0].library.iter().map(|c| c.definition.name).collect();
+    assert_eq!(top[0], "Grizzly Bears", "add_card_to_library puts cards in order: {top:?}");
+    let life = g.players[0].life;
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(
+        &Effect::RevealUntilOneToBattlefieldRestBottom { filter: R::Artifact, damage_controller: true },
+        &ctx,
+    )
+    .expect("resolve");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Bronze Sable"));
+    assert_eq!(g.players[0].life, life - 3);
+    let order: Vec<&str> = g.players[0].library.iter().map(|c| c.definition.name).collect();
+    assert_eq!(order, vec!["Island", "Grizzly Bears", "Grizzly Bears"], "the misses went to the bottom");
 }

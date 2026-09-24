@@ -49,4 +49,33 @@ impl GameState {
         self.check_state_based_actions_into(events);
         Ok(())
     }
+
+    /// Audacious Reshapers: reveal until one `filter` card, put it onto the
+    /// battlefield, the rest on the bottom in a random order, then the
+    /// source deals the controller damage equal to the cards revealed (the
+    /// hit included; every card when none hits).
+    pub(super) fn reveal_until_one_to_battlefield_rest_bottom(
+        &mut self,
+        filter: &SelectionRequirement,
+        damage_controller: bool,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
+        use rand::seq::SliceRandom;
+        let p = ctx.controller;
+        let (hits, mut rest) =
+            self.reveal_until_n(p, 1, |g, c| g.evaluate_requirement_on_card(filter, c, p));
+        let revealed = (hits.len() + rest.len()) as u32;
+        rest.shuffle(&mut self.rng.draw());
+        self.players[p].library.extend(rest);
+        let dest = ZoneDest::Battlefield { controller: PlayerRef::Seat(p), tapped: false };
+        for card in hits {
+            self.place_card_in_dest(card, p, &dest, events);
+        }
+        if damage_controller && revealed > 0 {
+            self.deal_damage_to_from(super::EntityRef::Player(p), revealed, ctx.source, events);
+        }
+        self.check_state_based_actions_into(events);
+        Ok(())
+    }
 }

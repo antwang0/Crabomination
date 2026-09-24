@@ -1956,7 +1956,8 @@ impl Effect {
             Effect::RevealUntilLandDamage { to, .. } => sel_has_target(to),
             Effect::RevealUntilNonlandDamage { to } => sel_has_target(to),
             // Reveals from your own library — no target slot.
-            Effect::RevealUntilLandsToBattlefield { .. } => false,
+            Effect::RevealUntilLandsToBattlefield { .. }
+            | Effect::RevealUntilOneToBattlefieldRestBottom { .. } => false,
             Effect::CopyAttackersAsBlockers => false,
             Effect::ChooseGraveyardCreaturesEachMayReturn => false,
             Effect::ReturnTargetCardsAtRandom { .. } => false,
