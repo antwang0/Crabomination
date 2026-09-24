@@ -1192,6 +1192,7 @@ impl Effect {
             | Effect::DistributeCountersFromSource { .. }
             | Effect::PlayerGainsShroudThisTurn { .. }
             | Effect::PlayerGainsProtectionFromChosenColor { .. }
+            | Effect::PlayersWithMostSacrifice { .. }
             | Effect::OpponentsBlockWithAtMost { .. } => false,
             Effect::RedirectDamageToThisThisTurn { to } => sel_has_target(to),
             Effect::RedirectNextCombatDamageToController { what } => sel_has_target(what),
@@ -1980,7 +1981,7 @@ impl Effect {
             Effect::EachPlayerRecyclesArtifacts => false,
             Effect::OpponentChoosesPermanentThen { .. } => false,
             Effect::RevealUntilMatchingToBattlefield { count, .. } => value_has_target(count),
-            Effect::ClashWithOpponent { .. } => false,
+            Effect::ClashWithOpponent { on_win, .. } => on_win.requires_target(),
             Effect::OnAttackedUntilYourNextTurn { .. } => false,
             Effect::ExileAnyNumberFromGraveyards { .. } => false,
             Effect::MayExileFromYourGraveyard { then, .. } => then.requires_target(),
@@ -4724,6 +4725,8 @@ impl Effect {
                 | Effect::BecomeCopyOfExiledCard { what, .. }
                 | Effect::ReturnSameNameFromAllGraveyards { what } => sel_find(what, slot),
                 Effect::UnlessPlayerPays { then, .. } => eff_find(then, slot, mode, kicked),
+                // Whirlpool Whelm's clash-won branch carries its target.
+                Effect::ClashWithOpponent { on_win, .. } => eff_find(on_win, slot, mode, kicked),
                 Effect::ExilePlayerGraveyard { who, .. }
                 | Effect::ExileLibraryCardsNamedLikeExiledThisResolution { who }
                 | Effect::ExileHand { who }
