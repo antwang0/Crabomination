@@ -76,6 +76,7 @@ lists were picked.
 | **Counterpunch** (CMD precon) WBG | Ghave, Guru of Spores | WBG | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Wade into Battle** (C15 precon) RW | Kalemne, Disciple of Iroas | RW | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Chaos Incarnate** (SCD) BR | Kardur, Doomscourge | BR | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
+| **Eternal Might** (DRC precon) WUB | Temmet, Naktamun's Will | WUB | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Arm for Battle** (CMR precon) RW | Wyleth, Soul of Steel | RW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Fae Dominion** (WOC precon) UB | Tegwyll, Duke of Splendor | UB | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Invent Superiority** (C16 precon) WUBR | Breya, Etherium Shaper | WUBR | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
@@ -710,6 +711,19 @@ a creature that died attacking had already been removed from combat when
 **Kardur**'s later entrants are goaded by a delayed trigger, not a static;
 **Theater of Horrors**' grant outlives it and can't play lands; **Wildfire
 Devils**' random player gives up their first instant or sorcery.
+
+The **fiftieth** is Aetherdrift Commander's **Eternal Might** (`EternalMight_DRC`)
+— Esper Zombies under Temmet, Naktamun's Will, with Hashaton, Scarab's Fist in
+the 99 (seat 49 before rebasing over Chaos Incarnate). Seventeen cards were
+missing; the primitive: `StaticEffect::GrantCyclingToYourHandCards`
+(Rhet-Tomb Mystic). ⚠ **No bot path cycles at all** — nothing constructs
+`GameAction::Cycle`, so the three Deserts and the Mystic's grant are human and
+UI paths only. Residuals: the "4/4 black Zombie" copies (Hashaton,
+God-Pharaoh's Gift) add Zombie rather than replace the creature types; the
+Gift and Rot Hulk take the greatest-power creature cards rather than a choice
+or targets. Debug pods beside Breya / Wyleth / Edgar / Sigarda (seeds
+9281/9282, 60 games) decided 60/60, zero panics, Temmet winning 30 % of each;
+a 120-game census (seed 9283) leaves no card unplayed (Temmet 41.7 % there).
 
 ⚠ **The board cap was a bot bug, not a loop.** A Krenko seat sent all 292
 of its Goblins at one player on 24 life each turn while two others sat on

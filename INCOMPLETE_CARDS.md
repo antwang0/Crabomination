@@ -1814,6 +1814,9 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Wretched Confluence | Plunder the Graves (C15) | the modes are the card's default picks; `ChooseN` has no cast-time mode choice. |
 | 🟡 Righteous Confluence | Call the Spirits (C15) | the three picks are one choice among the four non-targeting combinations (Knights and life; default three Knights); the "exile target enchantment" mode is not offered. |
 | 🟡 Sandstone Oracle | Call the Spirits (C15) | the chosen opponent is the one with the most cards in hand. |
+| 🟡 Hashaton, Scarab's Fist | Eternal Might (DRC) | "except it's a 4/4 black Zombie" adds Zombie rather than replacing the creature types. |
+| 🟡 God-Pharaoh's Gift | Eternal Might (DRC) | exiles your greatest-power creature card (no choice); the copy adds Zombie rather than replacing the creature types. |
+| 🟡 Rot Hulk | Eternal Might (DRC) | returns your greatest-power Zombie cards, not targets chosen on entry. |
 | 🟡 Footbottom Feast | Counterpunch (CMD) | the cards are chosen as it resolves, not targeted on cast; they go on top in mana-value order (the greatest on top). |
 
 ### The `modern_decks` Commander routine's precons (seats 23, 25, 27, 29, 30) — open residuals, 2026-09-24
