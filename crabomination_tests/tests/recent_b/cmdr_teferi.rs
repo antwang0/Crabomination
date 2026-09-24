@@ -390,3 +390,20 @@ fn well_of_ideas_draw_steps() {
         assert_eq!(g.players[seat].hand.len(), before + 1 + extra, "seat {seat}");
     }
 }
+
+/// CR 704.5m / 400.7 — the returned creature is a new object, so Fool's
+/// Demise is not on it: the Aura is orphaned the moment its host leaves, even
+/// with its own "enchanted creature dies" trigger on the stack. It kept the
+/// host's id and re-attached, so a sacrifice outlet looped forever (a
+/// 30,757-action pod game on Bottle Gnomes).
+#[test]
+fn fools_demise_does_not_follow_its_host_back() {
+    let mut g = main_phase(2);
+    let gnomes = g.add_card_to_battlefield(0, catalog::bottle_gnomes());
+    let demise = g.add_card_to_hand(0, catalog::fools_demise());
+    cast(&mut g, demise, &[Target::Permanent(gnomes)]);
+    activate(&mut g, 0, gnomes, None, vec![]).expect("sacrifice the Gnomes");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Bottle Gnomes"), "the Gnomes came back");
+    assert!(g.battlefield_find(demise).is_none(), "the Aura did not come with it");
+    assert!(g.players[0].hand.iter().any(|c| c.id == demise), "it went home instead");
+}

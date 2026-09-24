@@ -6972,9 +6972,13 @@ impl GameState {
             // trigger is still on the stack: SBAs run before it resolves, so
             // it has not had the chance to attach yet. Once the trigger has
             // resolved the ordinary sweep applies and a fizzled one is swept
-            // on the next check.
+            // on the next check. Only an Aura that is not yet attached: one
+            // whose host left is orphaned whatever it has on the stack (Fool's
+            // Demise's "when enchanted creature dies" trigger kept it in play,
+            // and the returned host — same id — picked it back up).
             .filter(|c| {
-                !self.stack.iter().any(|item| {
+                c.attached_to.is_some()
+                    || !self.stack.iter().any(|item| {
                     matches!(item, crate::game::types::StackItem::Trigger { source, .. }
                         if *source == c.id)
                 })
