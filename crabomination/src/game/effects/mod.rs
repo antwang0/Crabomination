@@ -22419,6 +22419,22 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ManifestFromGraveyard { who, filter } => {
+                use rand::seq::SliceRandom;
+                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
+                let mut pile: Vec<CardId> = self.players[p]
+                    .graveyard
+                    .iter()
+                    .filter(|c| self.evaluate_requirement_on_card(filter, c, ctx.controller))
+                    .map(|c| c.id)
+                    .collect();
+                pile.shuffle(&mut self.rng.draw());
+                for cid in pile {
+                    self.manifest_from_graveyard(cid, p, ctx, events);
+                }
+                Ok(())
+            }
+
             Effect::Cloak { who, amount, from_hand } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
                 let n = self.evaluate_value(amount, ctx).max(0) as u32;

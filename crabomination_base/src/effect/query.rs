@@ -2011,7 +2011,9 @@ impl Effect {
             Effect::LockTargetNameUntilYourNextTurn { what } => sel_has_target(what),
             Effect::NameOpponentCastLock => false,
             Effect::WinGame { who } | Effect::LoseGame { who } => player_has_target(who),
-            Effect::ControlPlayerNextTurn { who } => player_has_target(who),
+            Effect::ControlPlayerNextTurn { who } | Effect::ManifestFromGraveyard { who, .. } => {
+                player_has_target(who)
+            }
             Effect::PlayersControlEachOthersNextTurn { first, second } => {
                 player_has_target(first) || player_has_target(second)
             }
@@ -2552,6 +2554,7 @@ impl Effect {
             | Effect::ShuffleGraveyardIntoLibrary { who }
             | Effect::ShuffleFilteredGraveyardIntoLibrary { who, .. }
             | Effect::ControlPlayerNextTurn { who }
+            | Effect::ManifestFromGraveyard { who, .. }
             | Effect::PlayersControlEachOthersNextTurn { first: who, .. }
             | Effect::ChooseStepToSkipThisTurn { who }
             | Effect::LookAtTop { who, .. }

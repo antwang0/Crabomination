@@ -8561,6 +8561,10 @@ pub enum Effect {
     /// onto the battlefield face down as 2/2 creatures (the real card is
     /// stashed and can be turned face up for its mana cost if it's a creature).
     Manifest { who: PlayerRef, amount: Value },
+    /// CR 701.34 — "Exile all [filter] cards from [who]'s graveyard in a
+    /// face-down pile, shuffle that pile, then manifest those cards" under
+    /// the resolving controller (Ghastly Conscription).
+    ManifestFromGraveyard { who: PlayerRef, filter: SelectionRequirement },
     /// CR 701.34 from the hand — the resolved player manifests `count`
     /// cards from their hand; if `controller_draws`, the effect's
     /// controller draws one card per card manifested (Kozilek, the Broken

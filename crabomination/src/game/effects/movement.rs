@@ -1956,6 +1956,22 @@ impl GameState {
         self.move_card_to(cid, &dest, ctx, events);
     }
 
+    /// [`Self::manifest_card`] out of `owner`'s graveyard, under the resolving
+    /// controller: the card turns face down and enters as a 2/2.
+    pub(crate) fn manifest_from_graveyard(
+        &mut self,
+        cid: CardId,
+        owner: usize,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) {
+        if let Some(c) = self.players[owner].graveyard.iter_mut().find(|c| c.id == cid) {
+            c.turn_face_down();
+        }
+        let dest = ZoneDest::Battlefield { controller: crate::effect::PlayerRef::Seat(ctx.controller), tapped: false };
+        self.move_card_to(cid, &dest, ctx, events);
+    }
+
     /// Exile `anchor_id` and every same-named card in its owner's graveyard,
     /// hand, and library, then shuffle that library (CR 701.19c). Shared by
     /// Crumble to Dust / Surgical Extraction / Reap Intellect.

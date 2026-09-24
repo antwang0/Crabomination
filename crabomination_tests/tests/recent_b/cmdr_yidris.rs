@@ -1,7 +1,7 @@
 //! Commander: the Entropic Uprising precon (C16, Yidris,
 //! `decks::cmdr_yidris`) and the primitives it needed.
 
-use crabomination::card::{CardDefinition, CardType, CounterType, EventKind, EventScope, EventSpec, TriggeredAbility, Value};
+use crabomination::card::{SelectionRequirement as R, CardDefinition, CardType, CounterType, EventKind, EventScope, EventSpec, TriggeredAbility, Value};
 use crabomination::catalog;
 use crabomination::effect::{Effect, PlayerRef, Selector};
 use crabomination::game::effects::EffectContext;
@@ -62,4 +62,26 @@ fn cr_723_1_two_players_control_each_others_next_turn() {
     assert_eq!(g.controlled_by.get(2).copied().flatten(), Some(1), "seat 1 runs seat 2's turn");
     g.apply_pending_player_control(0);
     assert!(g.controlled_by.is_empty(), "the caster's own turn is theirs");
+}
+
+/// CR 701.34 — every creature card in the target's graveyard is manifested
+/// under the caster: face-down 2/2s; the non-creature card stays.
+#[test]
+fn cr_701_34_manifest_a_graveyard_under_your_control() {
+    let mut g = pod(2);
+    g.add_card_to_graveyard(1, catalog::serra_angel());
+    g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let bolt = g.add_card_to_graveyard(1, catalog::lightning_bolt());
+    let mut ctx = EffectContext::for_spell(0, Some(Target::Player(1)), 0, 0);
+    ctx.targets = vec![Target::Player(1)];
+    g.resolve_effect(&Effect::ManifestFromGraveyard { who: PlayerRef::Target(0), filter: R::Creature }, &ctx)
+        .expect("resolve");
+    let manifested: Vec<_> = g.battlefield.iter().filter(|c| c.controller == 0 && c.face_down).map(|c| c.id).collect();
+    assert_eq!(manifested.len(), 2);
+    for id in manifested {
+        let cp = g.computed_permanent(id).unwrap();
+        assert_eq!((cp.power, cp.toughness), (2, 2));
+        assert_eq!(g.battlefield_find(id).unwrap().owner, 1, "still the opponent's card");
+    }
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt));
 }
