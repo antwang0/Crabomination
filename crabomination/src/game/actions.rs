@@ -19251,7 +19251,6 @@ impl GameState {
         // payment rolls back both the auto-tap of mana sources AND the
         // tap-cost on the source itself.
         let needs_payment = !effective_mana_cost.symbols.is_empty();
-        let pre_snapshot = needs_payment.then(|| self.snapshot_payment_state(p));
 
         // Pay tap cost. Graveyard activations can't tap (the source is not
         // a permanent), so we reject any `tap_cost: true` ability from a
@@ -19283,6 +19282,13 @@ impl GameState {
             }
             perm.tapped = false;
         }
+        // Snapshot the payer *after* the {T} / {Q} costs: a payment that
+        // restores it between attempts (the restricted-source search) must
+        // not untap this source, or the source pays for itself and the
+        // activation recurses without bound (a stack overflow casting a
+        // commander in a 4-seat pod, seed 10129 game 544: an Opal Palace /
+        // Study Hall-shaped `{1}, {T}` source funding its own {1}).
+        let pre_snapshot = needs_payment.then(|| self.snapshot_payment_state(p));
 
         let mut auto_mana_events = Vec::new();
         // CR 106.6 — per-colour breakdown of what actually funded this

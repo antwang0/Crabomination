@@ -770,6 +770,22 @@ pub fn run_pod(
 
 #[cfg(test)]
 mod tests {
+    /// CR 601.2g — a `{1}, {T}` mana source must not pay its own {1}. The
+    /// payment snapshot was taken before the {T} cost and the restricted-source
+    /// search (Vedalken Engineer's artifact-only mana, allowed on an artifact's
+    /// ability) restored it, untapping Dimir Signet so it funded itself until
+    /// the stack overflowed: this exact game, casting Breya. (A replay: once
+    /// the bot or these decks change, the game stops reaching that board and
+    /// this only proves the game still finishes.)
+    #[test]
+    fn a_mana_source_paying_for_itself_does_not_overflow() {
+        let d = target_decks();
+        let field = [d[50], d[47], d[44], d[38]];
+        let pilot = Pilot::Scored(crate::server::bot::EvalWeights::baseline());
+        let t = run_pod_games(&field, 544, 1, 10129, 4_000, pilot);
+        assert_eq!(t.games, 1);
+    }
+
     use super::*;
 
     fn rofellos_pod(seats: usize) -> Vec<PodDeck> {
