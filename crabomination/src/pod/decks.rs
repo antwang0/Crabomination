@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Ten hand-picked commanders plus fifty official preconstructed lists, each a
+//! Ten hand-picked commanders plus fifty-three official preconstructed lists, each a
 //! 99 of cards this engine implements: legal under CR 903 (100 cards
 //! including the commander, singleton outside basics, every card inside the
 //! commander's CR 903.4 color identity) and Commander-legal per Scryfall's
@@ -8,7 +8,7 @@
 //!
 //! The ten were built by hand because the offline Scryfall cache cannot say
 //! how a precon splits into decks; MTGJSON's deck files can, and the eleventh
-//! through sixtieth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
+//! through sixty-third (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
 //! Win, Tails You Lose, Goblin Storm, Foundations Commander's Wretched Ranks,
 //! Tramplesaurus Rex and Keen Engineering, Commander Legends' Reap the Tides,
 //! Phyrexia: All Will Be One's Corrupting Influence, Zendikar Rising's Sneak
@@ -31,7 +31,9 @@
 //! Commander (2011)'s Heavenly Inferno and Political Puppets, Zendikar Rising
 //! Commander's Land's Wrath, Commander 2019's Primal Genesis and Commander 2016's
 //! Stalwart Unity, Commander (2011)'s Devour for Power, Duskmourn Commander's
-//! Endless Punishment and the Starter Commander Decks' Token Triumph) are taken
+//! Endless Punishment, the Starter Commander Decks' Token Triumph, Commander
+//! 2016's Breed Lethality, Commander (2011)'s Mirror Mastery and Secret Lair's
+//! Raining Cats and Dogs) are taken
 //! from
 //! one card for card. What all of them keep
 //! from the precon idea is what the pod needs — fixed, legal, varied color
@@ -1970,4 +1972,33 @@ pub const RIKU_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, mountain, mountain, mountain,
     mountain, mountain, mountain, mountain, mountain, forest, forest, forest, forest, forest,
     forest, forest, forest, forest, forest, forest, forest, forest,
+];
+
+pub const RIN_SERI_COMMANDERS: &[CardFactory] = &[rin_and_seri_inseparable];
+
+/// **Raining Cats and Dogs**, the Secret Lair Commander deck (SLD,
+/// 2024-01-22), exactly as MTGJSON's `RainingCatsAndDogs_SLD` prints it: 77
+/// nonbasic cards + 10 Plains + 5 Mountains + 7 Forests = 99. Naya Cats and
+/// Dogs tokens under Rin and Seri, Inseparable.
+pub const RIN_SERI_MAIN: &[CardFactory] = &[
+    jetmir_nexus_of_revels, jinnie_fay_jetmirs_second, anointed_procession, sol_ring,
+    alms_collector, highcliff_felidar, kitt_kanto_mayhem_diva, brimaz_king_of_oreskos,
+    stalking_leonin, cast_out, phabine_bosss_confidant, crib_swap, path_to_exile,
+    king_of_the_pride, felidar_retreat, white_suns_zenith, komainu_battle_armor,
+    skyhunter_strike_force, whitemane_lion, loyal_warhound, regal_caracal, lion_sash,
+    pack_leader, tocasias_welcome, hungry_lynx, sehts_tiger, mirror_entity, qasali_slingers,
+    spirited_companion, marisi_breaker_of_the_coil, jungle_shrine, cursed_mirror, heralds_horn,
+    path_of_ancestry, oreskos_explorer, jazal_goldmane, fleetfoot_panther, taurean_mauler,
+    krosan_verge, impact_tremors, temur_sabertooth, exotic_orchard, nacatl_war_pride,
+    warp_world, arcane_signet, beastmaster_ascension, keeper_of_fables, natures_lore,
+    command_tower, return_of_the_wildspeaker, feline_sovereign, masked_vandal, realmwalker,
+    greater_tanuki, lurking_predators, rootbound_crag, sunpetal_grove, showdown_of_the_skalds,
+    basilisk_collar, oketras_monument, canopy_vista, cinder_glade, bloodline_pretender,
+    clifftop_retreat, maskwood_nexus, animal_sanctuary, scattered_groves, sheltered_thicket,
+    jetmirs_garden, skullclamp, vanquishers_banner, three_visits, cultivate, farseek,
+    fortified_village, game_trail, dusk_dawn,
+    // Basics: 10 plains, 5 mountain, 7 forest
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    mountain, mountain, mountain, mountain, mountain,
+    forest, forest, forest, forest, forest, forest, forest,
 ];

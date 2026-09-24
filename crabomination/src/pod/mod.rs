@@ -561,6 +561,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::RIKU_COMMANDERS,
             main: decks::RIKU_MAIN,
         },
+        // Sixty-third: the fifty-third official list (Raining Cats and Dogs,
+        // SLD) — Naya Cats and Dogs under Rin and Seri. `--seats 63`.
+        PodDeck {
+            name: "Rin and Seri, Inseparable (RGW)",
+            commanders: decks::RIN_SERI_COMMANDERS,
+            main: decks::RIN_SERI_MAIN,
+        },
     ]
 }
 
