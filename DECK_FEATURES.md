@@ -64,13 +64,13 @@ lists were picked.
 | **Angels: They're Just Like Us** (SLD precon) W | Gisela, the Broken Blade (**meld**) | W | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Built From Scratch** (C14 precon) R | Daretti, Scrap Savant (**planeswalker**) | R | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Vampiric Bloodline** (VOC precon) BR | Strefan, Maurer Progenitor | BR | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
-| **Plunder the Graves** (C15 precon) BG | Meren of Clan Nel Toth | BG | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
+| **Plunder the Graves** (C15 precon) BG | Meren of Clan Nel Toth | BG | 100 | ✅ complete |
 | **Graveyard Overdrive** (M3C precon) BRG | Disa the Restless | BRG | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Sworn to Darkness** (C14 precon) B | Ob Nixilis of the Black Oath (**planeswalker**) | B | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Seize Control** (C15 precon) UR | Mizzix of the Izmagnus | UR | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Rebellion Rising** (ONC precon) RW | Neyali, Suns' Vanguard | RW | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Feline Ferocity** (C17 precon) GW | Arahbo, Roar of the World | GW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
-| **Call the Spirits** (C15 precon) WB | Daxos the Returned | WB | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
+| **Call the Spirits** (C15 precon) WB | Daxos the Returned | WB | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Peer Through Time** (C14 precon) U | Teferi, Temporal Archmage (**planeswalker**) | U | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Quantum Quandrix** (C21 precon) GU | Adrix and Nev, Twincasters | GU | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Lorehold Legacies** (C21 precon) RW | Osgir, the Reconstructor | RW | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
@@ -79,6 +79,7 @@ lists were picked.
 | **Chaos Incarnate** (SCD) BR | Kardur, Doomscourge | BR | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Heavenly Inferno** (CMD precon) RWB | Kaalia of the Vast | RWB | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Eternal Might** (DRC precon) WUB | Temmet, Naktamun's Will | WUB | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
+| **Land's Wrath** (ZNC precon) RGW | Obuun, Mul Daya Ancestor | RGW | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Arm for Battle** (CMR precon) RW | Wyleth, Soul of Steel | RW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Fae Dominion** (WOC precon) UB | Tegwyll, Duke of Splendor | UB | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Invent Superiority** (C16 precon) WUBR | Breya, Etherium Shaper | WUBR | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
@@ -539,8 +540,7 @@ CR 508.1a — the enchanted creature may still attack anyone but the Aura's
 controller), `Value::CreaturesDestroyedThisResolutionControlledBy` (Deadly
 Tempest charges each player for the creatures they controlled as they were
 destroyed, tokens included) and `Value::PlayersWithGreaterTally` (Oreskos
-Explorer). Residuals: **Righteous Confluence** offers its repeatable modes as
-one choice among the four non-targeting combinations; **Sandstone Oracle**'s
+Explorer). Residual: **Sandstone Oracle**'s
 opponent is the one with the most cards in hand. Debug pods beside Adrix and Nev /
 Meren / Gisela / Judith (seeds 9251/9252, 60 games) decided 60/60 with zero
 panics, and a 120-game census (seed 9253) leaves no card unplayed.
@@ -756,6 +756,25 @@ graveyard" (Tariel) and "each player other than target player" (Death by
 Dragons) had no way to say which players were legal. Residuals: **Archangel of
 Strife**'s choice is made as its ETB resolves; **Kaalia** also triggers
 attacking a planeswalker.
+
+The **fifty-fourth** is Zendikar Rising Commander's **Land's Wrath**
+(`LandSWrath_ZNC`) — Naya landfall under Obuun, Mul Daya Ancestor (seat 53
+before rebasing over Heavenly Inferno). Sixteen cards were missing and every one
+fit existing primitives (aftermath Struggle // Survive, a Saga, bolster,
+support, `WhenTargetDiesThisTurn`). Two bot gaps behind it: ⚠ **the
+`ChooseModesCast` enumerator offered single modes only**, so a spell with
+`min > 1` — the Strixhaven Commands' "choose two", a Confluence's "choose three,
+repeats allowed" — had no legal bot cast; it now offers every pick of exactly
+`min` modes, and Righteous and Wretched Confluence moved to cast-time modes (both
+residuals closed). ⚠ **No bot path cycled** (Eternal Might): a pod seat now
+cycles a spare land (six lands out) or a card more than two mana over its land
+count at an opponent's end step (`server/cycling.rs`, pods only). Residuals:
+**Scaretiller** picks its mode (hand land first, else an untargeted graveyard
+land); **The Mending of Dominaria** regrows the greatest-power creature card;
+**Trove Warden**'s cards return when it leaves by any route. Debug pods beside
+Arahbo / Yidris / Temmet / Sigarda (seeds 9301/9302, 60 games) decided 60/60,
+zero panics; a 120-game census (seed 9303) leaves no Obuun card unplayed.
+`--bench` byte-identical through all of it.
 
 ⚠ **The board cap was a bot bug, not a loop.** A Krenko seat sent all 292
 of its Goblins at one player on 24 life each turn while two others sat on

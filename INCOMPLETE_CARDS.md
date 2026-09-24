@@ -1811,12 +1811,13 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Shadowgrange Archfiend | Vampiric Bloodline (VOC) | no madness ("{2}{B}, Pay 8 life" has a life half a madness cost can't carry). |
 | 🟡 Imposing Grandeur | Vampiric Bloodline (VOC) | counts a commander in any zone. |
 | 🟡 Predators' Hour | Vampiric Bloodline (VOC) | the stolen card is exiled face up. |
-| 🟡 Wretched Confluence | Plunder the Graves (C15) | the modes are the card's default picks; `ChooseN` has no cast-time mode choice. |
-| 🟡 Righteous Confluence | Call the Spirits (C15) | the three picks are one choice among the four non-targeting combinations (Knights and life; default three Knights); the "exile target enchantment" mode is not offered. |
 | 🟡 Sandstone Oracle | Call the Spirits (C15) | the chosen opponent is the one with the most cards in hand. |
 | 🟡 Hashaton, Scarab's Fist | Eternal Might (DRC) | "except it's a 4/4 black Zombie" adds Zombie rather than replacing the creature types. |
 | 🟡 God-Pharaoh's Gift | Eternal Might (DRC) | exiles your greatest-power creature card (no choice); the copy adds Zombie rather than replacing the creature types. |
 | 🟡 Rot Hulk | Eternal Might (DRC) | returns your greatest-power Zombie cards, not targets chosen on entry. |
+| 🟡 Scaretiller | Land's Wrath (ZNC) | the mode is the engine's: a land from hand when there is one, else the first land card in your graveyard (untargeted). |
+| 🟡 The Mending of Dominaria | Land's Wrath (ZNC) | chapters I and II return your greatest-power creature card; the "may" is always taken. |
+| 🟡 Trove Warden | Land's Wrath (ZNC) | the exiled cards return when it leaves the battlefield by any route, not only when it dies. |
 | 🟡 Footbottom Feast | Counterpunch (CMD) | the cards are chosen as it resolves, not targeted on cast; they go on top in mana-value order (the greatest on top). |
 
 ### Seats 42, 46, 49 and 53 (Peer Through Time C14, Wade into Battle C15, Chaos Incarnate SCD, Heavenly Inferno CMD) — open residuals, 2026-09-24
