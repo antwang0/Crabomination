@@ -9526,7 +9526,7 @@ return `None` as soon as the stack is deeper than the fuel left.
 
 ```text
   seed 10011, 23 seats, one game each, release-fast, at ac0e39fa + the change
-  (before the unfrozen-read fix below, which lands after it on the branch)
+  (a tree without the unfrozen-read fix in the entry below)
                      turns / actions          before              after
   game 23            377 / 102,129            543 s (709 busy)    260 s
   game 17            303 / 105,957            204 s (260 busy)    196 s
