@@ -272,7 +272,8 @@ pub(crate) fn attack_static_scan(state: &GameState) -> u32 {
     for card in state.battlefield.iter() {
         for sa in &card.definition.static_abilities {
             m |= match sa.effect {
-                SE::AttackerCapAgainstController { .. } => attack_static::ATTACKER_CAP,
+                SE::AttackerCapAgainstController { .. }
+                | SE::AttackerCapAgainstControllerWhileTapped { .. } => attack_static::ATTACKER_CAP,
                 SE::AttackPowerCapByControllerHand => attack_static::POWER_CAP,
                 SE::CreaturesCantAttackController { .. } => {
                     attack_static::CANT_ATTACK_CONTROLLER
@@ -1284,6 +1285,7 @@ impl GameState {
                     .any(|sa| matches!(
                         sa.effect,
                         crate::effect::StaticEffect::AttackerCapAgainstController { .. }
+                            | crate::effect::StaticEffect::AttackerCapAgainstControllerWhileTapped { .. }
                     ))),
             "attack_static_scan missed an attacker cap",
         );
@@ -1298,6 +1300,11 @@ impl GameState {
                 .filter_map(|c| {
                     c.definition.static_abilities.iter().find_map(|sa| match sa.effect {
                         crate::effect::StaticEffect::AttackerCapAgainstController { n } => Some(n),
+                        crate::effect::StaticEffect::AttackerCapAgainstControllerWhileTapped { n }
+                            if c.tapped =>
+                        {
+                            Some(n)
+                        }
                         _ => None,
                     })
                 })
@@ -2482,6 +2489,23 @@ impl GameState {
                 return Err(block_reject(line!(), GameError::CannotBlock(first)));
             }
         }
+        // Mirri's "can't block with more than one creature this combat": the
+        // blocking player's own distinct blockers.
+        if let Some(&(first, _)) = assignments.first()
+            && let Some(owner) = self.battlefield_find(first).map(|c| c.controller)
+            && let Some(cap) = self.players[owner].block_cap_this_combat
+        {
+            let mut distinct: crate::game::types::SmallIdSet<CardId> = self
+                .block_map
+                .keys()
+                .copied()
+                .filter(|b| self.battlefield_find(*b).is_some_and(|c| c.controller == owner))
+                .collect();
+            distinct.extend(assignments.iter().map(|(b, _)| *b));
+            if distinct.len() > cap as usize {
+                return Err(block_reject(line!(), GameError::CannotBlock(first)));
+            }
+        }
         for &(blocker_id, attacker_id) in &assignments {
             let taken = batch_blocks.entry_or_default(blocker_id);
             if taken.contains(&attacker_id) || self.blocks(blocker_id, attacker_id) {
@@ -3254,6 +3278,11 @@ impl GameState {
         }
         self.blockers_declared = false;
         self.set_combat_damage_dealt(false);
+        for p in 0..self.players.len() {
+            if self.players[p].block_cap_this_combat.is_some() {
+                self.players[p].block_cap_this_combat = None;
+            }
+        }
         // CR 702.39 — provoke's "block this combat" requirement ends here.
         // Gated: the write is a `DerefMut` on a CoW `CardData`, so clearing
         // the `None` almost every permanent already holds deep-copied the

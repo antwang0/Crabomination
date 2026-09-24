@@ -29482,6 +29482,7 @@ fn static_effect_to_effects(
             // AttackerCapAgainstController — enforced in `declare_attackers`;
             // no layer effect.
             | StaticEffect::AttackerCapAgainstController { .. }
+            | StaticEffect::AttackerCapAgainstControllerWhileTapped { .. }
             // YourGraveyardCreaturesHaveChosenType — read by the hidden-zone
             // card evaluator (`graveyard_type_grants`); no layer effect.
             | StaticEffect::YourGraveyardCreaturesHaveChosenType
@@ -29793,6 +29794,7 @@ fn static_effect_to_effects(
             // gate; no continuous-layer effect.
             | StaticEffect::SelfFlashIf { .. }
             | StaticEffect::SelfFlashIfTargets { .. }
+            | StaticEffect::OpponentMultiDrawBecomesOneEach
             // SelfCostReducedIfCreatureDiedThisTurn (Bone Picker) — same.
             | StaticEffect::SelfCostReducedIfCreatureDiedThisTurn { .. }
             // SelfCostReducedIfPredicate (Avatar of Hope) — same.

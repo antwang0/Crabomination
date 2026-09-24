@@ -8354,6 +8354,18 @@ impl GameState {
                 return Err(e);
             }
         }
+        // CR 702.16b — a player's protection from a color (Seht's Tiger):
+        // the card is out of every zone here, so the legality check above
+        // could not read its colors.
+        let colors = card.definition.printed_colors();
+        if target.iter().chain(additional_targets.iter()).any(|t| {
+            matches!(t, Target::Player(tp)
+                if colors.iter().any(|c| self.players[*tp].protection_colors_eot.contains(c)))
+        }) {
+            cast_census::rollback(line!());
+            self.players[p].hand.push(card);
+            return Err(GameError::InvalidTarget);
+        }
 
         // CR 601.2c — an opponent's Flagbearer must be chosen if any declared
         // slot could take it (Standard Bearer). Skipped outright for an
@@ -12880,6 +12892,17 @@ impl GameState {
                 // Protection from everything (The One Ring) — can't be
                 // targeted by any spell or ability.
                 if self.players[*p].protected_from_everything {
+                    return Err(GameError::InvalidTarget);
+                }
+                // CR 702.16b — protection from a color: that color's sources
+                // can't target this player (Seht's Tiger).
+                if !self.players[*p].protection_colors_eot.is_empty()
+                    && source_card_id.is_some_and(|s| {
+                        self.source_colors(s)
+                            .iter()
+                            .any(|c| self.players[*p].protection_colors_eot.contains(c))
+                    })
+                {
                     return Err(GameError::InvalidTarget);
                 }
                 return Ok(());

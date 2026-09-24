@@ -1188,7 +1188,9 @@ impl Effect {
             | Effect::ExileFaceDownDrawPile { .. }
             | Effect::GrantActivatedAbilityToMatching { .. }
             | Effect::DistributeCountersFromSource { .. }
-            | Effect::PlayerGainsShroudThisTurn { .. } => false,
+            | Effect::PlayerGainsShroudThisTurn { .. }
+            | Effect::PlayerGainsProtectionFromChosenColor { .. }
+            | Effect::OpponentsBlockWithAtMost { .. } => false,
             Effect::RedirectDamageToThisThisTurn { to } => sel_has_target(to),
             Effect::RedirectNextCombatDamageToController { what } => sel_has_target(what),
             Effect::ReselectAttackTarget { what } => sel_has_target(what),

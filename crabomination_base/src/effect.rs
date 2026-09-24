@@ -8492,6 +8492,13 @@ pub enum Effect {
     /// CR 702.18 — "You gain shroud until end of turn" (Gilded Light). No
     /// player, `who` included, may target them for the rest of the turn.
     PlayerGainsShroudThisTurn { who: PlayerRef },
+    /// CR 702.16 — "you gain protection from the color of your choice until
+    /// end of turn" (Seht's Tiger). The pick is the hostile color.
+    PlayerGainsProtectionFromChosenColor { who: PlayerRef },
+    /// "Each opponent can't block with more than `n` creatures this combat"
+    /// (Mirri, Weatherlight Duelist). Sets each opponent's
+    /// `block_cap_this_combat`.
+    OpponentsBlockWithAtMost { n: u8 },
 
     /// Dimensional Breach — exile all permanents; for as long as any remain
     /// exiled this way, each player returns one they own to the battlefield
@@ -8634,7 +8641,14 @@ pub enum Effect {
     /// `SacrificeAllButOnePerType` but scoped to a single filter; the keeper
     /// is auto-picked as the highest-mana-value match (the same approximation
     /// the Cataclysm family uses for the "each player chooses" clause).
-    EachPlayerKeepsOneSacrificeRest { who: Selector, filter: SelectionRequirement },
+    /// `destroy`: "destroy the rest" instead (Divine Reckoning) —
+    /// indestructible and regeneration apply (CR 701.8).
+    EachPlayerKeepsOneSacrificeRest {
+        who: Selector,
+        filter: SelectionRequirement,
+        #[serde(default)]
+        destroy: bool,
+    },
     /// "Wish" — put a card you own matching `filter` from your sideboard
     /// ("outside the game") or from exile into your hand (Karn, the Great
     /// Creator's -2). Chosen via `Decision::ChooseCards` for a `wants_ui`

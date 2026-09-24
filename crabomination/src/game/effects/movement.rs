@@ -440,6 +440,17 @@ impl GameState {
             }
             return 0;
         }
+        // CR 702.16e — protection from a color prevents that color's damage
+        // to the player (Seht's Tiger).
+        if let (EntityRef::Player(p), Some(src)) = (ent, source)
+            && !self.players[p].protection_colors_eot.is_empty()
+            && self.source_colors(src).iter().any(|c| self.players[p].protection_colors_eot.contains(c))
+        {
+            if amount > 0 {
+                events.push(GameEvent::DamagePrevented { amount, to_player: Some(p), to_card: None });
+            }
+            return 0;
+        }
         // CR 615.10 — "if a [filter] source would deal damage to you, prevent
         // N of that damage" (Sphere of Purity). Per-event, controller-scoped.
         let mut amount = amount;

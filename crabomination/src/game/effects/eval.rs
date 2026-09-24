@@ -5860,7 +5860,12 @@ impl GameState {
             R::PowerAtMostDraftNoteMax
             | R::HasDraftNotedColorOfSource
             | R::HasDraftNotedCreatureTypeOfSource => false,
-            R::IsSourceChosenCreatureType => false,
+            // Source-less: the type a resolving `ChooseCreatureTypeThen` just
+            // published (Kindred Summons reveals library cards against it).
+            R::IsSourceChosenCreatureType => self.chosen_creature_type_scratch.is_some_and(|ct| {
+                card.definition.subtypes.creature_types.contains(&ct)
+                    || card.has_keyword(&crate::card::Keyword::Changeling)
+            }),
             R::SameNameAsTarget | R::TargetsALandYouControl => false,
             // Count walks the battlefield for the evaluating controller's
             // matching permanents; the candidate's own zone is irrelevant.

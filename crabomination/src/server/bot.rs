@@ -14044,6 +14044,25 @@ fn pick_blocks(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
                 true
             });
         }
+        // Mirri's per-player "no more than N blockers this combat".
+        if let Some(cap) = state.players[seat].block_cap_this_combat {
+            let mut kept: Vec<CardId> = state
+                .block_map
+                .keys()
+                .copied()
+                .filter(|b| state.battlefield_find(*b).is_some_and(|c| c.controller == seat))
+                .collect();
+            blocks.retain(|(blocker, _)| {
+                if kept.contains(blocker) {
+                    return true;
+                }
+                if kept.len() >= cap as usize {
+                    return false;
+                }
+                kept.push(*blocker);
+                true
+            });
+        }
         trim_blocks_to_payable_tax(state, seat, &mut blocks);
         blocks
     })

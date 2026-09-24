@@ -6732,6 +6732,7 @@ pub fn the_eternal_wanderer() -> CardDefinition {
                 effect: Effect::EachPlayerKeepsOneSacrificeRest {
                     who: Selector::Player(PlayerRef::EachPlayer),
                     filter: SelectionRequirement::Creature,
+                    destroy: false,
                 },
                 ..Default::default()
             },

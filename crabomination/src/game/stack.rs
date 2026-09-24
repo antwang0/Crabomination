@@ -4398,6 +4398,9 @@ impl GameState {
             pl.warped_spell_this_turn = false;
             pl.searched_library_this_turn = false;
             pl.shroud_this_turn = false;
+            if !pl.protection_colors_eot.is_empty() {
+                pl.protection_colors_eot = crate::mana::ColorSet::empty();
+            }
             pl.cards_to_graveyard_this_turn = 0;
             pl.creature_cards_to_graveyard_this_turn = 0;
             pl.graveyard_ids_this_turn.clear();

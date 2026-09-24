@@ -681,6 +681,15 @@ pub struct PlayerData {
     /// them is prevented. Cleared when their turn begins.
     #[serde(default)]
     pub protected_from_everything: bool,
+    /// CR 702.16 — "you gain protection from the color of your choice until
+    /// end of turn" (Seht's Tiger): sources of these colors can't target this
+    /// player and their damage to them is prevented. Cleared at cleanup.
+    #[serde(default)]
+    pub protection_colors_eot: crate::mana::ColorSet,
+    /// "Can't block with more than N creatures this combat" (Mirri,
+    /// Weatherlight Duelist's attack trigger). Cleared as combat ends.
+    #[serde(default)]
+    pub block_cap_this_combat: Option<u8>,
     /// CR 401.6 — turn-scoped "you may look at the top card of your library
     /// any time, and you may play lands and cast spells from the top of your
     /// library" grant (The Belligerent, Bonehoard's Dracosaur-style player
@@ -1338,6 +1347,8 @@ impl Player {
             searched_library_this_turn: false,
             shroud_this_turn: false,
             protected_from_everything: false,
+            protection_colors_eot: crate::mana::ColorSet::empty(),
+            block_cap_this_combat: None,
             cards_exiled_this_turn: 0,
             cards_to_graveyard_this_turn: 0,
             creature_cards_to_graveyard_this_turn: 0,

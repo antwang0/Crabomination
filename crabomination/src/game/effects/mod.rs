@@ -4441,6 +4441,23 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::PlayerGainsProtectionFromChosenColor { who } => {
+                if let Some(p) = self.resolve_player(who, ctx) {
+                    let color =
+                        self.chosen_color_aimed(ctx.controller, ctx.source, &Color::ALL, true);
+                    self.players[p].protection_colors_eot.insert(color);
+                }
+                Ok(())
+            }
+
+            Effect::OpponentsBlockWithAtMost { n } => {
+                for p in self.opponents_of(ctx.controller) {
+                    let cap = self.players[p].block_cap_this_combat.map_or(*n, |c| c.min(*n));
+                    self.players[p].block_cap_this_combat = Some(cap);
+                }
+                Ok(())
+            }
+
             Effect::RedirectNextDamageTo { what, to } => {
                 let Some(dest) = self.resolve_selector(to, ctx).into_iter().next() else {
                     return Ok(());
@@ -9082,6 +9099,17 @@ impl GameState {
                 let n = self.evaluate_value(amount, ctx).max(0) as usize;
                 for ent in self.resolve_selector(who, ctx) {
                     if let EntityRef::Player(p) = ent {
+                        // CR 614.1a — Alms Collector: an opponent's draw of
+                        // two or more becomes one card each.
+                        let (n, alms) = match (n >= 2).then(|| self.alms_collector_for(p)).flatten() {
+                            Some(seat) => (1, Some(seat)),
+                            None => (n, None),
+                        };
+                        if let Some(seat) = alms
+                            && !self.draw_one_or_deck(seat, events)
+                        {
+                            return Ok(());
+                        }
                         // CR 121.2b — a per-turn draw cap truncates the draw.
                         let n = match self.draw_cap_for(p) {
                             Some(cap) => {
@@ -22254,7 +22282,7 @@ impl GameState {
                 self.resolve_sacrifice_all_but_one_per_type(who, *include_land, ctx, events)
             }
 
-            Effect::EachPlayerKeepsOneSacrificeRest { who, filter } => {
+            Effect::EachPlayerKeepsOneSacrificeRest { who, filter, destroy } => {
                 // Deadly Vanity — each resolved player keeps one `filter`
                 // permanent (auto-pick: highest mana value) and sacrifices the
                 // rest of their `filter` permanents.
@@ -22280,7 +22308,11 @@ impl GameState {
                         .map(|c| c.id)
                         .collect();
                     for id in to_sac {
-                        self.sacrifice_one(id, p, events);
+                        if *destroy {
+                            self.destroy_permanent(id, false, events);
+                        } else {
+                            self.sacrifice_one(id, p, events);
+                        }
                     }
                 }
                 Ok(())
@@ -39988,5 +40020,32 @@ impl GameState {
     /// Pay `n` generic mana as `payer`; zero is always payable.
     fn pay_generic(&mut self, payer: usize, n: u32) -> bool {
         n == 0 || self.pay_mana_as(payer, &crate::mana::cost(&[crate::mana::generic(n)]))
+    }
+}
+
+impl GameState {
+    /// The controller of a permanent with Alms Collector's replacement that
+    /// is an opponent of `p`, if any (the first on the battlefield).
+    pub(crate) fn alms_collector_for(&self, p: usize) -> Option<usize> {
+        self.battlefield
+            .iter()
+            .find(|c| {
+                !self.same_team(c.controller, p)
+                    && c.definition.static_abilities.iter().any(|sa| {
+                        matches!(sa.effect, crate::effect::StaticEffect::OpponentMultiDrawBecomesOneEach)
+                    })
+            })
+            .map(|c| c.controller)
+    }
+}
+
+impl GameState {
+    /// A source's colors: computed on the battlefield, printed elsewhere
+    /// (a spell on the stack, a card in a zone).
+    pub(crate) fn source_colors(&self, src: CardId) -> Vec<Color> {
+        if let Some(cp) = self.battlefield_find(src).and_then(|_| self.computed_permanent(src)) {
+            return cp.colors.iter().collect();
+        }
+        self.find_card_anywhere(src).map(|c| c.definition.printed_colors()).unwrap_or_default()
     }
 }

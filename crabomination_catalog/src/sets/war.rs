@@ -5489,6 +5489,7 @@ pub fn single_combat() -> CardDefinition {
             Effect::EachPlayerKeepsOneSacrificeRest {
                 who: Selector::Player(PlayerRef::EachPlayer),
                 filter: R::Creature.or(R::Planeswalker),
+                destroy: false,
             },
             Effect::LockCreatureAndPlaneswalkerCasts,
         ]),

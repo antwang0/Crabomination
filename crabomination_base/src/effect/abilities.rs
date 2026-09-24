@@ -2090,6 +2090,14 @@ pub enum StaticEffect {
     /// [filter]" (Timely Ward — a commander). Read by the cast path's timing
     /// gate against the declared slot-0 target.
     SelfFlashIfTargets { filter: crate::card::SelectionRequirement },
+    /// "If an opponent would draw two or more cards, instead you and that
+    /// player each draw a card" (Alms Collector, CR 614.1a). Read by
+    /// `Effect::Draw` on a batch of two or more.
+    OpponentMultiDrawBecomesOneEach,
+    /// "As long as this is tapped, no more than `n` creatures can attack you
+    /// each combat" (Mirri, Weatherlight Duelist) — Crawlspace's cap, gated on
+    /// the source being tapped.
+    AttackerCapAgainstControllerWhileTapped { n: usize },
     /// "Each other [creature_type] creature you control enters with an
     /// additional `kind` counter" (Oona's Blackguard). Fixed-type sibling of
     /// `ChosenTypeEntersWithCounter`; Changeling entrants count.
