@@ -86,6 +86,7 @@ lists were picked.
 | **Stalwart Unity** (C16 precon) RGWU | Kynaios and Tiro of Meletis | RGWU | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Token Triumph** (SCD starter) GW | Emmara, Soul of the Accord | GW | 100 | ✅ complete |
 | **Raining Cats and Dogs** (SLD) RGW | Rin and Seri, Inseparable | RGW | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
+| **Open Hostility** (C16 precon) WBRG | Saskia the Unyielding | WBRG | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Devour for Power** (CMD precon) BGU | The Mimeoplasm | BGU | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Mirror Mastery** (CMD precon) GUR | Riku of Two Reflections | GUR | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Arm for Battle** (CMR precon) RW | Wyleth, Soul of Steel | RW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
@@ -943,6 +944,30 @@ counter's target on resolution. A debug pod beside Nahiri / Tegwyll /
 N'ghathrod (seed 9501, 30 games) decided 30/30, zero panics; a 120-game census
 beside Ghired / Kynaios / Emmara (seed 9502) decided 120/120 and leaves no card
 of the four lists unplayed, Rin and Seri winning 24.2 %.
+
+The **sixty-fourth** is Commander 2016's **Open Hostility** (`OpenHostility_C16`)
+— four-color (no blue) aggression under Saskia the Unyielding, with Tana, Tymna
+and Ravos (partner commanders) in the 99 (seat 58 before rebasing over six
+others). `Order` is `order_chaos`. Fifteen cards were missing (Dauntless Escort
+landed with Token Triumph first; Mirror Entity is shared with Raining Cats and
+Dogs); the primitives: `StaticEffect::AllDamageDealtAsThoughWither` (Everlasting
+Torment, riding the prevent-static lane so a board without it pays one lane
+read; the noncombat funnel and both combat legs honour it),
+`Effect::DealDamageFrom` (Saskia — the trigger's creature, not Saskia, deals the
+echo, so its lifelink and infect apply),
+`StaticEffect::OpponentsCantCastDuringYourTurnWhileAttached` (Conqueror's Flail),
+`Value::PlayersDealtCombatDamageThisTurn` (Tymna) and `CounterType::Fury`
+(Charging Cinderhorn). ⚠ **Tymna's test found postcombat-main triggers dead**:
+`advance_step` never fired `StepBegins(PostCombatMain)`, so every "at the
+beginning of your postcombat main phase" card (Survival, Florian, Tymna) did
+nothing in real games — the tests had called `fire_step_triggers` by hand. Now
+fired on entry (CR 505.1a). Residuals: Saskia's chosen player is the most
+hostile opponent; Brutal Hordechief's forced blocks stay the blockers' choice;
+Mirror Entity's all-types is a granted Changeling. Release pods beside Zedruu /
+Kaalia / Kynaios (seed 9511, 1,000 games) decided 1,000/1,000 (Saskia 25.7 %);
+strict-answer-log debug pods (seeds 9513/9514, 120 games) decided 120/120, zero
+panics; a 200-game census (seed 9512) leaves no card unplayed (seat numbers as
+they were then). `--bench` byte-identical.
 
 ⚠ **The board cap was a bot bug, not a loop.** A Krenko seat sent all 292
 of its Goblins at one player on 24 life each turn while two others sat on
