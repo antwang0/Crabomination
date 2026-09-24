@@ -144,9 +144,11 @@ pub fn boros_reckoner() -> CardDefinition {
         power: 3,
         toughness: 3,
         triggered_abilities: vec![TriggeredAbility {
+            // A declared "any target" slot: a bare `Target(0)` is bound to the
+            // damaged object, so it hit itself — forever, once indestructible.
             event: EventSpec::new(EventKind::DealtDamage, EventScope::SelfSource),
             effect: Effect::DealDamage {
-                to: Selector::Target(0),
+                to: crate::effect::shortcut::target_any(),
                 amount: Value::TriggerEventAmount,
             },
         }],

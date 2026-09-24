@@ -522,3 +522,20 @@ fn vengeful_ancestor_punishes_goaded_attackers() {
     declare(&mut g, 1, vec![at(bear, 2)]).expect("attack");
     assert_eq!(g.players[1].life, life - 1);
 }
+
+/// Boros Reckoner (in the 99) sends the damage it is dealt at a target it
+/// picks; it used to be bound to itself, which looped forever once Redemption
+/// Arc made it indestructible (a 1,000-game pod's one undecided game).
+#[test]
+fn boros_reckoner_redirects_rather_than_hitting_itself() {
+    let mut g = main_phase(2);
+    let br = g.add_card_to_battlefield(0, catalog::boros_reckoner());
+    let arc = g.add_card_to_hand(0, catalog::redemption_arc());
+    cast_at(&mut g, arc, &[Target::Permanent(br)]).expect("indestructible");
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Player(1))]));
+    let life = g.players[1].life;
+    let shock = g.add_card_to_hand(1, catalog::shock());
+    cast_as(&mut g, 1, shock, &[Target::Permanent(br)]).expect("shock");
+    assert_eq!(g.players[1].life, life - 2);
+    assert!(g.stack.is_empty(), "no self-retrigger");
+}
