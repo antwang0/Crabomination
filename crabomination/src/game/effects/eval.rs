@@ -3847,9 +3847,11 @@ impl GameState {
             R::NotToken => Some(!card.is_token),
             R::Tapped => Some(card.tapped),
             R::Untapped => Some(!card.tapped),
+            R::Unattached => Some(card.attached_to.is_none() && card.attached_to_player.is_none()),
             R::EnteredThisTurn => Some(card.entered_turn == Some(self.turn_number)),
             R::IsAttacking => Some(self.attacking.iter().any(|a| a.attacker == cid)),
             R::IsAttackingYou => Some(self.creature_is_attacking_seat(cid, controller)),
+            R::IsAttackingAnOpponent => Some(self.creature_is_attacking_an_opponent_of(cid, controller)),
             R::OtherThanSource => Some(source.is_none_or(|s| cid != s)),
             R::IsSource => Some(source == Some(cid)),
             R::PutOntoBattlefieldBySource => {
@@ -4488,6 +4490,7 @@ impl GameState {
                     R::Noncreature => !has_type(CT::Creature),
                     R::Tapped => card.tapped,
                     R::Untapped => !card.tapped,
+                    R::Unattached => card.attached_to.is_none() && card.attached_to_player.is_none(),
                     R::DealtDamageThisTurn => card.dealt_damage_this_turn,
                     R::DamagedBySourceThisTurn => {
                         source.is_some_and(|s| card.damaged_by_this_turn.contains(&s))
@@ -4630,6 +4633,9 @@ impl GameState {
                     R::IsSnow => card.definition.is_snow(),
                     R::IsAttacking => self.attacking.iter().any(|a| a.attacker == card.id),
                     R::IsAttackingYou => self.creature_is_attacking_seat(card.id, controller),
+                    R::IsAttackingAnOpponent => {
+                        self.creature_is_attacking_an_opponent_of(card.id, controller)
+                    }
                     R::IsUnblocked => {
                         self.attacking.iter().any(|a| a.attacker == card.id)
                             && !self.blocked_attackers.contains(&card.id)
@@ -5894,6 +5900,7 @@ impl GameState {
             // "for each attacking creature" reads it from the affinity counter).
             R::IsAttacking => self.attacking.iter().any(|a| a.attacker == card.id),
             R::IsAttackingYou => self.creature_is_attacking_seat(card.id, controller),
+            R::IsAttackingAnOpponent => self.creature_is_attacking_an_opponent_of(card.id, controller),
             // A battlefield instance carries this flag directly (Rowdy Research's
             // "{1} less for each creature that attacked this turn" affinity).
             R::AttackedThisTurn => card.attacked_this_turn,
@@ -5918,7 +5925,7 @@ impl GameState {
             R::WithCounterAtLeast(k, n) => card.counter_count(*k) >= *n,
             R::WithAnyCounter => card.has_any_counter(),
             // Battlefield-state predicates can't be evaluated for library cards.
-            R::Tapped | R::Untapped
+            R::Tapped | R::Untapped | R::Unattached
             | R::IsUnblocked | R::IsBlocked | R::IsBlocking | R::InCombatWithSource
             | R::IsAttackingAlone | R::IsBlockingAlone
             | R::FaceDown | R::HasAbilityOnStack

@@ -1627,7 +1627,7 @@ pub(crate) fn requirement_is_card_only(req: &SelectionRequirement) -> bool {
         // Tap state is a live `CardInstance` field, re-read on every layer
         // recompute — safe to route through the dynamic CardMatch path
         // (Augusta, Dean of Order's tapped/untapped anthems).
-        R::Tapped | R::Untapped => true,
+        R::Tapped | R::Untapped | R::Unattached => true,
         // Face-down is likewise a live `CardInstance` flag (Ixidor, Reality
         // Sculptor's "face-down creatures get +1/+1").
         R::FaceDown => true,
@@ -1715,6 +1715,7 @@ pub(crate) fn requirement_matches_card(
         R::Tapped => card.tapped,
         R::FaceDown => card.face_down,
         R::Untapped => !card.tapped,
+        R::Unattached => card.attached_to.is_none() && card.attached_to_player.is_none(),
         R::WithCounter(k) => card.counter_count(*k) > 0,
         R::WithAnyCounter => card.has_any_counter(),
         R::ControlledByYou => card.controller == source_controller,

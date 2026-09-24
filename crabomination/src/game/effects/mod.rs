@@ -34037,7 +34037,7 @@ impl GameState {
                             card.may_play_until = Some(crate::card::MayPlayPermission {
                                 player: ctx.controller,
                                 granted_turn,
-                                duration: *duration,
+                                duration: duration.bound_to(ctx.controller),
                                 exile_after: false,
                                 miracle: false,
                                 pay_life: false,

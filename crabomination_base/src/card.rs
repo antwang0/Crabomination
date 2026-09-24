@@ -845,6 +845,8 @@ pub enum CounterType {
     /// Enlightened counter — The Book of Exalted Deeds' memory aid (CR 122.1;
     /// the granted ability isn't tied to it).
     Enlightened,
+    /// Story counter — Staff of the Storyteller's token tally (ONC).
+    Story,
 }
 
 /// Every zone a card can occupy.
@@ -1033,7 +1035,31 @@ pub enum MayPlayDuration {
     /// begins, by the step-transition sweep (`clear_step_bounded_may_play`),
     /// so it is gated by the same `step_bounded_may_play` flag.
     UntilYourNextEndStep,
+    /// "During any turn you attacked with a token, you may play that card"
+    /// (Neyali, Suns' Vanguard). Never expires; the turn sweep parks the
+    /// permission's `player` at [`MAY_PLAY_DORMANT`] and declaring a token
+    /// attacker re-arms it for `holder` (CR 508.1 — "attacked with" is a
+    /// declared attacker, not one put onto the battlefield attacking).
+    TurnsHolderAttacksWithAToken { holder: usize },
 }
+
+impl MayPlayDuration {
+    /// The duration as granted to `seat`: binds a
+    /// `TurnsHolderAttacksWithAToken` template (printed with holder 0) to the
+    /// grantee; every other duration is seat-free.
+    pub fn bound_to(self, seat: usize) -> Self {
+        match self {
+            Self::TurnsHolderAttacksWithAToken { .. } => {
+                Self::TurnsHolderAttacksWithAToken { holder: seat }
+            }
+            d => d,
+        }
+    }
+}
+
+/// A `MayPlayPermission::player` that matches no seat — a
+/// `TurnsHolderAttacksWithAToken` grant between its live turns.
+pub const MAY_PLAY_DORMANT: usize = usize::MAX;
 
 /// Per-instance permission for "you may cast that card without paying its
 /// mana cost" — granted by Practiced Scrollsmith, Suspend Aggression,
@@ -2402,6 +2428,8 @@ pub enum SelectionRequirement {
     Noncreature,
     Tapped,
     Untapped,
+    /// Not attached to anything (an Equipment or Aura with no host).
+    Unattached,
     /// CR 120.x — the permanent has been dealt damage this turn (Initiate of
     /// Blood // Goka's "target creature that was dealt damage this turn").
     DealtDamageThisTurn,
@@ -2674,6 +2702,10 @@ pub enum SelectionRequirement {
     /// of yours). In a pod, a creature attacking someone else is not one of
     /// them (Arachnogenesis).
     IsAttackingYou,
+    /// An attacking creature whose defender is an opponent of the evaluating
+    /// player or a planeswalker one controls — "creatures attacking your
+    /// opponents and/or planeswalkers they control" (Roar of Resistance).
+    IsAttackingAnOpponent,
     /// An attacking creature that hasn't been blocked (CR 509.1h). Reads live
     /// combat state — Sneak's "return an unblocked creature you control".
     IsUnblocked,

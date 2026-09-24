@@ -27,4 +27,18 @@ impl GameState {
     pub(crate) fn creature_is_attacking_seat(&self, id: CardId, seat: usize) -> bool {
         self.attacking.iter().any(|a| a.attacker == id && a.target == AttackTarget::Player(seat))
     }
+
+    /// `id` attacks an opponent of `seat`, or a planeswalker one controls.
+    pub(crate) fn creature_is_attacking_an_opponent_of(&self, id: CardId, seat: usize) -> bool {
+        self.attacking.iter().any(|a| {
+            a.attacker == id
+                && match a.target {
+                    AttackTarget::Player(p) => !self.same_team(p, seat),
+                    AttackTarget::Planeswalker(pw) => self
+                        .battlefield_find(pw)
+                        .is_some_and(|c| !self.same_team(c.controller, seat)),
+                    AttackTarget::Battle(_) => false,
+                }
+        })
+    }
 }

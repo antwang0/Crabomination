@@ -4984,6 +4984,15 @@ impl GameState {
                     crate::card::MayPlayDuration::UntilYourNextEndStep => false,
                     // Step-bounded miracle windows are also dead by turn end.
                     crate::card::MayPlayDuration::EndOfThisStep => true,
+                    crate::card::MayPlayDuration::TurnsHolderAttacksWithAToken { .. } => {
+                        if perm.player != crate::card::MAY_PLAY_DORMANT {
+                            c.may_play_until = Some(crate::card::MayPlayPermission {
+                                player: crate::card::MAY_PLAY_DORMANT,
+                                ..perm
+                            });
+                        }
+                        false
+                    }
                 };
                 if expired {
                     c.may_play_until = None;

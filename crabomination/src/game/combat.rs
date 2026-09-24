@@ -1924,6 +1924,31 @@ impl GameState {
             // Raid (CR 702.108 ability word): the controller attacked this turn.
             self.players[p].attacked_this_turn = true;
             self.players[p].creatures_attacked_this_turn += 1;
+            // Neyali's "during any turn you attacked with a token" grants
+            // wake for this seat (CR 508.1: a declared attacker).
+            if card.is_token {
+                let wakes = |c: &crate::card::CardInstance| {
+                    c.cold_any(|k| {
+                        k.may_play_until.is_some_and(|perm| {
+                            perm.player == crate::card::MAY_PLAY_DORMANT
+                                && perm.duration
+                                    == crate::card::MayPlayDuration::TurnsHolderAttacksWithAToken {
+                                        holder: p,
+                                    }
+                        })
+                    })
+                };
+                if self.exile.iter().any(wakes) {
+                    for c in self.exile.iter_mut() {
+                        if wakes(c)
+                            && let Some(perm) = c.may_play_until
+                        {
+                            c.may_play_until =
+                                Some(crate::card::MayPlayPermission { player: p, ..perm });
+                        }
+                    }
+                }
+            }
             events.push(GameEvent::AttackerDeclared(id));
             // Walk printed Attacks triggers + any transient granted
             // Attacks triggers (Root Manipulation's "gain 1 life when
