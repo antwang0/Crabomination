@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Ten hand-picked commanders plus forty-four official preconstructed lists, each a
+//! Ten hand-picked commanders plus forty-five official preconstructed lists, each a
 //! 99 of cards this engine implements: legal under CR 903 (100 cards
 //! including the commander, singleton outside basics, every card inside the
 //! commander's CR 903.4 color identity) and Commander-legal per Scryfall's
@@ -8,7 +8,7 @@
 //!
 //! The ten were built by hand because the offline Scryfall cache cannot say
 //! how a precon splits into decks; MTGJSON's deck files can, and the eleventh
-//! through fifty-fourth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
+//! through fifty-fifth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
 //! Win, Tails You Lose, Goblin Storm, Foundations Commander's Wretched Ranks,
 //! Tramplesaurus Rex and Keen Engineering, Commander Legends' Reap the Tides,
 //! Phyrexia: All Will Be One's Corrupting Influence, Zendikar Rising's Sneak
@@ -28,8 +28,8 @@
 //! Wade into Battle, Commander Legends' Arm for Battle, Commander 2016's Invent
 //! Superiority and Entropic Uprising, Secret Lair's Chaos Incarnate,
 //! Aetherdrift Commander's Eternal Might, Commander 2017's Feline Ferocity,
-//! Commander (2011)'s Heavenly Inferno and Zendikar Rising Commander's Land's
-//! Wrath) are taken from one card for card. What all of them keep
+//! Commander (2011)'s Heavenly Inferno and Political Puppets and Zendikar
+//! Rising Commander's Land's Wrath) are taken from one card for card. What all of them keep
 //! from the precon idea is what the pod needs — fixed, legal, varied color
 //! identities, and built to play against each other.
 //! One is a Partner pair (CR 702.124b), one is a **planeswalker**
@@ -1735,4 +1735,32 @@ pub const OBUUN_MAIN: &[CardFactory] = &[
     // Basics: 7 plains, 4 mountain, 10 forest
     plains, plains, plains, plains, plains, plains, plains, mountain, mountain, mountain,
     mountain, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+];
+
+pub const ZEDRUU_COMMANDERS: &[CardFactory] = &[zedruu_the_greathearted];
+
+/// **Political Puppets**, the Commander (2011) Jeskai deck (CMD, 2011-06-17),
+/// as MTGJSON's `PoliticalPuppets_CMD` prints it: 71 nonbasic cards + 8
+/// Plains + 12 Islands + 8 Mountains = 99. Donations and table politics under
+/// Zedruu.
+/// One swap: Trade Secrets is banned in Commander, so Divination (the same
+/// mana value, blue sorcery draw) takes its slot.
+pub const ZEDRUU_MAIN: &[CardFactory] = &[
+    goblin_cadets, spurnmage_advocate, jotun_grunt, wall_of_omens, fog_bank, nin_the_pain_artist,
+    azorius_guildmage, court_hussar, gomazoa, guard_gomazoa, vedalken_plotter, wall_of_denial,
+    plumeveil, flametongue_kavu, windborn_muse, false_prophet, brion_stoutarm, ruhan_of_the_fomori,
+    chromeshell_crab, izzet_chronarch, dominus_of_fealty, rapacious_one, numot_the_devastator,
+    arbiter_of_knollridge, breath_of_darigaaz, divination, death_by_dragons, austere_command,
+    insurrection, skyscribing, brainstorm, flusterstorm, lash_out, punishing_fire, pollen_lullaby,
+    perilous_research, vision_skeins, whirlpool_whelm, chaos_warp, oblation, murmurs_from_beyond,
+    repulse, spell_crumple, wild_ricochet, reins_of_power, scattering_stroke, sol_ring,
+    armillary_sphere, fellwar_stone, howling_mine, lightning_greaves, prophetic_prism,
+    champions_helm, darksteel_ingot, dreamstone_hedron, soul_snare, journey_to_nowhere,
+    vow_of_lightning, ghostly_prison, vow_of_duty, propaganda, vow_of_flight, prison_term,
+    crescendo_of_war, martyrs_bond, azorius_chancery, boros_garrison, command_tower, evolving_wilds,
+    izzet_boilerworks, terramorphic_expanse,
+    // Basics: 8 plains, 12 island, 8 mountain
+    plains, plains, plains, plains, plains, plains, plains, plains, island, island, island, island,
+    island, island, island, island, island, island, island, island, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain,
 ];

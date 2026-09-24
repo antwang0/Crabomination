@@ -505,6 +505,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::OBUUN_COMMANDERS,
             main: decks::OBUUN_MAIN,
         },
+        // Fifty-fifth: the forty-fifth official list (Political Puppets, CMD)
+        // — Jeskai donations and politics under Zedruu. `--seats 55`.
+        PodDeck {
+            name: "Zedruu the Greathearted (URW)",
+            commanders: decks::ZEDRUU_COMMANDERS,
+            main: decks::ZEDRUU_MAIN,
+        },
     ]
 }
 
@@ -1032,6 +1039,7 @@ mod tests {
             ("Kalemne", [0xCA1E, 86, 9010]),
             ("Kardur", [0xCA2D, 87, 9011]),
             ("Kaalia", [0xCAA1, 88, 9012]),
+            ("Zedruu", [0x2ED7, 89, 9013]),
         ] {
             let precon = *field.iter().find(|d| d.name.starts_with(name)).expect("the precon seat");
             assert_eq!(precon.card_count(), 100);
