@@ -308,3 +308,27 @@ fn creeping_renaissance_regrows_a_type() {
     assert_eq!(g.players[0].hand.len(), 2);
     assert_eq!(g.players[0].graveyard.len(), 2, "the Plains and the Renaissance");
 }
+
+/// The bot's hostile `ChooseTarget` skips an opponent's permanent its own
+/// stack items already aim at while another is legal — two Scalelord
+/// Reckoners retargeting each other's Dragon stacked 3,905 triggers in a pod.
+#[test]
+fn bot_spreads_removal_rather_than_doubling_up() {
+    use crabomination::effect::{Effect, Selector};
+    use crabomination::game::types::TriggerPush;
+    use crabomination::server::bot::decide_choose_target;
+    let mut g = main_phase(2);
+    let big = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let small = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.stack.push(
+        TriggerPush::new(src, 0, Effect::Destroy { what: Selector::Target(0) })
+            .target(Some(Target::Permanent(big)))
+            .build(),
+    );
+    let legal = [Target::Permanent(big), Target::Permanent(small)];
+    let w = crabomination::server::EvalWeights::default();
+    assert_eq!(decide_choose_target(&g, 0, &legal, &w), DecisionAnswer::Target(Target::Permanent(small)));
+    let only = [Target::Permanent(big)];
+    assert_eq!(decide_choose_target(&g, 0, &only, &w), DecisionAnswer::Target(Target::Permanent(big)));
+}

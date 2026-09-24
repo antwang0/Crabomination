@@ -5365,14 +5365,37 @@ pub fn decide_choose_target(
     use crate::decision::DecisionAnswer;
     use crate::game::types::Target;
     let owner = |id: crate::card::CardId| state.battlefield_find(id).map(|c| c.controller);
-    // Opponent permanents — hit the biggest.
-    let best_opp = legal
+    // Opponent permanents — hit the biggest, skipping one our own stack items
+    // already aim at while another is open: a second destroy on a doomed
+    // permanent is waste, and two Scalelord Reckoners each retargeting the
+    // other's Dragon stacked 3,905 triggers (a pod's only undecided game).
+    let already_aimed: Vec<crate::card::CardId> = state
+        .stack
         .iter()
-        .filter_map(|t| match t {
+        .filter_map(|item| match item {
+            crate::game::types::StackItem::Trigger { controller, target: Some(Target::Permanent(id)), .. }
+                if *controller == seat =>
+            {
+                Some(*id)
+            }
+            crate::game::types::StackItem::Spell { caster, target: Some(Target::Permanent(id)), .. }
+                if *caster == seat =>
+            {
+                Some(*id)
+            }
+            _ => None,
+        })
+        .collect();
+    let opp_perms = || {
+        legal.iter().filter_map(|t| match t {
             Target::Permanent(id) if owner(*id).is_some_and(|o| o != seat) => Some(*id),
             _ => None,
         })
-        .max_by_key(|id| permanent_value(state, *id, w));
+    };
+    let best_opp = opp_perms()
+        .filter(|id| !already_aimed.contains(id))
+        .max_by_key(|id| permanent_value(state, *id, w))
+        .or_else(|| opp_perms().max_by_key(|id| permanent_value(state, *id, w)));
     if let Some(id) = best_opp {
         return DecisionAnswer::Target(Target::Permanent(id));
     }
