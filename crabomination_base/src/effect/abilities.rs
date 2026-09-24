@@ -1783,6 +1783,9 @@ pub enum StaticEffect {
     /// CR 601 — "Players can't cast spells during combat." (Basandra, Battle
     /// Seraph.) A cast-time lock for every seat during the combat phase.
     PlayersCantCastDuringCombat,
+    /// "Your opponents can't cast spells during combat" (Marisi, Breaker of
+    /// the Coil) — the opponents-only half of Basandra's lock (CR 506.1).
+    OpponentsCantCastDuringCombat,
     /// "Creatures controlled by players who chose war get +3/+0. Creatures
     /// controlled by players who chose peace get +0/+3." (Archangel of
     /// Strife.) The choices are the source's `modes_chosen`, indexed by seat

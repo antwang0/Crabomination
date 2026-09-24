@@ -4442,6 +4442,38 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::PlayersWithMostSacrifice { filter, count } => {
+                let counts: Vec<(usize, usize)> = (0..self.players.len())
+                    .filter(|p| self.players[*p].is_alive())
+                    .map(|p| {
+                        let n = self
+                            .battlefield
+                            .iter()
+                            .filter(|c| {
+                                c.controller == p && self.evaluate_requirement_on_card(filter, c, p)
+                            })
+                            .count();
+                        (p, n)
+                    })
+                    .collect();
+                let most = counts.iter().map(|(_, n)| *n).max().unwrap_or(0);
+                if most == 0 {
+                    return Ok(());
+                }
+                for (p, _) in counts.into_iter().filter(|(_, n)| *n == most) {
+                    self.run_effect(
+                        &Effect::Sacrifice {
+                            who: Selector::Player(PlayerRef::Seat(p)),
+                            count: count.clone(),
+                            filter: filter.clone(),
+                        },
+                        ctx,
+                        events,
+                    )?;
+                }
+                Ok(())
+            }
+
             Effect::PlayerGainsProtectionFromChosenColor { who } => {
                 if let Some(p) = self.resolve_player(who, ctx) {
                     let color =

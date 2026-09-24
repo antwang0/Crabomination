@@ -4996,7 +4996,9 @@ impl GameState {
                     SE::OpponentsCantCastDuringYourTurn | SE::OpponentsCantActDuringYourTurn => {
                         cast_lock::DURING_YOUR_TURN
                     }
-                    SE::PlayersCantCastDuringCombat => cast_lock::COMBAT,
+                    SE::PlayersCantCastDuringCombat | SE::OpponentsCantCastDuringCombat => {
+                        cast_lock::COMBAT
+                    }
                     _ => 0,
                 };
             }
@@ -5237,10 +5239,13 @@ impl GameState {
             && locks & cast_lock::COMBAT != 0
             && self.step.is_combat_phase()
             && self.battlefield.iter().any(|c| {
-                c.definition
-                    .static_abilities
-                    .iter()
-                    .any(|sa| matches!(sa.effect, StaticEffect::PlayersCantCastDuringCombat))
+                c.definition.static_abilities.iter().any(|sa| match sa.effect {
+                    StaticEffect::PlayersCantCastDuringCombat => true,
+                    StaticEffect::OpponentsCantCastDuringCombat => {
+                        !self.same_team(c.controller, caster)
+                    }
+                    _ => false,
+                })
             })
         {
             return Some(GameError::SilencedThisTurn);
@@ -29585,6 +29590,7 @@ fn static_effect_to_effects(
             | StaticEffect::SpellDamageToOpponentsBecomesTokens { .. }
             // A cast-time lock; and a per-creature pump gathered state-aware.
             | StaticEffect::PlayersCantCastDuringCombat
+            | StaticEffect::OpponentsCantCastDuringCombat
             | StaticEffect::WarOrPeace
             // Recomputed live in `compute_battlefield`, not here.
             | StaticEffect::SelfHasKeywordWhile { .. }

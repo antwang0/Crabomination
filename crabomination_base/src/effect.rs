@@ -8079,6 +8079,10 @@ pub enum Effect {
 
     // ── Sacrifice ────────────────────────────────────────────────────────────
     Sacrifice { who: Selector, count: Value, filter: SelectionRequirement },
+    /// "Each player who controls the most [filter] sacrifices `count`
+    /// [filter]" (Tectonic Hellion). The tied-for-most set is fixed before
+    /// anyone sacrifices.
+    PlayersWithMostSacrifice { filter: SelectionRequirement, count: Value },
     /// Each player picked by `who` sacrifices **all** permanents they control
     /// matching `filter` — no choice involved (CR 701.16). All Is Dust's
     /// "each player sacrifices all colored permanents they control".

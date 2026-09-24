@@ -356,6 +356,8 @@ pub enum CreatureType {
     Azra, Employee,
     // Unfinity (_____ Goblin).
     Guest,
+    // Commander 2019 (Doomed Artisan's tokens).
+    Sculpture,
 }
 
 /// Land subtypes (basic land types + others).
