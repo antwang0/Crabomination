@@ -2837,3 +2837,32 @@ pub const GUFF_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, island, island, island, island,
     island, island, island, mountain, mountain, mountain, mountain,
 ];
+
+pub const GOSHINTAI_COMMANDERS: &[CardFactory] = &[go_shintai_of_lifes_origin];
+
+/// **20 Ways to Win**, the Secret Lair Commander deck (SLD, 2024-12-04),
+/// exactly as MTGJSON's `20WaysToWin_SLD` prints it: 99 cards, no basics.
+/// Alternate win conditions, Gates and Shrines under Go-Shintai of Life's
+/// Origin (its WUBRG ability makes it five-colour).
+pub const GOSHINTAI_MAIN: &[CardFactory] = &[
+    alseid_of_lifes_bounty, approach_of_the_second_sun, arcane_signet, augur_of_autumn,
+    auriok_champion, austere_command, azorius_guildgate, baldurs_gate, biovisionary,
+    black_dragon_gate, boros_guildgate, bountiful_promenade, brushland, chromatic_lantern,
+    circuitous_route, citadel_gate, clever_concealment, cliffgate, command_tower, crib_swap,
+    darksteel_citadel, darksteel_mutation, dimir_guildgate, drown_in_dreams,
+    dryad_of_the_ilysian_grove, eerie_ultimatum, exotic_orchard, faeburrow_elder,
+    felidar_sovereign, fertile_ground, forbidden_orchard, forest, forgotten_ancient,
+    gateway_plaza, ghostly_prison, ghoulish_impetus, golgari_guildgate, gond_gate,
+    gruul_guildgate, halo_fountain, hangarback_walker, happily_ever_after, heap_gate,
+    heliods_intervention, heliod_sun_crowned, helix_pinnacle, hellkite_tyrant, homeward_path,
+    izzet_guildgate, kynaios_and_tiro_of_meletis, lightning_greaves, lignify, lilianas_contract,
+    mangara_the_diplomat, manor_gate, maskwood_nexus, mayaels_aria, mazes_end,
+    mechanized_production, monologue_tax, morbid_opportunist, mystic_remora, orzhov_guildgate,
+    overgrown_farmland, pariah, path_of_ancestry, plains, plaza_of_harmony, rakdos_guildgate,
+    razorverge_thicket, reflecting_pool, revel_in_riches, rite_of_replication, sanctum_weaver,
+    sea_gate, seedborn_muse, selesnya_guildgate, shalai_voice_of_plenty, shiny_impetus,
+    simic_ascendancy, simic_guildgate, sol_ring, souls_attendant, sphinxs_revelation, sun_titan,
+    sunscorch_regent, supreme_verdict, taurean_mauler, test_of_endurance, the_eternal_wanderer,
+    the_world_tree, thornglint_bridge, tireless_tracker, trace_of_abundance, tragic_arrogance,
+    triskaidekaphile, twenty_toed_toad, wooded_bastion, yahenni_undying_partisan,
+];

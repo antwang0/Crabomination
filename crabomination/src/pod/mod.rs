@@ -775,6 +775,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::GUFF_COMMANDERS,
             main: decks::GUFF_MAIN,
         },
+        // Ninety-second: the eighty-second official list (20 Ways to Win, SLD)
+        // — alternate wins, Gates and Shrines under Go-Shintai. `--pod-decks
+        // 92`.
+        PodDeck {
+            name: "Go-Shintai of Life's Origin (WUBRG)",
+            commanders: decks::GOSHINTAI_COMMANDERS,
+            main: decks::GOSHINTAI_MAIN,
+        },
     ]
 }
 
