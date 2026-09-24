@@ -2245,3 +2245,310 @@ fn wrens_run_packmaster_champions_an_elf_and_arms_wolves() {
     let wolf = g.battlefield.iter().find(|c| c.definition.name == "Wolf").map(|c| c.id).unwrap();
     assert!(g.computed_permanent(wolf).unwrap().keywords().contains(&Keyword::Deathtouch));
 }
+
+// ── Grave Danger (Gisa and Geralf, SCD) ─────────────────────────────────────
+
+fn cast_from_gy(g: &mut GameState, id: CardId) -> Result<(), String> {
+    flood(g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .map_err(|e| format!("{e:?}"))?;
+    drain_stack(g);
+    Ok(())
+}
+
+/// Gisa and Geralf — one Zombie creature spell from the graveyard per turn,
+/// and only a Zombie.
+#[test]
+fn gisa_and_geralf_casts_one_zombie_from_the_graveyard_a_turn() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::gisa_and_geralf());
+    let a = g.add_card_to_graveyard(0, catalog::loyal_subordinate());
+    let b = g.add_card_to_graveyard(0, catalog::unbreathing_horde());
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    assert!(cast_from_gy(&mut g, bear).is_err(), "not a Zombie");
+    cast_from_gy(&mut g, a).expect("the first Zombie");
+    assert!(g.battlefield_find(a).is_some());
+    assert!(cast_from_gy(&mut g, b).is_err(), "once each turn");
+}
+
+/// The bot casts from its graveyard through a board permission (Gisa and
+/// Geralf) — it had no block for Muldrotha-style grants at all.
+#[test]
+fn bot_casts_a_zombie_through_gisa_and_geralf() {
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::gisa_and_geralf());
+    let z = g.add_card_to_graveyard(0, catalog::loyal_subordinate());
+    // Post-combat: a fresh creature is not held for the second main.
+    g.step = TurnStep::PostCombatMain;
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let mut bot = HeuristicBot::new();
+    for _ in 0..16 {
+        let action = bot.next_action(&g, 0).expect("bot acts");
+        if let GameAction::CastSpell { card_id, .. } = action
+            && card_id == z
+        {
+            return;
+        }
+        let _ = g.perform_action(action);
+    }
+    panic!("the bot never cast the Zombie from its graveyard");
+}
+
+/// Scourge of Nel Toth — {B}{B} plus two sacrificed creatures from the
+/// graveyard; the alternative cost is not offered from hand.
+#[test]
+fn scourge_of_nel_toth_returns_for_two_creatures() {
+    let mut g = main_phase();
+    let s = g.add_card_to_graveyard(0, catalog::scourge_of_nel_toth());
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::hill_giant());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: s,
+        pitch_card: None,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("{B}{B} and two creatures");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(s).is_some());
+    assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none());
+    let mut g = main_phase();
+    let h = g.add_card_to_hand(0, catalog::scourge_of_nel_toth());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::hill_giant());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    let from_hand = g.perform_action(GameAction::CastSpellAlternative {
+        card_id: h,
+        pitch_card: None,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    });
+    assert!(from_hand.is_err(), "graveyard only");
+}
+
+/// Laboratory Drudge — draws at end step once a graveyard was used.
+#[test]
+fn laboratory_drudge_draws_after_a_graveyard_cast() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::laboratory_drudge());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let hand = g.players[0].hand.len();
+    pass_to_end_step(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand, "nothing from a graveyard yet");
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::laboratory_drudge());
+    g.add_card_to_battlefield(0, catalog::gisa_and_geralf());
+    let z = g.add_card_to_graveyard(0, catalog::loyal_subordinate());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    cast_from_gy(&mut g, z).expect("cast");
+    let hand = g.players[0].hand.len();
+    pass_to_end_step(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+}
+
+/// Grimoire of the Dead — three study counters, then every creature card in
+/// every graveyard joins you as a black Zombie.
+#[test]
+fn grimoire_of_the_dead_raises_every_graveyard() {
+    let mut g = main_phase();
+    let gr = g.add_card_to_battlefield(0, catalog::grimoire_of_the_dead());
+    g.battlefield_find_mut(gr).unwrap().add_counters(CounterType::Study, 3);
+    let theirs = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let mine = g.add_card_to_graveyard(0, catalog::hill_giant());
+    activate(&mut g, gr, 1, None).expect("remove three, sacrifice");
+    for id in [theirs, mine] {
+        let c = g.battlefield_find(id).expect("raised");
+        assert_eq!(c.controller, 0);
+        assert!(has_type(&g, id, CreatureType::Zombie));
+        assert!(g.computed_permanent(id).unwrap().colors.contains(&Color::Black));
+    }
+}
+
+/// Liliana, Untouched by Death — +1 drains when a Zombie is milled; −3 opens
+/// the graveyard's Zombies.
+#[test]
+fn liliana_untouched_mills_for_a_drain_and_opens_the_graveyard() {
+    let mut g = main_phase();
+    let l = g.add_card_to_battlefield(0, catalog::liliana_untouched_by_death());
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::loyal_subordinate());
+    g.add_card_to_library(0, catalog::island());
+    let life = g.players[1].life;
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: l, ability_index: 0, target: None, x_value: None })
+        .expect("+1");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 2);
+    let z = g.players[0].graveyard.iter().find(|c| c.definition.name == "Loyal Subordinate").unwrap().id;
+    g.battlefield_find_mut(l).unwrap().loyalty_uses_this_turn = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: l, ability_index: 2, target: None, x_value: None })
+        .expect("−3");
+    drain_stack(&mut g);
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: z,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast the Zombie from the graveyard");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(z).is_some());
+}
+
+/// CR 207.2c lieutenant — Loyal Subordinate drains only with your own
+/// commander on the battlefield.
+#[test]
+fn cr_207_2c_loyal_subordinate_needs_your_commander() {
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.add_card_to_battlefield(0, catalog::loyal_subordinate());
+    let life = g.players[1].life;
+    let _ = g.advance_step(Vec::new());
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life, "no commander");
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.add_card_to_battlefield(0, catalog::loyal_subordinate());
+    let cmd = g.add_card_to_battlefield(0, catalog::gisa_and_geralf());
+    g.players[0].commanders.push(cmd);
+    let _ = g.advance_step(Vec::new());
+    drain_stack(&mut g);
+    assert_eq!((g.players[1].life, g.players[2].life), (life - 3, life - 3));
+}
+
+/// Overseer of the Damned — an opponent's nontoken creature dying makes a
+/// tapped Zombie.
+#[test]
+fn overseer_of_the_damned_raises_opponents_dead() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::overseer_of_the_damned());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, &[Target::Permanent(bear)]);
+    let z = g.battlefield.iter().find(|c| c.definition.name == "Zombie").expect("a Zombie");
+    assert!(z.tapped && z.controller == 0);
+}
+
+/// Unbreathing Horde — counters from Zombies on board and in the graveyard;
+/// damage removes one counter instead.
+#[test]
+fn unbreathing_horde_counts_zombies_and_sheds_counters() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::loyal_subordinate());
+    g.add_card_to_graveyard(0, catalog::laboratory_drudge());
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let h = g.add_card_to_hand(0, catalog::unbreathing_horde());
+    cast(&mut g, h, &[]);
+    assert_eq!(pt(&g, h), (2, 2));
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, &[Target::Permanent(h)]);
+    assert_eq!(pt(&g, h), (1, 1), "the bolt only took a counter");
+}
+
+/// Vela the Night-Clad — your creatures leaving drain each opponent.
+#[test]
+fn vela_drains_when_your_creatures_leave() {
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.add_card_to_battlefield(0, catalog::vela_the_night_clad());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Intimidate));
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let (l1, l2) = (g.players[1].life, g.players[2].life);
+    cast(&mut g, bolt, &[Target::Permanent(bear)]);
+    assert_eq!((g.players[1].life, g.players[2].life), (l1 - 1, l2 - 1));
+}
+
+/// Zombie Apocalypse — Zombies return tapped, then Humans die.
+#[test]
+fn zombie_apocalypse_raises_zombies_and_kills_humans() {
+    let mut g = main_phase();
+    let z = g.add_card_to_graveyard(0, catalog::loyal_subordinate());
+    let human = g.add_card_to_battlefield(1, catalog::lilianas_devotee());
+    let spell = g.add_card_to_hand(0, catalog::zombie_apocalypse());
+    cast(&mut g, spell, &[]);
+    assert!(g.battlefield_find(z).is_some_and(|c| c.tapped));
+    assert!(g.battlefield_find(human).is_none());
+}
+
+/// Liliana's Devotee — Zombies +1/+0; a death this turn lets you buy a Zombie
+/// at your end step.
+#[test]
+fn lilianas_devotee_buys_a_zombie_after_a_death() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::lilianas_devotee());
+    let sub = g.add_card_to_battlefield(0, catalog::loyal_subordinate());
+    assert_eq!(pt(&g, sub), (4, 1));
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, &[Target::Permanent(bear)]);
+    flood(&mut g, 0);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    pass_to_end_step(&mut g);
+    assert_eq!(count_named(&g, 0, "Zombie"), 1);
+}
+
+/// Havengul Lich — {1}: a creature card in any graveyard is castable this turn.
+#[test]
+fn havengul_lich_opens_a_creature_card_in_any_graveyard() {
+    let mut g = main_phase();
+    let lich = g.add_card_to_battlefield(0, catalog::havengul_lich());
+    let bear = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: lich,
+        ability_index: 0,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("{1}");
+    drain_stack(&mut g);
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: bear,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast it");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).map(|c| c.controller), Some(0));
+}
+
+/// Lotleth Giant — undergrowth damage to a target opponent.
+#[test]
+fn lotleth_giant_burns_for_creature_cards() {
+    let mut g = main_phase();
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::hill_giant());
+    let giant = g.add_card_to_hand(0, catalog::lotleth_giant());
+    let life = g.players[1].life;
+    cast(&mut g, giant, &[]);
+    assert_eq!(g.players[1].life, life - 2);
+}
