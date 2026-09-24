@@ -30270,7 +30270,11 @@ fn requirement_live_leaves(req: &SelectionRequirement) -> u8 {
         | R::HasNoAbilities
         | R::HasName(_)
         | R::IsSourceChosenCreatureType
-        | R::HasChosenLandTypeOfSource => 8,
+        | R::HasChosenLandTypeOfSource
+        // Per-turn combat history (Moraug's "for each time it has attacked
+        // this turn") — not a printed characteristic either.
+        | R::AttackedThisTurn
+        | R::BlockedThisTurn => 8,
         R::And(a, b) | R::Or(a, b) => requirement_live_leaves(a) | requirement_live_leaves(b),
         R::Not(inner) => requirement_live_leaves(inner),
         _ => 0,

@@ -778,3 +778,41 @@ fn cr_107_3_a_look_and_pick_filter_reads_the_resolving_x() {
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == bear), "a 2-drop fits under X = 2");
 }
+
+/// CR 611.3a — a static over "creatures that attacked this turn" follows the
+/// combat history live: the pump lands once the creature has attacked.
+#[test]
+fn cr_611_3a_a_static_over_attacked_this_turn_is_live() {
+    use crabomination::card::{CardDefinition, CardType, StaticAbility, StaticEffect};
+    use crabomination::effect::Selector;
+    use crabomination::game::types::{Attack, AttackTarget, GameAction};
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.add_card_to_battlefield(0, CardDefinition {
+        name: "Attack History Test",
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Creatures you control that attacked this turn get +1/+0.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::AttackedThisTurn),
+                ),
+                power: 1,
+                toughness: 0,
+            },
+        }],
+        ..Default::default()
+    });
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 2);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bear, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 3);
+}
