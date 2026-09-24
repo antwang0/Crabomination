@@ -57,9 +57,6 @@ fn pt(g: &GameState, id: CardId) -> (i32, i32) {
     (c.power, c.toughness)
 }
 
-fn count_named(g: &GameState, seat: usize, name: &str) -> usize {
-    g.battlefield.iter().filter(|c| c.controller == seat && c.definition.name == name).count()
-}
 
 fn declare(g: &mut GameState, attacker: CardId, defender: usize) -> Result<(), String> {
     g.clear_sickness(attacker);
