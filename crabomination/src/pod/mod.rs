@@ -309,6 +309,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::BELLO_COMMANDERS,
             main: decks::BELLO_MAIN,
         },
+        // Twenty-ninth: the nineteenth official list (Grave Danger, SCD) —
+        // Dimir Zombies recast from the graveyard. `--seats 29`.
+        PodDeck {
+            name: "Gisa and Geralf (UB)",
+            commanders: decks::GISA_GERALF_COMMANDERS,
+            main: decks::GISA_GERALF_MAIN,
+        },
     ]
 }
 

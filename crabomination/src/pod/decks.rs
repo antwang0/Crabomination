@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Ten hand-picked commanders plus eighteen official preconstructed lists, each a
+//! Ten hand-picked commanders plus nineteen official preconstructed lists, each a
 //! 99 of cards this engine implements: legal under CR 903 (100 cards
 //! including the commander, singleton outside basics, every card inside the
 //! commander's CR 903.4 color identity) and Commander-legal per Scryfall's
@@ -8,15 +8,16 @@
 //!
 //! The ten were built by hand because the offline Scryfall cache cannot say
 //! how a precon splits into decks; MTGJSON's deck files can, and the eleventh
-//! through twenty-eighth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
+//! through twenty-ninth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
 //! Win, Tails You Lose, Goblin Storm, Foundations Commander's Wretched Ranks,
 //! Tramplesaurus Rex and Keen Engineering, Commander Legends' Reap the Tides,
 //! Phyrexia: All Will Be One's Corrupting Influence, Zendikar Rising's Sneak
 //! Attack, Tarkir: Dragonstorm's Jeskai Striker, Commander Masters' Sliver
 //! Swarm, Outlaws of Thunder Junction's Quick Draw, Commander 2017's
 //! Vampiric Bloodlust, Foundations Commander's Calling All Angels,
-//! Commander 2014's Guided by Nature and Bloomburrow Commander's Animated
-//! Army) are taken from one card for card. What all of them keep
+//! Commander 2014's Guided by Nature, Bloomburrow Commander's Animated Army
+//! and Secret Lair's Grave Danger) are taken from one card for card. What all
+//! of them keep
 //! from the precon idea is what the pod needs — fixed, legal, varied color
 //! identities, and built to play against each other.
 //! One is a Partner pair (CR 702.124b), one is a **planeswalker**
@@ -988,4 +989,32 @@ pub const BELLO_MAIN: &[CardFactory] = &[
     // Basics: 10 forest, 8 mountain
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, mountain,
     mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+];
+
+pub const GISA_GERALF_COMMANDERS: &[CardFactory] = &[gisa_and_geralf];
+
+/// **Grave Danger**, the Secret Lair Commander deck (SCD, 2022-12-02), exactly
+/// as MTGJSON's `GraveDanger_SCD` prints it: 68 nonbasic cards + 31
+/// basics = 99. Dimir Zombies that live in the graveyard: Gisa and Geralf
+/// recast one a turn, and the rest mill to feed them.
+pub const GISA_GERALF_MAIN: &[CardFactory] = &[
+    geralfs_mindcrusher, laboratory_drudge, army_of_the_damned, cemetery_reaper,
+    champion_of_the_perished, crippling_fear, gravespawn_sovereign, josu_vess_lich_knight,
+    liliana_untouched_by_death, lilianas_mastery, lilianas_standard_bearer, midnight_reaper,
+    necromantic_selection, necrotic_hex, open_the_graves, overseer_of_the_damned,
+    scourge_of_nel_toth, unbreathing_horde, zombie_apocalypse, enter_the_god_eternals,
+    havengul_lich, undermine, vela_the_night_clad, grimoire_of_the_dead, choked_estuary,
+    sunken_hollow, temple_of_deceit, deep_analysis, distant_melody, eternal_skylord,
+    lazotep_plating, sinister_sabotage, cruel_revival, curse_of_disturbance, feed_the_swarm,
+    fleshbag_marauder, gray_merchant_of_asphodel, lazotep_reaver, lilianas_devotee,
+    lord_of_the_accursed, lotleth_giant, loyal_subordinate, mire_triton, murder, spark_reaper,
+    syphon_flesh, undead_augur, vampiric_rites, vengeful_dead, victimize,
+    vizier_of_the_scorpion, withered_wretch, diregraf_captain, gleaming_overseer,
+    pilfered_plans, arcane_signet, commanders_sphere, dimir_signet, heraldic_banner, sol_ring,
+    talisman_of_dominance, unstable_obelisk, wayfarers_bauble, command_tower, dismal_backwater,
+    jwar_isle_refuge, salt_marsh, submerged_boneyard,
+    // Basics: 13 island, 18 swamp
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
