@@ -21315,6 +21315,34 @@ impl GameState {
                     );
                 }
             }
+            // Theoretical Duplication — any controller's entering creature,
+            // gated on the watcher's filter.
+            let matching: Vec<crate::game::types::DelayedTrigger> = self
+                .delayed_triggers
+                .iter()
+                .filter(|dt| matches!(dt.kind, DelayedKind::MatchingCreatureEntersThisTurn(_)))
+                .cloned()
+                .collect();
+            for (cid, _) in &entered_creatures {
+                for dt in &matching {
+                    let DelayedKind::MatchingCreatureEntersThisTurn(ref filt) = dt.kind else {
+                        continue;
+                    };
+                    if !self.evaluate_requirement_static(
+                        filt,
+                        &crate::game::types::Target::Permanent(*cid),
+                        dt.controller,
+                        Some(dt.source),
+                    ) {
+                        continue;
+                    }
+                    self.stack.push(
+                        TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
+                            .trigger_source(Some(crate::game::effects::EntityRef::Permanent(*cid)))
+                            .build(),
+                    );
+                }
+            }
         }
         // Turn-scoped "whenever a creature you control dies this turn" delayed
         // triggers (CR 603.4 — Waltz of Rage). Fire once per creature that

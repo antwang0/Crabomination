@@ -408,6 +408,7 @@ impl Effect {
             | Effect::WhenTargetDealsCombatDamageToPlayerThisTurn { body, .. }
             | Effect::CreaturesYouControlDyingThisTurn { body, .. }
             | Effect::WheneverCreatureDiesThisTurn { body, .. }
+            | Effect::WheneverCreatureEntersThisTurn { body, .. }
             | Effect::CreaturesYouControlDealingCombatDamageThisTurn { body, .. }
             | Effect::WheneverYouGainLifeThisTurn { body, .. }
             | Effect::WheneverOpponentMakesYouDiscardThisTurn { body, .. }
@@ -1931,7 +1932,7 @@ impl Effect {
             Effect::CreaturesYouControlEnteringThisTurn { .. } => false,
             Effect::EachPlayerReanimateCreatureMaxMv { .. } => false,
             Effect::CreaturesYouControlDyingThisTurn { .. } => false,
-            Effect::WheneverCreatureDiesThisTurn { .. } => false,
+            Effect::WheneverCreatureDiesThisTurn { .. } | Effect::WheneverCreatureEntersThisTurn { .. } => false,
             Effect::CreaturesYouControlDealingCombatDamageThisTurn { .. } => false,
             Effect::WheneverYouGainLifeThisTurn { .. } => false,
             Effect::WheneverCardEntersOpponentGraveyardThisTurn { .. } => false,

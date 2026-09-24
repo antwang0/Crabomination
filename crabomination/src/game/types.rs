@@ -1304,6 +1304,11 @@ pub enum DelayedKind {
     /// that enters for the rest of the turn; the entering creature is the
     /// trigger source. Expires at cleanup. Powers First Day of Class.
     CreatureYouControlEntersThisTurn,
+    /// "Whenever a creature [matching filter] enters this turn, …" — any
+    /// controller's (CR 603.4); the filter reads the entering creature with
+    /// the trigger's controller as "you". Theoretical Duplication. Expires at
+    /// cleanup.
+    MatchingCreatureEntersThisTurn(crate::card::SelectionRequirement),
     /// "Until end of turn, whenever a creature you control dies, …" (CR 603.4).
     /// Fires once per creature owned+controlled (via death LKI) by
     /// `DelayedTrigger.controller` that dies for the rest of the turn; the dead

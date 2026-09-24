@@ -110,3 +110,36 @@ fn cr_614_an_opponents_tokens_are_created_under_the_thiefs_control() {
     run(&mut g, 0, &soldiers(1));
     assert_eq!(named(&g, 0, "Soldier").len(), 3, "your own tokens stay yours");
 }
+
+/// CR 603.4 — "whenever a nontoken creature an opponent controls enters this
+/// turn": an opponent's cast creature fires it, the entering creature is the
+/// trigger source; the watcher's own creature doesn't.
+#[test]
+fn cr_603_4_a_turn_scoped_trigger_watches_other_players_creatures_enter() {
+    let mut g = pod(3);
+    run(
+        &mut g,
+        0,
+        &Effect::WheneverCreatureEntersThisTurn {
+            filter: R::Creature.and(R::ControlledByOpponent).and(R::NotToken),
+            body: Box::new(Effect::GainLife { who: Selector::You, amount: Value::ONE }),
+        },
+    );
+    let life = g.players[0].life;
+    let bear = g.add_card_to_hand(2, catalog::grizzly_bears());
+    g.active_player_idx = 2;
+    g.priority.player_with_priority = 2;
+    flood(&mut g, 2);
+    g.perform_action(GameAction::CastSpell { card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 1);
+    let mine = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell { card_id: mine, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 1, "not your own creature");
+}

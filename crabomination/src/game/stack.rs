@@ -4805,6 +4805,7 @@ impl GameState {
                     crate::game::types::DelayedKind::WhenCardDies(_)
                         | crate::game::types::DelayedKind::WhenCardLeavesBattlefieldThisTurn(_)
                         | crate::game::types::DelayedKind::CreatureYouControlEntersThisTurn
+                        | crate::game::types::DelayedKind::MatchingCreatureEntersThisTurn(_)
                         | crate::game::types::DelayedKind::CreatureYouControlDiesThisTurn
                         | crate::game::types::DelayedKind::MatchingCreatureDiesThisTurn(_)
                         | crate::game::types::DelayedKind::CreatureYouControlDealsCombatDamageThisTurn

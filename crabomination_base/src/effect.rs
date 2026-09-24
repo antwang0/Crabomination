@@ -8979,6 +8979,15 @@ pub enum Effect {
         body: Box<Effect>,
     },
 
+    /// "Whenever a creature [matching `filter`] enters this turn, [body]" —
+    /// any controller's creature (CR 603.4; Theoretical Duplication's
+    /// "nontoken creature an opponent controls"). The entering creature is
+    /// `Selector::TriggerSource`. Expires at cleanup.
+    WheneverCreatureEntersThisTurn {
+        filter: SelectionRequirement,
+        body: Box<Effect>,
+    },
+
     /// "Until end of turn, whenever a creature you control deals combat damage
     /// to a player, [body]." Registers a turn-scoped delayed trigger (CR 603.4)
     /// that fires per qualifying combat-damage event; the dealing creature is
