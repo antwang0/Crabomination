@@ -1663,6 +1663,7 @@ impl Effect {
                     | ManaPayload::ImprintedCardColor
                     | ManaPayload::AnyColorOpponentCouldProduce
                     | ManaPayload::AnyColorYouCouldProduce
+                    | ManaPayload::AnyColorAGateYouControlCouldProduce
                     | ManaPayload::AnyColorAmongLegendaries
                     | ManaPayload::AnyColorInCommanderIdentity
                     | ManaPayload::DraftNotedColorOfSource => false,

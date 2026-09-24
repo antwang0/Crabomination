@@ -2,10 +2,6 @@
 //! Go-Shintai of Life's Origin) needed beyond what the catalog had (Tragic
 //! Arrogance is Silverquill Statement's, `cmdr_breena.rs`). Tests in
 //! `tests/recent_b/cmdr_fdc.rs` (the precon-batch module).
-//!
-//! Residuals (each also on its card):
-//! - **Gond Gate** — "any color a Gate you control could produce" is any
-//!   color.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
@@ -119,8 +115,6 @@ pub fn baldurs_gate() -> CardDefinition {
 
 /// Gond Gate — your Gates enter untapped; {T}: {C}; {T}: a color a Gate of
 /// yours could produce.
-///
-/// Approximation: the second ability makes any color.
 pub fn gond_gate() -> CardDefinition {
     CardDefinition {
         name: "Gond Gate",
@@ -136,7 +130,7 @@ pub fn gond_gate() -> CardDefinition {
                 tap_cost: true,
                 effect: Effect::AddMana {
                     who: PlayerRef::You,
-                    pool: ManaPayload::AnyOneColor(Value::ONE),
+                    pool: ManaPayload::AnyColorAGateYouControlCouldProduce,
                 },
                 ..Default::default()
             },

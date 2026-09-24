@@ -139,6 +139,7 @@ mod legendary_spell;
 mod entry_tally;
 mod mystic_barrier;
 mod loyalty_copy;
+mod gate_mana;
 mod spree_targets;
 // CR 102.2 — "an opponent controls N or more …", read per opponent.
 mod milled_play;

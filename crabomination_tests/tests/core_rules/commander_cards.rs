@@ -1615,3 +1615,32 @@ fn a_permanent_shuffled_in_is_replaced_by_a_free_cast_off_the_top() {
     // The Ring is its library's only card, so it comes straight back.
     assert!(g.battlefield_find(ring).is_some_and(|c| c.controller == 1), "shuffled in and recast");
 }
+
+/// CR 106.7 — Gond Gate's "any color that a Gate you control could produce":
+/// the Gates' own colors, nothing else — its ability makes {W} or {U} beside
+/// an Azorius Guildgate, never {G} from a Forest.
+#[test]
+fn cr_106_7_colors_a_gate_could_produce() {
+    use crabomination::mana::Color;
+    let mut g = commander_game();
+    g.add_card_to_battlefield(0, catalog::azorius_guildgate());
+    let gond = g.add_card_to_battlefield(0, catalog::gond_gate());
+    g.add_card_to_battlefield(0, catalog::forest());
+    assert_eq!(g.colors_gates_could_produce(0), vec![Color::White, Color::Blue]);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: gond,
+        ability_index: 1,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("tap");
+    drain_stack(&mut g);
+    let pool = &g.players[0].mana_pool;
+    assert_eq!(pool.amount(Color::White) + pool.amount(Color::Blue), 1);
+    assert_eq!(pool.amount(Color::Green), 0);
+}

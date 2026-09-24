@@ -2696,6 +2696,10 @@ pub enum ManaPayload {
     /// controller's own permanents. Falls back to colorless if none.
     /// Star Compass.
     AnyColorYouCouldProduce,
+    /// Gond Gate — "one mana of any color that a Gate you control could
+    /// produce": the colors the Gates' own mana abilities (and chosen colors)
+    /// make.
+    AnyColorAGateYouControlCouldProduce,
     /// Add one mana of any type the *trigger's subject* land produced
     /// (Extraplanar Lens). Falls back to colorless if it produces nothing.
     AnyTypeTriggerSourceProduces,

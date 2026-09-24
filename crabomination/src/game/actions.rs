@@ -2648,6 +2648,7 @@ fn payload_yields_multiple(pool: &crate::effect::ManaPayload) -> bool {
         | ManaPayload::ImprintedCardColor
         | ManaPayload::AnyColorOpponentCouldProduce
         | ManaPayload::AnyColorYouCouldProduce
+        | ManaPayload::AnyColorAGateYouControlCouldProduce
         | ManaPayload::AnyTypeTriggerSourceProduces
         | ManaPayload::AnyTypeSacrificedLandProduces
         | ManaPayload::AnyColorAmongLegendaries
@@ -4073,7 +4074,8 @@ pub(crate) fn payload_produced_colors(pool: &ManaPayload) -> crate::mana::ColorS
         | ManaPayload::AnyColorInCommanderIdentity
         | ManaPayload::AnyColors(_)
         | ManaPayload::AnyColorOpponentCouldProduce
-        | ManaPayload::AnyColorYouCouldProduce => ColorSet::all(),
+        | ManaPayload::AnyColorYouCouldProduce
+        | ManaPayload::AnyColorAGateYouControlCouldProduce => ColorSet::all(),
         // Color set depends on live board state — not auto-tapped.
         ManaPayload::AnyColorAmongLegendaries
         | ManaPayload::AnyColorAmongExiledWithSource
