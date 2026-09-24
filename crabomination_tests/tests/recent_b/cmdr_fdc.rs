@@ -4219,3 +4219,31 @@ fn enduring_enchantments_batch() {
     cast(&mut g, bolt, &[Target::Permanent(bear)]);
     assert_eq!(g.battlefield_find(mystic).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
 }
+
+/// CR 118.9 — a bot with no mana still casts an enchantment through Demon of
+/// Fate's Design's life payment (board-granted alternative costs used to be
+/// invisible to the bot's candidates).
+#[test]
+fn cr_118_9_bot_pays_life_through_demon_of_fates_design() {
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    let mut g = main_phase();
+    g.players[0].wants_ui = true;
+    g.add_card_to_battlefield(0, catalog::demon_of_fates_design());
+    let boon = g.add_card_to_hand(0, catalog::boon_of_the_spirit_realm());
+    let mut bot = HeuristicBot::new();
+    for _ in 0..8 {
+        match bot.next_action(&g, 0) {
+            Some(a @ GameAction::CastSpellAlternative { .. }) => {
+                g.perform_action(a).expect("the alt cast is legal");
+                drain_stack(&mut g);
+                break;
+            }
+            Some(a) => {
+                let _ = g.perform_action(a);
+            }
+            None => break,
+        }
+    }
+    assert!(g.battlefield_find(boon).is_some(), "cast for 5 life");
+    assert_eq!(g.players[0].life, 15);
+}

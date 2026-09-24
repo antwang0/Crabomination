@@ -6460,6 +6460,9 @@ struct BoardFacts {
     grants_replicate: bool,
     /// A graveyard-cast permission is on the board (Muldrotha, Gisa).
     grants_gy_cast: bool,
+    /// An alternative-cost grant for hand spells is on the board (Fist of
+    /// Suns, Kentaro, Demon of Fate's Design).
+    grants_alt_cost: bool,
 }
 
 impl BoardFacts {
@@ -6471,6 +6474,7 @@ impl BoardFacts {
             grants_escape: false,
             grants_replicate: false,
             grants_gy_cast: false,
+            grants_alt_cost: false,
         };
         for c in state.battlefield.iter() {
             if c.controller != seat {
@@ -6492,6 +6496,9 @@ impl BoardFacts {
                     | SE::GraveyardCastOncePerTurn { .. }
                     | SE::GraveyardCastBySacrificingOncePerTurn { .. }
                     | SE::MayPlayCardsMilledThisTurn => f.grants_gy_cast = true,
+                    SE::FiveColorAlternativeCost
+                    | SE::GenericAlternativeCostForFilter { .. }
+                    | SE::LifeAlternativeCostOncePerYourTurn { .. } => f.grants_alt_cost = true,
                     _ => {}
                 }
             }
@@ -6574,6 +6581,9 @@ fn hand_specialties(state: &GameState, seat: usize, facts: &BoardFacts) -> u32 {
     }
     if facts.grants_replicate {
         m |= spec::REPLICATE;
+    }
+    if facts.grants_alt_cost {
+        m |= spec::ALT_COST;
     }
     m
 }
@@ -8204,12 +8214,21 @@ pub(super) fn cast_candidates<'a>(
     // `CastSpellAlternative` candidate. `would_accept` validates the alt cost
     // and its `condition` gate (e.g. Spectacle's opponent-lost-life), so a
     // Skewer the Critics is only offered for {R} once an opponent has bled.
+    // A board grant (Fist of Suns, Kentaro, Demon of Fate's Design) is
+    // offered too when it is mana-only or costs at most a third of the
+    // seat's life.
     gated_block!(mask, spec::ALT_COST, castable, {
-    for c in state.players[seat]
-        .hand
-        .iter()
-        .filter(|c| c.definition.alternative_cost.as_ref().is_some_and(mana_only_alt_cost))
-    {
+    let life = state.players[seat].life.max(0) as u32;
+    for c in state.players[seat].hand.iter().filter(|c| match &c.definition.alternative_cost {
+        Some(a) => mana_only_alt_cost(a),
+        None => {
+            facts.grants_alt_cost
+                && state.effective_alternative_cost(seat, c.id).is_some_and(|a| {
+                    (mana_only_alt_cost(&a) || a.life_cost * 3 <= life)
+                        && a.discard_filters.is_empty()
+                })
+        }
+    }) {
         let effect = c
             .definition
             .alternative_cost
