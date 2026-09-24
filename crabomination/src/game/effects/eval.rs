@@ -4733,6 +4733,11 @@ impl GameState {
                             && (card.definition.power == *n || card.definition.toughness == *n)
                     }
                     R::BasePowerIs(n) => card.definition.is_creature() && card.definition.power == *n,
+                    R::BasePowerToughnessIs(p, t) => {
+                        card.definition.is_creature()
+                            && card.definition.power == *p
+                            && card.definition.toughness == *t
+                    }
                     R::ExiledInsteadOfDyingThisTurn => self.turn.dies_to_exile_eot.contains(&card.id)
                         && self.exile.iter().any(|c| c.id == card.id),
                     R::HasSupertype(st) => has_stype(st),
@@ -6027,6 +6032,11 @@ impl GameState {
                 card.definition.is_creature() && (card.definition.power == *n || card.definition.toughness == *n)
             }
             R::BasePowerIs(n) => card.definition.is_creature() && card.definition.power == *n,
+            R::BasePowerToughnessIs(p, t) => {
+                card.definition.is_creature()
+                    && card.definition.power == *p
+                    && card.definition.toughness == *t
+            }
             R::ExiledInsteadOfDyingThisTurn => self.turn.dies_to_exile_eot.contains(&card.id)
                 && self.exile.iter().any(|c| c.id == card.id),
             // "With different names" — excludes anything sharing a name with

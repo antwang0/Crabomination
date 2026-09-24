@@ -4889,6 +4889,12 @@ pub enum Effect {
     /// All silence: `all_silence` damage to each. All snitch: `all_snitch` to
     /// each. Otherwise `mixed` to each opponent who chose silence.
     OpponentsChooseSilenceOrSnitch { all_silence: u32, all_snitch: u32, mixed: u32 },
+    /// "Each opponent chooses [option labels]. For each player who chose X,
+    /// …" (Master of Ceremonies, Seize the Spotlight): every living opponent
+    /// picks in turn order, then each pick's body runs in that order with
+    /// `PlayerRef::CurrentVoter` bound to the opponent who chose it. Not a
+    /// vote (CR 701.38) — no ballot modifiers, no `Voted` events.
+    EachOpponentChooses { prompt: String, options: Vec<VoteOption> },
     /// Kwain, Itinerant Meddler — "Each player may draw a card, then each
     /// player who drew a card this way gains `life` life." Asked APNAP; the
     /// takers draw, then gain.

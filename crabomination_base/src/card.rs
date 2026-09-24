@@ -2618,6 +2618,9 @@ pub enum SelectionRequirement {
     /// base power 1" (Zinnia, Rapid Augmenter). Same definition read as
     /// `BasePowerOrToughnessIs`.
     BasePowerIs(i32),
+    /// A creature whose printed (base) power and toughness are exactly
+    /// these — Bess, Soul Nourisher's "base power and toughness 1/1".
+    BasePowerToughnessIs(i32, i32),
     /// The object is in exile because an until-end-of-turn "if it would die,
     /// exile it instead" replacement moved it there this turn
     /// (`dies_to_exile_eot` — Cosmic Intervention's end-step return).

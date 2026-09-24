@@ -194,6 +194,49 @@ impl GameState {
         self.run_effect(&body, ctx, events)
     }
 
+    /// `Effect::EachOpponentChooses` — each living opponent, in turn order,
+    /// picks one of `options`; then each pick's body runs in that order with
+    /// `PlayerRef::CurrentVoter` bound to its chooser (the same binding a
+    /// per-vote ballot uses, so a body that asks resumes correctly).
+    pub(super) fn each_opponent_chooses(
+        &mut self,
+        prompt: &str,
+        options: &[crate::effect::VoteOption],
+        effect: &Effect,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
+        let me = ctx.controller;
+        let source = ctx.source.unwrap_or(CardId(0));
+        let opps: Vec<usize> = self
+            .seats_in_turn_order_from(me)
+            .into_iter()
+            .filter(|&q| q != me && !self.same_team(me, q) && self.players[q].is_alive())
+            .collect();
+        let labels: Vec<String> = options.iter().map(|o| o.label.clone()).collect();
+        let mut cursor = 0usize;
+        let mut picks: Vec<(usize, usize)> = Vec::with_capacity(opps.len());
+        for &q in &opps {
+            let Some(pick) =
+                self.ask_seat_option(&mut cursor, q, prompt.to_string(), source, labels.clone(), effect)
+            else {
+                return Ok(());
+            };
+            picks.push((q, pick.min(options.len().saturating_sub(1))));
+        }
+        self.clear_answer_log();
+        let body = Effect::Seq(
+            picks
+                .into_iter()
+                .map(|(q, i)| Effect::BindScratch {
+                    scratch: crate::effect::ScratchBinding::CurrentVoter(q),
+                    body: Box::new(options[i].effect.clone()),
+                })
+                .collect(),
+        );
+        self.run_effect(&body, ctx, events)
+    }
+
     /// `Effect::OpponentsChooseSilenceOrSnitch` — Prisoner's Dilemma. Each
     /// living opponent, in turn order, secretly picks; the damage is dealt
     /// once every choice is in. A headless opponent snitches: it never takes
