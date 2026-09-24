@@ -2901,6 +2901,7 @@ impl Effect {
                 | Effect::DiscardHalf { .. }
                 | Effect::DealDamage { .. }
                 | Effect::DealDamageDivided { .. }
+                | Effect::DealDamageEqualToPower { .. }
                 | Effect::LoseLife { .. }
                 | Effect::Drain { .. }
                 | Effect::Mill { .. }
@@ -3831,6 +3832,15 @@ impl Effect {
                 matches!(to, Selector::TargetFiltered { filter, .. } if filter.can_match_player())
             }
             Effect::DeliverUntoEvil { filter, .. } => filter.can_match_player(),
+            // "Deals damage equal to its power to any target" (Stalking
+            // Vengeance, Pyrogoyf): with no arm here the picker skipped
+            // players and aimed at a creature — often the dealer itself.
+            Effect::DealDamageEqualToPower { target, .. }
+            | Effect::EachDealsDamageEqualToPower { target, .. } => match target {
+                Selector::TargetFiltered { filter, .. } => filter.can_match_player(),
+                Selector::Target(_) => true,
+                _ => false,
+            },
             // Support / distribute put counters on creatures only — never players.
             Effect::SupportCounters { .. } => false,
             Effect::DistributeCounters { .. } => false,
