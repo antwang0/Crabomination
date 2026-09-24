@@ -3927,9 +3927,7 @@ impl Effect {
             | Effect::Attach { .. }
             | Effect::ExchangeControl { .. }
             | Effect::ExchangeControlChoosing { .. }
-            | Effect::DealDamageEqualToPower { .. }
             | Effect::DealDamageEqualToPowerToEach { .. }
-            | Effect::EachDealsDamageEqualToPower { .. }
             | Effect::Fight { .. } => false,
             // Compound effects: defer to whichever child first surfaces a
             // primary-target filter — the auto-target heuristic's slot 0
