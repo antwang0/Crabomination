@@ -11240,6 +11240,9 @@ impl GameState {
                 self.opponent_chooses_permanent_then(filter, body, effect, ctx, events)
             }
             Effect::ReturnTargetCardsAtRandom { count } => self.return_target_cards_at_random(count, ctx, events),
+            Effect::PutAnyNumberFromGraveyardOnTop { filter } => {
+                self.put_any_number_from_graveyard_on_top(filter, effect, ctx, events)
+            }
             Effect::ChooseGraveyardCreaturesEachMayReturn => {
                 self.choose_graveyard_creatures_each_may_return(ctx, events)
             }

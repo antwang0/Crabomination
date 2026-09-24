@@ -6269,6 +6269,11 @@ pub enum Effect {
     /// follow-up step in the same resolution to scale off (Barrel Down
     /// Sokenzan, Sink into Takenuma).
     ReturnAnyNumberToHand { filter: SelectionRequirement },
+    /// "Put any number of target [filter] cards from your graveyard on top of
+    /// your library" (Footbottom Feast). The controller picks the subset
+    /// (min 0); the picks go on top in mana-value order, the greatest last,
+    /// so it is the one drawn first.
+    PutAnyNumberFromGraveyardOnTop { filter: SelectionRequirement },
     /// "Tap any number of untapped permanents matching `filter` you control;
     /// this source gets +`power`/+`toughness` until end of turn for each one
     /// tapped this way" (Orphans of the Wheat). The controller chooses which

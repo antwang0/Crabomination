@@ -893,6 +893,7 @@ impl Effect {
             | Effect::PlayerTapsUntapped { .. }
             | Effect::TapAnyNumberThenPumpPerTapped { .. }
             | Effect::ReturnAnyNumberToHand { .. }
+            | Effect::PutAnyNumberFromGraveyardOnTop { .. }
             | Effect::ExileTopUntilNonland { .. }
             | Effect::TapAnyNumberThenCounters { .. }
             | Effect::GrantExtraPlusOneCountersThisTurn { .. }
