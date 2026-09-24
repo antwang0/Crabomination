@@ -216,6 +216,7 @@ fn player_ref_selector(p: &PlayerRef) -> Option<&Selector> {
         | PlayerRef::MostCreatures
         | PlayerRef::ChosenPlayerOfSource
         | PlayerRef::RandomOpponent
+        | PlayerRef::RandomOtherOpponentThanEnchanted
         | PlayerRef::RandomPlayer
         | PlayerRef::HostileOpponent
         | PlayerRef::OpponentsWhoVotedDifferently => None,
@@ -437,6 +438,11 @@ impl Effect {
             | Effect::EachPlayerFlipsCoin { on_heads, on_tails, .. } => {
                 f(on_heads);
                 f(on_tails);
+            }
+            Effect::RollTwoDiceAssign { first, second, .. }
+            | Effect::AssignTwoDieResults { first, second, .. } => {
+                f(first);
+                f(second);
             }
             Effect::FlipCoinsUntilLoseOrStop { tiers, .. } => {
                 for (_, e) in tiers {
@@ -1384,6 +1390,11 @@ impl Effect {
             Effect::RollDie { count, results, .. } => {
                 value_has_target(count) || results.iter().any(|(_, _, e)| e.requires_target())
             }
+            Effect::RollTwoDiceAssign { first, second, .. }
+            | Effect::AssignTwoDieResults { first, second, .. } => {
+                first.requires_target() || second.requires_target()
+            }
+            Effect::EachPlayerRollsSourceCantAttackHighest { .. } => false,
             Effect::ChooseMode(modes) | Effect::AsEntersChooseMode(modes) => {
                 modes.iter().any(|e| e.requires_target())
             }
@@ -1636,6 +1647,7 @@ impl Effect {
             | Effect::GainAllActivatedAbilitiesOf { what, .. } => sel_has_target(what),
             Effect::AddManaKeptThisTurn { who, .. }
             | Effect::AddManaKeptThisTurnCount { who, .. }
+            | Effect::AddManaKeptThisTurnAnyColors { who, .. }
             | Effect::CommanderToHand { who }
             | Effect::PutCommanderOntoBattlefield { who, .. } => player_has_target(who),
             Effect::AddManaEqualToPermanentCost { .. } => false,
@@ -1809,6 +1821,7 @@ impl Effect {
             | Effect::ChangeTargetOfAbility { what } => sel_has_target(what),
             Effect::WishToLibrary { .. }
             | Effect::ChooseCombatThisTurn
+            | Effect::ChooseBlocksThisTurn
             | Effect::SearchAndCastFree { .. }
             | Effect::FlickerHostWithAuras
             | Effect::ReturnLinkedExilesToBattlefieldAttached { .. }
@@ -4792,6 +4805,7 @@ impl Effect {
                 | Effect::ChangeTargetOfAbility { what } => sel_find(what, slot),
                 Effect::WishToLibrary { .. }
                 | Effect::ChooseCombatThisTurn
+                | Effect::ChooseBlocksThisTurn
                 | Effect::SearchAndCastFree { .. }
                 | Effect::FlickerHostWithAuras
                 | Effect::SacrificeEnchantedForExtraCombat

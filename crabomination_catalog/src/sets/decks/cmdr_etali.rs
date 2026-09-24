@@ -191,6 +191,7 @@ fn a_delina_roll(depth: u8) -> Effect {
         modifier: Value::Const(0),
         reroll_at_most: 0,
         results: vec![(1, 14, copy()), (15, 20, high)],
+        ignore_lowest: 0,
         on_doubles: None,
     }
 }
@@ -1121,6 +1122,7 @@ pub fn tibalts_trickery() -> CardDefinition {
                         modifier: Value::Const(0),
                         reroll_at_most: 0,
                         results: vec![(1, 1, mill(1)), (2, 2, mill(2)), (3, 3, mill(3))],
+                        ignore_lowest: 0,
                         on_doubles: None,
                     },
                     Effect::Cascade { max_mv: Value::Const(1000) },

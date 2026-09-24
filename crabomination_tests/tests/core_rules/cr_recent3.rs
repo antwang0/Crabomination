@@ -46,6 +46,7 @@ fn cr_706_die_doubles_and_reroll() {
         modifier: Value::ZERO,
         reroll_at_most: 0,
         results: vec![],
+        ignore_lowest: 0,
         on_doubles: Some(Box::new(Effect::GainLife {
             who: Selector::Player(PlayerRef::You),
             amount: Value::Const(5),
@@ -72,6 +73,7 @@ fn cr_706_die_doubles_and_reroll() {
             who: Selector::Player(PlayerRef::You),
             amount: Value::Const(3),
         })],
+        ignore_lowest: 0,
         on_doubles: None,
     };
     let ctx2 = EffectContext::for_spell(0, None, 0, 0);
@@ -129,6 +131,7 @@ fn cr_706_6_pixie_guide_ignores_the_lowest_roll() {
             (1, 1, Effect::LoseLife { who: Selector::Player(PlayerRef::You), amount: Value::Const(5) }),
             (6, 6, Effect::GainLife { who: Selector::Player(PlayerRef::You), amount: Value::Const(3) }),
         ],
+        ignore_lowest: 0,
         on_doubles: None,
     };
     let ctx = EffectContext::for_spell(0, None, 0, 0);
@@ -153,6 +156,7 @@ fn cr_706_6_without_the_static_the_low_roll_resolves() {
             1,
             Effect::LoseLife { who: Selector::Player(PlayerRef::You), amount: Value::Const(5) },
         )],
+        ignore_lowest: 0,
         on_doubles: None,
     };
     let ctx = EffectContext::for_spell(0, None, 0, 0);
@@ -227,6 +231,7 @@ fn cr_101_4_every_die_arm_runs_under_its_own_face_when_one_asks() {
                     amount: Value::LastDieRoll,
                 },
             ]))],
+            ignore_lowest: 0,
             on_doubles: None,
         })
         .build(),

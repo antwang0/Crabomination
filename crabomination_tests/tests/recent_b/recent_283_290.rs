@@ -681,6 +681,7 @@ mod recent286 {
                     who: Selector::Player(PlayerRef::You),
                     amount: Value::Const(4),
                 })],
+                ignore_lowest: 0,
                 on_doubles: None,
             },
             &EffectContext::for_spell(0, None, 0, 0),

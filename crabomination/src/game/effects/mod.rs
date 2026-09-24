@@ -17,6 +17,7 @@ mod eval;
 mod free_cast;
 mod graveyard_swap;
 mod graveyard_spread;
+mod dice_choices;
 mod fight_each;
 pub(crate) use eval::PrintedGates;
 pub(crate) mod events;
@@ -6124,7 +6125,15 @@ impl GameState {
             // range covers `rolled`. AutoDecider returns the midpoint;
             // ScriptedDecider can script any face. Mirrors FlipCoin's
             // resolver shape.
-            Effect::RollDie { sides, count, modifier, reroll_at_most, results, on_doubles } => {
+            Effect::RollDie {
+                sides,
+                count,
+                modifier,
+                reroll_at_most,
+                ignore_lowest,
+                results,
+                on_doubles,
+            } => {
                 let n = self.evaluate_value(count, ctx).max(0);
                 let sides = (*sides).max(2);
                 // CR 706.2 — the flat result modifier applied to every die
@@ -6145,7 +6154,8 @@ impl GameState {
                 // CR 706.6 — Pixie Guide et al. roll extra dice and ignore
                 // that many lowest results. Ignored rolls never happened, so
                 // they're dropped before any arm, doubles check or trigger.
-                let ignored = if n > 0 { self.extra_dice_for(ctx.controller) } else { 0 };
+                let ignored =
+                    if n > 0 { self.extra_dice_for(ctx.controller) + *ignore_lowest as u32 } else { 0 };
                 // CR 706.5 — track natural faces to detect "doubles".
                 let mut naturals: Vec<u8> = Vec::with_capacity(n as usize);
                 for _ in 0..n as u32 + ignored {
@@ -11589,6 +11599,18 @@ impl GameState {
             Effect::ReturnTargetCardsAtRandom { count } => self.return_target_cards_at_random(count, ctx, events),
             Effect::PutAnyNumberFromGraveyardOnTop { filter } => {
                 self.put_any_number_from_graveyard_on_top(filter, effect, ctx, events)
+            }
+            Effect::RollTwoDiceAssign { sides, first, second } => {
+                self.roll_two_dice_assign(*sides, first, second, ctx, events)
+            }
+            Effect::AssignTwoDieResults { a, b, first, second } => {
+                self.assign_two_die_results((*a, *b), first, second, effect, ctx, events)
+            }
+            Effect::EachPlayerRollsSourceCantAttackHighest { sides } => {
+                self.each_player_rolls_source_cant_attack_highest(*sides, ctx, events)
+            }
+            Effect::AddManaKeptThisTurnAnyColors { who, amount } => {
+                self.add_mana_kept_this_turn_any_colors(who, amount, ctx, events)
             }
             Effect::ExileTypeSpreadReturnPermanent { min_types } => {
                 self.exile_type_spread_return_permanent(*min_types, ctx, events)
@@ -28250,6 +28272,11 @@ impl GameState {
                 // CR 303.4a — the anchor may be a player ("enchant player":
                 // the Curse cycle, Psychic Possession) or a permanent.
                 let resolved = self.resolve_selector(to, ctx);
+                // CR 701.3b — attaching to nothing (Maddening Hex with no
+                // other opponent) leaves the attachment where it is.
+                if resolved.is_empty() {
+                    return Ok(());
+                }
                 let anchor = resolved.iter().find_map(|e| e.as_permanent_id());
                 let anchor_seat = resolved.iter().find_map(|e| match e {
                     EntityRef::Player(p) => Some(*p),
@@ -37190,6 +37217,10 @@ impl GameState {
                 self.combat_chooser = Some(ctx.controller);
                 Ok(())
             }
+            Effect::ChooseBlocksThisTurn => {
+                self.turn.block_chooser_this_turn = Some(ctx.controller);
+                Ok(())
+            }
 
             Effect::AdditionalCombatPhaseAfterMain { count } => {
                 let n = self.evaluate_value(count, ctx).max(0) as u32;
@@ -38906,6 +38937,19 @@ impl GameState {
                 let me = ctx.controller;
                 let opps: smallvec::SmallVec<[usize; 8]> =
                     self.living_seats().filter(|&q| !self.same_team(me, q)).collect();
+                (!opps.is_empty()).then(|| opps[self.rng.draw().random_range(0..opps.len())])
+            }
+            PlayerRef::RandomOtherOpponentThanEnchanted => {
+                use rand::RngExt;
+                let me = ctx.controller;
+                let current = ctx
+                    .source
+                    .and_then(|src| self.battlefield_find(src))
+                    .and_then(|c| c.attached_to_player);
+                let opps: smallvec::SmallVec<[usize; 8]> = self
+                    .living_seats()
+                    .filter(|&q| !self.same_team(me, q) && Some(q) != current)
+                    .collect();
                 (!opps.is_empty()).then(|| opps[self.rng.draw().random_range(0..opps.len())])
             }
             PlayerRef::ChosenPlayerOfSource => self.scratch.chosen_opponent_scratch.or_else(|| {

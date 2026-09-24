@@ -399,6 +399,7 @@ pub fn journey_to_the_lost_city() -> CardDefinition {
                         ]),
                     ),
                 ],
+                ignore_lowest: 0,
                 on_doubles: None,
             },
         ]))],

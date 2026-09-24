@@ -33,6 +33,7 @@ fn test_card_die_roll_d6_midpoint() -> crabomination::card::CardDefinition {
             count: Value::Const(1),
             modifier: Value::Const(0),
             reroll_at_most: 0,
+            ignore_lowest: 0,
             on_doubles: None,
             results: vec![
                 (1, 2, Effect::GainLife { who: Selector::You, amount: Value::Const(1) }),
@@ -61,6 +62,7 @@ fn test_card_die_roll_d6_big_gain() -> crabomination::card::CardDefinition {
             count: Value::Const(1),
             modifier: Value::Const(0),
             reroll_at_most: 0,
+            ignore_lowest: 0,
             on_doubles: None,
             results: vec![
                 (1, 2, Effect::GainLife { who: Selector::You, amount: Value::Const(5) }),
@@ -89,6 +91,7 @@ fn test_card_die_roll_d6_partial_table() -> crabomination::card::CardDefinition 
             count: Value::Const(1),
             modifier: Value::Const(0),
             reroll_at_most: 0,
+            ignore_lowest: 0,
             on_doubles: None,
             results: vec![
                 (1, 3, Effect::GainLife { who: Selector::You, amount: Value::Const(5) }),
@@ -115,6 +118,7 @@ fn test_card_die_roll_d6_plus(modifier: i32) -> crabomination::card::CardDefinit
             count: Value::Const(1),
             modifier: Value::Const(modifier),
             reroll_at_most: 0,
+            ignore_lowest: 0,
             on_doubles: None,
             results: vec![
                 (1, 6, Effect::LoseLife { who: Selector::You, amount: Value::Const(1) }),
@@ -140,6 +144,7 @@ fn test_card_die_roll_d6_reroll(reroll_at_most: u8) -> crabomination::card::Card
             count: Value::Const(1),
             modifier: Value::Const(0),
             reroll_at_most,
+            ignore_lowest: 0,
             on_doubles: None,
             results: vec![
                 (1, 3, Effect::GainLife { who: Selector::You, amount: Value::Const(1) }),
@@ -165,6 +170,7 @@ fn test_card_die_roll_doubles() -> crabomination::card::CardDefinition {
             count: Value::Const(2),
             modifier: Value::Const(0),
             reroll_at_most: 0,
+            ignore_lowest: 0,
             on_doubles: Some(Box::new(Effect::Draw {
                 who: Selector::You,
                 amount: Value::Const(1),

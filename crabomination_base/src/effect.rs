@@ -136,6 +136,11 @@ pub enum PlayerRef {
     /// drawn from the game's RNG. A fresh draw each time it is resolved, so
     /// it belongs in a one-shot slot such as `Effect::RememberPlayerOnSource`.
     RandomOpponent,
+    /// "Attach this Aura to **another** one of your opponents chosen at
+    /// random" (Maddening Hex): `RandomOpponent` drawn from the opponents other
+    /// than the player the source is currently attached to. With no other
+    /// opponent left it resolves to nobody, so the Aura stays put.
+    RandomOtherOpponentThanEnchanted,
     /// "Choose a player at random" (Wildfire Devils) — any living seat, the
     /// controller included, drawn from the game's RNG on each resolution.
     RandomPlayer,
@@ -3852,6 +3857,13 @@ pub enum Effect {
         /// to 0 (never reroll) for snapshot back-compat.
         #[serde(default)]
         reroll_at_most: u8,
+        /// CR 706.6 — "roll two d20 and ignore the lower roll" (Berserker's
+        /// Frenzy): roll this many extra dice and drop that many lowest
+        /// natural results before any arm, doubles check or trigger sees them.
+        /// Stacks with Pixie Guide-style `RollExtraDiceIgnoreLowest` statics.
+        /// Defaults to 0 for snapshot back-compat.
+        #[serde(default)]
+        ignore_lowest: u8,
         /// CR 706.3a — the results table. Each arm is `(low, high,
         /// effect)`; the first arm with `low <= rolled <= high` fires
         /// for that die. Use `(low, sides, effect)` for an "N+" arm,
@@ -3864,6 +3876,23 @@ pub enum Effect {
         #[serde(default)]
         on_doubles: Option<Box<Effect>>,
     },
+    /// CR 706 — "Roll two d`sides` and choose one result. [first] … equal to
+    /// that result. Then [second] … equal to the other result" (Wild
+    /// Endeavor). Both dice are rolled (one `DiceRolled` event), then the
+    /// resolution continues as [`Effect::AssignTwoDieResults`], so a
+    /// suspended choice replays with the same faces.
+    RollTwoDiceAssign { sides: u8, first: Box<Effect>, second: Box<Effect> },
+    /// The choice half of [`Effect::RollTwoDiceAssign`], its faces fixed: the
+    /// controller picks which of `a` / `b` `first` reads through
+    /// `Value::LastDieRoll`; `second` reads the other. Equal faces ask nothing.
+    AssignTwoDieResults { a: u8, b: u8, first: Box<Effect>, second: Box<Effect> },
+    /// CR 706 — Chaos Dragon: "each player rolls a d`sides`. If one or more
+    /// opponents had the highest result, this creature can't attack those
+    /// players or planeswalkers they control this combat." Every living seat
+    /// rolls in turn order from the controller (each roll is its own
+    /// `DiceRolled` event); each opponent tied for the top result is granted
+    /// to the source as `Keyword::CantAttackPlayer` until end of combat.
+    EachPlayerRollsSourceCantAttackHighest { sides: u8 },
     /// Modal — controller picks one of `modes` at cast time; the chosen index
     /// is stored in the stack item's `mode` field.
     ChooseMode(Vec<Effect>),
@@ -6054,6 +6083,11 @@ pub enum Effect {
     /// (Neheb, Dreadhorde Champion — "add that much {R}", where the amount is
     /// the number of cards discarded this resolution).
     AddManaKeptThisTurnCount { who: PlayerRef, color: Color, amount: Value },
+    /// Klauth, Unrivaled Ancient — `AddManaKeptThisTurnCount` in any
+    /// combination of colors: `amount` pips, each color chosen per pip, kept
+    /// through step and phase ends until cleanup. "Spend this mana only to cast
+    /// spells" is not enforced (the kept pool carries no spend restriction).
+    AddManaKeptThisTurnAnyColors { who: PlayerRef, amount: Value },
 
     // ── Permanent mutations ──────────────────────────────────────────────────
     Destroy { what: Selector },
@@ -10127,6 +10161,10 @@ pub enum Effect {
     /// the resolving controller; both declaration steps then hand priority to
     /// that seat instead of the active/defending player. Clears at cleanup.
     ChooseCombatThisTurn,
+    /// "You choose which creatures block this turn and how those creatures
+    /// block" (Berserker's Frenzy) — `ChooseCombatThisTurn`'s block half: the
+    /// resolving controller submits every block declaration this turn.
+    ChooseBlocksThisTurn,
     /// CR 505.1b — "After this main phase, there is an additional combat
     /// phase followed by an additional main phase." Banks a combat phase
     /// that begins when the active player leaves their current main phase;

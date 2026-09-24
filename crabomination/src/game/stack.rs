@@ -4937,6 +4937,9 @@ impl GameState {
         clear_turn!(self.next_combat_damage_redirect);
         clear_turn!(self.spell_damage_to_controller);
         clear_turn!(self.sorcery_damage_this_turn);
+        if self.turn.block_chooser_this_turn.is_some() {
+            self.turn.block_chooser_this_turn = None;
+        }
         clear_turn!(self.artifact_damage_to_players_this_turn);
         clear_cold!(self.combat_damage_redirect_this_turn);
         clear_cold!(self.doubled_damage_sources_this_turn);

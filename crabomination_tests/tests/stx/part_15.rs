@@ -471,6 +471,7 @@ fn roll_die_serde_round_trip() {
         count: Value::Const(2),
         modifier: Value::Const(0),
         reroll_at_most: 0,
+        ignore_lowest: 0,
         on_doubles: Some(Box::new(Effect::Draw {
             who: Selector::You,
             amount: Value::Const(2),
@@ -486,7 +487,7 @@ fn roll_die_serde_round_trip() {
     let json = serde_json::to_string(&original).expect("serialize");
     let parsed: Effect = serde_json::from_str(&json).expect("deserialize");
     match parsed {
-        Effect::RollDie { sides, count, modifier, reroll_at_most, results, on_doubles } => {
+        Effect::RollDie { sides, count, modifier, reroll_at_most, results, on_doubles, .. } => {
             assert!(matches!(modifier, Value::Const(0)));
             assert_eq!(reroll_at_most, 0);
             assert_eq!(sides, 20);

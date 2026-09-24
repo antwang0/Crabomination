@@ -893,6 +893,9 @@ pub enum CounterType {
     /// Slumber counter — Arixmethes, Slumbering Isle is a land, not a
     /// creature, while it has one.
     Slumber,
+    /// Component counter — Component Pouch's store: its d20 ability adds them,
+    /// its mana ability removes one for two mana.
+    Component,
 }
 
 /// Every zone a card can occupy.
@@ -4557,6 +4560,12 @@ pub struct CardDefinition {
     /// has produced attackers.
     #[serde(default)]
     pub cast_only_before_attackers: bool,
+    /// "Cast this spell only before combat or during combat before blockers
+    /// are declared" (Berserker's Frenzy). Legal from the untap step through
+    /// the Declare Attackers step, attackers on the board or not; illegal once
+    /// blockers are declared and in every later step of the turn.
+    #[serde(default)]
+    pub cast_only_before_blockers_step: bool,
     /// "You can't cast this spell unless [condition]" (Rakdos, Lord of Riots).
     /// Checked at the cast gate against the caster's game state.
     #[serde(default)]

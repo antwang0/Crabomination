@@ -1172,6 +1172,7 @@ fn rolled_dice_fires_once_per_roll() {
         modifier: Value::Const(0),
         reroll_at_most: 0,
         results: vec![],
+        ignore_lowest: 0,
         on_doubles: None,
     }, &ctx).unwrap();
     g.dispatch_triggers_for_events(&events);

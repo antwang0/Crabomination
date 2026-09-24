@@ -9179,6 +9179,25 @@ impl GameState {
             return Err(GameError::SelectionRequirementViolated);
         }
 
+        // "Cast only before combat or during combat before blockers are
+        // declared" (Berserker's Frenzy) — any step up to Declare Attackers.
+        if card.definition.cast_only_before_blockers_step
+            && (self.blockers_declared
+                || !matches!(
+                    self.step,
+                    crate::TurnStep::Untap
+                        | crate::TurnStep::Upkeep
+                        | crate::TurnStep::Draw
+                        | crate::TurnStep::PreCombatMain
+                        | crate::TurnStep::BeginCombat
+                        | crate::TurnStep::DeclareAttackers
+                ))
+        {
+            cast_census::rollback(line!());
+            self.players[p].hand.push(card);
+            return Err(GameError::SelectionRequirementViolated);
+        }
+
         // "You can't cast this spell unless …" (Rakdos, Lord of Riots).
         if let Some(cond) = card.definition.cast_condition.clone() {
             let ctx = crate::game::effects::EffectContext::for_trigger(card.id, p, None, 0);

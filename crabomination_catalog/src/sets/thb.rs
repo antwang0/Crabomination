@@ -160,6 +160,7 @@ pub fn haktos_the_unscarred() -> CardDefinition {
             modifier: Value::ONE,
             reroll_at_most: 0,
             results: vec![(2, 2, grant(2)), (3, 3, grant(3)), (4, 4, grant(4))],
+            ignore_lowest: 0,
             on_doubles: None,
         })],
         ..Default::default()

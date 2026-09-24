@@ -3220,6 +3220,7 @@ pub fn ground_pounder() -> CardDefinition {
                         duration: Duration::EndOfTurn,
                     },
                 )],
+                ignore_lowest: 0,
                 on_doubles: None,
             },
             ..Default::default()

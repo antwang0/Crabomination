@@ -1408,6 +1408,12 @@ pub struct TurnRegistries {
     /// entry is consumed by the first damage each names.
     #[serde(default)]
     pub(crate) double_next_damage_from: Vec<CardId>,
+    /// "You choose which creatures block this turn and how those creatures
+    /// block" (Berserker's Frenzy) — Master Warcraft's block half alone: the
+    /// seat that submits every block declaration this turn, attackers left to
+    /// the active player. Read by `block_chooser`; cleared at cleanup.
+    #[serde(default)]
+    pub(crate) block_chooser_this_turn: Option<usize>,
 }
 
 #[derive(Clone, Default, serde::Serialize, serde::Deserialize)]

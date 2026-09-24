@@ -25708,6 +25708,7 @@ pub fn ancient_copper_dragon() -> CardDefinition {
                         definition: std::sync::Arc::new(crate::game::effects::treasure_token()),
                     },
                 )],
+                ignore_lowest: 0,
                 on_doubles: None,
             },
         }],

@@ -212,6 +212,7 @@ pub fn arden_angel() -> CardDefinition {
                         to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
                     },
                 )],
+                ignore_lowest: 0,
                 on_doubles: None,
             },
         }],
