@@ -11824,9 +11824,12 @@ impl GameState {
     ///   read, so those go in;
     /// * the stack is not in the audit's `self.<field>` census, but the four
     ///   `evaluate_*` entries read whatever a catalog filter names, so its
-    ///   depth goes in as a cheap witness.
+    ///   depth goes in as a cheap witness;
+    /// * `turn_number`, `step` and `current_turn_is_extra` fold into `lists` — the
+    ///   unfrozen computed read took the memo and two cards' statics were
+    ///   served across a turn change they gate on.
     ///
-    /// ⚠⚠ **THE FIVE SCALARS ARE COMPARED, NOT HASHED, AND THAT IS THE WHOLE
+    /// ⚠⚠ **THE SCALARS ARE COMPARED, NOT HASHED, AND THAT IS THE WHOLE
     /// SHAPE OF THIS TYPE.** The first cut of `(-311)` folded them into one
     /// `u64` opening with `h = battlefield.writes(); h ^= continuous.writes()`
     /// — **a raw XOR of two small counters is not injective in the pair**
@@ -11865,6 +11868,16 @@ impl GameState {
         for id in self.block_map.keys() {
             lists = mix(lists, u64::from(id.0) | 1 << 33);
         }
+        // "the turn it entered" (Thrasta), "during an extra turn" (Medomai),
+        // step-gated statics: turn scalars no write counter sees. Folded, not
+        // a scalar, so `GameState` keeps its size.
+        lists = mix(
+            lists,
+            u64::from(self.turn_number)
+                | (self.step as u64) << 32
+                | u64::from(self.current_turn_is_extra) << 40
+                | 1 << 41,
+        );
         GatherKey {
             scalars: [
                 self.battlefield.writes(),
@@ -16055,10 +16068,11 @@ impl GameState {
             }
             return Some(cp);
         }
-        Some(std::sync::Arc::new(crate::game::layers::apply_layers_one(
-            card,
-            &self.gather_continuous_effects(),
-        )))
+        // Unfrozen reads go through `(-303)`'s cross memo too: a raw gather
+        // here was one full gather per read, and an SBA walk reads every
+        // permanent — a 30-seat pod spent 568 s on one game in this line.
+        let (fx, gates) = self.gathered_effects_and_gates_shared();
+        Some(std::sync::Arc::new(crate::game::layers::apply_layers_one_gated(card, &fx, gates)))
     }
 
     /// CR 603.10 — a last-known-information snapshot of a battlefield permanent
