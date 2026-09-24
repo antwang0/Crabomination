@@ -2332,6 +2332,10 @@ pub enum StaticEffect {
     /// Applied once per resolution that minted 1+ tokens for the controller
     /// (CR 614.13-style single application).
     TokenCreationAddsToken { definition: crate::card::TokenDefinition },
+    /// CR 614.1a — "If you would create one or more tokens, you may instead
+    /// create that many [one of `options`] tokens" (Jinnie Fay). Applied per
+    /// token at mint time by `GameState::token_replacement_for`.
+    TokensMayBecome { options: Vec<crate::card::TokenDefinition> },
     /// Chatterfang — "If one or more tokens would be created under your
     /// control, those tokens plus that many [definition] tokens are created
     /// instead." Like `TokenCreationAddsToken` but scaled to the number of

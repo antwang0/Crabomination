@@ -128,6 +128,8 @@ pub mod combat;
 mod could_produce;
 // CR 508.4 — put onto the battlefield attacking, never declared.
 mod enter_attacking;
+// CR 614.1a — Jinnie Fay's "instead create that many" token replacement.
+mod token_replacement;
 // CR 205.4e — a legendary instant or sorcery needs a legendary creature or planeswalker.
 mod legendary_spell;
 // CR 102.2 — "an opponent controls N or more …", read per opponent.
@@ -1962,6 +1964,10 @@ pub struct ResolutionScratch {
     /// Read by `Value::CreaturesDestroyedThisResolutionControlledBy`.
     #[serde(skip)]
     pub(crate) destroyed_controllers_this_resolution: Vec<(usize, bool)>,
+    /// Transient: the land cards the last `Effect::Parley` revealed, read by
+    /// `Value::LandCardsRevealedThisEffect` inside its body (Phabine).
+    #[serde(skip)]
+    pub(crate) parley_lands_revealed: u32,
     /// Permanents the resolution currently underway is targeting, so the
     /// damage funnel can tell "damage from a spell or ability that targets
     /// this" apart from incidental damage (CR 615 — Bronze Horse, Silhouette).
@@ -9651,6 +9657,10 @@ impl GameState {
         } else {
             ctrl
         };
+        // Jinnie Fay — a bigger token instead (CR 614.1a).
+        if let Some(repl) = self.token_replacement_for(ctrl, &inst.definition) {
+            inst = crate::card::CardInstance::new_token(id, repl, ctrl);
+        }
         inst.owner = ctrl;
         inst.controller = ctrl;
         inst.tapped = tapped;
@@ -29565,6 +29575,7 @@ fn static_effect_to_effects(
             // TokenCreationAddsToken — consulted in the resolve_effect
             // epilogue (Quina's extra-Frog rider); not a layer effect.
             | StaticEffect::TokenCreationAddsToken { .. }
+            | StaticEffect::TokensMayBecome { .. }
             | StaticEffect::TokenCreationAddsTokenPerToken { .. }
             // Consulted at the mint funnel (Academy Manufactor).
             | StaticEffect::ClueFoodTreasureMintsOneOfEach

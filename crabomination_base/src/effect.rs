@@ -1039,6 +1039,9 @@ pub enum Value {
     /// in the current resolution — X for the Scent / Seer cycle. Reset between
     /// independent resolutions.
     CardsRevealedThisEffect,
+    /// Parley's other count: the land cards revealed by the enclosing
+    /// `Effect::Parley` (Phabine's Citizen tokens).
+    LandCardsRevealedThisEffect,
     /// Amount of {E} paid by an `Effect::PayAnyEnergy` earlier in the current
     /// resolution. Reset between independent resolutions. Aether Spike's
     /// "counter that spell unless its controller pays {1} for each {E} paid

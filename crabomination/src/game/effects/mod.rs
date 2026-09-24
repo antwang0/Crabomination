@@ -33461,16 +33461,19 @@ impl GameState {
                 let seats: Vec<usize> = self.apnap_sort(
                     (0..self.players.len()).filter(|&p| !self.players[p].eliminated).collect(),
                 );
-                let mut nonland = 0u32;
+                let (mut nonland, mut lands) = (0u32, 0u32);
                 for &p in &seats {
                     let Some(top) = self.players[p].library.first() else { continue };
                     let (name, is_land) = (top.definition.name, top.definition.is_land());
                     events.push(GameEvent::TopCardRevealed { player: p, card_name: name, is_land });
-                    if !is_land {
+                    if is_land {
+                        lands += 1;
+                    } else {
                         nonland += 1;
                     }
                 }
                 self.cards_revealed_this_resolution = nonland;
+                self.scratch.parley_lands_revealed = lands;
                 self.run_effect(then, ctx, events)?;
                 for &p in &seats {
                     self.draw_one_or_deck(p, events);

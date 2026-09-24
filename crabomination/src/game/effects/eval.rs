@@ -1073,6 +1073,7 @@ impl GameState {
             Value::PermanentsReturnedThisEffect => self.permanents_returned_this_resolution as i32,
             Value::PermanentsTappedThisEffect => self.permanents_tapped_this_resolution as i32,
             Value::CardsRevealedThisEffect => self.cards_revealed_this_resolution as i32,
+            Value::LandCardsRevealedThisEffect => self.scratch.parley_lands_revealed as i32,
             Value::LastExiledManaValue => self
                 .scratch.exiled_card_ids_this_resolution
                 .last()
