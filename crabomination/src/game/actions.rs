@@ -514,6 +514,27 @@ impl GameState {
                 ..Default::default()
             });
         }
+        // Demon of Fate's Design — once during each of your turns, pay life
+        // equal to the spell's mana value rather than its mana cost.
+        if self.active_player_idx == p
+            && !self.players[p].life_alt_cast_used_this_turn
+            && self.battlefield.iter().any(|c| {
+                c.controller == p
+                    && c.definition.static_abilities.iter().any(|sa| match &sa.effect {
+                        crate::effect::StaticEffect::LifeAlternativeCostOncePerYourTurn {
+                            filter,
+                        } => self.evaluate_requirement_on_card(filter, card, p),
+                        _ => false,
+                    })
+            })
+        {
+            return Some(crate::card::AlternativeCost {
+                life_cost: card.definition.cost.cmc(),
+                your_turn_only: true,
+                once_per_turn_grant: true,
+                ..Default::default()
+            });
+        }
         // Dream Halls — every seat may discard a card sharing a colour with
         // the spell instead of paying for it. Colourless spells share no
         // colour, so they get no discount.
@@ -12651,6 +12672,9 @@ impl GameState {
             .saturating_sub(self.players[p].mana_pool.total());
         let mut auto_events = receipt.auto_events;
 
+        if alt.once_per_turn_grant {
+            self.players[p].life_alt_cast_used_this_turn = true;
+        }
         // Pay the life portion of the alt cost (CR 119.4; applied
         // amount honors cannot-lose replacements).
         if alt.life_cost > 0 && !self.replace_life_payment(p, alt.life_cost, &mut auto_events) {

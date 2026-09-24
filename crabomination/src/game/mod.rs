@@ -29933,6 +29933,9 @@ fn static_effect_to_effects(
             | StaticEffect::FiveColorAlternativeCost
             // Kentaro / Dream Halls — consulted by `effective_alternative_cost`.
             | StaticEffect::GenericAlternativeCostForFilter { .. }
+            | StaticEffect::LifeAlternativeCostOncePerYourTurn { .. }
+            // Narci — appended to a Saga's final chapter by `saga_chapters_crossed`.
+            | StaticEffect::SagaFinalChapterRider(_)
             | StaticEffect::DiscardColorSharingCardAlternativeCost
             // Hunting Velociraptor — consulted by `effective_alternative_cost`.
             | StaticEffect::GrantProwlToSpells { .. }

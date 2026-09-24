@@ -2325,6 +2325,17 @@ pub enum StaticEffect {
     /// spells you cast, where X is that spell's mana value" (Kentaro, the
     /// Smiling Cat). Read by `effective_alternative_cost`.
     GenericAlternativeCostForFilter { filter: SelectionRequirement },
+    /// CR 118.9 — "Once during each of your turns, you may cast a [filter]
+    /// spell by paying life equal to its mana value rather than paying its
+    /// mana cost" (Demon of Fate's Design). Read by
+    /// `effective_alternative_cost`; tracked by
+    /// `Player.life_alt_cast_used_this_turn`.
+    LifeAlternativeCostOncePerYourTurn { filter: SelectionRequirement },
+    /// "Whenever the final chapter ability of a Saga you control resolves,
+    /// `body`" (Narci, Fable Singer). `saga_chapters_crossed` appends `body`
+    /// to the final chapter's effect, so it runs as that chapter resolves
+    /// (a countered chapter never resolves) with the Saga as its source.
+    SagaFinalChapterRider(Box<crate::effect::Effect>),
     /// CR 118.9 — "Once each turn, you may pay {0} rather than pay the mana
     /// cost for a spell you cast from exile" (Warped Space). Waives the
     /// pay-own-cost rider a `may_play_until` grant stamps on an exiled card;

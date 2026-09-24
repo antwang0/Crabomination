@@ -870,6 +870,9 @@ pub enum CounterType {
     /// Cage counter — Mairsil, the Pretender has the activated abilities of
     /// the cards its controller owns in exile with one on them.
     Cage,
+    /// Blessing counter — Boon of the Spirit Realm's constellation tally, the
+    /// team pump it grants.
+    Blessing,
 }
 
 /// Every zone a card can occupy.
@@ -5864,6 +5867,11 @@ pub struct AlternativeCost {
     /// *converted*, so the permanent enters with its back face up.
     #[serde(default)]
     pub converted: bool,
+    /// Demon of Fate's Design — casting via this cost spends the caster's
+    /// once-per-turn `LifeAlternativeCostOncePerYourTurn` grant
+    /// (`Player.life_alt_cast_used_this_turn`).
+    #[serde(default)]
+    pub once_per_turn_grant: bool,
 }
 
 /// The bits [`CardDefinition::debug_flags`] answers. One `{:?}` scan and one

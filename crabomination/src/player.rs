@@ -661,6 +661,10 @@ pub struct PlayerData {
     /// exile". Reset at the turn boundary.
     #[serde(default)]
     pub free_exile_cast_used_this_turn: bool,
+    /// Demon of Fate's Design — this player has used their once-per-turn
+    /// "pay life equal to its mana value" cast. Reset at the turn boundary.
+    #[serde(default)]
+    pub life_alt_cast_used_this_turn: bool,
     /// Creatures exiled from under this player's control this turn (Vren, the
     /// Relentless' end-step Rat count). Reset at the turn boundary.
     #[serde(default)]
@@ -1349,6 +1353,7 @@ impl Player {
             committed_crime_this_turn: false,
             face_down_activity_this_turn: false,
             free_exile_cast_used_this_turn: false,
+            life_alt_cast_used_this_turn: false,
             creatures_exiled_from_control_this_turn: 0,
             descended_this_turn: false,
             descend_count_this_turn: 0,

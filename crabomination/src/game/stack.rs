@@ -1794,6 +1794,7 @@ impl GameState {
             return;
         };
         let controller = card.controller;
+        let final_ch = card.definition.saga_chapters.iter().map(|(n, _)| *n).max().unwrap_or(0);
         let mut chapters: Vec<(u32, Effect)> = card
             .definition
             .saga_chapters
@@ -1803,7 +1804,25 @@ impl GameState {
             .collect();
         chapters.sort_by_key(|(n, _)| *n);
         let mut queue: Vec<PendingTriggerPush> = Vec::new();
-        for (_, effect) in chapters {
+        for (n, mut effect) in chapters {
+            // Narci, Fable Singer — its rider runs as the final chapter resolves.
+            if n == final_ch {
+                let riders: Vec<Effect> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == controller)
+                    .flat_map(|c| c.definition.static_abilities.iter())
+                    .filter_map(|sa| match &sa.effect {
+                        crate::effect::StaticEffect::SagaFinalChapterRider(body) => {
+                            Some((**body).clone())
+                        }
+                        _ => None,
+                    })
+                    .collect();
+                if !riders.is_empty() {
+                    effect = Effect::Seq(std::iter::once(effect).chain(riders).collect());
+                }
+            }
             let mode = self.pick_trigger_mode(&effect, card_id, controller);
             queue.push(PendingTriggerPush {
                 from_mana_ability: false,
@@ -4451,6 +4470,7 @@ impl GameState {
             pl.face_down_activity_this_turn = false;
             // Warped Space's once-per-turn free cast from exile.
             pl.free_exile_cast_used_this_turn = false;
+            pl.life_alt_cast_used_this_turn = false;
             pl.creatures_exiled_from_control_this_turn = 0;
             // CR 401.6 — turn-scoped play-from-top permission ends at cleanup.
             pl.play_from_top_this_turn = false;
