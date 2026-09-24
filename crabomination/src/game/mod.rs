@@ -134,6 +134,8 @@ mod enter_attacking;
 mod token_replacement;
 // CR 205.4e — a legendary instant or sorcery needs a legendary creature or planeswalker.
 mod legendary_spell;
+// CR 608.3 — the entry tallies a resolving permanent spell adds (Celebration).
+mod entry_tally;
 mod mystic_barrier;
 mod loyalty_copy;
 mod spree_targets;

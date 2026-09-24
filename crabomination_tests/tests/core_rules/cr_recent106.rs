@@ -33,6 +33,11 @@
 //!
 //! CR 205.4e — a legendary instant or sorcery needs a legendary creature or
 //! planeswalker under its caster's control (`legendary_spell_castable`).
+//!
+//! CR 608.3 — a resolving permanent spell enters the battlefield, so it
+//! counts toward Celebration's "two or more nonland permanents entered under
+//! your control this turn" and the artifact entry tally; only tokens and
+//! effect moves were counted.
 
 use crabomination::card::SelectionRequirement;
 use crabomination::catalog;
@@ -1008,4 +1013,26 @@ fn cr_508_1a_mystic_barrier_points_attacks_one_way() {
     let at = |p| GameAction::DeclareAttackers(vec![Attack { attacker: bear, target: AttackTarget::Player(p) }]);
     assert!(g.perform_action(at(1)).is_err());
     g.perform_action(at(2)).expect("the nearest opponent to the right");
+}
+
+#[test]
+fn cr_608_3_resolved_permanent_spells_count_toward_celebration() {
+    use crabomination::effect::PlayerRef;
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let pred = Predicate::CelebrationActive { who: PlayerRef::You };
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    for card in [catalog::sol_ring(), catalog::grizzly_bears()] {
+        assert!(!g.evaluate_predicate(&pred, &ctx));
+        let id = g.add_card_to_hand(0, card);
+        g.players[0].mana_pool.add_colorless(1);
+        g.players[0].mana_pool.add(crabomination::mana::Color::Green, 2);
+        g.perform_action(GameAction::CastSpell { card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None })
+            .expect("cast");
+        drain_stack(&mut g);
+    }
+    assert!(g.evaluate_predicate(&pred, &ctx), "two spells resolved into permanents");
+    assert_eq!(g.players[0].artifacts_entered_this_turn, 1, "Sol Ring");
 }

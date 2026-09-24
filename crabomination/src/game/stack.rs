@@ -2739,6 +2739,7 @@ impl GameState {
                         );
                     }
 
+                    self.tally_permanent_entry(card_id);
                     events.push(GameEvent::PermanentEntered { card_id });
 
                     // CR 702.165 — a permanent spell cast with its Gift promised
@@ -8308,6 +8309,7 @@ impl GameState {
             let rid = returned.id;
             events.push(GameEvent::CardLeftGraveyard { player: owner, card_id: rid });
             self.battlefield.push(returned);
+            self.tally_permanent_entry(rid);
             events.push(GameEvent::PermanentEntered { card_id: rid });
         }
     }
