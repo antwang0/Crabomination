@@ -213,6 +213,13 @@ the handoff.
   type gate like the creature-type one (`gate_types`); it is on the layers' hot path
   and moves any 2-player game with an animated land under an anthem, so it needs its
   own bench reading.
+- ✅ New for Eldrazi Incursion (M3C, Ulalek): `ManaSymbol::ColorlessHybrid` ({C/X},
+  CR 107.4e, every `ManaSymbol` reader); `game/eldrazi.rs` —
+  `Effect::{EachPlayerChoosesColorExileOthers, CopyAllSpellsAndAbilitiesYouControl,
+  CopyOnePerOpponentWithTotalStats}`; `R::BasePowerOrToughnessAtMost`;
+  `Predicate::CastSpellWasKickedWith`. Fixed: `eldrazi_spawn_token` lacked Spawn.
+  Also `ManaPayload::AnyColorAGateYouControlCouldProduce` (`game/gate_mana.rs`)
+  retired Gond Gate's any-color residual.
 - ✅ New for Planeswalker Party (CMM, Guff), in `game/loyalty_copy.rs`:
   `StaticEffect::LoyaltyAbilitiesTwiceEachTurn` (Oath of Teferi, CR 606.3 — read by
   `activate_loyalty` and the client view); `PlayerCold::loyalty_copy_grants` with

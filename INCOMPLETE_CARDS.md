@@ -1969,6 +1969,10 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Sizzling Soloist | Cabaretti Cacophony (NCC) | "attacks during its controller's next combat phase" is must-attack until your next turn. |
 | 🟡 Vivien's Stampede | Cabaretti Cacophony (NCC) | the draw happens at end of combat, not at the next main phase. |
 | 🟡 Zurzoth, Chaos Rider | Cabaretti Cacophony (NCC) | the Devils' loot reaches the defending player of the attack, one player per batch. |
+| 🟡 Benthic Anomaly | Eldrazi Incursion (M3C) | each opponent's greatest-power creature is chosen, and the copy is of the one with the greatest mana value. |
+| 🟡 Bismuth Mindrender | Eldrazi Incursion (M3C) | the exiled card may be cast for life until end of turn, not only as the trigger resolves. |
+| 🟡 Selective Obliteration | Eldrazi Incursion (M3C) | each player's color is the one most common among their permanents. |
+| 🟡 Twins of Discord | Eldrazi Incursion (M3C) | the granted bloodthirst rides colorless creature spells you cast, not every entry. |
 | 🟡 Chandra, Legacy of Fire | Planeswalker Party (CMM) | the 0 removes a loyalty counter from each planeswalker you control with two or more, not "any number of permanents" chosen. |
 | 🟡 Guff Rewrites History | Planeswalker Party (CMM) | only opponents' permanents are chosen (never your own); the exiled lands go to the bottom in exile order. |
 | 🟡 Leori, Sparktouched Hunter | Planeswalker Party (CMM) | the planeswalker type is the one most common among yours on the battlefield and in hand, not a free choice. |

@@ -124,6 +124,7 @@ lists were picked.
 | **Tinker Time** (MOC precon) GUR | Gimbal, Gremlin Prodigy | GUR | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Legends' Legacy** (DMC precon) RWB | Dihada, Binder of Wills (**planeswalker**) | RWB | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Planeswalker Party** (CMM precon) URW | Commodore Guff (**planeswalker**) | URW | 100 | 🟡 all 100 implemented, 7 carry residuals (below) |
+| **Eldrazi Incursion** (M3C precon) WUBRG | Ulalek, Fused Atrocity | WUBRG | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Death Toll** (DSC precon) BG | Winter, Cynical Opportunist | BG | 100 | 🟡 all 100 implemented, 6 carry residuals (below) |
 | **Mind Seize** (C13 precon) UBR | Jeleva, Nephalia's Scourge | UBR | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **20 Ways to Win** (SLD) WUBRG | Go-Shintai of Life's Origin | WUBRG | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
@@ -1302,6 +1303,25 @@ Four-seat pods beside Ranar / Urza / Anikthea (seed 10160, 1,000 games, all
 decided): Saheeli 11.2 %; a 300-game census (seed 10161) leaves no card of the
 four unplayed; 12 seats (71..60 as numbered then, seed 10162): 200 / 200 decided. `--bench`
 byte-identical.
+
+The **hundredth** is Modern Horizons 3 Commander's **Eldrazi Incursion**
+(`EldraziIncursion_M3C`) — colorless Eldrazi under Ulalek, Fused Atrocity.
+Eighteen cards were missing. Engine: `ManaSymbol::ColorlessHybrid` ({C/W}, CR
+107.4e — Ulalek's printed cost: mana value 1, {C} tried first in the hybrid
+solver, its color counts for identity), a new module `game/eldrazi.rs`
+(`Effect::EachPlayerChoosesColorExileOthers` — Selective Obliteration;
+`CopyAllSpellsAndAbilitiesYouControl` — Ulalek, CR 707.10;
+`CopyOnePerOpponentWithTotalStats` — Benthic Anomaly, CR 707.9),
+`SelectionRequirement::BasePowerOrToughnessAtMost` (Angelic Aberration) and
+`Predicate::CastSpellWasKickedWith` (Wastescape Battlemage). Found and fixed: the
+shared `eldrazi_spawn_token` had lost its **Spawn** creature type. Residuals:
+**Benthic Anomaly**'s choices are the engine's (each opponent's greatest power; the
+copy of the greatest mana value); **Bismuth Mindrender**'s card is castable for life
+until end of turn; **Selective Obliteration**'s colors are each player's most common;
+**Twins of Discord**'s granted bloodthirst rides colorless creature spells cast.
+Four-seat pods beside Eshki / Ellivere / Lathliss (seed 10300, 1,000 games, all
+decided): Ulalek 5.7 %; a 300-game census (seed 10301) leaves no card of the four
+unplayed; 12 seats (seed 10302) 200 / 200. `--bench` byte-identical.
 
 The **ninety-first** is Commander Masters' **Planeswalker Party**
 (`PlaneswalkerParty_CMM`) — Jeskai superfriends under Commodore Guff, the
