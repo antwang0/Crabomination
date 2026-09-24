@@ -3807,6 +3807,75 @@ fn pick_stack_response(state: &GameState, seat: usize, w: &EvalWeights) -> Optio
     None
 }
 
+/// An opponent's spell on top of the stack that would take two or more of
+/// our nonland permanents (resolved in a clone): answer it with an instant
+/// that phases them out or makes them indestructible (Clever Concealment,
+/// Flawless Maneuver). The clone is paid only when such an instant is in hand.
+fn pick_sweeper_shield(state: &GameState, seat: usize, w: &EvalWeights) -> Option<Picked> {
+    use crate::game::types::StackItem;
+    let Some(StackItem::Spell { caster, .. }) = state.stack.last() else { return None };
+    if *caster == seat {
+        return None;
+    }
+    let shields: Vec<&crate::card::CardInstance> = state.players[seat]
+        .hand
+        .iter()
+        .filter(|c| {
+            c.definition.card_types.contains(&crate::card::CardType::Instant)
+                && effect_shields_permanents(&c.definition.effect)
+        })
+        .collect();
+    if shields.is_empty() {
+        return None;
+    }
+    let mine = |g: &GameState| {
+        g.battlefield.iter().filter(|c| c.controller == seat && !c.definition.is_land()).count()
+    };
+    let mut sim = state.clone();
+    sim.resolve_top_of_stack().ok()?;
+    if mine(state).saturating_sub(mine(&sim)) < 2 {
+        return None;
+    }
+    let sweep = SweepMana::new(state, seat);
+    for c in shields {
+        if !can_afford_in_state_with(state, seat, c, w, &sweep) {
+            continue;
+        }
+        // Every slot on our own side (the slot walker stops after slot 0).
+        let (target, additional_targets) = match &c.definition.effect {
+            body @ Effect::ApplyToTargets { .. } => {
+                match exactly_x_targets(state, seat, c.id, body, u32::MAX, Some(true)) {
+                    Some((t, extras)) => (Some(t), extras),
+                    None => continue,
+                }
+            }
+            eff => state.auto_targets_for_effect_all_slots_x(eff, seat, None, false, Some(c.id), None),
+        };
+        let action = GameAction::CastSpell {
+            card_id: c.id,
+            target,
+            additional_targets,
+            mode: None,
+            x_value: None,
+        };
+        if let Some(next) = state.accept(action.clone()) {
+            return Some(Picked::Probed(action, Box::new(next)));
+        }
+    }
+    None
+}
+
+/// The effect phases out, or grants indestructible to, permanents.
+fn effect_shields_permanents(eff: &Effect) -> bool {
+    match eff {
+        Effect::PhaseOut { .. } => true,
+        Effect::GrantKeyword { keyword: crate::card::Keyword::Indestructible, .. } => true,
+        Effect::ApplyToTargets { effect, .. } => effect_shields_permanents(effect),
+        Effect::Seq(v) => v.iter().any(effect_shields_permanents),
+        _ => false,
+    }
+}
+
 /// React to a threatening opponent ability on the stack with a dedicated
 /// ability-counter card (Stifle / Disallow). The ability's source is the
 /// target slot. Held separate from `pick_stack_response`'s spell logic so a
@@ -4153,9 +4222,10 @@ fn exactly_x_targets(
     source: CardId,
     body: &Effect,
     x_max: u32,
+    friendly: Option<bool>,
 ) -> Option<(Target, Vec<Target>)> {
     let Effect::ApplyToTargets { max_targets, filter, .. } = body else { return None };
-    let friendly = body.prefers_friendly_target_for_slot(0, None);
+    let friendly = friendly.unwrap_or_else(|| body.prefers_friendly_target_for_slot(0, None));
     let ok = |t: &Target| {
         state.evaluate_requirement_static(filter, t, seat, Some(source))
             && state.check_target_legality(t, seat).is_ok()
@@ -6599,7 +6669,7 @@ pub(super) fn cast_candidates<'a>(
         // fills every slot, so X — the target count — is picked here.
         if let Effect::TargetsExactlyX { body } = &c.definition.effect {
             if let Some(x) = x_value
-                && let Some((t, extras)) = exactly_x_targets(state, seat, c.id, body, x)
+                && let Some((t, extras)) = exactly_x_targets(state, seat, c.id, body, x, None)
             {
                 unvalidated.push(GameAction::CastSpell {
                     card_id: c.id,
@@ -12804,6 +12874,7 @@ fn sim_spell_action_inner(g: &GameState, w: &EvalWeights, allow_main: bool) -> O
     let p = g.player_with_priority();
     if !g.stack.is_empty() {
         return pick_stack_response(g, p, w)
+            .or_else(|| pick_sweeper_shield(g, p, w))
             .or_else(|| pick_ability_counter_response(g, p, w).map(Picked::Plain))
             .or_else(|| pick_prepare_response(g, p, w).map(Picked::Plain))
             .or_else(|| pick_buff_response(g, p, w).map(Picked::Plain));
@@ -18260,7 +18331,8 @@ fn pick_stack_response_top(state: &GameState, seat: usize, w: &EvalWeights) -> O
         pick_stack_response_scored(state, seat, w)
     } else {
         pick_stack_response(state, seat, w)
-    };
+    }
+    .or_else(|| pick_sweeper_shield(state, seat, w));
     if picked.is_some() {
         response_census::add(9, 1);
     }

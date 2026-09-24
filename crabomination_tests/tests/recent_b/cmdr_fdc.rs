@@ -3276,3 +3276,33 @@ fn rebellion_rising_cards() {
     let golem = g.battlefield.iter().find(|c| c.definition.name == "Golem").unwrap().id;
     assert_eq!(pt(&g, golem), (1, 1));
 }
+
+/// The bot answers an opponent's sweeper with a phase-out instant (Clever
+/// Concealment) — no response path cast one before.
+#[test]
+fn bot_phases_out_its_board_under_a_wrath() {
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    let mut g = main_phase();
+    let giants: Vec<CardId> =
+        (0..3).map(|_| g.add_card_to_battlefield(0, catalog::hill_giant())).collect();
+    let cc = g.add_card_to_hand(0, catalog::clever_concealment());
+    let wrath = g.add_card_to_hand(1, catalog::wrath_of_god());
+    g.active_player_idx = 1;
+    g.players[1].mana_pool.add(Color::White, 4);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell { card_id: wrath, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("wrath");
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 4);
+    match HeuristicBot::new().next_action(&g, 0) {
+        Some(a @ GameAction::CastSpell { card_id, .. }) if card_id == cc => {
+            g.perform_action(a).expect("cast");
+        }
+        other => panic!("expected Clever Concealment, got {other:?}"),
+    }
+    drain_stack(&mut g);
+    // Phased out (CR 702.26), so the Wrath finds none of them.
+    assert!(
+        giants.iter().all(|id| !g.players[0].graveyard.iter().any(|c| c.id == *id)),
+        "every Giant survives"
+    );
+}
