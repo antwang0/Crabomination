@@ -7,6 +7,7 @@
 //! [`GameEvent`]s.
 
 mod commander;
+mod copy_redirect;
 mod damage_draw;
 mod delayed;
 mod eval;
@@ -35063,6 +35064,10 @@ impl GameState {
                     }
                 }
                 Ok(())
+            }
+
+            Effect::CopySpellOntoAnotherOpponentsPermanent { what } => {
+                self.copy_spell_onto_another_opponents_permanent(what, ctx, effect, events)
             }
 
             Effect::EachPlayerDrawsDamageTheyDealtToSource => {

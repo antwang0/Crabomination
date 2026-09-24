@@ -7856,6 +7856,12 @@ pub enum Effect {
     /// source] this turn by sources they controlled." (Grothama,
     /// All-Devouring's leaves-the-battlefield trigger.)
     EachPlayerDrawsDamageTheyDealtToSource,
+    /// Exterminator Magmarch — "if another opponent controls one or more
+    /// nonland permanents that spell could target, choose one of those
+    /// permanents. Copy that spell. The copy targets the chosen permanent."
+    /// `what` is the spell (a `SpellCast` trigger's `TriggerSource`); the copy
+    /// is the copier's (CR 707.10c).
+    CopySpellOntoAnotherOpponentsPermanent { what: Selector },
 
     /// Exile the top card of `who`'s library and stamp a may-play
     /// permission on it for `duration`. Used by Conspiracy Theorist,
