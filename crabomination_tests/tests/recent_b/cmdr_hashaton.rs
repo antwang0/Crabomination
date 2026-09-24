@@ -73,10 +73,6 @@ fn declare(g: &mut GameState, attacker: CardId, defender: usize) -> Result<(), S
     .map_err(|e| format!("{e:?}"))
 }
 
-fn counters(g: &GameState, id: CardId) -> u32 {
-    g.battlefield_find(id).map(|c| c.counter_count(CounterType::PlusOnePlusOne)).unwrap_or(0)
-}
-
 fn advance_to(g: &mut GameState, step: TurnStep) {
     while g.step != step {
         let _ = g.advance_step(Vec::new());

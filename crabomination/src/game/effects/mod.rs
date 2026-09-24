@@ -11023,7 +11023,7 @@ impl GameState {
                 &Effect::GrantKeyword {
                     what: what.clone(),
                     keyword: Keyword::CantAttackPlayer(ctx.controller),
-                    duration: duration.clone(),
+                    duration: *duration,
                 },
                 ctx,
                 events,

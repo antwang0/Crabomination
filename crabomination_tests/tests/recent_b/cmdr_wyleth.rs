@@ -57,22 +57,6 @@ fn pt(g: &GameState, id: CardId) -> (i32, i32) {
     (c.power, c.toughness)
 }
 
-fn count_named(g: &GameState, seat: usize, name: &str) -> usize {
-    g.battlefield.iter().filter(|c| c.controller == seat && c.definition.name == name).count()
-}
-
-fn declare(g: &mut GameState, attacker: CardId, defender: usize) -> Result<(), String> {
-    g.clear_sickness(attacker);
-    g.step = TurnStep::DeclareAttackers;
-    g.priority.player_with_priority = g.active_player_idx;
-    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
-        attacker,
-        target: AttackTarget::Player(defender),
-    }]))
-    .map(|_| ())
-    .map_err(|e| format!("{e:?}"))
-}
-
 fn counters(g: &GameState, id: CardId) -> u32 {
     g.battlefield_find(id).map(|c| c.counter_count(CounterType::PlusOnePlusOne)).unwrap_or(0)
 }
