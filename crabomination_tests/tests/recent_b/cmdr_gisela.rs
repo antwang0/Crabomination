@@ -328,3 +328,32 @@ fn the_book_of_exalted_deeds_makes_an_angel_after_three_life() {
     to_end_step(&mut g);
     assert!(g.battlefield.iter().any(|c| c.is_token && c.definition.name == "Angel"));
 }
+
+/// CR 903.9b — Brisela bounced: its cards go to hand one by one, and the
+/// commander card may take the command-zone replacement; Bruna goes to hand.
+#[test]
+fn a_bounced_melded_commander_can_go_home() {
+    let mut g = main_phase(2);
+    let gisela = g.seat_commanders(0, vec![catalog::gisela_the_broken_blade()])[0];
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastFromCommandZone {
+        card_id: gisela,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+        alternative: false,
+        pitch_card: None,
+    })
+    .expect("cast Gisela");
+    drain_stack(&mut g);
+    let bruna = g.add_card_to_battlefield(0, catalog::bruna_the_fading_light());
+    to_end_step(&mut g);
+    let brisela = melded(&g).expect("melded");
+    let mut g = g;
+    g.step = TurnStep::PreCombatMain;
+    let bounce = g.add_card_to_hand(0, catalog::unsummon());
+    cast(&mut g, bounce, Some(Target::Permanent(brisela)));
+    assert!(g.players[0].command.iter().any(|c| c.id == gisela), "Gisela took the replacement");
+    assert!(g.players[0].hand.iter().any(|c| c.id == bruna), "Bruna went to hand");
+}

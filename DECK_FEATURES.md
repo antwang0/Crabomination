@@ -59,6 +59,9 @@ lists were picked.
 | **Guided by Nature** (C14 precon) G | Freyalise, Llanowar's Fury (**planeswalker**) | G | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Animated Army** (BLC precon) RG | Bello, Bard of the Brambles | RG | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Grave Danger** (SCD precon) UB | Gisa and Geralf | UB | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
+| **Swell the Host** (C15 precon) GU | Ezuri, Claw of Progress | GU | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
+| **Angels: They're Just Like Us** (SLD precon) W | Gisela, the Broken Blade (**meld**) | W | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
+| **Built From Scratch** (C14 precon) R | Daretti, Scrap Savant (**planeswalker**) | R | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not
