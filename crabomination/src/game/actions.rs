@@ -8060,6 +8060,7 @@ impl GameState {
         if !bestow
             && let Some(hand_card) = self.players[p].hand.iter().find(|c| c.id == card_id)
             && self.sorcery_timing_bars(p, hand_card, cost_statics)
+            && !self.flash_by_target(p, hand_card, target.as_ref())
         {
             cast_census::early(line!());
             return Err(GameError::SorcerySpeedOnly);
@@ -8328,7 +8329,8 @@ impl GameState {
             // the suite and every `debug-assertions` sweep re-run the
             // predicate here and fail if the stamps moved the answer.
             debug_assert!(
-                !self.sorcery_timing_bars(p, &card, cost_statics),
+                !self.sorcery_timing_bars(p, &card, cost_statics)
+                    || self.flash_by_target(p, &card, target.as_ref()),
                 "the hoisted CR 601.2 timing gate and the stamped card disagree",
             );
         }
@@ -14035,6 +14037,22 @@ impl GameState {
     /// `SelfFlashIf`, a battlefield grant (Sigarda's Aid), a flash *surcharge*
     /// (Vedalken Orrery-style taxes), or Winding Canyons' turn-scoped
     /// creature-spell permission. The six cast entry points share this.
+    /// "As though it had flash if it targets [filter]" (Timely Ward): the
+    /// declared slot-0 target satisfies a `SelfFlashIfTargets`.
+    pub(crate) fn flash_by_target(
+        &self,
+        p: usize,
+        card: &crate::card::CardInstance,
+        target: Option<&Target>,
+    ) -> bool {
+        let Some(t) = target else { return false };
+        !self.player_locked_to_sorcery_timing(p)
+            && card.definition.static_abilities.iter().any(|sa| {
+                matches!(&sa.effect, crate::effect::StaticEffect::SelfFlashIfTargets { filter }
+                    if self.evaluate_requirement_static(filter, t, p, Some(card.id)))
+            })
+    }
+
     pub(crate) fn flash_granted_for(&self, p: usize, card: &crate::card::CardInstance) -> bool {
         self.flash_granted_for_with(p, card, u32::MAX)
     }

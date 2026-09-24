@@ -2086,6 +2086,10 @@ pub enum StaticEffect {
     /// colors it is" (Seal of the Guildpact) — generic only, keyed to the
     /// source's `chosen_colors` (`Effect::ChooseTwoColorsForSource`).
     ChosenColorsSpellCostReduction,
+    /// "You may cast this spell as though it had flash if it targets
+    /// [filter]" (Timely Ward — a commander). Read by the cast path's timing
+    /// gate against the declared slot-0 target.
+    SelfFlashIfTargets { filter: crate::card::SelectionRequirement },
     /// "Each other [creature_type] creature you control enters with an
     /// additional `kind` counter" (Oona's Blackguard). Fixed-type sibling of
     /// `ChosenTypeEntersWithCounter`; Changeling entrants count.

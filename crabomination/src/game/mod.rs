@@ -29753,6 +29753,7 @@ fn static_effect_to_effects(
             // SelfFlashIf (Serpent of the Pass) — consulted at the cast-timing
             // gate; no continuous-layer effect.
             | StaticEffect::SelfFlashIf { .. }
+            | StaticEffect::SelfFlashIfTargets { .. }
             // SelfCostReducedIfCreatureDiedThisTurn (Bone Picker) — same.
             | StaticEffect::SelfCostReducedIfCreatureDiedThisTurn { .. }
             // SelfCostReducedIfPredicate (Avatar of Hope) — same.
