@@ -75,6 +75,7 @@ lists were picked.
 | **Lorehold Legacies** (C21 precon) RW | Osgir, the Reconstructor | RW | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Counterpunch** (CMD precon) WBG | Ghave, Guru of Spores | WBG | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Wade into Battle** (C15 precon) RW | Kalemne, Disciple of Iroas | RW | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
+| **Chaos Incarnate** (SCD) BR | Kardur, Doomscourge | BR | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Arm for Battle** (CMR precon) RW | Wyleth, Soul of Steel | RW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Fae Dominion** (WOC precon) UB | Tegwyll, Duke of Splendor | UB | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Invent Superiority** (C16 precon) WUBR | Breya, Etherium Shaper | WUBR | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
@@ -695,6 +696,20 @@ you control, not other players'. Four-seat pods beside Tegwyll / Osgir /
 Adrix (seed 10127, 1,000 games, all decided): Breya 17.1 %; a 300-game census
 (seed 10128) leaves no card of the four decks unplayed. `--bench`
 byte-identical.
+
+The **forty-ninth** is Secret Lair's **Chaos Incarnate** (`ChaosIncarnate_SCD`)
+— Rakdos goad and punishment under Kardur, Doomscourge. Sixteen cards were
+missing; the primitives are table choices (`SacrificeAllButN`,
+`EachOpponentChoosesFromGraveyard`, `EachOtherPlayerMayDraw`,
+`GreatestDiscardersLoseLife`, `PlayerRef::RandomPlayer`), Kardur's
+`WheneverCreatureEntersUntilYourNextTurn` and Theater of Horrors' dormant
+`HolderTurnsAfterOpponentLostLife` grant. ⚠ **Kardur found a CR 603.10 gap**:
+a creature that died attacking had already been removed from combat when
+"whenever an attacking creature dies" was checked, so it never fired —
+`left_while_attacking` now answers `IsAttacking` for this combat. Residuals:
+**Kardur**'s later entrants are goaded by a delayed trigger, not a static;
+**Theater of Horrors**' grant outlives it and can't play lands; **Wildfire
+Devils**' random player gives up their first instant or sorcery.
 
 ⚠ **The board cap was a bot bug, not a loop.** A Krenko seat sent all 292
 of its Goblins at one player on 24 life each turn while two others sat on
