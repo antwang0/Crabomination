@@ -906,6 +906,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ZHULODOK_COMMANDERS,
             main: decks::ZHULODOK_MAIN,
         },
+        // Hundred-and-ninth: the ninety-ninth official list (Upgrades
+        // Unleashed, NEC) — Gruul "modified" creatures under Chishiro, the
+        // Shattered Blade. `--pod-decks 109`.
+        PodDeck {
+            name: "Chishiro, the Shattered Blade (RG)",
+            commanders: decks::CHISHIRO_COMMANDERS,
+            main: decks::CHISHIRO_MAIN,
+        },
     ]
 }
 
@@ -1458,6 +1466,8 @@ mod tests {
             ("Kathril", [0xCA7B, 106, 9030]),
             // Library-top Equipment riders, CR 706.2 natural-max draws.
             ("Galea", [0x6A1E, 107, 9031]),
+            // CR 700.9 — modified creatures; CR 603.10 computed LKI power.
+            ("Chishiro", [0xC415, 109, 9033]),
         ] {
             let precon = *field.iter().find(|d| d.name.starts_with(name)).expect("the precon seat");
             assert_eq!(precon.card_count(), 100);

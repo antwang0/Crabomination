@@ -3328,3 +3328,33 @@ pub const ZHULODOK_MAIN: &[CardFactory] = &[
     wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes,
     wastes, wastes, wastes, wastes,
 ];
+
+pub const CHISHIRO_COMMANDERS: &[CardFactory] = &[chishiro_the_shattered_blade];
+
+/// **Upgrades Unleashed**, the Kamigawa: Neon Dynasty Commander deck (NEC,
+/// 2022-02-18), as MTGJSON's `UpgradesUnleashed_NEC` prints it: 72 nonbasic
+/// cards + 12 Mountains + 14 Forests + a second Mossfire Valley = 99. ⚠ The
+/// printed deck really ships two Mossfire Valleys, so it isn't singleton out
+/// of the box (CR 903.5b); the extra copy is a thirteenth Mountain here.
+/// Gruul "modified" creatures — counters, Auras, Equipment — under Chishiro.
+pub const CHISHIRO_MAIN: &[CardFactory] = &[
+    kaima_the_fractured_calm, ox_of_agonas, akki_battle_squad, kami_of_celebration,
+    komainu_battle_armor, ascendant_acolyte, kosei_penitent_warlord, rampant_rejuvenator,
+    tanuki_transplanter, orochi_merge_keeper, towashi_guide_bot, walking_skyscraper,
+    agitator_ant, goblin_razerunners, krenko_tin_street_kingpin, taurean_mauler, acidic_slime,
+    champion_of_lambholt, fertilid, forgotten_ancient, genesis_hydra, loyal_guardian,
+    primeval_protector, rishkar_peema_renegade, sakura_tribe_elder, spearbreaker_behemoth,
+    whiptongue_hydra, grumgully_the_generous, ulasht_the_hate_seed, collision_of_realms,
+    smoke_spirits_aid, chain_reaction, kodamas_reach, rampant_growth, rishkars_expertise,
+    shamanic_revelation, souls_majesty, vastwood_surge, decimate, silkguard, chaos_warp,
+    starstorm, beast_within, hunters_insight, mage_slayer, arcane_signet, blackblade_reforged,
+    bonehoard, fireshrieker, sol_ring, swiftfoot_boots, sword_of_vengeance, unquenchable_fury,
+    concord_with_the_kami, one_with_the_kami, invigorating_hot_spring, elemental_mastery,
+    shifting_shadow, bear_umbra, ordeal_of_nylea, snake_umbra, rhythm_of_the_wild, cinder_glade,
+    command_tower, exotic_orchard, game_trail, gruul_turf, mossfire_valley, opal_palace,
+    oran_rief_the_vastwood, raging_ravine, temple_of_abandon,
+    // Basics: 13 mountain (12 + the second Mossfire Valley), 14 forest
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest,
+];
