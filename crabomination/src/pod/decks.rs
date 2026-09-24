@@ -1391,3 +1391,32 @@ pub const TEFERI_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island, island,
     island, island, island, island, island, island, island,
 ];
+
+pub const OSGIR_COMMANDERS: &[CardFactory] = &[osgir_the_reconstructor];
+
+/// **Lorehold Legacies**, the Commander 2021 deck (C21, 2021-04-23), exactly
+/// as MTGJSON's `LoreholdLegacies_C21` prints it: 79 nonbasic cards +
+/// 20 basics = 99. Boros artifact recursion under Osgir, the Reconstructor.
+pub const OSGIR_MAIN: &[CardFactory] = &[
+    daretti_scrap_savant, combustible_gearhulk, alibou_ancient_witness, angel_of_the_ruins,
+    bronze_guardian, digsite_engineer, losheel_clockwork_scholar, audacious_reshapers,
+    laelia_the_blade_reforged, ruin_grinder, triplicate_titan, sun_titan,
+    feldon_of_the_third_path, hellkite_igniter, hellkite_tyrant, hoard_smelter_dragon,
+    pia_nalaar, jor_kadeen_the_prevailer, bosh_iron_golem, duplicant, myr_battlesphere,
+    scrap_trawler, solemn_simulacrum, steel_hellkite, steel_overseer, sanctum_gargoyle,
+    quicksmith_genius, thopter_engineer, burnished_hart, meteor_golem, pilgrims_eye,
+    excavation_technique, wake_the_past, cleansing_nova, rout, chain_reaction,
+    secret_rendezvous, reconstruct_history, rip_apart, faithless_looting, dispatch,
+    return_to_dust, boros_charm, archaeomancers_map, battlemages_bracers, cursed_mirror,
+    key_to_the_city, sculpting_steel, thousand_year_elixir, dispellers_capsule, arcane_signet,
+    boros_locket, commanders_sphere, hedron_archive, ichor_wellspring, mind_stone,
+    mycosynth_wellspring, sol_ring, unstable_obelisk, monologue_tax, darksteel_mutation,
+    battlefield_forge, exotic_orchard, slayers_stronghold, temple_of_triumph, lorehold_campus,
+    study_hall, ancient_den, boros_garrison, command_tower, darksteel_citadel, forgotten_cave,
+    great_furnace, myriad_landscape, phyrexias_core, rogues_passage, secluded_steppe,
+    sunhome_fortress_of_the_legion, temple_of_the_false_god,
+    // Basics: 12 mountain, 8 plains
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, plains, plains, plains, plains, plains, plains, plains,
+    plains,
+];

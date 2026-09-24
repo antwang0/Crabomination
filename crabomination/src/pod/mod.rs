@@ -421,6 +421,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::TEFERI_COMMANDERS,
             main: decks::TEFERI_MAIN,
         },
+        // Forty-third: the thirty-third official list (Lorehold Legacies,
+        // C21) — Boros artifact recursion under Osgir. `--seats 43`.
+        PodDeck {
+            name: "Osgir, the Reconstructor (RW)",
+            commanders: decks::OSGIR_COMMANDERS,
+            main: decks::OSGIR_MAIN,
+        },
     ]
 }
 
