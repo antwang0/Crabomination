@@ -29944,6 +29944,7 @@ fn static_effect_to_effects(
             | StaticEffect::AttackingPlayerChoosesBlocks
             // Warped Space — consulted by the cast-from-exile path; no layer.
             | StaticEffect::FreeExileCastOncePerTurn
+            | StaticEffect::FreeExileCastOncePerTurnMatching(_)
             // Tomorrow, Azami's Familiar — a draw replacement consulted in
             // `draw_one`; no layer effect.
             | StaticEffect::ReplaceDrawWithLookN { .. }

@@ -408,6 +408,23 @@ impl GameState {
     /// The alternative cost `p` may use to cast the hand card `card_id`: the
     /// printed one, or the CR 118.9 WUBRG cost Fist of Suns grants to every
     /// spell its controller casts.
+    /// CR 118.9 — whether `p` may pay {0} for `card` cast from exile this
+    /// turn: Warped Space (any spell) or Tlincalli Hunter (a matching one),
+    /// once per turn between them (`Player.free_exile_cast_used_this_turn`).
+    pub(crate) fn free_exile_cast_waiver(&self, p: usize, card: &CardInstance) -> bool {
+        !self.players[p].free_exile_cast_used_this_turn
+            && self.battlefield.iter().any(|c| {
+                c.controller == p
+                    && c.definition.static_abilities.iter().any(|sa| match &sa.effect {
+                        crate::effect::StaticEffect::FreeExileCastOncePerTurn => true,
+                        crate::effect::StaticEffect::FreeExileCastOncePerTurnMatching(f) => {
+                            self.evaluate_requirement_on_card(f, card, p)
+                        }
+                        _ => false,
+                    })
+            })
+    }
+
     pub(crate) fn effective_alternative_cost(
         &self,
         p: usize,
@@ -4172,6 +4189,9 @@ impl GameState {
             card.face_down = false;
             card.on_adventure = false;
             card.adventuring = false;
+            // Faldorn — a land played from exile enters from exile (the
+            // `move_card_to` path records the same for effect moves).
+            self.entered_from_exile_this_turn.insert(card.id);
         }
         if from_top_capped {
             self.players[p].cast_from_library_top_this_turn = true;
@@ -7164,6 +7184,8 @@ impl GameState {
         let mut card = Self::take_card(&mut self.exile, card_id)
             .ok_or(GameError::CardNotInHand(card_id))?;
         card.face_down = false;
+        // CR 702.143a — a foretold card is cast from exile (Faldorn).
+        card.cast_from_exile = true;
         if self.granted_foretell_cost(card_id).is_some() {
             self.granted_foretell_costs.retain(|(c, _)| *c != card_id);
         }
@@ -7367,6 +7389,11 @@ impl GameState {
             cost.reduce_generic(reduction);
         }
         apply_spell_cost_floor(self, &mut cost);
+        // Tlincalli Hunter — once each turn, {0} for a creature cast from exile.
+        let waive = cost.cmc() > 0 && self.free_exile_cast_waiver(p, &self.exile[pos]);
+        if waive {
+            cost = crate::mana::ManaCost::default();
+        }
         let forced_only = self.players[p].manual_mana;
         let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
         self.pay_life_cost(p, receipt.side_effects.life_lost);
@@ -7374,12 +7401,17 @@ impl GameState {
             .pool_before
             .total()
             .saturating_sub(self.players[p].mana_pool.total());
+        if waive {
+            self.players[p].free_exile_cast_used_this_turn = true;
+        }
         // Re-locate by id: payment ran after `pos` was captured.
         let mut card = Self::take_card(&mut self.exile, card_id)
             .ok_or(GameError::CardNotInHand(card_id))?;
         card.on_adventure = false;
         card.adventuring = false;
         card.cast_from_hand = false;
+        // CR 715.4 — the creature half is cast from exile.
+        card.cast_from_exile = true;
         let mut events = receipt.auto_events;
         events.push(GameEvent::SpellCast { player: p, card_id, face: CastFace::Front });
         self.finalize_cast(
@@ -7731,8 +7763,10 @@ impl GameState {
             self.check_target_legality_with_source(tgt, p, Some(card_id))?;
         }
         // Re-locate by id at removal time (target checks ran in between).
-        let card = Self::take_card(&mut self.exile, card_id)
+        let mut card = Self::take_card(&mut self.exile, card_id)
             .ok_or(GameError::CardNotInHand(card_id))?;
+        // CR 702.170d — a plotted card is cast from exile.
+        card.cast_from_exile = true;
         self.plotted_cards.remove(&card_id);
         let events = vec![GameEvent::SpellCast { player: p, card_id, face: CastFace::Front }];
         self.finalize_cast(
@@ -10300,6 +10334,9 @@ impl GameState {
         if from_hand {
             self.players[p].spells_cast_from_hand_this_turn += 1;
         }
+        if card.cast_from_exile {
+            self.players[p].spells_cast_from_exile_this_turn += 1;
+        }
         // CR 715 / 702.183 — when cast as its Adventure/Omen half the card is an
         // instant/sorcery spell, not a creature spell, so the spell-type
         // tallies (Magecraft / Prowess) read the half's types.
@@ -11974,13 +12011,7 @@ impl GameState {
         // instead of the cost its may-play grant stamped on.
         let waive = zone == crate::card::Zone::Exile
             && alt_cast_cost.as_ref().is_some_and(|c| c.cmc() > 0)
-            && !self.players[p].free_exile_cast_used_this_turn
-            && self.battlefield.iter().any(|c| {
-                c.controller == p
-                    && c.definition.static_abilities.iter().any(|sa| {
-                        matches!(sa.effect, crate::effect::StaticEffect::FreeExileCastOncePerTurn)
-                    })
-            });
+            && self.exile.iter().find(|c| c.id == card_id).is_some_and(|c| self.free_exile_cast_waiver(p, c));
         if let Some(life) = valgavoth_toll {
             if self.players[p].life < life as i32 {
                 return Err(GameError::InsufficientLife);

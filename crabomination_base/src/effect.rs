@@ -2073,6 +2073,10 @@ pub enum Predicate {
     /// exile — reads the `StackItem::Spell.card.cast_from_exile` flag.
     /// Nassari, Dean of Expression's "whenever you cast a spell from exile".
     CastSpellFromExile,
+    /// `CastSpellFromExile`, and it is the caster's first spell cast from
+    /// exile this turn (`Player.spells_cast_from_exile_this_turn == 1`) —
+    /// Wild-Magic Sorcerer.
+    FirstSpellCastFromExileThisTurn,
     /// True if the just-cast spell (via `ctx.trigger_source`) was cast from its
     /// owner's library — reads `StackItem::Spell.card.cast_from_library`.
     /// Melek, Izzet Paragon's "whenever you cast an instant or sorcery spell

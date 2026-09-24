@@ -766,6 +766,10 @@ pub struct PlayerData {
     /// this turn" payoffs (Prairie Dog, Emergent Haunting). Reset each turn.
     #[serde(default)]
     pub spells_cast_from_hand_this_turn: u32,
+    /// Spells this player cast from exile this turn (Wild-Magic Sorcerer's
+    /// "the first spell you cast from exile each turn"). Reset each turn.
+    #[serde(default)]
+    pub spells_cast_from_exile_this_turn: u32,
     /// Transient Hardened-Scales bonus granted "until end of turn" (Prairie
     /// Dog's {4}{W}). Adds to `plus_counter_adders_for`; cleared at cleanup.
     #[serde(default)]
@@ -1372,6 +1376,7 @@ impl Player {
             milled_ids_this_turn: Default::default(),
             instants_or_sorceries_cast_this_turn: 0,
             spells_cast_from_hand_this_turn: 0,
+            spells_cast_from_exile_this_turn: 0,
             extra_plus_one_counters_this_turn: 0,
             extra_etb_p1p1_counters_this_turn: 0,
             pending_is_discounts: Default::default(),

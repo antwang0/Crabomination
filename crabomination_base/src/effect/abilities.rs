@@ -2347,6 +2347,10 @@ pub enum StaticEffect {
     /// pay-own-cost rider a `may_play_until` grant stamps on an exiled card;
     /// tracked by `Player.free_exile_cast_used_this_turn`.
     FreeExileCastOncePerTurn,
+    /// `FreeExileCastOncePerTurn` limited to spells matching `filter` —
+    /// Tlincalli Hunter's "a creature spell you cast from exile". Shares
+    /// the same once-per-turn tally, and also waives an adventurer's cast.
+    FreeExileCastOncePerTurnMatching(SelectionRequirement),
     /// CR 121.2a — "If you would draw a card, look at the top `count` cards of
     /// your library instead. Put one into your hand and the rest on the bottom
     /// in any order." (Tomorrow, Azami's Familiar.)

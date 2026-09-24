@@ -886,6 +886,9 @@ impl GameState {
                     pl.spell_ids_cast_this_turn.clear();
                     pl.forage_graveyard_casts_turn = None;
                     pl.spells_cast_from_hand_this_turn = 0;
+                    if pl.spells_cast_from_exile_this_turn != 0 {
+                        pl.spells_cast_from_exile_this_turn = 0;
+                    }
                     pl.oil_activity_this_turn = false;
                     pl.channel_life_for_mana = false;
                     // CR 603.7e — unused "your next creature spell this turn"
