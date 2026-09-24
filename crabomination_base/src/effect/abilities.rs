@@ -435,6 +435,11 @@ pub enum StaticEffect {
     /// by name across all players. Materialized in
     /// `gather_continuous_effects_inner` (scans the live battlefield).
     AllNonlandPermanentsAreLegendary,
+    /// CR 205.4 / 613.1d — "Enchanted creature is legendary" (On Serra's
+    /// Wings): the permanent this Aura or Equipment is attached to gains the
+    /// Legendary supertype in layer 4. Materialized in
+    /// `gather_continuous_effects_inner`, beside the Leyline.
+    AttachedIsLegendary,
     /// Strip a keyword from matching permanents (CR 613 layer 6) — "creatures
     /// your opponents control lose hexproof and shroud" (Nowhere to Run). A
     /// layer-6 `Modification::RemoveKeyword`, the mirror of `GrantKeyword`.

@@ -15750,6 +15750,28 @@ impl GameState {
                 });
             }
         }
+        // CR 613.1d — "enchanted creature is legendary" (On Serra's Wings).
+        let legend_hosts: Vec<(CardId, CardId)> = sa_cards
+            .iter()
+            .filter(|(c, _)| {
+                c.definition
+                    .static_abilities
+                    .iter()
+                    .any(|sa| matches!(sa.effect, crate::effect::StaticEffect::AttachedIsLegendary))
+            })
+            .filter_map(|(c, _)| c.attached_to.map(|host| (c.id, host)))
+            .collect();
+        for (source, host) in legend_hosts {
+            all_effects.push(ContinuousEffect {
+                timestamp: 0,
+                source,
+                affected: AffectedPermanents::just(host),
+                layer: Layer::L4Type,
+                sublayer: None,
+                duration: EffectDuration::WhileSourceOnBattlefield,
+                modification: Modification::AddSupertype(crate::card::Supertype::Legendary),
+            });
+        }
         // CR 701.54c — the Ring's level-1 emblem makes its controller's
         // Ring-bearer legendary (in addition to the can't-be-blocked rider,
         // which is enforced directly in `blocker_can_block_attacker`).
@@ -29409,6 +29431,7 @@ fn static_effect_to_effects(
             // AllNonlandPermanentsAreLegendary — Leyline of Singularity scans
             // the live battlefield; resolved in `gather_continuous_effects`.
             | StaticEffect::AllNonlandPermanentsAreLegendary
+            | StaticEffect::AttachedIsLegendary
             // DevotionBonus — read directly by `devotion_to`, no continuous effect.
             | StaticEffect::DevotionBonus
             // PreventCombatDamageToSelfAndGrow — consulted at the combat damage
