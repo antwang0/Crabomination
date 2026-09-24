@@ -7001,11 +7001,15 @@ impl GameState {
                 // chosen now (after the gating cost was paid), not at the outer
                 // trigger. Auto-target the body fresh and thread the picks
                 // through a derived context, mirroring the descend/forage path.
-                let (slot0, additional) = self.auto_targets_for_effect_all_slots_sourced(
+                // A payoff behind "pay {X}" reads that X in its target filter
+                // (Halo Forager's "mana value X").
+                let (slot0, additional) = self.auto_targets_for_effect_all_slots_x(
                     body,
                     ctx.controller,
                     None,
+                    false,
                     ctx.source,
+                    (ctx.x_value > 0).then_some(ctx.x_value),
                 );
                 let mut body_ctx = ctx.clone();
                 body_ctx.targets = slot0.into_iter().chain(additional).collect();
