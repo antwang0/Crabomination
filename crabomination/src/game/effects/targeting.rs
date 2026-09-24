@@ -307,8 +307,13 @@ impl GameState {
                 .find_by_id(s)
                 .is_some_and(|c| c.controller != controller && !self.same_team(c.controller, controller))
         });
+        // Doubling its own counters is the point of a source's "double the
+        // counters on target creature" (a backed-up Bright-Palm trigger), so
+        // the source isn't spared there.
+        let own_doubling = doubles_target_counters(eff);
         let is_avoided = |cid: CardId| -> bool {
-            avoid.contains(&cid) && !(hostile_source && Some(cid) == avoid_source)
+            avoid.contains(&cid)
+                && !((hostile_source || own_doubling) && Some(cid) == avoid_source)
         };
         // For friendly pumps (Magecraft / Repartee +1/+1 fan-out, transient
         // PumpPT spells), prefer the highest-power friendly creature so the
@@ -338,7 +343,18 @@ impl GameState {
             // creature it could target, so it outranks any single body.
             let fans_out =
                 |cid: CardId| self.battlefield.find_by_id(cid).is_some_and(copies_to_the_team);
-            primary_candidates.sort_by_cached_key(|c| (!fans_out(c.0), std::cmp::Reverse(c.1)));
+            // "Double the counters on target creature" (Bright-Palm, Tanazir)
+            // is worth what the creature already carries, so the most
+            // counters outrank the most power.
+            let counters = |cid: CardId| -> u32 {
+                if !doubles_target_counters(eff) {
+                    return 0;
+                }
+                self.battlefield.find_by_id(cid).map_or(0, |c| c.counters.values().sum())
+            };
+            primary_candidates.sort_by_cached_key(|c| {
+                (!fans_out(c.0), std::cmp::Reverse(counters(c.0)), std::cmp::Reverse(c.1))
+            });
         } else {
             // Hostile pick: un-warded first, then the biggest threat.
             // The power term was missing until 2026-08-22, so removal took
@@ -1105,4 +1121,14 @@ fn copies_to_the_team(c: &CardInstance) -> bool {
         .triggered_abilities
         .iter()
         .any(|t| matches!(t.effect, Effect::CopyForEachOtherTargetableCreature))
+}
+
+/// The effect doubles the counters on its target — a friendly target is then
+/// picked by the counters it carries.
+fn doubles_target_counters(eff: &Effect) -> bool {
+    match eff {
+        Effect::DoubleCountersOnEach { .. } | Effect::DoubleAllCountersOn { .. } => true,
+        Effect::Seq(steps) => steps.first().is_some_and(doubles_target_counters),
+        _ => false,
+    }
 }
