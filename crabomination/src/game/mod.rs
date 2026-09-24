@@ -8574,10 +8574,23 @@ impl GameState {
             {
                 return true;
             }
-            Some(s.controller) == seat
+            if Some(s.controller) == seat
                 && s.definition.static_abilities.iter().any(|sa| {
                     matches!(sa.effect, SE::PreventAllCombatDamageToAndFromYourCreatures)
                 })
+            {
+                return true;
+            }
+            // Losheel — a filtered shield, read against the damaged permanent
+            // with the shield's controller as "you".
+            me.is_some_and(|c| {
+                s.definition.static_abilities.iter().any(|sa| match &sa.effect {
+                    SE::PreventAllCombatDamageToMatching { filter } => {
+                        self.evaluate_requirement_static_on(filter, c, s.controller, Some(s.id))
+                    }
+                    _ => false,
+                })
+            })
         })
     }
 
@@ -28175,6 +28188,7 @@ pub(crate) fn card_can_prevent_incoming_damage(card: &CardInstance) -> bool {
                 | SE::PreventAllDamageToEnchanted
                 | SE::PreventAllCombatDamageToAndFromEnchanted
                 | SE::PreventAllCombatDamageToAndFromYourCreatures
+                | SE::PreventAllCombatDamageToMatching { .. }
         )
     })
 }
@@ -29082,6 +29096,7 @@ fn static_effect_to_effects(
             | StaticEffect::PreventAllCombatDamageToThis
             | StaticEffect::PreventAllCombatDamageToAttached
             | StaticEffect::PreventAllCombatDamageToAndFromEnchanted
+            | StaticEffect::PreventAllCombatDamageToMatching { .. }
             | StaticEffect::PreventAllDamageToThis
             | StaticEffect::PlayersCantCycle
             | StaticEffect::MorphCostsMore { .. }

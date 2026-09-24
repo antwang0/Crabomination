@@ -1272,6 +1272,10 @@ pub enum StaticEffect {
     /// creature" (Sandskin) — the combat-only sibling of
     /// `PreventAllDamageToAndFromEnchanted`.
     PreventAllCombatDamageToAndFromEnchanted,
+    /// CR 615 — "Prevent all combat damage that would be dealt to [filter]",
+    /// the filter read with the source's controller as "you" (Losheel,
+    /// Clockwork Scholar's "attacking artifact creatures you control").
+    PreventAllCombatDamageToMatching { filter: crate::card::SelectionRequirement },
     /// "Prevent all damage that would be dealt to this permanent" — the
     /// combat+noncombat superset of `PreventAllCombatDamageToThis`, consulted
     /// on both damage funnels. Wrap in `WhileYourTurn` for turn-gated
