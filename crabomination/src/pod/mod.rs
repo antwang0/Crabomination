@@ -827,6 +827,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::KITT_COMMANDERS,
             main: decks::KITT_MAIN,
         },
+        // Ninety-ninth: the eighty-ninth official list (Draconic
+        // Domination, C17) — five-color Dragons under The Ur-Dragon.
+        // `--pod-decks 99`.
+        PodDeck {
+            name: "The Ur-Dragon (WUBRG)",
+            commanders: decks::UR_DRAGON_COMMANDERS,
+            main: decks::UR_DRAGON_MAIN,
+        },
     ]
 }
 

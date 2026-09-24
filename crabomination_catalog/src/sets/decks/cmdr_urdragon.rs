@@ -5,8 +5,6 @@
 //! Residuals (each also on its card):
 //! - **Orator of Ojutai** — the Dragon check reads your board and hand as it
 //!   enters; there is no reveal.
-//! - **Territorial Hellkite** — the opponent it must attack is any random one,
-//!   not one it didn't attack last combat, and it never taps itself.
 
 use std::sync::Arc;
 
@@ -436,24 +434,6 @@ pub fn taigam_ojutai_master() -> CardDefinition {
             3,
             4,
         ))
-    }
-}
-
-/// Territorial Hellkite — flying, haste; at the beginning of combat on your
-/// turn it must attack a random opponent. Residual: any opponent, and it never
-/// taps itself.
-pub fn territorial_hellkite() -> CardDefinition {
-    let mut def = creature("Territorial Hellkite", cost(&[generic(2), r(), r()]), vec![CreatureType::Dragon], 6, 5);
-    def.keywords.push(Keyword::Haste);
-    CardDefinition {
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::YourControl),
-            effect: Effect::MustAttackPlayerThisTurn {
-                attacker: Selector::This,
-                defender: Selector::Player(PlayerRef::RandomOpponent),
-            },
-        }],
-        ..def
     }
 }
 

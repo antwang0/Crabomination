@@ -2301,7 +2301,6 @@ static DECKS: &[Factory] = &[
     super::decks::hammerhead_tyrant,
     super::decks::opportunistic_dragon,
     super::decks::temple_of_the_dragon_queen,
-    super::decks::territorial_hellkite,
     super::decks::ureni_of_the_unwritten,
     super::decks::will_of_the_temur,
     super::decks::zenith_festival,

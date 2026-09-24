@@ -3041,3 +3041,33 @@ pub const KITT_MAIN: &[CardFactory] = &[
     thriving_heath, windbrisk_heights, plains, plains, plains, plains, mountain, mountain,
     mountain, mountain, forest, forest, forest, forest, forest, forest, forest, forest,
 ];
+
+pub const UR_DRAGON_COMMANDERS: &[CardFactory] = &[the_ur_dragon];
+
+/// **Draconic Domination**, the Commander 2017 deck (C17, 2017-08-25),
+/// exactly as MTGJSON's `DraconicDomination_C17` prints it: 81 nonbasic
+/// cards + 6 Mountains + 3 Swamps + 3 Forests + 3 Plains + 3 Islands = 99.
+/// Five-color Dragons under The Ur-Dragon.
+pub const UR_DRAGON_MAIN: &[CardFactory] = &[
+    o_kagachi_vengeful_kami, ramos_dragon_engine, scalelord_reckoner, boneyard_scourge,
+    territorial_hellkite, taigam_ojutai_master, wasitora_nekoru_queen, ryusei_the_falling_star,
+    scourge_of_valkas, utvara_hellkite, sunscorch_regent, deathbringer_regent, hellkite_charger,
+    tyrants_familiar, atarka_world_render, bladewing_the_risen, broodmate_dragon,
+    crosis_the_purger, dromoka_the_eternal, intet_the_dreamer, kolaghan_the_storms_fury,
+    nivmizzet_dracogenius, ojutai_soul_of_winter, scion_of_the_ur_dragon,
+    silumgar_the_drifting_death, spellbound_dragon, teneb_the_harvester, steel_hellkite,
+    orator_of_ojutai, dragonlords_servant, dragonspeaker_shaman, savage_ventmaw, fortunate_few,
+    fractured_identity, crux_of_fate, painful_truths, earthquake, cultivate, farseek,
+    kodamas_reach, rain_of_thorns, fist_of_suns, heralds_horn, mirror_of_the_forebears,
+    armillary_sphere, commanders_sphere, darksteel_ingot, dreamstone_hedron, lightning_greaves,
+    nihil_spellbomb, sol_ring, wayfarers_bauble, kindred_discovery, monastery_siege,
+    palace_siege, crucible_of_fire, dragon_tempest, frontier_siege, curse_of_verbosity,
+    curse_of_opulence, curse_of_bounty, elemental_bond, crucible_of_the_spirit_dragon,
+    haven_of_the_spirit_dragon, path_of_ancestry, arcane_sanctum, command_tower,
+    crumbling_necropolis, frontier_bivouac, jungle_shrine, mystic_monastery, nomad_outpost,
+    opulent_palace, sandsteppe_citadel, savage_lands, seaside_citadel, vivid_crag, vivid_creek,
+    vivid_grove, vivid_marsh, vivid_meadow,
+    // Basics: 6 mountain, 3 swamp, 3 forest, 3 plains, 3 island
+    mountain, mountain, mountain, mountain, mountain, mountain, swamp, swamp, swamp, forest,
+    forest, forest, plains, plains, plains, island, island, island,
+];
