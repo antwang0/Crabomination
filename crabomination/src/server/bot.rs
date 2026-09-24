@@ -8246,6 +8246,12 @@ fn sink_facts(state: &GameState, seat: usize, have: &SweepMana<'_>) -> u32 {
     // gates now skip all six on a board with nothing for them.
     let scan = state.grant_scan();
     let mut gy_ability_grant = false;
+    // A static that makes artifacts Equipment (Bludgeon Brawl, Arterial
+    // Alchemy): the per-card memo answers "is one out" without a walk.
+    let equipment_grant = state
+        .battlefield
+        .iter()
+        .any(|c| c.gather_scan_bits() & crate::card::gather_spec::ARTIFACTS_ARE_EQUIPMENT != 0);
     for c in state.battlefield.iter().filter(|c| c.controller == seat) {
         let def = &c.definition;
         if def.is_planeswalker() {
@@ -8257,7 +8263,9 @@ fn sink_facts(state: &GameState, seat: usize, have: &SweepMana<'_>) -> u32 {
         if def.saddle_cost().is_some() {
             m |= sink::SADDLE;
         }
-        if def.is_equipment() && def.has_equip().is_some() {
+        if (def.is_equipment() && def.has_equip().is_some())
+            || (equipment_grant && state.granted_equipment(c).is_some())
+        {
             m |= sink::EQUIP;
         }
         if def.subtypes.artifact_subtypes.contains(&ArtifactSubtype::Lander) {
