@@ -111,6 +111,8 @@ fn walk(v: &Value, out: &mut ColorSet) {
                             color_of(c, out);
                         }
                     }
+                    // ColorlessHybrid(color) — {C/W} is white (CR 903.4).
+                    "ColorlessHybrid" => color_of(p, out),
                     // ManaPayload — "{T}: Add {B}" is a rules-text symbol.
                     "Colors" => each_color(p, out),
                     "OfColor" => {

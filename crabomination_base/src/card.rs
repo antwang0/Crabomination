@@ -2614,6 +2614,9 @@ pub enum SelectionRequirement {
     /// control with base power or toughness 1" (Sword of the Squeak). Reads
     /// the definition, which is the token's for a token.
     BasePowerOrToughnessIs(i32),
+    /// A creature whose printed power or toughness is `n` or less — "each
+    /// with base power or toughness 1 or less" (Angelic Aberration).
+    BasePowerOrToughnessAtMost(i32),
     /// A creature whose printed power is `n` — "creatures you control with
     /// base power 1" (Zinnia, Rapid Augmenter). Same definition read as
     /// `BasePowerOrToughnessIs`.
@@ -6119,9 +6122,10 @@ impl CardDefinition {
         }
         for sym in &self.cost.symbols {
             match sym {
-                ManaSymbol::Colored(c) | ManaSymbol::Phyrexian(c) | ManaSymbol::MonoHybrid(_, c) => {
-                    colors.insert(*c)
-                }
+                ManaSymbol::Colored(c)
+                | ManaSymbol::Phyrexian(c)
+                | ManaSymbol::MonoHybrid(_, c)
+                | ManaSymbol::ColorlessHybrid(c) => colors.insert(*c),
                 // `PhyrexianHybrid` ({G/U/P}) is a hybrid pip too — it was
                 // in `ManaCost::distinct_colors`' arm and missing from this
                 // one, so an object printing it read a colour short.

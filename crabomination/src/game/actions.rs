@@ -15138,7 +15138,8 @@ impl GameState {
     ) -> bool {
         use crate::mana::ManaSymbol;
         let flexible = cost.symbols.iter().any(|s| {
-            matches!(s, ManaSymbol::Generic(n) if *n > 0) || matches!(s, ManaSymbol::MonoHybrid(_, _))
+            matches!(s, ManaSymbol::Generic(n) if *n > 0)
+                || matches!(s, ManaSymbol::MonoHybrid(_, _) | ManaSymbol::ColorlessHybrid(_))
         });
         let cost_colors = cost.color_set();
         let mut scan = self.grant_scan();
@@ -15206,7 +15207,9 @@ impl GameState {
         if cost
             .symbols
             .iter()
-            .any(|s| matches!(s, ManaSymbol::Hybrid(_, _) | ManaSymbol::MonoHybrid(_, _)))
+            .any(|s| {
+                matches!(s, ManaSymbol::Hybrid(_, _) | ManaSymbol::MonoHybrid(_, _) | ManaSymbol::ColorlessHybrid(_))
+            })
         {
             return self.untapped_relevant_source_exists(player, cost);
         }
@@ -15461,7 +15464,7 @@ impl GameState {
         use crate::mana::ManaSymbol;
         let flexible = cost.symbols.iter().any(|s| {
             matches!(s, ManaSymbol::Generic(n) if *n > 0)
-                || matches!(s, ManaSymbol::MonoHybrid(_, _))
+                || matches!(s, ManaSymbol::MonoHybrid(_, _) | ManaSymbol::ColorlessHybrid(_))
         });
         let cost_colors = cost.color_set();
         self.players[player].hand.iter().any(|c| {
@@ -15790,6 +15793,16 @@ impl GameState {
                     // otherwise treat the pip as {n} generic to tap for.
                     let have = &mut avail[color_index(*c)];
                     if *have > 0 { *have -= 1; } else { generic += n; }
+                }
+                ManaSymbol::ColorlessHybrid(c) => {
+                    // {C/X}: floating colorless, else the color, else tap
+                    // for one more (the auto-tapper's generic fallback).
+                    if avail_colorless > 0 {
+                        avail_colorless -= 1;
+                    } else {
+                        let have = &mut avail[color_index(*c)];
+                        if *have > 0 { *have -= 1; } else { generic += 1; }
+                    }
                 }
                 ManaSymbol::Generic(n) => generic += n,
                 ManaSymbol::Colorless(n) => {

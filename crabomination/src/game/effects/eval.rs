@@ -247,9 +247,10 @@ impl GameState {
             .filter(|card| card.controller == player)
             .flat_map(|card| card.definition.cost.symbols.iter())
             .filter(|sym| match sym {
-                ManaSymbol::Colored(c) | ManaSymbol::Phyrexian(c) | ManaSymbol::MonoHybrid(_, c) => {
-                    matches(c)
-                }
+                ManaSymbol::Colored(c)
+                | ManaSymbol::Phyrexian(c)
+                | ManaSymbol::MonoHybrid(_, c)
+                | ManaSymbol::ColorlessHybrid(c) => matches(c),
                 ManaSymbol::Hybrid(a, b) => matches(a) || matches(b),
                 _ => false,
             })
@@ -2764,6 +2765,15 @@ impl GameState {
                     _ => false,
                 })
             }
+            Predicate::CastSpellWasKickedWith(n) => {
+                let Some(EntityRef::Card(cid)) = ctx.trigger_source else {
+                    return false;
+                };
+                self.stack.iter().any(|si| match si {
+                    StackItem::Spell { card, .. } if card.id == cid => card.kicked_options.contains(n),
+                    _ => false,
+                })
+            }
             Predicate::CastSpellHasX => {
                 // Locate the just-cast spell via the trigger source and
                 // peek at its printed mana cost. Used by "whenever you
@@ -4746,6 +4756,10 @@ impl GameState {
                         card.definition.is_creature()
                             && (card.definition.power == *n || card.definition.toughness == *n)
                     }
+                    R::BasePowerOrToughnessAtMost(n) => {
+                        card.definition.is_creature()
+                            && (card.definition.power <= *n || card.definition.toughness <= *n)
+                    }
                     R::BasePowerIs(n) => card.definition.is_creature() && card.definition.power == *n,
                     R::BasePowerToughnessIs(p, t) => {
                         card.definition.is_creature()
@@ -6045,6 +6059,9 @@ impl GameState {
             R::HasForetell => card.definition.foretell_cost.is_some(),
             R::BasePowerOrToughnessIs(n) => {
                 card.definition.is_creature() && (card.definition.power == *n || card.definition.toughness == *n)
+            }
+            R::BasePowerOrToughnessAtMost(n) => {
+                card.definition.is_creature() && (card.definition.power <= *n || card.definition.toughness <= *n)
             }
             R::BasePowerIs(n) => card.definition.is_creature() && card.definition.power == *n,
             R::BasePowerToughnessIs(p, t) => {

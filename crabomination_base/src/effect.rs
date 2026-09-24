@@ -2043,6 +2043,9 @@ pub enum Predicate {
     /// ("when you cast this spell, if it was kicked" — Scourge of the
     /// Skyclaves) see the kicker state before resolution.
     CastSpellWasKicked,
+    /// `CastSpellWasKicked` for one of a "kicker {A} and/or {B}" spell's
+    /// kickers, by index (Wastescape Battlemage's two cast triggers).
+    CastSpellWasKickedWith(u8),
     /// "If you control a commander" (Akroma's Will, Jeska's Will) — true
     /// when any battlefield permanent the effect's controller controls is
     /// one of their designated commanders (`Player.commanders`).
@@ -4909,6 +4912,20 @@ pub enum Effect {
     /// `ColdState::temporary_attack_direction` and lifted as the
     /// controller's next turn begins.
     ChooseAttackDirectionUntilYourNextTurn,
+    /// Selective Obliteration — "each player chooses a color. Then exile each
+    /// permanent unless it's colorless or it's only the color its controller
+    /// chose." Each player picks the color most common among their own
+    /// permanents.
+    EachPlayerChoosesColorExileOthers,
+    /// Ulalek, Fused Atrocity — "copy all spells you control, then copy all
+    /// other activated and triggered abilities you control" (CR 707.10).
+    CopyAllSpellsAndAbilitiesYouControl,
+    /// Benthic Anomaly — "for each opponent, choose a creature that player
+    /// controls. Create a token that's a copy of one of those creatures,
+    /// except its power and toughness are those creatures' totals and it's a
+    /// colorless Eldrazi creature." Each opponent's greatest-power creature
+    /// is chosen; the copy is of the one with the greatest mana value.
+    CopyOnePerOpponentWithTotalStats,
     /// "Copy the next loyalty ability you activate this turn" `copies` times
     /// (Jaya's Phoenix: once; Repeated Reverberation: twice). Adds a one-shot
     /// `LoyaltyCopyGrant` to the controller.

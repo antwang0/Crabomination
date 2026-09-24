@@ -12805,6 +12805,7 @@ impl GameState {
                         ManaSymbol::Generic(n) | ManaSymbol::Colorless(n) | ManaSymbol::MonoHybrid(n, _) => {
                             self.players[p].mana_pool.add_colorless(*n);
                         }
+                        ManaSymbol::ColorlessHybrid(_) => self.players[p].mana_pool.add_colorless(1),
                         ManaSymbol::Snow | ManaSymbol::X => {}
                     }
                 }
@@ -32578,6 +32579,16 @@ impl GameState {
             Effect::ChooseAttackDirection => {
                 self.choose_attack_direction(ctx);
                 Ok(())
+            }
+            Effect::EachPlayerChoosesColorExileOthers => {
+                self.each_player_chooses_color_exile_others(ctx, events);
+                Ok(())
+            }
+            Effect::CopyAllSpellsAndAbilitiesYouControl => {
+                self.copy_all_spells_and_abilities(ctx, events)
+            }
+            Effect::CopyOnePerOpponentWithTotalStats => {
+                self.copy_one_per_opponent_with_total_stats(ctx, events)
             }
             Effect::ChooseAttackDirectionUntilYourNextTurn => {
                 self.choose_attack_direction_until_next_turn(ctx);

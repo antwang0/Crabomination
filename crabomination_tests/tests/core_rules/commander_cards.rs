@@ -1644,3 +1644,93 @@ fn cr_106_7_colors_a_gate_could_produce() {
     assert_eq!(pool.amount(Color::White) + pool.amount(Color::Blue), 1);
     assert_eq!(pool.amount(Color::Green), 0);
 }
+
+// ── Primitives for Eldrazi Incursion (M3C, Ulalek) ─────────────────────────
+
+/// CR 105.2 — Selective Obliteration: a permanent survives only if it's
+/// colorless or exactly its controller's chosen color (each seat's most
+/// common one); a multicolored permanent never survives.
+#[test]
+fn each_player_keeps_one_color() {
+    use crabomination::effect::Effect;
+    use crabomination::game::effects::EffectContext;
+    let mut g = game_with_format(Format::Commander, 3);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bear2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bolt_guy = g.add_card_to_battlefield(1, catalog::goblin_guide());
+    let ring = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(&Effect::EachPlayerChoosesColorExileOthers, &ctx).expect("resolve");
+    assert!(g.battlefield_find(bear).is_some() && g.battlefield_find(bear2).is_some(), "green, the chosen color");
+    assert!(g.battlefield_find(bolt_guy).is_none(), "red isn't");
+    assert!(g.battlefield_find(ring).is_some(), "colorless");
+}
+
+/// CR 707.10 — "copy all spells you control, then copy all other activated
+/// and triggered abilities you control" (Ulalek): an opponent's spell on the
+/// stack is left alone.
+#[test]
+fn cr_707_10_copy_every_spell_and_ability_you_control() {
+    use crabomination::effect::Effect;
+    use crabomination::game::effects::EffectContext;
+    use crabomination::game::types::StackItem;
+    let mut g = game_with_format(Format::Commander, 3);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    for (seat, card) in [(0, catalog::lightning_bolt()), (1, catalog::lightning_bolt())] {
+        let id = g.add_card_to_hand(seat, card);
+        g.players[seat].mana_pool.add(crabomination::mana::Color::Red, 1);
+        g.priority.player_with_priority = seat;
+        g.perform_action(GameAction::CastSpell {
+            card_id: id,
+            target: Some(Target::Player(2)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("bolt");
+    }
+    let spells = |g: &GameState, seat| {
+        g.stack.iter().filter(|s| matches!(s, StackItem::Spell { caster, .. } if *caster == seat)).count()
+    };
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(&Effect::CopyAllSpellsAndAbilitiesYouControl, &ctx).expect("copy");
+    assert_eq!((spells(&g, 0), spells(&g, 1)), (2, 1));
+}
+
+/// CR 707.9 — a copy with exceptions: Benthic Anomaly's token copies one
+/// chosen creature but takes the chosen creatures' summed power and
+/// toughness and is colorless.
+#[test]
+fn cr_707_9_one_copy_with_summed_stats() {
+    use crabomination::effect::Effect;
+    use crabomination::game::effects::EffectContext;
+    let mut g = game_with_format(Format::Commander, 3);
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_battlefield(2, catalog::goblin_guide());
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(&Effect::CopyOnePerOpponentWithTotalStats, &ctx).expect("copy");
+    let tok = g.battlefield.iter().find(|c| c.controller == 0 && c.is_token).expect("token").id;
+    let cp = g.computed_permanent(tok).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4), "2/2 + 2/2");
+    assert!(cp.colors.is_empty());
+}
+
+/// CR 107.4e — a colorless hybrid pip ({C/W}) is paid with one colorless
+/// mana or one mana of its color, has mana value 1, and counts its color
+/// toward color identity (CR 903.4).
+#[test]
+fn cr_107_4e_colorless_hybrid_pips() {
+    use crabomination::mana::{colorless_hybrid, Color, ManaCost, ManaPool};
+    let cost = ManaCost { symbols: vec![colorless_hybrid(Color::White), colorless_hybrid(Color::Blue)] };
+    assert_eq!(cost.cmc(), 2);
+    let mut pool = ManaPool::default();
+    pool.add_colorless(1);
+    pool.add(Color::Blue, 1);
+    assert!(pool.clone().pay(&cost).is_ok(), "{{C}} for one, {{U}} for the other");
+    let mut red = ManaPool::default();
+    red.add(Color::Red, 2);
+    assert!(red.pay(&cost).is_err(), "red pays neither");
+    let ulalek = catalog::ulalek_fused_atrocity();
+    assert_eq!(crabomination::color_identity::color_identity(&ulalek).len(), 5);
+}

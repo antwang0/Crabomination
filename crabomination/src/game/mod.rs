@@ -140,6 +140,7 @@ mod entry_tally;
 mod mystic_barrier;
 mod loyalty_copy;
 mod gate_mana;
+mod eldrazi;
 mod spree_targets;
 // CR 102.2 — "an opponent controls N or more …", read per opponent.
 mod milled_play;
@@ -10406,7 +10407,8 @@ impl GameState {
             match s {
                 ManaSymbol::Colored(_)
                 | ManaSymbol::Hybrid(..)
-                | ManaSymbol::MonoHybrid(..) => relaxed += 1,
+                | ManaSymbol::MonoHybrid(..)
+                | ManaSymbol::ColorlessHybrid(_) => relaxed += 1,
                 other => symbols.push(*other),
             }
         }
@@ -28341,6 +28343,7 @@ fn is_colorless_by_cost(def: &crate::card::CardDefinition) -> bool {
                 | ManaSymbol::Hybrid(_, _)
                 | ManaSymbol::Phyrexian(_)
                 | ManaSymbol::MonoHybrid(_, _)
+                | ManaSymbol::ColorlessHybrid(_)
         )
     })
 }

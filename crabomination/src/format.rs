@@ -554,6 +554,7 @@ fn cost_has_duplicate_symbol(c: &CardDefinition) -> bool {
             ManaSymbol::Colored(col) => format!("{col:?}"),
             ManaSymbol::Hybrid(a, b) => format!("H{a:?}{b:?}"),
             ManaSymbol::MonoHybrid(n, col) => format!("M{n}{col:?}"),
+            ManaSymbol::ColorlessHybrid(col) => format!("CH{col:?}"),
             ManaSymbol::Phyrexian(col) => format!("P{col:?}"),
             ManaSymbol::PhyrexianHybrid(a, b) => format!("PH{a:?}{b:?}"),
             ManaSymbol::Generic(_) => "generic".into(),

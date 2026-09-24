@@ -240,6 +240,9 @@ pub enum ManaSymbol {
     /// mana of the given color (e.g. {2/R}). Mana value is `n`
     /// (CR 202.3f). Used by the SOS "Archaic" Avatar cycle.
     MonoHybrid(u32, Color),
+    /// {C/W}: colorless hybrid — pay one colorless mana ({C}) or one mana of
+    /// the given color. Mana value 1 (Ulalek, Fused Atrocity).
+    ColorlessHybrid(Color),
     /// {S}: pay with mana from a snow source.
     Snow,
     /// {X}: variable cost determined at cast time.
@@ -278,6 +281,7 @@ impl ManaCost {
                 ManaSymbol::PhyrexianHybrid(_, _) => 1,
                 // CR 202.3f: monocolored hybrid MV is the generic amount.
                 ManaSymbol::MonoHybrid(n, _) => *n,
+                ManaSymbol::ColorlessHybrid(_) => 1,
                 ManaSymbol::Snow => 1,
                 ManaSymbol::X => 0, // X is 0 everywhere except on the stack
             })
@@ -312,7 +316,7 @@ impl ManaCost {
                     seen[idx(*a)] = true;
                     seen[idx(*b)] = true;
                 }
-                ManaSymbol::MonoHybrid(_, c) => {
+                ManaSymbol::MonoHybrid(_, c) | ManaSymbol::ColorlessHybrid(c) => {
                     seen[idx(*c)] = true;
                 }
                 _ => {}
@@ -363,6 +367,9 @@ impl ManaCost {
                 ManaSymbol::MonoHybrid(n, c) => {
                     s.push_str(&format!("{{{}/{}}}", n, color_pip_letter(*c)));
                 }
+                ManaSymbol::ColorlessHybrid(c) => {
+                    s.push_str(&format!("{{C/{}}}", color_pip_letter(*c)));
+                }
                 ManaSymbol::Snow => s.push_str("{S}"),
                 ManaSymbol::X => s.push_str("{X}"),
             }
@@ -383,7 +390,7 @@ impl ManaCost {
         self.symbols.iter().filter_map(|s| match s {
             ManaSymbol::Colored(c) | ManaSymbol::Phyrexian(c) => Some(*c),
             ManaSymbol::Hybrid(a, _) | ManaSymbol::PhyrexianHybrid(a, _) => Some(*a),
-            ManaSymbol::MonoHybrid(_, c) => Some(*c),
+            ManaSymbol::MonoHybrid(_, c) | ManaSymbol::ColorlessHybrid(c) => Some(*c),
             _ => None,
         })
     }
@@ -406,7 +413,7 @@ impl ManaCost {
                     result.insert(*a);
                     result.insert(*b);
                 }
-                ManaSymbol::MonoHybrid(_, c) => result.insert(*c),
+                ManaSymbol::MonoHybrid(_, c) | ManaSymbol::ColorlessHybrid(c) => result.insert(*c),
                 _ => {}
             }
         }
@@ -552,6 +559,7 @@ impl ManaCost {
                 | ManaSymbol::Phyrexian(_)
                 | ManaSymbol::PhyrexianHybrid(..)
                 | ManaSymbol::MonoHybrid(..)
+                | ManaSymbol::ColorlessHybrid(_)
                 | ManaSymbol::Snow => generic_pool += 1,
                 ManaSymbol::X => {}
             }
@@ -1414,6 +1422,9 @@ impl ManaPool {
         enum HyPip {
             Hybrid(Color, Color),
             Mono(u32, Color),
+            /// {C/X}: the colorless half is tried first, keeping colored
+            /// mana for the pips that need it.
+            ColorlessOr(Color),
         }
         let pips: Vec<HyPip> = cost
             .symbols
@@ -1421,6 +1432,7 @@ impl ManaPool {
             .filter_map(|s| match s {
                 ManaSymbol::Hybrid(a, b) => Some(HyPip::Hybrid(*a, *b)),
                 ManaSymbol::MonoHybrid(n, c) => Some(HyPip::Mono(*n, *c)),
+                ManaSymbol::ColorlessHybrid(c) => Some(HyPip::ColorlessOr(*c)),
                 _ => None,
             })
             .collect();
@@ -1462,10 +1474,32 @@ impl ManaPool {
                     rem -= drain;
                     return (rem == 0).then_some(done);
                 };
+                if let HyPip::ColorlessOr(c) = pip {
+                    for take_colorless in [true, false] {
+                        let mut next = pool.clone();
+                        if take_colorless {
+                            if next.colorless == 0 {
+                                continue;
+                            }
+                            next.colorless -= 1;
+                        } else {
+                            if next.amount(*c) == 0 {
+                                continue;
+                            }
+                            *next.slot_mut(*c) -= 1;
+                        }
+                        if let Some(done) = assign(&next, rest, deferred_generic, downstream) {
+                            return Some(done);
+                        }
+                    }
+                    return None;
+                }
                 let options: Vec<(Option<Color>, u32)> = match pip {
                     HyPip::Hybrid(a, b) => vec![(Some(*a), 0), (Some(*b), 0)],
                     // Colored half first — it's 1 mana vs {n}.
                     HyPip::Mono(n, c) => vec![(Some(*c), 0), (None, *n)],
+                    // Returned from above.
+                    HyPip::ColorlessOr(_) => Vec::new(),
                 };
                 for (color, generic) in options {
                     let mut next = pool.clone();
@@ -1492,8 +1526,14 @@ impl ManaPool {
                     {
                         return Err(ManaError::CannotPayHybrid { color_a: *a, color_b: *b });
                     }
-                    let needed =
-                        pips.iter().map(|p| if let HyPip::Mono(n, _) = p { *n } else { 0 }).sum();
+                    let needed = pips
+                        .iter()
+                        .map(|p| match p {
+                            HyPip::Mono(n, _) => *n,
+                            HyPip::ColorlessOr(_) => 1,
+                            HyPip::Hybrid(..) => 0,
+                        })
+                        .sum();
                     return Err(ManaError::InsufficientGeneric { needed, have: tmp.total() });
                 }
             }
@@ -1933,6 +1973,11 @@ pub fn phyrexian(color: Color) -> ManaSymbol {
 
 pub fn mono_hybrid(n: u32, color: Color) -> ManaSymbol {
     ManaSymbol::MonoHybrid(n, color)
+}
+
+/// {C/`color`} — colorless hybrid (Ulalek, Fused Atrocity).
+pub fn colorless_hybrid(color: Color) -> ManaSymbol {
+    ManaSymbol::ColorlessHybrid(color)
 }
 
 pub fn phyrexian_hybrid(a: Color, b: Color) -> ManaSymbol {

@@ -2103,6 +2103,9 @@ impl Effect {
             | Effect::EachPlayerMayDrawThenTakersGainLife { .. }
             | Effect::ChooseAttackDirection
             | Effect::ChooseAttackDirectionUntilYourNextTurn
+            | Effect::EachPlayerChoosesColorExileOthers
+            | Effect::CopyAllSpellsAndAbilitiesYouControl
+            | Effect::CopyOnePerOpponentWithTotalStats
             | Effect::CopyNextLoyaltyAbility { .. }
             | Effect::CopyLoyaltyAbilitiesOfChosenTypeThisTurn => false,
             Effect::ShuffleInThenCastFromTopFree { what } => sel_has_target(what),

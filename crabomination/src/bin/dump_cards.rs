@@ -35,6 +35,7 @@ fn format_mana_cost(cost: &ManaCost) -> String {
                 format!("{{{}/{}/P}}", a.short_name(), b.short_name())
             }
             ManaSymbol::MonoHybrid(n, c) => format!("{{{}/{}}}", n, c.short_name()),
+            ManaSymbol::ColorlessHybrid(c) => format!("{{C/{}}}", c.short_name()),
             ManaSymbol::Snow => "{S}".to_string(),
             ManaSymbol::X => "{X}".to_string(),
         })
