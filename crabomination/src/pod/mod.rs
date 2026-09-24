@@ -767,6 +767,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::BREENA_COMMANDERS,
             main: decks::BREENA_MAIN,
         },
+        // Ninety-first: the eighty-first official list (Planeswalker Party,
+        // CMM) — Jeskai superfriends under Commodore Guff, a planeswalker
+        // commander. `--pod-decks 91`.
+        PodDeck {
+            name: "Commodore Guff (URW)",
+            commanders: decks::GUFF_COMMANDERS,
+            main: decks::GUFF_MAIN,
+        },
     ]
 }
 

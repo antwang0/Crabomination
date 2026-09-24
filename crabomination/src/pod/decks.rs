@@ -2806,3 +2806,34 @@ pub const BREENA_MAIN: &[CardFactory] = &[
     plains, plains, plains, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
     swamp,
 ];
+
+pub const GUFF_COMMANDERS: &[CardFactory] = &[commodore_guff];
+
+/// **Planeswalker Party**, the Commander Masters Jeskai deck (CMM,
+/// 2023-08-04), exactly as MTGJSON's `PlaneswalkerParty_CMM` prints it: 81
+/// nonbasic cards + 7 Plainss + 7 Islands + 4 Mountains = 99. Superfriends under Commodore Guff, a
+/// planeswalker commander.
+pub const GUFF_MAIN: &[CardFactory] = &[
+    leori_sparktouched_hunter, mangara_the_diplomat, gatewatch_beacon, onakke_oathkeeper,
+    teyo_geometric_tactician, sparkshaper_visionary, vronos_masked_inquisitor,
+    chandra_legacy_of_fire, guff_rewrites_history, jayas_phoenix, ajani_steadfast,
+    deploy_the_gatewatch, elspeth_suns_champion, gideon_jura, norns_annex, oath_of_gideon,
+    promise_of_loyalty, semesters_end, urzas_ruinous_blast, deepglow_skate, jace_beleren,
+    jace_architect_of_thought, jace_mirror_mage, oath_of_jace, spark_double, blasphemous_act,
+    chandra_awakened_inferno, chandra_torch_of_defiance, repeated_reverberation,
+    sarkhan_the_masterless, nahiri_the_harbinger, narset_of_the_ancient_way,
+    narset_enlightened_master, oath_of_teferi, the_chain_veil, nevinyrrals_disk, silent_arbiter,
+    cascade_bluffs, exotic_orchard, frostboil_snarl, furycalm_snarl, karns_bastion,
+    mobilized_district, mystic_gate, port_town, prairie_stream, rugged_prairie,
+    skycloud_expanse, temple_of_enlightenment, temple_of_epiphany, temple_of_triumph,
+    cartographers_hawk, path_to_exile, kazuul_tyrant_of_the_cliffs, arcane_signet,
+    fellwar_stone, sol_ring, command_tower, myriad_landscape, reliquary_tower,
+    grateful_apparition, oreskos_explorer, swords_to_plowshares, the_wanderer, flux_channeler,
+    fog_bank, narset_parter_of_veils, thrummingbird, saheeli_sublime_artificer, wall_of_denial,
+    azorius_signet, boros_signet, honor_worn_shaku, izzet_signet, talisman_of_conviction,
+    talisman_of_creativity, talisman_of_progress, wayfarers_bauble, forge_of_heroes,
+    interplanar_beacon, mystic_monastery,
+    // Basics: 7 plains, 7 island, 4 mountain
+    plains, plains, plains, plains, plains, plains, plains, island, island, island, island,
+    island, island, island, mountain, mountain, mountain, mountain,
+];
