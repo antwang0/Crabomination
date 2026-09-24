@@ -441,7 +441,7 @@ impl GameState {
                     // the printed value.
                     self.find_card_anywhere(cid).map(|c| c.definition.power)
                 })
-                .sum(),
+                .fold(0, i32::saturating_add),
             Value::ToughnessOf(s) => self.resolve_selector(s, ctx).iter()
                 .filter_map(|e| {
                     // `as_card_id` (mirrors `PowerOf`): a dies-trigger subject
@@ -461,7 +461,7 @@ impl GameState {
                     // the printed value.
                     self.find_card_anywhere(cid).map(|c| c.definition.toughness)
                 })
-                .sum(),
+                .fold(0, i32::saturating_add),
             Value::MarkedDamageOn(s) => self
                 .resolve_selector(s, ctx)
                 .iter()
