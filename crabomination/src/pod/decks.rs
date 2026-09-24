@@ -2238,3 +2238,32 @@ pub const TROSTANI_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, forest, forest, forest, forest,
     forest, forest, forest,
 ];
+
+pub const FALDORN_COMMANDERS: &[CardFactory] = &[faldorn_dread_wolf_herald];
+
+/// **Exit from Exile**, the Battle for Baldur's Gate Gruul deck (CLB,
+/// 2022-06-10), exactly as MTGJSON's `ExitFromExile_CLB` prints it:
+/// 76 nonbasic cards + 11 Mountains + 12 Forests = 99. Impulse draw,
+/// cascade and Wolves under Faldorn, Dread Wolf Herald.
+pub const FALDORN_MAIN: &[CardFactory] = &[
+    vivien_champion_of_the_wilds, xenagos_the_reveler, aurora_phoenix, bonecrusher_giant,
+    dire_fleet_daredevil, dream_pillager, etali_primal_storm, greater_gargadon, izzet_chemister,
+    laelia_the_blade_reforged, tectonic_giant, urabrask_the_hidden, wild_magic_sorcerer,
+    arasta_of_the_endless_web, battle_mammoth, end_raze_forerunners, hornet_queen,
+    lovestruck_beast, managorger_hydra, sweet_gum_recluse, embereth_shieldbreaker,
+    sakura_tribe_elder, bloodbraid_elf, grumgully_the_generous, ignite_the_future, jeskas_will,
+    mizzium_mortars, ezuris_predation, escape_to_the_wilds, natures_lore, light_up_the_stage,
+    beanstalk_giant, cultivate, explore, kodamas_reach, search_for_tomorrow, terramorph,
+    three_visits, return_of_the_wildspeaker, demon_bolt, beast_within, natural_reclamation,
+    chaos_wand, arcane_signet, sol_ring, outpost_siege, stolen_strategy, warstorm_surge,
+    primeval_bounty, sandwurm_convergence, castle_embereth, cinder_glade, game_trail,
+    kessig_wolf_run, mossfire_valley, mosswort_bridge, raging_ravine, spinerock_knoll,
+    temple_of_abandon, command_tower, ash_barrens, blighted_woodland, gruul_turf,
+    highland_forest, myriad_landscape, temple_of_the_false_god, durnan_of_the_yawning_portal,
+    passionate_archaeologist, delayed_blast_fireball, nalfeshnee, green_slime,
+    journey_to_the_lost_city, tlincalli_hunter, venture_forth, sarevoks_tome, volcanic_torrent,
+    // Basics: 11 mountain, 12 forest
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest,
+];

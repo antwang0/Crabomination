@@ -626,6 +626,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::TROSTANI_COMMANDERS,
             main: decks::TROSTANI_MAIN,
         },
+        // Seventy-second: the sixty-second official list (Exit from Exile,
+        // CLB) — Gruul impulse draw and cascade under Faldorn. `--pod-decks 72`.
+        PodDeck {
+            name: "Faldorn, Dread Wolf Herald (RG)",
+            commanders: decks::FALDORN_COMMANDERS,
+            main: decks::FALDORN_MAIN,
+        },
     ]
 }
 
