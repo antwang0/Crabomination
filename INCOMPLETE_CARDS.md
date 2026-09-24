@@ -1818,6 +1818,10 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Scaretiller | Land's Wrath (ZNC) | the mode is the engine's: a land from hand when there is one, else the first land card in your graveyard (untargeted). |
 | 🟡 The Mending of Dominaria | Land's Wrath (ZNC) | chapters I and II return your greatest-power creature card; the "may" is always taken. |
 | 🟡 Trove Warden | Land's Wrath (ZNC) | the exiled cards return when it leaves the battlefield by any route, not only when it dies. |
+| 🟡 Kynaios and Tiro of Meletis | Stalwart Unity (C16) | an opponent holding a land who declines to put it onto the battlefield doesn't draw. |
+| 🟡 Humble Defector | Stalwart Unity (C16) | the opponent who gains control is random, not targeted. |
+| 🟡 Sidar Kondo of Jamuraa | Stalwart Unity (C16) | the evasion covers creatures you control with power 2 or less, not other players' small attackers. |
+| 🟡 Orzhov Advokist | Stalwart Unity (C16) | a taker's counters go on their greatest-power creature; the attack restriction covers the creatures they control as it resolves. |
 | 🟡 Footbottom Feast | Counterpunch (CMD) | the cards are chosen as it resolves, not targeted on cast; they go on top in mana-value order (the greatest on top). |
 
 ### Seats 42, 46, 49, 53 and 55 (Peer Through Time C14, Wade into Battle C15, Chaos Incarnate SCD, Heavenly Inferno and Political Puppets CMD) — open residuals, 2026-09-24

@@ -82,6 +82,7 @@ lists were picked.
 | **Political Puppets** (CMD precon) URW | Zedruu the Greathearted | URW | 100 | 🟡 all 100 implemented (Trade Secrets, banned, swapped for Divination), 2 carry residuals (below) |
 | **Eternal Might** (DRC precon) WUB | Temmet, Naktamun's Will | WUB | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Land's Wrath** (ZNC precon) RGW | Obuun, Mul Daya Ancestor | RGW | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
+| **Stalwart Unity** (C16 precon) RGWU | Kynaios and Tiro of Meletis | RGWU | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Arm for Battle** (CMR precon) RW | Wyleth, Soul of Steel | RW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Fae Dominion** (WOC precon) UB | Tegwyll, Duke of Splendor | UB | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Invent Superiority** (C16 precon) WUBR | Breya, Etherium Shaper | WUBR | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
@@ -806,6 +807,30 @@ whole — only `PumpPT`/`GrantKeyword` rode the gather's live pass; it now share
 it, and the dropped-static ratchet covers it. Residuals: **Jötun Grunt**'s
 graveyard and cards are the engine's pick; **Ruhan**'s random opponent is
 stored on Ruhan.
+
+The **fifty-seventh** is Commander 2016's **Stalwart Unity**
+(`StalwartUnity_C16`) — four-colour group hug under Kynaios and Tiro of Meletis,
+with Ludevic, Kraum and Sidar Kondo (three partner commanders) in the 99 (seat
+56 before rebasing over Primal Genesis). Sixteen cards were missing; the
+primitives: `CounterType::Bribery` and `Hoofprint`,
+`Effect::PreventAllDamageToPlayerThisTurn` + `EventKind::DamageToPlayerPrevented`
+(Selfless Squire, CR 615 — the event had no kind bit at first, so the trigger
+could not fire), `Effect::OnMatchingBlocksThisTurn` (Benefactor's Draught) and
+`Effect::EachPlayerMayCounterForPeace` (Orzhov Advokist, `game/effects/
+politics.rs`). ⚠ **The strict debug pod found Collective Voyage broken**: its
+join-forces body searched only seat 0's library and put those lands under the
+caster (`resolve_player`'s fan-out assert) — now `EachPlayerDoes`, with a CR
+207.2c test. Residuals: an opponent who declines Kynaios's land offer while
+holding one doesn't draw; Humble Defector goes to a random opponent; Sidar
+Kondo's evasion covers only your small creatures; Advokist counters a taker's
+greatest-power creature. Debug pods beside Zedruu / Obuun / Kaalia / Sigarda
+(seeds 9311/9312, 60 games) decided 60/60, zero panics; a 120-game census
+(seed 9313) leaves no card unplayed (Kynaios 22.5 % there).
+
+**Smoke at 54 seats** (seed 9411, before seats 55-57, release, strict answer
+log): 60 games, **60 decided, 0 caps, zero panics** — 608 turns, 350 k actions
+and 2,979 plays a game, the longest 891 turns; four-seat pods (seed 9412, 400
+games) all decided. `--bench` byte-identical throughout.
 
 ⚠ **The board cap was a bot bug, not a loop.** A Krenko seat sent all 292
 of its Goblins at one player on 24 life each turn while two others sat on
