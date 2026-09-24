@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Ten hand-picked commanders plus forty-five official preconstructed lists, each a
+//! Ten hand-picked commanders plus forty-seven official preconstructed lists, each a
 //! 99 of cards this engine implements: legal under CR 903 (100 cards
 //! including the commander, singleton outside basics, every card inside the
 //! commander's CR 903.4 color identity) and Commander-legal per Scryfall's
@@ -8,7 +8,7 @@
 //!
 //! The ten were built by hand because the offline Scryfall cache cannot say
 //! how a precon splits into decks; MTGJSON's deck files can, and the eleventh
-//! through fifty-fifth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
+//! through fifty-seventh (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
 //! Win, Tails You Lose, Goblin Storm, Foundations Commander's Wretched Ranks,
 //! Tramplesaurus Rex and Keen Engineering, Commander Legends' Reap the Tides,
 //! Phyrexia: All Will Be One's Corrupting Influence, Zendikar Rising's Sneak
@@ -28,8 +28,10 @@
 //! Wade into Battle, Commander Legends' Arm for Battle, Commander 2016's Invent
 //! Superiority and Entropic Uprising, Secret Lair's Chaos Incarnate,
 //! Aetherdrift Commander's Eternal Might, Commander 2017's Feline Ferocity,
-//! Commander (2011)'s Heavenly Inferno and Political Puppets and Zendikar
-//! Rising Commander's Land's Wrath) are taken from one card for card. What all of them keep
+//! Commander (2011)'s Heavenly Inferno and Political Puppets, Zendikar Rising
+//! Commander's Land's Wrath, Commander 2019's Primal Genesis and Commander 2016's
+//! Stalwart Unity) are taken from
+//! one card for card. What all of them keep
 //! from the precon idea is what the pod needs — fixed, legal, varied color
 //! identities, and built to play against each other.
 //! One is a Partner pair (CR 702.124b), one is a **planeswalker**
@@ -1792,4 +1794,34 @@ pub const GHIRED_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains,
     mountain, mountain, mountain, mountain,
     forest, forest, forest, forest, forest, forest, forest, forest,
+];
+
+pub const KYNAIOS_COMMANDERS: &[CardFactory] = &[kynaios_and_tiro_of_meletis];
+
+/// **Stalwart Unity**, the Commander 2016 deck (C16, 2016-11-11), exactly as
+/// MTGJSON's `StalwartUnity_C16` prints it: 79 nonbasic cards + 5 each of
+/// Plains, Islands, Mountains and Forests = 99. Four-colour group hug under
+/// Kynaios and Tiro of Meletis, with Ludevic, Kraum and Sidar Kondo — three
+/// partner commanders — in the 99.
+pub const KYNAIOS_MAIN: &[CardFactory] = &[
+    veteran_explorer, humble_defector, hushwing_gryff, orzhov_advokist, chasm_skulker,
+    gwafa_hazid_profiteer, ludevic_necro_alchemist, selvala_explorer_returned,
+    edric_spymaster_of_trest, akroan_horse, selfless_squire, windborn_muse,
+    sidar_kondo_of_jamuraa, horizon_chimera, zedruu_the_greathearted, psychosis_crawler,
+    kazuul_tyrant_of_the_cliffs, kraum_ludevics_opus, realm_seekers, rubblehulk,
+    progenitor_mimic, blazing_archon, minds_aglow, collective_voyage, cultivate, kodamas_reach,
+    tempt_with_discovery, wave_of_reckoning, migratory_route, seeds_of_renewal,
+    reverse_the_sands, treacherous_terrain, blasphemous_act, swords_to_plowshares, swan_song,
+    arcane_denial, benefactors_draught, oblation, beast_within, entrapment_maneuver,
+    reins_of_power, sylvan_reclamation, sol_ring, empyrial_plate, howling_mine,
+    commanders_sphere, temple_bell, assault_suit, prismatic_geoscope, vensers_journal,
+    keening_stone, evolutionary_escalation, oath_of_druids, ghostly_prison, propaganda,
+    rites_of_flourishing, sphere_of_safety, lurking_predators, hoofprints_of_the_stag,
+    ash_barrens, azorius_chancery, command_tower, evolving_wilds, exotic_orchard,
+    forbidden_orchard, frontier_bivouac, gruul_turf, homeward_path, izzet_boilerworks,
+    jungle_shrine, krosan_verge, myriad_landscape, mystic_monastery, opal_palace, rupture_spire,
+    seaside_citadel, selesnya_sanctuary, terramorphic_expanse, transguild_promenade,
+    // Basics: 5 plains, 5 island, 5 mountain, 5 forest
+    plains, plains, plains, plains, plains, island, island, island, island, island,
+    mountain, mountain, mountain, mountain, mountain, forest, forest, forest, forest, forest,
 ];

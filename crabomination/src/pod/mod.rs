@@ -519,6 +519,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::GHIRED_COMMANDERS,
             main: decks::GHIRED_MAIN,
         },
+        // Fifty-seventh: the forty-seventh official list (Stalwart Unity, C16) —
+        // four-colour group hug under Kynaios and Tiro. `--seats 57`.
+        PodDeck {
+            name: "Kynaios and Tiro of Meletis (RGWU)",
+            commanders: decks::KYNAIOS_COMMANDERS,
+            main: decks::KYNAIOS_MAIN,
+        },
     ]
 }
 
