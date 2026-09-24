@@ -477,6 +477,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::TEMMET_COMMANDERS,
             main: decks::TEMMET_MAIN,
         },
+        // Fifty-first: the forty-first official list (Entropic Uprising, C16)
+        // — UBRG cascade and chaos under Yidris. `--seats 51`.
+        PodDeck {
+            name: "Yidris, Maelstrom Wielder (UBRG)",
+            commanders: decks::YIDRIS_COMMANDERS,
+            main: decks::YIDRIS_MAIN,
+        },
     ]
 }
 

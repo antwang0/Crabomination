@@ -1623,3 +1623,31 @@ pub const TEMMET_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, island, island, island, island,
     swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const YIDRIS_COMMANDERS: &[CardFactory] = &[yidris_maelstrom_wielder];
+
+/// **Entropic Uprising**, the Commander 2016 deck (C16, 2016-11-11), exactly
+/// as MTGJSON's `EntropicUprising_C16` prints it: 79 nonbasic cards +
+/// 20 basics = 99. Four-colour (UBRG) cascade and chaos under
+/// Yidris, Maelstrom Wielder.
+pub const YIDRIS_MAIN: &[CardFactory] = &[
+    satyr_wayfinder, wall_of_blossoms, coiling_oracle, thrasios_triton_hero, goblin_spymaster,
+    spellheart_chimera, vial_smasher_the_fierce, academy_elite, gamekeeper, sangromancer,
+    bloodbraid_elf, horizon_chimera, kydele_chosen_of_kruphix, glint_eye_nephilim,
+    aeon_chronicler, guiltfeeder, consuming_aberration, nath_of_the_gilt_leaf,
+    runehorn_hellkite, etherium_horn_sorcerer, dragon_mage, blood_tyrant, wheel_of_fate,
+    windfall, parting_thoughts, far_wanderings, past_in_flames, whispering_madness, decimate,
+    devastation_tide, reforge_the_soul, worm_harvest, spelltwine, whims_of_the_fates,
+    grave_upheaval, cruel_entertainment, ghastly_conscription, volcanic_vision, treasure_cruise,
+    treacherous_terrain, army_of_the_damned, in_garruks_wake, chain_of_vapor, rakdos_charm,
+    chaos_warp, ancient_excavation, evacuation, bituminous_blast, curtains_call, sol_ring,
+    fellwar_stone, rakdos_signet, simic_signet, chromatic_lantern, commanders_sphere,
+    whispersilk_cloak, boompile, burgeoning, waste_not, frenzied_fugue, ash_barrens,
+    command_tower, crumbling_necropolis, dismal_backwater, evolving_wilds, exotic_orchard,
+    frontier_bivouac, jungle_hollow, opulent_palace, rakdos_carnarium, reliquary_tower,
+    rugged_highlands, rupture_spire, savage_lands, shadowblood_ridge, simic_growth_chamber,
+    swiftwater_cliffs, terramorphic_expanse, thornwood_falls,
+    // Basics: 5 island, 5 swamp, 5 mountain, 5 forest
+    island, island, island, island, island, swamp, swamp, swamp, swamp, swamp, mountain,
+    mountain, mountain, mountain, mountain, forest, forest, forest, forest, forest,
+];
