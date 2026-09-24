@@ -669,6 +669,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::WINTER_COMMANDERS,
             main: decks::WINTER_MAIN,
         },
+        // Seventy-eighth: the sixty-eighth official list (Witherbloom
+        // Witchcraft, C21) — Golgari life gain and loss under Willowdusk.
+        // `--pod-decks 78`.
+        PodDeck {
+            name: "Willowdusk, Essence Seer (BG)",
+            commanders: decks::WILLOWDUSK_COMMANDERS,
+            main: decks::WILLOWDUSK_MAIN,
+        },
     ]
 }
 

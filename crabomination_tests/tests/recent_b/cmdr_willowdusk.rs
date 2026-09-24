@@ -76,8 +76,6 @@ fn attack_with(g: &mut GameState, attackers: &[CardId], defender: usize) {
     drain_stack(g);
 }
 
-/// A two-colored spell gains 2; the second colored spell that turn gains
-
 /// Willowdusk reads the greater of life gained and life lost this turn.
 #[test]
 fn willowdusk_counts_the_greater_of_gained_and_lost() {

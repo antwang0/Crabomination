@@ -2417,3 +2417,31 @@ pub const WINTER_MAIN: &[CardFactory] = &[
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, forest, forest, forest, forest, forest,
     forest, forest,
 ];
+
+pub const WILLOWDUSK_COMMANDERS: &[CardFactory] = &[willowdusk_essence_seer];
+
+/// **Witherbloom Witchcraft**, the Commander 2021 Strixhaven deck (C21,
+/// 2021-04-23), exactly as MTGJSON's `WitherbloomWitchcraft_C21` prints it:
+/// 77 nonbasic cards + 11 Swamps + 11 Forests = 99. Golgari life gain and
+/// life loss under Willowdusk, Essence Seer.
+pub const WILLOWDUSK_MAIN: &[CardFactory] = &[
+    ob_nixilis_reignited, gyome_master_chef, marshland_bloodcaster, tivash_gloom_summoner,
+    veinwitch_coven, blossoming_bogbeast, ezzaroot_channeler, sproutback_trudge,
+    yedora_grave_gardener, bloodtracker, defiant_bloodlord, noxious_gearhulk, sangromancer,
+    ageless_entity, gluttonous_troll, sapling_of_colfenor, honor_troll, dina_soul_steeper,
+    bloodthirsty_aerialist, epicure_of_blood, silversmote_ghoul, vampire_nighthawk,
+    leyline_prowler, essence_pulse, healing_technique, pest_infestation, revival_experiment,
+    damnable_pact, deadly_tempest, taste_of_death, gaze_of_granite, ancient_craving,
+    feed_the_swarm, cultivate, rampant_growth, mortality_spear, reckless_spite, suffer_the_past,
+    pulse_of_murasa, druidic_satchel, loxodon_warhammer, well_of_lost_dreams, arcane_signet,
+    elixir_of_immortality, paradise_plume, pristine_talisman, sol_ring, sun_droplet,
+    talisman_of_resilience, blight_mound, trudge_garden, sanguine_bond, greed, gift_of_paradise,
+    moldervine_reclamation, exotic_orchard, high_market, llanowar_wastes, temple_of_malady,
+    witherbloom_campus, study_hall, blighted_woodland, command_tower, gingerbread_cabin,
+    golgari_rot_farm, jungle_hollow, myriad_landscape, radiant_fountain, sapseep_forest,
+    tainted_wood, temple_of_the_false_god, witchs_clinic, nissas_renewal, verdant_suns_avatar,
+    alhammarrets_archive, vensers_journal, rogues_passage,
+    // Basics: 11 swamp, 11 forest
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest,
+];
