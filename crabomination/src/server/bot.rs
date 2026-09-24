@@ -5977,6 +5977,14 @@ fn settle_answer(
         if g.is_game_over() {
             break;
         }
+        // Each step resolves at most one item, so a stack deeper than the fuel
+        // left can't settle: give up now rather than 64 steps later. An encore
+        // swarm in a 23-seat pod stacked 150-320 triggers on a 399-permanent
+        // board, and every candidate spent its whole fuel to come back `None`
+        // anyway: 2.3 s a priority pass (seed 10011, game 23).
+        if g.stack.len() as u32 > fuel {
+            return None;
+        }
         if g.pending_decision.is_some() {
             let answer = {
                 let pending = g.pending_decision.as_ref().unwrap();
@@ -17268,6 +17276,14 @@ fn settle_to_quiescence(
     loop {
         if g.is_game_over() {
             break;
+        }
+        // Each step resolves at most one item, so a stack deeper than the fuel
+        // left can't settle: give up now rather than 64 steps later. An encore
+        // swarm in a 23-seat pod stacked 150-320 triggers on a 399-permanent
+        // board, and every candidate spent its whole fuel to come back `None`
+        // anyway: 2.3 s a priority pass (seed 10011, game 23).
+        if g.stack.len() as u32 > fuel {
+            return None;
         }
         if g.pending_decision.is_some() {
             let answer = {

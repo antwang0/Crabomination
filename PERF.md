@@ -9512,6 +9512,32 @@ short to say so.
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
 
+### POD 2026-09-24 — a stack deeper than the settle fuel is given up on at once
+
+A 23-seat pod game (`--seats 23 --seed 10011 --first 23 --games 1`) took
+543 s of `release-fast` wall clock for 102,129 actions; its neighbour game 22
+took 1.6 s for 97,443. A timer on `next_action_settled` put 690 s in 325
+priority passes of one seat (Sliver Gravemother) on turn 356: 399 permanents
+and **150-320 Harmonic Sliver triggers** on the stack, from encore making one
+token per opponent. Legal, and each pass cost 2.3 s: `settle_to_quiescence`
+(and `settle_answer`) spent their whole 64-step fuel on every candidate and
+came back `None` anyway, since a step resolves at most one item. Both now
+return `None` as soon as the stack is deeper than the fuel left.
+
+```text
+  seed 10011, 23 seats, one game each, release-fast, at ac0e39fa + the change
+  (before the unfrozen-read fix below, which lands after it on the branch)
+                     turns / actions          before              after
+  game 23            377 / 102,129            543 s (709 busy)    260 s
+  game 17            303 / 105,957            204 s (260 busy)    196 s
+  game 0             276 /  71,276            102 s (139 busy)    139 s (no deep stack)
+  outcomes           identical (same turns, actions, winners)
+  --bench            195,806 / 27.49 / 611.9 / 0 stalls, determinism ok — byte-identical
+```
+
+Single runs, not paired: the before side ran twice at different load. The
+game-23 halving is far outside that spread; game 0 has no deep stack and
+the change does not touch it.
 ### POD 2026-09-24 — an unfrozen computed read gathered afresh every call
 
 A 30-seat pod (seed 10101) had games 13 and 15 at **568 s** each against ~1 s
