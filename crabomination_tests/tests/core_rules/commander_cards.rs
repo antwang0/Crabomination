@@ -1828,3 +1828,46 @@ fn bot_picks_at_most_one_target_per_opponent() {
         "expected a one-target Desecrate Reality, got {action:?}",
     );
 }
+
+/// CR 601.2c — on a prompting seat (every pod seat is `wants_ui`) an "up to
+/// N targets" spell the bot under-fills suspends to ask for the next slot,
+/// and the bot's dry run reads that as a rejection. Regression: Desecrate
+/// Reality was never cast in 1,000 pods. The bot now names one target per
+/// opponent up front, the cast completes, and the engine's extra-slot prompt
+/// never offers a second target under a controller already named.
+#[test]
+fn a_prompting_bot_seat_fills_per_opponent_slots() {
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    let mut g = game_with_format(Format::Commander, 4);
+    for s in 0..4 {
+        g.players[s].wants_ui = true;
+    }
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    for _ in 0..8 {
+        g.add_card_to_battlefield(0, catalog::wastes());
+    }
+    for s in 1..4 {
+        g.add_card_to_battlefield(s, catalog::grizzly_bears());
+    }
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let d = g.add_card_to_hand(0, catalog::desecrate_reality());
+    let action = HeuristicBot::new().next_action(&g, 0).expect("the bot acts");
+    let GameAction::CastSpell { card_id, target, additional_targets, .. } = &action else {
+        panic!("expected a cast, got {action:?}");
+    };
+    assert_eq!(*card_id, d);
+    assert_eq!(additional_targets.len(), 2, "one target for each of three opponents");
+    let controllers: Vec<usize> = target
+        .iter()
+        .chain(additional_targets.iter())
+        .filter_map(|t| match t {
+            Target::Permanent(id) => g.battlefield_find(*id).map(|c| c.controller),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(controllers.len(), 3);
+    assert!(controllers.iter().all(|c| controllers.iter().filter(|x| *x == c).count() == 1));
+    assert!(g.would_accept(action));
+}

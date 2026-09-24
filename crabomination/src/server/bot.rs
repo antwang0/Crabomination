@@ -6904,11 +6904,22 @@ pub(super) fn cast_candidates<'a>(
                     None => continue,
                 }
             } else if mode_effect.requires_target() {
-                let (t, extras) = state.auto_targets_for_effect_all_slots_x(
+                let (t, mut extras) = state.auto_targets_for_effect_all_slots_x(
                     mode_effect, seat, mode, false, None, x_value,
                 );
                 if t.is_none() {
                     continue;
+                }
+                // A prompting seat (every pod seat) is asked for each slot the
+                // cast leaves empty, and `would_accept` reads that suspension
+                // as a rejection — so an "up to N targets" spell the walk
+                // under-filled was never cast in a pod. Fill the slots the
+                // way the engine auto-fills them for a non-prompting seat.
+                if state.seat_prompts(seat) {
+                    let auto = state.auto_extra_targets_for(mode_effect, c.id, seat, t.clone());
+                    if auto.len() > extras.len() {
+                        extras = auto;
+                    }
                 }
                 (t, extras)
             } else {

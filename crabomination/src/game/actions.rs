@@ -5465,9 +5465,23 @@ impl GameState {
             } else {
                 None
             };
+            // CR 601.2c — one target per opponent (`ForEachOpponentTarget`):
+            // no slot past the opponent count, and no candidate under a
+            // controller already named.
+            let per_opponent = self
+                .find_card_anywhere(card_id)
+                .is_some_and(|c| c.definition.effect.per_opponent_targets(mode));
+            let slot_info = slot_info.filter(|_| {
+                !per_opponent || 1 + additional_targets.len() < self.opponents_of(p).len()
+            });
             if let Some((filter, source_name, slot_text, optional, distinct)) = slot_info {
                 let chosen: Vec<&Target> =
                     target.iter().chain(additional_targets.iter()).collect();
+                let named_controllers: Vec<usize> = if per_opponent {
+                    chosen.iter().filter_map(|t| self.target_controller_key(t)).collect()
+                } else {
+                    Vec::new()
+                };
                 // One freeze for the whole walk, the same reason
                 // `legal_targets_for_filter` takes one: every candidate asks
                 // `evaluate_requirement_static`'s layer-4 reads and
@@ -5482,6 +5496,8 @@ impl GameState {
                         .chain((0..s.players.len()).map(Target::Player))
                         .filter(|t| {
                             (!distinct || !chosen.contains(&t))
+                                && (named_controllers.is_empty()
+                                    || s.target_controller_key(t).is_none_or(|k| !named_controllers.contains(&k)))
                                 && s.evaluate_requirement_static(&filter, t, p, Some(card_id))
                                 && s.check_target_legality(t, p).is_ok()
                         })
