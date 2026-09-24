@@ -4325,7 +4325,23 @@ fn pick_combat_only_instant(state: &GameState, seat: usize, w: &EvalWeights) -> 
     {
         return None;
     }
-    for c in state.players[seat].hand.iter().filter(|c| c.definition.cast_only_during_combat) {
+    // CR 506.4 — "target attacking creature" has no legal target outside
+    // combat, so such an instant shares the window (Nemesis Trap was cast by
+    // no path in 120 four-seat pods, seed 9263).
+    fn requires_attacker(r: &crate::card::SelectionRequirement) -> bool {
+        use crate::card::SelectionRequirement as R;
+        match r {
+            R::IsAttacking | R::IsAttackingYou => true,
+            R::And(a, b) => requires_attacker(a) || requires_attacker(b),
+            _ => false,
+        }
+    }
+    let combat_window = |def: &crate::card::CardDefinition| {
+        def.cast_only_during_combat
+            || (def.card_types.contains(&crate::card::CardType::Instant)
+                && def.effect.target_filter_for_slot(0).is_some_and(requires_attacker))
+    };
+    for c in state.players[seat].hand.iter().filter(|c| combat_window(&c.definition)) {
         let def = &c.definition;
         // "X target …" (CR 601.2c): as many of the legal targets as X buys,
         // biggest mana value first; any other shape takes the auto-picks.
@@ -4352,6 +4368,11 @@ fn pick_combat_only_instant(state: &GameState, seat: usize, w: &EvalWeights) -> 
             }
         } else {
             let (target, additional_targets) = state.auto_targets_for_effect_all_slots(&def.effect, seat, None);
+            // The engine takes a targeted cast with no target (see TODO), so
+            // an attacker-only instant needs the attacker it names.
+            if target.is_none() && !def.cast_only_during_combat {
+                continue;
+            }
             GameAction::CastSpell { card_id: c.id, target, additional_targets, mode: None, x_value: None }
         };
         if state.would_accept(action.clone()) {
@@ -27241,6 +27262,31 @@ mod stack_response_tests {
         assert!(matches!(action, GameAction::CastSpell { card_id, .. } if card_id == wake), "got {action:?}");
         g.active_player_idx = 0;
         assert!(pick_combat_only_instant(&g, 0, &EvalWeights::default()).is_none(), "own turn");
+    }
+
+    /// CR 506.4 — "target attacking creature" (Nemesis Trap) has a legal
+    /// target only in combat, so it rides the same window: cast at the
+    /// opponent's attacker, and not with nothing attacking.
+    #[test]
+    fn an_attacking_creature_only_instant_is_cast_at_the_attacker() {
+        use crate::mana::Color;
+        let mut g = two_player_game();
+        g.active_player_idx = 1;
+        g.step = TurnStep::DeclareAttackers;
+        g.priority.player_with_priority = 0;
+        let trap = g.add_card_to_hand(0, catalog::nemesis_trap());
+        g.players[0].mana_pool.add(Color::Black, 6);
+        let dragon = g.add_card_to_battlefield(1, catalog::shivan_dragon());
+        let early = pick_combat_only_instant(&g, 0, &EvalWeights::default());
+        assert!(early.is_none(), "nothing attacks: {early:?}");
+        g.clear_sickness(dragon);
+        g.set_attacking(vec![Attack { attacker: dragon, target: AttackTarget::Player(0) }]);
+        let action = pick_combat_only_instant(&g, 0, &EvalWeights::default()).expect("cast it");
+        assert!(
+            matches!(action, GameAction::CastSpell { card_id, target: Some(Target::Permanent(t)), .. }
+                if card_id == trap && t == dragon),
+            "got {action:?}"
+        );
     }
 
     /// The stack 2-for-1: the opponent's Giant Growth on their own bear
