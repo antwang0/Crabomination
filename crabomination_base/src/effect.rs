@@ -1349,6 +1349,10 @@ pub enum Value {
     /// player this turn" (Impact Resonance): the largest per-source tally on a
     /// battlefield permanent, or the largest single hit a player took.
     GreatestDamageFromOneSourceThisTurn,
+    /// "The greatest power among creatures sacrificed this way" — the largest
+    /// power among the permanents sacrificed during this resolution, read off
+    /// their death snapshots (Shadowgrange Archfiend).
+    GreatestSacrificedPowerThisResolution,
     /// Creatures that died this turn whose death-time snapshot matches
     /// `filter`, read with the controller as "you" — "each nontoken creature
     /// put into your graveyard from the battlefield this turn" is
@@ -4683,6 +4687,11 @@ pub enum Effect {
     /// An opponent with a creature card must be picked when one exists; with
     /// none, you still name the opponent who picks from yours.
     ChooseGraveyardCreaturesEachMayReturn,
+    /// "Return `count` of them at random to the battlefield and put the rest
+    /// on the bottom of your library" over the spell's targets still in your
+    /// graveyard (Sinister Waltz, after an `ApplyToTargets` that declares
+    /// the graveyard slots).
+    ReturnTargetCardsAtRandom { count: Value },
     /// "Each player exiles all artifact cards from their graveyard, then
     /// sacrifices all artifacts they control, then puts all cards they
     /// exiled this way onto the battlefield." (Scrap Mastery.) Each step

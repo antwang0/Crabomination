@@ -2558,6 +2558,10 @@ pub enum SelectionRequirement {
     GreaterPowerOrToughnessThanSource,
     IsToken,
     NotToken,
+    /// The object has a mana ability (CR 605.1a) among its printed activated
+    /// abilities — "artifacts without mana abilities" is its negation
+    /// (Midnight Arsonist).
+    HasManaAbility,
     /// CR 702.185 — the permanent was cast for its warp cost (its `warped` flag
     /// is set). Backs Full Bore's "if it was cast for its warp cost" rider.
     Warped,
@@ -7537,7 +7541,7 @@ pub fn static_effect_gather_bits(effect: &crate::effect::StaticEffect) -> u64 {
         SE::AnnihilatorPerPlusOneCounter => g::ANNIHILATOR_PER_PLUS_ONE_COUNTER,
         SE::SelfBasePtFromValue { .. } => g::SELF_BASE_PT_FROM_VALUE,
         SE::SetBasePtForFilterFromValue { .. } => g::SET_BASE_PT_FOR_FILTER_FROM_VALUE,
-        SE::ArtifactsAreEquipment => g::ARTIFACTS_ARE_EQUIPMENT,
+        SE::ArtifactsAreEquipment | SE::MatchingArtifactsAreEquipment { .. } => g::ARTIFACTS_ARE_EQUIPMENT,
         SE::PumpPerSharedType { .. } | SE::PumpPerSameNameCreatureYouControl { .. } => {
             g::PUMP_PER_SHARED_TYPE
         }

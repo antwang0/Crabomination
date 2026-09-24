@@ -818,6 +818,14 @@ impl GameState {
                 .unwrap_or(0),
             Value::LibrarySizeOf(p) => self.resolve_player(p, ctx).map(|p| self.players[p].library.len() as i32).unwrap_or(0),
             Value::XFromCost => ctx.x_value as i32,
+            Value::GreatestSacrificedPowerThisResolution => self
+                .scratch
+                .cards_sacrificed_this_resolution
+                .iter()
+                .filter_map(|id| self.died_card_snapshots.get(id))
+                .map(|c| c.power())
+                .max()
+                .unwrap_or(0),
             Value::GreatestDamageFromOneSourceThisTurn => {
                 let to_players = self.players.iter().map(|p| p.greatest_hit_this_turn).max().unwrap_or(0);
                 let to_permanents =
@@ -5518,6 +5526,11 @@ impl GameState {
             R::HasSpellSubtype(s) => card.definition.subtypes.spell_subtypes.contains(s),
             R::IsToken => card.is_token,
             R::NotToken => !card.is_token,
+            R::HasManaAbility => card
+                .definition
+                .activated_abilities
+                .iter()
+                .any(|a| crate::game::actions::is_mana_ability(&a.effect)),
 
             R::Warped => card.warped,
             // CR 603.4 — entered this turn (hidden-zone cards are never

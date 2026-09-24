@@ -12203,12 +12203,12 @@ impl GameState {
         let mut all_effects: Vec<ContinuousEffect> = buf;
         all_effects.reserve(base.len() + sa_cards.len());
         all_effects.extend_from_slice(base);
-        // Bludgeon Brawl's pass calls `brawl_equip_mv` per battlefield card,
+        // Bludgeon Brawl's pass calls `granted_equipment` per battlefield card,
         // and that helper re-scans the whole board's static abilities looking
         // for `ArtifactsAreEquipment` — O(cards²) on every gather for a card
         // that is almost never out. The mask above already asked; the bit
         // over-approximates (it sees through the `While*` wrappers the old
-        // `matches!` did not) and `brawl_equip_mv` re-derives per card, so a
+        // `matches!` did not) and `granted_equipment` re-derives per card, so a
         // set bit costs only the walk it always paid.
         let any_artifacts_are_equipment = sa_mask & gs::ARTIFACTS_ARE_EQUIPMENT != 0;
         // Coat of Arms' pass built a `Vec` of every creature on the board —
@@ -12381,7 +12381,7 @@ impl GameState {
         // noncreature, non-Equipment artifact gains the Equipment subtype and,
         // once attached, hands its host +X/+0 for its own mana value.
         for card in if any_artifacts_are_equipment { &self.battlefield[..] } else { &[] } {
-            let Some(x) = self.brawl_equip_mv(card) else { continue };
+            let Some((_, x)) = self.granted_equipment(card) else { continue };
             all_effects.push(ContinuousEffect {
                 timestamp: card.object_timestamp(),
                 source: card.id,
@@ -12394,7 +12394,7 @@ impl GameState {
                 ),
             });
             let Some(target) = card.attached_to else { continue };
-            if x == 0 || self.battlefield.find_by_id(target).is_none() {
+            if x <= 0 || self.battlefield.find_by_id(target).is_none() {
                 continue;
             }
             all_effects.push(ContinuousEffect {
@@ -12404,7 +12404,7 @@ impl GameState {
                 layer: Layer::L7PowerTough,
                 sublayer: Some(PtSublayer::Modify),
                 duration: EffectDuration::Indefinite,
-                modification: Modification::ModifyPowerToughness(x as i32, 0),
+                modification: Modification::ModifyPowerToughness(x, 0),
             });
         }
         // CR 702.6 — Equipment attachment statics. Each Equipment with a
@@ -18890,7 +18890,7 @@ impl GameState {
             .card_types
             .contains(&crate::card::CardType::Creature);
         let was_nonland = !card.definition.card_types.contains(&crate::card::CardType::Land);
-        let madness = card.definition.madness_cost().cloned();
+        let madness = card.definition.madness_cost().cloned().or_else(|| self.granted_madness(p, &card));
 
         // The discard happens regardless of the destination zone (CR
         // 701.8b), so emit the event + bump the discard-matters counters
@@ -19022,6 +19022,21 @@ impl GameState {
                     .build(),
             );
         }
+    }
+
+    /// A madness cost `p`'s permanents grant `card` (Falkenrath Gorger: its
+    /// mana cost, for the matching cards `p` owns).
+    fn granted_madness(&self, p: usize, card: &CardInstance) -> Option<crate::mana::ManaCost> {
+        if card.owner != p {
+            return None;
+        }
+        self.battlefield
+            .iter()
+            .filter(|src| src.controller == p)
+            .flat_map(|src| src.definition.static_abilities.iter())
+            .any(|sa| matches!(&sa.effect, crate::effect::StaticEffect::OwnedCardsHaveMadness { filter }
+                if self.evaluate_requirement_on_card(filter, card, p)))
+            .then(|| card.definition.cost.clone())
     }
 
     /// CR 702.35b — offer the owner of an exiled Madness card a yes/no cast
@@ -20356,20 +20371,30 @@ impl GameState {
         })
     }
 
-    /// Bludgeon Brawl — the equip {X} / "+X/+0" value a noncreature,
-    /// non-Equipment artifact picks up while an `ArtifactsAreEquipment`
-    /// static is in play, i.e. its own mana value. `None` for anything the
-    /// grant doesn't reach.
-    pub(crate) fn brawl_equip_mv(&self, card: &CardInstance) -> Option<u32> {
+    /// The equip cost and "+N/+0" a noncreature, non-Equipment artifact picks
+    /// up from a static that makes it Equipment: Bludgeon Brawl's
+    /// `ArtifactsAreEquipment` (its own mana value, both) or a
+    /// `MatchingArtifactsAreEquipment` it matches (Arterial Alchemy's Blood
+    /// tokens). `None` for anything no grant reaches.
+    pub(crate) fn granted_equipment(&self, card: &CardInstance) -> Option<(crate::mana::ManaCost, i32)> {
         let def = &card.definition;
         if !def.is_artifact() || def.is_creature() || def.is_equipment() {
             return None;
         }
-        self.battlefield
-            .iter()
-            .flat_map(|c| &c.definition.static_abilities)
-            .any(|sa| matches!(sa.effect, crate::effect::StaticEffect::ArtifactsAreEquipment))
-            .then(|| def.cost.cmc())
+        self.battlefield.iter().find_map(|src| {
+            src.definition.static_abilities.iter().find_map(|sa| match &sa.effect {
+                crate::effect::StaticEffect::ArtifactsAreEquipment => {
+                    let mv = def.cost.cmc();
+                    Some((crate::mana::cost(&[crate::mana::generic(mv)]), mv as i32))
+                }
+                crate::effect::StaticEffect::MatchingArtifactsAreEquipment { filter, equip, power }
+                    if self.evaluate_requirement_on_card(filter, card, src.controller) =>
+                {
+                    Some((equip.clone(), *power))
+                }
+                _ => None,
+            })
+        })
     }
 
     /// CR 702.6 — summed "equip costs you pay cost {N} less" reduction across
@@ -20411,7 +20436,7 @@ impl GameState {
         }
         let fortify = self.battlefield[equip_pos].definition.has_fortify().cloned();
         // Bludgeon Brawl grants both the subtype and an equip {X} cost.
-        let brawl = self.brawl_equip_mv(&self.battlefield[equip_pos]);
+        let brawl = self.granted_equipment(&self.battlefield[equip_pos]).map(|(c, _)| c);
         if !self.battlefield[equip_pos].definition.is_equipment()
             && fortify.is_none()
             && brawl.is_none()
@@ -20420,7 +20445,7 @@ impl GameState {
         }
         let mut equip_cost = match (&fortify, brawl) {
             (Some(c), _) => c.clone(),
-            (None, Some(x)) => crate::mana::cost(&[crate::mana::generic(x)]),
+            (None, Some(granted)) => granted,
             (None, None) => self.battlefield[equip_pos]
                 .definition
                 .has_equip()
@@ -29244,6 +29269,9 @@ fn static_effect_to_effects(
             // Bludgeon Brawl — the granted subtype and bonus are synthesized
             // per artifact in `compute_battlefield`, not from a modification.
             | StaticEffect::ArtifactsAreEquipment
+            | StaticEffect::MatchingArtifactsAreEquipment { .. }
+            // Consulted by `discard_card`'s madness lookup.
+            | StaticEffect::OwnedCardsHaveMadness { .. }
             // Recomputed live in `compute_battlefield`, not here.
             | StaticEffect::SelfHasKeywordWhile { .. }
             | StaticEffect::SelfHasKeywordWhilePredicate { .. }

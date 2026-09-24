@@ -71,4 +71,39 @@ impl GameState {
         }
         Ok(())
     }
+
+    /// Sinister Waltz's tail: `count` of the targets still in the controller's
+    /// graveyard, picked at random off the game RNG, enter under them; the
+    /// rest go to the bottom of their library.
+    pub(super) fn return_target_cards_at_random(
+        &mut self,
+        count: &crate::effect::Value,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
+        use rand::seq::SliceRandom;
+        let me = ctx.controller;
+        let mut ids: Vec<CardId> = ctx
+            .targets
+            .iter()
+            .filter_map(|t| match t {
+                crate::game::types::Target::Permanent(id) => Some(*id),
+                _ => None,
+            })
+            .filter(|id| self.players[me].graveyard.iter().any(|c| c.id == *id))
+            .collect();
+        ids.dedup();
+        let n = (self.evaluate_value(count, ctx).max(0) as usize).min(ids.len());
+        ids.shuffle(&mut self.rng.draw());
+        let (back, rest) = ids.split_at(n);
+        for &id in rest {
+            let to_bottom = ZoneDest::Library { who: PlayerRef::Seat(me), pos: crate::effect::LibraryPosition::Bottom };
+            self.run_effect(&Effect::Move { what: Selector::ExactObjects(vec![id]), to: to_bottom }, ctx, events)?;
+        }
+        for &id in back {
+            let dest = ZoneDest::Battlefield { controller: PlayerRef::Seat(me), tapped: false };
+            self.run_effect(&Effect::Move { what: Selector::ExactObjects(vec![id]), to: dest }, ctx, events)?;
+        }
+        Ok(())
+    }
 }

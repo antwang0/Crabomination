@@ -1742,6 +1742,15 @@ pub enum StaticEffect {
     /// artifact's mana value" (Bludgeon Brawl). Global; the granted subtype,
     /// equip cost and bonus are all computed per artifact.
     ArtifactsAreEquipment,
+    /// "[filter] artifacts are Equipment in addition to their other types
+    /// and have 'Equipped creature gets +`power`/+0' and equip `equip`"
+    /// (Arterial Alchemy: Blood tokens you control). `filter` reads the
+    /// source's controller as "you". Rides Bludgeon Brawl's per-artifact pass.
+    MatchingArtifactsAreEquipment { filter: SelectionRequirement, equip: crate::mana::ManaCost, power: i32 },
+    /// CR 702.35 — "Each [filter] card you own that isn't on the battlefield
+    /// has madness. The madness cost is equal to its mana cost." (Falkenrath
+    /// Gorger.) Consulted where a discard looks for a madness cost.
+    OwnedCardsHaveMadness { filter: SelectionRequirement },
     /// CR 602.5 / 614 — "Activated abilities cost {N} more to activate
     /// unless they're mana abilities." Applies to every player's
     /// activations (Suppression Field).

@@ -10007,10 +10007,13 @@ fn pick_equip(state: &GameState, seat: usize) -> Option<GameAction> {
         .or_else(|| mine().max_by_key(|c| cpow(c)))
         .map(|c| c.id)?;
     for eq in &state.battlefield {
-        if eq.controller != seat || !eq.definition.is_equipment() {
+        if eq.controller != seat {
             continue;
         }
-        if eq.definition.has_equip().is_none() {
+        // A granted Equipment (Arterial Alchemy's Blood, Bludgeon Brawl's
+        // artifacts) carries its equip cost on the static, not the card.
+        let printed = eq.definition.is_equipment() && eq.definition.has_equip().is_some();
+        if !printed && state.granted_equipment(eq).is_none() {
             continue;
         }
         // Skip if already on the chosen target (no point re-equipping).
