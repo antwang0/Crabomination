@@ -352,6 +352,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::DARETTI_COMMANDERS,
             main: decks::DARETTI_MAIN,
         },
+        // Thirty-fifth: the twenty-fifth official list (Sworn to Darkness,
+        // C14) — mono-black Demons under a planeswalker commander.
+        // `--seats 35`.
+        PodDeck {
+            name: "Ob Nixilis (B)",
+            commanders: decks::OB_NIXILIS_COMMANDERS,
+            main: decks::OB_NIXILIS_MAIN,
+        },
     ]
 }
 

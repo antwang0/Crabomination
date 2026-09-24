@@ -1163,3 +1163,30 @@ pub const DARETTI_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain,
 ];
+
+pub const OB_NIXILIS_COMMANDERS: &[CardFactory] = &[ob_nixilis_of_the_black_oath];
+
+/// **Sworn to Darkness**, the Commander 2014 deck (C14, 2014-11-07), exactly
+/// as MTGJSON's `SwornToDarkness_C14` prints it: 67 nonbasic cards + 32
+/// basics = 99. Mono-black Demons and morbid under Ob Nixilis of the Black
+/// Oath, a planeswalker commander (CR 903.3a).
+pub const OB_NIXILIS_MAIN: &[CardFactory] = &[
+    skirsdag_high_priest, nantuko_shade, vampire_hexmage, burnished_hart, flesh_carver,
+    crypt_ghast, disciple_of_bolas, evernight_shade, abyssal_persecutor, nekrataal,
+    magus_of_the_coffers, raving_dead, shriekmaw, bloodgift_demon, demon_of_wailing_agonies,
+    drana_kalastria_bloodchief, ghoulcaller_gisa, gray_merchant_of_asphodel, morkrut_banshee,
+    grave_titan, phyrexian_gargantua, pontiff_of_blight, reaper_from_the_abyss,
+    butcher_of_malakir, overseer_of_the_damned, pestilence_demon, lilianas_reaver,
+    xathrid_demon, sign_in_blood, read_the_bones, victimize, syphon_mind, dread_return,
+    mutilate, infernal_offering, aether_snap, promise_of_power, necromantic_selection,
+    profane_command, dregs_of_sorrow, black_suns_zenith, spoils_of_blood, tragic_slip,
+    malicious_affliction, sudden_spoiling, tendrils_of_corruption, annihilate, skeletal_scrying,
+    wake_the_dead, sol_ring, charcoal_diamond, jet_medallion, mind_stone, swiftfoot_boots,
+    unstable_obelisk, worn_powerstone, lashwrithe, commanders_sphere, bad_moon,
+    arcane_lighthouse, barren_moor, bojuka_bog, crypt_of_agadeem, everglades, ghost_quarter,
+    myriad_landscape, polluted_mire,
+    // Basics: 32 swamp
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp,
+];
