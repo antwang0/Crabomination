@@ -1494,6 +1494,16 @@ pub enum Keyword {
     /// Progenitus): can't be blocked, targeted, enchanted/equipped, or dealt
     /// damage by anything. Returns true at every protection-check site.
     ProtectionFromEverything,
+    /// CR 702.16 — protection from the player chosen as it entered
+    /// (`CardInstance.chosen_player`): True-Name Nemesis. Checked at the
+    /// targeting, blocking and damage sites against the source's controller.
+    ProtectionFromChosenPlayer,
+    /// CR 509.1b — "can't be blocked as long as defending player controls
+    /// the most creatures or is tied for the most" (Hooded Horror).
+    CantBeBlockedIfDefenderHasMostCreatures,
+    /// CR 702.61 — split second only while the spell was kicked (Molten
+    /// Disaster). Read by `stack_has_split_second` with `CardInstance.kicked`.
+    SplitSecondIfKicked,
     /// CR 702.89 — Umbra armor (on an Aura): if the enchanted creature
     /// would be destroyed, instead remove all damage from it and destroy
     /// this Aura (Hyena Umbra, Spider Umbra).

@@ -1751,6 +1751,12 @@ pub(crate) fn cost_reduction_for_spell_full_over<'a>(
                 StaticEffect::AllPlayersSpellsCostLess { amount } => {
                     reduction += amount;
                 }
+                // Arcane Melee — table-wide, filtered.
+                StaticEffect::AllPlayersCostReduction { filter, amount }
+                    if state.evaluate_requirement_on_card(filter, card, caster) =>
+                {
+                    reduction += amount;
+                }
                 // "The first [filter] spell you cast each turn costs {N} less"
                 // — spent as soon as one matching spell has been cast.
                 StaticEffect::FirstMatchingSpellEachTurnCostsLess { filter, amount }
@@ -3370,11 +3376,11 @@ impl crate::game::GameState {
             return self.players[player].max_hand_size;
         }
         let no_max = self.battlefield.iter().any(|c| {
-            c.controller == player
-                && c.definition
-                    .static_abilities
-                    .iter()
-                    .any(|sa| matches!(sa.effect, StaticEffect::NoMaximumHandSize))
+            c.definition.static_abilities.iter().any(|sa| match sa.effect {
+                StaticEffect::NoMaximumHandSize => c.controller == player,
+                StaticEffect::AllPlayersNoMaximumHandSize => true,
+                _ => false,
+            })
         });
         if no_max {
             return None;
@@ -8864,8 +8870,10 @@ impl GameState {
                 // CR 702.16b — protection from a *filtered* quality
                 // (Empty-Shrine Kannushi, Pledge of Loyalty): the spell is
                 // still in transient ownership, so match it card-side.
-                if let Keyword::ProtectionFromMatching(f) = kw
-                    && self.evaluate_requirement_on_card(f, &card, target_card.controller)
+                if (matches!(kw, Keyword::ProtectionFromChosenPlayer)
+                    && target_card.chosen_player == Some(p))
+                    || matches!(kw, Keyword::ProtectionFromMatching(f)
+                        if self.evaluate_requirement_on_card(f, &card, target_card.controller))
                 {
                     cast_census::rollback(line!());
                     self.players[p].hand.push(card);
@@ -13620,6 +13628,7 @@ impl GameState {
                     | Keyword::ProtectionFromCreatures
                     | Keyword::ProtectionFromCreatureType(_)
                     | Keyword::ProtectionFromMatching(_)
+                    | Keyword::ProtectionFromChosenPlayer
                     | Keyword::ProtectionFromManaValueExcept(_)
                     | Keyword::ProtectionFromManaValueParity { .. }
                     | Keyword::ProtectionFromMulticolored
@@ -13679,6 +13688,11 @@ impl GameState {
             Keyword::ProtectionFromMatching(f) => {
                 self.evaluate_requirement_static(f, &Target::Permanent(source), tgt_controller, None)
             }
+            // True-Name Nemesis — the chosen player's sources.
+            Keyword::ProtectionFromChosenPlayer => self
+                .battlefield_find(tgt.id)
+                .and_then(|c| c.chosen_player)
+                .is_some_and(|q| self.find_card_anywhere(source).is_some_and(|s| s.controller == q)),
             Keyword::ProtectionFromManaValueExcept(n) => src_mv != *n,
             Keyword::ProtectionFromManaValueParity { odd } => (src_mv % 2 == 1) == *odd,
             Keyword::ProtectionFromMulticolored => src.colors.len() >= 2,
@@ -16257,6 +16271,8 @@ impl GameState {
         self.stack.iter().any(|si| match si {
             crate::game::types::StackItem::Spell { card, .. } => {
                 card.definition.keywords.has_kw(&crate::card::Keyword::SplitSecond)
+                    || (card.kicked
+                        && card.definition.keywords.has_kw(&crate::card::Keyword::SplitSecondIfKicked))
             }
             _ => false,
         })

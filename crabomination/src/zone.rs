@@ -814,6 +814,7 @@ fn card_has_hand_size_static(c: &CardInstance) -> bool {
         matches!(
             sa.effect,
             S::NoMaximumHandSize
+                | S::AllPlayersNoMaximumHandSize
                 | S::OpponentsMaxHandSizeReduced(_)
                 | S::ControllerMaxHandSizeReduced(_)
                 | S::ControllerMaxHandSize(_)

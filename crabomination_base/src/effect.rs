@@ -11038,6 +11038,7 @@ pub fn static_affects_spell_cost(effect: &StaticEffect) -> bool {
         SE::ColoredSpellTax { .. } => true,
         // `cost_reduction_for_spell_full_over`'s source loop
         SE::AllPlayersSpellsCostLess { .. }
+        | SE::AllPlayersCostReduction { .. }
         | SE::ChosenTypeSpellCostReduction { .. }
         | SE::ChosenColorsSpellCostReduction
         | SE::CostReduction { .. }

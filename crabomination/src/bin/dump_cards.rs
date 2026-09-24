@@ -183,7 +183,8 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         | Keyword::ProtectionFromInstants
         | Keyword::ProtectionFromOwnColors
         | Keyword::ProtectionFromColorsOutsideCommanderIdentity
-        | Keyword::ProtectionFromEverything => "Protection",
+        | Keyword::ProtectionFromEverything
+        | Keyword::ProtectionFromChosenPlayer => "Protection",
         Keyword::Landwalk(lt) => {
             return Some(format!("{:?}walk", lt));
         }
@@ -266,6 +267,8 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         | Keyword::AttacksAsThoughNoDefender
         | Keyword::CantBeBlockedIfControllerCastSpells(_)
         | Keyword::CantBeBlockedIfDefenderControls(_)
+        | Keyword::CantBeBlockedIfDefenderHasMostCreatures
+        | Keyword::SplitSecondIfKicked
         | Keyword::CantBeBlockedUnlessDefenderSharedType(_)
         | Keyword::CantBeEquipped
         | Keyword::AttackCostBounce(_)

@@ -1015,7 +1015,7 @@ pub fn anvil_of_bogardan() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "Players have no maximum hand size.",
-            effect: StaticEffect::NoMaximumHandSize,
+            effect: StaticEffect::AllPlayersNoMaximumHandSize,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::StepBegins(TurnStep::Draw), EventScope::AnyPlayer),

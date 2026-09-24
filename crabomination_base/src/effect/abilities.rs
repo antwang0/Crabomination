@@ -472,6 +472,12 @@ pub enum StaticEffect {
     /// CR 601.2f — "Spells cost {N} less to cast" for EVERY player (Helm of
     /// Awakening), not just the source's controller.
     AllPlayersSpellsCostLess { amount: u32 },
+    /// `AllPlayersSpellsCostLess` for spells matching `filter` only — Arcane
+    /// Melee's "instant and sorcery spells cost {2} less", every caster.
+    AllPlayersCostReduction { filter: SelectionRequirement, amount: u32 },
+    /// "Players have no maximum hand size" — every player, not only the
+    /// controller (Price of Knowledge). Read by `effective_max_hand_size`.
+    AllPlayersNoMaximumHandSize,
     /// CR 601.2f — "[filter] spells you cast cost `less` less to cast", where
     /// `less` names COLORED pips (Ragemonger's "{B}{R} less"). Applied via
     /// `ManaCost::reduce_by_cost`, so an unmatched colored pip falls back to

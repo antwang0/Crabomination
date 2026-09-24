@@ -16973,6 +16973,10 @@ impl GameState {
             ProtectionKind::Monocolored => src_colors.len() == 1,
             ProtectionKind::CardType(t) => src_card_types.contains(t),
             ProtectionKind::Everything => true,
+            ProtectionKind::ChosenPlayer => self
+                .battlefield_find(tgt.id)
+                .and_then(|c| c.chosen_player)
+                .is_some_and(|q| src_printed.is_some_and(|s| s.controller == q)),
         })
     }
 
@@ -18079,6 +18083,24 @@ impl GameState {
                     attacker.controller,
                     None,
                 ),
+                // True-Name Nemesis — the chosen player's creatures can't block it.
+                Keyword::ProtectionFromChosenPlayer => {
+                    attacker.chosen_player == Some(blocker.controller)
+                }
+                // CR 509.1b — Hooded Horror: the defender has at least as many
+                // creatures as every other player.
+                Keyword::CantBeBlockedIfDefenderHasMostCreatures => {
+                    let count = |q: usize| {
+                        self.battlefield
+                            .iter()
+                            .filter(|c| c.controller == q && c.definition.is_creature())
+                            .count()
+                    };
+                    let mine = count(defender);
+                    (0..self.players.len())
+                        .filter(|&q| q != defender && self.players[q].is_alive())
+                        .all(|q| count(q) <= mine)
+                }
                 // CR 702.16 / 903.4 — Commander's Plate. Same reason it is
                 // here and not in `can_block_attacker_computed`: the protected
                 // set is the complement of the attacker's controller's
@@ -28817,6 +28839,7 @@ enum ProtectionKind<'a> {
     Monocolored,
     CardType(&'a crate::card::CardType),
     Everything,
+    ChosenPlayer,
 }
 
 impl<'a> ProtectionKind<'a> {
@@ -28839,6 +28862,7 @@ impl<'a> ProtectionKind<'a> {
             Keyword::ProtectionFromMonocolored => Self::Monocolored,
             Keyword::ProtectionFromCardType(t) => Self::CardType(t),
             Keyword::ProtectionFromEverything => Self::Everything,
+            Keyword::ProtectionFromChosenPlayer => Self::ChosenPlayer,
             _ => return None,
         })
     }
@@ -29383,6 +29407,7 @@ fn static_effect_to_effects(
             | StaticEffect::ExtraLandPerTurn
             | StaticEffect::CostReduction { .. }
             | StaticEffect::AllPlayersSpellsCostLess { .. }
+            | StaticEffect::AllPlayersCostReduction { .. }
             | StaticEffect::ColoredCostReduction { .. }
             | StaticEffect::PhyrexianPipForSpells { .. }
             | StaticEffect::ColoredSpellTax { .. }
@@ -29885,6 +29910,7 @@ fn static_effect_to_effects(
             // NoMaximumHandSize / OpponentsMaxHandSizeReduced — consulted
             // at cleanup via `effective_max_hand_size`; no layer effect.
             | StaticEffect::NoMaximumHandSize
+            | StaticEffect::AllPlayersNoMaximumHandSize
             // DiscardToLibraryTop (Library of Leng) — read by `discard_card`.
             | StaticEffect::DiscardToLibraryTop
             // TappedCreaturesCanBlock — consulted at block declaration via
@@ -30719,6 +30745,8 @@ pub fn attacker_block_bar_kw(k: &Keyword) -> bool {
         k,
         // `blocker_pair_block`'s attacker loop.
         Keyword::CantBeBlockedIfDefenderControls(_)
+            | Keyword::CantBeBlockedIfDefenderHasMostCreatures
+            | Keyword::ProtectionFromChosenPlayer
             | Keyword::ProtectionFromMatching(_)
             | Keyword::Landwalk(_)
             | Keyword::LandwalkFiltered(_)
