@@ -442,6 +442,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::TEGWYLL_COMMANDERS,
             main: decks::TEGWYLL_MAIN,
         },
+        // Forty-sixth: the thirty-sixth official list (Wade into Battle,
+        // C15) — Boros Giants under Kalemne. `--seats 46`.
+        PodDeck {
+            name: "Kalemne, Disciple of Iroas (RW)",
+            commanders: decks::KALEMNE_COMMANDERS,
+            main: decks::KALEMNE_MAIN,
+        },
     ]
 }
 
@@ -950,6 +957,7 @@ mod tests {
             ("Ghalta", [0x6A17A, 84, 9008]),
             // CR 903.3a — a planeswalker commander with a lieutenant in its 99.
             ("Teferi", [0x7EFE41, 85, 9009]),
+            ("Kalemne", [0xCA1E, 86, 9010]),
         ] {
             let precon = *field.iter().find(|d| d.name.starts_with(name)).expect("the precon seat");
             assert_eq!(precon.card_count(), 100);

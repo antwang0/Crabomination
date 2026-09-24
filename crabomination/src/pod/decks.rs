@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Ten hand-picked commanders plus thirty-four official preconstructed lists, each a
+//! Ten hand-picked commanders plus thirty-six official preconstructed lists, each a
 //! 99 of cards this engine implements: legal under CR 903 (100 cards
 //! including the commander, singleton outside basics, every card inside the
 //! commander's CR 903.4 color identity) and Commander-legal per Scryfall's
@@ -8,7 +8,7 @@
 //!
 //! The ten were built by hand because the offline Scryfall cache cannot say
 //! how a precon splits into decks; MTGJSON's deck files can, and the eleventh
-//! through forty-fourth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
+//! through forty-sixth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
 //! Win, Tails You Lose, Goblin Storm, Foundations Commander's Wretched Ranks,
 //! Tramplesaurus Rex and Keen Engineering, Commander Legends' Reap the Tides,
 //! Phyrexia: All Will Be One's Corrupting Influence, Zendikar Rising's Sneak
@@ -23,8 +23,9 @@
 //! Bloodline, Commander 2015's Plunder the Graves and Seize Control,
 //! Commander 2021's Quantum Quandrix, Commander 2015's Call the Spirits,
 //! Phyrexia: All Will Be One's Rebellion Rising, Commander 2014's Peer
-//! Through Time, Commander 2021's Lorehold Legacies and Commander (2011)'s
-//! Counterpunch) are taken from one card for card. What all of them keep
+//! Through Time, Commander 2021's Lorehold Legacies, Commander (2011)'s
+//! Counterpunch, Wilds of Eldraine Commander's Fae Dominion and Commander
+//! 2015's Wade into Battle) are taken from one card for card. What all of them keep
 //! from the precon idea is what the pod needs — fixed, legal, varied color
 //! identities, and built to play against each other.
 //! One is a Partner pair (CR 702.124b), one is a **planeswalker**
@@ -1475,4 +1476,32 @@ pub const TEGWYLL_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     island, island, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
     swamp,
+];
+
+pub const KALEMNE_COMMANDERS: &[CardFactory] = &[kalemne_disciple_of_iroas];
+
+/// **Wade into Battle**, the Commander 2015 Boros deck (C15, 2015-11-13),
+/// exactly as MTGJSON's `WadeIntoBattle_C15` prints it: 74 nonbasic
+/// cards + 14 Mountains + 11 Plains = 99. Giants and experience counters
+/// under Kalemne.
+pub const KALEMNE_MAIN: &[CardFactory] = &[
+    oreskos_explorer, magus_of_the_wheel, stinkdrinker_daredevil, taurean_mauler, dawnglare_invoker,
+    desolation_giant, fumiko_the_lowblood, hunted_dragon, stoneshock_giant, thundercloud_shaman,
+    warchief_giant, herald_of_the_host, kalemnes_captain, anya_merciless_angel, sunrise_sovereign,
+    hammerfist_giant, inferno_titan, dawnbreak_reclaimer, sun_titan, hostility,
+    jareth_leonine_titan, victorys_herald, sandstone_oracle, hamletback_goliath,
+    arbiter_of_knollridge, borderland_behemoth, dream_pillager, magma_giant, angel_of_serenity,
+    gisela_blade_of_goldnight, breath_of_darigaaz, fiery_confluence, disaster_radius, earthquake,
+    meteor_blast, fall_of_the_hammer, orims_thunder, sol_ring, blade_of_selves, boros_signet,
+    coldsteel_heart, fellwar_stone, lightning_greaves, mind_stone, thought_vessel, basalt_monolith,
+    boros_cluestone, darksteel_ingot, loxodon_warhammer, urzas_incubator, worn_powerstone,
+    seers_sundial, dreamstone_hedron, staff_of_nin, curse_of_the_nightly_hunt, banishing_light,
+    faiths_fetters, rite_of_the_raging_storm, warstorm_surge, ancient_amphitheater,
+    blasted_landscape, boros_garrison, boros_guildgate, command_tower, drifting_meadow,
+    evolving_wilds, forgotten_cave, secluded_steppe, smoldering_crater, terramorphic_expanse,
+    vivid_crag, vivid_meadow, wind_scarred_crag, crib_swap,
+    // Basics: 14 mountain, 11 plains
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains,
 ];
