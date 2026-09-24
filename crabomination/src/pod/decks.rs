@@ -1764,3 +1764,32 @@ pub const ZEDRUU_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, mountain, mountain, mountain,
     mountain, mountain, mountain, mountain, mountain,
 ];
+
+pub const GHIRED_COMMANDERS: &[CardFactory] = &[ghired_conclave_exile];
+
+/// **Primal Genesis**, the Commander 2019 deck (C19, 2019-08-23), exactly as
+/// MTGJSON's `PrimalGenesis_C19` prints it: 80 nonbasic cards + 7 Plains + 4
+/// Mountains + 8 Forests = 99. Naya tokens and populate under Ghired.
+pub const GHIRED_MAIN: &[CardFactory] = &[
+    garruk_primal_hunter, atla_palani_nest_tender, marisi_breaker_of_the_coil, doomed_artisan,
+    tectonic_hellion, ohran_frostfang, selesnya_eulogist, tahngarth_first_mate,
+    angel_of_sanctions, wingmate_roc, dragonmaster_outcast, feldon_of_the_third_path,
+    giant_adephage, soul_of_zendikar, trostani_selesnyas_voice, desolation_twin,
+    flamerush_rider, heart_piercer_manticore, rampaging_baloths, thragtusk, emmara_tandris,
+    wayfaring_temple, cliffside_rescuer, voice_of_many, scaretiller, roc_egg,
+    garruks_packleader, sakura_tribe_elder, vitu_ghazi_guildmage, ghireds_belligerence,
+    full_flowering, hour_of_reckoning, phyrexian_rebirth, shamanic_revelation, hate_mirage,
+    cultivate, explore, farseek, harmonize, fresh_meat, momentous_fall, second_harvest,
+    rootborn_defenses, trostanis_judgment, beast_within, druids_deliverance, slice_in_twain,
+    naya_charm, sundering_growth, idol_of_oblivion, mimic_vat, soul_foundry, lightning_greaves,
+    sol_ring, commanders_insignia, song_of_the_worldsoul, growing_ranks, intangible_virtue,
+    colossal_majesty, elemental_bond, cinder_glade, exotic_orchard, gargoyle_castle,
+    sungrass_prairie, ash_barrens, blossoming_sands, boros_garrison, command_tower,
+    evolving_wilds, graypelt_refuge, gruul_turf, jungle_shrine, kazandu_refuge, krosan_verge,
+    myriad_landscape, naya_panorama, rogues_passage, rugged_highlands, selesnya_sanctuary,
+    terramorphic_expanse,
+    // Basics: 7 plains, 4 mountain, 8 forest
+    plains, plains, plains, plains, plains, plains, plains,
+    mountain, mountain, mountain, mountain,
+    forest, forest, forest, forest, forest, forest, forest, forest,
+];

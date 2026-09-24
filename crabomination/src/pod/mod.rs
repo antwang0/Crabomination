@@ -512,6 +512,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ZEDRUU_COMMANDERS,
             main: decks::ZEDRUU_MAIN,
         },
+        // Fifty-sixth: the forty-sixth official list (Primal Genesis, C19)
+        // — Naya tokens and populate under Ghired. `--seats 56`.
+        PodDeck {
+            name: "Ghired, Conclave Exile (RGW)",
+            commanders: decks::GHIRED_COMMANDERS,
+            main: decks::GHIRED_MAIN,
+        },
     ]
 }
 
