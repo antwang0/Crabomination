@@ -67,6 +67,7 @@ pub fn sliver_gravemother() -> CardDefinition {
                 description: "Each Sliver creature card in your graveyard has encore {X}, where \
                               X is its mana value.",
                 effect: StaticEffect::GraveyardCardsHaveEncore {
+                    mana_cost: false,
                     filter: R::Creature.and(R::HasCreatureType(CreatureType::Sliver)),
                 },
             },

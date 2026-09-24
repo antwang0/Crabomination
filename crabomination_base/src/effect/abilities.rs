@@ -1188,8 +1188,14 @@ pub enum StaticEffect {
     GraveyardCreaturesHaveScavenge,
     /// CR 702.141 — "Each [filter] card in your graveyard has encore {X},
     /// where X is its mana value." Sliver Gravemother. Surfaced beside the
-    /// scavenge grant as a virtual `from_graveyard` ability.
-    GraveyardCardsHaveEncore { filter: SelectionRequirement },
+    /// scavenge grant as a virtual `from_graveyard` ability. With
+    /// `mana_cost`, "its encore cost is equal to its mana cost" (Wire
+    /// Surgeons) — the card's own cost, colours and all.
+    GraveyardCardsHaveEncore {
+        filter: SelectionRequirement,
+        #[serde(default)]
+        mana_cost: bool,
+    },
     /// "If one or more tokens would be created under your control, twice
     /// that many tokens are created instead." Used by Adrix and Nev,
     /// Twincasters (Quandrix uncommon legendary). Doubling Season uses a

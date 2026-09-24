@@ -590,10 +590,12 @@ fn counter_drain_cost_slow(
 }
 
 /// Counters on `c` that a `counter_drain_cost` of the given kinds could take.
+/// "Remove a counter" of any kind counts keyword counters too (CR 122.1b —
+/// Hexavus takes back the flying counters it handed out).
 fn drainable_counters(c: &CardInstance, kinds: Option<&[crate::card::CounterType]>) -> u32 {
     match kinds {
         Some(ks) => ks.iter().map(|k| c.counter_count(*k)).sum(),
-        None => c.counters.values().sum(),
+        None => c.counters.values().sum::<u32>() + c.keyword_counters.values().sum::<u32>(),
     }
 }
 
@@ -3118,19 +3120,31 @@ impl crate::game::GameState {
         {
             out.push(crate::effect::shortcut::scavenge(card.definition.cost.clone()));
         }
-        // Sliver Gravemother — encore {X}, X = the card's mana value.
-        let encore = self.battlefield.iter().any(|c| {
-            c.controller == owner
-                && c.definition.static_abilities.iter().any(|sa| match &sa.effect {
-                    StaticEffect::GraveyardCardsHaveEncore { filter } => {
-                        self.evaluate_requirement_on_card(filter, card, owner)
-                    }
-                    _ => false,
-                })
-        });
-        if encore {
-            let mv = card.definition.cost.cmc();
-            out.push(crate::effect::shortcut::encore(crate::mana::cost(&[crate::mana::generic(mv)])));
+        // Sliver Gravemother — encore {X}, X = the card's mana value; Wire
+        // Surgeons — encore at the card's own mana cost. Either grant is one
+        // encore ability (the card has it or it doesn't); the colored one wins
+        // when both apply, being the one its printed text names.
+        let encore = self
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == owner)
+            .flat_map(|c| c.definition.static_abilities.iter())
+            .filter_map(|sa| match &sa.effect {
+                StaticEffect::GraveyardCardsHaveEncore { filter, mana_cost }
+                    if self.evaluate_requirement_on_card(filter, card, owner) =>
+                {
+                    Some(*mana_cost)
+                }
+                _ => None,
+            })
+            .reduce(|a, b| a || b);
+        if let Some(own_cost) = encore {
+            let cost = if own_cost {
+                card.definition.cost.clone()
+            } else {
+                crate::mana::cost(&[crate::mana::generic(card.definition.cost.cmc())])
+            };
+            out.push(crate::effect::shortcut::encore(cost));
         }
         out
     }
@@ -20057,6 +20071,15 @@ impl GameState {
                         c.remove_counters(k, take);
                         events.push(GameEvent::CounterRemoved { card_id: cid, counter_type: k, count: take });
                         left -= take;
+                    }
+                    // CR 122.1b — an any-kind drain takes keyword counters
+                    // once the ordinary ones are gone.
+                    if kinds.is_none() && left > 0 && !c.keyword_counters.is_empty() {
+                        let kws: Vec<_> = c.keyword_counters.iter().map(|(k, _)| k.clone()).collect();
+                        for kw in kws {
+                            if left == 0 { break; }
+                            left -= c.keyword_counters.remove_up_to(&kw, left);
+                        }
                     }
                 }
             }

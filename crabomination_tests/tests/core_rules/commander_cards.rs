@@ -972,3 +972,114 @@ fn cr_700_2_a_death_trigger_spreads_its_modes_over_distinct_opponents() {
         assert_eq!(losses, want, "{seats} seats");
     }
 }
+
+// ── Primitives for Urza's Iron Alliance (BRC, Urza) ───────────────────────
+
+/// CR 702.141 — "its encore cost is equal to its mana cost" (Wire Surgeons):
+/// Master of Etherium's encore costs {2}{U}, so three colorless won't pay it
+/// where the mana-value form (Sliver Gravemother's {X}) would.
+#[test]
+fn cr_702_141_encore_at_the_cards_own_mana_cost() {
+    use crabomination::card::{SelectionRequirement as R, StaticAbility};
+    use crabomination::effect::StaticEffect;
+    let mut surgeon = bear_commander();
+    surgeon.name = "Test Encore Granter";
+    surgeon.static_abilities = vec![StaticAbility {
+        description: "Artifact creature cards in your graveyard have encore at their mana cost.",
+        effect: StaticEffect::GraveyardCardsHaveEncore {
+            filter: R::Artifact.and(R::Creature),
+            mana_cost: true,
+        },
+    }];
+    let mut g = commander_game();
+    g.add_card_to_battlefield(0, surgeon);
+    let master = g.add_card_to_graveyard(0, catalog::master_of_etherium());
+    let encore = |g: &mut GameState| {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: master,
+            ability_index: 0,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+    };
+    g.players[0].mana_pool.add_colorless(3);
+    assert!(encore(&mut g).is_err(), "{{2}}{{U}}, not three colorless");
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    encore(&mut g).expect("paid with blue");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == master));
+}
+
+/// CR 122.1b — keyword counters are counters: "remove a counter from another
+/// creature you control" (Hexavus) can take a flying counter when that's the
+/// only counter there.
+#[test]
+fn cr_122_1b_a_remove_any_counter_cost_takes_a_keyword_counter() {
+    use crabomination::card::{CounterType, SelectionRequirement as R};
+    use crabomination::effect::{ActivatedAbility, Effect, Selector, Value};
+    let mut pump = bear_commander();
+    pump.name = "Test Counter Eater";
+    pump.activated_abilities = vec![ActivatedAbility {
+        remove_counter_among_filter: Some((None, 1, R::Creature.and(R::OtherThanSource))),
+        effect: Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+        ..Default::default()
+    }];
+    let mut g = commander_game();
+    let eater = g.add_card_to_battlefield(0, pump);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().keyword_counters.add(Keyword::Flying, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: eater,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("the flying counter pays");
+    drain_stack(&mut g);
+    assert!(!has_kw(&g, bear, Keyword::Flying));
+    assert_eq!(pt(&g, eater), (3, 3));
+}
+
+/// CR 615 — "As long as [condition], prevent all damage that would be dealt
+/// to [this]" (Sanwell, Avenger Ace): a `WhileCondition` gate on the self
+/// prevention static is honoured. It used to read `WhileYourTurn` alone.
+#[test]
+fn cr_615_a_conditional_prevent_all_damage_to_this() {
+    use crabomination::card::{SelectionRequirement as R, StaticAbility};
+    use crabomination::effect::{Predicate, Selector, StaticEffect};
+    let mut shy = bear_commander();
+    shy.name = "Test Shy Bear";
+    shy.static_abilities = vec![StaticAbility {
+        description: "As long as you control an artifact, prevent all damage to this.",
+        effect: StaticEffect::WhileCondition {
+            condition: Predicate::SelectorExists(Selector::EachPermanent(R::Artifact.and(R::ControlledByYou))),
+            inner: Box::new(StaticEffect::PreventAllDamageToThis),
+        },
+    }];
+    let mut g = commander_game();
+    let bear = g.add_card_to_battlefield(0, shy);
+    let bolt = |g: &mut GameState| {
+        let b = g.add_card_to_hand(0, catalog::lightning_bolt());
+        g.players[0].mana_pool.add(Color::Red, 1);
+        g.perform_action(GameAction::CastSpell {
+            card_id: b,
+            target: Some(Target::Permanent(bear)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("bolt");
+        drain_stack(g);
+    };
+    g.add_card_to_battlefield(0, catalog::sol_ring());
+    bolt(&mut g);
+    assert!(g.battlefield_find(bear).is_some(), "prevented with an artifact out");
+    let ring = g.battlefield.iter().find(|c| c.definition.name == "Sol Ring").unwrap().id;
+    g.remove_to_graveyard_with_triggers(ring);
+    bolt(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "not without one");
+}

@@ -8476,20 +8476,19 @@ impl GameState {
     /// (`StaticEffect::PreventAllDamageToThis`). Consulted on both funnels so
     /// Gideon Blackblade takes no damage — and loses no loyalty — during your
     /// turn.
+    ///
+    /// Every gate `active_static` knows is honoured, `WhileCondition`
+    /// included (Sanwell, Avenger Ace — "as long as an artifact creature you
+    /// control is attacking"); it used to peel `WhileYourTurn` alone.
     pub(crate) fn self_static_prevents_all_damage_active(
         &self,
         e: &crate::effect::StaticEffect,
-        controller: usize,
+        card: &CardInstance,
     ) -> bool {
-        use crate::effect::StaticEffect;
-        match e {
-            StaticEffect::PreventAllDamageToThis => true,
-            StaticEffect::WhileYourTurn { inner } => {
-                self.active_player_idx == controller
-                    && self.self_static_prevents_all_damage_active(inner, controller)
-            }
-            _ => false,
-        }
+        matches!(
+            self.active_static(e, card),
+            Some(crate::effect::StaticEffect::PreventAllDamageToThis)
+        )
     }
 
     /// True when `tgt` prevents all damage to itself (combat or noncombat) via
@@ -8501,7 +8500,7 @@ impl GameState {
         self.battlefield_find(tgt).is_some_and(|c| {
             !c.damage_prevention_off_eot
                 && c.definition.static_abilities.iter().any(|sa| {
-                    self.self_static_prevents_all_damage_active(&sa.effect, c.controller)
+                    self.self_static_prevents_all_damage_active(&sa.effect, c)
                 })
         }) || self.damage_sealed_by_aura(tgt, true)
     }
@@ -8608,7 +8607,7 @@ impl GameState {
         if let Some(c) = me
             && c.definition.static_abilities.iter().any(|sa| {
                 matches!(sa.effect, SE::PreventAllCombatDamageToThis)
-                    || self.self_static_prevents_all_damage_active(&sa.effect, c.controller)
+                    || self.self_static_prevents_all_damage_active(&sa.effect, c)
             })
         {
             return true;
