@@ -1877,6 +1877,8 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Chaos Wand | Exit from Exile (CLB) | a found instant or sorcery you don't cast stays in exile instead of going to the bottom. |
 | 🟡 Durnan of the Yawning Portal | Exit from Exile (CLB) | exiles the first creature card among the top four (no choice), and the cast from exile has no undaunted. |
 | 🟡 Stolen Strategy | Exit from Exile (CLB) | an exiled land may be played, not only spells cast. |
+| 🟡 Revival Experiment | Witherbloom Witchcraft (C21) | the engine picks the cards — the highest mana value per permanent type, a multi-typed card counting for the first type it fills. |
+| 🟡 Suffer the Past | Witherbloom Witchcraft (C21) | the X cards are chosen as it resolves (from the target player's graveyard), not targeted. |
 | 🟡 Descendants' Fury | Sliver Swarm (CMM) | "one of them" is any attacker of yours that damaged a player this turn, not only this combat-damage batch's. |
 | 🟡 Bloodlord of Vaasgoth | Vampiric Bloodlust (C17) | the granted bloodthirst is checked as the cast trigger resolves, not as the creature enters. |
 | 🟡 Mathas, Fiend Seeker | Vampiric Bloodlust (C17) | a bounty counter grants its dies trigger only while Mathas is on the battlefield. |

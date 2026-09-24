@@ -103,6 +103,7 @@ lists were picked.
 | **Urza's Iron Alliance** (BRC precon) WUB | Urza, Chief Artificer | WUB | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Phantom Premonition** (KHC precon) WU | Ranar the Ever-Watchful | WU | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Hatsune Miku** (SLD precon) GW | Trostani, Selesnya's Voice | GW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
+| **Witherbloom Witchcraft** (C21 precon) BG | Willowdusk, Essence Seer | BG | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Exit from Exile** (CLB precon) RG | Faldorn, Dread Wolf Herald | RG | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Exquisite Invention** (C18 precon) UR | Saheeli, the Gifted (**planeswalker**) | UR | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 
@@ -1074,6 +1075,28 @@ each at 4 / 6 / 8 seats read 1 / 0 / 2 undecided, every one `board cap` — Boon
 Reflection doubles Trostani / Angelic Chorus life per creature, and Storm Herd
 at ~1,000+ life makes that many Pegasi in one resolution, past
 `MAX_BATTLEFIELD` (1,024). The cards are right; the bound is the simulator's.
+`--bench` byte-identical.
+
+The **seventy-eighth** is Commander 2021's **Witherbloom Witchcraft**
+(`WitherbloomWitchcraft_C21`) — Golgari life gain and loss under Willowdusk,
+Essence Seer (committed as seat 73, then 77, while four concurrent seats
+landed). Seventeen cards were missing; the primitives:
+`Effect::NextSpellThisTurnMayCostLife` (Marshland Bloodcaster),
+`Effect::ReturnFaceDownAsForest` (Yedora — a face-down land is not a
+manifested card, so no mana cost turns it up), `Effect::ReturnOnePerPermanentType`
+(Revival Experiment, CR 110.4), `Value::NontokenCreaturesEnteredThisTurn`
+(Gyome). It found three engine gaps: ⚠ **a resolving creature spell never
+stamped `creatures_entered_this_turn`** — only tokens and zone moves did, so
+Geralf's and Ephara's counts missed cast creatures; **`PowerOf` / `ToughnessOf`
+could not see the library or the stack**; **`CastSpellMatches` answered every
+source-reading atom `false`** ("a spell of the chosen color"). Residuals:
+**Revival Experiment**'s picks are the engine's; **Suffer the Past** chooses as
+it resolves. Four-seat pods beside Sigarda / Teval / Disa (seed 11073, 1,000
+games, all decided): Willowdusk 19.5 %; the census leaves no card of the four
+unplayed. At 6 seats (73 then, beside Krark / Ixhel / Daxos / Emmara / Ranar,
+seed 11074) 3 of 1,000 hit `board cap` — **Emmara's Selesnya Guildmage /
+Vitu-Ghazi Saprolings (769-939 of them)**, not this list: the same shape as
+Storm Herd, a token engine outgrowing `MAX_BATTLEFIELD` in a long stall.
 `--bench` byte-identical.
 
 The **seventy-sixth** is Commander 2018's **Exquisite Invention**
