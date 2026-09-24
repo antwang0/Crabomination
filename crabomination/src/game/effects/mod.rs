@@ -2512,7 +2512,32 @@ impl GameState {
         for _ in 0..64 {
             let Some(sig) = self.suspend_signal.take() else { break };
             let (decision, pending, remaining) = *sig;
-            let answer = self.decider.decide(&decision);
+            // A creature-type naming a prompting seat was asked off the stack
+            // (Riders of Gavony, Species Specialist, Metallic Mimic as they
+            // enter) has no seat to reach, and the headless decider names
+            // Demon whatever the board: answer it with the bot's heuristic.
+            let answer = match &decision {
+                crate::decision::Decision::ChooseCreatureType { source, .. } => {
+                    // Only a controller's own naming: Callous Oppressor's
+                    // opponent-named type keeps the headless answer.
+                    let own = self.find_card_anywhere(*source).and_then(|c| {
+                        matches!(c.definition.as_enters_effect, Some(Effect::NameCreatureType { .. }))
+                            .then_some(c.controller)
+                    });
+                    if let Some(seat) = own.filter(|&p| self.seat_prompts(p)) {
+                        crate::server::bot::decide_pending_policy(
+                            self,
+                            seat,
+                            &crate::server::bot::EvalWeights::default(),
+                            &decision,
+                            false,
+                        )
+                    } else {
+                        self.decider.decide(&decision)
+                    }
+                }
+                _ => self.decider.decide(&decision),
+            };
             events.append(&mut self.apply_pending_effect_answer(pending, &answer)?);
             events.append(&mut self.resolve_effect_resumed(&remaining, ctx)?);
         }

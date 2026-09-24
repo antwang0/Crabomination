@@ -2402,10 +2402,15 @@ impl GameState {
                     .source
                     .and_then(|cid| self.find_card_anywhere(cid))
                     .and_then(|c| c.chosen_creature_type);
-                let obj = ctx
-                    .trigger_source
-                    .and_then(|e| e.as_card_id())
-                    .and_then(|id| self.find_card_anywhere(id));
+                // CR 603.10a — a dying token has already ceased to exist
+                // (CR 704.5d) by the time a died trigger checks it, so its
+                // types come from the dispatch-time snapshot (Species
+                // Specialist naming Human, a Human token dying).
+                let obj = ctx.trigger_source.and_then(|e| e.as_card_id()).and_then(|id| {
+                    self.find_card_anywhere(id)
+                        .or_else(|| self.died_card_snapshots.get(&id))
+                        .or_else(|| self.leaves_bf_lki.get(&id))
+                });
                 match (chosen, obj) {
                     (Some(ct), Some(card)) => {
                         card.has_keyword(&crate::card::Keyword::Changeling)
