@@ -647,6 +647,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::BRIGHT_PALM_COMMANDERS,
             main: decks::BRIGHT_PALM_MAIN,
         },
+        // Seventy-fifth: the sixty-fifth official list (Squirreled Away, BLC)
+        // — Golgari Squirrels and Food under Hazel. `--pod-decks 75`.
+        PodDeck {
+            name: "Hazel of the Rootbloom (BG)",
+            commanders: decks::HAZEL_COMMANDERS,
+            main: decks::HAZEL_MAIN,
+        },
     ]
 }
 
@@ -1181,6 +1188,7 @@ mod tests {
             ("Isperia", [0x15BE, 93, 9017]),
             ("Ranar", [0x5A4A, 94, 9018]),
             ("Wilhelt", [0x3117, 95, 9019]),
+            ("Hazel", [0x4A2E, 96, 9020]),
         ] {
             let precon = *field.iter().find(|d| d.name.starts_with(name)).expect("the precon seat");
             assert_eq!(precon.card_count(), 100);

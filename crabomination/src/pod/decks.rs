@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Ten hand-picked commanders plus sixty-four official preconstructed lists, each a
+//! Ten hand-picked commanders plus sixty-five official preconstructed lists, each a
 //! 99 of cards this engine implements: legal under CR 903 (100 cards
 //! including the commander, singleton outside basics, every card inside the
 //! commander's CR 903.4 color identity) and Commander-legal per Scryfall's
@@ -8,7 +8,7 @@
 //!
 //! The ten were built by hand because the offline Scryfall cache cannot say
 //! how a precon splits into decks; MTGJSON's deck files can, and the eleventh
-//! through seventy-fourth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
+//! through seventy-fifth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
 //! Win, Tails You Lose, Goblin Storm, Foundations Commander's Wretched Ranks,
 //! Tramplesaurus Rex and Keen Engineering, Commander Legends' Reap the Tides,
 //! Phyrexia: All Will Be One's Corrupting Influence, Zendikar Rising's Sneak
@@ -39,8 +39,8 @@
 //! Enchantments, The Brothers' War Commander's Urza's Iron Alliance and
 //! Kaldheim Commander's Phantom Premonition, Secret Lair's Hatsune Miku,
 //! Commander Legends: Battle for Baldur's Gate's Exit from Exile, Innistrad: Midnight
-//! Hunt Commander's Undead Unleashed and March of the Machine Commander's
-//! Call for Backup) are taken
+//! Hunt Commander's Undead Unleashed, March of the Machine Commander's
+//! Call for Backup and Bloomburrow Commander's Squirreled Away) are taken
 //! from
 //! one card for card. What all of them keep
 //! from the precon idea is what the pod needs — fixed, legal, varied color
@@ -2329,4 +2329,33 @@ pub const BRIGHT_PALM_MAIN: &[CardFactory] = &[
     // Basics: 5 plains, 2 mountain, 6 forest
     plains, plains, plains, plains, plains, mountain, mountain,
     forest, forest, forest, forest, forest, forest,
+];
+
+pub const HAZEL_COMMANDERS: &[CardFactory] = &[hazel_of_the_rootbloom];
+
+/// **Squirreled Away**, the Bloomburrow Commander deck (BLC, 2024-08-02),
+/// exactly as MTGJSON's `SquirreledAway_BLC` prints it: 82 nonbasic
+/// cards + 8 Swampes + 9 Forests = 99. Golgari Squirrels, Food and tokens under Hazel of the
+/// Rootbloom.
+pub const HAZEL_MAIN: &[CardFactory] = &[
+    the_odd_acorn_gang, garruk_cursed_huntsman, chittering_witch, insatiable_frugivore,
+    moonstone_eulogist, swarmyard_massacre, hazels_brewmaster, woe_strider, saw_in_half,
+    ogre_slumlord, decree_of_pain, gourmands_talent, rootcast_apprenticeship, scurry_of_squirrels,
+    end_raze_forerunners, arasta_of_the_endless_web, deep_forest_hermit, toski_bearer_of_secrets,
+    beastmaster_ascension, second_harvest, shamanic_revelation, chatterfang_squirrel_general,
+    temple_of_malady, casualties_of_war, windgraces_judgment, maskwood_nexus, academy_manufactor,
+    woodland_cemetery, necroblossom_snarl, oran_rief_the_vastwood, swarmyard, exotic_orchard,
+    llanowar_wastes, grim_backwoods, viridescent_bog, twilight_mire, gilded_goose, chitterspitter,
+    maelstrom_pulse, beledros_witherbloom, idol_of_oblivion, sword_of_the_squeak,
+    morbid_opportunist, nadiers_nightblade, plumb_the_forbidden, bastion_of_remembrance,
+    plaguecrafter, cache_grab, chatterstorm, poison_tip_archer, moldervine_reclamation,
+    ravenous_squirrel, skyfisher_spider, binding_the_old_gods, golgari_rot_farm, jungle_hollow,
+    haunted_mire, nested_shambler, deadly_dispute, zulaport_cutthroat, squirrel_sovereign,
+    prosperous_innkeeper, haywire_mite, tireless_provisioner, squirrel_nest, honored_dreyleader,
+    tear_asunder, wolfwillow_haven, putrefy, arcane_signet, golgari_signet, talisman_of_resilience,
+    sol_ring, skullclamp, terramorphic_expanse, path_of_ancestry, evolving_wilds, command_tower,
+    tranquil_thicket, bojuka_bog, tainted_wood, barren_moor,
+    // Basics: 8 swamp, 9 forest
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest,
 ];
