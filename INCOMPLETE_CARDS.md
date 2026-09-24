@@ -1932,6 +1932,8 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Demonic Covenant | Death Toll (DSC) | the draw also fires when Demons attack only a planeswalker. |
 | 🟡 Into the Pit | Death Toll (DSC) | the sacrifice is paid as the cast completes rather than as a cost before it. |
 | 🟡 Old Stickfingers | Death Toll (DSC) | reveals until one creature card X times, bottoming each run of misses before the next. |
+| 🟡 True-Name Nemesis | Mind Seize (C13) | the chosen player is the engine's most hostile opponent, not the controller's pick. |
+| 🟡 Eye of Doom | Mind Seize (C13) | each player's doom counter goes on the nonland permanent the engine picks. |
 | 🟡 Bell Borca, Spectral Sergeant | Legends' Legacy (DMC) | the noted mana values are every card exiled this turn (through the two exile funnels), including those exiled before Bell Borca entered. |
 | 🟡 Bladewing, Deathless Tyrant | Legends' Legacy (DMC) | combat damage to a planeswalker doesn't trigger it. |
 | 🟡 The Peregrine Dynamo | Legends' Legacy (DMC) | as Strionic Resonator: the target is the ability's source permanent, and the copy keeps its targets. |

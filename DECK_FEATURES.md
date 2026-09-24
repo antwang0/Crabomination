@@ -117,6 +117,7 @@ lists were picked.
 | **Tinker Time** (MOC precon) GUR | Gimbal, Gremlin Prodigy | GUR | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Legends' Legacy** (DMC precon) RWB | Dihada, Binder of Wills (**planeswalker**) | RWB | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Death Toll** (DSC precon) BG | Winter, Cynical Opportunist | BG | 100 | 🟡 all 100 implemented, 6 carry residuals (below) |
+| **Mind Seize** (C13 precon) UBR | Jeleva, Nephalia's Scourge | UBR | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not
@@ -1125,6 +1126,26 @@ reach cast creatures only; **Stensian Sanguinist**'s "this combat" is "this
 turn". Four-seat pods beside Sigarda / Teval / Disa (seed 11081, 1,000 games,
 all decided): Dina 15.9 %; the census leaves no card of the four unplayed.
 `--bench` byte-identical.
+
+The **eighty-ninth** is Commander 2013's **Mind Seize** (`MindSeize_C13`) —
+Grixis spells, theft and wheels under Jeleva, Nephalia's Scourge, reached by
+`--pod-decks 89` (seat 83, then 87 and 88, before rebasing over six others).
+Eighteen cards were missing; Curse of Chaos and Terra Ravager landed with
+Nature of the Beast meanwhile, so sixteen are this seat's (`cmdr_jeleva.rs`).
+The primitives: `Keyword::ProtectionFromChosenPlayer` (True-Name Nemesis —
+the chosen player's spells, abilities, blockers and damage at all four
+protection sites, CR 702.16), `Keyword::CantBeBlockedIfDefenderHasMostCreatures`
+(Hooded Horror, CR 509.1b), `Keyword::SplitSecondIfKicked` (Molten Disaster,
+CR 702.61), `StaticEffect::AllPlayersCostReduction` (Arcane Melee) and
+`StaticEffect::AllPlayersNoMaximumHandSize` (Price of Knowledge — and Anvil
+of Bogardan, whose "Players have no maximum hand size" only lifted its
+controller's cap). Rebasing found Feral Appetite (Witherbloom Pestilence)
+declaring its target only inside an `If`, so it resolved against no target;
+the exile now declares the slot. Residuals: **True-Name Nemesis** protects
+from the engine's most hostile opponent; **Eye of Doom**'s counters go where
+the engine picks. Pods (release, seed 10241, 1,000 games beside Winter /
+Faldorn / Anikthea): 1,000/1,000 decided, no card of the four lists unplayed,
+Jeleva 7.2 %. `--bench` byte-identical.
 
 The **seventy-seventh** is Duskmourn Commander's **Death Toll**
 (`DeathToll_DSC`) — Golgari self-mill and delirium under Winter, Cynical
