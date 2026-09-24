@@ -59,6 +59,7 @@ lists were picked.
 | **Guided by Nature** (C14 precon) G | Freyalise, Llanowar's Fury (**planeswalker**) | G | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Animated Army** (BLC precon) RG | Bello, Bard of the Brambles | RG | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Grave Danger** (SCD precon) UB | Gisa and Geralf | UB | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
+| **Forged in Stone** (C14 precon) W | Nahiri, the Lithomancer (**planeswalker**) | W | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Swell the Host** (C15 precon) GU | Ezuri, Claw of Progress | GU | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Angels: They're Just Like Us** (SLD precon) W | Gisela, the Broken Blade (**meld**) | W | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Built From Scratch** (C14 precon) R | Daretti, Scrap Savant (**planeswalker**) | R | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
@@ -394,6 +395,26 @@ Gisa / Anowon (seed 10092, 1,000 games, all decided): Gisa and Geralf 35.6 %.
 the budget grows by 5,000 a seat above ten while actions/game grow faster
 (27.5 k at 15, 78 k at 25, 106 k at 29) — attrition, not loops (every diagnosed
 cap). 2..8 seats at seed 10093: all decided.
+
+The **thirtieth** is Commander 2014's **Forged in Stone** (`ForgedInStone_C14`)
+— mono-white Equipment and Kor under Nahiri, the Lithomancer, the field's
+third planeswalker commander. Fifteen cards were missing (Karoo was already
+`karoo_land`); the primitives were `EquipScale` reading its equipment as the
+source and `count_named_like_exiled_with_source` (Strata Scythe). Residuals:
+**Arcane Lighthouse** strips hexproof/shroud once rather than "can't have",
+**Benevolent Offering**'s opponent is the engine's pick, **Nahiri**'s +2/−2
+take your first Equipment. Seed 10101, 200 games at 30 seats: **168 decided,
+32 action caps, zero panics** (the cap rate: 16 % at 30 seats, attrition as
+before). ⚠ **The find: games 13 and 15 took 568 s each** against ~1 s for a
+normal game — a board of ~200 permanents, nothing runaway. The profile put
+every sample in `gather_continuous_effects_inner` under `computed_permanent`:
+an **unfrozen** computed read gathered afresh on every call, bypassing the
+`(-303)` cross memo, so each SBA walk paid a full gather per permanent. Routed
+through the memo, game 13 runs 552 s -> 177 s with the same 110,161 actions,
+and the bench stays byte-identical. The memo's debug audit then caught two
+statics gated on turn scalars the key did not witness (Thrasta's entry turn,
+Medomai's extra turn); `turn_number` / `step` / `current_turn_is_extra` now
+fold into the key.
 
 ⚠ **The board cap was a bot bug, not a loop.** A Krenko seat sent all 292
 of its Goblins at one player on 24 life each turn while two others sat on

@@ -1797,3 +1797,19 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Forgotten Ancient | "move any number of +1/+1 counters" is all-or-nothing, spread evenly over your other creatures (`DistributeCountersFromSource`); no per-recipient amounts. |
 | 🟡 Verdant Confluence | modes are the default picks (two counters, two basics); `ChooseN` has no cast-time mode choice. |
 | 🟡 Skullwinder | "choose an opponent" is the engine's pick (fewest creatures). |
+
+### The `modern_decks` Commander routine's precons (seats 23, 25, 27, 29, 30) — open residuals, 2026-09-24
+
+| Card | Deck | Gap |
+|---|---|---|
+| 🟡 Descendants' Fury | Sliver Swarm (CMM) | "one of them" is any attacker of yours that damaged a player this turn, not only this combat-damage batch's. |
+| 🟡 Bloodlord of Vaasgoth | Vampiric Bloodlust (C17) | the granted bloodthirst is checked as the cast trigger resolves, not as the creature enters. |
+| 🟡 Mathas, Fiend Seeker | Vampiric Bloodlust (C17) | a bounty counter grants its dies trigger only while Mathas is on the battlefield. |
+| 🟡 Kheru Mind-Eater | Vampiric Bloodlust (C17) | the exiled card is exiled face up. |
+| 🟡 Sylvan Offering | Guided by Nature (C14) | "choose an opponent" is the engine's pick (fewest creatures). |
+| 🟡 Siege Behemoth | Guided by Nature (C14) | the per-creature "you may assign as though unblocked" is always yes. |
+| 🟡 Havengul Lich | Grave Danger (SCD) | the cast permission lands; the Lich does not gain the cast card's activated abilities. |
+| 🟡 Liliana, Untouched by Death | Grave Danger (SCD) | the −3 covers the Zombie cards in your graveyard as it resolves, not later arrivals that turn. |
+| 🟡 Arcane Lighthouse | Forged in Stone (C14) | creatures lose hexproof/shroud until end of turn; a grant made later that turn is not stopped ("can't have"). |
+| 🟡 Benevolent Offering | Forged in Stone (C14) | each "choose an opponent" is the engine's pick. |
+| 🟡 Nahiri, the Lithomancer | Forged in Stone (C14) | the +2 attaches your first Equipment; the −2 puts your first Equipment card from hand, else graveyard — no pick. |

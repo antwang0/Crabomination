@@ -9512,6 +9512,28 @@ short to say so.
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
 
+### POD 2026-09-24 — an unfrozen computed read gathered afresh every call
+
+A 30-seat pod (seed 10101) had games 13 and 15 at **568 s** each against ~1 s
+for a normal game — same ~110 k actions as their neighbours, a board of ~200
+permanents, nothing runaway (`CRAB_CAP_DIAG=<n>` now names a pod board as it
+passes `n` actions). Every gdb sample sat in `gather_continuous_effects_inner`
+under `computed_permanent_hinted`, from SBA requirement walks: the **unfrozen**
+tail of `computed_permanent_hinted` called `gather_continuous_effects()` raw,
+so `(-303)`'s cross memo never served it and an SBA walk over N permanents
+paid N gathers. Routed through `gathered_effects_and_gates_shared`:
+
+```text
+  seed 10101 game 13, 30 seats   552.4 s -> 183.8 s   110,161 actions both sides
+  seed 10101 games 0..11         8.7 s -> 4.9 s       113,256.5 actions/game both
+  --bench                        byte-identical (195,806 / 27.49 / 611.9, 0 stalls, determinism ok)
+```
+
+⚠ The widened memo's debug audit named two inputs `gather_key` never
+witnessed — `turn_number` (Thrasta's "the turn it entered") and
+`current_turn_is_extra` (Medomai) — so they and `step` fold into the key's
+hashed half (`GameState` stays under its cap).
+
 ### GUARDRAIL 2026-09-23 — five precons, the overkill spill, the combat-only window
 
 `--bench`, `release-fast`, `CRAB_THREAD_CHECK=1`, at `a8205adc`:
