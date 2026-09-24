@@ -4798,6 +4798,10 @@ pub enum Effect {
     /// controls can't attack you or planeswalkers you control until your
     /// next turn." The creature is the taker's greatest-power one.
     EachPlayerMayCounterForPeace { counters: u32 },
+    /// Kwain, Itinerant Meddler — "Each player may draw a card, then each
+    /// player who drew a card this way gains `life` life." Asked APNAP; the
+    /// takers draw, then gain.
+    EachPlayerMayDrawThenTakersGainLife { life: u32 },
     /// CR 901.9 — `who` rolls the planar die as an effect (Fractured
     /// Powerstone): no surcharge, no timing gate. A blank does nothing, chaos
     /// ensues, or `who` planeswalks. Outside Planechase only "whenever chaos
@@ -6816,6 +6820,9 @@ pub enum Effect {
     /// source's `chosen_color` (CR 614 — Coldsteel Heart, choose-a-color mana
     /// rocks). Read later by `ManaPayload::ChosenColorOfSource`.
     ChooseColorForSelf,
+    /// `ChooseColorForSelf` with one color ruled out — the Thriving lands'
+    /// "choose a color other than green".
+    ChooseColorForSelfOtherThan(crate::mana::Color),
     /// Tablet of the Guilds: as this enters, choose two colors (stamped on
     /// `CardInstance.chosen_colors`).
     ChooseTwoColorsForSource,

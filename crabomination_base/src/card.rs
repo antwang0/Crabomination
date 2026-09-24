@@ -877,6 +877,12 @@ pub enum CounterType {
     /// Blessing counter — Boon of the Spirit Realm's constellation tally, the
     /// team pump it grants.
     Blessing,
+    /// Ingredient counter — Communal Brewing's tally, the extra +1/+1
+    /// counters each creature spell you cast enters with.
+    Ingredient,
+    /// Vow counter — Promise of Loyalty's mark: a creature carrying one can't
+    /// attack the vow's caster or their planeswalkers.
+    Vow,
 }
 
 /// Every zone a card can occupy.

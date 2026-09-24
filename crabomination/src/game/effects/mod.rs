@@ -16900,6 +16900,16 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ChooseColorForSelfOtherThan(excluded) => {
+                let Some(source) = ctx.source else { return Ok(()); };
+                let legal: Vec<Color> = Color::ALL.iter().copied().filter(|c| c != excluded).collect();
+                let color = self.chosen_color_for_source(ctx.controller, Some(source), &legal);
+                if let Some(c) = self.battlefield_find_mut(source) {
+                    c.chosen_color = Some(color);
+                }
+                Ok(())
+            }
+
             Effect::ChooseTwoColorsForSource => {
                 let Some(source) = ctx.source else { return Ok(()); };
                 let mut picked: Vec<Color> = Vec::new();
@@ -32346,6 +32356,10 @@ impl GameState {
 
             Effect::EachPlayerMayCounterForPeace { counters } => {
                 self.each_player_may_counter_for_peace(*counters, effect, ctx, events)
+            }
+
+            Effect::EachPlayerMayDrawThenTakersGainLife { life } => {
+                self.each_player_may_draw_then_gain(*life, effect, ctx, events)
             }
 
             Effect::LureCreaturesToSourceNextTurn { who } => {

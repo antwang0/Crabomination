@@ -9684,6 +9684,10 @@ impl GameState {
         } else {
             ctrl
         };
+        // Fisher's Talent — a named token becomes another (CR 614.1a).
+        if let Some(repl) = self.named_token_replacement(ctrl, &inst.definition) {
+            inst = crate::card::CardInstance::new_token(id, repl, ctrl);
+        }
         // Jinnie Fay — a bigger token instead (CR 614.1a).
         if let Some(repl) = self.token_replacement_for(ctrl, &inst.definition) {
             inst = crate::card::CardInstance::new_token(id, repl, ctrl);
@@ -29700,6 +29704,7 @@ fn static_effect_to_effects(
             // epilogue (Quina's extra-Frog rider); not a layer effect.
             | StaticEffect::TokenCreationAddsToken { .. }
             | StaticEffect::TokensMayBecome { .. }
+            | StaticEffect::TokenNamedBecomes { .. }
             | StaticEffect::TokenCreationAddsTokenPerToken { .. }
             // Consulted at the mint funnel (Academy Manufactor).
             | StaticEffect::ClueFoodTreasureMintsOneOfEach

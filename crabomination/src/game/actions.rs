@@ -2530,16 +2530,19 @@ impl crate::game::GameState {
         card: &crate::card::CardInstance,
     ) -> bool {
         use crate::effect::StaticEffect;
-        self.battlefield.iter().any(|c| {
-            c.controller == player
-                && c.definition.static_abilities.iter().any(|sa| match &sa.effect {
-                    StaticEffect::CastHandSpellsFree => true,
-                    StaticEffect::CastFilteredSpellsFree { filter } => {
-                        self.evaluate_requirement_on_card(filter, card, player)
-                    }
-                    _ => false,
-                })
-        })
+        let grants = |sa: &crate::card::StaticAbility| match &sa.effect {
+            StaticEffect::CastHandSpellsFree => true,
+            StaticEffect::CastFilteredSpellsFree { filter } => {
+                self.evaluate_requirement_on_card(filter, card, player)
+            }
+            _ => false,
+        };
+        self.battlefield
+            .iter()
+            .any(|c| c.controller == player && c.definition.static_abilities.iter().any(grants))
+            // CR 114.4 — an emblem's static works from the command zone
+            // (Tamiyo, Field Researcher's −7).
+            || self.players[player].emblems.iter().any(|em| em.statics.iter().any(grants))
     }
 
     /// Conspiracy Unraveler — the smallest collect-evidence amount `player`

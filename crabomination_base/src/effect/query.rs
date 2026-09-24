@@ -1805,7 +1805,7 @@ impl Effect {
             Effect::SearchSameNameToBattlefield { who, what } => {
                 player_has_target(who) || sel_has_target(what)
             }
-            Effect::ChooseColorForSelf => false,
+            Effect::ChooseColorForSelf | Effect::ChooseColorForSelfOtherThan(_) => false,
             Effect::Populate { .. } => false,
             Effect::LoseAllAbilities { what, .. } => sel_has_target(what),
             Effect::AddCounter { what, amount, .. }
@@ -2076,7 +2076,8 @@ impl Effect {
             Effect::PreventCombatDamageExceptDealtBy { .. } => false,
             Effect::PreventAllCombatDamageToPlayerThisTurn { .. }
             | Effect::PreventAllDamageToPlayerThisTurn { .. }
-            | Effect::EachPlayerMayCounterForPeace { .. } => false,
+            | Effect::EachPlayerMayCounterForPeace { .. }
+            | Effect::EachPlayerMayDrawThenTakersGainLife { .. } => false,
             Effect::RollPlanarDie { who } | Effect::Planeswalk { who } | Effect::ChaosEnsues { who } => {
                 player_has_target(who)
             }

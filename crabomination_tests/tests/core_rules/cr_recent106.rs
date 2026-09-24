@@ -816,3 +816,122 @@ fn cr_611_3a_a_static_over_attacked_this_turn_is_live() {
     drain_stack(&mut g);
     assert_eq!(g.computed_permanent(bear).unwrap().power, 3);
 }
+
+fn peace_main() -> GameState {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g
+}
+
+fn run_as_spell(g: &mut GameState, effect: crabomination::effect::Effect) {
+    use crabomination::card::{CardDefinition, CardType};
+    use crabomination::game::types::GameAction;
+    let id = g.add_card_to_hand(0, CardDefinition {
+        name: "Primitive Test",
+        card_types: vec![CardType::Sorcery],
+        effect,
+        ..Default::default()
+    });
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(g);
+}
+
+fn plain_token(name: &str, p: i32, t: i32) -> crabomination::card::TokenDefinition {
+    use crabomination::card::{CardType, TokenDefinition};
+    TokenDefinition { name: name.into(), power: p, toughness: t, card_types: vec![CardType::Creature], ..Default::default() }
+}
+
+/// CR 614.1a / 614.5 — "if you would create a Fish, create a Shark instead"
+/// chains into "if you would create a Shark, create an Octopus instead",
+/// each replacement applying once (Fisher's Talent at level 3).
+#[test]
+fn cr_614_5_named_token_replacements_chain_once_each() {
+    use crabomination::card::{CardDefinition, CardType, StaticAbility, StaticEffect};
+    use crabomination::effect::{Effect, PlayerRef, Value};
+    let mut g = peace_main();
+    let rule = |from: &str, into| StaticAbility {
+        description: "token replacement",
+        effect: StaticEffect::TokenNamedBecomes { name: from.into(), into },
+    };
+    g.add_card_to_battlefield(0, CardDefinition {
+        name: "Token Chain Test",
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![rule("Fish", plain_token("Shark", 3, 3)), rule("Shark", plain_token("Octopus", 8, 8))],
+        ..Default::default()
+    });
+    run_as_spell(&mut g, Effect::CreateToken {
+        who: PlayerRef::You,
+        count: Value::ONE,
+        definition: std::sync::Arc::new(plain_token("Fish", 1, 1)),
+    });
+    let names: Vec<&str> = g.battlefield.iter().filter(|c| c.is_token).map(|c| c.definition.name).collect();
+    assert_eq!(names, vec!["Octopus"]);
+}
+
+/// CR 105.4 — "choose a color other than green" never names green.
+#[test]
+fn cr_105_4_a_color_other_than_x_excludes_x() {
+    use crabomination::card::{CardDefinition, CardType};
+    use crabomination::effect::Effect;
+    use crabomination::game::types::GameAction;
+    use crabomination::mana::Color;
+    let mut g = peace_main();
+    let land = g.add_card_to_hand(0, CardDefinition {
+        name: "Other Color Test",
+        card_types: vec![CardType::Land],
+        as_enters_effect: Some(Effect::ChooseColorForSelfOtherThan(Color::Green)),
+        ..Default::default()
+    });
+    g.perform_action(GameAction::PlayLand(land)).expect("play");
+    drain_stack(&mut g);
+    let chosen = g.battlefield_find(land).and_then(|c| c.chosen_color);
+    assert!(chosen.is_some_and(|c| c != Color::Green), "chose {chosen:?}");
+}
+
+/// Kwain's offer: each player may draw; only the takers gain the life.
+#[test]
+fn cr_101_4_each_player_may_draw_and_takers_gain_life() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    use crabomination::effect::Effect;
+    let mut g = peace_main();
+    for p in 0..2 {
+        g.add_card_to_library(p, catalog::plains());
+    }
+    let (l0, l1) = (g.players[0].life, g.players[1].life);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Bool(false)]));
+    run_as_spell(&mut g, Effect::EachPlayerMayDrawThenTakersGainLife { life: 1 });
+    assert_eq!((g.players[0].hand.len(), g.players[0].life), (1, l0 + 1));
+    assert_eq!((g.players[1].hand.len(), g.players[1].life), (0, l1));
+}
+
+/// CR 114.4 — an emblem's "cast spells from your hand without paying their
+/// mana costs" works from the command zone.
+#[test]
+fn cr_114_4_an_emblem_grants_free_casting_from_hand() {
+    use crabomination::card::{StaticAbility, StaticEffect};
+    use crabomination::effect::{Effect, PlayerRef};
+    use crabomination::game::types::GameAction;
+    let mut g = peace_main();
+    run_as_spell(&mut g, Effect::CreateEmblem {
+        who: PlayerRef::You,
+        name: "Free Cast Test".into(),
+        triggered: vec![],
+        statics: vec![StaticAbility { description: "free", effect: StaticEffect::CastHandSpellsFree }],
+    });
+    let angel = g.add_card_to_hand(0, catalog::serra_angel());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: angel,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("no mana needed");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(angel).is_some());
+}

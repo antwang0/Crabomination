@@ -1,7 +1,8 @@
-//! Multiplayer offers a player may take for a price paid to the offerer:
-//! Orzhov Advokist's "each player may put two +1/+1 counters on a creature
-//! they control; if a player does, creatures that player controls can't
-//! attack you or planeswalkers you control until your next turn".
+//! Multiplayer offers each player may take: Orzhov Advokist's "each player
+//! may put two +1/+1 counters on a creature they control; if a player does,
+//! creatures that player controls can't attack you or planeswalkers you
+//! control until your next turn", and Kwain's "each player may draw a card,
+//! then each player who drew a card this way gains 1 life".
 
 use crate::card::{CardId, CounterType, Keyword, SelectionRequirement};
 use crate::decision::OptionalKind;
@@ -77,6 +78,49 @@ impl GameState {
                     events,
                 )?;
             }
+        }
+        Ok(())
+    }
+
+    /// `Effect::EachPlayerMayDrawThenTakersGainLife` — APNAP, each living
+    /// player is asked (log-replayed); the takers each draw a card, then each
+    /// gains `life`.
+    pub(super) fn each_player_may_draw_then_gain(
+        &mut self,
+        life: u32,
+        effect: &Effect,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
+        let source = ctx.source.unwrap_or(CardId(0));
+        let seats = self.apnap_sort(self.living_seats().collect());
+        let mut cursor = 0usize;
+        let mut takers: Vec<usize> = Vec::new();
+        for q in seats {
+            let Some(yes) = self.ask_seat_bool(
+                &mut cursor,
+                q,
+                format!("Draw a card? Each player who does gains {life} life."),
+                source,
+                effect,
+                OptionalKind::MayBody,
+            ) else {
+                return Ok(());
+            };
+            if yes {
+                takers.push(q);
+            }
+        }
+        self.clear_answer_log();
+        for &q in &takers {
+            self.run_effect(&Effect::Draw { who: Selector::Player(PlayerRef::Seat(q)), amount: Value::ONE }, ctx, events)?;
+        }
+        for &q in &takers {
+            self.run_effect(
+                &Effect::GainLife { who: Selector::Player(PlayerRef::Seat(q)), amount: Value::Const(life as i32) },
+                ctx,
+                events,
+            )?;
         }
         Ok(())
     }
