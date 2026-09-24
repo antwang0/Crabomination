@@ -594,7 +594,7 @@ impl GameState {
                 }
                 // Arboria — the active player's "acted during their last turn"
                 // flag starts over as their new turn begins.
-                self.acted_on_own_turn_mask &= !(1u64 << (ap & 63));
+                self.acted_on_own_turn_mask &= !crate::game::seat_bit(ap);
                 // CR 614.10 — a skipped untap step skips its turn-based
                 // actions (untapping, phasing, day/night), but the turn
                 // itself still begins.

@@ -1268,6 +1268,10 @@ pub enum AttackOption {
 /// field *out* if it turns out to be written on most actions (it would
 /// unshare the group every time); move one *in* if it is a collection only
 /// rare cards touch.
+/// The most seats a game can hold: every per-seat mask is a `u64`
+/// ([`seat_bit`]). `GameState::new` asserts it; `bot_ladder` clamps to it.
+pub const MAX_SEATS: usize = 64;
+
 /// Bit for one seat in a seat mask; 0 for seats past 63 (no supported format
 /// seats that many, and a shift that wide is UB).
 #[inline]
@@ -3983,6 +3987,7 @@ impl GameState {
     /// for a specific format or player count.
     pub fn new(players: Vec<Player>) -> Self {
         let n = players.len();
+        debug_assert!(n <= MAX_SEATS, "{n} seats: the seat masks hold {MAX_SEATS}");
         // Default: one singleton team per seat (free-for-all semantics).
         // Team formats reshape this via `assign_teams`.
         let teams = (0..n)
@@ -8120,8 +8125,7 @@ impl GameState {
         if p != self.active_player_idx {
             return;
         }
-        debug_assert!(p < 64, "seat {p} is beyond the acted-on-own-turn mask");
-        self.acted_on_own_turn_mask |= 1u64 << (p & 63);
+        self.acted_on_own_turn_mask |= seat_bit(p);
     }
 
     /// Land Equilibrium — a land just entered under `p`. For each opponent's
@@ -8197,7 +8201,7 @@ impl GameState {
     /// cleared as `p`'s untap step begins, so during any other player's turn it
     /// still describes `p`'s last turn.
     pub(crate) fn acted_on_their_last_turn(&self, p: usize) -> bool {
-        p < 64 && self.acted_on_own_turn_mask & (1u64 << p) != 0
+        self.acted_on_own_turn_mask & seat_bit(p) != 0
     }
 
     /// Record a milled card for `PutIntoGraveyardFromLibraryThisTurn` — every

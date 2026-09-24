@@ -50,6 +50,7 @@ static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
+use crabomination::game::MAX_SEATS;
 use crabomination::cube::{CardFactory, color_pair_name, cube_deck, random_color_pair};
 use rand::SeedableRng;
 use rand::rngs::StdRng;
@@ -1195,15 +1196,16 @@ fn run_commander_pods(args: &Args, threads: usize) -> i32 {
     let all = crabomination::pod::target_decks();
     let picked = match &args.pod_decks {
         Some(ix) => {
-            if ix.len() < 2 || ix.iter().any(|&i| i == 0 || i > all.len()) {
-                eprintln!("error: --pod-decks wants 2+ indices in 1..={}", all.len());
+            if ix.len() < 2 || ix.len() > MAX_SEATS || ix.iter().any(|&i| i == 0 || i > all.len()) {
+                eprintln!("error: --pod-decks wants 2..={MAX_SEATS} indices in 1..={}", all.len());
                 return 2;
             }
             Some(ix.iter().map(|&i| all[i - 1]).collect::<Vec<_>>())
         }
         None => None,
     };
-    let seats = picked.as_ref().map_or(args.seats.clamp(2, all.len()), Vec::len);
+    // CR 800.1 sets no ceiling; the engine's seat masks do (`MAX_SEATS`).
+    let seats = picked.as_ref().map_or(args.seats.clamp(2, all.len().min(MAX_SEATS)), Vec::len);
     // The net observation encoder is fixed at two seats — `encode_state_inner`
     // reads the opponent as `1 - seat` — so an MCTS/net pilot in a 4-seat pod
     // would index out of bounds rather than play badly. Refusing here is the

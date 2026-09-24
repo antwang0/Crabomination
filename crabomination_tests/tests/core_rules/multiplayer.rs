@@ -5769,3 +5769,16 @@ fn cr_603_2_spell_cast_trigger_excludes_the_caster_as_another_player() {
     let lost: i32 = [0, 2].iter().map(|&p| lives[p] - g.players[p].life).sum();
     assert_eq!(lost, 2, "one of the other players took the 2");
 }
+
+/// CR 800.1 sets no ceiling on players, but every per-seat mask in the engine
+/// is a `u64`: a 65th seat used to alias seat 0's bit (`p & 63`) in release
+/// and trip a `debug_assert!` deep in trigger dispatch (a 65-seat debug pod).
+/// The cap is now one constant, asserted where a game is built.
+#[test]
+#[should_panic(expected = "seat masks hold 64")]
+fn cr_800_1_a_game_holds_at_most_max_seats_players() {
+    assert_eq!(crabomination::game::MAX_SEATS, 64);
+    let g = multi_player_game(64);
+    assert_eq!(g.players.len(), 64);
+    let _ = multi_player_game(65);
+}
