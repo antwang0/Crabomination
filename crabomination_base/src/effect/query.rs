@@ -4919,6 +4919,9 @@ impl Effect {
                     sel_find(source, slot).or_else(|| pref_find(who, slot))
                 }
                 Effect::CreateToken { who, .. } => pref_find(who, slot),
+                // Excise the Imperfect: "its controller incubates" reads the
+                // spell's target through the receiver.
+                Effect::Incubate { who, .. } => pref_find(who, slot),
                 Effect::CreateTokenCopiesHasteSac { source, .. } => sel_find(source, slot),
                 Effect::Endure { target, .. } => sel_find(target, slot),
                 Effect::Airbend { what } => sel_find(what, slot),
