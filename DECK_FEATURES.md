@@ -85,6 +85,7 @@ lists were picked.
 | **Stalwart Unity** (C16 precon) RGWU | Kynaios and Tiro of Meletis | RGWU | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Token Triumph** (SCD starter) GW | Emmara, Soul of the Accord | GW | 100 | ✅ complete |
 | **Devour for Power** (CMD precon) BGU | The Mimeoplasm | BGU | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
+| **Mirror Mastery** (CMD precon) GUR | Riku of Two Reflections | GUR | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Arm for Battle** (CMR precon) RW | Wyleth, Soul of Steel | RW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Fae Dominion** (WOC precon) UB | Tegwyll, Duke of Splendor | UB | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Invent Superiority** (C16 precon) WUBR | Breya, Etherium Shaper | WUBR | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
@@ -845,6 +846,15 @@ power tie. Pods (release, seed 9301, 400 games beside Krark / Giada / Neyali):
 400/400 decided, zero panics, no Mimeoplasm card unplayed; seed 9302 × 500 at
 2/4/6/8 seats all decided; 56 seats × 30 (seed 9303) all decided. `--bench`
 byte-identical.
+
+The **sixty-second** is Commander (2011)'s **Mirror Mastery**
+(`MirrorMastery_CMD`) — Temur copies under Riku of Two Reflections, with
+Animar and Intet in the 99. Sixteen cards were missing; the one primitive is
+`Effect::EndMayPlayOnCardsExiledWithSource` (Intet's "for as long as Intet
+remains on the battlefield", run by its leaves trigger). Residuals: Intet
+exiles face up; Ray of Command taps at the next end step. Pods (release, seed
+9331, 400 games beside Hanna / Yuriko / Gisa and Geralf): 400/400 decided, no
+card of the four lists unplayed. `--bench` byte-identical.
 
 **Smoke at 54 seats** (seed 9411, before seats 55-57, release, strict answer
 log): 60 games, **60 decided, 0 caps, zero panics** — 608 turns, 350 k actions

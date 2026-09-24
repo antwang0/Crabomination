@@ -1824,6 +1824,8 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Orzhov Advokist | Stalwart Unity (C16) | a taker's counters go on their greatest-power creature; the attack restriction covers the creatures they control as it resolves. |
 | 🟡 The Mimeoplasm | Devour for Power (CMD) | the engine picks the two cards: it copies the greatest-power creature card in any graveyard and counts the runner-up's power; a `*` power reads as its printed 0. |
 | 🟡 Desecrator Hag | Devour for Power (CMD) | a tie for greatest power is broken by graveyard order, not by the player. |
+| 🟡 Intet, the Dreamer | Mirror Mastery (CMD) | the card is exiled face up. |
+| 🟡 Ray of Command | Mirror Mastery (CMD) | the creature is tapped at the next end step, not as its control returns. |
 | 🟡 Footbottom Feast | Counterpunch (CMD) | the cards are chosen as it resolves, not targeted on cast; they go on top in mana-value order (the greatest on top). |
 
 ### Seats 42, 46, 49, 53 and 55 (Peer Through Time C14, Wade into Battle C15, Chaos Incarnate SCD, Heavenly Inferno and Political Puppets CMD) — open residuals, 2026-09-24
