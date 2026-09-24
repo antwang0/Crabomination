@@ -2387,3 +2387,33 @@ pub const SAHEELI_MAIN: &[CardFactory] = &[
     island, island, island, island, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain, mountain, mountain, mountain,
 ];
+
+pub const WINTER_COMMANDERS: &[CardFactory] = &[winter_cynical_opportunist];
+
+/// **Death Toll**, the Duskmourn Commander Golgari deck (DSC, 2024-09-27),
+/// exactly as MTGJSON's `DeathToll_DSC` prints it: 85 nonbasic cards +
+/// 7 Swamps + 7 Forests = 99. Self-mill and delirium under Winter, Cynical
+/// Opportunist.
+pub const WINTER_MAIN: &[CardFactory] = &[
+    rendmaw_creaking_nest, deluge_of_doom, demonic_covenant, into_the_pit, polluted_cistern_dim_oubliette,
+    demolisher_spawn, formless_genesis, ursine_monstrosity, convert_to_slime,
+    moldgraf_monstrosity, culling_ritual, cemetery_tampering, noxious_gearhulk,
+    ob_nixilis_reignited, professor_onyx, reanimate, whip_of_erebos, arachnogenesis,
+    deathcap_cultivator, giant_adephage, hornet_queen, inscription_of_abundance,
+    ishkanah_grafwidow, scavenging_ooze, titania_natures_force, wrenn_and_seven,
+    deadbridge_chant, grim_flayer, grist_the_hunger_tide, old_stickfingers, solemn_simulacrum,
+    dryad_arbor, exotic_orchard, grim_backwoods, llanowar_wastes, necroblossom_snarl,
+    temple_of_malady, twilight_mire, viridescent_bog, woodland_cemetery, vile_mutilator,
+    terramorphic_expanse, nights_whisper, grapple_with_the_past, deathreap_ritual, putrefy,
+    arcane_signet, sol_ring, suspicious_bookcase, command_tower, carrion_grub,
+    stitchers_supplier, crawling_sensation, gnarlwood_dryad, harmonize, harrow,
+    moldgraf_millipede, mulch, obsessive_skinner, rampant_growth, sakura_tribe_elder,
+    skola_grovedancer, binding_the_old_gods, grisly_salvage, nyx_weaver, burnished_hart,
+    commanders_sphere, golgari_signet, haywire_mite, mind_stone, talisman_of_resilience,
+    whispersilk_cloak, ash_barrens, barren_moor, bojuka_bog, darkmoss_bridge, evolving_wilds,
+    golgari_rot_farm, jungle_hollow, reliquary_tower, tainted_wood, temple_of_the_false_god,
+    tranquil_thicket, tree_of_tales, vault_of_whispers,
+    // Basics: 7 swamp, 7 forest
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, forest, forest, forest, forest, forest,
+    forest, forest,
+];

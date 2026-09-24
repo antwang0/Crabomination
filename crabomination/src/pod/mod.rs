@@ -662,6 +662,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SAHEELI_COMMANDERS,
             main: decks::SAHEELI_MAIN,
         },
+        // Seventy-seventh: the sixty-seventh official list (Death Toll, DSC)
+        // — Golgari self-mill and delirium under Winter. `--pod-decks 77`.
+        PodDeck {
+            name: "Winter, Cynical Opportunist (BG)",
+            commanders: decks::WINTER_COMMANDERS,
+            main: decks::WINTER_MAIN,
+        },
     ]
 }
 
