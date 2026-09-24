@@ -89,6 +89,7 @@ lists were picked.
 | **Growing Threat** (MOC precon) WB | Brimaz, Blight of Oreskos | WB | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Call for Backup** (MOC precon) RGW | Bright-Palm, Soul Awakener | RGW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **World Shaper** (EOC precon) BRG | Hearthhull, the Worldseed | BRG | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
+| **Peace Offering** (BLC precon) GWU | Ms. Bumbleflower | GWU | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
 | **Enduring Enchantments** (CMM precon) WBG | Anikthea, Hand of Erebos | WBG | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
 | **Open Hostility** (C16 precon) WBRG | Saskia the Unyielding | WBRG | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Devour for Power** (CMD precon) BGU | The Mimeoplasm | BGU | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
@@ -1243,6 +1244,23 @@ once), **Planetary Annihilation** (the engine keeps the lands), **Soul of
 Windgrace** (the first graveyard's land). A 200-game census beside
 Bright-Palm / Brimaz / Rin and Seri (seed 9531) decided 200/200 with zero
 panics, Hearthhull winning 21.5 %, every World Shaper card played.
+
+The **eighty-second** is Bloomburrow Commander's **Peace Offering**
+(`PeaceOffering_BLC`) — Bant group hug and politics under Ms. Bumbleflower
+(seat 81 before rebasing over Evasive Maneuvers). Nineteen cards were
+missing; the primitives: `CounterType::Ingredient` / `Vow`,
+`StaticEffect::TokenNamedBecomes` (Fisher's Talent's Fish → Shark → Octopus,
+chained once per rule and gated by Class level), `Effect::ChooseColorForSelfOtherThan`
+(the Thriving lands) and `Effect::EachPlayerMayDrawThenTakersGainLife`
+(Kwain). Two engine finds: ⚠ **a "whenever you cast a spell" trigger bound
+only its first target** (CR 603.3d — Ms. Bumbleflower's counter never landed;
+the self-cast and ETB paths already filled the rest), and **an emblem's
+free-cast static never applied** (CR 114.4 — Tamiyo's −7). Residuals:
+**Martial Impetus**, **Octomancer**, **Perch Protection**, **Promise of
+Loyalty**, **Tamiyo** (INCOMPLETE_CARDS). A 200-game census beside
+Hearthhull / Bright-Palm / Brimaz (seed 9551) decided 200/200 with zero
+panics and no card of the four lists unplayed, Ms. Bumbleflower winning
+38.0 %. `--bench` byte-identical.
 
 The **sixty-eighth** is Commander Masters' **Enduring Enchantments**
 (`EnduringEnchantments_CMM`) — Abzan Sagas, enchantresses and constellation

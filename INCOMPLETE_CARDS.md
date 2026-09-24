@@ -1837,6 +1837,11 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Moraug, Fury of Akoum | World Shaper (EOC) | +1/+0 once however many times a creature attacked; the untap rides every later combat this turn. |
 | 🟡 Planetary Annihilation | World Shaper (EOC) | each player keeps the engine's pick of six lands. |
 | 🟡 Soul of Windgrace | World Shaper (EOC) | the land comes from the first graveyard holding one. |
+| 🟡 Martial Impetus | Peace Offering (BLC) | the attack pump also reaches the enchanted creature. |
+| 🟡 Octomancer | Peace Offering (BLC) | the Octopus gift goes to a random opponent rather than a chosen one. |
+| 🟡 Perch Protection | Peace Offering (BLC) | the extra-turn gift goes to a random opponent; the life lock lasts this turn only. |
+| 🟡 Promise of Loyalty | Peace Offering (BLC) | the attack restriction outlives a removed vow counter. |
+| 🟡 Tamiyo, Field Researcher | Peace Offering (BLC) | a targeted opponent's creature draws its own controller the card. |
 | 🟡 Battle at the Helvault | Enduring Enchantments (CMM) | "for each player" covers opponents only: you can't exile one of your own permanents. |
 | 🟡 Battle for Bretagard | Enduring Enchantments (CMM) | chapter III copies every artifact and creature token you control, duplicate names included. |
 | 🟡 Cacophony Unleashed | Enduring Enchantments (CMM) | the animated 6/6 isn't legendary. |
