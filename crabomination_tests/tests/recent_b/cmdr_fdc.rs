@@ -5047,3 +5047,121 @@ fn twenty_ways_to_win_batch() {
     cast(&mut g, t, &[Target::Permanent(land)]);
     assert!(g.computed_permanent(land).unwrap().keywords().contains(&Keyword::Shroud));
 }
+
+// ── Cabaretti Cacophony (Kitt Kanto, Mayhem Diva) ───────────────────────────
+
+/// CR 101.4 — Master of Ceremonies: each opponent chooses, and the choice
+/// pays out to you and to that opponent.
+#[test]
+fn cr_101_4_master_of_ceremonies_pays_both_sides_of_each_choice() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::master_of_ceremonies());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(1)]));
+    to_upkeep(&mut g);
+    assert_eq!(count_named(&g, 0, "Citizen"), 1, "friends: you get one");
+    assert_eq!(count_named(&g, 1, "Citizen"), 1, "and so do they");
+
+    // Seize the Spotlight — fortune draws you a card and makes a Treasure.
+    let mut g = main_phase();
+    g.add_card_to_library(0, catalog::island());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(1)]));
+    let s = g.add_card_to_hand(0, catalog::seize_the_spotlight());
+    cast(&mut g, s, &[]);
+    assert_eq!(count_named(&g, 0, "Treasure"), 1);
+    assert_eq!(g.players[0].hand.len(), 1);
+}
+
+/// Bess counts a batch of base-1/1 creatures once and pumps them on attack.
+#[test]
+fn bess_grows_once_per_batch_of_one_ones() {
+    let mut g = main_phase();
+    let bess = g.add_card_to_battlefield(0, catalog::bess_soul_nourisher());
+    let charm = g.add_card_to_hand(0, catalog::cabaretti_charm());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: charm,
+        target: None,
+        additional_targets: vec![],
+        mode: Some(2),
+        x_value: None,
+    })
+    .expect("two Citizens");
+    drain_stack(&mut g);
+    assert_eq!(count_named(&g, 0, "Citizen"), 2);
+    assert_eq!(g.battlefield_find(bess).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let _ = bear;
+    combat(&mut g, vec![Attack { attacker: bess, target: AttackTarget::Player(1) }], 0, |g| {
+        let c = g.battlefield.iter().find(|c| c.definition.name == "Citizen").map(|c| c.id).unwrap();
+        assert_eq!(pt(g, c), (2, 2));
+    });
+}
+
+/// The rest of Cabaretti Cacophony's new cards, one play pattern each.
+#[test]
+fn cabaretti_cacophony_batch() {
+    // False Floor: creatures enter tapped.
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::false_floor());
+    let bear = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.priority.player_with_priority = 1;
+    g.active_player_idx = 1;
+    try_cast(&mut g, 1, bear, &[]).expect("cast");
+    assert!(g.battlefield_find(bear).unwrap().tapped);
+
+    // Crash the Party: a tapped Rhino per tapped creature.
+    let mut g = main_phase();
+    for _ in 0..2 {
+        let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.battlefield.find_by_id_mut(b).unwrap().tapped = true;
+    }
+    let ctp = g.add_card_to_hand(0, catalog::crash_the_party());
+    cast(&mut g, ctp, &[]);
+    assert_eq!(count_named(&g, 0, "Rhino Warrior"), 2);
+
+    // Killer Service: a Food per opponent.
+    let mut g = main_phase();
+    let ks = g.add_card_to_hand(0, catalog::killer_service());
+    cast(&mut g, ks, &[]);
+    assert_eq!(count_named(&g, 0, "Food"), 1);
+
+    // Life of the Party: each opponent gets a goaded copy.
+    let mut g = main_phase();
+    let lp = g.add_card_to_hand(0, catalog::life_of_the_party());
+    cast(&mut g, lp, &[]);
+    let copy = g.battlefield.iter().find(|c| c.controller == 1 && c.definition.name == "Life of the Party");
+    assert!(copy.is_some_and(|c| !c.goaded_by.is_empty()));
+
+    // Prosperous Partnership: two Citizens, then three taps for a Treasure.
+    let mut g = main_phase();
+    let pp = g.add_card_to_hand(0, catalog::prosperous_partnership());
+    cast(&mut g, pp, &[]);
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let ppid = g.battlefield.iter().find(|c| c.definition.name == "Prosperous Partnership").unwrap().id;
+    activate(&mut g, ppid, 0, None).expect("tap three");
+    assert_eq!(count_named(&g, 0, "Treasure"), 1);
+
+    // Rumor Gatherer draws on the second alliance each turn.
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::rumor_gatherer());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    for _ in 0..2 {
+        let b = g.add_card_to_hand(0, catalog::grizzly_bears());
+        cast(&mut g, b, &[]);
+    }
+    assert_eq!(g.players[0].hand.len(), 1, "scry, then draw");
+
+    // Zurzoth: an opponent's first draw on your turn makes a Devil (their
+    // "secrets" draw off Master of Ceremonies).
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::zurzoth_chaos_rider());
+    g.add_card_to_battlefield(0, catalog::master_of_ceremonies());
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(1, catalog::island());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(2)]));
+    to_upkeep(&mut g);
+    assert_eq!(g.players[1].hand.len(), 1, "secrets");
+    assert_eq!(count_named(&g, 0, "Devil"), 1);
+}
