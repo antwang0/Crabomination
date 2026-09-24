@@ -272,7 +272,7 @@ fn lazotep_quarry_makes_a_four_four_black_zombie_copy() {
     assert_eq!(copy.len(), 1);
     assert_eq!(pt(&g, copy[0]), (4, 4));
     let colors = &g.computed_permanent(copy[0]).unwrap().colors;
-    assert!(colors.contains(&Color::Black) && colors.len() == 1, "{colors:?}");
+    assert!(colors.contains(Color::Black) && colors.len() == 1, "{colors:?}");
 }
 
 /// Pest Infestation destroys up to X artifacts and makes 2X Pests.
