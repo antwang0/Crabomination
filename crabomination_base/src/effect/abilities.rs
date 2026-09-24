@@ -1332,6 +1332,11 @@ pub enum StaticEffect {
     /// CR 614.5 / 303.4a — "If a source would deal damage to enchanted player,
     /// it deals double that damage instead" (Curse of Bloodletting).
     DoubleDamageToEnchantedPlayer,
+    /// CR 614.5 — "If a source would deal damage to the chosen player or a
+    /// permanent they control, it deals double that damage instead" (Sawhorn
+    /// Nemesis): the player this permanent chose as it entered
+    /// (`CardInstance::chosen_player`).
+    DoubleDamageToChosenPlayer,
     /// CR 614.5 — "If a creature you control that entered this turn would deal
     /// damage, it deals twice that much damage instead." (Neriv, Heart of the
     /// Storm.) Combat and noncombat alike; consulted by `scale_damage_to`.

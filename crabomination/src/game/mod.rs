@@ -8779,6 +8779,9 @@ impl GameState {
                         {
                             d += 1;
                         }
+                        StaticEffect::DoubleDamageToChosenPlayer if c.chosen_player == Some(p) => {
+                            d += 1;
+                        }
                         StaticEffect::HalveDamageToYou if c.controller == p => h += 1,
                         // Urza's Armor — shave a flat N off every event that
                         // hits its controller's life total.
@@ -28038,6 +28041,7 @@ fn static_effect_scales_damage(effect: &crate::effect::StaticEffect) -> bool {
         // Recipient-scoped.
         | SE::DoubleDamageToOpponents
         | SE::DoubleDamageToEnchantedPlayer
+        | SE::DoubleDamageToChosenPlayer
         | SE::HalveDamageToYou
         | SE::ReduceDamageToYouBy(_)
         | SE::ReduceColorDamageToYouBy { .. }
@@ -29543,6 +29547,7 @@ fn static_effect_to_effects(
             | StaticEffect::OneSpellPerTurn
             | StaticEffect::EnchantedPlayerOneSpellPerTurn
             | StaticEffect::DoubleDamageToEnchantedPlayer
+            | StaticEffect::DoubleDamageToChosenPlayer
             | StaticEffect::OneNoncreatureSpellPerTurn
             | StaticEffect::OneNonartifactSpellPerTurn
             | StaticEffect::SpellsCostMoreExceptOnControllerTurn { .. }
