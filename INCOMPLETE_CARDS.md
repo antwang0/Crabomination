@@ -1998,6 +1998,8 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Druid of Purification | Draconic Rage (AFC) | every player chooses (no "may"), starting with the next player rather than you. |
 | 🟡 Klauth, Unrivaled Ancient | Draconic Rage (AFC) | "spend this mana only to cast spells" isn't enforced. |
 | 🟡 Sword of Hours | Draconic Rage (AFC) | "the damage dealt" is the damage to each recipient, one roll per recipient. |
+| 🟡 Abstruse Archaic | Eldrazi Unbound (CMM) | the target is the ability's source permanent (a colorless permanent you control with an ability on the stack), as Strionic Resonator. |
+| 🟡 Ugin's Mastery | Eldrazi Unbound (CMM) | the face-down creature turned face up is the first one you control, not a choice. |
 | 🟡 Benthic Anomaly | Eldrazi Incursion (M3C) | each opponent's greatest-power creature is chosen, and the copy is of the one with the greatest mana value. |
 | 🟡 Bismuth Mindrender | Eldrazi Incursion (M3C) | the exiled card may be cast for life until end of turn, not only as the trigger resolves. |
 | 🟡 Selective Obliteration | Eldrazi Incursion (M3C) | each player's color is the one most common among their permanents. |

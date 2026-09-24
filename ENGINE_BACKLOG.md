@@ -213,6 +213,10 @@ the handoff.
   type gate like the creature-type one (`gate_types`); it is on the layers' hot path
   and moves any 2-player game with an animated land under an anthem, so it needs its
   own bench reading.
+- ✅ New for Eldrazi Unbound (CMM, Zhulodok): `StaticEffect::ZeroAlternativeCostOncePerTurn`
+  (CR 118.9); `R::TargetsAPermanentYouControlMatching`; `Predicate::ColorlessManaSpentAtLeast`;
+  `CounterType::Suspect`. Fixed: the bot's `auto_targets_for_effect_all_slots_x` now
+  honors `per_opponent_targets` (CR 601.2c), so per-opponent spells get cast.
 - ✅ New for Eldrazi Incursion (M3C, Ulalek): `ManaSymbol::ColorlessHybrid` ({C/X},
   CR 107.4e, every `ManaSymbol` reader); `game/eldrazi.rs` —
   `Effect::{EachPlayerChoosesColorExileOthers, CopyAllSpellsAndAbilitiesYouControl,

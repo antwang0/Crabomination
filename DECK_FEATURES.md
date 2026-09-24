@@ -131,6 +131,7 @@ lists were picked.
 | **Legends' Legacy** (DMC precon) RWB | Dihada, Binder of Wills (**planeswalker**) | RWB | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Planeswalker Party** (CMM precon) URW | Commodore Guff (**planeswalker**) | URW | 100 | 🟡 all 100 implemented, 7 carry residuals (below) |
 | **Eldrazi Incursion** (M3C precon) WUBRG | Ulalek, Fused Atrocity | WUBRG | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
+| **Eldrazi Unbound** (CMM precon) C | Zhulodok, Void Gorger | C | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Death Toll** (DSC precon) BG | Winter, Cynical Opportunist | BG | 100 | 🟡 all 100 implemented, 6 carry residuals (below) |
 | **Mind Seize** (C13 precon) UBR | Jeleva, Nephalia's Scourge | UBR | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **20 Ways to Win** (SLD) WUBRG | Go-Shintai of Life's Origin | WUBRG | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
@@ -1371,6 +1372,22 @@ Four-seat pods beside Ranar / Urza / Anikthea (seed 10160, 1,000 games, all
 decided): Saheeli 11.2 %; a 300-game census (seed 10161) leaves no card of the
 four unplayed; 12 seats (71..60 as numbered then, seed 10162): 200 / 200 decided. `--bench`
 byte-identical.
+
+The **hundred-and-eighth** is Commander Masters' **Eldrazi Unbound**
+(`EldraziUnbound_CMM`) — colorless Eldrazi ramp under Zhulodok, Void Gorger.
+Eighteen cards were missing. Engine: `StaticEffect::ZeroAlternativeCostOncePerTurn`
+(Darksteel Monolith, CR 118.9), `SelectionRequirement::TargetsAPermanentYouControlMatching`
+(Not of This World — a spell *or ability* aimed at your permanent),
+`Predicate::ColorlessManaSpentAtLeast` (Desecrate Reality's adamant) and
+`CounterType::Suspect`. Found in the gate: **Desecrate Reality was never cast
+in 1,000 pods**. Every pod seat is `wants_ui`, so a cast leaving an "up to N" slot
+empty suspends to ask for it, and `would_accept` reads a bot seat's replay suspension
+as a rejection — any multi-target spell the bot under-filled was silently dropped in
+pods. Fixed as a class: on a prompting seat the bot fills extra slots with the
+engine's own `auto_extra_targets_for`; the engine's extra-slot prompt and the bot's
+slot walk both honor `ForEachOpponentTarget` (CR 601.2c). Two regression tests. Residuals: **Abstruse Archaic** targets the
+ability's source permanent; **Ugin's Mastery** turns up the first face-down
+creature. Four-seat pods beside Estrid / Kasla / Ulalek (seed 10400, 1,000 games, all decided): Zhulodok 35.0 %; a 300-game census (seed 10401) leaves no card of the four unplayed; 12 seats (then 103..92, seed 10402) 200 / 200. `--bench` byte-identical.
 
 The **hundredth** is Modern Horizons 3 Commander's **Eldrazi Incursion**
 (`EldraziIncursion_M3C`) — colorless Eldrazi under Ulalek, Fused Atrocity.
