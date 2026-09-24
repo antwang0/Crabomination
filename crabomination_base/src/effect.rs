@@ -1377,6 +1377,10 @@ pub enum Value {
     /// Eidolon's "draw a card for each Aura you controlled that was attached
     /// to it".
     AurasYouControlledOnDyingSubject,
+    /// The number of permanents matching `filter` attached to the permanent
+    /// `what` resolves to — "as long as this creature is enchanted by exactly
+    /// two Auras" (Timber Paladin).
+    AttachmentsOn { what: Box<Selector>, filter: SelectionRequirement },
     /// CR 706.4 — the result of the most recent die roll in this resolution.
     /// Set by the `Effect::RollDie` resolver just before it runs each result-
     /// table arm, so an inner effect can reference the rolled face ("create
@@ -10447,6 +10451,29 @@ pub enum Effect {
     /// library this way, shuffle." Boonweaver Giant. Candidates pool all three
     /// zones; the Aura's own enchant filter is not re-checked.
     SearchAuraAttachToSource,
+
+    /// CR 303.4f / 301.5c — put every `filter` card from the controller's
+    /// `zones` (preference order, greatest mana value first, at most `max`)
+    /// onto the battlefield attached to `host`, or, with `host: None`, each to
+    /// its own best legal permanent (a creature when `creatures_only`). A card
+    /// with no legal host stays where it is (CR 303.4i). Mantle of the
+    /// Ancients, Unfinished Business, Retether, Liberated Livestock.
+    PutOntoBattlefieldAttached {
+        zones: Vec<crate::card::Zone>,
+        filter: SelectionRequirement,
+        host: Option<Selector>,
+        max: Option<Value>,
+        #[serde(default)]
+        creatures_only: bool,
+    },
+    /// Reveal the top `count` cards; each `filter` card among them goes onto
+    /// the battlefield attached to its best legal host; the rest go to the
+    /// bottom in a random order (Knickknack Ouphe).
+    RevealTopPutAttached { count: Value, filter: SelectionRequirement },
+    /// Reveal until a `filter` card; put it onto the battlefield attached to
+    /// its best legal host, else into your hand; the rest go to the bottom in
+    /// a random order (Songbirds' Blessing).
+    RevealUntilPutAttachedElseHand { filter: SelectionRequirement },
 
     /// "For each planeswalker you control, you may activate one of its loyalty
     /// abilities this turn as though none of its loyalty abilities have been

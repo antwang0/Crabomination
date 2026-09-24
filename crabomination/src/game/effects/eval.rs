@@ -898,6 +898,17 @@ impl GameState {
                 }
                 counts.values().max().copied().unwrap_or(0) + changelings
             }
+            Value::AttachmentsOn { what, filter } => {
+                let Some(host) = self.resolve_selector(what, ctx).into_iter().find_map(|e| e.as_permanent_id())
+                else {
+                    return 0;
+                };
+                self.battlefield
+                    .iter()
+                    .filter(|c| c.attached_to == Some(host))
+                    .filter(|c| self.evaluate_requirement_on_card(filter, c, ctx.controller))
+                    .count() as i32
+            }
             Value::AurasYouControlledOnDyingSubject => ctx
                 .trigger_source
                 .and_then(|e| e.as_card_id())
@@ -6028,6 +6039,10 @@ impl GameState {
             // permanent must be attached to *this* source) happens in the
             // sac-cost path, which knows the source id.
             R::AttachedToSource => card.attached_to.is_some(),
+            R::AttachedToCreature => card
+                .attached_to
+                .and_then(|h| self.battlefield_find(h))
+                .is_some_and(|h| h.definition.is_creature()),
             R::IsHostOfSource => true,
             // `self.attacking` keys by card id, so a card not on the battlefield
             // is never listed — this stays false there (Static Snare's affinity

@@ -556,6 +556,10 @@ pub enum StaticEffect {
     /// (Fortune Teller's Talent level 3): the top of the library, a
     /// graveyard, exile or the command zone. Generic mana only.
     NonHandCastCostReduction { amount: u32 },
+    /// "Auras attached to permanents you control have umbra armor" (Umbra
+    /// Mystic, CR 702.89) — read by `apply_umbra_armor` for the host's
+    /// controller.
+    AurasOnYourPermanentsHaveUmbraArmor,
     /// Generic cost reduction for the controller's Plot activations from hand
     /// (Doc Aurlock — "Plotting cards from your hand costs {2} less"). Applied
     /// in `plot_card`; clamped at the generic pip.

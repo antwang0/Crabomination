@@ -2925,6 +2925,9 @@ pub enum SelectionRequirement {
     /// creature") intersect this with the source id in the cost path, since a
     /// source-blind requirement can't know which permanent "this" is.
     AttachedToSource,
+    /// The candidate is attached to a creature on the battlefield — "each
+    /// Aura you control that's attached to a creature" (Sage's Reverie).
+    AttachedToCreature,
     /// The mirror of `AttachedToSource`: true when the candidate is the
     /// permanent the *source* is attached to. Source-blind evaluators answer
     /// `true`; the cost path intersects against the real host, which is what

@@ -862,6 +862,9 @@ impl Effect {
             | Effect::ChooseStepToSkipThisTurn { .. }
             | Effect::SearchExileThenTokensPerCard { .. }
             | Effect::SearchAuraAttachToSource
+            | Effect::PutOntoBattlefieldAttached { .. }
+            | Effect::RevealTopPutAttached { .. }
+            | Effect::RevealUntilPutAttachedElseHand { .. }
             | Effect::PreventNextDamageFromSourceThisTurn { .. }
             | Effect::SacrificeSourceUnlessPayValue { .. }
             | Effect::AddAttackTaxThisTurn { .. }

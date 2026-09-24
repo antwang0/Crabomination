@@ -17015,9 +17015,19 @@ impl GameState {
         id: CardId,
         events: &mut Vec<GameEvent>,
     ) -> bool {
+        // Umbra Mystic: every Aura on a permanent its controller controls.
+        let granted = self.battlefield_find(id).is_some_and(|host| {
+            self.battlefield.iter().any(|c| {
+                c.controller == host.controller
+                    && c.definition.static_abilities.iter().any(|sa| {
+                        matches!(sa.effect, crate::effect::StaticEffect::AurasOnYourPermanentsHaveUmbraArmor)
+                    })
+            })
+        });
         let Some(aura_id) = self.battlefield.iter().find_map(|c| {
             (c.attached_to == Some(id)
-                && c.definition.keywords.has_kw(&Keyword::UmbraArmor))
+                && (c.definition.keywords.has_kw(&Keyword::UmbraArmor)
+                    || (granted && c.definition.is_aura())))
             .then_some(c.id)
         }) else {
             return false;
@@ -29463,6 +29473,7 @@ fn static_effect_to_effects(
             | StaticEffect::GraveyardCastCostReduction { .. }
             | StaticEffect::ExileCastCostReduction { .. }
             | StaticEffect::NonHandCastCostReduction { .. }
+            | StaticEffect::AurasOnYourPermanentsHaveUmbraArmor
             | StaticEffect::PlotCostReduction { .. }
             | StaticEffect::NinjutsuCostReduction { .. }
             | StaticEffect::CostReductionDuringOpponentsTurn { .. }

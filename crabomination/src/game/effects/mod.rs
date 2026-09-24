@@ -33,6 +33,7 @@ mod table_choices;
 mod planar;
 mod foretell;
 mod hand_exile;
+mod attach_from_zone;
 mod politics;
 mod targeting;
 /// The target enumerator's call-site census — see
@@ -34620,6 +34621,26 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::PutOntoBattlefieldAttached { zones, filter, host, max, creatures_only } => {
+                self.put_onto_battlefield_attached(
+                    zones,
+                    filter,
+                    host.as_ref(),
+                    max.as_ref(),
+                    *creatures_only,
+                    ctx,
+                    events,
+                );
+                Ok(())
+            }
+            Effect::RevealTopPutAttached { count, filter } => {
+                self.reveal_top_put_attached(count, filter, ctx, events);
+                Ok(())
+            }
+            Effect::RevealUntilPutAttachedElseHand { filter } => {
+                self.reveal_until_put_attached_else_hand(filter, ctx, events);
+                Ok(())
+            }
             Effect::SearchAuraAttachToSource => {
                 // Boonweaver Giant — pool graveyard + hand + library for an
                 // Aura and put it onto the battlefield attached to the source.
