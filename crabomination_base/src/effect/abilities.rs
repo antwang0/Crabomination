@@ -1780,6 +1780,14 @@ pub enum StaticEffect {
     /// prevent that damage. Create a `token` for each 1 damage prevented this
     /// way." (Hostility.) Applied in the noncombat damage funnel.
     SpellDamageToOpponentsBecomesTokens { token: std::sync::Arc<crate::card::TokenDefinition> },
+    /// CR 601 — "Players can't cast spells during combat." (Basandra, Battle
+    /// Seraph.) A cast-time lock for every seat during the combat phase.
+    PlayersCantCastDuringCombat,
+    /// "Creatures controlled by players who chose war get +3/+0. Creatures
+    /// controlled by players who chose peace get +0/+3." (Archangel of
+    /// Strife.) The choices are the source's `modes_chosen`, indexed by seat
+    /// (0 war, 1 peace), stamped by `Effect::EachPlayerChoosesWarOrPeace`.
+    WarOrPeace,
     /// CR 602.5 / 614 — "Activated abilities cost {N} more to activate
     /// unless they're mana abilities." Applies to every player's
     /// activations (Suppression Field).

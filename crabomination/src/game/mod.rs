@@ -347,6 +347,8 @@ pub(crate) mod cast_lock {
     pub const OWN_TURN_CAST: u32 = 1 << 10;
     /// `OpponentsCantCast/ActDuringYourTurn`.
     pub const DURING_YOUR_TURN: u32 = 1 << 11;
+    /// Basandra, Battle Seraph.
+    pub const COMBAT: u32 = 1 << 12;
     /// The locks whose gate reads the cast spell's characteristics.
     pub const ANY_CARD: u32 =
         ONE_SPELL | MANA_MAZE | NAME | CHOSEN_COLOR | EVEN_MV | ABOVE_LANDS | DAMPING;
@@ -4992,6 +4994,7 @@ impl GameState {
                     SE::OpponentsCantCastDuringYourTurn | SE::OpponentsCantActDuringYourTurn => {
                         cast_lock::DURING_YOUR_TURN
                     }
+                    SE::PlayersCantCastDuringCombat => cast_lock::COMBAT,
                     _ => 0,
                 };
             }
@@ -5223,6 +5226,19 @@ impl GameState {
                     .static_abilities
                     .iter()
                     .any(|sa| matches!(sa.effect, StaticEffect::PlayersActOnlyOnTheirOwnTurn))
+            })
+        {
+            return Some(GameError::SilencedThisTurn);
+        }
+        // Basandra — no player casts a spell during combat (CR 506.1).
+        if is_cast
+            && locks & cast_lock::COMBAT != 0
+            && self.step.is_combat_phase()
+            && self.battlefield.iter().any(|c| {
+                c.definition
+                    .static_abilities
+                    .iter()
+                    .any(|sa| matches!(sa.effect, StaticEffect::PlayersCantCastDuringCombat))
             })
         {
             return Some(GameError::SilencedThisTurn);
@@ -13437,6 +13453,36 @@ impl GameState {
                             ),
                         });
                     }
+                }
+            }
+        }
+        // Archangel of Strife — each creature by its controller's stamped
+        // choice (shares Coat of Arms' pre-scan bit).
+        if any_pump_per_shared_type {
+            for &(src, _) in &sa_cards {
+                if !src
+                    .definition
+                    .static_abilities
+                    .iter()
+                    .any(|sa| matches!(sa.effect, crate::effect::StaticEffect::WarOrPeace))
+                {
+                    continue;
+                }
+                for c in self.battlefield.iter().filter(|c| c.definition.is_creature()) {
+                    let (p, t) = match src.modes_chosen.get(c.controller) {
+                        Some(0) => (3, 0),
+                        Some(1) => (0, 3),
+                        _ => continue,
+                    };
+                    all_effects.push(ContinuousEffect {
+                        timestamp: src.object_timestamp(),
+                        source: src.id,
+                        affected: AffectedPermanents::just(c.id),
+                        layer: Layer::L7PowerTough,
+                        sublayer: Some(PtSublayer::Modify),
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::ModifyPowerToughness(p, t),
+                    });
                 }
             }
         }
@@ -29471,6 +29517,9 @@ fn static_effect_to_effects(
             | StaticEffect::LoyaltyAbilitiesAtInstantSpeed
             // Consulted in the noncombat damage funnel.
             | StaticEffect::SpellDamageToOpponentsBecomesTokens { .. }
+            // A cast-time lock; and a per-creature pump gathered state-aware.
+            | StaticEffect::PlayersCantCastDuringCombat
+            | StaticEffect::WarOrPeace
             // Recomputed live in `compute_battlefield`, not here.
             | StaticEffect::SelfHasKeywordWhile { .. }
             | StaticEffect::SelfHasKeywordWhilePredicate { .. }

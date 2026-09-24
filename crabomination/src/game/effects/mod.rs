@@ -8158,6 +8158,7 @@ impl GameState {
                 self.each_other_player_may_draw(per_draw, effect, ctx, events)
             }
             Effect::GreatestDiscardersLoseLife => self.greatest_discarders_lose_life(ctx, events),
+            Effect::EachPlayerChoosesWarOrPeace => self.each_player_chooses_war_or_peace(effect, ctx),
             Effect::WheneverCreatureEntersUntilYourNextTurn { filter, body } => {
                 self.delayed_triggers.push(DelayedTrigger {
                     controller: ctx.controller,

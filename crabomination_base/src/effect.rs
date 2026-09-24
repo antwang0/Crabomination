@@ -689,6 +689,10 @@ pub enum Value {
     /// less than half their starting life total (Anya, Merciless Angel;
     /// CR 103.4 — 20 in a duel, 40 in Commander).
     OpponentsBelowHalfStartingLife,
+    /// How many times the source's activated abilities were activated this
+    /// turn — the ability must record its uses (`max_activations_per_turn`;
+    /// Dragon Whelp's uncapped `Some(u32::MAX)`).
+    SourceActivationsThisTurn,
     /// Opponents of the controller holding at least N cards (Wolfcaller's
     /// Howl).
     OpponentsWithHandSizeAtLeast(u32),
@@ -4679,6 +4683,11 @@ pub enum Effect {
     /// cards discarded this way loses life equal to that mana value" (Scythe
     /// Specter). Reads this resolution's discards.
     GreatestDiscardersLoseLife,
+    /// "As this enters, each player chooses war or peace" (Archangel of
+    /// Strife): each seat's pick is stamped on the source's `modes_chosen`
+    /// (by seat; 0 war, 1 peace) for `StaticEffect::WarOrPeace`. A bot picks
+    /// war for the source's controller and peace for everyone else.
+    EachPlayerChoosesWarOrPeace,
     Scry    { who: PlayerRef, amount: Value },
     Surveil { who: PlayerRef, amount: Value },
     LookAtTop { who: PlayerRef, amount: Value },

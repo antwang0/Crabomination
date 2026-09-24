@@ -169,6 +169,48 @@ impl GameState {
         Ok(())
     }
 
+    /// `Effect::EachPlayerChoosesWarOrPeace` — APNAP, each seat picks; a
+    /// prompting seat is asked "War?", a bot takes war for the source's
+    /// controller and peace otherwise. Stamped by seat on the source.
+    pub(super) fn each_player_chooses_war_or_peace(
+        &mut self,
+        effect: &Effect,
+        ctx: &EffectContext,
+    ) -> Result<(), GameError> {
+        let Some(src) = ctx.source else { return Ok(()) };
+        let seats = self.apnap_sort(self.living_seats().collect());
+        let mut cursor = 0usize;
+        let mut picks: Vec<(usize, u8)> = Vec::new();
+        for q in seats {
+            let war = if self.seat_prompts(q) {
+                let Some(b) = self.ask_seat_bool(
+                    &mut cursor,
+                    q,
+                    "Choose war (+3/+0 to your creatures)? No chooses peace (+0/+3).".into(),
+                    src,
+                    effect,
+                    OptionalKind::MayBody,
+                ) else {
+                    return Ok(());
+                };
+                b
+            } else {
+                q == ctx.controller
+            };
+            picks.push((q, u8::from(!war)));
+        }
+        self.clear_answer_log();
+        let n = self.players.len();
+        if let Some(c) = self.battlefield_find_mut(src) {
+            let mut stamp = vec![2u8; n];
+            for (q, v) in picks {
+                stamp[q] = v;
+            }
+            c.modes_chosen = stamp;
+        }
+        Ok(())
+    }
+
     /// "A player chosen at random" among the living seats (`PlayerRef::RandomPlayer`).
     pub(crate) fn random_living_seat(&self) -> Option<usize> {
         use rand::RngExt;

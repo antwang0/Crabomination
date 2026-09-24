@@ -7608,7 +7608,7 @@ pub fn static_effect_gather_bits(effect: &crate::effect::StaticEffect) -> u64 {
         SE::SelfBasePtFromValue { .. } => g::SELF_BASE_PT_FROM_VALUE,
         SE::SetBasePtForFilterFromValue { .. } => g::SET_BASE_PT_FOR_FILTER_FROM_VALUE,
         SE::ArtifactsAreEquipment | SE::MatchingArtifactsAreEquipment { .. } => g::ARTIFACTS_ARE_EQUIPMENT,
-        SE::PumpPerSharedType { .. } | SE::PumpPerSameNameCreatureYouControl { .. } => {
+        SE::PumpPerSharedType { .. } | SE::PumpPerSameNameCreatureYouControl { .. } | SE::WarOrPeace => {
             g::PUMP_PER_SHARED_TYPE
         }
         SE::AnthemForFilter { .. } | SE::AnthemForFilterIf { .. } => g::ANTHEM_FILTER,

@@ -1952,7 +1952,8 @@ impl Effect {
             | Effect::WheneverCreatureEntersUntilYourNextTurn { .. }
             | Effect::EachOpponentChoosesFromGraveyard { .. }
             | Effect::EachOtherPlayerMayDraw { .. }
-            | Effect::GreatestDiscardersLoseLife => false,
+            | Effect::GreatestDiscardersLoseLife
+            | Effect::EachPlayerChoosesWarOrPeace => false,
             Effect::CreaturesYouControlDealingCombatDamageThisTurn { .. } => false,
             Effect::WheneverYouGainLifeThisTurn { .. } => false,
             Effect::WheneverCardEntersOpponentGraveyardThisTurn { .. } => false,
@@ -4126,6 +4127,14 @@ impl Effect {
         mode: Option<usize>,
         kicked: bool,
     ) -> Option<&SelectionRequirement> {
+        /// A player ref's slot: a bare `Target(n)` is an implicit player target;
+        /// one read out of a selector (`ControllerOf(TargetFiltered { .. })` —
+        /// Tariel's "target opponent's graveyard") carries its own filter.
+        fn pref_find(p: &PlayerRef, slot: u8) -> Option<&SelectionRequirement> {
+            player_ref_selector(p)
+                .and_then(|s| sel_find(s, slot))
+                .or_else(|| implicit_player_for_ref_slot(p, slot))
+        }
         fn sel_find(s: &Selector, slot: u8) -> Option<&SelectionRequirement> {
             // A `ControlledBy { who: Target(n) }` selector declares slot `n`
             // as a *player* target (How to Start a Riot's "creatures target
@@ -4168,7 +4177,7 @@ impl Effect {
                 // selector declares slot `n` as a player target — Lord of the
                 // Void's `Player(Target(0))`, Mudhole's `CardsInZone { who:
                 // Target(0) }` ("target player's graveyard").
-                _ => selector_player_ref(s).and_then(|w| implicit_player_for_ref_slot(w, slot)),
+                _ => selector_player_ref(s).and_then(|w| pref_find(w, slot)),
             }
         }
         // A target slot can hide inside a `Value` sub-tree — Rabid Bite
@@ -4198,7 +4207,7 @@ impl Effect {
                 | Value::GraveyardSizeOf(p)
                 | Value::LibrarySizeOf(p)
                 | Value::PermanentCountControlledBy(p)
-                | Value::CreatureCountControlledBy(p) => implicit_player_for_ref_slot(p, slot),
+                | Value::CreatureCountControlledBy(p) => pref_find(p, slot),
                 _ => None,
             }
         }
@@ -4306,7 +4315,7 @@ impl Effect {
                 },
                 // See `primary_target_filter`'s note: the chooser is a slot
                 // of its own and the body's is the fallback.
-                Effect::MayDoBy { who, body, .. } => implicit_player_for_ref_slot(who, slot)
+                Effect::MayDoBy { who, body, .. } => pref_find(who, slot)
                     .or_else(|| eff_find(body, slot, None, kicked)),
                 Effect::Parley { then: body }
                 | Effect::RevealAnyNumberFromHand { then: body, .. }
@@ -4728,12 +4737,12 @@ impl Effect {
                 // walkers have to agree about which slots exist.
                 | Effect::TopOfGraveyardToLibraryTop { who, .. }
                 | Effect::LookTopMayPayLifeToBin { who, .. }
-                | Effect::DiscardUnlessKind { who, .. } => implicit_player_for_ref_slot(who, slot),
+                | Effect::DiscardUnlessKind { who, .. } => pref_find(who, slot),
                 Effect::WaiveShroudForPlayerThisTurn { player } => {
-                    implicit_player_for_ref_slot(player, slot)
+                    pref_find(player, slot)
                 }
                 Effect::ExileUpToNFromGraveyards { of, .. } => {
-                    of.as_ref().and_then(|p| implicit_player_for_ref_slot(p, slot))
+                    of.as_ref().and_then(|p| pref_find(p, slot))
                 }
                 Effect::PhaseOut { what, .. }
                 | Effect::GrantSuspend { what, .. }
@@ -4870,9 +4879,9 @@ impl Effect {
                 // Echocasting Symposium / Emeritus of Truce) is a player
                 // slot alongside the copied source's own slot.
                 Effect::CreateTokenCopyOf { who, source, .. } => {
-                    sel_find(source, slot).or_else(|| implicit_player_for_ref_slot(who, slot))
+                    sel_find(source, slot).or_else(|| pref_find(who, slot))
                 }
-                Effect::CreateToken { who, .. } => implicit_player_for_ref_slot(who, slot),
+                Effect::CreateToken { who, .. } => pref_find(who, slot),
                 Effect::CreateTokenCopiesHasteSac { source, .. } => sel_find(source, slot),
                 Effect::Endure { target, .. } => sel_find(target, slot),
                 Effect::Airbend { what } => sel_find(what, slot),
@@ -4889,10 +4898,10 @@ impl Effect {
                 Effect::GrantChosenTypeLandwalk { what }
                 | Effect::BidLifeToCounterTargetSpell { what } => sel_find(what, slot),
                 Effect::ChooseOneAmong { what, chooser, .. } => sel_find(what, slot)
-                    .or_else(|| implicit_player_for_ref_slot(chooser, slot)),
+                    .or_else(|| pref_find(chooser, slot)),
                 Effect::SeparateIntoPiles { what, splitter, chooser, .. } => sel_find(what, slot)
-                    .or_else(|| implicit_player_for_ref_slot(splitter, slot))
-                    .or_else(|| implicit_player_for_ref_slot(chooser, slot)),
+                    .or_else(|| pref_find(splitter, slot))
+                    .or_else(|| pref_find(chooser, slot)),
                 // Wrappers that defer their target to an inner body.
                 Effect::Forage { then } | Effect::Process { then, .. } => {
                     eff_find(then, slot, mode, kicked)
@@ -4991,15 +5000,15 @@ impl Effect {
                     .iter()
                     .find_map(|e| eff_find(e, slot, mode, kicked)),
                 Effect::DiscardUnlessPutCardOnTop { who, then } => {
-                    implicit_player_for_ref_slot(who, slot)
+                    pref_find(who, slot)
                         .or_else(|| eff_find(then, slot, mode, kicked))
                 }
                 Effect::MayExileFromGraveyardElse { who, otherwise } => {
-                    implicit_player_for_ref_slot(who, slot)
+                    pref_find(who, slot)
                         .or_else(|| eff_find(otherwise, slot, mode, kicked))
                 }
                 Effect::RevealTopThenIf { who, then, else_, .. } => {
-                    implicit_player_for_ref_slot(who, slot)
+                    pref_find(who, slot)
                         .or_else(|| eff_find(then, slot, mode, kicked))
                         .or_else(|| {
                             else_

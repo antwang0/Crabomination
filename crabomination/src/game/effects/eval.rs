@@ -522,6 +522,10 @@ impl GameState {
                 .into_iter()
                 .filter(|&o| self.players[o].hand.len() <= *n as usize)
                 .count() as i32,
+            Value::SourceActivationsThisTurn => ctx
+                .source
+                .and_then(|s| self.battlefield_find(s))
+                .map_or(0, |c| c.once_per_turn_used.len() as i32),
             Value::OpponentsBelowHalfStartingLife => self
                 .opponents_of(ctx.controller)
                 .into_iter()
