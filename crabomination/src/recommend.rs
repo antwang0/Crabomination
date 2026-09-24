@@ -2567,6 +2567,9 @@ impl ActionCensus {
             A::PlayLand(id) | A::PlayLandBack(id) | A::PlayLandFromGraveyard(id) => {
                 (Some(*id), None)
             }
+            // Suspending or foretelling a card plays it: its later cast is not
+            // an action (a suspend-only Wheel of Fate read as never played).
+            A::Suspend { card_id } | A::Foretell { card_id } => (Some(*card_id), None),
             _ => (a.cast_card_id(), None),
         };
         let Some(id) = id else { return (variant.to_string(), None) };
