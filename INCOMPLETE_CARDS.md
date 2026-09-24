@@ -1828,3 +1828,4 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Arcane Lighthouse | Forged in Stone (C14) | creatures lose hexproof/shroud until end of turn; a grant made later that turn is not stopped ("can't have"). |
 | 🟡 Benevolent Offering | Forged in Stone (C14) | each "choose an opponent" is the engine's pick. |
 | 🟡 Nahiri, the Lithomancer | Forged in Stone (C14) | the +2 attaches your first Equipment; the −2 puts your first Equipment card from hand, else graveyard — no pick. |
+| 🟡 Mystic Confluence | Seize Control (C15) | the modes are the default picks (counter unless {3}, draw two); `ChooseN` has no cast-time mode choice with repeats. |
