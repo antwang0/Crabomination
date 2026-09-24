@@ -89,6 +89,7 @@ lists were picked.
 | **Open Hostility** (C16 precon) WBRG | Saskia the Unyielding | WBRG | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Devour for Power** (CMD precon) BGU | The Mimeoplasm | BGU | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Mirror Mastery** (CMD precon) GUR | Riku of Two Reflections | GUR | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
+| **First Flight** (SCD precon) WU | Isperia, Supreme Judge | WU | 100 | ✅ complete |
 | **Arm for Battle** (CMR precon) RW | Wyleth, Soul of Steel | RW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Fae Dominion** (WOC precon) UB | Tegwyll, Duke of Splendor | UB | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Invent Superiority** (C16 precon) WUBR | Breya, Etherium Shaper | WUBR | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
@@ -874,6 +875,17 @@ remains on the battlefield", run by its leaves trigger). Residuals: Intet
 exiles face up; Ray of Command taps at the next end step. Pods (release, seed
 9331, 400 games beside Hanna / Yuriko / Gisa and Geralf): 400/400 decided, no
 card of the four lists unplayed. `--bench` byte-identical.
+
+The **sixty-fifth** is Starter Commander's **First Flight** (`FirstFlight_SCD`)
+— Azorius fliers under Isperia, Supreme Judge. Eighteen cards were missing;
+the one primitive is **CR 508.1d's lure**, `Effect::LureCreaturesToSourceNextTurn`
++ `PlayerCold.attack_lure` (`game/attack_lure.rs`) — Gideon Jura's +2: during
+the target opponent's next turn every creature of theirs that can attack
+must attack Gideon, and the bot's forced-attacker repair and target pass
+honour it. No residuals. Pods (release, seed 9341, 1,000 games beside Judith /
+Ghalta / Breya): 1,000/1,000 decided, no card of the four lists unplayed,
+Isperia 29.4 %; 6 and 12 seats × 300 (seed 9343) all decided. `--bench`
+byte-identical.
 
 **Smoke at 54 seats** (seed 9411, before seats 55-57, release, strict answer
 log): 60 games, **60 decided, 0 caps, zero panics** — 608 turns, 350 k actions
