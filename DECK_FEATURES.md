@@ -89,6 +89,7 @@ lists were picked.
 | **Growing Threat** (MOC precon) WB | Brimaz, Blight of Oreskos | WB | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Call for Backup** (MOC precon) RGW | Bright-Palm, Soul Awakener | RGW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **World Shaper** (EOC precon) BRG | Hearthhull, the Worldseed | BRG | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
+| **Nature's Vengeance** (C18 precon) BRG | Lord Windgrace | BRG | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Peace Offering** (BLC precon) GWU | Ms. Bumbleflower | GWU | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
 | **Nature of the Beast** (C13 precon) RGW | Marath, Will of the Wild | RGW | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Reign of Dragons** (FDC precon) R | Lathliss, Dragon Queen | R | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
@@ -1638,6 +1639,23 @@ A 200-game census beside Ms. Bumbleflower / Hearthhull / Bright-Palm (seed
 9561) decided 200/200 with zero panics; Marath won 4-6 %, and **Fireball
 went uncast** — the bot's any-target burn goes face-first and fires only for
 lethal (TODO open queue).
+
+The **eightieth** is Commander 2018's **Nature's Vengeance**
+(`NatureSVengeance_C18`) — Jund lands under the planeswalker commander Lord
+Windgrace (claimed after yielding Death Toll to the session that claimed it
+first). Sixteen cards were missing (Forge of Heroes and Moldgraf Monstrosity
+landed with Exquisite Invention and Death Toll meanwhile; one definition
+each stays). Primitives: `Keyword::CantAttackOwner` (CR 508.1a, Xantcha —
+read against the defender, so the pod's attack picker honours it too),
+`Effect::TokenCopyAttackingUntilEndOfCombat` (Gyrus: a copy of a graveyard
+card, tapped and attacking, exiled at end of combat) and
+`Effect::RevealUntilSharesCardTypeToBattlefield` (Reality Scramble).
+Residuals: **Emissary of Grudges** (open choice, any redirectable spell),
+**Hunting Wilds** (Forests keep their color), **Charnelhoard Wurm** (any
+player), **Flameblast Dragon** (X asked before {R}; a bot pays X only from
+floating mana). A 400-game census beside Hearthhull / Willowdusk / Winter
+(seed 9431, release) decided 400/400, Windgrace winning 12.2 %, every card of
+the four lists played. `--bench` byte-identical.
 
 The **sixty-eighth** is Commander Masters' **Enduring Enchantments**
 (`EnduringEnchantments_CMM`) — Abzan Sagas, enchantresses and constellation

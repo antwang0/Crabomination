@@ -1837,6 +1837,10 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Moraug, Fury of Akoum | World Shaper (EOC) | +1/+0 once however many times a creature attacked; the untap rides every later combat this turn. |
 | 🟡 Planetary Annihilation | World Shaper (EOC) | each player keeps the engine's pick of six lands. |
 | 🟡 Soul of Windgrace | World Shaper (EOC) | the land comes from the first graveyard holding one. |
+| 🟡 Emissary of Grudges | Nature's Vengeance (C18) | the opponent is chosen openly, and the reveal redirects any spell that targets you or your permanents, not only the chosen player's. |
+| 🟡 Hunting Wilds | Nature's Vengeance (C18) | the animated Forests keep their own color rather than becoming green. |
+| 🟡 Charnelhoard Wurm | Nature's Vengeance (C18) | damage to any player fires it, not only an opponent. |
+| 🟡 Flameblast Dragon | Nature's Vengeance (C18) | {X} is asked before {R}; a bot seat answers X out of floating mana only. |
 | 🟡 Martial Impetus | Peace Offering (BLC) | the attack pump also reaches the enchanted creature. |
 | 🟡 Octomancer | Peace Offering (BLC) | the Octopus gift goes to a random opponent rather than a chosen one. |
 | 🟡 Perch Protection | Peace Offering (BLC) | the extra-turn gift goes to a random opponent; the life lock lasts this turn only. |
