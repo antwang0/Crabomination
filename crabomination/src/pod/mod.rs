@@ -470,6 +470,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::KARDUR_COMMANDERS,
             main: decks::KARDUR_MAIN,
         },
+        // Fiftieth: the fortieth official list (Eternal Might, DRC) —
+        // Esper Zombies under Temmet, Naktamun's Will. `--seats 50`.
+        PodDeck {
+            name: "Temmet, Naktamun's Will (WUB)",
+            commanders: decks::TEMMET_COMMANDERS,
+            main: decks::TEMMET_MAIN,
+        },
     ]
 }
 

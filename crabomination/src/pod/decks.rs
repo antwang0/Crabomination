@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Ten hand-picked commanders plus thirty-nine official preconstructed lists, each a
+//! Ten hand-picked commanders plus forty official preconstructed lists, each a
 //! 99 of cards this engine implements: legal under CR 903 (100 cards
 //! including the commander, singleton outside basics, every card inside the
 //! commander's CR 903.4 color identity) and Commander-legal per Scryfall's
@@ -8,7 +8,7 @@
 //!
 //! The ten were built by hand because the offline Scryfall cache cannot say
 //! how a precon splits into decks; MTGJSON's deck files can, and the eleventh
-//! through forty-ninth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
+//! through fiftieth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
 //! Win, Tails You Lose, Goblin Storm, Foundations Commander's Wretched Ranks,
 //! Tramplesaurus Rex and Keen Engineering, Commander Legends' Reap the Tides,
 //! Phyrexia: All Will Be One's Corrupting Influence, Zendikar Rising's Sneak
@@ -26,8 +26,8 @@
 //! Through Time, Commander 2021's Lorehold Legacies, Commander (2011)'s
 //! Counterpunch, Wilds of Eldraine Commander's Fae Dominion, Commander 2015's
 //! Wade into Battle, Commander Legends' Arm for Battle, Commander 2016's Invent
-//! Superiority and Secret Lair's Chaos Incarnate) are taken from one card for
-//! card. What all of them keep
+//! Superiority, Secret Lair's Chaos Incarnate and Aetherdrift Commander's
+//! Eternal Might) are taken from one card for card. What all of them keep
 //! from the precon idea is what the pod needs — fixed, legal, varied color
 //! identities, and built to play against each other.
 //! One is a Partner pair (CR 702.124b), one is a **planeswalker**
@@ -1592,4 +1592,34 @@ pub const KARDUR_MAIN: &[CardFactory] = &[
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
     swamp, swamp, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain, mountain, mountain, mountain,
+];
+
+pub const TEMMET_COMMANDERS: &[CardFactory] = &[temmet_naktamuns_will];
+
+/// **Eternal Might**, the Aetherdrift Commander deck (DRC, 2025-02-14),
+/// exactly as MTGJSON's `EternalMight_DRC` prints it: 85 nonbasic cards + 5
+/// Plains + 4 Islands + 5 Swamps = 99. Esper Zombies and embalm under Temmet,
+/// Naktamun's Will, with Hashaton, Scarab's Fist in the 99.
+pub const TEMMET_MAIN: &[CardFactory] = &[
+    hashaton_scarabs_fist, on_wings_of_gold, priest_of_the_crossing, renewed_solidarity,
+    wizened_mentor, prophet_of_the_scarab, rhet_tomb_mystic, lost_monarch_of_ifnir,
+    accursed_duneyard, commence_the_endgame, cryptbreaker, grave_titan, gravecrawler,
+    midnight_reaper, murderous_rider, zombie_master, angel_of_sanctions, dusk_dawn,
+    god_eternal_oketra, timeless_dragon, champion_of_wits, forgotten_creation,
+    pull_from_tomorrow, vizier_of_many_faces, archfiend_of_ifnir, cemetery_reaper,
+    crowded_crypt, damn, dread_summons, dreadhorde_invasion, liliana_deaths_majesty, never_return,
+    plague_belcher, rot_hulk, the_scarab_god, god_pharaohs_gift, maskwood_nexus, adarkar_wastes,
+    caves_of_koilos, drowned_catacomb, exotic_orchard, fetid_pools, glacial_fortress,
+    irrigated_farmland, isolated_chapel, prairie_stream, sunken_hollow, temple_of_deceit,
+    temple_of_silence, underground_river, unholy_grotto, swords_to_plowshares, corpse_augur,
+    corpse_knight, arcane_signet, sol_ring, command_tower, path_of_ancestry, binding_mummy,
+    cast_out, eternal_skylord, fleshbag_marauder, gempalm_polluter, lord_of_the_accursed,
+    twisted_abomination, undead_augur, despark, gleaming_overseer, lazotep_chancellor,
+    wayward_servant, bontus_monument, commanders_sphere, dimir_signet, gate_to_the_afterlife,
+    orzhov_signet, talisman_of_dominance, talisman_of_hierarchy, arcane_sanctum, ash_barrens,
+    desert_of_the_glorified, desert_of_the_mindful, desert_of_the_true, evolving_wilds,
+    orzhov_basilica, terramorphic_expanse,
+    // Basics: 5 plains, 4 island, 5 swamp
+    plains, plains, plains, plains, plains, island, island, island, island,
+    swamp, swamp, swamp, swamp, swamp,
 ];
