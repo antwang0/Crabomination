@@ -1552,6 +1552,9 @@ pub enum Predicate {
     ChoseModesAtLeast(u8),
     /// It's `who`'s turn.
     IsTurnOf(PlayerRef),
+    /// CR 800.4 — at least this many players have lost the game (Hot
+    /// Pursuit's "if two or more players have lost the game").
+    PlayersLostAtLeast(u8),
     /// `who` resolves to a player who is an opponent of the source's
     /// controller ("…deals combat damage to one of your opponents" —
     /// Gonti, Night Minister). Teammates and the controller are false.
@@ -4850,6 +4853,9 @@ pub enum Effect {
     /// "…is goaded for the rest of the game" (Nettling Nuisance): `Goad`, and
     /// the goad never expires.
     GoadForTheGame { what: Selector },
+    /// CR 701.15 / 611.2b — `Goad` that lasts as long as `hold` does rather
+    /// than until the goader's next turn (Hot Pursuit, Immortal Obligation).
+    GoadWhile { what: Selector, hold: GoadLasts },
     /// "[what] can't attack you or planeswalkers you control" for `duration`
     /// — `Keyword::CantAttackPlayer` naming the resolving controller.
     GrantCantAttackYou { what: Selector, duration: Duration },
@@ -4858,6 +4864,18 @@ pub enum Effect {
     /// controls can't attack you or planeswalkers you control until your
     /// next turn." The creature is the taker's greatest-power one.
     EachPlayerMayCounterForPeace { counters: u32 },
+    /// Agitator Ant — "each player may put `counters` +1/+1 counters on a
+    /// creature they control. Goad each creature that had counters put on it
+    /// this way." The creature is the taker's greatest-power one.
+    EachPlayerMayCounterThenGoad { counters: u32 },
+    /// CR 701.38 secret council (Mob Verdict) — each player votes for another
+    /// player; per vote, `on_opponent` runs with the voted-for opponent bound
+    /// as `PlayerRef::Triggerer`, or `on_you` when the controller got it.
+    EachPlayerVotesForAPlayer { on_opponent: Box<Effect>, on_you: Box<Effect> },
+    /// Prisoner's Dilemma — each opponent secretly chooses silence or snitch.
+    /// All silence: `all_silence` damage to each. All snitch: `all_snitch` to
+    /// each. Otherwise `mixed` to each opponent who chose silence.
+    OpponentsChooseSilenceOrSnitch { all_silence: u32, all_snitch: u32, mixed: u32 },
     /// Kwain, Itinerant Meddler — "Each player may draw a card, then each
     /// player who drew a card this way gains `life` life." Asked APNAP; the
     /// takers draw, then gain.
@@ -6081,6 +6099,17 @@ pub enum Effect {
     /// limits — a noncreature can't satisfy "if it was a creature", so it
     /// won't loop). No-op if the source isn't a creature card in a graveyard.
     ReturnSelfAsEnchantment,
+    /// Otherworldly Escort — "when this dies, if it's not a `unless`, return it
+    /// to the battlefield under its owner's control with `amount` `kind`
+    /// counters on it. It's a `types` (and no longer its old creature types)."
+    /// The retype rides the card's definition, so the next death sees it and
+    /// the gate self-limits, as `ReturnSelfAsEnchantment`'s does.
+    ReturnSelfRetypedWithCounters {
+        unless: crate::card::CreatureType,
+        types: Vec<crate::card::CreatureType>,
+        kind: crate::card::CounterType,
+        amount: u32,
+    },
     /// "When this creature dies, return it to the battlefield tapped and with
     /// `amount` `kind` counters under its owner's control." Returns the source
     /// from its owner's graveyard (Unstoppable Slasher — two stun counters).
@@ -7992,6 +8021,11 @@ pub enum Effect {
     /// could legally target, each copy aimed at a different one. No-op when the
     /// spell targets anything besides the source.
     CopyForEachOtherTargetableCreature,
+    /// Feather, Radiant Arbiter — "you may choose any number of other
+    /// creatures that spell could target and pay `per_copy` for each of those
+    /// creatures. If you do, for each of those creatures, copy that spell. The
+    /// copy targets that creature." The spell is the trigger's source.
+    MayPayToCopyOntoOtherCreatures { per_copy: crate::mana::ManaCost },
     /// CR 115.7d — "You may choose new targets for target spell." Repoints
     /// every declared slot of the targeted spell in place (Redirect), each
     /// against its own printed filter. This effect's controller (the
@@ -10110,6 +10144,9 @@ pub enum Effect {
     /// player(s) in `GameState.combat_damage_prevented_to_players_this_turn`;
     /// the combat resolver zeroes any combat hit aimed at them.
     PreventAllCombatDamageToPlayerThisTurn { who: PlayerRef },
+    /// Take the Bait — "prevent all combat damage that would be dealt to you
+    /// and planeswalkers you control this turn".
+    PreventAllCombatDamageToPlayerAndWalkersThisTurn { who: PlayerRef },
     /// CR 615 — "Prevent all damage that would be dealt to you this turn"
     /// (Selfless Squire): combat or not, from any source. Each prevention
     /// emits `GameEvent::DamagePrevented`, which
@@ -10774,6 +10811,18 @@ pub enum VoteTally {
     /// "…each choice with the most votes or tied for most votes" (Council
     /// Guardian): every winning option's effect runs once.
     AllTied,
+}
+
+/// What an [`Effect::GoadWhile`] lasts for; resolves to a
+/// `card::GoadHold` naming the source.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum GoadLasts {
+    /// "As long as this permanent remains on the battlefield" (Hot Pursuit).
+    WhileSourceOnBattlefield,
+    /// "For as long as that creature has a [kind] counter on it, it is
+    /// goaded, can't attack you or a permanent you control, and can't block
+    /// creatures you control" (Immortal Obligation).
+    Obligation(crate::card::CounterType),
 }
 
 /// The one piece of resolver scratch an [`Effect::BindScratch`] pins.

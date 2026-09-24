@@ -38,7 +38,7 @@ pub(crate) fn spread_face_attacks(
     }
     let power = |id: CardId| state.battlefield.find_by_id(id).map_or(0, |c| c.power().max(0));
     let (pinned, mut free): (Vec<CardId>, Vec<CardId>) = attackers.into_iter().partition(|&id| {
-        state.battlefield.find_by_id(id).is_some_and(|c| c.cold_any(|k| !k.goaded_by.is_empty()))
+        state.battlefield.find_by_id(id).is_some_and(|c| state.is_goaded(c))
     });
     free.sort_by_key(|&id| (std::cmp::Reverse(power(id)), id));
     let mut others: Vec<usize> =
@@ -111,7 +111,7 @@ pub(crate) fn retarget_taxed_attacks(
             .filter(|&d| state.attacker_target_block(seat, a.attacker, &kws, Some(d)).is_none())
             .map(|d| {
                 let cost = tax(&Attack { attacker: a.attacker, target: AttackTarget::Player(d) });
-                (c.goaded_by.contains(&d), cost, d)
+                (state.goaded_by_player(c, d), cost, d)
             })
             .min();
         if let Some((_, cost, d)) = best

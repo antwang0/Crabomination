@@ -885,6 +885,9 @@ pub enum CounterType {
     /// Vow counter — Promise of Loyalty's mark: a creature carrying one can't
     /// attack the vow's caster or their planeswalkers.
     Vow,
+    /// Duty counter — Immortal Obligation's mark: goaded, and can't attack or
+    /// block against the obligation's caster, while it's there.
+    Duty,
 }
 
 /// Every zone a card can occupy.
@@ -2894,6 +2897,9 @@ pub enum SelectionRequirement {
     /// `suspected` flag). Powers "Sacrifice a suspected creature" costs
     /// (Rune-Brand Juggler) and suspected-creature payoffs.
     IsSuspected,
+    /// CR 701.15 — goaded by anyone, by any of `GameState::goaders`' three
+    /// sources (Hot Pursuit, Vengeful Ancestor).
+    IsGoaded,
     /// CR 702.103 — true while the candidate is on the battlefield as a
     /// bestowed Aura rather than a creature ("if it's an Aura" —
     /// Everflame Eidolon).
@@ -7261,6 +7267,17 @@ fn cold_membership_check(c: &CardCold) {
 /// Ir on `resolve_combat`'s `make_mut` edge for a 5 M saving, because a
 /// combat step writes them on every creature that deals or takes damage.
 /// They stay in `CardData`.
+/// CR 611.2b — what a [`CardCold::goad_holds`] entry lasts for.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum GoadHold {
+    /// While this permanent remains on the battlefield (Hot Pursuit).
+    WhileOnBattlefield(CardId),
+    /// While the goaded creature has a counter of this kind; it also can't
+    /// attack the goader or their permanents, nor block the goader's
+    /// creatures (Immortal Obligation's duty counter).
+    Obligation(CounterType),
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct CardCold {
     /// Activated abilities granted to this specific permanent by resolved
@@ -7339,6 +7356,10 @@ pub struct CardCold {
     /// "Goaded for the rest of the game" (Nettling Nuisance's Pirate): no
     /// goader's entry expires at their next turn.
     pub goad_for_the_game: bool,
+    /// CR 701.15 / 611.2b — goads that last "as long as" something holds
+    /// rather than until the goader's next turn (Hot Pursuit, Immortal
+    /// Obligation). Read through `GameState::goaders`, never directly.
+    pub goad_holds: Vec<(usize, GoadHold)>,
     /// CR 702.171 — the creatures that have saddled this permanent this turn
     /// (the riders tapped by a Saddle activation). Read by
     /// `Effect::ExileAndReturnSelfWithSaddler` for "exile it and up to one
@@ -10746,6 +10767,8 @@ struct CardInstanceWire {
     goaded_by: Vec<usize>,
     #[serde(default)]
     goad_for_the_game: bool,
+    #[serde(default)]
+    goad_holds: Vec<(usize, GoadHold)>,
     /// CR 701.31 monstrous flag. `#[serde(default)]` so older snapshots load
     /// as `false`.
     #[serde(default)]
@@ -10951,6 +10974,7 @@ impl serde::Serialize for CardInstance {
             chosen_colors: self.chosen_colors.clone(),
             goaded_by: self.goaded_by.clone(),
             goad_for_the_game: self.goad_for_the_game,
+            goad_holds: self.goad_holds.clone(),
             monstrous: self.monstrous,
             renowned: self.renowned,
             suspected: self.suspected,
@@ -11119,6 +11143,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.chosen_colors = wire.chosen_colors;
         c.goaded_by = wire.goaded_by;
         c.goad_for_the_game = wire.goad_for_the_game;
+        c.goad_holds = wire.goad_holds;
         c.monstrous = wire.monstrous;
         c.renowned = wire.renowned;
         c.suspected = wire.suspected;

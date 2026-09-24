@@ -4901,6 +4901,7 @@ impl GameState {
         clear_cold!(self.draws_redirected_this_turn);
         self.damage_becomes_this_turn = None;
         clear_cold!(self.combat_damage_prevented_to_players_this_turn);
+        clear_cold!(self.combat_damage_prevented_to_walkers_this_turn);
         clear_cold!(self.auras_at_death);
         clear_cold!(self.creature_etb_steal_this_turn);
         clear_cold!(self.search_tax_paid_this_turn);

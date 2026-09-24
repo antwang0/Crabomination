@@ -359,6 +359,10 @@ impl Effect {
                     f(e);
                 }
             }
+            Effect::EachPlayerVotesForAPlayer { on_opponent, on_you } => {
+                f(on_opponent);
+                f(on_you);
+            }
             Effect::If { then, else_, .. }
             | Effect::IfRevealFromHand { then, else_, .. }
             | Effect::LookTopMayBottomAllElse { then, else_, .. } => {
@@ -852,6 +856,7 @@ impl Effect {
             | Effect::EachPlayerSacrificesDownTo { .. }
             | Effect::MassPolymorph
             | Effect::CopyForEachOtherTargetableCreature
+            | Effect::MayPayToCopyOntoOtherCreatures { .. }
             | Effect::SearchRevealPunishSameNameCasters { .. }
             | Effect::ExileTopGreatestManaValueTakesExtraTurn
             | Effect::ChooseStepToSkipThisTurn { .. }
@@ -1106,6 +1111,9 @@ impl Effect {
             // CR 701.38 votes are untargeted; the chosen option's body may
             // target, but it's chosen at resolution.
             Effect::Vote { options, .. } => options.iter().any(|o| o.effect.requires_target()),
+            Effect::EachPlayerVotesForAPlayer { on_opponent, on_you } => {
+                on_opponent.requires_target() || on_you.requires_target()
+            }
             Effect::CycleRecurFromGraveyard { .. } => false,
             Effect::ReturnGraveyardPermanentsDifferentNames
             | Effect::ReturnAllMatchingFromGraveyardToBattlefield { .. } => false,
@@ -1291,6 +1299,7 @@ impl Effect {
             Effect::SacrificeSourceUnlessSacrifice { .. } => false,
             Effect::GrantNextInstantOrSorceryDiscountThisTurn { .. } => false,
             Effect::ReturnSelfAsEnchantment => false,
+            Effect::ReturnSelfRetypedWithCounters { .. } => false,
             Effect::ReturnSelfTappedWithCounters { .. } => false,
             Effect::ReturnSelfTapped => false,
             Effect::ReturnSelf => false,
@@ -1569,6 +1578,7 @@ impl Effect {
             Effect::Explore { who } => sel_has_target(who),
             Effect::Goad { what }
             | Effect::GoadForTheGame { what }
+            | Effect::GoadWhile { what, .. }
             | Effect::GrantCantAttackYou { what, .. } => sel_has_target(what),
             Effect::Suspect { what } | Effect::ClearSuspected { what } => sel_has_target(what),
             Effect::ReplaceCreatureTypeText { what } => sel_has_target(what),
@@ -2077,8 +2087,11 @@ impl Effect {
             Effect::ReplaceYourNextDrawThisTurn { .. } => false,
             Effect::PreventCombatDamageExceptDealtBy { .. } => false,
             Effect::PreventAllCombatDamageToPlayerThisTurn { .. }
+            | Effect::PreventAllCombatDamageToPlayerAndWalkersThisTurn { .. }
             | Effect::PreventAllDamageToPlayerThisTurn { .. }
             | Effect::EachPlayerMayCounterForPeace { .. }
+            | Effect::EachPlayerMayCounterThenGoad { .. }
+            | Effect::OpponentsChooseSilenceOrSnitch { .. }
             | Effect::EachPlayerMayDrawThenTakersGainLife { .. }
             | Effect::ChooseAttackDirection
             | Effect::ChooseAttackDirectionUntilYourNextTurn
@@ -2799,6 +2812,7 @@ impl Effect {
             Effect::Airbend { what } => sel_filter(what),
             Effect::Goad { what }
             | Effect::GoadForTheGame { what }
+            | Effect::GoadWhile { what, .. }
             | Effect::GrantCantAttackYou { what, .. }
             | Effect::Transform { what }
             | Effect::Flip { what }
@@ -3654,7 +3668,9 @@ impl Effect {
             Effect::SacrificeSource => "sacrifice this".into(),
             Effect::ExileSource => "exile this".into(),
             Effect::Explore { .. } => "explore".into(),
-            Effect::Goad { .. } | Effect::GoadForTheGame { .. } => "goad target creature".into(),
+            Effect::Goad { .. } | Effect::GoadForTheGame { .. } | Effect::GoadWhile { .. } => {
+                "goad target creature".into()
+            }
             Effect::Suspect { .. } => "suspect target creature".into(),
             Effect::ReplaceCreatureTypeText { .. } => {
                 "change all instances of one creature type to another".into()
@@ -4890,6 +4906,7 @@ impl Effect {
                 | Effect::RemoveAllCountersDiscountNextSpell { what }
                 | Effect::Goad { what }
                 | Effect::GoadForTheGame { what }
+                | Effect::GoadWhile { what, .. }
                 | Effect::Detain { what }
                 | Effect::Provoke { what }
                 | Effect::MustBlockSource { what, .. }

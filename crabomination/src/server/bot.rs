@@ -3618,7 +3618,8 @@ fn forced_attacks(state: &GameState) -> Vec<Attack> {
             .find(|p| p.id == c.id)
             .map(|p| p.keywords())
             .unwrap_or(&[]);
-        if !kws.has_kw(&Keyword::MustAttack) && c.goaded_by.is_empty() {
+        let goaders = state.goaders(c);
+        if !kws.has_kw(&Keyword::MustAttack) && goaders.is_empty() {
             continue;
         }
         let able = c.definition.is_creature()
@@ -3630,11 +3631,12 @@ fn forced_attacks(state: &GameState) -> Vec<Attack> {
             continue;
         }
         let opponents = || {
-            (0..state.players.len())
-                .filter(|&q| !state.same_team(active, q) && state.players[q].is_alive())
+            (0..state.players.len()).filter(|&q| {
+                !state.same_team(active, q) && state.players[q].is_alive() && !state.obligated_to(c, q)
+            })
         };
         let Some(target) = opponents()
-            .find(|q| !c.goaded_by.contains(q))
+            .find(|q| !goaders.contains(q))
             .or_else(|| opponents().next())
         else {
             continue;
@@ -11164,14 +11166,15 @@ fn pick_attacks_inner(state: &GameState, seat: usize, guard: bool) -> Vec<Attack
 /// rejected declarations in 40 eighteen-seat pod games, each a lost combat).
 fn goad_legal_target(state: &GameState, seat: usize, id: CardId, preferred: usize) -> usize {
     let Some(c) = state.battlefield_find(id) else { return preferred };
-    if !c.goaded_by.contains(&preferred) {
+    let goaders = state.goaders(c);
+    if !goaders.contains(&preferred) {
         return preferred;
     }
     let n = state.players.len();
     (1..n)
         .map(|i| (seat + i) % n)
         .find(|&q| {
-            !state.same_team(seat, q) && state.players[q].is_alive() && !c.goaded_by.contains(&q)
+            !state.same_team(seat, q) && state.players[q].is_alive() && !goaders.contains(&q)
         })
         .unwrap_or(preferred)
 }
@@ -11194,6 +11197,7 @@ fn chosen_attack_target(state: &GameState, seat: usize, id: CardId) -> Option<us
 /// Cyclops is obliged only once somebody else has been declared), which is
 /// what makes the obligation set-dependent and the repair below a loop.
 fn must_attack(
+    state: &GameState,
     c: &crate::card::CardInstance,
     kws: &[crate::card::Keyword],
     others_attacking: bool,
@@ -11203,7 +11207,7 @@ fn must_attack(
         || kws.has_kw(&Keyword::MustAttackOrBlock)
         || (kws.has_kw(&Keyword::MustAttackIfAnotherAttacks) && others_attacking)
         || (kws.has_kw(&Keyword::MustAttackChosenPlayer) && c.chosen_player.is_some())
-        || c.cold_any(|k| !k.goaded_by.is_empty())
+        || state.is_goaded(c)
 }
 
 /// CR 508.1d — re-add every creature the rules oblige to attack that the
@@ -11240,7 +11244,7 @@ fn restore_forced_attackers(
 /// declarations to repair pays it once.
 fn attack_requirement_present(state: &GameState) -> bool {
     use crate::card::Keyword;
-    state.battlefield.iter().any(|c| c.cold_any(|k| !k.goaded_by.is_empty()))
+    state.any_goad_present()
         || state.board_keyword_in_scope(&[
             Keyword::MustAttack,
             Keyword::MustAttackOrBlock,
@@ -11272,7 +11276,7 @@ fn restore_forced_attackers_unchecked(
             // exists" is just a non-empty batch; spelled as the engine
             // spells it so the two read alike.
             let others = attackers.iter().any(|id| *id != c.id);
-            if !(lured || must_attack(c, cp.keywords(), others))
+            if !(lured || must_attack(state, c, cp.keywords(), others))
                 || !state.attacker_is_able(seat, c, Some(&cp), power_caps, statics)
             {
                 continue;
@@ -11404,7 +11408,7 @@ fn trim_attacks_to_payable_tax(
         let forced = state.battlefield_find(a.attacker).is_some_and(|c| {
             state
                 .computed_permanent(a.attacker)
-                .is_some_and(|cp| must_attack(c, cp.keywords(), attacks.len() > 1))
+                .is_some_and(|cp| must_attack(state, c, cp.keywords(), attacks.len() > 1))
         });
         // CR 508.1a/508.1g — a forced attacker is kept only while its own tax
         // fits the budget, which is exactly the question `attacker_is_able`

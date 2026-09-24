@@ -11209,6 +11209,33 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::GoadWhile { what, hold } => {
+                // CR 701.15 / 611.2b — a goad held by a condition rather than
+                // the goader's next turn; `goaders` reads it while it holds.
+                let goader = ctx.controller;
+                let hold = match hold {
+                    crate::effect::GoadLasts::WhileSourceOnBattlefield => {
+                        // Hot Pursuit ruling: gone before the trigger resolved,
+                        // the creature is never goaded.
+                        let Some(src) = ctx.source.filter(|s| self.battlefield_find(*s).is_some()) else {
+                            return Ok(());
+                        };
+                        crate::card::GoadHold::WhileOnBattlefield(src)
+                    }
+                    crate::effect::GoadLasts::Obligation(kind) => crate::card::GoadHold::Obligation(*kind),
+                };
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    if let Some(c) = self.battlefield_find_mut(cid)
+                        && c.definition.is_creature()
+                        && !c.goad_holds.contains(&(goader, hold))
+                    {
+                        c.goad_holds.push((goader, hold));
+                    }
+                }
+                Ok(())
+            }
+
             Effect::Goad { what } => {
                 // CR 701.38 — add the resolving controller to each target
                 // creature's goaded_by list. The grant expires when the
@@ -16311,6 +16338,26 @@ impl GameState {
                 if let Some(c) = self.battlefield.find_by_id_mut(src) {
                     let def = c.definition_make_mut();
                     def.card_types.retain(|t| *t != CardType::Creature);
+                }
+                Ok(())
+            }
+
+            Effect::ReturnSelfRetypedWithCounters { unless, types, kind, amount } => {
+                let Some(src) = ctx.source else { return Ok(()) };
+                let owner = self.players.iter().position(|p| {
+                    p.graveyard.iter().any(|c| {
+                        c.id == src
+                            && c.definition.is_creature()
+                            && !c.definition.subtypes.creature_types.contains(unless)
+                    })
+                });
+                let Some(owner) = owner else { return Ok(()) };
+                let dest = ZoneDest::Battlefield { controller: PlayerRef::Seat(owner), tapped: false };
+                let ret_ctx = EffectContext::for_ability(src, owner, None);
+                self.move_card_to(src, &dest, &ret_ctx, events);
+                if let Some(c) = self.battlefield.find_by_id_mut(src) {
+                    c.definition_make_mut().subtypes.creature_types = types.clone();
+                    c.add_counters(*kind, *amount);
                 }
                 Ok(())
             }
@@ -31460,6 +31507,10 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::MayPayToCopyOntoOtherCreatures { per_copy } => {
+                self.may_pay_to_copy_onto_other_creatures(per_copy, ctx, effect, events)
+            }
+
             Effect::CopyForEachOtherTargetableCreature => {
                 use crate::game::types::StackItem;
                 // The spell that triggered this (Zada's cast trigger binds it
@@ -32374,7 +32425,19 @@ impl GameState {
             }
 
             Effect::EachPlayerMayCounterForPeace { counters } => {
-                self.each_player_may_counter_for_peace(*counters, effect, ctx, events)
+                self.each_player_may_counter_for_peace(*counters, false, effect, ctx, events)
+            }
+
+            Effect::EachPlayerMayCounterThenGoad { counters } => {
+                self.each_player_may_counter_for_peace(*counters, true, effect, ctx, events)
+            }
+
+            Effect::EachPlayerVotesForAPlayer { on_opponent, on_you } => {
+                self.each_player_votes_for_a_player(on_opponent, on_you, effect, ctx, events)
+            }
+
+            Effect::OpponentsChooseSilenceOrSnitch { all_silence, all_snitch, mixed } => {
+                self.opponents_choose_silence_or_snitch((*all_silence, *all_snitch, *mixed), effect, ctx, events)
             }
 
             Effect::EachPlayerMayDrawThenTakersGainLife { life } => {
@@ -32439,6 +32502,18 @@ impl GameState {
             Effect::PreventAllDamageToPlayerThisTurn { who } => {
                 for p in self.resolve_players(who, ctx) {
                     self.players[p].all_damage_prevented_this_turn = true;
+                }
+                Ok(())
+            }
+
+            Effect::PreventAllCombatDamageToPlayerAndWalkersThisTurn { who } => {
+                for p in self.resolve_players(who, ctx) {
+                    if !self.combat_damage_prevented_to_players_this_turn.contains(&p) {
+                        self.combat_damage_prevented_to_players_this_turn.push(p);
+                    }
+                    if !self.combat_damage_prevented_to_walkers_this_turn.contains(&p) {
+                        self.combat_damage_prevented_to_walkers_this_turn.push(p);
+                    }
                 }
                 Ok(())
             }

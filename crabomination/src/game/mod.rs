@@ -126,6 +126,7 @@ pub mod as_enters;
 pub mod combat;
 // CR 508.1d — "attack [this] if able" during a player's next turn.
 mod attack_lure;
+mod goad;
 // CR 106.7 — "could produce" mana.
 mod could_produce;
 // CR 508.4 — put onto the battlefield attacking, never declared.
@@ -1570,6 +1571,10 @@ pub struct ColdState {
     /// `prevent_combat_to_target` for the player-target case. Cleared at cleanup.
     #[serde(default)]
     pub(crate) combat_damage_prevented_to_players_this_turn: Vec<usize>,
+    /// Take the Bait's other half — players whose planeswalkers take no
+    /// combat damage this turn. Cleared at cleanup.
+    #[serde(default)]
+    pub(crate) combat_damage_prevented_to_walkers_this_turn: Vec<usize>,
     /// CR 702.22c-f — the attacking bands declared this combat, each a list of
     /// still-attacking members. A band lasts for the rest of combat even if a
     /// member loses banding (CR 702.22e); a creature removed from combat drops
@@ -8939,6 +8944,11 @@ impl GameState {
                     match &sa.effect {
                         StaticEffect::DoubleDamageToOpponents
                             if !self.same_team(c.controller, p) =>
+                        {
+                            d += 1;
+                        }
+                        StaticEffect::DoubleDamageToOpponentPlayers
+                            if !self.same_team(c.controller, p) && matches!(ent, EntityRef::Player(_)) =>
                         {
                             d += 1;
                         }
@@ -18040,6 +18050,11 @@ impl GameState {
         defender: usize,
     ) -> Option<(u32, GameError)> {
         let attacker_id = attacker.id;
+        // Immortal Obligation — a duty-bound blocker can't block its caster's
+        // creatures.
+        if self.obligated_to(blocker, attacker.controller) {
+            return Some((line!(), GameError::CannotBlock(blocker.id)));
+        }
         // CR 702.158d — Space Beleren's +1: creatures can be blocked this turn
         // only by creatures in the same sector.
         if self.sector_block_lock_turn == Some(self.turn_number)
@@ -28665,6 +28680,7 @@ fn static_effect_scales_damage(effect: &crate::effect::StaticEffect) -> bool {
         | SE::HalveDamageDealt
         // Recipient-scoped.
         | SE::DoubleDamageToOpponents
+        | SE::DoubleDamageToOpponentPlayers
         | SE::DoubleDamageToEnchantedPlayer
         | SE::DoubleDamageToChosenPlayer
         | SE::DoubleDamageBetweenYouAndChosenPlayer
@@ -29568,6 +29584,7 @@ fn static_effect_to_effects(
             | StaticEffect::GrantConvokeToSpells { .. }
             | StaticEffect::GrantImproviseToSpells { .. }
             | StaticEffect::DoubleDamageToOpponents
+            | StaticEffect::DoubleDamageToOpponentPlayers
             | StaticEffect::DoubleDamageFromCreaturesEnteredThisTurn
             | StaticEffect::DoubleDamageFromControlledCreatures
             | StaticEffect::DoubleDamageFromControlledMatching { .. }
@@ -29708,6 +29725,8 @@ fn static_effect_to_effects(
             // Angelic Arbiter's pair — consulted in declare_attackers and at
             // the cast dispatch; no layer.
             | StaticEffect::OpponentsWhoCastCantAttack
+            // AttachedIsGoaded — read by `goad::goaders`; no layer.
+            | StaticEffect::AttachedIsGoaded
             | StaticEffect::OpponentsWhoAttackedCantCast
             // CreatureSpellsCantBeCountered — consulted at cast time; no layer.
             | StaticEffect::CreatureSpellsCantBeCountered

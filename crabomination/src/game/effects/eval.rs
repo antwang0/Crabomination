@@ -1977,6 +1977,9 @@ impl GameState {
                 .is_some_and(|p| self.scratch.players_sacrificed_this_resolution.contains(&p)),
             Predicate::ExcessDamageDealtThisResolution => self.excess_damage_this_resolution > 0,
             Predicate::IsTurnOf(pref) => self.resolve_player(pref, ctx) == Some(self.active_player_idx),
+            Predicate::PlayersLostAtLeast(n) => {
+                self.players.iter().filter(|p| !p.is_alive()).count() >= usize::from(*n)
+            }
             Predicate::SamePlayer(a, b) => {
                 match (self.resolve_player(a, ctx), self.resolve_player(b, ctx)) {
                     (Some(x), Some(y)) => x == y,
@@ -4796,6 +4799,7 @@ impl GameState {
                     R::IsEquipped => self.attached_equipment_count(*cid) > 0,
                     // CR 701.60 — suspected.
                     R::IsSuspected => card.suspected,
+                    R::IsGoaded => self.is_goaded(card),
                     // CR 702.103 — on the battlefield as a bestowed Aura.
                     R::IsBestowed => card.bestowed,
                     // CR 301.5 — equipped by at least `n` Equipment (Balan).
@@ -6035,6 +6039,7 @@ impl GameState {
             }
             // CR 701.60 — the suspected flag lives on the instance.
             R::IsSuspected => card.suspected,
+            R::IsGoaded => self.is_goaded(card),
             // Answerable off live state even for a card that has left the
             // battlefield: the Aura's `attached_to` still points at it during
             // the death replacement (Necromancer's Magemark).

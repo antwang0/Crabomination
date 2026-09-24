@@ -1605,7 +1605,7 @@ fn project_permanent(
         prevention_source_names: prevention.source_names.clone(),
         damage_prevented_as_source: state.source_damage_fully_prevented(card.id),
         doomed_next_damage,
-        goaded: !card.goaded_by.is_empty(),
+        goaded: state.is_goaded(card),
         assigns_no_combat_damage: state.assigns_no_combat_damage(card.id),
         pinned_in_phase: state
             .computed_permanent(card.id)
@@ -1869,7 +1869,7 @@ fn project_permanent(
                         || (o.definition.is_enchantment() && o.controller == card.controller))
             }),
         can_attack_despite_defender: state.ignores_defender_for_attack(card),
-        goaded_by: card.goaded_by.clone(),
+        goaded_by: state.goaders(card).to_vec(),
         attack_target: state.attack_for(card.id).map(|a| a.target),
         defending_player: state
             .attack_for(card.id)
@@ -3038,7 +3038,7 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::GrantSpellsUncounterableThisTurn { .. } => "Spells can't be countered",
         Effect::GrantHexproofFromColorThisTurn { .. } => "Hexproof from color",
         Effect::Explore { .. } => "Explore",
-        Effect::Goad { .. } | Effect::GoadForTheGame { .. } => "Goad",
+        Effect::Goad { .. } | Effect::GoadForTheGame { .. } | Effect::GoadWhile { .. } => "Goad",
         Effect::Provoke { .. } => "Provoke",
         Effect::Monstrosity { .. } => "Monstrosity",
         Effect::MoveCounter { .. } => "Move counters",

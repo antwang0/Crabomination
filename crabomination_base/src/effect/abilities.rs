@@ -262,6 +262,10 @@ pub enum StaticEffect {
     /// attack with creatures." Gated in `declare_attackers` off the declaring
     /// player's `spells_cast_this_turn`.
     OpponentsWhoCastCantAttack,
+    /// Bloodthirsty Blade, Redemption Arc — "equipped / enchanted creature
+    /// is goaded" (CR 701.15), by this permanent's controller. Read by
+    /// `GameState::goaders`; no layer effect.
+    AttachedIsGoaded,
     /// Angelic Arbiter — "Each opponent who attacked with a creature this turn
     /// can't cast spells." Gated at the cast dispatch off the caster's
     /// `Player.attacked_this_turn`.
@@ -1371,6 +1375,10 @@ pub enum StaticEffect {
     /// (Gisela, Blade of Goldnight.) Scoped to the static's controller's
     /// opponents; consulted by `GameState::scale_damage_to`.
     DoubleDamageToOpponents,
+    /// CR 614.5 — "If a source would deal damage to an opponent, it deals
+    /// double that damage to that player instead" (Fiendish Duo): players
+    /// only, not their permanents.
+    DoubleDamageToOpponentPlayers,
     /// CR 614.5 / 303.4a — "If a source would deal damage to enchanted player,
     /// it deals double that damage instead" (Curse of Bloodletting).
     DoubleDamageToEnchantedPlayer,

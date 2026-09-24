@@ -772,6 +772,11 @@ impl GameState {
         kws: &[Keyword],
         defender: Option<usize>,
     ) -> Option<(u32, GameError)> {
+        if let Some(d) = defender
+            && self.battlefield_find(id).is_some_and(|c| self.obligated_to(c, d))
+        {
+            return Some((line!(), GameError::CannotAttack(id)));
+        }
         // One walk, same reason as `attacker_self_block`.
         for k in kws {
             match k {
@@ -948,7 +953,10 @@ impl GameState {
         }
         let kws: &[Keyword] = cp.map(|c| c.keywords()).unwrap_or(&[]);
         let taxed = self.attack_tax_possible(statics);
-        if !Self::has_defender_dependent_restriction(kws) && !taxed {
+        if !Self::has_defender_dependent_restriction(kws)
+            && !taxed
+            && !card.cold_any(|k| !k.goad_holds.is_empty())
+        {
             return true;
         }
         (0..self.players.len()).any(|d| {
@@ -1214,7 +1222,7 @@ impl GameState {
         // One freeze scope so the gate and the pass share a single gather.
         let (computed, attack_requirement) = self.with_frozen_layers(|g| {
             let requirement = has_legal_target
-                && (g.battlefield.iter().any(|c| c.cold_any(|k| !k.goaded_by.is_empty()))
+                && (g.any_goad_present()
                     || g.attack_lure_of(p).is_some()
                     || g.board_keyword_in_scope(&[
                         Keyword::MustAttack,
@@ -1338,13 +1346,14 @@ impl GameState {
         for atk in &attacks {
             if let AttackTarget::Player(target_player) = atk.target
                 && let Some(c) = self.battlefield_find(atk.attacker)
-                && c.goaded_by.contains(&target_player)
+                && let goaders = self.goaders(c)
+                && goaders.contains(&target_player)
             {
                 let has_nongoader_option = (0..self.players.len()).any(|q| {
                     q != self.active_player_idx
                         && !self.same_team(self.active_player_idx, q)
                         && self.players[q].is_alive()
-                        && !c.goaded_by.contains(&q)
+                        && !goaders.contains(&q)
                 });
                 if has_nongoader_option {
                     return Err(GameError::InvalidAttackTarget(target_player));
@@ -1528,7 +1537,7 @@ impl GameState {
                 let must = must_attack
                     || must_either
                     || (must_if_another && attacks.iter().any(|a| a.attacker != c.id))
-                    || c.cold_any(|k| !k.goaded_by.is_empty());
+                    || self.is_goaded(c);
                 if !must {
                     continue;
                 }
@@ -5027,6 +5036,14 @@ impl GameState {
                 self.apply_prevention_shields(EntityRef::Player(p), amount, source, events)
             }
             AttackTarget::Planeswalker(pw) => {
+                if !self.damage_cant_be_prevented_this_turn
+                    && !self.combat_damage_prevented_to_walkers_this_turn.is_empty()
+                    && self
+                        .battlefield_find(pw)
+                        .is_some_and(|c| self.combat_damage_prevented_to_walkers_this_turn.contains(&c.controller))
+                {
+                    return 0;
+                }
                 self.apply_prevention_shields(EntityRef::Permanent(pw), amount, source, events)
             }
             AttackTarget::Battle(b) => {
