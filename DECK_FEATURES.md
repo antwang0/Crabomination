@@ -75,6 +75,7 @@ lists were picked.
 | **Lorehold Legacies** (C21 precon) RW | Osgir, the Reconstructor | RW | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Counterpunch** (CMD precon) WBG | Ghave, Guru of Spores | WBG | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Wade into Battle** (C15 precon) RW | Kalemne, Disciple of Iroas | RW | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
+| **Arm for Battle** (CMR precon) RW | Wyleth, Soul of Steel | RW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not
@@ -643,6 +644,21 @@ id and re-acquired it, and Bottle Gnomes looped 4,543 sacrifices — a
 30,757-action cap (CR 704.5m / 400.7; fixed). Seed 10311, 1,000 six-seat pods
 (Kalemne ×2, Teferi, Osgir, Neyali, Daxos): **1,000 decided, every card of the
 six lists played**; `--bench` byte-identical.
+
+The **forty-seventh** is Commander Legends' **Arm for Battle** (`ArmForBattle_CMR`)
+— Boros Auras and Equipment under Wyleth, Soul of Steel (seat 46 before
+rebasing over Wade into Battle). Seventeen cards were missing; the primitives:
+⚠ **CR 205.4e was unenforced** — the catalog had no legendary sorcery, and the
+cast gate now refuses Jaya's Immolating Inferno without a legendary creature or
+planeswalker (`game/legendary_spell.rs`); `StaticEffect::AttachedIsLegendary`
+(On Serra's Wings, layer 4, with the legend rule's scan bit). ⚠ **The census
+found Wild Ricochet castable by no bot path**: the copy window read only a
+`Seq`'s first step, and Ricochet retargets before it copies. Residuals: **Dawn
+Charm**'s counter mode also takes a spell that targets a permanent you control;
+**Timely Ward** has flash while any commander is on the battlefield. Debug pods
+beside Tegwyll / Ghave / Edgar / Sigarda (seeds 9271/9272, 60 games) decided
+60/60, zero panics; after the fix a 120-game census (seed 9273) leaves no card
+unplayed. `--bench` byte-identical.
 
 ⚠ **The board cap was a bot bug, not a loop.** A Krenko seat sent all 292
 of its Goblins at one player on 24 life each turn while two others sat on
