@@ -31,6 +31,7 @@ mod cmdr_fae;
 mod cmdr_kalemne;
 mod cmdr_kardur;
 mod cmdr_breya;
+mod cmdr_yidris;
 mod dsk2;
 mod dsk_rooms;
 mod recent_118_132;

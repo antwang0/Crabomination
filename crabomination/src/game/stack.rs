@@ -5140,20 +5140,27 @@ impl GameState {
 
     /// "When enchanted player loses the game" (Curse of Vengeance): each
     /// Aura on `p` that another player owns triggers now, while it is still
-    /// attached, with its counter total as the event amount. A controller
-    /// leaving at the same time gets nothing (CR 800.4d, in the push).
+    /// attached, with its counter total as the event amount; and "whenever a
+    /// player loses the game" (Blood Tyrant) on any other player's permanent.
+    /// A controller leaving at the same time gets nothing (CR 800.4d, in the
+    /// push).
     fn queue_enchanted_player_left_triggers(&mut self, p: usize) {
         use crate::effect::EventKind;
         let queued: Vec<(CardId, usize, crate::effect::Effect, u32)> = self
             .battlefield
             .iter()
-            .filter(|c| c.attached_to_player == Some(p) && c.owner != p)
+            .filter(|c| c.owner != p)
             .flat_map(|c| {
                 let amount: u32 = c.counters.iter().map(|(_, n)| *n).sum();
+                let on_p = c.attached_to_player == Some(p);
                 c.definition
                     .triggered_abilities
                     .iter()
-                    .filter(|t| t.event.kind == EventKind::EnchantedPlayerLeftGame)
+                    .filter(move |t| match t.event.kind {
+                        EventKind::EnchantedPlayerLeftGame => on_p,
+                        EventKind::PlayerLeftGame => true,
+                        _ => false,
+                    })
                     .map(move |t| (c.id, c.controller, t.effect.clone(), amount))
             })
             .collect();

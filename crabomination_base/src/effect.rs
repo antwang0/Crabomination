@@ -3228,6 +3228,10 @@ pub enum EventKind {
     /// Vengeance): queued for each Aura attached to a player as that player
     /// leaves, before the Aura goes; the event amount is the counters on it.
     EnchantedPlayerLeftGame,
+    /// CR 800.4a — "Whenever a player loses the game" (Blood Tyrant): queued
+    /// for every permanent carrying it as any player leaves; the departing
+    /// player's own permanents are gone with them.
+    PlayerLeftGame,
 }
 
 impl EventKind {
