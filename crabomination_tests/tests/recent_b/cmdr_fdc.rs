@@ -3605,7 +3605,7 @@ fn cr_701_36_ghired_populates_an_attacking_rhino() {
     .expect("attack");
     drain_stack(&mut g);
     assert_eq!(count_named(&g, 0, "Rhino"), 2);
-    let copy = g.battlefield.iter().filter(|c| c.definition.name == "Rhino").last().unwrap().id;
+    let copy = g.battlefield.iter().filter(|c| c.definition.name == "Rhino").next_back().unwrap().id;
     assert!(g.attacking.iter().any(|a| a.attacker == copy), "the populated Rhino attacks");
 }
 
