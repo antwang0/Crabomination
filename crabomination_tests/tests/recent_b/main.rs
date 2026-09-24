@@ -25,6 +25,7 @@ mod cmdr_daxos;
 mod cmdr_ghave;
 mod cmdr_teferi;
 mod cmdr_lorehold;
+mod cmdr_fae;
 mod dsk2;
 mod dsk_rooms;
 mod recent_118_132;

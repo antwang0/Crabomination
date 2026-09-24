@@ -7146,6 +7146,9 @@ pub struct CardCold {
     /// majority of creatures. Round-trips through `CardInstanceWire` with a
     /// `#[serde(default)]` for snapshot back-compat.
     pub goaded_by: Vec<usize>,
+    /// "Goaded for the rest of the game" (Nettling Nuisance's Pirate): no
+    /// goader's entry expires at their next turn.
+    pub goad_for_the_game: bool,
     /// CR 702.171 — the creatures that have saddled this permanent this turn
     /// (the riders tapped by a Saddle activation). Read by
     /// `Effect::ExileAndReturnSelfWithSaddler` for "exile it and up to one
@@ -10525,6 +10528,8 @@ struct CardInstanceWire {
     /// `#[serde(default)]` so older snapshots load as empty.
     #[serde(default)]
     goaded_by: Vec<usize>,
+    #[serde(default)]
+    goad_for_the_game: bool,
     /// CR 701.31 monstrous flag. `#[serde(default)]` so older snapshots load
     /// as `false`.
     #[serde(default)]
@@ -10729,6 +10734,7 @@ impl serde::Serialize for CardInstance {
             chosen_color: self.chosen_color,
             chosen_colors: self.chosen_colors.clone(),
             goaded_by: self.goaded_by.clone(),
+            goad_for_the_game: self.goad_for_the_game,
             monstrous: self.monstrous,
             renowned: self.renowned,
             suspected: self.suspected,
@@ -10896,6 +10902,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.chosen_color = wire.chosen_color;
         c.chosen_colors = wire.chosen_colors;
         c.goaded_by = wire.goaded_by;
+        c.goad_for_the_game = wire.goad_for_the_game;
         c.monstrous = wire.monstrous;
         c.renowned = wire.renowned;
         c.suspected = wire.suspected;

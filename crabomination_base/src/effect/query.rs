@@ -1541,7 +1541,7 @@ impl Effect {
                 player_has_target(who) || value_has_target(keep)
             }
             Effect::Explore { who } => sel_has_target(who),
-            Effect::Goad { what } => sel_has_target(what),
+            Effect::Goad { what } | Effect::GoadForTheGame { what } => sel_has_target(what),
             Effect::Suspect { what } | Effect::ClearSuspected { what } => sel_has_target(what),
             Effect::ReplaceCreatureTypeText { what } => sel_has_target(what),
             Effect::Detain { what } => sel_has_target(what),
@@ -2735,6 +2735,7 @@ impl Effect {
             Effect::Earthbend { .. } => Some(&EARTHBEND_TARGET),
             Effect::Airbend { what } => sel_filter(what),
             Effect::Goad { what }
+            | Effect::GoadForTheGame { what }
             | Effect::Transform { what }
             | Effect::Flip { what }
             | Effect::LoseAllAbilities { what, .. }
@@ -3583,7 +3584,7 @@ impl Effect {
             Effect::SacrificeSource => "sacrifice this".into(),
             Effect::ExileSource => "exile this".into(),
             Effect::Explore { .. } => "explore".into(),
-            Effect::Goad { .. } => "goad target creature".into(),
+            Effect::Goad { .. } | Effect::GoadForTheGame { .. } => "goad target creature".into(),
             Effect::Suspect { .. } => "suspect target creature".into(),
             Effect::ReplaceCreatureTypeText { .. } => {
                 "change all instances of one creature type to another".into()
@@ -4793,6 +4794,7 @@ impl Effect {
                 | Effect::FlipUntilLossThenTokenCopies { what }
                 | Effect::RemoveAllCountersDiscountNextSpell { what }
                 | Effect::Goad { what }
+                | Effect::GoadForTheGame { what }
                 | Effect::Detain { what }
                 | Effect::Provoke { what }
                 | Effect::MustBlockSource { what, .. }

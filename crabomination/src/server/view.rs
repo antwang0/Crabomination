@@ -3031,7 +3031,7 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::GrantSpellsUncounterableThisTurn { .. } => "Spells can't be countered",
         Effect::GrantHexproofFromColorThisTurn { .. } => "Hexproof from color",
         Effect::Explore { .. } => "Explore",
-        Effect::Goad { .. } => "Goad",
+        Effect::Goad { .. } | Effect::GoadForTheGame { .. } => "Goad",
         Effect::Provoke { .. } => "Provoke",
         Effect::Monstrosity { .. } => "Monstrosity",
         Effect::MoveCounter { .. } => "Move counters",

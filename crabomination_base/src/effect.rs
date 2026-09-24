@@ -4672,6 +4672,9 @@ pub enum Effect {
     /// than a goader if able, until that goader's next turn. Disrupt Decorum
     /// (mass goad), Bloodthirsty Blade.
     Goad { what: Selector },
+    /// "…is goaded for the rest of the game" (Nettling Nuisance): `Goad`, and
+    /// the goad never expires.
+    GoadForTheGame { what: Selector },
     /// CR 701.60 — *suspect* each creature `what` resolves to: set its
     /// `suspected` flag so it gains menace and can't block (injected as
     /// computed keywords). Repeat Offender, Reasonable Doubt.

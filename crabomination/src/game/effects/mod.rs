@@ -10945,6 +10945,22 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::GoadForTheGame { what } => {
+                let goader = ctx.controller;
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    if let Some(c) = self.battlefield_find_mut(cid)
+                        && c.definition.is_creature()
+                    {
+                        if !c.goaded_by.contains(&goader) {
+                            c.goaded_by.push(goader);
+                        }
+                        c.goad_for_the_game = true;
+                    }
+                }
+                Ok(())
+            }
+
             Effect::Goad { what } => {
                 // CR 701.38 — add the resolving controller to each target
                 // creature's goaded_by list. The grant expires when the
