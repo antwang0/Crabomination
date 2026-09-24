@@ -76,6 +76,8 @@ lists were picked.
 | **Counterpunch** (CMD precon) WBG | Ghave, Guru of Spores | WBG | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Wade into Battle** (C15 precon) RW | Kalemne, Disciple of Iroas | RW | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Arm for Battle** (CMR precon) RW | Wyleth, Soul of Steel | RW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
+| **Fae Dominion** (WOC precon) UB | Tegwyll, Duke of Splendor | UB | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
+| **Invent Superiority** (C16 precon) WUBR | Breya, Etherium Shaper | WUBR | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not
@@ -663,6 +665,36 @@ host (Blazing Sunsteel; CR 603.2 — fixed in the death-snapshot walk). Debug po
 beside Tegwyll / Ghave / Edgar / Sigarda (seeds 9271/9272, 60 games) decided
 60/60, zero panics; after the fix a 120-game census (seed 9273) leaves no card
 unplayed. `--bench` byte-identical.
+
+The **forty-fifth** is Wilds of Eldraine's **Fae Dominion** (`FaeDominion_WOC`)
+— Dimir Faeries under Tegwyll, Duke of Splendor (Alela is in the 99).
+Seventeen cards were missing; the primitives: `Effect::GoadForTheGame`
+(Nettling Nuisance's Pirate, CR 701.38 — a flag the goader's untap expiry
+skips), `Keyword::CantAttackPlayer` + `Effect::GrantCantAttackYou`
+(Illusionist's Gambit, CR 508.1a) and `CardDefinition::flash_additional_cost`
+(Tegwyll's Scouring's "flash by tapping three fliers", CR 601.2b). ⚠ **Halo
+Forager found a reflexive bug**: `Effect::Reflexive` auto-targeted its body
+with no X, so a "mana value X" payoff behind "pay {X}" matched nothing (CR
+603.7). The first census found Illusionist's Gambit cast by no bot path;
+`combat_only::pick_combat_only_spell` now takes a spell whose cast condition
+names the declare blockers step when the seat is attacked. Residuals:
+**Blightwing Bandit** exiles face up; **Halo Forager** can't cast a
+mana-value-0 card; **Illusionist's Gambit**'s grants last the turn;
+**Puppeteer Clique** exiles at the next end step, not necessarily yours.
+Four-seat pods beside Osgir / Ghave / Adrix (seed 10125, 1,000 games, all
+decided): Tegwyll 41.4 %.
+
+The **forty-eighth** is Commander 2016's **Invent Superiority**
+(`InventSuperiority_C16`) — four-colour artifacts under Breya, Etherium Shaper,
+the pod's first WUBR identity. Seventeen cards were missing; the one new rule
+piece is `EventKind::EnchantedPlayerLeftGame` (Curse of Vengeance's "when
+enchanted player loses the game", queued from `objects_leave_with_player`,
+the one CR 800.4a funnel, while the Aura is still attached) with
+`CounterType::Spite`. Residual: **Armory Automaton** attaches the Equipment
+you control, not other players'. Four-seat pods beside Tegwyll / Osgir /
+Adrix (seed 10127, 1,000 games, all decided): Breya 17.1 %; a 300-game census
+(seed 10128) leaves no card of the four decks unplayed. `--bench`
+byte-identical.
 
 ⚠ **The board cap was a bot bug, not a loop.** A Krenko seat sent all 292
 of its Goblins at one player on 24 life each turn while two others sat on

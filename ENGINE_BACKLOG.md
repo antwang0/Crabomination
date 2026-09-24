@@ -183,6 +183,14 @@ the handoff.
   or land type fell through both and the static was dropped: Song of Serenity, Archon of
   the Wild Rose, Shield of Kaldra, Akron Legionnaire, Hellspur Posse Boss, Camellia,
   Radiant Destiny, Shimmer. `dropped_static_ratchet` walks the catalog.
+- ✅ **A reflexive payoff behind "pay {X}" never saw X** (Halo Forager, CR 603.7):
+  `Effect::Reflexive` auto-targeted with no X, so a `ManaValueExactlyXFromCost` slot
+  matched nothing; it now targets at the context's paid X.
+- ✅ New for Fae Dominion / Invent Superiority: `GoadForTheGame` (CR 701.38),
+  `Keyword::CantAttackPlayer` + `GrantCantAttackYou` (CR 508.1a),
+  `flash_additional_cost` (CR 601.2b), `EventKind::EnchantedPlayerLeftGame` +
+  `CounterType::Spite` (CR 800.4a). Bot: a declare-blockers-step spell (Illusionist's
+  Gambit) rides `pick_combat_only_spell` when the seat is attacked.
 - ✅ **A graveyard-exile cost naming X refused every card** (Osgir, the Reconstructor's
   "{X}, {T}, Exile an artifact card with mana value X"): `exile_other_filter` evaluated
   `ManaValueExactlyXFromCost` without the activation's X; it now resolves it first.
