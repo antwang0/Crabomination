@@ -9340,6 +9340,15 @@ fn ability_makes_token(e: &Effect) -> bool {
 }
 
 fn pick_token_maker(state: &GameState, seat: usize, w: &EvalWeights) -> Option<GameAction> {
+    // On its own turn the sink waits for the second main phase: a token made
+    // before combat can't attack, and its mana may come from creatures that
+    // could have (Citanul Hierophants tapping Saprolings for Selesnya
+    // Guildmage left a 900-Saproling board that never swung).
+    if state.active_player_idx == seat
+        && matches!(state.step, TurnStep::Untap | TurnStep::Upkeep | TurnStep::Draw | TurnStep::PreCombatMain)
+    {
+        return None;
+    }
     for card in state.battlefield.iter().filter(|c| c.controller == seat) {
         for (idx, ab) in card.definition.activated_abilities.iter().enumerate() {
             if sink_sacrifice_cost(ab, w) || ab.exhaust || !ability_makes_token(&ab.effect) {
@@ -26858,6 +26867,8 @@ mod stack_response_tests {
         g.priority.player_with_priority = 0;
         assert!(pick_token_maker(&g, 0, &EvalWeights::default()).is_none(), "no mana → no token");
         g.players[0].mana_pool.add_colorless(5);
+        assert!(pick_token_maker(&g, 0, &EvalWeights::default()).is_none(), "not before its own combat");
+        g.step = TurnStep::PostCombatMain;
         assert!(matches!(pick_token_maker(&g, 0, &EvalWeights::default()),
             Some(GameAction::ActivateAbility { card_id, .. }) if card_id == sw),
             "bot makes an Ally token with leftover mana");
