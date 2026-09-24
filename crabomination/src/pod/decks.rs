@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Ten hand-picked commanders plus sixty-nine official preconstructed lists, each a
+//! Ten hand-picked commanders plus seventy official preconstructed lists, each a
 //! 99 of cards this engine implements: legal under CR 903 (100 cards
 //! including the commander, singleton outside basics, every card inside the
 //! commander's CR 903.4 color identity) and Commander-legal per Scryfall's
@@ -8,7 +8,7 @@
 //!
 //! The ten were built by hand because the offline Scryfall cache cannot say
 //! how a precon splits into decks; MTGJSON's deck files can, and the eleventh
-//! through seventy-ninth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
+//! through eightieth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
 //! Win, Tails You Lose, Goblin Storm, Foundations Commander's Wretched Ranks,
 //! Tramplesaurus Rex and Keen Engineering, Commander Legends' Reap the Tides,
 //! Phyrexia: All Will Be One's Corrupting Influence, Zendikar Rising's Sneak
@@ -42,8 +42,8 @@
 //! Hunt Commander's Undead Unleashed, March of the Machine Commander's
 //! Call for Backup, Bloomburrow Commander's Squirreled Away, Commander
 //! 2018's Exquisite Invention, Duskmourn Commander's Death Toll, Commander
-//! 2021's Witherbloom Witchcraft and Edge of Eternities Commander's World
-//! Shaper) are taken
+//! 2021's Witherbloom Witchcraft, Edge of Eternities Commander's World
+//! Shaper and Commander 2018's Nature's Vengeance) are taken
 //! from
 //! one card for card. What all of them keep
 //! from the precon idea is what the pod needs — fixed, legal, varied color
@@ -2477,4 +2477,32 @@ pub const HEARTHHULL_MAIN: &[CardFactory] = &[
     // Basics: 1 wastes, 5 swamp, 3 mountain, 8 forest
     swamp, swamp, swamp, swamp, swamp, mountain, mountain, mountain, forest, forest, forest,
     forest, forest, forest, forest, forest, wastes,
+];
+
+pub const WINDGRACE_COMMANDERS: &[CardFactory] = &[lord_windgrace];
+
+/// **Nature's Vengeance**, the Commander 2018 deck (C18, 2018-08-10), exactly
+/// as MTGJSON's `NatureSVengeance_C18` prints it: 81 nonbasic cards +
+/// 6 Swamps + 5 Mountains + 7 Forests = 99. Jund lands-matter under
+/// the planeswalker commander Lord Windgrace.
+pub const WINDGRACE_MAIN: &[CardFactory] = &[
+    charnelhoard_wurm, avenger_of_zendikar, soul_of_innistrad, flameblast_dragon,
+    budoka_gardener, centaur_vinecrasher, moldgraf_monstrosity, rampaging_baloths, scute_mob,
+    rubblehulk, acidic_slime, baloth_woodcrasher, borderland_explorer, farhaven_elf,
+    sakura_tribe_elder, yavimaya_elder, zendikar_incarnate, ruinous_path, chain_reaction,
+    decimate, gaze_of_granite, lavalanche, worm_harvest, stitch_together, cultivate, explore,
+    explosive_vegetation, far_wanderings, hunting_wilds, savage_twister, moonlight_bargain,
+    consign_to_dust, grapple_with_the_past, harrow, grisly_salvage, putrefy, seers_sundial,
+    sol_ring, retreat_to_hagra, khalni_heart_expedition, deathreap_ritual, akoum_refuge,
+    barren_moor, blighted_woodland, bojuka_bog, command_tower, evolving_wilds, forgotten_cave,
+    golgari_rot_farm, grim_backwoods, gruul_turf, haunted_fengraf, jund_panorama, jungle_hollow,
+    kazandu_refuge, khalni_garden, mountain_valley, myriad_landscape, rakdos_carnarium,
+    rocky_tar_pit, savage_lands, temple_of_the_false_god, terramorphic_expanse,
+    tranquil_thicket, warped_landscape, gyrus_waker_of_corpses, thantis_the_warweaver,
+    bloodtracker, emissary_of_grudges, fury_storm, nesting_dragon, reality_scramble,
+    crash_of_rhino_beetles, turntimber_sower, whiptongue_hydra, windgraces_judgment,
+    xantcha_sleeper_agent, loyal_subordinate, loyal_apprentice, loyal_guardian, forge_of_heroes,
+    // Basics: 6 swamp, 5 mountain, 7 forest
+    swamp, swamp, swamp, swamp, swamp, swamp, mountain, mountain, mountain, mountain, mountain,
+    forest, forest, forest, forest, forest, forest, forest,
 ];

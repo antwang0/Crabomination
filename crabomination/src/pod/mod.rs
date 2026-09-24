@@ -684,6 +684,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::HEARTHHULL_COMMANDERS,
             main: decks::HEARTHHULL_MAIN,
         },
+        // Eightieth: the seventieth official list (Nature's Vengeance,
+        // C18) — Jund lands under the planeswalker Lord Windgrace.
+        // `--pod-decks 80`.
+        PodDeck {
+            name: "Lord Windgrace (BRG)",
+            commanders: decks::WINDGRACE_COMMANDERS,
+            main: decks::WINDGRACE_MAIN,
+        },
     ]
 }
 
@@ -1219,6 +1227,7 @@ mod tests {
             ("Ranar", [0x5A4A, 94, 9018]),
             ("Wilhelt", [0x3117, 95, 9019]),
             ("Hazel", [0x4A2E, 96, 9020]),
+            ("Lord Windgrace", [0x7D18, 97, 9021]),
         ] {
             let precon = *field.iter().find(|d| d.name.starts_with(name)).expect("the precon seat");
             assert_eq!(precon.card_count(), 100);
