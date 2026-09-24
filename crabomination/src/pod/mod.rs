@@ -890,6 +890,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::GALEA_COMMANDERS,
             main: decks::GALEA_MAIN,
         },
+        // Hundred-and-seventh: the ninety-seventh official list (Draconic
+        // Dissent, CLB) — Izzet goad and Dragons under Firkraag, Cunning
+        // Instigator. `--pod-decks 107`.
+        PodDeck {
+            name: "Firkraag, Cunning Instigator (UR)",
+            commanders: decks::FIRKRAAG_COMMANDERS,
+            main: decks::FIRKRAAG_MAIN,
+        },
     ]
 }
 

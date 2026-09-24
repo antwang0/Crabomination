@@ -3273,3 +3273,28 @@ pub const GALEA_MAIN: &[CardFactory] = &[
     plains, plains, island, island, island, island, forest, forest, forest, forest, forest,
     forest, forest, forest,
 ];
+
+pub const FIRKRAAG_COMMANDERS: &[CardFactory] = &[firkraag_cunning_instigator];
+
+/// Draconic Dissent (CLB, 2022), card for card: Firkraag's Izzet goad dragons.
+pub const FIRKRAAG_MAIN: &[CardFactory] = &[
+    will_kenrith, rowan_kenrith, keiga_the_tide_star, pursued_whale, sly_instigator,
+    agitator_ant, avatar_of_slaughter, brash_taunter, chaos_dragon, drakuseth_maw_of_flames,
+    geode_rager, goblin_spymaster, kazuul_tyrant_of_the_cliffs, ryusei_the_falling_star,
+    territorial_hellkite, thunder_dragon, vengeful_ancestor, warmonger_hellkite,
+    niv_mizzet_parun, solemn_simulacrum, steel_hellkite, stuffy_doll, burnished_hart,
+    sprite_dragon, aether_gale, curse_of_the_swine, blasphemous_act, chain_reaction,
+    disrupt_decorum, compulsive_research, domineering_will, reins_of_power, chaos_warp,
+    midnight_clock, dragons_hoard, arcane_signet, mind_stone, wayfarers_bauble,
+    bloodthirsty_blade, fellwar_stone, hedron_archive, izzet_signet, sol_ring,
+    talisman_of_creativity, dissipation_field, the_akroan_war, psychic_impetus, shiny_impetus,
+    curse_of_verbosity, propaganda, curse_of_opulence, castle_vantress, desolate_lighthouse,
+    kher_keep, temple_of_epiphany, wandering_fumarole, command_tower, ash_barrens,
+    izzet_boilerworks, myriad_landscape, path_of_ancestry, prismari_campus, reliquary_tower,
+    temple_of_the_false_god, terrain_generator, island, island, island, island, island, island,
+    island, island, island, island, island, island, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    baeloth_barrityl_entertainer, clan_crafter, artificer_class, astral_dragon,
+    mocking_doppelganger, bothersome_quasit, death_kiss, loot_dispute, spectacular_showdown,
+    angler_turtle,
+];
