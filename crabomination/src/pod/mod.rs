@@ -790,6 +790,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::NELLY_COMMANDERS,
             main: decks::NELLY_MAIN,
         },
+        // Ninety-fourth: the eighty-fourth official list (Family Matters,
+        // BLC) — Jeskai tokens and offspring under Zinnia, Valley's Voice.
+        // `--pod-decks 94`.
+        PodDeck {
+            name: "Zinnia, Valley's Voice (URW)",
+            commanders: decks::ZINNIA_COMMANDERS,
+            main: decks::ZINNIA_MAIN,
+        },
     ]
 }
 
@@ -1330,6 +1338,7 @@ mod tests {
             ("Atarka", [0xA7A4, 99, 9023]),
             // CR 701.15 — goad from resolutions, holds and attachments.
             ("Nelly Borca", [0xBE11, 100, 9024]),
+            ("Zinnia", [0x2177, 101, 9025]),
         ] {
             let precon = *field.iter().find(|d| d.name.starts_with(name)).expect("the precon seat");
             assert_eq!(precon.card_count(), 100);
