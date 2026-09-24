@@ -57,6 +57,7 @@ lists were picked.
 | **Vampiric Bloodlust** (C17 precon) BRW | Edgar Markov | BRW | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Calling All Angels** (FDC precon) W | Giada, Font of Hope | W | 100 | ✅ complete |
 | **Guided by Nature** (C14 precon) G | Freyalise, Llanowar's Fury (**planeswalker**) | G | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
+| **Animated Army** (BLC precon) RG | Bello, Bard of the Brambles | RG | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not
@@ -327,6 +328,29 @@ is **not a loop**: Gravemother's encore at 24 opponents made 21 Brood Sliver
 tokens, and 21 Broods × ~40 connecting Slivers minted 813 tokens in one combat.
 Four-seat pods beside hand-built Edgar / Gravemother / Clavileño (seed 10052,
 1,000 games, all decided): C17 Edgar 19.6 %, hand-built Edgar **41.3 %**.
+
+The **twenty-eighth** is Bloomburrow Commander's **Animated Army**
+(`AnimatedArmy_BLC`), the field's first Gruul identity: Bello animates the
+big artifacts and enchantments on its turn. Seventeen cards were missing; six
+primitives — Treasure mana provenance (`ManaPool`'s counter +
+`Predicate::CastWithTreasureMana`, Alchemist's Talent / Rain of Riches),
+`Effect::RevealTopMayCastOneFree` (Sunbird's Invocation), `Effect::WithX` +
+`SelectionRequirement::PutOntoBattlefieldBySource` (Kodama of the East Tree's
+equal-or-lesser put and its no-chain clause) and
+`Effect::EachPlayerDrawsDamageTheyDealtToSource` (Grothama). ⚠ **Bello found a
+layer bug**: the continuous-effect matcher had no mana-value leaf, so
+`Not(ManaValueAtMost(3))` was true of everything and Mind Stone became a 4/4.
+Residuals: **Evercoat Ursine** can't play a hidden land; **Grothama**'s fight
+offer is its own trigger asking the attacker's controller, not a granted
+ability; **Tendershoot Dryad**'s ascend is checked on entry and at each upkeep.
+Seed 10071, 1,000 games at 28 seats: **860 decided, 140 action caps, 0 board
+caps, zero panics, every card of all twenty-eight lists played** (1,400
+distinct). The caps are the per-seat budget binding, not loops: passes per
+turn grow with the table, so 5,000 actions a seat is about nineteen rounds at
+28 seats, and the game read (17) had thirteen players alive on stalled boards
+of 20-31 permanents at turn 536. Bello wins 0.9 % there and 5.8 % of
+four-seat pods beside Ghalta / Freyalise / Tatyova (seed 10072, all decided —
+Ghalta takes 80.8 %).
 
 The **twenty-seventh** is Commander 2014's **Guided by Nature**
 (`GuidedByNature_C14`) — mono-green Elves under Freyalise, the field's second
