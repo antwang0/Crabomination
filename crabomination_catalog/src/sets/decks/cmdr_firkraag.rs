@@ -409,31 +409,6 @@ pub fn mocking_doppelganger() -> CardDefinition {
     }
 }
 
-/// Psychic Impetus — enchanted creature gets +2/+2 and is goaded; when it
-/// attacks, you scry 2.
-pub fn psychic_impetus() -> CardDefinition {
-    CardDefinition {
-        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
-        static_abilities: vec![
-            StaticAbility {
-                description: "Enchanted creature gets +2/+2.",
-                effect: StaticEffect::PumpPT {
-                    applies_to: Selector::AttachedTo(Box::new(Selector::This)),
-                    power: 2,
-                    toughness: 2,
-                },
-            },
-            StaticAbility { description: "Enchanted creature is goaded.", effect: StaticEffect::AttachedIsGoaded },
-        ],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Attacks, EventScope::EnchantedBySource),
-            effect: Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
-        }],
-        ..enchantment("Psychic Impetus", cost(&[generic(2), u()]))
-    }
-}
-
 /// Pursued Whale — enters: each opponent gets a 1/1 Pirate that can't block
 /// and makes their creatures attack each combat; spells your opponents cast
 /// targeting it cost {3} more.

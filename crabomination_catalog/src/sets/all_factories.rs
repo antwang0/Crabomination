@@ -2941,7 +2941,6 @@ static DECKS: &[Factory] = &[
     super::decks::firkraag_cunning_instigator,
     super::decks::loot_dispute,
     super::decks::mocking_doppelganger,
-    super::decks::psychic_impetus,
     super::decks::pursued_whale,
     super::decks::rowan_kenrith,
     super::decks::sly_instigator,
