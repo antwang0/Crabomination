@@ -118,6 +118,7 @@ lists were picked.
 | **Witherbloom Pestilence** (SOC precon) BG | Dina, Essence Brewer | BG | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Silverquill Statement** (C21 precon) WB | Breena, the Demagogue | WB | 100 | 🟡 all 100 implemented, 7 carry residuals (below) |
 | **Draconic Domination** (C17 precon) WUBRG | The Ur-Dragon | WUBRG | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
+| **Silverquill Influence** (SOC precon) WB | Killian, Decisive Mentor | WB | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Blame Game** (MKC precon) RW | Nelly Borca, Impulsive Accuser | RW | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Temur Roar** (TDC precon) GUR | Eshki, Temur's Roar | GUR | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Adaptive Enchantment** (C18 precon) GWU | Estrid, the Masked (**planeswalker**) | GWU | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
@@ -1189,6 +1190,25 @@ Arrogance keeps each player's best; Victory Chimes's mana is yours. Four-seat
 pods beside Sigarda / Teval / Disa (seed 11088, 1,000 games, all decided):
 Breena 25.1 %; census: no card of the four unplayed; 6 and 8 seats and a
 Strixhaven-only pod (seed 11089): 3,000 / 3,000 decided after the fix.
+`--bench` byte-identical.
+
+The **hundred-and-fifth** is Secrets of Strixhaven Commander's **Silverquill
+Influence** (`SilverquillInfluence_SOC`, 2026-04-24) — Orzhov Auras and goad
+under Killian, Decisive Mentor, `--pod-decks 105` (committed as 103 while two
+concurrent seats landed). Seventeen cards were
+missing (`cmdr_killian.rs`). The primitives: `R::EnchantedByYourAura` (a
+permanent with an Aura its viewer controls attached — Killian's draw,
+Eriette's attack shield) and a card `filter` on
+`Effect::RevealTopMayCastOneFree` (Herald of Amity casts only an Aura).
+Residuals: **Armored Skyhunter** leaves an Equipment unattached; **Coercive
+Impetus** renews its goad by a beginning-of-combat trigger; **Herald of
+Amity** reveals rather than exiles; **Intermediate Chirography** reads
+"modified" as "had counters". Four-seat pods beside Sigarda / Teval / Disa (seed 11094,
+1,000 games, all decided): Killian 36.1 %; census: no card of the four
+unplayed; 6 seats (seed 11095) 1,000 / 1,000 decided. 8 seats (seed 11095)
+board-capped 2 / 1,000 on Trostani's Storm Herd cast at 3,672 and 4,481 life
+(1,025 Pegasi each); ⚠ the bot now holds a token spell that would carry the
+battlefield past `MAX_BATTLEFIELD`, and the rerun is 1,000 / 1,000 decided.
 `--bench` byte-identical.
 
 The **ninety-ninth** is Commander 2017's **Draconic Domination**

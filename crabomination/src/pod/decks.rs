@@ -3213,3 +3213,34 @@ pub const DRACONIC_RAGE_MAIN: &[CardFactory] = &[
     dragonborn_champion, klauths_will, wulfgar_of_icewind_dale, barbarian_class,
     earth_cult_elemental, component_pouch, sword_of_hours, underdark_rift,
 ];
+
+pub const KILLIAN_COMMANDERS: &[CardFactory] = &[killian_decisive_mentor];
+
+/// **Silverquill Influence**, the Secrets of Strixhaven Commander deck (SOC),
+/// exactly as MTGJSON's `SilverquillInfluence_SOC` prints it: 83 nonbasic
+/// cards + 8 Plains + 8 Swamps = 99. Orzhov Auras and goad
+/// under Killian, Decisive Mentor.
+pub const KILLIAN_MAIN: &[CardFactory] = &[
+    scriv_the_obligator, eiganjo_dynastorian, forum_filibuster, herald_of_amity,
+    changing_loyalty, coercive_impetus, intermediate_chirography, defacing_duskmage,
+    eclipsed_steppe, turbulent_moor, umbral_expanse, fabled_passage, eldrazi_conscription,
+    ajanis_chosen, angelic_destiny, archon_of_suns_grace, armored_skyhunter,
+    combat_calligrapher, eidolon_of_countless_battles, firemane_commando, gift_of_immortality,
+    kor_spiritdancer, land_tax, mangara_the_diplomat, nils_discipline_enforcer,
+    pearl_ear_imperial_advisor, promise_of_loyalty, redemption_arc, shielded_by_faith,
+    songbirds_blessing, sram_senior_edificer, starfield_mystic, winds_of_rath, doomwake_giant,
+    ghoulish_impetus, keen_duelist, anguished_unmaking, breena_the_demagogue,
+    eriette_of_the_charmed_apple, inkshield, shadrix_silverquill, tomik_wielder_of_law,
+    vanishing_verse, caves_of_koilos, desolate_mire, exotic_orchard, fetid_heath,
+    isolated_chapel, shineshadow_snarl, temple_of_silence, war_room, flickering_ward,
+    fallen_ideal, screams_from_within, arcane_signet, sol_ring, command_tower, forum_of_amity,
+    terramorphic_expanse, chains_of_custody, darksteel_mutation, ghostly_prison,
+    martial_impetus, raffines_guidance, sages_reverie, secret_rendezvous, sentinels_eyes,
+    sheltered_by_ghosts, spirit_mantle, transcendent_envoy, animate_dead, hateful_eidolon,
+    parasitic_impetus, fracture, killian_ink_duelist, fellwar_stone, talisman_of_hierarchy,
+    arcane_lighthouse, bojuka_bog, path_of_ancestry, silverquill_campus, study_hall,
+    sunlit_marsh,
+    // Basics: 8 plains, 8 swamp
+    plains, plains, plains, plains, plains, plains, plains, plains, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp,
+];

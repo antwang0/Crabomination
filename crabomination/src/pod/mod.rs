@@ -874,6 +874,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::DRACONIC_RAGE_COMMANDERS,
             main: decks::DRACONIC_RAGE_MAIN,
         },
+        // Hundred-and-fifth: the ninety-fifth official list (Silverquill
+        // Influence, SOC) — Orzhov Auras and goad under Killian, Decisive
+        // Mentor. `--pod-decks 105`.
+        PodDeck {
+            name: "Killian, Decisive Mentor (WB)",
+            commanders: decks::KILLIAN_COMMANDERS,
+            main: decks::KILLIAN_MAIN,
+        },
     ]
 }
 
