@@ -127,6 +127,7 @@ lists were picked.
 | **Death Toll** (DSC precon) BG | Winter, Cynical Opportunist | BG | 100 | 🟡 all 100 implemented, 6 carry residuals (below) |
 | **Mind Seize** (C13 precon) UBR | Jeleva, Nephalia's Scourge | UBR | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **20 Ways to Win** (SLD) WUBRG | Go-Shintai of Life's Origin | WUBRG | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
+| **Cabaretti Cacophony** (NCC precon) RGW | Kitt Kanto, Mayhem Diva | RGW | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not
@@ -1185,6 +1186,7 @@ Breena 25.1 %; census: no card of the four unplayed; 6 and 8 seats and a
 Strixhaven-only pod (seed 11089): 3,000 / 3,000 decided after the fix.
 `--bench` byte-identical.
 
+<<<<<<< Updated upstream
 The **ninety-ninth** is Commander 2017's **Draconic Domination**
 (`DraconicDomination_C17`) — five-color Dragons under The Ur-Dragon (committed
 as 92, 97 and 98 while seven concurrent seats landed; Territorial Hellkite
@@ -1202,6 +1204,25 @@ no actor). Residual: **Orator of Ojutai** reads board and hand instead of a
 reveal. Four-seat pods beside Sigarda / Teval / Disa (seed 11092, 1,000 games,
 all decided): The Ur-Dragon 25.1 %; census: no card of the four unplayed; 6
 and 8 seats (seed 11093) 2,000 / 2,000 decided. `--bench` byte-identical.
+=======
+The **ninety-eighth** is Streets of New Capenna Commander's **Cabaretti
+Cacophony** (`CabarettiCacophony_NCC`) — Naya Citizens, alliance and goad under
+Kitt Kanto, Mayhem Diva, reached by `--pod-decks 98` (seat 96 before rebasing
+over two others). Sixteen cards were missing (`cmdr_kitt.rs`). The
+primitives: `Effect::EachOpponentChooses` (`effects/politics.rs` — every
+living opponent picks in turn order, then each pick's body runs with
+`PlayerRef::CurrentVoter` bound to its chooser; Master of Ceremonies, Seize
+the Spotlight; not a CR 701.38 vote) and `R::BasePowerToughnessIs` (Bess).
+The structural audit caught Killer Service nesting `MaySacrifice` inside
+`MayPay` (the inner ask replays the outer answer); it pays, then sacrifices
+the engine's pick. Residuals: **Excess** counts your creatures that damaged a
+player; **Killer Service**'s token is the engine's pick; **Sizzling
+Soloist**'s must-attack runs until your next turn; **Vivien's Stampede**
+draws at end of combat; **Zurzoth**'s loot reaches one defender per batch.
+Pods (release, seed 10261, 1,000 games beside Go-Shintai / Jeleva / Winter):
+1,000/1,000 decided, no card of the four lists unplayed, Kitt 16.8 %.
+`--bench` byte-identical.
+>>>>>>> Stashed changes
 
 The **ninety-second** is the Secret Lair **20 Ways to Win** (`20WaysToWin_SLD`)
 — alternate win conditions, Gates and Shrines under Go-Shintai of Life's
