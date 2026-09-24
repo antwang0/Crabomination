@@ -4388,8 +4388,8 @@ fn pick_combat_only_instant(state: &GameState, seat: usize, w: &EvalWeights) -> 
             }
         } else {
             let (target, additional_targets) = state.auto_targets_for_effect_all_slots(&def.effect, seat, None);
-            // The engine takes a targeted cast with no target (see TODO), so
-            // an attacker-only instant needs the attacker it names.
+            // An attacker-only instant needs the attacker it names: with no
+            // target the cast is illegal (CR 601.2c), so skip the dry run.
             if target.is_none() && !def.cast_only_during_combat {
                 continue;
             }

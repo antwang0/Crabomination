@@ -667,8 +667,8 @@ census found Nemesis Trap castable by no bot path**: "target attacking
 creature" exists only in combat, and the rule-based defensive picker skips
 exile by design, so `pick_combat_only_instant` now also takes an instant whose
 first target requires an attacker. ⚠ Behind it, an **engine gap**: a targeted
-spell is accepted with no target at all (Murder and Doom Blade too — CR
-601.2c; TODO). Residual: **Footbottom Feast** picks its cards as it resolves.
+spell was accepted with no target at all (Murder and Doom Blade too — CR
+601.2c; since enforced by another session). Residual: **Footbottom Feast** picks its cards as it resolves.
 Debug pods beside Daxos / Ixhel / Edgar / Sigarda (seeds 9261/9262, 60 games)
 decided 60/60, zero panics; after the picker fix a 120-game census (seed 9263)
 leaves no card unplayed. Ghave wins 0–4 % of those pods. `--bench`
