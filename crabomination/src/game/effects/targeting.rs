@@ -797,6 +797,14 @@ impl GameState {
         };
         let mut additional = Vec::new();
         let mut already_picked: Vec<CardId> = Vec::new();
+        // CR 601.2c — "for each opponent, … target … that player controls"
+        // (`ForEachOpponentTarget`): no two picks may share a controller, the
+        // rule the cast validator enforces. Without it the walk offered a
+        // second permanent of the same opponent and the whole cast was
+        // rejected, so the bot never cast Desecrate Reality into a board
+        // where only one opponent had targets.
+        let per_opponent = eff.per_opponent_targets(mode);
+        let mut picked_controllers: Vec<usize> = Vec::new();
         let mut slot: u8 = if slot0_filter.is_some() { 0 } else { 1 };
         // Loop-invariant: the seat does not change between slots.
         let opp = self
@@ -951,6 +959,12 @@ impl GameState {
                         Target::Permanent(id) => Some(*id),
                         _ => None,
                     }));
+                    if per_opponent {
+                        picked_controllers.clear();
+                        picked_controllers.extend(
+                            already_picked.iter().filter_map(|id| self.battlefield_find(*id)).map(|c| c.controller),
+                        );
+                    }
                     // Per *slot*, not per effect: Homesickness is
                     // "target player draws two" + "tap and stun target
                     // creature", and the whole-effect classifier reads the
@@ -985,7 +999,10 @@ impl GameState {
                     // `<` reproduces it either way.
                     let mut best: Option<(u8, bool, i32, CardId)> = None;
                     for c in self.battlefield.iter() {
-                        if already_picked.contains(&c.id) || !is_legal_bf(c) {
+                        if already_picked.contains(&c.id)
+                            || (per_opponent && picked_controllers.contains(&c.controller))
+                            || !is_legal_bf(c)
+                        {
                             continue;
                         }
                         let power = self

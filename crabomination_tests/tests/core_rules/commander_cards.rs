@@ -1803,3 +1803,28 @@ fn a_spell_that_targets_a_permanent_you_control() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).is_some(), "countered");
 }
+
+/// CR 601.2c — a "for each opponent, target … that player controls" spell
+/// (Desecrate Reality) whose targets all sit under one opponent: the bot
+/// proposes one target, not two of the same controller the cast would
+/// reject. Regression: the bot never cast Desecrate Reality in 1,000 pods.
+#[test]
+fn bot_picks_at_most_one_target_per_opponent() {
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    let mut g = game_with_format(Format::Commander, 3);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    for _ in 0..8 {
+        g.add_card_to_battlefield(0, catalog::wastes());
+    }
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let d = g.add_card_to_hand(0, catalog::desecrate_reality());
+    let action = HeuristicBot::new().next_action(&g, 0).expect("the bot acts");
+    assert!(
+        matches!(&action, GameAction::CastSpell { card_id, additional_targets, .. }
+            if *card_id == d && additional_targets.is_empty()),
+        "expected a one-target Desecrate Reality, got {action:?}",
+    );
+}
