@@ -4981,6 +4981,7 @@ impl GameState {
                     let pl = &mut *self.players[p];
                     pl.was_dealt_damage_this_turn = true;
                     pl.damage_taken_this_turn = pl.damage_taken_this_turn.saturating_add(amount);
+                    pl.greatest_hit_this_turn = pl.greatest_hit_this_turn.max(amount);
                     pl.combat_damage_taken_this_turn =
                         pl.combat_damage_taken_this_turn.saturating_add(amount);
                     if !pl.creatures_that_damaged_me_this_turn.contains(&atk_id) {

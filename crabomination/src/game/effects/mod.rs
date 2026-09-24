@@ -18,6 +18,7 @@ mod fight_each;
 pub(crate) use eval::PrintedGates;
 pub(crate) mod events;
 mod movement;
+mod opponent_choice;
 mod player_scope;
 mod reselect;
 mod reveal_cast;
@@ -5805,6 +5806,18 @@ impl GameState {
                         }
                         continue;
                     }
+                    // A dies trigger's card is already in a graveyard
+                    // (Epochrasite: "exile it with three time counters").
+                    if let Some(seat) = (0..self.players.len())
+                        .find(|&s| self.players[s].graveyard.iter().any(|c| c.id == cid))
+                    {
+                        if let Some(mut card) = Self::take_card(&mut self.players[seat].graveyard, cid) {
+                            card.granted_suspend = true;
+                            card.add_counters(crate::card::CounterType::Time, *time_counters);
+                            self.exile.push(card);
+                        }
+                        continue;
+                    }
                     self.remove_from_battlefield_to_exile(cid);
                     events.push(GameEvent::PermanentExiled { card_id: cid });
                     if let Some(c) = self.exile.iter_mut().find(|c| c.id == cid) {
@@ -11169,6 +11182,10 @@ impl GameState {
 
             // CR 509.4 — mint a token already blocking the targeted attacker.
             Effect::CopyAttackersAsBlockers => self.copy_attackers_as_blockers(ctx, events),
+            Effect::EachPlayerRecyclesArtifacts => self.each_player_recycles_artifacts(ctx, events),
+            Effect::OpponentChoosesPermanentThen { filter, body } => {
+                self.opponent_chooses_permanent_then(filter, body, effect, ctx, events)
+            }
             Effect::ChooseGraveyardCreaturesEachMayReturn => {
                 self.choose_graveyard_creatures_each_may_return(ctx, events)
             }

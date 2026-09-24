@@ -1337,6 +1337,11 @@ pub enum StaticEffect {
     /// Nemesis): the player this permanent chose as it entered
     /// (`CardInstance::chosen_player`).
     DoubleDamageToChosenPlayer,
+    /// CR 614.5 — "If a source controlled by one of the chosen players would
+    /// deal damage to the other chosen player or a permanent that player
+    /// controls, that source deals double that damage" (Bitter Feud), with
+    /// the two players this permanent's controller and its `chosen_player`.
+    DoubleDamageBetweenYouAndChosenPlayer,
     /// CR 614.5 — "If a creature you control that entered this turn would deal
     /// damage, it deals twice that much damage instead." (Neriv, Heart of the
     /// Storm.) Combat and noncombat alike; consulted by `scale_damage_to`.

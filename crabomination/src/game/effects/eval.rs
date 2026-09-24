@@ -818,6 +818,12 @@ impl GameState {
                 .unwrap_or(0),
             Value::LibrarySizeOf(p) => self.resolve_player(p, ctx).map(|p| self.players[p].library.len() as i32).unwrap_or(0),
             Value::XFromCost => ctx.x_value as i32,
+            Value::GreatestDamageFromOneSourceThisTurn => {
+                let to_players = self.players.iter().map(|p| p.greatest_hit_this_turn).max().unwrap_or(0);
+                let to_permanents =
+                    self.battlefield.iter().map(|c| c.max_damage_from_single_source()).max().unwrap_or(0);
+                to_players.max(to_permanents) as i32
+            }
             Value::CreatureDeathsThisTurnMatching { filter } => self
                 .deaths
                 .creature_deaths_this_turn

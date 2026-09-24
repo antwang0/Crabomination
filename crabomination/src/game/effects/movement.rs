@@ -1367,8 +1367,11 @@ impl GameState {
                 {
                     c.damaged_players_this_game.push(p);
                 }
-                self.players[p].damage_taken_this_turn =
-                    self.players[p].damage_taken_this_turn.saturating_add(amount);
+                {
+                    let pl = &mut *self.players[p];
+                    pl.damage_taken_this_turn = pl.damage_taken_this_turn.saturating_add(amount);
+                    pl.greatest_hit_this_turn = pl.greatest_hit_this_turn.max(amount);
+                }
                 // Record the damaging creature so "destroy target creature
                 // that dealt damage to you this turn" (Spear of Heliod) can
                 // filter targets. Only track battlefield creatures.

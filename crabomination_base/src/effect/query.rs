@@ -1946,6 +1946,8 @@ impl Effect {
             Effect::RevealUntilLandsToBattlefield { .. } => false,
             Effect::CopyAttackersAsBlockers => false,
             Effect::ChooseGraveyardCreaturesEachMayReturn => false,
+            Effect::EachPlayerRecyclesArtifacts => false,
+            Effect::OpponentChoosesPermanentThen { .. } => false,
             Effect::RevealUntilMatchingToBattlefield { count, .. } => value_has_target(count),
             Effect::ClashWithOpponent { .. } => false,
             Effect::OnAttackedUntilYourNextTurn { .. } => false,
