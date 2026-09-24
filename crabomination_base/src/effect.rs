@@ -5444,8 +5444,15 @@ pub enum Effect {
     /// end of turn. Put the rest on the bottom in a random order." Winota,
     /// Joiner of Forces. No-op outside combat. Auto-picks the highest-power
     /// match; the new attacker hits the same defender the triggering creature
-    /// (`trigger_source`) is attacking.
-    LookTopMayDeployAttacking { count: Value, filter: SelectionRequirement },
+    /// (`trigger_source`) is attacking. With `return_at_end_of_combat` the
+    /// indestructible grant is replaced by a return to its owner's hand at end
+    /// of combat (Arthur, Marigold Knight).
+    LookTopMayDeployAttacking {
+        count: Value,
+        filter: SelectionRequirement,
+        #[serde(default)]
+        return_at_end_of_combat: bool,
+    },
     /// Unattach each resolved Equipment/Aura-like permanent from its host
     /// (Stolen Uniform's end-of-theft cleanup). Auras die to SBA afterward;
     /// Equipment simply sits unattached.
@@ -7261,6 +7268,10 @@ pub enum Effect {
     /// sweep once the source untaps or leaves; while it holds something the
     /// source skips its own untap step ("you may choose not to untap").
     GainControlWhileSourceTapped { what: Selector },
+    /// CR 611.2c — "gain control of `what` for as long as it has a `kind`
+    /// counter on it" (Shield Broker's shield counter). The SBA sweep hands
+    /// it back once the last such counter is gone.
+    GainControlWhileCounter { what: Selector, kind: crate::card::CounterType },
     /// CR 611.2c — "gain control of that permanent for as long as that Aura is
     /// attached to it" (Eriette, the Beguiler). The Aura is
     /// `ctx.trigger_source`; the stolen permanent is whatever it's attached to.

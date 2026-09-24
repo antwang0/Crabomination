@@ -3953,6 +3953,7 @@ impl GameState {
             R::Untapped => Some(!card.tapped),
             R::Unattached => Some(card.attached_to.is_none() && card.attached_to_player.is_none()),
             R::EnteredThisTurn => Some(card.entered_turn == Some(self.turn_number)),
+            R::PaidGrantedOffspring => Some(card.paid_granted_offspring()),
             // CR 603.10 — an attacker that just left reads as attacking.
             R::IsAttacking => Some(self.is_or_was_attacking(cid)),
             R::IsAttackingYou => Some(self.creature_is_attacking_seat(cid, controller)),
@@ -4720,6 +4721,7 @@ impl GameState {
                         card.definition.is_creature()
                             && (card.definition.power == *n || card.definition.toughness == *n)
                     }
+                    R::BasePowerIs(n) => card.definition.is_creature() && card.definition.power == *n,
                     R::ExiledInsteadOfDyingThisTurn => self.turn.dies_to_exile_eot.contains(&card.id)
                         && self.exile.iter().any(|c| c.id == card.id),
                     R::HasSupertype(st) => has_stype(st),
@@ -4781,6 +4783,7 @@ impl GameState {
                     }
                     // CR 603.4 — entered this turn (stamped on every ETB).
                     R::EnteredThisTurn => card.entered_turn == Some(self.turn_number),
+                    R::PaidGrantedOffspring => card.paid_granted_offspring(),
                     R::EnteredFromGraveyardThisTurn => {
                         self.entered_from_graveyard_this_turn.contains(cid)
                     }
@@ -5672,6 +5675,7 @@ impl GameState {
             // CR 603.4 — entered this turn (hidden-zone cards are never
             // stamped, so this is false off the battlefield).
             R::EnteredThisTurn => card.entered_turn == Some(self.turn_number),
+            R::PaidGrantedOffspring => card.paid_granted_offspring(),
             R::EnteredFromGraveyardThisTurn => {
                 self.entered_from_graveyard_this_turn.contains(&card.id)
             }
@@ -6011,6 +6015,7 @@ impl GameState {
             R::BasePowerOrToughnessIs(n) => {
                 card.definition.is_creature() && (card.definition.power == *n || card.definition.toughness == *n)
             }
+            R::BasePowerIs(n) => card.definition.is_creature() && card.definition.power == *n,
             R::ExiledInsteadOfDyingThisTurn => self.turn.dies_to_exile_eot.contains(&card.id)
                 && self.exile.iter().any(|c| c.id == card.id),
             // "With different names" — excludes anything sharing a name with

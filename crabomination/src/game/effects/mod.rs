@@ -18140,6 +18140,7 @@ impl GameState {
                             while_source_tapped: false,
                             while_source_attached: false,
                             while_you_control_source: false,
+                            while_counter: None,
                             installed,
                         });
                     }
@@ -18165,6 +18166,7 @@ impl GameState {
                             while_source_tapped: false,
                             while_source_attached: false,
                             while_you_control_source: false,
+                            while_counter: None,
                             installed: None,
                         });
                     }
@@ -18190,6 +18192,7 @@ impl GameState {
                             while_source_tapped: false,
                             while_source_attached: false,
                             while_you_control_source: true,
+                            while_counter: None,
                             installed: None,
                         });
                     }
@@ -18267,6 +18270,7 @@ impl GameState {
                         while_source_tapped: false,
                         while_source_attached: true,
                         while_you_control_source: false,
+                        while_counter: None,
                         installed: None,
                     });
                 }
@@ -18293,6 +18297,7 @@ impl GameState {
                         while_source_tapped: false,
                         while_source_attached: true,
                         while_you_control_source: false,
+                        while_counter: None,
                         installed: None,
                     });
                 }
@@ -18317,6 +18322,32 @@ impl GameState {
                             while_source_tapped: true,
                             while_source_attached: false,
                             while_you_control_source: false,
+                            while_counter: None,
+                            installed: None,
+                        });
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::GainControlWhileCounter { what, kind } => {
+                // CR 611.2c — the steal lasts while the permanent keeps a
+                // `kind` counter; the SBA sweep unwinds it once none is left.
+                let new_ctrl = ctx.controller;
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    if let Some(prev) = self.change_control(cid, new_ctrl)
+                        && !self.temporary_control.iter().any(|t| t.card == cid)
+                    {
+                        self.temporary_control.push(crate::game::TempControl {
+                            card: cid,
+                            original_controller: prev,
+                            duration: crate::effect::Duration::Permanent,
+                            source: ctx.source,
+                            while_source_tapped: false,
+                            while_source_attached: false,
+                            while_you_control_source: false,
+                            while_counter: Some(*kind),
                             installed: None,
                         });
                     }
@@ -20175,9 +20206,16 @@ impl GameState {
                     if self.attacking.iter().any(|a| a.attacker == id) {
                         continue;
                     }
+                    // A source that isn't attacking (Echoing Assault, an
+                    // enchantment) sends it alongside the attacker it
+                    // targeted — "attacking that player".
                     let target = ctx
                         .source
                         .and_then(|src| self.attacking.iter().find(|a| a.attacker == src))
+                        .or_else(|| {
+                            let Some(Target::Permanent(t)) = ctx.targets.first() else { return None };
+                            self.attacking.iter().find(|a| a.attacker == *t)
+                        })
                         .map(|a| a.target)
                         .or_else(|| {
                             // CR 506.2 / 800.4a — a seat that has left the
@@ -25794,7 +25832,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::LookTopMayDeployAttacking { count, filter } => {
+            Effect::LookTopMayDeployAttacking { count, filter, return_at_end_of_combat } => {
                 use crate::game::types::AttackTarget;
                 // Only meaningful mid-combat.
                 if self.attacking.is_empty() {
@@ -25838,7 +25876,33 @@ impl GameState {
                     if let Some(target) = target
                         && self.put_into_combat_attacking(id, target)
                     {
-                        self.grant_keyword_eot(id, crate::card::Keyword::Indestructible);
+                        if *return_at_end_of_combat {
+                            self.delayed_triggers.push(crate::game::types::DelayedTrigger {
+                                controller: p,
+                                source: ctx.source.unwrap_or(CardId(0)),
+                                kind: DelayedKind::EndOfCombat,
+                                // Only while it is still on the battlefield:
+                                // one that died in combat stays dead.
+                                effect: Effect::If {
+                                    cond: crate::effect::Predicate::EntityMatches {
+                                        what: Selector::Target(0),
+                                        filter: crate::card::SelectionRequirement::OnBattlefield,
+                                    },
+                                    then: Box::new(Effect::Move {
+                                        what: Selector::Target(0),
+                                        to: ZoneDest::Hand(crate::effect::PlayerRef::OwnerOfMoved),
+                                    }),
+                                    else_: Box::new(Effect::Noop),
+                                },
+                                target: Some(Target::Permanent(id)),
+                                bound_token: None,
+                                bound_subject: None,
+                                fires_once: true,
+                                expires_after_turn: None,
+                            });
+                        } else {
+                            self.grant_keyword_eot(id, crate::card::Keyword::Indestructible);
+                        }
                     }
                 }
                 // Bottom the rest in a random order (CR 401.4).
@@ -26535,6 +26599,7 @@ impl GameState {
                             while_source_tapped: false,
                             while_source_attached: false,
                             while_you_control_source: false,
+                            while_counter: None,
                             installed: None,
                         });
                     }

@@ -2313,6 +2313,12 @@ pub enum Keyword {
     /// The power is the attacker's computed power at block declaration, so the
     /// grant itself needs no power filter the layers can't route.
     CantBeBlockedExceptByWhilePowerAtMost(u32, Box<SelectionRequirement>),
+    /// CR 509.1b — "can't be blocked" only while this creature's power or
+    /// toughness is `max` or less (Tetsuko Umezawa, Fugitive, granting it to
+    /// every creature you control). Read off the attacker's computed stats at
+    /// block declaration, so the grant needs no P/T filter the layers can't
+    /// route.
+    UnblockableWhilePowerOrToughnessAtMost(u32),
     /// CR 509.1b — "This creature can't be blocked unless all creatures
     /// defending player controls block it" (Tromokratis). Enforced against
     /// the finished block assignment in `declare_blockers`.
@@ -2608,6 +2614,10 @@ pub enum SelectionRequirement {
     /// control with base power or toughness 1" (Sword of the Squeak). Reads
     /// the definition, which is the token's for a token.
     BasePowerOrToughnessIs(i32),
+    /// A creature whose printed power is `n` — "creatures you control with
+    /// base power 1" (Zinnia, Rapid Augmenter). Same definition read as
+    /// `BasePowerOrToughnessIs`.
+    BasePowerIs(i32),
     /// The object is in exile because an until-end-of-turn "if it would die,
     /// exile it instead" replacement moved it there this turn
     /// (`dies_to_exile_eot` — Cosmic Intervention's end-step return).
@@ -2858,6 +2868,11 @@ pub enum SelectionRequirement {
     /// entered the battlefield under your control this turn" (Shaile, Dean of
     /// Radiance). Combine with `ControlledByYou` for the controller clause.
     EnteredThisTurn,
+    /// CR 702.175 — a permanent whose spell paid an offspring cost granted to
+    /// it (`StaticEffect::CreatureSpellsGainOffspring`): it was cast kicked
+    /// and carries no kicker or offspring of its own. Cleared when it
+    /// re-enters as a new object (CR 400.7).
+    PaidGrantedOffspring,
     /// True when the candidate entered the battlefield from a graveyard —
     /// or was cast from one — this turn (Prized Amalgam's intervening-if).
     /// Reads `GameState.entered_from_graveyard_this_turn`.
@@ -10356,6 +10371,10 @@ impl CardInstance {
             self.crewed_by.clear();
         }
         self.echo_paid = false;
+        // A kicker / offspring payment belongs to the spell that paid it; a
+        // flickered or reanimated creature was not cast kicked (its ETB
+        // rider and an offspring copy do not fire again).
+        self.kicked = false;
     }
 
     /// CR 400.7 — the leave-side half: what an object's next zone must not
@@ -10366,6 +10385,14 @@ impl CardInstance {
     /// share, and nearly every leaving card holds none of them. The
     /// end-of-turn effects, saddle and crew are `clear_effects_on_zone_
     /// change`'s; the damage is the entry's (`stack.rs`).
+    /// CR 702.175 — see `SelectionRequirement::PaidGrantedOffspring`.
+    pub fn paid_granted_offspring(&self) -> bool {
+        self.kicked
+            && self.definition.has_kicker().is_none()
+            && self.definition.kicker_action_cost.is_none()
+            && self.definition.kicker_options.is_empty()
+    }
+
     pub fn leave_battlefield_state(&mut self) {
         if self.perm_power_bonus != 0 || self.perm_toughness_bonus != 0 {
             self.perm_power_bonus = 0;
@@ -10412,6 +10439,7 @@ impl CardInstance {
             || !self.saddled_by.is_empty()
             || !self.crewed_by.is_empty()
             || self.echo_paid
+            || self.kicked
     }
 
     pub fn clear_effects_on_zone_change(&mut self) {

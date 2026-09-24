@@ -1868,6 +1868,7 @@ impl Effect {
             Effect::GainControlWhileSourceRemains { what }
             | Effect::GainControlWhileYouControlSource { what }
             | Effect::GainControlWhileSourceTapped { what }
+            | Effect::GainControlWhileCounter { what, .. }
             | Effect::CounterAbilityAndDestroySource { what }
             | Effect::WeldArtifacts { what } => sel_has_target(what),
             Effect::CreateToken { who, count, .. }
@@ -2464,6 +2465,7 @@ impl Effect {
             | Effect::GainControlWhileSourceRemains { what }
             | Effect::GainControlWhileYouControlSource { what }
             | Effect::GainControlWhileSourceTapped { what }
+            | Effect::GainControlWhileCounter { what, .. }
             | Effect::GrantKeywordWhileSourceTapped { what, .. }
             | Effect::SacrificeThenRevealUntilSharedType { what }
             | Effect::ExileFromGraveyardBecomeCopy { what }
@@ -4763,6 +4765,7 @@ impl Effect {
                 Effect::GainControlWhileSourceRemains { what }
                 | Effect::GainControlWhileYouControlSource { what }
                 | Effect::GainControlWhileSourceTapped { what }
+                | Effect::GainControlWhileCounter { what, .. }
                 | Effect::GrantKeywordWhileSourceTapped { what, .. }
                 | Effect::SacrificeThenRevealUntilSharedType { what }
                 | Effect::CounterAbilityAndDestroySource { what }

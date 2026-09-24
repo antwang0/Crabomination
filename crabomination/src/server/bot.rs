@@ -6494,6 +6494,9 @@ struct BoardFacts {
     grants_convoke: bool,
     /// Some permanent carries a prepared inset spell.
     prepared: bool,
+    /// A `CreatureSpellsGainOffspring` static is on the board (Zinnia), so a
+    /// hand creature with no kicker of its own has one to pay.
+    grants_offspring: bool,
     /// A `GraveyardCardsHaveEscape*` static is on the board (Kotis).
     grants_escape: bool,
     /// A replicate-granting static is on the board (Hatchery Sliver).
@@ -6511,6 +6514,7 @@ impl BoardFacts {
             repartee: false,
             grants_convoke: false,
             prepared: false,
+            grants_offspring: false,
             grants_escape: false,
             grants_replicate: false,
             grants_gy_cast: false,
@@ -6528,6 +6532,7 @@ impl BoardFacts {
                     SE::GrantConvokeToSpells { .. } | SE::GrantImproviseToSpells { .. } => {
                         f.grants_convoke = true
                     }
+                    SE::CreatureSpellsGainOffspring { .. } => f.grants_offspring = true,
                     SE::GraveyardCardsHaveEscape { .. }
                     | SE::GraveyardCardsHaveEscapeMatching { .. } => f.grants_escape = true,
                     SE::YourISSpellsHaveReplicate | SE::YourSpellsHaveReplicate { .. } => {
@@ -6578,6 +6583,9 @@ fn hand_specialties(state: &GameState, seat: usize, facts: &BoardFacts) -> u32 {
         }
         if def.gift.is_some() {
             m |= spec::GIFT;
+        }
+        if facts.grants_offspring && def.is_creature() {
+            m |= spec::KICKER;
         }
         // Gorex's filtered delve rides the delve block.
         if def.graveyard_exile_discount.is_some() {
@@ -7349,7 +7357,11 @@ pub(super) fn cast_candidates<'a>(
     for c in state.players[seat]
         .hand
         .iter()
-        .filter(|c| c.definition.has_kicker().is_some())
+        .filter(|c| {
+            c.definition.has_kicker().is_some()
+                || (facts.grants_offspring
+                    && state.granted_offspring_cost(seat, &c.definition).is_some())
+        })
     {
         let effect = &c.definition.effect;
         let (target, additional_targets) = if effect.requires_target() {
@@ -7373,7 +7385,7 @@ pub(super) fn cast_candidates<'a>(
             // Offspring (CR 702.166) is pure upside — a free 1/1 token copy
             // with no downside beyond the mana. When affordable, prefer it
             // over the plain cast of the same card (mirrors Conspire above).
-            if c.definition.has_offspring().is_some() {
+            if c.definition.has_offspring().is_some() || c.definition.has_kicker().is_none() {
                 let cid = c.id;
                 unvalidated.retain(
                     |a| !matches!(a, GameAction::CastSpell { card_id, .. } if *card_id == cid),

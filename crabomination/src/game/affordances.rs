@@ -753,11 +753,21 @@ impl GameState {
     ///
     /// [`kickable_hand_cards`]: Self::kickable_hand_cards
     fn kickable_hand_cards_on(&self, template: &GameState, caster: usize) -> Vec<CardId> {
+        // CR 702.175 — a board-granted offspring cost (Zinnia) is a kicker
+        // too; one board walk decides whether any hand creature can have one.
+        let grants_offspring = self.battlefield.iter().any(|c| {
+            c.controller == caster
+                && c.definition.static_abilities.iter().any(|sa| {
+                    matches!(sa.effect, crate::effect::StaticEffect::CreatureSpellsGainOffspring { .. })
+                })
+        });
         let hand: Vec<(CardId, bool, Option<_>)> = self.players[caster]
             .hand
             .iter()
             .filter(|c| {
-                c.definition.has_kicker().is_some() || c.definition.kicker_action_cost.is_some()
+                c.definition.has_kicker().is_some()
+                    || c.definition.kicker_action_cost.is_some()
+                    || (grants_offspring && self.granted_offspring_cost(caster, &c.definition).is_some())
             })
             .map(|c| {
                 let needs_target = c.definition.effect.requires_target();

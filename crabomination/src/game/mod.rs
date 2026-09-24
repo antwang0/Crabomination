@@ -3699,6 +3699,10 @@ pub(crate) struct TempControl {
     /// controls `card`. Swept alongside `while_source_tapped`.
     #[serde(default)]
     pub(crate) while_you_control_source: bool,
+    /// Shield Broker: the steal holds only while `card` has a counter of
+    /// this kind. Swept alongside `while_source_tapped`.
+    #[serde(default)]
+    pub(crate) while_counter: Option<crate::card::CounterType>,
     /// `Duration::UntilEndOfYourNextTurn` (Treasure Nabber): the player
     /// whose next turn it is and the turn the steal began on. Reverted in
     /// that player's first cleanup after `installed.1`.
@@ -18181,6 +18185,13 @@ impl GameState {
                         .max();
                     most.is_some_and(|p| blocker_cp.power < p)
                 }
+                // CR 509.1b — Tetsuko Umezawa's grant.
+                Keyword::UnblockableWhilePowerOrToughnessAtMost(n) => {
+                    let (p, t) = atk_cp
+                        .map(|c| (c.power, c.toughness))
+                        .unwrap_or_else(|| (attacker.power(), attacker.toughness()));
+                    p <= *n as i32 || t <= *n as i32
+                }
                 // CR 509.1b — Kraken of the Straits.
                 Keyword::CantBeBlockedByPowerLessThanCount(f) => {
                     let n = self
@@ -29450,6 +29461,7 @@ fn static_effect_to_effects(
             | StaticEffect::CostReductionWhile { .. }
             | StaticEffect::GraveyardCastCostReduction { .. }
             | StaticEffect::ExileCastCostReduction { .. }
+            | StaticEffect::NonHandCastCostReduction { .. }
             | StaticEffect::PlotCostReduction { .. }
             | StaticEffect::NinjutsuCostReduction { .. }
             | StaticEffect::CostReductionDuringOpponentsTurn { .. }
@@ -29582,6 +29594,7 @@ fn static_effect_to_effects(
             | StaticEffect::UntapOnlyChosenTypeWhileUntapped
             | StaticEffect::MostPermanentsCantPlay
             | StaticEffect::GrantConvokeToSpells { .. }
+            | StaticEffect::CreatureSpellsGainOffspring { .. }
             | StaticEffect::GrantImproviseToSpells { .. }
             | StaticEffect::DoubleDamageToOpponents
             | StaticEffect::DoubleDamageToOpponentPlayers
@@ -30793,6 +30806,7 @@ pub fn attacker_block_bar_kw(k: &Keyword) -> bool {
             | Keyword::CantBeBlockedUnlessDefenderSharedType(_)
             | Keyword::CantBeBlockedByPowerLessThanCount(_)
             | Keyword::CantBeBlockedByPowerLessThanGreatestAmong(_)
+            | Keyword::UnblockableWhilePowerOrToughnessAtMost(_)
             // `can_block_attacker_computed`'s attacker pass.
             | Keyword::Unblockable
             | Keyword::ProtectionFromCreatures

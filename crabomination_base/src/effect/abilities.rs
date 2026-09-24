@@ -552,6 +552,10 @@ pub enum StaticEffect {
     /// the exile-cast paths (foretell, adventure-creature, plotted, impulse
     /// pay-own-cost); clamped at the generic pip.
     ExileCastCostReduction { amount: u32 },
+    /// "Spells you cast from anywhere other than your hand cost {N} less"
+    /// (Fortune Teller's Talent level 3): the top of the library, a
+    /// graveyard, exile or the command zone. Generic mana only.
+    NonHandCastCostReduction { amount: u32 },
     /// Generic cost reduction for the controller's Plot activations from hand
     /// (Doc Aurlock — "Plotting cards from your hand costs {2} less"). Applied
     /// in `plot_card`; clamped at the generic pip.
@@ -3049,6 +3053,12 @@ pub enum StaticEffect {
     /// "[filter] spells you cast have convoke" (CR 702.51 — Chief Engineer).
     /// Consulted by the convoke cast path alongside the printed keyword.
     GrantConvokeToSpells { filter: SelectionRequirement },
+    /// "Creature spells you cast gain offspring {cost} as you cast them"
+    /// (CR 702.175 — Zinnia, Valley's Voice). Read by the kicked cast path
+    /// (`GameState::granted_offspring_cost`) for a creature spell with no
+    /// kicker or offspring of its own; the copy is made by the granting
+    /// permanent's trigger over `SelectionRequirement::PaidGrantedOffspring`.
+    CreatureSpellsGainOffspring { cost: crate::mana::ManaCost },
     /// "[filter] spells you cast have improvise" (CR 702.126 — Inspiring
     /// Statuary). Rides the convoke grant's cast gate and helper paths.
     GrantImproviseToSpells { filter: SelectionRequirement },

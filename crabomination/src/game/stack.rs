@@ -6136,7 +6136,12 @@ impl GameState {
         if self
             .temporary_control
             .iter()
-            .any(|tc| tc.while_source_tapped || tc.while_source_attached || tc.while_you_control_source)
+            .any(|tc| {
+                tc.while_source_tapped
+                    || tc.while_source_attached
+                    || tc.while_you_control_source
+                    || tc.while_counter.is_some()
+            })
         {
             let mut kept = Vec::new();
             for tc in std::mem::take(&mut self.temporary_control) {
@@ -6149,7 +6154,10 @@ impl GameState {
                     && (!tc.while_you_control_source
                         || tc.source.and_then(|s| self.battlefield_find(s)).is_some_and(|src| {
                             self.battlefield_find(tc.card).is_some_and(|c| c.controller == src.controller)
-                        }));
+                        }))
+                    && tc.while_counter.is_none_or(|k| {
+                        self.battlefield_find(tc.card).is_some_and(|c| c.counter_count(k) > 0)
+                    });
                 if holds {
                     kept.push(tc);
                 } else {

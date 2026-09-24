@@ -274,6 +274,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         | Keyword::AttackCostBounce(_)
         | Keyword::CantBeBlockedByPowerLessThanCount(_)
         | Keyword::CantBeBlockedByPowerLessThanGreatestAmong(_)
+        | Keyword::UnblockableWhilePowerOrToughnessAtMost(_)
         | Keyword::CantBeBlockedUnlessAllBlock
         | Keyword::HexproofUnlessAttackingOrBlocking
         | Keyword::CanBlockOnlyFlying

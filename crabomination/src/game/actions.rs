@@ -1741,6 +1741,21 @@ pub(crate) fn cost_reduction_for_spell_full_over<'a>(
                 {
                     reduction += amount;
                 }
+                // A hop cast from the library top or a graveyard is stamped
+                // before this runs; a command-zone cast is neither from hand
+                // nor still in it (the bot's affordability read passes a card
+                // that still sits in the hand, which gets no discount).
+                StaticEffect::NonHandCastCostReduction { amount }
+                    if src.controller == caster
+                        && (from_graveyard
+                            || from_exile
+                            || card.cast_from_library
+                            || card.cast_from_graveyard
+                            || (!card.cast_from_hand
+                                && !state.players[caster].hand.iter().any(|h| h.id == card.id))) =>
+                {
+                    reduction += amount;
+                }
                 StaticEffect::CostReduction { filter, amount }
                     if src.controller == caster
                         && state.evaluate_requirement_on_card(filter, card, caster) =>
@@ -5948,7 +5963,11 @@ impl GameState {
         let capped_used = self.players[p].cast_from_library_top_this_turn;
         self.battlefield.iter().any(|c| {
             c.controller == p
-                && c.definition.static_abilities.iter().any(|sa| match &sa.effect {
+                && c.definition
+                    .static_abilities
+                    .iter()
+                    .filter_map(|sa| self.active_static(&sa.effect, c))
+                    .any(|eff| match eff {
                     // Realmwalker — "creature spells of the chosen type": the
                     // grant's filter reads the granting permanent's choice,
                     // which the source-blind card check can't see, so it is
@@ -8045,6 +8064,32 @@ impl GameState {
         })
     }
 
+    /// CR 702.175 — the offspring cost a `CreatureSpellsGainOffspring` static
+    /// `p` controls grants this creature spell (Zinnia, Valley's Voice).
+    /// `None` for a card with its own kicker or offspring: the kicked cast
+    /// path carries one optional cost, and the printed one wins.
+    pub fn granted_offspring_cost(
+        &self,
+        p: usize,
+        def: &crate::card::CardDefinition,
+    ) -> Option<crate::mana::ManaCost> {
+        if !def.is_creature()
+            || def.has_kicker().is_some()
+            || def.kicker_action_cost.is_some()
+            || !def.kicker_options.is_empty()
+        {
+            return None;
+        }
+        self.battlefield.iter().filter(|c| c.controller == p).find_map(|c| {
+            c.definition.static_abilities.iter().find_map(|sa| match &sa.effect {
+                crate::effect::StaticEffect::CreatureSpellsGainOffspring { cost } => {
+                    Some(cost.clone())
+                }
+                _ => None,
+            })
+        })
+    }
+
     /// CR 702.126 — true when a `StaticEffect::GrantImproviseToSpells`
     /// permanent `p` controls (Inspiring Statuary) grants improvise to this
     /// spell.
@@ -8405,7 +8450,8 @@ impl GameState {
         let kicked = kicked
             && (card.definition.has_kicker().is_some()
                 || card.definition.kicker_action_cost.is_some()
-                || !kicker_options.is_empty());
+                || !kicker_options.is_empty()
+                || self.granted_offspring_cost(p, &card.definition).is_some());
         card.kicked = kicked;
         // Behind a read: `kicked_options` and `spree_modes` below are
         // `CardCold` fields, and a store of an empty list over an empty list
@@ -9259,6 +9305,9 @@ impl GameState {
         // CR 702.32b — fold the optional kicker cost into the total cost.
         if kicked && let Some(kick) = card.definition.has_kicker() {
             cost.symbols.extend(kick.symbols.iter().cloned());
+        } else if kicked && let Some(off) = self.granted_offspring_cost(p, &card.definition) {
+            // CR 702.175 — a granted offspring cost (Zinnia).
+            cost.symbols.extend(off.symbols);
         }
         // …and each chosen "and/or" kicker option (the Volver cycle).
         for i in &card.kicked_options {
