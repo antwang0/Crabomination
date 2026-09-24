@@ -12,6 +12,7 @@ mod cmdr_fdc;
 mod cmdr_otc;
 mod cmdr_angels;
 mod cmdr_bello;
+mod cmdr_disa;
 mod dsk2;
 mod dsk_rooms;
 mod recent_118_132;
