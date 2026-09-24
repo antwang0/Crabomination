@@ -123,6 +123,7 @@ lists were picked.
 | **Blame Game** (MKC precon) RW | Nelly Borca, Impulsive Accuser | RW | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Temur Roar** (TDC precon) GUR | Eshki, Temur's Roar | GUR | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Adaptive Enchantment** (C18 precon) GWU | Estrid, the Masked (**planeswalker**) | GWU | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
+| **Aura of Courage** (AFC precon) GWU | Galea, Kindler of Hope | GWU | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Exit from Exile** (CLB precon) RG | Faldorn, Dread Wolf Herald | RG | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Exquisite Invention** (C18 precon) UR | Saheeli, the Gifted (**planeswalker**) | UR | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Mishra's Burnished Banner** (BRC precon) UBR | Mishra, Eminent One | UBR | 100 | 🟡 all 100 implemented, 6 carry residuals (below) |
@@ -1192,6 +1193,25 @@ pods beside Sigarda / Teval / Disa (seed 11088, 1,000 games, all decided):
 Breena 25.1 %; census: no card of the four unplayed; 6 and 8 seats and a
 Strixhaven-only pod (seed 11089): 3,000 / 3,000 decided after the fix.
 `--bench` byte-identical.
+
+The **hundred-and-sixth** is Adventures in the Forgotten Realms Commander's
+**Aura of Courage** (`AuraOfCourage_AFC`) — Bant Auras and Equipment under
+Galea, Kindler of Hope. Seventeen cards were missing; the primitives:
+`StaticEffect::LibraryTopEquipmentAttachesOnEntry` + `CardCold::attach_on_entry`
+(Galea — the rider rides `statics_granted_triggers_for`, because a resolving
+spell and `fire_self_etb_triggers` gather self-ETBs in two walkers),
+`EquipCostReducedByTargetPower` (Belt of Giant Strength),
+`Effect::ReturnSelfAttachedTo { host }` (Gryff's Boon), CR 706.2's
+`RolledNaturalMax` event (Netherese Puzzle-Ward) and
+`NextSpellHasFlashThisTurn` (Ride the Avalanche, whose delayed "when you next
+cast" trigger now picks its target with the spell's mana value in scope).
+Residuals: Clay Golem rolls on resolution; Song of Inspiration returns the
+cards before the roll; Valiant Endeavor destroys one creature at a time.
+Four-seat pods beside Killian / Vrondiss / Kathril (seed 10250, 1,000 games,
+all decided): Galea 5.3 % — the bot does not build a Voltron threat; beside
+Estrid / Eshki / Nelly (seed 10251): 1,000 / 1,000, 5.3 %; census (seed 10252):
+no card of the four unplayed; strict debug pods (seeds 10253-10255, 4 and 6
+seats): 180 / 180. `--bench` byte-identical.
 
 The **hundred-and-fifth** is Secrets of Strixhaven Commander's **Silverquill
 Influence** (`SilverquillInfluence_SOC`, 2026-04-24) — Orzhov Auras and goad
