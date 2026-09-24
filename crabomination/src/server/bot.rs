@@ -18103,6 +18103,20 @@ fn pick_combat_trick(state: &GameState, seat: usize, w: &EvalWeights) -> Option<
     enum Shape {
         Pump(i32, i32),
         SetBase(i32, i32),
+        /// +X/+t where X is the pumped creature's own power (Unleash Fury's
+        /// "doubles"): the amount is read off the creature the trick lands on.
+        PumpBySelfPower(i32),
+    }
+    fn self_power_amount(e: &Effect) -> Option<i32> {
+        match e {
+            Effect::PumpPT {
+                what: Selector::Target(0) | Selector::TargetFiltered { slot: 0, .. },
+                power: Value::PowerOf(of),
+                toughness: Value::Const(t),
+                duration: Duration::EndOfTurn | Duration::EndOfCombat,
+            } if matches!(**of, Selector::Target(0)) => Some(*t),
+            _ => None,
+        }
     }
     fn set_base_amounts(e: &Effect) -> Option<(i32, i32)> {
         match e {
@@ -18122,7 +18136,12 @@ fn pick_combat_trick(state: &GameState, seat: usize, w: &EvalWeights) -> Option<
         .filter(|c| is_combat_trick(&c.definition))
         .filter(|c| can_afford_in_state_with(state, seat, c, w, &have_mana))
         .filter_map(|c| {
-            pump_amounts(&c.definition.effect).map(|(p, t)| (c.id, None, Shape::Pump(p, t)))
+            pump_amounts(&c.definition.effect)
+                .map(|(p, t)| (c.id, None, Shape::Pump(p, t)))
+                .or_else(|| {
+                    self_power_amount(&c.definition.effect)
+                        .map(|t| (c.id, None, Shape::PumpBySelfPower(t)))
+                })
         })
         .collect();
     // `trick_modes_combat_only`: a modal instant's pump / base-P/T mode is a
@@ -18188,6 +18207,7 @@ fn pick_combat_trick(state: &GameState, seat: usize, w: &EvalWeights) -> Option<
                     let Some(raw) = state.battlefield_find(our_id) else { continue };
                     (bp - raw.definition.power, bt - raw.definition.toughness)
                 }
+                Shape::PumpBySelfPower(t) => (op.max(0), t),
             };
             let saves = dies && ot + t > tp;
             let now_kills = !kills && op + p >= tt;
@@ -24888,6 +24908,31 @@ mod tests {
         assert!(
             matches!(action, Some(GameAction::PassPriority)),
             "no trick needed on a won fight, got {action:?}",
+        );
+    }
+
+    /// A pump whose amount is the creature's own power (Unleash Fury) is a
+    /// trick too: bears blocked by a 0/3 wall double to 4/2 and kill it. It
+    /// used to be held forever — the evaluator only read constant pumps, and
+    /// the main phase leaves a trick alone (1,300 Draconic Destruction pods,
+    /// never cast).
+    #[test]
+    fn bot_casts_a_power_doubling_trick() {
+        let mut g = two_player_game();
+        let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let wall = g.add_card_to_battlefield(1, catalog::wall_of_wood());
+        let fury = g.add_card_to_hand(0, catalog::unleash_fury());
+        g.players[0].mana_pool.add(crate::mana::Color::Red, 2);
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.step = TurnStep::DeclareBlockers;
+        g.set_attacking(vec![Attack { attacker: bears, target: AttackTarget::Player(1) }]);
+        g.set_block_map([(wall, bears)]);
+        g.set_blockers_declared(true);
+        let action = HeuristicBot::new().next_action(&g, 0);
+        assert!(
+            matches!(action, Some(GameAction::CastSpell { card_id, .. }) if card_id == fury),
+            "got {action:?}",
         );
     }
 
