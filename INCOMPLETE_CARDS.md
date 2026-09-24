@@ -1830,6 +1830,8 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Filigree Vector | Growing Threat (MOC) | the counters go on every creature and artifact you control rather than on chosen targets. |
 | 🟡 Path of the Schemer | Growing Threat (MOC) | the creature card is the greatest-power one among all graveyards. |
 | 🟡 Vulpine Harvester | Growing Threat (MOC) | any artifact card in your graveyard may be targeted; the mana-value check runs as the trigger resolves. |
+| 🟡 Dromoka's Command | Call for Backup (MOC) | the fight mode targets only your creature; it fights the greatest-power creature you don't control. |
+| 🟡 Inscription of Abundance | Call for Backup (MOC) | no kicker (one mode only); the fight mode's second creature is the greatest-power one you don't control. |
 | 🟡 Battle at the Helvault | Enduring Enchantments (CMM) | "for each player" covers opponents only: you can't exile one of your own permanents. |
 | 🟡 Battle for Bretagard | Enduring Enchantments (CMM) | chapter III copies every artifact and creature token you control, duplicate names included. |
 | 🟡 Cacophony Unleashed | Enduring Enchantments (CMM) | the animated 6/6 isn't legendary. |

@@ -87,6 +87,7 @@ lists were picked.
 | **Token Triumph** (SCD starter) GW | Emmara, Soul of the Accord | GW | 100 | ✅ complete |
 | **Raining Cats and Dogs** (SLD) RGW | Rin and Seri, Inseparable | RGW | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Growing Threat** (MOC precon) WB | Brimaz, Blight of Oreskos | WB | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
+| **Call for Backup** (MOC precon) RGW | Bright-Palm, Soul Awakener | RGW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Enduring Enchantments** (CMM precon) WBG | Anikthea, Hand of Erebos | WBG | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
 | **Open Hostility** (C16 precon) WBRG | Saskia the Unyielding | WBRG | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Devour for Power** (CMD precon) BGU | The Mimeoplasm | BGU | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
@@ -1120,6 +1121,23 @@ Residuals: **Cataclysmic Gearhulk** keeps the highest mana value of each
 type; **Filigree Vector** counters everything you control; **Path of the
 Schemer** takes the greatest-power creature card; **Vulpine Harvester** checks
 the mana value on resolution. `--bench` byte-identical.
+
+The **seventy-fourth** is March of the Machine Commander's **Call for
+Backup** (`CallForBackup_MOC`) — Naya +1/+1 counters and backup under
+Bright-Palm, Soul Awakener (seat 73 before rebasing over Undead Unleashed).
+Sixteen cards were missing, and three engine finds came with them:
+⚠ **a multi-mode cast checked every target against mode 0** (CR 700.2 —
+Dromoka's Command choosing the enchantment sacrifice and the counter was
+refused; `game/spree_targets.rs`); **LookPick's "mana value X or less" never
+read the resolving X** (CR 107.3 — Emergent Woodwurm's `WithX` power); and
+**auto-targeting doubled the wrong creature's counters** (the highest-power
+friendly creature, and never the trigger's own source — Bright-Palm doubled a
+counterless body). Residuals: **Dromoka's Command** and **Inscription of
+Abundance** fight the greatest-power creature you don't control, and the
+Inscription is never kicked. A 200-game census beside Brimaz / Rin and Seri /
+Ghired (seed 9521) decided 200/200 with zero panics, Bright-Palm winning 9.5 %;
+Semester's End was the one card never cast (it is a sweeper shield and no
+sweeper was cast).
 
 The **sixty-eighth** is Commander Masters' **Enduring Enchantments**
 (`EnduringEnchantments_CMM`) — Abzan Sagas, enchantresses and constellation
