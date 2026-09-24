@@ -738,6 +738,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::DINA_COMMANDERS,
             main: decks::DINA_MAIN,
         },
+        // Eighty-seventh: the seventy-seventh official list (Draconic
+        // Destruction, SCD) — Gruul Dragons under Atarka. `--pod-decks 87`.
+        PodDeck {
+            name: "Atarka, World Render (RG)",
+            commanders: decks::ATARKA_COMMANDERS,
+            main: decks::ATARKA_MAIN,
+        },
     ]
 }
 
@@ -1275,6 +1282,7 @@ mod tests {
             ("Hazel", [0x4A2E, 96, 9020]),
             ("Lord Windgrace", [0x7D18, 97, 9021]),
             ("Derevi", [0xDE7E, 98, 9022]),
+            ("Atarka", [0xA7A4, 99, 9023]),
         ] {
             let precon = *field.iter().find(|d| d.name.starts_with(name)).expect("the precon seat");
             assert_eq!(precon.card_count(), 100);

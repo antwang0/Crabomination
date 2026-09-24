@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Ten hand-picked commanders plus seventy-two official preconstructed lists, each a
+//! Ten hand-picked commanders plus seventy-seven official preconstructed lists, each a
 //! 99 of cards this engine implements: legal under CR 903 (100 cards
 //! including the commander, singleton outside basics, every card inside the
 //! commander's CR 903.4 color identity) and Commander-legal per Scryfall's
@@ -8,7 +8,7 @@
 //!
 //! The ten were built by hand because the offline Scryfall cache cannot say
 //! how a precon splits into decks; MTGJSON's deck files can, and the eleventh
-//! through eighty-second (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
+//! through eighty-seventh (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
 //! Win, Tails You Lose, Goblin Storm, Foundations Commander's Wretched Ranks,
 //! Tramplesaurus Rex and Keen Engineering, Commander Legends' Reap the Tides,
 //! Phyrexia: All Will Be One's Corrupting Influence, Zendikar Rising's Sneak
@@ -44,7 +44,8 @@
 //! 2018's Exquisite Invention, Duskmourn Commander's Death Toll, Commander
 //! 2021's Witherbloom Witchcraft, Edge of Eternities Commander's World
 //! Shaper, Commander 2018's Nature's Vengeance, Commander 2013's Evasive
-//! Maneuvers and Bloomburrow Commander's Peace Offering) are taken
+//! Maneuvers, Bloomburrow Commander's Peace Offering and the Starter Commander
+//! Decks' Draconic Destruction, among others) are taken
 //! from
 //! one card for card. What all of them keep
 //! from the precon idea is what the pod needs — fixed, legal, varied color
@@ -2688,4 +2689,31 @@ pub const DINA_MAIN: &[CardFactory] = &[
     // Basics: 8 swamp, 8 forest
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, forest, forest, forest, forest,
     forest, forest, forest, forest,
+];
+
+pub const ATARKA_COMMANDERS: &[CardFactory] = &[atarka_world_render];
+
+/// **Draconic Destruction**, a Starter Commander Deck (SCD, 2022-12-02), exactly
+/// as MTGJSON's `DraconicDestruction_SCD` prints it: 69 nonbasic cards +
+/// 18 Mountains + 12 Forests = 99. Gruul Dragons under Atarka, World
+/// Render.
+pub const ATARKA_MAIN: &[CardFactory] = &[
+    akoum_hellkite, chain_reaction, crucible_of_fire, demanding_dragon, dragonkin_berserker,
+    dragonmaster_outcast, drakuseth_maw_of_flames, dream_pillager, flameblast_dragon,
+    hoard_smelter_dragon, magmaquake, mordant_dragon, runehorn_hellkite, sarkhan_the_dragonspeaker,
+    scourge_of_valkas, spit_flame, sweltering_suns, thunderbreak_regent, thundermaw_hellkite,
+    tyrants_familiar, verix_bladewing, foe_razer_regent, frontier_siege, hunters_prowess,
+    primal_might, shamanic_revelation, clan_defiance, harbinger_of_the_hunt, dragons_hoard,
+    steel_hellkite, cinder_glade, game_trail, haven_of_the_spirit_dragon, temple_of_abandon,
+    dragon_mage, dragon_tempest, dragonlords_servant, dragonspeaker_shaman, furnace_whelp,
+    provoke_the_trolls, rapacious_dragon, unleash_fury, vandalblast, beast_within,
+    blossoming_defense, cultivate, drumhunter, elemental_bond, garruks_uprising, harmonize,
+    hunters_insight, loaming_shaman, return_to_nature, sakura_tribe_elder, draconic_disciple,
+    fires_of_yavimaya, savage_ventmaw, arcane_signet, atarka_monument, commanders_sphere, sol_ring,
+    swiftfoot_boots, talisman_of_impulse, command_tower, kazandu_refuge, path_of_ancestry,
+    rugged_highlands, shivan_oasis, timber_gorge,
+    // Basics: 12 forest, 18 mountain
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
 ];
