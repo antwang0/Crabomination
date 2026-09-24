@@ -72,6 +72,7 @@ lists were picked.
 | **Peer Through Time** (C14 precon) U | Teferi, Temporal Archmage (**planeswalker**) | U | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Quantum Quandrix** (C21 precon) GU | Adrix and Nev, Twincasters | GU | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Lorehold Legacies** (C21 precon) RW | Osgir, the Reconstructor | RW | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
+| **Counterpunch** (CMD precon) WBG | Ghave, Guru of Spores | WBG | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not
@@ -589,6 +590,22 @@ event announces a library exile), and a battlefield exile beside the graveyard.
 Four-seat pods beside Mizzix / Adrix / Daxos (seed 10123, 1,000 games, all
 decided): Osgir 19.4 %; the 300-game census (seed 10124) leaves no card of the
 four decks unplayed. `--bench` byte-identical.
+
+The **forty-fourth** is Commander (2011)'s **Counterpunch** (`Counterpunch_CMD`)
+— Abzan Saprolings and +1/+1 counters under Ghave, Guru of Spores (seat 41
+before rebasing over Rebellion Rising, Peer Through Time and Lorehold Legacies).
+Fourteen cards were missing (the Vows had landed with Call the Spirits); the
+primitive: `Effect::PutAnyNumberFromGraveyardOnTop` (Footbottom Feast). ⚠ **The
+census found Nemesis Trap castable by no bot path**: "target attacking
+creature" exists only in combat, and the rule-based defensive picker skips
+exile by design, so `pick_combat_only_instant` now also takes an instant whose
+first target requires an attacker. ⚠ Behind it, an **engine gap**: a targeted
+spell is accepted with no target at all (Murder and Doom Blade too — CR
+601.2c; TODO). Residual: **Footbottom Feast** picks its cards as it resolves.
+Debug pods beside Daxos / Ixhel / Edgar / Sigarda (seeds 9261/9262, 60 games)
+decided 60/60, zero panics; after the picker fix a 120-game census (seed 9263)
+leaves no card unplayed. Ghave wins 0–4 % of those pods. `--bench`
+byte-identical.
 
 ⚠ **The board cap was a bot bug, not a loop.** A Krenko seat sent all 292
 of its Goblins at one player on 24 life each turn while two others sat on

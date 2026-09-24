@@ -1814,6 +1814,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Wretched Confluence | Plunder the Graves (C15) | the modes are the card's default picks; `ChooseN` has no cast-time mode choice. |
 | 🟡 Righteous Confluence | Call the Spirits (C15) | the three picks are one choice among the four non-targeting combinations (Knights and life; default three Knights); the "exile target enchantment" mode is not offered. |
 | 🟡 Sandstone Oracle | Call the Spirits (C15) | the chosen opponent is the one with the most cards in hand. |
+| 🟡 Footbottom Feast | Counterpunch (CMD) | the cards are chosen as it resolves, not targeted on cast; they go on top in mana-value order (the greatest on top). |
 
 ### The `modern_decks` Commander routine's precons (seats 23, 25, 27, 29, 30) — open residuals, 2026-09-24
 
