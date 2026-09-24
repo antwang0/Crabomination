@@ -1986,6 +1986,11 @@ pub struct ResolutionScratch {
     /// `Value::LandCardsRevealedThisEffect` inside its body (Phabine).
     #[serde(skip)]
     pub(crate) parley_lands_revealed: u32,
+    /// Transient: the mana value of the card the last `Effect::Discover` hit
+    /// (the cap when it hit nothing), read by `Value::DiscoveredManaValue`
+    /// (Hit the Mother Lode's Treasures).
+    #[serde(skip)]
+    pub(crate) discovered_mana_value: u32,
     /// Permanents the resolution currently underway is targeting, so the
     /// damage funnel can tell "damage from a spell or ability that targets
     /// this" apart from incidental damage (CR 615 — Bronze Horse, Silhouette).

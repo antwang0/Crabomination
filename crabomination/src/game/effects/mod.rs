@@ -35920,6 +35920,11 @@ impl GameState {
                 if let Some(cid) = hit {
                     exiled.retain(|&x| x != cid);
                 }
+                // Hit the Mother Lode reads what the discover found.
+                let found_mv = hit.and_then(|c| self.find_card_anywhere(c)).map_or(cap, |c| c.definition.cost.cmc());
+                if self.scratch.discovered_mana_value != found_mv {
+                    self.scratch.discovered_mana_value = found_mv;
+                }
                 for cid in &exiled {
                     if self.exile.iter().any(|c| c.id == *cid) {
                         self.move_card_to(

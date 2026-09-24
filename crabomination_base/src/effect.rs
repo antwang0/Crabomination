@@ -1062,6 +1062,10 @@ pub enum Value {
     CardsRevealedThisEffect,
     /// Parley's other count: the land cards revealed by the enclosing
     /// `Effect::Parley` (Phabine's Citizen tokens).
+    /// The mana value of the card the last `Effect::Discover` hit this
+    /// resolution, or its cap N when it hit nothing (Hit the Mother Lode's
+    /// "if the discovered card's mana value is less than 10").
+    DiscoveredManaValue,
     LandCardsRevealedThisEffect,
     /// Amount of {E} paid by an `Effect::PayAnyEnergy` earlier in the current
     /// resolution. Reset between independent resolutions. Aether Spike's
