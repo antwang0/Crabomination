@@ -6560,6 +6560,10 @@ fn hand_specialties(state: &GameState, seat: usize, facts: &BoardFacts) -> u32 {
         if def.gift.is_some() {
             m |= spec::GIFT;
         }
+        // Gorex's filtered delve rides the delve block.
+        if def.graveyard_exile_discount.is_some() {
+            m |= spec::DELVE;
+        }
         if matches!(
             def.effect,
             Effect::Spree { .. }
