@@ -2718,6 +2718,18 @@ impl GameState {
                     );
                 }
                 self.stack.iter().any(|si| match si {
+                    // CR 202.3e — on the stack an X spell's mana value counts
+                    // the chosen X (Braingeyser for 3 is a 5 to Leitmotif
+                    // Composer).
+                    StackItem::Spell { card, x_value, .. }
+                        if card.id == cid && *x_value > 0 && card.definition.cost.has_x() =>
+                    {
+                        let mut with_x = (**card).clone();
+                        let mut def = (*card.definition.arc()).clone();
+                        def.cost = def.cost.with_x_value(*x_value);
+                        with_x.set_definition(std::sync::Arc::new(def));
+                        self.evaluate_requirement_on_card(filter, &with_x, ctx.controller)
+                    }
                     StackItem::Spell { card, .. } if card.id == cid => {
                         self.evaluate_requirement_on_card(filter, card, ctx.controller)
                     }

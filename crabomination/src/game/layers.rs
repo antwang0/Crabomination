@@ -1657,6 +1657,11 @@ pub(crate) fn requirement_is_card_only(req: &SelectionRequirement) -> bool {
         R::ToughnessGreaterThanPower => true,
         // Mana value is a printed characteristic, read like the type leaves.
         R::ManaValueAtMost(_) | R::ManaValueAtLeast(_) => true,
+        // So is a name (`requirement_matches_card` reads it off the
+        // definition). Missing here, a name-scoped grant was dropped outright
+        // — Leitmotif Composer's "creatures named Leitmotif Composer can't be
+        // blocked this turn" did nothing.
+        R::HasName(_) => true,
         R::And(a, b) | R::Or(a, b) => {
             requirement_is_card_only(a) && requirement_is_card_only(b)
         }
