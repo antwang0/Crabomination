@@ -6970,7 +6970,8 @@ impl GameState {
                     .filter(|sa| matches!(sa.effect, StaticEffect::DoubleTokens))
                     .count() as u32
             })
-            .sum()
+            .sum::<u32>()
+            + u32::from(self.players[seat].token_doublings_this_turn)
     }
 
     /// CR 614 — the host of `seat`'s live
@@ -9809,6 +9810,7 @@ impl GameState {
         inst.owner = ctrl;
         inst.controller = ctrl;
         inst.tapped = tapped;
+        self.players[ctrl].tokens_created_this_turn += 1;
         if inst.definition.is_creature() {
             self.players[ctrl].creatures_entered_this_turn.push(id);
         }
@@ -30003,6 +30005,7 @@ fn static_effect_to_effects(
             // epilogue (Quina's extra-Frog rider); not a layer effect.
             | StaticEffect::TokenCreationAddsToken { .. }
             | StaticEffect::TokensMayBecome { .. }
+            | StaticEffect::CreatureTokensBecome { .. }
             | StaticEffect::TokenNamedBecomes { .. }
             // Read at `attack_left_right_defender` (Mystic Barrier).
             | StaticEffect::AttackOnlyNearestOpponentInChosenDirection

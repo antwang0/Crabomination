@@ -4373,6 +4373,7 @@ impl GameState {
             me.speed_increased_this_turn = false;
             // Raid (CR 702.108): the active player hasn't attacked yet this turn.
             me.attacked_this_turn = false;
+            me.attacked_with_commander_this_turn = false;
             if !me.attacked_players_this_turn.is_empty() {
                 me.attacked_players_this_turn.clear();
             }
@@ -4411,6 +4412,8 @@ impl GameState {
             pl.greatest_hit_this_turn = 0;
             pl.combat_damage_taken_this_turn = 0;
             pl.token_copy_replacement_used_this_turn = false;
+            pl.tokens_created_this_turn = 0;
+            pl.token_doublings_this_turn = 0;
             pl.steals_opponent_tokens_this_turn = false;
             pl.poison_capped_this_turn = false;
             pl.lost_life_this_turn = false;
@@ -5063,6 +5066,7 @@ impl GameState {
                     // Step-bounded miracle windows are also dead by turn end.
                     crate::card::MayPlayDuration::EndOfThisStep => true,
                     crate::card::MayPlayDuration::TurnsHolderAttacksWithAToken { .. }
+                    | crate::card::MayPlayDuration::TurnsHolderAttacksWithACommander { .. }
                     | crate::card::MayPlayDuration::HolderTurnsAfterOpponentLostLife { .. } => {
                         if perm.player != crate::card::MAY_PLAY_DORMANT {
                             c.may_play_until = Some(crate::card::MayPlayPermission {

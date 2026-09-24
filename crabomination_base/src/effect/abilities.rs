@@ -2460,6 +2460,11 @@ pub enum StaticEffect {
     /// create that many [one of `options`] tokens" (Jinnie Fay). Applied per
     /// token at mint time by `GameState::token_replacement_for`.
     TokensMayBecome { options: Vec<crate::card::TokenDefinition> },
+    /// CR 614.1a — "If one or more creature tokens would be created under
+    /// your control, that many [into] tokens are created instead" (Divine
+    /// Visitation). Mandatory, applied per creature token at mint time by
+    /// `GameState::token_replacement_for`, ahead of any `TokensMayBecome`.
+    CreatureTokensBecome { into: crate::card::TokenDefinition },
     /// CR 614.1a — "If you would create a [name] token, create [into]
     /// instead" (Fisher's Talent's Fish → Shark → Octopus). Applied at mint
     /// time by `GameState::named_token_replacement`, which also peels a Class
@@ -3614,6 +3619,11 @@ pub struct ActivatedAbility {
     /// controller's choice (Pyromancy's "{3}, Discard a card at random:").
     #[serde(default)]
     pub discard_cost_random: bool,
+    /// With `discard_cost`, discard X cards, X the activation's chosen X
+    /// (`Value::XFromCost` in the effect), instead of the fixed count — Gix,
+    /// Yawgmoth Praetor's "Discard X cards:" (CR 107.3).
+    #[serde(default)]
+    pub discard_cost_x: bool,
     /// When set with `discard_cost`, the discarded card's mana value must equal
     /// the target's — the linked-X shape of "Discard a card with mana value X:
     /// Counter target spell with mana value X" (Kozilek, the Great Distortion).

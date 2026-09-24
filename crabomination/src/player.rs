@@ -600,6 +600,18 @@ pub struct PlayerData {
     /// copies" replacement has already fired this turn.
     #[serde(default)]
     pub token_copy_replacement_used_this_turn: bool,
+    /// Tokens created under this player's control this turn (Thalisse,
+    /// Reverent Medium). Counted at the mint funnel, cleared each turn.
+    #[serde(default)]
+    pub tokens_created_this_turn: u32,
+    /// Kaya, Geist Hunter's −2: this turn's extra token doublings (CR
+    /// 614.13), added to the permanent doublers. Cleared each turn.
+    #[serde(default)]
+    pub token_doublings_this_turn: u8,
+    /// This player declared a commander as an attacker this turn (CR 508.1;
+    /// Neriv's "during any turn you attacked with a commander").
+    #[serde(default)]
+    pub attacked_with_commander_this_turn: bool,
     /// Crafty Cutpurse — tokens an opponent would create this turn are
     /// created under this player's control instead (CR 614).
     #[serde(default)]
@@ -1387,6 +1399,9 @@ impl Player {
             greatest_hit_this_turn: 0,
             combat_damage_taken_this_turn: 0,
             token_copy_replacement_used_this_turn: false,
+            tokens_created_this_turn: 0,
+            token_doublings_this_turn: 0,
+            attacked_with_commander_this_turn: false,
             steals_opponent_tokens_this_turn: false,
             lost_life_this_turn: false,
             play_from_top_this_turn: false,

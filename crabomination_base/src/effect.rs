@@ -869,6 +869,10 @@ pub enum Value {
     /// to a defending player). One in a normal 1v1 combat; more in multiplayer
     /// when a batch spreads attackers across seats.
     OpponentsAttackedThisCombat,
+    /// Creatures attacking the player `PlayerRef` resolves to — "the number
+    /// of creatures attacking them" (Within Range), planeswalkers and battles
+    /// not counted (CR 506.3).
+    CreaturesAttackingPlayer(PlayerRef),
     /// The game's current turn number (CR 500 — the first turn is 1). Powers
     /// "the first upkeep" gates (Sentinel Dispatch).
     TurnNumber,
@@ -1287,6 +1291,9 @@ pub enum Value {
     /// Artifacts that entered the battlefield under the player's control this
     /// turn (`Player.artifacts_entered_this_turn`) — Malcator's end-step gate.
     ArtifactsEnteredThisTurn(PlayerRef),
+    /// Tokens created under the player's control this turn
+    /// (`Player.tokens_created_this_turn`) — Thalisse, Reverent Medium.
+    TokensCreatedThisTurn(PlayerRef),
     /// Mounts and/or Vehicles that entered under the player's control this turn
     /// (`Player.mounts_vehicles_entered_this_turn`) — Cloudspire Coordinator's
     /// X token count.
@@ -7452,6 +7459,11 @@ pub enum Effect {
     WeldArtifacts { what: Selector },
     /// Create `count` copies of the given token under `who`'s control.
     CreateToken { who: PlayerRef, count: Value, definition: std::sync::Arc<TokenDefinition> },
+    /// CR 614.13 — "Until end of turn, if one or more tokens would be created
+    /// under your control, twice that many of those tokens are created
+    /// instead" (Kaya, Geist Hunter's −2): one more doubling for `who` this
+    /// turn, stacking with `StaticEffect::DoubleTokens`.
+    DoubleTokensThisTurn { who: PlayerRef },
     /// "Each player creates a `definition` token for each [`filter`] they
     /// control" (Waiting in the Weeds). Unlike [`Effect::CreateToken`] with
     /// `PlayerRef::EachPlayer`, the count is evaluated per receiving player

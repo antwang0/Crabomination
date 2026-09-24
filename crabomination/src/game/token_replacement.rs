@@ -18,6 +18,19 @@ impl GameState {
         if !def.is_creature() {
             return None;
         }
+        // Divine Visitation's is not a choice: the first one applies.
+        let mandatory = self
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == ctrl)
+            .flat_map(|c| c.definition.static_abilities.iter())
+            .find_map(|sa| match &sa.effect {
+                crate::effect::StaticEffect::CreatureTokensBecome { into } => Some(into),
+                _ => None,
+            });
+        if let Some(into) = mandatory {
+            return Some(crabomination_base::tokens::token_card_arc(into));
+        }
         let base = def.power + def.toughness;
         self.battlefield
             .iter()

@@ -1950,6 +1950,16 @@ impl GameState {
                     Some(chosen) => chosen.contains(&id),
                     None => self.exert_pays_off(id, p),
                 };
+            // Neyali's "during any turn you attacked with a token" and Neriv's
+            // "… with a commander" (CR 903.3 — any player's) grants wake for
+            // this seat (CR 508.1: a declared attacker).
+            if self.battlefield.find_by_id(id).is_some_and(|c| c.is_token) {
+                self.wake_may_play(crate::card::MayPlayDuration::TurnsHolderAttacksWithAToken { holder: p }, p);
+            }
+            if !self.players[p].attacked_with_commander_this_turn && self.is_commander(id) {
+                self.players[p].attacked_with_commander_this_turn = true;
+                self.wake_may_play(crate::card::MayPlayDuration::TurnsHolderAttacksWithACommander { holder: p }, p);
+            }
             let card = self
                 .battlefield
                 .iter_mut()
@@ -1987,31 +1997,6 @@ impl GameState {
                 && !self.players[p].attacked_players_this_turn.contains(&d)
             {
                 self.players[p].attacked_players_this_turn.push(d);
-            }
-            // Neyali's "during any turn you attacked with a token" grants
-            // wake for this seat (CR 508.1: a declared attacker).
-            if card.is_token {
-                let wakes = |c: &crate::card::CardInstance| {
-                    c.cold_any(|k| {
-                        k.may_play_until.is_some_and(|perm| {
-                            perm.player == crate::card::MAY_PLAY_DORMANT
-                                && perm.duration
-                                    == crate::card::MayPlayDuration::TurnsHolderAttacksWithAToken {
-                                        holder: p,
-                                    }
-                        })
-                    })
-                };
-                if self.exile.iter().any(wakes) {
-                    for c in self.exile.iter_mut() {
-                        if wakes(c)
-                            && let Some(perm) = c.may_play_until
-                        {
-                            c.may_play_until =
-                                Some(crate::card::MayPlayPermission { player: p, ..perm });
-                        }
-                    }
-                }
             }
             events.push(GameEvent::AttackerDeclared(id));
             // Walk printed Attacks triggers + any transient granted
@@ -6972,4 +6957,27 @@ struct AttackerInfo {
     /// [`GameState::free_division_targets`].
     free_divider: bool,
     should_deal: bool,
+}
+
+impl GameState {
+    /// Re-arm every dormant exile permission of exactly `duration` for `p`
+    /// (Neyali's token attacks, Neriv's commander attacks).
+    fn wake_may_play(&mut self, duration: crate::card::MayPlayDuration, p: usize) {
+        let wakes = |c: &crate::card::CardInstance| {
+            c.cold_any(|k| {
+                k.may_play_until.is_some_and(|perm| {
+                    perm.player == crate::card::MAY_PLAY_DORMANT && perm.duration == duration
+                })
+            })
+        };
+        if self.exile.iter().any(wakes) {
+            for c in self.exile.iter_mut() {
+                if wakes(c)
+                    && let Some(perm) = c.may_play_until
+                {
+                    c.may_play_until = Some(crate::card::MayPlayPermission { player: p, ..perm });
+                }
+            }
+        }
+    }
 }

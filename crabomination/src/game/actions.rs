@@ -19329,7 +19329,8 @@ impl GameState {
         let discard_picks: Vec<CardId> = if let Some((filter, count)) =
             ability.discard_cost.as_ref()
         {
-            let count = *count as usize;
+            // CR 107.3 — "Discard X cards:" pays the activation's X (Gix).
+            let count = if ability.discard_cost_x { x_value.unwrap_or(0) } else { *count } as usize;
             if ability.discard_cost_same_name {
                 // CR 601 — "Discard N cards with the same name." Take the
                 // *cheapest* qualifying name, matching the sibling branch
@@ -19569,6 +19570,7 @@ impl GameState {
             || ability.remove_counter_among_x.is_some()
             || ability.energy_x_cost
             || ability.x_life_cost
+            || ability.discard_cost_x
         {
             x_value.unwrap_or(0)
         } else {

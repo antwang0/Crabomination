@@ -1910,6 +1910,7 @@ impl Effect {
             Effect::Incubate { who, amount } => {
                 player_has_target(who) || value_has_target(amount)
             }
+            Effect::DoubleTokensThisTurn { who } => player_has_target(who),
             Effect::BecomeBasicLand { what, .. }
             | Effect::LandsBecomeChosenBasicType { what, .. }
             | Effect::GainAllBasicLandTypes { what, .. }

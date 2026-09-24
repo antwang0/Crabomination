@@ -1096,6 +1096,11 @@ pub enum MayPlayDuration {
     /// attacker re-arms it for `holder` (CR 508.1 — "attacked with" is a
     /// declared attacker, not one put onto the battlefield attacking).
     TurnsHolderAttacksWithAToken { holder: usize },
+    /// "During any turn you attacked with a commander, you may play those
+    /// cards" (Neriv, Crackling Vanguard). `TurnsHolderAttacksWithAToken`'s
+    /// sibling: dormant between turns, re-armed when `holder` declares a
+    /// commander (any player's, CR 903.3) as an attacker.
+    TurnsHolderAttacksWithACommander { holder: usize },
     /// "During your turn, if an opponent lost life this turn, you may play
     /// cards exiled with this" (Theater of Horrors). Never expires; parked at
     /// [`MAY_PLAY_DORMANT`] by the turn sweep and re-armed for `holder` when
@@ -1111,6 +1116,9 @@ impl MayPlayDuration {
         match self {
             Self::TurnsHolderAttacksWithAToken { .. } => {
                 Self::TurnsHolderAttacksWithAToken { holder: seat }
+            }
+            Self::TurnsHolderAttacksWithACommander { .. } => {
+                Self::TurnsHolderAttacksWithACommander { holder: seat }
             }
             Self::HolderTurnsAfterOpponentLostLife { .. } => {
                 Self::HolderTurnsAfterOpponentLostLife { holder: seat }

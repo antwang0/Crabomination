@@ -20190,6 +20190,14 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::DoubleTokensThisTurn { who } => {
+                for p in self.resolve_players(who, ctx) {
+                    let d = &mut self.players[p].token_doublings_this_turn;
+                    *d = d.saturating_add(1);
+                }
+                Ok(())
+            }
+
             Effect::Incubate { who, amount } => {
                 use crate::card::CounterType;
                 let players = self.resolve_players(who, ctx);
@@ -34996,13 +35004,17 @@ impl GameState {
                         }
                         // Theater of Horrors' grant starts dormant unless it is
                         // already live.
-                        let grantee = if matches!(
-                            duration,
-                            crate::card::MayPlayDuration::HolderTurnsAfterOpponentLostLife { .. }
-                        ) {
-                            self.opponent_life_loss_grant_seat(ctx.controller)
-                        } else {
-                            ctx.controller
+                        let grantee = match duration {
+                            crate::card::MayPlayDuration::HolderTurnsAfterOpponentLostLife { .. } => {
+                                self.opponent_life_loss_grant_seat(ctx.controller)
+                            }
+                            // Neriv's, likewise, unless a commander attacked.
+                            crate::card::MayPlayDuration::TurnsHolderAttacksWithACommander { .. }
+                                if !self.players[ctx.controller].attacked_with_commander_this_turn =>
+                            {
+                                crate::card::MAY_PLAY_DORMANT
+                            }
+                            _ => ctx.controller,
                         };
                         if let Some(card) = self.find_card_anywhere_mut(top_id) {
                             card.may_play_until = Some(crate::card::MayPlayPermission {

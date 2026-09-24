@@ -680,6 +680,12 @@ impl GameState {
                 .filter_map(|&id| self.find_card_anywhere(id))
                 .map(|c| c.definition.cost.cmc() as i32)
                 .sum(),
+            Value::CreaturesAttackingPlayer(who) => self.resolve_player(who, ctx).map_or(0, |p| {
+                self.attacking
+                    .iter()
+                    .filter(|a| a.target == crate::game::types::AttackTarget::Player(p))
+                    .count() as i32
+            }),
             Value::OpponentsAttackedThisCombat => {
                 use crate::game::types::AttackTarget;
                 let mut seats = crate::fxhash::HashSet::default();
@@ -1641,6 +1647,10 @@ impl GameState {
             Value::ArtifactsEnteredThisTurn(p) => self
                 .resolve_player(p, ctx)
                 .map(|p| self.players[p].artifacts_entered_this_turn as i32)
+                .unwrap_or(0),
+            Value::TokensCreatedThisTurn(p) => self
+                .resolve_player(p, ctx)
+                .map(|p| self.players[p].tokens_created_this_turn as i32)
                 .unwrap_or(0),
             Value::MountsVehiclesEnteredThisTurn(p) => self
                 .resolve_player(p, ctx)
