@@ -49,6 +49,7 @@ mod cmdr_valgavoth;
 mod cmdr_riku;
 mod cmdr_isperia;
 mod cmdr_wilhelt;
+mod cmdr_windgrace;
 mod cmdr_inalla;
 mod cmdr_urza;
 mod cmdr_trostani;
