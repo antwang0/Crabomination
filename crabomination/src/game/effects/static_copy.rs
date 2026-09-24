@@ -8,6 +8,24 @@ use crate::game::types::GameEvent;
 use crate::game::{GameState, Target};
 
 impl GameState {
+    /// CR 707.2 — every card in every graveyard matching `filter`, as
+    /// `(id, name, printed power)`: the copy sources of an `EntersAsCopy`
+    /// with `from_graveyards` (Body Double's "any creature card in a
+    /// graveyard"). Evaluated against the card, so a type filter reads its
+    /// printed characteristics.
+    pub(crate) fn graveyard_copy_candidates(
+        &self,
+        filter: &crate::card::SelectionRequirement,
+        controller: usize,
+    ) -> Vec<(CardId, String, i32)> {
+        self.players
+            .iter()
+            .flat_map(|p| p.graveyard.iter())
+            .filter(|c| self.evaluate_requirement_on_card(filter, c, controller))
+            .map(|c| (c.id, c.definition.name.to_string(), c.definition.power))
+            .collect()
+    }
+
     /// Apply a `StaticEffect::CreaturesEnterAsCopyOf` that `controller`'s
     /// permanents hold over the entering `card_id`. With several, the last one
     /// found is applied last and wins (CR 616.1 — the controller's order).

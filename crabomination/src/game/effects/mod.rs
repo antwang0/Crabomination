@@ -2017,20 +2017,23 @@ impl GameState {
             .map(|c| c.definition.name)
             .unwrap_or("");
         // Every legal copy source, never the copier itself.
-        let mut candidates: Vec<(CardId, String, i32)> = self
-            .battlefield
-            .iter()
-            .filter(|c| c.id != card_id)
-            .filter(|c| {
-                self.evaluate_requirement_static(
-                    &spec.filter,
-                    &Target::Permanent(c.id),
-                    controller,
-                    None,
-                )
-            })
-            .map(|c| (c.id, c.definition.name.to_string(), c.definition.power))
-            .collect();
+        let mut candidates: Vec<(CardId, String, i32)> = if spec.from_graveyards {
+            self.graveyard_copy_candidates(&spec.filter, controller)
+        } else {
+            self.battlefield
+                .iter()
+                .filter(|c| c.id != card_id)
+                .filter(|c| {
+                    self.evaluate_requirement_static(
+                        &spec.filter,
+                        &Target::Permanent(c.id),
+                        controller,
+                        None,
+                    )
+                })
+                .map(|c| (c.id, c.definition.name.to_string(), c.definition.power))
+                .collect()
+        };
         if candidates.is_empty() {
             return false;
         }
@@ -13696,6 +13699,10 @@ impl GameState {
                 self.each_player_chooses_to_destroy(filter, effect, ctx, events)
             }
 
+            Effect::PlayerChoosesToDestroy { who, filter, no_regen } => {
+                self.player_chooses_to_destroy(who, filter, *no_regen, effect, ctx, events)
+            }
+
             Effect::EachPlayerDestroysChosenFromLeftNeighbor { filters } => {
                 let source = ctx.source.unwrap_or(CardId(0));
                 // Each SEAT picks from its left neighbour's board, and every one
@@ -17227,6 +17234,19 @@ impl GameState {
                         }
                         EntityRef::Player(p) if *kind == CounterType::Poison => {
                             self.add_poison(p, base, events);
+                        }
+                        // CR 122.1 — a card in exile can carry counters
+                        // (Mairsil's cage). No doubler reads it: those are
+                        // about permanents.
+                        EntityRef::Card(cid) => {
+                            if let Some(c) = self.exile.iter_mut().find(|c| c.id == cid) {
+                                c.add_counters(*kind, base);
+                                events.push(GameEvent::CounterAdded {
+                                    card_id: cid,
+                                    counter_type: *kind,
+                                    count: base,
+                                });
+                            }
                         }
                         _ => {}
                     }

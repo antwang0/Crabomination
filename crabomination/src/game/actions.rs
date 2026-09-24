@@ -886,6 +886,7 @@ fn mana_summary_of(def: &crate::card::CardDefinition) -> Option<u64> {
     for sa in &def.static_abilities {
         match sa.effect {
             SE::HasActivatedAbilitiesOfExiledWithSelf
+            | SE::HasActivatedAbilitiesOfOwnedExiledWithCounter { .. }
             | SE::HasActivatedAbilitiesOfGraveyardCreatures
             | SE::HasActivatedAbilitiesOfOtherNamedControlledCreatures
             | SE::HasActivatedAbilitiesOfOpponentCreatures
@@ -5469,6 +5470,9 @@ impl GameState {
                 Ok(mut evs) => {
                     if !self.players[p].hand.iter().any(|c| c.id == card_id) {
                         self.players[p].graveyard_sac_cast_sources_this_turn.push(grant);
+                        if self.graveyard_grant_exiles(grant) {
+                            self.mark_spell_exiles_on_resolve(card_id);
+                        }
                         if let Some(sacrifice) = &sacrifice {
                             evs.append(&mut self.sacrifice_for_graveyard_cast(p, grant, sacrifice));
                         }
@@ -5675,7 +5679,7 @@ impl GameState {
                             Some((c.id, Some(sacrifice.clone())))
                         }
                         // Gisa and Geralf — no sacrifice owed.
-                        StaticEffect::GraveyardCastOncePerTurn { filter }
+                        StaticEffect::GraveyardCastOncePerTurn { filter, .. }
                             if self.evaluate_requirement_on_card(filter, card, p) =>
                         {
                             Some((c.id, None))
@@ -5683,6 +5687,32 @@ impl GameState {
                         _ => None,
                     })
             })
+    }
+
+    /// Kess, Dissident Mage — does the graveyard-cast grant on `grant` exile
+    /// the spell it lets you cast ("if a spell cast this way would be put
+    /// into your graveyard, exile it instead")?
+    fn graveyard_grant_exiles(&self, grant: CardId) -> bool {
+        self.battlefield.find_by_id(grant).is_some_and(|c| {
+            c.definition.static_abilities.iter().any(|sa| {
+                matches!(
+                    sa.effect,
+                    crate::effect::StaticEffect::GraveyardCastOncePerTurn { exile_after: true, .. }
+                )
+            })
+        })
+    }
+
+    /// CR 702.34d's rider on a spell just cast: stamp it so the resolver
+    /// exiles it rather than putting it into its owner's graveyard.
+    fn mark_spell_exiles_on_resolve(&mut self, card_id: CardId) {
+        for si in self.stack.iter_mut() {
+            if let StackItem::Spell { card, .. } = si
+                && card.id == card_id
+            {
+                card.cast_via_flashback = true;
+            }
+        }
     }
 
     /// Pay a graveyard-cast grant's sacrifice: `p` sacrifices one permanent
@@ -16457,9 +16487,13 @@ impl GameState {
         let (mut welder, mut ooze, mut marvin, mut kraj, mut safehouse, mut snoop) =
             (false, false, false, false, false, false);
         let mut drana = false;
+        let mut caged: Option<crate::card::CounterType> = None;
         for sa in &me.definition.static_abilities {
             match sa.effect {
                 StaticEffect::HasActivatedAbilitiesOfExiledWithSelf => welder = true,
+                StaticEffect::HasActivatedAbilitiesOfOwnedExiledWithCounter { counter } => {
+                    caged = Some(counter)
+                }
                 StaticEffect::HasActivatedAbilitiesOfGraveyardCreatures => ooze = true,
                 StaticEffect::HasActivatedAbilitiesOfOtherNamedControlledCreatures => {
                     marvin = true
@@ -16486,6 +16520,17 @@ impl GameState {
         // with it", read live off the imprint pile.
         if welder {
             for imp in self.exile.iter().filter(|e| e.exiled_with == Some(card_id)) {
+                out.extend(imp.definition.activated_abilities.iter());
+            }
+        }
+        // Mairsil, the Pretender — the cards its controller owns in exile
+        // with cage counters on them, however they got there.
+        if let Some(kind) = caged {
+            for imp in self
+                .exile
+                .iter()
+                .filter(|e| e.owner == me.controller && e.counter_count(kind) > 0)
+            {
                 out.extend(imp.definition.activated_abilities.iter());
             }
         }
@@ -19620,7 +19665,10 @@ impl GameState {
         }
         // "Tap N untapped [filter] you control" as a cost (Crookclaw Elder).
         // Taps the least useful matches first (lowest power) so a bot doesn't
-        // tap out its best attackers to draw a card.
+        // tap out its best attackers to draw a card. The source is one of the
+        // candidates when it matches (Inalla, Archmage Ritualist's rulings:
+        // it can be one of the five Wizards); a `{T}` in the same cost has
+        // already tapped it above, so it can't pay twice.
         if let Some((filter, n)) = &ability.tap_others_cost {
             let mut pool: Vec<(CardId, i32)> = self
                 .battlefield
@@ -19628,7 +19676,6 @@ impl GameState {
                 .filter(|c| {
                     c.controller == p
                         && !c.tapped
-                        && c.id != card_id
                         && self.evaluate_requirement_static(
                             filter,
                             &Target::Permanent(c.id),

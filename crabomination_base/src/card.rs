@@ -864,6 +864,9 @@ pub enum CounterType {
     Hoofprint,
     /// Soul counter — Séance Board's morbid tally, the mana it taps for.
     Soul,
+    /// Cage counter — Mairsil, the Pretender has the activated abilities of
+    /// the cards its controller owns in exile with one on them.
+    Cage,
 }
 
 /// Every zone a card can occupy.
@@ -4804,6 +4807,11 @@ pub struct EntersAsCopy {
     /// rule doesn't apply to permanents you control").
     #[serde(default)]
     pub extra_static: Vec<crate::effect::StaticAbility>,
+    /// CR 707.2 — "a copy of any creature card in a graveyard" (Body Double):
+    /// the copy source is a card in any graveyard matching `filter` rather
+    /// than a permanent.
+    #[serde(default)]
+    pub from_graveyards: bool,
 }
 
 /// CR 614 — one mode of a `CardDefinition.enters_as_choice` as-enters

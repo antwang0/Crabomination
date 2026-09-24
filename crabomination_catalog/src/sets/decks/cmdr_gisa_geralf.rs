@@ -69,7 +69,7 @@ pub fn gisa_and_geralf() -> CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "Once during each of your turns, you may cast a Zombie creature spell \
                           from your graveyard.",
-            effect: StaticEffect::GraveyardCastOncePerTurn { filter: R::Creature.and(zombie()) },
+            effect: StaticEffect::GraveyardCastOncePerTurn { filter: R::Creature.and(zombie()), exile_after: false },
         }],
         ..creature(
             "Gisa and Geralf",

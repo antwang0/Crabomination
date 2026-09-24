@@ -675,16 +675,17 @@ pub fn storm_world() -> CardDefinition {
     }
 }
 
-/// The Abyss — a nonartifact creature dies every upkeep.
+/// The Abyss — at each player's upkeep, that player picks one of their
+/// nonartifact creatures and it is destroyed; it can't be regenerated. (It
+/// used to destroy every one of them.)
 pub fn the_abyss() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: upkeep(EventScope::AnyPlayer),
-            effect: Effect::DestroyNoRegen {
-                what: Selector::ControlledBy {
-                    who: PlayerRef::ActivePlayer,
-                    filter: R::Creature.and(R::Not(Box::new(R::Artifact))),
-                },
+            effect: Effect::PlayerChoosesToDestroy {
+                who: PlayerRef::ActivePlayer,
+                filter: R::Creature.and(R::Not(Box::new(R::Artifact))),
+                no_regen: true,
             },
         }],
         ..world("The Abyss", cost(&[generic(3), b()]))

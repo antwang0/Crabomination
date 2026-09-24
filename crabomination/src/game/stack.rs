@@ -6947,9 +6947,14 @@ impl GameState {
                 }
                 let (mode, auto_target) =
                     self.trigger_mode_and_target(&effect, controller, Some(source));
+                // CR 115.1c — slots past the first (Vindictive Lich), as the
+                // other death funnel and `push_pending_trigger` fill them.
+                let additional =
+                    self.auto_extra_targets_for(&effect, source, controller, auto_target.clone());
                 self.stack.push(
                     TriggerPush::new(source, controller, effect)
                         .target(auto_target)
+                        .additional_targets(additional)
                         .mode(mode)
                         .trigger_source(Some(crate::game::effects::EntityRef::Permanent(id)))
                         .event_amount(died_ev_amount)
@@ -8203,9 +8208,14 @@ impl GameState {
             for effect in std::iter::repeat_n(effect, fires) {
                 let (mode, auto_target) =
                     self.trigger_mode_and_target(&effect, controller, Some(source));
+                // CR 115.1c — slots past the first, as `push_pending_trigger`
+                // fills them (Vindictive Lich's three opponents).
+                let additional =
+                    self.auto_extra_targets_for(&effect, source, controller, auto_target.clone());
                 self.stack.push(
                     TriggerPush::new(source, controller, effect)
                         .target(auto_target)
+                        .additional_targets(additional)
                         .mode(mode)
                         .trigger_source(Some(crate::game::effects::EntityRef::Permanent(id)))
                         .build(),

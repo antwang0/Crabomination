@@ -783,3 +783,192 @@ fn a_command_zone_cast_is_not_a_graveyard_cast() {
     assert!(g.battlefield_find(cmd).is_some());
     assert_eq!(g.players[0].life, life, "Ash Zealot stays quiet");
 }
+
+// ── Primitives for Arcane Wizardry (C17, Inalla) ──────────────────────────
+
+/// CR 707.2 — "You may have this creature enter as a copy of any creature
+/// card in a graveyard" (Body Double): an `EntersAsCopy` with
+/// `from_graveyards` copies a card in *any* graveyard, not a permanent.
+#[test]
+fn cr_707_2_enters_as_a_copy_of_a_creature_card_in_a_graveyard() {
+    use crabomination::card::{EntersAsCopy, SelectionRequirement as R};
+    let copier = CardDefinition {
+        name: "Test Graveyard Copier",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Creature],
+        enters_as_copy: Some(EntersAsCopy {
+            filter: R::Creature,
+            from_graveyards: true,
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    let mut g = commander_game();
+    g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, copier);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(id).expect("the copier survived as a 2/2");
+    assert_eq!(c.definition.name, "Grizzly Bears");
+    assert_eq!(pt(&g, id), (2, 2));
+}
+
+/// CR 702.34d's rider on a plain graveyard grant — "Once during each of your
+/// turns, you may cast an instant or sorcery spell from your graveyard. If a
+/// spell cast this way would be put into your graveyard, exile it instead"
+/// (Kess, Dissident Mage). The second graveyard cast that turn is refused.
+#[test]
+fn a_once_per_turn_graveyard_cast_can_exile_the_spell() {
+    use crabomination::card::{SelectionRequirement as R, StaticAbility};
+    use crabomination::effect::StaticEffect;
+    let mut kess = bear_commander();
+    kess.name = "Test Graveyard Caster";
+    kess.static_abilities = vec![StaticAbility {
+        description: "Once during each of your turns, cast an instant or sorcery from your graveyard.",
+        effect: StaticEffect::GraveyardCastOncePerTurn {
+            filter: R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)),
+            exile_after: true,
+        },
+    }];
+    let mut g = commander_game();
+    g.add_card_to_battlefield(0, kess);
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let bolt2 = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    let life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast from the graveyard");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 3);
+    assert!(g.exile.iter().any(|c| c.id == bolt), "exiled instead of the graveyard");
+    assert!(g
+        .perform_action(GameAction::CastSpell {
+            card_id: bolt2,
+            target: Some(Target::Player(1)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .is_err(), "once per turn");
+}
+
+/// The Abyss / Magus of the Abyss — "destroy target nonartifact creature that
+/// player controls of their choice": ONE creature, picked by the player whose
+/// upkeep it is (it used to destroy every one of them). An unprompted seat
+/// gives up its weakest.
+#[test]
+fn the_abyss_destroys_one_creature_of_that_players_choice() {
+    let mut g = commander_game();
+    g.add_card_to_battlefield(1, catalog::the_abyss());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let giant = g.add_card_to_battlefield(0, catalog::hill_giant());
+    g.step = TurnStep::Untap;
+    advance_to(&mut g, TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "the weakest went");
+    assert!(g.battlefield_find(giant).is_some(), "one creature, not all");
+}
+
+/// CR 122.1 + Mairsil, the Pretender — a card exiled from the graveyard can
+/// take a cage counter, and a permanent with "has all activated abilities of
+/// all cards you own in exile with cage counters on them" activates the
+/// caged card's ability as its own.
+#[test]
+fn cr_122_1_a_caged_card_in_exile_lends_its_activated_abilities() {
+    use crabomination::card::{CounterType, SelectionRequirement as R, StaticAbility};
+    use crabomination::effect::{Effect, PlayerRef, Selector, StaticEffect, Value};
+    use crabomination::game::effects::EffectContext;
+    let mut pretender = bear_commander();
+    pretender.name = "Test Pretender";
+    pretender.static_abilities = vec![StaticAbility {
+        description: "Has the activated abilities of caged cards you own.",
+        effect: StaticEffect::HasActivatedAbilitiesOfOwnedExiledWithCounter {
+            counter: CounterType::Cage,
+        },
+    }];
+    let mut g = commander_game();
+    let me = g.add_card_to_battlefield(0, pretender);
+    g.clear_sickness(me);
+    let sorcerer = g.add_card_to_graveyard(0, catalog::prodigal_sorcerer());
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(
+        &Effect::Seq(vec![
+            Effect::ExileChosenFromHandOrGraveyard { who: PlayerRef::You, filter: R::Creature },
+            Effect::AddCounter { what: Selector::LastMoved, kind: CounterType::Cage, amount: Value::ONE },
+        ]),
+        &ctx,
+    )
+    .expect("cage");
+    let caged = g.exile.iter().find(|c| c.id == sorcerer).expect("exiled");
+    assert_eq!(caged.counter_count(CounterType::Cage), 1);
+    let life = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: me,
+        ability_index: 0,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("the caged Sorcerer's ping");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 1);
+}
+
+/// CR 115.1c + CR 700.2 — a death trigger whose modes each take "target
+/// opponent" fills every slot, one opponent per mode ("each mode must target a
+/// different player"): at four seats all three opponents are hit once; in a
+/// duel only the first mode finds an opponent and the rest do nothing. Both
+/// death funnels used to push the trigger with its first slot only, and the
+/// slot filler only ever offered the first opponent.
+#[test]
+fn cr_700_2_a_death_trigger_spreads_its_modes_over_distinct_opponents() {
+    use crabomination::card::SelectionRequirement as R;
+    use crabomination::effect::shortcut::{on_dies, target_filtered};
+    use crabomination::effect::{Effect, Value};
+    let lose = |n| Effect::LoseLife {
+        who: target_filtered(R::Player.and(R::ControlledByOpponent)),
+        amount: Value::Const(n),
+    };
+    let mut body = bear_commander();
+    body.name = "Test Spiteful Corpse";
+    body.supertypes.clear();
+    body.triggered_abilities = vec![on_dies(Effect::ChooseN { picks: vec![0, 1, 2], modes: vec![lose(3), lose(2), lose(1)] })];
+    for seats in [4usize, 2] {
+        let mut g = multi_player_game(seats);
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        let corpse = g.add_card_to_battlefield(0, body.clone());
+        let before: Vec<i32> = g.players.iter().map(|p| p.life).collect();
+        let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+        g.players[0].mana_pool.add(Color::Red, 1);
+        g.perform_action(GameAction::CastSpell {
+            card_id: bolt,
+            target: Some(Target::Permanent(corpse)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("bolt it");
+        drain_stack(&mut g);
+        let mut losses: Vec<i32> = (1..seats).map(|s| before[s] - g.players[s].life).collect();
+        losses.sort();
+        let want: Vec<i32> = if seats == 4 { vec![1, 2, 3] } else { vec![3] };
+        assert_eq!(losses, want, "{seats} seats");
+    }
+}

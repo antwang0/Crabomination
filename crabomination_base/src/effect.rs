@@ -6222,6 +6222,16 @@ pub enum Effect {
     /// [filter]. Destroy the chosen [permanents]" (Sadistic Shell Game); the
     /// filter's "you" is the resolving controller.
     EachPlayerChoosesToDestroy { filter: SelectionRequirement },
+    /// "Destroy target [filter] that player controls of their choice" (The
+    /// Abyss, Magus of the Abyss): `who` picks one permanent they control
+    /// matching `filter` and it is destroyed — `no_regen` for "it can't be
+    /// regenerated". The filter's "you" is `who`.
+    PlayerChoosesToDestroy {
+        who: PlayerRef,
+        filter: SelectionRequirement,
+        #[serde(default)]
+        no_regen: bool,
+    },
     /// "Starting with you, each player chooses one permanent matching each of
     /// `filters` from among those controlled by the player to their left.
     /// Destroy each permanent chosen this way." Grenzo's Rebuttal.

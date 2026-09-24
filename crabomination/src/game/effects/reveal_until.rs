@@ -69,8 +69,15 @@ impl GameState {
         rest.shuffle(&mut self.rng.draw());
         self.players[p].library.extend(rest);
         let dest = ZoneDest::Battlefield { controller: PlayerRef::Seat(p), tapped: false };
+        let placed: Vec<_> = hits.iter().map(|c| c.id).collect();
         for card in hits {
             self.place_card_in_dest(card, p, &dest, events);
+        }
+        // `Selector::LastMoved` is the card put onto the battlefield (Shifting
+        // Shadow attaches itself to it). Stored only on a hit: the scratch is
+        // a CoW group, and an empty-over-empty store would unshare it.
+        if !placed.is_empty() {
+            self.scratch.last_moved_cards = placed;
         }
         if damage_controller && revealed > 0 {
             self.deal_damage_to_from(super::EntityRef::Player(p), revealed, ctx.source, events);

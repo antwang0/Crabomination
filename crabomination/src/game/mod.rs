@@ -24151,11 +24151,19 @@ impl GameState {
         {
             return vec![];
         }
-        let opp = self
-            .opponents_of(controller)
-            .first()
-            .copied()
-            .unwrap_or((controller + 1) % self.players.len());
+        // Every live opponent is a candidate, the most hostile first: a pod's
+        // other opponents matter once the primary slot has claimed one — "each
+        // mode must target a different player" (Vindictive Lich) at four
+        // seats needs three of them. A duel has the one opponent it always had.
+        let mut opps = self.opponents_of(controller);
+        if let Some(h) = self.default_hostile_opponent(controller)
+            && let Some(i) = opps.iter().position(|&q| q == h)
+        {
+            opps[..=i].rotate_right(1);
+        }
+        if opps.is_empty() {
+            opps.push((controller + 1) % self.players.len());
+        }
         let mut avoid: Vec<CardId> = vec![source];
         if let Some(Target::Permanent(c)) = primary {
             avoid.push(c);
@@ -24190,17 +24198,23 @@ impl GameState {
             // in `auto_targets_for_effect_all_slots_kicked`.
             let hostile = self.players[controller].hostile_player_targets
                 && eff.player_slot_is_hostile(slot, None);
-            let order = if hostile {
-                [Target::Player(opp), Target::Player(controller)]
+            let opp_targets = opps.iter().map(|&q| Target::Player(q));
+            let order: Vec<Target> = if hostile {
+                opp_targets.chain(std::iter::once(Target::Player(controller))).collect()
             } else {
-                [Target::Player(controller), Target::Player(opp)]
+                std::iter::once(Target::Player(controller)).chain(opp_targets).collect()
             };
+            // A modal "choose one or more" never reuses a player: its
+            // player-per-mode cards print "each mode must target a different
+            // player" (Shadrix Silverquill, Vindictive Lich), so a mode left
+            // without a fresh player goes untargeted and does nothing.
+            let reuse_ok = !matches!(eff, Effect::ChooseN { .. });
             let mut pick = order
                 .clone()
                 .into_iter()
                 .filter(|t| !matches!(t, Target::Player(pl) if used_players.contains(pl)))
                 .find(|t| is_legal(t))
-                .or_else(|| order.into_iter().find(|t| is_legal(t)));
+                .or_else(|| if reuse_ok { order.into_iter().find(|t| is_legal(t)) } else { None });
             // Then a not-yet-claimed permanent, your own preferred.
             if pick.is_none() {
                 pick = self
@@ -29593,6 +29607,7 @@ fn static_effect_to_effects(
             | StaticEffect::HasActivatedAbilitiesOfOpponentCreatures
             | StaticEffect::HasActivatedAbilitiesOfGraveyardLands
             | StaticEffect::HasActivatedAbilitiesOfExiledWithSelf
+            | StaticEffect::HasActivatedAbilitiesOfOwnedExiledWithCounter { .. }
             | StaticEffect::CostReductionPerCounterOnSource { .. }
             | StaticEffect::PreventDamageToThisRedirect
             | StaticEffect::HasActivatedAbilitiesOfLibraryTop { .. }

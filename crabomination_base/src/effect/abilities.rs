@@ -1872,8 +1872,14 @@ pub enum StaticEffect {
     /// "Once during each of your turns, you may cast a [filter] spell from
     /// your graveyard" (Gisa and Geralf: a Zombie creature spell) — the
     /// no-sacrifice sibling of `GraveyardCastBySacrificingOncePerTurn`,
-    /// sharing its per-source tally.
-    GraveyardCastOncePerTurn { filter: SelectionRequirement },
+    /// sharing its per-source tally. With `exile_after`, "if a spell cast
+    /// this way would be put into your graveyard, exile it instead" (Kess,
+    /// Dissident Mage) — the flashback rider (CR 702.34d) on a plain grant.
+    GraveyardCastOncePerTurn {
+        filter: SelectionRequirement,
+        #[serde(default)]
+        exile_after: bool,
+    },
     GraveyardCastBySacrificingOncePerTurn {
         filter: SelectionRequirement,
         sacrifice: SelectionRequirement,
@@ -2268,6 +2274,12 @@ pub enum StaticEffect {
     /// it" (Myr Welder). A self-static: `granted_abilities_for` folds in every
     /// activated ability printed on a card stamped `exiled_with = this`.
     HasActivatedAbilitiesOfExiledWithSelf,
+    /// "This permanent has all activated abilities of all cards you own in
+    /// exile with [counter] counters on them" (Mairsil, the Pretender's cage
+    /// counters). A self-static like `HasActivatedAbilitiesOfExiledWithSelf`,
+    /// but keyed on the counter and the owner rather than a link to this
+    /// object, so a commander that re-enters keeps its earlier cages.
+    HasActivatedAbilitiesOfOwnedExiledWithCounter { counter: crate::card::CounterType },
     /// CR 605.1b — triggered mana ability: "Whenever [a matching land] is
     /// tapped for mana, its controller adds [extra]." Doesn't use the stack;
     /// resolved immediately at the mana-ability fast path. `enchanted_only`

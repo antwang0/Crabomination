@@ -202,7 +202,7 @@ pub fn karador_ghost_chieftain() -> CardDefinition {
             },
             StaticAbility {
                 description: "Once during each of your turns, you may cast a creature spell from your graveyard.",
-                effect: StaticEffect::GraveyardCastOncePerTurn { filter: R::Creature },
+                effect: StaticEffect::GraveyardCastOncePerTurn { filter: R::Creature, exile_after: false },
             },
         ],
         ..creature(

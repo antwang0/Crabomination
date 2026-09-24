@@ -771,7 +771,8 @@ impl Effect {
             | Effect::WillOfTheCouncilOnCards { .. }
             | Effect::BottomCardToGraveyardThenDeploy { .. }
             | Effect::EachPlayerDestroysChosenFromLeftNeighbor { .. }
-            | Effect::EachPlayerChoosesToDestroy { .. } => false,
+            | Effect::EachPlayerChoosesToDestroy { .. }
+            | Effect::PlayerChoosesToDestroy { .. } => false,
             Effect::PayPerCounterOrSacrifice { then, .. } => then.requires_target(),
             Effect::MayPayRepeatedly { body, .. } => body.requires_target(),
             Effect::CoffinExile { what } => sel_has_target(what),

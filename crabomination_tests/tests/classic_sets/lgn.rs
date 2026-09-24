@@ -870,7 +870,8 @@ fn crookclaw_elder_taps_two_birds_to_draw() {
     assert!(birds.iter().all(|id| g.battlefield_find(*id).unwrap().tapped), "both Birds tapped");
 }
 
-/// …and rejects the activation when only one Bird is untapped.
+/// …and rejects the activation when only one Bird is untapped. The Elder is
+/// a Bird itself and may pay with itself, so the other Bird starts tapped.
 #[test]
 fn crookclaw_elder_needs_two_untapped_birds() {
     let mut g = main_phase();
@@ -879,6 +880,7 @@ fn crookclaw_elder_needs_two_untapped_birds() {
     for id in [elder, bird] {
         g.clear_sickness(id);
     }
+    g.battlefield_find_mut(bird).unwrap().tapped = true;
     mana(&mut g, 0);
     g.priority.player_with_priority = 0;
     assert!(
