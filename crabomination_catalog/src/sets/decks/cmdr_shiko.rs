@@ -10,7 +10,6 @@ use crate::card::{
 };
 use crate::effect::shortcut::{flurry, target_filtered};
 use crate::effect::{CounteredSpellZone, Duration, Effect, PlayerRef, Predicate};
-use crate::game::types::TurnStep;
 use crate::mana::{Color, cost, generic, hybrid, r, u, w, x};
 use std::sync::Arc;
 
@@ -349,10 +348,8 @@ pub fn haughty_djinn() -> CardDefinition {
 }
 
 /// Shiny Impetus — +2/+2, goaded, and a Treasure for you each time it
-/// attacks. The goad is re-applied at the beginning of every combat, which
-/// holds it for as long as the Aura does.
+/// attacks.
 pub fn shiny_impetus() -> CardDefinition {
-    let enchanted = || Selector::AttachedTo(Box::new(Selector::This));
     CardDefinition {
         subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
         effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
@@ -370,9 +367,9 @@ pub fn shiny_impetus() -> CardDefinition {
             }],
             ..Default::default()
         }),
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::AnyPlayer),
-            effect: Effect::Goad { what: enchanted() },
+        static_abilities: vec![StaticAbility {
+            description: "Enchanted creature is goaded.",
+            effect: StaticEffect::AttachedIsGoaded,
         }],
         ..enchantment("Shiny Impetus", cost(&[generic(2), r()]))
     }

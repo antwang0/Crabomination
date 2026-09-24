@@ -239,7 +239,7 @@ fn cr_701_15_martial_impetus_goads_and_pumps() {
     let mi = g.add_card_to_hand(0, catalog::martial_impetus());
     cast_at(&mut g, mi, &[Target::Permanent(theirs)]).expect("cast");
     assert_eq!(pt(&g, theirs), (3, 3));
-    assert!(g.battlefield_find(theirs).unwrap().goaded_by.contains(&0));
+    assert!(g.goaded_by_player(g.battlefield_find(theirs).unwrap(), 0));
 }
 
 /// Mr. Foxglove draws up to the defender's hand size.

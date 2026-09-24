@@ -1277,7 +1277,7 @@ fn shiny_impetus_goads_and_pays_treasure() {
     let _ = g.advance_step(Vec::new());
     drain_stack(&mut g);
     assert_eq!(g.step, TurnStep::BeginCombat);
-    assert!(g.battlefield_find(victim).unwrap().cold_any(|k| k.goaded_by.contains(&0)), "goaded by seat 0");
+    assert!(g.goaded_by_player(g.battlefield_find(victim).unwrap(), 0), "goaded by seat 0");
     combat(&mut g, vec![Attack { attacker: victim, target: AttackTarget::Player(2) }], 1, |_| {});
     assert_eq!(count_named(&g, 0, "Treasure"), 1);
 }
@@ -4076,7 +4076,7 @@ fn cr_701_15b_ghoulish_impetus_goads_and_returns() {
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let aura = g.add_card_to_hand(0, catalog::ghoulish_impetus());
     cast(&mut g, aura, &[Target::Permanent(bear)]);
-    assert!(g.battlefield_find(bear).unwrap().goaded_by.contains(&0));
+    assert!(g.goaded_by_player(g.battlefield_find(bear).unwrap(), 0));
     assert_eq!(pt(&g, bear), (3, 3));
     assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Deathtouch));
     let giant = g.add_card_to_battlefield(1, catalog::hill_giant());

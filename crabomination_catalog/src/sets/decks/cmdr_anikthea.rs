@@ -426,11 +426,7 @@ pub fn demon_of_fates_design() -> CardDefinition {
 
 /// Ghoulish Impetus — enchanted creature gets +1/+1, has deathtouch and is
 /// goaded; when it dies, this returns at the next end step.
-///
-/// Approximation: the goad is applied on entry and again each of your upkeeps
-/// (a goad lasts until your next turn), so it outlives the Aura until then.
 pub fn ghoulish_impetus() -> CardDefinition {
-    let goad = || Effect::Goad { what: Selector::AttachedTo(Box::new(Selector::This)) };
     CardDefinition {
         subtypes: Subtypes {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
@@ -443,12 +439,11 @@ pub fn ghoulish_impetus() -> CardDefinition {
             keywords: vec![Keyword::Deathtouch],
             ..Default::default()
         }),
+        static_abilities: vec![StaticAbility {
+            description: "Enchanted creature is goaded.",
+            effect: StaticEffect::AttachedIsGoaded,
+        }],
         triggered_abilities: vec![
-            etb(goad()),
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
-                effect: goad(),
-            },
             TriggeredAbility {
                 event: EventSpec::new(EventKind::CreatureDied, EventScope::EnchantedBySource),
                 effect: Effect::DelayUntil {

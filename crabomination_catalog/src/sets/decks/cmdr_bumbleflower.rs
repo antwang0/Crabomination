@@ -319,7 +319,6 @@ pub fn kwain_itinerant_meddler() -> CardDefinition {
 ///
 /// ⚠ Residual: the pump reaches the enchanted creature too.
 pub fn martial_impetus() -> CardDefinition {
-    let enchanted = || Selector::AttachedTo(Box::new(Selector::This));
     CardDefinition {
         name: "Martial Impetus",
         cost: cost(&[generic(2), w()]),
@@ -338,13 +337,10 @@ pub fn martial_impetus() -> CardDefinition {
             })],
             ..Default::default()
         }),
-        triggered_abilities: vec![
-            etb(Effect::Goad { what: enchanted() }),
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::AnyPlayer),
-                effect: Effect::Goad { what: enchanted() },
-            },
-        ],
+        static_abilities: vec![StaticAbility {
+            description: "Enchanted creature is goaded.",
+            effect: StaticEffect::AttachedIsGoaded,
+        }],
         ..Default::default()
     }
 }
