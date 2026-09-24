@@ -2577,6 +2577,10 @@ pub enum SelectionRequirement {
     /// CR 702.143 — a card with foretell (Niko Defies Destiny's "return target
     /// card with foretell from your graveyard").
     HasForetell,
+    /// A creature whose printed power or toughness is `n` — "creature you
+    /// control with base power or toughness 1" (Sword of the Squeak). Reads
+    /// the definition, which is the token's for a token.
+    BasePowerOrToughnessIs(i32),
     /// The object is in exile because an until-end-of-turn "if it would die,
     /// exile it instead" replacement moved it there this turn
     /// (`dies_to_exile_eot` — Cosmic Intervention's end-step return).

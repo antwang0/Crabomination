@@ -4627,6 +4627,10 @@ impl GameState {
                     R::WithAnyCounter => card.has_any_counter(),
                     R::HasNoCounters => !card.has_any_counter(),
                     R::HasForetell => card.definition.foretell_cost.is_some(),
+                    R::BasePowerOrToughnessIs(n) => {
+                        card.definition.is_creature()
+                            && (card.definition.power == *n || card.definition.toughness == *n)
+                    }
                     R::ExiledInsteadOfDyingThisTurn => self.turn.dies_to_exile_eot.contains(&card.id)
                         && self.exile.iter().any(|c| c.id == card.id),
                     R::HasSupertype(st) => has_stype(st),
@@ -5914,6 +5918,9 @@ impl GameState {
             R::HasPrepareSpell => card.definition.prepare_spell.is_some(),
             R::HasNoCounters => !card.has_any_counter(),
             R::HasForetell => card.definition.foretell_cost.is_some(),
+            R::BasePowerOrToughnessIs(n) => {
+                card.definition.is_creature() && (card.definition.power == *n || card.definition.toughness == *n)
+            }
             R::ExiledInsteadOfDyingThisTurn => self.turn.dies_to_exile_eot.contains(&card.id)
                 && self.exile.iter().any(|c| c.id == card.id),
             // "With different names" — excludes anything sharing a name with
