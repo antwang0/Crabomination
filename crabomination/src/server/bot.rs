@@ -3149,6 +3149,7 @@ impl HeuristicBot {
                     if let Some(a) = pick_ability_counter_response_top(state, seat, &self.weights)
                         .or_else(|| pick_prepare_response(state, seat, &self.weights))
                         .or_else(|| pick_buff_response(state, seat, &self.weights))
+                        .or_else(|| pick_copy_response(state, seat, &self.weights))
                     {
                         return Some(BotStep::plain(a));
                     }
@@ -3195,6 +3196,7 @@ impl HeuristicBot {
                 let action = pick_ability_counter_response_top(state, seat, &self.weights)
                     .or_else(|| pick_prepare_response(state, seat, &self.weights))
                     .or_else(|| pick_buff_response(state, seat, &self.weights))
+                    .or_else(|| pick_copy_response(state, seat, &self.weights))
                     // Defender windows in the attack steps (the picker
                     // no-ops unless declared attackers are coming at us).
                     .or_else(|| {
@@ -4146,6 +4148,55 @@ fn effect_counters_abilities(eff: &Effect) -> bool {
         Effect::ChooseN { modes, .. } => modes.iter().any(effect_counters_abilities),
         _ => false,
     }
+}
+
+/// True when the effect copies a target spell (Reverberate, Twincast, Tempt
+/// with Mayhem's tempting offer) — the first step decides, as in
+/// [`effect_counters_spells`].
+fn effect_copies_target_spell(eff: &Effect) -> bool {
+    match eff {
+        Effect::CopySpell { .. }
+        | Effect::CopySpellMayChooseTargets { .. }
+        | Effect::CopySpellWithRiders { .. } => true,
+        Effect::TemptingOffer { body } => effect_copies_target_spell(body),
+        Effect::Seq(v) => v.first().is_some_and(effect_copies_target_spell),
+        _ => false,
+    }
+}
+
+/// CR 707.10 — copy the bot's own instant or sorcery while it is the top of
+/// the stack, with a spell-copy instant from hand. No other picker would: the
+/// counter and buff responses skip the bot's own spells, and the main-phase
+/// enumerator's auto-target never names a spell of its own, so Tempt with
+/// Mayhem went uncast through a 600-game 31-seat census. A copy is worth it
+/// for a spell of mana value 2 or more; the dry run is the final gate.
+fn pick_copy_response(state: &GameState, seat: usize, w: &EvalWeights) -> Option<GameAction> {
+    use crate::card::CardType;
+    use crate::game::types::StackItem;
+    let Some(StackItem::Spell { card, caster, .. }) = state.stack.last() else { return None };
+    let def = &card.definition;
+    if *caster != seat
+        || !(def.card_types.contains(&CardType::Instant) || def.card_types.contains(&CardType::Sorcery))
+        || def.cost.cmc() < 2
+    {
+        return None;
+    }
+    let spell_id = card.id;
+    let sweep = SweepMana::new(state, seat);
+    state.players[seat]
+        .hand
+        .iter()
+        .filter(|c| c.id != spell_id && c.definition.card_types.contains(&CardType::Instant))
+        .filter(|c| effect_copies_target_spell(&c.definition.effect))
+        .filter(|c| can_afford_in_state_with(state, seat, c, w, &sweep))
+        .map(|c| GameAction::CastSpell {
+            card_id: c.id,
+            target: Some(Target::Permanent(spell_id)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .find(|a| state.would_accept(a.clone()))
 }
 
 /// Land-count mulligan heuristic. A keepable opening hand wants roughly
@@ -26948,6 +26999,38 @@ mod stack_response_tests {
             matches!(action, GameAction::CastSpell { card_id, .. } if card_id == counter),
             "got {action:?}"
         );
+    }
+
+    /// CR 707.10 — with its own Divination on top of the stack, the bot copies
+    /// it with Tempt with Mayhem (the tempting offer wraps the copy); an
+    /// opponent's spell, or a one-mana one, is left alone.
+    #[test]
+    fn copy_response_copies_the_bots_own_spell() {
+        use crate::mana::Color;
+        let mut g = two_player_game();
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        let tempt = g.add_card_to_hand(0, catalog::tempt_with_mayhem());
+        let div = g.add_card_to_hand(0, catalog::divination());
+        g.players[0].mana_pool.add(Color::Blue, 3);
+        g.players[0].mana_pool.add(Color::Red, 3);
+        g.priority.player_with_priority = 0;
+        assert!(pick_copy_response(&g, 0, &EvalWeights::default()).is_none(), "empty stack");
+        g.perform_action(GameAction::CastSpell {
+            card_id: div,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("Divination");
+        let action = pick_copy_response(&g, 0, &EvalWeights::default()).expect("copy it");
+        assert!(
+            matches!(action, GameAction::CastSpell { card_id, target: Some(Target::Permanent(t)), .. }
+                if card_id == tempt && t == div),
+            "got {action:?}"
+        );
+        assert!(pick_copy_response(&g, 1, &EvalWeights::default()).is_none(), "not the opponent's spell");
     }
 
     /// The stack 2-for-1: the opponent's Giant Growth on their own bear
