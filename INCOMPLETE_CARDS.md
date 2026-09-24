@@ -1832,3 +1832,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Benevolent Offering | Forged in Stone (C14) | each "choose an opponent" is the engine's pick. |
 | 🟡 Nahiri, the Lithomancer | Forged in Stone (C14) | the +2 attaches your first Equipment; the −2 puts your first Equipment card from hand, else graveyard — no pick. |
 | 🟡 Mystic Confluence | Seize Control (C15) | the modes are the default picks (counter unless {3}, draw two); `ChooseN` has no cast-time mode choice with repeats. |
+| 🟡 Collective Effort | Rebellion Rising (ONC) | escalate is paid as it resolves (the standing `Escalate` approximation), tapping your first untapped creature. |
+| 🟡 Goldwardens' Gambit | Rebellion Rising (ONC) | each token takes your highest-mana-value unattached Equipment; no pick, and an attached one is never moved. |
+| 🟡 Neyali, Suns' Vanguard | Rebellion Rising (ONC) | "tokens attack a player" also counts tokens attacking a planeswalker an opponent controls. |
