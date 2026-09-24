@@ -489,6 +489,10 @@ fn no_cost_sacrifice_is_spelled_as_the_first_step_of_the_effect() {
         "Entish Restoration",
         "Faithless Salvaging",
         "Fast // Furious",
+        // "Discard a card, then draw a card. When you discard a nonland card
+        // this way, …" — the discard is the effect, and its reflexive payoff
+        // reads it.
+        "Fiery Encore",
         "Grab the Prize",
         "Path of the Pyromancer",
         "Inkling Tutor (b179)",

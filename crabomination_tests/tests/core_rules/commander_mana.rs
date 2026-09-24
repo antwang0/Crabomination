@@ -666,6 +666,7 @@ fn cr_106_6_every_rider_allows_every_payment() {
                 | RoomSpellsOrDoors
                 | FaceDownSpellsOrTurnFaceUp | CreatureHaste | CommanderTypeScry
                 | CommanderCastCounters | CommanderCastScry | SmallInstantSorceryExileInstead
+                | RedInstantSorceryCopy | XCostsOnly
                 | SpellFromGraveyard
                 | MonocoloredSpellOf(_) => {}
             }
@@ -707,6 +708,8 @@ fn cr_106_6_every_rider_allows_every_payment() {
             CommanderCastCounters,
             CommanderCastScry,
             SmallInstantSorceryExileInstead,
+            RedInstantSorceryCopy,
+            XCostsOnly,
             SpellFromGraveyard,
             MonocoloredSpellOf(crabomination::mana::Color::Red),
         ]

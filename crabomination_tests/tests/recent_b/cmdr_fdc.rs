@@ -5724,3 +5724,270 @@ fn draconic_dissent_batch() {
     assert!(g.battlefield_find(doll).is_none());
     assert!(g.players[1].hand.iter().any(|c| c.id == doll));
 }
+
+// ── Prismari Performance (Zaffai, Thunder Conductor) ────────────────────────
+
+fn cast_with(g: &mut GameState, seat: usize, id: CardId, target: Option<Target>) -> Result<(), String> {
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .map_err(|e| format!("{e:?}"))
+    .map(|_| {
+        let _ = seat;
+    })
+}
+
+/// CR 106.6 / 707.10 — Pyromancer's Goggles: its {R} spent on a red instant
+/// copies that spell.
+#[test]
+fn cr_106_6_pyromancers_goggles_copies_the_red_instant_it_paid_for() {
+    let mut g = main_phase();
+    let goggles = g.add_card_to_battlefield(0, catalog::pyromancers_goggles());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: goggles,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("tap for R");
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast_with(&mut g, 0, bolt, Some(Target::Player(1))).expect("bolt with the Goggles' R");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 14, "bolt and its copy");
+}
+
+/// CR 106.6 — Elementalist's Palette: an {X} spell adds two charge counters,
+/// and its colorless mana pays only a cost with {X}.
+#[test]
+fn cr_106_6_elementalists_palette_mana_pays_only_x_costs() {
+    let mut g = main_phase();
+    let pal = g.add_card_to_battlefield(0, catalog::elementalists_palette());
+    let fb = g.add_card_to_hand(0, catalog::fireball());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: fb,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(0),
+    })
+    .expect("X = 0");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(pal).unwrap().counter_count(CounterType::Charge), 2);
+    let tap = |g: &mut GameState| {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: pal,
+            ability_index: 1,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+        .expect("tap for C")
+    };
+    tap(&mut g);
+    let stone = g.add_card_to_hand(0, catalog::mind_stone());
+    assert!(cast_with(&mut g, 0, stone, None).is_err(), "no {{X}} in Mind Stone's cost");
+    let fb = g.add_card_to_hand(0, catalog::fireball());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: fb,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(2),
+    })
+    .expect("X = 2 off the Palette");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 18);
+}
+
+/// CR 707.10 — Radiant Performer copies a single-target spell for each other
+/// permanent and player it could target.
+#[test]
+fn cr_707_10_radiant_performer_copies_for_every_other_target() {
+    let mut g = main_phase();
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let shock = g.add_card_to_hand(0, catalog::shock());
+    flood(&mut g, 0);
+    cast_with(&mut g, 0, shock, Some(Target::Permanent(a))).expect("shock");
+    let rp = g.add_card_to_hand(0, catalog::radiant_performer());
+    cast_with(&mut g, 0, rp, None).expect("flash it in");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).is_none());
+    assert!(g.battlefield_find(b).is_none(), "a copy found the other bear");
+    assert_eq!(g.players[1].life, 18, "and the opponent");
+}
+
+/// CR 208.2 — Living Lore's P/T is the exiled card's mana value.
+#[test]
+fn cr_208_2_living_lore_is_as_big_as_the_card_it_exiled() {
+    let mut g = main_phase();
+    g.add_card_to_graveyard(0, catalog::divination());
+    let ll = g.add_card_to_hand(0, catalog::living_lore());
+    cast(&mut g, ll, &[]);
+    assert_eq!(pt(&g, ll), (3, 3));
+    assert!(g.players[0].graveyard.is_empty());
+}
+
+/// CR 702.34 — Jaya Ballard's emblem gives your graveyard's instants and
+/// sorceries flashback at their mana cost.
+#[test]
+fn cr_702_34_jaya_emblem_flashes_back_graveyard_spells() {
+    let mut g = main_phase();
+    let jaya = g.add_card_to_battlefield(0, catalog::jaya_ballard());
+    g.battlefield.find_by_id_mut(jaya).unwrap().add_counters(CounterType::Loyalty, 5);
+    loyalty_at(&mut g, jaya, 2, None);
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastFlashback {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("flashback");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 17);
+    assert!(g.exile.iter().any(|c| c.id == bolt));
+}
+
+/// Magecraft (CR 207.2c) — Zaffai: a mana value 5+ instant makes a 4/4.
+#[test]
+fn zaffai_makes_an_elemental_off_a_big_instant() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::zaffai_thunder_conductor());
+    g.add_card_to_library(0, catalog::island());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let ff = g.add_card_to_hand(0, catalog::fiery_fall());
+    cast(&mut g, ff, &[Target::Permanent(bear)]);
+    assert_eq!(count_named(&g, 0, "Elemental"), 1);
+    assert!(g.battlefield_find(bear).is_none());
+}
+
+/// The rest of Prismari Performance's new cards, one play pattern each.
+#[test]
+fn prismari_performance_batch() {
+    // Apex of Power: seven exiled, and ten mana cast from hand.
+    let mut g = main_phase();
+    for _ in 0..8 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let apex = g.add_card_to_hand(0, catalog::apex_of_power());
+    flood(&mut g, 0);
+    let before = g.players[0].mana_pool.total();
+    cast_with(&mut g, 0, apex, None).expect("apex");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.len(), 1);
+    assert_eq!(g.players[0].mana_pool.total(), before, "paid 10, got 10");
+
+    // Erratic Cyclops: +X/+0 off an instant.
+    let mut g = main_phase();
+    let cy = g.add_card_to_battlefield(0, catalog::erratic_cyclops());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, &[Target::Player(1)]);
+    assert_eq!(pt(&g, cy), (1, 8));
+
+    // Fiery Encore: discarding a three-drop deals 3.
+    let mut g = main_phase();
+    g.add_card_to_library(0, catalog::island());
+    let bear = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let fe = g.add_card_to_hand(0, catalog::fiery_encore());
+    g.add_card_to_hand(0, catalog::hill_giant());
+    cast(&mut g, fe, &[]);
+    assert!(g.battlefield_find(bear).is_none(), "the discarded Hill Giant's 4");
+
+    // Inferno Project: counters equal to graveyard instant/sorcery mana value.
+    let mut g = main_phase();
+    g.add_card_to_graveyard(0, catalog::divination());
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let ip = g.add_card_to_hand(0, catalog::inferno_project());
+    cast(&mut g, ip, &[]);
+    assert_eq!(pt(&g, ip), (4, 4));
+
+    // Inspiring Refrain: draw two, then suspended with three time counters.
+    let mut g = main_phase();
+    for _ in 0..2 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let ir = g.add_card_to_hand(0, catalog::inspiring_refrain());
+    cast(&mut g, ir, &[]);
+    assert_eq!(g.players[0].hand.len(), 2);
+    let ex = g.exile.iter().find(|c| c.id == ir).expect("exiled");
+    assert_eq!(ex.counter_count(CounterType::Time), 3);
+
+    // Desert of the Fervent enters tapped.
+    let mut g = main_phase();
+    let d = g.add_card_to_hand(0, catalog::desert_of_the_fervent());
+    g.perform_action(GameAction::PlayLand(d)).expect("land");
+    assert!(g.battlefield_find(d).unwrap().tapped);
+
+    // Muse Vortex X=3: one instant or sorcery cast free, the other to hand,
+    // the Island to the bottom (top of library first: Shock, Divination).
+    let mut g = main_phase();
+    g.add_card_to_library(0, catalog::shock());
+    g.add_card_to_library(0, catalog::divination());
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let mv = g.add_card_to_hand(0, catalog::muse_vortex());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: mv,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(3),
+    })
+    .expect("X = 3");
+    drain_stack(&mut g);
+    assert!(!g.exile.iter().any(|c| c.exiled_with == Some(mv)), "nothing left in exile");
+    assert_eq!(g.players[0].library.len() + g.players[0].hand.len(), 5);
+
+    // Reinterpret: counter the opponent's bolt, cast a Shock free.
+    let mut g = main_phase();
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    flood(&mut g, 1);
+    cast_with(&mut g, 1, bolt, Some(Target::Player(0))).expect("their bolt");
+    g.priority.player_with_priority = 0;
+    let re = g.add_card_to_hand(0, catalog::reinterpret());
+    g.add_card_to_hand(0, catalog::shock());
+    flood(&mut g, 0);
+    cast_with(&mut g, 0, re, Some(Target::Permanent(bolt))).expect("reinterpret");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 20, "countered");
+    assert!(g.players[0].hand.is_empty(), "the Shock was cast free");
+
+    // Traumatic Visions: counter target spell.
+    let mut g = main_phase();
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    flood(&mut g, 1);
+    cast_with(&mut g, 1, bolt, Some(Target::Player(0))).expect("their bolt");
+    g.priority.player_with_priority = 0;
+    let tv = g.add_card_to_hand(0, catalog::traumatic_visions());
+    flood(&mut g, 0);
+    cast_with(&mut g, 0, tv, Some(Target::Permanent(bolt))).expect("visions");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 20);
+
+    // Surge to Victory: +X/+0 from the exiled card.
+    let mut g = main_phase();
+    let div = g.add_card_to_graveyard(0, catalog::divination());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let sv = g.add_card_to_hand(0, catalog::surge_to_victory());
+    cast(&mut g, sv, &[Target::Permanent(div)]);
+    assert_eq!(pt(&g, bear), (5, 2));
+    assert!(g.exile.iter().any(|c| c.id == div));
+}
