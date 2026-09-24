@@ -1820,7 +1820,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Trove Warden | Land's Wrath (ZNC) | the exiled cards return when it leaves the battlefield by any route, not only when it dies. |
 | 🟡 Footbottom Feast | Counterpunch (CMD) | the cards are chosen as it resolves, not targeted on cast; they go on top in mana-value order (the greatest on top). |
 
-### Seats 42, 46, 49 and 53 (Peer Through Time C14, Wade into Battle C15, Chaos Incarnate SCD, Heavenly Inferno CMD) — open residuals, 2026-09-24
+### Seats 42, 46, 49, 53 and 55 (Peer Through Time C14, Wade into Battle C15, Chaos Incarnate SCD, Heavenly Inferno and Political Puppets CMD) — open residuals, 2026-09-24
 
 | Card | Deck | Gap |
 |---|---|---|
@@ -1834,6 +1834,8 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Wildfire Devils | Chaos Incarnate (SCD) | the random player gives up their first instant or sorcery in graveyard order. |
 | 🟡 Archangel of Strife | Heavenly Inferno (CMD) | war or peace is chosen as its ETB trigger resolves, not as it enters. |
 | 🟡 Kaalia of the Vast | Heavenly Inferno (CMD) | also triggers attacking an opponent's planeswalker. |
+| 🟡 Jötun Grunt | Political Puppets (CMD) | the graveyard and the two cards of each installment are the engine's pick (an opponent's fullest, highest mana values). |
+| 🟡 Ruhan of the Fomori | Political Puppets (CMD) | the random opponent is stored on Ruhan, so another effect storing a player on it overwrites the pick. |
 
 ### The `modern_decks` Commander routine's precons (seats 23, 25, 27, 29, 30) — open residuals, 2026-09-24
 

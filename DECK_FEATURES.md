@@ -78,6 +78,7 @@ lists were picked.
 | **Wade into Battle** (C15 precon) RW | Kalemne, Disciple of Iroas | RW | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Chaos Incarnate** (SCD) BR | Kardur, Doomscourge | BR | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Heavenly Inferno** (CMD precon) RWB | Kaalia of the Vast | RWB | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
+| **Political Puppets** (CMD precon) URW | Zedruu the Greathearted | URW | 100 | 🟡 all 100 implemented (Trade Secrets, banned, swapped for Divination), 2 carry residuals (below) |
 | **Eternal Might** (DRC precon) WUB | Temmet, Naktamun's Will | WUB | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Land's Wrath** (ZNC precon) RGW | Obuun, Mul Daya Ancestor | RGW | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Arm for Battle** (CMR precon) RW | Wyleth, Soul of Steel | RW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
@@ -775,6 +776,22 @@ land); **The Mending of Dominaria** regrows the greatest-power creature card;
 Arahbo / Yidris / Temmet / Sigarda (seeds 9301/9302, 60 games) decided 60/60,
 zero panics; a 120-game census (seed 9303) leaves no Obuun card unplayed.
 `--bench` byte-identical through all of it.
+
+The **fifty-fifth** is Commander (2011)'s **Political Puppets**
+(`PoliticalPuppets_CMD`) — Jeskai donations and table politics under Zedruu the
+Greathearted, with **one swap**: Trade Secrets is on the Commander ban list, so
+Divination takes its slot (the pod asserts legality, and the list as printed
+fails it). Sixteen cards were missing; the primitives:
+`CumulativeUpkeepCost::GraveyardCardsToBottom` (Jötun Grunt),
+`Effect::EachOpponentSacrificesSharingTypeWith` (Martyr's Bond),
+`CardDefinition::library_bottom_on_resolve` (Spell Crumple), and clash now
+picks the most hostile opponent and binds them as "that player" (Pollen
+Lullaby). ⚠ **Crescendo of War found a layer gap**: a
+`PumpPTPerCounterOnSource` over a live filter (attacking, blocking) was dropped
+whole — only `PumpPT`/`GrantKeyword` rode the gather's live pass; it now shares
+it, and the dropped-static ratchet covers it. Residuals: **Jötun Grunt**'s
+graveyard and cards are the engine's pick; **Ruhan**'s random opponent is
+stored on Ruhan.
 
 ⚠ **The board cap was a bot bug, not a loop.** A Krenko seat sent all 292
 of its Goblins at one player on 24 life each turn while two others sat on
