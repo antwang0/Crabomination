@@ -111,6 +111,7 @@ lists were picked.
 | **Hatsune Miku** (SLD precon) GW | Trostani, Selesnya's Voice | GW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Witherbloom Witchcraft** (C21 precon) BG | Willowdusk, Essence Seer | BG | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Witherbloom Pestilence** (SOC precon) BG | Dina, Essence Brewer | BG | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
+| **Silverquill Statement** (C21 precon) WB | Breena, the Demagogue | WB | 100 | 🟡 all 100 implemented, 9 carry residuals (below) |
 | **Exit from Exile** (CLB precon) RG | Faldorn, Dread Wolf Herald | RG | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Exquisite Invention** (C18 precon) UR | Saheeli, the Gifted (**planeswalker**) | UR | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Mishra's Burnished Banner** (BRC precon) UBR | Mishra, Eminent One | UBR | 100 | 🟡 all 100 implemented, 6 carry residuals (below) |
@@ -1125,6 +1126,28 @@ also Pest Infestation's "up to X"). Residuals: **Gorma**'s extra counters
 reach cast creatures only; **Stensian Sanguinist**'s "this combat" is "this
 turn". Four-seat pods beside Sigarda / Teval / Disa (seed 11081, 1,000 games,
 all decided): Dina 15.9 %; the census leaves no card of the four unplayed.
+`--bench` byte-identical.
+
+The **ninetieth** is Commander 2021's **Silverquill Statement**
+(`SilverquillStatement_C21`) — Orzhov politics and Inklings under Breena, the
+Demagogue (committed as 88). Eighteen cards were missing; the primitive is
+**CR 508.1's "whenever a player attacks one of your opponents"** —
+`EventScope::OpponentOfYoursAttacked`, fired once per attacked player for every
+listener that player opposes, the attacker in the target slot and the attacked
+opponent as `Triggerer` (Breena, Combat Calligrapher) — plus
+`Value::LowestOpponentLife` / `MostControlledByAnOpponent` and an attack tax that
+reads its attacker (Nils). Its pods found a bot bug: ⚠ **3,512 Aetherflux
+Reservoir shots into an indestructible Zetalpa** — the pinger called damage
+lethal to an indestructible creature and never aimed a paid repeat shot at a
+60-life face. Residuals (nine, all on the card docs): Breena's counters and
+Nils's targets are engine picks; the Blade/Impetus goad renews each beginning
+of combat; Bold Plagiarist copies +1/+1 counters only; Guardian Archon's
+protection from a player is hexproof + indestructible; Inkshield counts
+unblocked power; Author of Shadows takes the first nonland card; Tragic
+Arrogance keeps each player's best; Victory Chimes's mana is yours. Four-seat
+pods beside Sigarda / Teval / Disa (seed 11088, 1,000 games, all decided):
+Breena 25.1 %; census: no card of the four unplayed; 6 and 8 seats and a
+Strixhaven-only pod (seed 11089): 3,000 / 3,000 decided after the fix.
 `--bench` byte-identical.
 
 The **eighty-ninth** is Commander 2013's **Mind Seize** (`MindSeize_C13`) —
