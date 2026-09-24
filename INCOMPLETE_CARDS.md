@@ -1819,7 +1819,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Rot Hulk | Eternal Might (DRC) | returns your greatest-power Zombie cards, not targets chosen on entry. |
 | 🟡 Footbottom Feast | Counterpunch (CMD) | the cards are chosen as it resolves, not targeted on cast; they go on top in mana-value order (the greatest on top). |
 
-### Seats 42, 46 and 49 (Peer Through Time C14, Wade into Battle C15, Chaos Incarnate SCD) — open residuals, 2026-09-24
+### Seats 42, 46, 49 and 53 (Peer Through Time C14, Wade into Battle C15, Chaos Incarnate SCD, Heavenly Inferno CMD) — open residuals, 2026-09-24
 
 | Card | Deck | Gap |
 |---|---|---|
@@ -1831,6 +1831,8 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Kardur, Doomscourge | Chaos Incarnate (SCD) | creatures entering after its ETB are goaded by a delayed trigger, not a static rule. |
 | 🟡 Theater of Horrors | Chaos Incarnate (SCD) | the permission outlives the enchantment; lands among the exiled cards can't be played. |
 | 🟡 Wildfire Devils | Chaos Incarnate (SCD) | the random player gives up their first instant or sorcery in graveyard order. |
+| 🟡 Archangel of Strife | Heavenly Inferno (CMD) | war or peace is chosen as its ETB trigger resolves, not as it enters. |
+| 🟡 Kaalia of the Vast | Heavenly Inferno (CMD) | also triggers attacking an opponent's planeswalker. |
 
 ### The `modern_decks` Commander routine's precons (seats 23, 25, 27, 29, 30) — open residuals, 2026-09-24
 

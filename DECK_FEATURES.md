@@ -76,6 +76,7 @@ lists were picked.
 | **Counterpunch** (CMD precon) WBG | Ghave, Guru of Spores | WBG | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Wade into Battle** (C15 precon) RW | Kalemne, Disciple of Iroas | RW | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Chaos Incarnate** (SCD) BR | Kardur, Doomscourge | BR | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
+| **Heavenly Inferno** (CMD precon) RWB | Kaalia of the Vast | RWB | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Eternal Might** (DRC precon) WUB | Temmet, Naktamun's Will | WUB | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Arm for Battle** (CMR precon) RW | Wyleth, Soul of Steel | RW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Fae Dominion** (WOC precon) UB | Tegwyll, Duke of Splendor | UB | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
@@ -724,6 +725,18 @@ Gift and Rot Hulk take the greatest-power creature cards rather than a choice
 or targets. Debug pods beside Breya / Wyleth / Edgar / Sigarda (seeds
 9281/9282, 60 games) decided 60/60, zero panics, Temmet winning 30 % of each;
 a 120-game census (seed 9283) leaves no card unplayed (Temmet 41.7 % there).
+
+The **fifty-third** is Commander (2011)'s **Heavenly Inferno**
+(`HeavenlyInferno_CMD`) — Mardu Angels, Demons and Dragons under Kaalia of the
+Vast. Seventeen cards were missing; the primitives: `StaticEffect::WarOrPeace`
++ `Effect::EachPlayerChoosesWarOrPeace` (Archangel of Strife),
+`StaticEffect::PlayersCantCastDuringCombat` (Basandra, a new cast-lock bit),
+`Value::SourceActivationsThisTurn` (Dragon Whelp), and the target walk now reads
+a player ref's own selector filter (`pref_find`) — "target opponent's
+graveyard" (Tariel) and "each player other than target player" (Death by
+Dragons) had no way to say which players were legal. Residuals: **Archangel of
+Strife**'s choice is made as its ETB resolves; **Kaalia** also triggers
+attacking a planeswalker.
 
 ⚠ **The board cap was a bot bug, not a loop.** A Krenko seat sent all 292
 of its Goblins at one player on 24 life each turn while two others sat on
