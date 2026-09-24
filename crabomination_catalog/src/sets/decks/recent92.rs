@@ -97,9 +97,9 @@ pub fn mirari() -> CardDefinition {
     }
 }
 
-/// Niv-Mizzet, Dracogenius — {2}{U}{U}{R}{R} 5/5 Dragon Wizard, flying. Deals
-/// damage → you may draw. {U}{R}: deal 1 to any target. (The draw trigger fires
-/// on any damage Niv deals, approximating "to a player".)
+/// Niv-Mizzet, Dracogenius — {2}{U}{U}{R}{R} 5/5 Dragon Wizard, flying.
+/// Whenever it deals damage to a player, you may draw a card. {U}{R}: deal 1 to
+/// any target.
 pub fn nivmizzet_dracogenius() -> CardDefinition {
     CardDefinition {
         name: "Niv-Mizzet, Dracogenius",
@@ -114,7 +114,8 @@ pub fn nivmizzet_dracogenius() -> CardDefinition {
         toughness: 5,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::DealtDamage, EventScope::SelfSource),
+            // It shipped on `DealtDamage` — drawing when Niv *took* damage.
+            event: EventSpec::new(EventKind::DealsDamageToPlayer, EventScope::SelfSource),
             effect: Effect::MayDo {
                 description: "Draw a card.".into(),
                 body: Box::new(draw(1)),

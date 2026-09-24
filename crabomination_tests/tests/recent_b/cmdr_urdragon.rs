@@ -269,3 +269,18 @@ fn orator_draws_with_a_dragon() {
     cast(&mut g, 0, o2, None).expect("cast");
     assert_eq!(g.players[0].hand.len(), h, "drew one");
 }
+
+/// Niv-Mizzet, Dracogenius draws when it deals damage to a player — it
+/// shipped drawing when it was dealt damage instead.
+#[test]
+fn niv_mizzet_dracogenius_draws_on_damage_to_a_player() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 3);
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true), DecisionAnswer::Bool(true)]));
+    let niv = g.add_card_to_battlefield(0, catalog::nivmizzet_dracogenius());
+    let h = g.players[0].hand.len();
+    bolt(&mut g, 1, niv);
+    assert_eq!(g.players[0].hand.len(), h, "taking damage draws nothing");
+    activate(&mut g, 0, niv, 0, Some(Target::Player(1)), None).expect("ping");
+    assert_eq!(g.players[0].hand.len(), h + 1);
+}

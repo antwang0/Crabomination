@@ -354,3 +354,20 @@ fn deathbringer_liege_taps_then_kills() {
     cast(&mut g, 0, bp, None).expect("a black spell");
     assert!(g.battlefield_find(angel).is_none(), "destroyed while tapped");
 }
+
+/// Two Bold Plagiarists across the table don't feed each other: the counters a
+/// Plagiarist is given are put on a creature the opponent doesn't control.
+#[test]
+fn bold_plagiarists_do_not_loop() {
+    let mut g = pod(2);
+    let a = g.add_card_to_battlefield(0, catalog::bold_plagiarist());
+    let b = g.add_card_to_battlefield(1, catalog::bold_plagiarist());
+    let wd = g.add_card_to_battlefield(1, catalog::willowdusk_essence_seer());
+    g.clear_sickness(wd);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[1].life_gained_this_turn = 1;
+    g.active_player_idx = 1;
+    activate(&mut g, 1, wd, 0, Some(Target::Permanent(bear)), None).expect("a counter");
+    assert_eq!(g.battlefield_find(a).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    assert_eq!(g.battlefield_find(b).unwrap().counter_count(CounterType::PlusOnePlusOne), 0);
+}

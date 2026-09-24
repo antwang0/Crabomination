@@ -9,7 +9,8 @@
 //!   exiled, not a chosen one.
 //! - **Bloodthirsty Blade** / **Parasitic Impetus** — the goad is renewed at
 //!   the beginning of each combat by a trigger, not a static.
-//! - **Bold Plagiarist** — copies +1/+1 counters only.
+//! - **Bold Plagiarist** — copies +1/+1 counters only; an opponent's own
+//!   Plagiarist is never the creature it copies from.
 //! - **Guardian Archon** — "protection from the chosen player" is hexproof
 //!   and indestructible for the permanent, and your life can't drop this turn
 //!   is not modeled; the chosen player is the engine's most hostile opponent.
@@ -138,13 +139,22 @@ pub fn author_of_shadows() -> CardDefinition {
 }
 
 /// Bold Plagiarist — flash; an opponent putting +1/+1 counters on a creature
-/// they control puts as many on this. Residual: +1/+1 counters only.
+/// they control puts as many on this. Residual: +1/+1 counters only, and an
+/// opponent's own Bold Plagiarist never counts.
 pub fn bold_plagiarist() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flash],
         triggered_abilities: vec![TriggeredAbility {
+            // The event carries no actor, so "an opponent puts … on a creature
+            // they control" is read off the recipient's controller. The
+            // counters a Plagiarist is given are put by the opponent on a
+            // creature they *don't* control, so another Plagiarist must not see
+            // them — two of them fed each other to a million-action cap.
             event: EventSpec::new(EventKind::CounterAdded(CounterType::PlusOnePlusOne), EventScope::OpponentControl)
-                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature }),
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Creature.and(R::HasName("Bold Plagiarist".into()).negate()),
+                }),
             effect: Effect::AddCounter {
                 what: Selector::This,
                 kind: CounterType::PlusOnePlusOne,
