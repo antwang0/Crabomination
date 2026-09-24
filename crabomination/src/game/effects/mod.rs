@@ -7559,7 +7559,15 @@ impl GameState {
             Effect::OptionalTargets { body, .. } => self.run_effect(body, ctx, events),
             Effect::WithX { x, body } => {
                 let x = self.evaluate_value(x, ctx).max(0) as u32;
-                self.run_effect(body, &EffectContext { x_value: x, ..ctx.clone() }, events)
+                self.run_effect(body, &EffectContext { x_value: x, ..ctx.clone() }, events)?;
+                // A parked body resumes under the stack item's context, whose
+                // X is not this one: pin it (Kodama of the East Tree's pick
+                // resumed at X = 0, matched nothing and leaked its answer).
+                rewrap_parked(&mut self.suspend_signal, |carried| Effect::WithX {
+                    x: crate::effect::Value::Const(x as i32),
+                    body: Box::new(carried),
+                });
+                Ok(())
             }
             // Both cap the supplied slots at the paid X; they differ only in
             // whether the targeting walk treats slots below X as optional.

@@ -459,3 +459,100 @@ fn cr_603_7c_a_delayed_trigger_keeps_its_x() {
     assert_eq!(bears, 2, "two exiled, so two creature cards come back — not zero, not three");
     assert_eq!(g.players[0].library.len(), 3, "the two Forests and the third Bears are shuffled back");
 }
+
+/// Answer every `ChooseCards` ask by taking the first candidate; returns how
+/// many were asked.
+fn answer_first_cards(g: &mut GameState) -> usize {
+    use crabomination::decision::{Decision, DecisionAnswer};
+    let mut asked = 0;
+    for _ in 0..12 {
+        let Some(p) = g.pending_decision.as_ref() else {
+            if g.stack.is_empty() {
+                break;
+            }
+            g.perform_action(GameAction::PassPriority).expect("pass");
+            continue;
+        };
+        let answer = match &p.decision {
+            Decision::ChooseCards { candidates, .. } => {
+                asked += 1;
+                DecisionAnswer::Cards(candidates.iter().take(1).map(|(id, _)| *id).collect())
+            }
+            other => panic!("unexpected ask {other:?}"),
+        };
+        g.perform_action(GameAction::SubmitDecision(answer)).expect("answer");
+    }
+    asked
+}
+
+/// CR 608.2 — a body parked for a prompt resumes with the X its `WithX` bound
+/// (Kodama of the East Tree resumed at X = 0 in a pod, matched nothing and
+/// leaked its answer).
+#[test]
+fn cr_608_2_a_parked_with_x_body_keeps_its_x() {
+    use crabomination::card::{CardDefinition, CardType, SelectionRequirement as R};
+    use crabomination::effect::{Effect, PlayerRef, Value};
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let spell = g.add_card_to_hand(0, CardDefinition {
+        name: "Measured Arrival",
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::WithX {
+            x: Value::Const(3),
+            body: Box::new(Effect::PutFromHandOntoBattlefield {
+                who: PlayerRef::You,
+                filter: R::PermanentCard.and(R::ManaValueAtMostXFromCost),
+                count: Value::Const(1),
+                tapped: false,
+                haste: false,
+                sacrifice_eot: false,
+                return_eot: false,
+                then: None,
+            }),
+        },
+        ..Default::default()
+    });
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.add_card_to_hand(0, catalog::serra_angel());
+    g.players[0].wants_ui = true;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    let asked = answer_first_cards(&mut g);
+    g.players[0].wants_ui = false;
+    assert_eq!(asked, 1);
+    assert!(g.battlefield_find(bear).is_some(), "the Bears (MV 2 <= 3) came down on resume");
+}
+
+/// CR 608.2 — `Effect::AsPlayer` asks the chosen player, and their parked
+/// pick resumes as them: the card goes to *their* hand from *their* graveyard.
+#[test]
+fn cr_608_2_a_parked_as_player_body_resumes_as_that_player() {
+    use crabomination::card::{CardDefinition, CardType, SelectionRequirement as R};
+    use crabomination::effect::{Effect, PlayerRef, Value};
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let spell = g.add_card_to_hand(0, CardDefinition {
+        name: "Gift of Memory",
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::AsPlayer {
+            who: PlayerRef::Seat(1),
+            body: Box::new(Effect::ReturnGraveyardCardsToHand { filter: R::Any, max: Value::Const(1) }),
+        },
+        ..Default::default()
+    });
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_graveyard(1, catalog::serra_angel());
+    g.players[1].wants_ui = true;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    let asked = answer_first_cards(&mut g);
+    g.players[1].wants_ui = false;
+    assert_eq!(asked, 1);
+    assert!(g.players[1].hand.iter().any(|c| c.id == theirs));
+}
