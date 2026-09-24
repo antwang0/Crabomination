@@ -58,6 +58,7 @@ lists were picked.
 | **Calling All Angels** (FDC precon) W | Giada, Font of Hope | W | 100 | ✅ complete |
 | **Guided by Nature** (C14 precon) G | Freyalise, Llanowar's Fury (**planeswalker**) | G | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Animated Army** (BLC precon) RG | Bello, Bard of the Brambles | RG | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
+| **Grave Danger** (SCD precon) UB | Gisa and Geralf | UB | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not
@@ -371,6 +372,25 @@ the caps are attrition (game 297: 18 of 27 seats alive at turn 351) — the cap
 rate climbs with seats (0.6 % at 15, 3.3 % at 25, 7.3 % at 27) and was left
 alone. Four-seat pods beside Freyalise / Ghalta / Aesi (seed 10082, 1,000
 games, all decided): C14 Freyalise 11.8 %, Ghalta **67.4 %**.
+
+The **twenty-ninth** is Secret Lair's **Grave Danger** (`GraveDanger_SCD`) —
+Dimir Zombies under Gisa and Geralf. Sixteen cards were missing; the
+primitives: `StaticEffect::GraveyardCastOncePerTurn` (the no-sacrifice sibling
+of Exploration Broodship's grant), `AlternativeCost.from_graveyard` with
+`cast_alternative_from_graveyard` (Scourge of Nel Toth) and
+`Predicate::UsedGraveyardThisTurn` (Laboratory Drudge). ⚠ **The find: no bot
+block ever cast a graveyard card through a board permission** — Muldrotha,
+Lurrus, Exploration Broodship and now Gisa and Geralf were dead in bot play;
+`spec::GY_GRANT` offers those casts and the graveyard-only alternative costs.
+Residuals: **Havengul Lich** doesn't gain the cast card's activated abilities;
+**Liliana, Untouched by Death**'s −3 covers the graveyard as it resolves.
+Seed 10091, 300 games at 29 seats: **262 decided, 38 action caps, zero
+panics**, every Grave Danger card played; four-seat pods beside N'ghathrod /
+Gisa / Anowon (seed 10092, 1,000 games, all decided): Gisa and Geralf 35.6 %.
+⚠ The action-cap rate keeps climbing with seats (7.3 % at 27, 12.7 % at 29):
+the budget grows by 5,000 a seat above ten while actions/game grow faster
+(27.5 k at 15, 78 k at 25, 106 k at 29) — attrition, not loops (every diagnosed
+cap). 2..8 seats at seed 10093: all decided.
 
 ⚠ **The board cap was a bot bug, not a loop.** A Krenko seat sent all 292
 of its Goblins at one player on 24 life each turn while two others sat on
