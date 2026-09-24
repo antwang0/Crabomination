@@ -128,6 +128,8 @@ pub mod combat;
 mod could_produce;
 // CR 508.4 — put onto the battlefield attacking, never declared.
 mod enter_attacking;
+// CR 205.4e — a legendary instant or sorcery needs a legendary creature or planeswalker.
+mod legendary_spell;
 // CR 102.2 — "an opponent controls N or more …", read per opponent.
 mod milled_play;
 mod opponent_controls;

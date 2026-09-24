@@ -30,6 +30,9 @@
 //! rest of that body; it must resume bound to the same player. Six loops
 //! resumed it under the stack item's context (`ForEachOpponent` lost its
 //! `Triggerer`, five others their seat as controller).
+//!
+//! CR 205.4e — a legendary instant or sorcery needs a legendary creature or
+//! planeswalker under its caster's control (`legendary_spell_castable`).
 
 use crabomination::card::SelectionRequirement;
 use crabomination::catalog;
@@ -588,4 +591,41 @@ fn cr_702_74a_an_evoked_creature_is_sacrificed() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(evoker).is_none());
     assert_eq!(g.players[0].life, 23, "the leave trigger fired");
+}
+
+/// CR 205.4e — a legendary sorcery may be cast only while its caster controls
+/// a legendary creature or planeswalker (Jaya's Immolating Inferno); a
+/// nonlegendary creature does not count.
+#[test]
+fn cr_205_4e_a_legendary_sorcery_needs_a_legendary_creature_or_planeswalker() {
+    use crabomination::card::{CardDefinition, CardType, Supertype};
+    use crabomination::effect::{Effect, Selector, Value};
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    for _ in 0..2 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let spell = || CardDefinition {
+        name: "Legendary Insight",
+        cost: crabomination::mana::cost(&[crabomination::mana::generic(1)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ..Default::default()
+    };
+    let cast = |g: &mut GameState, id| {
+        g.players[0].mana_pool.add_colorless(1);
+        g.perform_action(GameAction::CastSpell {
+            card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+        })
+    };
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let first = g.add_card_to_hand(0, spell());
+    assert!(cast(&mut g, first).is_err(), "a nonlegendary creature is not enough");
+    g.players[0].mana_pool = Default::default();
+    g.add_card_to_battlefield(0, catalog::isamaru_hound_of_konda());
+    cast(&mut g, first).expect("a legendary creature lets it be cast");
+    drain_stack(&mut g);
 }

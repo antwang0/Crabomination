@@ -8728,6 +8728,14 @@ impl GameState {
             return Err(GameError::SelectionRequirementViolated);
         }
 
+        // CR 205.4e — a legendary instant or sorcery (Jaya's Immolating
+        // Inferno) needs a legendary creature or planeswalker.
+        if !self.legendary_spell_castable(p, &card.definition) {
+            cast_census::rollback(line!());
+            self.players[p].hand.push(card);
+            return Err(GameError::SelectionRequirementViolated);
+        }
+
         // "Cast this spell only during combat" (Cauldron Dance).
         if card.definition.cast_only_during_combat && !self.step.is_combat_phase() {
             cast_census::rollback(line!());
