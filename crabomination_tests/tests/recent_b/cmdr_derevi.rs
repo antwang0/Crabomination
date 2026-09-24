@@ -238,3 +238,16 @@ fn restore_reclaims_a_land() {
     cast(&mut g, r, &[Target::Permanent(land)]);
     assert_eq!(g.battlefield_find(land).map(|c| c.controller), Some(0));
 }
+
+/// The bot curses an opponent, not itself: an Aura attached to a player is a
+/// Curse, so the player slot is hostile (Curse of Predation used to land on
+/// its own caster, rewarding every attack on it).
+#[test]
+fn the_bot_curses_an_opponent() {
+    let mut g = pod(3);
+    g.players[0].hostile_player_targets = true;
+    for f in [catalog::curse_of_predation(), catalog::curse_of_the_forsaken(), catalog::curse_of_inertia()] {
+        let (t, _) = g.auto_targets_for_effect_all_slots(&f.effect, 0, None);
+        assert!(matches!(t, Some(Target::Player(p)) if p != 0), "{}: {t:?}", f.name);
+    }
+}
