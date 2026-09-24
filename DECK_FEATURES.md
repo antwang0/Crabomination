@@ -70,6 +70,7 @@ lists were picked.
 | **Seize Control** (C15 precon) UR | Mizzix of the Izmagnus | UR | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Rebellion Rising** (ONC precon) RW | Neyali, Suns' Vanguard | RW | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Feline Ferocity** (C17 precon) GW | Arahbo, Roar of the World | GW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
+| **Primal Genesis** (C19 precon) RGW | Ghired, Conclave Exile | RGW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Call the Spirits** (C15 precon) WB | Daxos the Returned | WB | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Peer Through Time** (C14 precon) U | Teferi, Temporal Archmage (**planeswalker**) | U | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Quantum Quandrix** (C21 precon) GU | Adrix and Nev, Twincasters | GU | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
@@ -583,6 +584,19 @@ Ghalta / Giada (seed 10151, 1,000 games, all decided, every card played):
 Arahbo 6.3 %. Seed 10161, 300 games at 52 seats: **299 decided, 1 board cap,
 zero panics** (329 k actions/game, 1,452 s on 4 threads). `--bench`
 byte-identical.
+
+The **fifty-sixth** is Commander 2019's **Primal Genesis** (`PrimalGenesis_C19`)
+— Naya tokens and populate under Ghired, Conclave Exile. Sixteen cards were
+missing, the commander among them; the primitives:
+`StaticEffect::OpponentsCantCastDuringCombat` (Marisi, CR 506.1 — Basandra's
+lane scoped to opponents), `CreatureType::Sculpture` (Doomed Artisan) and
+`Effect::PlayersWithMostSacrifice` (Tectonic Hellion — the tied-for-most set
+is fixed before anyone sacrifices). Ghired's attack populates and the copy
+joins the attack (`Populate` + `JoinCombatAttacking` on the last created
+token). Residuals: **Cliffside Rescuer**'s protection is from what opponents
+control; **Tahngarth** attacks its borrower's default opponent. Four-seat pods
+beside Sigarda / Ghalta / Bello (seed 10171, 1,000 games, all decided, every
+card played): Ghired 27.6 %. `--bench` byte-identical.
 
 The **forty-second** is Commander 2014's **Peer Through Time**
 (`PeerThroughTime_C14`) — mono-blue control under Teferi, Temporal Archmage,

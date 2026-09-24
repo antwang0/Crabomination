@@ -1858,3 +1858,5 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Neyali, Suns' Vanguard | Rebellion Rising (ONC) | "tokens attack a player" also counts tokens attacking a planeswalker an opponent controls. |
 | 🟡 Divine Reckoning | Feline Ferocity (C17) | each player keeps their highest-mana-value creature (the engine's pick, as Deadly Vanity). |
 | 🟡 Stalking Leonin | Feline Ferocity (C17) | the opponent is chosen openly by the engine (the one with the fewest creatures), not secretly by the player. |
+| 🟡 Cliffside Rescuer | Primal Genesis (C19) | protection from each opponent is protection from what opponents control (`ProtectionFromMatching(ControlledByOpponent)`). |
+| 🟡 Tahngarth, First Mate | Primal Genesis (C19) | it attacks its new controller's default opponent, not a chosen player that opponent is attacking. |
