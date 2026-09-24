@@ -2003,7 +2003,7 @@ impl GameState {
                     // does not).
                     self.battlefield
                         .iter()
-                        .any(|c| c.controller == p && self.players[p].commanders.contains(&c.id))
+                        .any(|c| c.controller == p && self.is_own_commander_object(p, c.id))
                 })
             }
             Predicate::CastWithTreasureMana { what } => self

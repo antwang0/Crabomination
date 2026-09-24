@@ -5043,8 +5043,8 @@ impl GameState {
                 // by damage type. The SBA in `check_state_based_actions`
                 // reads this table and eliminates the player when any
                 // single (victim, commander) entry crosses 21.
-                if self.is_commander(atk.id) {
-                    self.record_commander_damage(p, atk.id, amount);
+                if let Some(cmdr) = self.commander_card_of(atk.id) {
+                    self.record_commander_damage(p, cmdr, amount);
                 }
                 // CR 725 — a creature dealing combat damage to the monarch
                 // makes its controller the new monarch.
