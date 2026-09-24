@@ -4646,3 +4646,246 @@ fn death_toll_batch() {
     assert_eq!(g.players[0].hand.len(), 2);
     assert_eq!(g.players[0].graveyard.len(), 2);
 }
+
+// ── Mind Seize (Jeleva, Nephalia's Scourge) ─────────────────────────────────
+
+/// CR 702.16 — True-Name Nemesis has protection from its chosen player: that
+/// player's spells can't target it, their creatures can't block it and their
+/// damage is prevented; its controller can still target it.
+#[test]
+fn cr_702_16_true_name_nemesis_is_protected_from_the_chosen_player() {
+    let mut g = main_phase();
+    let tnn = g.add_card_to_hand(0, catalog::true_name_nemesis());
+    cast(&mut g, tnn, &[]);
+    assert_eq!(g.battlefield_find(tnn).unwrap().chosen_player, Some(1));
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.priority.player_with_priority = 1;
+    assert!(try_cast(&mut g, 1, bolt, &[Target::Permanent(tnn)]).is_err(), "can't be targeted");
+    g.priority.player_with_priority = 0;
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    g.clear_sickness(tnn);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: tnn,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    assert!(
+        g.perform_action(GameAction::DeclareBlockers(vec![(giant, tnn)])).is_err(),
+        "can't be blocked"
+    );
+    // Its controller's own spell may target it.
+    let mut g = main_phase();
+    let tnn = g.add_card_to_hand(0, catalog::true_name_nemesis());
+    cast(&mut g, tnn, &[]);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, &[Target::Permanent(tnn)]);
+    assert!(g.battlefield_find(tnn).is_none());
+}
+
+/// CR 509.1b — Hooded Horror can't be blocked by a defender with the most
+/// creatures (ties included).
+#[test]
+fn cr_509_1b_hooded_horror_evades_the_widest_board() {
+    let mut g = main_phase();
+    let hh = g.add_card_to_battlefield(0, catalog::hooded_horror());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(hh);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: hh,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    assert!(
+        g.perform_action(GameAction::DeclareBlockers(vec![(bear, hh)])).is_err(),
+        "one creature each: tied for the most"
+    );
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::DeclareBlockers(vec![(bear, hh)])).expect("now fewer: blockable");
+}
+
+/// CR 702.61 — a kicked Molten Disaster has split second; unkicked it
+/// doesn't.
+#[test]
+fn cr_702_61_molten_disaster_has_split_second_only_when_kicked() {
+    let mut g = main_phase();
+    let md = g.add_card_to_hand(0, catalog::molten_disaster());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpellKicked {
+        card_id: md,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(1),
+    })
+    .expect("kicked");
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.priority.player_with_priority = 1;
+    flood(&mut g, 1);
+    assert!(
+        g.perform_action(GameAction::CastSpell {
+            card_id: bolt,
+            target: Some(Target::Player(0)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .is_err(),
+        "split second"
+    );
+    let mut g = main_phase();
+    let md = g.add_card_to_hand(0, catalog::molten_disaster());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: md,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(1),
+    })
+    .expect("unkicked");
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.priority.player_with_priority = 1;
+    flood(&mut g, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("no split second");
+}
+
+/// CR 601.2f — Arcane Melee discounts every player's instants and sorceries;
+/// Price of Knowledge lifts every player's hand-size cap.
+#[test]
+fn cr_601_2f_arcane_melee_and_price_of_knowledge_reach_every_player() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::arcane_melee());
+    g.add_card_to_library(1, catalog::island());
+    g.add_card_to_library(1, catalog::island());
+    g.add_card_to_library(1, catalog::island());
+    let div = g.add_card_to_hand(1, catalog::divination());
+    g.priority.player_with_priority = 1;
+    g.active_player_idx = 1;
+    g.players[1].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: div,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("{U} is enough for the opponent too");
+
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::price_of_knowledge());
+    assert_eq!(g.effective_max_hand_size(1), None);
+    assert_eq!(g.effective_max_hand_size(0), None);
+}
+
+/// Jeleva exiles X from each library on entry and casts an exiled instant or
+/// sorcery for free on attack.
+#[test]
+fn jeleva_exiles_x_from_each_library_and_casts_one_on_attack() {
+    let mut g = main_phase();
+    for s in 0..2 {
+        g.add_card_to_library(s, catalog::lightning_bolt());
+        for _ in 0..5 {
+            g.add_card_to_library(s, catalog::island());
+        }
+    }
+    let j = g.add_card_to_hand(0, catalog::jeleva_nephalias_scourge());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: j,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("four mana");
+    drain_stack(&mut g);
+    assert_eq!(g.exile.len(), 8, "four from each library");
+    combat(&mut g, vec![Attack { attacker: j, target: AttackTarget::Player(1) }], 0, |_| {});
+    assert!(g.players[1].life <= 16, "a free Bolt (3) plus Jeleva (1)");
+}
+
+/// The rest of Mind Seize's new cards, one play pattern each.
+#[test]
+fn mind_seize_batch() {
+    // Curse of Shallow Graves: the attacker makes a tapped Zombie.
+    let mut g = main_phase();
+    let cur = g.add_card_to_hand(0, catalog::curse_of_shallow_graves());
+    cast(&mut g, cur, &[Target::Player(1)]);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    combat(&mut g, vec![Attack { attacker: bear, target: AttackTarget::Player(1) }], 0, |_| {});
+    assert_eq!(count_named(&g, 0, "Zombie"), 1);
+
+    // Eye of Doom: counters go down, then everything marked is destroyed.
+    let mut g = main_phase();
+    g.add_card_to_battlefield(1, catalog::hill_giant());
+    let eye = etb(&mut g, catalog::eye_of_doom());
+    let doomed = g.battlefield.iter().filter(|c| c.counter_count(CounterType::Doom) > 0).count();
+    assert!(doomed >= 1);
+    activate(&mut g, eye, 0, None).expect("sacrifice");
+    assert!(g.battlefield.iter().all(|c| c.counter_count(CounterType::Doom) == 0));
+
+    // Phthisis: the controller loses power plus toughness.
+    let mut g = main_phase();
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let p = g.add_card_to_hand(0, catalog::phthisis());
+    cast(&mut g, p, &[Target::Permanent(giant)]);
+    assert!(g.battlefield_find(giant).is_none());
+    assert_eq!(g.players[1].life, 14);
+
+    // Thraximundar: the defender sacrifices, and it grows.
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let th = g.add_card_to_battlefield(0, catalog::thraximundar());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    combat(&mut g, vec![Attack { attacker: th, target: AttackTarget::Player(1) }], 0, |_| {});
+    assert!(g.battlefield_find(bear).is_none());
+    assert_eq!(g.battlefield_find(th).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+
+    // Incendiary Command: 4 to a player and 2 to each creature.
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let ic = g.add_card_to_hand(0, catalog::incendiary_command());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: ic,
+        spree_modes: vec![0, 1],
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("choose two");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 16);
+    assert!(g.battlefield_find(bear).is_none());
+
+    // Echo Mage at level 4 copies a spell twice.
+    let mut g = main_phase();
+    let em = g.add_card_to_battlefield(0, catalog::echo_mage());
+    g.battlefield.find_by_id_mut(em).unwrap().add_counters(CounterType::Level, 4);
+    assert_eq!(pt(&g, em), (2, 5));
+
+    // Urza's Factory makes an Assembly-Worker; Baleful Force draws each upkeep.
+    let mut g = main_phase();
+    let uf = g.add_card_to_battlefield(0, catalog::urzas_factory());
+    activate(&mut g, uf, 1, None).expect("{7}, {T}");
+    assert_eq!(count_named(&g, 0, "Assembly-Worker"), 1);
+}
