@@ -386,6 +386,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::MEREN_COMMANDERS,
             main: decks::MEREN_MAIN,
         },
+        // Thirty-eighth: the twenty-eighth official list (Seize Control,
+        // C15) — Izzet spells under Mizzix. `--seats 38`.
+        PodDeck {
+            name: "Mizzix of the Izmagnus (UR)",
+            commanders: decks::MIZZIX_COMMANDERS,
+            main: decks::MIZZIX_MAIN,
+        },
     ]
 }
 

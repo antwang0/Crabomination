@@ -1247,3 +1247,31 @@ pub const MEREN_MAIN: &[CardFactory] = &[
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
 ];
+
+pub const MIZZIX_COMMANDERS: &[CardFactory] = &[mizzix_of_the_izmagnus];
+
+/// **Seize Control**, the Commander 2015 deck (C15, 2015-11-13), exactly as
+/// MTGJSON's `SeizeControl_C15` prints it: 72 nonbasic cards + 14 Islands + 13
+/// Mountains = 99. Izzet spells under Mizzix, whose experience counters
+/// discount every instant and sorcery.
+pub const MIZZIX_MAIN: &[CardFactory] = &[
+    goblin_electromancer, jaces_archivist, gigantoplasm, talrand_sky_summoner,
+    psychosis_crawler, broodbirth_viper, illusory_ambusher, lone_revenant, warchief_giant,
+    charmbreaker_devils, arjun_the_shifting_flame, etherium_horn_sorcerer, melek_izzet_paragon,
+    dragon_mage, preordain, faithless_looting, vandalblast, mizzium_mortars, windfall,
+    mystic_retrieval, stolen_goods, mizzixs_mastery, rite_of_replication, sleep, chain_reaction,
+    call_the_skybreaker, blatant_thievery, epic_experiment, meteor_blast, blustersquall,
+    brainstorm, echoing_truth, desperate_ravings, urzas_rage, counterflux, aetherize,
+    fact_or_fiction, reins_of_power, steam_augury, mystic_confluence, word_of_seizing,
+    act_of_aggression, prophetic_bolt, aethersnatch, mirror_match, fireminds_foresight, repeal,
+    comet_storm, magmaquake, stroke_of_genius, dominate, blue_suns_zenith, sol_ring,
+    izzet_signet, thought_vessel, worn_powerstone, seal_of_the_guildpact, awaken_the_sky_tyrant,
+    rite_of_the_raging_storm, thought_reflection, command_tower, evolving_wilds,
+    izzet_boilerworks, izzet_guildgate, reliquary_tower, rogues_passage, spinerock_knoll,
+    swiftwater_cliffs, temple_of_the_false_god, terramorphic_expanse, vivid_crag, vivid_creek,
+    // Basics: 14 island, 13 mountain
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain,
+];
