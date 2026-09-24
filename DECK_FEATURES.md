@@ -83,6 +83,7 @@ lists were picked.
 | **Eternal Might** (DRC precon) WUB | Temmet, Naktamun's Will | WUB | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Land's Wrath** (ZNC precon) RGW | Obuun, Mul Daya Ancestor | RGW | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Stalwart Unity** (C16 precon) RGWU | Kynaios and Tiro of Meletis | RGWU | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
+| **Token Triumph** (SCD starter) GW | Emmara, Soul of the Accord | GW | 100 | ✅ complete |
 | **Devour for Power** (CMD precon) BGU | The Mimeoplasm | BGU | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Arm for Battle** (CMR precon) RW | Wyleth, Soul of Steel | RW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Fae Dominion** (WOC precon) UB | Tegwyll, Duke of Splendor | UB | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
@@ -885,6 +886,19 @@ permanents. Four-seat pods beside Ghired / Zedruu / Arahbo (seed 10132, 1,000
 games, all decided): Valgavoth 47.1 %; a 300-game census (seed 10133) leaves no
 card of the four lists unplayed; 12 seats (57..46, seed 10134): 200 / 200
 decided (seat numbers as they were then). `--bench` byte-identical.
+
+The **sixtieth** is the Starter Commander Decks' **Token Triumph**
+(`TokenTriumph_SCD`) — Selesnya tokens and anthems under Emmara, Soul of the
+Accord (seat 59 before rebasing over Endless Punishment). Fifteen cards were
+missing; the primitive: `Keyword::CantBeBlockedByPowerLessThanGreatestAmong`
+(Champion of Lambholt; its sibling `CantBeBlockedExceptByWhilePowerAtMost`
+moved Sidar Kondo off a power-filtered grant the layers dropped whole — the
+dropped-static ratchet caught it). ⚠ **The census found Devouring Light
+castable by no bot path**: "attacking or blocking" is an `Or`, which the
+combat-only window didn't read as combat-only. No residuals. Debug pods beside
+the Mimeoplasm / Kynaios / Ghired / Sigarda (seeds 9321/9322, 60 games) decided
+60/60, zero panics, Emmara winning 45 %; a 120-game census (seed 9323) leaves no
+card unplayed (Emmara 38.3 % there). `--bench` byte-identical.
 
 ⚠ **The board cap was a bot bug, not a loop.** A Krenko seat sent all 292
 of its Goblins at one player on 24 life each turn while two others sat on
