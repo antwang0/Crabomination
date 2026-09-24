@@ -1215,10 +1215,10 @@ all decided): Galea 5.3 % — the bot does not build a Voltron threat; beside
 Estrid / Eshki / Nelly (seed 10251): 1,000 / 1,000, 5.3 %; census (seed 10252):
 no card of the four unplayed; strict debug pods (seeds 10253-10255, 4 and 6
 seats): 180 / 180. `--bench` byte-identical.
-The **hundred-and-seventh** is Kamigawa: Neon Dynasty Commander's **Upgrades
+The **hundred-and-ninth** is Kamigawa: Neon Dynasty Commander's **Upgrades
 Unleashed** (`UpgradesUnleashed_NEC`) — Gruul "modified" creatures (CR 700.9)
-under Chishiro, the Shattered Blade, `--pod-decks 107` (committed as 102 while
-five concurrent seats landed). ⚠ The printed deck ships **two Mossfire
+under Chishiro, the Shattered Blade, `--pod-decks 109` (committed as 102 while
+seven concurrent seats landed). ⚠ The printed deck ships **two Mossfire
 Valleys**, which isn't singleton (CR 903.5b); the seat runs a thirteenth
 Mountain in the second one's place. Eighteen cards were missing
 (`cmdr_chishiro.rs`); the primitive is `Selector::AttackedBySource` (Mage
