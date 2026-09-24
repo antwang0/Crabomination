@@ -957,7 +957,7 @@ Seri take 53 %; a 300-game census (seed 10141) leaves no card of the four
 unplayed; 12 seats (64..53 as numbered then, seed 10142): 200 / 200 decided. `--bench`
 byte-identical.
 
-The **sixty-eighth** is The Brothers' War Commander's **Urza's Iron Alliance**
+The **sixty-ninth** is The Brothers' War Commander's **Urza's Iron Alliance**
 (`UrzaSIronAlliance_BRC`) — Esper artifacts under Urza, Chief Artificer, and the
 first list past `MAX_SEATS` (64): it is reached by `--pod-decks`, not `--seats`.
 Sixteen cards were missing; the primitives: `GraveyardCardsHaveEncore::mana_cost`
@@ -970,7 +970,7 @@ offers the first matching card of the six and bottoms the rest in exile order;
 **Scholar of New Horizons** always takes the battlefield when it may.
 Four-seat pods beside Brimaz / Inalla / Isperia (seed 10150, 1,000 games,
 all decided): Urza 41.7 %; a 300-game census (seed 10151) leaves no card of the
-four unplayed; 12 seats (68..57, seed 10152): 200 / 200 decided. `--bench`
+four unplayed; 12 seats (68..57 as numbered before rebasing over Enduring Enchantments, seed 10152): 200 / 200 decided. `--bench`
 byte-identical.
 
 The **sixtieth** is the Starter Commander Decks' **Token Triumph**
