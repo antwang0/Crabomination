@@ -818,6 +818,12 @@ impl GameState {
                 .unwrap_or(0),
             Value::LibrarySizeOf(p) => self.resolve_player(p, ctx).map(|p| self.players[p].library.len() as i32).unwrap_or(0),
             Value::XFromCost => ctx.x_value as i32,
+            Value::CreatureDeathsThisTurnMatching { filter } => self
+                .deaths
+                .creature_deaths_this_turn
+                .iter()
+                .filter(|c| self.evaluate_requirement_on_card(filter, c, ctx.controller))
+                .count() as i32,
             Value::TurnNumber => self.turn_number as i32,
             Value::DraftNoteNumber { agg } => {
                 let notes = &self.players[ctx.controller].draft_notes;

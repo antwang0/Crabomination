@@ -1341,6 +1341,11 @@ pub enum Value {
     /// turn (`Player.creatures_died_this_turn` for `ctx.controller`). Liliana's
     /// Standard Bearer.
     ControllerCreaturesDiedThisTurn,
+    /// Creatures that died this turn whose death-time snapshot matches
+    /// `filter`, read with the controller as "you" — "each nontoken creature
+    /// put into your graveyard from the battlefield this turn" is
+    /// `NotToken.and(OwnedByYou)` (Caller of the Claw).
+    CreatureDeathsThisTurnMatching { filter: SelectionRequirement },
     /// Number of Zubera that died this turn across **every** player. Sums
     /// `Player.zuberas_died_this_turn`. Powers the Champions-of-Kamigawa
     /// Zubera death-trigger cycle ("for each Zubera that died this turn").
