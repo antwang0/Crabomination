@@ -69,6 +69,7 @@ lists were picked.
 | **Sworn to Darkness** (C14 precon) B | Ob Nixilis of the Black Oath (**planeswalker**) | B | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Seize Control** (C15 precon) UR | Mizzix of the Izmagnus | UR | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Call the Spirits** (C15 precon) WB | Daxos the Returned | WB | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
+| **Peer Through Time** (C14 precon) U | Teferi, Temporal Archmage (**planeswalker**) | U | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not
@@ -531,6 +532,23 @@ one choice among the four non-targeting combinations; **Sandstone Oracle**'s
 opponent is the one with the most cards in hand. Debug pods beside Adrix and Nev /
 Meren / Gisela / Judith (seeds 9251/9252, 60 games) decided 60/60 with zero
 panics, and a 120-game census (seed 9253) leaves no card unplayed.
+
+The **forty-second** is Commander 2014's **Peer Through Time**
+(`PeerThroughTime_C14`) — mono-blue control under Teferi, Temporal Archmage,
+the pod's second planeswalker commander, with Stormsurge Kraken as its
+lieutenant. Seventeen cards were missing; the primitives:
+`StaticEffect::CreaturesEnterAsCopyOf` (Infinite Reflection, CR 707.2 — the
+static sibling of `enters_as_copy`), `StaticEffect::LoyaltyAbilitiesAtInstantSpeed`
+(Teferi's emblem, CR 606.3; the bot already offers loyalty lines in its
+opponent's-end-step window, so the emblem is played), `Effect::MustAttackPlayerThisTurn`
+(Dulcet Sirens, CR 508.1d), `SelectionRequirement::SourceOwnerPlayer` (Crown of
+Doom's "other than its owner") with `GainControl` now reading a recipient
+selector's filter, and `Selector::TakeGreatestPower` (Stitcher Geralf).
+Residuals: **Domineering Will**'s "target player" is always you;
+**Intellectual Offering**'s opponents are the engine's pick; **Shaper
+Parasite**'s ±2 is picked as the trigger goes on the stack; **Infinite
+Reflection**'s ETB also "copies" the enchanted creature onto itself when it is
+yours.
 
 ⚠ **The board cap was a bot bug, not a loop.** A Krenko seat sent all 292
 of its Goblins at one player on 24 life each turn while two others sat on
