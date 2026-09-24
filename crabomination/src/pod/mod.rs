@@ -463,6 +463,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::BREYA_COMMANDERS,
             main: decks::BREYA_MAIN,
         },
+        // Forty-ninth: the thirty-ninth official list (Chaos Incarnate, SCD)
+        // — Rakdos goad and punishment under Kardur. `--seats 49`.
+        PodDeck {
+            name: "Kardur, Doomscourge (BR)",
+            commanders: decks::KARDUR_COMMANDERS,
+            main: decks::KARDUR_MAIN,
+        },
     ]
 }
 
@@ -972,6 +979,7 @@ mod tests {
             // CR 903.3a — a planeswalker commander with a lieutenant in its 99.
             ("Teferi", [0x7EFE41, 85, 9009]),
             ("Kalemne", [0xCA1E, 86, 9010]),
+            ("Kardur", [0xCA2D, 87, 9011]),
         ] {
             let precon = *field.iter().find(|d| d.name.starts_with(name)).expect("the precon seat");
             assert_eq!(precon.card_count(), 100);

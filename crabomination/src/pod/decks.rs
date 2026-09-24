@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Ten hand-picked commanders plus thirty-seven official preconstructed lists, each a
+//! Ten hand-picked commanders plus thirty-nine official preconstructed lists, each a
 //! 99 of cards this engine implements: legal under CR 903 (100 cards
 //! including the commander, singleton outside basics, every card inside the
 //! commander's CR 903.4 color identity) and Commander-legal per Scryfall's
@@ -8,7 +8,7 @@
 //!
 //! The ten were built by hand because the offline Scryfall cache cannot say
 //! how a precon splits into decks; MTGJSON's deck files can, and the eleventh
-//! through forty-seventh (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
+//! through forty-ninth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
 //! Win, Tails You Lose, Goblin Storm, Foundations Commander's Wretched Ranks,
 //! Tramplesaurus Rex and Keen Engineering, Commander Legends' Reap the Tides,
 //! Phyrexia: All Will Be One's Corrupting Influence, Zendikar Rising's Sneak
@@ -25,8 +25,9 @@
 //! Phyrexia: All Will Be One's Rebellion Rising, Commander 2014's Peer
 //! Through Time, Commander 2021's Lorehold Legacies, Commander (2011)'s
 //! Counterpunch, Wilds of Eldraine Commander's Fae Dominion, Commander 2015's
-//! Wade into Battle and Commander Legends' Arm for Battle) are taken from one
-//! card for card. What all of them keep
+//! Wade into Battle, Commander Legends' Arm for Battle, Commander 2016's Invent
+//! Superiority and Secret Lair's Chaos Incarnate) are taken from one card for
+//! card. What all of them keep
 //! from the precon idea is what the pod needs — fixed, legal, varied color
 //! identities, and built to play against each other.
 //! One is a Partner pair (CR 702.124b), one is a **planeswalker**
@@ -1564,4 +1565,31 @@ pub const BREYA_MAIN: &[CardFactory] = &[
     // Basics: 5 plains, 5 island, 4 swamp, 4 mountain
     plains, plains, plains, plains, plains, island, island, island, island, island, swamp,
     swamp, swamp, swamp, mountain, mountain, mountain, mountain,
+];
+
+pub const KARDUR_COMMANDERS: &[CardFactory] = &[kardur_doomscourge];
+
+/// **Chaos Incarnate**, the Secret Lair Commander deck (SCD, 2022-12-02),
+/// exactly as MTGJSON's `ChaosIncarnate_SCD` prints it: 70 nonbasic cards +
+/// 15 Swamps + 14 Mountains = 99. Rakdos goad and punishment under
+/// Kardur, Doomscourge.
+pub const KARDUR_MAIN: &[CardFactory] = &[
+    archfiend_of_depravity, bloodgift_demon, deadly_tempest, dredge_the_mire, ob_nixilis_reignited,
+    profane_command, rakshasa_debaser, reign_of_the_pit, sangromancer, scythe_specter,
+    sepulchral_primordial, soul_shatter, titan_hunter, blasphemous_act, brash_taunter, chaos_warp,
+    combustible_gearhulk, dictate_of_the_twin_gods, fiery_confluence, geode_rager,
+    kazuul_tyrant_of_the_cliffs, magmatic_force, sunbirds_invocation, tectonic_giant, wild_ricochet,
+    wildfire_devils, kaervek_the_merciless, spiteful_visions, stormfist_crusader,
+    theater_of_horrors, coveted_jewel, solemn_simulacrum, foreboding_ruins, smoldering_marsh,
+    stensia_bloodhall, temple_of_malice, ambitions_cost, feed_the_swarm, indulgent_tormentor,
+    read_the_bones, sign_in_blood, syphon_mind, vampire_nighthawk, abrade, explosion_of_riches,
+    guttersnipe, hate_mirage, mana_geyser, thermo_alchemist, breath_of_malfegor, rakdos_charm,
+    terminate, unlicensed_disintegration, arcane_signet, burnished_hart, commanders_sphere,
+    lightning_greaves, nihil_spellbomb, rakdos_signet, sol_ring, talisman_of_indulgence,
+    wayfarers_bauble, worn_powerstone, akoum_refuge, bloodfell_caves, cinder_barrens, command_tower,
+    molten_slagheap, myriad_landscape, urborg_volcano,
+    // Basics: 15 swamp, 14 mountain
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain,
 ];
