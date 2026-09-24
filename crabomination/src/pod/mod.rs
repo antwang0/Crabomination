@@ -813,6 +813,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ELLIVERE_COMMANDERS,
             main: decks::ELLIVERE_MAIN,
         },
+        // Ninety-seventh: the eighty-seventh official list (Temur Roar, TDC) —
+        // Temur Dragons under Eshki, Temur's Roar. `--pod-decks 97`.
+        PodDeck {
+            name: "Eshki, Temur's Roar (GUR)",
+            commanders: decks::ESHKI_COMMANDERS,
+            main: decks::ESHKI_MAIN,
+        },
     ]
 }
 
@@ -1353,6 +1360,8 @@ mod tests {
             ("Atarka", [0xA7A4, 99, 9023]),
             // CR 701.15 — goad from resolutions, holds and attachments.
             ("Nelly Borca", [0xBE11, 100, 9024]),
+            // A random-opponent attack requirement (Territorial Hellkite).
+            ("Eshki", [0xE5C1, 103, 9027]),
             ("Zinnia", [0x2177, 101, 9025]),
             ("Ellivere", [0xE111, 102, 9026]),
         ] {

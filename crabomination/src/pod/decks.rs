@@ -2983,3 +2983,33 @@ pub const ELLIVERE_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains, plains, plains, plains,
 ];
+
+pub const ESHKI_COMMANDERS: &[CardFactory] = &[eshki_temurs_roar];
+
+/// **Temur Roar**, the Tarkir: Dragonstorm Commander deck (TDC, 2025-04-11),
+/// exactly as MTGJSON's `TemurRoar_TDC` prints it: 85 nonbasic cards +
+/// 3 Islands + 6 Mountains + 5 Forests = 99. Temur Dragons under Eshki.
+pub const ESHKI_MAIN: &[CardFactory] = &[
+    ureni_of_the_unwritten, deceptive_frostkite, hammerhead_tyrant, will_of_the_temur,
+    parapet_thrasher, thundermane_dragon, zenith_festival, become_the_avalanche,
+    broodcaller_scourge, keiga_the_tide_star, reflections_of_littjara, atsushi_the_blazing_sky,
+    blasphemous_act, chaos_warp, dragonmaster_outcast, gadrak_the_crown_scourge, glorybringer,
+    hellkite_courser, lathliss_dragon_queen, leyline_tyrant, nesting_dragon, nogi_draco_zealot,
+    opportunistic_dragon, scourge_of_the_throne, skarrgan_hellkite, spit_flame, storms_wrath,
+    stormbreath_dragon, taurean_mauler, territorial_hellkite, thunderbreak_regent,
+    vengeful_ancestor, verix_bladewing, frontier_siege, selvalas_stampede, atarka_world_render,
+    dragonlord_atarka, harbinger_of_the_hunt, sarkhan_soul_aflame, temur_ascendancy,
+    dragons_hoard, steel_hellkite, cinder_glade, exotic_orchard, flooded_grove,
+    haven_of_the_spirit_dragon, hinterland_harbor, karplusan_forest, kessig_wolf_run,
+    mossfire_valley, mosswort_bridge, rockfall_vale, rootbound_crag, sheltered_thicket,
+    shivan_reef, sulfur_falls, temple_of_abandon, temple_of_mystery, yavimaya_coast,
+    dragon_tempest, breaching_dragonstorm, temple_of_the_dragon_queen, arcane_signet, sol_ring,
+    command_tower, stormshriek_feral, encroaching_dragonstorm, draconic_lore,
+    rapid_hybridization, reality_shift, dragonlords_servant, rapacious_dragon,
+    whirlwing_stormbrood, beast_within, elemental_bond, farseek, evolving_wilds,
+    frontier_bivouac, kodamas_reach, migration_path, fellwar_stone, talisman_of_creativity,
+    talisman_of_impulse, bountiful_landscape, path_of_ancestry,
+    // Basics: 3 island, 6 mountain, 5 forest
+    island, island, island, mountain, mountain, mountain, mountain, mountain, mountain, forest,
+    forest, forest, forest, forest,
+];
