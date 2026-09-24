@@ -1832,6 +1832,11 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Vulpine Harvester | Growing Threat (MOC) | any artifact card in your graveyard may be targeted; the mana-value check runs as the trigger resolves. |
 | 🟡 Dromoka's Command | Call for Backup (MOC) | the fight mode targets only your creature; it fights the greatest-power creature you don't control. |
 | 🟡 Inscription of Abundance | Call for Backup (MOC) | no kicker (one mode only); the fight mode's second creature is the greatest-power one you don't control. |
+| 🟡 Eumidian Wastewaker | World Shaper (EOC) | you and the defending player each discard a card; neither may sacrifice a permanent instead. |
+| 🟡 Loamcrafter Faun | World Shaper (EOC) | the cards are targeted as the trigger goes on the stack and capped at the discard count as it resolves. |
+| 🟡 Moraug, Fury of Akoum | World Shaper (EOC) | +1/+0 once however many times a creature attacked; the untap rides every later combat this turn. |
+| 🟡 Planetary Annihilation | World Shaper (EOC) | each player keeps the engine's pick of six lands. |
+| 🟡 Soul of Windgrace | World Shaper (EOC) | the land comes from the first graveyard holding one. |
 | 🟡 Battle at the Helvault | Enduring Enchantments (CMM) | "for each player" covers opponents only: you can't exile one of your own permanents. |
 | 🟡 Battle for Bretagard | Enduring Enchantments (CMM) | chapter III copies every artifact and creature token you control, duplicate names included. |
 | 🟡 Cacophony Unleashed | Enduring Enchantments (CMM) | the animated 6/6 isn't legendary. |

@@ -88,6 +88,7 @@ lists were picked.
 | **Raining Cats and Dogs** (SLD) RGW | Rin and Seri, Inseparable | RGW | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Growing Threat** (MOC precon) WB | Brimaz, Blight of Oreskos | WB | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Call for Backup** (MOC precon) RGW | Bright-Palm, Soul Awakener | RGW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
+| **World Shaper** (EOC precon) BRG | Hearthhull, the Worldseed | BRG | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
 | **Enduring Enchantments** (CMM precon) WBG | Anikthea, Hand of Erebos | WBG | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
 | **Open Hostility** (C16 precon) WBRG | Saskia the Unyielding | WBRG | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Devour for Power** (CMD precon) BGU | The Mimeoplasm | BGU | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
@@ -1181,6 +1182,21 @@ Inscription is never kicked. A 200-game census beside Brimaz / Rin and Seri /
 Ghired (seed 9521) decided 200/200 with zero panics, Bright-Palm winning 9.5 %;
 Semester's End was the one card never cast (it is a sweeper shield and no
 sweeper was cast).
+
+The **seventy-ninth** is Edge of Eternities Commander's **World Shaper**
+(`WorldShaper_EOC`) — Jund land sacrifice under Hearthhull, the Worldseed, a
+stationed Spacecraft commander (seat 78 before rebasing over Witherbloom
+Witchcraft). Seventeen cards were missing (Windgrace's
+Judgment landed with Squirreled Away at the same time; one definition stays).
+⚠ **A static over "creatures that attacked this turn" was dropped whole**
+(CR 611.3a): `requirement_live_leaves` didn't list `AttackedThisTurn` /
+`BlockedThisTurn`, so Moraug's pump went through the state-blind path and
+never applied. Residuals: **Eumidian Wastewaker** (discard only),
+**Loamcrafter Faun** (targets chosen before the discard), **Moraug** (+1/+0
+once), **Planetary Annihilation** (the engine keeps the lands), **Soul of
+Windgrace** (the first graveyard's land). A 200-game census beside
+Bright-Palm / Brimaz / Rin and Seri (seed 9531) decided 200/200 with zero
+panics, Hearthhull winning 21.5 %, every World Shaper card played.
 
 The **sixty-eighth** is Commander Masters' **Enduring Enchantments**
 (`EnduringEnchantments_CMM`) — Abzan Sagas, enchantresses and constellation
