@@ -87,6 +87,7 @@ lists were picked.
 | **Token Triumph** (SCD starter) GW | Emmara, Soul of the Accord | GW | 100 | ✅ complete |
 | **Raining Cats and Dogs** (SLD) RGW | Rin and Seri, Inseparable | RGW | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Growing Threat** (MOC precon) WB | Brimaz, Blight of Oreskos | WB | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
+| **Enduring Enchantments** (CMM precon) WBG | Anikthea, Hand of Erebos | WBG | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
 | **Open Hostility** (C16 precon) WBRG | Saskia the Unyielding | WBRG | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Devour for Power** (CMD precon) BGU | The Mimeoplasm | BGU | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Mirror Mastery** (CMD precon) GUR | Riku of Two Reflections | GUR | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
@@ -1019,6 +1020,32 @@ Residuals: **Cataclysmic Gearhulk** keeps the highest mana value of each
 type; **Filigree Vector** counters everything you control; **Path of the
 Schemer** takes the greatest-power creature card; **Vulpine Harvester** checks
 the mana value on resolution. `--bench` byte-identical.
+
+The **sixty-eighth** is Commander Masters' **Enduring Enchantments**
+(`EnduringEnchantments_CMM`) — Abzan Sagas, enchantresses and constellation
+under Anikthea, Hand of Erebos (seat 63, then 67, before rebasing over four
+others; a pod holds at most 64 players, so it seats in 4-seat and cycled
+fields). Seventeen cards were missing and Greater Tanuki landed with Raining
+Cats and Dogs meanwhile, so sixteen are this seat's (`cmdr_anikthea.rs`). The
+primitives: `CounterType::Blessing`;
+`StaticEffect::LifeAlternativeCostOncePerYourTurn` (Demon of Fate's Design,
+CR 118.9 — spent through `Player.life_alt_cast_used_this_turn`); and
+`StaticEffect::SagaFinalChapterRider` (Narci, CR 714.2c — appended to a
+Saga's final chapter, so a countered chapter drains nobody). ⚠ **The bot
+never cast through a board-granted alternative cost** — its alt-cost block
+read only a card's printed one, so Demon of Fate's Design, Kentaro and Fist
+of Suns were dead text; `BoardFacts.grants_alt_cost` now asks
+`effective_alternative_cost` (a life payment of at most a third of the
+seat's life). Residuals: **Battle at the Helvault** targets opponents'
+permanents only; **Battle for Bretagard** copies duplicate names;
+**Cacophony Unleashed** isn't legendary when animated; **Ghoulish Impetus**
+goads each of your upkeeps (the goad outlives the Aura until your next
+turn); **Ondu Spiritdancer**'s declined copy spends the turn. Pods (release,
+seed 10211, 1,000 games beside Brimaz / Inalla / Isperia): 1,000/1,000
+decided, no card of the four lists unplayed, Anikthea 47.1 %. 12 seats (seed
+10212) 200/200; 64 seats (seed 10213) 40/40; 63 seats (seed 10202, before
+the rebase) 54/60 with 6 board caps — 62 seats on the same seed capped 4/60,
+so the caps are the table's length, not this list. `--bench` byte-identical.
 
 The **sixty-fourth** is Commander 2016's **Open Hostility** (`OpenHostility_C16`)
 — four-color (no blue) aggression under Saskia the Unyielding, with Tana, Tymna

@@ -1830,6 +1830,11 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Filigree Vector | Growing Threat (MOC) | the counters go on every creature and artifact you control rather than on chosen targets. |
 | 🟡 Path of the Schemer | Growing Threat (MOC) | the creature card is the greatest-power one among all graveyards. |
 | 🟡 Vulpine Harvester | Growing Threat (MOC) | any artifact card in your graveyard may be targeted; the mana-value check runs as the trigger resolves. |
+| 🟡 Battle at the Helvault | Enduring Enchantments (CMM) | "for each player" covers opponents only: you can't exile one of your own permanents. |
+| 🟡 Battle for Bretagard | Enduring Enchantments (CMM) | chapter III copies every artifact and creature token you control, duplicate names included. |
+| 🟡 Cacophony Unleashed | Enduring Enchantments (CMM) | the animated 6/6 isn't legendary. |
+| 🟡 Ghoulish Impetus | Enduring Enchantments (CMM) | the goad is applied on entry and each of your upkeeps, not held by a static, so it lasts until your next turn after the Aura leaves. |
+| 🟡 Ondu Spiritdancer | Enduring Enchantments (CMM) | declining the copy still spends the turn's use. |
 | 🟡 Saskia the Unyielding | Open Hostility (C16) | "choose a player" is the engine's most hostile opponent (the card allows any player, you included). |
 | 🟡 Brutal Hordechief | Open Hostility (C16) | its activated ability makes opponents' creatures block if able, but how they block stays their controllers' choice. |
 | 🟡 Mirror Entity | Open Hostility (C16) | "gain all creature types" is a granted Changeling: it reaches type filters and targeting, not type-keyed layer anthems. |
