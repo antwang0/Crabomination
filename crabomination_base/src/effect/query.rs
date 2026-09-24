@@ -3150,6 +3150,11 @@ impl Effect {
             | Effect::BindTargetObjects { body, .. }
             | Effect::BindScratch { body, .. }
             | Effect::MayPayX { body, .. } => body.prefers_friendly_target(),
+            // "Each of up to N targets" rebinds every slot to the body's
+            // `Target(0)`, so the body's flavor is every slot's. Without this
+            // arm the wrapper read hostile and an optional slot of a friendly
+            // body (Silkguard's counters) was never spent on the caster's side.
+            Effect::ApplyToTargets { effect, .. } => effect.prefers_friendly_target(),
             // "TARGET player draws a card" is a gift — aim slot 0 at the
             // caster (Shadrix Silverquill's draw mode is the mode you take
             // yourself in the canonical two-pick line). A non-targeted

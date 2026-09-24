@@ -27109,6 +27109,35 @@ mod stack_response_tests {
         }
     }
 
+    /// An "up to X target creatures you control" counter spell is cast on the
+    /// bot's own creatures. Regression: `ApplyToTargets` was the one target
+    /// wrapper `prefers_friendly_target` didn't descend, so every slot read
+    /// hostile, the optional slots were declined, and Silkguard went uncast in
+    /// 1,800 pod games.
+    #[test]
+    fn bot_spends_up_to_x_friendly_counter_slots_on_its_own_creatures() {
+        use crate::mana::Color;
+        let mut g = two_player_game();
+        g.step = TurnStep::End;
+        g.active_player_idx = 1;
+        g.priority.player_with_priority = 0;
+        let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        let sg = g.add_card_to_hand(0, catalog::silkguard());
+        g.players[0].mana_pool.add(Color::Green, 3);
+        let mut bot = HeuristicBot::new();
+        match bot.next_action(&g, 0).expect("bot acts") {
+            GameAction::CastSpell { card_id, target, additional_targets, x_value, .. } => {
+                assert_eq!((card_id, x_value), (sg, Some(2)));
+                let mut picked: Vec<_> = target.into_iter().chain(additional_targets).collect();
+                picked.sort_by_key(|t| format!("{t:?}"));
+                assert_eq!(picked, vec![Target::Permanent(a), Target::Permanent(b)]);
+            }
+            other => panic!("expected Silkguard, got {other:?}"),
+        }
+    }
+
     /// Overkill/chip awareness: with a 5/5 and a 2/2 on the other side and
     /// only Shock in hand, the scorer must not value Shock-at-the-5/5 as
     /// removal — the kill (2/2) outranks the chip (5/5) despite the 5/5's
