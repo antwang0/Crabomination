@@ -59,6 +59,7 @@ impl GameState {
     /// controller's `zones` (greatest mana value first, at most `max`) goes
     /// onto the battlefield attached to `host`, or to its own best legal host
     /// when `host` is `None`. A card with no legal host stays put.
+    #[allow(clippy::too_many_arguments)]
     pub(super) fn put_onto_battlefield_attached(
         &mut self,
         zones: &[Zone],
