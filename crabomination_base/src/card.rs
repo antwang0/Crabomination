@@ -847,6 +847,8 @@ pub enum CounterType {
     Enlightened,
     /// Story counter — Staff of the Storyteller's token tally (ONC).
     Story,
+    /// Spite counter — Curse of Vengeance's tally of the cursed player's spells.
+    Spite,
 }
 
 /// Every zone a card can occupy.

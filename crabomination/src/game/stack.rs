@@ -5136,6 +5136,46 @@ impl GameState {
         });
     }
 
+    /// "When enchanted player loses the game" (Curse of Vengeance): each
+    /// Aura on `p` that another player owns triggers now, while it is still
+    /// attached, with its counter total as the event amount. A controller
+    /// leaving at the same time gets nothing (CR 800.4d, in the push).
+    fn queue_enchanted_player_left_triggers(&mut self, p: usize) {
+        use crate::effect::EventKind;
+        let queued: Vec<(CardId, usize, crate::effect::Effect, u32)> = self
+            .battlefield
+            .iter()
+            .filter(|c| c.attached_to_player == Some(p) && c.owner != p)
+            .flat_map(|c| {
+                let amount: u32 = c.counters.iter().map(|(_, n)| *n).sum();
+                c.definition
+                    .triggered_abilities
+                    .iter()
+                    .filter(|t| t.event.kind == EventKind::EnchantedPlayerLeftGame)
+                    .map(move |t| (c.id, c.controller, t.effect.clone(), amount))
+            })
+            .collect();
+        for (source, controller, effect, event_amount) in queued {
+            self.push_pending_trigger(
+                crate::game::types::PendingTriggerPush {
+                    source,
+                    controller,
+                    effect,
+                    subject: None,
+                    event_amount,
+                    mode: None,
+                    intervening_if: None,
+                    actor: Some(p),
+                    from_mana_ability: false,
+                    x_value: 0,
+                    converged_value: 0,
+                    mana_spent: 0,
+                },
+                None,
+            );
+        }
+    }
+
     /// CR 800.4a — handle a player leaving the game: all cards/tokens they
     /// own leave with them (every zone), and permanents they controlled but
     /// don't own revert to their owners' control. Objects leaving this way
@@ -5147,6 +5187,7 @@ impl GameState {
         // `check_state_based_actions` drives it off this for every seat, no
         // matter which rule or effect put them out.
         self.players[p].left_game = true;
+        self.queue_enchanted_player_left_triggers(p);
         // CR 506.4 / 800.4a — a creature that leaves the battlefield is removed
         // from combat, and so is an attacker whose defending player left the
         // game. Doing the `retain` alone left `attacking` and `block_map`
