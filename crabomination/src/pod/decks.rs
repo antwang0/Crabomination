@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Ten hand-picked commanders plus twenty-three official preconstructed lists, each a
+//! Ten hand-picked commanders plus twenty-four official preconstructed lists, each a
 //! 99 of cards this engine implements: legal under CR 903 (100 cards
 //! including the commander, singleton outside basics, every card inside the
 //! commander's CR 903.4 color identity) and Commander-legal per Scryfall's
@@ -8,7 +8,7 @@
 //!
 //! The ten were built by hand because the offline Scryfall cache cannot say
 //! how a precon splits into decks; MTGJSON's deck files can, and the eleventh
-//! through thirty-third (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
+//! through thirty-fourth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
 //! Win, Tails You Lose, Goblin Storm, Foundations Commander's Wretched Ranks,
 //! Tramplesaurus Rex and Keen Engineering, Commander Legends' Reap the Tides,
 //! Phyrexia: All Will Be One's Corrupting Influence, Zendikar Rising's Sneak
@@ -18,7 +18,8 @@
 //! Commander 2014's Guided by Nature, Bloomburrow Commander's Animated Army,
 //! Secret Lair's Grave Danger, Commander 2014's Forged in Stone, Modern
 //! Horizons 3 Commander's Graveyard Overdrive, Commander 2015's Swell the
-//! Host and Secret Lair's Angels: They're Just Like Us) are taken
+//! Host, Secret Lair's Angels: They're Just Like Us and Commander 2014's Built
+//! From Scratch) are taken
 //! from one card for card. What all of them keep
 //! from the precon idea is what the pod needs — fixed, legal, varied color
 //! identities, and built to play against each other.
@@ -1134,4 +1135,31 @@ pub const GISELA_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains, plains, plains,
+];
+
+pub const DARETTI_COMMANDERS: &[CardFactory] = &[daretti_scrap_savant];
+
+/// **Built From Scratch**, the Commander 2014 deck (C14, 2014-11-07), exactly
+/// as MTGJSON's `BuiltFromScratch_C14` prints it: 70 nonbasic cards + 29
+/// Mountains = 99. Mono-red artifacts under Daretti, another
+/// planeswalker commander (CR 903.3a) — scrap in, recursion out.
+pub const DARETTI_MAIN: &[CardFactory] = &[
+    goblin_welder, epochrasite, myr_retriever, myr_sire, bottle_gnomes, cathodion, junk_diver,
+    palladium_myr, pilgrims_eye, tuktuk_the_explorer, dualcaster_mage, feldon_of_the_third_path,
+    solemn_simulacrum, flametongue_kavu, beetleback_chief, ingot_chewer, steel_hellkite,
+    wurmcoil_engine, spitebellows, hoard_smelter_dragon, warmonger_hellkite, myr_battlesphere,
+    pentavus, tyrants_familiar, bosh_iron_golem, bogardan_hellkite, faithless_looting, whipflare,
+    scrap_mastery, incite_rebellion, blasphemous_act, impact_resonance, chaos_warp,
+    volcanic_offering, word_of_seizing, magmaquake, starstorm, everflowing_chalice,
+    panic_spellbomb, sol_ring, wayfarers_bauble, fire_diamond, ichor_wellspring,
+    liquimetal_coating, mind_stone, mycosynth_wellspring, ruby_medallion, swiftfoot_boots,
+    commanders_sphere, jalum_tome, pristine_talisman, unstable_obelisk, trading_post, caged_sun,
+    dreamstone_hedron, loreseekers_stone, spine_of_ish_sah, darksteel_citadel, great_furnace,
+    bitter_feud, arcane_lighthouse, buried_ruin, dormant_volcano, flamekin_village, forgotten_cave,
+    ghost_quarter, phyrexias_core, reliquary_tower, smoldering_crater, temple_of_the_false_god,
+    // Basics: 29 mountain
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain,
 ];

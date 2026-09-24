@@ -344,6 +344,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::GISELA_COMMANDERS,
             main: decks::GISELA_MAIN,
         },
+        // Thirty-fourth: the twenty-fourth official list (Built From
+        // Scratch, C14) — mono-red artifacts, a planeswalker commander.
+        // `--seats 34`.
+        PodDeck {
+            name: "Daretti, Scrap Savant (R)",
+            commanders: decks::DARETTI_COMMANDERS,
+            main: decks::DARETTI_MAIN,
+        },
     ]
 }
 
