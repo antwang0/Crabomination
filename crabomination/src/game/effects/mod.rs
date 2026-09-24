@@ -1722,6 +1722,24 @@ impl GameState {
         // their own face.
         let default_target = if caster != orig_caster && choose_new_targets {
             self.auto_target_for_effect_avoiding(&orig_card_def.effect, caster, None).or(target.clone())
+        } else if choose_new_targets
+            && matches!(orig_card_def.effect, Effect::Destroy { .. })
+            && let Some(Target::Permanent(first)) = target
+        {
+            // A second Destroy at the permanent the original destroys finds it
+            // gone and does nothing (CR 608.2b), so a self-copy (Malicious
+            // Affliction's morbid) defaults to another opposing permanent. The
+            // set's head is read as a trigger *source* (spared when hostile),
+            // so it leads with the id no card carries.
+            let avoid = [CardId(u32::MAX), first];
+            match self.auto_target_for_effect_avoiding_set(&orig_card_def.effect, caster, &avoid) {
+                Some(Target::Permanent(other))
+                    if self.battlefield_find(other).is_some_and(|c| c.controller != caster) =>
+                {
+                    Some(Target::Permanent(other))
+                }
+                _ => target.clone(),
+            }
         } else {
             target.clone()
         };

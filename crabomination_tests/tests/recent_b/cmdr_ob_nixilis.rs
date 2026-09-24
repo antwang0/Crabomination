@@ -5,7 +5,7 @@ use crabomination::card::{CardId, Keyword, SelectionRequirement as R, StaticAbil
 use crabomination::catalog;
 use crabomination::effect::{ActivatedAbility, Effect, PlayerRef, Selector, StaticEffect};
 use crabomination::game::effects::EffectContext;
-use crabomination::game::types::{Attack, AttackTarget, GameAction, TurnStep};
+use crabomination::game::types::{Attack, AttackTarget, GameAction, Target, TurnStep};
 use crabomination::game::*;
 use crabomination::mana::{Color, b, cost, generic};
 
@@ -158,9 +158,29 @@ fn cr_119_3_gray_merchant_and_kokusho_gain_the_table_total() {
     assert_eq!(g.players[0].life, 26);
     assert_eq!(g.players[1].life, 18);
     let kokusho = g.add_card_to_battlefield(0, catalog::kokusho_the_evening_star());
-    let ctx = EffectContext::for_spell(1, Some(crabomination::game::types::Target::Permanent(kokusho)), 0, 0);
+    let ctx = EffectContext::for_spell(1, Some(Target::Permanent(kokusho)), 0, 0);
     g.resolve_effect(&Effect::Destroy { what: Selector::Target(0) }, &ctx).expect("destroy");
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, 41);
     assert_eq!(g.players[3].life, 13);
+}
+
+/// CR 707.10 / 608.2b — a copy of your own Destroy spell defaults to another
+/// opposing creature: the original target is gone by the time the copy would
+/// destroy it (Reverberate on your own Murder).
+#[test]
+fn cr_707_10_a_self_copied_destroy_defaults_to_a_new_target() {
+    let mut g = pod(2);
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let murder = g.add_card_to_hand(0, catalog::murder());
+    let reverb = g.add_card_to_hand(0, catalog::reverberate());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell { card_id: murder, target: Some(Target::Permanent(angel)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("Murder");
+    g.perform_action(GameAction::CastSpell { card_id: reverb, target: Some(Target::Permanent(murder)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("Reverberate");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(angel).is_none());
+    assert!(g.battlefield_find(bear).is_none(), "the copy took the Bear");
 }
