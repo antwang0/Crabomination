@@ -2866,3 +2866,32 @@ pub const GOSHINTAI_MAIN: &[CardFactory] = &[
     the_world_tree, thornglint_bridge, tireless_tracker, trace_of_abundance, tragic_arrogance,
     triskaidekaphile, twenty_toed_toad, wooded_bastion, yahenni_undying_partisan,
 ];
+
+pub const NELLY_COMMANDERS: &[CardFactory] = &[nelly_borca_impulsive_accuser];
+
+/// **Blame Game**, the Murders at Karlov Manor Commander deck (MKC,
+/// 2024-02-09), exactly as MTGJSON's `BlameGame_MKC` prints it: 83 nonbasic
+/// cards + 9 Plains + 7 Mountains = 99. Boros goad under Nelly Borca.
+pub const NELLY_MAIN: &[CardFactory] = &[
+    feather_radiant_arbiter, immortal_obligation, otherworldly_escort, redemption_arc,
+    trouble_in_pairs, havoc_eater, hot_pursuit, mob_verdict, prisoners_dilemma, take_the_bait,
+    ransom_note, angel_of_the_ruins, comeuppance, darien_king_of_kjeldor, duelists_heritage,
+    elspeth_suns_champion, keeper_of_the_accord, loran_of_the_third_path, promise_of_loyalty,
+    selfless_squire, sevinnes_reclamation, smugglers_share, stalking_leonin, sun_titan,
+    windborn_muse, winds_of_rath, agitator_ant, brash_taunter, disrupt_decorum,
+    etali_primal_storm, fiendish_duo, frontier_warmonger, kazuul_tyrant_of_the_cliffs,
+    spectacular_showdown, vengeful_ancestor, anya_merciless_angel, boros_reckoner,
+    deflecting_palm, gisela_blade_of_goldnight, ancient_stone_idol, solemn_simulacrum,
+    steel_hellkite, tome_of_legends, castle_ardenvale, exotic_orchard, furycalm_snarl,
+    kher_keep, labyrinth_of_skophos, needle_spires, scavenger_grounds, slayers_stronghold,
+    temple_of_triumph, throne_of_the_high_city, war_room, ghostly_prison, gideons_sacrifice,
+    martial_impetus, orzhov_advokist, seal_of_cleansing, soul_snare, vow_of_duty, wall_of_omens,
+    curse_of_opulence, rite_of_the_raging_storm, shiny_impetus, vow_of_lightning, arcane_signet,
+    bloodthirsty_blade, fellwar_stone, mind_stone, sol_ring, talisman_of_conviction,
+    thought_vessel, access_tunnel, ash_barrens, boros_garrison, command_tower, escape_tunnel,
+    myriad_landscape, reliquary_tower, rogues_passage, sunhome_fortress_of_the_legion,
+    temple_of_the_false_god,
+    // Basics: 9 plains, 7 mountain
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain,
+];

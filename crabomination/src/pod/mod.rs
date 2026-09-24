@@ -783,6 +783,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::GOSHINTAI_COMMANDERS,
             main: decks::GOSHINTAI_MAIN,
         },
+        // Ninety-third: the eighty-third official list (Blame Game, MKC) —
+        // Boros goad under Nelly Borca. `--pod-decks 93`.
+        PodDeck {
+            name: "Nelly Borca, Impulsive Accuser (RW)",
+            commanders: decks::NELLY_COMMANDERS,
+            main: decks::NELLY_MAIN,
+        },
     ]
 }
 
@@ -1321,6 +1328,8 @@ mod tests {
             ("Lord Windgrace", [0x7D18, 97, 9021]),
             ("Derevi", [0xDE7E, 98, 9022]),
             ("Atarka", [0xA7A4, 99, 9023]),
+            // CR 701.15 — goad from resolutions, holds and attachments.
+            ("Nelly Borca", [0xBE11, 100, 9024]),
         ] {
             let precon = *field.iter().find(|d| d.name.starts_with(name)).expect("the precon seat");
             assert_eq!(precon.card_count(), 100);
