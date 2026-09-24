@@ -83,6 +83,7 @@ lists were picked.
 | **Eternal Might** (DRC precon) WUB | Temmet, Naktamun's Will | WUB | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Land's Wrath** (ZNC precon) RGW | Obuun, Mul Daya Ancestor | RGW | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Stalwart Unity** (C16 precon) RGWU | Kynaios and Tiro of Meletis | RGWU | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
+| **Devour for Power** (CMD precon) BGU | The Mimeoplasm | BGU | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Arm for Battle** (CMR precon) RW | Wyleth, Soul of Steel | RW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Fae Dominion** (WOC precon) UB | Tegwyll, Duke of Splendor | UB | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Invent Superiority** (C16 precon) WUBR | Breya, Etherium Shaper | WUBR | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
@@ -826,6 +827,21 @@ Kondo's evasion covers only your small creatures; Advokist counters a taker's
 greatest-power creature. Debug pods beside Zedruu / Obuun / Kaalia / Sigarda
 (seeds 9311/9312, 60 games) decided 60/60, zero panics; a 120-game census
 (seed 9313) leaves no card unplayed (Kynaios 22.5 % there).
+
+The **fifty-eighth** is Commander (2011)'s **Devour for Power**
+(`DevourForPower_CMD`) — Sultai graveyard value under The Mimeoplasm, with
+Damia, Vorosh and Skullbriar in the 99. Nine cards were missing (Spell Crumple
+and Vow of Flight had landed with Political Puppets). Primitives:
+`CardDefinition.keeps_counters_off_battlefield` + `CardInstance::
+drop_counters_for_zone_change` (CR 122.2 in one helper, with Skullbriar's
+exception; the redirect path used to keep a dead creature's counters on the
+card in exile, a hand or the command zone), and an as-enters copy re-reading
+its self-ETB list (CR 707.5 — The Mimeoplasm copying Mulldrifter draws two).
+Residuals: The Mimeoplasm's two cards are the engine's pick; Desecrator Hag's
+power tie. Pods (release, seed 9301, 400 games beside Krark / Giada / Neyali):
+400/400 decided, zero panics, no Mimeoplasm card unplayed; seed 9302 × 500 at
+2/4/6/8 seats all decided; 56 seats × 30 (seed 9303) all decided. `--bench`
+byte-identical.
 
 **Smoke at 54 seats** (seed 9411, before seats 55-57, release, strict answer
 log): 60 games, **60 decided, 0 caps, zero panics** — 608 turns, 350 k actions

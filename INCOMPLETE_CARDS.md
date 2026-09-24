@@ -1822,6 +1822,8 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Humble Defector | Stalwart Unity (C16) | the opponent who gains control is random, not targeted. |
 | 🟡 Sidar Kondo of Jamuraa | Stalwart Unity (C16) | the evasion covers creatures you control with power 2 or less, not other players' small attackers. |
 | 🟡 Orzhov Advokist | Stalwart Unity (C16) | a taker's counters go on their greatest-power creature; the attack restriction covers the creatures they control as it resolves. |
+| 🟡 The Mimeoplasm | Devour for Power (CMD) | the engine picks the two cards: it copies the greatest-power creature card in any graveyard and counts the runner-up's power; a `*` power reads as its printed 0. |
+| 🟡 Desecrator Hag | Devour for Power (CMD) | a tie for greatest power is broken by graveyard order, not by the player. |
 | 🟡 Footbottom Feast | Counterpunch (CMD) | the cards are chosen as it resolves, not targeted on cast; they go on top in mana-value order (the greatest on top). |
 
 ### Seats 42, 46, 49, 53 and 55 (Peer Through Time C14, Wade into Battle C15, Chaos Incarnate SCD, Heavenly Inferno and Political Puppets CMD) — open residuals, 2026-09-24
