@@ -914,6 +914,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::CHISHIRO_COMMANDERS,
             main: decks::CHISHIRO_MAIN,
         },
+        // Hundred-and-tenth: the hundredth official list (Painbow, DMC) —
+        // five-color multicolor under Jared Carthalion, a planeswalker
+        // commander (CR 903.3a). `--pod-decks 110`.
+        PodDeck {
+            name: "Jared Carthalion (WUBRG)",
+            commanders: decks::JARED_COMMANDERS,
+            main: decks::JARED_MAIN,
+        },
     ]
 }
 
@@ -1470,6 +1478,8 @@ mod tests {
             ("Galea", [0x6A1E, 107, 9031]),
             // CR 700.9 — modified creatures; CR 603.10 computed LKI power.
             ("Chishiro", [0xC415, 109, 9033]),
+            // CR 903.3a — a planeswalker commander; CR 105.2c all-colors tokens.
+            ("Jared", [0x7A2E, 110, 9034]),
         ] {
             let precon = *field.iter().find(|d| d.name.starts_with(name)).expect("the precon seat");
             assert_eq!(precon.card_count(), 100);

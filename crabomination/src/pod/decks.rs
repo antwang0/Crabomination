@@ -3358,3 +3358,33 @@ pub const CHISHIRO_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, forest, forest, forest, forest, forest, forest,
     forest, forest, forest, forest, forest, forest, forest, forest,
 ];
+
+pub const JARED_COMMANDERS: &[CardFactory] = &[jared_carthalion];
+
+/// **Painbow**, the Dominaria United Commander deck (DMC, 2022-09-09),
+/// exactly as MTGJSON's `Painbow_DMC` prints it: 88 nonbasic cards +
+/// 3 Forests + 2 Mountains + 2 Islands + 2 Plains + 2 Swamps = 99. Five-color multicolor matters under Jared Carthalion, a
+/// planeswalker commander.
+pub const JARED_MAIN: &[CardFactory] = &[
+    archelos_lagoon_mystic, atla_palani_nest_tender, baleful_strix, chromanticore,
+    coiling_oracle, o_kagachi_vengeful_kami, faeburrow_elder, fusion_elemental,
+    zaxara_the_exemplary, hero_of_precinct_one, illuna_apex_of_wishes, knight_of_new_alara,
+    maelstrom_archangel, nethroi_apex_of_death, rienne_angel_of_rebirth,
+    selvala_explorer_returned, solemn_simulacrum, surrak_dragonclaw, transguild_courier,
+    glint_eye_nephilim, xyris_the_writhing_storm, cultivate, duneblast, explore,
+    explosive_vegetation, farseek, kodamas_reach, lavalanche, merciless_eviction,
+    migration_path, painful_truths, radiant_flames, search_for_tomorrow, time_wipe, abzan_charm,
+    beast_within, echoing_truth, growth_spiral, terminate, naya_charm, path_to_exile,
+    sultai_charm, sylvan_reclamation, arcane_signet, coalition_relic, fellwar_stone,
+    commanders_sphere, prophetic_prism, abundant_growth, maelstrom_nexus,
+    path_to_the_world_tree, bad_river, arcane_sanctum, canopy_vista, cascading_cataracts,
+    cinder_glade, command_tower, crumbling_necropolis, crystal_quarry, evolving_wilds,
+    exotic_orchard, flood_plain, frontier_bivouac, grasslands, jungle_shrine, krosan_verge,
+    mountain_valley, murmuring_bosk, mystic_monastery, nomad_outpost, opulent_palace,
+    prairie_stream, rocky_tar_pit, sandsteppe_citadel, savage_lands, seaside_citadel,
+    smoldering_marsh, sunken_hollow, terramorphic_expanse, jenson_carthalion_druid_exile,
+    two_headed_hellkite, tiller_engine, unite_the_coalition, fallaji_wayfarer,
+    iridian_maelstrom, mana_cannons, primeval_spawn, obsidian_obelisk,
+    // Basics: 3 forest, 2 mountain, 2 island, 2 plains, 2 swamp
+    forest, forest, forest, mountain, mountain, island, island, plains, plains, swamp, swamp,
+];
