@@ -882,6 +882,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::KILLIAN_COMMANDERS,
             main: decks::KILLIAN_MAIN,
         },
+        // Hundred-and-sixth: the ninety-sixth official list (Aura of Courage,
+        // AFC) — Bant Auras and Equipment under Galea, Kindler of Hope.
+        // `--pod-decks 106`.
+        PodDeck {
+            name: "Galea, Kindler of Hope (GWU)",
+            commanders: decks::GALEA_COMMANDERS,
+            main: decks::GALEA_MAIN,
+        },
     ]
 }
 
@@ -1432,6 +1440,8 @@ mod tests {
             ("Estrid", [0xE571, 105, 9029]),
             // CR 122.1b — keyword counters from the graveyard (Kathril).
             ("Kathril", [0xCA7B, 106, 9030]),
+            // Library-top Equipment riders, CR 706.2 natural-max draws.
+            ("Galea", [0x6A1E, 107, 9031]),
         ] {
             let precon = *field.iter().find(|d| d.name.starts_with(name)).expect("the precon seat");
             assert_eq!(precon.card_count(), 100);

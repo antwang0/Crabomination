@@ -3244,3 +3244,32 @@ pub const KILLIAN_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, swamp, swamp, swamp, swamp,
     swamp, swamp, swamp, swamp,
 ];
+
+pub const GALEA_COMMANDERS: &[CardFactory] = &[galea_kindler_of_hope];
+
+/// **Aura of Courage**, the Adventures in the Forgotten Realms Commander deck
+/// (AFC, 2021-07-23), exactly as MTGJSON's `AuraOfCourage_AFC` prints it:
+/// 85 nonbasic cards + 2 Plains + 4 Islands + 8 Forests = 99. Bant Auras and
+/// Equipment under Galea, Kindler of Hope.
+pub const GALEA_MAIN: &[CardFactory] = &[
+    angel_of_finality, puresteel_paladin, realm_cloaked_giant, sram_senior_edificer,
+    prognostic_sphinx, cold_eyed_selkie, fleecemane_lion, knight_of_autumn, riverwise_augur,
+    acidic_slime, paradise_druid, winds_of_rath, serum_visions, natures_lore,
+    heroic_intervention, valorous_stance, brainstorm, bant_charm, argentum_armor,
+    basilisk_collar, masterwork_of_ingenuity, moonsilver_spear, sword_of_the_animist,
+    behemoth_sledge, arcane_signet, colossus_hammer, explorers_scope, sol_ring, swiftfoot_boots,
+    viridian_longbow, imprisoned_in_the_moon, greater_good, verdant_embrace, angelic_gift,
+    gryffs_boon, curse_of_verbosity, eel_umbra, psychic_impetus, abundant_growth,
+    fertile_ground, kenriths_transformation, rancor, utopia_sprawl, wild_growth, shielding_plax,
+    canopy_vista, exotic_orchard, fortified_village, lumbering_falls, port_town, prairie_stream,
+    skycloud_expanse, sungrass_prairie, evolving_wilds, azorius_chancery, bant_panorama,
+    command_tower, flood_plain, grasslands, halimar_depths, mishras_factory, path_of_ancestry,
+    seaside_citadel, simic_growth_chamber, terramorphic_expanse, thriving_grove, thriving_heath,
+    thriving_isle, vitu_ghazi_the_city_tree, storvald_frost_giant_jarl, fey_steed, holy_avenger,
+    mantle_of_the_ancients, robe_of_stars, valiant_endeavor, diviners_portent,
+    netherese_puzzle_ward, winged_boots, belt_of_giant_strength, song_of_inspiration,
+    catti_brie_of_mithral_hall, ride_the_avalanche, clay_golem, ebony_fly, sword_of_hours,
+    // Basics: 2 plains, 4 island, 8 forest
+    plains, plains, island, island, island, island, forest, forest, forest, forest, forest,
+    forest, forest, forest,
+];
