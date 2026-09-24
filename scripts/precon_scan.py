@@ -10,6 +10,7 @@ Scryfall cache cannot say how a precon splits into decks; MTGJSON can, which
 is how `pod::decks::TEVAL_MAIN` (Sultai Arisen) was taken card for card.
 
     python3 scripts/precon_scan.py            # top 30, fewest missing first
+    python3 scripts/precon_scan.py --top 60   # more rows (the 0-missing ones crowd the top)
     python3 scripts/precon_scan.py --deck SultaiArisen_TDC   # one list, as factories
 
 ⚠ "In the catalog" is a name match, not a verdict: a present card can still be
@@ -85,7 +86,8 @@ def main():
         miss = sorted({n for n in names if not present(n)})
         rows.append((len(miss), d["releaseDate"], d["name"], d["fileName"], miss))
     rows.sort()
-    for n, date, name, fname, miss in rows[:30]:
+    top = int(sys.argv[sys.argv.index("--top") + 1]) if "--top" in sys.argv else 30
+    for n, date, name, fname, miss in rows[:top]:
         print(f"{n:3d}  {date}  {name:<34} {fname:<36} {', '.join(miss[:8])}")
     return 0
 
