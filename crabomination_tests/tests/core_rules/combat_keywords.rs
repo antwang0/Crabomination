@@ -781,10 +781,13 @@ fn cr_702_151_enlist_does_nothing_with_no_eligible_helper() {
     assert_eq!(g.battlefield_find(atk).unwrap().power(), 2, "no helper → no pump");
 }
 
-// ── CR 702.169 Mobilize ──────────────────────────────────────────────────────
+// ── CR 702.181 Mobilize ──────────────────────────────────────────────────────
 
+/// CR 702.181a — the Warriors attack, survive combat, and are sacrificed at
+/// the beginning of the next end step. Regression: they were sacrificed at
+/// end of combat (this test said so, under Craft's rule number, 702.169).
 #[test]
-fn cr_702_169_mobilize_tokens_attack_then_sacrifice_at_end_of_combat() {
+fn cr_702_181_mobilize_tokens_attack_then_sacrifice_at_next_end_step() {
     let mut g = two_player_game();
     let atk = g.add_card_to_battlefield(0, body("Mobilizer", 2, 2, vec![shortcut::mobilize(2)]));
     g.clear_sickness(atk);
@@ -803,8 +806,10 @@ fn cr_702_169_mobilize_tokens_attack_then_sacrifice_at_end_of_combat() {
     // They deal their combat damage (P1 takes 2 attacker + 2 warriors = 4).
     advance_to(&mut g, TurnStep::PostCombatMain);
     assert_eq!(g.players[1].life, 16, "attacker + two 1/1 warriors hit for 4");
-    // Sacrificed as combat ends — gone before postcombat main.
-    assert_eq!(warriors(&g), 0, "warriors sacrificed at end of combat");
+    assert_eq!(warriors(&g), 2, "still there after combat");
+    advance_to(&mut g, TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(warriors(&g), 0, "sacrificed at the beginning of the end step");
 }
 
 // ── CR 509.1c MustBlock ("blocks each combat if able") ───────────────────────

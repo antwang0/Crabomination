@@ -9531,12 +9531,13 @@ fn cr_107_16_pay_x_life_variable_activation_cost() {
     assert!(g.computed_permanent(init).unwrap().power >= 5, "endured X=3");
 }
 
-// ── CR 702.169 — Mobilize tokens are tapped, attacking, and transient ───────
+// ── CR 702.181 — Mobilize tokens are tapped, attacking, and transient ───────
 
 /// A Mobilize attack trigger mints a tapped-and-attacking Warrior that is
-/// sacrificed at end of combat (CR 702.169). Zurgo's Vanguard.
+/// sacrificed at the beginning of the next end step (CR 702.181a), not at
+/// end of combat as this test once asserted. Zurgo's Vanguard.
 #[test]
-fn cr_702_169_mobilize_token_is_tapped_attacking_and_sacrificed() {
+fn cr_702_181_mobilize_token_is_tapped_attacking_and_sacrificed() {
     let mut g = two_player_game();
     let zurgo = g.add_card_to_battlefield(0, catalog::zurgos_vanguard());
     g.clear_sickness(zurgo);
@@ -9554,11 +9555,15 @@ fn cr_702_169_mobilize_token_is_tapped_attacking_and_sacrificed() {
         .expect("minted a Warrior");
     assert!(warrior.tapped, "token is tapped");
     assert!(g.attacking.iter().any(|a| a.attacker == warrior.id), "token is attacking");
-    // End of combat cleanup sacrifices it.
+    // End of combat leaves it; the next end step sacrifices it.
     g.process_attacking_token_cleanup();
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Warrior"), "survives combat");
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
     assert!(
         !g.battlefield.iter().any(|c| c.definition.name == "Warrior"),
-        "Warrior sacrificed at end of combat"
+        "Warrior sacrificed at the beginning of the end step"
     );
 }
 

@@ -2144,11 +2144,11 @@ pub fn enlist() -> TriggeredAbility {
     on_attack(Effect::Enlist)
 }
 
-/// Mobilize N (CR 702.169): "Whenever this creature attacks, create N
+/// Mobilize N (CR 702.181): "Whenever this creature attacks, create N
 /// 1/1 red Warrior creature tokens that are tapped and attacking.
-/// Sacrifice them at the beginning of the next end step." (Modeled as
-/// end-of-combat sacrifice — the tokens vanish before postcombat main
-/// either way.) An `Attacks / SelfSource` trigger over
+/// Sacrifice them at the beginning of the next end step." The tokens stay
+/// through the postcombat main phase and leave no longer attacking (Zurgo
+/// Stormrender reads the difference). An `Attacks / SelfSource` trigger over
 /// [`Effect::CreateTokenAttacking`].
 pub fn mobilize(n: i32) -> TriggeredAbility {
     mobilize_value(Value::Const(n))
@@ -2174,7 +2174,7 @@ pub fn mobilize_value(count: Value) -> TriggeredAbility {
             },
             ..Default::default()
         }),
-        cleanup: AttackingTokenCleanup::SacrificeAtEndOfCombat,
+        cleanup: AttackingTokenCleanup::SacrificeAtNextEndStep,
         defender: None,
     })
 }

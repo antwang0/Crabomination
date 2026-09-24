@@ -509,7 +509,7 @@ pub fn rite_of_renewal() -> CardDefinition {
 /// this turn", and the tokens go at the beginning of the next end step. The
 /// engine has `OnMatchingAttacksThisTurn` (per attacker, so it over-fires)
 /// and no once-per-combat delayed attack trigger, so the tokens are minted
-/// immediately and cleaned up at end of combat — strictly *worse* than the
+/// immediately (and go at the next end step) — strictly *worse* than the
 /// printing (you must activate after attackers are declared), which is the
 /// safe direction for an approximation.
 pub fn dalkovan_encampment() -> CardDefinition {
@@ -546,7 +546,7 @@ pub fn dalkovan_encampment() -> CardDefinition {
                     who: PlayerRef::You,
                     count: Value::Const(2),
                     definition: std::sync::Arc::new(warrior_token()),
-                    cleanup: crate::effect::AttackingTokenCleanup::SacrificeAtEndOfCombat,
+                    cleanup: crate::effect::AttackingTokenCleanup::SacrificeAtNextEndStep,
                     defender: None,
                 },
                 ..Default::default()

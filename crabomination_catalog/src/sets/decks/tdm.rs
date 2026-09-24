@@ -486,7 +486,7 @@ pub fn zurgos_vanguard() -> CardDefinition {
 
 /// War Effort — {3}{R} Enchantment. Creatures you control get +1/+0. Whenever
 /// you attack, create a 1/1 red Warrior token that's tapped and attacking,
-/// sacrificed at end of combat (Mobilize).
+/// sacrificed at the beginning of the next end step.
 pub fn war_effort() -> CardDefinition {
     CardDefinition {
         name: "War Effort",
@@ -517,7 +517,7 @@ pub fn war_effort() -> CardDefinition {
                     },
                     ..Default::default()
                 }),
-                cleanup: AttackingTokenCleanup::SacrificeAtEndOfCombat,
+                cleanup: AttackingTokenCleanup::SacrificeAtNextEndStep,
                 defender: None,
             },
         }],

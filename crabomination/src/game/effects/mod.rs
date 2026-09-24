@@ -20300,11 +20300,30 @@ impl GameState {
                 let def = token_arc_with_pt(definition, dyn_pt);
                 for _ in 0..n {
                     let id = self.mint_token_onto_battlefield(def.clone(), p, true, events);
+                    // CR 702.181a — Mobilize's tokens go at the next end step.
+                    if matches!(cleanup, AttackingTokenCleanup::SacrificeAtNextEndStep)
+                        && self.battlefield.find_by_id(id).is_some()
+                    {
+                        self.delayed_triggers.push(crate::game::types::DelayedTrigger {
+                            controller: p,
+                            source: id,
+                            kind: crate::game::types::DelayedKind::NextEndStep,
+                            effect: Effect::SacrificePermanent { what: Selector::This },
+                            target: None,
+                            bound_token: Some(id),
+                            bound_subject: None,
+                            fires_once: true,
+                            expires_after_turn: None,
+                        });
+                    }
                     // Join combat tapped + attacking (CR 508.3a) — bypasses the
                     // declare-attackers timing/sickness gates, like Ninjutsu.
                     if self.put_into_combat_attacking(id, target) {
-                        // Mobilize/Myriad temporary tokens leave at end of combat.
-                        if !matches!(cleanup, AttackingTokenCleanup::None) {
+                        // Myriad and friends' temporary tokens leave at end of combat.
+                        if matches!(
+                            cleanup,
+                            AttackingTokenCleanup::SacrificeAtEndOfCombat | AttackingTokenCleanup::ExileAtEndOfCombat
+                        ) {
                             self.attacking_token_cleanup.push((id, *cleanup));
                         }
                     }

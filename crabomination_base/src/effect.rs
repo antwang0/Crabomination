@@ -3770,8 +3770,11 @@ pub enum AttackingTokenCleanup {
     /// Tokens persist (a plain "tapped and attacking" mint).
     #[default]
     None,
-    /// Sacrifice the tokens at end of combat (Mobilize).
+    /// Sacrifice the tokens at end of combat (Kavaron Harrier, Gemini Engine).
     SacrificeAtEndOfCombat,
+    /// Sacrifice the tokens at the beginning of the next end step — Mobilize
+    /// (CR 702.181a), War Effort. After combat, so they leave not attacking.
+    SacrificeAtNextEndStep,
     /// Exile the tokens at end of combat (Myriad-style temporary copies).
     ExileAtEndOfCombat,
 }
@@ -7489,7 +7492,7 @@ pub enum Effect {
     /// new tokens join the current combat attacking the same defender the
     /// effect's source is attacking (falling back to the controller's first
     /// opponent when the source isn't itself an attacker). Powers "create N
-    /// tokens tapped and attacking" riders and Mobilize (CR 702.169).
+    /// tokens tapped and attacking" riders and Mobilize (CR 702.181).
     /// `cleanup` registers the tokens to leave at end of combat. No-op
     /// outside the combat phase.
     CreateTokenAttacking {

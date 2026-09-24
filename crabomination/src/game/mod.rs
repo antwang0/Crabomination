@@ -17505,7 +17505,8 @@ impl GameState {
                 AttackingTokenCleanup::ExileAtEndOfCombat => {
                     self.remove_from_battlefield_to_exile(id);
                 }
-                AttackingTokenCleanup::None => {}
+                // Registered as a next-end-step delayed trigger at the mint.
+                AttackingTokenCleanup::SacrificeAtNextEndStep | AttackingTokenCleanup::None => {}
             }
         }
         self.check_state_based_actions_into(&mut events);
