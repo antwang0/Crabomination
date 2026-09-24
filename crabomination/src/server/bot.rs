@@ -4399,6 +4399,26 @@ fn pick_combat_only_instant(state: &GameState, seat: usize, w: &EvalWeights) -> 
     None
 }
 
+/// Every non-decreasing pick of `k` of `n` modes — strictly increasing
+/// without repeats (CR 700.2d), non-decreasing with them. Bounded by the
+/// printed cards: at most four modes choose two, three choose three.
+fn mode_combinations(n: u8, k: usize, repeats: bool) -> Vec<Vec<u8>> {
+    fn go(n: u8, k: usize, repeats: bool, from: u8, cur: &mut Vec<u8>, out: &mut Vec<Vec<u8>>) {
+        if cur.len() == k {
+            out.push(cur.clone());
+            return;
+        }
+        for i in from..n {
+            cur.push(i);
+            go(n, k, repeats, if repeats { i } else { i + 1 }, cur, out);
+            cur.pop();
+        }
+    }
+    let mut out = Vec::new();
+    go(n, k, repeats, 0, &mut Vec::new(), &mut out);
+    out
+}
+
 /// Land-count mulligan heuristic. A keepable opening hand wants roughly
 /// 2–5 lands out of seven; 0–1 (screw) or 6–7 (flood) are shipped. We stop
 /// digging after two mulligans (a London mulligan past that bottoms too
@@ -7051,6 +7071,14 @@ pub(super) fn cast_candidates<'a>(
         let mut candidates: Vec<Vec<u8>> = (0..modes.len() as u8).map(|i| vec![i]).collect();
         if combo && modes.len() > 1 {
             candidates.push((0..modes.len() as u8).collect());
+        }
+        // "Choose two" (the Strixhaven Commands) and "choose three, repeats
+        // allowed" (the Confluences) reject a single mode, so offer every
+        // non-decreasing pick of exactly `min` modes.
+        if let Effect::ChooseModesCast { min, allow_repeats, .. } = &c.definition.effect
+            && *min > 1
+        {
+            candidates = mode_combinations(modes.len() as u8, *min as usize, *allow_repeats);
         }
         for picks in candidates {
             let Some(action) = pick(picks) else { continue };
@@ -27247,6 +27275,34 @@ mod stack_response_tests {
             matches!(action, GameAction::CastSpell { card_id, .. } if card_id == counter),
             "got {action:?}"
         );
+    }
+
+    /// CR 700.2d — "choose two" of four is six pairs; "choose three, repeats
+    /// allowed" of three is ten multisets.
+    #[test]
+    fn mode_combinations_count_the_legal_picks() {
+        assert_eq!(mode_combinations(4, 2, false).len(), 6);
+        assert_eq!(mode_combinations(3, 3, true).len(), 10);
+        assert!(mode_combinations(3, 3, true).contains(&vec![0, 0, 0]));
+    }
+
+    /// A Confluence (choose three, min 3) is offered as a three-mode cast.
+    #[test]
+    fn a_choose_three_spell_is_offered_as_three_modes() {
+        use crate::mana::Color;
+        let mut g = two_player_game();
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        let conf = g.add_card_to_hand(0, catalog::righteous_confluence());
+        g.players[0].mana_pool.add(Color::White, 5);
+        let casts: Vec<GameAction> = cast_candidates(&g, 0, &EvalWeights::default(), None)
+            .into_iter()
+            .map(|(a, _)| a)
+            .filter(|a| matches!(a, GameAction::CastSpellSpree { card_id, spree_modes, .. }
+                if *card_id == conf && spree_modes.len() == 3))
+            .collect();
+        assert!(!casts.is_empty(), "no three-mode cast offered");
     }
 
     /// CR 707.10 / 115.7 — Wild Ricochet retargets, then copies: the same
