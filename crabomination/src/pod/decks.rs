@@ -3388,3 +3388,32 @@ pub const JARED_MAIN: &[CardFactory] = &[
     // Basics: 3 forest, 2 mountain, 2 island, 2 plains, 2 swamp
     forest, forest, forest, mountain, mountain, island, island, plains, plains, swamp, swamp,
 ];
+
+pub const JIRINA_COMMANDERS: &[CardFactory] = &[jirina_kudro];
+
+/// **Ruthless Regiment**, the Commander 2020 deck (C20, 2020-04-17), exactly
+/// as MTGJSON's `RuthlessRegiment_C20` prints it: 83 nonbasic cards + 4
+/// Mountains + 8 Plains + 4 Swamps = 99. Mardu Humans under Jirina Kudro.
+pub const JIRINA_MAIN: &[CardFactory] = &[
+    nahiri_the_harbinger, kelsien_the_plague, trynn_champion_of_freedom,
+    silvar_devourer_of_the_free, verge_rangers, species_specialist, titan_hunter,
+    fireflux_squad, frontier_warmonger, bounty_agent, dearly_departed, frontline_medic,
+    knight_of_the_white_orchid, magus_of_the_disk, odric_master_tactician, riders_of_gavony,
+    thalias_lieutenant, thraben_doomsayer, disciple_of_bolas, xathrid_necromancer,
+    alesha_who_smiles_at_death, captivating_crew, fumiko_the_lowblood, magus_of_the_wheel,
+    titan_of_eternal_fire, adriana_captain_of_the_guard, generals_enforcer, banisher_priest,
+    cavalry_pegasus, devout_chaplain, zulaport_cutthroat, humble_defector, garna_the_bloodflame,
+    citywide_bust, cleansing_nova, increasing_devotion, painful_truths, ambitions_cost,
+    call_the_coppercoats, flawless_maneuver, unexpectedly_absent, crackling_doom, dire_tactics,
+    terminate, sanctuary_blade, bonders_ornament, arcane_signet, boros_signet,
+    commanders_sphere, heirloom_blade, orzhov_signet, rakdos_signet, skullclamp, sol_ring,
+    molten_echoes, outpost_siege, shared_animosity, sanctuary_lockdown, bastion_of_remembrance,
+    martial_impetus, parasitic_impetus, shiny_impetus, vigilante_justice, battlefield_forge,
+    exotic_orchard, shadowblood_ridge, smoldering_marsh, spinerock_knoll, windbrisk_heights,
+    bojuka_bog, boros_garrison, command_tower, myriad_landscape, nomad_outpost, orzhov_basilica,
+    path_of_ancestry, rakdos_carnarium, temple_of_the_false_god, unclaimed_territory,
+    bloodfell_caves, evolving_wilds, scoured_barrens, wind_scarred_crag,
+    // Basics: 4 mountain, 8 plains, 4 swamp
+    mountain, mountain, mountain, mountain, plains, plains, plains, plains, plains, plains,
+    plains, plains, swamp, swamp, swamp, swamp,
+];
