@@ -424,3 +424,57 @@ fn throes_of_chaos_cascades() {
     cast(&mut g, 0, t, None).expect("cast");
     assert_eq!(named(&g, 0, "Grizzly Bears").len(), 1);
 }
+
+/// Each Leitmotif Composer copies itself on a 5+ spell, so a board of them
+/// doubles (a pod reached 963 and ended as a board cap). Past the simulator's
+/// bound a bot holds the spell; with one Composer it casts it.
+#[test]
+fn bot_holds_a_big_spell_that_would_double_its_composers_past_the_bound() {
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    let casts = |composers: usize| {
+        let mut g = pod(2);
+        stock_libraries(&mut g, 10);
+        g.step = TurnStep::PostCombatMain;
+        for _ in 0..composers {
+            g.add_card_to_battlefield(0, catalog::leitmotif_composer());
+        }
+        for _ in 0..6 {
+            g.add_card_to_battlefield(0, catalog::island());
+        }
+        let t = g.add_card_to_hand(0, catalog::tidings());
+        matches!(HeuristicBot::new().next_action(&g, 0), Some(GameAction::CastSpell { card_id, .. }) if card_id == t)
+    };
+    assert!(casts(1), "one Composer: cast it");
+    assert!(!casts(520), "520 would become 1,040: hold it");
+}
+
+/// Redoubled Stormsinger tokens each copy every token that entered this turn,
+/// earlier Stormsingers' copies included; past the bound a bot leaves the
+/// rest home (a pod reached 1,025 Stormsingers).
+#[test]
+fn bot_holds_stormsingers_that_would_overflow_the_board() {
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    let mut g = pod(2);
+    stock_libraries(&mut g, 10);
+    for _ in 0..300 {
+        g.add_card_to_battlefield(0, catalog::island());
+    }
+    let singers: Vec<CardId> = (0..8).map(|_| g.add_card_to_battlefield(0, catalog::redoubled_stormsinger())).collect();
+    for id in &singers {
+        g.clear_sickness(*id);
+    }
+    // Forty Pegasi entered this turn: each Stormsinger copies all of them,
+    // and every later one the earlier ones' copies too.
+    g.players[0].life = 40;
+    let sh = g.add_card_to_hand(0, catalog::storm_herd());
+    cast(&mut g, 0, sh, None).expect("storm herd");
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    match HeuristicBot::new().next_action(&g, 0) {
+        Some(GameAction::DeclareAttackers(attacks)) => {
+            assert!(!attacks.is_empty(), "some still attack");
+            assert!(attacks.len() < singers.len(), "not every doubling Stormsinger swings: {}", attacks.len());
+        }
+        other => panic!("expected a declaration, got {other:?}"),
+    }
+}

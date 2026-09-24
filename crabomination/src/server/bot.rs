@@ -3157,11 +3157,8 @@ impl HeuristicBot {
             TurnStep::DeclareAttackers if is_active && state.attack_declarer() == seat => {
                 if !self.attackers_declared {
                     self.attackers_declared = true;
-                    Some(BotStep::plain(GameAction::DeclareAttackers(pick_attacks_scored(
-                        state,
-                        seat,
-                        &self.weights,
-                    ))))
+                    let attacks = board_bound_attacks(state, pick_attacks_scored(state, seat, &self.weights));
+                    Some(BotStep::plain(GameAction::DeclareAttackers(attacks)))
                 } else {
                     Some(BotStep::plain(GameAction::PassPriority))
                 }
@@ -8468,12 +8465,17 @@ pub(super) fn cast_candidates<'a>(
     // `MAX_BATTLEFIELD` (Storm Herd cast at 3,672 life minted 1,025 Pegasi
     // and ended an 8-seat pod as a board cap) is one the simulator can't
     // play out, so the bot holds it.
-    out.retain(|(a, _)| match a {
-        GameAction::CastSpell { card_id, .. } | GameAction::CastSpellAlternative { card_id, .. } => {
-            state.battlefield.len() as i64 + state.spell_token_estimate(*card_id, seat)
+    // A prepared spell is priced off its creature: the fan-out is the part
+    // that matters (Dirgur Focusmage's Braingeyser over 500 Composers).
+    out.retain(|(a, _)| match a.cast_card_id().or(match a {
+        GameAction::CastPrepareSpell { creature_id, .. } => Some(*creature_id),
+        _ => None,
+    }) {
+        Some(card_id) => {
+            state.battlefield.len() as i64 + state.spell_token_estimate(card_id, seat)
                 <= crate::recommend::MAX_BATTLEFIELD as i64
         }
-        _ => true,
+        None => true,
     });
     out
 }
@@ -10725,6 +10727,42 @@ pub fn pick_blocks_for_test(state: &GameState, seat: usize) -> Vec<(CardId, Card
 /// what. Extracted from `next_action` so the combat-aware evaluation can
 /// replay the same choice inside a simulation (see
 /// [`simulate_through_combat`]) rather than re-deriving it.
+/// Board-bound gate on a declaration: drop an attacker whose own attack
+/// triggers would carry the battlefield past `MAX_BATTLEFIELD`.
+/// A board-scaling one (Redoubled Stormsinger's "for each token that entered
+/// this turn") is priced as copying everything the earlier ones made, since
+/// its copies entered this turn too — an 8-seat pod ran a squad of
+/// Stormsinger tokens to 1,025 copies. Kept only if the engine accepts the
+/// trimmed declaration (an attack requirement wins).
+fn board_bound_attacks(state: &GameState, attacks: Vec<Attack>) -> Vec<Attack> {
+    use crate::recommend::MAX_BATTLEFIELD;
+    let start = state.battlefield.len() as i64;
+    let mut board = start;
+    let mut kept = Vec::with_capacity(attacks.len());
+    for a in &attacks {
+        let (n, scales, fires) = state.attack_token_estimate(a.attacker);
+        if n == 0 {
+            kept.push(a.clone());
+            continue;
+        }
+        // Each fire resolves on its own; a board-scaling one also copies
+        // what the fires before it made (they entered this turn too).
+        let mut after = board;
+        for _ in 0..fires {
+            after += if scales { n + (after - start) } else { n };
+        }
+        if after > MAX_BATTLEFIELD as i64 {
+            continue;
+        }
+        board = after;
+        kept.push(a.clone());
+    }
+    if kept.len() == attacks.len() || !state.would_accept(GameAction::DeclareAttackers(kept.clone())) {
+        return attacks;
+    }
+    kept
+}
+
 pub fn pick_attacks(state: &GameState, seat: usize) -> Vec<Attack> {
     // Layer-aware per-creature checks (Defender/Flying grants, Propaganda,
     // computed P/T) run once per candidate attacker — share one gather, the

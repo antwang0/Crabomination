@@ -280,25 +280,103 @@ impl GameState {
         pips + bonus
     }
 
-    /// Tokens the spell `id` would mint if `caster` cast it now: the sum of
-    /// its top-level `CreateToken` counts, read against the current board.
-    /// The bot uses it to skip a cast that would carry the battlefield past
-    /// the simulator's bound (Storm Herd at thousands of life).
+    /// Tokens `e` would mint if it resolved now under `ctx`: `CreateToken` /
+    /// `CreateTokenCopyOf` counts, one per `Populate`, `Seq` summed, and a
+    /// `ForEach` scaled by how many its selector picks. The bot's
+    /// board-bound gates read it; anything else counts 0.
+    pub(crate) fn effect_token_estimate(&self, e: &crate::effect::Effect, ctx: &EffectContext) -> i64 {
+        use crate::effect::Effect;
+        match e {
+            Effect::CreateToken { count, .. } | Effect::CreateTokenCopyOf { count, .. } => {
+                i64::from(self.evaluate_value(count, ctx).max(0))
+            }
+            Effect::Populate { .. } => 1,
+            Effect::Seq(es) => es.iter().map(|e| self.effect_token_estimate(e, ctx)).sum(),
+            Effect::ForEach { selector, body } => {
+                let n = self.resolve_selector(selector, ctx).len() as i64;
+                if n == 0 { 0 } else { n * self.effect_token_estimate(body, ctx) }
+            }
+            _ => 0,
+        }
+    }
+
+    /// Tokens the spell `id` would mint if `caster` cast it now: its own
+    /// effect's, plus — once the board is already large — the token triggers
+    /// still on the stack and one resolution of each "whenever you cast a
+    /// spell" token trigger `caster` controls (a board of Leitmotif Composers
+    /// doubles on every big spell). The bot
+    /// uses it to skip a cast that would carry the battlefield past the
+    /// simulator's bound (Storm Herd at thousands of life).
     pub(crate) fn spell_token_estimate(&self, id: CardId, caster: usize) -> i64 {
-        fn walk(g: &GameState, e: &crate::effect::Effect, ctx: &EffectContext) -> i64 {
-            match e {
-                crate::effect::Effect::CreateToken { count, .. } => i64::from(g.evaluate_value(count, ctx).max(0)),
-                crate::effect::Effect::Seq(es) => es.iter().map(|e| walk(g, e, ctx)).sum(),
+        let mut ctx = EffectContext::for_spell(caster, None, 0, 0);
+        let own = match self.find_card_anywhere(id) {
+            Some(card)
+                if matches!(
+                    card.definition.effect,
+                    crate::effect::Effect::CreateToken { .. } | crate::effect::Effect::Seq(_)
+                ) =>
+            {
+                ctx.source = Some(id);
+                self.effect_token_estimate(&card.definition.effect, &ctx)
+            }
+            _ => 0,
+        };
+        if self.battlefield.len() < crate::recommend::MAX_BATTLEFIELD / 4 {
+            return own;
+        }
+        // Token triggers already waiting on the stack land first: five Surge
+        // to Victory copies cast back to back each saw the board before the
+        // previous copy's Composer triggers resolved.
+        let mut fan_out: i64 = self
+            .stack
+            .iter()
+            .map(|si| match si {
+                StackItem::Trigger { source, controller, effect, .. } => {
+                    let mut tctx = EffectContext::for_spell(*controller, None, 0, 0);
+                    tctx.source = Some(*source);
+                    self.effect_token_estimate(effect, &tctx)
+                }
                 _ => 0,
+            })
+            .sum();
+        for c in self.battlefield.iter().filter(|c| c.controller == caster) {
+            for t in &c.definition.triggered_abilities {
+                if t.event.kind == crate::card::EventKind::SpellCast
+                    && t.event.scope == crate::card::EventScope::YourControl
+                {
+                    ctx.source = Some(c.id);
+                    fan_out += self.effect_token_estimate(&t.effect, &ctx);
+                }
             }
         }
-        let Some(card) = self.find_card_anywhere(id) else { return 0 };
-        if !matches!(card.definition.effect, crate::effect::Effect::CreateToken { .. } | crate::effect::Effect::Seq(_)) {
-            return 0;
+        own + fan_out
+    }
+
+    /// Tokens `attacker`'s own "whenever this attacks" triggers would mint
+    /// now, whether any of them scales with the board (a `ForEach` —
+    /// Redoubled Stormsinger copies every token that entered this turn,
+    /// including an earlier Stormsinger's copies), and how many times they
+    /// fire (Harmonic Prodigy doubles a Wizard's).
+    pub(crate) fn attack_token_estimate(&self, attacker: CardId) -> (i64, bool, usize) {
+        let Some(c) = self.battlefield_find(attacker) else { return (0, false, 1) };
+        let mut ctx = EffectContext::for_spell(c.controller, None, 0, 0);
+        ctx.source = Some(attacker);
+        let (mut n, mut scales) = (0, false);
+        for t in &c.definition.triggered_abilities {
+            if t.event.kind == crate::card::EventKind::Attacks
+                && t.event.scope == crate::card::EventScope::SelfSource
+            {
+                let e = self.effect_token_estimate(&t.effect, &ctx);
+                n += e;
+                scales |= e > 0 && matches!(&t.effect, crate::effect::Effect::ForEach { .. });
+            }
         }
-        let mut ctx = EffectContext::for_spell(caster, None, 0, 0);
-        ctx.source = Some(id);
-        walk(self, &card.definition.effect, &ctx)
+        let fires = if n > 0 {
+            1 + crate::game::actions::ally_trigger_extra_fires(self, c.controller, attacker)
+        } else {
+            1
+        };
+        (n, scales, fires)
     }
 
     pub(crate) fn evaluate_value(&self, v: &Value, ctx: &EffectContext) -> i32 {

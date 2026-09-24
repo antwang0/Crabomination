@@ -25291,6 +25291,17 @@ impl GameState {
                 {
                     c.is_token = true;
                 }
+                // "You may cast the copy" is declined when the cast would carry
+                // the battlefield past the engine's bound (`MAX_BATTLEFIELD`,
+                // the same one a token batch is capped at): Surge to Victory
+                // copying a big spell over a board of Leitmotif Composers
+                // doubled an 8-seat pod to 1,000.
+                if self.battlefield.len() as i64 + self.spell_token_estimate(copy, ctx.controller)
+                    > crate::recommend::MAX_BATTLEFIELD as i64
+                {
+                    self.players[ctx.controller].hand.retain(|c| c.id != copy);
+                    return Ok(());
+                }
                 let auto = self.auto_target_for_effect_avoiding(
                     &self.players[ctx.controller]
                         .hand
