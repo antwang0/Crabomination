@@ -106,8 +106,8 @@ fn hydra_omnivore_splashes_every_other_opponent() {
     let hydra = g.add_card_to_battlefield(0, catalog::hydra_omnivore());
     let before: Vec<i32> = g.players.iter().map(|p| p.life).collect();
     connect(&mut g, hydra, 2);
-    for seat in 1..4 {
-        assert_eq!(g.players[seat].life, before[seat] - 8, "seat {seat}");
+    for (seat, &was) in before.iter().enumerate().skip(1) {
+        assert_eq!(g.players[seat].life, was - 8, "seat {seat}");
     }
     assert_eq!(g.players[0].life, before[0]);
 }
