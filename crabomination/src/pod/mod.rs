@@ -547,6 +547,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::EMMARA_COMMANDERS,
             main: decks::EMMARA_MAIN,
         },
+        // Sixty-first: the fifty-first official list (Breed Lethality, C16)
+        // — four-color counters under Atraxa. `--seats 61`.
+        PodDeck {
+            name: "Atraxa, Praetors' Voice (WUBG)",
+            commanders: decks::ATRAXA_COMMANDERS,
+            main: decks::ATRAXA_MAIN,
+        },
     ]
 }
 

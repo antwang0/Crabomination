@@ -1913,3 +1913,34 @@ pub const EMMARA_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains,
 ];
+
+pub const ATRAXA_COMMANDERS: &[CardFactory] = &[atraxa_praetors_voice];
+
+/// **Breed Lethality**, the Commander 2016 deck (C16, 2016-11-11), exactly as
+/// MTGJSON's `BreedLethality_C16` prints it: 78 nonbasic cards + 5 Plains + 4
+/// Islands + 5 Swamps + 7 Forests = 99. Four-color +1/+1 counters and
+/// proliferate under Atraxa, Praetors' Voice.
+pub const ATRAXA_MAIN: &[CardFactory] = &[
+    thrummingbird, festercreep, scavenging_ooze, abzan_falconer, orzhov_advokist,
+    tuskguard_captain, necroplasm, champion_of_lambholt, reyhan_last_of_the_abzan,
+    vorel_of_the_hull_clade, crystalline_crawler, custodi_soulbinders, forgotten_ancient,
+    bane_of_the_living, ishai_ojutai_dragonspeaker, corpsejack_menace, fathom_mage,
+    master_biomancer, elite_scaleguard, reveillark, deepglow_skate, kalonian_hydra,
+    ikra_shidiqi_the_usurper, vulturous_zombie, juniper_order_ranger, ghave_guru_of_spores,
+    enduring_scalelord, manifold_insights, languish, tezzerets_gambit, migratory_route,
+    merciless_eviction, spitting_image, sublime_exhalation, duneblast, treasure_cruise,
+    disdainful_stroke, solidarity_of_heroes, grip_of_phyresis, inspiring_call, mortify, putrefy,
+    ancient_excavation, mirrorweave, sylvan_reclamation, sol_ring, fellwar_stone,
+    golgari_signet, orzhov_signet, simic_signet, commanders_sphere, darksteel_ingot,
+    cauldron_of_souls, astral_cornucopia, hardened_scales, brave_the_sands, duelists_heritage,
+    bred_for_the_hunt, citadel_siege, cathars_crusade, arcane_sanctum, ash_barrens,
+    azorius_chancery, command_tower, darkwater_catacombs, dreadship_reef, evolving_wilds,
+    exotic_orchard, golgari_rot_farm, murmuring_bosk, opal_palace, opulent_palace,
+    sandsteppe_citadel, seaside_citadel, sungrass_prairie, temple_of_the_false_god,
+    terramorphic_expanse, underground_river,
+    // Basics: 5 plains, 4 island, 5 swamp, 7 forest
+    plains, plains, plains, plains, plains,
+    island, island, island, island,
+    swamp, swamp, swamp, swamp, swamp,
+    forest, forest, forest, forest, forest, forest, forest,
+];
