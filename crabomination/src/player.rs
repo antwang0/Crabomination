@@ -818,6 +818,11 @@ pub struct PlayerData {
     /// back-compat.
     #[serde(default)]
     pub instants_or_sorceries_cast_this_turn: u32,
+    /// The greatest mana value (X included, CR 202.3e) among the instant and
+    /// sorcery spells this player cast this turn. Stamped in `finalize_cast`,
+    /// cleared with `instants_or_sorceries_cast_this_turn`. Rootha.
+    #[serde(default)]
+    pub greatest_is_mana_value_this_turn: u32,
     /// Count of spells this player cast **from their hand** this turn (CR
     /// 601). Unlike `spells_cast_this_turn`, casts from exile (Plot, impulse),
     /// graveyard (flashback/escape/disturb/retrace/aftermath), or the command
@@ -1443,6 +1448,7 @@ impl Player {
             graveyard_ids_this_turn: Default::default(),
             milled_ids_this_turn: Default::default(),
             instants_or_sorceries_cast_this_turn: 0,
+            greatest_is_mana_value_this_turn: 0,
             spells_cast_from_hand_this_turn: 0,
             spells_cast_from_exile_this_turn: 0,
             extra_plus_one_counters_this_turn: 0,

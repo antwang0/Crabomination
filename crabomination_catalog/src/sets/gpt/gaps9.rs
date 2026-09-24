@@ -80,6 +80,7 @@ pub fn ink_treader_nephilim() -> CardDefinition {
             ),
             effect: Effect::CopySpellForEachOtherLegalCreature {
                 what: Selector::TriggerSource,
+                casters_creatures: false,
             },
         }],
         ..Default::default()

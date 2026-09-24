@@ -4580,6 +4580,7 @@ impl GameState {
             // so each write below was its own `Arc::make_mut`.
             let me = &mut *self.players[p];
             me.instants_or_sorceries_cast_this_turn = 0;
+            me.greatest_is_mana_value_this_turn = 0;
             // One-shot IS-spell discounts are keyed off that tally, so they must
             // be cleared in lockstep with it (a stale `granted_at == 0` entry
             // would otherwise re-match after the reset).

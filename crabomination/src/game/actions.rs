@@ -10759,6 +10759,8 @@ impl GameState {
         let me = &mut *self.players[p];
         if is_instant_or_sorcery {
             me.instants_or_sorceries_cast_this_turn += 1;
+            let mv = card.definition.cost.with_x_value(x_value).cmc();
+            me.greatest_is_mana_value_this_turn = me.greatest_is_mana_value_this_turn.max(mv);
         }
         if card.definition.cost.color_set().is_multicolored() {
             me.multicolored_spells_cast_this_turn += 1;

@@ -858,6 +858,11 @@ pub enum Value {
     /// stack reads its printed mana value, so an X spell counts X = 0 once
     /// resolved. Call Forth the Tempest.
     TotalManaValueOfOtherSpellsCastThisTurn(PlayerRef),
+    /// The greatest mana value among instant and sorcery spells `who` has cast
+    /// this turn (0 if none), stamped at cast time so an X spell counts its X
+    /// (CR 202.3e). Backed by `Player.greatest_is_mana_value_this_turn`.
+    /// Rootha, Mastering the Moment.
+    GreatestInstantOrSorceryManaValueCastThisTurn(PlayerRef),
     /// Creatures `who` declared as attackers this turn (max over resolved
     /// players). Creatures *put onto the battlefield attacking* don't count,
     /// matching the Windbrisk Heights ruling on "attacked with N creatures".
@@ -4431,6 +4436,18 @@ pub enum Effect {
         chosen: Box<Effect>,
         other: Box<Effect>,
     },
+    /// "An opponent chooses one of [`what`]" as a veto: the effect's
+    /// hostile opponent (`PlayerRef::HostileOpponent`) names one, and `then`
+    /// runs against the others via `Selector::SeparatedPile { chosen: false }`.
+    /// A headless chooser names the highest mana value. Plargg and Nassari.
+    OpponentVetoesOne { what: Selector, then: Box<Effect> },
+    /// Abstract Performance — exile the top `count` cards of your library in
+    /// a face-down pile, then the next `count` in a face-up pile; an opponent
+    /// (the hostile one) chooses a pile to put into your graveyard; you may
+    /// cast a spell from the other without paying its mana cost and put the
+    /// rest into your hand. The chooser is asked before anything moves (the
+    /// face-up pile is read off the library).
+    FaceDownFaceUpPiles { count: u32 },
     /// CR 701.12 — exchange control of a permanent you control matching
     /// `filter` (chosen at resolution: `Decision::ChooseCards` for a
     /// `wants_ui` controller, lowest CardId otherwise) and the permanent
@@ -6486,7 +6503,15 @@ pub enum Effect {
     ReturnSelfDeployBlocker,
     /// Ink-Treader Nephilim — copy the resolved spell once for each other
     /// creature it could legally target, each copy aimed at a different one.
-    CopySpellForEachOtherLegalCreature { what: Selector },
+    ///
+    /// `casters_creatures`: Mirrorwing Dragon's "for each other creature
+    /// **they control** that the spell could target" — only the caster's
+    /// creatures, each checked against the spell's own target filter.
+    CopySpellForEachOtherLegalCreature {
+        what: Selector,
+        #[serde(default)]
+        casters_creatures: bool,
+    },
     /// Copy the spell `what` resolves to once, aimed at the object `target`
     /// resolves to — Frontline Heroism's "then copy that spell. The copy
     /// targets that token."

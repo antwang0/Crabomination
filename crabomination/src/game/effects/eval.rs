@@ -679,6 +679,12 @@ impl GameState {
                 .map(|&p| self.players[p].instants_or_sorceries_cast_this_turn as i32)
                 .max()
                 .unwrap_or(0),
+            Value::GreatestInstantOrSorceryManaValueCastThisTurn(p) => self
+                .resolve_players(p, ctx)
+                .iter()
+                .map(|&p| self.players[p].greatest_is_mana_value_this_turn as i32)
+                .max()
+                .unwrap_or(0),
             Value::TotalManaValueOfOtherSpellsCastThisTurn(p) => self
                 .resolve_players(p, ctx)
                 .iter()

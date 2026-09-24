@@ -536,6 +536,7 @@ impl Effect {
                 f(chosen);
                 f(other);
             }
+            Effect::OpponentVetoesOne { then, .. } => f(then),
             Effect::PayEnergyOrElse { otherwise, .. }
             | Effect::PayEnergyOrElseValue { otherwise, .. }
             | Effect::PayManaOrElse { otherwise, .. }
@@ -1032,6 +1033,8 @@ impl Effect {
             Effect::ChooseOneAmong { what, chooser, .. } => {
                 sel_has_target(what) || player_has_target(chooser)
             }
+            Effect::OpponentVetoesOne { what, .. } => sel_has_target(what),
+            Effect::FaceDownFaceUpPiles { .. } => false,
             Effect::CopyAbility { what, .. } => sel_has_target(what),
             Effect::StaggerPlayerUntilYourNextTurn { who } => player_has_target(who),
             Effect::LookTopKeepOneRestToGraveyard { who, .. } => {
@@ -1837,7 +1840,7 @@ impl Effect {
             | Effect::WarpWorld
             | Effect::ReturnSelfDeployBlocker
             | Effect::TokenUnlessOpponentLetsYouDraw { .. } => false,
-            Effect::CopySpellForEachOtherLegalCreature { what }
+            Effect::CopySpellForEachOtherLegalCreature { what, .. }
             | Effect::CopySpellTargeting { what, .. }
             | Effect::EyeOfTheStorm { what }
             | Effect::SearchOpponentLibraryForSameName { what } => sel_has_target(what),
@@ -2528,7 +2531,7 @@ impl Effect {
             | Effect::LookAtHandCastFree { who } => sel_filter(who),
             Effect::MayReturnSharingPermanentType { with: what }
             | Effect::ChangeTargetOfAbility { what }
-            | Effect::CopySpellForEachOtherLegalCreature { what }
+            | Effect::CopySpellForEachOtherLegalCreature { what, .. }
             | Effect::CopySpellTargeting { what, .. }
             | Effect::EyeOfTheStorm { what }
             | Effect::SearchOpponentLibraryForSameName { what } => sel_filter(what),
@@ -4847,7 +4850,7 @@ impl Effect {
                 | Effect::WarpWorld
                 | Effect::ReturnSelfDeployBlocker
                 | Effect::TokenUnlessOpponentLetsYouDraw { .. } => None,
-                Effect::CopySpellForEachOtherLegalCreature { what }
+                Effect::CopySpellForEachOtherLegalCreature { what, .. }
                 | Effect::CopySpellTargeting { what, .. }
                 | Effect::EyeOfTheStorm { what }
                 | Effect::SearchOpponentLibraryForSameName { what }
@@ -5048,6 +5051,7 @@ impl Effect {
                 | Effect::BidLifeToCounterTargetSpell { what } => sel_find(what, slot),
                 Effect::ChooseOneAmong { what, chooser, .. } => sel_find(what, slot)
                     .or_else(|| pref_find(chooser, slot)),
+                Effect::OpponentVetoesOne { what, .. } => sel_find(what, slot),
                 Effect::SeparateIntoPiles { what, splitter, chooser, .. } => sel_find(what, slot)
                     .or_else(|| pref_find(splitter, slot))
                     .or_else(|| pref_find(chooser, slot)),

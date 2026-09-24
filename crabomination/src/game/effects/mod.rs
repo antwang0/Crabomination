@@ -19038,7 +19038,7 @@ impl GameState {
                 }
                 Ok(())
             }
-            Effect::CopySpellForEachOtherLegalCreature { what } => {
+            Effect::CopySpellForEachOtherLegalCreature { what, casters_creatures } => {
                 // Ink-Treader Nephilim. One copy per other creature the spell
                 // could target; each copy is retargeted to its own creature.
                 let Some(spell_id) = self
@@ -19048,12 +19048,36 @@ impl GameState {
                 else {
                     return Ok(());
                 };
-                let others: Vec<CardId> = self
-                    .battlefield
-                    .iter()
-                    .filter(|c| c.definition.is_creature() && Some(c.id) != ctx.source)
-                    .map(|c| c.id)
-                    .collect();
+                let others: Vec<CardId> = if *casters_creatures {
+                    // Mirrorwing Dragon: only the caster's other creatures,
+                    // each one the spell's own target filter admits.
+                    let Some((caster, spell_effect)) = self.stack.iter().find_map(|si| match si {
+                        StackItem::Spell { card, caster, .. } if card.id == spell_id => {
+                            Some((*caster, card.definition.effect.clone()))
+                        }
+                        _ => None,
+                    }) else {
+                        return Ok(());
+                    };
+                    let legal =
+                        self.enumerate_legal_targets_with_source(&spell_effect, caster, Some(spell_id));
+                    self.battlefield
+                        .iter()
+                        .filter(|c| {
+                            c.controller == caster
+                                && c.definition.is_creature()
+                                && Some(c.id) != ctx.source
+                                && legal.contains(&Target::Permanent(c.id))
+                        })
+                        .map(|c| c.id)
+                        .collect()
+                } else {
+                    self.battlefield
+                        .iter()
+                        .filter(|c| c.definition.is_creature() && Some(c.id) != ctx.source)
+                        .map(|c| c.id)
+                        .collect()
+                };
                 if others.is_empty() {
                     return Ok(());
                 }
@@ -20080,6 +20104,103 @@ impl GameState {
                 self.separated_piles =
                     (vec![one], ids.into_iter().filter(|id| *id != one).collect());
                 self.run_piles_then_clear(chosen, other, ctx, events)
+            }
+
+            Effect::OpponentVetoesOne { what, then } => {
+                let ids: Vec<CardId> = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_card_id())
+                    .collect();
+                if ids.is_empty() {
+                    return Ok(());
+                }
+                let mv = |g: &Self, id: CardId| {
+                    g.find_card_anywhere(id).map_or(0, |c| c.definition.cost.cmc())
+                };
+                let best = ids.iter().copied().max_by_key(|id| mv(self, *id)).unwrap_or(ids[0]);
+                let veto = match self.resolve_player(&PlayerRef::HostileOpponent, ctx) {
+                    None => None,
+                    Some(seat) => {
+                        let source = ctx.source.unwrap_or(CardId(0));
+                        let candidates: Vec<(CardId, String)> = ids
+                            .iter()
+                            .filter_map(|id| {
+                                self.find_card_anywhere(*id)
+                                    .map(|c| (*id, c.definition.name.to_string()))
+                            })
+                            .collect();
+                        let Some(picked) = self.choose_up_to_cards(
+                            seat,
+                            "Choose a card they can't cast.".into(),
+                            source,
+                            candidates,
+                            1,
+                            PickValue::Gain,
+                            effect,
+                            vec![best],
+                        ) else {
+                            return Ok(());
+                        };
+                        Some(picked.first().copied().unwrap_or(best))
+                    }
+                };
+                self.separated_piles = (
+                    veto.into_iter().collect(),
+                    ids.into_iter().filter(|id| Some(*id) != veto).collect(),
+                );
+                self.run_piles_then_clear(&Effect::Noop, then, ctx, events)
+            }
+
+            Effect::FaceDownFaceUpPiles { count } => {
+                let p = ctx.controller;
+                let n = *count as usize;
+                let top: Vec<(CardId, bool, u32, String)> = self.players[p]
+                    .library
+                    .iter()
+                    .take(2 * n)
+                    .map(|c| (c.id, c.definition.is_land(), c.definition.cost.cmc(), c.definition.name.to_string()))
+                    .collect();
+                let down: Vec<CardId> = top.iter().take(n).map(|t| t.0).collect();
+                let up = &top[down.len()..];
+                // The chooser sees only the face-up pile. A headless one bins
+                // it when it's the rich one: two or more spells, or a big one.
+                let rich = up.iter().filter(|t| !t.1).count() >= 2 || up.iter().any(|t| t.2 >= 5);
+                let up_to_graveyard = match self.resolve_player(&PlayerRef::HostileOpponent, ctx) {
+                    None => false,
+                    Some(_) if up.is_empty() => false,
+                    Some(seat)
+                        if !self.seat_prompts(seat)
+                            && matches!(self.decider.kind(), crate::decision::DeciderKind::Auto) =>
+                    {
+                        rich
+                    }
+                    Some(seat) => {
+                        let names: Vec<&str> = up.iter().map(|t| t.3.as_str()).collect();
+                        let mut cursor = 0usize;
+                        let Some(i) = self.ask_seat_option(
+                            &mut cursor,
+                            seat,
+                            "Choose a pile to put into its owner's graveyard.".into(),
+                            ctx.source.unwrap_or(CardId(0)),
+                            vec!["The face-down pile".into(), format!("The face-up pile: {}", names.join(", "))],
+                            effect,
+                        ) else {
+                            return Ok(());
+                        };
+                        self.clear_answer_log();
+                        i == 1
+                    }
+                };
+                let up: Vec<CardId> = up.iter().map(|t| t.0).collect();
+                for id in down.iter().chain(up.iter()) {
+                    self.move_card_to(*id, &ZoneDest::Exile, ctx, events);
+                }
+                let binned = if up_to_graveyard { up } else { down };
+                for id in binned {
+                    self.move_card_to(id, &ZoneDest::Graveyard, ctx, events);
+                }
+                Ok(())
             }
 
             Effect::ExchangeControlChoosing { filter, with } => self.resolve_exchange_control_choosing(filter, with, ctx, events),
