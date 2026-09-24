@@ -1944,3 +1944,30 @@ pub const ATRAXA_MAIN: &[CardFactory] = &[
     swamp, swamp, swamp, swamp, swamp,
     forest, forest, forest, forest, forest, forest, forest,
 ];
+
+pub const RIKU_COMMANDERS: &[CardFactory] = &[riku_of_two_reflections];
+
+/// **Mirror Mastery**, the Commander (2011) Temur deck (CMD, 2011-06-17),
+/// exactly as MTGJSON's `MirrorMastery_CMD` prints it: 71 nonbasic cards +
+/// 7 Islands + 8 Mountains + 13 Forests = 99. Copies and
+/// big creatures under Riku of Two Reflections.
+pub const RIKU_MAIN: &[CardFactory] = &[
+    garruk_wildspeaker, magus_of_the_vineyard, veteran_explorer, fierce_empath,
+    edric_spymaster_of_trest, animar_soul_of_elements, conundrum_sphinx, aethersnipe,
+    chartooth_cougar, rapacious_one, spitebellows, deadwood_treefolk, elvish_aberration,
+    baloth_woodcrasher, hydra_omnivore, nucklavee, valley_rannet, intet_the_dreamer,
+    faultgrinder, krosan_tusker, simic_sky_swallower, trench_gorger, avatar_of_fury,
+    magmatic_force, artisan_of_kozilek, collective_voyage, hull_breach, cultivate,
+    kodamas_reach, firespout, ruination, explosive_vegetation, chain_reaction, death_by_dragons,
+    vengeful_rebirth, disaster_radius, call_the_skybreaker, savage_twister, brainstorm,
+    tribute_to_the_wild, colossal_might, invigorate, spell_crumple, electrolyze, ray_of_command,
+    prophetic_bolt, hunting_pack, sol_ring, armillary_sphere, gruul_signet, izzet_signet,
+    lightning_greaves, prophetic_prism, simic_signet, vow_of_flight, vow_of_lightning,
+    vow_of_wildness, command_tower, evolving_wilds, fungal_reaches, gruul_turf, homeward_path,
+    izzet_boilerworks, kazandu_refuge, rupture_spire, simic_growth_chamber,
+    temple_of_the_false_god, vivid_crag, vivid_creek, vivid_grove, fire_ice,
+    // Basics: 7 island, 8 mountain, 13 forest
+    island, island, island, island, island, island, island, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest,
+];

@@ -554,6 +554,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ATRAXA_COMMANDERS,
             main: decks::ATRAXA_MAIN,
         },
+        // Sixty-second: the fifty-second official list (Mirror Mastery, CMD)
+        // — Temur copies under Riku of Two Reflections. `--seats 62`.
+        PodDeck {
+            name: "Riku of Two Reflections (GUR)",
+            commanders: decks::RIKU_COMMANDERS,
+            main: decks::RIKU_MAIN,
+        },
     ]
 }
 
@@ -1083,6 +1090,7 @@ mod tests {
             ("Kaalia", [0xCAA1, 88, 9012]),
             ("Zedruu", [0x2ED7, 89, 9013]),
             ("The Mimeoplasm", [0x3133, 90, 9014]),
+            ("Riku", [0x21C0, 91, 9015]),
         ] {
             let precon = *field.iter().find(|d| d.name.starts_with(name)).expect("the precon seat");
             assert_eq!(precon.card_count(), 100);
