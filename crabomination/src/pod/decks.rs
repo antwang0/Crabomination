@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Ten hand-picked commanders plus twenty-seven official preconstructed lists, each a
+//! Ten hand-picked commanders plus twenty-eight official preconstructed lists, each a
 //! 99 of cards this engine implements: legal under CR 903 (100 cards
 //! including the commander, singleton outside basics, every card inside the
 //! commander's CR 903.4 color identity) and Commander-legal per Scryfall's
@@ -8,7 +8,7 @@
 //!
 //! The ten were built by hand because the offline Scryfall cache cannot say
 //! how a precon splits into decks; MTGJSON's deck files can, and the eleventh
-//! through thirty-seventh (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
+//! through thirty-eighth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
 //! Win, Tails You Lose, Goblin Storm, Foundations Commander's Wretched Ranks,
 //! Tramplesaurus Rex and Keen Engineering, Commander Legends' Reap the Tides,
 //! Phyrexia: All Will Be One's Corrupting Influence, Zendikar Rising's Sneak
@@ -20,7 +20,8 @@
 //! Horizons 3 Commander's Graveyard Overdrive, Commander 2015's Swell the
 //! Host, Secret Lair's Angels: They're Just Like Us, Commander 2014's Built From
 //! Scratch and Sworn to Darkness, Innistrad: Crimson Vow Commander's Vampiric
-//! Bloodline and Commander 2015's Plunder the Graves) are taken from one card for card. What all of them keep
+//! Bloodline and Commander 2015's Plunder the Graves and Seize Control) are
+//! taken from one card for card. What all of them keep
 //! from the precon idea is what the pod needs — fixed, legal, varied color
 //! identities, and built to play against each other.
 //! One is a Partner pair (CR 702.124b), one is a **planeswalker**
