@@ -5457,3 +5457,270 @@ fn draconic_rage_batch() {
     combat(&mut g, vec![Attack { attacker: bear, target: AttackTarget::Player(1) }], 0, |_| {});
     assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
 }
+
+// ── Draconic Dissent (Firkraag, Cunning Instigator) ─────────────────────────
+
+fn loyalty_at(g: &mut GameState, id: CardId, index: usize, target: Option<Target>) {
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: id, ability_index: index, target, x_value: None })
+        .expect("loyalty");
+    drain_stack(g);
+}
+
+fn goaded(g: &GameState, id: CardId) -> bool {
+    g.is_goaded(g.battlefield_find(id).unwrap())
+}
+
+/// CR 701.15 — Baeloth goads each opposing creature with less power than it
+/// (2): the 1/1 is goaded, the 2/2 and your own 1/1 aren't.
+#[test]
+fn cr_701_15_baeloth_goads_lesser_power_opponents() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::baeloth_barrityl_entertainer());
+    let elf = g.add_card_to_battlefield(1, catalog::llanowar_elves());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let mine = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    assert!(goaded(&g, elf));
+    assert!(!goaded(&g, bear), "not less");
+    assert!(!goaded(&g, mine), "yours");
+    assert!(g.any_goad_present());
+}
+
+/// CR 701.15 / 509.1b — Bothersome Quasit: a noncreature spell goads an
+/// opposing creature, and that goaded creature can't block.
+#[test]
+fn cr_509_1b_bothersome_quasit_goads_and_stops_the_block() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::bothersome_quasit());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let giant = g.add_card_to_battlefield(0, catalog::hill_giant());
+    let ring = g.add_card_to_hand(0, catalog::sol_ring());
+    cast(&mut g, ring, &[Target::Permanent(bear)]);
+    assert!(goaded(&g, bear));
+    g.clear_sickness(giant);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: giant, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    assert!(g.perform_action(GameAction::DeclareBlockers(vec![(bear, giant)])).is_err());
+}
+
+/// CR 707.9a — Mocking Doppelganger copies an opposing creature and goads
+/// the other creatures sharing its name, not itself.
+#[test]
+fn cr_707_9a_mocking_doppelganger_goads_its_namesakes() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let d = g.add_card_to_hand(0, catalog::mocking_doppelganger());
+    cast(&mut g, d, &[]);
+    assert_eq!(g.battlefield_find(d).unwrap().definition.name, "Grizzly Bears");
+    assert!(goaded(&g, bear));
+    assert!(!goaded(&g, d));
+}
+
+/// CR 701.15a — Firkraag: a Dragon attacking an opponent goads one of their
+/// creatures; a creature that had to attack connecting grows it and draws.
+#[test]
+fn cr_701_15a_firkraag_goads_and_rewards_forced_attackers() {
+    let mut g = main_phase();
+    let f = g.add_card_to_battlefield(0, catalog::firkraag_cunning_instigator());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    combat(&mut g, vec![Attack { attacker: f, target: AttackTarget::Player(1) }], 0, |_| {});
+    assert!(goaded(&g, bear), "a Dragon attacked");
+    assert_eq!(g.players[0].hand.len(), 0, "Firkraag didn't have to attack");
+
+    let mut g = main_phase();
+    let f = g.add_card_to_battlefield(0, catalog::firkraag_cunning_instigator());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield.find_by_id_mut(bear).unwrap().goaded_by.push(1);
+    g.add_card_to_library(0, catalog::island());
+    combat(&mut g, vec![Attack { attacker: bear, target: AttackTarget::Player(1) }], 0, |_| {});
+    assert_eq!(g.battlefield_find(f).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    assert_eq!(g.players[0].hand.len(), 1);
+}
+
+/// CR 601.2f — Will Kenrith's −2: the target draws two, and its instants and
+/// sorceries cost {2} less until your next turn.
+#[test]
+fn cr_601_2f_will_kenrith_discounts_the_targets_spells() {
+    let mut g = main_phase();
+    for _ in 0..2 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let will = g.add_card_to_battlefield(0, catalog::will_kenrith());
+    loyalty_at(&mut g, will, 1, Some(Target::Player(0)));
+    assert_eq!(g.players[0].hand.len(), 2);
+    let div = g.add_card_to_hand(0, catalog::divination());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: div,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("{2}{U} for {U}");
+}
+
+/// The rest of Draconic Dissent's new cards, one play pattern each.
+#[test]
+fn draconic_dissent_batch() {
+    // Pursued Whale: the opponent's Pirate can't block and makes them attack.
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    etb(&mut g, catalog::pursued_whale());
+    let pirate = g.battlefield.iter().find(|c| c.definition.name == "Pirate").unwrap().id;
+    assert_eq!(g.battlefield_find(pirate).unwrap().controller, 1);
+    assert!(g.computed_permanent(pirate).unwrap().keywords().contains(&Keyword::CantBlock));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::MustAttack));
+
+    // Stuffy Doll: pinging itself pings the chosen opponent.
+    let mut g = main_phase();
+    let doll = g.add_card_to_hand(0, catalog::stuffy_doll());
+    cast(&mut g, doll, &[]);
+    g.clear_sickness(doll);
+    activate(&mut g, doll, 0, None).expect("ping");
+    assert_eq!(g.players[1].life, 19);
+
+    // Thunder Dragon: 3 to each creature without flying.
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bird = g.add_card_to_battlefield(1, catalog::birds_of_paradise());
+    etb(&mut g, catalog::thunder_dragon());
+    assert!(g.battlefield_find(bear).is_none());
+    assert!(g.battlefield_find(bird).is_some());
+
+    // Astral Dragon: two 3/3 flying Dragon copies of a noncreature permanent.
+    let mut g = main_phase();
+    let ring = g.add_card_to_battlefield(0, catalog::sol_ring());
+    let ad = g.add_card_to_hand(0, catalog::astral_dragon());
+    cast(&mut g, ad, &[Target::Permanent(ring)]);
+    assert_eq!(count_named(&g, 0, "Sol Ring"), 3);
+
+    // Death Kiss: monstrosity 1 goads one opposing creature.
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let dk = g.add_card_to_battlefield(0, catalog::death_kiss());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: dk,
+        ability_index: 0,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        x_value: Some(1),
+        mode: None,
+    })
+    .expect("monstrosity");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(dk).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    assert!(goaded(&g, bear));
+
+    // Loot Dispute: the initiative and a Treasure.
+    let mut g = main_phase();
+    etb(&mut g, catalog::loot_dispute());
+    assert_eq!(count_named(&g, 0, "Treasure"), 1);
+    assert_eq!(g.initiative, Some(0));
+
+    // Psychic Impetus: +2/+2 and goaded.
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let pi = g.add_card_to_hand(0, catalog::psychic_impetus());
+    cast(&mut g, pi, &[Target::Permanent(bear)]);
+    assert_eq!(pt(&g, bear), (4, 4));
+    assert!(goaded(&g, bear));
+
+    // Sly Instigator: goaded and unblockable.
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let sly = g.add_card_to_battlefield(0, catalog::sly_instigator());
+    g.clear_sickness(sly);
+    flood(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: sly,
+        ability_index: 0,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("instigate");
+    drain_stack(&mut g);
+    assert!(goaded(&g, bear));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Unblockable));
+
+    // Rowan Kenrith −2: 3 damage to each tapped creature of the target.
+    let mut g = main_phase();
+    let tapped = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield.find_by_id_mut(tapped).unwrap().tapped = true;
+    let untapped = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let rowan = g.add_card_to_battlefield(0, catalog::rowan_kenrith());
+    loyalty_at(&mut g, rowan, 1, Some(Target::Player(1)));
+    assert!(g.battlefield_find(tapped).is_none());
+    assert!(g.battlefield_find(untapped).is_some());
+
+    // Artificer Class: the first artifact spell each turn costs {1} less.
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::artificer_class());
+    let stone = g.add_card_to_hand(0, catalog::mind_stone());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: stone,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("{2} for {1}");
+
+    // Castle Vantress enters tapped without an Island.
+    let mut g = main_phase();
+    let cv = g.add_card_to_hand(0, catalog::castle_vantress());
+    g.perform_action(GameAction::PlayLand(cv)).expect("land");
+    assert!(g.battlefield_find(cv).unwrap().tapped);
+
+    // Clan Crafter: your commander sacrifices an artifact to grow and draw.
+    let mut g = main_phase();
+    g.add_card_to_library(0, catalog::island());
+    let cmd = g.seat_commanders(0, vec![catalog::grizzly_bears()])[0];
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastFromCommandZone {
+        card_id: cmd,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+        alternative: false,
+        pitch_card: None,
+    })
+    .expect("commander");
+    drain_stack(&mut g);
+    g.add_card_to_battlefield(0, catalog::clan_crafter());
+    g.add_card_to_battlefield(0, catalog::sol_ring());
+    activate(&mut g, cmd, 0, None).expect("crafter");
+    assert_eq!(g.battlefield_find(cmd).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    assert_eq!(count_named(&g, 0, "Sol Ring"), 0);
+
+    // Dissipation Field: the opponent's Stuffy Doll damages you and goes home.
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::dissipation_field());
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    let doll = g.add_card_to_hand(1, catalog::stuffy_doll());
+    try_cast(&mut g, 1, doll, &[]).expect("doll");
+    g.clear_sickness(doll);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: doll,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("ping");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 19);
+    assert!(g.battlefield_find(doll).is_none());
+    assert!(g.players[1].hand.iter().any(|c| c.id == doll));
+}
