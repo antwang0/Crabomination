@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Ten hand-picked commanders plus twenty-two official preconstructed lists, each a
+//! Ten hand-picked commanders plus twenty-three official preconstructed lists, each a
 //! 99 of cards this engine implements: legal under CR 903 (100 cards
 //! including the commander, singleton outside basics, every card inside the
 //! commander's CR 903.4 color identity) and Commander-legal per Scryfall's
@@ -8,7 +8,7 @@
 //!
 //! The ten were built by hand because the offline Scryfall cache cannot say
 //! how a precon splits into decks; MTGJSON's deck files can, and the eleventh
-//! through thirty-second (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
+//! through thirty-third (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
 //! Win, Tails You Lose, Goblin Storm, Foundations Commander's Wretched Ranks,
 //! Tramplesaurus Rex and Keen Engineering, Commander Legends' Reap the Tides,
 //! Phyrexia: All Will Be One's Corrupting Influence, Zendikar Rising's Sneak
@@ -17,8 +17,8 @@
 //! Vampiric Bloodlust, Foundations Commander's Calling All Angels,
 //! Commander 2014's Guided by Nature, Bloomburrow Commander's Animated Army,
 //! Secret Lair's Grave Danger, Commander 2014's Forged in Stone, Modern
-//! Horizons 3 Commander's Graveyard Overdrive and Commander 2015's Swell the
-//! Host) are taken
+//! Horizons 3 Commander's Graveyard Overdrive, Commander 2015's Swell the
+//! Host and Secret Lair's Angels: They're Just Like Us) are taken
 //! from one card for card. What all of them keep
 //! from the precon idea is what the pod needs — fixed, legal, varied color
 //! identities, and built to play against each other.
@@ -1105,4 +1105,33 @@ pub const EZURI_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
     forest, forest, island, island, island, island, island, island, island, island, island, island,
     island,
+];
+
+pub const GISELA_COMMANDERS: &[CardFactory] = &[gisela_the_broken_blade];
+
+/// **Angels: They're Just Like Us but Cooler and with Wings**, the Secret Lair
+/// Commander deck (SLD, 2023-08-14), exactly as MTGJSON's
+/// `AngelsTheyReJustLikeUsButCoolerAndWithWings_SLD` prints it: 69 nonbasic
+/// cards + 30 Plains = 99. Mono-white Angels and lifegain under Gisela, who
+/// melds with Bruna (in the 99) into Brisela — a melded commander (CR 903.3).
+pub const GISELA_MAIN: &[CardFactory] = &[
+    bruna_the_fading_light, ajani_strength_of_the_pride, angel_of_destiny, angel_of_finality,
+    angel_of_serenity, angel_of_the_ruins, angel_of_vitality, angelic_accord,
+    angelic_field_marshal, arcane_signet, arch_of_orazca, archangel_of_thune, archangel_of_tithes,
+    arden_angel, austere_command, bishop_of_wings, bonders_enclave, breathkeeper_seraph,
+    cleansing_nova, commanders_plate, cosmos_elixir, court_of_grace, dawn_of_hope,
+    dawnbreak_reclaimer, dismantling_wave, emeria_shepherd, emeria_the_sky_ruin, endless_atlas,
+    entreat_the_angels, everflowing_chalice, giada_font_of_hope, griffin_aerie, heirloom_blade,
+    invoke_the_divine, karoo_land, keeper_of_the_accord, kindred_boon, lightning_greaves,
+    marble_diamond, mazemind_tome, mind_stone, myriad_landscape, nykthos_paragon,
+    nykthos_shrine_to_nyx, oketras_monument, path_of_ancestry, path_to_exile, pearl_medallion,
+    righteous_valkyrie, search_for_glory, sephara_skys_blade, seraph_sanctuary, serra_ascendant,
+    shattered_angel, sol_ring, speaker_of_the_heavens, starnheim_aspirant, sunblast_angel,
+    swiftfoot_boots, sword_of_the_animist, swords_to_plowshares, thalias_lancers,
+    the_book_of_exalted_deeds, tome_of_legends, urzas_incubator, valkyrie_harbinger,
+    vanquishers_banner, war_room, well_of_lost_dreams,
+    // Basics: 30 plains
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains,
 ];

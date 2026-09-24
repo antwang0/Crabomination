@@ -337,6 +337,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::EZURI_COMMANDERS,
             main: decks::EZURI_MAIN,
         },
+        // Thirty-third: the twenty-third official list (Angels, SLD) —
+        // mono-white Angels; Gisela melds into Brisela. `--seats 33`.
+        PodDeck {
+            name: "Gisela, the Broken Blade (W)",
+            commanders: decks::GISELA_COMMANDERS,
+            main: decks::GISELA_MAIN,
+        },
     ]
 }
 
