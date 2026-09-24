@@ -24,6 +24,7 @@ mod player_scope;
 mod reselect;
 mod reveal_cast;
 mod reveal_until;
+mod shell_game;
 mod life_loss_grants;
 mod spell_damage;
 mod static_copy;
@@ -13671,6 +13672,10 @@ impl GameState {
                     );
                 }
                 Ok(())
+            }
+
+            Effect::EachPlayerChoosesToDestroy { filter } => {
+                self.each_player_chooses_to_destroy(filter, effect, ctx, events)
             }
 
             Effect::EachPlayerDestroysChosenFromLeftNeighbor { filters } => {

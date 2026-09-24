@@ -6201,6 +6201,10 @@ pub enum Effect {
     /// creature card with power less than or equal to `max_power`, put it onto
     /// the battlefield" (Grenzo, Dungeon Warden).
     BottomCardToGraveyardThenDeploy { max_power: Value },
+    /// "Starting with the next opponent in turn order, each player chooses a
+    /// [filter]. Destroy the chosen [permanents]" (Sadistic Shell Game); the
+    /// filter's "you" is the resolving controller.
+    EachPlayerChoosesToDestroy { filter: SelectionRequirement },
     /// "Starting with you, each player chooses one permanent matching each of
     /// `filters` from among those controlled by the player to their left.
     /// Destroy each permanent chosen this way." Grenzo's Rebuttal.

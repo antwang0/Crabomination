@@ -770,7 +770,8 @@ impl Effect {
             | Effect::TakeInitiative { .. }
             | Effect::WillOfTheCouncilOnCards { .. }
             | Effect::BottomCardToGraveyardThenDeploy { .. }
-            | Effect::EachPlayerDestroysChosenFromLeftNeighbor { .. } => false,
+            | Effect::EachPlayerDestroysChosenFromLeftNeighbor { .. }
+            | Effect::EachPlayerChoosesToDestroy { .. } => false,
             Effect::PayPerCounterOrSacrifice { then, .. } => then.requires_target(),
             Effect::MayPayRepeatedly { body, .. } => body.requires_target(),
             Effect::CoffinExile { what } => sel_has_target(what),

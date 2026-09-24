@@ -2,7 +2,10 @@
 //! `decks::cmdr_valgavoth`) and the primitives it needed.
 
 use crabomination::card::{CardDefinition, CardId, CardType, CounterType, CreatureType, Keyword, Subtypes};
+use crabomination::card::SelectionRequirement as R;
 use crabomination::effect::{Effect, PlayerRef, Selector, Value};
+use crabomination::game::effects::EffectContext;
+use crabomination::decision::{DecisionAnswer, ScriptedDecider};
 use crabomination::catalog;
 use crabomination::game::types::{GameAction, Target, TurnStep};
 use crabomination::game::*;
@@ -76,4 +79,30 @@ fn cr_702_62_a_spell_that_suspends_itself() {
         drain_stack(&mut g);
     }
     assert_eq!(g.players[1].life, life - 2, "cast again off its last counter");
+}
+
+/// Each player, the caster last, picks a creature the caster doesn't
+/// control; the picks die together, the caster's own creatures never.
+#[test]
+fn each_player_chooses_a_creature_you_dont_control_to_destroy() {
+    let mut g = pod(3);
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(2, catalog::serra_angel());
+    // Seat 1 picks first (its own Bears), seat 2 next (seat 1's Bears too),
+    // the caster last (seat 2's Angel).
+    g.decider = Box::new(ScriptedDecider::new(vec![
+        DecisionAnswer::Target(Target::Permanent(a)),
+        DecisionAnswer::Target(Target::Permanent(a)),
+        DecisionAnswer::Target(Target::Permanent(b)),
+    ]));
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(
+        &Effect::EachPlayerChoosesToDestroy { filter: R::Creature.and(R::ControlledByOpponent) },
+        &ctx,
+    )
+    .expect("resolve");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none());
+    assert!(g.battlefield_find(mine).is_some());
 }

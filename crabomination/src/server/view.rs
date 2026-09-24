@@ -2912,6 +2912,7 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::EachPlayerDestroysChosenFromLeftNeighbor { .. } => {
             "Each player strips their left neighbour"
         }
+        Effect::EachPlayerChoosesToDestroy { .. } => "Each player picks a creature to destroy",
         Effect::Populate { .. } => "Populate",
         Effect::LoseLife { .. } => "Pay life / fetch land",
         Effect::Search { .. } => "Search library",
