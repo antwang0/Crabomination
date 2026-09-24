@@ -211,6 +211,66 @@ impl GameState {
         Ok(())
     }
 
+    /// `Effect::EachOpponentSacrificesSharingTypeWith` — the card types of
+    /// `what` (its last-known characteristics) become the sacrifice filter.
+    pub(super) fn each_opponent_sacrifices_sharing_type_with(
+        &mut self,
+        what: &Selector,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
+        let Some(id) = self.resolve_selector(what, ctx).into_iter().find_map(|e| e.as_card_id()) else {
+            return Ok(());
+        };
+        let types: Vec<crate::card::CardType> = self
+            .lki_snapshot(id)
+            .map(|c| c.definition.card_types.clone())
+            .or_else(|| self.find_card_anywhere(id).map(|c| c.definition.card_types.clone()))
+            .unwrap_or_default();
+        let Some(filter) = types
+            .into_iter()
+            .map(SelectionRequirement::HasCardType)
+            .reduce(|a, b| a.or(b))
+        else {
+            return Ok(());
+        };
+        self.run_effect(
+            &Effect::Sacrifice { who: Selector::Player(PlayerRef::EachOpponent), count: Value::ONE, filter },
+            ctx,
+            events,
+        )
+    }
+
+    /// Cumulative upkeep's "put `per` cards from a single graveyard on the
+    /// bottom of their owner's library", `times` over (Jötun Grunt). Paid only
+    /// when every installment can be; each takes an opponent's graveyard
+    /// first (the fullest), your own last, and its highest-mana-value cards.
+    pub(crate) fn pay_graveyard_cards_to_bottom(&mut self, payer: usize, per: usize, times: usize) -> bool {
+        let per = per.max(1);
+        let capacity: usize = self.living_seats().map(|s| self.players[s].graveyard.len() / per).sum();
+        if capacity < times {
+            return false;
+        }
+        for _ in 0..times {
+            let Some(seat) = self
+                .living_seats()
+                .filter(|&s| self.players[s].graveyard.len() >= per)
+                .max_by_key(|&s| (s != payer, self.players[s].graveyard.len(), std::cmp::Reverse(s)))
+            else {
+                return false;
+            };
+            let mut ids: Vec<(CardId, u32)> =
+                self.players[seat].graveyard.iter().map(|c| (c.id, c.definition.cost.cmc())).collect();
+            ids.sort_by_key(|&(id, mv)| (std::cmp::Reverse(mv), id.0));
+            for (id, _) in ids.into_iter().take(per) {
+                if let Some(card) = Self::take_card(&mut self.players[seat].graveyard, id) {
+                    self.players[seat].library.push(card);
+                }
+            }
+        }
+        true
+    }
+
     /// "A player chosen at random" among the living seats (`PlayerRef::RandomPlayer`).
     pub(crate) fn random_living_seat(&self) -> Option<usize> {
         use rand::RngExt;

@@ -1954,7 +1954,8 @@ impl Effect {
             | Effect::EachOpponentChoosesFromGraveyard { .. }
             | Effect::EachOtherPlayerMayDraw { .. }
             | Effect::GreatestDiscardersLoseLife
-            | Effect::EachPlayerChoosesWarOrPeace => false,
+            | Effect::EachPlayerChoosesWarOrPeace
+            | Effect::EachOpponentSacrificesSharingTypeWith { .. } => false,
             Effect::CreaturesYouControlDealingCombatDamageThisTurn { .. } => false,
             Effect::WheneverYouGainLifeThisTurn { .. } => false,
             Effect::WheneverCardEntersOpponentGraveyardThisTurn { .. } => false,

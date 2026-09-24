@@ -8159,6 +8159,9 @@ impl GameState {
             }
             Effect::GreatestDiscardersLoseLife => self.greatest_discarders_lose_life(ctx, events),
             Effect::EachPlayerChoosesWarOrPeace => self.each_player_chooses_war_or_peace(effect, ctx),
+            Effect::EachOpponentSacrificesSharingTypeWith { what } => {
+                self.each_opponent_sacrifices_sharing_type_with(what, ctx, events)
+            }
             Effect::WheneverCreatureEntersUntilYourNextTurn { filter, body } => {
                 self.delayed_triggers.push(DelayedTrigger {
                     controller: ctx.controller,
@@ -28752,7 +28755,7 @@ impl GameState {
                 // asks precede the zone moves / reveal events so the suspend
                 // re-run is idempotent.
                 let me = ctx.controller;
-                let Some(opp) = self.opponents_of(me).first().copied() else {
+                let Some(opp) = self.default_hostile_opponent(me) else {
                     return Ok(());
                 };
                 let source = ctx.source.unwrap_or(CardId(0));
@@ -28793,7 +28796,11 @@ impl GameState {
                     }
                 }
                 if mv[0] > mv[1] {
-                    self.run_effect(on_win, ctx, events)?;
+                    // "That player" in the payoff is the clashed opponent.
+                    let prev = self.scratch.chosen_opponent_scratch.replace(opp);
+                    let r = self.run_effect(on_win, ctx, events);
+                    self.scratch.chosen_opponent_scratch = prev;
+                    r?;
                 }
                 Ok(())
             }

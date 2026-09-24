@@ -849,6 +849,9 @@ pub enum CounterType {
     Story,
     /// Spite counter — Curse of Vengeance's tally of the cursed player's spells.
     Spite,
+    /// Strife counter — Crescendo of War adds one each upkeep and pumps
+    /// attackers (and your blockers) per counter.
+    Strife,
 }
 
 /// Every zone a card can occupy.
@@ -2336,6 +2339,10 @@ pub enum CumulativeUpkeepCost {
     PutCounterOnSelf(CounterType),
     /// "Cumulative upkeep—Draw a card" (Psychic Vortex). Always payable.
     Draw(u32),
+    /// "Cumulative upkeep—Put two cards from a single graveyard on the
+    /// bottom of their owner's library" (Jötun Grunt): `n` cards from one
+    /// graveyard per age counter.
+    GraveyardCardsToBottom(u32),
 }
 
 impl CumulativeUpkeepCost {
@@ -2349,6 +2356,9 @@ impl CumulativeUpkeepCost {
             CumulativeUpkeepCost::FlipCoin => "Flip a coin".into(),
             CumulativeUpkeepCost::PutCounterOnSelf(k) => format!("Put a {k:?} counter on this"),
             CumulativeUpkeepCost::Draw(n) => format!("Draw {n} card(s)"),
+            CumulativeUpkeepCost::GraveyardCardsToBottom(n) => {
+                format!("Put {n} cards from a single graveyard on the bottom of their owner's library")
+            }
         }
     }
 }
@@ -4096,6 +4106,11 @@ pub struct CardDefinition {
     /// Defaults to `false` via `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub exile_on_resolve: bool,
+    /// "Put [this] on the bottom of its owner's library" as the spell
+    /// finishes resolving (Spell Crumple): the resolved card goes there
+    /// instead of the graveyard.
+    #[serde(default)]
+    pub library_bottom_on_resolve: bool,
     /// CR 601.2b — "You may cast this spell as though it had flash if you pay
     /// [cost] more to cast it" (the Invasion "or Flight" cycle). The surcharge
     /// is only owed when the spell is actually cast outside sorcery timing.
@@ -7563,7 +7578,7 @@ pub fn static_effect_gather_bits(effect: &crate::effect::StaticEffect) -> u64 {
         | SE::WhileCountersAtLeast { inner, .. } => static_effect_gather_bits(inner),
         SE::GrantKeyword { .. } => g::GRANT_KEYWORD,
         SE::GrantKeywordToAttackers { .. } => g::GRANT_KEYWORD_TO_ATTACKERS,
-        SE::PumpPT { .. } => g::PUMP_PT,
+        SE::PumpPT { .. } | SE::PumpPTPerCounterOnSource { .. } => g::PUMP_PT,
         SE::SelfHasKeywordWhile { .. } => g::SELF_HAS_KEYWORD_WHILE,
         SE::SelfHasKeywordWhilePredicate { .. } => g::SELF_HAS_KEYWORD_WHILE_PREDICATE,
         SE::NotCreatureWhileDevotionBelow { .. } | SE::NotCreatureUnless { .. } => {

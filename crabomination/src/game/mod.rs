@@ -7748,6 +7748,9 @@ impl GameState {
                     }
                     true
                 }
+                CumulativeUpkeepCost::GraveyardCardsToBottom(per) => {
+                    self.pay_graveyard_cards_to_bottom(active, *per as usize, n as usize)
+                }
                 CumulativeUpkeepCost::Sacrifice(filter) => {
                     // Need N matching permanents (other than the source) to pay.
                     let cands = self.sacrifice_candidates(active, filter, Some(id));
@@ -13036,10 +13039,26 @@ impl GameState {
                 for sa in &card.definition.static_abilities {
                     // CR 611.2 — peel any `While*` gate first, so a gated combat
                     // anthem (Watchdog's untapped rider) still resolves live.
-                    let Some(crate::effect::StaticEffect::PumpPT { applies_to, power, toughness }) =
-                        self.active_static(&sa.effect, card)
-                    else {
-                        continue;
+                    // The per-counter anthem (Crescendo of War's "attacking
+                    // creatures get +1/+0 for each strife counter") rides the
+                    // same live pass — it was dropped whole over a combat filter.
+                    let (applies_to, power, toughness) = match self.active_static(&sa.effect, card) {
+                        Some(crate::effect::StaticEffect::PumpPT { applies_to, power, toughness }) => {
+                            (applies_to, *power, *toughness)
+                        }
+                        Some(crate::effect::StaticEffect::PumpPTPerCounterOnSource {
+                            applies_to,
+                            kind,
+                            per_power,
+                            per_toughness,
+                        }) => {
+                            let n = card.counter_count(*kind) as i32;
+                            if n == 0 {
+                                continue;
+                            }
+                            (applies_to, n * per_power, n * per_toughness)
+                        }
+                        _ => continue,
                     };
                     // CR 303.4a — a player-scoped anthem ("creatures enchanted
                     // player controls get -1/-1", Curse of Death's Hold) resolves
@@ -13055,7 +13074,7 @@ impl GameState {
                         layer: Layer::L7PowerTough,
                         sublayer: Some(PtSublayer::Modify),
                         duration: EffectDuration::WhileSourceOnBattlefield,
-                        modification: Modification::ModifyPowerToughness(*power, *toughness),
+                        modification: Modification::ModifyPowerToughness(power, toughness),
                     });
                 }
             }
@@ -26907,6 +26926,12 @@ impl GameState {
             events.push(GameEvent::PermanentExiled { card_id });
             return Ok(events);
         }
+        // Spell Crumple — "put this on the bottom of its owner's library".
+        if card.definition.library_bottom_on_resolve && !card.is_token {
+            let owner = card.owner;
+            self.players[owner].library.push(card);
+            return Ok(events);
+        }
         if card.definition.exile_on_resolve {
             self.players[caster].cards_exiled_this_turn =
                 self.players[caster].cards_exiled_this_turn.saturating_add(1);
@@ -30962,6 +30987,7 @@ mod dropped_static_ratchet {
                     e = inner;
                 }
                 if let SE::PumpPT { applies_to: Selector::EachPermanent(req), .. }
+                | SE::PumpPTPerCounterOnSource { applies_to: Selector::EachPermanent(req), .. }
                 | SE::GrantKeyword { applies_to: Selector::EachPermanent(req), .. } = e
                     && super::affected_from_requirement(req, 0).is_none()
                     && !super::requirement_needs_live_resolution(req)
