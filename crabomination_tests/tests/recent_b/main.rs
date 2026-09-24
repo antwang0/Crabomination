@@ -15,6 +15,7 @@ mod cmdr_bello;
 mod cmdr_disa;
 mod cmdr_ezuri;
 mod cmdr_gisela;
+mod cmdr_daretti;
 mod dsk2;
 mod dsk_rooms;
 mod recent_118_132;
