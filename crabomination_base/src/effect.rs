@@ -9447,6 +9447,10 @@ pub enum Effect {
     /// Registers a pending control entry consumed when that player actually
     /// takes a turn (Mindslaver).
     ControlPlayerNextTurn { who: PlayerRef },
+    /// CR 723.1 — "The first player controls the second player during the
+    /// second player's next turn, and the second player controls the first
+    /// player during the first player's next turn" (Cruel Entertainment).
+    PlayersControlEachOthersNextTurn { first: PlayerRef, second: PlayerRef },
     /// CR 500.8 — "That player skips each instance of the chosen step or phase
     /// this turn." The affected player picks draw step / main phase / combat
     /// phase (`Decision::ChooseModes`); the pick is turn-scoped. Fatespinner.

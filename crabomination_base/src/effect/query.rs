@@ -2012,6 +2012,9 @@ impl Effect {
             Effect::NameOpponentCastLock => false,
             Effect::WinGame { who } | Effect::LoseGame { who } => player_has_target(who),
             Effect::ControlPlayerNextTurn { who } => player_has_target(who),
+            Effect::PlayersControlEachOthersNextTurn { first, second } => {
+                player_has_target(first) || player_has_target(second)
+            }
             Effect::SkipTurns { who, count } => {
                 player_has_target(who) || value_has_target(count)
             }
@@ -2549,6 +2552,7 @@ impl Effect {
             | Effect::ShuffleGraveyardIntoLibrary { who }
             | Effect::ShuffleFilteredGraveyardIntoLibrary { who, .. }
             | Effect::ControlPlayerNextTurn { who }
+            | Effect::PlayersControlEachOthersNextTurn { first: who, .. }
             | Effect::ChooseStepToSkipThisTurn { who }
             | Effect::LookAtTop { who, .. }
             | Effect::RearrangeTop { who, .. }

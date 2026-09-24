@@ -10211,6 +10211,18 @@ impl GameState {
 
             // CR 723.1 — "You control target player during that player's next
             // turn." A later entry for the same seat overwrites (723.1a).
+            Effect::PlayersControlEachOthersNextTurn { first, second } => {
+                let (Some(a), Some(b)) = (self.resolve_player(first, ctx), self.resolve_player(second, ctx)) else {
+                    return Ok(());
+                };
+                if a != b {
+                    retain_cold!(self.pending_player_control, |(c, _)| *c != a && *c != b);
+                    self.pending_player_control.push((b, a));
+                    self.pending_player_control.push((a, b));
+                }
+                Ok(())
+            }
+
             Effect::ControlPlayerNextTurn { who } => {
                 for p in self.resolve_players(who, ctx) {
                     retain_cold!(self.pending_player_control, |(c, _)| *c != p);

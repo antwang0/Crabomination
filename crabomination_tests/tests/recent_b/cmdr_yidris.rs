@@ -3,7 +3,9 @@
 
 use crabomination::card::{CardDefinition, CardType, CounterType, EventKind, EventScope, EventSpec, TriggeredAbility, Value};
 use crabomination::catalog;
-use crabomination::effect::{Effect, Selector};
+use crabomination::effect::{Effect, PlayerRef, Selector};
+use crabomination::game::effects::EffectContext;
+use crabomination::game::types::Target;
 use crabomination::game::types::TurnStep;
 use crabomination::game::*;
 
@@ -40,4 +42,24 @@ fn cr_800_4a_a_permanent_sees_each_player_leave() {
     for id in [mine, theirs] {
         assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne), 10, "two players left");
     }
+}
+
+/// CR 723.1 — each of two players controls the other's next turn; the swap
+/// takes effect on the turn itself, and the caster controls nobody.
+#[test]
+fn cr_723_1_two_players_control_each_others_next_turn() {
+    let mut g = pod(3);
+    let mut ctx = EffectContext::for_spell(0, Some(Target::Player(1)), 0, 0);
+    ctx.targets = vec![Target::Player(1), Target::Player(2)];
+    g.resolve_effect(
+        &Effect::PlayersControlEachOthersNextTurn { first: PlayerRef::Target(0), second: PlayerRef::Target(1) },
+        &ctx,
+    )
+    .expect("resolve");
+    g.apply_pending_player_control(1);
+    assert_eq!(g.controlled_by.get(1).copied().flatten(), Some(2), "seat 2 runs seat 1's turn");
+    g.apply_pending_player_control(2);
+    assert_eq!(g.controlled_by.get(2).copied().flatten(), Some(1), "seat 1 runs seat 2's turn");
+    g.apply_pending_player_control(0);
+    assert!(g.controlled_by.is_empty(), "the caster's own turn is theirs");
 }
