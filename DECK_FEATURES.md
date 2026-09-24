@@ -108,6 +108,7 @@ lists were picked.
 | **Evasive Maneuvers** (C13 precon) GWU | Derevi, Empyrial Tactician | GWU | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Hatsune Miku** (SLD precon) GW | Trostani, Selesnya's Voice | GW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Witherbloom Witchcraft** (C21 precon) BG | Willowdusk, Essence Seer | BG | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
+| **Witherbloom Pestilence** (SOC precon) BG | Dina, Essence Brewer | BG | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Exit from Exile** (CLB precon) RG | Faldorn, Dread Wolf Herald | RG | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Exquisite Invention** (C18 precon) UR | Saheeli, the Gifted (**planeswalker**) | UR | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Mishra's Burnished Banner** (BRC precon) UBR | Mishra, Eminent One | UBR | 100 | 🟡 all 100 implemented, 6 carry residuals (below) |
@@ -1105,6 +1106,22 @@ unplayed. At 6 seats (73 then, beside Krark / Ixhel / Daxos / Emmara / Ranar,
 seed 11074) 3 of 1,000 hit `board cap` — **Emmara's Selesnya Guildmage /
 Vitu-Ghazi Saprolings (769-939 of them)**, not this list: the same shape as
 Storm Herd, a token engine outgrowing `MAX_BATTLEFIELD` in a long stall.
+`--bench` byte-identical.
+
+The **eighty-sixth** is Secrets of Strixhaven Commander's **Witherbloom
+Pestilence** (`WitherbloomPestilence_SOC`) — Golgari Pests and sacrifice under
+Dina, Essence Brewer (committed as 81, then 83, while five concurrent seats
+landed). Fourteen cards were missing and **no primitive was**: prepare
+(Eccentric Pestfinder // Turn Stones, Stensian Sanguinist // Exsanguinate),
+devour, `AdditionalCastCost::SacrificeAnyNumber` and `LifeGainBonus` all
+existed. Its census found one bot gap with two causes: ⚠ **Immoral Bargain
+was never cast** — the bot picked no X for a cost without an {X} pip, and a
+prompting seat was asked for a target past `TargetsExactlyX`'s X, so the cast
+suspended and `would_accept` read it as illegal (`Effect::slot_past_x_cap`,
+also Pest Infestation's "up to X"). Residuals: **Gorma**'s extra counters
+reach cast creatures only; **Stensian Sanguinist**'s "this combat" is "this
+turn". Four-seat pods beside Sigarda / Teval / Disa (seed 11081, 1,000 games,
+all decided): Dina 15.9 %; the census leaves no card of the four unplayed.
 `--bench` byte-identical.
 
 The **seventy-seventh** is Duskmourn Commander's **Death Toll**
