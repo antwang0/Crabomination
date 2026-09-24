@@ -273,6 +273,27 @@ impl GameState {
         pips + bonus
     }
 
+    /// Tokens the spell `id` would mint if `caster` cast it now: the sum of
+    /// its top-level `CreateToken` counts, read against the current board.
+    /// The bot uses it to skip a cast that would carry the battlefield past
+    /// the simulator's bound (Storm Herd at thousands of life).
+    pub(crate) fn spell_token_estimate(&self, id: CardId, caster: usize) -> i64 {
+        fn walk(g: &GameState, e: &crate::effect::Effect, ctx: &EffectContext) -> i64 {
+            match e {
+                crate::effect::Effect::CreateToken { count, .. } => i64::from(g.evaluate_value(count, ctx).max(0)),
+                crate::effect::Effect::Seq(es) => es.iter().map(|e| walk(g, e, ctx)).sum(),
+                _ => 0,
+            }
+        }
+        let Some(card) = self.find_card_anywhere(id) else { return 0 };
+        if !matches!(card.definition.effect, crate::effect::Effect::CreateToken { .. } | crate::effect::Effect::Seq(_)) {
+            return 0;
+        }
+        let mut ctx = EffectContext::for_spell(caster, None, 0, 0);
+        ctx.source = Some(id);
+        walk(self, &card.definition.effect, &ctx)
+    }
+
     pub(crate) fn evaluate_value(&self, v: &Value, ctx: &EffectContext) -> i32 {
         match v {
             Value::HalfLibrarySizeRoundedUp(who) => self

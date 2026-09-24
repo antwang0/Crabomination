@@ -8414,6 +8414,17 @@ pub(super) fn cast_candidates<'a>(
     // spell's own cost resolves as a counter, not a cast (the engine
     // auto-pays ward and `would_accept` can't see the trigger fail).
     out.retain(|(a, _)| ward_gate_ok(state, seat, a));
+    // Board-bound gate: a token spell that would carry the battlefield past
+    // `MAX_BATTLEFIELD` (Storm Herd cast at 3,672 life minted 1,025 Pegasi
+    // and ended an 8-seat pod as a board cap) is one the simulator can't
+    // play out, so the bot holds it.
+    out.retain(|(a, _)| match a {
+        GameAction::CastSpell { card_id, .. } | GameAction::CastSpellAlternative { card_id, .. } => {
+            state.battlefield.len() as i64 + state.spell_token_estimate(*card_id, seat)
+                <= crate::recommend::MAX_BATTLEFIELD as i64
+        }
+        _ => true,
+    });
     out
 }
 

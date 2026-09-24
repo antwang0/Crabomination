@@ -447,3 +447,25 @@ fn bot_shoots_face_not_an_indestructible_creature() {
         "{a:?}"
     );
 }
+
+/// A bot holds a token spell the simulator couldn't play out: Storm Herd at
+/// 3,672 life would carry the battlefield past `MAX_BATTLEFIELD` (two 8-seat
+/// pods ended as board caps). At 30 life it casts it.
+#[test]
+fn bot_holds_storm_herd_past_the_board_bound() {
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    let casts_herd = |life: i32| {
+        let mut g = pod(2);
+        stock_libraries(&mut g, 10);
+        g.step = TurnStep::PostCombatMain;
+        g.players[0].life = life;
+        let sh = g.add_card_to_hand(0, catalog::storm_herd());
+        for _ in 0..12 {
+            g.add_card_to_battlefield(0, catalog::plains());
+        }
+        let a = HeuristicBot::new().next_action(&g, 0);
+        matches!(a, Some(GameAction::CastSpell { card_id, .. }) if card_id == sh)
+    };
+    assert!(casts_herd(30), "an ordinary Storm Herd is cast");
+    assert!(!casts_herd(3_672), "one that would overflow the board is held");
+}
