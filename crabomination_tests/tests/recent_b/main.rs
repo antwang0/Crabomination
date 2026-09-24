@@ -47,6 +47,7 @@ mod cmdr_riku;
 mod cmdr_isperia;
 mod cmdr_inalla;
 mod cmdr_urza;
+mod cmdr_trostani;
 mod dsk2;
 mod dsk_rooms;
 mod recent_118_132;
