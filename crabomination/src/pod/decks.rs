@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Ten hand-picked commanders plus forty-seven official preconstructed lists, each a
+//! Ten hand-picked commanders plus fifty official preconstructed lists, each a
 //! 99 of cards this engine implements: legal under CR 903 (100 cards
 //! including the commander, singleton outside basics, every card inside the
 //! commander's CR 903.4 color identity) and Commander-legal per Scryfall's
@@ -8,7 +8,7 @@
 //!
 //! The ten were built by hand because the offline Scryfall cache cannot say
 //! how a precon splits into decks; MTGJSON's deck files can, and the eleventh
-//! through fifty-seventh (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
+//! through sixtieth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
 //! Win, Tails You Lose, Goblin Storm, Foundations Commander's Wretched Ranks,
 //! Tramplesaurus Rex and Keen Engineering, Commander Legends' Reap the Tides,
 //! Phyrexia: All Will Be One's Corrupting Influence, Zendikar Rising's Sneak
@@ -30,7 +30,9 @@
 //! Aetherdrift Commander's Eternal Might, Commander 2017's Feline Ferocity,
 //! Commander (2011)'s Heavenly Inferno and Political Puppets, Zendikar Rising
 //! Commander's Land's Wrath, Commander 2019's Primal Genesis and Commander 2016's
-//! Stalwart Unity) are taken from
+//! Stalwart Unity, Commander (2011)'s Devour for Power, Duskmourn Commander's
+//! Endless Punishment and the Starter Commander Decks' Token Triumph) are taken
+//! from
 //! one card for card. What all of them keep
 //! from the precon idea is what the pod needs — fixed, legal, varied color
 //! identities, and built to play against each other.
@@ -1881,4 +1883,33 @@ pub const VALGAVOTH_MAIN: &[CardFactory] = &[
     // Basics: 8 swamp, 8 mountain
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, mountain, mountain, mountain,
     mountain, mountain, mountain, mountain, mountain,
+];
+
+pub const EMMARA_COMMANDERS: &[CardFactory] = &[emmara_soul_of_the_accord];
+
+/// **Token Triumph**, the Starter Commander Decks' Selesnya deck (SCD,
+/// 2022-12-02), exactly as MTGJSON's `TokenTriumph_SCD` prints it: 70
+/// nonbasic cards + 15 Forests + 14 Plains = 99. Tokens and anthems under
+/// Emmara, Soul of the Accord.
+pub const EMMARA_MAIN: &[CardFactory] = &[
+    ajani_caller_of_the_pride, citywide_bust, commanders_insignia, dawn_of_hope,
+    dictate_of_heliod, felidar_retreat, hour_of_reckoning, mentor_of_the_meek,
+    white_suns_zenith, champion_of_lambholt, citanul_hierophants, collective_unconscious,
+    harvest_season, hornet_nest, hornet_queen, rishkar_peema_renegade, scavenging_ooze,
+    thunderfoot_baloth, verdant_force, aura_mutation, camaraderie, collective_blessing,
+    dauntless_escort, march_of_the_multitudes, trostani_discordant, idol_of_oblivion,
+    slate_of_ancestry, canopy_vista, fortified_village, temple_of_plenty, conclave_tribunal,
+    devouring_light, path_to_exile, rootborn_defenses, valor_in_akros, avacyns_pilgrim,
+    curse_of_bounty, eternal_witness, farhaven_elf, great_oak_guardian, harmonize, jade_mage,
+    jaspera_sentinel, karametras_favor, leafkin_druid, loyal_guardian, nissas_expedition,
+    nullmage_shepherd, overrun, overwhelming_instinct, presence_of_gond, reclamation_sage,
+    scatter_the_seeds, sporemound, voice_of_many, maja_bretagard_protector, selesnya_evangel,
+    selesnya_guildmage, sylvan_reclamation, arcane_signet, commanders_sphere, sol_ring,
+    talisman_of_unity, blossoming_sands, command_tower, elfhame_palace, graypelt_refuge,
+    holdout_settlement, tranquil_expanse, vitu_ghazi_the_city_tree,
+    // Basics: 15 forest, 14 plains
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains,
 ];

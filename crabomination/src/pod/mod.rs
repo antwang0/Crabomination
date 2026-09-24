@@ -540,6 +540,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::VALGAVOTH_COMMANDERS,
             main: decks::VALGAVOTH_MAIN,
         },
+        // Sixtieth: the fiftieth official list (Token Triumph, SCD) —
+        // Selesnya tokens and anthems under Emmara. `--seats 60`.
+        PodDeck {
+            name: "Emmara, Soul of the Accord (GW)",
+            commanders: decks::EMMARA_COMMANDERS,
+            main: decks::EMMARA_MAIN,
+        },
     ]
 }
 
