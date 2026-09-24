@@ -35,6 +35,7 @@ mod cmdr_kalemne;
 mod cmdr_kardur;
 mod cmdr_kaalia;
 mod cmdr_zedruu;
+mod cmdr_saskia;
 mod cmdr_breya;
 mod cmdr_yidris;
 mod cmdr_mimeoplasm;
