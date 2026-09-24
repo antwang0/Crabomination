@@ -1988,7 +1988,7 @@ pub(crate) fn cost_reduction_for_spell_full_over<'a>(
         }
         // CR 702.41a — affinity for artifacts, counted as the spell is cast
         // (Saheeli, the Gifted's +1).
-        if state.players[caster].pending_affinity_next_spell.iter().any(|&at| at == cast_so_far) {
+        if state.players[caster].pending_affinity_next_spell.contains(&cast_so_far) {
             let artifacts = state
                 .battlefield
                 .iter()
