@@ -8327,6 +8327,35 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::DrainLifeLost { from, to, amount } => {
+                let amt = self.evaluate_value(amount, ctx).max(0);
+                if amt == 0 { return Ok(()); }
+                let mut lost = 0i32;
+                for ent in self.resolve_selector(from, ctx) {
+                    if let EntityRef::Player(p) = ent {
+                        let applied = self.adjust_life_applied(p, -amt);
+                        if applied < 0 {
+                            lost -= applied;
+                            events.push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
+                        }
+                    }
+                }
+                if lost > 0 {
+                    for ent in self.resolve_selector(to, ctx) {
+                        if let EntityRef::Player(p) = ent {
+                            let applied = self.adjust_life_applied(p, lost);
+                            if applied > 0 {
+                                events.push(GameEvent::LifeGained { player: p, amount: applied as u32 });
+                            } else if applied < 0 {
+                                events.push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
+                            }
+                        }
+                    }
+                }
+                self.check_state_based_actions_into(events);
+                Ok(())
+            }
+
             Effect::AddEnergy(amount) => {
                 let base = self.evaluate_value(amount, ctx).max(0) as u32;
                 if base == 0 { return Ok(()); }

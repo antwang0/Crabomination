@@ -2966,7 +2966,7 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::AddPoison { .. } => "Add poison",
         Effect::RevealUntilFind { .. } => "Reveal until find",
         Effect::AddFirstSpellTax { .. } => "Cost tax",
-        Effect::Drain { .. } => "Drain",
+        Effect::Drain { .. } | Effect::DrainLifeLost { .. } => "Drain",
         Effect::SetNoMaxHandSize { .. } => "No max hand size",
         Effect::FlipCoin { .. } => "Flip coin",
         Effect::Proliferate => "Proliferate",

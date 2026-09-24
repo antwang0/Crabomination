@@ -124,3 +124,22 @@ fn cr_114_4_emblem_grants_an_activated_ability_to_its_owners_creatures() {
     flood(&mut g, 1);
     assert!(activate(&mut g, theirs, 0).is_err(), "not on an opponent's creature");
 }
+
+/// CR 119.3 — "you gain life equal to the life lost this way" counts every
+/// opponent's loss at a table; `Drain` gains its amount once.
+#[test]
+fn cr_119_3_drain_life_lost_gains_the_total_lost() {
+    let mut g = pod(4);
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    let each_opp = || Selector::Player(PlayerRef::EachOpponent);
+    g.resolve_effect(&Effect::DrainLifeLost { from: each_opp(), to: Selector::You, amount: Value::Const(2) }, &ctx)
+        .expect("drain");
+    assert_eq!(g.players[0].life, 26, "three opponents lost 2 each");
+    for seat in 1..4 {
+        assert_eq!(g.players[seat].life, 18);
+    }
+    g.players[3].life = 1;
+    g.resolve_effect(&Effect::DrainLifeLost { from: each_opp(), to: Selector::You, amount: Value::Const(2) }, &ctx)
+        .expect("drain");
+    assert_eq!(g.players[0].life, 32, "a seat at 1 still loses 2 (life can go negative)");
+}

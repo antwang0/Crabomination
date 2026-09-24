@@ -4309,6 +4309,12 @@ pub enum Effect {
     EachPlayerRevealTopKeepIfNamed { who: PlayerRef },
     /// Controller loses `amount` life, a different selector gains it.
     Drain { from: Selector, to: Selector, amount: Value },
+    /// "Each opponent loses `amount` life. You gain life equal to the life
+    /// lost this way" (Gray Merchant, Kokusho): each `from` player loses
+    /// `amount`, then each `to` player gains the **total** actually lost
+    /// (CR 119.3 — after replacement). `Drain` gains `amount` once, which is
+    /// the same at two seats and one opponent's worth at a table.
+    DrainLifeLost { from: Selector, to: Selector, amount: Value },
 
     /// CR 122 / 107.16 — the controller gets `amount` energy counters
     /// ({E}). Energy is a per-player resource pool (`Player.energy`), not

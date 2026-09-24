@@ -1478,7 +1478,7 @@ impl Effect {
             }
             Effect::Learn { who } => player_has_target(who),
             Effect::ExchangeLifeTotals { a, b } => sel_has_target(a) || sel_has_target(b),
-            Effect::Drain { from, to, amount } => {
+            Effect::Drain { from, to, amount } | Effect::DrainLifeLost { from, to, amount } => {
                 sel_has_target(from) || sel_has_target(to) || value_has_target(amount)
             }
             Effect::DiscardHandDrawThatMany { who } => sel_has_target(who),
@@ -2481,7 +2481,7 @@ impl Effect {
             | Effect::ExileTopMintPerChosenColor { who, .. } => {
                 sel_filter(who).or_else(|| implicit_player_if_bare_player_field(who))
             }
-            Effect::Drain { to, .. } => {
+            Effect::Drain { to, .. } | Effect::DrainLifeLost { to, .. } => {
                 sel_filter(to).or_else(|| implicit_player_if_bare_player_field(to))
             }
             Effect::AddPoison { who, .. } => {
@@ -2913,6 +2913,7 @@ impl Effect {
                 | Effect::DealDamageEqualToPower { .. }
                 | Effect::LoseLife { .. }
                 | Effect::Drain { .. }
+                | Effect::DrainLifeLost { .. }
                 | Effect::Mill { .. }
                 | Effect::Sacrifice { .. }
                 | Effect::SacrificeHalf { .. }
@@ -3521,6 +3522,10 @@ impl Effect {
                 Value::Const(n) => format!("lose {n} life"),
                 _ => "lose life".into(),
             },
+            Effect::DrainLifeLost { amount, .. } => match amount {
+                Value::Const(n) => format!("each opponent loses {n} life, you gain the life lost"),
+                _ => "drain life".into(),
+            },
             Effect::Drain { amount, .. } => match amount {
                 Value::Const(n) => format!("each opponent loses {n} life, you gain {n} life"),
                 _ => "drain life".into(),
@@ -3794,6 +3799,7 @@ impl Effect {
             | Effect::LoseLife { .. }
             | Effect::SetLifeTotal { .. }
             | Effect::Drain { .. }
+            | Effect::DrainLifeLost { .. }
             | Effect::Discard { .. }
             | Effect::DiscardAnyNumber { .. }
             | Effect::SetNoMaxHandSize { .. }
@@ -4519,7 +4525,7 @@ impl Effect {
                 | Effect::DiscardHalf { who, .. }
                 | Effect::SacrificeHalf { who, .. } => sel_find(who, slot),
                 Effect::SetLifeTotal { who, .. } => sel_find(who, slot),
-                Effect::Drain { from, to, .. } => {
+                Effect::Drain { from, to, .. } | Effect::DrainLifeLost { from, to, .. } => {
                     sel_find(from, slot).or_else(|| sel_find(to, slot))
                 }
                 // `amount` may read a target's power/toughness (Soul's Majesty

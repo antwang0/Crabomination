@@ -4702,7 +4702,7 @@ fn effect_imposes_self_cost(eff: &Effect) -> bool {
         // Self-directed damage (a "you may have ~ deal N damage to you" rider).
         Effect::DealDamage { to, .. } => hits_self(to),
         // Drain *out of* the bot is a cost; drain *into* the bot is upside.
-        Effect::Drain { from, .. } => hits_self(from),
+        Effect::Drain { from, .. } | Effect::DrainLifeLost { from, .. } => hits_self(from),
         Effect::Sacrifice { who, .. } | Effect::SacrificeGreatestMV { who, .. } => hits_self(who),
         Effect::SacrificeAndRemember { .. } => true,
         Effect::SacrificeAnyNumber { who, .. } => matches!(who, PlayerRef::You),
@@ -4768,7 +4768,12 @@ fn self_life_loss(eff: &Effect) -> i32 {
     };
     match eff {
         Effect::LoseLife { who, amount: Value::Const(n) } if hits(who) => (*n).max(0),
-        Effect::Drain { from, amount: Value::Const(n), .. } if hits(from) => (*n).max(0),
+        Effect::Drain { from, amount: Value::Const(n), .. }
+        | Effect::DrainLifeLost { from, amount: Value::Const(n), .. }
+            if hits(from) =>
+        {
+            (*n).max(0)
+        }
         Effect::Seq(v) => v.iter().map(self_life_loss).sum(),
         Effect::If { then, else_, .. } => self_life_loss(then).max(self_life_loss(else_)),
         Effect::ChooseMode(v)
@@ -9024,7 +9029,12 @@ fn ability_reach_amount(effect: &Effect) -> Option<i32> {
     match effect {
         Effect::DealDamage { to: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(n) }
         | Effect::LoseLife { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(n) }
-        | Effect::Drain { from: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(n), .. } => {
+        | Effect::Drain { from: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(n), .. }
+        | Effect::DrainLifeLost {
+            from: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::Const(n),
+            ..
+        } => {
             Some(*n)
         }
         // Compound abilities (e.g. "do X; each opponent loses N") still
@@ -15912,6 +15922,7 @@ fn effect_uses_x(eff: &Effect) -> bool {
         | Effect::GainLife { amount, .. }
         | Effect::LoseLife { amount, .. }
         | Effect::Drain { amount, .. }
+        | Effect::DrainLifeLost { amount, .. }
         | Effect::Draw { amount, .. }
         | Effect::Mill { amount, .. }
         | Effect::Scry { amount, .. }
@@ -16149,7 +16160,7 @@ fn cast_gains_life(state: &GameState, seat: usize, a: &GameAction) -> bool {
         };
         match e {
             Effect::GainLife { who, .. } => hits_self(who),
-            Effect::Drain { to, .. } => hits_self(to),
+            Effect::Drain { to, .. } | Effect::DrainLifeLost { to, .. } => hits_self(to),
             Effect::Seq(v) => v.iter().any(gains),
             Effect::If { then, else_, .. } => gains(then) || gains(else_),
             Effect::MayDo { body, .. } | Effect::ForEach { body, .. } => gains(body),
@@ -16600,7 +16611,9 @@ fn emblem_value(state: &GameState, seat: usize, emblem: &crate::player::Emblem) 
     fn shape_value(e: &Effect, amount: &dyn Fn(&Value) -> i32) -> i32 {
         match e {
             Effect::Draw { amount: a, .. } => 12 * amount(a),
-            Effect::DealDamage { amount: a, .. } | Effect::Drain { amount: a, .. } => {
+            Effect::DealDamage { amount: a, .. }
+            | Effect::Drain { amount: a, .. }
+            | Effect::DrainLifeLost { amount: a, .. } => {
                 6 * amount(a)
             }
             Effect::CreateToken { count, .. } => 10 * amount(count),
@@ -16628,7 +16641,7 @@ fn emblem_value(state: &GameState, seat: usize, emblem: &crate::player::Emblem) 
 fn lifegain_sources(state: &GameState, seat: usize) -> i32 {
     fn gains_life(e: &Effect) -> bool {
         match e {
-            Effect::GainLife { .. } | Effect::Drain { .. } => true,
+            Effect::GainLife { .. } | Effect::Drain { .. } | Effect::DrainLifeLost { .. } => true,
             Effect::Seq(v) => v.iter().any(gains_life),
             Effect::If { then, else_, .. } => gains_life(then) || gains_life(else_),
             Effect::MayDo { body, .. } => gains_life(body),
