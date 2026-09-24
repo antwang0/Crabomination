@@ -1945,6 +1945,7 @@ impl Effect {
             // Reveals from your own library — no target slot.
             Effect::RevealUntilLandsToBattlefield { .. } => false,
             Effect::CopyAttackersAsBlockers => false,
+            Effect::ChooseGraveyardCreaturesEachMayReturn => false,
             Effect::RevealUntilMatchingToBattlefield { count, .. } => value_has_target(count),
             Effect::ClashWithOpponent { .. } => false,
             Effect::OnAttackedUntilYourNextTurn { .. } => false,

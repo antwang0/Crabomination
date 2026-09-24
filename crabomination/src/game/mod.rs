@@ -10023,7 +10023,17 @@ impl GameState {
                 StaticEffect::ControllerCantWinGame => !self.same_team(src.controller, seat),
                 _ => false,
             })
-        })
+        }) || self.granted_cant_lose_controllers().any(|c| c == seat)
+    }
+
+    /// Controllers of permanents that have the granted "you can't lose the
+    /// game and your opponents can't win the game" (`Keyword::ControllerCantLoseGame`).
+    /// Read only once a loss or a win is already on the table.
+    fn granted_cant_lose_controllers(&self) -> impl Iterator<Item = usize> + '_ {
+        self.battlefield
+            .iter()
+            .filter(|c| self.permanent_has_keyword(c.id, &crate::card::Keyword::ControllerCantLoseGame))
+            .map(|c| c.controller)
     }
 
     /// Phyrexian Unlife — true when `seat` controls a
@@ -10312,6 +10322,7 @@ impl GameState {
                 _ => false,
             })
         })
+            || self.granted_cant_lose_controllers().any(|c| !self.same_team(c, seat))
     }
 
     /// Angel's Grace / Worship — clamp a would-be damage life delta so it

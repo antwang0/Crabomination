@@ -4663,6 +4663,12 @@ pub enum Effect {
     /// creature. Exile those tokens at end of combat." (Mirror Match, CR
     /// 509.4 / 707.2). The copies block without being declared as blockers.
     CopyAttackersAsBlockers,
+    /// "Choose a creature card in an opponent's graveyard, then that player
+    /// chooses a creature card in your graveyard. You may return those cards
+    /// to the battlefield under their owners' control." (Dawnbreak Reclaimer.)
+    /// An opponent with a creature card must be picked when one exists; with
+    /// none, you still name the opponent who picks from yours.
+    ChooseGraveyardCreaturesEachMayReturn,
     /// CR 701.49 — Venture into the dungeon: enter the first room of a
     /// chosen dungeon (auto: Lost Mine of Phandelver) or advance to the
     /// next room; room abilities resolve inline (`base::dungeons`).

@@ -116,6 +116,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         Keyword::Saddle(_) => "Saddle",
         Keyword::Casualty(_) => "Casualty",
         Keyword::Soulbond => "Soulbond",
+        Keyword::ControllerCantLoseGame => "You can't lose the game",
         Keyword::StartYourEngines => "Start your engines!",
         Keyword::Devoid => "Devoid",
         Keyword::Annihilator(_) => "Annihilator",

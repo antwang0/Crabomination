@@ -13,6 +13,7 @@ mod damage_draw;
 mod delayed;
 mod eval;
 mod free_cast;
+mod graveyard_swap;
 mod fight_each;
 pub(crate) use eval::PrintedGates;
 pub(crate) mod events;
@@ -11168,6 +11169,9 @@ impl GameState {
 
             // CR 509.4 — mint a token already blocking the targeted attacker.
             Effect::CopyAttackersAsBlockers => self.copy_attackers_as_blockers(ctx, events),
+            Effect::ChooseGraveyardCreaturesEachMayReturn => {
+                self.choose_graveyard_creatures_each_may_return(ctx, events)
+            }
 
             Effect::CreateTokenBlocking { definition, .. } => {
                 // A spell names the attacker as its target; a "whenever this

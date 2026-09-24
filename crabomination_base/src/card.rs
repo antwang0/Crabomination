@@ -842,6 +842,9 @@ pub enum CounterType {
     Corpse,
     /// Rally counter — Aligned Heart's flurry tally (TDC).
     Rally,
+    /// Enlightened counter — The Book of Exalted Deeds' memory aid (CR 122.1;
+    /// the granted ability isn't tied to it).
+    Enlightened,
 }
 
 /// Every zone a card can occupy.
@@ -2226,6 +2229,11 @@ pub enum Keyword {
     /// the bearer still isn't a shadow creature, so nonshadow attackers can
     /// still be blocked by it (Heartwood Dryad, Wall of Diffusion).
     CanBlockShadow,
+    /// "You can't lose the game and your opponents can't win the game" as an
+    /// ability a permanent *has* — granted, so it reads through layers (The
+    /// Book of Exalted Deeds' Angel). The printed form is
+    /// `StaticEffect::ControllerCantLoseGame` (Platinum Angel).
+    ControllerCantLoseGame,
     /// CR 702.95 — Soulbond. A marker keyword; when this or another creature
     /// enters while either is unpaired, its controller may pair them. The
     /// pairing rides `CardInstance.soulbond_partner`, and the bonus each
