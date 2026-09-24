@@ -63,6 +63,8 @@ lists were picked.
 | **Swell the Host** (C15 precon) GU | Ezuri, Claw of Progress | GU | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Angels: They're Just Like Us** (SLD precon) W | Gisela, the Broken Blade (**meld**) | W | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Built From Scratch** (C14 precon) R | Daretti, Scrap Savant (**planeswalker**) | R | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
+| **Vampiric Bloodline** (VOC precon) BR | Strefan, Maurer Progenitor | BR | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
+| **Plunder the Graves** (C15 precon) BG | Meren of Clan Nel Toth | BG | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Graveyard Overdrive** (M3C precon) BRG | Disa the Restless | BRG | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Sworn to Darkness** (C14 precon) B | Ob Nixilis of the Black Oath (**planeswalker**) | B | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 
@@ -462,6 +464,41 @@ by no bot path** (combat on an opponent's turn is no off-turn window) and
 `pick_combat_only_instant` now casts it; Tempt with Mayhem played once the copy
 picker landed. Ob wins 5.0 % there and 26.5 % of four-seat pods beside Judith /
 Gisa / Yuriko (seed 10102, 1,000 games, all decided). `--bench` byte-identical.
+
+The **thirty-second**, **thirty-third**, **thirty-fourth**, **thirty-sixth**
+and **thirty-seventh** are Commander 2015's **Swell the Host** (Ezuri, GU
++1/+1 counters), the Secret Lair **Angels: They're Just Like Us** (Gisela, the
+**first meld commander**), Commander 2014's **Built From Scratch** (Daretti,
+Scrap Savant, mono-red artifacts under a planeswalker), Crimson Vow
+Commander's **Vampiric Bloodline** (Strefan, Rakdos Blood tokens, with
+Kamber and Laurine as a Partner-with pair in the 99) and Commander 2015's
+**Plunder the Graves** (Meren, Golgari sacrifice and recursion). Engine finds
+along the way: ⚠ **a melded permanent is its component commander** (CR 712.4 +
+903.3 — Brisela's damage now tallies as Gisela's commander damage and it can
+go home); ⚠ **evoke never sacrificed** (CR 702.74a); ⚠ **graft's move trigger
+had no intervening-if**; ⚠ **Myriad copied toward a seat that had left**
+(CR 702.116a); ⚠ **a parked `WithX` / `AsPlayer` body lost its X or its
+player on resume** (CR 608.2a); ⚠ **the auto-targeter aimed a divided spell's
+later slots at the same player, or at the caster** (Forked Bolt and Avacyn's
+Judgment were uncastable by the bot); ⚠ **the equip sink gate missed granted
+Equipment** (Arterial Alchemy's Blood tokens tripped its debug assert); and
+seven shipped cards were corrected against oracle (Sakura-Tribe Elder,
+Evolving Wilds, Mosswort Bridge, Arbor Colossus, Trygon Predator, Forgotten
+Ancient, Caller of the Claw). Residuals are in INCOMPLETE_CARDS.
+
+⚠ **The pod budget counts plays, not priority passes.** Priority passes were
+~90 % of actions and grow with seats² (1,921 / 7,098 / 29,654 / 73,911
+actions per game at 4 / 8 / 16 / 24 seats, against 190 / 397 / 891 / 1,505
+plays), so the old action cap stopped 28–32 % of 33–34-seat games that were
+still progressing. `bot_ladder` now budgets `max(seats, 4) × 1,000` plays with a
+200-passes-per-play backstop. Readings on this budget: seed 9312, **60 games
+at all 37 seats: 60 decided, 0 caps, zero panics** (467 turns / 2,298 plays a
+game; Gisela 20.0 %); seed 9311, 400 four-seat games of the first four decks,
+all decided; seed 9323, 400 eight-seat games, all decided (Edgar 48.5 %).
+Four-seat pods of the new seats: seed 9321 (Ezuri / Gisela / Daretti /
+Strefan, 1,000 games, all decided) — Gisela **68.4 %**, Strefan 16.8 %, Ezuri
+13.0 %, Daretti 1.8 %; seed 9322 (Meren / Ob / Disa / Gisa and Geralf, 1,000
+games, 997 decided, 3 rule draws) — Meren 8.9 %. `--bench` byte-identical.
 
 ⚠ **The board cap was a bot bug, not a loop.** A Krenko seat sent all 292
 of its Goblins at one player on 24 life each turn while two others sat on

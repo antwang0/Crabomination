@@ -1789,7 +1789,7 @@ Tasigur (Splice / Delve).
 
 For the full machine-generated list, run the auditor (`--comments-only`).
 
-### Swell the Host (C15, pod seat 30) — open residuals, 2026-09-24
+### Swell the Host (C15, pod seat 32) — open residuals, 2026-09-24
 
 | Card | Gap |
 |---|---|
@@ -1797,6 +1797,21 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Forgotten Ancient | "move any number of +1/+1 counters" is all-or-nothing, spread evenly over your other creatures (`DistributeCountersFromSource`); no per-recipient amounts. |
 | 🟡 Verdant Confluence | modes are the default picks (two counters, two basics); `ChooseN` has no cast-time mode choice. |
 | 🟡 Skullwinder | "choose an opponent" is the engine's pick (fewest creatures). |
+
+### Seats 33, 34, 36 and 37 (Angels SLD, Built From Scratch C14, Vampiric Bloodline VOC, Plunder the Graves C15) — open residuals, 2026-09-24
+
+| Card | Deck | Gap |
+|---|---|---|
+| 🟡 Angel of Destiny | Angels (SLD) | "each player this creature attacked this turn" is the last player it attacked. |
+| 🟡 Dawnbreak Reclaimer | Angels (SLD) | both graveyard picks are the engine's (the cheapest creature card each way). |
+| 🟡 Bitter Feud | Built From Scratch (C14) | the two chosen players are its controller and the engine's pick of opponent. |
+| 🟡 Impact Resonance | Built From Scratch (C14) | X is read as the spell resolves, from per-source tallies and each player's largest single hit. |
+| 🟡 Volcanic Offering | Built From Scratch (C14) | the choosing opponent is the caster's most hostile one, for both halves. |
+| 🟡 Avacyn's Judgment | Vampiric Bloodline (VOC) | no madness (its `{X}{R}` needs an X a madness cast can't choose); a plain 2-damage divider. |
+| 🟡 Shadowgrange Archfiend | Vampiric Bloodline (VOC) | no madness ("{2}{B}, Pay 8 life" has a life half a madness cost can't carry). |
+| 🟡 Imposing Grandeur | Vampiric Bloodline (VOC) | counts a commander in any zone. |
+| 🟡 Predators' Hour | Vampiric Bloodline (VOC) | the stolen card is exiled face up. |
+| 🟡 Wretched Confluence | Plunder the Graves (C15) | the modes are the card's default picks; `ChooseN` has no cast-time mode choice. |
 
 ### The `modern_decks` Commander routine's precons (seats 23, 25, 27, 29, 30) — open residuals, 2026-09-24
 
