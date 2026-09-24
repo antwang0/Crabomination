@@ -488,6 +488,7 @@ fn no_cost_sacrifice_is_spelled_as_the_first_step_of_the_effect() {
         "Faithless Salvaging",
         "Fast // Furious",
         "Grab the Prize",
+        "Path of the Pyromancer",
         "Inkling Tutor (b179)",
         "Peer Past the Veil",
         "Planar Engineering",
