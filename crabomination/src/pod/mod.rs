@@ -407,6 +407,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::DAXOS_COMMANDERS,
             main: decks::DAXOS_MAIN,
         },
+        // Forty-first: the thirty-first official list (Rebellion Rising,
+        // ONC) — Boros tokens and Equipment under Neyali. `--seats 41`.
+        PodDeck {
+            name: "Neyali, Suns' Vanguard (RW)",
+            commanders: decks::NEYALI_COMMANDERS,
+            main: decks::NEYALI_MAIN,
+        },
     ]
 }
 

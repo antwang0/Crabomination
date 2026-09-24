@@ -1334,3 +1334,33 @@ pub const DAXOS_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const NEYALI_COMMANDERS: &[CardFactory] = &[neyali_suns_vanguard];
+
+/// **Rebellion Rising**, the Phyrexia: All Will Be One Commander deck (ONC,
+/// 2023-02-10), exactly as MTGJSON's `RebellionRising_ONC` prints it: 77
+/// nonbasic cards + 11 Plains + 11 Mountains = 99. Boros tokens and Equipment
+/// under Neyali, whose attacking tokens strike twice.
+pub const NEYALI_MAIN: &[CardFactory] = &[
+    elspeth_tirel, adriana_captain_of_the_guard, dragonmaster_outcast, emeria_angel,
+    goldnight_commander, harmonious_archon, jor_kadeen_the_prevailer, legion_warboss,
+    loyal_apprentice, mentor_of_the_meek, myr_battlesphere, otharri_suns_glory, phantom_general,
+    prava_of_the_steel_legion, siege_gang_commander, silverwing_squadron, solemn_simulacrum,
+    boros_charm, call_the_coppercoats, clever_concealment, flawless_maneuver, generous_gift,
+    midnight_haunting, path_to_exile, white_suns_zenith, battle_screech, chain_reaction,
+    collective_effort, cut_a_deal, finale_of_glory, goldwardens_gambit, hate_mirage,
+    heroic_reinforcements, hordeling_outburst, hour_of_reckoning, increasing_devotion,
+    martial_coup, rip_apart, assemble_the_legion, court_of_grace, felidar_retreat,
+    intangible_virtue, roar_of_resistance, arcane_signet, boros_signet, commanders_sphere,
+    fellwar_stone, glimmer_lens, hexplate_wallbreaker, idol_of_oblivion, kembas_banner,
+    loxodon_warhammer, mace_of_the_valiant, mask_of_memory, maul_of_the_skyclaves, mind_stone,
+    sol_ring, soul_guide_lantern, staff_of_the_storyteller, talisman_of_conviction,
+    vulshok_factory, boros_garrison, buried_ruin, castle_ardenvale, castle_embereth,
+    command_tower, exotic_orchard, forgotten_cave, furycalm_snarl, kher_keep, myriad_landscape,
+    path_of_ancestry, secluded_steppe, slayers_stronghold, temple_of_triumph,
+    temple_of_the_false_god, windbrisk_heights,
+    // Basics: 11 plains, 11 mountain
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain,
+];
