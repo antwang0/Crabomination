@@ -27,6 +27,7 @@ mod cmdr_wyleth;
 mod cmdr_hashaton;
 mod cmdr_obuun;
 mod cmdr_kynaios;
+mod cmdr_emmara;
 mod cmdr_teferi;
 mod cmdr_lorehold;
 mod cmdr_fae;
