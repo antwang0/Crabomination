@@ -26443,6 +26443,15 @@ impl GameState {
                 self.exile_resolving_spell = true;
                 Ok(())
             }
+            Effect::EndMayPlayOnCardsExiledWithSource => {
+                let Some(src) = ctx.source else { return Ok(()) };
+                for c in self.exile.iter_mut() {
+                    if c.exiled_with == Some(src) && c.may_play_until.is_some() {
+                        c.may_play_until = None;
+                    }
+                }
+                Ok(())
+            }
             Effect::DistributeCountersAmongLastCreated { total, kind } => {
                 // Resolution-time distribution among the tokens minted
                 // earlier in this resolution: as even as possible for every

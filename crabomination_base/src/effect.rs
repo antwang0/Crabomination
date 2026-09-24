@@ -5759,6 +5759,10 @@ pub enum Effect {
     /// "Exile [this spell]" as part of its own resolution (Revel in
     /// Silence). Same flag pattern as `ShuffleSelfIntoLibrary`.
     ExileResolvingSpell,
+    /// "…for as long as [this] remains on the battlefield" on a may-play grant
+    /// (Intet, the Dreamer): the source's leaves trigger ends the permission
+    /// on every card still exiled with it (`exiled_with == source`).
+    EndMayPlayOnCardsExiledWithSource,
 
     /// CR 903 — "Put your commander into your hand from the command zone"
     /// (Command Beacon). With two commanders the controller chooses one.

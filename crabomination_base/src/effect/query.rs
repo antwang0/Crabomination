@@ -1407,6 +1407,7 @@ impl Effect {
 
             Effect::ReturnResolvingSpellToHand => false,
             Effect::ExileResolvingSpell => false,
+            Effect::EndMayPlayOnCardsExiledWithSource => false,
             Effect::SilencePlayersThisTurn { who } => player_has_target(who),
             Effect::MayPayBy { who, body, else_, .. } => {
                 player_has_target(who)
