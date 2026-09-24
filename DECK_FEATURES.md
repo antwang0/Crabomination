@@ -91,6 +91,7 @@ lists were picked.
 | **World Shaper** (EOC precon) BRG | Hearthhull, the Worldseed | BRG | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
 | **Peace Offering** (BLC precon) GWU | Ms. Bumbleflower | GWU | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
 | **Nature of the Beast** (C13 precon) RGW | Marath, Will of the Wild | RGW | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
+| **Reign of Dragons** (FDC precon) R | Lathliss, Dragon Queen | R | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Enduring Enchantments** (CMM precon) WBG | Anikthea, Hand of Erebos | WBG | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
 | **Open Hostility** (C16 precon) WBRG | Saskia the Unyielding | WBRG | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Devour for Power** (CMD precon) BGU | The Mimeoplasm | BGU | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
@@ -1470,6 +1471,21 @@ Loyalty**, **Tamiyo** (INCOMPLETE_CARDS). A 200-game census beside
 Hearthhull / Bright-Palm / Brimaz (seed 9551) decided 200/200 with zero
 panics and no card of the four lists unplayed, Ms. Bumbleflower winning
 38.0 %. `--bench` byte-identical.
+
+The **ninety-fifth** is Foundations Commander's **Reign of Dragons**
+(`ReignOfDragons_FDC`) — mono-red Dragons under Lathliss, Dragon Queen
+(seat 92, then 94, before rebasing over three other lists). Thirteen cards
+were missing (`cmdr_lathliss.rs`); the primitive is
+`Value::DiscoveredManaValue` (Hit the Mother Lode's "the difference"). ⚠
+**Celebration never counted a spell**: a resolving permanent spell only
+emitted `PermanentEntered`, whose funnel logs creatures but not the
+nonland/artifact entry tallies, so two creature spells never turned Goddric
+on (`game/entry_tally.rs`, CR 608.3; the persist/undying return had the
+same hole). Residuals: **Carnelian Orb of Dragonkind**, **Goddric, Cloaked
+Reveler**, **Leyline Tyrant**, **Thundermane Dragon**. A 200-game census
+beside Marath / Brimaz / Bright-Palm (seed 92) decided 200/200 with zero
+panics and no card unplayed, Lathliss winning 59.5 %. `--bench`
+byte-identical.
 
 The **eighty-eighth** is Commander 2013's **Nature of the Beast**
 (`NatureOfTheBeast_C13`) — Naya big creatures under Marath, Will of the

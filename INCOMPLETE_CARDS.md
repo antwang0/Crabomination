@@ -1845,6 +1845,10 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Fiery Justice | Nature of the Beast (C13) | the 5 life goes to the engine's most hostile opponent. |
 | 🟡 Magus of the Arena | Nature of the Beast (C13) | you pick the opponent's creature; the opponent should. |
 | 🟡 Naya Soulbeast | Nature of the Beast (C13) | the top cards are read as it enters, not revealed as it is cast. |
+| 🟡 Carnelian Orb of Dragonkind | Reign of Dragons (FDC) | its mana gives any creature spell haste, not only a Dragon. |
+| 🟡 Goddric, Cloaked Reveler | Reign of Dragons (FDC) | while celebrating it keeps its Human Noble types beside Dragon. |
+| 🟡 Leyline Tyrant | Reign of Dragons (FDC) | the dying payment is any mana, not only {R}. |
+| 🟡 Thundermane Dragon | Reign of Dragons (FDC) | a creature cast from the top doesn't gain haste; the top card isn't shown to you. |
 | 🟡 Battle at the Helvault | Enduring Enchantments (CMM) | "for each player" covers opponents only: you can't exile one of your own permanents. |
 | 🟡 Battle for Bretagard | Enduring Enchantments (CMM) | chapter III copies every artifact and creature token you control, duplicate names included. |
 | 🟡 Cacophony Unleashed | Enduring Enchantments (CMM) | the animated 6/6 isn't legendary. |
