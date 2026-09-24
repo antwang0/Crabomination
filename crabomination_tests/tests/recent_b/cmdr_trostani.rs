@@ -417,3 +417,15 @@ fn bot_lets_its_own_aetherflux_shot_resolve_first() {
     }
     assert!(g.is_game_over(), "two 50-point shots end a three-seat game");
 }
+
+/// Storm Herd at 50,000 life mints one past the simulator's board bound, not
+/// 50,000: a bot probe of it used to take 22 s for one decision.
+#[test]
+fn a_token_batch_stops_at_the_board_bound() {
+    let mut g = pod(2);
+    g.players[0].life = 50_000;
+    let sh = g.add_card_to_hand(0, catalog::storm_herd());
+    cast(&mut g, 0, sh, None).expect("cast");
+    let n = named(&g, 0, "Pegasus").len();
+    assert_eq!(n, crabomination::recommend::MAX_BATTLEFIELD + 1);
+}

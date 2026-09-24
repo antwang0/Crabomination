@@ -19909,6 +19909,11 @@ impl GameState {
                     for _ in 0..doublers {
                         n = n.saturating_mul(2);
                     }
+                    // A simulator bound, not a rule: one batch past the board
+                    // bound ends the game as `BoardCap` all the same, and a
+                    // bot probe of Storm Herd at 15,197 life minted all 15,197
+                    // (22 s for one decision in an 8-seat pod).
+                    n = n.min(crate::recommend::MAX_BATTLEFIELD as u32 + 1);
                     // Moonlit Meditation — the turn's first token batch may
                     // instead be that many copies of the Aura's host.
                     if n > 0
