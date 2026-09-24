@@ -5165,3 +5165,295 @@ fn cabaretti_cacophony_batch() {
     assert_eq!(g.players[1].hand.len(), 1, "secrets");
     assert_eq!(count_named(&g, 0, "Devil"), 1);
 }
+
+// ── Draconic Rage (Vrondiss, Rage of Ancients) ──────────────────────────────
+
+fn rolls(faces: &[u8]) -> Box<ScriptedDecider> {
+    Box::new(ScriptedDecider::new(faces.iter().map(|&f| DecisionAnswer::DieRoll(f))))
+}
+
+fn to_begin_combat(g: &mut GameState) {
+    g.step = TurnStep::PreCombatMain;
+    let ev = g.advance_step(Vec::new()).expect("to begin combat");
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(g);
+}
+
+/// CR 706.6 — Berserker's Frenzy rolls two d20 and ignores the lower: a 3 and
+/// a 17 is a 17 (you choose the blocks); a 2 and a 9 is a 9 (their creatures
+/// must block). Illegal once combat is past the Declare Attackers step.
+#[test]
+fn cr_706_6_berserkers_frenzy_keeps_the_higher_d20() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let f = g.add_card_to_hand(0, catalog::berserkers_frenzy());
+    g.decider = rolls(&[3, 17]);
+    cast(&mut g, f, &[]);
+    assert_eq!(g.block_chooser(), Some(0), "15-20: you choose the blocks");
+    assert!(!g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::MustBlock));
+
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let f = g.add_card_to_hand(0, catalog::berserkers_frenzy());
+    g.decider = rolls(&[2, 9]);
+    cast(&mut g, f, &[]);
+    assert_eq!(g.block_chooser(), None);
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::MustBlock));
+
+    let mut g = main_phase();
+    g.step = TurnStep::PostCombatMain;
+    let f = g.add_card_to_hand(0, catalog::berserkers_frenzy());
+    assert!(try_cast(&mut g, 0, f, &[]).is_err(), "after combat");
+}
+
+/// CR 706.2 — Chaos Dragon: each player rolls; an opponent with the highest
+/// result can't be attacked by it this combat. Topping the table yourself
+/// bars nobody.
+#[test]
+fn cr_706_2_chaos_dragon_cant_attack_the_highest_roller() {
+    let mut g = main_phase();
+    let d = g.add_card_to_battlefield(0, catalog::chaos_dragon());
+    g.decider = rolls(&[5, 18]);
+    to_begin_combat(&mut g);
+    assert!(g.computed_permanent(d).unwrap().keywords().contains(&Keyword::CantAttackPlayer(1)));
+
+    let mut g = main_phase();
+    let d = g.add_card_to_battlefield(0, catalog::chaos_dragon());
+    g.decider = rolls(&[18, 5]);
+    to_begin_combat(&mut g);
+    assert!(!g.computed_permanent(d).unwrap().keywords().contains(&Keyword::CantAttackPlayer(1)));
+}
+
+/// CR 706 — Wild Endeavor: two d4, the controller chooses which result makes
+/// Beasts and which fetches basic lands.
+#[test]
+fn cr_706_wild_endeavor_assigns_its_two_results() {
+    for (pick, beasts, lands) in [(0u32, 3usize, 1usize), (1, 1, 3)] {
+        let mut g = main_phase();
+        for _ in 0..4 {
+            g.add_card_to_library(0, catalog::forest());
+        }
+        let w = g.add_card_to_hand(0, catalog::wild_endeavor());
+        g.decider = Box::new(ScriptedDecider::new([
+            DecisionAnswer::DieRoll(1),
+            DecisionAnswer::DieRoll(3),
+            DecisionAnswer::Amount(pick),
+        ]));
+        cast(&mut g, w, &[]);
+        assert_eq!(count_named(&g, 0, "Beast"), beasts, "pick {pick}");
+        assert_eq!(count_named(&g, 0, "Forest"), lands, "pick {pick}");
+    }
+}
+
+/// CR 303.4 — Maddening Hex: the cursed player's noncreature spell costs them
+/// a d6 of damage, then the Hex jumps to another opponent at random — and
+/// with no other opponent it stays.
+#[test]
+fn cr_303_4_maddening_hex_burns_then_moves_to_another_opponent() {
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
+    let hex = g.add_card_to_battlefield(0, catalog::maddening_hex());
+    g.battlefield.find_by_id_mut(hex).unwrap().attached_to_player = Some(1);
+    g.priority.player_with_priority = 1;
+    let shock = g.add_card_to_hand(1, catalog::shock());
+    g.decider = rolls(&[4]);
+    try_cast(&mut g, 1, shock, &[Target::Player(0)]).expect("shock");
+    assert_eq!(g.players[1].life, 16, "a rolled 4");
+    assert_eq!(g.battlefield_find(hex).unwrap().attached_to_player, Some(2), "the other opponent");
+
+    let mut g = main_phase();
+    g.active_player_idx = 1;
+    let hex = g.add_card_to_battlefield(0, catalog::maddening_hex());
+    g.battlefield.find_by_id_mut(hex).unwrap().attached_to_player = Some(1);
+    g.priority.player_with_priority = 1;
+    let shock = g.add_card_to_hand(1, catalog::shock());
+    g.decider = rolls(&[2]);
+    try_cast(&mut g, 1, shock, &[Target::Player(0)]).expect("shock");
+    assert_eq!(g.players[1].life, 18);
+    assert_eq!(g.battlefield_find(hex).unwrap().attached_to_player, Some(1), "no one else");
+}
+
+/// CR 614.1c — Neverwinter Hydra enters with the total of X d6 in counters.
+#[test]
+fn cr_614_1c_neverwinter_hydra_enters_with_x_d6_counters() {
+    let mut g = main_phase();
+    let h = g.add_card_to_hand(0, catalog::neverwinter_hydra());
+    flood(&mut g, 0);
+    g.decider = rolls(&[3, 5]);
+    g.perform_action(GameAction::CastSpell {
+        card_id: h,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(2),
+    })
+    .expect("X=2");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(h).unwrap().counter_count(CounterType::PlusOnePlusOne), 8);
+}
+
+/// CR 120.3 / 706 — Vrondiss: rolling a die (Component Pouch) lets it hit
+/// itself, and being dealt damage makes a 5/4 Dragon Spirit.
+#[test]
+fn cr_706_vrondiss_rolls_into_a_dragon_spirit() {
+    let mut g = main_phase();
+    let v = g.add_card_to_battlefield(0, catalog::vrondiss_rage_of_ancients());
+    let pouch = g.add_card_to_battlefield(0, catalog::component_pouch());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::DieRoll(15),
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Bool(true),
+    ]));
+    activate(&mut g, pouch, 1, None).expect("roll");
+    assert_eq!(g.battlefield_find(pouch).unwrap().counter_count(CounterType::Component), 2);
+    assert_eq!(g.battlefield_find(v).unwrap().damage, 1);
+    assert_eq!(count_named(&g, 0, "Dragon Spirit"), 1);
+    // Component Pouch's mana: a counter for two mana.
+    let mut g2 = main_phase();
+    let pouch = g2.add_card_to_battlefield(0, catalog::component_pouch());
+    g2.battlefield.find_by_id_mut(pouch).unwrap().add_counters(CounterType::Component, 1);
+    g2.perform_action(GameAction::ActivateAbility {
+        card_id: pouch,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("mana");
+    drain_stack(&mut g2);
+    assert_eq!(g2.players[0].mana_pool.total(), 2);
+    assert_eq!(g2.battlefield_find(pouch).unwrap().counter_count(CounterType::Component), 0);
+}
+
+/// CR 500.4 — Klauth's attack mana equals the attackers' total power and
+/// survives the combat steps' ends.
+#[test]
+fn cr_500_4_klauth_adds_kept_mana_equal_to_attacking_power() {
+    let mut g = main_phase();
+    let k = g.add_card_to_battlefield(0, catalog::klauth_unrivaled_ancient());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    combat(
+        &mut g,
+        vec![
+            Attack { attacker: k, target: AttackTarget::Player(1) },
+            Attack { attacker: bear, target: AttackTarget::Player(1) },
+        ],
+        0,
+        |_| {},
+    );
+    assert_eq!(g.players[0].mana_pool.total(), 6, "4 + 2, kept past the combat steps");
+}
+
+/// The rest of Draconic Rage's new cards, one play pattern each.
+#[test]
+fn draconic_rage_batch() {
+    // Bag of Tricks: a d8 of 2 digs to a two-drop creature.
+    let mut g = main_phase();
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::llanowar_elves());
+    let bag = g.add_card_to_battlefield(0, catalog::bag_of_tricks());
+    g.decider = rolls(&[2]);
+    activate(&mut g, bag, 0, None).expect("bag");
+    assert_eq!(count_named(&g, 0, "Grizzly Bears"), 1);
+
+    // Earth-Cult Elemental: a 20 makes each opponent sacrifice two.
+    let mut g = main_phase();
+    for _ in 0..3 {
+        g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    }
+    g.decider = rolls(&[20]);
+    etb(&mut g, catalog::earth_cult_elemental());
+    assert_eq!(count_named(&g, 1, "Grizzly Bears"), 1);
+
+    // Klauth's Will without a commander: one mode, X damage to non-fliers.
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bird = g.add_card_to_battlefield(1, catalog::birds_of_paradise());
+    let kw = g.add_card_to_hand(0, catalog::klauths_will());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: kw,
+        target: None,
+        additional_targets: vec![],
+        mode: Some(0),
+        x_value: Some(2),
+    })
+    .expect("breathe flame");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none());
+    assert!(g.battlefield_find(bird).is_some(), "flying");
+
+    // Rile: 1 damage and trample to your creature, draw.
+    let mut g = main_phase();
+    g.add_card_to_library(0, catalog::island());
+    let hill = g.add_card_to_battlefield(0, catalog::hill_giant());
+    let rile = g.add_card_to_hand(0, catalog::rile());
+    cast(&mut g, rile, &[Target::Permanent(hill)]);
+    assert_eq!(g.battlefield_find(hill).unwrap().damage, 1);
+    assert!(g.computed_permanent(hill).unwrap().keywords().contains(&Keyword::Trample));
+    assert_eq!(g.players[0].hand.len(), 1);
+
+    // Skyship Stalker: {R} for first strike.
+    let mut g = main_phase();
+    let s = g.add_card_to_battlefield(0, catalog::skyship_stalker());
+    activate(&mut g, s, 1, None).expect("first strike");
+    assert!(g.computed_permanent(s).unwrap().keywords().contains(&Keyword::FirstStrike));
+
+    // Sword of Hours: an attack counter, then a 12 doubles the counters.
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let sword = g.add_card_to_battlefield(0, catalog::sword_of_hours());
+    g.battlefield.find_by_id_mut(sword).unwrap().attached_to = Some(bear);
+    g.decider = rolls(&[12]);
+    combat(&mut g, vec![Attack { attacker: bear, target: AttackTarget::Player(1) }], 0, |_| {});
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+
+    // Underdark Rift: a d10 of 3 tucks the target under three cards.
+    let mut g = main_phase();
+    for _ in 0..5 {
+        g.add_card_to_library(1, catalog::island());
+    }
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let rift = g.add_card_to_battlefield(0, catalog::underdark_rift());
+    flood(&mut g, 0);
+    g.decider = rolls(&[3]);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: rift,
+        ability_index: 1,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("rift");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].library.get(3).map(|c| c.id), Some(bear));
+
+    // Dragonborn Champion: five damage to a player draws, three doesn't.
+    let mut g = main_phase();
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_battlefield(0, catalog::dragonborn_champion());
+    let shock = g.add_card_to_hand(0, catalog::shock());
+    cast(&mut g, shock, &[Target::Player(1)]);
+    assert_eq!(g.players[0].hand.len(), 0, "two damage");
+    let axe = g.add_card_to_hand(0, catalog::lava_axe());
+    cast(&mut g, axe, &[Target::Player(1)]);
+    assert_eq!(g.players[0].hand.len(), 1, "five damage");
+
+    // Druid of Purification: the opponent's artifact goes.
+    let mut g = main_phase();
+    let rock = g.add_card_to_battlefield(1, catalog::sol_ring());
+    etb(&mut g, catalog::druid_of_purification());
+    assert!(g.battlefield_find(rock).is_none());
+
+    // Wulfgar: an attack trigger of a permanent you control fires twice.
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::wulfgar_of_icewind_dale());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let armory = g.add_card_to_battlefield(0, catalog::armory_of_iroas());
+    g.battlefield.find_by_id_mut(armory).unwrap().attached_to = Some(bear);
+    combat(&mut g, vec![Attack { attacker: bear, target: AttackTarget::Player(1) }], 0, |_| {});
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+}
