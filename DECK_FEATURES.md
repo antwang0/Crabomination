@@ -85,6 +85,7 @@ lists were picked.
 | **Land's Wrath** (ZNC precon) RGW | Obuun, Mul Daya Ancestor | RGW | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Stalwart Unity** (C16 precon) RGWU | Kynaios and Tiro of Meletis | RGWU | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Token Triumph** (SCD starter) GW | Emmara, Soul of the Accord | GW | 100 | ✅ complete |
+| **Raining Cats and Dogs** (SLD) RGW | Rin and Seri, Inseparable | RGW | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Devour for Power** (CMD precon) BGU | The Mimeoplasm | BGU | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Mirror Mastery** (CMD precon) GUR | Riku of Two Reflections | GUR | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Arm for Battle** (CMR precon) RW | Wyleth, Soul of Steel | RW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
@@ -926,6 +927,22 @@ combat-only window didn't read as combat-only. No residuals. Debug pods beside
 the Mimeoplasm / Kynaios / Ghired / Sigarda (seeds 9321/9322, 60 games) decided
 60/60, zero panics, Emmara winning 45 %; a 120-game census (seed 9323) leaves no
 card unplayed (Emmara 38.3 % there). `--bench` byte-identical.
+
+The **sixty-third** is Secret Lair's **Raining Cats and Dogs**
+(`RainingCatsAndDogs_SLD`) — Naya Cats and Dogs under Rin and Seri,
+Inseparable (seat 62 before rebasing over Mirror Mastery). Sixteen cards were
+missing; the primitives: `StaticEffect::TokensMayBecome` (Jinnie Fay's CR
+614.1a token replacement, applied per token at mint time) and
+`Value::LandCardsRevealedThisEffect` (Phabine's parley splits lands from
+nonlands). Mirror Entity landed in Open Hostility at the same time; one
+definition stays. Residuals: **Highcliff Felidar** destroys one opponent at a
+time and picks among ties itself; **Jinnie Fay** always takes a bigger body
+and never replaces a noncreature token; **Pack Leader**'s shield covers the
+Dogs present as it resolves; **Showdown of the Skalds** II/III choose the
+counter's target on resolution. A debug pod beside Nahiri / Tegwyll /
+N'ghathrod (seed 9501, 30 games) decided 30/30, zero panics; a 120-game census
+beside Ghired / Kynaios / Emmara (seed 9502) decided 120/120 and leaves no card
+of the four lists unplayed, Rin and Seri winning 24.2 %.
 
 ⚠ **The board cap was a bot bug, not a loop.** A Krenko seat sent all 292
 of its Goblins at one player on 24 life each turn while two others sat on

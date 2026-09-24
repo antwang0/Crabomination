@@ -1822,6 +1822,10 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Humble Defector | Stalwart Unity (C16) | the opponent who gains control is random, not targeted. |
 | 🟡 Sidar Kondo of Jamuraa | Stalwart Unity (C16) | the evasion covers creatures you control with power 2 or less, not other players' small attackers. |
 | 🟡 Orzhov Advokist | Stalwart Unity (C16) | a taker's counters go on their greatest-power creature; the attack restriction covers the creatures they control as it resolves. |
+| 🟡 Highcliff Felidar | Raining Cats and Dogs (SLD) | the destructions run one opponent at a time, not simultaneously; the engine picks among tied creatures. |
+| 🟡 Jinnie Fay, Jetmir's Second | Raining Cats and Dogs (SLD) | not optional: a creature token is replaced by the bigger Cat or Dog whenever one beats its printed body, and a noncreature token never is. |
+| 🟡 Pack Leader | Raining Cats and Dogs (SLD) | the shield covers the Dogs you control as the trigger resolves, not one that arrives later that turn. |
+| 🟡 Showdown of the Skalds | Raining Cats and Dogs (SLD) | chapters II and III choose the counter's target as each trigger resolves. |
 | 🟡 The Mimeoplasm | Devour for Power (CMD) | the engine picks the two cards: it copies the greatest-power creature card in any graveyard and counts the runner-up's power; a `*` power reads as its printed 0. |
 | 🟡 Desecrator Hag | Devour for Power (CMD) | a tie for greatest power is broken by graveyard order, not by the player. |
 | 🟡 Intet, the Dreamer | Mirror Mastery (CMD) | the card is exiled face up. |
