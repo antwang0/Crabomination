@@ -13919,11 +13919,17 @@ impl GameState {
             // the chosen mode's (CR 700.2a).
             let mode = self.pick_trigger_mode(&effect, source, listener_controller);
             let view = effect.targeting_view(mode);
+            // CR 603.2 — the caster is the player the event names: "another
+            // target player" (The Lord of Pain) excludes them through
+            // `ControlledByTriggerPlayer`, at targeting and again at
+            // resolution (`trigger_player` below).
+            let saved_scratch = self.trigger_event_player_scratch.replace(controller);
             let auto_target = if !std::ptr::eq(view, &effect) && !view.requires_target() {
                 None
             } else {
                 self.auto_target_for_effect_avoiding(view, listener_controller, Some(source))
             };
+            self.trigger_event_player_scratch = saved_scratch;
             // The cast spell's mana value, so "where X is that spell's mana
             // value" riders scale (Shark Typhoon).
             let spell_mv = self
@@ -13956,6 +13962,7 @@ impl GameState {
                         .trigger_source(Some(crate::game::effects::EntityRef::Card(cast_card)))
                         .mana_spent(mana_spent)
                         .event_amount(spell_mv)
+                        .trigger_player(Some(controller))
                         .build(),
                 );
             }

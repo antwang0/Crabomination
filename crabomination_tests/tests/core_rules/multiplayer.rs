@@ -5727,3 +5727,45 @@ fn as_player_runs_the_body_for_the_chosen_opponent() {
     assert!(g.players[1].hand.iter().any(|c| c.id == theirs), "seat 1 got its own card back");
     assert!(g.players[0].graveyard.iter().any(|c| c.id == mine), "the caster's graveyard is untouched");
 }
+
+/// CR 603.2 / CR 115.1 — a SpellCast trigger's "another target player" (The
+/// Lord of Pain) names the caster as the event's player, so the caster is
+/// excluded at targeting *and* the chosen player stays legal at resolution.
+/// The cast-trigger push used to auto-target with no event player set and
+/// stamp none on the stack item, so the filter aimed at nobody.
+#[test]
+fn cr_603_2_spell_cast_trigger_excludes_the_caster_as_another_player() {
+    use crabomination::card::{EventKind, EventScope, EventSpec, SelectionRequirement as R, TriggeredAbility};
+    use crabomination::effect::{Effect, Value};
+    use crabomination::effect::shortcut::target_filtered;
+    use crabomination::game::types::GameAction;
+    use crabomination::mana::Color;
+    let mut watcher = catalog::grizzly_bears();
+    watcher.triggered_abilities = vec![TriggeredAbility {
+        event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer),
+        effect: Effect::DealDamage {
+            to: target_filtered(R::Player.and(R::Not(Box::new(R::ControlledByTriggerPlayer)))),
+            amount: Value::Const(2),
+        },
+    }];
+    let mut g = multi_player_game(3);
+    g.add_card_to_battlefield(0, watcher);
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(Color::Green, 2);
+    let bear = g.add_card_to_hand(1, catalog::grizzly_bears());
+    let lives: Vec<i32> = g.players.iter().map(|p| p.life).collect();
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, lives[1], "the caster is not another player");
+    let lost: i32 = [0, 2].iter().map(|&p| lives[p] - g.players[p].life).sum();
+    assert_eq!(lost, 2, "one of the other players took the 2");
+}
