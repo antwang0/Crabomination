@@ -2681,6 +2681,9 @@ pub enum GameEvent {
     /// trigger dispatch — synthesized there from `pending_exile_tally`
     /// (Ranar, Hero of Bretagard).
     CardsExiledFromHandOrBy { player: usize, count: u32 },
+    /// CR 701.12 — `card_id` fought (each fighter gets one), controlled by
+    /// `controller` as the fight began.
+    CreatureFought { card_id: CardId, controller: usize },
     /// A player paid life as a cost (CR 118.8 — Font of Agonies). Distinct
     /// from `LifeLost`, which also fires for damage and drains.
     PaidLife { player: usize, amount: u32 },

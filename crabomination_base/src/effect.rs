@@ -3295,6 +3295,11 @@ pub enum EventKind {
     /// per player per trigger batch, synthesized at dispatch from the exile
     /// tally; the event amount is how many cards ("that many").
     CardsExiledFromHandOrByYou,
+    /// CR 701.12 — a creature fought ("whenever a creature you control
+    /// fights" — Foe-Razer Regent). One event per fighter; the creature is the
+    /// subject and its controller the scope's actor. Matched to
+    /// `GameEvent::CreatureFought`.
+    Fights,
 }
 
 impl EventKind {

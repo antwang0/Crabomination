@@ -89,6 +89,7 @@ pub(crate) fn event_kind_bits(event: &GameEvent) -> u128 {
         ),
         E::LifeGained { .. } => bits!(K::LifeGained),
         E::CardsExiledFromHandOrBy { .. } => bits!(K::CardsExiledFromHandOrByYou),
+        E::CreatureFought { .. } => bits!(K::Fights),
         E::DamagePrevented { to_player: Some(_), .. } => bits!(K::DamageToPlayerPrevented),
         E::ScriedOrSurveiled { .. } => bits!(K::ScriedOrSurveiled),
         E::OpponentCausedYouToDiscard { .. } => bits!(K::OpponentCausedYouToDiscard),
@@ -323,6 +324,7 @@ fn reference_event_kind_matches(
         (EventKind::PlayerDamaged, GameEvent::DamageDealt { to_player: Some(_), .. }) => true,
         (EventKind::LifeGained, GameEvent::LifeGained { .. }) => true,
         (EventKind::CardsExiledFromHandOrByYou, GameEvent::CardsExiledFromHandOrBy { .. }) => true,
+        (EventKind::Fights, GameEvent::CreatureFought { .. }) => true,
         (EventKind::DamageToPlayerPrevented, GameEvent::DamagePrevented { to_player: Some(_), .. }) => true,
         (EventKind::ScriedOrSurveiled, GameEvent::ScriedOrSurveiled { .. }) => true,
         (
@@ -495,6 +497,7 @@ pub(crate) fn event_kind_fans_out(kind: &EventKind) -> bool {
     matches!(
         kind,
         EventKind::Attacks
+            | EventKind::Fights
             | EventKind::CreatureDied
             | EventKind::CreatureOrArtifactDied
             | EventKind::PermanentDied
@@ -1268,6 +1271,7 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         | GameEvent::SpellCast { player, .. }
         | GameEvent::LifeGained { player, .. }
         | GameEvent::CardsExiledFromHandOrBy { player, .. }
+        | GameEvent::CreatureFought { controller: player, .. }
         | GameEvent::LifeLost { player, .. }
         | GameEvent::PaidLife { player, .. }
         | GameEvent::ScriedOrSurveiled { player, .. }
@@ -1359,6 +1363,7 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         GameEvent::SpellCast { card_id, .. } => Some(EntityRef::Card(*card_id)),
         GameEvent::SpellsCopied { original, .. } => Some(EntityRef::Card(*original)),
         GameEvent::PermanentEntered { card_id } => Some(EntityRef::Permanent(*card_id)),
+        GameEvent::CreatureFought { card_id, .. } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::CreatureDied { card_id } => Some(EntityRef::Card(*card_id)),
         GameEvent::PermanentExiled { card_id } => Some(EntityRef::Card(*card_id)),
         GameEvent::PermanentDied { card_id, .. } => Some(EntityRef::Card(*card_id)),
@@ -1736,6 +1741,7 @@ mod tests {
             E::LifeLost { player: 0, amount: 1 },
             E::LifeGained { player: 0, amount: 1 },
             E::CardsExiledFromHandOrBy { player: 0, count: 1 },
+            E::CreatureFought { card_id: c, controller: 0 },
             E::PaidLife { player: 0, amount: 1 },
             E::ScriedOrSurveiled { player: 0, surveil: false },
             E::Proliferated { player: 0 },
@@ -1885,6 +1891,7 @@ mod tests {
             K::YourInstantOrSorceryDealtDamageToPlayer,
             K::LifeGained,
             K::CardsExiledFromHandOrByYou,
+            K::Fights,
             K::PaidLife,
             K::ScriedOrSurveiled,
             K::DungeonCompleted,

@@ -7987,6 +7987,13 @@ impl GameState {
                 // and protection-based prevention (CR 701.12b).
                 let atk_power = self.computed_permanent(atk_id).map(|cp| cp.power).unwrap_or(0);
                 let def_power = self.computed_permanent(def_id).map(|cp| cp.power).unwrap_or(0);
+                // CR 701.12 — both creatures fight ("whenever a creature you
+                // control fights" — Foe-Razer Regent).
+                for id in [atk_id, def_id] {
+                    if let Some(c) = self.battlefield_find(id) {
+                        events.push(GameEvent::CreatureFought { card_id: id, controller: c.controller });
+                    }
+                }
                 if atk_power > 0 {
                     self.deal_damage_to_from(
                         EntityRef::Permanent(def_id),
