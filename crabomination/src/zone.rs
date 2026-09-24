@@ -751,6 +751,7 @@ fn card_has_etb_static(c: &CardInstance) -> bool {
                 | S::CopyOpponentsEnteringCreatureTriggers
                 | S::EntersTapped { .. }
                 | S::LandsEnterUntapped
+                | S::MatchingEnterUntapped { .. }
         )
     })
 }

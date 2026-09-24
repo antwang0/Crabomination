@@ -460,6 +460,9 @@ pub enum StaticEffect {
     /// of Vigor-adjacent). An enters-untapped replacement that overrides any
     /// enters-tapped static for lands the source's controller controls.
     LandsEnterUntapped,
+    /// "[filter] permanents you control enter untapped" — the filtered
+    /// `LandsEnterUntapped` (Gond Gate's Gates).
+    MatchingEnterUntapped { filter: SelectionRequirement },
     /// "Lethal damage dealt to matching creatures is determined by their power
     /// rather than their toughness" (Zilortha, Strength Incarnate / Mountain
     /// Goat). The SBA reads `power` as the lethal threshold for any creature

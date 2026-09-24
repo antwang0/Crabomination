@@ -768,6 +768,10 @@ pub enum Value {
     /// Distinct card types among cards in `who`'s graveyard (the delirium
     /// count as a number — Lucid Dreams' "draw X").
     CardTypesInGraveyard(PlayerRef),
+    /// Distinct card types among permanents `who` controls and cards in
+    /// their graveyard, together (Happily Ever After's "six or more card
+    /// types among permanents you control and/or cards in your graveyard").
+    CardTypesAmongPermanentsAndGraveyard(PlayerRef),
     /// Cards `who` has discarded this turn (max over resolved players).
     /// Backed by `Player.cards_discarded_this_turn` (Dihada's Ploy).
     CardsDiscardedThisTurn(PlayerRef),
@@ -1625,6 +1629,10 @@ pub enum Predicate {
     /// "three or more lands with the same name"): the largest same-name
     /// group, not a total across names.
     ControlsLandsWithSameNameAtLeast { who: PlayerRef, at_least: u32 },
+    /// The filtered sibling: `who` controls `at_least` permanents matching
+    /// `filter` that share one name (Mechanized Production — "eight or more
+    /// artifacts with the same name as one another").
+    ControlsSameNamedAtLeast { who: PlayerRef, filter: SelectionRequirement, at_least: u32 },
     /// Mana from a Treasure was spent to cast the spell `what` resolves to
     /// (Alchemist's Talent, Rain of Riches — on a `SpellCast` trigger,
     /// `Selector::TriggerSource`).
@@ -8901,6 +8909,10 @@ pub enum Effect {
     /// creature, one enchantment, and one planeswalker from among the
     /// nonland permanents they control (auto-pick keeps the highest mana
     /// value of each) and sacrifices the rest (Ajani, Nacatl Avenger's -4).
+    /// Tragic Arrogance — as `SacrificeAllButOnePerType` (nonland), but the
+    /// resolving controller chooses for every player: their own best of each
+    /// type is kept, an opponent's weakest (lowest mana value).
+    SacrificeAllButOnePerTypeYouChoose { who: Selector },
     SacrificeAllButOnePerType {
         who: Selector,
         /// Cataclysm also lets each player keep one land ("an artifact, a

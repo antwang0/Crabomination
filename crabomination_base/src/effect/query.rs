@@ -1246,7 +1246,8 @@ impl Effect {
                 sel_has_target(who) || value_has_target(count)
             }
             Effect::WishToHand { .. } => false,
-            Effect::SacrificeAllButOnePerType { who, .. } => sel_has_target(who),
+            Effect::SacrificeAllButOnePerType { who, .. }
+            | Effect::SacrificeAllButOnePerTypeYouChoose { who } => sel_has_target(who),
             // The Oath cycle picks its own opponent at resolution.
             Effect::OathCatchUp { .. }
             | Effect::GainControlWhileSourceAttached

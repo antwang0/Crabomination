@@ -4566,8 +4566,7 @@ impl GameState {
         // CR 614 — an "enters untapped" replacement (Spelunking) overrides the
         // enters-tapped effects for lands the static-source's controller owns.
         if should_tap
-            && self.battlefield[idx].definition.is_land()
-            && self.lands_enter_untapped_for(self.battlefield[idx].controller)
+            && self.enters_untapped_override(self.battlefield[idx].id)
         {
             should_tap = false;
         }
@@ -4580,6 +4579,29 @@ impl GameState {
     /// (Spelunking) that outranks every enters-tapped effect on their lands.
     /// Shared by `apply_enters_tapped_replacement` and by the as-enters
     /// "if you don't, it enters tapped" branch, which have to agree.
+    /// CR 614 — an "enters untapped" replacement covers the entering
+    /// permanent `id`: a land under `lands_enter_untapped_for`, or a
+    /// permanent matching a `MatchingEnterUntapped` static its controller
+    /// controls (Gond Gate's Gates).
+    pub(crate) fn enters_untapped_override(&self, id: CardId) -> bool {
+        use crate::effect::StaticEffect;
+        let Some(card) = self.battlefield_find(id) else { return false };
+        let seat = card.controller;
+        if card.definition.is_land() && self.lands_enter_untapped_for(seat) {
+            return true;
+        }
+        self.battlefield.has_etb_static()
+            && self.battlefield.iter().any(|src| {
+                src.controller == seat
+                    && src.definition.static_abilities.iter().any(|sa| match &sa.effect {
+                        StaticEffect::MatchingEnterUntapped { filter } => {
+                            self.evaluate_requirement_on_card(filter, card, seat)
+                        }
+                        _ => false,
+                    })
+            })
+    }
+
     pub(crate) fn lands_enter_untapped_for(&self, seat: usize) -> bool {
         use crate::effect::StaticEffect;
         self.battlefield.has_etb_static()

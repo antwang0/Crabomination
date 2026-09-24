@@ -29418,6 +29418,7 @@ fn static_effect_to_effects(
             StaticEffect::EntersTapped { .. }
             | StaticEffect::EntersTappedUnless { .. }
             | StaticEffect::LandsEnterUntapped
+            | StaticEffect::MatchingEnterUntapped { .. }
             | StaticEffect::LethalDamageByPower { .. }
             | StaticEffect::ExtraLandPerTurn
             | StaticEffect::CostReduction { .. }

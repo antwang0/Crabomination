@@ -3578,9 +3578,7 @@ impl GameState {
                 // whose `PermanentTapped` event says the permanent *became*
                 // tapped, which an entering one never does.
                 let Some(src) = ctx.source else { return Ok(()) };
-                let land = self.battlefield_find(src).is_some_and(|c| c.definition.is_land());
-                let seat = self.battlefield_find(src).map(|c| c.controller);
-                if land && seat.is_some_and(|s| self.lands_enter_untapped_for(s)) {
+                if self.enters_untapped_override(src) {
                     return Ok(());
                 }
                 if let Some(c) = self.battlefield_find_mut(src) {
@@ -22511,7 +22509,10 @@ impl GameState {
             }
 
             Effect::SacrificeAllButOnePerType { who, include_land } => {
-                self.resolve_sacrifice_all_but_one_per_type(who, *include_land, ctx, events)
+                self.resolve_sacrifice_all_but_one_per_type(who, *include_land, false, ctx, events)
+            }
+            Effect::SacrificeAllButOnePerTypeYouChoose { who } => {
+                self.resolve_sacrifice_all_but_one_per_type(who, false, true, ctx, events)
             }
 
             Effect::EachPlayerKeepsOneSacrificeRest { who, filter, destroy } => {
@@ -39479,6 +39480,7 @@ impl GameState {
         &mut self,
         who: &crate::effect::Selector,
         include_land: bool,
+        you_choose: bool,
         ctx: &EffectContext,
         events: &mut Vec<GameEvent>,
     ) -> Result<(), GameError> {
@@ -39506,7 +39508,12 @@ impl GameState {
                                     && c.definition.card_types.contains(ty)
                                     && !keep.contains(&c.id)
                             })
-                            .max_by_key(|c| c.definition.cost.cmc())
+                            // Tragic Arrogance — the resolving controller
+                            // leaves an opponent its weakest of each type.
+                            .max_by_key(|c| {
+                                let mv = c.definition.cost.cmc() as i64;
+                                if you_choose && p != ctx.controller { -mv } else { mv }
+                            })
                             .map(|c| c.id);
                         if let Some(id) = pick {
                             keep.push(id);

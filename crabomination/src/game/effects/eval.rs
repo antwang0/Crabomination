@@ -1223,6 +1223,23 @@ impl GameState {
                 self.scratch.destroyed_controllers_this_resolution.iter().filter(|&&(c, _)| c == p).count() as i32
             }
             Value::ConvergedValue => ctx.converged_value as i32,
+            Value::CardTypesAmongPermanentsAndGraveyard(who) => {
+                let Some(p) = self.resolve_player(who, ctx) else { return 0 };
+                let mut kinds: Vec<&crate::card::CardType> = Vec::new();
+                let cards = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == p)
+                    .chain(self.players[p].graveyard.iter());
+                for c in cards {
+                    for t in &c.definition.card_types {
+                        if !kinds.contains(&t) {
+                            kinds.push(t);
+                        }
+                    }
+                }
+                kinds.len() as i32
+            }
             Value::CardTypesInGraveyard(who) => self
                 .resolve_player(who, ctx)
                 .map(|p| self.distinct_card_types_in_graveyard(p) as i32)
@@ -2084,6 +2101,18 @@ impl GameState {
                         .battlefield
                         .iter()
                         .filter(|c| c.controller == p && c.definition.is_land())
+                        .map(|c| c.definition.name)
+                        .collect();
+                    names.sort_unstable();
+                    names.chunk_by(|a, b| a == b).any(|g| g.len() as u32 >= *at_least)
+                })
+            }
+            Predicate::ControlsSameNamedAtLeast { who, filter, at_least } => {
+                self.resolve_players(who, ctx).into_iter().any(|p| {
+                    let mut names: Vec<&str> = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| c.controller == p && self.evaluate_requirement_on_card(filter, c, p))
                         .map(|c| c.definition.name)
                         .collect();
                     names.sort_unstable();
