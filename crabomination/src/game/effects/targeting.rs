@@ -875,9 +875,23 @@ impl GameState {
                 let (first, second) = if hostile { (opp, controller) } else { (controller, opp) };
                 let player_first = Target::Player(first);
                 let player_second = Target::Player(second);
-                if is_legal(&player_first) {
+                // CR 601.2c — a divide effect's slots are one "any number of
+                // targets": a player already named can't be named again, and
+                // Forked Bolt / Avacyn's Judgment aimed both halves at the same
+                // face, which the cast rejects — no divider was ever cast.
+                let distinct = slot > 0 && eff.distinct_target_count(mode).is_some();
+                let taken = |t: &Target| {
+                    distinct && (slot_0.as_ref() == Some(t) || additional.contains(t))
+                };
+                if is_legal(&player_first) && !taken(&player_first) {
                     found = Some(player_first);
-                } else if is_legal(&player_second) {
+                } else if is_legal(&player_second)
+                    && !taken(&player_second)
+                    // A hostile slot never falls back onto the caster's own
+                    // face: the battlefield walk below ranks the other side
+                    // first, and an optional slot may stay empty.
+                    && !(hostile && second == controller)
+                {
                     found = Some(player_second);
                 }
                 // Graveyard-preferring effects (reanimate / regrow — Young

@@ -321,3 +321,25 @@ fn stromkirk_occultist_impulses_on_a_hit() {
     connect(&mut g, &[so], 1);
     assert!(g.exile.iter().any(|c| c.id == top));
 }
+
+/// Bug fix (CR 601.2c): the bot aimed both halves of a divided-damage spell
+/// at the same face — or the second at its own — so the cast was rejected
+/// and Avacyn's Judgment / Forked Bolt went unplayed in 200 pods.
+#[test]
+fn the_bot_casts_a_divided_damage_spell_at_distinct_hostile_targets() {
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    for card in [catalog::avacyns_judgment(), catalog::forked_bolt()] {
+        let mut g = main_phase(2);
+        let elf = g.add_card_to_battlefield(1, catalog::llanowar_elves());
+        g.players[1].life = 2;
+        g.players[0].hostile_player_targets = true;
+        flood(&mut g, 0);
+        let id = g.add_card_to_hand(0, card);
+        let action = HeuristicBot::new().next_action(&g, 0);
+        assert!(
+            matches!(&action, Some(GameAction::CastSpell { card_id, target: Some(Target::Player(1)), additional_targets, .. })
+                if *card_id == id && additional_targets == &vec![Target::Permanent(elf)]),
+            "{action:?}"
+        );
+    }
+}
