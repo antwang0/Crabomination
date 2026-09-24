@@ -352,3 +352,36 @@ fn cr_205_4e_yawgmoths_vile_offering_reanimates_and_destroys() {
     assert!(g.battlefield_find(bear).is_none());
     assert!(g.exile.iter().any(|c| c.id == y), "exiled itself");
 }
+
+/// The bot pays {2} to transform an Incubator with counters on it into a
+/// creature (CR 701.53) — Brimaz's whole engine.
+#[test]
+fn bot_transforms_a_grown_incubator() {
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    let mut g = main_phase(2);
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::plains());
+    }
+    let e = g.add_card_to_hand(0, catalog::excise_the_imperfect());
+    let angel = g.add_card_to_battlefield(0, catalog::serra_angel());
+    cast_at(&mut g, e, &[Target::Permanent(angel)]).expect("excise");
+    let inc = named(&g, 0, "Incubator")[0];
+    g.players[0].mana_pool = Default::default();
+    let mut bot = HeuristicBot::new();
+    let mut transformed = false;
+    for _ in 0..20 {
+        g.priority.player_with_priority = 0;
+        let Some(action) = bot.next_action(&g, 0) else { break };
+        let pass = matches!(action, GameAction::PassPriority);
+        let _ = g.perform_action(action);
+        drain_stack(&mut g);
+        if g.computed_permanent(inc).is_some_and(|c| c.card_types().contains(&CardType::Creature)) {
+            transformed = true;
+            break;
+        }
+        if pass {
+            break;
+        }
+    }
+    assert!(transformed, "the bot left a 5-counter Incubator untransformed");
+}

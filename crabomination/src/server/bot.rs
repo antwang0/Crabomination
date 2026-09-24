@@ -8334,6 +8334,7 @@ mod sink {
     pub const AB_SELF_COUNTER: u32 = 1 << 20;
     pub const AB_TOKEN: u32 = 1 << 21;
     pub const AB_ENERGY: u32 = 1 << 22;
+    pub const AB_TRANSFORM: u32 = 1 << 23;
 }
 
 /// Run one gated fallback generator, returning its action when it has one.
@@ -8461,6 +8462,9 @@ fn ability_sink_bits(ab: &crate::effect::ActivatedAbility) -> u32 {
     }
     if effect_reanimates_from_graveyard(&ab.effect) {
         m |= sink::AB_REANIMATE;
+    }
+    if super::transform_sink::ability_transforms_self(&ab.effect) {
+        m |= sink::AB_TRANSFORM;
     }
     m
 }
@@ -9066,6 +9070,10 @@ fn main_phase_action_with(
     // board (Sun Warriors' {5}: 1/1 Ally, Realm of Koh's Spirit, Jasmine Dragon).
     // Last resort, dry-run-gated.
     gated_pick!(state, sinks, sink::AB_TOKEN, pick_token_maker(state, seat, w));
+
+    // Pay to flip a counter-carrying Incubator into a creature (CR 701.53).
+    // Last resort, dry-run-gated.
+    gated_pick!(state, sinks, sink::AB_TRANSFORM, super::transform_sink::pick_transform_self(state, seat));
 
     BotStep::plain(GameAction::PassPriority)
 }

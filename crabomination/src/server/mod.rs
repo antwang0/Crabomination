@@ -91,6 +91,7 @@ mod pod_attack;
 mod combat_only;
 mod suspend;
 mod cycling;
+mod transform_sink;
 pub mod encode;
 pub mod vocab_snapshot;
 pub mod decision_capture;
