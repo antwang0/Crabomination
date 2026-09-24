@@ -633,6 +633,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::FALDORN_COMMANDERS,
             main: decks::FALDORN_MAIN,
         },
+        // Seventy-third: the sixty-third official list (Undead Unleashed, MIC)
+        // — Dimir Zombies under Wilhelt, the Rotcleaver. `--pod-decks 73`.
+        PodDeck {
+            name: "Wilhelt, the Rotcleaver (UB)",
+            commanders: decks::WILHELT_COMMANDERS,
+            main: decks::WILHELT_MAIN,
+        },
     ]
 }
 
@@ -1166,6 +1173,7 @@ mod tests {
             ("Saskia", [0x5A5C, 92, 9016]),
             ("Isperia", [0x15BE, 93, 9017]),
             ("Ranar", [0x5A4A, 94, 9018]),
+            ("Wilhelt", [0x3117, 95, 9019]),
         ] {
             let precon = *field.iter().find(|d| d.name.starts_with(name)).expect("the precon seat");
             assert_eq!(precon.card_count(), 100);

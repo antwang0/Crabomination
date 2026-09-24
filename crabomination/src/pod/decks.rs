@@ -2267,3 +2267,32 @@ pub const FALDORN_MAIN: &[CardFactory] = &[
     mountain, mountain, forest, forest, forest, forest, forest, forest, forest, forest, forest,
     forest, forest, forest,
 ];
+
+pub const WILHELT_COMMANDERS: &[CardFactory] = &[wilhelt_the_rotcleaver];
+
+/// **Undead Unleashed**, the Innistrad: Midnight Hunt Commander deck (MIC,
+/// 2021-09-24), exactly as MTGJSON's `UndeadUnleashed_MIC` prints it:
+/// 72 nonbasic cards + 12 Islands + 15 Swamps = 99. Dimir Zombies
+/// under Wilhelt, the Rotcleaver.
+pub const WILHELT_MAIN: &[CardFactory] = &[
+    liliana_deaths_majesty, forgotten_creation, havengul_runebinder, stitcher_geralf,
+    undead_alchemist, butcher_of_malakir, cemetery_reaper, death_baron, diregraf_colossus,
+    eater_of_hope, gravespawn_sovereign, midnight_reaper, overseer_of_the_damned,
+    gisa_and_geralf, eternal_skylord, corpse_augur, fleshbag_marauder, lilianas_devotee,
+    lord_of_the_accursed, spark_reaper, undead_augur, diregraf_captain, gleaming_overseer,
+    ruthless_deathfang, hour_of_eternity, army_of_the_damned, dark_salvation, dread_summons,
+    zombie_apocalypse, distant_melody, feed_the_swarm, syphon_flesh, aetherspouts,
+    go_for_the_throat, arcane_signet, charcoal_diamond, commanders_sphere, sky_diamond,
+    sol_ring, talisman_of_dominance, rooftop_storm, dreadhorde_invasion,
+    endless_ranks_of_the_dead, lilianas_mastery, open_the_graves, choked_estuary,
+    darkwater_catacombs, exotic_orchard, sunken_hollow, temple_of_deceit, bojuka_bog,
+    command_tower, dimir_aqueduct, mortuary_mire, myriad_landscape, path_of_ancestry,
+    tainted_isle, unclaimed_territory, eloise_nephalia_sleuth, cleaver_skaab,
+    curse_of_unbinding, drown_in_dreams, empty_the_laboratory, hordewing_skaab, shadow_kin,
+    crowded_crypt, curse_of_the_restless_dead, ghouls_night_out, gorex_the_tombshell,
+    prowling_geistcatcher, ravenous_rotbelly, tomb_tyrant,
+    // Basics: 12 island, 15 swamp
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp,
+];
