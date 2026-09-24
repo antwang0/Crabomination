@@ -2955,3 +2955,31 @@ pub const LATHLISS_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain, mountain, mountain,
 ];
+
+pub const ELLIVERE_COMMANDERS: &[CardFactory] = &[ellivere_of_the_wild_court];
+
+/// **Virtue and Valor**, the Wilds of Eldraine Commander deck (WOC,
+/// 2023-09-08), exactly as MTGJSON's `VirtueAndValor_WOC` prints it:
+/// 70 nonbasic cards + 15 Forests + 14 Plains = 99. Selesnya Auras and Roles under
+/// Ellivere of the Wild Court.
+pub const ELLIVERE_MAIN: &[CardFactory] = &[
+    gylwain_casting_director, liberated_livestock, ox_drover, songbirds_blessing,
+    unfinished_business, giant_inheritance, knickknack_ouphe, loamcrafter_faun, timber_paladin,
+    ajanis_chosen, angelic_destiny, archon_of_suns_grace, austere_command, celestial_archon,
+    daybreak_coronet, eidolon_of_countless_battles, kor_spiritdancer, mantle_of_the_ancients,
+    realm_cloaked_giant, retether, shalai_voice_of_plenty, starfield_mystic, sun_titan,
+    timely_ward, tithe_taker, umbra_mystic, winds_of_rath, bear_umbra, eidolon_of_blossoms,
+    enchantresss_presence, indomitable_might, rishkars_expertise, sanctum_weaver,
+    setessan_champion, verdant_embrace, canopy_vista, castle_ardenvale, fortified_village,
+    hall_of_heliods_generosity, sungrass_prairie, temple_of_plenty, danitha_capashen,
+    ethereal_armor, generous_gift, sages_reverie, spectral_steel, swords_to_plowshares,
+    transcendent_envoy, ancestral_mask, aura_gnarlid, careful_cultivation, destiny_spinner,
+    fertile_ground, kenriths_transformation, paradise_druid, snake_umbra, sylvan_ranger,
+    utopia_sprawl, warbriar_blessing, jukai_naturalist, pollenbright_wings,
+    siona_captain_of_the_pyleas, arcane_signet, sol_ring, command_tower, krosan_verge,
+    myriad_landscape, vitu_ghazi_the_city_tree, tanglespan_lookout, syr_armont_the_redeemer,
+    // Basics: 15 forest, 14 plains
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains,
+];

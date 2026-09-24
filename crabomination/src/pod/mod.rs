@@ -805,6 +805,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::LATHLISS_COMMANDERS,
             main: decks::LATHLISS_MAIN,
         },
+        // Ninety-sixth: the eighty-sixth official list (Virtue and Valor,
+        // WOC) — Selesnya Auras and Roles under Ellivere of the Wild Court.
+        // `--pod-decks 96`.
+        PodDeck {
+            name: "Ellivere of the Wild Court (GW)",
+            commanders: decks::ELLIVERE_COMMANDERS,
+            main: decks::ELLIVERE_MAIN,
+        },
     ]
 }
 
@@ -1346,6 +1354,7 @@ mod tests {
             // CR 701.15 — goad from resolutions, holds and attachments.
             ("Nelly Borca", [0xBE11, 100, 9024]),
             ("Zinnia", [0x2177, 101, 9025]),
+            ("Ellivere", [0xE111, 102, 9026]),
         ] {
             let precon = *field.iter().find(|d| d.name.starts_with(name)).expect("the precon seat");
             assert_eq!(precon.card_count(), 100);
