@@ -261,6 +261,7 @@ const ALLOWED_MODELLING: &[(&str, &str)] = &[
     ("Vanquish the Horde", "affinity"),
     ("Sea God's Scorn", "affinity"),
     ("Stone Idol Trap", "affinity"),
+    ("Ancient Stone Idol", "affinity"),
 ];
 
 /// Reminder text stripped, the way `audit_keyword_drift.py` strips it.
