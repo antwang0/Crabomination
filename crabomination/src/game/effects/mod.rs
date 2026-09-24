@@ -38012,13 +38012,12 @@ impl GameState {
             }
 
             Selector::TopOfLibrary { who, count } => {
-                let Some(p) = self.resolve_player(who, ctx) else { return vec![]; };
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
-                self.players[p]
-                    .library
-                    .iter()
-                    .take(n)
-                    .map(|c| EntityRef::Card(c.id))
+                // A multi-player reference reads each player's top cards
+                // (Naya Soulbeast's "each player reveals the top card").
+                self.resolve_players(who, ctx)
+                    .into_iter()
+                    .flat_map(|p| self.players[p].library.iter().take(n).map(|c| EntityRef::Card(c.id)))
                     .collect()
             }
             Selector::TopOfLibraryUntilMvAtLeast { who, threshold } => {
