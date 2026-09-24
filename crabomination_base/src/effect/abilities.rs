@@ -3133,6 +3133,11 @@ pub struct ActivatedAbility {
     /// available. The source itself is eligible only if it matches.
     #[serde(default)]
     pub tap_others_cost: Option<(SelectionRequirement, u32)>,
+    /// "Untap N tapped [filter] you control" as an activation cost (Halo
+    /// Fountain). The mirror of `tap_others_cost`: rejected when fewer than N
+    /// tapped matches are available; the pay picks the highest-power ones.
+    #[serde(default)]
+    pub untap_others_cost: Option<(SelectionRequirement, u32)>,
     /// CR 702.6 — "Unattach this Equipment" as an activation cost: the source
     /// must currently be attached, and detaching it is part of the cost
     /// (Sunforger). Paid alongside `sac_cost` in `activate_ability`.

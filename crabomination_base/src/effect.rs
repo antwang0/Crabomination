@@ -8627,6 +8627,15 @@ pub enum Effect {
         duration: Duration,
     },
 
+    /// The end of an "until your next turn" `GrantActivatedAbilityToMatching`
+    /// with `Duration::Permanent`: strips `ability` from every matching
+    /// permanent's granted list. Scheduled by a `DelayUntil` (Song of
+    /// Freyalise's chapters I and II).
+    RevokeGrantedActivatedAbility {
+        filter: SelectionRequirement,
+        ability: Box<crate::effect::ActivatedAbility>,
+    },
+
     /// "You may move any number of `kind` counters from this creature onto
     /// other creatures" (Forgotten Ancient). The controller distributes; the
     /// auto-decider spreads them evenly over the matching creatures.

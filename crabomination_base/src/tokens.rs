@@ -597,6 +597,33 @@ pub fn clue_token() -> TokenDefinition {
     }
 }
 
+/// A Junk token: an Artifact with "{T}, Sacrifice this token: Exile the top
+/// card of your library. You may play that card this turn. Activate only as a
+/// sorcery."
+pub fn junk_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Junk".into(),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Junk], ..Default::default() },
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_cost: true,
+            sorcery_speed: true,
+            effect: Effect::ExileTopAndGrantMayPlay {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                pay_any_color: false,
+                max_mana_value: None,
+                pay_own_cost: true,
+                uncast_penalty: None,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// A Lander token (EOE): a colorless Artifact with "{2}, {T}, Sacrifice this
 /// token: Search your library for a basic land card, put it onto the
 /// battlefield tapped, then shuffle."

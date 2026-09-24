@@ -409,6 +409,8 @@ pub enum ArtifactSubtype {
     Book,
     // Unfinity: Attraction (CR 717) — lives in the Attraction deck, not the deck.
     Attraction,
+    // The Junk token: sacrifice to impulse-draw at sorcery speed.
+    Junk,
 }
 
 /// Enchantment subtypes.

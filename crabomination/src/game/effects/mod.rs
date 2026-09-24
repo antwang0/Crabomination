@@ -3851,6 +3851,21 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::RevokeGrantedActivatedAbility { filter, ability } => {
+                let ids: Vec<CardId> = self
+                    .resolve_selector(&Selector::EachPermanent(filter.clone()), ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_permanent_id())
+                    .collect();
+                for id in ids {
+                    if self.battlefield_find(id).is_some_and(|c| c.granted_activated_abilities.contains(&**ability)) {
+                        let Some(c) = self.battlefield_find_mut(id) else { continue };
+                        c.granted_activated_abilities.retain(|a| a != &**ability);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::DistributeCountersFromSource { kind, filter } => {
                 let Some(source) = ctx.source else { return Ok(()) };
                 let available =

@@ -19756,6 +19756,36 @@ impl GameState {
                 });
             }
         }
+        // "Untap N tapped [filter] you control" as a cost (Halo Fountain).
+        // Untaps the strongest matches first: they are the ones worth having
+        // back as blockers or attackers.
+        if let Some((filter, n)) = &ability.untap_others_cost {
+            let mut pool: Vec<(CardId, i32)> = self
+                .battlefield
+                .iter()
+                .filter(|c| {
+                    c.controller == p
+                        && c.tapped
+                        && self.evaluate_requirement_static(
+                            filter,
+                            &Target::Permanent(c.id),
+                            p,
+                            Some(card_id),
+                        )
+                })
+                .map(|c| (c.id, c.definition.power))
+                .collect();
+            if (pool.len() as u32) < *n {
+                return Err(GameError::SelectionRequirementViolated);
+            }
+            pool.sort_by_key(|&(id, pow)| (std::cmp::Reverse(pow), id));
+            for (id, _) in pool.into_iter().take(*n as usize) {
+                if let Some(c) = self.battlefield_find_mut(id) {
+                    c.tapped = false;
+                }
+                events.push(GameEvent::PermanentUntapped { card_id: id });
+            }
+        }
         if ability.sac_cost {
             let is_creature = self.permanent_is_creature(card_id);
             // The activator is the player paying the cost; the

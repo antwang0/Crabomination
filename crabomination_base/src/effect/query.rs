@@ -1192,6 +1192,7 @@ impl Effect {
             | Effect::ExileYourCreaturesForDragons { .. }
             | Effect::ExileFaceDownDrawPile { .. }
             | Effect::GrantActivatedAbilityToMatching { .. }
+            | Effect::RevokeGrantedActivatedAbility { .. }
             | Effect::DistributeCountersFromSource { .. }
             | Effect::PlayerGainsShroudThisTurn { .. }
             | Effect::PlayerGainsProtectionFromChosenColor { .. }

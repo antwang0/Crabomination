@@ -1440,21 +1440,14 @@ impl GameState {
                     crate::mana::Color::ALL.iter().filter(|c| set.contains(**c)).count() as i32
                 })
                 .unwrap_or(0),
+            // Every zone, the stack included: "each of that spell's colors"
+            // reads a spell mid-cast (Ancient Cornucopia).
             Value::ColorCountOf(s) => self
                 .resolve_selector(s, ctx)
                 .into_iter()
                 .find_map(|e| match e {
                     EntityRef::Permanent(cid) | EntityRef::Card(cid) => self
-                        .battlefield_find(cid)
-                        .or_else(|| {
-                            self.players.iter().find_map(|p| {
-                                p.graveyard
-                                    .iter()
-                                    .find(|c| c.id == cid)
-                                    .or_else(|| p.hand.iter().find(|c| c.id == cid))
-                            })
-                        })
-                        .or_else(|| self.exile.iter().find(|c| c.id == cid))
+                        .find_card_anywhere(cid)
                         .map(|c| c.definition.printed_colors().len() as i32),
                     EntityRef::Player(_) => None,
                 })
