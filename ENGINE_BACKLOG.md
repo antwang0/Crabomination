@@ -205,6 +205,34 @@ the handoff.
   suspend-only card (no mana cost) had no other way in. `server/suspend.rs` suspends
   one in the main phase; the census counts a suspend or a foretell as a play. A
   suspend card *with* a cost is still only cast (Aeon Chronicler's Suspend X is open).
+- ⚠ **A static grant's type filter reads printed card types** (found by Mishra's
+  Burnished Banner): `affected_includes_gated` matches `AffectedPermanents::All`'s
+  `card_types` against `definition.card_types`, so "artifact creatures you control
+  have flying" (Workshop Elders) misses a noncreature artifact animated in layer 4
+  (CR 613.8 — the layer-6 set depends on the layer-4 change). The fix is a computed
+  type gate like the creature-type one (`gate_types`); it is on the layers' hot path
+  and moves any 2-player game with an animated land under an anthem, so it needs its
+  own bench reading.
+- ✅ New for Legends' Legacy (DMC, Dihada): `GameEvent::AbilityActivated` carries
+  `life_paid` (the event amount), `EventKind::AbilityActivatedWithLifePaid` (Verrak,
+  CR 602.2 + 119.4); `StaticEffect::PlayersSkipExtraTurns` (Gerrard's Hourglass
+  Pendant, CR 614.10); `Value::GreatestManaValueExiledThisTurn` +
+  `GameState::greatest_exiled_mv_this_turn`, raised by `note_exiled_mana_value` in
+  `place_card_in_dest`'s exile branch and `remove_from_battlefield_to_exile`
+  (Bell Borca, CR 406). ⚠ The graveyard-exile cost paths (delve, collect evidence,
+  escape) push to exile directly and aren't noted.
+- ✅ `Selector::ExiledThisResolution` evaluated its filter with no X (found by Tinker
+  Time's Rashmi and Ragavan): the card-level evaluator reads `…XFromCost` as false, so
+  "mana value X or less" matched nothing; the selector now `resolve_x`es first
+  (CR 107.3, `cr_107_3_an_exiled_this_way_filter_reads_x`).
+- ✅ New for Tinker Time (MOC, Gimbal): `StaticEffect::GrantImproviseToSpells` +
+  `spell_granted_improvise` (Inspiring Statuary, CR 702.126a — shares the
+  `GRANT_CONVOKE` cast-scan bit, the helper picker and the bot's convoke block);
+  `Effect::ExileTopPushingLuck { stop_at, limit, then }` (Dance with Calamity).
+- ✅ New for Mishra's Burnished Banner (BRC, Mishra): `GameEvent::AbilityActivated`
+  carries `sacrificed` (any sacrifice cost paid), `EventKind::AbilityActivatedWithSacrifice`
+  (Ashnod the Uncaring, CR 602.2 + 118.3); `EntersAsCopy::not_a_creature` (Machine
+  God's Effigy, CR 707.9b).
 - ✅ New for Exquisite Invention (C18, Saheeli): `Effect::CastCommanderWithoutPaying`
   via `cast_from_command_zone_as` (no printed cost, no timing check, the CR 903.8 tax
   still owed — Geode Golem); `Effect::NextSpellHasAffinityForArtifacts` +

@@ -1926,6 +1926,21 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Demonic Covenant | Death Toll (DSC) | the draw also fires when Demons attack only a planeswalker. |
 | 🟡 Into the Pit | Death Toll (DSC) | the sacrifice is paid as the cast completes rather than as a cost before it. |
 | 🟡 Old Stickfingers | Death Toll (DSC) | reveals until one creature card X times, bottoming each run of misses before the next. |
+| 🟡 Bell Borca, Spectral Sergeant | Legends' Legacy (DMC) | the noted mana values are every card exiled this turn (through the two exile funnels), including those exiled before Bell Borca entered. |
+| 🟡 Bladewing, Deathless Tyrant | Legends' Legacy (DMC) | combat damage to a planeswalker doesn't trigger it. |
+| 🟡 The Peregrine Dynamo | Legends' Legacy (DMC) | as Strionic Resonator: the target is the ability's source permanent, and the copy keeps its targets. |
+| 🟡 Verrak, Warped Sengir | Legends' Legacy (DMC) | only a fixed life cost counts as life paid (not X or half your life); the copy keeps its targets. |
+| 🟡 Dance with Calamity | Tinker Time (MOC) | the exiling stops once the total mana value reaches nine (the engine's stop point), not as many times as the controller chooses. |
+| 🟡 Path of the Animist | Tinker Time (MOC) | Will of the Planeswalkers is not voted: outside Planechase planeswalking and chaos do nothing, but "whenever players vote" triggers don't see it. |
+| 🟡 Pain Distributor | Tinker Time (MOC) | "that player" is the dying artifact's owner, not its controller. |
+| 🟡 Gimbal, Gremlin Prodigy | Tinker Time (MOC) | the trample grant matches printed card types, so an animated artifact doesn't get it (CR 613.8; ENGINE_BACKLOG). |
+| 🟡 Mishra, Eminent One | Mishra's Burnished Banner (BRC) | the Warform keeps the copied artifact's name (it is non-legendary, so the legend rule leaves it alone as the rename would). |
+| 🟡 Ashnod the Uncaring | Mishra's Burnished Banner (BRC) | the copy finds the ability through its source, so an ability whose source was the sacrificed permanent can't be copied. |
+| 🟡 Blast-Furnace Hellkite | Mishra's Burnished Banner (BRC) | "creatures attacking your opponents" also counts creatures attacking an opponent's planeswalker. |
+| 🟡 Smelting Vat | Mishra's Burnished Banner (BRC) | each card is capped at the sacrificed artifact's mana value, not the pair's total. |
+| 🟡 Lithoform Engine | Mishra's Burnished Banner (BRC) | the ability copy is Strionic Resonator's: the target is the ability's source permanent, and the copy keeps its targets. |
+| 🟡 Workshop Elders | Mishra's Burnished Banner (BRC) | the flying grant matches printed card types, so an animated artifact doesn't fly (CR 613.8; ENGINE_BACKLOG). |
+| 🟡 Glint Raker | Mishra's Burnished Banner (BRC) | the reveal isn't optional. |
 | 🟡 Sanwell, Avenger Ace | Urza's Iron Alliance (BRC) | the cast offer is the first matching card of the six, not a choice; the rest go to the bottom in exile order, not a random one. |
 | 🟡 Scholar of New Horizons | Urza's Iron Alliance (BRC) | when the Plains may go onto the battlefield it always does. |
 | 🟡 Cosmic Intervention | Phantom Premonition (KHC) | the exile-instead replacement covers the permanents you control as it resolves (not ones that arrive later that turn); the end-step return takes the cards you own that a this-turn "exile it instead" moved. |

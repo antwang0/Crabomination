@@ -110,6 +110,9 @@ lists were picked.
 | **Witherbloom Witchcraft** (C21 precon) BG | Willowdusk, Essence Seer | BG | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Exit from Exile** (CLB precon) RG | Faldorn, Dread Wolf Herald | RG | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Exquisite Invention** (C18 precon) UR | Saheeli, the Gifted (**planeswalker**) | UR | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
+| **Mishra's Burnished Banner** (BRC precon) UBR | Mishra, Eminent One | UBR | 100 | 🟡 all 100 implemented, 6 carry residuals (below) |
+| **Tinker Time** (MOC precon) GUR | Gimbal, Gremlin Prodigy | GUR | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
+| **Legends' Legacy** (DMC precon) RWB | Dihada, Binder of Wills (**planeswalker**) | RWB | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Death Toll** (DSC precon) BG | Winter, Cynical Opportunist | BG | 100 | 🟡 all 100 implemented, 6 carry residuals (below) |
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
@@ -1148,6 +1151,47 @@ decided): Saheeli 11.2 %; a 300-game census (seed 10161) leaves no card of the
 four unplayed; 12 seats (71..60 as numbered then, seed 10162): 200 / 200 decided. `--bench`
 byte-identical.
 
+The **eighty-fifth** is Dominaria United Commander's **Legends' Legacy**
+(`LegendsLegacy_DMC`) — Mardu legends under Dihada, Binder of Wills, the
+seventh planeswalker commander. Eighteen cards were missing; the primitives:
+`GameEvent::AbilityActivated::life_paid` and
+`EventKind::AbilityActivatedWithLifePaid` (Verrak, Warped Sengir, CR 602.2 +
+119.4 — the event amount is the life paid), `StaticEffect::PlayersSkipExtraTurns`
+(Gerrard's Hourglass Pendant, CR 614.10 — binds its controller too) and
+`Value::GreatestManaValueExiledThisTurn` over
+`GameState::greatest_exiled_mv_this_turn` (Bell Borca's noted mana values,
+written by the library/graveyard exile funnel and the battlefield exile funnel).
+Residuals: **Bell Borca** notes cards exiled before it entered too; **Bladewing**
+doesn't trigger on damage to a planeswalker; **The Peregrine Dynamo** copies as
+Strionic Resonator does; **Verrak** sees only fixed life costs.
+Four-seat pods beside Gimbal / Mishra / Ms. Bumbleflower (seed 10190, 1,000 games, all decided): Dihada 31.1 %; a 300-game census (seed 10191) leaves no card unplayed; 12 seats (seed 10192): 200 / 200. `--bench` byte-identical.
+The **eighty-fourth** is March of the Machine Commander's **Tinker Time**
+(`TinkerTime_MOC`) — Temur artifact tokens under Gimbal, Gremlin Prodigy.
+Sixteen cards were missing; the primitives: `StaticEffect::GrantImproviseToSpells`
+(Inspiring Statuary, CR 702.126a — rides the convoke grant's cast gate, helper
+picker and bot block) and `Effect::ExileTopPushingLuck` (Dance with Calamity).
+⚠ **Found: `Selector::ExiledThisResolution` evaluated its filter with no X**, so
+a "mana value X or less" filter matched nothing (CR 107.3; Rashmi and Ragavan).
+Residuals: **Dance with Calamity** stops exiling at a total of nine rather than by
+choice; **Path of the Animist**'s Will of the Planeswalkers vote does nothing
+outside Planechase; **Pain Distributor** damages the artifact's owner;
+**Gimbal**'s trample grant reads printed types.
+Four-seat pods beside Mishra / Ms. Bumbleflower / Derevi (seed 10180, 1,000 games, all decided): Gimbal 29.0 %; a 300-game census (seed 10181) leaves no card of the four unplayed; 12 seats (seed 10192): 200 / 200. `--bench` byte-identical.
+The **eighty-third** is The Brothers' War Commander's **Mishra's Burnished
+Banner** (`MishraSBurnishedBanner_BRC`) — Grixis artifacts under Mishra,
+Eminent One. Seventeen cards were missing; the primitives:
+`GameEvent::AbilityActivated::sacrificed` and
+`EventKind::AbilityActivatedWithSacrifice` (Ashnod the Uncaring, CR 602.2 +
+118.3) and `EntersAsCopy::not_a_creature` (Machine God's Effigy, CR 707.9b).
+⚠ **Found: a static grant's "artifact creatures" filter reads printed types**
+(`affected_includes_gated`), so Workshop Elders' flying misses the artifact it
+animates (CR 613.8) — ENGINE_BACKLOG. Residuals: **Mishra**'s Warform keeps the
+artifact's name; **Ashnod** can't copy an ability whose source was the thing
+sacrificed; **Blast-Furnace Hellkite** also counts attacks on planeswalkers;
+**Smelting Vat** caps each card, not the pair's total; **Lithoform Engine**
+copies abilities as Strionic Resonator does; **Workshop Elders** (above);
+**Glint Raker**'s reveal isn't optional.
+Four-seat pods beside Ms. Bumbleflower / Derevi / Lord Windgrace (seed 10170, 1,000 games, all decided): Mishra 14.6 %; a 300-game census (seed 10171) leaves no card of the four unplayed; 12 seats (85..74, seed 10192): 200 / 200 decided. `--bench` byte-identical. ⚠ The first gate, on a binary built before rebasing over the Insatiable Frugivore / Chatterfang loop fixes, ran 1h45m on one 1,000-game block without finishing; the rebuilt binary does it in 6.6 s — the hang was not this list's.
 The **sixtieth** is the Starter Commander Decks' **Token Triumph**
 (`TokenTriumph_SCD`) — Selesnya tokens and anthems under Emmara, Soul of the
 Accord (seat 59 before rebasing over Endless Punishment). Fifteen cards were
