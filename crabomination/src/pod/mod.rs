@@ -619,6 +619,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::RANAR_COMMANDERS,
             main: decks::RANAR_MAIN,
         },
+        // Seventy-first: the sixty-first official list (Hatsune Miku, SLD) —
+        // Selesnya lifegain and tokens under Trostani. `--pod-decks 71`.
+        PodDeck {
+            name: "Trostani, Selesnya's Voice (GW)",
+            commanders: decks::TROSTANI_COMMANDERS,
+            main: decks::TROSTANI_MAIN,
+        },
     ]
 }
 

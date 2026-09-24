@@ -2207,3 +2207,34 @@ pub const RANAR_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains,
 ];
+
+pub const TROSTANI_COMMANDERS: &[CardFactory] = &[trostani_selesnyas_voice];
+
+/// **Hatsune Miku**, the Secret Lair Commander deck (SLD, 2026-08-10), exactly
+/// as MTGJSON's `HatsuneMiku_SLD` prints it: 85 nonbasic cards + 7 Plains +
+/// 7 Forests = 99. Selesnya lifegain and tokens under Trostani,
+/// Selesnya's Voice, whose populate copies the best token on the board.
+pub const TROSTANI_MAIN: &[CardFactory] = &[
+    archangel_of_thune, halo_fountain, grand_crescendo, shalai_voice_of_plenty,
+    song_of_the_worldsoul, soul_warden, break_down, cultivate, finale_of_devastation,
+    vorinclex_voice_of_hunger, bountiful_promenade, angel_of_indemnity, angelic_chorus,
+    boon_reflection, crested_sunmare, dazzling_theater_prop_room, elendas_hierophant,
+    excavation_technique, hour_of_reckoning, nykthos_paragon, resplendent_angel,
+    silverquill_lecturer, soul_of_eternity, speaker_of_the_heavens, storm_herd,
+    voice_of_the_blessed, ancient_cornucopia, arasta_of_the_endless_web, blossoming_bogbeast,
+    bramble_sovereign, fanatic_of_rhonas, gruff_triplets, healing_technique, pest_infestation,
+    shamanic_revelation, camaraderie, conclave_evangelist, ghalta_and_mavren, growing_ranks,
+    lathiel_the_bounteous_dawn, miraris_wake, rhys_the_redeemed, voice_of_resurgence,
+    aetherflux_reservoir, phyrexian_processor, canopy_vista, gavony_township,
+    grove_of_the_guardian, lazotep_quarry, overgrown_farmland, restless_prairie,
+    sungrass_prairie, sunpetal_grove, temple_of_plenty, invincible_hymn, ajanis_pridemate,
+    cleric_class, congregate, path_to_exile, rootborn_defenses, suture_priest,
+    swords_to_plowshares, avacyns_pilgrim, explore, farseek, llanowar_elves, natures_lore,
+    prosperous_innkeeper, song_of_freyalise, sundering_growth, idol_of_oblivion,
+    selesnya_signet, skullclamp, sol_ring, springleaf_drum, blossoming_sands, brokers_hideout,
+    command_tower, graypelt_refuge, krosan_verge, radiant_fountain, rogues_passage,
+    sapseep_forest, selesnya_sanctuary, seraph_sanctuary,
+    // Basics: 7 plains, 7 forest
+    plains, plains, plains, plains, plains, plains, plains, forest, forest, forest, forest,
+    forest, forest, forest,
+];
