@@ -1870,6 +1870,10 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Sword of the Squeak | Squirreled Away (BLC) | "base power or toughness 1" reads printed power and toughness. |
 | 🟡 Insatiable Frugivore | Squirreled Away (BLC) | the three cards exiled each time are the first three in your graveyard, not your pick. |
 | 🟡 Curse of Inertia | Evasive Maneuvers (C13) | the attacking player's tap-or-untap is the engine's pick of permanent and direction. |
+| 🟡 Zinnia, Valley's Voice | Family Matters (BLC) | the granted offspring copy is Zinnia's own trigger (lost if Zinnia leaves first); a creature with its own kicker or offspring gets no second one. |
+| 🟡 Echoing Assault | Family Matters (BLC) | one copy per combat, not one per player attacked. |
+| 🟡 Combat Celebrant | Family Matters (BLC) | a second exert in a turn is allowed and does nothing (the bonus is once a turn). |
+| 🟡 Rose Room Treasurer | Family Matters (BLC) | the {X} is paid from floating mana. |
 | 🟡 Atarka Monument | Draconic Destruction (SCD) | animated, it is a colorless Dragon (the printed red and green aren't applied). |
 | 🟡 Footbottom Feast | Counterpunch (CMD) | the cards are chosen as it resolves, not targeted on cast; they go on top in mana-value order (the greatest on top). |
 

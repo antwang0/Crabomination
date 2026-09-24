@@ -109,6 +109,7 @@ lists were picked.
 | **Squirreled Away** (BLC precon) BG | Hazel of the Rootbloom | BG | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Evasive Maneuvers** (C13 precon) GWU | Derevi, Empyrial Tactician | GWU | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Draconic Destruction** (SCD starter) RG | Atarka, World Render | RG | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
+| **Family Matters** (BLC precon) URW | Zinnia, Valley's Voice | URW | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Hatsune Miku** (SLD precon) GW | Trostani, Selesnya's Voice | GW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Witherbloom Witchcraft** (C21 precon) BG | Willowdusk, Essence Seer | BG | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Witherbloom Pestilence** (SOC precon) BG | Dina, Essence Brewer | BG | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
@@ -1425,6 +1426,27 @@ Derevi 3.0 % (4.5 % beside Teferi / Kalemne / Zedruu, seed 9545: a tempo list th
 bot pilots poorly); a 300-game census (seed 9542) leaves no card unplayed;
 strict debug pods (seeds 9543/9544, 120 games) decided 120/120. `--bench`
 byte-identical.
+
+The **ninety-fourth** is Bloomburrow Commander's **Family Matters**
+(`FamilyMatters_BLC`) — Jeskai tokens and offspring under Zinnia, Valley's
+Voice. Nineteen cards were missing; the primitives:
+`StaticEffect::CreatureSpellsGainOffspring` (CR 702.175 — the kicked cast
+path pays a board-granted offspring cost, `R::PaidGrantedOffspring` marks the
+permanent, the bot offers and prefers it), `NonHandCastCostReduction`
+(Fortune Teller's Talent level 3), `Effect::GainControlWhileCounter` (Shield
+Broker, CR 611.2c), `LookTopMayDeployAttacking`'s end-of-combat return
+(Arthur), `R::BasePowerIs`, and `Keyword::UnblockableWhilePowerOrToughnessAtMost`
+(Tetsuko — read at block declaration, since a P/T filter can't route through
+the layers). ⚠ **A flickered or reanimated creature still read as kicked**
+(CR 400.7): its kicker ETB and an offspring copy fired again; the new-object
+reset now clears it. ⚠ `library_top_playable` ignored class-level and
+condition wrappers. `JoinCombatAttacking` from a non-attacking source joins
+the attack its target makes (Echoing Assault). Residuals: **Zinnia**,
+**Echoing Assault**, **Combat Celebrant**, **Rose Room Treasurer**
+(INCOMPLETE_CARDS). Release pods beside Atarka / Derevi / Hazel (seed 9401,
+1,000 games): 1,000 decided, Zinnia 32.7 %, and the census leaves no card of
+the four lists unplayed; strict debug pods beside Nelly / Go-Shintai / Guff
+(seeds 9403/9404, 120 games) decided 120/120. `--bench` byte-identical.
 
 The **eighty-seventh** is the Starter Commander Decks' **Draconic
 Destruction** (`DraconicDestruction_SCD`) — Gruul Dragons under Atarka, World
