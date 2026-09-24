@@ -575,6 +575,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SASKIA_COMMANDERS,
             main: decks::SASKIA_MAIN,
         },
+        // Sixty-fifth: the fifty-fifth official list (First Flight, SCD) —
+        // Azorius fliers under Isperia, with Gideon Jura's lure. `--seats 65`.
+        PodDeck {
+            name: "Isperia, Supreme Judge (WU)",
+            commanders: decks::ISPERIA_COMMANDERS,
+            main: decks::ISPERIA_MAIN,
+        },
     ]
 }
 
@@ -1106,6 +1113,7 @@ mod tests {
             ("The Mimeoplasm", [0x3133, 90, 9014]),
             ("Riku", [0x21C0, 91, 9015]),
             ("Saskia", [0x5A5C, 92, 9016]),
+            ("Isperia", [0x15BE, 93, 9017]),
         ] {
             let precon = *field.iter().find(|d| d.name.starts_with(name)).expect("the precon seat");
             assert_eq!(precon.card_count(), 100);

@@ -2031,3 +2031,29 @@ pub const SASKIA_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain,
     forest, forest, forest, forest, forest,
 ];
+
+pub const ISPERIA_COMMANDERS: &[CardFactory] = &[isperia_supreme_judge];
+
+/// **First Flight**, the Starter Commander Azorius deck (SCD, 2022-12-02),
+/// exactly as MTGJSON's `FirstFlight_SCD` prints it: 69 nonbasic cards +
+/// 15 Plains + 15 Islands = 99. Fliers under Isperia, Supreme Judge.
+pub const ISPERIA_MAIN: &[CardFactory] = &[
+    archon_of_redemption, cartographers_hawk, cleansing_nova, emeria_angel, gideon_jura,
+    hanged_executioner, remorseful_cleric, sephara_skys_blade, steel_plume_marshal, storm_herd,
+    true_conviction, angler_turtle, bident_of_thassa, diluvian_primordial,
+    ever_watching_threshold, faerie_formation, gravitational_shift, inspired_sphinx,
+    sharding_sphinx, sphinx_of_enlightenment, windreader_sphinx, absorb, skycat_sovereign,
+    sphinxs_revelation, time_wipe, moorland_haunt, port_town, prairie_stream,
+    temple_of_enlightenment, aven_gagglemaster, banishing_light, condemn, crush_contraband,
+    disenchant, generous_gift, kangees_lieutenant, rally_of_wings, soul_snare,
+    swords_to_plowshares, vow_of_duty, aetherize, counterspell, favorable_winds, negate,
+    tide_skimmer, warden_of_evos_isle, winged_words, cloudblazer, empyrean_eagle,
+    jubilant_skybonder, kangee_sky_warden, migratory_route, staggering_insight,
+    thunderclap_wyvern, arcane_signet, azorius_signet, commanders_sphere, hedron_archive,
+    pilgrims_eye, sky_diamond, skyscanner, sol_ring, talisman_of_progress, thought_vessel,
+    coastal_tower, command_tower, meandering_river, sejiri_refuge, tranquil_cove,
+    // Basics: 15 plains, 15 island
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island,
+];
