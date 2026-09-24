@@ -36,6 +36,7 @@ mod cmdr_kaalia;
 mod cmdr_zedruu;
 mod cmdr_breya;
 mod cmdr_yidris;
+mod cmdr_mimeoplasm;
 mod dsk2;
 mod dsk_rooms;
 mod recent_118_132;
