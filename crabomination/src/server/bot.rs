@@ -5353,10 +5353,9 @@ fn sacrifice_keep_value(state: &GameState, id: crate::card::CardId, w: &EvalWeig
 
 /// Bot heuristic for `Decision::ChooseTarget` (votes, edicts, free-floating
 /// removal). Prefer destroying/exiling an opponent's **most** valuable
-/// permanent; if every legal permanent is our own (a "sacrifice/vote your own"
-/// choice), give up the **least** valuable. Player targets fall back to the
-/// **lowest-life** opponent (most progress toward a kill), then to the first
-/// legal option.
+/// permanent; else the **lowest-life** opponent (most progress toward a
+/// kill); only when neither is legal (a "sacrifice/vote your own" choice),
+/// give up our **least** valuable permanent; then the first legal option.
 pub fn decide_choose_target(
     state: &GameState,
     seat: usize,
@@ -5377,6 +5376,21 @@ pub fn decide_choose_target(
     if let Some(id) = best_opp {
         return DecisionAnswer::Target(Target::Permanent(id));
     }
+    // Player targets: prefer the lowest-life opponent (closest to death, so a
+    // "deal damage / lose life" effect makes the most progress toward a kill).
+    // Ahead of our own permanents: Boros Reckoner's "any target" facing an
+    // opponent with no creatures hit the bot's own Reckoner instead — forever,
+    // once it was indestructible.
+    let best_player = legal
+        .iter()
+        .filter_map(|t| match t {
+            Target::Player(p) if *p != seat => Some(*p),
+            _ => None,
+        })
+        .min_by_key(|p| state.players[*p].life);
+    if let Some(p) = best_player {
+        return DecisionAnswer::Target(Target::Player(p));
+    }
     // Only our own permanents are legal — give up the least valuable to keep
     // (tokens first, then lowest-value real cards).
     let worst_own = legal
@@ -5388,18 +5402,6 @@ pub fn decide_choose_target(
         .min_by_key(|id| sacrifice_keep_value(state, *id, w));
     if let Some(id) = worst_own {
         return DecisionAnswer::Target(Target::Permanent(id));
-    }
-    // Player targets: prefer the lowest-life opponent (closest to death, so a
-    // "deal damage / lose life" effect makes the most progress toward a kill).
-    let best_player = legal
-        .iter()
-        .filter_map(|t| match t {
-            Target::Player(p) if *p != seat => Some(*p),
-            _ => None,
-        })
-        .min_by_key(|p| state.players[*p].life);
-    if let Some(p) = best_player {
-        return DecisionAnswer::Target(Target::Player(p));
     }
     DecisionAnswer::Target(legal[0].clone())
 }

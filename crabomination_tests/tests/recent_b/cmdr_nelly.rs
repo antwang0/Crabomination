@@ -539,3 +539,20 @@ fn boros_reckoner_redirects_rather_than_hitting_itself() {
     assert_eq!(g.players[1].life, life - 2);
     assert!(g.stack.is_empty(), "no self-retrigger");
 }
+
+/// The bot's `ChooseTarget` policy sends any-target damage at an opponent's
+/// face before its own permanents: an opponent with no creatures used to mean
+/// the Reckoner's damage went into the bot's own board.
+#[test]
+fn bot_aims_any_target_at_an_opponent_before_its_own_board() {
+    use crabomination::server::bot::decide_choose_target;
+    let mut g = main_phase(3);
+    let mine = g.add_card_to_battlefield(0, catalog::boros_reckoner());
+    g.players[2].life = 7;
+    let legal = [Target::Permanent(mine), Target::Player(1), Target::Player(2)];
+    let pick = decide_choose_target(&g, 0, &legal, &crabomination::server::EvalWeights::default());
+    assert_eq!(pick, DecisionAnswer::Target(Target::Player(2)), "the lowest-life opponent");
+    let own_only = [Target::Permanent(mine)];
+    let pick = decide_choose_target(&g, 0, &own_only, &crabomination::server::EvalWeights::default());
+    assert_eq!(pick, DecisionAnswer::Target(Target::Permanent(mine)));
+}
