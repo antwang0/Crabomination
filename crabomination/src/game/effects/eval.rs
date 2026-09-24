@@ -569,6 +569,16 @@ impl GameState {
                 .iter()
                 .map(|&p| self.players[p].damage_taken_this_turn as i32)
                 .sum(),
+            Value::PlayersWithLandsAtLeastMore(n) => {
+                let lands = |seat: usize| {
+                    self.battlefield.iter().filter(|c| c.controller == seat && c.definition.is_land()).count()
+                };
+                let mine = lands(ctx.controller);
+                (0..self.players.len())
+                    .filter(|&s| s != ctx.controller && self.players[s].is_alive())
+                    .filter(|&s| lands(s) >= mine + *n as usize)
+                    .count() as i32
+            }
             Value::PlayersDealtCombatDamageThisTurn(p) => self
                 .resolve_players(p, ctx)
                 .iter()

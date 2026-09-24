@@ -2298,7 +2298,11 @@ impl GameState {
             ZoneDest::Hand(who) => ZoneDest::Hand(flatten(who)),
             ZoneDest::Library { who, pos } => ZoneDest::Library {
                 who: flatten(who),
-                pos: *pos,
+                // "Beneath the top X cards" reads the resolving spell's X.
+                pos: match pos {
+                    LibraryPosition::BeneathTopX => LibraryPosition::FromTop(ctx.x_value as usize),
+                    other => *other,
+                },
             },
             ZoneDest::Battlefield { controller, tapped } => ZoneDest::Battlefield {
                 controller: flatten(controller),
@@ -2434,7 +2438,11 @@ impl GameState {
                 // that was on top; any insertion can displace it.
                 retain_cold!(self.library_tops_revealed, |s| *s != p);
                 match pos {
-                    LibraryPosition::Top => self.players[p].library.insert(0, card),
+                    // Unflattened only when no effect context reached it: no
+                    // X, so the top.
+                    LibraryPosition::Top | LibraryPosition::BeneathTopX => {
+                        self.players[p].library.insert(0, card)
+                    }
                     LibraryPosition::Bottom => self.players[p].library.push(card),
                     LibraryPosition::OwnerChoice => {
                         // CR 701: "owner's choice" library placement.

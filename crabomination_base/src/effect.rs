@@ -740,6 +740,9 @@ pub enum Value {
     /// (`combat_damage_taken_this_turn > 0`) — "the number of opponents that
     /// were dealt combat damage this turn" (Tymna the Weaver).
     PlayersDealtCombatDamageThisTurn(PlayerRef),
+    /// How many players control at least `n` more lands than you (Surveyor's
+    /// Scope's "players who control at least two more lands than you").
+    PlayersWithLandsAtLeastMore(u32),
     /// Total damage dealt to the ability's source permanent this turn
     /// (`CardInstance.damage_dealt_to_this_turn`) — "if 4 or more damage was
     /// dealt to it this turn" (Rushing-Tide Zubera). Reads death-time LKI so a
@@ -2523,6 +2526,10 @@ pub enum LibraryPosition {
     /// if the library has fewer than N cards, the card goes on the
     /// bottom instead. `FromTop(0)` is equivalent to `Top`.
     FromTop(usize),
+    /// "Just beneath the top X cards" — `FromTop(X)` with the resolving
+    /// spell's X (Unexpectedly Absent). Flattened to `FromTop` while the
+    /// destination is resolved against the effect's context.
+    BeneathTopX,
 }
 
 /// Where the non-matching revealed cards go after a
