@@ -23,6 +23,7 @@ mod cmdr_quandrix;
 mod layer_stateful_filters;
 mod cmdr_daxos;
 mod cmdr_ghave;
+mod cmdr_wyleth;
 mod cmdr_teferi;
 mod cmdr_lorehold;
 mod cmdr_fae;
