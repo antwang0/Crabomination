@@ -143,6 +143,18 @@ the handoff.
   never concretized `ManaValueAtMostXFromCost` (CR 601.2b), so its graveyard slots
   matched nothing — `auto_targets_for_effect_all_slots_x` now takes the cast's X.
 
+- ✅ **A continuous effect's filter could not read mana value.** The layer
+  matcher (`requirement_matches_card`) had no `ManaValueAtMost` / `ManaValueAtLeast`
+  leaf, so it fell to `false`, and under a `Not` became `true` — Bello's "mana value
+  4 or greater" animated Mind Stone. Both leaves now read the printed mana value.
+- ✅ **Tomik, Wielder of Law's trigger never fired**: `YouAttack` at
+  `OpponentControl` scope is a scope the attack dispatch never consults for a
+  non-active listener; observers of another player's attack are `AnyPlayer`.
+- 🔴 OPEN — **Ascend on a permanent is checked only on entry and at upkeep** (six
+  cards: Tendershoot Dryad and the five before it). CR 702.131b grants the city's
+  blessing the moment the tenth permanent arrives; a hook where permanents enter or
+  change control would make it exact.
+
 ## FIXED 2026-09-23 (the residual session) — three bug CLASSES a precon's residual list led to
 
 - **Cast origin read as "not from hand".** `Predicate::CastFromGraveyard`,
