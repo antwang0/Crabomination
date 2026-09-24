@@ -3,8 +3,6 @@
 //! `tests/recent_b/cmdr_valgavoth.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Barbflare Gremlin** and **Enchanter's Bane** — the damage comes from
-//!   the Gremlin / the Bane, not the land / the enchantment.
 //! - **Star Athlete** — "up to one target" always takes a target.
 //! - **Torture Pit** — its +2 also reaches permanents opponents control
 //!   (the shared `NoncombatDamageToOpponentsBonus`).
@@ -34,14 +32,22 @@ fn creature(name: &'static str, mana: ManaCost, types: Vec<CreatureType>, p: i32
 }
 
 /// "[Its controller] may sacrifice [it]. If they don't, [damage] to them."
-fn sacrifice_or_take(what: Selector, damage: Value) -> Effect {
+/// `it_deals`: the permanent itself deals the damage (Enchanter's Bane's
+/// "target enchantment deals damage"), not the ability's source.
+fn sacrifice_or_take(what: Selector, damage: Value, it_deals: bool) -> Effect {
     let controller = || PlayerRef::ControllerOf(Box::new(what.clone()));
+    let to = Selector::Player(controller());
+    let burn = if it_deals {
+        Effect::DealDamageFrom { source: what.clone(), to, amount: damage }
+    } else {
+        Effect::DealDamage { to, amount: damage }
+    };
     Effect::PlayersMayAccept {
         who: controller(),
         description: "Sacrifice it rather than take the damage?".into(),
         on_accept: Box::new(Effect::SacrificePermanent { what: what.clone() }),
         if_any: Box::new(Effect::Noop),
-        otherwise: Box::new(Effect::DealDamage { to: Selector::Player(controller()), amount: damage }),
+        otherwise: Box::new(burn),
     }
 }
 
@@ -81,7 +87,8 @@ pub fn valgavoth_harrower_of_souls() -> CardDefinition {
 }
 
 /// Barbflare Gremlin — first strike, haste; while it's tapped, a land tapped
-/// for mana adds one more mana of a type it made, and its controller takes 1.
+/// for mana adds one more mana of a type it made, then that land deals its
+/// controller 1 damage.
 pub fn barbflare_gremlin() -> CardDefinition {
     let tapper = || PlayerRef::ControllerOf(Box::new(Selector::TriggerSource));
     CardDefinition {
@@ -93,15 +100,16 @@ pub fn barbflare_gremlin() -> CardDefinition {
             ])),
             effect: Effect::Seq(vec![
                 Effect::AddMana { who: tapper(), pool: ManaPayload::AnyTypeTriggerSourceProduces },
-                Effect::DealDamage { to: Selector::Player(tapper()), amount: Value::ONE },
+                // "Then that land deals 1 damage to that player."
+                Effect::DealDamageFrom { source: Selector::TriggerSource, to: Selector::Player(tapper()), amount: Value::ONE },
             ]),
         }],
         ..creature("Barbflare Gremlin", cost(&[generic(3), r()]), vec![CreatureType::Gremlin], 3, 2)
     }
 }
 
-/// Enchanter's Bane — at your end step, target enchantment's controller
-/// sacrifices it or takes its mana value in damage.
+/// Enchanter's Bane — at your end step, target enchantment deals its mana value
+/// in damage to its controller unless they sacrifice it.
 pub fn enchanters_bane() -> CardDefinition {
     CardDefinition {
         name: "Enchanter's Bane",
@@ -112,6 +120,7 @@ pub fn enchanters_bane() -> CardDefinition {
             effect: sacrifice_or_take(
                 target_filtered(R::Enchantment),
                 Value::ManaValueOf(Box::new(Selector::Target(0))),
+                true,
             ),
         }],
         ..Default::default()
@@ -302,7 +311,7 @@ pub fn star_athlete() -> CardDefinition {
         alternative_cost: Some(blitz(cost(&[generic(3), r()]))),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
-            effect: sacrifice_or_take(target_filtered(R::Nonland.and(R::Permanent)), Value::Const(5)),
+            effect: sacrifice_or_take(target_filtered(R::Nonland.and(R::Permanent)), Value::Const(5), false),
         }],
         ..creature("Star Athlete", cost(&[generic(1), r(), r()]), vec![CreatureType::Human, CreatureType::Warrior], 3, 2)
     }

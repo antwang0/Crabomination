@@ -93,7 +93,7 @@ lists were picked.
 | **Fae Dominion** (WOC precon) UB | Tegwyll, Duke of Splendor | UB | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Invent Superiority** (C16 precon) WUBR | Breya, Etherium Shaper | WUBR | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Entropic Uprising** (C16 precon) UBRG | Yidris, Maelstrom Wielder | UBRG | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
-| **Endless Punishment** (DSC precon) BR | Valgavoth, Harrower of Souls | BR | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
+| **Endless Punishment** (DSC precon) BR | Valgavoth, Harrower of Souls | BR | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not
@@ -908,10 +908,11 @@ The **fifty-ninth** is Duskmourn Commander's **Endless Punishment**
 Pain found spell-cast triggers blind to their caster** (CR 603.2): the cast
 trigger aimed with no event player set and stamped none on the stack item, so
 "another target player" could never exclude the caster — now both are the
-caster. Residuals: **Barbflare Gremlin**'s and **Enchanter's Bane**'s damage
-comes from them, not the land / the enchantment; **Star Athlete**'s "up to
+caster. Residuals: **Star Athlete**'s "up to
 one" always takes a target; **Torture Pit**'s +2 also reaches opponents'
-permanents. Four-seat pods beside Ghired / Zedruu / Arahbo (seed 10132, 1,000
+permanents (Barbflare Gremlin's and Enchanter's Bane's damage now comes from
+the land / the enchantment, through Open Hostility's `Effect::DealDamageFrom`).
+Four-seat pods beside Ghired / Zedruu / Arahbo (seed 10132, 1,000
 games, all decided): Valgavoth 47.1 %; a 300-game census (seed 10133) leaves no
 card of the four lists unplayed; 12 seats (57..46, seed 10134): 200 / 200
 decided (seat numbers as they were then). `--bench` byte-identical.

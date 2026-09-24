@@ -266,3 +266,19 @@ fn stonehoof_chieftain_hardens_attackers() {
     assert!(cp.keywords().contains(&crabomination::card::Keyword::Indestructible));
     assert!(cp.keywords().contains(&crabomination::card::Keyword::Trample));
 }
+
+/// The echo's source is the creature that connected (`DealDamageFrom`), not
+/// Saskia: a lifelinker gains for both hits.
+#[test]
+fn saskias_echo_carries_the_attackers_lifelink() {
+    let mut g = pod(3);
+    let saskia = g.add_card_to_hand(0, catalog::saskia_the_unyielding());
+    cast(&mut g, saskia, &[]);
+    let chosen = g.battlefield_find(saskia).unwrap().chosen_player.expect("a player was chosen");
+    let other = if chosen == 1 { 2 } else { 1 };
+    let tymna = g.add_card_to_battlefield(0, catalog::tymna_the_weaver());
+    g.clear_sickness(tymna);
+    swing(&mut g, &[tymna], other);
+    assert_eq!(lost(&g, chosen), 2);
+    assert_eq!(lost(&g, 0), -4, "lifelink on the hit and on the echo");
+}
