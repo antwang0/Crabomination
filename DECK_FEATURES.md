@@ -111,7 +111,8 @@ lists were picked.
 | **Hatsune Miku** (SLD precon) GW | Trostani, Selesnya's Voice | GW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Witherbloom Witchcraft** (C21 precon) BG | Willowdusk, Essence Seer | BG | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Witherbloom Pestilence** (SOC precon) BG | Dina, Essence Brewer | BG | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
-| **Silverquill Statement** (C21 precon) WB | Breena, the Demagogue | WB | 100 | 🟡 all 100 implemented, 9 carry residuals (below) |
+| **Silverquill Statement** (C21 precon) WB | Breena, the Demagogue | WB | 100 | 🟡 all 100 implemented, 7 carry residuals (below) |
+| **Blame Game** (MKC precon) RW | Nelly Borca, Impulsive Accuser | RW | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Exit from Exile** (CLB precon) RG | Faldorn, Dread Wolf Herald | RG | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Exquisite Invention** (C18 precon) UR | Saheeli, the Gifted (**planeswalker**) | UR | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Mishra's Burnished Banner** (BRC precon) UBR | Mishra, Eminent One | UBR | 100 | 🟡 all 100 implemented, 6 carry residuals (below) |
@@ -1129,6 +1130,34 @@ turn". Four-seat pods beside Sigarda / Teval / Disa (seed 11081, 1,000 games,
 all decided): Dina 15.9 %; the census leaves no card of the four unplayed.
 `--bench` byte-identical.
 
+The **ninety-third** is Murders at Karlov Manor Commander's **Blame Game**
+(`BlameGame_MKC`) — Boros goad under Nelly Borca, Impulsive Accuser. Eighteen
+cards were missing; the primitive is **goad with one reader**:
+`GameState::goaders` (`game/goad.rs`) joins a resolved goad, a held one
+(`CardCold::goad_holds`, CR 611.2b — Hot Pursuit while it remains, Immortal
+Obligation while its duty counter stays, which also bars attacking and blocking
+the caster) and `StaticEffect::AttachedIsGoaded` on an Aura or Equipment; combat,
+the bot, `pod_attack` and the view read through it, `R::IsGoaded` matches it.
+Martial / Shiny / Ghoulish / Parasitic Impetus and Bloodthirsty Blade had
+re-goaded on triggers (outliving the Aura); all five are the static now. Also
+`EachPlayerVotesForAPlayer` (CR 701.38 secret council), `OpponentsChooseSilenceOrSnitch`,
+`EachPlayerMayCounterThenGoad`, `DoubleDamageToOpponentPlayers` (CR 614.5),
+`PreventAllCombatDamageToPlayerAndWalkersThisTurn`, `Predicate::PlayersLostAtLeast`,
+`MayPayToCopyOntoOtherCreatures` and `ReturnSelfRetypedWithCounters`. Its pods
+found ⚠ **Boros Reckoner hitting itself forever** (a bare `Target(0)` on a
+`DealtDamage` trigger binds the damaged object) and ⚠ **the bot's any-target
+fallback choosing its own board before an opponent's face**; strict debug pods
+found the block planner's gate skipping the duty counter's block bar.
+Residuals: Agitator Ant's counters go on the greatest-power creature; a
+headless Feather copies onto its own creatures only; a re-added duty counter
+re-arms Immortal Obligation. Four-seat pods beside Dihada / Gimbal / Mishra
+(seed 10210, 1,000 games, all decided after the fixes): Nelly 53.9 %; beside
+Ms. Bumbleflower / Derevi / Windgrace (seed 10211): 1,000 / 1,000, Nelly 48.0 %;
+census (seed 10212): no card of the four unplayed; 12 seats (seed 10213):
+200 / 200; strict debug pods (seeds 10214-10217, 4 and 6 seats, 240 games):
+240 / 240. `--bench` byte-identical; cube/sos/sealed 300 games an archetype
+(seed 10220): 7,500 decided.
+
 The **ninetieth** is Commander 2021's **Silverquill Statement**
 (`SilverquillStatement_C21`) — Orzhov politics and Inklings under Breena, the
 Demagogue (committed as 88). Eighteen cards were missing; the primitive is
@@ -1140,9 +1169,8 @@ opponent as `Triggerer` (Breena, Combat Calligrapher) — plus
 reads its attacker (Nils). Its pods found a bot bug: ⚠ **3,512 Aetherflux
 Reservoir shots into an indestructible Zetalpa** — the pinger called damage
 lethal to an indestructible creature and never aimed a paid repeat shot at a
-60-life face. Residuals (nine, all on the card docs): Breena's counters and
-Nils's targets are engine picks; the Blade/Impetus goad renews each beginning
-of combat; Bold Plagiarist copies +1/+1 counters only; Guardian Archon's
+60-life face. Residuals (seven now — the Blade and Parasitic Impetus goad by static since seat 93 — all on the card docs): Breena's counters and
+Nils's targets are engine picks; Bold Plagiarist copies +1/+1 counters only; Guardian Archon's
 protection from a player is hexproof + indestructible; Inkshield counts
 unblocked power; Author of Shadows takes the first nonland card; Tragic
 Arrogance keeps each player's best; Victory Chimes's mana is yours. Four-seat

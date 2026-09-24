@@ -1902,14 +1902,15 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Stensian Sanguinist | Witherbloom Pestilence (SOC) | "whenever that creature deals combat damage to a player this combat" lasts the turn. |
 | 🟡 Breena, the Demagogue | Silverquill Statement (C21) | the two +1/+1 counters go on your greatest-power creature (the engine's pick). |
 | 🟡 Author of Shadows | Silverquill Statement (C21) | the castable card is the first nonland card exiled this way, not a chosen one. |
-| 🟡 Bloodthirsty Blade | Silverquill Statement (C21) | "equipped creature is goaded" is a goad renewed at each beginning of combat, not a static. |
-| 🟡 Parasitic Impetus | Silverquill Statement (C21) | "enchanted creature is goaded" is a goad renewed at each beginning of combat, not a static. |
 | 🟡 Bold Plagiarist | Silverquill Statement (C21) | copies +1/+1 counters only, and reads the counters' recipient, not who put them. |
 | 🟡 Guardian Archon | Silverquill Statement (C21) | protection from the chosen player is hexproof and indestructible on the permanent; your own protection isn't modeled; the choice is the engine's most hostile opponent. |
 | 🟡 Inkshield | Silverquill Statement (C21) | the Inklings count the unblocked power attacking you as it resolves, not the damage prevented. |
 | 🟡 Nils, Discipline Enforcer | Silverquill Statement (C21) | each player's counter goes on their first creature, chosen rather than targeted. |
 | 🟡 Tragic Arrogance | Silverquill Statement (C21) | the engine chooses for the caster: its own best of each type, each opponent's weakest (lowest mana value). |
 | 🟡 Victory Chimes | Silverquill Statement (C21) | the mana always goes to you, not a player of your choice. |
+| 🟡 Agitator Ant | Blame Game (MKC) | each taker's two counters go on their greatest-power creature, not one they choose. |
+| 🟡 Feather, Radiant Arbiter | Blame Game (MKC) | a headless caster only copies onto its own creatures (a person is offered every legal one). |
+| 🟡 Immortal Obligation | Blame Game (MKC) | a duty counter put back after the first one left re-arms the goad and the restrictions (CR 611.2b ends them for good). |
 | 🟡 Descendants' Fury | Sliver Swarm (CMM) | "one of them" is any attacker of yours that damaged a player this turn, not only this combat-damage batch's. |
 | 🟡 Bloodlord of Vaasgoth | Vampiric Bloodlust (C17) | the granted bloodthirst is checked as the cast trigger resolves, not as the creature enters. |
 | 🟡 Mathas, Fiend Seeker | Vampiric Bloodlust (C17) | a bounty counter grants its dies trigger only while Mathas is on the battlefield. |
