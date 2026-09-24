@@ -714,6 +714,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::MISHRA_COMMANDERS,
             main: decks::MISHRA_MAIN,
         },
+        // Eighty-fourth: the seventy-fourth official list (Tinker Time, MOC)
+        // — Temur artifact tokens under Gimbal, Gremlin Prodigy.
+        // `--pod-decks 84`.
+        PodDeck {
+            name: "Gimbal, Gremlin Prodigy (GUR)",
+            commanders: decks::GIMBAL_COMMANDERS,
+            main: decks::GIMBAL_MAIN,
+        },
     ]
 }
 

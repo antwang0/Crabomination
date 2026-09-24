@@ -2597,3 +2597,33 @@ pub const MISHRA_MAIN: &[CardFactory] = &[
     swamp, swamp, swamp, swamp, island, island, island, island, island, mountain, mountain,
     mountain, mountain,
 ];
+
+pub const GIMBAL_COMMANDERS: &[CardFactory] = &[gimbal_gremlin_prodigy];
+
+/// **Tinker Time**, the March of the Machine Commander Temur deck (MOC,
+/// 2023-04-21), exactly as MTGJSON's `TinkerTime_MOC` prints it: 76
+/// nonbasic cards + 8 Islands + 8 Mountains + 7 Forests = 99. Artifact tokens under Gimbal, Gremlin
+/// Prodigy.
+pub const GIMBAL_MAIN: &[CardFactory] = &[
+    rashmi_and_ragavan, schema_thief, sandsteppe_war_riders, cutthroat_negotiator,
+    hedron_detonator, ichor_elixir, path_of_the_animist, pain_distributor, dance_with_calamity,
+    pia_and_kiran_nalaar, feldon_of_the_third_path, chaos_warp, stroke_of_genius,
+    academy_manufactor, aid_from_the_cowl, bloodforged_battle_axe, brasss_bounty, cinder_glade,
+    echo_storm, everquill_phoenix, exotic_orchard, fiery_confluence, frostboil_snarl,
+    game_trail, gilded_goose, hellkite_igniter, imprisoned_in_the_moon, inspiring_statuary,
+    master_of_etherium, masterful_replication, perplexing_test, rise_and_shine,
+    saheelis_artistry, sharding_sphinx, shimmer_dragon, skyclave_relic, spell_swindle,
+    spine_of_ish_sah, temple_of_abandon, temple_of_epiphany, temple_of_mystery,
+    thopter_assembly, thopter_spy_network, tireless_tracker, vedalken_humiliator,
+    vineglimmer_snarl, workshop_elders, command_tower, crack_open, evolving_wilds,
+    fractured_powerstone, gruul_signet, izzet_signet, path_of_ancestry, reverse_engineer,
+    root_out, simic_growth_chamber, simic_signet, terramorphic_expanse, thoughtcast,
+    replicating_ring, arcane_signet, combine_chrysalis, curse_of_opulence, frontier_bivouac,
+    ghirapur_aether_grid, junk_winder, myriad_landscape, reality_shift,
+    saheeli_sublime_artificer, sol_ring, struggle_survive, tireless_provisioner, vampires_vengeance,
+    weirding_wood, whirler_rogue,
+    // Basics: 8 island, 8 mountain, 7 forest
+    island, island, island, island, island, island, island, island, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, forest, forest, forest, forest,
+    forest, forest, forest,
+];
