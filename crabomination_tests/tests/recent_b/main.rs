@@ -48,6 +48,7 @@ mod cmdr_ranar;
 mod cmdr_hazel;
 mod cmdr_derevi;
 mod cmdr_atarka;
+mod cmdr_zinnia;
 mod cmdr_breya;
 mod cmdr_yidris;
 mod cmdr_mimeoplasm;

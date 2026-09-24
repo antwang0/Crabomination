@@ -69,7 +69,7 @@ fn octopus() -> TokenDefinition {
 
 /// A Thriving land: enters tapped, choose a color other than its own; {T}:
 /// add its color or the chosen one.
-fn thriving(name: &'static str, color: Color) -> CardDefinition {
+pub(crate) fn thriving(name: &'static str, color: Color) -> CardDefinition {
     CardDefinition {
         name,
         card_types: vec![CardType::Land],
