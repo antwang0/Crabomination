@@ -3231,6 +3231,11 @@ pub struct ActivatedAbility {
     /// shapes).
     #[serde(default)]
     pub sac_other_filter: Option<(SelectionRequirement, u32)>,
+    /// "Sacrifice **a** creature:" printed on a creature, not "another" (Viscera
+    /// Seer, Carrion Feeder): the source itself may pay `sac_other_filter`.
+    /// The auto-pick takes it only when nothing else matches.
+    #[serde(default)]
+    pub sac_other_may_be_source: bool,
     /// A SECOND, DIFFERENT sacrifice in the same cost line — "Sacrifice a
     /// Swamp **and** a Forest:" (Jarad, Golgari Lich Lord's graveyard
     /// ability).

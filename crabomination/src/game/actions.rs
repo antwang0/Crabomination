@@ -18211,7 +18211,7 @@ impl GameState {
             let candidates: Vec<CardId> = self
                 .battlefield
                 .iter()
-                .filter(|c| c.id != card_id && c.controller == p)
+                .filter(|c| (c.id != card_id || ability.sac_other_may_be_source) && c.controller == p)
                 .filter(|c| !needs_attached_to_source || c.attached_to == Some(card_id))
                 .filter(|c| self.can_be_sacrificed(c.id))
                 .filter(|c| !needs_host_of_source || host == Some(c.id))
@@ -18233,13 +18233,17 @@ impl GameState {
             if candidates.len() < count {
                 return Err(GameError::SelectionRequirementViolated);
             }
+            // The auto-pick keeps the source for last: sacrificing the creature
+            // whose ability this is only when nothing else can pay.
+            let others: Vec<CardId> = candidates.iter().copied().filter(|&id| id != card_id).collect();
+            let auto_pool = if others.len() >= count { &others } else { &candidates };
             if let Some(chosen) = chosen_sac_other {
                 // Replay path: honor the player's pick if it's still a valid
                 // candidate; otherwise fall back to the auto-pick.
                 if candidates.contains(&chosen) {
                     vec![chosen]
                 } else {
-                    self.auto_pick_lowest_power(&candidates, count)
+                    self.auto_pick_lowest_power(auto_pool, count)
                 }
             } else if count == 1 && candidates.len() > 1 && self.players[p].manual_mana {
                 let source_name = self
@@ -18267,7 +18271,7 @@ impl GameState {
                 }));
                 return Ok(());
             } else {
-                self.auto_pick_lowest_power(&candidates, count)
+                self.auto_pick_lowest_power(auto_pool, count)
             }
         } else {
             Vec::new()
