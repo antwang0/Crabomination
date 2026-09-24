@@ -111,6 +111,7 @@ lists were picked.
 | **Draconic Destruction** (SCD starter) RG | Atarka, World Render | RG | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Family Matters** (BLC precon) URW | Zinnia, Valley's Voice | URW | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Virtue and Valor** (WOC precon) GW | Ellivere of the Wild Court | GW | 100 | 🟡 all 100 implemented, 7 carry residuals (below) |
+| **Divine Convocation** (MOC precon) URW | Kasla, the Broken Halo | URW | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Hatsune Miku** (SLD precon) GW | Trostani, Selesnya's Voice | GW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Witherbloom Witchcraft** (C21 precon) BG | Willowdusk, Essence Seer | BG | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Witherbloom Pestilence** (SOC precon) BG | Dina, Essence Brewer | BG | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
@@ -1501,6 +1502,25 @@ resolution. Four-seat pods beside Ellivere / Lathliss / Zinnia (seed 10230,
 10231): 1,000 / 1,000, 19.0 %; census (seed 10232): no card of the four
 unplayed; strict debug pods (seeds 10233-10235, 4 and 6 seats): 180 / 180.
 `--bench` byte-identical; cube/sos/sealed (seed 10236): 7,500 decided.
+
+The **hundred-and-first** is March of the Machine Commander's **Divine
+Convocation** (`DivineConvocation_MOC`) — Jeskai convoke under Kasla, the
+Broken Halo. Nineteen cards were missing. ⚠ **Convoking tapped creatures
+silently** (CR 702.51): the cast path set `tapped` with no `PermanentTapped`
+event, so no "becomes tapped" trigger ever fired off a convoke — Fallowsage,
+Mistmeadow Vanisher, Saint Traft and Rem Karolus and Wildfire Awakener's
+Elementals are built around exactly that. The primitives:
+`Effect::NextSpellGainsConvokeThisTurn` (Wand of the Worldsoul, Flockchaser
+Phantom; the bot sees the grant), `R::HasConvoke` (printed, static- or
+next-spell-granted — Kasla, Joyful Stormsculptor, Saint Traft),
+`Selector::CreaturesThatConvokedSource` (Venerated Loxodon) and
+`R::LoyaltyActivatedThisTurn` (Cut Short). Residuals: **Deluxe Dragster**,
+**Path of the Ghosthunter**, **Joyful Stormsculptor** (INCOMPLETE_CARDS).
+Release pods beside Ellivere / Zinnia / Atarka (seed 10101, 1,000 games):
+1,000 decided, Kasla 13.5 %, and the census leaves no card of the four lists
+unplayed; strict debug pods beside Ulalek / The Ur-Dragon / Kitt Kanto (seeds
+10103/10104, 120 games) decided 120/120. Suite 21,567 / 0; `--bench`
+byte-identical.
 
 The **ninety-sixth** is Wilds of Eldraine Commander's **Virtue and Valor**
 (`VirtueAndValor_WOC`) — Selesnya Auras and Roles under Ellivere of the Wild

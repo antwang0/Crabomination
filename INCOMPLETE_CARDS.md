@@ -1870,6 +1870,9 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Sword of the Squeak | Squirreled Away (BLC) | "base power or toughness 1" reads printed power and toughness. |
 | 🟡 Insatiable Frugivore | Squirreled Away (BLC) | the three cards exiled each time are the first three in your graveyard, not your pick. |
 | 🟡 Curse of Inertia | Evasive Maneuvers (C13) | the attacking player's tap-or-untap is the engine's pick of permanent and direction. |
+| 🟡 Deluxe Dragster | Divine Convocation (MOC) | the free spell may come from any opponent's graveyard, not only the damaged player's. |
+| 🟡 Path of the Ghosthunter | Divine Convocation (MOC) | with no planar deck the Will of the Planeswalkers vote isn't held (planeswalk and chaos would do nothing). |
+| 🟡 Joyful Stormsculptor | Divine Convocation (MOC) | battles take no damage (the engine has none). |
 | 🟡 Indomitable Might | Virtue and Valor (WOC) | the damage always goes as though unblocked; the controller doesn't choose. |
 | 🟡 Mantle of the Ancients | Virtue and Valor (WOC) | the returned Aura and Equipment cards are picked (greatest mana value first), not targeted. |
 | 🟡 Unfinished Business | Virtue and Valor (WOC) | the two Aura / Equipment cards are picked, not targeted. |
