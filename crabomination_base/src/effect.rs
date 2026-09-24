@@ -11504,6 +11504,7 @@ pub fn static_effect_grants_keyword(
         | SE::SelfHasDraftNotedKeywords
         | SE::AnnihilatorPerPlusOneCounter
         | SE::GrantProtectionFromChosenColor { .. }
+        | SE::GrantProtectionFromChosenCreatureType { .. }
         | SE::ProtectionFromExiledWithCardTypes
         | SE::AllColorWordsBecomeChosen
         | SE::YouAndCreaturesProtectionFromChosenCardType => true,

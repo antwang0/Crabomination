@@ -240,6 +240,11 @@ pub enum StaticEffect {
     /// read from the source's `chosen_color` ETB stamp (Ward Sliver). No-op
     /// until the choice is made.
     GrantProtectionFromChosenColor { applies_to: Selector },
+    /// CR 702.16 — "[affected] have protection from creatures of the chosen
+    /// type" (Riders of Gavony): the creature-type twin of
+    /// `GrantProtectionFromChosenColor`, reading the source's
+    /// `chosen_creature_type` stamp. Inert until chosen.
+    GrantProtectionFromChosenCreatureType { applies_to: Selector },
     /// CR 612 — "All instances of color words in the text of spells and
     /// permanents are changed to the chosen color word" (Swirl the Mists).
     /// Emits a layer-3 `ReplaceColorWord(other, chosen)` over every permanent
@@ -2641,6 +2646,15 @@ pub enum StaticEffect {
     /// Incarnation cycle (Anger, Wonder, Brawn, Valor, Filth). Zone-special:
     /// gathered from graveyards, not the battlefield.
     GraveyardAnthem { land_type: crate::card::LandType, keyword: Keyword },
+    /// "As long as this card is in your graveyard, each [filter] creature you
+    /// control enters with an additional `kind` counter on it" (Dearly
+    /// Departed, CR 614.1c). Zone-special like `GraveyardAnthem`: read off
+    /// the entering creature's controller's graveyard by
+    /// `chosen_type_etb_counter_specs`, one counter per copy there.
+    GraveyardMatchingEntersWithExtraCounters {
+        filter: SelectionRequirement,
+        kind: CounterType,
+    },
     /// "[Filter] spells you control can't be countered" — Destiny Spinner
     /// (creature and enchantment spells). Read at cast time by
     /// `caster_grants_uncounterable_with_x` off the caster's battlefield.

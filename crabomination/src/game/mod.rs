@@ -7410,6 +7410,7 @@ impl GameState {
         // the turn-scoped Combine Guildmage grant (PERF `(-239)`).
         if !self.battlefield.has_etb_counter_static()
             && !self.players.iter().any(|p| p.command.iter().any(|c| c.command_zone_statics_active()))
+            && !self.players[controller].graveyard.has_anthem()
         {
             let mut specs = vec![];
             if ec.definition.is_creature() {
@@ -7526,6 +7527,26 @@ impl GameState {
                         }
                     }
                     _ => {}
+                }
+            }
+        }
+        // Dearly Departed — a graveyard-zone rider, one counter per copy in
+        // the entering creature's controller's graveyard (CR 614.1c). The
+        // anthem lane covers the variant, so a yard without one skips this.
+        if self.players[controller].graveyard.has_anthem() {
+            for src in self.players[controller].graveyard.iter() {
+                for sa in &src.definition.static_abilities {
+                    if let StaticEffect::GraveyardMatchingEntersWithExtraCounters { filter, kind } =
+                        &sa.effect
+                        && self.evaluate_requirement_static(
+                            filter,
+                            &crate::game::Target::Permanent(entering),
+                            controller,
+                            Some(src.id),
+                        )
+                    {
+                        specs.push((*kind, 1));
+                    }
                 }
             }
         }
@@ -26824,6 +26845,51 @@ impl GameState {
         out
     }
 
+    /// Does `source` name its creature type to hold it *against* the table
+    /// (Riders of Gavony's protection) rather than to reward its own side?
+    pub(crate) fn names_type_to_protect_from(&self, source: CardId) -> bool {
+        self.find_card_anywhere(source).is_some_and(|c| {
+            c.definition.static_abilities.iter().any(|sa| {
+                matches!(
+                    sa.effect,
+                    crate::effect::StaticEffect::GrantProtectionFromChosenCreatureType { .. }
+                )
+            })
+        })
+    }
+
+    /// The hostile ordering of [`Self::creature_type_suggestions`]: the types
+    /// most common among creatures `chooser`'s opponents control come first,
+    /// then the ordinary list.
+    pub(crate) fn hostile_creature_type_suggestions(
+        &self,
+        chooser: usize,
+    ) -> Vec<crate::card::CreatureType> {
+        let mut counts: crate::fxhash::HashMap<crate::card::CreatureType, usize> =
+            crate::fxhash::HashMap::default();
+        for c in self
+            .battlefield
+            .iter()
+            .filter(|c| c.controller != chooser && c.definition.is_creature())
+        {
+            for &ct in &c.definition.subtypes.creature_types {
+                *counts.entry(ct).or_insert(0) += 1;
+            }
+        }
+        let mut ranked: Vec<_> = counts.into_iter().collect();
+        ranked.sort_by(|a, b| {
+            b.1.cmp(&a.1).then_with(|| format!("{:?}", a.0).cmp(&format!("{:?}", b.0)))
+        });
+        let mut out: Vec<crate::card::CreatureType> = ranked.into_iter().map(|(ct, _)| ct).collect();
+        for ct in self.creature_type_suggestions(chooser) {
+            if !out.contains(&ct) {
+                out.push(ct);
+            }
+        }
+        out.truncate(24);
+        out
+    }
+
     /// CR 612.1 — rewrite every printed instance of `from` as `to` in
     /// `target_id`'s definition (type line, filters and ability bodies alike);
     /// the walk is `crabomination_base::textrewrite::rewrite_creature_type`.
@@ -29208,6 +29274,23 @@ fn static_effect_to_effects(
                     });
                 }
             }
+            // Riders of Gavony — protection from the source's ETB-chosen
+            // creature type; inert until chosen.
+            StaticEffect::GrantProtectionFromChosenCreatureType { applies_to } => {
+                if let (Some(ct), Some(affected)) =
+                    (card.chosen_creature_type, selector_to_affected(applies_to, card))
+                {
+                    out.push(ContinuousEffect {
+                        timestamp,
+                        source,
+                        affected,
+                        layer: Layer::L6Ability,
+                        sublayer: None,
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::AddKeyword(Keyword::ProtectionFromCreatureType(ct)),
+                    });
+                }
+            }
             // Swirl the Mists — one layer-3 rewrite per non-chosen color, over
             // every permanent on the battlefield.
             StaticEffect::AllColorWordsBecomeChosen => {
@@ -30405,6 +30488,7 @@ fn static_effect_to_effects(
             // GraveyardAnthem is zone-special: gathered from graveyards in
             // `gather_continuous_effects_inner`, never from the battlefield.
             | StaticEffect::GraveyardAnthem { .. }
+            | StaticEffect::GraveyardMatchingEntersWithExtraCounters { .. }
             | StaticEffect::SpellsUncounterable { .. }
             | StaticEffect::MinusCounterReduction
             // Hand-zone grant, consulted by `landcycle_card` / the view.

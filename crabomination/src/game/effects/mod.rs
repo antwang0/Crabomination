@@ -32051,10 +32051,12 @@ impl GameState {
                 let decision = Decision::ChooseCreatureType {
                     excluded: Vec::new(),
                     source: target_id,
-                    suggestions: if options.is_empty() {
-                        self.creature_type_suggestions(chooser)
-                    } else {
+                    suggestions: if !options.is_empty() {
                         options.clone()
+                    } else if self.names_type_to_protect_from(target_id) {
+                        self.hostile_creature_type_suggestions(chooser)
+                    } else {
+                        self.creature_type_suggestions(chooser)
                     },
                 };
                 let pending =

@@ -67,13 +67,20 @@ pub struct Graveyard {
     lanes: AtomicU8,
 }
 
-/// Does this card carry a `GraveyardAnthem` static? The per-card half of
+/// Does this card carry a `GraveyardAnthem` static (or Dearly Departed's
+/// `GraveyardMatchingEntersWithExtraCounters`)? The per-card half of
 /// [`Graveyard::has_anthem`].
 fn card_has_anthem(c: &CardInstance) -> bool {
     c.definition
         .static_abilities
         .iter()
-        .any(|sa| matches!(sa.effect, crate::effect::StaticEffect::GraveyardAnthem { .. }))
+        .any(|sa| {
+            matches!(
+                sa.effect,
+                crate::effect::StaticEffect::GraveyardAnthem { .. }
+                    | crate::effect::StaticEffect::GraveyardMatchingEntersWithExtraCounters { .. }
+            )
+        })
 }
 
 /// Does this card grant an activated ability from the graveyard (Riftstone

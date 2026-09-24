@@ -3351,6 +3351,13 @@ fn decide_pending_policy_inner(
         // hand, so tribal payoffs (Cavern of Souls, Kindred
         // Discovery, Door of Destinies, the chosen-type lords) land
         // on a type it can actually exploit.
+        // A hostile naming (Riders of Gavony's protection) takes the
+        // opponents' most common type, which the suggestions lead with.
+        crate::decision::Decision::ChooseCreatureType { suggestions, source, .. }
+            if state.names_type_to_protect_from(*source) && !suggestions.is_empty() =>
+        {
+            crate::decision::DecisionAnswer::CreatureType(suggestions[0])
+        }
         crate::decision::Decision::ChooseCreatureType { suggestions, .. } => {
             decide_creature_type(state, seat, suggestions)
         }
