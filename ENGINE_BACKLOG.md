@@ -183,6 +183,15 @@ the handoff.
   or land type fell through both and the static was dropped: Song of Serenity, Archon of
   the Wild Rose, Shield of Kaldra, Akron Legionnaire, Hellspur Posse Boss, Camellia,
   Radiant Destiny, Shimmer. `dropped_static_ratchet` walks the catalog.
+- ✅ **A graveyard-exile cost naming X refused every card** (Osgir, the Reconstructor's
+  "{X}, {T}, Exile an artifact card with mana value X"): `exile_other_filter` evaluated
+  `ManaValueExactlyXFromCost` without the activation's X; it now resolves it first.
+- ✅ New for Lorehold Legacies: `PreventAllCombatDamageToMatching` (Losheel),
+  `RevealUntilOneToBattlefieldRestBottom` (Audacious Reshapers); return-all from the
+  graveyard records its cards for `Selector::LastMoved` (Wake the Past).
+- ⚠ Open: no event announces a card exiled **from a library** (Laelia, the Blade
+  Reforged; `PermanentExiled` / `CardExiledFromPlayOrGraveyard` cover play and
+  graveyards only, across ~90 emission sites).
 - ✅ New for Quantum Quandrix: Esix's first-tokens copy replacement, Crafty Cutpurse's
   token steal, `WheneverCreatureEntersThisTurn`, Study Hall's `CommanderCastScry`
   rider, Oversimplify's `ExileAllThenTokenPerPlayerByPower`.

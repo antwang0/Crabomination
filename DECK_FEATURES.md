@@ -70,6 +70,8 @@ lists were picked.
 | **Seize Control** (C15 precon) UR | Mizzix of the Izmagnus | UR | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Call the Spirits** (C15 precon) WB | Daxos the Returned | WB | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Peer Through Time** (C14 precon) U | Teferi, Temporal Archmage (**planeswalker**) | U | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
+| **Quantum Quandrix** (C21 precon) GU | Adrix and Nev, Twincasters | GU | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
+| **Lorehold Legacies** (C21 precon) RW | Osgir, the Reconstructor | RW | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not
@@ -549,6 +551,44 @@ Residuals: **Domineering Will**'s "target player" is always you;
 Parasite**'s ±2 is picked as the trigger goes on the stack; **Infinite
 Reflection**'s ETB also "copies" the enchanted creature onto itself when it is
 yours.
+
+The **thirty-ninth** is Commander 2021's **Quantum Quandrix**
+(`QuantumQuandrix_C21`) — Simic Fractals and token doubling under Adrix and
+Nev. Sixteen cards were missing; five primitives:
+`StaticEffect::FirstTokensOnYourTurnBecomeCopiesOfChosen` (Esix, beside Moonlit
+Meditation's replacement), `Effect::StealOpponentTokensThisTurn` (Crafty
+Cutpurse, a per-player flag the token mint funnel reads),
+`Effect::WheneverCreatureEntersThisTurn` (Theoretical Duplication — any
+controller's creature), `SpendRestriction::CommanderCastScry` (Study Hall,
+riding Path of Ancestry's deferred scry push) and
+`Effect::ExileAllThenTokenPerPlayerByPower` (Oversimplify). ⚠ **Guardian
+Augmenter found a layer class**: a `PumpPT` / `GrantKeyword` static over a
+filter with a stateful leaf the gather's live pass didn't know was dropped
+whole — eight shipped cards did nothing (Song of Serenity, Shield of Kaldra,
+Hellspur Posse Boss, Radiant Destiny, Shimmer, …); a catalog ratchet now holds
+the class at zero. Residuals: **Esix** copies the engine's pick (greatest mana
+value) and always takes the may; **Primal Empathy**'s counter goes on your
+creature of greatest power; **Ruxa** reads printed "no abilities" and always
+takes the unblocked-damage option. Four-seat pods beside Tatyova / Aesi / Ezuri
+(seed 10122, 1,000 games, all decided): Adrix 25.8 %; a 300-game census
+(seed 10124) leaves no card unplayed. `--bench` byte-identical.
+
+The **forty-third** is Commander 2021's **Lorehold Legacies**
+(`LoreholdLegacies_C21`) — Boros artifact recursion under Osgir, the
+Reconstructor. Seventeen cards were missing; the primitives:
+`StaticEffect::PreventAllCombatDamageToMatching` (Losheel's "attacking artifact
+creatures you control") and `Effect::RevealUntilOneToBattlefieldRestBottom`
+(Audacious Reshapers). ⚠ **Osgir found a cost bug**: an `exile_other_filter`
+naming X ("an artifact card with mana value X") was evaluated unresolved and
+refused every card; it now reads the activation's X. Wake the Past's "they gain
+haste" needed `ReturnAllMatchingFromGraveyardToBattlefield` to record its cards
+for `Selector::LastMoved`. Residuals: **Archaeomancer's Map** reads "that player
+controls more lands than you" as any opponent; **Key to the City**'s "up to
+one" always targets; **Laelia** counts only her own attack's library exile (no
+event announces a library exile), and a battlefield exile beside the graveyard.
+Four-seat pods beside Mizzix / Adrix / Daxos (seed 10123, 1,000 games, all
+decided): Osgir 19.4 %; the 300-game census (seed 10124) leaves no card of the
+four decks unplayed. `--bench` byte-identical.
 
 ⚠ **The board cap was a bot bug, not a loop.** A Krenko seat sent all 292
 of its Goblins at one player on 24 life each turn while two others sat on
