@@ -43,6 +43,7 @@ mod cmdr_zedruu;
 mod cmdr_saskia;
 mod cmdr_ranar;
 mod cmdr_hazel;
+mod cmdr_derevi;
 mod cmdr_breya;
 mod cmdr_yidris;
 mod cmdr_mimeoplasm;
