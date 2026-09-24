@@ -2746,3 +2746,237 @@ fn twilight_shepherd_returns_the_turns_dead() {
     assert!(g.players[0].hand.iter().any(|c| c.id == bear));
     assert!(g.players[0].graveyard.iter().any(|c| c.id == old), "it was there before");
 }
+
+// ── Seize Control (C15, Mizzix of the Izmagnus) ─────────────────────────────
+
+fn cast_x(g: &mut GameState, id: CardId, x: u32, targets: &[Target]) {
+    flood(g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: targets.first().cloned(),
+        additional_targets: targets.iter().skip(1).cloned().collect(),
+        mode: None,
+        x_value: Some(x),
+    })
+    .expect("cast");
+    drain_stack(g);
+}
+
+/// CR 110.2 / 608.3 — Aethersnatch takes an opponent's creature spell, which
+/// then enters under its new controller; the owner is unchanged.
+#[test]
+fn cr_608_3_aethersnatch_steals_a_creature_spell() {
+    let mut g = main_phase();
+    let giant = g.add_card_to_hand(1, catalog::hill_giant());
+    g.active_player_idx = 1;
+    flood(&mut g, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: giant,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("opponent casts");
+    g.priority.player_with_priority = 0;
+    let snatch = g.add_card_to_hand(0, catalog::aethersnatch());
+    cast(&mut g, snatch, &[Target::Permanent(giant)]);
+    let c = g.battlefield_find(giant).expect("the Giant resolved");
+    assert_eq!((c.controller, c.owner), (0, 1));
+}
+
+/// Awaken the Sky Tyrant — an opponent's source damaging you trades it for a
+/// 5/5 flying Dragon; the second source's trigger finds nothing to sacrifice.
+#[test]
+fn awaken_the_sky_tyrant_becomes_a_dragon_once() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::awaken_the_sky_tyrant());
+    g.active_player_idx = 1;
+    let attacks: Vec<Attack> = (0..2)
+        .map(|_| Attack {
+            attacker: g.add_card_to_battlefield(1, catalog::grizzly_bears()),
+            target: AttackTarget::Player(0),
+        })
+        .collect();
+    for a in &attacks {
+        g.clear_sickness(a.attacker);
+    }
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareAttackers(attacks)).expect("attack");
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no blocks");
+    // Damage events come back from the step change; the game loop
+    // dispatches them (the `combat` helper drops them).
+    while g.step != TurnStep::EndCombat {
+        let ev = g.advance_step(Vec::new()).expect("step");
+        g.dispatch_triggers_for_events(&ev);
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.players[0].life, 16, "both hit");
+    assert_eq!(count_named(&g, 0, "Dragon"), 1);
+    assert_eq!(count_named(&g, 0, "Awaken the Sky Tyrant"), 0);
+}
+
+/// Meteor Blast — X targets, 4 damage each (CR 601.2c: exactly X targets).
+#[test]
+fn meteor_blast_hits_x_targets_for_four() {
+    let mut g = main_phase();
+    let a = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let b = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let m = g.add_card_to_hand(0, catalog::meteor_blast());
+    cast_x(&mut g, m, 3, &[Target::Permanent(a), Target::Permanent(b), Target::Player(1)]);
+    assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none());
+    assert_eq!(g.players[1].life, 16);
+}
+
+/// Mystic Confluence — CR 700.2d lets a mode repeat; its default is draw three.
+#[test]
+fn cr_700_2d_mystic_confluence_draws_three_by_default() {
+    let mut g = main_phase();
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let m = g.add_card_to_hand(0, catalog::mystic_confluence());
+    let before = g.players[0].hand.len();
+    cast(&mut g, m, &[]);
+    assert_eq!(g.players[0].hand.len(), before - 1 + 3);
+}
+
+/// Rite of the Raging Storm — each upkeep hands that player a Lightning
+/// Rager, and a Rager can't attack the Rite's controller.
+#[test]
+fn rite_of_the_raging_storm_gives_ragers_that_cant_hit_you() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::rite_of_the_raging_storm());
+    g.active_player_idx = 1;
+    g.step = TurnStep::Untap;
+    let _ = g.advance_step(Vec::new());
+    drain_stack(&mut g);
+    assert_eq!(count_named(&g, 1, "Lightning Rager"), 1);
+    let rager = g.battlefield.iter().find(|c| c.controller == 1).unwrap().id;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    assert!(g
+        .perform_action(GameAction::DeclareAttackers(vec![Attack {
+            attacker: rager,
+            target: AttackTarget::Player(0),
+        }]))
+        .is_err());
+}
+
+/// Seal of the Guildpact — {1} less per chosen colour the spell is (generic
+/// only, CR 601.2f).
+#[test]
+fn seal_of_the_guildpact_discounts_per_chosen_color() {
+    let mut g = main_phase();
+    let seal = g.add_card_to_battlefield(0, catalog::seal_of_the_guildpact());
+    g.battlefield.find_by_id_mut(seal).unwrap().chosen_colors = vec![Color::Red, Color::Blue];
+    let giant = g.add_card_to_hand(0, catalog::hill_giant());
+    g.players[0].mana_pool.add(Color::Red, 3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: giant,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("{3}{R} for three");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(giant).is_some());
+}
+
+/// Stolen Goods — the opponent exiles to a nonland card, you cast it free.
+#[test]
+fn stolen_goods_casts_the_opponents_card_free() {
+    let mut g = main_phase();
+    g.add_card_to_library(1, catalog::island());
+    let giant = g.add_card_to_library(1, catalog::hill_giant());
+    g.players[1].library.reverse();
+    let s = g.add_card_to_hand(0, catalog::stolen_goods());
+    cast(&mut g, s, &[Target::Player(1)]);
+    assert!(g.exile.iter().any(|c| c.id == giant));
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: giant,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("free cast from exile");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(giant).map(|c| c.controller), Some(0));
+}
+
+/// Gigantoplasm — copies a creature (CR 707.9b) and keeps its own
+/// "{X}: base power and toughness X/X".
+#[test]
+fn gigantoplasm_copies_and_sets_its_base_size() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(1, catalog::hill_giant());
+    let p = g.add_card_to_hand(0, catalog::gigantoplasm());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    cast(&mut g, p, &[]);
+    assert_eq!(count_named(&g, 0, "Hill Giant"), 1);
+    activate(&mut g, p, 0, Some(7)).expect("{X}");
+    assert_eq!(pt(&g, p), (7, 7));
+}
+
+/// Lone Revenant — the intervening "if you control no other creatures"
+/// (CR 603.4) gates its look-four.
+#[test]
+fn cr_603_4_lone_revenant_digs_only_alone() {
+    for alone in [true, false] {
+        let mut g = main_phase();
+        for _ in 0..4 {
+            g.add_card_to_library(0, catalog::island());
+        }
+        let r = g.add_card_to_battlefield(0, catalog::lone_revenant());
+        if !alone {
+            g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        }
+        let before = g.players[0].hand.len();
+        combat(&mut g, vec![Attack { attacker: r, target: AttackTarget::Player(1) }], 0, |_| {});
+        assert_eq!(g.players[0].hand.len(), before + usize::from(alone), "alone = {alone}");
+    }
+}
+
+/// The simple five: Warchief Giant's haste + myriad, Etherium-Horn Sorcerer's
+/// self-bounce, Jace's Archivist's wheel, Desperate Ravings' random discard,
+/// Call the Skybreaker's Dragon-sized Elemental.
+#[test]
+fn seize_control_simple_cards() {
+    let mut g = main_phase();
+    let giant = g.add_card_to_battlefield(0, catalog::warchief_giant());
+    assert!(g.computed_permanent(giant).unwrap().keywords().contains(&Keyword::Haste));
+    let s = g.add_card_to_battlefield(0, catalog::etherium_horn_sorcerer());
+    activate(&mut g, s, 0, None).expect("bounce");
+    assert!(g.players[0].hand.iter().any(|c| c.id == s));
+
+    let mut g = main_phase();
+    for seat in [0, 1] {
+        for _ in 0..5 {
+            g.add_card_to_library(seat, catalog::island());
+        }
+    }
+    g.add_card_to_hand(1, catalog::island());
+    g.add_card_to_hand(1, catalog::island());
+    let a = g.add_card_to_battlefield(0, catalog::jaces_archivist());
+    g.clear_sickness(a);
+    activate(&mut g, a, 0, None).expect("wheel");
+    assert_eq!((g.players[0].hand.len(), g.players[1].hand.len()), (2, 2));
+
+    let mut g = main_phase();
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let d = g.add_card_to_hand(0, catalog::desperate_ravings());
+    cast(&mut g, d, &[]);
+    assert_eq!(g.players[0].hand.len(), 1);
+
+    let mut g = main_phase();
+    let c = g.add_card_to_hand(0, catalog::call_the_skybreaker());
+    cast(&mut g, c, &[]);
+    assert_eq!(pt(&g, g.battlefield.iter().find(|c| c.definition.name == "Elemental").unwrap().id), (5, 5));
+}
