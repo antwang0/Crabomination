@@ -112,6 +112,7 @@ pub fn dimir_house_guard() -> CardDefinition {
         keywords: vec![Keyword::Fear],
         activated_abilities: vec![
             ActivatedAbility {
+                sac_other_may_be_source: true,
                 sac_other_filter: Some((R::Creature, 1)),
                 effect: Effect::Regenerate {
                     what: Selector::This,

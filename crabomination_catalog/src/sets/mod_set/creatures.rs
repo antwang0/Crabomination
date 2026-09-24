@@ -7718,6 +7718,7 @@ pub fn viscera_seer() -> CardDefinition {
             exile_self_cost: false,
             exile_other_filter: None,
             self_counter_cost_reduction: None,
+            sac_other_may_be_source: true,
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
             tap_other_filter: None,
             from_hand: false,
@@ -10382,6 +10383,7 @@ pub fn indulgent_aristocrat() -> CardDefinition {
         keywords: vec![Keyword::Lifelink],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2)]),
+            sac_other_may_be_source: true,
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
             effect: Effect::AddCounter {
                 what: Selector::EachPermanent(

@@ -100,6 +100,7 @@ pub fn drowned_rusalka() -> CardDefinition {
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[u()]),
+            sac_other_may_be_source: true,
             sac_other_filter: Some((R::Creature, 1)),
             effect: Effect::Seq(vec![
                 Effect::Discard {

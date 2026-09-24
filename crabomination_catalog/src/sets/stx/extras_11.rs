@@ -1423,6 +1423,7 @@ pub fn witherbloom_harvester_b119() -> CardDefinition {
                 amount: Value::Const(1),
             },
             sorcery_speed: true,
+            sac_other_may_be_source: true,
             sac_other_filter: Some((
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                 1,

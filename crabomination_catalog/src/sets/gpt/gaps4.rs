@@ -75,6 +75,7 @@ pub fn starved_rusalka() -> CardDefinition {
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[g()]),
+            sac_other_may_be_source: true,
             sac_other_filter: Some((R::Creature, 1)),
             effect: Effect::GainLife {
                 who: Selector::You,
@@ -484,6 +485,7 @@ pub fn sanguine_praetor() -> CardDefinition {
         toughness: 5,
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[b()]),
+            sac_other_may_be_source: true,
             sac_other_filter: Some((R::Creature, 1)),
             effect: Effect::DestroyEachCreatureWithManaValue {
                 value: Value::SacrificedManaValue,

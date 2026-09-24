@@ -179,6 +179,7 @@ pub fn nim_shambler() -> CardDefinition {
             base_t: 1,
         }),
         activated_abilities: vec![ActivatedAbility {
+            sac_other_may_be_source: true,
             sac_other_filter: Some((R::Creature, 1)),
             effect: Effect::Regenerate {
                 what: Selector::This,

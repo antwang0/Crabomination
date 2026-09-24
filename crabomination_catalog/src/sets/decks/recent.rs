@@ -12644,6 +12644,7 @@ pub fn falkenrath_aristocrat() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Flying, Keyword::Haste],
         activated_abilities: vec![ActivatedAbility {
+            sac_other_may_be_source: true,
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
             effect: Effect::Seq(vec![
                 Effect::GrantKeyword {

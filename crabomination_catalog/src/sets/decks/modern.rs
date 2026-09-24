@@ -4090,6 +4090,7 @@ pub fn plagued_rusalka() -> CardDefinition {
                 toughness: Value::Const(-1),
                 duration: Duration::EndOfTurn,
             },
+            sac_other_may_be_source: true,
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
             ..Default::default()
         }],
@@ -6543,6 +6544,7 @@ pub fn carrion_feeder() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
+            sac_other_may_be_source: true,
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
             effect: Effect::AddCounter {
                 what: Selector::This,
@@ -6639,6 +6641,7 @@ pub fn nantuko_husk() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
+            sac_other_may_be_source: true,
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
             effect: Effect::PumpPT {
                 what: Selector::This,
@@ -6669,6 +6672,7 @@ pub fn bloodthrone_vampire() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
+            sac_other_may_be_source: true,
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
             effect: Effect::PumpPT {
                 what: Selector::This,
@@ -9615,6 +9619,7 @@ pub fn mogg_raider() -> CardDefinition {
                 toughness: Value::Const(1),
                 duration: Duration::EndOfTurn,
             },
+            sac_other_may_be_source: true,
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
             ..Default::default()
         }],

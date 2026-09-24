@@ -2521,6 +2521,7 @@ pub fn nezumi_bone_reader() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[b()]),
             sorcery_speed: true,
+            sac_other_may_be_source: true,
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
             effect: Effect::Discard {
                 who: Selector::Player(PlayerRef::Target(0)),
@@ -4618,6 +4619,7 @@ pub fn orochi_eggwatcher() -> CardDefinition {
         toughness: 3,
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[g()]),
+            sac_other_may_be_source: true,
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
             effect: Effect::PumpPT {
                 what: target_filtered(SelectionRequirement::Creature),

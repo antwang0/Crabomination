@@ -9122,6 +9122,7 @@ pub fn witherbloom_cauldronist_b143() -> CardDefinition {
             exile_self_cost: false,
             exile_other_filter: None,
             self_counter_cost_reduction: None,
+            sac_other_may_be_source: true,
             sac_other_filter: Some((
                 SelectionRequirement::Creature
                     .and(SelectionRequirement::ControlledByYou)

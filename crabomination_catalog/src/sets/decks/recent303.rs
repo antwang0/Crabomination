@@ -163,6 +163,7 @@ pub fn ragamuffyn() -> CardDefinition {
         toughness: 2,
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
+            sac_other_may_be_source: true,
             sac_other_filter: Some((R::Creature.or(R::Land), 1)),
             condition: Some(Predicate::HellbentActive {
                 who: PlayerRef::You,

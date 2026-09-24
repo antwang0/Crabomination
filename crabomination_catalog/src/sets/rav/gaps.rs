@@ -248,6 +248,7 @@ pub fn caregiver() -> CardDefinition {
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[w()]),
+            sac_other_may_be_source: true,
             sac_other_filter: Some((R::Creature, 1)),
             effect: Effect::PreventNextDamage {
                 target: target_any(),
@@ -304,6 +305,7 @@ pub fn drooling_groodion() -> CardDefinition {
         toughness: 3,
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2), b(), g()]),
+            sac_other_may_be_source: true,
             sac_other_filter: Some((R::Creature, 1)),
             effect: Effect::Seq(vec![
                 Effect::PumpPT {

@@ -63,6 +63,7 @@ pub fn lyzolda_the_blood_witch() -> CardDefinition {
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2)]),
+            sac_other_may_be_source: true,
             sac_other_filter: Some((R::Creature, 1)),
             effect: Effect::Seq(vec![
                 Effect::If {

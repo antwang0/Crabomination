@@ -274,6 +274,7 @@ pub fn stronghold_assassin() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
+            sac_other_may_be_source: true,
             sac_other_filter: Some((R::Creature, 1)),
             effect: Effect::Destroy {
                 what: target_filtered(R::Creature.and(R::HasColor(Color::Black).negate())),

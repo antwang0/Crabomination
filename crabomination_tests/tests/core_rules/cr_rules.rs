@@ -12019,3 +12019,35 @@ fn cr_119_4_toxic_deluge_pays_x_life_on_cast() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, 17, "and not again on resolution");
 }
+
+/// CR 701.21a / 602.2b — "Sacrifice a creature:" (not "another") on a creature
+/// can sacrifice that creature: a lone Viscera Seer scries off itself. With
+/// other fodder the auto-pick keeps the Seer. It used to be unable to pay with
+/// itself at all.
+#[test]
+fn cr_701_21a_viscera_seer_can_sacrifice_itself() {
+    let activate = |g: &mut GameState, seer| {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: seer,
+            ability_index: 0,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+    };
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let seer = g.add_card_to_battlefield(0, catalog::viscera_seer());
+    activate(&mut g, seer).expect("the Seer pays with itself");
+    assert!(g.battlefield_find(seer).is_none(), "sacrificed as the cost");
+    drain_stack(&mut g);
+
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let seer = g.add_card_to_battlefield(0, catalog::viscera_seer());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    activate(&mut g, seer).expect("activate");
+    assert!(g.battlefield_find(bear).is_none(), "the other creature goes first");
+    assert!(g.battlefield_find(seer).is_some());
+}

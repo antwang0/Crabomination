@@ -411,6 +411,7 @@ pub fn golgari_rotwurm() -> CardDefinition {
         toughness: 4,
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[b()]),
+            sac_other_may_be_source: true,
             sac_other_filter: Some((R::Creature, 1)),
             effect: Effect::LoseLife {
                 who: Selector::Target(0),
@@ -598,6 +599,7 @@ pub fn golgari_guildmage() -> CardDefinition {
         activated_abilities: vec![
             ActivatedAbility {
                 mana_cost: cost(&[generic(4), b()]),
+                sac_other_may_be_source: true,
                 sac_other_filter: Some((R::Creature, 1)),
                 effect: Effect::Move {
                     what: target_filtered(R::Creature.and(R::InYourGraveyard)),

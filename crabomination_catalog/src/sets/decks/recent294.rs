@@ -247,6 +247,7 @@ pub fn scorched_rusalka() -> CardDefinition {
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[r()]),
+            sac_other_may_be_source: true,
             sac_other_filter: Some((R::Creature, 1)),
             effect: Effect::DealDamage {
                 to: target_filtered(R::Player.or(R::Planeswalker)),
@@ -293,6 +294,7 @@ pub fn elvish_skysweeper() -> CardDefinition {
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(4), g()]),
+            sac_other_may_be_source: true,
             sac_other_filter: Some((R::Creature, 1)),
             effect: Effect::Destroy {
                 what: target_filtered(R::Creature.and(R::HasKeyword(Keyword::Flying))),

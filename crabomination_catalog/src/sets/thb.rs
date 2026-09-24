@@ -1637,6 +1637,7 @@ pub fn lampad_of_deaths_vigil() -> CardDefinition {
         toughness: 3,
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1)]),
+            sac_other_may_be_source: true,
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
             effect: Effect::Seq(vec![
                 Effect::LoseLife {
@@ -2256,6 +2257,7 @@ pub fn soulreaper_of_mogis() -> CardDefinition {
         toughness: 3,
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2), b()]),
+            sac_other_may_be_source: true,
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
             effect: Effect::Draw {
                 who: Selector::You,
@@ -4595,6 +4597,7 @@ pub fn blood_aspirant() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), r()]),
             tap_cost: true,
+            sac_other_may_be_source: true,
             sac_other_filter: Some((
                 SelectionRequirement::Creature.or(SelectionRequirement::Enchantment),
                 1,

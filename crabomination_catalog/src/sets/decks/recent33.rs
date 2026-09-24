@@ -111,6 +111,7 @@ pub fn sadistic_hypnotist() -> CardDefinition {
         toughness: 2,
         activated_abilities: vec![ActivatedAbility {
             sorcery_speed: true,
+            sac_other_may_be_source: true,
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
             effect: Effect::Discard {
                 who: target_filtered(SelectionRequirement::Player),

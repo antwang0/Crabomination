@@ -299,6 +299,7 @@ pub fn martyred_rusalka() -> CardDefinition {
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[w()]),
+            sac_other_may_be_source: true,
             sac_other_filter: Some((R::Creature, 1)),
             effect: Effect::GrantKeyword {
                 what: target_filtered(R::Creature),

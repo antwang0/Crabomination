@@ -668,6 +668,7 @@ pub fn undercity_informer() -> CardDefinition {
         toughness: 3,
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1)]),
+            sac_other_may_be_source: true,
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
             effect: Effect::MillUntilLands {
                 who: Selector::Target(0),

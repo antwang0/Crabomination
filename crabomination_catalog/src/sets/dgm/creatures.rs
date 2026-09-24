@@ -410,6 +410,7 @@ pub fn maw_of_the_obzedat() -> CardDefinition {
         power: 3,
         toughness: 3,
         activated_abilities: vec![ActivatedAbility {
+            sac_other_may_be_source: true,
             sac_other_filter: Some((R::Creature, 1)),
             effect: Effect::PumpPT {
                 what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),

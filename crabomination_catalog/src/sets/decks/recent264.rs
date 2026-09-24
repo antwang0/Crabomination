@@ -330,6 +330,7 @@ pub fn dreg_recycler() -> CardDefinition {
         toughness: 2,
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
+            sac_other_may_be_source: true,
             sac_other_filter: Some((R::Artifact.or(R::Creature), 1)),
             effect: Effect::Drain {
                 from: Selector::Player(PlayerRef::EachOpponent),

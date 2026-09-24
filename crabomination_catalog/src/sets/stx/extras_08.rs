@@ -348,6 +348,7 @@ pub fn witherbloom_plaguemage() -> CardDefinition {
                 },
             ]),
             self_counter_cost_reduction: None,
+            sac_other_may_be_source: true,
             sac_other_filter: Some((
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                 1,

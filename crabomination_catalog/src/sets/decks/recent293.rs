@@ -424,6 +424,7 @@ pub fn ghost_council_of_orzhova() -> CardDefinition {
         }],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1)]),
+            sac_other_may_be_source: true,
             sac_other_filter: Some((R::Creature, 1)),
             effect: Effect::ExileReturnNextEndStep {
                 what: Selector::This,
