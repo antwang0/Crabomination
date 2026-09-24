@@ -706,6 +706,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::BUMBLEFLOWER_COMMANDERS,
             main: decks::BUMBLEFLOWER_MAIN,
         },
+        // Eighty-third: the seventy-third official list (Mishra's Burnished
+        // Banner, BRC) — Grixis artifacts under Mishra, Eminent One.
+        // `--pod-decks 83`.
+        PodDeck {
+            name: "Mishra, Eminent One (UBR)",
+            commanders: decks::MISHRA_COMMANDERS,
+            main: decks::MISHRA_MAIN,
+        },
     ]
 }
 

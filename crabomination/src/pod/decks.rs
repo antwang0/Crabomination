@@ -2566,3 +2566,34 @@ pub const BUMBLEFLOWER_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, island, island, island, island, forest, forest, forest,
     forest,
 ];
+
+pub const MISHRA_COMMANDERS: &[CardFactory] = &[mishra_eminent_one];
+
+/// **Mishra's Burnished Banner**, the Brothers' War Commander Grixis deck
+/// (BRC, 2022-11-18), exactly as MTGJSON's `MishraSBurnishedBanner_BRC`
+/// prints it: 86 nonbasic cards + 4 Swamps + 5 Islands + 4 Mountains = 99.
+/// Grixis artifacts under Mishra, Eminent One.
+pub const MISHRA_MAIN: &[CardFactory] = &[
+    muzzio_visionary_architect, geth_lord_of_the_vault, herald_of_anguish,
+    jhoira_weatherlight_captain, silas_renn_seeker_adept, emry_lurker_of_the_loch,
+    master_transmuter, padeem_consul_of_innovation, workshop_elders, fain_the_broker,
+    audacious_reshapers, hellkite_igniter, slobad_goblin_tinkerer, brudiclad_telchor_engineer,
+    metalwork_colossus, traxos_scourge_of_kroog, blasphemous_act, expressive_iteration,
+    thoughtcast, feed_the_swarm, faithless_looting, chaos_warp, bedevil, fact_or_fiction,
+    thirst_for_knowledge, abrade, lithoform_engine, cursed_mirror, idol_of_oblivion,
+    mirrorworks, oblivion_stone, spine_of_ish_sah, strionic_resonator, trading_post,
+    oni_cult_anvil, dreamstone_hedron, fellwar_stone, hedron_archive, ichor_wellspring,
+    mind_stone, servo_schematic, sol_ring, thran_dynamo, mnemonic_sphere, executioners_capsule,
+    arcane_signet, commanders_sphere, dimir_signet, mycosynth_wellspring, nihil_spellbomb,
+    prophetic_prism, rakdos_signet, wayfarers_bauble, darkwater_catacombs, exotic_orchard,
+    shadowblood_ridge, smoldering_marsh, temple_of_deceit, temple_of_epiphany, temple_of_malice,
+    buried_ruin, crumbling_necropolis, dimir_aqueduct, izzet_boilerworks, myriad_landscape,
+    rakdos_carnarium, reliquary_tower, ash_barrens, command_tower, drossforge_bridge,
+    great_furnace, mistvault_bridge, path_of_ancestry, seat_of_the_synod, silverbluff_bridge,
+    terramorphic_expanse, vault_of_whispers, ashnod_the_uncaring, glint_raker,
+    terisiares_devastation, blast_furnace_hellkite, farid_enterprising_salvager,
+    machine_gods_effigy, scavenged_brawler, smelting_vat, wondrous_crucible,
+    // Basics: 4 swamp, 5 island, 4 mountain
+    swamp, swamp, swamp, swamp, island, island, island, island, island, mountain, mountain,
+    mountain, mountain,
+];
