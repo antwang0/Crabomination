@@ -195,9 +195,11 @@ fn cr_112_2_a_spell_copy_is_controlled_by_the_copier() {
     })
     .expect("copy");
     drain_stack(&mut g);
-    // Seat 1's copy resolved first (it was on top) and seat 0's original after,
-    // so seat 1 took 3 from its own copy plus 3 from the original.
-    assert_eq!(g.players[1].life, 20 - 6);
+    // CR 707.10c — the copy is seat 1's, and seat 1 aims it (CR 707.10: it may
+    // choose new targets): it goes at seat 0, while seat 0's original still
+    // hits seat 1.
+    assert_eq!(g.players[1].life, 20 - 3);
+    assert_eq!(g.players[0].life, 20 - 3);
 }
 
 /// CR 112.4 — a characteristic change applied to a permanent spell keeps
