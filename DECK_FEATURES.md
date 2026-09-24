@@ -120,6 +120,7 @@ lists were picked.
 | **Draconic Domination** (C17 precon) WUBRG | The Ur-Dragon | WUBRG | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Blame Game** (MKC precon) RW | Nelly Borca, Impulsive Accuser | RW | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Temur Roar** (TDC precon) GUR | Eshki, Temur's Roar | GUR | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
+| **Adaptive Enchantment** (C18 precon) GWU | Estrid, the Masked (**planeswalker**) | GWU | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Exit from Exile** (CLB precon) RG | Faldorn, Dread Wolf Herald | RG | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Exquisite Invention** (C18 precon) UR | Saheeli, the Gifted (**planeswalker**) | UR | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Mishra's Burnished Banner** (BRC precon) UBR | Mishra, Eminent One | UBR | 100 | 🟡 all 100 implemented, 6 carry residuals (below) |
@@ -1503,6 +1504,27 @@ resolution. Four-seat pods beside Ellivere / Lathliss / Zinnia (seed 10230,
 10231): 1,000 / 1,000, 19.0 %; census (seed 10232): no card of the four
 unplayed; strict debug pods (seeds 10233-10235, 4 and 6 seats): 180 / 180.
 `--bench` byte-identical; cube/sos/sealed (seed 10236): 7,500 decided.
+
+The **hundred-and-second** is Commander 2018's **Adaptive Enchantment**
+(`AdaptiveEnchantment_C18`) — Bant enchantments under Estrid, the Masked, a
+planeswalker commander. Eighteen cards were missing; the primitives: **CR 903.9's
+`CommanderPutIntoCommandZone` event**, emitted by both routes home (the 903.9a
+SBA and the 903.9b replacement; Myth Unbound, whose discount rides
+`CostReductionByValue` over `CommanderCastsFromCommandZone`),
+`CostReductionForYourSpellsTargetingThis` (Elderwood Scion),
+`ExileDyingOpponentCreaturesGrowingThis` (Ravenous Slime),
+`SpellsOfTypeCastThisTurnAtMost` (Tuvasa), `AttachAnyNumberTo` (Bruna, Heavenly
+Blademaster), `CounterType::Slumber` and `PlaneswalkerSubtype::Estrid`. Its pods
+found ⚠ **two Scalelord Reckoners stacking 3,905 triggers**, each retargeting
+the other player's Dragon: the bot's hostile pick now skips a permanent its
+own stack items already aim at. Residuals: Estrid's −7 Auras land on
+engine-picked hosts; Genesis Storm always puts the card in; Myth Unbound counts
+partners' casts together. Four-seat pods beside Kasla / Ulalek / The Ur-Dragon
+(seed 10240, 1,000 games, all decided after the fix): Estrid 20.2 %; beside
+Eshki / Nelly / Go-Shintai (seed 10241): 1,000 / 1,000, 15.3 %; census (seed
+10242): no card of the four unplayed; strict debug pods (seeds 10244-10246, 4
+and 6 seats): 180 / 180. `--bench` byte-identical; cube/sos/sealed (seed 10243):
+7,500 decided.
 
 The **hundred-and-first** is March of the Machine Commander's **Divine
 Convocation** (`DivineConvocation_MOC`) — Jeskai convoke under Kasla, the
