@@ -475,6 +475,8 @@ pub enum PlaneswalkerSubtype {
     Guff, Vronos,
     // C18 planeswalker commander (Adaptive Enchantment).
     Estrid,
+    // DMC planeswalker commander (Painbow).
+    Jared,
 }
 
 /// All subtype categories collected into one struct for CardDefinition.
@@ -2958,6 +2960,9 @@ pub enum SelectionRequirement {
     /// (Chief Engineer) or by a one-shot "next spell" grant (Wand of the
     /// Worldsoul). Kasla, Joyful Stormsculptor, Saint Traft and Rem Karolus.
     HasConvoke,
+    /// The object is all five colors (CR 105.2c — a Kavu token, Fallaji
+    /// Wayfarer). Computed colors on the battlefield, printed ones elsewhere.
+    AllColors,
     /// A planeswalker one of whose loyalty abilities was activated this turn
     /// (Cut Short).
     LoyaltyActivatedThisTurn,

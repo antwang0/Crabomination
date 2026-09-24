@@ -1304,6 +1304,7 @@ pub fn heroes_podium() -> CardDefinition {
                 per_toughness: 1,
                 count_graveyard: false,
                 exclude_self: true,
+                per_own_color: false,
             },
         }],
         activated_abilities: vec![ActivatedAbility {

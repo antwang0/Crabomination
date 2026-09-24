@@ -6170,6 +6170,13 @@ impl GameState {
                     || self.spell_granted_convoke(card.controller, card)
             }
             R::LoyaltyActivatedThisTurn => card.loyalty_uses_this_turn > 0,
+            R::AllColors => {
+                let n = match self.battlefield_find(card.id).and(self.computed_permanent(card.id)) {
+                    Some(cp) => cp.colors.len(),
+                    None => card.definition.printed_colors().len() as u32,
+                };
+                n >= 5
+            }
             R::IsHostOfSource => true,
             // `self.attacking` keys by card id, so a card not on the battlefield
             // is never listed — this stays false there (Static Snare's affinity

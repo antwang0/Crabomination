@@ -1900,6 +1900,7 @@ pub fn cid_timeless_artificer() -> CardDefinition {
                 per_toughness: 1,
                 count_graveyard: true,
                 exclude_self: false,
+                per_own_color: false,
             },
         }],
         ..Default::default()
@@ -1937,6 +1938,7 @@ pub fn warrior_of_light() -> CardDefinition {
                 per_toughness: 1,
                 count_graveyard: false,
                 exclude_self: false,
+                per_own_color: false,
             },
         }],
         triggered_abilities: vec![TriggeredAbility {

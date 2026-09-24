@@ -14109,6 +14109,7 @@ impl GameState {
                         per_toughness,
                         count_graveyard,
                         exclude_self,
+                        per_own_color,
                     } = &sa.effect
                     else {
                         continue;
@@ -14148,7 +14149,9 @@ impl GameState {
                         }
                         // "for each OTHER …" — the affected permanent doesn't
                         // count itself.
-                        let count = if *exclude_self
+                        let count = if *per_own_color {
+                            target.definition.printed_colors().len() as i32
+                        } else if *exclude_self
                             && self.evaluate_requirement_static_on(
                                 count_filter,
                                 target,
@@ -29557,6 +29560,7 @@ fn static_effect_to_effects(
             | StaticEffect::EntersTappedUnless { .. }
             | StaticEffect::LandsEnterUntapped
             | StaticEffect::MatchingEnterUntapped { .. }
+            | StaticEffect::OthersEnterWithSourceTapState
             | StaticEffect::LethalDamageByPower { .. }
             | StaticEffect::ExtraLandPerTurn
             | StaticEffect::CostReduction { .. }

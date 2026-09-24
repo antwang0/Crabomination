@@ -348,6 +348,10 @@ pub enum StaticEffect {
         /// Podium). Defaults to false.
         #[serde(default)]
         exclude_self: bool,
+        /// "+1/+1 for each of its colors" (Knight of New Alara): each affected
+        /// permanent counts its own printed colors instead of `count_filter`.
+        #[serde(default)]
+        per_own_color: bool,
     },
     /// CR 121.2a — "If you would draw a card, you may instead search your
     /// library for a card, put that card into your hand, then shuffle."
@@ -579,6 +583,10 @@ pub enum StaticEffect {
     /// "Players can't cast spells of the chosen type" (Archon of Valor's
     /// Reach) — the source's `chosen_card_type`, for every player.
     NoOneCastsChosenCardType,
+    /// CR 614.1c — "As long as this is tapped, other permanents enter tapped.
+    /// As long as it's untapped, other permanents enter untapped" (Archelos,
+    /// Lagoon Mystic). Applied last in `apply_enters_tapped_replacement`.
+    OthersEnterWithSourceTapState,
     /// Generic cost reduction for the controller's Plot activations from hand
     /// (Doc Aurlock — "Plotting cards from your hand costs {2} less"). Applied
     /// in `plot_card`; clamped at the generic pip.

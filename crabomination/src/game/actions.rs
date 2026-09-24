@@ -4622,6 +4622,26 @@ impl GameState {
         {
             should_tap = false;
         }
+        // Archelos: an untapped one makes others enter untapped; a tapped one
+        // taps them, unless the entrant's controller has an enters-untapped
+        // replacement (CR 616.1 — they order it last).
+        let (mut up, mut down) = (false, false);
+        for src in etb_scan {
+            if src.id != card_id
+                && src
+                    .definition
+                    .static_abilities
+                    .iter()
+                    .any(|sa| matches!(sa.effect, StaticEffect::OthersEnterWithSourceTapState))
+            {
+                if src.tapped { down = true } else { up = true }
+            }
+        }
+        if up {
+            should_tap = false;
+        } else if down && !self.enters_untapped_override(self.battlefield[idx].id) {
+            should_tap = true;
+        }
         if should_tap {
             self.battlefield[idx].tapped = true;
         }
@@ -14505,6 +14525,16 @@ impl GameState {
             // (Magecraft) trigger of a matching-subtype permanent fires an
             // additional time per doubler the controller controls.
             let fires = 1 + ally_trigger_extra_fires(self, listener_controller, source);
+            // "Whenever you cast a spell with {X} …" reads that spell's X
+            // (Zaxara, Geometer's Arthropod) — it's still on the stack.
+            let spell_x = self
+                .stack
+                .iter()
+                .find_map(|item| match item {
+                    StackItem::Spell { card, x_value, .. } if card.id == cast_card => Some(*x_value),
+                    _ => None,
+                })
+                .unwrap_or(0);
             // `repeat_n` yields the original last, so the ordinary board — no
             // doubler, `fires == 1` — pays no clone at all (PERF `(-361)`).
             for (effect, auto_target) in std::iter::repeat_n((effect, auto_target), fires) {
@@ -14517,6 +14547,7 @@ impl GameState {
                         // `Value::ConvergedValue` reads the iterated spell
                         // (Magmablood / Wildgrowth Archaic).
                         .converged_value(converged_value)
+                        .x_value(spell_x)
                         // Preserve the cast spell's id for Effect::CopySpell /
                         // Selector::CastSpellTarget.
                         .trigger_source(Some(crate::game::effects::EntityRef::Card(cast_card)))

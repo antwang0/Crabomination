@@ -752,6 +752,7 @@ fn card_has_etb_static(c: &CardInstance) -> bool {
                 | S::EntersTapped { .. }
                 | S::LandsEnterUntapped
                 | S::MatchingEnterUntapped { .. }
+                | S::OthersEnterWithSourceTapState
         )
     })
 }

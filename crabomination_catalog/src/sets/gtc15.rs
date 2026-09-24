@@ -69,6 +69,7 @@ pub fn hold_the_gates() -> CardDefinition {
                     per_toughness: 1,
                     count_graveyard: false,
                     exclude_self: false,
+                    per_own_color: false,
                 },
             },
             StaticAbility {
