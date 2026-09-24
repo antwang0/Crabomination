@@ -374,13 +374,18 @@ pub fn whirlpool_whelm() -> CardDefinition {
         Effect::Seq(vec![
             Effect::ClashWithOpponent {
                 on_win: Box::new(Effect::Move {
-                    what: target_filtered(R::Creature),
+                    what: target_n(0),
                     to: crate::effect::ZoneDest::Library { who: owner(), pos: crate::effect::LibraryPosition::Top },
                 }),
             },
+            // The target slot is declared here: a clash payoff is not walked
+            // for cast-time targets.
             Effect::If {
                 cond: Predicate::EntityMatches { what: target_n(0), filter: R::OnBattlefield },
-                then: Box::new(Effect::Move { what: target_n(0), to: crate::effect::ZoneDest::Hand(owner()) }),
+                then: Box::new(Effect::Move {
+                    what: target_filtered(R::Creature),
+                    to: crate::effect::ZoneDest::Hand(owner()),
+                }),
                 else_: Box::new(Effect::Noop),
             },
         ]),
