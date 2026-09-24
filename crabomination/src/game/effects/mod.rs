@@ -24,8 +24,10 @@ mod player_scope;
 mod reselect;
 mod reveal_cast;
 mod reveal_until;
+mod life_loss_grants;
 mod spell_damage;
 mod static_copy;
+mod table_choices;
 mod targeting;
 /// The target enumerator's call-site census — see
 /// [`targeting::call_site_census`]. Re-exported for `bot_ladder` under the
@@ -8126,6 +8128,33 @@ impl GameState {
                         self.discard_card(p, cid, events);
                     }
                 }
+                Ok(())
+            }
+
+            Effect::SacrificeAllButN { who, keep, filter } => {
+                self.sacrifice_all_but_n(who, keep, filter, ctx, events)
+            }
+            Effect::EachOpponentChoosesFromGraveyard { filter, to } => {
+                self.each_opponent_chooses_from_graveyard(filter, to, effect, ctx, events)
+            }
+            Effect::EachOtherPlayerMayDraw { per_draw } => {
+                self.each_other_player_may_draw(per_draw, effect, ctx, events)
+            }
+            Effect::GreatestDiscardersLoseLife => self.greatest_discarders_lose_life(ctx, events),
+            Effect::WheneverCreatureEntersUntilYourNextTurn { filter, body } => {
+                self.delayed_triggers.push(DelayedTrigger {
+                    controller: ctx.controller,
+                    source: ctx.source.unwrap_or(crate::card::CardId(0)),
+                    kind: crate::game::types::DelayedKind::MatchingCreatureEntersUntilYourNextTurn(
+                        filter.clone(),
+                    ),
+                    effect: (**body).clone(),
+                    target: None,
+                    bound_token: None,
+                    bound_subject: None,
+                    fires_once: false,
+                    expires_after_turn: None,
+                });
                 Ok(())
             }
 
@@ -34110,9 +34139,19 @@ impl GameState {
                         if over_cap {
                             continue;
                         }
+                        // Theater of Horrors' grant starts dormant unless it is
+                        // already live.
+                        let grantee = if matches!(
+                            duration,
+                            crate::card::MayPlayDuration::HolderTurnsAfterOpponentLostLife { .. }
+                        ) {
+                            self.opponent_life_loss_grant_seat(ctx.controller)
+                        } else {
+                            ctx.controller
+                        };
                         if let Some(card) = self.find_card_anywhere_mut(top_id) {
                             card.may_play_until = Some(crate::card::MayPlayPermission {
-                                player: ctx.controller,
+                                player: grantee,
                                 granted_turn,
                                 duration: duration.bound_to(ctx.controller),
                                 exile_after: false,
@@ -38124,6 +38163,7 @@ impl GameState {
                     _ => None,
                 }
             }
+            PlayerRef::RandomPlayer => self.random_living_seat(),
             PlayerRef::RandomOpponent => {
                 use rand::RngExt;
                 let me = ctx.controller;

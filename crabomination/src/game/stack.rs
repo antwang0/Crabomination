@@ -4318,6 +4318,7 @@ impl GameState {
             !(matches!(
                 dt.kind,
                 crate::game::types::DelayedKind::CreatureAttacksYouUntilYourNextTurn
+                    | crate::game::types::DelayedKind::MatchingCreatureEntersUntilYourNextTurn(_)
             ) && dt.controller == p)
         });
         {
@@ -4984,7 +4985,8 @@ impl GameState {
                     crate::card::MayPlayDuration::UntilYourNextEndStep => false,
                     // Step-bounded miracle windows are also dead by turn end.
                     crate::card::MayPlayDuration::EndOfThisStep => true,
-                    crate::card::MayPlayDuration::TurnsHolderAttacksWithAToken { .. } => {
+                    crate::card::MayPlayDuration::TurnsHolderAttacksWithAToken { .. }
+                    | crate::card::MayPlayDuration::HolderTurnsAfterOpponentLostLife { .. } => {
                         if perm.player != crate::card::MAY_PLAY_DORMANT {
                             c.may_play_until = Some(crate::card::MayPlayPermission {
                                 player: crate::card::MAY_PLAY_DORMANT,
@@ -7438,8 +7440,17 @@ impl GameState {
     /// combat state stays consistent. Prunes `self.attacking` (the
     /// attacker slot) and `self.block_map` (both blocker keys and
     /// attacker values).
+    /// Attacking now, or (CR 603.10) an attacker that left the battlefield
+    /// during this combat — "whenever an attacking creature dies" (Kardur).
+    pub(crate) fn is_or_was_attacking(&self, id: CardId) -> bool {
+        self.attacking.iter().any(|a| a.attacker == id) || self.left_while_attacking.contains(&id)
+    }
+
     pub(crate) fn remove_from_combat(&mut self, id: CardId) {
-        self.attacking.retain(|a| a.attacker != id);
+        if self.attacking.iter().any(|a| a.attacker == id) {
+            self.left_while_attacking.push(id);
+            self.attacking.retain(|a| a.attacker != id);
+        }
         // CR 702.22f — a creature removed from combat leaves its band.
         // Cold-group guard (see `clear_cold!`): `iter_mut` on an empty list is
         // still a `DerefMut`, and banding is rare.

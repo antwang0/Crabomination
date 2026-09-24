@@ -1309,6 +1309,9 @@ pub enum DelayedKind {
     /// the trigger's controller as "you". Theoretical Duplication. Expires at
     /// cleanup.
     MatchingCreatureEntersThisTurn(crate::card::SelectionRequirement),
+    /// The same watch "until your next turn" (Kardur, Doomscourge): expires
+    /// as the controller's next turn begins rather than at cleanup.
+    MatchingCreatureEntersUntilYourNextTurn(crate::card::SelectionRequirement),
     /// "Until end of turn, whenever a creature you control dies, …" (CR 603.4).
     /// Fires once per creature owned+controlled (via death LKI) by
     /// `DelayedTrigger.controller` that dies for the rest of the turn; the dead

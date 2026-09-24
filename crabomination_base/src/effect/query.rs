@@ -216,6 +216,7 @@ fn player_ref_selector(p: &PlayerRef) -> Option<&Selector> {
         | PlayerRef::MostCreatures
         | PlayerRef::ChosenPlayerOfSource
         | PlayerRef::RandomOpponent
+        | PlayerRef::RandomPlayer
         | PlayerRef::HostileOpponent
         | PlayerRef::OpponentsWhoVotedDifferently => None,
     }
@@ -409,6 +410,7 @@ impl Effect {
             | Effect::CreaturesYouControlDyingThisTurn { body, .. }
             | Effect::WheneverCreatureDiesThisTurn { body, .. }
             | Effect::WheneverCreatureEntersThisTurn { body, .. }
+            | Effect::WheneverCreatureEntersUntilYourNextTurn { body, .. }
             | Effect::CreaturesYouControlDealingCombatDamageThisTurn { body, .. }
             | Effect::WheneverYouGainLifeThisTurn { body, .. }
             | Effect::WheneverOpponentMakesYouDiscardThisTurn { body, .. }
@@ -1477,7 +1479,8 @@ impl Effect {
             | Effect::MillThenDrawPerType { who, .. }
             | Effect::DiscardHalf { who, .. }
             | Effect::DoubleLife { who }
-            | Effect::SacrificeHalf { who, .. } => sel_has_target(who),
+            | Effect::SacrificeHalf { who, .. }
+            | Effect::SacrificeAllButN { who, .. } => sel_has_target(who),
             Effect::ShuffleSelfIntoLibrary => false,
             Effect::SetLifeTotal { who, amount } => {
                 sel_has_target(who) || value_has_target(amount)
@@ -1942,7 +1945,12 @@ impl Effect {
             Effect::CreaturesYouControlEnteringThisTurn { .. } => false,
             Effect::EachPlayerReanimateCreatureMaxMv { .. } => false,
             Effect::CreaturesYouControlDyingThisTurn { .. } => false,
-            Effect::WheneverCreatureDiesThisTurn { .. } | Effect::WheneverCreatureEntersThisTurn { .. } => false,
+            Effect::WheneverCreatureDiesThisTurn { .. }
+            | Effect::WheneverCreatureEntersThisTurn { .. }
+            | Effect::WheneverCreatureEntersUntilYourNextTurn { .. }
+            | Effect::EachOpponentChoosesFromGraveyard { .. }
+            | Effect::EachOtherPlayerMayDraw { .. }
+            | Effect::GreatestDiscardersLoseLife => false,
             Effect::CreaturesYouControlDealingCombatDamageThisTurn { .. } => false,
             Effect::WheneverYouGainLifeThisTurn { .. } => false,
             Effect::WheneverCardEntersOpponentGraveyardThisTurn { .. } => false,
@@ -2338,7 +2346,8 @@ impl Effect {
             | Effect::MillThenDrawPerType { who, .. }
             | Effect::DiscardHalf { who, .. }
             | Effect::DoubleLife { who }
-            | Effect::SacrificeHalf { who, .. } => sel_filter(who),
+            | Effect::SacrificeHalf { who, .. }
+            | Effect::SacrificeAllButN { who, .. } => sel_filter(who),
             Effect::SetLifeTotal { who, .. } => sel_filter(who),
             Effect::Destroy { what }
             | Effect::DestroyAndRemember { what }
@@ -2936,6 +2945,7 @@ impl Effect {
                 | Effect::Mill { .. }
                 | Effect::Sacrifice { .. }
                 | Effect::SacrificeHalf { .. }
+                | Effect::SacrificeAllButN { .. }
                 | Effect::SacrificeAndRemember { .. }
                 | Effect::ExileFromHand { .. }
                 | Effect::ExileChosenFromHand { .. }
@@ -3832,6 +3842,7 @@ impl Effect {
             | Effect::MillHalf { .. }
             | Effect::DiscardHalf { .. }
             | Effect::SacrificeHalf { .. }
+            | Effect::SacrificeAllButN { .. }
             | Effect::AddPoison { .. } => true,
             // Cross-library searches target the searched player.
             Effect::SearchPickedBy {
@@ -4546,7 +4557,8 @@ impl Effect {
                 | Effect::MillHalf { who, .. }
                 | Effect::MillThenDrawPerType { who, .. }
                 | Effect::DiscardHalf { who, .. }
-                | Effect::SacrificeHalf { who, .. } => sel_find(who, slot),
+                | Effect::SacrificeHalf { who, .. }
+                | Effect::SacrificeAllButN { who, .. } => sel_find(who, slot),
                 Effect::SetLifeTotal { who, .. } => sel_find(who, slot),
                 Effect::Drain { from, to, .. } | Effect::DrainLifeLost { from, to, .. } => {
                     sel_find(from, slot).or_else(|| sel_find(to, slot))

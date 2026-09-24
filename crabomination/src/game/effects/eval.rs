@@ -3850,7 +3850,8 @@ impl GameState {
             R::Untapped => Some(!card.tapped),
             R::Unattached => Some(card.attached_to.is_none() && card.attached_to_player.is_none()),
             R::EnteredThisTurn => Some(card.entered_turn == Some(self.turn_number)),
-            R::IsAttacking => Some(self.attacking.iter().any(|a| a.attacker == cid)),
+            // CR 603.10 — an attacker that just left reads as attacking.
+            R::IsAttacking => Some(self.is_or_was_attacking(cid)),
             R::IsAttackingYou => Some(self.creature_is_attacking_seat(cid, controller)),
             R::IsAttackingAnOpponent => Some(self.creature_is_attacking_an_opponent_of(cid, controller)),
             R::OtherThanSource => Some(source.is_none_or(|s| cid != s)),
@@ -4636,7 +4637,7 @@ impl GameState {
                     R::IsNonbasicLand => card.definition.is_land() && !card.definition.supertypes.contains(&Supertype::Basic),
                     R::ProducesColorless => card.definition.produces_colorless(),
                     R::IsSnow => card.definition.is_snow(),
-                    R::IsAttacking => self.attacking.iter().any(|a| a.attacker == card.id),
+                    R::IsAttacking => self.is_or_was_attacking(card.id),
                     R::IsAttackingYou => self.creature_is_attacking_seat(card.id, controller),
                     R::IsAttackingAnOpponent => {
                         self.creature_is_attacking_an_opponent_of(card.id, controller)
@@ -5904,7 +5905,7 @@ impl GameState {
             // `self.attacking` keys by card id, so a card not on the battlefield
             // is never listed — this stays false there (Static Snare's affinity
             // "for each attacking creature" reads it from the affinity counter).
-            R::IsAttacking => self.attacking.iter().any(|a| a.attacker == card.id),
+            R::IsAttacking => self.is_or_was_attacking(card.id),
             R::IsAttackingYou => self.creature_is_attacking_seat(card.id, controller),
             R::IsAttackingAnOpponent => self.creature_is_attacking_an_opponent_of(card.id, controller),
             // A battlefield instance carries this flag directly (Rowdy Research's

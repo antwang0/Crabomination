@@ -3246,6 +3246,9 @@ impl GameState {
         if !self.blocked_attackers.is_empty() {
             self.blocked_attackers.clear();
         }
+        if !self.left_while_attacking.is_empty() {
+            self.left_while_attacking.clear();
+        }
         if !self.attack_bands.is_empty() {
             clear_cold!(self.attack_bands);
         }

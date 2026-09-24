@@ -1431,6 +1431,11 @@ pub struct ColdState {
     /// phase ends (CR 511.3).
     #[serde(default)]
     pub(crate) attacking_token_cleanup: Vec<(CardId, crate::effect::AttackingTokenCleanup)>,
+    /// CR 603.10 — attackers that left the battlefield during this combat,
+    /// so "whenever an attacking creature dies" (Kardur) reads them as
+    /// attacking. Cleared with the rest of combat (CR 511.3).
+    #[serde(default)]
+    pub(crate) left_while_attacking: Vec<CardId>,
     /// Transient: colors of the most-recently-sacrificed cost permanent —
     /// Lyzolda's `Predicate::SacrificedWasColor`. Set on the sacrifice-cost
     /// paths; reset between resolutions.
@@ -6065,6 +6070,7 @@ impl GameState {
             self.players[seat].lost_life_this_turn = true;
             self.players[seat].life_lost_this_turn =
                 self.players[seat].life_lost_this_turn.saturating_add((-delta) as u32);
+            self.wake_opponent_life_loss_grants(seat);
             // CR 702.179 — the active player's speed increases by 1 (capped at
             // 4), once on their own turn, the first time an opponent loses life.
             let active = self.active_player_idx;
@@ -21390,12 +21396,20 @@ impl GameState {
             let matching: Vec<crate::game::types::DelayedTrigger> = self
                 .delayed_triggers
                 .iter()
-                .filter(|dt| matches!(dt.kind, DelayedKind::MatchingCreatureEntersThisTurn(_)))
+                .filter(|dt| {
+                    matches!(
+                        dt.kind,
+                        DelayedKind::MatchingCreatureEntersThisTurn(_)
+                            | DelayedKind::MatchingCreatureEntersUntilYourNextTurn(_)
+                    )
+                })
                 .cloned()
                 .collect();
             for (cid, _) in &entered_creatures {
                 for dt in &matching {
-                    let DelayedKind::MatchingCreatureEntersThisTurn(ref filt) = dt.kind else {
+                    let (DelayedKind::MatchingCreatureEntersThisTurn(ref filt)
+                    | DelayedKind::MatchingCreatureEntersUntilYourNextTurn(ref filt)) = dt.kind
+                    else {
                         continue;
                     };
                     if !self.evaluate_requirement_static(

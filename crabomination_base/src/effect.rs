@@ -136,6 +136,9 @@ pub enum PlayerRef {
     /// drawn from the game's RNG. A fresh draw each time it is resolved, so
     /// it belongs in a one-shot slot such as `Effect::RememberPlayerOnSource`.
     RandomOpponent,
+    /// "Choose a player at random" (Wildfire Devils) — any living seat, the
+    /// controller included, drawn from the game's RNG on each resolution.
+    RandomPlayer,
     /// CR 701.38 — each opponent whose vote in the most recent ballot differed
     /// from the effect's controller's (Grudge Keeper).
     OpponentsWhoVotedDifferently,
@@ -4656,6 +4659,22 @@ pub enum Effect {
     /// down). Per-player. Lord Xander ("target opponent sacrifices half the
     /// permanents they control, rounded down" — `filter` = `Permanent`).
     SacrificeHalf { who: Selector, filter: SelectionRequirement, rounded_up: bool },
+    /// "[Each player] chooses up to `keep` [filter] they control, then
+    /// sacrifices the rest" (Archfiend of Depravity). Each keeps its best
+    /// (the inverse of `Sacrifice`'s weakest-first pick).
+    SacrificeAllButN { who: Selector, keep: Value, filter: SelectionRequirement },
+    /// "Each opponent chooses a [filter] card in their graveyard. Put those
+    /// cards [to]" (Dredge the Mire) — each chooser gives up its least
+    /// valuable match.
+    EachOpponentChoosesFromGraveyard { filter: SelectionRequirement, to: ZoneDest },
+    /// "Each other player may draw a card. Whenever a card is drawn this way,
+    /// [per_draw]" (Explosion of Riches) — `per_draw` runs under the
+    /// resolving controller once per accepted draw.
+    EachOtherPlayerMayDraw { per_draw: Box<Effect> },
+    /// "Each player who discarded a card with the greatest mana value among
+    /// cards discarded this way loses life equal to that mana value" (Scythe
+    /// Specter). Reads this resolution's discards.
+    GreatestDiscardersLoseLife,
     Scry    { who: PlayerRef, amount: Value },
     Surveil { who: PlayerRef, amount: Value },
     LookAtTop { who: PlayerRef, amount: Value },
@@ -9033,6 +9052,15 @@ pub enum Effect {
     /// "nontoken creature an opponent controls"). The entering creature is
     /// `Selector::TriggerSource`. Expires at cleanup.
     WheneverCreatureEntersThisTurn {
+        filter: SelectionRequirement,
+        body: Box<Effect>,
+    },
+
+    /// "Until your next turn, whenever a creature [matching `filter`] enters,
+    /// [body]" — the entering creature is `Selector::TriggerSource`; expires
+    /// as the controller's next turn begins. Kardur, Doomscourge's goad reach
+    /// over creatures that enter after it (its 2021 ruling).
+    WheneverCreatureEntersUntilYourNextTurn {
         filter: SelectionRequirement,
         body: Box<Effect>,
     },
