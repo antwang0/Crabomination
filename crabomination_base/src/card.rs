@@ -3527,6 +3527,29 @@ impl SelectionRequirement {
         }
     }
 
+    /// True when the filter can match an object on the stack (a spell or an
+    /// ability) — candidates no battlefield/graveyard/exile walk sees.
+    /// Recurses through And/Or/Not.
+    pub fn mentions_stack_object(&self) -> bool {
+        match self {
+            Self::IsSpellOnStack
+            | Self::HasAbilityOnStack
+            | Self::HasSpellSubtype(_)
+            | Self::SpellTargetsControllerOrControlled
+            | Self::SpellTargetsCreature
+            | Self::SpellTargetsMatching(_)
+            | Self::SpellWouldDestroyALandYouControl
+            | Self::SpellTargetsOnlySource
+            | Self::SpellWithSingleTarget
+            | Self::SpellNotCastFromHand => true,
+            Self::And(a, b) | Self::Or(a, b) => {
+                a.mentions_stack_object() || b.mentions_stack_object()
+            }
+            Self::Not(a) => a.mentions_stack_object(),
+            _ => false,
+        }
+    }
+
     /// True when the filter contains a **cross-slot** atom — one answered
     /// against the other chosen targets (`SameControllerAsTargetSlot`,
     /// `OtherThanTargetSlot`) rather than against the candidate alone.

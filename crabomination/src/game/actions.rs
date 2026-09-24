@@ -8714,6 +8714,22 @@ impl GameState {
                     .any(|(idx, tgt)| slot_bad((idx + 1) as u8, tgt))
         };
         self.target_slots_scratch.clear();
+        let filter_violation = filter_violation
+            || (target.is_none()
+                && additional_targets.is_empty()
+                && self.required_target_unfillable(
+                    p,
+                    &card,
+                    if card.gift_promised {
+                        card.definition.gift.as_ref().map(|g| &g.gifted_effect)
+                    } else {
+                        None
+                    }
+                    .unwrap_or(&card.definition.effect),
+                    mode,
+                    kicked,
+                    x_value.unwrap_or(0),
+                ));
         if filter_violation {
             cast_census::rollback(line!());
             self.players[p].hand.push(card);

@@ -12051,3 +12051,25 @@ fn cr_701_21a_viscera_seer_can_sacrifice_itself() {
     assert!(g.battlefield_find(bear).is_none(), "the other creature goes first");
     assert!(g.battlefield_find(seer).is_some());
 }
+
+/// CR 601.2c + 601.2 — a spell announces a target for each one it requires, and
+/// a cast that can't complete that step is illegal. Doom Blade with no nonblack
+/// creature anywhere used to be accepted with `target: None` and resolve as a
+/// no-op. A modal spell whose mode isn't fixed at cast is left alone.
+#[test]
+fn cr_601_2c_required_target_with_no_legal_candidate_rejects_the_cast() {
+    let cast = |id| GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    };
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::vampire_nighthawk());
+    let blade = g.add_card_to_hand(0, catalog::doom_blade());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    assert!(!g.would_accept(cast(blade)), "only a black creature on board");
+    assert!(g.perform_action(cast(blade)).is_err());
+    assert!(g.players[0].hand.iter().any(|c| c.id == blade), "the card stays in hand");
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    assert!(g.would_accept(cast(blade)), "a legal target exists");
+}

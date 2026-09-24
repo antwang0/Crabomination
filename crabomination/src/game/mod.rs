@@ -133,6 +133,8 @@ mod legendary_spell;
 // CR 102.2 — "an opponent controls N or more …", read per opponent.
 mod milled_play;
 mod opponent_controls;
+// CR 601.2c — a required target nothing could fill makes the cast illegal.
+mod required_target;
 mod unattach;
 /// CR 800.4f/g — routing an ask whose seat has left the game.
 pub(crate) mod departed;

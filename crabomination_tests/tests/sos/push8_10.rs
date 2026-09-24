@@ -422,11 +422,12 @@ fn magmablood_archaic_pumps_friendly_creatures_on_two_color_cast() {
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add(Color::Blue, 1);
     // ChooseMode 1 (destroy target enchantment) to avoid relying on
-    // a stack target for the spell body. Modes 0 / 2 also work but
-    // need targets.
+    // a stack target for the spell body. CR 601.2c: the mode needs a
+    // legal enchantment to aim at, so the opponent has one.
+    let anthem = g.add_card_to_battlefield(1, catalog::glorious_anthem());
     g.perform_action(GameAction::CastSpell {
         card_id: charm,
-        target: None,
+        target: Some(Target::Permanent(anthem)),
         additional_targets: vec![],
         mode: Some(1),
         x_value: None,
