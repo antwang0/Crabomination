@@ -271,6 +271,7 @@ pub fn synthetic_destiny() -> CardDefinition {
                     body: Box::new(Effect::RevealUntilMatchingToBattlefield {
                         filter: R::Creature,
                         count: Value::XFromCost,
+                        rest_bottom: false,
                     }),
                 },
             ])),

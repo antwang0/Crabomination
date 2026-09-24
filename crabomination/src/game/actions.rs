@@ -8321,7 +8321,9 @@ impl GameState {
         // Keyword::Delve and every listed card must currently sit in the
         // caster's graveyard. The cards aren't exiled here — only after the
         // reduced cost is paid — so a rejected cast leaves them in place.
+        let exile_discount = card.definition.graveyard_exile_discount.clone();
         if !delve_cards.is_empty()
+            && exile_discount.is_none()
             && !card.definition.keywords.has_kw(&crate::card::Keyword::Delve)
             && !self.controller_grants_spells_delve(p)
         {
@@ -8330,7 +8332,11 @@ impl GameState {
             return Err(GameError::SorcerySpeedOnly); // reuse: spell doesn't have delve
         }
         for cid in delve_cards {
-            if !self.players[p].graveyard.iter().any(|c| c.id == *cid) {
+            let fits = self.players[p].graveyard.iter().any(|c| {
+                c.id == *cid
+                    && exile_discount.as_ref().is_none_or(|(f, _)| self.evaluate_requirement_on_card(f, c, p))
+            });
+            if !fits {
                 cast_census::rollback(line!());
                 self.players[p].hand.push(card);
                 return Err(GameError::CardNotInGraveyard(*cid));
@@ -9086,7 +9092,8 @@ impl GameState {
         // `reduce_generic`; the cards themselves are exiled only after a
         // successful payment (below).
         if !delve_cards.is_empty() {
-            cost.reduce_generic(delve_cards.len() as u32);
+            let per = card.definition.graveyard_exile_discount.as_ref().map_or(1, |(_, n)| *n);
+            cost.reduce_generic(delve_cards.len() as u32 * per);
         }
         // Trinisphere floor (CR 117.7 / replacement-style): applied after
         // every reduction so a discounted spell still owes the minimum.
@@ -9221,8 +9228,13 @@ impl GameState {
         // (CR 702.66: they're exiled as part of paying the cost). Bumps the
         // per-turn exile tally so "if cards were exiled this turn" payoffs see
         // them.
+        let stamp = card.definition.graveyard_exile_discount.is_some().then_some(card.id);
         for cid in delve_cards {
-            if let Some(exiled) = Self::take_card(&mut self.players[p].graveyard, *cid) {
+            if let Some(mut exiled) = Self::take_card(&mut self.players[p].graveyard, *cid) {
+                // "Exiled with" the spell, which keeps its id as a permanent.
+                if stamp.is_some() {
+                    exiled.exiled_with = stamp;
+                }
                 self.exile.push(exiled);
                 self.players[p].cards_exiled_this_turn += 1;
             }

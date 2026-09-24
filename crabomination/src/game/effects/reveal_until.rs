@@ -30,22 +30,29 @@ impl GameState {
         &mut self,
         filter: &SelectionRequirement,
         count: &Value,
+        rest_bottom: bool,
         ctx: &EffectContext,
         events: &mut Vec<GameEvent>,
     ) -> Result<(), GameError> {
+        use rand::seq::SliceRandom;
         let p = ctx.controller;
         let need = self.evaluate_value(count, ctx).max(0) as u32;
         if need == 0 {
             return Ok(());
         }
-        let (hits, rest) =
+        let (hits, mut rest) =
             self.reveal_until_n(p, need, |g, c| g.evaluate_requirement_on_card(filter, c, p));
+        if rest_bottom {
+            rest.shuffle(&mut self.rng.draw());
+        }
         self.players[p].library.extend(rest);
         let dest = ZoneDest::Battlefield { controller: PlayerRef::Seat(p), tapped: false };
         for card in hits {
             self.place_card_in_dest(card, p, &dest, events);
         }
-        self.shuffle_library(p, events);
+        if !rest_bottom {
+            self.shuffle_library(p, events);
+        }
         self.check_state_based_actions_into(events);
         Ok(())
     }

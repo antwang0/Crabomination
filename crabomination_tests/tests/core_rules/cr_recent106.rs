@@ -434,6 +434,7 @@ fn cr_603_7c_a_delayed_trigger_keeps_its_x() {
                     body: Box::new(Effect::RevealUntilMatchingToBattlefield {
                         filter: R::Creature,
                         count: Value::XFromCost,
+                        rest_bottom: false,
                     }),
                 },
             ])),

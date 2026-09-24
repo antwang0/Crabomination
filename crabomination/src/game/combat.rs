@@ -4987,6 +4987,37 @@ impl GameState {
             .sum()
     }
 
+    /// The combat-damage-becomes-mill replacements' shared half: `p` mills
+    /// `amount` (Szadek, Undead Alchemist).
+    fn mill_instead_of_combat_damage(&mut self, p: usize, amount: u32, events: &mut Vec<GameEvent>) {
+        for _ in 0..amount {
+            if self.players[p].library.is_empty() {
+                break;
+            }
+            let card = self.players[p].library.remove(0);
+            let cid = card.id;
+            if !self.route_to_graveyard(card, events) {
+                self.note_milled(p, cid);
+                events.push(GameEvent::CardMilled { player: p, card_id: cid });
+            }
+        }
+    }
+
+    /// Does a `CombatDamageToPlayersBecomesMill` static `controller` controls
+    /// cover `attacker`?
+    fn combat_damage_becomes_mill(&self, attacker: CardId, controller: usize) -> bool {
+        self.battlefield.iter().any(|c| {
+            c.controller == controller
+                && c.definition.static_abilities.iter().any(|sa| {
+                    matches!(
+                        self.active_static(&sa.effect, c),
+                        Some(crate::effect::StaticEffect::CombatDamageToPlayersBecomesMill { filter })
+                            if self.evaluate_requirement_static(filter, &Target::Permanent(attacker), controller, Some(c.id))
+                    )
+                })
+        })
+    }
+
     fn deal_combat_damage_to_target(
         &mut self,
         atk: &AttackerInfo,
@@ -5023,17 +5054,13 @@ impl GameState {
                         counter_type: crate::card::CounterType::PlusOnePlusOne,
                         count: amount,
                     });
-                    for _ in 0..amount {
-                        if self.players[p].library.is_empty() {
-                            break;
-                        }
-                        let card = self.players[p].library.remove(0);
-                        let cid = card.id;
-                        if !self.route_to_graveyard(card, events) {
-                            self.note_milled(p, cid);
-                            events.push(GameEvent::CardMilled { player: p, card_id: cid });
-                        }
-                    }
+                    self.mill_instead_of_combat_damage(p, amount, events);
+                    return;
+                }
+                // CR 614 — Undead Alchemist: a matching attacker's combat
+                // damage to a player is a mill of that many instead.
+                if amount > 0 && self.combat_damage_becomes_mill(atk.id, atk.controller) {
+                    self.mill_instead_of_combat_damage(p, amount, events);
                     return;
                 }
                 // CR 614.9 — Palisade-Giant-style redirect: combat damage

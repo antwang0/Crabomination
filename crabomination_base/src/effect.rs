@@ -8316,8 +8316,14 @@ pub enum Effect {
     /// "Reveal cards from the top of your library until you reveal `count`
     /// `filter` cards, put all of them onto the battlefield, then shuffle the
     /// rest into your library" (Synthetic Destiny). Stops early on an empty
-    /// library.
-    RevealUntilMatchingToBattlefield { filter: SelectionRequirement, count: Value },
+    /// library. With `rest_bottom` the rest go on the bottom in a random order
+    /// instead of a shuffle (Empty the Laboratory).
+    RevealUntilMatchingToBattlefield {
+        filter: SelectionRequirement,
+        count: Value,
+        #[serde(default)]
+        rest_bottom: bool,
+    },
     /// "Reveal cards from the top of your library until you reveal a
     /// [filter] card. Put that card onto the battlefield and the rest on the
     /// bottom of your library in a random order" — and, with

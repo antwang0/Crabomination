@@ -29689,6 +29689,7 @@ fn static_effect_to_effects(
             // consulted at the combat + noncombat damage sites, not continuous.
             | StaticEffect::ReplaceDamageToSelfWithCounters { .. }
             | StaticEffect::CombatDamageToPlayerBecomesCountersAndMill
+            | StaticEffect::CombatDamageToPlayersBecomesMill { .. }
             // PumpSelfByControlledPermanents — needs a live battlefield
             // count; resolved in `gather_continuous_effects`.
             | StaticEffect::PumpSelfByControlledPermanents { .. }

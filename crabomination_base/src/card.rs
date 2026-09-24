@@ -4097,6 +4097,13 @@ pub struct CardDefinition {
     /// hand or library" — the card's own exception to CR 122.2 (Skullbriar).
     #[serde(default)]
     pub keeps_counters_off_battlefield: bool,
+    /// "As an additional cost to cast this spell, you may exile any number of
+    /// [filter] cards from your graveyard. This spell costs {n} less to cast
+    /// for each card exiled this way" (Gorex, the Tombshell): delve over a
+    /// filter at `n` generic a card, the exiled cards stamped `exiled_with`
+    /// the spell. Rides the delve cast path (`CastSpellDelve`).
+    #[serde(default)]
+    pub graveyard_exile_discount: Option<(SelectionRequirement, u32)>,
     /// CR 704.5j exception — "If there are exactly two permanents with this
     /// name on the battlefield, the legend rule doesn't apply to them."
     /// (Brothers Yamazaki.) When the same-name legend group has exactly two

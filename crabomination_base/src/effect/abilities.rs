@@ -2440,6 +2440,10 @@ pub enum StaticEffect {
     /// many cards." Szadek, Lord of Secrets. A dealer-side combat-damage
     /// replacement consulted in the attack-a-player branch.
     CombatDamageToPlayerBecomesCountersAndMill,
+    /// CR 614 — "If a [filter] you control would deal combat damage to a
+    /// player, instead that player mills that many cards" (Undead Alchemist).
+    /// Read at the combat damage site; the damage is never dealt.
+    CombatDamageToPlayersBecomesMill { filter: SelectionRequirement },
     /// CR 615 — "Prevent all damage that would be dealt to attacking
     /// creatures you control." Iroas, God of Victory. Consulted at both the
     /// combat strike-back and the shared non-combat damage funnel.

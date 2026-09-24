@@ -209,6 +209,7 @@ pub fn kindred_summons() -> CardDefinition {
                 count: Value::CountOf(Box::new(Selector::EachPermanent(
                     chosen().and(R::ControlledByYou),
                 ))),
+                rest_bottom: false,
             }),
         },
         ..Default::default()

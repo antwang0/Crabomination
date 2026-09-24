@@ -6911,11 +6911,10 @@ pub(super) fn cast_candidates<'a>(
     // payable. Appended to the candidate set so the bot actually leverages
     // Treasure Cruise / Dig Through Time / Gurmag Angler off a full bin.
     gated_block!(mask, spec::DELVE, castable, {
-    for c in state.players[seat]
-        .hand
-        .iter()
-        .filter(|c| c.definition.keywords.has_kw(&crate::card::Keyword::Delve))
-    {
+    for c in state.players[seat].hand.iter().filter(|c| {
+        c.definition.keywords.has_kw(&crate::card::Keyword::Delve)
+            || c.definition.graveyard_exile_discount.is_some()
+    }) {
         let generic_pips: u32 = c
             .definition
             .cost
@@ -6926,8 +6925,20 @@ pub(super) fn cast_candidates<'a>(
                 _ => None,
             })
             .sum();
-        let gy_ids: Vec<CardId> = state.players[seat].graveyard.iter().map(|g| g.id).collect();
-        let take = (generic_pips as usize).min(gy_ids.len());
+        // Gorex's filtered discount: only matching cards, `per` generic each.
+        let (per, gy_ids): (u32, Vec<CardId>) = match &c.definition.graveyard_exile_discount {
+            Some((f, per)) => (
+                (*per).max(1),
+                state.players[seat]
+                    .graveyard
+                    .iter()
+                    .filter(|g| state.evaluate_requirement_on_card(f, g, seat))
+                    .map(|g| g.id)
+                    .collect(),
+            ),
+            None => (1, state.players[seat].graveyard.iter().map(|g| g.id).collect()),
+        };
+        let take = (generic_pips.div_ceil(per) as usize).min(gy_ids.len());
         if take == 0 {
             continue;
         }
