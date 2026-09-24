@@ -495,6 +495,7 @@ impl Effect {
             | Effect::EachPlayerChoosesCreatureTypeThen { then, .. }
             | Effect::ChooseOpponentThen { then }
             | Effect::AsPlayer { body: then, .. }
+            | Effect::OpponentChoosesPermanentThen { body: then, .. }
             | Effect::RevealDrawnCardThenIf { then, .. }
             | Effect::Parley { then, .. }
             | Effect::RevealAnyNumberFromHand { then, .. }

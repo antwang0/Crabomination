@@ -128,11 +128,11 @@ pub fn hoard_smelter_dragon() -> CardDefinition {
                 // artifact's mana value" either way).
                 Effect::PumpPT {
                     what: Selector::This,
-                    power: Value::ManaValueOf(Box::new(target_filtered(R::Artifact))),
+                    power: Value::ManaValueOf(Box::new(Selector::Target(0))),
                     toughness: Value::Const(0),
                     duration: Duration::EndOfTurn,
                 },
-                Effect::Destroy { what: Selector::Target(0) },
+                Effect::Destroy { what: target_filtered(R::Artifact) },
             ]),
             ..Default::default()
         }],
