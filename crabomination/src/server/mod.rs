@@ -89,6 +89,7 @@ pub mod mcts;
 pub mod bot;
 mod pod_attack;
 mod combat_only;
+mod cycling;
 pub mod encode;
 pub mod vocab_snapshot;
 pub mod decision_capture;

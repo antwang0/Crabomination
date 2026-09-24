@@ -3184,7 +3184,14 @@ impl HeuristicBot {
             // drop out of the candidate set. Without this, every non-counter
             // instant was dead in hand until the bot's own main phase.
             TurnStep::End if !is_active && state.stack.is_empty() => {
-                Some(main_phase_action_with(state, seat, self.scored, &self.weights))
+                let action = main_phase_action_with(state, seat, self.scored, &self.weights);
+                // Spare mana with nothing to cast: cycle (pods only).
+                if matches!(action.action, GameAction::PassPriority)
+                    && let Some(cycle) = super::cycling::pick_cycle(state, seat)
+                {
+                    return Some(BotStep::plain(cycle));
+                }
+                Some(action)
             }
             _ => {
                 // Same shape as the main-phase stack window above: only
