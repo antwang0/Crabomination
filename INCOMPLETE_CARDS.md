@@ -1870,6 +1870,13 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Sword of the Squeak | Squirreled Away (BLC) | "base power or toughness 1" reads printed power and toughness. |
 | 🟡 Insatiable Frugivore | Squirreled Away (BLC) | the three cards exiled each time are the first three in your graveyard, not your pick. |
 | 🟡 Curse of Inertia | Evasive Maneuvers (C13) | the attacking player's tap-or-untap is the engine's pick of permanent and direction. |
+| 🟡 Indomitable Might | Virtue and Valor (WOC) | the damage always goes as though unblocked; the controller doesn't choose. |
+| 🟡 Mantle of the Ancients | Virtue and Valor (WOC) | the returned Aura and Equipment cards are picked (greatest mana value first), not targeted. |
+| 🟡 Unfinished Business | Virtue and Valor (WOC) | the two Aura / Equipment cards are picked, not targeted. |
+| 🟡 Retether | Virtue and Valor (WOC) | each Aura's host is the engine's pick (your greatest-power creature first). |
+| 🟡 Knickknack Ouphe | Virtue and Valor (WOC) | every eligible Aura goes onto the battlefield; each host is the engine's pick. |
+| 🟡 Songbirds' Blessing | Virtue and Valor (WOC) | the Aura always goes onto the battlefield when it has a host; the host is the engine's pick. |
+| 🟡 Liberated Livestock | Virtue and Valor (WOC) | each token's Aura is the engine's pick (graveyard first). |
 | 🟡 Zinnia, Valley's Voice | Family Matters (BLC) | the granted offspring copy is Zinnia's own trigger (lost if Zinnia leaves first); a creature with its own kicker or offspring gets no second one. |
 | 🟡 Echoing Assault | Family Matters (BLC) | one copy per combat, not one per player attacked. |
 | 🟡 Combat Celebrant | Family Matters (BLC) | a second exert in a turn is allowed and does nothing (the bonus is once a turn). |

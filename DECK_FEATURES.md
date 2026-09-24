@@ -110,6 +110,7 @@ lists were picked.
 | **Evasive Maneuvers** (C13 precon) GWU | Derevi, Empyrial Tactician | GWU | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Draconic Destruction** (SCD starter) RG | Atarka, World Render | RG | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Family Matters** (BLC precon) URW | Zinnia, Valley's Voice | URW | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
+| **Virtue and Valor** (WOC precon) GW | Ellivere of the Wild Court | GW | 100 | 🟡 all 100 implemented, 7 carry residuals (below) |
 | **Hatsune Miku** (SLD precon) GW | Trostani, Selesnya's Voice | GW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Witherbloom Witchcraft** (C21 precon) BG | Willowdusk, Essence Seer | BG | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Witherbloom Pestilence** (SOC precon) BG | Dina, Essence Brewer | BG | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
@@ -1425,6 +1426,24 @@ pods beside Hazel / Ranar / Saskia (seed 9541, 1,000 games): 1,000 decided —
 Derevi 3.0 % (4.5 % beside Teferi / Kalemne / Zedruu, seed 9545: a tempo list the
 bot pilots poorly); a 300-game census (seed 9542) leaves no card unplayed;
 strict debug pods (seeds 9543/9544, 120 games) decided 120/120. `--bench`
+byte-identical.
+
+The **ninety-sixth** is Wilds of Eldraine Commander's **Virtue and Valor**
+(`VirtueAndValor_WOC`) — Selesnya Auras and Roles under Ellivere of the Wild
+Court. Nineteen cards were missing; the primitive family is **Aura and
+Equipment cards put onto the battlefield attached** (CR 303.4f / 301.5c,
+`game/effects/attach_from_zone.rs`): `Effect::PutOntoBattlefieldAttached`
+(from graveyard and/or hand, to a named host or each to its own best legal
+one; no legal host leaves the card where it is, CR 303.4i) and its library
+forms `RevealTopPutAttached` / `RevealUntilPutAttachedElseHand`. Also
+`Value::AttachmentsOn`, `R::AttachedToCreature`, the Virtuous Role and
+`StaticEffect::AurasOnYourPermanentsHaveUmbraArmor`. Residuals: **Indomitable
+Might**, **Mantle of the Ancients**, **Unfinished Business**, **Retether**,
+**Knickknack Ouphe**, **Songbirds' Blessing**, **Liberated Livestock**
+(INCOMPLETE_CARDS). Release pods beside Zinnia / Atarka / Derevi (seed 9601,
+1,000 games): 1,000 decided, Ellivere 53.0 %, and the census leaves no card of
+the four lists unplayed; strict debug pods beside Lathliss / Nelly /
+Go-Shintai (seeds 9603/9604, 120 games) decided 120/120. `--bench`
 byte-identical.
 
 The **ninety-fourth** is Bloomburrow Commander's **Family Matters**
