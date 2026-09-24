@@ -1068,6 +1068,8 @@ fn known_card_in(card: &CardInstance, state: Option<&crate::game::GameState>) ->
         .find_map(|kw| {
             if let crate::card::Keyword::Cycling(c) = kw { Some(c.clone()) } else { None }
         })
+        // Rhet-Tomb Mystic — a granted cycling cost shows too.
+        .or_else(|| state.and_then(|st| st.granted_cycling_for(card.owner, card)))
         // Fluctuator — the label must show what the player will actually pay.
         .map(|mut c| {
             if let Some(st) = state {

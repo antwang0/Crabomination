@@ -19239,11 +19239,15 @@ impl GameState {
             .iter()
             .find(|c| c.id == card_id)
             .and_then(|c| {
-                c.definition.keywords.iter().find_map(|kw| match kw {
-                    Keyword::Cycling(mc) => Some((Some(mc.clone()), 0)),
-                    Keyword::CyclingLife(n) => Some((None, *n)),
-                    _ => None,
-                })
+                c.definition
+                    .keywords
+                    .iter()
+                    .find_map(|kw| match kw {
+                        Keyword::Cycling(mc) => Some((Some(mc.clone()), 0)),
+                        Keyword::CyclingLife(n) => Some((None, *n)),
+                        _ => None,
+                    })
+                    .or_else(|| self.granted_cycling_for(seat, c).map(|mc| (Some(mc), 0)))
             })
             .ok_or(GameError::CardNotInHand(card_id))?;
         if life_cost > 0 && self.players[seat].life < life_cost as i32 {
@@ -19385,6 +19389,27 @@ impl GameState {
                     .then(|| (cost.clone(), search.clone()))
             })
             .min_by_key(|(c, _)| c.cmc())
+    }
+
+    /// Cycling granted to a card in `seat`'s hand by a permanent `seat`
+    /// controls (`GrantCyclingToYourHandCards` — Rhet-Tomb Mystic); the
+    /// cheapest grant wins.
+    pub fn granted_cycling_for(
+        &self,
+        seat: usize,
+        card: &crate::card::CardInstance,
+    ) -> Option<crate::mana::ManaCost> {
+        self.battlefield
+            .iter()
+            .filter(|src| src.controller == seat)
+            .flat_map(|src| src.definition.static_abilities.iter())
+            .filter_map(|sa| match &sa.effect {
+                crate::effect::StaticEffect::GrantCyclingToYourHandCards { filter, cost } => {
+                    crate::game::layers::requirement_matches_card(filter, card, seat).then(|| cost.clone())
+                }
+                _ => None,
+            })
+            .min_by_key(|c| c.cmc())
     }
 
     fn landcycle_card(&mut self, card_id: crate::card::CardId) -> Result<Vec<GameEvent>, GameError> {
@@ -29857,6 +29882,7 @@ fn static_effect_to_effects(
             | StaticEffect::MinusCounterReduction
             // Hand-zone grant, consulted by `landcycle_card` / the view.
             | StaticEffect::GrantTypecyclingToHandCards { .. }
+            | StaticEffect::GrantCyclingToYourHandCards { .. }
             // CR 605.1b — resolved at the mana-ability fast path.
             | StaticEffect::ExtraManaOnLandTap { .. }
             // ETB-counter replacement, read at `chosen_type_etb_counter_specs`.

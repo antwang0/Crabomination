@@ -2268,6 +2268,10 @@ pub enum StaticEffect {
         cost: crate::mana::ManaCost,
         search: SelectionRequirement,
     },
+    /// CR 702.29 — "Each [filter] card in your hand has cycling [cost]"
+    /// (Rhet-Tomb Mystic). Consulted by `cycle_card` and the hand view for a
+    /// card with no printed cycling; only its controller's hand is granted.
+    GrantCyclingToYourHandCards { filter: SelectionRequirement, cost: crate::mana::ManaCost },
     /// "All [filter] permanents have '[triggered ability]'" (CR 613 layer 6
     /// grant — Kataki, War's Wage's "All artifacts have 'At the beginning of
     /// your upkeep, sacrifice this artifact unless you pay {1}'"). The
