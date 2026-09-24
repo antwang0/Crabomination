@@ -842,6 +842,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ULALEK_COMMANDERS,
             main: decks::ULALEK_MAIN,
         },
+        // Hundred-and-first: the ninety-first official list (Divine
+        // Convocation, MOC) — Jeskai convoke under Kasla, the Broken Halo.
+        // `--pod-decks 101`.
+        PodDeck {
+            name: "Kasla, the Broken Halo (URW)",
+            commanders: decks::KASLA_COMMANDERS,
+            main: decks::KASLA_MAIN,
+        },
     ]
 }
 
@@ -1386,6 +1394,8 @@ mod tests {
             ("Eshki", [0xE5C1, 103, 9027]),
             ("Zinnia", [0x2177, 101, 9025]),
             ("Ellivere", [0xE111, 102, 9026]),
+            // CR 702.51 — convoke taps fire "becomes tapped" triggers.
+            ("Kasla", [0xCA51, 104, 9028]),
         ] {
             let precon = *field.iter().find(|d| d.name.starts_with(name)).expect("the precon seat");
             assert_eq!(precon.card_count(), 100);

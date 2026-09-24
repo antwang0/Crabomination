@@ -3103,3 +3103,32 @@ pub const ULALEK_MAIN: &[CardFactory] = &[
     // Basics: 1 plains, 1 island, 1 swamp, 1 mountain, 1 forest, 1 wastes
     plains, island, swamp, mountain, forest, wastes,
 ];
+
+pub const KASLA_COMMANDERS: &[CardFactory] = &[kasla_the_broken_halo];
+
+/// **Divine Convocation**, the March of the Machine Commander deck (MOC,
+/// 2023-04-21), exactly as MTGJSON's `DivineConvocation_MOC` prints it:
+/// 75 nonbasic cards + 8 Plains + 8 Islands + 8 Mountains = 99. Jeskai convoke under Kasla, the
+/// Broken Halo.
+pub const KASLA_MAIN: &[CardFactory] = &[
+    saint_traft_and_rem_karolus, wand_of_the_worldsoul, flockchaser_phantom, wildfire_awakener,
+    ichor_elixir, path_of_the_ghosthunter, deluxe_dragster, mistmeadow_vanisher,
+    nesting_dovehawk, kykar_winds_fury, elspeth_suns_champion, the_locust_god,
+    angel_of_finality, angel_of_salvation, austere_command, chasm_skulker, cultivators_caravan,
+    emeria_angel, exotic_orchard, frostboil_snarl, furycalm_snarl, hour_of_reckoning,
+    keeper_of_the_accord, kher_keep, mentor_of_the_meek, nadir_kraken, port_town,
+    prairie_stream, secure_the_wastes, skycloud_expanse, temple_of_enlightenment,
+    temple_of_epiphany, temple_of_triumph, venerated_loxodon, whirlwind_of_thought,
+    cloud_of_faeries, command_tower, commanders_sphere, ephemeral_shields, evolving_wilds,
+    fractured_powerstone, goblin_instigator, goblin_medics, impact_tremors, spirited_companion,
+    suture_priest, terramorphic_expanse, village_bell_ringer, banisher_priest, arcane_signet,
+    battle_screech, chant_of_vitu_ghazi, conclave_tribunal, devouring_light, duergar_hedge_mage,
+    fallowsage, flight_of_equenauts, improbable_alliance, migratory_route, mystic_monastery,
+    rogues_passage, seraph_of_the_masses, skullclamp, sol_ring, stoke_the_flames,
+    swords_to_plowshares, tetsuko_umezawa_fugitive, wear_tear, temporal_cleansing, meeting_of_minds,
+    shatter_the_source, wrenns_resolve, cut_short, joyful_stormsculptor, artistic_refusal,
+    // Basics: 8 plains, 8 island, 8 mountain
+    plains, plains, plains, plains, plains, plains, plains, plains, island, island, island,
+    island, island, island, island, island, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain,
+];
