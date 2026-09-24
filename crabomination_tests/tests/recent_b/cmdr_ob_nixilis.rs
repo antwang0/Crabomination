@@ -143,3 +143,24 @@ fn cr_119_3_drain_life_lost_gains_the_total_lost() {
         .expect("drain");
     assert_eq!(g.players[0].life, 32, "a seat at 1 still loses 2 (life can go negative)");
 }
+
+/// CR 119.3 / 800.4 — Gray Merchant and Kokusho gain every opponent's loss at
+/// a table: Gray Merchant's devotion 2 drains three opponents for 6; Kokusho's
+/// death, three opponents for 15.
+#[test]
+fn cr_119_3_gray_merchant_and_kokusho_gain_the_table_total() {
+    let mut g = pod(4);
+    let gary = g.add_card_to_hand(0, catalog::gray_merchant_of_asphodel());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell { card_id: gary, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 26);
+    assert_eq!(g.players[1].life, 18);
+    let kokusho = g.add_card_to_battlefield(0, catalog::kokusho_the_evening_star());
+    let ctx = EffectContext::for_spell(1, Some(crabomination::game::types::Target::Permanent(kokusho)), 0, 0);
+    g.resolve_effect(&Effect::Destroy { what: Selector::Target(0) }, &ctx).expect("destroy");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 41);
+    assert_eq!(g.players[3].life, 13);
+}

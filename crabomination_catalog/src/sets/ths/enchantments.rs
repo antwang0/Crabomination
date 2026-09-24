@@ -51,7 +51,7 @@ pub fn gray_merchant_of_asphodel() -> CardDefinition {
         },
         power: 2,
         toughness: 4,
-        triggered_abilities: vec![etb(Effect::Drain {
+        triggered_abilities: vec![etb(Effect::DrainLifeLost {
             from: Selector::Player(PlayerRef::EachOpponent),
             to: Selector::You,
             amount: Value::DevotionTo(vec![Color::Black]),

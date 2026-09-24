@@ -261,7 +261,7 @@ pub fn scholar_of_athreos() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2), b()]),
-            effect: Effect::Drain {
+            effect: Effect::DrainLifeLost {
                 from: Selector::Player(PlayerRef::EachOpponent),
                 to: Selector::You,
                 amount: Value::ONE,
@@ -641,7 +641,7 @@ pub fn tormented_hero() -> CardDefinition {
                 applies_to: Selector::This,
             },
         }],
-        triggered_abilities: vec![heroic(Effect::Drain {
+        triggered_abilities: vec![heroic(Effect::DrainLifeLost {
             from: Selector::Player(PlayerRef::EachOpponent),
             to: Selector::You,
             amount: Value::ONE,

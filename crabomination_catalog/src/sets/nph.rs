@@ -2182,7 +2182,7 @@ fn chancellor_reveal(body: Effect) -> crate::effect::OpeningHandEffect {
 pub fn chancellor_of_the_dross() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        opening_hand: Some(chancellor_reveal(Effect::Drain {
+        opening_hand: Some(chancellor_reveal(Effect::DrainLifeLost {
             from: Selector::Player(PlayerRef::EachOpponent),
             to: Selector::You,
             amount: Value::Const(3),

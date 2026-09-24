@@ -516,7 +516,7 @@ pub fn endurance() -> CardDefinition {
 /// Kokusho, the Evening Star — {4}{B}{B} 5/5 Legendary Dragon Spirit, Flying.
 /// "When Kokusho dies, each opponent loses 5 life and you gain that much."
 pub fn kokusho_the_evening_star() -> CardDefinition {
-    use crate::effect::shortcut::dies_drain;
+    use crate::effect::shortcut::on_dies;
     CardDefinition {
         name: "Kokusho, the Evening Star",
         cost: cost(&[generic(4), b(), b()]),
@@ -529,7 +529,12 @@ pub fn kokusho_the_evening_star() -> CardDefinition {
         power: 5,
         toughness: 5,
         keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![dies_drain(5)],
+        // "You gain life equal to the life lost this way" — the total.
+        triggered_abilities: vec![on_dies(Effect::DrainLifeLost {
+            from: Selector::Player(PlayerRef::EachOpponent),
+            to: Selector::You,
+            amount: Value::Const(5),
+        })],
         ..Default::default()
     }
 }

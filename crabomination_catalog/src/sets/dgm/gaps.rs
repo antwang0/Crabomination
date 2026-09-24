@@ -411,7 +411,7 @@ pub fn debt_to_the_deathless() -> CardDefinition {
         name: "Debt to the Deathless",
         cost: cost(&[x(), w(), w(), b(), b()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Drain {
+        effect: Effect::DrainLifeLost {
             from: Selector::Player(PlayerRef::EachOpponent),
             to: Selector::You,
             amount: Value::Times(Box::new(Value::XFromCost), Box::new(Value::Const(2))),

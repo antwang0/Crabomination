@@ -976,6 +976,12 @@ mod tests {
     #[test]
     fn cr_903_seeded_pod_outcomes_match_the_committed_table() {
         // (seed, winner, turns, actions)
+        // Re-blessed 2026-09-24 (CR 119.3, "you gain life equal to the life
+        // lost this way" gains the table's total): Judith's Gray Merchant and
+        // Kokusho drain three opponents, so seed 0xC0FFEE is 52→44 turns /
+        // 2248→1829 actions, same winner; the other two unmoved. Aggregate,
+        // 2,000 games at seed 9981, before/after: 45.83/45.86 turns at four
+        // seats, 65.90/66.02 at six, every block 2,000/2,000 decided.
         // Re-blessed 2026-09-23 (CR 106.6, the payment floats a spend-
         // restricted source the spell may spend): seed 4242 55→53 turns /
         // 2436→2318 actions, same winner; the other two unmoved. Aggregate,
@@ -1101,7 +1107,7 @@ mod tests {
         // no longer a legal target, so nothing is aimed at a departed seat and
         // a trigger that was is countered. Seeds 43 and 4242: same winners.
         const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
-            (0xC0FFEE, Some(1), 52, 2248),
+            (0xC0FFEE, Some(1), 44, 1829),
             (43, Some(3), 57, 2394),
             (4242, Some(2), 53, 2245),
         ];

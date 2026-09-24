@@ -180,7 +180,7 @@ pub fn agent_of_masks() -> CardDefinition {
                 EventKind::StepBegins(crate::game::TurnStep::Upkeep),
                 EventScope::YourControl,
             ),
-            effect: Effect::Drain {
+            effect: Effect::DrainLifeLost {
                 from: Selector::Player(PlayerRef::EachOpponent),
                 to: Selector::You,
                 amount: Value::ONE,

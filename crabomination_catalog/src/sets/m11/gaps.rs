@@ -804,7 +804,7 @@ pub fn blood_tithe() -> CardDefinition {
     sorcery(
         "Blood Tithe",
         cost(&[generic(3), b()]),
-        Effect::Drain {
+        Effect::DrainLifeLost {
             from: Selector::Player(PlayerRef::EachOpponent),
             to: Selector::You,
             amount: Value::Const(3),

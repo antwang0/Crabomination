@@ -1381,21 +1381,14 @@ pub fn settle_the_score() -> CardDefinition {
 /// reprint, originally Worldwake). "Each opponent loses X life. You
 /// gain life equal to the life lost this way."
 ///
-/// Push (modern_decks, NEW, `stx::extras`): canonical X-cost drain
-/// finisher. Wired faithfully via `Effect::Drain { from:
-/// EachOpponent, to: You, amount: XFromCost }` — the drain
-/// primitive already pumps each-opp life into the controller and
-/// matches "life lost this way" (the gain equals the loss). In 2P
-/// games this drains X life from the opp and gives X to the caster;
-/// at X=10 it's a kill spell in any black shell. Same primitive
-/// powers Witherbloom Apprentice's magecraft and Sneering
-/// Shadewriter's ETB drain.
+/// `Effect::DrainLifeLost` — the gain is the total every opponent lost
+/// (X per opponent at a table), not X.
 pub fn exsanguinate() -> CardDefinition {
     CardDefinition {
         name: "Exsanguinate",
         cost: cost(&[crate::mana::x(), b(), b()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Drain {
+        effect: Effect::DrainLifeLost {
             from: Selector::Player(PlayerRef::EachOpponent),
             to: Selector::You,
             amount: Value::XFromCost,
