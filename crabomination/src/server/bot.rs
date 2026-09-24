@@ -13991,8 +13991,14 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
                 card: a,
                 cp: cp.clone(),
                 target: atk.target,
-                power: attacker_damage_value_on(state, a),
-                toughness: a.toughness(),
+                // Clamped to `SCALE_CEILING` for the planner's arithmetic
+                // (`1000 + power`, `power + toughness` …): a saturated power
+                // overflowed it in a 25-seat debug pod.
+                power: attacker_damage_value_on(state, a)
+                    .clamp(-crate::player::SCALE_CEILING, crate::player::SCALE_CEILING),
+                toughness: a
+                    .toughness()
+                    .clamp(-crate::player::SCALE_CEILING, crate::player::SCALE_CEILING),
                 flying: akw & combat_kw::FLYING != 0,
                 deathtouch: akw & combat_kw::DEATHTOUCH != 0,
                 first_strike: akw & (combat_kw::FIRST_STRIKE | combat_kw::DOUBLE_STRIKE) != 0,
@@ -14142,8 +14148,11 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
             BlockerFacts {
                 card: c,
                 view: cp,
-                power: c.power(),
-                toughness: c.toughness(),
+                // Clamped like `AttackerFacts`' pair.
+                power: c.power().clamp(-crate::player::SCALE_CEILING, crate::player::SCALE_CEILING),
+                toughness: c
+                    .toughness()
+                    .clamp(-crate::player::SCALE_CEILING, crate::player::SCALE_CEILING),
                 flying: v.kw & combat_kw::FLYING != 0,
                 reach: v.kw & combat_kw::REACH != 0,
                 deathtouch: v.kw & combat_kw::DEATHTOUCH != 0,
