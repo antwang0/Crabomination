@@ -1826,6 +1826,10 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Jinnie Fay, Jetmir's Second | Raining Cats and Dogs (SLD) | not optional: a creature token is replaced by the bigger Cat or Dog whenever one beats its printed body, and a noncreature token never is. |
 | 🟡 Pack Leader | Raining Cats and Dogs (SLD) | the shield covers the Dogs you control as the trigger resolves, not one that arrives later that turn. |
 | 🟡 Showdown of the Skalds | Raining Cats and Dogs (SLD) | chapters II and III choose the counter's target as each trigger resolves. |
+| 🟡 Cataclysmic Gearhulk | Growing Threat (MOC) | each player keeps their highest-mana-value permanent of each type rather than choosing. |
+| 🟡 Filigree Vector | Growing Threat (MOC) | the counters go on every creature and artifact you control rather than on chosen targets. |
+| 🟡 Path of the Schemer | Growing Threat (MOC) | the creature card is the greatest-power one among all graveyards. |
+| 🟡 Vulpine Harvester | Growing Threat (MOC) | any artifact card in your graveyard may be targeted; the mana-value check runs as the trigger resolves. |
 | 🟡 Saskia the Unyielding | Open Hostility (C16) | "choose a player" is the engine's most hostile opponent (the card allows any player, you included). |
 | 🟡 Brutal Hordechief | Open Hostility (C16) | its activated ability makes opponents' creatures block if able, but how they block stays their controllers' choice. |
 | 🟡 Mirror Entity | Open Hostility (C16) | "gain all creature types" is a granted Changeling: it reaches type filters and targeting, not type-keyed layer anthems. |

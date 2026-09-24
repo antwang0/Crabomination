@@ -86,6 +86,7 @@ lists were picked.
 | **Stalwart Unity** (C16 precon) RGWU | Kynaios and Tiro of Meletis | RGWU | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Token Triumph** (SCD starter) GW | Emmara, Soul of the Accord | GW | 100 | ✅ complete |
 | **Raining Cats and Dogs** (SLD) RGW | Rin and Seri, Inseparable | RGW | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
+| **Growing Threat** (MOC precon) WB | Brimaz, Blight of Oreskos | WB | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Open Hostility** (C16 precon) WBRG | Saskia the Unyielding | WBRG | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Devour for Power** (CMD precon) BGU | The Mimeoplasm | BGU | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Mirror Mastery** (CMD precon) GUR | Riku of Two Reflections | GUR | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
@@ -983,6 +984,24 @@ counter's target on resolution. A debug pod beside Nahiri / Tegwyll /
 N'ghathrod (seed 9501, 30 games) decided 30/30, zero panics; a 120-game census
 beside Ghired / Kynaios / Emmara (seed 9502) decided 120/120 and leaves no card
 of the four lists unplayed, Rin and Seri winning 24.2 %.
+
+The **sixty-seventh** is March of the Machine Commander's **Growing Threat**
+(`GrowingThreat_MOC`) — Orzhov Phyrexians, incubate and proliferate under
+Brimaz, Blight of Oreskos (seat 65, then 66, before rebasing over First
+Flight and Arcane Wizardry). Seventeen cards were missing; the primitives:
+`Effect::RollPlanarDie` / `Planeswalk` / `ChaosEnsues` and
+`StaticEffect::ExtraPlanarDie` (`game/effects/planar.rs` — Fractured
+Powerstone, Path of the Schemer's will of the planeswalkers, Ichor Elixir,
+whose extra die now reaches the special action too). ⚠ **The first census
+found Brimaz winning 1 of 60**: no bot path activated an Incubator's "{2}:
+Transform", so every incubated token stayed an inert artifact.
+`server/transform_sink.rs` flips one whose back face would survive; Brimaz
+went to 5 of 60 on the same seed, and 12.0 % over 200 games beside Ghired /
+Riku / Adriana (seed 9512, all decided, no card of the four lists unplayed).
+Residuals: **Cataclysmic Gearhulk** keeps the highest mana value of each
+type; **Filigree Vector** counters everything you control; **Path of the
+Schemer** takes the greatest-power creature card; **Vulpine Harvester** checks
+the mana value on resolution. `--bench` byte-identical.
 
 The **sixty-fourth** is Commander 2016's **Open Hostility** (`OpenHostility_C16`)
 — four-color (no blue) aggression under Saskia the Unyielding, with Tana, Tymna
