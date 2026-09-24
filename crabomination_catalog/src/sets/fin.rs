@@ -5921,7 +5921,7 @@ pub fn opera_love_song() -> CardDefinition {
             Effect::ExileTopAndGrantMayPlay {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
+                duration: crate::card::MayPlayDuration::UntilYourNextEndStep,
                 pay_any_color: false,
                 max_mana_value: None,
                 pay_own_cost: true,
@@ -6792,7 +6792,7 @@ pub fn haste_magic() -> CardDefinition {
             Effect::ExileTopAndGrantMayPlay {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                duration: crate::card::MayPlayDuration::UntilYourNextEndStep,
                 pay_any_color: false,
                 max_mana_value: None,
                 pay_own_cost: true,

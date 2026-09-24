@@ -54608,7 +54608,7 @@ pub fn questing_druid() -> CardDefinition {
             effect: Effect::ExileTopAndGrantMayPlay {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
+                duration: crate::card::MayPlayDuration::UntilYourNextEndStep,
                 pay_any_color: false,
                 max_mana_value: None,
                 pay_own_cost: true,

@@ -1117,7 +1117,7 @@ pub fn rakdos_the_muscle() -> CardDefinition {
             effect: Effect::ExileTopAndGrantMayPlay {
                 who: PlayerRef::EachOpponent,
                 count: Value::ManaValueOf(Box::new(Selector::TriggerSource)),
-                duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                duration: crate::card::MayPlayDuration::UntilYourNextEndStep,
                 pay_any_color: true,
                 max_mana_value: None,
                 pay_own_cost: false,

@@ -327,7 +327,7 @@ pub fn shadow_urchin() -> CardDefinition {
                 effect: Effect::ExileTopAndGrantMayPlay {
                     who: PlayerRef::You,
                     count: Value::TotalCountersOn { what: Box::new(Selector::TriggerSource) },
-                    duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
+                    duration: crate::card::MayPlayDuration::UntilYourNextEndStep,
                     pay_any_color: false,
                     max_mana_value: None,
                     pay_own_cost: true,

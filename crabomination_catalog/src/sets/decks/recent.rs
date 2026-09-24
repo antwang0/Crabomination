@@ -5352,7 +5352,7 @@ pub fn inti_seneschal_of_the_sun() -> CardDefinition {
                 effect: Effect::ExileTopAndGrantMayPlay {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    duration: MayPlayDuration::EndOfControllersNextTurn,
+                    duration: MayPlayDuration::UntilYourNextEndStep,
                     pay_any_color: false,
                     max_mana_value: None,
                     pay_own_cost: true,
@@ -10672,7 +10672,7 @@ pub fn unlucky_witness() -> CardDefinition {
         triggered_abilities: vec![on_dies(Effect::ExileTopAndGrantMayPlay {
             who: PlayerRef::You,
             count: Value::Const(2),
-            duration: MayPlayDuration::EndOfControllersNextTurn,
+            duration: MayPlayDuration::UntilYourNextEndStep,
             pay_any_color: false,
             max_mana_value: None,
             pay_own_cost: true,

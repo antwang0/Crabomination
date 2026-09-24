@@ -440,7 +440,7 @@ pub fn dragonhawk_fates_tempest() -> CardDefinition {
                 count: Value::count(Selector::EachPermanent(
                     R::Creature.and(R::PowerAtLeast(4)).and(R::ControlledByYou),
                 )),
-                duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
+                duration: crate::card::MayPlayDuration::UntilYourNextEndStep,
                 pay_any_color: false,
                 max_mana_value: None,
                 pay_own_cost: true,
