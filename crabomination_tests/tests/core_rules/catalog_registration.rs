@@ -2518,6 +2518,11 @@ fn every_self_source_trigger_kind_reaches_a_dispatcher() {
         ("PermanentDied", "stack.rs, the leave-trigger collection"),
         ("BecomesPlotted", "actions.rs, the plot action"),
         // Planechase (CR 901): the planar die and the walk push their own.
+        // CR 800.4a — a leaving player's Curse (Curse of Vengeance) and
+        // "whenever a player leaves the game" (Blood Tyrant) are queued off
+        // the departure itself, not an event batch.
+        ("EnchantedPlayerLeftGame", "stack.rs queue_enchanted_player_left_triggers"),
+        ("PlayerLeftGame", "stack.rs queue_enchanted_player_left_triggers"),
         ("ChaosEnsues", "stack.rs planar_trigger_pushes"),
         ("Encountered", "stack.rs planar_trigger_pushes"),
         ("PlaneswalkedAwayFrom", "stack.rs planar_trigger_pushes"),

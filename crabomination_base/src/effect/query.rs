@@ -500,6 +500,7 @@ impl Effect {
             | Effect::ChooseOpponentThen { then }
             | Effect::AsPlayer { body: then, .. }
             | Effect::OpponentChoosesPermanentThen { body: then, .. }
+            | Effect::EachOtherPlayerMayDraw { per_draw: then }
             | Effect::RevealDrawnCardThenIf { then, .. }
             | Effect::Parley { then, .. }
             | Effect::RevealAnyNumberFromHand { then, .. }
@@ -4740,6 +4741,9 @@ impl Effect {
                 | Effect::DiscardUnlessKind { who, .. } => pref_find(who, slot),
                 Effect::WaiveShroudForPlayerThisTurn { player } => {
                     pref_find(player, slot)
+                }
+                Effect::PlayersControlEachOthersNextTurn { first, second } => {
+                    pref_find(first, slot).or_else(|| pref_find(second, slot))
                 }
                 Effect::ExileUpToNFromGraveyards { of, .. } => {
                     of.as_ref().and_then(|p| pref_find(p, slot))
