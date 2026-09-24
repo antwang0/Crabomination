@@ -2747,6 +2747,9 @@ pub enum GameEvent {
     /// the greatest (modified) result rolled, so result-gated triggers like
     /// "whenever you roll a 5 or higher" can filter on `event_amount`.
     DiceRolled { player: usize, count: u32, high: u8 },
+    /// CR 706.2 — one die `player` rolled showed its highest *natural* face.
+    /// One event per such die (Netherese Puzzle-Ward).
+    RolledNaturalMax { player: usize },
     CreatureDied { card_id: CardId },
     /// CR 700.4 — a permanent hit a graveyard from the battlefield (any card
     /// type). Synthesized once per dispatch batch from the raw removal

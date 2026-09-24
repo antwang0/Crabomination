@@ -3211,6 +3211,9 @@ pub enum EventKind {
     /// CR 706.6 — the player rolled one or more dice ("Whenever you roll one
     /// or more dice"). Fires once per roll; matched to `GameEvent::DiceRolled`.
     RolledDice,
+    /// "Whenever you roll a die's highest natural result" (Netherese
+    /// Puzzle-Ward): once per die. Matched to `GameEvent::RolledNaturalMax`.
+    RolledNaturalMax,
     /// CR 701.9 batch — the player discarded one or more cards in a single
     /// effect resolution ("Whenever you discard one or more cards"). Fires once
     /// per resolution; the count is exposed via `Value::TriggerEventAmount`. The
@@ -4929,6 +4932,11 @@ pub enum Effect {
     /// which of the permanents `what` resolves to become attached to `to`
     /// (Bruna, Light of Alabaster; Heavenly Blademaster).
     AttachAnyNumberTo { what: Selector, to: Selector },
+    /// "Return this card from your graveyard to the battlefield attached to
+    /// [host]" with the host a declared selector, so an activated ability
+    /// announces its target (Gryff's Boon). `ReturnSelfAttachedToTarget` reads
+    /// a bare slot 0 no ability declares.
+    ReturnSelfAttachedTo { host: Selector },
     /// "[what] can't attack you or planeswalkers you control" for `duration`
     /// — `Keyword::CantAttackPlayer` naming the resolving controller.
     GrantCantAttackYou { what: Selector, duration: Duration },
@@ -10604,6 +10612,9 @@ pub enum Effect {
     /// "As this enters, choose one of `options`" — stamps
     /// `CardInstance.chosen_card_type` (Archon of Valor's Reach).
     ChooseCardTypeAmongForSource(Vec<crate::card::CardType>),
+    /// "The next spell you cast this turn can be cast as though it had flash"
+    /// (Ride the Avalanche). Spent by that cast.
+    NextSpellHasFlashThisTurn,
 
     /// "For each planeswalker you control, you may activate one of its loyalty
     /// abilities this turn as though none of its loyalty abilities have been

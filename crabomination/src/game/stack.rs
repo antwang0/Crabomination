@@ -4490,6 +4490,7 @@ impl GameState {
             pl.life_alt_cast_used_this_turn = false;
             pl.life_alt_next_spell_this_turn = false;
             pl.next_spell_convoke_this_turn = false;
+            pl.next_spell_flash_this_turn = false;
             pl.creatures_exiled_from_control_this_turn = 0;
             // CR 401.6 — turn-scoped play-from-top permission ends at cleanup.
             pl.play_from_top_this_turn = false;

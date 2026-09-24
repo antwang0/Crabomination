@@ -704,6 +704,10 @@ pub struct PlayerData {
     /// boundary.
     #[serde(default)]
     pub next_spell_convoke_this_turn: bool,
+    /// "The next spell you cast this turn can be cast as though it had flash"
+    /// (Ride the Avalanche). Spent by that cast; reset at the turn boundary.
+    #[serde(default)]
+    pub next_spell_flash_this_turn: bool,
     /// Creatures exiled from under this player's control this turn (Vren, the
     /// Relentless' end-step Rat count). Reset at the turn boundary.
     #[serde(default)]
@@ -1401,6 +1405,7 @@ impl Player {
             life_alt_next_spell_this_turn: false,
             attacked_players_this_turn: Vec::new(),
             next_spell_convoke_this_turn: false,
+            next_spell_flash_this_turn: false,
             creatures_exiled_from_control_this_turn: 0,
             descended_this_turn: false,
             descend_count_this_turn: 0,

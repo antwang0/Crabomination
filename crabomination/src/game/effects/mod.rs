@@ -6190,6 +6190,9 @@ impl GameState {
                         count: n as u32,
                         high: rolls.iter().copied().max().unwrap_or(0),
                     });
+                    for _ in naturals.iter().filter(|&&nat| nat == sides) {
+                        events.push(GameEvent::RolledNaturalMax { player: ctx.controller });
+                    }
                 }
                 // CR 706.5 — "if any of the dice show the same number"
                 // (doubles): once, after the per-die dispatch, when two or
@@ -34224,13 +34227,18 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::ReturnSelfAttachedToTarget | Effect::ReturnSelfAttachedToTrigger => {
+            Effect::ReturnSelfAttachedToTarget
+            | Effect::ReturnSelfAttachedToTrigger
+            | Effect::ReturnSelfAttachedTo { .. } => {
                 // Gift of Immortality — return the source from its owner's
                 // graveyard attached to the slot-0 target; the Scourge Dragon
-                // Auras attach to the creature that triggered them instead.
+                // Auras attach to the creature that triggered them instead;
+                // Gryff's Boon names its host with a declared slot.
                 let Some(src) = ctx.source else { return Ok(()) };
                 let host = if matches!(effect, Effect::ReturnSelfAttachedToTrigger) {
                     ctx.trigger_source.and_then(|e| e.as_permanent_id())
+                } else if let Effect::ReturnSelfAttachedTo { host } = effect {
+                    self.resolve_selector(host, ctx).iter().find_map(|e| e.as_permanent_id())
                 } else {
                     ctx.targets.first().and_then(|t| match t {
                         Target::Permanent(id) => Some(*id),
@@ -34765,6 +34773,10 @@ impl GameState {
             }
             Effect::NextSpellGainsConvokeThisTurn => {
                 self.players[ctx.controller].next_spell_convoke_this_turn = true;
+                Ok(())
+            }
+            Effect::NextSpellHasFlashThisTurn => {
+                self.players[ctx.controller].next_spell_flash_this_turn = true;
                 Ok(())
             }
             Effect::RevealUntilPutAttachedElseHand { filter } => {

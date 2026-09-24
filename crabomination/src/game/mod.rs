@@ -4599,10 +4599,30 @@ impl GameState {
         &self,
         card: &CardInstance,
     ) -> Vec<crate::card::TriggeredAbility> {
-        self.statics_granted_triggers_inner(card, &self.trigger_grant_sources())
+        let mut out: Vec<crate::card::TriggeredAbility> = self
+            .statics_granted_triggers_inner(card, &self.trigger_grant_sources())
             .into_iter()
             .cloned()
-            .collect()
+            .collect();
+        // Galea, Kindler of Hope — the rider an Equipment cast off the library
+        // top carries onto the battlefield. Here so both entry walkers (a
+        // resolving spell and `fire_self_etb_triggers`) see it.
+        if card.cold_any(|k| k.attach_on_entry) {
+            use crate::card::SelectionRequirement as R;
+            out.push(crate::card::TriggeredAbility {
+                event: crate::effect::EventSpec::new(
+                    crate::effect::EventKind::EntersBattlefield,
+                    crate::effect::EventScope::SelfSource,
+                ),
+                effect: crate::effect::Effect::AttachSourceTo {
+                    host: crate::effect::Selector::TargetFiltered {
+                        slot: 0,
+                        filter: R::Creature.and(R::ControlledByYou),
+                    },
+                },
+            });
+        }
+        out
     }
 
     /// The live `GrantTriggeredAbility` statics on the board, each with its
@@ -20852,8 +20872,15 @@ impl GameState {
         {
             equip_cost = alt;
         }
-        // CR 702.6 — "Equip costs you pay cost {N} less" (Auriok Steelshaper).
-        let reduction = self.equip_cost_reduction_for(p);
+        // CR 702.6 — "Equip costs you pay cost {N} less" (Auriok Steelshaper),
+        // and Belt of Giant Strength's own "{X} less, where X is the power of
+        // the creature it targets".
+        let mut reduction = self.equip_cost_reduction_for(p);
+        if self.battlefield[equip_pos].definition.static_abilities.iter().any(|sa| {
+            matches!(sa.effect, crate::effect::StaticEffect::EquipCostReducedByTargetPower)
+        }) {
+            reduction += self.computed_permanent(target).map_or(0, |c| c.power.max(0) as u32);
+        }
         if reduction > 0 {
             equip_cost.reduce_generic(reduction);
         }
@@ -29799,6 +29826,8 @@ fn static_effect_to_effects(
             | StaticEffect::OpponentsWhoCastCantAttack
             // AttachedIsGoaded — read by `goad::goaders`; no layer.
             | StaticEffect::AttachedIsGoaded
+            // Read by the library-top cast path; no layer.
+            | StaticEffect::LibraryTopEquipmentAttachesOnEntry
             | StaticEffect::OpponentsWhoAttackedCantCast
             // CreatureSpellsCantBeCountered — consulted at cast time; no layer.
             | StaticEffect::CreatureSpellsCantBeCountered
@@ -29885,6 +29914,7 @@ fn static_effect_to_effects(
             // Consulted directly in `equip()`, not a layer effect.
             | StaticEffect::ControllerEquipAtInstantSpeed
             | StaticEffect::EquipCostReduction { .. }
+            | StaticEffect::EquipCostReducedByTargetPower
             // Bludgeon Brawl — the granted subtype and bonus are synthesized
             // per artifact in `compute_battlefield`, not from a modification.
             | StaticEffect::ArtifactsAreEquipment

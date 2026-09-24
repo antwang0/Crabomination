@@ -875,6 +875,7 @@ impl Effect {
             | Effect::KeywordCountersFromGraveyard { .. }
             | Effect::RevealTopChooseByKeyword { .. }
             | Effect::ChooseCardTypeAmongForSource(_)
+            | Effect::NextSpellHasFlashThisTurn
             | Effect::PreventNextDamageFromSourceThisTurn { .. }
             | Effect::SacrificeSourceUnlessPayValue { .. }
             | Effect::AddAttackTaxThisTurn { .. }
@@ -1598,6 +1599,7 @@ impl Effect {
             Effect::Goad { what }
             | Effect::GoadForTheGame { what }
             | Effect::GoadWhile { what, .. }
+            | Effect::ReturnSelfAttachedTo { host: what }
             | Effect::GrantCantAttackYou { what, .. } => sel_has_target(what),
             Effect::Suspect { what } | Effect::ClearSuspected { what } => sel_has_target(what),
             Effect::ReplaceCreatureTypeText { what } => sel_has_target(what),
@@ -2849,6 +2851,7 @@ impl Effect {
             Effect::Goad { what }
             | Effect::GoadForTheGame { what }
             | Effect::GoadWhile { what, .. }
+            | Effect::ReturnSelfAttachedTo { host: what }
             | Effect::GrantCantAttackYou { what, .. }
             | Effect::Transform { what }
             | Effect::Flip { what }
@@ -4949,6 +4952,7 @@ impl Effect {
                 | Effect::Goad { what }
                 | Effect::GoadForTheGame { what }
                 | Effect::GoadWhile { what, .. }
+            | Effect::ReturnSelfAttachedTo { host: what }
                 | Effect::Detain { what }
                 | Effect::Provoke { what }
                 | Effect::MustBlockSource { what, .. }

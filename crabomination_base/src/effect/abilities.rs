@@ -266,6 +266,10 @@ pub enum StaticEffect {
     /// is goaded" (CR 701.15), by this permanent's controller. Read by
     /// `GameState::goaders`; no layer effect.
     AttachedIsGoaded,
+    /// Galea, Kindler of Hope — "when you cast an Equipment spell this way [off
+    /// the top of your library], it gains 'When this Equipment enters, attach
+    /// it to target creature you control.'" Read by the library-top cast path.
+    LibraryTopEquipmentAttachesOnEntry,
     /// Angelic Arbiter — "Each opponent who attacked with a creature this turn
     /// can't cast spells." Gated at the cast dispatch off the caster's
     /// `Player.attacked_this_turn`.
@@ -1810,6 +1814,10 @@ pub enum StaticEffect {
     /// Brass Squire-style discounts). Reduces the controller's equip-cost
     /// generic by `amount`, never below the colored portion.
     EquipCostReduction { amount: u32 },
+    /// Belt of Giant Strength — "this ability costs {X} less to activate,
+    /// where X is the power of the creature it targets", on the Equipment's
+    /// own equip. Read by `GameState::equip`.
+    EquipCostReducedByTargetPower,
     /// CR 613 — "Each noncreature, non-Equipment artifact is an Equipment
     /// with equip {X} and 'Equipped creature gets +X/+0,' where X is that
     /// artifact's mana value" (Bludgeon Brawl). Global; the granted subtype,

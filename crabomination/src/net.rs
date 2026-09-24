@@ -2787,6 +2787,7 @@ pub enum GameEventWire {
     /// Wire mirror of `GameEvent::DiceRolled` (CR 706.6). `high` is the
     /// greatest result rolled, surfaced so the log can show what was rolled.
     DiceRolled { player: usize, count: u32, #[serde(default)] high: u8 },
+    RolledNaturalMax { player: usize },
     CreatureDied { card_id: CardId },
     /// Wire mirror of `GameEvent::PermanentDied` (CR 700.4). An internal
     /// trigger event (the concrete death/sacrifice lines already log it), so
@@ -3045,6 +3046,7 @@ impl From<&GameEvent> for GameEventWire {
             GameEvent::DiceRolled { player, count, high } => {
                 GameEventWire::DiceRolled { player: *player, count: *count, high: *high }
             }
+            GameEvent::RolledNaturalMax { player } => GameEventWire::RolledNaturalMax { player: *player },
             GameEvent::CreatureDied { card_id } => {
                 GameEventWire::CreatureDied { card_id: *card_id }
             }
@@ -3394,6 +3396,7 @@ impl GameEventWire {
             }
             E::DungeonCompleted { player } => format!("{} completed a dungeon", pn(*player)),
             E::CoinFlipLost { player } => format!("{} lost a coin flip", pn(*player)),
+            E::RolledNaturalMax { player } => format!("{} rolled a die's highest natural result", pn(*player)),
             E::DiceRolled { player, count, high } => {
                 if *count == 1 {
                     format!("{} rolled a {high}", pn(*player))

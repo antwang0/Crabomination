@@ -161,6 +161,7 @@ pub(crate) fn event_kind_bits(event: &GameEvent) -> u128 {
         E::VotingFinished => bits!(K::VotingFinished),
         E::CoinFlipLost { .. } => bits!(K::LostCoinFlip),
         E::DiceRolled { .. } => bits!(K::RolledDice),
+        E::RolledNaturalMax { .. } => bits!(K::RolledNaturalMax),
         E::AuraAttached { .. } => bits!(K::AuraAttached, K::AuraAttachedToAny),
         E::AttachmentMoved { .. } => bits!(K::BecameAttached),
         E::DayNightChanged { .. } => bits!(K::DayNightChanged),
@@ -421,6 +422,7 @@ fn reference_event_kind_matches(
         (EventKind::VotingFinished, GameEvent::VotingFinished) => true,
         (EventKind::LostCoinFlip, GameEvent::CoinFlipLost { .. }) => true,
         (EventKind::RolledDice, GameEvent::DiceRolled { .. }) => true,
+        (EventKind::RolledNaturalMax, GameEvent::RolledNaturalMax { .. }) => true,
         (EventKind::AuraAttached, GameEvent::AuraAttached { .. })
         | (EventKind::AuraAttachedToAny, GameEvent::AuraAttached { .. }) => true,
         (
@@ -1304,6 +1306,7 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         | GameEvent::SpellCountered { player, .. }
         | GameEvent::CoinFlipLost { player }
         | GameEvent::DiceRolled { player, .. }
+        | GameEvent::RolledNaturalMax { player }
         | GameEvent::RingTempted { player, .. }
         | GameEvent::CommittedCrime { player }
         | GameEvent::PlayerSearchedLibrary { player }
@@ -1457,6 +1460,7 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         | GameEvent::CoinFlipWon { player }
         | GameEvent::CoinFlipLost { player }
         | GameEvent::DiceRolled { player, .. }
+        | GameEvent::RolledNaturalMax { player }
         | GameEvent::CommittedCrime { player }
         | GameEvent::PlayerSearchedLibrary { player }
         | GameEvent::LibraryShuffled { player }
@@ -1769,6 +1773,7 @@ mod tests {
             E::DungeonCompleted { player: 0 },
             E::CoinFlipLost { player: 0 },
             E::DiceRolled { player: 0, count: 1, high: 6 },
+            E::RolledNaturalMax { player: 0 },
             E::CreatureDied { card_id: c },
             E::PermanentDied { card_id: c, controller: 0, is_creature: true, is_artifact: false },
             E::PermanentDied { card_id: c, controller: 0, is_creature: false, is_artifact: true },

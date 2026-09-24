@@ -27,6 +27,11 @@ impl GameState {
         let a = self.roll_one_die(ctx.controller, sides);
         let b = self.roll_one_die(ctx.controller, sides);
         events.push(GameEvent::DiceRolled { player: ctx.controller, count: 2, high: a.max(b) });
+        for face in [a, b] {
+            if face == sides {
+                events.push(GameEvent::RolledNaturalMax { player: ctx.controller });
+            }
+        }
         let assign = Effect::AssignTwoDieResults {
             a,
             b,
@@ -102,6 +107,9 @@ impl GameState {
         for q in seats {
             let face = self.roll_one_die(q, sides);
             events.push(GameEvent::DiceRolled { player: q, count: 1, high: face });
+            if face == sides {
+                events.push(GameEvent::RolledNaturalMax { player: q });
+            }
             rolls.push((q, face));
         }
         let best = rolls.iter().map(|&(_, r)| r).max().unwrap_or(0);

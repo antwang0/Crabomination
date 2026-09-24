@@ -7423,6 +7423,10 @@ pub struct CardCold {
     /// `Effect::ChooseRandomOpponentNotAttackedLastCombat`, filled at declare
     /// attackers); `None` for every other creature.
     pub combat_defenders: Option<Vec<usize>>,
+    /// Galea, Kindler of Hope — an Equipment spell cast off the library top
+    /// "this way" gains "when this Equipment enters, attach it to target
+    /// creature you control"; stamped on the spell, read at entry.
+    pub attach_on_entry: bool,
     /// CR 702.171 — the creatures that have saddled this permanent this turn
     /// (the riders tapped by a Saddle activation). Read by
     /// `Effect::ExileAndReturnSelfWithSaddler` for "exile it and up to one

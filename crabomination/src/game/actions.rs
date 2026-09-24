@@ -5693,8 +5693,11 @@ impl GameState {
                 if let Some(card) = Self::take_card(&mut self.players[p].hand, card_id) {
                     self.players[p].library.insert(0, card);
                 }
-            } else if capped {
-                self.players[p].cast_from_library_top_this_turn = true;
+            } else {
+                if capped {
+                    self.players[p].cast_from_library_top_this_turn = true;
+                }
+                self.stamp_library_top_equipment_attach(p, card_id);
             }
             // Into the Pit's additional cost, paid as the cast completes.
             if let (Ok(evs), Some((src, filter))) = (&r, sac) {
@@ -5956,6 +5959,32 @@ impl GameState {
                 }
                 _ => None,
             })
+    }
+
+    /// Galea, Kindler of Hope — an Equipment spell `p` just cast off the
+    /// library top gains its attach-on-entry rider while `p` controls the
+    /// static that grants it.
+    fn stamp_library_top_equipment_attach(&mut self, p: usize, card_id: CardId) {
+        let grants = self.battlefield.iter().any(|c| {
+            c.controller == p
+                && c.definition.static_abilities.iter().any(|sa| {
+                    matches!(
+                        self.active_static(&sa.effect, c),
+                        Some(crate::effect::StaticEffect::LibraryTopEquipmentAttachesOnEntry)
+                    )
+                })
+        });
+        if !grants {
+            return;
+        }
+        for item in self.stack.iter_mut() {
+            if let crate::game::types::StackItem::Spell { card, .. } = item
+                && card.id == card_id
+                && card.definition.subtypes.artifact_subtypes.contains(&crate::card::ArtifactSubtype::Equipment)
+            {
+                card.attach_on_entry = true;
+            }
+        }
     }
 
     /// CR 401.6 — true when `card_id` is the top card of `p`'s library and a
@@ -9677,6 +9706,9 @@ impl GameState {
         if self.players[p].next_spell_convoke_this_turn {
             self.players[p].next_spell_convoke_this_turn = false;
             self.convoke_granted_spells.push(card_id);
+        }
+        if self.players[p].next_spell_flash_this_turn {
+            self.players[p].next_spell_flash_this_turn = false;
         }
         auto_events.push(GameEvent::SpellCast {
             player: p,
@@ -14111,10 +14143,23 @@ impl GameState {
                     .map(|c| c.definition.cost.cmc())
                     .unwrap_or(0);
                 for dt in next_cast {
+                    // A body with a target slot (Ride the Avalanche's "up to
+                    // one target creature") picks it now, reading the cast
+                    // spell's mana value as its filters would.
+                    let (mode, target) = if dt.effect.requires_target() {
+                        let saved = std::mem::replace(&mut self.trigger_event_amount_scratch, cast_mv);
+                        let picked = self.trigger_mode_and_target(&dt.effect, dt.controller, Some(dt.source));
+                        self.trigger_event_amount_scratch = saved;
+                        picked
+                    } else {
+                        (None, None)
+                    };
                     self.stack.push(
                         TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
                             .trigger_source(Some(crate::game::effects::EntityRef::Card(cast_card)))
                             .event_amount(cast_mv)
+                            .target(target)
+                            .mode(mode)
                             .build(),
                     );
                     // Repeating watchers ("whenever you cast a spell this
@@ -14628,6 +14673,7 @@ impl GameState {
             || self.flash_additional_cost_for(p, card).is_some()
             || (self.players[p].creature_spells_as_flash_this_turn
                 && card.definition.is_creature())
+            || self.players[p].next_spell_flash_this_turn
     }
 
     pub(crate) fn try_pay_with_auto_tap(
