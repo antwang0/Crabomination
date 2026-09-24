@@ -929,6 +929,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::JIRINA_COMMANDERS,
             main: decks::JIRINA_MAIN,
         },
+        // Hundred-and-twelfth: the hundred-and-second official list (Prismari
+        // Performance, C21) — Izzet big-spell magecraft under Zaffai, Thunder
+        // Conductor. `--pod-decks 112`.
+        PodDeck {
+            name: "Zaffai, Thunder Conductor (UR)",
+            commanders: decks::ZAFFAI_COMMANDERS,
+            main: decks::ZAFFAI_MAIN,
+        },
     ]
 }
 

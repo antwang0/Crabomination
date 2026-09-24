@@ -3417,3 +3417,28 @@ pub const JIRINA_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, plains, plains, plains, plains, plains, plains,
     plains, plains, swamp, swamp, swamp, swamp,
 ];
+
+pub const ZAFFAI_COMMANDERS: &[CardFactory] = &[zaffai_thunder_conductor];
+
+/// Prismari Performance (C21, 2021), card for card: Zaffai's Izzet big-spell magecraft.
+pub const ZAFFAI_MAIN: &[CardFactory] = &[
+    jaya_ballard, veyran_voice_of_duality, dazzling_sphinx, octavia_living_thesis,
+    sly_instigator, inferno_project, radiant_performer, rionya_fire_dancer, diluvian_primordial,
+    naru_meha_master_wizard, talrand_sky_summoner, charmbreaker_devils, dualcaster_mage,
+    erratic_cyclops, etali_primal_storm, wildfire_devils, storm_kiln_artist,
+    rootha_mercurial_artist, living_lore, humble_defector, crackling_drake, inspiring_refrain,
+    muse_vortex, creative_technique, fiery_encore, rousing_refrain, surge_to_victory,
+    aether_gale, apex_of_power, blasphemous_act, volcanic_vision, call_the_skybreaker,
+    epic_experiment, elemental_masterpiece, expressive_iteration, ponder, serum_visions,
+    treasure_cruise, faithless_looting, mana_geyser, reinterpret, aetherspouts,
+    dig_through_time, resculpt, brainstorm, traumatic_visions, fiery_fall, seething_song,
+    letter_of_acceptance, arcane_signet, hedron_archive, izzet_signet, mind_stone, sol_ring,
+    talisman_of_creativity, metallurgic_summonings, swarm_intelligence, exotic_orchard,
+    scavenger_grounds, shivan_reef, temple_of_epiphany, prismari_campus, study_hall,
+    blighted_cataract, command_tower, desert_of_the_fervent, desert_of_the_mindful,
+    forgotten_cave, izzet_boilerworks, lonely_sandbar, mage_ring_network, memorial_to_genius,
+    myriad_landscape, reliquary_tower, temple_of_the_false_god, island, island, island, island,
+    island, island, island, island, island, island, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, elementalists_palette, minds_desire,
+    brasss_bounty, sunbirds_invocation, pyromancers_goggles,
+];
