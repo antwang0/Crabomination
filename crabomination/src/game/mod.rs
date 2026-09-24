@@ -15498,6 +15498,14 @@ impl GameState {
                     }
                     (base_p + colors.len() as i32, base_t)
                 }
+                crate::card::DynamicPt::ExiledWithSourceManaValue => {
+                    let mv = self
+                        .exile
+                        .iter()
+                        .find(|c| c.exiled_with == Some(card.id))
+                        .map_or(0, |c| c.definition.cost.cmc() as i32);
+                    (mv, mv)
+                }
                 crate::card::DynamicPt::ExiledWithSourcePt { base_p, base_t } => self
                     .exile
                     .iter()

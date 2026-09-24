@@ -643,6 +643,9 @@ pub enum SpendRestriction {
     /// "Spend this mana only to cast spells with mana value 5 or greater or
     /// spells with {X} in their mana costs." (Troyan, Gutsy Explorer.)
     HighMvOrX,
+    /// "Spend this mana only on costs that contain {X}." (Elementalist's
+    /// Palette.) Reads `SpellKind::has_x`.
+    XCostsOnly,
     /// "Spend this mana only to cast a Dragon spell or an Omen spell."
     /// (Maelstrom of the Spirit Dragon.)
     DragonOrOmenSpell,
@@ -704,6 +707,11 @@ pub enum SpendRestriction {
     /// its owner's graveyard as it resolves." (Forger's Foundry.) Unrestricted
     /// spend; the funded spell is stamped `exile_with_on_resolve`.
     SmallInstantSorceryExileInstead,
+    /// "When that mana is spent to cast a red instant or sorcery spell, copy
+    /// that spell and you may choose new targets for the copy." (Pyromancer's
+    /// Goggles.) Unrestricted spend; the copy trigger goes on the stack above
+    /// the spell it funded, one per rider pip.
+    RedInstantSorceryCopy,
     /// "Spend this mana only to cast a spell from your graveyard." (Lord of
     /// the Forsaken.) Reads [`SpellKind::from_graveyard`].
     SpellFromGraveyard,
@@ -742,6 +750,7 @@ impl SpendRestriction {
             SpendRestriction::EquipmentOnly => "only Equipment",
             SpendRestriction::ColorlessSpellsOrAbilities => "only colorless spells or abilities",
             SpendRestriction::HighMvOrX => "only mana value 5+ or {X} spells",
+            SpendRestriction::XCostsOnly => "only costs that contain {X}",
             SpendRestriction::DragonOrOmenSpell => "only Dragon or Omen spells",
             SpendRestriction::EnchantmentSpell => "only enchantment spells",
             SpendRestriction::MulticoloredSpell => "only multicolored spells",
@@ -764,7 +773,8 @@ impl SpendRestriction {
             | SpendRestriction::CommanderTypeScry
             | SpendRestriction::CommanderCastCounters
             | SpendRestriction::CommanderCastScry
-            | SpendRestriction::SmallInstantSorceryExileInstead => {
+            | SpendRestriction::SmallInstantSorceryExileInstead
+            | SpendRestriction::RedInstantSorceryCopy => {
                 return None;
             }
         })
@@ -835,6 +845,7 @@ impl SpendRestriction {
                 kind.colorless || kind.activating_ability
             }
             SpendRestriction::HighMvOrX => kind.mana_value >= 5 || kind.has_x,
+            SpendRestriction::XCostsOnly => kind.has_x,
             SpendRestriction::DragonOrOmenSpell => {
                 kind.omen
                     || !kind.activating_ability
@@ -868,7 +879,8 @@ impl SpendRestriction {
             | SpendRestriction::CommanderTypeScry
             | SpendRestriction::CommanderCastCounters
             | SpendRestriction::CommanderCastScry
-            | SpendRestriction::SmallInstantSorceryExileInstead => {
+            | SpendRestriction::SmallInstantSorceryExileInstead
+            | SpendRestriction::RedInstantSorceryCopy => {
                 debug_assert!(self.is_rider(), "rider arm reached through the match");
                 true
             }

@@ -19,6 +19,7 @@ mod graveyard_swap;
 mod graveyard_spread;
 mod dice_choices;
 mod goad_attacked;
+mod copy_each_target;
 mod fight_each;
 pub(crate) use eval::PrintedGates;
 pub(crate) mod events;
@@ -11604,6 +11605,9 @@ impl GameState {
             Effect::ReturnTargetCardsAtRandom { count } => self.return_target_cards_at_random(count, ctx, events),
             Effect::PutAnyNumberFromGraveyardOnTop { filter } => {
                 self.put_any_number_from_graveyard_on_top(filter, effect, ctx, events)
+            }
+            Effect::CopySpellForEachOtherLegalTarget { what } => {
+                self.copy_spell_for_each_other_legal_target(what, ctx, events)
             }
             Effect::GoadACreatureOfEachOpponentAttackedBy { attackers } => {
                 self.goad_a_creature_of_each_opponent_attacked_by(attackers, ctx)

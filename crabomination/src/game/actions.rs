@@ -3163,15 +3163,16 @@ impl crate::game::GameState {
         {
             return None;
         }
-        let granted = self.battlefield.iter().any(|c| {
-            c.controller == seat
-                && c.definition.static_abilities.iter().any(|sa| {
-                    matches!(
-                        sa.effect,
-                        crate::effect::StaticEffect::GraveyardInstantsSorceriesHaveFlashback
-                    )
-                })
-        });
+        let flashback = |sa: &crate::card::StaticAbility| {
+            matches!(sa.effect, crate::effect::StaticEffect::GraveyardInstantsSorceriesHaveFlashback)
+        };
+        let granted = self
+            .battlefield
+            .iter()
+            .any(|c| c.controller == seat && c.definition.static_abilities.iter().any(flashback))
+            // CR 114.4 — an emblem's static works from the command zone (Jaya
+            // Ballard's −8).
+            || self.players[seat].emblems.iter().any(|em| em.statics.iter().any(flashback));
         // Bösium Strip — "until end of turn, you may cast instant and sorcery
         // spells from the top of your graveyard". The flashback tail already
         // exiles the spell, matching the printed rider.

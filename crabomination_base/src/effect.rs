@@ -4928,6 +4928,11 @@ pub enum Effect {
     /// "…is goaded for the rest of the game" (Nettling Nuisance): `Goad`, and
     /// the goad never expires.
     GoadForTheGame { what: Selector },
+    /// Radiant Performer — CR 707.10: copy the spell `what` names once for
+    /// each other permanent or player it could target, each copy (the
+    /// resolving controller's) aimed at a different one. Spells only; a
+    /// targeted ability is not copied.
+    CopySpellForEachOtherLegalTarget { what: Selector },
     /// Firkraag — "whenever one or more [attackers] you control attack an
     /// opponent, goad target creature that player controls": once per such
     /// opponent, goad the engine's pick of their creatures (greatest power

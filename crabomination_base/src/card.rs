@@ -5829,6 +5829,9 @@ pub enum DynamicPt {
     /// Power = the total power, toughness = the total toughness, of the cards
     /// exiled with this permanent (`CardInstance.exiled_with`). Sutured Ghoul.
     ExiledWithSourceTotals,
+    /// Power = toughness = the mana value of the card exiled with this
+    /// permanent; 0 with none (Living Lore).
+    ExiledWithSourceManaValue,
 }
 
 fn one_i32() -> i32 { 1 }

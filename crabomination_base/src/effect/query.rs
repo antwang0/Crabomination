@@ -1400,6 +1400,7 @@ impl Effect {
             }
             Effect::EachPlayerRollsSourceCantAttackHighest { .. } => false,
             Effect::GoadACreatureOfEachOpponentAttackedBy { .. } => false,
+            Effect::CopySpellForEachOtherLegalTarget { what } => sel_has_target(what),
             Effect::SpellDiscountUntilYourNextTurn { who, .. } => player_has_target(who),
             Effect::ChooseMode(modes) | Effect::AsEntersChooseMode(modes) => {
                 modes.iter().any(|e| e.requires_target())
@@ -2483,6 +2484,7 @@ impl Effect {
             | Effect::ReplaceCreatureTypeText { what }
             | Effect::Detain { what }
             | Effect::CounterSpell { what }
+            | Effect::CopySpellForEachOtherLegalTarget { what }
             | Effect::CounterSpellIfNameExiledWithSource { what }
             | Effect::CounterSpellExileSameNamed { what }
             | Effect::CounterSpellDrawIfUnderpaid { what }
@@ -4782,6 +4784,7 @@ impl Effect {
             | Effect::ReturnFaceDownAsForest { what }
                 | Effect::ChangeSpellTarget { what }
                 | Effect::CounterSpell { what }
+                | Effect::CopySpellForEachOtherLegalTarget { what }
                 | Effect::CounterSpellIfNameExiledWithSource { what }
                 | Effect::CounterSpellExileSameNamed { what }
                 | Effect::CounterSpellDrawIfUnderpaid { what }
