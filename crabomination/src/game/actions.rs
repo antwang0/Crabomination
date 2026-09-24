@@ -1860,6 +1860,11 @@ pub(crate) fn cost_reduction_for_spell_full_over<'a>(
                 {
                     reduction += amount;
                 }
+                StaticEffect::ChosenColorsSpellCostReduction if src.controller == caster => {
+                    let colors = card.definition.printed_colors();
+                    reduction +=
+                        src.chosen_colors.iter().filter(|c| colors.contains(c)).count() as u32;
+                }
                 StaticEffect::GrantAffinityToISSpells { permanent_filter } => {
                     // "Instant and sorcery spells you cast have Affinity for
                     // [permanent_filter]" — only fires on the controller's

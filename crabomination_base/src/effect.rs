@@ -7694,6 +7694,10 @@ pub enum Effect {
     /// redirector) chooses via `Decision::ChooseTarget`. Unlike
     /// `CopySpellMayChooseTargets` this mutates the original spell.
     ChooseNewTargetsForSpell { what: Selector },
+    /// "Gain control of target spell" (Aethersnatch). The spell's controller
+    /// becomes this effect's controller (CR 110.2, 608.2 — a permanent spell
+    /// enters under it); its owner is unchanged.
+    GainControlOfSpell { what: Selector },
     /// Psychic Battle — each player reveals the top card of their library; the
     /// player who revealed the greatest mana value (uniquely) may repoint the
     /// targets of the spell that just chose them. A tie changes nothing.
@@ -10663,6 +10667,7 @@ pub fn static_affects_spell_cost(effect: &StaticEffect) -> bool {
         // `cost_reduction_for_spell_full_over`'s source loop
         SE::AllPlayersSpellsCostLess { .. }
         | SE::ChosenTypeSpellCostReduction { .. }
+        | SE::ChosenColorsSpellCostReduction
         | SE::CostReduction { .. }
         | SE::CostReductionBySourcePower { .. }
         | SE::CostReductionByValue { .. }

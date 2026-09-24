@@ -2053,6 +2053,10 @@ pub enum StaticEffect {
     /// Applied in `cost_reduction_for_spell_zoned`; Changeling spells qualify.
     /// Urza's Incubator ({2}), Herald's Horn ({1}).
     ChosenTypeSpellCostReduction { amount: u32 },
+    /// "Each spell you cast costs {1} less to cast for each of the chosen
+    /// colors it is" (Seal of the Guildpact) — generic only, keyed to the
+    /// source's `chosen_colors` (`Effect::ChooseTwoColorsForSource`).
+    ChosenColorsSpellCostReduction,
     /// "Each other [creature_type] creature you control enters with an
     /// additional `kind` counter" (Oona's Blackguard). Fixed-type sibling of
     /// `ChosenTypeEntersWithCounter`; Changeling entrants count.

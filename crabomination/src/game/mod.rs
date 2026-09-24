@@ -29383,6 +29383,7 @@ fn static_effect_to_effects(
             // ChosenTypeSpellCostReduction — read at cast time in
             // `cost_reduction_for_spell_zoned`; no continuous-layer effect.
             | StaticEffect::ChosenTypeSpellCostReduction { .. }
+            | StaticEffect::ChosenColorsSpellCostReduction
             // ChosenTypeEntersWithCounter — read at ETB-counter time via
             // `chosen_type_etb_counter_specs`; no continuous-layer effect.
             | StaticEffect::ChosenTypeEntersWithCounter { .. }

@@ -1846,7 +1846,9 @@ impl Effect {
             | Effect::CopySpellMayChooseTargets { what, count } => {
                 sel_has_target(what) || value_has_target(count)
             }
-            Effect::ChooseNewTargetsForSpell { what } => sel_has_target(what),
+            Effect::ChooseNewTargetsForSpell { what } | Effect::GainControlOfSpell { what } => {
+                sel_has_target(what)
+            }
             Effect::CopySpellUnlessPaid { what, count, .. } => {
                 sel_has_target(what) || value_has_target(count)
             }
@@ -4746,7 +4748,8 @@ impl Effect {
                 | Effect::CopySpellMayChooseTargets { what, .. }
                 | Effect::CopySpellUnlessPaid { what, .. }
                 | Effect::CopySpellForEachOtherTarget { what }
-                | Effect::ChooseNewTargetsForSpell { what } => sel_find(what, slot),
+                | Effect::ChooseNewTargetsForSpell { what }
+                | Effect::GainControlOfSpell { what } => sel_find(what, slot),
                 Effect::Sacrifice { who, .. } | Effect::SacrificeGreatestMV { who, .. } => {
                     sel_find(who, slot)
                 }

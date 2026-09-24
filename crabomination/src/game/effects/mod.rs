@@ -31132,6 +31132,23 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::GainControlOfSpell { what } => {
+                let me = ctx.controller;
+                for e in self.resolve_selector(what, ctx) {
+                    let (EntityRef::Permanent(sid) | EntityRef::Card(sid)) = e else { continue };
+                    if let Some(crate::game::types::StackItem::Spell { card, caster, .. }) =
+                        self.stack.iter_mut().rev().find(|s| {
+                            matches!(s, crate::game::types::StackItem::Spell { card, .. }
+                                if card.id == sid)
+                        })
+                    {
+                        *caster = me;
+                        card.controller = me;
+                    }
+                }
+                Ok(())
+            }
+
             Effect::CopySpellUnlessPaid { what, mana_cost, count } => {
                 // Wandering Archaic shape: the *caster of the spell being
                 // copied* may pay `mana_cost` to avoid being copied. We:

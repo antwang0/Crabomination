@@ -2981,6 +2981,7 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::CopySpellWithRiders { .. } => "Copy spell (haste, sac at end step)",
         Effect::CopySpellMayChooseTargets { .. } => "Copy spell (new targets)",
         Effect::ChooseNewTargetsForSpell { .. } => "Choose new targets",
+        Effect::GainControlOfSpell { .. } => "Gain control of spell",
         Effect::GainControl { .. } => "Gain control",
         Effect::ExileIfWouldDieThisTurn { .. } => "Exile if it would die",
         Effect::ExileIfLeavesBattlefield { .. } => "Exile if it would leave",
