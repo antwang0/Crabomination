@@ -14863,6 +14863,8 @@ impl GameState {
                         ctx,
                         events,
                     );
+                    // Wake the Past's "they gain haste" reads them back.
+                    self.scratch.last_moved_cards.push(cid);
                     if *sacrifice_eot {
                         self.delayed_triggers.push(crate::game::types::DelayedTrigger {
                             controller: ctx.controller,

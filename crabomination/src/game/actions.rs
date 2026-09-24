@@ -18096,6 +18096,15 @@ impl GameState {
             } else {
                 *count as usize
             };
+            // "Exile an artifact card with mana value X" (Osgir) reads the
+            // activation's X too; a filter naming no X is borrowed as is.
+            let resolved;
+            let filter = if filter.names_x_or_converge() {
+                resolved = filter.resolve_x(x_value.unwrap_or(0));
+                &resolved
+            } else {
+                filter
+            };
             let candidates: Vec<CardId> = self.players[p]
                 .graveyard
                 .iter()
