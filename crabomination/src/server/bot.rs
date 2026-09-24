@@ -2900,6 +2900,9 @@ impl EvalWeights {
 /// `DeclareAttackers`/`DeclareBlockers` once per combat phase — the match
 /// actor polls it repeatedly, so without these flags it would re-submit every
 /// tick.
+/// See `HeuristicBot::optional_yes_this_step`.
+const OPTIONAL_LOOP_CAP: u16 = 64;
+
 pub struct HeuristicBot {
     last_step_key: Option<(u32, TurnStep, usize)>,
     attackers_declared: bool,
@@ -2913,6 +2916,11 @@ pub struct HeuristicBot {
     /// is lost, so the bot tracks what it has already committed to across
     /// consecutive prompts from the same source. `(source, cards, life)`.
     reveal_commit: Option<(CardId, usize, i32)>,
+    /// "You may" answers taken this step. CR 732.2 — an optional loop is
+    /// one a player stops by declining; two Enduring Scalelords feed each
+    /// other a +1/+1 counter forever, so past [`OPTIONAL_LOOP_CAP`] yeses in
+    /// one step the bot declines.
+    optional_yes_this_step: u16,
     /// How this bot values the board. Ladder-selectable -- see
     /// [`EvalWeights`].
     weights: EvalWeights,
@@ -2926,6 +2934,7 @@ impl HeuristicBot {
             blocks_declared: false,
             scored: true,
             reveal_commit: None,
+            optional_yes_this_step: 0,
             weights: EvalWeights::default(),
         }
     }
@@ -2948,6 +2957,7 @@ impl HeuristicBot {
             self.last_step_key = Some(key);
             self.attackers_declared = false;
             self.blocks_declared = false;
+            self.optional_yes_this_step = 0;
         }
     }
 
@@ -3035,8 +3045,17 @@ impl HeuristicBot {
                         crate::decision::DecisionAnswer::Bool(yes),
                     )));
                 }
-                let answer =
+                let mut answer =
                     decide_pending_policy(state, seat, &self.weights, &pending.decision, true);
+                if matches!(pending.decision, crate::decision::Decision::OptionalTrigger { .. })
+                    && answer == crate::decision::DecisionAnswer::Bool(true)
+                {
+                    if self.optional_yes_this_step >= OPTIONAL_LOOP_CAP {
+                        answer = crate::decision::DecisionAnswer::Bool(false);
+                    } else {
+                        self.optional_yes_this_step += 1;
+                    }
+                }
                 return Some(BotStep::plain(GameAction::SubmitDecision(answer)));
             }
             return None;

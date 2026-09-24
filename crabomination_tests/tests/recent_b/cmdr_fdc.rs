@@ -3923,3 +3923,35 @@ fn breed_lethality_cards() {
     combat(&mut g, vec![Attack { attacker: giant, target: AttackTarget::Player(1) }], 0, |_| {});
     assert_eq!(g.players[1].life, 14);
 }
+
+/// CR 732.2 — two Enduring Scalelords are an optional loop (each counter
+/// may put one on the other); a bot seat must stop it by declining, or the
+/// game never leaves the step. A 1,000-game census capped two games on it.
+#[test]
+fn cr_732_2_bot_breaks_the_enduring_scalelord_loop() {
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    let mut g = main_phase();
+    g.players[0].wants_ui = true;
+    g.add_card_to_battlefield(0, catalog::enduring_scalelord());
+    g.add_card_to_battlefield(0, catalog::enduring_scalelord());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // A +1/+1 counter on the Bears starts both Scalelords going.
+    g.battlefield.find_by_id_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    g.dispatch_triggers_for_events(&[GameEvent::CounterAdded {
+        card_id: bear,
+        counter_type: CounterType::PlusOnePlusOne,
+        count: 1,
+    }]);
+    let mut bots = [HeuristicBot::new(), HeuristicBot::new()];
+    for _ in 0..2_000 {
+        if g.stack.is_empty() && g.pending_decision.is_none() {
+            return;
+        }
+        for (seat, bot) in bots.iter_mut().enumerate() {
+            if let Some(a) = bot.next_action(&g, seat) {
+                let _ = g.perform_action(a);
+            }
+        }
+    }
+    panic!("the Scalelord loop never ended");
+}
