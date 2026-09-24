@@ -16,6 +16,7 @@ impl GameState {
         &mut self,
         count: &Value,
         max_mv: &Value,
+        filter: Option<&crate::card::SelectionRequirement>,
         ctx: &EffectContext,
         effect: &Effect,
         events: &mut Vec<GameEvent>,
@@ -27,7 +28,11 @@ impl GameState {
         }
         let cap = self.evaluate_value(max_mv, ctx).max(0) as u32;
         let revealed: Vec<CardId> = self.players[p].library[..n].iter().map(|c| c.id).collect();
-        let castable = |c: &crate::card::CardInstance| !c.definition.is_land() && c.definition.cost.cmc() <= cap;
+        let castable = |c: &crate::card::CardInstance| {
+            !c.definition.is_land()
+                && c.definition.cost.cmc() <= cap
+                && filter.is_none_or(|f| self.evaluate_requirement_on_card(f, c, p))
+        };
         let candidates: Vec<(CardId, String)> = self.players[p].library[..n]
             .iter()
             .filter(|c| castable(c))

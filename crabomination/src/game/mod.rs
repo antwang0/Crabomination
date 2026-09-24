@@ -18036,6 +18036,15 @@ impl GameState {
     /// [`attachment_in_scope`](Self::attachment_in_scope), so a board with
     /// nothing attached — most of them — answers it with a fold read.
     #[inline]
+    /// An Aura `seat` controls is attached to `id`.
+    pub(crate) fn enchanted_by_aura_of(&self, id: CardId, seat: usize) -> bool {
+        self.attachment_in_scope()
+            && self
+                .battlefield
+                .iter()
+                .any(|o| o.attached_to == Some(id) && o.controller == seat && o.definition.is_enchantment())
+    }
+
     pub(crate) fn permanent_is_enchanted(&self, id: CardId) -> bool {
         self.attachment_in_scope()
             && self
@@ -30424,6 +30433,7 @@ fn requirement_live_leaves(req: &SelectionRequirement) -> u8 {
         | R::IsAttackingAlone
         | R::IsBlockingAlone
         | R::IsEnchanted
+        | R::EnchantedByYourAura
         | R::IsOutlaw
         | R::IsSource
         | R::IsCommander

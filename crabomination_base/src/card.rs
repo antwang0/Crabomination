@@ -2904,6 +2904,10 @@ pub enum SelectionRequirement {
     /// whose `attached_to` points at the candidate. Powers Kestia's
     /// "whenever an enchanted creature … you control attacks" trigger.
     IsEnchanted,
+    /// An Aura the source's controller controls is attached to the candidate
+    /// (Killian, Decisive Mentor; Eriette of the Charmed Apple). Battlefield
+    /// only.
+    EnchantedByYourAura,
     /// The permanent is a commander — any player's (`Player.commanders`):
     /// CR 903.3, a commander stays one under another player's control, so
     /// "commanders you control" pairs this with the controller scope (Falthis,

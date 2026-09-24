@@ -8352,7 +8352,14 @@ pub enum Effect {
     /// with mana value `max_mv` or less from among them without paying its
     /// mana cost. Put the rest on the bottom." (Sunbird's Invocation, CR
     /// 601.2 — cast from the library.) One cast at most; lands are skipped.
-    RevealTopMayCastOneFree { count: Value, max_mv: Value },
+    RevealTopMayCastOneFree {
+        count: Value,
+        max_mv: Value,
+        /// Only cards matching this may be cast ("an Aura spell" — Herald of
+        /// Amity). `None` allows any nonland card.
+        #[serde(default)]
+        filter: Option<SelectionRequirement>,
+    },
     /// "Each player draws cards equal to the amount of damage dealt to [the
     /// source] this turn by sources they controlled." (Grothama,
     /// All-Devouring's leaves-the-battlefield trigger.)

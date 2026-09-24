@@ -36107,8 +36107,8 @@ impl GameState {
                 self.each_player_draws_damage_they_dealt_to_source(ctx, events)
             }
 
-            Effect::RevealTopMayCastOneFree { count, max_mv } => {
-                self.reveal_top_may_cast_one_free(count, max_mv, ctx, effect, events)
+            Effect::RevealTopMayCastOneFree { count, max_mv, filter } => {
+                self.reveal_top_may_cast_one_free(count, max_mv, filter.as_ref(), ctx, effect, events)
             }
 
             Effect::Ripple { n } => {

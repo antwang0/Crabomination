@@ -485,7 +485,7 @@ pub fn sunbirds_invocation() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(Predicate::CastFromHand),
-            effect: Effect::RevealTopMayCastOneFree { count: mv(), max_mv: mv() },
+            effect: Effect::RevealTopMayCastOneFree { count: mv(), max_mv: mv(), filter: None },
         }],
         ..enchantment("Sunbird's Invocation", cost(&[generic(5), r()]))
     }
