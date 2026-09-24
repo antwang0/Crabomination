@@ -15399,7 +15399,17 @@ fn available_mana(state: &GameState, seat: usize) -> AvailableMana {
     // An untapped source whose mana shape this estimate cannot cost — see the
     // `is_countable_mana_ability` arm in the loop.
     let mut opaque_source = false;
+    // CR 605.1b — "whenever a land is tapped for mana, add one more" (Mirari's
+    // Wake, Mana Flare, Bubbling Muck): a Plains then pays {W}{W}, which the
+    // per-colour budget below cannot see. Its statics sit in the mana-static
+    // lane `relax_reachable` already read, so a board without one pays nothing.
+    let mut extra_land_mana = !state.extra_mana_on_land_tap_this_turn.is_empty();
     for p in state.battlefield.iter() {
+        if relax_reachable && !extra_land_mana {
+            extra_land_mana = p.definition.static_abilities.iter().any(|sa| {
+                matches!(sa.effect, crate::effect::StaticEffect::ExtraManaOnLandTap { .. })
+            });
+        }
         #[cfg(feature = "trig-census")]
         if census {
             mana_census::add(1, 1);
@@ -15530,7 +15540,7 @@ fn available_mana(state: &GameState, seat: usize) -> AvailableMana {
     // colours. `false` from the gate is authoritative.
     let land_type = state.land_type_change_in_scope();
     crate::game::pay_census::record_budget(fused_relax, opaque_source, land_type);
-    if fused_relax || opaque_source || land_type {
+    if fused_relax || opaque_source || land_type || extra_land_mana {
         // `u32::MAX`, not `total`: widening to `total` is only as good as
         // `total`, and `total` deliberately under-counts the same sources
         // that force the widening. Two Treasures and nothing else read
@@ -23144,6 +23154,20 @@ mod tests {
     /// can afford: it would be committing to lines it can only pay for by
     /// spending something it would rather keep. A Lotus Petal on its own
     /// does not make a two-drop look castable.
+    /// CR 605.1b — under Mirari's Wake one Plains taps for {W}{W}; the colour
+    /// budget can't count that, so it must not refuse a {W}{W} ability
+    /// (Heliod's token-maker, which `sink::AB_TOKEN` dropped in a pod).
+    #[test]
+    fn available_mana_widens_under_extra_land_mana() {
+        let mut g = two_player_game();
+        let plains = g.add_card_to_battlefield(0, catalog::plains());
+        g.clear_sickness(plains);
+        let ww = crate::mana::cost(&[crate::mana::w(), crate::mana::w()]);
+        assert!(!colors_coverable(&ww, &available_mana(&g, 0)));
+        g.add_card_to_battlefield(0, catalog::miraris_wake());
+        assert!(colors_coverable(&ww, &available_mana(&g, 0)));
+    }
+
     #[test]
     fn available_mana_ignores_self_consuming_sources() {
         let mut g = two_player_game();
