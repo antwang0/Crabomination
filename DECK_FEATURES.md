@@ -99,6 +99,7 @@ lists were picked.
 | **Endless Punishment** (DSC precon) BR | Valgavoth, Harrower of Souls | BR | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Arcane Wizardry** (C17 precon) UBR | Inalla, Archmage Ritualist | UBR | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Urza's Iron Alliance** (BRC precon) WUB | Urza, Chief Artificer | WUB | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
+| **Hatsune Miku** (SLD precon) GW | Trostani, Selesnya's Voice | GW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not
@@ -973,6 +974,29 @@ Four-seat pods beside Brimaz / Inalla / Isperia (seed 10150, 1,000 games,
 all decided): Urza 41.7 %; a 300-game census (seed 10151) leaves no card of the
 four unplayed; 12 seats (68..57 as numbered before rebasing over Enduring Enchantments, seed 10152): 200 / 200 decided. `--bench`
 byte-identical.
+
+The **seventy-first** is the Secret Lair **Hatsune Miku** deck
+(`HatsuneMiku_SLD`) — Selesnya lifegain and tokens under Trostani, Selesnya's
+Voice; like Urza it is past `MAX_SEATS` and reached by `--pod-decks 71`
+(committed as "sixty-eighth" before rebasing over three concurrent seats).
+Seventeen cards were missing; the primitives: `ActivatedAbility::untap_others_cost`
+(Halo Fountain), `ArtifactSubtype::Junk` + `tokens::junk_token` (Break Down),
+`Effect::RevokeGrantedActivatedAbility` (Song of Freyalise's "until your next
+turn"). It found two engine gaps: **`Value::ColorCountOf` never saw a spell on
+the stack** (it walked battlefield/graveyard/hand/exile by hand; now
+`find_card_anywhere`), and ⚠ **the bot stacked its own Aetherflux Reservoir
+shots forever** (CR 117.3c hands priority back to the activator — 5,486 on the
+stack at a 6-seat action cap); a HeuristicBot seat now lets its own ability from
+a source resolve first. Residuals: **Ancient Cornucopia**'s once-a-turn limit is
+on the trigger; **Lazotep Quarry**'s token keeps its creature types. Four-seat
+pods beside Sigarda / Teval / Disa (seed 11068, 1,000 games, all decided):
+Trostani 46.1 %; the census leaves no card of the four unplayed. ⚠ **The
+lifegain engine is the pod's new board-cap source**: at seed 11069, 1,000 games
+each at 4 / 6 / 8 seats read 1 / 0 / 2 undecided, every one `board cap` — Boon
+Reflection doubles Trostani / Angelic Chorus life per creature, and Storm Herd
+at ~1,000+ life makes that many Pegasi in one resolution, past
+`MAX_BATTLEFIELD` (1,024). The cards are right; the bound is the simulator's.
+`--bench` byte-identical.
 
 The **sixtieth** is the Starter Commander Decks' **Token Triumph**
 (`TokenTriumph_SCD`) — Selesnya tokens and anthems under Emmara, Soul of the
