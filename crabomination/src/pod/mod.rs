@@ -455,6 +455,7 @@ pub fn play_one_pod_game_censused(
     let mut bots: Vec<Box<dyn Bot>> =
         pilots.iter().take(g.players.len()).map(|p| p.build()).collect();
     let (mut actions, mut stale) = (0usize, 0usize);
+    let (diag_floor, mut diag_said) = (crate::recommend::cap_diag_floor().flatten(), false);
     // One `OnceLock` read a game, not a bool per action: off, `record` is a
     // field test and the `Debug` format below never runs.
     let mut census =
@@ -507,6 +508,12 @@ pub fn play_one_pod_game_censused(
             g.pending_decision.as_ref().map(|pd| pd.acting_player()).unwrap_or(usize::MAX),
         );
         if any { stale = 0 } else { stale += 1 }
+        // `CRAB_CAP_DIAG=<n>` names a *slow* game's board too, once, as it
+        // passes `n` actions — a decided game never reaches the line below.
+        if let Some(n) = diag_floor.filter(|n| actions >= *n && !diag_said) {
+            diag_said = true;
+            eprintln!("pod past {n} actions seed {seed}: {}", crate::recommend::cap_diagnosis(&g, actions));
+        }
     }
     crate::server::bot::set_jitter_seed(None);
     let stop = stop_reason(&g, actions, max_actions, stale).unwrap_or(StopReason::NoLegalMove);
