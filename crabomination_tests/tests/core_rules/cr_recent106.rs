@@ -409,3 +409,53 @@ fn cr_608_2_a_parked_per_opponent_body_resumes_bound_to_its_opponent() {
     assert_eq!(g.battlefield_find(mine).map(|c| c.controller), Some(0));
     assert_eq!(g.battlefield_find(theirs).map(|c| c.controller), Some(0), "the corrupted opponent's Angel");
 }
+
+/// CR 603.7c — a delayed trigger's X is the X its creating effect had
+/// ("reveal until you reveal that many creature cards"), not the zero a
+/// fire-time context carries. `Effect::RevealUntilMatchingToBattlefield`
+/// puts every hit onto the battlefield and shuffles the misses back.
+#[test]
+fn cr_603_7c_a_delayed_trigger_keeps_its_x() {
+    use crabomination::card::{CardDefinition, CardType, SelectionRequirement as R};
+    use crabomination::effect::{Effect, Selector, Value};
+    let mut g = two_player_game();
+    let yours = || Selector::EachPermanent(R::Creature.and(R::ControlledByYou));
+    let spell = g.add_card_to_hand(0, CardDefinition {
+        name: "Delayed Destiny",
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::WithX {
+            x: Value::CountOf(Box::new(yours())),
+            body: Box::new(Effect::Seq(vec![
+                Effect::Exile { what: yours() },
+                Effect::AtNextEndStep {
+                    body: Box::new(Effect::RevealUntilMatchingToBattlefield {
+                        filter: R::Creature,
+                        count: Value::XFromCost,
+                    }),
+                },
+            ])),
+        },
+        ..Default::default()
+    });
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for def in [catalog::forest(), catalog::grizzly_bears(), catalog::forest(), catalog::grizzly_bears(), catalog::grizzly_bears()] {
+        g.add_card_to_library(0, def);
+    }
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.controller == 0).count(), 0, "both exiled");
+    while g.step != TurnStep::End {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+    }
+    drain_stack(&mut g);
+    let bears = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Grizzly Bears").count();
+    assert_eq!(bears, 2, "two exiled, so two creature cards come back — not zero, not three");
+    assert_eq!(g.players[0].library.len(), 3, "the two Forests and the third Bears are shuffled back");
+}

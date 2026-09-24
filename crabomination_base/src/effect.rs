@@ -4653,6 +4653,11 @@ pub enum Effect {
     /// attacker — Flash Foliage). No-op if the target isn't attacking; the
     /// token joins the block map and marks the attacker blocked.
     CreateTokenBlocking { definition: std::sync::Arc<crate::card::TokenDefinition>, filter: SelectionRequirement },
+    /// "For each creature attacking you or a planeswalker you control, create
+    /// a token that's a copy of that creature and that's blocking that
+    /// creature. Exile those tokens at end of combat." (Mirror Match, CR
+    /// 509.4 / 707.2). The copies block without being declared as blockers.
+    CopyAttackersAsBlockers,
     /// CR 701.49 — Venture into the dungeon: enter the first room of a
     /// chosen dungeon (auto: Lost Mine of Phandelver) or advance to the
     /// next room; room abilities resolve inline (`base::dungeons`).
@@ -8129,6 +8134,11 @@ pub enum Effect {
     /// (`tapped`), and put the rest on the bottom of your library in a random
     /// order. Stops early if the library runs out.
     RevealUntilLandsToBattlefield { count: Value, tapped: bool },
+    /// "Reveal cards from the top of your library until you reveal `count`
+    /// `filter` cards, put all of them onto the battlefield, then shuffle the
+    /// rest into your library" (Synthetic Destiny). Stops early on an empty
+    /// library.
+    RevealUntilMatchingToBattlefield { filter: SelectionRequirement, count: Value },
     /// "Until your next turn, whenever a creature attacks you or a
     /// planeswalker you control, [body]" — registers a floating trigger;
     /// the attacker is bound as `Selector::TriggerSource`. Tamiyo +2.

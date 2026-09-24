@@ -1944,6 +1944,8 @@ impl Effect {
             Effect::RevealUntilNonlandDamage { to } => sel_has_target(to),
             // Reveals from your own library — no target slot.
             Effect::RevealUntilLandsToBattlefield { .. } => false,
+            Effect::CopyAttackersAsBlockers => false,
+            Effect::RevealUntilMatchingToBattlefield { count, .. } => value_has_target(count),
             Effect::ClashWithOpponent { .. } => false,
             Effect::OnAttackedUntilYourNextTurn { .. } => false,
             Effect::ExileAnyNumberFromGraveyards { .. } => false,

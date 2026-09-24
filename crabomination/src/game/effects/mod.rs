@@ -6,6 +6,7 @@
 //! `ChooseMode`) recurse; leaf mutations perform game-state changes and emit
 //! [`GameEvent`]s.
 
+mod combat_copies;
 mod commander;
 mod copy_redirect;
 mod damage_draw;
@@ -19,6 +20,7 @@ mod movement;
 mod player_scope;
 mod reselect;
 mod reveal_cast;
+mod reveal_until;
 mod targeting;
 /// The target enumerator's call-site census — see
 /// [`targeting::call_site_census`]. Re-exported for `bot_ladder` under the
@@ -11157,6 +11159,8 @@ impl GameState {
             }
 
             // CR 509.4 — mint a token already blocking the targeted attacker.
+            Effect::CopyAttackersAsBlockers => self.copy_attackers_as_blockers(ctx, events),
+
             Effect::CreateTokenBlocking { definition, .. } => {
                 // A spell names the attacker as its target; a "whenever this
                 // creature blocks" trigger (Brimaz) carries none, and the
@@ -28570,22 +28574,15 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::RevealUntilMatchingToBattlefield { filter, count } => {
+                self.reveal_until_matching_to_battlefield(filter, count, ctx, events)
+            }
+
             Effect::RevealUntilLandsToBattlefield { count, tapped } => {
                 use rand::seq::SliceRandom;
                 let p = ctx.controller;
                 let need = self.evaluate_value(count, ctx).max(0) as u32;
-                let mut found = 0u32;
-                let mut lands: Vec<CardInstance> = Vec::new();
-                let mut rest: Vec<CardInstance> = Vec::new();
-                while found < need && !self.players[p].library.is_empty() {
-                    let card = self.players[p].library.remove(0);
-                    if card.definition.is_land() {
-                        found += 1;
-                        lands.push(card);
-                    } else {
-                        rest.push(card);
-                    }
-                }
+                let (lands, mut rest) = self.reveal_until_n(p, need, |_, c| c.definition.is_land());
                 // Bottom the non-land reveals in a random order (CR — the player
                 // saw them, so a deterministic bottom would be known info).
                 rest.shuffle(&mut self.rng.draw());
@@ -34270,6 +34267,14 @@ impl GameState {
                 // captured target; rewrite slot references to slot 0.
                 let captured = ctx.targets.get(1).or_else(|| ctx.targets.first()).cloned();
                 let mut effect = (**body).clone();
+                // X is fixed as the delayed trigger is created (CR 603.7c): the
+                // fire-time context has none (Synthetic Destiny's "that many").
+                if ctx.x_value > 0 {
+                    effect = Effect::WithX {
+                        x: crate::effect::Value::Const(ctx.x_value as i32),
+                        body: Box::new(effect),
+                    };
+                }
                 if ctx.targets.len() > 1 {
                     // Body references Target(1) — remap to the captured slot.
                     fn remap(e: &mut Effect) {
