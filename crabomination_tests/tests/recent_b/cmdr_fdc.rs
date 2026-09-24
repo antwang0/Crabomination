@@ -3955,3 +3955,267 @@ fn cr_732_2_bot_breaks_the_enduring_scalelord_loop() {
     }
     panic!("the Scalelord loop never ended");
 }
+
+// ── Enduring Enchantments (Anikthea, Hand of Erebos) ────────────────────────
+
+fn cast_for_life(g: &mut GameState, id: CardId) -> Result<(), String> {
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: id,
+        pitch_card: None,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .map_err(|e| format!("{e:?}"))?;
+    drain_stack(g);
+    Ok(())
+}
+
+/// CR 118.9 — Demon of Fate's Design: once during each of your turns an
+/// enchantment spell may be cast for life equal to its mana value instead of
+/// its mana cost; its sacrifice ability pumps by the fodder's mana value.
+#[test]
+fn cr_118_9_demon_of_fates_design_casts_one_enchantment_a_turn_for_life() {
+    let mut g = main_phase();
+    let demon = g.add_card_to_battlefield(0, catalog::demon_of_fates_design());
+    let boon = g.add_card_to_hand(0, catalog::boon_of_the_spirit_realm());
+    let song = g.add_card_to_hand(0, catalog::love_song_of_night_and_day());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    assert!(cast_for_life(&mut g, bear).is_err(), "not an enchantment");
+    cast_for_life(&mut g, boon).expect("pay 5 life");
+    assert_eq!(g.players[0].life, 15);
+    assert!(g.battlefield_find(boon).is_some());
+    assert!(cast_for_life(&mut g, song).is_err(), "once each turn");
+
+    // On an opponent's turn the grant is off.
+    let mut g2 = main_phase();
+    g2.add_card_to_battlefield(0, catalog::demon_of_fates_design());
+    let boon2 = g2.add_card_to_hand(0, catalog::boon_of_the_spirit_realm());
+    g2.active_player_idx = 1;
+    assert!(cast_for_life(&mut g2, boon2).is_err(), "only during your turns");
+
+    // {2}{B}, sacrifice another enchantment: +X/+0 (Boon's X is 5).
+    activate(&mut g, demon, 0, None).expect("sacrifice the Boon");
+    assert!(g.battlefield_find(boon).is_none());
+    assert_eq!(pt(&g, demon), (11, 6));
+}
+
+/// CR 714.2c — Narci, Fable Singer: as a Saga's final chapter ability
+/// resolves, each opponent loses (and you gain) the Saga's mana value; the
+/// Saga's sacrifice afterwards (CR 714.4) draws a card.
+#[test]
+fn cr_714_2c_narci_drains_on_a_sagas_final_chapter() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::narci_fable_singer());
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::island());
+    let hill = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let saga = g.add_card_to_hand(0, catalog::binding_the_old_gods());
+    cast(&mut g, saga, &[]);
+    assert!(g.battlefield_find(hill).is_none(), "chapter I destroyed it");
+    g.saga_advance(saga);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Forest"));
+    let hand = g.players[0].hand.len();
+    g.saga_advance(saga);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 16, "Binding the Old Gods has mana value 4");
+    assert_eq!(g.players[0].life, 24);
+    assert!(g.battlefield_find(saga).is_none(), "sacrificed after III");
+    assert_eq!(g.players[0].hand.len(), hand + 1, "sacrificing an enchantment draws");
+}
+
+/// CR 707.9b — Anikthea's token copy of an exiled enchantment card is also a
+/// 3/3 black Zombie creature, and the commander hands it menace.
+#[test]
+fn cr_707_9b_anikthea_reanimates_an_enchantment_as_a_zombie() {
+    let mut g = main_phase();
+    let boon = g.add_card_to_graveyard(0, catalog::boon_of_the_spirit_realm());
+    let ani = g.add_card_to_hand(0, catalog::anikthea_hand_of_erebos());
+    cast(&mut g, ani, &[]);
+    assert!(g.exile.iter().any(|c| c.id == boon), "the card is exiled");
+    let tok = g
+        .battlefield
+        .iter()
+        .find(|c| c.is_token && c.definition.name == "Boon of the Spirit Realm")
+        .map(|c| c.id)
+        .expect("a token copy");
+    let cp = g.computed_permanent(tok).unwrap();
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Creature));
+    assert!(cp.keywords().contains(&Keyword::Menace), "another enchantment creature");
+    // The copy's own constellation put a blessing counter on it: 3/3 + 1.
+    assert_eq!(g.battlefield_find(tok).unwrap().counter_count(CounterType::Blessing), 1);
+    assert_eq!(pt(&g, tok), (4, 4));
+}
+
+/// CR 603.4 — Cacophony Unleashed's wipe checks "if you cast it"; its
+/// constellation turns it into a 6/6 until end of turn.
+#[test]
+fn cr_603_4_cacophony_wipes_only_when_cast_and_animates() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let behemoth = g.add_card_to_battlefield(1, catalog::nyxborn_behemoth());
+    let c = g.add_card_to_hand(0, catalog::cacophony_unleashed());
+    cast(&mut g, c, &[]);
+    assert!(g.battlefield_find(bear).is_none());
+    assert!(g.battlefield_find(behemoth).is_some(), "an enchantment creature survives");
+    assert_eq!(pt(&g, c), (6, 6), "its own entry animates it");
+
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    etb(&mut g, catalog::cacophony_unleashed());
+    assert!(g.battlefield_find(bear).is_some(), "not cast, no wipe");
+}
+
+/// CR 701.15b — Ghoulish Impetus goads and pumps; when the creature dies the
+/// Aura comes back at the next end step.
+#[test]
+fn cr_701_15b_ghoulish_impetus_goads_and_returns() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::ghoulish_impetus());
+    cast(&mut g, aura, &[Target::Permanent(bear)]);
+    assert!(g.battlefield_find(bear).unwrap().goaded_by.contains(&0));
+    assert_eq!(pt(&g, bear), (3, 3));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Deathtouch));
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, &[Target::Permanent(bear)]);
+    assert!(g.battlefield_find(aura).is_none(), "the Aura fell off");
+    while g.step != TurnStep::End {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+    }
+    drain_stack(&mut g);
+    let back = g.battlefield.iter().find(|c| c.definition.name == "Ghoulish Impetus").expect("returned");
+    assert_eq!(back.attached_to, Some(giant));
+}
+
+/// CR 610.3 — Battle at the Helvault holds an opponent's permanent until the
+/// Saga leaves; chapter III's Avacyn arrives and the Saga's sacrifice frees it.
+#[test]
+fn cr_610_3_battle_at_the_helvault_returns_its_prisoner() {
+    let mut g = main_phase();
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let saga = g.add_card_to_hand(0, catalog::battle_at_the_helvault());
+    cast(&mut g, saga, &[]);
+    assert!(g.battlefield_find(giant).is_none(), "exiled by chapter I");
+    g.saga_advance(saga);
+    drain_stack(&mut g);
+    g.saga_advance(saga);
+    drain_stack(&mut g);
+    assert_eq!(count_named(&g, 0, "Avacyn"), 1);
+    assert!(g.battlefield_find(saga).is_none());
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Hill Giant" && c.controller == 1));
+}
+
+/// The rest of Enduring Enchantments' new cards, one play pattern each.
+#[test]
+fn enduring_enchantments_batch() {
+    // Boon of the Spirit Realm: a blessing counter per enchantment entering.
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let boon = g.add_card_to_hand(0, catalog::boon_of_the_spirit_realm());
+    cast(&mut g, boon, &[]);
+    let sw = g.add_card_to_hand(0, catalog::sandwurm_convergence());
+    cast(&mut g, sw, &[]);
+    assert_eq!(pt(&g, bear), (4, 4));
+
+    // Battle for Bretagard: two Warriors, then each token is copied.
+    let mut g = main_phase();
+    let saga = g.add_card_to_hand(0, catalog::battle_for_bretagard());
+    cast(&mut g, saga, &[]);
+    g.saga_advance(saga);
+    drain_stack(&mut g);
+    g.saga_advance(saga);
+    drain_stack(&mut g);
+    assert_eq!(count_named(&g, 0, "Human Warrior"), 2);
+    assert_eq!(count_named(&g, 0, "Elf Warrior"), 2);
+
+    // Composer of Spring: an entering enchantment drops a land from hand.
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::composer_of_spring());
+    let forest = g.add_card_to_hand(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![forest])]));
+    let sw = g.add_card_to_hand(0, catalog::sandwurm_convergence());
+    cast(&mut g, sw, &[]);
+    assert!(g.battlefield_find(forest).is_some_and(|c| c.tapped));
+
+    // Love Song of Night and Day: chapter I draws two for both players.
+    let mut g = main_phase();
+    for s in 0..2 {
+        for _ in 0..3 {
+            g.add_card_to_library(s, catalog::island());
+        }
+    }
+    let song = g.add_card_to_hand(0, catalog::love_song_of_night_and_day());
+    cast(&mut g, song, &[]);
+    assert_eq!(g.players[0].hand.len(), 2);
+    assert_eq!(g.players[1].hand.len(), 2);
+
+    // Nyxborn Behemoth: Sandwurm (mana value 8) takes eight off.
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::sandwurm_convergence());
+    let nb = g.add_card_to_hand(0, catalog::nyxborn_behemoth());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: nb,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("four mana is enough");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(nb).is_some());
+
+    // Ondu Spiritdancer: the first enchantment each turn is copied.
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::ondu_spiritdancer());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let sw = g.add_card_to_hand(0, catalog::sandwurm_convergence());
+    cast(&mut g, sw, &[]);
+    let boon = g.add_card_to_hand(0, catalog::boon_of_the_spirit_realm());
+    cast(&mut g, boon, &[]);
+    assert_eq!(count_named(&g, 0, "Sandwurm Convergence"), 2);
+    assert_eq!(count_named(&g, 0, "Boon of the Spirit Realm"), 1, "once each turn");
+
+    // Sandwurm Convergence: fliers can't attack you.
+    let mut g = main_phase();
+    g.add_card_to_battlefield(1, catalog::sandwurm_convergence());
+    let angel = g.add_card_to_battlefield(0, catalog::serra_angel());
+    g.clear_sickness(angel);
+    g.step = TurnStep::DeclareAttackers;
+    assert!(g
+        .perform_action(GameAction::DeclareAttackers(vec![Attack {
+            attacker: angel,
+            target: AttackTarget::Player(1),
+        }]))
+        .is_err());
+
+    // Satyr Enchanter draws per enchantment spell; Starfield Mystic discounts
+    // it and grows when an enchantment dies.
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::satyr_enchanter());
+    let mystic = g.add_card_to_battlefield(0, catalog::starfield_mystic());
+    g.add_card_to_library(0, catalog::island());
+    let aura = g.add_card_to_hand(0, catalog::ghoulish_impetus());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("{1} less");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), 1, "drew off the cast");
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, &[Target::Permanent(bear)]);
+    assert_eq!(g.battlefield_find(mystic).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
