@@ -88,6 +88,7 @@ pub(crate) fn event_kind_bits(event: &GameEvent) -> u128 {
             K::PlayerDamaged,
         ),
         E::LifeGained { .. } => bits!(K::LifeGained),
+        E::DamagePrevented { to_player: Some(_), .. } => bits!(K::DamageToPlayerPrevented),
         E::ScriedOrSurveiled { .. } => bits!(K::ScriedOrSurveiled),
         E::OpponentCausedYouToDiscard { .. } => bits!(K::OpponentCausedYouToDiscard),
         E::DungeonCompleted { .. } => bits!(K::DungeonCompleted),
