@@ -99,9 +99,12 @@ pub fn ancient_cornucopia() -> CardDefinition {
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
                 .with_filter(Predicate::CastSpellMatches(R::Not(Box::new(R::Colorless))))
                 .once_per_turn(),
-            effect: Effect::GainLife {
-                who: Selector::You,
-                amount: Value::ColorCountOf(Box::new(Selector::TriggerSource)),
+            effect: Effect::MayDo {
+                description: "Gain 1 life for each of that spell's colors?".into(),
+                body: Box::new(Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::ColorCountOf(Box::new(Selector::TriggerSource)),
+                }),
             },
         }],
         activated_abilities: vec![ActivatedAbility {

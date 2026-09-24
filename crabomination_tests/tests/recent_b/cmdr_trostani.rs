@@ -88,6 +88,11 @@ fn attack_with(g: &mut GameState, attackers: &[CardId], defender: usize) {
 fn ancient_cornucopia_gains_per_color_once_a_turn() {
     let mut g = pod(2);
     g.add_card_to_battlefield(0, catalog::ancient_cornucopia());
+    // "You may gain" — the seat takes it both times it is offered.
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
     let life = g.players[0].life;
     let rhys = g.add_card_to_hand(0, catalog::rhys_the_redeemed());
     cast(&mut g, 0, rhys, None).expect("cast");
