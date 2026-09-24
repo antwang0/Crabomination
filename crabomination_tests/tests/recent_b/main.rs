@@ -38,6 +38,7 @@ mod cmdr_nelly;
 mod cmdr_eshki;
 mod cmdr_estrid;
 mod cmdr_galea;
+mod cmdr_chishiro;
 mod cmdr_emmara;
 mod cmdr_teferi;
 mod cmdr_lorehold;
