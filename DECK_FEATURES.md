@@ -1215,6 +1215,27 @@ all decided): Galea 5.3 % — the bot does not build a Voltron threat; beside
 Estrid / Eshki / Nelly (seed 10251): 1,000 / 1,000, 5.3 %; census (seed 10252):
 no card of the four unplayed; strict debug pods (seeds 10253-10255, 4 and 6
 seats): 180 / 180. `--bench` byte-identical.
+The **hundred-and-seventh** is Kamigawa: Neon Dynasty Commander's **Upgrades
+Unleashed** (`UpgradesUnleashed_NEC`) — Gruul "modified" creatures (CR 700.9)
+under Chishiro, the Shattered Blade, `--pod-decks 107` (committed as 102 while
+five concurrent seats landed). ⚠ The printed deck ships **two Mossfire
+Valleys**, which isn't singleton (CR 903.5b); the seat runs a thirteenth
+Mountain in the second one's place. Eighteen cards were missing
+(`cmdr_chishiro.rs`); the primitive is `Selector::AttackedBySource` (Mage
+Slayer). Its tests found ⚠ **a leaving permanent's last-known P/T dropped every
+static and attachment bonus** (CR 603.10 — the death snapshots were plain
+clones; `GameState::lki_clone` bakes the computed P/T in), and `R::IsModified`
+answered "unmodified" for a creature whose own Aura had already been orphaned
+(it now reads `auras_at_death`, CR 603.10a). Its pods found two bot gaps: ⚠
+**`ApplyToTargets` read hostile to the auto-targeter**, so an "up to X target
+creatures you control" counter spell never filled a slot (Silkguard uncast in
+1,800 games), and **a karoo played onto an empty board bounced itself every
+turn** (3 no-progress draws in 2,000 games). Residual: Concord with the Kami
+takes every mode that can act. Four-seat pods beside Kasla / Ulalek / Eshki
+(seeds 10311, 10321-10323, 4,000 games) and Nelly / Ellivere / Lathliss (seed
+10312, 1,000): all decided, Chishiro 32.0 % and 14.6 %; census (seed 10323):
+no card of the four unplayed. `--bench` byte-identical; cube/sos/sealed (seed
+10320): 7,500 decided.
 
 The **hundred-and-fifth** is Secrets of Strixhaven Commander's **Silverquill
 Influence** (`SilverquillInfluence_SOC`, 2026-04-24) — Orzhov Auras and goad
