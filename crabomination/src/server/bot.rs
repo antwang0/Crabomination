@@ -3924,10 +3924,14 @@ fn pick_sweeper_shield(state: &GameState, seat: usize, w: &EvalWeights) -> Optio
     None
 }
 
-/// The effect phases out, or grants indestructible to, permanents.
+/// The effect phases out, grants indestructible to, or exiles until the
+/// next end step (Eerie Interlude — the sweeper resolves while they're
+/// gone), permanents.
 fn effect_shields_permanents(eff: &Effect) -> bool {
     match eff {
-        Effect::PhaseOut { .. } => true,
+        Effect::PhaseOut { .. }
+        | Effect::ExileReturnNextEndStep { .. }
+        | Effect::ExileReturnToOwnerNextEndStep { .. } => true,
         Effect::GrantKeyword { keyword: crate::card::Keyword::Indestructible, .. } => true,
         Effect::ApplyToTargets { effect, .. } => effect_shields_permanents(effect),
         Effect::Seq(v) => v.iter().any(effect_shields_permanents),
@@ -28973,5 +28977,49 @@ mod tail_guard_tests {
         next.perform_action(GameAction::DeclareAttackers(picked)).unwrap();
         let enc = super::super::encode::encode_state(&next, 1, super::super::net_eval::vocab());
         assert_eq!(d.successors[d.chosen], enc, "chosen must index the played declaration");
+    }
+}
+
+#[cfg(test)]
+mod sweeper_shield_tests {
+    use super::*;
+    use crate::game::types::TurnStep;
+    use crate::mana::Color;
+
+    /// Eerie Interlude exiles the team until the next end step, so a Wrath of
+    /// God resolving meanwhile finds nothing: the bot answers the sweeper with
+    /// it, targeting every creature it has.
+    #[test]
+    fn an_end_step_blink_answers_a_sweeper() {
+        let mut g = crate::game::two_player_game();
+        g.active_player_idx = 1;
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 1;
+        for _ in 0..2 {
+            g.add_card_to_battlefield(0, crate::catalog::grizzly_bears());
+        }
+        let wrath = g.add_card_to_hand(1, crate::catalog::wrath_of_god());
+        g.players[1].mana_pool.add(Color::White, 4);
+        g.perform_action(GameAction::CastSpell {
+            card_id: wrath,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("wrath");
+        let eerie = g.add_card_to_hand(0, crate::catalog::eerie_interlude());
+        g.players[0].mana_pool.add(Color::White, 3);
+        g.priority.player_with_priority = 0;
+        let picked = pick_sweeper_shield(&g, 0, &EvalWeights::default()).expect("a shield");
+        let action = match picked {
+            Picked::Probed(a, _) => a,
+            Picked::Plain(a) => a,
+        };
+        assert!(
+            matches!(&action, GameAction::CastSpell { card_id, additional_targets, .. }
+                if *card_id == eerie && additional_targets.len() == 1),
+            "{action:?}"
+        );
     }
 }
