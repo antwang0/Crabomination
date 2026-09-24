@@ -19,6 +19,9 @@ fn card_has(card: &CardInstance, wanted: &Keyword) -> bool {
     card.definition.keywords.iter().any(|k| keyword_matches(k, wanted))
 }
 
+/// A donor's counters: the plain kinds and the keyword counters.
+type Donor = (CardId, Vec<(CounterType, u32)>, Vec<(Keyword, u32)>);
+
 impl GameState {
     fn run_on(&mut self, id: CardId, effect: Effect, ctx: &EffectContext, events: &mut Vec<GameEvent>) {
         let mut c = ctx.clone();
@@ -185,7 +188,7 @@ impl GameState {
             return Ok(());
         };
         let p = ctx.controller;
-        let donors: Vec<(CardId, Vec<(CounterType, u32)>, Vec<(Keyword, u32)>)> = self
+        let donors: Vec<Donor> = self
             .battlefield
             .iter()
             .filter(|c| c.controller == p && c.id != to && c.definition.is_creature())
@@ -194,7 +197,7 @@ impl GameState {
                 let kws = c.keyword_counters.iter().map(|(k, n)| (k.clone(), *n)).filter(|(_, n)| *n > 0).collect();
                 (c.id, plain, kws)
             })
-            .filter(|(_, a, b): &(CardId, Vec<(CounterType, u32)>, Vec<(Keyword, u32)>)| !a.is_empty() || !b.is_empty())
+            .filter(|(_, a, b): &Donor| !a.is_empty() || !b.is_empty())
             .collect();
         for (from, plain, kws) in donors {
             for (kind, n) in plain {
