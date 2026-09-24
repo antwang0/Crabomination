@@ -414,6 +414,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::NEYALI_COMMANDERS,
             main: decks::NEYALI_MAIN,
         },
+        // Forty-second: the thirty-second official list (Peer Through Time,
+        // C14) — mono-blue under a planeswalker commander. `--seats 42`.
+        PodDeck {
+            name: "Teferi, Temporal Archmage (U)",
+            commanders: decks::TEFERI_COMMANDERS,
+            main: decks::TEFERI_MAIN,
+        },
     ]
 }
 
@@ -920,6 +927,8 @@ mod tests {
             ("Zada", [0x2ADA, 82, 9006]),
             ("Gisa", [0x6154, 83, 9007]),
             ("Ghalta", [0x6A17A, 84, 9008]),
+            // CR 903.3a — the second planeswalker commander, and a lieutenant.
+            ("Teferi", [0x7EFE41, 85, 9009]),
         ] {
             let precon = *field.iter().find(|d| d.name.starts_with(name)).expect("the precon seat");
             assert_eq!(precon.card_count(), 100);

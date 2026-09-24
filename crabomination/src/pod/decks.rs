@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Ten hand-picked commanders plus thirty official preconstructed lists, each a
+//! Ten hand-picked commanders plus thirty-two official preconstructed lists, each a
 //! 99 of cards this engine implements: legal under CR 903 (100 cards
 //! including the commander, singleton outside basics, every card inside the
 //! commander's CR 903.4 color identity) and Commander-legal per Scryfall's
@@ -8,7 +8,7 @@
 //!
 //! The ten were built by hand because the offline Scryfall cache cannot say
 //! how a precon splits into decks; MTGJSON's deck files can, and the eleventh
-//! through fortieth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
+//! through forty-second (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
 //! Win, Tails You Lose, Goblin Storm, Foundations Commander's Wretched Ranks,
 //! Tramplesaurus Rex and Keen Engineering, Commander Legends' Reap the Tides,
 //! Phyrexia: All Will Be One's Corrupting Influence, Zendikar Rising's Sneak
@@ -21,8 +21,9 @@
 //! Host, Secret Lair's Angels: They're Just Like Us, Commander 2014's Built From
 //! Scratch and Sworn to Darkness, Innistrad: Crimson Vow Commander's Vampiric
 //! Bloodline, Commander 2015's Plunder the Graves and Seize Control,
-//! Commander 2021's Quantum Quandrix and Commander 2015's Call the Spirits)
-//! are taken from one card for card. What all of them keep
+//! Commander 2021's Quantum Quandrix, Commander 2015's Call the Spirits,
+//! Phyrexia: All Will Be One's Rebellion Rising and Commander 2014's Peer
+//! Through Time) are taken from one card for card. What all of them keep
 //! from the precon idea is what the pod needs — fixed, legal, varied color
 //! identities, and built to play against each other.
 //! One is a Partner pair (CR 702.124b), one is a **planeswalker**
@@ -1363,4 +1364,30 @@ pub const NEYALI_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain,
+];
+
+pub const TEFERI_COMMANDERS: &[CardFactory] = &[teferi_temporal_archmage];
+
+/// **Peer Through Time**, the Commander 2014 mono-blue deck (C14,
+/// 2014-11-07), exactly as MTGJSON's `PeerThroughTime_C14` prints it:
+/// 68 nonbasic cards + 31 Islands = 99. Teferi is the pod's second
+/// planeswalker commander (CR 903.3a); Stormsurge Kraken is its lieutenant.
+pub const TEFERI_MAIN: &[CardFactory] = &[
+    azure_mage, fathom_seer, fog_bank, willbender, dulcet_sirens, riptide_survivor, sea_gate_oracle,
+    shaper_parasite, reef_worm, mulldrifter, ixidron, stitcher_geralf, stormsurge_kraken,
+    steel_hellkite, brine_elemental, frost_titan, sphinx_of_jwar_isle, sphinx_of_magosi,
+    phyrexian_ingester, sphinx_of_uthuun, hoverguard_sweepers, lorthos_the_tidemaker,
+    artisan_of_kozilek, breaching_leviathan, deep_sea_kraken, call_to_mind, compulsive_research,
+    concentrate, rite_of_replication, rush_of_knowledge, aether_gale, distorting_wake, pongify,
+    cyclonic_rift, into_the_roil, turn_to_frog, exclude, cackling_counterpart, domineering_will,
+    dismiss, intellectual_offering, stroke_of_genius, everflowing_chalice, sol_ring, mind_stone,
+    sapphire_medallion, sky_diamond, swiftfoot_boots, crown_of_doom, unstable_obelisk,
+    worn_powerstone, assault_suit, thran_dynamo, dreamstone_hedron, tormods_crypt,
+    commanders_sphere, nevinyrrals_disk, ur_golems_eye, infinite_reflection, well_of_ideas,
+    fools_demise, coral_atoll, ghost_quarter, lonely_sandbar, myriad_landscape, remote_isle,
+    tectonic_edge, zoetic_cavern,
+    // Basics: 31 island
+    island, island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island,
 ];
