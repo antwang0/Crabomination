@@ -4247,3 +4247,208 @@ fn cr_118_9_bot_pays_life_through_demon_of_fates_design() {
     assert!(g.battlefield_find(boon).is_some(), "cast for 5 life");
     assert_eq!(g.players[0].life, 15);
 }
+
+// ── Exit from Exile (Faldorn, Dread Wolf Herald) ───────────────────────────
+
+fn cast_bare(g: &mut GameState, id: CardId, target: Option<Target>) -> Result<(), String> {
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: id,
+        target,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .map_err(|e| format!("{e:?}"))?;
+    drain_stack(g);
+    Ok(())
+}
+
+/// CR 305.1 / 406 — Faldorn: its impulse exiles the top card, and playing
+/// that land from exile is a land entering from exile (a Wolf).
+#[test]
+fn cr_305_1_faldorn_makes_a_wolf_for_a_land_played_from_exile() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::faldorn_dread_wolf_herald());
+    let forest = g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_hand(0, catalog::island());
+    let f = g.battlefield.iter().find(|c| c.definition.name.starts_with("Faldorn")).unwrap().id;
+    g.clear_sickness(f);
+    activate(&mut g, f, 0, None).expect("{1}, {T}, discard");
+    assert!(g.exile.iter().any(|c| c.id == forest && c.may_play_until.is_some()));
+    g.perform_action(GameAction::PlayLand(forest)).expect("play it from exile");
+    drain_stack(&mut g);
+    assert_eq!(count_named(&g, 0, "Wolf"), 1);
+}
+
+/// CR 715.4 / 118.9 — Tlincalli Hunter: Retrieve Prey makes a graveyard
+/// creature castable from exile, the first creature cast from exile that turn
+/// costs {0}, and the adventurer's own cast is from exile too (Faldorn counts
+/// both).
+#[test]
+fn cr_715_4_tlincalli_hunter_casts_a_creature_from_exile_for_free() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::tlincalli_hunter());
+    g.add_card_to_battlefield(0, catalog::faldorn_dread_wolf_herald());
+    let wurm = g.add_card_to_graveyard(0, catalog::craw_wurm());
+    let hunter = g.add_card_to_hand(0, catalog::tlincalli_hunter());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastAdventure {
+        card_id: hunter,
+        target: Some(Target::Permanent(wurm)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Retrieve Prey");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == wurm && c.may_play_until.is_some()));
+    g.players[0].mana_pool = Default::default();
+    cast_bare(&mut g, wurm, None).expect("the Wurm costs {0}");
+    assert!(g.battlefield_find(wurm).is_some());
+    assert_eq!(count_named(&g, 0, "Wolf"), 1, "cast from exile");
+    // The waiver is spent: the adventurer costs its full seven.
+    let adv = GameAction::CastAdventureCreature {
+        card_id: hunter,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    };
+    assert!(g.perform_action(adv.clone()).is_err(), "once each turn");
+    flood(&mut g, 0);
+    g.perform_action(adv).expect("paid in full");
+    drain_stack(&mut g);
+    assert_eq!(count_named(&g, 0, "Wolf"), 2, "the adventurer is cast from exile");
+}
+
+/// CR 702.85a — Wild-Magic Sorcerer: the first spell cast from exile each
+/// turn cascades.
+#[test]
+fn cr_702_85a_wild_magic_sorcerer_cascades_the_first_exile_cast() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::wild_magic_sorcerer());
+    let faldorn = g.add_card_to_battlefield(0, catalog::faldorn_dread_wolf_herald());
+    g.clear_sickness(faldorn);
+    let giant = g.add_card_to_library(0, catalog::hill_giant());
+    let bears = g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_hand(0, catalog::island());
+    activate(&mut g, faldorn, 0, None).expect("impulse the Giant");
+    assert!(g.exile.iter().any(|c| c.id == giant));
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    flood(&mut g, 0);
+    cast_bare(&mut g, giant, None).expect("cast from exile");
+    assert!(g.battlefield_find(giant).is_some());
+    assert!(g.battlefield_find(bears).is_some(), "cascaded into the Bears");
+    assert_eq!(g.players[0].spells_cast_from_exile_this_turn, 2);
+}
+
+/// CR 702.62 — Greater Gargadon sheds a time counter per sacrifice while
+/// suspended.
+#[test]
+fn cr_702_62_greater_gargadon_sacrifices_down_its_suspend() {
+    let mut g = main_phase();
+    let garg = g.add_card_to_hand(0, catalog::greater_gargadon());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::Suspend { card_id: garg }).expect("suspend");
+    drain_stack(&mut g);
+    let time = |g: &GameState| {
+        g.exile.iter().find(|c| c.id == garg).map(|c| c.counter_count(CounterType::Time))
+    };
+    assert_eq!(time(&g), Some(10));
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    activate(&mut g, garg, 0, None).expect("sacrifice from exile");
+    assert!(g.battlefield_find(bear).is_none());
+    assert_eq!(time(&g), Some(9));
+}
+
+/// The rest of Exit from Exile's new cards, one play pattern each.
+#[test]
+fn exit_from_exile_batch() {
+    // Aurora Phoenix returns when you cast a cascade spell.
+    let mut g = main_phase();
+    let phoenix = g.add_card_to_graveyard(0, catalog::aurora_phoenix());
+    let ring = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let nr = g.add_card_to_hand(0, catalog::natural_reclamation());
+    cast(&mut g, nr, &[Target::Permanent(ring)]);
+    assert!(g.battlefield_find(ring).is_none());
+    assert!(g.players[0].hand.iter().any(|c| c.id == phoenix));
+
+    // Chaos Wand: the opponent's first instant or sorcery is cast for you.
+    let mut g = main_phase();
+    let wand = g.add_card_to_battlefield(0, catalog::chaos_wand());
+    let bolt = g.add_card_to_library(1, catalog::lightning_bolt());
+    g.add_card_to_library(1, catalog::island());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    flood(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: wand,
+        ability_index: 0,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("wand");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt), "cast and resolved");
+    assert!(g.players[1].life < 20 || g.players[0].life < 20, "the Bolt hit someone");
+
+    // Dire Fleet Daredevil borrows an opponent's instant.
+    let mut g = main_phase();
+    let bolt = g.add_card_to_graveyard(1, catalog::lightning_bolt());
+    etb(&mut g, catalog::dire_fleet_daredevil());
+    assert!(g.exile.iter().any(|c| c.id == bolt && c.may_play_until.is_some()));
+
+    // Ignite the Future: three cards to play.
+    let mut g = main_phase();
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let itf = g.add_card_to_hand(0, catalog::ignite_the_future());
+    cast(&mut g, itf, &[]);
+    assert_eq!(g.exile.iter().filter(|c| c.may_play_until.is_some()).count(), 3);
+
+    // Sarevok's Tome: the initiative, and {C}{C} while you have it.
+    let mut g = main_phase();
+    let tome = etb(&mut g, catalog::sarevoks_tome());
+    assert_eq!(g.initiative, Some(0));
+    activate(&mut g, tome, 0, None).expect("tap for mana");
+    assert!(g.players[0].mana_pool.total() >= 2);
+
+    // Sweet-Gum Recluse grows what entered this turn.
+    let mut g = main_phase();
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    cast(&mut g, bear, &[]);
+    let rec = g.add_card_to_hand(0, catalog::sweet_gum_recluse());
+    cast(&mut g, rec, &[Target::Permanent(bear)]);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 3);
+
+    // Venture Forth: a land, then it suspends itself.
+    let mut g = main_phase();
+    let isl = g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let vf = g.add_card_to_hand(0, catalog::venture_forth());
+    cast(&mut g, vf, &[]);
+    assert!(g.battlefield_find(isl).is_some());
+    assert_eq!(g.exile.iter().find(|c| c.id == vf).map(|c| c.counter_count(CounterType::Time)), Some(3));
+
+    // Journey to the Lost City exiles four each upkeep.
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::journey_to_the_lost_city());
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    g.step = TurnStep::Untap;
+    let ev = g.advance_step(Vec::new()).expect("to upkeep");
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert!(g.players[0].library.len() + g.exile.len() >= 4);
+    assert!(g.exile.len() >= 3, "exiled with it (a 1-9 or 10-19 roll leaves them there)");
+
+    // Highland Forest enters tapped.
+    let mut g = main_phase();
+    let hf = g.add_card_to_hand(0, catalog::highland_forest());
+    g.perform_action(GameAction::PlayLand(hf)).expect("land");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(hf).unwrap().tapped);
+}
