@@ -22450,6 +22450,40 @@ impl GameState {
                     }
                 }
             }
+            // CR 603.2 / 702.6e — an Equipment's "whenever equipped creature
+            // is dealt damage" (Blazing Sunsteel) triggered on the damage
+            // that killed its host; the Equipment is unattached by dispatch,
+            // so read the attachments recorded at the death.
+            for (eq_id, _) in self.auras_at_death.get(&snap.id).into_iter().flatten() {
+                let Some(eq) = self.battlefield_find(*eq_id) else { continue };
+                let Some(bonus) = &eq.definition.equipped_bonus else { continue };
+                let src = if bonus.triggers_on_equipment { eq.id } else { snap.id };
+                for ta in &bonus.triggered_abilities {
+                    if ta.event.kind != crate::effect::EventKind::DealtDamage
+                        || ta.event.scope != crate::effect::EventScope::SelfSource
+                    {
+                        continue;
+                    }
+                    for ev in events {
+                        if crate::game::effects::event_matches_spec(self, ev, &ta.event, snap) {
+                            candidates.push(TriggerCandidate {
+                                from_mana_ability: false,
+                                actor: None,
+                                source: src,
+                                effect: ta.effect.clone(),
+                                controller: snap.controller,
+                                filter: ta.event.filter.clone(),
+                                subject: crate::game::effects::event_subject(ev, &ta.event.kind),
+                                event_amount: self.event_amount_for(ev),
+                                triggered_by_etb: false,
+                                triggered_by_death: false,
+                                triggered_by_attack: false,
+                                triggered_by_land_entry: false,
+                            });
+                        }
+                    }
+                }
+            }
         }
         // "When this permanent is put into exile from the battlefield" — a
         // SelfSource `CardExiled` trigger fires from LKI: the source sits in

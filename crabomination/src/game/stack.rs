@@ -6786,10 +6786,12 @@ impl GameState {
             // authoritative for the whole `attached_to == Some(..)` family, so
             // this opens on it (PERF `(-319)`).
             if self.attachment_in_scope() {
+                let mut riders: Vec<(CardId, usize)> = Vec::new();
                 for eq in &self.battlefield {
                     if eq.attached_to != Some(id) {
                         continue;
                     }
+                    riders.push((eq.id, eq.controller));
                     let Some(bonus) = &eq.definition.equipped_bonus else { continue };
                     let src = if bonus.triggers_on_equipment { eq.id } else { id };
                     for ta in &bonus.triggered_abilities {
@@ -6800,6 +6802,18 @@ impl GameState {
                                 controller_idx,
                                 ta.event.filter.clone(),
                             ));
+                        }
+                    }
+                }
+                // CR 603.10 — the riders at death, as the destroy path records
+                // them: the dispatcher's lethal-damage walk reads an
+                // Equipment's "whenever equipped creature is dealt damage"
+                // off this (Blazing Sunsteel).
+                if !riders.is_empty() {
+                    let seen = self.auras_at_death.entry(id).or_default();
+                    for r in riders {
+                        if !seen.contains(&r) {
+                            seen.push(r);
                         }
                     }
                 }
@@ -7049,7 +7063,11 @@ impl GameState {
                 && self.battlefield.find_by_id(host).is_none()
             {
                 let (aura_controller, aura_snapshot) = (aura.controller, aura.clone());
-                self.auras_at_death.entry(host).or_default().push((id, aura_controller));
+                // The host's own death may already have recorded it.
+                let seen = self.auras_at_death.entry(host).or_default();
+                if !seen.contains(&(id, aura_controller)) {
+                    seen.push((id, aura_controller));
+                }
                 // Snapshot the leaving Aura so its "when enchanted creature
                 // dies" trigger (EnchantedBySource) can fire via LKI even
                 // though the Aura itself is gone (Minion's Return).
