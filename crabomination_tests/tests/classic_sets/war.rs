@@ -2075,6 +2075,10 @@ fn narsets_reversal_copies_and_returns() {
     g.perform_action(GameAction::CastSpell { card_id: nr, target: Some(Target::Permanent(bolt)), additional_targets: vec![], mode: None, x_value: None }).expect("cast reversal");
     drain_stack(&mut g);
     assert!(g.players[1].hand.iter().any(|c| c.id == bolt), "bolt returned to owner's hand");
+    // CR 707.10c — the copy is ours, and ours to aim: it hits the opponent,
+    // not our own face where the original pointed.
+    assert_eq!(g.players[0].life, 20, "the copy didn't come back at us");
+    assert_eq!(g.players[1].life, 17, "our copy hit them");
 }
 
 /// Gideon's Triumph edicts one attacker/blocker, or two with a Gideon in play.

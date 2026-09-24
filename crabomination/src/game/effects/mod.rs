@@ -1710,13 +1710,22 @@ impl GameState {
                 return;
             };
         let caster = controller.unwrap_or(orig_caster);
+        // A copy someone else controls (Narset's Reversal, Twincast on an
+        // opponent's spell) defaults to ITS controller's own pick: offering
+        // the original first had the new controller keep a Bolt aimed at
+        // their own face.
+        let default_target = if caster != orig_caster && choose_new_targets {
+            self.auto_target_for_effect_avoiding(&orig_card_def.effect, caster, None).or(target.clone())
+        } else {
+            target.clone()
+        };
         for _ in 0..n {
             // Per copy, optionally let the controller choose a new primary
             // target (CR 115.7). Legal targets are enumerated against the
-            // copy's own effect; the original is offered first so the
-            // default (AutoDecider) keeps it.
+            // copy's own effect; the default is offered first so the
+            // AutoDecider keeps it.
             let (copy_target, copy_extra) = if choose_new_targets && target.is_some() {
-                let t = self.repoint_copy_target(&orig_card_def, caster, &target);
+                let t = self.repoint_copy_target(&orig_card_def, caster, &default_target);
                 let mut taken: Vec<Target> = t.iter().cloned().collect();
                 for (i, o) in additional_targets.iter().enumerate() {
                     let pick = self
@@ -30638,7 +30647,9 @@ impl GameState {
                         .collect(),
                 };
                 for cid in candidate_ids {
-                    self.copy_stack_spell(cid, n, false, events);
+                    // CR 707.10c — the player who put the copy on the stack
+                    // controls it, whoever cast the original.
+                    self.copy_stack_spell_controlled(cid, n, false, Some(ctx.controller), None, events);
                 }
                 Ok(())
             }
@@ -30752,7 +30763,9 @@ impl GameState {
                         .collect(),
                 };
                 for cid in candidate_ids {
-                    self.copy_stack_spell(cid, n, true, events);
+                    // CR 707.10c — the copy is the copier's (Narset's Reversal
+                    // on an opponent's spell), not the original caster's.
+                    self.copy_stack_spell_controlled(cid, n, true, Some(ctx.controller), None, events);
                 }
                 Ok(())
             }
@@ -31126,7 +31139,9 @@ impl GameState {
                     // Unpaid (declined or unaffordable) → copy `n` times
                     // through the shared copy funnel (CR 707 CantBeCopied
                     // guard, copy bookkeeping, SpellsCopied event).
-                    self.copy_stack_spell(cid, n, false, events);
+                    // CR 707.10c — the player who put the copy on the stack
+                    // controls it, whoever cast the original.
+                    self.copy_stack_spell_controlled(cid, n, false, Some(ctx.controller), None, events);
                 }
                 Ok(())
             }
