@@ -7334,6 +7334,12 @@ impl GameState {
                             specs.push((*kind, n));
                         }
                     }
+                    StaticEffect::OtherCreaturesEnterWithCountersEqualToSourceCounters { kind } => {
+                        let n = src.counter_count(*kind);
+                        if n > 0 {
+                            specs.push((*kind, n));
+                        }
+                    }
                     _ => {}
                 }
             }
@@ -29701,6 +29707,7 @@ fn static_effect_to_effects(
             | StaticEffect::TypeEntersWithCountersPerControlled { .. }
             | StaticEffect::TypedCreaturesEnterWithExtraCounter { .. }
             | StaticEffect::OtherCreaturesEnterWithCountersEqualToSourcePower { .. }
+            | StaticEffect::OtherCreaturesEnterWithCountersEqualToSourceCounters { .. }
             // Target-tax, read at `extra_cost_for_spell` (Jubilant Skybonder).
             | StaticEffect::TaxOpponentSpellsTargeting { .. }
             | StaticEffect::TaxOpponentSpellsTargetingThis { .. }

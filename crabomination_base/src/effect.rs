@@ -6714,7 +6714,8 @@ pub enum Effect {
     /// "airbend up to one target [filter]" shape.
     Airbend { what: Selector },
     /// Remove every counter of every kind from `what` (CR 122.6 — Vampire
-    /// Hexmage's "remove all counters from target permanent").
+    /// Hexmage's "remove all counters from target permanent"). The count
+    /// feeds `Value::CountersRemovedThisEffect` (Thief of Blood).
     RemoveAllCounters { what: Selector },
     /// Remove a single counter of any one kind from `what` (the controller's
     /// choice; auto-picks the first present kind). Thrull Parasite's "remove a

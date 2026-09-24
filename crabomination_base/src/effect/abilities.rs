@@ -2083,6 +2083,10 @@ pub enum StaticEffect {
     /// `chosen_type_etb_counter_specs`; the source's live power (layers applied)
     /// sets the count, so a pumped Biomancer grants more.
     OtherCreaturesEnterWithCountersEqualToSourcePower { kind: CounterType },
+    /// "Each other creature you control enters with an additional X `kind`
+    /// counters on it, where X is the number of `kind` counters on this"
+    /// (Bloodspore Thrinax). The counter-count sibling of the power one.
+    OtherCreaturesEnterWithCountersEqualToSourceCounters { kind: CounterType },
     /// "Each permanent you control matching `filter` enters with `amount`
     /// additional `kind` counters on it" (Muzzio's Preparations — the filter
     /// carries `NamedBySource`, resolved against the source's chosen name).

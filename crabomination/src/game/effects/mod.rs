@@ -17428,6 +17428,8 @@ impl GameState {
                         // CR 122.1b — keyword counters are counters too.
                         c.keyword_counters.clear();
                         for (kind, count) in kinds {
+                            // "For each counter removed this way" (Thief of Blood).
+                            self.counters_removed_this_effect += count;
                             events.push(GameEvent::CounterRemoved { card_id: cid, counter_type: kind, count });
                         }
                     }
