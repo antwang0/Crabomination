@@ -612,6 +612,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::URZA_COMMANDERS,
             main: decks::URZA_MAIN,
         },
+        // Seventieth: the sixtieth official list (Phantom Premonition, KHC)
+        // — Azorius foretell and flicker under Ranar. `--seats 70`.
+        PodDeck {
+            name: "Ranar the Ever-Watchful (WU)",
+            commanders: decks::RANAR_COMMANDERS,
+            main: decks::RANAR_MAIN,
+        },
     ]
 }
 
@@ -1144,6 +1151,7 @@ mod tests {
             ("Riku", [0x21C0, 91, 9015]),
             ("Saskia", [0x5A5C, 92, 9016]),
             ("Isperia", [0x15BE, 93, 9017]),
+            ("Ranar", [0x5A4A, 94, 9018]),
         ] {
             let precon = *field.iter().find(|d| d.name.starts_with(name)).expect("the precon seat");
             assert_eq!(precon.card_count(), 100);

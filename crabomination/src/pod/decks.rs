@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Ten hand-picked commanders plus fifty-seven official preconstructed lists, each a
+//! Ten hand-picked commanders plus sixty official preconstructed lists, each a
 //! 99 of cards this engine implements: legal under CR 903 (100 cards
 //! including the commander, singleton outside basics, every card inside the
 //! commander's CR 903.4 color identity) and Commander-legal per Scryfall's
@@ -8,7 +8,7 @@
 //!
 //! The ten were built by hand because the offline Scryfall cache cannot say
 //! how a precon splits into decks; MTGJSON's deck files can, and the eleventh
-//! through sixty-seventh (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
+//! through seventieth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
 //! Win, Tails You Lose, Goblin Storm, Foundations Commander's Wretched Ranks,
 //! Tramplesaurus Rex and Keen Engineering, Commander Legends' Reap the Tides,
 //! Phyrexia: All Will Be One's Corrupting Influence, Zendikar Rising's Sneak
@@ -34,8 +34,10 @@
 //! Endless Punishment, the Starter Commander Decks' Token Triumph, Commander
 //! 2016's Breed Lethality, Commander (2011)'s Mirror Mastery, Secret Lair's
 //! Raining Cats and Dogs, Commander 2016's Open Hostility, the Starter Commander
-//! Decks' First Flight, Commander 2017's Arcane Wizardry and March of the
-//! Machine Commander's Growing Threat) are taken
+//! Decks' First Flight, Commander 2017's Arcane Wizardry, March of the
+//! Machine Commander's Growing Threat, Commander Masters' Enduring
+//! Enchantments, The Brothers' War Commander's Urza's Iron Alliance and
+//! Kaldheim Commander's Phantom Premonition) are taken
 //! from
 //! one card for card. What all of them keep
 //! from the precon idea is what the pod needs — fixed, legal, varied color
@@ -2176,4 +2178,32 @@ pub const URZA_MAIN: &[CardFactory] = &[
     wreck_hunter, hexavus, kaylas_music_box, thopter_shop,
     // Basics: 4 plains, 4 island, 3 swamp
     plains, plains, plains, plains, island, island, island, island, swamp, swamp, swamp,
+];
+
+pub const RANAR_COMMANDERS: &[CardFactory] = &[ranar_the_ever_watchful];
+
+/// **Phantom Premonition**, the Kaldheim Commander deck (KHC, 2021-02-05),
+/// exactly as MTGJSON's `PhantomPremonition_KHC` prints it: 74 nonbasic
+/// cards + 13 Plains + 12 Islands = 99. Azorius foretell
+/// and flicker under Ranar the Ever-Watchful.
+pub const RANAR_MAIN: &[CardFactory] = &[
+    angel_of_finality, angel_of_serenity, arcane_artisan, brago_king_eternal, burnished_hart,
+    cloudblazer, cloudgoat_ranger, empyrean_eagle, ethereal_valkyrie, evangel_of_heliod,
+    flickerwisp, geist_honored_monk, goldnight_commander, hero_of_bretagard, inspired_sphinx,
+    kor_cartographer, meteor_golem, mist_raven, mistmeadow_witch, mulldrifter, restoration_angel,
+    sage_of_the_beyond, sea_gate_oracle, soulherder, stoic_farmer, sun_titan, surtland_elementalist,
+    thunderclap_wyvern, vega_the_watcher, wall_of_omens, whirler_rogue, behold_the_multiverse,
+    cosmic_intervention, eerie_interlude, ghostly_flicker, iron_verdict, momentary_blink,
+    return_to_dust, saw_it_coming, synthetic_destiny, warhorn_blast, cleansing_nova,
+    curse_of_the_swine, migratory_route, ravenform, spectral_deluge, storm_herd,
+    tales_of_the_ancestors, windfall, banishing_light, day_of_the_dragons, ghostly_prison,
+    marshals_anthem, niko_defies_destiny, arcane_signet, azorius_signet, commanders_sphere,
+    marble_diamond, mind_stone, replicating_ring, sky_diamond, sol_ring, swiftfoot_boots,
+    azorius_chancery, azorius_guildgate, command_tower, cryptic_caves, gates_of_istfell,
+    glacial_floodplain, meandering_river, myriad_landscape, opal_palace, sejiri_refuge,
+    tranquil_cove,
+    // Basics: 13 plains, 12 island
+    island, island, island, island, island, island, island, island, island, island, island, island,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains,
 ];
