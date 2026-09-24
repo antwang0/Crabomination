@@ -5344,6 +5344,9 @@ impl GameState {
                         return None;
                     }
                     let slot = 1 + additional_targets.len() as u8;
+                    if card.definition.effect.slot_past_x_cap(slot, x_value.unwrap_or(0)) {
+                        return None;
+                    }
                     card.definition
                         .effect
                         .target_filter_for_slot_in_mode(slot, mode)

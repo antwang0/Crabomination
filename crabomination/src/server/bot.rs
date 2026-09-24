@@ -16244,6 +16244,25 @@ pub fn max_affordable_x_for_def(
             .unwrap_or(0);
         return need.min(spare);
     }
+    // X counted in sacrificed permanents: the seat feeds it only its tokens,
+    // and never more than the opponents have nonland permanents to answer.
+    if let Some(filter) = sacrifice_any_number_filter(def) {
+        let fodder = state
+            .battlefield
+            .iter()
+            .filter(|c| {
+                c.controller == seat
+                    && c.is_token
+                    && state.evaluate_requirement_static(filter, &crate::game::Target::Permanent(c.id), seat, None)
+            })
+            .count() as u32;
+        let answers = state
+            .battlefield
+            .iter()
+            .filter(|c| !state.same_team(c.controller, seat) && !c.definition.is_land())
+            .count() as u32;
+        return fodder.min(answers);
+    }
     // Everything the seat could still produce, not just what's floating --
     // see `available_mana`. Sizing X off the floating pool alone only
     // worked back when the bot tapped out before deciding anything.
@@ -16343,7 +16362,16 @@ pub fn stun_counters_at_x(def: &CardDefinition, x: u32) -> u32 {
 }
 
 pub fn x_relevant(def: &CardDefinition) -> bool {
-    def.cost.has_x() || effect_uses_x(&def.effect)
+    def.cost.has_x() || effect_uses_x(&def.effect) || sacrifice_any_number_filter(def).is_some()
+}
+
+/// "As an additional cost, sacrifice X / any number of [filter]" — the cast's
+/// X is the count (Immoral Bargain, Plumb the Forbidden).
+fn sacrifice_any_number_filter(def: &CardDefinition) -> Option<&crate::card::SelectionRequirement> {
+    def.additional_cast_cost.iter().find_map(|c| match c {
+        crate::card::AdditionalCastCost::SacrificeAnyNumber { filter } => Some(filter),
+        _ => None,
+    })
 }
 
 /// `skip_noop_x0`: every leaf of the effect scales with X, so a cast at

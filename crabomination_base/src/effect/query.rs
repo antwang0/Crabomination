@@ -5151,6 +5151,17 @@ impl Effect {
         self.target_slot_optional_x(slot, mode, 0)
     }
 
+    /// True when slot `slot` lies past an "X targets" / "up to X targets"
+    /// wrapper's paid X, so the slot does not exist for this cast (Immoral
+    /// Bargain's X, Pest Infestation's up to X) and no extra target is asked.
+    pub fn slot_past_x_cap(&self, slot: u8, x: u32) -> bool {
+        match self {
+            Effect::TargetsExactlyX { .. } | Effect::CapTargetsAtX { .. } => u32::from(slot) >= x,
+            Effect::Seq(steps) => steps.iter().any(|e| e.slot_past_x_cap(slot, x)),
+            _ => false,
+        }
+    }
+
     /// [`target_slot_optional`](Self::target_slot_optional) with the cast's /
     /// activation's paid {X}, so an `Effect::TargetsExactlyX` requires exactly
     /// that many slots (Synod Artificer). Callers with no X use the wrapper.

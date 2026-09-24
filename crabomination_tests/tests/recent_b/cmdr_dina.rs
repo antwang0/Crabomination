@@ -299,3 +299,24 @@ fn witch_of_the_moors_punishes_and_recurs() {
     assert!(named(&g, 1, "Grizzly Bears").is_empty() && named(&g, 2, "Grizzly Bears").is_empty());
     assert!(g.players[0].hand.iter().any(|c| c.id == dead));
 }
+
+/// The bot sizes Immoral Bargain's X by its tokens: it was never cast in a
+/// 1,000-game census before the bot could pick an X for a cost with no {X}.
+#[test]
+fn bot_casts_immoral_bargain_feeding_it_tokens() {
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    let mut g = pod(2);
+    g.players[0].wants_ui = true;
+    let gc = g.add_card_to_hand(0, catalog::grand_crescendo());
+    cast_x(&mut g, 0, gc, None, Some(2)).expect("two Citizens");
+    g.add_card_to_battlefield(1, catalog::serra_angel());
+    g.add_card_to_battlefield(1, catalog::sol_ring());
+    g.add_card_to_hand(0, catalog::immoral_bargain());
+    g.players[0].mana_pool = Default::default();
+    flood(&mut g, 0);
+    let a = HeuristicBot::new().next_action(&g, 0);
+    assert!(
+        matches!(a, Some(GameAction::CastSpell { x_value: Some(1..=2), .. })),
+        "{a:?}"
+    );
+}
