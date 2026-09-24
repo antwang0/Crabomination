@@ -448,8 +448,11 @@ fn ripley_vance_third_spell() {
         g.battlefield_find(ripley).unwrap().counter_count(CounterType::PlusOnePlusOne),
         1
     );
-    // Ripley (3 + 1 counter = 4 power) burns the auto-picked 4/4 down.
-    assert!(g.battlefield_find(angel).is_none(), "Serra Angel died to the 4-damage ping");
+    // Ripley (3 + 1 counter = 4 power) deals 4 to "any target": the auto-pick
+    // takes a player like any other any-target damage (it used to be unable
+    // to name one and always burned a creature).
+    assert_eq!(g.players[1].life, 20 - 3 - 4);
+    assert!(g.battlefield_find(angel).is_some());
 }
 
 /// Phantasmal Dreadmaw dies to any targeting.
