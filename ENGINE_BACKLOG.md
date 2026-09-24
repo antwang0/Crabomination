@@ -154,6 +154,30 @@ the handoff.
   cards: Tendershoot Dryad and the five before it). CR 702.131b grants the city's
   blessing the moment the tenth permanent arrives; a hook where permanents enter or
   change control would make it exact.
+- ✅ **A spell copy was controlled by the original caster** (CR 707.10c). Narset's
+  Reversal and Twincast on an opponent's spell handed the copy back to them;
+  `copy_stack_spell_controlled` takes the copier, and a copy someone else controls
+  defaults to its controller's own target pick.
+- ✅ **"Deals damage equal to its power to any target" never aimed at a player**
+  (Pyrogoyf, Stalking Vengeance): `accepts_player_target_by_body` had no arm, so the
+  picker chose a creature — often the dealer itself.
+- ✅ **"You gain life equal to the life lost this way" gained one opponent's worth**
+  (CR 119.3). `Effect::Drain` gains its amount once — right for Zulaport's "you gain 1
+  life", wrong at a table for Gray Merchant, Kokusho, Exsanguinate and six more.
+  `Effect::DrainLifeLost` gains the total; a sweep of all 187 `Drain`-from-each-opponent
+  cards against their oracle text moved exactly the nine that say "life lost this way".
+- ✅ **A self-copied Destroy re-aimed at the permanent the original destroys**
+  (CR 608.2b): Reverberate on your own Murder, Malicious Affliction's morbid copy —
+  the copy did nothing. It now defaults to another opposing permanent.
+- ✅ **An emblem's "creatures you control have '…'" granted nothing** (CR 114.4):
+  emblem statics reached only the layer system. `grant_scan` now reads them
+  (Ob Nixilis of the Black Oath's −8).
+- ✅ **Two more cards castable by no bot path**, from the 31- and 32-seat censuses:
+  Tempt with Mayhem (no picker copied the bot's *own* spell — `pick_copy_response`)
+  and Wake the Dead (combat on an opponent's turn was no bot window —
+  `pick_combat_only_instant`). Condemn (Nahiri) is still unplayed at 31 and 32 seats.
+- ✅ New: `Keyword::MustAttackChosenPlayer` + `PlayerRef::RandomOpponent` (Raving
+  Dead, CR 508.1d); `MayPlayDuration::UntilYourNextEndStep`.
 
 ## FIXED 2026-09-23 (the residual session) — three bug CLASSES a precon's residual list led to
 

@@ -63,6 +63,8 @@ lists were picked.
 | **Swell the Host** (C15 precon) GU | Ezuri, Claw of Progress | GU | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Angels: They're Just Like Us** (SLD precon) W | Gisela, the Broken Blade (**meld**) | W | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Built From Scratch** (C14 precon) R | Daretti, Scrap Savant (**planeswalker**) | R | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
+| **Graveyard Overdrive** (M3C precon) BRG | Disa the Restless | BRG | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
+| **Sworn to Darkness** (C14 precon) B | Ob Nixilis of the Black Oath (**planeswalker**) | B | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not
@@ -415,6 +417,51 @@ and the bench stays byte-identical. The memo's debug audit then caught two
 statics gated on turn scalars the key did not witness (Thrasta's entry turn,
 Medomai's extra turn); `turn_number` / `step` / `current_turn_is_extra` now
 fold into the key.
+
+The **thirty-first** is Modern Horizons 3 Commander's **Graveyard Overdrive**
+(`GraveyardOverdrive_M3C`), the field's first Jund identity: Lhurgoyfs under
+Disa the Restless. Seventeen cards were missing; the primitives:
+`MayPlayDuration::UntilYourNextEndStep` (which also moved **eight impulse cards**
+that had been playable for one turn off to their printed window),
+`StaticEffect::DoubleDamageToChosenPlayer` (Sawhorn Nemesis),
+`Effect::CopySpellOntoAnotherOpponentsPermanent` (Exterminator Magmarch) and
+`StaticEffect::MayPlayCardsMilledThisTurn` (Coram, the Undertaker, with its own
+bot candidates). ⚠ **Two engine finds**: a spell copy was controlled by the
+original caster (CR 707.10c — Narset's Reversal handed the copy back), and "deals
+damage equal to its power to any target" never aimed at a player (Pyrogoyf hit
+its own creature). Residuals: **Disa**'s "not from the battlefield" reads "not
+put there from the battlefield this turn"; **Find // Finality** picks its two
+cards at resolution; **Ziatora** sacrifices the weakest other creature. Seed
+10081, 600 games at 31 seats: **510 decided, 90 action caps, 0 board caps, zero
+panics**, 1,535 distinct cards played. ⚠ The census found **Tempt with Mayhem
+castable by no bot path** — no picker copied the bot's own spell — and
+`pick_copy_response` now does. Disa wins 5.7 % there and **47.2 %** of four-seat
+pods beside Teval / Ixhel / Bello (seed 10082, 1,000 games, all decided).
+`--bench` byte-identical.
+
+The **thirty-fifth** is Commander 2014's **Sworn to Darkness**
+(`SwornToDarkness_C14`) — mono-black Demons and morbid under Ob Nixilis of the
+Black Oath, a planeswalker commander. Fifteen cards were
+missing; the primitives: `Keyword::MustAttackChosenPlayer` +
+`PlayerRef::RandomOpponent` (Raving Dead, CR 508.1d), emblem statics that grant
+activated abilities (CR 114.4 — Ob's −8 had granted nothing), and
+`Effect::DrainLifeLost`. ⚠ **Ob found a Commander bug class**: `Drain` gains its
+amount once, so "you gain life equal to the life lost this way" gave one
+opponent's worth at a table — Gray Merchant, Kokusho, Exsanguinate and six more.
+A sweep of all 187 each-opponent drains against oracle text moved exactly those
+nine (the seeded pod table re-blessed: Judith runs two of them). ⚠ **Malicious
+Affliction found a second**: a self-copied Destroy defaulted to the original's
+target and did nothing (CR 608.2b); it now picks another opposing permanent.
+Residuals: **Infernal Offering**'s opponents are the engine's pick and each
+return takes the first creature card in graveyard order; **Profane Command**'s
+two modes are resolution-time picks (default: life loss and −X/−X).
+Seed 10101, 300 games in the 32-seat field before the rebase added Ezuri,
+Gisela and Daretti (Ob was seat 32): **229 decided, 71 action caps, 0 board caps,
+zero panics**, 1,570 distinct cards; the census found **Wake the Dead castable
+by no bot path** (combat on an opponent's turn is no off-turn window) and
+`pick_combat_only_instant` now casts it; Tempt with Mayhem played once the copy
+picker landed. Ob wins 5.0 % there and 26.5 % of four-seat pods beside Judith /
+Gisa / Yuriko (seed 10102, 1,000 games, all decided). `--bench` byte-identical.
 
 ⚠ **The board cap was a bot bug, not a loop.** A Krenko seat sent all 292
 of its Goblins at one player on 24 life each turn while two others sat on
