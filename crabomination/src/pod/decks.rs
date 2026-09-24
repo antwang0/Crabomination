@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Ten hand-picked commanders plus thirty-six official preconstructed lists, each a
+//! Ten hand-picked commanders plus thirty-seven official preconstructed lists, each a
 //! 99 of cards this engine implements: legal under CR 903 (100 cards
 //! including the commander, singleton outside basics, every card inside the
 //! commander's CR 903.4 color identity) and Commander-legal per Scryfall's
@@ -8,7 +8,7 @@
 //!
 //! The ten were built by hand because the offline Scryfall cache cannot say
 //! how a precon splits into decks; MTGJSON's deck files can, and the eleventh
-//! through forty-sixth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
+//! through forty-seventh (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
 //! Win, Tails You Lose, Goblin Storm, Foundations Commander's Wretched Ranks,
 //! Tramplesaurus Rex and Keen Engineering, Commander Legends' Reap the Tides,
 //! Phyrexia: All Will Be One's Corrupting Influence, Zendikar Rising's Sneak
@@ -24,8 +24,9 @@
 //! Commander 2021's Quantum Quandrix, Commander 2015's Call the Spirits,
 //! Phyrexia: All Will Be One's Rebellion Rising, Commander 2014's Peer
 //! Through Time, Commander 2021's Lorehold Legacies, Commander (2011)'s
-//! Counterpunch, Wilds of Eldraine Commander's Fae Dominion and Commander
-//! 2015's Wade into Battle) are taken from one card for card. What all of them keep
+//! Counterpunch, Wilds of Eldraine Commander's Fae Dominion, Commander 2015's
+//! Wade into Battle and Commander Legends' Arm for Battle) are taken from one
+//! card for card. What all of them keep
 //! from the precon idea is what the pod needs — fixed, legal, varied color
 //! identities, and built to play against each other.
 //! One is a Partner pair (CR 702.124b), one is a **planeswalker**
@@ -1504,4 +1505,33 @@ pub const KALEMNE_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain, mountain, mountain, plains, plains, plains, plains, plains,
     plains, plains, plains, plains, plains, plains,
+];
+
+pub const WYLETH_COMMANDERS: &[CardFactory] = &[wyleth_soul_of_steel];
+
+/// **Arm for Battle**, the Commander Legends deck (CMR, 2020-11-20), exactly
+/// as MTGJSON's `ArmForBattle_CMR` prints it: 76 nonbasic cards + 9
+/// Mountains + 14 Plains = 99. Boros Auras and Equipment under Wyleth, Soul of
+/// Steel.
+pub const WYLETH_MAIN: &[CardFactory] = &[
+    oreskos_explorer, relic_seeker, sram_senior_edificer, brass_squire,
+    danitha_capashen, dualcaster_mage, flickerwisp, ironclad_slayer, kor_cartographer,
+    odric_lunarch_marshal, tiana_ships_caretaker, condemn, expedite, swords_to_plowshares,
+    abrade, boros_charm, comet_storm, dawn_charm, deflecting_palm, disenchant, fists_of_flame,
+    temur_battle_rage, valorous_stance, generous_gift, unbreakable_formation, volcanic_fallout,
+    wear_tear, white_suns_zenith, master_warcraft, return_to_dust, wild_ricochet, word_of_seizing,
+    response_resurgence, jayas_immolating_inferno, martial_coup, relentless_assault,
+    winds_of_rath, bonesplitter, explorers_scope, sol_ring, blackblade_reforged,
+    blazing_sunsteel, boros_signet, heros_blade, mask_of_avacyn, ring_of_thune, ring_of_valkas,
+    swiftfoot_boots, fireshrieker, haunted_cloak, loxodon_warhammer, sunforger,
+    sword_of_vengeance, sigardas_aid, spirit_mantle, timely_ward, unquestioned_authority,
+    faith_unbroken, on_serras_wings, boros_garrison, boros_guildgate, command_tower,
+    encroaching_wastes, evolving_wilds, forgotten_cave, memorial_to_war, myriad_landscape,
+    rogues_passage, rupture_spire, secluded_steppe, slayers_stronghold, stone_quarry,
+    sunhome_fortress_of_the_legion, terramorphic_expanse, transguild_promenade,
+    wind_scarred_crag,
+    // Basics: 9 mountain, 14 plains
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains,
 ];

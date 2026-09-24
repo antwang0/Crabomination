@@ -449,6 +449,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::KALEMNE_COMMANDERS,
             main: decks::KALEMNE_MAIN,
         },
+        // Forty-seventh: the thirty-seventh official list (Arm for Battle, CMR) —
+        // Boros Auras and Equipment under Wyleth, Soul of Steel. `--seats 47`.
+        PodDeck {
+            name: "Wyleth, Soul of Steel (RW)",
+            commanders: decks::WYLETH_COMMANDERS,
+            main: decks::WYLETH_MAIN,
+        },
     ]
 }
 
