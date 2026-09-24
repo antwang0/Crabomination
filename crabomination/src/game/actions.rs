@@ -158,7 +158,8 @@ pub(crate) struct GrantScan<'a> {
     /// with the source.
     exiled_with: Vec<(&'a crate::card::SelectionRequirement, usize, CardId)>,
     /// Live `GrantActivatedAbilityFromGraveyard`: `(filter, ability, owning
-    /// seat, source id)`.
+    /// seat, source id)` — and an emblem's `GrantActivatedAbility`, whose
+    /// source id is the `CardId(u32::MAX)` no card carries.
     graveyard: Vec<(
         &'a crate::card::SelectionRequirement,
         &'a crate::effect::ActivatedAbility,
@@ -15964,6 +15965,24 @@ impl GameState {
                     };
                     let Selector::EachPermanent(req) = applies_to else { continue };
                     scan.graveyard.push((req, &**ability, seat, src.id));
+                }
+            }
+        }
+        // CR 114.4 — an emblem's abilities work from the command zone: "creatures
+        // you control have '…'" (Ob Nixilis of the Black Oath's −8). Same lane
+        // as the graveyard grant — a filter scoped to the owning seat — keyed
+        // to no card, since an emblem is not one.
+        for (seat, pl) in self.players.iter().enumerate() {
+            for em in &pl.emblems {
+                for sa in &em.statics {
+                    if let StaticEffect::GrantActivatedAbility {
+                        applies_to: Selector::EachPermanent(req),
+                        ability,
+                        condition: None,
+                    } = &sa.effect
+                    {
+                        scan.graveyard.push((req, ability, seat, CardId(u32::MAX)));
+                    }
                 }
             }
         }
