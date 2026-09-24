@@ -115,6 +115,7 @@ lists were picked.
 | **Witherbloom Witchcraft** (C21 precon) BG | Willowdusk, Essence Seer | BG | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Witherbloom Pestilence** (SOC precon) BG | Dina, Essence Brewer | BG | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Silverquill Statement** (C21 precon) WB | Breena, the Demagogue | WB | 100 | 🟡 all 100 implemented, 7 carry residuals (below) |
+| **Draconic Domination** (C17 precon) WUBRG | The Ur-Dragon | WUBRG | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Blame Game** (MKC precon) RW | Nelly Borca, Impulsive Accuser | RW | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Temur Roar** (TDC precon) GUR | Eshki, Temur's Roar | GUR | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Exit from Exile** (CLB precon) RG | Faldorn, Dread Wolf Herald | RG | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
@@ -1183,6 +1184,24 @@ pods beside Sigarda / Teval / Disa (seed 11088, 1,000 games, all decided):
 Breena 25.1 %; census: no card of the four unplayed; 6 and 8 seats and a
 Strixhaven-only pod (seed 11089): 3,000 / 3,000 decided after the fix.
 `--bench` byte-identical.
+
+The **ninety-ninth** is Commander 2017's **Draconic Domination**
+(`DraconicDomination_C17`) — five-color Dragons under The Ur-Dragon (committed
+as 92, 97 and 98 while seven concurrent seats landed; Territorial Hellkite
+landed twice and Temur Roar's exact version was kept). Eighteen cards were
+missing; the primitives: `Player::attacked_players_this_turn` +
+`R::PlayerAttackedYouLastTurn` (O-Kagachi) and
+`Effect::EachPlayerSparesOneTheyDontControl` (Fortunate Few). It found four
+engine/card bugs: ⚠ **`Predicate::EntityMatches` on a player answered only a
+bare `R::Player`** (every other player atom read false); **a trigger's
+auto-target never had "that player" off a became-target event** (the actor
+wasn't read — Scalelord Reckoner); ⚠ **Niv-Mizzet, Dracogenius drew when it
+was dealt damage**, not when it dealt damage to a player; and **two Bold
+Plagiarists fed each other to a million-action cap** (the counter event carries
+no actor). Residual: **Orator of Ojutai** reads board and hand instead of a
+reveal. Four-seat pods beside Sigarda / Teval / Disa (seed 11092, 1,000 games,
+all decided): The Ur-Dragon 25.1 %; census: no card of the four unplayed; 6
+and 8 seats (seed 11093) 2,000 / 2,000 decided. `--bench` byte-identical.
 
 The **ninety-second** is the Secret Lair **20 Ways to Win** (`20WaysToWin_SLD`)
 — alternate win conditions, Gates and Shrines under Go-Shintai of Life's

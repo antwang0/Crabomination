@@ -1928,6 +1928,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Immortal Obligation | Blame Game (MKC) | a duty counter put back after the first one left re-arms the goad and the restrictions (CR 611.2b ends them for good). |
 | 🟡 Deceptive Frostkite | Temur Roar (TDC) | the copy isn't optional when a creature with power 4 or greater is there to copy. |
 | 🟡 Will of the Temur | Temur Roar (TDC) | "if you control a commander as you cast this spell" is read as it resolves. |
+| 🟡 Orator of Ojutai | Draconic Domination (C17) | the Dragon check reads your board and hand as it enters; there is no optional reveal. |
 | 🟡 Descendants' Fury | Sliver Swarm (CMM) | "one of them" is any attacker of yours that damaged a player this turn, not only this combat-damage batch's. |
 | 🟡 Bloodlord of Vaasgoth | Vampiric Bloodlust (C17) | the granted bloodthirst is checked as the cast trigger resolves, not as the creature enters. |
 | 🟡 Mathas, Fiend Seeker | Vampiric Bloodlust (C17) | a bounty counter grants its dies trigger only while Mathas is on the battlefield. |
