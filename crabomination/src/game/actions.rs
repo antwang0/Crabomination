@@ -14232,6 +14232,15 @@ impl GameState {
             } else {
                 self.auto_target_for_effect_avoiding(view, listener_controller, Some(source))
             };
+            // CR 603.3d — a cast trigger with more than one target slot (Ms.
+            // Bumbleflower's "target opponent draws … +1/+1 counter on target
+            // creature") fills slots 1.. as the self-cast and ETB paths do;
+            // only the first slot was ever bound here.
+            let additional = if auto_target.is_some() {
+                self.auto_extra_targets_for(view, source, listener_controller, auto_target.clone())
+            } else {
+                Vec::new()
+            };
             self.trigger_event_player_scratch = saved_scratch;
             // The cast spell's mana value, so "where X is that spell's mana
             // value" riders scale (Shark Typhoon).
@@ -14255,6 +14264,7 @@ impl GameState {
                 self.stack.push(
                     TriggerPush::new(source, listener_controller, effect)
                         .target(auto_target)
+                        .additional_targets(additional.clone())
                         .mode(mode)
                         // The cast spell's converge count, so per-cast
                         // `Value::ConvergedValue` reads the iterated spell

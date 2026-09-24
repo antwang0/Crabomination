@@ -935,3 +935,38 @@ fn cr_114_4_an_emblem_grants_free_casting_from_hand() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(angel).is_some());
 }
+
+/// CR 603.3d — a "whenever you cast a spell" trigger with two target slots
+/// binds both as it goes on the stack.
+#[test]
+fn cr_603_3d_a_cast_trigger_fills_every_target_slot() {
+    use crabomination::card::{
+        CardDefinition, CardType, CounterType, EventKind, EventScope, EventSpec, TriggeredAbility,
+    };
+    use crabomination::effect::{Effect, Selector, Value};
+    let mut g = peace_main();
+    g.add_card_to_library(1, catalog::plains());
+    g.add_card_to_battlefield(0, CardDefinition {
+        name: "Two Slot Cast Test",
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl),
+            effect: Effect::Seq(vec![
+                Effect::Draw {
+                    who: Selector::TargetFiltered { slot: 0, filter: SelectionRequirement::OpponentPlayer },
+                    amount: Value::ONE,
+                },
+                Effect::AddCounter {
+                    what: Selector::TargetFiltered { slot: 1, filter: SelectionRequirement::Creature },
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+            ]),
+        }],
+        ..Default::default()
+    });
+    let angel = g.add_card_to_battlefield(0, catalog::serra_angel());
+    run_as_spell(&mut g, Effect::Noop);
+    assert_eq!(g.players[1].hand.len(), 1);
+    assert_eq!(g.battlefield_find(angel).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
