@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Ten hand-picked commanders plus forty-three official preconstructed lists, each a
+//! Ten hand-picked commanders plus forty-four official preconstructed lists, each a
 //! 99 of cards this engine implements: legal under CR 903 (100 cards
 //! including the commander, singleton outside basics, every card inside the
 //! commander's CR 903.4 color identity) and Commander-legal per Scryfall's
@@ -8,7 +8,7 @@
 //!
 //! The ten were built by hand because the offline Scryfall cache cannot say
 //! how a precon splits into decks; MTGJSON's deck files can, and the eleventh
-//! through fifty-third (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
+//! through fifty-fourth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
 //! Win, Tails You Lose, Goblin Storm, Foundations Commander's Wretched Ranks,
 //! Tramplesaurus Rex and Keen Engineering, Commander Legends' Reap the Tides,
 //! Phyrexia: All Will Be One's Corrupting Influence, Zendikar Rising's Sneak
@@ -27,8 +27,9 @@
 //! Counterpunch, Wilds of Eldraine Commander's Fae Dominion, Commander 2015's
 //! Wade into Battle, Commander Legends' Arm for Battle, Commander 2016's Invent
 //! Superiority and Entropic Uprising, Secret Lair's Chaos Incarnate,
-//! Aetherdrift Commander's Eternal Might, Commander 2017's Feline Ferocity and
-//! Commander (2011)'s Heavenly Inferno) are taken from one card for card. What all of them keep
+//! Aetherdrift Commander's Eternal Might, Commander 2017's Feline Ferocity,
+//! Commander (2011)'s Heavenly Inferno and Zendikar Rising Commander's Land's
+//! Wrath) are taken from one card for card. What all of them keep
 //! from the precon idea is what the pod needs — fixed, legal, varied color
 //! identities, and built to play against each other.
 //! One is a Partner pair (CR 702.124b), one is a **planeswalker**
@@ -1706,4 +1707,32 @@ pub const KAALIA_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, swamp, swamp, swamp, swamp,
     swamp, swamp, swamp, swamp, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain,
+];
+
+pub const OBUUN_COMMANDERS: &[CardFactory] = &[obuun_mul_daya_ancestor];
+
+/// **Land's Wrath**, the Zendikar Rising Commander deck (ZNC, 2020-09-25),
+/// exactly as MTGJSON's `LandSWrath_ZNC` prints it: 78 nonbasic cards + 7
+/// Plains + 4 Mountains + 10 Forests = 99. Naya landfall under Obuun, Mul Daya
+/// Ancestor.
+pub const OBUUN_MAIN: &[CardFactory] = &[
+    admonition_angel, trove_warden, geode_rager, emeria_angel, emeria_shepherd, sun_titan,
+    multani_yavimayas_avatar, rampaging_baloths, sylvan_advocate, waker_of_the_wilds,
+    living_twister, mina_and_denn_wildborn, omnath_locus_of_rage, abzan_falconer,
+    elite_scaleguard, kor_cartographer, acidic_slime, armorcraft_judge, elvish_rejuvenator,
+    embodiment_of_insight, evolution_sage, fertilid, keeper_of_fables, satyr_wayfinder,
+    sporemound, springbloom_druid, tuskguard_captain, yavimaya_elder, sandstone_oracle,
+    scaretiller, murasa_rootgrazer, hour_of_revelation, planar_outburst, nissas_renewal,
+    beanstalk_giant, circuitous_route, far_wanderings, harmonize, kodamas_reach, ground_assault,
+    treacherous_terrain, return_of_the_wildspeaker, condemn, crush_contraband, harrow,
+    inspiring_call, naya_charm, sylvan_reclamation, roiling_regrowth, seers_sundial,
+    arcane_signet, sol_ring, together_forever, abundance, the_mending_of_dominaria,
+    rites_of_flourishing, banishing_light, retreat_to_emeria, khalni_heart_expedition,
+    retreat_to_kazandu, zendikars_roil, needle_spires, blighted_woodland, boros_garrison,
+    boros_guildgate, command_tower, cryptic_caves, evolving_wilds, gruul_guildgate, gruul_turf,
+    jungle_shrine, krosan_verge, myriad_landscape, naya_panorama, selesnya_guildgate,
+    selesnya_sanctuary, terramorphic_expanse, struggle_survive,
+    // Basics: 7 plains, 4 mountain, 10 forest
+    plains, plains, plains, plains, plains, plains, plains, mountain, mountain, mountain,
+    mountain, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
 ];

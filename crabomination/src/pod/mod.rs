@@ -498,6 +498,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::KAALIA_COMMANDERS,
             main: decks::KAALIA_MAIN,
         },
+        // Fifty-fourth: the forty-fourth official list (Land's Wrath, ZNC) —
+        // Naya landfall under Obuun, Mul Daya Ancestor. `--seats 54`.
+        PodDeck {
+            name: "Obuun, Mul Daya Ancestor (RGW)",
+            commanders: decks::OBUUN_COMMANDERS,
+            main: decks::OBUUN_MAIN,
+        },
     ]
 }
 
