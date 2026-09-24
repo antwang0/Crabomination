@@ -344,6 +344,18 @@ the handoff.
   Scheme's connive (convokers on the resolving spell), Colossal Grave-Reaver's
   pick (mill BATCHES aren't delimited in `milled_ids_this_turn`).
 
+## FIXED 2026-09-24 (the Commander routine, Draconic Rage) — attaching to nothing detached
+
+- **CR 701.3b — `Effect::Attach` to an empty selection cleared the
+  attachment.** The resolver wrote `attached_to` / `attached_to_player` from
+  whatever the selector returned, so an anchor that resolved to nobody left an
+  Aura attached to nothing and the SBA sweep binned it. Maddening Hex ("attach
+  this Aura to another one of your opponents chosen at random") fell off in
+  every duel. An empty anchor now leaves the attachment where it is
+  (`cr_303_4_maddening_hex_burns_then_moves_to_another_opponent`).
+- **Open:** Berserker's Frenzy's "choose any number of creatures" has no
+  controller-chosen, untargeted multi-pick; it takes every opposing creature.
+
 ## FIXED 2026-09-24 (the Commander routine) — an Equipment-granted damage trigger died with its host, and two bot response gaps
 
 - **CR 603.2 / 704.3 — "whenever equipped creature is dealt damage" was lost

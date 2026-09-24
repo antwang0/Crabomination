@@ -132,6 +132,7 @@ lists were picked.
 | **Mind Seize** (C13 precon) UBR | Jeleva, Nephalia's Scourge | UBR | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **20 Ways to Win** (SLD) WUBRG | Go-Shintai of Life's Origin | WUBRG | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Cabaretti Cacophony** (NCC precon) RGW | Kitt Kanto, Mayhem Diva | RGW | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
+| **Draconic Rage** (AFC precon) RG | Vrondiss, Rage of Ancients | RG | 100 | 🟡 all 100 implemented, 6 carry residuals (below) |
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not
@@ -1207,6 +1208,29 @@ no actor). Residual: **Orator of Ojutai** reads board and hand instead of a
 reveal. Four-seat pods beside Sigarda / Teval / Disa (seed 11092, 1,000 games,
 all decided): The Ur-Dragon 25.1 %; census: no card of the four unplayed; 6
 and 8 seats (seed 11093) 2,000 / 2,000 decided. `--bench` byte-identical.
+
+The **hundred-and-fourth** is Adventures in the Forgotten Realms Commander's
+**Draconic Rage** (`DraconicRage_AFC`) — Gruul dragons and dice under Vrondiss,
+Rage of Ancients, reached by `--pod-decks 104` (103 before rebasing over
+Symbiotic Swarm). Eighteen cards were missing
+(`cmdr_vrondiss.rs`). The primitives: `RollDie.ignore_lowest` (CR 706.6,
+Berserker's Frenzy's "roll two d20 and ignore the lower roll"),
+`cast_only_before_blockers_step`, `Effect::ChooseBlocksThisTurn` (Master
+Warcraft's block half alone), and in `effects/dice_choices.rs`
+`Effect::RollTwoDiceAssign` (Wild Endeavor — both faces are fixed before the
+controller's pick, so a suspended choice replays them),
+`Effect::EachPlayerRollsSourceCantAttackHighest` (Chaos Dragon) and
+`Effect::AddManaKeptThisTurnAnyColors` (Klauth); also
+`PlayerRef::RandomOtherOpponentThanEnchanted` and `CounterType::Component`.
+⚠ **`Effect::Attach` to an empty selection detached the attachment** — a
+Maddening Hex with no other opponent fell off; it now stays (CR 701.3b).
+Residuals: **Berserker's Frenzy**'s 1–14 creatures are every opposing one;
+**Component Pouch**'s two colors may match; **Dragonborn Champion** ignores
+damage to you; **Druid of Purification** has no "may" and starts with the next
+player; **Klauth**'s mana isn't spell-only; **Sword of Hours** rolls per
+recipient. Pods (release, seed 10311, 1,000 games beside Kitt / Go-Shintai /
+Jeleva): 1,000/1,000 decided, no card of the four lists unplayed, Vrondiss
+35.8 %; 8 seats (seed 10312) 500/500 decided. `--bench` byte-identical.
 
 The **ninety-eighth** is Streets of New Capenna Commander's **Cabaretti
 Cacophony** (`CabarettiCacophony_NCC`) — Naya Citizens, alliance and goad under
