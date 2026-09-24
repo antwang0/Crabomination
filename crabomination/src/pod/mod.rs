@@ -435,6 +435,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::GHAVE_COMMANDERS,
             main: decks::GHAVE_MAIN,
         },
+        // Forty-fifth: the thirty-fifth official list (Fae Dominion, WOC) —
+        // Dimir Faeries under Tegwyll, Duke of Splendor. `--seats 45`.
+        PodDeck {
+            name: "Tegwyll, Duke of Splendor (UB)",
+            commanders: decks::TEGWYLL_COMMANDERS,
+            main: decks::TEGWYLL_MAIN,
+        },
     ]
 }
 

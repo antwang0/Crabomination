@@ -1448,3 +1448,31 @@ pub const GHAVE_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
     plains, plains, plains, plains, plains, plains, plains, plains,
 ];
+
+pub const TEGWYLL_COMMANDERS: &[CardFactory] = &[tegwyll_duke_of_splendor];
+
+/// **Fae Dominion**, the Wilds of Eldraine Commander deck (WOC, 2023-09-08),
+/// exactly as MTGJSON's `FaeDominion_WOC` prints it: 74 nonbasic cards +
+/// 25 basics = 99. Dimir Faeries under Tegwyll, Duke of Splendor.
+pub const TEGWYLL_MAIN: &[CardFactory] = &[
+    alela_cunning_conqueror, archmage_of_echoes, malleable_impostor, misleading_signpost,
+    shadow_puppeteers, blightwing_bandit, faerie_bladecrafter, nettling_nuisance,
+    tegwylls_scouring, brazen_borrower, dig_through_time, faerie_formation,
+    glen_elendra_archmage, hullbreaker_horror, illusionists_gambit, midnight_clock,
+    perplexing_test, reflections_of_littjara, scion_of_oona, sower_of_temptation,
+    theoretical_duplication, kindred_dominance, nightmare_unmaking, puppeteer_clique,
+    rankle_master_of_pranks, thrilling_encore, glen_elendra_liege, nymris_oonas_trickster,
+    oona_queen_of_the_fae, choked_estuary, darkwater_catacombs, exotic_orchard, secluded_glen,
+    sunken_hollow, temple_of_deceit, mocking_sprite, picklock_prankster, spell_stutter,
+    obyra_dreaming_duelist, spellscorn_coven, arcane_denial, cloud_of_faeries, consider,
+    distant_melody, fact_or_fiction, faerie_seer, frantic_search, hypnotic_sprite, keep_watch,
+    nightveil_sprite, opt, quickling, reality_shift, reconnaissance_mission, repulse,
+    run_away_together, snap, reckless_spite, halo_forager, arcane_signet, dimir_signet,
+    fellwar_stone, mind_stone, sol_ring, talisman_of_dominance, wayfarers_bauble, bojuka_bog,
+    command_tower, dimir_aqueduct, faerie_conclave, myriad_landscape, path_of_ancestry,
+    tainted_isle, temple_of_the_false_god,
+    // Basics: 13 island, 12 swamp
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp,
+];
