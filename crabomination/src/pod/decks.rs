@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Ten hand-picked commanders plus sixty official preconstructed lists, each a
+//! Ten hand-picked commanders plus sixty-four official preconstructed lists, each a
 //! 99 of cards this engine implements: legal under CR 903 (100 cards
 //! including the commander, singleton outside basics, every card inside the
 //! commander's CR 903.4 color identity) and Commander-legal per Scryfall's
@@ -8,7 +8,7 @@
 //!
 //! The ten were built by hand because the offline Scryfall cache cannot say
 //! how a precon splits into decks; MTGJSON's deck files can, and the eleventh
-//! through seventieth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
+//! through seventy-fourth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
 //! Win, Tails You Lose, Goblin Storm, Foundations Commander's Wretched Ranks,
 //! Tramplesaurus Rex and Keen Engineering, Commander Legends' Reap the Tides,
 //! Phyrexia: All Will Be One's Corrupting Influence, Zendikar Rising's Sneak
@@ -37,7 +37,10 @@
 //! Decks' First Flight, Commander 2017's Arcane Wizardry, March of the
 //! Machine Commander's Growing Threat, Commander Masters' Enduring
 //! Enchantments, The Brothers' War Commander's Urza's Iron Alliance and
-//! Kaldheim Commander's Phantom Premonition) are taken
+//! Kaldheim Commander's Phantom Premonition, Secret Lair's Hatsune Miku,
+//! Commander Legends: Battle for Baldur's Gate's Exit from Exile, Innistrad: Midnight
+//! Hunt Commander's Undead Unleashed and March of the Machine Commander's
+//! Call for Backup) are taken
 //! from
 //! one card for card. What all of them keep
 //! from the precon idea is what the pod needs — fixed, legal, varied color
@@ -2295,4 +2298,35 @@ pub const WILHELT_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     island, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
     swamp, swamp, swamp,
+];
+
+pub const BRIGHT_PALM_COMMANDERS: &[CardFactory] = &[bright_palm_soul_awakener];
+
+/// **Call for Backup**, the March of the Machine Commander deck (MOC,
+/// 2023-04-21), exactly as MTGJSON's `CallForBackup_MOC` prints it: 86
+/// nonbasic cards + 5 Plains + 2 Mountains + 6 Forests = 99. Naya +1/+1
+/// counters and backup under Bright-Palm, Soul Awakener.
+pub const BRIGHT_PALM_MAIN: &[CardFactory] = &[
+    shalai_and_hallar, death_greeters_champion, uncivil_unrest, ichor_elixir,
+    mirror_style_master, guardian_scalelord, emergent_woodwurm, path_of_the_pyromancer,
+    conclave_sledge_captain, kalonian_hydra, mikaeus_the_lunarch, canopy_vista,
+    champion_of_lambholt, cinder_glade, dromokas_command, exotic_orchard, flamerush_rider,
+    flameshadow_conjuring, forgotten_ancient, fortified_village, furycalm_snarl, game_trail,
+    gavony_township, genesis_hydra, gyre_sage, heaven_earth, high_sentinels_of_arashin,
+    incubation_druid, inscription_of_abundance, ion_storm, kessig_wolf_run,
+    krenko_tin_street_kingpin, managorger_hydra, mossfire_valley, mosswort_bridge,
+    restoration_angel, rishkar_peema_renegade, semesters_end, strionic_resonator,
+    sungrass_prairie, sunscorch_regent, temple_of_abandon, temple_of_plenty, temple_of_triumph,
+    together_forever, triskelion, command_tower, commanders_sphere, cultivate, evolving_wilds,
+    fertilid, fractured_powerstone, kodamas_reach, path_of_ancestry, pridemalkin,
+    return_to_nature, terramorphic_expanse, wood_elves, abzan_battle_priest, abzan_falconer,
+    alharu_solemn_ritualist, arcane_signet, armorcraft_judge, brawn, bretagard_stronghold,
+    conclave_mentor, constable_of_the_realm, elite_scaleguard, enduring_scalelord,
+    falkenrath_exterminator, field_of_ruin, generous_gift, good_fortune_unicorn,
+    hamza_guardian_of_arashin, hindervines, inspiring_call, jungle_shrine, juniper_order_ranger,
+    krosan_verge, llanowar_reborn, mindless_automaton, rogues_passage, slurrk_all_ingesting,
+    sol_ring, swords_to_plowshares, temple_of_the_false_god,
+    // Basics: 5 plains, 2 mountain, 6 forest
+    plains, plains, plains, plains, plains, mountain, mountain,
+    forest, forest, forest, forest, forest, forest,
 ];

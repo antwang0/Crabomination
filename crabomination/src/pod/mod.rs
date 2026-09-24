@@ -640,6 +640,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::WILHELT_COMMANDERS,
             main: decks::WILHELT_MAIN,
         },
+        // Seventy-fourth: the sixty-fourth official list (Call for Backup, MOC)
+        // — Naya +1/+1 counters and backup under Bright-Palm. `--pod-decks 74`.
+        PodDeck {
+            name: "Bright-Palm, Soul Awakener (RGW)",
+            commanders: decks::BRIGHT_PALM_COMMANDERS,
+            main: decks::BRIGHT_PALM_MAIN,
+        },
     ]
 }
 
