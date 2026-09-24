@@ -18295,7 +18295,7 @@ impl GameState {
     ///
     /// `bars` is `block_pair_board_gates() || <the attacker carries an
     /// `attacker_block_bar_kw`, or is a tempted Ring-bearer> || <the blocker
-    /// carries a `blocker_block_bar_kw`>`. Every `return`-a-bar in
+    /// carries a `blocker_block_bar_kw`, or a held goad (`goad_holds`)>`. Every `return`-a-bar in
     /// [`Self::blocker_pair_block`] and [`can_block_attacker_computed`] is
     /// reached only through one of those, so `bars == false` *is* the answer
     /// `None` — and the block planner, which asks 13-17 pairs per call, pays

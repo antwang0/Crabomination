@@ -14802,7 +14802,11 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
         // With the board half and the attacker's half both clear, nothing in
         // `blocker_pair_block` can bar the pair; the gated form
         // `debug_assert!`s that on every skip.
-        let blk_bars = board_block_gates || blk_keyword_bars;
+        // Immortal Obligation's duty counter bars blocks against the goader
+        // without a keyword; a held goad opens this blocker's gate.
+        let blk_bars = board_block_gates
+            || blk_keyword_bars
+            || blk_card.cold_any(|k| !k.goad_holds.is_empty());
         let bkw = blk_card.combat_keywords();
         let blk_first_strike =
             bkw & (combat_kw::FIRST_STRIKE | combat_kw::DOUBLE_STRIKE) != 0;

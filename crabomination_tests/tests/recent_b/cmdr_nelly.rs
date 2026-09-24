@@ -556,3 +556,20 @@ fn bot_aims_any_target_at_an_opponent_before_its_own_board() {
     let pick = decide_choose_target(&g, 0, &own_only, &crabomination::server::EvalWeights::default());
     assert_eq!(pick, DecisionAnswer::Target(Target::Permanent(mine)));
 }
+
+/// Immortal Obligation's block bar has no keyword, so the bot's block planner
+/// has to open its per-blocker gate for a duty-bound creature: it never
+/// assigns it to the caster's attacker (the gate's `debug_assert!` fired in a
+/// strict debug pod, seed 10214).
+#[test]
+fn bot_never_blocks_with_a_duty_bound_creature() {
+    let mut g = main_phase(3);
+    let bear = g.add_card_to_graveyard(1, catalog::hill_giant());
+    let io = g.add_card_to_hand(0, catalog::immortal_obligation());
+    cast_at(&mut g, io, &[Target::Permanent(bear)]).expect("cast");
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    declare(&mut g, 0, vec![at(mine, 1)]).expect("attack seat 1");
+    g.step = TurnStep::DeclareBlockers;
+    let blocks = crabomination::server::bot::pick_blocks_for_test(&g, 1);
+    assert!(!blocks.iter().any(|&(b, _)| b == bear), "{blocks:?}");
+}
