@@ -326,3 +326,28 @@ fn tomb_tyrant_needs_three_zombies_in_the_graveyard() {
     assert_eq!(tyr.counter_count(CounterType::PlusOnePlusOne), 0);
 }
 
+
+
+/// The bot finds Hour of Eternity's X targets in its graveyard: the "X
+/// target" picker walked only the battlefield and players, so the card was
+/// never cast in 1,000 pod games.
+#[test]
+fn the_bot_casts_hour_of_eternity_at_its_graveyard() {
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    let mut g = pod(2);
+    g.step = TurnStep::PostCombatMain;
+    g.add_card_to_graveyard(0, catalog::serra_angel());
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    for _ in 0..4 {
+        g.add_card_to_battlefield(0, catalog::island());
+    }
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::swamp());
+    }
+    let hour = g.add_card_to_hand(0, catalog::hour_of_eternity());
+    let action = HeuristicBot::new().next_action(&g, 0).expect("acts");
+    assert!(
+        matches!(action, GameAction::CastSpell { card_id, x_value: Some(2), .. } if card_id == hour),
+        "{action:?}",
+    );
+}

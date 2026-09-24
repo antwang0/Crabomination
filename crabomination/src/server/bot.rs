@@ -4299,6 +4299,19 @@ fn exactly_x_targets(
         .filter(|c| (c.controller == seat) == friendly && ok(&Target::Permanent(c.id)))
         .map(|c| (state.computed_permanent(c.id).map_or(c.definition.power, |cp| cp.power), c.id))
         .collect();
+    // "X target creature cards from your graveyard" (Hour of Eternity): an
+    // off-board filter names cards, not permanents — its filter is the gate.
+    if filter.mentions_offboard_zone() {
+        perms.extend(
+            state
+                .players
+                .iter()
+                .flat_map(|pl| pl.graveyard.iter())
+                .chain(state.exile.iter())
+                .filter(|c| ok(&Target::Permanent(c.id)))
+                .map(|c| (c.definition.power, c.id)),
+        );
+    }
     perms.sort_by(|a, b| b.0.cmp(&a.0).then(a.1.cmp(&b.1)));
     let players = if friendly { vec![seat] } else { state.opponents_of(seat) };
     let mut picks: Vec<Target> = perms
