@@ -1651,3 +1651,32 @@ pub const YIDRIS_MAIN: &[CardFactory] = &[
     island, island, island, island, island, swamp, swamp, swamp, swamp, swamp, mountain,
     mountain, mountain, mountain, mountain, forest, forest, forest, forest, forest,
 ];
+
+pub const ARAHBO_COMMANDERS: &[CardFactory] = &[arahbo_roar_of_the_world];
+
+/// **Feline Ferocity**, the Commander 2017 deck (C17, 2017-08-25), exactly as
+/// MTGJSON's `FelineFerocity_C17` prints it: 86 nonbasic cards + 7 Plains + 6
+/// Forests = 99. Selesnya Cats and Equipment under Arahbo, Roar of the World.
+pub const ARAHBO_MAIN: &[CardFactory] = &[
+    nazahn_revered_bladesmith, mirri_weatherlight_duelist, alms_collector,
+    balan_wandering_knight, stalking_leonin, hungry_lynx, qasali_slingers, jazal_goldmane,
+    jareth_leonine_titan, kemba_kha_regent, leonin_arbiter, leonin_shikari, raksha_golden_cub,
+    sehts_tiger, spirit_of_the_hearth, jedit_ojanen_of_efrava, fleecemane_lion, phantom_nishoba,
+    leonin_relic_warder, oreskos_explorer, sunspear_shikari, taj_nar_swordsmith,
+    temur_sabertooth, qasali_pridemage, traverse_the_outlands, divine_reckoning, rout,
+    hunters_prowess, souls_majesty, cultivate, harmonize, nissas_pilgrimage, kindred_summons,
+    white_suns_zenith, condemn, wing_shards, crushing_vines, relic_crush,
+    bloodforged_battle_axe, hammer_of_nazahn, argentum_armor, grappling_hook, quietus_spike,
+    staff_of_nin, sword_of_the_animist, sword_of_vengeance, heirloom_blade, heralds_horn,
+    behemoth_sledge, dreamstone_hedron, hedron_archive, heros_blade, lightning_greaves,
+    loxodon_warhammer, skullclamp, sol_ring, swiftfoot_boots, miraris_wake, abundance,
+    zendikar_resurgent, curse_of_vitality, curse_of_bounty, mosswort_bridge, stirring_wildwood,
+    path_of_ancestry, blighted_woodland, blossoming_sands, command_tower, elfhame_palace,
+    evolving_wilds, grasslands, graypelt_refuge, krosan_verge, myriad_landscape, opal_palace,
+    rogues_passage, saltcrusted_steppe, secluded_steppe, selesnya_guildgate, selesnya_sanctuary,
+    temple_of_the_false_god, terramorphic_expanse, tranquil_expanse, tranquil_thicket,
+    vivid_meadow, vivid_grove,
+    // Basics: 7 plains, 6 forest
+    plains, plains, plains, plains, plains, plains, plains,
+    forest, forest, forest, forest, forest, forest,
+];

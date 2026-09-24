@@ -484,6 +484,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::YIDRIS_COMMANDERS,
             main: decks::YIDRIS_MAIN,
         },
+        // Fifty-second: the forty-second official list (Feline Ferocity,
+        // C17) — Selesnya Cats and Equipment under Arahbo. `--seats 52`.
+        PodDeck {
+            name: "Arahbo, Roar of the World (GW)",
+            commanders: decks::ARAHBO_COMMANDERS,
+            main: decks::ARAHBO_MAIN,
+        },
     ]
 }
 
