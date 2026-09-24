@@ -69,6 +69,7 @@ lists were picked.
 | **Sworn to Darkness** (C14 precon) B | Ob Nixilis of the Black Oath (**planeswalker**) | B | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Seize Control** (C15 precon) UR | Mizzix of the Izmagnus | UR | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Rebellion Rising** (ONC precon) RW | Neyali, Suns' Vanguard | RW | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
+| **Feline Ferocity** (C17 precon) GW | Arahbo, Roar of the World | GW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Call the Spirits** (C15 precon) WB | Daxos the Returned | WB | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Peer Through Time** (C14 precon) U | Teferi, Temporal Archmage (**planeswalker**) | U | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Quantum Quandrix** (C21 precon) GU | Adrix and Nev, Twincasters | GU | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
@@ -563,6 +564,24 @@ attacking a player. Four-seat pods beside Adriana / Giada / Gisela (seed
 10131, 1,000 games, 999 decided + 1 draw, every card played): Neyali 13.0 %.
 Seed 10141, 300 games at 43 seats: **299 decided + 1 draw, 0 caps, zero
 panics** (230.8 k actions/game, 427 s on 4 threads). `--bench` byte-identical.
+
+The **fifty-second** is Commander 2017's **Feline Ferocity** (`FelineFerocity_C17`)
+— Selesnya Cats and Equipment under Arahbo, Roar of the World. Seventeen cards
+were missing; the primitives: `StaticEffect::OpponentMultiDrawBecomesOneEach`
+(Alms Collector, CR 614.1a — read by `Effect::Draw` on a batch of two or
+more), `Effect::PlayerGainsProtectionFromChosenColor` with
+`Player.protection_colors_eot` (Seht's Tiger, CR 702.16b/e — no targeting, no
+damage; the cast path checks the out-of-zone card's colors), Mirri's
+`Effect::OpponentsBlockWithAtMost` + `StaticEffect::AttackerCapAgainstControllerWhileTapped`
+(the bot's block planner trims to the cap), `EachPlayerKeepsOneSacrificeRest.destroy`
+(Divine Reckoning) and `IsSourceChosenCreatureType` answering for library cards
+while a `ChooseCreatureTypeThen` resolves (Kindred Summons). Residuals:
+**Divine Reckoning** keeps each player's highest-mana-value creature;
+**Stalking Leonin**'s opponent is picked openly. Four-seat pods beside Sigarda /
+Ghalta / Giada (seed 10151, 1,000 games, all decided, every card played):
+Arahbo 6.3 %. Seed 10161, 300 games at 52 seats: **299 decided, 1 board cap,
+zero panics** (329 k actions/game, 1,452 s on 4 threads). `--bench`
+byte-identical.
 
 The **forty-second** is Commander 2014's **Peer Through Time**
 (`PeerThroughTime_C14`) — mono-blue control under Teferi, Temporal Archmage,
