@@ -10,6 +10,7 @@ mod combat_copies;
 mod commander;
 mod copy_redirect;
 mod damage_draw;
+mod exile_power;
 mod delayed;
 mod eval;
 mod free_cast;
@@ -35195,6 +35196,10 @@ impl GameState {
 
             Effect::CopySpellOntoAnotherOpponentsPermanent { what } => {
                 self.copy_spell_onto_another_opponents_permanent(what, ctx, effect, events)
+            }
+
+            Effect::ExileAllThenTokenPerPlayerByPower { filter, definition } => {
+                self.exile_all_then_token_per_player_by_power(filter, definition, ctx, events)
             }
 
             Effect::EachPlayerDrawsDamageTheyDealtToSource => {

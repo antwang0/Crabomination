@@ -4917,6 +4917,14 @@ pub enum Effect {
     /// Sets the controller's `steals_opponent_tokens_this_turn`, read by the
     /// token mint funnel; expires at the next untap.
     StealOpponentTokensThisTurn,
+    /// "Exile all [filter]. Each player creates [definition] and puts a number
+    /// of +1/+1 counters on it equal to the total power of the ones they
+    /// controlled that were exiled this way" (Oversimplify). Powers are read
+    /// before the exile; a token that left counts (CR 111.7).
+    ExileAllThenTokenPerPlayerByPower {
+        filter: SelectionRequirement,
+        definition: std::sync::Arc<crate::card::TokenDefinition>,
+    },
     /// "You may put a card matching `filter` from your hand or graveyard
     /// onto the battlefield." Dakkon, Shadow Slayer −6. Auto-pick: the
     /// highest-MV match; a `wants_ui` controller picks (or declines) via

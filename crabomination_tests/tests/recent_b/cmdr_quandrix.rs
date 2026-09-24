@@ -143,3 +143,33 @@ fn cr_603_4_a_turn_scoped_trigger_watches_other_players_creatures_enter() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, life + 1, "not your own creature");
 }
+
+/// Each player's token gets the total power of the creatures they controlled
+/// that were exiled; a seat with none gets a 0/0 that dies (CR 704.5f).
+#[test]
+fn exile_all_then_a_token_per_player_by_power() {
+    let mut g = pod(3);
+    g.add_card_to_battlefield(0, catalog::serra_angel());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    run(
+        &mut g,
+        0,
+        &Effect::ExileAllThenTokenPerPlayerByPower {
+            filter: R::Creature,
+            definition: Arc::new(crabomination::card::TokenDefinition {
+                name: "Fractal".into(),
+                card_types: vec![CardType::Creature],
+                ..Default::default()
+            }),
+        },
+    );
+    g.check_state_based_actions();
+    let f0 = named(&g, 0, "Fractal");
+    assert_eq!(f0.len(), 1);
+    assert_eq!(g.battlefield_find(f0[0]).unwrap().counter_count(CounterType::PlusOnePlusOne), 6);
+    let f1 = named(&g, 1, "Fractal");
+    assert_eq!(g.battlefield_find(f1[0]).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+    assert!(named(&g, 2, "Fractal").is_empty(), "the 0/0 died");
+    assert!(named(&g, 0, "Serra Angel").is_empty());
+}
