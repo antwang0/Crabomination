@@ -3197,6 +3197,7 @@ impl HeuristicBot {
                     .or_else(|| pick_prepare_response(state, seat, &self.weights))
                     .or_else(|| pick_buff_response(state, seat, &self.weights))
                     .or_else(|| pick_copy_response(state, seat, &self.weights))
+                    .or_else(|| pick_combat_only_instant(state, seat, &self.weights))
                     // Defender windows in the attack steps (the picker
                     // no-ops unless declared attackers are coming at us).
                     .or_else(|| {
@@ -4197,6 +4198,54 @@ fn pick_copy_response(state: &GameState, seat: usize, w: &EvalWeights) -> Option
             x_value: None,
         })
         .find(|a| state.would_accept(a.clone()))
+}
+
+/// CR 601.3 — an instant castable only during combat on an opponent's turn
+/// (Wake the Dead), cast once attackers are declared. The off-turn windows
+/// are the end step and the response pickers, so no path reached it: the one
+/// Sworn to Darkness card a 300-game 32-seat census never saw played. The
+/// main enumerator builds the cast (X, targets); the dry run is the gate.
+fn pick_combat_only_instant(state: &GameState, seat: usize, w: &EvalWeights) -> Option<GameAction> {
+    if state.active_player_idx == seat
+        || !state.stack.is_empty()
+        || state.step != TurnStep::DeclareAttackers
+    {
+        return None;
+    }
+    for c in state.players[seat].hand.iter().filter(|c| c.definition.cast_only_during_combat) {
+        let def = &c.definition;
+        // "X target …" (CR 601.2c): as many of the legal targets as X buys,
+        // biggest mana value first; any other shape takes the auto-picks.
+        let action = if let Effect::TargetsExactlyX { body } = &def.effect {
+            let mut legal = state.enumerate_legal_targets(body, seat);
+            legal.sort_by_key(|t| match t {
+                Target::Permanent(id) => std::cmp::Reverse(
+                    state.find_card_anywhere(*id).map_or(0, |k| k.definition.cost.cmc()),
+                ),
+                _ => std::cmp::Reverse(0),
+            });
+            let x = (max_affordable_x(state, seat, c, w) as usize).min(legal.len());
+            if x == 0 {
+                continue;
+            }
+            legal.truncate(x);
+            let mut slots = legal.into_iter();
+            GameAction::CastSpell {
+                card_id: c.id,
+                target: slots.next(),
+                additional_targets: slots.collect(),
+                mode: None,
+                x_value: Some(x as u32),
+            }
+        } else {
+            let (target, additional_targets) = state.auto_targets_for_effect_all_slots(&def.effect, seat, None);
+            GameAction::CastSpell { card_id: c.id, target, additional_targets, mode: None, x_value: None }
+        };
+        if state.would_accept(action.clone()) {
+            return Some(action);
+        }
+    }
+    None
 }
 
 /// Land-count mulligan heuristic. A keepable opening hand wants roughly
@@ -27031,6 +27080,25 @@ mod stack_response_tests {
             "got {action:?}"
         );
         assert!(pick_copy_response(&g, 1, &EvalWeights::default()).is_none(), "not the opponent's spell");
+    }
+
+    /// CR 601.3 — Wake the Dead is cast in an opponent's declare-attackers
+    /// step, returning creature cards; never on the bot's own turn.
+    #[test]
+    fn combat_only_instant_is_cast_on_an_opponents_attack() {
+        use crate::mana::Color;
+        let mut g = two_player_game();
+        g.active_player_idx = 1;
+        g.step = TurnStep::DeclareAttackers;
+        g.priority.player_with_priority = 0;
+        let wake = g.add_card_to_hand(0, catalog::wake_the_dead());
+        g.add_card_to_graveyard(0, catalog::serra_angel());
+        g.add_card_to_graveyard(0, catalog::grizzly_bears());
+        g.players[0].mana_pool.add(Color::Black, 4);
+        let action = pick_combat_only_instant(&g, 0, &EvalWeights::default()).expect("cast it");
+        assert!(matches!(action, GameAction::CastSpell { card_id, .. } if card_id == wake), "got {action:?}");
+        g.active_player_idx = 0;
+        assert!(pick_combat_only_instant(&g, 0, &EvalWeights::default()).is_none(), "own turn");
     }
 
     /// The stack 2-for-1: the opponent's Giant Growth on their own bear
