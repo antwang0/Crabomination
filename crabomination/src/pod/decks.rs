@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Ten hand-picked commanders plus fifty-three official preconstructed lists, each a
+//! Ten hand-picked commanders plus fifty-four official preconstructed lists, each a
 //! 99 of cards this engine implements: legal under CR 903 (100 cards
 //! including the commander, singleton outside basics, every card inside the
 //! commander's CR 903.4 color identity) and Commander-legal per Scryfall's
@@ -8,7 +8,7 @@
 //!
 //! The ten were built by hand because the offline Scryfall cache cannot say
 //! how a precon splits into decks; MTGJSON's deck files can, and the eleventh
-//! through sixty-third (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
+//! through sixty-fourth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
 //! Win, Tails You Lose, Goblin Storm, Foundations Commander's Wretched Ranks,
 //! Tramplesaurus Rex and Keen Engineering, Commander Legends' Reap the Tides,
 //! Phyrexia: All Will Be One's Corrupting Influence, Zendikar Rising's Sneak
@@ -32,8 +32,8 @@
 //! Commander's Land's Wrath, Commander 2019's Primal Genesis and Commander 2016's
 //! Stalwart Unity, Commander (2011)'s Devour for Power, Duskmourn Commander's
 //! Endless Punishment, the Starter Commander Decks' Token Triumph, Commander
-//! 2016's Breed Lethality, Commander (2011)'s Mirror Mastery and Secret Lair's
-//! Raining Cats and Dogs) are taken
+//! 2016's Breed Lethality, Commander (2011)'s Mirror Mastery, Secret Lair's
+//! Raining Cats and Dogs and Commander 2016's Open Hostility) are taken
 //! from
 //! one card for card. What all of them keep
 //! from the precon idea is what the pod needs — fixed, legal, varied color
@@ -2001,4 +2001,33 @@ pub const RIN_SERI_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     mountain, mountain, mountain, mountain, mountain,
     forest, forest, forest, forest, forest, forest, forest,
+];
+
+pub const SASKIA_COMMANDERS: &[CardFactory] = &[saskia_the_unyielding];
+
+/// **Open Hostility**, the Commander 2016 deck (C16, 2016-11-11), exactly as
+/// MTGJSON's `OpenHostility_C16` prints it: 83 nonbasic cards + 3 Plains + 3
+/// Swamps + 5 Mountains + 5 Forests = 99. Four-color (no blue) aggression
+/// under Saskia, with Tana, Tymna and Ravos in the 99.
+pub const SASKIA_MAIN: &[CardFactory] = &[
+    wight_of_precinct_six, den_protector, quirion_explorer, sakura_tribe_elder, sylvok_explorer,
+    korozda_guildmage, zhur_taa_druid, selesnya_guildmage, mentor_of_the_meek, mirror_entity,
+    alesha_who_smiles_at_death, taurean_mauler, managorger_hydra, wild_beastmaster,
+    tymna_the_weaver, wilderness_elemental, dauntless_escort, brutal_hordechief,
+    charging_cinderhorn, thelonite_hermit, tana_the_bloodsower, iroas_god_of_victory, mycoloth,
+    ravos_soultender, ankle_shanker, thunderfoot_baloth, stalking_vengeance, stonehoof_chieftain,
+    primeval_protector, farseek, rampant_growth, shamanic_revelation, grave_upheaval,
+    treacherous_terrain, clan_defiance, lavalanche, terminate, artifact_mutation, boros_charm,
+    aura_mutation, abzan_charm, naya_charm, crackling_doom, grab_the_reins, utter_end,
+    sylvan_reclamation, divergent_transformations, order_chaos, skullclamp, sol_ring, conquerors_flail,
+    fellwar_stone, gruul_signet, lightning_greaves, commanders_sphere, sunforger, blind_obedience,
+    evolutionary_escalation, necrogenesis, beastmaster_ascension, everlasting_torment,
+    frenzied_fugue, breath_of_fury, ash_barrens, caves_of_koilos, command_tower, dragonskull_summit,
+    evolving_wilds, exotic_orchard, grand_coliseum, gruul_turf, jungle_shrine, karplusan_forest,
+    mosswort_bridge, nomad_outpost, orzhov_basilica, rootbound_crag, sandsteppe_citadel,
+    savage_lands, spinerock_knoll, sunpetal_grove, terramorphic_expanse, windbrisk_heights,
+    // Basics: 3 plains, 3 swamp, 5 mountain, 5 forest
+    plains, plains, plains, swamp, swamp, swamp,
+    mountain, mountain, mountain, mountain, mountain,
+    forest, forest, forest, forest, forest,
 ];

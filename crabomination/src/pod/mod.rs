@@ -568,6 +568,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::RIN_SERI_COMMANDERS,
             main: decks::RIN_SERI_MAIN,
         },
+        // Sixty-fourth: the fifty-fourth official list (Open Hostility, C16)
+        // — four-color (no blue) aggression under Saskia. `--seats 64`.
+        PodDeck {
+            name: "Saskia the Unyielding (WBRG)",
+            commanders: decks::SASKIA_COMMANDERS,
+            main: decks::SASKIA_MAIN,
+        },
     ]
 }
 
@@ -1098,6 +1105,7 @@ mod tests {
             ("Zedruu", [0x2ED7, 89, 9013]),
             ("The Mimeoplasm", [0x3133, 90, 9014]),
             ("Riku", [0x21C0, 91, 9015]),
+            ("Saskia", [0x5A5C, 92, 9016]),
         ] {
             let precon = *field.iter().find(|d| d.name.starts_with(name)).expect("the precon seat");
             assert_eq!(precon.card_count(), 100);
