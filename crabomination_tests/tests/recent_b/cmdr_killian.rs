@@ -290,6 +290,32 @@ fn intermediate_chirography_levels() {
     assert_eq!(g.battlefield_find(ink[0]).unwrap().counter_count(CounterType::PlusOnePlusOne), 1, "once per turn");
 }
 
+/// Intermediate Chirography level 3: a creature of yours modified only by an
+/// Aura you control dying makes an Inkling at the end step; an unmodified
+/// one doesn't. Regression (CR 700.9 / 603.10a): the death snapshot's
+/// attachments were invisible, so the card read "modified" as "had counters".
+#[test]
+fn intermediate_chirography_level_3_counts_an_aura_modified_death() {
+    // One Inkling from the Class entering; a second only for the modified death.
+    for (aura, inklings) in [(false, 1), (true, 2)] {
+        let mut g = pod(2);
+        let ic = g.add_card_to_hand(0, catalog::intermediate_chirography());
+        cast(&mut g, 0, ic, None).expect("cast");
+        let ic = named(&g, 0, "Intermediate Chirography")[0];
+        activate(&mut g, 0, ic, 0, None).expect("level 2");
+        activate(&mut g, 0, ic, 1, None).expect("level 3");
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        if aura {
+            let r = g.add_card_to_battlefield(0, catalog::rancor());
+            g.battlefield_find_mut(r).unwrap().attached_to = Some(bear);
+        }
+        let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+        cast(&mut g, 1, bolt, Some(Target::Permanent(bear))).expect("bolt");
+        step(&mut g, TurnStep::End);
+        assert_eq!(named(&g, 0, "Inkling").len(), inklings);
+    }
+}
+
 /// Scriv attaches a Contract to an opponent's creature; that creature
 /// attacking another opponent gets +2/+0, attacking you costs its controller 2.
 #[test]

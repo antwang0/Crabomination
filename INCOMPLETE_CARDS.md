@@ -1951,7 +1951,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Armored Skyhunter | Silverquill Influence (SOC) | an Equipment it puts onto the battlefield stays unattached. |
 | 🟡 Coercive Impetus | Silverquill Influence (SOC) | the goad is renewed by a trigger at the beginning of each combat, not a static. |
 | 🟡 Herald of Amity | Silverquill Influence (SOC) | the top eight are revealed rather than exiled; the uncast ones go to the bottom. |
-| 🟡 Intermediate Chirography | Silverquill Influence (SOC) | level 3 reads "modified" as "had counters"; an Aura or Equipment alone doesn't count. |
 | 🟡 Concord with the Kami | Upgrades Unleashed (NEC) | "choose one or more" takes every mode that can do something (a counter needs a target creature with a counter; the card and Spirit need their enchanted / equipped creature). |
 | 🟡 Descendants' Fury | Sliver Swarm (CMM) | "one of them" is any attacker of yours that damaged a player this turn, not only this combat-damage batch's. |
 | 🟡 Bloodlord of Vaasgoth | Vampiric Bloodlust (C17) | the granted bloodthirst is checked as the cast trigger resolves, not as the creature enters. |

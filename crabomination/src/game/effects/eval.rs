@@ -4916,19 +4916,9 @@ impl GameState {
                                         || (o.definition.is_enchantment()
                                             && o.controller == card.controller))
                             })
-                            // CR 603.10a — a death trigger looks back: what
-                            // rode the creature as it left (`auras_at_death`),
-                            // an Equipment or an Aura of its controller's.
+                            // CR 603.10a — a death trigger looks back.
                             || (self.battlefield.find_by_id(*cid).is_none()
-                                && self.auras_at_death.get(cid).is_some_and(|riders| {
-                                    riders.iter().any(|(a, ctrl)| {
-                                        *ctrl == card.controller
-                                            || self
-                                                .battlefield
-                                                .find_by_id(*a)
-                                                .is_some_and(|o| o.definition.is_artifact())
-                                    })
-                                }))
+                                && self.left_modified_by_attachments(card))
                     }
                     // CR 506.5: attacking alone = card is in attacking AND
                     // there is exactly one declared attacker.
@@ -5606,6 +5596,18 @@ impl GameState {
         self.evaluate_requirement_on_card_inner(req, &scratch, controller)
     }
 
+    /// CR 700.9 + 603.10a — was `card`, which has left the battlefield,
+    /// modified by what rode it as it left (`auras_at_death`): an Equipment,
+    /// or an Aura its controller controlled. Counters are the caller's half.
+    fn left_modified_by_attachments(&self, card: &CardInstance) -> bool {
+        self.auras_at_death.get(&card.id).is_some_and(|riders| {
+            riders.iter().any(|(a, ctrl)| {
+                *ctrl == card.controller
+                    || self.battlefield.find_by_id(*a).is_some_and(|o| o.definition.is_artifact())
+            })
+        })
+    }
+
     /// Evaluate a `SelectionRequirement` against a `CardInstance` in any zone.
     ///
     /// **CR 613 / CR 302 — a live battlefield permanent is answered by the
@@ -6190,6 +6192,12 @@ impl GameState {
             // the death replacement (Necromancer's Magemark).
             R::IsEnchanted => self.permanent_is_enchanted(card.id),
             R::EnchantedByYourAura => self.enchanted_by_aura_of(card.id, controller),
+            // CR 700.9 + 603.10a — off the battlefield, a death snapshot's
+            // counters and what rode it as it left (`auras_at_death`): "a
+            // modified creature died this turn" (Intermediate Chirography).
+            R::IsModified => {
+                card.counters.values().any(|&n| n > 0) || self.left_modified_by_attachments(card)
+            }
             R::IsCommander => self.is_commander(card.id),
             // CR 301.5 — same reasoning for "equipped" (Rakdos Riteknife's
             // tap-an-equipped-creature cost).
@@ -6214,7 +6222,7 @@ impl GameState {
             | R::SpellTargetsOnlySource
             | R::SpellWithSingleTarget
             | R::DealtDamageToControllerThisTurn | R::DamagedAPlayerThisTurn | R::IsBestowed
-            | R::EquippedByAtLeast(_) | R::IsModified | R::DealtDamageThisTurn
+            | R::EquippedByAtLeast(_) | R::DealtDamageThisTurn
             | R::DamagedBySourceThisTurn | R::DealtDamageToSourceThisTurn
             | R::BlockingOrBlockedBySource
             | R::BlockedBySourceThisTurn

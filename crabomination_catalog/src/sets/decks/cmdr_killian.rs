@@ -8,8 +8,6 @@
 //! - **Coercive Impetus** — the goad is renewed at the beginning of each
 //!   combat by a trigger, not a static.
 //! - **Herald of Amity** — the eight cards are revealed rather than exiled.
-//! - **Intermediate Chirography** — level 3 counts creatures that died with
-//!   counters on them; an Aura or Equipment alone doesn't make one modified.
 
 use std::sync::Arc;
 
@@ -346,7 +344,7 @@ pub fn herald_of_amity() -> CardDefinition {
 /// Intermediate Chirography — Class. Enters with a 2/1 Inkling. L2 ({1}{B}):
 /// your first life loss each turn puts a +1/+1 counter on a creature of yours.
 /// L3 ({2}{B}): each end step after a modified creature of yours died makes
-/// an Inkling. Residual: "modified" is read as "had counters".
+/// an Inkling (CR 700.9, read off the death snapshot, CR 603.10a).
 pub fn intermediate_chirography() -> CardDefinition {
     let level_up = |mana: ManaCost, from: u8| ActivatedAbility {
         mana_cost: mana,
@@ -378,7 +376,7 @@ pub fn intermediate_chirography() -> CardDefinition {
                         Predicate::SourceClassLevelAtLeast(3),
                         Predicate::ValueAtLeast(
                             Value::CreatureDeathsThisTurnMatching {
-                                filter: R::WithAnyCounter.and(R::ControlledByYou),
+                                filter: R::IsModified.and(R::ControlledByYou),
                             },
                             Value::ONE,
                         ),
