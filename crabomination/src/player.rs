@@ -689,6 +689,10 @@ pub struct PlayerData {
     /// "pay life equal to its mana value" cast. Reset at the turn boundary.
     #[serde(default)]
     pub life_alt_cast_used_this_turn: bool,
+    /// Darksteel Monolith — this player has used their once-each-turn {0}
+    /// cast. Reset at the turn boundary.
+    #[serde(default)]
+    pub zero_alt_cast_used_this_turn: bool,
     /// Marshland Bloodcaster — the next spell this player casts this turn may
     /// be paid for with life equal to its mana value. Spent by that cast;
     /// reset at the turn boundary.
@@ -1402,6 +1406,7 @@ impl Player {
             face_down_activity_this_turn: false,
             free_exile_cast_used_this_turn: false,
             life_alt_cast_used_this_turn: false,
+            zero_alt_cast_used_this_turn: false,
             life_alt_next_spell_this_turn: false,
             attacked_players_this_turn: Vec::new(),
             next_spell_convoke_this_turn: false,

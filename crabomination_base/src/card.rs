@@ -898,6 +898,8 @@ pub enum CounterType {
     /// Component counter — Component Pouch's store: its d20 ability adds them,
     /// its mana ability removes one for two mana.
     Component,
+    /// Suspect counter — Investigator's Journal's draw fuel.
+    Suspect,
 }
 
 /// Every zone a card can occupy.
@@ -3021,6 +3023,10 @@ pub enum SelectionRequirement {
     /// A spell *or ability* on the stack that targets a land the evaluating
     /// player controls (Teferi's Response).
     TargetsALandYouControl,
+    /// A spell *or ability* on the stack with a permanent the evaluating
+    /// player controls matching the inner filter among its targets (Not of
+    /// This World).
+    TargetsAPermanentYouControlMatching(Box<SelectionRequirement>),
     /// True when the candidate stack spell targets *only* the ability's
     /// source — one target slot, filled with the source (Ink-Treader
     /// Nephilim's "if that spell targets only this creature").
@@ -5989,6 +5995,10 @@ pub struct AlternativeCost {
     /// (`Player.life_alt_cast_used_this_turn`).
     #[serde(default)]
     pub once_per_turn_grant: bool,
+    /// Darksteel Monolith — casting via this cost spends the caster's
+    /// once-each-turn `ZeroAlternativeCostOncePerTurn` grant.
+    #[serde(default)]
+    pub once_per_turn_zero: bool,
 }
 
 /// The bits [`CardDefinition::debug_flags`] answers. One `{:?}` scan and one

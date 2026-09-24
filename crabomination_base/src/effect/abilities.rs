@@ -2402,6 +2402,10 @@ pub enum StaticEffect {
     /// `effective_alternative_cost`; tracked by
     /// `Player.life_alt_cast_used_this_turn`.
     LifeAlternativeCostOncePerYourTurn { filter: SelectionRequirement },
+    /// CR 118.9 — "Once each turn, you may pay {0} rather than pay the mana
+    /// cost for a [filter] spell you cast from your hand" (Darksteel
+    /// Monolith). Tracked by `Player.zero_alt_cast_used_this_turn`.
+    ZeroAlternativeCostOncePerTurn { filter: SelectionRequirement },
     /// "Whenever the final chapter ability of a Saga you control resolves,
     /// `body`" (Narci, Fable Singer). `saga_chapters_crossed` appends `body`
     /// to the final chapter's effect, so it runs as that chapter resolves

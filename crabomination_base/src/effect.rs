@@ -2102,6 +2102,10 @@ pub enum Predicate {
     /// casting the resolving spell. Reads the per-color payment breakdown
     /// stamped at cast time (`EffectContext.mana_spent_by_color`).
     ManaSpentOfColorAtLeast { color: crate::mana::Color, at_least: u32 },
+    /// Adamant for colorless — "if at least N colorless mana was spent to cast
+    /// this spell" (Desecrate Reality): the resolving spell's total spend less
+    /// its colored breakdown.
+    ColorlessManaSpentAtLeast(u32),
     /// "If [color] mana was spent to cast this" read from the *source
     /// permanent's* own cast provenance (`CardInstance.cast_mana_spent_by_color`),
     /// not the live spell-resolution context. Used by ETB triggers that look

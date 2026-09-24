@@ -4488,6 +4488,7 @@ impl GameState {
             // Warped Space's once-per-turn free cast from exile.
             pl.free_exile_cast_used_this_turn = false;
             pl.life_alt_cast_used_this_turn = false;
+            pl.zero_alt_cast_used_this_turn = false;
             pl.life_alt_next_spell_this_turn = false;
             pl.next_spell_convoke_this_turn = false;
             pl.next_spell_flash_this_turn = false;

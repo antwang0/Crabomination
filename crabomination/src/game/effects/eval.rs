@@ -2829,6 +2829,10 @@ impl GameState {
                     .find(|(c, _)| c == color)
                     .is_some_and(|(_, n)| *n >= *at_least)
             }
+            Predicate::ColorlessManaSpentAtLeast(n) => {
+                let colored: u32 = ctx.mana_spent_by_color.iter().map(|(_, k)| *k).sum();
+                ctx.mana_spent.saturating_sub(colored) >= *n
+            }
             Predicate::SourceCastWithColorSpent { color, at_least } => {
                 ctx.source
                     .and_then(|s| self.find_card_anywhere(s))
@@ -5004,6 +5008,21 @@ impl GameState {
                             }
                         })
                     }
+                    R::TargetsAPermanentYouControlMatching(inner) => {
+                        let hits = |t: &crate::game::types::Target| {
+                            matches!(t, crate::game::types::Target::Permanent(pid)
+                                if self.battlefield.iter().any(|o| o.id == *pid && o.controller == controller)
+                                    && self.evaluate_requirement_static(inner, t, controller, source))
+                        };
+                        self.stack.iter().any(|si| match si {
+                            StackItem::Spell { card: c, target, additional_targets, .. } => {
+                                c.id == card.id && target.iter().chain(additional_targets.iter()).any(hits)
+                            }
+                            StackItem::Trigger { source: sid, target, .. } => {
+                                *sid == card.id && target.iter().any(hits)
+                            }
+                        })
+                    }
                     R::SpellTargetsOnlySource => source.is_some_and(|src| {
                         self.stack.iter().any(|si| {
                             let StackItem::Spell { card: c, target, additional_targets, .. } = si
@@ -6071,7 +6090,7 @@ impl GameState {
                 card.definition.subtypes.creature_types.contains(&ct)
                     || card.has_keyword(&crate::card::Keyword::Changeling)
             }),
-            R::SameNameAsTarget | R::TargetsALandYouControl => false,
+            R::SameNameAsTarget | R::TargetsALandYouControl | R::TargetsAPermanentYouControlMatching(_) => false,
             // Count walks the battlefield for the evaluating controller's
             // matching permanents; the candidate's own zone is irrelevant.
             R::ManaValueAtMostControllerHand => {

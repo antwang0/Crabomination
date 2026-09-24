@@ -560,6 +560,22 @@ impl GameState {
                 ..Default::default()
             });
         }
+        // Darksteel Monolith — once each turn, {0} for a matching spell cast
+        // from hand.
+        if matches!(zone, AltCastZone::Hand)
+            && !self.players[p].zero_alt_cast_used_this_turn
+            && self.battlefield.iter().any(|c| {
+                c.controller == p
+                    && c.definition.static_abilities.iter().any(|sa| match &sa.effect {
+                        crate::effect::StaticEffect::ZeroAlternativeCostOncePerTurn { filter } => {
+                            self.evaluate_requirement_on_card(filter, card, p)
+                        }
+                        _ => false,
+                    })
+            })
+        {
+            return Some(crate::card::AlternativeCost { once_per_turn_zero: true, ..Default::default() });
+        }
         // Dream Halls — every seat may discard a card sharing a colour with
         // the spell instead of paying for it. Colourless spells share no
         // colour, so they get no discount.
@@ -13094,6 +13110,9 @@ impl GameState {
 
         if alt.once_per_turn_grant {
             self.players[p].life_alt_cast_used_this_turn = true;
+        }
+        if alt.once_per_turn_zero {
+            self.players[p].zero_alt_cast_used_this_turn = true;
         }
         // Pay the life portion of the alt cost (CR 119.4; applied
         // amount honors cannot-lose replacements).

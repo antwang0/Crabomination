@@ -1734,3 +1734,72 @@ fn cr_107_4e_colorless_hybrid_pips() {
     let ulalek = catalog::ulalek_fused_atrocity();
     assert_eq!(crabomination::color_identity::color_identity(&ulalek).len(), 5);
 }
+
+// ── Primitives for Eldrazi Unbound (CMM, Zhulodok) ─────────────────────────
+
+/// CR 118.9 — "Once each turn, you may pay {0} rather than pay the mana
+/// cost for a colorless spell you cast from your hand" (Darksteel Monolith):
+/// the first colorless spell is free, the second isn't, and a colored one
+/// never is.
+#[test]
+fn cr_118_9_a_zero_alternative_cost_once_each_turn() {
+    let mut g = commander_game();
+    g.add_card_to_battlefield(0, catalog::darksteel_monolith());
+    let alt = |g: &mut GameState, id| {
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::CastSpellAlternative {
+            card_id: id,
+            pitch_card: None,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+    };
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    assert!(alt(&mut g, bear).is_err(), "a green spell");
+    let a = g.add_card_to_hand(0, catalog::sol_ring());
+    let b = g.add_card_to_hand(0, catalog::arcane_signet());
+    alt(&mut g, a).expect("the first colorless spell is free");
+    drain_stack(&mut g);
+    assert!(alt(&mut g, b).is_err(), "once each turn");
+}
+
+/// CR 115.10 — "target spell or ability that targets a permanent you
+/// control" (Not of This World): a Bolt at your creature is legal, a Bolt at
+/// a player isn't; and the {7} discount needs a power-7 creature targeted.
+#[test]
+fn a_spell_that_targets_a_permanent_you_control() {
+    use crabomination::mana::Color;
+    let mut g = game_with_format(Format::Commander, 3);
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("bolt the bear");
+    let not = g.add_card_to_hand(0, catalog::not_of_this_world());
+    g.priority.player_with_priority = 0;
+    let cast = |g: &mut GameState| {
+        g.perform_action(GameAction::CastSpell {
+            card_id: not,
+            target: Some(Target::Permanent(bolt)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+    };
+    assert!(cast(&mut g).is_err(), "{{7}} with no mana — a 2/2 earns no discount");
+    g.players[0].mana_pool.add_colorless(7);
+    cast(&mut g).expect("the Bolt targets our Bears");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some(), "countered");
+}
