@@ -653,9 +653,13 @@ cast gate now refuses Jaya's Immolating Inferno without a legendary creature or
 planeswalker (`game/legendary_spell.rs`); `StaticEffect::AttachedIsLegendary`
 (On Serra's Wings, layer 4, with the legend rule's scan bit). ⚠ **The census
 found Wild Ricochet castable by no bot path**: the copy window read only a
-`Seq`'s first step, and Ricochet retargets before it copies. Residuals: **Dawn
-Charm**'s counter mode also takes a spell that targets a permanent you control;
-**Timely Ward** has flash while any commander is on the battlefield. Debug pods
+`Seq`'s first step, and Ricochet retargets before it copies. The two residuals
+it landed with were closed after: **Dawn Charm**'s counter mode takes only a
+spell that targets you (`SpellTargetsMatching(Player & ControlledByYou)`), and
+**Timely Ward**'s flash reads its declared target
+(`StaticEffect::SelfFlashIfTargets`). ⚠ The same pass found an Equipment's
+"whenever equipped creature is dealt damage" lost when the damage killed the
+host (Blazing Sunsteel; CR 603.2 — fixed in the death-snapshot walk). Debug pods
 beside Tegwyll / Ghave / Edgar / Sigarda (seeds 9271/9272, 60 games) decided
 60/60, zero panics; after the fix a 120-game census (seed 9273) leaves no card
 unplayed. `--bench` byte-identical.

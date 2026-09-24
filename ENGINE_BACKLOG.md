@@ -247,6 +247,24 @@ the handoff.
   Scheme's connive (convokers on the resolving spell), Colossal Grave-Reaver's
   pick (mill BATCHES aren't delimited in `milled_ids_this_turn`).
 
+## FIXED 2026-09-24 (the Commander routine) — an Equipment-granted damage trigger died with its host, and two bot response gaps
+
+- **CR 603.2 / 704.3 — "whenever equipped creature is dealt damage" was lost
+  on lethal damage.** The dispatcher's death-snapshot walk fired printed and
+  static-granted `DealtDamage` triggers from LKI but never an Equipment's
+  `EquipBonus.triggered_abilities`, and the SBA lethal path did not record
+  the host's riders. Blazing Sunsteel on a creature that died to the damage
+  did nothing. The SBA path now records riders in `auras_at_death` (the
+  destroy path already did; the orphan-Aura sweep dedupes) and the walk reads
+  their Equipment triggers (`cr_603_2_an_equipment_damage_trigger_survives_lethal_damage`).
+- **No bot path answered a sweeper.** `pick_sweeper_shield` resolves the
+  opponent's top spell in a clone and, when it would take two or more of our
+  nonland permanents, casts a phase-out / indestructible instant at every
+  own-side slot (Clever Concealment was unplayed in a 1,000-game census).
+- **"Each of X targets" was castable by no bot path** (Meteor Blast,
+  Doppelgang): the slot walker fills every slot, so `TargetsExactlyX` never
+  validated; `exactly_x_targets` picks the targets and sets X to their count.
+
 ## FIXED 2026-09-23 (the Commander routine) — combat was torn down as regular damage was dealt (CR 511.3)
 
 `resolve_combat_into` cleared `attacking`, `block_map`, blocked attackers,
