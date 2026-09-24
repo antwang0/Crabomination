@@ -20,6 +20,7 @@ mod cmdr_ob_nixilis;
 mod cmdr_strefan;
 mod cmdr_meren;
 mod cmdr_quandrix;
+mod layer_stateful_filters;
 mod dsk2;
 mod dsk_rooms;
 mod recent_118_132;

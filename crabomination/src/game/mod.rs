@@ -29845,6 +29845,24 @@ fn requirement_live_leaves(req: &SelectionRequirement) -> u8 {
         R::IsModified => 1,
         R::IsEquipped | R::EquippedByAtLeast(_) => 2,
         R::IsAttacking | R::IsAttackingYou => 4,
+        // Leaves that read other live state or the source — a blocker, an
+        // enchanted creature, the commander designation, a name, the
+        // source's own choice. None is printed-characteristics-only, so
+        // `affected_from_requirement` routes none of them; without this arm
+        // every `PumpPT` / `GrantKeyword` over one was dropped whole (Song of
+        // Serenity, Shield of Kaldra, Hellspur Posse Boss, Radiant Destiny —
+        // the ratchet below names the class).
+        R::IsBlocking
+        | R::IsAttackingAlone
+        | R::IsBlockingAlone
+        | R::IsEnchanted
+        | R::IsOutlaw
+        | R::IsSource
+        | R::IsCommander
+        | R::HasNoAbilities
+        | R::HasName(_)
+        | R::IsSourceChosenCreatureType
+        | R::HasChosenLandTypeOfSource => 8,
         R::And(a, b) | R::Or(a, b) => requirement_live_leaves(a) | requirement_live_leaves(b),
         R::Not(inner) => requirement_live_leaves(inner),
         _ => 0,
@@ -30739,4 +30757,41 @@ pub enum DrawOutcome {
     /// CR 104.3c — a draw was attempted and the library was empty. The
     /// caller arms [`GameState::lose_to_empty_draw`].
     EmptyLibrary,
+}
+
+#[cfg(test)]
+mod dropped_static_ratchet {
+    /// A `PumpPT` / `GrantKeyword` static over `EachPermanent(filter)` reaches
+    /// the layer system one of two ways: the printed-characteristics router
+    /// (`affected_from_requirement`), or the gather's live resolution
+    /// (`requirement_needs_live_resolution`). A filter neither takes is
+    /// dropped whole, so the card does nothing — eight catalog cards did
+    /// (Song of Serenity, Shield of Kaldra, Hellspur Posse Boss, …).
+    #[test]
+    fn every_filtered_pump_or_grant_static_reaches_the_layers() {
+        use crate::effect::{Selector, StaticEffect as SE};
+        let mut dropped = Vec::new();
+        for f in crate::card_registry::all_known_factories() {
+            let def = f();
+            for sa in &def.static_abilities {
+                let mut e = &sa.effect;
+                while let SE::WhileCondition { inner, .. }
+                | SE::WhileYourTurn { inner }
+                | SE::WhileNotYourTurn { inner } = e
+                {
+                    e = inner;
+                }
+                if let SE::PumpPT { applies_to: Selector::EachPermanent(req), .. }
+                | SE::GrantKeyword { applies_to: Selector::EachPermanent(req), .. } = e
+                    && super::affected_from_requirement(req, 0).is_none()
+                    && !super::requirement_needs_live_resolution(req)
+                {
+                    dropped.push(format!("{} :: {req:?}", def.name));
+                }
+            }
+        }
+        dropped.sort();
+        dropped.dedup();
+        assert!(dropped.is_empty(), "{} statics reach no layer:\n{}", dropped.len(), dropped.join("\n"));
+    }
 }
