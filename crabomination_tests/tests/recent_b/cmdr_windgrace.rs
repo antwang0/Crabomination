@@ -66,28 +66,6 @@ fn declare(g: &mut GameState, seat: usize, attacks: Vec<Attack>) -> Result<(), S
     g.would_accept(GameAction::DeclareAttackers(attacks)).then_some(()).ok_or_else(|| "rejected".to_string())
 }
 
-/// Swing, no blocks, and run combat out to its end step, dispatching what
-/// each bare `advance_step` hands back.
-fn swing_through(g: &mut GameState, seat: usize, attacks: Vec<Attack>, victim: usize) {
-    g.active_player_idx = seat;
-    g.step = TurnStep::DeclareAttackers;
-    g.priority.player_with_priority = seat;
-    g.perform_action(GameAction::DeclareAttackers(attacks)).expect("attack");
-    drain_stack(g);
-    g.step = TurnStep::DeclareBlockers;
-    g.priority.player_with_priority = victim;
-    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no blocks");
-    for _ in 0..8 {
-        if g.step == TurnStep::PostCombatMain {
-            break;
-        }
-        if let Ok(ev) = g.advance_step(Vec::new()) {
-            g.dispatch_triggers_for_events(&ev);
-        }
-        drain_stack(g);
-    }
-}
-
 /// CR 606.3 — Lord Windgrace's +2 discards, then draws; a land discarded
 /// this way draws one more.
 #[test]
