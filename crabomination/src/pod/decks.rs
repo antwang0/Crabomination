@@ -3071,3 +3071,35 @@ pub const UR_DRAGON_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, swamp, swamp, swamp, forest,
     forest, forest, plains, plains, plains, island, island, island,
 ];
+
+pub const ULALEK_COMMANDERS: &[CardFactory] = &[ulalek_fused_atrocity];
+
+/// **Eldrazi Incursion**, the Modern Horizons 3 Commander five-color deck (M3C,
+/// 2024-06-14), exactly as MTGJSON's `EldraziIncursion_M3C` prints it: 93
+/// nonbasic cards + 1 Plains + 1 Island + 1 Swamp + 1 Mountain + 1 Forest + 1 Wastes = 99. Colorless Eldrazi under Ulalek, Fused
+/// Atrocity.
+pub const ULALEK_MAIN: &[CardFactory] = &[
+    azlask_the_swelling_scourge, ulamogs_dreadsire, benthic_anomaly, eldritch_immunity,
+    selective_obliteration, angelic_aberration, bismuth_mindrender, hideous_taskmaster,
+    twins_of_discord, mutated_cultist, eldrazi_confluence, spawnbed_protector,
+    chittering_dispatcher, inversion_behemoth, ugin_the_ineffable, eldrazi_conscription,
+    cascading_cataracts, eldrazi_monument, sire_of_stagnation, shrine_of_the_forsaken_gods,
+    ugins_insight, drowner_of_hope, return_of_the_wildspeaker, tendo_ice_bridge,
+    battlefield_forge, llanowar_wastes, brushland, underground_river, oblivion_sower,
+    adarkar_wastes, karplusan_forest, yavimaya_coast, sulfurous_springs, caves_of_koilos,
+    shivan_reef, imprisoned_in_the_moon, temple_of_malady, temple_of_silence,
+    morophon_the_boundless, kozileks_return, world_breaker, ruins_of_oran_rief,
+    sifter_of_skulls, endbringer, corrupted_crossroads, deepfathom_skulker, vile_redeemer,
+    eldrazi_displacer, mystic_forge, all_is_dust, rishkars_expertise, awakening_zone,
+    eldrazi_temple, elder_deep_fiend, bonders_enclave, exotic_orchard, forsaken_monument,
+    snapping_voidcraw, heralds_horn, everflowing_chalice, glaring_fleshraker,
+    wastescape_battlemage, crib_swap, titans_vanguard, talisman_of_resilience, hedron_archive,
+    spawning_bed, ulamogs_nullifier, twisted_landscape, tranquil_landscape, tectonic_edge,
+    reliquary_tower, sol_ring, artisan_of_kozilek, opal_palace, dreamstone_hedron,
+    arcane_signet, tomb_of_the_spirit_dragon, secluded_courtyard, idol_of_oblivion,
+    talisman_of_curiosity, talisman_of_impulse, warping_wail, talisman_of_dominance,
+    command_tower, ash_barrens, ancient_stirrings, ulamogs_crusher, garruks_uprising,
+    suffer_the_past, skittering_invasion, path_of_ancestry, unclaimed_territory,
+    // Basics: 1 plains, 1 island, 1 swamp, 1 mountain, 1 forest, 1 wastes
+    plains, island, swamp, mountain, forest, wastes,
+];

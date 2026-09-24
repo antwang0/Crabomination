@@ -835,6 +835,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::UR_DRAGON_COMMANDERS,
             main: decks::UR_DRAGON_MAIN,
         },
+        // Hundredth: the ninetieth official list (Eldrazi Incursion, M3C) —
+        // colorless Eldrazi under Ulalek, Fused Atrocity. `--pod-decks 100`.
+        PodDeck {
+            name: "Ulalek, Fused Atrocity (WUBRG)",
+            commanders: decks::ULALEK_COMMANDERS,
+            main: decks::ULALEK_MAIN,
+        },
     ]
 }
 
