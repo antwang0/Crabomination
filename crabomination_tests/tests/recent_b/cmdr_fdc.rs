@@ -3586,3 +3586,176 @@ fn stalking_leonin_exiles_the_chosen_attacker() {
     drain_stack(&mut g);
     assert!(g.exile.iter().any(|c| c.id == giant));
 }
+
+// ── Primal Genesis (C19, Ghired, Conclave Exile) ────────────────────────────
+
+/// CR 701.36 — Ghired populates as it attacks, the copy tapped and attacking.
+#[test]
+fn cr_701_36_ghired_populates_an_attacking_rhino() {
+    let mut g = main_phase();
+    let gh = g.add_card_to_hand(0, catalog::ghired_conclave_exile());
+    cast(&mut g, gh, &[]);
+    assert_eq!(count_named(&g, 0, "Rhino"), 1);
+    g.clear_sickness(gh);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: gh,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(count_named(&g, 0, "Rhino"), 2);
+    let copy = g.battlefield.iter().filter(|c| c.definition.name == "Rhino").last().unwrap().id;
+    assert!(g.attacking.iter().any(|a| a.attacker == copy), "the populated Rhino attacks");
+}
+
+/// CR 506.1 — Marisi stops opponents (only) from casting during combat.
+#[test]
+fn cr_506_1_marisi_silences_opponents_in_combat() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::marisi_breaker_of_the_coil());
+    g.step = TurnStep::DeclareBlockers;
+    let theirs = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.priority.player_with_priority = 1;
+    assert!(try_cast(&mut g, 1, theirs, &[Target::Player(0)]).is_err());
+    let mine = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.priority.player_with_priority = 0;
+    try_cast(&mut g, 0, mine, &[Target::Player(1)]).expect("the controller still casts");
+}
+
+/// Tectonic Hellion — every player tied for most lands sacrifices two; the
+/// tie is fixed before anyone sacrifices.
+#[test]
+fn tectonic_hellion_hits_everyone_tied_for_most_lands() {
+    let mut g = main_phase();
+    let h = g.add_card_to_battlefield(0, catalog::tectonic_hellion());
+    for seat in [0, 1] {
+        for _ in 0..3 {
+            g.add_card_to_battlefield(seat, catalog::forest());
+        }
+    }
+    combat(&mut g, vec![Attack { attacker: h, target: AttackTarget::Player(1) }], 0, |_| {});
+    assert_eq!((count_named(&g, 0, "Forest"), count_named(&g, 1, "Forest")), (1, 1));
+}
+
+/// The rest of Primal Genesis, one assertion each.
+#[test]
+fn primal_genesis_cards() {
+    // Full Flowering: populate X = 2 times.
+    let mut g = main_phase();
+    let gh = g.add_card_to_hand(0, catalog::ghired_conclave_exile());
+    cast(&mut g, gh, &[]);
+    let ff = g.add_card_to_hand(0, catalog::full_flowering());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: ff,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(2),
+    })
+    .expect("X=2");
+    drain_stack(&mut g);
+    assert_eq!(count_named(&g, 0, "Rhino"), 3);
+
+    // Second Harvest copies each token; Song of the Worldsoul populates.
+    let sh = g.add_card_to_hand(0, catalog::second_harvest());
+    cast(&mut g, sh, &[]);
+    assert_eq!(count_named(&g, 0, "Rhino"), 6);
+    g.add_card_to_battlefield(0, catalog::song_of_the_worldsoul());
+    let st = g.add_card_to_hand(0, catalog::slice_in_twain());
+    let rock = g.add_card_to_battlefield(1, catalog::sol_ring());
+    g.add_card_to_library(0, catalog::island());
+    cast(&mut g, st, &[Target::Permanent(rock)]);
+    assert!(g.battlefield_find(rock).is_none());
+    assert_eq!(count_named(&g, 0, "Rhino"), 7);
+
+    // Atla Palani: an Egg dying reveals a creature onto the battlefield.
+    let mut g = main_phase();
+    let atla = g.add_card_to_battlefield(0, catalog::atla_palani_nest_tender());
+    g.clear_sickness(atla);
+    g.add_card_to_library(0, catalog::hill_giant());
+    g.add_card_to_library(0, catalog::island());
+    g.players[0].library.reverse();
+    activate(&mut g, atla, 0, None).expect("egg");
+    let egg = g.battlefield.iter().find(|c| c.definition.name == "Egg").unwrap().id;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, &[Target::Permanent(egg)]);
+    assert_eq!(count_named(&g, 0, "Hill Giant"), 1);
+
+    // Cliffside Rescuer: protection shields a creature from an opposing bolt.
+    let mut g = main_phase();
+    let r = g.add_card_to_battlefield(0, catalog::cliffside_rescuer());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(r);
+    flood(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: r,
+        ability_index: 0,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("sacrifice for protection");
+    drain_stack(&mut g);
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.priority.player_with_priority = 1;
+    assert!(try_cast(&mut g, 1, bolt, &[Target::Permanent(bear)]).is_err());
+
+    // Commander's Insignia: +1/+1 per command-zone cast.
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::commanders_insignia());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let cmdr = g.add_card_to_battlefield(0, catalog::hill_giant());
+    g.players[0].commanders.push(cmdr);
+    g.commander_cast_count.insert(cmdr, 2);
+    assert_eq!(pt(&g, bear), (4, 4));
+
+    // Doomed Artisan: a Sculpture each end step, sized by the count, benched.
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::doomed_artisan());
+    pass_to_end_step(&mut g);
+    let s = g.battlefield.iter().find(|c| c.definition.name == "Sculpture").unwrap().id;
+    assert_eq!(pt(&g, s), (1, 1));
+    assert!(g.computed_permanent(s).unwrap().keywords().contains(&Keyword::CantAttack));
+
+    // Mimic Vat imprints a dead creature and mints a hasty copy.
+    let mut g = main_phase();
+    let vat = g.add_card_to_battlefield(0, catalog::mimic_vat());
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, &[Target::Permanent(giant)]);
+    assert!(g.exile.iter().any(|c| c.id == giant));
+    activate(&mut g, vat, 0, None).expect("copy");
+    assert_eq!(count_named(&g, 0, "Hill Giant"), 1);
+
+    // Selesnya Eulogist: exile a graveyard creature, then populate.
+    let mut g = main_phase();
+    let gh = g.add_card_to_hand(0, catalog::ghired_conclave_exile());
+    cast(&mut g, gh, &[]);
+    let dead = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let eu = g.add_card_to_battlefield(0, catalog::selesnya_eulogist());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: eu,
+        ability_index: 0,
+        target: Some(Target::Permanent(dead)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("eulogy");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == dead) && count_named(&g, 0, "Rhino") == 2);
+
+    // Voice of Many: one card for the opponent with fewer creatures.
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    let v = g.add_card_to_hand(0, catalog::voice_of_many());
+    let hand = g.players[0].hand.len();
+    cast(&mut g, v, &[]);
+    assert_eq!(g.players[0].hand.len(), hand - 1 + 1);
+}
