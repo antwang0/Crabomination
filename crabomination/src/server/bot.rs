@@ -3199,7 +3199,15 @@ impl HeuristicBot {
                 {
                     return Some(BotStep::plain(a));
                 }
-                Some(main_phase_action_with(state, seat, self.scored, &self.weights))
+                let action = main_phase_action_with(state, seat, self.scored, &self.weights);
+                // CR 702.143a — nothing better to do: foretell with the idle mana.
+                if matches!(action.action, GameAction::PassPriority)
+                    && state.stack.is_empty()
+                    && let Some(a) = super::foretell::pick_foretell(state, seat)
+                {
+                    return Some(BotStep::plain(a));
+                }
+                Some(action)
             }
             // Opponent's end step with an empty stack — the bot's canonical
             // off-turn window. Reuse the whole scored main-phase enumeration:
@@ -8118,6 +8126,17 @@ pub(super) fn cast_candidates<'a>(
                 (None, vec![])
             };
             GameAction::CastPlotted {
+                card_id: c.id, target, additional_targets, mode: None, x_value: None,
+            }
+        } else if state.is_foretold(c) && !c.definition.is_land() {
+            // CR 702.143c — a foretold card, cast for its foretell cost on a
+            // later turn (`would_accept` enforces the turn and the timing).
+            let (target, additional_targets) = if c.definition.effect.requires_target() {
+                state.auto_targets_for_effect_all_slots(&c.definition.effect, seat, None)
+            } else {
+                (None, vec![])
+            };
+            GameAction::CastForetold {
                 card_id: c.id, target, additional_targets, mode: None, x_value: None,
             }
         } else {
@@ -16026,6 +16045,7 @@ fn ward_gate_ok(state: &GameState, seat: usize, action: &GameAction) -> bool {
         | GameAction::CastSpellAlternative { card_id, target, additional_targets, .. }
         | GameAction::CastAdventureCreature { card_id, target, additional_targets, .. }
         | GameAction::CastPlotted { card_id, target, additional_targets, .. }
+        | GameAction::CastForetold { card_id, target, additional_targets, .. }
         | GameAction::CastFromCommandZone { card_id, target, additional_targets, .. } => {
             (WardedCost::Spell(*card_id), target, additional_targets.as_slice())
         }
@@ -18644,7 +18664,8 @@ fn score_candidate(state: &GameState, seat: usize, action: &GameAction, w: &Eval
             (*card_id, target.clone(), 0, 0)
         }
         GameAction::CastAdventureCreature { card_id, target, .. }
-        | GameAction::CastPlotted { card_id, target, .. } => (*card_id, target.clone(), 0, 0),
+        | GameAction::CastPlotted { card_id, target, .. }
+        | GameAction::CastForetold { card_id, target, .. } => (*card_id, target.clone(), 0, 0),
         GameAction::ActivateAbility { card_id, target, .. } => (*card_id, target.clone(), 0, 0),
         // Loyalty activations: the target term is what differentiates them
         // (a −3 destroy at a 5-drop should out-score "+2: gain 3"); the

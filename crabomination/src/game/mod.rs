@@ -1448,6 +1448,11 @@ pub struct ColdState {
     /// attacking. Cleared with the rest of combat (CR 511.3).
     #[serde(default)]
     pub(crate) left_while_attacking: Vec<CardId>,
+    /// CR 702.143 — foretell costs an effect gave a card it foretold
+    /// (Ethereal Valkyrie: its mana cost less {2}). Read with the printed
+    /// cost by `cast_foretold`; dropped when the card is cast.
+    #[serde(default)]
+    pub(crate) granted_foretell_costs: Vec<(CardId, crate::mana::ManaCost)>,
     /// Transient: colors of the most-recently-sacrificed cost permanent —
     /// Lyzolda's `Predicate::SacrificedWasColor`. Set on the sacrifice-cost
     /// paths; reset between resolutions.
@@ -2113,6 +2118,14 @@ pub struct ResolutionScratch {
     /// however control moved.
     #[serde(skip, default)]
     pub(crate) pending_control_changes: Vec<(CardId, usize, usize)>,
+    /// Cards put into exile from each player's hand, or exiled from the
+    /// battlefield by a spell or ability that player controlled, since the
+    /// last trigger dispatch: `(seat, count)`, one entry per seat. Recorded by
+    /// `note_exiled_from_hand_or_by` and drained by
+    /// `dispatch_triggers_for_events` into `GameEvent::CardsExiledFromHandOrBy`
+    /// (Ranar the Ever-Watchful, Hero of Bretagard).
+    #[serde(skip, default)]
+    pub(crate) pending_exile_tally: Vec<(usize, u32)>,
     /// Identity of the spell currently resolving — (card id, caster, printed
     /// colors). Stamped around `resolve_effect` in spell resolution so
     /// source-aware damage replacements (Torbran) can read the controller and
@@ -21658,6 +21671,7 @@ impl GameState {
             && self.scratch.pending_cost_triggers.is_empty()
             && self.pending_permanent_deaths.is_empty()
             && self.scratch.pending_control_changes.is_empty()
+            && self.scratch.pending_exile_tally.is_empty()
         {
             return;
         }
@@ -21687,13 +21701,14 @@ impl GameState {
         // CR 800.4 — control changes recorded at the `change_control`
         // chokepoint since the last dispatch (Risky Move's hand-off).
         let control_changes: Vec<_> = take_scratch!(self.pending_control_changes);
+        let exile_tally: Vec<(usize, u32)> = take_scratch!(self.pending_exile_tally);
         // Nothing to fire and nothing to synthesize. The two takes above are
         // all the state this call has touched by here, so this leaves exactly
         // what the `events.is_empty()` return below leaves — without the
         // synthesis collect, the graveyard-batch count walk or the per-event
         // match. `perform_action_inner` drains every action's event list
         // through here, so the empty batch is a common one.
-        if events.is_empty() && deaths.is_empty() && control_changes.is_empty() {
+        if events.is_empty() && deaths.is_empty() && control_changes.is_empty() && exile_tally.is_empty() {
             return;
         }
         // Replay the deaths' causing spell/ability over the dispatch: the
@@ -21707,7 +21722,10 @@ impl GameState {
         // at the fifty-fourth tip — the ones that get past the empty-batch
         // return above. (It read 53,838 when the gate was written; the count
         // is the workload's, not the gate's, and it moves.)
-        let synthesized: Vec<GameEvent> = if deaths.is_empty() && control_changes.is_empty() {
+        let synthesized: Vec<GameEvent> = if deaths.is_empty()
+            && control_changes.is_empty()
+            && exile_tally.is_empty()
+        {
             Vec::new()
         } else {
             deaths
@@ -21721,6 +21739,9 @@ impl GameState {
                 })
                 .chain(control_changes.into_iter().map(|(card_id, from, to)| {
                     GameEvent::ControlChanged { card_id, from, to }
+                }))
+                .chain(exile_tally.into_iter().map(|(player, count)| {
+                    GameEvent::CardsExiledFromHandOrBy { player, count }
                 }))
                 .collect()
         };
@@ -27480,6 +27501,18 @@ impl GameState {
     /// for died events it's the dying card's mana value (Scrap Trawler's
     /// "lesser mana value than that artifact"), read from the death
     /// snapshot cache (tokens are already gone from every zone).
+    /// Tally one card put into exile from `seat`'s hand, or exiled from the
+    /// battlefield by a spell or ability `seat` controls, for the next
+    /// dispatch's `GameEvent::CardsExiledFromHandOrBy` (Ranar, Hero of
+    /// Bretagard — "whenever one or more cards …", CR 603.2c).
+    pub(crate) fn note_exiled_from_hand_or_by(&mut self, seat: usize) {
+        let tally = &mut self.scratch.pending_exile_tally;
+        match tally.iter_mut().find(|(s, _)| *s == seat) {
+            Some((_, n)) => *n += 1,
+            None => tally.push((seat, 1)),
+        }
+    }
+
     pub(crate) fn event_amount_for(&self, ev: &GameEvent) -> u32 {
         match ev {
             // `printed_cmc`, not `cost.cmc()`: this arm is 13,178 calls a
@@ -28121,6 +28154,7 @@ fn event_amount(event: &GameEvent) -> u32 {
         | GameEvent::DamagePrevented { amount, .. }
         | GameEvent::EnergyGained { amount, .. } => *amount,
         GameEvent::DiscardedBatch { count, .. } => *count,
+        GameEvent::CardsExiledFromHandOrBy { count, .. } => *count,
         GameEvent::CounterAdded { count, .. } => *count,
         GameEvent::CounterRemoved { count, .. } => *count,
         GameEvent::Discovered { value, .. } => *value,
@@ -30092,6 +30126,8 @@ fn static_effect_to_effects(
             | StaticEffect::TaxOpponentSpellsTargetingThis { .. }
             | StaticEffect::OpponentsCantCastDuringYourTurn
             | StaticEffect::OpponentsCantCastDuringYourTurnWhileAttached
+            // Ranar — read by the foretell special action; no layer.
+            | StaticEffect::FirstForetellEachTurnFree
             // PlayersCastOnlyOnOwnTurn (Dosan) — consulted at the cast
             // dispatch; no layer effect.
             | StaticEffect::PlayersCastOnlyOnOwnTurn

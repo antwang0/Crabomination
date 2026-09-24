@@ -2663,6 +2663,11 @@ pub enum GameEvent {
     DamagePrevented { amount: u32, to_player: Option<usize>, to_card: Option<CardId> },
     LifeLost { player: usize, amount: u32 },
     LifeGained { player: usize, amount: u32 },
+    /// `count` cards left `player`'s hand for exile, or were exiled from the
+    /// battlefield by a spell or ability `player` controlled, since the last
+    /// trigger dispatch — synthesized there from `pending_exile_tally`
+    /// (Ranar, Hero of Bretagard).
+    CardsExiledFromHandOrBy { player: usize, count: u32 },
     /// A player paid life as a cost (CR 118.8 — Font of Agonies). Distinct
     /// from `LifeLost`, which also fires for damage and drains.
     PaidLife { player: usize, amount: u32 },

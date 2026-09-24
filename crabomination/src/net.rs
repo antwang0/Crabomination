@@ -2746,6 +2746,8 @@ pub enum GameEventWire {
     DamagePrevented { amount: u32, to_player: Option<usize>, to_card: Option<CardId> },
     LifeLost { player: usize, amount: u32 },
     LifeGained { player: usize, amount: u32 },
+    /// Wire mirror of `GameEvent::CardsExiledFromHandOrBy`.
+    CardsExiledFromHandOrBy { player: usize, count: u32 },
     PaidLife { player: usize, amount: u32 },
     /// Wire mirror of `GameEvent::ScriedOrSurveiled`.
     ScriedOrSurveiled { player: usize, surveil: bool },
@@ -2976,6 +2978,9 @@ impl From<&GameEvent> for GameEventWire {
                 player: *player,
                 amount: *amount,
             },
+            GameEvent::CardsExiledFromHandOrBy { player, count } => {
+                GameEventWire::CardsExiledFromHandOrBy { player: *player, count: *count }
+            }
             GameEvent::LifeGained { player, amount } => GameEventWire::LifeGained {
                 player: *player,
                 amount: *amount,
@@ -3348,6 +3353,9 @@ impl GameEventWire {
             },
             E::LifeLost { player, amount } => format!("{} loses {amount} life", pn(*player)),
             E::LifeGained { player, amount } => format!("{} gains {amount} life", pn(*player)),
+            E::CardsExiledFromHandOrBy { player, count } => {
+                format!("{count} card(s) exiled from {}'s hand or by them", pn(*player))
+            }
             E::PaidLife { player, amount } => format!("{} pays {amount} life", pn(*player)),
             // Internal "you scried/surveiled" trigger event — the concrete
             // ScryPerformed/SurveilPerformed line already covers the log, so

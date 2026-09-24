@@ -6832,8 +6832,10 @@ impl GameState {
     }
 
     /// CR 702.143 — foretell a card from hand: pay {2} and exile it
-    /// face-down. Sorcery-speed only (CR 702.143b). The card can be cast for
-    /// its foretell cost on a later turn via `cast_foretold`.
+    /// face-down. A special action, legal any time its owner has priority
+    /// during their own turn (CR 702.143a — not only at sorcery speed). The
+    /// card can be cast for its foretell cost on a later turn via
+    /// `cast_foretold`.
     pub(crate) fn foretell_card(&mut self, card_id: CardId) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
         let has_foretell = self.players[p]
@@ -6845,15 +6847,15 @@ impl GameState {
         if !has_foretell {
             return Err(GameError::CardNotInHand(card_id));
         }
-        if !self.can_cast_sorcery_speed(p) {
+        if !self.on_active_team(p) {
             return Err(GameError::SorcerySpeedOnly);
         }
-        // The foretell *action* always costs {2}.
-        let cost = crate::mana::ManaCost {
-            symbols: vec![crate::mana::ManaSymbol::Generic(2)],
-        };
+        // The foretell *action* costs {2} — {0} for the first under Ranar.
+        let cost = self.foretell_action_cost(p);
         let forced_only = self.players[p].manual_mana;
-        let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
+        // Niko Defies Destiny's mana may pay the action ("to foretell cards").
+        let kind = crate::mana::SpellKind { foretell: true, ..Default::default() };
+        let receipt = self.try_pay_with_auto_tap_kind(p, &cost, forced_only, &kind)?;
         let mut events = receipt.auto_events;
         let mut card = self
             .players[p]
@@ -6862,6 +6864,7 @@ impl GameState {
         card.face_down = true;
         self.exile.push(card);
         self.foretold_this_turn.insert(card_id);
+        self.note_exiled_from_hand_or_by(p);
         events.push(GameEvent::PermanentExiled { card_id });
         Ok(events)
     }
@@ -7081,7 +7084,7 @@ impl GameState {
         let pos = self
             .exile
             .iter()
-            .position(|c| c.id == card_id && c.face_down && c.owner == p)
+            .position(|c| c.id == card_id && c.owner == p && self.is_foretold(c))
             .ok_or(GameError::CardNotInHand(card_id))?;
         // CR 702.143b — not on the turn it was foretold.
         if self.foretold_this_turn.contains(&card_id) {
@@ -7091,11 +7094,8 @@ impl GameState {
         if self.cast_from_zone_blocked(p, &self.exile[pos].definition, crate::card::Zone::Exile) {
             return Err(GameError::CardNotInHand(card_id));
         }
-        let foretell_cost = self.exile[pos]
-            .definition
-            .foretell_cost
-            .clone()
-            .ok_or(GameError::SorcerySpeedOnly)?;
+        let foretell_cost =
+            self.foretold_cast_cost(&self.exile[pos]).ok_or(GameError::SorcerySpeedOnly)?;
         let is_instant = self.exile[pos].definition.is_instant_speed();
         let must_be_sorcery_speed = !is_instant || self.player_locked_to_sorcery_timing(p);
         if must_be_sorcery_speed && !self.can_cast_sorcery_speed(p) {
@@ -7116,7 +7116,10 @@ impl GameState {
         }
         apply_spell_cost_floor(self, &mut cost);
         let forced_only = self.players[p].manual_mana;
-        let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
+        // The spell's own kind, so spend-restricted mana (Niko's "cast spells
+        // that have foretell", a creature-only mana source) sees what it funds.
+        let kind = self.spell_kind_for(p, &self.exile[pos]);
+        let receipt = self.try_pay_with_auto_tap_kind(p, &cost, forced_only, &kind)?;
         self.pay_life_cost(p, receipt.side_effects.life_lost);
         let mana_spent = receipt
             .pool_before
@@ -7126,6 +7129,9 @@ impl GameState {
         let mut card = Self::take_card(&mut self.exile, card_id)
             .ok_or(GameError::CardNotInHand(card_id))?;
         card.face_down = false;
+        if self.granted_foretell_cost(card_id).is_some() {
+            self.granted_foretell_costs.retain(|(c, _)| *c != card_id);
+        }
         let mut events = receipt.auto_events;
         events.push(GameEvent::SpellCast {
             player: p,

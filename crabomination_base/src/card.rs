@@ -854,6 +854,9 @@ pub enum CounterType {
     /// Strife counter — Crescendo of War adds one each upkeep and pumps
     /// attackers (and your blockers) per counter.
     Strife,
+    /// Night counter — Replicating Ring gains one each upkeep; at eight they
+    /// all come off and eight Replicated Rings are made.
+    Night,
     /// Fury counter — Charging Cinderhorn gains one at each end step in which
     /// no creature attacked, and burns that player for the count.
     Fury,
@@ -2566,6 +2569,13 @@ pub enum SelectionRequirement {
     /// True when the candidate has no counters of any kind on it (CR 122).
     /// Powers "target creature with no counters on it" (Heartless Act mode 0).
     HasNoCounters,
+    /// CR 702.143 — a card with foretell (Niko Defies Destiny's "return target
+    /// card with foretell from your graveyard").
+    HasForetell,
+    /// The object is in exile because an until-end-of-turn "if it would die,
+    /// exile it instead" replacement moved it there this turn
+    /// (`dies_to_exile_eot` — Cosmic Intervention's end-step return).
+    ExiledInsteadOfDyingThisTurn,
     /// True when the candidate's name differs from every card moved so far
     /// in the current resolution — "with different names" multi-search
     /// clauses (Saheeli Rai's -7).
@@ -6587,6 +6597,7 @@ impl CardDefinition {
             activating_ability: false,
             lesson: self.subtypes.spell_subtypes.contains(&crate::card::SpellSubtype::Lesson),
             devoid: self.keywords.has_kw(&Keyword::Devoid),
+            foretell: self.foretell_cost.is_some(),
             equipment: self.is_equipment(),
             colorless: colors.is_empty(),
             mana_value: self.cost.cmc(),

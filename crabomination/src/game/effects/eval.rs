@@ -944,6 +944,13 @@ impl GameState {
                 // you control" cards (Reflective Anatomy). Lock-in test:
                 // `tests::stx::reflective_anatomy_pumps_target_by_total_counters`.
                 .sum(),
+            Value::ForetoldCardsOwnedInExile(who) => {
+                let seats = self.resolve_players(who, ctx);
+                self.exile
+                    .iter()
+                    .filter(|c| seats.contains(&c.owner) && self.is_foretold(c))
+                    .count() as i32
+            }
             Value::TotalCountersOn { what } => self
                 .resolve_selector(what, ctx)
                 .into_iter()
@@ -4622,6 +4629,9 @@ impl GameState {
                     R::WithCounterAtLeast(k, n) => card.counter_count(*k) >= *n,
                     R::WithAnyCounter => card.has_any_counter(),
                     R::HasNoCounters => !card.has_any_counter(),
+                    R::HasForetell => card.definition.foretell_cost.is_some(),
+                    R::ExiledInsteadOfDyingThisTurn => self.turn.dies_to_exile_eot.contains(&card.id)
+                        && self.exile.iter().any(|c| c.id == card.id),
                     R::HasSupertype(st) => has_stype(st),
                     R::HasCreatureType(ct) => has_ctype(ct)
                         || card.has_keyword(&crate::card::Keyword::Changeling),
@@ -5906,6 +5916,9 @@ impl GameState {
             R::HasBackFace => card.definition.back_face.is_some(),
             R::HasPrepareSpell => card.definition.prepare_spell.is_some(),
             R::HasNoCounters => !card.has_any_counter(),
+            R::HasForetell => card.definition.foretell_cost.is_some(),
+            R::ExiledInsteadOfDyingThisTurn => self.turn.dies_to_exile_eot.contains(&card.id)
+                && self.exile.iter().any(|c| c.id == card.id),
             // "With different names" — excludes anything sharing a name with
             // a card already moved this resolution (Saheeli Rai -7).
             R::NameDiffersFromLastMoved => !self.scratch.last_moved_cards.iter().any(|id| {

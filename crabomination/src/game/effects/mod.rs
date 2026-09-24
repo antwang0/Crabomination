@@ -30,6 +30,8 @@ mod spell_damage;
 mod static_copy;
 mod table_choices;
 mod planar;
+mod foretell;
+mod hand_exile;
 mod politics;
 mod targeting;
 /// The target enumerator's call-site census — see
@@ -8207,6 +8209,10 @@ impl GameState {
             Effect::SacrificeAllButN { who, keep, filter } => {
                 self.sacrifice_all_but_n(who, keep, filter, ctx, events)
             }
+            Effect::ForetellFromHand { reduce } => self.foretell_from_hand(*reduce, ctx, events, effect),
+            Effect::ExileFromHandCopyCreature { who } => {
+                self.exile_from_hand_copy_creature(who, ctx, events, effect)
+            }
             Effect::EachOpponentChoosesFromGraveyard { filter, to } => {
                 self.each_opponent_chooses_from_graveyard(filter, to, effect, ctx, events)
             }
@@ -9498,6 +9504,7 @@ impl GameState {
                                 continue;
                             };
                             let card = self.players[p].hand.remove(i);
+                            self.note_exiled_from_hand_or_by(p);
                             self.place_card_in_dest(card, p, &ZoneDest::Exile, events);
                             self.scratch.last_moved_cards.push(cid);
                         }

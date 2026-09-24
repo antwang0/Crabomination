@@ -732,6 +732,7 @@ impl Effect {
         }
         match self {
             Effect::DestroyAllNoRegenGainControllerLifePerManaValue { .. }
+            | Effect::ForetellFromHand { .. }
             | Effect::EachPlayerCreatesTokenPerControlled { .. }
             | Effect::SourceEntersTapped
             | Effect::AbandonThisScheme | Effect::GameIsADraw
@@ -1518,6 +1519,7 @@ impl Effect {
             Effect::Discard { who, amount, .. } => sel_has_target(who) || value_has_target(amount),
             Effect::DiscardMatchingAtRandom { who, .. } => player_has_target(who),
             Effect::ExileFromHand { who, amount } => sel_has_target(who) || value_has_target(amount),
+            Effect::ExileFromHandCopyCreature { who } => sel_has_target(who),
             Effect::CastUpToNFromOpponentsExile { count } => value_has_target(count),
             Effect::DiscardAnyNumber { who, .. } => sel_has_target(who),
             Effect::SetNoMaxHandSize { who }
@@ -2978,6 +2980,7 @@ impl Effect {
                 | Effect::SacrificeAllButN { .. }
                 | Effect::SacrificeAndRemember { .. }
                 | Effect::ExileFromHand { .. }
+                | Effect::ExileFromHandCopyCreature { .. }
                 | Effect::ExileChosenFromHand { .. }
                 | Effect::ExilePlayerGraveyard { .. }
                 | Effect::ExileTopOfLibrary { .. }
@@ -4388,7 +4391,9 @@ impl Effect {
                 | Effect::CopyAbility { what, .. }
                 | Effect::GainAllActivatedAbilitiesOf { what, .. }
                 | Effect::LockOrUnlockRoomDoor { what } => sel_find(what, slot),
-                Effect::ExileFromHand { who, .. } | Effect::ManifestFromHand { who, .. } => {
+                Effect::ExileFromHand { who, .. }
+                | Effect::ExileFromHandCopyCreature { who }
+                | Effect::ManifestFromHand { who, .. } => {
                     sel_find(who, slot)
                 }
                 Effect::GrantProtectionFromColorsOf { what, of, .. } => {

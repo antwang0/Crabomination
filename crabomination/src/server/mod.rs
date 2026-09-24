@@ -90,6 +90,7 @@ pub mod bot;
 mod pod_attack;
 mod combat_only;
 mod suspend;
+mod foretell;
 mod cycling;
 mod transform_sink;
 pub mod encode;

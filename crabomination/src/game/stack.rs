@@ -7726,6 +7726,9 @@ impl GameState {
 
     pub fn remove_from_battlefield_to_exile(&mut self, id: CardId) {
         if let Some(card) = self.battlefield.take_by_id(id) {
+            if let Some(seat) = self.resolution_causer {
+                self.note_exiled_from_hand_or_by(seat);
+            }
             self.remove_effects_from_source(id);
             self.remove_from_combat(id);
             self.collect_leaver_counters(&card);

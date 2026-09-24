@@ -908,6 +908,9 @@ pub enum Value {
     /// All counters (every kind) on `what` — "for each counter on it"
     /// (Twitching Doll). Sums every counter the permanent carries.
     TotalCountersOn { what: Box<Selector> },
+    /// CR 702.143 — foretold cards `who` owns in exile: face down with a
+    /// foretell cost, printed or granted (Niko Defies Destiny's chapter I).
+    ForetoldCardsOwnedInExile(PlayerRef),
     /// CR 120.10 — the amount of excess damage dealt during the current
     /// resolution ("gain life / add mana equal to the excess damage" — The
     /// Last Agni Kai, Razor Rings). Backed by
@@ -3249,6 +3252,12 @@ pub enum EventKind {
     /// the event amount is the damage prevented, and the scope reads that
     /// player.
     DamageToPlayerPrevented,
+    /// "Whenever one or more cards are put into exile from your hand or a
+    /// spell or ability you control exiles one or more permanents from the
+    /// battlefield" (Ranar the Ever-Watchful, Hero of Bretagard). One event
+    /// per player per trigger batch, synthesized at dispatch from the exile
+    /// tally; the event amount is how many cards ("that many").
+    CardsExiledFromHandOrByYou,
 }
 
 impl EventKind {
@@ -4485,6 +4494,18 @@ pub enum Effect {
     /// (auto-decider exiles by hand order). Like `Discard` but routes to
     /// exile instead of the graveyard (Ashiok, Nightmare Muse −3).
     ExileFromHand { who: Selector, amount: Value },
+    /// "Exile a card from your hand face down. It becomes foretold. Its
+    /// foretell cost is its mana cost reduced by {`reduce`}." (Ethereal
+    /// Valkyrie.) The controller picks the card; it isn't foretelling
+    /// (Ranar's free first foretell is untouched), but it can't be cast this
+    /// turn (CR 702.143b) and it tallies as exiled from hand.
+    ForetellFromHand { reduce: u32 },
+    /// "[Player] exiles a card from their hand. If a creature card is exiled
+    /// this way, that player creates a token that's a copy of that card."
+    /// (Arcane Artisan.) Each resolved player picks their own card (a bot
+    /// its best creature); the token is stamped as created by the source, so
+    /// `Selector::TokensCreatedBySource` finds it later.
+    ExileFromHandCopyCreature { who: Selector },
     /// "Each resolved player discards their whole hand, then draws that many
     /// cards." Captures the hand size *before* discarding (Soratami Seer,
     /// Mind's Eye-style wheels). Distinct from `Discard` + `Draw` because the

@@ -88,6 +88,7 @@ pub(crate) fn event_kind_bits(event: &GameEvent) -> u128 {
             K::PlayerDamaged,
         ),
         E::LifeGained { .. } => bits!(K::LifeGained),
+        E::CardsExiledFromHandOrBy { .. } => bits!(K::CardsExiledFromHandOrByYou),
         E::DamagePrevented { to_player: Some(_), .. } => bits!(K::DamageToPlayerPrevented),
         E::ScriedOrSurveiled { .. } => bits!(K::ScriedOrSurveiled),
         E::OpponentCausedYouToDiscard { .. } => bits!(K::OpponentCausedYouToDiscard),
@@ -313,6 +314,7 @@ fn reference_event_kind_matches(
         // Any damage to a player, combat or not (Quest for Pure Flame).
         (EventKind::PlayerDamaged, GameEvent::DamageDealt { to_player: Some(_), .. }) => true,
         (EventKind::LifeGained, GameEvent::LifeGained { .. }) => true,
+        (EventKind::CardsExiledFromHandOrByYou, GameEvent::CardsExiledFromHandOrBy { .. }) => true,
         (EventKind::DamageToPlayerPrevented, GameEvent::DamagePrevented { to_player: Some(_), .. }) => true,
         (EventKind::ScriedOrSurveiled, GameEvent::ScriedOrSurveiled { .. }) => true,
         (
@@ -1255,6 +1257,7 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         | GameEvent::LandPlayed { player, .. }
         | GameEvent::SpellCast { player, .. }
         | GameEvent::LifeGained { player, .. }
+        | GameEvent::CardsExiledFromHandOrBy { player, .. }
         | GameEvent::LifeLost { player, .. }
         | GameEvent::PaidLife { player, .. }
         | GameEvent::ScriedOrSurveiled { player, .. }
@@ -1424,6 +1427,7 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         // into your hand" can return it.
         GameEvent::ManifestedDread { milled, .. } => Some(EntityRef::Card(*milled)),
         GameEvent::LifeGained { player, .. }
+        | GameEvent::CardsExiledFromHandOrBy { player, .. }
         | GameEvent::LifeLost { player, .. }
         | GameEvent::ManaAdded { player, .. }
         | GameEvent::DiscardedBatch { player, .. }
@@ -1719,6 +1723,7 @@ mod tests {
             E::DamagePrevented { amount: 1, to_player: Some(0), to_card: None },
             E::LifeLost { player: 0, amount: 1 },
             E::LifeGained { player: 0, amount: 1 },
+            E::CardsExiledFromHandOrBy { player: 0, count: 1 },
             E::PaidLife { player: 0, amount: 1 },
             E::ScriedOrSurveiled { player: 0, surveil: false },
             E::Proliferated { player: 0 },
@@ -1867,6 +1872,7 @@ mod tests {
             K::YourInstantOrSorceryDealtDamage,
             K::YourInstantOrSorceryDealtDamageToPlayer,
             K::LifeGained,
+            K::CardsExiledFromHandOrByYou,
             K::PaidLife,
             K::ScriedOrSurveiled,
             K::DungeonCompleted,

@@ -2936,6 +2936,9 @@ pub enum StaticEffect {
     /// `OpponentsCantCastDuringYourTurn` lock, live only while the source is
     /// attached.
     OpponentsCantCastDuringYourTurnWhileAttached,
+    /// "The first card you foretell each turn costs {0} to foretell."
+    /// (Ranar the Ever-Watchful.) Read by the foretell special action.
+    FirstForetellEachTurnFree,
     /// CR 601 — "Players can cast spells only during their own turns." Dosan
     /// the Falling Leaf. Symmetric: gated at the cast dispatch for *every*
     /// seat that isn't the active player, including the static's controller.

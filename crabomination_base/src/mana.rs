@@ -616,6 +616,11 @@ pub enum SpendRestriction {
     /// "Spend this mana only to cast a spell with devoid." (Corrupted
     /// Crossroads.)
     DevoidSpellsOnly,
+    /// "Spend this mana only to foretell cards or cast spells that have
+    /// foretell." (Niko Defies Destiny's chapter II.) Reads
+    /// `SpellKind.foretell`, set for a spell with a foretell cost and on the
+    /// foretell special action's {2}.
+    ForetellOnly,
     /// "If that mana is spent on an instant or sorcery spell, that spell
     /// can't be countered." (Boseiju, Who Shelters All.) Unrestricted spend;
     /// funding an instant/sorcery stamps the cast uncounterable like
@@ -725,6 +730,7 @@ impl SpendRestriction {
             SpendRestriction::AbilitiesOnly => "only activated abilities",
             SpendRestriction::LessonSpellsOnly => "only Lesson spells",
             SpendRestriction::DevoidSpellsOnly => "only devoid spells",
+            SpendRestriction::ForetellOnly => "only to foretell or cast foretell spells",
             SpendRestriction::EquipmentOnly => "only Equipment",
             SpendRestriction::ColorlessSpellsOrAbilities => "only colorless spells or abilities",
             SpendRestriction::HighMvOrX => "only mana value 5+ or {X} spells",
@@ -815,6 +821,7 @@ impl SpendRestriction {
             SpendRestriction::AbilitiesOnly => kind.activating_ability,
             SpendRestriction::LessonSpellsOnly => kind.lesson,
             SpendRestriction::DevoidSpellsOnly => kind.devoid,
+            SpendRestriction::ForetellOnly => kind.foretell,
             SpendRestriction::EquipmentOnly => kind.equipment,
             SpendRestriction::ColorlessSpellsOrAbilities => {
                 kind.colorless || kind.activating_ability
@@ -909,6 +916,9 @@ pub struct SpellKind {
     pub lesson: bool,
     /// Casting a spell with devoid (Corrupted Crossroads).
     pub devoid: bool,
+    /// Casting a spell that has foretell, or paying the foretell action's
+    /// {2} (Niko Defies Destiny's chapter II mana).
+    pub foretell: bool,
     /// Casting an Equipment spell, or activating an ability of an Equipment
     /// (Freya Crescent's "cast an Equipment spell or activate an equip ability").
     pub equipment: bool,
