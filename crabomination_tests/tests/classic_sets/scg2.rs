@@ -477,7 +477,11 @@ fn forgotten_ancient_grows_then_spreads_its_counters() {
     let mut g = main_phase();
     let ancient = g.add_card_to_battlefield(0, catalog::forgotten_ancient());
     let friend = g.add_card_to_battlefield(0, catalog::silver_knight());
-    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    // Two printed "may"s: the cast trigger's counter, then the upkeep move.
+    g.decider = Box::new(ScriptedDecider::new(vec![
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Bool(true),
+    ]));
     let knight = g.add_card_to_hand(0, catalog::silver_knight());
     cast(&mut g, 0, knight, None);
     assert_eq!(
