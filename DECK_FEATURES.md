@@ -116,6 +116,7 @@ lists were picked.
 | **Witherbloom Pestilence** (SOC precon) BG | Dina, Essence Brewer | BG | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Silverquill Statement** (C21 precon) WB | Breena, the Demagogue | WB | 100 | 🟡 all 100 implemented, 7 carry residuals (below) |
 | **Blame Game** (MKC precon) RW | Nelly Borca, Impulsive Accuser | RW | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
+| **Temur Roar** (TDC precon) GUR | Eshki, Temur's Roar | GUR | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Exit from Exile** (CLB precon) RG | Faldorn, Dread Wolf Herald | RG | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Exquisite Invention** (C18 precon) UR | Saheeli, the Gifted (**planeswalker**) | UR | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Mishra's Burnished Banner** (BRC precon) UBR | Mishra, Eminent One | UBR | 100 | 🟡 all 100 implemented, 6 carry residuals (below) |
@@ -1427,6 +1428,21 @@ Derevi 3.0 % (4.5 % beside Teferi / Kalemne / Zedruu, seed 9545: a tempo list th
 bot pilots poorly); a 300-game census (seed 9542) leaves no card unplayed;
 strict debug pods (seeds 9543/9544, 120 games) decided 120/120. `--bench`
 byte-identical.
+
+The **ninety-seventh** is Tarkir: Dragonstorm Commander's **Temur Roar**
+(`TemurRoar_TDC`) — Temur Dragons under Eshki, Temur's Roar. Thirteen cards
+were missing; the primitive is `Effect::ChooseRandomOpponentNotAttackedLastCombat`
+(Territorial Hellkite): `CardCold::combat_defenders` is armed by the trigger and
+filled at declare attackers, so only that creature pays. Its tests found ⚠ **a
+battlefield cast trigger picked its target before the cast spell's mana value
+was in scope** — Skyfire Kirin's and Hammerhead Tyrant's "mana value equal to /
+up to that spell's" filters never matched at targeting. Residuals: Deceptive
+Frostkite's copy isn't optional; Will of the Temur reads "as you cast" at
+resolution. Four-seat pods beside Ellivere / Lathliss / Zinnia (seed 10230,
+1,000 games, all decided): Eshki 13.5 %; beside Nelly / Go-Shintai / Guff (seed
+10231): 1,000 / 1,000, 19.0 %; census (seed 10232): no card of the four
+unplayed; strict debug pods (seeds 10233-10235, 4 and 6 seats): 180 / 180.
+`--bench` byte-identical; cube/sos/sealed (seed 10236): 7,500 decided.
 
 The **ninety-sixth** is Wilds of Eldraine Commander's **Virtue and Valor**
 (`VirtueAndValor_WOC`) — Selesnya Auras and Roles under Ellivere of the Wild
