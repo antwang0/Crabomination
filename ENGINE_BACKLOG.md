@@ -183,9 +183,8 @@ the handoff.
   (the cost paths already carried the victim's stats); Grab the Prize waits on
   a cost-time discard record, Devouring Greed on a per-Spirit count;
   `structural_audit::no_cost_sacrifice_is_spelled_as_the_first_step_of_the_effect`
-  keeps it out. Residual: `sac_other_filter` never picks the source, so
-  "Sacrifice a creature:" on a creature (Viscera Seer, Hypnotist, Korozda
-  Guildmage) can't sacrifice itself.
+  keeps it out. "Sacrifice a creature:" on a creature can now pay with itself
+  (`sac_other_may_be_source`, 38 cards; the auto-pick takes the source last).
 - **Departed players (CR 800.4a), found by a 25-seat DEBUG pod.** A player
   who had left was still a legal target, so a trigger aimed at them resolved
   and CR 800.4g re-seated its "may" onto the controller — whose replay fell
