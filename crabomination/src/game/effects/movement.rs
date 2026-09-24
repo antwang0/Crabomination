@@ -2264,6 +2264,19 @@ impl GameState {
                 return;
             }
         }
+        // CR 408 — the command zone: a commander's own "put this onto the
+        // battlefield from the command zone" ability (Derevi, Empyrial
+        // Tactician). Not a cast, so no commander tax. Only a card moving
+        // *itself*: anything else naming a card now in the command zone names
+        // a new object (CR 400.7) — a flickered commander that went home must
+        // not come back with the flicker's return.
+        for p in (0..self.players.len()).filter(|_| ctx.source == Some(cid)) {
+            if let Some(pos) = self.players[p].command.iter().position(|c| c.id == cid) {
+                let card = self.players[p].command.remove(pos);
+                self.place_card_in_dest(card, p, &resolved_dest, events);
+                return;
+            }
+        }
     }
 
     /// Pre-resolve any selector-based player refs in a `ZoneDest` against
