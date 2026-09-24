@@ -740,3 +740,41 @@ fn cr_700_2_each_chosen_mode_validates_its_own_target() {
     assert_eq!(g.players[1].life, life + 3);
     assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
 }
+
+/// CR 107.3 — a look-and-pick's "mana value X or less" reads the resolving
+/// X, including one bound by `Effect::WithX` rather than a cast (Emergent
+/// Woodwurm's "X is its power").
+#[test]
+fn cr_107_3_a_look_and_pick_filter_reads_the_resolving_x() {
+    use crabomination::card::{CardDefinition, CardType};
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    use crabomination::effect::{Effect, LookPick, PlayerRef, Value};
+    use crabomination::game::types::GameAction;
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.add_card_to_library(0, catalog::serra_angel());
+    let bear = g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::plains());
+    let spell = g.add_card_to_hand(0, CardDefinition {
+        name: "X Dig Test",
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::WithX {
+            x: Value::Const(2),
+            body: Box::new(Effect::LookPickToHand(Box::new(LookPick {
+                who: PlayerRef::You,
+                count: Value::Const(3),
+                pick_filter: Some(SelectionRequirement::Creature.and(SelectionRequirement::ManaValueAtMostXFromCost)),
+                take: Some(Value::ONE),
+                ..Default::default()
+            }))),
+        },
+        ..Default::default()
+    });
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![bear])]));
+    g.perform_action(GameAction::CastSpell { card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear), "a 2-drop fits under X = 2");
+}

@@ -23487,12 +23487,15 @@ impl GameState {
                 // Eligible-to-take set: filtered by `pick_filter` when present
                 // (Satyr Wayfinder — lands only). `revealed` keeps all top-N
                 // for the rest-to-graveyard sweep.
+                // The resolving X reaches "mana value X or less" (Genesis
+                // Hydra's cast X; Emergent Woodwurm's `WithX` power).
                 let eligible: Option<Vec<crate::card::CardId>> = pick_filter.as_ref().map(|f| {
+                    let f = f.resolve_x(ctx.x_value);
                     top_ids
                         .iter()
                         .copied()
                         .filter(|id| {
-                            self.evaluate_requirement_static(f, &Target::Permanent(*id), p, ctx.source)
+                            self.evaluate_requirement_static(&f, &Target::Permanent(*id), p, ctx.source)
                         })
                         .collect()
                 });
