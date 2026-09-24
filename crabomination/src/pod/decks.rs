@@ -3132,3 +3132,32 @@ pub const KASLA_MAIN: &[CardFactory] = &[
     island, island, island, island, island, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain,
 ];
+
+pub const ESTRID_COMMANDERS: &[CardFactory] = &[estrid_the_masked];
+
+/// **Adaptive Enchantment**, the Commander 2018 deck (C18, 2018-08-10), exactly
+/// as MTGJSON's `AdaptiveEnchantment_C18` prints it: 76 nonbasic cards +
+/// 9 Plains + 6 Islands + 8 Forests = 99. Bant enchantments under the planeswalker
+/// Estrid, the Masked.
+pub const ESTRID_MAIN: &[CardFactory] = &[
+    bruna_light_of_alabaster, eidolon_of_blossoms, hydra_omnivore, ajanis_chosen,
+    celestial_archon, silent_sentinel, boon_satyr, herald_of_the_pantheon, cold_eyed_selkie,
+    daxos_of_meletis, elderwood_scion, archetype_of_imagination, whitewater_naiads,
+    aura_gnarlid, reclamation_sage, yavimaya_enchantress, martial_coup, phyrexian_rebirth,
+    winds_of_rath, creeping_renaissance, kruphixs_insight, dismantling_blow, bant_charm,
+    sol_ring, sigil_of_the_empty_throne, dictate_of_kruphix, bear_umbra, enchantresss_presence,
+    epic_proportions, ground_seal, spawning_grounds, finest_hour, righteous_authority,
+    sages_reverie, soul_snare, unquestioned_authority, eel_umbra, vow_of_flight,
+    dawns_reflection, fertile_ground, overgrowth, snake_umbra, vow_of_wildness, wild_growth,
+    unflinching_courage, azorius_chancery, blossoming_sands, command_tower, evolving_wilds,
+    krosan_verge, meandering_river, mosswort_bridge, seaside_citadel, selesnya_sanctuary,
+    simic_growth_chamber, terramorphic_expanse, thornwood_falls, tranquil_cove,
+    tranquil_expanse, woodland_stream, kestia_the_cultivator, tuvasa_the_sunlit, empyrial_storm,
+    heavenly_blademaster, estrids_invocation, ever_watching_threshold, octopus_umbra,
+    genesis_storm, myth_unbound, nyleas_colossus, ravenous_slime, arixmethes_slumbering_isle,
+    loyal_unicorn, loyal_drake, loyal_guardian, forge_of_heroes,
+    // Basics: 9 plains, 6 island, 8 forest
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, island, island,
+    island, island, island, island, forest, forest, forest, forest, forest, forest, forest,
+    forest,
+];

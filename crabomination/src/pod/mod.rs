@@ -850,6 +850,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::KASLA_COMMANDERS,
             main: decks::KASLA_MAIN,
         },
+        // Hundred-and-second: the ninety-second official list (Adaptive
+        // Enchantment, C18) — Bant enchantments under Estrid, the Masked, a
+        // planeswalker commander. `--pod-decks 102`.
+        PodDeck {
+            name: "Estrid, the Masked (GWU)",
+            commanders: decks::ESTRID_COMMANDERS,
+            main: decks::ESTRID_MAIN,
+        },
     ]
 }
 
@@ -1396,6 +1404,8 @@ mod tests {
             ("Ellivere", [0xE111, 102, 9026]),
             // CR 702.51 — convoke taps fire "becomes tapped" triggers.
             ("Kasla", [0xCA51, 104, 9028]),
+            // CR 903.9 — Myth Unbound's command-zone draws, Empyrial Storm's copies.
+            ("Estrid", [0xE571, 105, 9029]),
         ] {
             let precon = *field.iter().find(|d| d.name.starts_with(name)).expect("the precon seat");
             assert_eq!(precon.card_count(), 100);
