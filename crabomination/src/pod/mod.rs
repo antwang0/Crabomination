@@ -759,6 +759,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::JELEVA_COMMANDERS,
             main: decks::JELEVA_MAIN,
         },
+        // Ninetieth: the eightieth official list (Silverquill Statement,
+        // C21) — Orzhov politics under Breena, the Demagogue.
+        // `--pod-decks 90`.
+        PodDeck {
+            name: "Breena, the Demagogue (WB)",
+            commanders: decks::BREENA_COMMANDERS,
+            main: decks::BREENA_MAIN,
+        },
     ]
 }
 

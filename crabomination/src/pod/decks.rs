@@ -2776,3 +2776,33 @@ pub const JELEVA_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, mountain, mountain,
     mountain, mountain, mountain, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const BREENA_COMMANDERS: &[CardFactory] = &[breena_the_demagogue];
+
+/// **Silverquill Statement**, the Commander 2021 Strixhaven deck (C21,
+/// 2021-04-23), exactly as MTGJSON's `SilverquillStatement_C21` prints it:
+/// 75 nonbasic cards + 14 Plainss + 10 Swamps = 99. Orzhov politics and
+/// Inklings under Breena, the Demagogue.
+pub const BREENA_MAIN: &[CardFactory] = &[
+    gideon_champion_of_justice, felisa_fang_of_silverquill, combat_calligrapher,
+    guardian_archon, nils_discipline_enforcer, scholarship_sponsor, author_of_shadows,
+    bold_plagiarist, fain_the_broker, keen_duelist, angel_of_serenity, boreas_charger,
+    hunted_lammasu, knight_of_the_white_orchid, selfless_squire, stalking_leonin,
+    sunscorch_regent, windborn_muse, zetalpa_primal_dawn, deathbringer_regent,
+    necropolis_regent, deathbringer_liege, magister_of_worth, teysa_envoy_of_ghosts,
+    elite_scaleguard, oreskos_explorer, orzhov_advokist, promise_of_loyalty,
+    incarnation_technique, tragic_arrogance, infernal_offering, secret_rendezvous,
+    stinging_study, inkshield, oblation, utter_end, fracture, tempting_contract, coveted_jewel,
+    pendant_of_prosperity, victory_chimes, arcane_signet, bloodthirsty_blade, mind_stone,
+    orzhov_signet, sol_ring, spectral_searchlight, cunning_rhetoric, citadel_siege,
+    together_forever, ghostly_prison, martial_impetus, soul_snare, vow_of_duty,
+    curse_of_disturbance, parasitic_impetus, caves_of_koilos, exotic_orchard,
+    mikokoro_center_of_the_sea, temple_of_silence, silverquill_campus, study_hall, barren_moor,
+    bojuka_bog, command_tower, myriad_landscape, opal_palace, orzhov_basilica, secluded_steppe,
+    tainted_field, temple_of_the_false_god, duelists_heritage, debtors_knell, ambitions_cost,
+    rogues_passage,
+    // Basics: 14 plains, 10 swamp
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp,
+];
