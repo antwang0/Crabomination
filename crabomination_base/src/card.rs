@@ -855,6 +855,8 @@ pub enum CounterType {
     /// Bribery counter — Gwafa Hazid, Profiteer's mark: a creature carrying
     /// one can't attack or block while Gwafa's static says so.
     Bribery,
+    /// Hoofprint counter — Hoofprints of the Stag's tally of cards drawn.
+    Hoofprint,
 }
 
 /// Every zone a card can occupy.
