@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Ten hand-picked commanders plus seventy-seven official preconstructed lists, each a
+//! Ten hand-picked commanders plus seventy-eight official preconstructed lists, each a
 //! 99 of cards this engine implements: legal under CR 903 (100 cards
 //! including the commander, singleton outside basics, every card inside the
 //! commander's CR 903.4 color identity) and Commander-legal per Scryfall's
@@ -8,7 +8,7 @@
 //!
 //! The ten were built by hand because the offline Scryfall cache cannot say
 //! how a precon splits into decks; MTGJSON's deck files can, and the eleventh
-//! through eighty-seventh (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
+//! through eighty-eighth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
 //! Win, Tails You Lose, Goblin Storm, Foundations Commander's Wretched Ranks,
 //! Tramplesaurus Rex and Keen Engineering, Commander Legends' Reap the Tides,
 //! Phyrexia: All Will Be One's Corrupting Influence, Zendikar Rising's Sneak
@@ -44,8 +44,11 @@
 //! 2018's Exquisite Invention, Duskmourn Commander's Death Toll, Commander
 //! 2021's Witherbloom Witchcraft, Edge of Eternities Commander's World
 //! Shaper, Commander 2018's Nature's Vengeance, Commander 2013's Evasive
-//! Maneuvers, Bloomburrow Commander's Peace Offering and the Starter Commander
-//! Decks' Draconic Destruction, among others) are taken
+//! Maneuvers, Bloomburrow Commander's Peace Offering, The Brothers' War
+//! Commander's Mishra's Burnished Banner, March of the Machine Commander's
+//! Tinker Time, Dominaria United Commander's Legends' Legacy, Secrets of
+//! Strixhaven Commander's Witherbloom Pestilence, the Starter Commander Decks'
+//! Draconic Destruction and Commander 2013's Nature of the Beast) are taken
 //! from
 //! one card for card. What all of them keep
 //! from the precon idea is what the pod needs — fixed, legal, varied color
@@ -2716,4 +2719,33 @@ pub const ATARKA_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+];
+
+pub const MARATH_COMMANDERS: &[CardFactory] = &[marath_will_of_the_wild];
+
+/// **Nature of the Beast**, the Commander 2013 deck (C13, 2013-11-01),
+/// exactly as MTGJSON's `NatureOfTheBeast_C13` prints it: 82 nonbasic
+/// cards + 4 Plains + 5 Mountains + 8 Forests = 99. Naya big creatures under
+/// Marath, Will of the Wild.
+pub const MARATH_MAIN: &[CardFactory] = &[
+    archangel, avenger_of_zendikar, baloth_woodcrasher, crater_hellion, deadwood_treefolk,
+    drumhunter, eternal_dragon, gahiji_honored_one, grazing_gladehart, krosan_tusker,
+    krosan_warchief, magus_of_the_arena, mayael_the_anima, mold_shambler, naya_soulbeast,
+    rakeclaw_gargantuan, rampaging_baloths, ravenous_baloth, spellbreaker_behemoth,
+    spitebellows, terra_ravager, valley_rannet, cultivate, fiery_justice, fireball,
+    from_the_ashes, harmonize, hull_breach, one_dozen_eyes, rain_of_thorns, restore,
+    savage_twister, slice_and_dice, tempt_with_discovery, wrath_of_god, boros_charm, naya_charm,
+    slice_in_twain, sprouting_vines, street_spasm, behemoth_sledge, druidic_satchel,
+    seers_sundial, sol_ring, swiftfoot_boots, tower_of_fortunes, curse_of_chaos,
+    curse_of_predation, curse_of_the_forsaken, darksteel_mutation, fires_of_yavimaya,
+    mystic_barrier, spawning_grounds, war_cadence, warstorm_surge, where_ancients_tread,
+    witch_hunt, boros_garrison, boros_guildgate, command_tower, contested_cliffs,
+    drifting_meadow, evolving_wilds, forgotten_cave, gruul_guildgate, homeward_path,
+    jungle_shrine, khalni_garden, mosswort_bridge, naya_panorama, new_benalia, opal_palace,
+    rupture_spire, secluded_steppe, selesnya_guildgate, selesnya_sanctuary, slippery_karst,
+    smoldering_crater, temple_of_the_false_god, tranquil_thicket, vitu_ghazi_the_city_tree,
+    vivid_crag,
+    // Basics: 4 plains, 5 mountain, 8 forest
+    plains, plains, plains, plains, mountain, mountain, mountain, mountain, mountain, forest,
+    forest, forest, forest, forest, forest, forest, forest,
 ];

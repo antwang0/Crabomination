@@ -745,6 +745,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ATARKA_COMMANDERS,
             main: decks::ATARKA_MAIN,
         },
+        // Eighty-eighth: the seventy-eighth official list (Nature of the Beast,
+        // C13) — Naya big creatures under Marath. `--pod-decks 88`.
+        PodDeck {
+            name: "Marath, Will of the Wild (RGW)",
+            commanders: decks::MARATH_COMMANDERS,
+            main: decks::MARATH_MAIN,
+        },
     ]
 }
 
