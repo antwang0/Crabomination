@@ -259,7 +259,7 @@ pub fn trench_behemoth() -> CardDefinition {
 
 /// A Vivid land: tapped with two charge counters; its color, or any color
 /// for a counter.
-fn vivid(name: &'static str, color: Color) -> CardDefinition {
+pub(super) fn vivid(name: &'static str, color: Color) -> CardDefinition {
     CardDefinition {
         name,
         card_types: vec![CardType::Land],
