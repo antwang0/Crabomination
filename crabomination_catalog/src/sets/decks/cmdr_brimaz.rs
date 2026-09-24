@@ -273,11 +273,11 @@ pub fn excise_the_imperfect() -> CardDefinition {
         cost: cost(&[generic(1), w(), w()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
+            Effect::Exile { what: target_filtered(R::Permanent.and(R::Nonland)) },
             Effect::Incubate {
-                who: PlayerRef::ControllerOf(Box::new(target_filtered(R::Permanent.and(R::Nonland)))),
+                who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
                 amount: Value::ManaValueOf(Box::new(Selector::Target(0))),
             },
-            Effect::Exile { what: Selector::Target(0) },
         ]),
         ..Default::default()
     }
