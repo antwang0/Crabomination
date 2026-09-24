@@ -2552,3 +2552,197 @@ fn lotleth_giant_burns_for_creature_cards() {
     cast(&mut g, giant, &[]);
     assert_eq!(g.players[1].life, life - 2);
 }
+
+// ── Forged in Stone (Nahiri, the Lithomancer, C14) ─────────────────────────
+
+fn loyalty(g: &mut GameState, pw: CardId, index: usize) {
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: pw,
+        ability_index: index,
+        target: None,
+        x_value: None,
+    })
+    .expect("loyalty");
+    drain_stack(g);
+}
+
+/// Nahiri — +2 suits a fresh Kor Soldier; −2 fetches an Equipment card.
+#[test]
+fn nahiri_suits_up_a_soldier_and_puts_out_equipment() {
+    let mut g = main_phase();
+    let n = g.add_card_to_battlefield(0, catalog::nahiri_the_lithomancer());
+    let spear = g.add_card_to_battlefield(0, catalog::moonsilver_spear());
+    loyalty(&mut g, n, 0);
+    let soldier = g.battlefield.iter().find(|c| c.definition.name == "Kor Soldier").unwrap().id;
+    assert_eq!(g.battlefield_find(spear).unwrap().attached_to, Some(soldier));
+    let mut g = main_phase();
+    let n = g.add_card_to_battlefield(0, catalog::nahiri_the_lithomancer());
+    let scythe = g.add_card_to_graveyard(0, catalog::strata_scythe());
+    loyalty(&mut g, n, 1);
+    assert!(g.battlefield_find(scythe).is_some());
+}
+
+/// Adarkar Valkyrie — the marked creature comes back under your control.
+#[test]
+fn adarkar_valkyrie_steals_the_dead() {
+    let mut g = main_phase();
+    let v = g.add_card_to_battlefield(0, catalog::adarkar_valkyrie());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(v);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: v,
+        ability_index: 0,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("{T}");
+    drain_stack(&mut g);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, &[Target::Permanent(bear)]);
+    assert_eq!(g.battlefield_find(bear).map(|c| c.controller), Some(0));
+}
+
+/// Angel of the Dire Hour — flashed in from hand, it exiles every attacker.
+#[test]
+fn angel_of_the_dire_hour_exiles_attackers() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let angel = g.add_card_to_hand(1, catalog::angel_of_the_dire_hour());
+    combat(
+        &mut g,
+        vec![Attack { attacker: bear, target: AttackTarget::Player(1) }],
+        1,
+        |g| {
+            try_cast(g, 1, angel, &[]).expect("flash");
+        },
+    );
+    assert!(g.exile.iter().any(|c| c.id == bear));
+}
+
+/// Arcane Lighthouse — an opponent's hexproof creature becomes targetable.
+#[test]
+fn arcane_lighthouse_strips_hexproof() {
+    let mut g = main_phase();
+    let lh = g.add_card_to_battlefield(0, catalog::arcane_lighthouse());
+    let drove = g.add_card_to_battlefield(1, catalog::drove_of_elves());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    assert!(try_cast(&mut g, 0, bolt, &[Target::Permanent(drove)]).is_err(), "hexproof");
+    activate(&mut g, lh, 1, None).expect("{1}, {T}");
+    try_cast(&mut g, 0, bolt, &[Target::Permanent(drove)]).expect("no hexproof now");
+    assert!(g.battlefield_find(drove).is_none());
+}
+
+/// Benevolent Offering — three Spirits each, then life by creature count.
+#[test]
+fn benevolent_offering_shares_spirits_and_life() {
+    let mut g = main_phase();
+    let spell = g.add_card_to_hand(0, catalog::benevolent_offering());
+    let (l0, l1) = (g.players[0].life, g.players[1].life);
+    cast(&mut g, spell, &[]);
+    assert_eq!(count_named(&g, 0, "Spirit"), 3);
+    assert_eq!(count_named(&g, 1, "Spirit"), 3);
+    assert_eq!((g.players[0].life, g.players[1].life), (l0 + 6, l1 + 6));
+}
+
+/// Celestial Crusader pumps every other white creature, anyone's.
+#[test]
+fn celestial_crusader_pumps_all_white_creatures() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::celestial_crusader());
+    let monk = g.add_card_to_battlefield(1, catalog::adarkar_valkyrie());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    assert_eq!(pt(&g, monk), (5, 6));
+    assert_eq!(pt(&g, bear), (2, 2));
+}
+
+/// Deploy to the Front / Nomads' Assembly / Geist-Honored Monk count creatures.
+#[test]
+fn creature_count_token_makers() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let d = g.add_card_to_hand(0, catalog::deploy_to_the_front());
+    cast(&mut g, d, &[]);
+    assert_eq!(count_named(&g, 0, "Soldier"), 2);
+    let na = g.add_card_to_hand(0, catalog::nomads_assembly());
+    cast(&mut g, na, &[]);
+    assert_eq!(count_named(&g, 0, "Kor Soldier"), 3, "one per creature you control");
+    let monk = g.add_card_to_hand(0, catalog::geist_honored_monk());
+    cast(&mut g, monk, &[]);
+    assert_eq!(pt(&g, monk), (9, 9), "3 + 3 + Bears + 2 Spirits + itself");
+}
+
+/// Hallowed Spiritkeeper — dying, a Spirit per creature card in your
+/// graveyard (itself included).
+#[test]
+fn hallowed_spiritkeeper_leaves_spirits() {
+    let mut g = main_phase();
+    let k = g.add_card_to_battlefield(0, catalog::hallowed_spiritkeeper());
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, &[Target::Permanent(k)]);
+    assert_eq!(count_named(&g, 0, "Spirit"), 2);
+}
+
+/// Masterwork of Ingenuity enters as a copy of an Equipment.
+#[test]
+fn masterwork_of_ingenuity_copies_an_equipment() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::moonsilver_spear());
+    let m = g.add_card_to_hand(0, catalog::masterwork_of_ingenuity());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    cast(&mut g, m, &[]);
+    assert_eq!(count_named(&g, 0, "Moonsilver Spear"), 2);
+}
+
+/// Moonsilver Spear — the equipped creature's attack makes a 4/4 Angel.
+#[test]
+fn moonsilver_spear_makes_an_angel_on_attack() {
+    let mut g = main_phase();
+    let spear = g.add_card_to_battlefield(0, catalog::moonsilver_spear());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    equip(&mut g, spear, bear);
+    combat(&mut g, vec![Attack { attacker: bear, target: AttackTarget::Player(1) }], 0, |_| {});
+    assert_eq!(count_named(&g, 0, "Angel"), 1);
+}
+
+/// Strata Scythe — +1/+1 per land sharing the imprinted land's name.
+#[test]
+fn strata_scythe_counts_lands_named_like_its_imprint() {
+    let mut g = main_phase();
+    g.add_card_to_library(0, catalog::plains());
+    g.add_card_to_battlefield(0, catalog::plains());
+    g.add_card_to_battlefield(1, catalog::plains());
+    g.add_card_to_battlefield(1, catalog::island());
+    let s = g.add_card_to_hand(0, catalog::strata_scythe());
+    cast(&mut g, s, &[]);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    equip(&mut g, s, bear);
+    assert_eq!(pt(&g, bear), (4, 4));
+}
+
+/// True Conviction — double strike and lifelink for your creatures.
+#[test]
+fn true_conviction_grants_double_strike_and_lifelink() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::true_conviction());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let kw = g.computed_permanent(bear).unwrap().keywords().to_vec();
+    assert!(kw.contains(&Keyword::DoubleStrike) && kw.contains(&Keyword::Lifelink));
+}
+
+/// Twilight Shepherd — returns what died this turn; persist brings it back.
+#[test]
+fn twilight_shepherd_returns_the_turns_dead() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let old = g.add_card_to_graveyard(0, catalog::hill_giant());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, &[Target::Permanent(bear)]);
+    let s = g.add_card_to_hand(0, catalog::twilight_shepherd());
+    cast(&mut g, s, &[]);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear));
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == old), "it was there before");
+}
