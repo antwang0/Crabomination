@@ -589,6 +589,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::INALLA_COMMANDERS,
             main: decks::INALLA_MAIN,
         },
+        // Sixty-seventh: the fifty-seventh official list (Growing Threat, MOC) —
+        // Orzhov Phyrexians and incubate under Brimaz. `--seats 67`.
+        PodDeck {
+            name: "Brimaz, Blight of Oreskos (WB)",
+            commanders: decks::BRIMAZ_COMMANDERS,
+            main: decks::BRIMAZ_MAIN,
+        },
     ]
 }
 

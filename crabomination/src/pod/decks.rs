@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Ten hand-picked commanders plus fifty-four official preconstructed lists, each a
+//! Ten hand-picked commanders plus fifty-seven official preconstructed lists, each a
 //! 99 of cards this engine implements: legal under CR 903 (100 cards
 //! including the commander, singleton outside basics, every card inside the
 //! commander's CR 903.4 color identity) and Commander-legal per Scryfall's
@@ -8,7 +8,7 @@
 //!
 //! The ten were built by hand because the offline Scryfall cache cannot say
 //! how a precon splits into decks; MTGJSON's deck files can, and the eleventh
-//! through sixty-fourth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
+//! through sixty-seventh (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
 //! Win, Tails You Lose, Goblin Storm, Foundations Commander's Wretched Ranks,
 //! Tramplesaurus Rex and Keen Engineering, Commander Legends' Reap the Tides,
 //! Phyrexia: All Will Be One's Corrupting Influence, Zendikar Rising's Sneak
@@ -33,7 +33,9 @@
 //! Stalwart Unity, Commander (2011)'s Devour for Power, Duskmourn Commander's
 //! Endless Punishment, the Starter Commander Decks' Token Triumph, Commander
 //! 2016's Breed Lethality, Commander (2011)'s Mirror Mastery, Secret Lair's
-//! Raining Cats and Dogs and Commander 2016's Open Hostility) are taken
+//! Raining Cats and Dogs, Commander 2016's Open Hostility, the Starter Commander
+//! Decks' First Flight, Commander 2017's Arcane Wizardry and March of the
+//! Machine Commander's Growing Threat) are taken
 //! from
 //! one card for card. What all of them keep
 //! from the precon idea is what the pod needs — fixed, legal, varied color
@@ -2085,4 +2087,32 @@ pub const INALLA_MAIN: &[CardFactory] = &[
     // Basics: 10 island, 6 swamp, 4 mountain
     island, island, island, island, island, island, island, island, island, island, swamp,
     swamp, swamp, swamp, swamp, swamp, mountain, mountain, mountain, mountain,
+];
+
+pub const BRIMAZ_COMMANDERS: &[CardFactory] = &[brimaz_blight_of_oreskos];
+
+/// **Growing Threat**, the March of the Machine Commander deck (MOC,
+/// 2023-04-21), exactly as MTGJSON's `GrowingThreat_MOC` prints it: 76
+/// nonbasic cards + 10 Plains + 13 Swamps = 99. Orzhov Phyrexians, incubate
+/// and proliferate under Brimaz, Blight of Oreskos.
+pub const BRIMAZ_MAIN: &[CardFactory] = &[
+    moira_and_teshar, ichor_elixir, blight_titan, darksteel_splicer, excise_the_imperfect,
+    filigree_vector, path_of_the_schemer, bitterthorn_nissas_animus, vulpine_harvester,
+    cataclysmic_gearhulk, massacre_wurm, noxious_gearhulk, phyrexian_scriptures,
+    phyrexian_triniform, soul_of_new_phyrexia, ancient_stone_idol, angel_of_the_ruins,
+    blade_splicer, coveted_jewel, duplicant, exotic_orchard, fetid_heath, karns_bastion,
+    myr_battlesphere, nettlecyst, phyrexian_delver, phyrexian_rebirth, psychosis_crawler,
+    scrap_trawler, sculpting_steel, scytheclaw, shineshadow_snarl, spire_of_industry,
+    temple_of_silence, utter_end, vault_of_the_archangel, yawgmoths_vile_offering, bojuka_bog,
+    command_tower, commanders_sphere, evolving_wilds, first_sphere_gargantua,
+    fractured_powerstone, goldmire_bridge, nights_whisper, orzhov_locket, orzhov_signet,
+    path_of_ancestry, phyrexian_ghoul, phyrexian_rager, silverquill_campus,
+    terramorphic_expanse, wayfarers_bauble, hedron_archive, ambitions_cost, arcane_signet,
+    bloodline_pretender, bone_shredder, burnished_hart, despark, go_for_the_throat,
+    graveshifter, keskit_the_flesh_sculptor, master_splicer, meteor_golem, mind_stone, mortify,
+    shattered_angel, shimmer_myr, sol_ring, swords_to_plowshares, tainted_field,
+    talisman_of_hierarchy, victimize, compleated_huntmaster, phyrexian_gargantua,
+    // Basics: 10 plains, 13 swamp
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
