@@ -3174,6 +3174,12 @@ impl HeuristicBot {
                 {
                     return Some(BotStep::plain(GameAction::RollPlanarDie));
                 }
+                // CR 702.62a — a no-mana-cost suspend card has no other way in.
+                if state.stack.is_empty()
+                    && let Some(a) = super::suspend::pick_suspend_only(state, seat)
+                {
+                    return Some(BotStep::plain(a));
+                }
                 Some(main_phase_action_with(state, seat, self.scored, &self.weights))
             }
             // Opponent's end step with an empty stack — the bot's canonical
