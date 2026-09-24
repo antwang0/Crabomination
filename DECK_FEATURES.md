@@ -108,6 +108,7 @@ lists were picked.
 | **Witherbloom Witchcraft** (C21 precon) BG | Willowdusk, Essence Seer | BG | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Exit from Exile** (CLB precon) RG | Faldorn, Dread Wolf Herald | RG | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Exquisite Invention** (C18 precon) UR | Saheeli, the Gifted (**planeswalker**) | UR | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
+| **Death Toll** (DSC precon) BG | Winter, Cynical Opportunist | BG | 100 | 🟡 all 100 implemented, 6 carry residuals (below) |
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not
@@ -1100,6 +1101,31 @@ seed 11074) 3 of 1,000 hit `board cap` — **Emmara's Selesnya Guildmage /
 Vitu-Ghazi Saprolings (769-939 of them)**, not this list: the same shape as
 Storm Herd, a token engine outgrowing `MAX_BATTLEFIELD` in a long stall.
 `--bench` byte-identical.
+
+The **seventy-seventh** is Duskmourn Commander's **Death Toll**
+(`DeathToll_DSC`) — Golgari self-mill and delirium under Winter, Cynical
+Opportunist, reached by `--pod-decks 77`. Eighteen cards were missing
+(`cmdr_winter.rs`). The primitives: `EventSpec::batch_counts_card_types`
+(Polluted Cistern — one "one or more cards" trigger whose amount is the card
+types among the whole batch, CR 603.2c); `Effect::ExileTypeSpreadReturnPermanent`
+(`effects/graveyard_spread.rs`, Winter); `Predicate::TwoShareAllCardTypes`
+(Demonic Covenant); `StaticEffect::PlayFromLibraryTopBySacrificing` (Into
+the Pit, CR 401.6 — spells only, tokens and cheap permanents offered as the
+sacrifice first); `StaticEffect::MayPlayLandsFromGraveyardMatching`
+(Titania's Forests). Rendmaw's "two or more card types" is an exact OR of
+the printable pairs. ⚠ **Its first census hung**: game 364 (seed 10231,
+beside Saheeli / Hazel / Faldorn) never left one bot probe — Chatterfang
+re-counted every earlier token on each resumed piece of an Insatiable
+Frugivore repeat, doubling the Squirrels per answer. Session `01XnuL2a`
+landed the same fix first (`f0522648`), so this seat carries none. Residuals:
+**Winter**'s exiled set is the engine's pick; **Cemetery Tampering** puts a
+hidden land onto the battlefield rather than playing it; **Polluted Cistern**
+counts milled cards only; **Demonic Covenant** draws on an attack at a
+planeswalker too; **Into the Pit**'s sacrifice is paid as the cast
+completes; **Old Stickfingers** reveals creature by creature. Pods (release,
+seed 10231, 1,000 games beside Faldorn / Anikthea / Ranar): 1,000/1,000
+decided, no card of the four lists unplayed, Winter 45.1 %. `--bench`
+byte-identical.
 
 The **seventy-sixth** is Commander 2018's **Exquisite Invention**
 (`ExquisiteInvention_C18`) — Izzet artifacts under Saheeli, the Gifted, the
