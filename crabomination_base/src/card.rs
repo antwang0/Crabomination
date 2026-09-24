@@ -2938,6 +2938,13 @@ pub enum SelectionRequirement {
     /// The candidate is attached to a creature on the battlefield — "each
     /// Aura you control that's attached to a creature" (Sage's Reverie).
     AttachedToCreature,
+    /// CR 702.51 — a spell that has convoke: printed, granted by a static
+    /// (Chief Engineer) or by a one-shot "next spell" grant (Wand of the
+    /// Worldsoul). Kasla, Joyful Stormsculptor, Saint Traft and Rem Karolus.
+    HasConvoke,
+    /// A planeswalker one of whose loyalty abilities was activated this turn
+    /// (Cut Short).
+    LoyaltyActivatedThisTurn,
     /// The mirror of `AttachedToSource`: true when the candidate is the
     /// permanent the *source* is attached to. Source-blind evaluators answer
     /// `true`; the cost path intersects against the real host, which is what

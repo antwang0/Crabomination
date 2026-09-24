@@ -6587,6 +6587,9 @@ fn hand_specialties(state: &GameState, seat: usize, facts: &BoardFacts) -> u32 {
         if facts.grants_offspring && def.is_creature() {
             m |= spec::KICKER;
         }
+        if state.players[seat].next_spell_convoke_this_turn {
+            m |= spec::CONVOKE;
+        }
         // Gorex's filtered delve rides the delve block.
         if def.graveyard_exile_discount.is_some() {
             m |= spec::DELVE;
@@ -7046,6 +7049,7 @@ pub(super) fn cast_candidates<'a>(
     gated_block!(mask, spec::CONVOKE, castable, {
     for c in state.players[seat].hand.iter() {
         let convoke = c.definition.keywords.has_kw(&crate::card::Keyword::Convoke)
+            || state.players[seat].next_spell_convoke_this_turn
             || (facts.grants_convoke && state.spell_granted_convoke(seat, c));
         let improvise = c.definition.keywords.has_kw(&crate::card::Keyword::Improvise)
             || (facts.grants_convoke && state.spell_granted_improvise(seat, c));

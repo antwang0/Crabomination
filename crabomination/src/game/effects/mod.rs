@@ -34702,6 +34702,10 @@ impl GameState {
                 self.reveal_top_put_attached(count, filter, ctx, events);
                 Ok(())
             }
+            Effect::NextSpellGainsConvokeThisTurn => {
+                self.players[ctx.controller].next_spell_convoke_this_turn = true;
+                Ok(())
+            }
             Effect::RevealUntilPutAttachedElseHand { filter } => {
                 self.reveal_until_put_attached_else_hand(filter, ctx, events);
                 Ok(())
@@ -37853,6 +37857,16 @@ impl GameState {
                 .map(EntityRef::Permanent)
                 .into_iter()
                 .collect(),
+            Selector::CreaturesThatConvokedSource => {
+                let Some(src) = ctx.source else { return Vec::new() };
+                self.convoked_by
+                    .iter()
+                    .filter(|(s, _)| *s == src)
+                    .flat_map(|(_, cs)| cs.iter().copied())
+                    .filter(|id| self.battlefield.find_by_id(*id).is_some())
+                    .map(EntityRef::Permanent)
+                    .collect()
+            }
             Selector::LastCreatedTokens => self
                 .scratch.last_created_tokens
                 .iter()

@@ -319,6 +319,9 @@ pub enum Selector {
     /// `Effect::Seq`, every CreateToken from the current resolution
     /// is included. Push: modern_decks batch 28.
     LastCreatedTokens,
+    /// CR 702.51 — the creatures that convoked the effect's source as it was
+    /// cast this turn (Venerated Loxodon).
+    CreaturesThatConvokedSource,
 
     /// All cards moved by `Effect::Move` (and Mill / Exile shortcuts)
     /// in the current resolution. Used by Practiced Scrollsmith,
@@ -10509,6 +10512,9 @@ pub enum Effect {
     /// its best legal host, else into your hand; the rest go to the bottom in
     /// a random order (Songbirds' Blessing).
     RevealUntilPutAttachedElseHand { filter: SelectionRequirement },
+    /// "The next spell you cast this turn has convoke" (CR 702.51 — Wand of
+    /// the Worldsoul, Flockchaser Phantom).
+    NextSpellGainsConvokeThisTurn,
 
     /// "For each planeswalker you control, you may activate one of its loyalty
     /// abilities this turn as though none of its loyalty abilities have been

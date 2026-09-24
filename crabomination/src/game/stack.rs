@@ -4394,6 +4394,12 @@ impl GameState {
         // Collections in the [`PlayerCold`] group are cleared behind an
         // `is_empty()` guard: `clear()` on an empty one still takes `&mut`,
         // and that unshares the whole cold group for nothing.
+        if !self.convoke_granted_spells.is_empty() {
+            self.convoke_granted_spells.clear();
+        }
+        if !self.convoked_by.is_empty() {
+            self.convoked_by.clear();
+        }
         for pl in &mut self.players {
             // `Player` is a CoW handle over `PlayerData`, so each of the ~55
             // writes below was its own `Player::deref_mut` -> `Arc::make_mut`.
@@ -4483,6 +4489,7 @@ impl GameState {
             pl.free_exile_cast_used_this_turn = false;
             pl.life_alt_cast_used_this_turn = false;
             pl.life_alt_next_spell_this_turn = false;
+            pl.next_spell_convoke_this_turn = false;
             pl.creatures_exiled_from_control_this_turn = 0;
             // CR 401.6 — turn-scoped play-from-top permission ends at cleanup.
             pl.play_from_top_this_turn = false;

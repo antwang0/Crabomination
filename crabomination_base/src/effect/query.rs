@@ -865,6 +865,7 @@ impl Effect {
             | Effect::PutOntoBattlefieldAttached { .. }
             | Effect::RevealTopPutAttached { .. }
             | Effect::RevealUntilPutAttachedElseHand { .. }
+            | Effect::NextSpellGainsConvokeThisTurn
             | Effect::PreventNextDamageFromSourceThisTurn { .. }
             | Effect::SacrificeSourceUnlessPayValue { .. }
             | Effect::AddAttackTaxThisTurn { .. }

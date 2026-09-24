@@ -1465,6 +1465,15 @@ pub struct ColdState {
     /// cost by `cast_foretold`; dropped when the card is cast.
     #[serde(default)]
     pub(crate) granted_foretell_costs: Vec<(CardId, crate::mana::ManaCost)>,
+    /// CR 702.51 — spells cast this turn under a one-shot "next spell has
+    /// convoke" grant, so `R::HasConvoke` sees them. Cleared at cleanup.
+    #[serde(default)]
+    pub(crate) convoke_granted_spells: Vec<CardId>,
+    /// CR 702.51 — the creatures that convoked each spell cast this turn
+    /// (Venerated Loxodon's "each creature that convoked it"). Cleared at
+    /// cleanup.
+    #[serde(default)]
+    pub(crate) convoked_by: Vec<(CardId, Vec<CardId>)>,
     /// Transient: colors of the most-recently-sacrificed cost permanent —
     /// Lyzolda's `Predicate::SacrificedWasColor`. Set on the sacrifice-cost
     /// paths; reset between resolutions.

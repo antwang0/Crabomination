@@ -8602,6 +8602,7 @@ impl GameState {
             "cast_cost_scan missed a GrantConvokeToSpells static",
         );
         let has_convoke = card.definition.keywords.has_kw(&crate::card::Keyword::Convoke)
+            || self.players[p].next_spell_convoke_this_turn
             || (cost_statics & cast_static::GRANT_CONVOKE != 0
                 && self.spell_granted_convoke(p, &card));
         let has_improvise = card.definition.keywords.has_kw(&crate::card::Keyword::Improvise)
@@ -9634,6 +9635,20 @@ impl GameState {
         }
 
         let mut auto_events = receipt.auto_events;
+        // CR 702.51 — tapping a creature to convoke taps it: its "becomes
+        // tapped" triggers fire (Fallowsage, Saint Traft and Rem Karolus).
+        if !convoke_creatures.is_empty() {
+            for &cid in convoke_creatures {
+                auto_events.push(GameEvent::PermanentTapped { card_id: cid, actor: None, as_attacker: false });
+            }
+            if has_convoke {
+                self.convoked_by.push((card_id, convoke_creatures.to_vec()));
+            }
+        }
+        if self.players[p].next_spell_convoke_this_turn {
+            self.players[p].next_spell_convoke_this_turn = false;
+            self.convoke_granted_spells.push(card_id);
+        }
         auto_events.push(GameEvent::SpellCast {
             player: p,
             card_id,

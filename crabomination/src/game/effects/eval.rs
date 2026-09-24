@@ -6085,6 +6085,12 @@ impl GameState {
                 .attached_to
                 .and_then(|h| self.battlefield_find(h))
                 .is_some_and(|h| h.definition.is_creature()),
+            R::HasConvoke => {
+                card.definition.keywords.has_kw(&crate::card::Keyword::Convoke)
+                    || self.convoke_granted_spells.contains(&card.id)
+                    || self.spell_granted_convoke(card.controller, card)
+            }
+            R::LoyaltyActivatedThisTurn => card.loyalty_uses_this_turn > 0,
             R::IsHostOfSource => true,
             // `self.attacking` keys by card id, so a card not on the battlefield
             // is never listed — this stays false there (Static Snare's affinity
