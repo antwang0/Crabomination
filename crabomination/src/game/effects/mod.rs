@@ -2803,7 +2803,7 @@ impl GameState {
         // permanent's type after it has left the battlefield). Snapshot every
         // permanent, not just creatures, so a sacrificed artifact is typed.
         if let Some(c) = self.battlefield_find(id) {
-            self.died_card_snapshots.insert(id, c.clone());
+            self.died_card_snapshots.insert(id, self.lki_clone(c));
         }
         if is_creature {
             events.push(GameEvent::CreatureSacrificed { card_id: id, who });
@@ -2949,7 +2949,7 @@ impl GameState {
         // post-destruction LKI reads of its counters (CR 603.10 — Dismantle).
         // Snapshot every permanent, like the sacrifice path.
         if let Some(c) = self.battlefield_find(cid) {
-            self.died_card_snapshots.insert(cid, c.clone());
+            self.died_card_snapshots.insert(cid, self.lki_clone(c));
         }
         if is_creature {
             events.push(GameEvent::CreatureDied { card_id: cid });
@@ -8413,7 +8413,7 @@ impl GameState {
                             .unwrap_or(false);
                         if is_creature {
                             if let Some(c) = self.battlefield_find(id) {
-                                self.died_card_snapshots.insert(id, c.clone());
+                                self.died_card_snapshots.insert(id, self.lki_clone(c));
                             }
                             events.push(GameEvent::CreatureSacrificed { card_id: id, who: p });
                             events.push(GameEvent::CreatureDied { card_id: id });
@@ -13712,7 +13712,7 @@ impl GameState {
                     // CR 700.4 — the swept board still dies properly: dies
                     // triggers, Persist/Undying, snapshots, tallies.
                     if let Some(c) = self.battlefield_find(id) {
-                        self.died_card_snapshots.insert(id, c.clone());
+                        self.died_card_snapshots.insert(id, self.lki_clone(c));
                     }
                     events.push(GameEvent::CreatureSacrificed { card_id: id, who });
                     events.push(GameEvent::CreatureDied { card_id: id });
@@ -21859,7 +21859,7 @@ impl GameState {
                     let p = c.controller;
                     let is_creature = c.definition.is_creature();
                     if is_creature {
-                        self.died_card_snapshots.insert(id, c.clone());
+                        self.died_card_snapshots.insert(id, self.lki_clone(c));
                         events.push(GameEvent::CreatureSacrificed { card_id: id, who: p });
                         events.push(GameEvent::CreatureDied { card_id: id });
                     }
@@ -29099,7 +29099,7 @@ impl GameState {
                         .unwrap_or(false);
                     if is_creature {
                         if let Some(c) = self.battlefield_find(cid) {
-                            self.died_card_snapshots.insert(cid, c.clone());
+                            self.died_card_snapshots.insert(cid, self.lki_clone(c));
                         }
                         events.push(GameEvent::CreatureSacrificed { card_id: cid, who: p });
                         events.push(GameEvent::CreatureDied { card_id: cid });
@@ -29193,7 +29193,7 @@ impl GameState {
                         .map(|c| c.definition.is_creature()).unwrap_or(false);
                     if is_creature {
                         if let Some(c) = self.battlefield_find(cid) {
-                            self.died_card_snapshots.insert(cid, c.clone());
+                            self.died_card_snapshots.insert(cid, self.lki_clone(c));
                         }
                         events.push(GameEvent::CreatureSacrificed { card_id: cid, who: p });
                         events.push(GameEvent::CreatureDied { card_id: cid });

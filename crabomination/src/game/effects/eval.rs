@@ -4916,6 +4916,19 @@ impl GameState {
                                         || (o.definition.is_enchantment()
                                             && o.controller == card.controller))
                             })
+                            // CR 603.10a — a death trigger looks back: what
+                            // rode the creature as it left (`auras_at_death`),
+                            // an Equipment or an Aura of its controller's.
+                            || (self.battlefield.find_by_id(*cid).is_none()
+                                && self.auras_at_death.get(cid).is_some_and(|riders| {
+                                    riders.iter().any(|(a, ctrl)| {
+                                        *ctrl == card.controller
+                                            || self
+                                                .battlefield
+                                                .find_by_id(*a)
+                                                .is_some_and(|o| o.definition.is_artifact())
+                                    })
+                                }))
                     }
                     // CR 506.5: attacking alone = card is in attacking AND
                     // there is exactly one declared attacker.

@@ -16441,15 +16441,22 @@ impl GameState {
         }
     }
 
-    pub fn dying_snapshot(&self, id: CardId) -> Option<CardInstance> {
-        let mut snap = self.battlefield.find_by_id(id)?.clone();
+    /// CR 603.10 — the last-known information of a permanent that is leaving
+    /// the battlefield: a clone whose creature types and **P/T are the
+    /// computed ones** (an Aura's, Equipment's or anthem's bonus baked into
+    /// the bonus fields), so `power()` on the snapshot answers what the
+    /// permanent was, not base + counters + pumps. `c` must be the
+    /// battlefield instance. Snapshots are LKI only — nothing returns one to
+    /// play.
+    pub(crate) fn lki_clone(&self, c: &CardInstance) -> CardInstance {
+        let mut snap = c.clone();
         // The doc's "only pays the layer cost when a grant is present" was a
         // claim, not code, until the presence gate existed: the read below is
         // a whole gather, taken once per dying permanent. `computed` can only
         // differ from printed here through `AddCreatureType` /
         // `SetCreatureTypes`, which is exactly what the gate answers.
         if self.creature_type_change_in_scope()
-            && let Some(cp) = self.computed_permanent(id)
+            && let Some(cp) = self.computed_permanent(c.id)
         {
             let printed = &snap.definition.subtypes.creature_types;
             if cp.subtypes().creature_types.iter().any(|t| !printed.contains(t)) {
@@ -16457,7 +16464,16 @@ impl GameState {
                     cp.subtypes().creature_types.clone();
             }
         }
-        Some(snap)
+        if c.definition.is_creature() && !self.layer_reads_are_printed() {
+            snap.power_bonus = snap.power_bonus.saturating_add(self.effective_power(c) - c.power());
+            snap.toughness_bonus =
+                snap.toughness_bonus.saturating_add(self.effective_toughness(c) - c.toughness());
+        }
+        snap
+    }
+
+    pub fn dying_snapshot(&self, id: CardId) -> Option<CardInstance> {
+        self.battlefield.find_by_id(id).map(|c| self.lki_clone(c))
     }
 
     /// CR 702.16 — true if `target` has protection from any of `source`'s

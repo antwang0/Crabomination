@@ -6598,7 +6598,7 @@ impl GameState {
                 if c.definition.is_creature() {
                     events.push(GameEvent::CreatureDied { card_id: id });
                 }
-                self.died_card_snapshots.insert(id, c.clone());
+                self.died_card_snapshots.insert(id, self.lki_clone(c));
             }
             self.remove_from_battlefield_to_graveyard_raw(id);
         }
@@ -6631,7 +6631,7 @@ impl GameState {
         };
         for id in world_victims {
             if let Some(c) = self.battlefield.find_by_id(id) {
-                self.died_card_snapshots.insert(id, c.clone());
+                self.died_card_snapshots.insert(id, self.lki_clone(c));
             }
             self.remove_from_battlefield_to_graveyard_raw(id);
         }
@@ -6665,7 +6665,7 @@ impl GameState {
         };
         for id in saga_victims {
             if let Some(c) = self.battlefield.find_by_id(id) {
-                self.died_card_snapshots.insert(id, c.clone());
+                self.died_card_snapshots.insert(id, self.lki_clone(c));
             }
             events.push(GameEvent::PermanentSacrificed {
                 card_id: id,
@@ -6966,7 +6966,7 @@ impl GameState {
             if !die_triggers.is_empty()
                 && let Some(c) = self.battlefield.find_by_id(id)
             {
-                self.leaves_bf_lki.insert(id, c.clone());
+                self.leaves_bf_lki.insert(id, self.lki_clone(c));
             }
             let was_land = self
                 .battlefield
@@ -8245,12 +8245,12 @@ impl GameState {
         if (!leave_triggers.is_empty() || has_sac_self_trigger)
             && let Some(c) = self.battlefield.find_by_id(id)
         {
-            self.died_card_snapshots.insert(id, c.clone());
+            self.died_card_snapshots.insert(id, self.lki_clone(c));
             // CR 603.10 — keep a longer-lived LKI snapshot so a
             // "deals damage / makes tokens equal to its power" body reads
             // the counter-boosted P/T at resolution (Goldvein Hydra,
             // Cacophony Scamp). Removed when the trigger resolves.
-            self.leaves_bf_lki.insert(id, c.clone());
+            self.leaves_bf_lki.insert(id, self.lki_clone(c));
         }
         // Capture owner + land-ness before removal so we can emit a
         // `CardPutIntoGraveyard` event (CR 700 — "put into a graveyard from

@@ -12073,3 +12073,35 @@ fn cr_601_2c_required_target_with_no_legal_candidate_rejects_the_cast() {
     g.add_card_to_battlefield(1, catalog::grizzly_bears());
     assert!(g.would_accept(cast(blade)), "a legal target exists");
 }
+
+/// CR 603.10 — a dies trigger's "its power" is the creature's last-known
+/// power **as computed**: an Equipment's and an anthem's bonus count, not
+/// only base + counters + pumps. Regression: the death snapshot was a plain
+/// clone, so Fireblade Charger under Bonesplitter and Glorious Anthem dealt 1.
+#[test]
+fn cr_603_10_dies_trigger_reads_computed_last_known_power() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let fc = g.add_card_to_battlefield(0, catalog::fireblade_charger());
+    let bs = g.add_card_to_battlefield(0, catalog::bonesplitter());
+    g.battlefield_find_mut(bs).unwrap().attached_to = Some(fc);
+    g.add_card_to_battlefield(0, catalog::glorious_anthem());
+    assert_eq!(g.computed_permanent(fc).unwrap().power, 4);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Player(1))]));
+    let m = g.add_card_to_hand(0, catalog::murder());
+    g.players[0].mana_pool.add(Color::Black, 3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: m,
+        target: Some(Target::Permanent(fc)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("murder");
+    let life = g.players[1].life;
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 4);
+}
