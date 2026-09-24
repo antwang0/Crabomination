@@ -1800,6 +1800,11 @@ pub enum StaticEffect {
     /// `cast_spell` on the source's controller's turn; each source grants one
     /// cast per turn (`PlayerCold::graveyard_sac_cast_sources_this_turn`).
     /// Read off `static_abilities` and off the active station bands' `statics`.
+    /// "Once during each of your turns, you may cast a [filter] spell from
+    /// your graveyard" (Gisa and Geralf: a Zombie creature spell) — the
+    /// no-sacrifice sibling of `GraveyardCastBySacrificingOncePerTurn`,
+    /// sharing its per-source tally.
+    GraveyardCastOncePerTurn { filter: SelectionRequirement },
     GraveyardCastBySacrificingOncePerTurn {
         filter: SelectionRequirement,
         sacrifice: SelectionRequirement,

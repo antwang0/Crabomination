@@ -6093,6 +6093,10 @@ mod spec {
     pub const GY_BACK: u32 = 1 << 17;
     /// Printed escape in the graveyard, or a board grant of it (Kotis).
     pub const GY_ESCAPE: u32 = 1 << 21;
+    /// A graveyard card castable through a board permission (Muldrotha,
+    /// Lurrus, Gisa and Geralf, Exploration Broodship) or its own
+    /// graveyard-only alternative cost (Scourge of Nel Toth).
+    pub const GY_GRANT: u32 = 1 << 29;
     /// The one graveyard loop that carries flashback, disturb, mayhem,
     /// harmonize and the `from_graveyard` activated abilities.
     pub const GY_LOOP: u32 = GY_RECAST;
@@ -6140,6 +6144,8 @@ struct BoardFacts {
     grants_escape: bool,
     /// A replicate-granting static is on the board (Hatchery Sliver).
     grants_replicate: bool,
+    /// A graveyard-cast permission is on the board (Muldrotha, Gisa).
+    grants_gy_cast: bool,
 }
 
 impl BoardFacts {
@@ -6150,6 +6156,7 @@ impl BoardFacts {
             prepared: false,
             grants_escape: false,
             grants_replicate: false,
+            grants_gy_cast: false,
         };
         for c in state.battlefield.iter() {
             if c.controller != seat {
@@ -6166,6 +6173,10 @@ impl BoardFacts {
                     SE::YourISSpellsHaveReplicate | SE::YourSpellsHaveReplicate { .. } => {
                         f.grants_replicate = true
                     }
+                    SE::MayCastPermanentsFromGraveyard
+                    | SE::PlayCardsFromGraveyardDuringYourTurn
+                    | SE::GraveyardCastOncePerTurn { .. }
+                    | SE::GraveyardCastBySacrificingOncePerTurn { .. } => f.grants_gy_cast = true,
                     _ => {}
                 }
             }
@@ -6283,6 +6294,9 @@ fn graveyard_specialties(state: &GameState, seat: usize) -> u32 {
         if c.may_cast_back_from_graveyard && def.back_face.is_some() {
             m |= spec::GY_BACK;
         }
+        if def.alternative_cost.as_ref().is_some_and(|a| a.from_graveyard) {
+            m |= spec::GY_GRANT;
+        }
     }
     m
 }
@@ -6357,7 +6371,15 @@ pub(super) fn cast_candidates<'a>(
             0
         }
         | if w.may_play { may_play_specialty(state, seat) } else { 0 }
-        | if facts.prepared { spec::PREPARED } else { 0 };
+        | if facts.prepared { spec::PREPARED } else { 0 }
+        | if facts.grants_gy_cast
+            && state.active_player_idx == seat
+            && !state.players[seat].graveyard.is_empty()
+        {
+            spec::GY_GRANT
+        } else {
+            0
+        };
     let has_repartee = facts.repartee;
     // One producible-mana read for every affordability filter in this
     // function — see `SweepMana`.
@@ -7617,6 +7639,47 @@ pub(super) fn cast_candidates<'a>(
         };
         let action = GameAction::CastEscape {
             card_id: c.id, exile_cards, target, additional_targets, mode: None, x_value: None,
+        };
+        castable.push((action, false));
+    }
+    });
+
+    // Graveyard casts through a board permission (Muldrotha, Lurrus, Gisa and
+    // Geralf, Exploration Broodship) or a graveyard-only alternative cost
+    // (Scourge of Nel Toth). `would_accept` validates timing, the per-turn
+    // tallies and the cost.
+    gated_block!(mask, spec::GY_GRANT, castable, {
+    for c in state.players[seat].graveyard.iter() {
+        let own_alt = c.definition.alternative_cost.as_ref().is_some_and(|a| a.from_graveyard);
+        let granted = !own_alt
+            && facts.grants_gy_cast
+            && !c.definition.is_land()
+            && (state.graveyard_sac_cast_grant(seat, c.id).is_some()
+                || state.graveyard_cast_type_available(seat, c.id).is_some());
+        if !own_alt && !granted {
+            continue;
+        }
+        let (target, additional_targets) = if c.definition.effect.requires_target() {
+            let (t, extras) =
+                state.auto_targets_for_effect_all_slots(&c.definition.effect, seat, None);
+            if t.is_none() {
+                continue;
+            }
+            (t, extras)
+        } else {
+            (None, vec![])
+        };
+        let action = if own_alt {
+            GameAction::CastSpellAlternative {
+                card_id: c.id,
+                pitch_card: None,
+                target,
+                additional_targets,
+                mode: None,
+                x_value: None,
+            }
+        } else {
+            GameAction::CastSpell { card_id: c.id, target, additional_targets, mode: None, x_value: None }
         };
         castable.push((action, false));
     }

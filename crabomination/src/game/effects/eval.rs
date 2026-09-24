@@ -2912,6 +2912,10 @@ impl GameState {
                 .battlefield
                 .iter()
                 .any(|c| c.controller == ctx.controller && self.is_commander(c.id)),
+            Predicate::UsedGraveyardThisTurn { who } => self
+                .resolve_players(who, ctx)
+                .iter()
+                .any(|&p| self.players[p].used_graveyard_this_turn),
             Predicate::PlayerControlsACommander { who } => {
                 let seats = self.resolve_players(who, ctx);
                 !seats.is_empty()

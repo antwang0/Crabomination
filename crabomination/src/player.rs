@@ -1049,6 +1049,10 @@ pub struct PlayerData {
     /// Gaea's Will — lands playable from this player's graveyard this turn.
     #[serde(default)]
     pub play_from_graveyard_this_turn: bool,
+    /// This turn the player cast a spell from a graveyard or activated an
+    /// ability of a card in a graveyard (Laboratory Drudge).
+    #[serde(default)]
+    pub used_graveyard_this_turn: bool,
     /// Gaea's Will — this player's graveyard-bound cards exile instead this
     /// turn (CR 614.6, own cards only).
     #[serde(default)]
@@ -1343,6 +1347,7 @@ impl Player {
             cant_cast_noncreature_this_turn: false,
             free_spells_from_hand_this_turn: false,
             play_from_graveyard_this_turn: false,
+            used_graveyard_this_turn: false,
             graveyard_bound_exiled_this_turn: false,
             first_spell_tax_charges: 0,
             sorceries_as_flash: false,

@@ -339,6 +339,45 @@ impl GameState {
         }
     }
 
+    /// Cast `card_id` from `p`'s graveyard for its graveyard-only alternative
+    /// cost (Scourge of Nel Toth): the same hop-into-hand shape as the other
+    /// graveyard casts, so every hand-cast rule applies and the card is
+    /// stamped cast-from-graveyard.
+    pub(crate) fn cast_alternative_from_graveyard(
+        &mut self,
+        card_id: CardId,
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        let p = self.priority.player_with_priority;
+        let card = self.players[p]
+            .graveyard
+            .iter()
+            .find(|c| c.id == card_id)
+            .ok_or(GameError::CardNotInHand(card_id))?;
+        if !card.definition.alternative_cost.as_ref().is_some_and(|a| a.from_graveyard)
+            || self.cast_from_zone_blocked(p, &card.definition, crate::card::Zone::Graveyard)
+        {
+            return Err(GameError::NoAlternativeCost);
+        }
+        let card = Self::take_card(&mut self.players[p].graveyard, card_id)
+            .ok_or(GameError::CardNotInHand(card_id))?;
+        self.players[p].hand.push(card);
+        self.casting_hop = Some((card_id, crate::game::HopFrom::Graveyard));
+        let r = self.cast_spell_alternative_from(
+            AltCastZone::Hand, card_id, None, target, additional_targets, mode, x_value,
+        );
+        self.casting_hop = None;
+        if r.is_err()
+            && let Some(card) = Self::take_card(&mut self.players[p].hand, card_id)
+        {
+            self.players[p].send_to_graveyard(card);
+        }
+        r
+    }
+
     /// Take `card_id` out of the zone an alt cast sources from.
     fn take_for_alt_cast(
         &mut self,
@@ -419,6 +458,14 @@ impl GameState {
             .definition
             .alternative_cost
             .clone();
+        // Scourge of Nel Toth — a graveyard-only alternative cost is offered
+        // only on the graveyard hop (`cast_alternative_from_graveyard`).
+        if let Some(alt) = &printed
+            && alt.from_graveyard
+        {
+            let hopped = self.casting_hop == Some((card_id, crate::game::HopFrom::Graveyard));
+            return hopped.then(|| alt.clone());
+        }
         if printed.is_some() {
             return printed;
         }
@@ -5400,7 +5447,9 @@ impl GameState {
                 Ok(mut evs) => {
                     if !self.players[p].hand.iter().any(|c| c.id == card_id) {
                         self.players[p].graveyard_sac_cast_sources_this_turn.push(grant);
-                        evs.append(&mut self.sacrifice_for_graveyard_cast(p, grant, &sacrifice));
+                        if let Some(sacrifice) = &sacrifice {
+                            evs.append(&mut self.sacrifice_for_graveyard_cast(p, grant, sacrifice));
+                        }
                         self.entered_from_graveyard_this_turn.insert(card_id);
                     }
                     return Ok(evs);
@@ -5562,7 +5611,7 @@ impl GameState {
         &self,
         p: usize,
         card_id: CardId,
-    ) -> Option<(CardId, crate::card::SelectionRequirement)> {
+    ) -> Option<(CardId, Option<crate::card::SelectionRequirement>)> {
         use crate::effect::StaticEffect;
         if self.active_player_idx != p {
             return None;
@@ -5601,7 +5650,13 @@ impl GameState {
                                         )
                                 }) =>
                         {
-                            Some((c.id, sacrifice.clone()))
+                            Some((c.id, Some(sacrifice.clone())))
+                        }
+                        // Gisa and Geralf — no sacrifice owed.
+                        StaticEffect::GraveyardCastOncePerTurn { filter }
+                            if self.evaluate_requirement_on_card(filter, card, p) =>
+                        {
+                            Some((c.id, None))
                         }
                         _ => None,
                     })
@@ -10021,6 +10076,9 @@ impl GameState {
             }
         }
         self.spells_cast_this_turn += 1;
+        if card.cast_from_graveyard && !self.players[p].used_graveyard_this_turn {
+            self.players[p].used_graveyard_this_turn = true;
+        }
         // Mana Maze reads the turn's most recent cast (CR 601.2 restriction).
         self.last_cast_spell_colors = card.definition.printed_color_set();
         {
@@ -17258,6 +17316,9 @@ impl GameState {
         // battlefield-only ability from another zone accidentally.
         if source_in_gy && !ability.from_graveyard {
             return Err(GameError::CardNotOnBattlefield(card_id));
+        }
+        if source_in_gy && !self.players[p].used_graveyard_this_turn {
+            self.players[p].used_graveyard_this_turn = true;
         }
         if source_in_hand && !ability.from_hand {
             return Err(GameError::CardNotOnBattlefield(card_id));

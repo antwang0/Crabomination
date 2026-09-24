@@ -1952,6 +1952,10 @@ pub enum Predicate {
     /// when any battlefield permanent the effect's controller controls is
     /// one of their designated commanders (`Player.commanders`).
     YouControlACommander,
+    /// "If you've cast a spell from a graveyard or activated an ability of a
+    /// card in a graveyard this turn" (Laboratory Drudge). Reads
+    /// `Player.used_graveyard_this_turn`.
+    UsedGraveyardThisTurn { who: PlayerRef },
     /// "Unless they control a commander" (Crimson Honor Guard) — true when
     /// every player `who` names controls a permanent that is any player's
     /// commander (CR 903.3).

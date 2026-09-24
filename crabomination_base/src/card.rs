@@ -5525,6 +5525,11 @@ fn one_i32() -> i32 { 1 }
 pub struct AlternativeCost {
     /// Mana paid for the alternative cast (often empty / `{0}` for pitch
     /// spells, but non-empty for evoke or kicker-style alternatives).
+    /// The alternative cost is only for a cast **from the graveyard** ("you
+    /// may cast this card from your graveyard by paying … rather than paying
+    /// its mana cost" — Scourge of Nel Toth); it is not offered from hand.
+    #[serde(default)]
+    pub from_graveyard: bool,
     pub mana_cost: ManaCost,
     /// Life paid as additional cost.
     pub life_cost: u32,

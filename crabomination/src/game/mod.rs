@@ -18517,6 +18517,22 @@ impl GameState {
                 additional_targets,
                 mode,
                 x_value,
+            } if !self.players[self.priority.player_with_priority].has_in_hand(card_id)
+                && self.players[self.priority.player_with_priority]
+                    .graveyard
+                    .iter()
+                    .any(|c| c.id == card_id) =>
+            {
+                let _ = pitch_card;
+                self.cast_alternative_from_graveyard(card_id, target, additional_targets, mode, x_value)
+            }
+            GameAction::CastSpellAlternative {
+                card_id,
+                pitch_card,
+                target,
+                additional_targets,
+                mode,
+                x_value,
             } => self.cast_spell_alternative_from(
                 crate::game::actions::AltCastZone::Hand, card_id, pitch_card, target, additional_targets, mode, x_value,
             ),
@@ -29109,6 +29125,7 @@ fn static_effect_to_effects(
             | StaticEffect::PlayExiledWithSourceForLife
             | StaticEffect::GraveyardCastWithLifeSurcharge { .. }
             | StaticEffect::GraveyardCastBySacrificingOncePerTurn { .. }
+            | StaticEffect::GraveyardCastOncePerTurn { .. }
             | StaticEffect::ActivationCostReduction { .. }
             | StaticEffect::YourCreatureActivatedAbilitiesCostLess { .. }
             // Consulted directly in `activate_ability`, not a layer effect.
