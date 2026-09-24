@@ -2270,6 +2270,10 @@ pub enum Keyword {
     /// `equipped_bonus`; "you" is the controller of each attached Aura that
     /// grants it, read in `attacker_target_block` against the defender.
     CantAttackAuraController,
+    /// CR 508.1a — "can't attack [seat] or planeswalkers [seat] controls",
+    /// granted for a turn by an effect that names its controller
+    /// (Illusionist's Gambit's "they can't attack you").
+    CantAttackPlayer(usize),
     /// CR 702.95 — Soulbond. A marker keyword; when this or another creature
     /// enters while either is unpaired, its controller may pair them. The
     /// pairing rides `CardInstance.soulbond_partner`, and the bonus each

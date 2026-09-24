@@ -1541,7 +1541,9 @@ impl Effect {
                 player_has_target(who) || value_has_target(keep)
             }
             Effect::Explore { who } => sel_has_target(who),
-            Effect::Goad { what } | Effect::GoadForTheGame { what } => sel_has_target(what),
+            Effect::Goad { what }
+            | Effect::GoadForTheGame { what }
+            | Effect::GrantCantAttackYou { what, .. } => sel_has_target(what),
             Effect::Suspect { what } | Effect::ClearSuspected { what } => sel_has_target(what),
             Effect::ReplaceCreatureTypeText { what } => sel_has_target(what),
             Effect::Detain { what } => sel_has_target(what),
@@ -2736,6 +2738,7 @@ impl Effect {
             Effect::Airbend { what } => sel_filter(what),
             Effect::Goad { what }
             | Effect::GoadForTheGame { what }
+            | Effect::GrantCantAttackYou { what, .. }
             | Effect::Transform { what }
             | Effect::Flip { what }
             | Effect::LoseAllAbilities { what, .. }

@@ -246,6 +246,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         | Keyword::CantBlockUnlessGreaterPowerBlocks
         | Keyword::CantAttackIfDefenderHasUntappedLand
         | Keyword::CantAttackAuraController
+        | Keyword::CantAttackPlayer(_)
         | Keyword::CantAttackIfAttackedLastTurn
         | Keyword::CantBlockIfYouHaveUntappedLand
         | Keyword::CantAttackUnlessMoreCreaturesThanDefender

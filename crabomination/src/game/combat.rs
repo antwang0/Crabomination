@@ -823,6 +823,9 @@ impl GameState {
                 {
                     return Some((line!(), GameError::CannotAttack(id)));
                 }
+                Keyword::CantAttackPlayer(s) if defender == Some(*s) => {
+                    return Some((line!(), GameError::CannotAttack(id)));
+                }
                 // CR 508.1a — Mogg Toady: strictly more creatures.
                 Keyword::CantAttackUnlessMoreCreaturesThanDefender
                     if defender
@@ -857,6 +860,7 @@ impl GameState {
                     | Keyword::CantAttackUnlessDefenderControlsLandType(_)
                     | Keyword::CantAttackIfDefenderHasUntappedLand
                     | Keyword::CantAttackAuraController
+                    | Keyword::CantAttackPlayer(_)
                     | Keyword::CantAttackUnlessMoreCreaturesThanDefender
                     | Keyword::CantAttackUnlessMoreLandsThanDefender
             )

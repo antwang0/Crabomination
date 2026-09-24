@@ -3,9 +3,9 @@
 
 use crabomination::card::SelectionRequirement as R;
 use crabomination::catalog;
-use crabomination::effect::{Effect, Selector};
+use crabomination::effect::{Duration, Effect, Selector};
 use crabomination::game::effects::EffectContext;
-use crabomination::game::types::TurnStep;
+use crabomination::game::types::{Attack, AttackTarget, GameAction, TurnStep};
 use crabomination::game::*;
 
 fn pod(n: usize) -> GameState {
@@ -35,4 +35,27 @@ fn cr_701_38_a_goad_for_the_game_outlives_the_goaders_turn() {
     g.do_untap();
     assert!(g.battlefield_find(forever).unwrap().goaded_by.contains(&0), "still goaded");
     assert!(g.battlefield_find(plain).unwrap().goaded_by.is_empty(), "a plain goad lapsed");
+}
+
+/// CR 508.1a — "they can't attack you or planeswalkers you control": the
+/// named seat is refused as a defender, another opponent isn't.
+#[test]
+fn cr_508_1a_a_creature_that_cant_attack_you_attacks_someone_else() {
+    let mut g = pod(3);
+    g.active_player_idx = 1;
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    run(
+        &mut g,
+        0,
+        &Effect::GrantCantAttackYou {
+            what: Selector::EachPermanent(R::HasName("Grizzly Bears".into())),
+            duration: Duration::EndOfTurn,
+        },
+    );
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    let at = |p| GameAction::DeclareAttackers(vec![Attack { attacker: bear, target: AttackTarget::Player(p) }]);
+    assert!(g.perform_action(at(0)).is_err(), "can't attack the granting player");
+    g.perform_action(at(2)).expect("another opponent is fine");
 }

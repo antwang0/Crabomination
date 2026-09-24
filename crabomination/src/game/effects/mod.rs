@@ -10945,6 +10945,16 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::GrantCantAttackYou { what, duration } => self.resolve_effect_into(
+                &Effect::GrantKeyword {
+                    what: what.clone(),
+                    keyword: Keyword::CantAttackPlayer(ctx.controller),
+                    duration: duration.clone(),
+                },
+                ctx,
+                events,
+            ),
+
             Effect::GoadForTheGame { what } => {
                 let goader = ctx.controller;
                 for ent in self.resolve_selector(what, ctx) {
