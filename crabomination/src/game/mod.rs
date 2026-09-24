@@ -1945,6 +1945,12 @@ pub struct ResolutionScratch {
     /// cards it just killed (Cleansing Meditation's Threshold rebuild).
     #[serde(skip)]
     pub(crate) destroyed_this_resolution: Vec<CardId>,
+    /// Transient: parallel to `destroyed_this_resolution`, each destroyed
+    /// permanent's controller as it was destroyed and whether it was a
+    /// creature — tokens included, which the card list can no longer find.
+    /// Read by `Value::CreaturesDestroyedThisResolutionControlledBy`.
+    #[serde(skip)]
+    pub(crate) destroyed_controllers_this_resolution: Vec<(usize, bool)>,
     /// Permanents the resolution currently underway is targeting, so the
     /// damage funnel can tell "damage from a spell or ability that targets
     /// this" apart from incidental damage (CR 615 — Bronze Horse, Silhouette).

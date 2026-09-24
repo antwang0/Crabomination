@@ -681,6 +681,10 @@ pub enum Value {
     /// Opponents of the controller holding at least N cards (Wolfcaller's
     /// Howl).
     OpponentsWithHandSizeAtLeast(u32),
+    /// Living players whose `tally` is strictly greater than the source
+    /// controller's (Oreskos Explorer: "the number of players who control
+    /// more lands than you").
+    PlayersWithGreaterTally(crate::card::PlayerTally),
     /// CR 700.2 — how many modes were chosen for the resolved spell (Riku of
     /// Many Paths reads the triggering spell's mode count).
     ModesChosenOf(Box<Selector>),
@@ -1367,6 +1371,11 @@ pub enum Value {
     /// Powers Culling Ritual's "Add {B} or {G} for each permanent destroyed
     /// this way" — evaluate it in a later `Seq` step after the destruction.
     PermanentsDestroyedThisResolution,
+    /// Creatures destroyed by `Effect::Destroy` earlier in this same
+    /// resolution that `who` controlled as they were destroyed, tokens
+    /// included. Deadly Tempest's "each player loses life equal to the number
+    /// of creatures they controlled that were destroyed this way".
+    CreaturesDestroyedThisResolutionControlledBy(PlayerRef),
     /// Number of snow permanents (CR 205.4g — supertype Snow) controlled by
     /// the resolved player. Powers Skred ("deals damage to target creature
     /// equal to the number of snow permanents you control") and other

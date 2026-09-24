@@ -2562,6 +2562,7 @@ impl GameState {
             clear_scratch!(self.exiled_card_ids_this_resolution);
             self.permanents_destroyed_this_resolution = 0;
             clear_scratch!(self.destroyed_this_resolution);
+            clear_scratch!(self.destroyed_controllers_this_resolution);
             self.excess_damage_this_resolution = 0;
             // Deaths caused by this resolution are tallied for the OUTERMOST
             // resolution only — a sweeper's own kills can re-enter `resolve_effect`
@@ -2904,6 +2905,7 @@ impl GameState {
             return false;
         }
         let is_creature = self.permanent_is_creature(cid);
+        let controller = self.battlefield_find(cid).map(|c| c.controller);
         // Cache the dying card's snapshot for AnotherOfYours-scope triggers,
         // type filter predicates (token deaths vanish before dispatch) and
         // post-destruction LKI reads of its counters (CR 603.10 — Dismantle).
@@ -2919,6 +2921,9 @@ impl GameState {
         self.permanents_destroyed_this_resolution =
             self.permanents_destroyed_this_resolution.saturating_add(1);
         self.scratch.destroyed_this_resolution.push(cid);
+        if let Some(controller) = controller {
+            self.scratch.destroyed_controllers_this_resolution.push((controller, is_creature));
+        }
         true
     }
 

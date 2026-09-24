@@ -2239,6 +2239,11 @@ pub enum Keyword {
     /// Book of Exalted Deeds' Angel). The printed form is
     /// `StaticEffect::ControllerCantLoseGame` (Platinum Angel).
     ControllerCantLoseGame,
+    /// CR 508.1a — "Enchanted creature can't attack you or planeswalkers you
+    /// control" (Vow of Duty, Vow of Malice). Granted by an Aura's
+    /// `equipped_bonus`; "you" is the controller of each attached Aura that
+    /// grants it, read in `attacker_target_block` against the defender.
+    CantAttackAuraController,
     /// CR 702.95 — Soulbond. A marker keyword; when this or another creature
     /// enters while either is unpaired, its controller may pair them. The
     /// pairing rides `CardInstance.soulbond_partner`, and the bonus each

@@ -808,6 +808,21 @@ impl GameState {
                 {
                     return Some((line!(), GameError::CannotAttack(id)));
                 }
+                // CR 508.1a — Vow of Duty: not the player (or a planeswalker
+                // of the player) who controls an attached Aura granting it.
+                Keyword::CantAttackAuraController
+                    if defender.is_some_and(|d| {
+                        self.battlefield.iter().any(|c| {
+                            c.attached_to == Some(id)
+                                && c.controller == d
+                                && c.definition.equipped_bonus.as_ref().is_some_and(|b| {
+                                    b.keywords.contains(&Keyword::CantAttackAuraController)
+                                })
+                        })
+                    }) =>
+                {
+                    return Some((line!(), GameError::CannotAttack(id)));
+                }
                 // CR 508.1a — Mogg Toady: strictly more creatures.
                 Keyword::CantAttackUnlessMoreCreaturesThanDefender
                     if defender
@@ -841,6 +856,7 @@ impl GameState {
                     | Keyword::CantAttackUnlessDefenderIsMonarch
                     | Keyword::CantAttackUnlessDefenderControlsLandType(_)
                     | Keyword::CantAttackIfDefenderHasUntappedLand
+                    | Keyword::CantAttackAuraController
                     | Keyword::CantAttackUnlessMoreCreaturesThanDefender
                     | Keyword::CantAttackUnlessMoreLandsThanDefender
             )
