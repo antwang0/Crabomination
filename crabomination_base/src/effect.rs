@@ -791,6 +791,14 @@ pub enum Value {
     /// their graveyard, together (Happily Ever After's "six or more card
     /// types among permanents you control and/or cards in your graveyard").
     CardTypesAmongPermanentsAndGraveyard(PlayerRef),
+    /// Distinct card types among the cards `sel` names, in whatever zone
+    /// (Occult Epiphany's "for each card type among cards discarded this
+    /// way", over `Selector::DiscardedThisResolution`).
+    CardTypesAmong(Box<Selector>),
+    /// Opponents of the controller who control at least one permanent `sel`
+    /// names (Sudden Salvation's "for each opponent who controls one or more
+    /// of those permanents").
+    OpponentsControllingAnyOf(Box<Selector>),
     /// Cards `who` has discarded this turn (max over resolved players).
     /// Backed by `Player.cards_discarded_this_turn` (Dihada's Ploy).
     CardsDiscardedThisTurn(PlayerRef),
@@ -8188,6 +8196,11 @@ pub enum Effect {
         grant_haste: bool,
         sacrifice_eot: bool,
     },
+    /// CR 707.9b — copy the spell `what` once, "except the copy is a 1/1
+    /// Spirit in addition to its other types" (Donal, Herald of Wings). The
+    /// exception is part of the copy's copiable values, so the token the
+    /// copy resolves into keeps it.
+    CopySpellAsOneOneSpirit { what: Selector },
     /// Gogo — copy target activated or triggered ability on the stack
     /// `times` times (the selector resolves to the ability's *source*
     /// permanent, mirroring `CounterAbility`). Copies keep the original's

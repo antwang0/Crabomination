@@ -6,6 +6,8 @@
 //! `ChooseMode`) recurse; leaf mutations perform game-state changes and emit
 //! [`GameEvent`]s.
 
+// Values over a selector's cards (Occult Epiphany, Sudden Salvation).
+mod among;
 mod combat_copies;
 mod commander;
 mod attach_choice;
@@ -33,6 +35,8 @@ mod shell_game;
 mod life_loss_grants;
 mod spell_damage;
 mod static_copy;
+// CR 707.9b — a spell copy that is also a 1/1 Spirit (Donal).
+mod spirit_copy;
 mod table_choices;
 mod planar;
 mod foretell;
@@ -31764,6 +31768,31 @@ impl GameState {
                         Some((*grant_haste, *sacrifice_eot)),
                         events,
                     );
+                }
+                Ok(())
+            }
+
+            Effect::CopySpellAsOneOneSpirit { what } => {
+                let ids: Vec<CardId> = match what {
+                    Selector::TriggerSource => ctx
+                        .trigger_source
+                        .into_iter()
+                        .filter_map(|e| match e {
+                            EntityRef::Permanent(c) | EntityRef::Card(c) => Some(c),
+                            _ => None,
+                        })
+                        .collect(),
+                    _ => self
+                        .resolve_selector(what, ctx)
+                        .into_iter()
+                        .filter_map(|e| match e {
+                            EntityRef::Permanent(c) | EntityRef::Card(c) => Some(c),
+                            _ => None,
+                        })
+                        .collect(),
+                };
+                for cid in ids {
+                    self.copy_spell_as_one_one_spirit(cid, events);
                 }
                 Ok(())
             }

@@ -1385,6 +1385,8 @@ impl GameState {
                 self.distinct_card_types_in_all_graveyards() as i32
             }
             Value::LastDiscardedCardTypes => self.last_discarded_card_types as i32,
+            Value::CardTypesAmong(sel) => self.card_types_among(sel, ctx),
+            Value::OpponentsControllingAnyOf(sel) => self.opponents_controlling_any_of(sel, ctx),
             Value::GreatestSameStoredResult => ctx
                 .source
                 .and_then(|id| self.battlefield_find(id))

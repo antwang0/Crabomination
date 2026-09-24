@@ -1934,6 +1934,7 @@ impl Effect {
             | Effect::CopySpellMayChooseTargets { what, count } => {
                 sel_has_target(what) || value_has_target(count)
             }
+            Effect::CopySpellAsOneOneSpirit { what } => sel_has_target(what),
             Effect::ChooseNewTargetsForSpell { what } | Effect::GainControlOfSpell { what } => {
                 sel_has_target(what)
             }
@@ -2516,6 +2517,7 @@ impl Effect {
             | Effect::CastWithoutPayingImmediate { what, .. }
             | Effect::CopySpell { what, .. }
             | Effect::CopySpellWithRiders { what, .. }
+            | Effect::CopySpellAsOneOneSpirit { what }
             | Effect::CopySpellMayChooseTargets { what, .. }
             | Effect::GainControl { what, .. }
             | Effect::GainControlWhileSourceRemains { what }
@@ -4953,6 +4955,7 @@ impl Effect {
                 | Effect::CreateTokenAttachedToEach { target, .. } => sel_find(target, slot),
                 Effect::CopySpell { what, .. }
                 | Effect::CopySpellWithRiders { what, .. }
+                | Effect::CopySpellAsOneOneSpirit { what }
                 | Effect::CopySpellMayChooseTargets { what, .. }
                 | Effect::CopySpellUnlessPaid { what, .. }
                 | Effect::CopySpellForEachOtherTarget { what }

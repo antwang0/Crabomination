@@ -16760,6 +16760,18 @@ impl GameState {
             return false;
         }
         let Some(tgt) = self.battlefield_find(target) else { return false };
+        // Drogskol Reinforcements — the filtered shield, read with its own
+        // controller as "you".
+        if self.battlefield.iter().any(|c| {
+            c.definition.static_abilities.iter().any(|sa| match &sa.effect {
+                crate::effect::StaticEffect::PreventNoncombatDamageToMatching { filter } => {
+                    self.evaluate_requirement_static_on(filter, tgt, c.controller, Some(c.id))
+                }
+                _ => false,
+            })
+        }) {
+            return true;
+        }
         if !tgt.definition.is_creature() {
             return false;
         }
@@ -28915,6 +28927,7 @@ fn static_effect_shields_damage(effect: &crate::effect::StaticEffect) -> bool {
         | SE::PreventAllDamageToController
         | SE::PreventAllDamageToControllerFromOthersSources
         | SE::PreventNoncombatDamageToYourCreatures
+        | SE::PreventNoncombatDamageToMatching { .. }
         | SE::PreventNoncombatDamageToYouAndYourPermanents
         | SE::PreventAllDamageToYourCreatureTokens
         | SE::PreventAllDamageToYourCreatures
@@ -30552,6 +30565,7 @@ fn static_effect_to_effects(
             | StaticEffect::PlayerDamageBecomesExileFromLibrary
             | StaticEffect::YourDamageToOpponentsBecomesMill
             | StaticEffect::PreventNoncombatDamageToYourCreatures
+            | StaticEffect::PreventNoncombatDamageToMatching { .. }
             | StaticEffect::PreventNoncombatDamageToYouAndYourPermanents
             | StaticEffect::PreventAllDamageToYourCreatureTokens
             | StaticEffect::PreventAllDamageToYourCreatures
