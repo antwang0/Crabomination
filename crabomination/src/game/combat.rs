@@ -3396,7 +3396,8 @@ impl GameState {
     /// more than one seat away, so this player can't attack at all).
     fn attack_left_right_defender(&self) -> Option<Option<usize>> {
         let step: isize = match self.attack_option {
-            crate::game::AttackOption::MultiplePlayers => return None,
+            // Mystic Barrier imposes the same shape on a free-for-all.
+            crate::game::AttackOption::MultiplePlayers => return self.barrier_defender(),
             crate::game::AttackOption::AttackLeft => 1,
             crate::game::AttackOption::AttackRight => -1,
         };

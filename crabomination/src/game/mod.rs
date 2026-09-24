@@ -134,6 +134,7 @@ mod enter_attacking;
 mod token_replacement;
 // CR 205.4e — a legendary instant or sorcery needs a legendary creature or planeswalker.
 mod legendary_spell;
+mod mystic_barrier;
 mod spree_targets;
 // CR 102.2 — "an opponent controls N or more …", read per opponent.
 mod milled_play;
@@ -29705,6 +29706,8 @@ fn static_effect_to_effects(
             | StaticEffect::TokenCreationAddsToken { .. }
             | StaticEffect::TokensMayBecome { .. }
             | StaticEffect::TokenNamedBecomes { .. }
+            // Read at `attack_left_right_defender` (Mystic Barrier).
+            | StaticEffect::AttackOnlyNearestOpponentInChosenDirection
             | StaticEffect::TokenCreationAddsTokenPerToken { .. }
             // Consulted at the mint funnel (Academy Manufactor).
             | StaticEffect::ClueFoodTreasureMintsOneOfEach

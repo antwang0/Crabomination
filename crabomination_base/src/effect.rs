@@ -4809,6 +4809,9 @@ pub enum Effect {
     /// player who drew a card this way gains `life` life." Asked APNAP; the
     /// takers draw, then gain.
     EachPlayerMayDrawThenTakersGainLife { life: u32 },
+    /// Mystic Barrier — "choose left or right", stamped on the source (left:
+    /// toward the next seat, the CR 803.1a direction; right: the previous).
+    ChooseAttackDirection,
     /// CR 901.9 — `who` rolls the planar die as an effect (Fractured
     /// Powerstone): no surcharge, no timing gate. A blank does nothing, chaos
     /// ensues, or `who` planeswalks. Outside Planechase only "whenever chaos

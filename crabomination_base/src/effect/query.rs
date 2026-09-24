@@ -2077,7 +2077,8 @@ impl Effect {
             Effect::PreventAllCombatDamageToPlayerThisTurn { .. }
             | Effect::PreventAllDamageToPlayerThisTurn { .. }
             | Effect::EachPlayerMayCounterForPeace { .. }
-            | Effect::EachPlayerMayDrawThenTakersGainLife { .. } => false,
+            | Effect::EachPlayerMayDrawThenTakersGainLife { .. }
+            | Effect::ChooseAttackDirection => false,
             Effect::RollPlanarDie { who } | Effect::Planeswalk { who } | Effect::ChaosEnsues { who } => {
                 player_has_target(who)
             }

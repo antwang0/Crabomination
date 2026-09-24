@@ -970,3 +970,42 @@ fn cr_603_3d_a_cast_trigger_fills_every_target_slot() {
     assert_eq!(g.players[1].hand.len(), 1);
     assert_eq!(g.battlefield_find(angel).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
 }
+
+/// CR 508.1a — Mystic Barrier: each player may attack only the nearest
+/// opponent in the chosen direction, skipping a player who has left.
+#[test]
+fn cr_508_1a_mystic_barrier_points_attacks_one_way() {
+    use crabomination::card::{CardDefinition, CardType, StaticAbility, StaticEffect};
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    use crabomination::effect::Effect;
+    use crabomination::game::types::{Attack, AttackTarget, GameAction};
+    let mut g = multi_player_game(4);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let barrier = CardDefinition {
+        name: "Barrier Test",
+        card_types: vec![CardType::Enchantment],
+        as_enters_effect: Some(Effect::ChooseAttackDirection),
+        static_abilities: vec![StaticAbility {
+            description: "attack only the nearest opponent in the chosen direction",
+            effect: StaticEffect::AttackOnlyNearestOpponentInChosenDirection,
+        }],
+        ..Default::default()
+    };
+    let id = g.add_card_to_hand(0, barrier);
+    g.players[0].mana_pool.add_colorless(5);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(1)]));
+    g.perform_action(GameAction::CastSpell { card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.attackable_players_for(0), vec![3], "right is the previous seat");
+    g.players[3].eliminated = true;
+    assert_eq!(g.attackable_players_for(0), vec![2], "the nearest living one");
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.step = TurnStep::DeclareAttackers;
+    let at = |p| GameAction::DeclareAttackers(vec![Attack { attacker: bear, target: AttackTarget::Player(p) }]);
+    assert!(g.perform_action(at(1)).is_err());
+    g.perform_action(at(2)).expect("the nearest opponent to the right");
+}

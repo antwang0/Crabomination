@@ -32362,6 +32362,11 @@ impl GameState {
                 self.each_player_may_draw_then_gain(*life, effect, ctx, events)
             }
 
+            Effect::ChooseAttackDirection => {
+                self.choose_attack_direction(ctx);
+                Ok(())
+            }
+
             Effect::LureCreaturesToSourceNextTurn { who } => {
                 let Some(src) = ctx.source else { return Ok(()) };
                 let turn = self.turn_number;

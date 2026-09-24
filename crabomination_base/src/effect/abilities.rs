@@ -2391,6 +2391,11 @@ pub enum StaticEffect {
     /// time by `GameState::named_token_replacement`, which also peels a Class
     /// level gate.
     TokenNamedBecomes { name: String, into: crate::card::TokenDefinition },
+    /// CR 508.1a — Mystic Barrier: "Each player may attack only the nearest
+    /// opponent in the last chosen direction and planeswalkers controlled by
+    /// that opponent." The direction is the source's `Effect::
+    /// ChooseAttackDirection` pick; read by `GameState::barrier_defender`.
+    AttackOnlyNearestOpponentInChosenDirection,
     /// Chatterfang — "If one or more tokens would be created under your
     /// control, those tokens plus that many [definition] tokens are created
     /// instead." Like `TokenCreationAddsToken` but scaled to the number of
