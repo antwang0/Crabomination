@@ -103,6 +103,7 @@ lists were picked.
 | **Arcane Wizardry** (C17 precon) UBR | Inalla, Archmage Ritualist | UBR | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Urza's Iron Alliance** (BRC precon) WUB | Urza, Chief Artificer | WUB | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Phantom Premonition** (KHC precon) WU | Ranar the Ever-Watchful | WU | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
+| **Squirreled Away** (BLC precon) BG | Hazel of the Rootbloom | BG | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Hatsune Miku** (SLD precon) GW | Trostani, Selesnya's Voice | GW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Witherbloom Witchcraft** (C21 precon) BG | Willowdusk, Essence Seer | BG | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Exit from Exile** (CLB precon) RG | Faldorn, Dread Wolf Herald | RG | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
@@ -1182,6 +1183,25 @@ Inscription is never kicked. A 200-game census beside Brimaz / Rin and Seri /
 Ghired (seed 9521) decided 200/200 with zero panics, Bright-Palm winning 9.5 %;
 Semester's End was the one card never cast (it is a sweeper shield and no
 sweeper was cast).
+
+The **seventy-fifth** is Bloomburrow Commander's **Squirreled Away**
+(`SquirreledAway_BLC`) — Golgari Squirrels, Food and tokens under Hazel of the
+Rootbloom. Seventeen cards were missing; one primitive, `R::BasePowerOrToughnessIs`
+(Sword of the Squeak). ⚠⚠ **Its first 1,000-game pod hung** (seed 9531, game 158):
+a bot lookahead through Insatiable Frugivore's repeat resumed the same
+resolution per answer, and **Chatterfang's rider re-counted every token the
+resolution had minted — its own Squirrels included — on each resume**, doubling
+the board per answer (CR 614.13). The riders now count only the tokens each
+resumed segment mints; a prompting-seat test pins it (it hangs without the
+fix). Frugivore's first repeat was also taken unasked (`MayRepeat` runs its
+first pass unconditionally) — a `MayDo` asks now. Residuals: **Hazel**'s "tap X
+tokens" taps every other untapped token; **Hazel's Brewmaster** lends the
+abilities of every exiled card, not only creatures; **Sword of the Squeak**
+reads printed power and toughness; **Frugivore** exiles the graveyard's first
+three. Release pods beside Ranar / Saskia / Valgavoth (seed 9531, 1,000 games):
+1,000 decided, Hazel 14.5 %; a 300-game census (seed 9532) leaves no card of
+Hazel's list unplayed; strict debug pods (seeds 9533/9534, 120 games) decided
+120/120. `--bench` byte-identical.
 
 The **seventy-ninth** is Edge of Eternities Commander's **World Shaper**
 (`WorldShaper_EOC`) — Jund land sacrifice under Hearthhull, the Worldseed, a
