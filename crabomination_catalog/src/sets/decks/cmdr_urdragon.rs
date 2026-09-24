@@ -197,7 +197,7 @@ fn siege(name: &'static str, mana: ManaCost, khans: TriggeredAbility, dragons: E
         cost: mana,
         card_types: vec![CardType::Enchantment],
         enter_modes: Some(vec![
-            EnterMode { label: "Khans".into(), triggered_abilities: vec![khans], ..Default::default() },
+            EnterMode { label: "Khans", triggered_abilities: vec![khans], ..Default::default() },
             dragons,
         ]),
         ..Default::default()
@@ -218,7 +218,7 @@ pub fn monastery_siege() -> CardDefinition {
             ]),
         },
         EnterMode {
-            label: "Dragons".into(),
+            label: "Dragons",
             static_abilities: vec![StaticAbility {
                 description: "Spells your opponents cast that target you or a permanent you control cost {2} more.",
                 effect: StaticEffect::TaxOpponentSpellsTargeting {
@@ -308,7 +308,7 @@ pub fn palace_siege() -> CardDefinition {
             },
         },
         EnterMode {
-            label: "Dragons".into(),
+            label: "Dragons",
             triggered_abilities: vec![TriggeredAbility {
                 event: your_upkeep(),
                 effect: Effect::DrainLifeLost {
