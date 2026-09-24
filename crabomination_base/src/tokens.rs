@@ -394,7 +394,7 @@ pub fn eldrazi_spawn_token() -> TokenDefinition {
         power: 0,
         toughness: 1,
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Eldrazi],
+            creature_types: vec![CreatureType::Eldrazi, CreatureType::Spawn],
             ..Default::default()
         },
         ..eldrazi_scion_token()
