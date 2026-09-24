@@ -1819,6 +1819,19 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Rot Hulk | Eternal Might (DRC) | returns your greatest-power Zombie cards, not targets chosen on entry. |
 | 🟡 Footbottom Feast | Counterpunch (CMD) | the cards are chosen as it resolves, not targeted on cast; they go on top in mana-value order (the greatest on top). |
 
+### Seats 42, 46 and 49 (Peer Through Time C14, Wade into Battle C15, Chaos Incarnate SCD) — open residuals, 2026-09-24
+
+| Card | Deck | Gap |
+|---|---|---|
+| 🟡 Domineering Will | Peer Through Time (C14) | "target player" is always you; the three creatures are the real targets. |
+| 🟡 Intellectual Offering | Peer Through Time (C14) | each "choose an opponent" is the engine's pick (fewest creatures). |
+| 🟡 Shaper Parasite | Peer Through Time (C14) | +2/−2 or −2/+2 is chosen as the trigger goes on the stack, not as it resolves. |
+| 🟡 Infinite Reflection | Peer Through Time (C14) | the ETB copy also rewrites the enchanted creature itself when it is yours (a copy of itself). |
+| 🟡 Dream Pillager | Wade into Battle (C15) | the exiled cards may be played, lands included, not only cast. |
+| 🟡 Kardur, Doomscourge | Chaos Incarnate (SCD) | creatures entering after its ETB are goaded by a delayed trigger, not a static rule. |
+| 🟡 Theater of Horrors | Chaos Incarnate (SCD) | the permission outlives the enchantment; lands among the exiled cards can't be played. |
+| 🟡 Wildfire Devils | Chaos Incarnate (SCD) | the random player gives up their first instant or sorcery in graveyard order. |
+
 ### The `modern_decks` Commander routine's precons (seats 23, 25, 27, 29, 30) — open residuals, 2026-09-24
 
 | Card | Deck | Gap |
