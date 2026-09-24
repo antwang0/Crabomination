@@ -406,11 +406,18 @@ pub fn collective_voyage() -> CardDefinition {
         effect: Effect::JoinForces {
             description: "Join forces — pay any amount of mana; each player ramps that many"
                 .into(),
-            body: Box::new(Effect::SearchUpToN {
+            // Each player searches their own library and the lands enter
+            // under their own control (CR 101.4, APNAP): `EachPlayerDoes`
+            // rebinds "you" per seat. A bare `who: EachPlayer` searched one
+            // library and put that seat's lands under the caster.
+            body: Box::new(Effect::EachPlayerDoes {
                 who: PlayerRef::EachPlayer,
-                filter: R::Land.and(R::HasSupertype(Supertype::Basic)),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
-                count: Value::TriggerEventAmount,
+                body: Box::new(Effect::SearchUpToN {
+                    who: PlayerRef::You,
+                    filter: R::Land.and(R::HasSupertype(Supertype::Basic)),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                    count: Value::TriggerEventAmount,
+                }),
             }),
         },
         ..Default::default()

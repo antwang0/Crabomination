@@ -2557,6 +2557,44 @@ fn cr_207_2c_join_forces_sums_every_seat_and_draws_that_many() {
     }
 }
 
+/// CR 207.2c / 101.4 — Collective Voyage: every seat searches its *own*
+/// library for X basics and puts them onto the battlefield under its own
+/// control. A bare `SearchUpToN { who: EachPlayer }` searched one library
+/// (seat 0's) and handed those lands to the caster; a debug pod caught it.
+#[test]
+fn cr_207_2c_collective_voyage_ramps_every_seat_under_its_own_control() {
+    use crabomination::mana::Color;
+    let mut g = multi_player_game(3);
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    let voyage = g.add_card_to_hand(0, catalog::collective_voyage());
+    for seat in 0..3 {
+        g.players[seat].mana_pool.add(Color::Green, 2);
+        for _ in 0..3 {
+            g.add_card_to_library(seat, catalog::forest());
+        }
+    }
+    g.decider = Box::new(PayAmount(1));
+    g.perform_action(GameAction::CastSpell {
+        card_id: voyage,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Collective Voyage");
+    drain_stack(&mut g);
+    for seat in 0..3 {
+        let lands = g
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == seat && c.owner == seat && c.definition.name == "Forest")
+            .count();
+        assert_eq!(lands, 3, "seat {seat} fetched its own three (1 + 1 + 1 = X)");
+    }
+}
+
 /// CR 207.2c — the `AutoDecider` answers 0 to a `ChooseAmount`, so a bot pod
 /// resolves join forces as a no-op rather than stalling on the ask. The point
 /// of the test is that it *resolves*: nothing is left pending.
