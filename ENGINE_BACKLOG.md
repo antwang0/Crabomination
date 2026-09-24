@@ -176,6 +176,16 @@ the handoff.
   Tempt with Mayhem (no picker copied the bot's *own* spell — `pick_copy_response`)
   and Wake the Dead (combat on an opponent's turn was no bot window —
   `pick_combat_only_instant`). Condemn (Nahiri) is still unplayed at 31 and 32 seats.
+- ✅ **Eight statics over a stateful filter reached no layer** (CR 611.3). A `PumpPT` /
+  `GrantKeyword` over `EachPermanent(filter)` routes through the printed matcher or the
+  gather's live pass (`requirement_live_leaves`), which knew attacking / modified /
+  equipped only; enchanted, a name, outlaw, `Not(IsSource)`, the source's chosen type
+  or land type fell through both and the static was dropped: Song of Serenity, Archon of
+  the Wild Rose, Shield of Kaldra, Akron Legionnaire, Hellspur Posse Boss, Camellia,
+  Radiant Destiny, Shimmer. `dropped_static_ratchet` walks the catalog.
+- ✅ New for Quantum Quandrix: Esix's first-tokens copy replacement, Crafty Cutpurse's
+  token steal, `WheneverCreatureEntersThisTurn`, Study Hall's `CommanderCastScry`
+  rider, Oversimplify's `ExileAllThenTokenPerPlayerByPower`.
 - ✅ New: `Keyword::MustAttackChosenPlayer` + `PlayerRef::RandomOpponent` (Raving
   Dead, CR 508.1d); `MayPlayDuration::UntilYourNextEndStep`.
 
