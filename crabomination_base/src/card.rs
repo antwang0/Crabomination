@@ -4091,6 +4091,12 @@ pub struct CardDefinition {
     /// is only owed when the spell is actually cast outside sorcery timing.
     #[serde(default)]
     pub flash_surcharge: Option<crate::mana::ManaCost>,
+    /// CR 601.2b — "You may cast this spell as though it had flash by [a
+    /// non-mana cost] in addition to paying its other costs" (Tegwyll's
+    /// Scouring's "tapping three untapped creatures you control with
+    /// flying"). Owed, like `flash_surcharge`, only outside sorcery timing.
+    #[serde(default)]
+    pub flash_additional_cost: Option<AdditionalCastCost>,
     /// "This spell costs {1} less to cast for each [filter] (on the
     /// battlefield)" — Affinity-class generic cost reduction whose discount
     /// scales off the caster's permanent count matching `filter`.

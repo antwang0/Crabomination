@@ -8780,6 +8780,10 @@ impl GameState {
         // so an unpayable spell reverts to hand before any mana is spent;
         // the costs themselves are paid after the mana cost succeeds.
         let mut additional_costs = card.definition.additional_cast_cost.clone();
+        // CR 601.2b — Tegwyll's Scouring cast at instant speed taps its fliers.
+        if let Some(fc) = self.flash_additional_cost_for(p, &card) {
+            additional_costs.push(fc.clone());
+        }
         // CR 702.41b — an entwined cast also pays the non-mana entwine cost.
         if entwine && let Some(ec) = &card.definition.entwine_additional_cost {
             additional_costs.push(ec.clone());
@@ -12754,6 +12758,20 @@ impl GameState {
             .then_some(extra)
     }
 
+    /// The non-mana sibling of [`Self::flash_surcharge_for`]: the flash cost
+    /// when the caster is outside sorcery timing and can pay it.
+    pub fn flash_additional_cost_for<'a>(
+        &self,
+        player: usize,
+        card: &'a CardInstance,
+    ) -> Option<&'a crate::card::AdditionalCastCost> {
+        let extra = card.definition.flash_additional_cost.as_ref()?;
+        (!self.can_cast_sorcery_speed(player)
+            && !self.player_locked_to_sorcery_timing(player)
+            && self.additional_costs_payable(player, std::slice::from_ref(extra)))
+        .then_some(extra)
+    }
+
     pub(crate) fn battlefield_grants_flash(&self, player: usize, card: &CardInstance) -> bool {
         use crate::effect::StaticEffect;
         if self.player_locked_to_sorcery_timing(player) {
@@ -14064,6 +14082,7 @@ impl GameState {
         self_flash
             || (statics & cast_static::FLASH != 0 && self.battlefield_grants_flash(p, card))
             || self.flash_surcharge_for(p, card).is_some()
+            || self.flash_additional_cost_for(p, card).is_some()
             || (self.players[p].creature_spells_as_flash_this_turn
                 && card.definition.is_creature())
     }
