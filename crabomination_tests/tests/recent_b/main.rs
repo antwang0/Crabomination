@@ -53,6 +53,7 @@ mod cmdr_inalla;
 mod cmdr_urza;
 mod cmdr_trostani;
 mod cmdr_saheeli;
+mod cmdr_willowdusk;
 mod dsk2;
 mod dsk_rooms;
 mod recent_118_132;
