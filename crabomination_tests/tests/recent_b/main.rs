@@ -64,6 +64,7 @@ mod cmdr_gimbal;
 mod cmdr_dihada;
 mod cmdr_dina;
 mod cmdr_breena;
+mod cmdr_guff;
 mod dsk2;
 mod dsk_rooms;
 mod recent_118_132;
