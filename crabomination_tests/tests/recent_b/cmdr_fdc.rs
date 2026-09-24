@@ -2377,7 +2377,7 @@ fn grimoire_of_the_dead_raises_every_graveyard() {
         let c = g.battlefield_find(id).expect("raised");
         assert_eq!(c.controller, 0);
         assert!(has_type(&g, id, CreatureType::Zombie));
-        assert!(g.computed_permanent(id).unwrap().colors.contains(&Color::Black));
+        assert!(g.computed_permanent(id).unwrap().colors.contains(Color::Black));
     }
 }
 

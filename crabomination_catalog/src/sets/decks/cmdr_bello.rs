@@ -223,7 +223,7 @@ pub fn brightcap_badger() -> CardDefinition {
             effect: make(1, saproling()),
         }],
         adventure: Some(Box::new(Adventure {
-            name: "Fungus Frolic".into(),
+            name: "Fungus Frolic",
             cost: cost(&[generic(2), g()]),
             card_types: vec![CardType::Instant],
             effect: make(2, saproling()),
