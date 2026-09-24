@@ -2749,3 +2749,30 @@ pub const MARATH_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, mountain, mountain, mountain, mountain, mountain, forest,
     forest, forest, forest, forest, forest, forest, forest,
 ];
+
+pub const JELEVA_COMMANDERS: &[CardFactory] = &[jeleva_nephalias_scourge];
+
+/// **Mind Seize**, the Commander (2013) Grixis deck (C13, 2013-11-01),
+/// exactly as MTGJSON's `MindSeize_C13` prints it: 77 nonbasic cards +
+/// 9 Islands + 8 Swamps + 5 Mountains = 99. Spells, theft and wheels
+/// under Jeleva, Nephalia's Scourge.
+pub const JELEVA_MAIN: &[CardFactory] = &[
+    augur_of_bolas, baleful_force, baleful_strix, charmbreaker_devils, diviner_spirit,
+    echo_mage, fog_bank, guard_gomazoa, guttersnipe, hooded_horror, jaces_archivist,
+    mnemonic_wall, nekusar_the_mindrazer, nightscape_familiar, nivix_guildmage, terra_ravager,
+    thraximundar, true_name_nemesis, uyo_silent_prophet, vampire_nighthawk, viseling,
+    army_of_the_damned, cruel_ultimatum, decree_of_pain, fissure_vent, incendiary_command,
+    infest, molten_disaster, phthisis, prosperity, skyscribing, strategic_planning,
+    tempt_with_reflections, annihilate, crosiss_charm, dismiss, grixis_charm,
+    illusionists_gambit, opportunity, soul_manipulation, starstorm, sudden_spoiling,
+    vision_skeins, wild_ricochet, armillary_sphere, eye_of_doom, mirari, obelisk_of_grixis,
+    sol_ring, swiftfoot_boots, temple_bell, wayfarers_bauble, arcane_melee, curse_of_chaos,
+    curse_of_inertia, curse_of_shallow_graves, price_of_knowledge, propaganda, spiteful_visions,
+    akoum_refuge, bojuka_bog, command_tower, crumbling_necropolis, dimir_guildgate,
+    evolving_wilds, grixis_panorama, izzet_boilerworks, izzet_guildgate, molten_slagheap,
+    opal_palace, rakdos_carnarium, rakdos_guildgate, rupture_spire, temple_of_the_false_god,
+    urzas_factory, vivid_creek, vivid_marsh,
+    // Basics: 9 island, 8 swamp, 5 mountain
+    island, island, island, island, island, island, island, island, island, mountain, mountain,
+    mountain, mountain, mountain, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];

@@ -752,6 +752,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::MARATH_COMMANDERS,
             main: decks::MARATH_MAIN,
         },
+        // Eighty-ninth: the seventy-ninth official list (Mind Seize, C13)
+        // — Grixis spells and theft under Jeleva. `--pod-decks 89`.
+        PodDeck {
+            name: "Jeleva, Nephalia's Scourge (UBR)",
+            commanders: decks::JELEVA_COMMANDERS,
+            main: decks::JELEVA_MAIN,
+        },
     ]
 }
 
