@@ -2831,17 +2831,32 @@ fn meteor_blast_hits_x_targets_for_four() {
     assert_eq!(g.players[1].life, 16);
 }
 
-/// Mystic Confluence — CR 700.2d lets a mode repeat; its default is draw three.
+/// Mystic Confluence — CR 700.2d lets a mode repeat; the default is counter
+/// unless {3}, then draw two.
 #[test]
-fn cr_700_2d_mystic_confluence_draws_three_by_default() {
+fn cr_700_2d_mystic_confluence_counters_and_draws_two() {
     let mut g = main_phase();
-    for _ in 0..3 {
+    for _ in 0..2 {
         g.add_card_to_library(0, catalog::island());
     }
+    let giant = g.add_card_to_hand(1, catalog::hill_giant());
+    g.active_player_idx = 1;
+    g.players[1].mana_pool.add(Color::Red, 4);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: giant,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("opponent casts");
+    g.priority.player_with_priority = 0;
     let m = g.add_card_to_hand(0, catalog::mystic_confluence());
     let before = g.players[0].hand.len();
-    cast(&mut g, m, &[]);
-    assert_eq!(g.players[0].hand.len(), before - 1 + 3);
+    cast(&mut g, m, &[Target::Permanent(giant)]);
+    assert!(g.battlefield_find(giant).is_none(), "no mana left to pay {{3}}");
+    assert_eq!(g.players[0].hand.len(), before - 1 + 2);
 }
 
 /// Rite of the Raging Storm — each upkeep hands that player a Lightning
@@ -2979,4 +2994,46 @@ fn seize_control_simple_cards() {
     let c = g.add_card_to_hand(0, catalog::call_the_skybreaker());
     cast(&mut g, c, &[]);
     assert_eq!(pt(&g, g.battlefield.iter().find(|c| c.definition.name == "Elemental").unwrap().id), (5, 5));
+}
+
+/// The bot casts "each of X targets" at the X its targets allow (Meteor
+/// Blast), and answers a spell with Mystic Confluence and Aethersnatch.
+#[test]
+fn bot_casts_meteor_blast_confluence_and_aethersnatch() {
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    let mut g = main_phase();
+    let m = g.add_card_to_hand(0, catalog::meteor_blast());
+    g.add_card_to_battlefield(1, catalog::hill_giant());
+    g.add_card_to_battlefield(1, catalog::hill_giant());
+    g.step = TurnStep::PostCombatMain;
+    g.players[0].mana_pool.add(Color::Red, 3);
+    g.players[0].mana_pool.add_colorless(2);
+    match HeuristicBot::new().next_action(&g, 0) {
+        Some(GameAction::CastSpell { card_id, x_value: Some(2), additional_targets, .. })
+            if card_id == m && additional_targets.len() == 1 => {}
+        other => panic!("expected Meteor Blast at X=2, got {other:?}"),
+    }
+    for (answer, blue) in [(catalog::mystic_confluence(), 5), (catalog::aethersnatch(), 6)] {
+        let mut g = main_phase();
+        let giant = g.add_card_to_hand(1, catalog::hill_giant());
+        g.active_player_idx = 1;
+        g.players[1].mana_pool.add(Color::Red, 4);
+        g.priority.player_with_priority = 1;
+        g.perform_action(GameAction::CastSpell {
+            card_id: giant,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("opponent casts");
+        g.priority.player_with_priority = 0;
+        let a = g.add_card_to_hand(0, answer);
+        g.players[0].mana_pool.add(Color::Blue, blue);
+        match HeuristicBot::new().next_action(&g, 0) {
+            Some(GameAction::CastSpell { card_id, target: Some(Target::Permanent(t)), .. })
+                if card_id == a && t == giant => {}
+            other => panic!("expected an answer to the Giant, got {other:?}"),
+        }
+    }
 }

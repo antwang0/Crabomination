@@ -227,14 +227,15 @@ pub fn meteor_blast() -> CardDefinition {
 }
 
 /// Mystic Confluence — choose three, repeats allowed: counter unless {3},
-/// bounce a creature, draw. The default picks are the draw three.
+/// bounce a creature, draw. The default picks are counter-unless-{3} and draw
+/// two, so it is cast as an answer to a spell.
 pub fn mystic_confluence() -> CardDefinition {
     spell(
         "Mystic Confluence",
         cost(&[generic(3), u(), u()]),
         true,
         Effect::ChooseN {
-            picks: vec![2, 2, 2],
+            picks: vec![0, 2, 2],
             modes: vec![
                 Effect::CounterUnlessPaid {
                     what: target_filtered(R::IsSpellOnStack),
