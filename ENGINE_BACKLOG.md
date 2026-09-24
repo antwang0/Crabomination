@@ -205,6 +205,13 @@ the handoff.
   suspend-only card (no mana cost) had no other way in. `server/suspend.rs` suspends
   one in the main phase; the census counts a suspend or a foretell as a play. A
   suspend card *with* a cost is still only cast (Aeon Chronicler's Suspend X is open).
+- ✅ **Found by Urza's Iron Alliance (BRC, Urza):** an any-kind "remove a counter" cost
+  (`remove_counter_among_filter` with no kind) summed the ordinary counter bag only, so
+  keyword counters could never pay it (CR 122.1b — Hexavus); it now counts them and drains
+  them after the ordinary ones. `self_static_prevents_all_damage_active` peeled
+  `WhileYourTurn` alone, so a `WhileCondition`-gated "prevent all damage to this" (Sanwell,
+  Avenger Ace) never applied; it now goes through `active_static`. New:
+  `GraveyardCardsHaveEncore::mana_cost` (Wire Surgeons).
 - ✅ **Found by Arcane Wizardry (C17, Inalla):** The Abyss destroyed *every* nonartifact
   creature of the active player — it is one, of their choice (`PlayerChoosesToDestroy`);
   "tap N untapped [X] you control" never let the source pay, though its doc said it

@@ -1883,6 +1883,8 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Vial Smasher the Fierce | Entropic Uprising (C16) | the random opponent is always dealt the damage, never one of their planeswalkers. |
 | 🟡 Blood Tyrant | Entropic Uprising (C16) | grows by the number of living players, not the life actually lost. |
 | 🟡 Star Athlete | Endless Punishment (DSC) | "up to one target" always takes a target when one exists. |
+| 🟡 Sanwell, Avenger Ace | Urza's Iron Alliance (BRC) | the cast offer is the first matching card of the six, not a choice; the rest go to the bottom in exile order, not a random one. |
+| 🟡 Scholar of New Horizons | Urza's Iron Alliance (BRC) | when the Plains may go onto the battlefield it always does. |
 | 🟡 Mairsil, the Pretender | Arcane Wizardry (C17) | a borrowed ability can be activated any number of times a turn, not once; the cage takes the highest-mana-value artifact or creature card. |
 | 🟡 Magus of the Abyss | Arcane Wizardry (C17) | "target … of their choice" is a choice, not a target: a hexproof creature can still be picked (The Abyss likewise). |
 | 🟡 Shifting Shadow | Arcane Wizardry (C17) | reveals from the Aura controller's library; the new creature enters before the old one is destroyed. |

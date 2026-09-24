@@ -97,6 +97,7 @@ lists were picked.
 | **Entropic Uprising** (C16 precon) UBRG | Yidris, Maelstrom Wielder | UBRG | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Endless Punishment** (DSC precon) BR | Valgavoth, Harrower of Souls | BR | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Arcane Wizardry** (C17 precon) UBR | Inalla, Archmage Ritualist | UBR | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
+| **Urza's Iron Alliance** (BRC precon) WUB | Urza, Chief Artificer | WUB | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not
@@ -954,6 +955,22 @@ picks all three modes in a fixed order. Four-seat pods beside Rin and Seri /
 Riku / Atraxa (seed 10140, 1,000 games, all decided): Inalla 7.8 % — Rin and
 Seri take 53 %; a 300-game census (seed 10141) leaves no card of the four
 unplayed; 12 seats (64..53 as numbered then, seed 10142): 200 / 200 decided. `--bench`
+byte-identical.
+
+The **sixty-eighth** is The Brothers' War Commander's **Urza's Iron Alliance**
+(`UrzaSIronAlliance_BRC`) — Esper artifacts under Urza, Chief Artificer, and the
+first list past `MAX_SEATS` (64): it is reached by `--pod-decks`, not `--seats`.
+Sixteen cards were missing; the primitives: `GraveyardCardsHaveEncore::mana_cost`
+(Wire Surgeons, CR 702.141). It found two engine gaps: ⚠ **an any-kind "remove a
+counter" cost never saw keyword counters** (CR 122.1b — Hexavus could hand out
+flying counters but never take them back), and **a self "prevent all damage to
+this" static peeled `WhileYourTurn` alone**, so Sanwell's "as long as an
+artifact creature you control is attacking" was dead. Residuals: **Sanwell**
+offers the first matching card of the six and bottoms the rest in exile order;
+**Scholar of New Horizons** always takes the battlefield when it may.
+Four-seat pods beside Brimaz / Inalla / Isperia (seed 10150, 1,000 games,
+all decided): Urza 41.7 %; a 300-game census (seed 10151) leaves no card of the
+four unplayed; 12 seats (68..57, seed 10152): 200 / 200 decided. `--bench`
 byte-identical.
 
 The **sixtieth** is the Starter Commander Decks' **Token Triumph**
