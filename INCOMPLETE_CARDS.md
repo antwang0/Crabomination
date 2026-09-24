@@ -1798,7 +1798,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Verdant Confluence | modes are the default picks (two counters, two basics); `ChooseN` has no cast-time mode choice. |
 | 🟡 Skullwinder | "choose an opponent" is the engine's pick (fewest creatures). |
 
-### Seats 33, 34, 36 and 37 (Angels SLD, Built From Scratch C14, Vampiric Bloodline VOC, Plunder the Graves C15) — open residuals, 2026-09-24
+### Seats 33, 34, 36, 37 and 40 (Angels SLD, Built From Scratch C14, Vampiric Bloodline VOC, Plunder the Graves C15, Call the Spirits C15) — open residuals, 2026-09-24
 
 | Card | Deck | Gap |
 |---|---|---|
@@ -1812,6 +1812,8 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Imposing Grandeur | Vampiric Bloodline (VOC) | counts a commander in any zone. |
 | 🟡 Predators' Hour | Vampiric Bloodline (VOC) | the stolen card is exiled face up. |
 | 🟡 Wretched Confluence | Plunder the Graves (C15) | the modes are the card's default picks; `ChooseN` has no cast-time mode choice. |
+| 🟡 Righteous Confluence | Call the Spirits (C15) | the three picks are one choice among the four non-targeting combinations (Knights and life; default three Knights); the "exile target enchantment" mode is not offered. |
+| 🟡 Sandstone Oracle | Call the Spirits (C15) | the chosen opponent is the one with the most cards in hand. |
 
 ### The `modern_decks` Commander routine's precons (seats 23, 25, 27, 29, 30) — open residuals, 2026-09-24
 

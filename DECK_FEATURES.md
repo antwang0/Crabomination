@@ -68,6 +68,7 @@ lists were picked.
 | **Graveyard Overdrive** (M3C precon) BRG | Disa the Restless | BRG | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Sworn to Darkness** (C14 precon) B | Ob Nixilis of the Black Oath (**planeswalker**) | B | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Seize Control** (C15 precon) UR | Mizzix of the Izmagnus | UR | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
+| **Call the Spirits** (C15 precon) WB | Daxos the Returned | WB | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not
@@ -517,6 +518,19 @@ beside Zellix / Zndrsplt / Stella (seed 10111, 1,000 games, all decided, every
 Mizzix card played): Mizzix 16.2 %. Seed 10121, 300 games at 38 seats: **300
 decided, 0 caps, zero panics** (190.6 k actions/game, 1,038 s on 4 threads).
 `--bench` byte-identical.
+
+The **fortieth** is Commander 2015's **Call the Spirits** (`CallTheSpirits_C15`)
+— Orzhov enchantments under Daxos the Returned. Fifteen cards were missing; the
+primitives: `Keyword::CantAttackAuraController` (Vow of Duty / Vow of Malice,
+CR 508.1a — the enchanted creature may still attack anyone but the Aura's
+controller), `Value::CreaturesDestroyedThisResolutionControlledBy` (Deadly
+Tempest charges each player for the creatures they controlled as they were
+destroyed, tokens included) and `Value::PlayersWithGreaterTally` (Oreskos
+Explorer). Residuals: **Righteous Confluence** offers its repeatable modes as
+one choice among the four non-targeting combinations; **Sandstone Oracle**'s
+opponent is the one with the most cards in hand. Debug pods beside Adrix and Nev /
+Meren / Gisela / Judith (seeds 9251/9252, 60 games) decided 60/60 with zero
+panics, and a 120-game census (seed 9253) leaves no card unplayed.
 
 ⚠ **The board cap was a bot bug, not a loop.** A Krenko seat sent all 292
 of its Goblins at one player on 24 life each turn while two others sat on
