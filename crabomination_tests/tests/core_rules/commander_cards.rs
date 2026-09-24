@@ -1149,3 +1149,94 @@ fn cr_611_2b_until_the_end_of_your_next_turn() {
     pass_until(&mut g, 1);
     assert_eq!(pt(&g, bear).0, 2, "gone after it");
 }
+
+// ── Primitives for Mishra's Burnished Banner (BRC, Mishra) ────────────────
+
+/// CR 602.2 + 118.3 — "whenever you activate an ability … if one or more
+/// permanents were sacrificed to pay its cost" (Ashnod the Uncaring): the
+/// activation event says whether a sacrifice paid for it, so Viscera Seer's
+/// sacrifice triggers and Prodigal Sorcerer's tap does not.
+#[test]
+fn cr_602_2_an_activation_knows_it_was_paid_by_sacrifice() {
+    use crabomination::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
+    use crabomination::effect::{Effect, Selector, Value};
+    let watcher = CardDefinition {
+        name: "Test Sacrifice Watcher",
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::AbilityActivatedWithSacrifice, EventScope::YourControl),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::ONE },
+        }],
+        ..Default::default()
+    };
+    let mut g = commander_game();
+    g.add_card_to_battlefield(0, watcher);
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let seer = g.add_card_to_battlefield(0, catalog::viscera_seer());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let sorcerer = g.add_card_to_battlefield(0, catalog::prodigal_sorcerer());
+    g.clear_sickness(sorcerer);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: sorcerer,
+        ability_index: 0,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("ping");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life, "a tap is not a sacrifice");
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: seer,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("sacrifice the Bears");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 1, "the sacrifice triggered");
+}
+
+/// CR 707.9b — "enter as a copy of any creature on the battlefield, except
+/// it's an artifact and it isn't a creature" (Machine God's Effigy): the
+/// exception is part of the copiable values, so the copy is a noncreature
+/// artifact named for what it copied.
+#[test]
+fn cr_707_9b_a_copy_except_it_isnt_a_creature() {
+    use crabomination::card::{EntersAsCopy, SelectionRequirement as R};
+    let copier = CardDefinition {
+        name: "Test Noncreature Copier",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Artifact],
+        enters_as_copy: Some(EntersAsCopy {
+            filter: R::Creature,
+            extra_card_types: vec![CardType::Artifact],
+            not_a_creature: true,
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    let mut g = commander_game();
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, copier);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(id).expect("a 0-toughness noncreature survives");
+    assert_eq!(c.definition.name, "Grizzly Bears");
+    assert!(c.definition.card_types.contains(&CardType::Artifact));
+    assert!(!c.definition.card_types.contains(&CardType::Creature));
+}

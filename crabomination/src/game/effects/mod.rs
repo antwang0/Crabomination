@@ -2095,7 +2095,8 @@ impl GameState {
             || !spec.extra_keywords.is_empty()
             || !spec.extra_card_types.is_empty()
             || spec.keep_name
-            || spec.non_legendary)
+            || spec.non_legendary
+            || spec.not_a_creature)
             && let Some(c) = self.battlefield.find_by_id_mut(card_id)
         {
             let def = c.definition_make_mut();
@@ -2121,6 +2122,10 @@ impl GameState {
             // CR 707.2e — strip Legendary so the copy dodges the legend rule.
             if spec.non_legendary {
                 def.supertypes.retain(|s| *s != crate::card::Supertype::Legendary);
+            }
+            // "It's not a creature" (Machine God's Effigy).
+            if spec.not_a_creature {
+                def.card_types.retain(|t| *t != crate::card::CardType::Creature);
             }
         }
         true

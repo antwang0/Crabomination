@@ -2623,7 +2623,16 @@ pub enum GameEvent {
     /// `tap_cost` is true when {T} (or {Q}) was part of the activation cost —
     /// Haunting Wind / Powerleech / Artifact Possession key on the *absence*
     /// of it, since the companion tap event already covers that half.
-    AbilityActivated { source: CardId, exhaust: bool, adapt: bool, tap_cost: bool },
+    /// `sacrificed` — one or more permanents were sacrificed to pay the cost
+    /// (Ashnod the Uncaring's "if one or more permanents were sacrificed to
+    /// activate it").
+    AbilityActivated {
+        source: CardId,
+        exhaust: bool,
+        adapt: bool,
+        tap_cost: bool,
+        sacrificed: bool,
+    },
     /// `source` is the permanent that produced the mana (a tapped land, a mana
     /// rock, …) when known, so clients can anchor mana-flow visuals to it.
     /// `None` for mana with no single permanent source (rituals, X-cost /

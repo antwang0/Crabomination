@@ -2936,7 +2936,7 @@ impl From<&GameEvent> for GameEventWire {
             GameEvent::SpellTargetChanged { card_id, .. } => {
                 GameEventWire::SpellTargetChanged { card_id: *card_id }
             }
-            GameEvent::AbilityActivated { source, exhaust, adapt, tap_cost } => {
+            GameEvent::AbilityActivated { source, exhaust, adapt, tap_cost, .. } => {
                 GameEventWire::AbilityActivated {
                     source: *source,
                     exhaust: *exhaust,

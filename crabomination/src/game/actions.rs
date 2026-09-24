@@ -19768,6 +19768,12 @@ impl GameState {
                 exhaust: ability.exhaust,
                 adapt: ability.effect.is_adapt(),
                 tap_cost: ability.tap_cost || ability.untap_self_cost,
+                sacrificed: ability.sac_cost
+                    || ability.sac_attachment_cost
+                    || ability.sac_other_filter.is_some()
+                    || ability.sac_other_second.is_some()
+                    || ability.sac_all_matching_cost.is_some()
+                    || ability.sac_any_number_filter.is_some(),
             });
         }
 

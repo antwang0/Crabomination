@@ -4868,6 +4868,10 @@ pub struct EntersAsCopy {
     /// than a permanent.
     #[serde(default)]
     pub from_graveyards: bool,
+    /// CR 707.2 — "except it's an artifact … (It's not a creature.)"
+    /// (Machine God's Effigy): the copy loses the creature type it copied.
+    #[serde(default)]
+    pub not_a_creature: bool,
 }
 
 /// CR 614 — one mode of a `CardDefinition.enters_as_choice` as-enters

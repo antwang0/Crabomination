@@ -3017,6 +3017,9 @@ pub enum EventKind {
     AnyCounterAdded,
     /// An ability was activated.
     AbilityActivated,
+    /// An ability was activated and one or more permanents were sacrificed to
+    /// pay for it (Ashnod the Uncaring). Also an `AbilityActivated`.
+    AbilityActivatedWithSacrifice,
     /// CR 702.177 — an exhaust ability was activated ("whenever you activate an
     /// exhaust ability" — Adrenaline Jockey).
     ExhaustAbilityActivated,

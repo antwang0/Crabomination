@@ -112,6 +112,7 @@ pub(crate) fn event_kind_bits(event: &GameEvent) -> u128 {
         }
         E::AbilityActivated { .. } => bits!(
             K::AbilityActivated,
+            K::AbilityActivatedWithSacrifice,
             K::ExhaustAbilityActivated,
             K::AdaptAbilityActivated,
         ),
@@ -210,6 +211,9 @@ fn event_payload_matches(
         }
         (EventKind::ExhaustAbilityActivated, GameEvent::AbilityActivated { exhaust, .. }) => {
             *exhaust
+        }
+        (EventKind::AbilityActivatedWithSacrifice, GameEvent::AbilityActivated { sacrificed, .. }) => {
+            *sacrificed
         }
         (EventKind::AdaptAbilityActivated, GameEvent::AbilityActivated { adapt, .. }) => *adapt,
         (EventKind::LandPutIntoGraveyard, GameEvent::CardPutIntoGraveyard { is_land, .. }) => {
@@ -336,6 +340,7 @@ fn reference_event_kind_matches(
         (EventKind::CounterRemoved(k), GameEvent::CounterRemoved { counter_type, .. }) => counter_type == k,
         (EventKind::AnyCounterAdded, GameEvent::CounterAdded { .. }) => true,
         (EventKind::AbilityActivated, GameEvent::AbilityActivated { .. }) => true,
+        (EventKind::AbilityActivatedWithSacrifice, GameEvent::AbilityActivated { sacrificed: true, .. }) => true,
         (EventKind::ExhaustAbilityActivated, GameEvent::AbilityActivated { exhaust: true, .. }) => true,
         (EventKind::AdaptAbilityActivated, GameEvent::AbilityActivated { adapt: true, .. }) => true,
         (EventKind::CardLeftGraveyard, GameEvent::CardLeftGraveyard { .. }) => true,
@@ -1670,9 +1675,10 @@ mod tests {
             E::LandPlayed { player: 0, card_id: c, played: true },
             E::SpellCast { player: 0, card_id: c, face: CastFace::Front },
             E::SpellTargetChanged { card_id: c, new_target: Target::Player(1) },
-            E::AbilityActivated { source: c, exhaust: false, adapt: false, tap_cost: false },
-            E::AbilityActivated { source: c, exhaust: true, adapt: false, tap_cost: true },
-            E::AbilityActivated { source: c, exhaust: false, adapt: true, tap_cost: false },
+            E::AbilityActivated { source: c, exhaust: false, adapt: false, tap_cost: false, sacrificed: false },
+            E::AbilityActivated { source: c, exhaust: true, adapt: false, tap_cost: true, sacrificed: false },
+            E::AbilityActivated { source: c, exhaust: false, adapt: true, tap_cost: false, sacrificed: false },
+            E::AbilityActivated { source: c, exhaust: false, adapt: false, tap_cost: false, sacrificed: true },
             E::ManaAdded { player: 0, color: crate::mana::Color::Green, source: Some(c) },
             E::ColorlessManaAdded { player: 0, source: None },
             E::PermanentEntered { card_id: c },
