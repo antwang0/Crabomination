@@ -14336,6 +14336,21 @@ impl GameState {
             // `ControlledByTriggerPlayer`, at targeting and again at
             // resolution (`trigger_player` below).
             let saved_scratch = self.trigger_event_player_scratch.replace(controller);
+            // The cast spell's mana value, so "where X is that spell's mana
+            // value" riders scale (Shark Typhoon) and a target filter relative
+            // to it (`ManaValueEqualsTriggerAmount` — Skyfire Kirin, Hammerhead
+            // Tyrant) sees it at targeting, not only at resolution.
+            let spell_mv = self
+                .stack
+                .iter()
+                .find_map(|si| match si {
+                    StackItem::Spell { card, .. } if card.id == cast_card => {
+                        Some(card.definition.cost.cmc())
+                    }
+                    _ => None,
+                })
+                .unwrap_or(0);
+            let saved_amount = std::mem::replace(&mut self.trigger_event_amount_scratch, spell_mv);
             let auto_target = if !std::ptr::eq(view, &effect) && !view.requires_target() {
                 None
             } else {
@@ -14351,18 +14366,7 @@ impl GameState {
                 Vec::new()
             };
             self.trigger_event_player_scratch = saved_scratch;
-            // The cast spell's mana value, so "where X is that spell's mana
-            // value" riders scale (Shark Typhoon).
-            let spell_mv = self
-                .stack
-                .iter()
-                .find_map(|si| match si {
-                    StackItem::Spell { card, .. } if card.id == cast_card => {
-                        Some(card.definition.cost.cmc())
-                    }
-                    _ => None,
-                })
-                .unwrap_or(0);
+            self.trigger_event_amount_scratch = saved_amount;
             // CR 603.x — Harmonic Prodigy / Veyran / Katara: a SpellCast
             // (Magecraft) trigger of a matching-subtype permanent fires an
             // additional time per doubler the controller controls.
