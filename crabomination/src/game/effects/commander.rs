@@ -60,6 +60,14 @@ impl GameState {
         total <= limit
     }
 
+    /// Bell Borca's note: raise the turn's greatest exiled mana value.
+    pub(crate) fn note_exiled_mana_value(&mut self, mv: u32) {
+        let mv = mv.min(u8::MAX as u32) as u8;
+        if mv > self.greatest_exiled_mv_this_turn {
+            self.greatest_exiled_mv_this_turn = mv;
+        }
+    }
+
     pub(crate) fn grant_next_spell_affinity(&mut self, seat: usize) {
         if let Some(p) = self.players.get_mut(seat) {
             let at = p.spells_cast_this_turn;

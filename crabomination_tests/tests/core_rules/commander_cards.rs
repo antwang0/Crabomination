@@ -1342,3 +1342,115 @@ fn cr_107_3_an_exiled_this_way_filter_reads_x() {
     g.resolve_effect(&exile_and_count(1), &ctx).expect("resolve");
     assert_eq!(g.players[0].life, life + 1, "but not at most X = 1");
 }
+
+// ── Primitives for Legends' Legacy (DMC, Dihada) ──────────────────────────
+
+/// CR 602.2 + 119.4 — "if life was paid to activate it" (Verrak, Warped
+/// Sengir): the activation event carries the life paid, and only a life-cost
+/// activation triggers.
+#[test]
+fn cr_602_2_an_activation_knows_the_life_paid_for_it() {
+    use crabomination::card::{ActivatedAbility, EventKind, EventScope, EventSpec, TriggeredAbility};
+    use crabomination::effect::{Effect, Selector, Value};
+    let watcher = CardDefinition {
+        name: "Test Life Watcher",
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::AbilityActivatedWithLifePaid, EventScope::YourControl),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::TriggerEventAmount },
+        }],
+        ..Default::default()
+    };
+    let pay = |life: u32| CardDefinition {
+        name: "Test Life Payer",
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            life_cost: life,
+            effect: Effect::Noop,
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    let mut g = commander_game();
+    g.add_card_to_battlefield(0, watcher);
+    let three = g.add_card_to_battlefield(0, pay(3));
+    let free = g.add_card_to_battlefield(0, pay(0));
+    let life = g.players[0].life;
+    for id in [free, three] {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: id,
+            ability_index: 0,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+        .expect("activate");
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.players[0].life, life, "paid 3, the watcher gave 3 back; the free one gave nothing");
+}
+
+/// CR 614.10 — "if a player would begin an extra turn, that player skips
+/// that turn instead" (Gerrard's Hourglass Pendant) binds its own controller,
+/// unlike Trouble in Pairs' opponents-only clause.
+#[test]
+fn cr_614_10_a_symmetric_extra_turn_skip_binds_its_controller() {
+    use crabomination::card::{StaticAbility, StaticEffect};
+    let pendant = |effect| CardDefinition {
+        name: "Test Pendant",
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility { description: "", effect }],
+        ..Default::default()
+    };
+    let mut g = commander_game();
+    let id = g.add_card_to_battlefield(0, pendant(StaticEffect::OpponentsSkipExtraTurns));
+    assert!(!g.extra_turn_denied_for(0) && g.extra_turn_denied_for(1));
+    g.remove_from_battlefield_to_exile(id);
+    g.add_card_to_battlefield(0, pendant(StaticEffect::PlayersSkipExtraTurns));
+    assert!(g.extra_turn_denied_for(0) && g.extra_turn_denied_for(1));
+}
+
+/// CR 406 — "note the mana value of each card as it's put into exile" (Bell
+/// Borca): the turn's greatest exiled mana value is noted from the library
+/// and from the battlefield, and forgotten at the next turn.
+#[test]
+fn cr_406_the_greatest_exiled_mana_value_is_noted_this_turn() {
+    use crabomination::effect::{Effect, Selector, Value};
+    use crabomination::game::effects::EffectContext;
+    let mut g = commander_game();
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::island());
+        g.add_card_to_library(1, catalog::island());
+    }
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    let note = |g: &mut GameState| {
+        g.resolve_effect(
+            &Effect::GainLife { who: Selector::You, amount: Value::GreatestManaValueExiledThisTurn },
+            &ctx,
+        )
+        .expect("resolve");
+    };
+    g.resolve_effect(
+        &Effect::ExileTopOfLibrary { who: Selector::You, amount: Value::ONE, link_to_source: false, face_down: false },
+        &ctx,
+    )
+    .expect("exile the Bears");
+    let life = g.players[0].life;
+    note(&mut g);
+    assert_eq!(g.players[0].life, life + 2);
+    let ring = g.add_card_to_battlefield(0, catalog::solemn_simulacrum());
+    g.remove_from_battlefield_to_exile(ring);
+    note(&mut g);
+    assert_eq!(g.players[0].life, life + 2 + 4, "Solemn's four from the battlefield");
+    for _ in 0..200 {
+        if g.active_player_idx == 1 {
+            break;
+        }
+        let _ = g.perform_action(GameAction::PassPriority);
+    }
+    let life = g.players[0].life;
+    note(&mut g);
+    assert_eq!(g.players[0].life, life, "a new turn forgets");
+}

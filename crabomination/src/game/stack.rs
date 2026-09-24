@@ -4530,6 +4530,9 @@ impl GameState {
         // EOE Void — reset the game-wide "a nonland permanent left this turn"
         // flag at the turn boundary.
         self.nonland_permanent_left_bf_this_turn = false;
+        if self.greatest_exiled_mv_this_turn != 0 {
+            self.greatest_exiled_mv_this_turn = 0;
+        }
         // Reset the "cards exiled this turn" tally; powers Strixhaven
         // "if one or more cards were put into exile this turn" payoffs
         // (Ennis the Debate Moderator) per turn.
@@ -7790,6 +7793,7 @@ impl GameState {
             // counted as one.
             if resolved == crate::card::Zone::Exile {
                 self.scratch.exiled_card_ids_this_resolution.push(id);
+                self.note_exiled_mana_value(card.printed_cmc());
             }
             self.place_card_at_resolved_zone(card, resolved);
             self.on_left_battlefield(id, &mut events);

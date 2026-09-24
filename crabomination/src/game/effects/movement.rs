@@ -2568,6 +2568,7 @@ impl GameState {
             }
             ZoneDest::Exile | ZoneDest::ExileWithSourceStamp => {
                 let cid = card.id;
+                self.note_exiled_mana_value(card.printed_cmc());
                 self.exile.push(card);
                 // Record for `Selector::ExiledThisResolution` ("if you exiled
                 // a [type] card this way" — Bonehoard Dracosaur).

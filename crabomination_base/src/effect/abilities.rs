@@ -3099,6 +3099,10 @@ pub enum StaticEffect {
     /// `extra_turns` is consumed (`stack.rs`'s turn advance), off printed
     /// static abilities like `LandwalkIgnored`.
     OpponentsSkipExtraTurns,
+    /// The symmetric form — "if a player would begin an extra turn, that
+    /// player skips that turn instead" (Gerrard's Hourglass Pendant): binds
+    /// its controller too.
+    PlayersSkipExtraTurns,
     /// Like `GrantActivatedAbility`, but the granting card is active from its
     /// owner's **graveyard** rather than the battlefield ("as long as this card
     /// is in your graveyard, lands you control have …" — Riftstone Portal).

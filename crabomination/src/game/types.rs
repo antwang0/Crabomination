@@ -2632,6 +2632,10 @@ pub enum GameEvent {
         adapt: bool,
         tap_cost: bool,
         sacrificed: bool,
+        /// Life paid as part of the cost (Verrak, Warped Sengir's "if life
+        /// was paid to activate it … pay that much life again"). The event's
+        /// amount.
+        life_paid: u32,
     },
     /// `source` is the permanent that produced the mana (a tapped land, a mana
     /// rock, …) when known, so clients can anchor mana-flow visuals to it.

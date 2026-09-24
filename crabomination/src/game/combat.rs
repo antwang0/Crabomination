@@ -3434,12 +3434,17 @@ impl GameState {
     /// is "if an **opponent** would begin an extra turn", so its own
     /// controller's extra turns are untouched. Printed statics only, like
     /// [`Self::landwalk_ignored`] next to it.
-    pub(crate) fn extra_turn_denied_for(&self, seat: usize) -> bool {
-        self.battlefield
-            .iter()
-            .filter(|c| c.controller != seat)
-            .flat_map(|c| &c.definition.static_abilities)
-            .any(|sa| matches!(sa.effect, crate::effect::StaticEffect::OpponentsSkipExtraTurns))
+    /// `PlayersSkipExtraTurns` (Gerrard's Hourglass Pendant) binds every
+    /// seat, its controller included.
+    pub fn extra_turn_denied_for(&self, seat: usize) -> bool {
+        use crate::effect::StaticEffect as SE;
+        self.battlefield.iter().any(|c| {
+            c.definition.static_abilities.iter().any(|sa| match sa.effect {
+                SE::OpponentsSkipExtraTurns => c.controller != seat,
+                SE::PlayersSkipExtraTurns => true,
+                _ => false,
+            })
+        })
     }
 
     pub(crate) fn landwalk_ignored(&self, lt: crate::card::LandType) -> bool {

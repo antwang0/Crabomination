@@ -2794,6 +2794,13 @@ pub struct GameState {
     /// boundary.
     #[serde(default)]
     pub nonland_permanent_left_bf_this_turn: bool,
+    /// The greatest mana value among cards put into exile this turn — Bell
+    /// Borca's "note the mana value of each card as it's put into exile".
+    /// Written only when it grows; reset at the turn boundary. A `u8` (a
+    /// mana value past 255 saturates) so it fits `GameState`'s padding —
+    /// `cow::tests::game_state_stays_small`.
+    #[serde(default)]
+    pub greatest_exiled_mv_this_turn: u8,
     /// CR 701.10f / 614.5 — transient mana-production multiplier for the
     /// mana ability currently resolving (Mana Reflection ×2, Nyxbloom
     /// Ancient ×3, composed). Set before a tapped-for-mana ability resolves
@@ -3923,6 +3930,7 @@ impl Clone for GameState {
             pending_ability_tap_other: self.pending_ability_tap_other,
             prevent_combat_damage_this_turn: self.prevent_combat_damage_this_turn,
             nonland_permanent_left_bf_this_turn: self.nonland_permanent_left_bf_this_turn,
+            greatest_exiled_mv_this_turn: self.greatest_exiled_mv_this_turn,
             mana_production_multiplier: self.mana_production_multiplier,
             additional_combat_phases: self.additional_combat_phases,
             combat_chooser: self.combat_chooser,
@@ -4134,6 +4142,7 @@ impl GameState {
             suspend_signal: None,
             prevent_combat_damage_this_turn: false,
             nonland_permanent_left_bf_this_turn: false,
+            greatest_exiled_mv_this_turn: 0,
             mana_production_multiplier: 1,
             in_layer_gather: std::sync::atomic::AtomicBool::new(false),
             #[cfg(feature = "trig-census")]
@@ -28233,6 +28242,7 @@ fn event_amount(event: &GameEvent) -> u32 {
         // CR 706.4 — the greatest result rolled, for "roll a 5 or higher"
         // result-gated triggers (`Predicate::DieResultAtLeast`).
         GameEvent::DiceRolled { high, .. } => *high as u32,
+        GameEvent::AbilityActivated { life_paid, .. } => *life_paid,
         _ => 0,
     }
 }
@@ -29499,6 +29509,7 @@ fn static_effect_to_effects(
             | StaticEffect::LandwalkIgnored(_)
             // Consulted directly at the turn advance, not a layer effect.
             | StaticEffect::OpponentsSkipExtraTurns
+            | StaticEffect::PlayersSkipExtraTurns
             // Read by the damage funnels (`scale_damage_to`), not a layer effect.
             | StaticEffect::MultiplyDamageFromYourSources { .. }
             // Consulted directly by the cast gate, not a layer effect.

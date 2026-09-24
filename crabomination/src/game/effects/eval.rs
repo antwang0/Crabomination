@@ -634,6 +634,7 @@ impl GameState {
                 .map(|&p| self.players[p].spells_cast_this_turn as i32)
                 .max()
                 .unwrap_or(0),
+            Value::GreatestManaValueExiledThisTurn => self.greatest_exiled_mv_this_turn as i32,
             Value::SpellsCastThisTurnTotal => {
                 self.players.iter().map(|p| p.spells_cast_this_turn as i32).sum()
             }

@@ -811,6 +811,10 @@ pub enum Value {
     /// spell of a turn"). The summed sibling of `SpellsCastThisTurn`, which
     /// takes the max over the resolved seats.
     SpellsCastThisTurnTotal,
+    /// The greatest mana value among cards put into exile this turn (Bell
+    /// Borca, Spectral Sergeant's noted mana values). Backed by
+    /// `GameState::greatest_exiled_mv_this_turn`.
+    GreatestManaValueExiledThisTurn,
     OtherSpellsCastThisTurn(PlayerRef),
     /// Instant and sorcery spells `who` has cast so far this turn (max over
     /// the resolved players). Backed by
@@ -3020,6 +3024,9 @@ pub enum EventKind {
     /// An ability was activated and one or more permanents were sacrificed to
     /// pay for it (Ashnod the Uncaring). Also an `AbilityActivated`.
     AbilityActivatedWithSacrifice,
+    /// An ability was activated and life was paid to activate it (Verrak,
+    /// Warped Sengir); the event amount is the life paid.
+    AbilityActivatedWithLifePaid,
     /// CR 702.177 — an exhaust ability was activated ("whenever you activate an
     /// exhaust ability" — Adrenaline Jockey).
     ExhaustAbilityActivated,
