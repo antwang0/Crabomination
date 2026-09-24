@@ -125,6 +125,7 @@ lists were picked.
 | **Adaptive Enchantment** (C18 precon) GWU | Estrid, the Masked (**planeswalker**) | GWU | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Aura of Courage** (AFC precon) GWU | Galea, Kindler of Hope | GWU | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Upgrades Unleashed** (NEC precon) RG | Chishiro, the Shattered Blade | RG | 100 | 🟡 all 100 implemented, 4 carry residuals (Concord with the Kami, Agitator Ant, Forgotten Ancient, Shifting Shadow) |
+| **Ruthless Regiment** (C20 precon) RWB | Jirina Kudro | RWB | 100 | 🟡 all 100 implemented, 2 carry residuals (Sanctuary Blade, Odric, Master Tactician) |
 | **Exit from Exile** (CLB precon) RG | Faldorn, Dread Wolf Herald | RG | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Exquisite Invention** (C18 precon) UR | Saheeli, the Gifted (**planeswalker**) | UR | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Mishra's Burnished Banner** (BRC precon) UBR | Mishra, Eminent One | UBR | 100 | 🟡 all 100 implemented, 6 carry residuals (below) |
