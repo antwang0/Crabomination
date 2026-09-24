@@ -1842,6 +1842,10 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Desecrator Hag | Devour for Power (CMD) | a tie for greatest power is broken by graveyard order, not by the player. |
 | 🟡 Intet, the Dreamer | Mirror Mastery (CMD) | the card is exiled face up. |
 | 🟡 Ray of Command | Mirror Mastery (CMD) | the creature is tapped at the next end step, not as its control returns. |
+| 🟡 Hordewing Skaab | Undead Unleashed (MIC) | draws/discards one per opponent dealt combat damage this turn, not only those its Zombies' batch damaged. |
+| 🟡 Hour of Eternity | Undead Unleashed (MIC) | the 4/4 black copies are Zombies in addition to their creature types, not instead. |
+| 🟡 Shadow Kin | Undead Unleashed (MIC) | copies the greatest-power creature card milled (the engine's pick). |
+| 🟡 Rooftop Storm | Undead Unleashed (MIC) | the free cast covers Zombie creature spells cast from hand, not the command zone or other zones. |
 | 🟡 Footbottom Feast | Counterpunch (CMD) | the cards are chosen as it resolves, not targeted on cast; they go on top in mana-value order (the greatest on top). |
 
 ### Seats 42, 46, 49, 53 and 55 (Peer Through Time C14, Wade into Battle C15, Chaos Incarnate SCD, Heavenly Inferno and Political Puppets CMD) — open residuals, 2026-09-24

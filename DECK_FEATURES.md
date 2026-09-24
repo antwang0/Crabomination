@@ -92,6 +92,7 @@ lists were picked.
 | **Devour for Power** (CMD precon) BGU | The Mimeoplasm | BGU | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Mirror Mastery** (CMD precon) GUR | Riku of Two Reflections | GUR | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **First Flight** (SCD precon) WU | Isperia, Supreme Judge | WU | 100 | ✅ complete |
+| **Undead Unleashed** (MIC precon) UB | Wilhelt, the Rotcleaver | UB | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Arm for Battle** (CMR precon) RW | Wyleth, Soul of Steel | RW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Fae Dominion** (WOC precon) UB | Tegwyll, Duke of Splendor | UB | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Invent Superiority** (C16 precon) WUBR | Breya, Etherium Shaper | WUBR | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
@@ -892,6 +893,27 @@ honour it. No residuals. Pods (release, seed 9341, 1,000 games beside Judith /
 Ghalta / Breya): 1,000/1,000 decided, no card of the four lists unplayed,
 Isperia 29.4 %; 6 and 12 seats × 300 (seed 9343) all decided. `--bench`
 byte-identical.
+
+The **seventy-third** is Innistrad: Midnight Hunt's **Undead Unleashed**
+(`UndeadUnleashed_MIC`) — Dimir Zombies under Wilhelt, the Rotcleaver.
+Eighteen cards were missing. Primitives: `CardDefinition.
+graveyard_exile_discount` (Gorex's filtered delve at {2} a card, the cards
+stamped exiled-with the spell), `StaticEffect::CombatDamageToPlayersBecomesMill`
+(Undead Alchemist, CR 614), `RevealUntilMatchingToBattlefield.rest_bottom`
+(Empty the Laboratory), and `MoveChosen` now records `LastMoved` (Ghouls' Night
+Out's "those cards"). Two bot finds: the delve gate ignored Gorex (the debug
+gate caught it) and the X-target picker never looked in a graveyard, so Hour
+of Eternity went uncast in 1,000 pods — cast after the fix, with a test.
+Residuals: Hordewing Skaab, Hour of Eternity, Shadow Kin, Rooftop Storm
+(INCOMPLETE_CARDS). Pods (release, seed 9361, 1,000 games beside Mimeoplasm /
+Temmet / Stella Lee): 1,000/1,000 decided, no card unplayed, Wilhelt 21.1 %;
+64 seats × 12 (seed 9363) all decided. `--bench` byte-identical.
+
+**The field passed 64 lists this run and the engine's seat masks are `u64`**:
+a 65-seat debug pod tripped `note_acted_on_own_turn`'s assert (in release seat
+64 aliased seat 0's bit). `game::MAX_SEATS` is the cap, asserted in
+`GameState::new`; `bot_ladder` clamps `--seats`/`--pod-decks` to it, so the
+later lists are reached with `--pod-decks`.
 
 **Smoke at 54 seats** (seed 9411, before seats 55-57, release, strict answer
 log): 60 games, **60 decided, 0 caps, zero panics** — 608 turns, 350 k actions
