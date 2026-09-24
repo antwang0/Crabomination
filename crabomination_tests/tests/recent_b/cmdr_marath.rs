@@ -276,3 +276,35 @@ fn cr_119_7_witch_hunt_stops_life_gain() {
     cast_at(&mut g, fj, &[Target::Permanent(a)]).expect("cast");
     assert_eq!(g.players[1].life, life, "no gain under Witch Hunt");
 }
+
+/// The bot spends Marath's counters: with mana up and a target around, it
+/// activates the {X} ability.
+#[test]
+fn bot_spends_maraths_counters() {
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    let mut g = main_phase(2);
+    let m = g.add_card_to_battlefield(0, catalog::marath_will_of_the_wild());
+    g.battlefield_find_mut(m).unwrap().add_counters(CounterType::PlusOnePlusOne, 5);
+    g.clear_sickness(m);
+    for _ in 0..5 {
+        g.add_card_to_battlefield(0, catalog::mountain());
+    }
+    g.add_card_to_battlefield(1, catalog::serra_angel());
+    let mut bot = HeuristicBot::new();
+    let mut used = false;
+    for _ in 0..20 {
+        g.priority.player_with_priority = 0;
+        let Some(action) = bot.next_action(&g, 0) else { break };
+        if matches!(action, GameAction::ActivateAbility { card_id, .. } if card_id == m) {
+            used = true;
+            break;
+        }
+        let pass = matches!(action, GameAction::PassPriority);
+        let _ = g.perform_action(action);
+        drain_stack(&mut g);
+        if pass {
+            break;
+        }
+    }
+    assert!(used, "the bot never spent Marath's counters");
+}

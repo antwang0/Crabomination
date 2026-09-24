@@ -8416,6 +8416,7 @@ mod sink {
     pub const AB_TOKEN: u32 = 1 << 21;
     pub const AB_ENERGY: u32 = 1 << 22;
     pub const AB_TRANSFORM: u32 = 1 << 23;
+    pub const AB_X_COUNTERS: u32 = 1 << 24;
 }
 
 /// Run one gated fallback generator, returning its action when it has one.
@@ -8546,6 +8547,9 @@ fn ability_sink_bits(ab: &crate::effect::ActivatedAbility) -> u32 {
     }
     if super::transform_sink::ability_transforms_self(&ab.effect) {
         m |= sink::AB_TRANSFORM;
+    }
+    if ab.remove_counter_x.is_some() {
+        m |= sink::AB_X_COUNTERS;
     }
     m
 }
@@ -9165,6 +9169,10 @@ fn main_phase_action_with(
     // Pay to flip a counter-carrying Incubator into a creature (CR 701.53).
     // Last resort, dry-run-gated.
     gated_pick!(state, sinks, sink::AB_TRANSFORM, super::transform_sink::pick_transform_self(state, seat));
+
+    // Spend "{X}, remove X counters" abilities (Marath) on their best mode
+    // and size. Dry-run-scored against passing.
+    gated_pick!(state, sinks, sink::AB_X_COUNTERS, super::x_counter_sink::pick_x_counter_ability(state, seat, w));
 
     BotStep::plain(GameAction::PassPriority)
 }
@@ -16958,7 +16966,7 @@ fn ply_blend_factor(turn: u32) -> f32 {
     ((ZERO_AT - turn as f32) / (ZERO_AT - FULL_UNTIL)).clamp(0.0, 1.0)
 }
 
-fn eval_material(state: &GameState, seat: usize, w: &EvalWeights) -> i32 {
+pub(super) fn eval_material(state: &GameState, seat: usize, w: &EvalWeights) -> i32 {
     // Scores a whole board, so it reads every permanent's computed state —
     // and the sims call it on a cloned (unfrozen) state once per candidate.
     state.with_frozen_layers(|state| eval_material_frozen(state, seat, w))
@@ -17378,7 +17386,7 @@ fn policy_declaration_score(
 
 /// decision that surfaces until the stack empties. `None` on rejection or
 /// a resolution that won't settle — callers fall back to the static rank.
-fn evaluate_action_outcome(
+pub(super) fn evaluate_action_outcome(
     state: &GameState,
     seat: usize,
     action: &GameAction,

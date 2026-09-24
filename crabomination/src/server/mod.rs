@@ -93,6 +93,7 @@ mod suspend;
 mod foretell;
 mod cycling;
 mod transform_sink;
+mod x_counter_sink;
 pub mod encode;
 pub mod vocab_snapshot;
 pub mod decision_capture;
