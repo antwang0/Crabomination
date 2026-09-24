@@ -71,6 +71,7 @@ lists were picked.
 | **Rebellion Rising** (ONC precon) RW | Neyali, Suns' Vanguard | RW | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Feline Ferocity** (C17 precon) GW | Arahbo, Roar of the World | GW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Primal Genesis** (C19 precon) RGW | Ghired, Conclave Exile | RGW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
+| **Breed Lethality** (C16 precon) WUBG | Atraxa, Praetors' Voice | WUBG | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Call the Spirits** (C15 precon) WB | Daxos the Returned | WB | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Peer Through Time** (C14 precon) U | Teferi, Temporal Archmage (**planeswalker**) | U | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Quantum Quandrix** (C21 precon) GU | Adrix and Nev, Twincasters | GU | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
@@ -603,6 +604,22 @@ token). Residuals: **Cliffside Rescuer**'s protection is from what opponents
 control; **Tahngarth** attacks its borrower's default opponent. Four-seat pods
 beside Sigarda / Ghalta / Bello (seed 10171, 1,000 games, all decided, every
 card played): Ghired 27.6 %. `--bench` byte-identical.
+
+The **sixty-first** is Commander 2016's **Breed Lethality** (`BreedLethality_C16`)
+— four-color +1/+1 counters and proliferate under Atraxa, Praetors' Voice.
+Sixteen cards were missing; Champion of Lambholt and Dreadship Reef landed
+meanwhile with Token Triumph and Devour for Power, so fourteen are this
+seat's. The primitive: `Effect::RevealTopEachOpponentChoosesToHand`
+(Manifold Insights — each opponent in turn order picks a different card for
+you, the rest bottom at random). Shared helpers `sets::storage_land` and
+`sets::pain_tap`. ⚠ **The census found an optional loop the bot never
+stopped**: two Enduring Scalelords feed each other a counter per "you may"
+forever (2 of 1,000 games capped). `HeuristicBot` now declines past 64
+optional yeses in one step (CR 732.2), and the rerun decided 1,000/1,000 with
+every card played: Atraxa 27.9 % beside Teval / Ixhel / Bello (seed 10191).
+Residual: **Duneblast** always keeps one creature. The 56-seat smoke of the
+field before this seat (seed 10181, 200 games): **197 decided, 3 board caps,
+zero panics**. `--bench` byte-identical.
 
 The **forty-second** is Commander 2014's **Peer Through Time**
 (`PeerThroughTime_C14`) — mono-blue control under Teferi, Temporal Archmage,
