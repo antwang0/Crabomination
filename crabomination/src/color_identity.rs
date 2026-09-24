@@ -97,6 +97,14 @@ fn walk(v: &Value, out: &mut ColorSet) {
             // a Crypt Ghast is mono-black. The engine expands the keyword into
             // a real `MayPay` with a real hybrid cost; that cost is the one
             // printed cost on a card that is not printed on the card.
+            // "This ability doesn't affect its color identity" (Fallaji
+            // Wayfarer's all-colors CDA) — the card says so itself.
+            if m.get("description")
+                .and_then(Value::as_str)
+                .is_some_and(|d| d.contains("doesn't affect its color identity"))
+            {
+                return;
+            }
             if m.get("description").and_then(Value::as_str).is_some_and(is_reminder_only_cost) {
                 return;
             }

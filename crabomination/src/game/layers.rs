@@ -1621,6 +1621,9 @@ pub(crate) fn requirement_is_card_only(req: &SelectionRequirement) -> bool {
         | R::Planeswalker | R::Land | R::Nonland | R::Noncreature | R::IsBasicLand
         | R::IsNonbasicLand | R::IsToken | R::NotToken | R::ControlledByYou
         | R::ControlledByOpponent | R::Colorless => true,
+        // Color counts read the printed colors, like `HasColor` (Rienne's
+        // "other multicolored creatures you control").
+        R::Multicolored | R::Monocolored => true,
         // `card.owner` is a `CardInstance` field like `is_token`, and
         // `requirement_matches_card` has always read it. It was missing here,
         // so any filter this list could not otherwise flatten was **dropped**
@@ -1745,6 +1748,8 @@ pub(crate) fn requirement_matches_card(
         // CR 702.114 — Devoid is a CDA: the object is colorless regardless of
         // its (possibly colored) cost pips.
         R::Colorless => def.printed_color_set().is_empty(),
+        R::Multicolored => def.printed_color_set().len() >= 2,
+        R::Monocolored => def.printed_color_set().len() == 1,
         R::And(a, b) => {
             requirement_matches_card(a, card, source_controller)
                 && requirement_matches_card(b, card, source_controller)

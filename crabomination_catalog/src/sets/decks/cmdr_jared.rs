@@ -161,7 +161,7 @@ pub fn fallaji_wayfarer() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![
             StaticAbility {
-                description: "Fallaji Wayfarer is all colors.",
+                description: "Fallaji Wayfarer is all colors. This ability doesn't affect its color identity.",
                 effect: StaticEffect::GrantAllColors { applies_to: Selector::This },
             },
             StaticAbility {
