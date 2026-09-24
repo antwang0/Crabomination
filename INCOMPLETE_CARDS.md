@@ -1871,6 +1871,10 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 |---|---|---|
 | 🟡 Ancient Cornucopia | Hatsune Miku (SLD) | "do this only once each turn" limits the trigger, so a declined gain still spends the turn's one. |
 | 🟡 Lazotep Quarry | Hatsune Miku (SLD) | the 4/4 black Zombie copy keeps the card's creature types and adds Zombie (the shared eternalize shape). |
+| 🟡 Aurora Phoenix | Exit from Exile (CLB) | a spell given cascade by a trigger (Wild-Magic Sorcerer) doesn't carry the keyword, so it doesn't return the Phoenix. |
+| 🟡 Chaos Wand | Exit from Exile (CLB) | a found instant or sorcery you don't cast stays in exile instead of going to the bottom. |
+| 🟡 Durnan of the Yawning Portal | Exit from Exile (CLB) | exiles the first creature card among the top four (no choice), and the cast from exile has no undaunted. |
+| 🟡 Stolen Strategy | Exit from Exile (CLB) | an exiled land may be played, not only spells cast. |
 | 🟡 Descendants' Fury | Sliver Swarm (CMM) | "one of them" is any attacker of yours that damaged a player this turn, not only this combat-damage batch's. |
 | 🟡 Bloodlord of Vaasgoth | Vampiric Bloodlust (C17) | the granted bloodthirst is checked as the cast trigger resolves, not as the creature enters. |
 | 🟡 Mathas, Fiend Seeker | Vampiric Bloodlust (C17) | a bounty counter grants its dies trigger only while Mathas is on the battlefield. |

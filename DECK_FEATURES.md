@@ -102,6 +102,7 @@ lists were picked.
 | **Urza's Iron Alliance** (BRC precon) WUB | Urza, Chief Artificer | WUB | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Phantom Premonition** (KHC precon) WU | Ranar the Ever-Watchful | WU | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Hatsune Miku** (SLD precon) GW | Trostani, Selesnya's Voice | GW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
+| **Exit from Exile** (CLB precon) RG | Faldorn, Dread Wolf Herald | RG | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not
@@ -1027,6 +1028,28 @@ beside Saskia / Inalla / Kaalia (seed 9521, 1,000 games): 1,000 decided, Ranar
 52.2 %; a 300-game census (seed 9522) leaves no card of the four unplayed;
 strict debug pods (seeds 9523/9524, 120 games) decided 120/120. `--bench`
 byte-identical.
+
+The **seventy-second** is Battle for Baldur's Gate's **Exit from Exile**
+(`ExitFromExile_CLB`) — Gruul impulse draw, cascade and Wolves under
+Faldorn, Dread Wolf Herald, reached by `--pod-decks 72`. Seventeen cards
+were missing (`cmdr_faldorn.rs`). ⚠ **"Cast from exile" was three casts
+short**: foretold, adventure-creature and plotted casts never stamped
+`cast_from_exile` (CR 702.143a / 715.4 / 702.170d), and a land *played*
+from exile never counted as entering from exile (CR 305.1) — so Faldorn's
+own Wolves, Fire Lord Zuko and Nassari missed them. The primitives:
+`Predicate::FirstSpellCastFromExileThisTurn` over
+`Player.spells_cast_from_exile_this_turn` (Wild-Magic Sorcerer) and
+`StaticEffect::FreeExileCastOncePerTurnMatching` (Tlincalli Hunter's
+creature-only {0}; the shared `free_exile_cast_waiver` now reaches an
+adventurer's cast, Warped Space's too). Residuals: **Aurora Phoenix** doesn't
+see cascade granted by a trigger; **Chaos Wand** leaves an uncast find in
+exile; **Durnan** takes the first creature of the four and its cast has no
+undaunted; **Stolen Strategy** lets an exiled land be played. Pods (release,
+seed 10221, 1,000 games beside Trostani / Ranar / Urza): 1,000/1,000
+decided, no card of the four lists unplayed, Faldorn 13.4 %; six seats
+beside Anikthea / Trostani / Ranar / Urza / Brimaz (seed 10222, 400 games)
+399 decided, one board cap — 17,194 Pegasi from Storm Herd under Angelic
+Chorus in the Trostani list. `--bench` byte-identical.
 
 The **seventy-first** is the Secret Lair **Hatsune Miku** deck
 (`HatsuneMiku_SLD`) — Selesnya lifegain and tokens under Trostani, Selesnya's
