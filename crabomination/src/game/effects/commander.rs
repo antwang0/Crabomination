@@ -191,6 +191,15 @@ impl GameState {
 // widen `PaymentSideEffects` for an interaction no target deck has.
 // ---------------------------------------------------------------------------
 
+/// The scry triggers a cast's commander-mana riders owe, put on the stack
+/// once the spell is: Path of Ancestry's pips (scry 1 each, if the spell
+/// shares a creature type with the commander) and Study Hall's `(pips, X)`.
+#[derive(Default, Clone, Copy)]
+pub(crate) struct CommanderManaScry {
+    path_pips: u32,
+    study: (u32, u32),
+}
+
 impl GameState {
     /// `CardDefinition::spell_kind` plus the one field only the game can fill:
     /// CR 903.3 — whether `card` is `seat`'s own commander — and whether a
@@ -222,9 +231,9 @@ impl GameState {
         spent: &crate::mana::PaymentSideEffects,
         kind: &SpellKind,
         card: &mut CardInstance,
-    ) -> u32 {
+    ) -> CommanderManaScry {
         if spent.spent_restrictions.is_empty() {
-            return 0;
+            return CommanderManaScry::default();
         }
         // CR 106.6a — "a separate effect … once for each mana produced", so
         // two doubled Opal Palace pips are two counters per prior cast.
@@ -248,10 +257,21 @@ impl GameState {
                 SpendRestriction::SmallInstantSorceryExileInstead,
             );
         }
-        if kind.creature {
-            spent.spent_count(SpendRestriction::CommanderTypeScry)
+        // Study Hall — one scry-X trigger per rider pip that funded the
+        // commander, X counting the cast in progress (like Opal Palace).
+        let study_pips = spent.spent_count(SpendRestriction::CommanderCastScry);
+        let study = if kind.commander && study_pips > 0 {
+            (study_pips, self.commander_cast_count.get(&card.id).copied().unwrap_or(0))
         } else {
-            0
+            (0, 0)
+        };
+        CommanderManaScry {
+            path_pips: if kind.creature {
+                spent.spent_count(SpendRestriction::CommanderTypeScry)
+            } else {
+                0
+            },
+            study,
         }
     }
 
@@ -262,7 +282,29 @@ impl GameState {
     /// ruling: they're checked immediately after the cast, not at activation),
     /// layer-aware while it's on the battlefield.
     /// CR 106.6a — one trigger per rider pip spent, not one per cast.
-    pub(crate) fn push_commander_mana_scry(&mut self, seat: usize, kind: &SpellKind, pips: u32) {
+    pub(crate) fn push_commander_mana_scry(
+        &mut self,
+        seat: usize,
+        kind: &SpellKind,
+        riders: CommanderManaScry,
+    ) {
+        let (study_pips, x) = riders.study;
+        if study_pips > 0 && x > 0 {
+            let source = self
+                .restricted_mana_source(seat, SpendRestriction::CommanderCastScry)
+                .unwrap_or(CardId(0));
+            for _ in 0..study_pips {
+                self.stack.push(
+                    TriggerPush::new(
+                        source,
+                        seat,
+                        Effect::Scry { who: PlayerRef::You, amount: Value::Const(x as i32) },
+                    )
+                    .build(),
+                );
+            }
+        }
+        let pips = riders.path_pips;
         if pips == 0 || !self.commander_shares_creature_type(seat, kind) {
             return;
         }

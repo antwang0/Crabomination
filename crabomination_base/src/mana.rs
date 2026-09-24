@@ -677,6 +677,11 @@ pub enum SpendRestriction {
     /// Unrestricted spend; the counters ride the cast card's
     /// `pending_etb_counters`.
     CommanderCastCounters,
+    /// "When you spend this mana to cast your commander, scry X, where X is
+    /// the number of times it's been cast from the command zone this game."
+    /// (Study Hall.) Unrestricted spend; the scry trigger goes on the stack
+    /// above the commander it funded, as Path of Ancestry's does.
+    CommanderCastScry,
     /// "When you spend this mana to cast an instant or sorcery spell with mana
     /// value 3 or less, you may exile that spell instead of putting it into
     /// its owner's graveyard as it resolves." (Forger's Foundry.) Unrestricted
@@ -737,6 +742,7 @@ impl SpendRestriction {
             | SpendRestriction::CreatureHaste
             | SpendRestriction::CommanderTypeScry
             | SpendRestriction::CommanderCastCounters
+            | SpendRestriction::CommanderCastScry
             | SpendRestriction::SmallInstantSorceryExileInstead => {
                 return None;
             }
@@ -833,6 +839,7 @@ impl SpendRestriction {
             | SpendRestriction::CreatureHaste
             | SpendRestriction::CommanderTypeScry
             | SpendRestriction::CommanderCastCounters
+            | SpendRestriction::CommanderCastScry
             | SpendRestriction::SmallInstantSorceryExileInstead => {
                 debug_assert!(self.is_rider(), "rider arm reached through the match");
                 true

@@ -179,6 +179,47 @@ fn cr_106_6a_two_rider_pips_fire_two_triggers() {
     assert!(matches!(g.stack[2], StackItem::Trigger { .. }));
 }
 
+// ── Study Hall ────────────────────────────────────────────────────────────
+
+/// Study Hall: mana spent to cast your commander triggers "scry X", X the
+/// command-zone casts this game with the one in progress (CR 603.2); the
+/// trigger goes on the stack above the commander (CR 603.3). A non-commander
+/// spell funded by the same rider triggers nothing.
+#[test]
+fn study_hall_scries_for_each_command_zone_cast() {
+    let (mut g, cmd) = commander_game();
+    g.players[0].mana_pool.add_restricted(Color::Green, 1, SpendRestriction::CommanderCastScry);
+    g.perform_action(GameAction::CastFromCommandZone {
+        card_id: cmd,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+        alternative: false,
+        pitch_card: None,
+    })
+    .expect("cast from the command zone");
+    assert_eq!(g.stack.len(), 2, "the commander and the scry trigger");
+    let StackItem::Trigger { effect, .. } = &g.stack[1] else { panic!("trigger on top") };
+    assert!(
+        matches!(**effect, crabomination::effect::Effect::Scry { amount: crabomination::effect::Value::Const(1), .. }),
+        "first cast: scry 1, got {effect:?}"
+    );
+    let (mut g, _) = commander_game();
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_restricted(Color::Green, 1, SpendRestriction::CommanderCastScry);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bears,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    assert_eq!(g.stack.len(), 1, "not a commander: no trigger");
+}
+
 // ── Opal Palace ───────────────────────────────────────────────────────────
 
 /// Opal Palace: mana spent to cast your commander gives it one additional
@@ -624,7 +665,8 @@ fn cr_106_6_every_rider_allows_every_payment() {
                 | LegendarySpell | LegendarySpellUncounterable | NoncreatureSpellsOnly
                 | RoomSpellsOrDoors
                 | FaceDownSpellsOrTurnFaceUp | CreatureHaste | CommanderTypeScry
-                | CommanderCastCounters | SmallInstantSorceryExileInstead | SpellFromGraveyard
+                | CommanderCastCounters | CommanderCastScry | SmallInstantSorceryExileInstead
+                | SpellFromGraveyard
                 | MonocoloredSpellOf(_) => {}
             }
         }
@@ -661,6 +703,7 @@ fn cr_106_6_every_rider_allows_every_payment() {
             CreatureHaste,
             CommanderTypeScry,
             CommanderCastCounters,
+            CommanderCastScry,
             SmallInstantSorceryExileInstead,
             SpellFromGraveyard,
             MonocoloredSpellOf(crabomination::mana::Color::Red),
