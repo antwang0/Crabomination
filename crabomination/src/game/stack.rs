@@ -2496,7 +2496,22 @@ impl GameState {
                     // effect never dies as a 0/0, and before the counter specs
                     // below so an enters-with count can read what it did
                     // (Mimeoplasm's three counters per card it exiled).
+                    let name_before = self.battlefield.find_by_id(card_id).map(|c| c.definition.name);
                     self.apply_as_enters_replacements(card_id);
+                    // CR 707.5 — an as-enters copy (The Mimeoplasm) enters with
+                    // the copied card's "when this enters" abilities, not its own.
+                    if let (Some(before), Some(c)) = (name_before, self.battlefield.find_by_id(card_id))
+                        && before != c.definition.name
+                    {
+                        etb_triggers = c
+                            .definition
+                            .triggered_abilities
+                            .iter()
+                            .filter(|t| t.event.kind == EventKind::EntersBattlefield
+                                && matches!(t.event.scope, EventScope::SelfSource))
+                            .map(|t| (t.effect.clone(), t.event.filter.clone()))
+                            .collect();
+                    }
                     // Collect the printed `enters_with_counters` spec and
                     // any active `ExtraEtbCountersForCreatureCasts` static
                     // effects controlled by the caster. The static fires
@@ -5843,8 +5858,7 @@ impl GameState {
                 };
                 if let Some(mut card) = card {
                     // CR 400.7 — a new object in the command zone.
-                    card.counters.clear();
-                    card.keyword_counters.clear();
+                    card.drop_counters_for_zone_change(Zone::Command);
                     card.exiled_with = None;
                     self.players[owner].command.push(card);
                     self.offboard_keyword_grants = true;
@@ -7790,6 +7804,11 @@ impl GameState {
         // CR 708.10 — a face-down permanent is turned face up as it leaves
         // the battlefield (no-op unless it carries a stashed real definition).
         card.turn_face_up();
+        // CR 122.2 — whatever zone the redirect names; the exile arms used to
+        // keep a dead creature's counters on the exiled card.
+        if zone != Zone::Battlefield {
+            card.drop_counters_for_zone_change(zone);
+        }
         // The graveyard→exile redirect (Rest in Peace / Leyline / Disturb back
         // face, CR 614.6 / 702.146e) and its void-counter rider read the back
         // face, so capture them *before* the CR 712.4 front-face revert.
@@ -7886,12 +7905,7 @@ impl GameState {
             // Top of owner's library. Replacement effects don't carry
             // a position field today; if a future replacement needs
             // bottom / shuffled, extend the type.
-            Zone::Library => {
-                // CR 122.2 — counters don't survive the zone change.
-                card.counters.clear();
-                card.keyword_counters.clear();
-                self.players[owner].library.insert(0, card)
-            }
+            Zone::Library => self.players[owner].library.insert(0, card),
             Zone::Command => {
                 self.players[owner].command.push(card);
                 self.offboard_keyword_grants = true;

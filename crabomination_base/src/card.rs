@@ -195,7 +195,7 @@ pub enum CreatureType {
     Elephant, Rhino, Hippo, Mammoth, Whale, Leviathan, Kraken, Elk, Egg, Weasel,
     Lion, Kavu, Lhurgoyf, Atog, Noggle, Vedalken, Kor, Ally, Kobold, Surrakar, Licid, Thalakos,
     Avatar, Phyrexian, Praetor, Incarnation, Mercenary, Rebel, Monger, Archon, Aetherborn,
-    Construct, Golem, Myr, Robot, Hellion, Scarecrow, Dreadnought, Sable,
+    Construct, Triskelavite, Golem, Myr, Robot, Hellion, Scarecrow, Dreadnought, Sable,
     Ooze, Plant, Saproling,
     // Strixhaven-era subtypes. (Book is Codie, Vociferous Codex's
     // 2023-oracle creature type.)
@@ -4073,6 +4073,10 @@ pub struct CardDefinition {
     /// checked at the same battlefield-death funnel (Nissa's Chosen).
     #[serde(default)]
     pub dies_to_library_bottom: bool,
+    /// "Counters remain on this as it moves to any zone other than a player's
+    /// hand or library" — the card's own exception to CR 122.2 (Skullbriar).
+    #[serde(default)]
+    pub keeps_counters_off_battlefield: bool,
     /// CR 704.5j exception — "If there are exactly two permanents with this
     /// name on the battlefield, the legend rule doesn't apply to them."
     /// (Brothers Yamazaki.) When the same-name legend group has exactly two
@@ -10224,6 +10228,21 @@ impl CardInstance {
         }
         if self.echo_paid {
             self.echo_paid = false;
+        }
+    }
+
+    /// CR 122.2 — counters cease to exist as the object changes zones, unless
+    /// the card keeps them and `to` is neither a hand nor a library
+    /// (Skullbriar). Guarded: a write unshares the CoW card.
+    pub fn drop_counters_for_zone_change(&mut self, to: Zone) {
+        if self.definition.keeps_counters_off_battlefield && !matches!(to, Zone::Hand | Zone::Library) {
+            return;
+        }
+        if !self.counters.is_empty() {
+            self.counters.clear();
+        }
+        if !self.keyword_counters.is_empty() {
+            self.keyword_counters.clear();
         }
     }
 

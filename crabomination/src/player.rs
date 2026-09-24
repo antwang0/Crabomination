@@ -1488,12 +1488,7 @@ impl PlayerData {
         // A `clear()` is a write, and `CardInstance`'s `DerefMut` is
         // `Arc::make_mut` — so clearing an already-empty map deep-copies a
         // shared card, and most permanents die with no counters at all.
-        if !card.counters.is_empty() {
-            card.counters.clear();
-        }
-        if !card.keyword_counters.is_empty() {
-            card.keyword_counters.clear();
-        }
+        card.drop_counters_for_zone_change(crate::card::Zone::Graveyard);
         self.cards_to_graveyard_this_turn += 1;
         if card.definition.is_creature() {
             self.creature_cards_to_graveyard_this_turn += 1;

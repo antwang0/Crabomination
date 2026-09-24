@@ -2381,8 +2381,7 @@ impl GameState {
         // battlefield arm additionally re-seeds planeswalker loyalty).
         // Dies-with-counters triggers read the `died_card_snapshots` /
         // `leaves_bf_lki` LKI caches, not the new zone's object.
-        card.counters.clear();
-        card.keyword_counters.clear();
+        card.drop_counters_for_zone_change(intended);
         // CR 710.4 — a flip card has only its normal characteristics off the
         // battlefield, and keeps no memory of having flipped. (The
         // replacement-redirect path does this in `place_card_at_resolved_zone`;
