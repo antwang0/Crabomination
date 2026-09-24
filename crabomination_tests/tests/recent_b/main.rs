@@ -77,6 +77,7 @@ mod cmdr_guff;
 mod cmdr_urdragon;
 mod cmdr_killian;
 mod cmdr_azlask;
+mod cmdr_zhulodok;
 mod dsk2;
 mod dsk_rooms;
 mod recent_118_132;
