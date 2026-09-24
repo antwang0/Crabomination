@@ -95,7 +95,7 @@ pub fn cartographers_survey() -> CardDefinition {
             then: None,
             max: Some(2),
             tapped: true,
-            exile_rest: false,
+            exile_rest: false, rest_to_graveyard: false,
         },
         ..Default::default()
     }

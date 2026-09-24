@@ -74,7 +74,7 @@ pub fn freestrider_lookout() -> CardDefinition {
                 then: None,
                 max: Some(1),
                 tapped: true,
-                exile_rest: false,
+                exile_rest: false, rest_to_graveyard: false,
             },
         }],
         ..Default::default()

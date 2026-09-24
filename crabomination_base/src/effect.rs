@@ -2478,6 +2478,10 @@ pub enum Duration {
     /// pass and so needs no sweep at all: this is for an effect a resolution
     /// installs.
     WhileSourceOnBattlefield,
+    /// CR 611.2b — "until the end of your next turn" (Treasure Nabber): lasts
+    /// through the controller's next turn — the one after this if it's
+    /// already theirs — and ends in that turn's cleanup step.
+    UntilEndOfYourNextTurn,
     /// Indefinite (for effects like "gain control" without a clause).
     Permanent,
 }
@@ -5438,6 +5442,11 @@ pub enum Effect {
         /// among them onto the battlefield" (Tezzeret, Master of the Bridge).
         #[serde(default)]
         exile_rest: bool,
+        /// The remainder goes to the graveyard instead — "Then put all cards
+        /// revealed this way that weren't put onto the battlefield into your
+        /// graveyard" (Saheeli's Directive).
+        #[serde(default)]
+        rest_to_graveyard: bool,
     },
     /// "Reveal the top `count` cards of your library. For each card type, you
     /// may put a card of that type from among them into your hand. Put the
@@ -5827,6 +5836,15 @@ pub enum Effect {
         #[serde(default)]
         return_at_end_step: bool,
     },
+    /// CR 903.8 — "cast your commander from the command zone without paying
+    /// its mana cost" (Geode Golem; the "you may" is a `MayDo` around it). The
+    /// commander tax is an additional cost and is still paid; a cast that
+    /// can't be paid, or a commander not in the command zone, does nothing.
+    CastCommanderWithoutPaying,
+    /// "The next spell you cast this turn has affinity for artifacts"
+    /// (Saheeli, the Gifted's +1): it costs {1} less for each artifact you
+    /// control *as you cast it* (CR 702.41a). Lapses with the next spell.
+    NextSpellHasAffinityForArtifacts,
 
     // ── Mana ─────────────────────────────────────────────────────────────────
     AddMana { who: PlayerRef, pool: ManaPayload },

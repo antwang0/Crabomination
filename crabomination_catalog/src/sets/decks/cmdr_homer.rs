@@ -969,7 +969,7 @@ pub fn through_the_forest_gate() -> CardDefinition {
                 then: None,
                 max: None,
                 tapped: true,
-                exile_rest: false,
+                exile_rest: false, rest_to_graveyard: false,
             },
             Effect::ShuffleLibrary { who: PlayerRef::You },
             Effect::GainLife { who: Selector::You, amount: Value::Const(8) },

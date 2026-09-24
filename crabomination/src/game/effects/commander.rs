@@ -12,6 +12,41 @@ use crate::game::types::TriggerPush;
 use crate::mana::{SpellKind, SpendRestriction};
 
 impl GameState {
+    /// Geode Golem — cast one of `seat`'s commanders from the command zone
+    /// without paying its mana cost (the tax is still paid; see
+    /// `cast_from_command_zone_as`). With two in the zone (Partner) the one
+    /// with the greater mana value goes, the one the discount is worth most
+    /// on. A cast that fails leaves the commander where it was.
+    pub(crate) fn cast_commander_without_paying(
+        &mut self,
+        seat: usize,
+        events: &mut Vec<crate::game::types::GameEvent>,
+    ) {
+        let Some(id) = self.players.get(seat).and_then(|p| {
+            p.command
+                .iter()
+                .filter(|c| p.commanders.contains(&c.id))
+                .max_by_key(|c| c.definition.cost.cmc())
+                .map(|c| c.id)
+        }) else {
+            return;
+        };
+        if let Ok(mut evs) = self.cast_from_command_zone_as(seat, id, None, vec![], None, None, true) {
+            events.append(&mut evs);
+        }
+    }
+
+    /// Saheeli, the Gifted's +1 — the next spell `seat` casts this turn has
+    /// affinity for artifacts. Keyed, like `pending_spell_discounts`, on the
+    /// spells-cast tally so it lapses with the next spell; the count itself is
+    /// taken at cast time by `cost_reduction_for_spell`.
+    pub(crate) fn grant_next_spell_affinity(&mut self, seat: usize) {
+        if let Some(p) = self.players.get_mut(seat) {
+            let at = p.spells_cast_this_turn;
+            p.pending_affinity_next_spell.push(at);
+        }
+    }
+
     /// CR 903.3 / 202.3 — the greatest printed mana value among `seat`'s
     /// commanders, in whatever zone each is; 0 with none.
     pub(crate) fn greatest_commander_mana_value(&self, seat: usize) -> u32 {

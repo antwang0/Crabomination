@@ -4557,6 +4557,9 @@ impl GameState {
             // would otherwise re-match after the reset).
             me.pending_is_discounts.clear();
             me.pending_spell_discounts.clear();
+            if !me.pending_affinity_next_spell.is_empty() {
+                me.pending_affinity_next_spell.clear();
+            }
             me.creatures_cast_this_turn = 0;
             // Clear Teferi, Time Raveler's "you may cast sorceries as though they
             // had flash" flag — it expires on the start of your next turn.
@@ -4763,6 +4766,7 @@ impl GameState {
         self.revert_temporary_control(&[
             crate::effect::Duration::EndOfTurn,
             crate::effect::Duration::UntilNextTurn,
+            crate::effect::Duration::UntilEndOfYourNextTurn,
         ]);
         // CR 707 — "becomes a copy ... until end of turn" swaps snap back.
         self.revert_temporary_copies(&[

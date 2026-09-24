@@ -200,6 +200,10 @@ pub(crate) fn map_effect_duration(
         crate::effect::Duration::UntilNextTurn
         | crate::effect::Duration::UntilYourNextUntap
         | crate::effect::Duration::UntilYourNextUpkeep => EffectDuration::UntilNextTurn,
+        // Needs the controller and the turn: only the controller-aware
+        // `effect_duration_for` can place it. A caller without them ends it at
+        // this turn's cleanup rather than never.
+        crate::effect::Duration::UntilEndOfYourNextTurn => EffectDuration::UntilEndOfTurn,
         crate::effect::Duration::WhileSourceTapped => EffectDuration::WhileSourceTapped,
         crate::effect::Duration::WhileSourceAttached => EffectDuration::WhileSourceAttached,
         crate::effect::Duration::WhileSourceOnBattlefield => {
@@ -11932,6 +11936,14 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::CastCommanderWithoutPaying => {
+                self.cast_commander_without_paying(ctx.controller, events);
+                Ok(())
+            }
+            Effect::NextSpellHasAffinityForArtifacts => {
+                self.grant_next_spell_affinity(ctx.controller);
+                Ok(())
+            }
             Effect::PutCommanderOntoBattlefield { who, haste, return_at_end_step } => {
                 if let Some(p) = self.resolve_player(who, ctx) {
                     self.put_commander_onto_battlefield(
@@ -17974,6 +17986,8 @@ impl GameState {
                     if !matches!(duration, Duration::Permanent)
                         && !self.temporary_control.iter().any(|t| t.card == cid)
                     {
+                        let installed = matches!(duration, Duration::UntilEndOfYourNextTurn)
+                            .then_some((ctx.controller, self.turn_number));
                         self.temporary_control.push(crate::game::TempControl {
                             card: cid,
                             original_controller: prev,
@@ -17982,6 +17996,7 @@ impl GameState {
                             while_source_tapped: false,
                             while_source_attached: false,
                             while_you_control_source: false,
+                            installed,
                         });
                     }
                 }
@@ -18006,6 +18021,7 @@ impl GameState {
                             while_source_tapped: false,
                             while_source_attached: false,
                             while_you_control_source: false,
+                            installed: None,
                         });
                     }
                 }
@@ -18030,6 +18046,7 @@ impl GameState {
                             while_source_tapped: false,
                             while_source_attached: false,
                             while_you_control_source: true,
+                            installed: None,
                         });
                     }
                 }
@@ -18106,6 +18123,7 @@ impl GameState {
                         while_source_tapped: false,
                         while_source_attached: true,
                         while_you_control_source: false,
+                        installed: None,
                     });
                 }
                 Ok(())
@@ -18131,6 +18149,7 @@ impl GameState {
                         while_source_tapped: false,
                         while_source_attached: true,
                         while_you_control_source: false,
+                        installed: None,
                     });
                 }
                 Ok(())
@@ -18154,6 +18173,7 @@ impl GameState {
                             while_source_tapped: true,
                             while_source_attached: false,
                             while_you_control_source: false,
+                            installed: None,
                         });
                     }
                 }
@@ -25826,7 +25846,15 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::LookTopPutMatchingOntoBattlefield { count, filter, then, max, tapped, exile_rest } => {
+            Effect::LookTopPutMatchingOntoBattlefield {
+                count,
+                filter,
+                then,
+                max,
+                tapped,
+                exile_rest,
+                rest_to_graveyard,
+            } => {
                 let p = ctx.controller;
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
                 let looked: Vec<crate::card::CardId> =
@@ -25868,6 +25896,11 @@ impl GameState {
                     // Tezzeret's −8: the unmatched remainder is exiled.
                     for id in rest {
                         self.move_card_to(id, &ZoneDest::Exile, ctx, events);
+                    }
+                } else if *rest_to_graveyard {
+                    // Saheeli's Directive: the unmatched remainder is binned.
+                    for id in rest {
+                        self.move_card_to(id, &ZoneDest::Graveyard, ctx, events);
                     }
                 } else {
                     rest.shuffle(&mut self.rng.draw());
@@ -26347,6 +26380,7 @@ impl GameState {
                             while_source_tapped: false,
                             while_source_attached: false,
                             while_you_control_source: false,
+                            installed: None,
                         });
                     }
                     if let Some(c) = self.battlefield_find_mut(*cid) {

@@ -1986,6 +1986,16 @@ pub(crate) fn cost_reduction_for_spell_full_over<'a>(
                 reduction = reduction.saturating_add(amount);
             }
         }
+        // CR 702.41a — affinity for artifacts, counted as the spell is cast
+        // (Saheeli, the Gifted's +1).
+        if state.players[caster].pending_affinity_next_spell.iter().any(|&at| at == cast_so_far) {
+            let artifacts = state
+                .battlefield
+                .iter()
+                .filter(|c| c.controller == caster && c.definition.is_artifact())
+                .count() as u32;
+            reduction = reduction.saturating_add(artifacts);
+        }
     }
     // Turn-scoped "[filter] spells you cast this turn cost {N} less"
     // grants (Urza, Planeswalker's +2). Cleared at cleanup.
@@ -12082,6 +12092,28 @@ impl GameState {
         x_value: Option<u32>,
     ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
+        self.cast_from_command_zone_as(p, card_id, target, additional_targets, mode, x_value, false)
+    }
+
+    /// [`cast_from_command_zone`](Self::cast_from_command_zone) for seat `p`.
+    /// With `without_paying`, "cast your commander from the command zone
+    /// without paying its mana cost" (Geode Golem): no printed cost and X = 0,
+    /// and no timing check — it's cast while an ability resolves (CR 608.2g) —
+    /// but the commander tax is still owed (CR 903.8 makes it an *additional*
+    /// cost, and "you still pay any additional costs"), as is every other
+    /// additional cost the cast would carry.
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn cast_from_command_zone_as(
+        &mut self,
+        p: usize,
+        card_id: CardId,
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+        without_paying: bool,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        let x_value = if without_paying { None } else { x_value };
 
         // Locate + remove the commander from the caster's command zone.
         let mut card = Self::take_card(&mut self.players[p].command, card_id)
@@ -12098,6 +12130,7 @@ impl GameState {
         let must_be_sorcery_speed = !(card.definition.is_instant_speed() || flash_granted)
             || self.player_locked_to_sorcery_timing(p);
         if must_be_sorcery_speed
+            && !without_paying
             && !self.can_cast_sorcery_speed(p)
             && !self.players[p].sorceries_as_flash
         {
@@ -12126,7 +12159,11 @@ impl GameState {
         // Build the cost: printed + commander tax. The tax is
         // `{2}` × prior casts; it stacks on top of any X / generic
         // tax / cost reduction the spell would normally see.
-        let base_cost = card.definition.cost.clone();
+        let base_cost = if without_paying {
+            crate::mana::ManaCost::default()
+        } else {
+            card.definition.cost.clone()
+        };
         let mut cost = if base_cost.has_x() {
             base_cost.with_x_value(x_value.unwrap_or(0))
         } else {

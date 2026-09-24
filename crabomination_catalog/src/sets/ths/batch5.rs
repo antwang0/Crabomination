@@ -617,7 +617,7 @@ pub fn xenagos_the_reveler() -> CardDefinition {
                     then: None,
                     max: None,
                     tapped: false,
-                    exile_rest: true,
+                    exile_rest: true, rest_to_graveyard: false,
                 },
                 ..Default::default()
             },

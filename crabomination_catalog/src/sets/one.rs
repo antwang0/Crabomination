@@ -6868,7 +6868,7 @@ pub fn green_suns_twilight() -> CardDefinition {
                 then: None,
                 max: Some(2),
                 tapped: false,
-                exile_rest: false,
+                exile_rest: false, rest_to_graveyard: false,
             }),
             else_: Box::new(Effect::LookPickToHand(Box::new(LookPick {
                 rest_bottom_random: true,
@@ -7227,7 +7227,7 @@ pub fn expand_the_sphere() -> CardDefinition {
                 then: None,
                 max: Some(2),
                 tapped: true,
-                exile_rest: false,
+                exile_rest: false, rest_to_graveyard: false,
             },
         ]),
         ..Default::default()

@@ -132,7 +132,7 @@ pub fn elvish_rejuvenator() -> CardDefinition {
                 then: None,
                 max: Some(1),
                 tapped: true,
-                exile_rest: false,
+                exile_rest: false, rest_to_graveyard: false,
             },
         }],
         ..creature("Elvish Rejuvenator", cost(&[generic(2), g()]), vec![CreatureType::Elf, CreatureType::Druid], 1, 1)

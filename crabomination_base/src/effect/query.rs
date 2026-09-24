@@ -773,7 +773,9 @@ impl Effect {
             | Effect::BottomCardToGraveyardThenDeploy { .. }
             | Effect::EachPlayerDestroysChosenFromLeftNeighbor { .. }
             | Effect::EachPlayerChoosesToDestroy { .. }
-            | Effect::PlayerChoosesToDestroy { .. } => false,
+            | Effect::PlayerChoosesToDestroy { .. }
+            | Effect::CastCommanderWithoutPaying
+            | Effect::NextSpellHasAffinityForArtifacts => false,
             Effect::PayPerCounterOrSacrifice { then, .. } => then.requires_target(),
             Effect::MayPayRepeatedly { body, .. } => body.requires_target(),
             Effect::CoffinExile { what } => sel_has_target(what),

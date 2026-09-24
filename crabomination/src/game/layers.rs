@@ -45,6 +45,9 @@ pub enum EffectDuration {
     /// player's next turn still sees the effect; it expires as that upkeep
     /// begins (Xenic Poltergeist).
     UntilYourNextUpkeep { player: usize, installed_turn: u32 },
+    /// CR 611.2b — "until the end of your next turn": expires in the cleanup
+    /// step of the recorded player's first turn after `installed_turn`.
+    UntilEndOfYourNextTurn { player: usize, installed_turn: u32 },
     /// Expires when the current combat phase ends (CR 511.2 — "Effects
     /// that last 'until end of combat' expire at the end of the combat
     /// phase"). Cleared as the end-of-combat step ends. If the effect

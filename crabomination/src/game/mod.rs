@@ -3674,6 +3674,11 @@ pub(crate) struct TempControl {
     /// controls `card`. Swept alongside `while_source_tapped`.
     #[serde(default)]
     pub(crate) while_you_control_source: bool,
+    /// `Duration::UntilEndOfYourNextTurn` (Treasure Nabber): the player
+    /// whose next turn it is and the turn the steal began on. Reverted in
+    /// that player's first cleanup after `installed.1`.
+    #[serde(default)]
+    pub(crate) installed: Option<(usize, u32)>,
 }
 
 /// A triggered ability a resolution granted to a permanent for a while —
@@ -17166,22 +17171,30 @@ impl GameState {
                 player: controller,
                 installed_turn: self.turn_number,
             },
+            crate::effect::Duration::UntilEndOfYourNextTurn => EffectDuration::UntilEndOfYourNextTurn {
+                player: controller,
+                installed_turn: self.turn_number,
+            },
             other => crate::game::effects::map_effect_duration(other),
         }
     }
 
     pub fn expire_end_of_turn_effects(&mut self) {
+        // CR 611.2b — "until the end of your next turn" ends in the cleanup
+        // of the recorded player's first turn after the one it began on.
+        let (active, turn) = (self.active_player_idx, self.turn_number);
+        let ends_now = |d: &EffectDuration| match *d {
+            EffectDuration::UntilEndOfTurn | EffectDuration::UntilEndOfCombat => true,
+            EffectDuration::UntilEndOfYourNextTurn { player, installed_turn } => {
+                player == active && turn > installed_turn
+            }
+            _ => false,
+        };
         // Same `CowBox` guard as `remove_effects_from_source`: a cleanup step
         // on a board with no turn-scoped effect otherwise deep-copies the
         // whole list to keep every entry.
-        if self.continuous_effects.iter().any(|e| {
-            e.duration == EffectDuration::UntilEndOfTurn
-                || e.duration == EffectDuration::UntilEndOfCombat
-        }) {
-            self.continuous_effects.retain(|e| {
-                e.duration != EffectDuration::UntilEndOfTurn
-                    && e.duration != EffectDuration::UntilEndOfCombat
-            });
+        if self.continuous_effects.iter().any(|e| ends_now(&e.duration)) {
+            self.continuous_effects.retain(|e| !ends_now(&e.duration));
         }
     }
 
@@ -17198,14 +17211,20 @@ impl GameState {
             return;
         }
         let all = std::mem::take(&mut self.temporary_control);
+        // An entry is due when its duration is swept now and, for "until the
+        // end of your next turn", this is that player's turn after the one it
+        // began on.
+        let (active, turn) = (self.active_player_idx, self.turn_number);
+        let due = |tc: &TempControl| {
+            which.contains(&tc.duration)
+                && tc.installed.is_none_or(|(p, t)| p == active && turn > t)
+        };
         // CR 800.4c's "there is no other effect giving control of that object
         // to another player in the game" — asked of the *whole* list rather
         // than of the entries already processed, so it does not depend on the
         // order control effects were registered in.
         let survives_elsewhere = |card: CardId, idx: usize| {
-            all.iter()
-                .enumerate()
-                .any(|(j, o)| j != idx && o.card == card && !which.contains(&o.duration))
+            all.iter().enumerate().any(|(j, o)| j != idx && o.card == card && !due(o))
         };
         let mut kept: Vec<TempControl> = Vec::new();
         for (idx, tc) in all.iter().cloned().enumerate() {
@@ -17213,7 +17232,7 @@ impl GameState {
             if !on_battlefield {
                 continue; // card left play — nothing to revert
             }
-            if which.contains(&tc.duration) {
+            if due(&tc) {
                 // CR 800.4c — "If an effect that gives a player still in the
                 // game control of an object ends, there is no other effect
                 // giving control of that object to another player in the

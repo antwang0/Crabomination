@@ -1083,3 +1083,69 @@ fn cr_615_a_conditional_prevent_all_damage_to_this() {
     bolt(&mut g);
     assert!(g.battlefield_find(bear).is_none(), "not without one");
 }
+
+// ── Primitives for Exquisite Invention (C18, Saheeli) ─────────────────────
+
+/// CR 903.8 — "cast your commander from the command zone without paying its
+/// mana cost" still owes the tax, an additional cost: after one earlier cast,
+/// {2} is due, and without it the commander stays in the command zone.
+#[test]
+fn cr_903_8_a_free_commander_cast_still_pays_the_tax() {
+    use crabomination::effect::Effect;
+    use crabomination::game::effects::EffectContext;
+    let mut g = commander_game();
+    let id = g.players[0].commanders[0];
+    g.commander_cast_count.insert(id, 1);
+    g.step = TurnStep::DeclareBlockers;
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(&Effect::CastCommanderWithoutPaying, &ctx).expect("resolve");
+    drain_stack(&mut g);
+    assert!(g.players[0].command.iter().any(|c| c.id == id), "no mana for the {{2}} tax");
+    g.players[0].mana_pool.add_colorless(2);
+    g.resolve_effect(&Effect::CastCommanderWithoutPaying, &ctx).expect("resolve");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(id).is_some(), "cast mid-combat, the printed {{G}} unpaid");
+    assert_eq!(g.players[0].mana_pool.total(), 0, "the tax took both");
+}
+
+/// CR 611.2b — "until the end of your next turn" outlives the opponent's turn
+/// and ends in the cleanup of its controller's next one.
+#[test]
+fn cr_611_2b_until_the_end_of_your_next_turn() {
+    use crabomination::effect::{Duration, Effect, Selector, Value};
+    use crabomination::game::effects::EffectContext;
+    let mut g = commander_game();
+    for s in 0..2 {
+        for _ in 0..6 {
+            g.add_card_to_library(s, catalog::island());
+        }
+    }
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    let ctx = EffectContext { targets: vec![Target::Permanent(bear)], ..ctx };
+    g.resolve_effect(
+        &Effect::PumpPT {
+            what: Selector::Target(0),
+            power: Value::Const(3),
+            toughness: Value::Const(0),
+            duration: Duration::UntilEndOfYourNextTurn,
+        },
+        &ctx,
+    )
+    .expect("pump");
+    let pass_until = |g: &mut GameState, seat: usize| {
+        for _ in 0..400 {
+            if g.active_player_idx == seat && g.step == TurnStep::PreCombatMain {
+                return;
+            }
+            let _ = g.perform_action(GameAction::PassPriority);
+        }
+        panic!("never reached seat {seat}'s main phase");
+    };
+    pass_until(&mut g, 1);
+    assert_eq!(pt(&g, bear).0, 5, "through the opponent's turn");
+    pass_until(&mut g, 0);
+    assert_eq!(pt(&g, bear).0, 5, "and our next turn");
+    pass_until(&mut g, 1);
+    assert_eq!(pt(&g, bear).0, 2, "gone after it");
+}
