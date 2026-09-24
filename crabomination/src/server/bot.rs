@@ -4132,10 +4132,53 @@ fn effect_counters_spells(eff: &Effect) -> bool {
         | Effect::CounterSpellExileSameNamed { .. }
         | Effect::CounterSpellToZone { .. }
         | Effect::CounterUnlessPaid { .. }
-        | Effect::CounterUnless { .. } => true,
+        | Effect::CounterUnless { .. }
+        // Taking the spell answers it the same way (Aethersnatch).
+        | Effect::GainControlOfSpell { .. } => true,
         Effect::Seq(v) => v.iter().any(effect_counters_spells),
+        // A "choose N" whose default picks counter (Mystic Confluence).
+        Effect::ChooseN { picks, modes } => {
+            picks.iter().any(|&i| modes.get(i as usize).is_some_and(effect_counters_spells))
+        }
         _ => false,
     }
+}
+
+/// Slot targets for "each of X targets" (`TargetsExactlyX` over
+/// `ApplyToTargets`): distinct legal targets on the side the body wants —
+/// the biggest permanents, then the players — at most `x_max` of them.
+fn exactly_x_targets(
+    state: &GameState,
+    seat: usize,
+    source: CardId,
+    body: &Effect,
+    x_max: u32,
+) -> Option<(Target, Vec<Target>)> {
+    let Effect::ApplyToTargets { max_targets, filter, .. } = body else { return None };
+    let friendly = body.prefers_friendly_target_for_slot(0, None);
+    let ok = |t: &Target| {
+        state.evaluate_requirement_static(filter, t, seat, Some(source))
+            && state.check_target_legality(t, seat).is_ok()
+    };
+    let mut perms: Vec<(i32, CardId)> = state
+        .battlefield
+        .iter()
+        .filter(|c| (c.controller == seat) == friendly && ok(&Target::Permanent(c.id)))
+        .map(|c| (state.computed_permanent(c.id).map_or(c.definition.power, |cp| cp.power), c.id))
+        .collect();
+    perms.sort_by(|a, b| b.0.cmp(&a.0).then(a.1.cmp(&b.1)));
+    let players = if friendly { vec![seat] } else { state.opponents_of(seat) };
+    let mut picks: Vec<Target> = perms
+        .into_iter()
+        .map(|(_, id)| Target::Permanent(id))
+        .chain(players.into_iter().map(Target::Player).filter(|t| ok(t)))
+        .take((x_max as usize).min(*max_targets as usize))
+        .collect();
+    if picks.is_empty() {
+        return None;
+    }
+    let first = picks.remove(0);
+    Some((first, picks))
 }
 
 /// True when the effect can counter an activated/triggered ability (Stifle's
@@ -6550,6 +6593,22 @@ pub(super) fn cast_candidates<'a>(
         // nothing at X=0 — the cast waits for a real X.
         if w.skip_noop_x0 && x_value == Some(0) && x_zero_is_noop(&c.definition.effect) {
             menu_census::add(39, 1);
+            continue;
+        }
+        // "Each of X targets" (Meteor Blast, Doppelgang): the slot walker
+        // fills every slot, so X — the target count — is picked here.
+        if let Effect::TargetsExactlyX { body } = &c.definition.effect {
+            if let Some(x) = x_value
+                && let Some((t, extras)) = exactly_x_targets(state, seat, c.id, body, x)
+            {
+                unvalidated.push(GameAction::CastSpell {
+                    card_id: c.id,
+                    target: Some(t),
+                    additional_targets: extras.clone(),
+                    mode: None,
+                    x_value: Some(extras.len() as u32 + 1),
+                });
+            }
             continue;
         }
         for i in 0..modes.unwrap_or(1) {
