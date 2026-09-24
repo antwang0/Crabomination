@@ -2147,3 +2147,33 @@ pub const ANIKTHEA_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, swamp, swamp, swamp, swamp, swamp, forest,
     forest, forest, forest, forest, forest, forest, forest,
 ];
+
+pub const URZA_COMMANDERS: &[CardFactory] = &[urza_chief_artificer];
+
+/// **Urza's Iron Alliance**, The Brothers' War Commander deck (BRC,
+/// 2022-11-18), exactly as MTGJSON's `UrzaSIronAlliance_BRC` prints it: 88
+/// nonbasic cards + 4 Plains + 4 Islands + 3 Swamps = 99. Esper artifacts under
+/// Urza, Chief Artificer.
+pub const URZA_MAIN: &[CardFactory] = &[
+    indomitable_archangel, ethersworn_adjudicator, noxious_gearhulk, alela_artful_provocateur,
+    angel_of_the_ruins, bronze_guardian, digsite_engineer, losheel_clockwork_scholar,
+    teshar_ancestors_apostle, master_of_etherium, sai_master_thopterist, sharding_sphinx,
+    shimmer_dragon, thought_monitor, vedalken_humiliator, marionette_master, baleful_strix,
+    sharuum_the_hegemon, darksteel_juggernaut, etched_champion, myr_battlesphere,
+    solemn_simulacrum, steel_hellkite, steel_overseer, filigree_attendant, whirler_rogue,
+    armix_filigree_thrasher, chief_of_the_foundry, etherium_sculptor, chrome_courier,
+    austere_command, phyrexian_rebirth, urzas_ruinous_blast, one_with_the_machine, vindicate,
+    preordain, sphinxs_revelation, unbreakable_formation, swords_to_plowshares, despark,
+    bident_of_thassa, cranial_plating, liquimetal_torque, relic_of_progenitus, skullclamp,
+    sol_ring, swiftfoot_boots, thought_vessel, arcane_signet, azorius_signet, dimir_signet,
+    orzhov_signet, tempered_steel, thopter_spy_network, exotic_orchard, prairie_stream,
+    river_of_tears, skycloud_expanse, spire_of_industry, sunken_hollow, temple_of_deceit,
+    temple_of_enlightenment, temple_of_silence, arcane_sanctum, azorius_chancery,
+    darksteel_citadel, dimir_aqueduct, orzhov_basilica, ancient_den, ash_barrens, bojuka_bog,
+    command_tower, evolving_wilds, goldmire_bridge, mistvault_bridge, path_of_ancestry,
+    razortide_bridge, seat_of_the_synod, vault_of_whispers, tawnos_solemn_survivor,
+    sanwell_avenger_ace, scholar_of_new_horizons, march_of_progress, wire_surgeons,
+    wreck_hunter, hexavus, kaylas_music_box, thopter_shop,
+    // Basics: 4 plains, 4 island, 3 swamp
+    plains, plains, plains, plains, island, island, island, island, swamp, swamp, swamp,
+];

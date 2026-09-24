@@ -604,6 +604,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ANIKTHEA_COMMANDERS,
             main: decks::ANIKTHEA_MAIN,
         },
+        // Sixty-ninth: the fifty-ninth official list (Urza's Iron Alliance,
+        // BRC) — Esper artifacts under Urza, Chief Artificer. `--pod-decks 69`
+        // (past `MAX_SEATS`, so not every list fits one pod).
+        PodDeck {
+            name: "Urza, Chief Artificer (WUB)",
+            commanders: decks::URZA_COMMANDERS,
+            main: decks::URZA_MAIN,
+        },
     ]
 }
 
