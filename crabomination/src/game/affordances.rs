@@ -645,7 +645,7 @@ impl GameState {
                     }
                     // CR 508.1a — Vow of Duty: some defender besides the
                     // Aura's controller must remain.
-                    Keyword::CantAttackAuraController | Keyword::CantAttackPlayer(_) => (0..self.players.len()).any(|d| {
+                    Keyword::CantAttackAuraController | Keyword::CantAttackPlayer(_) | Keyword::CantAttackOwner => (0..self.players.len()).any(|d| {
                         !self.same_team(seat, d)
                             && self.players[d].is_alive()
                             && self.attacker_target_block(seat, c.id, kws, Some(d)).is_none()

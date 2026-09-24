@@ -20115,6 +20115,9 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::TokenCopyAttackingUntilEndOfCombat { source } => {
+                self.token_copy_attacking_until_end_of_combat(source, ctx, events)
+            }
             Effect::Myriad => {
                 use crate::game::types::AttackTarget;
                 // Source must currently be attacking a player.
@@ -29135,6 +29138,9 @@ impl GameState {
                 self.reveal_until_one_to_battlefield_rest_bottom(filter, *damage_controller, ctx, events)
             }
 
+            Effect::RevealUntilSharesCardTypeToBattlefield { with } => {
+                self.reveal_until_shares_card_type_to_battlefield(with, ctx, events)
+            }
             Effect::RevealUntilMatchingToBattlefield { filter, count, rest_bottom } => {
                 self.reveal_until_matching_to_battlefield(filter, count, *rest_bottom, ctx, events)
             }

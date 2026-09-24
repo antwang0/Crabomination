@@ -467,6 +467,8 @@ pub enum PlaneswalkerSubtype {
     Davriel, Arlinn, Sarkhan, Yanggu,
     // C14 planeswalker commander (CR 903.3a).
     Freyalise,
+    // C18 planeswalker commander (Lord Windgrace).
+    Windgrace,
 }
 
 /// All subtype categories collected into one struct for CardDefinition.
@@ -2322,6 +2324,10 @@ pub enum Keyword {
     /// granted for a turn by an effect that names its controller
     /// (Illusionist's Gambit's "they can't attack you").
     CantAttackPlayer(usize),
+    /// CR 508.1a — "can't attack its owner or planeswalkers its owner
+    /// controls" (Xantcha, Sleeper Agent), read against the defender in
+    /// `attacker_target_block`.
+    CantAttackOwner,
     /// CR 702.95 — Soulbond. A marker keyword; when this or another creature
     /// enters while either is unpaired, its controller may pair them. The
     /// pairing rides `CardInstance.soulbond_partner`, and the bonus each

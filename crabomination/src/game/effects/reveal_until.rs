@@ -3,7 +3,7 @@
 
 use super::EffectContext;
 use crate::card::{CardInstance, SelectionRequirement};
-use crate::effect::{PlayerRef, Value, ZoneDest};
+use crate::effect::{PlayerRef, Selector, Value, ZoneDest};
 use crate::game::GameState;
 use crate::game::types::{GameError, GameEvent};
 
@@ -91,5 +91,31 @@ impl GameState {
         }
         self.check_state_based_actions_into(events);
         Ok(())
+    }
+
+    /// Reality Scramble's reveal: until a card sharing a card type with the
+    /// card `with` resolves to (CR 205.2a), onto the battlefield; the rest on
+    /// the bottom in a random order.
+    pub(super) fn reveal_until_shares_card_type_to_battlefield(
+        &mut self,
+        with: &Selector,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
+        let types = self
+            .resolve_selector(with, ctx)
+            .into_iter()
+            .find_map(|e| e.as_card_id())
+            .and_then(|id| self.find_card_anywhere(id))
+            .map(|c| c.definition.card_types.clone())
+            .unwrap_or_default();
+        let Some(filter) = types
+            .into_iter()
+            .map(SelectionRequirement::HasCardType)
+            .reduce(|a, b| a.or(b))
+        else {
+            return Ok(());
+        };
+        self.reveal_until_matching_to_battlefield(&filter, &Value::ONE, true, ctx, events)
     }
 }

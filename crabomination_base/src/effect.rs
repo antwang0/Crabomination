@@ -7264,6 +7264,14 @@ pub enum Effect {
     /// are exiled at end of combat. No-op outside combat / when the source
     /// isn't attacking a player.
     Myriad,
+    /// "Create a token that's a copy of [card], tapped and attacking. Exile
+    /// the token at end of combat" (Gyrus, Waker of Corpses). `source` names
+    /// the card to copy, found on the battlefield, in exile or a graveyard
+    /// (CR 707.2 — its copiable values). The token attacks the defender the
+    /// effect's source is attacking (CR 508.4 — it was never declared, so no
+    /// "whenever ~ attacks" trigger), else the controller's first opponent.
+    /// No-op outside combat.
+    TokenCopyAttackingUntilEndOfCombat { source: Selector },
     /// "The next instant or sorcery spell you cast this turn costs {amount}
     /// less to cast" (Thundertrap Trainer, Maelstrom Muse). `amount` is
     /// evaluated at resolution, so `Value::PowerOf(TriggerSource)` reads the
@@ -8398,6 +8406,14 @@ pub enum Effect {
     /// rest into your library" (Synthetic Destiny). Stops early on an empty
     /// library. With `rest_bottom` the rest go on the bottom in a random order
     /// instead of a shuffle (Empty the Laboratory).
+    /// "Reveal cards from the top of your library until you reveal a card
+    /// that shares a card type with [with]. Put that card onto the
+    /// battlefield and the rest on the bottom of your library in a random
+    /// order" (Reality Scramble, with `with` the permanent it just put on the
+    /// bottom — which can be the card revealed, CR 701.20). The card types
+    /// are read as this resolves; a `with` that resolves to nothing, or to a
+    /// card with no card type, reveals nothing.
+    RevealUntilSharesCardTypeToBattlefield { with: Selector },
     RevealUntilMatchingToBattlefield {
         filter: SelectionRequirement,
         count: Value,

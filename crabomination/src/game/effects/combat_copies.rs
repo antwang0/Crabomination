@@ -1,7 +1,8 @@
-//! Token copies that enter combat blocking (Mirror Match).
+//! Token copies that enter combat: blocking (Mirror Match) or attacking
+//! (Gyrus, Waker of Corpses).
 
 use super::EffectContext;
-use crate::effect::AttackingTokenCleanup;
+use crate::effect::{AttackingTokenCleanup, Selector};
 use crate::game::GameState;
 use crate::game::types::{AttackTarget, GameError, GameEvent};
 
@@ -34,6 +35,41 @@ impl GameState {
             if !self.blocked_attackers.contains(&attacker) {
                 self.blocked_attackers.push(attacker);
             }
+            self.attacking_token_cleanup.push((token, AttackingTokenCleanup::ExileAtEndOfCombat));
+        }
+        Ok(())
+    }
+
+    /// Gyrus's copy: a token copy of the card `source` names, put into the
+    /// current combat tapped and attacking (CR 508.4 — never declared), and
+    /// exiled at end of combat.
+    pub(super) fn token_copy_attacking_until_end_of_combat(
+        &mut self,
+        source: &Selector,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
+        if self.attacking.is_empty() {
+            return Ok(());
+        }
+        let me = ctx.controller;
+        let Some(def) = self
+            .resolve_selector(source, ctx)
+            .into_iter()
+            .find_map(|e| e.as_card_id())
+            .and_then(|id| self.find_card_anywhere(id))
+            .map(|c| c.definition.arc())
+        else {
+            return Ok(());
+        };
+        let target = ctx
+            .source
+            .and_then(|src| self.attacking.iter().find(|a| a.attacker == src))
+            .map(|a| a.target)
+            .or_else(|| self.default_hostile_opponent(me).map(AttackTarget::Player));
+        let Some(target) = target else { return Ok(()) };
+        let token = self.mint_token_onto_battlefield(def, me, true, events);
+        if self.put_into_combat_attacking(token, target) {
             self.attacking_token_cleanup.push((token, AttackingTokenCleanup::ExileAtEndOfCombat));
         }
         Ok(())

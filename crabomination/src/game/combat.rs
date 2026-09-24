@@ -827,6 +827,13 @@ impl GameState {
                 Keyword::CantAttackPlayer(s) if defender == Some(*s) => {
                     return Some((line!(), GameError::CannotAttack(id)));
                 }
+                // CR 508.1a — Xantcha: not its owner, nor the owner's
+                // planeswalkers (`defender` is the planeswalker's controller).
+                Keyword::CantAttackOwner
+                    if defender.is_some() && defender == self.battlefield_find(id).map(|c| c.owner) =>
+                {
+                    return Some((line!(), GameError::CannotAttack(id)));
+                }
                 // CR 508.1a — Mogg Toady: strictly more creatures.
                 Keyword::CantAttackUnlessMoreCreaturesThanDefender
                     if defender
@@ -862,6 +869,7 @@ impl GameState {
                     | Keyword::CantAttackIfDefenderHasUntappedLand
                     | Keyword::CantAttackAuraController
                     | Keyword::CantAttackPlayer(_)
+                    | Keyword::CantAttackOwner
                     | Keyword::CantAttackUnlessMoreCreaturesThanDefender
                     | Keyword::CantAttackUnlessMoreLandsThanDefender
             )
