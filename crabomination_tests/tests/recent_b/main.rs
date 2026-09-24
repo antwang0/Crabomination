@@ -51,6 +51,7 @@ mod cmdr_wilhelt;
 mod cmdr_inalla;
 mod cmdr_urza;
 mod cmdr_trostani;
+mod cmdr_saheeli;
 mod dsk2;
 mod dsk_rooms;
 mod recent_118_132;
