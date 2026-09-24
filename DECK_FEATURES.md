@@ -107,6 +107,7 @@ lists were picked.
 | **Phantom Premonition** (KHC precon) WU | Ranar the Ever-Watchful | WU | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Squirreled Away** (BLC precon) BG | Hazel of the Rootbloom | BG | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Evasive Maneuvers** (C13 precon) GWU | Derevi, Empyrial Tactician | GWU | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
+| **Draconic Destruction** (SCD starter) RG | Atarka, World Render | RG | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Hatsune Miku** (SLD precon) GW | Trostani, Selesnya's Voice | GW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Witherbloom Witchcraft** (C21 precon) BG | Willowdusk, Essence Seer | BG | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Witherbloom Pestilence** (SOC precon) BG | Dina, Essence Brewer | BG | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
@@ -1310,6 +1311,20 @@ Derevi 3.0 % (4.5 % beside Teferi / Kalemne / Zedruu, seed 9545: a tempo list th
 bot pilots poorly); a 300-game census (seed 9542) leaves no card unplayed;
 strict debug pods (seeds 9543/9544, 120 games) decided 120/120. `--bench`
 byte-identical.
+
+The **eighty-seventh** is the Starter Commander Decks' **Draconic
+Destruction** (`DraconicDestruction_SCD`) — Gruul Dragons under Atarka, World
+Render. Nineteen cards were missing; the primitive is `EventKind::Fights` /
+`GameEvent::CreatureFought` (CR 701.12 — Foe-Razer Regent's "whenever a creature
+you control fights", emitted per fighter by the Fight resolver). Demanding
+Dragon rides Browbeat's `PlayersMayAccept` shape with the targeted opponent as
+the chooser. ⚠ **The bot never cast Unleash Fury**: it was classed as a combat
+trick, so the main phase held it, but `pick_combat_trick` read only constant
+pumps — a pump by the creature's own power is now priced at its current power.
+Residual: **Atarka Monument** animates colorless. Release pods beside Derevi /
+Hazel / Ranar (seed 8701, 1,000 games): 1,000 decided, Atarka 38.0 %; a
+1,000-game census (seed 8703) leaves no card of the four lists unplayed; strict
+debug pods (seed 8704, 60 games) decided 60/60. `--bench` byte-identical.
 
 The **seventy-ninth** is Edge of Eternities Commander's **World Shaper**
 (`WorldShaper_EOC`) — Jund land sacrifice under Hearthhull, the Worldseed, a
