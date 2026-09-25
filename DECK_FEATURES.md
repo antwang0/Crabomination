@@ -130,6 +130,7 @@ lists were picked.
 | **Miracle Worker** (DSC precon) WUB | Aminatou, Veil Piercer | WUB | 100 | 🟡 all 100 implemented, 6 carry residuals (INCOMPLETE_CARDS) |
 | **Ruthless Regiment** (C20 precon) RWB | Jirina Kudro | RWB | 100 | 🟡 all 100 implemented, 2 carry residuals (Sanctuary Blade, Odric, Master Tactician) |
 | **Most Wanted** (OTC precon) RWB | Olivia, Opulent Outlaw | RWB | 100 | 🟡 all 100 implemented, 3 carry residuals (Back in Town, Dire Fleet Ravager, Vihaan, Goldwaker) |
+| **Tricky Terrain** (M3C precon) GU | Omo, Queen of Vesuva | GU | 100 | 🟡 all 100 implemented, 7 carry residuals (Omo, Horizon of Progress, Desert Warfare, Sunken Palace, Magus of the Candelabra, Rampant Frogantua, March from Velis Vel) |
 | **Prismari Artistry** (SOC precon) UR | Rootha, Mastering the Moment | UR | 100 | 🟡 all 100 implemented, 2 carry residuals (Abstract Performance, Plargg and Nassari) |
 | **Coven Counters** (MIC precon) GW | Leinore, Autumn Sovereign | GW | 100 | 🟡 all 100 implemented, 4 carry residuals (Curse of Conformity, Celestial Judgment, Sigardian Zealot, Moorland Rescuer) |
 | **Arcane Maelstrom** (C20 precon) GUR | Kalamax, the Stormsire | GUR | 100 | 🟡 all 100 implemented, 4 carry residuals (Eon Frolicker, Haldan, Pako, Lavabrink Floodgates) |
@@ -1281,6 +1282,29 @@ takes every mode that can act. Four-seat pods beside Kasla / Ulalek / Eshki
 10312, 1,000): all decided, Chishiro 32.0 % and 14.6 %; census (seed 10323):
 no card of the four unplayed. `--bench` byte-identical; cube/sos/sealed (seed
 10320): 7,500 decided.
+
+The **hundred-and-twenty-second** is Modern Horizons 3 Commander's **Tricky
+Terrain** (`TrickyTerrain_M3C`) — Simic lands-matter under Omo, Queen of
+Vesuva, `--pod-decks 122`. Eighteen cards were missing (`cmdr_omo.rs`). The
+primitives: `CounterType::Everything` with `LandType::NONBASIC` (Omo's lands
+are every land type); `Effect::ExileAllOtherSpellsCounterAllAbilities`
+(Summary Dismissal, `effects/stack_sweep.rs` — exiling isn't countering, CR
+701.5); `Effect::EachPushesTrigger` (Aggressive Biomancy's copies each fight
+as their own trigger, `effects/token_triggers.rs`);
+`Predicate::CostReturnedHadNonbasicLandType`, read off the layered type line
+as the cost is paid (Wonderscape Sage, CR 603.10);
+`SpendRestriction::SpellOrAbilityCopy` (Sunken Palace's spell half);
+`DelayedTriggerKind::YourNextEndStep` (Desert Warfare). Its pods found ⚠ **a
+Scute Swarm board doubling past the board cap** on a turn of extra land drops
+(930 and 978 swarms); the bot now holds a hand land drop whose landfall
+fan-out would pass `BOARD_GATE` (`landfall_token_estimate`) — lands put onto
+the battlefield by effects still fire landfall and still reach the cap once
+in 1,000 (open queue). Residuals: seven (INCOMPLETE_CARDS). Four-seat pods
+beside Olivia / Jirina / Galea (seed 10420) and Nelly / Eshki / Estrid (seed
+10421), 1,000 games each: 999 decided (one board cap each), Omo 24.7 % and
+17.3 %; beside Chishiro / Zurgo / Otrimi (seed 10423): 999 — one
+Chishiro no-progress draw; census: no card of the list unplayed. `--bench`
+byte-identical; cube/sos/sealed (seed 10422): 7,500 decided.
 
 The **hundred-and-sixteenth** is Outlaws of Thunder Junction Commander's
 **Most Wanted** (`MostWanted_OTC`) — Mardu outlaws and Treasure under Olivia,
