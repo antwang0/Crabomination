@@ -38,6 +38,7 @@ mod cmdr_millicent;
 mod cmdr_zimone;
 mod cmdr_kamiz;
 mod cmdr_galadriel;
+mod cmdr_brass;
 mod cmdr_nelly;
 mod cmdr_eshki;
 mod cmdr_estrid;
