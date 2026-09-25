@@ -1886,6 +1886,22 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Hildibrand Manderville | Scions & Spellcraft (FIC) | dying doesn't let you cast it from the graveyard as an Adventure. |
 | 🟡 Into the Story | Scions & Spellcraft (FIC) | any graveyard with seven cards discounts it, yours included. |
 | 🟡 Urianger Augurelt | Scions & Spellcraft (FIC) | the card is exiled face up; a land played from exile gains no life; its spells get no {2} discount. |
+| 🟡 Archangel Avacyn | From Cute to Brute (SLD) | transforms at your next upkeep, not the next upkeep of any player. |
+| 🟡 Arlinn, the Pack's Hope | From Cute to Brute (SLD) | the +1's flash and extra +1/+1 counter last this turn, not until your next turn. |
+| 🟡 Azor's Gateway | From Cute to Brute (SLD) | transforms off five cards exiled with it, not five different mana values; the exiled card is the engine's pick. |
+| 🟡 Chandra, Fire of Kaladesh | From Cute to Brute (SLD) | flips when an opponent has lost 3 or more life this turn, not after Chandra dealt 3 damage. |
+| 🟡 Cosima, God of the Voyage | From Cute to Brute (SLD) | the voyage ability isn't implemented. |
+| 🟡 Dennick, Pious Apprentice | From Cute to Brute (SLD) | graveyard cards can still be targeted. |
+| 🟡 Kytheon, Hero of Akros | From Cute to Brute (SLD) | Gideon's +2 lure isn't implemented; the +1's indestructible lasts until end of turn; the 0 doesn't prevent damage to him. |
+| 🟡 Jace, Vryn's Prodigy | From Cute to Brute (SLD) | the Telepath's +1 lasts until end of turn. |
+| 🟡 Journey to Eternity | From Cute to Brute (SLD) | returns the creature, but not itself transformed. |
+| 🟡 Liliana, Heretical Healer | From Cute to Brute (SLD) | the Defiant Necromancer's −8 emblem isn't implemented. |
+| 🟡 Ludevic, Necrogenius | From Cute to Brute (SLD) | transforms for {U}{U}{B}{B} exiling one creature card; Olag is a 4/4 with counters, not a copy. |
+| 🟡 Nicol Bolas, the Ravager | From Cute to Brute (SLD) | the Arisen's −12 isn't implemented. |
+| 🟡 Sisay, Weatherlight Captain | From Cute to Brute (SLD) | fetches mana value up to its power, not less than. |
+| 🟡 Kolvori, God of Kinship | From Cute to Brute (SLD) | The Ringhart Crest's mana isn't restricted. |
+| 🟡 Valki, God of Lies | From Cute to Brute (SLD) | Tibalt's exiled cards can't be played; the emblem isn't implemented. |
+| 🟡 Elbrus, the Binding Blade | From Cute to Brute (SLD) | Withengar's "whenever a player loses the game" isn't implemented. |
 | 🟡 Battle at the Helvault | Enduring Enchantments (CMM) | "for each player" covers opponents only: you can't exile one of your own permanents. |
 | 🟡 Battle for Bretagard | Enduring Enchantments (CMM) | chapter III copies every artifact and creature token you control, duplicate names included. |
 | 🟡 Cacophony Unleashed | Enduring Enchantments (CMM) | the animated 6/6 isn't legendary. |

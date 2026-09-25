@@ -99,6 +99,7 @@ lists were picked.
 | **Elven Council** (LTC precon) GU | Galadriel, Elven-Queen | GU | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
 | **Ahoy Mateys** (LCC precon) UBR | Admiral Brass, Unsinkable | UBR | 100 | 🟡 all 100 implemented, 10 carry residuals (below) |
 | **Scions & Spellcraft** (FIC precon) WUB | Y'shtola, Night's Blessed | WUB | 100 | 🟡 all 100 implemented, 6 carry residuals (below) |
+| **From Cute to Brute** (SLD Commander deck) WUBRG | Esika, God of the Tree | WUBRG | 100 | 🟡 all 100 implemented, 16 carry residuals (below) |
 | **Enduring Enchantments** (CMM precon) WBG | Anikthea, Hand of Erebos | WBG | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
 | **Open Hostility** (C16 precon) WBRG | Saskia the Unyielding | WBRG | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Devour for Power** (CMD precon) BGU | The Mimeoplasm | BGU | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
@@ -2860,6 +2861,22 @@ Identity**, **Mandate of Peace**, **Elsha of the Infinite**. Pods beside
 Ashling / Éowyn / Perrie (seed 9200, 1,000) and the first three seats
 (9201, 1,000), six seats (9202, 1,000): all decided, no card of the list
 unplayed; strict debug pods 150 / 150. `--bench` byte-identical.
+
+The **hundred-and-sixty-eighth** is Secret Lair's **From Cute to Brute**
+(`FromCuteToBrute_SLD`) — five-color legends, double-faced almost to a
+card, under Esika, God of the Tree. Twenty-eight cards were missing
+(`cmdr_esika.rs`); the one primitive is `CounterType::Landmark` (Treasure
+Map). ⚠ Found on the way: **CR 712.2 — a transforming DFC's back face was
+castable** — `CastSpellBack` swapped in any back and cast it for its
+(empty) cost, so Insectile Aberration or Jace, Telepath Unbound came down
+from hand for nothing; a back that prints no mana cost is now refused.
+Residuals: **Archangel Avacyn**, **Arlinn, the Pack's Hope**, **Azor's
+Gateway**, **Chandra, Fire of Kaladesh**, **Cosima**, **Dennick**,
+**Kytheon** (Gideon), **Jace, Vryn's Prodigy**, **Journey to Eternity**,
+**Liliana, Heretical Healer**, **Ludevic**, **Nicol Bolas, the Ravager**,
+**Sisay**, **Kolvori** (the Crest), **Valki** (Tibalt), **Elbrus**
+(Withengar). A 200-game census beside Y'shtola / Brass / Galadriel (seed 168) decided 200/200 with zero
+panics; Esika won 11.5 %.
 
 The **hundred-and-sixty-third** is Final Fantasy XIV's **Scions &
 Spellcraft** (`ScionsSpellcraftFinalFantasyXiv_FIC`) — Esper noncreature
