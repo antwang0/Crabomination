@@ -5532,3 +5532,32 @@ pub const FOURTH_DOCTOR_MAIN: &[CardFactory] = &[
     ash_barrens, seaside_citadel, command_tower, path_of_ancestry, plains, plains, island, island,
     forest, forest, forest,
 ];
+
+pub const TENTH_DOCTOR_COMMANDERS: &[CardFactory] = &[the_tenth_doctor, rose_tyler];
+
+/// **Timey-Wimey**, the Doctor Who Commander deck (WHO, 2023-10-13), exactly
+/// as MTGJSON's `TimeyWimey_WHO` prints it: 89 nonbasic cards + 3 Plainss + 3 Islands + 3 Mountains
+/// = 98. Jeskai time travel and suspend under The Tenth Doctor + Rose Tyler.
+pub const TENTH_DOCTOR_MAIN: &[CardFactory] = &[
+    wilfred_mott, everybody_lives, everything_comes_to_dust, four_knocks, the_pandorica,
+    the_wedding_of_river_song, adipose_offspring, astrid_peth, crack_in_time,
+    the_girl_in_the_fireplace, martha_jones, nanogene_conversion, flesh_duplicate,
+    the_eleventh_hour, all_of_history_all_at_once, donna_noble, amy_pond, ecstatic_beauty,
+    rms_titanic, coward_killer, the_parting_of_the_ways, the_ninth_doctor, sally_sparrow,
+    jenny_generated_anomaly, rory_williams, the_eleventh_doctor, the_war_doctor,
+    regenerations_restored, idris_soul_of_the_tardis, the_face_of_boe, run_for_your_life,
+    the_day_of_the_doctor, gallifrey_falls_no_more, dinosaurs_on_a_spaceship, kate_stewart,
+    rotating_fireplace, the_moment, trenzalore_clocktower, grasp_of_fate, farewell, out_of_time,
+    wedding_ring, inspiring_refrain, as_foretold, fractured_identity, port_town, temple_of_triumph,
+    exotic_orchard, temple_of_enlightenment, prairie_stream, irrigated_farmland, deserted_beach,
+    glacial_fortress, skycloud_expanse, temple_of_epiphany, frostboil_snarl, thespians_stage,
+    furycalm_snarl, war_room, sunbaked_canyon, sundown_pass, stormcarved_coast, fiery_islet,
+    atraxi_warden, wibbly_wobbly_timey_wimey, time_beetle, star_whale, sibylline_soothsayer,
+    judoon_enforcers, psychic_paper, tardis, sonic_screwdriver, arcane_signet, sol_ring,
+    clockspinning, thought_vessel, mind_stone, talisman_of_creativity, lightning_greaves,
+    talisman_of_conviction, evolving_wilds, command_tower, path_of_ancestry,
+    temple_of_the_false_god, myriad_landscape, thriving_bluff, mystic_monastery, ominous_cemetery,
+    rogues_passage,
+    // Basics
+    plains, plains, plains, island, island, island, mountain, mountain, mountain,
+];

@@ -1493,6 +1493,15 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::FOURTH_DOCTOR_COMMANDERS,
             main: decks::FOURTH_DOCTOR_MAIN,
         },
+        // Hundred-and-eighty-third: Timey-Wimey (WHO, Doctor Who) — Jeskai
+        // time travel and suspend under The Tenth Doctor + Rose Tyler (CR
+        // 702.124m's Doctor's companion pair, CR 701.54 time travel).
+        // `--pod-decks 183`.
+        PodDeck {
+            name: "The Tenth Doctor + Rose Tyler (URW)",
+            commanders: decks::TENTH_DOCTOR_COMMANDERS,
+            main: decks::TENTH_DOCTOR_MAIN,
+        },
     ]
 }
 
@@ -2138,6 +2147,8 @@ mod tests {
             // CR 701.55 villainous choices (doubled by The Valeyard), CR 708.2
             // face-down Cybermen.
             ("Davros", [0xDA05, 181, 9105]),
+            // CR 701.54 time travel, CR 702.62 suspend, a Doctor's companion.
+            ("The Tenth Doctor", [0x7E17, 183, 9107]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
