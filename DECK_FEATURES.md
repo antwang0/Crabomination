@@ -2635,6 +2635,33 @@ Vehicle, an activated manland or a stationed Spacecraft stayed home: Kotori
 Inspirit / Morska (seed 15101, 1,000) and six seats (15102, 1,000): all
 decided; census (15103, 500): nothing unplayed. `--bench` byte-identical.
 
+The **hundred-and-eighty-third** is Doctor Who Commander's **Timey-Wimey**
+(`TimeyWimey_WHO`, 2023-10-13) — Jeskai time travel and suspend under The
+Tenth Doctor + Rose Tyler (a Doctor's companion pair, CR 702.124m),
+`--pod-decks 183`. Forty-seven cards were missing (`cmdr_tenth.rs`; Trenzalore
+Clocktower is Blast from the Past's). The primitives
+(`game/effects/timey_wimey.rs`): `Effect::GrantSuspendManaValueCounters`,
+`MayExileFromHandSuspended` and `RemoveTimeCountersFromSuspended` (through the
+suspend funnel, so the last counter casts — Amy Pond), `R::HasSuspend`,
+`Effect::DealDamageToTargetAndTypeSharers` (Killer), `ExileAllButConvokerKin`
+(Everything Comes to Dust), `CastFromHandPayingSuspendCost` (The Face of Boe),
+`StaticEffect::ZeroCostOncePerTurnMvAtMostSourceCounters` (As Foretold),
+`R::PairedWithSource` (Donna Noble) and `Value::EmergeSacrificedToughness`
+(Adipose Offspring). ⚠ Two engine finds: **a printed-suspend card that also
+gained suspend lost two time counters each upkeep** (Kang Prime or The Tenth
+Doctor exiling Star Whale — `process_suspend` walked exile twice), and **every
+linked phase-out put time counters on its source** (Out of Time's rider fired
+for Oubliette and The Moment too — it now needs a vanishing source).
+Regenerations Restored is vanishing 12 spelled out, so its last counter exiles
+it rather than sacrificing it. Residuals: **Clockspinning**, **Everybody
+Lives!**, **Idris**, **The Day of the Doctor**, **The Eleventh Hour**, **The
+Pandorica**, **The War Doctor**, **Wedding Ring** (INCOMPLETE_CARDS). Four
+seats beside Blast from the Past / Masters of Evil / Turtle Power! (seed
+10560, 1,000, `--card-census`: nothing unplayed): all decided, 21.8 %; six
+seats beside those three, The Ruinous Powers and Paradox Power (10561, 1,000):
+all decided, 15.5 %; strict debug pods (3 × 60 four-seat, 3 × 40 six-seat)
+decided. `--bench` 200,190 — byte-identical.
+
 The **hundred-and-eighty-second** is Doctor Who Commander's **Blast from the
 Past** (`BlastFromThePast_WHO`, 2023-10-13) — Bant historic spells and Sagas
 under The Fourth Doctor + Sarah Jane Smith (the Doctor's companion pair, CR
