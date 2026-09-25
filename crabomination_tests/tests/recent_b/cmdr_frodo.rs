@@ -247,3 +247,30 @@ fn treebeard_turns_lifegain_into_counters() {
     activate(&mut g, food, 0, None).expect("eat");
     assert_eq!(g.battlefield_find(tree).map(|c| c.counter_count(CounterType::PlusOnePlusOne)), Some(3));
 }
+
+/// A prompting seat's as-enters ask on a creature a mass reanimation returns
+/// (Feasting Hobbit's devour under Living Death) is answered on the spot: the
+/// enclosing resolution can't replay, so a parked ask used to leak its answer
+/// and the devour never happened (a strict 6-seat pod, seed 10481).
+#[test]
+fn an_as_enters_ask_inside_living_death_is_answered_in_place() {
+    use crabomination::decision::Decision;
+    let mut g = main_phase(2);
+    g.players[0].wants_ui = true;
+    g.add_card_to_graveyard(0, catalog::feasting_hobbit());
+    g.add_token_to_battlefield(0, &crabomination::game::effects::food_token());
+    let ld = g.add_card_to_hand(0, catalog::living_death());
+    cast(&mut g, ld, None, None).expect("Living Death");
+    for _ in 0..10 {
+        let Some(pending) = g.pending_decision.as_ref() else { break };
+        let answer = match &pending.decision {
+            Decision::ChooseAmount { max, .. } => DecisionAnswer::Amount(*max),
+            _ => DecisionAnswer::Bool(true),
+        };
+        g.submit_decision(answer).expect("answer");
+        drain_stack(&mut g);
+    }
+    assert!(g.pending_decision.is_none());
+    let hobbit = g.battlefield.iter().find(|c| c.definition.name == "Feasting Hobbit").expect("returned");
+    assert_eq!(hobbit.counter_count(CounterType::PlusOnePlusOne), 3, "it devoured the Food");
+}

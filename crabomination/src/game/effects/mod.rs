@@ -2300,7 +2300,7 @@ impl GameState {
         // with NO creature type named for every `wants_ui` seat. `!driven` is
         // the land drop, which parks the signal itself.
         let _ = if driven {
-            self.resolve_effect_driven(&effect, &ctx)
+            self.resolve_as_enters_driven(&effect, &ctx)
         } else {
             self.resolve_effect(&effect, &ctx)
         };
@@ -2628,6 +2628,34 @@ impl GameState {
         if self.resolution_depth > 0 {
             return Ok(events);
         }
+        self.drive_suspensions(ctx, &mut events, None)?;
+        Ok(events)
+    }
+
+    /// An as-enters replacement's ask (CR 614.12 — Devour, a named type, a
+    /// chosen color), answered where the permanent enters, at any depth. The
+    /// enclosing resolution cannot be trusted to replay: a mass reanimation
+    /// (Living Death) parked Feasting Hobbit's devour, never reached it again
+    /// and leaked the answer, so the Hobbit entered with nothing devoured. A
+    /// prompting controller's ask goes to the bot's policy.
+    pub(crate) fn resolve_as_enters_driven(
+        &mut self,
+        effect: &Effect,
+        ctx: &EffectContext,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        let mut events = self.resolve_effect(effect, ctx)?;
+        self.drive_suspensions(ctx, &mut events, Some(ctx.controller))?;
+        Ok(events)
+    }
+
+    /// Answer each pending suspension through the decider (or, for
+    /// `as_enters_seat` when that seat prompts, the bot's policy) and resume.
+    fn drive_suspensions(
+        &mut self,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+        as_enters_seat: Option<usize>,
+    ) -> Result<(), GameError> {
         // Bounded: each round consumes exactly one ask, and an arm that asks
         // for ever is a defect the resume-channel guards catch — the cap keeps
         // it from becoming a hang here.
@@ -2638,7 +2666,15 @@ impl GameState {
             // (Riders of Gavony, Species Specialist, Metallic Mimic as they
             // enter) has no seat to reach, and the headless decider names
             // Demon whatever the board: answer it with the bot's heuristic.
+            let policy_seat = as_enters_seat.filter(|&p| self.seat_prompts(p));
             let answer = match &decision {
+                _ if let Some(seat) = policy_seat => crate::server::bot::decide_pending_policy(
+                    self,
+                    seat,
+                    &crate::server::bot::EvalWeights::default(),
+                    &decision,
+                    false,
+                ),
                 crate::decision::Decision::ChooseCreatureType { source, .. } => {
                     // Only a controller's own naming: Callous Oppressor's
                     // opponent-named type keeps the headless answer.
@@ -2666,7 +2702,7 @@ impl GameState {
         // Whatever is left could not be driven; dropping it is what happened
         // before this existed, and leaving it set would strand the next ask.
         self.suspend_signal = None;
-        Ok(events)
+        Ok(())
     }
 
     fn resolve_effect_into_kind(
