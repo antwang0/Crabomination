@@ -4482,3 +4482,32 @@ pub const EOWYN_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, island, island,
     island, island, island, mountain, mountain, mountain, mountain, mountain,
 ];
+
+pub const ASHLING_COMMANDERS: &[CardFactory] = &[ashling_the_limitless];
+
+/// **Dance of the Elements**, the Lorwyn Eclipsed Commander deck, exactly
+/// as MTGJSON prints it: 83 nonbasic cards + 2 Plains + 2 Island + 2 Swamp +
+/// 2 Mountain + 8 Forest = 99. Five-color Elementals under Ashling, the
+/// Limitless — evoke from hand, then a hasty token copy of what was
+/// sacrificed.
+pub const ASHLING_MAIN: &[CardFactory] = &[
+    mass_of_mysteries, elemental_spectacle, springleaf_parade, jubilation, impulsivity, lamentation,
+    belonging, subterfuge, rain_slicked_copse, sodden_verdure, abundant_countryside, endurance,
+    fury, haunting_voyage, avenger_of_zendikar, cavalier_of_thorns, greenwarden_of_murasa,
+    selvala_heart_of_the_wilds, titan_of_industry, muldrotha_the_gravetide, omnath_locus_of_rage,
+    yarok_the_desecrated, omnath_locus_of_the_roil, timeless_lotus, shatter_the_sky,
+    hoofprints_of_the_stag, slithermuse, descendants_fury, blasphemous_act, cream_of_the_crop,
+    kindred_summons, bane_of_progress, realmwalker, return_of_the_wildspeaker, faeburrow_elder,
+    vernal_sovereign, horde_of_notions, maelstrom_wanderer, jegantha_the_wellspring,
+    chromatic_lantern, primal_beyond, raging_ravine, exotic_orchard, flamekin_village,
+    path_to_exile, mulldrifter, reality_shift, shriekmaw, shimmercreep, flamebraider, crib_swap,
+    secluded_courtyard, sol_ring, command_tower, arcane_signet, distant_melody,
+    incandescent_soulstoke, eclipsed_flamekin, foundation_breaker, garruks_uprising, risen_reef,
+    fellwar_stone, unclaimed_territory, ancient_ziggurat, frontier_bivouac, sandsteppe_citadel,
+    savage_lands, opulent_palace, seaside_citadel, jungle_shrine, smokebraider, ingot_chewer,
+    fertile_ground, abundant_growth, kodamas_reach, cultivate, path_of_ancestry, thriving_grove,
+    thriving_heath, thriving_isle, opal_palace, thriving_bluff, thriving_moor,
+    // Basics: 2 plains, 2 island, 2 swamp, 2 mountain, 8 forest
+    plains, plains, island, island, swamp, swamp, mountain, mountain, forest, forest, forest,
+    forest, forest, forest, forest, forest,
+];

@@ -1215,6 +1215,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::EOWYN_COMMANDERS,
             main: decks::EOWYN_MAIN,
         },
+        // Hundred-and-forty-eighth: Dance of the Elements (Lorwyn Eclipsed)
+        // — five-color Elementals under Ashling, the Limitless, evoking from
+        // hand and copying what they sacrifice. `--pod-decks 148`.
+        PodDeck {
+            name: "Ashling, the Limitless (WUBRG)",
+            commanders: decks::ASHLING_COMMANDERS,
+            main: decks::ASHLING_MAIN,
+        },
     ]
 }
 
@@ -1821,6 +1829,9 @@ mod tests {
             // CR 122.1b kinds of counters, CR 122.1c shields, CR 707.10c
             // copies that spread their removal.
             ("Perrie", [0x9E44, 146, 9070]),
+            // CR 702.74 granted evoke (Ashling), CR 702.143 foretold
+            // Haunting Voyage, CR 702.141 encore.
+            ("Ashling", [0xA541, 148, 9072]),
         ] {
             let precon = *field.iter().find(|d| d.name.starts_with(name)).expect("the precon seat");
             assert_eq!(precon.card_count(), 100);
