@@ -3287,6 +3287,9 @@ impl GameState {
             Predicate::IsFirstCombatPhaseThisTurn => self.combat_phases_this_turn <= 1,
             Predicate::IsFirstEndStepThisTurn => self.end_steps_this_turn <= 1,
             Predicate::IsFirstUpkeepThisTurn => self.upkeep_steps_this_turn <= 1,
+            Predicate::CounterPutOnCreatureThisTurn => {
+                self.counter_on_creature_turn == Some(self.turn_number)
+            }
             Predicate::CastFromHand => {
                 // Inverse of CastFromGraveyard. Triggers / activated
                 // abilities default `cast_from_hand` to `true` which

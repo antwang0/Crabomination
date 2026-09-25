@@ -10304,6 +10304,10 @@ impl GameState {
             }
             // Handing an opponent life is always payable.
             A::OpponentGainsLife { .. } => true,
+            // CR 701.68b — no creature, no blight.
+            A::Blight { .. } => {
+                self.battlefield.iter().any(|c| c.controller == p && c.definition.is_creature())
+            }
             A::OneOf(options) => options
                 .iter()
                 .any(|o| self.additional_costs_payable(p, std::slice::from_ref(o))),
@@ -10848,6 +10852,29 @@ impl GameState {
                     // by the caller from the same graveyard-can-afford check.
                     if self.graveyard_can_collect_evidence(p, *amount) {
                         events.append(&mut self.collect_evidence_from_graveyard(p, *amount));
+                    }
+                }
+                A::Blight { n } => {
+                    // CR 701.68a — the caster's pick; auto: the cheapest
+                    // creature that survives the counters, else the cheapest.
+                    let mut cands: Vec<&crate::card::CardInstance> = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| c.controller == p && c.definition.is_creature())
+                        .collect();
+                    cands.sort_by_key(|c| (c.toughness() <= *n as i32, c.definition.cost.cmc()));
+                    if let Some(id) = cands.first().map(|c| c.id) {
+                        let ctx = crate::game::effects::EffectContext::for_spell(p, None, 0, 0);
+                        if let Ok(mut evs) = self.resolve_effect(
+                            &Effect::AddCounter {
+                                what: crate::effect::Selector::ExactObjects(vec![id]),
+                                kind: crate::card::CounterType::MinusOneMinusOne,
+                                amount: crate::card::Value::Const(*n as i32),
+                            },
+                            &ctx,
+                        ) {
+                            events.append(&mut evs);
+                        }
                     }
                 }
                 A::OpponentGainsLife { amount } => {

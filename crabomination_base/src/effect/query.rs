@@ -379,6 +379,7 @@ impl Effect {
             }
             Effect::ForEach { body, .. }
             | Effect::Repeat { body, .. }
+            | Effect::RepeatWhileClashWon { body }
             | Effect::EachPlayerDoes { body, .. }
             | Effect::MayDo { body, .. }
             | Effect::MayDoBy { body, .. }
@@ -1374,6 +1375,9 @@ impl Effect {
             Effect::GrantSpellsFlashThisTurn { .. } => false,
             Effect::EachPlayerKeepsTotalPowerAtMost { .. } => false,
             Effect::ExchangeLifeWithSourceToughness => false,
+            Effect::ExchangePlayerLifeWithSourceToughness { .. } => false,
+            Effect::RemoveCountersFromAmongDrawAndLoseLife => false,
+            Effect::RepeatWhileClashWon { body } => body.requires_target(),
             Effect::TokenCopyTappedAttacking { source } => sel_has_target(source),
             Effect::OwnerShufflesInExilesTopPlaysOrCasts { what } => sel_has_target(what),
             Effect::DoubleXOfSpell { .. } => false,

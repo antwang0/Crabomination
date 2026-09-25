@@ -5371,6 +5371,10 @@ pub enum AdditionalCastCost {
     /// "As an additional cost, an opponent gains N life" (Roar of Jukai's
     /// splice cost). Always payable; the caster's first opponent gains it.
     OpponentGainsLife { amount: u32 },
+    /// CR 701.68 — "blight N" as a cost: put N -1/-1 counters on a creature
+    /// you control (Burning Curiosity's optional "you may blight 1", as a
+    /// `kicker_action_cost`). Payable while you control a creature.
+    Blight { n: u32 },
     /// CR 601.2b — "sacrifice a creature, discard a card, or pay 4 life"
     /// (Dusk Mangler): the caster pays exactly one of the options. Payable
     /// when any option is; the cast pipeline concretizes it to one option

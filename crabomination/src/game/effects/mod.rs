@@ -31367,6 +31367,112 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ExchangePlayerLifeWithSourceToughness { who } => {
+                let Some(src) = ctx.source else { return Ok(()) };
+                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()) };
+                let Some(toughness) = self.computed_permanent(src).map(|c| c.toughness) else {
+                    return Ok(());
+                };
+                let old_life = self.players[p].life;
+                let base_power = self.battlefield_find(src).map(|c| c.definition.power).unwrap_or(0);
+                // CR 119.7 — the exchange is a gain or loss of the difference.
+                let delta = toughness - old_life;
+                let them = Selector::Player(PlayerRef::Seat(p));
+                let life_effect = if delta >= 0 {
+                    Effect::GainLife { who: them, amount: crate::effect::Value::Const(delta) }
+                } else {
+                    Effect::LoseLife { who: them, amount: crate::effect::Value::Const(-delta) }
+                };
+                self.resolve_effect_into(&life_effect, ctx, events)?;
+                self.resolve_effect_into(
+                    &Effect::SetBasePT {
+                        what: Selector::This,
+                        power: crate::effect::Value::Const(base_power),
+                        toughness: crate::effect::Value::Const(old_life),
+                        duration: crate::effect::Duration::Permanent,
+                    },
+                    ctx,
+                    events,
+                )?;
+                Ok(())
+            }
+
+            Effect::RepeatWhileClashWon { body } => {
+                // Each win re-enters this effect as the clash's payoff, so a
+                // clash that suspends resumes at that clash, not at `body`.
+                let step = Effect::Seq(vec![
+                    (**body).clone(),
+                    Effect::ClashWithOpponent { on_win: Box::new(effect.clone()) },
+                ]);
+                self.run_effect(&step, ctx, events)
+            }
+
+            Effect::RemoveCountersFromAmongDrawAndLoseLife => {
+                let me = ctx.controller;
+                let source = ctx.source.unwrap_or(CardId(0));
+                let total = |c: &CardInstance| -> u32 { c.counters.iter().map(|(_, n)| *n).sum() };
+                let candidates: Vec<(CardId, String)> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| total(c) > 0)
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                if candidates.is_empty() {
+                    return Ok(());
+                }
+                // A headless seat strips what hurts it: -1/-1 (and other
+                // harmful) counters off its own permanents, every counter off
+                // an opponent's — while the draw leaves it life to spare.
+                use crate::card::CounterType as CT;
+                let harmful = |k: &CT| matches!(k, CT::MinusOneMinusOne | CT::Stun | CT::Poison | CT::Doom);
+                let mut budget = (self.players[me].life - 5).max(0) as u32;
+                let mut auto = Vec::new();
+                for c in self.battlefield.iter() {
+                    let helps = if c.controller == me {
+                        c.counters.iter().all(|(k, _)| harmful(k))
+                    } else {
+                        c.counters.iter().all(|(k, _)| !harmful(k))
+                    };
+                    let n = total(c);
+                    if n > 0 && helps && n <= budget {
+                        budget -= n;
+                        auto.push(c.id);
+                    }
+                }
+                let max = candidates.len() as u32;
+                let Some(picked) = self.choose_up_to_cards(
+                    me,
+                    "Remove the counters from which permanents?".into(),
+                    source,
+                    candidates,
+                    max,
+                    PickValue::Gain,
+                    effect,
+                    auto,
+                ) else {
+                    return Ok(());
+                };
+                let mut removed = 0u32;
+                for id in picked {
+                    let Some(c) = self.battlefield.find_by_id_mut(id) else { continue };
+                    let kinds: Vec<(CT, u32)> = c.counters.iter().map(|(k, n)| (*k, *n)).collect();
+                    for (k, n) in kinds {
+                        if n == 0 {
+                            continue;
+                        }
+                        c.remove_counters(k, n);
+                        removed += n;
+                        events.push(GameEvent::CounterRemoved { card_id: id, counter_type: k, count: n });
+                    }
+                }
+                if removed > 0 {
+                    let n = crate::effect::Value::Const(removed as i32);
+                    self.resolve_effect_into(&Effect::Draw { who: Selector::You, amount: n.clone() }, ctx, events)?;
+                    self.resolve_effect_into(&Effect::LoseLife { who: Selector::You, amount: n }, ctx, events)?;
+                }
+                Ok(())
+            }
+
             Effect::ExchangeLifeWithSourceToughness => {
                 let Some(src) = ctx.source else { return Ok(()) };
                 let Some(toughness) = self.computed_permanent(src).map(|c| c.toughness) else {

@@ -2334,6 +2334,10 @@ pub enum Predicate {
     /// Paradox Haze's "first upkeep step of your turn" trigger so the extra
     /// upkeep it grants doesn't loop.
     IsFirstUpkeepThisTurn,
+    /// A counter was put on a creature this turn (Lasting Tarfire's
+    /// intervening "if you put a counter on a creature this turn" — any
+    /// player's counters count; the engine doesn't record who put them).
+    CounterPutOnCreatureThisTurn,
     /// True when the resolving spell was kicked (CR 702.32) — its optional
     /// kicker cost was paid at cast time. Reads `EffectContext.kicked`,
     /// stamped from the resolving `CardInstance.kicked` flag. Used by
@@ -7300,6 +7304,19 @@ pub enum Effect {
     /// toughness": your life becomes its toughness and its base toughness
     /// becomes your former life total (a layer-7b set, CR 613.4b).
     ExchangeLifeWithSourceToughness,
+    /// Tree of Perdition — "Exchange target opponent's life total with this
+    /// creature's toughness": `who`'s life becomes its toughness and its base
+    /// toughness becomes their former life total (CR 119.7, 613.4b).
+    ExchangePlayerLifeWithSourceToughness { who: PlayerRef },
+    /// CR 701.30 — "[body], then clash with an opponent. If you win, repeat
+    /// this process" (Hoarder's Greed). Each win re-enters this effect, so a
+    /// suspended clash resumes without re-running an earlier `body`.
+    RepeatWhileClashWon { body: Box<Effect> },
+    /// "Remove any number of counters from among permanents on the
+    /// battlefield. You draw cards and lose life equal to the number of
+    /// counters removed this way" (Eventide's Shadow). The controller picks
+    /// permanents; each loses all its counters.
+    RemoveCountersFromAmongDrawAndLoseLife,
     /// Audacious Swap — "The owner of target nonenchantment permanent
     /// shuffles it into their library, then exiles the top card of their
     /// library. If it's a land card, they put it onto the battlefield.

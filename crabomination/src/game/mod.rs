@@ -1452,6 +1452,11 @@ pub struct ColdState {
     /// True between an additional beginning phase's untap and draw steps.
     #[serde(default)]
     pub in_additional_beginning_phase: bool,
+    /// The turn a counter was last put on a creature — read by
+    /// `Predicate::CounterPutOnCreatureThisTurn` (Lasting Tarfire). A turn
+    /// stamp, so no cleanup write: written at most once a turn.
+    #[serde(default)]
+    pub counter_on_creature_turn: Option<u32>,
     /// Sower of Discord's "two chosen players", per source.
     #[serde(default)]
     pub chosen_player_pairs: Vec<(CardId, usize, usize)>,
@@ -22281,6 +22286,15 @@ impl GameState {
     }
 
     fn dispatch_triggers_for_events_slow(&mut self, events: &[GameEvent]) {
+        if self.counter_on_creature_turn != Some(self.turn_number)
+            && events.iter().any(|e| {
+                matches!(e, GameEvent::CounterAdded { card_id, .. }
+                    if self.battlefield_find(*card_id).is_some_and(|c| c.definition.is_creature()))
+            })
+        {
+            let turn = self.turn_number;
+            self.counter_on_creature_turn = Some(turn);
+        }
         // Cost-payment events (paid life) queued since the last dispatch —
         // fold them in so resumed-decision paths that bypass
         // `perform_action`'s drain still fire their triggers.
