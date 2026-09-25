@@ -4542,16 +4542,18 @@ impl GameState {
             // "For the first time each turn" life-gain gates key on the same
             // turn boundary.
             pl.gained_life_earlier_this_turn = false;
+            // Cards drawn "this turn" is the same kind of tally: every seat
+            // draws on other players' turns (Elenda and Azor's end step,
+            // "your second card each turn", Spirit of the Labyrinth's cap),
+            // so it resets for every player, not only the active one.
+            if pl.cards_drawn_this_turn != 0 {
+                pl.cards_drawn_this_turn = 0;
+            }
         }
-        // Reset cards-drawn tally for the active player. Powers Quandrix
-        // scaling cards (Fractal Anomaly's "X = cards drawn this turn"
-        // and similar). Other players' tallies advance independently
-        // and are reset on their own untap.
         {
             // One `Player::deref_mut` for the run: `Player` is a CoW handle,
             // so each write below was its own `Arc::make_mut`.
             let me = &mut *self.players[p];
-            me.cards_drawn_this_turn = 0;
             me.last_drawn_card = None;
             // Reset the per-turn {E}-spent tally (Izzet Generatorium's draw gate).
             me.energy_spent_this_turn = 0;
