@@ -1891,7 +1891,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Chandra, Fire of Kaladesh | From Cute to Brute (SLD) | flips when an opponent has lost 3 or more life this turn, not after Chandra dealt 3 damage. |
 | 🟡 Cosima, God of the Voyage | From Cute to Brute (SLD) | the voyage ability isn't implemented. |
 | 🟡 Kytheon, Hero of Akros | From Cute to Brute (SLD) | Gideon's +2 lure isn't implemented; the +1's indestructible lasts until end of turn; the 0 doesn't prevent damage to him. |
-| 🟡 Jace, Vryn's Prodigy | From Cute to Brute (SLD) | the Telepath's +1 lasts until end of turn. |
 | 🟡 Journey to Eternity | From Cute to Brute (SLD) | returns the creature, but not itself transformed. |
 | 🟡 Liliana, Heretical Healer | From Cute to Brute (SLD) | the Defiant Necromancer's −8 emblem isn't implemented. |
 | 🟡 Ludevic, Necrogenius | From Cute to Brute (SLD) | transforms for {U}{U}{B}{B} exiling one creature card; Olag is a 4/4 with counters, not a copy. |

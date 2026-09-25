@@ -13,7 +13,6 @@
 //! - **Gideon, Battle-Forged** (Kytheon's back) — the +2 lure isn't
 //!   implemented; the +1's indestructible lasts until end of turn; the 0
 //!   doesn't prevent damage to him.
-//! - **Jace, Telepath Unbound** — the +1 lasts until end of turn.
 //! - **Journey to Eternity** — returns the creature, but not itself
 //!   transformed.
 //! - **Liliana, Defiant Necromancer** — the −8 emblem isn't implemented.
@@ -673,9 +672,8 @@ pub fn hadanas_climb() -> CardDefinition {
     }
 }
 
-/// Jace, Vryn's Prodigy // Jace, Telepath Unbound.
-///
-/// ⚠ Residual: the +1 lasts until end of turn.
+/// Jace, Vryn's Prodigy // Jace, Telepath Unbound — the +1's -2/-0 lasts
+/// until your next turn.
 pub fn jace_vryns_prodigy() -> CardDefinition {
     let unbound = walker(
         "Jace, Telepath Unbound",
@@ -693,7 +691,7 @@ pub fn jace_vryns_prodigy() -> CardDefinition {
                         what: Selector::Target(0),
                         power: Value::Const(-2),
                         toughness: Value::ZERO,
-                        duration: Duration::EndOfTurn,
+                        duration: Duration::UntilNextTurn,
                     }),
                 },
             ),

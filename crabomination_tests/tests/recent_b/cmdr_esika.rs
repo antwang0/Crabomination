@@ -125,6 +125,19 @@ fn jace_flips_with_five_in_the_graveyard() {
     activate(&mut g, jace, 0, None).expect("{T}: loot");
     let unbound = on_board(&g, 0, "Jace, Telepath Unbound").expect("the planeswalker side");
     assert_eq!(g.battlefield_find(unbound).unwrap().counter_count(CounterType::Loyalty), 5);
+    // The +1's -2/-0 lasts until your next turn: through the opponent's.
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    library(&mut g, 1, 3);
+    loyalty(&mut g, unbound, 0, Some(Target::Permanent(bear)));
+    for _ in 0..40 {
+        if g.active_player_idx == 1 && g.step == TurnStep::PreCombatMain {
+            break;
+        }
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.active_player_idx, 1);
+    assert_eq!(pt(&g, bear), (0, 2), "still shrunk on the opponent's turn");
 }
 
 /// Esika gives other legendary creatures vigilance and a mana ability; her
