@@ -1199,6 +1199,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::HAKBAL_COMMANDERS,
             main: decks::HAKBAL_MAIN,
         },
+        // Seat 146: Bedecked Brokers (NCC) — Bant counters and shields under
+        // Perrie, the Pulverizer (CR 122.1b keyword counters as kinds; CR
+        // 122.1c shields). `--pod-decks 146`.
+        PodDeck {
+            name: "Perrie, the Pulverizer (GWU)",
+            commanders: decks::PERRIE_COMMANDERS,
+            main: decks::PERRIE_MAIN,
+        },
     ]
 }
 
@@ -1802,6 +1810,9 @@ mod tests {
             // CR 702.37 morph and megamorph, CR 614 Rayami's death exile,
             // CR 903.9 commanders sent home.
             ("Kadena", [0x6ADE, 142, 9066]),
+            // CR 122.1b kinds of counters, CR 122.1c shields, CR 707.10c
+            // copies that spread their removal.
+            ("Perrie", [0x9E44, 146, 9070]),
         ] {
             let precon = *field.iter().find(|d| d.name.starts_with(name)).expect("the precon seat");
             assert_eq!(precon.card_count(), 100);

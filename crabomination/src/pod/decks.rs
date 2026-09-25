@@ -4420,3 +4420,34 @@ pub const HAKBAL_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, island, island, island, island,
     island, island, island, island, island, island, island, island, island,
 ];
+
+pub const PERRIE_COMMANDERS: &[CardFactory] = &[perrie_the_pulverizer];
+
+/// **Bedecked Brokers**, the Streets of New Capenna Commander deck (NCC,
+/// 2022-04-29), exactly as MTGJSON's `BedeckedBrokers_NCC` prints it:
+/// 85 nonbasic cards + 5 Plains + 4 Islands + 5 Forests = 99. Bant counters
+/// and shields under Perrie, the Pulverizer.
+pub const PERRIE_MAIN: &[CardFactory] = &[
+    kros_defense_contractor, ajani_unyielding, angelic_sleuth, aven_courier,
+    aven_mimeomancer, avenging_huntbonder, bribe_taker, crystalline_giant, devoted_druid,
+    denry_klin_editor_in_chief, evolution_sage, fathom_mage, forgotten_ancient,
+    grateful_apparition, incubation_druid, jenara_asura_of_war, luminarch_aspirant,
+    park_heights_maverick, rishkar_peema_renegade, roalesk_apex_hybrid, scavenging_ooze,
+    shield_broker, skyboon_evangelist, skyship_plunderer, slippery_bogbonder,
+    steelbane_hydra, thrummingbird, vorel_of_the_hull_clade, wall_of_roots,
+    wickerbough_elder, wingspan_mentor, declaration_in_stone, damning_verdict,
+    planar_outburst, tezzerets_gambit, rishkars_expertise, urban_evolution, bant_charm,
+    brokers_charm, brokers_confluence, contractual_safeguard, exotic_pets, generous_gift,
+    storm_of_forms, familys_favor, hoofprints_of_the_stag, primal_empathy,
+    resourceful_defense, together_forever, agents_toolkit, arcane_signet, commanders_sphere,
+    everflowing_chalice, fellwar_stone, gavel_of_the_righteous, midnight_clock,
+    oblivion_stone, oracles_vault, power_conduit, sol_ring, swiftfoot_boots, ash_barrens,
+    bant_panorama, brokers_hideout, canopy_vista, command_tower, exotic_orchard,
+    flooded_grove, fortified_village, gavony_township, karns_bastion, littjara_mirrorlake,
+    llanowar_reborn, myriad_landscape, nesting_grounds, path_of_ancestry, port_town,
+    prairie_stream, seaside_citadel, skycloud_expanse, sungrass_prairie, temple_of_mystery,
+    vivid_creek, vivid_grove, vivid_meadow,
+    // Basics: 5 plains, 4 island, 5 forest
+    forest, forest, forest, forest, forest, island, island, island, island, plains, plains,
+    plains, plains, plains,
+];
