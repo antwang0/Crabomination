@@ -204,14 +204,11 @@ the handoff.
   suspend-only card (no mana cost) had no other way in. `server/suspend.rs` suspends
   one in the main phase; the census counts a suspend or a foretell as a play. A
   suspend card *with* a cost is still only cast (Aeon Chronicler's Suspend X is open).
-- ⚠ **A static grant's type filter reads printed card types** (found by Mishra's
-  Burnished Banner): `affected_includes_gated` matches `AffectedPermanents::All`'s
-  `card_types` against `definition.card_types`, so "artifact creatures you control
-  have flying" (Workshop Elders) misses a noncreature artifact animated in layer 4
-  (CR 613.8 — the layer-6 set depends on the layer-4 change). The fix is a computed
-  type gate like the creature-type one (`gate_types`); it is on the layers' hot path
-  and moves any 2-player game with an animated land under an anthem, so it needs its
-  own bench reading.
+- ✅ **A static grant's type filter read printed card types** (CR 613.8): an
+  `All`/`AllOpponents`/`AllWithCounter` set filtered by card type now reads the
+  computed types when the effect list also changes card types in layer 4 (a
+  `SecondPass` gate, like the creature-type one). An animated land gets the
+  anthem; `--bench` byte-identical (its pool animates nothing).
 - ✅ New for Subjective Reality (C18, Aminatou), in `game/fateshift.rs`:
   `Effect::{ManifestTopAttachSource, ExileSourceAndTopThenManifest, ChooseTwoPlayersForSource,
   OtherChosenPlayerLosesLife, RotateNonlandPermanents, GrantFreeCastOnePerCardType,

@@ -959,22 +959,34 @@ pub(crate) struct SecondPass {
     power: bool,
     type_changer: bool,
     type_lord: bool,
+    /// CR 613.8 — a layer-4 card-type change and an effect whose set is
+    /// filtered by card type: the set must read the computed types.
+    card_type_changer: bool,
+    card_type_filtered: bool,
 }
 
 impl SecondPass {
     pub(crate) fn of(effects: &[ContinuousEffect]) -> Self {
         let mut g = Self::default();
         for e in effects {
-            match e.affected {
+            match &e.affected {
                 AffectedPermanents::CardMatchPowerGated { .. } => g.power = true,
                 AffectedPermanents::AllWithCreatureType { .. } => g.type_lord = true,
+                AffectedPermanents::All { card_types, .. }
+                | AffectedPermanents::AllOpponents { card_types, .. }
+                | AffectedPermanents::AllWithCounter { card_types, .. }
+                    if !card_types.is_empty() =>
+                {
+                    g.card_type_filtered = true
+                }
                 _ => {}
             }
-            if matches!(
-                e.modification,
-                Modification::SetCreatureTypes(_) | Modification::AddCreatureType(_)
-            ) {
-                g.type_changer = true;
+            match e.modification {
+                Modification::SetCreatureTypes(_) | Modification::AddCreatureType(_) => g.type_changer = true,
+                Modification::AddCardType(_) | Modification::RemoveCardType(_) | Modification::SetCardTypes(_) => {
+                    g.card_type_changer = true
+                }
+                _ => {}
             }
         }
         g
@@ -1028,10 +1040,11 @@ fn compute_permanent_gated(
     // (Turn to Frog into a Frog lord, Arcane Adaptation, etc.) gets the buff.
     // Only re-run when both a type-changer and a type lord are present.
     let has_type_gated = gates.type_changer && gates.type_lord;
-    if gates.power || has_type_gated {
-        return compute_permanent_second_pass(card, effects, has_type_gated);
+    let has_card_type_gated = gates.card_type_changer && gates.card_type_filtered;
+    if gates.power || has_type_gated || has_card_type_gated {
+        return compute_permanent_second_pass(card, effects, has_type_gated, has_card_type_gated);
     }
-    compute_permanent_pass(card, effects, None, None)
+    compute_permanent_pass(card, effects, None, None, None)
 }
 
 /// The CR 613.8 re-run, out of line. `compute_permanent_gated` is 269,492
@@ -1045,10 +1058,12 @@ fn compute_permanent_second_pass(
     card: &crate::card::CardInstance,
     effects: &[ContinuousEffect],
     has_type_gated: bool,
+    has_card_type_gated: bool,
 ) -> ComputedPermanent {
-    let pass1 = compute_permanent_pass(card, effects, None, None);
+    let pass1 = compute_permanent_pass(card, effects, None, None, None);
     let gate_types = has_type_gated.then(|| pass1.subtypes().creature_types.clone());
-    compute_permanent_pass(card, effects, Some(pass1.power), gate_types.as_deref())
+    let gate_card_types = has_card_type_gated.then(|| pass1.card_types().clone());
+    compute_permanent_pass(card, effects, Some(pass1.power), gate_types.as_deref(), gate_card_types.as_deref())
 }
 
 fn compute_permanent_pass(
@@ -1056,6 +1071,7 @@ fn compute_permanent_pass(
     effects: &[ContinuousEffect],
     gate_power: Option<i32>,
     gate_types: Option<&[CreatureType]>,
+    gate_card_types: Option<&[CardType]>,
 ) -> ComputedPermanent {
     // Start from the base card definition — borrowed, not cloned: each of
     // these materializes only if a layer below actually writes to it.
@@ -1221,7 +1237,7 @@ fn compute_permanent_pass(
         // calls at ~137 Ir out of line, against ~0 inlined). A `push` loop is
         // the inlined shape written down, so a later build cannot flip it.
         for e in effects.iter() {
-            if affects(e, card, gate_power, gate_types) {
+            if affects(e, card, gate_power, gate_types, gate_card_types) {
                 sorted.push(e);
             }
         }
@@ -1465,8 +1481,9 @@ fn affects(
     card: &crate::card::CardInstance,
     gate_power: Option<i32>,
     gate_types: Option<&[CreatureType]>,
+    gate_card_types: Option<&[CardType]>,
 ) -> bool {
-    affected_includes_gated(&effect.affected, effect.source, card, gate_power, gate_types)
+    affected_includes_gated(&effect.affected, effect.source, card, gate_power, gate_types, gate_card_types)
 }
 
 /// Whether `card` is one of the permanents described by `affected`, given the
@@ -1483,7 +1500,7 @@ pub(crate) fn affected_includes(
     let printed_power = card.definition.base_power()
         + card.counter_count(CounterType::PlusOnePlusOne) as i32
         - card.counter_count(CounterType::MinusOneMinusOne) as i32;
-    affected_includes_gated(affected, source, card, Some(printed_power), None)
+    affected_includes_gated(affected, source, card, Some(printed_power), None, None)
 }
 
 fn affected_includes_gated(
@@ -1494,7 +1511,11 @@ fn affected_includes_gated(
     // CR 613.8 — the affected card's *computed* creature types (pass 2 of a
     // type lord recompute). `None` falls back to printed types.
     gate_types: Option<&[CreatureType]>,
+    // CR 613.8 — the computed card types (pass 2 when a layer-4 type change
+    // meets a type-filtered set). `None` falls back to printed types.
+    gate_card_types: Option<&[CardType]>,
 ) -> bool {
+    let computed_types = gate_card_types.unwrap_or(&card.definition.card_types);
     match affected {
         AffectedPermanents::Source => source == card.id,
         AffectedPermanents::Specific(ids) => ids.contains(&card.id),
@@ -1519,7 +1540,7 @@ fn affected_includes_gated(
                 && owned_by_controller
                     .is_none_or(|want| (card.owner == card.controller) == want)
                 && (card_types.is_empty()
-                    || card_types.iter().all(|t| card.definition.card_types.contains(t)))
+                    || card_types.iter().all(|t| computed_types.contains(t)))
                 // CR 105.2 — the coloured pips (hybrid and Phyrexian too)
                 // UNION the colour indicator, empty under Devoid. This
                 // walked `Colored(_)` alone, so a {G/W} creature and a
@@ -1548,7 +1569,7 @@ fn affected_includes_gated(
             // Short-circuit, cheapest first — see the `All` arm.
             ctrl_ok
                 && (card_types.is_empty()
-                    || card_types.iter().all(|t| card.definition.card_types.contains(t)))
+                    || card_types.iter().all(|t| computed_types.contains(t)))
                 && counter.is_none_or(|k| card.counter_count(k) > 0)
                 && color.is_none_or(|want| card.definition.printed_color_set().contains(want))
                 && creature_type.as_ref().is_none_or(|ct| {
@@ -1577,7 +1598,7 @@ fn affected_includes_gated(
         AffectedPermanents::AllWithCounter { controller, card_types, counter, at_least } => {
             controller.is_none_or(|c| c == card.controller)
                 && (card_types.is_empty()
-                    || card_types.iter().all(|t| card.definition.card_types.contains(t)))
+                    || card_types.iter().all(|t| computed_types.contains(t)))
                 && card.counter_count(*counter) >= *at_least
         }
         AffectedPermanents::CardMatch { source_controller, requirement } => {

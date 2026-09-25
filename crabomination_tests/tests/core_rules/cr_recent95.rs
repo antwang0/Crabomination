@@ -3,6 +3,8 @@
 //!   enters- or leaves-the-battlefield triggers.
 //! - CR 704.5n — an Equipment's host legality reads the *computed* type line,
 //!   so an animated land keeps what's bolted to it.
+//! - CR 613.8 — a type-filtered set ("creatures you control") sees a layer-4
+//!   animation: an anthem reaches an animated land.
 //! - CR 613.1c — a layer-4 animation adds the creature type without taking the
 //!   land's own types or mana ability away.
 //! - CR 602.5 — City of Solitude's off-turn lock covers activated abilities,
@@ -105,6 +107,51 @@ fn cr_613_1c_animated_land_keeps_its_land_types() {
     })
     .expect("it still taps for mana");
     assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1);
+}
+
+/// CR 613.8 — an anthem whose set is "creatures you control" (layer 7c)
+/// depends on the layer-4 animation: Quirion Druid's 0/0-plus-counters Forest
+/// gets Glorious Anthem's +1/+1.
+#[test]
+fn cr_613_8_anthem_reaches_an_animated_land() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::glorious_anthem());
+    let druid = ready(&mut g, 0, catalog::quirion_druid());
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    let before = g.computed_permanent(forest).unwrap();
+    assert_eq!((before.power, before.toughness), (0, 0));
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: druid,
+        ability_index: 0,
+        target: Some(Target::Permanent(forest)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("animate");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(forest).expect("still on the battlefield");
+    let (p, t) = (cp.power, cp.toughness);
+    let druid_only = {
+        let mut h = two_player_game();
+        let d = ready(&mut h, 0, catalog::quirion_druid());
+        let f = h.add_card_to_battlefield(0, catalog::forest());
+        h.players[0].mana_pool.add(Color::Green, 1);
+        h.perform_action(GameAction::ActivateAbility {
+            card_id: d,
+            ability_index: 0,
+            target: Some(Target::Permanent(f)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("animate");
+        drain_stack(&mut h);
+        let c = h.computed_permanent(f).unwrap();
+        (c.power, c.toughness)
+    };
+    assert_eq!((p, t), (druid_only.0 + 1, druid_only.1 + 1), "the anthem applies to the animated land");
 }
 
 /// City of Solitude shuts an off-turn seat out of activations too, and the
