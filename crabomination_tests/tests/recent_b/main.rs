@@ -39,6 +39,7 @@ mod cmdr_eshki;
 mod cmdr_estrid;
 mod cmdr_jirina;
 mod cmdr_olivia;
+mod cmdr_omo;
 mod cmdr_galea;
 mod cmdr_chishiro;
 mod cmdr_zurgo;
