@@ -3015,6 +3015,21 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-09-25 (Commander session `011z4qQX`) — the `--bench` invariant MOVES: 195,806 -> 200,190
+
+Intentional: the bot's lockdown-Aura fix (`78cafe10`, "a lockdown Aura is
+hostile"). The fixed pool's skies deck runs three Pacifism, which the bot used
+to put on its own best creature; it now locks down the aggro deck's
+attackers, so games run longer. Golden traces re-blessed in the same commit.
+
+```text
+--bench          decisions 200,190 / 28.12 / 625.6 / 0 stalls (was 195,806 / 27.49 / 611.9)
+                 determinism ok; peak_rss_mib 34.1
+decisions_per_s  16 paired runs, pre-fix (rf3) vs fix (rf4): +1.34 % median /
+                 +0.66 % mean (sd 5.24) — noise; games/s is not comparable
+                 across the move (the games are longer)
+```
+
 ### 2026-09-25 (Commander session `011z4qQX`, Counter Blitz) — guardrail, no perf work
 
 `GameEvent::CounterAdded` gained a `placer` (CR 122.6) and the per-dispatch
