@@ -96,6 +96,7 @@ lists were picked.
 | **Spirit Squadron** (VOC precon) WU | Millicent, Restless Revenant | WU | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Jump Scare!** (DSC precon) GU | Zimone, Mystery Unraveler | GU | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
 | **Obscura Operation** (NCC precon) WUB | Kamiz, Obscura Oculus | WUB | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
+| **Elven Council** (LTC precon) GU | Galadriel, Elven-Queen | GU | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
 | **Enduring Enchantments** (CMM precon) WBG | Anikthea, Hand of Erebos | WBG | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
 | **Open Hostility** (C16 precon) WBRG | Saskia the Unyielding | WBRG | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Devour for Power** (CMD precon) BGU | The Mimeoplasm | BGU | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
@@ -2546,6 +2547,25 @@ Extortionist**, **Alandra, Sky Dreamer**, **Erdwal Illuminator**
 Gavi / Gonti / Prossh / Nelly (seed 13402, 1,000): all decided, 16.2 %;
 census beside Omo / Olivia / Jirina (seed 13403, 500): no card of the four
 lists unplayed. cube / sos / sealed 7,500 decided. `--bench` byte-identical.
+
+The **hundred-and-fiftieth** is Tales of Middle-earth Commander's **Elven
+Council** (`ElvenCouncil_LTC`) — Simic Elves and council votes under
+Galadriel, Elven-Queen (seat 149 before rebasing over Abzan Armor).
+Twenty-three cards were missing (`cmdr_galadriel.rs`); the primitives:
+`Effect::SecretCouncilPlayerVote` (Círdan — a card per vote received, a
+free permanent for each player nobody voted for) and
+`Effect::SecretCouncilPermanentVote` (Trap the Trespassers — a stun counter
+per vote), in `game/effects/secret_council.rs`;
+`PlayerRef::OpponentsWhoVotedTheSame` and `Value::PlayersIn` (Erestor, Model
+of Unity); `StaticEffect::OtherCreaturesEnterWithCountersEqualToSourceToughness`
+(Arwen); `Predicate::AnOpponentsTopCardSharesCardTypeWith` (Gandalf,
+Westward Voyager); `Selector::RingBearerOf` (Galadriel). Headless voters
+pick a ballot's first option, so each ballot lists the option a bot should
+take first (Elrond's aid before fellowship). Residuals: **Celeborn the
+Wise**, **Elrond of the White Council**, **Gandalf, Westward Voyager**,
+**Mirkwood Trapper**, **Sail into the West**. A 200-game census beside Kamiz
+/ Zimone / Millicent (seed 150) decided 200/200 with zero panics and no card
+unplayed, Galadriel winning 19.0 %. `--bench` byte-identical.
 
 The **hundred-and-forty-third** is Streets of New Capenna Commander's
 **Obscura Operation** (`ObscuraOperation_NCC`) — Esper connive and evasion
