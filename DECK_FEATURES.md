@@ -144,6 +144,7 @@ lists were picked.
 | **Deadly Disguise** (MKC precon) RGW | Kaust, Eyes of the Glade | RGW | 100 | 🟡 all 100 implemented, 4 carry residuals (Boltbender, Tesak, Unexplained Absence, Veiled Ascension) |
 | **Quandrix Unlimited** (SOC precon) GU | Zimone, Infinite Analyst | GU | 100 | 🟡 all 100 implemented, 3 carry residuals (Kinetic Ooze, Primo, Unbound Flourishing) |
 | **Maestros Massacre** (NCC precon) UBR | Anhelo, the Painter | UBR | 100 | 🟡 all 100 implemented, 7 carry residuals (Maestros Confluence, Parnesse, Sinister Concierge, Syrix, Waste Management, Xander's Pact, Zndrsplt's Judgment) |
+| **Creative Energy** (M3C precon) URW | Satya, Aetherflux Genius | URW | 100 | 🟡 all 100 implemented, 6 carry residuals (Cayth, Filigree Racer, Hourglass of the Lost, Overclocked Electromancer, Razorfield Ripper, Sphinx of the Revelation) |
 | **Deep Clue Sea** (MKC precon) GWU | Morska, Undersea Sleuth | GWU | 100 | 🟡 all 100 implemented, 3 carry residuals (Aerial Extortionist, Alandra, Sky Dreamer, Erdwal Illuminator) |
 | **Counter Intelligence** (EOC precon) URW | Inspirit, Flagship Vessel (**Spacecraft**) | URW | 100 | 🟡 all 100 implemented, 6 carry residuals (Cloud Key, Inspirit, Depthshaker Titan, Moxite Refinery, Resourceful Defense, Ripples of Potential) |
 | **Coven Counters** (MIC precon) GW | Leinore, Autumn Sovereign | GW | 100 | 🟡 all 100 implemented, 4 carry residuals (Curse of Conformity, Celestial Judgment, Sigardian Zealot, Moorland Rescuer) |
@@ -1249,6 +1250,29 @@ all decided): Galea 5.3 % — the bot does not build a Voltron threat; beside
 Estrid / Eshki / Nelly (seed 10251): 1,000 / 1,000, 5.3 %; census (seed 10252):
 no card of the four unplayed; strict debug pods (seeds 10253-10255, 4 and 6
 seats): 180 / 180. `--bench` byte-identical.
+The **hundred-and-forty-fourth** is Modern Horizons 3 Commander's **Creative
+Energy** (`CreativeEnergy_M3C`, 2024-06-14) — Jeskai energy and token copies
+under Satya, Aetherflux Genius, `--pod-decks 144` (measured as 142). Eighteen cards were
+missing (`cmdr_satya.rs`). New primitives: `StaticEffect::EnergyGainDoubles`
+(Aether Refinery); `Value::EnergyOf` / `Value::EnergySpentThisTurn` (Razorfield
+Ripper, Blaster Hulk's `self_cost_reduction_per`); `R::PowerExactlyXFromCost`
+(Localized Destruction under `WithX`); `Effect::TokenCopyTappedAttacking`, a
+kept attacking copy chained into a `DelayUntilWithCapture` pay-or-sacrifice
+(Satya). Residuals: **Cayth** doesn't grant fabricate; **Filigree Racer**'s
+jump-start is a flashback without the discard; **Hourglass of the Lost**
+spends all its time counters; **Overclocked Electromancer** gets no
+excess-damage {E}; **Razorfield Ripper** reconfigures for {2} only; **Sphinx of
+the Revelation** pays its {E} on resolution. Pods (1,000 games each, all
+decided): 4 seats beside Urza / Osgir / Eshki (seed 11114) Satya 23.4 %,
+census: no card of the four unplayed; 6 seats beside Prosper / Anhelo /
+Inspirit / Saheeli / Zimone (seed 11115) 1,000 / 1,000 once two bugs were fixed
+— ⚠ `BecomeCopyOf`'s kept abilities re-appended the copier's *current* ones, so
+an Aurora Shifter copying an Aurora Shifter doubled its triggers each combat
+until the pod was OOM-killed (game 548), and the bot fired Aethergeode
+Miner's {E}{E} self-blink forever off two Aetherstorm Rocs (game 418, action
+cap); 8 seats (seed 11115) 999 / 1,000, the one a genuine simultaneous-loss
+draw. `--bench` byte-identical.
+
 The **hundred-and-fortieth** is Streets of New Capenna Commander's
 **Maestros Massacre** (`MaestrosMassacre_NCC`, 2022-04-29) — Grixis
 spell-copying and casualty under Anhelo, the Painter, `--pod-decks 140` (measured as 139).

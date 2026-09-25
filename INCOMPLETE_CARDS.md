@@ -2017,6 +2017,12 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Waste Management | Maestros Massacre (NCC) | kicked, it exiles the hostile opponent's graveyard rather than a targeted player's; unkicked, the two cards may come from different graveyards. |
 | 🟡 Xander's Pact | Maestros Massacre (NCC) | a land exiled this way may be played too. |
 | 🟡 Zndrsplt's Judgment | Maestros Massacre (NCC) | you are the only friend and every opponent a foe. |
+| 🟡 Cayth, Famed Mechanist | Creative Energy (M3C) | other nontoken creatures you control don't gain fabricate 1. |
+| 🟡 Filigree Racer | Creative Energy (M3C) | the granted jump-start is a flashback for the card's mana cost, without the discard. |
+| 🟡 Hourglass of the Lost | Creative Energy (M3C) | it removes all its time counters (X is that number), not a chosen X. |
+| 🟡 Overclocked Electromancer | Creative Energy (M3C) | the excess-damage {E} isn't gained. |
+| 🟡 Razorfield Ripper | Creative Energy (M3C) | reconfigure costs only {2}, not the {E}{E}{E} option. |
+| 🟡 Sphinx of the Revelation | Creative Energy (M3C) | the X {E} is paid as the ability resolves, not as a cost. |
 | 🟡 Akim, the Soaring Wind | Timeless Wisdom (C20) | "the first time each turn" is counted from Akim's arrival: tokens made earlier that turn don't use it up. |
 | 🟡 Crystalline Resonance | Timeless Wisdom (C20) | the copy lasts until it copies again, not until your next turn. |
 | 🟡 Ethereal Forager | Timeless Wisdom (C20) | the returned card is the first linked instant or sorcery, not a chosen one. |
