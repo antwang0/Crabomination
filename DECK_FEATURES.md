@@ -162,6 +162,7 @@ lists were picked.
 | **Counter Blitz** (FIC precon) GWU | Tidus, Yuna's Guardian | GWU | 100 | 🟡 all 100 implemented, 3 carry residuals (Endless Detour, Lulu, Stern Guardian, Rikku, Resourceful Guardian) |
 | **The Fantastic Four** (MSC precon) WURG | Invisible Woman | WURG | 100 | 🟡 all 100 implemented, 2 carry residuals (Mister Fantastic; Tragic Arrogance's engine-chosen keeps) |
 | **Scrappy Survivors** (PIP precon) RGW | Dogmeat, Ever Loyal | RGW | 100 | 🟡 all 100 implemented, 5 carry residuals (Agility Bobblehead, Brotherhood Outcast, Inventory Management, Perception Bobblehead, Vault 101) |
+| **Avengers Assemble** (MSC precon) URW | Captain America, Team Leader | URW | 100 | 🟡 all 100 implemented, 6 carry residuals (Captain Marvel, Heroic Return, Heroic Sacrifice, Scarlet Witch, Speed, Winter Soldier) |
 | **Dance of the Elements** (ECC precon) WUBRG | Ashling, the Limitless | WUBRG | 100 | 🟡 all 100 implemented, 5 carry residuals (Flamebraider, Smokebraider, Primal Beyond, Haunting Voyage, Horde of Notions) |
 | **Veloci-Ramp-Tor** (LCC precon) RGW | Pantlaza, Sun-Favored | RGW | 100 | 🟡 all 100 implemented, 2 carry residuals (Sunfrill Imitator, Wrathful Raptors) |
 | **Multiverse Reforged** (FRC precon) WUBR | Jace, Multiverse Architect (**planeswalker**) | WUBR | 100 | 🟡 all 100 implemented, 2 carry residuals (Dack Fayden, Helping Hand; Tamiyo, Upriser Crowned) |
@@ -2624,6 +2625,29 @@ Vehicle, an activated manland or a stationed Spacecraft stayed home: Kotori
 **Dance of the Manse** (INCOMPLETE_CARDS). Four-seat pods beside Hakbal /
 Inspirit / Morska (seed 15101, 1,000) and six seats (15102, 1,000): all
 decided; census (15103, 500): nothing unplayed. `--bench` byte-identical.
+
+The **hundred-and-seventy-fourth** is Marvel Super Heroes Commander's
+**Avengers Assemble** (`AvengersAssemble_MSC`, 2026-06-26) — Jeskai Heroes
+under Captain America, Team Leader, `--pod-decks 174`. Thirty-eight cards were
+missing (`cmdr_captain_america.rs`). The primitives: two flag bits on the
+`CardInstance` handle — **the first time a creature became tapped this turn**
+(`Predicate::TriggerSourceFirstTappedThisTurn`, Captain America, Living
+Legend; stamped as `PermanentTapped` dispatches, where the tap has already
+unshared the card, so it costs no CoW copy), `Predicate::AnOpponentCastASpellThisTurn`
+(Captain Mar-Vell's flash through `WhileCondition`), `Predicate::APlayerAttackedYouLastTurn`
+(Avenge), `StaticEffect::AddDamageToOpponents.other` (Thor's "another source"),
+`Effect::AddManaKeptThisTurnAnyOneColor` (Photon),
+`Selector::CreaturesBlockingTriggerSource` (She-Hulk) and the Kree and Gamma
+creature types. **Jocasta** returns from the graveyard when you attack with
+your commander (CR 903.3 — `R::IsCommander`, asserted). Ant-Man carries
+skulk, whose reminder text is his printed ability (allowlisted like Locke).
+Residuals: **Captain Marvel**, **Heroic Return**, **Heroic Sacrifice**,
+**Scarlet Witch**, **Speed**, **Winter Soldier** (INCOMPLETE_CARDS). Four
+seats beside Invisible Woman / Tidus / Auntie (seed 17201, 1,000,
+`--card-census`: nothing unplayed): all decided, Captain America 27.7 %; six
+seats beside Y'shtola / Frodo + Sam / Jace / Terra / Mirko (17202, 1,000): all
+decided, 10.6 %; strict debug pods (17201 × 30, 17202 × 36) decided. `--bench`
+byte-identical.
 
 The **hundred-and-seventy-first** is Marvel Super Heroes Commander's **The
 Fantastic Four** (`TheFantasticFour_MSC`, 2026-06-26) — four-color noncreature

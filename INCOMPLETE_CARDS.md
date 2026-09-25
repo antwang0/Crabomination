@@ -2310,5 +2310,11 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Vault 101: Birthday Party | Scrappy Survivors (PIP) | chapters II and III pick the Aura or Equipment card and its host rather than letting you choose. |
 | 🟡 Endless Detour | Counter Blitz (FIC) | the kind of target (spell, nonland permanent, graveyard card) is chosen as a mode. |
 | 🟡 Lulu, Stern Guardian | Counter Blitz (FIC) | the stunned attacker is chosen as the trigger resolves, not as it's put on the stack. |
+| 🟡 Captain Marvel, Apex Avenger | Avengers Assemble (MSC) | only +1/+1 counters put on another creature are copied onto her. |
+| 🟡 Heroic Return | Avengers Assemble (MSC) | a returned Hero's two +1/+1 counters are put on as it lands, not as it enters. |
+| 🟡 Heroic Sacrifice | Avengers Assemble (MSC) | damage to your noncreature permanents is redirected too. |
+| 🟡 Scarlet Witch, Chaotic Avenger | Avengers Assemble (MSC) | the two cards are exiled face up. |
+| 🟡 Speed, Young Avenger | Avengers Assemble (MSC) | "can't be blocked except by creatures with haste" is unblockable. |
+| 🟡 Winter Soldier, Reborn Avenger | Avengers Assemble (MSC) | a returned Hero's +1/+1 counter is put on as it lands, not as it enters. |
 | 🟡 Mister Fantastic | The Fantastic Four (MSC) | the copies keep the original's targets, and an activated ability of yours is a legal target too. |
 | 🟡 Rikku, Resourceful Guardian | Counter Blitz (FIC) | "can't be blocked by creatures your opponents control" is unblockable (the same in free-for-all). |
