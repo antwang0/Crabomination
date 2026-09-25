@@ -6,8 +6,8 @@
 //! - **Boltbender** — turning it up re-aims one target spell, not any number
 //!   of spells and abilities.
 //! - **Tesak, Judith's Hellhound** — other Dogs don't gain unleash.
-//! - **Unexplained Absence** — it takes up to one target per opponent's
-//!   permanent without the one-per-player limit, and never your own.
+//! - **Unexplained Absence** — it never takes one of your own permanents
+//!   (the printed "for each player" includes you).
 //! - **Veiled Ascension** — face-down creatures get their flying counter
 //!   from a trigger after they enter, not as they enter.
 
@@ -425,25 +425,28 @@ pub fn true_identity() -> CardDefinition {
 /// Unexplained Absence — exile nonland permanents; each one's controller
 /// cloaks the top card of their library.
 ///
-/// Residual: up to one target per opponent's permanent without the
-/// one-per-player limit, and never your own.
+/// Residual: it never takes one of your own permanents.
 pub fn unexplained_absence() -> CardDefinition {
     CardDefinition {
         name: "Unexplained Absence",
         cost: cost(&[generic(3), w()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::ApplyToTargets {
-            max_targets: 8,
-            min_targets: 0,
-            filter: R::Permanent.and(R::Not(Box::new(R::Land))).and(R::ControlledByOpponent),
-            effect: Box::new(Effect::Seq(vec![
-                Effect::Cloak {
-                    who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
-                    amount: Value::ONE,
-                    from_hand: false,
-                },
-                Effect::Exile { what: Selector::Target(0) },
-            ])),
+        // One target per opponent (`ForEachOpponentTarget` caps and spreads
+        // the slots).
+        effect: Effect::ForEachOpponentTarget {
+            body: Box::new(Effect::ApplyToTargets {
+                max_targets: 8,
+                min_targets: 0,
+                filter: R::Permanent.and(R::Not(Box::new(R::Land))).and(R::ControlledByOpponent),
+                effect: Box::new(Effect::Seq(vec![
+                    Effect::Cloak {
+                        who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+                        amount: Value::ONE,
+                        from_hand: false,
+                    },
+                    Effect::Exile { what: Selector::Target(0) },
+                ])),
+            }),
         },
         ..Default::default()
     }
