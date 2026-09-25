@@ -266,7 +266,7 @@ pub fn boneyard_parley() -> CardDefinition {
             },
             Effect::SeparateIntoPiles {
                 what: Selector::LastMoved,
-                splitter: PlayerRef::EachOpponent,
+                splitter: PlayerRef::OpponentOf(Box::new(PlayerRef::You)),
                 chooser: PlayerRef::You,
                 chosen: Box::new(Effect::Move {
                     what: Selector::SeparatedPile { chosen: true },
