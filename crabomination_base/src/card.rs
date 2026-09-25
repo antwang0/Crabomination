@@ -927,6 +927,8 @@ pub enum CounterType {
     Eyeball,
     /// Brick counter — Oracle's Vault's tally toward its free play.
     Brick,
+    /// Cell counter — Sephiroth, Fallen Hero's Jenova Cells.
+    Cell,
 }
 
 /// Every zone a card can occupy.

@@ -27599,6 +27599,7 @@ impl GameState {
             ctx.cast_via_madness = card.cast_via_madness;
             ctx.cast_via_waterbend = card.cast_via_waterbend;
             ctx.cast_from_graveyard = card.cast_from_graveyard;
+            ctx.spell_cast_from_exile = card.cast_from_exile;
             ctx.cast_collected_evidence = card.cast_collected_evidence;
             ctx.entwined = card.entwined;
             ctx.spree_modes = card.spree_modes.clone();

@@ -2389,6 +2389,7 @@ impl GameState {
                     bargained: false,
                     cast_via_mayhem: false,
                     cast_via_madness: false,
+                    spell_cast_from_exile: false,
                     cast_via_waterbend: false,
                     cast_collected_evidence: false,
                     entwined: false,

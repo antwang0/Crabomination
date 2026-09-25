@@ -2388,6 +2388,9 @@ pub enum Predicate {
     /// `EffectContext.cast_via_madness`, stamped from
     /// `CardInstance.cast_via_madness`.
     SpellWasMadness,
+    /// "If this spell was cast from exile" (Lifestream's Blessing, the
+    /// Ultimate Magic cycle) — the resolving spell's own cast zone.
+    SpellWasCastFromExile,
     /// CR 701.67 — true iff this spell's optional "you may waterbend {N}"
     /// additional cost was paid. Reads `EffectContext.cast_via_waterbend`,
     /// stamped from `CardInstance.cast_via_waterbend`. Gates "if its additional

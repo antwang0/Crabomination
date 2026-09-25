@@ -353,6 +353,9 @@ pub struct EffectContext {
     /// Stamped from `CardInstance.cast_via_madness`; read by
     /// `Predicate::SpellWasMadness`.
     pub cast_via_madness: bool,
+    /// The resolving spell was cast from exile (foretold, or through a
+    /// may-play grant) — `Predicate::SpellWasCastFromExile`.
+    pub spell_cast_from_exile: bool,
     /// True if the resolving spell's optional waterbend cost was paid (CR
     /// 701.67). Stamped from `CardInstance.cast_via_waterbend`; read by
     /// `Predicate::SpellWasWaterbend`. Defaults to `false`.
@@ -392,6 +395,7 @@ impl EffectContext {
             bargained: false,
             cast_via_mayhem: false,
             cast_via_madness: false,
+            spell_cast_from_exile: false,
             cast_via_waterbend: false,
             cast_collected_evidence: false,
             entwined: false,
@@ -479,6 +483,7 @@ impl EffectContext {
             bargained: false,
             cast_via_mayhem: false,
             cast_via_madness: false,
+            spell_cast_from_exile: false,
             cast_via_waterbend: false,
             cast_collected_evidence: false,
             entwined: false,
@@ -511,6 +516,7 @@ impl EffectContext {
             bargained: false,
             cast_via_mayhem: false,
             cast_via_madness: false,
+            spell_cast_from_exile: false,
             cast_via_waterbend: false,
             cast_collected_evidence: false,
             entwined: false,
@@ -542,6 +548,7 @@ impl EffectContext {
             bargained: false,
             cast_via_mayhem: false,
             cast_via_madness: false,
+            spell_cast_from_exile: false,
             cast_via_waterbend: false,
             cast_collected_evidence: false,
             entwined: false,
@@ -642,6 +649,7 @@ impl EffectContext {
             bargained: false,
             cast_via_mayhem: false,
             cast_via_madness: false,
+            spell_cast_from_exile: false,
             cast_via_waterbend: false,
             cast_collected_evidence: false,
             entwined: false,
