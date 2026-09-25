@@ -1975,6 +1975,9 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Plargg and Nassari | Prismari Artistry (SOC) | the vetoing opponent is the hostile opponent, not one you choose. |
 | 🟡 Cataclysmic Prospecting | Desert Bloom (OTC) | mana spent from Deserts isn't tracked; the Treasures count the tapped Deserts you control as it resolves. |
 | 🟡 Dune Chanter | Desert Bloom (OTC) | land cards off the battlefield aren't Deserts (lands you control are). |
+| 🟡 Ao, the Dawn Sky | Lorehold Spirit (SOC) | the unpicked cards stay on top of the library, not the bottom in a random order. |
+| 🟡 Quintorius, Loremaster | Lorehold Spirit (SOC) | the exiled card is cast as the ability resolves (not any time this turn) and isn't put on the bottom of the library afterward. |
+| 🟡 Serra Paragon | Lorehold Spirit (SOC) | lands played from the graveyard don't share the once-a-turn limit, and the "exile it and gain 2 life" rider isn't granted. |
 | 🟡 Fear of Sleep Paralysis | Miracle Worker (DSC) | only the untap step's stun removal is stopped; an effect that removes or moves counters still takes an opponent's stun counter. |
 | 🟡 Mirrormade | Miracle Worker (DSC) | the copy isn't optional. |
 | 🟡 One with the Multiverse | Miracle Worker (DSC) | the once-a-turn free cast works from hand only, not from the top of the library. |

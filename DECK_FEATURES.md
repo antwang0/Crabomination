@@ -134,6 +134,7 @@ lists were picked.
 | **Tricky Terrain** (M3C precon) GU | Omo, Queen of Vesuva | GU | 100 | 🟡 all 100 implemented, 7 carry residuals (Omo, Horizon of Progress, Desert Warfare, Sunken Palace, Magus of the Candelabra, Rampant Frogantua, March from Velis Vel) |
 | **Prismari Artistry** (SOC precon) UR | Rootha, Mastering the Moment | UR | 100 | 🟡 all 100 implemented, 2 carry residuals (Abstract Performance, Plargg and Nassari) |
 | **Desert Bloom** (OTC precon) RGW | Yuma, Proud Protector | RGW | 100 | 🟡 all 100 implemented, 2 carry residuals (Cataclysmic Prospecting, Dune Chanter) |
+| **Lorehold Spirit** (SOC precon) RW | Quintorius, History Chaser (**planeswalker**) | RW | 100 | 🟡 all 100 implemented, 3 carry residuals (Ao, the Dawn Sky, Quintorius, Loremaster, Serra Paragon) |
 | **Coven Counters** (MIC precon) GW | Leinore, Autumn Sovereign | GW | 100 | 🟡 all 100 implemented, 4 carry residuals (Curse of Conformity, Celestial Judgment, Sigardian Zealot, Moorland Rescuer) |
 | **Arcane Maelstrom** (C20 precon) GUR | Kalamax, the Stormsire | GUR | 100 | 🟡 all 100 implemented, 4 carry residuals (Eon Frolicker, Haldan, Pako, Lavabrink Floodgates) |
 | **Enhanced Evolution** (C20 precon) BGU | Otrimi, the Ever-Playful | BGU | 100 | 🟡 all 100 implemented, 4 carry residuals (Capricopian, Manascape Refractor, Mindleecher, Vastwood Hydra) |
@@ -1231,6 +1232,25 @@ all decided): Galea 5.3 % — the bot does not build a Voltron threat; beside
 Estrid / Eshki / Nelly (seed 10251): 1,000 / 1,000, 5.3 %; census (seed 10252):
 no card of the four unplayed; strict debug pods (seeds 10253-10255, 4 and 6
 seats): 180 / 180. `--bench` byte-identical.
+The **hundred-and-twenty-seventh** is Secrets of Strixhaven Commander's
+**Lorehold Spirit** (`LoreholdSpirit_SOC`, 2026-04-24) — Boros Spirits and
+graveyard departures under the planeswalker commander Quintorius, History
+Chaser, `--pod-decks 127`. Twenty-one cards were missing
+(`cmdr_quintorius.rs`); they compose from existing parts
+(`CardLeftGraveyard` batched, Class levels, `NonHandCastCostReduction`,
+`Vote`/`PerVote`, `MoveWithinTotalManaValue`, `PumpPTByValue` over
+`CommanderCastsFromCommandZone`) plus `PlaneswalkerSubtype::Quintorius`. It
+found one engine gap: ⚠ **`ExileFromGraveyard` / `ExileBottomOfGraveyard`
+never recorded what they exiled this resolution**, so an "exiled this way"
+count after them read 0 (Augusta, Order Returned). Residuals: **Ao, the Dawn
+Sky** leaves the unpicked cards on top; **Quintorius, Loremaster** casts the
+exiled card as the ability resolves and doesn't bottom it; **Serra Paragon**'s
+lands don't share its once-a-turn limit and its rider isn't granted. Four-seat pods beside Sigarda / Teval / Disa (seed 11104,
+1,000 games, all decided): Quintorius 35.7 %; census: no card of the four
+unplayed; 6 and 8 seats (seed 11105) 1,000 / 1,000 each once a self-copying
+token stops at `BOARD_GATE` (they were 997 / 998, every cap a Scute Swarm).
+`--bench` byte-identical.
+
 The **hundred-and-twenty-third** is Outlaws of Thunder Junction
 Commander's **Desert Bloom** (`DesertBloom_OTC`, 2024-04-19) — Naya Deserts
 and lands-matter under Yuma, Proud Protector, `--pod-decks 123` (committed as 122). Nineteen
