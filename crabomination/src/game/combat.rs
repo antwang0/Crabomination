@@ -271,7 +271,18 @@ pub(crate) fn attack_static_scan(state: &GameState) -> u32 {
     let mut m = 0u32;
     for card in state.battlefield.iter() {
         for sa in &card.definition.static_abilities {
-            m |= match sa.effect {
+            // Classify the innermost effect of a gated static (Queen Mother
+            // Ramonda's "as long as you're the monarch"); the gate itself is
+            // read by the consumer through `active_static`.
+            let mut eff = &sa.effect;
+            while let SE::WhileClassLevelAtLeast { inner, .. }
+            | SE::WhileYourTurn { inner }
+            | SE::WhileNotYourTurn { inner }
+            | SE::WhileCondition { inner, .. } = eff
+            {
+                eff = inner;
+            }
+            m |= match *eff {
                 SE::AttackerCapAgainstController { .. }
                 | SE::AttackerCapAgainstControllerWhileTapped { .. } => attack_static::ATTACKER_CAP,
                 SE::AttackPowerCapByControllerHand => attack_static::POWER_CAP,
@@ -1727,8 +1738,9 @@ impl GameState {
                 .battlefield
                 .iter()
                 .filter(|c| c.controller == d)
-                .flat_map(|c| c.definition.static_abilities.iter().map(move |sa| (c.id, sa)))
-                .any(|(src, sa)| match &sa.effect {
+                .flat_map(|c| c.definition.static_abilities.iter().map(move |sa| (c, sa)))
+                .filter_map(|(c, sa)| self.active_static(&sa.effect, c).map(|e| (c.id, e)))
+                .any(|(src, e)| match e {
                     crate::effect::StaticEffect::CreaturesCantAttackController {
                         protect_planeswalkers,
                         filter,
@@ -4960,7 +4972,7 @@ impl GameState {
                         _ => {}
                     }
                 }
-                (sekki, grows, kind)
+                (sekki, grows, kind.or_else(|| self.attached_replaces_damage_with_counters(recipient)))
             }
             None => return dealt,
         };
@@ -5103,9 +5115,21 @@ impl GameState {
         &self,
         id: CardId,
     ) -> Option<crate::card::CounterType> {
-        self.battlefield_find(id).and_then(|c| {
-            c.definition.static_abilities.iter().find_map(|s| match s.effect {
-                crate::effect::StaticEffect::ReplaceDamageToSelfWithCounters { kind } => Some(kind),
+        self.battlefield_find(id)
+            .and_then(|c| {
+                c.definition.static_abilities.iter().find_map(|s| match s.effect {
+                    crate::effect::StaticEffect::ReplaceDamageToSelfWithCounters { kind } => Some(kind),
+                    _ => None,
+                })
+            })
+            .or_else(|| self.attached_replaces_damage_with_counters(id))
+    }
+
+    /// Panther Habit — an attachment turning damage to `id` into counters.
+    fn attached_replaces_damage_with_counters(&self, id: CardId) -> Option<crate::card::CounterType> {
+        self.battlefield.iter().filter(|a| a.attached_to == Some(id)).find_map(|a| {
+            a.definition.static_abilities.iter().find_map(|s| match s.effect {
+                crate::effect::StaticEffect::ReplaceDamageToAttachedWithCounters { kind } => Some(kind),
                 _ => None,
             })
         })

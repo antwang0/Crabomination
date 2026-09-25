@@ -772,6 +772,7 @@ impl Effect {
             | Effect::DoublePlayerCounters { .. }
             | Effect::SpreadCounterKindToOthers { .. }
             | Effect::ReverseTurnOrder
+            | Effect::RevealDeployOneTakeOne { .. }
             | Effect::ChooseModeAtRandom(_)
             | Effect::EachOpponentReturnsFromYourGraveyard { .. }
             | Effect::GrantCastSpellRiders { .. }

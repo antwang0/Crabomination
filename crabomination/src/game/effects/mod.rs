@@ -36,6 +36,7 @@ mod player_counters;
 mod counter_kinds;
 mod counter_blitz;
 mod revival;
+mod wakanda;
 mod chosen_color_damage;
 mod fight_each;
 pub(crate) use eval::PrintedGates;
@@ -23490,6 +23491,10 @@ impl GameState {
                 Ok(())
             }
             Effect::CastExiledFreeOwnersLoseLife { what } => self.cast_exiled_free_owners_lose_life(what, ctx, events),
+            Effect::RevealDeployOneTakeOne { count, indestructible } => {
+                self.reveal_deploy_one_take_one(count, *indestructible, ctx, events);
+                Ok(())
+            }
             Effect::ReverseTurnOrder => {
                 self.turn_order_reversed = !self.turn_order_reversed;
                 Ok(())

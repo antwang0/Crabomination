@@ -5137,6 +5137,12 @@ pub enum Effect {
     /// "Reverse the game's turn order" (Aeon Engine). A second reversal
     /// restores the original order.
     ReverseTurnOrder,
+    /// "Reveal the top [count] cards of your library. You may put a permanent
+    /// card from among them onto the battlefield [with an indestructible
+    /// counter]. You may put a permanent card from among them into your hand.
+    /// Put the rest into your graveyard" (Wakanda Forever!). The picks are the
+    /// engine's: the two highest-mana-value permanent cards.
+    RevealDeployOneTakeOne { count: Value, indestructible: bool },
     /// "Choose one at random —" (Umaro, Raging Yeti). Not a die roll. The
     /// mode is picked as it resolves, and a targeted mode takes the
     /// auto-picker's target then.

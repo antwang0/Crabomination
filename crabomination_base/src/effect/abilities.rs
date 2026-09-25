@@ -2702,6 +2702,11 @@ pub enum StaticEffect {
         #[serde(default = "plus_one_plus_one")]
         kind: CounterType,
     },
+    /// "If equipped creature would be dealt damage, prevent that damage and put
+    /// that many `kind` counters on it" (Panther Habit): the
+    /// `ReplaceDamageToSelfWithCounters` of the permanent this is attached to,
+    /// read at the same two damage sites.
+    ReplaceDamageToAttachedWithCounters { kind: CounterType },
     /// CR 614 — "If damage would be dealt to you, put that many `kind`
     /// counters on this permanent instead" (Delaying Shield).
     ReplaceDamageToYouWithCountersOnSource { kind: CounterType },
