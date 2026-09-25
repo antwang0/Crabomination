@@ -151,6 +151,7 @@ lists were picked.
 | **Deep Clue Sea** (MKC precon) GWU | Morska, Undersea Sleuth | GWU | 100 | 🟡 all 100 implemented, 3 carry residuals (Aerial Extortionist, Alandra, Sky Dreamer, Erdwal Illuminator) |
 | **Counter Intelligence** (EOC precon) URW | Inspirit, Flagship Vessel (**Spacecraft**) | URW | 100 | 🟡 all 100 implemented, 6 carry residuals (Cloud Key, Inspirit, Depthshaker Titan, Moxite Refinery, Resourceful Defense, Ripples of Potential) |
 | **Explorers of the Deep** (LCC precon) GU | Hakbal of the Surging Soul | GU | 100 | 🟡 all 100 implemented, 2 carry residuals (Xolatoyac, the Smiling Flood, Bygone Marvels) |
+| **Buckle Up** (NEC precon) WU | Kotori, Pilot Prodigy | WU | 100 | 🟡 all 100 implemented, 3 carry residuals (Armed and Armored, Katsumasa, the Animator, Dance of the Manse) |
 | **Dance of the Elements** (ECC precon) WUBRG | Ashling, the Limitless | WUBRG | 100 | 🟡 all 100 implemented, 5 carry residuals (Flamebraider, Smokebraider, Primal Beyond, Haunting Voyage, Horde of Notions) |
 | **Mystic Intellect** (C19 precon) URW | Sevinne, the Chronoclasm | URW | 100 | 🟡 all 100 implemented (Dockside Extortionist, banned, swapped for Ragavan), 3 carry residuals (Wall of Stolen Identity, Mandate of Peace, Elsha of the Infinite) |
 | **Coven Counters** (MIC precon) GW | Leinore, Autumn Sovereign | GW | 100 | 🟡 all 100 implemented, 4 carry residuals (Curse of Conformity, Celestial Judgment, Sigardian Zealot, Moorland Rescuer) |
@@ -2495,6 +2496,22 @@ list); **Haunting Voyage** unforetold returns the two greatest-power cards;
 **Horde of Notions** can't play an Elemental land. Strict debug pods (4 seats
 beside Satya / Prosper / Morophon, seeds 10450-10451; 6 seats, 10452):
 180 / 180 decided.
+
+The **hundred-and-fifty-first** is Kamigawa: Neon Dynasty Commander's
+**Buckle Up** (`BuckleUp_NEC`, 2022-02-18) — Azorius Vehicles under Kotori,
+Pilot Prodigy, `--pod-decks 151` (committed as 148, 149 and 150 as three other
+lists landed first). Twenty-three cards were missing (`cmdr_kotori.rs`). The
+primitives: `GameState::effective_crew_cost` (CR 702.122 — a granted crew
+counts: Kotori's crew 2, Swift Reconfiguration), `EntersAsCopy::
+as_vehicle_crew` (CR 707.9b, Imposter Mech), and crew events now have an
+actor (a `YourControl` "becomes crewed" trigger never fired — Mobilizer Mech).
+Its pods found ⚠ **no bot ever attacked with an animated permanent** — the
+attacker walk (and `legal_attackers`) read the printed type line, so a crewed
+Vehicle, an activated manland or a stationed Spacecraft stayed home: Kotori
+5.0 → 25.0 % (seed 15101). Residuals: **Armed and Armored**, **Katsumasa**,
+**Dance of the Manse** (INCOMPLETE_CARDS). Four-seat pods beside Hakbal /
+Inspirit / Morska (seed 15101, 1,000) and six seats (15102, 1,000): all
+decided; census (15103, 500): nothing unplayed. `--bench` byte-identical.
 
 The **hundred-and-forty-fifth** is Lost Caverns of Ixalan Commander's
 **Explorers of the Deep** (`ExplorersOfTheDeep_LCC`, 2023-11-17) — Simic
