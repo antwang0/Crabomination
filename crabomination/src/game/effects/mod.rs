@@ -20694,6 +20694,9 @@ impl GameState {
                             .iter()
                             .find_map(|pl| pl.graveyard.iter().find(|c| c.id == src_id))
                     })
+                    // A card still in a library (Haunting Imitation copies
+                    // each player's revealed top card).
+                    .or_else(|| self.find_card_anywhere(src_id))
                     .map(|c| c.definition.boxed_clone());
                 // Edited through the `Box` and moved into the `Arc` heap to
                 // heap below: the by-value form kept an 8 KB slot in this
