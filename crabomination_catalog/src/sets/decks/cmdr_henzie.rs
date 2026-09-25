@@ -526,31 +526,3 @@ pub fn weathered_sentinels() -> CardDefinition {
         ..creature("Weathered Sentinels", cost(&[generic(3)]), vec![CreatureType::Wall], 2, 5)
     }
 }
-
-/// World Shaper — {3}{G} 3/3 Merfolk Shaman. Attacking, you may mill three;
-/// dying, every land card in your graveyard returns tapped.
-pub fn world_shaper() -> CardDefinition {
-    CardDefinition {
-        triggered_abilities: vec![
-            on_attack(Effect::MayDo {
-                description: "Mill three cards?".into(),
-                body: Box::new(Effect::Mill { who: Selector::You, amount: Value::Const(3) }),
-            }),
-            on_dies(Effect::Move {
-                what: Selector::CardsInZone {
-                    who: PlayerRef::You,
-                    zone: crate::card::Zone::Graveyard,
-                    filter: R::Land,
-                },
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
-            }),
-        ],
-        ..creature(
-            "World Shaper",
-            cost(&[generic(3), g()]),
-            vec![CreatureType::Merfolk, CreatureType::Shaman],
-            3,
-            3,
-        )
-    }
-}

@@ -3036,7 +3036,6 @@ static DECKS: &[Factory] = &[
     super::decks::turf_war,
     super::decks::wave_of_rats,
     super::decks::weathered_sentinels,
-    super::decks::world_shaper,
     super::decks::replicating_ring,
     super::decks::spectral_deluge,
     super::decks::stoic_farmer,
