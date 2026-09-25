@@ -1351,6 +1351,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::AUNTIE_COMMANDERS,
             main: decks::AUNTIE_MAIN,
         },
+        // Hundred-and-sixty-fifth: Counter Blitz (FIC, Final Fantasy X) —
+        // Bant +1/+1 counters and proliferate under Tidus, Yuna's Guardian
+        // (CR 122.6 "you put" counters, Saga creatures). `--pod-decks 165`.
+        PodDeck {
+            name: "Tidus, Yuna's Guardian (GWU)",
+            commanders: decks::TIDUS_COMMANDERS,
+            main: decks::TIDUS_MAIN,
+        },
     ]
 }
 

@@ -4992,3 +4992,33 @@ pub const AUNTIE_MAIN: &[CardFactory] = &[
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, mountain, mountain, mountain,
     mountain, forest, forest, forest, forest, forest, forest,
 ];
+
+pub const TIDUS_COMMANDERS: &[CardFactory] = &[tidus_yunas_guardian];
+
+/// **Counter Blitz**, the Final Fantasy X Commander deck (FIC, 2025-06-13),
+/// exactly as MTGJSON's `CounterBlitzFinalFantasyX_FIC` prints it: 90 nonbasic
+/// cards + 3 Islands + 3 Forests + 3 Plains = 99. Bant +1/+1 counters and
+/// proliferate under Tidus, Yuna's Guardian.
+pub const TIDUS_MAIN: &[CardFactory] = &[
+    yuna_grand_summoner, auron_venerated_guardian, chocobo_knights, gatta_and_luzzu,
+    lord_jyscal_guado, protection_magic, summon_ixion, summon_yojimbo, summoners_sending,
+    blitzball_stadium, lulu_stern_guardian, oaka_traveling_merchant, rikku_resourceful_guardian,
+    summon_valefor, maester_seymour, sphere_grid, summon_magus_sisters, tromell_seymours_butler,
+    yunas_decision, yunas_whistle, kimahri_valiant_guardian, shelinda_yevon_acolyte,
+    sin_unending_cataclysm, wakka_devoted_guardian, collective_effort, damning_verdict, farewell,
+    luminous_broodmoth, promise_of_loyalty, resourceful_defense, scholar_of_new_horizons,
+    sunscorch_regent, together_forever, chasm_skulker, inexorable_tide, pull_from_tomorrow,
+    bane_of_progress, fight_rigging, forgotten_ancient, generous_patron, gyre_sage, hardened_scales,
+    incubation_druid, path_of_discovery, rampant_rejuvenator, tireless_tracker, altered_ego,
+    endless_detour, fathom_mage, walking_ballista, brushland, canopy_vista, exotic_orchard,
+    flooded_grove, fortified_village, glacial_fortress, hinterland_harbor, overflowing_basin,
+    port_town, prairie_stream, skycloud_expanse, sungrass_prairie, sunpetal_grove,
+    temple_of_enlightenment, temple_of_mystery, temple_of_plenty, vineglimmer_snarl, destroy_evil,
+    grateful_apparition, path_to_exile, an_offer_you_cant_refuse, duskshell_crawler, farseek,
+    inspiring_call, three_visits, bred_for_the_hunt, arcane_signet, everflowing_chalice, sol_ring,
+    ash_barrens, evolving_wilds, forge_of_heroes, idyllic_beachfront, nesting_grounds,
+    path_of_ancestry, radiant_grove, seaside_citadel, tangled_islet, temple_of_the_false_god,
+    command_tower,
+    // Basics: 3 island, 3 forest, 3 plains
+    island, island, island, forest, forest, forest, plains, plains, plains,
+];
