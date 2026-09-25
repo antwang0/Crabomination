@@ -143,6 +143,7 @@ lists were picked.
 | **Quandrix Unlimited** (SOC precon) GU | Zimone, Infinite Analyst | GU | 100 | 🟡 all 100 implemented, 3 carry residuals (Kinetic Ooze, Primo, Unbound Flourishing) |
 | **Maestros Massacre** (NCC precon) UBR | Anhelo, the Painter | UBR | 100 | 🟡 all 100 implemented, 7 carry residuals (Maestros Confluence, Parnesse, Sinister Concierge, Syrix, Waste Management, Xander's Pact, Zndrsplt's Judgment) |
 | **Deep Clue Sea** (MKC precon) GWU | Morska, Undersea Sleuth | GWU | 100 | 🟡 all 100 implemented, 3 carry residuals (Aerial Extortionist, Alandra, Sky Dreamer, Erdwal Illuminator) |
+| **Counter Intelligence** (EOC precon) URW | Inspirit, Flagship Vessel (**Spacecraft**) | URW | 100 | 🟡 all 100 implemented, 6 carry residuals (Cloud Key, Inspirit, Depthshaker Titan, Moxite Refinery, Resourceful Defense, Ripples of Potential) |
 | **Coven Counters** (MIC precon) GW | Leinore, Autumn Sovereign | GW | 100 | 🟡 all 100 implemented, 4 carry residuals (Curse of Conformity, Celestial Judgment, Sigardian Zealot, Moorland Rescuer) |
 | **Arcane Maelstrom** (C20 precon) GUR | Kalamax, the Stormsire | GUR | 100 | 🟡 all 100 implemented, 4 carry residuals (Eon Frolicker, Haldan, Pako, Lavabrink Floodgates) |
 | **Enhanced Evolution** (C20 precon) BGU | Otrimi, the Ever-Playful | BGU | 100 | 🟡 all 100 implemented, 4 carry residuals (Capricopian, Manascape Refractor, Mindleecher, Vastwood Hydra) |
@@ -2341,6 +2342,24 @@ Loyalty**, **Tamiyo** (INCOMPLETE_CARDS). A 200-game census beside
 Hearthhull / Bright-Palm / Brimaz (seed 9551) decided 200/200 with zero
 panics and no card of the four lists unplayed, Ms. Bumbleflower winning
 38.0 %. `--bench` byte-identical.
+
+The **hundred-and-thirty-ninth** is Edge of Eternities Commander's **Counter
+Intelligence** (`CounterIntelligence_EOC`, 2025-08-01) — Jeskai artifacts and
+counters under the Spacecraft commander Inspirit, Flagship Vessel (CR 903.3's
+Spacecraft clause), `--pod-decks 139`. Twenty cards were missing
+(`cmdr_inspirit.rs`). The primitives: `Effect::SpellGainsSunburst` (CR 702.44,
+Lux Artillery / Solar Array), `Effect::PutCountersOf` (leaver counters through
+LKI, Resourceful Defense), any-kind `remove_counter_among_x` (Moxite
+Refinery). It found three engine holes: ⚠ **a card-type-filtered set read
+printed types** (CR 613.8 — an anthem missed an animated land; "artifact
+creatures you control have …" missed an animated artifact; now a `SecondPass`
+gate), ⚠ **`CostReduction` over the source's chosen card type never
+matched** (Cloud Key; the card check has no source), ⚠ **a Station band's
+`PumpPTByValue` static was dropped** (Uthros Research Craft). Residuals: six
+(INCOMPLETE_CARDS). Four-seat pods beside Morska / Saheeli / Zimone (seed
+13901, 1,000): all decided, Inspirit 7.2 %; six seats (13902, 1,000): all
+decided, 1.4 % — ⚠ a weak bot pilot, lead open; census (13903, 500): nothing
+unplayed. `--bench` byte-identical.
 
 The **hundred-and-thirty-fourth** is Murders at Karlov Manor Commander's
 **Deep Clue Sea** (`DeepClueSea_MKC`, 2024-02-09) — Bant Clues and

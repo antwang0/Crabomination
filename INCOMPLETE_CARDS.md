@@ -2154,3 +2154,9 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Aerial Extortionist | Deep Clue Sea (MKC) | "up to one target nonland permanent" always takes a target. |
 | 🟡 Alandra, Sky Dreamer | Deep Clue Sea (MKC) | the fifth-card trigger is "five or more drawn, once a turn", so it fires on a later draw when Alandra arrived after the fifth. |
 | 🟡 Erdwal Illuminator | Deep Clue Sea (MKC) | "you investigate" reads a Clue token created under your control; "first time each turn" counts Clues made before it arrived. |
+| 🟡 Cloud Key | Counter Intelligence (EOC) | the card-type choice also offers land and planeswalker. |
+| 🟡 Inspirit, Flagship Vessel | Counter Intelligence (EOC) | "up to one other target artifact" always targets one when it can. |
+| 🟡 Depthshaker Titan | Counter Intelligence (EOC) | "any number of target" noncreature artifacts takes the targeter's pick. |
+| 🟡 Moxite Refinery | Counter Intelligence (EOC) | the X counters may come from among several of your artifacts and creatures, not one; its two modes are two abilities. |
+| 🟡 Resourceful Defense | Counter Intelligence (EOC) | the {4}{W} move takes every counter ("any number"). |
+| 🟡 Ripples of Potential | Counter Intelligence (EOC) | the phase-out is all or none of your permanents with counters, not a pick among those proliferated. |
