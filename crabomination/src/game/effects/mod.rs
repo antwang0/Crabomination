@@ -9,6 +9,8 @@
 // Values over a selector's cards (Occult Epiphany, Sudden Salvation).
 mod among;
 mod combat_copies;
+// CR 701.50 — connive on a selected permanent (Kamiz, Change of Plans).
+mod connive;
 mod commander;
 mod attach_choice;
 mod party;
@@ -32109,6 +32111,8 @@ impl GameState {
                 }
                 Ok(())
             }
+
+            Effect::Connive { what, amount } => self.connive(what, amount, ctx, events),
 
             Effect::CopySpellAsOneOneSpirit { what } => {
                 let ids: Vec<CardId> = match what {

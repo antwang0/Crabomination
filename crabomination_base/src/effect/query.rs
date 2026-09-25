@@ -1968,6 +1968,7 @@ impl Effect {
                 sel_has_target(what) || value_has_target(count)
             }
             Effect::CopySpellAsOneOneSpirit { what } => sel_has_target(what),
+            Effect::Connive { what, amount } => sel_has_target(what) || value_has_target(amount),
             Effect::ChooseNewTargetsForSpell { what } | Effect::GainControlOfSpell { what } => {
                 sel_has_target(what)
             }
@@ -2564,6 +2565,7 @@ impl Effect {
             | Effect::CopySpell { what, .. }
             | Effect::CopySpellWithRiders { what, .. }
             | Effect::CopySpellAsOneOneSpirit { what }
+            | Effect::Connive { what, .. }
             | Effect::CopySpellMayChooseTargets { what, .. }
             | Effect::GainControl { what, .. }
             | Effect::GainControlWhileSourceRemains { what }
@@ -5019,6 +5021,7 @@ impl Effect {
                 Effect::CopySpell { what, .. }
                 | Effect::CopySpellWithRiders { what, .. }
                 | Effect::CopySpellAsOneOneSpirit { what }
+                | Effect::Connive { what, .. }
                 | Effect::CopySpellMayChooseTargets { what, .. }
                 | Effect::CopySpellUnlessPaid { what, .. }
                 | Effect::CopySpellForEachOtherTarget { what }

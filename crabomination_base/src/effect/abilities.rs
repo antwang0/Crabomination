@@ -890,6 +890,11 @@ pub enum StaticEffect {
     /// the damage is still dealt (triggers fire), only the life change is
     /// clamped.
     DamageWontReduceControllerLifeBelowOne { requires_creature: bool },
+    /// CR 120.3a / 614 — "damage doesn't cause you to lose life" (Archon of
+    /// Coronation, gated on being the monarch through `WhileCondition`). The
+    /// damage is still dealt — combat damage still makes its dealer's
+    /// controller the monarch — only the life change is replaced.
+    DamageDoesntCauseControllerLifeLoss,
     /// CR 601.2b — card-intrinsic optional additional cost: "you may sacrifice
     /// any number of creatures; this spell costs {N} less to cast for each."
     /// `per` is the per-creature generic reduction. Carried on the spell's own

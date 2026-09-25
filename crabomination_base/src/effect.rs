@@ -8317,6 +8317,12 @@ pub enum Effect {
     /// exception is part of the copy's copiable values, so the token the
     /// copy resolves into keeps it.
     CopySpellAsOneOneSpirit { what: Selector },
+    /// CR 701.50 — each permanent `what` names connives `amount`: its
+    /// controller draws that many, discards that many, and it gets a +1/+1
+    /// counter per nonland card discarded *this way* (Kamiz, Change of
+    /// Plans, Mask of the Schemer). The `shortcut::connive` helper is the
+    /// self-only form and counts every discard of the resolution.
+    Connive { what: Selector, amount: Value },
     /// Gogo — copy target activated or triggered ability on the stack
     /// `times` times (the selector resolves to the ability's *source*
     /// permanent, mirroring `CounterAbility`). Copies keep the original's

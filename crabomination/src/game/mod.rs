@@ -138,6 +138,8 @@ mod token_replacement;
 mod legendary_spell;
 // CR 608.3 — the entry tallies a resolving permanent spell adds (Celebration).
 mod entry_tally;
+// CR 120.3a — "damage doesn't cause you to lose life" (Archon of Coronation).
+mod damage_life;
 mod mystic_barrier;
 mod loyalty_copy;
 mod gate_mana;
@@ -10676,6 +10678,9 @@ impl GameState {
     /// replaced); a life total already ≤ 1 just doesn't move.
     pub(crate) fn clamp_damage_to_life_floor(&self, seat: usize, amount: u32) -> u32 {
         use crate::effect::StaticEffect;
+        if self.damage_causes_no_life_loss(seat) {
+            return 0;
+        }
         let floored = self.players[seat].damage_floor_this_turn
             || self.battlefield.iter().any(|src| {
                 src.controller == seat
@@ -30831,6 +30836,7 @@ fn static_effect_to_effects(
             | StaticEffect::ControllerDoesntLoseFromLife
             // Consulted at the damage-to-player life sites.
             | StaticEffect::DamageWontReduceControllerLifeBelowOne { .. }
+            | StaticEffect::DamageDoesntCauseControllerLifeLoss
             | StaticEffect::NoSpellOrNonbasicLandSharingAPermanentName
             | StaticEffect::OneSpellPerTurn
             | StaticEffect::EnchantedPlayerOneSpellPerTurn
