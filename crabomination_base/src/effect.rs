@@ -5003,6 +5003,14 @@ pub enum Effect {
     /// "Exile all other spells and counter all abilities" (Summary
     /// Dismissal). Uncounterable spells are exiled too; copies cease to exist.
     ExileAllOtherSpellsCounterAllAbilities,
+    /// "Each player gains control of all nontoken permanents they own"
+    /// (Brooding Saurian). Ends every theft of a nontoken permanent, the
+    /// temporary ones included.
+    OwnersGainControlOfNontokens,
+    /// "Choose a color. [This] deals `amount` damage to each creature of the
+    /// chosen color" (Sudden Demise). The engine picks the color that kills
+    /// the most opposing value net of the caster's own.
+    DamageEachCreatureOfChosenColor { amount: Value },
     /// CR 701.10g — "exchange its power and the power of `b`" (Serene
     /// Master): each gets the other's current power as a layer-7b set for
     /// `duration`. Nothing happens unless both are creatures on the battlefield.

@@ -747,6 +747,8 @@ impl Effect {
             Effect::DestroyAllNoRegenGainControllerLifePerManaValue { .. }
             | Effect::EachPlayerTakesCreatureOfNext
             | Effect::LookTopFiveDigForLife
+            | Effect::OwnersGainControlOfNontokens
+            | Effect::DamageEachCreatureOfChosenColor { .. }
             | Effect::ForetellFromHand { .. }
             | Effect::EachPlayerCreatesTokenPerControlled { .. }
             | Effect::SourceEntersTapped

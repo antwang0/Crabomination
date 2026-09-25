@@ -29,6 +29,8 @@ mod copy_each_target;
 mod exchange_power;
 mod library_dig;
 mod order_of_succession;
+mod owners_control;
+mod chosen_color_damage;
 mod fight_each;
 pub(crate) use eval::PrintedGates;
 pub(crate) mod events;
@@ -22996,6 +22998,13 @@ impl GameState {
             Effect::EachPlayerTakesCreatureOfNext => {
                 self.each_player_takes_creature_of_next(ctx);
                 Ok(())
+            }
+            Effect::OwnersGainControlOfNontokens => {
+                self.owners_gain_control_of_nontokens();
+                Ok(())
+            }
+            Effect::DamageEachCreatureOfChosenColor { amount } => {
+                self.damage_each_creature_of_chosen_color(amount, ctx, events)
             }
             Effect::LookTopFiveDigForLife => {
                 self.look_top_five_dig_for_life(ctx, events);

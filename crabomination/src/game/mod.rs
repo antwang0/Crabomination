@@ -6978,12 +6978,16 @@ impl GameState {
         use crate::effect::StaticEffect;
         self.battlefield
             .iter()
-            .filter(|c| c.controller == seat)
             .map(|c| {
                 c.definition
                     .static_abilities
                     .iter()
-                    .filter(|sa| matches!(sa.effect, StaticEffect::DoubleTokens))
+                    .filter(|sa| match sa.effect {
+                        StaticEffect::DoubleTokens => c.controller == seat,
+                        // Primal Vigor doubles every player's tokens.
+                        StaticEffect::DoubleTokensEveryone => true,
+                        _ => false,
+                    })
                     .count() as u32
             })
             .sum::<u32>()
@@ -7340,12 +7344,16 @@ impl GameState {
         use crate::effect::StaticEffect;
         self.battlefield
             .iter()
-            .filter(|c| c.controller == seat)
             .map(|c| {
                 c.definition
                     .static_abilities
                     .iter()
-                    .filter(|sa| matches!(sa.effect, StaticEffect::DoublePlusOneCounters))
+                    .filter(|sa| match sa.effect {
+                        StaticEffect::DoublePlusOneCounters => c.controller == seat,
+                        // Primal Vigor doubles them on every creature.
+                        StaticEffect::DoublePlusOneCountersEveryone => true,
+                        _ => false,
+                    })
                     .count() as u32
             })
             .sum()
@@ -29862,6 +29870,8 @@ fn static_effect_to_effects(
             // DoubleTokens — read at `Effect::CreateToken` resolution time
             // via `GameState::token_doublers_for(seat)`; no layer effect.
             | StaticEffect::DoubleTokens
+            | StaticEffect::DoubleTokensEveryone
+            | StaticEffect::DoublePlusOneCountersEveryone
             | StaticEffect::FirstTokensEachTurnBecomeCopiesOfAttached
             | StaticEffect::FirstTokensOnYourTurnBecomeCopiesOfChosen
             // DoubleCounters / ExtraPlusOneCounters — read at counter-add

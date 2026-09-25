@@ -1306,6 +1306,9 @@ pub enum StaticEffect {
     /// token count (2 doublers → 4×, 3 → 8×, …). CR 614.13 framing —
     /// the effect is a replacement that scales the create-token event.
     DoubleTokens,
+    /// Primal Vigor's token half — `DoubleTokens` for every player, whoever
+    /// controls the source (CR 614.13).
+    DoubleTokensEveryone,
     /// "The first time you would create one or more tokens each turn, you may
     /// instead create that many tokens that are copies of enchanted permanent"
     /// (Moonlit Meditation). A once-per-turn CR 614 replacement on the token
@@ -1346,6 +1349,9 @@ pub enum StaticEffect {
     /// *any* counter kind), this only doubles +1/+1 placements onto the
     /// controller's creatures. Composes multiplicatively with `DoubleCounters`.
     DoublePlusOneCounters,
+    /// Primal Vigor's counter half — "+1/+1 counters put on a creature" are
+    /// doubled for every creature, whoever controls the source (CR 614.16).
+    DoublePlusOneCountersEveryone,
     /// CR 614.16 additive variant for *every* counter kind — "If one or more
     /// counters would be put on an artifact or creature you control, that many
     /// plus one of each of those kinds are put on it instead."

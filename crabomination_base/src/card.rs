@@ -360,6 +360,8 @@ pub enum CreatureType {
     Sculpture,
     // Commander Legends: Battle for Baldur's Gate (Death Kiss).
     Beholder,
+    // Commander 2013 (Sek'Kuar, Deathkeeper's tokens).
+    Graveborn,
 }
 
 /// Land subtypes (basic land types + others).
@@ -921,6 +923,8 @@ pub enum CounterType {
     /// Contested counter — Turf War's mark: a creature dealing combat damage
     /// to a player takes one of their lands carrying one.
     Contested,
+    /// Eyeball counter — Jar of Eyeballs' tally of your creatures dying.
+    Eyeball,
 }
 
 /// Every zone a card can occupy.
