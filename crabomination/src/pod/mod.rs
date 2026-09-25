@@ -1425,6 +1425,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::CAPTAIN_AMERICA_COMMANDERS,
             main: decks::CAPTAIN_AMERICA_MAIN,
         },
+        // Hundred-and-seventy-fifth: Tyranid Swarm (Warhammer 40,000) — Temur
+        // +1/+1 counters and {X} creatures under The Swarmlord (CR 106.6a
+        // Biophagus's creature-cast counter rider). `--pod-decks 175`.
+        PodDeck {
+            name: "The Swarmlord (GUR)",
+            commanders: decks::SWARMLORD_COMMANDERS,
+            main: decks::SWARMLORD_MAIN,
+        },
     ]
 }
 

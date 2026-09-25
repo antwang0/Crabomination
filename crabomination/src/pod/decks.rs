@@ -5303,3 +5303,29 @@ pub const CAPTAIN_AMERICA_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, island, island, island, island, island,
     mountain, mountain, mountain, mountain, mountain,
 ];
+
+pub const SWARMLORD_COMMANDERS: &[CardFactory] = &[the_swarmlord];
+
+/// **Tyranid Swarm**, the Warhammer 40,000 Commander deck (40K, 2022-10-07),
+/// exactly as MTGJSON's `TyranidSwarm_40K` prints it: 77 nonbasic cards +
+/// 7 Mountain + 7 Island + 8 Forest = 99. Temur +1/+1 counters and {X}
+/// creatures under The Swarmlord.
+pub const SWARMLORD_MAIN: &[CardFactory] = &[
+    hull_breach, cultivate, explore, farseek, rampant_growth, starstorm, aetherize,
+    inspiring_call, harrow, icon_of_ancestry, heralds_horn, sol_ring, arcane_signet, abundance,
+    deaths_presence, hardened_scales, bred_for_the_hunt, new_horizons, overgrowth, cinder_glade,
+    exotic_orchard, game_trail, temple_of_abandon, temple_of_epiphany, temple_of_mystery,
+    ash_barrens, frontier_bivouac, unclaimed_territory, cave_of_temptation, command_tower,
+    evolving_wilds, opal_palace, path_of_ancestry, rugged_highlands, terramorphic_expanse,
+    thornwood_falls, magus_lucea_kane, genestealer_patriarch, exocrine, the_red_terror,
+    screamer_killer, biophagus, bone_sabres, broodlord, clamavus, haruspex,
+    hierophant_bio_titan, hormagaunt_horde, lictor, nexos, old_one_eye, sporocyst,
+    termagant_swarm, tervigon, toxicrene, tyrant_guard, atalan_jackal,
+    deathleaper_terror_weapon, the_first_tyrannic_war, gargoyle_flock, ghyrson_starn_kelermorph,
+    malanthrope, mawloc, ravener, shadow_in_the_warp, tyranid_harridan, tyranid_prime,
+    winged_hive_tyrant, zoanthrope, genestealer_locus, acolyte_hybrid, aberrant,
+    purestrain_genestealer, tyranid_invasion, trygon_prime, venomthrope, goliath_truck,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, island, island, island,
+    island, island, island, island, forest, forest, forest, forest, forest, forest, forest, forest,
+];
