@@ -31782,6 +31782,18 @@ impl GameState {
                 if let Some(src_def) = src_def {
                     for ent in self.resolve_selector(what, ctx) {
                         let Some(cid) = ent.as_permanent_id() else { continue };
+                        // "Except it has this ability" keeps the copier's
+                        // *printed* abilities — the definition before its
+                        // first copy — not whatever it last copied. Reading
+                        // the current definition re-appended the kept
+                        // abilities on every re-copy, so an Aurora Shifter
+                        // copying an Aurora Shifter doubled its trigger list
+                        // each turn until the process ran out of memory.
+                        let printed = self
+                            .temporary_copies
+                            .iter()
+                            .find(|t| t.card == cid)
+                            .and_then(|t| t.original.clone());
                         if let Some(c) = self.battlefield.find_by_id_mut(cid) {
                             let mut new_def = (*src_def).clone();
                             for t in extra_creature_types {
@@ -31789,15 +31801,20 @@ impl GameState {
                                     new_def.subtypes.creature_types.push(*t);
                                 }
                             }
+                            let own = printed.unwrap_or_else(|| c.definition.arc());
                             if *keep_own_triggered {
-                                new_def
-                                    .triggered_abilities
-                                    .extend(c.definition.triggered_abilities.iter().cloned());
+                                for t in &own.triggered_abilities {
+                                    if !new_def.triggered_abilities.contains(t) {
+                                        new_def.triggered_abilities.push(t.clone());
+                                    }
+                                }
                             }
                             if *keep_own_activated {
-                                new_def
-                                    .activated_abilities
-                                    .extend(c.definition.activated_abilities.iter().cloned());
+                                for a in &own.activated_abilities {
+                                    if !new_def.activated_abilities.contains(a) {
+                                        new_def.activated_abilities.push(a.clone());
+                                    }
+                                }
                             }
                             // CR 708.10 — a face-down permanent that becomes a
                             // copy keeps the face-down characteristics; only its

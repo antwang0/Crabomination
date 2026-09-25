@@ -10487,6 +10487,22 @@ fn pick_energy_payoff(state: &GameState, seat: usize) -> Option<GameAction> {
             if !is_pure || state.players[seat].energy < amount {
                 continue;
             }
+            // A self-blink (Aethergeode Miner) is a response to removal, not a
+            // payoff: fired proactively it only re-triggers other entry
+            // abilities, and two Aetherstorm Rocs refund its {E}{E}, so the bot
+            // blinked forever (6-seat pod seed 11115 game 418). Re-granting a
+            // keyword the source already has (Aethersphere Harvester's
+            // lifelink) just burns the energy.
+            let idle = match &ab.effect {
+                Effect::ExileAndReturnToOwner { what: crate::effect::Selector::This } => true,
+                Effect::GrantKeyword { what: crate::effect::Selector::This, keyword, .. } => {
+                    state.computed_permanent(card.id).is_some_and(|cp| cp.keywords().contains(keyword))
+                }
+                _ => false,
+            };
+            if idle {
+                continue;
+            }
             // A self-refilling energy token loop (Whirler Virtuoso under
             // Decoction Module) stops once the board is already overkill.
             if ability_makes_token(&ab.effect) && super::renewal_guard::board_is_saturated(state, seat) {
@@ -21005,6 +21021,42 @@ mod tests {
         assert!(pick_energy_payoff(&g, 0).is_some(), "bot fires the energy_cost-gated payoff");
         g.players[0].energy = 1;
         assert!(pick_energy_payoff(&g, 0).is_none(), "and only when it can afford it");
+    }
+
+    /// An energy self-blink (Aethergeode Miner) and a keyword the source
+    /// already has are not payoffs: firing them proactively looped a 6-seat
+    /// pod (two Aetherstorm Rocs refunded the blink's {E}{E}).
+    #[test]
+    fn bot_skips_idle_energy_abilities() {
+        use crate::card::{ActivatedAbility, CardDefinition, CardType, Keyword};
+        let mut g = two_player_game();
+        let blink = ActivatedAbility {
+            energy_cost: 2,
+            effect: Effect::ExileAndReturnToOwner { what: crate::effect::Selector::This },
+            ..Default::default()
+        };
+        let lifelink = ActivatedAbility {
+            energy_cost: 1,
+            effect: Effect::GrantKeyword {
+                what: crate::effect::Selector::This,
+                keyword: Keyword::Lifelink,
+                duration: crate::effect::Duration::EndOfTurn,
+            },
+            ..Default::default()
+        };
+        let def = CardDefinition {
+            name: "Idle Engine",
+            card_types: vec![CardType::Creature],
+            power: 1,
+            toughness: 1,
+            keywords: vec![Keyword::Lifelink],
+            activated_abilities: vec![blink, lifelink],
+            ..Default::default()
+        };
+        let id = g.add_card_to_battlefield(0, def);
+        g.clear_sickness(id);
+        g.players[0].energy = 4;
+        assert!(pick_energy_payoff(&g, 0).is_none(), "neither ability is worth the energy");
     }
 
     /// Mulligan heuristic: ship a 1-land seven, keep a 3-land seven, and

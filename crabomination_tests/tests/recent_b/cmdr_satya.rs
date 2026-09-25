@@ -354,3 +354,24 @@ fn stone_idol_generator_builds() {
     assert_eq!(c.len(), 1);
     assert_eq!(pt(&g, c[0]), (6, 12));
 }
+
+/// Regression: an Aurora Shifter re-copying keeps its *printed* two
+/// triggers once. It used to re-append whatever it currently had, so a pair
+/// copying each other doubled their trigger lists every combat (a 6-seat pod
+/// ran out of memory, seed 11115 game 548).
+#[test]
+fn aurora_shifter_recopying_does_not_stack_triggers() {
+    let mut g = pod(2);
+    let a = g.add_card_to_battlefield(0, catalog::aurora_shifter());
+    let b = g.add_card_to_battlefield(0, catalog::aurora_shifter());
+    for _ in 0..4 {
+        g.players[0].energy = 4;
+        g.step = TurnStep::BeginCombat;
+        g.fire_step_triggers(TurnStep::BeginCombat);
+        drain_stack(&mut g);
+    }
+    for id in [a, b] {
+        let n = g.battlefield_find(id).unwrap().definition.triggered_abilities.len();
+        assert_eq!(n, 2, "two printed triggers, no matter how often it copies");
+    }
+}
