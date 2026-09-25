@@ -9543,6 +9543,64 @@ short to say so.
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
 
+### ML 2026-09-25 — `(-371)` the value net's forward pass, 3.4x in the search
+
+The net leaf had become 37.5 % of a net-leaf search. `CRAB_MCTS_TIMING` on
+`mcts-net67-256` mirrors (4 x 12 sealed, 8 threads, seed 43): forward
+**188 us** per rollout against 304 us of rollout simulation, where the
+material leaf's evaluation is 1 us. ML_NOTES round 69's "the leaf costs no
+measurable wall clock" predates the engine's ~4x cheaper rollouts. The
+champion carries the attention layer (`attn.*`): with ~37 objects a
+position, attention was two thirds of the forward.
+
+Measured with a new instrument, `bot_ladder --bench-net [GAMES]`: the
+champion's forward over every snapshot of 40 heuristic sealed self-play
+games (4,336 positions, 36.7 objects mean, p90 48), one thread, best of 7;
+it prints the output sum to nine places, and `CRAB_BENCH_DUMP=path` writes
+every output for a per-position diff between two builds.
+
+```text
+  bench-net, us/position, release-fast (another project held ~4 cores)
+  base                                                         154
+  1. whole forward under one AVX2 dispatch                     146   sum identical
+  2. transposed weights; blocked matvec / 4x16 matmul kernels   96
+  3. softmax: exp as a vectorisable polynomial, max/sum in
+     lanes (a loop carrying a sequential float sum or a
+     saturating `as` cast does not vectorise)                   83
+  4. attention core as two blocked matmuls per head             70
+  5. zero inputs skipped in the matvec (bit-exact)              59   sum identical
+  6. the two kernels out of line, AVX2 each                     46   sum identical
+     (inlined into the one big AVX2 function they ran at a
+     third of their isolated 61 GMAC/s)
+  per-position vs base    max |d| 1.13e-6, mean 1.06e-7, 0 adjacent order flips
+```
+
+In the search, three interleaved runs a side, same command as above:
+
+```text
+                forward us/rollout     thread-ms per searched decision
+  old           178 / 193 / 200        128 / 142 / 145
+  new            55 /  56 /  57         99 /  99 /  98        -28 %
+  rollout sim   310-357 old, 316-322 new: unchanged (the games differ a
+                little, since the outputs moved in the 7th place)
+```
+
+A cell with the net leaf on both sides runs about 28 % shorter; a net-vs-
+material cell about half that. Checks: the candle parity tests (plain,
+attention, policy head, transformer blocks, all < 1e-4) and the nn unit
+tests pass; the suite is green with golden traces unchanged; `--bench`
+reads 200,190 / 625.6 / 0 stalls on both builds (net-free). Memory: +2.8
+MiB, the transposed copy of the loaded net's weights (`peak_rss_mib` 60.6
+-> 63.4 on `--bench`, which loads the champion).
+
+Not fused multiply-adds, deliberately: Rust never contracts `a * b + c`,
+and `mul_add` on a machine without FMA is a libm call, which would also
+make the AVX2 and baseline builds disagree in the last bit. The old
+`dot_avx2` comment claiming FMA was wrong and is corrected. Left on the
+table: the trunk's 512x1060 layer is now memory-bound (13 us, 2.2 MB of
+weights streamed per forward, contended across search threads), and the
+attention core spends ~12 us partly on padding the key count to 16.
+
 ### POD 2026-09-24 — a stack deeper than the settle fuel is given up on at once
 
 A 23-seat pod game (`--seats 23 --seed 10011 --first 23 --games 1`) took

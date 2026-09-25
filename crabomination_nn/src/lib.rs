@@ -725,12 +725,281 @@ impl DeckNet {
 
 // ───────────────────────────── inference net ────────────────────────────
 
+/// Outputs a [`matvec_raw`] block keeps in accumulators: 64 f32 are eight
+/// 256-bit registers, enough independent add chains to cover the add's
+/// latency.
+const MV_BLOCK: usize = 64;
+/// [`matmul_raw`]'s register block: 4 input rows × 16 outputs, eight
+/// 256-bit accumulators fed by two weight loads per input column.
+const MM_ROWS: usize = 4;
+const MM_COLS: usize = 16;
+
+/// `e^x` for `x ≤ 0` (softmax scores after the max is subtracted), as a
+/// branch-free polynomial that vectorises across a row of scores —
+/// `f32::exp` is a libm call per element. Cephes' single-precision
+/// reduction and polynomial: relative error ~1e-7, the same order as
+/// f32 rounding.
+#[inline(always)]
+fn exp_neg(x: f32) -> f32 {
+    // Below −87 the result underflows f32's normal range; clamp so the
+    // exponent bits below stay valid (the weight is ~1e-38 either way).
+    let x = x.max(-87.0);
+    let n = (x * std::f32::consts::LOG2_E + 0.5).floor();
+    let r = x - n * 0.693_359_4 - n * -2.121_944_4e-4;
+    let z = r * r;
+    let p = ((((1.987_569_1e-4 * r + 1.398_199_9e-3) * r + 8.333_452e-3) * r + 4.166_579_6e-2) * r
+        + 1.666_666_5e-1)
+        * r
+        + 0.5; // Cephes' 5.0000001201e-1, which rounds to exactly 0.5 in f32
+    let e = p * z + r + 1.0;
+    // 2^n by building the exponent field directly. `n as i32` would be a
+    // saturating conversion, which keeps LLVM from vectorising the loop;
+    // adding 1.5·2^23 instead leaves the integer n in the low mantissa
+    // bits (exact for |n| < 2^22; here −126 ≤ n ≤ 0), and the rest is
+    // integer arithmetic on the bits.
+    const MAGIC: f32 = 12_582_912.0; // 1.5 · 2^23
+    let n_bits = (n + MAGIC).to_bits().wrapping_sub(MAGIC.to_bits());
+    e * f32::from_bits(n_bits.wrapping_add(127) << 23)
+}
+
+/// Largest element of `xs` (−∞ when empty), in lane-wise partial maxima
+/// so the reduction vectorises; `max` is associative, so the answer is
+/// the one a sequential scan gives.
+#[inline(always)]
+fn max_lanes(xs: &[f32]) -> f32 {
+    let mut acc = [f32::NEG_INFINITY; 8];
+    let mut chunks = xs.chunks_exact(8);
+    for c in &mut chunks {
+        for l in 0..8 {
+            acc[l] = acc[l].max(c[l]);
+        }
+    }
+    let mut m = f32::NEG_INFINITY;
+    for &v in chunks.remainder().iter().chain(&acc) {
+        m = m.max(v);
+    }
+    m
+}
+
+/// Sum of `xs` in eight lane-wise partial sums (vectorised; the order
+/// differs from a sequential sum by f32 rounding only).
+#[inline(always)]
+fn sum_lanes(xs: &[f32]) -> f32 {
+    let mut acc = [0.0f32; 8];
+    let mut chunks = xs.chunks_exact(8);
+    for c in &mut chunks {
+        for l in 0..8 {
+            acc[l] += c[l];
+        }
+    }
+    let mut s = 0.0f32;
+    for &v in chunks.remainder() {
+        s += v;
+    }
+    for v in acc {
+        s += v;
+    }
+    s
+}
+
+/// Multi-head scaled dot-product attention over `n` objects: `q`, `k`,
+/// `v` packed `n × h`, the context written into `ctx` (`n × h`). Shared by
+/// the single attention layer and the transformer blocks.
+///
+/// Each head is two small matrix products on the blocked kernel: scores
+/// `S = Q·Kᵀ` (the keys laid out transposed and padded to the block
+/// width, so every query's scores come out of broadcast-multiply-adds
+/// across the keys) and context `C = P·V`. The softmax runs over the real
+/// keys only; padded score columns are never read and padded weights are
+/// zero, so the padding is invisible in the result.
+#[inline(always)]
+fn attention_core(q: &[f32], k: &[f32], v: &[f32], n: usize, h: usize, ctx: &mut [f32]) {
+    let hd = h / ATTN_HEADS;
+    let scale = 1.0 / (hd as f32).sqrt();
+    let np = n.div_ceil(MM_COLS) * MM_COLS;
+    let mut qh = vec![0.0f32; n * hd];
+    let mut kt = vec![0.0f32; hd * np];
+    let mut vh = vec![0.0f32; np * hd];
+    let mut scores = vec![0.0f32; n * np];
+    let mut ch = vec![0.0f32; n * hd];
+    for head in 0..ATTN_HEADS {
+        let off = head * hd;
+        for i in 0..n {
+            qh[i * hd..(i + 1) * hd].copy_from_slice(&q[i * h + off..i * h + off + hd]);
+            vh[i * hd..(i + 1) * hd].copy_from_slice(&v[i * h + off..i * h + off + hd]);
+            for d in 0..hd {
+                kt[d * np + i] = k[i * h + off + d];
+            }
+        }
+        kernel::matmul(&qh, n, hd, &kt, np, &mut scores);
+        for row in scores.chunks_exact_mut(np) {
+            let real = &mut row[..n];
+            for sc in real.iter_mut() {
+                *sc *= scale;
+            }
+            // Softmax, max-subtracted so a wide score range can't overflow
+            // on a big board. Max, exp and sum run as separate passes: a
+            // loop that also carries a sequential float sum cannot be
+            // vectorised at all.
+            let max = max_lanes(real);
+            for sc in real.iter_mut() {
+                *sc = exp_neg(*sc - max);
+            }
+            let inv = 1.0 / sum_lanes(real);
+            for sc in real.iter_mut() {
+                *sc *= inv;
+            }
+            row[n..].fill(0.0);
+        }
+        kernel::matmul(&scores, n, np, &vh, hd, &mut ch);
+        for i in 0..n {
+            ctx[i * h + off..i * h + off + hd].copy_from_slice(&ch[i * hd..(i + 1) * hd]);
+        }
+    }
+}
+
+/// `out = W · x` given `wt` = Wᵀ (`k × m`, `k = x.len()`, `m = out.len()`):
+/// each input `x[c]` is broadcast against a block of [`MV_BLOCK`] outputs
+/// held in accumulators, so no output pays a horizontal reduction and each
+/// weight is loaded once. (Row-wise [`dot`]s reload `x` for every output
+/// and end each one in a lane reduction.) Every output sums its inputs in
+/// order `c = 0..k`, as [`matmul_raw`] does, so a row computes the same
+/// bits whichever kernel ran it.
+#[inline(always)]
+fn matvec_raw(x: &[f32], wt: &[f32], m: usize, out: &mut [f32]) {
+    debug_assert_eq!(wt.len(), x.len() * m);
+    debug_assert_eq!(out.len(), m);
+    let mut j0 = 0;
+    while j0 + MV_BLOCK <= m {
+        let mut acc = [0.0f32; MV_BLOCK];
+        for (c, &xc) in x.iter().enumerate() {
+            // A zero input adds exactly nothing, so skipping it is
+            // bit-exact — and it skips loading that input's whole weight
+            // row. The trunk's inputs are full of zeros: empty zones pool
+            // to zero blocks (the two stack groups almost always), and
+            // relu zeroes about half of the hidden layer.
+            if xc == 0.0 {
+                continue;
+            }
+            let w: &[f32; MV_BLOCK] = wt[c * m + j0..c * m + j0 + MV_BLOCK].try_into().unwrap();
+            for l in 0..MV_BLOCK {
+                acc[l] += xc * w[l];
+            }
+        }
+        out[j0..j0 + MV_BLOCK].copy_from_slice(&acc);
+        j0 += MV_BLOCK;
+    }
+    if j0 < m {
+        let rest = &mut out[j0..];
+        rest.fill(0.0);
+        for (c, &xc) in x.iter().enumerate() {
+            for (o, w) in rest.iter_mut().zip(&wt[c * m + j0..(c + 1) * m]) {
+                *o += xc * w;
+            }
+        }
+    }
+}
+
+/// `out[i] = W · x[i]` for `n` input rows packed in `x` (`n × k`), given
+/// `wt` = Wᵀ (`k × m`); `out` is `n × m`. A register block of [`MM_ROWS`]
+/// rows × [`MM_COLS`] outputs shares every weight load across the rows.
+/// A width the block doesn't divide, and the last `n % MM_ROWS` rows, go
+/// through [`matvec_raw`]; the summation order is the same either way.
+#[inline(always)]
+fn matmul_raw(x: &[f32], n: usize, k: usize, wt: &[f32], m: usize, out: &mut [f32]) {
+    debug_assert_eq!(x.len(), n * k);
+    debug_assert_eq!(wt.len(), k * m);
+    debug_assert_eq!(out.len(), n * m);
+    let mut i = 0;
+    if m.is_multiple_of(MM_COLS) {
+        while i + MM_ROWS <= n {
+            let xs: [&[f32]; MM_ROWS] = std::array::from_fn(|r| &x[(i + r) * k..(i + r + 1) * k]);
+            for j0 in (0..m).step_by(MM_COLS) {
+                let mut acc = [[0.0f32; MM_COLS]; MM_ROWS];
+                for c in 0..k {
+                    let w: &[f32; MM_COLS] = wt[c * m + j0..c * m + j0 + MM_COLS].try_into().unwrap();
+                    for r in 0..MM_ROWS {
+                        let xv = xs[r][c];
+                        for l in 0..MM_COLS {
+                            acc[r][l] += xv * w[l];
+                        }
+                    }
+                }
+                for (r, a) in acc.iter().enumerate() {
+                    out[(i + r) * m + j0..(i + r) * m + j0 + MM_COLS].copy_from_slice(a);
+                }
+            }
+            i += MM_ROWS;
+        }
+    }
+    for i in i..n {
+        matvec_raw(&x[i * k..(i + 1) * k], wt, m, &mut out[i * m..(i + 1) * m]);
+    }
+}
+
+/// The two kernels as separately compiled functions, picked per call.
+///
+/// Inlined into the forward pass's one big AVX2 function, the same kernel
+/// ran at about a third of its speed in isolation (register allocation
+/// over a function that size); called out of line it keeps its own tight
+/// loop. A handful of calls per forward, so the feature check and the
+/// call cost nothing.
+mod kernel {
+    #[inline]
+    pub(super) fn matmul(x: &[f32], n: usize, k: usize, wt: &[f32], m: usize, out: &mut [f32]) {
+        #[cfg(target_arch = "x86_64")]
+        if super::avx2_fma() {
+            // SAFETY: the detected features gate the call.
+            return unsafe { matmul_avx2(x, n, k, wt, m, out) };
+        }
+        matmul_base(x, n, k, wt, m, out)
+    }
+
+    #[inline]
+    pub(super) fn matvec(x: &[f32], wt: &[f32], m: usize, out: &mut [f32]) {
+        #[cfg(target_arch = "x86_64")]
+        if super::avx2_fma() {
+            // SAFETY: the detected features gate the call.
+            return unsafe { matvec_avx2(x, wt, m, out) };
+        }
+        matvec_base(x, wt, m, out)
+    }
+
+    #[cfg(target_arch = "x86_64")]
+    #[target_feature(enable = "avx2", enable = "fma")]
+    #[inline(never)]
+    unsafe fn matmul_avx2(x: &[f32], n: usize, k: usize, wt: &[f32], m: usize, out: &mut [f32]) {
+        super::matmul_raw(x, n, k, wt, m, out)
+    }
+
+    #[inline(never)]
+    fn matmul_base(x: &[f32], n: usize, k: usize, wt: &[f32], m: usize, out: &mut [f32]) {
+        super::matmul_raw(x, n, k, wt, m, out)
+    }
+
+    #[cfg(target_arch = "x86_64")]
+    #[target_feature(enable = "avx2", enable = "fma")]
+    #[inline(never)]
+    unsafe fn matvec_avx2(x: &[f32], wt: &[f32], m: usize, out: &mut [f32]) {
+        super::matvec_raw(x, wt, m, out)
+    }
+
+    #[inline(never)]
+    fn matvec_base(x: &[f32], wt: &[f32], m: usize, out: &mut [f32]) {
+        super::matvec_raw(x, wt, m, out)
+    }
+}
+
 /// Row-major dense matrix (`data[r * cols + c]`).
 #[derive(Debug, Clone)]
 pub struct Tensor2 {
     pub rows: usize,
     pub cols: usize,
     pub data: Vec<f32>,
+    /// `data` transposed (`t[c * rows + r]`), which the forward pass's
+    /// blocked kernels read: an input broadcast against one contiguous
+    /// run of outputs. Kept in step by [`Tensor2::new`] and both pads.
+    t: Vec<f32>,
 }
 
 /// Eight-accumulator dot product. The single-accumulator loop chains
@@ -743,7 +1012,9 @@ pub struct Tensor2 {
 ///
 /// `inline(always)` is load-bearing: the AVX2 wrapper below relies on
 /// this body inlining into its `#[target_feature]` scope, where LLVM
-/// recompiles it with 256-bit lanes and FMA.
+/// recompiles it with 256-bit lanes. (Not fused multiply-adds: Rust never
+/// contracts `a * b + c` into an FMA, so every kernel in this file is a
+/// multiply and an add per lane.)
 #[inline(always)]
 fn dot(a: &[f32], b: &[f32]) -> f32 {
     const LANES: usize = 8;
@@ -768,35 +1039,69 @@ fn dot(a: &[f32], b: &[f32]) -> f32 {
     sum
 }
 
-/// The same body compiled with AVX2 + FMA, picked at runtime. The
-/// baseline x86-64 target this workspace builds for is SSE2-only; the
-/// boxes it runs on are not, and the difference is 4-wide mul+add
-/// against 8-wide FMA. Safety: the caller checks the CPU features.
+/// The same body compiled with AVX2, picked at runtime. The baseline
+/// x86-64 target this workspace builds for is SSE2-only; the boxes it
+/// runs on are not, and the difference is 4-wide lanes against 8-wide.
+/// Safety: the caller checks the CPU features.
 #[cfg(target_arch = "x86_64")]
 #[target_feature(enable = "avx2", enable = "fma")]
 unsafe fn dot_avx2(a: &[f32], b: &[f32]) -> f32 {
     dot(a, b)
 }
 
+/// Whether this CPU has AVX2 and FMA, detected once.
+#[cfg(target_arch = "x86_64")]
+#[inline]
+fn avx2_fma() -> bool {
+    use std::sync::OnceLock;
+    static AVX2: OnceLock<bool> = OnceLock::new();
+    *AVX2.get_or_init(|| {
+        std::arch::is_x86_feature_detected!("avx2") && std::arch::is_x86_feature_detected!("fma")
+    })
+}
+
 /// Runtime CPU-feature dispatch for [`dot`], the check cached to a bool.
 #[inline]
 fn dot_dispatch(a: &[f32], b: &[f32]) -> f32 {
     #[cfg(target_arch = "x86_64")]
-    {
-        use std::sync::OnceLock;
-        static AVX2: OnceLock<bool> = OnceLock::new();
-        if *AVX2.get_or_init(|| {
-            std::arch::is_x86_feature_detected!("avx2")
-                && std::arch::is_x86_feature_detected!("fma")
-        }) {
-            // SAFETY: the detected features gate the call.
-            return unsafe { dot_avx2(a, b) };
-        }
+    if avx2_fma() {
+        // SAFETY: the detected features gate the call.
+        return unsafe { dot_avx2(a, b) };
     }
     dot(a, b)
 }
 
 impl Tensor2 {
+    fn new(rows: usize, cols: usize, data: Vec<f32>) -> Self {
+        let mut t = Tensor2 { rows, cols, data, t: Vec::new() };
+        t.retranspose();
+        t
+    }
+
+    fn retranspose(&mut self) {
+        let (rows, cols) = (self.rows, self.cols);
+        self.t = vec![0.0; rows * cols];
+        for r in 0..rows {
+            for c in 0..cols {
+                self.t[c * rows + r] = self.data[r * cols + c];
+            }
+        }
+    }
+
+    /// `out = self · x` — [`matvec_raw`] on this matrix's transposed copy.
+    #[inline(always)]
+    fn matvec_t(&self, x: &[f32], out: &mut [f32]) {
+        debug_assert_eq!(x.len(), self.cols);
+        kernel::matvec(x, &self.t, self.rows, out);
+    }
+
+    /// `out[i] = self · x[i]` for `n` packed rows — [`matmul_raw`] on this
+    /// matrix's transposed copy. The per-object layers run as one call.
+    #[inline(always)]
+    fn matmul_t(&self, x: &[f32], n: usize, out: &mut [f32]) {
+        kernel::matmul(x, n, self.cols, &self.t, self.rows, out);
+    }
+
     /// `out = self · x` (no accumulation into prior contents).
     fn matvec(&self, x: &[f32], out: &mut [f32]) {
         debug_assert_eq!(x.len(), self.cols);
@@ -820,6 +1125,7 @@ impl Tensor2 {
         }
         self.cols = new_cols;
         self.data = data;
+        self.retranspose();
     }
 
     /// Extend to `new_rows` by appending zero rows at the bottom.
@@ -833,6 +1139,7 @@ impl Tensor2 {
         debug_assert!(new_rows >= self.rows);
         self.data.resize(new_rows * self.cols, 0.0);
         self.rows = new_rows;
+        self.retranspose();
     }
 }
 
@@ -877,7 +1184,7 @@ fn get_tensor(st: &safetensors::SafeTensors<'_>, name: &'static str) -> Result<T
     }
     let data =
         raw.chunks_exact(4).map(|c| f32::from_le_bytes(c.try_into().unwrap())).collect();
-    Ok(Tensor2 { rows, cols, data })
+    Ok(Tensor2::new(rows, cols, data))
 }
 
 /// The value net, loaded from a trainer-exported safetensors file.
@@ -974,6 +1281,7 @@ struct TBlock {
 
 /// Layer norm over one row, eps matching candle's `LayerNormConfig`
 /// default.
+#[inline(always)]
 fn layer_norm_row(x: &[f32], w: &[f32], b: &[f32], out: &mut [f32]) {
     let d = x.len();
     let mean = x.iter().sum::<f32>() / d as f32;
@@ -1159,7 +1467,7 @@ impl PlayNet {
                 .chunks_exact(4)
                 .map(|c| f32::from_le_bytes(c.try_into().unwrap()))
                 .collect();
-            Ok(Tensor2 { rows, cols, data })
+            Ok(Tensor2::new(rows, cols, data))
         };
         let mut n_blocks = 0;
         while st.tensor(&format!("tblocks.{n_blocks}.ln1.weight")).is_ok() {
@@ -1326,12 +1634,15 @@ impl PlayNet {
 
     /// Per-object hidden vectors for every object on the board, flattened
     /// across groups: `(hs [n, h_obj], group index per object)`.
+    #[inline(always)]
     fn encode_objects(&self, s: &EncodedState, h_obj: usize) -> (Vec<f32>, Vec<usize>) {
         let emb_dim = self.emb.cols;
+        let k = self.obj_w.cols;
         let n: usize = s.len();
-        let mut hs = vec![0.0f32; n * h_obj];
+        // Pack every object's input row, then run the object layer over all
+        // of them as one matrix product.
+        let mut x = vec![0.0f32; n * k];
         let mut owner = Vec::with_capacity(n);
-        let mut x = vec![0.0f32; self.obj_w.cols];
         let mut i = 0;
         for (gi, group) in s.groups().enumerate() {
             for o in group {
@@ -1339,14 +1650,18 @@ impl PlayNet {
                 // not the last row.
                 let card =
                     if (o.card as usize) < self.emb.rows { o.card as usize } else { 0 };
-                x[..emb_dim].copy_from_slice(&self.emb.data[card * emb_dim..(card + 1) * emb_dim]);
-                x[emb_dim..].copy_from_slice(&o.feats);
-                self.obj_w.matvec(&x, &mut hs[i * h_obj..(i + 1) * h_obj]);
-                for (v, b) in hs[i * h_obj..(i + 1) * h_obj].iter_mut().zip(&self.obj_b) {
-                    *v = (*v + b).max(0.0);
-                }
+                let row = &mut x[i * k..(i + 1) * k];
+                row[..emb_dim].copy_from_slice(&self.emb.data[card * emb_dim..(card + 1) * emb_dim]);
+                row[emb_dim..].copy_from_slice(&o.feats);
                 owner.push(gi);
                 i += 1;
+            }
+        }
+        let mut hs = vec![0.0f32; n * h_obj];
+        self.obj_w.matmul_t(&x, n, &mut hs);
+        for row in hs.chunks_exact_mut(h_obj) {
+            for (v, b) in row.iter_mut().zip(&self.obj_b) {
+                *v = (*v + b).max(0.0);
             }
         }
         (hs, owner)
@@ -1366,14 +1681,13 @@ impl PlayNet {
     /// all; the full pre-norm stack that pays that parity cost is
     /// [`Self::transform`] (`tblocks.*`), and old `attn.*` checkpoints
     /// keep loading through this path unchanged.
+    #[inline(always)]
     fn attend(&self, hs: &mut [f32], owner: &[usize], h_obj: usize) {
         let Some(a) = &self.attn else { return };
         let n = owner.len();
         if n == 0 {
             return;
         }
-        let hd = h_obj / ATTN_HEADS;
-        let scale = 1.0 / (hd as f32).sqrt();
 
         // Tagged input: h + group_embedding(group_of_object).
         let mut xin = vec![0.0f32; n * h_obj];
@@ -1386,9 +1700,9 @@ impl PlayNet {
 
         let project = |w: &Tensor2, b: &[f32]| {
             let mut out = vec![0.0f32; n * h_obj];
-            for i in 0..n {
-                w.matvec(&xin[i * h_obj..(i + 1) * h_obj], &mut out[i * h_obj..(i + 1) * h_obj]);
-                for (v, bb) in out[i * h_obj..(i + 1) * h_obj].iter_mut().zip(b) {
+            w.matmul_t(&xin, n, &mut out);
+            for row in out.chunks_exact_mut(h_obj) {
+                for (v, bb) in row.iter_mut().zip(b) {
                     *v += bb;
                 }
             }
@@ -1397,46 +1711,16 @@ impl PlayNet {
         let q = project(&a.q_w, &a.q_b);
         let k = project(&a.k_w, &a.k_b);
         let v = project(&a.v_w, &a.v_b);
-
         let mut ctx = vec![0.0f32; n * h_obj];
-        let mut scores = vec![0.0f32; n];
-        for head in 0..ATTN_HEADS {
-            let off = head * hd;
-            for i in 0..n {
-                let qi = &q[i * h_obj + off..i * h_obj + off + hd];
-                let mut max = f32::NEG_INFINITY;
-                for (j, sc) in scores.iter_mut().enumerate() {
-                    let kj = &k[j * h_obj + off..j * h_obj + off + hd];
-                    let dot: f32 = dot_dispatch(qi, kj);
-                    *sc = dot * scale;
-                    max = max.max(*sc);
-                }
-                // Softmax, max-subtracted so a wide score range can't
-                // overflow on a big board.
-                let mut sum = 0.0f32;
-                for sc in scores.iter_mut() {
-                    *sc = (*sc - max).exp();
-                    sum += *sc;
-                }
-                let inv = 1.0 / sum;
-                for (j, sc) in scores.iter().enumerate() {
-                    let w = sc * inv;
-                    let vj = &v[j * h_obj + off..j * h_obj + off + hd];
-                    let dst = &mut ctx[i * h_obj + off..i * h_obj + off + hd];
-                    for (d, sv) in dst.iter_mut().zip(vj) {
-                        *d += w * sv;
-                    }
-                }
-            }
-        }
+        attention_core(&q, &k, &v, n, h_obj, &mut ctx);
 
         // Output projection, residual against the pre-attention hidden
         // state, relu.
-        let mut proj = vec![0.0f32; h_obj];
+        let mut proj = vec![0.0f32; n * h_obj];
+        a.o_w.matmul_t(&ctx, n, &mut proj);
         for i in 0..n {
-            a.o_w.matvec(&ctx[i * h_obj..(i + 1) * h_obj], &mut proj);
             for j in 0..h_obj {
-                hs[i * h_obj + j] = (hs[i * h_obj + j] + proj[j] + a.o_b[j]).max(0.0);
+                hs[i * h_obj + j] = (hs[i * h_obj + j] + proj[i * h_obj + j] + a.o_b[j]).max(0.0);
             }
         }
     }
@@ -1445,14 +1729,13 @@ impl PlayNet {
     /// pre-LN blocks in place. Attention math matches [`Self::attend`];
     /// the differences are the normed input, no relu on the stream, and
     /// the FFN half-block.
+    #[inline(always)]
     fn transform(&self, hs: &mut [f32], owner: &[usize], h_obj: usize) {
         let Some(ts) = &self.tstack else { return };
         let n = owner.len();
         if n == 0 {
             return;
         }
-        let hd = h_obj / ATTN_HEADS;
-        let scale = 1.0 / (hd as f32).sqrt();
 
         for i in 0..n {
             let tag = &ts.group.data[owner[i] * h_obj..(owner[i] + 1) * h_obj];
@@ -1462,6 +1745,8 @@ impl PlayNet {
         }
 
         let mut xn = vec![0.0f32; n * h_obj];
+        let mut proj = vec![0.0f32; n * h_obj];
+        let mut ctx = vec![0.0f32; n * h_obj];
         for blk in &ts.blocks {
             // x += attn(ln1(x))
             for i in 0..n {
@@ -1474,9 +1759,9 @@ impl PlayNet {
             }
             let project = |w: &Tensor2, b: &[f32]| {
                 let mut out = vec![0.0f32; n * h_obj];
-                for i in 0..n {
-                    w.matvec(&xn[i * h_obj..(i + 1) * h_obj], &mut out[i * h_obj..(i + 1) * h_obj]);
-                    for (v, bb) in out[i * h_obj..(i + 1) * h_obj].iter_mut().zip(b) {
+                w.matmul_t(&xn, n, &mut out);
+                for row in out.chunks_exact_mut(h_obj) {
+                    for (v, bb) in row.iter_mut().zip(b) {
                         *v += bb;
                     }
                 }
@@ -1485,47 +1770,16 @@ impl PlayNet {
             let q = project(&blk.q_w, &blk.q_b);
             let k = project(&blk.k_w, &blk.k_b);
             let v = project(&blk.v_w, &blk.v_b);
-
-            let mut ctx = vec![0.0f32; n * h_obj];
-            let mut scores = vec![0.0f32; n];
-            for head in 0..ATTN_HEADS {
-                let off = head * hd;
-                for i in 0..n {
-                    let qi = &q[i * h_obj + off..i * h_obj + off + hd];
-                    let mut max = f32::NEG_INFINITY;
-                    for (j, sc) in scores.iter_mut().enumerate() {
-                        let kj = &k[j * h_obj + off..j * h_obj + off + hd];
-                        let dot: f32 = dot_dispatch(qi, kj);
-                        *sc = dot * scale;
-                        max = max.max(*sc);
-                    }
-                    let mut sum = 0.0f32;
-                    for sc in scores.iter_mut() {
-                        *sc = (*sc - max).exp();
-                        sum += *sc;
-                    }
-                    let inv = 1.0 / sum;
-                    for (j, sc) in scores.iter().enumerate() {
-                        let w = sc * inv;
-                        let vj = &v[j * h_obj + off..j * h_obj + off + hd];
-                        let dst = &mut ctx[i * h_obj + off..i * h_obj + off + hd];
-                        for (d, sv) in dst.iter_mut().zip(vj) {
-                            *d += w * sv;
-                        }
-                    }
-                }
-            }
-            let mut proj = vec![0.0f32; h_obj];
+            attention_core(&q, &k, &v, n, h_obj, &mut ctx);
+            blk.o_w.matmul_t(&ctx, n, &mut proj);
             for i in 0..n {
-                blk.o_w.matvec(&ctx[i * h_obj..(i + 1) * h_obj], &mut proj);
                 for j in 0..h_obj {
-                    hs[i * h_obj + j] += proj[j] + blk.o_b[j];
+                    hs[i * h_obj + j] += proj[i * h_obj + j] + blk.o_b[j];
                 }
             }
 
-            // x += ffn2(relu(ffn1(ln2(x))))
-            let f = blk.ffn1_w.rows;
-            let mut f1 = vec![0.0f32; f];
+            // x += ffn2(relu(ffn1(ln2(x)))) — rows are independent, so the
+            // two layers run over all of them at once.
             for i in 0..n {
                 layer_norm_row(
                     &hs[i * h_obj..(i + 1) * h_obj],
@@ -1533,13 +1787,19 @@ impl PlayNet {
                     &blk.ln2_b,
                     &mut xn[i * h_obj..(i + 1) * h_obj],
                 );
-                blk.ffn1_w.matvec(&xn[i * h_obj..(i + 1) * h_obj], &mut f1);
-                for (v, b) in f1.iter_mut().zip(&blk.ffn1_b) {
+            }
+            let f = blk.ffn1_w.rows;
+            let mut f1 = vec![0.0f32; n * f];
+            blk.ffn1_w.matmul_t(&xn, n, &mut f1);
+            for row in f1.chunks_exact_mut(f) {
+                for (v, b) in row.iter_mut().zip(&blk.ffn1_b) {
                     *v = (*v + b).max(0.0);
                 }
-                blk.ffn2_w.matvec(&f1, &mut proj);
+            }
+            blk.ffn2_w.matmul_t(&f1, n, &mut proj);
+            for i in 0..n {
                 for j in 0..h_obj {
-                    hs[i * h_obj + j] += proj[j] + blk.ffn2_b[j];
+                    hs[i * h_obj + j] += proj[i * h_obj + j] + blk.ffn2_b[j];
                 }
             }
         }
@@ -1614,6 +1874,26 @@ impl PlayNet {
     /// The shared trunk: encode, interact, pool, two relu layers. Both
     /// heads read the returned activations.
     fn trunk_out(&self, s: &EncodedState) -> Vec<f32> {
+        #[cfg(target_arch = "x86_64")]
+        if avx2_fma() {
+            // SAFETY: the detected features gate the call.
+            return unsafe { self.trunk_out_avx2(s) };
+        }
+        self.trunk_out_body(s)
+    }
+
+    /// [`Self::trunk_out_body`] compiled with AVX2: the loops it inlines —
+    /// the softmax, the pooling, the bias and relu passes — get 256-bit
+    /// lanes. The matrix products themselves are the out-of-line
+    /// [`kernel`] functions, which pick their own AVX2 build.
+    #[cfg(target_arch = "x86_64")]
+    #[target_feature(enable = "avx2", enable = "fma")]
+    unsafe fn trunk_out_avx2(&self, s: &EncodedState) -> Vec<f32> {
+        self.trunk_out_body(s)
+    }
+
+    #[inline(always)]
+    fn trunk_out_body(&self, s: &EncodedState) -> Vec<f32> {
         let h_obj = self.obj_w.rows;
         let mut trunk_in = vec![0.0f32; self.trunk1_w.cols];
 
@@ -1657,12 +1937,12 @@ impl PlayNet {
         trunk_in[gbase..].copy_from_slice(&s.global);
 
         let mut t1 = vec![0.0f32; self.trunk1_w.rows];
-        self.trunk1_w.matvec(&trunk_in, &mut t1);
+        self.trunk1_w.matvec_t(&trunk_in, &mut t1);
         for (v, b) in t1.iter_mut().zip(&self.trunk1_b) {
             *v = (*v + b).max(0.0);
         }
         let mut t2 = vec![0.0f32; self.trunk2_w.rows];
-        self.trunk2_w.matvec(&t1, &mut t2);
+        self.trunk2_w.matvec_t(&t1, &mut t2);
         for (v, b) in t2.iter_mut().zip(&self.trunk2_b) {
             *v = (*v + b).max(0.0);
         }
@@ -2089,3 +2369,4 @@ mod tests {
         assert!(PlayNet::load(&bytes).is_err());
     }
 }
+

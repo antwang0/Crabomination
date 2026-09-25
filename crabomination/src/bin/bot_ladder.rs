@@ -1718,7 +1718,80 @@ fn outcomes_match(a: (&SimCost, &[Row]), b: (&SimCost, &[Row])) -> bool {
     })
 }
 
+/// `--bench-net [GAMES]`: the value net's forward pass on real positions.
+///
+/// Plays `GAMES` (default 40) heuristic sealed self-play games the way a
+/// training actor does, encodes every snapshot from both seats, then times
+/// the champion's (`CRAB_NET` or `nets/champion.safetensors`) forward pass
+/// over that fixed set on one thread — best of seven passes, so another
+/// process's load shows up as a slow pass rather than a slow reading. The
+/// output sum is printed to full precision: a kernel change that moves it
+/// by more than float noise changed what the net computes, and
+/// `CRAB_BENCH_DUMP=path` writes every output for a per-position diff.
+fn bench_net(games: usize) {
+    use crabomination::selfplay::{
+        heuristic_sealed_build, play_recorded_game, sealed_game_template, sealed_pool,
+    };
+    let path = std::env::var("CRAB_NET").unwrap_or_else(|_| "nets/champion.safetensors".into());
+    let bytes = std::fs::read(&path).unwrap_or_else(|e| panic!("{path}: {e}"));
+    let vocab = crabomination::server::net_eval::vocab();
+    let mut net = crabomination_nn::PlayNet::load(&bytes).unwrap_or_else(|e| panic!("{path}: {e:?}"));
+    net.pad_vocab(vocab.size()).unwrap_or_else(|e| panic!("{path}: {e:?}"));
+
+    let mut states = Vec::new();
+    for g in 0..games as u64 {
+        let seed = 0xB3_4C_4E_E7 ^ g.wrapping_mul(0x9E37_79B9_7F4A_7C15);
+        let deck_a = heuristic_sealed_build(&sealed_pool(seed ^ 1), seed ^ 3);
+        let deck_b = heuristic_sealed_build(&sealed_pool(seed ^ 2), seed ^ 4);
+        let template = sealed_game_template(&deck_a, &deck_b);
+        let rec = play_recorded_game(&template, [EvalWeights::default(); 2], seed, 4000, vocab);
+        states.extend(rec.rows.into_iter().map(|r| r.state));
+    }
+    let objs: Vec<usize> = states.iter().map(|s| s.objects().len()).collect();
+    let mean = objs.iter().sum::<usize>() as f64 / objs.len().max(1) as f64;
+    let mut sorted = objs.clone();
+    sorted.sort_unstable();
+    let pct = |p: f64| sorted[((sorted.len() - 1) as f64 * p) as usize];
+
+    // `CRAB_BENCH_DUMP=path`: every position's output, little-endian f32
+    // — to compare two builds of the forward pass position by position.
+    if let Ok(dump) = std::env::var("CRAB_BENCH_DUMP") {
+        let bytes: Vec<u8> = states.iter().flat_map(|st| net.forward(st).to_le_bytes()).collect();
+        std::fs::write(&dump, bytes).unwrap_or_else(|e| panic!("{dump}: {e}"));
+    }
+
+    let mut best = f64::INFINITY;
+    let mut sum = 0.0f64;
+    for _ in 0..7 {
+        let t0 = std::time::Instant::now();
+        let mut s = 0.0f64;
+        for st in &states {
+            s += std::hint::black_box(net.forward(std::hint::black_box(st))) as f64;
+        }
+        best = best.min(t0.elapsed().as_secs_f64());
+        sum = s;
+    }
+    println!(
+        "bench-net: {path}, {} positions from {games} games; objects/position mean {mean:.1}, \
+         p50 {}, p90 {}, max {}",
+        states.len(),
+        pct(0.5),
+        pct(0.9),
+        sorted.last().copied().unwrap_or(0),
+    );
+    println!(
+        "  forward: {:.2} µs/position (best of 7 passes, 1 thread); output sum {sum:.9}",
+        best * 1e6 / states.len().max(1) as f64,
+    );
+}
+
 fn main() {
+    let argv: Vec<String> = std::env::args().collect();
+    if let Some(i) = argv.iter().position(|a| a == "--bench-net") {
+        let games = argv.get(i + 1).and_then(|g| g.parse().ok()).unwrap_or(40);
+        bench_net(games);
+        return;
+    }
     let args = match parse_args() {
         Ok(a) => a,
         Err(e) => {

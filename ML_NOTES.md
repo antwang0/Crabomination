@@ -5438,3 +5438,38 @@ moves existing fields. Batch them — two layout changes are two retrains.
 **What is already true and needs nothing:** the scored (heuristic) pilots run
 pods today with no encoder involvement, which is what `bot_ladder --commander`
 uses, and what the 400-game smoke test measures.
+
+## Throughput — the net leaf's forward pass, 3.4x; and the learner's open leads (2026-09-25)
+
+**Round 69's "the leaf costs no measurable wall clock" is stale.** At the
+2026-09-25 tip, `CRAB_MCTS_TIMING` on `mcts-net67-256` mirrors put the value
+net's forward at **37.5 % of search time** (188 us a rollout against 304 us of
+simulation): the engine's rollouts got ~4x cheaper since, and the champion
+carries the attention layer. PERF `(-371)` rewrote `crabomination_nn`'s
+forward (transposed weights, blocked kernels, attention as two matmuls per
+head, a vectorised softmax, zero-skipping in the trunk): 3.4x on the forward
+in the search (55-57 us a rollout), **-28 % thread time per net-leaf searched
+decision**, outputs within 1.1e-6 of the old code (0 adjacent order flips;
+the candle parity tests hold at 1e-4). A cell with the net on both sides
+runs ~28 % shorter. `bot_ladder --bench-net` is the instrument.
+
+Open learner-side leads, found in the same survey and **not** acted on
+(each is a code reading, not a measurement, unless it says otherwise):
+
+- **Relabel under the window lock.** `selfplay_train.rs` runs the λ-relabel's
+  forward pass while holding `shared.window`'s mutex, which every actor
+  needs to push rows; at the default cadence that is a ~4-5 s hold (round
+  69's stats: relabel 40-52 s of every ~105 s of learner time). Snapshot the
+  new rows, run the net outside the lock, write the targets back.
+- **Generation outruns consumption ~5x.** Round 69 trained on 22.5-24 % of
+  the 25 M rows it generated (sleep 0), and under `--relabel-mode new` every
+  generated row costs one forward pass — the unused rows tax the learner
+  directly. Fewer actors, or keeping one snapshot in N, cuts relabel time in
+  proportion.
+- **The value path has no prefetch.** Round 72 measured prefetch +19 % and
+  batch 1024 +25 % on the PG path only (batch 1024 later OOMed; 512 is the
+  safe ceiling).
+- Minor: `play_recorded_game` evaluates `eval_material_public` for both seats
+  at every snapshot (`RecordedGame.heur`), read only by `--calibrate` /
+  `--pairwise`, never by `actor_loop` — part of a ~6 % snapshot block. Only
+  worth taking if the actors ever become the bottleneck.
