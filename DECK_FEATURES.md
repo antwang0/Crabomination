@@ -166,6 +166,7 @@ lists were picked.
 | **Paradox Power** (WHO precon) GUR | The Thirteenth Doctor + Yasmin Khan | GUR | 100 | 🟡 all 100 implemented, 13 carry residuals (Become the Pilot, Bigger on the Inside, Bill Potts, Clara Oswald, Last Night Together, Lunar Hatchling, Me the Immortal, Psychic Paper, River Song's Diary, Ryan Sinclair, Strax, The Fugitive Doctor, Truth or Consequences) |
 | **Avengers Assemble** (MSC precon) URW | Captain America, Team Leader | URW | 100 | 🟡 all 100 implemented, 6 carry residuals (Captain Marvel, Heroic Return, Heroic Sacrifice, Scarlet Witch, Speed, Winter Soldier) |
 | **Turtle Power!** (TMC precon) WUBRG | Heroes in a Half Shell | WUBRG | 100 | 🟡 all 100 implemented, 5 carry residuals (Heroes in a Half Shell, Coin of Mastery, Double Jump // Flying Kick, Special Move, Vigor) |
+| **Blast from the Past** (WHO precon) GWU | The Fourth Doctor + Sarah Jane Smith | GWU | 100 | 🟡 all 100 implemented, 10 carry residuals (Ace's Baseball Bat, Displaced Dinosaurs, Nyssa of Traken, Peri Brown, Reverse the Polarity, Susan Foreman, The Curse of Fenric, The Eighth Doctor, The Fourth Doctor, The Second Doctor) |
 | **Doom Prevails** (MSC precon) UBR | Doctor Doom, King of Latveria | UBR | 100 | 🟡 all 100 implemented, 4 carry residuals (Extract Power, Kang Dynasty, Lady Loki, Superior Foes of Spider-Man) |
 | **The Ruinous Powers** (40K precon) UBR | Abaddon the Despoiler | UBR | 100 | 🟡 all 100 implemented, 6 carry residuals (Bloodthirster, Chaos Mutation, Khârn the Betrayer, The Horus Heresy, The Lost and the Damned, The Ruinous Powers) |
 | **Masters of Evil** (WHO precon) UBR | Davros, Dalek Creator | UBR | 100 | 🟡 all 100 implemented, 11 carry residuals (Day of the Moon, Doomsday Confluence, Genesis of the Daleks, Rassilon, The Master Multiplied, The Sound of Drums, The Toymaker's Trap, Time Reaper, Vislor Turlough, Weeping Angel, Zygon Infiltrator) |
@@ -2632,6 +2633,24 @@ Vehicle, an activated manland or a stationed Spacecraft stayed home: Kotori
 **Dance of the Manse** (INCOMPLETE_CARDS). Four-seat pods beside Hakbal /
 Inspirit / Morska (seed 15101, 1,000) and six seats (15102, 1,000): all
 decided; census (15103, 500): nothing unplayed. `--bench` byte-identical.
+
+The **hundred-and-eighty-second** is Doctor Who Commander's **Blast from the
+Past** (`BlastFromThePast_WHO`, 2023-10-13) — Bant historic spells and Sagas
+under The Fourth Doctor + Sarah Jane Smith (the Doctor's companion pair, CR
+702.124m), `--pod-decks 182`. Forty-five cards were missing
+(`cmdr_fourth_doctor.rs`). The primitives: `StaticEffect::YourSagasHaveReadAhead`
+(Barbara Wright, CR 714.3c — read in `saga_enter_advance`),
+`Effect::CopySpellNonLegendary` (The Sixth Doctor, CR 707.9b),
+`Effect::GuessManaValueAgainstValue` (The Seventh Doctor — Master of
+Predicaments' guess against your artifact count, investigating when nothing
+is cast), `Effect::AddOneOfAChosenCounterToEach` (The Caves of Androzani; the
+pick shared with proliferate as `proliferate_wants`) and
+`Effect::CounterAllOtherSpells` (Reverse the Polarity). Ten cards carry
+residuals (INCOMPLETE_CARDS). Four seats beside Heroes / the Thirteenth
+Doctor / Captain America (seed 18101, 1,000, `--card-census`: nothing
+unplayed): all decided, Fourth Doctor 11.4 %; six seats beside Abaddon /
+Szarekh / Doctor Doom / the Swarmlord / Y'shtola (18102, 1,000: nothing
+unplayed): all decided, 2.5 %. `--bench` byte-identical.
 
 The **hundred-and-eighty-first** is Doctor Who Commander's **Masters of Evil**
 (`MastersOfEvil_WHO`, 2023-10-13) — Grixis Daleks, Cybermen and villainous

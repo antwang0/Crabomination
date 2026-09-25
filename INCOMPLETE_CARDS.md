@@ -2353,6 +2353,16 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Truth or Consequences | Paradox Power (WHO) | each consequences vote picks its own random opponent. |
 | 🟡 Endless Detour | Counter Blitz (FIC) | the kind of target (spell, nonland permanent, graveyard card) is chosen as a mode. |
 | 🟡 Lulu, Stern Guardian | Counter Blitz (FIC) | the stunned attacker is chosen as the trigger resolves, not as it's put on the stack. |
+| 🟡 Ace's Baseball Bat | Blast from the Past (WHO) | "must be blocked by a Dalek if able" is not modelled. |
+| 🟡 Displaced Dinosaurs | Blast from the Past (WHO) | the historic permanent becomes a 7/7 Dinosaur as a trigger resolves, not as it enters. |
+| 🟡 Nyssa of Traken | Blast from the Past (WHO) | the creatures are tapped up to the count on resolution, not targeted. |
+| 🟡 Peri Brown | Blast from the Past (WHO) | every historic spell has convoke, not only the first each turn. |
+| 🟡 Reverse the Polarity | Blast from the Past (WHO) | "can't be blocked" reaches only the creatures on the battlefield as it resolves. |
+| 🟡 Susan Foreman | Blast from the Past (WHO) | the planeswalk replacement does nothing (no Planechase). |
+| 🟡 The Curse of Fenric | Blast from the Past (WHO) | I spares your own creatures; II doesn't rename the creature Fenric or make it legendary, so III's Mutant fights any other creature. |
+| 🟡 The Eighth Doctor | Blast from the Past (WHO) | the historic land and permanent spell are separate allowances, and the cast permanent isn't exiled if it leaves later. |
+| 🟡 The Fourth Doctor | Blast from the Past (WHO) | no Food for a land played from the top. |
+| 🟡 The Second Doctor | Blast from the Past (WHO) | an opponent who draws has only its current creatures barred from attacking you. |
 | 🟡 Heroes in a Half Shell | Turtle Power! (TMC) | "each of those creatures" is each Mutant, Ninja or Turtle of yours that dealt damage to a player this turn, not only this batch's. |
 | 🟡 Coin of Mastery | Turtle Power! (TMC) | artifact mana is counted off the pool, so mana floated from lands and artifacts together and only partly spent can read low. |
 | 🟡 Double Jump // Flying Kick | Turtle Power! (TMC) | cast fused, Flying Kick has no enemy target (a fused right half reads one target). |
