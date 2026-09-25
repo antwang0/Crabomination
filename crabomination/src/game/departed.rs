@@ -74,11 +74,20 @@ impl GameState {
         // source gone too (an ability resolving off a permanent that has left),
         // fall back to the seat that still has to finish resolving, which the
         // caller identifies by holding priority.
+        //
+        // Every candidate is checked for being in the game: in a pod two
+        // seats can be gone at once, and a source owned by one departed seat
+        // resolving while priority still names another handed the choice from
+        // one departed seat to the next (a six-seat pod asked a dead seat to
+        // pick from a dead seat's graveyard). The last resort is the next
+        // seat in turn order that is still in the game.
+        let alive = |c: &usize| self.players.get(*c).is_some_and(|p| p.is_alive());
         let controller = self
             .find_card_anywhere(source)
             .map(|c| c.controller)
-            .filter(|&c| self.players.get(c).is_some_and(|p| p.is_alive()))
-            .unwrap_or(self.priority.player_with_priority);
+            .filter(alive)
+            .or(Some(self.priority.player_with_priority).filter(alive))
+            .unwrap_or_else(|| self.next_alive_seat(seat));
         if self.same_team(controller, seat) {
             // The departed chooser was the controller or a teammate: the
             // controller may name any other player, and naming themselves is
@@ -90,7 +99,7 @@ impl GameState {
         // answers with `default_hostile_opponent` and a fixed seed reproduces
         // it. No opponent left means the controller chooses themselves, which
         // the first sentence of 800.4g allows.
-        self.default_hostile_opponent(controller).unwrap_or(controller)
+        self.default_hostile_opponent(controller).filter(alive).unwrap_or(controller)
     }
 
     /// Whether an interactive seat should be handed a modal — `wants_ui`,
@@ -168,6 +177,41 @@ mod tests {
         g.players[1].life = 0;
         g.check_state_based_actions();
         assert_eq!(g.route_ask(1, src, false), AskRoute::Seat(0));
+    }
+
+    /// CR 800.4a — an ask suspended for a seat that then leaves in the same
+    /// action is dropped with the seat, not installed later as a decision it
+    /// owes (a six-seat pod asked a departed seat for a graveyard pick after
+    /// it lost to the priority pass that suspended the ask).
+    #[test]
+    fn cr_800_4a_a_departed_seats_suspended_ask_leaves_with_it() {
+        use crate::decision::{Decision, PickValue};
+        use crate::game::types::PendingEffectState;
+        let mut g = multi_player_game(4);
+        let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let ask = |player| {
+            Some(Box::new((
+                Decision::ChooseCards {
+                    source: src,
+                    prompt: String::new(),
+                    candidates: vec![],
+                    min: 1,
+                    max: 1,
+                    eligible: None,
+                    value: PickValue::Gain,
+                },
+                PendingEffectState::CardsAnswerPending { player },
+                crate::effect::Effect::Noop,
+            )))
+        };
+        g.suspend_signal = ask(3);
+        g.players[1].life = 0;
+        g.check_state_based_actions();
+        assert!(g.suspend_signal.is_some(), "another seat's ask stays");
+        g.suspend_signal = ask(2);
+        g.players[2].life = 0;
+        g.check_state_based_actions();
+        assert!(g.suspend_signal.is_none(), "the departed seat's ask is gone");
     }
 
     /// CR 800.4 generally: no modal the engine poses may name a seat that has

@@ -5507,6 +5507,14 @@ impl GameState {
         if self.pending_decision.as_ref().is_some_and(|d| d.acting_player() == p) {
             self.pending_decision = None;
         }
+        // The same ask one step earlier: suspended but not yet installed as
+        // `pending_decision` when the seat left mid-action. Left in place, the
+        // next resolution turns it into a decision owed by a seat that is gone
+        // (a six-seat pod: a graveyard pick asked of a player who lost to the
+        // same priority pass).
+        if self.suspend_signal.as_ref().is_some_and(|s| s.1.answering_player() == Some(p)) {
+            self.suspend_signal = None;
+        }
         // CR 800.4a — "If the player who left the game had priority at the time
         // they left, priority passes to the next player in turn order who's
         // still in the game." Same wedge as the ask above: every other seat's
