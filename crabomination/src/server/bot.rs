@@ -15890,7 +15890,12 @@ fn no_cost_reduction_possible(
         && p.pending_spell_discounts.is_empty()
         && p.turn_spell_discounts.is_empty()
         && state.extra_cast_reduction == 0
-        // Last of the six: the only one that can force the source gather.
+        // Saheeli's next-spell affinity and a "spells that player casts cost
+        // {N} less" turn grant: both reduce off the board, and the gate used
+        // to reject a spell they made affordable.
+        && p.pending_affinity_next_spell.is_empty()
+        && !state.turn_scoped_spell_taxes.iter().any(|t| t.discount_for == Some(seat))
+        // Last of the eight: the only one that can force the source gather.
         && have.cost_sources().is_empty()
 }
 
@@ -25044,6 +25049,23 @@ mod tests {
             matches!(action, Some(GameAction::PassPriority)),
             "no trick needed on a won fight, got {action:?}",
         );
+    }
+
+    /// The mana-value gate's "no reduction possible" read has to see every
+    /// off-board reduction: Saheeli's next-spell affinity made Divination
+    /// affordable off one Island and two artifacts, and the gate rejected it
+    /// (a `debug_assert` in a Commander pod).
+    #[test]
+    fn mana_value_gate_sees_next_spell_affinity() {
+        let mut g = two_player_game();
+        for _ in 0..2 {
+            g.add_card_to_battlefield(0, catalog::ornithopter());
+        }
+        let d = g.add_card_to_hand(0, catalog::divination());
+        g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+        g.players[0].pending_affinity_next_spell.push(0);
+        let card = g.players[0].hand.iter().find(|c| c.id == d).unwrap().clone();
+        assert!(can_afford_in_state(&g, 0, &card, &EvalWeights::default()));
     }
 
     /// A pump whose amount is the creature's own power (Unleash Fury) is a
