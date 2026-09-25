@@ -36,7 +36,9 @@ fn is_nested_ability(map: &serde_json::Map<String, Value>) -> bool {
 /// 603.7d, `auto_targets_for_effect_all_slots`). A slot under either is
 /// answered, not lost — counting it inflated the ratchet below from 19 to 39
 /// and hid how many real gaps are left.
-const RESOLUTION_TIME_TARGETING: &[&str] = &["Reflexive", "ReflexiveTrigger"];
+/// `ChooseModeAtRandom` (Umaro) joins them: its mode is only known as it
+/// resolves, and `choose_mode_at_random` auto-targets the chosen mode then.
+const RESOLUTION_TIME_TARGETING: &[&str] = &["Reflexive", "ReflexiveTrigger", "ChooseModeAtRandom"];
 
 /// Every `slot` mentioned by a `Selector::TargetFiltered` in `v`, not
 /// descending into nested ability definitions or resolution-time bodies.

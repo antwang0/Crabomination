@@ -107,7 +107,7 @@ const REBINDS_TARGETS: &[&str] = &[
 /// `ChooseUnchosenModeThisTurn` shares `ChooseUnchosenMode`'s resolution arm
 /// (Parapet Thrasher).
 const RESOLUTION_TIME_TARGETING: &[&str] =
-    &["Reflexive", "ReflexiveTrigger", "ChooseUnchosenMode", "ChooseUnchosenModeThisTurn"];
+    &["Reflexive", "ReflexiveTrigger", "ChooseUnchosenMode", "ChooseUnchosenModeThisTurn", "ChooseModeAtRandom"];
 
 /// Modal variants whose targets ride on the cast action, one slot per chosen
 /// mode, rather than on a fixed cast-time slot.

@@ -357,6 +357,7 @@ impl Effect {
         match self {
             Effect::Seq(v)
             | Effect::ChooseMode(v)
+            | Effect::ChooseModeAtRandom(v)
             | Effect::AsEntersChooseMode(v) => {
                 for e in v {
                     f(e);
