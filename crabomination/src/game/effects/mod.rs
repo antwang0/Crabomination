@@ -2175,7 +2175,8 @@ impl GameState {
             || spec.legendary
             || !spec.extra_supertypes.is_empty()
             || spec.non_legendary
-            || spec.not_a_creature)
+            || spec.not_a_creature
+            || spec.as_vehicle_crew.is_some())
             && let Some(c) = self.battlefield.find_by_id_mut(card_id)
         {
             let def = c.definition_make_mut();
@@ -2215,6 +2216,19 @@ impl GameState {
             // "It's not a creature" (Machine God's Effigy).
             if spec.not_a_creature {
                 def.card_types.retain(|t| *t != crate::card::CardType::Creature);
+            }
+            // Imposter Mech — a Vehicle artifact with crew N, no other type
+            // (and no creature or planeswalker subtypes, 2022-02-18 ruling).
+            if let Some(n) = spec.as_vehicle_crew {
+                def.card_types = vec![crate::card::CardType::Artifact];
+                def.subtypes.creature_types.clear();
+                def.subtypes.planeswalker_subtypes.clear();
+                def.subtypes.enchantment_subtypes.clear();
+                if !def.subtypes.artifact_subtypes.contains(&crate::card::ArtifactSubtype::Vehicle) {
+                    def.subtypes.artifact_subtypes.push(crate::card::ArtifactSubtype::Vehicle);
+                }
+                def.keywords.retain(|k| !matches!(k, crate::card::Keyword::Crew(_)));
+                def.keywords.push(crate::card::Keyword::Crew(n));
             }
         }
         true

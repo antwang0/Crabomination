@@ -1600,6 +1600,11 @@ fn event_card(event: &GameEvent) -> Option<CardId> {
         // The moved attachment is the actor — "this Equipment becomes
         // attached" is a SelfSource trigger on the Equipment.
         GameEvent::AttachmentMoved { attachment, .. } => Some(*attachment),
+        // CR 702.122 / 702.171 — the crewed Vehicle / saddled Mount, whose
+        // controller is the actor ("whenever a Vehicle you control becomes
+        // crewed"; Mobilizer Mech).
+        GameEvent::VehicleCrewed { vehicle, .. } => Some(*vehicle),
+        GameEvent::MountSaddled { mount, .. } => Some(*mount),
         _ => None,
     }
 }

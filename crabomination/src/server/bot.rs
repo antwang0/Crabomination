@@ -8838,12 +8838,19 @@ fn sink_facts(state: &GameState, seat: usize, have: &SweepMana<'_>) -> u32 {
         .battlefield
         .iter()
         .any(|c| c.gather_scan_bits() & crate::card::gather_spec::ARTIFACTS_ARE_EQUIPMENT != 0);
+    // A granted crew (Kotori, Swift Reconfiguration) needs the layers; ask
+    // them only on a board where something grants one.
+    let crew_granted = state.battlefield.iter().any(|c| {
+        c.definition.static_abilities.iter().any(|sa| {
+            matches!(&sa.effect, crate::effect::StaticEffect::GrantKeyword { keyword: crate::card::Keyword::Crew(_), .. })
+        }) || c.definition.equipped_bonus.as_ref().is_some_and(|b| b.keywords.iter().any(|k| matches!(k, crate::card::Keyword::Crew(_))))
+    });
     for c in state.battlefield.iter().filter(|c| c.controller == seat) {
         let def = &c.definition;
         if def.is_planeswalker() {
             m |= sink::LOYALTY;
         }
-        if def.crew_cost().is_some() {
+        if def.crew_cost().is_some() || (crew_granted && state.effective_crew_cost(c.id).is_some()) {
             m |= sink::CREW;
         }
         if def.saddle_cost().is_some() {
@@ -9731,7 +9738,7 @@ fn pick_crew_vehicle(state: &GameState, seat: usize) -> Option<GameAction> {
     crewers.sort_by_key(|&(_, p)| p);
 
     for v in state.battlefield.iter().filter(|c| c.controller == seat) {
-        let Some(cost) = v.definition.crew_cost() else { continue };
+        let Some(cost) = state.effective_crew_cost(v.id) else { continue };
         let Some(cp) = state.computed_permanent_on(v) else { continue };
         // Already a creature (crewed/animated this turn) → nothing to do.
         if cp.card_types().contains(&CardType::Creature) {
@@ -10539,7 +10546,7 @@ fn pick_crew(state: &GameState, seat: usize) -> Option<GameAction> {
         if vehicle.controller != seat {
             continue;
         }
-        let Some(crew_n) = vehicle.definition.crew_cost() else { continue };
+        let Some(crew_n) = state.effective_crew_cost(vehicle.id) else { continue };
         // Already a creature this turn (crewed / animated)? Don't re-crew.
         if state
             .computed_permanent_on(vehicle)

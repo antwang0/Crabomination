@@ -21384,6 +21384,21 @@ impl GameState {
             })
     }
 
+    /// CR 702.122 — the cheapest crew N this permanent has, printed or
+    /// granted (Kotori's "Vehicles you control have crew 2"; a permanent with
+    /// several crew abilities may use any of them).
+    pub fn effective_crew_cost(&self, vehicle: crate::card::CardId) -> Option<u32> {
+        let c = self.battlefield_find(vehicle)?;
+        let printed = c.definition.crew_cost();
+        let granted = self.computed_permanent_on(c).and_then(|cp| {
+            cp.keywords().iter().filter_map(|k| if let Keyword::Crew(n) = k { Some(*n) } else { None }).min()
+        });
+        match (printed, granted) {
+            (Some(a), Some(b)) => Some(a.min(b)),
+            (a, b) => a.or(b),
+        }
+    }
+
     fn crew(
         &mut self,
         vehicle: crate::card::CardId,
@@ -21398,10 +21413,7 @@ impl GameState {
         if self.battlefield[veh_pos].controller != p {
             return Err(GameError::NotYourPriority);
         }
-        let crew_n = self.battlefield[veh_pos]
-            .definition
-            .crew_cost()
-            .ok_or(GameError::InvalidTarget)?;
+        let crew_n = self.effective_crew_cost(vehicle).ok_or(GameError::InvalidTarget)?;
         // Validate the crew: distinct, controlled by p, untapped creatures,
         // none being the Vehicle itself. Sum their computed power.
         let computed = self.compute_battlefield();

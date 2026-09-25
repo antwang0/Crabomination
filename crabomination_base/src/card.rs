@@ -5020,6 +5020,11 @@ pub struct EntersAsCopy {
     /// addition to its other types" — Moritte of the Frost's snow half).
     #[serde(default)]
     pub extra_supertypes: Vec<Supertype>,
+    /// "except it's a Vehicle artifact with crew N and it loses all other
+    /// card types" (Imposter Mech): the copy is an artifact only, with the
+    /// Vehicle subtype and crew N; subtypes of the lost types go with them.
+    #[serde(default)]
+    pub as_vehicle_crew: Option<u32>,
 }
 
 /// CR 614 — one mode of a `CardDefinition.enters_as_choice` as-enters
