@@ -6614,7 +6614,11 @@ impl BoardFacts {
                     | SE::MayPlayCardsMilledThisTurn => f.grants_gy_cast = true,
                     SE::FiveColorAlternativeCost
                     | SE::GenericAlternativeCostForFilter { .. }
-                    | SE::LifeAlternativeCostOncePerYourTurn { .. } => f.grants_alt_cost = true,
+                    | SE::LifeAlternativeCostOncePerYourTurn { .. }
+                    // The {0} grants (Darksteel Monolith, One with the
+                    // Multiverse) were invisible here, so neither was used.
+                    | SE::ZeroAlternativeCostOncePerTurn { .. }
+                    | SE::ZeroAlternativeCostOncePerYourTurn { .. } => f.grants_alt_cost = true,
                     _ => {}
                 }
             }
