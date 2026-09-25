@@ -5050,6 +5050,19 @@ pub fn optional_trigger_beneficial(state: &GameState, source: CardId, descriptio
     if body.is_some_and(|b| removal_targets_own_permanent(state, b)) {
         return false;
     }
+    // A "you may create a token" on an overkill board only grows it: Flourishing
+    // Defenses offered an Elf Warrior per -1/-1 counter and the bot took all
+    // 980 under Everlasting Torment until the six-seat pod's board cap
+    // (seat 173 pod, seed 17302 game 37).
+    if body.is_some_and(ability_makes_token)
+        && (state.battlefield.len() >= crate::recommend::BOARD_GATE
+            || state
+                .battlefield
+                .find_by_id(source)
+                .is_some_and(|c| super::renewal_guard::board_is_saturated(state, c.controller)))
+    {
+        return false;
+    }
     // Take it unless the body is self-costly; default to taking when the
     // body can't be introspected (most "you may" on your own permanents is
     // upside).

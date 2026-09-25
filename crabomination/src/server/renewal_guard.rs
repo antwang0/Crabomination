@@ -130,4 +130,21 @@ mod tests {
         g.players[1].life = 21;
         assert!(!super::board_is_saturated(&g, me), "120 power < 3 x 41");
     }
+
+    /// A "you may create a token" trigger is declined on an overkill board:
+    /// Flourishing Defenses took every Elf Warrior it was offered under
+    /// Everlasting Torment until the pod's board cap (seed 17302, game 37).
+    #[test]
+    fn an_overkill_board_declines_optional_tokens() {
+        use crate::server::bot::optional_trigger_beneficial;
+        let mut g = multi_player_game(3);
+        let me = 0;
+        let fd = g.add_card_to_battlefield(me, catalog::flourishing_defenses());
+        let ask = "Create an Elf Warrior for each -1/-1 counter?";
+        assert!(optional_trigger_beneficial(&g, fd, ask), "an ordinary board takes the Elves");
+        for _ in 0..60 {
+            g.add_card_to_battlefield(me, catalog::grizzly_bears());
+        }
+        assert!(!optional_trigger_beneficial(&g, fd, ask), "sixty Bears against 40 life: enough");
+    }
 }
