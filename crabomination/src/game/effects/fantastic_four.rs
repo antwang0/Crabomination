@@ -61,7 +61,7 @@ impl GameState {
     ) -> Result<(), GameError> {
         let Some(src) = ctx.source else { return Ok(()) };
         let Some(AttackTarget::Player(p)) =
-            self.attacking.iter().find(|a| a.attacker == src).map(|a| a.target.clone())
+            self.attacking.iter().find(|a| a.attacker == src).map(|a| a.target)
         else {
             return Ok(());
         };

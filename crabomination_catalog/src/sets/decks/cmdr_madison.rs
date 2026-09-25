@@ -407,7 +407,6 @@ pub fn james_wandering_dad() -> CardDefinition {
                 count: Value::XFromCost,
                 definition: Arc::new(crabomination_base::tokens::clue_token()),
             },
-            ..Default::default()
         })),
         ..legendary(creature(
             "James, Wandering Dad",
