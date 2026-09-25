@@ -18562,12 +18562,21 @@ fn action_outcome_is_temporary(state: &GameState, action: &GameAction) -> bool {
 /// and it belongs on the normal schedule.
 fn is_combat_trick(def: &CardDefinition) -> bool {
     use crate::card::CardType;
-    use crate::effect::{Duration, Selector};
+    use crate::effect::{Duration, Selector, Value};
     if !def.card_types.contains(&CardType::Instant) {
         return false;
     }
     fn all_temp_pumps(e: &Effect) -> bool {
         match e {
+            // A per-count shrink ("-1/-1 for each Swamp you control", Defile)
+            // is removal: `pick_combat_trick` only pumps our own creature and
+            // skips dynamic amounts, so holding it for combat meant it was
+            // never cast (seed 17701, 1,000 Necron pods).
+            Effect::PumpPT { toughness: Value::Times(a, b), .. }
+                if matches!(**a, Value::Const(n) if n < 0) || matches!(**b, Value::Const(n) if n < 0) =>
+            {
+                false
+            }
             Effect::PumpPT {
                 what: Selector::Target(_) | Selector::TargetFiltered { .. },
                 duration: Duration::EndOfTurn | Duration::EndOfCombat,
@@ -25419,11 +25428,17 @@ mod tests {
             moved,
             vec![
                 "Agony Warp",
+                "Call for Blood",
                 "Consume Strength",
+                "Defile",
+                "Irradiate",
                 "Leeching Bite",
+                "Nightmarish End",
                 "Schismotivate",
                 "Seeds of Strength",
+                "Sickening Shoal",
                 "Skulduggery",
+                "Slice from the Shadows",
                 "Steal Strength",
             ],
             "a new name here is a card leaving the trick window, and if it is in cube / sos / \
