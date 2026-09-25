@@ -155,6 +155,7 @@ lists were picked.
 | **Dance of the Elements** (ECC precon) WUBRG | Ashling, the Limitless | WUBRG | 100 | 🟡 all 100 implemented, 5 carry residuals (Flamebraider, Smokebraider, Primal Beyond, Haunting Voyage, Horde of Notions) |
 | **Mystic Intellect** (C19 precon) URW | Sevinne, the Chronoclasm | URW | 100 | 🟡 all 100 implemented (Dockside Extortionist, banned, swapped for Ragavan), 3 carry residuals (Wall of Stolen Identity, Mandate of Peace, Elsha of the Infinite) |
 | **The Hosts of Mordor** (LTC precon) UBR | Sauron, Lord of the Rings | UBR | 100 | 🟡 all 100 implemented, 3 carry residuals (Moria Scavenger, Shelob, Dread Weaver, Summons of Saruman) |
+| **Elven Empire** (KHC precon) BG | Lathril, Blade of the Elves | BG | 100 | 🟡 all 100 implemented, 2 carry residuals (Serpent's Soul-Jar, Roots of Wisdom) |
 | **Coven Counters** (MIC precon) GW | Leinore, Autumn Sovereign | GW | 100 | 🟡 all 100 implemented, 4 carry residuals (Curse of Conformity, Celestial Judgment, Sigardian Zealot, Moorland Rescuer) |
 | **Arcane Maelstrom** (C20 precon) GUR | Kalamax, the Stormsire | GUR | 100 | 🟡 all 100 implemented, 4 carry residuals (Eon Frolicker, Haldan, Pako, Lavabrink Floodgates) |
 | **Enhanced Evolution** (C20 precon) BGU | Otrimi, the Ever-Playful | BGU | 100 | 🟡 all 100 implemented, 4 carry residuals (Capricopian, Manascape Refractor, Mindleecher, Vastwood Hydra) |
@@ -2611,6 +2612,23 @@ targeted), **Summons of Saruman** (flashback pays X in mana). Pods
 (1,000 games each): 4 seats beside Urza / Osgir / Eshki (seed 11120) Sauron
 28.1 %, census: no card of the four unplayed; 6 seats (seed 11121) beside Sevinne / Anje / Kotori / Galadriel / Felothar 1,000 / 1,000, Sauron 13.1 %; 8 seats (seed 11121) 1,000 / 1,000, Sauron 16.1 %. `--bench`
 byte-identical.
+
+The **hundred-and-fifty-sixth** is Kaldheim Commander's **Elven Empire**
+(`ElvenEmpire_KHC`) — Golgari Elves under Lathril, Blade of the Elves,
+`--pod-decks 156` (committed as 154, then 155, as The Hosts of Mordor and
+Veloci-Ramp-Tor landed first).
+Twenty-six cards were missing (`cmdr_lathril.rs`). The primitives:
+`Effect::MayPayXTimes` (CR 107.3 — Numa's "pay {X}{X}", sharing MayPayX's
+resolution and every walker arm) and
+`DynamicPt::CreaturesOfTypeControlledAndInGraveyard` (Abomination of
+Llanowar). Bounty of Skemfar is two chained `LookPick`s (a land, then an
+Elf from what is left of the six). Residuals: **Serpent's Soul-Jar** (every
+exiled creature castable, not one) and **Roots of Wisdom** (returns from
+among the milled three). Pods beside Sevinne / Anje / Kotori (seed 9210,
+1,000; census: nothing unplayed), the first three seats (9211, 1,000), six
+seats (9212, 1,000): all decided; Lathril 51.6 / 56.3 / 33.2 % — the
+strongest recent seat (Lathril's ten-Elf drain). Strict debug pods 90 / 90.
+`--bench` byte-identical.
 
 The **hundred-and-fifty-third** is Commander 2019's **Mystic Intellect**
 (`MysticIntellect_C19`) — Jeskai flashback under Sevinne, the Chronoclasm,

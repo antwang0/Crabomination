@@ -2001,6 +2001,8 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Wall of Stolen Identity | Mystic Intellect (C19) | the tap-and-lock happens as it enters, not as a reflexive "when you do" trigger; the lock lasts while the Wall is on the battlefield, not while you control it. |
 | 🟡 Mandate of Peace | Mystic Intellect (C19) | a trigger waiting to be put on the stack still goes on (CR 724.2a says it ceases to exist). |
 | 🟡 Elsha of the Infinite | Mystic Intellect (C19) | its flash also covers a top-of-library cast another permission allowed (Mystic Forge). |
+| 🟡 Serpent's Soul-Jar | Elven Empire (KHC) | every creature card it exiled becomes castable until end of turn, not one of them. |
+| 🟡 Roots of Wisdom | Elven Empire (KHC) | the land or Elf card comes from among the three milled, not from anywhere in the graveyard. |
 | 🟡 Orator of Ojutai | Draconic Domination (C17) | the Dragon check reads your board and hand as it enters; there is no optional reveal. |
 | 🟡 Armored Skyhunter | Silverquill Influence (SOC) | an Equipment it puts onto the battlefield stays unattached. |
 | 🟡 Coercive Impetus | Silverquill Influence (SOC) | the goad is renewed by a trigger at the beginning of each combat, not a static. |
