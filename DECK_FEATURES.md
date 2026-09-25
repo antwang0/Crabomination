@@ -135,6 +135,7 @@ lists were picked.
 | **Planeswalker Party** (CMM precon) URW | Commodore Guff (**planeswalker**) | URW | 100 | 🟡 all 100 implemented, 7 carry residuals (below) |
 | **Eldrazi Incursion** (M3C precon) WUBRG | Ulalek, Fused Atrocity | WUBRG | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Eldrazi Unbound** (CMM precon) C | Zhulodok, Void Gorger | C | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
+| **Subjective Reality** (C18 precon) WUB | Aminatou, the Fateshifter (**planeswalker**) | WUB | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Death Toll** (DSC precon) BG | Winter, Cynical Opportunist | BG | 100 | 🟡 all 100 implemented, 6 carry residuals (below) |
 | **Mind Seize** (C13 precon) UBR | Jeleva, Nephalia's Scourge | UBR | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **20 Ways to Win** (SLD) WUBRG | Go-Shintai of Life's Origin | WUBRG | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
@@ -1461,6 +1462,29 @@ permanent, the copy keeps its targets).
 Four-seat pods beside Ranar / Urza / Anikthea (seed 10160, 1,000 games, all
 decided): Saheeli 11.2 %; a 300-game census (seed 10161) leaves no card of the
 four unplayed; 12 seats (71..60 as numbered then, seed 10162): 200 / 200 decided. `--bench`
+byte-identical.
+
+The **hundred-and-fourteenth** is Commander 2018's **Subjective Reality**
+(`SubjectiveReality_C18`) — Esper top-of-library under Aminatou, the Fateshifter,
+the ninth planeswalker commander. Nineteen cards were missing; the primitives (new
+module `game/fateshift.rs`): `Effect::ManifestTopAttachSource` (Cloudform /
+Lightform — the printed enchantment *becomes* an Aura through a `temporary_copies`
+definition swap, reverted as it leaves), `ExileSourceAndTopThenManifest` (Jeskai
+Infiltrator), `ChooseTwoPlayersForSource` + `OtherChosenPlayerLosesLife` (Sower of
+Discord), `RotateNonlandPermanents` (Aminatou's −6), `GrantFreeCastOnePerCardType`
+(Aminatou's Augury), `CastTopFreeIfElseDraw` (Yennett), `PlayTopFreeElseExile`
+(Djinn of Wishes), `Predicate::OpponentControlsAtLeastMoreLands` (Isolated
+Watchtower). Found and fixed: `GrantKeywordWhileControllerControlsAtMost` evaluated
+its filters with no source, so `IsSource` / `OtherThanSource` read vacuously; and in
+the 12-seat gate **the bot shuffled Belt of Giant Strength between two 11/11s 11,365
+times** (a base-P/T setter lowers an 11/11, so "equip the biggest" flipped every
+tick) — moving an Equipment now needs a strictly stronger new host. Residuals:
+**Aminatou's Augury** picks its free spells at resolution; **Portent** never
+shuffles; **Primordial Mist**'s exile is its target, not its cost; **Sower of
+Discord**'s pair is the two least-life opponents. Four-seat pods beside Chishiro /
+Zhulodok / Firkraag (seed 10500, 1,000 games): Aminatou 22.7 %, 999 decided plus one
+genuine draw; a 300-game census (seed 10501) leaves no card unplayed; 12 seats
+(110..99, seed 10502) 199 decided plus one draw, no action cap. `--bench`
 byte-identical.
 
 The **hundred-and-eighth** is Commander Masters' **Eldrazi Unbound**

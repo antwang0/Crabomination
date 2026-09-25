@@ -2013,6 +2013,10 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Muse Vortex | Prismari Performance (C21) | the uncast cards go to the bottom in exile order, not a random one. |
 | 🟡 Radiant Performer | Prismari Performance (C21) | copies a targeted spell, not a targeted ability. |
 | 🟡 Zaffai, Thunder Conductor | Prismari Performance (C21) | one magecraft trigger per copy event, however many copies it made. |
+| 🟡 Aminatou's Augury | Subjective Reality (C18) | the one free spell per nonland card type is picked at resolution (greatest mana value first), not as each is cast. |
+| 🟡 Portent | Subjective Reality (C18) | never has the player shuffle. |
+| 🟡 Primordial Mist | Subjective Reality (C18) | exiling the face-down permanent is the ability's target, not its cost. |
+| 🟡 Sower of Discord | Subjective Reality (C18) | the two chosen players are the opponents with the least life (you and your only opponent at two seats). |
 | 🟡 Abstruse Archaic | Eldrazi Unbound (CMM) | the target is the ability's source permanent (a colorless permanent you control with an ability on the stack), as Strionic Resonator. |
 | 🟡 Ugin's Mastery | Eldrazi Unbound (CMM) | the face-down creature turned face up is the first one you control, not a choice. |
 | 🟡 Benthic Anomaly | Eldrazi Incursion (M3C) | each opponent's greatest-power creature is chosen, and the copy is of the one with the greatest mana value. |

@@ -213,6 +213,12 @@ the handoff.
   type gate like the creature-type one (`gate_types`); it is on the layers' hot path
   and moves any 2-player game with an animated land under an anthem, so it needs its
   own bench reading.
+- ✅ New for Subjective Reality (C18, Aminatou), in `game/fateshift.rs`:
+  `Effect::{ManifestTopAttachSource, ExileSourceAndTopThenManifest, ChooseTwoPlayersForSource,
+  OtherChosenPlayerLosesLife, RotateNonlandPermanents, GrantFreeCastOnePerCardType,
+  CastTopFreeIfElseDraw, PlayTopFreeElseExile}`, `ColdState::chosen_player_pairs`,
+  `Predicate::OpponentControlsAtLeastMoreLands`. Fixed: the conditional-keyword static's
+  missing source; the bot's equipment oscillation (`pick_equip`).
 - ✅ New for Eldrazi Unbound (CMM, Zhulodok): `StaticEffect::ZeroAlternativeCostOncePerTurn`
   (CR 118.9); `R::TargetsAPermanentYouControlMatching`; `Predicate::ColorlessManaSpentAtLeast`;
   `CounterType::Suspect`. Fixed: the bot's `auto_targets_for_effect_all_slots_x` now
