@@ -3193,6 +3193,8 @@ impl Effect {
             // the slot walk ranks the caster's own side last and an
             // optional support slot is declined outright.
             Effect::SupportCounters { .. } => true,
+            // Conniving draws its controller cards and grows the creature.
+            Effect::Connive { .. } => true,
             Effect::DistributeCounters { counter, .. } => {
                 matches!(counter, CounterType::PlusOnePlusOne)
             }
