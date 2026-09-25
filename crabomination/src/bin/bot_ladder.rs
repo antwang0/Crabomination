@@ -2552,7 +2552,7 @@ fn report_card_census(
     println!("  card census: {} distinct cards played", counts.len());
     // What a run spent its actions on: a capped game replayed with
     // `--first N --games 1 --card-census` names its loop here.
-    for (line, n) in census.top_actions(5) {
+    for (line, n) in census.top_actions(5).into_iter().chain(census.top_actions(40).into_iter().filter(|(l, _)| !l.ends_with("PassPriority")).take(3)) {
         println!("    top action {n:>7}  {line}");
     }
     for d in field {
