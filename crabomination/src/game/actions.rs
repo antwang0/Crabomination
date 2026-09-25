@@ -5633,6 +5633,35 @@ impl GameState {
             }
             return r;
         }
+        // Haakon — "you may cast Knight spells from your graveyard": no
+        // surcharge, no per-turn cap. Same hop-into-hand shape as above.
+        if !self.players[p].hand.iter().any(|c| c.id == card_id)
+            && !self.players[p].graveyard.iter().any(|c| {
+                c.id == card_id
+                    && self.cast_from_zone_blocked(p, &c.definition, crate::card::Zone::Graveyard)
+            })
+            && self.graveyard_cast_free_grant(p, card_id)
+        {
+            let card = Self::take_card(&mut self.players[p].graveyard, card_id)
+                .ok_or(GameError::CardNotInHand(card_id))?;
+            self.players[p].hand.push(card);
+            self.casting_hop = Some((card_id, crate::game::HopFrom::Graveyard));
+            let r = self.cast_spell_with_convoke(
+                card_id, target, additional_targets, mode, x_value, &[], &[], CastFlags::default(),
+            );
+            self.casting_hop = None;
+            match &r {
+                Err(_) => {
+                    if let Some(card) = Self::take_card(&mut self.players[p].hand, card_id) {
+                        self.players[p].send_to_graveyard(card);
+                    }
+                }
+                Ok(_) => {
+                    self.entered_from_graveyard_this_turn.insert(card_id);
+                }
+            }
+            return r;
+        }
         // Osteomancer Adept — cast a creature spell from your graveyard by
         // foraging in addition to its other costs; it enters with a finality
         // counter. Same hop-into-hand shape as the Noctis branch above.
@@ -6039,6 +6068,21 @@ impl GameState {
                 }
                 _ => None,
             })
+    }
+
+    /// Haakon — a `GraveyardCastFreely` permission `p` controls covers the
+    /// card `card_id` in `p`'s graveyard.
+    pub(crate) fn graveyard_cast_free_grant(&self, p: usize, card_id: CardId) -> bool {
+        let Some(card) = self.players[p].graveyard.iter().find(|c| c.id == card_id) else { return false };
+        self.battlefield.iter().filter(|c| c.controller == p).any(|c| {
+            c.definition.static_abilities.iter().any(|sa| {
+                matches!(
+                    self.active_static(&sa.effect, c),
+                    Some(crate::effect::StaticEffect::GraveyardCastFreely { filter })
+                        if self.evaluate_requirement_on_card(filter, card, p)
+                )
+            })
+        })
     }
 
     /// Galea, Kindler of Hope — an Equipment spell `p` just cast off the
@@ -17788,6 +17832,20 @@ impl GameState {
             return Err(GameError::OutOfRange);
         }
 
+        // "Tap X untapped [filter]:" (Aryel) with no X named: X is the target's
+        // power, the least that makes its "power X or less" target legal.
+        let x_value = match (x_value, &target) {
+            (None, Some(Target::Permanent(t)))
+                if self
+                    .battlefield_find(card_id)
+                    .and_then(|c| c.definition.activated_abilities.get(ability_index))
+                    .is_some_and(|a| a.tap_n_x) =>
+            {
+                self.battlefield_find(*t).map(|c| self.effective_power(c).max(0) as u32)
+            }
+            (v, _) => v,
+        };
+
         // Consume any "another permanent" cost picks from an
         // `ActivateAbilityChoice` resume up front, so a failure anywhere below
         // can't leak them onto the next activation. `None` on the first attempt
@@ -19299,7 +19357,7 @@ impl GameState {
         let tap_n_picks: Vec<CardId> = if let Some((filter, count)) =
             ability.tap_n_filter.as_ref()
         {
-            let count = *count as usize;
+            let count = if ability.tap_n_x { x_value.unwrap_or(0) as usize } else { *count as usize };
             let mut candidates: Vec<CardId> = self
                 .battlefield
                 .iter()
@@ -19608,6 +19666,7 @@ impl GameState {
         } else if ability.mana_cost.has_x()
             || ability.sac_other_x
             || ability.exile_other_x
+            || ability.tap_n_x
             || ability.remove_counter_x.is_some()
             || ability.remove_counter_among_x.is_some()
             || ability.energy_x_cost

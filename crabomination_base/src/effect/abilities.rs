@@ -1952,6 +1952,10 @@ pub enum StaticEffect {
     /// `cast_from_zone_without_paying`; land plays through the grant share the
     /// engine-wide may-play land gap.
     PlayExiledWithSourceForLife,
+    /// "As long as this is on the battlefield, you may cast [filter] spells
+    /// from your graveyard" — no surcharge, no per-turn cap (Haakon,
+    /// Stromgald Scourge's Knights). Read by `graveyard_cast_free_grant`.
+    GraveyardCastFreely { filter: SelectionRequirement },
     /// "You may cast [filter] spells from your graveyard by paying `life`
     /// life in addition to paying their other costs. If you cast a spell this
     /// way, it enters with a finality counter." Noctis, Prince of Lucis
@@ -3602,6 +3606,11 @@ pub struct ActivatedAbility {
     /// exist. Auto-picks the lowest-power matches. Defaults to None.
     #[serde(default)]
     pub tap_n_filter: Option<(SelectionRequirement, u32)>,
+    /// "Tap X untapped [`tap_n_filter`] you control:" — the count is the
+    /// activation's X; with no X given, X is the target permanent's power,
+    /// the least that makes a "power X or less" target legal (Aryel).
+    #[serde(default)]
+    pub tap_n_x: bool,
     /// Optional cost: return a *different* permanent the activator controls
     /// matching this filter to its owner's hand (CR 602.5b "Return a [filter]
     /// you control to its owner's hand:" costs). Mirrors `sac_other_filter`

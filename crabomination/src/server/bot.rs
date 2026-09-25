@@ -6610,6 +6610,7 @@ impl BoardFacts {
                     SE::MayCastPermanentsFromGraveyard
                     | SE::PlayCardsFromGraveyardDuringYourTurn
                     | SE::GraveyardCastOncePerTurn { .. }
+                    | SE::GraveyardCastFreely { .. }
                     | SE::GraveyardCastBySacrificingOncePerTurn { .. }
                     | SE::MayPlayCardsMilledThisTurn
                     | SE::CastFromGraveyardMatching { .. } => f.grants_gy_cast = true,
@@ -8169,7 +8170,8 @@ pub(super) fn cast_candidates<'a>(
             && facts.grants_gy_cast
             && !c.definition.is_land()
             && (state.graveyard_sac_cast_grant(seat, c.id).is_some()
-                || state.graveyard_cast_type_available(seat, c.id).is_some());
+                || state.graveyard_cast_type_available(seat, c.id).is_some()
+                || state.graveyard_cast_free_grant(seat, c.id));
         if !own_alt && !granted {
             continue;
         }
