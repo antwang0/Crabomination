@@ -1294,6 +1294,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::CLOUD_FIC_COMMANDERS,
             main: decks::CLOUD_FIC_MAIN,
         },
+        // Hundred-and-fifty-eighth: the hundred-and-forty-eighth official
+        // list (Ahoy Mateys, LCC) — Grixis Pirates under Admiral Brass.
+        // `--pod-decks 158`.
+        PodDeck {
+            name: "Admiral Brass, Unsinkable (UBR)",
+            commanders: decks::BRASS_COMMANDERS,
+            main: decks::BRASS_MAIN,
+        },
     ]
 }
 

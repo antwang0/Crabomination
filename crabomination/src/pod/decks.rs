@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Ten hand-picked commanders plus a hundred and forty official preconstructed lists, each a
+//! Ten hand-picked commanders plus a hundred and forty-eight official preconstructed lists, each a
 //! 99 of cards this engine implements: legal under CR 903 (100 cards
 //! including the commander, singleton outside basics, every card inside the
 //! commander's CR 903.4 color identity) and Commander-legal per Scryfall's
@@ -8,7 +8,7 @@
 //!
 //! The ten were built by hand because the offline Scryfall cache cannot say
 //! how a precon splits into decks; MTGJSON's deck files can, and the eleventh
-//! through hundred-and-fiftieth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
+//! through hundred-and-fifty-eighth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
 //! Win, Tails You Lose, Goblin Storm, Foundations Commander's Wretched Ranks,
 //! Tramplesaurus Rex and Keen Engineering, Commander Legends' Reap the Tides,
 //! Phyrexia: All Will Be One's Corrupting Influence, Zendikar Rising's Sneak
@@ -55,8 +55,9 @@
 //! Foundations Commander's Reign of Dragons, among others — seat 124 is
 //! Innistrad: Crimson Vow Commander's Spirit Squadron, seat 133 Duskmourn
 //! Commander's Jump Scare!, seat 143 Streets of New Capenna Commander's
-//! Obscura Operation and seat 150 Tales of Middle-earth Commander's Elven
-//! Council) are taken from one card for card. What all of them keep
+//! Obscura Operation seat 150 Tales of Middle-earth Commander's Elven
+//! Council and seat 158 The Lost Caverns of Ixalan Commander's Ahoy
+//! Mateys) are taken from one card for card. What all of them keep
 //! from the precon idea is what the pod needs — fixed, legal, varied color
 //! identities, and built to play against each other.
 //! One is a Partner pair (CR 702.124b), one is a **planeswalker**
@@ -4779,4 +4780,35 @@ pub const CLOUD_FIC_MAIN: &[CardFactory] = &[
     radiant_grove, sacred_peaks, wooded_ridgeline, command_tower,
     // Basics
     mountain, mountain, mountain, forest, forest, forest, plains, plains, plains,
+];
+
+pub const BRASS_COMMANDERS: &[CardFactory] = &[admiral_brass_unsinkable];
+
+/// **Ahoy Mateys**, the Lost Caverns of Ixalan Commander deck (LCC,
+/// 2023-11-17), exactly as MTGJSON's `AhoyMateys_LCC` prints it:
+/// 84 nonbasic cards + 6 Islands + 4 Swamps + 5 Mountains = 99. Grixis Pirates under Admiral
+/// Brass, Unsinkable.
+pub const BRASS_MAIN: &[CardFactory] = &[
+    don_andres_the_renegade, the_indomitable, storm_fleet_negotiator, francisco_fowl_marauder,
+    the_grim_captains_locker, skeleton_crew, broadside_bombardiers, gemcutter_buccaneer,
+    arm_mounted_anchor, amphin_mutineer, bident_of_thassa, corsair_captain, evacuation,
+    timestream_navigator, warkite_marauder, black_market_connections, blood_money,
+    dire_fleet_ravager, fathom_fleet_captain, lethal_scheme, angraths_marauders,
+    blasphemous_act, captain_lannery_storm, captivating_crew, chaos_warp, coercive_recruiter,
+    dire_fleet_daredevil, kari_zev_skyship_raider, port_razer, shared_animosity,
+    admiral_beckett_brass, hostage_taker, king_narfis_betrayal, prismari_command,
+    zara_renegade_recruiter, icon_of_ancestry, vanquishers_banner, choked_estuary,
+    desolate_lighthouse, exotic_orchard, foreboding_ruins, frostboil_snarl,
+    geier_reach_sanitarium, nephalia_drownyard, smoldering_marsh, sulfur_falls, sunken_hollow,
+    azure_fleet_admiral, enterprising_scallywag, daring_saboteur, departed_deckhand,
+    distant_melody, ghost_of_ramirez_depietro, malcolm_keen_eyed_navigator, merchant_raiders,
+    siren_stormtamer, spectral_sailor, windfall, feed_the_swarm, pitiless_plunderer,
+    breeches_brazen_plunderer, faithless_looting, rakdos_charm, ramirez_depietro_pillager,
+    arcane_signet, commanders_sphere, dimir_signet, heralds_horn, izzet_signet, rakdos_signet,
+    sol_ring, wayfarers_bauble, command_tower, crumbling_necropolis, evolving_wilds,
+    path_of_ancestry, port_of_karfell, rogues_passage, secluded_courtyard, terramorphic_expanse,
+    thriving_bluff, thriving_isle, thriving_moor, unclaimed_territory,
+    // Basics: 6 island, 4 swamp, 5 mountain
+    island, island, island, island, island, island, swamp, swamp, swamp, swamp, mountain,
+    mountain, mountain, mountain, mountain,
 ];
