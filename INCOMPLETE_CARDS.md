@@ -1963,6 +1963,12 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Gix, Yawgmoth Praetor | Mardu Surge (TDC) | the cards its activation exiles stay free to play for the rest of the turn, not only as the ability resolves. |
 | 🟡 Abstract Performance | Prismari Artistry (SOC) | the "face-down" pile is exiled face up (only the chooser's prompt hides it); the chooser is the hostile opponent, not one you choose. |
 | 🟡 Plargg and Nassari | Prismari Artistry (SOC) | the vetoing opponent is the hostile opponent, not one you choose. |
+| 🟡 Fear of Sleep Paralysis | Miracle Worker (DSC) | only the untap step's stun removal is stopped; an effect that removes or moves counters still takes an opponent's stun counter. |
+| 🟡 Mirrormade | Miracle Worker (DSC) | the copy isn't optional. |
+| 🟡 One with the Multiverse | Miracle Worker (DSC) | the once-a-turn free cast works from hand only, not from the top of the library. |
+| 🟡 Phenomenon Investigators | Miracle Worker (DSC) | Doubt's "return a nonland permanent you own" targets it. |
+| 🟡 Secret Arcade // Dusty Parlor | Miracle Worker (DSC) | Secret Arcade makes permanents enchantments, not permanent spells on the stack. |
+| 🟡 Spirit-Sister's Call | Miracle Worker (DSC) | the sacrifice must share the chosen card's first card type (creature, artifact, enchantment, land, planeswalker, battle). |
 | 🟡 Descendants' Fury | Sliver Swarm (CMM) | "one of them" is any attacker of yours that damaged a player this turn, not only this combat-damage batch's. |
 | 🟡 Bloodlord of Vaasgoth | Vampiric Bloodlust (C17) | the granted bloodthirst is checked as the cast trigger resolves, not as the creature enters. |
 | 🟡 Mathas, Fiend Seeker | Vampiric Bloodlust (C17) | a bounty counter grants its dies trigger only while Mathas is on the battlefield. |
