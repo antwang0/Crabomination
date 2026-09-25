@@ -914,6 +914,7 @@ const FREE_ACTIVATION_ALLOWED: &[(&str, &str)] = &[
     // printed activated ability (`{1}:`, opponents only) is the second one and
     // is correctly costed. Primitive job: a self-regenerating static.
     ("Clergy of the Holy Nimbus", "static regeneration modelled as a free activation"),
+    ("Primordial Mist", "cost: exile a face-down permanent you control (modeled as the ability's target), so each activation spends one"),
 ];
 
 /// **A `condition` is not a cost, and a sacrifice in the EFFECT is not one

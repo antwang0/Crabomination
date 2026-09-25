@@ -2345,6 +2345,9 @@ pub enum Predicate {
     /// lands than you, …"), Tithe, Knight of the White Orchid's ETB
     /// trigger, and Land Tax.
     OpponentControlsMoreLandsThanYou,
+    /// An opponent controls at least `n` more lands than you (Isolated
+    /// Watchtower's "at least two more").
+    OpponentControlsAtLeastMoreLands(u32),
     /// True if any opponent of `ctx.controller` has a strictly higher life
     /// total. Linvala, the Preserver's first ETB ("if an opponent has more
     /// life than you, you gain 5 life").
@@ -5011,6 +5014,39 @@ pub enum Effect {
     /// chose." Each player picks the color most common among their own
     /// permanents.
     EachPlayerChoosesColorExileOthers,
+    /// Cloudform / Lightform — "it becomes an Aura with enchant creature.
+    /// Manifest the top card of your library and attach this to it" (CR
+    /// 701.34). The printed enchantment becomes an Aura here (swapped in
+    /// through `temporary_copies`, reverted as it leaves the battlefield).
+    ManifestTopAttachSource,
+    /// Jeskai Infiltrator — "exile it and the top card of your library in a
+    /// face-down pile, shuffle that pile, then manifest those cards."
+    ExileSourceAndTopThenManifest,
+    /// Sower of Discord — "as this enters, choose two players": two
+    /// opponents with the least life (you and your only opponent at two
+    /// seats). Stored in `ColdState::chosen_player_pairs`.
+    ChooseTwoPlayersForSource,
+    /// Sower of Discord's trigger body — the damaged player (the trigger's
+    /// `TriggerEventPlayer`) is one of the source's chosen pair: the other
+    /// loses `amount` life. A no-op for anyone else.
+    OtherChosenPlayerLosesLife { amount: Value },
+    /// Aminatou, the Fateshifter's −6 — "choose left or right. Each player
+    /// gains control of all nonland permanents other than [this] controlled
+    /// by the next player in the chosen direction."
+    RotateNonlandPermanents,
+    /// Aminatou's Augury — "for each nonland card type, you may cast a spell
+    /// of that type from among [what] without paying its mana cost" this
+    /// turn. One card per type is picked at resolution (greatest mana value
+    /// first, a card counting for one type), and those get the free cast.
+    GrantFreeCastOnePerCardType { what: Selector },
+    /// Yennett — "reveal the top card of your library. You may cast it
+    /// without paying its mana cost if it matches `filter`. If you don't
+    /// cast it, draw a card."
+    CastTopFreeIfElseDraw { filter: crate::card::SelectionRequirement },
+    /// Djinn of Wishes — "reveal the top card of your library. You may play
+    /// that card without paying its mana cost. If you don't, exile it." A
+    /// land needs a land play left on your own turn.
+    PlayTopFreeElseExile,
     /// Ulalek, Fused Atrocity — "copy all spells you control, then copy all
     /// other activated and triggered abilities you control" (CR 707.10).
     CopyAllSpellsAndAbilitiesYouControl,

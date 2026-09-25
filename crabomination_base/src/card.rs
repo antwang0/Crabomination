@@ -473,6 +473,8 @@ pub enum PlaneswalkerSubtype {
     Windgrace,
     // CMM (Planeswalker Party): Commodore Guff, Vronos, Masked Inquisitor.
     Guff, Vronos,
+    // C18 (Subjective Reality): Aminatou, the Fateshifter.
+    Aminatou,
     // C18 planeswalker commander (Adaptive Enchantment).
     Estrid,
     // DMC planeswalker commander (Painbow).

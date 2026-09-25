@@ -3212,6 +3212,14 @@ impl GameState {
                     _ => false,
                 }
             }
+            Predicate::OpponentControlsAtLeastMoreLands(n) => {
+                let you = ctx.controller;
+                let lands = |s: usize| {
+                    self.battlefield.iter().filter(|c| c.controller == s && c.definition.is_land()).count() as u32
+                };
+                let mine = lands(you);
+                self.opponents_of(you).into_iter().any(|o| lands(o) >= mine + *n)
+            }
             Predicate::OpponentControlsMoreLandsThanYou => {
                 // Walk the battlefield, count lands per seat. True iff
                 // any opponent of `ctx.controller` has strictly more

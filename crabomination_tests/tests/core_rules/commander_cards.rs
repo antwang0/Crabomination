@@ -1871,3 +1871,73 @@ fn a_prompting_bot_seat_fills_per_opponent_slots() {
     assert!(controllers.iter().all(|c| controllers.iter().filter(|x| *x == c).count() == 1));
     assert!(g.would_accept(action));
 }
+
+// ── Primitives for Subjective Reality (C18, Aminatou) ─────────────────────
+
+/// CR 800.4 / 110.2 — Aminatou's −6: each seat takes the nonland
+/// permanents of the next seat in the chosen direction (left = the next
+/// seat), except the source; lands stay put.
+#[test]
+fn nonland_permanents_rotate_one_seat() {
+    use crabomination::effect::Effect;
+    use crabomination::game::effects::EffectContext;
+    let mut g = game_with_format(Format::Commander, 3);
+    let src = g.add_card_to_battlefield(0, catalog::sol_ring());
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let c = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    let land = g.add_card_to_battlefield(1, catalog::forest());
+    let ctx = EffectContext { source: Some(src), ..EffectContext::for_spell(0, None, 0, 0) };
+    g.resolve_effect(&Effect::RotateNonlandPermanents, &ctx).expect("rotate");
+    let ctrl = |g: &GameState, id| g.battlefield_find(id).unwrap().controller;
+    assert_eq!((ctrl(&g, a), ctrl(&g, b), ctrl(&g, c)), (2, 0, 1), "seat s takes seat s+1's");
+    assert_eq!(ctrl(&g, land), 1);
+    assert_eq!(ctrl(&g, src), 0, "not the source");
+}
+
+/// CR 120.3 — Sower of Discord's pair: damage to one chosen player makes the
+/// other lose that much; anyone else is untouched.
+#[test]
+fn damage_to_one_chosen_player_drains_the_other() {
+    let mut g = game_with_format(Format::Commander, 4);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.players[1].life = 30;
+    g.players[2].life = 31;
+    let sower = g.add_card_to_hand(0, catalog::sower_of_discord());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: sower, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(&mut g);
+    let (l1, l2, l3) = (g.players[1].life, g.players[2].life, g.players[3].life);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Red, 1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, l1 - 3);
+    assert_eq!(g.players[2].life, l2 - 3, "the other of the two least-life opponents");
+    assert_eq!(g.players[3].life, l3);
+}
+
+/// CR 601.2 — "for each nonland card type, you may cast a spell of that type
+/// from among them without paying its mana cost": one card per type, and a
+/// card of two types spends only one.
+#[test]
+fn one_free_cast_per_card_type() {
+    use crabomination::effect::{Effect, Selector};
+    use crabomination::game::effects::EffectContext;
+    let mut g = commander_game();
+    let ids: Vec<CardId> = [catalog::grizzly_bears(), catalog::hill_giant(), catalog::lightning_bolt(), catalog::sol_ring()]
+        .into_iter()
+        .map(|d| g.add_card_to_exile(0, d))
+        .collect();
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(&Effect::GrantFreeCastOnePerCardType { what: Selector::ExactObjects(ids.clone()) }, &ctx)
+        .expect("grant");
+    let free: Vec<bool> = ids.iter().map(|id| g.exile.iter().find(|c| c.id == *id).unwrap().may_play_until.is_some()).collect();
+    assert_eq!(free, vec![false, true, true, true], "the bigger creature, the instant, the artifact");
+}

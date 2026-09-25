@@ -32688,6 +32688,27 @@ impl GameState {
                 self.choose_attack_direction(ctx);
                 Ok(())
             }
+            Effect::ManifestTopAttachSource => self.manifest_top_attach_source(ctx, events),
+            Effect::ExileSourceAndTopThenManifest => {
+                self.exile_source_and_top_then_manifest(ctx, events);
+                Ok(())
+            }
+            Effect::ChooseTwoPlayersForSource => {
+                self.choose_two_players_for_source(ctx);
+                Ok(())
+            }
+            Effect::OtherChosenPlayerLosesLife { amount } => {
+                let n = self.evaluate_value(amount, ctx).max(0);
+                self.other_chosen_player_loses_life(ctx, n, events)
+            }
+            Effect::RotateNonlandPermanents => self.rotate_nonland_permanents(ctx, events),
+            Effect::GrantFreeCastOnePerCardType { what } => {
+                let ids: Vec<CardId> = self.resolve_selector(what, ctx).iter().filter_map(|e| e.as_card_id()).collect();
+                self.grant_free_cast_one_per_card_type(&ids, ctx);
+                Ok(())
+            }
+            Effect::CastTopFreeIfElseDraw { filter } => self.cast_top_free_if_else_draw(filter, ctx, events),
+            Effect::PlayTopFreeElseExile => self.play_top_free_else_exile(ctx, events),
             Effect::EachPlayerChoosesColorExileOthers => {
                 self.each_player_chooses_color_exile_others(ctx, events);
                 Ok(())

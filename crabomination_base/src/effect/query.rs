@@ -2132,11 +2132,19 @@ impl Effect {
             | Effect::ChooseAttackDirection
             | Effect::ChooseAttackDirectionUntilYourNextTurn
             | Effect::EachPlayerChoosesColorExileOthers
+            | Effect::ManifestTopAttachSource
+            | Effect::ExileSourceAndTopThenManifest
+            | Effect::ChooseTwoPlayersForSource
+            | Effect::OtherChosenPlayerLosesLife { .. }
+            | Effect::RotateNonlandPermanents
+            | Effect::CastTopFreeIfElseDraw { .. }
+            | Effect::PlayTopFreeElseExile
             | Effect::CopyAllSpellsAndAbilitiesYouControl
             | Effect::CopyOnePerOpponentWithTotalStats
             | Effect::CopyNextLoyaltyAbility { .. }
             | Effect::CopyLoyaltyAbilitiesOfChosenTypeThisTurn => false,
             Effect::ShuffleInThenCastFromTopFree { what } => sel_has_target(what),
+            Effect::GrantFreeCastOnePerCardType { what } => sel_has_target(what),
             Effect::RollPlanarDie { who } | Effect::Planeswalk { who } | Effect::ChaosEnsues { who } => {
                 player_has_target(who)
             }

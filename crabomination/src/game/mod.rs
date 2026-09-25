@@ -141,6 +141,7 @@ mod mystic_barrier;
 mod loyalty_copy;
 mod gate_mana;
 mod eldrazi;
+mod fateshift;
 mod spree_targets;
 // CR 102.2 — "an opponent controls N or more …", read per opponent.
 mod milled_play;
@@ -1418,6 +1419,9 @@ pub struct TurnRegistries {
 
 #[derive(Clone, Default, serde::Serialize, serde::Deserialize)]
 pub struct ColdState {
+    /// Sower of Discord's "two chosen players", per source.
+    #[serde(default)]
+    pub chosen_player_pairs: Vec<(CardId, usize, usize)>,
     /// Teyo, Geometric Tactician's −2: `(step, seat)` — the Mystic Barrier
     /// attack direction (+1 left, -1 right) until `seat`'s next turn.
     #[serde(default)]
@@ -15868,7 +15872,7 @@ impl GameState {
                             .filter(|c| c.controller == seat)
                             .filter(|c| {
                                 self.requirement_on_permanent(
-                                    count_filter, c, seat, None, &count_gates,
+                                    count_filter, c, seat, Some(card.id), &count_gates,
                                 )
                             })
                             .count()
@@ -15880,7 +15884,10 @@ impl GameState {
                     .iter()
                     .filter(|c| counts.get(c.controller).is_some_and(|n| *n as u32 <= *max))
                     .filter(|c| {
-                        self.requirement_on_permanent(filter, c, c.controller, None, &gates)
+                        // The static's own card as source, so `IsSource` /
+                        // `OtherThanSource` resolve (Jeskai Infiltrator's
+                        // "as long as you control no other creatures").
+                        self.requirement_on_permanent(filter, c, c.controller, Some(card.id), &gates)
                     })
                     .map(|c| c.id)
                     .collect();
