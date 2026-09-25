@@ -3930,6 +3930,91 @@ fn pick_sweeper_shield(state: &GameState, seat: usize, w: &EvalWeights) -> Optio
     None
 }
 
+/// An opponent's single-target spell on top of the stack aimed at one of our
+/// permanents or at us: answer it with an instant that chooses new targets for
+/// it (CR 115.7d — Deflecting Swat, Redirect). Kept only when a clone that
+/// resolves the retarget shows the spell pointing away from our side.
+fn pick_retarget_shield(state: &GameState, seat: usize, w: &EvalWeights) -> Option<Picked> {
+    use crate::game::Target;
+    use crate::game::types::StackItem;
+    let Some(StackItem::Spell { card, caster, target: Some(aimed), additional_targets, .. }) = state.stack.last()
+    else {
+        return None;
+    };
+    if *caster == seat || !additional_targets.is_empty() {
+        return None;
+    }
+    let ours = |g: &GameState, t: &Target| match t {
+        Target::Player(p) => *p == seat,
+        Target::Permanent(id) => g.battlefield_find(*id).is_some_and(|c| c.controller == seat),
+    };
+    if !ours(state, aimed) {
+        return None;
+    }
+    let spell_id = card.id;
+    let deflectors: Vec<&crate::card::CardInstance> = state.players[seat]
+        .hand
+        .iter()
+        .filter(|c| {
+            c.definition.card_types.contains(&crate::card::CardType::Instant)
+                && effect_retargets_spell(&c.definition.effect)
+        })
+        .collect();
+    if deflectors.is_empty() {
+        return None;
+    }
+    let sweep = SweepMana::new(state, seat);
+    for c in deflectors {
+        let target = Some(Target::Permanent(spell_id));
+        let mut tries = Vec::with_capacity(2);
+        if c.definition.alternative_cost.is_some() {
+            tries.push(GameAction::CastSpellAlternative {
+                card_id: c.id,
+                pitch_card: None,
+                target: target.clone(),
+                additional_targets: vec![],
+                mode: None,
+                x_value: None,
+            });
+        }
+        if can_afford_in_state_with(state, seat, c, w, &sweep) {
+            tries.push(GameAction::CastSpell {
+                card_id: c.id,
+                target,
+                additional_targets: vec![],
+                mode: None,
+                x_value: None,
+            });
+        }
+        for action in tries {
+            let Some(next) = state.accept(action.clone()) else { continue };
+            let mut sim = next.clone();
+            if sim.resolve_top_of_stack().is_err() {
+                continue;
+            }
+            let moved = sim.stack.iter().rev().find_map(|si| match si {
+                StackItem::Spell { card, target, .. } if card.id == spell_id => Some(target.clone()),
+                _ => None,
+            });
+            if let Some(Some(t)) = moved
+                && !ours(&sim, &t)
+            {
+                return Some(Picked::Probed(action, Box::new(next)));
+            }
+        }
+    }
+    None
+}
+
+/// The effect chooses new targets for a target spell (Redirect's shape).
+fn effect_retargets_spell(eff: &Effect) -> bool {
+    match eff {
+        Effect::ChooseNewTargetsForSpell { .. } => true,
+        Effect::Seq(v) => v.first().is_some_and(effect_retargets_spell),
+        _ => false,
+    }
+}
+
 /// The effect phases out, grants indestructible to, or exiles until the
 /// next end step (Eerie Interlude — the sweeper resolves while they're
 /// gone), permanents.
@@ -13314,6 +13399,7 @@ fn sim_spell_action_inner(g: &GameState, w: &EvalWeights, allow_main: bool) -> O
     if !g.stack.is_empty() {
         return pick_stack_response(g, p, w)
             .or_else(|| pick_sweeper_shield(g, p, w))
+            .or_else(|| pick_retarget_shield(g, p, w))
             .or_else(|| pick_ability_counter_response(g, p, w).map(Picked::Plain))
             .or_else(|| pick_prepare_response(g, p, w).map(Picked::Plain))
             .or_else(|| pick_buff_response(g, p, w).map(Picked::Plain));
@@ -18866,7 +18952,8 @@ fn pick_stack_response_top(state: &GameState, seat: usize, w: &EvalWeights) -> O
     } else {
         pick_stack_response(state, seat, w)
     }
-    .or_else(|| pick_sweeper_shield(state, seat, w));
+    .or_else(|| pick_sweeper_shield(state, seat, w))
+    .or_else(|| pick_retarget_shield(state, seat, w));
     if picked.is_some() {
         response_census::add(9, 1);
     }
@@ -29438,6 +29525,36 @@ mod sweeper_shield_tests {
     use super::*;
     use crate::game::types::TurnStep;
     use crate::mana::Color;
+
+    /// CR 115.7d — a Murder aimed at the bot's creature is answered with
+    /// Redirect, and the resolved retarget points it at the caster's own.
+    #[test]
+    fn a_retarget_turns_removal_around() {
+        let mut g = crate::game::two_player_game();
+        g.active_player_idx = 1;
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 1;
+        let mine = g.add_card_to_battlefield(0, crate::catalog::craw_wurm());
+        g.add_card_to_battlefield(1, crate::catalog::grizzly_bears());
+        let murder = g.add_card_to_hand(1, crate::catalog::murder());
+        g.players[1].mana_pool.add(Color::Black, 3);
+        g.perform_action(GameAction::CastSpell {
+            card_id: murder,
+            target: Some(crate::game::Target::Permanent(mine)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("murder");
+        let redirect = g.add_card_to_hand(0, crate::catalog::redirect());
+        g.players[0].mana_pool.add(Color::Blue, 4);
+        g.priority.player_with_priority = 0;
+        let picked = pick_retarget_shield(&g, 0, &EvalWeights::default()).expect("a retarget");
+        let action = match picked {
+            Picked::Probed(a, _) | Picked::Plain(a) => a,
+        };
+        assert!(matches!(&action, GameAction::CastSpell { card_id, .. } if *card_id == redirect), "{action:?}");
+    }
 
     /// Eerie Interlude exiles the team until the next end step, so a Wrath of
     /// God resolving meanwhile finds nothing: the bot answers the sweeper with
