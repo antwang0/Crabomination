@@ -608,7 +608,9 @@ pub fn titan_of_industry() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Reach, Keyword::Trample],
         triggered_abilities: vec![etb(Effect::ChooseN {
-            picks: vec![2],
+            // Choose two; the default pair is the Rhino and the shield
+            // counter (`picks` names the modes, CR 700.2d).
+            picks: vec![2, 3],
             modes: vec![
                 Effect::Destroy { what: target_filtered(R::Artifact.or(R::Enchantment)) },
                 Effect::GainLife { who: target_filtered(R::Player), amount: Value::Const(5) },
