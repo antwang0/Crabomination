@@ -5149,3 +5149,32 @@ pub const MADISON_MAIN: &[CardFactory] = &[
     island, island, island, island, island, mountain, mountain, mountain, mountain, plains,
     plains, plains, plains,
 ];
+
+pub const CAESAR_COMMANDERS: &[CardFactory] = &[caesar_legions_emperor];
+
+/// **Hail, Caesar**, the Fallout Commander deck (2024-03-08), exactly as
+/// MTGJSON's `HailCaesar_PIP` prints it: 85 nonbasic cards + 5 Plains + 4
+/// Swamp + 5 Mountain = 99. Mardu tokens and sacrifice under Caesar,
+/// Legion's Emperor.
+pub const CAESAR_MAIN: &[CardFactory] = &[
+    mr_house_president_and_ceo, aradesh_the_founder, battle_of_hoover_dam, overseer_of_vault_76,
+    securitron_squadron, sierra_nukas_biggest_fan, vault_75_middle_school,
+    yes_man_personal_securitron, v_a_t_s, wasteland_raider, mysterious_stranger, powder_ganger,
+    rose_cutthroat_raider, thrill_kill_disciple, wild_wasteland, boomer_scrapper, colonel_autumn,
+    desdemona_freedoms_edge, elder_arthur_maxson, kellogg_dangerous_mind, maccready_lamplight_mayor,
+    the_nipton_lottery, paladin_elizabeth_taggerdy, vault_11_voters_dilemma, ed_e_lonesome_eyebot,
+    desolate_mire, diamond_city, captain_of_the_watch, entrapment_maneuver, hour_of_reckoning,
+    keeper_of_the_accord, marshals_anthem, martial_coup, secure_the_wastes, black_market,
+    lethal_scheme, stolen_strategy, anguished_unmaking, assemble_the_legion, fervent_charge,
+    ruinous_ultimatum, canyon_slough, clifftop_retreat, dragonskull_summit, isolated_chapel,
+    shadowblood_ridge, smoldering_marsh, temple_of_malice, temple_of_silence, temple_of_triumph,
+    windbrisk_heights, gary_clone, butch_deloria_tunnel_snake, ruthless_radrat,
+    craig_boone_novac_guard, legate_lanius_caesars_ace, white_glove_gourmand, charisma_bobblehead,
+    luck_bobblehead, survivors_med_kit, impassioned_orator, intangible_virtue,
+    bastion_of_remembrance, deadly_dispute, morbid_opportunist, pitiless_plunderer,
+    generals_enforcer, heroic_reinforcements, wear_tear, arcane_signet, skullclamp, sol_ring,
+    talisman_of_conviction, talisman_of_hierarchy, talisman_of_indulgence, ash_barrens,
+    command_tower, evolving_wilds, memorial_to_glory, myriad_landscape, nomad_outpost,
+    path_of_ancestry, tainted_field, tainted_peak, terramorphic_expanse, plains, plains, plains,
+    plains, plains, swamp, swamp, swamp, swamp, mountain, mountain, mountain, mountain, mountain,
+];

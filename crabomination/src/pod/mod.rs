@@ -1388,6 +1388,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::MADISON_COMMANDERS,
             main: decks::MADISON_MAIN,
         },
+        // Hundred-and-seventieth: Hail, Caesar (Fallout) — Mardu tokens
+        // and sacrifice under Caesar, Legion's Emperor. `--pod-decks 170`.
+        PodDeck {
+            name: "Caesar, Legion's Emperor (RWB)",
+            commanders: decks::CAESAR_COMMANDERS,
+            main: decks::CAESAR_MAIN,
+        },
     ]
 }
 
@@ -2021,6 +2028,9 @@ mod tests {
             // CR 725 the monarch, CR 508.1c a gated attack restriction,
             // restricted Vibranium mana.
             ("T'Challa", [0x7C4A, 167, 9091]),
+            // CR 702.157 squad's non-mana cost, CR 701.38 a most-votes
+            // council, CR 702.138 granted escape.
+            ("Caesar", [0xCAE5, 170, 9094]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
