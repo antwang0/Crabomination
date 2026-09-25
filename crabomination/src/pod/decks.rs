@@ -4841,3 +4841,34 @@ pub const MIRKO_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, swamp, swamp, swamp,
     swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const TERRA_COMMANDERS: &[CardFactory] = &[terra_herald_of_hope];
+
+/// **Revival Trance**, the Final Fantasy VI Commander deck (FIC, 2025-06-13),
+/// exactly as MTGJSON's `RevivalTranceFinalFantasyVi_FIC` prints it:
+/// 89 nonbasic cards + 3 Mountains + 4 Plainss + 3 Swamps = 99. Mardu graveyard recursion
+/// under Terra, Herald of Hope.
+pub const TERRA_MAIN: &[CardFactory] = &[
+    celes_rune_knight, coin_of_fate, cyan_vengeful_samurai, general_leo_cristophe,
+    espers_to_magicite, the_falcon_airship_restored, interceptor_shadows_hound,
+    rejoin_the_fight, shadow_mysterious_assassin, siegfried_famed_swordsman,
+    gau_feral_youth, gogo_mysterious_mime, sabin_master_monk, snort, strago_and_relm,
+    summon_esper_valigarmanda, umaro_raging_yeti, banon_the_returners_leader,
+    edgar_master_machinist, kefka_dancing_mad, locke_treasure_hunter, mog_moogle_warrior,
+    setzer_wandering_gambler, the_warring_triad, sun_titan, tragic_arrogance,
+    archfiend_of_depravity, reanimate, rise_of_the_dark_realms, sepulchral_primordial,
+    combustible_gearhulk, flayer_of_the_hatebound, ruin_grinder, bedevil, legions_to_ashes,
+    priest_of_fell_rites, ruinous_ultimatum, key_to_the_city, solemn_simulacrum,
+    battlefield_forge, clifftop_retreat, desolate_mire, dragonskull_summit, exotic_orchard,
+    fetid_heath, foreboding_ruins, furycalm_snarl, graven_cairns, high_market,
+    isolated_chapel, rugged_prairie, shadowblood_ridge, shineshadow_snarl, smoldering_marsh,
+    sulfurous_springs, sunscorched_divide, phoenix_down, laughing_mad, angel_of_the_ruins,
+    palace_jailer, morbid_opportunist, nights_whisper, pitiless_plunderer, stitch_together,
+    stitchers_supplier, anger, big_score, crackling_doom, mortify, arcane_signet,
+    commanders_sphere, meteor_golem, millikin, mind_stone, sol_ring, swiftfoot_boots,
+    talisman_of_conviction, talisman_of_indulgence, wayfarers_bauble, ash_barrens,
+    demolition_field, evolving_wilds, geothermal_bog, nomad_outpost, path_of_ancestry,
+    rogues_passage, sacred_peaks, sunlit_marsh, command_tower,
+    // Basics
+    plains, plains, plains, plains, swamp, swamp, swamp, mountain, mountain, mountain,
+];

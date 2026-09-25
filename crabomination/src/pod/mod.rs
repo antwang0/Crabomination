@@ -1311,6 +1311,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::MIRKO_COMMANDERS,
             main: decks::MIRKO_MAIN,
         },
+        // Seat 160: Revival Trance (FIC, Final Fantasy VI) — Mardu graveyard
+        // recursion under Terra, Herald of Hope (random modes, opponents'
+        // reanimation picks, blitz from the graveyard). `--pod-decks 160`.
+        PodDeck {
+            name: "Terra, Herald of Hope (RWB)",
+            commanders: decks::TERRA_COMMANDERS,
+            main: decks::TERRA_MAIN,
+        },
     ]
 }
 
@@ -1933,6 +1941,9 @@ mod tests {
             // CR 702.6 equip (a legendary equip cost), CR 702.143 foretold
             // "cast from exile" riders, one destroy per opponent.
             ("Cloud, Ex", [0xC10D, 157, 9081]),
+            // CR 702.152 blitz from the graveyard, CR 700.2 a random mode,
+            // CR 101.4 opponents choosing in turn order.
+            ("Terra, Herald", [0x7E44, 160, 9084]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
