@@ -9571,6 +9571,9 @@ fn ability_is_pure_mana(e: &Effect) -> bool {
 }
 
 pub(super) fn pick_sacrifice_value(state: &GameState, seat: usize, w: &EvalWeights) -> Option<GameAction> {
+    if super::renewal_guard::board_is_cluttered(state, seat) {
+        return None;
+    }
     let baseline = eval_material(state, seat, w);
     let scan = state.grant_scan();
     for card in state.battlefield.iter().filter(|c| c.controller == seat) {

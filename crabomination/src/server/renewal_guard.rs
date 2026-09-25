@@ -63,6 +63,20 @@ pub(super) fn board_is_saturated(state: &GameState, seat: usize) -> bool {
     power >= 3 * life
 }
 
+/// True when `seat` already controls [`CLUTTERED_PERMANENTS`] permanents. A
+/// sacrifice outlet whose value is paid back by triggers — Woe Strider
+/// feeding Squirrels to Eloise, Nephalia Sleuth under Chatterfang, a Clue and
+/// a new Squirrel per scry — scores above passing every time and loops until
+/// the pod's board cap (968 Clues, decks 73-78, seed 20073 game 184). Past
+/// this many permanents one more trade changes nothing but the board size.
+pub(super) fn board_is_cluttered(state: &GameState, seat: usize) -> bool {
+    state.battlefield.iter().filter(|c| c.controller == seat).count() >= CLUTTERED_PERMANENTS
+}
+
+/// The permanent count at which [`board_is_cluttered`] fires — far past any
+/// duel board, so the 2-player pool never reaches it.
+const CLUTTERED_PERMANENTS: usize = 150;
+
 /// The creature count below which [`board_is_saturated`] never fires — far
 /// past any duel board, so the 2-player pool never reaches it.
 const SATURATED_CREATURES: usize = 60;
@@ -129,6 +143,37 @@ mod tests {
         assert!(super::board_is_saturated(&g, me));
         g.players[1].life = 21;
         assert!(!super::board_is_saturated(&g, me), "120 power < 3 x 41");
+    }
+
+    /// Woe Strider beside Eloise, Nephalia Sleuth and Chatterfang: every
+    /// token it eats pays a Clue and a Squirrel back, so the trade scores above
+    /// passing forever — 968 Clues at the pod's board cap (decks 73-78,
+    /// seed 20073 game 184). At 150 permanents the outlet is left alone.
+    #[test]
+    fn a_cluttered_board_stops_feeding_a_sacrifice_outlet() {
+        let mut g = multi_player_game(4);
+        let me = 1;
+        let ws = g.add_card_to_battlefield(me, catalog::woe_strider());
+        g.add_card_to_battlefield(me, catalog::eloise_nephalia_sleuth());
+        g.add_card_to_battlefield(me, catalog::chatterfang_squirrel_general());
+        for _ in 0..3 {
+            g.add_token_to_battlefield(me, &crabomination_base::tokens::eldrazi_spawn_token());
+        }
+        g.clear_sickness(ws);
+        g.active_player_idx = me;
+        g.step = TurnStep::PostCombatMain;
+        g.priority.player_with_priority = me;
+        let w = EvalWeights::default();
+        let open = pick_sacrifice_value(&g, me, &w);
+        assert!(
+            matches!(open, Some(GameAction::ActivateAbility { card_id, .. }) if card_id == ws),
+            "an ordinary board takes the Clue: {open:?}"
+        );
+        while g.battlefield.iter().filter(|c| c.controller == me).count() < 150 {
+            g.add_card_to_battlefield(me, catalog::forest());
+        }
+        assert!(super::board_is_cluttered(&g, me));
+        assert!(pick_sacrifice_value(&g, me, &w).is_none(), "150 permanents: enough");
     }
 
     /// A "you may create a token" trigger is declined on an overkill board:
