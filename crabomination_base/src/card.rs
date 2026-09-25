@@ -3153,6 +3153,11 @@ pub enum SelectionRequirement {
     /// `odd: true`, even (incl. 0) otherwise. Extinction Event's "exile each
     /// creature with mana value of the chosen parity".
     ManaValueParity { odd: bool },
+    /// True when the creature's power has the given parity — odd when
+    /// `odd: true`, even (incl. 0 and negatives by `rem_euclid`) otherwise.
+    /// Zimone's Hypothesis's "each creature with power of the chosen
+    /// quality".
+    PowerParity { odd: bool },
     /// True when the card's mana value equals the number of counters of the
     /// given kind on the resolving ability's source (Aether Vial). Resolved
     /// to a concrete `ManaValueExactly(n)` by `resolve_source_counters` at

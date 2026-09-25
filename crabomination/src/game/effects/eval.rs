@@ -4938,6 +4938,10 @@ impl GameState {
                     R::PowerAtLeast(n) => {
                         card.definition.is_creature() && self.effective_power(card) >= *n
                     }
+                    R::PowerParity { odd } => {
+                        card.definition.is_creature()
+                            && (self.effective_power(card).rem_euclid(2) == 1) == *odd
+                    }
                     R::ToughnessAtLeast(n) => {
                         card.definition.is_creature() && self.effective_toughness(card) >= *n
                     }
@@ -5945,6 +5949,7 @@ impl GameState {
             R::PowerAtMost(n) => card.definition.is_creature() && card.power() <= *n,
             R::PowerAtMostSourcePower => false,
             R::PowerAtLeast(n) => card.definition.is_creature() && card.power() >= *n,
+            R::PowerParity { odd } => card.definition.is_creature() && (card.power().rem_euclid(2) == 1) == *odd,
             // No source/battlefield context in the on-card evaluator (used
             // for hidden-zone cards); the source-relative Mentor check only
             // makes sense for battlefield targets, so it's vacuously false.
