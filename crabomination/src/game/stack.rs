@@ -3464,9 +3464,18 @@ impl GameState {
             }
             if !is_land {
                 self.players[p].rad_counters = self.players[p].rad_counters.saturating_sub(1);
-                let applied = self.adjust_life_applied(p, -1);
+                // Strong, the Brutish Thespian — the radiation heals instead.
+                let heals = self.battlefield.iter().any(|c| {
+                    c.controller == p
+                        && c.definition.static_abilities.iter().any(|sa| {
+                            matches!(sa.effect, crate::effect::StaticEffect::GainLifeFromRadiation)
+                        })
+                });
+                let applied = self.adjust_life_applied(p, if heals { 1 } else { -1 });
                 if applied < 0 {
                     events.push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
+                } else if applied > 0 {
+                    events.push(GameEvent::LifeGained { player: p, amount: applied as u32 });
                 }
             }
         }
@@ -4491,6 +4500,20 @@ impl GameState {
         }
         if !self.convoked_by.is_empty() {
             self.convoked_by.clear();
+        }
+        // Nuka-Nuke Launcher — the grant lasts through its player's next turn.
+        let active = self.active_player_idx;
+        for i in 0..self.players.len() {
+            if self.players[i].rad_per_cast == 0 {
+                continue;
+            }
+            let pl = &mut self.players[i];
+            if i == active && !pl.rad_per_cast_their_turn {
+                pl.rad_per_cast_their_turn = true;
+            } else if i != active && pl.rad_per_cast_their_turn {
+                pl.rad_per_cast = 0;
+                pl.rad_per_cast_their_turn = false;
+            }
         }
         for pl in &mut self.players {
             // `Player` is a CoW handle over `PlayerData`, so each of the ~55

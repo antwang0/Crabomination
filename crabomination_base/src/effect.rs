@@ -1367,6 +1367,14 @@ pub enum Value {
     /// summed (Vishgraz's "for each poison counter your opponents have").
     /// `PoisonCountersOf` reads one player.
     PoisonCountersAmong(PlayerRef),
+    /// Rad counters summed over the players `who` names (Vault 12: "the
+    /// total number of rad counters among players"; one player for a
+    /// "has a rad counter" gate).
+    RadCountersAmong(PlayerRef),
+    /// Every counter every player has — poison, rad, energy, experience — the
+    /// player half of "each counter among players and permanents"
+    /// (Lumbering Megasloth).
+    CountersAmongPlayers,
     /// How many of the players `who` resolves to have at least `at_least`
     /// poison counters — the count Corrupted scales by at a table ("for each
     /// opponent who has three or more poison counters": Wurmquake, Glissa's
@@ -3666,6 +3674,12 @@ pub struct EventSpec {
     /// (Polluted Cistern).
     #[serde(default)]
     pub batch_counts_card_types: bool,
+    /// With `once_per_batch`: the one fire's `TriggerEventAmount` is how many
+    /// of the batch's events match, filter included — "put a +1/+1 counter on
+    /// each of up to X target creatures, where X is the number of nonland
+    /// cards milled this way" (The Wise Mothman).
+    #[serde(default)]
+    pub batch_counts_subjects: bool,
     /// "This ability triggers only N times each turn" counted per event
     /// subject (Nadu's granted trigger is per creature). `None` = uncapped.
     #[serde(default)]
@@ -3751,6 +3765,7 @@ impl EventSpec {
             batch_across_players: false,
             batch_sums_damage: false,
             batch_counts_card_types: false,
+            batch_counts_subjects: false,
             per_subject_cap: None,
             actor_is_opponent: false,
             exclude_attacker_taps: false,
@@ -7320,6 +7335,19 @@ pub enum Effect {
     /// creature's toughness": `who`'s life becomes its toughness and its base
     /// toughness becomes their former life total (CR 119.7, 613.4b).
     ExchangePlayerLifeWithSourceToughness { who: PlayerRef },
+    /// "Until the end of [who]'s next turn, that player gets `amount` rad
+    /// counters whenever they cast a spell" (Nuka-Nuke Launcher). Stacks
+    /// per grant; cleared at the turn boundary after their next turn.
+    RadOnCastUntilEndOfTheirNextTurn { who: PlayerRef, amount: u32 },
+    /// "Destroy any number of target [filter] with total mana value `cap` or
+    /// less" (Rampaging Yao Guai), picked on resolution: the controller chooses;
+    /// a headless seat takes the opponents' priciest that fit.
+    DestroyWithinTotalManaValue { filter: SelectionRequirement, cap: Value },
+    /// "Return it to the battlefield. It's [its back face] … attached to
+    /// [host]" (Harold and Bob, First Numens): the source card returns from
+    /// its owner's graveyard already transformed to its back face, attached to
+    /// the first `host`. A back face that is an Aura enters as that Aura.
+    ReturnSelfTransformedAttachedTo { host: Selector },
     /// CR 701.30 — "[body], then clash with an opponent. If you win, repeat
     /// this process" (Hoarder's Greed). Each win re-enters this effect, so a
     /// suspended clash resumes without re-running an earlier `body`.

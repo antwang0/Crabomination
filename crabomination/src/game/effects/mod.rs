@@ -31411,6 +31411,107 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::RadOnCastUntilEndOfTheirNextTurn { who, amount } => {
+                for p in self.resolve_players(who, ctx) {
+                    let pl = &mut self.players[p];
+                    pl.rad_per_cast = pl.rad_per_cast.saturating_add(*amount);
+                    // A grant made on their own turn still runs through their
+                    // next one.
+                    pl.rad_per_cast_their_turn = false;
+                }
+                Ok(())
+            }
+
+            Effect::DestroyWithinTotalManaValue { filter, cap } => {
+                let me = ctx.controller;
+                let cap = self.evaluate_value(cap, ctx).max(0) as u32;
+                let source = ctx.source.unwrap_or(CardId(0));
+                let mut cands: Vec<(CardId, String, u32, bool)> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.definition.cost.cmc() <= cap)
+                    .filter(|c| self.evaluate_requirement_static_on(filter, c, me, ctx.source))
+                    .map(|c| (c.id, c.definition.name.to_string(), c.definition.cost.cmc(), c.controller != me))
+                    .collect();
+                if cands.is_empty() {
+                    return Ok(());
+                }
+                // Headless: opponents' permanents, priciest first, while the
+                // running total fits.
+                cands.sort_by_key(|c| (!c.3, std::cmp::Reverse(c.2)));
+                let mut left = cap;
+                let auto: Vec<CardId> = cands
+                    .iter()
+                    .filter(|c| c.3)
+                    .filter(|c| {
+                        let fits = c.2 <= left;
+                        if fits {
+                            left -= c.2;
+                        }
+                        fits
+                    })
+                    .map(|c| c.0)
+                    .collect();
+                let max = cands.len() as u32;
+                let candidates: Vec<(CardId, String)> = cands.iter().map(|c| (c.0, c.1.clone())).collect();
+                let Some(picked) = self.choose_up_to_cards(
+                    me,
+                    format!("Destroy permanents with total mana value {cap} or less"),
+                    source,
+                    candidates,
+                    max,
+                    PickValue::Gain,
+                    effect,
+                    auto,
+                ) else {
+                    return Ok(());
+                };
+                // A pick over the cap keeps its prefix that fits.
+                let mut left = cap;
+                let mut ids = Vec::new();
+                for id in picked {
+                    let mv = self.battlefield_find(id).map_or(u32::MAX, |c| c.definition.cost.cmc());
+                    if mv <= left {
+                        left -= mv;
+                        ids.push(id);
+                    }
+                }
+                if !ids.is_empty() {
+                    self.run_effect(&Effect::Destroy { what: Selector::ExactObjects(ids) }, ctx, events)?;
+                }
+                Ok(())
+            }
+
+            Effect::ReturnSelfTransformedAttachedTo { host } => {
+                let Some(src) = ctx.source else { return Ok(()) };
+                let Some(host) = self.resolve_selector(host, ctx).iter().find_map(|e| e.as_permanent_id()) else {
+                    return Ok(());
+                };
+                let Some(owner) = self.players.iter().position(|pl| pl.graveyard.iter().any(|c| c.id == src)) else {
+                    return Ok(());
+                };
+                // Flip the card to its back face while it is still in the
+                // graveyard, so it enters as that object (CR 712.14-style).
+                if let Some(c) = self.players[owner].graveyard.iter_mut().find(|c| c.id == src)
+                    && !c.transformed
+                    && let Some(back) = c.definition.back_face.as_ref().map(|b| (**b).clone())
+                {
+                    c.front_face = Some(c.definition.arc());
+                    c.set_definition(std::sync::Arc::new(back));
+                    c.transformed = true;
+                }
+                self.move_card_to(
+                    src,
+                    &ZoneDest::Battlefield { controller: PlayerRef::Seat(owner), tapped: false },
+                    ctx,
+                    events,
+                );
+                if let Some(c) = self.battlefield_find_mut(src) {
+                    c.attached_to = Some(host);
+                }
+                Ok(())
+            }
+
             Effect::RepeatWhileClashWon { body } => {
                 // Each win re-enters this effect as the clash's payoff, so a
                 // clash that suspends resumes at that clash, not at `body`.

@@ -423,6 +423,8 @@ pub enum ArtifactSubtype {
     Attraction,
     // The Junk token: sacrifice to impulse-draw at sorcery speed.
     Junk,
+    // Fallout: the Bobblehead cycle.
+    Bobblehead,
 }
 
 /// Enchantment subtypes.
@@ -2744,6 +2746,10 @@ pub enum SelectionRequirement {
     /// been pumped (counters / bonuses). Kutzil, Malamet Exemplar; Sovereign
     /// Okinec Ahau. Battlefield-only; false for non-creatures.
     PowerGreaterThanBasePower,
+    /// Candidate's current power differs from its printed base power (Jason
+    /// Bright's "if its power was different from its base power", read on
+    /// a dying creature's last-known information).
+    PowerDifferentFromBasePower,
     /// Candidate's power + toughness (layer-computed) is at most `n`. Used
     /// by Cut Down ("destroy target creature with total power and toughness
     /// 5 or less"). Battlefield-only; false for non-creatures.

@@ -20054,6 +20054,13 @@ impl GameState {
                 effective_mana_cost.reduce_generic(*n);
             }
         }
+        if let Some(v) = &ability.cost_reduction_value {
+            let ctx = crate::game::effects::EffectContext::for_trigger(card_id, p, None, 0);
+            let n = self.evaluate_value(v, &ctx).max(0) as u32;
+            if n > 0 {
+                effective_mana_cost.reduce_generic(n);
+            }
+        }
         // "Costs {X} less to activate, where X is this creature's power"
         // (The Dominion Bracelet, granted to its bearer).
         if ability.cost_reduction_per_equipped_power {

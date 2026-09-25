@@ -1871,6 +1871,17 @@ impl GameState {
                 .resolve_player(p, ctx)
                 .map(|p| self.players[p].poison_counters as i32)
                 .unwrap_or(0),
+            Value::RadCountersAmong(who) => self
+                .resolve_players(who, ctx)
+                .iter()
+                .map(|&p| self.players[p].rad_counters as i32)
+                .sum(),
+            Value::CountersAmongPlayers => self
+                .players
+                .iter()
+                .filter(|p| !p.eliminated)
+                .map(|p| (p.poison_counters + p.rad_counters + p.energy + p.experience) as i32)
+                .sum(),
             Value::PoisonCountersAmong(who) => self
                 .resolve_players(who, ctx)
                 .iter()
@@ -5021,6 +5032,10 @@ impl GameState {
                         card.definition.is_creature()
                             && self.effective_power(card) > card.definition.power
                     }
+                    R::PowerDifferentFromBasePower => {
+                        card.definition.is_creature()
+                            && self.effective_power(card) != card.definition.power
+                    }
                     R::PowerPlusToughnessAtMost(n) => {
                         card.definition.is_creature()
                             && self
@@ -6058,6 +6073,9 @@ impl GameState {
             }
             R::PowerGreaterThanBasePower => {
                 card.definition.is_creature() && card.power() > card.definition.power
+            }
+            R::PowerDifferentFromBasePower => {
+                card.definition.is_creature() && card.power() != card.definition.power
             }
             R::PowerPlusToughnessAtMost(n) => {
                 card.definition.is_creature()

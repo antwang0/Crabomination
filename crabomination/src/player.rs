@@ -284,6 +284,14 @@ pub struct PlayerCold {
     /// ability this turn. Written once a turn; reset at the turn boundary.
     #[serde(default)]
     pub artifact_ability_activated_this_turn: bool,
+    /// Nuka-Nuke Launcher — rad counters this player gets per spell cast,
+    /// until the end of their next turn.
+    #[serde(default)]
+    pub rad_per_cast: u32,
+    /// Set once this player's turn has begun under `rad_per_cast`; the next
+    /// turn boundary clears the grant.
+    #[serde(default)]
+    pub rad_per_cast_their_turn: bool,
 }
 
 /// A seat's mutable state. Reached only through [`Player`], which owns it

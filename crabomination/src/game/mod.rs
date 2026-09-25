@@ -22287,6 +22287,15 @@ impl GameState {
     }
 
     fn dispatch_triggers_for_events_slow(&mut self, events: &[GameEvent]) {
+        // Nuka-Nuke Launcher — a marked player's spells cost them radiation.
+        for e in events {
+            if let GameEvent::SpellCast { player, .. } = e
+                && let Some(n) = self.players.get(*player).map(|pl| pl.rad_per_cast).filter(|n| *n > 0)
+            {
+                let pl = &mut self.players[*player];
+                pl.rad_counters = pl.rad_counters.saturating_add(n);
+            }
+        }
         let mut placed = 0u64;
         for e in events {
             if let GameEvent::CounterAdded { card_id, .. } = e
@@ -23127,6 +23136,8 @@ impl GameState {
                     };
                     let event_amount = if ta.event.batch_counts_card_types {
                         self.batch_card_type_count(events, &ta.event, card)
+                    } else if ta.event.batch_counts_subjects {
+                        self.batch_subject_count(events, &ta.event, card)
                     } else {
                         self.event_amount_for(ev)
                     };
@@ -28735,6 +28746,34 @@ impl GameState {
     /// `EventSpec::batch_counts_card_types` — the number of card types among
     /// the cards of every event in `events` that `spec` matches (CR 603.2c:
     /// the one trigger sees the whole batch).
+    /// `EventSpec::batch_counts_subjects` — how many events in `events`
+    /// match `spec`, its filter read with each event's subject bound.
+    pub(crate) fn batch_subject_count(
+        &self,
+        events: &[GameEvent],
+        spec: &crate::effect::EventSpec,
+        source: &CardInstance,
+    ) -> u32 {
+        events
+            .iter()
+            .filter(|ev| crate::game::effects::events::event_matches_spec(self, ev, spec, source))
+            .filter(|ev| {
+                spec.filter.as_ref().is_none_or(|f| {
+                    let subject = crate::game::effects::event_subject(ev, &spec.kind);
+                    self.evaluate_predicate(
+                        f,
+                        &crate::game::effects::EffectContext::for_intervening_filter(
+                            source.controller,
+                            source.id,
+                            subject,
+                            self.event_amount_for(ev),
+                        ),
+                    )
+                })
+            })
+            .count() as u32
+    }
+
     pub(crate) fn batch_card_type_count(
         &self,
         events: &[GameEvent],
@@ -30441,6 +30480,7 @@ fn static_effect_to_effects(
             // PreventDamageToSelfTradingCounters — read at both damage
             // funnels (`trade_counters_for_damage`); no layer effect.
             | StaticEffect::PreventDamageToSelfTradingCounters { .. }
+            | StaticEffect::PreventDamageToSelfWhileCountersForRad { .. }
             // ExtraEtbCountersForCreatureCasts — read at creature-spell
             // resolution time in `stack.rs::resolve_spell`; no layer effect.
             | StaticEffect::ExtraEtbCountersForCreatureCasts { .. }
@@ -30653,6 +30693,8 @@ fn static_effect_to_effects(
             | StaticEffect::Ascend
             // Read by `Effect::Explore`.
             | StaticEffect::ExploresTwice
+            // Read by the rad-counter turn-based action.
+            | StaticEffect::GainLifeFromRadiation
             // Read by `Effect::Surveil` and the surveil answer.
             | StaticEffect::SurveilLooksExtra { .. }
             | StaticEffect::MayPlaySurveilledThisTurnForLife

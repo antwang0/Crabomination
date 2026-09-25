@@ -1951,6 +1951,9 @@ pub enum StaticEffect {
     /// "If a creature you control would explore, instead it explores, then it
     /// explores again" (Topography Tracker) — read by `Effect::Explore`.
     ExploresTwice,
+    /// "You gain life rather than lose life from radiation" (Strong, the
+    /// Brutish Thespian) — read by the rad-counter turn-based action.
+    GainLifeFromRadiation,
     /// "You may look at an additional N cards each time you surveil"
     /// (Enhanced Surveillance), read by `Effect::Surveil`.
     SurveilLooksExtra { n: u32 },
@@ -2718,6 +2721,12 @@ pub enum StaticEffect {
         counter: crate::card::CounterType,
         token: std::sync::Arc<crate::card::TokenDefinition>,
     },
+    /// CR 615 — "If damage would be dealt to this creature while it has a
+    /// `counter` counter on it, prevent that damage, remove that many
+    /// `counter` counters from it, then give each player a rad counter for
+    /// each counter removed this way" (Bloatfly Swarm). Read by the same
+    /// funnel as `PreventDamageToSelfTradingCounters`.
+    PreventDamageToSelfWhileCountersForRad { counter: crate::card::CounterType },
     /// CR 614 — "If this creature would deal combat damage to a player,
     /// instead put that many +1/+1 counters on it and that player mills that
     /// many cards." Szadek, Lord of Secrets. A dealer-side combat-damage
@@ -3667,6 +3676,11 @@ pub struct ActivatedAbility {
     /// nonbasic lands"). Defaults to None.
     #[serde(default)]
     pub cost_reduction_if: Option<(crate::effect::Predicate, u32)>,
+    /// "This ability costs {1} less to activate for each [Value]" (Mariposa
+    /// Military Base's rad counters). Generic-only, evaluated for the
+    /// activator at payment time.
+    #[serde(default)]
+    pub cost_reduction_value: Option<crate::effect::Value>,
     /// "This ability costs {N} less to activate if it targets [filter]" —
     /// taken when every chosen target matches (Wayta, Trainer Prodigy's
     /// "{2} less if it targets two creatures you control"). Generic-only;

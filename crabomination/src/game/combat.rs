@@ -4951,7 +4951,8 @@ impl GameState {
                 let (mut sekki, mut grows, mut kind) = (false, false, None);
                 for sa in &c.definition.static_abilities {
                     match sa.effect {
-                        SE::PreventDamageToSelfTradingCounters { .. } => sekki = true,
+                        SE::PreventDamageToSelfTradingCounters { .. }
+                        | SE::PreventDamageToSelfWhileCountersForRad { .. } => sekki = true,
                         SE::PreventCombatDamageToSelfAndGrow => grows = true,
                         SE::ReplaceDamageToSelfWithCounters { kind: k } => {
                             kind.get_or_insert(k);
@@ -5038,6 +5039,30 @@ impl GameState {
     ) -> bool {
         if dealt == 0 || self.damage_cant_be_prevented_this_turn {
             return false;
+        }
+        // Bloatfly Swarm — only while a counter remains; each removed counter
+        // is a rad counter for every player.
+        let rad = self.battlefield_find(recipient).and_then(|c| {
+            c.definition.static_abilities.iter().find_map(|s| match s.effect {
+                crate::effect::StaticEffect::PreventDamageToSelfWhileCountersForRad { counter }
+                    if c.counter_count(counter) > 0 =>
+                {
+                    Some(counter)
+                }
+                _ => None,
+            })
+        });
+        if let Some(counter) = rad {
+            let Some(c) = self.battlefield_find_mut(recipient) else { return false };
+            let removed = dealt.min(c.counter_count(counter));
+            c.remove_counters(counter, removed);
+            events.push(GameEvent::CounterRemoved { card_id: recipient, counter_type: counter, count: removed });
+            for p in 0..self.players.len() {
+                if !self.players[p].eliminated {
+                    self.players[p].rad_counters = self.players[p].rad_counters.saturating_add(removed);
+                }
+            }
+            return true;
         }
         let Some((counter, token)) = self.battlefield_find(recipient).and_then(|c| {
             c.definition.static_abilities.iter().find_map(|s| match &s.effect {
