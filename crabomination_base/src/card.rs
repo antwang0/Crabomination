@@ -3128,6 +3128,11 @@ pub enum SelectionRequirement {
     /// a concrete `PowerAtMost(x)` by `resolve_x` (Entrancing Lyre's "tap
     /// target creature with power X or less"); unresolved instances eval false.
     PowerAtMostXFromCost,
+    /// Power == the X in force (a cast's X, or an `Effect::WithX` binding).
+    /// Resolved by `resolve_x` to `PowerAtMost(x) ∧ PowerAtLeast(x)`
+    /// (Localized Destruction's "power equal to the amount of {E} paid");
+    /// unresolved instances evaluate false.
+    PowerExactlyXFromCost,
     /// Toughness ≤ the X paid into the resolving spell/ability's cost. Resolved
     /// to a concrete `ToughnessAtMost(x)` by `resolve_x` (Finale of Eternity's
     /// "destroy up to three target creatures with toughness X or less").
@@ -3641,6 +3646,7 @@ impl SelectionRequirement {
             Self::ManaValueAtMostXFromCost
             | Self::ManaValueExactlyXFromCost
             | Self::PowerAtMostXFromCost
+            | Self::PowerExactlyXFromCost
             | Self::ToughnessAtMostXFromCost
             | Self::ManaValueAtMostConverged => true,
             Self::And(a, b) | Self::Or(a, b) => {
@@ -3656,6 +3662,9 @@ impl SelectionRequirement {
             Self::ManaValueAtMostXFromCost => Self::ManaValueAtMost(x),
             Self::ManaValueExactlyXFromCost => Self::ManaValueExactly(x),
             Self::PowerAtMostXFromCost => Self::PowerAtMost(x as i32),
+            Self::PowerExactlyXFromCost => {
+                Self::And(Box::new(Self::PowerAtMost(x as i32)), Box::new(Self::PowerAtLeast(x as i32)))
+            }
             Self::ToughnessAtMostXFromCost => Self::ToughnessAtMost(x as i32),
             Self::And(a, b) => Self::And(Box::new(a.resolve_x(x)), Box::new(b.resolve_x(x))),
             Self::Or(a, b) => Self::Or(Box::new(a.resolve_x(x)), Box::new(b.resolve_x(x))),

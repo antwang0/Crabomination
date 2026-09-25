@@ -7422,6 +7422,17 @@ impl GameState {
             .sum()
     }
 
+    /// Aether Refinery (`StaticEffect::EnergyGainDoubles`) — how many times
+    /// an energy gain of `seat`'s doubles.
+    pub fn energy_gain_doublers_for(&self, seat: usize) -> u32 {
+        self.battlefield
+            .iter()
+            .filter(|c| c.controller == seat)
+            .flat_map(|c| c.definition.static_abilities.iter())
+            .filter(|sa| matches!(sa.effect, crate::effect::StaticEffect::EnergyGainDoubles))
+            .count() as u32
+    }
+
     /// CR 614.5 — how many -1/-1 counters to shave off a placement onto one
     /// of `seat`'s creatures (Vizier of Remedies; one per copy).
     pub fn minus_counter_reduction_for(&self, seat: usize) -> u32 {
@@ -30095,6 +30106,7 @@ fn static_effect_to_effects(
             // Energy-gain bonus — read at AddEnergy time via
             // `GameState::energy_gain_bonus_for`; no layer effect.
             | StaticEffect::EnergyGainBonus { .. }
+            | StaticEffect::EnergyGainDoubles
             // Damage doubling/halving — read at damage time via
             // `GameState::damage_doublers` / `damage_halvers` /
             // `scale_damage_to`; no layer effect.

@@ -762,6 +762,12 @@ pub enum Value {
     /// "the total amount of life your opponents lost this turn" (Florian,
     /// Voldaren Scion). The summing sibling of `LifeLostThisTurn`'s max.
     TotalLifeLostThisTurn(PlayerRef),
+    /// The {E} the players `who` resolves to have (summed) — Razorfield
+    /// Ripper's "+X/+X, where X is the amount of {E} you have".
+    EnergyOf(PlayerRef),
+    /// The {E} the players `who` resolves to paid or lost this turn (summed;
+    /// `Player.energy_spent_this_turn`) — Blaster Hulk's cost reduction.
+    EnergySpentThisTurn(PlayerRef),
     /// Damage dealt to a player this turn (`Player.damage_taken_this_turn`) —
     /// "Bloodthirst X, where X is the damage dealt to your opponents this
     /// turn" (Petrified Wood-Kin). Sums across the resolved players.
@@ -7774,6 +7780,12 @@ pub enum Effect {
     /// "whenever ~ attacks" trigger), else the controller's first opponent.
     /// No-op outside combat.
     TokenCopyAttackingUntilEndOfCombat { source: Selector },
+    /// "Create a tapped and attacking token that's a copy of [source]" with
+    /// no end-of-combat cleanup; the token is `Selector::LastCreatedToken`
+    /// for a chained rider (Satya, Aetherflux Genius's end-step "sacrifice
+    /// it unless you pay {E}"). It attacks what the effect's source is
+    /// attacking, else the hostile opponent. No-op outside combat.
+    TokenCopyTappedAttacking { source: Selector },
     /// "The next instant or sorcery spell you cast this turn costs {amount}
     /// less to cast" (Thundertrap Trainer, Maelstrom Muse). `amount` is
     /// evaluated at resolution, so `Value::PowerOf(TriggerSource)` reads the

@@ -1391,6 +1391,10 @@ pub enum StaticEffect {
     /// `amount` instead." An energy-only gain bonus (Izzet Generatorium), unlike
     /// `ExtraCounterAllKinds` which boosts every counter kind.
     EnergyGainBonus { amount: u32 },
+    /// CR 614 — "If you would get one or more {E}, you get twice that many
+    /// {E} instead" (Aether Refinery). Applied after `EnergyGainBonus`, one
+    /// doubling per copy.
+    EnergyGainDoubles,
     /// CR 614.2 — "If a source would deal damage … it deals double that
     /// damage instead." A *global* damage-replacement (Furnace of Rath,
     /// Gratuitous Violence-class): read

@@ -74,4 +74,37 @@ impl GameState {
         }
         Ok(())
     }
+
+    /// `Effect::TokenCopyTappedAttacking` — the token stays after combat and
+    /// is `last_created_token` for a chained rider (Satya).
+    pub(super) fn token_copy_tapped_attacking(
+        &mut self,
+        source: &Selector,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
+        if self.attacking.is_empty() {
+            return Ok(());
+        }
+        let me = ctx.controller;
+        let Some(def) = self
+            .resolve_selector(source, ctx)
+            .into_iter()
+            .find_map(|e| e.as_card_id())
+            .and_then(|id| self.find_card_anywhere(id))
+            .map(|c| c.definition.arc())
+        else {
+            return Ok(());
+        };
+        let target = ctx
+            .source
+            .and_then(|src| self.attacking.iter().find(|a| a.attacker == src))
+            .map(|a| a.target)
+            .or_else(|| self.default_hostile_opponent(me).map(AttackTarget::Player));
+        let Some(target) = target else { return Ok(()) };
+        let token = self.mint_token_onto_battlefield(def, me, true, events);
+        self.put_into_combat_attacking(token, target);
+        self.last_created_token = Some(token);
+        Ok(())
+    }
 }

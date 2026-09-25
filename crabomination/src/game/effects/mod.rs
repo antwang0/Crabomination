@@ -8841,9 +8841,12 @@ impl GameState {
                 // CR 122 / 614.16 — Winding Constrictor's player half also boosts
                 // {E} a player gets ("that many plus one"); Izzet Generatorium's
                 // energy-only bonus stacks on top (CR 614).
-                let amt = base
+                let mut amt = base
                     .saturating_add(self.extra_any_kind_adders_for(p))
                     .saturating_add(self.energy_gain_bonus_for(p));
+                for _ in 0..self.energy_gain_doublers_for(p) {
+                    amt = amt.saturating_mul(2);
+                }
                 self.players[p].energy = self.players[p].energy.saturating_add(amt);
                 events.push(GameEvent::EnergyGained { player: p, amount: amt });
                 Ok(())
@@ -20753,6 +20756,7 @@ impl GameState {
             Effect::TokenCopyAttackingUntilEndOfCombat { source } => {
                 self.token_copy_attacking_until_end_of_combat(source, ctx, events)
             }
+            Effect::TokenCopyTappedAttacking { source } => self.token_copy_tapped_attacking(source, ctx, events),
             Effect::Myriad => {
                 use crate::game::types::AttackTarget;
                 // Source must currently be attacking a player.
