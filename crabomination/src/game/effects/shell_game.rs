@@ -134,7 +134,7 @@ impl GameState {
             if theirs.is_empty() {
                 continue;
             }
-            theirs.sort_by(|a, b| b.0.cmp(&a.0));
+            theirs.sort_by_key(|t| std::cmp::Reverse(t.0));
             let legal: Vec<Target> = theirs.into_iter().map(|(_, id)| Target::Permanent(id)).collect();
             let picked = self.ask_seat_target_logged(
                 &mut cursor,
