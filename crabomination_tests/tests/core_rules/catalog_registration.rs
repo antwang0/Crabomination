@@ -3095,6 +3095,8 @@ fn every_saga_has_its_printed_chapters() {
             "iii" => Some(3),
             "iv" => Some(4),
             "v" => Some(5),
+            // The Flux (WHO) is the first six-chapter Saga.
+            "vi" => Some(6),
             _ => None,
         };
         let mut out = HashSet::new();
