@@ -992,6 +992,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::OTRIMI_COMMANDERS,
             main: decks::OTRIMI_MAIN,
         },
+        // Hundred-and-twentieth: the hundred-and-tenth official list (Coven
+        // Counters, MIC) — Selesnya counters and coven under Leinore.
+        // `--pod-decks 120`.
+        PodDeck {
+            name: "Leinore, Autumn Sovereign (GW)",
+            commanders: decks::LEINORE_COMMANDERS,
+            main: decks::LEINORE_MAIN,
+        },
     ]
 }
 
@@ -1563,6 +1571,8 @@ mod tests {
             ("Aminatou, Veil", [0xA417, 118, 9042]),
             // CR 702.140 mutate, CR 306.5b X loyalty, CR 207.2c spell mastery.
             ("Otrimi", [0x0791, 119, 9043]),
+            // Coven (three different powers), CR 303.4a player Curses, CR 107.3 X.
+            ("Leinore", [0x1E17, 120, 9044]),
         ] {
             let precon = *field.iter().find(|d| d.name.starts_with(name)).expect("the precon seat");
             assert_eq!(precon.card_count(), 100);

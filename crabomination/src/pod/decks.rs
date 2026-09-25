@@ -3649,3 +3649,33 @@ pub const OTRIMI_MAIN: &[CardFactory] = &[
     swamp, swamp, swamp, swamp, swamp, forest, forest, forest, forest, forest, forest, forest,
     forest, forest, forest, forest, island, island,
 ];
+
+pub const LEINORE_COMMANDERS: &[CardFactory] = &[leinore_autumn_sovereign];
+
+/// **Coven Counters**, the Innistrad: Midnight Hunt Commander deck (MIC,
+/// 2021-09-24), exactly as MTGJSON's `CovenCounters_MIC` prints it: 75 nonbasic
+/// cards + 12 Plains + 12 Forests = 99. Selesnya +1/+1 counters and coven
+/// (three different powers) under Leinore, Autumn Sovereign.
+pub const LEINORE_MAIN: &[CardFactory] = &[
+    angel_of_glorys_rise, bastion_protector, custodi_soulbinders, dearly_departed,
+    herald_of_war, knight_of_the_white_orchid, mikaeus_the_lunarch, odric_master_tactician,
+    riders_of_gavony, victorys_envoy, champion_of_lambholt, gyre_sage, kessig_cagebreakers,
+    somberwald_sage, verdurous_gearhulk, wild_beastmaster, herons_grace_champion,
+    sigarda_herons_grace, abzan_falconer, ainok_bond_kin, elite_scaleguard, orzhov_advokist,
+    avacyns_pilgrim, eternal_witness, yavimaya_elder, enduring_scalelord, juniper_order_ranger,
+    trostanis_summoner, cleansing_nova, hour_of_reckoning, shamanic_revelation, bestial_menace,
+    biogenic_upgrade, growth_spasm, unbreakable_formation, return_to_dust, swords_to_plowshares,
+    beast_within, inspiring_call, lifecrafters_bestiary, arcane_signet, sol_ring,
+    swiftfoot_boots, talisman_of_unity, citadel_siege, deaths_presence, canopy_vista,
+    exotic_orchard, fortified_village, sungrass_prairie, temple_of_plenty, blighted_woodland,
+    command_tower, krosan_verge, myriad_landscape, path_of_ancestry, rogues_passage,
+    selesnya_sanctuary, temple_of_the_false_god, kyler_sigardian_emissary, celestial_judgment,
+    curse_of_conformity, moorland_rescuer, sigardas_vanguard, stalwart_pathlighter,
+    wall_of_mourning, celebrate_the_harvest, curse_of_clinging_webs, heronblade_elite,
+    kurbis_harvest_celebrant, ruinous_intrusion, sigardian_zealot, somberwald_beastmaster,
+    dawnhart_wardens, moonsilver_key,
+    // Basics: 12 plains, 12 forest
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest,
+];
