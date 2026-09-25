@@ -11606,6 +11606,13 @@ impl GameState {
         if jumpstart {
             flashback_additional.push(crate::card::AdditionalCastCost::Discard { count: 1, filter: None });
         }
+        // CR 601.2f — "you may cast this card from your graveyard" is an
+        // ordinary cast from another zone, so the card's own additional costs
+        // apply (Skaab Ruinator's "exile three creature cards from your
+        // graveyard"); only the flashback riders were being paid.
+        if gy_cast {
+            flashback_additional.extend(card.definition.additional_cast_cost.iter().cloned());
+        }
         if !flashback_additional.is_empty() {
             // The flashback card can't fund its own riders (e.g. Resurgent
             // Belief's gy-exile) — lift it out of the graveyard for the check.
