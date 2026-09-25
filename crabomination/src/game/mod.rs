@@ -1437,6 +1437,12 @@ pub struct TurnRegistries {
 
 #[derive(Clone, Default, serde::Serialize, serde::Deserialize)]
 pub struct ColdState {
+    /// Aeon Engine — the game's turn order is reversed: every walk "in turn
+    /// order" (the next turn, priority, APNAP) goes the other way round the
+    /// table. Reversing again restores the original order. Cold: written once
+    /// a game at most, read through `Deref` for free.
+    #[serde(default)]
+    pub turn_order_reversed: bool,
     /// Sower of Discord's "two chosen players", per source.
     #[serde(default)]
     pub chosen_player_pairs: Vec<(CardId, usize, usize)>,
@@ -2250,11 +2256,6 @@ pub struct GameState {
     /// gains control of this creature. Activate only as a sorcery."
     #[serde(default)]
     pub deploy_creatures: bool,
-    /// Aeon Engine — the game's turn order is reversed: every walk "in turn
-    /// order" (the next turn, priority, APNAP) goes the other way round the
-    /// table. Reversing again restores the original order.
-    #[serde(default)]
-    pub turn_order_reversed: bool,
     /// All permanents currently in play.
     ///
     /// The heavy zones (battlefield, phased_out, exile, stack,
@@ -3932,7 +3933,6 @@ impl Clone for GameState {
             range_of_influence: self.range_of_influence,
             attack_adjacent_only: self.attack_adjacent_only,
             deploy_creatures: self.deploy_creatures,
-            turn_order_reversed: self.turn_order_reversed,
             step: self.step,
             active_player_idx: self.active_player_idx,
             starting_player: self.starting_player,
@@ -4127,7 +4127,6 @@ impl GameState {
             range_of_influence: None,
             attack_adjacent_only: false,
             deploy_creatures: false,
-            turn_order_reversed: false,
             battlefield: crate::zone::Battlefield::default(),
             phased_out: CowBox::default(),
             exile: crate::zone::CardPile::default(),
