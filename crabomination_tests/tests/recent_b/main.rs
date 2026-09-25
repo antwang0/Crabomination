@@ -60,6 +60,7 @@ mod cmdr_ellivere;
 mod cmdr_kasla;
 mod cmdr_kathril;
 mod cmdr_jared;
+mod cmdr_kalamax;
 mod cmdr_breya;
 mod cmdr_yidris;
 mod cmdr_mimeoplasm;
