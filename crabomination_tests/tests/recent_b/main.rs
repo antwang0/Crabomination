@@ -45,6 +45,7 @@ mod cmdr_galea;
 mod cmdr_chishiro;
 mod cmdr_zurgo;
 mod cmdr_veilpiercer;
+mod cmdr_gavi;
 mod cmdr_leinore;
 mod cmdr_sidar;
 mod cmdr_oloro;
