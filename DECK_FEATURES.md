@@ -2627,6 +2627,23 @@ Vehicle, an activated manland or a stationed Spacecraft stayed home: Kotori
 Inspirit / Morska (seed 15101, 1,000) and six seats (15102, 1,000): all
 decided; census (15103, 500): nothing unplayed. `--bench` byte-identical.
 
+The **hundred-and-seventy-fifth** is Warhammer 40,000 Commander's **Tyranid
+Swarm** (`TyranidSwarm_40K`, 2022-10-07) — Temur +1/+1 counters and {X}
+creatures under The Swarmlord, `--pod-decks 175`. Forty cards were missing
+(`cmdr_swarmlord.rs`). The primitives: `SpendRestriction::CreatureCastCounter`
+(Biophagus — CR 106.6a, a counter per funding pip, riding Opal Palace's
+provenance hook), `PumpTeamByControlledPermanents::per_own_counter` (Clamavus)
+and `AdditionalCastCost::RemoveCountersAmong` (Hierophant Bio-Titan's discount
+cost). ⚠ Its tests found **a damage trigger's intervening-if read the damage
+amount as 0** — `fire_combat_damage_triggers` built the filter context without
+`event_amount`, so "deals exactly 1 damage" (Ghyrson Starn) never matched.
+Residuals: **Ghyrson Starn**, **Hierophant Bio-Titan**, **Magus Lucea Kane**,
+**The First Tyrannic War**, **The Red Terror** (INCOMPLETE_CARDS). Four seats
+beside Captain America / Dogmeat / Greyfax (seed 17501, 1,000,
+`--card-census`: nothing unplayed): all decided, Swarmlord 32.2 %; six seats
+beside Invisible Woman / Caesar / Madison / Mothman / Tidus (17502, 1,000):
+all decided, 14.4 %. `--bench` byte-identical.
+
 The **hundred-and-seventy-third** is Fallout Commander's **Scrappy
 Survivors** (`ScrappySurvivors_PIP`, 2024-03-08) — Naya Auras, Equipment and
 Junk under Dogmeat, Ever Loyal, `--pod-decks 173` (built as 172; Forces of the
