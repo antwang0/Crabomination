@@ -71,6 +71,34 @@ fn cairn_wanderer_borrows_from_graveyards() {
     assert!(has(&g, cw, Keyword::Vigilance));
 }
 
+/// CR 400.7 — Cairn Wanderer reads a graveyard card as it is in the
+/// graveyard: a creature that *had* double strike on the battlefield (a
+/// granted keyword) and died lends none. The death snapshot used to be read
+/// instead, and its clearing moved the count under the gather memo.
+#[test]
+fn cr_400_7_cairn_wanderer_reads_graveyard_cards_not_their_last_known_selves() {
+    let mut g = pod(2);
+    let cw = g.add_card_to_battlefield(0, catalog::cairn_wanderer());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let mut ctx = EffectContext::for_spell(0, None, 0, 0);
+    ctx.source = Some(bear);
+    let grant = crabomination::effect::Effect::GrantKeyword {
+        what: crabomination::effect::Selector::ExactObjects(vec![bear]),
+        keyword: Keyword::DoubleStrike,
+        duration: crabomination::effect::Duration::EndOfTurn,
+    };
+    g.resolve_effect(&grant, &ctx).expect("grant");
+    let kill = crabomination::effect::Effect::Destroy { what: crabomination::effect::Selector::ExactObjects(vec![bear]) };
+    let ev = g.resolve_effect(&kill, &ctx).expect("destroy");
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bear));
+    // Before and after the death snapshots are cleared — the answer must not
+    // move with them.
+    assert!(!has(&g, cw, Keyword::DoubleStrike), "Grizzly Bears has no double strike in the graveyard");
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert!(!has(&g, cw, Keyword::DoubleStrike));
+}
+
 /// Soulflayer: a delved creature card's keywords (CR 702.66).
 #[test]
 fn soulflayer_keeps_what_it_delved() {

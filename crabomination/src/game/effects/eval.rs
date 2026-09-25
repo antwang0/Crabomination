@@ -1780,24 +1780,18 @@ impl GameState {
                     })
                     .count() as i32
             }
-            Value::CardsInAllGraveyardsMatching { filter } => {
-                let ids: Vec<CardId> = self
-                    .players
-                    .iter()
-                    .flat_map(|p| p.graveyard.iter())
-                    .map(|c| c.id)
-                    .collect();
-                ids.into_iter()
-                    .filter(|id| {
-                        self.evaluate_requirement_static(
-                            filter,
-                            &crate::game::Target::Permanent(*id),
-                            ctx.controller,
-                            ctx.source,
-                        )
-                    })
-                    .count() as i32
-            }
+            // "A creature card with flying is in a graveyard" (Cairn Wanderer)
+            // reads the cards as they are in the graveyard (CR 400.7), not a
+            // death snapshot of what they were on the battlefield. Reading the
+            // snapshot also made the count change when the snapshots were
+            // cleared, an input the state-level gather memo does not witness
+            // (a strict six-seat pod, seed 23033).
+            Value::CardsInAllGraveyardsMatching { filter } => self
+                .players
+                .iter()
+                .flat_map(|p| p.graveyard.iter())
+                .filter(|c| self.evaluate_requirement_on_card(filter, c, ctx.controller))
+                .count() as i32,
             Value::CardsInOpponentsGraveyardsMatching { filter } => {
                 let ids: Vec<CardId> = self
                     .players
