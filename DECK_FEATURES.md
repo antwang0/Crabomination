@@ -94,6 +94,7 @@ lists were picked.
 | **Nature of the Beast** (C13 precon) RGW | Marath, Will of the Wild | RGW | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Reign of Dragons** (FDC precon) R | Lathliss, Dragon Queen | R | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Spirit Squadron** (VOC precon) WU | Millicent, Restless Revenant | WU | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
+| **Jump Scare!** (DSC precon) GU | Zimone, Mystery Unraveler | GU | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
 | **Enduring Enchantments** (CMM precon) WBG | Anikthea, Hand of Erebos | WBG | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
 | **Open Hostility** (C16 precon) WBRG | Saskia the Unyielding | WBRG | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Devour for Power** (CMD precon) BGU | The Mimeoplasm | BGU | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
@@ -2206,6 +2207,23 @@ Loyalty**, **Tamiyo** (INCOMPLETE_CARDS). A 200-game census beside
 Hearthhull / Bright-Palm / Brimaz (seed 9551) decided 200/200 with zero
 panics and no card of the four lists unplayed, Ms. Bumbleflower winning
 38.0 %. `--bench` byte-identical.
+
+The **hundred-and-thirty-third** is Duskmourn Commander's **Jump Scare!**
+(`JumpScare_DSC`) — Simic manifest dread and morph under Zimone, Mystery
+Unraveler (seat 131 before rebasing over two other lists). Twenty cards were
+missing (`cmdr_zimone.rs`); the primitive is `SelectionRequirement::
+PowerParity` (Zimone's Hypothesis). Two engine holes: ⚠ **a "counter,
+exile, cast it free" trigger aimed at itself** — `CounterSpellExileMayPlayFree`
+had no slot-filter walker arm, so Kheru Spellsnatcher's turned-face-up
+trigger read an `Any` filter and took the first permanent (it and three
+sibling counter variants now also refuse a player); and ⚠ **a card cast
+from the graveyard skipped its own additional costs** (CR 601.2f — Skaab
+Ruinator came back without exiling three creature cards; only flashback
+riders were paid). Residuals: **Ashaya, Soul of the Wild**, **Deathmist
+Raptor**, **Disorienting Choice**, **Zimone, Mystery Unraveler**, **Zimone's
+Hypothesis**. A 200-game census beside Millicent / Lathliss / Bright-Palm
+(seed 133) decided 200/200 with zero panics and no card of the list
+unplayed, Zimone winning 18.0 %. `--bench` byte-identical.
 
 The **hundred-and-twenty-fourth** is Innistrad: Crimson Vow Commander's
 **Spirit Squadron** (`SpiritSquadron_VOC`) — Azorius Spirits under
