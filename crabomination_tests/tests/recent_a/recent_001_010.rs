@@ -6233,6 +6233,27 @@ mod recent {
         assert!(g.battlefield_find(dragger).is_none(), "off the battlefield");
     }
 
+    /// CR 702.84a — "exile it ... if it would leave the battlefield": an
+    /// unearthed creature that is destroyed goes to exile, not the graveyard
+    /// (bug fix: the shortcut had only the end-step exile, so it could be
+    /// unearthed again).
+    #[test]
+    fn unearthed_creature_that_dies_is_exiled() {
+        let mut g = two_player_game();
+        let dragger = g.add_card_to_graveyard(0, catalog::viscera_dragger());
+        g.players[0].mana_pool.add(Color::Black, 1);
+        g.players[0].mana_pool.add_colorless(1);
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: dragger, ability_index: 0,
+            target: None, additional_targets: vec![], x_value: None, mode: None,
+        }).unwrap();
+        drain_stack(&mut g);
+        let mut events = Vec::new();
+        g.destroy_permanent(dragger, false, &mut events);
+        assert!(g.exile.iter().any(|c| c.id == dragger), "exiled instead of dying to the graveyard");
+        assert!(!g.players[0].graveyard.iter().any(|c| c.id == dragger));
+    }
+
     /// Rotting Rats' unearth re-triggers its enters-the-battlefield discard.
     #[test]
     fn rotting_rats_unearth_repeats_etb_discard() {

@@ -863,9 +863,9 @@ pub fn station() -> ActivatedAbility {
 
 /// Unearth `cost` (CR 702.84). "[cost]: Return this card from your graveyard to
 /// the battlefield. It gains haste. Exile it at the beginning of the next end
-/// step …" — a sorcery-speed graveyard-activated ability. The "exile it if it
-/// would leave the battlefield" clause is approximated by the end-step exile
-/// only (the same model Goryo's Vengeance uses).
+/// step or if it would leave the battlefield" — a sorcery-speed
+/// graveyard-activated ability; the leave clause is a CR 614 replacement
+/// (`ExileIfLeavesBattlefield`), so a dying unearthed creature is exiled.
 pub fn unearth(cost: crate::mana::ManaCost) -> ActivatedAbility {
     ActivatedAbility {
         mana_cost: cost,
@@ -876,6 +876,7 @@ pub fn unearth(cost: crate::mana::ManaCost) -> ActivatedAbility {
                 what: Selector::This,
                 to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
             },
+            Effect::ExileIfLeavesBattlefield { what: Selector::This },
             Effect::GrantKeyword {
                 what: Selector::This,
                 keyword: crate::card::Keyword::Haste,
