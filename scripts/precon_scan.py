@@ -38,7 +38,7 @@ def fetch(name, sub=""):
     os.makedirs(CACHE, exist_ok=True)
     path = os.path.join(CACHE, name)
     if not os.path.exists(path):
-        subprocess.run(["curl", "-sSf", "-o", path, f"{BASE}/{sub}{name}"], check=True)
+        subprocess.run(["curl", "-sSf", "--http1.1", "--retry", "3", "--max-time", "60", "-o", path, f"{BASE}/{sub}{name}"], check=True)
     return json.load(open(path, encoding="utf-8"))["data"]
 
 
