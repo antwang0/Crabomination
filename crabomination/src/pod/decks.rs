@@ -4005,3 +4005,31 @@ pub const MOROPHON_MAIN: &[CardFactory] = &[
     // Basics: 3 forest, 3 plains, 2 mountain, 3 island, 1 swamp
     forest, forest, forest, plains, plains, plains, mountain, mountain, island, island, island, swamp,
 ];
+
+pub const SEFRIS_COMMANDERS: &[CardFactory] = &[sefris_of_the_hidden_ways];
+
+/// **Dungeons of Death**, the Adventures in the Forgotten Realms Commander
+/// deck (AFC, 2021-07-23), exactly as MTGJSON's `DungeonsOfDeath_AFC` prints
+/// it: 80 nonbasic cards + 7 Plains + 5 Islands + 7 Swamps = 99. Esper
+/// reanimation and dungeon venturing under Sefris of the Hidden Ways.
+pub const SEFRIS_MAIN: &[CardFactory] = &[
+    cataclysmic_gearhulk, eternal_dragon, karmic_guide, sun_titan, sunblast_angel,
+    champion_of_wits, curator_of_mysteries, phantasmal_image, doomed_necromancer, ashen_rider,
+    baleful_strix, hostage_taker, solemn_simulacrum, ronom_unicorn, wall_of_omens,
+    merfolk_looter, mulldrifter, murder_of_crows, plaguecrafter, reassembling_skeleton,
+    shriekmaw, cloudblazer, necrotic_sliver, obsessive_stitcher, burnished_hart, meteor_golem,
+    necromantic_selection, unburial_rites, victimize, utter_end, swords_to_plowshares,
+    forbidden_alchemy, despark, vanish_into_memory, arcane_signet, commanders_sphere,
+    fellwar_stone, sol_ring, wayfarers_bauble, lightning_greaves, propaganda, choked_estuary,
+    darkwater_catacombs, exotic_orchard, geier_reach_sanitarium, high_market, nimbus_maze,
+    port_town, prairie_stream, sunken_hollow, evolving_wilds, arcane_sanctum, azorius_chancery,
+    command_tower, dimir_aqueduct, esper_panorama, orzhov_basilica, terramorphic_expanse,
+    thriving_heath, thriving_isle, thriving_moor, nihiloor, immovable_rod, radiant_solar,
+    revivify, thorough_investigation, arcane_endeavor, minn_wily_illusionist, phantom_steed,
+    rod_of_absorption, grave_endeavor, wand_of_orcus, extract_brain, midnight_pathlighter,
+    minimus_containment, hama_pashar_ruin_seeker, dungeon_map, bucknards_everfull_purse,
+    clay_golem, component_pouch,
+    // Basics: 7 plains, 5 island, 7 swamp
+    plains, plains, plains, plains, plains, plains, plains, island, island, island, island,
+    island, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];

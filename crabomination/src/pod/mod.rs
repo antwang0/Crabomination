@@ -1088,6 +1088,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::MOROPHON_COMMANDERS,
             main: decks::MOROPHON_MAIN,
         },
+        // Hundred-and-thirty-second: the hundred-and-twenty-second official
+        // list (Dungeons of Death, AFC) — Esper reanimation and venturing
+        // under Sefris of the Hidden Ways. `--pod-decks 132`.
+        PodDeck {
+            name: "Sefris of the Hidden Ways (WUB)",
+            commanders: decks::SEFRIS_COMMANDERS,
+            main: decks::SEFRIS_MAIN,
+        },
     ]
 }
 
