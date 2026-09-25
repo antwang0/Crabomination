@@ -4184,3 +4184,34 @@ pub const ZIMONE_IA_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, forest, forest, forest, forest,
     forest, forest,
 ];
+
+pub const SAHEELI_RADIANT_COMMANDERS: &[CardFactory] = &[saheeli_radiant_creator];
+
+/// **Living Energy**, the Aetherdrift Commander deck (DRC, 2025-02-14),
+/// exactly as MTGJSON's `LivingEnergy_DRC` prints it: 83 nonbasic cards +
+/// 5 Islands + 5 Mountains + 6 Forests = 99. Temur energy and
+/// artifacts under Saheeli, Radiant Creator.
+pub const SAHEELI_RADIANT_MAIN: &[CardFactory] = &[
+    pia_nalaar_chief_mechanic, territorial_aetherkite, nissa_worldsoul_speaker,
+    peema_trailblazer, rampaging_aetherhood, adaptive_omnitool, aetherflux_conduit,
+    aetheric_amplifier, stridehangar_automaton, chain_reaction, chaos_warp,
+    druid_of_purification, chromatic_lantern, duplicant, academy_ruins, aethersquall_ancient,
+    aethertide_whale, confiscation_coup, disallow, midnight_clock, one_with_the_machine,
+    sai_master_thopterist, thopter_spy_network, blasphemous_act, combustible_gearhulk,
+    lightning_runner, pia_and_kiran_nalaar, aetherwind_basker, architect_of_the_untamed,
+    bootleggers_stash, elder_gargaroth, aetherworks_marvel, conjurers_closet,
+    cultivators_caravan, panharmonicon, retrofitter_foundry, solemn_simulacrum,
+    triplicate_titan, exotic_orchard, frostboil_snarl, hinterland_harbor, karplusan_forest,
+    overflowing_basin, rootbound_crag, sheltered_thicket, shivan_reef, spire_of_industry,
+    sulfur_falls, temple_of_epiphany, treasure_vault, vineglimmer_snarl, yavimaya_coast,
+    reality_shift, arcane_signet, lightning_greaves, sol_ring, command_tower, arcane_denial,
+    bespoke_battlewagon, era_of_innovation, glimmer_of_genius, whirler_rogue, loyal_apprentice,
+    reckless_fireweaver, attune_with_aether, explosive_vegetation, peema_aether_seer,
+    servant_of_the_conduit, rogue_refiner, saheeli_sublime_artificer, whirler_virtuoso,
+    commanders_sphere, decoction_module, ornithopter_of_paradise, solar_transformer,
+    soul_guide_lantern, talisman_of_curiosity, aether_hub, evolving_wilds, frontier_bivouac,
+    path_of_ancestry, slagwoods_bridge, tanglepool_bridge,
+    // Basics: 5 island, 5 mountain, 6 forest
+    island, island, island, island, island, mountain, mountain, mountain, mountain, mountain,
+    forest, forest, forest, forest, forest, forest,
+];

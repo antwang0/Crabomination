@@ -1136,6 +1136,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ZIMONE_IA_COMMANDERS,
             main: decks::ZIMONE_IA_MAIN,
         },
+        // Seat 138: Living Energy (DRC) — Temur energy and artifacts under
+        // Saheeli, Radiant Creator (CR 107.16 energy; CR 118.9 energy as an
+        // alternative cost). `--pod-decks 138`.
+        PodDeck {
+            name: "Saheeli, Radiant Creator (GUR)",
+            commanders: decks::SAHEELI_RADIANT_COMMANDERS,
+            main: decks::SAHEELI_RADIANT_MAIN,
+        },
     ]
 }
 
@@ -1731,6 +1739,8 @@ mod tests {
             // CR 700.18 full party, CR 702.84 granted unearth, CR 603.3d
             // once-each-turn grants (Folk Hero).
             ("Nalia", [0x4A11, 136, 9060]),
+            // CR 107.16 energy; CR 118.9 an energy alternative cost.
+            ("Saheeli, Radiant", [0x5A4E, 138, 9062]),
         ] {
             let precon = *field.iter().find(|d| d.name.starts_with(name)).expect("the precon seat");
             assert_eq!(precon.card_count(), 100);
