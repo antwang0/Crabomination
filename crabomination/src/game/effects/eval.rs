@@ -1119,6 +1119,13 @@ impl GameState {
                         .count() as i32
                 })
                 .unwrap_or(0),
+            Value::SpellsCastNotFromHandThisTurn(who) => self
+                .resolve_player(who, ctx)
+                .map(|p| {
+                    let pl = &self.players[p];
+                    pl.spells_cast_this_turn.saturating_sub(pl.spells_cast_from_hand_this_turn) as i32
+                })
+                .unwrap_or(0),
             Value::AurasYouControlledOnDyingSubject => ctx
                 .trigger_source
                 .and_then(|e| e.as_card_id())

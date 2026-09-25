@@ -2017,6 +2017,9 @@ pub enum StaticEffect {
     /// permanent this Aura enchants. Read by `GameState::equip` and the
     /// spell cost-reduction walk.
     CostReductionTargetingHost { amount: u32 },
+    /// "You draw cards from the bottom of your library rather than the top"
+    /// (River Song). Read by `draw_one` for the static's controller.
+    ControllerDrawsFromBottom,
     /// Belt of Giant Strength — "this ability costs {X} less to activate,
     /// where X is the power of the creature it targets", on the Equipment's
     /// own equip. Read by `GameState::equip`.

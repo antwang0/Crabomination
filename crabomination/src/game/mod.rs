@@ -20709,6 +20709,20 @@ impl GameState {
         if self.players[p].library.is_empty() && self.reanimate_instead_of_empty_draw(p, events) {
             return DrawOutcome::Drew;
         }
+        // River Song — "you draw cards from the bottom of your library": the
+        // bottom card is moved up and drawn as the top.
+        if draw_statics
+            && self.players[p].library.len() > 1
+            && self.battlefield.iter().any(|c| {
+                c.controller == p
+                    && c.definition.static_abilities.iter().any(|sa| {
+                        matches!(sa.effect, crate::effect::StaticEffect::ControllerDrawsFromBottom)
+                    })
+            })
+            && let Some(bottom) = self.players[p].library.pop()
+        {
+            self.players[p].library.insert(0, bottom);
+        }
         let drew = match self.players[p].draw_top() {
             Some(id) => {
                 self.cards_drawn_this_resolution += 1;
@@ -30787,6 +30801,8 @@ fn static_effect_to_effects(
             | StaticEffect::ControllerEquipAtInstantSpeed
             | StaticEffect::EquipCostReduction { .. }
             | StaticEffect::CostReductionTargetingHost { .. }
+            // Read by `draw_one`, not a layer effect.
+            | StaticEffect::ControllerDrawsFromBottom
             | StaticEffect::EquipCostReducedByTargetPower
             // Bludgeon Brawl — the granted subtype and bonus are synthesized
             // per artifact in `compute_battlefield`, not from a modification.

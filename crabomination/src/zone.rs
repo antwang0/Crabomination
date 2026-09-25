@@ -1009,6 +1009,7 @@ fn card_has_draw_static(c: &CardInstance) -> bool {
                 | S::EmptyHandDrawBonus { .. }
                 | S::DrawsRevealedTaxed { .. }
                 | S::OpponentExtraDrawsRedirected
+                | S::ControllerDrawsFromBottom
         )
     })
 }

@@ -3313,8 +3313,16 @@ impl crate::game::GameState {
         {
             return None;
         }
-        let flashback = |sa: &crate::card::StaticAbility| {
-            matches!(sa.effect, crate::effect::StaticEffect::GraveyardInstantsSorceriesHaveFlashback)
+        // "During your turn, each instant and sorcery card in your graveyard
+        // has flashback" (Return the Past) rides a `WhileYourTurn` wrapper.
+        let my_turn = self.active_player_idx == seat;
+        let flashback = |sa: &crate::card::StaticAbility| match &sa.effect {
+            crate::effect::StaticEffect::GraveyardInstantsSorceriesHaveFlashback => true,
+            crate::effect::StaticEffect::WhileYourTurn { inner } => {
+                my_turn
+                    && matches!(**inner, crate::effect::StaticEffect::GraveyardInstantsSorceriesHaveFlashback)
+            }
+            _ => false,
         };
         let granted = self
             .battlefield

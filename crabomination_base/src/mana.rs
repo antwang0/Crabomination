@@ -740,6 +740,10 @@ pub enum SpendRestriction {
     /// spend; one counter per funding pip rides the cast card's
     /// `pending_etb_counters` (CR 106.6a).
     CreatureCastCounter,
+    /// "Spend this mana only to cast a [type] spell or activate an ability of
+    /// a [type]" for either of two types (Gallifrey Council Chamber: Time
+    /// Lord or Alien). Changelings count.
+    CreatureOfEitherTypeOrItsAbility(crate::card::CreatureType, crate::card::CreatureType),
 }
 
 impl SpendRestriction {
@@ -772,6 +776,9 @@ impl SpendRestriction {
             SpendRestriction::ForetellOnly => "only to foretell or cast foretell spells",
             SpendRestriction::EquipmentOnly => "only Equipment",
             SpendRestriction::AuraOrEquipmentSpells => "only Aura and Equipment spells",
+            SpendRestriction::CreatureOfEitherTypeOrItsAbility(..) => {
+                "only spells and abilities of the two listed creature types"
+            }
             SpendRestriction::ColorlessSpellsOrAbilities => "only colorless spells or abilities",
             SpendRestriction::HighMvOrX => "only mana value 5+ or {X} spells",
             SpendRestriction::XCostsOnly => "only costs that contain {X}",
@@ -877,6 +884,10 @@ impl SpendRestriction {
             SpendRestriction::EquipmentOnly => kind.equipment,
             SpendRestriction::AuraOrEquipmentSpells => {
                 !kind.activating_ability && (kind.equipment || kind.aura)
+            }
+            SpendRestriction::CreatureOfEitherTypeOrItsAbility(a, b) => {
+                (kind.creature || kind.creature_ability)
+                    && (kind.changeling || kind.creature_types.contains(&a) || kind.creature_types.contains(&b))
             }
             SpendRestriction::ColorlessSpellsOrAbilities => {
                 kind.colorless || kind.activating_ability

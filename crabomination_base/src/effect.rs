@@ -1503,6 +1503,10 @@ pub enum Value {
     /// `GameState.auras_at_death`. Gunner Conscript's "if it was enchanted" /
     /// "if it was equipped", Cass's "if it was enchanted or equipped".
     AttachmentsOnDyingSubject { filter: SelectionRequirement },
+    /// The number of spells `who` has cast this turn from anywhere other than
+    /// their hand (Paradox — Impending Flux, Surge of Brilliance):
+    /// `spells_cast_this_turn - spells_cast_from_hand_this_turn`.
+    SpellsCastNotFromHandThisTurn(PlayerRef),
     /// The number of permanents matching `filter` attached to the permanent
     /// `what` resolves to — "as long as this creature is enchanted by exactly
     /// two Auras" (Timber Paladin).
