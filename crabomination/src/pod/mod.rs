@@ -1263,6 +1263,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SEVINNE_COMMANDERS,
             main: decks::SEVINNE_MAIN,
         },
+        // Hundred-and-fifty-fourth: The Hosts of Mordor (LTC) — Grixis
+        // Orc armies, the Ring tempting you, and the opponents' own
+        // creatures and spells turned against them. `--pod-decks 154`.
+        PodDeck {
+            name: "Sauron, Lord of the Rings (UBR)",
+            commanders: decks::SAURON_COMMANDERS,
+            main: decks::SAURON_MAIN,
+        },
     ]
 }
 

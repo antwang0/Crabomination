@@ -4662,3 +4662,33 @@ pub const SEVINNE_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, island, island,
     island, island, island, island, island, island, mountain, mountain, mountain, mountain,
 ];
+
+pub const SAURON_COMMANDERS: &[CardFactory] = &[sauron_lord_of_the_rings];
+
+/// **The Hosts of Mordor**, the LTC Commander deck (2023-06-23), exactly as
+/// MTGJSON's `TheHostsOfMordor_LTC` prints it: 80 nonbasic cards + 6 Island
+/// + 6 Swamp + 7 Mountain = 99. Grixis Orc armies, the Ring tempting you,
+/// and the opponents' own creatures and spells turned against them.
+pub const SAURON_MAIN: &[CardFactory] = &[
+    saruman_the_white_hand, corsairs_of_umbar, monstrosity_of_the_lake, subjugate_the_hobbits,
+    shelob_dread_weaver, cavern_hoard_dragon, orcish_siegemaster, rampaging_war_mammoth,
+    the_balrog_of_moria, grima_sarumans_footman, in_the_darkness_bind_them, lidless_gaze,
+    lord_of_the_nazgul, moria_scavenger, summons_of_saruman, too_greedily_too_deep,
+    wake_the_dragon, relic_of_sauron, the_black_gate, decree_of_pain, languish, living_death,
+    reanimate, blasphemous_act, goblin_dark_dwellers, inferno_titan, knollspine_dragon,
+    scourge_of_the_throne, siege_gang_commander, treasure_nabber, hostage_taker, notion_thief,
+    choked_estuary, desolate_lighthouse, dragonskull_summit, drowned_catacomb, foreboding_ruins,
+    frostboil_snarl, smoldering_marsh, sulfur_falls, sulfurous_springs, sunken_hollow,
+    underground_river, treason_of_isengard, bitter_downfall, troll_of_khazad_dum,
+    voracious_fell_beast, fiery_inscription, grishnakh_brash_instigator, arcane_denial,
+    boon_of_the_wish_giver, consider, deep_analysis, fact_or_fiction, forbidden_alchemy,
+    feed_the_swarm, merciless_executioner, revenge_of_ravens, anger, faithless_looting,
+    the_mouth_of_sauron, goblin_cratermaker, guttersnipe, shiny_impetus, thrill_of_possibility,
+    extract_from_darkness, arcane_signet, basalt_monolith, commanders_sphere,
+    everflowing_chalice, mind_stone, sol_ring, worn_powerstone, command_tower,
+    crumbling_necropolis, evolving_wilds, field_of_ruin, path_of_ancestry, rogues_passage,
+    terramorphic_expanse,
+    // Basics: 6 island, 6 swamp, 7 mountain
+    island, island, island, island, island, island, swamp, swamp, swamp, swamp, swamp, swamp,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+];
