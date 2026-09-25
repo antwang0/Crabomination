@@ -13159,16 +13159,26 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::GrantMiracle { what, cost } => {
+            Effect::GrantMiracle { what, .. } | Effect::GrantMiracleReduced { what, .. } => {
                 // Stamp an until-end-of-turn may-play permission plus the
                 // miracle alt-cost on each resolved card, so the controller
-                // may cast it this turn for `cost` (Lorehold, the Historian).
+                // may cast it this turn for `cost` (Lorehold, the Historian),
+                // or for its own cost less `reduce` generic (Aminatou).
                 let granter = ctx.controller;
                 let granted_turn = self.turn_number;
                 for ent in self.resolve_selector(what, ctx) {
                     if let EntityRef::Card(cid) = ent
                         && let Some(card) = self.find_card_anywhere_mut(cid)
                     {
+                        let cost = match effect {
+                            Effect::GrantMiracle { cost, .. } => cost.clone(),
+                            Effect::GrantMiracleReduced { reduce, .. } => {
+                                let mut c = card.definition.cost.clone();
+                                c.reduce_generic(*reduce);
+                                c
+                            }
+                            _ => unreachable!(),
+                        };
                         card.may_play_until = Some(crate::card::MayPlayPermission {
                             player: granter,
                             granted_turn,
@@ -13179,7 +13189,7 @@ impl GameState {
                             miracle: true,
                             pay_life: false,
                         });
-                        card.granted_alt_cast_cost_eot = Some(cost.clone());
+                        card.granted_alt_cast_cost_eot = Some(cost);
                         self.step_bounded_may_play = true;
                     }
                 }
@@ -23991,6 +24001,7 @@ impl GameState {
                     picked_lands_to_battlefield,
                     rest_bottom_random,
                     rest_to_exile,
+                    rest_on_top,
                     then_if_picked,
                     then_if_not_picked,
                     picked_matching_to_battlefield,
@@ -24079,6 +24090,7 @@ impl GameState {
                     picked_lands_to_battlefield: *picked_lands_to_battlefield,
                     rest_bottom_random: *rest_bottom_random,
                     rest_to_exile: *rest_to_exile,
+                    rest_on_top: *rest_on_top,
                     then_if_picked: then_if_picked.clone(),
                     then_if_not_picked: then_if_not_picked.clone(),
                     picked_matching_to_battlefield: picked_matching_to_battlefield.clone(),
@@ -24149,6 +24161,7 @@ impl GameState {
                     picked_lands_to_battlefield: false,
                     rest_bottom_random: false,
                     rest_to_exile: false,
+                    rest_on_top: false,
                     then_if_picked: None,
                     then_if_not_picked: None,
                     picked_matching_to_battlefield: None,
@@ -24202,6 +24215,7 @@ impl GameState {
                     picked_lands_to_battlefield: false,
                     rest_bottom_random: *rest_bottom_random,
                     rest_to_exile: *exile_rest,
+                    rest_on_top: false,
                     then_if_picked: None,
                     then_if_not_picked: None,
                     picked_matching_to_battlefield: None,

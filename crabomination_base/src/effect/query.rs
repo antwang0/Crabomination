@@ -1714,6 +1714,7 @@ impl Effect {
             | Effect::GrantEmbalmThisTurn { what }
             | Effect::GrantHarmonizeThisTurn { what }
             | Effect::GrantMiracle { what, .. }
+            | Effect::GrantMiracleReduced { what, .. }
             | Effect::Exile { what }
             | Effect::ReturnFaceDownAsForest { what }
             | Effect::ExileWithSource { what }
@@ -2477,6 +2478,7 @@ impl Effect {
             | Effect::GrantEmbalmThisTurn { what }
             | Effect::GrantHarmonizeThisTurn { what }
             | Effect::GrantMiracle { what, .. }
+            | Effect::GrantMiracleReduced { what, .. }
             | Effect::Exile { what }
             | Effect::ReturnFaceDownAsForest { what }
             | Effect::ExileWithSource { what }
@@ -4795,6 +4797,7 @@ impl Effect {
                 | Effect::GrantFlashbackThisTurn { what }
                 | Effect::GrantEmbalmThisTurn { what }
                 | Effect::GrantMiracle { what, .. }
+                | Effect::GrantMiracleReduced { what, .. }
                 | Effect::Exile { what }
             | Effect::ReturnFaceDownAsForest { what }
                 | Effect::ChangeSpellTarget { what }

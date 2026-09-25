@@ -570,6 +570,9 @@ impl GameState {
                         crate::effect::StaticEffect::ZeroAlternativeCostOncePerTurn { filter } => {
                             self.evaluate_requirement_on_card(filter, card, p)
                         }
+                        crate::effect::StaticEffect::ZeroAlternativeCostOncePerYourTurn { filter } => {
+                            self.active_player_idx == p && self.evaluate_requirement_on_card(filter, card, p)
+                        }
                         _ => false,
                     })
             })

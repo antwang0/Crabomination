@@ -930,7 +930,8 @@ fn static_effect_touches_untap(e: &crate::effect::StaticEffect) -> bool {
         | S::MaxOneUntapPerStep { .. }
         | S::MaxUntapsPerStep { .. }
         | S::UntapSelfEachUntapStep
-        | S::UntapAttachedEachUntapStep => true,
+        | S::UntapAttachedEachUntapStep
+        | S::OpponentsStunCountersStay => true,
         _ => false,
     }
 }

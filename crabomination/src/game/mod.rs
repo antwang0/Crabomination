@@ -25958,7 +25958,7 @@ impl GameState {
                 }
                 Ok(events)
             }
-            PendingEffectState::ImpulsePending { player, revealed, rest_to_graveyard, eligible, take, to_battlefield, tapped, keep_on_top, gain_life_if_pick, gain_life_greatest_power_rest, optional, picked_lands_to_battlefield, rest_bottom_random, rest_to_exile, then_if_picked, then_if_not_picked, picked_matching_to_battlefield, battlefield_haste, source } => {
+            PendingEffectState::ImpulsePending { player, revealed, rest_to_graveyard, eligible, take, to_battlefield, tapped, keep_on_top, gain_life_if_pick, gain_life_greatest_power_rest, optional, picked_lands_to_battlefield, rest_bottom_random, rest_to_exile, rest_on_top, then_if_picked, then_if_not_picked, picked_matching_to_battlefield, battlefield_haste, source } => {
                 // `None` eligible means "any revealed card" (no filter).
                 let is_eligible = |id: &CardId| match &eligible {
                     None => true,
@@ -26085,7 +26085,8 @@ impl GameState {
                 let mut greatest_milled_power: Option<i32> = None;
                 let mut bottom_batch: Vec<crate::card::CardInstance> = Vec::new();
                 for rid in &revealed {
-                    if picks.contains(rid) {
+                    // Diabolic Vision — the rest simply stay on top.
+                    if picks.contains(rid) || rest_on_top {
                         continue;
                     }
                     if let Some(card) = Self::take_card(&mut self.players[player].library, *rid) {
@@ -30015,6 +30016,8 @@ fn static_effect_to_effects(
             | StaticEffect::TokenCreationAddsToken { .. }
             | StaticEffect::TokensMayBecome { .. }
             | StaticEffect::CreatureTokensBecome { .. }
+            // Read at the untap step's stun replacement.
+            | StaticEffect::OpponentsStunCountersStay
             | StaticEffect::TokenNamedBecomes { .. }
             // Read at `attack_left_right_defender` (Mystic Barrier).
             | StaticEffect::AttackOnlyNearestOpponentInChosenDirection
@@ -30324,6 +30327,7 @@ fn static_effect_to_effects(
             | StaticEffect::GenericAlternativeCostForFilter { .. }
             | StaticEffect::LifeAlternativeCostOncePerYourTurn { .. }
             | StaticEffect::ZeroAlternativeCostOncePerTurn { .. }
+            | StaticEffect::ZeroAlternativeCostOncePerYourTurn { .. }
             // Narci — appended to a Saga's final chapter by `saga_chapters_crossed`.
             | StaticEffect::SagaFinalChapterRider(_)
             | StaticEffect::DiscardColorSharingCardAlternativeCost

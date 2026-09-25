@@ -6288,6 +6288,10 @@ pub enum Effect {
     /// for free). Used by Lorehold, the Historian's "instant and sorcery
     /// cards in your hand have miracle {2}" grant.
     GrantMiracle { what: Selector, cost: crate::mana::ManaCost },
+    /// `GrantMiracle` whose cost is each card's own mana cost reduced by
+    /// `{reduce}` generic (Aminatou, Veil Piercer — "its miracle cost is equal
+    /// to its mana cost reduced by {4}").
+    GrantMiracleReduced { what: Selector, reduce: u32 },
     Exile   { what: Selector },
     /// The "Enduring" cycle (Bloomburrow): "When this dies, if it was a
     /// creature, return it to the battlefield. It's an enchantment." Returns
@@ -11241,6 +11245,10 @@ pub struct LookPick {
     /// Takes precedence over `rest_to_graveyard`.
     #[serde(default)]
     pub rest_to_exile: bool,
+    /// "…and the rest on top of your library in any order" (Diabolic
+    /// Vision): the non-picked cards stay on top, in revealed order.
+    #[serde(default)]
+    pub rest_on_top: bool,
 
     /// Picks matching this filter go onto the battlefield instead of to hand
     /// (Break Out's mana-value-2-or-less creature). Applied per pick, after
@@ -11270,6 +11278,7 @@ impl Default for LookPick {
             picked_lands_to_battlefield: false,
             rest_bottom_random: false,
             rest_to_exile: false,
+            rest_on_top: false,
             picked_matching_to_battlefield: None,
             battlefield_haste: false,
         }

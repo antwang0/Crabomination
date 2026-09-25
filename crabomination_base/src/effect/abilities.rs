@@ -2426,6 +2426,11 @@ pub enum StaticEffect {
     /// cost for a [filter] spell you cast from your hand" (Darksteel
     /// Monolith). Tracked by `Player.zero_alt_cast_used_this_turn`.
     ZeroAlternativeCostOncePerTurn { filter: SelectionRequirement },
+    /// "Once during each of your turns, you may cast a spell from your hand
+    /// … without paying its mana cost" (One with the Multiverse): the
+    /// Monolith grant, gated to its controller's turn. Shares
+    /// `Player.zero_alt_cast_used_this_turn`.
+    ZeroAlternativeCostOncePerYourTurn { filter: SelectionRequirement },
     /// "Whenever the final chapter ability of a Saga you control resolves,
     /// `body`" (Narci, Fable Singer). `saga_chapters_crossed` appends `body`
     /// to the final chapter's effect, so it runs as that chapter resolves
@@ -2472,6 +2477,10 @@ pub enum StaticEffect {
     /// Visitation). Mandatory, applied per creature token at mint time by
     /// `GameState::token_replacement_for`, ahead of any `TokensMayBecome`.
     CreatureTokensBecome { into: crate::card::TokenDefinition },
+    /// "Stun counters can't be removed from permanents your opponents
+    /// control" (Fear of Sleep Paralysis): at the untap step (CR 122.1d) such
+    /// a permanent keeps its stun counter and stays tapped.
+    OpponentsStunCountersStay,
     /// CR 614.1a — "If you would create a [name] token, create [into]
     /// instead" (Fisher's Talent's Fish → Shark → Octopus). Applied at mint
     /// time by `GameState::named_token_replacement`, which also peels a Class

@@ -3698,6 +3698,23 @@ impl GameState {
         // lists.
         let any_static = self.battlefield.has_untap_static()
             || self.command_zone_sources().any(crate::zone::card_has_untap_static);
+        // Fear of Sleep Paralysis — seats whose stun counters stay put: an
+        // opponent of theirs controls the static.
+        let stun_locked: Vec<usize> = if any_static {
+            (0..self.players.len())
+                .filter(|&seat| {
+                    self.battlefield.iter().any(|c| {
+                        !self.same_team(c.controller, seat)
+                            && c.definition
+                                .static_abilities
+                                .iter()
+                                .any(|sa| matches!(sa.effect, StaticEffect::OpponentsStunCountersStay))
+                    })
+                })
+                .collect()
+        } else {
+            Vec::new()
+        };
         debug_assert!(
             any_static
                 || !self.battlefield.iter().chain(self.command_zone_sources()).any(|c| {
@@ -4198,7 +4215,9 @@ impl GameState {
                     *n += 1;
                 }
                 if card.counter_count(CounterType::Stun) > 0 {
-                    card.remove_counters(CounterType::Stun, 1);
+                    if !stun_locked.contains(&card.controller) {
+                        card.remove_counters(CounterType::Stun, 1);
+                    }
                 } else if card.tapped {
                     untapped_now.push(card.id);
                     card.tapped = false;
@@ -4254,7 +4273,9 @@ impl GameState {
                     continue;
                 }
                 if card.counter_count(CounterType::Stun) > 0 {
-                    card.remove_counters(CounterType::Stun, 1);
+                    if !stun_locked.contains(&card.controller) {
+                        card.remove_counters(CounterType::Stun, 1);
+                    }
                 } else if card.tapped {
                     untapped_now.push(card.id);
                     card.tapped = false;
@@ -4281,7 +4302,9 @@ impl GameState {
         for host in untap_hosts {
             if let Some(card) = self.battlefield_find_mut(host) {
                 if card.counter_count(CounterType::Stun) > 0 {
-                    card.remove_counters(CounterType::Stun, 1);
+                    if !stun_locked.contains(&card.controller) {
+                        card.remove_counters(CounterType::Stun, 1);
+                    }
                 } else if card.tapped {
                     card.tapped = false;
                     untapped_now.push(host);
