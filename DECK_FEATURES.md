@@ -168,6 +168,7 @@ lists were picked.
 | **Turtle Power!** (TMC precon) WUBRG | Heroes in a Half Shell | WUBRG | 100 | 🟡 all 100 implemented, 5 carry residuals (Heroes in a Half Shell, Coin of Mastery, Double Jump // Flying Kick, Special Move, Vigor) |
 | **Doom Prevails** (MSC precon) UBR | Doctor Doom, King of Latveria | UBR | 100 | 🟡 all 100 implemented, 4 carry residuals (Extract Power, Kang Dynasty, Lady Loki, Superior Foes of Spider-Man) |
 | **The Ruinous Powers** (40K precon) UBR | Abaddon the Despoiler | UBR | 100 | 🟡 all 100 implemented, 6 carry residuals (Bloodthirster, Chaos Mutation, Khârn the Betrayer, The Horus Heresy, The Lost and the Damned, The Ruinous Powers) |
+| **Masters of Evil** (WHO precon) UBR | Davros, Dalek Creator | UBR | 100 | 🟡 all 100 implemented, 11 carry residuals (Day of the Moon, Doomsday Confluence, Genesis of the Daleks, Rassilon, The Master Multiplied, The Sound of Drums, The Toymaker's Trap, Time Reaper, Vislor Turlough, Weeping Angel, Zygon Infiltrator) |
 | **Necron Dynasties** (40K precon) B | Szarekh, the Silent King | B | 100 | 🟡 all 100 implemented, 4 carry residuals (Biotransference, Canoptek Wraith, Necron Deathmark, Out of the Tombs) |
 | **Dance of the Elements** (ECC precon) WUBRG | Ashling, the Limitless | WUBRG | 100 | 🟡 all 100 implemented, 5 carry residuals (Flamebraider, Smokebraider, Primal Beyond, Haunting Voyage, Horde of Notions) |
 | **Veloci-Ramp-Tor** (LCC precon) RGW | Pantlaza, Sun-Favored | RGW | 100 | 🟡 all 100 implemented, 2 carry residuals (Sunfrill Imitator, Wrathful Raptors) |

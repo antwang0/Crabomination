@@ -2046,6 +2046,17 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 The Horus Heresy | The Ruinous Powers (40K) | chapter III's choices start with the next opponent, not with you. |
 | 🟡 The Lost and the Damned | The Ruinous Powers (40K) | a land played from outside your hand (graveyard, exile) doesn't count. |
 | 🟡 The Ruinous Powers | The Ruinous Powers (40K) | the life-loss rider reads any spell you cast from exile that you don't own, and an exiled land can't be played. |
+| 🟡 Day of the Moon | Masters of Evil (WHO) | only the latest chosen name is goaded, not every name chosen for it. |
+| 🟡 Doomsday Confluence | Masters of Evil (WHO) | each of the X modes is chosen as it resolves, not all on cast. |
+| 🟡 Genesis of the Daleks | Masters of Evil (WHO) | chapter IV counts the Daleks it destroyed, not every Dalek that died this turn. |
+| 🟡 Rassilon, the War President | Masters of Evil (WHO) | noncreature spells cast from exile don't have conspire. |
+| 🟡 The Master, Multiplied | Masters of Evil (WHO) | your triggered abilities can still make you sacrifice or exile your creature tokens. |
+| 🟡 The Sound of Drums | Masters of Evil (WHO) | the enchanted creature's combat damage isn't doubled. |
+| 🟡 The Toymaker's Trap | Masters of Evil (WHO) | numbers already chosen may be chosen again. |
+| 🟡 Time Reaper | Masters of Evil (WHO) | the 3 life is gained whether or not a card moved. |
+| 🟡 Vislor Turlough | Masters of Evil (WHO) | goaded for the rest of the game, not only while the opponent controls it. |
+| 🟡 Weeping Angel | Masters of Evil (WHO) | its combat damage to a creature is dealt, then that creature is shuffled away (not prevented). |
+| 🟡 Zygon Infiltrator | Masters of Evil (WHO) | the copy lasts until end of turn, not while the target stays tapped. |
 | 🟡 Biotransference | Necron Dynasties (40K) | only permanents become artifacts: creature spells and creature cards in other zones stay non-artifacts (its own cast trigger reads "artifact or creature spell", the same set). |
 | 🟡 Canoptek Wraith | Necron Dynasties (40K) | each fetched basic shares a name with some permanent, not with the one land chosen. |
 | 🟡 Necron Deathmark | Necron Dynasties (40K) | the destroy and the mill are two enters triggers, not one. |
