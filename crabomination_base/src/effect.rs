@@ -540,6 +540,9 @@ pub enum Selector {
     /// ("the *nonblack* creature blocking or blocked by this" — Deathgazer).
     /// Player entities never match a permanent filter and are dropped.
     MatchingAmong { inner: Box<Selector>, filter: SelectionRequirement },
+    /// CR 701.54 — `who`'s Ring-bearer, if they have one on the battlefield
+    /// (Galadriel, Elven-Queen's "put a +1/+1 counter on your Ring-bearer").
+    RingBearerOf(PlayerRef),
     /// Take at most `count` entities from `inner` (in resolution order).
     /// Wraps another selector to clamp how many entities flow through —
     /// used by SOS Heated Argument's "you may exile *a card* from your

@@ -39504,6 +39504,14 @@ impl GameState {
                     })
                     .collect()
             }
+            Selector::RingBearerOf(who) => self
+                .resolve_players(who, ctx)
+                .into_iter()
+                .filter_map(|p| self.players[p].ring_bearer)
+                .filter(|id| self.battlefield_find(*id).is_some())
+                .map(EntityRef::Permanent)
+                .collect(),
+
             Selector::MatchingAmong { inner, filter } => {
                 let all = self.resolve_selector(inner, ctx);
                 all.into_iter()
