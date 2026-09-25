@@ -159,6 +159,7 @@ lists were picked.
 | **Cavalry Charge** (MOC precon) WUB | Sidar Jabari of Zhalfir | WUB | 100 | 🟡 all 100 implemented, 3 carry residuals (Path of the Enigma, Syr Elenora, Aryel) |
 | **Eternal Bargain** (C13 precon) WUB | Oloro, Ageless Ascetic | WUB | 100 | 🟡 all 100 implemented, 4 carry residuals (Order of Succession, Lim-Dûl's Vault, Springjack Pasture, Serene Master) |
 | **Power Hungry** (C13 precon) BRG | Prossh, Skyraider of Kher | BRG | 100 | 🟡 all 100 implemented, 4 carry residuals (Sudden Demise, Night Soil, Widespread Panic, Capricious Efreet) |
+| **Bedecked Brokers** (NCC precon) GWU | Perrie, the Pulverizer | GWU | 100 | 🟡 all 100 implemented, 5 carry residuals (Kros, Aven Mimeomancer, Agent's Toolkit, Littjara Mirrorlake, Skyship Plunderer) |
 | **Living Energy** (DRC precon) GUR | Saheeli, Radiant Creator | GUR | 100 | 🟡 all 100 implemented, 4 carry residuals (Aetherflux Conduit, Territorial Aetherkite, Rampaging Aetherhood, Saheeli) |
 | **Exit from Exile** (CLB precon) RG | Faldorn, Dread Wolf Herald | RG | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Exquisite Invention** (C18 precon) UR | Saheeli, the Gifted (**planeswalker**) | UR | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
@@ -1568,6 +1569,31 @@ Galea / Kathril / Chishiro (seed 10400, 1,000 games) and Nelly / Eshki /
 Estrid (seed 10401, 1,000): all decided, Jirina 28.4 % and 24.3 %; census
 (seed 10401): no card of the list unplayed. `--bench` byte-identical;
 cube/sos/sealed (seed 10402): 7,500 decided.
+
+The **hundred-and-forty-sixth** is Streets of New Capenna Commander's
+**Bedecked Brokers** (`BedeckedBrokers_NCC`) — Bant counters and shields
+under Perrie, the Pulverizer, `--pod-decks 146`. Twenty-one cards were
+missing (`cmdr_perrie.rs`). The primitives (`game/effects/counter_kinds.rs`)
+all read a keyword counter as a kind of its own (CR 122.1b):
+`Value::CounterKindsAmong` (Perrie, Storm of Forms), `AddCounterOfEachKindAmong`
+(Bribe Taker, Exotic Pets), `AddCounterOfEachKindOn` (Skyship Plunderer),
+`AddMissingCounterKindFromYours` (Aven Courier), `SpreadCounterKindToOthers`
+(Contractual Safeguard), `CopyCountersOnto` (Denry Klin) and
+`ExileSameNameInvestigate` (Declaration in Stone); `CounterType::Brick`.
+⚠ **Found on the way:** the copies of a copied single-target removal spell
+(CR 707.10c) all defaulted to the original's target, so Storm of Forms' per-kind
+copies fizzled on one bounced permanent; each copy of a destroy, exile or
+bounce now defaults past every permanent already aimed at (Malicious
+Affliction's one copy was the only case handled). Pods (seed 146, 1,000
+each): 4 seats (Sigarda / Judith / Hanna) 1,000 decided, Perrie 24.3 %;
+6 seats against the Leinore / Sidar / Oloro / Prossh / Nalia precons 1,000
+decided, 2.2 %; 8 seats (seats 4-10) 1,000 decided, 7.9 %. Residuals: Kros
+goads only for its own counters; Aven Mimeomancer's 3/1 flier lasts while
+Mimeomancer does; Agent's Toolkit's counters come from an entry trigger and
+the moved counter is the engine's pick; Littjara Mirrorlake's extra counter
+lands after the copy enters; Skyship Plunderer reads a player's energy,
+experience and poison only. Census: no card of the list unplayed. Debug
+strict pods (400 games): clean. `--bench` byte-identical.
 
 The **hundred-and-thirty-eighth** is Aetherdrift Commander's **Living Energy**
 (`LivingEnergy_DRC`) — Temur energy and artifacts under Saheeli, Radiant
