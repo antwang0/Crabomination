@@ -9458,7 +9458,7 @@ fn ability_is_pure_mana(e: &Effect) -> bool {
     }
 }
 
-fn pick_sacrifice_value(state: &GameState, seat: usize, w: &EvalWeights) -> Option<GameAction> {
+pub(super) fn pick_sacrifice_value(state: &GameState, seat: usize, w: &EvalWeights) -> Option<GameAction> {
     let baseline = eval_material(state, seat, w);
     let scan = state.grant_scan();
     for card in state.battlefield.iter().filter(|c| c.controller == seat) {
@@ -9493,6 +9493,9 @@ fn pick_sacrifice_value(state: &GameState, seat: usize, w: &EvalWeights) -> Opti
             // `auto_tap_spends_a_land_before_sacrificing_a_mana_source`
             // already pins that the engine spends a land first.
             if ability_is_pure_mana(&ab.effect) {
+                continue;
+            }
+            if super::renewal_guard::renews_its_own_fodder(state, seat, card.id, &ab) {
                 continue;
             }
             let target = if ab.effect.requires_target() {
@@ -9594,7 +9597,7 @@ fn ability_makes_token(e: &Effect) -> bool {
     }
 }
 
-fn pick_token_maker(state: &GameState, seat: usize, w: &EvalWeights) -> Option<GameAction> {
+pub(super) fn pick_token_maker(state: &GameState, seat: usize, w: &EvalWeights) -> Option<GameAction> {
     // On its own turn the sink waits for the second main phase: a token made
     // before combat can't attack, and its mana may come from creatures that
     // could have (Citanul Hierophants tapping Saprolings for Selesnya
@@ -9606,7 +9609,11 @@ fn pick_token_maker(state: &GameState, seat: usize, w: &EvalWeights) -> Option<G
     }
     for card in state.battlefield.iter().filter(|c| c.controller == seat) {
         for (idx, ab) in card.definition.activated_abilities.iter().enumerate() {
-            if sink_sacrifice_cost(ab, w) || ab.exhaust || !ability_makes_token(&ab.effect) {
+            if sink_sacrifice_cost(ab, w)
+                || ab.exhaust
+                || !ability_makes_token(&ab.effect)
+                || super::renewal_guard::renews_its_own_fodder(state, seat, card.id, ab)
+            {
                 continue;
             }
             let action = GameAction::ActivateAbility {
