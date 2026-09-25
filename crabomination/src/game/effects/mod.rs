@@ -58,6 +58,7 @@ mod library_top_deploy;
 mod graveyard_type_sweep;
 mod contested_lands;
 mod theft;
+mod stack_and_command;
 mod politics;
 mod targeting;
 /// The target enumerator's call-site census — see
@@ -35409,6 +35410,11 @@ impl GameState {
                 self.exile_top_of_each_library_may_play_for_life(ctx, events)
             }
             Effect::ManifestTopOfLibraryUnderYou { who } => self.manifest_top_of_library_under_you(who, ctx, events),
+            Effect::CounterAllAbilitiesOf { who } => self.counter_all_abilities_of(who, ctx),
+            Effect::ReturnCommandersToCommandZone { who } => self.return_commanders_to_command_zone(who, ctx, events),
+            Effect::ExchangeSpellAndCreatureControl { a, b } => {
+                self.exchange_spell_and_creature_control(a, b, ctx, events)
+            }
             Effect::ChooseCardTypeAmongForSource(options) => {
                 use crate::decision::{Decision, DecisionAnswer};
                 let Some(source) = ctx.source else { return Ok(()) };

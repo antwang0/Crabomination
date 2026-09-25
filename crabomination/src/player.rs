@@ -897,6 +897,11 @@ pub struct PlayerData {
     /// next face-down cast, cleared in `finish_cleanup`.
     #[serde(default)]
     pub next_face_down_discount_this_turn: u32,
+    /// Face-down creature spells this player has cast this turn (Kadena,
+    /// Slinking Sorcerer's "first … each turn" discount); cleared in
+    /// `finish_cleanup` with the face-down discounts.
+    #[serde(default)]
+    pub face_down_spells_cast_this_turn: u32,
     /// Number of creature spells this player has cast on the current
     /// turn. Reset to 0 in `do_untap`. Powers creature-cast magecraft
     /// payoffs ("if you've cast a creature spell this turn, …") and
@@ -1491,6 +1496,7 @@ impl Player {
             pending_affinity_next_spell: Default::default(),
             face_down_discount_this_turn: 0,
             next_face_down_discount_this_turn: 0,
+            face_down_spells_cast_this_turn: 0,
             cards_discarded_this_turn: 0,
             permanents_sacrificed_this_turn: 0,
             artifacts_sacrificed_this_turn: 0,

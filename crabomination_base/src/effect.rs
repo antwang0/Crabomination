@@ -970,6 +970,9 @@ pub enum Value {
     /// controls (Valiant Changeling's discount). A changeling has every type,
     /// so it saturates the count.
     DistinctCreatureTypesAmongYourCreatures,
+    /// The greatest number of cards any one opponent of the controller has
+    /// drawn this turn (Thought Sponge).
+    GreatestCardsDrawnThisTurnByAnOpponent,
     /// Counters of the given type on `what`.
     CountersOn { what: Box<Selector>, kind: CounterType },
     /// All counters (every kind) on `what` — "for each counter on it"
@@ -10911,6 +10914,15 @@ pub enum Effect {
     /// CR 701.34 — manifest the top card of `who`'s library under your
     /// control (Thieving Amalgam, Orochi Soul-Reaver).
     ManifestTopOfLibraryUnderYou { who: PlayerRef },
+    /// Counter every triggered or activated ability on the stack controlled by
+    /// a player `who` resolves to (Kadena's Silencer).
+    CounterAllAbilitiesOf { who: PlayerRef },
+    /// CR 903.9 — `who` returns each commander they control from the
+    /// battlefield to the command zone (Leadership Vacuum).
+    ReturnCommandersToCommandZone { who: PlayerRef },
+    /// Exchange control of the spell `a` and the creature `b`; the spell's
+    /// new controller may choose new targets (Sudden Substitution).
+    ExchangeSpellAndCreatureControl { a: Selector, b: Selector },
     /// "The next spell you cast this turn can be cast as though it had flash"
     /// (Ride the Avalanche). Spent by that cast.
     NextSpellHasFlashThisTurn,

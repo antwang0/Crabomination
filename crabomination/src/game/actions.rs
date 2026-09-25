@@ -1034,6 +1034,7 @@ fn mana_summary_of(def: &crate::card::CardDefinition) -> Option<u64> {
                 flags |= mana_summary::COUNTER_GRANT
             }
             SE::ExileDyingOpponentCreatures { .. }
+            | SE::ExileDyingNontokenCreaturesWithCounter { .. }
             | SE::ExileDyingOpponentCreaturesGrowingThis
             | SE::DiesToLibraryTopInstead { .. }
             | SE::DiesToOwnersHandInstead { .. }
@@ -7401,7 +7402,21 @@ impl GameState {
             .players
             .get(seat)
             .map_or(0, |p| p.face_down_discount_this_turn + p.next_face_down_discount_this_turn);
-        3u32.saturating_sub(reduction + turn_grant)
+        // Kadena — the first face-down creature spell each turn.
+        let first = if self.players.get(seat).is_some_and(|p| p.face_down_spells_cast_this_turn == 0) {
+            self.battlefield
+                .iter()
+                .filter(|c| c.controller == seat)
+                .flat_map(|c| &c.definition.static_abilities)
+                .filter_map(|sa| match sa.effect {
+                    crate::effect::StaticEffect::FirstFaceDownSpellEachTurnCostsLess { amount } => Some(amount),
+                    _ => None,
+                })
+                .sum()
+        } else {
+            0
+        };
+        3u32.saturating_sub(reduction + turn_grant + first)
     }
 
     pub(crate) fn cast_face_down(&mut self, card_id: CardId) -> Result<Vec<GameEvent>, GameError> {
@@ -7445,6 +7460,7 @@ impl GameState {
         if self.players[p].next_face_down_discount_this_turn != 0 {
             self.players[p].next_face_down_discount_this_turn = 0;
         }
+        self.players[p].face_down_spells_cast_this_turn += 1;
         let mut events = receipt.auto_events;
         events.push(GameEvent::SpellCast { player: p, card_id, face: CastFace::Front });
         self.finalize_cast(p, card, None, vec![], None, 0, 0, mana_spent, true);

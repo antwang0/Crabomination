@@ -894,6 +894,7 @@ impl Effect {
             | Effect::ExileTopMayCastFreeIfNonland { .. }
             | Effect::ExileTopOfEachLibraryMayPlayForLife
             | Effect::ManifestTopOfLibraryUnderYou { .. }
+            | Effect::CounterAllAbilitiesOf { .. }
             | Effect::LookTopExileOneFaceDownMayPlay { .. }
             | Effect::NextSpellHasFlashThisTurn
             | Effect::PreventNextDamageFromSourceThisTurn { .. }
@@ -1550,7 +1551,9 @@ impl Effect {
             Effect::EachDealsDamageEqualToPower { dealers, target } => {
                 sel_has_target(dealers) || sel_has_target(target)
             }
-            Effect::ExchangeControl { a, b } | Effect::ExchangePower { a, b, .. } => {
+            Effect::ExchangeControl { a, b }
+            | Effect::ExchangeSpellAndCreatureControl { a, b }
+            | Effect::ExchangePower { a, b, .. } => {
                 sel_has_target(a) || sel_has_target(b)
             }
             Effect::RedirectNextDamage { target, to, .. } => {
@@ -2134,6 +2137,7 @@ impl Effect {
             // cards from their hand" — the seat is a target, not a fan-out.
             Effect::PayLifeRevealExileFromHand { opp } => player_has_target(opp),
             Effect::RevealUntilCreatureBecomeCopy { who } => player_has_target(who),
+            Effect::ReturnCommandersToCommandZone { who } => player_has_target(who),
             Effect::TakeExtraTurn { who, count } => {
                 player_has_target(who) || value_has_target(count)
             }
@@ -2468,7 +2472,9 @@ impl Effect {
             }
             // The targeted side may be `b` when `a` is the source itself
             // (Volatile Stormdrake exchanges `This` with a targeted creature).
-            Effect::ExchangeControl { a, b } | Effect::ExchangePower { a, b, .. } => {
+            Effect::ExchangeControl { a, b }
+            | Effect::ExchangeSpellAndCreatureControl { a, b }
+            | Effect::ExchangePower { a, b, .. } => {
                 sel_filter(a).or_else(|| sel_filter(b))
             }
             // "Move a counter from this onto target creature" (Afiya Grove):
@@ -4748,7 +4754,9 @@ impl Effect {
                 Effect::EachDealsDamageEqualToPower { dealers, target } => {
                     sel_find(dealers, slot).or_else(|| sel_find(target, slot))
                 }
-                Effect::ExchangeControl { a, b } | Effect::ExchangePower { a, b, .. } => {
+                Effect::ExchangeControl { a, b }
+                | Effect::ExchangeSpellAndCreatureControl { a, b }
+                | Effect::ExchangePower { a, b, .. } => {
                     sel_find(a, slot).or_else(|| sel_find(b, slot))
                 }
                 Effect::MoveCounters { from, to, .. } => {

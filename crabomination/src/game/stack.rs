@@ -4798,6 +4798,7 @@ impl GameState {
             let stale_scalars = !player.turn_spell_discounts.is_empty()
                 || player.face_down_discount_this_turn != 0
                 || player.next_face_down_discount_this_turn != 0
+                || player.face_down_spells_cast_this_turn != 0
                 || player.extra_plus_one_counters_this_turn != 0
                 || player.extra_etb_p1p1_counters_this_turn != 0;
             if !stale_grants && !stale_scalars {
@@ -4821,6 +4822,7 @@ impl GameState {
                 player.turn_spell_discounts.clear();
                 player.face_down_discount_this_turn = 0;
                 player.next_face_down_discount_this_turn = 0;
+                player.face_down_spells_cast_this_turn = 0;
                 // "Until end of turn" +1/+1 counter bonus (Prairie Dog) ends.
                 player.extra_plus_one_counters_this_turn = 0;
                 player.extra_etb_p1p1_counters_this_turn = 0;
@@ -7704,6 +7706,25 @@ impl GameState {
             } else {
                 None
             };
+            // Rayami, First of the Fallen — any player's nontoken creature,
+            // exiled with a counter.
+            let rayami_counter: Option<crate::card::CounterType> = if redirects
+                && valentin_redirect.is_none()
+                && slime_redirect.is_none()
+                && card.definition.is_creature()
+                && !card.is_token
+            {
+                self.battlefield.iter().flat_map(|src| src.definition.static_abilities.iter()).find_map(|sa| {
+                    match sa.effect {
+                        crate::effect::StaticEffect::ExileDyingNontokenCreaturesWithCounter { counter } => {
+                            Some(counter)
+                        }
+                        _ => None,
+                    }
+                })
+            } else {
+                None
+            };
             let slime_power = card.power().max(0) as u32;
             // CR 614 — "If this permanent would be put into a graveyard, put
             // it on top of its owner's library instead" (Pulmonic Sliver's
@@ -7760,6 +7781,7 @@ impl GameState {
                 || valentin_redirect.is_some()
                 || slime_redirect.is_some()
                 || exile_instead
+                || rayami_counter.is_some()
             {
                 crate::card::Zone::Exile
             } else if library_top_redirect || card.definition.dies_to_library_bottom {
@@ -7821,6 +7843,13 @@ impl GameState {
                     self.players[seat].creatures_exiled_from_control_this_turn.saturating_add(1);
             }
             self.place_card_at_resolved_zone(card, resolved);
+            // Rayami's blood counter goes on the exiled card, after the zone
+            // change has dropped its battlefield counters (CR 122.2).
+            if let (Some(kind), crate::card::Zone::Exile) = (rayami_counter, resolved)
+                && let Some(c) = self.exile.iter_mut().find(|c| c.id == id)
+            {
+                c.add_counters(kind, 1);
+            }
             let mut events = Vec::new();
             self.on_left_battlefield(id, &mut events);
             // Ravenous Slime's counters, when the creature really went to exile.

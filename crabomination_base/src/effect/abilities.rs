@@ -158,6 +158,14 @@ pub enum StaticEffect {
     /// triggers an additional time" (Felix Five-Boots). Read at the
     /// combat-damage trigger push.
     DoubleControllerCombatDamageToPlayerTriggers,
+    /// "The first face-down creature spell you cast each turn costs {amount}
+    /// less to cast" (Kadena, Slinking Sorcerer) — read by
+    /// `face_down_cast_cost` off `Player::face_down_spells_cast_this_turn`.
+    FirstFaceDownSpellEachTurnCostsLess { amount: u32 },
+    /// CR 614 — "If a nontoken creature would die, exile that card with a
+    /// `counter` counter on it instead" (Rayami, First of the Fallen), for
+    /// every player's creatures.
+    ExileDyingNontokenCreaturesWithCounter { counter: crate::card::CounterType },
     /// "[Creatures the selector picks] get +X/+Y", where X and Y are live
     /// [`Value`]s evaluated with the source as context — the dynamic-magnitude
     /// sibling of `PumpPT` (Meishin, the Mind Cage's "all creatures get -X/-0,

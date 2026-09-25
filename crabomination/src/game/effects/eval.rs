@@ -1057,6 +1057,11 @@ impl GameState {
                 }
                 counts.values().max().copied().unwrap_or(0) + changelings
             }
+            Value::GreatestCardsDrawnThisTurnByAnOpponent => (0..self.players.len())
+                .filter(|&q| q != ctx.controller && !self.same_team(q, ctx.controller))
+                .map(|q| self.players[q].cards_drawn_this_turn as i32)
+                .max()
+                .unwrap_or(0),
             Value::DistinctCreatureTypesAmongYourCreatures => {
                 let mut seen: Vec<crate::card::CreatureType> = Vec::new();
                 for c in self.battlefield.iter().filter(|c| c.controller == ctx.controller) {
