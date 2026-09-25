@@ -2040,6 +2040,10 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Lady Loki, Agent of Chaos | Doom Prevails (MSC) | "your first instant, sorcery or Villain spell each turn" counts from when she is on the battlefield, not from the start of the turn. |
 | 🟡 Superior Foes of Spider-Man | Doom Prevails (MSC) | the exiled card is playable this turn only, not until you exile another card with it. |
 | 🟡 Extract Power | Doom Prevails (MSC) | the exiled cards are face up. |
+| 🟡 Biotransference | Necron Dynasties (40K) | only permanents become artifacts: creature spells and creature cards in other zones stay non-artifacts (its own cast trigger reads "artifact or creature spell", the same set). |
+| 🟡 Canoptek Wraith | Necron Dynasties (40K) | each fetched basic shares a name with some permanent, not with the one land chosen. |
+| 🟡 Necron Deathmark | Necron Dynasties (40K) | the destroy and the mill are two enters triggers, not one. |
+| 🟡 Out of the Tombs | Necron Dynasties (40K) | the creature returned instead of an empty draw is the greatest-mana-value one, not asked (the draw funnel can't suspend). |
 | 🟡 Wall of Stolen Identity | Mystic Intellect (C19) | the tap-and-lock happens as it enters, not as a reflexive "when you do" trigger; the lock lasts while the Wall is on the battlefield, not while you control it. |
 | 🟡 Mandate of Peace | Mystic Intellect (C19) | a trigger waiting to be put on the stack still goes on (CR 724.2a says it ceases to exist). |
 | 🟡 Elsha of the Infinite | Mystic Intellect (C19) | its flash also covers a top-of-library cast another permission allowed (Mystic Forge). |
