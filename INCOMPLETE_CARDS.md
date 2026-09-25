@@ -2032,6 +2032,10 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Wrathful Raptors | Veloci-Ramp-Tor (LCC) | damage that kills the Raptors themselves in the same event doesn't trigger them. |
 | 🟡 Dack Fayden, Helping Hand | Multiverse Reforged (FRC) | the revealed creatures go to the opponents in turn order, not by your choice. |
 | 🟡 Tamiyo, Upriser Crowned | Multiverse Reforged (FRC) | "one or more creatures" fires once per creature (same taps and stun counters). |
+| 🟡 Aradesh, the Founder | Hail, Caesar (PIP) | only its own enlist earns the double strike and draw; another creature of yours that enlists doesn't. |
+| 🟡 Colonel Autumn | Hail, Caesar (PIP) | the "exploits" payoff rides on its own and its granted exploits: a printed exploit creature doesn't count, and two Autumns don't double it. |
+| 🟡 Mr. House, President and CEO | Hail, Caesar (PIP) | its roll is one die (no extra die per Treasure mana), and "roll a 4 or higher" reads a roll's highest die once. |
+| 🟡 Mysterious Stranger | Hail, Caesar (PIP) | the exiled instants and sorceries are picked, not targeted. |
 | 🟡 Wall of Stolen Identity | Mystic Intellect (C19) | the tap-and-lock happens as it enters, not as a reflexive "when you do" trigger; the lock lasts while the Wall is on the battlefield, not while you control it. |
 | 🟡 Mandate of Peace | Mystic Intellect (C19) | a trigger waiting to be put on the stack still goes on (CR 724.2a says it ceases to exist). |
 | 🟡 Elsha of the Infinite | Mystic Intellect (C19) | its flash also covers a top-of-library cast another permission allowed (Mystic Forge). |

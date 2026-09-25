@@ -164,6 +164,7 @@ lists were picked.
 | **Dance of the Elements** (ECC precon) WUBRG | Ashling, the Limitless | WUBRG | 100 | 🟡 all 100 implemented, 5 carry residuals (Flamebraider, Smokebraider, Primal Beyond, Haunting Voyage, Horde of Notions) |
 | **Veloci-Ramp-Tor** (LCC precon) RGW | Pantlaza, Sun-Favored | RGW | 100 | 🟡 all 100 implemented, 2 carry residuals (Sunfrill Imitator, Wrathful Raptors) |
 | **Multiverse Reforged** (FRC precon) WUBR | Jace, Multiverse Architect (**planeswalker**) | WUBR | 100 | 🟡 all 100 implemented, 2 carry residuals (Dack Fayden, Helping Hand; Tamiyo, Upriser Crowned) |
+| **Hail, Caesar** (PIP precon) RWB | Caesar, Legion's Emperor | RWB | 100 | 🟡 all 100 implemented, 4 carry residuals (Aradesh, Colonel Autumn, Mr. House, Mysterious Stranger) |
 | **Mystic Intellect** (C19 precon) URW | Sevinne, the Chronoclasm | URW | 100 | 🟡 all 100 implemented (Dockside Extortionist, banned, swapped for Ragavan), 3 carry residuals (Wall of Stolen Identity, Mandate of Peace, Elsha of the Infinite) |
 | **The Hosts of Mordor** (LTC precon) UBR | Sauron, Lord of the Rings | UBR | 100 | 🟡 all 100 implemented, 3 carry residuals (Moria Scavenger, Shelob, Dread Weaver, Summons of Saruman) |
 | **Elven Empire** (KHC precon) BG | Lathril, Blade of the Elves | BG | 100 | 🟡 all 100 implemented, 2 carry residuals (Serpent's Soul-Jar, Roots of Wisdom) |
@@ -2828,6 +2829,33 @@ targeted), **Summons of Saruman** (flashback pays X in mana). Pods
 (1,000 games each): 4 seats beside Urza / Osgir / Eshki (seed 11120) Sauron
 28.1 %, census: no card of the four unplayed; 6 seats (seed 11121) beside Sevinne / Anje / Kotori / Galadriel / Felothar 1,000 / 1,000, Sauron 13.1 %; 8 seats (seed 11121) 1,000 / 1,000, Sauron 16.1 %. `--bench`
 byte-identical.
+
+The **hundred-and-seventieth** is Fallout Commander's **Hail, Caesar**
+(`HailCaesar_PIP`, 2024-03-08) — Mardu tokens and sacrifice under Caesar,
+Legion's Emperor, `--pod-decks 170` (committed as 167 and 169 while other
+seats landed). Thirty-three cards were missing (`cmdr_caesar.rs`). The
+primitives: `Effect::GrantEscapeThisTurn` (Desdemona, CR 702.138);
+`Effect::ChooseOneAtRandomAmong` (The Nipton Lottery); `R::
+SameToughnessAsTargetSlot` (V.A.T.S., a cross-slot filter);
+`Effect::SecretCouncilPermanentVoteMost` (Vault 11 — up-to-one votes, most
+votes, a nobody-voted branch, CR 701.38); `Value::LastRollFaceCount` (Luck
+Bobblehead's seven 6s); `Effect::RemoveCountersFromAmongThen` (Overseer of
+Vault 76); `CardDefinition::squad_extra_cost` (Ruthless Radrat's and
+Thrill-Kill Disciple's non-mana squad halves, CR 702.157); `Effect::
+EnlistThen` (Aradesh). Two engine finds from its strict pods: ⚠ **a resumed
+trigger that fizzled on its stored target left the stashed answer for the
+next resolution** (CR 608.2b — the early returns now drop both resume
+channels); ⚠ **a `Reflexive` body's runtime target is not carried across a
+prompting seat's resume**, so Craig Boone's opponent answer was lost (its
+target now rides on the trigger). And `ChooseN.picks` names the default
+modes, not a count — Titan of Industry (Dance of the Elements) had been
+choosing one mode. Residuals: **Aradesh** (only its own enlist), **Colonel
+Autumn** (the exploit payoff rides on its own and granted exploits), **Mr.
+House** (one die; a roll's highest die), **Mysterious Stranger** (picked, not
+targeted). Pods (1,000 games each, all decided): 4 seats beside Dr. Madison Li
+/ Mothman / Jace (seed 10520) Caesar 24.5 %, census: nothing unplayed; 6 seats
+(10521) 9.7 %. Strict debug pods (10510-10511) 120 / 120 after the fixes.
+`--bench` byte-identical.
 
 The **hundred-and-sixty-first** is Final Reforging Commander's **Multiverse
 Reforged** (`MultiverseReforged_FRC`, 2026-10-02) — four-color legends under
