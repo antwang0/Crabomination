@@ -191,6 +191,12 @@ pub enum OptionalKind {
     /// A tempting offer (CR 701.x): every accepter pays the caster more than
     /// it gains. Decline.
     TemptingOffer,
+    /// Orzhov Advokist's peace offer: yes puts +1/+1 counters on one of the
+    /// seat's creatures, and then none of its creatures can attack `offerer`
+    /// until the offerer's next turn (CR 508.1a). Free while another opponent
+    /// is left to attack; with `offerer` the last one, yes forfeits every
+    /// attack (an 8-seat pod held 617 Pegasi at home for twenty turns).
+    PeaceOffer { offerer: usize },
     /// Ad Nauseam's per-reveal ask — the one stateful policy, answered on the
     /// bot struct across the series.
     RevealTopLoseLife,
@@ -221,7 +227,8 @@ impl OptionalKind {
             | OptionalKind::CastFree
             | OptionalKind::FreeUpside
             | OptionalKind::Neutral
-            | OptionalKind::TemptingOffer => false,
+            | OptionalKind::TemptingOffer
+            | OptionalKind::PeaceOffer { .. } => false,
         }
     }
 }

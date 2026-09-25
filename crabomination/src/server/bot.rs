@@ -4822,6 +4822,12 @@ pub fn decide_optional_trigger(
             (*count == 0 || gy >= *count as usize * 2, false)
         }
         K::SelfCost | K::TemptingOffer => (false, false),
+        // Take the counters while someone else is left to attack; with the
+        // offerer the last opponent standing, yes forfeits every attack.
+        K::PeaceOffer { offerer } => {
+            let last = state.living_seats().filter(|&q| q != seat).all(|q| q == *offerer);
+            (!last, false)
+        }
         K::FreeUpside | K::Neutral => (true, false),
         // The one stateful family: answered on the bot struct in
         // `next_action`, which tracks the reveals committed so far. A sim
@@ -20149,6 +20155,25 @@ mod tests {
         g.add_card_to_battlefield(0, crate::catalog::forest());
         assert!(take(&g), "three lands can");
         assert!(optional_trigger_beneficial(&g, id, "pay {3}: draw"), "and a draw is upside");
+    }
+
+    /// CR 508.1a — Orzhov Advokist's offer is free while another opponent is
+    /// left to attack, and a forfeit of every attack when the offerer is the
+    /// last one (617 Pegasi sat home for twenty turns of an 8-seat pod).
+    #[test]
+    fn peace_offer_is_declined_against_the_last_opponent() {
+        use crate::decision::OptionalKind as K;
+        let w = EvalWeights::default();
+        let mut g = crate::game::multi_player_game(3);
+        let src = g.add_card_to_battlefield(1, crate::catalog::grizzly_bears());
+        let ask = |g: &crate::game::GameState| {
+            decide_optional_trigger(g, 0, src, &K::PeaceOffer { offerer: 1 }, "", &w, false)
+        };
+        assert!(ask(&g), "seat 2 is still there to attack");
+        g.players[2].life = 0;
+        g.check_state_based_actions();
+        assert!(!g.players[2].is_alive());
+        assert!(!ask(&g), "the offerer is the last opponent");
     }
 
     /// The kinds that used to fall through to the blanket yes. Each one is an

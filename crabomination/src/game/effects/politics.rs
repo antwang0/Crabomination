@@ -58,7 +58,7 @@ impl GameState {
                 format!("Put {counters} +1/+1 counters on a creature? {rider}"),
                 source,
                 effect,
-                OptionalKind::MayBody,
+                if goad { OptionalKind::MayBody } else { OptionalKind::PeaceOffer { offerer: me } },
             ) else {
                 return Ok(());
             };
