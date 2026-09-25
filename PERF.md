@@ -3015,6 +3015,22 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-09-25 (Commander session `011z4qQX`, Counter Blitz) — guardrail, no perf work
+
+`GameEvent::CounterAdded` gained a `placer` (CR 122.6) and the per-dispatch
+counter stamp became a per-seat mask; both are on the trigger path of every
+pool.
+
+```text
+--bench          decisions 195,806 / 27.49 / 611.9 / 0 stalls — byte-identical
+                 determinism ok; peak_rss_mib 32.3
+bench_ab.py      32 pairs, base 592fa2bd8 vs candidate: +3.37 % median /
+                 +3.07 % mean games/s (sd 8.65) — noise, no regression
+two-player pools cube/sos/sealed x 300 an archetype, seed 16510 = 7,500 games,
+                 all decided
+pod              4 seats x 1,000 (16501) / 6 seats x 1,000 (16502), all decided
+```
+
 ### 2026-09-20 (the eleventh Commander session, CLOSING tip) — guardrail, no perf work
 
 Eight bug classes, one rules feature, one pod deck and ~50 card edits later,
