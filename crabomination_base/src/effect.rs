@@ -7844,6 +7844,10 @@ pub enum Effect {
     /// CR 702.26 — every permanent phased out "until" this source phases in
     /// (The Pandorica, becoming untapped).
     PhaseInHeldBySource,
+    /// Narrow the may-play permission on each selected exiled card to
+    /// casting: "you may cast spells from among them" (Dream Pillager). Runs
+    /// after the effect that granted it.
+    RestrictMayPlayToCasting { what: Selector },
     /// "[This] has all activated and triggered abilities of the exiled card"
     /// (Idris, Soul of the TARDIS): the cards exiled with the source lend
     /// their abilities to it, stamped as they're exiled.

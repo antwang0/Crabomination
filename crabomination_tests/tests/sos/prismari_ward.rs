@@ -1292,7 +1292,7 @@ fn practiced_scrollsmith_may_play_expires_after_controllers_next_turn() {
     let pox_id = g.next_id();
     let mut pox = crabomination::card::CardInstance::new(pox_id, catalog::pox_plague(), 0);
     pox.controller = 0;
-    pox.may_play_until = Some(crabomination::card::MayPlayPermission {
+    pox.may_play_until = Some(crabomination::card::MayPlayPermission { cast_only: false,
         player: 0,
         granted_turn: g.turn_number,
         duration: crabomination::card::MayPlayDuration::EndOfControllersNextTurn,
@@ -1554,7 +1554,7 @@ fn may_play_granted_on_your_own_turn_survives_until_your_next_turn_ends() {
         g.active_player_idx = if own_turn { 0 } else { 1 };
         let card = g.add_card_to_exile(0, catalog::lightning_bolt());
         if let Some(c) = g.exile.iter_mut().find(|c| c.id == card) {
-            c.may_play_until = Some(crabomination::card::MayPlayPermission {
+            c.may_play_until = Some(crabomination::card::MayPlayPermission { cast_only: false,
                 player: 0,
                 granted_turn: g.turn_number,
                 duration: crabomination::card::MayPlayDuration::EndOfControllersNextTurn,
@@ -1599,7 +1599,7 @@ fn may_play_land_is_a_land_drop_not_a_cast() {
     g.priority.player_with_priority = 0;
     let land = g.add_card_to_exile(0, catalog::forest());
     if let Some(c) = g.exile.iter_mut().find(|c| c.id == land) {
-        c.may_play_until = Some(crabomination::card::MayPlayPermission {
+        c.may_play_until = Some(crabomination::card::MayPlayPermission { cast_only: false,
             player: 0,
             granted_turn: g.turn_number,
             duration: crabomination::card::MayPlayDuration::EndOfControllersNextTurn,
@@ -2274,7 +2274,7 @@ fn nita_trigger_fans_counters_when_casting_unowned_spell() {
     let mut g = two_player_game();
     let mut bolt = crabomination::card::CardInstance::new(g.next_id(), catalog::lightning_bolt(), 1);
     bolt.controller = 0; // P0 is the caster
-    bolt.may_play_until = Some(MayPlayPermission {
+    bolt.may_play_until = Some(MayPlayPermission { cast_only: false,
         player: 0,
         granted_turn: g.turn_number,
         duration: MayPlayDuration::EndOfThisTurn,

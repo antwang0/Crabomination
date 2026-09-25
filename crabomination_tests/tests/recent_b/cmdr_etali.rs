@@ -496,7 +496,7 @@ fn passionate_archaeologist_burns_for_exile_casts() {
     let div = g.next_id();
     let mut card = CardInstance::new(div, catalog::divination(), 0);
     card.controller = 0;
-    card.may_play_until = Some(MayPlayPermission {
+    card.may_play_until = Some(MayPlayPermission { cast_only: false,
         player: 0,
         granted_turn: g.turn_number,
         duration: MayPlayDuration::EndOfThisTurn,
@@ -551,7 +551,7 @@ fn b_cast_by(g: &mut GameState, seat: usize, id: CardId, target: Option<Target>)
 fn b_grant_free(g: &mut GameState, id: CardId) {
     let turn = g.turn_number;
     let c = g.exile.iter_mut().find(|c| c.id == id).expect("card is in exile");
-    c.may_play_until = Some(MayPlayPermission {
+    c.may_play_until = Some(MayPlayPermission { cast_only: false,
         player: 0,
         granted_turn: turn,
         duration: MayPlayDuration::EndOfThisTurn,

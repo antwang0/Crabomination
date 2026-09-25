@@ -222,3 +222,31 @@ fn stinkdrinker_daredevil_discounts_giants() {
     cast_raw(&mut g, hill, &[]).expect("{3}{R} for {1}{R}");
     assert!(g.battlefield_find(hill).is_some());
 }
+
+/// Dream Pillager — "you may cast spells from among those cards": a land it
+/// exiles can't be played; a spell can be cast.
+#[test]
+fn dream_pillager_exiles_spells_to_cast_not_lands_to_play() {
+    let mut g = main_phase(2);
+    let pillager = g.add_card_to_battlefield(0, catalog::dream_pillager());
+    let bears = g.add_card_to_library(0, catalog::grizzly_bears());
+    let land = g.add_card_to_library(0, catalog::mountain());
+    let body = catalog::dream_pillager().triggered_abilities[0].effect.clone();
+    let mut ctx = EffectContext::for_spell(0, None, 0, 0);
+    ctx.source = Some(pillager);
+    ctx.event_amount = 2;
+    let ev = g.resolve_effect(&body, &ctx).expect("trigger");
+    g.dispatch_triggers_for_events(&ev);
+    assert!(g.exile.iter().any(|c| c.id == land) && g.exile.iter().any(|c| c.id == bears));
+    g.priority.player_with_priority = 0;
+    assert!(g.perform_action(GameAction::PlayLand(land)).is_err(), "a land can't be played this way");
+    flood(&mut g);
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: bears,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("a spell can be cast");
+}

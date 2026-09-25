@@ -1,10 +1,6 @@
 //! Commander: the cards the **Wade into Battle** precon (C15, Kalemne,
 //! Disciple of Iroas) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_kalemne.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Dream Pillager** — the exiled cards may be *played* (a land among
-//!   them too), not only cast.
 
 use crate::card::{
     ActivatedAbility, AdditionalCastCost, CardDefinition, CardType, CreatureType, EnchantmentSubtype,
@@ -145,14 +141,14 @@ pub fn disaster_radius() -> CardDefinition {
 }
 
 /// Dream Pillager — flying; combat damage to a player exiles that many cards
-/// off your library, castable this turn. Residual: lands among them may be
-/// played too.
+/// off your library, castable (not playable) this turn.
 pub fn dream_pillager() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
-            effect: Effect::ExileTopAndGrantMayPlay {
+            effect: Effect::Seq(vec![
+                Effect::ExileTopAndGrantMayPlay {
                 who: PlayerRef::You,
                 count: Value::TriggerEventAmount,
                 duration: MayPlayDuration::EndOfThisTurn,
@@ -161,6 +157,8 @@ pub fn dream_pillager() -> CardDefinition {
                 pay_own_cost: true,
                 uncast_penalty: None,
             },
+                Effect::RestrictMayPlayToCasting { what: Selector::ExiledThisResolution { filter: R::Any } },
+            ]),
         }],
         ..creature("Dream Pillager", cost(&[generic(5), r(), r()]), vec![CreatureType::Dragon], 4, 4)
     }

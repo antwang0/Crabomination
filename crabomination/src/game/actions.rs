@@ -4385,7 +4385,7 @@ impl GameState {
             .iter()
             .find(|c| c.id == card_id)
             .and_then(|c| c.may_play_until)
-            .is_some_and(|perm| perm.player == p)
+            .is_some_and(|perm| perm.player == p && !perm.cast_only)
     }
 
     pub(crate) fn play_land(&mut self, card_id: CardId) -> Result<Vec<GameEvent>, GameError> {
@@ -14516,7 +14516,7 @@ impl GameState {
         hijacker: usize,
         events: &mut Vec<GameEvent>,
     ) {
-        card.may_play_until = Some(crate::card::MayPlayPermission {
+        card.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false,
             player: hijacker,
             granted_turn: self.turn_number,
             duration: crate::card::MayPlayDuration::WhileExiled,

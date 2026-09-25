@@ -1956,7 +1956,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Intellectual Offering | Peer Through Time (C14) | each "choose an opponent" is the engine's pick (fewest creatures). |
 | 🟡 Shaper Parasite | Peer Through Time (C14) | +2/−2 or −2/+2 is chosen as the trigger goes on the stack, not as it resolves. |
 | 🟡 Infinite Reflection | Peer Through Time (C14) | the ETB copy also rewrites the enchanted creature itself when it is yours (a copy of itself). |
-| 🟡 Dream Pillager | Wade into Battle (C15) | the exiled cards may be played, lands included, not only cast. |
 | 🟡 Kardur, Doomscourge | Chaos Incarnate (SCD) | creatures entering after its ETB are goaded by a delayed trigger, not a static rule. |
 | 🟡 Theater of Horrors | Chaos Incarnate (SCD) | the permission outlives the enchantment; lands among the exiled cards can't be played. |
 | 🟡 Wildfire Devils | Chaos Incarnate (SCD) | the random player gives up their first instant or sorcery in graveyard order. |
@@ -1974,7 +1973,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Aurora Phoenix | Exit from Exile (CLB) | a spell given cascade by a trigger (Wild-Magic Sorcerer) doesn't carry the keyword, so it doesn't return the Phoenix. |
 | 🟡 Chaos Wand | Exit from Exile (CLB) | a found instant or sorcery you don't cast stays in exile instead of going to the bottom. |
 | 🟡 Durnan of the Yawning Portal | Exit from Exile (CLB) | exiles the first creature card among the top four (no choice), and the cast from exile has no undaunted. |
-| 🟡 Stolen Strategy | Exit from Exile (CLB) | an exiled land may be played, not only spells cast. |
 | 🟡 Revival Experiment | Witherbloom Witchcraft (C21) | the engine picks the cards — the highest mana value per permanent type, a multi-typed card counting for the first type it fills. |
 | 🟡 Suffer the Past | Witherbloom Witchcraft (C21) | the X cards are chosen as it resolves (from the target player's graveyard), not targeted. |
 | 🟡 Gorma, the Gullet | Witherbloom Pestilence (SOC) | the extra +1/+1 counters reach creatures you cast; a nontoken creature put onto the battlefield another way enters without them. |
@@ -2019,7 +2017,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Harper Recruiter | Everyone's Invited! (SLD) | the engine picks the party revealed from the top four (a largest one). |
 | 🟡 Karazikar, the Eye Tyrant | Planar Portal (AFC) | the creature it taps and goads is the engine's pick (the attacked player's strongest), not a target. |
 | 🟡 Hellish Rebuke | Planar Portal (AFC) | modelled as the caster's watcher for the turn: the sacrifice-and-lose-2 trigger is yours, not the damaging permanent's controller's (same outcome). |
-| 🟡 Dead Man's Chest | Planar Portal (AFC) | an exiled land is playable too (the card says "cast spells"). |
 | 🟡 Share the Spoils | Planar Portal (AFC) | each player's linked cards open at their upkeep; a land played from the pile doesn't refill it. |
 | 🟡 Danse Macabre | Planar Portal (AFC) | you sacrifice after the other players, not simultaneously. |
 | 🟡 Flamebraider | Dance of the Elements (ECC) | its mana spends on Elemental creature spells and Elemental sources' abilities; a Kindred Elemental noncreature spell can't use it. |

@@ -63,7 +63,7 @@ fn cr_118_may_play_permission_covers_a_land_in_exile() {
     let land = g.add_card_to_exile(0, catalog::forest());
     let grant = |g: &mut GameState, player: usize| {
         let turn = g.turn_number;
-        g.find_card_anywhere_mut(land).unwrap().may_play_until = Some(MayPlayPermission {
+        g.find_card_anywhere_mut(land).unwrap().may_play_until = Some(MayPlayPermission { cast_only: false,
             player,
             granted_turn: turn,
             duration: MayPlayDuration::WhileExiled,
@@ -87,7 +87,7 @@ fn cr_305_1_a_land_played_from_an_opponents_exile_is_yours() {
     let mut g = game();
     let land = g.add_card_to_exile(1, catalog::forest());
     let turn = g.turn_number;
-    g.find_card_anywhere_mut(land).unwrap().may_play_until = Some(MayPlayPermission {
+    g.find_card_anywhere_mut(land).unwrap().may_play_until = Some(MayPlayPermission { cast_only: false,
         player: 0,
         granted_turn: turn,
         duration: MayPlayDuration::WhileExiled,

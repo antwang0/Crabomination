@@ -1851,6 +1851,7 @@ impl Effect {
             | Effect::PhaseOut { what, .. }
             | Effect::GrantSuspend { what, .. }
             | Effect::Clockspin { what }
+            | Effect::RestrictMayPlayToCasting { what }
             | Effect::SetCopiableNameAndTypes { what, .. }
             | Effect::ModularCounters { what }
             | Effect::BecomeBlocked { what }
@@ -2718,6 +2719,7 @@ impl Effect {
             | Effect::TokenCopyTappedAttacking { source: what }
             | Effect::GrantSuspend { what, .. }
             | Effect::Clockspin { what }
+            | Effect::RestrictMayPlayToCasting { what }
             | Effect::SetCopiableNameAndTypes { what, .. }
             | Effect::ModularCounters { what }
             | Effect::BecomeBlocked { what }
@@ -4249,6 +4251,7 @@ impl Effect {
             Effect::PhaseOut { what, .. }
             | Effect::GrantSuspend { what, .. }
             | Effect::Clockspin { what }
+            | Effect::RestrictMayPlayToCasting { what }
             | Effect::SetCopiableNameAndTypes { what, .. }
             | Effect::ModularCounters { what }
             | Effect::BecomeBlocked { what }
@@ -5100,6 +5103,7 @@ impl Effect {
                 Effect::PhaseOut { what, .. }
                 | Effect::GrantSuspend { what, .. }
             | Effect::Clockspin { what }
+            | Effect::RestrictMayPlayToCasting { what }
             | Effect::SetCopiableNameAndTypes { what, .. }
                 | Effect::ModularCounters { what }
                 | Effect::BecomeBlocked { what }

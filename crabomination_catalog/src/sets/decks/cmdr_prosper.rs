@@ -8,7 +8,6 @@
 //! - **Hellish Rebuke** — modelled as your watcher for the turn, so the
 //!   sacrifice-and-lose-life trigger is yours rather than the permanent
 //!   controller's (same outcome).
-//! - **Dead Man's Chest** — an exiled land is playable too ("cast spells").
 //! - **Share the Spoils** — each player's pile of linked cards becomes
 //!   playable at their upkeep; a land played from it doesn't refill it.
 //! - **Danse Macabre** — your sacrifice is made after the others'.
@@ -244,7 +243,7 @@ pub fn dark_dweller_oracle() -> CardDefinition {
 
 /// Dead Man's Chest — when the enchanted opponent's creature dies, exile
 /// cards equal to its power off its owner's library; cast them with any
-/// mana while they stay exiled. Residual: an exiled land is playable too.
+/// mana while they stay exiled.
 pub fn dead_mans_chest() -> CardDefinition {
     CardDefinition {
         name: "Dead Man's Chest",
@@ -257,7 +256,8 @@ pub fn dead_mans_chest() -> CardDefinition {
         },
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::EnchantedBySource),
-            effect: Effect::ExileTopAndGrantMayPlay {
+            effect: Effect::Seq(vec![
+                Effect::ExileTopAndGrantMayPlay {
                 who: PlayerRef::OwnerOf(Box::new(Selector::TriggerSource)),
                 count: Value::PowerOf(Box::new(Selector::TriggerSource)),
                 duration: MayPlayDuration::WhileExiled,
@@ -266,6 +266,8 @@ pub fn dead_mans_chest() -> CardDefinition {
                 pay_own_cost: false,
                 uncast_penalty: None,
             },
+                Effect::RestrictMayPlayToCasting { what: Selector::ExiledThisResolution { filter: R::Any } },
+            ]),
         }],
         ..Default::default()
     }

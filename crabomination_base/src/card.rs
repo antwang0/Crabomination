@@ -1232,6 +1232,10 @@ pub struct MayPlayPermission {
     /// and bills the caster life equal to the card's mana value instead.
     #[serde(default)]
     pub pay_life: bool,
+    /// "You may cast spells from among them" rather than "play": a land
+    /// among the cards can't be played (Dream Pillager, Stolen Strategy).
+    #[serde(default)]
+    pub cast_only: bool,
 }
 
 /// CR 122 — the counters on a permanent, in the order they were first added.

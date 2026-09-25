@@ -185,7 +185,7 @@ impl GameState {
         let turn = self.turn_number;
         for id in picked {
             if let Some(c) = self.exile.iter_mut().find(|c| c.id == id) {
-                c.may_play_until = Some(crate::card::MayPlayPermission {
+                c.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false,
                     player: ctx.controller,
                     granted_turn: turn,
                     duration: crate::card::MayPlayDuration::EndOfThisTurn,

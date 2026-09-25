@@ -24,7 +24,7 @@ impl GameState {
             if let Some(perm) = c.may_play_until
                 && dormant(&perm)
             {
-                c.may_play_until = Some(MayPlayPermission { player: active, ..perm });
+                c.may_play_until = Some(MayPlayPermission { cast_only: false, player: active, ..perm });
             }
         }
     }

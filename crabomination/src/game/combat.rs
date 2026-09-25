@@ -7229,7 +7229,7 @@ impl GameState {
                 if wakes(c)
                     && let Some(perm) = c.may_play_until
                 {
-                    c.may_play_until = Some(crate::card::MayPlayPermission { player: p, ..perm });
+                    c.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false, player: p, ..perm });
                 }
             }
         }

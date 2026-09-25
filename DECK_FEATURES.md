@@ -77,7 +77,7 @@ lists were picked.
 | **Quantum Quandrix** (C21 precon) GU | Adrix and Nev, Twincasters | GU | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Lorehold Legacies** (C21 precon) RW | Osgir, the Reconstructor | RW | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Counterpunch** (CMD precon) WBG | Ghave, Guru of Spores | WBG | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
-| **Wade into Battle** (C15 precon) RW | Kalemne, Disciple of Iroas | RW | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
+| **Wade into Battle** (C15 precon) RW | Kalemne, Disciple of Iroas | RW | 100 | ✅ all 100 implemented |
 | **Chaos Incarnate** (SCD) BR | Kardur, Doomscourge | BR | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Heavenly Inferno** (CMD precon) RWB | Kaalia of the Vast | RWB | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Political Puppets** (CMD precon) URW | Zedruu the Greathearted | URW | 100 | 🟡 all 100 implemented (Trade Secrets, banned, swapped for Divination), 2 carry residuals (below) |
@@ -140,7 +140,7 @@ lists were picked.
 | **Most Wanted** (OTC precon) RWB | Olivia, Opulent Outlaw | RWB | 100 | 🟡 all 100 implemented, 3 carry residuals (Back in Town, Dire Fleet Ravager, Vihaan, Goldwaker) |
 | **Tricky Terrain** (M3C precon) GU | Omo, Queen of Vesuva | GU | 100 | 🟡 all 100 implemented, 7 carry residuals (Omo, Horizon of Progress, Desert Warfare, Sunken Palace, Magus of the Candelabra, Rampant Frogantua, March from Velis Vel) |
 | **Everyone's Invited!** (SLD) WUBRG | Morophon, the Boundless | WUBRG | 100 | 🟡 all 100 implemented, 7 carry residuals (Amoeboid Changeling, Nameless Inversion, Shields of Velis Vel, Moritte of the Frost, Unsettled Mariner, Stick Together, Harper Recruiter) |
-| **Planar Portal** (AFC precon) BR | Prosper, Tome-Bound | BR | 100 | 🟡 all 100 implemented, 5 carry residuals (Karazikar, Hellish Rebuke, Dead Man's Chest, Share the Spoils, Danse Macabre) |
+| **Planar Portal** (AFC precon) BR | Prosper, Tome-Bound | BR | 100 | 🟡 all 100 implemented, 4 carry residuals (Karazikar, Hellish Rebuke, Share the Spoils, Danse Macabre) |
 | **Prismari Artistry** (SOC precon) UR | Rootha, Mastering the Moment | UR | 100 | 🟡 all 100 implemented, 2 carry residuals (Abstract Performance, Plargg and Nassari) |
 | **Desert Bloom** (OTC precon) RGW | Yuma, Proud Protector | RGW | 100 | 🟡 all 100 implemented, 2 carry residuals (Cataclysmic Prospecting, Dune Chanter) |
 | **Lorehold Spirit** (SOC precon) RW | Quintorius, History Chaser (**planeswalker**) | RW | 100 | 🟡 all 100 implemented, 3 carry residuals (Ao, the Dawn Sky, Quintorius, Loremaster, Serra Paragon) |
@@ -196,7 +196,7 @@ lists were picked.
 | **Merciless Rage** (C19 precon) BR | Anje Falkenrath | BR | 100 | 🟡 all 100 implemented, 5 carry residuals (Archfiend of Spite, Boneyard Parley, Chainer, Hedonist's Trove, K'rrik) |
 | **Bedecked Brokers** (NCC precon) GWU | Perrie, the Pulverizer | GWU | 100 | 🟡 all 100 implemented, 5 carry residuals (Kros, Aven Mimeomancer, Agent's Toolkit, Littjara Mirrorlake, Skyship Plunderer) |
 | **Living Energy** (DRC precon) GUR | Saheeli, Radiant Creator | GUR | 100 | 🟡 all 100 implemented, 4 carry residuals (Aetherflux Conduit, Territorial Aetherkite, Rampaging Aetherhood, Saheeli) |
-| **Exit from Exile** (CLB precon) RG | Faldorn, Dread Wolf Herald | RG | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
+| **Exit from Exile** (CLB precon) RG | Faldorn, Dread Wolf Herald | RG | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Exquisite Invention** (C18 precon) UR | Saheeli, the Gifted (**planeswalker**) | UR | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Mishra's Burnished Banner** (BRC precon) UBR | Mishra, Eminent One | UBR | 100 | 🟡 all 100 implemented, 6 carry residuals (below) |
 | **Tinker Time** (MOC precon) GUR | Gimbal, Gremlin Prodigy | GUR | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
@@ -1153,7 +1153,7 @@ creature-only {0}; the shared `free_exile_cast_waiver` now reaches an
 adventurer's cast, Warped Space's too). Residuals: **Aurora Phoenix** doesn't
 see cascade granted by a trigger; **Chaos Wand** leaves an uncast find in
 exile; **Durnan** takes the first creature of the four and its cast has no
-undaunted; **Stolen Strategy** lets an exiled land be played. Pods (release,
+undaunted. Pods (release,
 seed 10221, 1,000 games beside Trostani / Ranar / Urza): 1,000/1,000
 decided, no card of the four lists unplayed, Faldorn 13.4 %; six seats
 beside Anikthea / Trostani / Ranar / Urza / Brimaz (seed 10222, 400 games)
