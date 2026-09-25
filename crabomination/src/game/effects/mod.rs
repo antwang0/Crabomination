@@ -31470,7 +31470,11 @@ impl GameState {
                 if mine == theirs {
                     self.run_effect(on_match, ctx, events)
                 } else {
-                    self.run_effect(on_miss, ctx, events)
+                    // The opponent's guess rides as the event amount (The
+                    // Toymaker's Trap: "lose life equal to the number they
+                    // guessed").
+                    let miss_ctx = EffectContext { event_amount: theirs, ..ctx.clone() };
+                    self.run_effect(on_miss, &miss_ctx, events)
                 }
             }
 

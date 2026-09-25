@@ -7491,7 +7491,9 @@ pub enum Effect {
     /// "You and [opponent] each secretly choose 1 through `max`. Then those
     /// choices are revealed. If they match, [on_match]. Otherwise,
     /// [on_miss]" (Expert-Level Safe). Each pick is uniform at random —
-    /// the game's equilibrium strategy, so no seat is asked.
+    /// the game's equilibrium strategy, so no seat is asked. `on_miss` reads
+    /// the opponent's guess as `Value::TriggerEventAmount` (The Toymaker's
+    /// Trap).
     SecretNumbersMatch { opponent: PlayerRef, max: u32, on_match: Box<Effect>, on_miss: Box<Effect> },
     /// "At the beginning of combat on enchanted opponent's turn, that player
     /// may pay {1} for each artifact they control. If they don't, creatures

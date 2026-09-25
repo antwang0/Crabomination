@@ -13,8 +13,7 @@
 //!   sacrifice or exile your creature tokens.
 //! - **The Sound of Drums** — the enchanted creature's combat damage isn't
 //!   doubled.
-//! - **The Toymaker's Trap** — the guess is a match or a miss; the life lost
-//!   is the chosen number's worth, and numbers may repeat.
+//! - **The Toymaker's Trap** — numbers already chosen may be chosen again.
 //! - **Time Reaper** — the life is gained whether or not a card moved.
 //! - **Vislor Turlough** — goaded for the rest of the game, not only while
 //!   the opponent controls it.
@@ -1182,8 +1181,7 @@ pub fn the_sound_of_drums() -> CardDefinition {
 
 /// The Toymaker's Trap — your upkeep: a secret number from 1 to 5 an opponent
 /// guesses; a miss loses them life and draws you a card, a match sacrifices
-/// it. Residual: the life lost is the chosen number's worth, and numbers may
-/// repeat.
+/// it. Residual: numbers already chosen may be chosen again.
 pub fn the_toymakers_trap() -> CardDefinition {
     CardDefinition {
         name: "The Toymaker's Trap",
@@ -1198,7 +1196,7 @@ pub fn the_toymakers_trap() -> CardDefinition {
                 on_miss: Box::new(Effect::Seq(vec![
                     Effect::LoseLife {
                         who: Selector::Player(PlayerRef::HostileOpponent),
-                        amount: Value::ChosenNumberOfSource,
+                        amount: Value::TriggerEventAmount,
                     },
                     draw(1),
                 ])),

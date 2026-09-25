@@ -275,3 +275,24 @@ fn cr_122_1_genesis_of_the_daleks_musters_per_lore_counter() {
     cast(&mut g, saga, None).expect("Genesis");
     assert_eq!(named(&g, 0, "Dalek").len(), 1);
 }
+
+/// CR 603.2 — The Toymaker's Trap: at your upkeep a match sacrifices it; a
+/// miss costs the opponent the number they guessed (1-5) and draws you one.
+#[test]
+fn cr_603_2_the_toymakers_trap_charges_the_guess() {
+    for _ in 0..8 {
+        let mut g = main_phase(2);
+        let trap = g.add_card_to_battlefield(0, catalog::the_toymakers_trap());
+        let (life, hand) = (g.players[1].life, g.players[0].hand.len());
+        g.step = TurnStep::Upkeep;
+        g.fire_step_triggers(TurnStep::Upkeep);
+        drain_stack(&mut g);
+        if g.battlefield_find(trap).is_none() {
+            assert_eq!(g.players[1].life, life, "a match costs nothing");
+            continue;
+        }
+        let lost = life - g.players[1].life;
+        assert!((1..=5).contains(&lost), "lost {lost}");
+        assert_eq!(g.players[0].hand.len(), hand + 1);
+    }
+}
