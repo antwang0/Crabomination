@@ -1319,6 +1319,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::TERRA_COMMANDERS,
             main: decks::TERRA_MAIN,
         },
+        // Hundred-and-sixty-first: Multiverse Reforged (Final Reforging) —
+        // four-color legends under Jace, Multiverse Architect, a
+        // planeswalker commander with Empower Jace. `--pod-decks 161`.
+        PodDeck {
+            name: "Jace, Multiverse Architect (WUBR)",
+            commanders: decks::JACE_COMMANDERS,
+            main: decks::JACE_MAIN,
+        },
     ]
 }
 
@@ -1944,6 +1952,9 @@ mod tests {
             // CR 702.152 blitz from the graveyard, CR 700.2 a random mode,
             // CR 101.4 opponents choosing in turn order.
             ("Terra, Herald", [0x7E44, 160, 9084]),
+            // CR 306.5b Empower Jace tokens, CR 508.1 Jace's attack tax,
+            // CR 702.26 Teferi's Reproach.
+            ("Jace, Multiverse", [0x7ACE, 161, 9085]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

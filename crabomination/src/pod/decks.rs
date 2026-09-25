@@ -4872,3 +4872,33 @@ pub const TERRA_MAIN: &[CardFactory] = &[
     // Basics
     plains, plains, plains, plains, swamp, swamp, swamp, mountain, mountain, mountain,
 ];
+
+pub const JACE_COMMANDERS: &[CardFactory] = &[jace_multiverse_architect];
+
+/// **Multiverse Reforged**, the Final Reforging Commander deck (2026-10-02),
+/// exactly as MTGJSON's `MultiverseReforged_FRC` prints it: 88 nonbasic
+/// cards + 4 Plains + 3 Island + 2 Swamp + 2 Mountain = 99. Four-color
+/// legends and planeswalker tricks under Jace, Multiverse Architect (a
+/// planeswalker commander, CR 903.3a's printed exception).
+pub const JACE_MAIN: &[CardFactory] = &[
+    nissa_leyline_tamer, omnath_locus_of_the_void, dack_fayden_helping_hand,
+    ob_nixilis_the_ascended, teferis_reproach, avacyn_angel_of_horror, jhoira_weatherlight_corsair,
+    venser_fervent_forger, niv_mizzet_ghost_counsel, tamiyo_upriser_crowned, the_ur_sphinx,
+    darksteel_angel, ginger_queen_of_sweets, memnarch_the_warden, turbulent_crater, turbulent_shore,
+    turbulent_wetlands, akroma_angel_of_fury, reflecting_pool, elspeth_suns_champion,
+    flawless_maneuver, grand_crescendo, martial_coup, overlord_of_the_mistmoors, secure_the_wastes,
+    serras_emissary, skrelvs_hive, staff_of_the_storyteller, sunfall, white_suns_twilight,
+    mass_polymorph, occult_epiphany, shark_typhoon, synthetic_destiny, archfiend_of_despair,
+    archon_of_cruelty, dreadhorde_invasion, cursed_mirror, whirlwind_of_thought, windcrag_siege,
+    chromatic_lantern, currency_converter, proteus_staff, battlefield_forge, caves_of_koilos,
+    clifftop_retreat, drowned_catacomb, exotic_orchard, fabled_passage, fetid_heath,
+    glacial_fortress, isolated_chapel, kher_keep, mystic_gate, prairie_stream, radiant_summit,
+    restless_anchorage, restless_spire, shivan_reef, sulfur_falls, sulfurous_springs, sunken_ruins,
+    underground_river, plan_for_all_outcomes, fatehold_charm, arcane_signet, sol_ring,
+    command_tower, lingering_souls, path_to_exile, stroke_of_midnight, swords_to_plowshares,
+    brainstorm, brainsurge, fact_or_fiction, despark, azorius_signet, dimir_signet, fellwar_stone,
+    izzet_signet, rakdos_signet, talisman_of_creativity, talisman_of_dominance,
+    talisman_of_indulgence, talisman_of_progress, contaminated_landscape, path_of_ancestry,
+    perilous_landscape, plains, plains, plains, plains, island, island, island, swamp, swamp,
+    mountain, mountain,
+];
