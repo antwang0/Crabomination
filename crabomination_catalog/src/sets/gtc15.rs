@@ -70,6 +70,7 @@ pub fn hold_the_gates() -> CardDefinition {
                     count_graveyard: false,
                     exclude_self: false,
                     per_own_color: false,
+                    per_own_counter: None,
                 },
             },
             StaticAbility {

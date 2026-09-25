@@ -10369,6 +10369,8 @@ impl GameState {
             }
             // Handing an opponent life is always payable.
             A::OpponentGainsLife { .. } => true,
+            // Removing "any number" of counters — zero is legal.
+            A::RemoveCountersAmong { .. } => true,
             // CR 701.68b — no creature, no blight.
             A::Blight { .. } => {
                 self.battlefield.iter().any(|c| c.controller == p && c.definition.is_creature())
@@ -10940,6 +10942,26 @@ impl GameState {
                         ) {
                             events.append(&mut evs);
                         }
+                    }
+                }
+                A::RemoveCountersAmong { kind, count } => {
+                    let ctx = crate::game::effects::EffectContext::for_spell(p, None, 0, 0);
+                    let mut left = self.evaluate_value(count, &ctx).max(0) as u32;
+                    while left > 0 {
+                        let Some(id) = self
+                            .battlefield
+                            .iter()
+                            .filter(|c| c.controller == p && c.definition.is_creature() && c.counter_count(*kind) > 0)
+                            .max_by_key(|c| c.counter_count(*kind))
+                            .map(|c| c.id)
+                        else {
+                            break;
+                        };
+                        if let Some(c) = self.battlefield_find_mut(id) {
+                            c.remove_counters(*kind, 1);
+                        }
+                        events.push(GameEvent::CounterRemoved { card_id: id, counter_type: *kind, count: 1 });
+                        left -= 1;
                     }
                 }
                 A::OpponentGainsLife { amount } => {

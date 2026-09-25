@@ -669,7 +669,7 @@ fn cr_106_6_every_rider_allows_every_payment() {
                 | RedInstantSorceryCopy | XCostsOnly
                 | SpellFromGraveyard
                 | MonocoloredSpellOf(_) | OutlawSpellsOrAbilities | SpellsYouDontOwn | SpellOrAbilityCopy
-                | AuraOrEquipmentSpells => {}
+                | AuraOrEquipmentSpells | CreatureCastCounter => {}
             }
         }
         use SpendRestriction::*;
@@ -696,6 +696,7 @@ fn cr_106_6_every_rider_allows_every_payment() {
             InstantSorceryUncounterable,
             EquipmentOnly,
             AuraOrEquipmentSpells,
+            CreatureCastCounter,
             ColorlessSpellsOrAbilities,
             HighMvOrX,
             DragonOrOmenSpell,

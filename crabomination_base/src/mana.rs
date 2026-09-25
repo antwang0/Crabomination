@@ -735,6 +735,11 @@ pub enum SpendRestriction {
     /// "Spend this mana only to cast Aura and/or Equipment spells."
     /// (Codsworth, Handy Helper.) Spells only — an equip ability is not one.
     AuraOrEquipmentSpells,
+    /// "If this mana is spent to cast a creature spell, that creature enters
+    /// with an additional +1/+1 counter on it." (Biophagus.) Unrestricted
+    /// spend; one counter per funding pip rides the cast card's
+    /// `pending_etb_counters` (CR 106.6a).
+    CreatureCastCounter,
 }
 
 impl SpendRestriction {
@@ -791,6 +796,7 @@ impl SpendRestriction {
             | SpendRestriction::CreatureHaste
             | SpendRestriction::CommanderTypeScry
             | SpendRestriction::CommanderCastCounters
+            | SpendRestriction::CreatureCastCounter
             | SpendRestriction::CommanderCastScry
             | SpendRestriction::SmallInstantSorceryExileInstead
             | SpendRestriction::RedInstantSorceryCopy
@@ -909,6 +915,7 @@ impl SpendRestriction {
             | SpendRestriction::CreatureHaste
             | SpendRestriction::CommanderTypeScry
             | SpendRestriction::CommanderCastCounters
+            | SpendRestriction::CreatureCastCounter
             | SpendRestriction::CommanderCastScry
             | SpendRestriction::SmallInstantSorceryExileInstead
             | SpendRestriction::RedInstantSorceryCopy

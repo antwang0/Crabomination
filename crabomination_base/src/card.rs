@@ -5414,6 +5414,12 @@ pub enum AdditionalCastCost {
     /// you control (Burning Curiosity's optional "you may blight 1", as a
     /// `kicker_action_cost`). Payable while you control a creature.
     Blight { n: u32 },
+    /// "You may remove any number of `kind` counters from among creatures you
+    /// control" as a discount cost (Hierophant Bio-Titan, paired with a
+    /// `SelfCostReducedByValue` over the same `count`). `count` is read at
+    /// payment from the caster's side; the counters come off the creatures
+    /// carrying the most first. Always payable (zero is a legal choice).
+    RemoveCountersAmong { kind: CounterType, count: crate::effect::Value },
     /// CR 601.2b — "sacrifice a creature, discard a card, or pay 4 life"
     /// (Dusk Mangler): the caster pays exactly one of the options. Payable
     /// when any option is; the cast pipeline concretizes it to one option

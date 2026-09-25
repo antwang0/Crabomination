@@ -315,6 +315,11 @@ impl GameState {
                     .push((crate::card::CounterType::PlusOnePlusOne, n));
             }
         }
+        // Biophagus — any creature spell, one counter per funding pip.
+        let bio = spent.spent_count(SpendRestriction::CreatureCastCounter);
+        if kind.creature && bio > 0 {
+            card.pending_etb_counters.push((crate::card::CounterType::PlusOnePlusOne, bio));
+        }
         // Forger's Foundry — the same provenance hook: the rider names the
         // cast object (CR 106.6), so it rides the card like Opal Palace's.
         if kind.instant_or_sorcery

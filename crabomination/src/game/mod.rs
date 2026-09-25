@@ -14322,6 +14322,7 @@ impl GameState {
                         count_graveyard,
                         exclude_self,
                         per_own_color,
+                        per_own_counter,
                     } = &sa.effect
                     else {
                         continue;
@@ -14361,7 +14362,9 @@ impl GameState {
                         }
                         // "for each OTHER …" — the affected permanent doesn't
                         // count itself.
-                        let count = if *per_own_color {
+                        let count = if let Some(kind) = per_own_counter {
+                            target.counter_count(*kind) as i32
+                        } else if *per_own_color {
                             target.definition.printed_colors().len() as i32
                         } else if *exclude_self
                             && self.evaluate_requirement_static_on(

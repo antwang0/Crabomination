@@ -392,6 +392,11 @@ pub enum StaticEffect {
         /// permanent counts its own printed colors instead of `count_filter`.
         #[serde(default)]
         per_own_color: bool,
+        /// "+1/+1 for each +1/+1 counter on it" (Clamavus): each affected
+        /// permanent counts its own counters of this kind instead of
+        /// `count_filter`.
+        #[serde(default)]
+        per_own_counter: Option<crate::card::CounterType>,
     },
     /// CR 121.2a — "If you would draw a card, you may instead search your
     /// library for a card, put that card into your hand, then shuffle."
