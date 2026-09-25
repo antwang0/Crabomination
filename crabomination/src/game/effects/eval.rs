@@ -3167,6 +3167,9 @@ impl GameState {
                     _ => false,
                 })
             }
+            Predicate::RingTemptedAtLeast { who, n } => self
+                .resolve_player(who, ctx)
+                .is_some_and(|p| self.players[p].ring_temptations >= *n),
             Predicate::FirstInstantOrSorceryCastFromGraveyardThisTurn => {
                 self.evaluate_predicate(&Predicate::CastSpellFromGraveyard, ctx)
                     && self.players[ctx.controller].instants_sorceries_cast_from_graveyard_this_turn == 1

@@ -2243,6 +2243,9 @@ pub enum Predicate {
     /// The just-cast spell is the controller's first instant or sorcery cast
     /// from a graveyard this turn (Sevinne, the Chronoclasm).
     FirstInstantOrSorceryCastFromGraveyardThisTurn,
+    /// The Ring has tempted `who` at least `n` times this game (CR 701.54 —
+    /// Frodo, Adventurous Hobbit's "two or more times").
+    RingTemptedAtLeast { who: PlayerRef, n: u32 },
     /// True if `ctx.source` (the listening permanent's id) is currently
     /// in the engine's `permanents_gained_counter_this_turn` set — i.e.
     /// the listening permanent has had one or more counters put on it

@@ -20090,6 +20090,26 @@ impl GameState {
                 effective_mana_cost.reduce_generic(total.min(max_cut));
             }
         }
+        // Sam, Loyal Attendant — activated abilities of [filter] you control
+        // cost {N} less (generic only, no floor).
+        if !effective_mana_cost.symbols.is_empty()
+            && let Some(src) = self.battlefield_find(card_id).filter(|c| c.controller == p)
+        {
+            let total: u32 = self
+                .battlefield
+                .iter()
+                .filter(|c| c.controller == p)
+                .flat_map(|c| c.definition.static_abilities.iter())
+                .map(|sa| match &sa.effect {
+                    crate::effect::StaticEffect::MatchingActivatedAbilitiesCostLess { filter, amount }
+                        if self.evaluate_requirement_on_card(filter, src, p) => *amount,
+                    _ => 0,
+                })
+                .sum();
+            if total > 0 {
+                effective_mana_cost.reduce_generic(total);
+            }
+        }
         // Tezzeret, Betrayer of Flesh — the first artifact ability you
         // activate each turn costs {N} less (generic only, no floor).
         if !self.players[p].artifact_ability_activated_this_turn

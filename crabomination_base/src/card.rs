@@ -929,6 +929,10 @@ pub enum CounterType {
     Brick,
     /// Cell counter — Sephiroth, Fallen Hero's Jenova Cells.
     Cell,
+    /// Call for Unity's anthem counter.
+    Unity,
+    /// Prize Pig's lifegain tally.
+    Ribbon,
 }
 
 /// Every zone a card can occupy.

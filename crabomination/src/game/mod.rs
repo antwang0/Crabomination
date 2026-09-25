@@ -30622,6 +30622,7 @@ fn static_effect_to_effects(
             | StaticEffect::GraveyardCastOncePerTurn { .. }
             | StaticEffect::ActivationCostReduction { .. }
             | StaticEffect::YourCreatureActivatedAbilitiesCostLess { .. }
+            | StaticEffect::MatchingActivatedAbilitiesCostLess { .. }
             | StaticEffect::FirstArtifactAbilityEachTurnCostsLess { .. }
             // Read on permanent entry (`apply_permanent_ascend`).
             | StaticEffect::Ascend

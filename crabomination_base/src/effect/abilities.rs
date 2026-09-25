@@ -1941,6 +1941,9 @@ pub enum StaticEffect {
     /// Biomancer's Familiar / Training Grounds-style (generic-only). Applies
     /// when the ability's source is a creature the static's controller controls.
     YourCreatureActivatedAbilitiesCostLess { amount: u32 },
+    /// "Activated abilities of [filter] you control cost {N} less to
+    /// activate" (Sam, Loyal Attendant's Foods). Generic only, no floor.
+    MatchingActivatedAbilitiesCostLess { filter: SelectionRequirement, amount: u32 },
     /// "The first activated ability of an artifact you activate each turn
     /// costs {N} less to activate" (Tezzeret, Betrayer of Flesh). Generic
     /// only, no floor; mana abilities count as the first (2022-02-18 ruling).
