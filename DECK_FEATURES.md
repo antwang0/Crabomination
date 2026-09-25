@@ -146,6 +146,7 @@ lists were picked.
 | **Maestros Massacre** (NCC precon) UBR | Anhelo, the Painter | UBR | 100 | 🟡 all 100 implemented, 7 carry residuals (Maestros Confluence, Parnesse, Sinister Concierge, Syrix, Waste Management, Xander's Pact, Zndrsplt's Judgment) |
 | **Creative Energy** (M3C precon) URW | Satya, Aetherflux Genius | URW | 100 | 🟡 all 100 implemented, 6 carry residuals (Cayth, Filigree Racer, Hourglass of the Lost, Overclocked Electromancer, Razorfield Ripper, Sphinx of the Revelation) |
 | **Riders of Rohan** (LTC precon) URW | Éowyn, Shieldmaiden | URW | 100 | 🟡 all 100 implemented, 8 carry residuals (Call for Aid, Champions of Minas Tirith, Crown of Gondor, Denethor, Éomer, Fealty to the Realm, Gilraen, Visions of Glory) |
+| **Abzan Armor** (TDC precon) WBG | Felothar the Steadfast | WBG | 100 | 🟡 all 100 implemented, 4 carry residuals (Arbor Adherent, Baldin, Betor, Tip the Scales) |
 | **Deep Clue Sea** (MKC precon) GWU | Morska, Undersea Sleuth | GWU | 100 | 🟡 all 100 implemented, 3 carry residuals (Aerial Extortionist, Alandra, Sky Dreamer, Erdwal Illuminator) |
 | **Counter Intelligence** (EOC precon) URW | Inspirit, Flagship Vessel (**Spacecraft**) | URW | 100 | 🟡 all 100 implemented, 6 carry residuals (Cloud Key, Inspirit, Depthshaker Titan, Moxite Refinery, Resourceful Defense, Ripples of Potential) |
 | **Explorers of the Deep** (LCC precon) GU | Hakbal of the Surging Soul | GU | 100 | 🟡 all 100 implemented, 2 carry residuals (Xolatoyac, the Smiling Flood, Bygone Marvels) |
@@ -1254,6 +1255,22 @@ all decided): Galea 5.3 % — the bot does not build a Voltron threat; beside
 Estrid / Eshki / Nelly (seed 10251): 1,000 / 1,000, 5.3 %; census (seed 10252):
 no card of the four unplayed; strict debug pods (seeds 10253-10255, 4 and 6
 seats): 180 / 180. `--bench` byte-identical.
+The **hundred-and-forty-ninth** is Tarkir: Dragonstorm Commander's **Abzan Armor**
+(`AbzanArmor_TDC`, 2025-04-11) — toughness-matters and defenders under
+Felothar the Steadfast, `--pod-decks 149` (measured as 148). Twenty-three cards were missing
+(`cmdr_felothar.rs`). New primitives: `Effect::EachPlayerKeepsTotalPowerAtMost`
+(Slaughter the Strong) and `Effect::ExchangeLifeWithSourceToughness` (Tree of
+Redemption). ⚠ It found an engine bug: the declare-attackers check never read
+a *granted* `Keyword::AttacksAsThoughNoDefender` (only the team statics and
+the turn-scoped set), so every such grant — a magecraft Wall in `modern.rs`,
+an MKM ability, Assault Formation, Walking Bulwark — was dead (CR 508.1a).
+Residuals: **Arbor Adherent**'s X counts its own toughness; **Baldin**'s
++0/+X goes on your whole team; **Betor**'s picks aren't targeted; **Tip the
+Scales** sacrifices the engine's pick. Pods (1,000 games each): 4 seats beside
+Urza / Osgir / Eshki (seed 11118) Felothar 33.1 %, census: no card of the four
+unplayed; 6 seats (seed 11119) beside Éowyn / Perrie / Hakbal / Satya / Kamiz 1,000 / 1,000; 8 seats (seed 11119) 1,000 / 1,000. `--bench`
+byte-identical.
+
 The **hundred-and-forty-seventh** is Tales of Middle-earth Commander's **Riders of
 Rohan** (`RidersOfRohan_LTC`, 2023-06-23) — Jeskai Humans and the monarch
 under Éowyn, Shieldmaiden, `--pod-decks 147` (measured as 146). Twenty-three cards were

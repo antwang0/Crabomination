@@ -2036,6 +2036,10 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Fealty to the Realm | Riders of Rohan (LTC) | the Aura's controller controls the creature, not whoever is the monarch. |
 | 🟡 Gilraen, Dúnedain Protector | Riders of Rohan (LTC) | the creature always returns at the next end step with its counters, never at once. |
 | 🟡 Visions of Glory | Riders of Rohan (LTC) | the flashback isn't discounted by your commander's mana value. |
+| 🟡 Arbor Adherent | Abzan Armor (TDC) | X counts its own toughness too ("other creatures" isn't honored). |
+| 🟡 Baldin, Century Herdmaster | Abzan Armor (TDC) | the +0/+X goes on each creature you control rather than up to one hundred targets. |
+| 🟡 Betor, Ancestor's Voice | Abzan Armor (TDC) | the counters go on your greatest-power other creature and the reanimation takes the greatest-power card; neither is targeted. |
+| 🟡 Tip the Scales | Abzan Armor (TDC) | the creature sacrificed is the engine's pick. |
 | 🟡 Akim, the Soaring Wind | Timeless Wisdom (C20) | "the first time each turn" is counted from Akim's arrival: tokens made earlier that turn don't use it up. |
 | 🟡 Crystalline Resonance | Timeless Wisdom (C20) | the copy lasts until it copies again, not until your next turn. |
 | 🟡 Ethereal Forager | Timeless Wisdom (C20) | the returned card is the first linked instant or sorcery, not a chosen one. |
