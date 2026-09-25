@@ -117,6 +117,9 @@ pub enum PlayerRef {
     /// The player with the highest life total, ties broken toward the earliest
     /// seat. Wild Dogs' "the player with the most life gains control".
     HighestLife,
+    /// An opponent of the controller with the most life among them, ties
+    /// toward the earliest seat — Galactus, Devourer of Worlds.
+    HighestLifeOpponent,
     /// The player with the most cards in hand, ties broken toward the earliest
     /// seat. Sokenzan Renegade's "the player who has the most cards in hand
     /// gains control of this."
@@ -1244,6 +1247,9 @@ pub enum Value {
     /// control" — Case of the Shattered Pact). Contrast `ColorCountOf`, which
     /// reads a single object's colors.
     DistinctColorsAmong(Box<Selector>),
+    /// The number of colors among permanents the controller controls and
+    /// spells they've cast this turn (First Family).
+    ColorsAmongYoursAndSpellsCastThisTurn,
     /// Converge value: the number of distinct colors of mana spent on the
     /// spell's cost. Stashed on `StackItem::Spell` at cast time and read
     /// from `EffectContext.converged_value` here. Used by Prismatic
@@ -5203,6 +5209,9 @@ pub enum Effect {
     /// (Brooding Saurian). Ends every theft of a nontoken permanent, the
     /// temporary ones included.
     OwnersGainControlOfNontokens,
+    /// "Each player gains control of all [filter] they own" (Alicia Masters:
+    /// creatures, tokens included).
+    OwnersGainControlOf { filter: SelectionRequirement },
     /// "Choose a color. [This] deals `amount` damage to each creature of the
     /// chosen color" (Sudden Demise). The engine picks the color that kills
     /// the most opposing value net of the caster's own.
@@ -10990,6 +10999,17 @@ pub enum Effect {
     /// Sirens): stamps the player on the creature's `chosen_player` and grants
     /// `Keyword::MustAttackChosenPlayer` until end of turn.
     MustAttackPlayerThisTurn { attacker: Selector, defender: Selector },
+    /// `MustAttackPlayerThisTurn` for `duration` — Silver Surfer's "until the
+    /// end of your next turn, target creature attacks that player each combat
+    /// if able".
+    MustAttackPlayerFor { attacker: Selector, defender: Selector, duration: Duration },
+    /// "Other creatures you control attacking that player get +P/+T until end
+    /// of turn", that player being the one the source attacks (Namor,
+    /// Atlantean King).
+    PumpOtherAttackersOnSamePlayer { power: Value, toughness: Value },
+    /// Exile a card matching `filter` chosen at random from `who`'s graveyard,
+    /// linked to the source (`Selector::CardExiledWithSource`) — Power Pack.
+    ExileRandomFromGraveyardWithSource { who: PlayerRef, filter: SelectionRequirement },
 
     /// "Destroy `what`. For each permanent put into a graveyard this way, its
     /// controller creates a token" (Terastodon). Victims that survive the

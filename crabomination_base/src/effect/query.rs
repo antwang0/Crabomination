@@ -212,6 +212,7 @@ fn player_ref_selector(p: &PlayerRef) -> Option<&Selector> {
         | PlayerRef::DefendingPlayer
         | PlayerRef::LowestLife
         | PlayerRef::HighestLife
+        | PlayerRef::HighestLifeOpponent
         | PlayerRef::MostCardsInHand
         | PlayerRef::MostCreatures
         | PlayerRef::ChosenPlayerOfSource
@@ -773,6 +774,9 @@ impl Effect {
             | Effect::EachPlayerTakesCreatureOfNext
             | Effect::LookTopFiveDigForLife
             | Effect::OwnersGainControlOfNontokens
+            | Effect::OwnersGainControlOf { .. }
+            | Effect::PumpOtherAttackersOnSamePlayer { .. }
+            | Effect::ExileRandomFromGraveyardWithSource { .. }
             | Effect::DoublePlayerCounters { .. }
             | Effect::SpreadCounterKindToOthers { .. }
             | Effect::ReverseTurnOrder
@@ -1850,7 +1854,8 @@ impl Effect {
             Effect::MustBlockTarget { blocker, attacker } => {
                 sel_has_target(blocker) || sel_has_target(attacker)
             }
-            Effect::MustAttackPlayerThisTurn { attacker, defender } => {
+            Effect::MustAttackPlayerThisTurn { attacker, defender }
+            | Effect::MustAttackPlayerFor { attacker, defender, .. } => {
                 sel_has_target(attacker) || sel_has_target(defender)
             }
             Effect::PreventNextFromChosenSourceToTeam { amount, to, .. } => {
@@ -2521,7 +2526,9 @@ impl Effect {
             Effect::MustBlockTarget { blocker, attacker } => {
                 sel_filter(blocker).or_else(|| sel_filter(attacker))
             }
-            Effect::MustAttackPlayerThisTurn { attacker, .. } => sel_filter(attacker),
+            Effect::MustAttackPlayerThisTurn { attacker, .. } | Effect::MustAttackPlayerFor { attacker, .. } => {
+                sel_filter(attacker)
+            }
             Effect::DealDamageEqualToPower { target, .. } => {
                 sel_filter(target).or_else(|| implicit_any_target_if_bare(target))
             }
@@ -4815,7 +4822,8 @@ impl Effect {
                 Effect::MustBlockTarget { blocker, attacker } => {
                     sel_find(blocker, slot).or_else(|| sel_find(attacker, slot))
                 }
-                Effect::MustAttackPlayerThisTurn { attacker, defender } => {
+                Effect::MustAttackPlayerThisTurn { attacker, defender }
+                | Effect::MustAttackPlayerFor { attacker, defender, .. } => {
                     sel_find(attacker, slot).or_else(|| sel_find(defender, slot))
                 }
                 // Two-slot effects whose slots carry their own filters:

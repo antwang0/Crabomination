@@ -365,6 +365,8 @@ pub enum CreatureType {
     Graveborn,
     // Fallout (Shaun, Father of Synths; Synth Infiltrator).
     Synth,
+    // Marvel Super Heroes Commander (Black Bolt, Crystal, Lockjaw, Medusa).
+    Inhuman,
 }
 
 /// Land subtypes (basic land types + others).
@@ -5982,6 +5984,10 @@ pub enum DynamicPt {
     /// Power = toughness = the mana value of the card exiled with this
     /// permanent; 0 with none (Living Lore).
     ExiledWithSourceManaValue,
+    /// Power = the greatest mana value among the controller's noncreature
+    /// permanents and the noncreature cards in their graveyard (Dragon Man,
+    /// Reformed Robot); toughness fixed.
+    GreatestNoncreatureManaValueYoursAndGraveyard { toughness: i32 },
 }
 
 fn one_i32() -> i32 { 1 }

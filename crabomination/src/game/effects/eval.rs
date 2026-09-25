@@ -1677,6 +1677,21 @@ impl GameState {
                     EntityRef::Player(_) => None,
                 })
                 .unwrap_or(0),
+            Value::ColorsAmongYoursAndSpellsCastThisTurn => {
+                let seat = ctx.controller;
+                let mut set = crate::mana::ColorSet::default();
+                for c in self.battlefield.iter().filter(|c| c.controller == seat) {
+                    for col in c.definition.printed_colors() {
+                        set.insert(col);
+                    }
+                }
+                if let Some(p) = self.players.get(seat) {
+                    for cast in p.spell_casts_this_turn.iter() {
+                        set = set.union(cast.colors);
+                    }
+                }
+                set.len() as i32
+            }
             Value::DistinctColorsAmong(s) => {
                 let mut seen: crate::fxhash::HashSet<crate::mana::Color> =
                     crate::fxhash::HashSet::default();

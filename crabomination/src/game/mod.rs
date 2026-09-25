@@ -15359,6 +15359,20 @@ impl GameState {
                     };
                     (n, n)
                 }
+                crate::card::DynamicPt::GreatestNoncreatureManaValueYoursAndGraveyard { toughness } => {
+                    let seat = card.controller;
+                    let on_board = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| c.controller == seat && !c.definition.is_creature())
+                        .map(|c| c.definition.cost.cmc() as i32);
+                    let in_yard = self.players[seat]
+                        .graveyard
+                        .iter()
+                        .filter(|c| !c.definition.is_creature())
+                        .map(|c| c.definition.cost.cmc() as i32);
+                    (on_board.chain(in_yard).max().unwrap_or(0), toughness)
+                }
                 crate::card::DynamicPt::CreaturesControlledPower { base_p, base_t } => {
                     let n = self.battlefield.iter().filter(|c| {
                         c.controller == card.controller && c.definition.is_creature()

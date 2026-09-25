@@ -35,6 +35,7 @@ mod owners_control;
 mod player_counters;
 mod counter_kinds;
 mod counter_blitz;
+mod fantastic_four;
 mod revival;
 mod wakanda;
 mod chosen_color_damage;
@@ -12345,40 +12346,17 @@ impl GameState {
             }
 
             Effect::MustAttackPlayerThisTurn { attacker, defender } => {
-                // CR 508.1d — the named player is the one it must attack; the
-                // requirement itself is `MustAttackChosenPlayer`'s, for the turn.
-                let Some(q) = self
-                    .resolve_selector(defender, ctx)
-                    .into_iter()
-                    .find_map(|e| match e {
-                        EntityRef::Player(q) => Some(q),
-                        _ => None,
-                    })
-                else {
-                    return Ok(());
-                };
-                let ids: Vec<CardId> = self
-                    .resolve_selector(attacker, ctx)
-                    .into_iter()
-                    .filter_map(|e| e.as_permanent_id())
-                    .collect();
-                for cid in &ids {
-                    if let Some(c) = self.battlefield_find_mut(*cid) {
-                        c.chosen_player = Some(q);
-                    }
-                }
-                if ids.is_empty() {
-                    return Ok(());
-                }
-                self.run_effect(
-                    &Effect::GrantKeyword {
-                        what: Selector::ExactObjects(ids),
-                        keyword: crate::card::Keyword::MustAttackChosenPlayer,
-                        duration: crate::effect::Duration::EndOfTurn,
-                    },
-                    ctx,
-                    events,
-                )
+                self.must_attack_player(attacker, defender, crate::effect::Duration::EndOfTurn, ctx, events)
+            }
+            Effect::MustAttackPlayerFor { attacker, defender, duration } => {
+                self.must_attack_player(attacker, defender, *duration, ctx, events)
+            }
+            Effect::PumpOtherAttackersOnSamePlayer { power, toughness } => {
+                self.pump_other_attackers_on_same_player(power, toughness, ctx, events)
+            }
+            Effect::ExileRandomFromGraveyardWithSource { who, filter } => {
+                self.exile_random_from_graveyard_with_source(who, filter, ctx, events);
+                Ok(())
             }
 
             Effect::MustBlockTarget { blocker, attacker } => {
@@ -23535,6 +23513,10 @@ impl GameState {
             }
             Effect::OwnersGainControlOfNontokens => {
                 self.owners_gain_control_of_nontokens();
+                Ok(())
+            }
+            Effect::OwnersGainControlOf { filter } => {
+                self.owners_gain_control_of(filter);
                 Ok(())
             }
             Effect::DamageEachCreatureOfChosenColor { amount } => {
@@ -40670,6 +40652,13 @@ impl GameState {
                     _ => Some(p),
                 }
             }),
+            // "An opponent with the most life among your opponents" (Galactus).
+            PlayerRef::HighestLifeOpponent => {
+                self.opponents_of(ctx.controller).into_iter().fold(None::<usize>, |best, p| match best {
+                    Some(b) if self.effective_life(b) >= self.effective_life(p) => Some(b),
+                    _ => Some(p),
+                })
+            }
             // `max_by_key` returns the *last* maximum; fold keeps the earliest.
             PlayerRef::MostCardsInHand => self
                 .living_seats()
