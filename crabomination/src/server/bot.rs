@@ -10510,6 +10510,24 @@ fn pick_equip(state: &GameState, seat: usize) -> Option<GameAction> {
             continue;
         }
         let action = GameAction::Equip { equipment: eq.id, target };
+        // Moving an Equipment off one of our own creatures must leave the new
+        // host strictly stronger than the old one is now. A base-P/T setter
+        // (Belt of Giant Strength's 10/10) *lowers* an 11/11, so "equip the
+        // biggest" flipped it between two It That Betrays every tick — 11,365
+        // equips and an action-capped 12-seat pod.
+        let moving_from = eq
+            .attached_to
+            .and_then(|h| state.battlefield_find(h))
+            .filter(|h| h.controller == seat && h.definition.is_creature());
+        if let Some(host) = moving_from {
+            let before = cpow(host);
+            let Some(after) = state.accept(action.clone()) else { continue };
+            let gained = after.computed_permanent(target).map(|cp| cp.power).unwrap_or(i32::MIN);
+            if gained <= before {
+                continue;
+            }
+            return Some(action);
+        }
         if state.would_accept(action.clone()) {
             return Some(action);
         }

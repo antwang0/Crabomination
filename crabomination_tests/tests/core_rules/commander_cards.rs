@@ -1941,3 +1941,25 @@ fn one_free_cast_per_card_type() {
     let free: Vec<bool> = ids.iter().map(|id| g.exile.iter().find(|c| c.id == *id).unwrap().may_play_until.is_some()).collect();
     assert_eq!(free, vec![false, true, true, true], "the bigger creature, the instant, the artifact");
 }
+
+/// Regression: a base-P/T-setting Equipment (Belt of Giant Strength, 10/10)
+/// on one of two 11/11s *lowered* its host, so the bot's "equip the biggest"
+/// moved it to the other every tick — 11,365 equips and an action-capped
+/// 12-seat pod. Moving an Equipment now needs a strictly stronger new host.
+#[test]
+fn bot_does_not_shuffle_equipment_between_equal_hosts() {
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    let mut g = commander_game();
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    for _ in 0..10 {
+        g.add_card_to_battlefield(0, catalog::wastes());
+    }
+    let a = g.add_card_to_battlefield(0, catalog::it_that_betrays());
+    g.add_card_to_battlefield(0, catalog::it_that_betrays());
+    let belt = g.add_card_to_battlefield(0, catalog::belt_of_giant_strength());
+    g.battlefield_find_mut(belt).unwrap().attached_to = Some(a);
+    let action = HeuristicBot::new().next_action(&g, 0);
+    assert!(!matches!(action, Some(GameAction::Equip { .. })), "got {action:?}");
+}
