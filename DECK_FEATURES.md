@@ -1238,6 +1238,26 @@ takes every mode that can act. Four-seat pods beside Kasla / Ulalek / Eshki
 no card of the four unplayed. `--bench` byte-identical; cube/sos/sealed (seed
 10320): 7,500 decided.
 
+The **hundred-and-eleventh** is Commander 2020's **Ruthless Regiment**
+(`RuthlessRegiment_C20`) — Mardu Humans under Jirina Kudro, `--pod-decks 111`
+(committed as 110 until Painbow landed there first). Nineteen cards were
+missing (`cmdr_jirina.rs`). The primitives:
+`StaticEffect::GraveyardMatchingEntersWithExtraCounters` (Dearly Departed, CR
+614.1c — it rides the graveyard anthem lane and `chosen_type_etb_counter_specs`
+reads it) and `GrantProtectionFromChosenCreatureType` (Riders of Gavony, CR
+702.16). Its tests found ⚠ **a pod seat's as-enters creature-type naming always
+named Demon** — the ask is driven off the stack, where only the headless
+decider answered (Metallic Mimic, Cavern of Souls, Species Specialist); a
+controller's own naming now takes the bot heuristic, and Riders' hostile naming
+leads with the opponents' most common type. And **`TriggerObjectIsChosenType`
+missed a dying token** (it had ceased to exist, CR 704.5d — it now reads the
+died-card snapshot, CR 603.10a). Residuals: Sanctuary Blade chooses its colour
+by a trigger; Odric's block choice holds for the turn. Four-seat pods beside
+Galea / Kathril / Chishiro (seed 10400, 1,000 games) and Nelly / Eshki /
+Estrid (seed 10401, 1,000): all decided, Jirina 28.4 % and 24.3 %; census
+(seed 10401): no card of the list unplayed. `--bench` byte-identical;
+cube/sos/sealed (seed 10402): 7,500 decided.
+
 The **hundred-and-fifth** is Secrets of Strixhaven Commander's **Silverquill
 Influence** (`SilverquillInfluence_SOC`, 2026-04-24) — Orzhov Auras and goad
 under Killian, Decisive Mentor, `--pod-decks 105` (committed as 103 while two
