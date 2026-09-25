@@ -24,6 +24,9 @@ mod graveyard_spread;
 mod dice_choices;
 mod goad_attacked;
 mod copy_each_target;
+mod exchange_power;
+mod library_dig;
+mod order_of_succession;
 mod fight_each;
 pub(crate) use eval::PrintedGates;
 pub(crate) mod events;
@@ -22957,6 +22960,18 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ExchangePower { a, b, duration } => {
+                self.exchange_power(a, b, *duration, ctx);
+                Ok(())
+            }
+            Effect::EachPlayerTakesCreatureOfNext => {
+                self.each_player_takes_creature_of_next(ctx);
+                Ok(())
+            }
+            Effect::LookTopFiveDigForLife => {
+                self.look_top_five_dig_for_life(ctx, events);
+                Ok(())
+            }
             Effect::SacrificeAllButOnePerType { who, include_land } => {
                 self.resolve_sacrifice_all_but_one_per_type(who, *include_land, false, ctx, events)
             }

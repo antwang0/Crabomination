@@ -5003,6 +5003,21 @@ pub enum Effect {
     /// "Exile all other spells and counter all abilities" (Summary
     /// Dismissal). Uncounterable spells are exiled too; copies cease to exist.
     ExileAllOtherSpellsCounterAllAbilities,
+    /// CR 701.10g — "exchange its power and the power of `b`" (Serene
+    /// Master): each gets the other's current power as a layer-7b set for
+    /// `duration`. Nothing happens unless both are creatures on the battlefield.
+    ExchangePower { a: Selector, b: Selector, duration: Duration },
+    /// "Choose left or right. Starting with you and proceeding in the chosen
+    /// direction, each player chooses a creature controlled by the next player
+    /// in that direction. Each player gains control of the creature they
+    /// chose" (Order of Succession, CR 101.4). The caster picks the direction
+    /// that nets it the most; each chooser takes the next player's best.
+    EachPlayerTakesCreatureOfNext,
+    /// Lim-Dûl's Vault — look at the top five; as many times as you choose,
+    /// pay 1 life, bottom them and look at the next five; then shuffle and put
+    /// the last five on top. The digging is the engine's pick: it pays while
+    /// the window holds no castable spell and life stays above 10.
+    LookTopFiveDigForLife,
     /// Put one `body` trigger on the stack per permanent `what` resolves to,
     /// sourced from that permanent (so `Selector::This` is it), targets
     /// picked as it triggers. The "tokens … except they have 'When this token

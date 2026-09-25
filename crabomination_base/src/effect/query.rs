@@ -745,6 +745,8 @@ impl Effect {
         }
         match self {
             Effect::DestroyAllNoRegenGainControllerLifePerManaValue { .. }
+            | Effect::EachPlayerTakesCreatureOfNext
+            | Effect::LookTopFiveDigForLife
             | Effect::ForetellFromHand { .. }
             | Effect::EachPlayerCreatesTokenPerControlled { .. }
             | Effect::SourceEntersTapped
@@ -1528,7 +1530,9 @@ impl Effect {
             Effect::EachDealsDamageEqualToPower { dealers, target } => {
                 sel_has_target(dealers) || sel_has_target(target)
             }
-            Effect::ExchangeControl { a, b } => sel_has_target(a) || sel_has_target(b),
+            Effect::ExchangeControl { a, b } | Effect::ExchangePower { a, b, .. } => {
+                sel_has_target(a) || sel_has_target(b)
+            }
             Effect::RedirectNextDamage { target, to, .. } => {
                 sel_has_target(target) || sel_has_target(to)
             }
@@ -2439,7 +2443,9 @@ impl Effect {
             }
             // The targeted side may be `b` when `a` is the source itself
             // (Volatile Stormdrake exchanges `This` with a targeted creature).
-            Effect::ExchangeControl { a, b } => sel_filter(a).or_else(|| sel_filter(b)),
+            Effect::ExchangeControl { a, b } | Effect::ExchangePower { a, b, .. } => {
+                sel_filter(a).or_else(|| sel_filter(b))
+            }
             // "Move a counter from this onto target creature" (Afiya Grove):
             // `requires_target` already saw the slot, so the filter walker has
             // to as well or the trigger binds nothing.
@@ -4704,7 +4710,9 @@ impl Effect {
                 Effect::EachDealsDamageEqualToPower { dealers, target } => {
                     sel_find(dealers, slot).or_else(|| sel_find(target, slot))
                 }
-                Effect::ExchangeControl { a, b } => sel_find(a, slot).or_else(|| sel_find(b, slot)),
+                Effect::ExchangeControl { a, b } | Effect::ExchangePower { a, b, .. } => {
+                    sel_find(a, slot).or_else(|| sel_find(b, slot))
+                }
                 Effect::MoveCounters { from, to, .. } => {
                     sel_find(from, slot).or_else(|| sel_find(to, slot))
                 }
