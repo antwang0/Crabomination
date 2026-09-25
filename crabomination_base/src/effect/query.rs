@@ -5479,7 +5479,16 @@ impl Effect {
     pub fn slot_past_x_cap(&self, slot: u8, x: u32) -> bool {
         match self {
             Effect::TargetsExactlyX { .. } | Effect::CapTargetsAtX { .. } => u32::from(slot) >= x,
+            // "Destroy up to X target …" written as a cap on the paid X
+            // (Klauth's Will): no slot prompt past the X-th.
+            Effect::CapTargetsAt { amount: crate::effect::Value::XFromCost, .. } => u32::from(slot) >= x,
             Effect::Seq(steps) => steps.iter().any(|e| e.slot_past_x_cap(slot, x)),
+            // Modal and conditional wrappers answer for the bodies they may
+            // run — Klauth's Will's commander `If` over `ChooseN` / `ChooseMode`.
+            Effect::If { then, else_, .. } => then.slot_past_x_cap(slot, x) || else_.slot_past_x_cap(slot, x),
+            Effect::ChooseN { modes, .. } | Effect::ChooseMode(modes) => {
+                modes.iter().any(|e| e.slot_past_x_cap(slot, x))
+            }
             _ => false,
         }
     }
@@ -5514,6 +5523,14 @@ impl Effect {
                     .min_targets_in_mode(mode)
                     .is_some_and(|min| slot >= min),
             },
+            // Klauth's Will: "up to X target artifacts" behind a commander
+            // `If` and a `ChooseN` — the slot is optional when a body it may
+            // run says so (the slot prompt was mandatory, so a prompting seat
+            // could never finish the cast).
+            Effect::If { then, else_, .. } => {
+                then.target_slot_optional_x(slot, mode, x) || else_.target_slot_optional_x(slot, mode, x)
+            }
+            Effect::ChooseN { modes, .. } => modes.iter().any(|e| e.target_slot_optional_x(slot, None, x)),
             _ => self
                 .min_targets_in_mode(mode)
                 .is_some_and(|min| slot >= min),

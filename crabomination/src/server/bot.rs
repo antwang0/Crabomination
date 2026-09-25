@@ -24406,6 +24406,34 @@ mod tests {
         assert_eq!(answer, crate::decision::DecisionAnswer::Target(Target::Player(2)), "{:?}", pending.decision);
     }
 
+    /// Klauth's Will's "up to X target artifacts and/or enchantments" sits
+    /// behind a commander `If` and a `ChooseN`, so the slot helpers read its
+    /// extra slots as mandatory and unbounded: a prompting seat was asked for
+    /// a sixteenth target it didn't have and never cast the card (Vrondiss
+    /// census). It's cast from both kinds of seat now.
+    #[test]
+    fn bot_casts_klauths_will_from_a_prompting_seat() {
+        for prompts in [false, true] {
+            let mut g = crate::game::multi_player_game(4);
+            g.players[0].wants_ui = prompts;
+            g.step = TurnStep::PostCombatMain;
+            let id = g.add_card_to_hand(0, catalog::klauths_will());
+            for _ in 0..4 {
+                g.add_card_to_battlefield(0, catalog::mountain());
+                g.add_card_to_battlefield(0, catalog::forest());
+            }
+            g.add_card_to_battlefield(0, catalog::serra_angel());
+            for p in 1..4 {
+                g.add_card_to_battlefield(p, catalog::grizzly_bears());
+                g.add_card_to_battlefield(p, catalog::sol_ring());
+            }
+            assert!(
+                matches!(main_phase_action(&g, 0), GameAction::CastSpell { card_id, .. } if card_id == id),
+                "prompts {prompts}"
+            );
+        }
+    }
+
     /// CR 702.122's shape — Fireball costs {1} more per target beyond the
     /// first, and the slot walker filled all ten of its slots (the first
     /// one its own caster), so the dry run never accepted it and the card
