@@ -1450,6 +1450,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SZAREKH_COMMANDERS,
             main: decks::SZAREKH_MAIN,
         },
+        // Hundred-and-seventy-eighth: Paradox Power (WHO, Doctor Who) — Temur
+        // paradox under The Thirteenth Doctor and her companion Yasmin Khan
+        // (CR 702.124m's Doctor's companion pair). `--pod-decks 178`.
+        PodDeck {
+            name: "The Thirteenth Doctor + Yasmin Khan (GUR)",
+            commanders: decks::THIRTEENTH_COMMANDERS,
+            main: decks::THIRTEENTH_MAIN,
+        },
     ]
 }
 

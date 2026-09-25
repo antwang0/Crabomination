@@ -5387,3 +5387,34 @@ pub const SZAREKH_MAIN: &[CardFactory] = &[
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
     swamp, swamp, swamp, swamp,
 ];
+
+pub const THIRTEENTH_COMMANDERS: &[CardFactory] = &[the_thirteenth_doctor, yasmin_khan];
+
+/// **Paradox Power**, the Doctor Who Commander deck (WHO, 2023-10-13),
+/// exactly as MTGJSON's `ParadoxPower_WHO` prints it: 87 nonbasic cards +
+/// 4 Island + 3 Mountain + 4 Forest = 98 beside the two commanders — The
+/// Thirteenth Doctor and her companion Yasmin Khan (CR 702.124m). Temur
+/// paradox: spells cast from anywhere but your hand.
+pub const THIRTEENTH_MAIN: &[CardFactory] = &[
+    danny_pink, osgood_operation_double, twice_upon_a_time, become_the_pilot,
+    quantum_misalignment, nardole_resourceful_cyborg, flatline, bill_potts,
+    into_the_time_vortex, dan_lewis, flaming_tyrannosaurus, ryan_sinclair, return_the_past,
+    impending_flux, the_flux, sisterhood_of_karn, graham_obrien, karvanista_loyal_lupari,
+    the_foretold_soldier, fugitive_of_the_judoon, river_song, madame_vastra, jenny_flint,
+    strax_sontaran_nurse, the_twelfth_doctor, the_fugitive_doctor, me_the_immortal,
+    frost_fair_lure_fish, lunar_hatchling, heaven_sent, last_night_together, river_songs_diary,
+    confession_dial, clara_oswald, chaos_warp, cursed_mirror, carpet_of_flowers,
+    dreamroot_cascade, temple_of_mystery, vineglimmer_snarl, waterlogged_grove,
+    desolate_lighthouse, rockfall_vale, rootbound_crag, temple_of_abandon, cinder_glade,
+    sheltered_thicket, temple_of_epiphany, frostboil_snarl, stormcarved_coast, fiery_islet,
+    game_trail, exotic_orchard, gallifrey_council_chamber, psychic_paper, tardis,
+    sonic_screwdriver, start_the_tardis, surge_of_brilliance, iraxxa_empress_of_mars,
+    memory_worm, decaying_time_loop, thijarian_witness, truth_or_consequences,
+    bigger_on_the_inside, wreck_and_rebuild, arcane_signet, sol_ring, ponder, think_twice,
+    preordain, throes_of_chaos, cultivate, search_for_tomorrow, farseek, beast_within,
+    growth_spiral, talisman_of_curiosity, talisman_of_impulse, rogues_passage, frontier_bivouac,
+    reliquary_tower, myriad_landscape, temple_of_the_false_god, path_of_ancestry, command_tower,
+    ominous_cemetery,
+    // Basics
+    island, island, island, island, mountain, mountain, mountain, forest, forest, forest, forest,
+];
