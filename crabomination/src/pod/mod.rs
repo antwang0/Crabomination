@@ -1223,6 +1223,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ASHLING_COMMANDERS,
             main: decks::ASHLING_MAIN,
         },
+        // Hundred-and-forty-ninth: Abzan Armor (Tarkir: Dragonstorm) —
+        // Abzan toughness-matters and defenders under Felothar the
+        // Steadfast. `--pod-decks 149`.
+        PodDeck {
+            name: "Felothar the Steadfast (WBG)",
+            commanders: decks::FELOTHAR_COMMANDERS,
+            main: decks::FELOTHAR_MAIN,
+        },
     ]
 }
 

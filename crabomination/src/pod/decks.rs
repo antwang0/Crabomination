@@ -4511,3 +4511,33 @@ pub const ASHLING_MAIN: &[CardFactory] = &[
     plains, plains, island, island, swamp, swamp, mountain, mountain, forest, forest, forest,
     forest, forest, forest, forest, forest,
 ];
+
+pub const FELOTHAR_COMMANDERS: &[CardFactory] = &[felothar_the_steadfast];
+
+/// **Abzan Armor**, the Tarkir: Dragonstorm Commander deck (2025-04-11),
+/// exactly as MTGJSON's `AbzanArmor_TDC` prints it: 81 nonbasic cards + 6
+/// Plains + 5 Swamp + 7 Forest = 99. Abzan toughness-matters and defenders
+/// under Felothar the Steadfast.
+pub const FELOTHAR_MAIN: &[CardFactory] = &[
+    betor_ancestors_voice, protector_of_the_wastes, reunion_of_the_house, jaws_of_defeat,
+    tip_the_scales, will_of_the_abzan, arbor_adherent, canopy_gargantuan, rampart_architect,
+    tree_of_redemption, ikra_shidiqi_the_usurper, baldin_century_herdmaster,
+    expel_the_interlopers, indomitable_ancients, rhox_faithmender, shalai_voice_of_plenty,
+    wakestone_gargoyle, wall_of_reverence, welcoming_vampire, zetalpa_primal_dawn,
+    arasta_of_the_endless_web, assault_formation, hornet_nest, seedborn_muse, sylvan_caryatid,
+    towering_titan, anguished_unmaking, dragonlord_dromoka, faeburrow_elder,
+    shadrix_silverquill, sidar_kondo_of_jamuraa, colfenors_urn, staff_of_compleation,
+    weathered_sentinels, canopy_vista, exotic_orchard, fortified_village, isolated_chapel,
+    overgrown_farmland, sungrass_prairie, sunpetal_grove, temple_of_malady, temple_of_plenty,
+    temple_of_silence, twilight_mire, woodland_cemetery, arcane_signet, sol_ring, command_tower,
+    nyx_fleece_ram, slaughter_the_strong, swords_to_plowshares, wall_of_omens,
+    wingmantle_chaplain, behind_the_scenes, blight_pile, feed_the_swarm, infernal_grasp,
+    wall_of_limbs, arboreal_grazer, axebane_guardian, carven_caryatid, evolving_wilds,
+    jaddi_offshoot, overgrown_battlement, sandsteppe_citadel, tower_defense, wall_of_blossoms,
+    wall_of_roots, despark, indulging_patrician, crashing_drawbridge, orzhov_signet,
+    selesnya_signet, swiftfoot_boots, walking_bulwark, access_tunnel, bojuka_bog,
+    deceptive_landscape, path_of_ancestry, radiant_grove,
+    // Basics: 6 plains, 5 swamp, 7 forest
+    plains, plains, plains, plains, plains, plains, swamp, swamp, swamp, swamp, swamp, forest,
+    forest, forest, forest, forest, forest, forest,
+];
