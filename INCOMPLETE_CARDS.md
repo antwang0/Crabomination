@@ -1861,6 +1861,10 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Disorienting Choice | Jump Scare! (DSC) | the targets' controllers decide through the engine's may-prompt, and the lands found are the engine's pick. |
 | 🟡 Zimone, Mystery Unraveler | Jump Scare! (DSC) | the permanent turned face up is the engine's pick. |
 | 🟡 Zimone's Hypothesis | Jump Scare! (DSC) | the creature given the counter is chosen as a target. |
+| 🟡 Commit // Memory | Obscura Operation (NCC) | Commit can't target a spell, only a nonland permanent. |
+| 🟡 Kamiz, Obscura Oculus | Obscura Operation (NCC) | the lesser-power attacker given double strike is the engine's pick. |
+| 🟡 Obscura Confluence | Obscura Operation (NCC) | the third mode returns a creature card from your graveyard (the engine's pick), not a target player's choice. |
+| 🟡 Oskar, Rubbish Reclaimer | Obscura Operation (NCC) | the discarded card may be cast from the graveyard until end of turn rather than right away. |
 | 🟡 Battle at the Helvault | Enduring Enchantments (CMM) | "for each player" covers opponents only: you can't exile one of your own permanents. |
 | 🟡 Battle for Bretagard | Enduring Enchantments (CMM) | chapter III copies every artifact and creature token you control, duplicate names included. |
 | 🟡 Cacophony Unleashed | Enduring Enchantments (CMM) | the animated 6/6 isn't legendary. |

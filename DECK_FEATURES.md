@@ -95,6 +95,7 @@ lists were picked.
 | **Reign of Dragons** (FDC precon) R | Lathliss, Dragon Queen | R | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Spirit Squadron** (VOC precon) WU | Millicent, Restless Revenant | WU | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Jump Scare!** (DSC precon) GU | Zimone, Mystery Unraveler | GU | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
+| **Obscura Operation** (NCC precon) WUB | Kamiz, Obscura Oculus | WUB | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Enduring Enchantments** (CMM precon) WBG | Anikthea, Hand of Erebos | WBG | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
 | **Open Hostility** (C16 precon) WBRG | Saskia the Unyielding | WBRG | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Devour for Power** (CMD precon) BGU | The Mimeoplasm | BGU | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
@@ -2425,6 +2426,23 @@ Extortionist**, **Alandra, Sky Dreamer**, **Erdwal Illuminator**
 Gavi / Gonti / Prossh / Nelly (seed 13402, 1,000): all decided, 16.2 %;
 census beside Omo / Olivia / Jirina (seed 13403, 500): no card of the four
 lists unplayed. cube / sos / sealed 7,500 decided. `--bench` byte-identical.
+
+The **hundred-and-forty-third** is Streets of New Capenna Commander's
+**Obscura Operation** (`ObscuraOperation_NCC`) — Esper connive and evasion
+under Kamiz, Obscura Oculus (seat 142 before rebasing over Faceless
+Menace). Twenty cards were missing and Aerial Extortionist landed with Deep
+Clue Sea meanwhile, so nineteen are this seat's (`cmdr_kamiz.rs`). The
+primitives: `Effect::Connive { what, amount }` (CR 701.50 — per permanent,
+counting only that creature's own discards; the `shortcut::connive` Seq
+read the whole resolution's list, so "each of X creatures connive"
+over-counted) and `StaticEffect::DamageDoesntCauseControllerLifeLoss`
+(CR 120.3a, Archon of Coronation under a monarch gate, read at the damage
+life sites). ⚠ **Escape's exiled cost cards weren't "exiled with" the
+escaping card**, so Skyway Robber's escaped trigger had nothing to cast.
+Residuals: **Commit // Memory**, **Kamiz, Obscura Oculus**, **Obscura
+Confluence**, **Oskar, Rubbish Reclaimer**. A 200-game census beside Zimone
+/ Millicent / Lathliss (seed 143) decided 200/200 with zero panics and no
+card unplayed, Kamiz winning 7.0 %. `--bench` byte-identical.
 
 The **hundred-and-thirty-third** is Duskmourn Commander's **Jump Scare!**
 (`JumpScare_DSC`) — Simic manifest dread and morph under Zimone, Mystery
