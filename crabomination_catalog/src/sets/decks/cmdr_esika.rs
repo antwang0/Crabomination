@@ -3,8 +3,6 @@
 //! almost all double-faced. Tests in `tests/recent_b/cmdr_esika.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Archangel Avacyn** — transforms at *your* next upkeep, not the next
-//!   upkeep of any player.
 //! - **Arlinn, the Pack's Hope** — the +1's flash and extra +1/+1 counter
 //!   last this turn, not until your next turn.
 //! - **Azor's Gateway** — transforms off five cards exiled with it, not five
@@ -143,8 +141,6 @@ fn player_or_walker() -> Selector {
 /// entering makes your creatures indestructible this turn; a non-Angel of
 /// yours dying transforms her at the next upkeep, and the Purifier burns
 /// everything else for 3.
-///
-/// ⚠ Residual: transforms at *your* next upkeep.
 pub fn archangel_avacyn() -> CardDefinition {
     let purifier = CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
@@ -166,7 +162,7 @@ pub fn archangel_avacyn() -> CardDefinition {
                     what: Selector::TriggerSource,
                     filter: R::HasCreatureType(CreatureType::Angel).negate(),
                 }),
-                effect: Effect::AtYourNextUpkeep { body: Box::new(transform_self()) },
+                effect: Effect::AtNextTurnsUpkeep { body: Box::new(transform_self()) },
             },
         ],
         back_face: Some(back(purifier, vec![Color::Red])),

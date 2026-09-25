@@ -311,3 +311,23 @@ fn dennick_locks_graveyards_out_of_targeting() {
     let raise = g.add_card_to_hand(0, catalog::raise_dead());
     assert!(cast(&mut g, raise, Some(Target::Permanent(dead))).is_err());
 }
+
+/// Archangel Avacyn transforms at the beginning of the *next* upkeep — the
+/// opponent's, when her creature dies on your turn.
+#[test]
+fn archangel_avacyn_transforms_at_the_next_players_upkeep() {
+    let mut g = main_phase();
+    let avacyn = g.add_card_to_battlefield(0, catalog::archangel_avacyn());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, Some(Target::Permanent(bear))).expect("Bolt the Bears");
+    for _ in 0..40 {
+        if g.active_player_idx == 1 && g.step == TurnStep::Draw {
+            break;
+        }
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.active_player_idx, 1);
+    assert_eq!(g.battlefield_find(avacyn).map(|c| c.definition.name), Some("Avacyn, the Purifier"));
+}
