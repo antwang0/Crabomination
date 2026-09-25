@@ -3947,3 +3947,31 @@ pub const GONTI_MAIN: &[CardFactory] = &[
     island, island, island, island, island, swamp, swamp, swamp, swamp, swamp, swamp, forest,
     forest, forest, forest,
 ];
+
+pub const PROSSH_COMMANDERS: &[CardFactory] = &[prossh_skyraider_of_kher];
+
+/// **Power Hungry**, the Commander 2013 Jund deck (C13, 2013-11-01), exactly
+/// as MTGJSON's `PowerHungry_C13` prints it: 79 nonbasic cards + 6 Swamps +
+/// 7 Mountains + 7 Forests = 99. Jund tokens and sacrifice under Prossh, Skyraider
+/// of Kher.
+pub const PROSSH_MAIN: &[CardFactory] = &[
+    brooding_saurian, capricious_efreet, charnelhoard_wurm, deathbringer_thoctar,
+    deepfire_elemental, elvish_skysweeper, endless_cockroaches, endrek_sahr_master_breeder,
+    fell_shepherd, goblin_sharpshooter, golgari_guildmage, hooded_horror,
+    hua_tuo_honored_physician, hunted_troll, inferno_titan, jade_mage, ophiomancer,
+    quagmire_druid, sakura_tribe_elder, scarland_thrinax, sekkuar_deathkeeper,
+    shattergang_brothers, silklash_spider, sprouting_thrinax, stalking_vengeance,
+    stronghold_assassin, terra_ravager, viscera_seer, walker_of_the_grove,
+    wight_of_precinct_six, dirge_of_dread, mass_mutiny, restore, rough_tumble, spoils_of_victory,
+    sudden_demise, tempt_with_vengeance, jund_charm, reincarnation, armillary_sphere,
+    carnage_altar, jar_of_eyeballs, obelisk_of_jund, plague_boiler, sol_ring, spine_of_ish_sah,
+    swiftfoot_boots, blood_rites, curse_of_chaos, curse_of_predation, curse_of_shallow_graves,
+    fecundity, foster, furnace_celebration, goblin_bombardment, night_soil, primal_vigor,
+    tooth_and_claw, vile_requiem, widespread_panic, akoum_refuge, command_tower, evolving_wilds,
+    golgari_guildgate, golgari_rot_farm, grim_backwoods, gruul_guildgate, jund_panorama,
+    kazandu_refuge, khalni_garden, kher_keep, llanowar_reborn, opal_palace, rakdos_guildgate,
+    rupture_spire, savage_lands, temple_of_the_false_god, terramorphic_expanse, vivid_grove,
+    // Basics: 6 swamp, 7 mountain, 7 forest
+    swamp, swamp, swamp, swamp, swamp, swamp, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, forest, forest, forest, forest, forest, forest, forest,
+];

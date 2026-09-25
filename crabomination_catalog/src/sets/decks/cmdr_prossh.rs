@@ -380,7 +380,7 @@ pub fn scarland_thrinax() -> CardDefinition {
 
 /// Sek'Kuar, Deathkeeper — another nontoken creature of yours dying makes a
 /// 3/1 black and red Graveborn with haste.
-pub fn sek_kuar_deathkeeper() -> CardDefinition {
+pub fn sekkuar_deathkeeper() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl).with_filter(

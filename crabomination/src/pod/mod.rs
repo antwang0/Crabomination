@@ -1072,6 +1072,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::GONTI_COMMANDERS,
             main: decks::GONTI_MAIN,
         },
+        // Hundred-and-thirtieth: the hundred-and-twentieth official list
+        // (Power Hungry, C13) — Jund tokens and sacrifice under Prossh,
+        // Skyraider of Kher. `--pod-decks 130`.
+        PodDeck {
+            name: "Prossh, Skyraider of Kher (BRG)",
+            commanders: decks::PROSSH_COMMANDERS,
+            main: decks::PROSSH_MAIN,
+        },
     ]
 }
 
@@ -1659,6 +1667,9 @@ mod tests {
             // CR 701.34 manifest from another library, CR 106.6 spend
             // restrictions, CR 702.99 cipher.
             ("Gonti, Canny", [0x6071, 129, 9053]),
+            // CR 614.13/614.16 for every player (Primal Vigor); owners regain
+            // control (Brooding Saurian); a cast trigger counting mana spent.
+            ("Prossh", [0x9055, 130, 9054]),
         ] {
             let precon = *field.iter().find(|d| d.name.starts_with(name)).expect("the precon seat");
             assert_eq!(precon.card_count(), 100);

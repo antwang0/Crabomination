@@ -2701,7 +2701,7 @@ static DECKS: &[Factory] = &[
     super::decks::obelisk_of_jund,
     super::decks::primal_vigor,
     super::decks::scarland_thrinax,
-    super::decks::sek_kuar_deathkeeper,
+    super::decks::sekkuar_deathkeeper,
     super::decks::shattergang_brothers,
     super::decks::spoils_of_victory,
     super::decks::sprouting_thrinax,
