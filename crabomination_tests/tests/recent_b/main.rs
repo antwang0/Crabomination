@@ -131,6 +131,7 @@ mod cmdr_mirko;
 mod cmdr_auntie;
 mod cmdr_mothman;
 mod cmdr_madison;
+mod cmdr_dogmeat;
 mod cmdr_kaust;
 mod cmdr_zimone_ia;
 mod cmdr_anhelo;
