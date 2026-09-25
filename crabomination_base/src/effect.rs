@@ -7227,6 +7227,16 @@ pub enum Effect {
     /// (Alchemist's Refuge). Sets `Player.spells_as_flash_this_turn`,
     /// cleared at the turn boundary.
     GrantSpellsFlashThisTurn { who: PlayerRef },
+    /// Slaughter the Strong — "Each player chooses any number of creatures
+    /// they control with total power `max` or less, then sacrifices all other
+    /// creatures they control." Each seat keeps greedily, greatest power
+    /// first while the running total fits (0-power creatures always fit),
+    /// then everything else is sacrificed at once.
+    EachPlayerKeepsTotalPowerAtMost { max: u32 },
+    /// Tree of Redemption — "Exchange your life total with this creature's
+    /// toughness": your life becomes its toughness and its base toughness
+    /// becomes your former life total (a layer-7b set, CR 613.4b).
+    ExchangeLifeWithSourceToughness,
     /// Audacious Swap — "The owner of target nonenchantment permanent
     /// shuffles it into their library, then exiles the top card of their
     /// library. If it's a land card, they put it onto the battlefield.

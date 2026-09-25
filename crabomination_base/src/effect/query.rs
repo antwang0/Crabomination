@@ -1360,6 +1360,8 @@ impl Effect {
             Effect::FaceDownSpellsCostLessThisTurn { .. } => false,
             Effect::NextFaceDownSpellCostsLessThisTurn { .. } => false,
             Effect::GrantSpellsFlashThisTurn { .. } => false,
+            Effect::EachPlayerKeepsTotalPowerAtMost { .. } => false,
+            Effect::ExchangeLifeWithSourceToughness => false,
             Effect::TokenCopyTappedAttacking { source } => sel_has_target(source),
             Effect::OwnerShufflesInExilesTopPlaysOrCasts { what } => sel_has_target(what),
             Effect::DoubleXOfSpell { .. } => false,

@@ -31037,6 +31037,60 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::EachPlayerKeepsTotalPowerAtMost { max } => {
+                let mut doomed: Vec<(CardId, usize)> = Vec::new();
+                for p in self.living_seats().collect::<Vec<_>>() {
+                    let mut mine: Vec<(CardId, i32)> = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| c.controller == p && c.definition.is_creature())
+                        .map(|c| (c.id, self.effective_power_on(c).max(0)))
+                        .collect();
+                    mine.sort_by_key(|&(id, pw)| (std::cmp::Reverse(pw), id));
+                    let mut total = 0i32;
+                    for (id, pw) in mine {
+                        if total + pw <= *max as i32 {
+                            total += pw;
+                        } else {
+                            doomed.push((id, p));
+                        }
+                    }
+                }
+                for (id, p) in doomed {
+                    self.sacrifice_one(id, p, events);
+                }
+                Ok(())
+            }
+
+            Effect::ExchangeLifeWithSourceToughness => {
+                let Some(src) = ctx.source else { return Ok(()) };
+                let Some(toughness) = self.computed_permanent(src).map(|c| c.toughness) else {
+                    return Ok(());
+                };
+                let p = ctx.controller;
+                let old_life = self.players[p].life;
+                let base_power = self.battlefield_find(src).map(|c| c.definition.power).unwrap_or(0);
+                // CR 119.7 — the exchange is a gain or loss of the difference.
+                let delta = toughness - old_life;
+                let life_effect = if delta >= 0 {
+                    Effect::GainLife { who: Selector::You, amount: crate::effect::Value::Const(delta) }
+                } else {
+                    Effect::LoseLife { who: Selector::You, amount: crate::effect::Value::Const(-delta) }
+                };
+                self.resolve_effect_into(&life_effect, ctx, events)?;
+                self.resolve_effect_into(
+                    &Effect::SetBasePT {
+                        what: Selector::This,
+                        power: crate::effect::Value::Const(base_power),
+                        toughness: crate::effect::Value::Const(old_life),
+                        duration: crate::effect::Duration::Permanent,
+                    },
+                    ctx,
+                    events,
+                )?;
+                Ok(())
+            }
+
             Effect::GrantSpellsFlashThisTurn { who } => {
                 if let Some(seat) = self.resolve_player(who, ctx) {
                     self.players[seat].spells_as_flash_this_turn = true;
