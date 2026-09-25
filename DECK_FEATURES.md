@@ -135,6 +135,7 @@ lists were picked.
 | **Most Wanted** (OTC precon) RWB | Olivia, Opulent Outlaw | RWB | 100 | 🟡 all 100 implemented, 3 carry residuals (Back in Town, Dire Fleet Ravager, Vihaan, Goldwaker) |
 | **Tricky Terrain** (M3C precon) GU | Omo, Queen of Vesuva | GU | 100 | 🟡 all 100 implemented, 7 carry residuals (Omo, Horizon of Progress, Desert Warfare, Sunken Palace, Magus of the Candelabra, Rampant Frogantua, March from Velis Vel) |
 | **Everyone's Invited!** (SLD) WUBRG | Morophon, the Boundless | WUBRG | 100 | 🟡 all 100 implemented, 7 carry residuals (Amoeboid Changeling, Nameless Inversion, Shields of Velis Vel, Moritte of the Frost, Unsettled Mariner, Stick Together, Harper Recruiter) |
+| **Planar Portal** (AFC precon) BR | Prosper, Tome-Bound | BR | 100 | 🟡 all 100 implemented, 5 carry residuals (Karazikar, Hellish Rebuke, Dead Man's Chest, Share the Spoils, Danse Macabre) |
 | **Prismari Artistry** (SOC precon) UR | Rootha, Mastering the Moment | UR | 100 | 🟡 all 100 implemented, 2 carry residuals (Abstract Performance, Plargg and Nassari) |
 | **Desert Bloom** (OTC precon) RGW | Yuma, Proud Protector | RGW | 100 | 🟡 all 100 implemented, 2 carry residuals (Cataclysmic Prospecting, Dune Chanter) |
 | **Lorehold Spirit** (SOC precon) RW | Quintorius, History Chaser (**planeswalker**) | RW | 100 | 🟡 all 100 implemented, 3 carry residuals (Ao, the Dawn Sky, Quintorius, Loremaster, Serra Paragon) |
@@ -1419,6 +1420,27 @@ takes every mode that can act. Four-seat pods beside Kasla / Ulalek / Eshki
 10312, 1,000): all decided, Chishiro 32.0 % and 14.6 %; census (seed 10323):
 no card of the four unplayed. `--bench` byte-identical; cube/sos/sealed (seed
 10320): 7,500 decided.
+
+The **hundred-and-forty-first** is Adventures in the Forgotten Realms
+Commander's **Planar Portal** (`PlanarPortal_AFC`) — Rakdos exile-and-play
+under Prosper, Tome-Bound, `--pod-decks 141` (committed as 137 and 138 while
+four other seats landed). Twenty cards were missing (`cmdr_prosper.rs`; Grim
+Hireling came with Party Time). The primitives:
+`StaticEffect::DiesToExileInstead` (Lorcan's Warlocks, read against the
+battlefield permanent so an effect-given type counts); CR 603.10
+`left_while_blocking` (Death Tyrant); `Selector::SacrificedThisResolution`
+(Danse Macabre); `EventScope::YouAttackedPlayer` (Karazikar);
+`DelayedKind::OpponentPermanentDamagesYouThisTurn` (Hellish Rebuke);
+`Predicate::TriggerCardExiledWithSource` (Share the Spoils). Its survey
+found ⚠ **a turn-granted trigger's filter was read from each permanent's own
+side**, so Predators' Hour's and Arm with Aether's "creatures you control"
+armed every seat's creatures (the entry now carries its granter); its tests
+found `SacrificeAndRemember` skipping the resolution's sacrifice bookkeeping.
+Residuals: five (INCOMPLETE_CARDS). Four-seat pods beside Morophon / Omo /
+Olivia (seed 10440) and Nelly / Eshki / Estrid (seed 10441), 1,000 games
+each: all decided, Prosper 7.6 % and 7.3 %; census: no card of the list
+unplayed. `--bench` byte-identical; cube/sos/sealed (seed 10402): 7,500
+decided.
 
 The **hundred-and-thirty-first** is the Secret Lair Commander deck
 **Everyone's Invited!** (`EveryoneSInvited_SLD`, 2025) — five-color
