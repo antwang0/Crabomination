@@ -162,6 +162,7 @@ lists were picked.
 | **Counter Blitz** (FIC precon) GWU | Tidus, Yuna's Guardian | GWU | 100 | 🟡 all 100 implemented, 3 carry residuals (Endless Detour, Lulu, Stern Guardian, Rikku, Resourceful Guardian) |
 | **The Fantastic Four** (MSC precon) WURG | Invisible Woman | WURG | 100 | 🟡 all 100 implemented, 2 carry residuals (Mister Fantastic; Tragic Arrogance's engine-chosen keeps) |
 | **Scrappy Survivors** (PIP precon) RGW | Dogmeat, Ever Loyal | RGW | 100 | 🟡 all 100 implemented, 5 carry residuals (Agility Bobblehead, Brotherhood Outcast, Inventory Management, Perception Bobblehead, Vault 101) |
+| **Tyranid Swarm** (40K precon) GUR | The Swarmlord | GUR | 100 | 🟡 all 100 implemented, 5 carry residuals (Ghyrson Starn, Hierophant Bio-Titan, Magus Lucea Kane, The First Tyrannic War, The Red Terror) |
 | **Avengers Assemble** (MSC precon) URW | Captain America, Team Leader | URW | 100 | 🟡 all 100 implemented, 6 carry residuals (Captain Marvel, Heroic Return, Heroic Sacrifice, Scarlet Witch, Speed, Winter Soldier) |
 | **Dance of the Elements** (ECC precon) WUBRG | Ashling, the Limitless | WUBRG | 100 | 🟡 all 100 implemented, 5 carry residuals (Flamebraider, Smokebraider, Primal Beyond, Haunting Voyage, Horde of Notions) |
 | **Veloci-Ramp-Tor** (LCC precon) RGW | Pantlaza, Sun-Favored | RGW | 100 | 🟡 all 100 implemented, 2 carry residuals (Sunfrill Imitator, Wrathful Raptors) |
