@@ -137,6 +137,8 @@ lists were picked.
 | **Coven Counters** (MIC precon) GW | Leinore, Autumn Sovereign | GW | 100 | 🟡 all 100 implemented, 4 carry residuals (Curse of Conformity, Celestial Judgment, Sigardian Zealot, Moorland Rescuer) |
 | **Arcane Maelstrom** (C20 precon) GUR | Kalamax, the Stormsire | GUR | 100 | 🟡 all 100 implemented, 4 carry residuals (Eon Frolicker, Haldan, Pako, Lavabrink Floodgates) |
 | **Enhanced Evolution** (C20 precon) BGU | Otrimi, the Ever-Playful | BGU | 100 | 🟡 all 100 implemented, 4 carry residuals (Capricopian, Manascape Refractor, Mindleecher, Vastwood Hydra) |
+| **Cavalry Charge** (MOC precon) WUB | Sidar Jabari of Zhalfir | WUB | 100 | 🟡 all 100 implemented, 3 carry residuals (Path of the Enigma, Syr Elenora, Aryel) |
+| **Eternal Bargain** (C13 precon) WUB | Oloro, Ageless Ascetic | WUB | 100 | 🟡 all 100 implemented, 4 carry residuals (Order of Succession, Lim-Dûl's Vault, Springjack Pasture, Serene Master) |
 | **Exit from Exile** (CLB precon) RG | Faldorn, Dread Wolf Herald | RG | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Exquisite Invention** (C18 precon) UR | Saheeli, the Gifted (**planeswalker**) | UR | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Mishra's Burnished Banner** (BRC precon) UBR | Mishra, Eminent One | UBR | 100 | 🟡 all 100 implemented, 6 carry residuals (below) |
@@ -1365,6 +1367,47 @@ Galea / Kathril / Chishiro (seed 10400, 1,000 games) and Nelly / Eshki /
 Estrid (seed 10401, 1,000): all decided, Jirina 28.4 % and 24.3 %; census
 (seed 10401): no card of the list unplayed. `--bench` byte-identical;
 cube/sos/sealed (seed 10402): 7,500 decided.
+
+The **hundred-and-twenty-sixth** is Commander 2013's **Eternal Bargain**
+(`EternalBargain_C13`) — Esper lifegain and artifacts under Oloro, Ageless
+Ascetic (already in `sets::cmdr`, its command-zone upkeep life CR 113.6b),
+`--pod-decks 126` (committed as 125 while Riveteers Rampage landed there).
+Twenty cards were missing (`cmdr_oloro.rs`). The primitives, each in its own
+module under `game/effects`: `Effect::ExchangePower` (CR 701.10g, Serene
+Master), `Effect::EachPlayerTakesCreatureOfNext` (Order of Succession — every
+chooser takes the next living player's most valuable creature, the caster
+turns the circle the way that nets it the most; left is the next seat) and
+`Effect::LookTopFiveDigForLife` (Lim-Dûl's Vault). Residuals: Order of
+Succession's and the Vault's choices are the engine's; no bot path picks
+Springjack Pasture's X; Serene Master's exchanged power counts counters twice.
+Pods (release, 3,000 games: 4 seats beside Sidar / Leinore / Sigarda, seed
+10520; 6 seats, 10521; 8 seats, 10522): 2,995 decided — one draw is Famine
+killing the last three players at once (CR 104.4a), four board caps are Desert
+Bloom's Scute Swarm (TODO); Oloro 34.2 % at four seats. Census: no card of the
+four lists unplayed. Debug strict pods (400 games): clean. `--bench`
+byte-identical.
+
+The **hundred-and-twenty-first** is March of the Machine Commander's
+**Cavalry Charge** (`CavalryCharge_MOC`) — Esper Knights under Sidar Jabari of
+Zhalfir, `--pod-decks 121`. Nineteen cards were missing (`cmdr_sidar.rs`). The
+primitives: `ActivatedAbility::tap_n_x` ("Tap X untapped Knights" — Aryel; with
+no X named it is the target's power) and Haakon's Knights ride
+`CastFromGraveyardMatching` (a duplicate `GraveyardCastFreely` landed first
+and was folded in). Its finds: ⚠ **an Eminence "whenever you attack" never
+fired from the command zone** (CR 113.6b — the you-attack walk read the
+battlefield and graveyards only); ⚠ **cards drawn "this turn" reset only for
+the active player**, so off-turn draw counts were stale (Elenda and Azor's end
+step, second-card-each-turn triggers, Spirit of the Labyrinth's cap); ⚠ **the
+bot's graveyard-grant gate opened only on the seat's own turn** although
+Sarcophagus's and Haakon's grants work on any turn (a debug pod tripped the
+gate's assertion). Residuals: **Path of the Enigma** holds no planar vote;
+**Syr Elenora**'s power is a battlefield static; **Aryel**'s X is the
+target's power. Pods (release, 3,000 games: 4 seats beside Leinore / Sigarda /
+Teval, seed 10510; 6 seats, 10511; 8 seats, 10512): 2,998 decided, Sidar
+48.1 % at four seats; the two board caps are Miracle Worker's Extravagant
+Replication copying itself (below, TODO). Census: no card of the four lists
+unplayed. Debug `CRAB_ANSWER_LOG=strict` pods (400 games, 4 and 6 seats):
+clean after the gate fix. `--bench` byte-identical.
 
 The **hundred-and-twentieth** is Innistrad: Midnight Hunt Commander's **Coven
 Counters** (`CovenCounters_MIC`) — Selesnya +1/+1 counters and coven under
