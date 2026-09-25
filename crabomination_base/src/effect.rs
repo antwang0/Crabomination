@@ -7947,6 +7947,13 @@ pub enum Effect {
     /// permanents, any other kind by default, and add one poison to each
     /// opponent already poisoned. (No multi-select UI yet.)
     Proliferate,
+    /// "For each [permanent matching `filter`], choose a counter on it. You
+    /// may put an additional counter of that kind on that permanent" (The
+    /// Caves of Androzani II, III). One kind per permanent, chosen the way
+    /// proliferate chooses (good counters on yours, bad on theirs); not a
+    /// proliferate (CR 701.34), so no player counters and no Proliferated
+    /// event.
+    AddOneOfAChosenCounterToEach { filter: crate::card::SelectionRequirement },
     /// Gain control of `what`. `to` names the new controller (`None` = the
     /// effect's controller, the common case — Threaten, Act of Treason). A
     /// `Some(pref)` hands control to another player — Wishclaw Talisman's
@@ -8333,6 +8340,9 @@ pub enum Effect {
     /// Swift Silence — counter every other spell on the stack, then draw a
     /// card for each spell countered this way (CR 701.5).
     CounterAllOtherSpellsDrawPer,
+    /// "Counter all other spells" — `CounterAllOtherSpellsDrawPer` without
+    /// the draw (Reverse the Polarity).
+    CounterAllOtherSpells,
     /// Fall (Rise // Fall) — `who` reveals `count` cards at random from their
     /// hand, then discards each nonland card revealed this way. Lands revealed
     /// this way stay in hand.
@@ -8695,6 +8705,10 @@ pub enum Effect {
     },
     /// Copy target spell/ability `count` times.
     CopySpell    { what: Selector, count: Value },
+    /// "Copy it, except the copy isn't legendary" (The Sixth Doctor): one
+    /// copy of the spell `what` names, with Legendary stripped (CR 707.9b),
+    /// so a permanent copy survives the legend rule beside the original.
+    CopySpellNonLegendary { what: Selector },
     /// As `CopySpell`, but when the copied spell is a permanent spell the
     /// resulting token permanent carries riders: `grant_haste` gives it
     /// haste until end of turn, and `sacrifice_eot` schedules a
@@ -11388,6 +11402,11 @@ pub enum Effect {
     /// without paying its mana cost." Master of Predicaments. The guess is a
     /// `Decision::OptionalTrigger` on the guesser's seat (true = "greater").
     GuessManaValueAboveElseCastFree { who: PlayerRef, threshold: u32 },
+    /// The Seventh Doctor — `GuessManaValueAboveElseCastFree` with the line
+    /// read off a `Value` (the number of artifacts you control), and
+    /// `otherwise` run when no spell was cast this way ("If you don't cast a
+    /// spell this way, investigate").
+    GuessManaValueAgainstValue { who: PlayerRef, threshold: Value, otherwise: Box<Effect> },
 
     /// "`who` may pay `life`. If they don't, they return a permanent they
     /// control to its owner's hand." Umbilicus — one pay-or-bounce decision per

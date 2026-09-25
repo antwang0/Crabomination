@@ -1724,6 +1724,9 @@ pub enum StaticEffect {
     /// triggers an additional time." Read at trigger dispatch off the
     /// `triggered_by_draw` candidate flag.
     DoubleControllerDrawTriggers,
+    /// Barbara Wright — "Sagas you control have read ahead" (CR 714.3c): read
+    /// in `saga_enter_advance` beside the printed `read_ahead` flag.
+    YourSagasHaveReadAhead,
     /// Anhelo, the Painter — "The first instant or sorcery spell you cast
     /// each turn has casualty N." Read by `GameState::casualty_for` (the
     /// `CastSpellCasualty` action and the bot's casualty block).

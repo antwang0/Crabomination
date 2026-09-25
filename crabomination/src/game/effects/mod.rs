@@ -37,6 +37,7 @@ mod counter_kinds;
 mod counter_blitz;
 mod fantastic_four;
 mod turtle_power;
+mod blast_from_the_past;
 mod revival;
 mod wakanda;
 mod chosen_color_damage;
@@ -15458,7 +15459,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::CounterAllOtherSpellsDrawPer => {
+            Effect::CounterAllOtherSpellsDrawPer | Effect::CounterAllOtherSpells => {
                 use crate::game::types::StackItem;
                 let src = ctx.source;
                 let to_remove: Vec<usize> = self
@@ -15481,7 +15482,7 @@ impl GameState {
                         countered += 1;
                     }
                 }
-                if countered > 0 {
+                if countered > 0 && matches!(effect, Effect::CounterAllOtherSpellsDrawPer) {
                     self.run_effect(
                         &Effect::Draw {
                             who: Selector::You,
@@ -36544,50 +36545,25 @@ impl GameState {
                 // Master of Predicaments — you pick a card, they guess whether
                 // its mana value is greater than `threshold`; a wrong guess
                 // lets you cast it for free.
-                use crate::decision::{Decision, DecisionAnswer};
-                let p = ctx.controller;
-                let Some(guesser) = self.resolve_players(who, ctx).first().copied() else {
-                    return Ok(());
-                };
-                // Auto-pick the hand card whose mana value the guesser is
-                // least likely to call (the extreme farthest from the line).
-                let Some((chosen, mv)) = self.players[p]
-                    .hand
-                    .iter()
-                    .map(|c| (c.id, c.definition.cost.cmc()))
-                    .max_by_key(|(_, mv)| mv.abs_diff(*threshold))
-                else {
-                    return Ok(());
-                };
-                let decision = Decision::OptionalTrigger {
-                    source: ctx.source.unwrap_or(CardId(0)),
-                    description: format!("Is the chosen card's mana value greater than {threshold}?"),
-                    kind: OptionalKind::Neutral,
-                };
-                let _ = guesser;
-                let guess = matches!(self.decider.decide(&decision), DecisionAnswer::Bool(true));
-                if guess == (mv > *threshold) {
-                    return Ok(());
-                }
-                let auto_target = self
-                    .players[p]
-                    .hand
-                    .iter()
-                    .find(|c| c.id == chosen)
-                    .map(|c| c.definition.effect.clone())
-                    .and_then(|e| self.auto_target_for_effect_avoiding(&e, p, Some(chosen)));
-                let cast = self.cast_card_for_free(
-                    p,
-                    chosen,
-                    crate::card::Zone::Hand,
-                    auto_target,
-                    vec![],
-                    None,
-                    None,
-                    false,
-                );
-                events.extend(cast.unwrap_or_default());
+                self.guess_mana_value_then_cast(who, *threshold, ctx, events);
                 Ok(())
+            }
+
+            Effect::GuessManaValueAgainstValue { who, threshold, otherwise } => {
+                let line = self.evaluate_value(threshold, ctx).max(0) as u32;
+                if !self.guess_mana_value_then_cast(who, line, ctx, events) {
+                    self.run_effect(otherwise, ctx, events)?;
+                }
+                Ok(())
+            }
+
+            Effect::CopySpellNonLegendary { what } => {
+                self.copy_spell_non_legendary(what, ctx, events);
+                Ok(())
+            }
+
+            Effect::AddOneOfAChosenCounterToEach { filter } => {
+                self.add_one_of_a_chosen_counter_to_each(filter, ctx, events)
             }
 
             Effect::ExileTopAndGrantMayPlay {
@@ -41188,22 +41164,7 @@ impl GameState {
                 let friendly = c.controller == proliferating;
                 let kinds: Vec<CounterType> = c.counters.iter()
                     .filter(|(_, n)| **n > 0)
-                    .filter(|(k, _)| match **k {
-                        // Bad-for-friendly: skip on your stuff, proliferate
-                        // on enemy stuff.
-                        CounterType::MinusOneMinusOne => !friendly,
-                        CounterType::Stun => !friendly,
-                        // Good-for-friendly: proliferate yours, skip
-                        // opponent's.
-                        CounterType::PlusOnePlusOne
-                        | CounterType::Loyalty
-                        | CounterType::Charge
-                        | CounterType::Page => friendly,
-                        // Other kinds: proliferate by default (the controller
-                        // can always elect to proliferate any counter under
-                        // the printed rule).
-                        _ => true,
-                    })
+                    .filter(|(k, _)| proliferate_wants(**k, friendly))
                     .map(|(k, _)| *k)
                     .collect();
                 (c.id, kinds)
@@ -42714,5 +42675,19 @@ impl GameState {
             return cp.colors.iter().collect();
         }
         self.find_card_anywhere(src).map(|c| c.definition.printed_colors()).unwrap_or_default()
+    }
+}
+
+/// Whether the auto-decider adds a counter of `kind` to a permanent when
+/// proliferating, `friendly` meaning the proliferating player controls it.
+pub(super) fn proliferate_wants(kind: CounterType, friendly: bool) -> bool {
+    match kind {
+        // Bad-for-friendly: skip on your stuff, proliferate on enemy stuff.
+        CounterType::MinusOneMinusOne | CounterType::Stun => !friendly,
+        // Good-for-friendly: proliferate yours, skip opponent's.
+        CounterType::PlusOnePlusOne | CounterType::Loyalty | CounterType::Charge | CounterType::Page => friendly,
+        // Other kinds: proliferate by default (the controller can always
+        // elect to proliferate any counter under the printed rule).
+        _ => true,
     }
 }

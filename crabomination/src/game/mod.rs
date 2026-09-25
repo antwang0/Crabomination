@@ -30654,6 +30654,8 @@ fn static_effect_to_effects(
             | StaticEffect::DoubleControllerTurnedFaceUpTriggers
             // Krang — read at trigger dispatch via `draw_trigger_extra_fires`.
             | StaticEffect::DoubleControllerDrawTriggers
+            // Barbara Wright — read in `saga_enter_advance`.
+            | StaticEffect::YourSagasHaveReadAhead
             // Anhelo — read by `casualty_for`; no layer effect.
             | StaticEffect::FirstInstantSorceryHasCasualty(_)
             // Rod of Absorption — read at the end of spell resolution via

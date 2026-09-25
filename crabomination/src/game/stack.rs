@@ -1456,7 +1456,18 @@ impl GameState {
         if card.definition.saga_chapters.is_empty() {
             return;
         }
-        if !card.definition.read_ahead {
+        // Barbara Wright — "Sagas you control have read ahead".
+        let granted = !card.definition.read_ahead && {
+            let ctrl = card.controller;
+            self.battlefield.iter().any(|c| {
+                c.controller == ctrl
+                    && c.definition
+                        .static_abilities
+                        .iter()
+                        .any(|sa| matches!(sa.effect, crate::effect::StaticEffect::YourSagasHaveReadAhead))
+            })
+        };
+        if !card.definition.read_ahead && !granted {
             self.saga_advance(card_id);
             return;
         }

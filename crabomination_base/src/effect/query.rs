@@ -1356,7 +1356,11 @@ impl Effect {
             | Effect::RandomHandCardDeployOrCastFree { who } => sel_has_target(who),
             // Search-library / counter-all effects pick no cast-time target.
             Effect::SearchLibraryCreaturesUpToTotalManaValue { .. }
-            | Effect::CounterAllOtherSpellsDrawPer => false,
+            | Effect::CounterAllOtherSpellsDrawPer
+            | Effect::CounterAllOtherSpells
+            | Effect::GuessManaValueAgainstValue { .. }
+            | Effect::AddOneOfAChosenCounterToEach { .. } => false,
+            Effect::CopySpellNonLegendary { what } => sel_has_target(what),
             Effect::DestroyTargetsPolymorph { .. } => true,
             Effect::DestroyTargets { .. } => true,
             Effect::DealHalfLifeDamage { .. } => false,
