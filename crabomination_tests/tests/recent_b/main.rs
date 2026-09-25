@@ -67,6 +67,7 @@ mod cmdr_kathril;
 mod cmdr_jared;
 mod cmdr_kalamax;
 mod cmdr_otrimi;
+mod cmdr_henzie;
 mod cmdr_breya;
 mod cmdr_yidris;
 mod cmdr_mimeoplasm;
