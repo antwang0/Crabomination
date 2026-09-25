@@ -2621,9 +2621,27 @@ impl ActionCensus {
         // name, and must not land in the card census as one.
         let found = g.find_card_anywhere(id).map(|c| c.definition.name.to_string());
         let name = found.clone().unwrap_or_else(|| format!("{id:?}"));
-        let line = match idx {
-            Some(i) => format!("{variant}#{i} {name}"),
-            None => format!("{variant} {name}"),
+        // The ability's effect, so a granted ability (Trazyn's graveyard
+        // artifacts, an anthem's grant) names what it is, not only its index.
+        let effect = idx.and_then(|i| {
+            let c = g.battlefield_find(id)?;
+            let printed = &c.definition.activated_abilities;
+            let ab = match printed.get(i) {
+                Some(ab) => ab,
+                None => *g.granted_abilities_of(c, &g.grant_scan()).get(i - printed.len())?,
+            };
+            Some(format!(
+                "{}{}{}{}",
+                crate::server::view::ability_effect_label(&ab.effect),
+                if ab.tap_cost { ", {T}" } else { "" },
+                if ab.sac_cost { ", sac self" } else { "" },
+                if ab.sac_other_filter.is_some() { ", sac other" } else { "" },
+            ))
+        });
+        let line = match (idx, effect) {
+            (Some(i), Some(e)) => format!("{variant}#{i} {name} [{e}]"),
+            (Some(i), None) => format!("{variant}#{i} {name}"),
+            (None, _) => format!("{variant} {name}"),
         };
         (line, found)
     }
