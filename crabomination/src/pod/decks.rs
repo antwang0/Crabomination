@@ -5418,3 +5418,32 @@ pub const THIRTEENTH_MAIN: &[CardFactory] = &[
     // Basics
     island, island, island, island, mountain, mountain, mountain, forest, forest, forest, forest,
 ];
+
+pub const ABADDON_COMMANDERS: &[CardFactory] = &[abaddon_the_despoiler];
+
+/// **The Ruinous Powers**, the Warhammer 40,000 Commander deck (40K,
+/// 2022-10-07), exactly as MTGJSON's `TheRuinousPowers_40K` prints it: 75
+/// nonbasic cards + 8 Mountains + 8 Swamps + 8 Islands = 99. Grixis
+/// Chaos cascade and Demons under Abaddon the Despoiler.
+pub const ABADDON_MAIN: &[CardFactory] = &[
+    past_in_flames, decree_of_pain, blasphemous_act, deny_reality, chaos_warp, reverberate,
+    bile_blight, bituminous_blast, brainstorm, dark_ritual, chromatic_lantern, assault_suit,
+    sol_ring, talisman_of_creativity, talisman_of_dominance, talisman_of_indulgence,
+    worn_powerstone, commanders_sphere, wayfarers_bauble, warstorm_surge, exotic_orchard,
+    foreboding_ruins, sunken_hollow, barren_moor, crumbling_necropolis, molten_slagheap,
+    temple_of_the_false_god, command_tower, dismal_backwater, evolving_wilds, forgotten_cave,
+    path_of_ancestry, swiftwater_cliffs, terramorphic_expanse, belakor_the_dark_master,
+    lord_of_change, blight_grenade, great_unclean_one, mandate_of_abaddon,
+    mortarion_daemon_primarch, nurgles_conscription, plague_drone, poxwalkers, sloppity_bilepiper,
+    tallyman_of_nurgle, venomcrawler, aspiring_champion, bloodthirster, dark_apostle,
+    keeper_of_secrets, kharn_the_betrayer, knight_rampager, let_the_galaxy_burn,
+    blood_for_the_blood_god, chaos_defiler, chaos_mutation, drachnyen, exalted_flamer_of_tzeentch,
+    helbrute, the_horus_heresy, kill_maim_burn, lucius_the_eternal, magnus_the_red,
+    mutalith_vortex_beast, pink_horror, the_ruinous_powers, tzaangor_shaman, heralds_of_tzeentch,
+    nurgles_rot, bloodcrusher_of_khorne, chaos_terminator_lord, herald_of_slaanesh, noise_marine,
+    seeker_of_slaanesh, the_lost_and_the_damned,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, island, island, island, island, island, island,
+    island, island,
+];

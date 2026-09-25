@@ -1458,6 +1458,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::THIRTEENTH_COMMANDERS,
             main: decks::THIRTEENTH_MAIN,
         },
+        // Hundred-and-seventy-ninth: The Ruinous Powers (Warhammer 40,000) —
+        // Grixis Chaos cascade and Demons under Abaddon the Despoiler
+        // (CR 508.1d Seeker of Slaanesh's forced attack). `--pod-decks 179`.
+        PodDeck {
+            name: "Abaddon the Despoiler (UBR)",
+            commanders: decks::ABADDON_COMMANDERS,
+            main: decks::ABADDON_MAIN,
+        },
     ]
 }
 
@@ -2097,6 +2105,9 @@ mod tests {
             ("Caesar", [0xCAE5, 170, 9094]),
             // CR 701.50 connive triggers, CR 702.62 granted suspend.
             ("Doctor Doom", [0xD00D, 176, 9100]),
+            // CR 702.85 granted cascade, CR 615 Khârn's control swap, CR
+            // 508.1d a forced attack.
+            ("Abaddon", [0xABAD, 179, 9103]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
