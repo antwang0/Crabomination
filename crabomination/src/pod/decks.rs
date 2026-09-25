@@ -3709,3 +3709,33 @@ pub const SIDAR_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, island, island, island,
     island, island, island, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const OMO_COMMANDERS: &[CardFactory] = &[omo_queen_of_vesuva];
+
+/// **Tricky Terrain**, the Modern Horizons 3 Commander deck (M3C,
+/// 2024-06-14), exactly as MTGJSON's `TrickyTerrain_M3C` prints it: 92
+/// nonbasic cards + 3 Islands + 4 Forests = 99. Simic lands-matter under Omo,
+/// Queen of Vesuva.
+pub const OMO_MAIN: &[CardFactory] = &[
+    jyoti_moag_ancient, march_from_velis_vel, wonderscape_sage, copy_land, desert_warfare,
+    trenchpost, sage_of_the_maze, lazotep_quarry, rampant_frogantua, sunken_palace,
+    horizon_of_progress, planar_nexus, aggressive_biomancy, talon_gates_of_madara,
+    hydroid_krasis, terastodon, lair_of_the_hydra, nissa_steward_of_elements,
+    magus_of_the_candelabra, lumbering_falls, blast_zone, apex_devastator, dreamroot_cascade,
+    summary_dismissal, yavimaya_coast, flooded_grove, hour_of_promise, ramunap_excavator,
+    hydra_broodmaster, drown_in_dreams, vineglimmer_snarl, vivien_reid,
+    yavimaya_cradle_of_growth, dryad_of_the_ilysian_grove, mirage_mirror, overflowing_basin,
+    temple_of_mystery, chromatic_lantern, oblivion_stone, scute_swarm, ulvenwald_hydra,
+    evacuation, replication_technique, finale_of_revelation, mana_reflection,
+    uro, curse_of_the_swine, vesuva, dark_depths, thespians_stage,
+    avenger_of_zendikar, seers_sundial, rampaging_baloths, fog_bank, urzas_power_plant,
+    urzas_tower, urzas_mine, satyr_wayfinder, arcane_denial, simic_guildgate, treasure_cruise,
+    sol_ring, basilisk_gate, beast_within, tatyova_benthic_druid, propaganda,
+    simic_growth_chamber, floriferous_vinewall, arcane_signet, desert_of_the_indomitable,
+    hashep_oasis, expedition_map, hidden_cataract, hidden_nursery, volatile_fault,
+    growth_spiral, elvish_rejuvenator, urban_evolution, harmonize, thornwood_falls, cloudpost,
+    sylvan_scrying, acidic_slime, pongify, lush_oasis, skullwinder, desert_of_the_mindful,
+    command_tower, poison_dart_frog, glimmerpost, eureka_moment, quandrix_campus,
+    // Basics: 3 island, 4 forest
+    island, island, island, forest, forest, forest, forest,
+];

@@ -1008,6 +1008,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SIDAR_COMMANDERS,
             main: decks::SIDAR_MAIN,
         },
+        // Hundred-and-twenty-second: the hundred-and-twelfth official list
+        // (Tricky Terrain, M3C) — Simic lands-matter under Omo, Queen of
+        // Vesuva. `--pod-decks 122`.
+        PodDeck {
+            name: "Omo, Queen of Vesuva (GU)",
+            commanders: decks::OMO_COMMANDERS,
+            main: decks::OMO_MAIN,
+        },
     ]
 }
 
@@ -1583,6 +1591,8 @@ mod tests {
             ("Leinore", [0x1E17, 120, 9044]),
             // CR 113.6b eminence from the command zone; CR 602.5b tap-X costs.
             ("Sidar", [0x51DA, 121, 9045]),
+            // Everything counters (every land type), CR 701.5 Summary Dismissal.
+            ("Omo", [0x0A0A, 122, 9046]),
         ] {
             let precon = *field.iter().find(|d| d.name.starts_with(name)).expect("the precon seat");
             assert_eq!(precon.card_count(), 100);
