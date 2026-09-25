@@ -1948,6 +1948,14 @@ pub enum StaticEffect {
     /// "If a creature you control would explore, instead it explores, then it
     /// explores again" (Topography Tracker) — read by `Effect::Explore`.
     ExploresTwice,
+    /// "You may look at an additional N cards each time you surveil"
+    /// (Enhanced Surveillance), read by `Effect::Surveil`.
+    SurveilLooksExtra { n: u32 },
+    /// "You may play lands and cast spells from among cards in your graveyard
+    /// you've surveilled this turn … pay life equal to its mana value rather
+    /// than its mana cost" (Eye of Duskmantle): stamped as a pay-life may-play
+    /// permission on each card surveilled into the graveyard.
+    MayPlaySurveilledThisTurnForLife,
     /// CR 702.131b — Ascend on a permanent: any time its controller controls
     /// ten or more permanents, they get the city's blessing. Checked on every
     /// permanent entry (`GameState::apply_permanent_ascend`).

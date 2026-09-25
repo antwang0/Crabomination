@@ -1632,7 +1632,7 @@ pub fn knowledge_and_power() -> CardDefinition {
         cost: cost(&[generic(4), r()]),
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::ScriedOrSurveiled, EventScope::YourControl),
+            event: EventSpec::new(EventKind::Scried, EventScope::YourControl),
             effect: Effect::MayPay {
                 description: "Pay {2} to deal 2 damage?".into(),
                 mana_cost: cost(&[generic(2)]),

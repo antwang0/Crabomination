@@ -374,7 +374,7 @@ pub fn mirelurk_queen() -> CardDefinition {
                 }),
             }),
             TriggeredAbility {
-                event: EventSpec::new(EventKind::CardMilled, EventScope::AnyPlayer)
+                event: EventSpec::new(EventKind::Milled, EventScope::AnyPlayer)
                     .with_filter(Predicate::EntityMatches {
                         what: Selector::TriggerSource,
                         filter: R::Nonland,

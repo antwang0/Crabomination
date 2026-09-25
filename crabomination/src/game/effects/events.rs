@@ -91,7 +91,8 @@ pub(crate) fn event_kind_bits(event: &GameEvent) -> u128 {
         E::CardsExiledFromHandOrBy { .. } => bits!(K::CardsExiledFromHandOrByYou),
         E::CreatureFought { .. } => bits!(K::Fights),
         E::DamagePrevented { to_player: Some(_), .. } => bits!(K::DamageToPlayerPrevented),
-        E::ScriedOrSurveiled { .. } => bits!(K::ScriedOrSurveiled),
+        E::ScriedOrSurveiled { surveil: false, .. } => bits!(K::ScriedOrSurveiled, K::Scried),
+        E::ScriedOrSurveiled { surveil: true, .. } => bits!(K::ScriedOrSurveiled, K::Surveilled),
         E::OpponentCausedYouToDiscard { .. } => bits!(K::OpponentCausedYouToDiscard),
         E::DungeonCompleted { .. } => bits!(K::DungeonCompleted),
         E::Proliferated { .. } => bits!(K::Proliferated),
@@ -120,7 +121,8 @@ pub(crate) fn event_kind_bits(event: &GameEvent) -> u128 {
         ),
         E::CardLeftGraveyard { .. } => bits!(K::CardLeftGraveyard),
         E::CardPutIntoGraveyard { .. } => bits!(K::LandPutIntoGraveyard, K::PutIntoGraveyard),
-        E::CardMilled { .. } => bits!(K::PutIntoGraveyard, K::CardMilled),
+        E::CardMilled { .. } => bits!(K::PutIntoGraveyard, K::CardMilled, K::Milled),
+        E::CardSurveiledIntoGraveyard { .. } => bits!(K::CardMilled),
         E::CardPutIntoHandFromGraveyard { .. } => bits!(K::PutIntoHandFromGraveyard),
         E::PermanentExiled { .. } => bits!(K::CardExiled),
         E::CardExiledFromPlayOrGraveyard { .. } => bits!(K::CardExiledFromPlayOrGraveyard),
@@ -329,6 +331,8 @@ fn reference_event_kind_matches(
         (EventKind::Fights, GameEvent::CreatureFought { .. }) => true,
         (EventKind::DamageToPlayerPrevented, GameEvent::DamagePrevented { to_player: Some(_), .. }) => true,
         (EventKind::ScriedOrSurveiled, GameEvent::ScriedOrSurveiled { .. }) => true,
+        (EventKind::Scried, GameEvent::ScriedOrSurveiled { surveil: false, .. }) => true,
+        (EventKind::Surveilled, GameEvent::ScriedOrSurveiled { surveil: true, .. }) => true,
         (
             EventKind::OpponentCausedYouToDiscard,
             GameEvent::OpponentCausedYouToDiscard { .. },
@@ -369,6 +373,8 @@ fn reference_event_kind_matches(
         (EventKind::ChoseTargets, GameEvent::ChoseTargets { .. }) => true,
         (EventKind::CardCycled, GameEvent::CardCycled { .. }) => true,
         (EventKind::CardMilled, GameEvent::CardMilled { .. }) => true,
+        (EventKind::CardMilled, GameEvent::CardSurveiledIntoGraveyard { .. }) => true,
+        (EventKind::Milled, GameEvent::CardMilled { .. }) => true,
         (
             EventKind::PermanentDestroyedByEffect,
             GameEvent::PermanentDestroyedByEffect { .. },
@@ -547,6 +553,7 @@ pub(crate) fn event_kind_fans_out(kind: &EventKind) -> bool {
             // `once_per_batch`; before this kind fanned out, both wordings
             // read as the plural one and the singular cards under-fired.
             | EventKind::CardMilled
+            | EventKind::Milled
             // CR 603.6 — a `CreateToken { count: 3 }`, a mass reanimation and
             // a two-sided ETB all push several `PermanentEntered` into ONE
             // batch, and the singular printed wording ("whenever **another
@@ -875,6 +882,7 @@ fn event_matches_spec_rest(
                     event,
                     GameEvent::CardCycled { card_id, .. }
                     | GameEvent::CardMilled { card_id, .. }
+                    | GameEvent::CardSurveiledIntoGraveyard { card_id, .. }
                     | GameEvent::CardDiscarded { card_id, .. }
                     | GameEvent::OpponentCausedYouToDiscard { card_id, .. }
                     | GameEvent::CardPutIntoGraveyard { card_id, .. }
@@ -1289,6 +1297,7 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         | GameEvent::ClassLevelReached { player, .. }
         | GameEvent::PoisonAdded { player, .. }
         | GameEvent::CardMilled { player, .. }
+        | GameEvent::CardSurveiledIntoGraveyard { player, .. }
         | GameEvent::CumulativeUpkeepUnpaid { player, .. }
         | GameEvent::PermanentDestroyedByEffect { controller: player, .. }
         | GameEvent::ManifestedDread { player, .. }
@@ -1446,7 +1455,9 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         // predicates can introspect it ("a creature card put into a graveyard
         // from a library" — Dreadhound). SelfSource milled triggers match by
         // id in the scope check, so this rebind doesn't affect them.
-        GameEvent::CardMilled { card_id, .. } => Some(EntityRef::Card(*card_id)),
+        GameEvent::CardMilled { card_id, .. } | GameEvent::CardSurveiledIntoGraveyard { card_id, .. } => {
+            Some(EntityRef::Card(*card_id))
+        }
         // Bind TriggerSource to the card put into the graveyard "this way", so
         // Paranormal Analyst's "put a card you put into your graveyard this way
         // into your hand" can return it.
@@ -1563,6 +1574,7 @@ fn event_card(event: &GameEvent) -> Option<CardId> {
         | GameEvent::CreatureSacrificed { card_id, .. }
         | GameEvent::CardCycled { card_id, .. }
         | GameEvent::CardMilled { card_id, .. }
+        | GameEvent::CardSurveiledIntoGraveyard { card_id, .. }
         | GameEvent::PermanentSacrificed { card_id, .. }
         | GameEvent::CreatureLeftWithoutDying { card_id, .. }
         | GameEvent::PermanentLeftBattlefield { card_id, .. }
@@ -1762,6 +1774,7 @@ mod tests {
             E::CreatureFought { card_id: c, controller: 0 },
             E::PaidLife { player: 0, amount: 1 },
             E::ScriedOrSurveiled { player: 0, surveil: false },
+            E::ScriedOrSurveiled { player: 0, surveil: true },
             E::Proliferated { player: 0 },
             E::Foraged { player: 0 },
             E::EvidenceCollected { player: 0 },
@@ -1823,6 +1836,7 @@ mod tests {
             E::PermanentReturnedToHand { card_id: c, player: 0 },
             E::SpellCountered { card_id: c, player: 0 },
             E::CardMilled { player: 0, card_id: c },
+            E::CardSurveiledIntoGraveyard { player: 0, card_id: c },
             E::PermanentDestroyedByEffect {
                 card_id: c,
                 controller: 0,
@@ -1914,6 +1928,9 @@ mod tests {
             K::Fights,
             K::PaidLife,
             K::ScriedOrSurveiled,
+            K::Scried,
+            K::Surveilled,
+            K::Milled,
             K::DungeonCompleted,
             K::Proliferated,
             K::Foraged,

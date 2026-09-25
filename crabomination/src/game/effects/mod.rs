@@ -11381,7 +11381,21 @@ impl GameState {
             | Effect::RearrangeTop { who, amount } => {
                 use crate::decision::Decision;
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
-                let n = self.evaluate_value(amount, ctx).max(0) as usize;
+                let mut n = self.evaluate_value(amount, ctx).max(0) as usize;
+                // Enhanced Surveillance — "look at an additional two cards each
+                // time you surveil" (a surveil of 0 stays no surveil).
+                if n > 0 && matches!(effect, Effect::Surveil { .. }) {
+                    n += self
+                        .battlefield
+                        .iter()
+                        .filter(|c| c.controller == p)
+                        .flat_map(|c| c.definition.static_abilities.iter())
+                        .map(|sa| match sa.effect {
+                            crate::effect::StaticEffect::SurveilLooksExtra { n } => n as usize,
+                            _ => 0,
+                        })
+                        .sum::<usize>();
+                }
                 // CR 701.22b: "If a player is instructed to scry 0, no
                 // scry event occurs. Abilities that trigger whenever a
                 // player scries won't trigger." (Same wording covers
@@ -14391,6 +14405,71 @@ impl GameState {
                     // Chainable: a follow-up `GrantMayPlay(LastMoved)` lets
                     // the controller cast the exiled card (Hostage Taker).
                     self.scratch.last_moved_cards.push(cid);
+                }
+                Ok(())
+            }
+
+            Effect::EachPlayerExilesChosenUntilSourceLeaves { count, filter } => {
+                // CR 610.3a — nothing is exiled once the source is gone.
+                let Some(source) = ctx.source.filter(|s| self.battlefield_find(*s).is_some())
+                else {
+                    return Ok(());
+                };
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                if n == 0 {
+                    return Ok(());
+                }
+                let seats = self.apnap_sort(
+                    (0..self.players.len()).filter(|&p| !self.players[p].eliminated).collect(),
+                );
+                let mut cursor = 0;
+                let mut picks: Vec<CardId> = Vec::new();
+                for p in seats {
+                    let mut mine: Vec<&CardInstance> = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| c.controller == p && self.evaluate_requirement_on_card(filter, c, p))
+                        .collect();
+                    if mine.len() <= n {
+                        picks.extend(mine.iter().map(|c| c.id));
+                        continue;
+                    }
+                    // A headless seat gives up its cheapest, smallest bodies.
+                    mine.sort_by_key(|c| (c.definition.cost.cmc(), c.power()));
+                    let auto: Vec<CardId> = mine.iter().take(n).map(|c| c.id).collect();
+                    let candidates: Vec<(CardId, String)> =
+                        mine.iter().map(|c| (c.id, c.definition.name.to_string())).collect();
+                    let Some(chosen) = self.ask_seat_cards_logged(
+                        &mut cursor,
+                        p,
+                        format!("Choose {n} creatures to exile"),
+                        source,
+                        candidates,
+                        n as u32,
+                        n as u32,
+                        PickValue::Cost,
+                        effect,
+                        auto,
+                    ) else {
+                        return Ok(());
+                    };
+                    picks.extend(chosen);
+                }
+                self.clear_answer_log();
+                for cid in picks {
+                    if self.battlefield_find(cid).is_none() {
+                        continue;
+                    }
+                    self.remove_from_battlefield_to_exile(cid);
+                    events.push(GameEvent::PermanentExiled { card_id: cid });
+                    if let Some(c) = self.exile.iter_mut().find(|c| c.id == cid) {
+                        c.exiled_by = Some(crate::card::ExileLink {
+                            source,
+                            return_to: crate::card::ExileReturnZone::Battlefield,
+                            monarch_guard: None,
+                        });
+                        c.exiled_with = Some(source);
+                    }
                 }
                 Ok(())
             }
@@ -31882,6 +31961,44 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::BecomeCopyKeepingIdentity { what, source } => {
+                // The copier's own name, before any copy it's already become.
+                let names: Vec<(CardId, &'static str)> = self
+                    .resolve_selector(what, ctx)
+                    .iter()
+                    .filter_map(|e| e.as_permanent_id())
+                    .filter_map(|cid| {
+                        let printed = self
+                            .temporary_copies
+                            .iter()
+                            .find(|t| t.card == cid)
+                            .and_then(|t| t.original.as_ref().map(|d| d.name));
+                        self.battlefield_find(cid).map(|c| (cid, printed.unwrap_or(c.definition.name)))
+                    })
+                    .collect();
+                self.run_effect(
+                    &Effect::BecomeCopyOf {
+                        what: what.clone(),
+                        source: source.clone(),
+                        extra_creature_types: vec![],
+                        keep_own_triggered: false,
+                        keep_own_activated: true,
+                    },
+                    ctx,
+                    events,
+                )?;
+                for (cid, name) in names {
+                    if let Some(c) = self.battlefield.find_by_id_mut(cid) {
+                        let def = c.definition_make_mut();
+                        def.name = name;
+                        if !def.supertypes.contains(&crate::card::Supertype::Legendary) {
+                            def.supertypes.push(crate::card::Supertype::Legendary);
+                        }
+                    }
+                }
+                Ok(())
+            }
+
             Effect::BecomeCopyOf {
                 what,
                 source,
@@ -38207,6 +38324,12 @@ impl GameState {
             Effect::AdditionalEndStep { count } => {
                 let n = self.evaluate_value(count, ctx).max(0) as u32;
                 self.additional_end_steps = self.additional_end_steps.saturating_add(n);
+                Ok(())
+            }
+
+            Effect::AdditionalBeginningPhase { count } => {
+                let n = self.evaluate_value(count, ctx).max(0) as u32;
+                self.additional_beginning_phases = self.additional_beginning_phases.saturating_add(n);
                 Ok(())
             }
 

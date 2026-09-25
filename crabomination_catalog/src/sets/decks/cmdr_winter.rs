@@ -502,11 +502,10 @@ pub fn old_stickfingers() -> CardDefinition {
     })
 }
 
-/// Polluted Cistern // Dim Oubliette — Cistern: milling one or more cards
-/// drains each opponent 1 per card type among them. Oubliette: on unlock,
-/// mill three, then return a creature card from your graveyard.
-///
-/// Approximation: only milled cards count.
+/// Polluted Cistern // Dim Oubliette — Cistern: one or more cards put into
+/// your graveyard from your library (milled or surveiled) drain each opponent
+/// 1 per card type among them. Oubliette: on unlock, mill three, then return
+/// a creature card from your graveyard.
 pub fn polluted_cistern_dim_oubliette() -> CardDefinition {
     CardDefinition {
         name: "Polluted Cistern // Dim Oubliette",

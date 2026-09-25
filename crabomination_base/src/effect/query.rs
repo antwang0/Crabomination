@@ -928,6 +928,7 @@ impl Effect {
             | Effect::ShareKeywordsAmongYourCreatures { .. }
             | Effect::ExchangeControlWithTriggeringSpell { .. }
             | Effect::ExileAnyNumberUntilSourceLeaves { .. }
+            | Effect::EachPlayerExilesChosenUntilSourceLeaves { .. }
             | Effect::RevealUntilCreatureDoubleBasePt
             | Effect::CopyActivatedAbilityMayChooseTargets
             | Effect::AdvanceClassLevel
@@ -1977,6 +1978,7 @@ impl Effect {
             | Effect::GainLandType { what, .. }
             | Effect::ResetCreature { what, .. } => sel_has_target(what),
             Effect::BecomeCopyOf { what, source, .. }
+            | Effect::BecomeCopyKeepingIdentity { what, source }
             | Effect::BecomeCopyOfFor { what, source, .. } => {
                 sel_has_target(what) || sel_has_target(source)
             }
@@ -2165,7 +2167,8 @@ impl Effect {
             Effect::AdditionalCombatPhase { count }
             | Effect::AdditionalCombatPhaseAfterMain { count }
             | Effect::AdditionalEndStep { count }
-            | Effect::AdditionalUpkeepStep { count } => value_has_target(count),
+            | Effect::AdditionalUpkeepStep { count }
+            | Effect::AdditionalBeginningPhase { count } => value_has_target(count),
             // Registers a delayed trigger; its body targets at fire time, not cast.
             Effect::AtEachCombatThisTurn { .. } => false,
             Effect::UnlockRoomDoor { what } | Effect::LockOrUnlockRoomDoor { what } => {
@@ -2871,9 +2874,9 @@ impl Effect {
             Effect::WithX { body, .. } => body.primary_target_filter(),
             // The copy *source* is the targeted slot ("becomes a copy of
             // target land").
-            Effect::BecomeCopyOf { source, .. } | Effect::BecomeCopyOfFor { source, .. } => {
-                sel_filter(source)
-            }
+            Effect::BecomeCopyOf { source, .. }
+            | Effect::BecomeCopyKeepingIdentity { source, .. }
+            | Effect::BecomeCopyOfFor { source, .. } => sel_filter(source),
             Effect::WhenTargetDiesThisTurn { filter, .. } => {
                 filter.as_ref().or(Some(&SelectionRequirement::Creature))
             }
@@ -5141,6 +5144,7 @@ impl Effect {
                     sel_find(from, slot).or_else(|| sel_find(to, slot))
                 }
                 Effect::BecomeCopyOf { what, source, .. }
+                | Effect::BecomeCopyKeepingIdentity { what, source }
                 | Effect::BecomeCopyOfFor { what, source, .. } => {
                     sel_find(what, slot).or_else(|| sel_find(source, slot))
                 }

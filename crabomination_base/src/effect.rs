@@ -3105,6 +3105,17 @@ pub enum EventKind {
     /// actually happened). Fires once per scry/surveil resolution; the acting
     /// player rides in as the subject. Matoya, Archon Elder.
     ScriedOrSurveiled,
+    /// CR 701.22 — "whenever you scry" only (Flamespeaker Adept); the same
+    /// event as `ScriedOrSurveiled`, narrowed by its `surveil` flag.
+    Scried,
+    /// CR 701.42 — "whenever you surveil" only (Mirko, Dimir Spybug).
+    Surveilled,
+    /// CR 701.13 — the literal "mills" wording only ("whenever a player mills
+    /// one or more creature cards" — Zellix; "cards are milled" — Mirelurk
+    /// Queen). `CardMilled` is the wider "put into a graveyard from a
+    /// library" family, which a surveil also fires (Narcomoeba, Unshakable
+    /// Tail).
+    Milled,
     /// CR 701.49 — a player completed a dungeon (the final room's ability
     /// resolved). "Whenever you complete a dungeon" (Dungeon Crawler).
     DungeonCompleted,
@@ -6870,6 +6881,12 @@ pub enum Effect {
     /// controller picks the subset (`Decision::ChooseCards`, min 0); each pick
     /// is linked to the source exactly like `ExileUntilSourceLeaves`.
     ExileAnyNumberUntilSourceLeaves { filter: SelectionRequirement },
+    /// CR 603.6e — "each player chooses [count] [filter] they control. Exile
+    /// them until this leaves the battlefield" (Foreboding Steamboat). Each
+    /// player (APNAP) picks from their own permanents — all of them when they
+    /// have `count` or fewer — then every pick is exiled at once, linked to
+    /// the source.
+    EachPlayerExilesChosenUntilSourceLeaves { count: Value, filter: SelectionRequirement },
     /// CR 725 — Palace Jailer's "exile [what] until an opponent becomes the
     /// monarch". Exiles the resolved permanent(s) with a `monarch_guard` set to
     /// the controller (who has just become the monarch); the card returns to the
@@ -8202,6 +8219,11 @@ pub enum Effect {
         #[serde(default)]
         keep_own_activated: bool,
     },
+    /// CR 707.9b — "becomes a copy of [source], except its name is [its
+    /// own], it's legendary in addition to its other types, and it has this
+    /// ability" (Lazav, the Multifarious): `BecomeCopyOf` keeping its own
+    /// activated abilities, then its printed name and the Legendary supertype.
+    BecomeCopyKeepingIdentity { what: Selector, source: Selector },
     /// CR 707.2 — continuous (layer-1) sibling of `BecomeCopyOf`: each
     /// `what` becomes a copy of `source` for `duration`, via a
     /// `Modification::CopyCardDefinition` continuous effect (the snapshot is
@@ -10582,6 +10604,9 @@ pub enum Effect {
     /// `count` extra upkeep steps; when the active player leaves the Upkeep
     /// with one banked, the turn loops back to another Upkeep (Paradox Haze).
     AdditionalUpkeepStep { count: Value },
+    /// CR 500.8 — "there is an additional beginning phase after this phase"
+    /// (Sphinx of the Second Sun), banked on the game.
+    AdditionalBeginningPhase { count: Value },
     /// "At the beginning of each combat this turn, [body]." Registers a
     /// turn-scoped `DelayedKind::EachCombatThisTurn` delayed trigger that
     /// runs `body` at the start of every Begin-Combat step for the rest of

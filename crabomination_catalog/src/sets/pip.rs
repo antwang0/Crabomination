@@ -67,7 +67,7 @@ pub fn glowing_one() -> CardDefinition {
                 },
             },
             TriggeredAbility {
-                event: EventSpec::new(EventKind::CardMilled, EventScope::AnyPlayer).with_filter(
+                event: EventSpec::new(EventKind::Milled, EventScope::AnyPlayer).with_filter(
                     Predicate::EntityMatches {
                         what: Selector::TriggerSource,
                         filter: R::Nonland,

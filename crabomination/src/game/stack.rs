@@ -514,6 +514,20 @@ impl GameState {
             next = TurnStep::BeginCombat;
         }
 
+        // CR 500.8 — "an additional beginning phase after this phase" (Sphinx
+        // of the Second Sun): leaving the postcombat main with one banked, the
+        // turn runs an extra untap / upkeep / draw, then moves on to the end
+        // phase. The extra untap step is only its turn-based action.
+        if next == TurnStep::End && self.step == TurnStep::PostCombatMain && self.additional_beginning_phases > 0 {
+            self.additional_beginning_phases -= 1;
+            self.in_additional_beginning_phase = true;
+            next = TurnStep::Untap;
+        }
+        if self.step == TurnStep::Draw && self.in_additional_beginning_phase {
+            self.in_additional_beginning_phase = false;
+            next = TurnStep::End;
+        }
+
         // CR 500.7 — additional end step. When the active player leaves the
         // End step with one banked, loop back to another End step instead of
         // advancing to cleanup (Y'shtola Rhul).
@@ -567,6 +581,26 @@ impl GameState {
         }
 
         match next {
+            // CR 500.8 / 502.3 — an additional beginning phase's untap step:
+            // phase and untap the active player's permanents; the turn has
+            // already begun, so nothing expires and no turn starts.
+            TurnStep::Untap if self.in_additional_beginning_phase => {
+                self.do_phasing();
+                let ap = self.active_player_idx;
+                for c in self.battlefield.iter_mut().filter(|c| c.controller == ap && c.tapped) {
+                    if c.counter_count(crate::card::CounterType::Stun) > 0 {
+                        c.remove_counters(crate::card::CounterType::Stun, 1);
+                    } else {
+                        c.tapped = false;
+                    }
+                }
+                self.priority.player_with_priority = self.priority_recipient(ap);
+                self.priority.consecutive_passes = self.alive_count().saturating_sub(1);
+                let mut upkeep_events = self.pass_priority()?;
+                events.append(&mut upkeep_events);
+                self.recycle_events(upkeep_events);
+                return Ok(events);
+            }
             // Untap has no priority window — auto-execute and move on.
             TurnStep::Untap => {
                 // CR 615 — "until your next turn" damage locks (Kiora's +1)
@@ -4898,6 +4932,12 @@ impl GameState {
         self.end_steps_this_turn = 0;
         self.additional_upkeep_steps = 0;
         self.upkeep_steps_this_turn = 0;
+        // Cold state: only written when set, so an ordinary turn doesn't
+        // unshare it.
+        if self.additional_beginning_phases != 0 || self.in_additional_beginning_phase {
+            self.additional_beginning_phases = 0;
+            self.in_additional_beginning_phase = false;
+        }
         if !self.deaths.graveyard_from_battlefield_this_turn.is_empty() {
             self.deaths.graveyard_from_battlefield_this_turn.clear();
         }

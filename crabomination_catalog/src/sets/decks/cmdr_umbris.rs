@@ -470,7 +470,7 @@ pub fn grazilaxx_illithid_scholar() -> CardDefinition {
 pub fn zellix_sanity_flayer() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CardMilled, EventScope::AnyPlayer)
+            event: EventSpec::new(EventKind::Milled, EventScope::AnyPlayer)
                 .with_filter(trigger_matches(R::Creature))
                 .once_per_batch(),
             effect: mint(black_horror(), 1),

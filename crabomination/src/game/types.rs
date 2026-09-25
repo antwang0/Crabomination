@@ -2878,6 +2878,12 @@ pub enum GameEvent {
     /// what `EventScope::YourControl`/`OpponentControl` reads.
     SpellCountered { card_id: CardId, player: usize },
     CardMilled { player: usize, card_id: CardId },
+    /// CR 701.42a — a surveiled card was put into `player`'s graveyard from
+    /// their library. Not a mill (CR 701.13): it matches the "put into your
+    /// graveyard from your library" family (`EventKind::CardMilled`) but not
+    /// the literal "mills" wording (`EventKind::Milled`). The surveil also
+    /// emits a `CardPutIntoGraveyard` for the same card.
+    CardSurveiledIntoGraveyard { player: usize, card_id: CardId },
     /// CR 701.7 — a permanent was destroyed by a spell or ability. `destroyer`
     /// is that effect's controller (Karmic Justice). Emitted only from the
     /// `Effect::Destroy` funnel, so combat/SBA deaths don't match.

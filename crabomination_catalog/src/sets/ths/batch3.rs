@@ -972,7 +972,7 @@ pub fn labyrinth_champion() -> CardDefinition {
 pub fn flamespeaker_adept() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::ScriedOrSurveiled, EventScope::YourControl),
+            event: EventSpec::new(EventKind::Scried, EventScope::YourControl),
             effect: Effect::Seq(vec![
                 Effect::PumpPT {
                     what: Selector::This,

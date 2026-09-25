@@ -1443,6 +1443,15 @@ pub struct ColdState {
     /// a game at most, read through `Deref` for free.
     #[serde(default)]
     pub turn_order_reversed: bool,
+    /// CR 500.8 — additional beginning phases banked by
+    /// `Effect::AdditionalBeginningPhase`, run after the postcombat main
+    /// (Sphinx of the Second Sun). Reset at cleanup. Cold: only Sphinx
+    /// games ever write it.
+    #[serde(default)]
+    pub additional_beginning_phases: u32,
+    /// True between an additional beginning phase's untap and draw steps.
+    #[serde(default)]
+    pub in_additional_beginning_phase: bool,
     /// Sower of Discord's "two chosen players", per source.
     #[serde(default)]
     pub chosen_player_pairs: Vec<(CardId, usize, usize)>,
@@ -26307,17 +26316,42 @@ impl GameState {
                 }
                 top_cards.extend(remaining);
                 let graveyarded = graveyard_cards.len();
+                let mut out = Vec::with_capacity(graveyarded + 2);
+                // Eye of Duskmantle — cards surveilled into the graveyard this
+                // turn may be played, paying life for mana.
+                let eye = self.battlefield.iter().any(|c| {
+                    c.controller == player
+                        && c.definition.static_abilities.iter().any(|sa| {
+                            matches!(sa.effect, crate::effect::StaticEffect::MayPlaySurveilledThisTurnForLife)
+                        })
+                });
                 for c in graveyard_cards {
+                    let cid = c.id;
+                    let is_land = c.definition.is_land();
                     self.players[player].send_to_graveyard(c);
+                    // CR 701.42a — put into the graveyard from the library:
+                    // "from anywhere" and "from your library" watchers read
+                    // these; it is not a mill (CR 701.13).
+                    out.push(GameEvent::CardPutIntoGraveyard { player, card_id: cid, is_land });
+                    out.push(GameEvent::CardSurveiledIntoGraveyard { player, card_id: cid });
+                    if eye && let Some(card) = self.players[player].graveyard.iter_mut().find(|c| c.id == cid) {
+                        card.may_play_until = Some(crate::card::MayPlayPermission {
+                            player,
+                            granted_turn: self.turn_number,
+                            duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                            exile_after: false,
+                            miracle: false,
+                            pay_life: true,
+                        });
+                    }
                 }
                 let lib = &mut self.players[player].library;
                 for c in top_cards.into_iter().rev() {
                     lib.insert(0, c);
                 }
-                Ok(vec![
-                    GameEvent::SurveilPerformed { player, looked_at: count, graveyarded },
-                    GameEvent::ScriedOrSurveiled { player, surveil: true },
-                ])
+                out.push(GameEvent::SurveilPerformed { player, looked_at: count, graveyarded });
+                out.push(GameEvent::ScriedOrSurveiled { player, surveil: true });
+                Ok(out)
             }
             PendingEffectState::LearnPending { player } => {
                 let DecisionAnswer::Learn(choice) = answer else {
@@ -30584,6 +30618,9 @@ fn static_effect_to_effects(
             | StaticEffect::Ascend
             // Read by `Effect::Explore`.
             | StaticEffect::ExploresTwice
+            // Read by `Effect::Surveil` and the surveil answer.
+            | StaticEffect::SurveilLooksExtra { .. }
+            | StaticEffect::MayPlaySurveilledThisTurnForLife
             // Read in `activate_ability`'s tax block.
             | StaticEffect::TaxOpponentAbilitiesTargeting { .. }
             // Consulted directly in `activate_ability`, not a layer effect.
