@@ -19737,11 +19737,20 @@ impl GameState {
         if self.players[p].mana_pool.pay(cost).is_err() {
             return false;
         }
+        // A targeted madness spell (Dark Withering) takes the auto-picker's
+        // target, as the other effect-driven casts do; with `None` its cast
+        // was refused and the card sat in exile.
+        let target = self
+            .exile
+            .iter()
+            .find(|c| c.id == card_id)
+            .map(|c| c.definition.effect.clone())
+            .and_then(|e| self.auto_target_for_effect_avoiding(&e, p, Some(card_id)));
         match self.cast_card_for_free(
             p,
             card_id,
             crate::card::Zone::Exile,
-            None,
+            target,
             vec![],
             None,
             x_value,
@@ -28079,6 +28088,9 @@ impl GameState {
             // CR 701.59 — a self-ETB trigger reads whether the collect-evidence
             // cost was paid ("if evidence was collected" — Crimestopper Sprite).
             ctx.cast_collected_evidence = src.cast_collected_evidence;
+            // "If its madness cost was paid" (Grave Scrabbler) is re-read
+            // as the trigger resolves (CR 603.4).
+            ctx.cast_via_madness = src.cast_via_madness;
         }
         if let Some(ts) = trigger_source_ent {
             ctx.trigger_source = Some(ts);
