@@ -2010,7 +2010,22 @@ impl GameState {
             && legal.contains(orig)
         {
             legal.retain(|t| t != orig);
-            legal.insert(0, orig.clone());
+            // On a crowded board a copy aimed back at the caster's own
+            // permanent defaults to the next legal object instead: every
+            // Replication Technique copy kept its Dualcaster Mage target, each
+            // new Mage's ETB copied the spell again, and 991 Mages reached
+            // the 8-seat pod's board cap (seed 9405, game 379). The default is
+            // a pick the chooser may override, not a rule.
+            let own = matches!(orig, crate::game::types::Target::Permanent(id)
+                if self.battlefield_find(*id).is_some_and(|c| c.controller == caster));
+            if own
+                && !legal.is_empty()
+                && self.battlefield.iter().filter(|c| c.controller == caster).count() >= CROWDED_COPY_BOARD
+            {
+                legal.push(orig.clone());
+            } else {
+                legal.insert(0, orig.clone());
+            }
         }
         let source = match original {
             Some(crate::game::types::Target::Permanent(c)) => *c,
@@ -42701,3 +42716,8 @@ pub(super) fn proliferate_wants(kind: CounterType, friendly: bool) -> bool {
         _ => true,
     }
 }
+
+/// `repoint_copy_slot`'s crowded-board line: past this many permanents on the
+/// caster's side, a copy aimed back at the caster's own permanent defaults to
+/// another legal object. Far past any duel board.
+const CROWDED_COPY_BOARD: usize = 150;

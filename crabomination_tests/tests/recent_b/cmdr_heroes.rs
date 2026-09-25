@@ -403,3 +403,43 @@ fn double_jump_flying_kick_fused_uses_both_halves_targets() {
     assert!(cp.keywords().contains(&crabomination::card::Keyword::Flying));
     assert!(g.battlefield_find(theirs).is_none(), "5 damage to a 4/4");
 }
+
+/// A copy that may choose new targets defaults to its original target —
+/// except on a crowded board when that target is the caster's own permanent:
+/// every Replication Technique copy kept its Dualcaster Mage target and each
+/// new Mage copied the spell again, 991 Mages to the 8-seat pod's board cap
+/// (seed 9405, game 379).
+#[test]
+fn a_crowded_board_moves_a_self_aimed_copy_off_its_target() {
+    use crabomination::game::types::StackItem;
+    for (lands, keeps) in [(0usize, true), (150, false)] {
+        let mut g = pod(2);
+        let mage = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let other = g.add_card_to_battlefield(0, catalog::serra_angel());
+        for _ in 0..lands {
+            g.add_card_to_battlefield(0, catalog::forest());
+        }
+        let rt = g.add_card_to_hand(0, catalog::replication_technique());
+        flood(&mut g, 0);
+        g.perform_action(GameAction::CastSpell {
+            card_id: rt,
+            target: Some(Target::Permanent(mage)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("cast");
+        while g.pending_decision.is_some() {
+            let _ = g.perform_action(GameAction::SubmitDecision(crabomination::decision::DecisionAnswer::Bool(false)));
+        }
+        let before = g.stack.len();
+        let ctx = EffectContext::for_spell(0, Some(Target::Permanent(rt)), 0, 0);
+        let evs = g
+            .resolve_effect(&Effect::CopySpellMayChooseTargets { what: Selector::Target(0), count: Value::ONE }, &ctx)
+            .expect("copy");
+        g.dispatch_triggers_for_events(&evs);
+        assert!(g.stack.len() > before, "a copy was made");
+        let Some(StackItem::Spell { target, .. }) = g.stack.last() else { panic!("a spell on top") };
+        assert_eq!(*target == Some(Target::Permanent(mage)), keeps, "{lands} lands: {target:?} (other {other:?})");
+    }
+}
