@@ -4124,3 +4124,32 @@ pub const KAUST_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, mountain, mountain, mountain, forest, forest, forest,
     forest,
 ];
+
+pub const NALIA_COMMANDERS: &[CardFactory] = &[nalia_dearnise];
+
+/// **Party Time**, the Commander Legends: Battle for Baldur's Gate Commander
+/// deck (CLB, 2022-06-10), exactly as MTGJSON's `PartyTime_CLB` prints it:
+/// 79 nonbasic cards + 10 Plainss + 10 Swamps = 99. Orzhov parties under Nalia
+/// de'Arnise.
+pub const NALIA_MAIN: &[CardFactory] = &[
+    archpriest_of_iona, bygone_bishop, eight_and_a_half_tails, frontline_medic, galepowder_mage,
+    glorious_protector, jazal_goldmane, magus_of_the_balance, mikaeus_the_lunarch,
+    mirror_entity, order_of_whiteclay, selfless_spirit, solemn_recruit, squad_commander,
+    bloodsoaked_champion, butcher_of_malakir, calculating_lich, dire_fleet_ravager,
+    gonti_lord_of_luxury, grim_haruspex, grim_hireling, mardu_strike_leader, mindblade_render,
+    nighthawk_scavenger, pontiff_of_blight, puppeteer_clique, felisa_fang_of_silverquill,
+    high_priest_of_penance, aven_mindcensor, irregular_cohort, mages_attendant, mother_of_runes,
+    priest_of_ancient_lore, rumor_gatherer, valiant_changeling, changeling_outcast,
+    corpse_augur, malakir_blood_priest, zulaport_cutthroat, austere_command, dusk_dawn,
+    sevinnes_reclamation, thwart_the_grave, unbreakable_formation, despark, maskwood_nexus,
+    arcane_signet, orzhov_signet, skullclamp, sol_ring, talisman_of_hierarchy,
+    firjas_retribution, castle_locthwain, mutavault, shambling_vent, temple_of_silence,
+    vault_of_the_archangel, war_room, windbrisk_heights, command_tower, ash_barrens, bojuka_bog,
+    mortuary_mire, myriad_landscape, orzhov_basilica, path_of_ancestry, snowfield_sinkhole,
+    starlit_sanctum, tainted_field, burakos_party_leader, folk_hero, deep_gnome_terramancer,
+    harper_recruiter, seasoned_dungeoneer, stick_together, black_market_connections,
+    solemn_doomguide, multiclass_baldric, crib_swap,
+    // Basics: 10 plains, 10 swamp
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];

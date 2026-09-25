@@ -1120,6 +1120,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::KAUST_COMMANDERS,
             main: decks::KAUST_MAIN,
         },
+        // Hundred-and-thirty-sixth: the hundred-and-twenty-sixth official list
+        // (Party Time, CLB) — Orzhov parties under Nalia de'Arnise.
+        // `--pod-decks 136`.
+        PodDeck {
+            name: "Nalia de'Arnise (WB)",
+            commanders: decks::NALIA_COMMANDERS,
+            main: decks::NALIA_MAIN,
+        },
     ]
 }
 
@@ -1712,6 +1720,9 @@ mod tests {
             ("Prossh", [0x9055, 130, 9054]),
             // CR 700.8 parties (Stick Together), CR 611.2b next-turn copies.
             ("Morophon", [0x0A0B, 131, 9055]),
+            // CR 700.18 full party, CR 702.84 granted unearth, CR 603.3d
+            // once-each-turn grants (Folk Hero).
+            ("Nalia", [0x4A11, 136, 9060]),
         ] {
             let precon = *field.iter().find(|d| d.name.starts_with(name)).expect("the precon seat");
             assert_eq!(precon.card_count(), 100);
