@@ -368,10 +368,11 @@ the handoff.
   next opponent after `ask_seat_target_logged` returned `None`, overwriting
   the parked ask; one 8-seat game answered 7,741 of them and hit the action
   cap (`--pod-decks 162,..,155 --seed 9402 --first 701`, also games 1520 and
-  1576). It returns on the suspend now. `scripts/audit_stash_in_loop.py`
-  did not flag it — the loop calls a logged ask, which the audit treats as
-  safe; teaching it "a logged ask in a loop must return on `None`" is the
-  class fix.
+  1576). It returns on the suspend now. **Class fix:**
+  `scripts/audit_stash_in_loop.py` now also flags a logged ask in a loop
+  whose statement doesn't return / `?` on `None` (every engine file); it
+  flags Meteor's loop on the pre-fix tree and found a second live one,
+  Rejoin the Fight's `each_opponent_returns_from_your_graveyard`, fixed.
 
 ## FIXED 2026-09-25 (the Commander routine, Prismari Performance) — an emblem's flashback grant, and a spell-target trigger with no target
 
