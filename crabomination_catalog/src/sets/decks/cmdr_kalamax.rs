@@ -113,11 +113,15 @@ pub fn curious_herd() -> CardDefinition {
     instant(
         "Curious Herd",
         cost(&[generic(3), g()]),
-        Effect::CreateToken {
-            who: PlayerRef::You,
-            count: Value::CountOf(Box::new(Selector::ControlledBy { who: PlayerRef::Target(0), filter: R::Artifact })),
-            definition: Arc::new(token("Beast", vec![Color::Green], vec![CreatureType::Beast], 3, 3)),
-        },
+        // "Choose target opponent": a zero-card draw names slot 0's filter.
+        Effect::Seq(vec![
+            Effect::Draw { who: Selector::TargetFiltered { slot: 0, filter: R::OpponentPlayer }, amount: Value::Const(0) },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::CountOf(Box::new(Selector::ControlledBy { who: PlayerRef::Target(0), filter: R::Artifact })),
+                definition: Arc::new(token("Beast", vec![Color::Green], vec![CreatureType::Beast], 3, 3)),
+            },
+        ]),
     )
 }
 
