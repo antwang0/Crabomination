@@ -598,6 +598,28 @@ pub fn clue_token() -> TokenDefinition {
     }
 }
 
+/// A Mutagen token: an Artifact with "{1}, {T}, Sacrifice this token: Put a
+/// +1/+1 counter on target creature. Activate only as a sorcery."
+pub fn mutagen_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Mutagen".into(),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: ManaCost { symbols: vec![ManaSymbol::Generic(1)] },
+            tap_cost: true,
+            sac_cost: true,
+            sorcery_speed: true,
+            effect: Effect::AddCounter {
+                what: Selector::TargetFiltered { slot: 0, filter: SelectionRequirement::Creature },
+                kind: crate::card::CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// A Junk token: an Artifact with "{T}, Sacrifice this token: Exile the top
 /// card of your library. You may play that card this turn. Activate only as a
 /// sorcery."
