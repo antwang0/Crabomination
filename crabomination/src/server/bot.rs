@@ -10481,6 +10481,11 @@ fn pick_energy_payoff(state: &GameState, seat: usize) -> Option<GameAction> {
             if !is_pure || state.players[seat].energy < amount {
                 continue;
             }
+            // A self-refilling energy token loop (Whirler Virtuoso under
+            // Decoction Module) stops once the board is already overkill.
+            if ability_makes_token(&ab.effect) && super::renewal_guard::board_is_saturated(state, seat) {
+                continue;
+            }
             let action = GameAction::ActivateAbility {
                 card_id: card.id,
                 ability_index: idx,
