@@ -97,6 +97,7 @@ lists were picked.
 | **Jump Scare!** (DSC precon) GU | Zimone, Mystery Unraveler | GU | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
 | **Obscura Operation** (NCC precon) WUB | Kamiz, Obscura Oculus | WUB | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Elven Council** (LTC precon) GU | Galadriel, Elven-Queen | GU | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
+| **Ahoy Mateys** (LCC precon) UBR | Admiral Brass, Unsinkable | UBR | 100 | 🟡 all 100 implemented, 10 carry residuals (below) |
 | **Enduring Enchantments** (CMM precon) WBG | Anikthea, Hand of Erebos | WBG | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
 | **Open Hostility** (C16 precon) WBRG | Saskia the Unyielding | WBRG | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Devour for Power** (CMD precon) BGU | The Mimeoplasm | BGU | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
@@ -2673,6 +2674,25 @@ Identity**, **Mandate of Peace**, **Elsha of the Infinite**. Pods beside
 Ashling / Éowyn / Perrie (seed 9200, 1,000) and the first three seats
 (9201, 1,000), six seats (9202, 1,000): all decided, no card of the list
 unplayed; strict debug pods 150 / 150. `--bench` byte-identical.
+
+The **hundred-and-fifty-eighth** is The Lost Caverns of Ixalan Commander's
+**Ahoy Mateys** (`AhoyMateys_LCC`) — Grixis Pirates under Admiral Brass,
+Unsinkable. Twenty-five cards were missing (`cmdr_brass.rs`); the
+primitives: `SelectionRequirement::ControlledByMonarch` (Azure Fleet
+Admiral — also a block-walker leaf, so `can_block_attacker_computed` now
+takes the monarch; the walker's `_ => false` would otherwise have killed
+the evasion), `ControlledByPlayerDamagedByAtLeast` (Admiral Beckett Brass),
+`DiscardedThisTurn` (Ghost of Ramirez DePietro) and
+`Effect::ReturnToOwnersHandAtNextEndStep` (Zara). ⚠ **Port Razer loops
+without its attack restriction** ("can't attack a player it has already
+attacked this turn" has no primitive), so its trigger is once a turn to
+keep games finite. Residuals: **Admiral Beckett Brass**, **Arm-Mounted
+Anchor**, **Departed Deckhand**, **Gemcutter Buccaneer**, **Merchant
+Raiders**, **Port Razer**, **Siren Stormtamer**, **The Grim Captain's
+Locker**, **Timestream Navigator**, **Zara, Renegade Recruiter**. A 200-game
+census beside Galadriel / Kamiz / Zimone (seed 158) decided 200/200 with
+zero panics and no card unplayed, Brass winning 30.5 %. `--bench`
+byte-identical.
 
 The **hundred-and-fiftieth** is Tales of Middle-earth Commander's **Elven
 Council** (`ElvenCouncil_LTC`) — Simic Elves and council votes under

@@ -1870,6 +1870,16 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Gandalf, Westward Voyager | Elven Council (LTC) | the opponents' top cards are read, not revealed. |
 | 🟡 Mirkwood Trapper | Elven Council (LTC) | the shrunk attacker is the first one declared, not a target; the second ability isn't implemented. |
 | 🟡 Sail into the West | Elven Council (LTC) | on embark every player wheels; the "may" isn't offered. |
+| 🟡 Admiral Beckett Brass | Ahoy Mateys (LCC) | any damage from three Pirates this turn counts, not only combat damage. |
+| 🟡 Arm-Mounted Anchor | Ahoy Mateys (LCC) | equip always costs {2}; the hand-size discount isn't modelled. |
+| 🟡 Departed Deckhand | Ahoy Mateys (LCC) | it's sacrificed when any spell or ability targets it. |
+| 🟡 Gemcutter Buccaneer | Ahoy Mateys (LCC) | Treasures get equip {3} only, not equip Pirate {1}. |
+| 🟡 Merchant Raiders | Ahoy Mateys (LCC) | the lock lasts while it's on the battlefield, not while you control it. |
+| 🟡 Port Razer | Ahoy Mateys (LCC) | its trigger fires once a turn instead of "can't attack a player it has already attacked this turn". |
+| 🟡 Siren Stormtamer | Ahoy Mateys (LCC) | counters spells only, targeting you or any permanent you control. |
+| 🟡 The Grim Captain's Locker | Ahoy Mateys (LCC) | the escape-granting ability isn't implemented. |
+| 🟡 Timestream Navigator | Ahoy Mateys (LCC) | it goes to the bottom as part of the effect, not as a cost. |
+| 🟡 Zara, Renegade Recruiter | Ahoy Mateys (LCC) | the stolen creature is the engine's pick, and you don't look at the rest of the hand. |
 | 🟡 Battle at the Helvault | Enduring Enchantments (CMM) | "for each player" covers opponents only: you can't exile one of your own permanents. |
 | 🟡 Battle for Bretagard | Enduring Enchantments (CMM) | chapter III copies every artifact and creature token you control, duplicate names included. |
 | 🟡 Cacophony Unleashed | Enduring Enchantments (CMM) | the animated 6/6 isn't legendary. |
