@@ -1952,6 +1952,9 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Valiant Endeavor | Aura of Courage (AFC) | the creatures with enough power are destroyed one at a time, not simultaneously. |
 | 🟡 Sanctuary Blade | Ruthless Regiment (C20) | the colour is chosen by a trigger as it becomes attached (not a replacement), so protection starts once that trigger resolves. |
 | 🟡 Odric, Master Tactician | Ruthless Regiment (C20) | you choose blocks for the rest of the turn, not only this combat (differs only with an extra combat). |
+| 🟡 Back in Town | Most Wanted (OTC) | the X outlaw cards are chosen as it resolves rather than targeted. |
+| 🟡 Dire Fleet Ravager | Most Wanted (OTC) | the players lose their thirds one after another (each reads only its own life, so the totals match). |
+| 🟡 Vihaan, Goldwaker | Most Wanted (OTC) | the vigilance/haste grant's outlaw filter reads printed types, so animated Treasure Assassins don't get them (they are outlaws for every other reader). |
 | 🟡 Orator of Ojutai | Draconic Domination (C17) | the Dragon check reads your board and hand as it enters; there is no optional reveal. |
 | 🟡 Armored Skyhunter | Silverquill Influence (SOC) | an Equipment it puts onto the battlefield stays unattached. |
 | 🟡 Coercive Impetus | Silverquill Influence (SOC) | the goad is renewed by a trigger at the beginning of each combat, not a static. |
