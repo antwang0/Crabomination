@@ -2628,6 +2628,23 @@ Vehicle, an activated manland or a stationed Spacecraft stayed home: Kotori
 Inspirit / Morska (seed 15101, 1,000) and six seats (15102, 1,000): all
 decided; census (15103, 500): nothing unplayed. `--bench` byte-identical.
 
+The **hundred-and-seventy-sixth** is Marvel Super Heroes Commander's **Doom
+Prevails** (`DoomPrevails_MSC`, 2026-06-26) — Grixis Villains and connive under
+Doctor Doom, King of Latveria, `--pod-decks 176` (built as 175; Tyranid Swarm
+landed there first). Thirty-eight cards were missing (`cmdr_doom.rs`). The
+primitives: **`EventKind::Connived`** (CR 701.50 — "whenever a creature you
+control connives", `GameEvent::Connived` pushed per conniver in `connive.rs`:
+Iron Monger, Glorious Purpose, Ultron Unlimited), the Plan enchantment type and
+plan counter (Glorious Purpose's sixth-counter payoff). The Gamma creature type
+arrived with Avengers Assemble in parallel; the duplicate was dropped.
+Residuals: **Extract Power**, **Kang Dynasty**, **Lady Loki**, **Superior Foes
+of Spider-Man** (INCOMPLETE_CARDS). Four seats beside Swarmlord / Captain
+America / Caesar (seed 10530, 1,000, `--card-census`: nothing unplayed): all
+decided, Doom 32.7 %; six seats beside Swarmlord / Captain America / Dogmeat /
+Greyfax / Invisible Woman (10531, 1,000): all decided, 25.5 %; strict debug
+pods (5 × 60 four-seat, 2 × 40 six-seat) decided. `--bench` 200,190 —
+byte-identical to the invariant.
+
 The **hundred-and-seventy-fifth** is Warhammer 40,000 Commander's **Tyranid
 Swarm** (`TyranidSwarm_40K`, 2022-10-07) — Temur +1/+1 counters and {X}
 creatures under The Swarmlord, `--pod-decks 175`. Forty cards were missing
