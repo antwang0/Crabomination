@@ -1969,6 +1969,10 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Phenomenon Investigators | Miracle Worker (DSC) | Doubt's "return a nonland permanent you own" targets it. |
 | 🟡 Secret Arcade // Dusty Parlor | Miracle Worker (DSC) | Secret Arcade makes permanents enchantments, not permanent spells on the stack. |
 | 🟡 Spirit-Sister's Call | Miracle Worker (DSC) | the sacrifice must share the chosen card's first card type (creature, artifact, enchantment, land, planeswalker, battle). |
+| 🟡 Curse of Conformity | Coven Counters (MIC) | a changeling keeps every creature type (Changeling is read as a type wildcard, not a layer-4 CDA the curse can override). |
+| 🟡 Celestial Judgment | Coven Counters (MIC) | the creature kept per power is the engine's pick (the caster's best, else an opponent's weakest), not a prompt. |
+| 🟡 Sigardian Zealot | Coven Counters (MIC) | the chosen set is one of your creatures per power (the engine's pick); no opponent's creature is ever chosen. |
+| 🟡 Moorland Rescuer | Coven Counters (MIC) | the returned set is a greedy largest-power-first pick under the cap, not a prompt. |
 | 🟡 Descendants' Fury | Sliver Swarm (CMM) | "one of them" is any attacker of yours that damaged a player this turn, not only this combat-damage batch's. |
 | 🟡 Bloodlord of Vaasgoth | Vampiric Bloodlust (C17) | the granted bloodthirst is checked as the cast trigger resolves, not as the creature enters. |
 | 🟡 Mathas, Fiend Seeker | Vampiric Bloodlust (C17) | a bounty counter grants its dies trigger only while Mathas is on the battlefield. |
