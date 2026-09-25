@@ -1479,6 +1479,10 @@ pub struct ColdState {
     /// attacking. Cleared with the rest of combat (CR 511.3).
     #[serde(default)]
     pub(crate) left_while_attacking: Vec<CardId>,
+    /// CR 603.10 — the blocking twin: blockers that left the battlefield
+    /// during this combat (Death Tyrant). Cleared with `left_while_attacking`.
+    #[serde(default)]
+    pub(crate) left_while_blocking: Vec<CardId>,
     /// CR 702.143 — foretell costs an effect gave a card it foretold
     /// (Ethereal Valkyrie: its mana cost less {2}). Read with the printed
     /// cost by `cast_foretold`; dropped when the card is cast.
@@ -21664,6 +21668,46 @@ impl GameState {
     ///
     /// [`dispatch_triggers_for_events`]: Self::dispatch_triggers_for_events
     /// [`event_kind_bits`]: crate::game::effects::events::event_kind_bits
+    /// `DelayedKind::OpponentPermanentDamagesYouThisTurn` (Hellish Rebuke):
+    /// one trigger per damage event a permanent of the watcher's opponent
+    /// dealt the watcher, with that permanent as the trigger source.
+    fn fire_opponent_permanent_damage_watchers(&mut self, events: &[GameEvent]) {
+        use crate::game::types::DelayedKind;
+        if !self.delayed_triggers.iter().any(|dt| dt.kind == DelayedKind::OpponentPermanentDamagesYouThisTurn) {
+            return;
+        }
+        let hits: Vec<(usize, CardId)> = events
+            .iter()
+            .filter_map(|e| match e {
+                GameEvent::DamageDealt {
+                    amount: 1..,
+                    to_player: Some(p),
+                    from_card: Some(src),
+                    from_controller: Some(c),
+                    ..
+                } if self.battlefield_find(*src).is_some() && self.opponents_of(*p).contains(c) => {
+                    Some((*p, *src))
+                }
+                _ => None,
+            })
+            .collect();
+        for (p, src) in hits {
+            let watchers: Vec<crate::game::types::DelayedTrigger> = self
+                .delayed_triggers
+                .iter()
+                .filter(|dt| dt.kind == DelayedKind::OpponentPermanentDamagesYouThisTurn && dt.controller == p)
+                .cloned()
+                .collect();
+            for dt in watchers {
+                self.stack.push(
+                    TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
+                        .trigger_source(Some(crate::game::effects::EntityRef::Permanent(src)))
+                        .build(),
+                );
+            }
+        }
+    }
+
     fn fire_delayed_event_watchers(&mut self, events: &[GameEvent], batch_bits: u128) {
         // Every leg below fires a watcher off `delayed_triggers`; with none
         // registered there is nothing to fire, and the two ungated collects
@@ -21671,6 +21715,7 @@ impl GameState {
         if self.delayed_triggers.is_empty() {
             return;
         }
+        self.fire_opponent_permanent_damage_watchers(events);
         // Event-keyed delayed triggers ("when [card] dies this turn, …").
         // Fire any `WhenCardDies(cid)` whose watched card appears in a
         // `CreatureDied` event in this batch, with its captured target.
@@ -30539,6 +30584,7 @@ fn static_effect_to_effects(
             // `remove_from_battlefield_to_graveyard_raw`; no layer effect.
             | StaticEffect::DiesToLibraryTopInstead { .. }
             | StaticEffect::DiesToOwnersHandInstead { .. }
+            | StaticEffect::DiesToExileInstead { .. }
             // OpponentsCantCastChosenColor (Iona) — gated at the cast
             // dispatch; no layer effect.
             | StaticEffect::OpponentsCantCastChosenColor

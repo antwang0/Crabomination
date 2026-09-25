@@ -22,6 +22,7 @@ pub(crate) fn delayed_kind_from_effect(
         }
         DelayedTriggerKind::YourNextUpkeep => DelayedKind::YourNextUpkeep,
         DelayedTriggerKind::NextEndStep => DelayedKind::NextEndStep,
+        DelayedTriggerKind::OpponentPermanentDamagesYouThisTurn => DelayedKind::OpponentPermanentDamagesYouThisTurn,
         DelayedTriggerKind::NextCleanupStep => DelayedKind::NextCleanupStep,
         DelayedTriggerKind::YourNextMainPhase => DelayedKind::YourNextMainPhase,
         DelayedTriggerKind::EndOfCombat => DelayedKind::EndOfCombat,

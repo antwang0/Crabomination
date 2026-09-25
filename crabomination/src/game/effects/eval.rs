@@ -2185,6 +2185,11 @@ impl GameState {
             Predicate::ExcessDamageDealtThisResolution => self.excess_damage_this_resolution > 0,
             Predicate::IsTurnOf(pref) => self.resolve_player(pref, ctx) == Some(self.active_player_idx),
             Predicate::CostReturnedHadNonbasicLandType => self.cost_returned_nonbasic_land_type,
+            Predicate::TriggerCardExiledWithSource => ctx
+                .trigger_source
+                .and_then(|e| e.as_card_id())
+                .and_then(|id| self.find_card_anywhere(id))
+                .is_some_and(|c| c.exiled_with.is_some() && c.exiled_with == ctx.source),
             Predicate::PlayersLostAtLeast(n) => {
                 self.players.iter().filter(|p| !p.is_alive()).count() >= usize::from(*n)
             }
@@ -5064,7 +5069,9 @@ impl GameState {
                             && !self.blocked_attackers.contains(&card.id)
                     }
                     R::IsBlocked => self.blocked_attackers.contains(&card.id),
-                    R::IsBlocking => self.block_map.contains_key(&card.id),
+                    R::IsBlocking => {
+                        self.block_map.contains_key(&card.id) || self.left_while_blocking.contains(&card.id)
+                    }
                     // Symmetric: the candidate blocks the source, or the source
                     // blocks the candidate (Gomazoa's "each creature it's
                     // blocking").
@@ -6431,9 +6438,12 @@ impl GameState {
             R::WithCounter(k) => card.counter_count(*k) > 0,
             R::WithCounterAtLeast(k, n) => card.counter_count(*k) >= *n,
             R::WithAnyCounter => card.has_any_counter(),
+            // CR 603.10 — a blocker that just left reads as blocking (Death
+            // Tyrant's "a blocking creature an opponent controls dies").
+            R::IsBlocking => self.left_while_blocking.contains(&card.id),
             // Battlefield-state predicates can't be evaluated for library cards.
             R::Tapped | R::Untapped | R::Unattached
-            | R::IsUnblocked | R::IsBlocked | R::IsBlocking | R::InCombatWithSource
+            | R::IsUnblocked | R::IsBlocked | R::InCombatWithSource
             | R::IsAttackingAlone | R::IsBlockingAlone
             | R::FaceDown | R::HasAbilityOnStack
             | R::IsSpellOnStack | R::SpellNotCastFromHand

@@ -38603,6 +38603,19 @@ impl GameState {
                 );
                 out
             }
+            Selector::SacrificedThisResolution { filter } => self
+                .scratch
+                .cards_sacrificed_this_resolution
+                .iter()
+                .filter(|&&id| {
+                    self.players.iter().any(|p| {
+                        p.graveyard
+                            .iter()
+                            .any(|c| c.id == id && self.evaluate_requirement_on_card(filter, c, ctx.controller))
+                    })
+                })
+                .map(|&id| EntityRef::Card(id))
+                .collect(),
             Selector::CostExiledCards => {
                 self.cost_exiled_cards.iter().map(|&cid| EntityRef::Card(cid)).collect()
             }

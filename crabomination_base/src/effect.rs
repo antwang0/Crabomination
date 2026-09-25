@@ -370,6 +370,10 @@ pub enum Selector {
     /// The card(s) exiled from a graveyard to pay this activation's cost
     /// (Necropolis). Empty outside such an activation.
     CostExiledCards,
+    /// The cards sacrificed during this resolution that are now in a
+    /// graveyard and match `filter` — Danse Macabre's "creature cards put
+    /// into a graveyard this way".
+    SacrificedThisResolution { filter: SelectionRequirement },
     /// Every player and planeswalker the source has dealt damage to this
     /// game (The Fallen).
     DamagedBySourceThisGame,
@@ -1617,6 +1621,9 @@ pub enum Predicate {
     /// nonbasic land type as it last existed on the battlefield (Wonderscape
     /// Sage).
     CostReturnedHadNonbasicLandType,
+    /// The event's card (a spell just cast, a land just played) was one of
+    /// the cards exiled with the source — Share the Spoils' "when they do".
+    TriggerCardExiledWithSource,
     /// `who` resolves to a player who is an opponent of the source's
     /// controller ("…deals combat damage to one of your opponents" —
     /// Gonti, Night Minister). Teammates and the controller are false.
@@ -3525,6 +3532,11 @@ pub enum EventScope {
     /// attacking player into the target slot (`PlayerRef::Target(0)`) and the
     /// attacked opponent as the trigger source (`PlayerRef::Triggerer`).
     OpponentOfYoursAttacked,
+    /// CR 508.1 — "Whenever you attack a player" (Karazikar, the Eye
+    /// Tyrant): once per declaration per player the source's controller
+    /// attacks. The attacked player rides the trigger source
+    /// (`PlayerRef::Triggerer`); the target slot stays free.
+    YouAttackedPlayer,
     /// The creature the source Aura was attached to has died (left the
     /// battlefield). Matches a `CreatureDied` event whose subject is recorded
     /// in `GameState.auras_at_death` as having carried the source Aura.
@@ -11185,6 +11197,10 @@ pub enum DelayedTriggerKind {
     /// controller's own end step — this turn's if it's theirs and it hasn't
     /// begun, else their next turn's. `NextEndStep` fires on anyone's.
     YourNextEndStep,
+    /// Until end of turn, whenever a permanent an opponent controls deals
+    /// damage to you — that permanent is the trigger source (Hellish
+    /// Rebuke). Fires every time, not once.
+    OpponentPermanentDamagesYouThisTurn,
     /// "At the beginning of the end step of target player's next turn"
     /// (Suppress). `Effect::DelayUntil` reads the player from target slot 0.
     TargetsNextEndStep,

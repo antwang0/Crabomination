@@ -2998,6 +2998,11 @@ pub enum StaticEffect {
     /// same site. Necromancer's Magemark ("If a creature you control that's
     /// enchanted would die, return it to its owner's hand instead").
     DiesToOwnersHandInstead { filter: crate::card::SelectionRequirement },
+    /// CR 614 — "If a [matching permanent] you control would die, exile it
+    /// instead" (Lorcan, Warlock Collector's Warlocks). Read against the
+    /// battlefield (layered) permanent just before it leaves, so a type an
+    /// effect gave it counts; "you" is the static's controller.
+    DiesToExileInstead { filter: crate::card::SelectionRequirement },
     /// CR 614.5 — "If an opponent would mill one or more cards, they mill
     /// twice that many cards instead." (Bruvac the Grandiloquent.) Consulted
     /// by `GameState::mill_count_for` at every mill site.

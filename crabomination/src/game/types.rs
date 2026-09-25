@@ -1412,6 +1412,13 @@ pub enum DelayedKind {
     /// of their opponents; the discarded card is the trigger source. Expires
     /// at cleanup. Pure Intentions.
     OpponentCausesYouToDiscardThisTurn,
+    /// Until end of turn, each time a permanent one of
+    /// `DelayedTrigger.controller`'s opponents controls deals damage to them,
+    /// with that permanent as the trigger source (Hellish Rebuke: "…gain
+    /// 'When this permanent deals damage to the player who cast Hellish
+    /// Rebuke, sacrifice this permanent. You lose 2 life.'"). Expires at
+    /// cleanup.
+    OpponentPermanentDamagesYouThisTurn,
 }
 
 // ── Pending decisions (suspendable resolution) ───────────────────────────────

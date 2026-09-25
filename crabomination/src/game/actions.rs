@@ -1022,6 +1022,7 @@ fn mana_summary_of(def: &crate::card::CardDefinition) -> Option<u64> {
             | SE::ExileDyingOpponentCreaturesGrowingThis
             | SE::DiesToLibraryTopInstead { .. }
             | SE::DiesToOwnersHandInstead { .. }
+            | SE::DiesToExileInstead { .. }
             | SE::ExileCardsBoundForGraveyard { .. }
             | SE::ExileOwnCyclingCardsUnlessCycled => flags |= mana_summary::DEATH_REDIRECT,
             SE::LandsProduceColorInstead(_) | SE::YourBasicLandsProduceChosenColorInstead => {

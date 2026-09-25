@@ -1025,7 +1025,8 @@ impl GameState {
             | EventScope::YouTapped => false, // event-based
             EventScope::ControllerAttackedByOpponent
             | EventScope::ControllerPlaneswalkerAttackedByOpponent
-        | EventScope::OpponentOfYoursAttacked => false, // combat-based
+        | EventScope::OpponentOfYoursAttacked
+        | EventScope::YouAttackedPlayer => false, // combat-based
         };
         // One board-level scan for the whole walk: the per-card shim rebuilds
         // it, so asking it per battlefield permanent is O(cards²).
@@ -4935,6 +4936,7 @@ impl GameState {
                         | crate::game::types::DelayedKind::YouGainLifeThisTurn
                         | crate::game::types::DelayedKind::CardEntersOpponentGraveyardThisTurn
                         | crate::game::types::DelayedKind::OpponentCausesYouToDiscardThisTurn
+                        | crate::game::types::DelayedKind::OpponentPermanentDamagesYouThisTurn
                 )
         });
         // CR 514.2 / CR 615.1 — "this turn" combat damage prevention
@@ -5250,7 +5252,9 @@ impl GameState {
     /// remains blocked (CR 509.1b); the permanent stays on the battlefield.
     pub(crate) fn remove_permanent_from_combat(&mut self, id: CardId) {
         self.attacking.retain(|atk| atk.attacker != id);
-        self.block_map.remove(&id);
+        if self.block_map.remove(&id).is_some() {
+            self.left_while_blocking.push(id);
+        }
         self.block_map.retain(|_, atks| {
             atks.retain(|a| *a != id);
             !atks.is_empty()
@@ -7621,6 +7625,21 @@ impl GameState {
     /// arms should use `remove_to_graveyard_with_triggers` or
     /// `sacrifice_one` instead (audit P3: death-funnel bypass family).
     pub fn remove_from_battlefield_to_graveyard_raw(&mut self, id: CardId) {
+        // CR 614 — Lorcan's "if a Warlock you control would die, exile it
+        // instead": read while the permanent is still on the battlefield, so
+        // the Warlock type Lorcan's own effect gave it is on its type line.
+        let exile_instead = self.board_redirects_deaths()
+            && self.battlefield.iter().any(|src| {
+                src.definition.static_abilities.iter().any(|sa| {
+                    matches!(&sa.effect, crate::effect::StaticEffect::DiesToExileInstead { filter }
+                        if self.evaluate_requirement_static(
+                            filter,
+                            &crate::game::Target::Permanent(id),
+                            src.controller,
+                            Some(src.id),
+                        ))
+                })
+            });
         if let Some(mut card) = self.battlefield.take_by_id(id) {
             self.remove_effects_from_source(id);
             self.remove_from_combat(id);
@@ -7740,6 +7759,7 @@ impl GameState {
                 || card.definition.dies_to_exile
                 || valentin_redirect.is_some()
                 || slime_redirect.is_some()
+                || exile_instead
             {
                 crate::card::Zone::Exile
             } else if library_top_redirect || card.definition.dies_to_library_bottom {

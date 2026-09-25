@@ -2320,6 +2320,38 @@ impl GameState {
                     );
                 }
             }
+            // CR 508.1 — "whenever you attack a player" (Karazikar): once per
+            // player the attacking player attacks, that player bound as the
+            // trigger source.
+            let mine: Vec<(CardId, Effect)> = self
+                .battlefield
+                .iter()
+                .filter(|c| c.controller == p)
+                .flat_map(|c| {
+                    c.definition
+                        .triggered_abilities
+                        .iter()
+                        .filter(|t| {
+                            t.event.kind == EventKind::Attacks
+                                && t.event.scope == crate::effect::EventScope::YouAttackedPlayer
+                        })
+                        .map(move |t| (c.id, t.effect.clone()))
+                })
+                .collect();
+            if !mine.is_empty() {
+                for a_def in self.attacking.iter().filter_map(|a| match a.target {
+                    AttackTarget::Player(d) => Some(d),
+                    _ => None,
+                }).collect::<std::collections::BTreeSet<_>>() {
+                    for (src, effect) in &mine {
+                        self.stack.push(
+                            TriggerPush::new(*src, p, effect.clone())
+                                .trigger_source(Some(crate::game::effects::EntityRef::Player(a_def)))
+                                .build(),
+                        );
+                    }
+                }
+            }
         }
 
         // "Whenever one or more …" slots spent by this declaration.
@@ -3409,6 +3441,9 @@ impl GameState {
         }
         if !self.left_while_attacking.is_empty() {
             self.left_while_attacking.clear();
+        }
+        if !self.left_while_blocking.is_empty() {
+            self.left_while_blocking.clear();
         }
         if !self.attack_bands.is_empty() {
             clear_cold!(self.attack_bands);
