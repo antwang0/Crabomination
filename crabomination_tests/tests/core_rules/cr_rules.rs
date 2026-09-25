@@ -11402,7 +11402,7 @@ fn audit_block_restriction_filters_use_leaves_the_block_walker_handles() {
     const HANDLED: &[&str] = &[
         "Any", "Permanent", "Creature", "Artifact", "Enchantment", "Land", "IsToken", "NotToken",
         "HasColor", "Colorless", "HasKeyword", "HasToxic", "HasModular", "HasMutate",
-        "HasCreatureType", "HasArtifactSubtype", "PowerAtMost", "PowerAtLeast", "ToughnessAtMost",
+        "HasCreatureType", "HasArtifactSubtype", "HasSupertype", "PowerAtMost", "PowerAtLeast", "ToughnessAtMost",
         "ToughnessAtLeast", "ToughnessGreaterThanPower", "HasCardType", "IsEnchanted", "And", "Or",
         "Not",
     ];

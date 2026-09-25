@@ -31810,6 +31810,8 @@ fn blocker_matches_block_filter(
         R::HasCreatureType(t) => computed.subtypes().creature_types.contains(t)
             || computed.keywords().has_kw(&Keyword::Changeling),
         R::HasArtifactSubtype(a) => computed.subtypes().artifact_subtypes.contains(a),
+        // Midnight Pathlighter — "except by legendary creatures".
+        R::HasSupertype(s) => computed.supertypes().contains(s),
         R::PowerAtMost(n) => computed.power <= *n,
         R::PowerAtLeast(n) => computed.power >= *n,
         R::ToughnessAtMost(n) => computed.toughness <= *n,

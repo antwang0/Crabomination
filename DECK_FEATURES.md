@@ -1292,7 +1292,7 @@ completion tail resolves once, last); `StaticEffect::
 ExileResolvingInstantsAndSorceries` plus a `total_mana_value` cap on
 `CastAnyOrderWithoutPaying` (Rod of Absorption); and `CastFromHandWithoutPaying`
 now resolves an X-relative filter, so `WithX` over a die result gates it
-(Arcane Endeavor). Residuals: **Grave Endeavor** targets its creature card; **Nihiloor** always
+(Arcane Endeavor). Residuals: **Grave Endeavor** returns the greatest-power creature card; **Nihiloor** always
 taps itself and takes one creature; **Phantom Steed**'s copy isn't an
 Illusion; **Rod of Absorption** exiles spells cast before it arrived. Pods
 (1,000 games each, all decided): 4 seats beside Urza / Osgir / Eshki (seed

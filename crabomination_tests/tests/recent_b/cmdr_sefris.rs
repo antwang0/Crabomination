@@ -181,7 +181,7 @@ fn grave_endeavor_reanimates_and_drains() {
         DecisionAnswer::DieRoll(7),
         DecisionAnswer::Amount(0),
     ]));
-    cast(&mut g, 0, ge, Some(Target::Permanent(bear))).expect("grave endeavor");
+    cast(&mut g, 0, ge, None).expect("grave endeavor");
     let counters = g.battlefield_find(bear).expect("back").counter_count(CounterType::PlusOnePlusOne);
     let drained = 20 - g.players[1].life;
     assert_eq!((counters + drained as u32), 11, "the two results split");
