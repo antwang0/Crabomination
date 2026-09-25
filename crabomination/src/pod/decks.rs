@@ -4360,3 +4360,33 @@ pub const KAMIZ_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, island, island, island, island, island, island,
     swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const SATYA_COMMANDERS: &[CardFactory] = &[satya_aetherflux_genius];
+
+/// **Creative Energy**, the Modern Horizons 3 Commander deck (2024-06-14),
+/// exactly as MTGJSON's `CreativeEnergy_M3C` prints it: 79 nonbasic cards +
+/// 10 Plains + 5 Island + 5 Mountain = 99. Jeskai energy and token copies
+/// under Satya, Aetherflux Genius.
+pub const SATYA_MAIN: &[CardFactory] = &[
+    cayth_famed_mechanist, sphinx_of_the_revelation, filigree_racer, localized_destruction,
+    aether_refinery, hourglass_of_the_lost, salvation_colossus, blaster_hulk, razorfield_ripper,
+    silverquill_lecturer, overclocked_electromancer, stone_idol_generator, aurora_shifter,
+    conversion_apparatus, gontis_aether_heart, lightning_runner, aethertide_whale,
+    aethergeode_miner, aethersphere_harvester, bident_of_thassa, temple_of_enlightenment,
+    battlefield_forge, myr_battlesphere, grenzo_havoc_raiser, brudiclad_telchor_engineer,
+    coveted_jewel, goldspan_dragon, legion_loyalty, mystic_gate, akromas_will, adarkar_wastes,
+    shivan_reef, coalition_relic, combustible_gearhulk, aetherworks_marvel, angel_of_invention,
+    confiscation_coup, aetherstorm_roc, aethersquall_ancient, frostboil_snarl, austere_command,
+    furycalm_snarl, midnight_clock, professional_face_breaker, farewell, port_town,
+    temple_of_triumph, solemn_simulacrum, temple_of_epiphany, prairie_stream,
+    skyclave_apparition, castle_vantress, jolted_awake, bespoke_battlewagon, roil_cartographer,
+    unstable_amulet, amped_raptor, solar_transformer, scurry_of_gremlins, izzet_generatorium,
+    talisman_of_conviction, tezzerets_gambit, izzet_boilerworks, azorius_chancery,
+    talisman_of_progress, command_tower, burnished_hart, arcane_signet, sol_ring,
+    era_of_innovation, aether_hub, decoction_module, glimmer_of_genius, whirler_virtuoso,
+    talisman_of_creativity, swords_to_plowshares, wayfarers_bauble, demolition_field,
+    mystic_monastery,
+    // Basics: 10 plains, 5 island, 5 mountain
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, island,
+    island, island, island, island, mountain, mountain, mountain, mountain, mountain,
+];

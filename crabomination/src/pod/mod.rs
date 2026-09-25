@@ -1183,6 +1183,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::KAMIZ_COMMANDERS,
             main: decks::KAMIZ_MAIN,
         },
+        // Hundred-and-forty-fourth: Creative Energy (Modern Horizons 3)
+        // — Jeskai energy and token copies under Satya, Aetherflux
+        // Genius. `--pod-decks 144`.
+        PodDeck {
+            name: "Satya, Aetherflux Genius (URW)",
+            commanders: decks::SATYA_COMMANDERS,
+            main: decks::SATYA_MAIN,
+        },
     ]
 }
 
