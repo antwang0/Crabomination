@@ -3,20 +3,9 @@
 //! `tests/recent_b/cmdr_tenth.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Clockspinning** — targets a permanent only, not a suspended card.
-//! - **Everybody Lives!** — players don't gain hexproof, and they can still
-//!   lose life.
-//! - **Idris, Soul of the TARDIS** — gains the exiled card's activated
-//!   abilities, not its triggered ones.
-//! - **The Day of the Doctor** — chapter IV spares every Doctor, not up to
-//!   three chosen ones.
-//! - **The Eleventh Hour** — Prisoner Zero keeps the copied creature's name
-//!   and creature types (plus Alien).
-//! - **The Pandorica** — the permanent phases in when The Pandorica leaves
-//!   the battlefield, not when it untaps.
-//! - **The War Doctor** — "one or more" triggers once per permanent or card.
-//! - **Wedding Ring** — the watch reads any artifact named Wedding Ring the
-//!   opponent controls (the copy they got, or another).
+//! - **Clockspinning** — keyword counters can't be chosen.
+//! - **The Day of the Doctor** — chapter IV keeps your own greatest-power
+//!   Doctors; you can't keep an opponent's.
 
 use std::sync::Arc;
 
@@ -234,9 +223,9 @@ pub fn atraxi_warden() -> CardDefinition {
     }
 }
 
-/// Clockspinning — buyback {3}; remove a counter from target permanent or
-/// add another of that kind. Residual: a permanent only, not a suspended
-/// card.
+/// Clockspinning — buyback {3}; a counter on target permanent or suspended
+/// card is removed or doubled up (the caster helps its own, hurts an
+/// opponent's). Residual: keyword counters can't be chosen.
 pub fn clockspinning() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Buyback(cost(&[generic(3)]))],
@@ -244,10 +233,11 @@ pub fn clockspinning() -> CardDefinition {
             "Clockspinning",
             cost(&[u()]),
             CardType::Instant,
-            Effect::ChooseMode(vec![
-                Effect::RemoveAnyCounter { what: target_filtered(R::Permanent) },
-                Effect::AddCounterOfEachKindOn { what: target_filtered(R::Permanent) },
-            ]),
+            Effect::Clockspin {
+                what: target_filtered(
+                    R::OnBattlefield.and(R::WithAnyCounter).or(R::InExile.and(R::IsSuspended)),
+                ),
+            },
         )
     }
 }
@@ -353,9 +343,8 @@ pub fn ecstatic_beauty() -> CardDefinition {
     }
 }
 
-/// Everybody Lives! — creatures gain hexproof and indestructible; players
-/// can't lose or win this turn. Residual: players don't gain hexproof and can
-/// still lose life.
+/// Everybody Lives! — creatures gain hexproof and indestructible, players
+/// gain hexproof; nobody can lose life, lose or win this turn.
 pub fn everybody_lives() -> CardDefinition {
     spell(
         "Everybody Lives!",
@@ -372,6 +361,8 @@ pub fn everybody_lives() -> CardDefinition {
                 keyword: Keyword::Indestructible,
                 duration: Duration::EndOfTurn,
             },
+            Effect::PlayerHexproofThisTurn { who: Selector::Player(PlayerRef::EachPlayer) },
+            Effect::CantLoseLifeThisTurn { who: Selector::Player(PlayerRef::EachPlayer) },
             Effect::EachPlayerDoes {
                 who: PlayerRef::EachPlayer,
                 body: Box::new(Effect::CantLoseThisTurn { damage_floor: false }),
@@ -424,28 +415,30 @@ pub fn four_knocks() -> CardDefinition {
 
 /// Idris, Soul of the TARDIS — vanishing 3; entering exiles another artifact
 /// of yours until she leaves; she has its activated abilities and +X/+X (X =
-/// its mana value). Residual: not its triggered abilities.
+/// its mana value), and its triggered abilities.
 pub fn idris_soul_of_the_tardis() -> CardDefinition {
     let x = || Value::TotalManaValueOf(Box::new(Selector::CardExiledWithSource));
     CardDefinition {
         keywords: vec![Keyword::Vanishing(3)],
         static_abilities: vec![
             StaticAbility {
-                description: "Idris has all activated abilities of the exiled card.",
-                effect: StaticEffect::HasActivatedAbilitiesOfExiledWithSelf,
-            },
-            StaticAbility {
                 description: "Idris gets +X/+X, where X is the exiled card's mana value.",
                 effect: StaticEffect::PumpSelfByValue { amount: x(), per_power: 1, per_toughness: 1 },
             },
         ],
-        triggered_abilities: vec![etb(Effect::ExileUntilSourceLeaves {
-            what: Selector::Take {
-                inner: Box::new(Selector::EachPermanent(yours(R::Artifact).and(R::OtherThanSource))),
-                count: Box::new(Value::ONE),
+        // The borrowed abilities are stamped as the card is exiled: a static
+        // reading `exiled_with` never saw a card `ExileUntilSourceLeaves`
+        // links through `exiled_by`, so Idris had none.
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::ExileUntilSourceLeaves {
+                what: Selector::Take {
+                    inner: Box::new(Selector::EachPermanent(yours(R::Artifact).and(R::OtherThanSource))),
+                    count: Box::new(Value::ONE),
+                },
+                return_to: ExileReturnZone::Battlefield,
             },
-            return_to: ExileReturnZone::Battlefield,
-        })],
+            Effect::AcquireAbilitiesOfExiledWithSource,
+        ]))],
         ..legend(creature(
             "Idris, Soul of the TARDIS",
             cost(&[generic(1), u(), r()]),
@@ -786,8 +779,9 @@ pub fn star_whale() -> CardDefinition {
 }
 
 /// The Day of the Doctor — I–III: exile from the top until a legendary card,
-/// playable while this remains. IV: you may exile all non-Doctor creatures
-/// for 13 damage to you. Residual: every Doctor is spared, not up to three.
+/// playable while this remains. IV: keep up to three Doctors and you may exile
+/// every other creature for 13 damage to you. Residual: IV keeps your own
+/// greatest-power Doctors.
 pub fn the_day_of_the_doctor() -> CardDefinition {
     let summon = || {
         Effect::Seq(vec![
@@ -824,12 +818,9 @@ pub fn the_day_of_the_doctor() -> CardDefinition {
                 (
                     4,
                     Effect::MayDo {
-                        description: "Exile every creature but your Doctors and take 13 damage?".into(),
+                        description: "Exile every creature but up to three of your Doctors and take 13 damage?".into(),
                         body: Box::new(Effect::Seq(vec![
-                            Effect::Move {
-                                what: Selector::EachPermanent(R::Creature.and(R::Not(Box::new(yours(doctor()))))),
-                                to: ZoneDest::Exile,
-                            },
+                            Effect::ExileOtherCreaturesKeepingUpTo { keep: doctor(), max: 3 },
                             Effect::DealDamage { to: Selector::You, amount: Value::Const(13) },
                         ])),
                     },
@@ -869,7 +860,7 @@ pub fn the_eleventh_doctor() -> CardDefinition {
 
 /// The Eleventh Hour — I: tutor a Doctor. II: a Food and a 1/1 Human that
 /// makes Doctor spells cost {1} less. III: a legendary Alien token copy of
-/// target creature. Residual: the copy keeps its name and creature types.
+/// target creature named Prisoner Zero.
 pub fn the_eleventh_hour() -> CardDefinition {
     let human = TokenDefinition {
         static_abilities: vec![StaticAbility {
@@ -886,19 +877,26 @@ pub fn the_eleventh_hour() -> CardDefinition {
             (2, Effect::Seq(vec![make(food_token(), Value::ONE), make(human, Value::ONE)])),
             (
                 3,
-                Effect::CreateTokenCopyOf {
-                    who: PlayerRef::You,
-                    count: Value::ONE,
-                    source: target_filtered(R::Creature),
-                    extra_creature_types: vec![CreatureType::Alien],
-                    extra_card_types: vec![],
-                    override_pt: None,
-                    override_colors: None,
-                    enters_tapped: false,
-                    non_legendary: false,
-                    legendary: true,
-                    extra_keywords: vec![],
-                },
+                Effect::Seq(vec![
+                    Effect::CreateTokenCopyOf {
+                        who: PlayerRef::You,
+                        count: Value::ONE,
+                        source: target_filtered(R::Creature),
+                        extra_creature_types: vec![],
+                        extra_card_types: vec![],
+                        override_pt: None,
+                        override_colors: None,
+                        enters_tapped: false,
+                        non_legendary: false,
+                        legendary: true,
+                        extra_keywords: vec![],
+                    },
+                    Effect::SetCopiableNameAndTypes {
+                        what: Selector::LastCreatedToken,
+                        name: "Prisoner Zero",
+                        creature_types: vec![CreatureType::Alien],
+                    },
+                ]),
             ),
         ],
     )
@@ -1030,8 +1028,8 @@ pub fn the_ninth_doctor() -> CardDefinition {
 }
 
 /// The Pandorica — may stay tapped; {1}{W},{T}: untap another target nonland
-/// permanent, then phase it out (sorcery speed). Residual: it phases in when
-/// The Pandorica leaves the battlefield, not when it untaps.
+/// permanent, then phase it out until The Pandorica untaps or leaves
+/// (sorcery speed).
 pub fn the_pandorica() -> CardDefinition {
     CardDefinition {
         name: "The Pandorica",
@@ -1048,6 +1046,10 @@ pub fn the_pandorica() -> CardDefinition {
                 Effect::PhaseOut { what: Selector::Target(0), until_source_leaves: true },
             ]),
             ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::BecomesUntapped, EventScope::SelfSource),
+            effect: Effect::PhaseInHeldBySource,
         }],
         ..Default::default()
     }
@@ -1113,19 +1115,20 @@ pub fn the_tenth_doctor() -> CardDefinition {
 
 /// The War Doctor — other permanents phasing out and other cards being
 /// exiled add time counters; attacking, it deals its time counters to any
-/// target, exiling a creature that would die. Residual: "one or more"
-/// triggers once per object.
+/// target, exiling a creature that would die.
 pub fn the_war_doctor() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::PhasesOut, EventScope::AnyPlayer)
-                    .with_filter(Predicate::Not(Box::new(Predicate::TriggerSourceIsSelf))),
+                    .with_filter(Predicate::Not(Box::new(Predicate::TriggerSourceIsSelf)))
+                    .once_per_batch(),
                 effect: time_counter_on_self(),
             },
             TriggeredAbility {
                 event: EventSpec::new(EventKind::CardExiled, EventScope::AnyPlayer)
-                    .with_filter(Predicate::Not(Box::new(Predicate::TriggerSourceIsSelf))),
+                    .with_filter(Predicate::Not(Box::new(Predicate::TriggerSourceIsSelf)))
+                    .once_per_batch(),
                 effect: time_counter_on_self(),
             },
             on_attack(Effect::Seq(vec![
@@ -1172,13 +1175,13 @@ pub fn time_beetle() -> CardDefinition {
 
 /// Wedding Ring — entering, if cast, target opponent gets a token copy; an
 /// opponent with a Wedding Ring drawing or gaining life on their turn does
-/// the same for you. Residual: any Wedding Ring they control counts.
+/// the same for you (CR 201.2: any artifact of theirs with that name).
 pub fn wedding_ring() -> CardDefinition {
     let wed = || {
         Predicate::All(vec![
             Predicate::SelectorExists(Selector::ControlledBy {
                 who: PlayerRef::Triggerer,
-                filter: R::HasName("Wedding Ring".into()),
+                filter: R::Artifact.and(R::HasName("Wedding Ring".into())),
             }),
             Predicate::IsTurnOf(PlayerRef::Triggerer),
         ])

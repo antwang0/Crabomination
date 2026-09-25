@@ -326,3 +326,144 @@ fn cr_702_63a_flesh_duplicate_copy_enters_with_three_time_counters() {
     upkeep_tick(&mut g);
     assert!(g.battlefield_find(dup).is_some(), "not sacrificed at its first upkeep");
 }
+
+fn activate(g: &mut GameState, card_id: CardId, ability_index: usize, target: Option<Target>) -> Result<(), String> {
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id,
+        ability_index,
+        target,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .map_err(|e| format!("{e:?}"))?;
+    drain_stack(g);
+    Ok(())
+}
+
+/// CR 702.62b — Clockspinning reaches a suspended card: the caster's own
+/// loses a time counter; an opponent's creature loses its +1/+1 counter.
+#[test]
+fn cr_702_62b_clockspinning_turns_a_suspended_cards_clock() {
+    let mut g = main_phase(2);
+    let whale = g.add_card_to_graveyard(0, catalog::star_whale());
+    suspend(&mut g, whale, 3);
+    let spell = g.add_card_to_hand(0, catalog::clockspinning());
+    cast(&mut g, spell, Some(Target::Permanent(whale))).expect("Clockspinning on a suspended card");
+    assert_eq!(time(&g, whale), 2);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    let spell = g.add_card_to_hand(0, catalog::clockspinning());
+    cast(&mut g, spell, Some(Target::Permanent(bear))).expect("Clockspinning on a creature");
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+/// Everybody Lives! — players gain hexproof and can't lose life this turn
+/// (they can still gain it).
+#[test]
+fn everybody_lives_shields_the_players() {
+    let mut g = main_phase(2);
+    let spell = g.add_card_to_hand(0, catalog::everybody_lives());
+    cast(&mut g, spell, None).expect("Everybody Lives!");
+    let life = g.players[1].life;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    assert!(cast(&mut g, bolt, Some(Target::Player(1))).is_err(), "a player has hexproof");
+    run(&mut g, Effect::LoseLife { who: Selector::Player(crabomination::effect::PlayerRef::Seat(1)), amount: Value::Const(5) }, spell);
+    assert_eq!(g.players[1].life, life, "can't lose life");
+    run(&mut g, Effect::GainLife { who: Selector::Player(crabomination::effect::PlayerRef::Seat(1)), amount: Value::Const(2) }, spell);
+    assert_eq!(g.players[1].life, life + 2, "can still gain it");
+}
+
+/// Idris has the exiled artifact's activated abilities — Sol Ring's mana
+/// ability (a static reading the imprint link never saw this exile's link).
+#[test]
+fn idris_taps_for_the_exiled_sol_ring() {
+    let mut g = main_phase(2);
+    let ring = g.add_card_to_battlefield(0, catalog::sol_ring());
+    let idris = g.add_card_to_hand(0, catalog::idris_soul_of_the_tardis());
+    cast(&mut g, idris, None).expect("Idris");
+    assert!(g.exile.iter().any(|c| c.id == ring), "Sol Ring is exiled");
+    g.clear_sickness(idris);
+    g.players[0].mana_pool = Default::default();
+    activate(&mut g, idris, 0, None).expect("Sol Ring's ability");
+    assert_eq!(g.players[0].mana_pool.total(), 2);
+}
+
+/// The Day of the Doctor IV — up to three Doctors stay; every other creature
+/// is exiled.
+#[test]
+fn the_day_of_the_doctor_keeps_three_doctors() {
+    let mut g = main_phase(2);
+    let saga = g.add_card_to_battlefield(0, catalog::the_day_of_the_doctor());
+    let docs: Vec<CardId> = [
+        catalog::the_tenth_doctor(),
+        catalog::the_war_doctor(),
+        catalog::the_ninth_doctor(),
+        catalog::the_eleventh_doctor(),
+    ]
+    .into_iter()
+    .map(|d| g.add_card_to_battlefield(0, d))
+    .collect();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    run(
+        &mut g,
+        Effect::ExileOtherCreaturesKeepingUpTo {
+            keep: crabomination::card::SelectionRequirement::HasCreatureType(crabomination::card::CreatureType::Doctor),
+            max: 3,
+        },
+        saga,
+    );
+    assert!(g.battlefield_find(bear).is_none());
+    assert_eq!(docs.iter().filter(|d| g.battlefield_find(**d).is_some()).count(), 3);
+    assert!(g.battlefield_find(docs[2]).is_none(), "the weakest Doctor (The Ninth, 2 power) goes");
+}
+
+/// CR 707.9b — The Eleventh Hour III: the copy is a legendary Alien named
+/// Prisoner Zero, not the copied creature's name and types.
+#[test]
+fn cr_707_9b_the_eleventh_hour_makes_prisoner_zero() {
+    let mut g = main_phase(2);
+    let saga = g.add_card_to_battlefield(0, catalog::the_eleventh_hour());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let chapter = catalog::the_eleventh_hour().saga_chapters[2].1.clone();
+    let mut ctx = EffectContext::for_spell(0, Some(Target::Permanent(bear)), 0, 0);
+    ctx.source = Some(saga);
+    g.resolve_effect(&chapter, &ctx).expect("chapter III");
+    let zero = named(&g, 0, "Prisoner Zero");
+    assert_eq!(zero.len(), 1);
+    let cp = g.computed_permanent(zero[0]).unwrap();
+    assert_eq!(cp.subtypes().creature_types, vec![crabomination::card::CreatureType::Alien]);
+    assert!(cp.supertypes().contains(&crabomination::card::Supertype::Legendary));
+    assert_eq!((cp.power, cp.toughness), (2, 2), "still a copy of the Bears");
+}
+
+/// CR 702.26 — The Pandorica holds a permanent phased out while it stays
+/// tapped; untapping it phases the permanent back in.
+#[test]
+fn cr_702_26_the_pandorica_releases_on_untap() {
+    let mut g = main_phase(2);
+    let box_ = g.add_card_to_battlefield(0, catalog::the_pandorica());
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    flood(&mut g, 0);
+    activate(&mut g, box_, 0, Some(Target::Permanent(giant))).expect("The Pandorica");
+    assert!(g.battlefield_find(giant).is_none(), "phased out");
+    let c = g.battlefield_find_mut(box_).unwrap();
+    c.tapped = false;
+    let ev = vec![GameEvent::PermanentUntapped { card_id: box_ }];
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(giant).is_some(), "phased back in");
+}
+
+/// The War Doctor — "one or more other cards are put into exile": one
+/// counter for a batch, not one per card.
+#[test]
+fn the_war_doctor_counts_an_exile_batch_once() {
+    let mut g = main_phase(2);
+    let doc = g.add_card_to_battlefield(0, catalog::the_war_doctor());
+    let a = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let b = g.add_card_to_graveyard(1, catalog::hill_giant());
+    run(&mut g, Effect::Exile { what: Selector::ExactObjects(vec![a, b]) }, doc);
+    assert_eq!(time(&g, doc), 1);
+}

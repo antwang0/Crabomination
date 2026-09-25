@@ -170,7 +170,7 @@ lists were picked.
 | **Doom Prevails** (MSC precon) UBR | Doctor Doom, King of Latveria | UBR | 100 | 🟡 all 100 implemented, 4 carry residuals (Extract Power, Kang Dynasty, Lady Loki, Superior Foes of Spider-Man) |
 | **The Ruinous Powers** (40K precon) UBR | Abaddon the Despoiler | UBR | 100 | 🟡 all 100 implemented, 6 carry residuals (Bloodthirster, Chaos Mutation, Khârn the Betrayer, The Horus Heresy, The Lost and the Damned, The Ruinous Powers) |
 | **Masters of Evil** (WHO precon) UBR | Davros, Dalek Creator | UBR | 100 | 🟡 all 100 implemented, 11 carry residuals (Day of the Moon, Doomsday Confluence, Genesis of the Daleks, Rassilon, The Master Multiplied, The Sound of Drums, The Toymaker's Trap, Time Reaper, Vislor Turlough, Weeping Angel, Zygon Infiltrator) |
-| **Timey-Wimey** (WHO precon) URW | The Tenth Doctor + Rose Tyler | URW | 100 | 🟡 all 100 implemented, 8 carry residuals (Clockspinning, Everybody Lives!, Idris, The Day of the Doctor, The Eleventh Hour, The Pandorica, The War Doctor, Wedding Ring) |
+| **Timey-Wimey** (WHO precon) URW | The Tenth Doctor + Rose Tyler | URW | 100 | 🟡 all 100 implemented, 2 carry residuals (Clockspinning, The Day of the Doctor) |
 | **Necron Dynasties** (40K precon) B | Szarekh, the Silent King | B | 100 | 🟡 all 100 implemented, 4 carry residuals (Biotransference, Canoptek Wraith, Necron Deathmark, Out of the Tombs) |
 | **Dance of the Elements** (ECC precon) WUBRG | Ashling, the Limitless | WUBRG | 100 | 🟡 all 100 implemented, 5 carry residuals (Flamebraider, Smokebraider, Primal Beyond, Haunting Voyage, Horde of Notions) |
 | **Veloci-Ramp-Tor** (LCC precon) RGW | Pantlaza, Sun-Favored | RGW | 100 | 🟡 all 100 implemented, 2 carry residuals (Sunfrill Imitator, Wrathful Raptors) |
