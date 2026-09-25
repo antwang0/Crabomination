@@ -137,6 +137,7 @@ lists were picked.
 | **Prismari Artistry** (SOC precon) UR | Rootha, Mastering the Moment | UR | 100 | 🟡 all 100 implemented, 2 carry residuals (Abstract Performance, Plargg and Nassari) |
 | **Desert Bloom** (OTC precon) RGW | Yuma, Proud Protector | RGW | 100 | 🟡 all 100 implemented, 2 carry residuals (Cataclysmic Prospecting, Dune Chanter) |
 | **Lorehold Spirit** (SOC precon) RW | Quintorius, History Chaser (**planeswalker**) | RW | 100 | 🟡 all 100 implemented, 3 carry residuals (Ao, the Dawn Sky, Quintorius, Loremaster, Serra Paragon) |
+| **Dungeons of Death** (AFC precon) WUB | Sefris of the Hidden Ways | WUB | 100 | 🟡 all 100 implemented, 4 carry residuals (Grave Endeavor, Nihiloor, Phantom Steed, Rod of Absorption) |
 | **Coven Counters** (MIC precon) GW | Leinore, Autumn Sovereign | GW | 100 | 🟡 all 100 implemented, 4 carry residuals (Curse of Conformity, Celestial Judgment, Sigardian Zealot, Moorland Rescuer) |
 | **Arcane Maelstrom** (C20 precon) GUR | Kalamax, the Stormsire | GUR | 100 | 🟡 all 100 implemented, 4 carry residuals (Eon Frolicker, Haldan, Pako, Lavabrink Floodgates) |
 | **Enhanced Evolution** (C20 precon) BGU | Otrimi, the Ever-Playful | BGU | 100 | 🟡 all 100 implemented, 4 carry residuals (Capricopian, Manascape Refractor, Mindleecher, Vastwood Hydra) |
@@ -1234,6 +1235,27 @@ all decided): Galea 5.3 % — the bot does not build a Voltron threat; beside
 Estrid / Eshki / Nelly (seed 10251): 1,000 / 1,000, 5.3 %; census (seed 10252):
 no card of the four unplayed; strict debug pods (seeds 10253-10255, 4 and 6
 seats): 180 / 180. `--bench` byte-identical.
+The **hundred-and-thirty-second** is Adventures in the Forgotten Realms
+Commander's **Dungeons of Death** (`DungeonsOfDeath_AFC`, 2021-07-23) — Esper
+reanimation and venturing under Sefris of the Hidden Ways, `--pod-decks 132` (measured as 128).
+Twenty cards were missing; nineteen are in `cmdr_sefris.rs` (Extract Brain landed first in `cmdr_gonti.rs`). New primitives:
+`PlayerRef::PlayerToYourRight` (Bucknard's Everfull Purse — the nearest living
+seat against turn order); `StaticEffect::DungeonRoomsTriggerTwice` (Hama
+Pashar — extra room copies push above the original so the CR 309.6
+completion tail resolves once, last); `StaticEffect::
+ExileResolvingInstantsAndSorceries` plus a `total_mana_value` cap on
+`CastAnyOrderWithoutPaying` (Rod of Absorption); and `CastFromHandWithoutPaying`
+now resolves an X-relative filter, so `WithX` over a die result gates it
+(Arcane Endeavor). Residuals: **Grave Endeavor** targets its creature card; **Nihiloor** always
+taps itself and takes one creature; **Phantom Steed**'s copy isn't an
+Illusion; **Rod of Absorption** exiles spells cast before it arrived. Pods
+(1,000 games each, all decided): 4 seats beside Urza / Osgir / Eshki (seed
+11106) Sefris 20.3 %, census: no card of the four unplayed; 6 seats beside
+Quintorius / Oloro / Henzie / Millicent / Yuma (seed 11107) and 8 seats
+(seed 11107). The 6-seat run takes 128 s, 104 s of it one game (259): a Yuma
+Scute Swarm board of 814 copies whose 8,171 no-op landfall triggers each
+cycle six seats of priority. It still decides. `--bench` byte-identical.
+
 The **hundred-and-twenty-seventh** is Secrets of Strixhaven Commander's
 **Lorehold Spirit** (`LoreholdSpirit_SOC`, 2026-04-24) — Boros Spirits and
 graveyard departures under the planeswalker commander Quintorius, History
