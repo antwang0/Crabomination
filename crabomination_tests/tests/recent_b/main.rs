@@ -41,6 +41,7 @@ mod cmdr_galadriel;
 mod cmdr_brass;
 mod cmdr_yshtola;
 mod cmdr_tidus;
+mod cmdr_esika;
 mod cmdr_nelly;
 mod cmdr_eshki;
 mod cmdr_estrid;
