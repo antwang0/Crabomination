@@ -3185,6 +3185,7 @@ impl HeuristicBot {
                         .or_else(|| pick_prepare_response(state, seat, &self.weights))
                         .or_else(|| pick_buff_response(state, seat, &self.weights))
                         .or_else(|| pick_copy_response(state, seat, &self.weights))
+                        .or_else(|| super::spell_response::pick_punish_response(state, seat))
                     {
                         return Some(BotStep::plain(a));
                     }
@@ -3220,6 +3221,7 @@ impl HeuristicBot {
                 if matches!(action.action, GameAction::PassPriority)
                     && state.stack.is_empty()
                     && let Some(a) = super::foretell::pick_foretell(state, seat)
+                        .or_else(|| super::spell_response::pick_idle_retrieval(state, seat))
                 {
                     return Some(BotStep::plain(a));
                 }
@@ -3253,6 +3255,7 @@ impl HeuristicBot {
                     .or_else(|| pick_prepare_response(state, seat, &self.weights))
                     .or_else(|| pick_buff_response(state, seat, &self.weights))
                     .or_else(|| pick_copy_response(state, seat, &self.weights))
+                    .or_else(|| super::spell_response::pick_punish_response(state, seat))
                     .or_else(|| pick_combat_only_instant(state, seat, &self.weights))
                     // Defender windows in the attack steps (the picker
                     // no-ops unless declared attackers are coming at us).
@@ -4440,6 +4443,8 @@ fn effect_copies_target_spell(eff: &Effect) -> bool {
         | Effect::CopySpellMayChooseTargets { .. }
         | Effect::CopySpellWithRiders { .. } => true,
         Effect::TemptingOffer { body } => effect_copies_target_spell(body),
+        // Increasing Vengeance copies once or twice by where it was cast.
+        Effect::If { then, else_, .. } => effect_copies_target_spell(then) && effect_copies_target_spell(else_),
         // Wild Ricochet retargets the spell before it copies it.
         Effect::Seq(v) => match v.as_slice() {
             [Effect::ChooseNewTargetsForSpell { .. }, copy, ..] => effect_copies_target_spell(copy),
@@ -4482,6 +4487,7 @@ fn pick_copy_response(state: &GameState, seat: usize, w: &EvalWeights) -> Option
             x_value: None,
         })
         .find(|a| state.would_accept(a.clone()))
+        .or_else(|| super::spell_response::graveyard_copy_casts(state, seat, spell_id, effect_copies_target_spell))
 }
 
 /// CR 601.3 — an instant castable only during combat on an opponent's turn

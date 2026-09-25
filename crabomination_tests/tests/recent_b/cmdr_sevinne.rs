@@ -288,3 +288,67 @@ fn pristine_skywise_untaps_on_noncreature_spells() {
     cast_with(&mut g, cast(temblor, None)).expect("Temblor");
     assert!(g.battlefield_find(skywise).is_some_and(|c| !c.tapped));
 }
+
+fn lands(g: &mut GameState, seat: usize, n: usize) {
+    for _ in 0..n {
+        g.add_card_to_battlefield(seat, catalog::island());
+        g.add_card_to_battlefield(seat, catalog::mountain());
+    }
+}
+
+/// A 1,000-pod census never cast Runic Repetition: the bot casts it at an
+/// exiled flashback card of its own.
+#[test]
+fn bot_casts_runic_repetition_at_an_exiled_flashback_card() {
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    let mut g = main_phase();
+    stock_libraries(&mut g, 5);
+    lands(&mut g, 0, 3);
+    let temblor = g.add_card_to_exile(0, catalog::rolling_temblor());
+    let rr = g.add_card_to_hand(0, catalog::runic_repetition());
+    let got = HeuristicBot::new().next_action(&g, 0);
+    assert!(
+        matches!(got, Some(GameAction::CastSpell { card_id, target: Some(Target::Permanent(t)), .. }) if card_id == rr && t == temblor),
+        "got {got:?}"
+    );
+}
+
+/// CR 707.10 — with its own sorcery on the stack, the bot flashes back
+/// Increasing Vengeance from the graveyard to copy it twice.
+#[test]
+fn bot_copies_its_own_spell_with_a_graveyard_increasing_vengeance() {
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    let mut g = main_phase();
+    stock_libraries(&mut g, 10);
+    lands(&mut g, 0, 5);
+    let iv = g.add_card_to_graveyard(0, catalog::increasing_vengeance());
+    let div = g.add_card_to_hand(0, catalog::divination());
+    g.players[0].mana_pool.add(Color::Blue, 3);
+    g.perform_action(cast(div, None)).expect("Divination");
+    let got = HeuristicBot::new().next_action(&g, 0);
+    assert!(
+        matches!(got, Some(GameAction::CastFlashback { card_id, target: Some(Target::Permanent(t)), .. }) if card_id == iv && t == div),
+        "got {got:?}"
+    );
+}
+
+/// The bot answers an opponent's six-drop with Refuse for six.
+#[test]
+fn bot_refuses_an_opponents_big_spell() {
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    let mut g = main_phase();
+    stock_libraries(&mut g, 5);
+    lands(&mut g, 1, 3);
+    g.active_player_idx = 0;
+    let wurm = g.add_card_to_hand(0, catalog::craw_wurm());
+    flood(&mut g, 0);
+    g.perform_action(cast(wurm, None)).expect("Wurm");
+    let refuse = g.add_card_to_hand(1, catalog::refuse_cooperate());
+    g.priority.player_with_priority = 1;
+    let got = HeuristicBot::new().next_action(&g, 1);
+    assert!(
+        matches!(got, Some(GameAction::CastSpell { card_id, target: Some(Target::Permanent(t)), .. }) if card_id == refuse && t == wurm),
+        "got {got:?}"
+    );
+}
+

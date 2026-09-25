@@ -1880,6 +1880,12 @@ pub fn dueling_coach() -> CardDefinition {
 /// pattern.
 pub fn increasing_vengeance() -> CardDefinition {
     use crate::card::{Keyword, Predicate};
+    // "Target instant or sorcery spell you control" — it read any spell.
+    let yours = target_filtered(
+        SelectionRequirement::IsSpellOnStack
+            .and(SelectionRequirement::ControlledByYou)
+            .and(SelectionRequirement::HasCardType(CardType::Instant).or(SelectionRequirement::HasCardType(CardType::Sorcery))),
+    );
     CardDefinition {
         name: "Increasing Vengeance",
         cost: cost(&[r(), r()]),
@@ -1889,14 +1895,8 @@ pub fn increasing_vengeance() -> CardDefinition {
         keywords: vec![Keyword::Flashback(cost(&[generic(3), r(), r()]))],
         effect: Effect::If {
             cond: Predicate::CastFromGraveyard,
-            then: Box::new(Effect::CopySpell {
-                what: target_filtered(SelectionRequirement::IsSpellOnStack),
-                count: Value::Const(2),
-            }),
-            else_: Box::new(Effect::CopySpell {
-                what: target_filtered(SelectionRequirement::IsSpellOnStack),
-                count: Value::Const(1),
-            }),
+            then: Box::new(Effect::CopySpellMayChooseTargets { what: yours.clone(), count: Value::Const(2) }),
+            else_: Box::new(Effect::CopySpellMayChooseTargets { what: yours, count: Value::Const(1) }),
         },
         ..Default::default()
     }

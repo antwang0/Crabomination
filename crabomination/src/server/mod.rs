@@ -92,6 +92,7 @@ mod combat_only;
 mod suspend;
 mod foretell;
 mod cycling;
+mod spell_response;
 mod transform_sink;
 mod x_counter_sink;
 mod renewal_guard;

@@ -3715,7 +3715,8 @@ impl SelectionRequirement {
             Self::InGraveyard
             | Self::InYourGraveyard
             | Self::InOpponentGraveyard
-            | Self::InExile => true,
+            | Self::InExile
+            | Self::OnTopOfLibrary => true,
             Self::And(a, b) | Self::Or(a, b) => {
                 a.mentions_offboard_zone() || b.mentions_offboard_zone()
             }
