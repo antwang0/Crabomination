@@ -1286,6 +1286,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::LATHRIL_COMMANDERS,
             main: decks::LATHRIL_MAIN,
         },
+        // Seat 157: Limit Break (FIC, Final Fantasy VII) — Naya Equipment
+        // under Cloud, Ex-SOLDIER (CR 702.6 equip, CR 702.143 foretell riders
+        // read "cast from exile"). `--pod-decks 157`.
+        PodDeck {
+            name: "Cloud, Ex-SOLDIER (RGW)",
+            commanders: decks::CLOUD_FIC_COMMANDERS,
+            main: decks::CLOUD_FIC_MAIN,
+        },
     ]
 }
 
@@ -1905,6 +1913,9 @@ mod tests {
             ("Pantlaza", [0x9A47, 155, 9079]),
             // CR 702.143 foretell, CR 107.3 an {X}{X} payment (Numa).
             ("Lathril", [0x1A7A, 156, 9080]),
+            // CR 702.6 equip (a legendary equip cost), CR 702.143 foretold
+            // "cast from exile" riders, one destroy per opponent.
+            ("Cloud, Ex", [0xC10D, 157, 9081]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

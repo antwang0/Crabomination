@@ -4749,3 +4749,34 @@ pub const LATHRIL_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
     swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const CLOUD_FIC_COMMANDERS: &[CardFactory] = &[cloud_ex_soldier];
+
+/// **Limit Break**, the Final Fantasy VII Commander deck (FIC, 2025-06-13),
+/// exactly as MTGJSON's `LimitBreakFinalFantasyVii_FIC` prints it:
+/// 90 nonbasic cards + 3 Forests + 3 Mountains + 3 Plainss = 99. Naya Equipment and
+/// power-7 payoffs under Cloud, Ex-SOLDIER.
+pub const CLOUD_FIC_MAIN: &[CardFactory] = &[
+    tifa_martial_artist, cid_freeflier_pilot, clouds_limit_break, elena_turk_recruit,
+    heidegger_shinra_executive, helitrooper, soldier_military_program, ultimate_magic_holy,
+    avalanche_of_sector_7, cait_sith_fortune_teller, summon_kujata, ultimate_magic_meteor,
+    vincent_vengeful_atoner, yuffie_materia_hunter, bugenhagen_wise_elder,
+    lifestreams_blessing, professor_hojo, summoning_materia, aerith_last_ancient,
+    barret_avalanche_leader, red_xiii_proud_warrior, sephiroth_fallen_hero,
+    conformer_shuriken, wrecking_ball_arm, austere_command, bastion_protector,
+    bronze_guardian, clever_concealment, puresteel_paladin, unfinished_business,
+    vanquish_the_horde, chaos_warp, hellkite_tyrant, professional_face_breaker, decimate,
+    armory_automaton, champions_helm, conquerors_flail, darksteel_plate, inspiring_statuary,
+    sword_of_the_animist, battlefield_forge, bonders_enclave, brushland, canopy_vista,
+    cinder_glade, clifftop_retreat, exotic_orchard, fire_lit_thicket, fortified_village,
+    furycalm_snarl, game_trail, mossfire_valley, rootbound_crag, rugged_prairie,
+    scavenger_grounds, slayers_stronghold, spire_of_industry, sungrass_prairie,
+    sunpetal_grove, sunscorched_divide, zack_fair, barret_wallace, dispatch,
+    secret_rendezvous, furious_rise, vandalblast, cultivate, harmonize, natures_lore,
+    rampant_growth, behemoth_sledge, arcane_signet, colossus_hammer, explorers_scope,
+    heros_blade, heros_heirloom, lightning_greaves, mask_of_memory, skullclamp, sol_ring,
+    trailblazers_boots, ash_barrens, evolving_wilds, jungle_shrine, path_of_ancestry,
+    radiant_grove, sacred_peaks, wooded_ridgeline, command_tower,
+    // Basics
+    mountain, mountain, mountain, forest, forest, forest, plains, plains, plains,
+];
