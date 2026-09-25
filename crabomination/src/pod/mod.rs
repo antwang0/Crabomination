@@ -1279,6 +1279,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::PANTLAZA_COMMANDERS,
             main: decks::PANTLAZA_MAIN,
         },
+        // Hundred-and-fifty-sixth: Elven Empire (Kaldheim Commander) —
+        // Golgari Elves under Lathril, Blade of the Elves. `--pod-decks 156`.
+        PodDeck {
+            name: "Lathril, Blade of the Elves (BG)",
+            commanders: decks::LATHRIL_COMMANDERS,
+            main: decks::LATHRIL_MAIN,
+        },
     ]
 }
 
@@ -1896,6 +1903,8 @@ mod tests {
             // CR 603.2d Wayta's doubled enrage, CR 615 Temple Altisaur's
             // prevention, CR 610.3 Bronzebeak Foragers' exile.
             ("Pantlaza", [0x9A47, 155, 9079]),
+            // CR 702.143 foretell, CR 107.3 an {X}{X} payment (Numa).
+            ("Lathril", [0x1A7A, 156, 9080]),
         ] {
             let precon = *field.iter().find(|d| d.name.starts_with(name)).expect("the precon seat");
             assert_eq!(precon.card_count(), 100);

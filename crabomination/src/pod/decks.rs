@@ -4720,3 +4720,32 @@ pub const PANTLAZA_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, plains, plains, plains, plains,
     mountain, mountain, mountain, mountain,
 ];
+
+pub const LATHRIL_COMMANDERS: &[CardFactory] = &[lathril_blade_of_the_elves];
+
+/// **Elven Empire**, the Kaldheim Commander deck (KHC, 2021-02-05), exactly
+/// as MTGJSON's `ElvenEmpire_KHC` prints it: 70 nonbasic cards + 16 Forests +
+/// 13 Swamps = 99. Golgari Elves under Lathril, Blade of the Elves.
+pub const LATHRIL_MAIN: &[CardFactory] = &[
+    abomination_of_llanowar, beast_whisperer, canopy_tactician, cultivator_of_blades,
+    dwynen_gilt_leaf_daen, elderfang_ritualist, elvish_archdruid, elvish_mystic,
+    elvish_rejuvenator, end_raze_forerunners, eyeblight_cullers, farhaven_elf,
+    golgari_findbroker, harald_king_of_skemfar, imperious_perfect, jagged_scar_archers,
+    jaspera_sentinel, llanowar_tribe, lys_alana_huntmaster, lys_alana_scarblade,
+    marwyn_the_nurturer, masked_admirers, miara_thorn_of_the_glade, nullmage_shepherd,
+    numa_joraga_chieftain, poison_tip_archer, reclamation_sage, rhys_the_exiled,
+    ruthless_winnower, shaman_of_the_pack, skemfar_shadowsage, springbloom_druid,
+    sylvan_messenger, timberwatch_elf, twinblade_assassins, voice_of_many,
+    voice_of_the_woods, wirewood_channeler, wolverine_riders, wood_elves, elven_ambush,
+    poison_the_cup, putrefy, tergrids_shadow, ambitions_cost, bounty_of_skemfar,
+    casualties_of_war, eyeblight_massacre, elvish_promenade, harvest_season,
+    pact_of_the_serpent, return_upon_the_tide, roots_of_wisdom, arcane_signet,
+    serpents_soul_jar, sol_ring, binding_the_old_gods, crown_of_skemfar, elderfang_venom,
+    pride_of_the_perfect, prowess_of_the_fair, moldervine_reclamation, command_tower,
+    foul_orchard, golgari_guildgate, golgari_rot_farm, jungle_hollow, myriad_landscape,
+    path_of_ancestry, skemfar_elderhall,
+    // Basics: 16 forest, 13 swamp
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp,
+];
