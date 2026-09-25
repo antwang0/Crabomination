@@ -128,6 +128,7 @@ lists were picked.
 | **Upgrades Unleashed** (NEC precon) RG | Chishiro, the Shattered Blade | RG | 100 | 🟡 all 100 implemented, 4 carry residuals (Concord with the Kami, Agitator Ant, Forgotten Ancient, Shifting Shadow) |
 | **Mardu Surge** (TDC precon) RWB | Zurgo Stormrender | RWB | 100 | 🟡 all 100 implemented, 1 carries a residual (Gix, Yawgmoth Praetor) |
 | **Ruthless Regiment** (C20 precon) RWB | Jirina Kudro | RWB | 100 | 🟡 all 100 implemented, 2 carry residuals (Sanctuary Blade, Odric, Master Tactician) |
+| **Prismari Artistry** (SOC precon) UR | Rootha, Mastering the Moment | UR | 100 | 🟡 all 100 implemented, 2 carry residuals (Abstract Performance, Plargg and Nassari) |
 | **Exit from Exile** (CLB precon) RG | Faldorn, Dread Wolf Herald | RG | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Exquisite Invention** (C18 precon) UR | Saheeli, the Gifted (**planeswalker**) | UR | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Mishra's Burnished Banner** (BRC precon) UBR | Mishra, Eminent One | UBR | 100 | 🟡 all 100 implemented, 6 carry residuals (below) |
@@ -1220,6 +1221,40 @@ all decided): Galea 5.3 % — the bot does not build a Voltron threat; beside
 Estrid / Eshki / Nelly (seed 10251): 1,000 / 1,000, 5.3 %; census (seed 10252):
 no card of the four unplayed; strict debug pods (seeds 10253-10255, 4 and 6
 seats): 180 / 180. `--bench` byte-identical.
+The **hundred-and-fifteenth** is Secrets of Strixhaven Commander's **Prismari
+Artistry** (`PrismariArtistry_SOC`, 2026-04-24) — Izzet spells and Elementals
+under Rootha, Mastering the Moment, `--pod-decks 115` (committed as 107, 110
+and 113 while eight concurrent seats landed). Nineteen cards were missing
+(`cmdr_rootha.rs`); Surge to Victory and Redoubled Stormsinger also landed
+with Prismari Performance (`cmdr_zaffai.rs`) and Mardu Surge (`cmdr_zurgo.rs`),
+whose versions were kept.
+The primitives: `Value::GreatestInstantOrSorceryManaValueCastThisTurn`
+(stamped at cast time with X — Rootha), `CopySpellForEachOtherLegalCreature.
+casters_creatures` (Mirrorwing Dragon — the caster's creatures, each checked
+against the spell's own filter), `Effect::OpponentVetoesOne` (Plargg and
+Nassari) and `Effect::FaceDownFaceUpPiles` (Abstract Performance — the
+chooser is asked off the library before anything moves). It found two engine
+bugs: ⚠ **a cast trigger read an X spell's mana value off its printed cost**
+(CR 202.3e — Braingeyser for 3 was a 2 to "mana value 5 or greater") and ⚠
+**`R::HasName` wasn't card-only, so every name-scoped continuous effect was
+dropped** (Leitmotif Composer's unblockability did nothing). And three
+rules-correct doublings the simulator can't hold: Leitmotif Composers copying
+themselves on every big spell, Redoubled Stormsinger tokens copying each
+other's copies under Harmonic Prodigy, Surge to Victory's free copies over a
+Composer board — now board-bound gates (cast-trigger fan-out and pending
+stack tokens in the cast gate, a declaration gate on attack triggers, and a
+declined free copy past `MAX_BATTLEFIELD`). Residuals: **Abstract
+Performance**'s "face-down" pile is exiled face up and the chooser is the
+hostile opponent; **Plargg and Nassari**'s vetoing opponent is the hostile
+one. ⚠ The 8-seat pod also found **Orzhov Advokist's peace offer taken from
+the last opponent standing** (617 Pegasi held home for twenty turns, one game
+42 s): the ask is `OptionalKind::PeaceOffer` now and the bot declines it
+then. Four-seat pods
+beside Sigarda / Teval / Disa (seed 11096, 1,000 games, all decided): Rootha
+20.3 %; census: no card of the four unplayed (Twinflame, unplayed before the
+"up to N targets" bot fix, now casts); 6 and 8 seats (seed 11097) 1,000 /
+1,000 each. `--bench` byte-identical.
+
 The **hundred-and-ninth** is Kamigawa: Neon Dynasty Commander's **Upgrades
 Unleashed** (`UpgradesUnleashed_NEC`) — Gruul "modified" creatures (CR 700.9)
 under Chishiro, the Shattered Blade, `--pod-decks 109` (committed as 102 while

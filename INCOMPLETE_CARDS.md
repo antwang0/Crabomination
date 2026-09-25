@@ -1958,6 +1958,8 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Herald of Amity | Silverquill Influence (SOC) | the top eight are revealed rather than exiled; the uncast ones go to the bottom. |
 | 🟡 Concord with the Kami | Upgrades Unleashed (NEC) | "choose one or more" takes every mode that can do something (a counter needs a target creature with a counter; the card and Spirit need their enchanted / equipped creature). |
 | 🟡 Gix, Yawgmoth Praetor | Mardu Surge (TDC) | the cards its activation exiles stay free to play for the rest of the turn, not only as the ability resolves. |
+| 🟡 Abstract Performance | Prismari Artistry (SOC) | the "face-down" pile is exiled face up (only the chooser's prompt hides it); the chooser is the hostile opponent, not one you choose. |
+| 🟡 Plargg and Nassari | Prismari Artistry (SOC) | the vetoing opponent is the hostile opponent, not one you choose. |
 | 🟡 Descendants' Fury | Sliver Swarm (CMM) | "one of them" is any attacker of yours that damaged a player this turn, not only this combat-damage batch's. |
 | 🟡 Bloodlord of Vaasgoth | Vampiric Bloodlust (C17) | the granted bloodthirst is checked as the cast trigger resolves, not as the creature enters. |
 | 🟡 Mathas, Fiend Seeker | Vampiric Bloodlust (C17) | a bounty counter grants its dies trigger only while Mathas is on the battlefield. |
