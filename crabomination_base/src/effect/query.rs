@@ -4430,6 +4430,10 @@ impl Effect {
                 }
                 Effect::If { then, else_, .. } => eff_find(then, slot, mode, kicked)
                     .or_else(|| eff_find(else_, slot, mode, kicked)),
+                // Grave Endeavor's reanimate target sits in one die branch.
+                Effect::RollTwoDiceAssign { first, second, .. }
+                | Effect::AssignTwoDieResults { first, second, .. } => eff_find(first, slot, mode, kicked)
+                    .or_else(|| eff_find(second, slot, mode, kicked)),
                 // A death-watch that is its slot's only mention declares the
                 // filter itself (Melira's "another target creature or artifact").
                 Effect::WhenTargetDiesThisTurn {
