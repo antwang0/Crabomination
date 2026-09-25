@@ -43,6 +43,7 @@ mod cmdr_jirina;
 mod cmdr_olivia;
 mod cmdr_omo;
 mod cmdr_morophon;
+mod cmdr_prosper;
 mod cmdr_galea;
 mod cmdr_chishiro;
 mod cmdr_zurgo;
