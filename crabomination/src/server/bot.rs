@@ -9609,6 +9609,9 @@ pub(super) fn pick_token_maker(state: &GameState, seat: usize, w: &EvalWeights) 
     {
         return None;
     }
+    if super::renewal_guard::board_is_saturated(state, seat) {
+        return None;
+    }
     for card in state.battlefield.iter().filter(|c| c.controller == seat) {
         for (idx, ab) in card.definition.activated_abilities.iter().enumerate() {
             if sink_sacrifice_cost(ab, w)

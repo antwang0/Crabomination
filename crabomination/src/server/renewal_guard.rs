@@ -40,6 +40,33 @@ pub(super) fn renews_its_own_fodder(state: &GameState, seat: usize, source: Card
         })
 }
 
+/// True when `seat`'s board is already overkill: at least
+/// [`SATURATED_CREATURES`] creatures whose total power is three times the
+/// life every live opponent has left. Another token then changes nothing but
+/// the board size, and a sink that nets its own resource back loops until
+/// the pod's board cap — Whirler Virtuoso under Decoction Module,
+/// Panharmonicon and Stridehangar Automaton (3 energy in, 4 back) made 980
+/// Thopters in one game (seat 138 pod, seed 138 game 561).
+pub(super) fn board_is_saturated(state: &GameState, seat: usize) -> bool {
+    let mut count = 0usize;
+    let mut power = 0i64;
+    for c in state.battlefield.iter().filter(|c| c.controller == seat) {
+        if let Some(cp) = state.computed_permanent(c.id).filter(|cp| cp.card_types().contains(&crate::card::CardType::Creature)) {
+            count += 1;
+            power += i64::from(cp.power.max(0));
+        }
+    }
+    if count < SATURATED_CREATURES {
+        return false;
+    }
+    let life: i64 = state.opponents_of(seat).iter().map(|&o| i64::from(state.players[o].life.max(0))).sum();
+    power >= 3 * life
+}
+
+/// The creature count below which [`board_is_saturated`] never fires — far
+/// past any duel board, so the 2-player pool never reaches it.
+const SATURATED_CREATURES: usize = 60;
+
 #[cfg(test)]
 mod tests {
     use crate::catalog;
@@ -82,5 +109,25 @@ mod tests {
             assert!(pick_sacrifice_value(&g, me, &w).is_none());
             assert!(pick_token_maker(&g, me, &w).is_none());
         }
+    }
+
+    /// Sixty Bears against two opponents at 20 life: 120 power is three
+    /// times 40, so the token sink stops (the 980-Thopter pod game, seed 138
+    /// game 561); at 59 creatures it does not.
+    #[test]
+    fn an_overkill_board_stops_minting_tokens() {
+        let mut g = multi_player_game(3);
+        let me = 0;
+        for p in 1..3 {
+            g.players[p].life = 20;
+        }
+        for _ in 0..59 {
+            g.add_card_to_battlefield(me, catalog::grizzly_bears());
+        }
+        assert!(!super::board_is_saturated(&g, me), "59 creatures");
+        g.add_card_to_battlefield(me, catalog::grizzly_bears());
+        assert!(super::board_is_saturated(&g, me));
+        g.players[1].life = 21;
+        assert!(!super::board_is_saturated(&g, me), "120 power < 3 x 41");
     }
 }
