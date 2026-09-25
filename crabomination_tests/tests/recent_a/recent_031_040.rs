@@ -779,6 +779,13 @@ mod recent35 {
         drain_stack(&mut g);
         assert!(g.battlefield_find(foe).is_none(), "target exiled by the blink");
         assert!(g.exile.iter().any(|c| c.id == foe), "sitting in exile until end step");
+        // CR 610.3 — "under its owner's control", with no counter.
+        g.step = TurnStep::End;
+        g.fire_step_triggers(TurnStep::End);
+        drain_stack(&mut g);
+        let back = g.battlefield.iter().find(|c| c.definition.name == "Grizzly Bears").expect("returned");
+        assert_eq!(back.controller, 1);
+        assert_eq!(back.counter_count(crabomination::card::CounterType::PlusOnePlusOne), 0);
     }
 
     #[test]

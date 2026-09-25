@@ -62,10 +62,11 @@ pub fn glimmerpoint_stag() -> CardDefinition {
         keywords: vec![Keyword::Vigilance],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::ExileReturnNextEndStep {
+            effect: Effect::ExileReturnToOwnerNextEndStep {
                 what: target_filtered(
                     SelectionRequirement::Permanent.and(SelectionRequirement::OtherThanSource),
                 ),
+                tapped: false,
             },
         }],
         ..Default::default()
