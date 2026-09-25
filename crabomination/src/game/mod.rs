@@ -154,6 +154,8 @@ mod opponent_controls;
 mod required_target;
 mod unattach;
 mod empty_draw;
+// CR 702.63a — vanishing's last-counter sacrifice trigger.
+mod vanishing;
 /// CR 800.4f/g — routing an ask whose seat has left the game.
 pub(crate) mod departed;
 #[doc(hidden)]
@@ -7722,7 +7724,7 @@ impl GameState {
         specs
     }
 
-    /// CR 702.32 / 702.62 — a permanent with Fading N / Vanishing N enters
+    /// CR 702.32 / 702.63 — a permanent with Fading N / Vanishing N enters
     /// with N fade / time counters. Called from both ETB paths after the
     /// permanent is on the battlefield.
     /// CR 614.1c — apply a permanent's printed `enters_with_counters` to a
@@ -7859,10 +7861,11 @@ impl GameState {
         events
     }
 
-    /// CR 702.32 / 702.62 — at the beginning of the active player's upkeep,
-    /// each Fading / Vanishing permanent they control removes a counter (and
-    /// is sacrificed when it runs out). Processed as a turn-based action at
-    /// upkeep before priority.
+    /// CR 702.32 / 702.63 — at the beginning of the active player's upkeep,
+    /// each Fading / Vanishing permanent they control removes a counter (a
+    /// fading one with none left is sacrificed; vanishing's sacrifice is the
+    /// last-counter trigger in `vanishing.rs`). Processed at upkeep before
+    /// priority.
     pub fn process_fading_vanishing(&mut self) -> Vec<crate::game::GameEvent> {
         use crate::card::{CounterType, Keyword};
         let active = self.active_player_idx;
@@ -7899,7 +7902,9 @@ impl GameState {
                     false
                 }
             } else {
-                // Vanishing: remove one; sacrifice when the last is removed.
+                // CR 702.63a — Vanishing: remove one if there is one. The
+                // sacrifice is its own trigger on the last removal, whatever
+                // removed it (`vanishing_sacrifice_candidates`).
                 if had > 0 {
                     if let Some(c) = self.battlefield_find_mut(id) {
                         c.remove_counters(kind, 1);
@@ -7910,7 +7915,7 @@ impl GameState {
                         count: 1,
                     });
                 }
-                had <= 1
+                false
             };
             if sacrifice {
                 // CR 700.4 — the shared sacrifice helper emits the full
@@ -8104,27 +8109,14 @@ impl GameState {
     /// summoning sickness — Suspend grants haste). Targets are auto-chosen,
     /// matching AutoDecider behavior for other free casts.
     pub fn process_suspend(&mut self) -> Vec<crate::game::GameEvent> {
-        use crate::card::{CounterType, Keyword};
         let active = self.active_player_idx;
         let mut events = Vec::new();
-        // Snapshot suspended exiled cards owned by the active player — the
-        // printed keyword, or suspend *gained* (CR 702.62e, the card
-        // "Suspend", Kang Prime) — with ≥1 time counter, so the borrow is
-        // released before casting. One pass: a printed-suspend card that also
-        // gained suspend (Kang Prime exiling Star Whale) is still one
-        // suspended card, and ticked twice a turn when the two were walked
-        // separately.
-        let suspended: Vec<CardId> = self
-            .exile
-            .iter()
-            .filter(|c| {
-                c.owner == active
-                    && c.counter_count(CounterType::Time) > 0
-                    && (c.granted_suspend
-                        || c.definition.keywords.iter().any(|k| matches!(k, Keyword::Suspend(..))))
-            })
-            .map(|c| c.id)
-            .collect();
+        // CR 702.62e — suspend printed or gained (the card "Suspend", Kang
+        // Prime). One pass: a printed-suspend card that also gained suspend
+        // (Kang Prime exiling Star Whale) ticked twice a turn when the two
+        // were walked separately.
+        let suspended: Vec<CardId> =
+            self.exile.iter().filter(|c| c.owner == active && c.is_suspended()).map(|c| c.id).collect();
         for id in suspended {
             events.append(&mut self.remove_suspend_time_counter(id));
         }
@@ -10091,6 +10083,11 @@ impl GameState {
         // skipped it, so a copy of Emeritus of Ideation came down *unprepared*
         // and a copied Hangarback Walker came down a bare 0/0.
         self.apply_printed_etb_counters(id, events);
+        // CR 702.32a / 702.63a — a token with fading or vanishing enters with
+        // its counters too (a copy's were seeded with the copy, above).
+        if !copied {
+            self.apply_fading_vanishing_etb(id, events);
+        }
         // CR 122.1 — Metallic Mimic / Cathars' Crusade / Arlinn-style typed
         // ETB counters apply to minted tokens too (they enter as normal
         // creatures), and so do the creating effect's own "with N counters".
@@ -22719,7 +22716,10 @@ impl GameState {
         // `self.battlefield` is shared. Phase 2 will mutate `self.stack`
         // and call `&self.evaluate_predicate` to gate each candidate by
         // the optional `EventSpec::filter`.
-        let mut candidates: Vec<TriggerCandidate> = Vec::new();
+        // CR 702.63a — vanishing's sacrifice goes first, so it resolves after
+        // the permanent's own triggers on the same removal (Regenerations
+        // Restored exiles itself for an extra turn before it is sacrificed).
+        let mut candidates: Vec<TriggerCandidate> = self.vanishing_sacrifice_candidates(events);
         // One battlefield pass for the four board-level facts below, instead
         // of one walk each. Hushbringer (CR 614) suppression of reaction
         // creature-death triggers ("whenever a creature dies") while a
@@ -23711,11 +23711,7 @@ impl GameState {
         // CR 702.62b — a suspended card's `TriggerZone::WhileSuspended`
         // triggers function from exile (Nihilith). Most exiled cards carry no
         // counter at all, so the bag test answers first.
-        for card in self.exile.iter().filter(|c| {
-            !c.counters.is_empty()
-                && c.counter_count(crate::card::CounterType::Time) > 0
-                && c.definition.keywords.iter().any(|k| matches!(k, crate::card::Keyword::Suspend(..)))
-        }) {
+        for card in self.exile.iter().filter(|c| c.is_suspended()) {
             for ta in &card.definition.triggered_abilities {
                 if ta.event.zone != crate::effect::TriggerZone::WhileSuspended {
                     continue;

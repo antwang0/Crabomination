@@ -156,7 +156,10 @@ fn vanishing_sacrifices_when_last_time_counter_removed() {
     g.process_fading_vanishing();
     assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::Time), 1,
         "one time counter removed, still alive");
-    g.process_fading_vanishing();
+    // CR 702.63a — the last removal triggers the sacrifice.
+    let ev = g.process_fading_vanishing();
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
     assert!(g.battlefield_find(bear).is_none(), "sacrificed when the last time counter is removed");
     assert!(g.players[0].graveyard.iter().any(|c| c.id == bear));
 }

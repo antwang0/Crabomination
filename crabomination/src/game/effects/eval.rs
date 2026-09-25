@@ -6167,6 +6167,7 @@ impl GameState {
             R::HasKeyword(kw) => card.has_keyword(kw),
             R::HasToxic => card.has_toxic(),
             R::HasModular => card.has_modular(),
+            R::IsSuspended => card.is_suspended() && self.exile.iter().any(|c| c.id == card.id),
             R::HasMutate => card.definition.mutate.is_some(),
             R::HasMorphAbility => card.definition.has_morph_ability(),
             R::HasNoAbilities => card.definition.has_no_abilities(),

@@ -764,7 +764,7 @@ impl GameState {
                 };
                 self.continuous_effects.retain(|e| !ends_now(&e.duration));
                 self.expire_granted_triggers(|g| ends_now(&g.expiry));
-                // CR 702.32 / 702.62 — Fading / Vanishing tick down as a
+                // CR 702.32 / 702.63 — Fading / Vanishing tick down as a
                 // turn-based action at upkeep, before step triggers.
                 let mut fv = self.process_fading_vanishing();
                 events.append(&mut fv);
@@ -2756,7 +2756,7 @@ impl GameState {
                             });
                         }
                     }
-                    // CR 702.32 / 702.62 — Fading / Vanishing enter-with-counters.
+                    // CR 702.32 / 702.63 — Fading / Vanishing enter-with-counters.
                     self.apply_fading_vanishing_etb(card_id, &mut events);
                     // CR 701.28 — a spell cast converted (More Than Meets the
                     // Eye) enters with its back face up.

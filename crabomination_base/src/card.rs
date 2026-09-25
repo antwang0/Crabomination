@@ -2641,6 +2641,9 @@ pub enum SelectionRequirement {
     /// Has Modular N for any N (CR 702.43) — "each creature you control with
     /// modular" (Arcbound Overseer).
     HasModular,
+    /// CR 702.62b — a suspended card: has suspend and a time counter (only
+    /// true in exile — Rose Tyler, Clockspinning).
+    IsSuspended,
     /// CR 702.140 — the card has a mutate cost (Pollywog Symbiote's
     /// "creature spell you cast … if it has mutate").
     HasMutate,
@@ -9912,6 +9915,12 @@ impl CardInstance {
 
     pub fn counter_count(&self, ct: CounterType) -> u32 {
         self.counters.get(&ct).copied().unwrap_or(0)
+    }
+
+    /// CR 702.62b — has suspend (printed or gained) and a time counter. Only
+    /// meaningful for a card in exile; callers walk `GameState::exile`.
+    pub fn is_suspended(&self) -> bool {
+        !self.counters.is_empty() && self.counter_count(CounterType::Time) > 0 && self.has_suspend()
     }
 
     /// CR 122.1 — a counter kind is on a permanent or it is not; a stored

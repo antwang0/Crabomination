@@ -7831,6 +7831,10 @@ pub enum Effect {
     /// "Suspend"). Its owner's `process_suspend` ticks it down and free-casts
     /// it when the last counter is removed.
     GrantSuspend { what: Selector, time_counters: u32 },
+    /// "Choose a counter on target permanent or suspended card. Remove that
+    /// counter or put another of those counters on it" (Clockspinning). The
+    /// bot helps its own objects and hurts an opponent's.
+    Clockspin { what: Selector },
     /// "You may cast spells from your hand this turn without paying their
     /// mana costs" (Yusri's five-win jackpot). Sets the controller's
     /// `free_spells_from_hand_this_turn` flag, cleared at end-of-turn.

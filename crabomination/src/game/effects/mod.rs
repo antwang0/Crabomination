@@ -38,6 +38,7 @@ mod counter_blitz;
 mod fantastic_four;
 mod turtle_power;
 mod blast_from_the_past;
+mod time_travel;
 mod revival;
 mod wakanda;
 mod chosen_color_damage;
@@ -2226,7 +2227,10 @@ impl GameState {
             def.static_abilities
                 .extend(spec.extra_static.iter().cloned());
             for kw in &spec.extra_keywords {
-                if !def.keywords.contains(kw) {
+                // "Except it has vanishing 3 if that creature doesn't have
+                // vanishing" (Flesh Duplicate): a copied vanishing stands.
+                let vanishing = |k: &Keyword| matches!(k, Keyword::Vanishing(_));
+                if !def.keywords.contains(kw) && !(vanishing(kw) && def.keywords.iter().any(vanishing)) {
                     def.keywords.push(kw.clone());
                 }
             }
@@ -6280,51 +6284,10 @@ impl GameState {
             }
 
             Effect::GrantSuspend { what, time_counters } => {
-                // CR 702.62e-f — exile with time counters; the owner's
-                // upkeep ticks it via `granted_suspend`.
-                let ids: Vec<crate::card::CardId> = self
-                    .resolve_selector(what, ctx)
-                    .iter()
-                    .filter_map(|e| e.as_card_id())
-                    .collect();
-                for cid in ids {
-                    // CR 702.62 on a spell — Taigam exiles the spell he
-                    // copied straight off the stack, so it never resolves.
-                    if let Some(pos) = self
-                        .stack
-                        .iter()
-                        .position(|si| matches!(si, StackItem::Spell { card, .. } if card.id == cid))
-                    {
-                        if let StackItem::Spell { card, .. } = self.stack.remove(pos) {
-                            let mut card = *card;
-                            card.granted_suspend = true;
-                            card.add_counters(crate::card::CounterType::Time, *time_counters);
-                            self.exile.push(card);
-                            events.push(GameEvent::PermanentExiled { card_id: cid });
-                        }
-                        continue;
-                    }
-                    // A dies trigger's card is already in a graveyard
-                    // (Epochrasite: "exile it with three time counters").
-                    if let Some(seat) = (0..self.players.len())
-                        .find(|&s| self.players[s].graveyard.iter().any(|c| c.id == cid))
-                    {
-                        if let Some(mut card) = Self::take_card(&mut self.players[seat].graveyard, cid) {
-                            card.granted_suspend = true;
-                            card.add_counters(crate::card::CounterType::Time, *time_counters);
-                            self.exile.push(card);
-                        }
-                        continue;
-                    }
-                    self.remove_from_battlefield_to_exile(cid);
-                    events.push(GameEvent::PermanentExiled { card_id: cid });
-                    if let Some(c) = self.exile.iter_mut().find(|c| c.id == cid) {
-                        c.granted_suspend = true;
-                        c.add_counters(crate::card::CounterType::Time, *time_counters);
-                    }
-                }
+                self.grant_suspend(what, *time_counters, ctx, events);
                 Ok(())
             }
+            Effect::Clockspin { what } => self.clockspin(what, ctx, events),
 
             Effect::FlipCoinsUntilLoseOrStop { tiers } => {
                 use crate::decision::{Decision, DecisionAnswer};
@@ -9066,46 +9029,7 @@ impl GameState {
                 }
                 Ok(())
             }
-            Effect::TimeTravel { who } => {
-                let Some(p) = self
-                    .resolve_selector(&Selector::Player(who.clone()), ctx)
-                    .into_iter()
-                    .find_map(|e| if let EntityRef::Player(p) = e { Some(p) } else { None })
-                else {
-                    return Ok(());
-                };
-                // Suspended cards p owns in exile → remove a time counter (cast
-                // sooner); removal-to-zero casts via the suspend funnel.
-                let suspended: Vec<CardId> = self
-                    .exile
-                    .iter()
-                    .filter(|c| c.owner == p && c.counter_count(CounterType::Time) > 0)
-                    .map(|c| c.id)
-                    .collect();
-                for id in suspended {
-                    let mut evs = self.remove_suspend_time_counter(id);
-                    events.append(&mut evs);
-                }
-                // Permanents p controls with time counters → add one (vanishing
-                // lives longer).
-                let perms: Vec<CardId> = self
-                    .battlefield
-                    .iter()
-                    .filter(|c| c.controller == p && c.counter_count(CounterType::Time) > 0)
-                    .map(|c| c.id)
-                    .collect();
-                for id in perms {
-                    if let Some(c) = self.battlefield_find_mut(id) {
-                        c.add_counters(CounterType::Time, 1);
-                        events.push(GameEvent::CounterAdded {
-                            card_id: id,
-                            counter_type: CounterType::Time,
-                            count: 1, placer: self.resolution_causer,
-                        });
-                    }
-                }
-                Ok(())
-            }
+            Effect::TimeTravel { who } => self.time_travel(who, ctx, events),
 
             Effect::PayEnergyOrElse { amount, otherwise } => {
                 // CR 107.16 — "sacrifice/return unless you pay {E}…". Pay when

@@ -4940,6 +4940,19 @@ impl GameState {
             let defense = c.definition.defense;
             c.counters.insert(CounterType::Defense, defense);
         }
+        // CR 702.32a / 702.63a — a copied (or copy-granted) fading or
+        // vanishing enters with its counters.
+        let fade_or_time = c.definition.keywords.iter().find_map(|k| match k {
+            crate::card::Keyword::Fading(n) => Some((CounterType::Fade, *n)),
+            crate::card::Keyword::Vanishing(n) => Some((CounterType::Time, *n)),
+            _ => None,
+        });
+        if let Some((kind, n)) = fade_or_time
+            && n > 0
+            && c.counter_count(kind) == 0
+        {
+            c.add_counters(kind, n);
+        }
     }
 
     /// CR 704.5g (Zilortha) — true iff some active `LethalDamageByPower` static

@@ -38,6 +38,8 @@ fn cr_702_26_out_of_time_linked_phase() {
     g.dispatch_triggers_for_events(&events);
     let events = g.process_fading_vanishing();
     g.dispatch_triggers_for_events(&events);
+    // CR 702.63a — the last removal triggers the sacrifice.
+    drain_stack(&mut g);
     assert!(g.battlefield_find(oot).is_none(), "vanishing sacrificed it");
     assert!(g.battlefield_find(mine).is_some(), "phased back in");
     assert!(g.battlefield_find(theirs).is_some());

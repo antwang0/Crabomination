@@ -290,3 +290,39 @@ fn cr_406_3_everything_comes_to_dust_clears_the_board() {
     assert!(g.battlefield_find(bear).is_none() && g.battlefield_find(droid).is_none());
     assert!(g.battlefield_find(land).is_some());
 }
+
+fn upkeep_tick(g: &mut GameState) {
+    g.active_player_idx = 0;
+    let ev = g.process_fading_vanishing();
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(g);
+}
+
+/// CR 702.63a — a token with vanishing enters with its time counters: The
+/// Girl in the Fireplace's Human Noble lives three upkeeps, not zero (a minted
+/// token got none, and its first upkeep sacrificed it).
+#[test]
+fn cr_702_63a_the_girl_in_the_fireplace_noble_enters_with_time_counters() {
+    let mut g = main_phase(2);
+    let saga = g.add_card_to_battlefield(0, catalog::the_girl_in_the_fireplace());
+    let chapter_one = catalog::the_girl_in_the_fireplace().saga_chapters[0].1.clone();
+    run(&mut g, chapter_one, saga);
+    let noble = named(&g, 0, "Human Noble")[0];
+    assert_eq!(time(&g, noble), 3);
+    upkeep_tick(&mut g);
+    assert_eq!(time(&g, noble), 2, "still here after its first upkeep");
+}
+
+/// CR 702.63a / 707.9b — Flesh Duplicate's copy has vanishing 3 and enters
+/// with three time counters (they were placed before the copy took hold).
+#[test]
+fn cr_702_63a_flesh_duplicate_copy_enters_with_three_time_counters() {
+    let mut g = main_phase(2);
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let dup = g.add_card_to_hand(0, catalog::flesh_duplicate());
+    cast(&mut g, dup, None).expect("Flesh Duplicate");
+    assert_eq!(g.battlefield_find(dup).map(|c| c.definition.name), Some("Grizzly Bears"));
+    assert_eq!(time(&g, dup), 3);
+    upkeep_tick(&mut g);
+    assert!(g.battlefield_find(dup).is_some(), "not sacrificed at its first upkeep");
+}

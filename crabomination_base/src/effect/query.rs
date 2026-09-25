@@ -1847,6 +1847,7 @@ impl Effect {
             | Effect::ExileReturnToOwnerNextEndStep { what, .. }
             | Effect::PhaseOut { what, .. }
             | Effect::GrantSuspend { what, .. }
+            | Effect::Clockspin { what }
             | Effect::ModularCounters { what }
             | Effect::BecomeBlocked { what }
             | Effect::RememberPermanentOnSource { what }
@@ -2709,6 +2710,7 @@ impl Effect {
             | Effect::PutFaceDownOntoBattlefield { what }
             | Effect::TokenCopyTappedAttacking { source: what }
             | Effect::GrantSuspend { what, .. }
+            | Effect::Clockspin { what }
             | Effect::ModularCounters { what }
             | Effect::BecomeBlocked { what }
             | Effect::Tap { what }
@@ -4238,6 +4240,7 @@ impl Effect {
             // (Mistbind Clique); the plain selector forms don't.
             Effect::PhaseOut { what, .. }
             | Effect::GrantSuspend { what, .. }
+            | Effect::Clockspin { what }
             | Effect::ModularCounters { what }
             | Effect::BecomeBlocked { what }
             | Effect::Tap { what }
@@ -5087,6 +5090,7 @@ impl Effect {
                 }
                 Effect::PhaseOut { what, .. }
                 | Effect::GrantSuspend { what, .. }
+            | Effect::Clockspin { what }
                 | Effect::ModularCounters { what }
                 | Effect::BecomeBlocked { what }
                 | Effect::CantAttackThisTurn { what }

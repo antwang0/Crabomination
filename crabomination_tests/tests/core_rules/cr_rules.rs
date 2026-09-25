@@ -4749,6 +4749,24 @@ fn cr_701_56_time_travel_advances_own_suspended_card() {
     assert_eq!(after, 4, "one time counter removed");
 }
 
+/// CR 701.56a — time travel reaches only *suspended* cards (CR 702.62b: suspend
+/// and a time counter), and adds to each permanent with a time counter.
+#[test]
+fn cr_701_56_time_travel_skips_an_exiled_card_without_suspend() {
+    use crabomination::effect::{Effect, PlayerRef};
+    let mut g = two_player_game();
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    let card = g.players[0].remove_from_hand(bears).unwrap();
+    g.exile.push(card);
+    g.exile.last_mut().unwrap().add_counters(CounterType::Time, 2);
+    let hermit = g.add_card_to_battlefield(0, catalog::deep_forest_hermit());
+    g.battlefield_find_mut(hermit).unwrap().add_counters(CounterType::Time, 1);
+    let ctx = crabomination::game::effects::EffectContext::for_ability(crabomination::card::CardId(0), 0, None);
+    g.resolve_effect(&Effect::TimeTravel { who: PlayerRef::You }, &ctx).unwrap();
+    assert_eq!(g.exile.iter().find(|c| c.id == bears).unwrap().counter_count(CounterType::Time), 2);
+    assert_eq!(g.battlefield_find(hermit).unwrap().counter_count(CounterType::Time), 2);
+}
+
 // ── CR 702.148 — Cleave ──────────────────────────────────────────────────────
 
 /// Casting Path of Peril normally destroys only creatures of mana value 2 or
