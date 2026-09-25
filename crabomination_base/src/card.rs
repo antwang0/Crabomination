@@ -367,6 +367,8 @@ pub enum CreatureType {
     Synth,
     // Marvel Super Heroes Commander (Black Bolt, Crystal, Lockjaw, Medusa).
     Inhuman,
+    // Warhammer 40,000 Commander (Forces of the Imperium).
+    Astartes, Custodes, Inquisitor,
 }
 
 /// Land subtypes (basic land types + others).

@@ -40701,7 +40701,7 @@ pub fn vanguard_suppressor() -> CardDefinition {
         cost: cost(&[generic(3), u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Warrior],
+            creature_types: vec![CreatureType::Astartes, CreatureType::Warrior],
             ..Default::default()
         },
         power: 3,
@@ -40827,7 +40827,7 @@ pub fn ultramarines_honour_guard() -> CardDefinition {
         cost: cost(&[generic(3), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Warrior],
+            creature_types: vec![CreatureType::Astartes, CreatureType::Warrior],
             ..Default::default()
         },
         power: 2,
@@ -40915,7 +40915,7 @@ pub fn space_marine_devastator() -> CardDefinition {
         cost: cost(&[generic(3), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Warrior],
+            creature_types: vec![CreatureType::Astartes, CreatureType::Warrior],
             ..Default::default()
         },
         power: 3,
