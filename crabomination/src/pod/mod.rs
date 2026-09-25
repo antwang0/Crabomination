@@ -1032,6 +1032,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::MILLICENT_COMMANDERS,
             main: decks::MILLICENT_MAIN,
         },
+        // Hundred-and-twenty-fifth: the hundred-and-fifteenth official list
+        // (Riveteers Rampage, NCC) — Jund blitz under Henzie "Toolbox" Torre.
+        // `--pod-decks 125`.
+        PodDeck {
+            name: "Henzie \"Toolbox\" Torre (BRG)",
+            commanders: decks::HENZIE_COMMANDERS,
+            main: decks::HENZIE_MAIN,
+        },
     ]
 }
 
@@ -1609,6 +1617,8 @@ mod tests {
             ("Sidar", [0x51DA, 121, 9045]),
             // Everything counters (every land type), CR 701.5 Summary Dismissal.
             ("Omo", [0x0A0A, 122, 9046]),
+            // CR 702.152 granted blitz, CR 508.1a Weathered Sentinels, CR 701.15 goad.
+            ("Henzie", [0x4E21, 125, 9049]),
         ] {
             let precon = *field.iter().find(|d| d.name.starts_with(name)).expect("the precon seat");
             assert_eq!(precon.card_count(), 100);

@@ -3801,3 +3801,32 @@ pub const MILLICENT_MAIN: &[CardFactory] = &[
     plains, island, island, island, island, island, island, island, island, island, island,
     island,
 ];
+
+pub const HENZIE_COMMANDERS: &[CardFactory] = &[henzie_toolbox_torre];
+
+/// **Riveteers Rampage**, the Streets of New Capenna Commander deck (NCC,
+/// 2022-04-29), exactly as MTGJSON's `RiveteersRampage_NCC` prints it:
+/// 84 nonbasic cards + 4 Swamps + 5 Mountains + 6 Forests = 99. Jund big creatures and blitz under
+/// Henzie "Toolbox" Torre.
+pub const HENZIE_MAIN: &[CardFactory] = &[
+    the_beamtown_bullies, jolene_the_plunder_queen, caldaia_guardian, mezzio_mugger,
+    wave_of_rats, weathered_sentinels, bellowing_mauler, grime_gorger, first_responder,
+    deathbringer_regent, disciple_of_bolas, noxious_gearhulk, etali_primal_storm, inferno_titan,
+    stalking_vengeance, avenger_of_zendikar, giant_adephage, greenwarden_of_murasa,
+    mitotic_slime, thragtusk, treeshaker_chimera, woodfall_primus, world_shaper,
+    kresh_the_bloodbraided, solemn_simulacrum, artisan_of_kozilek, indrik_stomphowler,
+    overgrown_battlement, temur_sabertooth, riveteers_confluence, aether_snap, painful_truths,
+    blasphemous_act, lifes_legacy, victimize, explore, farseek, kodamas_reach, migration_path,
+    rampant_growth, chaos_warp, riveteers_charm, windgraces_judgment, terminate, arcane_signet,
+    commanders_sphere, fellwar_stone, sol_ring, dodgy_jalopy, glittering_stockpile,
+    lifecrafters_bestiary, protection_racket, industrial_advancement, rain_of_riches, turf_war,
+    next_of_kin, evolutionary_leap, warstorm_surge, garruks_uprising, deathreap_ritual,
+    cinder_glade, exotic_orchard, foreboding_ruins, game_trail, kessig_wolf_run,
+    mossfire_valley, mosswort_bridge, shadowblood_ridge, smoldering_marsh, spinerock_knoll,
+    temple_of_malady, twilight_mire, ash_barrens, blighted_woodland, command_tower,
+    jund_panorama, myriad_landscape, path_of_ancestry, riveteers_overlook, savage_lands,
+    temple_of_the_false_god, thriving_bluff, thriving_grove, thriving_moor,
+    // Basics: 4 swamp, 5 mountain, 6 forest
+    swamp, swamp, swamp, swamp, mountain, mountain, mountain, mountain, mountain, forest,
+    forest, forest, forest, forest, forest,
+];
