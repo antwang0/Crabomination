@@ -15877,8 +15877,27 @@ impl GameState {
                         modification: Modification::SetPowerToughness(power, toughness),
                     });
                 }
-                // CR 721.2a — static abilities granted by the band.
+                // CR 721.2a — static abilities granted by the band. A
+                // value-scaled pump (Uthros Research Craft's "+1/+0 for each
+                // artifact") needs the game to count, so it is read here.
                 for se in &band.statics {
+                    if let crate::effect::StaticEffect::PumpPTByValue { applies_to, power, toughness } = se {
+                        let Some(affected) = selector_to_affected(applies_to, card) else { continue };
+                        let ctx = crate::game::effects::EffectContext::for_ability(card.id, card.controller, None);
+                        let (p, t) = (self.evaluate_value(power, &ctx), self.evaluate_value(toughness, &ctx));
+                        if p != 0 || t != 0 {
+                            all_effects.push(ContinuousEffect {
+                                timestamp: card.object_timestamp(),
+                                source: card.id,
+                                affected,
+                                layer: Layer::L7PowerTough,
+                                sublayer: Some(PtSublayer::Modify),
+                                duration: EffectDuration::WhileSourceOnBattlefield,
+                                modification: Modification::ModifyPowerToughness(p, t),
+                            });
+                        }
+                        continue;
+                    }
                     static_effect_to_effects(
                         se,
                         card,

@@ -1856,6 +1856,14 @@ pub(crate) fn cost_reduction_for_spell_full_over<'a>(
                 {
                     reduction += amount;
                 }
+                // Cloud Key — "the chosen type" is the source's, which the
+                // sourceless card check can't read.
+                StaticEffect::CostReduction { filter: crate::card::SelectionRequirement::IsSourceChosenCardType, amount }
+                    if src.controller == caster
+                        && src.chosen_card_type.as_ref().is_some_and(|t| card.definition.card_types.contains(t)) =>
+                {
+                    reduction += amount;
+                }
                 StaticEffect::CostReduction { filter, amount }
                     if src.controller == caster
                         && state.evaluate_requirement_on_card(filter, card, caster) =>
@@ -19756,7 +19764,10 @@ impl GameState {
                 .iter()
                 .filter(|c| c.controller == p)
                 .filter(|c| self.evaluate_requirement_static_on(filter, c, p, Some(card_id)))
-                .map(|c| c.counter_count(*kind))
+                .map(|c| match kind {
+                    Some(k) => c.counter_count(*k),
+                    None => c.counters.values().sum(),
+                })
                 .sum();
             if want == 0 || have < want {
                 return Err(GameError::SelectionRequirementViolated);
@@ -20905,10 +20916,14 @@ impl GameState {
         // counters of the named kind across matching permanents, lowest-power
         // first (validated pre-flight). X is available to the body via XFromCost.
         if let Some((kind, filter)) = ability.remove_counter_among_x.clone() {
+            let has = |c: &CardInstance| match kind {
+                Some(k) => c.counter_count(k) > 0,
+                None => c.counters.values().any(|&n| n > 0),
+            };
             let mut picks: Vec<(CardId, i32)> = self
                 .battlefield
                 .iter()
-                .filter(|c| c.controller == p && c.counter_count(kind) > 0)
+                .filter(|c| c.controller == p && has(c))
                 .filter(|c| self.evaluate_requirement_static_on(&filter, c, p, Some(card_id)))
                 .map(|c| (c.id, c.power()))
                 .collect();
@@ -20916,11 +20931,23 @@ impl GameState {
             let mut left = x_value.unwrap_or(0);
             for (cid, _) in picks {
                 if left == 0 { break; }
-                if let Some(c) = self.battlefield.find_by_id_mut(cid) {
-                    let take = left.min(c.counter_count(kind));
-                    c.remove_counters(kind, take);
-                    events.push(GameEvent::CounterRemoved { card_id: cid, counter_type: kind, count: take });
-                    left -= take;
+                // `None` drains any kinds, in the map's (deterministic) order.
+                let kinds: Vec<crate::card::CounterType> = match kind {
+                    Some(k) => vec![k],
+                    None => self
+                        .battlefield
+                        .find_by_id(cid)
+                        .map(|c| c.counters.iter().filter(|(_, n)| **n > 0).map(|(k, _)| *k).collect())
+                        .unwrap_or_default(),
+                };
+                for k in kinds {
+                    if left == 0 { break; }
+                    if let Some(c) = self.battlefield.find_by_id_mut(cid) {
+                        let take = left.min(c.counter_count(k));
+                        c.remove_counters(k, take);
+                        events.push(GameEvent::CounterRemoved { card_id: cid, counter_type: k, count: take });
+                        left -= take;
+                    }
                 }
             }
         }

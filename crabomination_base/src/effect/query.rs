@@ -1402,6 +1402,8 @@ impl Effect {
             Effect::MoveCounters { from, to, amount, .. } => {
                 sel_has_target(from) || sel_has_target(to) || value_has_target(amount)
             }
+            Effect::PutCountersOf { from, to } => sel_has_target(from) || sel_has_target(to),
+            Effect::SpellGainsSunburst { what } => sel_has_target(what),
             Effect::FreeSpellsFromHandThisTurn => false,
             Effect::ChooseCardTypeForSource => false,
             Effect::PlayFromGraveyardThisTurn
@@ -2472,6 +2474,7 @@ impl Effect {
             // `requires_target` already saw the slot, so the filter walker has
             // to as well or the trigger binds nothing.
             Effect::MoveCounters { from, to, .. } => sel_filter(from).or_else(|| sel_filter(to)),
+            Effect::PutCountersOf { from, to } => sel_filter(from).or_else(|| sel_filter(to)),
             Effect::ReattachTargetAura { aura, to } => sel_filter(aura).or_else(|| sel_filter(to)),
             Effect::RedirectNextDamage { target, to, .. } => {
                 sel_filter(target).or_else(|| sel_filter(to))
@@ -4750,6 +4753,7 @@ impl Effect {
                 Effect::MoveCounters { from, to, .. } => {
                     sel_find(from, slot).or_else(|| sel_find(to, slot))
                 }
+                Effect::PutCountersOf { from, to } => sel_find(from, slot).or_else(|| sel_find(to, slot)),
                 Effect::RedirectNextDamage { target, to, .. } => {
                     sel_find(target, slot).or_else(|| sel_find(to, slot))
                 }

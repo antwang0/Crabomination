@@ -3826,13 +3826,13 @@ pub struct ActivatedAbility {
     pub remove_counter_among_filter:
         Option<(Option<crate::card::CounterType>, u32, SelectionRequirement)>,
     /// Variable sibling of `remove_counter_among_filter`: remove `x_value`
-    /// counters of the named kind from among permanents matching the filter the
-    /// activator controls ("Remove one or more +1/+1 counters from among
+    /// counters of the named kind (`None` = any kinds — Moxite Refinery) from
+    /// among permanents matching the filter the activator controls ("Remove one or more +1/+1 counters from among
     /// creatures you control:" — Ooze Flux). The body reads the count via
     /// `Value::XFromCost`. Rejected when fewer than X (or fewer than one) are
     /// available; the auto-picker drains lowest-value permanents first.
     #[serde(default)]
-    pub remove_counter_among_x: Option<(crate::card::CounterType, SelectionRequirement)>,
+    pub remove_counter_among_x: Option<(Option<crate::card::CounterType>, SelectionRequirement)>,
     /// Kind-restricted sibling of `remove_counter_among_filter`: remove `count`
     /// counters of any of the listed kinds from among matching permanents you
     /// control ("Remove a +1/+1 counter or a charge counter from a permanent

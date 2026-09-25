@@ -5152,6 +5152,16 @@ fn is_net_positive_loot(v: &[Effect]) -> bool {
     drawn > binned && binned > 0
 }
 
+/// Does `req` only admit permanents the evaluating player controls?
+fn requires_your_control(req: &crate::card::SelectionRequirement) -> bool {
+    use crate::card::SelectionRequirement as R;
+    match req {
+        R::ControlledByYou => true,
+        R::And(a, b) => requires_your_control(a) || requires_your_control(b),
+        _ => false,
+    }
+}
+
 fn effect_imposes_self_cost(eff: &Effect) -> bool {
     use crate::effect::{PlayerRef, Selector};
     let hits_self = |sel: &Selector| {
@@ -5171,6 +5181,9 @@ fn effect_imposes_self_cost(eff: &Effect) -> bool {
         Effect::Drain { from, .. } | Effect::DrainLifeLost { from, .. } => hits_self(from),
         Effect::Sacrifice { who, .. } | Effect::SacrificeGreatestMV { who, .. } => hits_self(who),
         Effect::SacrificeAndRemember { .. } => true,
+        // Phasing out your own board (Ripples of Potential) takes it out of the
+        // game until your next turn: only a player reading the stack wants it.
+        Effect::PhaseOut { what: Selector::EachPermanent(req), .. } => requires_your_control(req),
         Effect::SacrificeAnyNumber { who, .. } => matches!(who, PlayerRef::You),
         Effect::PayLifeLookTake { who } => matches!(who, PlayerRef::You),
         // A **loot** is not a cost: "you may draw two cards. If you do,

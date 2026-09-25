@@ -5999,6 +5999,67 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::PutCountersOf { from, to } => {
+                // Resourceful Defense — read the source's counters through
+                // LKI (CR 603.10a), then put each kind on every `to` as a
+                // placement (doublers apply, CR 614.16).
+                let bag: Vec<(crate::card::CounterType, u32)> = self
+                    .resolve_selector(from, ctx)
+                    .iter()
+                    .find_map(|e| match e {
+                        EntityRef::Permanent(c) | EntityRef::Card(c) => Some(*c),
+                        _ => None,
+                    })
+                    .and_then(|cid| {
+                        self.battlefield_find(cid)
+                            .or_else(|| self.lki_snapshot(cid))
+                            .or_else(|| self.died_card_snapshots.get(&cid))
+                    })
+                    .map(|c| c.counters.iter().filter(|(_, n)| **n > 0).map(|(k, n)| (*k, *n)).collect())
+                    .unwrap_or_default();
+                if bag.is_empty() {
+                    return Ok(());
+                }
+                let targets: Vec<CardId> =
+                    self.resolve_selector(to, ctx).iter().filter_map(|e| e.as_permanent_id()).collect();
+                for (kind, n) in bag {
+                    self.run_effect(
+                        &Effect::AddCounter {
+                            what: Selector::ExactObjects(targets.clone()),
+                            kind,
+                            amount: crate::effect::Value::Const(n as i32),
+                        },
+                        ctx,
+                        events,
+                    )?;
+                }
+                Ok(())
+            }
+
+            Effect::SpellGainsSunburst { what } => {
+                // CR 702.44 — stamp the spell's sunburst counters now: its
+                // colors spent are already fixed (the converge count).
+                for ent in self.resolve_selector(what, ctx) {
+                    let (EntityRef::Card(cid) | EntityRef::Permanent(cid)) = ent else { continue };
+                    for item in self.stack.iter_mut() {
+                        if let crate::game::types::StackItem::Spell { card, converged_value, .. } = item
+                            && card.id == cid
+                        {
+                            if *converged_value > 0 {
+                                let kind = if card.definition.is_creature() {
+                                    crate::card::CounterType::PlusOnePlusOne
+                                } else {
+                                    crate::card::CounterType::Charge
+                                };
+                                card.pending_etb_counters.push((kind, *converged_value));
+                            }
+                            break;
+                        }
+                    }
+                }
+                Ok(())
+            }
+
             Effect::MoveCounters { from, to, counter, amount } => {
                 let n = self.evaluate_value(amount, ctx).max(0) as u32;
                 let from_id = self

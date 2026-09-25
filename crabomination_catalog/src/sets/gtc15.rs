@@ -321,7 +321,7 @@ pub fn ooze_flux() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), g()]),
             remove_counter_among_x: Some((
-                CounterType::PlusOnePlusOne,
+                Some(CounterType::PlusOnePlusOne),
                 R::Creature.and(R::ControlledByYou),
             )),
             effect: Effect::CreateToken {

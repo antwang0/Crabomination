@@ -7403,6 +7403,14 @@ pub enum Effect {
     /// Dromedary). Capped by the source's live count; no-ops when `from`
     /// and `to` resolve to the same permanent.
     MoveCounters { from: Selector, to: Selector, counter: crate::card::CounterType, amount: Value },
+    /// "Put those counters on [to]" (Resourceful Defense): every counter of
+    /// every kind on `from` — read through last-known information when it has
+    /// left the battlefield (CR 603.10a) — is put on each `to`.
+    PutCountersOf { from: Selector, to: Selector },
+    /// CR 702.44 — "[the spell] gains sunburst" (Lux Artillery, Solar Array):
+    /// each spell `what` resolves to enters with a +1/+1 counter (creature) or
+    /// charge counter (otherwise) per color of mana spent to cast it.
+    SpellGainsSunburst { what: Selector },
     /// Rakdos, the Showstopper — "flip a coin for each creature that isn't one
     /// of `exclude_types`; destroy each creature whose coin comes up tails."
     /// The controller flips (honoring coin-flip advantage).
