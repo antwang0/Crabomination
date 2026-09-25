@@ -1998,6 +1998,9 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Tesak, Judith's Hellhound | Deadly Disguise (MKC) | other Dogs you control don't gain unleash. |
 | 🟡 Unexplained Absence | Deadly Disguise (MKC) | targets only opponents' nonland permanents, and without the one-per-player limit. |
 | 🟡 Veiled Ascension | Deadly Disguise (MKC) | an entering face-down creature gets its flying counter from a trigger, not as it enters. |
+| 🟡 Kinetic Ooze | Quandrix Unlimited (SOC) | at X 10 or more it doubles the counters on each other creature you control, not on targets you choose. |
+| 🟡 Primo, the Unbounded | Quandrix Unlimited (SOC) | when several base-power-0 creatures connect at once, the Fractal reads the first one's damage, not the total. |
+| 🟡 Unbound Flourishing | Quandrix Unlimited (SOC) | activated abilities with {X} in their cost aren't copied. |
 | 🟡 Akim, the Soaring Wind | Timeless Wisdom (C20) | "the first time each turn" is counted from Akim's arrival: tokens made earlier that turn don't use it up. |
 | 🟡 Crystalline Resonance | Timeless Wisdom (C20) | the copy lasts until it copies again, not until your next turn. |
 | 🟡 Ethereal Forager | Timeless Wisdom (C20) | the returned card is the first linked instant or sorcery, not a chosen one. |

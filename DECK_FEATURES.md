@@ -140,6 +140,7 @@ lists were picked.
 | **Lorehold Spirit** (SOC precon) RW | Quintorius, History Chaser (**planeswalker**) | RW | 100 | 🟡 all 100 implemented, 3 carry residuals (Ao, the Dawn Sky, Quintorius, Loremaster, Serra Paragon) |
 | **Dungeons of Death** (AFC precon) WUB | Sefris of the Hidden Ways | WUB | 100 | 🟡 all 100 implemented, 4 carry residuals (Grave Endeavor, Nihiloor, Phantom Steed, Rod of Absorption) |
 | **Deadly Disguise** (MKC precon) RGW | Kaust, Eyes of the Glade | RGW | 100 | 🟡 all 100 implemented, 4 carry residuals (Boltbender, Tesak, Unexplained Absence, Veiled Ascension) |
+| **Quandrix Unlimited** (SOC precon) GU | Zimone, Infinite Analyst | GU | 100 | 🟡 all 100 implemented, 3 carry residuals (Kinetic Ooze, Primo, Unbound Flourishing) |
 | **Deep Clue Sea** (MKC precon) GWU | Morska, Undersea Sleuth | GWU | 100 | 🟡 all 100 implemented, 3 carry residuals (Aerial Extortionist, Alandra, Sky Dreamer, Erdwal Illuminator) |
 | **Coven Counters** (MIC precon) GW | Leinore, Autumn Sovereign | GW | 100 | 🟡 all 100 implemented, 4 carry residuals (Curse of Conformity, Celestial Judgment, Sigardian Zealot, Moorland Rescuer) |
 | **Arcane Maelstrom** (C20 precon) GUR | Kalamax, the Stormsire | GUR | 100 | 🟡 all 100 implemented, 4 carry residuals (Eon Frolicker, Haldan, Pako, Lavabrink Floodgates) |
@@ -1242,6 +1243,26 @@ all decided): Galea 5.3 % — the bot does not build a Voltron threat; beside
 Estrid / Eshki / Nelly (seed 10251): 1,000 / 1,000, 5.3 %; census (seed 10252):
 no card of the four unplayed; strict debug pods (seeds 10253-10255, 4 and 6
 seats): 180 / 180. `--bench` byte-identical.
+The **hundred-and-thirty-seventh** is Secrets of Strixhaven Commander's
+**Quandrix Unlimited** (`QuandrixUnlimited_SOC`, 2026-04-24) — Simic X spells
+and +1/+1 counters under Zimone, Infinite Analyst, `--pod-decks 137`.
+Twenty-one cards were missing (`cmdr_zimone_ia.rs`; the Jump Scare! Zimone is
+`cmdr_zimone.rs`). New primitives: `StaticEffect::ExtraPlusOneCountersMatching`
+(Benevolent Hydra's "another creature", Ozolith's "artifact or creature");
+`StaticEffect::FirstMatchingSpellEachTurnCostsLessPerCounter` (Zimone);
+`Effect::OnYourNextSpellMatchingThisTurn`, which hands the body the cast
+spell's X (Brass Infiniscope); `Effect::DoubleXOfSpell` (Unbound Flourishing);
+`Effect::GrantSpellsFlashThisTurn` (Alchemist's Refuge). ⚠ On the stack an X
+spell's cost reads with X filled in (CR 202.3e), so `R::HasXInCost` inside
+`Predicate::CastSpellMatches` is false for any X > 0 — gate on
+`Predicate::CastSpellHasX` instead. Residuals: **Kinetic Ooze** at X 10
+doubles each other creature of yours, not chosen targets; **Primo** reads the
+batch's first damage event; **Unbound Flourishing** doesn't copy {X}
+abilities. Pods (1,000 games each, all decided): 4 seats beside Urza / Osgir /
+Eshki (seed 11110) Zimone 17.2 %, census: no card of the four unplayed; 6
+seats beside Nalia / Kaust / Morska / Zimone (DSC) / Sefris and 8 seats (seed
+11111). `--bench` byte-identical.
+
 The **hundred-and-thirty-fifth** is Murders at Karlov Manor Commander's
 **Deadly Disguise** (`DeadlyDisguise_MKC`, 2024-02-09) — Naya morph, disguise
 and cloak under Kaust, Eyes of the Glade, `--pod-decks 135` (measured as 134). Eighteen cards
