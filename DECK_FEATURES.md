@@ -156,6 +156,7 @@ lists were picked.
 | **Revenant Recon** (MKC precon) UB | Mirko, Obsessive Theorist | UB | 100 | 🟡 all 100 implemented, 3 carry residuals (Marvo, Deep Operative, Watcher of Hours, Whispering Snitch) |
 | **Dance of the Elements** (ECC precon) WUBRG | Ashling, the Limitless | WUBRG | 100 | 🟡 all 100 implemented, 5 carry residuals (Flamebraider, Smokebraider, Primal Beyond, Haunting Voyage, Horde of Notions) |
 | **Veloci-Ramp-Tor** (LCC precon) RGW | Pantlaza, Sun-Favored | RGW | 100 | 🟡 all 100 implemented, 2 carry residuals (Sunfrill Imitator, Wrathful Raptors) |
+| **Multiverse Reforged** (FRC precon) WUBR | Jace, Multiverse Architect (**planeswalker**) | WUBR | 100 | 🟡 all 100 implemented, 2 carry residuals (Dack Fayden, Helping Hand; Tamiyo, Upriser Crowned) |
 | **Mystic Intellect** (C19 precon) URW | Sevinne, the Chronoclasm | URW | 100 | 🟡 all 100 implemented (Dockside Extortionist, banned, swapped for Ragavan), 3 carry residuals (Wall of Stolen Identity, Mandate of Peace, Elsha of the Infinite) |
 | **The Hosts of Mordor** (LTC precon) UBR | Sauron, Lord of the Rings | UBR | 100 | 🟡 all 100 implemented, 3 carry residuals (Moria Scavenger, Shelob, Dread Weaver, Summons of Saruman) |
 | **Elven Empire** (KHC precon) BG | Lathril, Blade of the Elves | BG | 100 | 🟡 all 100 implemented, 2 carry residuals (Serpent's Soul-Jar, Roots of Wisdom) |
@@ -2659,6 +2660,26 @@ graveyard half of its cost is paid on resolution; the X card is picked, not
 targeted), **Summons of Saruman** (flashback pays X in mana). Pods
 (1,000 games each): 4 seats beside Urza / Osgir / Eshki (seed 11120) Sauron
 28.1 %, census: no card of the four unplayed; 6 seats (seed 11121) beside Sevinne / Anje / Kotori / Galadriel / Felothar 1,000 / 1,000, Sauron 13.1 %; 8 seats (seed 11121) 1,000 / 1,000, Sauron 16.1 %. `--bench`
+byte-identical.
+
+The **hundred-and-sixty-first** is Final Reforging Commander's **Multiverse
+Reforged** (`MultiverseReforged_FRC`, 2026-10-02) — four-color legends under
+the planeswalker commander Jace, Multiverse Architect, `--pod-decks 161`.
+Twenty cards were missing (`cmdr_jace.rs`), the commander among them. The
+primitives: planeswalker **tokens** (`TokenDefinition::loyalty_abilities`)
+and `Effect::EmpowerJace` (the Amass shape on a blue Jace token — Fatehold
+Charm, Plan for All Outcomes); `Effect::CantAttackPlaneswalkerTypeThisTurn`
+(Jace's unpaid combat tax, read by `permanent_cant_be_attacked`);
+`DynamicPt::BasePlusUnspentMana` (Omnath, Locus of the Void);
+`Effect::LifeLockUntilNextTurn` (Teferi's Reproach, CR 119.7);
+`Effect::DistributeControlAmongOpponents` (Dack Fayden — and reveal-until-N
+to the battlefield now records `LastMoved`); `Effect::
+EachPlayerMillsYouMayCastOne` (The Ur-Sphinx). Residuals: **Dack Fayden**
+hands the creatures out in turn order; **Tamiyo** fires per creature (same
+outcome). Pods (1,000 games each, all decided): 4 seats beside Terra / Mirko
+/ Admiral Brass (seed 10500) Jace 20.8 %, census: no card of the four
+unplayed; 6 seats beside Pantlaza / Ashling / Satya / Prosper / Morophon
+(10501) 13.5 %. Strict debug pods (10490-10492) 180 / 180. `--bench`
 byte-identical.
 
 The **hundred-and-fifty-fifth** is Lost Caverns of Ixalan Commander's
