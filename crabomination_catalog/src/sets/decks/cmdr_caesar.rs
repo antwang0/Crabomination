@@ -350,9 +350,12 @@ pub fn craig_boone_novac_guard() -> CardDefinition {
             otherwise: Box::new(Effect::DealDamage { to: target_filtered(R::Creature), amount: quests() }),
         }),
     };
+    // The target rides on the trigger itself rather than a `Reflexive`: a
+    // reflexive body's runtime target isn't carried into the continuation a
+    // prompting controller's answer resumes, so the accept was lost.
     let mut boone = on_you_attack(Effect::Seq(vec![
         Effect::AddCounter { what: Selector::This, kind: CounterType::Quest, amount: Value::Const(2) },
-        Effect::Reflexive { body: Box::new(shot) },
+        shot,
     ]));
     boone.event = boone.event.with_filter(Predicate::AttackedWithCountAtLeast { who: PlayerRef::You, at_least: 2 });
     CardDefinition {

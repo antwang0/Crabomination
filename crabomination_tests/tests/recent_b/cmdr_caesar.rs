@@ -256,3 +256,51 @@ fn caesar_sacrifices_for_two_modes() {
     assert_eq!(named(&g, 0, "Soldier").len(), 2, "two hasty Soldiers");
     assert_eq!(g.players[0].hand.len(), hand + 1, "and a card");
 }
+
+/// Caesar on a prompting seat: the sacrifice and the two modes are asked
+/// and answered through the pending-decision channel.
+#[test]
+fn caesar_prompting_seat_answers_cleanly() {
+    use crabomination::decision::Decision;
+    let mut g = main_phase(2);
+    g.players[0].wants_ui = true;
+    let caesar = g.add_card_to_battlefield(0, catalog::caesar_legions_emperor());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    attack(&mut g, &[caesar]);
+    for _ in 0..10 {
+        let Some(pending) = g.pending_decision.as_ref() else { break };
+        let answer = match &pending.decision {
+            Decision::ChooseModes { .. } => DecisionAnswer::Modes(vec![0, 2]),
+            _ => DecisionAnswer::Bool(true),
+        };
+        g.submit_decision(answer).expect("answer");
+        drain_stack(&mut g);
+    }
+    assert!(g.pending_decision.is_none());
+    assert_eq!(named(&g, 0, "Soldier").len(), 2);
+    assert_eq!(g.players[1].life, 18, "two creature tokens' worth of damage");
+}
+
+/// Craig Boone: attacking with two, it shoots a creature whose prompting
+/// controller may take the damage instead.
+#[test]
+fn craig_boone_prompting_opponent_answers_cleanly() {
+    let mut g = main_phase(2);
+    g.players[1].wants_ui = true;
+    let boone = g.add_card_to_battlefield(0, catalog::craig_boone_novac_guard());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let life = g.players[1].life;
+    attack(&mut g, &[boone, bear]);
+    for _ in 0..10 {
+        if g.pending_decision.is_none() {
+            break;
+        }
+        g.submit_decision(DecisionAnswer::Bool(true)).expect("answer");
+        drain_stack(&mut g);
+    }
+    assert!(g.pending_decision.is_none());
+    assert_eq!(g.battlefield_find(boone).unwrap().counter_count(CounterType::Quest), 2);
+    assert!(g.battlefield_find(giant).is_some());
+    assert_eq!(g.players[1].life, life - 2, "they took it");
+}
