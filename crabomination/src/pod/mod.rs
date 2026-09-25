@@ -1359,6 +1359,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::TIDUS_COMMANDERS,
             main: decks::TIDUS_MAIN,
         },
+        // Hundred-and-sixty-sixth: Mutant Menace (Fallout) — Sultai rad
+        // counters, mills and Mutants under The Wise Mothman (CR 728 healing
+        // radiation, CR 615 Bloatfly Swarm). `--pod-decks 166`.
+        PodDeck {
+            name: "The Wise Mothman (BGU)",
+            commanders: decks::MOTHMAN_COMMANDERS,
+            main: decks::MOTHMAN_MAIN,
+        },
     ]
 }
 

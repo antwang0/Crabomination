@@ -2620,6 +2620,28 @@ unplayed): all decided, Tidus 16.7 %; six seats beside Jace / Terra / Mirko /
 Brass / Cloud (16502, 1,000): all decided, Tidus 22.7 %; strict debug pods
 (16501 × 30, 16502 × 36 six-seat) all decided. `--bench` byte-identical.
 
+The **hundred-and-sixty-sixth** is Fallout Commander's **Mutant Menace**
+(`MutantMenace_PIP`, 2024-03-08) — Sultai rad counters, mills and Mutants
+under The Wise Mothman, `--pod-decks 166` (built as 165; Counter Blitz landed
+there first). Thirty-four cards were missing (`cmdr_mothman.rs`). The
+primitives: `StaticEffect::GainLifeFromRadiation` (CR 728, Strong),
+`StaticEffect::PreventDamageToSelfWhileCountersForRad` (CR 615, Bloatfly
+Swarm, in Sekki's funnel), `Effect::RadOnCastUntilEndOfTheirNextTurn` (a
+PlayerCold mark read at dispatch — Nuka-Nuke Launcher),
+`ActivatedAbility::cost_reduction_value` (Mariposa Military Base),
+`Value::RadCountersAmong` / `CountersAmongPlayers` (Vault 12, Lumbering
+Megasloth), `EventSpec::batch_counts_subjects` (a once-per-batch fire counting
+the matching events — The Wise Mothman, Screeching Scorchbeast),
+`Effect::DestroyWithinTotalManaValue` (Rampaging Yao Guai),
+`Effect::ReturnSelfTransformedAttachedTo` (Harold and Bob returns as its Aura
+back face) and `R::PowerDifferentFromBasePower` (Jason Bright). Residuals:
+**The Wise Mothman**, **Rampaging Yao Guai**, **Struggle for Project Purity**
+(INCOMPLETE_CARDS). Four seats beside Auntie Ool / Y'shtola / Frodo + Sam
+(seed 16501, 1,000) and six beside Jace / Terra / Mirko / Brass / Cloud
+(16502, 1,000): all decided, Mothman 13.8 / 19.5 %; census (16503, 500):
+nothing unplayed; a strict debug pod (16504, 60) decided. `--bench`
+byte-identical.
+
 The **hundred-and-sixty-fourth** is Lorwyn Eclipsed Commander's **Blight
 Curse** (`BlightCurse_ECC`, 2026-01-23) — Jund -1/-1 counters under Auntie Ool,
 Cursewretch, `--pod-decks 164` (built as 163; Scions & Spellcraft landed

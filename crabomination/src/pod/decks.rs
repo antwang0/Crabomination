@@ -5022,3 +5022,33 @@ pub const TIDUS_MAIN: &[CardFactory] = &[
     // Basics: 3 island, 3 forest, 3 plains
     island, island, island, forest, forest, forest, plains, plains, plains,
 ];
+
+pub const MOTHMAN_COMMANDERS: &[CardFactory] = &[the_wise_mothman];
+
+/// **Mutant Menace**, the Fallout Commander deck (PIP, 2024-03-08), exactly as
+/// MTGJSON's `MutantMenace_PIP` prints it: 84 nonbasic cards + 5 Swamp + 5 Forest + 5 Island = 99.
+/// Sultai rad counters, mills and Mutants under The Wise Mothman.
+pub const MOTHMAN_MAIN: &[CardFactory] = &[
+    the_master_transcendent, jason_bright_glowing_prophet, mirelurk_queen,
+    piper_wright_publick_reporter, radstorm, struggle_for_project_purity, feral_ghoul,
+    hancock_ghoulish_mayor, nuclear_fallout, screeching_scorchbeast, vault_12_the_necropolis,
+    harold_and_bob_first_numens, lily_bowen_raging_grandma, power_fist, rampaging_yao_guai,
+    strong_the_brutish_thespian, tato_farmer, watchful_radstag, agent_frank_horrigan,
+    alpha_deathclaw, atomize, marcus_mutant_mayor, mutational_advantage,
+    vault_87_forced_evolution, nuka_nuke_launcher, recon_craft_theta, mariposa_military_base,
+    overflowing_basin, viridescent_bog, fraying_sanity, inexorable_tide, branching_evolution,
+    guardian_project, hardened_scales, tireless_tracker, biomass_mutation, casualties_of_war,
+    find_finality, darkwater_catacombs, drowned_catacomb, exotic_orchard, fetid_pools, hinterland_harbor,
+    nesting_grounds, sunken_hollow, temple_of_deceit, temple_of_malady, temple_of_mystery,
+    woodland_cemetery, vexing_radgull, bloatfly_swarm, infesting_radroach, cathedral_acolyte,
+    glowing_one, lumbering_megasloth, contaminated_drink, nightkin_ambusher,
+    raul_trouble_shooter, young_deathclaws, strength_bobblehead, cultivate, farseek, harmonize,
+    inspiring_call, rampant_growth, corpsejack_menace, putrefy, winding_constrictor,
+    arcane_signet, contagion_clasp, sol_ring, talisman_of_curiosity, talisman_of_dominance,
+    talisman_of_resilience, ash_barrens, command_tower, evolving_wilds, mortuary_mire,
+    opulent_palace, path_of_ancestry, tainted_isle, tainted_wood, temple_of_the_false_god,
+    terramorphic_expanse,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, forest, forest, forest, forest, forest, island, island,
+    island, island, island,
+];
