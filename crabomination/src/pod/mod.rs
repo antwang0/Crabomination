@@ -1375,6 +1375,11 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::TCHALLA_COMMANDERS,
             main: decks::TCHALLA_MAIN,
         },
+        PodDeck {
+            name: "Esika, God of the Tree (WUBRG)",
+            commanders: decks::ESIKA_COMMANDERS,
+            main: decks::ESIKA_MAIN,
+        },
     ]
 }
 

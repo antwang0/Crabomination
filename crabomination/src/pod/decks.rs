@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Ten hand-picked commanders plus a hundred and fifty-three official preconstructed lists, each a
+//! Ten hand-picked commanders plus a hundred and fifty-eight official preconstructed lists, each a
 //! 99 of cards this engine implements: legal under CR 903 (100 cards
 //! including the commander, singleton outside basics, every card inside the
 //! commander's CR 903.4 color identity) and Commander-legal per Scryfall's
@@ -8,7 +8,7 @@
 //!
 //! The ten were built by hand because the offline Scryfall cache cannot say
 //! how a precon splits into decks; MTGJSON's deck files can, and the eleventh
-//! through hundred-and-sixty-third (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
+//! through hundred-and-sixty-eighth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
 //! Win, Tails You Lose, Goblin Storm, Foundations Commander's Wretched Ranks,
 //! Tramplesaurus Rex and Keen Engineering, Commander Legends' Reap the Tides,
 //! Phyrexia: All Will Be One's Corrupting Influence, Zendikar Rising's Sneak
@@ -56,8 +56,9 @@
 //! Innistrad: Crimson Vow Commander's Spirit Squadron, seat 133 Duskmourn
 //! Commander's Jump Scare!, seat 143 Streets of New Capenna Commander's
 //! Obscura Operation, seat 150 Tales of Middle-earth Commander's Elven
-//! Council, seat 158 The Lost Caverns of Ixalan Commander's Ahoy Mateys
-//! and seat 163 Final Fantasy XIV's Scions & Spellcraft) are taken from one card for card. What all of them keep
+//! Council, seat 158 The Lost Caverns of Ixalan Commander's Ahoy Mateys,
+//! seat 163 Final Fantasy XIV's Scions & Spellcraft and seat 168 Secret
+//! Lair's From Cute to Brute) are taken from one card for card. What all of them keep
 //! from the precon idea is what the pod needs — fixed, legal, varied color
 //! identities, and built to play against each other.
 //! One is a Partner pair (CR 702.124b), one is a **planeswalker**
@@ -5083,4 +5084,37 @@ pub const TCHALLA_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
     forest, forest,
+];
+
+pub const ESIKA_COMMANDERS: &[CardFactory] = &[esika_god_of_the_tree];
+
+/// **From Cute to Brute**, the Secret Lair Commander deck (SLD, 2021),
+/// exactly as MTGJSON's `FromCuteToBrute_SLD` prints it: 92 nonbasic cards +
+/// 1 Plains + 1 Island + 1 Swamp + 1 Mountain + 3 Forests = 99. Five-color
+/// legends, double-faced almost to a card, under Esika, God of the Tree.
+pub const ESIKA_MAIN: &[CardFactory] = &[
+    archangel_avacyn, bloodline_keeper, nicol_bolas_the_ravager, westvale_abbey, putrefy,
+    rhys_the_redeemed, evolving_wilds, exotic_orchard, vivid_grove, arlinn_kord,
+    voldaren_pariah, guardian_project, beast_whisperer, chromatic_lantern,
+    emmara_soul_of_the_accord, elbrus_the_binding_blade, sisay_weatherlight_captain,
+    sol_ring, scattered_groves, sheltered_thicket, harmonize, altar_of_the_pantheon,
+    kinnan_bonder_prodigy, pongify, chandra_fire_of_kaladesh, jace_vryns_prodigy,
+    kytheon_hero_of_akros, liliana_heretical_healer, nissa_vastwood_seer, opulent_palace,
+    azors_gateway, hadanas_climb, journey_to_eternity, dowsing_dagger, legions_landing,
+    search_for_azcanta, thaumatic_compass, treasure_map, beast_within, farseek,
+    garruk_relentless, command_tower, brightclimb_pathway, branchloft_pathway,
+    cragcrown_pathway, needleverge_pathway, riverglide_pathway, valakut_awakening,
+    bala_ged_recovery, clearwater_pathway, hagra_mauling, ondu_inversion, sandstone_oracle,
+    sphinx_of_the_second_sun, meteor_golem, terramorphic_expanse, blightstep_pathway,
+    hengegate_pathway, barkchannel_pathway, darkbore_pathway, valki_god_of_lies,
+    rimewood_falls, woodland_chasm, kolvori_god_of_kinship, cosima_god_of_the_voyage,
+    plargg_dean_of_chaos, valentin_dean_of_the_vein, shaile_dean_of_radiance,
+    mila_crafty_companion, triplicate_titan, diluvian_primordial, seaside_citadel,
+    arlinn_the_packs_hope, ludevic_necrogenius, dennick_pious_apprentice,
+    tovolars_huntmaster, butcher_of_malakir, path_of_ancestry, savage_lands,
+    tireless_provisioner, fellwar_stone, urzas_ruinous_blast, zetalpa_primal_dawn,
+    commanders_sphere, arcane_signet, jolrael_mwonvuli_recluse, sandsteppe_citadel,
+    jungle_shrine, frontier_bivouac, time_wipe, utter_end, the_world_tree,
+    // Basics: 1 plains, 1 island, 1 swamp, 1 mountain, 3 forest
+    plains, island, swamp, mountain, forest, forest, forest,
 ];
