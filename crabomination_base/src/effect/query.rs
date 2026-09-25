@@ -2529,6 +2529,7 @@ impl Effect {
             | Effect::CopySpellForEachOtherLegalTarget { what }
             | Effect::CounterSpellIfNameExiledWithSource { what }
             | Effect::CounterSpellExileSameNamed { what }
+            | Effect::CounterSpellExileMayPlayFree { what }
             | Effect::CounterSpellDrawIfUnderpaid { what }
             | Effect::CounterSpellToZone { what, .. }
             | Effect::CounterSpellExileNameLock { what }
@@ -4061,7 +4062,13 @@ impl Effect {
             Effect::DistributeCounters { .. } => false,
             // Stack-targeted counter spells take a permanent slot but the
             // target is a stack item, not a player. Reject player target.
+            // The four siblings below were missing: an auto-targeted
+            // trigger (Kheru Spellsnatcher turned face up) took a player.
             Effect::CounterSpell { .. }
+            | Effect::CounterSpellExileMayPlayFree { .. }
+            | Effect::CounterSpellExileSameNamed { .. }
+            | Effect::CounterSpellDiscardSplicedNames { .. }
+            | Effect::CounterSpellIfNameExiledWithSource { .. }
             | Effect::CounterSpellDrawIfUnderpaid { .. }
             | Effect::CounterSpellToZone { .. }
             | Effect::CounterSpellExileNameLock { .. }
@@ -4836,6 +4843,7 @@ impl Effect {
                 | Effect::CopySpellForEachOtherLegalTarget { what }
                 | Effect::CounterSpellIfNameExiledWithSource { what }
                 | Effect::CounterSpellExileSameNamed { what }
+                | Effect::CounterSpellExileMayPlayFree { what }
                 | Effect::CounterSpellDrawIfUnderpaid { what }
                 | Effect::CounterSpellToZone { what, .. }
                 | Effect::CounterSpellExileNameLock { what }
