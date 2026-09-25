@@ -1637,6 +1637,9 @@ pub enum Predicate {
     /// The event's card (a spell just cast, a land just played) was one of
     /// the cards exiled with the source — Share the Spoils' "when they do".
     TriggerCardExiledWithSource,
+    /// CR 702.143 — "if this spell was foretold": the resolving spell was
+    /// cast for its foretell cost (Haunting Voyage).
+    CastForetold,
     /// `who` resolves to a player who is an opponent of the source's
     /// controller ("…deals combat damage to one of your opponents" —
     /// Gonti, Night Minister). Teammates and the controller are false.

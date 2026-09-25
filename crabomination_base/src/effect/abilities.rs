@@ -3156,6 +3156,11 @@ pub enum StaticEffect {
     /// prowl alternative cost against the spell's own printed creature types.
     /// A printed alternative cost wins (a card carries one alt cost).
     GrantProwlToSpells { filter: SelectionRequirement, cost: crate::mana::ManaCost },
+    /// CR 702.74 — "[filter] spells you cast from your hand gain evoke
+    /// [cost] as you cast them" (Ashling, the Limitless). Read by
+    /// `effective_alternative_cost` on the hand zone only; a printed
+    /// alternative cost wins (a card carries one alt cost).
+    GrantEvokeToSpells { filter: SelectionRequirement, cost: crate::mana::ManaCost },
     /// "Permanents you control have: whenever one or more +1/+1 counters are put
     /// on this permanent, put an additional +1/+1 counter on it. This ability
     /// triggers only once each turn." Cursed Wombat. Consulted in the

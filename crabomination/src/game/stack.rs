@@ -4845,6 +4845,7 @@ impl GameState {
         clear_cold!(self.shroud_waivers);
         clear_cold!(self.abilities_locked_this_turn);
         clear_cold!(self.foretold_this_turn);
+        clear_cold!(self.foretold_casts_this_turn);
         clear_cold!(self.plotted_this_turn);
         clear_cold!(self.entered_from_graveyard_this_turn);
         clear_cold!(self.entered_from_exile_this_turn);

@@ -460,6 +460,31 @@ impl GameState {
         Some(crate::effect::shortcut::prowl(cost, types.clone()))
     }
 
+    /// The evoke a `GrantEvokeToSpells` static `p` controls gives the spell
+    /// `card_id` cast from `p`'s hand (Ashling, the Limitless — CR 702.74).
+    fn granted_evoke(
+        &self,
+        p: usize,
+        zone: AltCastZone,
+        card_id: CardId,
+    ) -> Option<crate::card::AlternativeCost> {
+        if zone != AltCastZone::Hand {
+            return None;
+        }
+        let card = self.alt_cast_source(p, zone).iter().find(|c| c.id == card_id)?;
+        let cost = self.battlefield.iter().filter(|c| c.controller == p).find_map(|c| {
+            c.definition.static_abilities.iter().find_map(|sa| match &sa.effect {
+                crate::effect::StaticEffect::GrantEvokeToSpells { filter, cost }
+                    if self.evaluate_requirement_on_card(filter, card, p) =>
+                {
+                    Some(cost.clone())
+                }
+                _ => None,
+            })
+        })?;
+        Some(crate::effect::shortcut::evoke(cost))
+    }
+
     /// The blitz a `GrantBlitzToSpells` static `p` controls gives the spell
     /// `card_id` (Henzie), its cost the spell's mana cost.
     fn granted_blitz(
@@ -544,6 +569,11 @@ impl GameState {
         // CR 702.76 — Hunting Velociraptor: "[filter] spells you cast have
         // prowl [cost]". The prowl gate reads the spell's own creature types.
         if let Some(granted) = self.granted_prowl(p, zone, card_id) {
+            return Some(granted);
+        }
+        // CR 702.74 — Ashling: "Elemental permanent spells you cast from
+        // your hand gain evoke {4}".
+        if let Some(granted) = self.granted_evoke(p, zone, card_id) {
             return Some(granted);
         }
         let five_color = self.battlefield.iter().any(|c| {
@@ -7663,6 +7693,7 @@ impl GameState {
         card.face_down = false;
         // CR 702.143a — a foretold card is cast from exile (Faldorn).
         card.cast_from_exile = true;
+        self.foretold_casts_this_turn.insert(card_id);
         if self.granted_foretell_cost(card_id).is_some() {
             self.granted_foretell_costs.retain(|(c, _)| *c != card_id);
         }

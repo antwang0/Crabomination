@@ -1841,6 +1841,11 @@ pub struct ColdState {
     /// turn; cleared at cleanup. `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub foretold_this_turn: crate::game::types::IdSet<CardId>,
+    /// Spells cast this turn for their foretell cost, for "if this spell was
+    /// foretold" (Haunting Voyage — `Predicate::CastForetold`). A foretold
+    /// spell is cast and resolves within one turn; cleared at cleanup.
+    #[serde(default)]
+    pub(crate) foretold_casts_this_turn: crate::game::types::IdSet<CardId>,
     /// CR 702.170 — cards currently plotted (exiled face-up, castable from
     /// exile without paying their mana cost on a later turn).
     /// `#[serde(default)]` for snapshot back-compat.
@@ -30704,6 +30709,7 @@ fn static_effect_to_effects(
             | StaticEffect::DiscardColorSharingCardAlternativeCost
             // Hunting Velociraptor — consulted by `effective_alternative_cost`.
             | StaticEffect::GrantProwlToSpells { .. }
+            | StaticEffect::GrantEvokeToSpells { .. }
             // Memory Crystal — read by the cast path's buyback fold.
             | StaticEffect::BuybackCostsLess { .. }
             // Invasion Plans — read by `block_chooser` at declare-blockers.
