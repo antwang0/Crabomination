@@ -126,6 +126,7 @@ lists were picked.
 | **Adaptive Enchantment** (C18 precon) GWU | Estrid, the Masked (**planeswalker**) | GWU | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Aura of Courage** (AFC precon) GWU | Galea, Kindler of Hope | GWU | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Upgrades Unleashed** (NEC precon) RG | Chishiro, the Shattered Blade | RG | 100 | 🟡 all 100 implemented, 4 carry residuals (Concord with the Kami, Agitator Ant, Forgotten Ancient, Shifting Shadow) |
+| **Mardu Surge** (TDC precon) RWB | Zurgo Stormrender | RWB | 100 | 🟡 all 100 implemented, 1 carries a residual (Gix, Yawgmoth Praetor) |
 | **Ruthless Regiment** (C20 precon) RWB | Jirina Kudro | RWB | 100 | 🟡 all 100 implemented, 2 carry residuals (Sanctuary Blade, Odric, Master Tactician) |
 | **Exit from Exile** (CLB precon) RG | Faldorn, Dread Wolf Herald | RG | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Exquisite Invention** (C18 precon) UR | Saheeli, the Gifted (**planeswalker**) | UR | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
@@ -1297,6 +1298,26 @@ no actor). Residual: **Orator of Ojutai** reads board and hand instead of a
 reveal. Four-seat pods beside Sigarda / Teval / Disa (seed 11092, 1,000 games,
 all decided): The Ur-Dragon 25.1 %; census: no card of the four unplayed; 6
 and 8 seats (seed 11093) 2,000 / 2,000 decided. `--bench` byte-identical.
+
+The **hundred-and-thirteenth** is Tarkir: Dragonstorm Commander's **Mardu
+Surge** (`MarduSurge_TDC`) — Mardu tokens and attack triggers under Zurgo
+Stormrender, `--pod-decks 113` (committed as 112 while a concurrent seat
+landed). Nineteen cards were missing (`cmdr_zurgo.rs`). The primitives:
+`StaticEffect::CreatureTokensBecome` (Divine Visitation, CR 614.1a — mandatory,
+at the mint), `Effect::DoubleTokensThisTurn` (Kaya's −2),
+`Value::TokensCreatedThisTurn` (Thalisse), `Value::CreaturesAttackingPlayer`
+(Within Range), `MayPlayDuration::TurnsHolderAttacksWithACommander` (Neriv —
+Neyali's token grant's sibling) and `ActivatedAbility::discard_cost_x` (Gix).
+Its tests found ⚠ **Mobilize sacrificed its Warriors at end of combat** where
+CR 702.181a says the next end step (the shortcut's doc called the two
+equivalent; War Effort and Dalkovan Encampment shared it) — Zurgo's "draw if it
+was attacking, otherwise drain" reads the difference. Residual: Gix's exiled
+cards stay playable for the turn. ⚠ Bot gap: no generator picks an X for Gix's
+"Discard X cards:" activation. Four-seat pods beside Chishiro / Jirina / Eshki
+(seeds 10331-10332, 2,000 games) and Kasla / Estrid / Nelly (seed 10333,
+1,000): all decided, Zurgo 29.5 % and 28.9 %; census: no card of the four
+unplayed. `--bench` byte-identical; cube/sos/sealed (seed 10330): 7,500
+decided.
 
 The **hundred-and-twelfth** is Commander 2021's **Prismari Performance**
 (`PrismariPerformance_C21`) — Izzet big spells and magecraft under Zaffai,
