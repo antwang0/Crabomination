@@ -883,6 +883,10 @@ pub enum StaticEffect {
     /// Wielder of Mysteries, Thassa's Oracle's gate). Consulted by
     /// `lose_to_empty_draw`.
     WinInsteadOfDrawFromEmpty,
+    /// CR 614 — "If you would draw a card while your library has no cards in
+    /// it, instead return a creature card from your graveyard to the
+    /// battlefield. If you can't, you lose the game" (Out of the Tombs).
+    ReanimateInsteadOfDrawFromEmpty,
     /// CR 104.3d — "You can't lose the game and your opponents can't win the
     /// game" (Platinum Angel). Consulted by the SBA loss checks,
     /// `lose_to_empty_draw`, and the win/lose one-shot effects.
@@ -1962,6 +1966,11 @@ pub enum StaticEffect {
     /// "Activated abilities of [filter] you control cost {N} less to
     /// activate" (Sam, Loyal Attendant's Foods). Generic only, no floor.
     MatchingActivatedAbilitiesCostLess { filter: SelectionRequirement, amount: u32 },
+    /// "Activated abilities of cards in your graveyard cost {N} less to
+    /// activate. This effect can't reduce the mana in that ability's
+    /// activation cost to less than one mana" (Convergence of Dominion; its
+    /// commander gate is a `WhileCondition`).
+    GraveyardActivatedAbilitiesCostLess { amount: u32 },
     /// "The first activated ability of an artifact you activate each turn
     /// costs {N} less to activate" (Tezzeret, Betrayer of Flesh). Generic
     /// only, no floor; mana abilities count as the first (2022-02-18 ruling).
@@ -2688,6 +2697,10 @@ pub enum StaticEffect {
     /// source). A self-only grant: only the permanent carrying this static
     /// gains the abilities.
     HasActivatedAbilitiesOfGraveyardCreatures,
+    /// "As long as this is on the battlefield, it has all activated abilities
+    /// of all artifact cards in your graveyard" (Trazyn the Infinite) — the
+    /// own-graveyard, artifact sibling of the Necrotic Ooze grant.
+    HasActivatedAbilitiesOfYourGraveyardArtifacts,
     /// Marvin, Murderous Mimic — "has all activated abilities of creatures you
     /// control that don't have the same name as this creature." The
     /// battlefield sibling of `HasActivatedAbilitiesOfGraveyardCreatures`;

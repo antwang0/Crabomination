@@ -6226,12 +6226,16 @@ pub enum Effect {
     /// "Return any number of target [filter] cards with total mana value `cap`
     /// or less from `from` to `to`" (March from the Tomb). Takes the cheapest
     /// matches first until the next one would break the budget, so the count is
-    /// maximized. No-op when nothing matches.
+    /// maximized. No-op when nothing matches. The moved cards are
+    /// `Selector::LastMoved`.
     MoveWithinTotalManaValue {
         from: Selector,
         filter: SelectionRequirement,
         cap: Value,
         to: ZoneDest,
+        /// "Up to N" — at most this many cards (The War in Heaven's three).
+        #[serde(default)]
+        max_count: Option<u32>,
     },
     MoveChosen {
         from: Selector,
@@ -8916,6 +8920,15 @@ pub enum Effect {
         #[serde(default)]
         filter: Option<SelectionRequirement>,
     },
+    /// "You may cast a [filter] spell from your hand or graveyard by paying
+    /// life equal to its mana value rather than paying its mana cost"
+    /// (Anrakyr the Traveller). One pick, cast during resolution; a card
+    /// whose mana value exceeds the caster's life can't be paid for (CR 119.4).
+    MayCastFromHandOrGraveyardForLife { filter: SelectionRequirement },
+    /// "Each [filter] card in your graveyard gains unearth {cost} until end of
+    /// turn" (Ghost Ark) — the one-shot twin of
+    /// `StaticEffect::GraveyardCardsHaveUnearth`.
+    GraveyardCardsGainUnearthThisTurn { filter: SelectionRequirement, cost: crate::mana::ManaCost },
     /// CR 702.104 — Tribute N. An opponent may put N +1/+1 counters on the
     /// source as it enters; if they decline, `otherwise` runs. The opponent
     /// answers via `Decision::OptionalTrigger` (synchronous decider, like

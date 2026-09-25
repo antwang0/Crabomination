@@ -1420,7 +1420,9 @@ impl Effect {
             Effect::PutFaceDownOntoBattlefield { what } => sel_has_target(what),
             Effect::GrantKeywordsToSpell { what, .. }
             | Effect::SpellEntersWithCounters { what, .. } => sel_has_target(what),
-            Effect::CastFromHandWithoutPaying { .. } => false,
+            Effect::CastFromHandWithoutPaying { .. }
+            | Effect::MayCastFromHandOrGraveyardForLife { .. }
+            | Effect::GraveyardCardsGainUnearthThisTurn { .. } => false,
             // The *chosen source* is a choice, not a target (CR 615.7) — but
             // `to` is where the shield lands and `redirect_to` is where the
             // damage goes, and both are printed "target" on the cards that

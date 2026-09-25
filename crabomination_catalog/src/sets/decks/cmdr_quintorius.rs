@@ -260,6 +260,7 @@ pub fn ao_the_dawn_sky() -> CardDefinition {
                     filter: R::Nonland.and(R::PermanentCard),
                     cap: Value::Const(4),
                     to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    max_count: None,
                 },
                 Effect::AddCounter {
                     what: Selector::EachPermanent(

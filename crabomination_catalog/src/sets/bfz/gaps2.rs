@@ -684,6 +684,7 @@ pub fn march_from_the_tomb() -> CardDefinition {
             filter: R::Creature.and(R::HasCreatureType(CreatureType::Ally)),
             cap: Value::Const(8),
             to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            max_count: None,
         },
         ..Default::default()
     }

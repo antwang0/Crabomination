@@ -28,6 +28,14 @@ impl GameState {
         self.attacking.iter().any(|a| a.attacker == id && a.target == AttackTarget::Player(seat))
     }
 
+    /// `id` attacks the player `source` last chose (its `chosen_player`).
+    pub(crate) fn attacking_chosen_player_of(&self, id: CardId, source: Option<CardId>) -> bool {
+        source
+            .and_then(|s| self.battlefield_find(s))
+            .and_then(|c| c.chosen_player)
+            .is_some_and(|p| self.creature_is_attacking_seat(id, p))
+    }
+
     /// `id` attacks an opponent of `seat`, or a planeswalker one controls.
     pub(crate) fn creature_is_attacking_an_opponent_of(&self, id: CardId, seat: usize) -> bool {
         self.attacking.iter().any(|a| {

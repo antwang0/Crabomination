@@ -369,6 +369,8 @@ pub enum CreatureType {
     Inhuman,
     // Warhammer 40,000 Commander (Forces of the Imperium).
     Astartes, Custodes, Inquisitor,
+    // Warhammer 40,000 Commander (Necron Dynasties): "C'tan" is `Ctan`.
+    Necron, Ctan,
     // Marvel Super Heroes Commander (Captain Mar-Vell; Professor Hulk, She-Hulk).
     Kree,
     Gamma,
@@ -919,6 +921,8 @@ pub enum CounterType {
     /// Plan counters — Glorious Purpose's tally (the sixth sacrifices it and
     /// casts from the top four).
     Plan,
+    /// Necrodermis counters — The War in Heaven's mark on what it returns.
+    Necrodermis,
     /// Vow counter — Promise of Loyalty's mark: a creature carrying one can't
     /// attack the vow's caster or their planeswalkers.
     Vow,
@@ -2921,6 +2925,10 @@ pub enum SelectionRequirement {
     /// player or a planeswalker one controls — "creatures attacking your
     /// opponents and/or planeswalkers they control" (Roar of Resistance).
     IsAttackingAnOpponent,
+    /// An attacking creature whose defender is the player stamped on the
+    /// evaluating source's `chosen_player` — "creatures attacking the last
+    /// chosen player" (Triarch Stalker). False without a source.
+    IsAttackingChosenPlayerOfSource,
     /// An attacking creature that hasn't been blocked (CR 509.1h). Reads live
     /// combat state — Sneak's "return an unblocked creature you control".
     IsUnblocked,

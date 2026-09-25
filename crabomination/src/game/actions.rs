@@ -1055,6 +1055,7 @@ fn mana_summary_of(def: &crate::card::CardDefinition) -> Option<u64> {
             | SE::HasActivatedAbilitiesOfOwnedExiledWithCounter { .. }
             | SE::HasActivatedAbilitiesOfExiledWithCounter { .. }
             | SE::HasActivatedAbilitiesOfGraveyardCreatures
+            | SE::HasActivatedAbilitiesOfYourGraveyardArtifacts
             | SE::HasActivatedAbilitiesOfOtherNamedControlledCreatures
             | SE::HasActivatedAbilitiesOfOpponentCreatures
             | SE::HasActivatedAbilitiesOfCounteredCreatures
@@ -3394,7 +3395,7 @@ impl crate::game::GameState {
             out.push(crate::effect::shortcut::encore(cost));
         }
         // Solemn Doomguide — unearth at the static's cost, once however many
-        // grant it.
+        // grant it; Ghost Ark's until-end-of-turn grant is the same ability.
         if let Some(cost) = self
             .battlefield
             .iter()
@@ -3407,6 +3408,11 @@ impl crate::game::GameState {
                     Some(cost.clone())
                 }
                 _ => None,
+            })
+            .or_else(|| {
+                self.turn.graveyard_unearth_eot.iter().find_map(|(seat, filter, cost)| {
+                    (*seat == owner && self.evaluate_requirement_on_card(filter, card, owner)).then(|| cost.clone())
+                })
             })
         {
             out.push(crate::effect::shortcut::unearth(cost));
@@ -17494,7 +17500,7 @@ impl GameState {
         // one pass per block below.
         let (mut welder, mut ooze, mut marvin, mut kraj, mut safehouse, mut snoop) =
             (false, false, false, false, false, false);
-        let (mut drana, mut refractor) = (false, false);
+        let (mut drana, mut refractor, mut trazyn) = (false, false, false);
         let mut caged: Option<crate::card::CounterType> = None;
         let mut brained: Option<crate::card::CounterType> = None;
         for sa in &me.definition.static_abilities {
@@ -17507,6 +17513,7 @@ impl GameState {
                     brained = Some(counter)
                 }
                 StaticEffect::HasActivatedAbilitiesOfGraveyardCreatures => ooze = true,
+                StaticEffect::HasActivatedAbilitiesOfYourGraveyardArtifacts => trazyn = true,
                 StaticEffect::HasActivatedAbilitiesOfOtherNamedControlledCreatures => {
                     marvin = true
                 }
@@ -17642,6 +17649,17 @@ impl GameState {
                         if ab.from_graveyard || ab.exile_self_cost {
                             continue;
                         }
+                        out.push(ab);
+                    }
+                }
+            }
+        }
+        // Trazyn the Infinite — the same, from the artifact cards in its
+        // controller's own graveyard.
+        if trazyn && let Some(pl) = self.players.get(me.controller) {
+            for card in pl.graveyard.iter().filter(|c| c.definition.is_artifact()) {
+                for ab in &card.definition.activated_abilities {
+                    if !(ab.from_graveyard || ab.exile_self_cost) {
                         out.push(ab);
                     }
                 }
@@ -20240,6 +20258,28 @@ impl GameState {
                 .sum();
             if total > 0 {
                 effective_mana_cost.reduce_generic(total);
+            }
+        }
+        // Convergence of Dominion — abilities that function from your
+        // graveyard (unearth, scavenge, ...) cost {N} less, floored at one
+        // mana of the cost.
+        if ability.from_graveyard && !effective_mana_cost.symbols.is_empty() {
+            let this = &*self;
+            let total: u32 = this
+                .battlefield
+                .iter()
+                .filter(|c| c.controller == p)
+                .flat_map(|c| {
+                    c.definition.static_abilities.iter().filter_map(move |sa| this.active_static(&sa.effect, c))
+                })
+                .map(|e| match e {
+                    crate::effect::StaticEffect::GraveyardActivatedAbilitiesCostLess { amount } => *amount,
+                    _ => 0,
+                })
+                .sum();
+            if total > 0 {
+                let max_cut = effective_mana_cost.cmc().saturating_sub(1);
+                effective_mana_cost.reduce_generic(total.min(max_cut));
             }
         }
         // Tezzeret, Betrayer of Flesh — the first artifact ability you

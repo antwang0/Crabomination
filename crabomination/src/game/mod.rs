@@ -153,6 +153,7 @@ mod opponent_controls;
 // CR 601.2c — a required target nothing could fill makes the cast illegal.
 mod required_target;
 mod unattach;
+mod empty_draw;
 /// CR 800.4f/g — routing an ask whose seat has left the game.
 pub(crate) mod departed;
 #[doc(hidden)]
@@ -1356,6 +1357,11 @@ pub struct TurnRegistries {
     /// of those sorcery spells". Cleared at cleanup.
     #[serde(default)]
     pub sorcery_damage_this_turn: Vec<(CardId, usize, u32)>,
+    /// `(seat, filter, cost)` — "each [filter] card in your graveyard gains
+    /// unearth {cost} until end of turn" (Ghost Ark). Read beside the
+    /// `GraveyardCardsHaveUnearth` static; cleared at cleanup.
+    #[serde(default)]
+    pub(crate) graveyard_unearth_eot: Vec<(usize, crate::card::SelectionRequirement, crate::mana::ManaCost)>,
     /// Permanents whose death is replaced by exile for the rest of the
     /// turn — "if that creature would die this turn, exile it instead"
     /// (Wilt in the Heat). Checked in `remove_from_battlefield_to_graveyard_raw`
@@ -20699,6 +20705,10 @@ impl GameState {
                 })
             })
             .flatten();
+        // CR 614 — Out of the Tombs replaces the empty-library draw itself.
+        if self.players[p].library.is_empty() && self.reanimate_instead_of_empty_draw(p, events) {
+            return DrawOutcome::Drew;
+        }
         let drew = match self.players[p].draw_top() {
             Some(id) => {
                 self.cards_drawn_this_resolution += 1;
@@ -30735,6 +30745,7 @@ fn static_effect_to_effects(
             | StaticEffect::GrantActivatedAbility { .. }
             // Necrotic Ooze — surfaced via `granted_abilities_for`, not a layer.
             | StaticEffect::HasActivatedAbilitiesOfGraveyardCreatures
+            | StaticEffect::HasActivatedAbilitiesOfYourGraveyardArtifacts
             | StaticEffect::HasActivatedAbilitiesOfOtherNamedControlledCreatures
             | StaticEffect::HasActivatedAbilitiesOfOpponentCreatures
             | StaticEffect::HasActivatedAbilitiesOfGraveyardLands
@@ -30757,6 +30768,7 @@ fn static_effect_to_effects(
             | StaticEffect::ActivationCostReduction { .. }
             | StaticEffect::YourCreatureActivatedAbilitiesCostLess { .. }
             | StaticEffect::MatchingActivatedAbilitiesCostLess { .. }
+            | StaticEffect::GraveyardActivatedAbilitiesCostLess { .. }
             | StaticEffect::FirstArtifactAbilityEachTurnCostsLess { .. }
             // Read on permanent entry (`apply_permanent_ascend`).
             | StaticEffect::Ascend
@@ -31193,6 +31205,7 @@ fn static_effect_to_effects(
             // SelfCostReducedIf (Gigastorm Titan) — read off the spell.
             | StaticEffect::SelfCostReducedIf { .. }
             | StaticEffect::WinInsteadOfDrawFromEmpty
+            | StaticEffect::ReanimateInsteadOfDrawFromEmpty
             // CR 104.3d — consulted at the loss/win sites, no layer effect.
             | StaticEffect::ControllerCantLoseGame
             | StaticEffect::ControllerCantWinGame
@@ -31335,7 +31348,7 @@ fn requirement_live_leaves(req: &SelectionRequirement) -> u8 {
     match req {
         R::IsModified => 1,
         R::IsEquipped | R::EquippedByAtLeast(_) => 2,
-        R::IsAttacking | R::IsAttackingYou | R::IsAttackingAnOpponent => 4,
+        R::IsAttacking | R::IsAttackingYou | R::IsAttackingAnOpponent | R::IsAttackingChosenPlayerOfSource => 4,
         // Leaves that read other live state or the source — a blocker, an
         // enchanted creature, the commander designation, a name, the
         // source's own choice. None is printed-characteristics-only, so

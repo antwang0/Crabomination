@@ -4528,7 +4528,7 @@ fn pick_combat_only_instant(state: &GameState, seat: usize, w: &EvalWeights) -> 
     fn requires_attacker(r: &crate::card::SelectionRequirement) -> bool {
         use crate::card::SelectionRequirement as R;
         match r {
-            R::IsAttacking | R::IsAttackingYou | R::IsBlocking => true,
+            R::IsAttacking | R::IsAttackingYou | R::IsAttackingChosenPlayerOfSource | R::IsBlocking => true,
             R::And(a, b) => requires_attacker(a) || requires_attacker(b),
             R::Or(a, b) => requires_attacker(a) && requires_attacker(b),
             _ => false,
@@ -8981,6 +8981,8 @@ fn sink_facts(state: &GameState, seat: usize, have: &SweepMana<'_>) -> u32 {
     if state.players[seat].energy == 0 {
         m &= !sink::AB_ENERGY;
     }
+    // Ghost Ark — an until-end-of-turn unearth grant is the static's twin.
+    gy_ability_grant = gy_ability_grant || state.turn.graveyard_unearth_eot.iter().any(|(p, _, _)| *p == seat);
     for c in state.players[seat].graveyard.iter() {
         if c.definition.activated_abilities.iter().any(|ab| ab.from_graveyard)
             || c.cold_any(|k| {

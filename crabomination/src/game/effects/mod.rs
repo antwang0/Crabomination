@@ -11346,7 +11346,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::MoveWithinTotalManaValue { from, filter, cap, to } => {
+            Effect::MoveWithinTotalManaValue { from, filter, cap, to, max_count } => {
                 // Cheapest-first greedy fill of the mana-value budget, so the
                 // number of cards returned is maximized (March from the Tomb).
                 let budget = self.evaluate_value(cap, ctx).max(0) as u32;
@@ -11374,9 +11374,14 @@ impl GameState {
                         }
                     })
                     .map(|(id, _)| id)
+                    .take(max_count.map_or(usize::MAX, |n| n as usize))
                     .collect();
+                if !self.scratch.last_moved_cards.is_empty() {
+                    self.scratch.last_moved_cards.clear();
+                }
                 for id in picks {
                     self.move_card_to(id, to, ctx, events);
+                    self.scratch.last_moved_cards.push(id);
                 }
                 Ok(())
             }
@@ -38657,6 +38662,15 @@ impl GameState {
                         break;
                     }
                 }
+                Ok(())
+            }
+
+            Effect::MayCastFromHandOrGraveyardForLife { filter } => {
+                self.may_cast_for_life(filter, ctx, effect, events)
+            }
+
+            Effect::GraveyardCardsGainUnearthThisTurn { filter, cost } => {
+                self.turn.graveyard_unearth_eot.push((ctx.controller, filter.clone(), cost.clone()));
                 Ok(())
             }
 

@@ -4367,6 +4367,7 @@ impl GameState {
             R::IsAttacking => Some(self.is_or_was_attacking(cid)),
             R::IsAttackingYou => Some(self.creature_is_attacking_seat(cid, controller)),
             R::IsAttackingAnOpponent => Some(self.creature_is_attacking_an_opponent_of(cid, controller)),
+            R::IsAttackingChosenPlayerOfSource => Some(self.attacking_chosen_player_of(cid, source)),
             R::OtherThanSource => Some(source.is_none_or(|s| cid != s)),
             R::IsSource => Some(source == Some(cid)),
             R::TurnedFaceUpThisTurn => Some(self.turn.turned_face_up_this_turn.contains(&cid)),
@@ -5212,6 +5213,7 @@ impl GameState {
                     R::IsAttackingAnOpponent => {
                         self.creature_is_attacking_an_opponent_of(card.id, controller)
                     }
+                    R::IsAttackingChosenPlayerOfSource => self.attacking_chosen_player_of(card.id, source),
                     R::IsUnblocked => {
                         self.attacking.iter().any(|a| a.attacker == card.id)
                             && !self.blocked_attackers.contains(&card.id)
@@ -6603,6 +6605,7 @@ impl GameState {
             R::IsAttacking => self.is_or_was_attacking(card.id),
             R::IsAttackingYou => self.creature_is_attacking_seat(card.id, controller),
             R::IsAttackingAnOpponent => self.creature_is_attacking_an_opponent_of(card.id, controller),
+            R::IsAttackingChosenPlayerOfSource => false,
             // A battlefield instance carries this flag directly (Rowdy Research's
             // "{1} less for each creature that attacked this turn" affinity).
             R::AttackedThisTurn => card.attacked_this_turn,
