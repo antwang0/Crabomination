@@ -5522,8 +5522,15 @@ impl GameState {
                     R::InExile => self.exile.iter().any(|c| c.id == *cid),
                     R::OnTopOfLibrary => self.is_library_top(*cid),
                     R::OnBattlefield => self.battlefield_find(*cid).is_some(),
+                    // Either link, as `SameNameAsExiledWithSource` below: an
+                    // until-leaves exile stamps `exiled_by`, not `exiled_with`
+                    // (Bronzebeak Foragers' "card exiled with this").
                     R::ExiledWithSource => source.is_some_and(|s| {
-                        self.exile.iter().any(|c| c.id == *cid && c.exiled_with == Some(s))
+                        self.exile.iter().any(|c| {
+                            c.id == *cid
+                                && (c.exiled_with == Some(s)
+                                    || c.cold_any(|k| k.exiled_by.as_ref().is_some_and(|l| l.source == s)))
+                        })
                     }),
                     // CR-spec: "the greatest mana value among [filter] they
                     // control" — the candidate must (a) match `inner` and
@@ -6148,6 +6155,21 @@ impl GameState {
             R::SharesColorWithManaSpent
             | R::SameControllerAsTargetSlot(_)
             | R::OtherThanTargetSlot(_) => true,
+            R::SharesCreatureTypeWithCreatureYouControl => {
+                let mine = &card.definition.subtypes.creature_types;
+                let wild = card.has_keyword(&crate::card::Keyword::Changeling);
+                (wild || !mine.is_empty())
+                    && self.battlefield.iter().any(|c| {
+                        c.controller == controller
+                            && c.id != card.id
+                            && self.computed_permanent(c.id).is_some_and(|cp| {
+                                cp.card_types().contains(&crate::card::CardType::Creature)
+                                    && (wild
+                                        || cp.keywords().contains(&crate::card::Keyword::Changeling)
+                                        || cp.subtypes().creature_types.iter().any(|t| mine.contains(t)))
+                            })
+                    })
+            }
             R::SharesColorWithPermanentYouControl => {
                 let colors = card.definition.printed_colors();
                 !colors.is_empty()
@@ -6336,7 +6358,7 @@ impl GameState {
             // battlefield.
             R::OnBattlefield => false,
             // Source-relative; this card-only path has no source id.
-            R::ExiledWithSource => card.exiled_with.is_some(),
+            R::ExiledWithSource => card.exiled_with.is_some() || card.cold_any(|k| k.exiled_by.is_some()),
             // Battlefield-only ("greatest MV among controlled" walks the
             // battlefield in the static variant; library searches don't
             // surface this filter).

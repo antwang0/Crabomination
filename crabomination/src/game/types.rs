@@ -1550,6 +1550,12 @@ pub struct TriggerCandidate {
     /// time".
     #[serde(default)]
     pub triggered_by_face_up: bool,
+    /// The controller of the creature whose being dealt damage fired this
+    /// trigger (a `DamageDealt` to a creature), else `None` — Wayta, Trainer
+    /// Prodigy's "a creature you control being dealt damage causes …
+    /// triggers an additional time" doubler.
+    #[serde(default)]
+    pub damaged_creature_controller: Option<usize>,
     /// CR 605.1b — fired from a mana ability (a permanent tapped for mana).
     #[serde(default)]
     pub from_mana_ability: bool,

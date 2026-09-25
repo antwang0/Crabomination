@@ -745,6 +745,11 @@ pub struct PlayerData {
     /// (Ride the Avalanche). Spent by that cast; reset at the turn boundary.
     #[serde(default)]
     pub next_spell_flash_this_turn: bool,
+    /// Progenitor's Icon — one entry per activation: the next spell of that
+    /// creature type this turn has flash. Spent by that cast; cleared at the
+    /// turn boundary.
+    #[serde(default)]
+    pub next_typed_spell_flash_this_turn: Vec<crate::card::CreatureType>,
     /// "You may cast spells this turn as though they had flash" (Alchemist's
     /// Refuge). Reset at the turn boundary.
     #[serde(default)]
@@ -1473,6 +1478,7 @@ impl Player {
             attacked_players_this_turn: Vec::new(),
             next_spell_convoke_this_turn: false,
             next_spell_flash_this_turn: false,
+            next_typed_spell_flash_this_turn: Vec::new(),
             creatures_exiled_from_control_this_turn: 0,
             descended_this_turn: false,
             descend_count_this_turn: 0,

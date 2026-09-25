@@ -10001,6 +10001,14 @@ impl GameState {
         if self.players[p].next_spell_flash_this_turn {
             self.players[p].next_spell_flash_this_turn = false;
         }
+        if !self.players[p].next_typed_spell_flash_this_turn.is_empty()
+            && let Some(i) = self.players[p]
+                .next_typed_spell_flash_this_turn
+                .iter()
+                .position(|t| def_is_creature_type(&card.definition, *t))
+        {
+            self.players[p].next_typed_spell_flash_this_turn.remove(i);
+        }
         auto_events.push(GameEvent::SpellCast {
             player: p,
             card_id,
@@ -15051,6 +15059,10 @@ impl GameState {
             || (self.players[p].creature_spells_as_flash_this_turn
                 && card.definition.is_creature())
             || self.players[p].next_spell_flash_this_turn
+            || self.players[p]
+                .next_typed_spell_flash_this_turn
+                .iter()
+                .any(|t| def_is_creature_type(&card.definition, *t))
             || self.players[p].spells_as_flash_this_turn
     }
 
@@ -19997,6 +20009,14 @@ impl GameState {
         }
         // "Costs {N} less to activate if [predicate]" (Razorlash
         // Transmogrant's "if an opponent controls four or more nonbasic lands").
+        if let Some((filter, n)) = &ability.cost_reduction_if_targets {
+            let mut chosen = target.iter().chain(additional_targets.iter()).peekable();
+            if chosen.peek().is_some()
+                && chosen.all(|t| self.evaluate_requirement_static(filter, t, p, Some(card_id)))
+            {
+                effective_mana_cost.reduce_generic(*n);
+            }
+        }
         if let Some((cond, n)) = &ability.cost_reduction_if {
             let ctx = crate::game::effects::EffectContext::for_trigger(card_id, p, None, 0);
             if self.evaluate_predicate(cond, &ctx) {
@@ -21802,4 +21822,10 @@ fn clamp_activated_mode(effect: &crate::effect::Effect, chosen: usize) -> usize 
         Some(modes) if !modes.is_empty() => chosen.min(modes.len() - 1),
         _ => 0,
     }
+}
+
+/// A spell "of the chosen type" (Progenitor's Icon): its printed creature
+/// types, or changeling (CR 702.73a).
+fn def_is_creature_type(def: &crate::card::CardDefinition, t: crate::card::CreatureType) -> bool {
+    def.subtypes.creature_types.contains(&t) || def.keywords.contains(&crate::card::Keyword::Changeling)
 }

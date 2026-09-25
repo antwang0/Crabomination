@@ -9209,6 +9209,19 @@ impl GameState {
                         {
                             amount = amount.saturating_sub(*n);
                         }
+                        // Temple Altisaur — "prevent all but 1" to another of
+                        // its kind.
+                        StaticEffect::CapDamageToYourOtherMatchingCreatures { filter, cap }
+                            if c.controller == p
+                                && matches!(ent, EntityRef::Permanent(cid)
+                                    if cid != c.id
+                                        && self.battlefield_find(cid).is_some_and(|t| {
+                                            t.controller == p
+                                                && self.evaluate_requirement_on_card(filter, t, p)
+                                        })) =>
+                        {
+                            amount = amount.min(*cap);
+                        }
                         StaticEffect::AddDamageToOpponents { source_color, amount: bonus }
                             if !self.same_team(c.controller, p) =>
                         {
@@ -23112,6 +23125,7 @@ impl GameState {
                         triggered_by_attack: matches!(ev, GameEvent::AttackerDeclared(_)),
                         triggered_by_land_entry: matches!(ev, GameEvent::LandPlayed { .. }),
                         triggered_by_face_up: matches!(ev, GameEvent::TurnedFaceUp { .. }),
+                        damaged_creature_controller: self.damaged_creature_controller(ev),
                         from_mana_ability: matches!(
                             ev,
                             GameEvent::TappedForMana { .. }
@@ -23267,6 +23281,7 @@ impl GameState {
                             triggered_by_attack: false,
                             triggered_by_land_entry: false,
                             triggered_by_face_up: false,
+                            damaged_creature_controller: self.damaged_creature_controller(ev),
                         });
                     }
                 }
@@ -23301,6 +23316,7 @@ impl GameState {
                                 triggered_by_attack: false,
                                 triggered_by_land_entry: false,
                                 triggered_by_face_up: false,
+                                damaged_creature_controller: self.damaged_creature_controller(ev),
                             });
                         }
                     }
@@ -23347,6 +23363,7 @@ impl GameState {
                                 triggered_by_attack: false,
                                 triggered_by_land_entry: false,
                                 triggered_by_face_up: false,
+                                damaged_creature_controller: None,
                             });
                         }
                     }
@@ -23461,6 +23478,7 @@ impl GameState {
                             triggered_by_attack: matches!(ev, GameEvent::AttackerDeclared(_)),
                             triggered_by_land_entry: false,
                             triggered_by_face_up: false,
+                            damaged_creature_controller: None,
                             from_mana_ability: matches!(
                                 ev,
                                 GameEvent::TappedForMana { .. }
@@ -23528,6 +23546,7 @@ impl GameState {
                                 triggered_by_attack: matches!(ev, GameEvent::AttackerDeclared(_)),
                                 triggered_by_land_entry: false,
                                 triggered_by_face_up: false,
+                                damaged_creature_controller: None,
                                 from_mana_ability: false,
                             });
                             break;
@@ -23573,6 +23592,7 @@ impl GameState {
                             triggered_by_attack: false,
                             triggered_by_land_entry: false,
                             triggered_by_face_up: false,
+                            damaged_creature_controller: None,
                             from_mana_ability: false,
                         });
                     }
@@ -23624,6 +23644,7 @@ impl GameState {
                                     triggered_by_attack: false,
                                     triggered_by_land_entry: false,
                                     triggered_by_face_up: false,
+                                    damaged_creature_controller: None,
                                 });
                                 break;
                             }
@@ -23666,6 +23687,7 @@ impl GameState {
                             triggered_by_attack: false,
                             triggered_by_land_entry: false,
                             triggered_by_face_up: false,
+                            damaged_creature_controller: None,
                             });
                         }
                     }
@@ -23758,6 +23780,7 @@ impl GameState {
                             triggered_by_attack: false,
                             triggered_by_land_entry: false,
                             triggered_by_face_up: false,
+                            damaged_creature_controller: None,
                         });
                     }
                 }
@@ -23811,6 +23834,7 @@ impl GameState {
                                 triggered_by_attack: false,
                                 triggered_by_land_entry: false,
                                 triggered_by_face_up: false,
+                                damaged_creature_controller: None,
                                 });
                             }
                         }
@@ -23838,6 +23862,7 @@ impl GameState {
                                 triggered_by_attack: false,
                                 triggered_by_land_entry: false,
                                 triggered_by_face_up: false,
+                                damaged_creature_controller: None,
                                 });
                             }
                         }
@@ -23966,6 +23991,33 @@ impl GameState {
             .count()
     }
 
+    /// The controller of the creature a `DamageDealt` event hit, read live or
+    /// from its last-known information when the damage was lethal — the
+    /// candidate half of Wayta, Trainer Prodigy's doubler. `None` for any
+    /// other event and for damage to a player or a noncreature.
+    pub(crate) fn damaged_creature_controller(&self, ev: &GameEvent) -> Option<usize> {
+        let GameEvent::DamageDealt { to_card: Some(id), .. } = ev else { return None };
+        let c = self.battlefield_find(*id).or_else(|| self.lki_snapshot(*id))?;
+        c.definition.is_creature().then_some(c.controller)
+    }
+
+    /// Count Wayta-style creature-damage trigger doublers a player controls
+    /// (`StaticEffect::DoubleControllerCreatureDamagedTriggers`). Only reached
+    /// for a candidate whose damaged creature that player controls.
+    pub(crate) fn creature_damage_trigger_extra_fires(&self, controller: usize) -> usize {
+        self.battlefield
+            .iter()
+            .filter(|c| c.controller == controller)
+            .flat_map(|c| &c.definition.static_abilities)
+            .filter(|sa| {
+                matches!(
+                    sa.effect,
+                    crate::effect::StaticEffect::DoubleControllerCreatureDamagedTriggers
+                )
+            })
+            .count()
+    }
+
     /// Count active Isshin-style attack-trigger doublers a player controls
     /// (`StaticEffect::DoubleControllerAttackTriggers` — Windcrag Siege's Mardu
     /// mode). Each adds one extra fire to a permanent's attack-caused trigger.
@@ -24052,6 +24104,7 @@ impl GameState {
                 triggered_by_attack,
                 triggered_by_land_entry,
                 triggered_by_face_up,
+                damaged_creature_controller,
                 from_mana_ability,
             } = candidate;
             if let Some(filter) = filter {
@@ -24204,12 +24257,20 @@ impl GameState {
                 } else {
                     0
                 };
+                // Wayta, Trainer Prodigy: a trigger of yours caused by a
+                // creature you control being dealt damage fires again.
+                let damage_extra = if damaged_creature_controller == Some(controller) {
+                    self.creature_damage_trigger_extra_fires(controller)
+                } else {
+                    0
+                };
                 let fires = 1
                     + crate::game::actions::ally_trigger_extra_fires(self, controller, source)
                     + death_extra
                     + attack_extra
                     + land_extra
-                    + face_up_extra;
+                    + face_up_extra
+                    + damage_extra;
                 for effect in std::iter::repeat_n(effect, fires) {
                     queue.push(PendingTriggerPush {
                         actor,
@@ -29339,6 +29400,7 @@ fn static_effect_scales_damage(effect: &crate::effect::StaticEffect) -> bool {
         | SE::ReduceColorDamageToYouBy { .. }
         | SE::ReduceDamageToYourCreaturesBy(_)
         | SE::ReduceDamageToYourMatchingCreaturesBy { .. }
+        | SE::CapDamageToYourOtherMatchingCreatures { .. }
         // Source-scoped.
         | SE::AddDamageFromColorSpells { .. }
         | SE::ReduceSpellDamageBy { .. }
@@ -30284,6 +30346,7 @@ fn static_effect_to_effects(
             | StaticEffect::ControllerMaxHandSizeReduced(_)
             | StaticEffect::ReduceDamageToYourCreaturesBy(_)
             | StaticEffect::ReduceDamageToYourMatchingCreaturesBy { .. }
+            | StaticEffect::CapDamageToYourOtherMatchingCreatures { .. }
             | StaticEffect::AddDamageToOpponents { .. }
             | StaticEffect::AddDamageToOpponentsPerCounter { .. }
             | StaticEffect::AddDamageFromColorToPlayers { .. }
@@ -30342,6 +30405,7 @@ fn static_effect_to_effects(
             // `resolving_spell_absorber`; no layer effect.
             | StaticEffect::ExileResolvingInstantsAndSorceries
             | StaticEffect::DoubleControllerLandEntryTriggers
+            | StaticEffect::DoubleControllerCreatureDamagedTriggers
             // SuppressCreatureEtbTriggers — read at trigger dispatch via
             // `creature_etb_triggers_suppressed` / `creature_dies_triggers_suppressed`;
             // no layer effect (Torpor Orb, Tocatli Honor Guard, Hushbringer).

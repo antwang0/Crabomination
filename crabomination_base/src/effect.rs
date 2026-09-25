@@ -11034,6 +11034,11 @@ pub enum Effect {
     /// "The next spell you cast this turn can be cast as though it had flash"
     /// (Ride the Avalanche). Spent by that cast.
     NextSpellHasFlashThisTurn,
+    /// "The next spell of the chosen type you cast this turn can be cast as
+    /// though it had flash" (Progenitor's Icon) — the source's chosen
+    /// creature type, read at resolution. Spent by the first spell of that
+    /// type cast.
+    NextSpellOfChosenTypeHasFlashThisTurn,
 
     /// "For each planeswalker you control, you may activate one of its loyalty
     /// abilities this turn as though none of its loyalty abilities have been

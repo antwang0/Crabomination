@@ -1594,6 +1594,11 @@ pub enum StaticEffect {
     /// you control matching `filter` get the reduction (Daunting Defender's
     /// Clerics, Circle of Solace-style tribal shields).
     ReduceDamageToYourMatchingCreaturesBy { filter: SelectionRequirement, amount: u32 },
+    /// CR 615 — "If a source would deal damage to another [filter] you
+    /// control, prevent all but `cap` of that damage" (Temple Altisaur). Read
+    /// beside `ReduceDamageToYourMatchingCreaturesBy` in
+    /// `GameState::scale_damage_to`; the static's own permanent is excluded.
+    CapDamageToYourOtherMatchingCreatures { filter: SelectionRequirement, cap: u32 },
     /// CR 614.5 — "If a [color] source you control would deal damage to an
     /// opponent or a permanent an opponent controls, it deals that much
     /// damage plus `amount` instead." (Torbran, Thane of Red Fell.)
@@ -1708,6 +1713,13 @@ pub enum StaticEffect {
     /// `triggered_by_land_entry` candidate flag) or an ETB-caused trigger
     /// whose entering subject is a land gets one extra fire per copy.
     DoubleControllerLandEntryTriggers,
+    /// "If a creature you control being dealt damage causes a triggered
+    /// ability of a permanent you control to trigger, that ability triggers
+    /// an additional time" (Wayta, Trainer Prodigy — CR 603.2d). Read at
+    /// trigger push through the `damaged_creature_controller` candidate
+    /// field; the damaged creature's last-known information counts when the
+    /// damage was lethal.
+    DoubleControllerCreatureDamagedTriggers,
     /// CR 603.x — the filter-based sibling of `DoubleControllerTriggersOfType`:
     /// "If a triggered ability of a creature you control matching `filter`
     /// triggers, that ability triggers an additional time" (Delney, Streetwise
@@ -3644,6 +3656,12 @@ pub struct ActivatedAbility {
     /// nonbasic lands"). Defaults to None.
     #[serde(default)]
     pub cost_reduction_if: Option<(crate::effect::Predicate, u32)>,
+    /// "This ability costs {N} less to activate if it targets [filter]" —
+    /// taken when every chosen target matches (Wayta, Trainer Prodigy's
+    /// "{2} less if it targets two creatures you control"). Generic-only;
+    /// evaluated against the activation's own targets at payment time.
+    #[serde(default)]
+    pub cost_reduction_if_targets: Option<(SelectionRequirement, u32)>,
     /// "This ability costs {1} less to activate for each [filter] card in your
     /// graveyard" — generic-only reduction counted off the activator's
     /// graveyard at payment time (Battlefield Butcher). Defaults to None.

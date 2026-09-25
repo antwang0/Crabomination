@@ -35646,6 +35646,14 @@ impl GameState {
                 self.players[ctx.controller].next_spell_flash_this_turn = true;
                 Ok(())
             }
+            Effect::NextSpellOfChosenTypeHasFlashThisTurn => {
+                if let Some(ct) =
+                    ctx.source.and_then(|s| self.find_card_anywhere(s)).and_then(|c| c.chosen_creature_type)
+                {
+                    self.players[ctx.controller].next_typed_spell_flash_this_turn.push(ct);
+                }
+                Ok(())
+            }
             Effect::RevealUntilPutAttachedElseHand { filter } => {
                 self.reveal_until_put_attached_else_hand(filter, ctx, events);
                 Ok(())

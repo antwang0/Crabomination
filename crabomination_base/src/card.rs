@@ -2796,6 +2796,10 @@ pub enum SelectionRequirement {
     /// Empty-Shrine Kannushi's "protection from the colors of permanents you
     /// control".
     SharesColorWithPermanentYouControl,
+    /// Shares a creature type with a creature the evaluating player controls
+    /// (Descendants' Path's revealed card). Changelings on either side share
+    /// with everything; a creature's layer-4 types count.
+    SharesCreatureTypeWithCreatureYouControl,
     /// Shares a colour with the permanent sacrificed to pay this spell's
     /// additional cost (Mind Extraction). False with nothing sacrificed.
     SharesColorWithSacrificed,

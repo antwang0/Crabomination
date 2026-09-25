@@ -907,6 +907,7 @@ impl Effect {
             | Effect::CounterAllAbilitiesOf { .. }
             | Effect::LookTopExileOneFaceDownMayPlay { .. }
             | Effect::NextSpellHasFlashThisTurn
+            | Effect::NextSpellOfChosenTypeHasFlashThisTurn
             | Effect::PreventNextDamageFromSourceThisTurn { .. }
             | Effect::SacrificeSourceUnlessPayValue { .. }
             | Effect::AddAttackTaxThisTurn { .. }
