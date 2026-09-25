@@ -1986,6 +1986,11 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Dead Man's Chest | Planar Portal (AFC) | an exiled land is playable too (the card says "cast spells"). |
 | 🟡 Share the Spoils | Planar Portal (AFC) | each player's linked cards open at their upkeep; a land played from the pile doesn't refill it. |
 | 🟡 Danse Macabre | Planar Portal (AFC) | you sacrifice after the other players, not simultaneously. |
+| 🟡 Flamebraider | Dance of the Elements (ECC) | its mana spends on Elemental creature spells and Elemental sources' abilities; a Kindred Elemental noncreature spell can't use it. |
+| 🟡 Smokebraider | Dance of the Elements (ECC) | as Flamebraider: Kindred Elemental noncreature spells can't spend its mana. |
+| 🟡 Primal Beyond | Dance of the Elements (ECC) | as Flamebraider for its colored mana; the "reveal" is automatic whenever an Elemental card is in hand. |
+| 🟡 Haunting Voyage | Dance of the Elements (ECC) | cast unforetold, the two returned are the two with the greatest power, not the caster's pick. |
+| 🟡 Horde of Notions | Dance of the Elements (ECC) | casts the Elemental card; an Elemental land card can't be played this way. |
 | 🟡 Orator of Ojutai | Draconic Domination (C17) | the Dragon check reads your board and hand as it enters; there is no optional reveal. |
 | 🟡 Armored Skyhunter | Silverquill Influence (SOC) | an Equipment it puts onto the battlefield stays unattached. |
 | 🟡 Coercive Impetus | Silverquill Influence (SOC) | the goad is renewed by a trigger at the beginning of each combat, not a static. |

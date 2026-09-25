@@ -149,6 +149,7 @@ lists were picked.
 | **Deep Clue Sea** (MKC precon) GWU | Morska, Undersea Sleuth | GWU | 100 | 🟡 all 100 implemented, 3 carry residuals (Aerial Extortionist, Alandra, Sky Dreamer, Erdwal Illuminator) |
 | **Counter Intelligence** (EOC precon) URW | Inspirit, Flagship Vessel (**Spacecraft**) | URW | 100 | 🟡 all 100 implemented, 6 carry residuals (Cloud Key, Inspirit, Depthshaker Titan, Moxite Refinery, Resourceful Defense, Ripples of Potential) |
 | **Explorers of the Deep** (LCC precon) GU | Hakbal of the Surging Soul | GU | 100 | 🟡 all 100 implemented, 2 carry residuals (Xolatoyac, the Smiling Flood, Bygone Marvels) |
+| **Dance of the Elements** (ECC precon) WUBRG | Ashling, the Limitless | WUBRG | 100 | 🟡 all 100 implemented, 5 carry residuals (Flamebraider, Smokebraider, Primal Beyond, Haunting Voyage, Horde of Notions) |
 | **Coven Counters** (MIC precon) GW | Leinore, Autumn Sovereign | GW | 100 | 🟡 all 100 implemented, 4 carry residuals (Curse of Conformity, Celestial Judgment, Sigardian Zealot, Moorland Rescuer) |
 | **Arcane Maelstrom** (C20 precon) GUR | Kalamax, the Stormsire | GUR | 100 | 🟡 all 100 implemented, 4 carry residuals (Eon Frolicker, Haldan, Pako, Lavabrink Floodgates) |
 | **Enhanced Evolution** (C20 precon) BGU | Otrimi, the Ever-Playful | BGU | 100 | 🟡 all 100 implemented, 4 carry residuals (Capricopian, Manascape Refractor, Mindleecher, Vastwood Hydra) |
@@ -2457,6 +2458,24 @@ Loyalty**, **Tamiyo** (INCOMPLETE_CARDS). A 200-game census beside
 Hearthhull / Bright-Palm / Brimaz (seed 9551) decided 200/200 with zero
 panics and no card of the four lists unplayed, Ms. Bumbleflower winning
 38.0 %. `--bench` byte-identical.
+
+The **hundred-and-forty-eighth** is Lorwyn Eclipsed Commander's **Dance of
+the Elements** — five-color Elementals under Ashling, the Limitless,
+`--pod-decks 148` (committed as 145 until Explorers of the Deep, Bedecked
+Brokers and Riders of Rohan landed). Twenty-two cards were missing
+(`cmdr_ashling.rs`). The primitives: `StaticEffect::GrantEvokeToSpells`
+(CR 702.74 — Ashling's "Elemental permanent spells you cast from your hand
+gain evoke {4}", read by `effective_alternative_cost` on the hand zone only)
+and `Predicate::CastForetold` (CR 702.143, Haunting Voyage's "if this spell
+was foretold", a ColdState set stamped by `cast_foretold`). Ashling's copy of
+a sacrificed nontoken Elemental is a hasty token captured into a
+`DelayUntilWithCapture` pay-{W}{U}{B}{R}{G}-or-sacrifice. Residuals:
+**Flamebraider**, **Smokebraider** and **Primal Beyond** spend on Elemental
+creature spells and Elemental sources only (no Kindred Elemental in the
+list); **Haunting Voyage** unforetold returns the two greatest-power cards;
+**Horde of Notions** can't play an Elemental land. Strict debug pods (4 seats
+beside Satya / Prosper / Morophon, seeds 10450-10451; 6 seats, 10452):
+180 / 180 decided.
 
 The **hundred-and-forty-fifth** is Lost Caverns of Ixalan Commander's
 **Explorers of the Deep** (`ExplorersOfTheDeep_LCC`, 2023-11-17) — Simic
