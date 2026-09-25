@@ -925,6 +925,8 @@ pub enum CounterType {
     Contested,
     /// Eyeball counter — Jar of Eyeballs' tally of your creatures dying.
     Eyeball,
+    /// Brick counter — Oracle's Vault's tally toward its free play.
+    Brick,
 }
 
 /// Every zone a card can occupy.

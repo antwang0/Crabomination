@@ -852,6 +852,7 @@ impl GameState {
                     .max()
                     .unwrap_or(0)
             }
+            Value::CounterKindsAmong { who, filter } => self.count_counter_kinds_among(who, filter, ctx),
             Value::DistinctPowerYouControl => {
                 let mut powers: Vec<i32> = self
                     .battlefield

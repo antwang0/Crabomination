@@ -33,6 +33,7 @@ mod library_dig;
 mod order_of_succession;
 mod owners_control;
 mod player_counters;
+mod counter_kinds;
 mod chosen_color_damage;
 mod fight_each;
 pub(crate) use eval::PrintedGates;
@@ -23113,6 +23114,30 @@ impl GameState {
             }
             Effect::DoublePlayerCounters { who } => {
                 self.double_player_counters(who, ctx, events);
+                Ok(())
+            }
+            Effect::AddCounterOfEachKindAmong { onto, who, filter, or_plus_one } => {
+                self.add_counter_of_each_kind_among(onto, who, filter, *or_plus_one, ctx, events);
+                Ok(())
+            }
+            Effect::AddCounterOfEachKindOn { what } => {
+                self.add_counter_of_each_kind_on(what, ctx, events);
+                Ok(())
+            }
+            Effect::AddMissingCounterKindFromYours { what } => {
+                self.add_missing_counter_kind_from_yours(what, ctx, events);
+                Ok(())
+            }
+            Effect::SpreadCounterKindToOthers { shield_first } => {
+                self.spread_counter_kind_to_others(*shield_first, ctx, events);
+                Ok(())
+            }
+            Effect::CopyCountersOnto { from, to } => {
+                self.copy_counters_onto(from, to, ctx, events);
+                Ok(())
+            }
+            Effect::ExileSameNameInvestigate { what } => {
+                self.exile_same_name_investigate(what, ctx, events);
                 Ok(())
             }
             Effect::OwnersGainControlOfNontokens => {

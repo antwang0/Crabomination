@@ -751,6 +751,7 @@ impl Effect {
             | Effect::LookTopFiveDigForLife
             | Effect::OwnersGainControlOfNontokens
             | Effect::DoublePlayerCounters { .. }
+            | Effect::SpreadCounterKindToOthers { .. }
             | Effect::DamageEachCreatureOfChosenColor { .. }
             | Effect::ForetellFromHand { .. }
             | Effect::EachPlayerCreatesTokenPerControlled { .. }
@@ -1908,6 +1909,11 @@ impl Effect {
             Effect::GrantLoyaltyTwiceThisTurn { what }
             | Effect::BecomeTreasure { what }
             | Effect::AddCounterOfPresentKind { what } => sel_has_target(what),
+            Effect::AddCounterOfEachKindAmong { onto: what, .. }
+            | Effect::AddCounterOfEachKindOn { what }
+            | Effect::AddMissingCounterKindFromYours { what }
+            | Effect::ExileSameNameInvestigate { what } => sel_has_target(what),
+            Effect::CopyCountersOnto { from, to } => sel_has_target(from) || sel_has_target(to),
             Effect::Proliferate => false,
             Effect::BlockersPoisonedThisTurn { .. } => false,
             Effect::AuraSwapFromHand
@@ -2629,6 +2635,10 @@ impl Effect {
             | Effect::GrantLoyaltyTwiceThisTurn { what }
             | Effect::BecomeTreasure { what }
             | Effect::AddCounterOfPresentKind { what }
+            | Effect::AddCounterOfEachKindAmong { onto: what, .. }
+            | Effect::AddCounterOfEachKindOn { what }
+            | Effect::AddMissingCounterKindFromYours { what }
+            | Effect::ExileSameNameInvestigate { what }
             | Effect::AddKeywordCounter { what, .. }
             | Effect::RemoveKeywordCounter { what, .. }
             | Effect::AddRandomMissingCounter { what, .. } => sel_filter(what),
@@ -2956,7 +2966,8 @@ impl Effect {
             | Effect::Explore { who: what } => sel_filter(what),
             Effect::MoveAllCounters { from, to }
             | Effect::MoveCounter { from, to, .. }
-            | Effect::MoveOneCounter { from, to } => {
+            | Effect::MoveOneCounter { from, to }
+            | Effect::CopyCountersOnto { from, to } => {
                 sel_filter(from).or_else(|| sel_filter(to))
             }
             Effect::Tribute { otherwise, .. } => otherwise.primary_target_filter(),
@@ -5078,6 +5089,10 @@ impl Effect {
                 | Effect::GrantLoyaltyTwiceThisTurn { what }
                 | Effect::BecomeTreasure { what }
                 | Effect::AddCounterOfPresentKind { what }
+                | Effect::AddCounterOfEachKindAmong { onto: what, .. }
+                | Effect::AddCounterOfEachKindOn { what }
+                | Effect::AddMissingCounterKindFromYours { what }
+                | Effect::ExileSameNameInvestigate { what }
                 | Effect::BecomeChosenColor { what, .. }
                 | Effect::BecomeChosenCreatureType { what, .. }
                 | Effect::BecomeColor { what, .. }
@@ -5102,7 +5117,8 @@ impl Effect {
                 | Effect::CreaturesDontUntapNextUntapStep { who } => sel_find(who, slot),
                 Effect::MoveAllCounters { from, to }
                 | Effect::MoveCounter { from, to, .. }
-                | Effect::MoveOneCounter { from, to } => {
+                | Effect::MoveOneCounter { from, to }
+                | Effect::CopyCountersOnto { from, to } => {
                     sel_find(from, slot).or_else(|| sel_find(to, slot))
                 }
                 Effect::BecomeCopyOf { what, source, .. }

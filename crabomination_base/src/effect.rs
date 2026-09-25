@@ -1278,6 +1278,10 @@ pub enum Value {
     /// controls. Backs Golden Ratio's "draw a card for each different
     /// power among creatures you control."
     DistinctPowerYouControl,
+    /// The number of different kinds of counters among `who`'s permanents
+    /// matching `filter`; a keyword counter is a kind (CR 122.1b). Perrie,
+    /// the Pulverizer; Storm of Forms.
+    CounterKindsAmong { who: PlayerRef, filter: crate::card::SelectionRequirement },
     /// Total (computed) toughness of all creatures the controller controls.
     /// Betor, Kin to All's tiered end-step check (10/20/40).
     TotalToughnessControlled,
@@ -5034,6 +5038,33 @@ pub enum Effect {
     /// "Double the number of each kind of counter you have" (Aetheric
     /// Amplifier): `who`'s energy, experience and poison counters.
     DoublePlayerCounters { who: PlayerRef },
+    /// "For each kind of counter among `who`'s permanents matching `filter`,
+    /// put a counter of that kind on [`onto`]" — keyword counters are kinds
+    /// too (CR 122.1b). Several recipients take the kinds in turn (Exotic
+    /// Pets' "either of those tokens"). With `or_plus_one` each kind may be
+    /// a +1/+1 counter instead (Bribe Taker): only shield and keyword kinds
+    /// are kept, every other kind becomes +1/+1.
+    AddCounterOfEachKindAmong { onto: Selector, who: PlayerRef, filter: crate::card::SelectionRequirement, or_plus_one: bool },
+    /// "For each kind of counter on target permanent or player, give that
+    /// permanent or player another counter of that kind" (Skyship Plunderer).
+    AddCounterOfEachKindOn { what: Selector },
+    /// "Choose a counter on a permanent you control. Put a counter of that
+    /// kind on [`what`] if it doesn't have a counter of that kind" (Aven
+    /// Courier). The kind is picked as it resolves: a keyword counter, then
+    /// shield, then +1/+1, never a harmful kind.
+    AddMissingCounterKindFromYours { what: Selector },
+    /// "Choose a kind of counter on a creature you control. Put a counter of
+    /// that kind on each other creature you control" (Contractual
+    /// Safeguard). `shield_first` is its addendum: a shield counter goes on
+    /// your best creature first, and may be the kind chosen.
+    SpreadCounterKindToOthers { shield_first: bool },
+    /// "Put the same number of each kind of counter on [`to`]" as [`from`]
+    /// has, keyword counters included (Denry Klin, Editor in Chief).
+    CopyCountersOnto { from: Selector, to: Selector },
+    /// "Exile target creature and all other creatures its controller
+    /// controls with the same name. That player investigates for each
+    /// nontoken creature exiled this way" (Declaration in Stone).
+    ExileSameNameInvestigate { what: Selector },
     /// "Each player gains control of all nontoken permanents they own"
     /// (Brooding Saurian). Ends every theft of a nontoken permanent, the
     /// temporary ones included.
