@@ -1780,7 +1780,7 @@ impl GameState {
         let default_target = if caster != orig_caster && choose_new_targets {
             self.auto_target_for_effect_avoiding(&orig_card_def.effect, caster, None).or(target.clone())
         } else if choose_new_targets
-            && matches!(orig_card_def.effect, Effect::Destroy { .. })
+            && Self::copy_spreads_removal(&orig_card_def.effect)
             && let Some(Target::Permanent(first)) = target
         {
             // A second Destroy at the permanent the original destroys finds it
@@ -1800,13 +1800,34 @@ impl GameState {
         } else {
             target.clone()
         };
-        for _ in 0..n {
+        // Every permanent a removal copy (or the original) already aims at;
+        // each later copy defaults past them all (Storm of Forms' copies).
+        let mut aimed: Vec<CardId> = match (&target, &default_target) {
+            (Some(Target::Permanent(a)), Some(Target::Permanent(b))) => vec![*a, *b],
+            _ => Vec::new(),
+        };
+        let spreads = choose_new_targets && caster == orig_caster && Self::copy_spreads_removal(&orig_card_def.effect);
+        for i in 0..n {
+            let mut default_target = default_target.clone();
+            if spreads && i > 0 && matches!(target, Some(Target::Permanent(_))) {
+                let mut avoid = vec![CardId(u32::MAX)];
+                avoid.extend(aimed.iter().copied());
+                if let Some(Target::Permanent(other)) =
+                    self.auto_target_for_effect_avoiding_set(&orig_card_def.effect, caster, &avoid)
+                    && self.battlefield_find(other).is_some_and(|c| c.controller != caster)
+                {
+                    default_target = Some(Target::Permanent(other));
+                }
+            }
             // Per copy, optionally let the controller choose a new primary
             // target (CR 115.7). Legal targets are enumerated against the
             // copy's own effect; the default is offered first so the
             // AutoDecider keeps it.
             let (copy_target, copy_extra) = if choose_new_targets && target.is_some() {
                 let t = self.repoint_copy_target(&orig_card_def, caster, &default_target);
+                if let Some(Target::Permanent(id)) = t {
+                    aimed.push(id);
+                }
                 let mut taken: Vec<Target> = t.iter().cloned().collect();
                 for (i, o) in additional_targets.iter().enumerate() {
                     let pick = self
@@ -1901,6 +1922,18 @@ impl GameState {
     /// copied spell's primary effect and ask `caster`'s decider to pick
     /// one (original offered first). Returns the chosen target, or the
     /// original when no choice is made / no legal alternative exists.
+    /// A single-target removal effect whose self-copies each want a different
+    /// opposing permanent: a second destroy, exile or bounce at the object
+    /// the first one moves finds it gone (CR 608.2b).
+    fn copy_spreads_removal(effect: &Effect) -> bool {
+        matches!(
+            effect,
+            Effect::Destroy { .. }
+                | Effect::Exile { .. }
+                | Effect::Move { to: crate::effect::ZoneDest::Hand(_), .. }
+        )
+    }
+
     fn repoint_copy_target(
         &mut self,
         def: &crate::card::CardDefinition,
