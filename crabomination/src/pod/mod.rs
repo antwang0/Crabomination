@@ -1231,6 +1231,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::FELOTHAR_COMMANDERS,
             main: decks::FELOTHAR_MAIN,
         },
+        // Hundred-and-fiftieth: the hundred-and-fortieth official
+        // list (Elven Council, LTC) — Simic Elves and votes under Galadriel.
+        // `--pod-decks 150`.
+        PodDeck {
+            name: "Galadriel, Elven-Queen (GU)",
+            commanders: decks::GALADRIEL_COMMANDERS,
+            main: decks::GALADRIEL_MAIN,
+        },
     ]
 }
 

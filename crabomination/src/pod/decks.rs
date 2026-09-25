@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Ten hand-picked commanders plus a hundred and thirty-three official preconstructed lists, each a
+//! Ten hand-picked commanders plus a hundred and forty official preconstructed lists, each a
 //! 99 of cards this engine implements: legal under CR 903 (100 cards
 //! including the commander, singleton outside basics, every card inside the
 //! commander's CR 903.4 color identity) and Commander-legal per Scryfall's
@@ -8,7 +8,7 @@
 //!
 //! The ten were built by hand because the offline Scryfall cache cannot say
 //! how a precon splits into decks; MTGJSON's deck files can, and the eleventh
-//! through hundred-and-forty-third (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
+//! through hundred-and-fiftieth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
 //! Win, Tails You Lose, Goblin Storm, Foundations Commander's Wretched Ranks,
 //! Tramplesaurus Rex and Keen Engineering, Commander Legends' Reap the Tides,
 //! Phyrexia: All Will Be One's Corrupting Influence, Zendikar Rising's Sneak
@@ -54,8 +54,9 @@
 //! Commander's Blame Game, Bloomburrow Commander's Family Matters and
 //! Foundations Commander's Reign of Dragons, among others — seat 124 is
 //! Innistrad: Crimson Vow Commander's Spirit Squadron, seat 133 Duskmourn
-//! Commander's Jump Scare! and seat 143 Streets of New Capenna Commander's
-//! Obscura Operation) are taken from one card for card. What all of them keep
+//! Commander's Jump Scare!, seat 143 Streets of New Capenna Commander's
+//! Obscura Operation and seat 150 Tales of Middle-earth Commander's Elven
+//! Council) are taken from one card for card. What all of them keep
 //! from the precon idea is what the pod needs — fixed, legal, varied color
 //! identities, and built to play against each other.
 //! One is a Partner pair (CR 702.124b), one is a **planeswalker**
@@ -4540,4 +4541,33 @@ pub const FELOTHAR_MAIN: &[CardFactory] = &[
     // Basics: 6 plains, 5 swamp, 7 forest
     plains, plains, plains, plains, plains, plains, swamp, swamp, swamp, swamp, swamp, forest,
     forest, forest, forest, forest, forest, forest,
+];
+
+pub const GALADRIEL_COMMANDERS: &[CardFactory] = &[galadriel_elven_queen];
+
+/// **Elven Council**, the Tales of Middle-earth Commander deck (LTC,
+/// 2023-06-23), exactly as MTGJSON's `ElvenCouncil_LTC` prints it:
+/// 73 nonbasic cards + 11 Islands + 15 Forests = 99. Simic Elves and council votes
+/// under Galadriel, Elven-Queen.
+pub const GALADRIEL_MAIN: &[CardFactory] = &[
+    gandalf_westward_voyager, raise_the_palisade, trap_the_trespassers, arwen_weaver_of_hope,
+    galadhrim_ambush, haldir_lorien_lieutenant, legolas_greenleaf, mirkwood_elk,
+    travel_through_caradhras, windswift_slice, cirdan_the_shipwright,
+    elrond_of_the_white_council, erestor_of_the_council, mirkwood_trapper,
+    radagast_wizard_of_wilds, sail_into_the_west, song_of_earendil, lothlorien_blade,
+    model_of_unity, colossal_whale, devastation_tide, mystic_confluence, plea_for_power,
+    swan_song, asceticism, elvish_archdruid, elvish_piper, elvish_warmaster, genesis_wave,
+    heroic_intervention, hornet_queen, inscription_of_abundance, overwhelming_stampede,
+    realm_seekers, seeds_of_renewal, sylvan_offering, exotic_orchard, flooded_grove,
+    hinterland_harbor, rejuvenating_springs, vineglimmer_snarl, lorien_revealed,
+    celeborn_the_wise, elven_farsight, wose_pathfinder, learn_from_the_past, opt, preordain,
+    arbor_elf, beast_within, cultivate, elvish_mystic, elvish_visionary, farhaven_elf,
+    mirror_of_galadriel, lignify, paradise_druid, rampant_growth, reclamation_sage, wood_elves,
+    growth_spiral, arcane_signet, commanders_sphere, lightning_greaves, sol_ring,
+    whispersilk_cloak, ash_barrens, command_tower, field_of_ruin, lonely_sandbar,
+    thornwood_falls, tranquil_thicket, woodland_stream,
+    // Basics: 11 island, 15 forest
+    island, island, island, island, island, island, island, island, island, island, island,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest,
 ];
