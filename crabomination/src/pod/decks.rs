@@ -4390,3 +4390,33 @@ pub const SATYA_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, island,
     island, island, island, island, mountain, mountain, mountain, mountain, mountain,
 ];
+
+pub const HAKBAL_COMMANDERS: &[CardFactory] = &[hakbal_of_the_surging_soul];
+
+/// **Explorers of the Deep**, the Lost Caverns of Ixalan Commander deck (LCC,
+/// 2023-11-17), exactly as MTGJSON's `ExplorersOfTheDeep_LCC` prints it: 79
+/// nonbasic cards + 7 Forests + 13 Islands = 99. Simic Merfolk and explore under
+/// Hakbal of the Surging Soul.
+pub const HAKBAL_MAIN: &[CardFactory] = &[
+    xolatoyac_the_smiling_flood, mist_dancer, ripples_of_potential, wave_goodbye,
+    bygone_marvels, deeproot_historian, topography_tracker, tributary_instructor,
+    singer_of_swift_rivers, benthic_biomancer, commit_memory, coralhelm_commander, curse_of_the_swine,
+    emperor_mihail_ii, herald_of_secret_streams, kindred_discovery, kopala_warden_of_waves,
+    master_of_the_pearl_trident, merfolk_sovereign, reflections_of_littjara, seafloor_oracle,
+    surgespanner, svyelun_of_sea_and_sky, thassa_god_of_the_sea, thieving_skydiver,
+    branching_evolution, deeproot_elite, hardened_scales, realmwalker, ruinous_intrusion,
+    cold_eyed_selkie, kumena_tyrant_of_orazca, prime_speaker_zegana, quandrix_command,
+    simic_ascendancy, tishana_voice_of_thunder, vorel_of_the_hull_clade, zegana_utopian_speaker,
+    metallic_mimic, alchemists_refuge, hinterland_harbor, karns_bastion, mosswort_bridge,
+    temple_of_mystery, vineglimmer_snarl, merfolk_cave_diver, aetherize, deeproot_waters,
+    merrow_reejerey, rapid_hybridization, ravenform, sage_of_fables, stonybrook_banneret,
+    beast_within, nicanzil_current_conductor, evolution_sage, explore, inspiring_call,
+    kodamas_reach, growth_spiral, kioras_follower, merfolk_mistbinder, merfolk_skydiver,
+    tatyova_benthic_druid, arcane_signet, commanders_sphere, simic_signet, sol_ring,
+    swiftfoot_boots, command_tower, llanowar_reborn, myriad_landscape, path_of_ancestry,
+    reliquary_tower, rogues_passage, secluded_courtyard, simic_growth_chamber,
+    temple_of_the_false_god, unclaimed_territory,
+    // Basics: 7 forest, 13 island
+    forest, forest, forest, forest, forest, forest, forest, island, island, island, island,
+    island, island, island, island, island, island, island, island, island,
+];

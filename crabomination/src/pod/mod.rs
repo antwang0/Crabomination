@@ -1191,6 +1191,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SATYA_COMMANDERS,
             main: decks::SATYA_MAIN,
         },
+        // Hundred-and-forty-fifth: the hundred-and-thirty-fifth official
+        // list (Explorers of the Deep, LCC) — Simic Merfolk and explore under
+        // Hakbal of the Surging Soul. `--pod-decks 145`.
+        PodDeck {
+            name: "Hakbal of the Surging Soul (GU)",
+            commanders: decks::HAKBAL_COMMANDERS,
+            main: decks::HAKBAL_MAIN,
+        },
     ]
 }
 
