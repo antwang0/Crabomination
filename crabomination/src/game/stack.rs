@@ -2981,6 +2981,7 @@ impl GameState {
                                 ctx.cast_from_hand = c.cast_from_hand;
                                 ctx.cast_from_graveyard = c.cast_from_graveyard;
                                 ctx.cast_via_mayhem = c.cast_via_mayhem;
+                                ctx.cast_via_madness = c.cast_via_madness;
                             }
                             if !self.evaluate_predicate(pred, &ctx) {
                                 continue;

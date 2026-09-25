@@ -2618,6 +2618,13 @@ pub enum SelectionRequirement {
     /// The card has flashback (CR 702.34) in any of its cost shapes
     /// (Flashback / FlashbackTap). Tombfire's graveyard sweep.
     HasFlashback,
+    /// The card has madness (CR 702.35), printed or granted (Anje
+    /// Falkenrath's "if it has madness").
+    HasMadness,
+    /// A permanent that was cast from its owner's hand on its way to the
+    /// battlefield (Chainer's "if you didn't cast it from your hand").
+    /// False for anything that entered without being cast.
+    WasCastFromHand,
     /// The card shares a card type with a card exiled by the evaluating
     /// source (`exiled_with == source`) — Holistic Wisdom's return gate.
     SharesCardTypeWithExiledBySource,
@@ -8748,6 +8755,11 @@ pub struct CardData {
     /// cost. Read by `Predicate::SpellWasMayhem` so "if this spell's mayhem cost
     /// was paid" riders (Sandman's Quicksand) can branch. Cleared off the stack.
     pub cast_via_mayhem: bool,
+    /// CR 702.35 — true if this card was cast for its madness cost. Read by
+    /// `Predicate::SpellWasMadness` ("if its madness cost was paid" — Grave
+    /// Scrabbler, From Under the Floorboards). Cleared as it leaves the
+    /// battlefield.
+    pub cast_via_madness: bool,
     /// CR 701.67 — true if this spell's optional "you may waterbend {N}"
     /// additional cost was paid. Read by `Predicate::SpellWasWaterbend` for
     /// "if its additional cost was paid" riders. Cleared off the stack.
@@ -9563,6 +9575,7 @@ impl CardInstance {
             cast_with_treasure_mana: false,
             put_onto_battlefield_by: None,
             cast_via_mayhem: false,
+            cast_via_madness: false,
             cast_via_waterbend: false,
             cast_collected_evidence: false,
             cast_from_exile: false,
@@ -10835,6 +10848,8 @@ struct CardInstanceWire {
     #[serde(default)]
     cast_via_mayhem: bool,
     #[serde(default)]
+    cast_via_madness: bool,
+    #[serde(default)]
     cast_via_waterbend: bool,
     #[serde(default)]
     cast_collected_evidence: bool,
@@ -11109,6 +11124,7 @@ impl serde::Serialize for CardInstance {
             cast_from_hand: self.cast_from_hand,
             cast_via_flashback: self.cast_via_flashback,
             cast_via_mayhem: self.cast_via_mayhem,
+            cast_via_madness: self.cast_via_madness,
             cast_via_waterbend: self.cast_via_waterbend,
             cast_collected_evidence: self.cast_collected_evidence,
             cast_from_exile: self.cast_from_exile,
@@ -11275,6 +11291,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.cast_from_hand = wire.cast_from_hand;
         c.cast_via_flashback = wire.cast_via_flashback;
         c.cast_via_mayhem = wire.cast_via_mayhem;
+        c.cast_via_madness = wire.cast_via_madness;
         c.cast_via_waterbend = wire.cast_via_waterbend;
         c.cast_collected_evidence = wire.cast_collected_evidence;
         c.cast_from_exile = wire.cast_from_exile;

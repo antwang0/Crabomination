@@ -2243,6 +2243,11 @@ pub struct GameState {
     /// gains control of this creature. Activate only as a sorcery."
     #[serde(default)]
     pub deploy_creatures: bool,
+    /// Aeon Engine — the game's turn order is reversed: every walk "in turn
+    /// order" (the next turn, priority, APNAP) goes the other way round the
+    /// table. Reversing again restores the original order.
+    #[serde(default)]
+    pub turn_order_reversed: bool,
     /// All permanents currently in play.
     ///
     /// The heavy zones (battlefield, phased_out, exile, stack,
@@ -3918,6 +3923,7 @@ impl Clone for GameState {
             range_of_influence: self.range_of_influence,
             attack_adjacent_only: self.attack_adjacent_only,
             deploy_creatures: self.deploy_creatures,
+            turn_order_reversed: self.turn_order_reversed,
             step: self.step,
             active_player_idx: self.active_player_idx,
             starting_player: self.starting_player,
@@ -4112,6 +4118,7 @@ impl GameState {
             range_of_influence: None,
             attack_adjacent_only: false,
             deploy_creatures: false,
+            turn_order_reversed: false,
             battlefield: crate::zone::Battlefield::default(),
             phased_out: CowBox::default(),
             exile: crate::zone::CardPile::default(),
@@ -5625,7 +5632,8 @@ impl GameState {
             return 0;
         }
         let mut mask = 0u64;
-        let mut seat = (prev + 1) % n;
+        let next = |s: usize| if self.turn_order_reversed { (s + n - 1) % n } else { (s + 1) % n };
+        let mut seat = next(prev);
         for _ in 0..n {
             if seat == active {
                 break;
@@ -5633,7 +5641,7 @@ impl GameState {
             if !self.players[seat].is_alive() {
                 mask |= 1u64 << (seat & 63);
             }
-            seat = (seat + 1) % n;
+            seat = next(seat);
         }
         mask
     }
@@ -5643,7 +5651,7 @@ impl GameState {
     pub fn next_alive_seat(&self, from: usize) -> usize {
         let n = self.players.len();
         for step in 1..=n {
-            let i = (from + step) % n;
+            let i = if self.turn_order_reversed { (from + n * step - step) % n } else { (from + step) % n };
             if self.players[i].is_alive() {
                 return i;
             }
@@ -19698,10 +19706,17 @@ impl GameState {
         // declining with the mana up is strictly worse). Scripted deciders
         // keep full control. Real interactive choice needs a resumable
         // discard flow — TODO.md.
+        // CR 107.3 — a madness {X} cost (From Under the Floorboards): X is
+        // everything the floated pool has left after the rest of the cost.
+        let x_value = cost.has_x().then(|| {
+            let mut probe = self.players[p].mana_pool.clone();
+            probe.pay(&cost.with_x_value(0)).map_or(0, |_| probe.total())
+        });
+        let cost = &x_value.map_or_else(|| cost.clone(), |x| cost.with_x_value(x));
         let take = match self.decider.kind() {
             crate::decision::DeciderKind::Auto => {
                 let mut probe = self.players[p].mana_pool.clone();
-                probe.pay(cost).is_ok()
+                probe.pay(cost).is_ok() && x_value != Some(0)
             }
             _ => matches!(
                 self.decider.decide(&Decision::OptionalTrigger {
@@ -19729,11 +19744,19 @@ impl GameState {
             None,
             vec![],
             None,
-            None,
+            x_value,
             false,
         ) {
             Ok(mut ev) => {
                 events.append(&mut ev);
+                if let Some(crate::game::types::StackItem::Spell { card, .. }) = self
+                    .stack
+                    .iter_mut()
+                    .rev()
+                    .find(|s| matches!(s, crate::game::types::StackItem::Spell { card, .. } if card.id == card_id))
+                {
+                    card.cast_via_madness = true;
+                }
                 true
             }
             Err(_) => {
@@ -27476,6 +27499,7 @@ impl GameState {
             ctx.kick_count = card.kick_count;
             ctx.bargained = card.bargained;
             ctx.cast_via_mayhem = card.cast_via_mayhem;
+            ctx.cast_via_madness = card.cast_via_madness;
             ctx.cast_via_waterbend = card.cast_via_waterbend;
             ctx.cast_from_graveyard = card.cast_from_graveyard;
             ctx.cast_collected_evidence = card.cast_collected_evidence;
@@ -30050,6 +30074,7 @@ fn static_effect_to_effects(
             | StaticEffect::AllPlayersCostReduction { .. }
             | StaticEffect::ColoredCostReduction { .. }
             | StaticEffect::PhyrexianPipForSpells { .. }
+            | StaticEffect::PhyrexianPipsForAllSpells { .. }
             | StaticEffect::ColoredSpellTax { .. }
             | StaticEffect::NamedSpellCostReduction { .. }
             | StaticEffect::FaceDownSpellsCostLess { .. }

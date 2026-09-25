@@ -3361,6 +3361,7 @@ impl GameState {
                 // artifact/enchantment/token sacrificed) at cast time.
                 ctx.bargained
             }
+            Predicate::SpellWasMadness => ctx.cast_via_madness,
             Predicate::SpellWasMayhem => {
                 // CR 702.187 — true iff this spell was cast from the graveyard
                 // for its Mayhem cost.
@@ -4957,6 +4958,10 @@ impl GameState {
                     R::HasCyclingAbility => card.definition.has_cycling_ability(),
                     R::HasDisturb => card.definition.has_disturb(),
                     R::HasFlashback => card.definition.has_flashback_ability(),
+                    R::HasMadness => {
+                        card.definition.madness_cost().is_some() || self.granted_madness(card.owner, card).is_some()
+                    }
+                    R::WasCastFromHand => !card.is_token && card.cast_from_hand,
                     R::SharesCardTypeWithExiledBySource => self
                         .shares_card_type_with_exiled_by(source, &card.definition),
                     // CR 613 — **every** P/T leaf below reads the *computed*
@@ -5990,6 +5995,10 @@ impl GameState {
             R::HasCyclingAbility => card.definition.has_cycling_ability(),
             R::HasDisturb => card.definition.has_disturb(),
             R::HasFlashback => card.definition.has_flashback_ability(),
+            R::HasMadness => {
+                card.definition.madness_cost().is_some() || self.granted_madness(card.owner, card).is_some()
+            }
+            R::WasCastFromHand => !card.is_token && card.cast_from_hand,
             // No source context in the on-card evaluator; the exile-linked
             // share check only resolves through `evaluate_requirement_static`.
             R::SharesCardTypeWithExiledBySource => false,

@@ -2381,6 +2381,10 @@ pub enum Predicate {
     /// `CardInstance.cast_via_mayhem`. Gates "if this spell's mayhem cost was
     /// paid, …" riders (Sandman's Quicksand).
     SpellWasMayhem,
+    /// CR 702.35 — "if its madness cost was paid". Reads
+    /// `EffectContext.cast_via_madness`, stamped from
+    /// `CardInstance.cast_via_madness`.
+    SpellWasMadness,
     /// CR 701.67 — true iff this spell's optional "you may waterbend {N}"
     /// additional cost was paid. Reads `EffectContext.cast_via_waterbend`,
     /// stamped from `CardInstance.cast_via_waterbend`. Gates "if its additional
@@ -5063,6 +5067,9 @@ pub enum Effect {
     /// "Double the number of each kind of counter you have" (Aetheric
     /// Amplifier): `who`'s energy, experience and poison counters.
     DoublePlayerCounters { who: PlayerRef },
+    /// "Reverse the game's turn order" (Aeon Engine). A second reversal
+    /// restores the original order.
+    ReverseTurnOrder,
     /// "For each kind of counter among `who`'s permanents matching `filter`,
     /// put a counter of that kind on [`onto`]" — keyword counters are kinds
     /// too (CR 122.1b). Several recipients take the kinds in turn (Exotic

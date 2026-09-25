@@ -1714,6 +1714,9 @@ pub(crate) fn apply_colored_cost_statics(
             {
                 cost.phyrexianize_one(*color);
             }
+            if let StaticEffect::PhyrexianPipsForAllSpells { color } = &sa.effect {
+                while cost.phyrexianize_one(*color) {}
+            }
         }
     }
 }
@@ -2658,9 +2661,9 @@ pub(crate) fn cast_cost_scan(state: &crate::game::GameState) -> u32 {
                 | SE::ControllerSpellsHaveFlash { .. }
                 | SE::ControllerSorceriesAsFlash => cast_static::FLASH,
                 SE::ColoredSpellTax { .. } => cast_static::COLORED_TAX,
-                SE::ColoredCostReduction { .. } | SE::PhyrexianPipForSpells { .. } => {
-                    cast_static::COLORED_REDUCTION
-                }
+                SE::ColoredCostReduction { .. }
+                | SE::PhyrexianPipForSpells { .. }
+                | SE::PhyrexianPipsForAllSpells { .. } => cast_static::COLORED_REDUCTION,
                 SE::SpellCostFloor { .. } => cast_static::COST_FLOOR,
                 SE::GrantConvokeToSpells { .. } | SE::GrantImproviseToSpells { .. } => {
                     cast_static::GRANT_CONVOKE
@@ -11494,6 +11497,7 @@ impl GameState {
                     kick_count: 0,
                     bargained: false,
                     cast_via_mayhem: false,
+                    cast_via_madness: false,
                     cast_via_waterbend: false,
                     cast_collected_evidence: false,
                     entwined: false,
@@ -12937,6 +12941,7 @@ impl GameState {
                 kick_count: 0,
                 bargained: false,
                 cast_via_mayhem: false,
+                cast_via_madness: false,
                 cast_via_waterbend: false,
                 cast_collected_evidence: false,
                     entwined: false,
@@ -14750,6 +14755,7 @@ impl GameState {
                     kick_count: 0,
                     bargained: false,
                     cast_via_mayhem: false,
+                    cast_via_madness: false,
                     cast_via_waterbend: false,
                     cast_collected_evidence: false,
                     entwined: false,
@@ -18781,6 +18787,7 @@ impl GameState {
                 kick_count: 0,
                 bargained: false,
                 cast_via_mayhem: false,
+                cast_via_madness: false,
                 cast_via_waterbend: false,
                 cast_collected_evidence: false,
                     entwined: false,

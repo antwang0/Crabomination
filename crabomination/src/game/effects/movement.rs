@@ -2903,6 +2903,7 @@ impl GameState {
                 || c.cast_via_flashback
                 || c.cast_from_suspend
                 || c.cast_from_escape
+                || c.cast_via_madness
                 || c.put_onto_battlefield_by.is_some()
             {
                 let c = &mut **c;
@@ -2913,6 +2914,7 @@ impl GameState {
                 c.cast_via_flashback = false;
                 c.cast_from_suspend = false;
                 c.cast_from_escape = false;
+                c.cast_via_madness = false;
                 c.put_onto_battlefield_by = None;
             }
         }

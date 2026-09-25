@@ -760,6 +760,7 @@ impl Effect {
             | Effect::OwnersGainControlOfNontokens
             | Effect::DoublePlayerCounters { .. }
             | Effect::SpreadCounterKindToOthers { .. }
+            | Effect::ReverseTurnOrder
             | Effect::DamageEachCreatureOfChosenColor { .. }
             | Effect::ForetellFromHand { .. }
             | Effect::EachPlayerCreatesTokenPerControlled { .. }

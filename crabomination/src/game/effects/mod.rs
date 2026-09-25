@@ -350,6 +350,9 @@ pub struct EffectContext {
     /// Stamped from the resolving `CardInstance.cast_via_mayhem` flag; read by
     /// `Predicate::SpellWasMayhem`. Defaults to `false`.
     pub cast_via_mayhem: bool,
+    /// Stamped from `CardInstance.cast_via_madness`; read by
+    /// `Predicate::SpellWasMadness`.
+    pub cast_via_madness: bool,
     /// True if the resolving spell's optional waterbend cost was paid (CR
     /// 701.67). Stamped from `CardInstance.cast_via_waterbend`; read by
     /// `Predicate::SpellWasWaterbend`. Defaults to `false`.
@@ -388,6 +391,7 @@ impl EffectContext {
             kick_count: 0,
             bargained: false,
             cast_via_mayhem: false,
+            cast_via_madness: false,
             cast_via_waterbend: false,
             cast_collected_evidence: false,
             entwined: false,
@@ -474,6 +478,7 @@ impl EffectContext {
             kick_count: 0,
             bargained: false,
             cast_via_mayhem: false,
+            cast_via_madness: false,
             cast_via_waterbend: false,
             cast_collected_evidence: false,
             entwined: false,
@@ -505,6 +510,7 @@ impl EffectContext {
             kick_count: 0,
             bargained: false,
             cast_via_mayhem: false,
+            cast_via_madness: false,
             cast_via_waterbend: false,
             cast_collected_evidence: false,
             entwined: false,
@@ -535,6 +541,7 @@ impl EffectContext {
             kick_count: 0,
             bargained: false,
             cast_via_mayhem: false,
+            cast_via_madness: false,
             cast_via_waterbend: false,
             cast_collected_evidence: false,
             entwined: false,
@@ -634,6 +641,7 @@ impl EffectContext {
             kick_count: 0,
             bargained: false,
             cast_via_mayhem: false,
+            cast_via_madness: false,
             cast_via_waterbend: false,
             cast_collected_evidence: false,
             entwined: false,
@@ -23175,6 +23183,10 @@ impl GameState {
             }
             Effect::EachPlayerTakesCreatureOfNext => {
                 self.each_player_takes_creature_of_next(ctx);
+                Ok(())
+            }
+            Effect::ReverseTurnOrder => {
+                self.turn_order_reversed = !self.turn_order_reversed;
                 Ok(())
             }
             Effect::DoublePlayerCounters { who } => {

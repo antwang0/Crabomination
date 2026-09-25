@@ -2388,6 +2388,7 @@ impl GameState {
                     kick_count: 0,
                     bargained: false,
                     cast_via_mayhem: false,
+                    cast_via_madness: false,
                     cast_via_waterbend: false,
                     cast_collected_evidence: false,
                     entwined: false,

@@ -559,6 +559,11 @@ pub enum StaticEffect {
     /// this way" (the Defiler cycle). One `{C}` pip becomes `{C/P}`: the
     /// payment already pays that with 2 life exactly when `C` is missing.
     PhyrexianPipForSpells { filter: SelectionRequirement, color: crate::mana::Color },
+    /// "For each {C} in a cost, you may pay 2 life rather than pay that mana"
+    /// (K'rrik, Son of Yawgmoth): every `{C}` pip of the controller's spells
+    /// becomes `{C/P}`, which the payment covers with 2 life only when `C`
+    /// is missing.
+    PhyrexianPipsForAllSpells { color: crate::mana::Color },
     /// CR 601.2f — "[filter] spells you cast cost `more` more to cast", where
     /// `more` names COLORED pips (the Invasion Leech cycle's "{W} more"). Only
     /// the source's controller pays it; applied before any reduction so a
