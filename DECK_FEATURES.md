@@ -152,6 +152,7 @@ lists were picked.
 | **Counter Intelligence** (EOC precon) URW | Inspirit, Flagship Vessel (**Spacecraft**) | URW | 100 | 🟡 all 100 implemented, 6 carry residuals (Cloud Key, Inspirit, Depthshaker Titan, Moxite Refinery, Resourceful Defense, Ripples of Potential) |
 | **Explorers of the Deep** (LCC precon) GU | Hakbal of the Surging Soul | GU | 100 | 🟡 all 100 implemented, 2 carry residuals (Xolatoyac, the Smiling Flood, Bygone Marvels) |
 | **Dance of the Elements** (ECC precon) WUBRG | Ashling, the Limitless | WUBRG | 100 | 🟡 all 100 implemented, 5 carry residuals (Flamebraider, Smokebraider, Primal Beyond, Haunting Voyage, Horde of Notions) |
+| **Mystic Intellect** (C19 precon) URW | Sevinne, the Chronoclasm | URW | 100 | 🟡 all 100 implemented (Dockside Extortionist, banned, swapped for Ragavan), 3 carry residuals (Wall of Stolen Identity, Mandate of Peace, Elsha of the Infinite) |
 | **Coven Counters** (MIC precon) GW | Leinore, Autumn Sovereign | GW | 100 | 🟡 all 100 implemented, 4 carry residuals (Curse of Conformity, Celestial Judgment, Sigardian Zealot, Moorland Rescuer) |
 | **Arcane Maelstrom** (C20 precon) GUR | Kalamax, the Stormsire | GUR | 100 | 🟡 all 100 implemented, 4 carry residuals (Eon Frolicker, Haldan, Pako, Lavabrink Floodgates) |
 | **Enhanced Evolution** (C20 precon) BGU | Otrimi, the Ever-Playful | BGU | 100 | 🟡 all 100 implemented, 4 carry residuals (Capricopian, Manascape Refractor, Mindleecher, Vastwood Hydra) |
@@ -2547,6 +2548,27 @@ Extortionist**, **Alandra, Sky Dreamer**, **Erdwal Illuminator**
 Gavi / Gonti / Prossh / Nelly (seed 13402, 1,000): all decided, 16.2 %;
 census beside Omo / Olivia / Jirina (seed 13403, 500): no card of the four
 lists unplayed. cube / sos / sealed 7,500 decided. `--bench` byte-identical.
+
+The **hundred-and-fifty-third** is Commander 2019's **Mystic Intellect**
+(`MysticIntellect_C19`) — Jeskai flashback under Sevinne, the Chronoclasm,
+`--pod-decks 153` (committed as 149 until Abzan Armor, Elven Council, Buckle
+Up and Merciless Rage landed). Twenty-three cards were missing
+(`cmdr_sevinne.rs`); one swap, Dockside Extortionist (banned in Commander
+2024-09-23, still in the catalog) → Ragavan. The primitives:
+`Effect::EndTheCombatPhase` (CR 724.2 — Mandate of Peace: the stack is
+exiled, no end of combat step, no-op outside combat),
+`R::OnTopOfLibrary` (Elsha's flash, true mid-cast off the top via
+`casting_hop`), `Predicate::FirstInstantOrSorceryCastFromGraveyardThisTurn`
+(Sevinne) and `EntersAsCopy.lock_copied` (Wall of Stolen Identity). The
+census found three bot gaps (`server/spell_response.rs`): graveyard
+flashback / aftermath copies of the bot's own spell (Increasing Vengeance —
+also fixed to target only your instant or sorcery), a punish response to an
+opponent's MV 4+ spell (Refuse), and an idle-main retrieval (Runic
+Repetition nets 0 in `eval_material`). Residuals: **Wall of Stolen
+Identity**, **Mandate of Peace**, **Elsha of the Infinite**. Pods beside
+Ashling / Éowyn / Perrie (seed 9200, 1,000) and the first three seats
+(9201, 1,000), six seats (9202, 1,000): all decided, no card of the list
+unplayed; strict debug pods 150 / 150. `--bench` byte-identical.
 
 The **hundred-and-fiftieth** is Tales of Middle-earth Commander's **Elven
 Council** (`ElvenCouncil_LTC`) — Simic Elves and council votes under
