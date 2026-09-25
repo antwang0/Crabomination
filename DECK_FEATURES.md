@@ -158,6 +158,7 @@ lists were picked.
 | **Revenant Recon** (MKC precon) UB | Mirko, Obsessive Theorist | UB | 100 | 🟡 all 100 implemented, 3 carry residuals (Marvo, Deep Operative, Watcher of Hours, Whispering Snitch) |
 | **Blight Curse** (ECC precon) BRG | Auntie Ool, Cursewretch | BRG | 100 | 🟡 all 100 implemented, 2 carry residuals (Eventide's Shadow, Puca's Covenant) |
 | **Mutant Menace** (PIP precon) BGU | The Wise Mothman | BGU | 100 | 🟡 all 100 implemented, 3 carry residuals (The Wise Mothman, Rampaging Yao Guai, Struggle for Project Purity) |
+| **Science!** (PIP precon) URW | Dr. Madison Li | URW | 100 | 🟡 all 100 implemented, 6 carry residuals (C.A.M.P., Endurance Bobblehead, Expert-Level Safe, Plasma Caster, Vault 13, Vault 112) |
 | **Counter Blitz** (FIC precon) GWU | Tidus, Yuna's Guardian | GWU | 100 | 🟡 all 100 implemented, 3 carry residuals (Endless Detour, Lulu, Stern Guardian, Rikku, Resourceful Guardian) |
 | **Dance of the Elements** (ECC precon) WUBRG | Ashling, the Limitless | WUBRG | 100 | 🟡 all 100 implemented, 5 carry residuals (Flamebraider, Smokebraider, Primal Beyond, Haunting Voyage, Horde of Notions) |
 | **Veloci-Ramp-Tor** (LCC precon) RGW | Pantlaza, Sun-Favored | RGW | 100 | 🟡 all 100 implemented, 2 carry residuals (Sunfrill Imitator, Wrathful Raptors) |

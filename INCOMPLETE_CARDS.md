@@ -2293,6 +2293,12 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 The Wise Mothman | Mutant Menace (PIP) | the "up to X target creatures" are your greatest-power creatures, chosen on resolution rather than targeted. |
 | 🟡 Rampaging Yao Guai | Mutant Menace (PIP) | the artifacts and enchantments are chosen on resolution, not targeted. |
 | 🟡 Struggle for Project Purity | Mutant Menace (PIP) | Brotherhood draws you one card per opponent, not per card they actually drew. |
+| 🟡 C.A.M.P. | Science! (PIP) | the Junk token comes whenever the creature is colored, not only when it shares a color with the land's mana. |
+| 🟡 Endurance Bobblehead | Science! (PIP) | the X creatures are your greatest-power ones, chosen on resolution rather than targeted. |
+| 🟡 Expert-Level Safe | Science! (PIP) | both numbers are drawn uniformly at random (the equilibrium strategy); no player is asked. |
+| 🟡 Plasma Caster | Science! (PIP) | the target may be any blocking creature, not only one blocking the equipped creature. |
+| 🟡 Vault 13: Dweller's Journey | Science! (PIP) | chapter I's "one per player" isn't enforced on its targets. |
+| 🟡 Vault 112: Sadistic Simulation | Science! (PIP) | chapter III reveals rather than exiles, and only a spell (not a land) may be played from among them. |
 | 🟡 Endless Detour | Counter Blitz (FIC) | the kind of target (spell, nonland permanent, graveyard card) is chosen as a mode. |
 | 🟡 Lulu, Stern Guardian | Counter Blitz (FIC) | the stunned attacker is chosen as the trigger resolves, not as it's put on the stack. |
 | 🟡 Rikku, Resourceful Guardian | Counter Blitz (FIC) | "can't be blocked by creatures your opponents control" is unblockable (the same in free-for-all). |

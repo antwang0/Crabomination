@@ -240,6 +240,8 @@ fn every_ability_that_could_add_mana_is_a_mana_ability() {
         "Deathrite Shaman",
         "Priest of Forgotten Gods",
         "Radiant Lotus",
+        // Alluring Eyes goads a target creature, then adds {R} (CR 605.1a).
+        "Red Death, Shipwrecker",
         "Spectral Searchlight",
         "Witch Engine",
     ];
