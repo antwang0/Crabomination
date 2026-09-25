@@ -2270,3 +2270,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Whispering Snitch | Revenant Recon (MKC) | "for the first time each turn" is once per turn: a surveil before it entered doesn't use up the turn's trigger. |
 | 🟡 Eventide's Shadow | Blight Curse (ECC) | each chosen permanent loses all its counters (no partial removal). |
 | 🟡 Puca's Covenant | Blight Curse (ECC) | the returned card is chosen on resolution, not targeted, and the dying creature's own card is among the choices. |
+| 🟡 The Wise Mothman | Mutant Menace (PIP) | the "up to X target creatures" are your greatest-power creatures, chosen on resolution rather than targeted. |
+| 🟡 Rampaging Yao Guai | Mutant Menace (PIP) | the artifacts and enchantments are chosen on resolution, not targeted. |
+| 🟡 Struggle for Project Purity | Mutant Menace (PIP) | Brotherhood draws you one card per opponent, not per card they actually drew. |
