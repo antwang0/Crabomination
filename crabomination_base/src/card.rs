@@ -281,6 +281,7 @@ pub enum CreatureType {
     Juggernaut,
     // Ravnica Simic graft creature subtype (Cytoplast Root-Kin).
     Mutant,
+    Spy,
     // Mirrodin Slith creature subtype (Arcbound Slith).
     Slith,
     // War of the Spark Amass Army token subtype (CR 701.43).
