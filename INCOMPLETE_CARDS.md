@@ -2040,6 +2040,12 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Lady Loki, Agent of Chaos | Doom Prevails (MSC) | "your first instant, sorcery or Villain spell each turn" counts from when she is on the battlefield, not from the start of the turn. |
 | 🟡 Superior Foes of Spider-Man | Doom Prevails (MSC) | the exiled card is playable this turn only, not until you exile another card with it. |
 | 🟡 Extract Power | Doom Prevails (MSC) | the exiled cards are face up. |
+| 🟡 Bloodthirster | The Ruinous Powers (40K) | it may attack a player it already attacked this turn. |
+| 🟡 Chaos Mutation | The Ruinous Powers (40K) | two of its targets may share a controller. |
+| 🟡 Khârn the Betrayer | The Ruinous Powers (40K) | the next opponent in turn order gains control of it, not an opponent of your choice. |
+| 🟡 The Horus Heresy | The Ruinous Powers (40K) | chapter III's choices start with the next opponent, not with you. |
+| 🟡 The Lost and the Damned | The Ruinous Powers (40K) | a land played from outside your hand (graveyard, exile) doesn't count. |
+| 🟡 The Ruinous Powers | The Ruinous Powers (40K) | the life-loss rider reads any spell you cast from exile that you don't own, and an exiled land can't be played. |
 | 🟡 Biotransference | Necron Dynasties (40K) | only permanents become artifacts: creature spells and creature cards in other zones stay non-artifacts (its own cast trigger reads "artifact or creature spell", the same set). |
 | 🟡 Canoptek Wraith | Necron Dynasties (40K) | each fetched basic shares a name with some permanent, not with the one land chosen. |
 | 🟡 Necron Deathmark | Necron Dynasties (40K) | the destroy and the mill are two enters triggers, not one. |
