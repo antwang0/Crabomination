@@ -533,3 +533,13 @@ fn converge_generic_drain_maximizes_distinct_colors() {
     div.pay_for_spell(&five, &converge).expect("payable");
     assert_eq!(drained(&before, &div), 4, "converge drain spreads across colors");
 }
+
+/// Thieving Varmint's mana funds only a spell its caster doesn't own (CR
+/// 106.6), and never an ability.
+#[test]
+fn spells_you_dont_own_restriction() {
+    let r = SpendRestriction::SpellsYouDontOwn;
+    assert!(r.allows(&SpellKind { not_owned: true, ..Default::default() }));
+    assert!(!r.allows(&SpellKind::default()));
+    assert!(!r.allows(&SpellKind { not_owned: true, activating_ability: true, ..Default::default() }));
+}

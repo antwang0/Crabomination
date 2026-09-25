@@ -6755,6 +6755,7 @@ impl CardDefinition {
         let artifact = self.is_artifact();
         let kindred = self.card_types.contains(&CardType::Kindred);
         crate::mana::SpellKind {
+            not_owned: false,
             wants_converge: self.wants_converge(),
             instant_or_sorcery: self.is_instant() || self.is_sorcery(),
             artifact,

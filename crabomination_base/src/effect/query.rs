@@ -885,6 +885,11 @@ impl Effect {
             | Effect::ExileOnePerCardTypeFromGraveyardGrow { .. }
             | Effect::ContestOneLandPerPlayer
             | Effect::TakeContestedLand
+            | Effect::OpponentChoosesXFromHandCastOneFree { .. }
+            | Effect::ExileTopMayCastFreeIfNonland { .. }
+            | Effect::ExileTopOfEachLibraryMayPlayForLife
+            | Effect::ManifestTopOfLibraryUnderYou { .. }
+            | Effect::LookTopExileOneFaceDownMayPlay { .. }
             | Effect::NextSpellHasFlashThisTurn
             | Effect::PreventNextDamageFromSourceThisTurn { .. }
             | Effect::SacrificeSourceUnlessPayValue { .. }
@@ -978,6 +983,7 @@ impl Effect {
                 player_has_target(who) || otherwise.requires_target()
             }
             Effect::CounterSpellExileMayPlayFree { what } => sel_has_target(what),
+            Effect::ExileSpellLinked { what } => sel_has_target(what),
             Effect::ExileTopRepeatOnDuplicateNames { who, .. }
             | Effect::LoseAllButLifeRemembered { who, .. }
             | Effect::UntapChosenPerCardInGraveyard { who } => player_has_target(who),
@@ -1760,6 +1766,7 @@ impl Effect {
             | Effect::CounterSpellDrawIfUnderpaid { what }
             | Effect::CounterSpellToZone { what, .. }
             | Effect::CounterSpellExileNameLock { what }
+            | Effect::ExileSpellLinked { what }
             | Effect::CounterAbility { what }
             | Effect::CounterSpellOrAbility { what }
             | Effect::CounterUnlessPaid { what, .. }
@@ -2524,6 +2531,7 @@ impl Effect {
             | Effect::CounterSpellDrawIfUnderpaid { what }
             | Effect::CounterSpellToZone { what, .. }
             | Effect::CounterSpellExileNameLock { what }
+            | Effect::ExileSpellLinked { what }
             | Effect::CounterAbility { what }
             | Effect::CounterSpellOrAbility { what }
             | Effect::CounterUnlessPaid { what, .. }
@@ -4056,6 +4064,7 @@ impl Effect {
             | Effect::CounterSpellDrawIfUnderpaid { .. }
             | Effect::CounterSpellToZone { .. }
             | Effect::CounterSpellExileNameLock { .. }
+            | Effect::ExileSpellLinked { .. }
             | Effect::CounterAbility { .. }
             | Effect::CounterSpellOrAbility { .. }
             | Effect::CounterUnlessPaid { .. }
@@ -4829,6 +4838,7 @@ impl Effect {
                 | Effect::CounterSpellDrawIfUnderpaid { what }
                 | Effect::CounterSpellToZone { what, .. }
                 | Effect::CounterSpellExileNameLock { what }
+                | Effect::ExileSpellLinked { what }
                 | Effect::CounterAbility { what }
                 | Effect::CounterSpellOrAbility { what }
                 | Effect::CounterUnlessPaid { what, .. }

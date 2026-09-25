@@ -276,6 +276,7 @@ impl GameState {
         let mut kind = card.definition.spell_kind();
         kind.from_graveyard =
             self.casting_hop == Some((card.id, crate::game::HopFrom::Graveyard));
+        kind.not_owned = card.owner != seat;
         kind.commander = self
             .players
             .get(seat)

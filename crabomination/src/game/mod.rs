@@ -30667,6 +30667,8 @@ fn static_effect_to_effects(
             | StaticEffect::GrantBlitzToSpells { .. }
             | StaticEffect::BlitzCostLessPerCommanderCast
             | StaticEffect::TreasureCreationAddsTreasure
+            | StaticEffect::SpellsYouDontOwnCostLess { .. }
+            | StaticEffect::DoubleControllerCombatDamageToPlayerTriggers
             // Drannith Magistrate — cast-legality gate in `cast_from_zone_blocked`.
             | StaticEffect::OpponentsCantCastFromAnywhereButHand
             // Lier — read by the flashback-cast path / graveyard view.

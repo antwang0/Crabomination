@@ -10806,6 +10806,26 @@ pub enum Effect {
     /// The damaging creature's controller gains control of one of the damaged
     /// player's contested lands and untaps it (Turf War).
     TakeContestedLand,
+    /// Exile each resolved spell from the stack (not a counter), linked to
+    /// the source (Smirking Spelljacker).
+    ExileSpellLinked { what: Selector },
+    /// Look at the top `count` of `who`'s library, exile one face down that
+    /// you may play with mana of any type while it stays exiled, the rest to
+    /// that player's graveyard (`rest_to_graveyard`, Thief of Sanity) or the
+    /// bottom (Siphon Insight). The engine picks the card.
+    LookTopExileOneFaceDownMayPlay { who: PlayerRef, count: Value, rest_to_graveyard: bool },
+    /// `who` chooses X cards from their hand; you may cast one of them free
+    /// (Extract Brain). Both picks are the engine's.
+    OpponentChoosesXFromHandCastOneFree { who: PlayerRef },
+    /// `who` exiles their top card; if it's nonland, you may cast it free
+    /// (Mind's Dilation).
+    ExileTopMayCastFreeIfNonland { who: PlayerRef },
+    /// Each player exiles their top card; until end of turn you may play them,
+    /// paying life rather than mana for a spell (Nashi, Moon Sage's Scion).
+    ExileTopOfEachLibraryMayPlayForLife,
+    /// CR 701.34 — manifest the top card of `who`'s library under your
+    /// control (Thieving Amalgam, Orochi Soul-Reaver).
+    ManifestTopOfLibraryUnderYou { who: PlayerRef },
     /// "The next spell you cast this turn can be cast as though it had flash"
     /// (Ride the Avalanche). Spent by that cast.
     NextSpellHasFlashThisTurn,

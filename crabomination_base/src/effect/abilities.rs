@@ -150,6 +150,14 @@ pub enum StaticEffect {
     /// — one extra per resolution that minted a Treasure for the controller,
     /// beside `TokenCreationAddsToken`.
     TreasureCreationAddsTreasure,
+    /// "Spells you cast but don't own cost {amount} less to cast" (Gonti,
+    /// Canny Acquisitor).
+    SpellsYouDontOwnCostLess { amount: u32 },
+    /// "If a creature you control dealing combat damage to a player causes a
+    /// triggered ability of a permanent you control to trigger, that ability
+    /// triggers an additional time" (Felix Five-Boots). Read at the
+    /// combat-damage trigger push.
+    DoubleControllerCombatDamageToPlayerTriggers,
     /// "[Creatures the selector picks] get +X/+Y", where X and Y are live
     /// [`Value`]s evaluated with the source as context — the dynamic-magnitude
     /// sibling of `PumpPT` (Meishin, the Mind Cage's "all creatures get -X/-0,

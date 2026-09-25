@@ -54,6 +54,7 @@ mod reveal_top_misc;
 mod library_top_deploy;
 mod graveyard_type_sweep;
 mod contested_lands;
+mod theft;
 mod politics;
 mod targeting;
 /// The target enumerator's call-site census — see
@@ -35163,6 +35164,18 @@ impl GameState {
             }
             Effect::ContestOneLandPerPlayer => self.contest_one_land_per_player(ctx, events),
             Effect::TakeContestedLand => self.take_contested_land(ctx, events),
+            Effect::ExileSpellLinked { what } => self.exile_spell_linked(what, ctx, events),
+            Effect::LookTopExileOneFaceDownMayPlay { who, count, rest_to_graveyard } => {
+                self.look_top_exile_one_face_down_may_play(who, count, *rest_to_graveyard, ctx, events)
+            }
+            Effect::OpponentChoosesXFromHandCastOneFree { who } => {
+                self.opponent_chooses_x_from_hand_cast_one_free(who, ctx, events)
+            }
+            Effect::ExileTopMayCastFreeIfNonland { who } => self.exile_top_may_cast_free_if_nonland(who, ctx, events),
+            Effect::ExileTopOfEachLibraryMayPlayForLife => {
+                self.exile_top_of_each_library_may_play_for_life(ctx, events)
+            }
+            Effect::ManifestTopOfLibraryUnderYou { who } => self.manifest_top_of_library_under_you(who, ctx, events),
             Effect::ChooseCardTypeAmongForSource(options) => {
                 use crate::decision::{Decision, DecisionAnswer};
                 let Some(source) = ctx.source else { return Ok(()) };

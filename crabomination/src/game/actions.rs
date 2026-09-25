@@ -1835,6 +1835,11 @@ pub(crate) fn cost_reduction_for_spell_full_over<'a>(
                 {
                     reduction += amount;
                 }
+                StaticEffect::SpellsYouDontOwnCostLess { amount }
+                    if src.controller == caster && card.owner != caster =>
+                {
+                    reduction += amount;
+                }
                 StaticEffect::CostReduction { filter, amount }
                     if src.controller == caster
                         && state.evaluate_requirement_on_card(filter, card, caster) =>

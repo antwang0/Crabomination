@@ -6922,6 +6922,43 @@ impl GameState {
                     _ => None,
                 }
             };
+            // Felix Five-Boots — a trigger of a permanent you control caused
+            // by a creature you control hitting a player fires once more per
+            // such static.
+            let extra = if combat_batch
+                && matches!(default_target, Target::Player(_))
+                && attacker_controller == Some(controller)
+                && self.battlefield_find(trig_source).is_some()
+            {
+                self.battlefield
+                    .iter()
+                    .filter(|c| c.controller == controller)
+                    .flat_map(|c| &c.definition.static_abilities)
+                    .filter(|sa| {
+                        matches!(
+                            sa.effect,
+                            crate::effect::StaticEffect::DoubleControllerCombatDamageToPlayerTriggers
+                        )
+                    })
+                    .count()
+            } else {
+                0
+            };
+            for _ in 0..extra {
+                self.stack.push(
+                    TriggerPush::new(trig_source, controller, effect.clone())
+                        .target(target.clone())
+                        .mode(mode)
+                        .trigger_source(dealer.clone())
+                        .trigger_player(match default_target {
+                            Target::Player(p) => Some(p),
+                            _ => None,
+                        })
+                        .x_value(damage_amount)
+                        .event_amount(damage_amount)
+                        .build(),
+                );
+            }
             self.stack.push(
                 TriggerPush::new(trig_source, controller, effect)
                     .target(target)

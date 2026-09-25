@@ -668,7 +668,7 @@ fn cr_106_6_every_rider_allows_every_payment() {
                 | CommanderCastCounters | CommanderCastScry | SmallInstantSorceryExileInstead
                 | RedInstantSorceryCopy | XCostsOnly
                 | SpellFromGraveyard
-                | MonocoloredSpellOf(_) | OutlawSpellsOrAbilities | SpellOrAbilityCopy => {}
+                | MonocoloredSpellOf(_) | OutlawSpellsOrAbilities | SpellsYouDontOwn | SpellOrAbilityCopy => {}
             }
         }
         use SpendRestriction::*;
@@ -680,6 +680,7 @@ fn cr_106_6_every_rider_allows_every_payment() {
             CreatureSpellOfType(CreatureType::Bear),
             SpellOrAbilityCopy,
             OutlawSpellsOrAbilities,
+            SpellsYouDontOwn,
             CreatureOfTypeOrItsAbility(CreatureType::Bear),
             CreatureOfAnyTypes([CreatureType::Bear, CreatureType::Elf, CreatureType::Elf]),
             InstantSorceryOrTypes([CreatureType::Demon, CreatureType::Spirit]),
