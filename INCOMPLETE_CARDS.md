@@ -1977,6 +1977,11 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Unsettled Mariner | Everyone's Invited! (SLD) | modelled as ward {1} on your permanents: you aren't protected, and it doesn't stack with a printed ward. |
 | 🟡 Stick Together | Everyone's Invited! (SLD) | each player keeps the engine's pick: a largest party, strongest creatures first. |
 | 🟡 Harper Recruiter | Everyone's Invited! (SLD) | the engine picks the party revealed from the top four (a largest one). |
+| 🟡 Karazikar, the Eye Tyrant | Planar Portal (AFC) | the creature it taps and goads is the engine's pick (the attacked player's strongest), not a target. |
+| 🟡 Hellish Rebuke | Planar Portal (AFC) | modelled as the caster's watcher for the turn: the sacrifice-and-lose-2 trigger is yours, not the damaging permanent's controller's (same outcome). |
+| 🟡 Dead Man's Chest | Planar Portal (AFC) | an exiled land is playable too (the card says "cast spells"). |
+| 🟡 Share the Spoils | Planar Portal (AFC) | each player's linked cards open at their upkeep; a land played from the pile doesn't refill it. |
+| 🟡 Danse Macabre | Planar Portal (AFC) | you sacrifice after the other players, not simultaneously. |
 | 🟡 Orator of Ojutai | Draconic Domination (C17) | the Dragon check reads your board and hand as it enters; there is no optional reveal. |
 | 🟡 Armored Skyhunter | Silverquill Influence (SOC) | an Equipment it puts onto the battlefield stays unattached. |
 | 🟡 Coercive Impetus | Silverquill Influence (SOC) | the goad is renewed by a trigger at the beginning of each combat, not a static. |
