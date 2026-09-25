@@ -2303,6 +2303,11 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Plasma Caster | Science! (PIP) | the target may be any blocking creature, not only one blocking the equipped creature. |
 | 🟡 Vault 13: Dweller's Journey | Science! (PIP) | chapter I's "one per player" isn't enforced on its targets. |
 | 🟡 Vault 112: Sadistic Simulation | Science! (PIP) | chapter III reveals rather than exiles, and only a spell (not a land) may be played from among them. |
+| 🟡 Agility Bobblehead | Scrappy Survivors (PIP) | the X creatures are your greatest-power ones, chosen on resolution rather than targeted. |
+| 🟡 Brotherhood Outcast | Scrappy Survivors (PIP) | the returned Aura or Equipment card is picked (greatest mana value first) rather than targeted, and its host is the engine's pick. |
+| 🟡 Inventory Management | Scrappy Survivors (PIP) | every Aura and Equipment you choose moves to one creature, your greatest-power one. |
+| 🟡 Perception Bobblehead | Scrappy Survivors (PIP) | the rest go to the bottom in the cascade order, not a random one. |
+| 🟡 Vault 101: Birthday Party | Scrappy Survivors (PIP) | chapters II and III pick the Aura or Equipment card and its host rather than letting you choose. |
 | 🟡 Endless Detour | Counter Blitz (FIC) | the kind of target (spell, nonland permanent, graveyard card) is chosen as a mode. |
 | 🟡 Lulu, Stern Guardian | Counter Blitz (FIC) | the stunned attacker is chosen as the trigger resolves, not as it's put on the stack. |
 | 🟡 Mister Fantastic | The Fantastic Four (MSC) | the copies keep the original's targets, and an activated ability of yours is a legal target too. |

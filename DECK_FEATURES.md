@@ -161,6 +161,7 @@ lists were picked.
 | **Science!** (PIP precon) URW | Dr. Madison Li | URW | 100 | 🟡 all 100 implemented, 6 carry residuals (C.A.M.P., Endurance Bobblehead, Expert-Level Safe, Plasma Caster, Vault 13, Vault 112) |
 | **Counter Blitz** (FIC precon) GWU | Tidus, Yuna's Guardian | GWU | 100 | 🟡 all 100 implemented, 3 carry residuals (Endless Detour, Lulu, Stern Guardian, Rikku, Resourceful Guardian) |
 | **The Fantastic Four** (MSC precon) WURG | Invisible Woman | WURG | 100 | 🟡 all 100 implemented, 2 carry residuals (Mister Fantastic; Tragic Arrogance's engine-chosen keeps) |
+| **Scrappy Survivors** (PIP precon) RGW | Dogmeat, Ever Loyal | RGW | 100 | 🟡 all 100 implemented, 5 carry residuals (Agility Bobblehead, Brotherhood Outcast, Inventory Management, Perception Bobblehead, Vault 101) |
 | **Dance of the Elements** (ECC precon) WUBRG | Ashling, the Limitless | WUBRG | 100 | 🟡 all 100 implemented, 5 carry residuals (Flamebraider, Smokebraider, Primal Beyond, Haunting Voyage, Horde of Notions) |
 | **Veloci-Ramp-Tor** (LCC precon) RGW | Pantlaza, Sun-Favored | RGW | 100 | 🟡 all 100 implemented, 2 carry residuals (Sunfrill Imitator, Wrathful Raptors) |
 | **Multiverse Reforged** (FRC precon) WUBR | Jace, Multiverse Architect (**planeswalker**) | WUBR | 100 | 🟡 all 100 implemented, 2 carry residuals (Dack Fayden, Helping Hand; Tamiyo, Upriser Crowned) |
