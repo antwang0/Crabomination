@@ -903,6 +903,8 @@ pub enum CounterType {
     /// Ingredient counter — Communal Brewing's tally, the extra +1/+1
     /// counters each creature spell you cast enters with.
     Ingredient,
+    /// Treasure Map's landmark counters (three transform it).
+    Landmark,
     /// Vow counter — Promise of Loyalty's mark: a creature carrying one can't
     /// attack the vow's caster or their planeswalkers.
     Vow,
