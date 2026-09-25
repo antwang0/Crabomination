@@ -113,4 +113,24 @@ impl GameState {
         events.push(GameEvent::PermanentExiled { card_id: id });
         Ok(())
     }
+
+    /// `Effect::ExileSelfForetold` — the source permanent goes to exile face
+    /// down and becomes foretold (The Foretold Soldier); its printed foretell
+    /// cost is what it's cast for later.
+    pub(super) fn exile_self_foretold(
+        &mut self,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
+        let Some(id) = ctx.source else { return Ok(()) };
+        if self.battlefield_find(id).is_none() {
+            return Ok(());
+        }
+        self.move_card_to(id, &crate::effect::ZoneDest::Exile, ctx, events);
+        if let Some(c) = self.exile.iter_mut().find(|c| c.id == id) {
+            c.face_down = true;
+            self.foretold_this_turn.insert(id);
+        }
+        Ok(())
+    }
 }

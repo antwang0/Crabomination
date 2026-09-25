@@ -8780,6 +8780,10 @@ pub enum Effect {
     /// off a `SpellCast`/`SelfSource` self-cast trigger so both copies land
     /// above the original.
     Demonstrate,
+    /// "Exile this face down. It becomes foretold" (The Foretold Soldier,
+    /// CR 702.143): the source leaves for exile face down, keeping its
+    /// printed foretell cost, and counts as foretold this turn.
+    ExileSelfForetold,
 
     // ── Cast-without-paying / may-play ───────────────────────────────────────
     /// "Until [duration], you may cast/play that card [from where it is]."

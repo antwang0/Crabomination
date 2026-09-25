@@ -8631,6 +8631,7 @@ impl GameState {
             Effect::SacrificeAllButN { who, keep, filter } => {
                 self.sacrifice_all_but_n(who, keep, filter, ctx, events)
             }
+            Effect::ExileSelfForetold => self.exile_self_foretold(ctx, events),
             Effect::ForetellFromHand { reduce } => self.foretell_from_hand(*reduce, ctx, events, effect),
             Effect::ExileFromHandCopyCreature { who } => {
                 self.exile_from_hand_copy_creature(who, ctx, events, effect)
@@ -33208,9 +33209,18 @@ impl GameState {
                 // opponent of the caster's choosing also copies it; every
                 // copy may choose new targets. Fired from a self-cast
                 // trigger, so `ctx.source` is the spell still on the stack.
-                let spell_id = match ctx.source {
+                // A granted demonstrate (The Twelfth Doctor's "the first spell
+                // you cast from anywhere other than your hand") fires off a
+                // permanent: the spell is the trigger's subject.
+                let on_stack = |id: CardId| {
+                    self.stack.iter().any(|si| matches!(si, crate::game::types::StackItem::Spell { card, .. } if card.id == id))
+                };
+                let spell_id = match ctx.source.filter(|&c| on_stack(c)) {
                     Some(c) => c,
-                    None => return Ok(()),
+                    None => match ctx.trigger_source.and_then(|e| e.as_card_id()).filter(|&c| on_stack(c)) {
+                        Some(c) => c,
+                        None => return Ok(()),
+                    },
                 };
                 self.copy_stack_spell(spell_id, 1, true, events);
                 // Pick an opponent (the lowest-seat opponent by default; a

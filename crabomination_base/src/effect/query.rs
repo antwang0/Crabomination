@@ -1372,6 +1372,7 @@ impl Effect {
                 sel_has_target(source) || sel_has_target(hosts)
             }
             Effect::TreasurePerPairedManaValueInHand { .. } => false,
+            Effect::ExileSelfForetold => false,
             Effect::ManifestDread { who } => player_has_target(who),
             Effect::ManifestDreadRepeatThenCounters { .. } => false,
             Effect::Cloak { .. } => false,
