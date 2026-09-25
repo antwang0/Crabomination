@@ -369,6 +369,9 @@ pub enum CreatureType {
     Inhuman,
     // Warhammer 40,000 Commander (Forces of the Imperium).
     Astartes, Custodes, Inquisitor,
+    // Marvel Super Heroes Commander (Captain Mar-Vell; Professor Hulk, She-Hulk).
+    Kree,
+    Gamma,
 }
 
 /// Land subtypes (basic land types + others).
@@ -9514,6 +9517,11 @@ pub struct CardInstance {
     pub attacked_last_turn: bool,
     /// CR 509.1 — blocked at least one attacker this combat.
     pub blocked_this_turn: bool,
+    /// Became tapped this turn, and a second time — "the first time that
+    /// creature has become tapped this turn" (Captain America, Living
+    /// Legend). Stamped as `PermanentTapped` dispatches; reset each turn.
+    pub tapped_this_turn: bool,
+    pub tapped_again_this_turn: bool,
 }
 
 impl std::ops::Deref for CardInstance {
@@ -9554,6 +9562,8 @@ impl From<CardData> for CardInstance {
             attacked_own_turn: false,
             attacked_last_turn: false,
             blocked_this_turn: false,
+            tapped_this_turn: false,
+            tapped_again_this_turn: false,
         }
     }
 }

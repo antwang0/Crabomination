@@ -9255,8 +9255,8 @@ impl GameState {
                         {
                             amount = amount.min(*cap);
                         }
-                        StaticEffect::AddDamageToOpponents { source_color, amount: bonus }
-                            if !self.same_team(c.controller, p) =>
+                        StaticEffect::AddDamageToOpponents { source_color, amount: bonus, other }
+                            if !self.same_team(c.controller, p) && !(*other && source == Some(c.id)) =>
                         {
                             // "+N if a [color] source you control" — needs a
                             // known source controlled by the static's owner.
@@ -22333,6 +22333,17 @@ impl GameState {
             {
                 let pl = &mut self.players[*player];
                 pl.rad_counters = pl.rad_counters.saturating_add(n);
+            }
+        }
+        for e in events {
+            if let GameEvent::PermanentTapped { card_id, .. } = e
+                && let Some(c) = self.battlefield_find_mut(*card_id)
+            {
+                if c.tapped_this_turn {
+                    c.tapped_again_this_turn = true;
+                } else {
+                    c.tapped_this_turn = true;
+                }
             }
         }
         let mut placed = 0u64;

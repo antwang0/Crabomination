@@ -9801,6 +9801,7 @@ pub fn torbran_thane_of_red_fell() -> CardDefinition {
             effect: StaticEffect::AddDamageToOpponents {
                 source_color: Some(Color::Red),
                 amount: 2,
+                other: false,
             },
         }],
         ..Default::default()

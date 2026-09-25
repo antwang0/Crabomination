@@ -538,6 +538,7 @@ pub fn artists_talent() -> CardDefinition {
                     inner: Box::new(StaticEffect::AddDamageToOpponents {
                         source_color: None,
                         amount: 2,
+                        other: false,
                     }),
                 },
             },

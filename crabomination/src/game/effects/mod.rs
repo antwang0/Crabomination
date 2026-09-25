@@ -11945,6 +11945,9 @@ impl GameState {
             Effect::AddManaKeptThisTurnAnyColors { who, amount } => {
                 self.add_mana_kept_this_turn_any_colors(who, amount, ctx, events)
             }
+            Effect::AddManaKeptThisTurnAnyOneColor { who, amount } => {
+                self.add_mana_kept_this_turn_any_one_color(who, amount, ctx, events)
+            }
             Effect::ExileTypeSpreadReturnPermanent { min_types } => {
                 self.exile_type_spread_return_permanent(*min_types, ctx, events)
             }
@@ -39524,6 +39527,15 @@ impl GameState {
             }
 
             // The mirror of `BlockedAttacker`, with the same watcher fallback.
+            Selector::CreaturesBlockingTriggerSource => match ctx.trigger_source {
+                Some(EntityRef::Permanent(subject)) => self
+                    .blockers_of(subject)
+                    .into_iter()
+                    .filter(|bid| self.battlefield.find_by_id(*bid).is_some())
+                    .map(EntityRef::Permanent)
+                    .collect(),
+                _ => Vec::new(),
+            },
             Selector::BlockingCreatures => {
                 let blocking = |attacker: CardId| -> Vec<EntityRef> {
                     self.blockers_of(attacker)

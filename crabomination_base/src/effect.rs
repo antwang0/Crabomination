@@ -284,6 +284,9 @@ pub enum Selector {
     /// "whenever this becomes blocked by a creature, [affect that creature]"
     /// triggers (Grasping Giant).
     BlockingCreatures,
+    /// The creatures blocking the trigger's subject (She-Hulk: "for each
+    /// creature blocking it", "it" being the blocked Hero).
+    CreaturesBlockingTriggerSource,
     /// Every creature blocking or blocked by the (resolved) subject creature —
     /// the symmetric combat-partner set. Trial // Error's "return all creatures
     /// blocking or blocked by target creature". Excludes the subject itself.
@@ -2386,6 +2389,17 @@ pub enum Predicate {
     /// You put a counter on a creature this turn (CR 122.6 — Lasting
     /// Tarfire's intervening "if you put a counter on a creature this turn").
     CounterPutOnCreatureThisTurn,
+    /// The trigger's subject became tapped for the first time this turn
+    /// (`CardInstance.tapped_this_turn` without `tapped_again_this_turn`) —
+    /// Captain America, Living Legend.
+    TriggerSourceFirstTappedThisTurn,
+    /// An opponent of the controller has cast a spell this turn (Captain
+    /// Mar-Vell, Space-Born).
+    AnOpponentCastASpellThisTurn,
+    /// A player attacked the controller during that player's last turn
+    /// (Avenge — `attacked_players_this_turn`, rolled over as their turn
+    /// begins).
+    APlayerAttackedYouLastTurn,
     /// True when the resolving spell was kicked (CR 702.32) — its optional
     /// kicker cost was paid at cast time. Reads `EffectContext.kicked`,
     /// stamped from the resolving `CardInstance.kicked` flag. Used by
@@ -6524,6 +6538,9 @@ pub enum Effect {
     /// through step and phase ends until cleanup. "Spend this mana only to cast
     /// spells" is not enforced (the kept pool carries no spend restriction).
     AddManaKeptThisTurnAnyColors { who: PlayerRef, amount: Value },
+    /// "Add that much mana of any one color. Until end of turn, you don't lose
+    /// this mana as steps and phases end" (Photon, Mighty Marvel).
+    AddManaKeptThisTurnAnyOneColor { who: PlayerRef, amount: Value },
 
     // ── Permanent mutations ──────────────────────────────────────────────────
     Destroy { what: Selector },

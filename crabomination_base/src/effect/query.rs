@@ -1758,6 +1758,7 @@ impl Effect {
             Effect::AddManaKeptThisTurn { who, .. }
             | Effect::AddManaKeptThisTurnCount { who, .. }
             | Effect::AddManaKeptThisTurnAnyColors { who, .. }
+            | Effect::AddManaKeptThisTurnAnyOneColor { who, .. }
             | Effect::CommanderToHand { who }
             | Effect::PutCommanderOntoBattlefield { who, .. } => player_has_target(who),
             Effect::AddManaEqualToPermanentCost { .. } => false,

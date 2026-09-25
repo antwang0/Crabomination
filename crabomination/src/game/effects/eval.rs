@@ -3358,6 +3358,19 @@ impl GameState {
             Predicate::IsFirstCombatPhaseThisTurn => self.combat_phases_this_turn <= 1,
             Predicate::IsFirstEndStepThisTurn => self.end_steps_this_turn <= 1,
             Predicate::IsFirstUpkeepThisTurn => self.upkeep_steps_this_turn <= 1,
+            Predicate::TriggerSourceFirstTappedThisTurn => match ctx.trigger_source {
+                Some(EntityRef::Permanent(id)) | Some(EntityRef::Card(id)) => self
+                    .battlefield_find(id)
+                    .is_some_and(|c| c.tapped_this_turn && !c.tapped_again_this_turn),
+                _ => false,
+            },
+            Predicate::AnOpponentCastASpellThisTurn => self
+                .opponents_of(ctx.controller)
+                .into_iter()
+                .any(|p| self.players[p].spells_cast_this_game_turn > 0),
+            Predicate::APlayerAttackedYouLastTurn => {
+                self.players.iter().any(|p| p.attacked_players_this_turn.contains(&ctx.controller))
+            }
             Predicate::CounterPutOnCreatureThisTurn => self.counter_on_creature.is_some_and(|(t, m)| {
                 t == self.turn_number && m & 1u64.checked_shl(ctx.controller as u32).unwrap_or(0) != 0
             }),

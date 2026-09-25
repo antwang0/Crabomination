@@ -129,6 +129,30 @@ impl GameState {
     /// `Effect::AddManaKeptThisTurnAnyColors` — each pip's color is chosen
     /// on its own (the needs-aware pick for a headless seat), added to the
     /// pool and to the kept-this-turn pool that step ends re-seed.
+    /// `Effect::AddManaKeptThisTurnAnyOneColor` — one color chosen for the
+    /// whole amount (Photon, Mighty Marvel).
+    pub(super) fn add_mana_kept_this_turn_any_one_color(
+        &mut self,
+        who: &PlayerRef,
+        amount: &Value,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
+        let Some(p) = self.resolve_player(who, ctx) else { return Ok(()) };
+        let n = self.evaluate_value(amount, ctx).max(0) as u32 * self.mana_production_multiplier.max(1);
+        if n == 0 {
+            return Ok(());
+        }
+        let legal = [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green];
+        let color = self.chosen_mana_color(p, &legal, ctx.source);
+        self.players[p].mana_pool.add(color, n);
+        self.players[p].kept_mana_this_turn.add(color, n);
+        for _ in 0..n {
+            events.push(GameEvent::ManaAdded { player: p, color, source: ctx.source });
+        }
+        Ok(())
+    }
+
     pub(super) fn add_mana_kept_this_turn_any_colors(
         &mut self,
         who: &PlayerRef,
