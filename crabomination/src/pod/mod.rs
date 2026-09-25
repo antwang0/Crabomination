@@ -1064,6 +1064,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::GAVI_COMMANDERS,
             main: decks::GAVI_MAIN,
         },
+        // Hundred-and-twenty-ninth: the hundred-and-nineteenth official list
+        // (Grand Larceny, OTC) — Sultai theft under Gonti, Canny Acquisitor.
+        // `--pod-decks 129`.
+        PodDeck {
+            name: "Gonti, Canny Acquisitor (BGU)",
+            commanders: decks::GONTI_COMMANDERS,
+            main: decks::GONTI_MAIN,
+        },
     ]
 }
 
@@ -1648,6 +1656,9 @@ mod tests {
             ("Oloro", [0x0107, 126, 9050]),
             // CR 702.29 cycling for {0} (Gavi, New Perspectives); CR 614.1a Sarcophagus.
             ("Gavi", [0x6A71, 128, 9052]),
+            // CR 701.34 manifest from another library, CR 106.6 spend
+            // restrictions, CR 702.99 cipher.
+            ("Gonti, Canny", [0x6071, 129, 9053]),
         ] {
             let precon = *field.iter().find(|d| d.name.starts_with(name)).expect("the precon seat");
             assert_eq!(precon.card_count(), 100);

@@ -3917,3 +3917,33 @@ pub const GAVI_MAIN: &[CardFactory] = &[
     island, island, island, island, island, mountain, mountain, mountain, mountain, mountain,
     mountain, plains, plains, plains, plains,
 ];
+
+pub const GONTI_COMMANDERS: &[CardFactory] = &[gonti_canny_acquisitor];
+
+/// **Grand Larceny**, the Outlaws of Thunder Junction Commander deck (OTC,
+/// 2024-04-19), exactly as MTGJSON's `GrandLarceny_OTC` prints it: 84
+/// nonbasic cards + 5 Islands + 6 Swamps + 4 Forests = 99. Sultai theft under Gonti, Canny
+/// Acquisitor.
+pub const GONTI_MAIN: &[CardFactory] = &[
+    felix_five_boots, thieving_skydiver, sage_of_the_beyond, ghostly_pilferer,
+    diluvian_primordial, stolen_goods, curse_of_the_swine, dazzling_sphinx, arcane_heist,
+    smirking_spelljacker, minds_dilation, gonti_lord_of_luxury, predators_hour,
+    brainstealer_dragon, cunning_rhetoric, thieving_amalgam, orochi_soul_reaver,
+    thieving_varmint, heartless_conscription, nashi_moon_sages_scion, baleful_mastery,
+    ohran_frostfang, savvy_trader, tower_winder, cazur_ruthless_stalker, silent_blade_oni,
+    hostage_taker, edric_spymaster_of_trest, fallen_shinobi, cold_eyed_selkie, siphon_insight,
+    extract_brain, shadowmage_infiltrator, baleful_strix, culling_ritual, thief_of_sanity,
+    villainous_wealth, the_mimeoplasm, plasm_capture, ukkima_stalking_shadow,
+    bladegriff_prototype, chaos_wand, dream_thiefs_bandana, oblivion_sower, overflowing_basin,
+    drowned_catacomb, temple_of_deceit, temple_of_malady, darkwater_catacombs, fetid_pools,
+    yavimaya_coast, viridescent_bog, exotic_orchard, underground_river, woodland_cemetery,
+    sunken_hollow, temple_of_mystery, hinterland_harbor, darkslick_shores, flooded_grove,
+    twilight_mire, llanowar_wastes, slither_blade, whirler_rogue, triton_shorestalker,
+    feed_the_swarm, silhana_ledgewalker, rampant_growth, kodamas_reach, void_attendant,
+    three_visits, putrefy, trygon_predator, doc_aurlock_grizzled_genius, arcane_signet,
+    darksteel_ingot, fellwar_stone, prismatic_lens, sol_ring, command_tower, reliquary_tower,
+    access_tunnel, dimir_aqueduct, opulent_palace,
+    // Basics: 5 island, 6 swamp, 4 forest
+    island, island, island, island, island, swamp, swamp, swamp, swamp, swamp, swamp, forest,
+    forest, forest, forest,
+];
