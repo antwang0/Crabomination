@@ -248,6 +248,10 @@ const ALLOWED_MODELLING: &[(&str, &str)] = &[
     // player, that player gets a poison counter". Poisonous is combat-only,
     // so this is an approximation and not an equivalence.
     ("Pit Scorpion", "poisonous"),
+    // "Creatures with power greater than this creature's power can't block
+    // it" is skulk's own reminder text (CR 702.118b), and the block-filter
+    // walker has no attacker to compare a `PowerGreaterThanSource` against.
+    ("Silumgar Assassin", "skulk"),
     // `affinity_filter` is the engine's cost-reduction primitive, and these
     // spell the reduction out instead of printing the keyword ("costs {1}
     // less to cast for each creature on the battlefield").
