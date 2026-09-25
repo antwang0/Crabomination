@@ -121,6 +121,7 @@ mod cmdr_inspirit;
 mod cmdr_hakbal;
 mod cmdr_kotori;
 mod cmdr_mirko;
+mod cmdr_auntie;
 mod cmdr_kaust;
 mod cmdr_zimone_ia;
 mod cmdr_anhelo;
