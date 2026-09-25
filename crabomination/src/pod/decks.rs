@@ -3563,3 +3563,31 @@ pub const OLIVIA_MAIN: &[CardFactory] = &[
     // Basics: 2 plains, 4 swamp, 2 mountain
     plains, plains, swamp, swamp, swamp, swamp, mountain, mountain,
 ];
+
+pub const KALAMAX_COMMANDERS: &[CardFactory] = &[kalamax_the_stormsire];
+
+/// **Arcane Maelstrom**, the Ikoria Commander deck (C20, 2020-04-17), exactly
+/// as MTGJSON's `ArcaneMaelstrom_C20` prints it: 81 nonbasic cards +
+/// 8 Forests + 5 Islands + 5 Mountains = 99. Temur instants and copies under Kalamax, the Stormsire.
+pub const KALAMAX_MAIN: &[CardFactory] = &[
+    jace_architect_of_thought, xyris_the_writhing_storm, haldan_avid_arcanist,
+    pako_arcane_retriever, eon_frolicker, nascent_metamorph, glademuse, ravenous_gigantotherium,
+    lunar_mystic, niblis_of_frost, talrand_sky_summoner, charmbreaker_devils, dualcaster_mage,
+    etali_primal_storm, goblin_dark_dwellers, djinn_illuminatus, melek_izzet_paragon,
+    rashmi_eternities_crafter, wort_the_raidmother, solemn_simulacrum, murmuring_mystic,
+    crackling_drake, surreal_memoir, decoy_gambit, deflecting_swat, curious_herd, chaos_warp,
+    comet_storm, commune_with_lava, starstorm, strength_of_the_tajuru, artifact_mutation,
+    prophetic_bolt, clash_of_titans, channeled_force, chemisters_insight, frantic_search,
+    whiplash_trap, crop_rotation, evolution_charm, harrow, hunters_insight, hunting_pack,
+    natural_connection, slice_in_twain, tribute_to_the_wild, growth_spiral, temur_charm,
+    lavabrink_floodgates, twinning_staff, bonders_ornament, arcane_signet, commanders_sphere,
+    lightning_greaves, sol_ring, swarm_intelligence, primal_empathy, psychic_impetus,
+    shiny_impetus, predatory_impetus, wilderness_reclamation, cinder_glade, desolate_lighthouse,
+    exotic_orchard, kessig_wolf_run, mossfire_valley, mosswort_bridge, oran_rief_the_vastwood,
+    scavenger_grounds, yavimaya_coast, command_tower, frontier_bivouac, gruul_turf,
+    halimar_depths, izzet_boilerworks, myriad_landscape, rupture_spire, simic_growth_chamber,
+    rugged_highlands, swiftwater_cliffs, thornwood_falls,
+    // Basics: 8 forest, 5 island, 5 mountain
+    forest, forest, forest, forest, forest, forest, forest, forest, island, island, island,
+    island, island, mountain, mountain, mountain, mountain, mountain,
+];

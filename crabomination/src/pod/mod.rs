@@ -968,6 +968,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::OLIVIA_COMMANDERS,
             main: decks::OLIVIA_MAIN,
         },
+        // Hundred-and-seventeenth: the hundred-and-seventh official list
+        // (Arcane Maelstrom, C20) — Temur instants and copies under Kalamax,
+        // the Stormsire. `--pod-decks 117`.
+        PodDeck {
+            name: "Kalamax, the Stormsire (GUR)",
+            commanders: decks::KALAMAX_COMMANDERS,
+            main: decks::KALAMAX_MAIN,
+        },
     ]
 }
 
@@ -1533,6 +1541,8 @@ mod tests {
             ("Zurgo Stormrender", [0x2B60, 113, 9037]),
             // CR 613.1d layered outlaws; CR 122.1 hit counters in exile.
             ("Olivia", [0x0117, 116, 9040]),
+            // CR 707.10 — copies, Twinning Staff's +1, granted conspire.
+            ("Kalamax", [0xCA1A, 117, 9041]),
         ] {
             let precon = *field.iter().find(|d| d.name.starts_with(name)).expect("the precon seat");
             assert_eq!(precon.card_count(), 100);
