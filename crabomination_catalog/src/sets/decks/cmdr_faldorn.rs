@@ -5,7 +5,6 @@
 //! Residuals (each also on its card):
 //! - **Aurora Phoenix** — a spell given cascade by a trigger (Wild-Magic
 //!   Sorcerer) doesn't have the keyword, so it doesn't return the Phoenix.
-//! - **Chaos Wand** — a found card you don't cast stays in exile.
 //! - **Durnan** — exiles the first creature card among the top four (no
 //!   choice), and the cast from exile doesn't have undaunted.
 
@@ -152,9 +151,7 @@ pub fn aurora_phoenix() -> CardDefinition {
 
 /// Chaos Wand — {4}, {T}: target opponent exiles cards from the top of their
 /// library until an instant or sorcery; you may cast it free; the rest go to
-/// the bottom.
-///
-/// Approximation: a found card you don't cast stays in exile.
+/// the bottom, an uncast find with them.
 pub fn chaos_wand() -> CardDefinition {
     CardDefinition {
         name: "Chaos Wand",
@@ -179,6 +176,11 @@ pub fn chaos_wand() -> CardDefinition {
                         filter: R::HasCardType(CardType::Instant)
                             .or(R::HasCardType(CardType::Sorcery)),
                     }),
+                    // An uncast find goes to the bottom with the rest.
+                    Effect::Move {
+                        what: Selector::ExiledThisResolution { filter: R::InExile },
+                        to: ZoneDest::Library { who: PlayerRef::Target(0), pos: crate::effect::LibraryPosition::Bottom },
+                    },
                 ])),
             },
             ..Default::default()

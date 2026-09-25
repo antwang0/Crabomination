@@ -4393,6 +4393,26 @@ fn exit_from_exile_batch() {
     assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt), "cast and resolved");
     assert!(g.players[1].life < 20 || g.players[0].life < 20, "the Bolt hit someone");
 
+    // Declined, the find joins the rest on the bottom — not left in exile.
+    let mut g = main_phase();
+    let wand = g.add_card_to_battlefield(0, catalog::chaos_wand());
+    let bolt = g.add_card_to_library(1, catalog::lightning_bolt());
+    g.add_card_to_library(1, catalog::island());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)]));
+    flood(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: wand,
+        ability_index: 0,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("wand");
+    drain_stack(&mut g);
+    assert!(!g.exile.iter().any(|c| c.id == bolt), "not stranded in exile");
+    assert!(g.players[1].library.iter().any(|c| c.id == bolt), "on the bottom of its library");
+
     // Dire Fleet Daredevil borrows an opponent's instant.
     let mut g = main_phase();
     let bolt = g.add_card_to_graveyard(1, catalog::lightning_bolt());

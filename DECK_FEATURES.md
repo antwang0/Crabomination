@@ -196,7 +196,7 @@ lists were picked.
 | **Merciless Rage** (C19 precon) BR | Anje Falkenrath | BR | 100 | 🟡 all 100 implemented, 5 carry residuals (Archfiend of Spite, Boneyard Parley, Chainer, Hedonist's Trove, K'rrik) |
 | **Bedecked Brokers** (NCC precon) GWU | Perrie, the Pulverizer | GWU | 100 | 🟡 all 100 implemented, 5 carry residuals (Kros, Aven Mimeomancer, Agent's Toolkit, Littjara Mirrorlake, Skyship Plunderer) |
 | **Living Energy** (DRC precon) GUR | Saheeli, Radiant Creator | GUR | 100 | 🟡 all 100 implemented, 4 carry residuals (Aetherflux Conduit, Territorial Aetherkite, Rampaging Aetherhood, Saheeli) |
-| **Exit from Exile** (CLB precon) RG | Faldorn, Dread Wolf Herald | RG | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
+| **Exit from Exile** (CLB precon) RG | Faldorn, Dread Wolf Herald | RG | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Exquisite Invention** (C18 precon) UR | Saheeli, the Gifted (**planeswalker**) | UR | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Mishra's Burnished Banner** (BRC precon) UBR | Mishra, Eminent One | UBR | 100 | 🟡 all 100 implemented, 6 carry residuals (below) |
 | **Tinker Time** (MOC precon) GUR | Gimbal, Gremlin Prodigy | GUR | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
@@ -1151,8 +1151,7 @@ own Wolves, Fire Lord Zuko and Nassari missed them. The primitives:
 `StaticEffect::FreeExileCastOncePerTurnMatching` (Tlincalli Hunter's
 creature-only {0}; the shared `free_exile_cast_waiver` now reaches an
 adventurer's cast, Warped Space's too). Residuals: **Aurora Phoenix** doesn't
-see cascade granted by a trigger; **Chaos Wand** leaves an uncast find in
-exile; **Durnan** takes the first creature of the four and its cast has no
+see cascade granted by a trigger; **Durnan** takes the first creature of the four and its cast has no
 undaunted. Pods (release,
 seed 10221, 1,000 games beside Trostani / Ranar / Urza): 1,000/1,000
 decided, no card of the four lists unplayed, Faldorn 13.4 %; six seats
@@ -3054,8 +3053,7 @@ from Ring-bearers, read through `GameState::is_a_ring_bearer`) and an
 X-aware `Selector::MatchingAmong` (CR 107.3 — its card branch rewrote no
 `…XFromCost` leaf, so Summons of Saruman's "mana value X or less from among
 them" could never match). Everything else composes: Gríma reuses Chaos
-Wand's dig and then bottoms an uncast find (which Chaos Wand still leaves in
-exile); The Balrog's "when you do" is `MayExileSelfThen` + `Reflexive` +
+Wand's dig and then bottoms an uncast find; The Balrog's "when you do" is `MayExileSelfThen` + `Reflexive` +
 `ForEachOpponentTarget`; Grishnákh reads the Army's power as a `WithX`.
 Residuals: **Moria Scavenger** (two abilities for one), **Shelob** (the
 graveyard half of its cost is paid on resolution; the X card is picked, not
