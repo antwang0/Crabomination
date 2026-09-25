@@ -2626,6 +2626,29 @@ Vehicle, an activated manland or a stationed Spacecraft stayed home: Kotori
 Inspirit / Morska (seed 15101, 1,000) and six seats (15102, 1,000): all
 decided; census (15103, 500): nothing unplayed. `--bench` byte-identical.
 
+The **hundred-and-seventy-third** is Fallout Commander's **Scrappy
+Survivors** (`ScrappySurvivors_PIP`, 2024-03-08) — Naya Auras, Equipment and
+Junk under Dogmeat, Ever Loyal, `--pod-decks 173` (built as 172; Forces of the
+Imperium landed there first). Thirty-eight cards were missing
+(`cmdr_dogmeat.rs`). The primitives: `Value::AttachmentsOnDyingSubject`
+(CR 603.10a — what rode the dead creature, read off `auras_at_death`: Gunner
+Conscript's two Junk triggers, Cass's gate), `Effect::
+ReturnDyingSubjectAttachmentsTo` (Cass — the Aura cards come back attached,
+the Equipment moves), `Effect::CreateTokenCopyOfAttachedToEach` (Three Dog's
+Aura copies, CR 303.4f), `Predicate::YouDiscardedGreatestManaValueThisEffect`
+(Cait's paired loot), `Effect::TreasurePerPairedManaValueInHand` (Vault 21),
+`StaticEffect::CostReductionTargetingHost` (Strong Back's equip and Aura-spell
+discount) and `SpendRestriction::AuraOrEquipmentSpells` (Codsworth). Residuals:
+**Agility Bobblehead**, **Brotherhood Outcast**, **Inventory Management**,
+**Perception Bobblehead**, **Vault 101** (INCOMPLETE_CARDS). Four seats beside
+Madison / Caesar / Mothman (seed 17301, 1,000, `--card-census`: nothing
+unplayed): all decided, Dogmeat 10.5 %; six seats beside Greyfax / Invisible
+Woman / Tidus / Auntie / Y'shtola (17302, 1,000): all decided, Dogmeat 1.6 % (Y'shtola 56 %). ⚠ Its first
+six-seat run board-capped one game on Auntie's Flourishing Defenses: the bot
+took every optional Elf Warrior (980) — a token-making "you may" is now
+declined on an overkill board (`optional_trigger_beneficial`). `--bench`
+byte-identical.
+
 The **hundred-and-seventy-fourth** is Marvel Super Heroes Commander's
 **Avengers Assemble** (`AvengersAssemble_MSC`, 2026-06-26) — Jeskai Heroes
 under Captain America, Team Leader, `--pod-decks 174`. Thirty-eight cards were
