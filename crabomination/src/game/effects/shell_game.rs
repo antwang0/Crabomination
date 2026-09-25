@@ -106,4 +106,52 @@ impl GameState {
         }
         Ok(())
     }
+
+    /// `Effect::DestroyOnePerOpponent` — the controller picks one matching
+    /// permanent of each opponent (most expensive offered first), then every
+    /// pick is destroyed at once.
+    pub(super) fn destroy_one_per_opponent(
+        &mut self,
+        filter: &SelectionRequirement,
+        effect: &Effect,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
+        let me = ctx.controller;
+        let source = ctx.source.unwrap_or(CardId(0));
+        let mut cursor = 0;
+        let mut doomed = Vec::new();
+        for opp in self.opponents_of(me) {
+            let mut theirs: Vec<(u32, CardId)> = self
+                .battlefield
+                .iter()
+                .filter(|c| {
+                    c.controller == opp
+                        && self.evaluate_requirement_static(filter, &Target::Permanent(c.id), me, Some(source))
+                })
+                .map(|c| (c.definition.cost.cmc(), c.id))
+                .collect();
+            if theirs.is_empty() {
+                continue;
+            }
+            theirs.sort_by(|a, b| b.0.cmp(&a.0));
+            let legal: Vec<Target> = theirs.into_iter().map(|(_, id)| Target::Permanent(id)).collect();
+            let picked = self.ask_seat_target_logged(
+                &mut cursor,
+                me,
+                format!("P{me}: choose a permanent P{opp} controls to destroy"),
+                source,
+                legal,
+                effect,
+            );
+            if let Some(Target::Permanent(id)) = picked {
+                doomed.push(id);
+            }
+        }
+        self.clear_answer_log();
+        for id in doomed {
+            self.destroy_permanent(id, false, events);
+        }
+        Ok(())
+    }
 }

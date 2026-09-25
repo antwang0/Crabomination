@@ -761,6 +761,7 @@ impl Effect {
             | Effect::DoublePlayerCounters { .. }
             | Effect::SpreadCounterKindToOthers { .. }
             | Effect::ReverseTurnOrder
+            | Effect::DestroyOnePerOpponent { .. }
             | Effect::DamageEachCreatureOfChosenColor { .. }
             | Effect::ForetellFromHand { .. }
             | Effect::EachPlayerCreatesTokenPerControlled { .. }

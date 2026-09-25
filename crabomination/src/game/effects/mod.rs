@@ -23206,6 +23206,7 @@ impl GameState {
                 self.each_player_takes_creature_of_next(ctx);
                 Ok(())
             }
+            Effect::DestroyOnePerOpponent { filter } => self.destroy_one_per_opponent(filter, effect, ctx, events),
             Effect::ReverseTurnOrder => {
                 self.turn_order_reversed = !self.turn_order_reversed;
                 Ok(())

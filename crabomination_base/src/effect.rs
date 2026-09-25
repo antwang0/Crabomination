@@ -5080,6 +5080,10 @@ pub enum Effect {
     /// "Reverse the game's turn order" (Aeon Engine). A second reversal
     /// restores the original order.
     ReverseTurnOrder,
+    /// "For each opponent, choose a [filter] that player controls. Destroy
+    /// the chosen permanents" (Ultimate Magic: Meteor). The effect's
+    /// controller picks one per opponent; all are destroyed together.
+    DestroyOnePerOpponent { filter: crate::card::SelectionRequirement },
     /// "For each kind of counter among `who`'s permanents matching `filter`,
     /// put a counter of that kind on [`onto`]" — keyword counters are kinds
     /// too (CR 122.1b). Several recipients take the kinds in turn (Exotic
