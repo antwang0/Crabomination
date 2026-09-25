@@ -133,6 +133,7 @@ lists were picked.
 | **Ruthless Regiment** (C20 precon) RWB | Jirina Kudro | RWB | 100 | 🟡 all 100 implemented, 2 carry residuals (Sanctuary Blade, Odric, Master Tactician) |
 | **Most Wanted** (OTC precon) RWB | Olivia, Opulent Outlaw | RWB | 100 | 🟡 all 100 implemented, 3 carry residuals (Back in Town, Dire Fleet Ravager, Vihaan, Goldwaker) |
 | **Tricky Terrain** (M3C precon) GU | Omo, Queen of Vesuva | GU | 100 | 🟡 all 100 implemented, 7 carry residuals (Omo, Horizon of Progress, Desert Warfare, Sunken Palace, Magus of the Candelabra, Rampant Frogantua, March from Velis Vel) |
+| **Everyone's Invited!** (SLD) WUBRG | Morophon, the Boundless | WUBRG | 100 | 🟡 all 100 implemented, 7 carry residuals (Amoeboid Changeling, Nameless Inversion, Shields of Velis Vel, Moritte of the Frost, Unsettled Mariner, Stick Together, Harper Recruiter) |
 | **Prismari Artistry** (SOC precon) UR | Rootha, Mastering the Moment | UR | 100 | 🟡 all 100 implemented, 2 carry residuals (Abstract Performance, Plargg and Nassari) |
 | **Desert Bloom** (OTC precon) RGW | Yuma, Proud Protector | RGW | 100 | 🟡 all 100 implemented, 2 carry residuals (Cataclysmic Prospecting, Dune Chanter) |
 | **Lorehold Spirit** (SOC precon) RW | Quintorius, History Chaser (**planeswalker**) | RW | 100 | 🟡 all 100 implemented, 3 carry residuals (Ao, the Dawn Sky, Quintorius, Loremaster, Serra Paragon) |
@@ -1326,6 +1327,26 @@ takes every mode that can act. Four-seat pods beside Kasla / Ulalek / Eshki
 10312, 1,000): all decided, Chishiro 32.0 % and 14.6 %; census (seed 10323):
 no card of the four unplayed. `--bench` byte-identical; cube/sos/sealed (seed
 10320): 7,500 decided.
+
+The **hundred-and-thirty-first** is the Secret Lair Commander deck
+**Everyone's Invited!** (`EveryoneSInvited_SLD`, 2025) — five-color
+changelings under Morophon, the Boundless, `--pod-decks 131` (committed as 129
+until Grand Larceny and Power Hungry landed). Nineteen cards were missing
+(`cmdr_morophon.rs`). The primitives: CR 700.8 largest-party matching in
+`effects/party.rs`, shared by `Effect::EachPlayerKeepsPartySacrificesRest`
+(Stick Together) and `Effect::LookTopTakeParty` (Harper Recruiter);
+`Effect::StampTokenCopyExceptions` (`effects/token_riders.rs` — Brenard's Food
+Golem copies carry the Food subtype and the sacrifice ability as copiable
+values, CR 707.9b); `EntersAsCopy.extra_supertypes` (Moritte's snow). Its
+tests found ⚠ **`EntersAsCopy.legendary` was declared and never read** (a
+Sakashima the Impostor copy entered non-legendary), and ⚠ **CR 611.2b: a
+temporary copy "until your next turn" reverted at this turn's cleanup** (and
+an "until your next untap" one never reverted) — `TempCopy` now carries its
+controller and installed turn, and those end as that player's next turn
+begins. Residuals: seven (INCOMPLETE_CARDS). Four-seat pods beside Omo /
+Olivia / Jirina (seed 10430) and Nelly / Eshki / Estrid (seed 10431), 1,000
+games each: all decided, Morophon 11.9 % and 8.4 %; census: no card of the
+list unplayed. `--bench` byte-identical.
 
 The **hundred-and-twenty-second** is Modern Horizons 3 Commander's **Tricky
 Terrain** (`TrickyTerrain_M3C`) — Simic lands-matter under Omo, Queen of
