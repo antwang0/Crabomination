@@ -62,6 +62,7 @@ mod cmdr_doom;
 mod cmdr_szarekh;
 mod cmdr_abaddon;
 mod cmdr_davros;
+mod cmdr_tenth;
 mod cmdr_prosper;
 mod cmdr_galea;
 mod cmdr_chishiro;
