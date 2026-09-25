@@ -153,9 +153,7 @@ fn xyris_punishes_extra_draws() {
     g.add_card_to_battlefield(0, catalog::xyris_the_writhing_storm());
     g.add_card_to_library(1, catalog::island());
     let d = g.add_card_to_hand(1, catalog::divination());
-    for c in [Color::Blue] {
-        g.players[1].mana_pool.add(c, 5);
-    }
+    g.players[1].mana_pool.add(Color::Blue, 5);
     g.players[1].mana_pool.add_colorless(5);
     g.add_card_to_library(1, catalog::island());
     g.active_player_idx = 1;
