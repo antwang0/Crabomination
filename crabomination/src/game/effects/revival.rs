@@ -70,15 +70,20 @@ impl GameState {
                 break;
             }
             legal.sort();
-            let picked = self.ask_seat_target_logged(
+            // `legal` is non-empty, so `None` is a suspend: stop and let the
+            // resume replay the logged picks (asking the next opponent would
+            // overwrite the parked ask — `scripts/audit_stash_in_loop.py`).
+            let Some(picked) = self.ask_seat_target_logged(
                 &mut cursor,
                 opp,
                 format!("P{opp}: choose a card in P{me}'s graveyard to return"),
                 source,
                 legal.into_iter().map(|(_, id)| Target::Permanent(id)).collect(),
                 effect,
-            );
-            if let Some(Target::Permanent(id)) = picked {
+            ) else {
+                return Ok(());
+            };
+            if let Target::Permanent(id) = picked {
                 chosen.push(id);
             }
         }

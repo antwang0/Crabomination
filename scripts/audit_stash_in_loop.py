@@ -34,6 +34,14 @@ sixteenth find's fix, which is the check that it checks anything.
 allowlisted / 0 unexplained -> 2 / 1 / **1 unexplained**. A gate that cannot
 fail is worse than no gate; this one can.
 
+
+**Second check (2026-09-25):** a *logged* ask (`ask_seat_target_logged`,
+`ask_seat_bool`, …) is safe in a loop only if the loop STOPS when it returns
+`None` — `None` is the suspend, and asking on for the next seat overwrites the
+parked ask. `destroy_one_per_opponent` (Ultimate Magic: Meteor) asked on and
+an 8-seat pod answered 7,741 asks in one game. The check reads the statement
+the ask sits in for a `return` / `?` on the `None` path; it flags that
+function on the tree before its fix.
 """
 
 import re
@@ -100,14 +108,63 @@ def nearest_name(lines, i):
         m = re.search(r"Effect::([A-Za-z0-9_]+)", lines[j])
         if m and "=>" in lines[j]:
             return m.group(1)
-        m = re.match(r"\s*(?:pub(?:\(crate\))? )?fn ([a-z0-9_]+)", lines[j])
+        m = re.match(r"\s*(?:pub(?:\((?:crate|super)\))? )?fn ([a-z0-9_]+)", lines[j])
         if m:
             return m.group(1)
         j -= 1
     return "?"
 
 
+LOGGED = (
+    "self.ask_seat_target_logged(",
+    "self.ask_seat_bool(",
+    "self.ask_seat_amount(",
+    "self.ask_seat_cards_logged(",
+    "self.ask_seat_option(",
+)
+
+# path:fn -> why a `None` from a logged ask in that loop needn't stop it.
+LOGGED_KNOWN: dict = {}
+
+
+def stops_on_none(lines, i):
+    """True when the statement holding the ask at line `i` returns (or `?`s)
+    on `None`: `let Some(..) = ask(..) else { return .. }`, `ask(..)?`, or a
+    `None => return` arm."""
+    start = i
+    while start > 0 and not re.match(r"\s*(let |if let |match |while let )", lines[start]) and \
+            lines[start - 1].rstrip().endswith((",", "(", "=")):
+        start -= 1
+    window = "\n".join(lines[start:i + 25])
+    # The ask's statement ends at the first `;` at or below its indent.
+    end = window.find(";")
+    stmt = window if end < 0 else window[: end + 1]
+    return bool(re.search(r"else\s*\{\s*(return|break|continue)", window[: end + 60] if end >= 0 else window)
+                or re.search(r"\)\?", stmt)
+                or re.search(r"None\s*=>\s*(\{\s*)?return", window))
+
+
 def main() -> int:
+    logged_flags = []
+    # Every engine file: a per-seat ask loop can live in any module.
+    for rel in sorted(str(q.relative_to(ROOT)) for q in (ROOT / "crabomination/src/game").rglob("*.rs")):
+        path = ROOT / rel
+        if not path.exists():
+            continue
+        lines = path.read_text().split("\n")
+        for i, line in enumerate(lines):
+            if not any(p in line for p in LOGGED):
+                continue
+            if not enclosing_loop(lines, i):
+                continue
+            name = nearest_name(lines, i)
+            if f"{rel}:{name}" in LOGGED_KNOWN or stops_on_none(lines, i):
+                continue
+            logged_flags.append((rel, i + 1, name))
+    print(f"{len(logged_flags)} logged ask(s) in a loop that ask on past a suspend")
+    for rel, ln, name in logged_flags:
+        print(f"  FLAG {rel}:{ln}  in {name}")
+    print()
     hits, unexplained = [], []
     for rel in FILES:
         path = ROOT / rel
@@ -140,7 +197,7 @@ def main() -> int:
         print("A loop over seats may not ask through the single-slot channel: use "
               "`ask_seat_cards_logged` / `ask_seat_bool` (cursor-indexed), and keep "
               "the mutations after every ask.")
-    return 1 if unexplained else 0
+    return 1 if unexplained or logged_flags else 0
 
 
 if __name__ == "__main__":
