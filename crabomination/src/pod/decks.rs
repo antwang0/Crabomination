@@ -3739,3 +3739,33 @@ pub const OMO_MAIN: &[CardFactory] = &[
     // Basics: 3 island, 4 forest
     island, island, island, forest, forest, forest, forest,
 ];
+
+pub const YUMA_COMMANDERS: &[CardFactory] = &[yuma_proud_protector];
+
+/// **Desert Bloom**, the Outlaws of Thunder Junction Commander deck (OTC,
+/// 2024-04-19), exactly as MTGJSON's `DesertBloom_OTC` prints it: 82
+/// nonbasic cards + 6 Plainss + 4 Mountains + 7 Forests = 99. Naya Deserts and lands-matter
+/// under Yuma, Proud Protector.
+pub const YUMA_MAIN: &[CardFactory] = &[
+    kirri_talented_sprout, scavenger_grounds, sun_titan, omnath_locus_of_rage,
+    descend_upon_the_sinful, chromatic_lantern, marshals_anthem, sheltered_thicket, scute_swarm,
+    hour_of_promise, oracle_of_mul_daya, ramunap_excavator, scattered_groves, world_shaper,
+    nesting_dragon, turntimber_sower, sevinnes_reclamation, ancient_greenwarden,
+    titania_protector_of_argoth, return_of_the_wildspeaker, perennial_behemoth,
+    avenger_of_zendikar, hazezon_shaper_of_sand, escape_to_the_wilds, heaven_earth, genesis_hydra,
+    sunscorched_divide, the_mending_of_dominaria, decimate, sand_scout, embrace_the_unknown,
+    dune_chanter, cataclysmic_prospecting, vengeful_regrowth, angel_of_indemnity,
+    cactus_preserve, rumbleweed, terramorphic_expanse, evolving_wilds, swiftfoot_boots, explore,
+    sol_ring, satyr_wayfinder, perpetual_timepiece, crawling_sensation, painted_bluffs,
+    command_tower, magmatic_insight, krosan_verge, desert_of_the_true, skullwinder,
+    desert_of_the_indomitable, jungle_shrine, bitter_reunion, desert_of_the_fervent,
+    valorous_stance, dunes_of_the_dead, shefet_dunes, hashep_oasis, elvish_rejuvenator,
+    winding_way, springbloom_druid, arcane_signet, unholy_heat, thrilling_discovery,
+    electric_revelation, eccentric_farmer, harrow, ramunap_ruins, path_to_exile,
+    requisition_raid, bovine_intervention, map_the_frontier, conduit_pylons, mirage_mesa,
+    wreck_and_rebuild, angel_of_the_ruins, bristling_backwoods, creosote_heath, abraded_bluffs,
+    scaretiller, nantuko_cultivator,
+    // Basics: 6 plains, 4 mountain, 7 forest
+    plains, plains, plains, plains, plains, plains, mountain, mountain, mountain, mountain,
+    forest, forest, forest, forest, forest, forest, forest,
+];

@@ -1016,6 +1016,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::OMO_COMMANDERS,
             main: decks::OMO_MAIN,
         },
+        // Hundred-and-twenty-third: the hundred-and-thirteenth official list
+        // (Desert Bloom, OTC) — Naya Deserts and lands-matter under Yuma,
+        // Proud Protector. `--pod-decks 123`.
+        PodDeck {
+            name: "Yuma, Proud Protector (RGW)",
+            commanders: decks::YUMA_COMMANDERS,
+            main: decks::YUMA_MAIN,
+        },
     ]
 }
 
