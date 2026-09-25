@@ -1024,6 +1024,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::YUMA_COMMANDERS,
             main: decks::YUMA_MAIN,
         },
+        // Hundred-and-twenty-fourth: the hundred-and-fourteenth official list
+        // (Spirit Squadron, VOC) — Azorius Spirits under Millicent.
+        // `--pod-decks 124`.
+        PodDeck {
+            name: "Millicent, Restless Revenant (WU)",
+            commanders: decks::MILLICENT_COMMANDERS,
+            main: decks::MILLICENT_MAIN,
+        },
     ]
 }
 

@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Ten hand-picked commanders plus eighty-five official preconstructed lists, each a
+//! Ten hand-picked commanders plus a hundred and fourteen official preconstructed lists, each a
 //! 99 of cards this engine implements: legal under CR 903 (100 cards
 //! including the commander, singleton outside basics, every card inside the
 //! commander's CR 903.4 color identity) and Commander-legal per Scryfall's
@@ -8,7 +8,7 @@
 //!
 //! The ten were built by hand because the offline Scryfall cache cannot say
 //! how a precon splits into decks; MTGJSON's deck files can, and the eleventh
-//! through ninety-fifth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
+//! through hundred-and-twenty-fourth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
 //! Win, Tails You Lose, Goblin Storm, Foundations Commander's Wretched Ranks,
 //! Tramplesaurus Rex and Keen Engineering, Commander Legends' Reap the Tides,
 //! Phyrexia: All Will Be One's Corrupting Influence, Zendikar Rising's Sneak
@@ -52,8 +52,9 @@
 //! Seize, Commander 2021's Silverquill Statement, Commander Masters'
 //! Planeswalker Party, Secret Lair's 20 Ways to Win, Murders at Karlov Manor
 //! Commander's Blame Game, Bloomburrow Commander's Family Matters and
-//! Foundations Commander's Reign of Dragons) are taken from one card for
-//! card. What all of them keep
+//! Foundations Commander's Reign of Dragons, among others — seat 124 is
+//! Innistrad: Crimson Vow Commander's Spirit Squadron) are taken from one
+//! card for card. What all of them keep
 //! from the precon idea is what the pod needs — fixed, legal, varied color
 //! identities, and built to play against each other.
 //! One is a Partner pair (CR 702.124b), one is a **planeswalker**
@@ -3768,4 +3769,35 @@ pub const YUMA_MAIN: &[CardFactory] = &[
     // Basics: 6 plains, 4 mountain, 7 forest
     plains, plains, plains, plains, plains, plains, mountain, mountain, mountain, mountain,
     forest, forest, forest, forest, forest, forest, forest,
+];
+
+pub const MILLICENT_COMMANDERS: &[CardFactory] = &[millicent_restless_revenant];
+
+/// **Spirit Squadron**, the Innistrad: Crimson Vow Commander deck (VOC,
+/// 2021-11-19), exactly as MTGJSON's `SpiritSquadron_VOC` prints it:
+/// 76 nonbasic cards + 12 Plains + 11 Islands = 99. Azorius Spirits under
+/// Millicent, Restless Revenant.
+pub const MILLICENT_MAIN: &[CardFactory] = &[
+    dovin_grand_arbiter, donal_herald_of_wings, rhoda_geist_avenger, timin_youthful_geist,
+    drogskol_reinforcements, priest_of_the_blessed_graf, ethereal_investigator,
+    spectral_arcanist, angel_of_flight_alabaster, boreas_charger, bygone_bishop,
+    custodi_soulbinders, hallowed_spiritkeeper, hanged_executioner, karmic_guide,
+    knight_of_the_white_orchid, mentor_of_the_meek, mirror_entity, oyobi_who_split_the_heavens,
+    remorseful_cleric, twilight_drover, windborn_muse, ghostly_pilferer,
+    kami_of_the_crescent_moon, rattlechains, shacklegeist, supreme_phantom,
+    geist_of_saint_traft, custodi_squire, spectral_shepherd, nebelgast_herald,
+    sire_of_the_storm, spectral_sailor, drogskol_captain, storm_of_souls, haunting_imitation,
+    fell_the_mighty, kirtars_wrath, flood_of_tears, distant_melody, sudden_salvation,
+    occult_epiphany, disorder_in_the_court, benevolent_offering, crush_contraband,
+    swords_to_plowshares, arcane_denial, midnight_clock, arcane_signet, azorius_locket,
+    azorius_signet, commanders_sphere, marble_diamond, sky_diamond, sol_ring, haunted_library,
+    breath_of_the_sleepless, promise_of_bunrei, imprisoned_in_the_moon, verity_circle,
+    darksteel_mutation, field_of_souls, ghostly_prison, reconnaissance_mission, exotic_orchard,
+    moorland_haunt, port_town, prairie_stream, skycloud_expanse, temple_of_enlightenment,
+    azorius_chancery, command_tower, myriad_landscape, path_of_ancestry,
+    temple_of_the_false_god, unclaimed_territory,
+    // Basics: 12 plains, 11 island
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, island, island, island, island, island, island, island, island, island, island,
+    island,
 ];
