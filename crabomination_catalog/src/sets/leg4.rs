@@ -259,7 +259,7 @@ pub fn glyph_of_reincarnation() -> CardDefinition {
         cost(&[g()]),
         Effect::Seq(vec![
             Effect::DestroyNoRegen { what: blocked_by_target() },
-            Effect::EachPlayerReturnsAMatchingPermanent { filter: R::Creature },
+            Effect::EachPlayerReturnsAMatchingPermanent { filter: R::Creature, opponents: false },
         ]),
     )
 }

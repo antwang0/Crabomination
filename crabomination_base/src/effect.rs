@@ -4888,7 +4888,12 @@ pub enum Effect {
     /// "Each player returns a permanent matching `filter` they control to its
     /// owner's hand" (Curfew). APNAP order; each player picks their own, and a
     /// player controlling no match does nothing.
-    EachPlayerReturnsAMatchingPermanent { filter: SelectionRequirement },
+    /// `opponents`: only the controller's opponents do (Summon: Valefor).
+    EachPlayerReturnsAMatchingPermanent {
+        filter: SelectionRequirement,
+        #[serde(default)]
+        opponents: bool,
+    },
     /// CR 402.2b — set each resolved player's maximum hand size to a specific
     /// number (`Player.max_hand_size = Some(size)`). Used by "your maximum
     /// hand size is N" cards such as Null Profusion (zero) or Library of Leng
@@ -7540,6 +7545,10 @@ pub enum Effect {
     /// Hexmage's "remove all counters from target permanent"). The count
     /// feeds `Value::CountersRemovedThisEffect` (Thief of Blood).
     RemoveAllCounters { what: Selector },
+    /// "Remove all counters from any number of [filter]" (Sin, Unending
+    /// Cataclysm) — the controller's pick among matching permanents with
+    /// counters; the total feeds `Value::CountersRemovedThisEffect`.
+    RemoveAllCountersFromAnyNumber { filter: SelectionRequirement },
     /// Remove a single counter of any one kind from `what` (the controller's
     /// choice; auto-picks the first present kind). Thrull Parasite's "remove a
     /// counter from target nonland permanent".
@@ -8274,6 +8283,11 @@ pub enum Effect {
     /// ability" (Lazav, the Multifarious): `BecomeCopyOf` keeping its own
     /// activated abilities, then its printed name and the Legendary supertype.
     BecomeCopyKeepingIdentity { what: Selector, source: Selector },
+    /// CR 707.9b — "becomes a copy of [source], except its name is [its own]
+    /// and it has `keywords` and this ability" (Kimahri, Valiant Guardian):
+    /// `BecomeCopyOf` keeping its own triggered abilities, then its name and
+    /// the keywords.
+    BecomeCopyKeepingName { what: Selector, source: Selector, keywords: Vec<Keyword> },
     /// CR 707.2 — continuous (layer-1) sibling of `BecomeCopyOf`: each
     /// `what` becomes a copy of `source` for `duration`, via a
     /// `Modification::CopyCardDefinition` continuous effect (the snapshot is

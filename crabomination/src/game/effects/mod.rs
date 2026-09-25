@@ -34,6 +34,7 @@ mod order_of_succession;
 mod owners_control;
 mod player_counters;
 mod counter_kinds;
+mod counter_blitz;
 mod revival;
 mod chosen_color_damage;
 mod fight_each;
@@ -10927,10 +10928,14 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::EachPlayerReturnsAMatchingPermanent { filter } => {
+            Effect::EachPlayerReturnsAMatchingPermanent { filter, opponents } => {
                 use crate::decision::{Decision, DecisionAnswer};
                 let source = ctx.source.unwrap_or(CardId(0));
-                let seats = self.apnap_sort((0..self.players.len()).collect());
+                let seats = if *opponents {
+                    self.apnap_sort(self.opponents_of(ctx.controller).into_iter().collect())
+                } else {
+                    self.apnap_sort((0..self.players.len()).collect())
+                };
                 let mut picks: Vec<CardId> = Vec::new();
                 for p in seats {
                     let mine: Vec<(CardId, String)> = self
@@ -18511,8 +18516,10 @@ impl GameState {
                 // CR 603.7 — the "when you do" payoff goes on the stack as
                 // its own trigger; targets are picked now (603.7d).
                 let Some(src) = ctx.source else { return Ok(()) };
+                // Sourced: a slot filter can read the source ("power less than
+                // Auron's" — `PowerLessThanSource`).
                 let (slot0, additional) =
-                    self.auto_targets_for_effect_all_slots(body, ctx.controller, None);
+                    self.auto_targets_for_effect_all_slots_sourced(body, ctx.controller, None, Some(src));
                 self.stack.push(
                     crate::game::TriggerPush::new(src, ctx.controller, (**body).clone())
                         .target(slot0)
@@ -23468,6 +23475,12 @@ impl GameState {
             Effect::SpreadCounterKindToOthers { shield_first } => {
                 self.spread_counter_kind_to_others(*shield_first, ctx, events);
                 Ok(())
+            }
+            Effect::BecomeCopyKeepingName { what, source, keywords } => {
+                self.become_copy_keeping_name(what, source, keywords, ctx, events)
+            }
+            Effect::RemoveAllCountersFromAnyNumber { filter } => {
+                self.remove_all_counters_from_any_number(filter, effect, ctx, events)
             }
             Effect::CopyCountersOnto { from, to } => {
                 self.copy_counters_onto(from, to, ctx, events);

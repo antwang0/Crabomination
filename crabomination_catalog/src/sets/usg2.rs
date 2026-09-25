@@ -2059,7 +2059,7 @@ pub fn curfew() -> CardDefinition {
     instant(
         "Curfew",
         cost(&[u()]),
-        Effect::EachPlayerReturnsAMatchingPermanent { filter: R::Creature },
+        Effect::EachPlayerReturnsAMatchingPermanent { filter: R::Creature, opponents: false },
     )
 }
 

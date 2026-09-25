@@ -926,7 +926,7 @@ pub fn sunken_hope() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::AnyPlayer),
-            effect: Effect::EachPlayerReturnsAMatchingPermanent { filter: R::Creature },
+            effect: Effect::EachPlayerReturnsAMatchingPermanent { filter: R::Creature, opponents: false },
         }],
         ..enchantment("Sunken Hope", cost(&[generic(3), u(), u()]))
     }

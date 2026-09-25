@@ -24857,12 +24857,15 @@ impl GameState {
                     body
                 }
                 Effect::CapTargetsAt { amount, body } => {
-                    let ctx = crate::game::effects::EffectContext::for_trigger(
+                    let mut ctx = crate::game::effects::EffectContext::for_trigger(
                         source,
                         controller,
                         primary.clone(),
                         0,
                     );
+                    // CR 601.2b — a permanent's trigger reads the X stamped on
+                    // it, as the push does (Blitzball Stadium's support X).
+                    ctx.x_value = self.battlefield_find(source).map_or(0, |c| c.cast_x_value);
                     cap = cap.min(self.evaluate_value(amount, &ctx).max(0) as usize);
                     body
                 }
