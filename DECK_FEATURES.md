@@ -139,6 +139,7 @@ lists were picked.
 | **Desert Bloom** (OTC precon) RGW | Yuma, Proud Protector | RGW | 100 | 🟡 all 100 implemented, 2 carry residuals (Cataclysmic Prospecting, Dune Chanter) |
 | **Lorehold Spirit** (SOC precon) RW | Quintorius, History Chaser (**planeswalker**) | RW | 100 | 🟡 all 100 implemented, 3 carry residuals (Ao, the Dawn Sky, Quintorius, Loremaster, Serra Paragon) |
 | **Dungeons of Death** (AFC precon) WUB | Sefris of the Hidden Ways | WUB | 100 | 🟡 all 100 implemented, 4 carry residuals (Grave Endeavor, Nihiloor, Phantom Steed, Rod of Absorption) |
+| **Deadly Disguise** (MKC precon) RGW | Kaust, Eyes of the Glade | RGW | 100 | 🟡 all 100 implemented, 4 carry residuals (Boltbender, Tesak, Unexplained Absence, Veiled Ascension) |
 | **Coven Counters** (MIC precon) GW | Leinore, Autumn Sovereign | GW | 100 | 🟡 all 100 implemented, 4 carry residuals (Curse of Conformity, Celestial Judgment, Sigardian Zealot, Moorland Rescuer) |
 | **Arcane Maelstrom** (C20 precon) GUR | Kalamax, the Stormsire | GUR | 100 | 🟡 all 100 implemented, 4 carry residuals (Eon Frolicker, Haldan, Pako, Lavabrink Floodgates) |
 | **Enhanced Evolution** (C20 precon) BGU | Otrimi, the Ever-Playful | BGU | 100 | 🟡 all 100 implemented, 4 carry residuals (Capricopian, Manascape Refractor, Mindleecher, Vastwood Hydra) |
@@ -1237,6 +1238,24 @@ all decided): Galea 5.3 % — the bot does not build a Voltron threat; beside
 Estrid / Eshki / Nelly (seed 10251): 1,000 / 1,000, 5.3 %; census (seed 10252):
 no card of the four unplayed; strict debug pods (seeds 10253-10255, 4 and 6
 seats): 180 / 180. `--bench` byte-identical.
+The **hundred-and-thirty-fifth** is Murders at Karlov Manor Commander's
+**Deadly Disguise** (`DeadlyDisguise_MKC`, 2024-02-09) — Naya morph, disguise
+and cloak under Kaust, Eyes of the Glade, `--pod-decks 135` (measured as 134). Eighteen cards
+were missing (`cmdr_kaust.rs`). New primitives: `R::TurnedFaceUpThisTurn`
+(Kaust — `TurnRegistries.turned_face_up_this_turn`, stamped where a
+`TurnedFaceUp` event is dispatched); `Effect::PutFaceDownOntoBattlefield`
+(Ashcloud Phoenix); `Effect::NextFaceDownSpellCostsLessThisTurn`, spent by the
+next face-down cast, and `StaticEffect::DoubleControllerTurnedFaceUpTriggers`
+over a new `triggered_by_face_up` candidate flag (Panoptic Projektor); and
+`CardDefinition.turned_face_up_counters`, applied inside
+`CardInstance::turn_face_up`, so Hooded Hydra is never a face-up 0/0 for state-based actions to kill. Residuals: **Boltbender** re-aims one
+target spell; **Tesak** doesn't grant unleash; **Unexplained Absence** targets
+only opponents' permanents, without the one-per-player limit; **Veiled
+Ascension**'s entering flying counter comes from a trigger. Pods (1,000 games
+each, all decided): 4 seats beside Urza / Osgir / Eshki (seed 11108) Kaust
+20.5 %, census: no card of the four unplayed; 6 seats beside Zimone / Sefris /
+Morophon / Prossh / Gonti and 8 seats (seed 11109). `--bench` byte-identical.
+
 The **hundred-and-thirty-second** is Adventures in the Forgotten Realms
 Commander's **Dungeons of Death** (`DungeonsOfDeath_AFC`, 2021-07-23) — Esper
 reanimation and venturing under Sefris of the Hidden Ways, `--pod-decks 132` (measured as 128).

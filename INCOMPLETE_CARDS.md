@@ -1994,6 +1994,10 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Nihiloor | Dungeons of Death (AFC) | the creature tapped for the steal is always Nihiloor, and only one opponent's creature is taken. |
 | 🟡 Phantom Steed | Dungeons of Death (AFC) | the attacking token copy isn't an Illusion in addition to its other types. |
 | 🟡 Rod of Absorption | Dungeons of Death (AFC) | every instant or sorcery resolving while it is on the battlefield is exiled, including one cast before it arrived. |
+| 🟡 Boltbender | Deadly Disguise (MKC) | turning it up re-aims one target spell, not any number of spells and abilities. |
+| 🟡 Tesak, Judith's Hellhound | Deadly Disguise (MKC) | other Dogs you control don't gain unleash. |
+| 🟡 Unexplained Absence | Deadly Disguise (MKC) | targets only opponents' nonland permanents, and without the one-per-player limit. |
+| 🟡 Veiled Ascension | Deadly Disguise (MKC) | an entering face-down creature gets its flying counter from a trigger, not as it enters. |
 | 🟡 Akim, the Soaring Wind | Timeless Wisdom (C20) | "the first time each turn" is counted from Akim's arrival: tokens made earlier that turn don't use it up. |
 | 🟡 Crystalline Resonance | Timeless Wisdom (C20) | the copy lasts until it copies again, not until your next turn. |
 | 🟡 Ethereal Forager | Timeless Wisdom (C20) | the returned card is the first linked instant or sorcery, not a chosen one. |
