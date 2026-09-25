@@ -3975,3 +3975,33 @@ pub const PROSSH_MAIN: &[CardFactory] = &[
     swamp, swamp, swamp, swamp, swamp, swamp, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, forest, forest, forest, forest, forest, forest, forest,
 ];
+
+pub const MOROPHON_COMMANDERS: &[CardFactory] = &[morophon_the_boundless];
+
+/// **Everyone's Invited!**, the Secret Lair Commander deck (SLD, 2025-05-12),
+/// exactly as MTGJSON's `EveryoneSInvited_SLD` prints it: 87 nonbasic cards
+/// + 3 Forests + 3 Plains + 2 Mountains + 3 Islands + 1 Swamp = 99. Five-color
+/// changelings and tribal payoffs under Morophon, the Boundless.
+pub const MOROPHON_MAIN: &[CardFactory] = &[
+    raise_the_palisade, bitterblossom, taurean_mauler, avenger_of_zendikar, coat_of_arms,
+    kindred_summons, maskwood_nexus, sol_ring, tendershoot_dryad, adarkar_wastes,
+    amoeboid_changeling, ancient_amphitheater, arcane_adaptation, arcane_denial, arcane_sanctum,
+    arcane_signet, atla_palani_nest_tender, beast_within, black_market_connections,
+    bloodline_pretender, brenard_ginger_sculptor, bruse_tarl_roving_rancher, brushland,
+    chameleon_colossus, cloudshredder_sliver, command_tower, crib_swap, cultivate,
+    darkwater_catacombs, distant_melody, double_down, exotic_orchard, fabled_passage, farseek,
+    feline_sovereign, fire_belly_changeling, frontier_bivouac, gemhide_sliver, gilt_leaf_palace,
+    graveshifter, guardian_gladewalker, harabaz_druid, harper_recruiter,
+    impostor_of_the_sixth_pride, jungle_shrine, karplusan_forest, kindred_discovery,
+    kindred_dominance, kinsbaile_cavalier, kirri_talented_sprout, kodamas_reach,
+    llanowar_wastes, magda_brazen_outlaw, manaweft_sliver, masked_vandal, mirror_entity,
+    moritte_of_the_frost, mossfire_valley, mothdust_changeling, murmuring_bosk, mutavault,
+    nameless_inversion, opulent_palace, overflowing_basin, path_of_ancestry, pongify,
+    realmbreaker_the_invasion_tree, realmwalker, rin_and_seri_inseparable, risen_reef,
+    rukarumel_biologist, seaside_citadel, secluded_glen, shapesharer, shields_of_velis_vel,
+    skeletal_changeling, sophia_dogged_detective, spoils_of_adventure, stick_together,
+    sungrass_prairie, tazri_beacon_of_unity, the_bears_of_littjara, the_world_tree,
+    universal_automaton, unsettled_mariner, wanderwine_hub, yavimaya_coast,
+    // Basics: 3 forest, 3 plains, 2 mountain, 3 island, 1 swamp
+    forest, forest, forest, plains, plains, plains, mountain, mountain, island, island, island, swamp,
+];

@@ -1080,6 +1080,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::PROSSH_COMMANDERS,
             main: decks::PROSSH_MAIN,
         },
+        // Hundred-and-thirty-first: the hundred-and-twenty-first official
+        // list (Everyone's Invited!, SLD) — five-color changelings under
+        // Morophon, the Boundless. `--pod-decks 131`.
+        PodDeck {
+            name: "Morophon, the Boundless (WUBRG)",
+            commanders: decks::MOROPHON_COMMANDERS,
+            main: decks::MOROPHON_MAIN,
+        },
     ]
 }
 
@@ -1670,6 +1678,8 @@ mod tests {
             // CR 614.13/614.16 for every player (Primal Vigor); owners regain
             // control (Brooding Saurian); a cast trigger counting mana spent.
             ("Prossh", [0x9055, 130, 9054]),
+            // CR 700.8 parties (Stick Together), CR 611.2b next-turn copies.
+            ("Morophon", [0x0A0B, 131, 9055]),
         ] {
             let precon = *field.iter().find(|d| d.name.starts_with(name)).expect("the precon seat");
             assert_eq!(precon.card_count(), 100);
