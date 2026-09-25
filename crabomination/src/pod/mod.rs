@@ -1466,6 +1466,15 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ABADDON_COMMANDERS,
             main: decks::ABADDON_MAIN,
         },
+        // Hundred-and-eightieth: Turtle Power! (TMC, Teenage Mutant
+        // Ninja Turtles) — five-color +1/+1 counters under Heroes in a Half
+        // Shell (Krang's draw-trigger doubling, CR 603.2; Coin of Mastery's
+        // artifact-mana count). `--pod-decks 180`.
+        PodDeck {
+            name: "Heroes in a Half Shell (WUBRG)",
+            commanders: decks::HEROES_COMMANDERS,
+            main: decks::HEROES_MAIN,
+        },
     ]
 }
 

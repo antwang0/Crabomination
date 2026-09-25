@@ -5447,3 +5447,30 @@ pub const ABADDON_MAIN: &[CardFactory] = &[
     swamp, swamp, swamp, swamp, swamp, swamp, island, island, island, island, island, island,
     island, island,
 ];
+
+/// Turtle Power! (TMC, 2026-03-06) — Heroes in a Half Shell, five-color
+/// Mutants, Ninjas and Turtles on +1/+1 counters. Card for card.
+pub const HEROES_COMMANDERS: &[CardFactory] = &[heroes_in_a_half_shell];
+
+pub const HEROES_MAIN: &[CardFactory] = &[
+    leonardo_the_balance, donatello_the_brains, splinter_the_mentor, raphael_the_muscle,
+    michelangelo_the_heart, continue_card, endless_foot_assault, april_oneil_live_on_the_scene,
+    baxter_fly_in_the_ointment, here_comes_a_new_hero, irma_part_time_mutant,
+    krang_the_all_powerful, ray_fillet_wave_warrior, bebop_skull_crossbones, dimension_x_pizzasaur,
+    foot_chopper, game_over, rat_king_pale_piper, shredder_shadow_master, swift_demise,
+    casey_jones_back_alley_brute, electric_seaweed, fast_forward, shellshock, special_move,
+    tempestra_dame_of_games, tokka_rahzar_unsupervised, high_score, leatherhead_iron_gator,
+    level_up, ninja_pizza, rocksteady_mutant_marauder, super_combo, double_jump_flying_kick,
+    arcade_cabinet, big_mother_mouser, coin_of_mastery, exploding_barrel, mole_module,
+    roadkill_rodney, big_apple_3_a_m, hidden_hideout, together_forever, vanquish_the_horde,
+    wave_goodbye, blasphemous_act, biogenic_ooze, steelbane_hydra, vigor, voracious_hydra,
+    assassins_trophy, corpsejack_menace, chromatic_lantern, cinder_glade, city_of_brass,
+    dragonskull_summit, exotic_orchard, fabled_passage, grand_coliseum, hinterland_harbor,
+    rain_slicked_copse, rootbound_crag, smoldering_marsh, sodden_verdure, spire_garden,
+    sunken_hollow, undergrowth_stadium, vernal_fen, lita_little_orphan_amphibian,
+    mona_lisa_science_geek, lessons_from_life, everything_pizza, escape_tunnel, turtle_lair,
+    acidic_slime, cultivate, harmonize, arcane_signet, sol_ring, ash_barrens, command_tower,
+    evolving_wilds, path_of_ancestry, thriving_grove, thriving_isle, thriving_moor,
+    vibrant_cityscape, plains, plains, island, island, swamp, swamp, mountain, mountain, forest,
+    forest, forest, forest,
+];
