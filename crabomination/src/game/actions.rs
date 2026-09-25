@@ -12152,8 +12152,11 @@ impl GameState {
         // Pay the additional cost: exile the chosen graveyard cards.
         let mut events = Vec::new();
         for cid in exile_cards {
-            if let Some(exiled) = Self::take_card(&mut self.players[p].graveyard, *cid) {
+            if let Some(mut exiled) = Self::take_card(&mut self.players[p].graveyard, *cid) {
                 events.push(GameEvent::CardLeftGraveyard { player: p, card_id: *cid });
+                // The escape cost's cards are "exiled with" the escaping card
+                // (Skyway Robber casts from among them).
+                exiled.exiled_with = Some(card_id);
                 self.exile.push(exiled);
             }
         }
