@@ -23712,9 +23712,29 @@ impl GameState {
         // CR 702.62b — a suspended card's `TriggerZone::WhileSuspended`
         // triggers function from exile (Nihilith). Most exiled cards carry no
         // counter at all, so the bag test answers first.
-        for card in self.exile.iter().filter(|c| c.is_suspended()) {
+        // A card whose last time counter this batch removed was cast off it
+        // already (CR 702.62e); its "whenever a time counter is removed"
+        // still saw that removal while it was exiled (Dinosaurs on a
+        // Spaceship's token for the last counter).
+        let last_counter_cast = self.stack.iter().filter_map(|si| match si {
+            StackItem::Spell { card, .. }
+                if card.cast_from_suspend
+                    && events.iter().any(|e| {
+                        matches!(e, GameEvent::CounterRemoved { card_id, counter_type: crate::card::CounterType::Time, .. }
+                            if *card_id == card.id)
+                    }) =>
+            {
+                Some(&**card)
+            }
+            _ => None,
+        });
+        for (card, cast_off) in
+            self.exile.iter().filter(|c| c.is_suspended()).map(|c| (c, false)).chain(last_counter_cast.map(|c| (c, true)))
+        {
             for ta in &card.definition.triggered_abilities {
-                if ta.event.zone != crate::effect::TriggerZone::WhileSuspended {
+                if ta.event.zone != crate::effect::TriggerZone::WhileSuspended
+                    || (cast_off && ta.event.kind != crate::effect::EventKind::CounterRemoved(crate::card::CounterType::Time))
+                {
                     continue;
                 }
                 // One trigger per card: a mill reports both `CardMilled` and

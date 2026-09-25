@@ -467,3 +467,18 @@ fn the_war_doctor_counts_an_exile_batch_once() {
     run(&mut g, Effect::Exile { what: Selector::ExactObjects(vec![a, b]) }, doc);
     assert_eq!(time(&g, doc), 1);
 }
+
+/// CR 702.62e — Dinosaurs on a Spaceship's last time counter coming off
+/// casts it, and its exile trigger still saw that removal: a token for it.
+#[test]
+fn cr_702_62e_dinosaurs_on_a_spaceship_counts_its_last_counter() {
+    let mut g = main_phase(2);
+    let dinos = g.add_card_to_graveyard(0, catalog::dinosaurs_on_a_spaceship());
+    suspend(&mut g, dinos, 1);
+    g.active_player_idx = 0;
+    let ev = g.process_suspend();
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(dinos).is_some(), "cast off its last counter");
+    assert_eq!(named(&g, 0, "Dinosaur").len(), 1, "and a token for that counter");
+}
