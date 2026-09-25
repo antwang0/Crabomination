@@ -43,6 +43,7 @@ mod cmdr_yshtola;
 mod cmdr_tidus;
 mod cmdr_esika;
 mod cmdr_invisible_woman;
+mod cmdr_greyfax;
 mod cmdr_nelly;
 mod cmdr_eshki;
 mod cmdr_estrid;
