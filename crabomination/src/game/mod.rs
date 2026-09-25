@@ -1757,6 +1757,15 @@ pub struct ColdState {
     /// Checked when attacks are declared; cleared at cleanup.
     #[serde(default)]
     pub cant_attack_player_this_turn: Vec<(usize, usize)>,
+    /// Desdemona's until-end-of-turn escape grants: `(card, exile count)`.
+    /// Read by `effective_escape_grant`; cleared at cleanup.
+    #[serde(default)]
+    pub(crate) granted_escape_eot: Vec<(CardId, u32)>,
+    /// The natural faces of the most recent `RollDie` resolution, for
+    /// `Value::LastRollFaceCount` (Luck Bobblehead's "if you rolled 6 exactly
+    /// seven times"). Written only when it changes.
+    #[serde(default)]
+    pub(crate) last_roll_naturals: Vec<u8>,
     /// "Creatures `.0` controls can't attack `.2` planeswalkers `.1` controls
     /// this turn" (Jace, Multiverse Architect's unpaid tax). Read by
     /// `permanent_cant_be_attacked` for the active player; cleared at cleanup.
@@ -9736,6 +9745,9 @@ impl GameState {
         use crate::effect::StaticEffect;
         if let Some((c, n)) = card.definition.has_escape() {
             return Some((c.clone(), n, None));
+        }
+        if let Some((_, n)) = self.granted_escape_eot.iter().find(|(id, _)| *id == card.id) {
+            return Some((card.definition.cost.clone(), *n, None));
         }
         if card.definition.is_land() {
             return None;

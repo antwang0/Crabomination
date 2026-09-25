@@ -6584,13 +6584,53 @@ impl GameState {
         // Pay the base cost first (pip-aware, so the colored pips aren't
         // stranded by the generic squad payment), then charge the squad cost
         // `times` times as an additional cost (CR 601.2f).
-        let events = self.cast_spell(card_id, target, additional_targets, mode, x_value)?;
+        let extra = self
+            .players[p]
+            .hand
+            .iter()
+            .find(|c| c.id == card_id)
+            .and_then(|c| c.definition.squad_extra_cost.clone());
+        let mut events = self.cast_spell(card_id, target, additional_targets, mode, x_value)?;
         if times > 0 {
             let mut combined = crate::mana::ManaCost { symbols: Vec::new() };
             for _ in 0..times {
                 combined.symbols.extend(squad.symbols.iter().cloned());
             }
-            self.try_pay_with_auto_tap(p, &combined)?;
+            if !combined.symbols.is_empty() {
+                self.try_pay_with_auto_tap(p, &combined)?;
+            }
+            // The non-mana half, `times` times (CR 601.2h): checked whole
+            // first, so an unaffordable count fails the cast (it runs inside
+            // `cast_atomically`) rather than paying part of it.
+            if let Some(extra) = extra {
+                use crate::card::AdditionalCastCost as A;
+                let (have, need, cost) = match &extra {
+                    A::Discard { count, filter } => (
+                        self.players[p]
+                            .hand
+                            .iter()
+                            .filter(|c| filter.as_ref().is_none_or(|f| self.evaluate_requirement_on_card(f, c, p)))
+                            .count() as u32,
+                        count * times,
+                        A::Discard { count: count * times, filter: filter.clone() },
+                    ),
+                    A::ExileFromGraveyard { filter, count } => (
+                        self.players[p]
+                            .graveyard
+                            .iter()
+                            .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
+                            .count() as u32,
+                        count * times,
+                        A::ExileFromGraveyard { filter: filter.clone(), count: count * times },
+                    ),
+                    _ => (0, 1, extra.clone()),
+                };
+                if have < need {
+                    return Err(GameError::SelectionRequirementViolated);
+                }
+                let (paid, _) = self.pay_additional_costs(p, std::slice::from_ref(&cost), None, None);
+                events.extend(paid);
+            }
         }
         // Stamp the squad count on the spell now on the stack so its ETB
         // (Value::SquadCount) mints the right number of copies.

@@ -6442,6 +6442,9 @@ impl GameState {
                     naturals.sort_unstable_by(|a, b| b.cmp(a));
                     naturals.truncate(n as usize);
                 }
+                if self.last_roll_naturals != naturals {
+                    self.last_roll_naturals = naturals.clone();
+                }
                 // CR 706.2 — add the modifier, flooring the modified result at
                 // 1 (a die result is never reduced below 1). The result may
                 // exceed `sides`, letting a top "N+" arm catch boosted rolls.
@@ -13515,6 +13518,17 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::GrantEscapeThisTurn { what, exile_count } => {
+                for ent in self.resolve_selector(what, ctx) {
+                    if let Some(cid) = ent.as_card_id()
+                        && !self.granted_escape_eot.iter().any(|(id, _)| *id == cid)
+                    {
+                        self.granted_escape_eot.push((cid, *exile_count));
+                    }
+                }
+                Ok(())
+            }
+
             Effect::GrantEmbalmThisTurn { what } => {
                 for ent in self.resolve_selector(what, ctx) {
                     if let Some(cid) = ent.as_card_id()
@@ -20576,6 +20590,20 @@ impl GameState {
                 self.run_piles_then_clear(chosen, other, ctx, events)
             }
 
+            Effect::ChooseOneAtRandomAmong { what, chosen, other } => {
+                let ids: Vec<CardId> = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_card_id())
+                    .collect();
+                if ids.is_empty() {
+                    return Ok(());
+                }
+                let one = ids[rand::RngExt::random_range(&mut self.rng.draw(), 0..ids.len())];
+                self.separated_piles = (vec![one], ids.into_iter().filter(|id| *id != one).collect());
+                self.run_piles_then_clear(chosen, other, ctx, events)
+            }
+
             Effect::OpponentVetoesOne { what, then } => {
                 let ids: Vec<CardId> = self
                     .resolve_selector(what, ctx)
@@ -21094,6 +21122,16 @@ impl GameState {
                 let p = ctx.controller;
                 let granted_at = self.players[p].instants_or_sorceries_cast_this_turn;
                 self.players[p].pending_is_discounts.push((amt, granted_at));
+                Ok(())
+            }
+
+            Effect::EnlistThen { then } => {
+                let tapped = events.len();
+                self.run_effect(&Effect::Enlist, ctx, events)?;
+                let enlisted = events[tapped..].iter().any(|e| matches!(e, GameEvent::PumpApplied { .. }));
+                if enlisted {
+                    self.run_effect(then, ctx, events)?;
+                }
                 Ok(())
             }
 
@@ -32828,7 +32866,10 @@ impl GameState {
                 self.secret_council_player_vote(per_vote, unvoted, effect, ctx, events)
             }
             Effect::SecretCouncilPermanentVote { filter, per_vote } => {
-                self.secret_council_permanent_vote(filter, per_vote, effect, ctx, events)
+                self.secret_council_permanent_vote(filter, per_vote, None, effect, ctx, events)
+            }
+            Effect::SecretCouncilPermanentVoteMost { filter, on_most, on_none } => {
+                self.secret_council_permanent_vote(filter, on_most, Some(on_none), effect, ctx, events)
             }
 
             Effect::CopySpellAsOneOneSpirit { what } => {
@@ -35058,6 +35099,43 @@ impl GameState {
                     }
                     if pl.rad_counters != 0 {
                         pl.rad_counters = 0;
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::RemoveCountersFromAmongThen { kind, count, filter, then } => {
+                let p = ctx.controller;
+                let mut picks: Vec<(CardId, i32, u32)> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == p && c.counter_count(*kind) > 0)
+                    .filter(|c| self.evaluate_requirement_static_on(filter, c, p, ctx.source))
+                    .map(|c| (c.id, c.power(), c.counter_count(*kind)))
+                    .collect();
+                if picks.iter().map(|(_, _, n)| *n).sum::<u32>() < *count {
+                    return Ok(());
+                }
+                picks.sort_by_key(|(_, pw, _)| *pw);
+                let mut left = *count;
+                for (cid, _, have) in picks {
+                    if left == 0 {
+                        break;
+                    }
+                    let take = left.min(have);
+                    if let Some(c) = self.battlefield.find_by_id_mut(cid) {
+                        c.remove_counters(*kind, take);
+                    }
+                    events.push(GameEvent::CounterRemoved { card_id: cid, counter_type: *kind, count: take });
+                    left -= take;
+                }
+                self.run_effect(then, ctx, events)
+            }
+
+            Effect::RemoveAllRadCounters { who } => {
+                for seat in self.resolve_players(who, ctx) {
+                    if self.players[seat].rad_counters != 0 {
+                        self.players[seat].rad_counters = 0;
                     }
                 }
                 Ok(())

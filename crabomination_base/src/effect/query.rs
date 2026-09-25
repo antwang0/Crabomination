@@ -372,6 +372,12 @@ impl Effect {
                 f(unvoted);
             }
             Effect::SecretCouncilPermanentVote { per_vote, .. } => f(per_vote),
+            Effect::EnlistThen { then } => f(then),
+            Effect::RemoveCountersFromAmongThen { then, .. } => f(then),
+            Effect::SecretCouncilPermanentVoteMost { on_most, on_none, .. } => {
+                f(on_most);
+                f(on_none);
+            }
             Effect::If { then, else_, .. }
             | Effect::IfRevealFromHand { then, else_, .. }
             | Effect::LookTopMayBottomAllElse { then, else_, .. } => {
@@ -543,7 +549,8 @@ impl Effect {
                 }
             }
             Effect::SeparateIntoPiles { chosen, other, .. }
-            | Effect::ChooseOneAmong { chosen, other, .. } => {
+            | Effect::ChooseOneAmong { chosen, other, .. }
+            | Effect::ChooseOneAtRandomAmong { chosen, other, .. } => {
                 f(chosen);
                 f(other);
             }
@@ -757,6 +764,8 @@ impl Effect {
             Effect::DestroyAllNoRegenGainControllerLifePerManaValue { .. }
             | Effect::SecretCouncilPlayerVote { .. }
             | Effect::SecretCouncilPermanentVote { .. }
+            | Effect::SecretCouncilPermanentVoteMost { .. }
+            | Effect::RemoveCountersFromAmongThen { .. }
             | Effect::EachPlayerTakesCreatureOfNext
             | Effect::LookTopFiveDigForLife
             | Effect::OwnersGainControlOfNontokens
@@ -1077,7 +1086,8 @@ impl Effect {
             Effect::ChooseOneAmong { what, chooser, .. } => {
                 sel_has_target(what) || player_has_target(chooser)
             }
-            Effect::OpponentVetoesOne { what, .. } => sel_has_target(what),
+            Effect::OpponentVetoesOne { what, .. }
+            | Effect::ChooseOneAtRandomAmong { what, .. } => sel_has_target(what),
             Effect::FaceDownFaceUpPiles { .. } => false,
             Effect::CopyAbility { what, .. } => sel_has_target(what),
             Effect::StaggerPlayerUntilYourNextTurn { who } => player_has_target(who),
@@ -1210,6 +1220,7 @@ impl Effect {
             | Effect::RevealTopThenShuffle { who, .. }
             | Effect::RemoveAllPoison { who }
             | Effect::RemoveAllPlayerCounters { who }
+            | Effect::RemoveAllRadCounters { who }
             | Effect::PlayerCantCastMatchingThisTurn { who, .. }
             | Effect::PlayerCantActivateNonManaAbilitiesThisTurn { who }
             | Effect::ChooseFromHandToTopOfLibrary { who, .. }
@@ -1300,6 +1311,7 @@ impl Effect {
             Effect::RevealUntilSharesCardTypeToBattlefield { with } => sel_has_target(with),
             Effect::JoinCombatAttacking { what } => sel_has_target(what),
             Effect::Enlist => false,
+            Effect::EnlistThen { then } => then.requires_target(),
             Effect::StudyTopCard { .. } => false,
             Effect::ExileTopWithCounters { .. } => false,
             Effect::GrantPlayFromTopThisTurn => false,
@@ -1778,6 +1790,7 @@ impl Effect {
             | Effect::GrantDamageDeniesRegenerationThisTurn { what }
             | Effect::WhenTargetLeavesBattlefieldThisTurn { what, .. }
             | Effect::GrantFlashbackThisTurn { what }
+            | Effect::GrantEscapeThisTurn { what, .. }
             | Effect::GrantEmbalmThisTurn { what }
             | Effect::GrantHarmonizeThisTurn { what }
             | Effect::GrantMiracle { what, .. }
@@ -2566,6 +2579,7 @@ impl Effect {
             | Effect::GrantDamageDeniesRegenerationThisTurn { what }
             | Effect::WhenTargetLeavesBattlefieldThisTurn { what, .. }
             | Effect::GrantFlashbackThisTurn { what }
+            | Effect::GrantEscapeThisTurn { what, .. }
             | Effect::GrantEmbalmThisTurn { what }
             | Effect::GrantHarmonizeThisTurn { what }
             | Effect::GrantMiracle { what, .. }
@@ -3408,6 +3422,7 @@ impl Effect {
             // Granting flashback to a card always targets one in a graveyard
             // (Snapcaster Mage, Slickshot Lockpicker).
             Effect::GrantFlashbackThisTurn { .. }
+            | Effect::GrantEscapeThisTurn { .. }
             | Effect::GrantEmbalmThisTurn { .. }
             | Effect::GrantHarmonizeThisTurn { .. } => true,
             // "Return target Aura card from your graveyard" — the pick only
@@ -4920,6 +4935,7 @@ impl Effect {
                 | Effect::GrantDamageDeniesRegenerationThisTurn { what }
                 | Effect::WhenTargetLeavesBattlefieldThisTurn { what, .. }
                 | Effect::GrantFlashbackThisTurn { what }
+                | Effect::GrantEscapeThisTurn { what, .. }
                 | Effect::GrantEmbalmThisTurn { what }
                 | Effect::GrantMiracle { what, .. }
                 | Effect::GrantMiracleReduced { what, .. }

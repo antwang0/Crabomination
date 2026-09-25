@@ -5097,6 +5097,7 @@ impl GameState {
         self.no_search_this_turn = false;
         clear_cold!(self.skipped_steps_this_turn);
         clear_cold!(self.cant_attack_player_this_turn);
+        clear_cold!(self.granted_escape_eot);
         clear_cold!(self.cant_attack_pw_type_this_turn);
         self.graveyard_play_pooled_for = None;
         self.block_poison_this_turn = 0;

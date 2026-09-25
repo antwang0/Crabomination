@@ -71,6 +71,10 @@ impl GameState {
         &mut self,
         filter: &SelectionRequirement,
         per_vote: &Effect,
+        // `Some(on_none)`: the "up to one … most votes" form — a voter may
+        // abstain, `per_vote` runs once per permanent tied for most votes,
+        // and `on_none` when nobody got a vote (Vault 11).
+        most: Option<&Effect>,
         effect: &Effect,
         ctx: &EffectContext,
         events: &mut Vec<GameEvent>,
@@ -83,10 +87,16 @@ impl GameState {
             .map(|c| (c.id, self.effective_power(c), c.definition.name.to_string()))
             .collect();
         if candidates.is_empty() {
-            return Ok(());
+            return match most {
+                Some(on_none) => self.run_effect(on_none, ctx, events),
+                None => Ok(()),
+            };
         }
         candidates.sort_by_key(|(id, pw, _)| (std::cmp::Reverse(*pw), *id));
-        let labels: Vec<String> = candidates.iter().map(|(_, _, n)| n.clone()).collect();
+        let mut labels: Vec<String> = candidates.iter().map(|(_, _, n)| n.clone()).collect();
+        if most.is_some() {
+            labels.push("No creature".to_string());
+        }
         let voters = self.seats_in_turn_order_from(ctx.controller);
         let mut cursor = 0usize;
         let mut cast: Vec<(usize, CardId)> = Vec::new();
@@ -103,7 +113,10 @@ impl GameState {
                 ) else {
                     return Ok(());
                 };
-                cast.push((v, candidates[pick.min(candidates.len() - 1)].0));
+                if pick >= candidates.len() {
+                    continue; // abstained ("up to one")
+                }
+                cast.push((v, candidates[pick].0));
             }
         }
         self.clear_answer_log();
@@ -112,6 +125,21 @@ impl GameState {
             events.push(GameEvent::Voted { player: v, choice: name });
         }
         events.push(GameEvent::VotingFinished);
+        if let Some(on_none) = most {
+            if cast.is_empty() {
+                return self.run_effect(on_none, ctx, events);
+            }
+            let tally = |id: CardId| cast.iter().filter(|(_, c)| *c == id).count();
+            let top = cast.iter().map(|(_, id)| tally(*id)).max().unwrap_or(0);
+            let mut winners: Vec<CardId> = cast.iter().map(|(_, id)| *id).filter(|id| tally(*id) == top).collect();
+            winners.sort();
+            winners.dedup();
+            for id in winners {
+                let sub = EffectContext { targets: vec![Target::Permanent(id)], ..ctx.clone() };
+                self.run_effect(per_vote, &sub, events)?;
+            }
+            return Ok(());
+        }
         for &(_, id) in &cast {
             let sub = EffectContext { targets: vec![Target::Permanent(id)], ..ctx.clone() };
             self.run_effect(per_vote, &sub, events)?;

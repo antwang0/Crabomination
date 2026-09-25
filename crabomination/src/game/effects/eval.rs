@@ -1848,6 +1848,13 @@ impl GameState {
             }
             // A token that left has ceased to exist and is not found; one still
             // here is a token. Either way it is not counted.
+            Value::LastRollFaceCount(face) => {
+                self.last_roll_naturals.iter().filter(|f| **f == *face).count() as i32
+            }
+            Value::CreaturesEnteredThisTurn(p) => {
+                let Some(seat) = self.resolve_player(p, ctx) else { return 0 };
+                self.players[seat].creatures_entered_this_turn.len() as i32
+            }
             Value::NontokenCreaturesEnteredThisTurn(p) => {
                 let Some(seat) = self.resolve_player(p, ctx) else { return 0 };
                 self.players[seat]
@@ -3877,7 +3884,21 @@ impl GameState {
             R::OtherThanTargetSlot(slot) => {
                 slots.get(*slot as usize).and_then(|t| t.as_ref()).is_none_or(|o| o != target)
             }
+            R::SameToughnessAsTargetSlot(slot) => {
+                slots.get(*slot as usize).and_then(|t| t.as_ref()).is_none_or(|o| {
+                    self.target_toughness(o).is_some() && self.target_toughness(o) == self.target_toughness(target)
+                })
+            }
             _ => true,
+        }
+    }
+
+    /// A targeted permanent's current toughness (CR 613); `None` for a player
+    /// or an object off the battlefield.
+    fn target_toughness(&self, t: &Target) -> Option<i32> {
+        match t {
+            Target::Permanent(cid) => self.computed_permanent(*cid).map(|cp| cp.toughness),
+            Target::Player(_) => None,
         }
     }
 
@@ -4501,6 +4522,15 @@ impl GameState {
             // CR 601.2c — "**another** target": not the object slot N already
             // holds. Same scratch, same vacuous answer while that slot is
             // unchosen.
+            R::SameToughnessAsTargetSlot(slot) => {
+                match self.target_slots_scratch.get(*slot as usize).and_then(|t| t.as_ref()) {
+                    Some(other) => {
+                        self.target_toughness(other).is_some()
+                            && self.target_toughness(other) == self.target_toughness(target)
+                    }
+                    None => true,
+                }
+            }
             R::OtherThanTargetSlot(slot) => {
                 match self.target_slots_scratch.get(*slot as usize).and_then(|t| t.as_ref()) {
                     Some(other) => other != target,
@@ -6196,7 +6226,8 @@ impl GameState {
             // and slot-aware (`cross_slot_targets_ok`) respectively.
             R::SharesColorWithManaSpent
             | R::SameControllerAsTargetSlot(_)
-            | R::OtherThanTargetSlot(_) => true,
+            | R::OtherThanTargetSlot(_)
+            | R::SameToughnessAsTargetSlot(_) => true,
             R::SharesCreatureTypeWithCreatureYouControl => {
                 let mine = &card.definition.subtypes.creature_types;
                 let wild = card.has_keyword(&crate::card::Keyword::Changeling);

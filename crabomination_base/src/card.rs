@@ -2855,6 +2855,11 @@ pub enum SelectionRequirement {
     /// sibling of `SameControllerAsTargetSlot` and read the same way, out of
     /// `GameState::target_slots_scratch`.
     OtherThanTargetSlot(u8),
+    /// CR 601.2c — cross-slot filter: the same toughness as the creature
+    /// already chosen for slot `.0` ("any number of target creatures with
+    /// equal toughness" — V.A.T.S.). Vacuously true while that slot is
+    /// unchosen; read like `SameControllerAsTargetSlot`.
+    SameToughnessAsTargetSlot(u8),
     /// The permanent's mana value equals the evaluating player's unspent
     /// (floating) mana — Glissa Sunseeker.
     ManaValueEqualsYourUnspentMana,
@@ -3808,7 +3813,9 @@ impl SelectionRequirement {
     /// atom.
     pub fn mentions_cross_slot(&self) -> bool {
         match self {
-            Self::SameControllerAsTargetSlot(_) | Self::OtherThanTargetSlot(_) => true,
+            Self::SameControllerAsTargetSlot(_)
+            | Self::OtherThanTargetSlot(_)
+            | Self::SameToughnessAsTargetSlot(_) => true,
             Self::And(a, b) | Self::Or(a, b) => {
                 a.mentions_cross_slot() || b.mentions_cross_slot()
             }
@@ -4545,6 +4552,13 @@ pub struct CardDefinition {
     /// caller. `None` by default.
     #[serde(default)]
     pub self_cost_reduction_if_collect_evidence: Option<u32>,
+    /// CR 702.157 — the non-mana part of a squad cost, paid once per squad
+    /// copy on top of `Keyword::Squad`'s mana ("Squad—{1}, Discard a card",
+    /// Thrill-Kill Disciple; "Squad—Exile four cards from your graveyard",
+    /// Ruthless Radrat, whose squad mana is empty). Only `Discard` and
+    /// `ExileFromGraveyard` are read.
+    #[serde(default)]
+    pub squad_extra_cost: Option<AdditionalCastCost>,
     /// "This spell costs `{per}` less to cast for each [`Value`]" — the
     /// scaled sibling of `self_cost_reduction_if` (Domain: Draco's `{2}` and
     /// Stratadon's `{1}` per basic land type among lands you control).

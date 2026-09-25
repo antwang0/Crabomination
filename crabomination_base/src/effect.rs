@@ -1356,6 +1356,13 @@ pub enum Value {
     /// Nontoken creatures that entered under `who`'s control this turn
     /// (Gyome, Master Chef's end-step Food count).
     NontokenCreaturesEnteredThisTurn(PlayerRef),
+    /// Every creature (token or not) that entered under `who`'s control this
+    /// turn (Diamond City's "two or more creatures entered the battlefield
+    /// under your control this turn").
+    CreaturesEnteredThisTurn(PlayerRef),
+    /// How many dice of the most recent roll showed natural face `.0` (Luck
+    /// Bobblehead's "if you rolled 6 exactly seven times").
+    LastRollFaceCount(u8),
     /// The number of distinct power values among creatures `0` controls
     /// ("one mana of that color for each different power among creatures you
     /// control" — Selvala, Eager Trailblazer).
@@ -4562,6 +4569,11 @@ pub enum Effect {
         chosen: Box<Effect>,
         other: Box<Effect>,
     },
+    /// "Choose one of [`what`] at random" — `ChooseOneAmong` with a uniform
+    /// pick instead of a player's: `chosen` runs against it and `other`
+    /// against the rest (The Nipton Lottery's "choose a creature at random …
+    /// then destroy all other creatures").
+    ChooseOneAtRandomAmong { what: Selector, chosen: Box<Effect>, other: Box<Effect> },
     /// "An opponent chooses one of [`what`]" as a veto: the effect's
     /// hostile opponent (`PlayerRef::HostileOpponent`) names one, and `then`
     /// runs against the others via `Selector::SeparatedPile { chosen: false }`.
@@ -5253,6 +5265,16 @@ pub enum Effect {
     /// controller as "you"); `per_vote` then runs once per vote with the
     /// voted-for permanent as `Target(0)`.
     SecretCouncilPermanentVote { filter: SelectionRequirement, per_vote: Box<Effect> },
+    /// CR 701.38 — "Each player secretly votes for up to one [filter], then
+    /// those votes are revealed. If no [permanent] got votes, [on_none].
+    /// Otherwise, [on_most] each [permanent] with the most votes or tied for
+    /// most votes" (Vault 11: Voter's Dilemma). A voter may abstain;
+    /// `on_most` runs once per top permanent, as `Target(0)`.
+    SecretCouncilPermanentVoteMost {
+        filter: SelectionRequirement,
+        on_most: Box<Effect>,
+        on_none: Box<Effect>,
+    },
     /// Prisoner's Dilemma — each opponent secretly chooses silence or snitch.
     /// All silence: `all_silence` damage to each. All snitch: `all_snitch` to
     /// each. Otherwise `mixed` to each opponent who chose silence.
@@ -5796,6 +5818,20 @@ pub enum Effect {
     /// the engine tracks (poison, energy, experience, rad). Final Act's
     /// fifth mode.
     RemoveAllPlayerCounters { who: PlayerRef },
+    /// "Target player loses all rad counters" (Survivor's Med Kit's RadAway)
+    /// — rad only, unlike `RemoveAllPlayerCounters`.
+    RemoveAllRadCounters { who: PlayerRef },
+    /// "Remove `count` `kind` counters from among [filter] permanents you
+    /// control. When you do, [then]" — the resolution-time sibling of
+    /// `ActivatedAbility::remove_counter_among_filter` (Overseer of Vault 76's
+    /// three quest counters). Does nothing unless `count` can be removed;
+    /// drains weakest-first, as the cost does. Wrap in `MayDo` for "you may".
+    RemoveCountersFromAmongThen {
+        kind: crate::card::CounterType,
+        count: u32,
+        filter: SelectionRequirement,
+        then: Box<Effect>,
+    },
     /// "Deals `amount` damage to each creature for each Aura attached to that
     /// creature" (Baki's Curse). Creatures with no Aura take nothing.
     DamageEachCreaturePerAura { amount: Value },
@@ -6524,6 +6560,12 @@ pub enum Effect {
     /// normal flashback path (pay the cost, exile on resolve). Used by the
     /// SOS "Flashback" instant.
     GrantFlashbackThisTurn { what: Selector },
+    /// "Target card in your graveyard gains escape until end of turn. The
+    /// escape cost is equal to its mana cost plus exile `exile_count` other
+    /// cards from your graveyard" (Desdemona, Freedom's Edge — CR 702.138).
+    /// Recorded in `GameState::granted_escape_eot`, read first by
+    /// `effective_escape_grant`; cleared at cleanup.
+    GrantEscapeThisTurn { what: Selector, exile_count: u32 },
     /// "Target creature card in your graveyard gains embalm until end of turn.
     /// The embalm cost is equal to its mana cost." (CR 702.88 — Cursecloth
     /// Wrappings.) Pushes a real embalm activation onto the card's
@@ -8199,6 +8241,10 @@ pub enum Effect {
     /// "which creature" collapses to auto-tapping the highest-power eligible
     /// creature (only when its power is positive, so it's never a downgrade).
     Enlist,
+    /// Enlist (CR 702.151), then — only when a creature was enlisted —
+    /// `then` ("if it enlisted a creature this combat, …": Aradesh, the
+    /// Founder's payoff on its own attack).
+    EnlistThen { then: Box<Effect> },
     /// Create `count` token copies of the permanent resolved by `source`,
     /// controlled by `who`. The copy inherits the source's printed
     /// CardDefinition (name, P/T, types, keywords, activated/triggered
