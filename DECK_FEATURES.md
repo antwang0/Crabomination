@@ -130,6 +130,7 @@ lists were picked.
 | **Ruthless Regiment** (C20 precon) RWB | Jirina Kudro | RWB | 100 | 🟡 all 100 implemented, 2 carry residuals (Sanctuary Blade, Odric, Master Tactician) |
 | **Most Wanted** (OTC precon) RWB | Olivia, Opulent Outlaw | RWB | 100 | 🟡 all 100 implemented, 3 carry residuals (Back in Town, Dire Fleet Ravager, Vihaan, Goldwaker) |
 | **Prismari Artistry** (SOC precon) UR | Rootha, Mastering the Moment | UR | 100 | 🟡 all 100 implemented, 2 carry residuals (Abstract Performance, Plargg and Nassari) |
+| **Coven Counters** (MIC precon) GW | Leinore, Autumn Sovereign | GW | 100 | 🟡 all 100 implemented, 4 carry residuals (Curse of Conformity, Celestial Judgment, Sigardian Zealot, Moorland Rescuer) |
 | **Exit from Exile** (CLB precon) RG | Faldorn, Dread Wolf Herald | RG | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Exquisite Invention** (C18 precon) UR | Saheeli, the Gifted (**planeswalker**) | UR | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Mishra's Burnished Banner** (BRC precon) UBR | Mishra, Eminent One | UBR | 100 | 🟡 all 100 implemented, 6 carry residuals (below) |
@@ -1316,6 +1317,24 @@ Galea / Kathril / Chishiro (seed 10400, 1,000 games) and Nelly / Eshki /
 Estrid (seed 10401, 1,000): all decided, Jirina 28.4 % and 24.3 %; census
 (seed 10401): no card of the list unplayed. `--bench` byte-identical;
 cube/sos/sealed (seed 10402): 7,500 decided.
+
+The **hundred-and-twentieth** is Innistrad: Midnight Hunt Commander's **Coven
+Counters** (`CovenCounters_MIC`) — Selesnya +1/+1 counters and coven under
+Leinore, Autumn Sovereign, `--pod-decks 120` (committed as 114, 115, 118 and 119
+while six concurrent seats landed). Eighteen cards were missing
+(`cmdr_leinore.rs`). The primitives: `Selector::OnePerDistinctPower` (Celestial
+Judgment's survivors, Sigardian Zealot's pumped set — the controller's own
+best per power, else an opponent's weakest), `StaticEffect::
+MatchingLoseAllCreatureTypes` plus a `ControlledBy` seat on
+`SetBasePtForFilter`, both resolved live (Curse of Conformity, CR 303.4a), and
+`Selector::TakeWithSumCap` now spends its cap largest-first (Moorland
+Rescuer). Residuals: a changeling keeps its types under Curse of Conformity;
+the per-power picks and Moorland Rescuer's set are the engine's. Pods
+(release, 5,000 games: 4 seats beside Sigarda / Teval / Jirina, seed 10500,
+and Aminatou / Zurgo / Zaffai, seed 10501; 6 and 8 seats, seeds 10502-10503):
+all decided, Leinore 37.2 % / 41.0 % at four seats; census: no card of the
+four lists unplayed. Debug `CRAB_ANSWER_LOG=strict` pods (480 games, 4 and 6
+seats): clean. `--bench` byte-identical.
 
 The **hundred-and-fifth** is Secrets of Strixhaven Commander's **Silverquill
 Influence** (`SilverquillInfluence_SOC`, 2026-04-24) — Orzhov Auras and goad
