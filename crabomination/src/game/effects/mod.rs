@@ -36285,6 +36285,24 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ReturnToOwnersHandAtNextEndStep { what } => {
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(id) = ent.as_permanent_id() else { continue };
+                    self.delayed_triggers.push(crate::game::types::DelayedTrigger {
+                        controller: ctx.controller,
+                        source: id,
+                        kind: crate::game::types::DelayedKind::NextEndStep,
+                        effect: Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::OwnerOfMoved) },
+                        target: None,
+                        bound_token: None,
+                        bound_subject: None,
+                        fires_once: true,
+                        expires_after_turn: None,
+                    });
+                }
+                Ok(())
+            }
+
             Effect::SacrificeAtNextEndStep { what } => {
                 for ent in self.resolve_selector(what, ctx) {
                     let Some(id) = ent.as_permanent_id() else { continue };

@@ -814,7 +814,7 @@ mod recent85 {
             let blk = g.add_card_to_battlefield(1, def);
             let inst = g.battlefield_find(blk).unwrap().clone();
             let cp = g.computed_permanent(blk).unwrap();
-            crabomination::game::can_block_attacker_computed(&inst, &cp, || false, &atk_kws, crabomination::mana::ColorSet::empty(), 2)
+            crabomination::game::can_block_attacker_computed(&inst, &cp, || false, None, &atk_kws, crabomination::mana::ColorSet::empty(), 2)
         };
         assert!(!check(&mut g, catalog::grizzly_bears()), "green creature can't block granted Fear");
         assert!(check(&mut g, catalog::ornithopter()), "artifact creature still can");

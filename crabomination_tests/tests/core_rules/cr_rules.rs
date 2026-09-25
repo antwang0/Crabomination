@@ -3041,7 +3041,7 @@ fn cr_702_36_fear_blockable_only_by_artifact_or_black() {
         let inst = g.battlefield_find(blk).unwrap().clone();
         let cp = g.computed_permanent(blk).unwrap();
         assert_eq!(
-            crabomination::game::can_block_attacker_computed(&inst, &cp, || false, attacker_kws, crabomination::mana::ColorSet::empty(), 2),
+            crabomination::game::can_block_attacker_computed(&inst, &cp, || false, None, attacker_kws, crabomination::mana::ColorSet::empty(), 2),
             expect, "{why}"
         );
     };
@@ -3063,7 +3063,7 @@ fn cr_702_13_intimidate_blockable_only_by_artifact_or_shared_color() {
         let inst = g.battlefield_find(blk).unwrap().clone();
         let cp = g.computed_permanent(blk).unwrap();
         assert_eq!(
-            crabomination::game::can_block_attacker_computed(&inst, &cp, || false, &attacker_kws, attacker_colors, 2),
+            crabomination::game::can_block_attacker_computed(&inst, &cp, || false, None, &attacker_kws, attacker_colors, 2),
             expect, "{why}"
         );
     };
@@ -3091,7 +3091,7 @@ fn cr_702_72_skulk_blocked_only_by_equal_or_lesser_power() {
         let inst = g.battlefield_find(blk).unwrap().clone();
         let cp = g.computed_permanent(blk).unwrap();
         assert_eq!(
-            crabomination::game::can_block_attacker_computed(&inst, &cp, || false, &attacker_kws, crabomination::mana::ColorSet::empty(), 2),
+            crabomination::game::can_block_attacker_computed(&inst, &cp, || false, None, &attacker_kws, crabomination::mana::ColorSet::empty(), 2),
             expect, "{why}"
         );
     };
@@ -3119,7 +3119,7 @@ fn cr_509_1b_cant_be_blocked_by_power_at_least() {
         let inst = g.battlefield_find(blk).unwrap().clone();
         let cp = g.computed_permanent(blk).unwrap();
         assert_eq!(
-            crabomination::game::can_block_attacker_computed(&inst, &cp, || false, &attacker_kws, crabomination::mana::ColorSet::empty(), 5),
+            crabomination::game::can_block_attacker_computed(&inst, &cp, || false, None, &attacker_kws, crabomination::mana::ColorSet::empty(), 5),
             expect, "{why}"
         );
     };
@@ -3802,7 +3802,7 @@ fn cr_702_31_horsemanship_only_blocked_by_horsemanship() {
     let binst = g.battlefield_find(blk).unwrap();
     let bcomp = g.computed_permanent(blk).unwrap();
     assert!(!crabomination::game::can_block_attacker_computed(
-        binst, &bcomp, || false, acomp.keywords(), acomp.colors, acomp.power),
+        binst, &bcomp, || false, None, acomp.keywords(), acomp.colors, acomp.power),
         "a non-horsemanship creature can't block a horsemanship attacker");
 }
 
@@ -3819,7 +3819,7 @@ fn cr_702_28b_shadow_creature_cant_block_nonshadow() {
     let binst = g.battlefield_find(blk).unwrap();
     let bcomp = g.computed_permanent(blk).unwrap();
     assert!(!crabomination::game::can_block_attacker_computed(
-        binst, &bcomp, || false, acomp.keywords(), acomp.colors, acomp.power),
+        binst, &bcomp, || false, None, acomp.keywords(), acomp.colors, acomp.power),
         "a shadow creature can't block a non-shadow attacker");
 }
 
@@ -5154,11 +5154,11 @@ fn cr_509_1b_can_block_only_flying_restriction() {
     let binst = g.battlefield_find(blk).unwrap();
     let bcomp = g.computed_permanent(blk).unwrap();
     assert!(
-        !crabomination::game::can_block_attacker_computed(binst, &bcomp, || false, &[], crabomination::mana::ColorSet::empty(), 3),
+        !crabomination::game::can_block_attacker_computed(binst, &bcomp, || false, None, &[], crabomination::mana::ColorSet::empty(), 3),
         "ground attacker can't be blocked by a fly-only blocker"
     );
     assert!(
-        crabomination::game::can_block_attacker_computed(binst, &bcomp, || false, &[Keyword::Flying], crabomination::mana::ColorSet::empty(), 3),
+        crabomination::game::can_block_attacker_computed(binst, &bcomp, || false, None, &[Keyword::Flying], crabomination::mana::ColorSet::empty(), 3),
         "a flyer can be blocked"
     );
 }
@@ -11402,7 +11402,7 @@ fn audit_block_restriction_filters_use_leaves_the_block_walker_handles() {
     const HANDLED: &[&str] = &[
         "Any", "Permanent", "Creature", "Artifact", "Enchantment", "Land", "IsToken", "NotToken",
         "HasColor", "Colorless", "HasKeyword", "HasToxic", "HasModular", "HasMutate",
-        "HasCreatureType", "HasArtifactSubtype", "HasSupertype", "PowerAtMost", "PowerAtLeast", "ToughnessAtMost",
+        "HasCreatureType", "HasArtifactSubtype", "HasSupertype", "ControlledByMonarch", "PowerAtMost", "PowerAtLeast", "ToughnessAtMost",
         "ToughnessAtLeast", "ToughnessGreaterThanPower", "HasCardType", "IsEnchanted", "And", "Or",
         "Not",
     ];

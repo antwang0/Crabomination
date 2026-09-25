@@ -18306,6 +18306,7 @@ impl GameState {
                     blocker,
                     blocker_cp,
                     || self.permanent_is_enchanted(blocker.id),
+                    self.monarch,
                     atk_cp.keywords(),
                     atk_cp.colors,
                     atk_cp.power,
@@ -18664,6 +18665,7 @@ impl GameState {
             blocker,
             blocker_cp,
             || self.permanent_is_enchanted(blocker.id),
+            self.monarch,
             atk_kws,
             atk_colors,
             atk_power,
@@ -31784,6 +31786,7 @@ pub fn can_block_attacker_computed(
     blocker: &CardInstance,
     blocker_computed: &ComputedPermanent,
     blocker_enchanted: impl Fn() -> bool + Copy,
+    monarch: Option<usize>,
     attacker_kws: &[Keyword],
     attacker_colors: crate::mana::ColorSet,
     attacker_power: i32,
@@ -31937,6 +31940,7 @@ pub fn can_block_attacker_computed(
                     blocker,
                     blocker_computed,
                     blocker_enchanted,
+                    monarch,
                     filter,
                 ) =>
             {
@@ -31948,6 +31952,7 @@ pub fn can_block_attacker_computed(
                         blocker,
                         blocker_computed,
                         blocker_enchanted,
+                        monarch,
                         filter,
                     ) =>
             {
@@ -31958,6 +31963,7 @@ pub fn can_block_attacker_computed(
                     blocker,
                     blocker_computed,
                     blocker_enchanted,
+                    monarch,
                     filter,
                 ) =>
             {
@@ -31990,6 +31996,7 @@ fn blocker_matches_block_filter(
     blocker: &CardInstance,
     computed: &ComputedPermanent,
     enchanted: impl Fn() -> bool + Copy,
+    monarch: Option<usize>,
     req: &SelectionRequirement,
 ) -> bool {
     use SelectionRequirement as R;
@@ -32024,6 +32031,8 @@ fn blocker_matches_block_filter(
         R::HasArtifactSubtype(a) => computed.subtypes().artifact_subtypes.contains(a),
         // Midnight Pathlighter — "except by legendary creatures".
         R::HasSupertype(s) => computed.supertypes().contains(s),
+        // Azure Fleet Admiral's "creatures the monarch controls" (CR 725).
+        R::ControlledByMonarch => monarch == Some(blocker.controller),
         R::PowerAtMost(n) => computed.power <= *n,
         R::PowerAtLeast(n) => computed.power >= *n,
         R::ToughnessAtMost(n) => computed.toughness <= *n,
@@ -32031,14 +32040,14 @@ fn blocker_matches_block_filter(
         R::ToughnessGreaterThanPower => computed.toughness > computed.power,
         R::HasCardType(ct) => computed.card_types().contains(ct),
         R::And(a, b) => {
-            blocker_matches_block_filter(blocker, computed, enchanted, a)
-                && blocker_matches_block_filter(blocker, computed, enchanted, b)
+            blocker_matches_block_filter(blocker, computed, enchanted, monarch, a)
+                && blocker_matches_block_filter(blocker, computed, enchanted, monarch, b)
         }
         R::Or(a, b) => {
-            blocker_matches_block_filter(blocker, computed, enchanted, a)
-                || blocker_matches_block_filter(blocker, computed, enchanted, b)
+            blocker_matches_block_filter(blocker, computed, enchanted, monarch, a)
+                || blocker_matches_block_filter(blocker, computed, enchanted, monarch, b)
         }
-        R::Not(inner) => !blocker_matches_block_filter(blocker, computed, enchanted, inner),
+        R::Not(inner) => !blocker_matches_block_filter(blocker, computed, enchanted, monarch, inner),
         _ => false,
     }
 }

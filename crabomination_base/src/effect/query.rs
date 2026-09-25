@@ -1095,9 +1095,9 @@ impl Effect {
             Effect::ExileTopFaceDownGrantPlay { library, grantee } => {
                 player_has_target(library) || player_has_target(grantee)
             }
-            Effect::SacrificeAtNextUpkeep { what } | Effect::SacrificeAtNextEndStep { what } => {
-                sel_has_target(what)
-            }
+            Effect::SacrificeAtNextUpkeep { what }
+            | Effect::SacrificeAtNextEndStep { what }
+            | Effect::ReturnToOwnersHandAtNextEndStep { what } => sel_has_target(what),
             Effect::ExileAtNextEndStep { what }
             | Effect::AssignsNoCombatDamageThisTurn { what } => sel_has_target(what),
             Effect::SacrificeSourceUnlessSacrificeTotalPower { .. } => false,

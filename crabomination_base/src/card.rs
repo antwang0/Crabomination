@@ -3178,6 +3178,18 @@ pub enum SelectionRequirement {
     /// Zimone's Hypothesis's "each creature with power of the chosen
     /// quality".
     PowerParity { odd: bool },
+    /// Controlled by the monarch (CR 725; Azure Fleet Admiral's "can't be
+    /// blocked by creatures the monarch controls").
+    ControlledByMonarch,
+    /// Controlled by a player whom at least `n` creatures matching `filter`
+    /// dealt damage this turn (Admiral Beckett Brass's "a player who was
+    /// dealt combat damage by three or more Pirates this turn"). Reads
+    /// `Player.creatures_that_damaged_me_this_turn` against the creatures'
+    /// current characteristics.
+    ControlledByPlayerDamagedByAtLeast { filter: Box<SelectionRequirement>, n: u32 },
+    /// A card its owner discarded this turn (Ghost of Ramirez DePietro's
+    /// "a card in a graveyard that was discarded … this turn").
+    DiscardedThisTurn,
     /// True when the card's mana value equals the number of counters of the
     /// given kind on the resolving ability's source (Aether Vial). Resolved
     /// to a concrete `ManaValueExactly(n)` by `resolve_source_counters` at

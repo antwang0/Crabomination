@@ -5882,6 +5882,10 @@ pub enum Effect {
     /// selector is resolved now; each hit gets its own CR 603.7a delayed
     /// trigger.
     SacrificeAtNextEndStep { what: Selector },
+    /// "Return that creature to its owner's hand at the beginning of the next
+    /// end step" — a per-permanent delayed return (Zara, Renegade
+    /// Recruiter), the hand-bound sibling of `SacrificeAtNextEndStep`.
+    ReturnToOwnersHandAtNextEndStep { what: Selector },
     /// "Exile it at the beginning of the next end step" (Shallow Grave) — the
     /// exile twin of [`Effect::SacrificeAtNextEndStep`]. The selector is
     /// resolved now; each hit gets its own CR 603.7a delayed trigger.

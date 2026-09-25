@@ -6022,6 +6022,20 @@ impl GameState {
             R::PowerAtMostSourcePower => false,
             R::PowerAtLeast(n) => card.definition.is_creature() && card.power() >= *n,
             R::PowerParity { odd } => card.definition.is_creature() && (card.power().rem_euclid(2) == 1) == *odd,
+            R::ControlledByMonarch => self.monarch == Some(card.controller),
+            R::ControlledByPlayerDamagedByAtLeast { filter, n } => {
+                let p = card.controller;
+                self.players[p]
+                    .creatures_that_damaged_me_this_turn
+                    .iter()
+                    .filter(|id| {
+                        self.find_card_anywhere(**id)
+                            .is_some_and(|c| self.evaluate_requirement_on_card(filter, c, controller))
+                    })
+                    .count() as u32
+                    >= *n
+            }
+            R::DiscardedThisTurn => self.players[card.owner].discarded_this_turn.contains(&card.id),
             // No source/battlefield context in the on-card evaluator (used
             // for hidden-zone cards); the source-relative Mentor check only
             // makes sense for battlefield targets, so it's vacuously false.
