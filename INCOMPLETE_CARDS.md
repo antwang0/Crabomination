@@ -2001,6 +2001,13 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Kinetic Ooze | Quandrix Unlimited (SOC) | at X 10 or more it doubles the counters on each other creature you control, not on targets you choose. |
 | 🟡 Primo, the Unbounded | Quandrix Unlimited (SOC) | when several base-power-0 creatures connect at once, the Fractal reads the first one's damage, not the total. |
 | 🟡 Unbound Flourishing | Quandrix Unlimited (SOC) | activated abilities with {X} in their cost aren't copied. |
+| 🟡 Maestros Confluence | Maestros Massacre (NCC) | the goad mode takes the hostile opponent's creatures rather than a targeted player's. |
+| 🟡 Parnesse, the Subtle Brush | Maestros Massacre (NCC) | only your permanents carry the pay-4-life tax (you as a target don't), and copying a spell doesn't offer an opponent a copy. |
+| 🟡 Sinister Concierge | Maestros Massacre (NCC) | the second creature suspended must be an opponent's. |
+| 🟡 Syrix, Carrier of the Flame | Maestros Massacre (NCC) | the end-step check counts any card leaving your graveyard, not only creature cards, and the graveyard cast is a permission for the rest of the turn. |
+| 🟡 Waste Management | Maestros Massacre (NCC) | kicked, it exiles the hostile opponent's graveyard rather than a targeted player's; unkicked, the two cards may come from different graveyards. |
+| 🟡 Xander's Pact | Maestros Massacre (NCC) | a land exiled this way may be played too. |
+| 🟡 Zndrsplt's Judgment | Maestros Massacre (NCC) | you are the only friend and every opponent a foe. |
 | 🟡 Akim, the Soaring Wind | Timeless Wisdom (C20) | "the first time each turn" is counted from Akim's arrival: tokens made earlier that turn don't use it up. |
 | 🟡 Crystalline Resonance | Timeless Wisdom (C20) | the copy lasts until it copies again, not until your next turn. |
 | 🟡 Ethereal Forager | Timeless Wisdom (C20) | the returned card is the first linked instant or sorcery, not a chosen one. |

@@ -141,6 +141,7 @@ lists were picked.
 | **Dungeons of Death** (AFC precon) WUB | Sefris of the Hidden Ways | WUB | 100 | 🟡 all 100 implemented, 4 carry residuals (Grave Endeavor, Nihiloor, Phantom Steed, Rod of Absorption) |
 | **Deadly Disguise** (MKC precon) RGW | Kaust, Eyes of the Glade | RGW | 100 | 🟡 all 100 implemented, 4 carry residuals (Boltbender, Tesak, Unexplained Absence, Veiled Ascension) |
 | **Quandrix Unlimited** (SOC precon) GU | Zimone, Infinite Analyst | GU | 100 | 🟡 all 100 implemented, 3 carry residuals (Kinetic Ooze, Primo, Unbound Flourishing) |
+| **Maestros Massacre** (NCC precon) UBR | Anhelo, the Painter | UBR | 100 | 🟡 all 100 implemented, 7 carry residuals (Maestros Confluence, Parnesse, Sinister Concierge, Syrix, Waste Management, Xander's Pact, Zndrsplt's Judgment) |
 | **Deep Clue Sea** (MKC precon) GWU | Morska, Undersea Sleuth | GWU | 100 | 🟡 all 100 implemented, 3 carry residuals (Aerial Extortionist, Alandra, Sky Dreamer, Erdwal Illuminator) |
 | **Coven Counters** (MIC precon) GW | Leinore, Autumn Sovereign | GW | 100 | 🟡 all 100 implemented, 4 carry residuals (Curse of Conformity, Celestial Judgment, Sigardian Zealot, Moorland Rescuer) |
 | **Arcane Maelstrom** (C20 precon) GUR | Kalamax, the Stormsire | GUR | 100 | 🟡 all 100 implemented, 4 carry residuals (Eon Frolicker, Haldan, Pako, Lavabrink Floodgates) |
@@ -1243,6 +1244,27 @@ all decided): Galea 5.3 % — the bot does not build a Voltron threat; beside
 Estrid / Eshki / Nelly (seed 10251): 1,000 / 1,000, 5.3 %; census (seed 10252):
 no card of the four unplayed; strict debug pods (seeds 10253-10255, 4 and 6
 seats): 180 / 180. `--bench` byte-identical.
+The **hundred-and-fortieth** is Streets of New Capenna Commander's
+**Maestros Massacre** (`MaestrosMassacre_NCC`, 2022-04-29) — Grixis
+spell-copying and casualty under Anhelo, the Painter, `--pod-decks 140` (measured as 139).
+Twenty-two cards were missing (`cmdr_anhelo.rs`). New primitives:
+`StaticEffect::FirstInstantSorceryHasCasualty` read through
+`GameState::casualty_for` by both the `CastSpellCasualty` action and the bot's
+casualty block (Anhelo); `Effect::OwnerShufflesInExilesTopPlaysOrCasts`
+(Audacious Swap). The rest compose: `SeparateIntoPiles` per opponent (Make an
+Example), `GrantSuspend` (Sinister Concierge), graveyard-scoped triggers
+(Dogged Detective's opponent draw, Skyclave Shade's landfall, Syrix),
+`GrantMayPlayForLife` (Xander's Pact), `Hideaway` + a capped free cast
+(Smuggler's Buggy). Residuals: **Maestros Confluence** goads the hostile
+opponent's creatures; **Parnesse** protects only your permanents and offers
+no copy; **Sinister Concierge** suspends an opponent's creature;
+**Syrix** reads any card leaving your graveyard; **Waste Management** kicked
+takes the hostile opponent's graveyard; **Xander's Pact** lets exiled lands be
+played; **Zndrsplt's Judgment** makes you the only friend. Pods (1,000 games
+each, all decided): 4 seats beside Urza / Osgir / Eshki (seed 11112) Anhelo
+12.0 %, census: no card of the four unplayed; 6 seats beside Saheeli / Zimone
+/ Nalia / Kaust / Morska and 8 seats (seed 11113). `--bench` byte-identical.
+
 The **hundred-and-thirty-seventh** is Secrets of Strixhaven Commander's
 **Quandrix Unlimited** (`QuandrixUnlimited_SOC`, 2026-04-24) — Simic X spells
 and +1/+1 counters under Zimone, Infinite Analyst, `--pod-decks 137`.
