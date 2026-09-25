@@ -2506,7 +2506,6 @@ static DECKS: &[Factory] = &[
     super::decks::cramped_vents_access_maze,
     super::decks::diabolic_vision,
     super::decks::fear_of_sleep_paralysis,
-    super::decks::life_insurance,
     super::decks::mirrormade,
     super::decks::moon_blessed_cleric,
     super::decks::obscura_storefront,

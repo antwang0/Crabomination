@@ -18,7 +18,7 @@ use crate::card::{
     EventSpec, Keyword, LandType, RoomDoor, RoomDoors, SelectionRequirement as R, Selector, StaticAbility,
     StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{eerie, etb, extort, on_you_attack, target_filtered};
+use crate::effect::shortcut::{eerie, etb, on_you_attack, target_filtered};
 use crate::effect::{
     Duration, Effect, LibraryPosition, LookPick, PlayerRef, Predicate, ZoneDest,
 };
@@ -59,10 +59,6 @@ fn room(name: &'static str, left: RoomDoor, right: RoomDoor) -> CardDefinition {
 
 fn at_your(step: TurnStep, effect: Effect) -> TriggeredAbility {
     TriggeredAbility { event: EventSpec::new(EventKind::StepBegins(step), EventScope::YourControl), effect }
-}
-
-fn treasure() -> Arc<TokenDefinition> {
-    Arc::new(crabomination_base::tokens::treasure_token())
 }
 
 /// Aminatou, Veil Piercer — surveil 2 each upkeep; enchantment cards in hand
@@ -162,26 +158,6 @@ pub fn fear_of_sleep_paralysis() -> CardDefinition {
             6,
             6,
         )
-    }
-}
-
-/// Life Insurance — extort; each nontoken creature death costs you 1 life
-/// and makes a Treasure.
-pub fn life_insurance() -> CardDefinition {
-    CardDefinition {
-        triggered_abilities: vec![
-            extort(),
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer).with_filter(
-                    Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::NotToken },
-                ),
-                effect: Effect::Seq(vec![
-                    Effect::LoseLife { who: Selector::You, amount: Value::ONE },
-                    Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: treasure() },
-                ]),
-            },
-        ],
-        ..spell("Life Insurance", cost(&[generic(3), w(), b()]), CardType::Enchantment, Effect::Noop)
     }
 }
 

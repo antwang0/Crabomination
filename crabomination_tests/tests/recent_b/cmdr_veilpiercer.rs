@@ -164,21 +164,6 @@ fn fear_of_sleep_paralysis_stuns_for_good() {
     assert!(c.tapped && c.counter_count(CounterType::Stun) == 1, "counter stays, no untap");
 }
 
-/// Life Insurance: a nontoken creature dying costs 1 life and makes a
-/// Treasure; a token dying doesn't.
-#[test]
-fn life_insurance_pays_out_on_deaths() {
-    let mut g = main_phase(2);
-    g.add_card_to_battlefield(0, catalog::life_insurance());
-    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)]));
-    let life = g.players[0].life;
-    let m = g.add_card_to_hand(0, catalog::murder());
-    cast_at(&mut g, m, &[Target::Permanent(bear)]).expect("kill");
-    assert_eq!(g.players[0].life, life - 1);
-    assert_eq!(named(&g, 0, "Treasure").len(), 1);
-}
-
 /// Mirrormade enters as a copy of an artifact.
 #[test]
 fn mirrormade_copies_an_artifact() {
