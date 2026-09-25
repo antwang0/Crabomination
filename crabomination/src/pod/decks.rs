@@ -3679,3 +3679,33 @@ pub const LEINORE_MAIN: &[CardFactory] = &[
     plains, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
     forest, forest,
 ];
+
+pub const SIDAR_COMMANDERS: &[CardFactory] = &[sidar_jabari_of_zhalfir];
+
+/// **Cavalry Charge**, the March of the Machine Commander deck (MOC,
+/// 2023-04-21), exactly as MTGJSON's `CavalryCharge_MOC` prints it: 80 nonbasic
+/// cards + 8 Plains + 6 Islands + 5 Swamps = 99. Esper Knights under Sidar
+/// Jabari of Zhalfir.
+pub const SIDAR_MAIN: &[CardFactory] = &[
+    elenda_and_azor, exsanguinator_cavalry, ichor_elixir, herald_of_hoofbeats, locthwain_lancer,
+    chivalric_alliance, path_of_the_enigma, vodalian_wave_knight, conjurers_mantle,
+    ethersworn_adjudicator, hero_of_bladehold, vona_butcher_of_magan, acclaimed_contender,
+    adeline_resplendent_cathar, aryel_knight_of_windgrace, choked_estuary, exotic_orchard,
+    fell_the_mighty, haakon_stromgald_scourge, josu_vess_lich_knight, knight_exemplar,
+    knight_of_the_white_orchid, knights_charge, lilianas_standard_bearer, maul_of_the_skyclaves,
+    midnight_reaper, murderous_rider, painful_truths, port_town, prairie_stream,
+    promise_of_loyalty, pull_from_tomorrow, shineshadow_snarl, sigiled_sword_of_valeron,
+    silverwing_squadron, sunken_hollow, temple_of_deceit, temple_of_enlightenment,
+    temple_of_silence, time_wipe, unbreakable_formation, valiant_knight, vanquishers_banner,
+    worthy_knight, bojuka_bog, command_tower, commanders_sphere, distant_melody, evolving_wilds,
+    fractured_powerstone, orzhov_signet, path_of_ancestry, read_the_bones, smitten_swordmaster,
+    terramorphic_expanse, thriving_heath, thriving_isle, thriving_moor, arcane_sanctum,
+    arcane_signet, arvad_the_cursed, corpse_knight, despark, fellwar_stone, foulmire_knight,
+    heralds_horn, knight_of_the_last_breath, knights_of_the_black_rose, mind_stone,
+    myriad_landscape, order_of_midnight, path_to_exile, return_to_dust, sol_ring,
+    swords_to_plowshares, syr_elenora_the_discerning, syr_konrad_the_grim,
+    temple_of_the_false_god, wintermoor_commander, xerex_strobe_knight,
+    // Basics: 8 plains, 6 island, 5 swamp
+    plains, plains, plains, plains, plains, plains, plains, plains, island, island, island,
+    island, island, island, swamp, swamp, swamp, swamp, swamp,
+];

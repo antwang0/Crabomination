@@ -1000,6 +1000,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::LEINORE_COMMANDERS,
             main: decks::LEINORE_MAIN,
         },
+        // Hundred-and-twenty-first: the hundred-and-eleventh official list
+        // (Cavalry Charge, MOC) — Esper Knights under Sidar Jabari of Zhalfir,
+        // whose eminence loots from the command zone. `--pod-decks 121`.
+        PodDeck {
+            name: "Sidar Jabari of Zhalfir (WUB)",
+            commanders: decks::SIDAR_COMMANDERS,
+            main: decks::SIDAR_MAIN,
+        },
     ]
 }
 
@@ -1573,6 +1581,8 @@ mod tests {
             ("Otrimi", [0x0791, 119, 9043]),
             // Coven (three different powers), CR 303.4a player Curses, CR 107.3 X.
             ("Leinore", [0x1E17, 120, 9044]),
+            // CR 113.6b eminence from the command zone; CR 602.5b tap-X costs.
+            ("Sidar", [0x51DA, 121, 9045]),
         ] {
             let precon = *field.iter().find(|d| d.name.starts_with(name)).expect("the precon seat");
             assert_eq!(precon.card_count(), 100);
