@@ -397,6 +397,7 @@ impl Effect {
             | Effect::TargetsExactlyX { body, .. }
             | Effect::CapTargetsAt { body, .. }
             | Effect::ForEachOpponentTarget { body }
+            | Effect::EachPushesTrigger { body, .. }
             | Effect::BindTargetSlot { body, .. }
             | Effect::BindTargetObjects { body, .. }
             | Effect::BindScratch { body, .. }

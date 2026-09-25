@@ -877,7 +877,10 @@ fn every_reanimating_move_says_which_zone_its_target_is_in() {
                     return;
                 }
                 for (k, inner) in map {
-                    if RESOLUTION_TIME_TARGETING.contains(&k.as_str()) {
+                    // A captured delayed body's slot 0 is the object the
+                    // capture recorded (Desert Warfare's sacrificed Desert),
+                    // not a cast-time target.
+                    if RESOLUTION_TIME_TARGETING.contains(&k.as_str()) || k == "DelayUntilWithCapture" {
                         continue;
                     }
                     if k == "Move"
