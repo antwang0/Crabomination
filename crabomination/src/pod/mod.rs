@@ -1056,6 +1056,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::QUINTORIUS_COMMANDERS,
             main: decks::QUINTORIUS_MAIN,
         },
+        // Hundred-and-twenty-eighth: the hundred-and-eighteenth official list
+        // (Timeless Wisdom, C20) — Jeskai cycling under Gavi, Nest Warden.
+        // `--pod-decks 128`.
+        PodDeck {
+            name: "Gavi, Nest Warden (URW)",
+            commanders: decks::GAVI_COMMANDERS,
+            main: decks::GAVI_MAIN,
+        },
     ]
 }
 
@@ -1638,6 +1646,8 @@ mod tests {
             // CR 113.6b command-zone upkeep life; CR 701.10g power exchange;
             // Order of Succession's pass around the table.
             ("Oloro", [0x0107, 126, 9050]),
+            // CR 702.29 cycling for {0} (Gavi, New Perspectives); CR 614.1a Sarcophagus.
+            ("Gavi", [0x6A71, 128, 9052]),
         ] {
             let precon = *field.iter().find(|d| d.name.starts_with(name)).expect("the precon seat");
             assert_eq!(precon.card_count(), 100);

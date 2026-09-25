@@ -128,6 +128,7 @@ lists were picked.
 | **Aura of Courage** (AFC precon) GWU | Galea, Kindler of Hope | GWU | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Upgrades Unleashed** (NEC precon) RG | Chishiro, the Shattered Blade | RG | 100 | 🟡 all 100 implemented, 4 carry residuals (Concord with the Kami, Agitator Ant, Forgotten Ancient, Shifting Shadow) |
 | **Mardu Surge** (TDC precon) RWB | Zurgo Stormrender | RWB | 100 | 🟡 all 100 implemented, 1 carries a residual (Gix, Yawgmoth Praetor) |
+| **Timeless Wisdom** (C20 precon) URW | Gavi, Nest Warden | URW | 100 | 🟡 all 100 implemented, 4 carry residuals (Akim, the Soaring Wind, Crystalline Resonance, Ethereal Forager, Nimble Obstructionist) |
 | **Miracle Worker** (DSC precon) WUB | Aminatou, Veil Piercer | WUB | 100 | 🟡 all 100 implemented, 6 carry residuals (INCOMPLETE_CARDS) |
 | **Ruthless Regiment** (C20 precon) RWB | Jirina Kudro | RWB | 100 | 🟡 all 100 implemented, 2 carry residuals (Sanctuary Blade, Odric, Master Tactician) |
 | **Most Wanted** (OTC precon) RWB | Olivia, Opulent Outlaw | RWB | 100 | 🟡 all 100 implemented, 3 carry residuals (Back in Town, Dire Fleet Ravager, Vihaan, Goldwaker) |
@@ -1446,6 +1447,31 @@ and Aminatou / Zurgo / Zaffai, seed 10501; 6 and 8 seats, seeds 10502-10503):
 all decided, Leinore 37.2 % / 41.0 % at four seats; census: no card of the
 four lists unplayed. Debug `CRAB_ANSWER_LOG=strict` pods (480 games, 4 and 6
 seats): clean. `--bench` byte-identical.
+
+The **hundred-and-twenty-eighth** is Ikoria Commander's **Timeless Wisdom**
+(`TimelessWisdom_C20`) — Jeskai cycling under Gavi, Nest Warden,
+`--pod-decks 128` (committed as 122, 123 and 127 while Omo, Yuma, Millicent, Henzie, Oloro and Quintorius landed). Nineteen cards were missing; eighteen landed here (`cmdr_gavi.rs` — Descend upon the Sinful came first with Desert Bloom). The
+primitives: `StaticEffect::FirstCyclingEachTurnFree` (Gavi) and
+`CyclingFreeWhileHandAtLeast` (New Perspectives), read where the cycling cost
+is paid; `Player.cards_cycled_this_turn` / `Value::CardsCycledThisTurn`
+(Spellpyre Phoenix's graveyard end-step return); Abandoned Sarcophagus's
+`CastFromGraveyardMatching` (any turn, no budget) and
+`ExileOwnCyclingCardsUnlessCycled` (a death-redirect-lane static; the cycle
+path marks `Player.cycling_card` while it discards). The pod bot cycles more
+freely when the cycle is free. ⚠ Glimmerpoint Stag returned the blinked
+permanent under *its* controller with a +1/+1 counter (Semester's End's
+return) — now its owner's, no counter. ⚠ Pods: Extravagant Replication's
+"copy another permanent you control" picked a Replication token (the
+own-side heuristic gives up the cheapest) and doubled the board to the cap —
+the bot now passes over a token-copy replicator on a crowded board.
+Residuals: Akim's "first time each turn" counts from its arrival; Crystalline
+Resonance's copy lasts until it copies again; Ethereal Forager returns the
+first linked instant or sorcery; Nimble Obstructionist's "you don't control"
+reads the source permanent. Pods (release: 4 seats beside Sigarda / Hanna /
+Jirina, seed 12200, 1,000 games, and Aminatou / Zurgo / Omo, seed 12201,
+1,000 — and beside Kalamax 1,500 while numbered 122; 6 seats, seed 12202, 600;
+8 seats, seed 12203, 400): all decided, Gavi 11.7 % / 10.4 % at four seats; census: no card of the list unplayed.
+`--bench` byte-identical; cube/sos/sealed (seed 12204): 62,500 decided.
 
 The **hundred-and-fifth** is Secrets of Strixhaven Commander's **Silverquill
 Influence** (`SilverquillInfluence_SOC`, 2026-04-24) — Orzhov Auras and goad

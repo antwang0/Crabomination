@@ -3889,3 +3889,31 @@ pub const QUINTORIUS_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     mountain, mountain, mountain, mountain, mountain, mountain,
 ];
+
+pub const GAVI_COMMANDERS: &[CardFactory] = &[gavi_nest_warden];
+
+/// **Timeless Wisdom**, the Ikoria Commander deck (C20, 2020-04-17), exactly
+/// as MTGJSON's `TimelessWisdom_C20` prints it: 84 nonbasic cards +
+/// 5 Islands + 6 Mountains + 4 Plains = 99. Jeskai cycling under Gavi, Nest Warden.
+pub const GAVI_MAIN: &[CardFactory] = &[
+    chandra_flamecaller, akim_the_soaring_wind, brallin_skyshark_rider, shabraz_the_skyshark,
+    cryptic_trilobite, herald_of_the_forgotten, ethereal_forager, agitator_ant, spellpyre_phoenix,
+    surly_badgersaur, eternal_dragon, sun_titan, curator_of_mysteries, nimble_obstructionist,
+    portal_mage, isperia_supreme_judge, mercurial_chemister, niv_mizzet_the_firemind,
+    the_locust_god, psychosis_crawler, valiant_rescuer, rooting_moloch, savai_thundermane,
+    vizier_of_tumbling_sands, dismantling_wave, akromas_vengeance, decree_of_justice,
+    descend_upon_the_sinful, boon_of_the_wish_giver, windfall, slice_and_dice, migratory_route,
+    fierce_guardianship, neutralize, zenith_flare, hieroglyphic_illumination, abandoned_sarcophagus,
+    fluctuator, bonders_ornament, arcane_signet, azorius_signet, boros_signet, commanders_sphere,
+    izzet_signet, sol_ring, raugrin_crystal, crystalline_resonance, astral_drift,
+    hoofprints_of_the_stag, drake_haven, new_perspectives, tectonic_reformation, ominous_seas,
+    reconnaissance_mission, martial_impetus, psychic_impetus, shiny_impetus, cast_out, spirit_cairn,
+    lightning_rift, exotic_orchard, hostile_desert, irrigated_farmland, prairie_stream, shivan_reef,
+    skycloud_expanse, ash_barrens, azorius_chancery, boros_garrison, command_tower,
+    desert_of_the_fervent, desert_of_the_mindful, desert_of_the_true, drifting_meadow,
+    forgotten_cave, izzet_boilerworks, lonely_sandbar, myriad_landscape, mystic_monastery,
+    reliquary_tower, remote_isle, secluded_steppe, smoldering_crater, temple_of_the_false_god,
+    // Basics: 5 island, 6 mountain, 4 plains
+    island, island, island, island, island, mountain, mountain, mountain, mountain, mountain,
+    mountain, plains, plains, plains, plains,
+];

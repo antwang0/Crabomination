@@ -1978,6 +1978,10 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Ao, the Dawn Sky | Lorehold Spirit (SOC) | the unpicked cards stay on top of the library, not the bottom in a random order. |
 | 🟡 Quintorius, Loremaster | Lorehold Spirit (SOC) | the exiled card is cast as the ability resolves (not any time this turn) and isn't put on the bottom of the library afterward. |
 | 🟡 Serra Paragon | Lorehold Spirit (SOC) | lands played from the graveyard don't share the once-a-turn limit, and the "exile it and gain 2 life" rider isn't granted. |
+| 🟡 Akim, the Soaring Wind | Timeless Wisdom (C20) | "the first time each turn" is counted from Akim's arrival: tokens made earlier that turn don't use it up. |
+| 🟡 Crystalline Resonance | Timeless Wisdom (C20) | the copy lasts until it copies again, not until your next turn. |
+| 🟡 Ethereal Forager | Timeless Wisdom (C20) | the returned card is the first linked instant or sorcery, not a chosen one. |
+| 🟡 Nimble Obstructionist | Timeless Wisdom (C20) | "you don't control" reads the ability's source permanent's controller. |
 | 🟡 Fear of Sleep Paralysis | Miracle Worker (DSC) | only the untap step's stun removal is stopped; an effect that removes or moves counters still takes an opponent's stun counter. |
 | 🟡 Mirrormade | Miracle Worker (DSC) | the copy isn't optional. |
 | 🟡 One with the Multiverse | Miracle Worker (DSC) | the once-a-turn free cast works from hand only, not from the top of the library. |
