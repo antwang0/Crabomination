@@ -20701,6 +20701,16 @@ impl GameState {
                         _ => None,
                     });
                 let Some(src_id) = source_id else { return Ok(()); };
+                // Simulator bound on a self-copying token (Scute Swarm on each
+                // land, Extravagant Replication each upkeep): past
+                // `BOARD_GATE` it mints nothing, so the doubling stops where
+                // the board is already won instead of ending the game as a
+                // `BoardCap` (every Desert Bloom pod cap was a Swarm board).
+                if Some(src_id) == ctx.source
+                    && self.battlefield.len() >= crate::recommend::BOARD_GATE
+                {
+                    return Ok(());
+                }
                 // Source def: battlefield first, then graveyard / exile so an
                 // Embalm/Eternalize copy (CR 702.88/702.91) can be minted off
                 // the card after it's been exiled as the activation cost.

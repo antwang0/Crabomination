@@ -325,3 +325,22 @@ fn perennial_behemoth_plays_graveyard_lands() {
     assert_eq!(named(&g, 0, "Forest").len(), 1);
 }
 
+
+/// A simulator bound, not a rule: a self-copying token (Scute Swarm at six
+/// lands) mints nothing once the board is at `BOARD_GATE` — every Desert
+/// Bloom pod cap was a doubling Swarm board.
+#[test]
+fn scute_swarm_stops_copying_at_the_board_gate() {
+    let mut g = pod(2);
+    let swarm = g.add_card_to_battlefield(0, catalog::scute_swarm());
+    let fill = crabomination::recommend::BOARD_GATE - g.battlefield.len() - 1;
+    for _ in 0..fill {
+        g.add_card_to_battlefield(0, catalog::forest());
+    }
+    let _ = swarm;
+    let f = g.add_card_to_hand(0, catalog::forest());
+    g.perform_action(GameAction::PlayLand(f)).expect("land");
+    drain_stack(&mut g);
+    assert_eq!(named(&g, 0, "Scute Swarm").len(), 1, "no copy past the gate");
+    assert_eq!(g.battlefield.len(), crabomination::recommend::BOARD_GATE);
+}
