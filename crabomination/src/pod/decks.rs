@@ -4153,3 +4153,34 @@ pub const NALIA_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, swamp,
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const ZIMONE_IA_COMMANDERS: &[CardFactory] = &[zimone_infinite_analyst];
+
+/// **Quandrix Unlimited**, the Secrets of Strixhaven Commander deck
+/// (2026-04-24), exactly as MTGJSON's `QuandrixUnlimited_SOC` prints it: 86
+/// nonbasic cards + 7 Island + 6 Forest = 99. Simic X spells and +1/+1
+/// counters under Zimone, Infinite Analyst.
+pub const ZIMONE_IA_MAIN: &[CardFactory] = &[
+    primo_the_unbounded, owlin_spiralmancer, expansion_algorithm, nexus_mentality, kinetic_ooze,
+    lattice_library, nev_the_practical_dean, yavimaya_bloomsage, striding_shotcaller,
+    brass_infiniscope, turbulent_wilderness, commanders_insight, ingenious_prodigy,
+    pull_from_tomorrow, benevolent_hydra, unbound_flourishing, fabled_passage,
+    curse_of_the_swine, deekah_fractal_theorist, entrancing_melody, perplexing_test,
+    stroke_of_genius, zimones_hypothesis, animists_awakening, forgotten_ancient,
+    fractal_harness, goldvein_hydra, guardian_augmenter, hardened_scales, lifeblood_hydra,
+    mana_bloom, open_the_way, ozolith_the_shattered_spire, primal_might, primordial_hydra,
+    silkguard, steelbane_hydra, altered_ego, biomass_mutation, elusive_otter, the_goose_mother,
+    hydroid_krasis, oversimplify, quandrix_command, tanazir_quandrix, zimone_all_questioning,
+    astral_cornucopia, elementalists_palette, hangarback_walker, stonecoil_serpent,
+    alchemists_refuge, exotic_orchard, flooded_grove, hinterland_harbor, oran_rief_the_vastwood,
+    overflowing_basin, rain_slicked_copse, sodden_verdure, temple_of_mystery, vineglimmer_snarl,
+    yavimaya_coast, arcane_signet, sol_ring, command_tower, quandrix_charm, paradox_gardens,
+    terramorphic_expanse, rapid_hybridization, beast_within, kami_of_whispered_hopes,
+    natures_lore, three_visits, tyvars_stand, decisive_denial, eureka_moment,
+    quandrix_apprentice, troyan_gutsy_explorer, zimone_quandrix_prodigy, opal_palace,
+    path_of_ancestry, quandrix_campus, reliquary_tower, rogues_passage, study_hall,
+    tangled_islet, temple_of_the_false_god,
+    // Basics: 7 island, 6 forest
+    island, island, island, island, island, island, island, forest, forest, forest, forest,
+    forest, forest,
+];

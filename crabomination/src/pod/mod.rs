@@ -1128,6 +1128,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::NALIA_COMMANDERS,
             main: decks::NALIA_MAIN,
         },
+        // Hundred-and-thirty-seventh: Quandrix Unlimited (Secrets of
+        // Strixhaven) — Simic X spells and +1/+1 counters under Zimone,
+        // Infinite Analyst. `--pod-decks 137`.
+        PodDeck {
+            name: "Zimone, Infinite Analyst (GU)",
+            commanders: decks::ZIMONE_IA_COMMANDERS,
+            main: decks::ZIMONE_IA_MAIN,
+        },
     ]
 }
 
