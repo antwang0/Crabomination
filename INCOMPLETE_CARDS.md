@@ -2127,3 +2127,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Vindictive Lich | Arcane Wizardry (C17) | always all three modes, in a fixed order (lose five, discard two, sacrifice); a mode with no fresh opponent does nothing. |
 | 🟡 Spiked Corridor // Torture Pit | Endless Punishment (DSC) | Torture Pit's +2 also reaches permanents opponents control (the shared `NoncombatDamageToOpponentsBonus`). |
 | 🟡 Duneblast | Breed Lethality (C16) | the survivor is the chooser's pick among all creatures, and one always survives when any exist ("up to one" never picks none). |
+| 🟡 Aerial Extortionist | Deep Clue Sea (MKC) | "up to one target nonland permanent" always takes a target. |
+| 🟡 Alandra, Sky Dreamer | Deep Clue Sea (MKC) | the fifth-card trigger is "five or more drawn, once a turn", so it fires on a later draw when Alandra arrived after the fifth. |
+| 🟡 Erdwal Illuminator | Deep Clue Sea (MKC) | "you investigate" reads a Clue token created under your control; "first time each turn" counts Clues made before it arrived. |

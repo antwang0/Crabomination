@@ -150,10 +150,9 @@ the handoff.
 - ✅ **Tomik, Wielder of Law's trigger never fired**: `YouAttack` at
   `OpponentControl` scope is a scope the attack dispatch never consults for a
   non-active listener; observers of another player's attack are `AnyPlayer`.
-- 🔴 OPEN — **Ascend on a permanent is checked only on entry and at upkeep** (six
-  cards: Tendershoot Dryad and the five before it). CR 702.131b grants the city's
-  blessing the moment the tenth permanent arrives; a hook where permanents enter or
-  change control would make it exact.
+- ✅ **Ascend on a permanent was checked only on entry and at upkeep** (CR
+  702.131b): `StaticEffect::Ascend`, read by `game/ascend.rs` on every permanent
+  entry and control change; six cards moved onto it (Deep Clue Sea run).
 - ✅ **A spell copy was controlled by the original caster** (CR 707.10c). Narset's
   Reversal and Twincast on an opponent's spell handed the copy back to them;
   `copy_stack_spell_controlled` takes the copier, and a copy someone else controls

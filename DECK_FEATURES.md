@@ -140,6 +140,7 @@ lists were picked.
 | **Lorehold Spirit** (SOC precon) RW | Quintorius, History Chaser (**planeswalker**) | RW | 100 | 🟡 all 100 implemented, 3 carry residuals (Ao, the Dawn Sky, Quintorius, Loremaster, Serra Paragon) |
 | **Dungeons of Death** (AFC precon) WUB | Sefris of the Hidden Ways | WUB | 100 | 🟡 all 100 implemented, 4 carry residuals (Grave Endeavor, Nihiloor, Phantom Steed, Rod of Absorption) |
 | **Deadly Disguise** (MKC precon) RGW | Kaust, Eyes of the Glade | RGW | 100 | 🟡 all 100 implemented, 4 carry residuals (Boltbender, Tesak, Unexplained Absence, Veiled Ascension) |
+| **Deep Clue Sea** (MKC precon) GWU | Morska, Undersea Sleuth | GWU | 100 | 🟡 all 100 implemented, 3 carry residuals (Aerial Extortionist, Alandra, Sky Dreamer, Erdwal Illuminator) |
 | **Coven Counters** (MIC precon) GW | Leinore, Autumn Sovereign | GW | 100 | 🟡 all 100 implemented, 4 carry residuals (Curse of Conformity, Celestial Judgment, Sigardian Zealot, Moorland Rescuer) |
 | **Arcane Maelstrom** (C20 precon) GUR | Kalamax, the Stormsire | GUR | 100 | 🟡 all 100 implemented, 4 carry residuals (Eon Frolicker, Haldan, Pako, Lavabrink Floodgates) |
 | **Enhanced Evolution** (C20 precon) BGU | Otrimi, the Ever-Playful | BGU | 100 | 🟡 all 100 implemented, 4 carry residuals (Capricopian, Manascape Refractor, Mindleecher, Vastwood Hydra) |
@@ -2247,6 +2248,26 @@ Loyalty**, **Tamiyo** (INCOMPLETE_CARDS). A 200-game census beside
 Hearthhull / Bright-Palm / Brimaz (seed 9551) decided 200/200 with zero
 panics and no card of the four lists unplayed, Ms. Bumbleflower winning
 38.0 %. `--bench` byte-identical.
+
+The **hundred-and-thirty-fourth** is Murders at Karlov Manor Commander's
+**Deep Clue Sea** (`DeepClueSea_MKC`, 2024-02-09) — Bant Clues and
+second-draw payoffs under Morska, Undersea Sleuth, `--pod-decks 134` (committed
+as 131 and 132 while three other lists landed first). Twenty cards were
+missing (`cmdr_morska.rs`; Sophia, Dogged Detective landed with Everyone's
+Invited!). The primitives: ⚠ **permanent ascend is a static now**
+(`StaticEffect::Ascend`, CR 702.131b — `game/ascend.rs` checks every permanent
+entry and control change; six cards that re-checked at upkeep moved onto it),
+`Effect::Ungoad` (CR 701.15a, Serene Sleuth),
+`Effect::SilencePlayersUntilTheirNextTurn` (Innocuous Researcher) and
+`StaticEffect::FirstArtifactAbilityEachTurnCostsLess` (Tezzeret, Betrayer of
+Flesh). It also fixed ⚠ **Thirst for Knowledge** (in two pod lists), which
+discarded two even with an artifact in hand. Residuals: **Aerial
+Extortionist**, **Alandra, Sky Dreamer**, **Erdwal Illuminator**
+(INCOMPLETE_CARDS). Four-seat pods beside Morophon / Sefris / Zimone (seed
+13401, 1,000 games): all decided, Morska 30.7 %; six seats beside Quintorius /
+Gavi / Gonti / Prossh / Nelly (seed 13402, 1,000): all decided, 16.2 %;
+census beside Omo / Olivia / Jirina (seed 13403, 500): no card of the four
+lists unplayed. cube / sos / sealed 7,500 decided. `--bench` byte-identical.
 
 The **hundred-and-thirty-third** is Duskmourn Commander's **Jump Scare!**
 (`JumpScare_DSC`) — Simic manifest dread and morph under Zimone, Mystery
