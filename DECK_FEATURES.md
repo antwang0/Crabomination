@@ -144,6 +144,9 @@ lists were picked.
 | **Coven Counters** (MIC precon) GW | Leinore, Autumn Sovereign | GW | 100 | 🟡 all 100 implemented, 4 carry residuals (Curse of Conformity, Celestial Judgment, Sigardian Zealot, Moorland Rescuer) |
 | **Arcane Maelstrom** (C20 precon) GUR | Kalamax, the Stormsire | GUR | 100 | 🟡 all 100 implemented, 4 carry residuals (Eon Frolicker, Haldan, Pako, Lavabrink Floodgates) |
 | **Enhanced Evolution** (C20 precon) BGU | Otrimi, the Ever-Playful | BGU | 100 | 🟡 all 100 implemented, 4 carry residuals (Capricopian, Manascape Refractor, Mindleecher, Vastwood Hydra) |
+| **Riveteers Rampage** (NCC precon) BRG | Henzie "Toolbox" Torre | BRG | 100 | 🟡 all 100 implemented, 7 carry residuals (below) |
+| **Grand Larceny** (OTC precon) BGU | Gonti, Canny Acquisitor | BGU | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
+| **Party Time** (CLB precon) WB | Nalia de'Arnise | WB | 100 | 🟡 all 100 implemented, 2 carry residuals (Calculating Lich, Glorious Protector) |
 | **Cavalry Charge** (MOC precon) WUB | Sidar Jabari of Zhalfir | WUB | 100 | 🟡 all 100 implemented, 3 carry residuals (Path of the Enigma, Syr Elenora, Aryel) |
 | **Eternal Bargain** (C13 precon) WUB | Oloro, Ageless Ascetic | WUB | 100 | 🟡 all 100 implemented, 4 carry residuals (Order of Succession, Lim-Dûl's Vault, Springjack Pasture, Serene Master) |
 | **Power Hungry** (C13 precon) BRG | Prossh, Skyraider of Kher | BRG | 100 | 🟡 all 100 implemented, 4 carry residuals (Sudden Demise, Night Soil, Widespread Panic, Capricious Efreet) |
@@ -2059,6 +2062,53 @@ Eshki / Nelly / Go-Shintai (seed 10241): 1,000 / 1,000, 15.3 %; census (seed
 10242): no card of the four unplayed; strict debug pods (seeds 10244-10246, 4
 and 6 seats): 180 / 180. `--bench` byte-identical; cube/sos/sealed (seed 10243):
 7,500 decided.
+
+The **hundred-and-twenty-ninth** is Outlaws of Thunder Junction
+Commander's **Grand Larceny** (`GrandLarceny_OTC`) — Sultai theft under
+Gonti, Canny Acquisitor, `--pod-decks 129` (committed as 128 until Timeless
+Wisdom landed there first). Eighteen cards were missing (`cmdr_gonti.rs`);
+the primitives: `SpendRestriction::SpellsYouDontOwn` + `SpellKind::not_owned`
+(Thieving Varmint, CR 106.6), `StaticEffect::SpellsYouDontOwnCostLess`
+(Gonti), `StaticEffect::DoubleControllerCombatDamageToPlayerTriggers` (Felix
+Five-Boots — one more fire at the combat-damage push), and
+`game/effects/theft.rs`: `ExileSpellLinked` (Smirking Spelljacker — exiled,
+not countered, so an uncounterable spell goes too; a spell copy just ceases),
+`LookTopExileOneFaceDownMayPlay` (Thief of Sanity, Siphon Insight),
+`OpponentChoosesXFromHandCastOneFree` (Extract Brain),
+`ExileTopMayCastFreeIfNonland` (Mind's Dilation),
+`ExileTopOfEachLibraryMayPlayForLife` (Nashi) and
+`ManifestTopOfLibraryUnderYou` (CR 701.34 — Thieving Amalgam, Orochi
+Soul-Reaver: the card's owner and the manifesting player apart). Residuals:
+**Bladegriff Prototype**, **Extract Brain**, **Nashi**, **Siphon Insight**,
+**Thief of Sanity** (INCOMPLETE_CARDS). Release pods beside Henzie / Otrimi /
+Kalamax (seed 14001, 1,000 games): 1,000 decided, Gonti 19.5 %, no card of
+the four lists unplayed. `--bench` byte-identical.
+
+The **hundred-and-twenty-fifth** is Streets of New Capenna Commander's
+**Riveteers Rampage** (`RiveteersRampage_NCC`) — Jund blitz under Henzie
+"Toolbox" Torre, `--pod-decks 125` (committed as 123 and 124 while Desert
+Bloom and Spirit Squadron landed first; its World Shaper is Desert Bloom's).
+Nineteen cards were missing (`cmdr_henzie.rs`); the primitives:
+`StaticEffect::GrantBlitzToSpells` + `BlitzCostLessPerCommanderCast` (Henzie,
+CR 702.152 — the spell's own mana cost as its blitz, {1} less per commander
+cast, printed blitz costs discounted too; the bot's alt-cost facts see the
+grant), `StaticEffect::TreasureCreationAddsTreasure` (Jolene),
+`StaticEffect::CanAttackPlayersWhoAttackedYouLastTurn` (Weathered Sentinels,
+CR 508.1a — Defender waived per defending player, checked per attack; the bot
+re-aims it or leaves it home), `Effect::ExileOnePerCardTypeFromGraveyardGrow`
+(Grime Gorger, CR 205.2a) and `CounterType::Contested` +
+`ContestOneLandPerPlayer` / `TakeContestedLand` (Turf War). ⚠
+`R::DamagedAPlayerThisTurn` read only the battlefield, so Wave of Rats' own
+death trigger never saw its hit — it reads the death snapshot now (CR
+603.10). Two base-branch ratchets were red from another seat and fixed here:
+`for_each_inner` didn't recurse `EachPushesTrigger`, and the reanimation
+audit read a `DelayUntilWithCapture` return as an unzoned target. Residuals:
+**Henzie**, **First Responder**, **Mezzio Mugger**, **Next of Kin**,
+**Protection Racket**, **The Beamtown Bullies**, **Turf War**
+(INCOMPLETE_CARDS). Release pods beside Millicent / Yuma / Otrimi (seed
+13001, 1,000 games): 999 decided (the one board cap is Yuma's Scute Swarm
+runaway, already open), Henzie 18.2 %, no card of the four lists unplayed.
+`--bench` byte-identical.
 
 The **hundred-and-seventeenth** is Ikoria Commander's **Arcane Maelstrom**
 (`ArcaneMaelstrom_C20`) — Temur instants and copies under Kalamax, the

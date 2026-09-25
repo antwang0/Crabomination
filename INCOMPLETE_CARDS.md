@@ -2020,6 +2020,20 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Manascape Refractor | Enhanced Evolution (C20) | mana of any color isn't spendable on the borrowed land abilities' activation costs. |
 | 🟡 Mindleecher | Enhanced Evolution (C20) | the face-down exiled cards may be cast with mana of any type (the Gonti exile primitive's spend). |
 | 🟡 Vastwood Hydra | Enhanced Evolution (C20) | the counters go among up to three target creatures you control, not "any number" chosen on resolution. |
+| 🟡 Henzie "Toolbox" Torre | Riveteers Rampage (NCC) | a creature spell with its own blitz uses its printed blitz cost (discounted), not a choice between that and Henzie's. |
+| 🟡 First Responder | Riveteers Rampage (NCC) | the returned creature is targeted, not chosen as the trigger resolves. |
+| 🟡 Mezzio Mugger | Riveteers Rampage (NCC) | the exiled cards may be cast with mana of any type (the printed "as though any color" excludes colorless). |
+| 🟡 Next of Kin | Riveteers Rampage (NCC) | the lesser creature card comes from your hand only, not the command zone. |
+| 🟡 Protection Racket | Riveteers Rampage (NCC) | every opponent is offered each revealed card, not only the one whose pass of the process it is. |
+| 🟡 The Beamtown Bullies | Riveteers Rampage (NCC) | the opponent whose turn it is isn't targeted. |
+| 🟡 Turf War | Riveteers Rampage (NCC) | the contested lands are chosen, not targeted; the stolen land is the engine's pick. |
+| 🟡 Bladegriff Prototype | Grand Larceny (OTC) | the choosing opponent is the engine's pick, not necessarily the damaged player. |
+| 🟡 Extract Brain | Grand Larceny (OTC) | the opponent's X cards and your free cast are the engine's picks. |
+| 🟡 Nashi, Moon Sage's Scion | Grand Larceny (OTC) | any of the exiled cards may be played this turn, not only one. |
+| 🟡 Siphon Insight | Grand Larceny (OTC) | the exiled card is the engine's pick and may be cast with mana of any type. |
+| 🟡 Thief of Sanity | Grand Larceny (OTC) | the exiled card is the engine's pick (the highest mana value nonland). |
+| 🟡 Calculating Lich | Party Time (CLB) | a creature attacking a planeswalker drains that planeswalker's controller too. |
+| 🟡 Glorious Protector | Party Time (CLB) | the non-Angel creatures exiled are the choose-cards default for a bot seat (none), not a judged pick. |
 | 🟡 Path of the Enigma | Cavalry Charge (MOC) | the Will of the Planeswalkers vote isn't held (no planar deck, so planeswalk and chaos do nothing). |
 | 🟡 Syr Elenora, the Discerning | Cavalry Charge (MOC) | her hand-size power is a battlefield static, not a CDA read in every zone. |
 | 🟡 Aryel, Knight of Windgrace | Cavalry Charge (MOC) | X for "tap X untapped Knights" is the target's power (the least that works), not a free choice. |
