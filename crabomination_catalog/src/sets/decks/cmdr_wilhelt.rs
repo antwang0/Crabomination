@@ -5,7 +5,6 @@
 //! Residuals (each also on its card):
 //! - **Hordewing Skaab** — draws for the opponents dealt combat damage this
 //!   turn, not only those its Zombies' batch damaged.
-//! - **Hour of Eternity** — the copies are Zombies in addition to their types.
 //! - **Shadow Kin** — copies the greatest-power creature card milled (the
 //!   engine's pick).
 //! - **Rooftop Storm** — Zombie creature spells cast from hand only.
@@ -355,8 +354,8 @@ pub fn hordewing_skaab() -> CardDefinition {
 }
 
 /// Hour of Eternity — {X}{X}{U}{U}{U} Sorcery. Exile X target creature cards
-/// from your graveyard; a 4/4 black Zombie token copy of each. (Residual:
-/// Zombie in addition to the copied types.)
+/// from your graveyard; a 4/4 black Zombie token copy of each (Zombie instead
+/// of the copied creature types, per its ruling).
 pub fn hour_of_eternity() -> CardDefinition {
     spell(
         "Hour of Eternity",
@@ -379,6 +378,10 @@ pub fn hour_of_eternity() -> CardDefinition {
                         non_legendary: false,
                         legendary: false,
                         extra_keywords: vec![],
+                    },
+                    Effect::SetCopiableCreatureTypes {
+                        what: Selector::LastCreatedToken,
+                        creature_types: vec![CreatureType::Zombie],
                     },
                     Effect::Move { what: Selector::Target(0), to: ZoneDest::Exile },
                 ])),

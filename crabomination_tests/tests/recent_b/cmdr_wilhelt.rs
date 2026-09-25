@@ -247,7 +247,8 @@ fn hour_of_eternity_mints_4_4_zombie_copies() {
     assert_eq!(copies.len(), 1);
     let cp = g.computed_permanent(copies[0]).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 4));
-    assert!(cp.subtypes().creature_types.contains(&CreatureType::Zombie));
+    // Its ruling: a Zombie *instead of* the copied creature types.
+    assert_eq!(cp.subtypes().creature_types, vec![CreatureType::Zombie]);
     assert!(cp.keywords().contains(&Keyword::Flying), "still a copy");
 }
 

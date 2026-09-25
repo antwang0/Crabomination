@@ -6311,6 +6311,14 @@ impl GameState {
             Effect::ExileOtherCreaturesKeepingUpTo { keep, max } => {
                 self.exile_other_creatures_keeping(keep, *max, ctx, events)
             }
+            Effect::SetCopiableCreatureTypes { what, creature_types } => {
+                for id in self.resolve_selector(what, ctx).into_iter().filter_map(|e| e.as_permanent_id()) {
+                    if let Some(c) = self.battlefield_find_mut(id) {
+                        c.definition_make_mut().subtypes.creature_types = creature_types.clone();
+                    }
+                }
+                Ok(())
+            }
             Effect::SetCopiableNameAndTypes { what, name, creature_types } => {
                 for id in self.resolve_selector(what, ctx).into_iter().filter_map(|e| e.as_permanent_id()) {
                     if let Some(c) = self.battlefield_find_mut(id) {

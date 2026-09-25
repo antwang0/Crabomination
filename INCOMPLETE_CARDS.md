@@ -1912,7 +1912,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Intet, the Dreamer | Mirror Mastery (CMD) | the card is exiled face up. |
 | 🟡 Ray of Command | Mirror Mastery (CMD) | the creature is tapped at the next end step, not as its control returns. |
 | 🟡 Hordewing Skaab | Undead Unleashed (MIC) | draws/discards one per opponent dealt combat damage this turn, not only those its Zombies' batch damaged. |
-| 🟡 Hour of Eternity | Undead Unleashed (MIC) | the 4/4 black copies are Zombies in addition to their creature types, not instead. |
 | 🟡 Shadow Kin | Undead Unleashed (MIC) | copies the greatest-power creature card milled (the engine's pick). |
 | 🟡 Rooftop Storm | Undead Unleashed (MIC) | the free cast covers Zombie creature spells cast from hand, not the command zone or other zones. |
 | 🟡 Hazel of the Rootbloom | Squirreled Away (BLC) | "tap X untapped tokens" taps every other untapped token you control (X is all of them). |
@@ -1966,7 +1965,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | Card | Deck | Gap |
 |---|---|---|
 | 🟡 Ancient Cornucopia | Hatsune Miku (SLD) | "do this only once each turn" limits the trigger, so a declined gain still spends the turn's one. |
-| 🟡 Lazotep Quarry | Hatsune Miku (SLD) | the 4/4 black Zombie copy keeps the card's creature types and adds Zombie (the shared eternalize shape). |
 | 🟡 Aurora Phoenix | Exit from Exile (CLB) | a spell given cascade by a trigger (Wild-Magic Sorcerer) doesn't carry the keyword, so it doesn't return the Phoenix. |
 | 🟡 Durnan of the Yawning Portal | Exit from Exile (CLB) | exiles the first creature card among the top four (no choice), and the cast from exile has no undaunted. |
 | 🟡 Revival Experiment | Witherbloom Witchcraft (C21) | the engine picks the cards — the highest mana value per permanent type, a multi-typed card counting for the first type it fills. |

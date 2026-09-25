@@ -7859,6 +7859,9 @@ pub enum Effect {
     /// CR 707.9b — a copy "except it's [types] named [name]" (The Eleventh
     /// Hour's Prisoner Zero): the name and creature types become part of the
     /// selected permanents' copiable values.
+    /// CR 707.9b — "except it's a [type]" *instead of* its other creature
+    /// types (Hour of Eternity's 4/4 black Zombies, unlike eternalize's).
+    SetCopiableCreatureTypes { what: Selector, creature_types: Vec<crate::card::CreatureType> },
     SetCopiableNameAndTypes {
         what: Selector,
         #[serde(with = "crate::static_str_serde")]

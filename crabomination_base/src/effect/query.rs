@@ -1853,6 +1853,7 @@ impl Effect {
             | Effect::Clockspin { what }
             | Effect::RestrictMayPlayToCasting { what }
             | Effect::SetCopiableNameAndTypes { what, .. }
+            | Effect::SetCopiableCreatureTypes { what, .. }
             | Effect::ModularCounters { what }
             | Effect::BecomeBlocked { what }
             | Effect::RememberPermanentOnSource { what }
@@ -2721,6 +2722,7 @@ impl Effect {
             | Effect::Clockspin { what }
             | Effect::RestrictMayPlayToCasting { what }
             | Effect::SetCopiableNameAndTypes { what, .. }
+            | Effect::SetCopiableCreatureTypes { what, .. }
             | Effect::ModularCounters { what }
             | Effect::BecomeBlocked { what }
             | Effect::Tap { what }
@@ -4253,6 +4255,7 @@ impl Effect {
             | Effect::Clockspin { what }
             | Effect::RestrictMayPlayToCasting { what }
             | Effect::SetCopiableNameAndTypes { what, .. }
+            | Effect::SetCopiableCreatureTypes { what, .. }
             | Effect::ModularCounters { what }
             | Effect::BecomeBlocked { what }
             | Effect::Tap { what }
@@ -5105,6 +5108,7 @@ impl Effect {
             | Effect::Clockspin { what }
             | Effect::RestrictMayPlayToCasting { what }
             | Effect::SetCopiableNameAndTypes { what, .. }
+            | Effect::SetCopiableCreatureTypes { what, .. }
                 | Effect::ModularCounters { what }
                 | Effect::BecomeBlocked { what }
                 | Effect::CantAttackThisTurn { what }

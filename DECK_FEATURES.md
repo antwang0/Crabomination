@@ -105,7 +105,7 @@ lists were picked.
 | **Devour for Power** (CMD precon) BGU | The Mimeoplasm | BGU | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Mirror Mastery** (CMD precon) GUR | Riku of Two Reflections | GUR | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **First Flight** (SCD precon) WU | Isperia, Supreme Judge | WU | 100 | ✅ complete |
-| **Undead Unleashed** (MIC precon) UB | Wilhelt, the Rotcleaver | UB | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
+| **Undead Unleashed** (MIC precon) UB | Wilhelt, the Rotcleaver | UB | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Arm for Battle** (CMR precon) RW | Wyleth, Soul of Steel | RW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Fae Dominion** (WOC precon) UB | Tegwyll, Duke of Splendor | UB | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Invent Superiority** (C16 precon) WUBR | Breya, Etherium Shaper | WUBR | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
@@ -122,7 +122,7 @@ lists were picked.
 | **Divine Convocation** (MOC precon) URW | Kasla, the Broken Halo | URW | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Symbiotic Swarm** (C20 precon) WBG | Kathril, Aspect Warper | WBG | 100 | 🟡 all 100 implemented, 6 carry residuals (below) |
 | **Painbow** (DMC precon) WUBRG | Jared Carthalion | WUBRG | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
-| **Hatsune Miku** (SLD precon) GW | Trostani, Selesnya's Voice | GW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
+| **Hatsune Miku** (SLD precon) GW | Trostani, Selesnya's Voice | GW | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Witherbloom Witchcraft** (C21 precon) BG | Willowdusk, Essence Seer | BG | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Witherbloom Pestilence** (SOC precon) BG | Dina, Essence Brewer | BG | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Silverquill Statement** (C21 precon) WB | Breena, the Demagogue | WB | 100 | 🟡 all 100 implemented, 7 carry residuals (below) |
@@ -1014,7 +1014,7 @@ stamped exiled-with the spell), `StaticEffect::CombatDamageToPlayersBecomesMill`
 Out's "those cards"). Two bot finds: the delve gate ignored Gorex (the debug
 gate caught it) and the X-target picker never looked in a graveyard, so Hour
 of Eternity went uncast in 1,000 pods — cast after the fix, with a test.
-Residuals: Hordewing Skaab, Hour of Eternity, Shadow Kin, Rooftop Storm
+Residuals: Hordewing Skaab, Shadow Kin, Rooftop Storm
 (INCOMPLETE_CARDS). Pods (release, seed 9361, 1,000 games beside Mimeoplasm /
 Temmet / Stella Lee): 1,000/1,000 decided, no card unplayed, Wilhelt 21.1 %;
 64 seats × 12 (seed 9363) all decided. `--bench` byte-identical.
@@ -1172,7 +1172,7 @@ the stack** (it walked battlefield/graveyard/hand/exile by hand; now
 shots forever** (CR 117.3c hands priority back to the activator — 5,486 on the
 stack at a 6-seat action cap); a HeuristicBot seat now lets its own ability from
 a source resolve first. Residuals: **Ancient Cornucopia**'s once-a-turn limit is
-on the trigger; **Lazotep Quarry**'s token keeps its creature types. Four-seat
+on the trigger. Four-seat
 pods beside Sigarda / Teval / Disa (seed 11068, 1,000 games, all decided):
 Trostani 46.1 %; the census leaves no card of the four unplayed. ⚠ **The
 lifegain engine is the pod's new board-cap source**: at seed 11069, 1,000 games

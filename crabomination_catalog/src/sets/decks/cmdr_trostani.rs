@@ -5,8 +5,6 @@
 //! Residuals (each also on its card):
 //! - **Ancient Cornucopia** — "do this only once each turn" limits the trigger,
 //!   not the gain: a declined gain still spends the turn's one.
-//! - **Lazotep Quarry** — the token keeps the card's creature types and adds
-//!   Zombie (the shared eternalize shape), rather than being only a Zombie.
 
 use std::sync::Arc;
 
@@ -346,8 +344,8 @@ pub fn lathiel_the_bounteous_dawn() -> CardDefinition {
 
 /// Lazotep Quarry — a Desert: {C}; sacrifice a creature for any color; {X}{2},
 /// sacrifice a Desert: exile a creature card with mana value X from your
-/// graveyard for a 4/4 black Zombie token copy (sorcery speed). Residual: the
-/// copy keeps its creature types and adds Zombie.
+/// graveyard for a 4/4 black Zombie token copy — a Zombie instead of its
+/// other creature types, unlike eternalize's (sorcery speed).
 pub fn lazotep_quarry() -> CardDefinition {
     CardDefinition {
         name: "Lazotep Quarry",
@@ -384,6 +382,10 @@ pub fn lazotep_quarry() -> CardDefinition {
                         non_legendary: false,
                         legendary: false,
                         extra_keywords: vec![],
+                    },
+                    Effect::SetCopiableCreatureTypes {
+                        what: Selector::LastCreatedToken,
+                        creature_types: vec![CreatureType::Zombie],
                     },
                     Effect::Exile {
                         what: target_filtered(
