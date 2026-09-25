@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Ten hand-picked commanders plus a hundred and fourteen official preconstructed lists, each a
+//! Ten hand-picked commanders plus a hundred and twenty-three official preconstructed lists, each a
 //! 99 of cards this engine implements: legal under CR 903 (100 cards
 //! including the commander, singleton outside basics, every card inside the
 //! commander's CR 903.4 color identity) and Commander-legal per Scryfall's
@@ -8,7 +8,7 @@
 //!
 //! The ten were built by hand because the offline Scryfall cache cannot say
 //! how a precon splits into decks; MTGJSON's deck files can, and the eleventh
-//! through hundred-and-twenty-fourth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
+//! through hundred-and-thirty-third (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
 //! Win, Tails You Lose, Goblin Storm, Foundations Commander's Wretched Ranks,
 //! Tramplesaurus Rex and Keen Engineering, Commander Legends' Reap the Tides,
 //! Phyrexia: All Will Be One's Corrupting Influence, Zendikar Rising's Sneak
@@ -53,8 +53,8 @@
 //! Planeswalker Party, Secret Lair's 20 Ways to Win, Murders at Karlov Manor
 //! Commander's Blame Game, Bloomburrow Commander's Family Matters and
 //! Foundations Commander's Reign of Dragons, among others — seat 124 is
-//! Innistrad: Crimson Vow Commander's Spirit Squadron) are taken from one
-//! card for card. What all of them keep
+//! Innistrad: Crimson Vow Commander's Spirit Squadron and seat 133 Duskmourn
+//! Commander's Jump Scare!) are taken from one card for card. What all of them keep
 //! from the precon idea is what the pod needs — fixed, legal, varied color
 //! identities, and built to play against each other.
 //! One is a Partner pair (CR 702.124b), one is a **planeswalker**
@@ -4032,4 +4032,33 @@ pub const SEFRIS_MAIN: &[CardFactory] = &[
     // Basics: 7 plains, 5 island, 7 swamp
     plains, plains, plains, plains, plains, plains, plains, island, island, island, island,
     island, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const ZIMONE_COMMANDERS: &[CardFactory] = &[zimone_mystery_unraveler];
+
+/// **Jump Scare!**, the Duskmourn Commander deck (DSC, 2024-09-27), exactly
+/// as MTGJSON's `JumpScare_DSC` prints it: 81 nonbasic cards + 9 Islands + 9 Forests =
+/// 99. Simic manifest dread and morph under Zimone, Mystery Unraveler.
+pub const ZIMONE_MAIN: &[CardFactory] = &[
+    kianne_corrupted_memory, glitch_interpreter, they_came_from_the_pipes, zimones_hypothesis,
+    curator_beastie, disorienting_choice, experimental_lab_staff_room, shriekwood_devourer,
+    giggling_skitterspike, cackling_counterpart, citanul_hierophants, aether_gale,
+    body_of_knowledge, dig_through_time, kefnet_the_mindful, kheru_spellsnatcher,
+    primordial_mist, skaab_ruinator, ashaya_soul_of_the_wild, augur_of_autumn, deathmist_raptor,
+    ezuris_predation, hydra_omnivore, multani_yavimayas_avatar, overwhelming_stampede,
+    sandwurm_convergence, scute_swarm, shigeki_jukai_visionary, temur_war_shaman,
+    thunderfoot_baloth, trail_of_mystery, whisperwood_elemental, worldspine_wurm,
+    aesi_tyrant_of_gyre_strait, arixmethes_slumbering_isle, biomass_mutation, oversimplify,
+    rashmi_eternities_crafter, scroll_of_fate, castle_vantress, drownyard_temple, flooded_grove,
+    hinterland_harbor, mosswort_bridge, overflowing_basin, temple_of_mystery, vineglimmer_snarl,
+    yavimaya_coast, overgrown_zealot, growing_dread, terramorphic_expanse, beast_within,
+    growth_spiral, arcane_signet, sol_ring, command_tower, counterspell, reality_shift,
+    retreat_to_coralhelm, beanstalk_giant, cultivate, explosive_vegetation, greater_tanuki,
+    rampant_growth, sakura_tribe_elder, wilderness_reclamation, yavimaya_elder,
+    yedora_grave_gardener, eureka_moment, tatyova_benthic_druid, trygon_predator, simic_signet,
+    ash_barrens, evolving_wilds, myriad_landscape, quandrix_campus, reliquary_tower,
+    simic_growth_chamber, tangled_islet, temple_of_the_false_god, thornwood_falls,
+    // Basics: 9 island, 9 forest
+    island, island, island, island, island, island, island, island, island, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest,
 ];

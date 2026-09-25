@@ -1096,6 +1096,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SEFRIS_COMMANDERS,
             main: decks::SEFRIS_MAIN,
         },
+        // Hundred-and-thirty-third: the hundred-and-twenty-third official list
+        // (Jump Scare!, DSC) — Simic manifest dread under Zimone.
+        // `--pod-decks 133`.
+        PodDeck {
+            name: "Zimone, Mystery Unraveler (GU)",
+            commanders: decks::ZIMONE_COMMANDERS,
+            main: decks::ZIMONE_MAIN,
+        },
     ]
 }
 
