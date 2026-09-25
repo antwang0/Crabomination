@@ -301,3 +301,13 @@ fn snow_duals_enter_tapped() {
         assert!(g.battlefield_find(id).unwrap().tapped);
     }
 }
+
+/// Dennick, Pious Apprentice — cards in graveyards can't be targeted.
+#[test]
+fn dennick_locks_graveyards_out_of_targeting() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::dennick_pious_apprentice());
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let raise = g.add_card_to_hand(0, catalog::raise_dead());
+    assert!(cast(&mut g, raise, Some(Target::Permanent(dead))).is_err());
+}

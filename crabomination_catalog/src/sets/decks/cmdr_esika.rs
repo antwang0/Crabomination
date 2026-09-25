@@ -12,7 +12,6 @@
 //! - **Chandra, Fire of Kaladesh** — flips when an opponent has lost 3 or
 //!   more life this turn, not after Chandra herself dealt 3 damage.
 //! - **Cosima, God of the Voyage** — the voyage ability isn't implemented.
-//! - **Dennick, Pious Apprentice** — graveyard cards can still be targeted.
 //! - **Gideon, Battle-Forged** (Kytheon's back) — the +2 lure isn't
 //!   implemented; the +1's indestructible lasts until end of turn; the 0
 //!   doesn't prevent damage to him.
@@ -425,11 +424,9 @@ pub fn cosima_god_of_the_voyage() -> CardDefinition {
     })
 }
 
-/// Dennick, Pious Apprentice // Dennick, Pious Apparition — lifelink;
-/// disturb {2}{W}{U}; the Apparition flies and investigates once a turn when
-/// creature cards hit graveyards.
-///
-/// ⚠ Residual: graveyard cards can still be targeted.
+/// Dennick, Pious Apprentice // Dennick, Pious Apparition — lifelink; cards
+/// in graveyards can't be targeted; disturb {2}{W}{U}; the Apparition flies
+/// and investigates once a turn when creature cards hit graveyards.
 pub fn dennick_pious_apprentice() -> CardDefinition {
     let apparition = CardDefinition {
         keywords: vec![Keyword::Flying],
@@ -447,6 +444,10 @@ pub fn dennick_pious_apprentice() -> CardDefinition {
     };
     legendary(CardDefinition {
         keywords: vec![Keyword::Lifelink, Keyword::Disturb(cost(&[generic(2), w(), u()]))],
+        static_abilities: vec![StaticAbility {
+            description: "Cards in graveyards can't be the targets of spells or abilities.",
+            effect: StaticEffect::GraveyardCardsUntargetable,
+        }],
         back_face: Some(back(apparition, vec![Color::White, Color::Blue])),
         ..creature(
             "Dennick, Pious Apprentice",
