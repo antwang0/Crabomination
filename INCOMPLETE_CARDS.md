@@ -2317,6 +2317,19 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Magus Lucea Kane | Tyranid Swarm (40K) | only the next spell with {X} is copied, not an ability with {X}. |
 | 🟡 The First Tyrannic War | Tyranid Swarm (40K) | chapter I's counters are put on after the creature enters, not as it enters. |
 | 🟡 The Red Terror | Tyranid Swarm (40K) | only a permanent source's damage is seen (not a red instant's or sorcery's). |
+| 🟡 Become the Pilot | Paradox Power (WHO) | no "can't be blocked unless it's attacking its owner or a permanent its owner controls" clause. |
+| 🟡 Bigger on the Inside | Paradox Power (WHO) | the mana and the next spell's cascade are yours; no target player. |
+| 🟡 Bill Potts | Paradox Power (WHO) | only instants and sorceries that target only it are copied, not activated abilities. |
+| 🟡 Clara Oswald | Paradox Power (WHO) | "Impossible Girl" (a chosen color while it's your commander) isn't modeled. |
+| 🟡 Last Night Together | Paradox Power (WHO) | any creature may attack in the extra combat, not only the two chosen. |
+| 🟡 Lunar Hatchling | Paradox Power (WHO) | its escape doesn't also exile a land you control. |
+| 🟡 Me, the Immortal | Paradox Power (WHO) | its counters don't stay with it as it changes zones. |
+| 🟡 Psychic Paper | Paradox Power (WHO) | no chosen creature name and type (ward 1 and unblockable only). |
+| 🟡 River Song's Diary | Paradox Power (WHO) | every resolving instant and sorcery is exiled, not only those cast from a hand. |
+| 🟡 Ryan Sinclair | Paradox Power (WHO) | cards with mana value above its power are skipped (discover) rather than ending the reveal. |
+| 🟡 Strax, Sontaran Nurse | Paradox Power (WHO) | the creature it fights is picked from the random player's, not targeted. |
+| 🟡 The Fugitive Doctor | Paradox Power (WHO) | the granted flashback costs the card's mana cost, not {2}{R}{G}. |
+| 🟡 Truth or Consequences | Paradox Power (WHO) | each consequences vote picks its own random opponent. |
 | 🟡 Endless Detour | Counter Blitz (FIC) | the kind of target (spell, nonland permanent, graveyard card) is chosen as a mode. |
 | 🟡 Lulu, Stern Guardian | Counter Blitz (FIC) | the stunned attacker is chosen as the trigger resolves, not as it's put on the stack. |
 | 🟡 Captain Marvel, Apex Avenger | Avengers Assemble (MSC) | only +1/+1 counters put on another creature are copied onto her. |
