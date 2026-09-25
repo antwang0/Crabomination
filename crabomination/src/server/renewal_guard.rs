@@ -40,6 +40,27 @@ pub(super) fn renews_its_own_fodder(state: &GameState, seat: usize, source: Card
         })
 }
 
+/// Whether `e` draws its controller a card, through `Seq` and the
+/// sacrificed-object wrapper a sacrifice-cost ability resolves inside.
+fn draws_you_a_card(e: &Effect) -> bool {
+    match e {
+        Effect::Draw { who: crate::effect::Selector::You, .. } => true,
+        Effect::Seq(steps) => steps.iter().any(draws_you_a_card),
+        Effect::WithSacrificedPt { body, .. } => draws_you_a_card(body),
+        _ => false,
+    }
+}
+
+/// True when a sacrifice-cost ability draws `seat` a card while its library is
+/// empty. That draw is either a loss (CR 704.5b) or a replacement, and the
+/// replacement is where it loops: Trazyn the Infinite borrowing Commander's
+/// Sphere's "sacrifice this: draw a card" beside Out of the Tombs (draw from
+/// an empty library → return a creature card) sacrificed and returned Trazyn
+/// 5,736 times in one six-seat pod (seed 10541, game 7).
+pub(super) fn sacrifices_to_draw_from_empty_library(state: &GameState, seat: usize, ab: &ActivatedAbility) -> bool {
+    state.players[seat].library.is_empty() && draws_you_a_card(&ab.effect)
+}
+
 /// True when `seat`'s board is already overkill: at least
 /// [`SATURATED_CREATURES`] creatures whose total power is three times the
 /// life every live opponent has left. Another token then changes nothing but
@@ -123,6 +144,28 @@ mod tests {
             assert!(pick_sacrifice_value(&g, me, &w).is_none());
             assert!(pick_token_maker(&g, me, &w).is_none());
         }
+    }
+
+    /// CR 704.5b — a "sacrifice this: draw a card" ability with an empty
+    /// library is a loss or a replacement loop (Trazyn + Commander's Sphere +
+    /// Out of the Tombs: 5,736 activations, six-seat pod seed 10541 game 7),
+    /// never a value play; with cards left it is judged as before.
+    #[test]
+    fn a_sacrifice_to_draw_from_an_empty_library_is_not_taken() {
+        let mut g = multi_player_game(4);
+        let me = 1;
+        let sphere = g.add_card_to_battlefield(me, catalog::commanders_sphere());
+        let ab = g.battlefield_find(sphere).unwrap().definition.activated_abilities.iter().find(|a| a.sac_cost).unwrap().clone();
+        g.players[me].library.clear();
+        assert!(super::sacrifices_to_draw_from_empty_library(&g, me, &ab));
+        g.active_player_idx = me;
+        g.step = TurnStep::PostCombatMain;
+        g.priority.player_with_priority = me;
+        for w in [EvalWeights::default(), EvalWeights::baseline()] {
+            assert!(pick_sacrifice_value(&g, me, &w).is_none());
+        }
+        g.add_card_to_library(me, catalog::forest());
+        assert!(!super::sacrifices_to_draw_from_empty_library(&g, me, &ab), "a card left to draw");
     }
 
     /// Sixty Bears against two opponents at 20 life: 120 power is three

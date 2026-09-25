@@ -23254,7 +23254,12 @@ impl GameState {
                         triggered_by_attack: matches!(ev, GameEvent::AttackerDeclared(_)),
                         triggered_by_land_entry: matches!(ev, GameEvent::LandPlayed { .. }),
                         triggered_by_face_up: matches!(ev, GameEvent::TurnedFaceUp { .. }),
-                        triggered_by_draw: matches!(ev, GameEvent::CardDrawn { .. }),
+                        triggered_by_draw: matches!(
+                            ev,
+                            GameEvent::CardDrawn { .. }
+                                | GameEvent::FirstCardDrawnThisTurn { .. }
+                                | GameEvent::SecondCardDrawnThisTurn { .. }
+                        ),
                         damaged_creature_controller: self.damaged_creature_controller(ev),
                         from_mana_ability: matches!(
                             ev,

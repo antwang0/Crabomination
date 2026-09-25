@@ -165,6 +165,7 @@ lists were picked.
 | **Tyranid Swarm** (40K precon) GUR | The Swarmlord | GUR | 100 | 🟡 all 100 implemented, 5 carry residuals (Ghyrson Starn, Hierophant Bio-Titan, Magus Lucea Kane, The First Tyrannic War, The Red Terror) |
 | **Paradox Power** (WHO precon) GUR | The Thirteenth Doctor + Yasmin Khan | GUR | 100 | 🟡 all 100 implemented, 13 carry residuals (Become the Pilot, Bigger on the Inside, Bill Potts, Clara Oswald, Last Night Together, Lunar Hatchling, Me the Immortal, Psychic Paper, River Song's Diary, Ryan Sinclair, Strax, The Fugitive Doctor, Truth or Consequences) |
 | **Avengers Assemble** (MSC precon) URW | Captain America, Team Leader | URW | 100 | 🟡 all 100 implemented, 6 carry residuals (Captain Marvel, Heroic Return, Heroic Sacrifice, Scarlet Witch, Speed, Winter Soldier) |
+| **Turtle Power!** (TMC precon) WUBRG | Heroes in a Half Shell | WUBRG | 100 | 🟡 all 100 implemented, 5 carry residuals (Heroes in a Half Shell, Coin of Mastery, Double Jump // Flying Kick, Special Move, Vigor) |
 | **Doom Prevails** (MSC precon) UBR | Doctor Doom, King of Latveria | UBR | 100 | 🟡 all 100 implemented, 4 carry residuals (Extract Power, Kang Dynasty, Lady Loki, Superior Foes of Spider-Man) |
 | **The Ruinous Powers** (40K precon) UBR | Abaddon the Despoiler | UBR | 100 | 🟡 all 100 implemented, 6 carry residuals (Bloodthirster, Chaos Mutation, Khârn the Betrayer, The Horus Heresy, The Lost and the Damned, The Ruinous Powers) |
 | **Necron Dynasties** (40K precon) B | Szarekh, the Silent King | B | 100 | 🟡 all 100 implemented, 4 carry residuals (Biotransference, Canoptek Wraith, Necron Deathmark, Out of the Tombs) |
@@ -2630,6 +2631,60 @@ Vehicle, an activated manland or a stationed Spacecraft stayed home: Kotori
 **Dance of the Manse** (INCOMPLETE_CARDS). Four-seat pods beside Hakbal /
 Inspirit / Morska (seed 15101, 1,000) and six seats (15102, 1,000): all
 decided; census (15103, 500): nothing unplayed. `--bench` byte-identical.
+
+The **hundred-and-eightieth** is Teenage Mutant Ninja Turtles
+Commander's **Turtle Power!** (`TurtlePower_TMC`, 2026-03-06) — five-color
++1/+1 counters under Heroes in a Half Shell, `--pod-decks 180`. Forty-eight
+cards were missing (`cmdr_heroes.rs`; the shared Mutagen token moved to
+`tokens::mutagen_token`). The primitives: **mana from an artifact source**
+(the pool tracks artifact-produced mana beside Treasure mana, a cast stamps
+how much it spent, `Value::ArtifactManaSpentToCastSource` — Coin of Mastery),
+**a draw-caused trigger doubler** (`StaticEffect::DoubleControllerDrawTriggers`
+off a `triggered_by_draw` candidate flag, first and second draws of a turn
+included — Krang, CR 603.2), `Effect::CopiesAttackEachOtherOpponent` (Myriad's
+copies made non-legendary and sacrificed, only off an attack on a player —
+Shredder; Myriad now shares the resolver),
+`StaticEffect::ReplaceDamageToOtherCreaturesYouControlWithCounters` (Vigor),
+`R::ManaValueAtMostCountersAmongYours` (Dimension X Pizzasaur),
+`Value::OpponentsAttackedThisTurn` (Fast Forward) and the Utrom creature type.
+The seven partners carry `PartnerLabel("Character select")`; Bebop and
+Rocksteady are a Partner-with pair. Residuals: **Heroes in a Half Shell**,
+**Coin of Mastery**, **Double Jump // Flying Kick**, **Special Move**,
+**Vigor** (INCOMPLETE_CARDS). Four seats beside Captain America / Invisible
+Woman / Tidus (seed 17901, 1,000, `--card-census`: nothing unplayed): all
+decided, Heroes 25.9 %; six seats beside the Thirteenth Doctor / Szarekh /
+Doctor Doom / the Swarmlord / Y'shtola (17902, 1,000): all decided after the
+empty-library draw fix (one Trazyn + Commander's Sphere + Out of the Tombs
+loop capped game 523; `018BnccM` landed the same fix first), Heroes 15.2 %. `--bench` byte-identical.
+
+The **hundred-and-seventy-ninth** is Warhammer 40,000 Commander's **The
+Ruinous Powers** (`TheRuinousPowers_40K`, 2022-10-07) — Grixis Chaos cascade
+and Demons under Abaddon the Despoiler, `--pod-decks 179`. Forty-one cards were
+missing (`cmdr_abaddon.rs`). The primitives:
+`StaticEffect::PreventDamageToSelfOpponentGainsControl` (Khârn the Betrayer —
+CR 615 / 800.4, read in `trade_counters_for_damage`),
+`StaticEffect::OpponentsMustAttackWithAtLeastOne` (Seeker of Slaanesh — CR
+508.1d: an empty declaration is rejected while a creature is able, and the
+bot's forced-attacker repair sends the sturdiest one),
+`Effect::ReturnSourceWhenTargetLeaves` (Lucius the Eternal — CR 603.7, a
+delayed leaves-the-battlefield trigger), `CardDefinition::escape_exile_filter`
+(Helbrute's Sarcophagus — escape exiling only a creature card),
+`DestroyOnePerOpponent.random_one` (Chaos Defiler) and the Primarch type.
+Abaddon's cascade reads `TotalLifeLostThisTurn(EachOpponent)`. ⚠ Its six-seat
+pods found **a departed seat's suspended ask outlived it** (a graveyard pick
+asked of a player who lost to the same priority pass was installed later as a
+decision owed by a seat no longer in the game — CR 800.4a, the leave handler
+now drops it) and **the bot sacrificed to draw from an empty library** (Trazyn
+the Infinite borrowing Commander's Sphere beside Out of the Tombs: 5,736
+activations, 3 of 1,000 six-seat pods action-capped — `pick_sacrifice_value`
+skips it now). Residuals: **Bloodthirster**, **Chaos Mutation**, **Khârn the
+Betrayer**, **The Horus Heresy**, **The Lost and the Damned**, **The Ruinous
+Powers** (INCOMPLETE_CARDS). Four seats beside Paradox Power / Necron Dynasties
+/ Doom Prevails (seed 10540, 1,000, `--card-census`: nothing unplayed): all
+decided, Abaddon 20.6 %; six seats beside those three, Tyranid Swarm and
+Avengers Assemble (10541, 1,000): all decided after the two fixes, 12.0 %;
+strict debug pods (3 × 60 four-seat, 6 × 40 six-seat) decided. `--bench`
+200,190 — byte-identical.
 
 The **hundred-and-seventy-sixth** is Marvel Super Heroes Commander's **Doom
 Prevails** (`DoomPrevails_MSC`, 2026-06-26) — Grixis Villains and connive under
