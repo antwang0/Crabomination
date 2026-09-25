@@ -17765,13 +17765,15 @@ impl GameState {
         let mut before: Option<crate::mana::ManaPool> = None;
         // A Treasure's mana is marked the same way, from the pool total —
         // the Treasure has been sacrificed by the time the mana is there.
-        let treasure_before = self
-            .battlefield
-            .find_by_id(card_id)
+        let source = self.battlefield.find_by_id(card_id);
+        let treasure_before = source
             .filter(|c| {
                 c.definition.subtypes.artifact_subtypes.contains(&crate::card::ArtifactSubtype::Treasure)
             })
             .map(|_| self.players[p].mana_pool.total());
+        // Tezzeret, Betrayer of Flesh's "first artifact ability each turn".
+        let first_artifact_ability = !self.players[p].artifact_ability_activated_this_turn
+            && source.is_some_and(|c| c.controller == p && c.definition.is_artifact());
         let out = self.activate_ability_inner(
             card_id,
             ability_index,
@@ -17784,6 +17786,8 @@ impl GameState {
         );
         if out.is_err() {
             events.truncate(mark);
+        } else if first_artifact_ability && self.pending_decision.is_none() {
+            self.players[p].artifact_ability_activated_this_turn = true;
         }
         if let Some(before) = before {
             let pool = &mut self.players[p].mana_pool;
@@ -19855,6 +19859,28 @@ impl GameState {
             if total > 0 {
                 let max_cut = effective_mana_cost.cmc().saturating_sub(1);
                 effective_mana_cost.reduce_generic(total.min(max_cut));
+            }
+        }
+        // Tezzeret, Betrayer of Flesh — the first artifact ability you
+        // activate each turn costs {N} less (generic only, no floor).
+        if !self.players[p].artifact_ability_activated_this_turn
+            && !effective_mana_cost.symbols.is_empty()
+            && self
+                .battlefield_find(card_id)
+                .is_some_and(|c| c.controller == p && c.definition.is_artifact())
+        {
+            let total: u32 = self
+                .battlefield
+                .iter()
+                .filter(|c| c.controller == p)
+                .flat_map(|c| c.definition.static_abilities.iter())
+                .map(|sa| match sa.effect {
+                    crate::effect::StaticEffect::FirstArtifactAbilityEachTurnCostsLess { amount } => amount,
+                    _ => 0,
+                })
+                .sum();
+            if total > 0 {
+                effective_mana_cost.reduce_generic(total);
             }
         }
         // Power Artifact — the enchanted permanent's activated abilities cost

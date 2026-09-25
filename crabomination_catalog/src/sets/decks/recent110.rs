@@ -589,24 +589,8 @@ pub fn slippery_scoundrel() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        triggered_abilities: vec![
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: Effect::Ascend {
-                    who: PlayerRef::You,
-                },
-            },
-            TriggeredAbility {
-                event: EventSpec::new(
-                    EventKind::StepBegins(crate::game::types::TurnStep::Upkeep),
-                    EventScope::ActivePlayer,
-                ),
-                effect: Effect::Ascend {
-                    who: PlayerRef::You,
-                },
-            },
-        ],
         static_abilities: vec![
+            crate::sets::ascend(),
             StaticAbility {
                 description: "Hexproof and can't be blocked while you have the city's blessing.",
                 effect: StaticEffect::SelfHasKeywordIf {

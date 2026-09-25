@@ -4979,6 +4979,10 @@ pub enum Effect {
     /// than a goader if able, until that goader's next turn. Disrupt Decorum
     /// (mass goad), Bloodthirsty Blade.
     Goad { what: Selector },
+    /// CR 701.15a — "[what] is no longer goaded" (Serene Sleuth): ends every
+    /// resolved and held goad on each creature. A static that says a creature
+    /// "is goaded" (an attached Aura) keeps applying.
+    Ungoad { what: Selector },
     /// "…is goaded for the rest of the game" (Nettling Nuisance): `Goad`, and
     /// the goad never expires.
     GoadForTheGame { what: Selector },
@@ -6207,6 +6211,10 @@ pub enum Effect {
     /// way." Nebuchadnezzar.
     NameCardRevealRandomDiscardNamed { who: PlayerRef, count: Value },
     SilencePlayersThisTurn { who: PlayerRef },
+    /// "[who] can't cast spells until [their] next turn" (Innocuous
+    /// Researcher): the silence carries over each turn boundary until that
+    /// player's own turn begins.
+    SilencePlayersUntilTheirNextTurn { who: PlayerRef },
     /// "Exile [this spell]" as part of its own resolution (Revel in
     /// Silence). Same flag pattern as `ShuffleSelfIntoLibrary`.
     ExileResolvingSpell,

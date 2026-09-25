@@ -1877,6 +1877,14 @@ pub enum StaticEffect {
     /// Biomancer's Familiar / Training Grounds-style (generic-only). Applies
     /// when the ability's source is a creature the static's controller controls.
     YourCreatureActivatedAbilitiesCostLess { amount: u32 },
+    /// "The first activated ability of an artifact you activate each turn
+    /// costs {N} less to activate" (Tezzeret, Betrayer of Flesh). Generic
+    /// only, no floor; mana abilities count as the first (2022-02-18 ruling).
+    FirstArtifactAbilityEachTurnCostsLess { amount: u32 },
+    /// CR 702.131b — Ascend on a permanent: any time its controller controls
+    /// ten or more permanents, they get the city's blessing. Checked on every
+    /// permanent entry (`GameState::apply_permanent_ascend`).
+    Ascend,
     /// CR 702.27b — "Buyback costs cost {N} less" (Memory Crystal). Reduces
     /// the generic part of the buyback surcharge only, and only for its
     /// controller's casts.

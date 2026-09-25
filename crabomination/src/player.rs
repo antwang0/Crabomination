@@ -271,6 +271,19 @@ pub struct PlayerCold {
     /// cleared at the end of this player's next turn.
     #[serde(default)]
     pub attack_lure: Option<(crate::card::CardId, u32)>,
+    /// "Can't cast spells until your next turn" (Innocuous Researcher):
+    /// re-arms `silenced_this_turn` at every turn boundary until this
+    /// player's own untap clears it.
+    #[serde(default)]
+    pub silenced_until_their_turn: bool,
+    /// CR 702.131b — a permanent with ascend has entered under this player's
+    /// control, so permanent entries check for the city's blessing.
+    #[serde(default)]
+    pub ascend_armed: bool,
+    /// Tezzeret, Betrayer of Flesh — this player has activated an artifact's
+    /// ability this turn. Written once a turn; reset at the turn boundary.
+    #[serde(default)]
+    pub artifact_ability_activated_this_turn: bool,
 }
 
 /// A seat's mutable state. Reached only through [`Player`], which owns it

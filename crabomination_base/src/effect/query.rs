@@ -1471,7 +1471,9 @@ impl Effect {
             Effect::ReturnResolvingSpellToHand => false,
             Effect::ExileResolvingSpell => false,
             Effect::EndMayPlayOnCardsExiledWithSource => false,
-            Effect::SilencePlayersThisTurn { who } => player_has_target(who),
+            Effect::SilencePlayersThisTurn { who } | Effect::SilencePlayersUntilTheirNextTurn { who } => {
+                player_has_target(who)
+            }
             Effect::MayPayBy { who, body, else_, .. } => {
                 player_has_target(who)
                     || body.requires_target()
@@ -1623,6 +1625,7 @@ impl Effect {
             Effect::Explore { who } => sel_has_target(who),
             Effect::Goad { what }
             | Effect::GoadForTheGame { what }
+            | Effect::Ungoad { what }
             | Effect::GoadWhile { what, .. }
             | Effect::ReturnSelfAttachedTo { host: what }
             | Effect::GrantCantAttackYou { what, .. } => sel_has_target(what),
@@ -2901,6 +2904,7 @@ impl Effect {
             Effect::Airbend { what } => sel_filter(what),
             Effect::Goad { what }
             | Effect::GoadForTheGame { what }
+            | Effect::Ungoad { what }
             | Effect::GoadWhile { what, .. }
             | Effect::ReturnSelfAttachedTo { host: what }
             | Effect::GrantCantAttackYou { what, .. }
@@ -3768,6 +3772,7 @@ impl Effect {
             Effect::Goad { .. } | Effect::GoadForTheGame { .. } | Effect::GoadWhile { .. } => {
                 "goad target creature".into()
             }
+            Effect::Ungoad { .. } => "end goad".into(),
             Effect::Suspect { .. } => "suspect target creature".into(),
             Effect::ReplaceCreatureTypeText { .. } => {
                 "change all instances of one creature type to another".into()
@@ -5021,6 +5026,7 @@ impl Effect {
                 | Effect::RemoveAllCountersDiscountNextSpell { what }
                 | Effect::Goad { what }
                 | Effect::GoadForTheGame { what }
+                | Effect::Ungoad { what }
                 | Effect::GoadWhile { what, .. }
             | Effect::ReturnSelfAttachedTo { host: what }
                 | Effect::Detain { what }

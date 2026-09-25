@@ -4,7 +4,7 @@ mod recent81 {
     use crabomination::card::{CounterType, Keyword};
     use crabomination::catalog;
     use crabomination::game::two_player_game;
-    use crabomination::game::types::{Attack, AttackTarget, Target, TurnStep};
+    use crabomination::game::types::{Attack, AttackTarget, GameAction, Target, TurnStep};
     use crabomination::game::*;
 
     fn advance_to(g: &mut GameState, step: TurnStep) {
@@ -503,13 +503,16 @@ mod recent82 {
         let vigilant = |g: &GameState, id| g.computed_permanent(id).unwrap().keywords().contains(&Keyword::Vigilance);
         let elf = g.add_card_to_battlefield(0, catalog::llanowar_elves());
         assert!(!vigilant(&g, bear), "no vigilance without the city's blessing");
-        // CR 702.131 — ten permanents: ascend at the upkeep check.
-        for _ in 0..8 {
+        for _ in 0..7 {
             g.add_card_to_battlefield(0, catalog::forest());
         }
-        g.step = TurnStep::Upkeep;
-        g.fire_step_triggers(TurnStep::Upkeep);
-        drain_stack(&mut g);
+        // CR 702.131b — ascend is static: the tenth permanent entering grants
+        // the blessing, no upkeep check.
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        let land = g.add_card_to_hand(0, catalog::forest());
+        g.perform_action(GameAction::PlayLand(land)).expect("tenth permanent");
         assert!(g.players[0].city_blessing);
         assert!(vigilant(&g, bear) && !vigilant(&g, elf), "the chosen type gains vigilance");
     }

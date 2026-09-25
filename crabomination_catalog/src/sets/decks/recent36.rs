@@ -116,25 +116,11 @@ pub fn wayward_swordtooth() -> CardDefinition {
         power: 5,
         toughness: 5,
         keywords: vec![Keyword::CantAttackOrBlockUnlessCityBlessing],
-        static_abilities: vec![StaticAbility {
-            description: "You may play an additional land on each of your turns.",
-            effect: StaticEffect::ExtraLandPerTurn,
-        }],
-        triggered_abilities: vec![
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: Effect::Ascend {
-                    who: PlayerRef::You,
-                },
-            },
-            TriggeredAbility {
-                event: EventSpec::new(
-                    EventKind::StepBegins(crate::game::TurnStep::Upkeep),
-                    EventScope::ActivePlayer,
-                ),
-                effect: Effect::Ascend {
-                    who: PlayerRef::You,
-                },
+        static_abilities: vec![
+            crate::sets::ascend(),
+            StaticAbility {
+                description: "You may play an additional land on each of your turns.",
+                effect: StaticEffect::ExtraLandPerTurn,
             },
         ],
         ..Default::default()

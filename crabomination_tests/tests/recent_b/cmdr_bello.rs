@@ -344,11 +344,14 @@ fn tendershoot_dryad_breeds_and_blesses() {
     drain_stack(&mut g);
     let sap = g.battlefield.iter().find(|c| c.definition.name == "Saproling").unwrap().id;
     assert_eq!(pt(&g, sap), (1, 1));
-    for _ in 0..8 {
+    for _ in 0..7 {
         g.add_card_to_battlefield(0, catalog::forest());
     }
-    g.fire_step_triggers(TurnStep::Upkeep);
-    drain_stack(&mut g);
+    // CR 702.131b — the tenth permanent entering grants the blessing.
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let land = g.add_card_to_hand(0, catalog::forest());
+    g.perform_action(GameAction::PlayLand(land)).expect("tenth permanent");
     assert!(g.players[0].city_blessing);
     assert_eq!(pt(&g, sap), (3, 3));
 }

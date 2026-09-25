@@ -11387,6 +11387,23 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::Ungoad { what } => {
+                // CR 701.15a — end the resolved and held goads; a static
+                // "is goaded" (an attached Aura) keeps applying.
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    if let Some(c) = self.battlefield_find(cid)
+                        && (!c.goaded_by.is_empty() || !c.goad_holds.is_empty())
+                        && let Some(c) = self.battlefield_find_mut(cid)
+                    {
+                        c.goaded_by.clear();
+                        c.goad_holds.clear();
+                        c.goad_for_the_game = false;
+                    }
+                }
+                Ok(())
+            }
+
             Effect::Goad { what } => {
                 // CR 701.38 — add the resolving controller to each target
                 // creature's goaded_by list. The grant expires when the
@@ -27329,6 +27346,15 @@ impl GameState {
             Effect::SilencePlayersThisTurn { who } => {
                 for p in self.resolve_players(who, ctx) {
                     self.players[p].silenced_this_turn = true;
+                }
+                Ok(())
+            }
+
+            Effect::SilencePlayersUntilTheirNextTurn { who } => {
+                // Re-armed at each turn boundary until that player's untap.
+                for p in self.resolve_players(who, ctx) {
+                    self.players[p].silenced_this_turn = true;
+                    self.players[p].silenced_until_their_turn = true;
                 }
                 Ok(())
             }

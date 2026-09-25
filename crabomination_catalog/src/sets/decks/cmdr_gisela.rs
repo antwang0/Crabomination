@@ -162,29 +162,19 @@ pub fn angel_of_destiny() -> CardDefinition {
 }
 
 /// Arch of Orazca — ascend; taps for {C}; {5}, {T}: draw with the city's
-/// blessing. Permanent ascend (CR 702.131b) is checked as it enters and as
-/// the draw is activated.
+/// blessing.
 pub fn arch_of_orazca() -> CardDefinition {
     CardDefinition {
         name: "Arch of Orazca",
         card_types: vec![CardType::Land],
-        triggered_abilities: vec![etb(Effect::Ascend { who: PlayerRef::You })],
+        static_abilities: vec![crate::sets::ascend()],
         activated_abilities: vec![
             tap_add_colorless(),
             ActivatedAbility {
                 mana_cost: cost(&[generic(5)]),
                 tap_cost: true,
-                condition: Some(Predicate::Any(vec![
-                    Predicate::HasCityBlessing { who: PlayerRef::You },
-                    Predicate::SelectorCountAtLeast {
-                        sel: yours(R::Permanent),
-                        n: Value::Const(10),
-                    },
-                ])),
-                effect: Effect::Seq(vec![
-                    Effect::Ascend { who: PlayerRef::You },
-                    Effect::Draw { who: Selector::You, amount: Value::Const(1) },
-                ]),
+                condition: Some(Predicate::HasCityBlessing { who: PlayerRef::You }),
+                effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
                 ..Default::default()
             },
         ],

@@ -349,6 +349,15 @@ pub fn verge_land(
 ///
 /// `scripts/audit_enters_tapped.py` is the census over the cards still on the
 /// trigger (ENGINE_BACKLOG's forty-ninth find).
+/// CR 702.131b — Ascend on a permanent (a static ability, checked on every
+/// permanent entry by the engine).
+pub fn ascend() -> StaticAbility {
+    StaticAbility {
+        description: "Ascend (If you control ten or more permanents, you get the city's blessing for the rest of the game.)",
+        effect: StaticEffect::Ascend,
+    }
+}
+
 pub fn enters_tapped() -> StaticAbility {
     StaticAbility {
         description: "This land enters tapped.",

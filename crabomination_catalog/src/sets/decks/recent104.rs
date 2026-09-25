@@ -56,22 +56,8 @@ pub fn twilight_prophet() -> CardDefinition {
         power: 2,
         toughness: 4,
         keywords: vec![Keyword::Flying],
+        static_abilities: vec![crate::sets::ascend()],
         triggered_abilities: vec![
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: Effect::Ascend {
-                    who: PlayerRef::You,
-                },
-            },
-            TriggeredAbility {
-                event: EventSpec::new(
-                    EventKind::StepBegins(crate::game::TurnStep::Upkeep),
-                    EventScope::YourControl,
-                ),
-                effect: Effect::Ascend {
-                    who: PlayerRef::You,
-                },
-            },
             TriggeredAbility {
                 event: EventSpec::new(
                     EventKind::StepBegins(crate::game::TurnStep::Upkeep),

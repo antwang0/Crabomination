@@ -127,6 +127,7 @@ pub mod combat;
 // CR 508.1d — "attack [this] if able" during a player's next turn.
 mod attack_lure;
 mod goad;
+mod ascend;
 // CR 106.7 — "could produce" mana.
 mod could_produce;
 // CR 508.4 — put onto the battlefield attacking, never declared.
@@ -17653,6 +17654,8 @@ impl GameState {
         let mut inst = CardInstance::new(id, def, player_idx);
         inst.battlefield_timestamp = self.next_timestamp();
         self.battlefield.push(inst);
+        // Arms (and checks) permanent ascend like a real entry would.
+        self.apply_permanent_ascend(id);
         id
     }
 
@@ -22083,6 +22086,11 @@ impl GameState {
         // at the fifty-fourth tip — the ones that get past the empty-batch
         // return above. (It read 53,838 when the gate was written; the count
         // is the workload's, not the gate's, and it moves.)
+        // CR 702.131b — a permanent changing control can bring ascend, or the
+        // tenth permanent, to its new controller.
+        for i in 0..control_changes.len() {
+            self.apply_permanent_ascend(control_changes[i].0);
+        }
         let synthesized: Vec<GameEvent> = if deaths.is_empty()
             && control_changes.is_empty()
             && exile_tally.is_empty()
@@ -22282,6 +22290,7 @@ impl GameState {
                         self.players[p].face_down_activity_this_turn = true;
                     }
                     self.apply_soulbond_pairing(*card_id);
+                    self.apply_permanent_ascend(*card_id);
                 }
                 // CR 613.7e/f/g — attach, turn face up, and transform each
                 // give the object a new timestamp.
@@ -30222,6 +30231,9 @@ fn static_effect_to_effects(
             | StaticEffect::GraveyardCastOncePerTurn { .. }
             | StaticEffect::ActivationCostReduction { .. }
             | StaticEffect::YourCreatureActivatedAbilitiesCostLess { .. }
+            | StaticEffect::FirstArtifactAbilityEachTurnCostsLess { .. }
+            // Read on permanent entry (`apply_permanent_ascend`).
+            | StaticEffect::Ascend
             // Consulted directly in `activate_ability`, not a layer effect.
             | StaticEffect::OtherExhaustActivationCostReduction { .. }
             // Consulted directly in `equip()`, not a layer effect.

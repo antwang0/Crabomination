@@ -4404,6 +4404,9 @@ impl GameState {
             // "Until your next turn" player grants expire at their owner's untap
             // (Blossoming Calm's hexproof).
             me.hexproof_until_next_turn = false;
+            if me.silenced_until_their_turn {
+                me.silenced_until_their_turn = false;
+            }
             me.creatures_attacked_this_turn = 0;
             me.spells_cast_this_turn = 0;
             me.spells_cast_from_hand_this_turn = 0;
@@ -4437,6 +4440,9 @@ impl GameState {
             pl.combat_damage_taken_this_turn = 0;
             pl.token_copy_replacement_used_this_turn = false;
             pl.tokens_created_this_turn = 0;
+            if pl.artifact_ability_activated_this_turn {
+                pl.artifact_ability_activated_this_turn = false;
+            }
             pl.cards_cycled_this_turn = 0;
             pl.token_doublings_this_turn = 0;
             pl.steals_opponent_tokens_this_turn = false;
@@ -4473,7 +4479,8 @@ impl GameState {
                 pl.used_graveyard_this_turn = false;
             }
             pl.graveyard_bound_exiled_this_turn = false;
-            pl.silenced_this_turn = false;
+            // Innocuous Researcher's lock outlasts the boundary.
+            pl.silenced_this_turn = pl.silenced_until_their_turn;
             pl.warped_spell_this_turn = false;
             pl.searched_library_this_turn = false;
             pl.shroud_this_turn = false;

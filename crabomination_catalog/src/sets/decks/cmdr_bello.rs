@@ -492,22 +492,14 @@ pub fn sunbirds_invocation() -> CardDefinition {
 }
 
 /// Tendershoot Dryad — ascend; a Saproling every upkeep; Saprolings are +2/+2
-/// with the city's blessing. ⚠ Ascend is checked as it enters and at each
-/// upkeep, like the other ascend permanents here (CR 702.131b checks
-/// continuously).
+/// with the city's blessing.
 pub fn tendershoot_dryad() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![
-            etb(Effect::Ascend { who: PlayerRef::You }),
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::ActivePlayer),
-                effect: Effect::Seq(vec![
-                    Effect::Ascend { who: PlayerRef::You },
-                    make(1, token("Saproling", Color::Green, CreatureType::Saproling)),
-                ]),
-            },
-        ],
-        static_abilities: vec![StaticAbility {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::ActivePlayer),
+            effect: make(1, token("Saproling", Color::Green, CreatureType::Saproling)),
+        }],
+        static_abilities: vec![crate::sets::ascend(), StaticAbility {
             description: "Saprolings you control get +2/+2 as long as you have the city's blessing.",
             effect: StaticEffect::WhileCondition {
                 condition: Predicate::HasCityBlessing { who: PlayerRef::You },

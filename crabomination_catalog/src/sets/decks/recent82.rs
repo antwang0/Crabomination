@@ -146,27 +146,16 @@ pub fn tempered_steel() -> CardDefinition {
 /// Radiant Destiny — {2}{W} Enchantment. Ascend. As it enters, choose a
 /// creature type. Creatures you control of the chosen type get +1/+1. As long
 /// as you have the city's blessing, they also have vigilance.
-///
-/// Ascend (a static ability, CR 702.131b) is checked at your upkeep — before
-/// any attack the vigilance is for — rather than continuously. No enters
-/// check: the choice is the only thing that happens as it enters (CR 614.12).
 pub fn radiant_destiny() -> CardDefinition {
-    use crate::card::{EventKind, EventScope, EventSpec, Predicate, TriggeredAbility};
+    use crate::card::Predicate;
     CardDefinition {
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(
-                EventKind::StepBegins(crate::game::TurnStep::Upkeep),
-                EventScope::YourControl,
-            ),
-            effect: Effect::Ascend { who: PlayerRef::You },
-        }],
         name: "Radiant Destiny",
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Enchantment],
         as_enters_effect: Some(Effect::NameCreatureType {
             what: Selector::This,
         }),
-        static_abilities: vec![StaticAbility {
+        static_abilities: vec![crate::sets::ascend(), StaticAbility {
             description: "Creatures you control of the chosen type get +1/+1.",
             effect: StaticEffect::AnthemForChosenType {
                 all_players: false,

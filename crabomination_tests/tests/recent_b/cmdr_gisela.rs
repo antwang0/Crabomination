@@ -177,10 +177,14 @@ fn arch_of_orazca_draws_with_the_citys_blessing() {
         })
     };
     assert!(draw(&mut g).is_err(), "no blessing with two permanents");
-    for _ in 0..9 {
+    for _ in 0..8 {
         g.add_card_to_battlefield(0, catalog::plains());
     }
-    draw(&mut g).expect("ten permanents: ascend, then draw");
+    // CR 702.131b — the tenth permanent entering grants the blessing.
+    let land = g.add_card_to_hand(0, catalog::plains());
+    g.perform_action(GameAction::PlayLand(land)).expect("tenth permanent");
+    assert!(g.players[0].city_blessing);
+    draw(&mut g).expect("ten permanents: the blessing, then draw");
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), 1);
 }
