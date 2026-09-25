@@ -1955,6 +1955,13 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Back in Town | Most Wanted (OTC) | the X outlaw cards are chosen as it resolves rather than targeted. |
 | 🟡 Dire Fleet Ravager | Most Wanted (OTC) | the players lose their thirds one after another (each reads only its own life, so the totals match). |
 | 🟡 Vihaan, Goldwaker | Most Wanted (OTC) | the vigilance/haste grant's outlaw filter reads printed types, so animated Treasure Assassins don't get them (they are outlaws for every other reader). |
+| 🟡 Omo, Queen of Vesuva | Tricky Terrain (M3C) | "every creature type" is a Changeling grant, which a layer-4 type-line read doesn't see. |
+| 🟡 Horizon of Progress | Tricky Terrain (M3C) | "any type a land you control could produce" reads your lands' basic land types (Reflecting Pool's approximation) — no {C}, nothing from a nonbasic land's own ability. |
+| 🟡 Desert Warfare | Tricky Terrain (M3C) | a Desert card reaching your graveyard from hand or library is watched only as a discard or a mill (surveil and other routes are missed). |
+| 🟡 Sunken Palace | Tricky Terrain (M3C) | its rider copies a spell it pays for, not an activated ability. |
+| 🟡 Magus of the Candelabra | Tricky Terrain (M3C) | untaps up to X of your own tapped lands, untargeted (Candelabra of Tawnos's approximation). |
+| 🟡 Rampant Frogantua | Tricky Terrain (M3C) | every milled land goes onto the battlefield ("any number" isn't offered). |
+| 🟡 March from Velis Vel | Tricky Terrain (M3C) | the nonbasic land type is chosen as a mode. |
 | 🟡 Orator of Ojutai | Draconic Domination (C17) | the Dragon check reads your board and hand as it enters; there is no optional reveal. |
 | 🟡 Armored Skyhunter | Silverquill Influence (SOC) | an Equipment it puts onto the battlefield stays unattached. |
 | 🟡 Coercive Impetus | Silverquill Influence (SOC) | the goad is renewed by a trigger at the beginning of each combat, not a static. |
