@@ -153,6 +153,7 @@ lists were picked.
 | **Explorers of the Deep** (LCC precon) GU | Hakbal of the Surging Soul | GU | 100 | 🟡 all 100 implemented, 2 carry residuals (Xolatoyac, the Smiling Flood, Bygone Marvels) |
 | **Buckle Up** (NEC precon) WU | Kotori, Pilot Prodigy | WU | 100 | 🟡 all 100 implemented, 3 carry residuals (Armed and Armored, Katsumasa, the Animator, Dance of the Manse) |
 | **Dance of the Elements** (ECC precon) WUBRG | Ashling, the Limitless | WUBRG | 100 | 🟡 all 100 implemented, 5 carry residuals (Flamebraider, Smokebraider, Primal Beyond, Haunting Voyage, Horde of Notions) |
+| **Veloci-Ramp-Tor** (LCC precon) RGW | Pantlaza, Sun-Favored | RGW | 100 | 🟡 all 100 implemented, 2 carry residuals (Sunfrill Imitator, Wrathful Raptors) |
 | **Mystic Intellect** (C19 precon) URW | Sevinne, the Chronoclasm | URW | 100 | 🟡 all 100 implemented (Dockside Extortionist, banned, swapped for Ragavan), 3 carry residuals (Wall of Stolen Identity, Mandate of Peace, Elsha of the Infinite) |
 | **The Hosts of Mordor** (LTC precon) UBR | Sauron, Lord of the Rings | UBR | 100 | 🟡 all 100 implemented, 3 carry residuals (Moria Scavenger, Shelob, Dread Weaver, Summons of Saruman) |
 | **Elven Empire** (KHC precon) BG | Lathril, Blade of the Elves | BG | 100 | 🟡 all 100 implemented, 2 carry residuals (Serpent's Soul-Jar, Roots of Wisdom) |
@@ -2612,6 +2613,27 @@ targeted), **Summons of Saruman** (flashback pays X in mana). Pods
 (1,000 games each): 4 seats beside Urza / Osgir / Eshki (seed 11120) Sauron
 28.1 %, census: no card of the four unplayed; 6 seats (seed 11121) beside Sevinne / Anje / Kotori / Galadriel / Felothar 1,000 / 1,000, Sauron 13.1 %; 8 seats (seed 11121) 1,000 / 1,000, Sauron 16.1 %. `--bench`
 byte-identical.
+
+The **hundred-and-fifty-fifth** is Lost Caverns of Ixalan Commander's
+**Veloci-Ramp-Tor** (`VelociRampTor_LCC`, 2023-11-17) — Naya Dinosaurs,
+enrage and ramp under Pantlaza, Sun-Favored, `--pod-decks 155`. Twenty-six
+cards were missing (`cmdr_pantlaza.rs`; `precon_scan` listed 25 — it matched
+the Dinosaur Egg *token*'s name, so the card was never reported). The
+primitives: `StaticEffect::DoubleControllerCreatureDamagedTriggers` (Wayta,
+CR 603.2d — a `TriggerCandidate::damaged_creature_controller` filled on the
+live and the LKI damage paths, so lethal enrage doubles too);
+`ActivatedAbility::cost_reduction_if_targets` (Wayta's fight);
+`StaticEffect::CapDamageToYourOtherMatchingCreatures` (Temple Altisaur, CR 615
+"prevent all but 1"); `Effect::NextSpellOfChosenTypeHasFlashThisTurn`
+(Progenitor's Icon); `R::SharesCreatureTypeWithCreatureYouControl`
+(Descendants' Path). ⚠ It found `R::ExiledWithSource` reading only the
+imprint link, so "a card exiled with this" never matched an until-leaves
+exile (Bronzebeak Foragers). Residuals: **Sunfrill Imitator** takes the
+copied name; **Wrathful Raptors** misses damage that kills them in the same
+event. Pods (1,000 games each, all decided): 4 seats beside Sauron / Sevinne /
+Anje (seed 10480) Pantlaza 57.8 %, census: no card of the four unplayed; 6
+seats beside Ashling / Satya / Prosper / Morophon / Omo (10481) 42.6 %. Strict
+debug pods (10470-10472) 180 / 180. `--bench` byte-identical.
 
 The **hundred-and-fifty-sixth** is Kaldheim Commander's **Elven Empire**
 (`ElvenEmpire_KHC`) — Golgari Elves under Lathril, Blade of the Elves,
