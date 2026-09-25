@@ -1441,6 +1441,15 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::DOOM_COMMANDERS,
             main: decks::DOOM_MAIN,
         },
+        // Hundred-and-seventy-seventh: Necron Dynasties (40K) — mono-black
+        // Necron artifacts under Szarekh, the Silent King (unearth's CR
+        // 702.84a leave-exile, Out of the Tombs' CR 614 empty-draw
+        // replacement). `--pod-decks 177`.
+        PodDeck {
+            name: "Szarekh, the Silent King (B)",
+            commanders: decks::SZAREKH_COMMANDERS,
+            main: decks::SZAREKH_MAIN,
+        },
     ]
 }
 

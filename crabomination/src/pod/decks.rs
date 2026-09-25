@@ -5360,3 +5360,30 @@ pub const DOOM_MAIN: &[CardFactory] = &[
     island, island, island, island, swamp, swamp, swamp, swamp, swamp, swamp, mountain, mountain,
     mountain, mountain, mountain,
 ];
+
+pub const SZAREKH_COMMANDERS: &[CardFactory] = &[szarekh_the_silent_king];
+
+/// **Necron Dynasties**, the Warhammer 40,000 Commander deck (40K,
+/// 2022-10-07), exactly as MTGJSON's `NecronDynasties_40K` prints it:
+/// 69 nonbasic cards + 30 Swamps = 99. Mono-black Necron artifacts under
+/// Szarekh, the Silent King — mill, unearth and reanimation.
+pub const SZAREKH_MAIN: &[CardFactory] = &[
+    beacon_of_unrest, living_death, mutilate, dread_return, defile, darkness, go_for_the_throat,
+    caged_sun, endless_atlas, gilded_lotus, mystic_forge, sculpting_steel, cranial_plating,
+    hedron_archive, mask_of_memory, sol_ring, arcane_signet, commanders_sphere, mind_stone,
+    thought_vessel, unstable_obelisk, wayfarers_bauble, barren_moor, myriad_landscape,
+    reliquary_tower, desert_of_the_glorified, polluted_mire, vault_of_whispers,
+    imotekh_the_stormlord, anrakyr_the_traveller, biotransference, chronomancer, cryptek,
+    illuminor_szeras, lokhust_heavy_destroyer, lychguard, necron_deathmark, necron_overlord,
+    out_of_the_tombs, royal_warden, shard_of_the_nightbringer, shard_of_the_void_dragon,
+    skorpekh_lord, technomancer, their_name_is_death, their_number_is_legion, tomb_blade,
+    trazyn_the_infinite, triarch_stalker, the_war_in_heaven, canoptek_scarab_swarm,
+    canoptek_spyder, canoptek_tomb_sentinel, canoptek_wraith, convergence_of_dominion,
+    cryptothrall, ghost_ark, necron_monolith, resurrection_orb, sceptre_of_eternal_glory,
+    tomb_fortress, flayed_one, hexmark_destroyer, plasmancer, psychomancer, sautekh_immortal,
+    skorpekh_destroyer, triarch_praetorian, night_scythe,
+    // Basics: 30 swamp
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp,
+];
