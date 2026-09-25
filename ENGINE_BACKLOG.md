@@ -350,6 +350,29 @@ the handoff.
   Scheme's connive (convokers on the resolving spell), Colossal Grave-Reaver's
   pick (mill BATCHES aren't delimited in `milled_ids_this_turn`).
 
+## FIXED 2026-09-25 (the Commander routine, session `01RyGJHK`) — two resume-channel bugs the strict and 8-seat pods found
+
+- **An as-enters ask inside a non-replayable resolution leaked.** Living
+  Death returning Feasting Hobbit: the devour ask (a `SacrificeAnyNumber`
+  as-enters effect) suspended at resolution depth > 0, the enclosing arm
+  never reached it again, the answer leaked (`CRAB_ANSWER_LOG=strict`, 6-seat
+  pod seed 10481) and nothing was devoured. `resolve_as_enters_driven` now
+  drives every as-enters ask where the permanent enters (CR 614.12), a
+  prompting seat's through `decide_pending_policy`. Test:
+  `cmdr_frodo::an_as_enters_ask_inside_living_death_is_answered_in_place`.
+  ⚠ Open lead: any other mass-move arm (`SacrificeOthersThenReanimate`, …)
+  that fires an ask *other* than an as-enters one still parks into a
+  resolution that may not replay it.
+- **A per-opponent ask loop asked on past a suspend.**
+  `destroy_one_per_opponent` (Ultimate Magic: Meteor) kept asking for the
+  next opponent after `ask_seat_target_logged` returned `None`, overwriting
+  the parked ask; one 8-seat game answered 7,741 of them and hit the action
+  cap (`--pod-decks 162,..,155 --seed 9402 --first 701`, also games 1520 and
+  1576). It returns on the suspend now. `scripts/audit_stash_in_loop.py`
+  did not flag it — the loop calls a logged ask, which the audit treats as
+  safe; teaching it "a logged ask in a loop must return on `None`" is the
+  class fix.
+
 ## FIXED 2026-09-25 (the Commander routine, Prismari Performance) — an emblem's flashback grant, and a spell-target trigger with no target
 
 - **CR 114.4 — `graveyard_flashback_grant` scanned the battlefield only**, so
