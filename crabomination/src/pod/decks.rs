@@ -4093,3 +4093,34 @@ pub const MORSKA_MAIN: &[CardFactory] = &[
     plains, plains, plains, island, island, island, island, island, island, forest, forest, forest,
     forest, forest,
 ];
+
+pub const KAUST_COMMANDERS: &[CardFactory] = &[kaust_eyes_of_the_glade];
+
+/// **Deadly Disguise**, the Murders at Karlov Manor Commander deck
+/// (2024-02-09), exactly as MTGJSON's `DeadlyDisguise_MKC` prints it: 88
+/// nonbasic cards + 4 Plains + 3 Mountain + 4 Forest = 99. Naya morph,
+/// disguise and cloak under Kaust, Eyes of the Glade.
+pub const KAUST_MAIN: &[CardFactory] = &[
+    duskana_the_rage_mother, true_identity, unexplained_absence, veiled_ascension, boltbender,
+    showstopping_surprise, tesak_judiths_hellhound, experiment_twelve, printlifter_ooze,
+    panoptic_projektor, ransom_note, ugins_mastery, austere_command, dusk_dawn, exalted_angel,
+    fell_the_mighty, hidden_dragonslayer, master_of_pearls, mastery_of_the_unseen,
+    mirror_entity, welcoming_vampire, akroma_angel_of_fury, ashcloud_phoenix, chaos_warp,
+    imperial_hellkite, jeskas_will, neheb_the_eternal, scourge_of_the_throne, beast_whisperer,
+    deathmist_raptor, den_protector, hooded_hydra, krosan_cloudscraper, krosan_colossus,
+    obscuring_aether, ohran_frostfang, return_of_the_wildspeaker, root_elemental,
+    saryth_the_vipers_fang, seedborn_muse, temur_war_shaman, thelonite_hermit,
+    toski_bearer_of_secrets, trail_of_mystery, whisperwood_elemental, yedora_grave_gardener,
+    decimate, sidar_kondo_of_jamuraa, lifecrafters_bestiary, scroll_of_fate, canopy_vista,
+    cinder_glade, exotic_orchard, fortified_village, furycalm_snarl, game_trail,
+    kessig_wolf_run, mossfire_valley, mosswort_bridge, scattered_groves, sheltered_thicket,
+    shrine_of_the_forsaken_gods, sungrass_prairie, temple_of_abandon, temple_of_plenty,
+    temple_of_triumph, path_to_exile, ainok_survivalist, broodhatch_nantuko, nervous_gardener,
+    nantuko_vigilante, natures_lore, sakura_tribe_elder, salt_road_ambushers, three_visits,
+    wild_growth, arcane_signet, sol_ring, boros_garrison, command_tower, branch_of_vitu_ghazi,
+    gruul_turf, jungle_shrine, krosan_verge, sacred_peaks, selesnya_sanctuary,
+    temple_of_the_false_god, zoetic_cavern,
+    // Basics: 4 plains, 3 mountain, 4 forest
+    plains, plains, plains, plains, mountain, mountain, mountain, forest, forest, forest,
+    forest,
+];

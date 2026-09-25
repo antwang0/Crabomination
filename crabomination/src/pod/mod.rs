@@ -1112,6 +1112,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::MORSKA_COMMANDERS,
             main: decks::MORSKA_MAIN,
         },
+        // Hundred-and-thirty-fifth: Deadly Disguise (Murders at Karlov
+        // Manor) — Naya morph, disguise and cloak under Kaust, Eyes of
+        // the Glade. `--pod-decks 135`.
+        PodDeck {
+            name: "Kaust, Eyes of the Glade (RGW)",
+            commanders: decks::KAUST_COMMANDERS,
+            main: decks::KAUST_MAIN,
+        },
     ]
 }
 
