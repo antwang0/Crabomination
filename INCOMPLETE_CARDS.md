@@ -2023,6 +2023,10 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Lim-Dûl's Vault | Eternal Bargain (C13) | how far to dig is the engine's pick, and the last five keep their order. |
 | 🟡 Springjack Pasture | Eternal Bargain (C13) | no bot path picks an X for "Sacrifice X Goats"; the Goats are only made. |
 | 🟡 Serene Master | Eternal Bargain (C13) | the exchanged power is the current one, so the creatures' +1/+1 counters apply twice (7b set, then 7c again). |
+| 🟡 Sudden Demise | Power Hungry (C13) | the color is the engine's pick (the most opposing value killed, net of the caster's own), not a prompt. |
+| 🟡 Night Soil | Power Hungry (C13) | the two creature cards come from your own graveyard, not any single graveyard. |
+| 🟡 Widespread Panic | Power Hungry (C13) | any shuffle a spell or ability makes counts, not only one its controller made of their own library. |
+| 🟡 Capricious Efreet | Power Hungry (C13) | the up-to-two opposing targets are the auto-picker's; no UI prompt for the optional slots. |
 | 🟡 Descendants' Fury | Sliver Swarm (CMM) | "one of them" is any attacker of yours that damaged a player this turn, not only this combat-damage batch's. |
 | 🟡 Bloodlord of Vaasgoth | Vampiric Bloodlust (C17) | the granted bloodthirst is checked as the cast trigger resolves, not as the creature enters. |
 | 🟡 Mathas, Fiend Seeker | Vampiric Bloodlust (C17) | a bounty counter grants its dies trigger only while Mathas is on the battlefield. |

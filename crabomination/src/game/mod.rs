@@ -22088,8 +22088,8 @@ impl GameState {
         // is the workload's, not the gate's, and it moves.)
         // CR 702.131b — a permanent changing control can bring ascend, or the
         // tenth permanent, to its new controller.
-        for i in 0..control_changes.len() {
-            self.apply_permanent_ascend(control_changes[i].0);
+        for change in &control_changes {
+            self.apply_permanent_ascend(change.0);
         }
         let synthesized: Vec<GameEvent> = if deaths.is_empty()
             && control_changes.is_empty()

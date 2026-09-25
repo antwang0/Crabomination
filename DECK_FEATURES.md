@@ -144,6 +144,7 @@ lists were picked.
 | **Enhanced Evolution** (C20 precon) BGU | Otrimi, the Ever-Playful | BGU | 100 | 🟡 all 100 implemented, 4 carry residuals (Capricopian, Manascape Refractor, Mindleecher, Vastwood Hydra) |
 | **Cavalry Charge** (MOC precon) WUB | Sidar Jabari of Zhalfir | WUB | 100 | 🟡 all 100 implemented, 3 carry residuals (Path of the Enigma, Syr Elenora, Aryel) |
 | **Eternal Bargain** (C13 precon) WUB | Oloro, Ageless Ascetic | WUB | 100 | 🟡 all 100 implemented, 4 carry residuals (Order of Succession, Lim-Dûl's Vault, Springjack Pasture, Serene Master) |
+| **Power Hungry** (C13 precon) BRG | Prossh, Skyraider of Kher | BRG | 100 | 🟡 all 100 implemented, 4 carry residuals (Sudden Demise, Night Soil, Widespread Panic, Capricious Efreet) |
 | **Exit from Exile** (CLB precon) RG | Faldorn, Dread Wolf Herald | RG | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Exquisite Invention** (C18 precon) UR | Saheeli, the Gifted (**planeswalker**) | UR | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Mishra's Burnished Banner** (BRC precon) UBR | Mishra, Eminent One | UBR | 100 | 🟡 all 100 implemented, 6 carry residuals (below) |
@@ -1432,6 +1433,26 @@ Galea / Kathril / Chishiro (seed 10400, 1,000 games) and Nelly / Eshki /
 Estrid (seed 10401, 1,000): all decided, Jirina 28.4 % and 24.3 %; census
 (seed 10401): no card of the list unplayed. `--bench` byte-identical;
 cube/sos/sealed (seed 10402): 7,500 decided.
+
+The **hundred-and-thirtieth** is Commander 2013's **Power Hungry**
+(`PowerHungry_C13`) — Jund tokens and sacrifice under Prossh, Skyraider of
+Kher, `--pod-decks 130`. Twenty-one cards were missing (`cmdr_prossh.rs`). The
+primitives: `StaticEffect::DoubleTokensEveryone` /
+`DoublePlusOneCountersEveryone` (Primal Vigor — the existing doubler counts
+read them for every player), `Effect::OwnersGainControlOfNontokens` (Brooding
+Saurian) and `Effect::DamageEachCreatureOfChosenColor` (Sudden Demise), plus
+`CounterType::Eyeball` and `CreatureType::Graveborn`. ⚠ **Its pods found a bot
+loop: Tooth and Claw under Primal Vigor** traded two Carnivores for two
+Carnivores 3,936 times in one turn (10 action caps in 3,000 games) — both the
+priced sacrifice owner and the token sink took it; `renews_its_own_fodder`
+(`server/renewal_guard.rs`) now refuses a sacrifice whose fodder is only
+tokens the ability itself makes, and the re-run is 3,000 / 3,000 decided.
+Residuals: Sudden Demise's color is the engine's; Night Soil reads your own
+graveyard; Widespread Panic counts any effect shuffle; Capricious Efreet's
+opposing targets are the auto-picker's. Prossh wins 1.5-3.1 % against modern
+lists and 20.3 % against its C13 cohort (Derevi / Marath / Jeleva, seed
+10534) — the list's age, not a fault. Census: no card of the list unplayed.
+Debug strict pods (400 games): clean. `--bench` byte-identical.
 
 The **hundred-and-twenty-sixth** is Commander 2013's **Eternal Bargain**
 (`EternalBargain_C13`) — Esper lifegain and artifacts under Oloro, Ageless
