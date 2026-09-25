@@ -12313,38 +12313,50 @@ impl GameState {
                     else {
                         continue;
                     };
-                    let top = self.players[controller].library.first();
-                    let is_land = top.map(|c| c.definition.is_land());
-                    if let Some(name) = top.map(|c| c.definition.name) {
-                        events.push(GameEvent::TopCardRevealed {
-                            player: controller,
-                            card_name: name,
-                            is_land: is_land.unwrap_or(false),
+                    // Topography Tracker — "instead it explores, then it
+                    // explores again", once per such permanent its controller
+                    // controls.
+                    let reps = 1 + self
+                        .battlefield
+                        .iter()
+                        .filter(|c| c.controller == controller)
+                        .flat_map(|c| c.definition.static_abilities.iter())
+                        .filter(|sa| matches!(sa.effect, crate::effect::StaticEffect::ExploresTwice))
+                        .count();
+                    for _ in 0..reps {
+                        let top = self.players[controller].library.first();
+                        let is_land = top.map(|c| c.definition.is_land());
+                        if let Some(name) = top.map(|c| c.definition.name) {
+                            events.push(GameEvent::TopCardRevealed {
+                                player: controller,
+                                card_name: name,
+                                is_land: is_land.unwrap_or(false),
+                            });
+                        }
+                        if is_land == Some(true) {
+                            let card = self.players[controller].library.remove(0);
+                            self.players[controller].hand.push(card);
+                        } else {
+                            // Nonland revealed (or empty library): +1/+1 counter.
+                            // CR 614.16 — counter replacement effects apply.
+                            let n =
+                                self.scaled_counter_count(controller, CounterType::PlusOnePlusOne, 1, true);
+                            if let Some(c) = self.battlefield_find_mut(cid) {
+                                c.add_counters(CounterType::PlusOnePlusOne, n);
+                                events.push(GameEvent::CounterAdded {
+                                    card_id: cid,
+                                    counter_type: CounterType::PlusOnePlusOne,
+                                    count: n,
+                                });
+                                self.turn.permanents_gained_counter_this_turn.insert(cid);
+                            }
+                        }
+                        events.push(GameEvent::Explored {
+                            card_id: cid,
+                            controller,
+                            explored_land: is_land == Some(true),
                         });
                     }
-                    if is_land == Some(true) {
-                        let card = self.players[controller].library.remove(0);
-                        self.players[controller].hand.push(card);
-                    } else {
-                        // Nonland revealed (or empty library): +1/+1 counter.
-                        // CR 614.16 — counter replacement effects apply.
-                        let n =
-                            self.scaled_counter_count(controller, CounterType::PlusOnePlusOne, 1, true);
-                        if let Some(c) = self.battlefield_find_mut(cid) {
-                            c.add_counters(CounterType::PlusOnePlusOne, n);
-                            events.push(GameEvent::CounterAdded {
-                                card_id: cid,
-                                counter_type: CounterType::PlusOnePlusOne,
-                                count: n,
-                            });
-                            self.turn.permanents_gained_counter_this_turn.insert(cid);
-                        }
-                    }
-                    events.push(GameEvent::Explored {
-                        card_id: cid,
-                        controller,
-                        explored_land: is_land == Some(true),
-                    });
                 }
                 self.check_state_based_actions_into(events);
                 Ok(())

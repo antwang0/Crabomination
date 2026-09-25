@@ -708,6 +708,10 @@ pub enum StaticEffect {
     /// `extra_cost_for_spell` against the spell's chosen target; the tax only
     /// applies to spells cast by an opponent of the source's controller.
     TaxOpponentSpellsTargeting { target_filter: SelectionRequirement, amount: u32 },
+    /// The activated-ability half of `TaxOpponentSpellsTargeting`: "abilities
+    /// your opponents activate that target a [filter] you control cost {N}
+    /// more to activate" (Kopala, Warden of Waves).
+    TaxOpponentAbilitiesTargeting { target_filter: SelectionRequirement, amount: u32 },
     /// "Spells your opponents cast that target this creature cost `amount` more
     /// to cast" (Sphinx of New Prahv). The self-scoped sibling of
     /// `TaxOpponentSpellsTargeting`: the tax applies only when the chosen
@@ -1840,6 +1844,9 @@ pub enum StaticEffect {
     /// Six: during the controller's turn, nonland permanent cards in their
     /// graveyard have retrace (CR 702.55).
     GraveyardPermanentsHaveRetraceDuringYourTurn,
+    /// "[filter] cards in your graveyard have retrace" (Deeproot Historian),
+    /// read by `GameState::effective_retrace`.
+    GraveyardCardsHaveRetrace { filter: SelectionRequirement },
     /// The Ozolith: when a creature its controller controls leaves the
     /// battlefield with counters on it, those counters move onto this
     /// permanent (applied at the leave funnels).
@@ -1921,6 +1928,9 @@ pub enum StaticEffect {
     /// costs {N} less to activate" (Tezzeret, Betrayer of Flesh). Generic
     /// only, no floor; mana abilities count as the first (2022-02-18 ruling).
     FirstArtifactAbilityEachTurnCostsLess { amount: u32 },
+    /// "If a creature you control would explore, instead it explores, then it
+    /// explores again" (Topography Tracker) — read by `Effect::Explore`.
+    ExploresTwice,
     /// CR 702.131b — Ascend on a permanent: any time its controller controls
     /// ten or more permanents, they get the city's blessing. Checked on every
     /// permanent entry (`GameState::apply_permanent_ascend`).

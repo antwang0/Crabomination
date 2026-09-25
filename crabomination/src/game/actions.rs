@@ -20164,6 +20164,31 @@ impl GameState {
             }
         }
 
+        // Kopala, Warden of Waves — an opponent's ability aimed at a matching
+        // permanent of the static's controller costs {N} more.
+        if let Some(Target::Permanent(pid)) = target.as_ref()
+            && let Some(tc) = self.battlefield_find(*pid)
+            && tc.controller != p
+        {
+            let tax: u32 = self
+                .battlefield
+                .iter()
+                .filter(|c| c.controller == tc.controller)
+                .flat_map(|c| c.definition.static_abilities.iter())
+                .map(|sa| match &sa.effect {
+                    crate::effect::StaticEffect::TaxOpponentAbilitiesTargeting { target_filter, amount }
+                        if self.evaluate_requirement_on_card(target_filter, tc, tc.controller) =>
+                    {
+                        *amount
+                    }
+                    _ => 0,
+                })
+                .sum();
+            if tax > 0 {
+                effective_mana_cost.symbols.push(crate::mana::ManaSymbol::Generic(tax));
+            }
+        }
+
         // CR 106.6 — "spend only mana of the chosen color": last, so taxes and
         // reductions land first and every remaining generic pip is recoloured.
         if ability.spend_only_chosen_color

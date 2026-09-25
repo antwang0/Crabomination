@@ -9744,6 +9744,16 @@ impl GameState {
         if card.definition.has_retrace() {
             return true;
         }
+        // Deeproot Historian — "[filter] cards in your graveyard have retrace".
+        if self.battlefield.iter().any(|c| {
+            c.controller == p
+                && c.definition.static_abilities.iter().any(|sa| {
+                    matches!(&sa.effect, StaticEffect::GraveyardCardsHaveRetrace { filter }
+                        if self.evaluate_requirement_on_card(filter, card, p))
+                })
+        }) {
+            return true;
+        }
         self.active_player_idx == p
             && !card.definition.is_land()
             && card.definition.is_permanent()
@@ -30422,6 +30432,10 @@ fn static_effect_to_effects(
             | StaticEffect::FirstArtifactAbilityEachTurnCostsLess { .. }
             // Read on permanent entry (`apply_permanent_ascend`).
             | StaticEffect::Ascend
+            // Read by `Effect::Explore`.
+            | StaticEffect::ExploresTwice
+            // Read in `activate_ability`'s tax block.
+            | StaticEffect::TaxOpponentAbilitiesTargeting { .. }
             // Consulted directly in `activate_ability`, not a layer effect.
             | StaticEffect::OtherExhaustActivationCostReduction { .. }
             // Consulted directly in `equip()`, not a layer effect.
@@ -30460,6 +30474,7 @@ fn static_effect_to_effects(
             | StaticEffect::YourGraveyardCreaturesHaveChosenType
             | StaticEffect::OwnedCardsOffBattlefieldAreChosenTypeToo { .. }
             | StaticEffect::GraveyardPermanentsHaveRetraceDuringYourTurn
+            | StaticEffect::GraveyardCardsHaveRetrace { .. }
             | StaticEffect::CollectsLeaverCounters
             | StaticEffect::OpponentsCantActivateArtifactAbilities
             // AnnihilatorPerPlusOneCounter — needs a live counter count,
