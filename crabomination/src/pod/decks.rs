@@ -4902,3 +4902,34 @@ pub const JACE_MAIN: &[CardFactory] = &[
     perilous_landscape, plains, plains, plains, plains, island, island, island, swamp, swamp,
     mountain, mountain,
 ];
+
+pub const FRODO_COMMANDERS: &[CardFactory] = &[frodo_adventurous_hobbit, sam_loyal_attendant];
+
+/// **Food and Fellowship**, the Tales of Middle-earth Commander deck (LTC,
+/// 2023-06-23), exactly as MTGJSON's `FoodAndFellowship_LTC` prints it: 82
+/// nonbasic cards + 4 Plains + 4 Swamps + 8 Forests = 98, beside two
+/// commanders that partner with each other (CR 702.124j). Abzan Food and
+/// lifegain under Frodo and Sam.
+pub const FRODO_MAIN: &[CardFactory] = &[
+    field_tested_frying_pan, the_gaffer, gwaihir_greatest_of_the_eagles,
+    of_herbs_and_stewed_rabbit, gollum_obsessed_stalker, lobelia_defender_of_bag_end,
+    rapacious_guest, assemble_the_entmoot, feasting_hobbit, motivated_pony, prize_pig,
+    banquet_guests, bilbo_birthday_celebrant, farmer_cotton, merry_warden_of_isengard,
+    pippin_warden_of_isengard, treebeard_gracious_host, hithlain_rope, call_for_unity,
+    dawn_of_hope, dusk_dawn, fell_the_mighty, fumigate, mentor_of_the_meek, sanguine_bond,
+    toxic_deluge, birds_of_paradise, gilded_goose, woodfall_primus, anguished_unmaking,
+    chromatic_lantern, trading_post, well_of_lost_dreams, brushland, canopy_vista,
+    exotic_orchard, fortified_village, isolated_chapel, murmuring_bosk, necroblossom_snarl,
+    scattered_groves, shineshadow_snarl, sunpetal_grove, woodland_cemetery,
+    eagles_of_the_north, landroval_horizon_witness, rosie_cotton_of_south_lane,
+    shire_shirriff, mirkwood_bats, generous_ent, path_to_exile, swords_to_plowshares,
+    revive_the_shire, butterbur_bree_innkeeper, crypt_incursion, go_for_the_throat,
+    nights_whisper, cultivate, essence_warden, farseek, great_oak_guardian, harmonize,
+    orchard_strider, prosperous_innkeeper, shire_terrace, tireless_provisioner, mortify,
+    savvy_hunter, arcane_signet, commanders_sphere, pristine_talisman, sol_ring,
+    access_tunnel, ash_barrens, command_tower, evolving_wilds, ghost_quarter,
+    graypelt_refuge, path_of_ancestry, rogues_passage, sandsteppe_citadel, scoured_barrens,
+    // Basics: 4 plains, 4 swamp, 8 forest
+    plains, plains, plains, plains, swamp, swamp, swamp, swamp, forest, forest, forest,
+    forest, forest, forest, forest, forest,
+];

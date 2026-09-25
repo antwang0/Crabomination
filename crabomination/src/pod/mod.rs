@@ -1327,6 +1327,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::JACE_COMMANDERS,
             main: decks::JACE_MAIN,
         },
+        // Hundred-and-sixty-second: Food and Fellowship (Tales of
+        // Middle-earth) — Abzan Food and lifegain under Frodo and Sam, a
+        // "partner with" pair (CR 702.124j). `--pod-decks 162`.
+        PodDeck {
+            name: "Frodo + Sam (WBG)",
+            commanders: decks::FRODO_COMMANDERS,
+            main: decks::FRODO_MAIN,
+        },
     ]
 }
 
@@ -1946,6 +1954,8 @@ mod tests {
             ("Pantlaza", [0x9A47, 155, 9079]),
             // CR 702.143 foretell, CR 107.3 an {X}{X} payment (Numa).
             ("Lathril", [0x1A7A, 156, 9080]),
+            // CR 702.124j partner with, CR 701.54 the Ring tempts you.
+            ("Frodo", [0xF20D, 162, 9086]),
             // CR 702.6 equip (a legendary equip cost), CR 702.143 foretold
             // "cast from exile" riders, one destroy per opponent.
             ("Cloud, Ex", [0xC10D, 157, 9081]),
