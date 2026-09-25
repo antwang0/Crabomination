@@ -5028,6 +5028,7 @@ impl Effect {
                 | Effect::CopySpellWithRiders { what, .. }
                 | Effect::CopySpellAsOneOneSpirit { what }
                 | Effect::Connive { what, .. }
+                | Effect::OwnerShufflesInExilesTopPlaysOrCasts { what }
                 | Effect::CopySpellMayChooseTargets { what, .. }
                 | Effect::CopySpellUnlessPaid { what, .. }
                 | Effect::CopySpellForEachOtherTarget { what }
