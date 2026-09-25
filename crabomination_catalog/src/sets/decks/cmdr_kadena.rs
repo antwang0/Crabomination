@@ -53,7 +53,7 @@ pub fn kadena_slinking_sorcerer() -> CardDefinition {
         supertypes: vec![Supertype::Legendary],
         can_be_commander: true,
         static_abilities: vec![StaticAbility {
-            description: "The first face-down creature spell you cast each turn costs {3} less to cast.".into(),
+            description: "The first face-down creature spell you cast each turn costs {3} less to cast.",
             effect: StaticEffect::FirstFaceDownSpellEachTurnCostsLess { amount: 3 },
         }],
         triggered_abilities: vec![TriggeredAbility {
@@ -139,7 +139,7 @@ pub fn foul_orchard() -> CardDefinition {
 /// Residual: turned face up, it attaches by a trigger, not as it turns.
 pub fn gift_of_doom() -> CardDefinition {
     let grant = |keyword: Keyword| StaticAbility {
-        description: "Enchanted creature has deathtouch and indestructible.".into(),
+        description: "Enchanted creature has deathtouch and indestructible.",
         effect: StaticEffect::GrantKeyword { applies_to: Selector::AttachedTo(Box::new(Selector::This)), keyword },
     };
     CardDefinition {
@@ -285,11 +285,11 @@ pub fn rayami_first_of_the_fallen() -> CardDefinition {
         Keyword::Vigilance,
     ];
     let mut statics = vec![StaticAbility {
-        description: "If a nontoken creature would die, exile that card with a blood counter on it instead.".into(),
+        description: "If a nontoken creature would die, exile that card with a blood counter on it instead.",
         effect: StaticEffect::ExileDyingNontokenCreaturesWithCounter { counter: CounterType::Blood },
     }];
     statics.extend(shared.into_iter().map(|keyword| StaticAbility {
-        description: "Rayami has the keywords of exiled creature cards with blood counters on them.".into(),
+        description: "Rayami has the keywords of exiled creature cards with blood counters on them.",
         effect: StaticEffect::WhileCondition {
             condition: Predicate::SelectorCountAtLeast {
                 sel: Selector::CardsInZone {
@@ -352,7 +352,7 @@ pub fn secret_plans() -> CardDefinition {
         cost: cost(&[g(), u()]),
         card_types: vec![CardType::Enchantment],
         static_abilities: vec![StaticAbility {
-            description: "Face-down creatures you control get +0/+1.".into(),
+            description: "Face-down creatures you control get +0/+1.",
             effect: StaticEffect::PumpPT {
                 applies_to: Selector::EachPermanent(R::Creature.and(R::FaceDown).and(R::ControlledByYou)),
                 power: 0,

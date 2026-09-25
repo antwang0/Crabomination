@@ -67,12 +67,11 @@ pub fn nalia_dearnise() -> CardDefinition {
         can_be_commander: true,
         static_abilities: vec![
             StaticAbility {
-                description: "You may look at the top card of your library any time.".into(),
+                description: "You may look at the top card of your library any time.",
                 effect: StaticEffect::MayLookAtOwnLibraryTop,
             },
             StaticAbility {
-                description: "You may cast Cleric, Rogue, Warrior, and Wizard spells from the top of your library."
-                    .into(),
+                description: "You may cast Cleric, Rogue, Warrior, and Wizard spells from the top of your library.",
                 effect: StaticEffect::PlayFromLibraryTop { filter: R::Creature.and(party_role()) },
             },
         ],
@@ -98,7 +97,7 @@ pub fn nalia_dearnise() -> CardDefinition {
 pub fn archpriest_of_iona() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![StaticAbility {
-            description: "Its power is equal to the number of creatures in your party.".into(),
+            description: "Its power is equal to the number of creatures in your party.",
             effect: StaticEffect::SelfBasePtFromValue { power: Value::PartyCount, toughness: Value::Const(2) },
         }],
         triggered_abilities: vec![TriggeredAbility {
@@ -128,7 +127,7 @@ pub fn burakos_party_leader() -> CardDefinition {
         static_abilities: [CreatureType::Cleric, CreatureType::Rogue, CreatureType::Warrior, CreatureType::Wizard]
             .into_iter()
             .map(|creature_type| StaticAbility {
-                description: "Burakos is also a Cleric, Rogue, Warrior, and Wizard.".into(),
+                description: "Burakos is also a Cleric, Rogue, Warrior, and Wizard.",
                 effect: StaticEffect::AddCreatureTypeToMatching { applies_to: Selector::This, creature_type },
             })
             .collect(),
@@ -266,8 +265,7 @@ pub fn folk_hero() -> CardDefinition {
         subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Background], ..Default::default() },
         static_abilities: vec![StaticAbility {
             description: "Commander creatures you own have \"Whenever you cast a spell that shares a creature \
-                          type with this creature, draw a card. This ability triggers only once each turn.\""
-                .into(),
+                          type with this creature, draw a card. This ability triggers only once each turn.\"",
             effect: StaticEffect::GrantTriggeredAbility {
                 filter: R::Creature.and(R::IsCommander).and(R::OwnedByYou),
                 ability: Box::new(granted),
@@ -440,7 +438,7 @@ pub fn mardu_strike_leader() -> CardDefinition {
 /// / Warrior / Wizard; with a full party, all damage to it is prevented.
 pub fn multiclass_baldric() -> CardDefinition {
     let grant = |t: CreatureType, keyword: Keyword| StaticAbility {
-        description: "Equipped creature has a keyword while you control a party role.".into(),
+        description: "Equipped creature has a keyword while you control a party role.",
         effect: StaticEffect::WhileCondition {
             condition: you_control(t),
             inner: Box::new(StaticEffect::GrantKeyword {
@@ -462,8 +460,7 @@ pub fn multiclass_baldric() -> CardDefinition {
             grant(CreatureType::Wizard, Keyword::Flying),
             StaticAbility {
                 description: "As long as you have a full party, prevent all damage that would be dealt to \
-                              equipped creature."
-                    .into(),
+                              equipped creature.",
                 effect: StaticEffect::WhileCondition {
                     condition: full_party(),
                     inner: Box::new(StaticEffect::PreventAllDamageToEnchanted),
@@ -547,8 +544,7 @@ pub fn solemn_doomguide() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying],
         static_abilities: vec![StaticAbility {
-            description: "Each Cleric, Rogue, Warrior, and/or Wizard creature card in your graveyard has unearth {1}{B}."
-                .into(),
+            description: "Each Cleric, Rogue, Warrior, and/or Wizard creature card in your graveyard has unearth {1}{B}.",
             effect: StaticEffect::GraveyardCardsHaveUnearth {
                 filter: R::Creature.and(party_role()),
                 cost: cost(&[generic(1), b()]),
@@ -577,7 +573,7 @@ pub fn thwart_the_grave() -> CardDefinition {
         cost: cost(&[generic(4), b(), b()]),
         card_types: vec![CardType::Sorcery],
         static_abilities: vec![StaticAbility {
-            description: "This spell costs {1} less to cast for each creature in your party.".into(),
+            description: "This spell costs {1} less to cast for each creature in your party.",
             effect: StaticEffect::SelfCostReducedByValue { amount: Value::PartyCount },
         }],
         effect: Effect::OptionalTargets {
@@ -600,8 +596,7 @@ pub fn valiant_changeling() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Changeling, Keyword::DoubleStrike],
         static_abilities: vec![StaticAbility {
-            description: "This spell costs {1} less to cast for each creature type among creatures you control."
-                .into(),
+            description: "This spell costs {1} less to cast for each creature type among creatures you control.",
             effect: StaticEffect::SelfCostReducedByValue {
                 amount: Value::Min(
                     Box::new(Value::DistinctCreatureTypesAmongYourCreatures),
