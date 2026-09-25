@@ -666,13 +666,18 @@ impl GameState {
         // loop, and this runs once per attack candidate inside the bot's
         // search — asking the families one at a time read `fixed` +0.17 %.
         let mut hasted = false;
+        // A granted "can attack as though it didn't have defender" (Assault
+        // Formation's {G}, Walking Bulwark, the magecraft Walls) waives it
+        // too; the declaration used to read only the statics and the
+        // turn-scoped set, so every such grant was dead.
+        let waives_defender = kws.iter().any(|k| matches!(k, Keyword::AttacksAsThoughNoDefender));
         for k in kws {
             match k {
                 Keyword::Haste => hasted = true,
                 Keyword::CantAttack => {
                     return Some((line!(), GameError::CannotAttack(id)));
                 }
-                Keyword::Defender if !self.ignores_defender_for_attack(card) => {
+                Keyword::Defender if !waives_defender && !self.ignores_defender_for_attack(card) => {
                     return Some((line!(), GameError::CannotAttack(id)));
                 }
                 // CR 508.1a — Goblin Cohort: unless you cast a creature spell
