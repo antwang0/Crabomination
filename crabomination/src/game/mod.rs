@@ -14763,41 +14763,63 @@ impl GameState {
                     // above: a `WhileYourTurn`-wrapped live-filter grant was
                     // matched raw here and so emitted nothing on either path.
                     let Some(eff) = self.active_static(&sa.effect, card) else { continue };
-                    let (req, modification, layer, sublayer) = match eff {
+                    use crate::effect::Selector as Sel;
+                    let (applies_to, modification, layer, sublayer) = match eff {
                         crate::effect::StaticEffect::SetBasePtForFilter {
-                            applies_to: crate::effect::Selector::EachPermanent(req),
+                            applies_to: applies_to @ Sel::EachPermanent(req),
                             power,
                             toughness,
                         } if !crate::game::layers::requirement_is_card_only(req) => (
-                            req,
+                            applies_to,
                             Modification::SetPowerToughness(*power, *toughness),
                             Layer::L7PowerTough,
                             Some(PtSublayer::SetValue),
                         ),
+                        // CR 303.4a — a player-scoped base P/T (Curse of
+                        // Conformity) has no static path; its seat is live.
+                        crate::effect::StaticEffect::SetBasePtForFilter {
+                            applies_to: applies_to @ Sel::ControlledBy { .. },
+                            power,
+                            toughness,
+                        } => (
+                            applies_to,
+                            Modification::SetPowerToughness(*power, *toughness),
+                            Layer::L7PowerTough,
+                            Some(PtSublayer::SetValue),
+                        ),
+                        crate::effect::StaticEffect::MatchingLoseAllCreatureTypes { applies_to } => {
+                            (applies_to, Modification::SetCreatureTypes(Vec::new()), Layer::L4Type, None)
+                        }
                         crate::effect::StaticEffect::GrantKeyword {
-                            applies_to: crate::effect::Selector::EachPermanent(req),
+                            applies_to: applies_to @ Sel::EachPermanent(req),
                             keyword,
                         } if !crate::game::layers::requirement_is_card_only(req) => (
-                            req,
+                            applies_to,
                             Modification::AddKeyword(keyword.clone()),
                             Layer::L6Ability,
                             None,
                         ),
                         _ => continue,
                     };
-                    let ids: crate::game::layers::AffectedIds = self
-                        .battlefield
-                        .iter()
-                        .filter(|c| {
-                            self.evaluate_requirement_static_on(
-                                req,
-                                c,
-                                card.controller,
-                                Some(card.id),
-                            )
-                        })
-                        .map(|c| c.id)
-                        .collect();
+                    let ids: crate::game::layers::AffectedIds = match applies_to {
+                        Sel::EachPermanent(req) => self
+                            .battlefield
+                            .iter()
+                            .filter(|c| {
+                                self.evaluate_requirement_static_on(
+                                    req,
+                                    c,
+                                    card.controller,
+                                    Some(card.id),
+                                )
+                            })
+                            .map(|c| c.id)
+                            .collect(),
+                        other => {
+                            let Some(ids) = self.eager_static_targets(card, other) else { continue };
+                            ids
+                        }
+                    };
                     if ids.is_empty() {
                         continue;
                     }
@@ -29589,6 +29611,8 @@ fn static_effect_to_effects(
                     });
                 }
             }
+            // Resolved live in the gather's `SET_BASE_PT_FOR_FILTER` pass.
+            StaticEffect::MatchingLoseAllCreatureTypes { .. } => {}
             StaticEffect::AddCreatureTypeToMatching { applies_to, creature_type } => {
                 if let Some(affected) = selector_to_affected(applies_to, card) {
                     out.push(ContinuousEffect {

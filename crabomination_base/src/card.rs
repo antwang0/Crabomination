@@ -7889,7 +7889,7 @@ pub fn static_effect_gather_bits(effect: &crate::effect::StaticEffect) -> u64 {
         SE::AnthemForColorSharedWithLibraryTop { .. } => {
             g::ANTHEM_FOR_COLOR_SHARED_WITH_LIBRARY_TOP
         }
-        SE::SetBasePtForFilter { .. } => g::SET_BASE_PT_FOR_FILTER,
+        SE::SetBasePtForFilter { .. } | SE::MatchingLoseAllCreatureTypes { .. } => g::SET_BASE_PT_FOR_FILTER,
         SE::SelfHasKeywordIf { .. } => g::SELF_HAS_KEYWORD_IF,
         SE::SelfHasDraftNotedKeywords => g::SELF_HAS_DRAFT_NOTED_KEYWORDS,
         SE::SelfIsCreatureIf { .. } => g::SELF_IS_CREATURE_IF,

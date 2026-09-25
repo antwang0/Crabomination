@@ -38242,6 +38242,38 @@ impl GameState {
                 ids.sort_by_key(|(_, pw)| std::cmp::Reverse(*pw));
                 ids.into_iter().take(n).map(|(id, _)| EntityRef::Permanent(id)).collect()
             }
+            Selector::OnePerDistinctPower { filter, rest } => {
+                let p = ctx.controller;
+                let mut cands: Vec<(CardId, i32, bool, u32, i32)> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
+                    .map(|c| {
+                        let (pw, tg) = self
+                            .computed_permanent(c.id)
+                            .map(|cp| (cp.power, cp.toughness))
+                            .unwrap_or((c.power(), c.toughness()));
+                        (c.id, pw, c.controller == p, c.definition.cost.cmc(), tg)
+                    })
+                    .collect();
+                // Per power, the first after sorting is the pick: own before
+                // theirs, own highest value first, theirs lowest first.
+                cands.sort_by(|a, b| {
+                    a.1.cmp(&b.1).then(b.2.cmp(&a.2)).then_with(|| {
+                        if a.2 { (b.3, b.4).cmp(&(a.3, a.4)) } else { (a.3, a.4).cmp(&(b.3, b.4)) }
+                    })
+                });
+                let mut out = Vec::with_capacity(cands.len());
+                let mut last = None;
+                for (id, pw, ..) in cands {
+                    let chosen = last != Some(pw);
+                    last = Some(pw);
+                    if chosen != *rest {
+                        out.push(EntityRef::Permanent(id));
+                    }
+                }
+                out
+            }
             Selector::PlayersControlling(filter) => {
                 let n = self.players.len();
                 (0..n)
@@ -39017,25 +39049,29 @@ impl GameState {
                 if cap_n == 0 {
                     return vec![];
                 }
-                let candidates = self.resolve_selector(inner, ctx);
+                // Bind each candidate to `ctx.trigger_source` so that
+                // `value_of_each` can reference it via `Selector::TriggerSource`
+                // (mirrors `Effect::ForEach`'s binding convention).
+                let mut valued: Vec<(EntityRef, i32)> = self
+                    .resolve_selector(inner, ctx)
+                    .into_iter()
+                    .map(|ent| {
+                        let mut sub_ctx = ctx.clone();
+                        sub_ctx.trigger_source = Some(ent);
+                        (ent, self.evaluate_value(value_of_each, &sub_ctx).max(0))
+                    })
+                    .collect();
+                // Greedy, largest first (stable, so ties keep resolution
+                // order): the AutoDecider's deterministic pick, and it spends
+                // the cap on the biggest bodies (Moorland Rescuer).
+                valued.sort_by_key(|&(_, v)| std::cmp::Reverse(v));
                 let mut running_total: i32 = 0;
                 let mut kept: Vec<EntityRef> = Vec::new();
-                for ent in candidates {
-                    // Bind the candidate to `ctx.trigger_source` so that
-                    // `value_of_each` can reference it via
-                    // `Selector::TriggerSource` (mirrors `Effect::ForEach`'s
-                    // binding convention). Per-iteration sub-ctx clone keeps
-                    // outer ctx untouched after evaluation.
-                    let mut sub_ctx = ctx.clone();
-                    sub_ctx.trigger_source = Some(ent);
-                    let v = self.evaluate_value(value_of_each, &sub_ctx).max(0);
+                for (ent, v) in valued {
                     if running_total + v <= cap_n {
                         running_total += v;
                         kept.push(ent);
                     }
-                    // Otherwise skip this candidate; iteration continues so
-                    // smaller items can still fit. Greedy walk gives the
-                    // AutoDecider a deterministic pick.
                 }
                 kept
             }

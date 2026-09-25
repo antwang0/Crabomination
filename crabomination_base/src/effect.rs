@@ -337,6 +337,11 @@ pub enum Selector {
     /// The controller's `count` greatest-power permanents matching `filter`
     /// — the engine's pick for "up to X target creatures" (Vitality Hunter).
     GreatestPowerTopN { filter: SelectionRequirement, count: Value },
+    /// "For each different power among [filter], choose one with that power"
+    /// (Celestial Judgment, Sigardian Zealot). The controller's pick per power:
+    /// their own best (mana value, then toughness), else an opponent's weakest.
+    /// `rest: true` resolves to every match *not* chosen.
+    OnePerDistinctPower { filter: SelectionRequirement, rest: bool },
 
     /// All cards moved by `Effect::Move` (and Mill / Exile shortcuts)
     /// in the current resolution. Used by Practiced Scrollsmith,
@@ -539,15 +544,11 @@ pub enum Selector {
     /// creature cards" whose total power sizes a token (Stitcher Geralf).
     TakeGreatestPower { inner: Box<Selector>, count: Box<Value> },
 
-    /// Walk `inner` in iteration order, accumulating `value_of_each`
-    /// per entity, and take entities greedily while the running sum
-    /// stays ≤ `cap`. Entities whose value would push the sum over
-    /// `cap` are skipped; iteration continues so smaller items can
-    /// still fit. Used by Spell Satchel's "Choose any number of
-    /// target IS cards in your graveyard with total mana value 4 or
-    /// less. Return them to your hand." The greedy walk gives the
-    /// AutoDecider a deterministic pick; a real UI player would
-    /// surface a per-card pick prompt with the same running cap.
+    /// Take entities of `inner` greedily, largest `value_of_each` first,
+    /// while the running sum stays ≤ `cap`; one that would overflow is
+    /// skipped so smaller ones can still fit. "Any number of creature cards
+    /// with total power X or less" (Moorland Rescuer). The greedy walk is the
+    /// AutoDecider's deterministic pick; a UI seat gets no per-card prompt.
     TakeWithSumCap {
         inner: Box<Selector>,
         cap: Box<Value>,
@@ -11367,6 +11368,7 @@ pub fn static_effect_changes_creature_types(effect: &StaticEffect) -> bool {
         | SE::MatchingAreChosenTypeToo { .. }
         | SE::MatchingLandsAreCreatures { .. }
         | SE::AddCreatureTypeToMatching { .. }
+        | SE::MatchingLoseAllCreatureTypes { .. }
         | SE::SelfIsCreatureIf { .. } => true,
         SE::WhileClassLevelAtLeast { inner, .. }
         | SE::WhileYourTurn { inner }

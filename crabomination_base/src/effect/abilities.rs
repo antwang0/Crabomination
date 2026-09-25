@@ -417,6 +417,10 @@ pub enum StaticEffect {
         applies_to: Selector,
         creature_type: crate::card::CreatureType,
     },
+    /// CR 205.3 / 613.1d — "[matching creatures] lose all creature types"
+    /// (Curse of Conformity). Layer 4, resolved live so `applies_to` may be a
+    /// `ControlledBy` seat.
+    MatchingLoseAllCreatureTypes { applies_to: Selector },
     AddCardTypeToMatching {
         applies_to: Selector,
         card_type: crate::card::CardType,
