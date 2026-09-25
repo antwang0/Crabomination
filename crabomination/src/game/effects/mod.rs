@@ -39,6 +39,7 @@ mod foretell;
 mod hand_exile;
 mod attach_from_zone;
 pub(crate) mod keyword_gifts;
+mod reveal_top_misc;
 mod politics;
 mod targeting;
 /// The target enumerator's call-site census — see
@@ -1737,6 +1738,19 @@ impl GameState {
                 return;
             };
         let caster = controller.unwrap_or(orig_caster);
+        // CR 707.10 — Twinning Staff: one more copy per such static the
+        // copies' controller controls.
+        let n = if n > 0 {
+            n + self
+                .battlefield
+                .iter()
+                .filter(|c| c.controller == caster)
+                .flat_map(|c| c.definition.static_abilities.iter())
+                .filter(|sa| matches!(sa.effect, crate::effect::StaticEffect::SpellCopiesPlusOne))
+                .count()
+        } else {
+            n
+        };
         // A copy someone else controls (Narset's Reversal, Twincast on an
         // opponent's spell) defaults to ITS controller's own pick: offering
         // the original first had the new controller keep a Bolt aimed at
@@ -34989,6 +35003,8 @@ impl GameState {
             }
             Effect::MoveCountersFromAmongOnto { onto } => self.move_counters_from_among_onto(onto, ctx, events),
             Effect::MoveOneCounter { from, to } => self.move_one_counter(from, to, ctx, events),
+            Effect::RevealTopCastFreeIfLesserElseHand => self.reveal_top_cast_free_if_lesser_else_hand(ctx, events),
+            Effect::RevealUntilCreatureBecomeCopy { who } => self.reveal_until_creature_become_copy(who, ctx, events),
             Effect::ChooseCardTypeAmongForSource(options) => {
                 use crate::decision::{Decision, DecisionAnswer};
                 let Some(source) = ctx.source else { return Ok(()) };

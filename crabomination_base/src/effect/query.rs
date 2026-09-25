@@ -876,6 +876,7 @@ impl Effect {
             | Effect::KeywordCountersFromGraveyard { .. }
             | Effect::RevealTopChooseByKeyword { .. }
             | Effect::ChooseCardTypeAmongForSource(_)
+            | Effect::RevealTopCastFreeIfLesserElseHand
             | Effect::NextSpellHasFlashThisTurn
             | Effect::PreventNextDamageFromSourceThisTurn { .. }
             | Effect::SacrificeSourceUnlessPayValue { .. }
@@ -2098,6 +2099,7 @@ impl Effect {
             // Vizkopa Confessor's "**target opponent** reveals that many
             // cards from their hand" — the seat is a target, not a fan-out.
             Effect::PayLifeRevealExileFromHand { opp } => player_has_target(opp),
+            Effect::RevealUntilCreatureBecomeCopy { who } => player_has_target(who),
             Effect::TakeExtraTurn { who, count } => {
                 player_has_target(who) || value_has_target(count)
             }
@@ -2673,6 +2675,7 @@ impl Effect {
             | Effect::LookTopExileOneOfN { who, .. }
 
             | Effect::TakeExtraTurn { who, .. }
+            | Effect::RevealUntilCreatureBecomeCopy { who }
             | Effect::LoseGame { who }
             | Effect::RevealHand { who }
             | Effect::RevealTopOfLibrary { who }

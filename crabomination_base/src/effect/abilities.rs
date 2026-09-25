@@ -592,6 +592,13 @@ pub enum StaticEffect {
     /// As long as it's untapped, other permanents enter untapped" (Archelos,
     /// Lagoon Mystic). Applied last in `apply_enters_tapped_replacement`.
     OthersEnterWithSourceTapState,
+    /// CR 707.10 — "If you would copy a spell one or more times, instead copy
+    /// it that many times plus an additional time" (Twinning Staff). Read by
+    /// `copy_stack_spell_controlled` for the copies' controller.
+    SpellCopiesPlusOne,
+    /// "[filter] spells you cast have conspire" (Wort, the Raidmother, CR
+    /// 702.78) — consulted with the printed keyword by the conspire cast path.
+    GrantConspireToSpells { filter: SelectionRequirement },
     /// Generic cost reduction for the controller's Plot activations from hand
     /// (Doc Aurlock — "Plotting cards from your hand costs {2} less"). Applied
     /// in `plot_card`; clamped at the generic pip.

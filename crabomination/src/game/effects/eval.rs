@@ -3229,6 +3229,11 @@ impl GameState {
                 self.entered_from_graveyard_this_turn.contains(&cid)
                     || self.battlefield_find(cid).is_some_and(|c| c.cast_from_graveyard)
             }
+            Predicate::AnOpponentHadCreaturesEnterAtLeast(n) => (0..self.players.len()).any(|q| {
+                q != ctx.controller
+                    && !self.same_team(q, ctx.controller)
+                    && self.players[q].creatures_entered_this_turn.len() >= *n as usize
+            }),
             Predicate::TriggerSourceHadCounters => {
                 let cid = match ctx.trigger_source {
                     Some(EntityRef::Card(c)) | Some(EntityRef::Permanent(c)) => c,

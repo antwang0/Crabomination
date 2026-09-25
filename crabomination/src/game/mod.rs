@@ -29662,6 +29662,8 @@ fn static_effect_to_effects(
             | StaticEffect::LandsEnterUntapped
             | StaticEffect::MatchingEnterUntapped { .. }
             | StaticEffect::OthersEnterWithSourceTapState
+            | StaticEffect::SpellCopiesPlusOne
+            | StaticEffect::GrantConspireToSpells { .. }
             | StaticEffect::LethalDamageByPower { .. }
             | StaticEffect::ExtraLandPerTurn
             | StaticEffect::CostReduction { .. }

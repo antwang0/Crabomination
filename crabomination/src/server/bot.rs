@@ -6562,6 +6562,8 @@ struct BoardFacts {
     /// A `CreatureSpellsGainOffspring` static is on the board (Zinnia), so a
     /// hand creature with no kicker of its own has one to pay.
     grants_offspring: bool,
+    /// A `GrantConspireToSpells` static is on the board (Wort).
+    grants_conspire: bool,
     /// A `GraveyardCardsHaveEscape*` static is on the board (Kotis).
     grants_escape: bool,
     /// A replicate-granting static is on the board (Hatchery Sliver).
@@ -6580,6 +6582,7 @@ impl BoardFacts {
             grants_convoke: false,
             prepared: false,
             grants_offspring: false,
+            grants_conspire: false,
             grants_escape: false,
             grants_replicate: false,
             grants_gy_cast: false,
@@ -6598,6 +6601,7 @@ impl BoardFacts {
                         f.grants_convoke = true
                     }
                     SE::CreatureSpellsGainOffspring { .. } => f.grants_offspring = true,
+                    SE::GrantConspireToSpells { .. } => f.grants_conspire = true,
                     SE::GraveyardCardsHaveEscape { .. }
                     | SE::GraveyardCardsHaveEscapeMatching { .. } => f.grants_escape = true,
                     SE::YourISSpellsHaveReplicate | SE::YourSpellsHaveReplicate { .. } => {
@@ -6651,6 +6655,9 @@ fn hand_specialties(state: &GameState, seat: usize, facts: &BoardFacts) -> u32 {
         }
         if facts.grants_offspring && def.is_creature() {
             m |= spec::KICKER;
+        }
+        if facts.grants_conspire && (def.is_instant() || def.is_sorcery()) {
+            m |= spec::CONSPIRE;
         }
         if state.players[seat].next_spell_convoke_this_turn {
             m |= spec::CONVOKE;
@@ -7377,7 +7384,10 @@ pub(super) fn cast_candidates<'a>(
     for c in state.players[seat]
         .hand
         .iter()
-        .filter(|c| c.definition.keywords.has_kw(&crate::card::Keyword::Conspire))
+        .filter(|c| {
+            c.definition.keywords.has_kw(&crate::card::Keyword::Conspire)
+                || (facts.grants_conspire && state.spell_has_conspire(seat, c))
+        })
     {
         let spell_colors = c.definition.printed_colors();
         let pair: Vec<CardId> = state

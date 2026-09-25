@@ -6625,7 +6625,7 @@ impl GameState {
             .hand
             .iter()
             .find(|c| c.id == card_id)
-            .filter(|c| c.definition.keywords.has_kw(&crate::card::Keyword::Conspire))
+            .filter(|c| self.spell_has_conspire(p, c))
             .map(|c| c.definition.printed_colors())
             .ok_or(GameError::CardNotInHand(card_id))?;
         // Each conspirer must be an untapped creature you control sharing a
@@ -8191,6 +8191,21 @@ impl GameState {
                 _ => None,
             })
         })
+    }
+
+    /// CR 702.78 — the spell has conspire: printed, or granted by a
+    /// `GrantConspireToSpells` static its caster controls (Wort).
+    pub fn spell_has_conspire(&self, p: usize, card: &CardInstance) -> bool {
+        card.definition.keywords.has_kw(&crate::card::Keyword::Conspire)
+            || self.battlefield.iter().any(|c| {
+                c.controller == p
+                    && c.definition.static_abilities.iter().any(|sa| match &sa.effect {
+                        crate::effect::StaticEffect::GrantConspireToSpells { filter } => {
+                            crate::game::layers::requirement_matches_card(filter, card, p)
+                        }
+                        _ => false,
+                    })
+            })
     }
 
     /// CR 702.126 — true when a `StaticEffect::GrantImproviseToSpells`

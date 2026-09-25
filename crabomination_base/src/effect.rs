@@ -1774,6 +1774,9 @@ pub enum Predicate {
     /// The trigger's leaving permanent had one or more counters on it as it
     /// left (CR 603.10 — its last-known information; Nikara, Lair Scavenger).
     TriggerSourceHadCounters,
+    /// An opponent of the controller had at least `n` creatures enter under
+    /// their control this turn (Whiplash Trap's alternative cost).
+    AnOpponentHadCreaturesEnterAtLeast(u32),
     /// CR 400.7 — the source is on the battlefield as the SAME object a
     /// delayed trigger was scheduled for: its `battlefield_timestamp` (stamped
     /// fresh on every entry) still equals the recorded one. A card keeps its
@@ -10711,6 +10714,14 @@ pub enum Effect {
     /// "As this enters, choose one of `options`" — stamps
     /// `CardInstance.chosen_card_type` (Archon of Valor's Reach).
     ChooseCardTypeAmongForSource(Vec<crate::card::CardType>),
+    /// Reveal your top card; a nonland card with mana value less than the
+    /// triggering spell's may be cast free, else it goes to hand (Rashmi,
+    /// Eternities Crafter).
+    RevealTopCastFreeIfLesserElseHand,
+    /// `who` reveals until a creature card; the source becomes a copy of it
+    /// until end of turn; the revealed cards go to the bottom in a random
+    /// order (Nascent Metamorph).
+    RevealUntilCreatureBecomeCopy { who: PlayerRef },
     /// "The next spell you cast this turn can be cast as though it had flash"
     /// (Ride the Avalanche). Spent by that cast.
     NextSpellHasFlashThisTurn,

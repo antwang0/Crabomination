@@ -1208,7 +1208,7 @@ impl GameState {
         let hand: Vec<(CardId, Vec<crate::mana::Color>, bool, Option<_>)> = self.players[caster]
             .hand
             .iter()
-            .filter(|c| c.definition.keywords.contains(&Keyword::Conspire))
+            .filter(|c| c.definition.keywords.contains(&Keyword::Conspire) || self.spell_has_conspire(caster, c))
             .map(|c| {
                 let needs_target = c.definition.effect.requires_target();
                 (
