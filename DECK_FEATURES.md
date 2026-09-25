@@ -1468,9 +1468,10 @@ Residuals: Akim's "first time each turn" counts from its arrival; Crystalline
 Resonance's copy lasts until it copies again; Ethereal Forager returns the
 first linked instant or sorcery; Nimble Obstructionist's "you don't control"
 reads the source permanent. Pods (release: 4 seats beside Sigarda / Hanna /
-Jirina, seed 12200, 1,000 games, and Aminatou / Zurgo / Omo, seed 12201,
-1,000 — and beside Kalamax 1,500 while numbered 122; 6 seats, seed 12202, 600;
-8 seats, seed 12203, 400): all decided, Gavi 11.7 % / 10.4 % at four seats; census: no card of the list unplayed.
+Jirina, seed 12200, 1,000 games, and Aminatou / Zurgo / Quintorius, seed
+12201, 1,000 — and beside Kalamax 1,500 and Omo 1,000 while numbered 122/123;
+6 seats, seed 12202, 600; 8 seats, seed 12203, 400): all decided, Gavi 11.7 % /
+6.9 % at four seats. Suite at seat 128: 22,162 / 0 / 7; census: no card of the list unplayed.
 `--bench` byte-identical; cube/sos/sealed (seed 12204): 62,500 decided.
 
 The **hundred-and-fifth** is Secrets of Strixhaven Commander's **Silverquill
