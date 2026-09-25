@@ -219,6 +219,28 @@ mod tests {
         assert!(pick_sacrifice_value(&g, me, &w).is_none(), "150 permanents: enough");
     }
 
+    /// Whirler Virtuoso's energy Thopters stop at 150 permanents even while
+    /// their power is short of three times the table's life: Legion
+    /// Loyalty's myriad tripled ~300 of them to the board cap (seed 21139,
+    /// game 100).
+    #[test]
+    fn a_cluttered_board_stops_minting_energy_tokens() {
+        use crate::server::bot::pick_energy_payoff;
+        let mut g = multi_player_game(4);
+        let me = 1;
+        g.add_card_to_battlefield(me, catalog::whirler_virtuoso());
+        g.players[me].energy = 9;
+        g.active_player_idx = me;
+        g.step = TurnStep::PostCombatMain;
+        g.priority.player_with_priority = me;
+        assert!(pick_energy_payoff(&g, me).is_some(), "an ordinary board makes a Thopter");
+        while !super::board_is_cluttered(&g, me) {
+            g.add_card_to_battlefield(me, catalog::forest());
+        }
+        assert!(!super::board_is_saturated(&g, me), "no creature army, so not saturated");
+        assert!(pick_energy_payoff(&g, me).is_none(), "150 permanents: enough");
+    }
+
     /// A "you may create a token" trigger is declined on an overkill board:
     /// Flourishing Defenses took every Elf Warrior it was offered under
     /// Everlasting Torment until the pod's board cap (seed 17302, game 37).

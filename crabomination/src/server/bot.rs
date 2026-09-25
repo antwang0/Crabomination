@@ -5059,7 +5059,10 @@ pub fn optional_trigger_beneficial(state: &GameState, source: CardId, descriptio
             || state
                 .battlefield
                 .find_by_id(source)
-                .is_some_and(|c| super::renewal_guard::board_is_saturated(state, c.controller)))
+                .is_some_and(|c| {
+                    super::renewal_guard::board_is_saturated(state, c.controller)
+                        || super::renewal_guard::board_is_cluttered(state, c.controller)
+                }))
     {
         return false;
     }
@@ -9756,7 +9759,7 @@ pub(super) fn pick_token_maker(state: &GameState, seat: usize, w: &EvalWeights) 
     {
         return None;
     }
-    if super::renewal_guard::board_is_saturated(state, seat) {
+    if super::renewal_guard::board_is_saturated(state, seat) || super::renewal_guard::board_is_cluttered(state, seat) {
         return None;
     }
     for card in state.battlefield.iter().filter(|c| c.controller == seat) {
@@ -10588,7 +10591,7 @@ fn pick_crack_lander(state: &GameState, seat: usize) -> Option<GameAction> {
 /// Find a beneficial energy-only activated ability the bot can pay for: an
 /// `Effect::PayEnergy { amount, .. }` ability with no mana/tap/sac cost,
 /// where the bot controls the source and has at least `amount` energy.
-fn pick_energy_payoff(state: &GameState, seat: usize) -> Option<GameAction> {
+pub(super) fn pick_energy_payoff(state: &GameState, seat: usize) -> Option<GameAction> {
     if state.players[seat].energy == 0 {
         return None;
     }
@@ -10632,7 +10635,13 @@ fn pick_energy_payoff(state: &GameState, seat: usize) -> Option<GameAction> {
             }
             // A self-refilling energy token loop (Whirler Virtuoso under
             // Decoction Module) stops once the board is already overkill.
-            if ability_makes_token(&ab.effect) && super::renewal_guard::board_is_saturated(state, seat) {
+            // Or past 150 permanents: Legion Loyalty's myriad tripled ~300
+            // Whirler Thopters to the board cap before their power reached
+            // three times the table's life (seed 21139, game 100).
+            if ability_makes_token(&ab.effect)
+                && (super::renewal_guard::board_is_saturated(state, seat)
+                    || super::renewal_guard::board_is_cluttered(state, seat))
+            {
                 continue;
             }
             let action = GameAction::ActivateAbility {
