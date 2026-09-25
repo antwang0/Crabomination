@@ -153,6 +153,7 @@ lists were picked.
 | **Cavalry Charge** (MOC precon) WUB | Sidar Jabari of Zhalfir | WUB | 100 | 🟡 all 100 implemented, 3 carry residuals (Path of the Enigma, Syr Elenora, Aryel) |
 | **Eternal Bargain** (C13 precon) WUB | Oloro, Ageless Ascetic | WUB | 100 | 🟡 all 100 implemented, 4 carry residuals (Order of Succession, Lim-Dûl's Vault, Springjack Pasture, Serene Master) |
 | **Power Hungry** (C13 precon) BRG | Prossh, Skyraider of Kher | BRG | 100 | 🟡 all 100 implemented, 4 carry residuals (Sudden Demise, Night Soil, Widespread Panic, Capricious Efreet) |
+| **Living Energy** (DRC precon) GUR | Saheeli, Radiant Creator | GUR | 100 | 🟡 all 100 implemented, 4 carry residuals (Aetherflux Conduit, Territorial Aetherkite, Rampaging Aetherhood, Saheeli) |
 | **Exit from Exile** (CLB precon) RG | Faldorn, Dread Wolf Herald | RG | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Exquisite Invention** (C18 precon) UR | Saheeli, the Gifted (**planeswalker**) | UR | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Mishra's Burnished Banner** (BRC precon) UBR | Mishra, Eminent One | UBR | 100 | 🟡 all 100 implemented, 6 carry residuals (below) |
@@ -1500,6 +1501,27 @@ Galea / Kathril / Chishiro (seed 10400, 1,000 games) and Nelly / Eshki /
 Estrid (seed 10401, 1,000): all decided, Jirina 28.4 % and 24.3 %; census
 (seed 10401): no card of the list unplayed. `--bench` byte-identical;
 cube/sos/sealed (seed 10402): 7,500 decided.
+
+The **hundred-and-thirty-eighth** is Aetherdrift Commander's **Living Energy**
+(`LivingEnergy_DRC`) — Temur energy and artifacts under Saheeli, Radiant
+Creator, `--pod-decks 138`. Twenty-one cards were missing
+(`cmdr_saheeli_radiant.rs`). The primitives: `AlternativeCost.energy_cost` and
+`StaticEffect::EnergyAlternativeCostForFilter` (Nissa, Worldsoul Speaker —
+CR 118.9, cast a permanent for eight {E}), `StaticEffect::
+ArtifactTokenCreationAddsToken` (Stridehangar Automaton's extra Thopter per
+artifact-token batch) and `Effect::DoublePlayerCounters` (Aetheric Amplifier).
+⚠ **Its pods found a bot loop:** Whirler Virtuoso under Decoction Module,
+Panharmonicon and Stridehangar nets +1 {E} per activation (a real infinite),
+and `pick_energy_payoff` ran it to 980 Thopters and the board cap (seed 138
+game 561). `board_is_saturated` (`server/renewal_guard.rs`) now stops both
+token sinks once the seat has 60+ creatures with three times the opponents'
+remaining life in power. Re-run (seed 138, 1,000 games each): 4 seats
+(Sigarda / Judith / Hanna) 1,000 decided, Saheeli 23.7 %; 6 seats against
+the Leinore / Sidar / Oloro / Prossh / Nalia precons 1,000 decided, 1.3 %;
+8 seats (seats 4-10) 1,000 decided, 6.0 %. Residuals: Aetherflux Conduit's
+free casts last the turn; Territorial Aetherkite / Rampaging Aetherhood pay
+all their {E}; Saheeli's copy target is chosen as the trigger goes on the
+stack. Census: no card of the list unplayed. `--bench` byte-identical.
 
 The **hundred-and-thirtieth** is Commander 2013's **Power Hungry**
 (`PowerHungry_C13`) — Jund tokens and sacrifice under Prossh, Skyraider of

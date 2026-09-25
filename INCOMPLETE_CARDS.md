@@ -2055,6 +2055,10 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Night Soil | Power Hungry (C13) | the two creature cards come from your own graveyard, not any single graveyard. |
 | 🟡 Widespread Panic | Power Hungry (C13) | any shuffle a spell or ability makes counts, not only one its controller made of their own library. |
 | 🟡 Capricious Efreet | Power Hungry (C13) | the up-to-two opposing targets are the auto-picker's; no UI prompt for the optional slots. |
+| 🟡 Aetherflux Conduit | Living Energy (DRC) | the free casts after drawing seven last the turn, not only the ability's resolution. |
+| 🟡 Territorial Aetherkite | Living Energy (DRC) | "pay one or more {E}" pays all of it; no prompt for a smaller amount. |
+| 🟡 Rampaging Aetherhood | Living Energy (DRC) | "pay one or more {E}" pays all of it; no prompt for a smaller amount. |
+| 🟡 Saheeli, Radiant Creator | Living Energy (DRC) | the copied permanent is chosen as the trigger goes on the stack, not in a reflexive trigger after paying. |
 | 🟡 Descendants' Fury | Sliver Swarm (CMM) | "one of them" is any attacker of yours that damaged a player this turn, not only this combat-damage batch's. |
 | 🟡 Bloodlord of Vaasgoth | Vampiric Bloodlust (C17) | the granted bloodthirst is checked as the cast trigger resolves, not as the creature enters. |
 | 🟡 Mathas, Fiend Seeker | Vampiric Bloodlust (C17) | a bounty counter grants its dies trigger only while Mathas is on the battlefield. |
