@@ -4265,6 +4265,7 @@ impl GameState {
             R::OtherThanSource => Some(source.is_none_or(|s| cid != s)),
             R::IsSource => Some(source == Some(cid)),
             R::TurnedFaceUpThisTurn => Some(self.turn.turned_face_up_this_turn.contains(&cid)),
+            R::IsRingBearer => Some(self.is_a_ring_bearer(cid)),
             R::PutOntoBattlefieldBySource => {
                 Some(source.is_some() && card.put_onto_battlefield_by == source)
             }
@@ -5487,6 +5488,7 @@ impl GameState {
                         .is_none_or(|chosen| *cid != chosen),
                     R::IsSource => source == Some(*cid),
                     R::TurnedFaceUpThisTurn => self.turn.turned_face_up_this_turn.contains(cid),
+                    R::IsRingBearer => self.is_a_ring_bearer(*cid),
                     R::PutOntoBattlefieldBySource => {
                         source.is_some()
                             && self.battlefield_find(*cid).is_some_and(|c| c.put_onto_battlefield_by == source)
@@ -6309,6 +6311,7 @@ impl GameState {
             // A card in another zone is never the battlefield source.
             R::IsSource => false,
             R::TurnedFaceUpThisTurn => self.turn.turned_face_up_this_turn.contains(&card.id),
+            R::IsRingBearer => self.is_a_ring_bearer(card.id),
             R::PutOntoBattlefieldBySource => false,
             R::NotSacrificedThisResolution => {
                 !self.scratch.cards_sacrificed_this_resolution.contains(&card.id)

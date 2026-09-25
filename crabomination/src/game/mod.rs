@@ -4385,6 +4385,12 @@ impl GameState {
             .map(|c| c.id)
     }
 
+    /// CR 701.54c — is `id` any player's (validated) Ring-bearer?
+    pub fn is_a_ring_bearer(&self, id: CardId) -> bool {
+        self.players.iter().any(|p| p.ring_bearer == Some(id))
+            && (0..self.players.len()).any(|p| self.effective_ring_bearer(p) == Some(id))
+    }
+
     /// CR 731 — set the game's day/night designation, emitting
     /// `DayNightChanged` on a real change.
     /// CR 712 — flip one DFC permanent to its other face in place. The object
@@ -31094,6 +31100,7 @@ fn requirement_live_leaves(req: &SelectionRequirement) -> u8 {
         | R::IsOutlaw
         | R::IsSource
         | R::TurnedFaceUpThisTurn
+        | R::IsRingBearer
         | R::IsCommander
         | R::HasNoAbilities
         | R::HasName(_)

@@ -39615,6 +39615,16 @@ impl GameState {
 
             Selector::MatchingAmong { inner, filter } => {
                 let all = self.resolve_selector(inner, ctx);
+                // CR 107.3 — a card filter may name the resolution's X
+                // (Summons of Saruman's "mana value X or less from among
+                // them"); the card-level evaluator has no context to read it.
+                let resolved;
+                let filter = if filter.names_x_or_converge() {
+                    resolved = filter.resolve_x(ctx.x_value);
+                    &resolved
+                } else {
+                    filter
+                };
                 all.into_iter()
                     .filter(|e| match e {
                         // Thread the resolving source so source-relative

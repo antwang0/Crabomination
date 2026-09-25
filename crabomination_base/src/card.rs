@@ -3275,6 +3275,11 @@ pub enum SelectionRequirement {
     /// CR 708 — the candidate permanent was turned face up this turn
     /// (`TurnRegistries.turned_face_up_this_turn`; Kaust, Eyes of the Glade).
     TurnedFaceUpThisTurn,
+    /// CR 701.54c — the candidate is some player's Ring-bearer (read through
+    /// `GameState::effective_ring_bearer`, so a bearer that left or changed
+    /// control no longer counts). Lord of the Nazgûl's "protection from
+    /// Ring-bearers".
+    IsRingBearer,
     /// The candidate permanent was put onto the battlefield by the ability's
     /// source (`CardData::put_onto_battlefield_by`) — Kodama of the East
     /// Tree's "if it wasn't put onto the battlefield with this ability".
