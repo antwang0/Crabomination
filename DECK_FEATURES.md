@@ -127,6 +127,7 @@ lists were picked.
 | **Aura of Courage** (AFC precon) GWU | Galea, Kindler of Hope | GWU | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Upgrades Unleashed** (NEC precon) RG | Chishiro, the Shattered Blade | RG | 100 | 🟡 all 100 implemented, 4 carry residuals (Concord with the Kami, Agitator Ant, Forgotten Ancient, Shifting Shadow) |
 | **Mardu Surge** (TDC precon) RWB | Zurgo Stormrender | RWB | 100 | 🟡 all 100 implemented, 1 carries a residual (Gix, Yawgmoth Praetor) |
+| **Miracle Worker** (DSC precon) WUB | Aminatou, Veil Piercer | WUB | 100 | 🟡 all 100 implemented, 6 carry residuals (INCOMPLETE_CARDS) |
 | **Ruthless Regiment** (C20 precon) RWB | Jirina Kudro | RWB | 100 | 🟡 all 100 implemented, 2 carry residuals (Sanctuary Blade, Odric, Master Tactician) |
 | **Most Wanted** (OTC precon) RWB | Olivia, Opulent Outlaw | RWB | 100 | 🟡 all 100 implemented, 3 carry residuals (Back in Town, Dire Fleet Ravager, Vihaan, Goldwaker) |
 | **Prismari Artistry** (SOC precon) UR | Rootha, Mastering the Moment | UR | 100 | 🟡 all 100 implemented, 2 carry residuals (Abstract Performance, Plargg and Nassari) |
@@ -1372,6 +1373,26 @@ no actor). Residual: **Orator of Ojutai** reads board and hand instead of a
 reveal. Four-seat pods beside Sigarda / Teval / Disa (seed 11092, 1,000 games,
 all decided): The Ur-Dragon 25.1 %; census: no card of the four unplayed; 6
 and 8 seats (seed 11093) 2,000 / 2,000 decided. `--bench` byte-identical.
+
+The **hundred-and-eighteenth** is Duskmourn Commander's **Miracle Worker**
+(`MiracleWorker_DSC`) — Esper enchantments and miracles under Aminatou, Veil
+Piercer, `--pod-decks 118` (committed as 116 while two concurrent seats
+landed). Sixteen cards were missing (`cmdr_veilpiercer.rs`; Life Insurance
+landed first in Most Wanted). The primitives: `LookPick::rest_on_top`
+(Diabolic Vision), `Effect::GrantMiracleReduced` (Aminatou's "mana cost
+reduced by {4}", CR 702.94 — granted as the turn's first card is drawn),
+`StaticEffect::OpponentsStunCountersStay` (Fear of Sleep Paralysis, on the
+untap-static lane) and `StaticEffect::ZeroAlternativeCostOncePerYourTurn` (One
+with the Multiverse). Its bot find: ⚠ **the {0} alternative-cost grants were
+invisible to the bot** (`grants_alt_cost` listed Kentaro and Demon of Fate's
+Design but not Darksteel Monolith). Residuals: six, INCOMPLETE_CARDS. Four-seat
+pods beside Zurgo / Chishiro / Olivia (seeds 10341-10342, 2,000 games): all
+decided, Aminatou 9.6 % and 11.0 %; beside Estrid / Aminatou the Fateshifter /
+Kalamax (seed 10343, 1,000): 999 decided — ⚠ **one board cap: Extravagant
+Replication copying itself each upkeep** (213 copies, 770 Signets by turn 73; a
+legal explosion, the Storm Herd class); census: no card of the Miracle Worker
+list unplayed. `--bench` byte-identical; cube/sos/sealed (seed 10340): 7,500
+decided.
 
 The **hundred-and-thirteenth** is Tarkir: Dragonstorm Commander's **Mardu
 Surge** (`MarduSurge_TDC`) — Mardu tokens and attack triggers under Zurgo
