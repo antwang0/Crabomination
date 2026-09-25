@@ -1603,7 +1603,7 @@ fn affected_includes_gated(
                         Some(types) => types.contains(ct),
                         None => card.definition.subtypes.creature_types.contains(ct),
                     };
-                    typed || card.definition.keywords.has_kw(&Keyword::Changeling)
+                    typed || card.has_keyword(&Keyword::Changeling)
                 })
         }
         AffectedPermanents::AllWithCreatureType { controller, creature_type, exclude_source } => {
@@ -1619,7 +1619,7 @@ fn affected_includes_gated(
                     None => {
                         card.definition.subtypes.creature_types.contains(creature_type)
                     }
-                } || card.definition.keywords.has_kw(&Keyword::Changeling))
+                } || card.has_keyword(&Keyword::Changeling))
         }
         AffectedPermanents::AllWithCounter { controller, card_types, counter, at_least } => {
             controller.is_none_or(|c| c == card.controller)

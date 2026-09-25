@@ -282,3 +282,27 @@ fn saskias_echo_carries_the_attackers_lifelink() {
     assert_eq!(lost(&g, chosen), 2);
     assert_eq!(lost(&g, 0), -4, "lifelink on the hit and on the echo");
 }
+
+/// Mirror Entity — "creatures you control … gain all creature types": a
+/// Goblin lord pumps them.
+#[test]
+fn mirror_entity_types_meet_a_goblin_lord() {
+    let mut g = pod(2);
+    let entity = g.add_card_to_battlefield(0, catalog::mirror_entity());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::goblin_king());
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: entity,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: Some(3),
+        mode: None,
+    })
+    .expect("Mirror Entity");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4), "base 3/3 plus the Goblin King");
+}

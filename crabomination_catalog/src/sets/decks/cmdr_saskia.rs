@@ -9,8 +9,6 @@
 //! - **Brutal Hordechief** — its creatures-block ability makes each
 //!   opponent's creature block if able; *how* they block is still their
 //!   controller's choice, not yours.
-//! - **Mirror Entity** — "all creature types" is a granted Changeling: it
-//!   reaches type filters and targeting, not type-keyed layer anthems.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, EventKind,
@@ -256,8 +254,8 @@ pub fn lavalanche() -> CardDefinition {
 }
 
 /// Mirror Entity — changeling; {X}: until end of turn your creatures have base
-/// power and toughness X/X and gain all creature types.
-/// Residual: the types ride a granted Changeling.
+/// power and toughness X/X and gain all creature types (a granted
+/// Changeling, which type lords read).
 pub fn mirror_entity() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Changeling],

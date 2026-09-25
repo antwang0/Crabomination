@@ -3,8 +3,7 @@
 //! Tests in `tests/recent_b/cmdr_morophon.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Amoeboid Changeling, Nameless Inversion, Shields of Velis Vel** — "all
-//!   creature types" is a Changeling grant and "loses all creature types"
+//! - **Amoeboid Changeling, Nameless Inversion** — "loses all creature types"
 //!   empties the type line and strips Changeling until end of turn (a later
 //!   grant the same turn doesn't restore it).
 //! - **Moritte of the Frost** — the two counters come from an entry trigger,

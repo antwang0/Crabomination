@@ -101,7 +101,7 @@ lists were picked.
 | **Scions & Spellcraft** (FIC precon) WUB | Y'shtola, Night's Blessed | WUB | 100 | 🟡 all 100 implemented, 6 carry residuals (below) |
 | **From Cute to Brute** (SLD Commander deck) WUBRG | Esika, God of the Tree | WUBRG | 100 | 🟡 all 100 implemented, 14 carry residuals (below) |
 | **Enduring Enchantments** (CMM precon) WBG | Anikthea, Hand of Erebos | WBG | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
-| **Open Hostility** (C16 precon) WBRG | Saskia the Unyielding | WBRG | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
+| **Open Hostility** (C16 precon) WBRG | Saskia the Unyielding | WBRG | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Devour for Power** (CMD precon) BGU | The Mimeoplasm | BGU | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Mirror Mastery** (CMD precon) GUR | Riku of Two Reflections | GUR | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **First Flight** (SCD precon) WU | Isperia, Supreme Judge | WU | 100 | ✅ complete |
@@ -139,7 +139,7 @@ lists were picked.
 | **Ruthless Regiment** (C20 precon) RWB | Jirina Kudro | RWB | 100 | 🟡 all 100 implemented, 2 carry residuals (Sanctuary Blade, Odric, Master Tactician) |
 | **Most Wanted** (OTC precon) RWB | Olivia, Opulent Outlaw | RWB | 100 | 🟡 all 100 implemented, 3 carry residuals (Back in Town, Dire Fleet Ravager, Vihaan, Goldwaker) |
 | **Tricky Terrain** (M3C precon) GU | Omo, Queen of Vesuva | GU | 100 | 🟡 all 100 implemented, 7 carry residuals (Omo, Horizon of Progress, Desert Warfare, Sunken Palace, Magus of the Candelabra, Rampant Frogantua, March from Velis Vel) |
-| **Everyone's Invited!** (SLD) WUBRG | Morophon, the Boundless | WUBRG | 100 | 🟡 all 100 implemented, 7 carry residuals (Amoeboid Changeling, Nameless Inversion, Shields of Velis Vel, Moritte of the Frost, Unsettled Mariner, Stick Together, Harper Recruiter) |
+| **Everyone's Invited!** (SLD) WUBRG | Morophon, the Boundless | WUBRG | 100 | 🟡 all 100 implemented, 6 carry residuals (Amoeboid Changeling, Nameless Inversion, Moritte of the Frost, Unsettled Mariner, Stick Together, Harper Recruiter) |
 | **Planar Portal** (AFC precon) BR | Prosper, Tome-Bound | BR | 100 | 🟡 all 100 implemented, 4 carry residuals (Karazikar, Hellish Rebuke, Share the Spoils, Danse Macabre) |
 | **Prismari Artistry** (SOC precon) UR | Rootha, Mastering the Moment | UR | 100 | 🟡 all 100 implemented, 2 carry residuals (Abstract Performance, Plargg and Nassari) |
 | **Desert Bloom** (OTC precon) RGW | Yuma, Proud Protector | RGW | 100 | 🟡 all 100 implemented, 2 carry residuals (Cataclysmic Prospecting, Dune Chanter) |
@@ -3396,8 +3396,8 @@ echo, so its lifelink and infect apply),
 beginning of your postcombat main phase" card (Survival, Florian, Tymna) did
 nothing in real games — the tests had called `fire_step_triggers` by hand. Now
 fired on entry (CR 505.1a). Residuals: Saskia's chosen player is the most
-hostile opponent; Brutal Hordechief's forced blocks stay the blockers' choice;
-Mirror Entity's all-types is a granted Changeling. Release pods beside Zedruu /
+hostile opponent; Brutal Hordechief's forced blocks stay the blockers' choice.
+Release pods beside Zedruu /
 Kaalia / Kynaios (seed 9511, 1,000 games) decided 1,000/1,000 (Saskia 25.7 %);
 strict-answer-log debug pods (seeds 9513/9514, 120 games) decided 120/120, zero
 panics; a 200-game census (seed 9512) leaves no card unplayed (seat numbers as
