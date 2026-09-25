@@ -1896,7 +1896,11 @@ fn every_creature_that_prints_lure_carries_it() {
 /// a Treasure") is not modelled **at all** — only the ETB half ships — so it
 /// is an absent ability rather than an unbatched one, and belongs to whoever
 /// builds excess-damage tracking. INCOMPLETE_CARDS names it too.
-const BATCHED_DAMAGE_SIGNED_OFF: &[&str] = &["Quartzwood Crasher", "Magmatic Galleon"];
+///
+/// Forth Eorlingas! fires its "you become the monarch" per connecting
+/// creature, and becoming the monarch you already are is no change (CR
+/// 725.3): once a batch and once a dealer are the same game.
+const BATCHED_DAMAGE_SIGNED_OFF: &[&str] = &["Quartzwood Crasher", "Magmatic Galleon", "Forth Eorlingas!"];
 
 /// **A card that prints "whenever one or more … deal … damage" fires once per
 /// damage batch, not once per dealer.**
