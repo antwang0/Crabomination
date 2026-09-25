@@ -960,6 +960,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ROOTHA_COMMANDERS,
             main: decks::ROOTHA_MAIN,
         },
+        // Hundred-and-sixteenth: the hundred-and-sixth official list (Most
+        // Wanted, OTC) — Mardu outlaws and Treasure under Olivia, Opulent
+        // Outlaw. `--pod-decks 116`.
+        PodDeck {
+            name: "Olivia, Opulent Outlaw (RWB)",
+            commanders: decks::OLIVIA_COMMANDERS,
+            main: decks::OLIVIA_MAIN,
+        },
     ]
 }
 
@@ -1523,6 +1531,8 @@ mod tests {
             ("Jirina", [0x1714, 111, 9035]),
             // CR 702.181a Mobilize, CR 614.1a token replacement, CR 903.3 commander attacks.
             ("Zurgo Stormrender", [0x2B60, 113, 9037]),
+            // CR 613.1d layered outlaws; CR 122.1 hit counters in exile.
+            ("Olivia", [0x0117, 116, 9040]),
         ] {
             let precon = *field.iter().find(|d| d.name.starts_with(name)).expect("the precon seat");
             assert_eq!(precon.card_count(), 100);

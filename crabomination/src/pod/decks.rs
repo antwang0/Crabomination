@@ -3532,3 +3532,34 @@ pub const ROOTHA_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, mountain, mountain,
     mountain, mountain, mountain, mountain, mountain,
 ];
+
+pub const OLIVIA_COMMANDERS: &[CardFactory] = &[olivia_opulent_outlaw];
+
+/// **Most Wanted**, the Outlaws of Thunder Junction Commander deck (OTC,
+/// 2024-04-19), exactly as MTGJSON's `MostWanted_OTC` prints it: 91 nonbasic
+/// cards + 2 Plains + 4 Swamps + 2 Mountains = 99. Mardu outlaws and
+/// Treasure under Olivia, Opulent Outlaw.
+pub const OLIVIA_MAIN: &[CardFactory] = &[
+    vihaan_goldwaker, councils_judgment, heliods_intervention, angelic_sell_sword,
+    we_ride_at_dawn, massacre_girl, fain_the_broker, witch_of_the_moors, nighthawk_scavenger,
+    curtains_call, misfortune_teller, painful_truths, kamber_the_plunderer, ogre_slumlord, hex,
+    mari_the_killing_quill, discreet_retreat, charred_graverobber, back_in_town,
+    marshland_bloodcaster, veinwitch_coven, rankle_master_of_pranks, dire_fleet_ravager,
+    mirror_entity, dire_fleet_daredevil, captain_lannery_storm, seize_the_spotlight,
+    grenzo_havoc_raiser, angraths_marauders, captivating_crew, rain_of_riches,
+    laurine_the_diversion, mass_mutiny, dead_before_sunrise, graywaters_fixer, life_insurance,
+    breena_the_demagogue, queen_marchesa, idol_of_oblivion, academy_manufactor, bounty_board,
+    fetid_heath, command_beacon, vault_of_the_archangel, dragonskull_summit, temple_of_silence,
+    temple_of_malice, exotic_orchard, temple_of_triumph, clifftop_retreat, isolated_chapel,
+    bonders_enclave, caves_of_koilos, battlefield_forge, sulfurous_springs, rugged_prairie,
+    desolate_mire, shadowblood_ridge, canyon_slough, smoldering_marsh, blackcleave_cliffs,
+    mistmeadow_skulk, requisition_raid, changeling_outcast, feed_the_swarm, deadly_dispute,
+    morbid_opportunist, aetherborn_marauder, tenured_inkcaster, shoot_the_sheriff,
+    lightning_greaves, impulsive_pilferer, shiny_impetus, humble_defector, glittering_stockpile,
+    boros_charm, arcane_signet, trailblazers_boots, bandits_haul, orzhov_signet, sol_ring,
+    rakdos_signet, command_tower, bojuka_bog, path_of_ancestry, rogues_passage,
+    demolition_field, tainted_peak, sunhome_fortress_of_the_legion, nomad_outpost,
+    temple_of_the_false_god,
+    // Basics: 2 plains, 4 swamp, 2 mountain
+    plains, plains, swamp, swamp, swamp, swamp, mountain, mountain,
+];
