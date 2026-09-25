@@ -115,6 +115,7 @@ mod cmdr_zimone_ia;
 mod cmdr_anhelo;
 mod cmdr_satya;
 mod cmdr_eowyn;
+mod cmdr_felothar;
 mod cmdr_azlask;
 mod cmdr_zhulodok;
 mod cmdr_aminatou;
