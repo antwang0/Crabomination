@@ -2646,6 +2646,25 @@ unplayed): all decided, Tidus 16.7 %; six seats beside Jace / Terra / Mirko /
 Brass / Cloud (16502, 1,000): all decided, Tidus 22.7 %; strict debug pods
 (16501 × 30, 16502 × 36 six-seat) all decided. `--bench` byte-identical.
 
+The **hundred-and-sixty-ninth** is Fallout Commander's **Science!**
+(`Science_PIP`, 2024-03-08) — Jeskai energy and artifacts under Dr. Madison
+Li, `--pod-decks 169`. Thirty-seven cards were missing (`cmdr_madison.rs`). The
+primitives: `GraveyardCastOncePerTurn::mv_at_most_counters` (Arcade Gannon),
+`StaticEffect::HasActivatedAbilitiesOfExiledWithCounter` (Rex's brain
+counters, any owner), `Selector::ExiledForCost` (Curie's copy source — ⚠ the
+exile-a-permanent cost read its filter without the source, so "exile
+*another*" could exile the activating permanent itself), `Effect::
+SecretNumbersMatch` (Expert-Level Safe), `Effect::
+EnchantedPlayerPaysPerArtifactOrNoAttacks` (Overencumbered), `Effect::
+ReturnSomeExiledWithSourceRestToBottom` (Vault 13), `Value::BasePowerOf`,
+`CreatureType::Synth`, `CounterType::Brain`. Residuals: **C.A.M.P.**,
+**Endurance Bobblehead**, **Expert-Level Safe**, **Plasma Caster**, **Vault 13**,
+**Vault 112** (INCOMPLETE_CARDS). Four seats beside Esika / T'Challa / Mothman
+(seed 16901, 1,000) and six beside Tidus / Auntie / Y'shtola / Frodo + Sam /
+Jace (16902, 1,000): all decided, Madison 14.3 / 2.3 % (an open lead);
+census (16903, 500): nothing unplayed; a strict debug pod (16904, 60)
+decided. `--bench` byte-identical.
+
 The **hundred-and-sixty-sixth** is Fallout Commander's **Mutant Menace**
 (`MutantMenace_PIP`, 2024-03-08) — Sultai rad counters, mills and Mutants
 under The Wise Mothman, `--pod-decks 166` (built as 165; Counter Blitz landed

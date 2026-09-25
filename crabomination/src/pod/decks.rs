@@ -5118,3 +5118,34 @@ pub const ESIKA_MAIN: &[CardFactory] = &[
     // Basics: 1 plains, 1 island, 1 swamp, 1 mountain, 3 forest
     plains, island, swamp, mountain, forest, forest, forest,
 ];
+
+pub const MADISON_COMMANDERS: &[CardFactory] = &[dr_madison_li];
+
+/// **Science!**, the Fallout Commander deck (PIP, 2024-03-08), exactly as
+/// MTGJSON's `Science_PIP` prints it: 86 nonbasic cards + 4 Mountain + 5 Island + 4 Plains = 99.
+/// Jeskai energy and artifacts under Dr. Madison Li.
+pub const MADISON_MAIN: &[CardFactory] = &[
+    liberty_prime_recharged, automated_assembly_line, brotherhood_scribe, overencumbered,
+    the_prydwen_steel_flagship, sentry_bot, vault_13_dwellers_journey,
+    curie_emergent_intelligence, james_wandering_dad, nick_valentine_private_eye,
+    synth_infiltrator, assaultron_dominator, the_motherlode_excavator, plasma_caster,
+    synth_eradicator, arcade_gannon, electrosiphon, red_death_shipwrecker, rex_cyber_hound,
+    sentinel_sarah_lyons, shaun_father_of_synths, vault_112_sadistic_simulation,
+    brotherhood_vertibird, t_45_power_armor, ferrous_lake, helios_one, austere_command,
+    open_the_vaults, mechanized_production, one_with_the_machine, wake_the_past, mystic_forge,
+    panharmonicon, solemn_simulacrum, steel_overseer, clifftop_retreat, exotic_orchard,
+    glacial_fortress, irrigated_farmland, prairie_stream, skycloud_expanse, spire_of_industry,
+    sulfur_falls, temple_of_enlightenment, temple_of_epiphany, treasure_vault,
+    paladin_danse_steel_maverick, nerd_rage, robobrain_war_mind, bottle_cap_blast,
+    elder_owyn_lyons, behemoth_of_vault_0, c_a_m_p, endurance_bobblehead, expert_level_safe,
+    intelligence_bobblehead, nuka_cola_vending_machine, crush_contraband, dispatch,
+    swords_to_plowshares, glimmer_of_genius, thirst_for_knowledge, whirler_rogue,
+    loyal_apprentice, unexpected_windfall, arcane_signet, everflowing_chalice,
+    lightning_greaves, mind_stone, sol_ring, talisman_of_conviction, talisman_of_creativity,
+    talisman_of_progress, thought_vessel, wayfarers_bauble, ash_barrens, buried_ruin,
+    command_tower, evolving_wilds, myriad_landscape, mystic_monastery, path_of_ancestry,
+    razortide_bridge, rustvale_bridge, silverbluff_bridge, terramorphic_expanse,
+    // Basics
+    island, island, island, island, island, mountain, mountain, mountain, mountain, plains,
+    plains, plains, plains,
+];

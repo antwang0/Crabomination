@@ -1380,6 +1380,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ESIKA_COMMANDERS,
             main: decks::ESIKA_MAIN,
         },
+        // Hundred-and-sixty-ninth: Science! (Fallout) — Jeskai energy and
+        // artifacts under Dr. Madison Li (CR 707.2 Curie's cost-exiled copy
+        // source, Rex's brain-countered abilities). `--pod-decks 169`.
+        PodDeck {
+            name: "Dr. Madison Li (URW)",
+            commanders: decks::MADISON_COMMANDERS,
+            main: decks::MADISON_MAIN,
+        },
     ]
 }
 
