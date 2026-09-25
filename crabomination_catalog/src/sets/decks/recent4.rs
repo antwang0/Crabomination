@@ -607,9 +607,8 @@ fn artifact_tutor_mage(name: &'static str, mv: u32) -> CardDefinition {
     }
 }
 
-/// Thirst for Knowledge — {2}{U} Instant. Draw three cards, then discard two.
-/// (The "unless you discard an artifact" reduction is approximated as a flat
-/// discard two.)
+/// Thirst for Knowledge — {2}{U} Instant. Draw three cards, then discard two
+/// cards unless you discard an artifact card.
 pub fn thirst_for_knowledge() -> CardDefinition {
     CardDefinition {
         name: "Thirst for Knowledge",
@@ -620,10 +619,10 @@ pub fn thirst_for_knowledge() -> CardDefinition {
                 who: Selector::You,
                 amount: Value::Const(3),
             },
-            Effect::Discard {
-                who: Selector::You,
-                amount: Value::Const(2),
-                random: false,
+            Effect::DiscardUnlessKind {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                instead: SelectionRequirement::HasCardType(CardType::Artifact),
             },
         ]),
         ..Default::default()

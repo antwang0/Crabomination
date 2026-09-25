@@ -99,6 +99,7 @@ mod cmdr_rootha;
 mod cmdr_yuma;
 mod cmdr_quintorius;
 mod cmdr_sefris;
+mod cmdr_morska;
 mod cmdr_azlask;
 mod cmdr_zhulodok;
 mod cmdr_aminatou;
