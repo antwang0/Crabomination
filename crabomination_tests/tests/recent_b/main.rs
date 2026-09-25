@@ -51,6 +51,7 @@ mod cmdr_morophon;
 mod cmdr_ashling;
 mod cmdr_pantlaza;
 mod cmdr_jace;
+mod cmdr_caesar;
 mod cmdr_prosper;
 mod cmdr_galea;
 mod cmdr_chishiro;
