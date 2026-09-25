@@ -4362,6 +4362,8 @@ fn effect_counters_spells(eff: &Effect) -> bool {
         // Taking the spell answers it the same way (Aethersnatch).
         | Effect::GainControlOfSpell { .. } => true,
         Effect::Seq(v) => v.iter().any(effect_counters_spells),
+        // An X bound from the countered spell (Counterpoint's recast cap).
+        Effect::WithX { body, .. } => effect_counters_spells(body),
         // A "choose N" whose default picks counter (Mystic Confluence).
         Effect::ChooseN { picks, modes } => {
             picks.iter().any(|&i| modes.get(i as usize).is_some_and(effect_counters_spells))
