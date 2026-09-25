@@ -2631,6 +2631,35 @@ Vehicle, an activated manland or a stationed Spacecraft stayed home: Kotori
 Inspirit / Morska (seed 15101, 1,000) and six seats (15102, 1,000): all
 decided; census (15103, 500): nothing unplayed. `--bench` byte-identical.
 
+The **hundred-and-seventy-ninth** is Warhammer 40,000 Commander's **The
+Ruinous Powers** (`TheRuinousPowers_40K`, 2022-10-07) — Grixis Chaos cascade
+and Demons under Abaddon the Despoiler, `--pod-decks 179`. Forty-one cards were
+missing (`cmdr_abaddon.rs`). The primitives:
+`StaticEffect::PreventDamageToSelfOpponentGainsControl` (Khârn the Betrayer —
+CR 615 / 800.4, read in `trade_counters_for_damage`),
+`StaticEffect::OpponentsMustAttackWithAtLeastOne` (Seeker of Slaanesh — CR
+508.1d: an empty declaration is rejected while a creature is able, and the
+bot's forced-attacker repair sends the sturdiest one),
+`Effect::ReturnSourceWhenTargetLeaves` (Lucius the Eternal — CR 603.7, a
+delayed leaves-the-battlefield trigger), `CardDefinition::escape_exile_filter`
+(Helbrute's Sarcophagus — escape exiling only a creature card),
+`DestroyOnePerOpponent.random_one` (Chaos Defiler) and the Primarch type.
+Abaddon's cascade reads `TotalLifeLostThisTurn(EachOpponent)`. ⚠ Its six-seat
+pods found **a departed seat's suspended ask outlived it** (a graveyard pick
+asked of a player who lost to the same priority pass was installed later as a
+decision owed by a seat no longer in the game — CR 800.4a, the leave handler
+now drops it) and **the bot sacrificed to draw from an empty library** (Trazyn
+the Infinite borrowing Commander's Sphere beside Out of the Tombs: 5,736
+activations, 3 of 1,000 six-seat pods action-capped — `pick_sacrifice_value`
+skips it now). Residuals: **Bloodthirster**, **Chaos Mutation**, **Khârn the
+Betrayer**, **The Horus Heresy**, **The Lost and the Damned**, **The Ruinous
+Powers** (INCOMPLETE_CARDS). Four seats beside Paradox Power / Necron Dynasties
+/ Doom Prevails (seed 10540, 1,000, `--card-census`: nothing unplayed): all
+decided, Abaddon 20.6 %; six seats beside those three, Tyranid Swarm and
+Avengers Assemble (10541, 1,000): all decided after the two fixes, 12.0 %;
+strict debug pods (3 × 60 four-seat, 6 × 40 six-seat) decided. `--bench`
+200,190 — byte-identical.
+
 The **hundred-and-seventy-sixth** is Marvel Super Heroes Commander's **Doom
 Prevails** (`DoomPrevails_MSC`, 2026-06-26) — Grixis Villains and connive under
 Doctor Doom, King of Latveria, `--pod-decks 176` (built as 175; Tyranid Swarm
