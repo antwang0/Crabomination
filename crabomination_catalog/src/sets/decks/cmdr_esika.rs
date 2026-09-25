@@ -11,8 +11,7 @@
 //!   more life this turn, not after Chandra herself dealt 3 damage.
 //! - **Cosima, God of the Voyage** — the voyage ability isn't implemented.
 //! - **Gideon, Battle-Forged** (Kytheon's back) — the +2 lure isn't
-//!   implemented; the +1's indestructible lasts until end of turn; the 0
-//!   doesn't prevent damage to him.
+//!   implemented.
 //! - **Journey to Eternity** — returns the creature, but not itself
 //!   transformed.
 //! - **Liliana, Defiant Necromancer** — the −8 emblem isn't implemented.
@@ -852,8 +851,7 @@ pub fn kolvori_god_of_kinship() -> CardDefinition {
 
 /// Kytheon, Hero of Akros // Gideon, Battle-Forged.
 ///
-/// ⚠ Residual: Gideon's +2 lure isn't implemented; the +1's indestructible
-/// lasts until end of turn; his 0 doesn't prevent damage to him.
+/// ⚠ Residual: Gideon's +2 lure isn't implemented.
 pub fn kytheon_hero_of_akros() -> CardDefinition {
     let gideon = walker(
         "Gideon, Battle-Forged",
@@ -865,20 +863,27 @@ pub fn kytheon_hero_of_akros() -> CardDefinition {
             loyalty(
                 1,
                 Effect::Seq(vec![
-                    Effect::GrantKeyword { what: target_filtered(R::Creature), keyword: Keyword::Indestructible, duration: Duration::EndOfTurn },
+                    Effect::GrantKeyword {
+                        what: target_filtered(R::Creature),
+                        keyword: Keyword::Indestructible,
+                        duration: Duration::UntilNextTurn,
+                    },
                     Effect::Untap { what: Selector::Target(0), up_to: None },
                 ]),
             ),
             loyalty(
                 0,
-                Effect::BecomeCreature {
-                    what: Selector::This,
-                    power: Value::Const(4),
-                    toughness: Value::Const(4),
-                    creature_types: vec![CreatureType::Human, CreatureType::Soldier],
-                    keywords: vec![Keyword::Indestructible],
-                    duration: Duration::EndOfTurn,
-                },
+                Effect::Seq(vec![
+                    Effect::BecomeCreature {
+                        what: Selector::This,
+                        power: Value::Const(4),
+                        toughness: Value::Const(4),
+                        creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+                        keywords: vec![Keyword::Indestructible],
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::PreventAllDamageThisTurn { target: Selector::This, redirect_to: None },
+                ]),
             ),
         ],
     );

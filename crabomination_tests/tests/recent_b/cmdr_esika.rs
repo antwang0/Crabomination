@@ -344,3 +344,21 @@ fn archangel_avacyn_transforms_at_the_next_players_upkeep() {
     assert_eq!(g.active_player_idx, 1);
     assert_eq!(g.battlefield_find(avacyn).map(|c| c.definition.name), Some("Avacyn, the Purifier"));
 }
+
+/// Gideon, Battle-Forged's 0: a 4/4 indestructible creature this turn, and
+/// damage that would be dealt to him is prevented (it isn't loyalty loss).
+#[test]
+fn gideon_battle_forged_zero_prevents_damage_to_him() {
+    let mut g = main_phase();
+    let kytheon = g.add_card_to_battlefield(0, catalog::kytheon_hero_of_akros());
+    let mut ctx = EffectContext::for_ability(kytheon, 0, None);
+    ctx.source = Some(kytheon);
+    let ev = g.resolve_effect(&crabomination::effect::Effect::ExileSelfReturnTransformed, &ctx).expect("flip");
+    g.dispatch_triggers_for_events(&ev);
+    let gideon = on_board(&g, 0, "Gideon, Battle-Forged").expect("the planeswalker side");
+    loyalty(&mut g, gideon, 2, None);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, Some(Target::Permanent(gideon))).expect("Bolt Gideon");
+    let c = g.battlefield_find(gideon).expect("still here");
+    assert_eq!(c.counter_count(CounterType::Loyalty), 3, "no damage got through");
+}
