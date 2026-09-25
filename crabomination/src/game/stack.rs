@@ -2411,6 +2411,17 @@ impl GameState {
                     }
                 }
 
+                // Don't Blink — a creature cast from exile goes to its owner's
+                // library instead of the battlefield.
+                if card.cast_from_exile
+                    && card.definition.is_creature()
+                    && self.creatures_from_exile_shuffle_this_turn
+                {
+                    let owner = card.owner;
+                    self.players[owner].library.push(card);
+                    self.shuffle_library(owner, &mut events);
+                    return Ok(events);
+                }
                 if card.definition.is_permanent() && !card.casting_alt_half() {
                     // Collect ETB triggers before moving card into battlefield.
                     // `mut` so the enters-as-copy path can swap in the
@@ -5103,6 +5114,9 @@ impl GameState {
         clear_cold!(self.skipped_steps_this_turn);
         clear_cold!(self.cant_attack_player_this_turn);
         clear_cold!(self.granted_escape_eot);
+        if self.creatures_from_exile_shuffle_this_turn {
+            self.creatures_from_exile_shuffle_this_turn = false;
+        }
         clear_cold!(self.cant_attack_pw_type_this_turn);
         self.graveyard_play_pooled_for = None;
         self.block_poison_this_turn = 0;

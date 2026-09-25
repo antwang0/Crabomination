@@ -2804,6 +2804,13 @@ pub enum StaticEffect {
     /// creatures is able to attack (`declare_attackers_banded`); the bot's
     /// forced-attacker repair adds one.
     OpponentsMustAttackWithAtLeastOne,
+    /// CR 701.55 — "If an opponent would face a villainous choice, they face
+    /// that choice an additional time" (The Valeyard). Read where a
+    /// villainous choice is posed; each such permanent adds one more.
+    OpponentsFaceVillainousChoicesTwice,
+    /// CR 702.153 — "The first nonlegendary artifact spell you cast each turn
+    /// has casualty N" (Ashad, the Lone Cyberman). Read in `casualty_for`.
+    FirstNonlegendaryArtifactSpellHasCasualty(u32),
     /// CR 614 — "If this creature would deal combat damage to a player,
     /// instead put that many +1/+1 counters on it and that player mills that
     /// many cards." Szadek, Lord of Secrets. A dealer-side combat-damage

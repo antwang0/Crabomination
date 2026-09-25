@@ -7509,7 +7509,7 @@ impl GameState {
     /// Painter) when it is an instant or sorcery and `seat` has cast none yet
     /// this turn.
     pub fn casualty_for(&self, seat: usize, def: &crate::card::CardDefinition) -> Option<u32> {
-        def.casualty_cost().or_else(|| {
+        def.casualty_cost().or_else(|| self.first_nonlegendary_artifact_casualty(seat, def)).or_else(|| {
             if !(def.is_instant() || def.is_sorcery()) || self.players[seat].instants_or_sorceries_cast_this_turn > 0 {
                 return None;
             }

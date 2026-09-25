@@ -1772,6 +1772,12 @@ pub struct ColdState {
     /// Read by `effective_escape_grant`; cleared at cleanup.
     #[serde(default)]
     pub(crate) granted_escape_eot: Vec<(CardId, u32)>,
+    /// Don't Blink — "until end of turn, if one or more creatures would enter
+    /// from exile or after being cast from exile, their owners shuffle them
+    /// into their libraries instead". Read at both entry routes; cleared at
+    /// cleanup (guarded, so an idle turn writes nothing to this group).
+    #[serde(default)]
+    pub(crate) creatures_from_exile_shuffle_this_turn: bool,
     /// The natural faces of the most recent `RollDie` resolution, for
     /// `Value::LastRollFaceCount` (Luck Bobblehead's "if you rolled 6 exactly
     /// seven times"). Written only when it changes.
@@ -30613,6 +30619,11 @@ fn static_effect_to_effects(
             // OpponentsMustAttackWithAtLeastOne — read at the attack
             // declaration (`opponent_forces_an_attack`); no layer effect.
             | StaticEffect::OpponentsMustAttackWithAtLeastOne
+            // OpponentsFaceVillainousChoicesTwice — read where a villainous
+            // choice is posed; FirstNonlegendaryArtifactSpellHasCasualty — read
+            // in `casualty_for`. No layer effect.
+            | StaticEffect::OpponentsFaceVillainousChoicesTwice
+            | StaticEffect::FirstNonlegendaryArtifactSpellHasCasualty(_)
             // ExtraEtbCountersForCreatureCasts — read at creature-spell
             // resolution time in `stack.rs::resolve_spell`; no layer effect.
             | StaticEffect::ExtraEtbCountersForCreatureCasts { .. }

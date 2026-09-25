@@ -1544,7 +1544,8 @@ impl Effect {
             Effect::AllureOfTheUnknown => false,
             Effect::PossibilityStorm
             | Effect::KnowledgePool
-            | Effect::PermanentsEnterTappedThisTurn => false,
+            | Effect::PermanentsEnterTappedThisTurn
+            | Effect::CreaturesFromExileShuffleThisTurn => false,
 
             Effect::ReturnResolvingSpellToHand => false,
             Effect::ExileResolvingSpell => false,
@@ -1820,6 +1821,7 @@ impl Effect {
             | Effect::GrantMiracleReduced { what, .. }
             | Effect::Exile { what }
             | Effect::ReturnFaceDownAsForest { what }
+            | Effect::PutFaceDownAsCyberman { what, .. }
             | Effect::ExileWithSource { what }
             | Effect::RemoveAllCountersDiscountNextSpell { what }
             | Effect::ExileSameNameAsTarget { what }
@@ -2612,6 +2614,7 @@ impl Effect {
             | Effect::GrantMiracleReduced { what, .. }
             | Effect::Exile { what }
             | Effect::ReturnFaceDownAsForest { what }
+            | Effect::PutFaceDownAsCyberman { what, .. }
             | Effect::ExileWithSource { what }
             | Effect::RemoveAllCountersDiscountNextSpell { what }
             | Effect::ExileSameNameAsTarget { what }
@@ -4970,6 +4973,7 @@ impl Effect {
                 | Effect::GrantMiracleReduced { what, .. }
                 | Effect::Exile { what }
             | Effect::ReturnFaceDownAsForest { what }
+            | Effect::PutFaceDownAsCyberman { what, .. }
                 | Effect::ChangeSpellTarget { what }
                 | Effect::CounterSpell { what }
                 | Effect::CopySpellForEachOtherLegalTarget { what }

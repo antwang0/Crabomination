@@ -9609,6 +9609,11 @@ pub enum Effect {
     /// It's a Forest land" (Yedora, Grave Gardener) — every card `what`
     /// resolves to in a graveyard enters as a nameless face-down Forest.
     ReturnFaceDownAsForest { what: Selector },
+    /// "Put [what] onto the battlefield face down under your control. It's a
+    /// 2/2 Cyberman artifact creature" (Missy, Cybership, Death in Heaven,
+    /// The Cyber-Controller) — from any zone; a permanent `what` resolves to
+    /// is turned face down in place under its controller (Cyber Conversion).
+    PutFaceDownAsCyberman { what: Selector, tapped: bool },
     /// "For each permanent type, return up to one card of that type from your
     /// graveyard to the battlefield. You lose `life_per_card` life for each
     /// card returned this way" (Revival Experiment, CR 110.4). A card counts
@@ -10346,6 +10351,10 @@ pub enum Effect {
     /// CR 614 — "Permanents enter tapped this turn" (Due Respect). A
     /// turn-scoped blanket replacement over every entry path.
     PermanentsEnterTappedThisTurn,
+    /// "Until end of turn, if one or more creatures would enter from exile
+    /// or after being cast from exile, their owners shuffle them into their
+    /// libraries instead" (Don't Blink).
+    CreaturesFromExileShuffleThisTurn,
 
     /// Knowledge Pool's cast replacement — the just-cast spell (the trigger
     /// source) is exiled stamped `exiled_with = source`, and its caster may

@@ -376,6 +376,9 @@ pub enum CreatureType {
     Gamma,
     // Warhammer 40,000 Commander (Magnus the Red, Mortarion).
     Primarch,
+    // Doctor Who (Masters of Evil) — and the face-down 2/2 artifact creature
+    // body of `facedown_cyberman_definition`.
+    Cyberman,
     // Teenage Mutant Ninja Turtles Commander (Krang, the All-Powerful).
     Utrom,
 }
@@ -925,6 +928,8 @@ pub enum CounterType {
     /// Plan counters — Glorious Purpose's tally (the sixth sacrifices it and
     /// casts from the top four).
     Plan,
+    /// The Master, Formed Anew — marks the exiled creature it may copy.
+    Takeover,
     /// Necrodermis counters — The War in Heaven's mark on what it returns.
     Necrodermis,
     /// Vow counter — Promise of Loyalty's mark: a creature carrying one can't
@@ -5129,6 +5134,11 @@ pub struct EntersAsCopy {
     /// than a permanent.
     #[serde(default)]
     pub from_graveyards: bool,
+    /// "a copy of a creature card in exile with a takeover counter on it"
+    /// (The Master, Formed Anew): the copy source is an exiled card matching
+    /// `filter` that carries this counter.
+    #[serde(default)]
+    pub from_exile_with_counter: Option<CounterType>,
     /// CR 707.2 — "except it's an artifact … (It's not a creature.)"
     /// (Machine God's Effigy): the copy loses the creature type it copied.
     #[serde(default)]
@@ -7376,6 +7386,17 @@ pub fn facedown_forest_definition() -> CardDefinition {
         card_types: vec![CardType::Land],
         subtypes: Subtypes { land_types: vec![LandType::Forest], ..Default::default() },
         ..Default::default()
+    }
+}
+
+/// "Put it onto the battlefield face down. It's a 2/2 Cyberman artifact
+/// creature" (Missy, Cybership, Death in Heaven, The Cyber-Controller, Cyber
+/// Conversion — CR 708.2's characteristics, overridden by the effect).
+pub fn facedown_cyberman_definition() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Cyberman], ..Default::default() },
+        ..facedown_creature_definition()
     }
 }
 
@@ -10175,6 +10196,17 @@ impl CardInstance {
         }
         self.face_up_def = Some(self.definition.arc());
         self.set_definition(Arc::new(facedown_forest_definition()));
+        self.face_down = true;
+    }
+
+    /// Turn this card face down as a 2/2 Cyberman artifact creature
+    /// ([`facedown_cyberman_definition`]); no-op if already face down.
+    pub fn turn_face_down_as_cyberman(&mut self) {
+        if self.face_up_def.is_some() {
+            return;
+        }
+        self.face_up_def = Some(self.definition.arc());
+        self.set_definition(Arc::new(facedown_cyberman_definition()));
         self.face_down = true;
     }
 

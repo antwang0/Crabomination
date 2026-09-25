@@ -2109,6 +2109,23 @@ impl GameState {
         {
             return;
         }
+        // Don't Blink — a creature card entering from exile is shuffled into
+        // its owner's library instead.
+        if matches!(dest, ZoneDest::Battlefield { .. })
+            && self.creatures_from_exile_shuffle_this_turn
+            && let Some(owner) = self
+                .exile
+                .iter()
+                .find(|c| c.id == cid && !c.face_down && c.definition.is_creature())
+                .map(|c| c.owner)
+        {
+            let to_library = ZoneDest::Library {
+                who: crate::effect::PlayerRef::Seat(owner),
+                pos: crate::effect::LibraryPosition::Shuffled,
+            };
+            self.move_card_to(cid, &to_library, ctx, events);
+            return;
+        }
         // Grafdigger's Cage / Soulless Jailer — locked cards in graveyards
         // and libraries can't enter the battlefield.
         if matches!(dest, ZoneDest::Battlefield { .. }) {

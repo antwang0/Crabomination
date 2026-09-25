@@ -51,6 +51,7 @@ mod reveal_cast;
 mod reveal_until;
 mod shell_game;
 mod linked_return;
+mod masters_of_evil;
 mod life_loss_grants;
 mod spell_damage;
 mod static_copy;
@@ -2126,6 +2127,12 @@ impl GameState {
         // Every legal copy source, never the copier itself.
         let mut candidates: Vec<(CardId, String, i32)> = if spec.from_graveyards {
             self.graveyard_copy_candidates(&spec.filter, controller)
+        } else if let Some(kind) = spec.from_exile_with_counter {
+            self.exile
+                .iter()
+                .filter(|c| c.counter_count(kind) > 0 && self.evaluate_requirement_on_card(&spec.filter, c, controller))
+                .map(|c| (c.id, c.definition.name.to_string(), c.definition.power))
+                .collect()
         } else {
             self.battlefield
                 .iter()
@@ -4118,6 +4125,11 @@ impl GameState {
                 if let Some(p) = self.resolve_player(who, ctx) {
                     self.players[p].life_alt_next_spell_this_turn = true;
                 }
+                Ok(())
+            }
+
+            Effect::PutFaceDownAsCyberman { what, tapped } => {
+                self.put_face_down_as_cyberman(what, *tapped, ctx, events);
                 Ok(())
             }
 
@@ -22960,6 +22972,13 @@ impl GameState {
                     })
                     .collect();
                 choosers = self.apnap_sort(choosers);
+                // The Valeyard — each face the choice once more per such
+                // permanent among their opponents' (CR 701.55). A seat's
+                // repeats sit together; a suspend hands the next *seat* on.
+                let choosers: Vec<usize> = choosers
+                    .into_iter()
+                    .flat_map(|p| std::iter::repeat_n(p, 1 + self.villainous_choice_repeats(p)))
+                    .collect();
                 for (i, p) in choosers.iter().copied().enumerate() {
                     let opt_ctx = EffectContext { controller: p, ..ctx.clone() };
                     // The chooser picks the option that harms them least
@@ -22979,8 +22998,15 @@ impl GameState {
                     // sacrifice choice) and the choosers after this one were
                     // dropped. Re-enter this arm per remaining seat so each
                     // still makes their own CR 701.55 choice.
+                    let rest: Vec<usize> = choosers[i + 1..].iter().copied().filter(|&q| q != p).collect();
+                    let mut rest_seats: Vec<usize> = Vec::new();
+                    for q in rest {
+                        if !rest_seats.contains(&q) {
+                            rest_seats.push(q);
+                        }
+                    }
                     if splice_after_suspend(&mut self.suspend_signal, || {
-                        per_seat_continuation(&choosers[i + 1..], |q| {
+                        per_seat_continuation(&rest_seats, |q| {
                             Effect::VillainousChoice {
                                 who: Selector::Player(PlayerRef::Seat(q)),
                                 option_a: option_a.clone(),
@@ -31852,6 +31878,11 @@ impl GameState {
                     }
                     self.move_card_to(cid, &ZoneDest::Hand(PlayerRef::Seat(p)), ctx, events);
                 }
+                Ok(())
+            }
+
+            Effect::CreaturesFromExileShuffleThisTurn => {
+                self.creatures_from_exile_shuffle_this_turn = true;
                 Ok(())
             }
 
