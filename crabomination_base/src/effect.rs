@@ -1375,6 +1375,10 @@ pub enum Value {
     /// How many of the controller's opponents lost life this turn (Kaito,
     /// Bane of Nightmares' 0).
     OpponentsWhoLostLifeThisTurn,
+    /// Living players (the controller included) who lost life this turn —
+    /// Reaper's Scythe's "a soul counter for each player who lost life this
+    /// turn".
+    PlayersWhoLostLifeThisTurn,
     /// Multicolored spells the player has cast this turn (Zenith Chronicler).
     MulticoloredSpellsCastThisTurn(PlayerRef),
     /// The greatest total toxic value among creatures the player controls

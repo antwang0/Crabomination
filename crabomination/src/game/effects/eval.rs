@@ -1881,6 +1881,9 @@ impl GameState {
                 .iter()
                 .filter(|&&p| self.players[p].poison_counters >= *at_least)
                 .count() as i32,
+            Value::PlayersWhoLostLifeThisTurn => {
+                self.players.iter().filter(|p| p.is_alive() && p.lost_life_this_turn).count() as i32
+            }
             Value::OpponentsWhoLostLifeThisTurn => self
                 .opponents_of(ctx.controller)
                 .into_iter()
