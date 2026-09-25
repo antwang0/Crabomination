@@ -7912,11 +7912,24 @@ pub(super) fn cast_candidates<'a>(
                 x_value: None,
             });
         }
-        if fuse {
+        // CR 702.102 — the fused cast names the left half's slots, then the
+        // right half's; the engine reads the right half from slot `L`.
+        if fuse && let Some(split) = def.split.as_deref() {
+            let mut all: Vec<Target> = target.iter().cloned().chain(additional_targets.iter().cloned()).collect();
+            all.truncate(effect.target_slot_count());
+            let right = &split.right.effect;
+            if right.requires_target() {
+                let (rt, rextras) = state.auto_targets_for_effect_all_slots(right, seat, None);
+                if let Some(rt) = rt {
+                    all.push(rt);
+                    all.extend(rextras);
+                }
+            }
+            let mut all = all.into_iter();
             offers.push(GameAction::CastSplitFused {
                 card_id: c.id,
-                target: target.clone(),
-                additional_targets: additional_targets.clone(),
+                target: all.next(),
+                additional_targets: all.collect(),
                 mode: None,
                 x_value: None,
             });

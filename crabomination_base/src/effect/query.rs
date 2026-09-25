@@ -5422,6 +5422,13 @@ impl Effect {
         self.target_filter_for_slot_in_mode(slot, None)
     }
 
+    /// How many consecutive target slots, from slot 0, this effect declares —
+    /// where a fused split card's right half starts reading its targets
+    /// (CR 702.102: the left half's slots come first).
+    pub fn target_slot_count(&self) -> usize {
+        (0..32u8).take_while(|&s| self.target_filter_for_slot(s).is_some()).count()
+    }
+
     /// The number of targets the effect's multi-target instance *requires*
     /// (`ApplyToTargets.min_targets`), or `None` when the slot-bearing
     /// effect is not an `ApplyToTargets` (conventional effects keep their

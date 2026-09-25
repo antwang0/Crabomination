@@ -2363,7 +2363,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 The Second Doctor | Blast from the Past (WHO) | an opponent who draws has only its current creatures barred from attacking you. |
 | 🟡 Heroes in a Half Shell | Turtle Power! (TMC) | "each of those creatures" is each Mutant, Ninja or Turtle of yours that dealt damage to a player this turn, not only this batch's. |
 | 🟡 Coin of Mastery | Turtle Power! (TMC) | artifact mana is counted off the pool, so mana floated from lands and artifacts together and only partly spent can read low. |
-| 🟡 Double Jump // Flying Kick | Turtle Power! (TMC) | cast fused, Flying Kick has no enemy target (a fused right half reads one target). |
 | 🟡 Special Move | Turtle Power! (TMC) | Foot Toss's creature is your greatest-power creature, chosen on resolution rather than targeted. |
 | 🟡 Vigor | Turtle Power! (TMC) | the prevention is a replacement, so "damage can't be prevented" doesn't stop it. |
 | 🟡 Captain Marvel, Apex Avenger | Avengers Assemble (MSC) | only +1/+1 counters put on another creature are copied onto her. |

@@ -27857,21 +27857,29 @@ impl GameState {
         // Where a suspension below belongs, for the resume to pick up after.
         let mut tail_stage = stage;
         // CR 709 / 702.102 — a fused split cast resolves its right half in a
-        // second pass, reading its target from `additional_targets` slot 0
-        // (the left half consumed `target`). Fusable halves are single-target.
+        // second pass. The targets are the left half's slots, then the right
+        // half's: the right half reads from slot `L` of the whole list, `L`
+        // the left effect's slot count. It read `additional_targets[0]` only,
+        // so a two-target half (Flying Kick, Blood) lost its second target
+        // and a two-target left half (Flesh) handed its own slot 1 across.
         if self.suspend_signal.is_none()
             && stage <= 1
             && card.split_cast == Some(2)
             && let Some(split) = card.definition.split.as_ref()
         {
+            let left_slots = card.definition.effect.target_slot_count();
+            let mut right_targets =
+                target.iter().cloned().chain(additional_targets.iter().cloned()).skip(left_slots);
+            let right_target = right_targets.next();
+            let right_extra: Vec<Target> = right_targets.collect();
             let right_ctx = EffectContext {
                 cast_from_graveyard: card.cast_from_graveyard,
                 ..EffectContext::for_spell_with_source_and_origin(
                     card.id,
                     card.definition.name,
                     caster,
-                    additional_targets.first().cloned(),
-                    Vec::new(),
+                    right_target,
+                    right_extra,
                     mode,
                     x_value,
                     converged_value,

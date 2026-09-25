@@ -377,3 +377,29 @@ fn game_over_is_cheaper_at_half_life() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).is_none());
 }
+
+/// CR 702.102 — Double Jump // Flying Kick cast fused: the left half's slot
+/// first, then Flying Kick's two. The jumper becomes a 5/5 flier and kicks
+/// the opposing Serra Angel for 5; the right half used to read one target
+/// and did nothing.
+#[test]
+fn double_jump_flying_kick_fused_uses_both_halves_targets() {
+    let mut g = pod(2);
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let card = g.add_card_to_hand(0, catalog::double_jump_flying_kick());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSplitFused {
+        card_id: card,
+        target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Permanent(mine), Target::Permanent(theirs)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("fused cast");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(mine).expect("still here");
+    assert_eq!((cp.power, cp.toughness), (5, 5));
+    assert!(cp.keywords().contains(&crabomination::card::Keyword::Flying));
+    assert!(g.battlefield_find(theirs).is_none(), "5 damage to a 4/4");
+}

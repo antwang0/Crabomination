@@ -7,8 +7,6 @@
 //!   Ninja or Turtle of yours that dealt damage to a player this turn.
 //! - **Coin of Mastery** — artifact mana is counted from the pool, so mana
 //!   floated from lands and artifacts together can read low.
-//! - **Double Jump // Flying Kick** — cast fused, Flying Kick has no enemy
-//!   target (a fused right half reads one target).
 //! - **Special Move** — Foot Toss's creature is your greatest-power creature,
 //!   chosen on resolution rather than targeted.
 //! - **Vigor** — the prevention is a replacement, so "damage can't be
@@ -1067,9 +1065,6 @@ pub fn continue_card() -> CardDefinition {
 }
 
 /// Double Jump // Flying Kick — a flying counter and base 5/5; or a bite.
-///
-/// ⚠ Residual: cast fused, Flying Kick has no enemy target (a fused right
-/// half reads one target), so only Double Jump does anything.
 pub fn double_jump_flying_kick() -> CardDefinition {
     let mine = target_filtered(yours(R::Creature));
     CardDefinition {

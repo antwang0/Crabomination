@@ -165,7 +165,7 @@ lists were picked.
 | **Tyranid Swarm** (40K precon) GUR | The Swarmlord | GUR | 100 | 🟡 all 100 implemented, 5 carry residuals (Ghyrson Starn, Hierophant Bio-Titan, Magus Lucea Kane, The First Tyrannic War, The Red Terror) |
 | **Paradox Power** (WHO precon) GUR | The Thirteenth Doctor + Yasmin Khan | GUR | 100 | 🟡 all 100 implemented, 13 carry residuals (Become the Pilot, Bigger on the Inside, Bill Potts, Clara Oswald, Last Night Together, Lunar Hatchling, Me the Immortal, Psychic Paper, River Song's Diary, Ryan Sinclair, Strax, The Fugitive Doctor, Truth or Consequences) |
 | **Avengers Assemble** (MSC precon) URW | Captain America, Team Leader | URW | 100 | 🟡 all 100 implemented, 6 carry residuals (Captain Marvel, Heroic Return, Heroic Sacrifice, Scarlet Witch, Speed, Winter Soldier) |
-| **Turtle Power!** (TMC precon) WUBRG | Heroes in a Half Shell | WUBRG | 100 | 🟡 all 100 implemented, 5 carry residuals (Heroes in a Half Shell, Coin of Mastery, Double Jump // Flying Kick, Special Move, Vigor) |
+| **Turtle Power!** (TMC precon) WUBRG | Heroes in a Half Shell | WUBRG | 100 | 🟡 all 100 implemented, 4 carry residuals (Heroes in a Half Shell, Coin of Mastery, Special Move, Vigor) |
 | **Blast from the Past** (WHO precon) GWU | The Fourth Doctor + Sarah Jane Smith | GWU | 100 | 🟡 all 100 implemented, 10 carry residuals (Ace's Baseball Bat, Displaced Dinosaurs, Nyssa of Traken, Peri Brown, Reverse the Polarity, Susan Foreman, The Curse of Fenric, The Eighth Doctor, The Fourth Doctor, The Second Doctor) |
 | **Doom Prevails** (MSC precon) UBR | Doctor Doom, King of Latveria | UBR | 100 | 🟡 all 100 implemented, 4 carry residuals (Extract Power, Kang Dynasty, Lady Loki, Superior Foes of Spider-Man) |
 | **The Ruinous Powers** (40K precon) UBR | Abaddon the Despoiler | UBR | 100 | 🟡 all 100 implemented, 6 carry residuals (Bloodthirster, Chaos Mutation, Khârn the Betrayer, The Horus Heresy, The Lost and the Damned, The Ruinous Powers) |
@@ -2723,8 +2723,8 @@ Shredder; Myriad now shares the resolver),
 `Value::OpponentsAttackedThisTurn` (Fast Forward) and the Utrom creature type.
 The seven partners carry `PartnerLabel("Character select")`; Bebop and
 Rocksteady are a Partner-with pair. Residuals: **Heroes in a Half Shell**,
-**Coin of Mastery**, **Double Jump // Flying Kick**, **Special Move**,
-**Vigor** (INCOMPLETE_CARDS). Four seats beside Captain America / Invisible
+**Coin of Mastery**, **Special Move**, **Vigor** (INCOMPLETE_CARDS; Double
+Jump // Flying Kick's fused targets were fixed after landing). Four seats beside Captain America / Invisible
 Woman / Tidus (seed 17901, 1,000, `--card-census`: nothing unplayed): all
 decided, Heroes 25.9 %; six seats beside the Thirteenth Doctor / Szarekh /
 Doctor Doom / the Swarmlord / Y'shtola (17902, 1,000): all decided after the
