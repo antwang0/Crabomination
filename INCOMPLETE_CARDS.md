@@ -1965,6 +1965,13 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Magus of the Candelabra | Tricky Terrain (M3C) | untaps up to X of your own tapped lands, untargeted (Candelabra of Tawnos's approximation). |
 | 🟡 Rampant Frogantua | Tricky Terrain (M3C) | every milled land goes onto the battlefield ("any number" isn't offered). |
 | 🟡 March from Velis Vel | Tricky Terrain (M3C) | the nonbasic land type is chosen as a mode. |
+| 🟡 Amoeboid Changeling | Everyone's Invited! (SLD) | "gains all creature types" is a Changeling grant; "loses all creature types" empties the type line and strips Changeling until end of turn, and a later grant that turn doesn't restore it. |
+| 🟡 Nameless Inversion | Everyone's Invited! (SLD) | as Amoeboid Changeling's "loses all creature types". |
+| 🟡 Shields of Velis Vel | Everyone's Invited! (SLD) | "gain all creature types" is a Changeling grant. |
+| 🟡 Moritte of the Frost | Everyone's Invited! (SLD) | the two +1/+1 counters come from an entry trigger, not "enters with"; a noncreature copy has changeling too. |
+| 🟡 Unsettled Mariner | Everyone's Invited! (SLD) | modelled as ward {1} on your permanents: you aren't protected, and it doesn't stack with a printed ward. |
+| 🟡 Stick Together | Everyone's Invited! (SLD) | each player keeps the engine's pick: a largest party, strongest creatures first. |
+| 🟡 Harper Recruiter | Everyone's Invited! (SLD) | the engine picks the party revealed from the top four (a largest one). |
 | 🟡 Orator of Ojutai | Draconic Domination (C17) | the Dragon check reads your board and hand as it enters; there is no optional reveal. |
 | 🟡 Armored Skyhunter | Silverquill Influence (SOC) | an Equipment it puts onto the battlefield stays unattached. |
 | 🟡 Coercive Impetus | Silverquill Influence (SOC) | the goad is renewed by a trigger at the beginning of each combat, not a static. |
