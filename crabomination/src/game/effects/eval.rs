@@ -4962,7 +4962,7 @@ impl GameState {
                     // Assassins, are outlaws until end of turn).
                     R::IsOutlaw => has_type(CT::Creature)
                         && (card.has_keyword(&crate::card::Keyword::Changeling)
-                            || OUTLAW_TYPES.iter().any(|t| has_ctype(t))),
+                            || OUTLAW_TYPES.iter().any(has_ctype)),
                     R::HasLandType(lt) => has_ltype(lt),
                     R::ControllerControlsLandType(lt) => {
                         self.seat_controls_land_type(card.controller, *lt)

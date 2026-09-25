@@ -10762,7 +10762,7 @@ fn board_bound_attacks(state: &GameState, attacks: Vec<Attack>) -> Vec<Attack> {
     for a in &attacks {
         let (n, scales, fires) = state.attack_token_estimate(a.attacker);
         if n == 0 {
-            kept.push(a.clone());
+            kept.push(*a);
             continue;
         }
         // Each fire resolves on its own; a board-scaling one also copies
@@ -10775,7 +10775,7 @@ fn board_bound_attacks(state: &GameState, attacks: Vec<Attack>) -> Vec<Attack> {
             continue;
         }
         board = after;
-        kept.push(a.clone());
+        kept.push(*a);
     }
     if kept.len() == attacks.len() || !state.would_accept(GameAction::DeclareAttackers(kept.clone())) {
         return attacks;

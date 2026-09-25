@@ -226,7 +226,7 @@ pub fn manascape_refractor() -> CardDefinition {
         cost: cost(&[generic(3)]),
         card_types: vec![CardType::Artifact],
         static_abilities: vec![crate::sets::enters_tapped(), StaticAbility {
-            description: "Has all activated abilities of all lands on the battlefield.".into(),
+            description: "Has all activated abilities of all lands on the battlefield.",
             effect: StaticEffect::HasActivatedAbilitiesOfBattlefieldLands,
         }],
         ..Default::default()
@@ -346,11 +346,11 @@ pub fn tidal_barracuda() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![
             StaticAbility {
-                description: "Any player may cast spells as though they had flash.".into(),
+                description: "Any player may cast spells as though they had flash.",
                 effect: StaticEffect::AnyPlayerSpellsHaveFlash { filter: R::Any },
             },
             StaticAbility {
-                description: "Your opponents can't cast spells during your turn.".into(),
+                description: "Your opponents can't cast spells during your turn.",
                 effect: StaticEffect::OpponentsCantCastDuringYourTurn,
             },
         ],
