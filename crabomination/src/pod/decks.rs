@@ -5240,3 +5240,34 @@ pub const GREYFAX_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, island, island, island,
     island, island, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const DOGMEAT_COMMANDERS: &[CardFactory] = &[dogmeat_ever_loyal];
+
+/// **Scrappy Survivors**, the Fallout Commander deck (PIP, 2024-03-08),
+/// exactly as MTGJSON's `ScrappySurvivors_PIP` prints it: 87 nonbasic cards +
+/// 4 Mountain + 4 Forest + 4 Plains = 99. Naya Auras, Equipment and Junk
+/// under Dogmeat, Ever Loyal.
+pub const DOGMEAT_MAIN: &[CardFactory] = &[
+    preston_garvey_minuteman, codsworth_handy_helper, idolized, pre_war_formalwear,
+    vault_101_birthday_party, duchess_wayward_tavernkeep, grim_reapers_sprint, junk_jet,
+    megatons_fate, vault_21_house_gambit, veronica_dissident_scribe, animal_friend, strong_back,
+    almost_perfect, armory_paladin, cait_cage_brawler, cass_hand_of_vengeance,
+    inventory_management, moira_brown_guide_author, three_dog_galaxy_news_dj, mister_gutsy,
+    pip_boy_3000, junktown, sunscorched_divide, mantle_of_the_ancients, puresteel_paladin,
+    single_combat, blasphemous_act, chaos_warp, heroic_intervention, basilisk_collar,
+    bloodforged_battle_axe, champions_helm, masterwork_of_ingenuity, canopy_vista, cinder_glade,
+    clifftop_retreat, exotic_orchard, mossfire_valley, rootbound_crag, scattered_groves,
+    scavenger_grounds, sheltered_thicket, sungrass_prairie, sunpetal_grove, temple_of_abandon,
+    temple_of_plenty, temple_of_triumph, brotherhood_outcast, commander_sofia_daguerre,
+    acquired_mutation, crimson_caravaneer, ian_the_reckless, bighorner_rancher, break_down,
+    gunner_conscript, super_mutant_scavenger, well_rested, agility_bobblehead,
+    perception_bobblehead, silver_shroud_costume, all_that_glitters, path_to_exile,
+    valorous_stance, sticky_fingers, abundant_growth, fertile_ground, rancor, squirrel_nest,
+    wild_growth, behemoth_sledge, arcane_signet, brass_knuckles, explorers_scope, fireshrieker,
+    sol_ring, swiftfoot_boots, ash_barrens, buried_ruin, command_tower, evolving_wilds,
+    jungle_shrine, path_of_ancestry, roadside_reliquary, rogues_passage,
+    temple_of_the_false_god, terramorphic_expanse,
+    // Basics
+    mountain, mountain, mountain, mountain, forest, forest, forest, forest, plains, plains,
+    plains, plains,
+];

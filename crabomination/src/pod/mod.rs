@@ -1408,6 +1408,15 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::GREYFAX_COMMANDERS,
             main: decks::GREYFAX_MAIN,
         },
+        // Hundred-and-seventy-third: Scrappy Survivors (Fallout) — Naya
+        // Auras, Equipment and Junk under Dogmeat, Ever Loyal (CR 603.10a
+        // Cass and Gunner Conscript read what rode the dead creature).
+        // `--pod-decks 173`.
+        PodDeck {
+            name: "Dogmeat, Ever Loyal (RGW)",
+            commanders: decks::DOGMEAT_COMMANDERS,
+            main: decks::DOGMEAT_MAIN,
+        },
     ]
 }
 
