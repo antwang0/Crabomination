@@ -5271,3 +5271,35 @@ pub const DOGMEAT_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, forest, forest, forest, forest, plains, plains,
     plains, plains,
 ];
+
+pub const CAPTAIN_AMERICA_COMMANDERS: &[CardFactory] = &[captain_america_team_leader];
+
+/// **Avengers Assemble**, the Marvel Super Heroes Commander deck (MSC,
+/// 2026-06-26), exactly as MTGJSON's `AvengersAssemble_MSC` prints it: 83
+/// nonbasic cards + 6 Plains + 5 Islands + 5 Mountains = 99. Jeskai Heroes under Captain America, Team
+/// Leader.
+pub const CAPTAIN_AMERICA_MAIN: &[CardFactory] = &[
+    avenge, falcon_and_redwing, hercules_olympian_hero, heroic_return, heroic_sacrifice,
+    methods_of_the_mighty, winter_soldier_reborn_avenger, iron_man_armored_avenger,
+    jarvis_earths_mightiest_butler, professor_hulk, the_wasp_winsome_avenger, west_coast_expansion,
+    firebird_blazing_ranger, photon_mighty_marvel, she_hulk_wallbreaker,
+    war_machine_avenging_arsenal, ant_man_elusive_avenger, black_widow_agile_avenger,
+    captain_marvel_apex_avenger, director_nick_fury, hawkeye_avenging_archer,
+    love_on_the_battlefield, quicksilver_speedster, scarlet_witch_chaotic_avenger,
+    shang_chi_and_the_ten_rings, avengers_quinjet, hulkbuster_armor, jocasta_automaton_avenger,
+    vision_synthezoid_avenger, austere_command, bastion_protector, dismantling_wave, folk_hero,
+    gift_of_immortality, kindred_discovery, door_of_destinies, metallic_mimic, tome_of_legends,
+    clifftop_retreat, coastal_peak, exotic_orchard, frostboil_snarl, furycalm_snarl,
+    glacial_fortress, glittering_massif, irrigated_farmland, plaza_of_heroes, port_town,
+    prairie_stream, radiant_summit, scavenger_grounds, scorched_geyser, spectator_seating,
+    sulfur_falls, raise_the_palisade, thor_asgards_avenger, captain_mar_vell_space_born,
+    patriot_shield_wielder, speed_young_avenger, captain_america_living_legend, avengers_tower,
+    destroy_evil, make_your_move, swords_to_plowshares, arcane_denial, reconnaissance_mission,
+    rip_apart, arcane_signet, heros_blade, relic_of_legends, sol_ring, talisman_of_conviction,
+    talisman_of_creativity, talisman_of_progress, thought_vessel, command_tower, mystic_monastery,
+    path_of_ancestry, secluded_courtyard, unclaimed_territory, fellwar_stone, heralds_horn,
+    rescue_pepper_potts,
+    // Basics
+    plains, plains, plains, plains, plains, plains, island, island, island, island, island,
+    mountain, mountain, mountain, mountain, mountain,
+];

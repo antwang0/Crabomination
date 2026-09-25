@@ -1417,6 +1417,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::DOGMEAT_COMMANDERS,
             main: decks::DOGMEAT_MAIN,
         },
+        // Hundred-and-seventy-fourth: Avengers Assemble (MSC, Marvel Super
+        // Heroes) — Jeskai Heroes under Captain America, Team Leader
+        // (Jocasta's commander-attack return, CR 903.3). `--pod-decks 174`.
+        PodDeck {
+            name: "Captain America, Team Leader (URW)",
+            commanders: decks::CAPTAIN_AMERICA_COMMANDERS,
+            main: decks::CAPTAIN_AMERICA_MAIN,
+        },
     ]
 }
 
