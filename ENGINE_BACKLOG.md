@@ -394,6 +394,14 @@ the handoff.
   whose statement doesn't return / `?` on `None` (every engine file); it
   flags Meteor's loop on the pre-fix tree and found a second live one,
   Rejoin the Fight's `each_opponent_returns_from_your_graveyard`, fixed.
+- **The bot re-fought an indestructible creature forever.** Apex Altisaur
+  (enrage: fight up to one target) chose an indestructible Zetalpa each
+  time; the damage back re-triggered enrage — 7,538 fights, an action-capped
+  8-seat pod (`--pod-decks 162,..,155 --seed 9403 --first 795`). An optional
+  fight now takes only a creature it destroys, else declines
+  (`server/fight_pick.rs`). The census found it: `--card-census` prints the
+  top action lines and an answer's line names the ask, its first legal pick
+  and the pick made.
 
 ## FIXED 2026-09-25 (the Commander routine, Prismari Performance) — an emblem's flashback grant, and a spell-target trigger with no target
 
