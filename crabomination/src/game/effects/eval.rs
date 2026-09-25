@@ -151,15 +151,22 @@ pub(crate) fn printed_type_rejects(t: &crate::card::CardType, c: &CardInstance) 
     !c.definition.card_types.contains(t)
 }
 
-/// OTJ — a card is an outlaw if it is a creature that's an Assassin, Mercenary,
-/// Pirate, Rogue, or Warlock (Changeling satisfies any type).
-pub(crate) fn card_is_outlaw(card: &CardInstance) -> bool {
+/// OTJ's five outlaw creature types.
+pub(crate) const OUTLAW_TYPES: [crate::card::CreatureType; 5] = {
     use crate::card::CreatureType::*;
-    card.definition.is_creature()
+    [Assassin, Mercenary, Pirate, Rogue, Warlock]
+};
+
+/// OTJ — a card is an outlaw if it has an Assassin, Mercenary, Pirate, Rogue,
+/// or Warlock creature type (Changeling satisfies any type). Off the
+/// battlefield that includes a Kindred card, which carries creature types
+/// without being a creature (the 2024-04-12 rulings' "outlaw card"); the
+/// battlefield arm reads the layered type line instead.
+pub(crate) fn card_is_outlaw(card: &CardInstance) -> bool {
+    (card.definition.is_creature()
+        || card.definition.card_types.contains(&crate::card::CardType::Kindred))
         && (card.has_keyword(&crate::card::Keyword::Changeling)
-            || [Assassin, Mercenary, Pirate, Rogue, Warlock]
-                .iter()
-                .any(|t| card.definition.subtypes.creature_types.contains(t)))
+            || OUTLAW_TYPES.iter().any(|t| card.definition.subtypes.creature_types.contains(t)))
 }
 
 /// Equinox — `(targeted, mass)`: does this spell's effect destroy lands by
@@ -4842,7 +4849,12 @@ impl GameState {
                     R::HasSupertype(st) => has_stype(st),
                     R::HasCreatureType(ct) => has_ctype(ct)
                         || card.has_keyword(&crate::card::Keyword::Changeling),
-                    R::IsOutlaw => card_is_outlaw(card),
+                    // CR 613.1d — an outlaw on the battlefield reads its
+                    // layered types (Vihaan's Treasures, animated as Construct
+                    // Assassins, are outlaws until end of turn).
+                    R::IsOutlaw => has_type(CT::Creature)
+                        && (card.has_keyword(&crate::card::Keyword::Changeling)
+                            || OUTLAW_TYPES.iter().any(|t| has_ctype(t))),
                     R::HasLandType(lt) => has_ltype(lt),
                     R::ControllerControlsLandType(lt) => {
                         self.seat_controls_land_type(card.controller, *lt)

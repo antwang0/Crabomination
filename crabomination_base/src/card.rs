@@ -904,6 +904,9 @@ pub enum CounterType {
     Component,
     /// Suspect counter — Investigator's Journal's draw fuel.
     Suspect,
+    /// Hit counter — Mari, the Killing Quill's mark on an opponent's creature
+    /// card it exiles; an outlaw's combat damage cashes one in.
+    Hit,
 }
 
 /// Every zone a card can occupy.

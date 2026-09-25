@@ -719,6 +719,12 @@ pub enum SpendRestriction {
     /// (Throne of Eldraine). The color is the source's chosen one, bound when
     /// the mana is made (`ManaPayload::RestrictedToChosenColorMono`).
     MonocoloredSpellOf(Color),
+    /// "Spend this mana only to cast outlaw spells or activate abilities of
+    /// outlaw sources" (Discreet Retreat): an Assassin, Mercenary, Pirate,
+    /// Rogue or Warlock spell, or an ability of a source with one of those
+    /// types in any zone. `SpellKind::creature_types` is filled only for a
+    /// creature or Kindred object, which is exactly what can carry one.
+    OutlawSpellsOrAbilities,
 }
 
 impl SpendRestriction {
@@ -734,6 +740,7 @@ impl SpendRestriction {
             SpendRestriction::CreatureOfTypeOrItsAbility(_) => {
                 "only creatures of the chosen type and their abilities"
             }
+            SpendRestriction::OutlawSpellsOrAbilities => "only outlaws and their abilities",
             SpendRestriction::CreatureOfType(_) => "only spells of the chosen type",
             SpendRestriction::CreatureOfAnyTypes(_) => "only spells of the listed creature types",
             SpendRestriction::InstantSorceryOrTypes(_) => {
@@ -814,6 +821,13 @@ impl SpendRestriction {
             SpendRestriction::CreatureOfTypeOrItsAbility(t) => {
                 (kind.creature || kind.creature_ability)
                     && (kind.changeling || kind.creature_types.contains(&t))
+            }
+            SpendRestriction::OutlawSpellsOrAbilities => {
+                use crate::card::CreatureType::*;
+                kind.changeling
+                    || [Assassin, Mercenary, Pirate, Rogue, Warlock]
+                        .iter()
+                        .any(|t| kind.creature_types.contains(t))
             }
             // Spells only: an ability's `SpellKind` carries its source's types.
             SpendRestriction::CreatureOfType(t) => {

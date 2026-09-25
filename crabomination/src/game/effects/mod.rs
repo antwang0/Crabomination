@@ -17764,6 +17764,16 @@ impl GameState {
                                 events.push(GameEvent::CounterRemoved { card_id: cid, counter_type: *kind, count: removed });
                             }
                         }
+                    // CR 122.1 — a card in exile carries counters too (Mari's
+                    // hit counters); the add arm already reaches it.
+                    else if let EntityRef::Card(cid) = ent
+                        && let Some(c) = self.exile.iter_mut().find(|c| c.id == cid)
+                    {
+                        let removed = c.remove_counters(*kind, n);
+                        if removed > 0 {
+                            events.push(GameEvent::CounterRemoved { card_id: cid, counter_type: *kind, count: removed });
+                        }
+                    }
                 }
                 Ok(())
             }
