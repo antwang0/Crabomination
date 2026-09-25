@@ -2624,6 +2624,9 @@ impl Effect {
             // Player filter (Mistbind Clique); plain selectors keep theirs.
             Effect::PhaseOut { what, .. }
             | Effect::TurnFaceDown { what }
+            | Effect::OwnerShufflesInExilesTopPlaysOrCasts { what }
+            | Effect::PutFaceDownOntoBattlefield { what }
+            | Effect::TokenCopyTappedAttacking { source: what }
             | Effect::GrantSuspend { what, .. }
             | Effect::ModularCounters { what }
             | Effect::BecomeBlocked { what }
@@ -4998,6 +5001,9 @@ impl Effect {
                 | Effect::BecomeBlocked { what }
                 | Effect::CantAttackThisTurn { what }
                 | Effect::TurnFaceUpFree { what, .. }
+                | Effect::OwnerShufflesInExilesTopPlaysOrCasts { what }
+                | Effect::PutFaceDownOntoBattlefield { what }
+                | Effect::TokenCopyTappedAttacking { source: what }
                 | Effect::Tap { what }
                 | Effect::SetSaddled { what }
                 | Effect::TapAndUntapLock { what }
