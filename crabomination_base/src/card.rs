@@ -446,7 +446,7 @@ pub enum BattleSubtype {
 pub enum PlaneswalkerSubtype {
     Chandra, Jace, Liliana, Ajani, Garruk, Elspeth, Gideon, Nissa, Sorin,
     Teferi, Karn, Ugin, Bolas, Ashiok, Nahiri, Vraska, Domri, Ral, Vivien,
-    Tezzeret, Oko,
+    Tezzeret, Oko, Quintorius,
     // SOS Witherbloom Dellian planeswalker subtype (Professor Dellian Fel).
     Dellian,
     // Modern_decks cube expansion (Saheeli Rai, Tamiyo Collector of Tales,
