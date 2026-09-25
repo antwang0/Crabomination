@@ -481,6 +481,23 @@ impl GameState {
                     _ => None,
                 })
                 .filter(|(filter, _)| {
+                    // A spell source (Lightning Bolt) is off the battlefield
+                    // by the time it deals damage; read the card wherever it
+                    // is so "a source an opponent controls" sees it.
+                    if self.battlefield_find(src).is_none() {
+                        if let Some(card) = self.find_card_anywhere(src) {
+                            return self.evaluate_requirement_on_card(filter, card, p);
+                        }
+                        // Mid-resolution the spell is in no zone: rebuild it
+                        // from the resolving snapshot, controlled by its caster.
+                        if let (Some((id, caster, ..)), Some(snap)) =
+                            (&self.scratch.resolving_source, &self.scratch.resolving_spell_snapshot)
+                            && *id == src
+                        {
+                            let card = crate::card::CardInstance::new(src, snap.definition.clone(), *caster);
+                            return self.evaluate_requirement_on_card(filter, &card, p);
+                        }
+                    }
                     self.evaluate_requirement_static(
                         filter,
                         &crate::game::types::Target::Permanent(src),
