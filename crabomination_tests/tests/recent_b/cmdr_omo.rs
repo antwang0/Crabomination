@@ -364,3 +364,23 @@ fn horizon_of_progress_drops_a_land() {
     activate(&mut g, h, 1, &[]).expect("put a land");
     assert!(g.battlefield_find(f).is_some_and(|c| c.tapped));
 }
+
+/// The bot holds a land drop whose landfall fan-out would carry the board
+/// past its bound: 500 Scute Swarms past six lands would double to 1,000
+/// (two 1,000-game Tricky Terrain pods ended at the board cap that way).
+#[test]
+fn the_bot_holds_a_land_that_would_double_a_scute_swarm_board() {
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    let mut g = main_phase(2);
+    for _ in 0..6 {
+        g.add_card_to_battlefield(0, catalog::forest());
+    }
+    let land = g.add_card_to_hand(0, catalog::forest());
+    let action = HeuristicBot::new().next_action(&g, 0);
+    assert!(matches!(action, Some(GameAction::PlayLand(id)) if id == land), "a small board plays it: {action:?}");
+    for _ in 0..500 {
+        g.add_card_to_battlefield(0, catalog::scute_swarm());
+    }
+    let action = HeuristicBot::new().next_action(&g, 0);
+    assert!(!matches!(action, Some(GameAction::PlayLand(_))), "{action:?}");
+}

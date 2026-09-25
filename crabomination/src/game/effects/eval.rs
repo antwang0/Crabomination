@@ -362,6 +362,29 @@ impl GameState {
         own + fan_out
     }
 
+    /// Tokens `seat`'s landfall triggers would mint off one more land: each
+    /// Scute Swarm past six lands copies itself, so a board of them doubles
+    /// on every land drop (two 1,000-game pods ended at the board cap on a
+    /// Tricky Terrain turn of extra land drops). Small boards read 0.
+    pub(crate) fn landfall_token_estimate(&self, seat: usize) -> i64 {
+        if self.battlefield.len() < crate::recommend::MAX_BATTLEFIELD / 4 {
+            return 0;
+        }
+        let mut ctx = EffectContext::for_spell(seat, None, 0, 0);
+        let mut n = 0;
+        for c in self.battlefield.iter().filter(|c| c.controller == seat) {
+            for t in &c.definition.triggered_abilities {
+                if t.event.kind == crate::card::EventKind::LandPlayed
+                    && t.event.scope == crate::card::EventScope::YourControl
+                {
+                    ctx.source = Some(c.id);
+                    n += self.effect_token_estimate(&t.effect, &ctx);
+                }
+            }
+        }
+        n
+    }
+
     /// Tokens `attacker`'s own "whenever this attacks" triggers would mint
     /// now, whether any of them scales with the board (a `ForEach` —
     /// Redoubled Stormsinger copies every token that entered this turn,

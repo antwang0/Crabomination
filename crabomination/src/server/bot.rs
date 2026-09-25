@@ -8950,7 +8950,12 @@ fn main_phase_action_with(
     // is the same one a successful `perform_action(action)` on the driver
     // produces. `accept_on` keeps it; the driver adopts it and skips its own
     // execution (see `Bot::next_action_settled`).
-    let can_play_land = state.can_player_play_land(seat);
+    // Board-bound gate, the land-drop twin of the cast and attack ones: a
+    // land whose landfall fan-out (a board of Scute Swarms doubling) would
+    // carry the battlefield past `MAX_BATTLEFIELD` is held.
+    let can_play_land = state.can_player_play_land(seat)
+        && state.battlefield.len() as i64 + 1 + state.landfall_token_estimate(seat)
+            <= crate::recommend::BOARD_GATE as i64;
     if can_play_land
         && let Some(land_id) = pick_land_to_play(state, seat, w)
     {
