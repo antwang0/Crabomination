@@ -132,6 +132,8 @@ lists were picked.
 | **Most Wanted** (OTC precon) RWB | Olivia, Opulent Outlaw | RWB | 100 | 🟡 all 100 implemented, 3 carry residuals (Back in Town, Dire Fleet Ravager, Vihaan, Goldwaker) |
 | **Prismari Artistry** (SOC precon) UR | Rootha, Mastering the Moment | UR | 100 | 🟡 all 100 implemented, 2 carry residuals (Abstract Performance, Plargg and Nassari) |
 | **Coven Counters** (MIC precon) GW | Leinore, Autumn Sovereign | GW | 100 | 🟡 all 100 implemented, 4 carry residuals (Curse of Conformity, Celestial Judgment, Sigardian Zealot, Moorland Rescuer) |
+| **Arcane Maelstrom** (C20 precon) GUR | Kalamax, the Stormsire | GUR | 100 | 🟡 all 100 implemented, 4 carry residuals (Eon Frolicker, Haldan, Pako, Lavabrink Floodgates) |
+| **Enhanced Evolution** (C20 precon) BGU | Otrimi, the Ever-Playful | BGU | 100 | 🟡 all 100 implemented, 4 carry residuals (Capricopian, Manascape Refractor, Mindleecher, Vastwood Hydra) |
 | **Exit from Exile** (CLB precon) RG | Faldorn, Dread Wolf Herald | RG | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Exquisite Invention** (C18 precon) UR | Saheeli, the Gifted (**planeswalker**) | UR | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Mishra's Burnished Banner** (BRC precon) UBR | Mishra, Eminent One | UBR | 100 | 🟡 all 100 implemented, 6 carry residuals (below) |
@@ -1837,6 +1839,49 @@ Eshki / Nelly / Go-Shintai (seed 10241): 1,000 / 1,000, 15.3 %; census (seed
 10242): no card of the four unplayed; strict debug pods (seeds 10244-10246, 4
 and 6 seats): 180 / 180. `--bench` byte-identical; cube/sos/sealed (seed 10243):
 7,500 decided.
+
+The **hundred-and-seventeenth** is Ikoria Commander's **Arcane Maelstrom**
+(`ArcaneMaelstrom_C20`) — Temur instants and copies under Kalamax, the
+Stormsire, `--pod-decks 117` (committed as 116 until Most Wanted landed
+there first). Eighteen cards were missing (`cmdr_kalamax.rs`); the
+primitives: `StaticEffect::SpellCopiesPlusOne` (Twinning Staff, CR 707.10 —
+one more copy per static, for the copies' controller),
+`StaticEffect::GrantConspireToSpells` + `GameState::spell_has_conspire` (Wort,
+the Raidmother, CR 702.78 — the cast path, the affordance and the bot's
+conspire block all read it), `Effect::RevealTopCastFreeIfLesserElseHand`
+(Rashmi) and `RevealUntilCreatureBecomeCopy` (Nascent Metamorph) in
+`game/effects/reveal_top_misc.rs`, and
+`Predicate::AnOpponentHadCreaturesEnterAtLeast` (Whiplash Trap's alternative
+cost). Curious Herd names its target opponent with a zero-card draw (the
+target-walker ratchet caught a bare slot). ⚠ **The bot never cast a pure
+retarget spell** (Deflecting Swat unplayed in 1,000 pods): it now answers an
+opponent's single-target spell aimed at its board or face with a held
+Redirect-shaped instant (the free commander cost first), kept only when a
+clone shows the retarget pointing the spell away (`pick_retarget_shield`).
+Residuals: **Eon Frolicker**, **Haldan** / **Pako**, **Lavabrink Floodgates**
+(INCOMPLETE_CARDS). Release pods beside Olivia / Jared / Kathril (seed 7,
+1,000 games): 1,000 decided, Kalamax 4.2 %, and the census left only
+Deflecting Swat unplayed — the find above; after it, beside Otrimi /
+Kathril / Jared (seed 12001), every card of the four lists is played.
+
+The **hundred-and-nineteenth** is Ikoria Commander's **Enhanced Evolution**
+(`EnhancedEvolution_C20`) — Sultai mutate under Otrimi, the Ever-Playful,
+`--pod-decks 119` (committed as 118 until Miracle Worker landed there
+first). Nineteen cards were missing (`cmdr_otrimi.rs`); Otrimi, Mindleecher,
+Pouncing Shoreshark and Souvenir Snatcher ride the existing mutate path (CR
+702.140), Cazur and Ukkima partner with each other, and Nissa, Steward of
+Elements' X loyalty (CR 306.5b) is `enters_with_counters`. The primitives
+(`game/effects/library_top_deploy.rs`):
+`Effect::RevealTopPutLandsRestBottomRandom` (Animist's Awakening — spell
+mastery, CR 207.2c, read as it resolves), `LookTopMayPutLandOrCreatureMvAtMost`
+(Nissa's 0, its "you may" through `MayDo`), and
+`StaticEffect::HasActivatedAbilitiesOfBattlefieldLands` (Manascape
+Refractor, the battlefield sibling of Mirran Safehouse). Residuals:
+**Capricopian**, **Manascape Refractor**, **Mindleecher**, **Vastwood Hydra**
+(INCOMPLETE_CARDS). Release pods beside Kalamax / Kathril / Jared (seed
+12001, 1,000 games): 1,000 decided, Otrimi 23.2 %, no card of the four lists
+unplayed; strict debug pods beside Olivia / Aminatou (seeds 12003/12004, 120
+games) decided 120/120. `--bench` byte-identical.
 
 The **hundred-and-tenth** is Dominaria United Commander's **Painbow**
 (`Painbow_DMC`) — five-color multicolor under Jared Carthalion, a

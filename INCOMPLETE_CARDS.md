@@ -1973,6 +1973,14 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Celestial Judgment | Coven Counters (MIC) | the creature kept per power is the engine's pick (the caster's best, else an opponent's weakest), not a prompt. |
 | 🟡 Sigardian Zealot | Coven Counters (MIC) | the chosen set is one of your creatures per power (the engine's pick); no opponent's creature is ever chosen. |
 | 🟡 Moorland Rescuer | Coven Counters (MIC) | the returned set is a greedy largest-power-first pick under the cap, not a prompt. |
+| 🟡 Eon Frolicker | Arcane Maelstrom (C20) | the protection from the chosen player until your next turn isn't granted (the extra turn is). |
+| 🟡 Haldan, Avid Arcanist | Arcane Maelstrom (C20) | the play permission is stamped as Pako exiles a card while you control Haldan (not re-read if Haldan comes or goes later); creature cards are playable too. |
+| 🟡 Pako, Arcane Retriever | Arcane Maelstrom (C20) | see Haldan: its fetch counters and exile are exact; the Haldan-granted permission is stamped at exile. |
+| 🟡 Lavabrink Floodgates | Arcane Maelstrom (C20) | each upkeep's player may only add a doom counter (removing one isn't offered). |
+| 🟡 Capricopian | Enhanced Evolution (C20) | the attacked player's "{2}: put a +1/+1 counter on it, then reselect which player it's attacking" isn't offered. |
+| 🟡 Manascape Refractor | Enhanced Evolution (C20) | mana of any color isn't spendable on the borrowed land abilities' activation costs. |
+| 🟡 Mindleecher | Enhanced Evolution (C20) | the face-down exiled cards may be cast with mana of any type (the Gonti exile primitive's spend). |
+| 🟡 Vastwood Hydra | Enhanced Evolution (C20) | the counters go among up to three target creatures you control, not "any number" chosen on resolution. |
 | 🟡 Descendants' Fury | Sliver Swarm (CMM) | "one of them" is any attacker of yours that damaged a player this turn, not only this combat-damage batch's. |
 | 🟡 Bloodlord of Vaasgoth | Vampiric Bloodlust (C17) | the granted bloodthirst is checked as the cast trigger resolves, not as the creature enters. |
 | 🟡 Mathas, Fiend Seeker | Vampiric Bloodlust (C17) | a bounty counter grants its dies trigger only while Mathas is on the battlefield. |
