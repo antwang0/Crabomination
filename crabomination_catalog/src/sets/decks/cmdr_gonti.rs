@@ -64,7 +64,7 @@ pub fn gonti_canny_acquisitor() -> CardDefinition {
         supertypes: vec![Supertype::Legendary],
         can_be_commander: true,
         static_abilities: vec![StaticAbility {
-            description: "Spells you cast but don't own cost {1} less to cast.".into(),
+            description: "Spells you cast but don't own cost {1} less to cast.",
             effect: StaticEffect::SpellsYouDontOwnCostLess { amount: 1 },
         }],
         triggered_abilities: vec![TriggeredAbility {
@@ -171,7 +171,7 @@ pub fn felix_five_boots() -> CardDefinition {
         supertypes: vec![Supertype::Legendary],
         keywords: vec![Keyword::Menace, Keyword::Ward(WardCost::Mana(cost(&[generic(2)])))],
         static_abilities: vec![StaticAbility {
-            description: "Your creatures' combat damage to a player triggers your abilities an additional time.".into(),
+            description: "Your creatures' combat damage to a player triggers your abilities an additional time.",
             effect: StaticEffect::DoubleControllerCombatDamageToPlayerTriggers,
         }],
         ..creature(
@@ -285,7 +285,7 @@ pub fn savvy_trader() -> CardDefinition {
             },
         ]))],
         static_abilities: vec![StaticAbility {
-            description: "Spells you cast from anywhere other than your hand cost {1} less to cast.".into(),
+            description: "Spells you cast from anywhere other than your hand cost {1} less to cast.",
             effect: StaticEffect::NonHandCastCostReduction { amount: 1 },
         }],
         ..creature(

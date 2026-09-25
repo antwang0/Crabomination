@@ -6949,7 +6949,7 @@ impl GameState {
                     TriggerPush::new(trig_source, controller, effect.clone())
                         .target(target.clone())
                         .mode(mode)
-                        .trigger_source(dealer.clone())
+                        .trigger_source(dealer)
                         .trigger_player(match default_target {
                             Target::Player(p) => Some(p),
                             _ => None,

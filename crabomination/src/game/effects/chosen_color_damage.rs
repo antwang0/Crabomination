@@ -25,7 +25,7 @@ impl GameState {
                 .iter()
                 .filter(|c| {
                     g.computed_permanent(c.id).is_some_and(|cp| {
-                        cp.card_types().contains(&crate::card::CardType::Creature) && cp.colors.contains(&color)
+                        cp.card_types().contains(&crate::card::CardType::Creature) && cp.colors.contains(color)
                     })
                 })
                 .map(|c| c.id)
