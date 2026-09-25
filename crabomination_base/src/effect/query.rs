@@ -393,6 +393,7 @@ impl Effect {
             | Effect::MayRepeat { body, .. }
             | Effect::OnEachSpellYouCastUntilEndOfYourNextTurn { body, .. }
             | Effect::ReflexiveTrigger { body, .. }
+            | Effect::EachPushesTrigger { body, .. }
             | Effect::CapTargetsAtX { body, .. }
             | Effect::TargetsExactlyX { body, .. }
             | Effect::CapTargetsAt { body, .. }

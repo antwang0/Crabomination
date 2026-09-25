@@ -190,8 +190,9 @@ pub fn desert_warfare() -> CardDefinition {
     let comes_back = || Effect::DelayUntilWithCapture {
         kind: DelayedTriggerKind::YourNextEndStep,
         capture: Selector::TriggerSource,
+        // Only from your graveyard: a Desert that left it meanwhile stays put.
         body: Box::new(Effect::Move {
-            what: Selector::Target(0),
+            what: Selector::TargetFiltered { slot: 0, filter: R::InYourGraveyard },
             to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
         }),
     };
