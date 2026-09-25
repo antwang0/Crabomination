@@ -60,7 +60,7 @@ fn simic_ascendancy_accrues_growth_and_wins_at_twenty() {
     g.dispatch_triggers_for_events(&[GameEvent::CounterAdded {
         card_id: bear,
         counter_type: CounterType::PlusOnePlusOne,
-        count: 3,
+        count: 3, placer: None,
     }]);
     drain_stack(&mut g);
     assert_eq!(

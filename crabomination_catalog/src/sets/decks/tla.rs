@@ -2285,13 +2285,12 @@ pub fn earth_kingdom_general() -> CardDefinition {
         triggered_abilities: vec![
             etb(Effect::Earthbend { n: Value::Const(2) }),
             // "Whenever you put one or more +1/+1 counters on a creature, you
-            // may gain that much life. Do this only once each turn." Counter
-            // events don't attribute a placer, so scope on the subject being a
-            // creature you control — the Stalwart Successor idiom.
+            // may gain that much life. Do this only once each turn." Any
+            // creature, keyed on who put the counters (CR 122.6).
             TriggeredAbility {
                 event: EventSpec::new(
                     EventKind::CounterAdded(CounterType::PlusOnePlusOne),
-                    EventScope::YourControl,
+                    EventScope::YouPutCounters,
                 )
                 .with_filter(Predicate::EntityMatches {
                     what: Selector::TriggerSource,

@@ -2268,7 +2268,5 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Marvo, Deep Operative | Revenant Recon (MKC) | "whenever you win a clash" rides Marvo's own attack clash (the deck's only clash), which is with the most hostile opponent rather than the defending player. |
 | 🟡 Watcher of Hours | Revenant Recon (MKC) | removing the last time counter casts it at once, so that removal doesn't surveil. |
 | 🟡 Whispering Snitch | Revenant Recon (MKC) | "for the first time each turn" is once per turn: a surveil before it entered doesn't use up the turn's trigger. |
-| 🟡 Hapatra, Vizier of Poisons | Blight Curse (ECC) | "whenever you put one or more -1/-1 counters on a creature" fires on any player's -1/-1 counters (the engine doesn't record who put a counter). |
-| 🟡 Lasting Tarfire | Blight Curse (ECC) | "if you put a counter on a creature this turn" counts any player's counters. |
 | 🟡 Eventide's Shadow | Blight Curse (ECC) | each chosen permanent loses all its counters (no partial removal). |
 | 🟡 Puca's Covenant | Blight Curse (ECC) | the returned card is chosen on resolution, not targeted, and the dying creature's own card is among the choices. |

@@ -2814,7 +2814,10 @@ pub enum GameEvent {
     /// leaves trigger fires off last-known information.
     PermanentLeftBattlefield { card_id: CardId, controller: usize },
     PumpApplied { card_id: CardId, power: i32, toughness: i32 },
-    CounterAdded { card_id: CardId, counter_type: CounterType, count: u32 },
+    /// `placer` is the player who put the counters (CR 122.6): the controller
+    /// of the resolving spell or ability, `None` outside a resolution — read
+    /// as the permanent's controller then (CR 122.6a). `EventScope::YouPutCounters`.
+    CounterAdded { card_id: CardId, counter_type: CounterType, count: u32, placer: Option<usize> },
     /// CR 122.1b — keyword counters are counters; surfaced so the log /
     /// client see the grant (no `EventKind` listener yet).
     KeywordCounterAdded { card_id: CardId, keyword: crate::card::Keyword, count: u32 },

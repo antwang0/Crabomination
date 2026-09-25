@@ -3073,7 +3073,7 @@ impl From<&GameEvent> for GameEventWire {
                 power: *power,
                 toughness: *toughness,
             },
-            GameEvent::CounterAdded { card_id, counter_type, count } => {
+            GameEvent::CounterAdded { card_id, counter_type, count, .. } => {
                 GameEventWire::CounterAdded {
                     card_id: *card_id,
                     counter_type: *counter_type,

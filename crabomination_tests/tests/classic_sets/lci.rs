@@ -607,7 +607,7 @@ fn dusk_legion_duelist_draws_on_counter() {
     let before = g.players[0].hand.len();
     g.battlefield_find_mut(duelist).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
     g.dispatch_triggers_for_events(&[GameEvent::CounterAdded {
-        card_id: duelist, counter_type: CounterType::PlusOnePlusOne, count: 1,
+        card_id: duelist, counter_type: CounterType::PlusOnePlusOne, count: 1, placer: None,
     }]);
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), before + 1, "drew off the counter trigger");

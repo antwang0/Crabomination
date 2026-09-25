@@ -23,11 +23,11 @@ pub fn stocking_the_pantry() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
                 EventKind::CounterAdded(CounterType::PlusOnePlusOne),
-                EventScope::YourControl,
+                EventScope::YouPutCounters,
             )
             .with_filter(Predicate::EntityMatches {
                 what: Selector::TriggerSource,
-                filter: R::Creature,
+                filter: R::Creature.and(R::ControlledByYou),
             }),
             effect: Effect::AddCounter {
                 what: Selector::This,

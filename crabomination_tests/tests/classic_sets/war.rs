@@ -1169,7 +1169,7 @@ fn bioessence_hydra_grows_on_loyalty_added() {
     g.dispatch_triggers_for_events(&[GameEvent::CounterAdded {
         card_id: pw,
         counter_type: CounterType::Loyalty,
-        count: 2,
+        count: 2, placer: None,
     }]);
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(hydra).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);

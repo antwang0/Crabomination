@@ -2171,6 +2171,7 @@ fn trigger_event_label(event: &crate::card::EventSpec) -> &'static str {
         // (Sharae, Solitary Sanctuary); the others key off the tapped
         // permanent's controller (Magda-style).
         (EventKind::Tapped, EventScope::YouTapped) => "You tap",
+        (EventKind::CounterAdded(_) | EventKind::AnyCounterAdded, EventScope::YouPutCounters) => "You put counters",
         (EventKind::Tapped, EventScope::SelfSource) => "When tapped",
         (EventKind::Tapped, EventScope::YourControl) => "Yours tapped",
         (EventKind::Tapped, EventScope::OpponentControl) => "Enemy tapped",

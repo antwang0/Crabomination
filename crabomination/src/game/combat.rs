@@ -4549,7 +4549,7 @@ impl GameState {
                             events.push(GameEvent::CounterAdded {
                                 card_id: blocker_id,
                                 counter_type: crate::card::CounterType::MinusOneMinusOne,
-                                count: dealt as u32,
+                                count: dealt as u32, placer: Some(atk.controller),
                             });
                         }
                     } else if dealt > 0
@@ -4732,7 +4732,7 @@ impl GameState {
                                 events.push(GameEvent::CounterAdded {
                                     card_id: hit,
                                     counter_type: crate::card::CounterType::MinusOneMinusOne,
-                                    count: dmg,
+                                    count: dmg, placer: Some(bc.controller),
                                 });
                             } else {
                                 attacker.damage += dmg;
@@ -4985,7 +4985,7 @@ impl GameState {
         events.push(GameEvent::CounterAdded {
             card_id: recipient,
             counter_type: kind,
-            count: grow,
+            count: grow, placer: self.resolution_causer,
         });
         0
     }
@@ -5236,7 +5236,7 @@ impl GameState {
                     events.push(GameEvent::CounterAdded {
                         card_id: atk.id,
                         counter_type: crate::card::CounterType::PlusOnePlusOne,
-                        count: amount,
+                        count: amount, placer: self.resolution_causer,
                     });
                     self.mill_instead_of_combat_damage(p, amount, events);
                     return;

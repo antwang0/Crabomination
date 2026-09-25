@@ -1452,11 +1452,12 @@ pub struct ColdState {
     /// True between an additional beginning phase's untap and draw steps.
     #[serde(default)]
     pub in_additional_beginning_phase: bool,
-    /// The turn a counter was last put on a creature — read by
-    /// `Predicate::CounterPutOnCreatureThisTurn` (Lasting Tarfire). A turn
-    /// stamp, so no cleanup write: written at most once a turn.
+    /// `(turn, seat mask)`: who put a counter on a creature this turn (CR
+    /// 122.6) — read by `Predicate::CounterPutOnCreatureThisTurn` (Lasting
+    /// Tarfire, Lord Jyscal Guado). Turn-stamped, so no cleanup write: written
+    /// at most once a turn per seat.
     #[serde(default)]
-    pub counter_on_creature_turn: Option<u32>,
+    pub counter_on_creature: Option<(u32, u64)>,
     /// Sower of Discord's "two chosen players", per source.
     #[serde(default)]
     pub chosen_player_pairs: Vec<(CardId, usize, usize)>,
@@ -7237,7 +7238,7 @@ impl GameState {
             events.push(GameEvent::CounterAdded {
                 card_id: cid,
                 counter_type: CounterType::PlusOnePlusOne,
-                count: n,
+                count: n, placer: self.resolution_causer,
             });
         }
     }
@@ -7709,7 +7710,7 @@ impl GameState {
         events.push(crate::game::GameEvent::CounterAdded {
             card_id: cid,
             counter_type: kind,
-            count: n,
+            count: n, placer: self.resolution_causer,
         });
     }
 
@@ -7735,7 +7736,7 @@ impl GameState {
         events.push(crate::game::GameEvent::CounterAdded {
             card_id: cid,
             counter_type: kind,
-            count: n,
+            count: n, placer: self.resolution_causer,
         });
     }
 
@@ -7776,7 +7777,7 @@ impl GameState {
         events.push(crate::game::GameEvent::CounterAdded {
             card_id: cid,
             counter_type: CounterType::Time,
-            count: n,
+            count: n, placer: self.resolution_causer,
         });
     }
 
@@ -7927,7 +7928,7 @@ impl GameState {
             events.push(crate::game::GameEvent::CounterAdded {
                 card_id: id,
                 counter_type: CounterType::Age,
-                count: 1,
+                count: 1, placer: self.resolution_causer,
             });
             let n = self.battlefield_find(id).map(|c| c.counter_count(CounterType::Age)).unwrap_or(1);
             // A wants_ui controller gets a real pay-or-sacrifice trigger for
@@ -8008,7 +8009,7 @@ impl GameState {
                     events.push(crate::game::GameEvent::CounterAdded {
                         card_id: id,
                         counter_type: *kind,
-                        count: n,
+                        count: n, placer: self.resolution_causer,
                     });
                     true
                 }
@@ -10077,7 +10078,7 @@ impl GameState {
                     events.push(crate::game::GameEvent::CounterAdded {
                         card_id: id,
                         counter_type: kind,
-                        count: scaled,
+                        count: scaled, placer: self.resolution_causer,
                     });
                     self.turn.permanents_gained_counter_this_turn.insert(id);
                 }
@@ -22286,14 +22287,21 @@ impl GameState {
     }
 
     fn dispatch_triggers_for_events_slow(&mut self, events: &[GameEvent]) {
-        if self.counter_on_creature_turn != Some(self.turn_number)
-            && events.iter().any(|e| {
-                matches!(e, GameEvent::CounterAdded { card_id, .. }
-                    if self.battlefield_find(*card_id).is_some_and(|c| c.definition.is_creature()))
-            })
-        {
+        let mut placed = 0u64;
+        for e in events {
+            if let GameEvent::CounterAdded { card_id, .. } = e
+                && self.battlefield_find(*card_id).is_some_and(|c| c.definition.is_creature())
+                && let Some(p) = crate::game::effects::events::counter_placer(self, e)
+            {
+                placed |= 1u64.checked_shl(p as u32).unwrap_or(0);
+            }
+        }
+        if placed != 0 {
             let turn = self.turn_number;
-            self.counter_on_creature_turn = Some(turn);
+            let seen = self.counter_on_creature.filter(|&(t, _)| t == turn).map_or(0, |(_, m)| m);
+            if seen | placed != seen {
+                self.counter_on_creature = Some((turn, seen | placed));
+            }
         }
         // Cost-payment events (paid life) queued since the last dispatch —
         // fold them in so resumed-decision paths that bypass
@@ -27827,7 +27835,7 @@ impl GameState {
                 && let Some(c) = self.battlefield_find_mut(cid)
             {
                 c.add_counters(kind, 1);
-                events.push(GameEvent::CounterAdded { card_id: cid, counter_type: kind, count: 1 });
+                events.push(GameEvent::CounterAdded { card_id: cid, counter_type: kind, count: 1, placer: self.resolution_causer });
             }
             return Ok(events);
         }
@@ -28048,7 +28056,7 @@ impl GameState {
             events.push(GameEvent::CounterAdded {
                 card_id,
                 counter_type: fuse.counter,
-                count: fuse.count,
+                count: fuse.count, placer: self.resolution_causer,
             });
             return Ok(events);
         }
@@ -28073,7 +28081,7 @@ impl GameState {
                 events.push(GameEvent::CounterAdded {
                     card_id,
                     counter_type: crate::card::CounterType::Time,
-                    count: n,
+                    count: n, placer: self.resolution_causer,
                 });
                 return Ok(events);
             }

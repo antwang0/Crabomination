@@ -3,10 +3,6 @@
 //! `tests/recent_b/cmdr_auntie.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Hapatra, Vizier of Poisons** — "whenever you put one or more -1/-1
-//!   counters on a creature" fires on any player's -1/-1 counters.
-//! - **Lasting Tarfire** — "if you put a counter on a creature this turn"
-//!   counts any player's counters.
 //! - **Eventide's Shadow** — each chosen permanent loses all its counters.
 //! - **Puca's Covenant** — the returned card is chosen on resolution (not
 //!   targeted), and the dying creature's own card is among the choices.
@@ -287,8 +283,6 @@ pub fn grim_poppet() -> CardDefinition {
 /// Whenever Hapatra deals combat damage to a player, you may put a -1/-1
 /// counter on target creature. Whenever you put one or more -1/-1 counters on
 /// a creature, create a 1/1 green Snake creature token with deathtouch.
-///
-/// ⚠ Residual: the Snake trigger fires on any player's -1/-1 counters.
 pub fn hapatra_vizier_of_poisons() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![
@@ -297,7 +291,8 @@ pub fn hapatra_vizier_of_poisons() -> CardDefinition {
                 effect: may("Put a -1/-1 counter on target creature?", minus(target_filtered(R::Creature), 1)),
             },
             TriggeredAbility {
-                event: minus_counters_put(),
+                event: EventSpec::new(EventKind::CounterAdded(CounterType::MinusOneMinusOne), EventScope::YouPutCounters)
+                    .with_filter(trigger_is(R::Creature)),
                 effect: make(
                     TokenDefinition {
                         keywords: vec![Keyword::Deathtouch],
@@ -606,8 +601,6 @@ pub fn grave_venerations() -> CardDefinition {
 /// Lasting Tarfire — {1}{R} Enchantment. At the beginning of each end step, if
 /// you put a counter on a creature this turn, it deals 2 damage to each
 /// opponent.
-///
-/// ⚠ Residual: any player's counters count.
 pub fn lasting_tarfire() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {

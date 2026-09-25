@@ -4226,7 +4226,7 @@ impl GameState {
                     events.push(GameEvent::CounterAdded {
                         card_id: *id,
                         counter_type: *kind,
-                        count: moved,
+                        count: moved, placer: self.resolution_causer,
                     });
                 }
                 Ok(())
@@ -4634,7 +4634,7 @@ impl GameState {
                     events.push(GameEvent::CounterAdded {
                         card_id: src,
                         counter_type: fuse.counter,
-                        count: fuse.count,
+                        count: fuse.count, placer: self.resolution_causer,
                     });
                 }
                 Ok(())
@@ -5917,7 +5917,7 @@ impl GameState {
                         events.push(GameEvent::CounterAdded {
                             card_id: cid,
                             counter_type: CounterType::Defense,
-                            count: 1,
+                            count: 1, placer: self.resolution_causer,
                         });
                     }
                 }
@@ -5963,7 +5963,7 @@ impl GameState {
                         events.push(GameEvent::CounterAdded {
                             card_id: src,
                             counter_type: CounterType::Loyalty,
-                            count: 1,
+                            count: 1, placer: self.resolution_causer,
                         });
                     }
                 }
@@ -6208,7 +6208,7 @@ impl GameState {
                             events.push(GameEvent::CounterAdded {
                                 card_id: tid,
                                 counter_type: *counter,
-                                count: moved,
+                                count: moved, placer: self.resolution_causer,
                             });
                         }
                     }
@@ -6252,7 +6252,7 @@ impl GameState {
                         events.push(GameEvent::CounterAdded {
                             card_id: cid,
                             counter_type: CounterType::PlusOnePlusOne,
-                            count: n,
+                            count: n, placer: self.resolution_causer,
                         });
                     }
                     self.turn.permanents_gained_counter_this_turn.insert(cid);
@@ -8055,7 +8055,7 @@ impl GameState {
                     if let Some(c) = self.battlefield_find_mut(id) {
                         c.add_counters(CounterType::PlusOnePlusOne, n);
                         events.push(GameEvent::CounterAdded {
-                            card_id: id, counter_type: CounterType::PlusOnePlusOne, count: n,
+                            card_id: id, counter_type: CounterType::PlusOnePlusOne, count: n, placer: self.resolution_causer,
                         });
                     }
                     self.turn.permanents_gained_counter_this_turn.insert(id);
@@ -8261,7 +8261,7 @@ impl GameState {
                     if let Some(c) = self.battlefield_find_mut(id) {
                         c.add_counters(counter, n);
                         events.push(GameEvent::CounterAdded {
-                            card_id: id, counter_type: counter, count: n,
+                            card_id: id, counter_type: counter, count: n, placer: self.resolution_causer,
                         });
                     }
                     self.turn.permanents_gained_counter_this_turn.insert(id);
@@ -9077,7 +9077,7 @@ impl GameState {
                         events.push(GameEvent::CounterAdded {
                             card_id: id,
                             counter_type: CounterType::Time,
-                            count: 1,
+                            count: 1, placer: self.resolution_causer,
                         });
                     }
                 }
@@ -11513,7 +11513,7 @@ impl GameState {
                         events.push(GameEvent::CounterAdded {
                             card_id: src,
                             counter_type: CounterType::PlusOnePlusOne,
-                            count,
+                            count, placer: self.resolution_causer,
                         });
                         self.turn.permanents_gained_counter_this_turn.insert(src);
                     }
@@ -12442,7 +12442,7 @@ impl GameState {
                                 events.push(GameEvent::CounterAdded {
                                     card_id: cid,
                                     counter_type: CounterType::PlusOnePlusOne,
-                                    count: n,
+                                    count: n, placer: self.resolution_causer,
                                 });
                                 self.turn.permanents_gained_counter_this_turn.insert(cid);
                             }
@@ -15063,7 +15063,7 @@ impl GameState {
                         events.push(GameEvent::CounterAdded {
                             card_id: cid,
                             counter_type: *counter,
-                            count: 1,
+                            count: 1, placer: self.resolution_causer,
                         });
                     }
                 }
@@ -16161,7 +16161,7 @@ impl GameState {
                         events.push(GameEvent::CounterAdded {
                             card_id: sid,
                             counter_type: crate::card::CounterType::Time,
-                            count: phased,
+                            count: phased, placer: self.resolution_causer,
                         });
                     }
                 Ok(())
@@ -17793,7 +17793,7 @@ impl GameState {
                         events.push(GameEvent::CounterAdded {
                             card_id: cid,
                             counter_type: *kind,
-                            count: n,
+                            count: n, placer: self.resolution_causer,
                         });
                     }
                     self.turn.permanents_gained_counter_this_turn.insert(cid);
@@ -17849,7 +17849,7 @@ impl GameState {
                     events.push(GameEvent::CounterAdded {
                         card_id: cid,
                         counter_type: *kind,
-                        count: scaled,
+                        count: scaled, placer: self.resolution_causer,
                     });
                     // CR 714.2b — lore counters fire every threshold crossed.
                     if *kind == CounterType::Lore {
@@ -17895,7 +17895,7 @@ impl GameState {
                                 if n == 0 { continue; }
                                 let before = c.counter_count(*kind);
                                 c.add_counters(*kind, n);
-                                events.push(GameEvent::CounterAdded { card_id: cid, counter_type: *kind, count: n });
+                                events.push(GameEvent::CounterAdded { card_id: cid, counter_type: *kind, count: n, placer: self.resolution_causer });
                                 // CR 714.2b — lore counters from any source
                                 // (proliferate, a doubler, Sagas' own advance)
                                 // fire every chapter threshold they cross.
@@ -17909,7 +17909,7 @@ impl GameState {
                                 events.push(GameEvent::CounterAdded {
                                     card_id: cid,
                                     counter_type: *kind,
-                                    count: n,
+                                    count: n, placer: self.resolution_causer,
                                 });
                             }
                             // Track per-turn "this permanent gained counters"
@@ -17936,7 +17936,7 @@ impl GameState {
                                 events.push(GameEvent::CounterAdded {
                                     card_id: cid,
                                     counter_type: *kind,
-                                    count: base,
+                                    count: base, placer: self.resolution_causer,
                                 });
                             }
                         }
@@ -17967,7 +17967,7 @@ impl GameState {
                     if n == 0 { continue; }
                     if let Some(c) = self.battlefield_find_mut(cid) {
                         c.add_counters(CounterType::PlusOnePlusOne, n);
-                        events.push(GameEvent::CounterAdded { card_id: cid, counter_type: CounterType::PlusOnePlusOne, count: n });
+                        events.push(GameEvent::CounterAdded { card_id: cid, counter_type: CounterType::PlusOnePlusOne, count: n, placer: self.resolution_causer });
                     }
                     self.turn.permanents_gained_counter_this_turn.insert(cid);
                 }
@@ -18000,7 +18000,7 @@ impl GameState {
                         .unwrap_or(cur);
                     if let Some(c) = self.battlefield_find_mut(cid) {
                         c.add_counters(*kind, add);
-                        events.push(GameEvent::CounterAdded { card_id: cid, counter_type: *kind, count: add });
+                        events.push(GameEvent::CounterAdded { card_id: cid, counter_type: *kind, count: add, placer: self.resolution_causer });
                     }
                     self.turn.permanents_gained_counter_this_turn.insert(cid);
                 }
@@ -18033,7 +18033,7 @@ impl GameState {
                             .unwrap_or(cur);
                         if let Some(c) = self.battlefield_find_mut(cid) {
                             c.add_counters(kind, add);
-                            events.push(GameEvent::CounterAdded { card_id: cid, counter_type: kind, count: add });
+                            events.push(GameEvent::CounterAdded { card_id: cid, counter_type: kind, count: add, placer: self.resolution_causer });
                         }
                     }
                     self.turn.permanents_gained_counter_this_turn.insert(cid);
@@ -18118,7 +18118,7 @@ impl GameState {
                         events.push(GameEvent::CounterAdded {
                             card_id: cid,
                             counter_type: *kind,
-                            count: n,
+                            count: n, placer: self.resolution_causer,
                         });
                         self.turn.permanents_gained_counter_this_turn.insert(cid);
                         if !recipients.contains(&cid) {
@@ -18321,7 +18321,7 @@ impl GameState {
                     let n = self.scaled_counter_count_on(s, CounterType::PlusOnePlusOne, total * 2);
                     if let Some(c) = self.battlefield_find_mut(s) {
                         c.add_counters(CounterType::PlusOnePlusOne, n);
-                        events.push(GameEvent::CounterAdded { card_id: s, counter_type: CounterType::PlusOnePlusOne, count: n });
+                        events.push(GameEvent::CounterAdded { card_id: s, counter_type: CounterType::PlusOnePlusOne, count: n, placer: self.resolution_causer });
                     }
                     self.turn.permanents_gained_counter_this_turn.insert(s);
                 }
@@ -18382,7 +18382,7 @@ impl GameState {
                         let cur = c.counter_count(CounterType::Loyalty);
                         c.counters.insert(CounterType::Loyalty, target);
                         if target > cur {
-                            events.push(GameEvent::CounterAdded { card_id: cid, counter_type: CounterType::Loyalty, count: target - cur });
+                            events.push(GameEvent::CounterAdded { card_id: cid, counter_type: CounterType::Loyalty, count: target - cur, placer: self.resolution_causer });
                         } else if cur > target {
                             events.push(GameEvent::CounterRemoved { card_id: cid, counter_type: CounterType::Loyalty, count: cur - target });
                         }
@@ -18479,7 +18479,7 @@ impl GameState {
                     } else if let Some(c) = self.battlefield_find_mut(cid) {
                         c.add_counters(CounterType::PlusOnePlusOne, 1);
                         events.push(GameEvent::CounterAdded {
-                            card_id: cid, counter_type: CounterType::PlusOnePlusOne, count: 1,
+                            card_id: cid, counter_type: CounterType::PlusOnePlusOne, count: 1, placer: self.resolution_causer,
                         });
                     }
                 }
@@ -18553,6 +18553,7 @@ impl GameState {
                             .unwrap_or_default()
                     };
                     self.board_instance_keywords |= taken_kw.iter().any(|(_, n)| *n > 0);
+                    let placer = self.resolution_causer;
                     if let Some(d) = self.battlefield_find_mut(dst) {
                         for (kind, n) in taken {
                             if n > 0 {
@@ -18560,7 +18561,7 @@ impl GameState {
                                 events.push(GameEvent::CounterAdded {
                                     card_id: dst,
                                     counter_type: kind,
-                                    count: n,
+                                    count: n, placer,
                                 });
                             }
                         }
@@ -18605,7 +18606,7 @@ impl GameState {
                         && let Some(d) = self.battlefield_find_mut(cid) {
                             d.add_counters(*kind, removed);
                             events.push(GameEvent::CounterAdded {
-                                card_id: cid, counter_type: *kind, count: removed,
+                                card_id: cid, counter_type: *kind, count: removed, placer: self.resolution_causer,
                             });
                             break;
                         }
@@ -20812,7 +20813,7 @@ impl GameState {
                             events.push(GameEvent::CounterAdded {
                                 card_id: id,
                                 counter_type: CounterType::PlusOnePlusOne,
-                                count: scaled,
+                                count: scaled, placer: self.resolution_causer,
                             });
                             self.turn.permanents_gained_counter_this_turn.insert(id);
                         }
@@ -20861,7 +20862,7 @@ impl GameState {
                         c.add_counters(CounterType::PlusOnePlusOne, scaled);
                     }
                     events.push(GameEvent::CounterAdded {
-                        card_id: army, counter_type: CounterType::PlusOnePlusOne, count: scaled,
+                        card_id: army, counter_type: CounterType::PlusOnePlusOne, count: scaled, placer: self.resolution_causer,
                     });
                     self.turn.permanents_gained_counter_this_turn.insert(army);
                 }
@@ -20924,7 +20925,7 @@ impl GameState {
                         c.add_counters(CounterType::Loyalty, scaled);
                     }
                     events.push(GameEvent::CounterAdded {
-                        card_id: jace, counter_type: CounterType::Loyalty, count: scaled,
+                        card_id: jace, counter_type: CounterType::Loyalty, count: scaled, placer: self.resolution_causer,
                     });
                     self.turn.permanents_gained_counter_this_turn.insert(jace);
                 }
@@ -27732,7 +27733,7 @@ impl GameState {
                         events.push(GameEvent::CounterAdded {
                             card_id: *cid,
                             counter_type: *kind,
-                            count: share,
+                            count: share, placer: self.resolution_causer,
                         });
                         remaining -= share;
                     }
@@ -33548,7 +33549,7 @@ impl GameState {
                     events.push(GameEvent::CounterAdded {
                         card_id: source,
                         counter_type: KINDS[pick],
-                        count: 1,
+                        count: 1, placer: self.resolution_causer,
                     });
                 }
                 Ok(())
@@ -40772,7 +40773,7 @@ impl GameState {
                 if let Some(c) = self.battlefield_find_mut(cid) {
                     before = c.counter_count(k);
                     c.add_counters(k, n);
-                    events.push(GameEvent::CounterAdded { card_id: cid, counter_type: k, count: n });
+                    events.push(GameEvent::CounterAdded { card_id: cid, counter_type: k, count: n, placer: self.resolution_causer });
                 }
                 // CR 714.2b — a proliferated lore counter fires the chapter it
                 // crosses (Sagas advance twice in a turn with a proliferator).
@@ -41927,7 +41928,7 @@ impl GameState {
                                 events.push(GameEvent::CounterAdded {
                                     card_id: cid,
                                     counter_type: CounterType::MinusOneMinusOne,
-                                    count: *n,
+                                    count: *n, placer: self.resolution_causer,
                                 });
                             }
                             self.check_state_based_actions_into(events);

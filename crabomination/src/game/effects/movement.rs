@@ -848,7 +848,7 @@ impl GameState {
             events.push(GameEvent::CounterAdded {
                 card_id: cid,
                 counter_type: CounterType::PlusOnePlusOne,
-                count: counters_for_target,
+                count: counters_for_target, placer: self.resolution_causer,
             });
         }
         if life_gain > 0 && let Some(p) = life_gain_to.or(to_player) {
@@ -1232,7 +1232,7 @@ impl GameState {
             if let Some(c) = self.battlefield_find_mut(tgt) {
                 c.add_counters(kind, amount);
             }
-            events.push(GameEvent::CounterAdded { card_id: tgt, counter_type: kind, count: amount });
+            events.push(GameEvent::CounterAdded { card_id: tgt, counter_type: kind, count: amount, placer: self.resolution_causer });
             return;
         }
         // CR 614.9 — Treacherous Link: damage bound for the host lands on its
@@ -1274,7 +1274,7 @@ impl GameState {
             events.push(GameEvent::CounterAdded {
                 card_id: tgt,
                 counter_type: crate::card::CounterType::PlusOnePlusOne,
-                count: amount,
+                count: amount, placer: self.resolution_causer,
             });
             return;
         }
@@ -1497,7 +1497,7 @@ impl GameState {
                     events.push(GameEvent::CounterAdded {
                         card_id: cid,
                         counter_type: kind,
-                        count: amount,
+                        count: amount, placer: self.resolution_causer,
                     });
                     return;
                 }
@@ -1690,6 +1690,7 @@ impl GameState {
                     let victim_converts = self.computed_permanent(cid).is_some_and(|cp| {
                         cp.keywords().has_kw(&crate::card::Keyword::DamageBecomesMinusCounters)
                     });
+                    let placer = self.resolution_causer;
                     if let Some(c) = self.battlefield_find_mut(cid) {
                     if c.definition.is_creature() {
                         c.dealt_damage_this_turn = true;
@@ -1712,7 +1713,7 @@ impl GameState {
                         events.push(GameEvent::CounterAdded {
                             card_id: cid,
                             counter_type: CounterType::MinusOneMinusOne,
-                            count: amount,
+                            count: amount, placer,
                         });
                     } else {
                         c.damage += amount;
@@ -2734,7 +2735,7 @@ impl GameState {
                         events.push(GameEvent::CounterAdded {
                             card_id: cid,
                             counter_type: kind,
-                            count: n,
+                            count: n, placer: self.resolution_causer,
                         });
                     }
                 }

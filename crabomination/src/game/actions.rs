@@ -7355,7 +7355,7 @@ impl GameState {
         events.push(GameEvent::CounterAdded {
             card_id,
             counter_type: CounterType::Time,
-            count: n,
+            count: n, placer: self.resolution_causer,
         });
         Ok(events)
     }
@@ -21023,7 +21023,7 @@ impl GameState {
                 events.push(GameEvent::CounterAdded {
                     card_id,
                     counter_type: kind,
-                    count: scaled,
+                    count: scaled, placer: self.resolution_causer,
                 });
             }
         }

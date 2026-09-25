@@ -285,7 +285,7 @@ mod recent102 {
             g.dispatch_triggers_for_events(&[GameEvent::CounterAdded {
                 card_id: id,
                 counter_type: CounterType::PlusOnePlusOne,
-                count: 1,
+                count: 1, placer: None,
             }]);
             drain_stack(g);
         };

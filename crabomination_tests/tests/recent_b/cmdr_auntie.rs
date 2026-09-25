@@ -77,7 +77,12 @@ fn minus(g: &GameState, id: CardId) -> u32 {
 }
 
 fn put_minus(g: &mut GameState, id: CardId, n: i32) -> Vec<GameEvent> {
-    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    put_minus_as(g, 0, id, n)
+}
+
+/// `put_minus` with `seat` putting the counters (CR 122.6).
+fn put_minus_as(g: &mut GameState, seat: usize, id: CardId, n: i32) -> Vec<GameEvent> {
+    let ctx = EffectContext::for_spell(seat, None, 0, 0);
     let evs = g
         .resolve_effect(
             &Effect::AddCounter {
@@ -226,6 +231,19 @@ fn lasting_tarfire_needs_a_counter_this_turn() {
     g.turn_number = 6;
     step(&mut g, TurnStep::End);
     assert_eq!(g.players[1].life, 18, "a new turn");
+}
+
+/// CR 122.6 — "if YOU put a counter on a creature this turn": an opponent's
+/// counters don't turn Lasting Tarfire on.
+#[test]
+fn lasting_tarfire_ignores_an_opponents_counters() {
+    let mut g = pod(3);
+    g.turn_number = 5;
+    g.add_card_to_battlefield(0, catalog::lasting_tarfire());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    put_minus_as(&mut g, 1, bear, 1);
+    step(&mut g, TurnStep::End);
+    assert_eq!((g.players[1].life, g.players[2].life), (20, 20));
 }
 
 /// Blowfly Infestation — a creature dying with a -1/-1 counter passes one on.
@@ -383,6 +401,17 @@ fn hapatra_makes_snakes() {
     let snakes = named(&g, 0, "Snake");
     assert_eq!(snakes.len(), 1, "one or more counters: one Snake");
     assert!(g.computed_permanent(snakes[0]).unwrap().keywords().contains(&Keyword::Deathtouch));
+}
+
+/// CR 122.6 — Hapatra's "whenever YOU put": an opponent putting -1/-1
+/// counters on a creature makes no Snake, even on Hapatra's side.
+#[test]
+fn hapatra_ignores_an_opponents_counters() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::hapatra_vizier_of_poisons());
+    let a = g.add_card_to_battlefield(0, catalog::hill_giant());
+    put_minus_as(&mut g, 1, a, 1);
+    assert!(named(&g, 0, "Snake").is_empty());
 }
 
 /// Flourishing Defenses — an Elf Warrior per -1/-1 counter.

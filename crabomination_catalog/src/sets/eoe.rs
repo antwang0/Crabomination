@@ -6482,7 +6482,7 @@ pub fn terrasymbiosis() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
                 EventKind::CounterAdded(CounterType::PlusOnePlusOne),
-                EventScope::YourControl,
+                EventScope::YouPutCounters,
             )
             .with_filter(Predicate::EntityMatches {
                 what: Selector::TriggerSource,

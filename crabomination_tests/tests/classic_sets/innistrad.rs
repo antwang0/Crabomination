@@ -2196,7 +2196,7 @@ fn cloaked_cadet_draws_on_human_counter() {
     let before = g.players[0].hand.len();
     g.battlefield_find_mut(cadet).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
     g.dispatch_triggers_for_events(&[GameEvent::CounterAdded {
-        card_id: cadet, counter_type: CounterType::PlusOnePlusOne, count: 1,
+        card_id: cadet, counter_type: CounterType::PlusOnePlusOne, count: 1, placer: None,
     }]);
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), before + 1, "drew off the Human counter trigger");

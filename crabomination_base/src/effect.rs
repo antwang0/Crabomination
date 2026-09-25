@@ -2338,9 +2338,8 @@ pub enum Predicate {
     /// Paradox Haze's "first upkeep step of your turn" trigger so the extra
     /// upkeep it grants doesn't loop.
     IsFirstUpkeepThisTurn,
-    /// A counter was put on a creature this turn (Lasting Tarfire's
-    /// intervening "if you put a counter on a creature this turn" — any
-    /// player's counters count; the engine doesn't record who put them).
+    /// You put a counter on a creature this turn (CR 122.6 — Lasting
+    /// Tarfire's intervening "if you put a counter on a creature this turn").
     CounterPutOnCreatureThisTurn,
     /// True when the resolving spell was kicked (CR 702.32) — its optional
     /// kicker cost was paid at cast time. Reads `EffectContext.kicked`,
@@ -3613,6 +3612,10 @@ pub enum EventScope {
     /// to an opponent's creature). Distinct from `Tapped`/`YourControl`, which
     /// key off the tapped permanent's controller rather than the tapper.
     YouTapped,
+    /// "Whenever you put one or more counters on …" — a `CounterAdded` whose
+    /// placer (CR 122.6) is the trigger's controller, whoever controls the
+    /// permanent; a `.with_filter` on `TriggerSource` restricts the subject.
+    YouPutCounters,
 }
 
 impl EventScope {

@@ -959,3 +959,39 @@ fn cytoplast_root_kin_pulls_a_counter_off_a_creature_you_control() {
     assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
     assert_eq!(g.battlefield_find(kin).unwrap().counter_count(CounterType::PlusOnePlusOne), before + 1);
 }
+
+// ── Who puts a counter (CR 122.6) ────────────────────────────────────────
+
+/// Resolve "put `n` +1/+1 counters on `id`" as `seat`'s effect and dispatch.
+fn put_plus_as(g: &mut GameState, seat: usize, id: CardId, n: i32) {
+    let ctx = crabomination::game::effects::EffectContext::for_spell(seat, None, 0, 0);
+    let evs = g
+        .resolve_effect(
+            &crabomination::effect::Effect::AddCounter {
+                what: crabomination::effect::Selector::ExactObjects(vec![id]),
+                kind: CounterType::PlusOnePlusOne,
+                amount: crabomination::card::Value::Const(n),
+            },
+            &ctx,
+        )
+        .expect("counters");
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(g);
+}
+
+/// CR 122.6 — "whenever you put one or more +1/+1 counters on a creature"
+/// keys on the placer, not the creature's controller: your counters on an
+/// opponent's creature trigger Earth Kingdom General, an opponent's counters
+/// on yours don't.
+#[test]
+fn you_put_counters_keys_on_the_placer() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::earth_kingdom_general());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    put_plus_as(&mut g, 1, mine, 2);
+    assert_eq!(g.players[0].life, 20, "an opponent's counters on my creature");
+    put_plus_as(&mut g, 0, theirs, 2);
+    assert_eq!(g.players[0].life, 22, "my counters on their creature");
+}

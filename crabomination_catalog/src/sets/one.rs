@@ -7285,7 +7285,7 @@ pub fn all_will_be_one() -> CardDefinition {
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![
             TriggeredAbility {
-                event: EventSpec::new(EventKind::AnyCounterAdded, EventScope::YourControl),
+                event: EventSpec::new(EventKind::AnyCounterAdded, EventScope::YouPutCounters),
                 effect: ping(),
             },
             TriggeredAbility {

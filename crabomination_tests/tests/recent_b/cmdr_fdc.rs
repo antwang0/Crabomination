@@ -3940,7 +3940,7 @@ fn cr_732_2_bot_breaks_the_enduring_scalelord_loop() {
     g.dispatch_triggers_for_events(&[GameEvent::CounterAdded {
         card_id: bear,
         counter_type: CounterType::PlusOnePlusOne,
-        count: 1,
+        count: 1, placer: None,
     }]);
     let mut bots = [HeuristicBot::new(), HeuristicBot::new()];
     for _ in 0..2_000 {

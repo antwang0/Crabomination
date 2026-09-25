@@ -65,7 +65,7 @@ fn cr_122_1c_loyalty_counters_added_scales_bioessence_hydra() {
     g.dispatch_triggers_for_events(&[GameEvent::CounterAdded {
         card_id: pw,
         counter_type: CounterType::Loyalty,
-        count: 3,
+        count: 3, placer: None,
     }]);
     drain_stack(&mut g);
     assert_eq!(

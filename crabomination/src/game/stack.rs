@@ -1059,7 +1059,8 @@ impl GameState {
             | EventScope::YourSourceDamagedOpponent
             | EventScope::OpponentSourceDamagedYou
             | EventScope::YourOtherSourceDamagedOpponent
-            | EventScope::YouTapped => false, // event-based
+            | EventScope::YouTapped
+            | EventScope::YouPutCounters => false, // event-based
             EventScope::ControllerAttackedByOpponent
             | EventScope::ControllerPlaneswalkerAttackedByOpponent
         | EventScope::OpponentOfYoursAttacked
@@ -2721,7 +2722,7 @@ impl GameState {
                             events.push(GameEvent::CounterAdded {
                                 card_id,
                                 counter_type: kind,
-                                count: n,
+                                count: n, placer: self.resolution_causer,
                             });
                         }
                     }

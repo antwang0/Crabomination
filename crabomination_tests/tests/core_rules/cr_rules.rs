@@ -7043,7 +7043,7 @@ fn cr_122_any_counter_added_first_time_per_turn() {
         g.dispatch_triggers_for_events(&[GameEvent::CounterAdded {
             card_id: id,
             counter_type: CounterType::PlusOnePlusOne,
-            count: 1,
+            count: 1, placer: None,
         }]);
         drain_stack(g);
     };

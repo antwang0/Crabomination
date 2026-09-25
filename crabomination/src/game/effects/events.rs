@@ -1198,6 +1198,7 @@ fn event_matches_spec_rest(
             event,
             GameEvent::PermanentTapped { actor: Some(a), .. } if state.same_team(*a, source.controller)
         ),
+        EventScope::YouPutCounters => counter_placer(state, event).is_some_and(|p| p == source.controller),
     };
 
     if !scope_ok {
@@ -1245,6 +1246,17 @@ pub(crate) fn actor_for_scope(
         return state.battlefield_find(cid).map(|c| c.controller);
     }
     event_actor(state, event)
+}
+
+/// Who put a `CounterAdded`'s counters (CR 122.6): its recorded placer, else
+/// the permanent's controller — CR 122.6a's default for a permanent entering
+/// with counters, and every counter placed outside a resolution.
+pub(crate) fn counter_placer(state: &GameState, event: &GameEvent) -> Option<usize> {
+    match event {
+        GameEvent::CounterAdded { placer: Some(p), .. } => Some(*p),
+        GameEvent::CounterAdded { card_id, placer: None, .. } => state.battlefield_find(*card_id).map(|c| c.controller),
+        _ => None,
+    }
 }
 
 pub(crate) fn event_actor(state: &GameState, event: &GameEvent) -> Option<usize> {
@@ -1550,6 +1562,7 @@ pub(crate) fn emblem_event_matches(
             event,
             GameEvent::PermanentTapped { actor: Some(a), .. } if state.same_team(*a, controller)
         ),
+        EventScope::YouPutCounters => counter_placer(state, event).is_some_and(|p| p == controller),
         EventScope::FromYourGraveyard
         | EventScope::FromYourGraveyardAnyPlayer
         | EventScope::YourPermanentTargetedByOpponent
@@ -1802,8 +1815,8 @@ mod tests {
             E::PermanentSacrificed { card_id: c, who: 0 },
             E::CreatureLeftWithoutDying { card_id: c, controller: 0 },
             E::PumpApplied { card_id: c, power: 1, toughness: 1 },
-            E::CounterAdded { card_id: c, counter_type: CounterType::PlusOnePlusOne, count: 1 },
-            E::CounterAdded { card_id: c, counter_type: CounterType::MinusOneMinusOne, count: 1 },
+            E::CounterAdded { card_id: c, counter_type: CounterType::PlusOnePlusOne, count: 1, placer: None },
+            E::CounterAdded { card_id: c, counter_type: CounterType::MinusOneMinusOne, count: 1, placer: None },
             E::KeywordCounterAdded {
                 card_id: c,
                 keyword: crate::card::Keyword::Vigilance,
