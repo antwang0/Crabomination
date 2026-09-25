@@ -8494,7 +8494,7 @@ pub(super) fn cast_candidates<'a>(
     }) {
         Some(card_id) => {
             state.battlefield.len() as i64 + state.spell_token_estimate(card_id, seat)
-                <= crate::recommend::MAX_BATTLEFIELD as i64
+                <= crate::recommend::BOARD_GATE as i64
         }
         None => true,
     });
@@ -10756,7 +10756,7 @@ pub fn pick_blocks_for_test(state: &GameState, seat: usize) -> Vec<(CardId, Card
 /// Stormsinger tokens to 1,025 copies. Kept only if the engine accepts the
 /// trimmed declaration (an attack requirement wins).
 fn board_bound_attacks(state: &GameState, attacks: Vec<Attack>) -> Vec<Attack> {
-    use crate::recommend::MAX_BATTLEFIELD;
+    use crate::recommend::BOARD_GATE;
     let start = state.battlefield.len() as i64;
     let mut board = start;
     let mut kept = Vec::with_capacity(attacks.len());
@@ -10772,7 +10772,7 @@ fn board_bound_attacks(state: &GameState, attacks: Vec<Attack>) -> Vec<Attack> {
         for _ in 0..fires {
             after += if scales { n + (after - start) } else { n };
         }
-        if after > MAX_BATTLEFIELD as i64 {
+        if after > BOARD_GATE as i64 {
             continue;
         }
         board = after;

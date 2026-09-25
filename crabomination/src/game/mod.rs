@@ -8378,6 +8378,15 @@ impl GameState {
         let auto_target = self.auto_target_for_effect_avoiding(&effect, owner, Some(id));
         // The suspending owner casts it; route priority so the cast helper
         // attributes it correctly.
+        // "You may cast it" — passed up when the cast would carry the
+        // battlefield past the engine's bound (a suspended Rousing Refrain
+        // over a board of Leitmotif Composers); it stays exiled, as an
+        // uncastable one does (CR 702.62e).
+        if self.battlefield.len() as i64 + self.spell_token_estimate(id, owner)
+            > crate::recommend::BOARD_GATE as i64
+        {
+            return events;
+        }
         let saved_priority = self.priority.player_with_priority;
         self.priority.player_with_priority = owner;
         let cast = self.cast_card_for_free(

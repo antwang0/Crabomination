@@ -2019,6 +2019,12 @@ pub enum StopReason {
 /// it is a runaway, ended as undecided the way an action-capped one is.
 pub const MAX_BATTLEFIELD: usize = 1_024;
 
+/// Where the board-bound gates stop a token effect (a held cast, a declined
+/// free cast, a capped copy fan-out): an eighth short of `MAX_BATTLEFIELD`,
+/// so the ordinary tokens a board keeps making (Treasure, a Clue) don't tip a
+/// gated board over the bound one at a time.
+pub const BOARD_GATE: usize = MAX_BATTLEFIELD - MAX_BATTLEFIELD / 8;
+
 /// Why a driver loop stops, in the loop's own order — the rules first, then
 /// the two simulator bounds, then staleness — or `None` to play on. Both
 /// loops ([`play_one_game_traced`] and the actor's) ask this so the bounds

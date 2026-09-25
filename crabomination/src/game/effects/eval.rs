@@ -292,12 +292,33 @@ impl GameState {
             }
             Effect::Populate { .. } => 1,
             Effect::Seq(es) => es.iter().map(|e| self.effect_token_estimate(e, ctx)).sum(),
+            // A branch the estimate can't settle is priced at its larger arm.
+            Effect::If { then, else_, .. } => {
+                self.effect_token_estimate(then, ctx).max(self.effect_token_estimate(else_, ctx))
+            }
             Effect::ForEach { selector, body } => {
                 let n = self.resolve_selector(selector, ctx).len() as i64;
                 if n == 0 { 0 } else { n * self.effect_token_estimate(body, ctx) }
             }
             _ => 0,
         }
+    }
+
+    /// Tokens the spells and triggers already on the stack would mint as
+    /// they resolve — the board a new token effect has to fit beside.
+    pub(crate) fn pending_stack_tokens(&self) -> i64 {
+        self.stack
+            .iter()
+            .map(|si| {
+                let (source, controller, effect) = match si {
+                    StackItem::Trigger { source, controller, effect, .. } => (*source, *controller, &**effect),
+                    StackItem::Spell { card, caster, .. } => (card.id, *caster, &card.definition.effect),
+                };
+                let mut tctx = EffectContext::for_spell(controller, None, 0, 0);
+                tctx.source = Some(source);
+                self.effect_token_estimate(effect, &tctx)
+            })
+            .sum()
     }
 
     /// Tokens the spell `id` would mint if `caster` cast it now: its own
@@ -327,18 +348,7 @@ impl GameState {
         // Token triggers already waiting on the stack land first: five Surge
         // to Victory copies cast back to back each saw the board before the
         // previous copy's Composer triggers resolved.
-        let mut fan_out: i64 = self
-            .stack
-            .iter()
-            .map(|si| match si {
-                StackItem::Trigger { source, controller, effect, .. } => {
-                    let mut tctx = EffectContext::for_spell(*controller, None, 0, 0);
-                    tctx.source = Some(*source);
-                    self.effect_token_estimate(effect, &tctx)
-                }
-                _ => 0,
-            })
-            .sum();
+        let mut fan_out: i64 = self.pending_stack_tokens();
         for c in self.battlefield.iter().filter(|c| c.controller == caster) {
             for t in &c.definition.triggered_abilities {
                 if t.event.kind == crate::card::EventKind::SpellCast

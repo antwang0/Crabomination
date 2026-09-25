@@ -19110,6 +19110,29 @@ impl GameState {
                 if others.is_empty() {
                     return Ok(());
                 }
+                // Engine bound (as a token batch's cap): copies of a token
+                // spell stop where the battlefield would pass
+                // `MAX_BATTLEFIELD` — Rite of Replication on a Mirrorwing
+                // Dragon over a board of its own tokens multiplied past it.
+                let mut others = others;
+                let per_copy = self.stack.iter().find_map(|si| match si {
+                    StackItem::Spell { card, caster, .. } if card.id == spell_id => {
+                        let mut c = EffectContext::for_spell(*caster, None, 0, 0);
+                        c.source = Some(spell_id);
+                        Some(self.effect_token_estimate(&card.definition.effect, &c))
+                    }
+                    _ => None,
+                });
+                if let Some(n) = per_copy.filter(|&n| n > 0) {
+                    let room = (crate::recommend::BOARD_GATE as i64
+                        - self.battlefield.len() as i64
+                        - self.pending_stack_tokens())
+                    .max(0);
+                    others.truncate((room / n) as usize);
+                    if others.is_empty() {
+                        return Ok(());
+                    }
+                }
                 self.copy_stack_spell(spell_id, others.len(), false, events);
                 // Retarget the fresh copies, newest first, one creature each.
                 let mut fresh: Vec<usize> = Vec::new();
@@ -25330,7 +25353,7 @@ impl GameState {
                 // copying a big spell over a board of Leitmotif Composers
                 // doubled an 8-seat pod to 1,000.
                 if self.battlefield.len() as i64 + self.spell_token_estimate(copy, ctx.controller)
-                    > crate::recommend::MAX_BATTLEFIELD as i64
+                    > crate::recommend::BOARD_GATE as i64
                 {
                     self.players[ctx.controller].hand.retain(|c| c.id != copy);
                     return Ok(());
@@ -37026,7 +37049,7 @@ impl GameState {
                 // the battlefield past the engine's bound — `CopyCardAndCastFree`
                 // has the Surge to Victory / Leitmotif Composer story.
                 if self.battlefield.len() as i64 + self.spell_token_estimate(card_id, ctx.controller)
-                    > crate::recommend::MAX_BATTLEFIELD as i64
+                    > crate::recommend::BOARD_GATE as i64
                 {
                     return Ok(());
                 }
