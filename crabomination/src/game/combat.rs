@@ -6931,6 +6931,8 @@ impl GameState {
                 );
                 ctx.trigger_source =
                     Some(crate::game::effects::EntityRef::Permanent(source));
+                // "Deals exactly 1 damage" (Ghyrson Starn) reads the amount.
+                ctx.event_amount = damage_amount;
                 if !self.evaluate_predicate(pred, &ctx) {
                     continue;
                 }
