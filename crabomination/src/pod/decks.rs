@@ -4692,3 +4692,31 @@ pub const SAURON_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, swamp, swamp, swamp, swamp, swamp, swamp,
     mountain, mountain, mountain, mountain, mountain, mountain, mountain,
 ];
+
+pub const PANTLAZA_COMMANDERS: &[CardFactory] = &[pantlaza_sun_favored];
+
+/// **Veloci-Ramp-Tor**, the Lost Caverns of Ixalan Commander deck
+/// (2023-11-17), exactly as MTGJSON's `VelociRampTor_LCC` prints it:
+/// 83 nonbasic cards + 8 Forest + 4 Plains + 4 Mountain = 99. Naya
+/// Dinosaurs, enrage and ramp under Pantlaza, Sun-Favored.
+pub const PANTLAZA_MAIN: &[CardFactory] = &[
+    wayta_trainer_prodigy, bronzebeak_foragers, from_the_rubble, wrathful_raptors, curious_altisaur,
+    dinosaur_egg, scion_of_calamity, sunfrill_imitator, progenitors_icon, akromas_will,
+    kinjallis_sunwing, temple_altisaur, wakening_suns_avatar, zetalpa_primal_dawn,
+    chandras_ignition, etali_primal_storm, fiery_confluence, marauding_raptor, apex_altisaur,
+    deathgorge_scavenger, descendants_path, rampaging_brontodon, regal_behemoth,
+    return_of_the_wildspeaker, ripjaw_raptor, rishkars_expertise, runic_armasaur, shifting_ceratops,
+    topiary_stomper, verdant_suns_avatar, wayward_swordtooth, quartzwood_crasher, regisaur_alpha,
+    xenagos_god_of_revels, zacama_primal_calamity, lifecrafters_bestiary, arch_of_orazca,
+    canopy_vista, cinder_glade, clifftop_retreat, exotic_orchard, fortified_village, furycalm_snarl,
+    game_trail, kessig_wolf_run, mosswort_bridge, bellowing_aegisaur, generous_gift,
+    majestic_heliopterus, path_to_exile, earthshaker_dreadmaw, ixallis_lorekeeper,
+    thrashing_brontodon, otepec_huntmaster, itzquinth_firstborn_of_gishath, cultivate,
+    drover_of_the_mighty, farseek, migration_path, rampant_growth, ranging_raptors, savage_stomp,
+    thunderherd_migration, thundering_spineback, atzocan_seer, raging_regisaur, raging_swordtooth,
+    rhythm_of_the_wild, arcane_signet, sol_ring, command_tower, evolving_wilds, jungle_shrine,
+    myriad_landscape, path_of_ancestry, rogues_passage, secluded_courtyard, temple_of_the_false_god,
+    terramorphic_expanse, thriving_bluff, thriving_grove, thriving_heath, unclaimed_territory,
+    forest, forest, forest, forest, forest, forest, forest, forest, plains, plains, plains, plains,
+    mountain, mountain, mountain, mountain,
+];

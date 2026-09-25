@@ -1271,6 +1271,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SAURON_COMMANDERS,
             main: decks::SAURON_MAIN,
         },
+        // Hundred-and-fifty-fifth: Veloci-Ramp-Tor (Lost Caverns of Ixalan)
+        // — Naya Dinosaurs and enrage under Pantlaza, Sun-Favored.
+        // `--pod-decks 155`.
+        PodDeck {
+            name: "Pantlaza, Sun-Favored (RGW)",
+            commanders: decks::PANTLAZA_COMMANDERS,
+            main: decks::PANTLAZA_MAIN,
+        },
     ]
 }
 
@@ -1885,6 +1893,9 @@ mod tests {
             // CR 702.34 flashback copied by Sevinne, CR 724.2 ending the
             // combat phase.
             ("Sevinne", [0x5E71, 153, 9077]),
+            // CR 603.2d Wayta's doubled enrage, CR 615 Temple Altisaur's
+            // prevention, CR 610.3 Bronzebeak Foragers' exile.
+            ("Pantlaza", [0x9A47, 155, 9079]),
         ] {
             let precon = *field.iter().find(|d| d.name.starts_with(name)).expect("the precon seat");
             assert_eq!(precon.card_count(), 100);
