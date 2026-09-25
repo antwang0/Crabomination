@@ -45,6 +45,7 @@ mod cmdr_esika;
 mod cmdr_invisible_woman;
 mod cmdr_greyfax;
 mod cmdr_captain_america;
+mod cmdr_heroes;
 mod cmdr_nelly;
 mod cmdr_eshki;
 mod cmdr_estrid;
