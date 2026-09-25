@@ -5329,3 +5329,34 @@ pub const SWARMLORD_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, island, island, island,
     island, island, island, island, forest, forest, forest, forest, forest, forest, forest, forest,
 ];
+
+pub const DOOM_COMMANDERS: &[CardFactory] = &[doctor_doom_king_of_latveria];
+
+/// **Doom Prevails**, the Marvel Super Heroes Commander deck (MSC,
+/// 2026-06-26), exactly as MTGJSON's `DoomPrevails_MSC` prints it: 84
+/// nonbasic cards + 4 Islands + 6 Swamps + 5 Mountains = 99. Grixis Villains
+/// and connive under Doctor Doom, King of Latveria.
+pub const DOOM_MAIN: &[CardFactory] = &[
+    molecule_man, extract_power, glorious_purpose, helmut_zemo_mastermind, kang_dynasty,
+    age_of_ultron, damocles_base_sword_of_kang, endless_ranks_of_hydra, the_frightful_four,
+    iron_monger_sadistic_tycoon, klaw_master_of_sound, abomination_world_ravager, batroc_the_leaper,
+    killmonger_ruthless_usurper, lady_loki_agent_of_chaos, living_laser, lokis_scepter,
+    puppet_master_string_puller, stilt_man_towering_terror, titania_proud_pummeler, archnemesis,
+    kang_prime, loki_the_deceiver, red_ghost_intangible_genius, the_squadron_sinister,
+    typhoid_mary_fractured, ultron_unlimited, dooms_time_platform, tri_sentinel_act_of_vengeance,
+    black_market_connections, kindred_dominance, lethal_scheme, toxic_deluge, blasphemous_act,
+    chaos_warp, bedevil, currency_converter, progenitors_icon, skullclamp, canyon_slough,
+    choked_estuary, coastal_peak, dragonskull_summit, drowned_catacomb, exotic_orchard, fetid_pools,
+    foreboding_ruins, frostboil_snarl, luxury_suite, scavenger_grounds, scorched_geyser,
+    smoldering_marsh, sulfur_falls, sunken_hollow, spark_double, titan_of_littjara,
+    baron_strucker_hydra_overlord, moonstone_harsh_mistress, kang_temporal_tyrant, madame_hydra,
+    villainous_hideout, containment_construct, chameleon_master_of_disguise, propaganda,
+    nights_whisper, syphon_mind, tombstone_career_criminal, withering_torment,
+    superior_foes_of_spider_man, vandalblast, prowler_clawed_thief, terminate, arcane_signet,
+    patchwork_banner, sol_ring, swiftfoot_boots, talisman_of_dominance, talisman_of_indulgence,
+    command_tower, crumbling_necropolis, path_of_ancestry, secluded_courtyard, terramorphic_expanse,
+    unclaimed_territory,
+    // Basics
+    island, island, island, island, swamp, swamp, swamp, swamp, swamp, swamp, mountain, mountain,
+    mountain, mountain, mountain,
+];

@@ -1433,6 +1433,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SWARMLORD_COMMANDERS,
             main: decks::SWARMLORD_MAIN,
         },
+        // Hundred-and-seventy-sixth: Doom Prevails (MSC, Marvel Super
+        // Heroes) — Grixis Villains under Doctor Doom, King of Latveria
+        // (CR 701.50 connive payoffs). `--pod-decks 176`.
+        PodDeck {
+            name: "Doctor Doom, King of Latveria (UBR)",
+            commanders: decks::DOOM_COMMANDERS,
+            main: decks::DOOM_MAIN,
+        },
     ]
 }
 
@@ -2069,6 +2077,8 @@ mod tests {
             // CR 702.157 squad's non-mana cost, CR 701.38 a most-votes
             // council, CR 702.138 granted escape.
             ("Caesar", [0xCAE5, 170, 9094]),
+            // CR 701.50 connive triggers, CR 702.62 granted suspend.
+            ("Doctor Doom", [0xD00D, 176, 9100]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
