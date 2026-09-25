@@ -3621,3 +3621,31 @@ pub const VEIL_PIERCER_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, island, island, island, island, swamp, swamp, swamp,
     swamp, swamp,
 ];
+
+pub const OTRIMI_COMMANDERS: &[CardFactory] = &[otrimi_the_ever_playful];
+
+/// **Enhanced Evolution**, the Ikoria Commander deck (C20, 2020-04-17),
+/// exactly as MTGJSON's `EnhancedEvolution_C20` prints it: 81 nonbasic cards +
+/// 5 Swamps + 11 Forests + 2 Islands = 99. Sultai mutate under Otrimi, the Ever-Playful.
+pub const OTRIMI_MAIN: &[CardFactory] = &[
+    nissa_steward_of_elements, zaxara_the_exemplary, cazur_ruthless_stalker,
+    ukkima_stalking_shadow, souvenir_snatcher, tidal_barracuda, boneyard_mycodrax, mindleecher,
+    capricopian, sawtusk_demolisher, beast_whisperer, genesis_hydra, hungering_hydra,
+    masked_admirers, predator_ooze, vastwood_hydra, vorapede, cold_eyed_selkie,
+    wydwen_the_biting_gale, silent_arbiter, archipelagore, dreamtail_heron, pouncing_shoreshark,
+    cavern_whisperer, chittering_harvester, insatiable_hemophage, auspicious_starrix, fertilid,
+    glowstone_recluse, migratory_greathorn, boneyard_lurker, trumpeting_gnarr,
+    illusory_ambusher, mulldrifter, shriekmaw, heroes_bane, reclamation_sage, yavimaya_dryad,
+    trygon_predator, dredge_the_mire, mind_spring, deadly_tempest, profane_command,
+    animists_awakening, find_finality, gaze_of_granite, villainous_wealth, migration_path, kodamas_reach,
+    deadly_rollick, beast_within, krosan_grip, putrefy, manascape_refractor,
+    lifecrafters_bestiary, bonders_ornament, arcane_signet, sol_ring, psychic_impetus,
+    parasitic_impetus, predatory_impetus, propaganda, darkwater_catacombs, endless_sands,
+    exotic_orchard, llanowar_wastes, sunken_hollow, blighted_woodland, command_tower,
+    dimir_aqueduct, golgari_rot_farm, mortuary_mire, myriad_landscape, opulent_palace,
+    rogues_passage, simic_growth_chamber, soaring_seacliff, temple_of_the_false_god,
+    dismal_backwater, jungle_hollow, thornwood_falls,
+    // Basics: 5 swamp, 11 forest, 2 island
+    swamp, swamp, swamp, swamp, swamp, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, island, island,
+];

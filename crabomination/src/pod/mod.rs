@@ -984,6 +984,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::VEIL_PIERCER_COMMANDERS,
             main: decks::VEIL_PIERCER_MAIN,
         },
+        // Hundred-and-nineteenth: the hundred-and-ninth official list
+        // (Enhanced Evolution, C20) — Sultai mutate under Otrimi, the
+        // Ever-Playful. `--pod-decks 119`.
+        PodDeck {
+            name: "Otrimi, the Ever-Playful (BGU)",
+            commanders: decks::OTRIMI_COMMANDERS,
+            main: decks::OTRIMI_MAIN,
+        },
     ]
 }
 
@@ -1553,6 +1561,8 @@ mod tests {
             ("Kalamax", [0xCA1A, 117, 9041]),
             // CR 702.94 granted miracle, CR 122.1d stun lock, CR 709 Rooms.
             ("Aminatou, Veil", [0xA417, 118, 9042]),
+            // CR 702.140 mutate, CR 306.5b X loyalty, CR 207.2c spell mastery.
+            ("Otrimi", [0x0791, 119, 9043]),
         ] {
             let precon = *field.iter().find(|d| d.name.starts_with(name)).expect("the precon seat");
             assert_eq!(precon.card_count(), 100);
