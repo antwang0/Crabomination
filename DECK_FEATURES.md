@@ -171,6 +171,7 @@ lists were picked.
 | **Cavalry Charge** (MOC precon) WUB | Sidar Jabari of Zhalfir | WUB | 100 | 🟡 all 100 implemented, 3 carry residuals (Path of the Enigma, Syr Elenora, Aryel) |
 | **Eternal Bargain** (C13 precon) WUB | Oloro, Ageless Ascetic | WUB | 100 | 🟡 all 100 implemented, 4 carry residuals (Order of Succession, Lim-Dûl's Vault, Springjack Pasture, Serene Master) |
 | **Power Hungry** (C13 precon) BRG | Prossh, Skyraider of Kher | BRG | 100 | 🟡 all 100 implemented, 4 carry residuals (Sudden Demise, Night Soil, Widespread Panic, Capricious Efreet) |
+| **Revival Trance** (FIC precon) RWB | Terra, Herald of Hope | RWB | 100 | 🟡 all 100 implemented, 9 carry residuals (Edgar, Espers to Magicite, General Leo, Gogo, Legions to Ashes, Locke, Esper Valigarmanda, The Warring Triad, Umaro) |
 | **Limit Break** (FIC precon) RGW | Cloud, Ex-SOLDIER | RGW | 100 | 🟡 all 100 implemented, 4 carry residuals (Professor Hojo, Helitrooper, Lifestream's Blessing, Yuffie) |
 | **Merciless Rage** (C19 precon) BR | Anje Falkenrath | BR | 100 | 🟡 all 100 implemented, 5 carry residuals (Archfiend of Spite, Boneyard Parley, Chainer, Hedonist's Trove, K'rrik) |
 | **Bedecked Brokers** (NCC precon) GWU | Perrie, the Pulverizer | GWU | 100 | 🟡 all 100 implemented, 5 carry residuals (Kros, Aven Mimeomancer, Agent's Toolkit, Littjara Mirrorlake, Skyship Plunderer) |
@@ -1599,6 +1600,31 @@ Galea / Kathril / Chishiro (seed 10400, 1,000 games) and Nelly / Eshki /
 Estrid (seed 10401, 1,000): all decided, Jirina 28.4 % and 24.3 %; census
 (seed 10401): no card of the list unplayed. `--bench` byte-identical;
 cube/sos/sealed (seed 10402): 7,500 decided.
+
+The **hundred-and-sixtieth** is the Final Fantasy VI Commander deck
+**Revival Trance** (`RevivalTranceFinalFantasyVi_FIC`) — Mardu graveyard
+recursion under Terra, Herald of Hope, `--pod-decks 160`. Twenty-six cards
+were missing, the commander among them (`cmdr_terra.rs`). The primitives
+(`game/effects/revival.rs`): `Effect::ChooseModeAtRandom` (Umaro — not a die
+roll, so nothing watching rolls sees it), `EachOpponentReturnsFromYourGraveyard`
+(Rejoin the Fight — each opponent in turn order picks an unchosen card, the
+weakest offered first), `GrantCastSpellRiders` (Strago and Relm's hasty,
+end-step-sacrificed free cast, through the existing `resolve_riders`) and
+`CastExiledFreeOwnersLoseLife` (Kefka); `AlternativeCost.also_from_graveyard`
+(Sabin's blitz from hand or graveyard, read by the bot's graveyard scan).
+Locke's "can't be blocked by creatures with greater power" is skulk's
+wording, so it is `Keyword::Skulk`. Pods (seed 160, 1,000 each): 4 seats
+1,000 decided, Terra 36.8 %; 6 seats against the Leinore / Sidar / Oloro /
+Prossh / Nalia precons 1,000 decided, 12.0 %; 8 seats (seats 4-10) 1,000
+decided, 19.7 %. Residuals (INCOMPLETE_CARDS): Edgar's recast artifact enters
+untapped; Espers to Magicite copies the first exiled creature card as a
+layer-4 artifact; General Leo's return is required; Gogo takes the copied
+name; Legions to Ashes exiles every player's namesake tokens; Locke's milled
+cards are all playable; Esper Valigarmanda's chapter I takes the first
+instant or sorcery; The Warring Triad mills in its effect and pays you;
+Umaro's mode and target are picked as it resolves. Census: no card of the
+list unplayed. Debug strict pods (400 games): clean. `--bench`
+byte-identical.
 
 The **hundred-and-fifty-seventh** is the Final Fantasy VII Commander deck
 **Limit Break** (`LimitBreakFinalFantasyVii_FIC`) — Naya Equipment and

@@ -2122,6 +2122,15 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Night Soil | Power Hungry (C13) | the two creature cards come from your own graveyard, not any single graveyard. |
 | 🟡 Widespread Panic | Power Hungry (C13) | any shuffle a spell or ability makes counts, not only one its controller made of their own library. |
 | 🟡 Capricious Efreet | Power Hungry (C13) | the up-to-two opposing targets are the auto-picker's; no UI prompt for the optional slots. |
+| 🟡 Edgar, Master Machinist | Revival Trance (FIC) | an artifact cast from the graveyard with its permission enters untapped. |
+| 🟡 Espers to Magicite | Revival Trance (FIC) | the copied card is the first creature card exiled, not a chosen target; its artifact-only type is a layer-4 set, not a copiable value. |
+| 🟡 General Leo Cristophe | Revival Trance (FIC) | the "up to one" return target is required whenever a legal card exists. |
+| 🟡 Gogo, Mysterious Mime | Revival Trance (FIC) | the copy takes the copied creature's name. |
+| 🟡 Legions to Ashes | Revival Trance (FIC) | same-named tokens of every player are exiled, not only those of the target's controller. |
+| 🟡 Locke, Treasure Hunter | Revival Trance (FIC) | any of the milled cards may be played this turn, not only one spell. |
+| 🟡 Summon: Esper Valigarmanda | Revival Trance (FIC) | chapter I exiles the first instant or sorcery card of each graveyard rather than a chosen one. |
+| 🟡 The Warring Triad | Revival Trance (FIC) | the mill is part of the effect, not a cost, and the mana always goes to you. |
+| 🟡 Umaro, Raging Yeti | Revival Trance (FIC) | the random mode, and a damage target, are chosen as the trigger resolves. |
 | 🟡 Professor Hojo | Limit Break (FIC) | no "first activated ability targeting your creature costs {2} less" discount; the draw fires for any permanent's ability targeting your creature. |
 | 🟡 Helitrooper | Limit Break (FIC) | the {2} equip discount applies to every equip you activate, not only ones targeting it. |
 | 🟡 Lifestream's Blessing | Limit Break (FIC) | X (greatest power) is read as it resolves, not as it was cast. |
