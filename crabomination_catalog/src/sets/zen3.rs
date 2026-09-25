@@ -1226,6 +1226,7 @@ pub fn chandra_ablaze() -> CardDefinition {
                     source_zone: crate::card::Zone::Graveyard,
                     filter: None,
                     cap: None,
+                    total_mana_value: None,
                 },
             },
         ],

@@ -144,6 +144,11 @@ pub enum PlayerRef {
     /// "Choose a player at random" (Wildfire Devils) — any living seat, the
     /// controller included, drawn from the game's RNG on each resolution.
     RandomPlayer,
+    /// "The player to your right" (Bucknard's Everfull Purse) — the nearest
+    /// living seat one step *against* turn order (CR 101.4: play passes to
+    /// the left, so the right is the previous seat; the same direction as
+    /// CR 803.1b attack-right). In a duel it is the opponent; alone, nobody.
+    PlayerToYourRight,
     /// CR 701.38 — each opponent whose vote in the most recent ballot differed
     /// from the effect's controller's (Grudge Keeper).
     OpponentsWhoVotedDifferently,
@@ -8470,6 +8475,11 @@ pub enum Effect {
         /// graveyard" — Jetsam). `None` is the printed "any number".
         #[serde(default)]
         cap: Option<Value>,
+        /// Cap on the *total* mana value of what is cast ("spells … with
+        /// total mana value X or less" — Rod of Absorption). A card whose
+        /// mana value would overrun what is left is skipped.
+        #[serde(default)]
+        total_mana_value: Option<Value>,
     },
     /// "You may cast a [filter] spell from your hand without paying its
     /// mana cost" (Maelstrom Archangel; Oracle of Bones restricts to

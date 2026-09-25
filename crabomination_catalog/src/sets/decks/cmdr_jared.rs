@@ -341,6 +341,7 @@ pub fn primeval_spawn() -> CardDefinition {
                     source_zone: Zone::Exile,
                     filter: Some(R::ManaValueAtMost(10)),
                     cap: Some(Value::ONE),
+                    total_mana_value: None,
                 },
             ]),
         }],

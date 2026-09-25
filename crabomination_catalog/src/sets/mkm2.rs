@@ -370,6 +370,7 @@ pub fn flotsam_jetsam() -> CardDefinition {
                         source_zone: crate::card::Zone::Graveyard,
                         filter: None,
                         cap: Some(Value::OpponentCount),
+                        total_mana_value: None,
                     },
                 ]),
             },
@@ -1052,6 +1053,7 @@ pub fn kylox_visionary_inventor() -> CardDefinition {
                     R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)),
                 ),
                 cap: None,
+                total_mana_value: None,
             },
         ]))],
         ..legend(
@@ -1092,6 +1094,7 @@ pub fn kyloxs_voltstrider() -> CardDefinition {
             source_zone: crate::card::Zone::Exile,
             filter: Some(R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery))),
             cap: Some(Value::ONE),
+            total_mana_value: None,
         })],
         ..Default::default()
     }

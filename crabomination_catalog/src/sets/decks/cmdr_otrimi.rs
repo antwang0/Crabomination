@@ -399,6 +399,7 @@ pub fn villainous_wealth() -> CardDefinition {
                 source_zone: crate::card::Zone::Exile,
                 filter: Some(R::Nonland.and(R::ManaValueAtMostXFromCost)),
                 cap: None,
+                total_mana_value: None,
             },
         ]),
         ..Default::default()

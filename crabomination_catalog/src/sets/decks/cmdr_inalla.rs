@@ -219,6 +219,7 @@ pub fn izzet_chemister() -> CardDefinition {
                     source_zone: Zone::Exile,
                     filter: None,
                     cap: None,
+                    total_mana_value: None,
                 },
                 ..Default::default()
             },

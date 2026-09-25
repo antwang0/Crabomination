@@ -838,6 +838,7 @@ pub fn etali_primal_conqueror() -> CardDefinition {
                 source_zone: Zone::Exile,
                 filter: None,
                 cap: None,
+                total_mana_value: None,
             },
         ]))],
         activated_abilities: vec![ActivatedAbility {

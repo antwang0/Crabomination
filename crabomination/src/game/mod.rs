@@ -23732,6 +23732,31 @@ impl GameState {
             .count()
     }
 
+    /// Hama Pashar (`StaticEffect::DungeonRoomsTriggerTwice`) — how many extra
+    /// times a room ability of `owner`'s dungeon triggers.
+    pub(crate) fn dungeon_room_extra_fires(&self, owner: usize) -> usize {
+        self.battlefield
+            .iter()
+            .filter(|c| c.controller == owner)
+            .flat_map(|c| &c.definition.static_abilities)
+            .filter(|sa| matches!(sa.effect, crate::effect::StaticEffect::DungeonRoomsTriggerTwice))
+            .count()
+    }
+
+    /// Rod of Absorption (`StaticEffect::ExileResolvingInstantsAndSorceries`)
+    /// — the first such permanent on the battlefield, which a resolving
+    /// instant or sorcery is exiled with instead of hitting a graveyard.
+    pub(crate) fn resolving_spell_absorber(&self) -> Option<CardId> {
+        self.battlefield
+            .iter()
+            .find(|c| {
+                c.definition.static_abilities.iter().any(|sa| {
+                    matches!(sa.effect, crate::effect::StaticEffect::ExileResolvingInstantsAndSorceries)
+                })
+            })
+            .map(|c| c.id)
+    }
+
     pub(crate) fn push_ordered_trigger_candidates(
         &mut self,
         candidates: Vec<TriggerCandidate>,
@@ -27659,6 +27684,20 @@ impl GameState {
                 return Ok(events);
             }
         }
+        // Rod of Absorption — exiled instead, and linked to the Rod so its
+        // sacrifice ability can cast it.
+        if (card.definition.is_instant() || card.definition.is_sorcery())
+            && !card.is_token
+            && let Some(rod) = self.resolving_spell_absorber()
+        {
+            let mut card = card;
+            let card_id = card.id;
+            card.counters.clear();
+            card.exiled_with = Some(rod);
+            self.exile.push(card);
+            events.push(GameEvent::PermanentExiled { card_id });
+            return Ok(events);
+        }
         // CR 614.6 — an instant/sorcery bound for the graveyard is exiled
         // instead under Rest in Peace / Leyline of the Void.
         self.route_to_graveyard(card, &mut events);
@@ -30008,6 +30047,12 @@ fn static_effect_to_effects(
             | StaticEffect::DoubleControllerPermanentTriggers
             | StaticEffect::DoubleControllerDeathTriggers
             | StaticEffect::DoubleControllerAttackTriggers
+            // Hama Pashar — read in `Effect::Venture` via
+            // `dungeon_room_extra_fires`; no layer effect.
+            | StaticEffect::DungeonRoomsTriggerTwice
+            // Rod of Absorption — read at the end of spell resolution via
+            // `resolving_spell_absorber`; no layer effect.
+            | StaticEffect::ExileResolvingInstantsAndSorceries
             | StaticEffect::DoubleControllerLandEntryTriggers
             // SuppressCreatureEtbTriggers — read at trigger dispatch via
             // `creature_etb_triggers_suppressed` / `creature_dies_triggers_suppressed`;

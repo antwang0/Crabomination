@@ -2210,6 +2210,7 @@ pub fn improvisation_capstone() -> CardDefinition {
                 what: Selector::LastMoved,
                 source_zone: Zone::Exile,
                 cap: None,
+                total_mana_value: None,
             },
             Effect::RegisterParadigm,
         ]),

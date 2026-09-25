@@ -169,6 +169,7 @@ pub fn dance_with_calamity() -> CardDefinition {
                     source_zone: crate::card::Zone::Exile,
                     filter: None,
                     cap: None,
+                    total_mana_value: None,
                 }),
             },
         ]),

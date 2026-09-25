@@ -218,6 +218,7 @@ fn player_ref_selector(p: &PlayerRef) -> Option<&Selector> {
         | PlayerRef::RandomOpponent
         | PlayerRef::RandomOtherOpponentThanEnchanted
         | PlayerRef::RandomPlayer
+        | PlayerRef::PlayerToYourRight
         | PlayerRef::HostileOpponent
         | PlayerRef::OpponentsWhoVotedDifferently => None,
     }

@@ -372,6 +372,7 @@ pub fn muse_vortex() -> CardDefinition {
                 source_zone: Zone::Exile,
                 filter: Some(instant_or_sorcery().and(R::ManaValueAtMostXFromCost)),
                 cap: Some(Value::ONE),
+                total_mana_value: None,
             },
             Effect::Move { what: exiled(instant_or_sorcery()), to: ZoneDest::Hand(PlayerRef::You) },
             Effect::Move {

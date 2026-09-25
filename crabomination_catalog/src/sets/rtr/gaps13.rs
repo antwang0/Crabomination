@@ -59,6 +59,7 @@ pub fn epic_experiment() -> CardDefinition {
                         .and(R::ManaValueAtMostXFromCost),
                 ),
                 cap: None,
+                total_mana_value: None,
             },
             Effect::Move {
                 what: Selector::CardExiledWithSource,
@@ -121,6 +122,7 @@ pub fn jace_architect_of_thought() -> CardDefinition {
                         source_zone: Zone::Exile,
                         filter: None,
                         cap: None,
+                        total_mana_value: None,
                     },
                 ]),
                 ..Default::default()

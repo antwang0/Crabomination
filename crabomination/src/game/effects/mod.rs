@@ -11835,25 +11835,36 @@ impl GameState {
                 // the stack. CR 309.6 — the dungeon leaves the game once its
                 // bottommost room's ability is done resolving, so the removal
                 // rides the same stack item rather than firing a beat early.
-                let mut room_effect = room.effect.clone();
-                if room.next.is_empty() {
-                    room_effect = Effect::Seq(vec![room_effect, Effect::CompleteDungeon]);
+                // Hama Pashar — each extra fire is a plain copy of the room
+                // ability pushed *above* the original, so the one carrying the
+                // completion tail resolves last.
+                let extra = self.dungeon_room_extra_fires(p);
+                let base_effect = room.effect.clone();
+                let room_effect = if room.next.is_empty() {
+                    Effect::Seq(vec![base_effect.clone(), Effect::CompleteDungeon])
+                } else {
+                    base_effect.clone()
+                };
+                let source = ctx.source.unwrap_or(CardId(0));
+                let mut pushes = Vec::with_capacity(1 + extra);
+                for effect in std::iter::once(room_effect).chain(std::iter::repeat_n(base_effect, extra)) {
+                    let mode = self.pick_trigger_mode(&effect, source, p);
+                    pushes.push(crate::game::types::PendingTriggerPush {
+                        from_mana_ability: false,
+                        x_value: 0,
+                        converged_value: 0,
+                        mana_spent: 0,
+                        actor: None,
+                        source,
+                        controller: p,
+                        effect,
+                        subject: None,
+                        event_amount: 0,
+                        mode,
+                        intervening_if: None,
+                    });
                 }
-                let mode = self.pick_trigger_mode(&room_effect, ctx.source.unwrap_or(CardId(0)), p);
-                self.drain_trigger_queue(vec![crate::game::types::PendingTriggerPush {
-                    from_mana_ability: false,
-                    x_value: 0,
-                    converged_value: 0,
-                    mana_spent: 0,
-                    actor: None,
-                    source: ctx.source.unwrap_or(CardId(0)),
-                    controller: p,
-                    effect: room_effect,
-                    subject: None,
-                    event_amount: 0,
-                    mode,
-                    intervening_if: None,
-                }]);
+                self.drain_trigger_queue(pushes);
                 Ok(())
             }
 
@@ -37280,7 +37291,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::CastAnyOrderWithoutPaying { what, source_zone, filter, cap } => {
+            Effect::CastAnyOrderWithoutPaying { what, source_zone, filter, cap, total_mana_value } => {
                 // "Cast any number ... without paying" with CONTROLLER-CHOSEN
                 // ORDER: offer each remaining castable card; after any accept,
                 // re-offer the declined ones (so declining A to cast B first,
@@ -37302,6 +37313,11 @@ impl GameState {
                     .as_ref()
                     .map(|v| self.evaluate_value(v, ctx).max(0) as usize)
                     .unwrap_or(usize::MAX);
+                // Rod of Absorption — total mana value X or less.
+                let mut mv_budget = total_mana_value
+                    .as_ref()
+                    .map(|v| self.evaluate_value(v, ctx).max(0) as u32)
+                    .unwrap_or(u32::MAX);
                 loop {
                     if budget == 0 {
                         break;
@@ -37334,6 +37350,11 @@ impl GameState {
                                 remaining.retain(|c| *c != cid);
                                 continue;
                             }
+                        }
+                        let mv = card_ref.definition.cost.cmc();
+                        if mv > mv_budget {
+                            remaining.retain(|c| *c != cid);
+                            continue;
                         }
                         let name = card_ref.definition.name;
                         let card_def = card_ref.definition.arc();
@@ -37375,6 +37396,9 @@ impl GameState {
                         events.extend(cast_events);
                         remaining.retain(|c| *c != cid);
                         progressed = true;
+                        if mv_budget != u32::MAX {
+                            mv_budget -= mv;
+                        }
                         budget -= 1;
                         if budget == 0 {
                             break;
@@ -37390,6 +37414,10 @@ impl GameState {
             Effect::CastFromHandWithoutPaying { filter } => {
                 use crate::decision::{Decision, DecisionAnswer};
                 let p = ctx.controller;
+                // An X-relative gate (Arcane Endeavor's "mana value less than
+                // or equal to the other result", bound by `Effect::WithX`).
+                let filter = filter.as_ref().map(|f| f.resolve_x(ctx.x_value));
+                let filter = &filter;
                 let candidates: Vec<(CardId, String)> = self.players[p]
                     .hand
                     .iter()
@@ -39491,6 +39519,12 @@ impl GameState {
                 }
             }
             PlayerRef::RandomPlayer => self.random_living_seat(),
+            PlayerRef::PlayerToYourRight => {
+                let n = self.players.len();
+                (1..n)
+                    .map(|k| (ctx.controller + n - k) % n)
+                    .find(|&q| self.players[q].is_alive())
+            }
             PlayerRef::RandomOpponent => {
                 use rand::RngExt;
                 let me = ctx.controller;

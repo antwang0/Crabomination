@@ -1642,6 +1642,17 @@ pub enum StaticEffect {
     /// dispatch off the `triggered_by_attack` candidate flag (and the
     /// self-source attack path in `combat.rs`).
     DoubleControllerAttackTriggers,
+    /// Hama Pashar, Ruin Seeker — "Room abilities of dungeons you own trigger
+    /// an additional time." Read where `Effect::Venture` pushes the room's
+    /// trigger (`dungeon_room_extra_fires`); the extra copies carry no
+    /// CR 309.6 completion tail, so a dungeon completes once.
+    DungeonRoomsTriggerTwice,
+    /// Rod of Absorption — "Whenever a player casts an instant or sorcery
+    /// spell, exile it instead of putting it into a graveyard as it
+    /// resolves." Read at the end of spell resolution
+    /// (`resolving_spell_absorber`): the card goes to exile stamped
+    /// `exiled_with` this permanent, so `R::ExiledWithSource` finds it.
+    ExileResolvingInstantsAndSorceries,
     /// Ancient Greenwarden — "If a land entering causes a triggered ability
     /// of a permanent you control to trigger, that ability triggers an
     /// additional time." Read at trigger dispatch: a landfall trigger (the
