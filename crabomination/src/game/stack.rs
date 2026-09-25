@@ -5252,9 +5252,7 @@ impl GameState {
     /// remains blocked (CR 509.1b); the permanent stays on the battlefield.
     pub(crate) fn remove_permanent_from_combat(&mut self, id: CardId) {
         self.attacking.retain(|atk| atk.attacker != id);
-        if self.block_map.remove(&id).is_some() {
-            self.left_while_blocking.push(id);
-        }
+        self.block_map.remove(&id);
         self.block_map.retain(|_, atks| {
             atks.retain(|a| *a != id);
             !atks.is_empty()
@@ -7612,7 +7610,9 @@ impl GameState {
             }
             self.attack_bands.retain(|b| b.len() > 1);
         }
-        self.block_map.remove(&id);
+        if self.block_map.remove(&id).is_some() {
+            self.left_while_blocking.push(id);
+        }
         self.block_map.retain(|_, atks| {
             atks.retain(|a| *a != id);
             !atks.is_empty()

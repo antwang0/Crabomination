@@ -29495,6 +29495,10 @@ impl GameState {
                         events.push(GameEvent::CreatureDied { card_id: cid });
                     }
                     events.push(GameEvent::PermanentSacrificed { card_id: cid, who: p });
+                    // The same bookkeeping `sacrifice_one` keeps, so "put into
+                    // a graveyard this way" reads it (Danse Macabre).
+                    self.scratch.players_sacrificed_this_resolution.insert(p);
+                    self.scratch.cards_sacrificed_this_resolution.push(cid);
                     // CR 700.4 — through the rich funnel so dies/LTB triggers
                     // and Persist/Undying fire (Kitchen Finks sacrificed to
                     // Tribute to Hunger).
