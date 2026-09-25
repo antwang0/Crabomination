@@ -108,6 +108,7 @@ mod cmdr_quintorius;
 mod cmdr_sefris;
 mod cmdr_morska;
 mod cmdr_inspirit;
+mod cmdr_hakbal;
 mod cmdr_kaust;
 mod cmdr_zimone_ia;
 mod cmdr_anhelo;
