@@ -110,6 +110,7 @@ mod cmdr_inspirit;
 mod cmdr_kaust;
 mod cmdr_zimone_ia;
 mod cmdr_anhelo;
+mod cmdr_satya;
 mod cmdr_azlask;
 mod cmdr_zhulodok;
 mod cmdr_aminatou;
