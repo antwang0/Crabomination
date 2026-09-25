@@ -1168,6 +1168,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::PROSPER_COMMANDERS,
             main: decks::PROSPER_MAIN,
         },
+        // Hundred-and-forty-second: Faceless Menace (C19) — Sultai morph
+        // under Kadena, Slinking Sorcerer. `--pod-decks 142`.
+        PodDeck {
+            name: "Kadena, Slinking Sorcerer (BGU)",
+            commanders: decks::KADENA_COMMANDERS,
+            main: decks::KADENA_MAIN,
+        },
     ]
 }
 
@@ -1768,6 +1775,9 @@ mod tests {
             // CR 614 Warlocks exiled instead of dying (Lorcan); CR 603.10 a dead
             // blocker (Death Tyrant); CR 508.1 "whenever you attack a player".
             ("Prosper", [0x9A05, 141, 9065]),
+            // CR 702.37 morph and megamorph, CR 614 Rayami's death exile,
+            // CR 903.9 commanders sent home.
+            ("Kadena", [0x6ADE, 142, 9066]),
         ] {
             let precon = *field.iter().find(|d| d.name.starts_with(name)).expect("the precon seat");
             assert_eq!(precon.card_count(), 100);

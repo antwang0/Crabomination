@@ -4302,3 +4302,31 @@ pub const PROSPER_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain,
 ];
+
+pub const KADENA_COMMANDERS: &[CardFactory] = &[kadena_slinking_sorcerer];
+
+/// **Faceless Menace**, the Commander 2019 deck (C19, 2019-08-23), exactly as
+/// MTGJSON's `FacelessMenace_C19` prints it: 84 nonbasic cards +
+/// 5 Islands + 3 Swamps + 7 Forests = 99. Sultai morph under Kadena, Slinking Sorcerer.
+pub const KADENA_MAIN: &[CardFactory] = &[
+    vraska_the_unseen, rayami_first_of_the_fallen, volrath_the_shapestealer, kadenas_silencer,
+    thought_sponge, thieving_amalgam, apex_altisaur, grismold_the_dreadsower, deathmist_raptor,
+    hooded_hydra, chromeshell_crab, ixidron, kheru_spellsnatcher, stratus_dancer,
+    thousand_winds, vesuvan_shapeshifter, bane_of_the_living, grim_haruspex, silumgar_assassin,
+    den_protector, seedborn_muse, thelonite_hermit, sagu_mauler, voice_of_many, scaretiller,
+    willbender, skinthinner, ainok_survivalist, great_oak_guardian, nantuko_vigilante,
+    sakura_tribe_elder, icefeather_aven, road_of_return, ghastly_conscription, hex,
+    overwhelming_stampede, tempt_with_discovery, mire_in_misery, tezzerets_gambit, cultivate,
+    explore, farseek, urban_evolution, sudden_substitution, biomass_mutation, leadership_vacuum,
+    echoing_truth, reality_shift, putrefy, sultai_charm, pendant_of_prosperity, scroll_of_fate,
+    strionic_resonator, sol_ring, thran_dynamo, gift_of_doom, trail_of_mystery,
+    bounty_of_the_luxa, secret_plans, darkwater_catacombs, exotic_orchard, llanowar_wastes,
+    shrine_of_the_forsaken_gods, sunken_hollow, thespians_stage, yavimaya_coast, ash_barrens,
+    bojuka_bog, command_tower, dimir_aqueduct, evolving_wilds, foul_orchard, golgari_guildgate,
+    golgari_rot_farm, jungle_hollow, myriad_landscape, opulent_palace, reliquary_tower,
+    simic_growth_chamber, simic_guildgate, temple_of_the_false_god, terramorphic_expanse,
+    thornwood_falls, woodland_stream,
+    // Basics: 5 island, 3 swamp, 7 forest
+    island, island, island, island, island, swamp, swamp, swamp, forest, forest, forest, forest,
+    forest, forest, forest,
+];
