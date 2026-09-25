@@ -154,6 +154,7 @@ lists were picked.
 | **Buckle Up** (NEC precon) WU | Kotori, Pilot Prodigy | WU | 100 | 🟡 all 100 implemented, 3 carry residuals (Armed and Armored, Katsumasa, the Animator, Dance of the Manse) |
 | **Dance of the Elements** (ECC precon) WUBRG | Ashling, the Limitless | WUBRG | 100 | 🟡 all 100 implemented, 5 carry residuals (Flamebraider, Smokebraider, Primal Beyond, Haunting Voyage, Horde of Notions) |
 | **Mystic Intellect** (C19 precon) URW | Sevinne, the Chronoclasm | URW | 100 | 🟡 all 100 implemented (Dockside Extortionist, banned, swapped for Ragavan), 3 carry residuals (Wall of Stolen Identity, Mandate of Peace, Elsha of the Infinite) |
+| **The Hosts of Mordor** (LTC precon) UBR | Sauron, Lord of the Rings | UBR | 100 | 🟡 all 100 implemented, 3 carry residuals (Moria Scavenger, Shelob, Dread Weaver, Summons of Saruman) |
 | **Coven Counters** (MIC precon) GW | Leinore, Autumn Sovereign | GW | 100 | 🟡 all 100 implemented, 4 carry residuals (Curse of Conformity, Celestial Judgment, Sigardian Zealot, Moorland Rescuer) |
 | **Arcane Maelstrom** (C20 precon) GUR | Kalamax, the Stormsire | GUR | 100 | 🟡 all 100 implemented, 4 carry residuals (Eon Frolicker, Haldan, Pako, Lavabrink Floodgates) |
 | **Enhanced Evolution** (C20 precon) BGU | Otrimi, the Ever-Playful | BGU | 100 | 🟡 all 100 implemented, 4 carry residuals (Capricopian, Manascape Refractor, Mindleecher, Vastwood Hydra) |
@@ -2591,6 +2592,25 @@ Extortionist**, **Alandra, Sky Dreamer**, **Erdwal Illuminator**
 Gavi / Gonti / Prossh / Nelly (seed 13402, 1,000): all decided, 16.2 %;
 census beside Omo / Olivia / Jirina (seed 13403, 500): no card of the four
 lists unplayed. cube / sos / sealed 7,500 decided. `--bench` byte-identical.
+
+The **hundred-and-fifty-fourth** is Tales of Middle-earth Commander's **The Hosts of
+Mordor** (`TheHostsOfMordor_LTC`, 2023-06-23) — Grixis Orc armies (amass),
+the Ring tempting you, and theft under Sauron, Lord of the Rings,
+`--pod-decks 154`. Twenty-five cards were missing (`cmdr_sauron.rs`). The
+primitives: `R::IsRingBearer` (CR 701.54c — Lord of the Nazgûl's protection
+from Ring-bearers, read through `GameState::is_a_ring_bearer`) and an
+X-aware `Selector::MatchingAmong` (CR 107.3 — its card branch rewrote no
+`…XFromCost` leaf, so Summons of Saruman's "mana value X or less from among
+them" could never match). Everything else composes: Gríma reuses Chaos
+Wand's dig and then bottoms an uncast find (which Chaos Wand still leaves in
+exile); The Balrog's "when you do" is `MayExileSelfThen` + `Reflexive` +
+`ForEachOpponentTarget`; Grishnákh reads the Army's power as a `WithX`.
+Residuals: **Moria Scavenger** (two abilities for one), **Shelob** (the
+graveyard half of its cost is paid on resolution; the X card is picked, not
+targeted), **Summons of Saruman** (flashback pays X in mana). Pods
+(1,000 games each): 4 seats beside Urza / Osgir / Eshki (seed 11120) Sauron
+28.1 %, census: no card of the four unplayed; 6 seats (seed 11121) beside Sevinne / Anje / Kotori / Galadriel / Felothar 1,000 / 1,000, Sauron 13.1 %; 8 seats (seed 11121) 1,000 / 1,000, Sauron 16.1 %. `--bench`
+byte-identical.
 
 The **hundred-and-fifty-third** is Commander 2019's **Mystic Intellect**
 (`MysticIntellect_C19`) — Jeskai flashback under Sevinne, the Chronoclasm,
