@@ -1802,7 +1802,7 @@ mod tests {
     #[test]
     fn cr_903_5a_the_official_precon_seats_play_pod_games() {
         let field = target_decks();
-        for (name, seeds) in [
+        let seats = [
             ("Teval", [0x7E7A1_u64, 78, 9002]),
             ("N'ghathrod", [0xC1B, 79, 9003]),
             ("Clavileño", [0xB100D, 80, 9004]),
@@ -1905,19 +1905,33 @@ mod tests {
             ("Pantlaza", [0x9A47, 155, 9079]),
             // CR 702.143 foretell, CR 107.3 an {X}{X} payment (Numa).
             ("Lathril", [0x1A7A, 156, 9080]),
-        ] {
-            let precon = *field.iter().find(|d| d.name.starts_with(name)).expect("the precon seat");
-            assert_eq!(precon.card_count(), 100);
-            let decks = vec![precon, field[0], field[1], field[2]];
-            let t = build_pod_template(&decks);
-            assert_eq!(t.players[0].library.len(), 100 - precon.commanders.len());
-            let pilots = vec![Pilot::default(); 4];
-            for seed in seeds {
-                let o = play_one_pod_game(&t, &pilots, 50_000, seed);
-                assert!(o.winner.is_some(), "{name} seed {seed} left the pod undecided");
-                assert!(o.turns > 0);
+        ];
+        // One work item per (seat, seed), pulled by a worker per core: this
+        // test is the suite's long pole (~630 s of a ~640 s debug run on four
+        // cores when it walked the list on one thread). Each game is seeded,
+        // so the order they run in changes nothing. `RUST_MIN_STACK` (32 MiB,
+        // `.cargo/config.toml`) sizes the workers' stacks.
+        let jobs: Vec<(&str, u64)> =
+            seats.iter().flat_map(|(name, seeds)| seeds.iter().map(move |&seed| (*name, seed))).collect();
+        let next = std::sync::atomic::AtomicUsize::new(0);
+        let workers = std::thread::available_parallelism().map_or(1, |n| n.get()).min(jobs.len());
+        std::thread::scope(|s| {
+            for _ in 0..workers {
+                s.spawn(|| {
+                    while let Some(&(name, seed)) = jobs.get(next.fetch_add(1, std::sync::atomic::Ordering::Relaxed)) {
+                        let precon = *field.iter().find(|d| d.name.starts_with(name)).expect("the precon seat");
+                        assert_eq!(precon.card_count(), 100);
+                        let decks = vec![precon, field[0], field[1], field[2]];
+                        let t = build_pod_template(&decks);
+                        assert_eq!(t.players[0].library.len(), 100 - precon.commanders.len());
+                        let pilots = vec![Pilot::default(); 4];
+                        let o = play_one_pod_game(&t, &pilots, 50_000, seed);
+                        assert!(o.winner.is_some(), "{name} seed {seed} left the pod undecided");
+                        assert!(o.turns > 0);
+                    }
+                });
             }
-        }
+        });
     }
 
     /// CR 702.121 (Melee) — the tenth seat is the field's only
