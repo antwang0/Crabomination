@@ -3399,6 +3399,15 @@ fn decide_pending_policy_inner(
         // should instead hit the opponent's *most* valuable
         // permanent — or, when forced to choose among its own
         // permanents, give up the *least* valuable.
+        // A -1/-1 counter the rules force onto our own side goes on the body
+        // that survives it, not the least valuable one: a 1/1 token dying to
+        // it re-fires Blowfly Infestation, whose next counter mints Hapatra
+        // another Snake to die — 1,857 turns of it in one pod game.
+        crate::decision::Decision::ChooseTarget { source, legal, optional: false, .. }
+            if !legal.is_empty() && own_minus_counter_pick(state, seat, *source, legal).is_some() =>
+        {
+            own_minus_counter_pick(state, seat, *source, legal).expect("guarded")
+        }
         crate::decision::Decision::ChooseTarget { legal, optional, .. } if !legal.is_empty() => {
             // Round 53: judge the corner candidates by settled outcome at
             // the real decision. Inside a sim (`eval_modes` off) the
@@ -5497,6 +5506,45 @@ fn sacrifice_keep_value(state: &GameState, id: crate::card::CardId, w: &EvalWeig
         return -1;
     }
     permanent_value(state, id, w)
+}
+
+/// `Some` when every legal target is our own creature and the asking
+/// source's abilities put -1/-1 counters on a target: the creature that best
+/// survives one (greatest toughness, then the least valuable).
+fn own_minus_counter_pick(
+    state: &GameState,
+    seat: usize,
+    source: crate::card::CardId,
+    legal: &[crate::game::types::Target],
+) -> Option<crate::decision::DecisionAnswer> {
+    use crate::game::types::Target;
+    fn adds_minus(e: &crate::effect::Effect) -> bool {
+        let mut hit = matches!(
+            e,
+            crate::effect::Effect::AddCounter { kind: crate::card::CounterType::MinusOneMinusOne, .. }
+        );
+        e.for_each_inner(&mut |inner| hit |= adds_minus(inner));
+        hit
+    }
+    let def = &state.find_card_anywhere(source)?.definition;
+    let puts_minus = def.triggered_abilities.iter().any(|t| adds_minus(&t.effect))
+        || def.activated_abilities.iter().any(|a| adds_minus(&a.effect));
+    if !puts_minus {
+        return None;
+    }
+    let mut own = Vec::with_capacity(legal.len());
+    for t in legal {
+        let Target::Permanent(id) = t else { return None };
+        let c = state.battlefield_find(*id)?;
+        if c.controller != seat {
+            return None;
+        }
+        let cp = state.computed_permanent(*id)?;
+        own.push((*id, cp.toughness, c.is_token, c.definition.cost.cmc()));
+    }
+    own.iter()
+        .max_by_key(|(_, t, token, mv)| (*t, *token, std::cmp::Reverse(*mv)))
+        .map(|(id, ..)| crate::decision::DecisionAnswer::Target(Target::Permanent(*id)))
 }
 
 /// Bot heuristic for `Decision::ChooseTarget` (votes, edicts, free-floating
