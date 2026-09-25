@@ -82,6 +82,7 @@ mod cmdr_urdragon;
 mod cmdr_killian;
 mod cmdr_azlask;
 mod cmdr_zhulodok;
+mod cmdr_aminatou;
 mod dsk2;
 mod dsk_rooms;
 mod recent_118_132;
