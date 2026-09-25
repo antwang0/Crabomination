@@ -9252,6 +9252,8 @@ impl GameState {
                     for (id, _) in hits.into_iter().take(n) {
                         if let Some(card) = Self::take_card(&mut self.players[p].graveyard, id) {
                             self.exile.push(card);
+                            // "Exiled this way" (Augusta, Order Returned).
+                            self.scratch.exiled_card_ids_this_resolution.push(id);
                             self.players[p].cards_exiled_this_turn += 1;
                             events.push(GameEvent::PermanentExiled { card_id: id });
                             self.note_left_graveyard(p, id, events);
@@ -9268,6 +9270,7 @@ impl GameState {
                     };
                     if let Some(card) = Self::take_card(&mut self.players[p].graveyard, id) {
                         self.exile.push(card);
+                        self.scratch.exiled_card_ids_this_resolution.push(id);
                         self.players[p].cards_exiled_this_turn += 1;
                         events.push(GameEvent::PermanentExiled { card_id: id });
                         self.note_left_graveyard(p, id, events);
