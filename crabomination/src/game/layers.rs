@@ -979,6 +979,9 @@ impl SecondPass {
                 {
                     g.card_type_filtered = true
                 }
+                AffectedPermanents::CardMatch { requirement, .. } if requirement_reads_card_type(requirement) => {
+                    g.card_type_filtered = true
+                }
                 _ => {}
             }
             match e.modification {
@@ -1237,7 +1240,7 @@ fn compute_permanent_pass(
         // calls at ~137 Ir out of line, against ~0 inlined). A `push` loop is
         // the inlined shape written down, so a later build cannot flip it.
         for e in effects.iter() {
-            if affects(e, card, gate_power, gate_types, gate_card_types) {
+            if affects(e, effects, card, gate_power, gate_types, gate_card_types) {
                 sorted.push(e);
             }
         }
@@ -1478,11 +1481,34 @@ fn colors_from_card(card: &crate::card::CardInstance) -> ColorSet {
 /// excludes them.
 fn affects(
     effect: &ContinuousEffect,
+    all: &[ContinuousEffect],
     card: &crate::card::CardInstance,
     gate_power: Option<i32>,
     gate_types: Option<&[CreatureType]>,
     gate_card_types: Option<&[CardType]>,
 ) -> bool {
+    // CR 613.6 — an effect that starts applying in layer 4 keeps the set it
+    // had there in every later layer, and that set was fixed before layer 4
+    // changed any type. So in the second pass a `CardMatch` that is (part
+    // of) a card-type changer — its own requirement names a changer from the
+    // same source — reads the printed types: Titania's Song / March of the
+    // Machines' "each noncreature artifact" would otherwise read its own
+    // output and drop both the type and the P/T set it animated.
+    let gate_card_types = match (&effect.affected, gate_card_types) {
+        (AffectedPermanents::CardMatch { requirement, .. }, Some(_))
+            if all.iter().any(|o| {
+                o.source == effect.source
+                    && matches!(
+                        o.modification,
+                        Modification::AddCardType(_) | Modification::RemoveCardType(_) | Modification::SetCardTypes(_)
+                    )
+                    && matches!(&o.affected, AffectedPermanents::CardMatch { requirement: r, .. } if r == requirement)
+            }) =>
+        {
+            None
+        }
+        _ => gate_card_types,
+    };
     affected_includes_gated(&effect.affected, effect.source, card, gate_power, gate_types, gate_card_types)
 }
 
@@ -1614,7 +1640,7 @@ fn affected_includes_gated(
             if requirement_mentions_other_than_source(requirement) && source == card.id {
                 return false;
             }
-            requirement_matches_card(requirement, card, *source_controller)
+            requirement_matches_card_typed(requirement, card, *source_controller, computed_types)
         }
         AffectedPermanents::CardMatchPowerGated { source_controller, requirement, power_at_least } => {
             let Some(power) = gate_power else { return false };
@@ -1626,6 +1652,19 @@ fn affected_includes_gated(
             }
             requirement_matches_card(requirement, card, *source_controller)
         }
+    }
+}
+
+/// True when `req` has a card-type leaf — the ones
+/// [`requirement_matches_card_typed`] reads from the computed types.
+fn requirement_reads_card_type(req: &SelectionRequirement) -> bool {
+    use SelectionRequirement as R;
+    match req {
+        R::Creature | R::Artifact | R::Enchantment | R::Planeswalker | R::Land | R::Nonland | R::Noncreature => true,
+        R::HasCardType(_) => true,
+        R::And(a, b) | R::Or(a, b) => requirement_reads_card_type(a) || requirement_reads_card_type(b),
+        R::Not(inner) => requirement_reads_card_type(inner),
+        _ => false,
     }
 }
 
@@ -1726,18 +1765,31 @@ pub(crate) fn requirement_matches_card(
     card: &crate::card::CardInstance,
     source_controller: usize,
 ) -> bool {
+    requirement_matches_card_typed(req, card, source_controller, &card.definition.card_types)
+}
+
+/// [`requirement_matches_card`] with the card-type leaves read from `types`
+/// — the CR 613.8 second pass hands in the layer-4 computed types, so "each
+/// nonartifact creature" skips a creature a static made an artifact (The
+/// Flesh Is Weak).
+pub(crate) fn requirement_matches_card_typed(
+    req: &SelectionRequirement,
+    card: &crate::card::CardInstance,
+    source_controller: usize,
+    types: &[CardType],
+) -> bool {
     use SelectionRequirement as R;
     let def = &card.definition;
     match req {
         R::Any | R::Permanent => true,
         R::PermanentCard => def.is_permanent(),
-        R::Creature => def.card_types.contains(&CardType::Creature),
-        R::Artifact => def.card_types.contains(&CardType::Artifact),
-        R::Enchantment => def.card_types.contains(&CardType::Enchantment),
-        R::Planeswalker => def.card_types.contains(&CardType::Planeswalker),
-        R::Land => def.card_types.contains(&CardType::Land),
-        R::Nonland => !def.card_types.contains(&CardType::Land),
-        R::Noncreature => !def.card_types.contains(&CardType::Creature),
+        R::Creature => types.contains(&CardType::Creature),
+        R::Artifact => types.contains(&CardType::Artifact),
+        R::Enchantment => types.contains(&CardType::Enchantment),
+        R::Planeswalker => types.contains(&CardType::Planeswalker),
+        R::Land => types.contains(&CardType::Land),
+        R::Nonland => !types.contains(&CardType::Land),
+        R::Noncreature => !types.contains(&CardType::Creature),
         R::IsBasicLand => def.is_land() && def.supertypes.contains(&Supertype::Basic),
         R::IsNonbasicLand => def.is_land() && !def.supertypes.contains(&Supertype::Basic),
         R::ProducesColorless => def.produces_colorless(),
@@ -1753,7 +1805,7 @@ pub(crate) fn requirement_matches_card(
         R::ControlledByYou => card.controller == source_controller,
         R::ControlledByOpponent => card.controller != source_controller,
         R::OwnedByYou => card.owner == source_controller,
-        R::HasCardType(t) => def.card_types.contains(t),
+        R::HasCardType(t) => types.contains(t),
         R::HasSupertype(s) => def.supertypes.contains(s),
         R::HasCreatureType(ct) => def.subtypes.creature_types.contains(ct)
             || card.has_keyword(&Keyword::Changeling),
@@ -1777,14 +1829,14 @@ pub(crate) fn requirement_matches_card(
         R::Multicolored => def.printed_color_set().len() >= 2,
         R::Monocolored => def.printed_color_set().len() == 1,
         R::And(a, b) => {
-            requirement_matches_card(a, card, source_controller)
-                && requirement_matches_card(b, card, source_controller)
+            requirement_matches_card_typed(a, card, source_controller, types)
+                && requirement_matches_card_typed(b, card, source_controller, types)
         }
         R::Or(a, b) => {
-            requirement_matches_card(a, card, source_controller)
-                || requirement_matches_card(b, card, source_controller)
+            requirement_matches_card_typed(a, card, source_controller, types)
+                || requirement_matches_card_typed(b, card, source_controller, types)
         }
-        R::Not(inner) => !requirement_matches_card(inner, card, source_controller),
+        R::Not(inner) => !requirement_matches_card_typed(inner, card, source_controller, types),
         // Source exclusion is enforced in `affects()` (source id known there);
         // treat as always-matching for the printed-characteristics walk.
         R::OtherThanSource => true,
