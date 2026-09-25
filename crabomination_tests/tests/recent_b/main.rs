@@ -117,6 +117,7 @@ mod cmdr_morska;
 mod cmdr_inspirit;
 mod cmdr_hakbal;
 mod cmdr_kotori;
+mod cmdr_mirko;
 mod cmdr_kaust;
 mod cmdr_zimone_ia;
 mod cmdr_anhelo;

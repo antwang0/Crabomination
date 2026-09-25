@@ -152,6 +152,7 @@ lists were picked.
 | **Counter Intelligence** (EOC precon) URW | Inspirit, Flagship Vessel (**Spacecraft**) | URW | 100 | 🟡 all 100 implemented, 6 carry residuals (Cloud Key, Inspirit, Depthshaker Titan, Moxite Refinery, Resourceful Defense, Ripples of Potential) |
 | **Explorers of the Deep** (LCC precon) GU | Hakbal of the Surging Soul | GU | 100 | 🟡 all 100 implemented, 2 carry residuals (Xolatoyac, the Smiling Flood, Bygone Marvels) |
 | **Buckle Up** (NEC precon) WU | Kotori, Pilot Prodigy | WU | 100 | 🟡 all 100 implemented, 3 carry residuals (Armed and Armored, Katsumasa, the Animator, Dance of the Manse) |
+| **Revenant Recon** (MKC precon) UB | Mirko, Obsessive Theorist | UB | 100 | 🟡 all 100 implemented, 3 carry residuals (Marvo, Deep Operative, Watcher of Hours, Whispering Snitch) |
 | **Dance of the Elements** (ECC precon) WUBRG | Ashling, the Limitless | WUBRG | 100 | 🟡 all 100 implemented, 5 carry residuals (Flamebraider, Smokebraider, Primal Beyond, Haunting Voyage, Horde of Notions) |
 | **Veloci-Ramp-Tor** (LCC precon) RGW | Pantlaza, Sun-Favored | RGW | 100 | 🟡 all 100 implemented, 2 carry residuals (Sunfrill Imitator, Wrathful Raptors) |
 | **Mystic Intellect** (C19 precon) URW | Sevinne, the Chronoclasm | URW | 100 | 🟡 all 100 implemented (Dockside Extortionist, banned, swapped for Ragavan), 3 carry residuals (Wall of Stolen Identity, Mandate of Peace, Elsha of the Infinite) |

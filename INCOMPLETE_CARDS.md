@@ -2231,3 +2231,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Armed and Armored | Buckle Up (NEC) | "choose a Dwarf" is the engine's pick, and every Equipment you control is attached. |
 | 🟡 Katsumasa, the Animator | Buckle Up (NEC) | "each of up to three target" noncreature artifacts takes the targeter's pick. |
 | 🟡 Dance of the Manse | Buckle Up (NEC) | "up to X target" cards take the targeter's pick (capped at X). |
+| 🟡 Marvo, Deep Operative | Revenant Recon (MKC) | "whenever you win a clash" rides Marvo's own attack clash (the deck's only clash), which is with the most hostile opponent rather than the defending player. |
+| 🟡 Watcher of Hours | Revenant Recon (MKC) | removing the last time counter casts it at once, so that removal doesn't surveil. |
+| 🟡 Whispering Snitch | Revenant Recon (MKC) | "for the first time each turn" is once per turn: a surveil before it entered doesn't use up the turn's trigger. |
