@@ -128,6 +128,7 @@ lists were picked.
 | **Upgrades Unleashed** (NEC precon) RG | Chishiro, the Shattered Blade | RG | 100 | 🟡 all 100 implemented, 4 carry residuals (Concord with the Kami, Agitator Ant, Forgotten Ancient, Shifting Shadow) |
 | **Mardu Surge** (TDC precon) RWB | Zurgo Stormrender | RWB | 100 | 🟡 all 100 implemented, 1 carries a residual (Gix, Yawgmoth Praetor) |
 | **Ruthless Regiment** (C20 precon) RWB | Jirina Kudro | RWB | 100 | 🟡 all 100 implemented, 2 carry residuals (Sanctuary Blade, Odric, Master Tactician) |
+| **Most Wanted** (OTC precon) RWB | Olivia, Opulent Outlaw | RWB | 100 | 🟡 all 100 implemented, 3 carry residuals (Back in Town, Dire Fleet Ravager, Vihaan, Goldwaker) |
 | **Prismari Artistry** (SOC precon) UR | Rootha, Mastering the Moment | UR | 100 | 🟡 all 100 implemented, 2 carry residuals (Abstract Performance, Plargg and Nassari) |
 | **Exit from Exile** (CLB precon) RG | Faldorn, Dread Wolf Herald | RG | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Exquisite Invention** (C18 precon) UR | Saheeli, the Gifted (**planeswalker**) | UR | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
@@ -1276,6 +1277,25 @@ takes every mode that can act. Four-seat pods beside Kasla / Ulalek / Eshki
 10312, 1,000): all decided, Chishiro 32.0 % and 14.6 %; census (seed 10323):
 no card of the four unplayed. `--bench` byte-identical; cube/sos/sealed (seed
 10320): 7,500 decided.
+
+The **hundred-and-sixteenth** is Outlaws of Thunder Junction Commander's
+**Most Wanted** (`MostWanted_OTC`) — Mardu outlaws and Treasure under Olivia,
+Opulent Outlaw, `--pod-decks 116` (committed as 115 until Prismari Artistry
+landed there). Eighteen cards were missing (`cmdr_olivia.rs`). The
+primitives: `R::IsOutlaw` reads the layered type line on the battlefield (CR
+613.1d — Vihaan's animated Treasure Assassins are outlaws to Olivia's trigger)
+and counts a Kindred card off it; `CounterType::Hit` (Mari) —
+⚠ **`Suspect` was missing from the client's exhaustive counter-label
+matches**, so the client did not build; `Effect::RemoveCounter` reaches a
+card in exile (CR 122.1); `SpendRestriction::OutlawSpellsOrAbilities`
+(Discreet Retreat). Residuals: Back in Town chooses as it resolves; Dire
+Fleet Ravager's losses are sequential; Vihaan's own grant reads printed types
+(the layer machinery's `requirement_matches_card` keeps type leaves printed).
+Four-seat pods beside Jirina / Zurgo / Aminatou (seed 10410, 1,000 games):
+all decided, Olivia 26.9 %; beside Nelly / Galea / Chishiro (seed 10411,
+1,000): 999 decided — one Chishiro / Nelly no-progress draw after Olivia was
+out — Olivia 20.5 %; census: no card of the list unplayed. `--bench`
+byte-identical; cube/sos/sealed (seed 10412): 7,500 decided.
 
 The **hundred-and-eleventh** is Commander 2020's **Ruthless Regiment**
 (`RuthlessRegiment_C20`) — Mardu Humans under Jirina Kudro, `--pod-decks 111`
