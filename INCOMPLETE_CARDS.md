@@ -2023,6 +2023,14 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Overclocked Electromancer | Creative Energy (M3C) | the excess-damage {E} isn't gained. |
 | 🟡 Razorfield Ripper | Creative Energy (M3C) | reconfigure costs only {2}, not the {E}{E}{E} option. |
 | 🟡 Sphinx of the Revelation | Creative Energy (M3C) | the X {E} is paid as the ability resolves, not as a cost. |
+| 🟡 Call for Aid | Riders of Rohan (LTC) | nothing stops you sacrificing the borrowed creatures. |
+| 🟡 Champions of Minas Tirith | Riders of Rohan (LTC) | the opponent is never offered the {X} payment, so while you're the monarch they can't attack you. |
+| 🟡 Crown of Gondor | Riders of Rohan (LTC) | the equip is never discounted while you're the monarch. |
+| 🟡 Denethor, Stone Seer | Riders of Rohan (LTC) | you become the monarch rather than a target player. |
+| 🟡 Éomer, King of Rohan | Riders of Rohan (LTC) | you become the monarch rather than a target player. |
+| 🟡 Fealty to the Realm | Riders of Rohan (LTC) | the Aura's controller controls the creature, not whoever is the monarch. |
+| 🟡 Gilraen, Dúnedain Protector | Riders of Rohan (LTC) | the creature always returns at the next end step with its counters, never at once. |
+| 🟡 Visions of Glory | Riders of Rohan (LTC) | the flashback isn't discounted by your commander's mana value. |
 | 🟡 Akim, the Soaring Wind | Timeless Wisdom (C20) | "the first time each turn" is counted from Akim's arrival: tokens made earlier that turn don't use it up. |
 | 🟡 Crystalline Resonance | Timeless Wisdom (C20) | the copy lasts until it copies again, not until your next turn. |
 | 🟡 Ethereal Forager | Timeless Wisdom (C20) | the returned card is the first linked instant or sorcery, not a chosen one. |

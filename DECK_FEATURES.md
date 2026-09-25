@@ -145,6 +145,7 @@ lists were picked.
 | **Quandrix Unlimited** (SOC precon) GU | Zimone, Infinite Analyst | GU | 100 | 🟡 all 100 implemented, 3 carry residuals (Kinetic Ooze, Primo, Unbound Flourishing) |
 | **Maestros Massacre** (NCC precon) UBR | Anhelo, the Painter | UBR | 100 | 🟡 all 100 implemented, 7 carry residuals (Maestros Confluence, Parnesse, Sinister Concierge, Syrix, Waste Management, Xander's Pact, Zndrsplt's Judgment) |
 | **Creative Energy** (M3C precon) URW | Satya, Aetherflux Genius | URW | 100 | 🟡 all 100 implemented, 6 carry residuals (Cayth, Filigree Racer, Hourglass of the Lost, Overclocked Electromancer, Razorfield Ripper, Sphinx of the Revelation) |
+| **Riders of Rohan** (LTC precon) URW | Éowyn, Shieldmaiden | URW | 100 | 🟡 all 100 implemented, 8 carry residuals (Call for Aid, Champions of Minas Tirith, Crown of Gondor, Denethor, Éomer, Fealty to the Realm, Gilraen, Visions of Glory) |
 | **Deep Clue Sea** (MKC precon) GWU | Morska, Undersea Sleuth | GWU | 100 | 🟡 all 100 implemented, 3 carry residuals (Aerial Extortionist, Alandra, Sky Dreamer, Erdwal Illuminator) |
 | **Counter Intelligence** (EOC precon) URW | Inspirit, Flagship Vessel (**Spacecraft**) | URW | 100 | 🟡 all 100 implemented, 6 carry residuals (Cloud Key, Inspirit, Depthshaker Titan, Moxite Refinery, Resourceful Defense, Ripples of Potential) |
 | **Explorers of the Deep** (LCC precon) GU | Hakbal of the Surging Soul | GU | 100 | 🟡 all 100 implemented, 2 carry residuals (Xolatoyac, the Smiling Flood, Bygone Marvels) |
@@ -1251,6 +1252,23 @@ all decided): Galea 5.3 % — the bot does not build a Voltron threat; beside
 Estrid / Eshki / Nelly (seed 10251): 1,000 / 1,000, 5.3 %; census (seed 10252):
 no card of the four unplayed; strict debug pods (seeds 10253-10255, 4 and 6
 seats): 180 / 180. `--bench` byte-identical.
+The **hundred-and-forty-seventh** is Tales of Middle-earth Commander's **Riders of
+Rohan** (`RidersOfRohan_LTC`, 2023-06-23) — Jeskai Humans and the monarch
+under Éowyn, Shieldmaiden, `--pod-decks 147` (measured as 146). Twenty-three cards were
+missing (`cmdr_eowyn.rs`), all composed from existing parts: the monarch
+(`BecomeMonarch`, `IsMonarch`, "no monarch" as `Not(IsMonarch(EachPlayer))`),
+`CreatureEnteredThisTurnMatching`, sagas, dash, keyword counters,
+`CreaturesYouControlDealingCombatDamageThisTurn`, `CantAttackPlayerThisTurn`.
+Residuals: **Call for Aid** doesn't forbid sacrificing the borrowed creatures;
+**Champions of Minas Tirith** never offers the {X}; **Crown of Gondor**'s
+equip isn't discounted; **Denethor** and **Éomer** crown you rather than a
+target player; **Fealty to the Realm** follows the Aura's controller, not the
+monarch; **Gilraen** always returns at the end step; **Visions of Glory**'s
+flashback isn't discounted. Pods (1,000 games each): 4 seats beside Urza /
+Osgir / Eshki (seed 11116) Éowyn 32.1 %, census: no card of the four unplayed;
+6 seats (seed 11117) beside Hakbal / Satya / Kamiz / Kadena / Prosper 1,000 / 1,000; 8 seats (seed 11117) 1,000 / 1,000. `--bench`
+byte-identical.
+
 The **hundred-and-forty-fourth** is Modern Horizons 3 Commander's **Creative
 Energy** (`CreativeEnergy_M3C`, 2024-06-14) — Jeskai energy and token copies
 under Satya, Aetherflux Genius, `--pod-decks 144` (measured as 142). Eighteen cards were
