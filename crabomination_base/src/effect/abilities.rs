@@ -1232,6 +1232,12 @@ pub enum StaticEffect {
     /// cards and your life total becomes 20" (Lich's Mirror). One application
     /// replaces every simultaneous loss state-based action.
     ReplaceControllerLossWithReset,
+    /// CR 614 / 104.3 — "If you would lose the game, instead exile [this]
+    /// and your life total becomes 1" (The Golden Throne). Read by the loss
+    /// SBA through `apply_loss_exile_self`; the exile spends the shield, so a
+    /// loss state that survives the life reset (poison, commander damage)
+    /// ends the game at the next check.
+    ReplaceControllerLossWithExileSelf,
     /// Death-Mask Duplicant — "as long as a card exiled with this creature has
     /// [keyword], this creature has [keyword]". Each entry in `keywords` is
     /// matched against the exiled cards' keywords by *variant*, so

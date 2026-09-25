@@ -140,6 +140,7 @@ mod legendary_spell;
 mod entry_tally;
 // CR 120.3a — "damage doesn't cause you to lose life" (Archon of Coronation).
 mod damage_life;
+mod loss_exile;
 mod mystic_barrier;
 mod loyalty_copy;
 mod gate_mana;
@@ -30390,6 +30391,7 @@ fn static_effect_to_effects(
             // ReplaceControllerLossWithReset — read by the loss SBA via
             // `apply_loss_reset` (Lich's Mirror); no layer effect.
             | StaticEffect::ReplaceControllerLossWithReset
+            | StaticEffect::ReplaceControllerLossWithExileSelf
             // ArtifactActivatedAbilitiesLocked — consulted in
             // `activate_ability` (Collector Ouphe); no layer effect.
             | StaticEffect::ArtifactActivatedAbilitiesLocked
