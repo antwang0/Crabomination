@@ -6829,6 +6829,7 @@ impl BoardFacts {
                     // Multiverse) were invisible here, so neither was used.
                     | SE::ZeroAlternativeCostOncePerTurn { .. }
                     | SE::ZeroAlternativeCostOncePerYourTurn { .. }
+                    | SE::ZeroCostOncePerTurnMvAtMostSourceCounters(_)
                     // Henzie's granted blitz, Ashling's granted evoke.
                     | SE::GrantBlitzToSpells { .. }
                     | SE::GrantEvokeToSpells { .. } => f.grants_alt_cost = true,

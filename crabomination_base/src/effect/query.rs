@@ -834,7 +834,10 @@ impl Effect {
             | Effect::NextSpellHasAffinityForArtifacts => false,
             Effect::PayPerCounterOrSacrifice { then, .. } => then.requires_target(),
             Effect::MayPayRepeatedly { body, .. } => body.requires_target(),
-            Effect::CoffinExile { what } | Effect::ReturnSourceWhenTargetLeaves { what } => sel_has_target(what),
+            Effect::CoffinExile { what }
+            | Effect::ReturnSourceWhenTargetLeaves { what }
+            | Effect::GrantSuspendManaValueCounters { what }
+            | Effect::DealDamageToTargetAndTypeSharers { what, .. } => sel_has_target(what),
             Effect::AddCounterCapped { what, amount, cap, .. } => {
                 sel_has_target(what) || value_has_target(amount) || value_has_target(cap)
             }
@@ -1550,7 +1553,11 @@ impl Effect {
             Effect::PossibilityStorm
             | Effect::KnowledgePool
             | Effect::PermanentsEnterTappedThisTurn
-            | Effect::CreaturesFromExileShuffleThisTurn => false,
+            | Effect::CreaturesFromExileShuffleThisTurn
+            | Effect::MayExileFromHandSuspended { .. }
+            | Effect::RemoveTimeCountersFromSuspended { .. }
+            | Effect::ExileAllButConvokerKin
+            | Effect::CastFromHandPayingSuspendCost => false,
 
             Effect::ReturnResolvingSpellToHand => false,
             Effect::ExileResolvingSpell => false,
@@ -4943,7 +4950,9 @@ impl Effect {
                 | Effect::RevealRandomFromHand { who: what, .. }
                 | Effect::TopTwoGraveyardOpponentSplits { who: what }
                 | Effect::CoffinExile { what, .. }
-                | Effect::ReturnSourceWhenTargetLeaves { what } => sel_find(what, slot),
+                | Effect::ReturnSourceWhenTargetLeaves { what }
+                | Effect::GrantSuspendManaValueCounters { what }
+                | Effect::DealDamageToTargetAndTypeSharers { what, .. } => sel_find(what, slot),
                 Effect::ExchangeOwnership { a, b, .. } => {
                     sel_find(a, slot).or_else(|| sel_find(b, slot))
                 }

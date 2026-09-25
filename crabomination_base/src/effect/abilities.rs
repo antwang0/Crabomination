@@ -2623,6 +2623,11 @@ pub enum StaticEffect {
     /// cost for a [filter] spell you cast from your hand" (Darksteel
     /// Monolith). Tracked by `Player.zero_alt_cast_used_this_turn`.
     ZeroAlternativeCostOncePerTurn { filter: SelectionRequirement },
+    /// "Once each turn, you may pay {0} rather than pay the mana cost for a
+    /// spell you cast with mana value X or less, where X is the number of
+    /// [kind] counters on this" (As Foretold) — any zone; shares Darksteel
+    /// Monolith's once-each-turn tracker.
+    ZeroCostOncePerTurnMvAtMostSourceCounters(crate::card::CounterType),
     /// "Once during each of your turns, you may cast a spell from your hand
     /// … without paying its mana cost" (One with the Multiverse): the
     /// Monolith grant, gated to its controller's turn. Shares

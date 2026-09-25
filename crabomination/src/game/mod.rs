@@ -1778,6 +1778,12 @@ pub struct ColdState {
     /// cleanup (guarded, so an idle turn writes nothing to this group).
     #[serde(default)]
     pub(crate) creatures_from_exile_shuffle_this_turn: bool,
+    /// CR 702.119 — spells cast for their emerge cost this turn, with the
+    /// sacrificed creature's toughness (Adipose Offspring's "if its emerge
+    /// cost was paid … X, the sacrificed creature's toughness"). Written only
+    /// by an emerge cast; cleared (guarded) at cleanup.
+    #[serde(default)]
+    pub(crate) emerged_this_turn: Vec<(CardId, i32)>,
     /// The natural faces of the most recent `RollDie` resolution, for
     /// `Value::LastRollFaceCount` (Luck Bobblehead's "if you rolled 6 exactly
     /// seven times"). Written only when it changes.
@@ -8090,35 +8096,25 @@ impl GameState {
         use crate::card::{CounterType, Keyword};
         let active = self.active_player_idx;
         let mut events = Vec::new();
-        // Snapshot suspended exiled cards (Suspend keyword + ≥1 time counter)
-        // owned by the active player, so the borrow is released before casting.
+        // Snapshot suspended exiled cards owned by the active player — the
+        // printed keyword, or suspend *gained* (CR 702.62e, the card
+        // "Suspend", Kang Prime) — with ≥1 time counter, so the borrow is
+        // released before casting. One pass: a printed-suspend card that also
+        // gained suspend (Kang Prime exiling Star Whale) is still one
+        // suspended card, and ticked twice a turn when the two were walked
+        // separately.
         let suspended: Vec<CardId> = self
             .exile
             .iter()
             .filter(|c| {
                 c.owner == active
                     && c.counter_count(CounterType::Time) > 0
-                    && c.definition
-                        .keywords
-                        .iter()
-                        .any(|k| matches!(k, Keyword::Suspend(..)))
+                    && (c.granted_suspend
+                        || c.definition.keywords.iter().any(|k| matches!(k, Keyword::Suspend(..))))
             })
             .map(|c| c.id)
             .collect();
         for id in suspended {
-            events.append(&mut self.remove_suspend_time_counter(id));
-        }
-        // CR 702.62e — cards that *gained* suspend (the card "Suspend")
-        // tick on the same schedule even without the printed keyword.
-        let granted: Vec<CardId> = self
-            .exile
-            .iter()
-            .filter(|c| {
-                c.owner == active && c.granted_suspend && c.counter_count(CounterType::Time) > 0
-            })
-            .map(|c| c.id)
-            .collect();
-        for id in granted {
             events.append(&mut self.remove_suspend_time_counter(id));
         }
         events
@@ -31137,6 +31133,7 @@ fn static_effect_to_effects(
             | StaticEffect::GenericAlternativeCostForFilter { .. }
             | StaticEffect::LifeAlternativeCostOncePerYourTurn { .. }
             | StaticEffect::ZeroAlternativeCostOncePerTurn { .. }
+            | StaticEffect::ZeroCostOncePerTurnMvAtMostSourceCounters(_)
             | StaticEffect::ZeroAlternativeCostOncePerYourTurn { .. }
             // Narci — appended to a Saga's final chapter by `saga_chapters_crossed`.
             | StaticEffect::SagaFinalChapterRider(_)
@@ -31436,6 +31433,8 @@ fn requirement_live_leaves(req: &SelectionRequirement) -> u8 {
         | R::IsOutlaw
         | R::IsSource
         | R::TurnedFaceUpThisTurn
+        | R::HasSuspend
+        | R::PairedWithSource
         | R::IsRingBearer
         | R::IsCommander
         | R::HasNoAbilities

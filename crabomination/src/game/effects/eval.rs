@@ -1232,6 +1232,10 @@ impl GameState {
             Value::CounteredSpellManaSpent => self.countered_spell_mana_spent as i32,
             Value::CounteredSpellManaValue => self.countered_spell_mana_value as i32,
             Value::ChosenNumber => self.chosen_number_this_resolution as i32,
+            Value::EmergeSacrificedToughness => ctx
+                .source
+                .and_then(|s| self.emerged_this_turn.iter().find(|(id, _)| *id == s))
+                .map_or(0, |(_, t)| *t),
             Value::ChosenNumberOfSource => ctx
                 .source
                 .and_then(|s| self.battlefield_find(s))
@@ -4401,6 +4405,8 @@ impl GameState {
             R::OtherThanSource => Some(source.is_none_or(|s| cid != s)),
             R::IsSource => Some(source == Some(cid)),
             R::TurnedFaceUpThisTurn => Some(self.turn.turned_face_up_this_turn.contains(&cid)),
+            R::HasSuspend => Some(self.find_card_anywhere(cid).is_some_and(crate::card::CardInstance::has_suspend)),
+            R::PairedWithSource => Some(source.and_then(|s| self.battlefield_find(s)).and_then(|s| s.soulbond_partner) == Some(cid)),
             R::IsRingBearer => Some(self.is_a_ring_bearer(cid)),
             R::PutOntoBattlefieldBySource => {
                 Some(source.is_some() && card.put_onto_battlefield_by == source)
@@ -5641,6 +5647,10 @@ impl GameState {
                         .is_none_or(|chosen| *cid != chosen),
                     R::IsSource => source == Some(*cid),
                     R::TurnedFaceUpThisTurn => self.turn.turned_face_up_this_turn.contains(cid),
+                    R::HasSuspend => self.find_card_anywhere(*cid).is_some_and(crate::card::CardInstance::has_suspend),
+                    R::PairedWithSource => {
+                        source.and_then(|s| self.battlefield_find(s)).and_then(|s| s.soulbond_partner) == Some(*cid)
+                    }
                     R::IsRingBearer => self.is_a_ring_bearer(*cid),
                     R::PutOntoBattlefieldBySource => {
                         source.is_some()
@@ -6507,6 +6517,9 @@ impl GameState {
             // A card in another zone is never the battlefield source.
             R::IsSource => false,
             R::TurnedFaceUpThisTurn => self.turn.turned_face_up_this_turn.contains(&card.id),
+            R::HasSuspend => card.has_suspend(),
+            // A card off the battlefield is nobody's soulbond partner.
+            R::PairedWithSource => false,
             R::IsRingBearer => self.is_a_ring_bearer(card.id),
             R::PutOntoBattlefieldBySource => false,
             R::NotSacrificedThisResolution => {

@@ -659,6 +659,21 @@ impl GameState {
                 ..Default::default()
             });
         }
+        // As Foretold — once each turn, {0} for a spell of mana value up to
+        // the counters on it, cast from anywhere.
+        if !self.players[p].zero_alt_cast_used_this_turn
+            && self.battlefield.iter().any(|c| {
+                c.controller == p
+                    && c.definition.static_abilities.iter().any(|sa| match sa.effect {
+                        crate::effect::StaticEffect::ZeroCostOncePerTurnMvAtMostSourceCounters(kind) => {
+                            card.definition.cost.cmc() <= c.counter_count(kind)
+                        }
+                        _ => false,
+                    })
+            })
+        {
+            return Some(crate::card::AlternativeCost { once_per_turn_zero: true, ..Default::default() });
+        }
         // Darksteel Monolith — once each turn, {0} for a matching spell cast
         // from hand.
         if matches!(zone, AltCastZone::Hand)
@@ -13625,6 +13640,8 @@ impl GameState {
         if let Some(sac_cid) = emerge_sac
             && self.battlefield_find(sac_cid).is_some()
         {
+            let toughness = self.computed_permanent(sac_cid).map_or(0, |cp| cp.toughness);
+            self.emerged_this_turn.push((card_id, toughness));
             auto_events.push(GameEvent::PermanentSacrificed { card_id: sac_cid, who: p });
             let mut die_evs = self.remove_to_graveyard_as_cost(sac_cid);
             auto_events.append(&mut die_evs);

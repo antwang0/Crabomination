@@ -3348,6 +3348,13 @@ pub enum SelectionRequirement {
     /// CR 708 — the candidate permanent was turned face up this turn
     /// (`TurnRegistries.turned_face_up_this_turn`; Kaust, Eyes of the Glade).
     TurnedFaceUpThisTurn,
+    /// CR 702.62 — the card has suspend: the printed keyword, or suspend it
+    /// gained (`CardInstance.granted_suspend`, CR 702.62e — Kang Prime, The
+    /// Tenth Doctor). "If it doesn't have suspend, it gains suspend."
+    HasSuspend,
+    /// CR 702.95 — the candidate is the source's soulbond partner ("a
+    /// creature it's paired with", Donna Noble).
+    PairedWithSource,
     /// CR 701.54c — the candidate is some player's Ring-bearer (read through
     /// `GameState::effective_ring_bearer`, so a bearer that left or changed
     /// control no longer counts). Lord of the Nazgûl's "protection from
@@ -10197,6 +10204,11 @@ impl CardInstance {
         self.face_up_def = Some(self.definition.arc());
         self.set_definition(Arc::new(facedown_forest_definition()));
         self.face_down = true;
+    }
+
+    /// CR 702.62 — has suspend: printed, or gained (CR 702.62e).
+    pub fn has_suspend(&self) -> bool {
+        self.granted_suspend || self.definition.keywords.iter().any(|k| matches!(k, Keyword::Suspend(..)))
     }
 
     /// Turn this card face down as a 2/2 Cyberman artifact creature

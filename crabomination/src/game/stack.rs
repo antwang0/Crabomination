@@ -5128,6 +5128,7 @@ impl GameState {
         if self.creatures_from_exile_shuffle_this_turn {
             self.creatures_from_exile_shuffle_this_turn = false;
         }
+        clear_cold!(self.emerged_this_turn);
         clear_cold!(self.cant_attack_pw_type_this_turn);
         self.graveyard_play_pooled_for = None;
         self.block_poison_this_turn = 0;

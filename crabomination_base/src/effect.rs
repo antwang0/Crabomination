@@ -1046,6 +1046,10 @@ pub enum Value {
     /// `Effect::ChooseNumberForSource` (Phyrexian Processor's "the life paid
     /// as this artifact entered"). Zero when nothing was chosen.
     ChosenNumberOfSource,
+    /// CR 702.119 — the toughness of the creature sacrificed to cast the
+    /// source for its emerge cost this turn; 0 when it wasn't emerged
+    /// (Adipose Offspring).
+    EmergeSacrificedToughness,
     /// Nonland cards exiled by the enclosing
     /// [`Effect::ExileTopBatchesUntilLandLast`] (Rally the Horde).
     NonlandCardsExiledThisEffect,
@@ -10371,6 +10375,28 @@ pub enum Effect {
     /// or after being cast from exile, their owners shuffle them into their
     /// libraries instead" (Don't Blink).
     CreaturesFromExileShuffleThisTurn,
+    /// "Put a number of time counters on it equal to its mana value. If it
+    /// doesn't have suspend, it gains suspend" (The Parting of the Ways) —
+    /// `GrantSuspend` with each card's own mana value as the count.
+    GrantSuspendManaValueCounters { what: Selector },
+    /// "[who] may exile a [filter] card from their hand with a number of time
+    /// counters on it equal to its mana value. If it doesn't have suspend, it
+    /// gains suspend" (The Eleventh Doctor, The Wedding of River Song).
+    MayExileFromHandSuspended { who: PlayerRef, filter: SelectionRequirement },
+    /// "Choose a suspended card you own and remove `amount` time counters from
+    /// it" (Amy Pond) — through the suspend funnel, so the last one casts it
+    /// (CR 702.62).
+    RemoveTimeCountersFromSuspended { amount: Value },
+    /// "Deals `amount` damage to target creature and each other creature that
+    /// shares a creature type with it" (Killer).
+    DealDamageToTargetAndTypeSharers { what: Selector, amount: Value },
+    /// "Exile all creatures except those that share a creature type with a
+    /// creature that convoked this spell, all artifacts, and all enchantments"
+    /// (Everything Comes to Dust).
+    ExileAllButConvokerKin,
+    /// "You may cast a spell with suspend from your hand. If you do, pay its
+    /// suspend cost rather than its mana cost" (The Face of Boe).
+    CastFromHandPayingSuspendCost,
 
     /// Knowledge Pool's cast replacement — the just-cast spell (the trigger
     /// source) is exiled stamped `exiled_with = source`, and its caster may

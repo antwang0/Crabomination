@@ -53,6 +53,7 @@ mod reveal_until;
 mod shell_game;
 mod linked_return;
 mod masters_of_evil;
+mod timey_wimey;
 mod life_loss_grants;
 mod spell_damage;
 mod static_copy;
@@ -16175,10 +16176,13 @@ impl GameState {
                     }
                 }
                 // Out of Time — one time counter on the source per permanent
-                // phased out this way.
+                // phased out this way ("vanishing X, where X is …", printed
+                // as Vanishing 0). Only a vanishing source: Oubliette and The
+                // Moment phase things out until they leave and count nothing.
                 if *until_source_leaves && phased > 0
                     && let Some(sid) = source
-                    && let Some(src) = self.battlefield_find_mut(sid) {
+                    && let Some(src) = self.battlefield_find_mut(sid)
+                    && src.definition.keywords.iter().any(|k| matches!(k, crate::card::Keyword::Vanishing(_))) {
                         src.add_counters(crate::card::CounterType::Time, phased);
                         events.push(GameEvent::CounterAdded {
                             card_id: sid,
@@ -31885,6 +31889,19 @@ impl GameState {
                 }
                 Ok(())
             }
+
+            Effect::GrantSuspendManaValueCounters { what } => self.grant_suspend_mana_value_counters(what, ctx, events),
+            Effect::MayExileFromHandSuspended { who, filter } => {
+                self.may_exile_from_hand_suspended(who, filter, effect, ctx, events)
+            }
+            Effect::RemoveTimeCountersFromSuspended { amount } => {
+                self.remove_time_counters_from_suspended(amount, effect, ctx, events)
+            }
+            Effect::DealDamageToTargetAndTypeSharers { what, amount } => {
+                self.deal_damage_to_target_and_type_sharers(what, amount, ctx, events)
+            }
+            Effect::ExileAllButConvokerKin => self.exile_all_but_convoker_kin(ctx, events),
+            Effect::CastFromHandPayingSuspendCost => self.cast_from_hand_paying_suspend_cost(effect, ctx, events),
 
             Effect::CreaturesFromExileShuffleThisTurn => {
                 self.creatures_from_exile_shuffle_this_turn = true;
