@@ -5663,9 +5663,20 @@ impl GameState {
             .iter()
             .filter(|c| c.controller == q && !c.tapped && c.definition.is_creature())
             .count();
+        // Pariah / Pariah's Shield / Palisade Giant — damage aimed at `q`
+        // lands on a creature instead, so `q` is the worst seat to aim at.
+        // Brash Taunter enchanted by an opponent's Pariah hit that opponent,
+        // took the damage itself, and fired again 5,697 times to the pod's
+        // action cap (seed 21091, game 48).
+        let shielded = if self.damage_redirect_target(crate::game::effects::EntityRef::Player(q)).is_some() {
+            1_000
+        } else {
+            0
+        };
         i64::from(race) * 3
             + i64::from(100 - self.effective_life(q).clamp(0, 100)) * 2
             + (10 - untapped.min(10)) as i64
+            - shielded
     }
 
     /// CR 800.4j — the seat that actually receives priority when `seat` would.

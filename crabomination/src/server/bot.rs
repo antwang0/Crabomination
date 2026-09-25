@@ -5626,7 +5626,13 @@ pub fn decide_choose_target(
             Target::Player(p) if *p != seat => Some(*p),
             _ => None,
         })
-        .min_by_key(|p| state.players[*p].life);
+        // A seat whose damage lands on a creature (Pariah) is last: Brash
+        // Taunter wearing an opponent's Pariah hit that opponent, took the
+        // damage itself and fired again 5,697 times (seed 21091, game 48).
+        .min_by_key(|p| {
+            let shielded = state.damage_redirect_target(crate::game::effects::EntityRef::Player(*p)).is_some();
+            (shielded, state.players[*p].life)
+        });
     if let Some(p) = best_player {
         return DecisionAnswer::Target(Target::Player(p));
     }
@@ -24359,6 +24365,36 @@ mod tests {
         // Only enough mana for the {R} pip — X must collapse to 0.
         g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
         assert_eq!(max_affordable_x(&g, 0, &card, &EvalWeights::default()), 0);
+    }
+
+    /// Brash Taunter wearing an opponent's Pariah: damage to that opponent is
+    /// dealt to the Taunter, which triggers it again — the pod ran it 5,697
+    /// times (seed 21091, game 48). Another opponent is the target.
+    #[test]
+    fn brash_taunter_avoids_the_pariah_opponent() {
+        let mut g = crate::game::multi_player_game(3);
+        let me = 0;
+        g.players[me].wants_ui = true;
+        let taunter = g.add_card_to_battlefield(me, catalog::brash_taunter());
+        let pariah = g.add_card_to_battlefield(1, catalog::pariah());
+        g.battlefield_find_mut(pariah).unwrap().attached_to = Some(taunter);
+        g.players[1].life = 5;
+        assert_eq!(
+            g.damage_redirect_target(crate::game::effects::EntityRef::Player(1)),
+            Some(taunter),
+            "Pariah redirects its controller's damage"
+        );
+        let ctx = crate::game::effects::EffectContext::for_spell(2, None, 0, 0);
+        let evs = g
+            .resolve_effect(
+                &Effect::DealDamage { to: crate::effect::Selector::ExactObjects(vec![taunter]), amount: crate::card::Value::Const(2) },
+                &ctx,
+            )
+            .expect("damage");
+        g.dispatch_triggers_for_events(&evs);
+        let pending = g.pending_decision.clone().expect("the Taunter asks for its target");
+        let answer = decide_pending_policy(&g, me, &EvalWeights::default(), &pending.decision, true);
+        assert_eq!(answer, crate::decision::DecisionAnswer::Target(Target::Player(2)), "{:?}", pending.decision);
     }
 
     /// CR 702.122's shape — Fireball costs {1} more per target beyond the
