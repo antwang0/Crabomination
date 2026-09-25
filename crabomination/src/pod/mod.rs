@@ -1144,6 +1144,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SAHEELI_RADIANT_COMMANDERS,
             main: decks::SAHEELI_RADIANT_MAIN,
         },
+        // Seat 139: Counter Intelligence (EOC) — Jeskai artifacts and counters
+        // under the Spacecraft commander Inspirit, Flagship Vessel (CR 903.3's
+        // Spacecraft clause). `--pod-decks 139`.
+        PodDeck {
+            name: "Inspirit, Flagship Vessel (URW)",
+            commanders: decks::INSPIRIT_COMMANDERS,
+            main: decks::INSPIRIT_MAIN,
+        },
     ]
 }
 

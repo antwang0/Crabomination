@@ -4215,3 +4215,33 @@ pub const SAHEELI_RADIANT_MAIN: &[CardFactory] = &[
     island, island, island, island, island, mountain, mountain, mountain, mountain, mountain,
     forest, forest, forest, forest, forest, forest,
 ];
+
+pub const INSPIRIT_COMMANDERS: &[CardFactory] = &[inspirit_flagship_vessel];
+
+/// **Counter Intelligence**, the Edge of Eternities Commander deck (EOC,
+/// 2025-08-01), exactly as MTGJSON's `CounterIntelligence_EOC` prints it: 90
+/// nonbasic cards + 3 Plains + 3 Islands + 3 Mountains = 99. Jeskai artifacts
+/// and counters under the Spacecraft commander Inspirit, Flagship Vessel.
+pub const INSPIRIT_MAIN: &[CardFactory] = &[
+    kilo_apogee_mind, patrolling_peacemaker, insight_engine, uthros_research_craft,
+    depthshaker_titan, long_range_sensor, moxite_refinery, solar_array, surge_conductor,
+    glittering_massif, radiant_summit, swan_song, chaos_warp, cloud_key, gavel_of_the_righteous,
+    battlefield_forge, angel_of_the_ruins, fumigate, organic_extinction, resourceful_defense,
+    chrome_host_seedshark, cyberdrive_awakener, deepglow_skate, emry_lurker_of_the_loch,
+    kappa_cannoneer, phyrexian_metamorph, pull_from_tomorrow, ripples_of_potential,
+    tekuthal_inquiry_dominus, thought_monitor, universal_surveillance, chain_reaction,
+    alibou_ancient_witness, jhoira_weatherlight_captain, wake_the_past, astral_cornucopia,
+    crystalline_crawler, darksteel_reactor, empowered_autogenerator, hangarback_walker,
+    lux_artillery, lux_cannon, steel_overseer, threefold_thunderhulk, titan_forge,
+    adarkar_wastes, cascade_bluffs, clifftop_retreat, exotic_orchard, glacial_fortress,
+    irrigated_farmland, karns_bastion, the_mycosynth_gardens, rugged_prairie, shivan_reef,
+    skycloud_expanse, spire_of_industry, sulfur_falls, temple_of_enlightenment,
+    temple_of_epiphany, temple_of_triumph, swords_to_plowshares, tezzerets_gambit,
+    thirst_for_knowledge, arcane_signet, pentad_prism, sol_ring, command_tower, dispatch,
+    etherium_sculptor, experimental_augury, thrummingbird, enthusiastic_mechanaut, coretapper,
+    etched_oracle, everflowing_chalice, golem_foundry, mindless_automaton, soul_guide_lantern,
+    ancient_den, buried_ruin, evolving_wilds, great_furnace, lonely_sandbar, mystic_monastery,
+    razortide_bridge, rustvale_bridge, seat_of_the_synod, secluded_steppe, silverbluff_bridge,
+    // Basics: 3 plains, 3 island, 3 mountain
+    plains, plains, plains, island, island, island, mountain, mountain, mountain,
+];
