@@ -2417,6 +2417,18 @@ impl GameState {
                     }
                 }
             }
+            // CR 113.6b — Eminence: a "whenever you attack" that functions
+            // from the command zone (Sidar Jabari of Zhalfir).
+            if !self.command_zones_are_empty() {
+                for c in self.players[ap].command.iter() {
+                    let all = c.command_zone_abilities_active();
+                    for t in &c.definition.triggered_abilities {
+                        if (all || t.event.zone.in_command_zone()) && listens(t, ap) {
+                            you_attack.push((c.id, ap, t.effect.clone(), t.event.filter.clone()));
+                        }
+                    }
+                }
+            }
             for (src, ctrl, effect, filter) in you_attack {
                 // CR 603.2 — the "whenever you attack with …" rider is a
                 // trigger-time gate read off the finished attack declaration.
