@@ -1343,6 +1343,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::YSHTOLA_COMMANDERS,
             main: decks::YSHTOLA_MAIN,
         },
+        // Hundred-and-sixty-fourth: Blight Curse (Lorwyn Eclipsed) — Jund
+        // -1/-1 counters under Auntie Ool, Cursewretch (CR 701.68 blight as a
+        // cost, CR 701.30 Hoarder's Greed's repeating clash). `--pod-decks 164`.
+        PodDeck {
+            name: "Auntie Ool, Cursewretch (BRG)",
+            commanders: decks::AUNTIE_COMMANDERS,
+            main: decks::AUNTIE_MAIN,
+        },
     ]
 }
 

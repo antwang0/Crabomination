@@ -2594,6 +2594,30 @@ Vehicle, an activated manland or a stationed Spacecraft stayed home: Kotori
 Inspirit / Morska (seed 15101, 1,000) and six seats (15102, 1,000): all
 decided; census (15103, 500): nothing unplayed. `--bench` byte-identical.
 
+The **hundred-and-sixty-fourth** is Lorwyn Eclipsed Commander's **Blight
+Curse** (`BlightCurse_ECC`, 2026-01-23) — Jund -1/-1 counters under Auntie Ool,
+Cursewretch, `--pod-decks 164` (built as 163; Scions & Spellcraft landed
+there first). Thirty cards were missing (`cmdr_auntie.rs`).
+The primitives: `AdditionalCastCost::Blight` (CR 701.68 — Burning Curiosity's
+optional "you may blight 1" rides `kicker_action_cost`),
+`Effect::RepeatWhileClashWon` (CR 701.30, Hoarder's Greed: each win re-enters
+the effect as the clash's payoff, so a suspended clash resumes there),
+`Effect::ExchangePlayerLifeWithSourceToughness` (CR 119.7, Tree of Perdition),
+`Effect::RemoveCountersFromAmongDrawAndLoseLife` (Eventide's Shadow) and
+`Predicate::CounterPutOnCreatureThisTurn` (a turn stamp — Lasting Tarfire).
+Its pods found ⚠ **the bot gave a forced -1/-1 counter to its own 1/1 token**
+— the edict heuristic's "least valuable" — whose death re-fired Blowfly
+Infestation and minted Hapatra another Snake to die (1,857 turns; now the body
+that survives it). One six-seat game (seed 16302, game 525) is a genuine
+mandatory loop: a stolen Marauding Raptor under Everlasting Torment wither-
+damages each entering Snake, Hapatra makes another (CR 104.4b — a draw; the
+engine ends it at the action cap). Residuals: **Hapatra**, **Lasting
+Tarfire**, **Eventide's Shadow**, **Puca's Covenant** (INCOMPLETE_CARDS).
+Four seats beside Frodo + Sam / Jace / Terra (seed 16301, 1,000): all decided,
+Auntie 17.5 %; six seats beside Mirko / Brass / Cloud / Lathril / Pantlaza
+(16302, 1,000): 999 decided, Auntie 12.2 %; census (16303, 500): nothing
+unplayed; a strict debug pod (16304, 60) decided. `--bench` byte-identical.
+
 The **hundred-and-fifty-ninth** is Murders at Karlov Manor Commander's
 **Revenant Recon** (`RevenantRecon_MKC`, 2024-02-09) — Dimir surveil,
 reanimation and copies under Mirko, Obsessive Theorist, `--pod-decks 159`

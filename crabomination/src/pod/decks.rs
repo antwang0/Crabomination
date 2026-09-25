@@ -4963,3 +4963,32 @@ pub const YSHTOLA_MAIN: &[CardFactory] = &[
     // Basics: 4 plains, 3 island, 4 swamp
     plains, plains, plains, plains, island, island, island, swamp, swamp, swamp, swamp,
 ];
+
+pub const AUNTIE_COMMANDERS: &[CardFactory] = &[auntie_ool_cursewretch];
+
+/// **Blight Curse**, the Lorwyn Eclipsed Commander deck (ECC, 2026-01-23),
+/// exactly as MTGJSON's `BlightCurse_ECC` prints it: 81 nonbasic cards + 8
+/// Swamp + 4 Mountain + 6 Forest = 99. Jund -1/-1 counters under Auntie Ool,
+/// Cursewretch.
+pub const AUNTIE_MAIN: &[CardFactory] = &[
+    the_reaper_king_no_more, wickersmiths_tools, sinister_gnarlbark, eventides_shadow,
+    aberrant_return, dread_tiller, grave_venerations, oft_nabbed_goat, village_pillagers,
+    pucas_covenant, ferrafor_young_yew, tree_of_perdition, vernal_fen, festering_thicket,
+    necroskitter, ignoble_hierarch, nesting_grounds, massacre_girl_known_killer, grave_titan,
+    vraska_betrayals_sting, the_scorpion_god, liliana_death_wielder, chimil_the_inner_sun,
+    carnifex_demon, puppeteer_clique, dusk_urchins, black_suns_zenith, painful_truths, persist,
+    midnight_banshee, chain_reaction, archfiend_of_ifnir, channeler_initiate,
+    hapatra_vizier_of_poisons, glissa_sunslayer, everlasting_torment, assassins_trophy,
+    grim_poppet, canyon_slough, sheltered_thicket, exotic_orchard, smoldering_marsh,
+    cinder_glade, dragonskull_summit, rootbound_crag, woodland_cemetery, lasting_tarfire,
+    burning_curiosity, hoarders_greed, blowfly_infestation, fire_covenant, sol_ring,
+    arcane_signet, command_tower, cathartic_reunion, skinrender, soul_snuffers,
+    incremental_blight, infernal_grasp, evolution_sage, devoted_druid, flourishing_defenses,
+    harmonize, putrefy, binding_the_old_gods, kulrath_knight, contagion_clasp, savage_lands,
+    ifnir_deadlands, nights_whisper, wickerbough_elder, terminate, commanders_sphere,
+    cathartic_pyre, evolving_wilds, terramorphic_expanse, path_of_ancestry, riveteers_overlook,
+    rakdos_carnarium, gruul_turf, golgari_rot_farm,
+    // Basics: 8 swamp, 4 mountain, 6 forest
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, mountain, mountain, mountain,
+    mountain, forest, forest, forest, forest, forest, forest,
+];
