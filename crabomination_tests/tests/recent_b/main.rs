@@ -62,6 +62,7 @@ mod cmdr_saheeli_radiant;
 mod cmdr_perrie;
 mod cmdr_anje;
 mod cmdr_cloud_fic;
+mod cmdr_terra;
 mod cmdr_sevinne;
 mod cmdr_lathril;
 mod cmdr_emmara;
