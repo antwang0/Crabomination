@@ -752,6 +752,11 @@ pub enum Value {
     /// controller's (Oreskos Explorer: "the number of players who control
     /// more lands than you").
     PlayersWithGreaterTally(crate::card::PlayerTally),
+    /// Living players whose `tally` is strictly smaller than the source
+    /// controller's — never the controller, so "each opponent who controls
+    /// fewer creatures than you" (Birth of the Imperium). The mirror of
+    /// `PlayersWithGreaterTally`.
+    PlayersWithFewerTally(crate::card::PlayerTally),
     /// CR 700.2 — how many modes were chosen for the resolved spell (Riku of
     /// Many Paths reads the triggering spell's mode count).
     ModesChosenOf(Box<Selector>),

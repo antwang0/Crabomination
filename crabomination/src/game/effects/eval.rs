@@ -647,6 +647,10 @@ impl GameState {
                 let mine = self.player_tally(ctx.controller, *tally);
                 self.living_seats().filter(|&p| self.player_tally(p, *tally) > mine).count() as i32
             }
+            Value::PlayersWithFewerTally(tally) => {
+                let mine = self.player_tally(ctx.controller, *tally);
+                self.living_seats().filter(|&p| self.player_tally(p, *tally) < mine).count() as i32
+            }
             // CR 800.4a — a player who has left the game is nobody's opponent.
             Value::OpponentsWithHandSizeAtMost(n) => self
                 .opponents_of(ctx.controller)
