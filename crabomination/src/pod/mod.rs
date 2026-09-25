@@ -1335,6 +1335,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::FRODO_COMMANDERS,
             main: decks::FRODO_MAIN,
         },
+        // Hundred-and-sixty-third: the hundred-and-fifty-third official
+        // list (Scions & Spellcraft, FIC) — Esper spells under Y'shtola.
+        // `--pod-decks 163`.
+        PodDeck {
+            name: "Y'shtola, Night's Blessed (WUB)",
+            commanders: decks::YSHTOLA_COMMANDERS,
+            main: decks::YSHTOLA_MAIN,
+        },
     ]
 }
 

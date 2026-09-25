@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Ten hand-picked commanders plus a hundred and forty-eight official preconstructed lists, each a
+//! Ten hand-picked commanders plus a hundred and fifty-three official preconstructed lists, each a
 //! 99 of cards this engine implements: legal under CR 903 (100 cards
 //! including the commander, singleton outside basics, every card inside the
 //! commander's CR 903.4 color identity) and Commander-legal per Scryfall's
@@ -8,7 +8,7 @@
 //!
 //! The ten were built by hand because the offline Scryfall cache cannot say
 //! how a precon splits into decks; MTGJSON's deck files can, and the eleventh
-//! through hundred-and-fifty-eighth (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
+//! through hundred-and-sixty-third (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
 //! Win, Tails You Lose, Goblin Storm, Foundations Commander's Wretched Ranks,
 //! Tramplesaurus Rex and Keen Engineering, Commander Legends' Reap the Tides,
 //! Phyrexia: All Will Be One's Corrupting Influence, Zendikar Rising's Sneak
@@ -55,9 +55,9 @@
 //! Foundations Commander's Reign of Dragons, among others — seat 124 is
 //! Innistrad: Crimson Vow Commander's Spirit Squadron, seat 133 Duskmourn
 //! Commander's Jump Scare!, seat 143 Streets of New Capenna Commander's
-//! Obscura Operation seat 150 Tales of Middle-earth Commander's Elven
-//! Council and seat 158 The Lost Caverns of Ixalan Commander's Ahoy
-//! Mateys) are taken from one card for card. What all of them keep
+//! Obscura Operation, seat 150 Tales of Middle-earth Commander's Elven
+//! Council, seat 158 The Lost Caverns of Ixalan Commander's Ahoy Mateys
+//! and seat 163 Final Fantasy XIV's Scions & Spellcraft) are taken from one card for card. What all of them keep
 //! from the precon idea is what the pod needs — fixed, legal, varied color
 //! identities, and built to play against each other.
 //! One is a Partner pair (CR 702.124b), one is a **planeswalker**
@@ -4932,4 +4932,34 @@ pub const FRODO_MAIN: &[CardFactory] = &[
     // Basics: 4 plains, 4 swamp, 8 forest
     plains, plains, plains, plains, swamp, swamp, swamp, swamp, forest, forest, forest,
     forest, forest, forest, forest, forest,
+];
+
+pub const YSHTOLA_COMMANDERS: &[CardFactory] = &[yshtola_nights_blessed];
+
+/// **Scions & Spellcraft**, the Final Fantasy XIV Commander deck (FIC,
+/// 2025-06-13), exactly as MTGJSON's `ScionsSpellcraftFinalFantasyXiv_FIC`
+/// prints it: 88 nonbasic cards + 4 Plains + 3 Islands + 4 Swamps = 99. Esper noncreature
+/// spells under Y'shtola, Night's Blessed.
+pub const YSHTOLA_MAIN: &[CardFactory] = &[
+    graha_tia_scion_reborn, alisaie_leveilleur, champions_from_beyond, dancers_chakrams,
+    summon_good_king_mog_xii, tataru_taru, thancred_waters, alphinaud_leveilleur,
+    blue_mages_cane, hermes_overseer_of_elpis, hraesvelgr_of_the_first_brood, observed_stasis,
+    eye_of_nidhogg, fandaniel_telophoroi_ascian, astrologians_planisphere, reapers_scythe,
+    transpose, ardbert_warrior_of_darkness, emet_selch_of_the_third_seat, estinien_varlineau,
+    hildibrand_manderville, krile_baldesion, lyse_hext, papalymo_totolymo, urianger_augurelt,
+    archaeomancers_map, authority_of_the_consuls, cleansing_nova, final_judgment,
+    archmage_emeritus, dig_through_time, rite_of_replication, sublime_epiphany,
+    torrential_gearhulk, crux_of_fate, lethal_scheme, murderous_rider, baleful_strix, vindicate,
+    void_rend, coveted_jewel, tome_of_legends, choked_estuary, darkwater_catacombs,
+    desolate_mire, drowned_catacomb, exotic_orchard, fetid_heath, glacial_fortress,
+    isolated_chapel, port_town, prairie_stream, scavenger_grounds, shineshadow_snarl,
+    skycloud_expanse, sunken_hollow, sunken_ruins, underground_river, white_auracite,
+    sages_nouliths, circle_of_power, cut_a_deal, lingering_souls, swords_to_plowshares,
+    hypnotic_sprite, into_the_story, propaganda, bastion_of_remembrance, exsanguinate,
+    snuff_out, syphon_mind, arcane_signet, relic_of_legends, sol_ring, talisman_of_dominance,
+    talisman_of_hierarchy, talisman_of_progress, thought_vessel, arcane_sanctum, ash_barrens,
+    command_tower, contaminated_aquifer, demolition_field, evolving_wilds, idyllic_beachfront,
+    path_of_ancestry, sunlit_marsh, temple_of_the_false_god,
+    // Basics: 4 plains, 3 island, 4 swamp
+    plains, plains, plains, plains, island, island, island, swamp, swamp, swamp, swamp,
 ];
