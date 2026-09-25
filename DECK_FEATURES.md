@@ -169,6 +169,7 @@ lists were picked.
 | **Cavalry Charge** (MOC precon) WUB | Sidar Jabari of Zhalfir | WUB | 100 | 🟡 all 100 implemented, 3 carry residuals (Path of the Enigma, Syr Elenora, Aryel) |
 | **Eternal Bargain** (C13 precon) WUB | Oloro, Ageless Ascetic | WUB | 100 | 🟡 all 100 implemented, 4 carry residuals (Order of Succession, Lim-Dûl's Vault, Springjack Pasture, Serene Master) |
 | **Power Hungry** (C13 precon) BRG | Prossh, Skyraider of Kher | BRG | 100 | 🟡 all 100 implemented, 4 carry residuals (Sudden Demise, Night Soil, Widespread Panic, Capricious Efreet) |
+| **Limit Break** (FIC precon) RGW | Cloud, Ex-SOLDIER | RGW | 100 | 🟡 all 100 implemented, 4 carry residuals (Professor Hojo, Helitrooper, Lifestream's Blessing, Yuffie) |
 | **Merciless Rage** (C19 precon) BR | Anje Falkenrath | BR | 100 | 🟡 all 100 implemented, 5 carry residuals (Archfiend of Spite, Boneyard Parley, Chainer, Hedonist's Trove, K'rrik) |
 | **Bedecked Brokers** (NCC precon) GWU | Perrie, the Pulverizer | GWU | 100 | 🟡 all 100 implemented, 5 carry residuals (Kros, Aven Mimeomancer, Agent's Toolkit, Littjara Mirrorlake, Skyship Plunderer) |
 | **Living Energy** (DRC precon) GUR | Saheeli, Radiant Creator | GUR | 100 | 🟡 all 100 implemented, 4 carry residuals (Aetherflux Conduit, Territorial Aetherkite, Rampaging Aetherhood, Saheeli) |
@@ -1596,6 +1597,25 @@ Galea / Kathril / Chishiro (seed 10400, 1,000 games) and Nelly / Eshki /
 Estrid (seed 10401, 1,000): all decided, Jirina 28.4 % and 24.3 %; census
 (seed 10401): no card of the list unplayed. `--bench` byte-identical;
 cube/sos/sealed (seed 10402): 7,500 decided.
+
+The **hundred-and-fifty-seventh** is the Final Fantasy VII Commander deck
+**Limit Break** (`LimitBreakFinalFantasyVii_FIC`) — Naya Equipment and
+power-7 payoffs under Cloud, Ex-SOLDIER (already in `fin.rs`),
+`--pod-decks 157`. Twenty-two cards were missing (`cmdr_cloud_fic.rs`). The
+primitives: `Predicate::SpellWasCastFromExile` (the resolving spell's own
+`cast_from_exile`, stamped into `EffectContext.spell_cast_from_exile` — the
+foretold riders of Lifestream's Blessing and Ultimate Magic: Holy / Meteor),
+`Effect::DestroyOnePerOpponent` (Meteor — `PlayerChoosesToDestroy` only picks
+among the chooser's own permanents) and `CounterType::Cell` (Sephiroth). Pods
+(seed 157, 1,000 each): 4 seats 1,000 decided, Cloud 37.3 %; 6 seats against
+the Leinore / Sidar / Oloro / Prossh / Nalia precons 1,000 decided, 5.6 %;
+8 seats (seats 4-10) 1,000 decided, 14.6 % — the strongest of this run's
+lists. Residuals: Professor Hojo has no first-targeting discount and draws for
+any permanent's targeting ability; Helitrooper's equip discount covers every
+equip; Lifestream's Blessing reads X as it resolves; Yuffie's Equipment is
+the engine's pick. Census: every card played across the three pods (Clever
+Concealment went uncast in the 4-seat run only). Debug strict pods (400
+games): clean. `--bench` byte-identical.
 
 The **hundred-and-fifty-second** is Commander 2019's **Merciless Rage**
 (`MercilessRage_C19`) — Rakdos madness under Anje Falkenrath, `--pod-decks

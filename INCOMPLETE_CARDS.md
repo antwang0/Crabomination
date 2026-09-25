@@ -2117,6 +2117,10 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Night Soil | Power Hungry (C13) | the two creature cards come from your own graveyard, not any single graveyard. |
 | 🟡 Widespread Panic | Power Hungry (C13) | any shuffle a spell or ability makes counts, not only one its controller made of their own library. |
 | 🟡 Capricious Efreet | Power Hungry (C13) | the up-to-two opposing targets are the auto-picker's; no UI prompt for the optional slots. |
+| 🟡 Professor Hojo | Limit Break (FIC) | no "first activated ability targeting your creature costs {2} less" discount; the draw fires for any permanent's ability targeting your creature. |
+| 🟡 Helitrooper | Limit Break (FIC) | the {2} equip discount applies to every equip you activate, not only ones targeting it. |
+| 🟡 Lifestream's Blessing | Limit Break (FIC) | X (greatest power) is read as it resolves, not as it was cast. |
+| 🟡 Yuffie, Materia Hunter | Limit Break (FIC) | the Equipment attached is the engine's pick among yours. |
 | 🟡 Archfiend of Spite | Merciless Rage (C19) | the damaging player always sacrifices when they have that many permanents; they never choose the life loss. |
 | 🟡 Boneyard Parley | Merciless Rage (C19) | the up-to-five creature cards are an untargeted pick (the first five in seat order). |
 | 🟡 Chainer, Nightmare Adept | Merciless Rage (C19) | the graveyard-cast permission names one creature card (the first) as it resolves. |
