@@ -99,7 +99,7 @@ lists were picked.
 | **Elven Council** (LTC precon) GU | Galadriel, Elven-Queen | GU | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
 | **Ahoy Mateys** (LCC precon) UBR | Admiral Brass, Unsinkable | UBR | 100 | 🟡 all 100 implemented, 10 carry residuals (below) |
 | **Scions & Spellcraft** (FIC precon) WUB | Y'shtola, Night's Blessed | WUB | 100 | 🟡 all 100 implemented, 6 carry residuals (below) |
-| **From Cute to Brute** (SLD Commander deck) WUBRG | Esika, God of the Tree | WUBRG | 100 | 🟡 all 100 implemented, 16 carry residuals (below) |
+| **From Cute to Brute** (SLD Commander deck) WUBRG | Esika, God of the Tree | WUBRG | 100 | 🟡 all 100 implemented, 15 carry residuals (below) |
 | **Enduring Enchantments** (CMM precon) WBG | Anikthea, Hand of Erebos | WBG | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
 | **Open Hostility** (C16 precon) WBRG | Saskia the Unyielding | WBRG | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Devour for Power** (CMD precon) BGU | The Mimeoplasm | BGU | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
@@ -3201,7 +3201,7 @@ Residuals: **Archangel Avacyn**, **Arlinn, the Pack's Hope**, **Azor's
 Gateway**, **Chandra, Fire of Kaladesh**, **Cosima**, **Dennick**,
 **Kytheon** (Gideon), **Jace, Vryn's Prodigy**, **Journey to Eternity**,
 **Liliana, Heretical Healer**, **Ludevic**, **Nicol Bolas, the Ravager**,
-**Sisay**, **Kolvori** (the Crest), **Valki** (Tibalt), **Elbrus**
+**Kolvori** (the Crest), **Valki** (Tibalt), **Elbrus**
 (Withengar). A 200-game census beside Y'shtola / Brass / Galadriel (seed 168) decided 200/200 with zero
 panics; Esika won 11.5 %.
 

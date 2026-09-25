@@ -154,6 +154,20 @@ fn sisay_counts_legendary_colors() {
     assert_eq!(pt(&g, sisay), (4, 4), "green and blue");
 }
 
+/// Sisay fetches a legendary permanent card with mana value *less than* its
+/// power: at 2 power a mana-value-2 legend stays in the library.
+#[test]
+fn sisay_fetches_below_its_power() {
+    let mut g = main_phase();
+    let sisay = g.add_card_to_battlefield(0, catalog::sisay_weatherlight_captain());
+    let kinnan = g.add_card_to_library(0, catalog::kinnan_bonder_prodigy());
+    activate(&mut g, sisay, 0, None).expect("Sisay at 2 power");
+    assert!(g.players[0].library.iter().any(|c| c.id == kinnan), "mana value 2 is not less than 2");
+    g.add_card_to_battlefield(0, catalog::the_tenth_doctor());
+    activate(&mut g, sisay, 0, None).expect("Sisay at 4 power");
+    assert!(g.battlefield_find(kinnan).is_some());
+}
+
 /// Hadana's Climb's third counter on one creature transforms it into the
 /// Winged Temple of Orazca.
 #[test]

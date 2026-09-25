@@ -23955,8 +23955,11 @@ impl GameState {
                         .map(|c| c.counter_count(kind))
                         .unwrap_or(0)
                 };
+                // And source-power gates (Sisay's "less than Sisay's power").
+                let power = ctx.source.and_then(|s| self.source_power_lki(s)).unwrap_or(0);
                 let filter = filter
                     .resolve_source_counters(&src_counts)
+                    .resolve_source_power(power)
                     .resolve_x(ctx.x_value)
                     .resolve_converge(ctx.converged_value);
                 let mut candidates: Vec<(crate::card::CardId, String)> = self.players[p]

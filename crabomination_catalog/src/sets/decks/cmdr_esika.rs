@@ -23,7 +23,6 @@
 //! - **Ludevic, Necrogenius** — transforms for {U}{U}{B}{B} exiling one
 //!   creature card; Olag is a plain 4/4 with counters, not a copy.
 //! - **Nicol Bolas, the Arisen** — the −12 isn't implemented.
-//! - **Sisay, Weatherlight Captain** — fetches mana value *up to* its power.
 //! - **The Ringhart Crest** — its mana isn't restricted.
 //! - **Tibalt, Cosmic Impostor** (Valki's back) — cards it exiles can't be
 //!   played; the emblem isn't implemented.
@@ -1103,9 +1102,8 @@ pub fn rimewood_falls() -> CardDefinition {
 }
 
 /// Sisay, Weatherlight Captain — +1/+1 per color among your other
-/// legendary permanents; {W}{U}{B}{R}{G}: fetch a legendary permanent.
-///
-/// ⚠ Residual: fetches mana value *up to* its power.
+/// legendary permanents; {W}{U}{B}{R}{G}: fetch a legendary permanent with
+/// mana value less than its power.
 pub fn sisay_weatherlight_captain() -> CardDefinition {
     let colors = || {
         Value::DistinctColorsAmong(Box::new(yours(R::Permanent.and(R::HasSupertype(Supertype::Legendary)).and(R::OtherThanSource))))
@@ -1119,7 +1117,7 @@ pub fn sisay_weatherlight_captain() -> CardDefinition {
             mana_cost: cost(&[w(), u(), b(), r(), g()]),
             effect: Effect::Search {
                 who: PlayerRef::You,
-                filter: R::PermanentCard.and(R::HasSupertype(Supertype::Legendary)).and(R::ManaValueAtMostSourcePower),
+                filter: R::PermanentCard.and(R::HasSupertype(Supertype::Legendary)).and(R::ManaValueLessThanSourcePower),
                 to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
             },
             ..Default::default()

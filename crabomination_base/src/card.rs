@@ -3186,6 +3186,9 @@ pub enum SelectionRequirement {
     /// dying source). Sandbender Scavengers' "return a creature with mana value
     /// ≤ this creature's power" reflexive death reanimation.
     ManaValueAtMostSourcePower,
+    /// Mana value < the source's power (Sisay, Weatherlight Captain's "with
+    /// mana value less than Sisay's power"). Concretized like its sibling.
+    ManaValueLessThanSourcePower,
     /// Mana value ≤ the X paid into the resolving spell's cost. Resolved to
     /// a concrete `ManaValueAtMost(x)` by `resolve_x` at search-resolution
     /// time (Chord of Calling); unresolved instances evaluate false.
@@ -3778,6 +3781,8 @@ impl SelectionRequirement {
     pub fn resolve_source_power(&self, power: i32) -> Self {
         match self {
             Self::ManaValueAtMostSourcePower => Self::ManaValueAtMost(power.max(0) as u32),
+            Self::ManaValueLessThanSourcePower if power >= 1 => Self::ManaValueAtMost((power - 1) as u32),
+            Self::ManaValueLessThanSourcePower => Self::Not(Box::new(Self::Any)),
             Self::And(a, b) => Self::And(
                 Box::new(a.resolve_source_power(power)),
                 Box::new(b.resolve_source_power(power)),
