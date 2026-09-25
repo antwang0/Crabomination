@@ -3473,3 +3473,32 @@ pub const ZURGO_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, swamp, swamp, swamp, swamp, swamp, mountain,
     mountain, mountain, mountain, mountain,
 ];
+
+pub const AMINATOU_COMMANDERS: &[CardFactory] = &[aminatou_the_fateshifter];
+
+/// **Subjective Reality**, the Commander 2018 Esper deck (C18,
+/// 2018-08-10), exactly as MTGJSON's `SubjectiveReality_C18` prints it: 83
+/// nonbasic cards + 8 Plainss + 5 Islands + 3 Swamps = 99. Esper top-of-library under Aminatou, the
+/// Fateshifter, a planeswalker commander.
+pub const AMINATOU_MAIN: &[CardFactory] = &[
+    enigma_sphinx, serra_avatar, adarkar_valkyrie, conundrum_sphinx, djinn_of_wishes,
+    jeskai_infiltrator, sphinx_of_jwar_isle, sphinx_of_uthuun, phyrexian_delver,
+    duskmantle_seer, high_priest_of_penance, silent_blade_oni, mulldrifter,
+    ninja_of_the_deep_hours, sigiled_starfish, pilgrims_eye, terminus, entreat_the_angels,
+    army_of_the_damned, akromas_vengeance, devastation_tide, dream_cache, ponder, portent,
+    treasure_hunt, utter_end, banishing_stroke, return_to_dust, brainstorm, predict,
+    telling_time, esper_charm, mortify, azorius_signet, commanders_sphere, crystal_ball,
+    dimir_signet, mind_stone, orzhov_signet, seers_lantern, sol_ring, lightform, cloudform,
+    arcane_sanctum, azorius_chancery, azorius_guildgate, barren_moor, command_tower,
+    dimir_aqueduct, dimir_guildgate, dismal_backwater, forsaken_sanctuary, halimar_depths,
+    jwar_isle_refuge, lonely_sandbar, meandering_river, mortuary_mire, new_benalia,
+    orzhov_basilica, orzhov_guildgate, scoured_barrens, secluded_steppe, sejiri_refuge,
+    submerged_boneyard, tranquil_cove, varina_lich_queen, yennett_cryptic_sovereign,
+    boreas_charger, magus_of_the_balance, aminatous_augury, primordial_mist, entreat_the_dead,
+    night_incarnate, skull_storm, sower_of_discord, yuriko_the_tigers_shadow,
+    isolated_watchtower, aethermages_touch, loyal_unicorn, loyal_subordinate, geode_golem,
+    forge_of_heroes, crib_swap,
+    // Basics: 8 plains, 5 island, 3 swamp
+    plains, plains, plains, plains, plains, plains, plains, plains, island, island, island,
+    island, island, swamp, swamp, swamp,
+];
