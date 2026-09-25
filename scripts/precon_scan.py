@@ -48,6 +48,9 @@ def catalog_names():
     fn_pat = re.compile(r"pub fn (\w+)\(\) -> (?:crate::card::)?CardDefinition")
     # A factory whose body is one helper call naming the card: `karoo("Karoo", …)`.
     helper_pat = re.compile(r'-> (?:crate::card::)?CardDefinition \{\s*[\w:]+\(\s*"((?:[^"\\]|\\.)*)"')
+    # Or a struct update over a helper naming it: `..creature("H.E.R.B.I.E., …", …)`,
+    # whose slug is not the factory's name.
+    update_pat = re.compile(r'\.\.[\w:]+\(\s*"((?:[^"\\]|\\.)*)"')
     for dp, _, fs in os.walk(CATALOG):
         for f in fs:
             if f.endswith(".rs"):
@@ -55,6 +58,7 @@ def catalog_names():
                 names.update(m.group(1).replace("\\'", "'") for m in name_pat.finditer(src))
                 names.update(fn_pat.findall(src))
                 names.update(helper_pat.findall(src))
+                names.update(update_pat.findall(src))
     return names
 
 
