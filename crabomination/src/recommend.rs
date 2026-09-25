@@ -2602,7 +2602,19 @@ impl ActionCensus {
                 .map_or("?", |c| c.definition.name);
             let named = d.split_once("source_name: \"").and_then(|(_, r)| r.split('"').next()).unwrap_or("");
             let desc = d.split_once("description: \"").and_then(|(_, r)| r.split('"').next()).unwrap_or("");
-            return (format!("{variant} {kind} {src} {named} {desc}"), None);
+            // The first legal pick names the loop's other half.
+            let first = d
+                .split_once("legal: [Permanent(CardId(")
+                .and_then(|(_, r)| r.split(')').next()?.parse().ok())
+                .and_then(|n| g.find_card_anywhere(crate::card::CardId(n)))
+                .map_or("", |c| c.definition.name);
+            let picked = match a {
+                A::SubmitDecision(crate::decision::DecisionAnswer::Target(crate::game::types::Target::Permanent(id))) => {
+                    g.find_card_anywhere(*id).map_or("", |c| c.definition.name)
+                }
+                _ => "",
+            };
+            return (format!("{variant} {kind} {src} {named} {desc} {first} -> {picked}"), None);
         }
         let Some(id) = id else { return (variant.to_string(), None) };
         // A card the action names but no zone holds any more is an id, not a

@@ -274,3 +274,39 @@ fn an_as_enters_ask_inside_living_death_is_answered_in_place() {
     let hobbit = g.battlefield.iter().find(|c| c.definition.name == "Feasting Hobbit").expect("returned");
     assert_eq!(hobbit.counter_count(CounterType::PlusOnePlusOne), 3, "it devoured the Food");
 }
+
+/// An optional fight takes only a creature it kills: Apex Altisaur's enrage
+/// re-fought an indestructible Zetalpa 7,538 times in an 8-seat pod
+/// (`--pod-decks 162,..,155 --seed 9403 --first 795`). Against Zetalpa and a
+/// Prize Pig, the bot fights the Pig once and then declines.
+#[test]
+fn apex_altisaur_declines_a_fight_it_cannot_win() {
+    use crabomination::decision::Decision;
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    let mut g = main_phase(4);
+    g.players[0].wants_ui = true;
+    let pig = g.add_card_to_battlefield(1, catalog::prize_pig());
+    let zetalpa = g.add_card_to_battlefield(2, catalog::zetalpa_primal_dawn());
+    let alti = g.add_card_to_hand(0, catalog::apex_altisaur());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell { card_id: alti, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    let mut asks = 0;
+    for _ in 0..200 {
+        if let Some(p) = g.pending_decision.as_ref() {
+            assert!(matches!(p.decision, Decision::ChooseTarget { .. }), "{:?}", p.decision);
+            let seat = g.player_with_priority();
+            let a = HeuristicBot::new().next_action(&g, seat).expect("answer");
+            asks += 1;
+            g.perform_action(a).expect("answer accepted");
+        } else if g.stack.is_empty() {
+            break;
+        } else {
+            g.perform_action(GameAction::PassPriority).expect("pass");
+        }
+    }
+    assert!(asks <= 2, "the fight was asked {asks} times");
+    assert!(g.battlefield_find(pig).is_none(), "the Pig it could kill");
+    assert!(g.battlefield_find(zetalpa).is_some());
+    assert!(g.battlefield_find(alti).is_some_and(|c| c.damage == 0), "never fought Zetalpa");
+}

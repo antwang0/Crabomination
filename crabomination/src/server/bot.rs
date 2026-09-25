@@ -3408,6 +3408,13 @@ fn decide_pending_policy_inner(
         {
             own_minus_counter_pick(state, seat, *source, legal).expect("guarded")
         }
+        // An optional fight takes only a creature it kills (Apex Altisaur's
+        // enrage re-fought an indestructible Zetalpa 7,538 times).
+        crate::decision::Decision::ChooseTarget { source, legal, optional: true, .. }
+            if super::fight_pick::optional_fight_source(state, *source) =>
+        {
+            super::fight_pick::pick_killing_fight(state, *source, legal)
+        }
         crate::decision::Decision::ChooseTarget { legal, optional, .. } if !legal.is_empty() => {
             // Round 53: judge the corner candidates by settled outcome at
             // the real decision. Inside a sim (`eval_modes` off) the
