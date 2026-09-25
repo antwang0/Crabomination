@@ -368,6 +368,26 @@ fn cr_104_4_a_turn_that_draws_a_card_is_not_a_no_progress_loop() {
     assert!(g.game_over.is_none(), "drawing a card every turn is progress");
 }
 
+/// CR 104.4b — damage past a surviving creature's printed toughness is not
+/// progress. Brash Taunter wearing an opponent's Pariah, with that opponent
+/// the only legal "target opponent", looped its mandatory trigger 5,697
+/// times to the pod's action cap while the damage marked on it climbed by one
+/// each lap, so the loop watch never saw a repeat (seed 21091, game 48). Up
+/// to the toughness it still moves the digest.
+#[test]
+fn cr_104_4b_damage_past_toughness_is_not_progress() {
+    let mut g = two_player_game();
+    let taunter = g.add_card_to_battlefield(0, catalog::brash_taunter());
+    let clean = g.progress_fingerprint();
+    g.battlefield_find_mut(taunter).unwrap().damage = 1;
+    let lethal = g.progress_fingerprint();
+    assert_ne!(lethal, clean, "the first point of damage is progress");
+    for d in [2, 7, 5_000] {
+        g.battlefield_find_mut(taunter).unwrap().damage = d;
+        assert_eq!(g.progress_fingerprint(), lethal, "{d} damage on a 1/1 that survives it");
+    }
+}
+
 /// CR 104.4 — the turn watch's digest, tested as a FIELD LIST.
 ///
 /// ⚠ **WHAT IS OUT OF THIS DIGEST IS WHY `all` 1159 RAN TO TURN 18,202.**

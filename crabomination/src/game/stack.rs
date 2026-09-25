@@ -2277,11 +2277,19 @@ impl GameState {
             // sharing a stream (PERF `(-179)`).
             let counters = c.counters.values().sum::<u32>();
             let head = u64::from(c.id.0) | ((u64::from(c.tapped) & tap_bit) << 32);
-            if counters == 0 && c.damage < (1 << 30) {
-                h = fp_mix(h, head | (u64::from(c.damage) << 33));
+            // Damage past the printed toughness is not progress: a creature
+            // still here with that much marked survives it (indestructible,
+            // or pumped), and more of it changes nothing. Brash Taunter
+            // wearing an opponent's Pariah, with that opponent the only legal
+            // target, looped a mandatory trigger 5,697 times while its damage
+            // climbed by 1 each lap, so the watchdog never saw the repeat
+            // (CR 104.4b; seed 21091, game 48).
+            let damage = c.damage.min(c.definition.toughness.max(1) as u32);
+            if counters == 0 && damage < (1 << 30) {
+                h = fp_mix(h, head | (u64::from(damage) << 33));
             } else {
                 h = fp_mix(h, head);
-                h = fp_mix(h, (1 << 63) | fp_pair(c.damage, counters));
+                h = fp_mix(h, (1 << 63) | fp_pair(damage, counters));
             }
         }
         h
