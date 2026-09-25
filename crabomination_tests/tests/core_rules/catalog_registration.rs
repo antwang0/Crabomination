@@ -240,6 +240,7 @@ const ALLOWED_MODELLING: &[(&str, &str)] = &[
     // "can't be blocked by creatures with greater power" is skulk's reminder
     // text, printed without the keyword (CR 702.118a).
     ("Locke, Treasure Hunter", "skulk"),
+    ("Ant-Man, Elusive Avenger", "skulk"),
     // "you may pay {N} any number of times" (the Adversary cycle) is
     // multikicker in everything but name.
     ("Intrepid Adversary", "kicker"),
