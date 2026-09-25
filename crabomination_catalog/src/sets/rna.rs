@@ -1444,7 +1444,7 @@ pub fn prying_eyes() -> CardDefinition {
 
 /// The RNA guild Locket cycle — {3} artifacts that tap for one of two colors
 /// and sacrifice (paying four hybrid mana) to draw two cards.
-fn locket(name: &'static str, c1: Color, c2: Color) -> CardDefinition {
+pub(crate) fn locket(name: &'static str, c1: Color, c2: Color) -> CardDefinition {
     CardDefinition {
         name,
         cost: cost(&[generic(3)]),

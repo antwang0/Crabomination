@@ -59,6 +59,7 @@ mod cmdr_prossh;
 mod cmdr_saheeli_radiant;
 mod cmdr_perrie;
 mod cmdr_anje;
+mod cmdr_sevinne;
 mod cmdr_emmara;
 mod cmdr_teferi;
 mod cmdr_lorehold;
