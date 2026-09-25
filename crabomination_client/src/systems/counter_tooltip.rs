@@ -1621,6 +1621,7 @@ fn counter_label(kind: CounterType) -> &'static str {
         CounterType::Contested => "Contested",
         CounterType::Eyeball => "Eyeball",
         CounterType::Brick => "Brick",
+        CounterType::Cell => "Cell",
     }
 }
 
