@@ -132,6 +132,7 @@ lists were picked.
 | **Most Wanted** (OTC precon) RWB | Olivia, Opulent Outlaw | RWB | 100 | 🟡 all 100 implemented, 3 carry residuals (Back in Town, Dire Fleet Ravager, Vihaan, Goldwaker) |
 | **Tricky Terrain** (M3C precon) GU | Omo, Queen of Vesuva | GU | 100 | 🟡 all 100 implemented, 7 carry residuals (Omo, Horizon of Progress, Desert Warfare, Sunken Palace, Magus of the Candelabra, Rampant Frogantua, March from Velis Vel) |
 | **Prismari Artistry** (SOC precon) UR | Rootha, Mastering the Moment | UR | 100 | 🟡 all 100 implemented, 2 carry residuals (Abstract Performance, Plargg and Nassari) |
+| **Desert Bloom** (OTC precon) RGW | Yuma, Proud Protector | RGW | 100 | 🟡 all 100 implemented, 2 carry residuals (Cataclysmic Prospecting, Dune Chanter) |
 | **Coven Counters** (MIC precon) GW | Leinore, Autumn Sovereign | GW | 100 | 🟡 all 100 implemented, 4 carry residuals (Curse of Conformity, Celestial Judgment, Sigardian Zealot, Moorland Rescuer) |
 | **Arcane Maelstrom** (C20 precon) GUR | Kalamax, the Stormsire | GUR | 100 | 🟡 all 100 implemented, 4 carry residuals (Eon Frolicker, Haldan, Pako, Lavabrink Floodgates) |
 | **Enhanced Evolution** (C20 precon) BGU | Otrimi, the Ever-Playful | BGU | 100 | 🟡 all 100 implemented, 4 carry residuals (Capricopian, Manascape Refractor, Mindleecher, Vastwood Hydra) |
@@ -1227,6 +1228,25 @@ all decided): Galea 5.3 % — the bot does not build a Voltron threat; beside
 Estrid / Eshki / Nelly (seed 10251): 1,000 / 1,000, 5.3 %; census (seed 10252):
 no card of the four unplayed; strict debug pods (seeds 10253-10255, 4 and 6
 seats): 180 / 180. `--bench` byte-identical.
+The **hundred-and-twenty-third** is Outlaws of Thunder Junction
+Commander's **Desert Bloom** (`DesertBloom_OTC`, 2024-04-19) — Naya Deserts
+and lands-matter under Yuma, Proud Protector, `--pod-decks 123` (committed as 122). Nineteen
+cards were missing (`cmdr_yuma.rs`); no new primitives — they compose from
+landwalk, `MayPlayLandsFromGraveyardMatching`, `LandPutIntoGraveyard` /
+`PutIntoGraveyard` triggers, `LandTypeChanger`, `GrantActivatedAbility`,
+`ApplyToTargets` and `ForEach` over graveyard lands. Residuals:
+**Cataclysmic Prospecting** can't see mana spent from Deserts (its Treasures
+count your tapped Deserts); **Dune Chanter** doesn't make land cards off the
+battlefield Deserts. ⚠ The deck's Scute Swarm, fed by lands entering from
+effects, doubles pods to the board cap: 4 seats (seed 11102) 999 / 1,000
+decided, 6 seats (seed 11103) 996, 8 seats 994, every cap a Scute Swarm (or
+Extravagant Replication) board. A land-drop gate stops the bot's own drop
+past `BOARD_GATE`; clamping token creation at the gate instead removed every
+cap but tripled the 8-seat pod's time (38 s → 107 s) on the ~900-permanent
+boards it left running, so it was reverted (another session's land-drop gate,
+`40198e5d`, landed alongside). Yuma 31.0 % in the four-seat
+pods; census: no card of the four unplayed. `--bench` byte-identical.
+
 The **hundred-and-fifteenth** is Secrets of Strixhaven Commander's **Prismari
 Artistry** (`PrismariArtistry_SOC`, 2026-04-24) — Izzet spells and Elementals
 under Rootha, Mastering the Moment, `--pod-decks 115` (committed as 107, 110
