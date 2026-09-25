@@ -945,7 +945,7 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ZURGO_COMMANDERS,
             main: decks::ZURGO_MAIN,
         },
-        // Hundred-and-fourteenth: the hundredth official list (Subjective
+        // Hundred-and-fourteenth: the hundred-and-fourth official list (Subjective
         // Reality, C18) — Esper top-of-library under Aminatou, the Fateshifter,
         // a planeswalker commander. `--pod-decks 114`.
         PodDeck {
