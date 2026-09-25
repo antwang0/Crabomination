@@ -1367,6 +1367,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::MOTHMAN_COMMANDERS,
             main: decks::MOTHMAN_MAIN,
         },
+        // Seat 167: Wakanda Forever (MSC) — Selesnya artifacts, Vibranium
+        // and the monarch under T'Challa, the Black Panther (CR 508.1c gated
+        // attack restrictions, CR 615.10 spell sources). `--pod-decks 167`.
+        PodDeck {
+            name: "T'Challa, the Black Panther (GW)",
+            commanders: decks::TCHALLA_COMMANDERS,
+            main: decks::TCHALLA_MAIN,
+        },
     ]
 }
 
@@ -1997,6 +2005,9 @@ mod tests {
             // CR 306.5b Empower Jace tokens, CR 508.1 Jace's attack tax,
             // CR 702.26 Teferi's Reproach.
             ("Jace, Multiverse", [0x7ACE, 161, 9085]),
+            // CR 725 the monarch, CR 508.1c a gated attack restriction,
+            // restricted Vibranium mana.
+            ("T'Challa", [0x7C4A, 167, 9091]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

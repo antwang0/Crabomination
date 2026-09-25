@@ -5052,3 +5052,35 @@ pub const MOTHMAN_MAIN: &[CardFactory] = &[
     swamp, swamp, swamp, swamp, swamp, forest, forest, forest, forest, forest, island, island,
     island, island, island,
 ];
+
+pub const TCHALLA_COMMANDERS: &[CardFactory] = &[tchalla_the_black_panther];
+
+/// **Wakanda Forever**, the Marvel Super Heroes Commander deck (MSC,
+/// 2026-06-26), exactly as MTGJSON's `WakandaForever_MSC` prints it:
+/// 75 nonbasic cards + 12 Forests + 12 Plainss = 99. Selesnya artifacts, Vibranium
+/// and the monarch under T'Challa, the Black Panther.
+pub const TCHALLA_MAIN: &[CardFactory] = &[
+    dora_milaje_elite, everett_k_ross_hapless_attache, hatut_zeraze_strike_force,
+    king_solomons_frogs, midnight_angel_armor, queen_mother_ramonda,
+    royal_talon_fighter_jet, the_spear_of_bashenga, ancestral_communion,
+    fight_for_the_throne, mbaku_jabari_chieftain, nakia_wakandan_operative,
+    wkabi_shield_of_the_nation, wakanda_forever, zuri_warrior_of_wakanda,
+    bast_panther_goddess, okoye_mighty_and_adored, shuri_the_black_panther,
+    storm_queen_of_wakanda, tchaka_venerable_king, heart_shaped_herb, kimoyo_beads,
+    nyami_class_mother_ship, panther_habit, panther_robot, shuris_fabricator,
+    vibranium_mining_mech, vibranium_strike_gauntlets, the_great_mound, divine_visitation,
+    loyal_retainers, martial_coup, vanquish_the_horde, birds_of_paradise, conduit_of_worlds,
+    greater_good, natures_lore, overwhelming_stampede, coveted_jewel, gilded_lotus,
+    helm_of_the_host, metalwork_colossus, solemn_simulacrum, trading_post,
+    bountiful_promenade, canopy_vista, fortified_village, razorverge_thicket,
+    scattered_groves, scavenger_grounds, sungrass_prairie, sunpetal_grove,
+    throne_of_the_high_city, scourglass, fleecemane_lion, hammer_of_nazahn, minds_eye,
+    sword_of_the_animist, thran_dynamo, dispatch, generous_gift, ingenious_smith,
+    palace_jailer, valorous_stance, beast_within, harmonize, loyal_guardian, arcane_signet,
+    meteor_golem, sol_ring, whispersilk_cloak, command_tower, evolving_wilds,
+    path_of_ancestry, terramorphic_expanse,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest,
+];
