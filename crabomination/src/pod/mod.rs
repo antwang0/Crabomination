@@ -1302,6 +1302,15 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::BRASS_COMMANDERS,
             main: decks::BRASS_MAIN,
         },
+        // Hundred-and-fifty-ninth: Revenant Recon (Murders at Karlov Manor)
+        // — Dimir surveil, reanimation and copies under Mirko, Obsessive
+        // Theorist (CR 701.42 surveil events, CR 500.8 Sphinx of the Second
+        // Sun). `--pod-decks 159`.
+        PodDeck {
+            name: "Mirko, Obsessive Theorist (UB)",
+            commanders: decks::MIRKO_COMMANDERS,
+            main: decks::MIRKO_MAIN,
+        },
     ]
 }
 

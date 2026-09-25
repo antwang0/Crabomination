@@ -4812,3 +4812,32 @@ pub const BRASS_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, swamp, swamp, swamp, swamp, mountain,
     mountain, mountain, mountain, mountain,
 ];
+
+pub const MIRKO_COMMANDERS: &[CardFactory] = &[mirko_obsessive_theorist];
+
+/// **Revenant Recon**, the Murders at Karlov Manor Commander deck (MKC,
+/// 2024-02-09), exactly as MTGJSON's `RevenantRecon_MKC` prints it: 81
+/// nonbasic cards + 9 Island + 9 Swamp = 99. Dimir surveil, reanimation and
+/// copies under Mirko, Obsessive Theorist.
+pub const MIRKO_MAIN: &[CardFactory] = &[
+    marvo_deep_operative, case_of_the_shifting_visage, copy_catchers, final_word_phantom,
+    watcher_of_hours, charnel_serenade, eye_of_duskmantle, foreboding_steamboat,
+    unshakable_tail, counterpoint, ransom_note, amphin_mutineer, dream_eater, mission_briefing,
+    phyrexian_metamorph, sphinx_of_the_second_sun, vizier_of_many_faces, black_suns_zenith,
+    dogged_detective, doom_whisperer, grave_titan, massacre_wurm, overseer_of_the_damned,
+    phyrexian_arena, pile_on, reanimate, rise_of_the_dark_realms, toxic_deluge,
+    twilight_prophet, baleful_strix, connive_concoct, lazav_the_multifarious, master_of_death,
+    choked_estuary, darkwater_catacombs, drownyard_temple, fetid_pools, hostile_desert,
+    river_of_tears, sunken_hollow, brainstorm, consider, curate, deep_analysis,
+    enhanced_surveillance, epharas_dispersal, mulldrifter, nightveil_sprite, otherworldly_gaze,
+    thoughtbound_phantasm, animate_dead, necromancy, price_of_fame, ravenous_chupacabra,
+    shriekmaw, sinister_starfish, syr_konrad_the_grim, whispering_snitch, dimir_spybug,
+    discovery_dispersal, disinformation_campaign, notion_rain, arcane_signet, dimir_signet,
+    everflowing_chalice, mind_stone, sol_ring, talisman_of_dominance, thought_vessel,
+    ash_barrens, bojuka_bog, command_tower, dimir_aqueduct, myriad_landscape, mystic_sanctuary,
+    port_of_karfell, reliquary_tower, rogues_passage, tainted_isle, temple_of_the_false_god,
+    tocasias_dig_site,
+    // Basics: 9 island, 9 swamp
+    island, island, island, island, island, island, island, island, island, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp,
+];

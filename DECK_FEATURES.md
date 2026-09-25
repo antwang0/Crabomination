@@ -2564,6 +2564,30 @@ Vehicle, an activated manland or a stationed Spacecraft stayed home: Kotori
 Inspirit / Morska (seed 15101, 1,000) and six seats (15102, 1,000): all
 decided; census (15103, 500): nothing unplayed. `--bench` byte-identical.
 
+The **hundred-and-fifty-ninth** is Murders at Karlov Manor Commander's
+**Revenant Recon** (`RevenantRecon_MKC`, 2024-02-09) — Dimir surveil,
+reanimation and copies under Mirko, Obsessive Theorist, `--pod-decks 159`
+(four other lists took 155-158 while it was built). Twenty-five cards were
+missing (`cmdr_mirko.rs`, two of them split cards). The primitives: surveil
+and scry are separate trigger kinds (`EventKind::Scried` / `Surveilled`, CR
+701.22 / 701.42); ⚠ **a surveiled card was never "put into a graveyard"** — it
+now emits `CardPutIntoGraveyard` and `CardSurveiledIntoGraveyard`, which feed
+the "put into your graveyard from your library" family (`EventKind::
+CardMilled`: Narcomoeba, Unshakable Tail, Polluted Cistern), while the literal
+"mills" wording moved to `EventKind::Milled` (Glowing One, Mirelurk Queen,
+Zellix — CR 701.13); CR 500.8's additional beginning phase (Sphinx of the
+Second Sun); a copy that keeps its name, legendary and its ability (Lazav,
+CR 707.9b); "each player chooses two … exile them until" (Foreboding
+Steamboat, CR 603.6e); Enhanced Surveillance's extra look and Eye of
+Duskmantle's pay-life casts of surveiled cards. The bot now reads a
+counterspell wrapped in an X binding as a counterspell (Counterpoint went
+uncast in the census). Residuals: **Marvo**, **Watcher of Hours**,
+**Whispering Snitch** (INCOMPLETE_CARDS). Four-seat pods beside Cloud /
+Lathril / Pantlaza (seed 15801, 1,000) and six seats beside Sauron / Sevinne
+/ Anje / Kotori / Hakbal (15802, 1,000): all decided, Mirko 16.4 / 13.7 %;
+census (15803, 500): nothing unplayed.
+`--bench` byte-identical.
+
 The **hundred-and-forty-fifth** is Lost Caverns of Ixalan Commander's
 **Explorers of the Deep** (`ExplorersOfTheDeep_LCC`, 2023-11-17) — Simic
 Merfolk and explore under Hakbal of the Surging Soul, `--pod-decks 145`
