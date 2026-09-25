@@ -36,6 +36,7 @@ mod cmdr_marath;
 mod cmdr_lathliss;
 mod cmdr_millicent;
 mod cmdr_zimone;
+mod cmdr_kamiz;
 mod cmdr_nelly;
 mod cmdr_eshki;
 mod cmdr_estrid;
