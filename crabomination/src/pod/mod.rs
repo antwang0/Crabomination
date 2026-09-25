@@ -1207,6 +1207,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::PERRIE_COMMANDERS,
             main: decks::PERRIE_MAIN,
         },
+        // Hundred-and-forty-seventh: Riders of Rohan (The Lord of the
+        // Rings: Tales of Middle-earth) — Jeskai Humans and the monarch
+        // under Éowyn, Shieldmaiden. `--pod-decks 147`.
+        PodDeck {
+            name: "Éowyn, Shieldmaiden (URW)",
+            commanders: decks::EOWYN_COMMANDERS,
+            main: decks::EOWYN_MAIN,
+        },
     ]
 }
 

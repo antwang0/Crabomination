@@ -4451,3 +4451,34 @@ pub const PERRIE_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, island, island, island, island, plains, plains,
     plains, plains, plains,
 ];
+
+pub const EOWYN_COMMANDERS: &[CardFactory] = &[eowyn_shieldmaiden];
+
+/// **Riders of Rohan**, the The Lord of the Rings: Tales of Middle-earth
+/// Commander deck (2023-06-23), exactly as MTGJSON's `RidersOfRohan_LTC`
+/// prints it: 80 nonbasic cards + 9 Plains + 5 Island + 5 Mountain = 99.
+/// Jeskai Humans and the monarch under Éowyn, Shieldmaiden.
+pub const EOWYN_MAIN: &[CardFactory] = &[
+    aragorn_king_of_gondor, beregond_of_the_guard, champions_of_minas_tirith,
+    gilraen_dunedain_protector, grey_host_reinforcements, lossarnach_captain,
+    archivist_of_gondor, denethor_stone_seer, fealty_to_the_realm, call_for_aid,
+    gimli_of_the_glittering_caves, boromir_gondors_hope, eomer_king_of_rohan,
+    faramir_steward_of_gondor, forth_eorlingas, oath_of_eorl, riders_of_rohan,
+    taunt_from_the_rampart, crown_of_gondor, bastion_protector, dearly_departed,
+    frontline_medic, increasing_devotion, marshals_anthem, selfless_squire,
+    unbreakable_formation, verge_rangers, visions_of_glory, weathered_wayfarer,
+    combat_celebrant, court_of_ire, earthquake, flamerush_rider, frontier_warmonger,
+    harsh_mentor, shared_animosity, zealous_conscripts, supreme_verdict, door_of_destinies,
+    vanquishers_banner, battlefield_forge, clifftop_retreat, exotic_orchard, furycalm_snarl,
+    glacial_fortress, port_town, prairie_stream, sulfur_falls, throne_of_the_high_city,
+    windbrisk_heights, lost_to_legend, erkenbrand_lord_of_westfold, banishing_light,
+    fiend_hunter, palace_jailer, path_to_exile, sunset_revelry, swords_to_plowshares,
+    village_bell_ringer, prince_imrahil_the_fair, humble_defector, theoden_king_of_rohan,
+    arcane_signet, commanders_sphere, heirloom_blade, heralds_horn, sol_ring,
+    talisman_of_conviction, talisman_of_progress, thought_vessel, wayfarers_bauble,
+    command_tower, evolving_wilds, field_of_ruin, path_of_ancestry, rogues_passage,
+    secluded_courtyard, terramorphic_expanse, tranquil_cove, wind_scarred_crag,
+    // Basics: 9 plains, 5 island, 5 mountain
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, island, island,
+    island, island, island, mountain, mountain, mountain, mountain, mountain,
+];
