@@ -10726,6 +10726,14 @@ pub enum Effect {
     /// until end of turn; the revealed cards go to the bottom in a random
     /// order (Nascent Metamorph).
     RevealUntilCreatureBecomeCopy { who: PlayerRef },
+    /// Reveal your top `count` cards; put every land card among them onto
+    /// the battlefield (`tapped` when set), the rest on the bottom in a random
+    /// order (Animist's Awakening).
+    RevealTopPutLandsRestBottomRandom { count: Value, tapped: bool },
+    /// Look at your top card; if it's a land card, or a creature card with
+    /// mana value at most `max_mv`, you may put it onto the battlefield
+    /// (Nissa, Steward of Elements' 0).
+    LookTopMayPutLandOrCreatureMvAtMost { max_mv: Value },
     /// "The next spell you cast this turn can be cast as though it had flash"
     /// (Ride the Avalanche). Spent by that cast.
     NextSpellHasFlashThisTurn,

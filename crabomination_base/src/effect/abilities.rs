@@ -2831,6 +2831,10 @@ pub enum StaticEffect {
     /// all graveyards." Sibling of
     /// `HasActivatedAbilitiesOfGraveyardCreatures`.
     HasActivatedAbilitiesOfGraveyardLands,
+    /// Manascape Refractor — "has all activated abilities of all lands on
+    /// the battlefield." The battlefield sibling of
+    /// `HasActivatedAbilitiesOfGraveyardLands`.
+    HasActivatedAbilitiesOfBattlefieldLands,
     /// Phyrexian Vindicator — "If damage would be dealt to this creature,
     /// prevent it. When damage is prevented this way, this creature deals
     /// CR 118.9 — "Rather than pay the mana cost for a spell, its controller

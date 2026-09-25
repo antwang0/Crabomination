@@ -959,6 +959,7 @@ fn mana_summary_of(def: &crate::card::CardDefinition) -> Option<u64> {
             | SE::HasActivatedAbilitiesOfOpponentCreatures
             | SE::HasActivatedAbilitiesOfCounteredCreatures
             | SE::HasActivatedAbilitiesOfGraveyardLands
+            | SE::HasActivatedAbilitiesOfBattlefieldLands
             | SE::HasActivatedAbilitiesOfLibraryTop { .. } => flags |= mana_summary::SELF_GRANT,
             SE::CounteredCreaturesHaveAbilitiesOfExiledWithSource => {
                 flags |= mana_summary::COUNTER_GRANT
@@ -17084,7 +17085,7 @@ impl GameState {
         // one pass per block below.
         let (mut welder, mut ooze, mut marvin, mut kraj, mut safehouse, mut snoop) =
             (false, false, false, false, false, false);
-        let mut drana = false;
+        let (mut drana, mut refractor) = (false, false);
         let mut caged: Option<crate::card::CounterType> = None;
         for sa in &me.definition.static_abilities {
             match sa.effect {
@@ -17099,6 +17100,7 @@ impl GameState {
                 StaticEffect::HasActivatedAbilitiesOfCounteredCreatures => kraj = true,
                 StaticEffect::HasActivatedAbilitiesOfOpponentCreatures => drana = true,
                 StaticEffect::HasActivatedAbilitiesOfGraveyardLands => safehouse = true,
+                StaticEffect::HasActivatedAbilitiesOfBattlefieldLands => refractor = true,
                 // Conspicuous Snoop, read below off the same list — this pass
                 // is the one that already has it in cache.
                 StaticEffect::HasActivatedAbilitiesOfLibraryTop { .. } => snoop = true,
@@ -17283,6 +17285,13 @@ impl GameState {
                         out.push(ab);
                     }
                 }
+            }
+        }
+        // Manascape Refractor — every activated ability of every land on the
+        // battlefield (a granted one included only if printed on the land).
+        if refractor {
+            for land in self.battlefield.iter().filter(|c| c.id != card_id && c.definition.is_land()) {
+                out.extend(land.definition.activated_abilities.iter());
             }
         }
         // Conspicuous Snoop — while the controller's library top matches the

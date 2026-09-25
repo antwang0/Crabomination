@@ -877,6 +877,8 @@ impl Effect {
             | Effect::RevealTopChooseByKeyword { .. }
             | Effect::ChooseCardTypeAmongForSource(_)
             | Effect::RevealTopCastFreeIfLesserElseHand
+            | Effect::RevealTopPutLandsRestBottomRandom { .. }
+            | Effect::LookTopMayPutLandOrCreatureMvAtMost { .. }
             | Effect::NextSpellHasFlashThisTurn
             | Effect::PreventNextDamageFromSourceThisTurn { .. }
             | Effect::SacrificeSourceUnlessPayValue { .. }

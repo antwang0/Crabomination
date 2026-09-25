@@ -30032,6 +30032,7 @@ fn static_effect_to_effects(
             | StaticEffect::HasActivatedAbilitiesOfOtherNamedControlledCreatures
             | StaticEffect::HasActivatedAbilitiesOfOpponentCreatures
             | StaticEffect::HasActivatedAbilitiesOfGraveyardLands
+            | StaticEffect::HasActivatedAbilitiesOfBattlefieldLands
             | StaticEffect::HasActivatedAbilitiesOfExiledWithSelf
             | StaticEffect::HasActivatedAbilitiesOfOwnedExiledWithCounter { .. }
             | StaticEffect::CostReductionPerCounterOnSource { .. }

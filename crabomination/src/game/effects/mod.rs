@@ -40,6 +40,7 @@ mod hand_exile;
 mod attach_from_zone;
 pub(crate) mod keyword_gifts;
 mod reveal_top_misc;
+mod library_top_deploy;
 mod politics;
 mod targeting;
 /// The target enumerator's call-site census — see
@@ -35019,6 +35020,12 @@ impl GameState {
             Effect::MoveOneCounter { from, to } => self.move_one_counter(from, to, ctx, events),
             Effect::RevealTopCastFreeIfLesserElseHand => self.reveal_top_cast_free_if_lesser_else_hand(ctx, events),
             Effect::RevealUntilCreatureBecomeCopy { who } => self.reveal_until_creature_become_copy(who, ctx, events),
+            Effect::RevealTopPutLandsRestBottomRandom { count, tapped } => {
+                self.reveal_top_put_lands_rest_bottom_random(count, *tapped, ctx, events)
+            }
+            Effect::LookTopMayPutLandOrCreatureMvAtMost { max_mv } => {
+                self.look_top_may_put_land_or_creature_mv_at_most(max_mv, ctx, events)
+            }
             Effect::ChooseCardTypeAmongForSource(options) => {
                 use crate::decision::{Decision, DecisionAnswer};
                 let Some(source) = ctx.source else { return Ok(()) };
