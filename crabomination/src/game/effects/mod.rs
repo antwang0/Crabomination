@@ -31465,6 +31465,98 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::SecretNumbersMatch { opponent, max, on_match, on_miss } => {
+                use rand::seq::IteratorRandom;
+                let Some(_opp) = self.resolve_player(opponent, ctx) else { return Ok(()) };
+                let hi = (*max).max(1);
+                let mine = (1..=hi).choose(&mut self.rng.draw()).unwrap_or(1);
+                let theirs = (1..=hi).choose(&mut self.rng.draw()).unwrap_or(1);
+                if mine == theirs {
+                    self.run_effect(on_match, ctx, events)
+                } else {
+                    self.run_effect(on_miss, ctx, events)
+                }
+            }
+
+            Effect::EnchantedPlayerPaysPerArtifactOrNoAttacks => {
+                let Some(p) = ctx.source.and_then(|s| self.battlefield_find(s)).and_then(|c| c.attached_to_player)
+                else {
+                    return Ok(());
+                };
+                let n = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == p && c.definition.is_artifact())
+                    .count() as u32;
+                let no_attacks = Effect::GrantKeywordToMatchingThisTurn {
+                    filter: crate::card::SelectionRequirement::Creature,
+                    keyword: crate::card::Keyword::CantAttack,
+                };
+                if n == 0 {
+                    return Ok(());
+                }
+                let pay = Effect::MayPayBy {
+                    who: PlayerRef::Seat(p),
+                    description: format!("Pay {{{n}}} so creatures can attack this combat?"),
+                    mana_cost: crate::mana::cost(&[crate::mana::generic(n)]),
+                    body: Box::new(Effect::Noop),
+                    else_: Some(Box::new(no_attacks)),
+                };
+                self.run_effect(&pay, ctx, events)
+            }
+
+            Effect::ReturnSomeExiledWithSourceRestToBottom { count } => {
+                let Some(source) = ctx.source else { return Ok(()) };
+                let me = ctx.controller;
+                let mut linked: Vec<(CardId, String, bool, u32)> = self
+                    .exile
+                    .iter()
+                    .filter(|c| c.exiled_with == Some(source) || c.exiled_by.as_ref().is_some_and(|l| l.source == source))
+                    .map(|c| (c.id, c.definition.name.to_string(), c.owner == me, c.definition.cost.cmc()))
+                    .collect();
+                if linked.is_empty() {
+                    return Ok(());
+                }
+                linked.sort_by_key(|c| (!c.2, std::cmp::Reverse(c.3)));
+                let n = (*count as usize).min(linked.len());
+                let auto: Vec<CardId> = linked.iter().take(n).map(|c| c.0).collect();
+                let candidates: Vec<(CardId, String)> = linked.iter().map(|c| (c.0, c.1.clone())).collect();
+                let picked = if linked.len() <= n {
+                    auto
+                } else {
+                    let Some(v) = self.choose_up_to_cards(
+                        me,
+                        format!("Return {n} cards to the battlefield"),
+                        source,
+                        candidates,
+                        n as u32,
+                        PickValue::Gain,
+                        effect,
+                        auto,
+                    ) else {
+                        return Ok(());
+                    };
+                    v
+                };
+                for (id, ..) in &linked {
+                    // Unlink first: this effect places them, not the saga's
+                    // leave-the-battlefield return.
+                    if let Some(c) = self.exile.iter_mut().find(|c| c.id == *id) {
+                        c.exiled_by = None;
+                        c.exiled_with = None;
+                    }
+                    let owner = self.exile.iter().find(|c| c.id == *id).map(|c| c.owner);
+                    let Some(owner) = owner else { continue };
+                    let dest = if picked.contains(id) {
+                        ZoneDest::Battlefield { controller: PlayerRef::Seat(owner), tapped: false }
+                    } else {
+                        ZoneDest::Library { who: PlayerRef::Seat(owner), pos: crate::effect::LibraryPosition::Bottom }
+                    };
+                    self.move_card_to(*id, &dest, ctx, events);
+                }
+                Ok(())
+            }
+
             Effect::DestroyWithinTotalManaValue { filter, cap } => {
                 let me = ctx.controller;
                 let cap = self.evaluate_value(cap, ctx).max(0) as u32;
@@ -39442,6 +39534,11 @@ impl GameState {
             // Both linkage styles count as "exiled with this": the plain
             // `exiled_with` stamp and the CR 603.6e return link installed by
             // `ExileUntilSourceLeaves` (Mardu Siegebreaker, Assimilation Aegis).
+            Selector::ExiledForCost => self
+                .exiled_for_cost_card
+                .filter(|id| self.exile.iter().any(|c| c.id == *id))
+                .map(|id| vec![EntityRef::Card(id)])
+                .unwrap_or_default(),
             Selector::CardExiledWithSource => self
                 .exile
                 .iter()

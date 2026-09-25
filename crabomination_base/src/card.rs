@@ -363,6 +363,8 @@ pub enum CreatureType {
     Beholder,
     // Commander 2013 (Sek'Kuar, Deathkeeper's tokens).
     Graveborn,
+    // Fallout (Shaun, Father of Synths; Synth Infiltrator).
+    Synth,
 }
 
 /// Land subtypes (basic land types + others).
@@ -938,6 +940,8 @@ pub enum CounterType {
     Unity,
     /// Prize Pig's lifegain tally.
     Ribbon,
+    /// Rex, Cyber-Hound's mark on an exiled creature card.
+    Brain,
 }
 
 /// Every zone a card can occupy.

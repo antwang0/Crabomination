@@ -483,6 +483,7 @@ fn counter_token(kind: CounterType) -> &'static str {
         CounterType::Cell => "Cell",
         CounterType::Unity => "Unity",
         CounterType::Ribbon => "Ribbon",
+        CounterType::Brain => "Brain",
     }
 }
 

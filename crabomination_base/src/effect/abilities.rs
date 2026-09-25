@@ -2107,6 +2107,10 @@ pub enum StaticEffect {
         filter: SelectionRequirement,
         #[serde(default)]
         exile_after: bool,
+        /// "…with mana value less than or equal to the number of `kind`
+        /// counters on [this]" (Arcade Gannon's quest counters).
+        #[serde(default)]
+        mv_at_most_counters: Option<crate::card::CounterType>,
     },
     GraveyardCastBySacrificingOncePerTurn {
         filter: SelectionRequirement,
@@ -2511,6 +2515,10 @@ pub enum StaticEffect {
     /// but keyed on the counter and the owner rather than a link to this
     /// object, so a commander that re-enters keeps its earlier cages.
     HasActivatedAbilitiesOfOwnedExiledWithCounter { counter: crate::card::CounterType },
+    /// "[This] has all activated abilities of all cards in exile with
+    /// `counter` counters on them" — whoever owns them (Rex, Cyber-Hound's
+    /// brain counters).
+    HasActivatedAbilitiesOfExiledWithCounter { counter: crate::card::CounterType },
     /// CR 605.1b — triggered mana ability: "Whenever [a matching land] is
     /// tapped for mana, its controller adds [extra]." Doesn't use the stack;
     /// resolved immediately at the mana-ability fast path. `enchanted_only`

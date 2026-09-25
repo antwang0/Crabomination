@@ -1878,6 +1878,12 @@ impl GameState {
                 .resolve_player(p, ctx)
                 .map(|p| self.players[p].poison_counters as i32)
                 .unwrap_or(0),
+            Value::BasePowerOf(what) => self
+                .resolve_selector(what, ctx)
+                .into_iter()
+                .find_map(|e| e.as_card_id())
+                .and_then(|id| self.find_card_anywhere(id).map(|c| c.definition.power))
+                .unwrap_or(0),
             Value::RadCountersAmong(who) => self
                 .resolve_players(who, ctx)
                 .iter()

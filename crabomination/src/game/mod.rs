@@ -1452,6 +1452,10 @@ pub struct ColdState {
     /// True between an additional beginning phase's untap and draw steps.
     #[serde(default)]
     pub in_additional_beginning_phase: bool,
+    /// The permanent the last activation exiled for its
+    /// `exile_permanent_cost` — `Selector::ExiledForCost` (Curie).
+    #[serde(default)]
+    pub exiled_for_cost_card: Option<CardId>,
     /// `(turn, seat mask)`: who put a counter on a creature this turn (CR
     /// 122.6) — read by `Predicate::CounterPutOnCreatureThisTurn` (Lasting
     /// Tarfire, Lord Jyscal Guado). Turn-stamped, so no cleanup write: written
@@ -30685,6 +30689,7 @@ fn static_effect_to_effects(
             | StaticEffect::HasActivatedAbilitiesOfBattlefieldLands
             | StaticEffect::HasActivatedAbilitiesOfExiledWithSelf
             | StaticEffect::HasActivatedAbilitiesOfOwnedExiledWithCounter { .. }
+            | StaticEffect::HasActivatedAbilitiesOfExiledWithCounter { .. }
             | StaticEffect::CostReductionPerCounterOnSource { .. }
             | StaticEffect::FirstMatchingSpellEachTurnCostsLessPerCounter { .. }
             | StaticEffect::PreventDamageToThisRedirect

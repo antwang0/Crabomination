@@ -450,6 +450,10 @@ impl Effect {
             | Effect::WhenLastCreatedTokenLeaves { body, .. } => {
                 f(body);
             }
+            Effect::SecretNumbersMatch { on_match, on_miss, .. } => {
+                f(on_match);
+                f(on_miss);
+            }
             Effect::FlipCoin { on_heads, on_tails, .. }
             | Effect::FlipCoinBy { on_heads, on_tails, .. }
             | Effect::EachPlayerFlipsCoin { on_heads, on_tails, .. } => {
@@ -1392,6 +1396,11 @@ impl Effect {
             Effect::ExchangeLifeWithSourceToughness => false,
             Effect::ExchangePlayerLifeWithSourceToughness { .. } => false,
             Effect::RadOnCastUntilEndOfTheirNextTurn { .. } => false,
+            Effect::SecretNumbersMatch { on_match, on_miss, .. } => {
+                on_match.requires_target() || on_miss.requires_target()
+            }
+            Effect::EnchantedPlayerPaysPerArtifactOrNoAttacks => false,
+            Effect::ReturnSomeExiledWithSourceRestToBottom { .. } => false,
             Effect::DestroyWithinTotalManaValue { .. } => false,
             Effect::ReturnSelfTransformedAttachedTo { host } => sel_has_target(host),
             Effect::RemoveCountersFromAmongDrawAndLoseLife => false,

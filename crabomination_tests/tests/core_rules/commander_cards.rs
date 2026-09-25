@@ -834,6 +834,7 @@ fn a_once_per_turn_graveyard_cast_can_exile_the_spell() {
     kess.static_abilities = vec![StaticAbility {
         description: "Once during each of your turns, cast an instant or sorcery from your graveyard.",
         effect: StaticEffect::GraveyardCastOncePerTurn {
+            mv_at_most_counters: None,
             filter: R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)),
             exile_after: true,
         },

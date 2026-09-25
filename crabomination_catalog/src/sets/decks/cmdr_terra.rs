@@ -132,6 +132,7 @@ pub fn banon_the_returners_leader() -> CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "Pray — Once during each of your turns, you may cast a creature spell from among cards in your graveyard that were put there from anywhere other than the battlefield this turn.",
             effect: StaticEffect::GraveyardCastOncePerTurn {
+                mv_at_most_counters: None,
                 filter: R::Creature
                     .and(R::PutIntoGraveyardThisTurn)
                     .and(R::Not(Box::new(R::PutIntoGraveyardFromBattlefieldThisTurn))),
@@ -256,7 +257,7 @@ pub fn edgar_master_machinist() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "Once during each of your turns, you may cast an artifact spell from your graveyard.",
-            effect: StaticEffect::GraveyardCastOncePerTurn { filter: R::Artifact, exile_after: false },
+            effect: StaticEffect::GraveyardCastOncePerTurn { mv_at_most_counters: None, filter: R::Artifact, exile_after: false },
         }],
         triggered_abilities: vec![on_attack(Effect::PumpPT {
             what: Selector::This,

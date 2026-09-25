@@ -594,6 +594,7 @@ pub fn serra_paragon() -> CardDefinition {
             StaticAbility {
                 description: "Once during each of your turns, you may cast a permanent spell with mana value 3 or less from your graveyard.",
                 effect: StaticEffect::GraveyardCastOncePerTurn {
+                    mv_at_most_counters: None,
                     filter: R::PermanentCard.and(R::Nonland).and(R::ManaValueAtMost(3)),
                     exile_after: false,
                 },

@@ -576,6 +576,7 @@ pub fn raul_trouble_shooter() -> CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "Once during each of your turns, you may cast a spell from among cards in your graveyard milled this turn.",
             effect: StaticEffect::GraveyardCastOncePerTurn {
+                mv_at_most_counters: None,
                 filter: R::Nonland.and(R::PutIntoGraveyardFromLibraryThisTurn),
                 exile_after: false,
             },

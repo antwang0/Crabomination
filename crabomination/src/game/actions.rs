@@ -1053,6 +1053,7 @@ fn mana_summary_of(def: &crate::card::CardDefinition) -> Option<u64> {
         match sa.effect {
             SE::HasActivatedAbilitiesOfExiledWithSelf
             | SE::HasActivatedAbilitiesOfOwnedExiledWithCounter { .. }
+            | SE::HasActivatedAbilitiesOfExiledWithCounter { .. }
             | SE::HasActivatedAbilitiesOfGraveyardCreatures
             | SE::HasActivatedAbilitiesOfOtherNamedControlledCreatures
             | SE::HasActivatedAbilitiesOfOpponentCreatures
@@ -6079,8 +6080,10 @@ impl GameState {
                             Some((c.id, Some(sacrifice.clone())))
                         }
                         // Gisa and Geralf — no sacrifice owed.
-                        StaticEffect::GraveyardCastOncePerTurn { filter, .. }
-                            if self.evaluate_requirement_on_card(filter, card, p) =>
+                        StaticEffect::GraveyardCastOncePerTurn { filter, mv_at_most_counters, .. }
+                            if self.evaluate_requirement_on_card(filter, card, p)
+                                && mv_at_most_counters
+                                    .is_none_or(|k| card.definition.cost.cmc() <= c.counter_count(k)) =>
                         {
                             Some((c.id, None))
                         }
@@ -17456,11 +17459,15 @@ impl GameState {
             (false, false, false, false, false, false);
         let (mut drana, mut refractor) = (false, false);
         let mut caged: Option<crate::card::CounterType> = None;
+        let mut brained: Option<crate::card::CounterType> = None;
         for sa in &me.definition.static_abilities {
             match sa.effect {
                 StaticEffect::HasActivatedAbilitiesOfExiledWithSelf => welder = true,
                 StaticEffect::HasActivatedAbilitiesOfOwnedExiledWithCounter { counter } => {
                     caged = Some(counter)
+                }
+                StaticEffect::HasActivatedAbilitiesOfExiledWithCounter { counter } => {
+                    brained = Some(counter)
                 }
                 StaticEffect::HasActivatedAbilitiesOfGraveyardCreatures => ooze = true,
                 StaticEffect::HasActivatedAbilitiesOfOtherNamedControlledCreatures => {
@@ -17494,6 +17501,11 @@ impl GameState {
         }
         // Mairsil, the Pretender — the cards its controller owns in exile
         // with cage counters on them, however they got there.
+        if let Some(kind) = brained {
+            for imp in self.exile.iter().filter(|e| e.counter_count(kind) > 0) {
+                out.extend(imp.definition.activated_abilities.iter());
+            }
+        }
         if let Some(kind) = caged {
             for imp in self
                 .exile
@@ -19344,11 +19356,13 @@ impl GameState {
         let exile_permanent_picks: Vec<CardId> = if let Some((filter, count)) =
             ability.exile_permanent_cost.as_ref()
         {
+            // Source-aware, so "exile *another* …" (`OtherThanSource`) can't
+            // pick the activating permanent (Curie, Emergent Intelligence).
             let candidates: Vec<CardId> = self
                 .battlefield
                 .iter()
                 .filter(|c| c.controller == p)
-                .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
+                .filter(|c| self.evaluate_requirement_static(filter, &Target::Permanent(c.id), p, Some(card_id)))
                 .map(|c| c.id)
                 .collect();
             if candidates.len() < *count as usize {
@@ -20925,6 +20939,7 @@ impl GameState {
             );
             if mv.is_some() {
                 self.exiled_for_cost_mana_value = mv;
+                self.exiled_for_cost_card = Some(cid);
             }
         }
 

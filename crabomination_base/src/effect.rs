@@ -308,6 +308,10 @@ pub enum Selector {
     /// exile-zone card stamped `exiled_with == ctx.source`. Resolves to that
     /// single card so the activated ability can play it from exile.
     CardExiledWithSource,
+    /// The permanent the current activation exiled to pay its
+    /// `exile_permanent_cost` (Curie, Emergent Intelligence's "becomes a copy
+    /// of the exiled creature").
+    ExiledForCost,
     /// CR 702.95 — the creature the effect's source is paired with by
     /// soulbond (`CardInstance.soulbond_partner`), while both are on the
     /// battlefield; empty when unpaired. Mirage Phalanx's "each of those
@@ -685,6 +689,9 @@ pub enum Value {
     /// control"). Off-battlefield objects contribute their printed CMC.
     TotalManaValueOf(Box<Selector>),
     PowerOf(Box<Selector>),
+    /// The printed (copiable) power of the first entity `what` resolves to —
+    /// "draw cards equal to its base power" (Curie, Emergent Intelligence).
+    BasePowerOf(Box<Selector>),
     /// CR 700.18 — the size of the controller's party: the number of distinct
     /// roles (Cleric, Rogue, Warrior, Wizard) among creatures they control,
     /// capped at 4. A single creature counts for at most one role. Powers
@@ -7387,6 +7394,21 @@ pub enum Effect {
     /// counters whenever they cast a spell" (Nuka-Nuke Launcher). Stacks
     /// per grant; cleared at the turn boundary after their next turn.
     RadOnCastUntilEndOfTheirNextTurn { who: PlayerRef, amount: u32 },
+    /// "You and [opponent] each secretly choose 1 through `max`. Then those
+    /// choices are revealed. If they match, [on_match]. Otherwise,
+    /// [on_miss]" (Expert-Level Safe). Each pick is uniform at random —
+    /// the game's equilibrium strategy, so no seat is asked.
+    SecretNumbersMatch { opponent: PlayerRef, max: u32, on_match: Box<Effect>, on_miss: Box<Effect> },
+    /// "At the beginning of combat on enchanted opponent's turn, that player
+    /// may pay {1} for each artifact they control. If they don't, creatures
+    /// can't attack this combat" (Overencumbered) — the payment half; the
+    /// Aura's trigger gates the turn.
+    EnchantedPlayerPaysPerArtifactOrNoAttacks,
+    /// "Return `count` cards exiled with [this] to the battlefield under
+    /// their owners' control and put the rest on the bottom of their owners'
+    /// libraries" (Vault 13: Dweller's Journey). The controller picks; a
+    /// headless seat returns its own cards first, then the priciest.
+    ReturnSomeExiledWithSourceRestToBottom { count: u32 },
     /// "Destroy any number of target [filter] with total mana value `cap` or
     /// less" (Rampaging Yao Guai), picked on resolution: the controller chooses;
     /// a headless seat takes the opponents' priciest that fit.
