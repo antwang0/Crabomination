@@ -9614,7 +9614,9 @@ pub(super) fn pick_sacrifice_value(state: &GameState, seat: usize, w: &EvalWeigh
             if ability_is_pure_mana(&ab.effect) {
                 continue;
             }
-            if super::renewal_guard::renews_its_own_fodder(state, seat, card.id, &ab) {
+            if super::renewal_guard::renews_its_own_fodder(state, seat, card.id, &ab)
+                || super::renewal_guard::sacrifices_to_draw_from_empty_library(state, seat, &ab)
+            {
                 continue;
             }
             let target = if ab.effect.requires_target() {
