@@ -1247,6 +1247,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::KOTORI_COMMANDERS,
             main: decks::KOTORI_MAIN,
         },
+        // Seat 152: Merciless Rage (C19) — Rakdos madness under Anje
+        // Falkenrath (CR 702.35 madness, madness {X}; Aeon Engine's reversed
+        // turn order). `--pod-decks 152`.
+        PodDeck {
+            name: "Anje Falkenrath (BR)",
+            commanders: decks::ANJE_COMMANDERS,
+            main: decks::ANJE_MAIN,
+        },
     ]
 }
 
@@ -1856,6 +1864,8 @@ mod tests {
             // CR 702.74 granted evoke (Ashling), CR 702.143 foretold
             // Haunting Voyage, CR 702.141 encore.
             ("Ashling", [0xA541, 148, 9072]),
+            // CR 702.35 madness (paid, {X}, targeted), a reversed turn order.
+            ("Anje", [0xA41E, 152, 9076]),
         ] {
             let precon = *field.iter().find(|d| d.name.starts_with(name)).expect("the precon seat");
             assert_eq!(precon.card_count(), 100);

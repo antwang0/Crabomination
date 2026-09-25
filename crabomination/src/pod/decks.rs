@@ -4599,3 +4599,33 @@ pub const KOTORI_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, island, island, island, island, island, island, island,
     island, island, island, island, island, island, island, island,
 ];
+
+pub const ANJE_COMMANDERS: &[CardFactory] = &[anje_falkenrath];
+
+/// **Merciless Rage**, the Commander 2019 deck (C19, 2019-08-23), exactly as
+/// MTGJSON's `MercilessRage_C19` prints it: 79 nonbasic cards + 10 Swamps +
+/// 10 Mountains = 99. Rakdos madness under Anje Falkenrath.
+pub const ANJE_MAIN: &[CardFactory] = &[
+    ob_nixilis_reignited, chainer_nightmare_adept, greven_predator_captain,
+    archfiend_of_spite, bone_miser, krrik_son_of_yawgmoth, anjes_ravager, skyfire_phoenix,
+    wildfire_devils, champion_of_stray_souls, geth_lord_of_the_vault, soul_of_innistrad,
+    asylum_visitor, doomed_necromancer, overseer_of_the_damned, flayer_of_the_hatebound,
+    magus_of_the_wheel, squee_goblin_nabob, stromkirk_occultist, bloodhall_priest,
+    solemn_simulacrum, scaretiller, big_game_hunter, gorgon_recluse, grave_scrabbler,
+    nightshade_assassin, plaguecrafter, sanitarium_skeleton, meteor_golem,
+    nightmare_unmaking, boneyard_parley, beacon_of_unrest, from_under_the_floorboards,
+    in_garruks_wake, avacyns_judgment, mire_in_misery, hate_mirage, call_to_the_netherworld,
+    murderous_compulsion, alchemists_greeting, malevolent_whispers, chaos_warp,
+    dark_withering, fiery_temper, violent_eruption, aeon_engine, grimoire_of_the_dead,
+    key_to_the_city, bloodthirsty_blade, armillary_sphere, hedron_archive, rakdos_locket,
+    sol_ring, curse_of_fools_wisdom, hedonists_trove, warstorm_surge, faith_of_the_devoted,
+    the_eldest_reborn, zombie_infestation, sanctum_of_eternity, drownyard_temple,
+    exotic_orchard, geier_reach_sanitarium, akoum_refuge, ash_barrens, barren_moor,
+    bloodfell_caves, cinder_barrens, command_tower, evolving_wilds, forgotten_cave,
+    memorial_to_folly, mortuary_mire, myriad_landscape, rakdos_carnarium, rakdos_guildgate,
+    rix_maadi_dungeon_palace, terramorphic_expanse, temple_of_the_false_god,
+    // Basics: 10 swamp, 10 mountain
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain,
+];
