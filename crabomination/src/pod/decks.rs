@@ -4274,3 +4274,31 @@ pub const ANHELO_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, swamp, swamp, swamp, swamp, swamp,
     swamp, mountain, mountain, mountain, mountain, mountain,
 ];
+
+pub const PROSPER_COMMANDERS: &[CardFactory] = &[prosper_tome_bound];
+
+/// **Planar Portal**, the Adventures in the Forgotten Realms Commander deck
+/// (AFC, 2021-07-23), exactly as MTGJSON's `PlanarPortal_AFC` prints it: 72
+/// nonbasic cards + 14 Swamps + 13 Mountains = 99. Rakdos exile-and-play
+/// under Prosper, Tome-Bound.
+pub const PROSPER_MAIN: &[CardFactory] = &[
+    chittering_witch, fiend_of_the_shadows, gonti_lord_of_luxury, marionette_master,
+    ogre_slumlord, piper_of_the_swarm, pontiff_of_blight, dark_dweller_oracle,
+    dire_fleet_daredevil, dream_pillager, etali_primal_storm, izzet_chemister, tectonic_giant,
+    loyal_apprentice, consuming_vapors, hex, apex_of_power, disrupt_decorum, ignite_the_future,
+    phthisis, light_up_the_stage, throes_of_chaos, vandalblast, chaos_warp, commune_with_lava,
+    bedevil, bituminous_blast, rakdos_charm, terminate, chaos_wand, arcane_signet,
+    commanders_sphere, fellwar_stone, mind_stone, orazca_relic, rakdos_signet, sol_ring,
+    talisman_of_indulgence, unstable_obelisk, dead_mans_chest, theater_of_horrors,
+    shiny_impetus, exotic_orchard, foreboding_ruins, shadowblood_ridge, smoldering_marsh,
+    spinerock_knoll, bojuka_bog, command_tower, mortuary_mire, rakdos_carnarium, tainted_peak,
+    zhalfirin_void, karazikar_the_eye_tyrant, bag_of_devouring, danse_macabre, death_tyrant,
+    grim_hireling, hellish_rebuke, lorcan_warlock_collector, fiendlash, reckless_endeavor,
+    share_the_spoils, wild_magic_sorcerer, fevered_suspicion, hurl_through_hell, warlock_class,
+    chaos_channeler, you_find_some_prisoners, bucknards_everfull_purse, ebony_fly,
+    underdark_rift,
+    // Basics: 14 swamp, 13 mountain
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain,
+];

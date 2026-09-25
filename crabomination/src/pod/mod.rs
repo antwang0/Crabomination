@@ -1160,6 +1160,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ANHELO_COMMANDERS,
             main: decks::ANHELO_MAIN,
         },
+        // Hundred-and-forty-first: the hundred-and-thirty-first official
+        // list (Planar Portal, AFC) — Rakdos exile-and-play under Prosper,
+        // Tome-Bound. `--pod-decks 141`.
+        PodDeck {
+            name: "Prosper, Tome-Bound (BR)",
+            commanders: decks::PROSPER_COMMANDERS,
+            main: decks::PROSPER_MAIN,
+        },
     ]
 }
 
@@ -1757,6 +1765,9 @@ mod tests {
             ("Nalia", [0x4A11, 136, 9060]),
             // CR 107.16 energy; CR 118.9 an energy alternative cost.
             ("Saheeli, Radiant", [0x5A4E, 138, 9062]),
+            // CR 614 Warlocks exiled instead of dying (Lorcan); CR 603.10 a dead
+            // blocker (Death Tyrant); CR 508.1 "whenever you attack a player".
+            ("Prosper", [0x9A05, 141, 9065]),
         ] {
             let precon = *field.iter().find(|d| d.name.starts_with(name)).expect("the precon seat");
             assert_eq!(precon.card_count(), 100);
