@@ -160,6 +160,7 @@ lists were picked.
 | **Mutant Menace** (PIP precon) BGU | The Wise Mothman | BGU | 100 | 🟡 all 100 implemented, 3 carry residuals (The Wise Mothman, Rampaging Yao Guai, Struggle for Project Purity) |
 | **Science!** (PIP precon) URW | Dr. Madison Li | URW | 100 | 🟡 all 100 implemented, 6 carry residuals (C.A.M.P., Endurance Bobblehead, Expert-Level Safe, Plasma Caster, Vault 13, Vault 112) |
 | **Counter Blitz** (FIC precon) GWU | Tidus, Yuna's Guardian | GWU | 100 | 🟡 all 100 implemented, 3 carry residuals (Endless Detour, Lulu, Stern Guardian, Rikku, Resourceful Guardian) |
+| **The Fantastic Four** (MSC precon) WURG | Invisible Woman | WURG | 100 | 🟡 all 100 implemented, 2 carry residuals (Mister Fantastic; Tragic Arrogance's engine-chosen keeps) |
 | **Dance of the Elements** (ECC precon) WUBRG | Ashling, the Limitless | WUBRG | 100 | 🟡 all 100 implemented, 5 carry residuals (Flamebraider, Smokebraider, Primal Beyond, Haunting Voyage, Horde of Notions) |
 | **Veloci-Ramp-Tor** (LCC precon) RGW | Pantlaza, Sun-Favored | RGW | 100 | 🟡 all 100 implemented, 2 carry residuals (Sunfrill Imitator, Wrathful Raptors) |
 | **Multiverse Reforged** (FRC precon) WUBR | Jace, Multiverse Architect (**planeswalker**) | WUBR | 100 | 🟡 all 100 implemented, 2 carry residuals (Dack Fayden, Helping Hand; Tamiyo, Upriser Crowned) |
@@ -2621,6 +2622,26 @@ Vehicle, an activated manland or a stationed Spacecraft stayed home: Kotori
 **Dance of the Manse** (INCOMPLETE_CARDS). Four-seat pods beside Hakbal /
 Inspirit / Morska (seed 15101, 1,000) and six seats (15102, 1,000): all
 decided; census (15103, 500): nothing unplayed. `--bench` byte-identical.
+
+The **hundred-and-seventy-first** is Marvel Super Heroes Commander's **The
+Fantastic Four** (`TheFantasticFour_MSC`, 2026-06-26) — four-color noncreature
+spells under Invisible Woman, `--pod-decks 171` (built as 166; Mutant Menace, Wakanda Forever, From Cute to Brute, Science! and Hail, Caesar landed first). Her printed cost is {2}{W};
+the {R}{G}{W}{U} in her attack trigger makes the identity WURG (CR 903.4 reads
+rules-text mana symbols — asserted). Thirty-four cards were missing
+(`cmdr_invisible_woman.rs`). The primitives: `Effect::MustAttackPlayerFor`
+(CR 508.1d, Silver Surfer's "until the end of your next turn"),
+`Effect::PumpOtherAttackersOnSamePlayer` (Namor), `Effect::ExileRandomFromGraveyardWithSource`
+(Power Pack), `Effect::OwnersGainControlOf` (Alicia Masters — tokens too),
+`PlayerRef::HighestLifeOpponent` (Galactus, riding `MustAttackChosenPlayer`
+unless you control Silver Surfer), `Value::ColorsAmongYoursAndSpellsCastThisTurn`
+(First Family), `DynamicPt::GreatestNoncreatureManaValueYoursAndGraveyard`
+(Dragon Man, cast from the graveyard through `Keyword::GraveyardCast` + a
+discard) and `CreatureType::Inhuman`. Residual: **Mister Fantastic**
+(INCOMPLETE_CARDS). Four seats beside Tidus / Auntie / Y'shtola (seed 16601,
+1,000, `--card-census`: nothing unplayed): all decided, Invisible Woman
+21.0 %; six seats beside Frodo + Sam / Jace / Terra / Mirko / Brass (16602,
+1,000): all decided, 20.4 %; strict debug pods (16601 × 30, 16602 × 36)
+decided. `--bench` byte-identical.
 
 The **hundred-and-sixty-fifth** is Final Fantasy Commander's **Counter Blitz**
 (`CounterBlitzFinalFantasyX_FIC`, 2025-06-13) — Bant +1/+1 counters and
