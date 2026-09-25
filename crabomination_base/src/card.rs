@@ -282,6 +282,8 @@ pub enum CreatureType {
     // Ravnica Simic graft creature subtype (Cytoplast Root-Kin).
     Mutant,
     Spy,
+    // Marvel: Abomination's "Gamma Berserker".
+    Gamma,
     // Mirrodin Slith creature subtype (Arcbound Slith).
     Slith,
     // War of the Spark Amass Army token subtype (CR 701.43).
@@ -441,6 +443,8 @@ pub enum ArtifactSubtype {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum EnchantmentSubtype {
     Aura, Saga, Shrine, Cartouche, Curse, Room, Class, Case, Background, Role,
+    // Marvel: the Plan enchantments (Glorious Purpose's plan counters).
+    Plan,
 }
 
 /// Spell subtypes (for instants/sorceries).
@@ -914,6 +918,9 @@ pub enum CounterType {
     Ingredient,
     /// Treasure Map's landmark counters (three transform it).
     Landmark,
+    /// Plan counters — Glorious Purpose's tally (the sixth sacrifices it and
+    /// casts from the top four).
+    Plan,
     /// Vow counter — Promise of Loyalty's mark: a creature carrying one can't
     /// attack the vow's caster or their planeswalkers.
     Vow,

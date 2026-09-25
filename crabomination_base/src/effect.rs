@@ -3363,6 +3363,10 @@ pub enum EventKind {
     /// Wayfinder payoffs). The exploring permanent is the event subject;
     /// matched to `GameEvent::Explored`.
     Explored,
+    /// CR 701.50 — a permanent connived (Glorious Purpose, Iron Monger,
+    /// Ultron's "whenever a creature you control connives"). The conniver is
+    /// the event subject; matched to `GameEvent::Connived`.
+    Connived,
     /// CR 701.57 — the controller performed a discover (Curator of Sun's
     /// Creation's "whenever you discover" payoff). The discovering player is
     /// the event subject; matched to `GameEvent::Discovered`. The discover

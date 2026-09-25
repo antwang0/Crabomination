@@ -2855,6 +2855,8 @@ pub enum GameEvent {
     /// land (Nicanzil filters land vs nonland explores; surfaced through
     /// `event_amount_for` as 1/0).
     Explored { card_id: CardId, controller: usize, explored_land: bool },
+    /// CR 701.50 — `card_id` connived (its controller drew and discarded).
+    Connived { card_id: CardId, controller: usize },
     /// CR 701.57 — `player` performed a discover for `value` (Curator of
     /// Sun's Creation's "whenever you discover" payoff reads `value` via
     /// `Value::TriggerEventAmount`).

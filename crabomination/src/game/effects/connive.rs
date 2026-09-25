@@ -47,6 +47,7 @@ impl GameState {
                     events,
                 )?;
             }
+            events.push(GameEvent::Connived { card_id: id, controller });
         }
         Ok(())
     }

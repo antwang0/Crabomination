@@ -2826,6 +2826,7 @@ pub enum GameEventWire {
     PermanentPhasedIn { card_id: CardId },
     ControlChanged { card_id: CardId, from: usize, to: usize },
     Explored { card_id: CardId, controller: usize },
+    Connived { card_id: CardId, controller: usize },
     Discovered { player: usize, value: u32 },
     BecameMonstrous { card_id: CardId },
     Transformed { card_id: CardId },
@@ -3115,6 +3116,9 @@ impl From<&GameEvent> for GameEventWire {
             }
             GameEvent::Explored { card_id, controller, .. } => {
                 GameEventWire::Explored { card_id: *card_id, controller: *controller }
+            }
+            GameEvent::Connived { card_id, controller } => {
+                GameEventWire::Connived { card_id: *card_id, controller: *controller }
             }
             GameEvent::Discovered { player, value } => {
                 GameEventWire::Discovered { player: *player, value: *value }
@@ -3459,6 +3463,7 @@ impl GameEventWire {
                 format!("{} changed control to {}", name(*card_id), pn(*to))
             }
             E::Explored { card_id, .. } => format!("{} explored", name(*card_id)),
+            E::Connived { card_id, .. } => format!("{} connived", name(*card_id)),
             E::Discovered { player, value } => format!("{} discovered {value}", pn(*player)),
             E::BecameMonstrous { card_id } => format!("{} became monstrous", name(*card_id)),
             E::Transformed { card_id } => format!("{} transformed", name(*card_id)),

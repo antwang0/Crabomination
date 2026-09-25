@@ -143,6 +143,7 @@ pub(crate) fn event_kind_bits(event: &GameEvent) -> u128 {
         E::CumulativeUpkeepUnpaid { .. } => bits!(K::CumulativeUpkeepUnpaid),
         E::ControlChanged { .. } => bits!(K::GainedControlOfThis, K::LostControlOfThis),
         E::Explored { .. } => bits!(K::Explored),
+        E::Connived { .. } => bits!(K::Connived),
         E::Discovered { .. } => bits!(K::Discovered),
         E::BecameMonstrous { .. } => bits!(K::BecameMonstrous),
         E::Transformed { .. } => bits!(K::Transformed),
@@ -405,6 +406,7 @@ fn reference_event_kind_matches(
             source.is_none_or(|src| *card_id == src.id) && from != to
         }
         (EventKind::Explored, GameEvent::Explored { .. }) => true,
+        (EventKind::Connived, GameEvent::Connived { .. }) => true,
         (EventKind::Discovered, GameEvent::Discovered { .. }) => true,
         (EventKind::BecameMonstrous, GameEvent::BecameMonstrous { .. }) => true,
         (EventKind::Transformed, GameEvent::Transformed { .. }) => true,
@@ -591,6 +593,7 @@ pub(crate) fn event_kind_fans_out(kind: &EventKind) -> bool {
             | EventKind::LandPutIntoGraveyard
             | EventKind::TokenCreated
             | EventKind::Explored
+            | EventKind::Connived
             | EventKind::PlayerDamaged
             | EventKind::CardExiled
     )
@@ -934,7 +937,7 @@ fn event_matches_spec_rest(
             // CR 701.40 — "Whenever this creature explores." Source must
             // equal the exploring permanent.
             event,
-            GameEvent::Explored { card_id, .. } if *card_id == source.id
+            GameEvent::Explored { card_id, .. } | GameEvent::Connived { card_id, .. } if *card_id == source.id
         ) || matches!(
             // CR 701.31 — "When this becomes monstrous." Source must equal
             // the permanent that became monstrous.
@@ -1423,6 +1426,7 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         | GameEvent::PermanentPhasedOut { card_id }
         | GameEvent::CumulativeUpkeepUnpaid { card_id, .. } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::Explored { card_id, .. } => Some(EntityRef::Permanent(*card_id)),
+        GameEvent::Connived { card_id, .. } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::BecameMonstrous { card_id, .. } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::Transformed { card_id } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::Mutated { card_id } => Some(EntityRef::Permanent(*card_id)),
@@ -1598,6 +1602,7 @@ fn event_card(event: &GameEvent) -> Option<CardId> {
         | GameEvent::PermanentPhasedIn { card_id }
         | GameEvent::PermanentPhasedOut { card_id }
         | GameEvent::Explored { card_id, .. }
+        | GameEvent::Connived { card_id, .. }
         | GameEvent::BecameMonstrous { card_id, .. }
         | GameEvent::Transformed { card_id }
         | GameEvent::Mutated { card_id }
@@ -1839,6 +1844,7 @@ mod tests {
             E::ControlChanged { card_id: c, from: 1, to: 0 },
             E::ControlChanged { card_id: mine, from: 0, to: 0 },
             E::Explored { card_id: c, controller: 0, explored_land: true },
+            E::Connived { card_id: c, controller: 0 },
             E::Discovered { player: 0, value: 3 },
             E::BecameMonstrous { card_id: c, n: 2 },
             E::Transformed { card_id: c },
@@ -1986,6 +1992,7 @@ mod tests {
             K::GainedControlOfThis,
             K::LostControlOfThis,
             K::Explored,
+            K::Connived,
             K::Discovered,
             K::BecameMonstrous,
             K::EnergyGained,
