@@ -65,11 +65,11 @@ pub fn henzie_toolbox_torre() -> CardDefinition {
         can_be_commander: true,
         static_abilities: vec![
             StaticAbility {
-                description: "Each creature spell you cast with mana value 4 or greater has blitz.".into(),
+                description: "Each creature spell you cast with mana value 4 or greater has blitz.",
                 effect: StaticEffect::GrantBlitzToSpells { filter: R::Creature.and(R::ManaValueAtLeast(4)) },
             },
             StaticAbility {
-                description: "Blitz costs you pay cost {1} less for each time you've cast your commander.".into(),
+                description: "Blitz costs you pay cost {1} less for each time you've cast your commander.",
                 effect: StaticEffect::BlitzCostLessPerCommanderCast,
             },
         ],
@@ -155,7 +155,7 @@ pub fn dodgy_jalopy() -> CardDefinition {
         toughness: 5,
         keywords: vec![Keyword::Trample, Keyword::Crew(3)],
         static_abilities: vec![StaticAbility {
-            description: "Its power is equal to the greatest mana value among creatures you control.".into(),
+            description: "Its power is equal to the greatest mana value among creatures you control.",
             effect: StaticEffect::SelfBasePtFromValue { power: greatest.clone(), toughness: Value::Const(5) },
         }],
         activated_abilities: vec![ActivatedAbility {
@@ -275,7 +275,7 @@ pub fn jolene_the_plunder_queen() -> CardDefinition {
             effect: Effect::CreateToken { who: PlayerRef::Target(0), count: Value::ONE, definition: treasure() },
         }],
         static_abilities: vec![StaticAbility {
-            description: "If you would create Treasure tokens, create those plus an additional Treasure.".into(),
+            description: "If you would create Treasure tokens, create those plus an additional Treasure.",
             effect: StaticEffect::TreasureCreationAddsTreasure,
         }],
         activated_abilities: vec![ActivatedAbility {
@@ -511,7 +511,7 @@ pub fn weathered_sentinels() -> CardDefinition {
         card_types: vec![CardType::Artifact, CardType::Creature],
         keywords: vec![Keyword::Defender, Keyword::Reach, Keyword::Vigilance, Keyword::Trample],
         static_abilities: vec![StaticAbility {
-            description: "Can attack players who attacked you during their last turn.".into(),
+            description: "Can attack players who attacked you during their last turn.",
             effect: StaticEffect::CanAttackPlayersWhoAttackedYouLastTurn,
         }],
         triggered_abilities: vec![on_attack(Effect::Seq(vec![
