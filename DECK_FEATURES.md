@@ -159,6 +159,7 @@ lists were picked.
 | **Mystic Intellect** (C19 precon) URW | Sevinne, the Chronoclasm | URW | 100 | 🟡 all 100 implemented (Dockside Extortionist, banned, swapped for Ragavan), 3 carry residuals (Wall of Stolen Identity, Mandate of Peace, Elsha of the Infinite) |
 | **The Hosts of Mordor** (LTC precon) UBR | Sauron, Lord of the Rings | UBR | 100 | 🟡 all 100 implemented, 3 carry residuals (Moria Scavenger, Shelob, Dread Weaver, Summons of Saruman) |
 | **Elven Empire** (KHC precon) BG | Lathril, Blade of the Elves | BG | 100 | 🟡 all 100 implemented, 2 carry residuals (Serpent's Soul-Jar, Roots of Wisdom) |
+| **Food and Fellowship** (LTC precon) WBG | Frodo, Adventurous Hobbit **+** Sam, Loyal Attendant (Partner with) | WBG | 98 + 2 | 🟡 all 100 implemented, 3 carry residuals (Gollum, Motivated Pony, Field-Tested Frying Pan) |
 | **Coven Counters** (MIC precon) GW | Leinore, Autumn Sovereign | GW | 100 | 🟡 all 100 implemented, 4 carry residuals (Curse of Conformity, Celestial Judgment, Sigardian Zealot, Moorland Rescuer) |
 | **Arcane Maelstrom** (C20 precon) GUR | Kalamax, the Stormsire | GUR | 100 | 🟡 all 100 implemented, 4 carry residuals (Eon Frolicker, Haldan, Pako, Lavabrink Floodgates) |
 | **Enhanced Evolution** (C20 precon) BGU | Otrimi, the Ever-Playful | BGU | 100 | 🟡 all 100 implemented, 4 carry residuals (Capricopian, Manascape Refractor, Mindleecher, Vastwood Hydra) |
@@ -2680,6 +2681,25 @@ event. Pods (1,000 games each, all decided): 4 seats beside Sauron / Sevinne /
 Anje (seed 10480) Pantlaza 57.8 %, census: no card of the four unplayed; 6
 seats beside Ashling / Satya / Prosper / Morophon / Omo (10481) 42.6 %. Strict
 debug pods (10470-10472) 180 / 180. `--bench` byte-identical.
+
+The **hundred-and-sixty-second** is Tales of Middle-earth Commander's **Food
+and Fellowship** (`FoodAndFellowship_LTC`) — Abzan Food and lifegain under
+Frodo, Adventurous Hobbit and Sam, Loyal Attendant, a "partner with" pair
+(CR 702.124j), `--pod-decks 162` (committed as 159, then 161). Twenty-seven
+cards were missing (`cmdr_frodo.rs`). The primitives: `CounterType::Unity`
+and `CounterType::Ribbon`, `Predicate::RingTemptedAtLeast` (CR 701.54,
+Frodo) and `StaticEffect::MatchingActivatedAbilitiesCostLess` (Sam's Foods).
+⚠ **Its strict debug pod found an engine bug**: an as-enters ask on a
+creature a mass reanimation returns (Feasting Hobbit's devour under Living
+Death) parked inside a resolution that never replays it — the answer leaked
+and nothing was devoured. `resolve_as_enters_driven` now answers every
+as-enters ask where the permanent enters (CR 614.12), a prompting seat's
+through the bot's policy. Residuals: **Gollum** (reads this Gollum's damage
+of any kind), **Motivated Pony** (any artifact entering, not a Food),
+**Field-Tested Frying Pan** (the pump is the Equipment's trigger). Pods
+beside Admiral Brass / Lathril / Sevinne (seed 9220, census: nothing
+unplayed), the first three seats (9221), six seats (9222): 3,000 / 3,000
+decided; Frodo + Sam 35.8 / 67.7 / 30.8 %. `--bench` byte-identical.
 
 The **hundred-and-fifty-sixth** is Kaldheim Commander's **Elven Empire**
 (`ElvenEmpire_KHC`) — Golgari Elves under Lathril, Blade of the Elves,

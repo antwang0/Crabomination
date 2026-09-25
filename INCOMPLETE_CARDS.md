@@ -2013,6 +2013,9 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Elsha of the Infinite | Mystic Intellect (C19) | its flash also covers a top-of-library cast another permission allowed (Mystic Forge). |
 | 🟡 Serpent's Soul-Jar | Elven Empire (KHC) | every creature card it exiled becomes castable until end of turn, not one of them. |
 | 🟡 Roots of Wisdom | Elven Empire (KHC) | the land or Elf card comes from among the three milled, not from anywhere in the graveyard. |
+| 🟡 Gollum, Obsessed Stalker | Food and Fellowship (LTC) | the drain reaches players this Gollum dealt any damage this game, not every Gollum's combat damage. |
+| 🟡 Motivated Pony | Food and Fellowship (LTC) | the untap rider checks for any artifact entering under your control this turn, not a Food. |
+| 🟡 Field-Tested Frying Pan | Food and Fellowship (LTC) | the lifegain pump is the Equipment's own trigger, not an ability the equipped creature has. |
 | 🟡 Orator of Ojutai | Draconic Domination (C17) | the Dragon check reads your board and hand as it enters; there is no optional reveal. |
 | 🟡 Armored Skyhunter | Silverquill Influence (SOC) | an Equipment it puts onto the battlefield stays unattached. |
 | 🟡 Coercive Impetus | Silverquill Influence (SOC) | the goad is renewed by a trigger at the beginning of each combat, not a static. |
