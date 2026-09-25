@@ -93,6 +93,7 @@ lists were picked.
 | **Peace Offering** (BLC precon) GWU | Ms. Bumbleflower | GWU | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
 | **Nature of the Beast** (C13 precon) RGW | Marath, Will of the Wild | RGW | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Reign of Dragons** (FDC precon) R | Lathliss, Dragon Queen | R | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
+| **Spirit Squadron** (VOC precon) WU | Millicent, Restless Revenant | WU | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Enduring Enchantments** (CMM precon) WBG | Anikthea, Hand of Erebos | WBG | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
 | **Open Hostility** (C16 precon) WBRG | Saskia the Unyielding | WBRG | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Devour for Power** (CMD precon) BGU | The Mimeoplasm | BGU | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
@@ -2072,6 +2073,22 @@ Loyalty**, **Tamiyo** (INCOMPLETE_CARDS). A 200-game census beside
 Hearthhull / Bright-Palm / Brimaz (seed 9551) decided 200/200 with zero
 panics and no card of the four lists unplayed, Ms. Bumbleflower winning
 38.0 %. `--bench` byte-identical.
+
+The **hundred-and-twenty-fourth** is Innistrad: Crimson Vow Commander's
+**Spirit Squadron** (`SpiritSquadron_VOC`) — Azorius Spirits under
+Millicent, Restless Revenant (seat 123 before rebasing over Desert Bloom).
+Eighteen cards were missing (`cmdr_millicent.rs`); the primitives:
+`Effect::CopySpellAsOneOneSpirit` (Donal, CR 707.9b — the exception is
+written into the copy's definition, so the token keeps it),
+`StaticEffect::PreventNoncombatDamageToMatching` (Drogskol Reinforcements),
+`Value::CardTypesAmong` (Occult Epiphany) and
+`Value::OpponentsControllingAnyOf` (Sudden Salvation). ⚠
+**`CreateTokenCopyOf` never found a library card**: the source lookup walked
+the battlefield, exile and graveyards, so Haunting Imitation's copies of
+each player's top card were silently skipped. Residuals: **Donal, Herald of
+Wings**, **Haunting Imitation**, **Spectral Arcanist**. A 200-game census
+beside Lathliss / Marath / Bright-Palm (seed 124) decided 200/200 with zero
+panics and no card of the list unplayed, Millicent winning 27.0 %.
 
 The **ninety-fifth** is Foundations Commander's **Reign of Dragons**
 (`ReignOfDragons_FDC`) — mono-red Dragons under Lathliss, Dragon Queen

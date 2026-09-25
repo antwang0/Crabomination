@@ -1853,6 +1853,9 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Goddric, Cloaked Reveler | Reign of Dragons (FDC) | while celebrating it keeps its Human Noble types beside Dragon. |
 | 🟡 Leyline Tyrant | Reign of Dragons (FDC) | the dying payment is any mana, not only {R}. |
 | 🟡 Thundermane Dragon | Reign of Dragons (FDC) | a creature cast from the top doesn't gain haste; the top card isn't shown to you. |
+| 🟡 Donal, Herald of Wings | Spirit Squadron (VOC) | "only once each turn" is spent when the trigger fires, even if you decline the copy. |
+| 🟡 Haunting Imitation | Spirit Squadron (VOC) | the top cards are read, not revealed. |
+| 🟡 Spectral Arcanist | Spirit Squadron (VOC) | the graveyard spell is chosen as a target when the trigger goes on the stack, not as it resolves. |
 | 🟡 Battle at the Helvault | Enduring Enchantments (CMM) | "for each player" covers opponents only: you can't exile one of your own permanents. |
 | 🟡 Battle for Bretagard | Enduring Enchantments (CMM) | chapter III copies every artifact and creature token you control, duplicate names included. |
 | 🟡 Cacophony Unleashed | Enduring Enchantments (CMM) | the animated 6/6 isn't legendary. |
