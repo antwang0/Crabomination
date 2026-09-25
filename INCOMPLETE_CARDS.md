@@ -1880,6 +1880,12 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 The Grim Captain's Locker | Ahoy Mateys (LCC) | the escape-granting ability isn't implemented. |
 | 🟡 Timestream Navigator | Ahoy Mateys (LCC) | it goes to the bottom as part of the effect, not as a cost. |
 | 🟡 Zara, Renegade Recruiter | Ahoy Mateys (LCC) | the stolen creature is the engine's pick, and you don't look at the rest of the hand. |
+| 🟡 Blue Mage's Cane | Scions & Spellcraft (FIC) | the copy costs the card's own mana cost, not {3}, and the graveyard card isn't exiled. |
+| 🟡 Dancer's Chakrams | Scions & Spellcraft (FIC) | the commander pump also reaches the equipped creature when it's a commander. |
+| 🟡 Estinien Varlineau | Scions & Spellcraft (FIC) | counts opponents dealt combat damage by any creature, not only by it or a Dragon. |
+| 🟡 Hildibrand Manderville | Scions & Spellcraft (FIC) | dying doesn't let you cast it from the graveyard as an Adventure. |
+| 🟡 Into the Story | Scions & Spellcraft (FIC) | any graveyard with seven cards discounts it, yours included. |
+| 🟡 Urianger Augurelt | Scions & Spellcraft (FIC) | the card is exiled face up; a land played from exile gains no life; its spells get no {2} discount. |
 | 🟡 Battle at the Helvault | Enduring Enchantments (CMM) | "for each player" covers opponents only: you can't exile one of your own permanents. |
 | 🟡 Battle for Bretagard | Enduring Enchantments (CMM) | chapter III copies every artifact and creature token you control, duplicate names included. |
 | 🟡 Cacophony Unleashed | Enduring Enchantments (CMM) | the animated 6/6 isn't legendary. |

@@ -98,6 +98,7 @@ lists were picked.
 | **Obscura Operation** (NCC precon) WUB | Kamiz, Obscura Oculus | WUB | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Elven Council** (LTC precon) GU | Galadriel, Elven-Queen | GU | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
 | **Ahoy Mateys** (LCC precon) UBR | Admiral Brass, Unsinkable | UBR | 100 | 🟡 all 100 implemented, 10 carry residuals (below) |
+| **Scions & Spellcraft** (FIC precon) WUB | Y'shtola, Night's Blessed | WUB | 100 | 🟡 all 100 implemented, 6 carry residuals (below) |
 | **Enduring Enchantments** (CMM precon) WBG | Anikthea, Hand of Erebos | WBG | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
 | **Open Hostility** (C16 precon) WBRG | Saskia the Unyielding | WBRG | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Devour for Power** (CMD precon) BGU | The Mimeoplasm | BGU | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
@@ -2786,6 +2787,19 @@ Identity**, **Mandate of Peace**, **Elsha of the Infinite**. Pods beside
 Ashling / Éowyn / Perrie (seed 9200, 1,000) and the first three seats
 (9201, 1,000), six seats (9202, 1,000): all decided, no card of the list
 unplayed; strict debug pods 150 / 150. `--bench` byte-identical.
+
+The **hundred-and-sixty-third** is Final Fantasy XIV's **Scions &
+Spellcraft** (`ScionsSpellcraftFinalFantasyXiv_FIC`) — Esper noncreature
+spells under Y'shtola, Night's Blessed. Twenty-six cards were missing
+(`cmdr_yshtola.rs`); the one primitive is `Value::PlayersWhoLostLifeThisTurn`
+(Reaper's Scythe). Emet-Selch's graveyard recast is the bare
+`CastWithoutPayingImmediate` — a `MayDo` around it hid the graveyard target
+from the auto-targeter and the trigger was dropped. Residuals: **Blue
+Mage's Cane**, **Dancer's Chakrams**, **Estinien Varlineau**, **Hildibrand
+Manderville**, **Into the Story**, **Urianger Augurelt**. A 200-game census
+beside Brass / Galadriel / Kamiz (seed 163) decided 200/200 with zero
+panics; Y'shtola won 55.5 %, and **Observed Stasis went uncast** (TODO open
+queue).
 
 The **hundred-and-fifty-eighth** is The Lost Caverns of Ixalan Commander's
 **Ahoy Mateys** (`AhoyMateys_LCC`) — Grixis Pirates under Admiral Brass,
