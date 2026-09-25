@@ -382,7 +382,7 @@ impl Effect {
             | Effect::EachPlayerDoes { body, .. }
             | Effect::MayDo { body, .. }
             | Effect::MayDoBy { body, .. }
-            | Effect::MayPayX { body, .. }
+            | Effect::MayPayX { body, .. } | Effect::MayPayXTimes { body, .. }
             | Effect::MayPayGenericUpTo { body, .. }
             | Effect::MayPayRepeatedly { body, .. }
             | Effect::Reflexive { body, .. }
@@ -1471,7 +1471,7 @@ impl Effect {
             | Effect::BindTargetSlot { body, .. }
             | Effect::BindTargetObjects { body, .. }
             | Effect::BindScratch { body, .. } => body.requires_target(),
-            Effect::MayPayX { body, .. } => body.requires_target(),
+            Effect::MayPayX { body, .. } | Effect::MayPayXTimes { body, .. } => body.requires_target(),
             Effect::OptionalTargets { body, .. } => body.requires_target(),
             Effect::WithX { body, .. } => body.requires_target(),
             Effect::WithSacrificedPt { body, .. } => body.requires_target(),
@@ -2896,7 +2896,7 @@ impl Effect {
             | Effect::MayExileSelfThen { body }
             | Effect::MayExileFromYourGraveyard { then: body, .. }
             | Effect::MayDo { body, .. }
-            | Effect::MayPayX { body, .. }
+            | Effect::MayPayX { body, .. } | Effect::MayPayXTimes { body, .. }
             | Effect::CapTargetsAtX { body }
             | Effect::TargetsExactlyX { body }
             | Effect::CapTargetsAt { body, .. }
@@ -3118,7 +3118,7 @@ impl Effect {
             | Effect::BindTargetSlot { body, .. }
             | Effect::BindTargetObjects { body, .. }
             | Effect::BindScratch { body, .. }
-            | Effect::MayPayX { body, .. }
+            | Effect::MayPayX { body, .. } | Effect::MayPayXTimes { body, .. }
             | Effect::Repeat { body, .. } => body.slot_owner(slot, mode),
             other => other
                 .target_filter_for_slot_in_mode_kicked(slot, None, false)
@@ -3176,7 +3176,7 @@ impl Effect {
                 | Effect::BindTargetSlot { body, .. }
                 | Effect::BindTargetObjects { body, .. }
                 | Effect::BindScratch { body, .. }
-                | Effect::MayPayX { body, .. }
+                | Effect::MayPayX { body, .. } | Effect::MayPayXTimes { body, .. }
                 | Effect::Repeat { body, .. } => hostile(body),
                 _ => false,
             }
@@ -3250,7 +3250,7 @@ impl Effect {
             | Effect::BindTargetSlot { body, .. }
             | Effect::BindTargetObjects { body, .. }
             | Effect::BindScratch { body, .. }
-            | Effect::MayPayX { body, .. } => body.prefers_friendly_target(),
+            | Effect::MayPayX { body, .. } | Effect::MayPayXTimes { body, .. } => body.prefers_friendly_target(),
             // "Each of up to N targets" rebinds every slot to the body's
             // `Target(0)`, so the body's flavor is every slot's. Without this
             // arm the wrapper read hostile and an optional slot of a friendly
@@ -3364,7 +3364,7 @@ impl Effect {
             | Effect::BindTargetSlot { body, .. }
             | Effect::BindTargetObjects { body, .. }
             | Effect::BindScratch { body, .. }
-            | Effect::MayPayX { body, .. }
+            | Effect::MayPayX { body, .. } | Effect::MayPayXTimes { body, .. }
             | Effect::MayPay { body, .. }
             | Effect::MayPayBy { body, .. }
             | Effect::MaySacrifice { then: body, .. }
@@ -3459,7 +3459,7 @@ impl Effect {
             | Effect::BindTargetSlot { body, .. }
             | Effect::BindTargetObjects { body, .. }
             | Effect::BindScratch { body, .. }
-            | Effect::MayPayX { body, .. }
+            | Effect::MayPayX { body, .. } | Effect::MayPayXTimes { body, .. }
             | Effect::MayPay { body, .. }
             | Effect::MayPayBy { body, .. }
             | Effect::MaySacrifice { then: body, .. }
@@ -3910,7 +3910,7 @@ impl Effect {
             | Effect::BindTargetSlot { body, .. }
             | Effect::BindTargetObjects { body, .. }
             | Effect::BindScratch { body, .. }
-            | Effect::MayPayX { body, .. }
+            | Effect::MayPayX { body, .. } | Effect::MayPayXTimes { body, .. }
             | Effect::MayPay { body, .. }
             | Effect::MayPayBy { body, .. }
             | Effect::MayPayLife { body, .. }
@@ -4259,7 +4259,7 @@ impl Effect {
             | Effect::BindScratch { body, .. }
             | Effect::OptionalTargets { body, .. }
             | Effect::WithX { body, .. }
-            | Effect::MayPayX { body, .. }
+            | Effect::MayPayX { body, .. } | Effect::MayPayXTimes { body, .. }
             | Effect::MayPay { body, .. }
             | Effect::MayPayBy { body, .. }
             | Effect::MaySacrifice { then: body, .. }
@@ -4554,7 +4554,7 @@ impl Effect {
                 | Effect::BindTargetSlot { body, .. }
                 | Effect::BindTargetObjects { body, .. }
                 | Effect::BindScratch { body, .. }
-                | Effect::MayPayX { body, .. }
+                | Effect::MayPayX { body, .. } | Effect::MayPayXTimes { body, .. }
                 | Effect::MayPay { body, .. }
                 | Effect::MaySacrifice { then: body, .. }
                 | Effect::MaySacrificeSource { then: body, .. }
@@ -5344,7 +5344,7 @@ impl Effect {
             | Effect::BindTargetSlot { body, .. }
             | Effect::BindTargetObjects { body, .. }
             | Effect::BindScratch { body, .. }
-            | Effect::MayPayX { body, .. }
+            | Effect::MayPayX { body, .. } | Effect::MayPayXTimes { body, .. }
             | Effect::MayPay { body, .. }
             | Effect::MayPayBy { body, .. }
             | Effect::MaySacrifice { then: body, .. }
@@ -5387,7 +5387,7 @@ impl Effect {
             | Effect::BindTargetSlot { body, .. }
             | Effect::BindTargetObjects { body, .. }
             | Effect::BindScratch { body, .. }
-            | Effect::MayPayX { body, .. }
+            | Effect::MayPayX { body, .. } | Effect::MayPayXTimes { body, .. }
             | Effect::MayPay { body, .. }
             | Effect::MayPayBy { body, .. }
             | Effect::MaySacrifice { then: body, .. }
@@ -5441,7 +5441,7 @@ impl Effect {
             | Effect::CapTargetsAt { body, .. }
             | Effect::OptionalTargets { body, .. }
             | Effect::WithX { body, .. }
-            | Effect::MayPayX { body, .. }
+            | Effect::MayPayX { body, .. } | Effect::MayPayXTimes { body, .. }
             | Effect::MayPay { body, .. }
             | Effect::MayPayBy { body, .. }
             | Effect::MaySacrifice { then: body, .. }
@@ -5476,7 +5476,7 @@ impl Effect {
             | Effect::BindTargetSlot { body, .. }
             | Effect::BindTargetObjects { body, .. }
             | Effect::BindScratch { body, .. }
-            | Effect::MayPayX { body, .. }
+            | Effect::MayPayX { body, .. } | Effect::MayPayXTimes { body, .. }
             | Effect::MayPay { body, .. }
             | Effect::MayPayBy { body, .. }
             | Effect::MaySacrifice { then: body, .. }

@@ -258,6 +258,13 @@ pub fn cast_at(g: &mut GameState, id: CardId, target: Target) -> Vec<GameEvent> 
 
 pub use types::*;
 
+/// CR 724 — what a resolving "end the …" effect asked to end.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EndRequest {
+    Turn,
+    Combat,
+}
+
 // `pub use` (doc-hidden) rather than plain `use`: the out-of-crate test
 // suite (`crabomination_tests`) reaches these via `crabomination::game::*`,
 // which only sees public re-exports — the old in-crate test glob also
@@ -2682,15 +2689,13 @@ pub struct GameState {
     /// with the given counter on it (Esper Origins). Cleared once consumed.
     #[serde(skip)]
     pub(crate) resolving_spell_to_battlefield_transformed: Option<Option<crate::card::CounterType>>,
-    /// CR 724 — set by `Effect::EndTheTurn`; consumed after the current
-    /// stack item finishes resolving (exile the stack, clear combat, jump
-    /// to cleanup).
+    /// CR 724 — set by `Effect::EndTheTurn` (`Turn`) or, during combat, by
+    /// `Effect::EndTheCombatPhase` (`Combat`); consumed after the current
+    /// stack item finishes resolving (exile the stack, clear combat, jump to
+    /// cleanup or to the next main phase). One byte for both: `GameState`
+    /// is size-capped (`cow::tests::game_state_stays_small`).
     #[serde(skip)]
-    pub(crate) end_turn_requested: bool,
-    /// CR 724.2 — set by `Effect::EndTheCombatPhase` during combat; consumed
-    /// like `end_turn_requested`, but the game resumes at the next main phase.
-    #[serde(skip)]
-    pub(crate) end_combat_requested: bool,
+    pub(crate) end_requested: Option<EndRequest>,
     /// CR 702.46 — Cipher. Set by `Effect::Cipher` to the creature the
     /// resolving spell should be exiled "encoded on"; the post-resolution
     /// routing consumes it to send the card to exile (with `encoded_on` stamped)
@@ -3993,8 +3998,7 @@ impl Clone for GameState {
             resolving_spell_library_from_top: self.resolving_spell_library_from_top,
             resolving_spell_to_battlefield_transformed: self
                 .resolving_spell_to_battlefield_transformed,
-            end_turn_requested: self.end_turn_requested,
-            end_combat_requested: self.end_combat_requested,
+            end_requested: self.end_requested,
             cipher_encode_pending: self.cipher_encode_pending,
             permanents_destroyed_this_resolution: self.permanents_destroyed_this_resolution,
             excess_damage_this_resolution: self.excess_damage_this_resolution,
@@ -4204,8 +4208,7 @@ impl GameState {
             exile_resolving_spell: false,
             resolving_spell_library_from_top: None,
             resolving_spell_to_battlefield_transformed: None,
-            end_turn_requested: false,
-            end_combat_requested: false,
+            end_requested: None,
             cipher_encode_pending: None,
             permanents_destroyed_this_resolution: 0,
             excess_damage_this_resolution: 0,
@@ -15313,6 +15316,19 @@ impl GameState {
                 crate::card::DynamicPt::ControllerExperience { base_p, base_t } => {
                     let n = self.players[card.controller].experience as i32;
                     (base_p + n, base_t + n)
+                }
+                crate::card::DynamicPt::CreaturesOfTypeControlledAndInGraveyard { creature_type } => {
+                    let is_type = |c: &crate::card::CardInstance| {
+                        c.definition.subtypes.creature_types.contains(&creature_type)
+                            || c.has_keyword(&crate::card::Keyword::Changeling)
+                    };
+                    let n = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| c.controller == card.controller && c.definition.is_creature() && is_type(c))
+                        .count()
+                        + self.players[card.controller].graveyard.iter().filter(|c| is_type(c)).count();
+                    (n as i32, n as i32)
                 }
                 crate::card::DynamicPt::CreaturesOfTypeControlled { creature_type } => {
                     let n = self.battlefield.iter().filter(|c| {
@@ -27888,7 +27904,7 @@ impl GameState {
         // CR 724.1a — a spell that ended the turn is exiled along with the
         // rest of the stack instead of going to the graveyard (Day's
         // Undoing). The flag stays set; `resolve_top_of_stack` consumes it.
-        if self.end_turn_requested || self.end_combat_requested {
+        if self.end_requested.is_some() {
             self.exile.push(card);
             return Ok(events);
         }

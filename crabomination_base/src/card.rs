@@ -5776,6 +5776,9 @@ pub enum DynamicPt {
     /// Power = toughness = the number of creatures of `creature_type` the
     /// controller controls (counting the source). Pack Rat.
     CreaturesOfTypeControlled { creature_type: CreatureType },
+    /// `*/*` = creatures of `creature_type` you control plus cards of that
+    /// type in your graveyard (Abomination of Llanowar).
+    CreaturesOfTypeControlledAndInGraveyard { creature_type: CreatureType },
     /// Power = toughness = the number of creatures on the battlefield (any
     /// controller) sharing the source's `chosen_creature_type`. Caller of
     /// the Hunt.

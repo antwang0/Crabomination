@@ -4197,6 +4197,10 @@ pub enum Effect {
     /// so `Value::XFromCost` reads the chosen amount. Tester of the
     /// Tangential's "pay {X}: move X +1/+1 counters".
     MayPayX { description: String, body: Box<Effect> },
+    /// "You may pay {X}{X}" — [`Effect::MayPayX`] with the payment `times` ×
+    /// X (Numa, Joraga Chieftain). Opaque to the target walkers: a targeted
+    /// body goes inside an [`Effect::Reflexive`].
+    MayPayXTimes { times: u32, description: String, body: Box<Effect> },
 
     /// Optional **paid** branch: the controller is asked yes/no, and if
     /// they accept *and* can afford `mana_cost`, the engine deducts the

@@ -3265,13 +3265,10 @@ impl GameState {
 
         // CR 724 — Effect::EndTheTurn fired during this resolution: exile
         // the rest of the stack, clear combat, and jump to cleanup.
-        if self.end_turn_requested {
-            self.end_turn_requested = false;
-            return self.do_end_the_turn(events);
-        }
-        if self.end_combat_requested {
-            self.end_combat_requested = false;
-            return self.do_end_the_combat_phase(events);
+        match self.end_requested.take() {
+            Some(crate::game::EndRequest::Turn) => return self.do_end_the_turn(events),
+            Some(crate::game::EndRequest::Combat) => return self.do_end_the_combat_phase(events),
+            None => {}
         }
 
         self.check_state_based_actions_into(&mut events);

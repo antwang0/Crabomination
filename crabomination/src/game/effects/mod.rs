@@ -7281,7 +7281,11 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::MayPayX { description, body } => {
+            Effect::MayPayX { description, body } | Effect::MayPayXTimes { description, body, .. } => {
+                let times = match effect {
+                    Effect::MayPayXTimes { times, .. } => (*times).max(1),
+                    _ => 1,
+                };
                 // "You may pay {X}. When you do, [body]." — X is chosen at
                 // resolution (0 = decline), capped by the controller's
                 // floated pool (MayPay convention: no mid-resolution mana
@@ -7292,8 +7296,9 @@ impl GameState {
                 // The most X could be: the pool plus one per untapped source
                 // (a bound — a source adding two is under-counted; the payment
                 // below is the truth and a failed one runs nothing).
-                let pool_max = self.players[ctx.controller].mana_pool.total()
-                    + self.mana_source_candidates(ctx.controller).len() as u32;
+                let pool_max = (self.players[ctx.controller].mana_pool.total()
+                    + self.mana_source_candidates(ctx.controller).len() as u32)
+                    / times;
                 if pool_max == 0 {
                     return Ok(());
                 }
@@ -7322,7 +7327,7 @@ impl GameState {
                 if n == 0 {
                     return Ok(());
                 }
-                let x_cost = crate::mana::ManaCost::new(vec![crate::mana::generic(n)]);
+                let x_cost = crate::mana::ManaCost::new(vec![crate::mana::generic(n * times)]);
                 if !self.pay_mana_cost_with_picks(ctx.controller, &x_cost, None, events) {
                     return Ok(());
                 }
@@ -27504,14 +27509,14 @@ impl GameState {
             }
 
             Effect::EndTheTurn => {
-                self.end_turn_requested = true;
+                self.end_requested = Some(crate::game::EndRequest::Turn);
                 Ok(())
             }
 
             // CR 724.2g — outside a combat phase nothing happens.
             Effect::EndTheCombatPhase => {
                 if self.step.is_combat_phase() {
-                    self.end_combat_requested = true;
+                    self.end_requested = Some(crate::game::EndRequest::Combat);
                 }
                 Ok(())
             }
