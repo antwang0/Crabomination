@@ -2048,6 +2048,9 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Baldin, Century Herdmaster | Abzan Armor (TDC) | the +0/+X goes on each creature you control rather than up to one hundred targets. |
 | 🟡 Betor, Ancestor's Voice | Abzan Armor (TDC) | the counters go on your greatest-power other creature and the reanimation takes the greatest-power card; neither is targeted. |
 | 🟡 Tip the Scales | Abzan Armor (TDC) | the creature sacrificed is the engine's pick. |
+| 🟡 Moria Scavenger | The Hosts of Mordor (LTC) | its one ability is two ("discard a creature card: draw, amass Orcs 1" and "discard a card: draw"); a creature discarded through the second amasses nothing. |
+| 🟡 Shelob, Dread Weaver | The Hosts of Mordor (LTC) | "put a creature card exiled with Shelob into its owner's graveyard" is paid on resolution (the ability needs one to activate); the X ability's card is the engine's pick, not a target. |
+| 🟡 Summons of Saruman | The Hosts of Mordor (LTC) | flashback pays X in mana rather than by exiling X cards from your graveyard. |
 | 🟡 Akim, the Soaring Wind | Timeless Wisdom (C20) | "the first time each turn" is counted from Akim's arrival: tokens made earlier that turn don't use it up. |
 | 🟡 Crystalline Resonance | Timeless Wisdom (C20) | the copy lasts until it copies again, not until your next turn. |
 | 🟡 Ethereal Forager | Timeless Wisdom (C20) | the returned card is the first linked instant or sorcery, not a chosen one. |
