@@ -761,6 +761,10 @@ impl Effect {
             | Effect::DoublePlayerCounters { .. }
             | Effect::SpreadCounterKindToOthers { .. }
             | Effect::ReverseTurnOrder
+            | Effect::ChooseModeAtRandom(_)
+            | Effect::EachOpponentReturnsFromYourGraveyard { .. }
+            | Effect::GrantCastSpellRiders { .. }
+            | Effect::CastExiledFreeOwnersLoseLife { .. }
             | Effect::DestroyOnePerOpponent { .. }
             | Effect::DamageEachCreatureOfChosenColor { .. }
             | Effect::ForetellFromHand { .. }

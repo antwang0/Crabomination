@@ -34,6 +34,7 @@ mod order_of_succession;
 mod owners_control;
 mod player_counters;
 mod counter_kinds;
+mod revival;
 mod chosen_color_damage;
 mod fight_each;
 pub(crate) use eval::PrintedGates;
@@ -23286,6 +23287,15 @@ impl GameState {
                 Ok(())
             }
             Effect::DestroyOnePerOpponent { filter } => self.destroy_one_per_opponent(filter, effect, ctx, events),
+            Effect::ChooseModeAtRandom(modes) => self.choose_mode_at_random(modes, ctx, events),
+            Effect::EachOpponentReturnsFromYourGraveyard { filter } => {
+                self.each_opponent_returns_from_your_graveyard(filter, effect, ctx, events)
+            }
+            Effect::GrantCastSpellRiders { what, haste, sacrifice_eot } => {
+                self.grant_cast_spell_riders(what, *haste, *sacrifice_eot, ctx);
+                Ok(())
+            }
+            Effect::CastExiledFreeOwnersLoseLife { what } => self.cast_exiled_free_owners_lose_life(what, ctx, events),
             Effect::ReverseTurnOrder => {
                 self.turn_order_reversed = !self.turn_order_reversed;
                 Ok(())

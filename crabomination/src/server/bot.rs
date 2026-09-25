@@ -6895,7 +6895,7 @@ fn graveyard_specialties(state: &GameState, seat: usize) -> u32 {
         if c.may_cast_back_from_graveyard && def.back_face.is_some() {
             m |= spec::GY_BACK;
         }
-        if def.alternative_cost.as_ref().is_some_and(|a| a.from_graveyard) {
+        if def.alternative_cost.as_ref().is_some_and(|a| a.from_graveyard || a.also_from_graveyard) {
             m |= spec::GY_GRANT;
         }
     }
@@ -8306,7 +8306,8 @@ pub(super) fn cast_candidates<'a>(
     // tallies and the cost.
     gated_block!(mask, spec::GY_GRANT, castable, {
     for c in state.players[seat].graveyard.iter() {
-        let own_alt = c.definition.alternative_cost.as_ref().is_some_and(|a| a.from_graveyard);
+        let own_alt =
+            c.definition.alternative_cost.as_ref().is_some_and(|a| a.from_graveyard || a.also_from_graveyard);
         let granted = !own_alt
             && facts.grants_gy_cast
             && !c.definition.is_land()

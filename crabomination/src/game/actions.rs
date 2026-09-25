@@ -358,7 +358,7 @@ impl GameState {
             .iter()
             .find(|c| c.id == card_id)
             .ok_or(GameError::CardNotInHand(card_id))?;
-        if !card.definition.alternative_cost.as_ref().is_some_and(|a| a.from_graveyard)
+        if !card.definition.alternative_cost.as_ref().is_some_and(|a| a.from_graveyard || a.also_from_graveyard)
             || self.cast_from_zone_blocked(p, &card.definition, crate::card::Zone::Graveyard)
         {
             return Err(GameError::NoAlternativeCost);

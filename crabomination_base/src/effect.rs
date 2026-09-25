@@ -5091,6 +5091,24 @@ pub enum Effect {
     /// "Reverse the game's turn order" (Aeon Engine). A second reversal
     /// restores the original order.
     ReverseTurnOrder,
+    /// "Choose one at random —" (Umaro, Raging Yeti). Not a die roll. The
+    /// mode is picked as it resolves, and a targeted mode takes the
+    /// auto-picker's target then.
+    ChooseModeAtRandom(Vec<Effect>),
+    /// "Starting with the next opponent in turn order, each opponent chooses
+    /// a [filter] card in your graveyard that hasn't been chosen. Return each
+    /// card chosen this way to the battlefield under your control" (Rejoin
+    /// the Fight).
+    EachOpponentReturnsFromYourGraveyard { filter: crate::card::SelectionRequirement },
+    /// The creature spell(s) `what` names, now on the stack, gain haste
+    /// and/or "sacrifice at the beginning of the next end step" as they
+    /// resolve — the rider on a free cast (Strago and Relm). Run after the
+    /// cast.
+    GrantCastSpellRiders { what: Selector, haste: bool, sacrifice_eot: bool },
+    /// "You may cast any number of spells from among [what] without paying
+    /// their mana costs. Then each player who owns a spell you cast this way
+    /// loses life equal to its mana value" (Kefka, Dancing Mad).
+    CastExiledFreeOwnersLoseLife { what: Selector },
     /// "For each opponent, choose a [filter] that player controls. Destroy
     /// the chosen permanents" (Ultimate Magic: Meteor). The effect's
     /// controller picks one per opponent; all are destroyed together.

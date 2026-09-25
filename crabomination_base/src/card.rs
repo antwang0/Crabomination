@@ -5956,6 +5956,11 @@ pub struct AlternativeCost {
     /// its mana cost" — Scourge of Nel Toth); it is not offered from hand.
     #[serde(default)]
     pub from_graveyard: bool,
+    /// The alternative cost is offered from hand as usual **and** from your
+    /// graveyard ("You may cast this card from your graveyard using its blitz
+    /// ability" — Sabin, Master Monk).
+    #[serde(default)]
+    pub also_from_graveyard: bool,
     pub mana_cost: ManaCost,
     /// Life paid as additional cost.
     pub life_cost: u32,
