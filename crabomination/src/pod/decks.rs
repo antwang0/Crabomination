@@ -4629,3 +4629,36 @@ pub const ANJE_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain,
 ];
+
+pub const SEVINNE_COMMANDERS: &[CardFactory] = &[sevinne_the_chronoclasm];
+
+/// **Mystic Intellect**, the Commander 2019 deck (C19, 2019-08-23), exactly as
+/// MTGJSON's `MysticIntellect_C19` prints it: 78 nonbasic cards + 9 Plains +
+/// 8 Islands + 4 Mountains = 99. Jeskai flashback and graveyard casting under
+/// Sevinne, the Chronoclasm.
+/// One swap: Dockside Extortionist is banned in Commander (2024-09-23), so
+/// Ragavan, Nimble Pilferer (a cheap red creature that makes Treasure) takes
+/// its slot; the card itself is in the catalog.
+pub const SEVINNE_MAIN: &[CardFactory] = &[
+    ral_zarek, elsha_of_the_infinite, pramikon_sky_rampart, thalias_geistcaller,
+    wall_of_stolen_identity, backdraft_hellkite, ragavan_nimble_pilferer,
+    gerrard_weatherlight_hero, pristine_angel, sun_titan, clever_impersonator,
+    zetalpa_primal_dawn, river_kelpie, talrand_sky_summoner, pristine_skywise,
+    cliffside_rescuer, scaretiller, guttersnipe, crackling_drake, burnished_hart,
+    sevinnes_reclamation, mass_diminish, ignite_the_future, divine_reckoning, dusk_dawn,
+    increasing_devotion, storm_herd, devils_play, deep_analysis, mystic_retrieval,
+    runic_repetition, faithless_looting, rolling_temblor, mandate_of_peace,
+    increasing_vengeance, magmaquake, refuse_cooperate, leadership_vacuum,
+    prismatic_strands, purify_the_grave, ray_of_distortion, chemisters_insight,
+    fact_or_fiction, fervent_denial, oonas_grace, think_twice, desperate_ravings,
+    farm_market, empowered_autogenerator, bloodthirsty_blade, armillary_sphere,
+    azorius_locket, commanders_sphere, izzet_locket, sol_ring, jaces_sanctum,
+    ghostly_prison, secrets_of_the_dead, burning_vengeance, exotic_orchard, prairie_stream,
+    ash_barrens, azorius_chancery, boros_garrison, boros_guildgate, command_tower,
+    evolving_wilds, highland_lake, izzet_boilerworks, izzet_guildgate, myriad_landscape,
+    mystic_monastery, stone_quarry, swiftwater_cliffs, temple_of_the_false_god,
+    terramorphic_expanse, tranquil_cove, wind_scarred_crag,
+    // Basics: 9 plains, 8 island, 4 mountain
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, island, island,
+    island, island, island, island, island, island, mountain, mountain, mountain, mountain,
+];

@@ -1255,6 +1255,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ANJE_COMMANDERS,
             main: decks::ANJE_MAIN,
         },
+        // Hundred-and-fifty-third: Mystic Intellect (Commander 2019) — Jeskai
+        // flashback under Sevinne, the Chronoclasm (CR 724.2 Mandate of
+        // Peace, CR 508.1a Pramikon). `--pod-decks 153`.
+        PodDeck {
+            name: "Sevinne, the Chronoclasm (URW)",
+            commanders: decks::SEVINNE_COMMANDERS,
+            main: decks::SEVINNE_MAIN,
+        },
     ]
 }
 
@@ -1866,6 +1874,9 @@ mod tests {
             ("Ashling", [0xA541, 148, 9072]),
             // CR 702.35 madness (paid, {X}, targeted), a reversed turn order.
             ("Anje", [0xA41E, 152, 9076]),
+            // CR 702.34 flashback copied by Sevinne, CR 724.2 ending the
+            // combat phase.
+            ("Sevinne", [0x5E71, 153, 9077]),
         ] {
             let precon = *field.iter().find(|d| d.name.starts_with(name)).expect("the precon seat");
             assert_eq!(precon.card_count(), 100);
