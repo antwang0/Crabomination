@@ -7,7 +7,10 @@
 //!   the chooser's prompt hides it); the chooser is the hostile opponent.
 //! - **Plargg and Nassari** — the vetoing opponent is the hostile opponent,
 //!   not one you choose.
-//! - **Redoubled Stormsinger** — the copies attack the Stormsinger's defender.
+//!
+//! Surge to Victory and Redoubled Stormsinger are in this list too; they
+//! landed first with Prismari Performance (`cmdr_zaffai`) and Mardu Surge
+//! (`cmdr_zurgo`).
 
 use std::sync::Arc;
 
@@ -448,26 +451,6 @@ pub fn plargg_and_nassari() -> CardDefinition {
             ]),
         }],
         ..creature("Plargg and Nassari", cost(&[generic(3), r(), r()]), vec![CreatureType::Orc, CreatureType::Efreet], 5, 4)
-    }
-}
-
-/// Redoubled Stormsinger — first strike; attacking copies each creature token
-/// of yours that entered this turn, tapped and attacking, sacrificed at the
-/// next end step. Residual: the copies attack the Stormsinger's defender.
-pub fn redoubled_stormsinger() -> CardDefinition {
-    CardDefinition {
-        keywords: vec![Keyword::FirstStrike],
-        triggered_abilities: vec![on_attack(Effect::ForEach {
-            selector: Selector::EachPermanent(
-                R::Creature.and(R::IsToken).and(R::ControlledByYou).and(R::EnteredThisTurn),
-            ),
-            body: Box::new(Effect::Seq(vec![
-                token_copy_of(Selector::TriggerSource, true),
-                Effect::JoinCombatAttacking { what: Selector::LastCreatedToken },
-                Effect::SacrificeAtNextEndStep { what: Selector::LastCreatedToken },
-            ])),
-        })],
-        ..creature("Redoubled Stormsinger", cost(&[generic(2), r()]), vec![CreatureType::Orc, CreatureType::Wizard], 3, 3)
     }
 }
 

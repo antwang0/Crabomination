@@ -1886,7 +1886,6 @@ static DECKS: &[Factory] = &[
     super::decks::determined_iteration,
     super::decks::mirrorwing_dragon,
     super::decks::plargg_and_nassari,
-    super::decks::redoubled_stormsinger,
     super::decks::volcanic_salvo,
     super::decks::throes_of_chaos,
     super::decks::body_double,

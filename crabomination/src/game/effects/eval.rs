@@ -358,6 +358,13 @@ impl GameState {
     /// including an earlier Stormsinger's copies), and how many times they
     /// fire (Harmonic Prodigy doubles a Wizard's).
     pub(crate) fn attack_token_estimate(&self, attacker: CardId) -> (i64, bool, usize) {
+        fn has_for_each(e: &crate::effect::Effect) -> bool {
+            match e {
+                crate::effect::Effect::ForEach { .. } => true,
+                crate::effect::Effect::Seq(es) => es.iter().any(has_for_each),
+                _ => false,
+            }
+        }
         let Some(c) = self.battlefield_find(attacker) else { return (0, false, 1) };
         let mut ctx = EffectContext::for_spell(c.controller, None, 0, 0);
         ctx.source = Some(attacker);
@@ -368,7 +375,7 @@ impl GameState {
             {
                 let e = self.effect_token_estimate(&t.effect, &ctx);
                 n += e;
-                scales |= e > 0 && matches!(&t.effect, crate::effect::Effect::ForEach { .. });
+                scales |= e > 0 && has_for_each(&t.effect);
             }
         }
         let fires = if n > 0 {
