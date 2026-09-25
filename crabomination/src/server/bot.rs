@@ -7182,6 +7182,16 @@ pub(super) fn cast_candidates<'a>(
                     Some(t) => (Some(t), Vec::new()),
                     None => continue,
                 }
+            } else if mode_effect.requires_target() && c.definition.cost_per_extra_target.is_some() {
+                // CR 702.122 / Fireball — each target beyond the first costs
+                // more, and X already spent the whole pool: the slot walker's
+                // full fan-out (Fireball's ten slots, the first of them its
+                // own caster) could never be paid, so the card was never
+                // cast (Marath census). One target, the single-slot pick.
+                match state.auto_target_for_effect(mode_effect, seat) {
+                    Some(t) => (Some(t), Vec::new()),
+                    None => continue,
+                }
             } else if mode_effect.requires_target() {
                 let (t, mut extras) = state.auto_targets_for_effect_all_slots_x(
                     mode_effect, seat, mode, false, None, x_value,
@@ -24349,6 +24359,34 @@ mod tests {
         // Only enough mana for the {R} pip — X must collapse to 0.
         g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
         assert_eq!(max_affordable_x(&g, 0, &card, &EvalWeights::default()), 0);
+    }
+
+    /// CR 702.122's shape — Fireball costs {1} more per target beyond the
+    /// first, and the slot walker filled all ten of its slots (the first
+    /// one its own caster), so the dry run never accepted it and the card
+    /// went uncast in every pod (Marath census). One target, an opponent.
+    #[test]
+    fn bot_casts_fireball_at_one_opponent() {
+        // Pod seats prompt for each optional extra slot (`wants_ui`); the
+        // dry run declines it rather than reading the ask as a rejection.
+        for (seats, prompts) in [(2usize, false), (4, false), (4, true)] {
+            let mut g = crate::game::multi_player_game(seats);
+            g.players[0].wants_ui = prompts;
+            g.step = TurnStep::PostCombatMain;
+            let id = g.add_card_to_hand(0, catalog::fireball());
+            for _ in 0..6 {
+                g.add_card_to_battlefield(0, catalog::mountain());
+            }
+            g.add_card_to_battlefield(1, catalog::serra_angel());
+            match main_phase_action(&g, 0) {
+                GameAction::CastSpell { card_id, target: Some(t), additional_targets, x_value: Some(5), .. } => {
+                    assert_eq!(card_id, id);
+                    assert_ne!(t, Target::Player(0), "never at itself");
+                    assert!(additional_targets.is_empty(), "each extra target costs {{1}} more");
+                }
+                other => panic!("{seats} seats (prompts {prompts}): expected Fireball for X=5, got {other:?}"),
+            }
+        }
     }
 
     #[test]

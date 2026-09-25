@@ -334,7 +334,23 @@ impl GameState {
             let acting = template.priority.player_with_priority;
             let before =
                 scratch_census::on().then(|| template.resolution_scratch_fingerprint());
-            let ok = probe.perform_action_inner(action).is_ok();
+            let mut ok = probe.perform_action_inner(action).is_ok();
+            // An "up to N targets" cast suspends to ask for its next optional
+            // slot. A bot answers that prompt itself, and declining is always
+            // one of its answers, so the probe declines and reads the cast
+            // that results: Fireball, whose every extra target costs {1}
+            // more, was never accepted from a prompting seat.
+            if ok
+                && !template.players.get(acting).is_some_and(|p| p.manual_mana)
+                && probe.pending_decision.as_ref().is_some_and(|pd| {
+                    matches!(pd.resume, crate::game::types::ResumeContext::CastExtraTargetPick { .. })
+                        && matches!(pd.decision, crate::decision::Decision::ChooseTarget { optional: true, .. })
+                })
+            {
+                ok = probe
+                    .perform_action_inner(GameAction::SubmitDecision(crate::decision::DecisionAnswer::DeclineTarget))
+                    .is_ok();
+            }
             if let Some((all, coll)) = before {
                 let (a2, c2) = probe.resolution_scratch_fingerprint();
                 scratch_census::tick(all == a2, coll == c2);
