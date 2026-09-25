@@ -1604,6 +1604,10 @@ pub enum Predicate {
     /// CR 800.4 — at least this many players have lost the game (Hot
     /// Pursuit's "if two or more players have lost the game").
     PlayersLostAtLeast(u8),
+    /// The permanent returned to hand to pay this activation's cost had a
+    /// nonbasic land type as it last existed on the battlefield (Wonderscape
+    /// Sage).
+    CostReturnedHadNonbasicLandType,
     /// `who` resolves to a player who is an opponent of the source's
     /// controller ("…deals combat damage to one of your opponents" —
     /// Gonti, Night Minister). Teammates and the controller are false.
@@ -4996,6 +5000,15 @@ pub enum Effect {
     /// which of the permanents `what` resolves to become attached to `to`
     /// (Bruna, Light of Alabaster; Heavenly Blademaster).
     AttachAnyNumberTo { what: Selector, to: Selector },
+    /// "Exile all other spells and counter all abilities" (Summary
+    /// Dismissal). Uncounterable spells are exiled too; copies cease to exist.
+    ExileAllOtherSpellsCounterAllAbilities,
+    /// Put one `body` trigger on the stack per permanent `what` resolves to,
+    /// sourced from that permanent (so `Selector::This` is it), targets
+    /// picked as it triggers. The "tokens … except they have 'When this token
+    /// enters, …'" rider (Aggressive Biomancy): the copy's own enters event
+    /// has already passed by the time a granted ability could see it.
+    EachPushesTrigger { what: Selector, body: Box<Effect> },
     /// "Return this card from your graveyard to the battlefield attached to
     /// [host]" with the host a declared selector, so an activated ability
     /// announces its target (Gryff's Boon). `ReturnSelfAttachedToTarget` reads
@@ -11050,6 +11063,10 @@ pub enum DelayedTriggerKind {
     CreatureAttacksYouUntilYourNextTurn,
     YourNextUpkeep,
     NextEndStep,
+    /// "At the beginning of your next end step" (Desert Warfare): the
+    /// controller's own end step — this turn's if it's theirs and it hasn't
+    /// begun, else their next turn's. `NextEndStep` fires on anyone's.
+    YourNextEndStep,
     /// "At the beginning of the end step of target player's next turn"
     /// (Suppress). `Effect::DelayUntil` reads the player from target slot 0.
     TargetsNextEndStep,

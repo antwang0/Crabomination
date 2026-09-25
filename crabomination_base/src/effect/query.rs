@@ -2136,6 +2136,8 @@ impl Effect {
             | Effect::OpponentsChooseSilenceOrSnitch { .. }
             | Effect::ChooseRandomOpponentNotAttackedLastCombat
             | Effect::AttachAnyNumberTo { .. }
+            | Effect::ExileAllOtherSpellsCounterAllAbilities
+            | Effect::EachPushesTrigger { .. }
             | Effect::EachOpponentChooses { .. }
             | Effect::EachPlayerMayDrawThenTakersGainLife { .. }
             | Effect::ChooseAttackDirection

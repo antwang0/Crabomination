@@ -1494,6 +1494,12 @@ pub struct ColdState {
     /// (Necropolis's "the exiled card's mana value").
     #[serde(default)]
     pub(crate) cost_exiled_cards: Vec<CardId>,
+    /// Did the permanent returned to hand to pay the current activation's
+    /// `bounce_other_filter` cost have a nonbasic land type as it last
+    /// existed on the battlefield (Wonderscape Sage's "unless that land had a
+    /// nonbasic land type")? Stamped at payment, only when it changes.
+    #[serde(default)]
+    pub(crate) cost_returned_nonbasic_land_type: bool,
     /// Creature types on the most recently discarded card
     /// (`Predicate::LastDiscardedHasCreatureType` — Necromancer's Stockpile).
     /// Stamped in `discard_card`.
@@ -25765,7 +25771,7 @@ impl GameState {
                         // Card stays in hand; register a delayed trigger that
                         // fires later (next upkeep / first main / end step).
                         use crate::game::types::DelayedTrigger;
-                        let dk = crate::game::effects::delayed_kind_from_effect(kind, None, self.turn_number);
+                        let dk = crate::game::effects::delayed_kind_from_effect(kind, None, p, self.turn_number);
                         self.delayed_triggers.push(DelayedTrigger {
                             controller: p,
                             source: cid,

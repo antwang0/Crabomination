@@ -264,6 +264,8 @@ pub(crate) struct CommanderManaScry {
     /// Pyromancer's Goggles — rider pips that funded a red instant or
     /// sorcery, and that spell.
     copies: (u32, Option<CardId>),
+    /// Sunken Palace — rider pips that funded any spell, and that spell.
+    palace_copies: (u32, Option<CardId>),
 }
 
 impl GameState {
@@ -326,14 +328,15 @@ impl GameState {
         // Pyromancer's Goggles — one copy trigger per rider pip that funded a
         // red instant or sorcery (CR 106.6: the rider names that spell).
         let goggles = spent.spent_count(SpendRestriction::RedInstantSorceryCopy);
-        let copies = if goggles > 0
-            && kind.instant_or_sorcery
-            && kind.colors.contains(crate::mana::Color::Red)
-        {
-            (goggles, Some(card.id))
+        let goggles = if kind.instant_or_sorcery && kind.colors.contains(crate::mana::Color::Red) {
+            goggles
         } else {
-            (0, None)
+            0
         };
+        // Sunken Palace — its rider copies whatever spell it funded.
+        let palace = spent.spent_count(SpendRestriction::SpellOrAbilityCopy);
+        let copies = if goggles > 0 { (goggles, Some(card.id)) } else { (0, None) };
+        let palace_copies = if palace > 0 { (palace, Some(card.id)) } else { (0, None) };
         // Study Hall — one scry-X trigger per rider pip that funded the
         // commander, X counting the cast in progress (like Opal Palace).
         let study_pips = spent.spent_count(SpendRestriction::CommanderCastScry);
@@ -350,6 +353,7 @@ impl GameState {
             },
             study,
             copies,
+            palace_copies,
         }
     }
 
@@ -371,6 +375,25 @@ impl GameState {
         if let (copy_pips @ 1.., Some(spell)) = riders.copies {
             let source = self
                 .restricted_mana_source(seat, SpendRestriction::RedInstantSorceryCopy)
+                .unwrap_or(CardId(0));
+            for _ in 0..copy_pips {
+                self.stack.push(
+                    TriggerPush::new(
+                        source,
+                        seat,
+                        Effect::CopySpellMayChooseTargets {
+                            what: crate::effect::Selector::TriggerSource,
+                            count: Value::ONE,
+                        },
+                    )
+                    .trigger_source(Some(crate::game::effects::EntityRef::Card(spell)))
+                    .build(),
+                );
+            }
+        }
+        if let (copy_pips @ 1.., Some(spell)) = riders.palace_copies {
+            let source = self
+                .restricted_mana_source(seat, SpendRestriction::SpellOrAbilityCopy)
                 .unwrap_or(CardId(0));
             for _ in 0..copy_pips {
                 self.stack.push(

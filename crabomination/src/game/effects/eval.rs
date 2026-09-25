@@ -2142,6 +2142,7 @@ impl GameState {
                 .is_some_and(|p| self.scratch.players_sacrificed_this_resolution.contains(&p)),
             Predicate::ExcessDamageDealtThisResolution => self.excess_damage_this_resolution > 0,
             Predicate::IsTurnOf(pref) => self.resolve_player(pref, ctx) == Some(self.active_player_idx),
+            Predicate::CostReturnedHadNonbasicLandType => self.cost_returned_nonbasic_land_type,
             Predicate::PlayersLostAtLeast(n) => {
                 self.players.iter().filter(|p| !p.is_alive()).count() >= usize::from(*n)
             }

@@ -1617,6 +1617,7 @@ fn counter_label(kind: CounterType) -> &'static str {
         CounterType::Magnet => "Magnet",
         CounterType::Suspect => "Suspect",
         CounterType::Hit => "Hit",
+        CounterType::Everything => "Everything",
     }
 }
 
@@ -1716,6 +1717,7 @@ fn counter_reminder(kind: CounterType) -> Option<&'static str> {
         CounterType::Bloodline => "Edgar Markov's Coffin tally — at three, the counters come off and it transforms back into Edgar.",
         CounterType::Rust => "Corrosion's tally — an artifact is destroyed once its mana value is at most its rust count.",
         CounterType::Hit => "Mari's mark on an exiled card — an Assassin, Mercenary or Rogue dealing combat damage to its owner removes one for a card and two Treasures.",
+        CounterType::Everything => "Omo's mark — a land with one is every land type; a nonland creature with one is every creature type.",
         CounterType::Ore => "Orcish Mine's countdown — one comes off each upkeep and each time the land taps; the last one destroys it.",
         _ => return None,
     })

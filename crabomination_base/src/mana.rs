@@ -712,6 +712,10 @@ pub enum SpendRestriction {
     /// Goggles.) Unrestricted spend; the copy trigger goes on the stack above
     /// the spell it funded, one per rider pip.
     RedInstantSorceryCopy,
+    /// Sunken Palace's rider: "When you spend this mana to cast a spell or
+    /// activate an ability, copy that spell or ability. You may choose new
+    /// targets for the copy." Permits every payment.
+    SpellOrAbilityCopy,
     /// "Spend this mana only to cast a spell from your graveyard." (Lord of
     /// the Forsaken.) Reads [`SpellKind::from_graveyard`].
     SpellFromGraveyard,
@@ -781,7 +785,8 @@ impl SpendRestriction {
             | SpendRestriction::CommanderCastCounters
             | SpendRestriction::CommanderCastScry
             | SpendRestriction::SmallInstantSorceryExileInstead
-            | SpendRestriction::RedInstantSorceryCopy => {
+            | SpendRestriction::RedInstantSorceryCopy
+            | SpendRestriction::SpellOrAbilityCopy => {
                 return None;
             }
         })
@@ -894,7 +899,8 @@ impl SpendRestriction {
             | SpendRestriction::CommanderCastCounters
             | SpendRestriction::CommanderCastScry
             | SpendRestriction::SmallInstantSorceryExileInstead
-            | SpendRestriction::RedInstantSorceryCopy => {
+            | SpendRestriction::RedInstantSorceryCopy
+            | SpendRestriction::SpellOrAbilityCopy => {
                 debug_assert!(self.is_rider(), "rider arm reached through the match");
                 true
             }

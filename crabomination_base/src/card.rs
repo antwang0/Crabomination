@@ -387,6 +387,14 @@ impl LandType {
     pub const BASICS: [LandType; 5] =
         [Self::Plains, Self::Island, Self::Swamp, Self::Mountain, Self::Forest];
 
+    /// Every nonbasic land type the engine knows (CR 205.3i), for "every land
+    /// type" (Omo's everything counter) and "choose a nonbasic land type"
+    /// (March from Velis Vel).
+    pub const NONBASIC: [LandType; 13] = [
+        Self::Desert, Self::Gate, Self::Locus, Self::Mine, Self::Tower, Self::PowerPlant, Self::Urza,
+        Self::Omenpath, Self::Planet, Self::Cave, Self::Lair, Self::Town, Self::Sphere,
+    ];
+
     /// CR 205.3i — one of the five basic land types (the only ones that carry an
     /// intrinsic mana ability and can be rewritten by a CR 612 text change).
     pub fn is_basic_type(self) -> bool {
@@ -907,6 +915,9 @@ pub enum CounterType {
     /// Hit counter — Mari, the Killing Quill's mark on an opponent's creature
     /// card it exiles; an outlaw's combat damage cashes one in.
     Hit,
+    /// Everything counter — Omo, Queen of Vesuva's mark: a land with one is
+    /// every land type, a nonland creature with one every creature type.
+    Everything,
 }
 
 /// Every zone a card can occupy.

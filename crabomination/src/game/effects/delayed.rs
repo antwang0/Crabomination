@@ -11,9 +11,15 @@ use crate::game::DelayedKind;
 pub(crate) fn delayed_kind_from_effect(
     k: DelayedTriggerKind,
     target_player: Option<usize>,
+    controller: usize,
     turn: u32,
 ) -> DelayedKind {
     match k {
+        // `after_turn` one back lets this turn's end step count when it is
+        // the controller's and hasn't begun yet.
+        DelayedTriggerKind::YourNextEndStep => {
+            DelayedKind::PlayersNextEndStep { player: controller, after_turn: turn.saturating_sub(1) }
+        }
         DelayedTriggerKind::YourNextUpkeep => DelayedKind::YourNextUpkeep,
         DelayedTriggerKind::NextEndStep => DelayedKind::NextEndStep,
         DelayedTriggerKind::NextCleanupStep => DelayedKind::NextCleanupStep,

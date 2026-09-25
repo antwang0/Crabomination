@@ -11,6 +11,8 @@ mod among;
 mod combat_copies;
 mod commander;
 mod attach_choice;
+mod stack_sweep;
+mod token_triggers;
 mod copy_redirect;
 mod damage_draw;
 mod exile_power;
@@ -28541,6 +28543,10 @@ impl GameState {
             }
 
             Effect::AttachAnyNumberTo { what, to } => self.attach_any_number_to(what, to, effect, ctx, events),
+            Effect::ExileAllOtherSpellsCounterAllAbilities => {
+                self.exile_all_other_spells_counter_all_abilities(ctx, events)
+            }
+            Effect::EachPushesTrigger { what, body } => self.each_pushes_trigger(what, body, ctx, events),
 
             Effect::Attach { what, to } => {
                 // CR 303.4a — the anchor may be a player ("enchant player":
@@ -30233,6 +30239,7 @@ impl GameState {
                             Some(Target::Player(p)) => Some(p),
                             _ => None,
                         },
+                        ctx.controller,
                         self.turn_number,
                     ),
                     effect: (**body).clone(),
@@ -30261,7 +30268,7 @@ impl GameState {
                 self.delayed_triggers.push(DelayedTrigger {
                     controller: ctx.controller,
                     source: ctx.source.unwrap_or(crate::card::CardId(0)),
-                    kind: delayed_kind_from_effect(*kind, captured_player, self.turn_number),
+                    kind: delayed_kind_from_effect(*kind, captured_player, ctx.controller, self.turn_number),
                     effect: (**body).clone(),
                     target,
                     bound_token: self.last_created_token,

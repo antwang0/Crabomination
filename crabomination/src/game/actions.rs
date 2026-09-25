@@ -20871,6 +20871,23 @@ impl GameState {
         // Return-another-to-hand-as-cost (CR 602.5b): with tap/mana/life paid,
         // bounce each cost-picked permanent to its owner's hand. Quirion
         // Ranger, Wirewood Symbiote.
+        if !bounce_other_picks.is_empty() {
+            // CR 603.10 — read the returned land's type line while it is
+            // still on the battlefield (an everything counter, a Copy Land).
+            let nonbasic = bounce_other_picks.iter().any(|&id| {
+                crate::card::LandType::NONBASIC.iter().any(|&lt| {
+                    self.evaluate_requirement_static(
+                        &crate::card::SelectionRequirement::HasLandType(lt),
+                        &crate::game::Target::Permanent(id),
+                        p,
+                        Some(card_id),
+                    )
+                })
+            });
+            if self.cost_returned_nonbasic_land_type != nonbasic {
+                self.cost_returned_nonbasic_land_type = nonbasic;
+            }
+        }
         for other_cid in bounce_other_picks {
             self.move_card_to(
                 other_cid,
