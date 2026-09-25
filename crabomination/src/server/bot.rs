@@ -6770,6 +6770,9 @@ struct BoardFacts {
     grants_alt_cost: bool,
     /// A `FirstInstantSorceryHasCasualty` static is on the board (Anhelo).
     grants_casualty: bool,
+    /// A `FirstNonlegendaryArtifactSpellHasCasualty` static is on the board
+    /// (Ashad, the Lone Cyberman).
+    grants_artifact_casualty: bool,
 }
 
 impl BoardFacts {
@@ -6786,6 +6789,7 @@ impl BoardFacts {
             grants_gy_cast_any_turn: false,
             grants_alt_cost: state.players[seat].life_alt_next_spell_this_turn,
             grants_casualty: false,
+            grants_artifact_casualty: false,
         };
         for c in state.battlefield.iter() {
             if c.controller != seat {
@@ -6802,6 +6806,7 @@ impl BoardFacts {
                     SE::CreatureSpellsGainOffspring { .. } => f.grants_offspring = true,
                     SE::GrantConspireToSpells { .. } => f.grants_conspire = true,
                     SE::FirstInstantSorceryHasCasualty(_) => f.grants_casualty = true,
+                    SE::FirstNonlegendaryArtifactSpellHasCasualty(_) => f.grants_artifact_casualty = true,
                     SE::GraveyardCardsHaveEscape { .. }
                     | SE::GraveyardCardsHaveEscapeMatching { .. } => f.grants_escape = true,
                     SE::YourISSpellsHaveReplicate | SE::YourSpellsHaveReplicate { .. } => {
@@ -6869,6 +6874,12 @@ fn hand_specialties(state: &GameState, seat: usize, facts: &BoardFacts) -> u32 {
             m |= spec::KICKER;
         }
         if facts.grants_casualty && (def.is_instant() || def.is_sorcery()) {
+            m |= spec::SAC_EXTRA;
+        }
+        if facts.grants_artifact_casualty
+            && def.is_artifact()
+            && !def.supertypes.contains(&crate::card::Supertype::Legendary)
+        {
             m |= spec::SAC_EXTRA;
         }
         if facts.grants_conspire && (def.is_instant() || def.is_sorcery()) {
