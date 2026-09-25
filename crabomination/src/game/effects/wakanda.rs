@@ -30,7 +30,7 @@ impl GameState {
             .filter(|c| c.definition.is_permanent())
             .map(|c| (c.definition.cost.cmc(), c.id))
             .collect();
-        permanents.sort_by(|a, b| b.0.cmp(&a.0));
+        permanents.sort_by_key(|p| std::cmp::Reverse(p.0));
         let deploy = permanents.first().map(|(_, id)| *id);
         let take = permanents.get(1).map(|(_, id)| *id);
         if let Some(id) = deploy {

@@ -871,7 +871,7 @@ pub fn struggle_for_project_purity() -> CardDefinition {
         card_types: vec![CardType::Enchantment],
         enter_modes: Some(vec![
             EnterMode {
-                label: "Brotherhood".into(),
+                label: "Brotherhood",
                 triggered_abilities: vec![TriggeredAbility {
                     event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
                     effect: Effect::Seq(vec![
@@ -882,7 +882,7 @@ pub fn struggle_for_project_purity() -> CardDefinition {
                 ..Default::default()
             },
             EnterMode {
-                label: "Enclave".into(),
+                label: "Enclave",
                 triggered_abilities: vec![TriggeredAbility {
                     // Fires once per attacking creature: two rad counters each.
                     event: EventSpec::new(EventKind::Attacks, EventScope::ControllerAttackedByOpponent),
