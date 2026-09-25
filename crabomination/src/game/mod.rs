@@ -9256,7 +9256,7 @@ impl GameState {
                             amount = amount.min(*cap);
                         }
                         StaticEffect::AddDamageToOpponents { source_color, amount: bonus, other }
-                            if !self.same_team(c.controller, p) && !(*other && source == Some(c.id)) =>
+                            if !(self.same_team(c.controller, p) || *other && source == Some(c.id)) =>
                         {
                             // "+N if a [color] source you control" — needs a
                             // known source controlled by the static's owner.
