@@ -11155,16 +11155,25 @@ fn pick_attacks_inner(state: &GameState, seat: usize, guard: bool) -> Vec<Attack
     // spill is one allocation instead of the 0->4->8->16 ladder.
     let mut raw_attackers: smallvec::SmallVec<[&crate::card::CardInstance; 16]> =
         smallvec::SmallVec::new();
+    let any_card_type_change =
+        state.continuous_effects.has_family(crate::game::layers::mod_families::CARD_TYPE);
     for c in state.battlefield.iter() {
+        let may_be_animated = !c.definition.is_creature()
+            && (any_card_type_change || !c.definition.station.is_empty());
         // Two instance reads before the layer view: `computed_permanent`
         // is ~1.5 k Ir on a first read and asking it about every land and
         // enchantment the seat controls read `fixed` +0.62 %. Both gates
-        // are the ones this filter already made, so the candidate set is
-        // unchanged — including its one limitation, that a permanent
-        // *animated* into a creature is never considered.
+        // are the ones this filter already made. A noncreature permanent is
+        // asked only when something may have animated it (CR 613.1d): a
+        // resolved card-type change (crew, a manland's activation) or a
+        // Station band — one word load on a board that animates nothing.
         if c.controller == seat
             && !c.tapped
-            && c.definition.is_creature()
+            && (c.definition.is_creature()
+                || (may_be_animated
+                    && state.computed_permanent_on(c).is_some_and(|cp| {
+                        cp.card_types().contains(&crate::card::CardType::Creature)
+                    })))
             && state.may_declare_attacker(
                 seat,
                 c,

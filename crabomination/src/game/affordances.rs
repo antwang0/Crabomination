@@ -551,7 +551,13 @@ impl GameState {
             // kws block below, which honors the ignore-defender exception.
             .filter(|c| {
                 c.controller == seat
-                    && c.definition.is_creature()
+                    // CR 506.2 / 613.1d — a crewed Vehicle, an animated land
+                    // or a stationed Spacecraft is a creature by its computed
+                    // type line (the layers are frozen for this walk).
+                    && (c.definition.is_creature()
+                        || self.computed_permanent(c.id).is_some_and(|cp| {
+                            cp.card_types().contains(&crate::card::CardType::Creature)
+                        }))
                     && !c.tapped
                     && !c.has_keyword(&Keyword::CantAttack)
                     && (!c.summoning_sick || c.has_keyword(&Keyword::Haste))

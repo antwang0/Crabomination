@@ -388,3 +388,31 @@ fn weatherlight_digs_historic() {
     }
     assert!(g.players[0].hand.len() >= hand, "a Sol Ring (historic) or nothing");
 }
+
+/// Bot: CR 702.122 — a crewed Vehicle is an artifact creature, so the bot
+/// attacks with it (the attacker walk read the printed type line and never
+/// offered one; nor an animated land).
+#[test]
+fn bot_attacks_with_a_crewed_vehicle() {
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::kotori_pilot_prodigy());
+    let plow = g.add_card_to_battlefield(0, catalog::colossal_plow());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(plow);
+    g.clear_sickness(bear);
+    let mut bot = HeuristicBot::new();
+    let mut declared = Vec::new();
+    for _ in 0..30 {
+        let seat = g.priority.player_with_priority;
+        let Some(action) = bot.next_action(&g, seat) else { break };
+        if let GameAction::DeclareAttackers(atts) = &action {
+            declared = atts.iter().map(|a| a.attacker).collect();
+        }
+        let _ = g.perform_action(action);
+        if g.step == TurnStep::DeclareBlockers {
+            break;
+        }
+    }
+    assert!(declared.contains(&plow), "the crewed Plow attacks: {declared:?}");
+}
