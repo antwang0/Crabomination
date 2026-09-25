@@ -164,6 +164,7 @@ lists were picked.
 | **Cavalry Charge** (MOC precon) WUB | Sidar Jabari of Zhalfir | WUB | 100 | 🟡 all 100 implemented, 3 carry residuals (Path of the Enigma, Syr Elenora, Aryel) |
 | **Eternal Bargain** (C13 precon) WUB | Oloro, Ageless Ascetic | WUB | 100 | 🟡 all 100 implemented, 4 carry residuals (Order of Succession, Lim-Dûl's Vault, Springjack Pasture, Serene Master) |
 | **Power Hungry** (C13 precon) BRG | Prossh, Skyraider of Kher | BRG | 100 | 🟡 all 100 implemented, 4 carry residuals (Sudden Demise, Night Soil, Widespread Panic, Capricious Efreet) |
+| **Merciless Rage** (C19 precon) BR | Anje Falkenrath | BR | 100 | 🟡 all 100 implemented, 5 carry residuals (Archfiend of Spite, Boneyard Parley, Chainer, Hedonist's Trove, K'rrik) |
 | **Bedecked Brokers** (NCC precon) GWU | Perrie, the Pulverizer | GWU | 100 | 🟡 all 100 implemented, 5 carry residuals (Kros, Aven Mimeomancer, Agent's Toolkit, Littjara Mirrorlake, Skyship Plunderer) |
 | **Living Energy** (DRC precon) GUR | Saheeli, Radiant Creator | GUR | 100 | 🟡 all 100 implemented, 4 carry residuals (Aetherflux Conduit, Territorial Aetherkite, Rampaging Aetherhood, Saheeli) |
 | **Exit from Exile** (CLB precon) RG | Faldorn, Dread Wolf Herald | RG | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
@@ -1590,6 +1591,31 @@ Galea / Kathril / Chishiro (seed 10400, 1,000 games) and Nelly / Eshki /
 Estrid (seed 10401, 1,000): all decided, Jirina 28.4 % and 24.3 %; census
 (seed 10401): no card of the list unplayed. `--bench` byte-identical;
 cube/sos/sealed (seed 10402): 7,500 decided.
+
+The **hundred-and-fifty-second** is Commander 2019's **Merciless Rage**
+(`MercilessRage_C19`) — Rakdos madness under Anje Falkenrath, `--pod-decks
+152`. Twenty-four cards were missing (`cmdr_anje.rs`). The primitives:
+`CardInstance/EffectContext.cast_via_madness` and `Predicate::SpellWasMadness`
+(Grave Scrabbler, From Under the Floorboards — stamped on the spell, carried
+to the permanent, read by entry triggers and again as they resolve); a
+madness {X} cost takes X from the mana left after the rest (an auto seat skips
+X = 0); `R::HasMadness` (printed or granted — Anje's untap) and
+`R::WasCastFromHand` (Chainer); `GameState.turn_order_reversed` +
+`Effect::ReverseTurnOrder` (Aeon Engine — `next_alive_seat`, so the next turn,
+priority and APNAP all turn round); `StaticEffect::PhyrexianPipsForAllSpells`
+(K'rrik). ⚠ **Found on the way:** a madness cast passed no target, so every
+*targeted* madness spell (Dark Withering, Alchemist's Greeting, Psychotic
+Haze's kin) was refused and sat in exile (CR 702.35b); it now takes the
+auto-picker's target. The strict pods caught Boneyard Parley's splitter as a
+singular `EachOpponent`. Pods (seed 152, 1,000 each): 4 seats 1,000 decided,
+Anje 19.5 %; 6 seats against the Leinore / Sidar / Oloro / Prossh / Nalia
+precons 1,000 decided, 1.2 %; 8 seats (seats 4-10) 1,000 decided, 5.7 %.
+Residuals: Archfiend of Spite's damager always sacrifices when able;
+Boneyard Parley's five are an untargeted pick; Chainer's permission names one
+card as it resolves; Hedonist's Trove has no one-spell cap and its cards stay
+playable after it leaves; K'rrik's life-for-{B} covers spells only. Census:
+no card of the list unplayed. Debug strict pods (400 games): clean. `--bench`
+byte-identical.
 
 The **hundred-and-forty-sixth** is Streets of New Capenna Commander's
 **Bedecked Brokers** (`BedeckedBrokers_NCC`) — Bant counters and shields
