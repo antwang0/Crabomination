@@ -151,6 +151,7 @@ lists were picked.
 | **Riveteers Rampage** (NCC precon) BRG | Henzie "Toolbox" Torre | BRG | 100 | 🟡 all 100 implemented, 7 carry residuals (below) |
 | **Grand Larceny** (OTC precon) BGU | Gonti, Canny Acquisitor | BGU | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
 | **Party Time** (CLB precon) WB | Nalia de'Arnise | WB | 100 | 🟡 all 100 implemented, 2 carry residuals (Calculating Lich, Glorious Protector) |
+| **Faceless Menace** (C19 precon) BGU | Kadena, Slinking Sorcerer | BGU | 100 | 🟡 all 100 implemented, 5 carry residuals (Gift of Doom, Rayami, Road of Return, Vesuvan Shapeshifter, Volrath) |
 | **Cavalry Charge** (MOC precon) WUB | Sidar Jabari of Zhalfir | WUB | 100 | 🟡 all 100 implemented, 3 carry residuals (Path of the Enigma, Syr Elenora, Aryel) |
 | **Eternal Bargain** (C13 precon) WUB | Oloro, Ageless Ascetic | WUB | 100 | 🟡 all 100 implemented, 4 carry residuals (Order of Succession, Lim-Dûl's Vault, Springjack Pasture, Serene Master) |
 | **Power Hungry** (C13 precon) BRG | Prossh, Skyraider of Kher | BRG | 100 | 🟡 all 100 implemented, 4 carry residuals (Sudden Demise, Night Soil, Widespread Panic, Capricious Efreet) |

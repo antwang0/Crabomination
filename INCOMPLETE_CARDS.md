@@ -2049,6 +2049,11 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Thief of Sanity | Grand Larceny (OTC) | the exiled card is the engine's pick (the highest mana value nonland). |
 | 🟡 Calculating Lich | Party Time (CLB) | a creature attacking a planeswalker drains that planeswalker's controller too. |
 | 🟡 Glorious Protector | Party Time (CLB) | the non-Angel creatures exiled are the choose-cards default for a bot seat (none), not a judged pick. |
+| 🟡 Gift of Doom | Faceless Menace (C19) | turned face up it attaches by a trigger, not as it turns (the "as" replacement). |
+| 🟡 Rayami, First of the Fallen | Faceless Menace (C19) | protection isn't among the keywords it shares with blood-countered exiled cards. |
+| 🟡 Road of Return | Faceless Menace (C19) | an unentwined cast's mode is the engine's pick. |
+| 🟡 Vesuvan Shapeshifter | Faceless Menace (C19) | copies only as it enters, not as it's turned face up; no upkeep turn-face-down. |
+| 🟡 Volrath, the Shapestealer | Faceless Menace (C19) | the copy isn't 7/5 and doesn't keep the {1} copy ability. |
 | 🟡 Path of the Enigma | Cavalry Charge (MOC) | the Will of the Planeswalkers vote isn't held (no planar deck, so planeswalk and chaos do nothing). |
 | 🟡 Syr Elenora, the Discerning | Cavalry Charge (MOC) | her hand-size power is a battlefield static, not a CDA read in every zone. |
 | 🟡 Aryel, Knight of Windgrace | Cavalry Charge (MOC) | X for "tap X untapped Knights" is the target's power (the least that works), not a free choice. |
