@@ -7271,6 +7271,21 @@ impl GameState {
                 .iter()
                 .filter(|sa| matches!(sa.effect, StaticEffect::ExtraPlusOneCounterOnSelf))
                 .count() as u32;
+            // Benevolent Hydra / Ozolith — filtered "that many plus one".
+            for src in self.battlefield.iter().filter(|s| s.controller == ctrl) {
+                for sa in &src.definition.static_abilities {
+                    if let StaticEffect::ExtraPlusOneCountersMatching { filter } = &sa.effect
+                        && self.evaluate_requirement_static(
+                            filter,
+                            &crate::game::Target::Permanent(cid),
+                            ctrl,
+                            Some(src.id),
+                        )
+                    {
+                        base += 1;
+                    }
+                }
+            }
         }
         self.scaled_counter_count(ctrl, kind, base, is_creature)
     }
@@ -30002,6 +30017,7 @@ fn static_effect_to_effects(
             | StaticEffect::DoubleCounters
             | StaticEffect::DoublePlusOneCounters
             | StaticEffect::ExtraPlusOneCounters
+            | StaticEffect::ExtraPlusOneCountersMatching { .. }
             | StaticEffect::ExtraPlusOneCounterOnSelf
             | StaticEffect::ExtraCounterAllKinds
             // Energy-gain bonus — read at AddEnergy time via
@@ -30297,6 +30313,7 @@ fn static_effect_to_effects(
             | StaticEffect::HasActivatedAbilitiesOfExiledWithSelf
             | StaticEffect::HasActivatedAbilitiesOfOwnedExiledWithCounter { .. }
             | StaticEffect::CostReductionPerCounterOnSource { .. }
+            | StaticEffect::FirstMatchingSpellEachTurnCostsLessPerCounter { .. }
             | StaticEffect::PreventDamageToThisRedirect
             | StaticEffect::HasActivatedAbilitiesOfLibraryTop { .. }
             | StaticEffect::CounteredCreaturesHaveAbilitiesOfExiledWithSource

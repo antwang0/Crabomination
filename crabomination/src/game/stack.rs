@@ -4512,6 +4512,7 @@ impl GameState {
             }
             pl.cant_activate_nonmana_abilities_this_turn = false;
             pl.creature_spells_as_flash_this_turn = false;
+            pl.spells_as_flash_this_turn = false;
             pl.cast_from_graveyard_top_this_turn = false;
             if !pl.next_spell_uncounterable.is_empty() {
                 pl.next_spell_uncounterable.clear();
@@ -4925,6 +4926,7 @@ impl GameState {
                         | crate::game::types::DelayedKind::YourNextExhaustActivationThisTurn
                         | crate::game::types::DelayedKind::YourNextInstantSorceryCastThisTurn
                         | crate::game::types::DelayedKind::YourNextSpellOfTypeThisTurn(_)
+                        | crate::game::types::DelayedKind::YourNextSpellMatchingThisTurn(_)
                         | crate::game::types::DelayedKind::EachCombatThisTurn
                         | crate::game::types::DelayedKind::MatchingCreatureAttacksThisTurn(_)
                         | crate::game::types::DelayedKind::MatchingCreatureBlocksThisTurn(_)

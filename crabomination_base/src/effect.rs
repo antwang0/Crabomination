@@ -7138,6 +7138,14 @@ pub enum Effect {
     /// "You may cast creature spells this turn as though they had flash"
     /// (Winding Canyons). Sets `Player.creature_spells_as_flash_this_turn`.
     GrantCreatureSpellsFlashThisTurn { who: PlayerRef },
+    /// "You may cast spells this turn as though they had flash"
+    /// (Alchemist's Refuge). Sets `Player.spells_as_flash_this_turn`,
+    /// cleared at the turn boundary.
+    GrantSpellsFlashThisTurn { who: PlayerRef },
+    /// "Double the value of X" for the spell `what` resolves to while it is
+    /// on the stack (Unbound Flourishing's cast trigger) — the stack item's
+    /// X doubles, so an "enters with X counters" reads the doubled value.
+    DoubleXOfSpell { what: Selector },
     /// CR 705 — "Choose a source you control and flip a coin. If you win the
     /// flip, the next time that source would deal damage this turn, it deals
     /// double that damage instead. If you lose, prevent that damage"
@@ -9818,6 +9826,14 @@ pub enum Effect {
     /// cascade" is two of these, each consumed only by its own type.
     OnYourNextSpellOfTypeThisTurn {
         card_type: crate::card::CardType,
+        body: Box<Effect>,
+    },
+    /// CR 603.7e — one-shot "when you next cast a [filter] spell this turn,
+    /// [body]"; the cast spell is `Selector::TriggerSource` and its X is the
+    /// body's `Value::XFromCost` (Brass Infiniscope — "a spell with {X} in
+    /// its mana cost … gain half X life"). Non-matching casts leave it armed.
+    OnYourNextSpellMatchingThisTurn {
+        filter: SelectionRequirement,
         body: Box<Effect>,
     },
     /// "When you cast a spell with the chosen name for the first time this

@@ -30810,6 +30810,43 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::OnYourNextSpellMatchingThisTurn { filter, body } => {
+                let source = ctx.source.unwrap_or(crate::card::CardId(0));
+                self.delayed_triggers.push(DelayedTrigger {
+                    controller: ctx.controller,
+                    source,
+                    kind: crate::game::types::DelayedKind::YourNextSpellMatchingThisTurn(filter.clone()),
+                    effect: (**body).clone(),
+                    target: None,
+                    bound_token: None,
+                    bound_subject: None,
+                    fires_once: true,
+                    expires_after_turn: None,
+                });
+                Ok(())
+            }
+
+            Effect::GrantSpellsFlashThisTurn { who } => {
+                if let Some(seat) = self.resolve_player(who, ctx) {
+                    self.players[seat].spells_as_flash_this_turn = true;
+                }
+                Ok(())
+            }
+
+            Effect::DoubleXOfSpell { what } => {
+                for ent in self.resolve_selector(what, ctx) {
+                    let (EntityRef::Card(cid) | EntityRef::Permanent(cid)) = ent else { continue };
+                    for item in self.stack.iter_mut() {
+                        if let crate::game::types::StackItem::Spell { card, x_value, .. } = item
+                            && card.id == cid
+                        {
+                            *x_value = x_value.saturating_mul(2);
+                        }
+                    }
+                }
+                Ok(())
+            }
+
             Effect::OnYourNextInstantSorceryThisTurn { body } => {
                 let source = ctx.source.unwrap_or(crate::card::CardId(0));
                 self.delayed_triggers.push(DelayedTrigger {

@@ -583,6 +583,10 @@ pub enum StaticEffect {
     /// discount lapses once a matching spell has already been cast this turn.
     /// Generic-only, like every other flat reduction.
     FirstMatchingSpellEachTurnCostsLess { filter: SelectionRequirement, amount: u32 },
+    /// "The first [filter] spell you cast each turn costs {1} less to cast
+    /// for each [kind] counter on this" (Zimone, Infinite Analyst). The
+    /// per-counter sibling of `FirstMatchingSpellEachTurnCostsLess`.
+    FirstMatchingSpellEachTurnCostsLessPerCounter { filter: SelectionRequirement, kind: crate::card::CounterType },
     /// Like `CostReduction`, but applies only while `condition` holds for the
     /// controller (Gran-Gran — "Noncreature spells you cast cost {1} less as
     /// long as there are three or more Lesson cards in your graveyard"). The
@@ -1341,6 +1345,12 @@ pub enum StaticEffect {
     /// Each active copy adds one to a +1/+1 placement onto the controller's
     /// creatures; applied before any `DoubleCounters` multiplier.
     ExtraPlusOneCounters,
+    /// "If one or more +1/+1 counters would be put on [filter] you control,
+    /// that many plus one are put on it instead" — the filtered sibling of
+    /// `ExtraPlusOneCounters`, evaluated against the receiving permanent with
+    /// this permanent as the source (Benevolent Hydra's "another creature",
+    /// Ozolith's "artifact or creature"). Read in `scaled_counter_count_on`.
+    ExtraPlusOneCountersMatching { filter: crate::card::SelectionRequirement },
     /// CR 614.16 self-scoped additive variant — "If one or more +1/+1 counters
     /// would be put on THIS, that many plus one are put on it instead." Mowu,
     /// Loyal Companion. Like `ExtraPlusOneCounters` but only for placements onto

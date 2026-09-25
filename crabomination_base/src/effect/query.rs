@@ -429,6 +429,7 @@ impl Effect {
             | Effect::OnYourNextAttackThisTurn { body, .. }
             | Effect::OnYourNextInstantSorceryThisTurn { body, .. }
             | Effect::OnYourNextSpellOfTypeThisTurn { body, .. }
+            | Effect::OnYourNextSpellMatchingThisTurn { body, .. }
             | Effect::OnYourNextNamedSpellThisTurn { body, .. }
             | Effect::WhenTargetLeavesBattlefieldThisTurn { body, .. }
             | Effect::AtEachCombatThisTurn { body, .. }
@@ -1347,6 +1348,8 @@ impl Effect {
             Effect::SpellsCostLessThisTurn { .. } => false,
             Effect::FaceDownSpellsCostLessThisTurn { .. } => false,
             Effect::NextFaceDownSpellCostsLessThisTurn { .. } => false,
+            Effect::GrantSpellsFlashThisTurn { .. } => false,
+            Effect::DoubleXOfSpell { .. } => false,
             Effect::PutFaceDownOntoBattlefield { what } => sel_has_target(what),
             Effect::GrantKeywordsToSpell { what, .. }
             | Effect::SpellEntersWithCounters { what, .. } => sel_has_target(what),
@@ -1460,6 +1463,7 @@ impl Effect {
             | Effect::OnYourNextAttackThisTurn { body }
             | Effect::OnYourNextInstantSorceryThisTurn { body }
             | Effect::OnYourNextSpellOfTypeThisTurn { body, .. }
+            | Effect::OnYourNextSpellMatchingThisTurn { body, .. }
             | Effect::OnEachSpellYouCastUntilEndOfYourNextTurn { body }
             | Effect::OnYourNextNamedSpellThisTurn { body } => body.requires_target(),
             Effect::SearchSplitWithOpponent { .. } => false,
@@ -2896,6 +2900,7 @@ impl Effect {
             | Effect::OnYourNextAttackThisTurn { body }
             | Effect::OnYourNextInstantSorceryThisTurn { body }
             | Effect::OnYourNextSpellOfTypeThisTurn { body, .. }
+            | Effect::OnYourNextSpellMatchingThisTurn { body, .. }
             | Effect::OnEachSpellYouCastUntilEndOfYourNextTurn { body }
             | Effect::OnYourNextNamedSpellThisTurn { body }
             | Effect::Repeat { body, .. }
@@ -5122,6 +5127,7 @@ impl Effect {
                 | Effect::OnYourNextAttackThisTurn { body }
                 | Effect::OnYourNextInstantSorceryThisTurn { body }
                 | Effect::OnYourNextSpellOfTypeThisTurn { body, .. }
+                | Effect::OnYourNextSpellMatchingThisTurn { body, .. }
                 | Effect::OnEachSpellYouCastUntilEndOfYourNextTurn { body }
                 | Effect::OnYourNextNamedSpellThisTurn { body }
                 | Effect::OptionalTargets { body, .. }

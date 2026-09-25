@@ -1923,6 +1923,17 @@ pub(crate) fn cost_reduction_for_spell_full_over<'a>(
                     );
                     reduction += state.evaluate_value(amount, &ctx).max(0) as u32;
                 }
+                StaticEffect::FirstMatchingSpellEachTurnCostsLessPerCounter { filter, kind }
+                    if src.controller == caster
+                        && state.evaluate_requirement_on_card(filter, card, caster)
+                        && !state.players[caster].spell_ids_cast_this_turn.iter().any(|id| {
+                            state.find_card_anywhere(*id).is_some_and(|c| {
+                                state.evaluate_requirement_on_card(filter, c, caster)
+                            })
+                        }) =>
+                {
+                    reduction += src.counter_count(*kind);
+                }
                 StaticEffect::CostReductionPerCounterOnSource { filter, kind }
                     if src.controller == caster
                         && state.evaluate_requirement_on_card(filter, card, caster) =>
@@ -14361,6 +14372,54 @@ impl GameState {
                 }
             }
         }
+        // CR 603.7e (filter-gated) — "when you next cast a [filter] spell this
+        // turn" (Brass Infiniscope). Same read-only gate: the filter is read
+        // only when such a watcher of the caster's is on the list.
+        if self.delayed_triggers.iter().any(|dt| {
+            dt.controller == controller
+                && matches!(dt.kind, crate::game::types::DelayedKind::YourNextSpellMatchingThisTurn(_))
+        }) && let Some(cast) = self.find_card_anywhere(cast_card).cloned()
+        {
+            let hits: Vec<bool> = self
+                .delayed_triggers
+                .iter()
+                .map(|dt| {
+                    dt.controller == controller
+                        && matches!(
+                            &dt.kind,
+                            crate::game::types::DelayedKind::YourNextSpellMatchingThisTurn(f)
+                                if self.evaluate_requirement_on_card(f, &cast, controller)
+                        )
+                })
+                .collect();
+            if hits.iter().any(|h| *h) {
+                let cast_x = self
+                    .stack
+                    .iter()
+                    .find_map(|it| match it {
+                        crate::game::types::StackItem::Spell { card, x_value, .. } if card.id == cast_card => {
+                            Some(*x_value)
+                        }
+                        _ => None,
+                    })
+                    .unwrap_or(0);
+                let mut fired = Vec::new();
+                let mut kept = Vec::new();
+                for (dt, hit) in std::mem::take(&mut self.delayed_triggers).into_iter().zip(hits) {
+                    if hit { fired.push(dt) } else { kept.push(dt) }
+                }
+                self.delayed_triggers = kept;
+                for dt in fired {
+                    self.stack.push(
+                        TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
+                            .trigger_source(Some(crate::game::effects::EntityRef::Card(cast_card)))
+                            .event_amount(cast.definition.cost.cmc())
+                            .x_value(cast_x)
+                            .build(),
+                    );
+                }
+            }
+        }
         // CR 603.7e (name-gated) — "when you cast a spell with the chosen name
         // for the first time this turn" (Medomai's Prophecy III). Only a cast
         // whose name matches the watching source's `named_card` consumes the
@@ -14875,6 +14934,7 @@ impl GameState {
             || (self.players[p].creature_spells_as_flash_this_turn
                 && card.definition.is_creature())
             || self.players[p].next_spell_flash_this_turn
+            || self.players[p].spells_as_flash_this_turn
     }
 
     pub(crate) fn try_pay_with_auto_tap(

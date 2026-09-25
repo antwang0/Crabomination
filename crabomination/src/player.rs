@@ -745,6 +745,10 @@ pub struct PlayerData {
     /// (Ride the Avalanche). Spent by that cast; reset at the turn boundary.
     #[serde(default)]
     pub next_spell_flash_this_turn: bool,
+    /// "You may cast spells this turn as though they had flash" (Alchemist's
+    /// Refuge). Reset at the turn boundary.
+    #[serde(default)]
+    pub spells_as_flash_this_turn: bool,
     /// Creatures exiled from under this player's control this turn (Vren, the
     /// Relentless' end-step Rat count). Reset at the turn boundary.
     #[serde(default)]
@@ -1395,6 +1399,7 @@ impl Player {
             cant_play_lands_this_turn: false,
             cant_activate_nonmana_abilities_this_turn: false,
             creature_spells_as_flash_this_turn: false,
+            spells_as_flash_this_turn: false,
             cast_from_graveyard_top_this_turn: false,
             extra_loyalty_activations: 0,
             loyalty_copy_grants: Vec::new(),

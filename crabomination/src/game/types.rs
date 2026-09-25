@@ -1344,6 +1344,9 @@ pub enum DelayedKind {
     /// `Effect::OnYourNextSpellOfTypeThisTurn` — consumed only by the
     /// controller's next cast of this card type (Smoldering Stagecoach).
     YourNextSpellOfTypeThisTurn(crate::card::CardType),
+    /// `Effect::OnYourNextSpellMatchingThisTurn` — consumed only by the
+    /// controller's next cast matching the requirement (Brass Infiniscope).
+    YourNextSpellMatchingThisTurn(crate::card::SelectionRequirement),
     /// "When you cast a spell with the chosen name for the first time this
     /// turn, …" (CR 603.7e, name-gated). Fires once on the controller's next
     /// cast whose name matches the source's `named_card`; non-matching casts
