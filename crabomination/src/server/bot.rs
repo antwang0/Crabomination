@@ -17346,20 +17346,32 @@ fn is_instant_or_sorcery_in_hand(state: &GameState, seat: usize, cid: CardId) ->
 }
 
 /// For a *beneficial* Aura in hand (positive `equipped_bonus` stats or a
-/// granted keyword), pick the bot's most valuable creature that satisfies
-/// the enchant filter as the host. Returns `None` for non-Auras and for
-/// debuff Auras (negative stats — Pacifism-style restrictions live in
-/// other def fields and keep the hostile auto-target walk). Without this,
-/// `Effect::Attach` falls into the auto-targeter's hostile branch and a
+/// keyword package worth having), pick the bot's most valuable creature that
+/// satisfies the enchant filter as the host. Returns `None` for non-Auras
+/// and for debuff Auras, which keep the hostile auto-target walk. Without
+/// this, `Effect::Attach` falls into the auto-targeter's hostile branch and a
 /// Rancor prefers the opponent's creatures.
+///
+/// Bug fix: a 0/0 Aura granting *any* keyword read as beneficial, so
+/// Pacifism (can't attack or block) was aimed at the bot's own best creature
+/// and Observed Stasis ("enchant creature an opponent controls", loses all
+/// abilities) was never cast at all. The keyword package now has to be worth
+/// something (`keyword_value`), an ability-stripping Aura is a debuff, and
+/// one that can only enchant an opponent's creature is hostile by its text.
 fn is_beneficial_aura(def: &CardDefinition) -> bool {
     use crate::card::EnchantmentSubtype;
     if !def.subtypes.enchantment_subtypes.contains(&EnchantmentSubtype::Aura) {
         return false;
     }
+    if def.effect.primary_target_filter().is_some_and(|f| f.mentions_controlled_by_opponent()) {
+        return false;
+    }
     def.equipped_bonus.as_ref().is_some_and(|bonus| {
-        bonus.power + bonus.toughness > 0
-            || (bonus.power + bonus.toughness == 0 && !bonus.keywords.is_empty())
+        !bonus.remove_abilities
+            && (bonus.power + bonus.toughness > 0
+                || (bonus.power + bonus.toughness == 0
+                    && !bonus.keywords.is_empty()
+                    && keyword_value(&bonus.keywords, 2, &EvalWeights::default()) > 0))
     })
 }
 

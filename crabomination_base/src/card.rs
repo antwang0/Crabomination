@@ -3781,6 +3781,18 @@ impl SelectionRequirement {
         }
     }
 
+    /// True when every match must be controlled by an opponent ("enchant
+    /// creature an opponent controls") — an `And` holding
+    /// `ControlledByOpponent`. An `Or` qualifies only if both arms do.
+    pub fn mentions_controlled_by_opponent(&self) -> bool {
+        match self {
+            Self::ControlledByOpponent => true,
+            Self::And(a, b) => a.mentions_controlled_by_opponent() || b.mentions_controlled_by_opponent(),
+            Self::Or(a, b) => a.mentions_controlled_by_opponent() && b.mentions_controlled_by_opponent(),
+            _ => false,
+        }
+    }
+
     /// True when the filter holds an atom answered against the ability's
     /// source (its chosen color, its exiled card, its host) — the atoms the
     /// source-less card walker answers `false`. Recurses through And/Or/Not.

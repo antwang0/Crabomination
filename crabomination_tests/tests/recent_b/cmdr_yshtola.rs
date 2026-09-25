@@ -350,3 +350,31 @@ fn emet_selch_recasts_from_the_graveyard() {
     assert_eq!(g.players[1].life, life - 6);
     assert!(g.exile.iter().any(|c| c.id == old));
 }
+
+/// Bug fix: the bot read a 0/0 Aura granting any keyword as beneficial, so
+/// Pacifism went on its own best creature and Observed Stasis ("enchant
+/// creature an opponent controls") was never cast (0 casts in 1,000 pods).
+/// Both now aim at the opponent's threat.
+#[test]
+fn bot_aims_a_lockdown_aura_at_the_opponent() {
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    for aura in [catalog::observed_stasis, catalog::pacifism] {
+        let mut g = main_phase(2);
+        g.step = TurnStep::PostCombatMain;
+        stock(&mut g, 0, 5);
+        for _ in 0..3 {
+            g.add_card_to_battlefield(0, catalog::island());
+            g.add_card_to_battlefield(0, catalog::plains());
+        }
+        g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let wurm = g.add_card_to_battlefield(1, catalog::craw_wurm());
+        let id = g.add_card_to_hand(0, aura());
+        match HeuristicBot::new().next_action(&g, 0) {
+            Some(GameAction::CastSpell { card_id, target, .. }) => {
+                assert_eq!(card_id, id);
+                assert_eq!(target, Some(Target::Permanent(wurm)));
+            }
+            other => panic!("expected the Aura cast, got {other:?}"),
+        }
+    }
+}

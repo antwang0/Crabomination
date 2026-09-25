@@ -370,3 +370,4 @@ fn black_widow_watches_second_draws() {
     drain_stack(&mut g);
     assert_eq!((plus(&g, bw), g.players[0].hand.len()), (1, hand + 1));
 }
+
