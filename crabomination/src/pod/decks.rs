@@ -3830,3 +3830,31 @@ pub const HENZIE_MAIN: &[CardFactory] = &[
     swamp, swamp, swamp, swamp, mountain, mountain, mountain, mountain, mountain, forest,
     forest, forest, forest, forest, forest,
 ];
+
+pub const OLORO_COMMANDERS: &[CardFactory] = &[oloro_ageless_ascetic];
+
+/// **Eternal Bargain**, the Commander 2013 Esper deck (C13, 2013-11-01),
+/// exactly as MTGJSON's `EternalBargain_C13` prints it: 75 nonbasic cards +
+/// 9 Plains + 6 Islands + 9 Swamps = 99. Esper lifegain and artifacts under Oloro,
+/// Ageless Ascetic, whose upkeep life works from the command zone.
+pub const OLORO_MAIN: &[CardFactory] = &[
+    ajanis_pridemate, augury_adept, azorius_herald, disciple_of_griselbrand, diviner_spirit,
+    divinity_of_pride, filigree_angel, hooded_horror, kongming_sleeping_dragon, marrow_bats,
+    myr_battlesphere, phyrexian_delver, phyrexian_gargantua, raven_familiar, razor_hippogriff,
+    serene_master, serra_avatar, sharding_sphinx, sharuum_the_hegemon, sphinx_of_the_steel_wind,
+    stormscape_battlemage, sydri_galvanic_genius, tidal_force, tidehollow_strix, tower_gargoyle,
+    vizkopa_guildmage, wall_of_reverence, brilliant_plan, death_grasp, deep_analysis, famine,
+    order_of_succession, survival_cache, tempt_with_immortality, toxic_deluge, dromars_charm,
+    lim_duls_vault, reckless_spite, spinal_embrace, crawlspace, nevinyrrals_disk,
+    nihil_spellbomb, obelisk_of_esper, pristine_talisman, sol_ring, sun_droplet,
+    swiftfoot_boots, thopter_foundry, well_of_lost_dreams, act_of_authority, cradle_of_vitality,
+    curse_of_inertia, curse_of_shallow_graves, curse_of_the_forsaken, darksteel_mutation, greed,
+    phyrexian_reclamation, sanguine_bond, arcane_sanctum, azorius_chancery, azorius_guildgate,
+    barren_moor, command_tower, dimir_guildgate, esper_panorama, evolving_wilds,
+    jwar_isle_refuge, lonely_sandbar, opal_palace, orzhov_basilica, orzhov_guildgate,
+    rupture_spire, springjack_pasture, temple_of_the_false_god, transguild_promenade,
+    // Basics: 9 plains, 6 island, 9 swamp
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, island, island,
+    island, island, island, island, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp,
+];

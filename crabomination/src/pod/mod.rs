@@ -1040,6 +1040,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::HENZIE_COMMANDERS,
             main: decks::HENZIE_MAIN,
         },
+        // Hundred-and-twenty-sixth: the hundred-and-sixteenth official list
+        // (Eternal Bargain, C13) — Esper lifegain under Oloro, Ageless Ascetic
+        // (CR 113.6b command-zone upkeep life). `--pod-decks 126`.
+        PodDeck {
+            name: "Oloro, Ageless Ascetic (WUB)",
+            commanders: decks::OLORO_COMMANDERS,
+            main: decks::OLORO_MAIN,
+        },
     ]
 }
 
@@ -1619,6 +1627,9 @@ mod tests {
             ("Omo", [0x0A0A, 122, 9046]),
             // CR 702.152 granted blitz, CR 508.1a Weathered Sentinels, CR 701.15 goad.
             ("Henzie", [0x4E21, 125, 9049]),
+            // CR 113.6b command-zone upkeep life; CR 701.10g power exchange;
+            // Order of Succession's pass around the table.
+            ("Oloro", [0x0107, 126, 9050]),
         ] {
             let precon = *field.iter().find(|d| d.name.starts_with(name)).expect("the precon seat");
             assert_eq!(precon.card_count(), 100);
