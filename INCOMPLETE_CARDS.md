@@ -2036,6 +2036,10 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Colonel Autumn | Hail, Caesar (PIP) | the "exploits" payoff rides on its own and its granted exploits: a printed exploit creature doesn't count, and two Autumns don't double it. |
 | 🟡 Mr. House, President and CEO | Hail, Caesar (PIP) | its roll is one die (no extra die per Treasure mana), and "roll a 4 or higher" reads a roll's highest die once. |
 | 🟡 Mysterious Stranger | Hail, Caesar (PIP) | the exiled instants and sorceries are picked, not targeted. |
+| 🟡 Kang Dynasty | Doom Prevails (MSC) | the draw rider reads any goaded creature an opponent controls dealing combat damage off your turn, not only the ones this Saga goaded. |
+| 🟡 Lady Loki, Agent of Chaos | Doom Prevails (MSC) | "your first instant, sorcery or Villain spell each turn" counts from when she is on the battlefield, not from the start of the turn. |
+| 🟡 Superior Foes of Spider-Man | Doom Prevails (MSC) | the exiled card is playable this turn only, not until you exile another card with it. |
+| 🟡 Extract Power | Doom Prevails (MSC) | the exiled cards are face up. |
 | 🟡 Wall of Stolen Identity | Mystic Intellect (C19) | the tap-and-lock happens as it enters, not as a reflexive "when you do" trigger; the lock lasts while the Wall is on the battlefield, not while you control it. |
 | 🟡 Mandate of Peace | Mystic Intellect (C19) | a trigger waiting to be put on the stack still goes on (CR 724.2a says it ceases to exist). |
 | 🟡 Elsha of the Infinite | Mystic Intellect (C19) | its flash also covers a top-of-library cast another permission allowed (Mystic Forge). |
