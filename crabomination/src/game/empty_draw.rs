@@ -4,7 +4,6 @@
 
 use super::GameState;
 use super::types::GameEvent;
-use crate::card::{SelectionRequirement as R, Zone};
 use crate::effect::{Effect, PlayerRef, Selector, StaticEffect, ZoneDest};
 
 impl GameState {
@@ -22,19 +21,26 @@ impl GameState {
         }) else {
             return false;
         };
-        if !self.players[p].graveyard.iter().any(|c| c.definition.is_creature()) {
+        // The pick is automatic (greatest mana value, first in graveyard order
+        // on a tie): the draw funnel can't suspend for an ask, and an ask
+        // left pending here was owed by a seat the failed draw then decked
+        // (seed 17703, four-seat pod).
+        let Some(pick) = self.players[p]
+            .graveyard
+            .iter()
+            .filter(|c| c.definition.is_creature())
+            .rev()
+            .max_by_key(|c| c.definition.cost.cmc())
+            .map(|c| c.id)
+        else {
             return false;
-        }
+        };
         let ctx = super::effects::EffectContext::for_ability(source, p, None);
-        let pick = Effect::MoveChosen {
-            from: Selector::CardsInZone { who: PlayerRef::You, zone: Zone::Graveyard, filter: R::Creature },
-            filter: None,
-            count: crate::effect::Value::ONE,
-            up_to: false,
+        let back = Effect::Move {
+            what: Selector::ExactObjects(vec![pick]),
             to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
         };
-        let before = self.players[p].graveyard.len();
-        let _ = self.run_effect(&pick, &ctx, events);
-        self.players[p].graveyard.len() < before
+        let _ = self.run_effect(&back, &ctx, events);
+        !self.players[p].graveyard.iter().any(|c| c.id == pick)
     }
 }

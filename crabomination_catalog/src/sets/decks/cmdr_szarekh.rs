@@ -6,6 +6,8 @@
 //! - **Biotransference** — creature spells and creature cards off the
 //!   battlefield aren't artifacts (only permanents are); its own cast trigger
 //!   reads "artifact or creature spell", which is the same set.
+//! - **Out of the Tombs** — the reanimated card is the engine's pick (greatest
+//!   mana value): the draw funnel can't suspend for an ask.
 //! - **Canoptek Wraith** — each fetched basic shares a name with a permanent,
 //!   not necessarily the chosen land.
 
@@ -519,6 +521,8 @@ pub fn night_scythe() -> CardDefinition {
 
 /// Out of the Tombs — upkeep: two eon counters, then mill that many; an
 /// empty-library draw reanimates a creature card instead (or loses).
+///
+/// ⚠ Residual: the returned card is the greatest-mana-value one, not asked.
 pub fn out_of_the_tombs() -> CardDefinition {
     CardDefinition {
         name: "Out of the Tombs",

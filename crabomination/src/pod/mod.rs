@@ -1619,8 +1619,9 @@ pub fn play_one_pod_game_censused(
             g.pending_decision
                 .as_ref()
                 .is_none_or(|pd| g.players[pd.acting_player()].is_alive()),
-            "seed {seed}: seat {} has left the game and still owes an ask",
+            "seed {seed}: seat {} has left the game and still owes an ask: {:?}",
             g.pending_decision.as_ref().map(|pd| pd.acting_player()).unwrap_or(usize::MAX),
+            g.pending_decision.as_ref().map(|pd| &pd.decision),
         );
         if any { stale = 0 } else { stale += 1 }
         // `CRAB_CAP_DIAG=<n>` names a *slow* game's board too, once, as it
