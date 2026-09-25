@@ -5178,3 +5178,34 @@ pub const CAESAR_MAIN: &[CardFactory] = &[
     path_of_ancestry, tainted_field, tainted_peak, terramorphic_expanse, plains, plains, plains,
     plains, plains, swamp, swamp, swamp, swamp, mountain, mountain, mountain, mountain, mountain,
 ];
+
+pub const INVISIBLE_WOMAN_COMMANDERS: &[CardFactory] = &[invisible_woman];
+
+/// **The Fantastic Four**, the Marvel Super Heroes Commander deck (MSC,
+/// 2026-06-26), exactly as MTGJSON's `TheFantasticFour_MSC` prints it: 82
+/// nonbasic cards + 5 Plains + 4 Islands + 3 Mountains + 5 Forests = 99.
+/// Four-color noncreature spells under Invisible Woman, whose {R}{G}{W}{U}
+/// rules-text cost makes her identity WURG (CR 903.4).
+pub const INVISIBLE_WOMAN_MAIN: &[CardFactory] = &[
+    mister_fantastic, human_torch, the_thing, galactus_devourer_of_worlds,
+    silver_surfer_galactuss_herald, invisible_force_field, ultimate_nullification, council_of_reeds,
+    fantastic_elasticity, lockjaw_slobbering_teleporter, valeria_richards_precocious,
+    alicia_masters_skilled_sculptor, flame_on, franklin_richards_ascendant, nova_flame,
+    its_clobberin_time, medusa_inhuman_queen, black_bolt_inhuman_king, cosmic_crucible,
+    crystal_inhuman_princess, dragon_man_reformed_robot, first_family, namor_atlantean_king,
+    power_pack, willie_lumpkin_postman, the_fantasticar, herbie_lovable_robot, negative_zone_portal,
+    unstable_molecule_suit, cleansing_nova, clever_concealment, collective_effort, monologue_tax,
+    promise_of_loyalty, tragic_arrogance, quantum_misalignment, recurring_insight,
+    into_the_time_vortex, seize_the_day, path_of_discovery, galvanic_iteration,
+    taunt_from_the_rampart, whirlwind_of_thought, chromatic_lantern, mirage_mirror, canopy_vista,
+    cinder_glade, clifftop_retreat, exotic_orchard, fabled_passage, glacial_fortress,
+    hinterland_harbor, prairie_stream, radiant_summit, rejuvenating_springs, rootbound_crag,
+    scorched_geyser, sodden_verdure, sulfur_falls, sunpetal_grove, terramorphic_expanse,
+    minds_dilation, annie_joins_up, genesis_ultimatum, mister_fantastic_reed_richards,
+    baxter_building, bovine_intervention, cut_a_deal, path_to_exile, deep_analysis, cultivate,
+    farseek, terramorph, three_visits, expressive_iteration, hull_breach, arcane_signet,
+    lightning_greaves, sol_ring, command_tower, evolving_wilds, path_of_ancestry,
+    // Basics: 5 plains, 4 island, 3 mountain, 5 forest
+    plains, plains, plains, plains, plains, island, island, island, island, mountain, mountain,
+    mountain, forest, forest, forest, forest, forest,
+];

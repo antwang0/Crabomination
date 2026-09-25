@@ -1395,6 +1395,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::CAESAR_COMMANDERS,
             main: decks::CAESAR_MAIN,
         },
+        // Hundred-and-seventy-first: The Fantastic Four (MSC, Marvel Super
+        // Heroes) — four-color noncreature spells under Invisible Woman, whose
+        // {R}{G}{W}{U} rules text sets her identity (CR 903.4). `--pod-decks 171`.
+        PodDeck {
+            name: "Invisible Woman (WURG)",
+            commanders: decks::INVISIBLE_WOMAN_COMMANDERS,
+            main: decks::INVISIBLE_WOMAN_MAIN,
+        },
     ]
 }
 
