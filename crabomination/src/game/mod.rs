@@ -30573,6 +30573,10 @@ fn static_effect_to_effects(
             // funnels (`trade_counters_for_damage`); no layer effect.
             | StaticEffect::PreventDamageToSelfTradingCounters { .. }
             | StaticEffect::PreventDamageToSelfWhileCountersForRad { .. }
+            | StaticEffect::PreventDamageToSelfOpponentGainsControl
+            // OpponentsMustAttackWithAtLeastOne — read at the attack
+            // declaration (`opponent_forces_an_attack`); no layer effect.
+            | StaticEffect::OpponentsMustAttackWithAtLeastOne
             // ExtraEtbCountersForCreatureCasts — read at creature-spell
             // resolution time in `stack.rs::resolve_spell`; no layer effect.
             | StaticEffect::ExtraEtbCountersForCreatureCasts { .. }

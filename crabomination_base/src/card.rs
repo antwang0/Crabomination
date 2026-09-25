@@ -374,6 +374,8 @@ pub enum CreatureType {
     // Marvel Super Heroes Commander (Captain Mar-Vell; Professor Hulk, She-Hulk).
     Kree,
     Gamma,
+    // Warhammer 40,000 Commander (Magnus the Red, Mortarion).
+    Primarch,
 }
 
 /// Land subtypes (basic land types + others).
@@ -4598,6 +4600,13 @@ pub struct CardDefinition {
     /// `ExileFromGraveyard` are read.
     #[serde(default)]
     pub squad_extra_cost: Option<AdditionalCastCost>,
+    /// CR 702.138 — escape whose exiled cards must match a filter ("cast
+    /// this card from your graveyard by exiling another creature card from
+    /// your graveyard in addition to paying its other costs", Helbrute's
+    /// Sarcophagus, printed as `Keyword::Escape(cost, 1)` with its mana cost).
+    /// `None`: any other graveyard card.
+    #[serde(default)]
+    pub escape_exile_filter: Option<SelectionRequirement>,
     /// "This spell costs `{per}` less to cast for each [`Value`]" — the
     /// scaled sibling of `self_cost_reduction_if` (Domain: Draco's `{2}` and
     /// Stratadon's `{1}` per basic land type among lands you control).

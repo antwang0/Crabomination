@@ -4700,6 +4700,20 @@ impl GameState {
     /// choice is forced; with several the controller picks the first alive
     /// opponent in seat order (a bot-policy default, like the other
     /// auto-resolved entry choices).
+    /// CR 702.138 — the filter an escaping card puts on the graveyard cards
+    /// it exiles (`CardDefinition::escape_exile_filter`, Helbrute).
+    pub(crate) fn escape_exile_filter_of(
+        &self,
+        p: usize,
+        card_id: CardId,
+    ) -> Option<crate::card::SelectionRequirement> {
+        self.players[p]
+            .graveyard
+            .iter()
+            .find(|c| c.id == card_id)
+            .and_then(|c| c.definition.escape_exile_filter.clone())
+    }
+
     pub(crate) fn apply_enters_under_opponent_control(&mut self, card_id: CardId) {
         let Some(c) = self.battlefield_find(card_id) else { return };
         // The guard keeps the replacement one-shot: every entry path funnels
@@ -12305,6 +12319,17 @@ impl GameState {
         seen.sort_unstable();
         seen.dedup();
         if seen.len() != exile_cards.len() {
+            return Err(GameError::SelectionRequirementViolated);
+        }
+        if let Some(filter) = self.escape_exile_filter_of(p, card_id)
+            && exile_cards.iter().any(|cid| {
+                !self.players[p]
+                    .graveyard
+                    .iter()
+                    .find(|c| c.id == *cid)
+                    .is_some_and(|c| self.requirement_on_graveyard_card(&filter, c, p, Some(card_id)))
+            })
+        {
             return Err(GameError::SelectionRequirementViolated);
         }
         if let Some(ref tgt) = target {

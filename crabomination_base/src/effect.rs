@@ -5213,10 +5213,21 @@ pub enum Effect {
     /// their mana costs. Then each player who owns a spell you cast this way
     /// loses life equal to its mana value" (Kefka, Dancing Mad).
     CastExiledFreeOwnersLoseLife { what: Selector },
+    /// CR 603.7 — "When that creature leaves the battlefield, return this
+    /// card from exile to the battlefield under its owner's control" (Lucius
+    /// the Eternal): a delayed trigger watching `what`, returning the source
+    /// card if it is still in exile when it fires.
+    ReturnSourceWhenTargetLeaves { what: Selector },
     /// "For each opponent, choose a [filter] that player controls. Destroy
     /// the chosen permanents" (Ultimate Magic: Meteor). The effect's
     /// controller picks one per opponent; all are destroyed together.
-    DestroyOnePerOpponent { filter: crate::card::SelectionRequirement },
+    /// `random_one`: "Destroy one of them chosen at random" (Chaos Defiler) —
+    /// only one pick, drawn from the game's RNG, is destroyed.
+    DestroyOnePerOpponent {
+        filter: crate::card::SelectionRequirement,
+        #[serde(default)]
+        random_one: bool,
+    },
     /// "For each kind of counter among `who`'s permanents matching `filter`,
     /// put a counter of that kind on [`onto`]" — keyword counters are kinds
     /// too (CR 122.1b). Several recipients take the kinds in turn (Exotic

@@ -2781,6 +2781,18 @@ pub enum StaticEffect {
     /// each counter removed this way" (Bloatfly Swarm). Read by the same
     /// funnel as `PreventDamageToSelfTradingCounters`.
     PreventDamageToSelfWhileCountersForRad { counter: crate::card::CounterType },
+    /// CR 615 / CR 800.4 — "If damage would be dealt to this creature,
+    /// prevent that damage and an opponent of your choice gains control of
+    /// it" (Khârn the Betrayer). Read by the same funnel as
+    /// `PreventDamageToSelfTradingCounters`; the new controller is the next
+    /// living opponent in turn order.
+    PreventDamageToSelfOpponentGainsControl,
+    /// CR 508.1d — "Each opponent must attack with at least one creature
+    /// each combat if able" (Seeker of Slaanesh). An empty declaration by an
+    /// opponent of this permanent's controller is rejected while one of their
+    /// creatures is able to attack (`declare_attackers_banded`); the bot's
+    /// forced-attacker repair adds one.
+    OpponentsMustAttackWithAtLeastOne,
     /// CR 614 — "If this creature would deal combat damage to a player,
     /// instead put that many +1/+1 counters on it and that player mills that
     /// many cards." Szadek, Lord of Secrets. A dealer-side combat-damage

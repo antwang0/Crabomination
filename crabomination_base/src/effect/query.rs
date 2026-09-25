@@ -833,7 +833,7 @@ impl Effect {
             | Effect::NextSpellHasAffinityForArtifacts => false,
             Effect::PayPerCounterOrSacrifice { then, .. } => then.requires_target(),
             Effect::MayPayRepeatedly { body, .. } => body.requires_target(),
-            Effect::CoffinExile { what } => sel_has_target(what),
+            Effect::CoffinExile { what } | Effect::ReturnSourceWhenTargetLeaves { what } => sel_has_target(what),
             Effect::AddCounterCapped { what, amount, cap, .. } => {
                 sel_has_target(what) || value_has_target(amount) || value_has_target(cap)
             }
@@ -4934,7 +4934,8 @@ impl Effect {
                 | Effect::UnlockRoomDoor { what }
                 | Effect::RevealRandomFromHand { who: what, .. }
                 | Effect::TopTwoGraveyardOpponentSplits { who: what }
-                | Effect::CoffinExile { what, .. } => sel_find(what, slot),
+                | Effect::CoffinExile { what, .. }
+                | Effect::ReturnSourceWhenTargetLeaves { what } => sel_find(what, slot),
                 Effect::ExchangeOwnership { a, b, .. } => {
                     sel_find(a, slot).or_else(|| sel_find(b, slot))
                 }

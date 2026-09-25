@@ -49,6 +49,7 @@ mod reselect;
 mod reveal_cast;
 mod reveal_until;
 mod shell_game;
+mod linked_return;
 mod life_loss_grants;
 mod spell_damage;
 mod static_copy;
@@ -23468,7 +23469,10 @@ impl GameState {
                 self.each_player_takes_creature_of_next(ctx);
                 Ok(())
             }
-            Effect::DestroyOnePerOpponent { filter } => self.destroy_one_per_opponent(filter, effect, ctx, events),
+            Effect::ReturnSourceWhenTargetLeaves { what } => self.return_source_when_target_leaves(what, ctx),
+            Effect::DestroyOnePerOpponent { filter, random_one } => {
+                self.destroy_one_per_opponent(filter, *random_one, effect, ctx, events)
+            }
             Effect::ChooseModeAtRandom(modes) => self.choose_mode_at_random(modes, ctx, events),
             Effect::EachOpponentReturnsFromYourGraveyard { filter } => {
                 self.each_opponent_returns_from_your_graveyard(filter, effect, ctx, events)

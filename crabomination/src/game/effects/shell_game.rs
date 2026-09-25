@@ -109,10 +109,12 @@ impl GameState {
 
     /// `Effect::DestroyOnePerOpponent` — the controller picks one matching
     /// permanent of each opponent (most expensive offered first), then every
-    /// pick is destroyed at once.
+    /// pick is destroyed at once — or, with `random_one` (Chaos Defiler),
+    /// one pick chosen at random.
     pub(super) fn destroy_one_per_opponent(
         &mut self,
         filter: &SelectionRequirement,
+        random_one: bool,
         effect: &Effect,
         ctx: &EffectContext,
         events: &mut Vec<GameEvent>,
@@ -155,6 +157,10 @@ impl GameState {
             }
         }
         self.clear_answer_log();
+        if random_one && doomed.len() > 1 {
+            let pick = doomed[rand::RngExt::random_range(&mut self.rng.draw(), 0..doomed.len())];
+            doomed = vec![pick];
+        }
         for id in doomed {
             self.destroy_permanent(id, false, events);
         }

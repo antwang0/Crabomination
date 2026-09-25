@@ -643,7 +643,7 @@ pub fn ultimate_magic_meteor() -> CardDefinition {
                 Effect::DealDamage { to: Selector::EachPermanent(R::Creature), amount: Value::Const(7) },
                 Effect::If {
                     cond: Predicate::SpellWasCastFromExile,
-                    then: Box::new(Effect::DestroyOnePerOpponent { filter: R::Artifact.or(R::Land) }),
+                    then: Box::new(Effect::DestroyOnePerOpponent { filter: R::Artifact.or(R::Land), random_one: false }),
                     else_: Box::new(Effect::Noop),
                 },
             ]),

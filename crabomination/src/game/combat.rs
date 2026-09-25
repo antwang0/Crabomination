@@ -161,6 +161,8 @@ pub(crate) mod attack_static {
     pub const CANT_ATTACK_CONTROLLER: u32 = 1 << 2;
     /// `AttackTaxToController` (Propaganda, Elephant Grass, Norn's Annex).
     pub const ATTACK_TAX: u32 = 1 << 3;
+    /// `OpponentsMustAttackWithAtLeastOne` (Seeker of Slaanesh).
+    pub const MUST_ATTACK_WITH_ONE: u32 = 1 << 4;
 }
 
 /// Tag which of `declare_attackers_banded`'s rejections fired, under
@@ -292,6 +294,7 @@ pub(crate) fn attack_static_scan(state: &GameState) -> u32 {
                 SE::AttackTaxToController { .. } | SE::AttackTaxOnYourPlaneswalkers { .. } => {
                     attack_static::ATTACK_TAX
                 }
+                SE::OpponentsMustAttackWithAtLeastOne => attack_static::MUST_ATTACK_WITH_ONE,
                 _ => 0,
             };
         }
@@ -1281,6 +1284,7 @@ impl GameState {
             let requirement = has_legal_target
                 && (g.any_goad_present()
                     || g.attack_lure_of(p).is_some()
+                    || statics & attack_static::MUST_ATTACK_WITH_ONE != 0
                     || g.board_keyword_in_scope(&[
                         Keyword::MustAttack,
                         Keyword::MustAttackOrBlock,
@@ -1602,6 +1606,15 @@ impl GameState {
                     return Err(attack_reject(line!(), GameError::CannotAttack(c.id)));
                 }
             }
+        }
+        // CR 508.1d — Seeker of Slaanesh: at least one attacker, if able.
+        if attack_requirement
+            && attacks.is_empty()
+            && statics & attack_static::MUST_ATTACK_WITH_ONE != 0
+            && self.opponent_forces_an_attack(p)
+            && let Some(c) = self.battlefield.iter().find(|c| c.controller == p && able_to_attack(c))
+        {
+            return Err(attack_reject(line!(), GameError::CannotAttack(c.id)));
         }
         // CR 508.1d — Magnetic Web (`groups`, built above the layer pass).
         for filter in groups {
@@ -4964,7 +4977,8 @@ impl GameState {
                 for sa in &c.definition.static_abilities {
                     match sa.effect {
                         SE::PreventDamageToSelfTradingCounters { .. }
-                        | SE::PreventDamageToSelfWhileCountersForRad { .. } => sekki = true,
+                        | SE::PreventDamageToSelfWhileCountersForRad { .. }
+                        | SE::PreventDamageToSelfOpponentGainsControl => sekki = true,
                         SE::PreventCombatDamageToSelfAndGrow => grows = true,
                         SE::ReplaceDamageToSelfWithCounters { kind: k } => {
                             kind.get_or_insert(k);
@@ -5040,6 +5054,18 @@ impl GameState {
         self.computed_permanent(id)?.keywords().has_kw(&KW).then_some(c.controller)
     }
 
+    /// CR 508.1d — does an opponent of `p` control a "each opponent must
+    /// attack with at least one creature" static (Seeker of Slaanesh)?
+    pub(crate) fn opponent_forces_an_attack(&self, p: usize) -> bool {
+        self.battlefield.iter().any(|c| {
+            c.controller != p
+                && !self.same_team(p, c.controller)
+                && c.definition.static_abilities.iter().any(|s| {
+                    matches!(s.effect, crate::effect::StaticEffect::OpponentsMustAttackWithAtLeastOne)
+                })
+        })
+    }
+
     /// Sekki, Seasons' Guide (CR 615) — prevent `dealt` damage to `recipient`,
     /// remove that many counters, and mint that many tokens. Returns false
     /// (damage stands) when `recipient` has no such static.
@@ -5051,6 +5077,22 @@ impl GameState {
     ) -> bool {
         if dealt == 0 || self.damage_cant_be_prevented_this_turn {
             return false;
+        }
+        // Khârn the Betrayer — prevent it, and it changes hands (CR 800.4:
+        // never to a player who has left the game).
+        let betrayed = self.battlefield_find(recipient).and_then(|c| {
+            c.definition
+                .static_abilities
+                .iter()
+                .any(|s| matches!(s.effect, crate::effect::StaticEffect::PreventDamageToSelfOpponentGainsControl))
+                .then_some(c.controller)
+        });
+        if let Some(controller) = betrayed {
+            let n = self.players.len();
+            if let Some(to) = self.opponents_of(controller).into_iter().min_by_key(|&q| (q + n - controller) % n) {
+                self.change_control(recipient, to);
+            }
+            return true;
         }
         // Bloatfly Swarm — only while a counter remains; each removed counter
         // is a rad counter for every player.

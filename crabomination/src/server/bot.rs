@@ -8345,9 +8345,13 @@ pub(super) fn cast_candidates<'a>(
         if !colors_coverable(&cost, have_mana.get()) {
             continue;
         }
+        let fodder_filter = c.definition.escape_exile_filter.as_ref();
         let mut fodder: Vec<&crate::card::CardInstance> = gy
             .iter()
             .filter(|o| o.id != c.id && state.effective_escape_grant(o, seat).is_none())
+            .filter(|o| {
+                fodder_filter.is_none_or(|f| state.requirement_on_graveyard_card(f, o, seat, Some(c.id)))
+            })
             .collect();
         if fodder.len() < n as usize {
             continue;
@@ -11712,10 +11716,13 @@ fn restore_forced_attackers(
     power_caps: &[usize],
     attackers: &mut Vec<CardId>,
 ) {
-    if !attack_requirement_present(state) && state.attack_lure_of(seat).is_none() {
+    let statics = crate::game::combat::attack_static_scan(state);
+    if !attack_requirement_present(state)
+        && state.attack_lure_of(seat).is_none()
+        && statics & crate::game::combat::attack_static::MUST_ATTACK_WITH_ONE == 0
+    {
         return;
     }
-    let statics = crate::game::combat::attack_static_scan(state);
     restore_forced_attackers_unchecked(state, seat, power_caps, statics, attackers);
 }
 
@@ -11768,6 +11775,22 @@ fn restore_forced_attackers_unchecked(
         if !added {
             break;
         }
+    }
+    // CR 508.1d — Seeker of Slaanesh: an empty declaration is illegal while
+    // a creature is able to attack, so send the sturdiest able one.
+    if attackers.is_empty()
+        && statics & crate::game::combat::attack_static::MUST_ATTACK_WITH_ONE != 0
+        && state.opponent_forces_an_attack(seat)
+        && let Some(c) = state
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == seat)
+            .filter_map(|c| state.computed_permanent_on(c).map(|cp| (c, cp)))
+            .filter(|(c, cp)| state.attacker_is_able(seat, c, Some(cp), power_caps, statics))
+            .max_by_key(|(c, cp)| (cp.toughness, std::cmp::Reverse(c.id)))
+            .map(|(c, _)| c.id)
+    {
+        attackers.push(c);
     }
 }
 
@@ -12064,10 +12087,12 @@ fn repair_attack_subsets(
     greedy: &[Attack],
     candidates: &mut Vec<Vec<Attack>>,
 ) {
-    if !state.with_frozen_layers(attack_requirement_present) {
+    let statics = crate::game::combat::attack_static_scan(state);
+    if !state.with_frozen_layers(attack_requirement_present)
+        && statics & crate::game::combat::attack_static::MUST_ATTACK_WITH_ONE == 0
+    {
         return;
     }
-    let statics = crate::game::combat::attack_static_scan(state);
     let power_caps = state.attack_power_caps(statics);
     state.with_frozen_layers(|st| {
         for cand in candidates.iter_mut() {
