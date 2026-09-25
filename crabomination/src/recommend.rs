@@ -2513,6 +2513,15 @@ impl ActionCensus {
     /// `HashMap` and its walk order is a hash layout, which is the one thing
     /// a report must not inherit (`render` below is the only place in the
     /// type that reads an order, and it sorts first).
+    /// The `n` most frequent action lines, most frequent first (ties by
+    /// name, so the listing is deterministic).
+    pub fn top_actions(&self, n: usize) -> Vec<(&str, usize)> {
+        let mut v: Vec<(&str, usize)> = self.counts.iter().map(|(k, c)| (k.as_str(), *c)).collect();
+        v.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(b.0)));
+        v.truncate(n);
+        v
+    }
+
     pub fn card_counts(&self) -> &HashMap<String, usize> {
         &self.cards
     }
@@ -2578,6 +2587,23 @@ impl ActionCensus {
             A::Suspend { card_id } | A::Foretell { card_id } => (Some(*card_id), None),
             _ => (a.cast_card_id(), None),
         };
+        // An answer names the ask it answers and the card asking, so a loop
+        // of asks is traceable to its source. Not a play: no card census.
+        if let A::SubmitDecision(_) = a
+            && let Some(p) = g.pending_decision.as_ref()
+        {
+            let d = format!("{:?}", p.decision);
+            let kind = d.split(['{', '(', ' ']).next().unwrap_or("?");
+            // Diagnostic only: the asking card is the Debug's `source` field.
+            let src = d
+                .split_once("source: CardId(")
+                .and_then(|(_, r)| r.split(')').next()?.parse().ok())
+                .and_then(|n| g.find_card_anywhere(crate::card::CardId(n)))
+                .map_or("?", |c| c.definition.name);
+            let named = d.split_once("source_name: \"").and_then(|(_, r)| r.split('"').next()).unwrap_or("");
+            let desc = d.split_once("description: \"").and_then(|(_, r)| r.split('"').next()).unwrap_or("");
+            return (format!("{variant} {kind} {src} {named} {desc}"), None);
+        }
         let Some(id) = id else { return (variant.to_string(), None) };
         // A card the action names but no zone holds any more is an id, not a
         // name, and must not land in the card census as one.

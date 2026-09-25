@@ -245,3 +245,38 @@ fn yuffie_steals_an_artifact() {
     cast(&mut g, yuffie, &[Target::Permanent(ring)]).expect("cast");
     assert_eq!(g.battlefield_find(ring).unwrap().controller, 0);
 }
+
+/// A prompting caster's per-opponent picks resume one ask at a time. The loop
+/// used to ask on for the next opponent after a suspend, overwriting the
+/// parked ask: an 8-seat pod answered 7,741 of them (`--pod-decks
+/// 162,161,160,159,158,157,156,155 --seed 9402 --first 701 --games 1`, the
+/// reproduction — this board converged even before the fix). Pinned here: one
+/// bot-answered pick per opponent with something to lose.
+#[test]
+fn ultimate_magic_meteor_prompts_each_opponent_once() {
+    use crabomination::decision::Decision;
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    let mut g = main_phase(8);
+    g.players[0].wants_ui = true;
+    // Seats 2 and 5 have nothing to lose; the rest one land each.
+    let lands: Vec<CardId> =
+        [1, 3, 4, 6, 7].into_iter().map(|p| g.add_card_to_battlefield(p, catalog::forest())).collect();
+    let spell = g.add_card_to_hand(0, catalog::ultimate_magic_meteor());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::Foretell { card_id: spell }).expect("foretell");
+    g.foretold_this_turn.clear();
+    g.perform_action(GameAction::CastForetold { card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast foretold");
+    let mut asks = 0;
+    for _ in 0..40 {
+        drain_stack(&mut g);
+        let Some(pending) = g.pending_decision.as_ref() else { break };
+        assert!(matches!(pending.decision, Decision::ChooseTarget { .. }), "{:?}", pending.decision);
+        // The pod's own answerer: the bot policy for the prompting seat.
+        let action = HeuristicBot::new().next_action(&g, 0).expect("the bot answers");
+        asks += 1;
+        g.perform_action(action).expect("answer");
+    }
+    assert_eq!(asks, 5, "one pick per opponent with something to lose");
+    assert!(lands.iter().all(|l| g.battlefield_find(*l).is_none()));
+}

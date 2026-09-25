@@ -2550,6 +2550,11 @@ fn report_card_census(
 ) {
     let counts = census.card_counts();
     println!("  card census: {} distinct cards played", counts.len());
+    // What a run spent its actions on: a capped game replayed with
+    // `--first N --games 1 --card-census` names its loop here.
+    for (line, n) in census.top_actions(5) {
+        println!("    top action {n:>7}  {line}");
+    }
     for d in field {
         let mut never: Vec<(&str, bool)> = Vec::new();
         let mut seen = std::collections::BTreeSet::new();

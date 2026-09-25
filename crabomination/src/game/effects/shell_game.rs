@@ -136,15 +136,21 @@ impl GameState {
             }
             theirs.sort_by_key(|t| std::cmp::Reverse(t.0));
             let legal: Vec<Target> = theirs.into_iter().map(|(_, id)| Target::Permanent(id)).collect();
-            let picked = self.ask_seat_target_logged(
+            // `legal` is non-empty, so `None` is a suspend: stop here and let
+            // the resume replay the logged picks. Asking on for the next
+            // opponent overwrote the parked ask, and a prompting seat answered
+            // 7,741 of them in one 8-seat pod (seed 9402, game 701).
+            let Some(picked) = self.ask_seat_target_logged(
                 &mut cursor,
                 me,
                 format!("P{me}: choose a permanent P{opp} controls to destroy"),
                 source,
                 legal,
                 effect,
-            );
-            if let Some(Target::Permanent(id)) = picked {
+            ) else {
+                return Ok(());
+            };
+            if let Target::Permanent(id) = picked {
                 doomed.push(id);
             }
         }
