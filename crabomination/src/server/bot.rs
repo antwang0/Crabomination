@@ -6655,6 +6655,10 @@ struct BoardFacts {
     grants_replicate: bool,
     /// A graveyard-cast permission is on the board (Muldrotha, Gisa).
     grants_gy_cast: bool,
+    /// A graveyard-cast grant that works on any turn (Abandoned Sarcophagus,
+    /// Haakon), where the others are "during your turn" or once each of
+    /// your turns.
+    grants_gy_cast_any_turn: bool,
     /// An alternative-cost grant for hand spells is on the board (Fist of
     /// Suns, Kentaro, Demon of Fate's Design).
     grants_alt_cost: bool,
@@ -6671,6 +6675,7 @@ impl BoardFacts {
             grants_escape: false,
             grants_replicate: false,
             grants_gy_cast: false,
+            grants_gy_cast_any_turn: false,
             grants_alt_cost: state.players[seat].life_alt_next_spell_this_turn,
         };
         for c in state.battlefield.iter() {
@@ -6695,10 +6700,12 @@ impl BoardFacts {
                     SE::MayCastPermanentsFromGraveyard
                     | SE::PlayCardsFromGraveyardDuringYourTurn
                     | SE::GraveyardCastOncePerTurn { .. }
-                    | SE::GraveyardCastFreely { .. }
                     | SE::GraveyardCastBySacrificingOncePerTurn { .. }
-                    | SE::MayPlayCardsMilledThisTurn
-                    | SE::CastFromGraveyardMatching { .. } => f.grants_gy_cast = true,
+                    | SE::MayPlayCardsMilledThisTurn => f.grants_gy_cast = true,
+                    SE::CastFromGraveyardMatching { .. } => {
+                        f.grants_gy_cast = true;
+                        f.grants_gy_cast_any_turn = true;
+                    }
                     SE::FiveColorAlternativeCost
                     | SE::GenericAlternativeCostForFilter { .. }
                     | SE::LifeAlternativeCostOncePerYourTurn { .. }
@@ -6918,7 +6925,7 @@ pub(super) fn cast_candidates<'a>(
         | if w.may_play { may_play_specialty(state, seat) } else { 0 }
         | if facts.prepared { spec::PREPARED } else { 0 }
         | if facts.grants_gy_cast
-            && state.active_player_idx == seat
+            && (state.active_player_idx == seat || facts.grants_gy_cast_any_turn)
             && !state.players[seat].graveyard.is_empty()
         {
             spec::GY_GRANT
@@ -8255,8 +8262,7 @@ pub(super) fn cast_candidates<'a>(
             && facts.grants_gy_cast
             && !c.definition.is_land()
             && (state.graveyard_sac_cast_grant(seat, c.id).is_some()
-                || state.graveyard_cast_type_available(seat, c.id).is_some()
-                || state.graveyard_cast_free_grant(seat, c.id));
+                || state.graveyard_cast_type_available(seat, c.id).is_some());
         if !own_alt && !granted {
             continue;
         }

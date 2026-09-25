@@ -330,7 +330,7 @@ pub fn haakon_stromgald_scourge() -> CardDefinition {
         cast_condition: Some(Predicate::Not(Box::new(Predicate::All(vec![])))),
         static_abilities: vec![StaticAbility {
             description: "As long as Haakon is on the battlefield, you may cast Knight spells from your graveyard.",
-            effect: StaticEffect::GraveyardCastFreely { filter: knight() },
+            effect: StaticEffect::CastFromGraveyardMatching { filter: knight() },
         }],
         triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::LoseLife {
             who: Selector::You,

@@ -30131,7 +30131,6 @@ fn static_effect_to_effects(
             | StaticEffect::MayPlayCardsMilledThisTurn
             | StaticEffect::PlayExiledWithSourceForLife
             | StaticEffect::GraveyardCastWithLifeSurcharge { .. }
-            | StaticEffect::GraveyardCastFreely { .. }
             | StaticEffect::GraveyardCastBySacrificingOncePerTurn { .. }
             | StaticEffect::GraveyardCastOncePerTurn { .. }
             | StaticEffect::ActivationCostReduction { .. }

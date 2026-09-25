@@ -1952,10 +1952,6 @@ pub enum StaticEffect {
     /// `cast_from_zone_without_paying`; land plays through the grant share the
     /// engine-wide may-play land gap.
     PlayExiledWithSourceForLife,
-    /// "As long as this is on the battlefield, you may cast [filter] spells
-    /// from your graveyard" — no surcharge, no per-turn cap (Haakon,
-    /// Stromgald Scourge's Knights). Read by `graveyard_cast_free_grant`.
-    GraveyardCastFreely { filter: SelectionRequirement },
     /// "You may cast [filter] spells from your graveyard by paying `life`
     /// life in addition to paying their other costs. If you cast a spell this
     /// way, it enters with a finality counter." Noctis, Prince of Lucis
@@ -3183,8 +3179,8 @@ pub enum StaticEffect {
     /// than pay cycling costs" (New Perspectives).
     CyclingFreeWhileHandAtLeast(u32),
     /// "You may cast spells that have a cycling ability from your graveyard"
-    /// (Abandoned Sarcophagus): a graveyard-cast grant for `filter`, on any
-    /// turn, with no budget. Read by `graveyard_cast_type_available`.
+    /// (Abandoned Sarcophagus; Haakon's Knights): a graveyard-cast grant for
+    /// `filter`, on any turn, with no budget. Read by `graveyard_cast_type_available`.
     CastFromGraveyardMatching { filter: SelectionRequirement },
     /// "If a card that has a cycling ability would be put into your graveyard
     /// from anywhere and it wasn't cycled, exile it instead" (Abandoned
