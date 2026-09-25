@@ -2004,6 +2004,11 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Firkraag, Cunning Instigator | Draconic Dissent (CLB) | the goaded creature is the engine's pick (greatest power), not a target; "had to attack this combat" reads as goaded or must-attack when the damage is dealt. |
 | 🟡 Rowan Kenrith | Draconic Dissent (CLB) | the +2's forced attacks last until your next turn and reach the target's creatures at resolution only. |
 | 🟡 Stuffy Doll | Draconic Dissent (CLB) | the chosen player is the engine's most hostile opponent. |
+| 🟡 Apex of Power | Prismari Performance (C21) | the exiled cards may also be played as lands, not only cast. |
+| 🟡 Dazzling Sphinx | Prismari Performance (C21) | a found card you don't cast stays in exile rather than going to the bottom. |
+| 🟡 Muse Vortex | Prismari Performance (C21) | the uncast cards go to the bottom in exile order, not a random one. |
+| 🟡 Radiant Performer | Prismari Performance (C21) | copies a targeted spell, not a targeted ability. |
+| 🟡 Zaffai, Thunder Conductor | Prismari Performance (C21) | one magecraft trigger per copy event, however many copies it made. |
 | 🟡 Abstruse Archaic | Eldrazi Unbound (CMM) | the target is the ability's source permanent (a colorless permanent you control with an ability on the stack), as Strionic Resonator. |
 | 🟡 Ugin's Mastery | Eldrazi Unbound (CMM) | the face-down creature turned face up is the first one you control, not a choice. |
 | 🟡 Benthic Anomaly | Eldrazi Incursion (M3C) | each opponent's greatest-power creature is chosen, and the copy is of the one with the greatest mana value. |

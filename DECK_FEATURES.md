@@ -140,6 +140,7 @@ lists were picked.
 | **Cabaretti Cacophony** (NCC precon) RGW | Kitt Kanto, Mayhem Diva | RGW | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
 | **Draconic Rage** (AFC precon) RG | Vrondiss, Rage of Ancients | RG | 100 | 🟡 all 100 implemented, 6 carry residuals (below) |
 | **Draconic Dissent** (CLB precon) UR | Firkraag, Cunning Instigator | UR | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
+| **Prismari Performance** (C21 precon) UR | Zaffai, Thunder Conductor | UR | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not
@@ -1294,6 +1295,28 @@ no actor). Residual: **Orator of Ojutai** reads board and hand instead of a
 reveal. Four-seat pods beside Sigarda / Teval / Disa (seed 11092, 1,000 games,
 all decided): The Ur-Dragon 25.1 %; census: no card of the four unplayed; 6
 and 8 seats (seed 11093) 2,000 / 2,000 decided. `--bench` byte-identical.
+
+The **hundred-and-twelfth** is Commander 2021's **Prismari Performance**
+(`PrismariPerformance_C21`) — Izzet big spells and magecraft under Zaffai,
+Thunder Conductor, reached by `--pod-decks 112` (110, then 111, before
+rebasing over Painbow and Ruthless Regiment). Eighteen cards were missing
+(`cmdr_zaffai.rs`). The primitives: `SpendRestriction::RedInstantSorceryCopy`
+(Pyromancer's Goggles — a rider whose pips each push a copy trigger above the
+red instant or sorcery they funded, through the commander-mana rider hook),
+`SpendRestriction::XCostsOnly` (Elementalist's Palette),
+`Effect::CopySpellForEachOtherLegalTarget` (Radiant Performer,
+`effects/copy_each_target.rs`) and `DynamicPt::ExiledWithSourceManaValue`
+(Living Lore). ⚠ **An emblem's `GraveyardInstantsSorceriesHaveFlashback` was
+never read** — the grant scanned the battlefield only (CR 114.4; Jaya
+Ballard's −8). ⚠ **A trigger targeting "a spell with a single target" found
+no target**: the auto-picker walked the stack only for counter-class filters.
+Residuals: **Apex of Power**'s exiled cards may be played as lands; **Dazzling
+Sphinx** leaves an uncast find in exile; **Muse Vortex** bottoms in exile
+order; **Radiant Performer** copies spells only; **Zaffai** triggers once per
+copy event. Pods (release, seed 10331, 1,000 games beside Firkraag /
+Vrondiss / Jared): 1,000/1,000 decided, no card of the four lists unplayed,
+Zaffai 12.1 %; 8 seats (seed 10332) 500/500 decided. `--bench`
+byte-identical.
 
 The **hundred-and-seventh** is Commander Legends: Battle for Baldur's Gate's
 **Draconic Dissent** (`DraconicDissent_CLB`) — Izzet goad and Dragons under

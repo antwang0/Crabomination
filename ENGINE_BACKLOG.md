@@ -348,6 +348,21 @@ the handoff.
   Scheme's connive (convokers on the resolving spell), Colossal Grave-Reaver's
   pick (mill BATCHES aren't delimited in `milled_ids_this_turn`).
 
+## FIXED 2026-09-25 (the Commander routine, Prismari Performance) — an emblem's flashback grant, and a spell-target trigger with no target
+
+- **CR 114.4 — `graveyard_flashback_grant` scanned the battlefield only**, so
+  an emblem carrying `GraveyardInstantsSorceriesHaveFlashback` (Jaya
+  Ballard's −8) granted nothing; the emblem's statics are now read beside the
+  battlefield's (`cr_702_34_jaya_emblem_flashes_back_graveyard_spells`).
+- **The target auto-picker walked the stack only for counter-class filters**
+  (`IsSpellOnStack` and two siblings), so a trigger targeting "a spell with a
+  single target" (Radiant Performer) fell through to a player and did
+  nothing. `SpellWithSingleTarget` joins the gate.
+- **Open:** the shared `magecraft` helper listens to `SpellCast` only, so no
+  magecraft card triggers on a copy (CR 207.2c: "cast or copy"). Widening it
+  would move every magecraft card the bench plays; Zaffai carries its own
+  `SpellCopied` trigger instead.
+
 ## FIXED 2026-09-24 (the Commander routine, Draconic Rage) — attaching to nothing detached
 
 - **CR 701.3b — `Effect::Attach` to an empty selection cleared the
