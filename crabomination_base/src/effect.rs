@@ -6485,6 +6485,11 @@ pub enum Effect {
     /// (Goblin Maskmaker). Bumps `Player.face_down_discount_this_turn`, read
     /// by `face_down_cast_cost` and cleared at cleanup (CR 514.2).
     FaceDownSpellsCostLessThisTurn { amount: u32 },
+    /// "The next face-down creature spell you cast this turn costs {amount}
+    /// less to cast" (Panoptic Projektor). Bumps
+    /// `Player.next_face_down_discount_this_turn`, spent by the next
+    /// face-down cast and cleared at cleanup.
+    NextFaceDownSpellCostsLessThisTurn { amount: u32 },
     /// "That spell gains [keywords]" — grants keywords to a spell on the
     /// stack for as long as it's there (Judith, Carnage Connoisseur).
     /// Recorded in `GameState.spell_keyword_grants`.
@@ -9214,6 +9219,11 @@ pub enum Effect {
     /// face-down pile, shuffle that pile, then manifest those cards" under
     /// the resolving controller (Ghastly Conscription).
     ManifestFromGraveyard { who: PlayerRef, filter: SelectionRequirement },
+    /// "Return it to the battlefield face down under your control" (Ashcloud
+    /// Phoenix): each graveyard card the selector resolves to turns face down
+    /// and enters as a 2/2 under the effect's controller, like a manifest —
+    /// so a card with morph can be turned up for its morph cost.
+    PutFaceDownOntoBattlefield { what: Selector },
     /// CR 701.34 from the hand — the resolved player manifests `count`
     /// cards from their hand; if `controller_draws`, the effect's
     /// controller draws one card per card manifested (Kozilek, the Broken

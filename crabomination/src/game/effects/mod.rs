@@ -16815,6 +16815,11 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::NextFaceDownSpellCostsLessThisTurn { amount } => {
+                self.players[ctx.controller].next_face_down_discount_this_turn += *amount;
+                Ok(())
+            }
+
             Effect::GrantKeywordsToSpell { what, keywords } => {
                 for ent in self.resolve_selector(what, ctx) {
                     let Some(cid) = ent.as_card_id() else { continue };
@@ -23226,6 +23231,19 @@ impl GameState {
                 pile.shuffle(&mut self.rng.draw());
                 for cid in pile {
                     self.manifest_from_graveyard(cid, p, ctx, events);
+                }
+                Ok(())
+            }
+
+            Effect::PutFaceDownOntoBattlefield { what } => {
+                for ent in self.resolve_selector(what, ctx) {
+                    let (EntityRef::Card(cid) | EntityRef::Permanent(cid)) = ent else { continue };
+                    let Some(owner) =
+                        self.players.iter().position(|pl| pl.graveyard.iter().any(|c| c.id == cid))
+                    else {
+                        continue;
+                    };
+                    self.manifest_from_graveyard(cid, owner, ctx, events);
                 }
                 Ok(())
             }

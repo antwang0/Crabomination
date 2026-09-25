@@ -3258,6 +3258,9 @@ pub enum SelectionRequirement {
     /// *is* the ability's source. Lets a cost name the permanent itself
     /// ("Return this enchantment to its owner's hand:" — Attunement).
     IsSource,
+    /// CR 708 — the candidate permanent was turned face up this turn
+    /// (`TurnRegistries.turned_face_up_this_turn`; Kaust, Eyes of the Glade).
+    TurnedFaceUpThisTurn,
     /// The candidate permanent was put onto the battlefield by the ability's
     /// source (`CardData::put_onto_battlefield_by`) — Kodama of the East
     /// Tree's "if it wasn't put onto the battlefield with this ability".
@@ -4133,6 +4136,12 @@ pub struct CardDefinition {
     ///
     /// Defaults to `None` via `#[serde(default)]` so all existing literal
     /// CardDefinition initialisations pick up the new field automatically.
+    /// CR 702.37 / 708 — "As this creature is turned face up, put N `kind`
+    /// counters on it" (Hooded Hydra). Applied inside
+    /// `CardInstance::turn_face_up`, so every turn-up path (morph cost,
+    /// `TurnFaceUpFree`) puts them on before state-based actions look.
+    #[serde(default)]
+    pub turned_face_up_counters: Option<(CounterType, u32)>,
     #[serde(default)]
     pub enters_with_counters: Option<(CounterType, crate::effect::Value)>,
     /// "If this card is in a graveyard, effects from spells named X count it
@@ -10123,9 +10132,13 @@ impl CardInstance {
         self.face_up_def.as_ref()?;
         let real = self.face_up_def.take()?;
         let name = real.name;
+        let counters = real.turned_face_up_counters;
         self.set_definition(real);
         self.face_down = false;
         self.cloaked = false;
+        if let Some((kind, n)) = counters {
+            self.add_counters(kind, n);
+        }
         Some(name)
     }
 

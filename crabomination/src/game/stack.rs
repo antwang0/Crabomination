@@ -4795,6 +4795,7 @@ impl GameState {
             });
             let stale_scalars = !player.turn_spell_discounts.is_empty()
                 || player.face_down_discount_this_turn != 0
+                || player.next_face_down_discount_this_turn != 0
                 || player.extra_plus_one_counters_this_turn != 0
                 || player.extra_etb_p1p1_counters_this_turn != 0;
             if !stale_grants && !stale_scalars {
@@ -4817,6 +4818,7 @@ impl GameState {
                 // "[Filter] spells cost {N} less this turn" grants end (CR 514.2).
                 player.turn_spell_discounts.clear();
                 player.face_down_discount_this_turn = 0;
+                player.next_face_down_discount_this_turn = 0;
                 // "Until end of turn" +1/+1 counter bonus (Prairie Dog) ends.
                 player.extra_plus_one_counters_this_turn = 0;
                 player.extra_etb_p1p1_counters_this_turn = 0;
@@ -4895,6 +4897,7 @@ impl GameState {
         // Close the "if it would die this turn, exile it instead" window
         // (Wilt in the Heat).
         clear_turn!(self.dies_to_exile_eot);
+        clear_turn!(self.turned_face_up_this_turn);
         clear_cold!(self.damage_exiles_victim_eot);
         clear_cold!(self.damage_denies_regen_eot);
         // Expire event-keyed "when [card] dies this turn" delayed triggers

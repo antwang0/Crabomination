@@ -1647,6 +1647,11 @@ pub enum StaticEffect {
     /// trigger (`dungeon_room_extra_fires`); the extra copies carry no
     /// CR 309.6 completion tail, so a dungeon completes once.
     DungeonRoomsTriggerTwice,
+    /// Panoptic Projektor — "If turning a face-down permanent face up causes
+    /// a triggered ability of a permanent you control to trigger, that
+    /// ability triggers an additional time." Read at trigger dispatch off the
+    /// `triggered_by_face_up` candidate flag.
+    DoubleControllerTurnedFaceUpTriggers,
     /// Rod of Absorption — "Whenever a player casts an instant or sorcery
     /// spell, exile it instead of putting it into a graveyard as it
     /// resolves." Read at the end of spell resolution

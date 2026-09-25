@@ -7323,8 +7323,10 @@ impl GameState {
             })
             .sum();
         // `seat` can be the spectator sentinel, which indexes no player.
-        let turn_grant =
-            self.players.get(seat).map_or(0, |p| p.face_down_discount_this_turn);
+        let turn_grant = self
+            .players
+            .get(seat)
+            .map_or(0, |p| p.face_down_discount_this_turn + p.next_face_down_discount_this_turn);
         3u32.saturating_sub(reduction + turn_grant)
     }
 
@@ -7365,6 +7367,10 @@ impl GameState {
             .remove_from_hand(card_id)
             .ok_or(GameError::CardNotInHand(card_id))?;
         card.turn_face_down();
+        // Panoptic Projektor's discount is spent by this cast.
+        if self.players[p].next_face_down_discount_this_turn != 0 {
+            self.players[p].next_face_down_discount_this_turn = 0;
+        }
         let mut events = receipt.auto_events;
         events.push(GameEvent::SpellCast { player: p, card_id, face: CastFace::Front });
         self.finalize_cast(p, card, None, vec![], None, 0, 0, mana_spent, true);

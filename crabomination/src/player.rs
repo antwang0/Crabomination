@@ -888,6 +888,11 @@ pub struct PlayerData {
     /// `finish_cleanup` alongside `turn_spell_discounts`.
     #[serde(default)]
     pub face_down_discount_this_turn: u32,
+    /// "The next face-down creature spell you cast this turn costs {N} less"
+    /// (Panoptic Projektor). Summed into `face_down_cast_cost`, spent by the
+    /// next face-down cast, cleared in `finish_cleanup`.
+    #[serde(default)]
+    pub next_face_down_discount_this_turn: u32,
     /// Number of creature spells this player has cast on the current
     /// turn. Reset to 0 in `do_untap`. Powers creature-cast magecraft
     /// payoffs ("if you've cast a creature spell this turn, …") and
@@ -1480,6 +1485,7 @@ impl Player {
             pending_spell_discounts: Default::default(),
             pending_affinity_next_spell: Default::default(),
             face_down_discount_this_turn: 0,
+            next_face_down_discount_this_turn: 0,
             cards_discarded_this_turn: 0,
             permanents_sacrificed_this_turn: 0,
             artifacts_sacrificed_this_turn: 0,

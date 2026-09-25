@@ -1346,6 +1346,8 @@ impl Effect {
             Effect::Meld { .. } => false,
             Effect::SpellsCostLessThisTurn { .. } => false,
             Effect::FaceDownSpellsCostLessThisTurn { .. } => false,
+            Effect::NextFaceDownSpellCostsLessThisTurn { .. } => false,
+            Effect::PutFaceDownOntoBattlefield { what } => sel_has_target(what),
             Effect::GrantKeywordsToSpell { what, .. }
             | Effect::SpellEntersWithCounters { what, .. } => sel_has_target(what),
             Effect::CastFromHandWithoutPaying { .. } => false,

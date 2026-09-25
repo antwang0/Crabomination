@@ -1364,6 +1364,11 @@ pub struct TurnRegistries {
     /// (Concussive Bolt). Cleared at cleanup.
     #[serde(default)]
     pub(crate) cant_block_this_turn: Vec<CardId>,
+    /// CR 708 — permanents turned face up this turn (`R::TurnedFaceUpThisTurn`,
+    /// Kaust). Stamped where a `TurnedFaceUp` event is dispatched; cleared at
+    /// cleanup.
+    #[serde(default)]
+    pub(crate) turned_face_up_this_turn: crate::game::types::IdSet<CardId>,
     /// Active prevention shields (CR 615.1) around players/permanents.
     /// Created by `Effect::PreventNextDamage` / `PreventAllDamageThisTurn`;
     /// consulted by the non-combat damage path (`deal_damage_to_from`) and
@@ -22325,6 +22330,7 @@ impl GameState {
                     // CR 708 — "you turned a permanent face up this turn".
                     if let Some(p) = face_up_ctrl {
                         self.players[p].face_down_activity_this_turn = true;
+                        self.turn.turned_face_up_this_turn.insert(*card_id);
                     }
                 }
                 // Per-turn sacrifice tally — every sacrifice path funnels a
@@ -22881,6 +22887,7 @@ impl GameState {
                         ),
                         triggered_by_attack: matches!(ev, GameEvent::AttackerDeclared(_)),
                         triggered_by_land_entry: matches!(ev, GameEvent::LandPlayed { .. }),
+                        triggered_by_face_up: matches!(ev, GameEvent::TurnedFaceUp { .. }),
                         from_mana_ability: matches!(
                             ev,
                             GameEvent::TappedForMana { .. }
@@ -23035,6 +23042,7 @@ impl GameState {
                             triggered_by_death: false,
                             triggered_by_attack: false,
                             triggered_by_land_entry: false,
+                            triggered_by_face_up: false,
                         });
                     }
                 }
@@ -23068,6 +23076,7 @@ impl GameState {
                                 triggered_by_death: false,
                                 triggered_by_attack: false,
                                 triggered_by_land_entry: false,
+                                triggered_by_face_up: false,
                             });
                         }
                     }
@@ -23113,6 +23122,7 @@ impl GameState {
                                 triggered_by_death: false,
                                 triggered_by_attack: false,
                                 triggered_by_land_entry: false,
+                                triggered_by_face_up: false,
                             });
                         }
                     }
@@ -23226,6 +23236,7 @@ impl GameState {
                             ),
                             triggered_by_attack: matches!(ev, GameEvent::AttackerDeclared(_)),
                             triggered_by_land_entry: false,
+                            triggered_by_face_up: false,
                             from_mana_ability: matches!(
                                 ev,
                                 GameEvent::TappedForMana { .. }
@@ -23292,6 +23303,7 @@ impl GameState {
                                 ),
                                 triggered_by_attack: matches!(ev, GameEvent::AttackerDeclared(_)),
                                 triggered_by_land_entry: false,
+                                triggered_by_face_up: false,
                                 from_mana_ability: false,
                             });
                             break;
@@ -23336,6 +23348,7 @@ impl GameState {
                             triggered_by_death: false,
                             triggered_by_attack: false,
                             triggered_by_land_entry: false,
+                            triggered_by_face_up: false,
                             from_mana_ability: false,
                         });
                     }
@@ -23386,6 +23399,7 @@ impl GameState {
                                     triggered_by_death: false,
                                     triggered_by_attack: false,
                                     triggered_by_land_entry: false,
+                                    triggered_by_face_up: false,
                                 });
                                 break;
                             }
@@ -23427,6 +23441,7 @@ impl GameState {
                             triggered_by_death: false,
                             triggered_by_attack: false,
                             triggered_by_land_entry: false,
+                            triggered_by_face_up: false,
                             });
                         }
                     }
@@ -23518,6 +23533,7 @@ impl GameState {
                             triggered_by_death: false,
                             triggered_by_attack: false,
                             triggered_by_land_entry: false,
+                            triggered_by_face_up: false,
                         });
                     }
                 }
@@ -23570,6 +23586,7 @@ impl GameState {
                                 triggered_by_death: false,
                                 triggered_by_attack: false,
                                 triggered_by_land_entry: false,
+                                triggered_by_face_up: false,
                                 });
                             }
                         }
@@ -23596,6 +23613,7 @@ impl GameState {
                                 triggered_by_death: false,
                                 triggered_by_attack: false,
                                 triggered_by_land_entry: false,
+                                triggered_by_face_up: false,
                                 });
                             }
                         }
@@ -23741,6 +23759,19 @@ impl GameState {
             .count()
     }
 
+    /// Panoptic Projektor (`StaticEffect::DoubleControllerTurnedFaceUpTriggers`)
+    /// — how many extra times a turned-face-up trigger of `controller`'s fires.
+    pub(crate) fn face_up_trigger_extra_fires(&self, controller: usize) -> usize {
+        self.battlefield
+            .iter()
+            .filter(|c| c.controller == controller)
+            .flat_map(|c| &c.definition.static_abilities)
+            .filter(|sa| {
+                matches!(sa.effect, crate::effect::StaticEffect::DoubleControllerTurnedFaceUpTriggers)
+            })
+            .count()
+    }
+
     /// Hama Pashar (`StaticEffect::DungeonRoomsTriggerTwice`) — how many extra
     /// times a room ability of `owner`'s dungeon triggers.
     pub(crate) fn dungeon_room_extra_fires(&self, owner: usize) -> usize {
@@ -23796,6 +23827,7 @@ impl GameState {
                 triggered_by_death,
                 triggered_by_attack,
                 triggered_by_land_entry,
+                triggered_by_face_up,
                 from_mana_ability,
             } = candidate;
             if let Some(filter) = filter {
@@ -23941,11 +23973,19 @@ impl GameState {
                 } else {
                     0
                 };
+                // Panoptic Projektor: a turned-face-up trigger fires an
+                // additional time per doubler.
+                let face_up_extra = if triggered_by_face_up {
+                    self.face_up_trigger_extra_fires(controller)
+                } else {
+                    0
+                };
                 let fires = 1
                     + crate::game::actions::ally_trigger_extra_fires(self, controller, source)
                     + death_extra
                     + attack_extra
-                    + land_extra;
+                    + land_extra
+                    + face_up_extra;
                 for effect in std::iter::repeat_n(effect, fires) {
                     queue.push(PendingTriggerPush {
                         actor,
@@ -30059,6 +30099,9 @@ fn static_effect_to_effects(
             // Hama Pashar — read in `Effect::Venture` via
             // `dungeon_room_extra_fires`; no layer effect.
             | StaticEffect::DungeonRoomsTriggerTwice
+            // Panoptic Projektor — read at trigger dispatch via
+            // `face_up_trigger_extra_fires`; no layer effect.
+            | StaticEffect::DoubleControllerTurnedFaceUpTriggers
             // Rod of Absorption — read at the end of spell resolution via
             // `resolving_spell_absorber`; no layer effect.
             | StaticEffect::ExileResolvingInstantsAndSorceries
@@ -30805,6 +30848,7 @@ fn requirement_live_leaves(req: &SelectionRequirement) -> u8 {
         | R::EnchantedByYourAura
         | R::IsOutlaw
         | R::IsSource
+        | R::TurnedFaceUpThisTurn
         | R::IsCommander
         | R::HasNoAbilities
         | R::HasName(_)

@@ -1534,6 +1534,12 @@ pub struct TriggerCandidate {
     /// doubler for landfall triggers.
     #[serde(default)]
     pub triggered_by_land_entry: bool,
+    /// True if the originating event was a permanent turned face up —
+    /// Panoptic Projektor's "if turning a face-down permanent face up causes
+    /// a triggered ability … to trigger, that ability triggers an additional
+    /// time".
+    #[serde(default)]
+    pub triggered_by_face_up: bool,
     /// CR 605.1b — fired from a mana ability (a permanent tapped for mana).
     #[serde(default)]
     pub from_mana_ability: bool,
