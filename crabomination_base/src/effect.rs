@@ -5024,6 +5024,24 @@ pub enum Effect {
     /// enters, …'" rider (Aggressive Biomancy): the copy's own enters event
     /// has already passed by the time a granted ability could see it.
     EachPushesTrigger { what: Selector, body: Box<Effect> },
+    /// CR 700.8 — "Each player chooses a party from among creatures they
+    /// control, then sacrifices the rest" (Stick Together). Each keeps a
+    /// largest party of their strongest creatures.
+    EachPlayerKeepsPartySacrificesRest,
+    /// "Look at the top `count` cards of your library. You may reveal a
+    /// Cleric card, a Rogue card, a Warrior card, and/or a Wizard card from
+    /// among them and put those cards into your hand. Put the rest on the
+    /// bottom in a random order" (Harper Recruiter): a largest party.
+    LookTopTakeParty { who: PlayerRef, count: Value },
+    /// The rest of a token-copy's "except" clause, written into the tokens
+    /// this resolution created (`Selector::LastCreatedTokens`) as copiable
+    /// values: artifact subtypes and activated abilities `CreateTokenCopyOf`
+    /// has no field for (Brenard's "1/1 Food Golem … with '{2}, {T},
+    /// Sacrifice this token: You gain 3 life'").
+    StampTokenCopyExceptions {
+        artifact_subtypes: Vec<crate::card::ArtifactSubtype>,
+        activated: Vec<ActivatedAbility>,
+    },
     /// "Return this card from your graveyard to the battlefield attached to
     /// [host]" with the host a declared selector, so an activated ability
     /// announces its target (Gryff's Boon). `ReturnSelfAttachedToTarget` reads

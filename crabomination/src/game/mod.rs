@@ -3785,6 +3785,12 @@ pub struct TempCopy {
     /// printed definition, not to schedule a revert.
     #[serde(default)]
     pub(crate) shapeshifter: bool,
+    /// `(controller, installed_turn)` for a copy whose duration is keyed to
+    /// its controller's next turn (`UntilNextTurn` / `UntilYourNextUntap` —
+    /// Shapesharer's "until your next turn"; `UntilEndOfYourNextTurn`). `None`
+    /// for the rest. These used to revert at this turn's cleanup.
+    #[serde(default)]
+    pub(crate) until_turn_of: Option<(usize, u32)>,
 }
 
 impl TempCopy {
@@ -17516,6 +17522,32 @@ impl GameState {
     /// Entries whose card left the battlefield are dropped (the copy effect
     /// ended with the object).
     pub(crate) fn revert_temporary_copies(&mut self, which: &[crate::effect::Duration]) {
+        self.revert_temporary_copies_where(|tc| which.contains(&tc.duration));
+    }
+
+    /// CR 611.2b — the copies whose controller's next turn is `active`'s
+    /// (turn `turn`): "until your next turn" ones end as it begins, and with
+    /// `at_cleanup` the "until the end of your next turn" ones end in its
+    /// cleanup step.
+    pub(crate) fn revert_next_turn_copies(&mut self, active: usize, turn: u32, at_cleanup: bool) {
+        use crate::effect::Duration as D;
+        if self.temporary_copies.iter().all(|tc| tc.until_turn_of.is_none()) {
+            return;
+        }
+        self.revert_temporary_copies_where(|tc| {
+            tc.until_turn_of.is_some_and(|(p, installed)| {
+                p == active
+                    && turn > installed
+                    && if at_cleanup {
+                        tc.duration == D::UntilEndOfYourNextTurn
+                    } else {
+                        matches!(tc.duration, D::UntilNextTurn | D::UntilYourNextUntap)
+                    }
+            })
+        });
+    }
+
+    fn revert_temporary_copies_where(&mut self, ends: impl Fn(&TempCopy) -> bool) {
         // Cold-group guard — see `revert_temporary_control`.
         if self.temporary_copies.is_empty() {
             return;
@@ -17525,7 +17557,7 @@ impl GameState {
             if self.battlefield.find_by_id(tc.card).is_none() {
                 continue; // card left play — nothing to revert
             }
-            if which.contains(&tc.duration) {
+            if ends(&tc) {
                 if let Some(def) = tc.original_def()
                     && let Some(c) = self.battlefield.find_by_id_mut(tc.card)
                 {

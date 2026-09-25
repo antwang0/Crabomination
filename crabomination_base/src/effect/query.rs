@@ -2145,6 +2145,9 @@ impl Effect {
             | Effect::ChooseRandomOpponentNotAttackedLastCombat
             | Effect::AttachAnyNumberTo { .. }
             | Effect::ExileAllOtherSpellsCounterAllAbilities
+            | Effect::EachPlayerKeepsPartySacrificesRest
+            | Effect::LookTopTakeParty { .. }
+            | Effect::StampTokenCopyExceptions { .. }
             | Effect::EachPushesTrigger { .. }
             | Effect::EachOpponentChooses { .. }
             | Effect::EachPlayerMayDrawThenTakersGainLife { .. }

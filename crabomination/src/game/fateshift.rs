@@ -40,6 +40,7 @@ impl GameState {
         let mut aura = (*orig).clone();
         aura.subtypes.enchantment_subtypes.push(EnchantmentSubtype::Aura);
         self.temporary_copies.push(crate::game::TempCopy {
+            until_turn_of: None,
             card: src,
             original: Some(orig.clone()),
             original_name: orig.name.to_string(),

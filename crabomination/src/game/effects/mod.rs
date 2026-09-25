@@ -11,7 +11,9 @@ mod among;
 mod combat_copies;
 mod commander;
 mod attach_choice;
+mod party;
 mod stack_sweep;
+mod token_riders;
 mod token_triggers;
 mod copy_redirect;
 mod damage_draw;
@@ -2127,6 +2129,8 @@ impl GameState {
             || !spec.extra_keywords.is_empty()
             || !spec.extra_card_types.is_empty()
             || spec.keep_name
+            || spec.legendary
+            || !spec.extra_supertypes.is_empty()
             || spec.non_legendary
             || spec.not_a_creature)
             && let Some(c) = self.battlefield.find_by_id_mut(card_id)
@@ -2150,6 +2154,16 @@ impl GameState {
             }
             if spec.keep_name {
                 def.name = original_name;
+            }
+            // CR 707.2 — "except it's legendary [and snow] in addition to its
+            // other types" (Sakashima the Impostor, Moritte of the Frost).
+            // This flag was declared and never read, so a Sakashima copy
+            // entered non-legendary.
+            let extra = spec.legendary.then_some(crate::card::Supertype::Legendary);
+            for st in extra.iter().chain(spec.extra_supertypes.iter()) {
+                if !def.supertypes.contains(st) {
+                    def.supertypes.push(*st);
+                }
             }
             // CR 707.2e — strip Legendary so the copy dodges the legend rule.
             if spec.non_legendary {
@@ -18720,6 +18734,7 @@ impl GameState {
                 }
                 let original = std::mem::replace(c.definition_mut(), std::sync::Arc::new(new_def));
                 self.temporary_copies.push(crate::game::TempCopy {
+                    until_turn_of: None,
                     shapeshifter: false,
                     card: cid,
                     original_name: original.name.to_string(),
@@ -28591,6 +28606,11 @@ impl GameState {
                 self.exile_all_other_spells_counter_all_abilities(ctx, events)
             }
             Effect::EachPushesTrigger { what, body } => self.each_pushes_trigger(what, body, ctx, events),
+            Effect::EachPlayerKeepsPartySacrificesRest => self.each_player_keeps_party_sacrifices_rest(ctx, events),
+            Effect::LookTopTakeParty { who, count } => self.look_top_take_party(who, count, ctx, events),
+            Effect::StampTokenCopyExceptions { artifact_subtypes, activated } => {
+                self.stamp_token_copy_exceptions(artifact_subtypes, activated, ctx, events)
+            }
 
             Effect::Attach { what, to } => {
                 // CR 303.4a — the anchor may be a player ("enchant player":
@@ -31496,6 +31516,7 @@ impl GameState {
                             // restores this (a dead Clone is a Clone in the
                             // graveyard, so Vizier's embalm stays available).
                             self.temporary_copies.push(crate::game::TempCopy {
+                    until_turn_of: None,
                     shapeshifter: false,
                                 card: cid,
                                 original_name: original.name.to_string(),
@@ -31545,7 +31566,15 @@ impl GameState {
                     };
                     let original = c.copiable_definition();
                     c.set_copiable_definition(copy_def.clone());
+                    let until_turn_of = matches!(
+                        duration,
+                        crate::effect::Duration::UntilNextTurn
+                            | crate::effect::Duration::UntilYourNextUntap
+                            | crate::effect::Duration::UntilEndOfYourNextTurn
+                    )
+                    .then_some((ctx.controller, self.turn_number));
                     self.temporary_copies.push(crate::game::TempCopy {
+                    until_turn_of,
                     shapeshifter: false,
                         card: cid,
                         original_name: original.name.to_string(),
@@ -35502,6 +35531,7 @@ impl GameState {
                 }
                 let original = std::mem::replace(c.definition_mut(), std::sync::Arc::new(new_def));
                 self.temporary_copies.push(crate::game::TempCopy {
+                    until_turn_of: None,
                     shapeshifter: false,
                     card: cid,
                     original_name: original.name.to_string(),

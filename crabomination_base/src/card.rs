@@ -4987,6 +4987,10 @@ pub struct EntersAsCopy {
     /// (Machine God's Effigy): the copy loses the creature type it copied.
     #[serde(default)]
     pub not_a_creature: bool,
+    /// Supertypes layered on top of the copy ("legendary and snow in
+    /// addition to its other types" — Moritte of the Frost's snow half).
+    #[serde(default)]
+    pub extra_supertypes: Vec<Supertype>,
 }
 
 /// CR 614 — one mode of a `CardDefinition.enters_as_choice` as-enters

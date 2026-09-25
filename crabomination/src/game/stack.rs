@@ -634,6 +634,7 @@ impl GameState {
                 };
                 self.continuous_effects.retain(|e| !ends_now(&e.duration));
                 self.expire_granted_triggers(|g| ends_now(&g.expiry));
+                self.revert_next_turn_copies(self.active_player_idx, turn, false);
                 // CR 801.2c — ranges of influence are determined as each turn
                 // begins, so a player leaving only shifts them now.
                 self.refresh_range_matrix();
@@ -4824,10 +4825,8 @@ impl GameState {
             crate::effect::Duration::UntilEndOfYourNextTurn,
         ]);
         // CR 707 — "becomes a copy ... until end of turn" swaps snap back.
-        self.revert_temporary_copies(&[
-            crate::effect::Duration::EndOfTurn,
-            crate::effect::Duration::UntilNextTurn,
-        ]);
+        self.revert_temporary_copies(&[crate::effect::Duration::EndOfTurn]);
+        self.revert_next_turn_copies(self.active_player_idx, self.turn_number, true);
         // CR 702.143b — foretold-this-turn cards become castable next turn.
         // Autumn Willow's "until end of turn" shroud waiver (CR 514.2).
         clear_cold!(self.shroud_waivers);
@@ -5570,6 +5569,7 @@ impl GameState {
                 .any(|tc| tc.card == id && tc.shapeshifter)
             {
                 self.temporary_copies.push(crate::game::TempCopy {
+                    until_turn_of: None,
                     card: id,
                     original: Some(printed.clone()),
                     original_name: printed.name.to_string(),
