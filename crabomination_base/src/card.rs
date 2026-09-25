@@ -282,8 +282,6 @@ pub enum CreatureType {
     // Ravnica Simic graft creature subtype (Cytoplast Root-Kin).
     Mutant,
     Spy,
-    // Marvel: Abomination's "Gamma Berserker".
-    Gamma,
     // Mirrodin Slith creature subtype (Arcbound Slith).
     Slith,
     // War of the Spark Amass Army token subtype (CR 701.43).
