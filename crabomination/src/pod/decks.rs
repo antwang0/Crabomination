@@ -3502,3 +3502,33 @@ pub const AMINATOU_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, island, island, island,
     island, island, swamp, swamp, swamp,
 ];
+
+pub const ROOTHA_COMMANDERS: &[CardFactory] = &[rootha_mastering_the_moment];
+
+/// **Prismari Artistry**, the Secrets of Strixhaven Commander deck (SOC,
+/// 2026-04-24), exactly as MTGJSON's `PrismariArtistry_SOC` prints it: 84
+/// nonbasic cards + 8 Islands + 7 Mountains = 99. Izzet spells and
+/// Elementals under Rootha, Mastering the Moment.
+pub const ROOTHA_MAIN: &[CardFactory] = &[
+    muddle_the_ever_changing, inspired_skypainter, abstract_performance, dirgur_focusmage,
+    leitmotif_composer, furygale_flocking, prismari_pianist, renegade_bull, coastal_peak,
+    scorched_geyser, turbulent_springs, faerie_mastermind, chain_reaction, determined_iteration,
+    harmonic_prodigy, fabled_passage, archmage_emeritus, brazen_borrower, curiosity_crafter,
+    dig_through_time, replication_technique, rite_of_replication, thunderclap_drake,
+    blasphemous_act, chaos_warp, creative_technique, cursed_mirror, dance_with_calamity,
+    goldspan_dragon, manaform_hellkite, mirrorwing_dragon, plargg_and_nassari,
+    redoubled_stormsinger, rionya_fire_dancer, rousing_refrain, surge_to_victory, twinflame,
+    volcanic_salvo, brudiclad_telchor_engineer, galazeth_prismari, magma_opus, prismari_command,
+    veyran_voice_of_duality, solemn_simulacrum, cascade_bluffs, exotic_orchard, ferrous_lake,
+    frostboil_snarl, hall_of_oracles, restless_spire, shivan_reef, sulfur_falls,
+    temple_of_epiphany, arcane_signet, sol_ring, command_tower, prismari_charm,
+    spectacle_summit, terramorphic_expanse, aether_gale, arcane_denial, deep_analysis,
+    reality_shift, resculpt, treasure_cruise, abrade, big_score, mana_geyser, storm_kiln_artist,
+    throes_of_chaos, volcanic_torrent, expressive_iteration, rootha_mercurial_artist,
+    stormcatch_mentor, fellwar_stone, lightning_greaves, talisman_of_creativity,
+    molten_tributary, mystic_sanctuary, path_of_ancestry, prismari_campus, reliquary_tower,
+    study_hall, temple_of_the_false_god,
+    // Basics: 8 island, 7 mountain
+    island, island, island, island, island, island, island, island, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain,
+];

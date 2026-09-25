@@ -953,6 +953,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::AMINATOU_COMMANDERS,
             main: decks::AMINATOU_MAIN,
         },
+        // Hundred-and-fifteenth: the hundred-and-fifth official list (Prismari Artistry, SOC) — Izzet spells and Elementals under Rootha.
+        // `--pod-decks 115`.
+        PodDeck {
+            name: "Rootha, Mastering the Moment (UR)",
+            commanders: decks::ROOTHA_COMMANDERS,
+            main: decks::ROOTHA_MAIN,
+        },
     ]
 }
 
