@@ -976,6 +976,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::KALAMAX_COMMANDERS,
             main: decks::KALAMAX_MAIN,
         },
+        // Hundred-and-eighteenth: the hundred-and-eighth official list (Miracle
+        // Worker, DSC) — Esper enchantments and miracles under Aminatou, Veil
+        // Piercer. `--pod-decks 118`.
+        PodDeck {
+            name: "Aminatou, Veil Piercer (WUB)",
+            commanders: decks::VEIL_PIERCER_COMMANDERS,
+            main: decks::VEIL_PIERCER_MAIN,
+        },
     ]
 }
 
@@ -1543,6 +1551,8 @@ mod tests {
             ("Olivia", [0x0117, 116, 9040]),
             // CR 707.10 — copies, Twinning Staff's +1, granted conspire.
             ("Kalamax", [0xCA1A, 117, 9041]),
+            // CR 702.94 granted miracle, CR 122.1d stun lock, CR 709 Rooms.
+            ("Aminatou, Veil", [0xA417, 118, 9042]),
         ] {
             let precon = *field.iter().find(|d| d.name.starts_with(name)).expect("the precon seat");
             assert_eq!(precon.card_count(), 100);

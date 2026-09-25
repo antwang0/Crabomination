@@ -3591,3 +3591,33 @@ pub const KALAMAX_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, island, island, island,
     island, island, mountain, mountain, mountain, mountain, mountain,
 ];
+
+pub const VEIL_PIERCER_COMMANDERS: &[CardFactory] = &[aminatou_veil_piercer];
+
+/// **Miracle Worker**, the Duskmourn Commander deck (DSC, 2024-09-27),
+/// exactly as MTGJSON's `MiracleWorker_DSC` prints it: 85 nonbasic cards +
+/// 5 Plains + 4 Islands + 5 Swamps = 99. Esper enchantments and miracles
+/// under Aminatou, Veil Piercer.
+pub const VEIL_PIERCER_MAIN: &[CardFactory] = &[
+    the_master_of_keys, redress_fate, secret_arcade_dusty_parlor, soaring_lightbringer,
+    fear_of_sleep_paralysis, ancient_cellarspawn, cramped_vents_access_maze,
+    metamorphosis_fanatic, phenomenon_investigators, mesa_enchantress, terminus,
+    aminatous_augury, utter_end, entreat_the_angels, monologue_tax, ondu_spiritdancer,
+    sigil_of_the_empty_throne, starfield_mystic, timely_ward, verge_rangers, dream_eater,
+    extravagant_replication, mirrormade, one_with_the_multiverse, prognostic_sphinx,
+    shark_typhoon, arvinox_the_mind_flail, demon_of_fates_design, doomwake_giant,
+    nightmare_shepherd, athreos_shroud_veiled, inkshield, life_insurance, spirit_sisters_call,
+    time_wipe, solemn_simulacrum, adarkar_wastes, caves_of_koilos, hall_of_heliods_generosity,
+    temple_of_deceit, temple_of_enlightenment, temple_of_silence, underground_river,
+    bottomless_pool_locker_room, terramorphic_expanse, auramancer, swords_to_plowshares,
+    moon_blessed_cleric, ponder, portent, telling_time, diabolic_vision, arcane_signet,
+    sol_ring, command_tower, cast_out, return_to_dust, sphere_of_safety, arcane_denial,
+    archetype_of_imagination, brainstorm, otherworldly_gaze, thirst_for_meaning,
+    the_eldest_reborn, read_the_bones, azorius_signet, brainstone, burnished_hart,
+    commanders_sphere, mind_stone, orzhov_signet, arcane_sanctum, ash_barrens, azorius_chancery,
+    bojuka_bog, dimir_aqueduct, evolving_wilds, halimar_depths, obscura_storefront,
+    orzhov_basilica, tainted_field, tainted_isle, thriving_heath, thriving_isle, thriving_moor,
+    // Basics: 5 plains, 4 island, 5 swamp
+    plains, plains, plains, plains, plains, island, island, island, island, swamp, swamp, swamp,
+    swamp, swamp,
+];
