@@ -2633,6 +2633,32 @@ Vehicle, an activated manland or a stationed Spacecraft stayed home: Kotori
 Inspirit / Morska (seed 15101, 1,000) and six seats (15102, 1,000): all
 decided; census (15103, 500): nothing unplayed. `--bench` byte-identical.
 
+The **hundred-and-eighty-first** is Doctor Who Commander's **Masters of Evil**
+(`MastersOfEvil_WHO`, 2023-10-13) — Grixis Daleks, Cybermen and villainous
+choices under Davros, Dalek Creator, `--pod-decks 181`. Forty-seven cards were
+missing (`cmdr_davros.rs`). The primitives (`game/effects/masters_of_evil.rs`):
+`Effect::PutFaceDownAsCyberman` (CR 708.2 — a card from any zone enters face
+down under you as a 2/2 Cyberman artifact creature, a permanent is turned face
+down in place: Missy, Cybership, Death in Heaven, The Cyber-Controller, Cyber
+Conversion), `StaticEffect::OpponentsFaceVillainousChoicesTwice` (The Valeyard,
+CR 701.55), `StaticEffect::FirstNonlegendaryArtifactSpellHasCasualty` (Ashad),
+`Effect::CreaturesFromExileShuffleThisTurn` (Don't Blink — read at the
+move-to-battlefield funnel and at a cast-from-exile creature's resolution),
+`EntersAsCopy.from_exile_with_counter` with the takeover counter (The Master,
+Formed Anew); `SecretNumbersMatch` now hands its miss branch the opponent's
+guess (The Toymaker's Trap). ⚠ Its first debug pod found **the bot's
+`SAC_EXTRA` cast gate knew only Anhelo's casualty grant** — every pod with
+Ashad tripped the gate's audit until the board-facts scan learned the artifact
+grant. Residuals: **Day of the Moon**, **Doomsday Confluence**, **Genesis of
+the Daleks**, **Rassilon**, **The Master, Multiplied**, **The Sound of
+Drums**, **The Toymaker's Trap**, **Time Reaper**, **Vislor Turlough**,
+**Weeping Angel**, **Zygon Infiltrator** (INCOMPLETE_CARDS). Four seats beside
+Turtle Power! / The Ruinous Powers / Paradox Power (seed 10550, 1,000,
+`--card-census`: nothing unplayed): all decided, Davros 33.2 %; six seats
+beside those three, Necron Dynasties and Doom Prevails (10551, 1,000): all
+decided, 21.3 %; strict debug pods (3 × 60 four-seat, 3 × 40 six-seat)
+decided. `--bench` 200,190 — byte-identical.
+
 The **hundred-and-eightieth** is Teenage Mutant Ninja Turtles
 Commander's **Turtle Power!** (`TurtlePower_TMC`, 2026-03-06) — five-color
 +1/+1 counters under Heroes in a Half Shell, `--pod-decks 180`. Forty-eight
