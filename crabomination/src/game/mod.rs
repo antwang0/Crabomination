@@ -28188,6 +28188,18 @@ impl GameState {
     /// `continue_trigger_resolution_with_source` appending into a
     /// caller-owned buffer — see
     /// [`resolve_effect_into`](Self::resolve_effect_into).
+    /// CR 608.2b — a resumed trigger that fizzles on its stored target never
+    /// re-runs the arm that asked, so the answer the resume stashed for it
+    /// would leak into the next resolution (a strict pod's stale one-shot
+    /// channel: Caesar's reflexive modes, re-checked against a target that
+    /// had become illegal). Drop both resume channels on that path.
+    fn drop_resume_channels_on_fizzle(&mut self, resuming: bool) {
+        if resuming {
+            self.clear_answer_log();
+            clear_opt_scratch!(self.stashed_resolution_answer);
+        }
+    }
+
     #[allow(clippy::too_many_arguments)]
     pub fn continue_trigger_resolution_with_source_into(
         &mut self,
@@ -28234,6 +28246,7 @@ impl GameState {
         if let Some(Target::Player(p)) = target.as_ref()
             && self.players.get(*p).is_some_and(|pl| !pl.is_alive())
         {
+            self.drop_resume_channels_on_fizzle(resuming);
             return Ok(());
         }
         let resolved_target = match target.as_ref() {
@@ -28246,6 +28259,7 @@ impl GameState {
                 Some(filter)
                     if !self.evaluate_requirement_static(&filter, t, controller, Some(source)) =>
                 {
+                    self.drop_resume_channels_on_fizzle(resuming);
                     return Ok(());
                 }
                 _ => Some(t.clone()),
