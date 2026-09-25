@@ -2646,6 +2646,24 @@ Greyfax / Invisible Woman (10531, 1,000): all decided, 25.5 %; strict debug
 pods (5 × 60 four-seat, 2 × 40 six-seat) decided. `--bench` 200,190 —
 byte-identical to the invariant.
 
+The **hundred-and-seventy-eighth** is Doctor Who Commander's **Paradox
+Power** (`ParadoxPower_WHO`, 2023-10-13) — Temur paradox under The Thirteenth
+Doctor and her companion Yasmin Khan (CR 702.124m's Doctor's companion pair,
+asserted), `--pod-decks 178`. Forty-six cards were missing
+(`cmdr_thirteenth.rs`). The primitives: `Value::SpellsCastNotFromHandThisTurn`
+(Impending Flux, Surge of Brilliance), `StaticEffect::ControllerDrawsFromBottom`
+(River Song, in the draw-static lane), `SpendRestriction::
+CreatureOfEitherTypeOrItsAbility` (Gallifrey Council Chamber), a
+`WhileYourTurn`-gated graveyard flashback grant (Return the Past),
+`Effect::ExileSelfForetold` (The Foretold Soldier, CR 702.143) and a granted
+demonstrate that copies the trigger's spell (The Twelfth Doctor, CR 702.150).
+The Flux is the first six-chapter Saga — the chapter ratchet's numeral parser
+now reads VI. Residuals: thirteen cards (INCOMPLETE_CARDS). Four seats beside
+Szarekh / Doctor Doom / Swarmlord (seed 17801, 1,000, `--card-census`: nothing
+of Paradox Power's unplayed): all decided, 6.9 %; six seats beside Dogmeat /
+Invisible Woman / Madison / Mothman / Tidus (17802, 1,000): all decided,
+4.8 %. `--bench` byte-identical (200,190).
+
 The **hundred-and-seventy-fifth** is Warhammer 40,000 Commander's **Tyranid
 Swarm** (`TyranidSwarm_40K`, 2022-10-07) — Temur +1/+1 counters and {X}
 creatures under The Swarmlord, `--pod-decks 175`. Forty cards were missing
