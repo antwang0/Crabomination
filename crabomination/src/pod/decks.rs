@@ -4062,3 +4062,34 @@ pub const ZIMONE_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, forest, forest,
     forest, forest, forest, forest, forest, forest, forest,
 ];
+
+pub const MORSKA_COMMANDERS: &[CardFactory] = &[morska_undersea_sleuth];
+
+/// **Deep Clue Sea**, the Murders at Karlov Manor Commander deck (MKC,
+/// 2024-02-09), exactly as MTGJSON's `DeepClueSea_MKC` prints it: 85
+/// nonbasic cards + 3 Plains + 6 Islands + 5 Forests = 99. Bant Clues and
+/// second-draw payoffs under Morska, Undersea Sleuth.
+pub const MORSKA_MAIN: &[CardFactory] = &[
+    sophia_dogged_detective, armed_with_proof, merchant_of_truth, serene_sleuth,
+    detective_of_the_month, follow_the_bodies, tangletrove_kelp, innocuous_researcher,
+    on_the_trail, knowledge_is_power, ransom_note, aerial_extortionist, bennie_bracks_zoologist,
+    farewell, fumigate, organic_extinction, search_the_premises, alandra_sky_dreamer,
+    confirm_suspicions, ethereal_investigator, finale_of_revelation, kappa_cannoneer,
+    mechanized_production, nadir_kraken, shimmer_dragon, teferis_ageless_insight,
+    tezzeret_betrayer_of_flesh, thought_monitor, hornet_queen, jolrael_mwonvuli_recluse,
+    killer_service, tireless_tracker, adrix_and_nev_twincasters, chulane_teller_of_tales,
+    disorder_in_the_court, esix_fractal_bloom, hydroid_krasis, koma_cosmos_serpent,
+    lonis_cryptozoologist, selvala_explorer_returned, academy_manufactor, idol_of_oblivion,
+    inspiring_statuary, nettlecyst, psychosis_crawler, canopy_vista, exotic_orchard,
+    irrigated_farmland, prairie_stream, scattered_groves, skycloud_expanse, spire_of_industry,
+    sungrass_prairie, temple_of_enlightenment, temple_of_mystery, temple_of_plenty,
+    swords_to_plowshares, erdwal_illuminator, junk_winder, ongoing_investigation, whirler_rogue,
+    graf_mole, ulvenwald_mysteries, wilderness_reclamation, wavesifter, arcane_signet,
+    azorius_signet, simic_signet, sol_ring, talisman_of_curiosity, talisman_of_progress,
+    talisman_of_unity, azorius_chancery, magnifying_glass, command_tower, krosan_verge,
+    lonely_sandbar, path_of_ancestry, reliquary_tower, seaside_citadel, secluded_steppe,
+    selesnya_sanctuary, simic_growth_chamber, temple_of_the_false_god, tranquil_thicket,
+    // Basics: 3 plains, 6 island, 5 forest
+    plains, plains, plains, island, island, island, island, island, island, forest, forest, forest,
+    forest, forest,
+];

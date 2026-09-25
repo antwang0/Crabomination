@@ -1104,6 +1104,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ZIMONE_COMMANDERS,
             main: decks::ZIMONE_MAIN,
         },
+        // Hundred-and-thirty-fourth: the hundred-and-twenty-fourth official
+        // list (Deep Clue Sea, MKC) — Bant Clues and second-draw payoffs under
+        // Morska, Undersea Sleuth. `--pod-decks 134`.
+        PodDeck {
+            name: "Morska, Undersea Sleuth (GWU)",
+            commanders: decks::MORSKA_COMMANDERS,
+            main: decks::MORSKA_MAIN,
+        },
     ]
 }
 
