@@ -22408,6 +22408,13 @@ impl GameState {
                     });
                 }
                 if ids.is_empty() {
+                    // The candidates this arm asked about can vanish before
+                    // its resume re-runs it — sacrificed commanders going home
+                    // (CR 903.9a) under a mid-resolution SBA check. The answer
+                    // parked for this ask is then moot; leaving it would hand
+                    // it to the next unrelated ask (Danse Macabre, a four-seat
+                    // pod seed 24058 game 17).
+                    clear_opt_scratch!(self.stashed_resolution_answer);
                     return Ok(());
                 }
                 let candidates: Vec<(CardId, String)> = ids
