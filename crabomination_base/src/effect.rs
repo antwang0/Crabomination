@@ -1300,6 +1300,9 @@ pub enum Value {
     /// Tokens created under the player's control this turn
     /// (`Player.tokens_created_this_turn`) — Thalisse, Reverent Medium.
     TokensCreatedThisTurn(PlayerRef),
+    /// Cards the player cycled this turn (`Player.cards_cycled_this_turn`) —
+    /// Spellpyre Phoenix's "if you cycled two or more cards this turn".
+    CardsCycledThisTurn(PlayerRef),
     /// Mounts and/or Vehicles that entered under the player's control this turn
     /// (`Player.mounts_vehicles_entered_this_turn`) — Cloudspire Coordinator's
     /// X token count.

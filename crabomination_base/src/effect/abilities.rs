@@ -3167,6 +3167,21 @@ pub enum StaticEffect {
     /// "Cycling abilities you activate cost {N} less to activate"
     /// (Fluctuator). Consulted where the Cycling keyword's cost is paid.
     CyclingCostReduction(u32),
+    /// "You may pay {0} rather than pay the cycling cost of the first card
+    /// you cycle each turn" (Gavi, Nest Warden).
+    FirstCyclingEachTurnFree,
+    /// "As long as you have `n` or more cards in hand, you may pay {0} rather
+    /// than pay cycling costs" (New Perspectives).
+    CyclingFreeWhileHandAtLeast(u32),
+    /// "You may cast spells that have a cycling ability from your graveyard"
+    /// (Abandoned Sarcophagus): a graveyard-cast grant for `filter`, on any
+    /// turn, with no budget. Read by `graveyard_cast_type_available`.
+    CastFromGraveyardMatching { filter: SelectionRequirement },
+    /// "If a card that has a cycling ability would be put into your graveyard
+    /// from anywhere and it wasn't cycled, exile it instead" (Abandoned
+    /// Sarcophagus). A death-redirect-lane static; the cycle path marks
+    /// `Player.cycling_card` while it discards.
+    ExileOwnCyclingCardsUnlessCycled,
     /// CR 614.x — "If a `color` spell would deal damage to a permanent or
     /// player, it deals that much damage plus `amount` instead" (Sulfuric
     /// Vapors). Unlike `AddDamageFromColorToPlayers` the source must be a

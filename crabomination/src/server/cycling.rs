@@ -12,7 +12,8 @@ const ENOUGH_LANDS: usize = 6;
 
 /// A cycle worth making at an opponent's end step, or `None`: a land once
 /// `seat` controls six, or a nonland card whose mana value is more than two
-/// above `seat`'s land count. The dry run is the gate (cost, Stabilizer).
+/// above `seat`'s land count. A free cycle (Gavi, New Perspectives) loosens
+/// both bars by two. The dry run is the gate (cost, Stabilizer).
 pub(super) fn pick_cycle(state: &GameState, seat: usize) -> Option<GameAction> {
     use crate::card::Keyword;
     if state.players[seat].commanders.is_empty() {
@@ -23,6 +24,7 @@ pub(super) fn pick_cycle(state: &GameState, seat: usize) -> Option<GameAction> {
         .iter()
         .filter(|c| c.controller == seat && c.definition.is_land())
         .count();
+    let slack = if state.cycling_is_free(seat) { 2 } else { 0 };
     state.players[seat]
         .hand
         .iter()
@@ -32,9 +34,9 @@ pub(super) fn pick_cycle(state: &GameState, seat: usize) -> Option<GameAction> {
         })
         .filter(|c| {
             if c.definition.is_land() {
-                lands >= ENOUGH_LANDS
+                lands + slack >= ENOUGH_LANDS
             } else {
-                c.definition.cost.cmc() as usize > lands + 2
+                c.definition.cost.cmc() as usize + slack > lands + 2
             }
         })
         .map(|c| GameAction::Cycle { card_id: c.id, x_value: None })

@@ -9346,6 +9346,15 @@ impl GameState {
                         }
                     }
                 }
+                // Abandoned Sarcophagus — the owner's cycling cards, unless
+                // this move is the cycle's own discard.
+                if matches!(sa.effect, StaticEffect::ExileOwnCyclingCardsUnlessCycled)
+                    && c.controller == owner
+                    && card.definition.has_cycling_ability()
+                    && self.players.get(owner).is_none_or(|pl| pl.cycling_card != Some(card.id))
+                {
+                    redirects = true;
+                }
             }
         }
         (redirects, void, stamped_by)
@@ -19595,6 +19604,20 @@ impl GameState {
             .sum()
     }
 
+    /// Whether `seat`'s next cycling cost may be {0}: Gavi's first card each
+    /// turn, or New Perspectives with a full enough hand.
+    pub(crate) fn cycling_is_free(&self, seat: usize) -> bool {
+        let hand = self.players[seat].hand.len() as u32;
+        let first = self.players[seat].cards_cycled_this_turn == 0;
+        self.battlefield.iter().filter(|c| c.controller == seat).any(|c| {
+            c.definition.static_abilities.iter().any(|sa| match sa.effect {
+                crate::effect::StaticEffect::FirstCyclingEachTurnFree => first,
+                crate::effect::StaticEffect::CyclingFreeWhileHandAtLeast(n) => hand >= n,
+                _ => false,
+            })
+        })
+    }
+
     fn cycle_card(
         &mut self,
         card_id: crate::card::CardId,
@@ -19635,6 +19658,10 @@ impl GameState {
         // Pay the cycling cost from the floated mana pool; an {X} in the
         // cost (Shark Typhoon's {X}{1}{U}) is paid as `x_value` generic.
         let x = x_value.unwrap_or(0);
+        // Gavi's first cycle each turn, New Perspectives's seven-card hand:
+        // "you may pay {0} rather than pay the cycling cost".
+        let free = self.cycling_is_free(seat);
+        let (cycling_cost, life_cost) = if free { (None, 0) } else { (cycling_cost, life_cost) };
         if let Some(mc) = &cycling_cost {
             let mut mc = if mc.has_x() { mc.with_x_value(x) } else { mc.clone() };
             // "Cycling abilities you activate cost {N} less" (Fluctuator).
@@ -19652,7 +19679,11 @@ impl GameState {
         // Madness replacement, CR 702.35).
         let mut events = vec![];
         let cycled_name = self.find_card_anywhere(card_id).map(|c| c.definition.name);
-        if self.discard_card(seat, card_id, &mut events) {
+        self.players[seat].cycling_card = Some(card_id);
+        let discarded = self.discard_card(seat, card_id, &mut events);
+        self.players[seat].cycling_card = None;
+        if discarded {
+            self.players[seat].cards_cycled_this_turn += 1;
             // CR 702.29c — emit the cycle-specific event in addition to
             // the discard event, so "When you cycle this card" triggers
             // distinguish cycle from a regular hand discard.
@@ -29811,6 +29842,10 @@ fn static_effect_to_effects(
             // projection, the Cycling cost path, and `tap_for_mana`.
             | StaticEffect::OpponentsPlayWithHandsRevealed
             | StaticEffect::CyclingCostReduction(_)
+            | StaticEffect::FirstCyclingEachTurnFree
+            | StaticEffect::CyclingFreeWhileHandAtLeast(_)
+            | StaticEffect::CastFromGraveyardMatching { .. }
+            | StaticEffect::ExileOwnCyclingCardsUnlessCycled
             | StaticEffect::LandsProduceColorInstead(_)
             | StaticEffect::YourBasicLandsProduceChosenColorInstead
             | StaticEffect::PreventDamageBetweenSharedColorCreatures

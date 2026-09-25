@@ -6611,7 +6611,8 @@ impl BoardFacts {
                     | SE::PlayCardsFromGraveyardDuringYourTurn
                     | SE::GraveyardCastOncePerTurn { .. }
                     | SE::GraveyardCastBySacrificingOncePerTurn { .. }
-                    | SE::MayPlayCardsMilledThisTurn => f.grants_gy_cast = true,
+                    | SE::MayPlayCardsMilledThisTurn
+                    | SE::CastFromGraveyardMatching { .. } => f.grants_gy_cast = true,
                     SE::FiveColorAlternativeCost
                     | SE::GenericAlternativeCostForFilter { .. }
                     | SE::LifeAlternativeCostOncePerYourTurn { .. }

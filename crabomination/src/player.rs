@@ -604,6 +604,14 @@ pub struct PlayerData {
     /// Reverent Medium). Counted at the mint funnel, cleared each turn.
     #[serde(default)]
     pub tokens_created_this_turn: u32,
+    /// Cards this player cycled this turn (CR 702.29; Spellpyre Phoenix,
+    /// Gavi's first-cycle-free). Cleared each turn.
+    #[serde(default)]
+    pub cards_cycled_this_turn: u32,
+    /// The card being cycled right now, while its discard is placed — so
+    /// Abandoned Sarcophagus's "if it wasn't cycled" redirect can tell.
+    #[serde(default)]
+    pub cycling_card: Option<crate::card::CardId>,
     /// Kaya, Geist Hunter's −2: this turn's extra token doublings (CR
     /// 614.13), added to the permanent doublers. Cleared each turn.
     #[serde(default)]
@@ -1405,6 +1413,8 @@ impl Player {
             combat_damage_taken_this_turn: 0,
             token_copy_replacement_used_this_turn: false,
             tokens_created_this_turn: 0,
+            cards_cycled_this_turn: 0,
+            cycling_card: None,
             token_doublings_this_turn: 0,
             attacked_with_commander_this_turn: false,
             steals_opponent_tokens_this_turn: false,

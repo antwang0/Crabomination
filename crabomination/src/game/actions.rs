@@ -968,7 +968,8 @@ fn mana_summary_of(def: &crate::card::CardDefinition) -> Option<u64> {
             | SE::ExileDyingOpponentCreaturesGrowingThis
             | SE::DiesToLibraryTopInstead { .. }
             | SE::DiesToOwnersHandInstead { .. }
-            | SE::ExileCardsBoundForGraveyard { .. } => flags |= mana_summary::DEATH_REDIRECT,
+            | SE::ExileCardsBoundForGraveyard { .. }
+            | SE::ExileOwnCyclingCardsUnlessCycled => flags |= mana_summary::DEATH_REDIRECT,
             SE::LandsProduceColorInstead(_) | SE::YourBasicLandsProduceChosenColorInstead => {
                 flags |= mana_summary::LAND_MANA_REPLACER
             }
@@ -5789,10 +5790,22 @@ impl GameState {
     ) -> Option<Option<crate::card::CardType>> {
         use crate::card::CardType;
         use crate::effect::StaticEffect;
+        let card = self.players[p].graveyard.iter().find(|c| c.id == card_id)?;
+        // Abandoned Sarcophagus — any turn, no budget, for matching cards.
+        if self.battlefield.iter().any(|c| {
+            c.controller == p
+                && c.definition.static_abilities.iter().any(|sa| match &sa.effect {
+                    StaticEffect::CastFromGraveyardMatching { filter } => {
+                        self.evaluate_requirement_on_card(filter, card, p)
+                    }
+                    _ => false,
+                })
+        }) {
+            return Some(None);
+        }
         if self.active_player_idx != p {
             return None;
         }
-        let card = self.players[p].graveyard.iter().find(|c| c.id == card_id)?;
         if self.battlefield.iter().any(|c| {
             c.controller == p
                 && c.definition.static_abilities.iter().any(|sa| {

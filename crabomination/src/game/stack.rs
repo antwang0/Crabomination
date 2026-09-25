@@ -4436,6 +4436,7 @@ impl GameState {
             pl.combat_damage_taken_this_turn = 0;
             pl.token_copy_replacement_used_this_turn = false;
             pl.tokens_created_this_turn = 0;
+            pl.cards_cycled_this_turn = 0;
             pl.token_doublings_this_turn = 0;
             pl.steals_opponent_tokens_this_turn = false;
             pl.poison_capped_this_turn = false;
