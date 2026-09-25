@@ -74,6 +74,7 @@ mod cmdr_kalamax;
 mod cmdr_otrimi;
 mod cmdr_henzie;
 mod cmdr_gonti;
+mod cmdr_nalia;
 mod cmdr_breya;
 mod cmdr_yidris;
 mod cmdr_mimeoplasm;
