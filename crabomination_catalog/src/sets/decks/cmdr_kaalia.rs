@@ -5,8 +5,6 @@
 //! Residuals (each also on its card):
 //! - **Archangel of Strife** — war or peace is chosen as its ETB trigger
 //!   resolves, not as it enters.
-//! - **Kaalia of the Vast** — also triggers attacking an opponent's
-//!   planeswalker.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype, EquipBonus,
@@ -284,7 +282,7 @@ pub fn kaalia_of_the_vast() -> CardDefinition {
             .or(R::HasCreatureType(CreatureType::Dragon)),
         return_to_hand_eot: false,
     });
-    t.event = t.event.with_filter(Predicate::EntityMatches { what: Selector::This, filter: R::IsAttackingAnOpponent });
+    t.event = t.event.with_filter(Predicate::EntityMatches { what: Selector::This, filter: R::IsAttackingOpponentPlayer });
     legendary(CardDefinition {
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![t],

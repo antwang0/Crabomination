@@ -49,4 +49,12 @@ impl GameState {
                 }
         })
     }
+
+    /// Attacking an opponent of `seat` directly (not a planeswalker or
+    /// battle of theirs).
+    pub(crate) fn creature_is_attacking_opponent_player(&self, id: CardId, seat: usize) -> bool {
+        self.attacking
+            .iter()
+            .any(|a| a.attacker == id && matches!(a.target, AttackTarget::Player(p) if !self.same_team(p, seat)))
+    }
 }

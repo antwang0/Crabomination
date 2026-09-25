@@ -31453,7 +31453,7 @@ fn requirement_live_leaves(req: &SelectionRequirement) -> u8 {
     match req {
         R::IsModified => 1,
         R::IsEquipped | R::EquippedByAtLeast(_) => 2,
-        R::IsAttacking | R::IsAttackingYou | R::IsAttackingAnOpponent | R::IsAttackingChosenPlayerOfSource => 4,
+        R::IsAttacking | R::IsAttackingYou | R::IsAttackingAnOpponent | R::IsAttackingOpponentPlayer | R::IsAttackingChosenPlayerOfSource => 4,
         // Leaves that read other live state or the source — a blocker, an
         // enchanted creature, the commander designation, a name, the
         // source's own choice. None is printed-characteristics-only, so

@@ -2941,6 +2941,9 @@ pub enum SelectionRequirement {
     /// player or a planeswalker one controls — "creatures attacking your
     /// opponents and/or planeswalkers they control" (Roar of Resistance).
     IsAttackingAnOpponent,
+    /// Attacking an opponent of the evaluating player — the player, not a
+    /// planeswalker or battle ("whenever Kaalia attacks an opponent").
+    IsAttackingOpponentPlayer,
     /// An attacking creature whose defender is the player stamped on the
     /// evaluating source's `chosen_player` — "creatures attacking the last
     /// chosen player" (Triarch Stalker). False without a source.

@@ -1960,7 +1960,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Theater of Horrors | Chaos Incarnate (SCD) | the permission outlives the enchantment; lands among the exiled cards can't be played. |
 | 🟡 Wildfire Devils | Chaos Incarnate (SCD) | the random player gives up their first instant or sorcery in graveyard order. |
 | 🟡 Archangel of Strife | Heavenly Inferno (CMD) | war or peace is chosen as its ETB trigger resolves, not as it enters. |
-| 🟡 Kaalia of the Vast | Heavenly Inferno (CMD) | also triggers attacking an opponent's planeswalker. |
 | 🟡 Jötun Grunt | Political Puppets (CMD) | the graveyard and the two cards of each installment are the engine's pick (an opponent's fullest, highest mana values). |
 | 🟡 Ruhan of the Fomori | Political Puppets (CMD) | the random opponent is stored on Ruhan, so another effect storing a player on it overwrites the pick. |
 

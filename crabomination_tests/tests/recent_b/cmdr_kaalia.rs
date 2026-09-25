@@ -207,6 +207,23 @@ fn kaalia_drops_an_angel_into_the_attack() {
     assert!(g.attacking.iter().any(|x| x.attacker == angel && x.target == AttackTarget::Player(2)));
 }
 
+/// Kaalia's trigger is "whenever Kaalia attacks an opponent": attacking a
+/// planeswalker drops nothing in.
+#[test]
+fn kaalia_attacking_a_planeswalker_drops_nothing() {
+    let mut g = pod(3);
+    let kaalia = g.add_card_to_battlefield(0, catalog::kaalia_of_the_vast());
+    let angel = g.add_card_to_hand(0, catalog::serra_angel());
+    let walker = g.add_card_to_battlefield(2, catalog::chandra_torch_of_defiance());
+    g.clear_sickness(kaalia);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: kaalia, target: AttackTarget::Planeswalker(walker) }]))
+        .expect("attack the planeswalker");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == angel), "the Angel stays in hand");
+}
+
 /// Malfegor discards your hand; each opponent sacrifices that many creatures.
 #[test]
 fn malfegor_trades_your_hand_for_their_board() {
