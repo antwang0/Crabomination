@@ -4763,6 +4763,8 @@ impl GameState {
             let pl = &mut **pl;
             pl.cannot_gain_life_this_turn = false;
             pl.life_locked_this_turn = false;
+            pl.hexproof_this_turn = false;
+            pl.cant_lose_life_this_turn = false;
             // CR 104.3d — Angel's Grace's protections end with the turn.
             pl.cant_lose_this_turn = false;
             pl.damage_floor_this_turn = false;

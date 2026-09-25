@@ -10454,7 +10454,8 @@ impl GameState {
     /// by the lose-life paths (`Effect::LoseLife`, drain-target gates).
     pub fn player_cannot_lose_life_now(&self, seat: usize) -> bool {
         use crate::effect::{PlayerStaticTarget, StaticEffect};
-        if self.players[seat].life_locked_this_turn || self.players[seat].life_locked_until_next_turn {
+        let pl = &self.players[seat];
+        if pl.life_locked_this_turn || pl.life_locked_until_next_turn || pl.cant_lose_life_this_turn {
             return true;
         }
         self.battlefield.has_life_static() && self.battlefield.iter().any(|src| {

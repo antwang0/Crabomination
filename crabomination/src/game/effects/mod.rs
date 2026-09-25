@@ -39,6 +39,7 @@ mod fantastic_four;
 mod turtle_power;
 mod blast_from_the_past;
 mod time_travel;
+mod phasing;
 mod revival;
 mod wakanda;
 mod chosen_color_damage;
@@ -6288,6 +6289,29 @@ impl GameState {
                 Ok(())
             }
             Effect::Clockspin { what } => self.clockspin(what, ctx, events),
+            Effect::PhaseInHeldBySource => {
+                if let Some(src) = ctx.source {
+                    self.phase_in_held_by(src, events);
+                }
+                Ok(())
+            }
+            Effect::AcquireAbilitiesOfExiledWithSource => {
+                self.acquire_abilities_of_exiled_with_source(ctx);
+                Ok(())
+            }
+            Effect::ExileOtherCreaturesKeepingUpTo { keep, max } => {
+                self.exile_other_creatures_keeping(keep, *max, ctx, events)
+            }
+            Effect::SetCopiableNameAndTypes { what, name, creature_types } => {
+                for id in self.resolve_selector(what, ctx).into_iter().filter_map(|e| e.as_permanent_id()) {
+                    if let Some(c) = self.battlefield_find_mut(id) {
+                        let def = c.definition_make_mut();
+                        def.name = name;
+                        def.subtypes.creature_types = creature_types.clone();
+                    }
+                }
+                Ok(())
+            }
 
             Effect::FlipCoinsUntilLoseOrStop { tiers } => {
                 use crate::decision::{Decision, DecisionAnswer};
@@ -8749,6 +8773,24 @@ impl GameState {
                 for ent in self.resolve_selector(who, ctx) {
                     if let EntityRef::Player(p) = ent {
                         self.players[p].life_locked_this_turn = true;
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::PlayerHexproofThisTurn { who } => {
+                for ent in self.resolve_selector(who, ctx) {
+                    if let EntityRef::Player(p) = ent {
+                        self.players[p].hexproof_this_turn = true;
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::CantLoseLifeThisTurn { who } => {
+                for ent in self.resolve_selector(who, ctx) {
+                    if let EntityRef::Player(p) = ent {
+                        self.players[p].cant_lose_life_this_turn = true;
                     }
                 }
                 Ok(())

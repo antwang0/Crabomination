@@ -4711,6 +4711,12 @@ pub enum Effect {
     /// both gain and loss are dropped. Sets `Player.life_locked_this_turn`,
     /// cleared by `do_untap` at the turn boundary. Flare of Fortitude.
     LifeLockThisTurn { who: Selector },
+    /// "Players gain hexproof until end of turn" (Everybody Lives!). Sets
+    /// `Player.hexproof_this_turn`, cleared at the next untap.
+    PlayerHexproofThisTurn { who: Selector },
+    /// "Players can't lose life this turn" (Everybody Lives!) — unlike
+    /// `LifeLockThisTurn`, life can still be gained.
+    CantLoseLifeThisTurn { who: Selector },
     /// CR 104.3d — Angel's Grace: until end of turn the controller can't
     /// lose the game and their opponents can't win it. With `damage_floor`,
     /// damage that would drop their life below 1 drops it to 1 instead.
@@ -7835,6 +7841,26 @@ pub enum Effect {
     /// counter or put another of those counters on it" (Clockspinning). The
     /// bot helps its own objects and hurts an opponent's.
     Clockspin { what: Selector },
+    /// CR 702.26 — every permanent phased out "until" this source phases in
+    /// (The Pandorica, becoming untapped).
+    PhaseInHeldBySource,
+    /// "[This] has all activated and triggered abilities of the exiled card"
+    /// (Idris, Soul of the TARDIS): the cards exiled with the source lend
+    /// their abilities to it, stamped as they're exiled.
+    AcquireAbilitiesOfExiledWithSource,
+    /// "Choose up to `max` [keep]. Exile all other creatures" (The Day of
+    /// the Doctor's IV, inside its "you may"). The controller keeps its own
+    /// greatest-power matches.
+    ExileOtherCreaturesKeepingUpTo { keep: crate::card::SelectionRequirement, max: u32 },
+    /// CR 707.9b — a copy "except it's [types] named [name]" (The Eleventh
+    /// Hour's Prisoner Zero): the name and creature types become part of the
+    /// selected permanents' copiable values.
+    SetCopiableNameAndTypes {
+        what: Selector,
+        #[serde(with = "crate::static_str_serde")]
+        name: crate::static_str_serde::StaticStr,
+        creature_types: Vec<crate::card::CreatureType>,
+    },
     /// "You may cast spells from your hand this turn without paying their
     /// mana costs" (Yusri's five-win jackpot). Sets the controller's
     /// `free_spells_from_hand_this_turn` flag, cleared at end-of-turn.

@@ -2872,21 +2872,7 @@ impl GameState {
         self.return_linked_exiles(id, events);
         // CR 702.26 — permanents phased out "until [this] leaves the
         // battlefield" (Out of Time) phase in now.
-        let mut i = 0;
-        let mut phased_in: Vec<CardId> = Vec::new();
-        while i < self.phased_out.len() {
-            if self.phased_out[i].phased_out_by == Some(id) {
-                let mut c = self.phased_out.remove(i);
-                c.phased_out_by = None;
-                phased_in.push(c.id);
-                self.battlefield.push(c);
-            } else {
-                i += 1;
-            }
-        }
-        for card_id in phased_in {
-            events.push(GameEvent::PermanentPhasedIn { card_id });
-        }
+        self.phase_in_held_by(id, events);
         // Source-bound control steals end with their source (Sower of
         // Temptation — CR 800.4 hands the permanent back).
         // `temporary_control` is a `ColdState` field, so the `take` is a

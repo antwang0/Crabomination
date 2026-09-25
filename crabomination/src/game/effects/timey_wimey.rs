@@ -280,4 +280,58 @@ impl GameState {
             events,
         )
     }
+
+    /// `Effect::AcquireAbilitiesOfExiledWithSource` — the activated and
+    /// triggered abilities of each card exiled with the source join its own
+    /// (Idris). Stamped as the card is exiled, so a later layer effect that
+    /// removes abilities removes these too.
+    pub(super) fn acquire_abilities_of_exiled_with_source(&mut self, ctx: &EffectContext) {
+        let Some(src) = ctx.source else { return };
+        let (mut activated, mut triggered) = (Vec::new(), Vec::new());
+        for c in self
+            .exile
+            .iter()
+            .filter(|c| c.exiled_with == Some(src) || c.exiled_by.as_ref().is_some_and(|l| l.source == src))
+        {
+            activated.extend(c.definition.activated_abilities.iter().cloned());
+            triggered.extend(c.definition.triggered_abilities.iter().cloned());
+        }
+        if activated.is_empty() && triggered.is_empty() {
+            return;
+        }
+        if let Some(me) = self.battlefield_find_mut(src) {
+            let def = me.definition_make_mut();
+            def.activated_abilities.extend(activated);
+            def.triggered_abilities.extend(triggered);
+        }
+    }
+
+    /// `Effect::ExileOtherCreaturesKeepingUpTo` — keep up to `max` of the
+    /// controller's creatures matching `keep` (greatest power first) and
+    /// exile every other creature.
+    pub(super) fn exile_other_creatures_keeping(
+        &mut self,
+        keep: &SelectionRequirement,
+        max: u32,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
+        let me = ctx.controller;
+        let mut kept: Vec<(CardId, i32)> = self
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == me && c.definition.is_creature())
+            .filter(|c| self.evaluate_requirement_on_card(keep, c, me))
+            .map(|c| (c.id, self.computed_permanent(c.id).map_or(0, |cp| cp.power)))
+            .collect();
+        kept.sort_by_key(|&(id, power)| (std::cmp::Reverse(power), id));
+        kept.truncate(max as usize);
+        let others: Vec<CardId> = self
+            .battlefield
+            .iter()
+            .filter(|c| c.definition.is_creature() && !kept.iter().any(|(k, _)| *k == c.id))
+            .map(|c| c.id)
+            .collect();
+        self.run_effect(&Effect::Exile { what: Selector::ExactObjects(others) }, ctx, events)
+    }
 }

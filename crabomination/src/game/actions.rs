@@ -14410,7 +14410,7 @@ impl GameState {
     /// via `StaticEffect::ControllerHasHexproof` (Leyline of Sanctity).
     pub fn player_has_static_hexproof(&self, player: usize) -> bool {
         use crate::effect::StaticEffect;
-        self.players.get(player).is_some_and(|p| p.hexproof_until_next_turn)
+        self.players.get(player).is_some_and(|p| p.hexproof_until_next_turn || p.hexproof_this_turn)
             || self.battlefield.iter().any(|c| {
                 c.controller == player
                     && c.definition

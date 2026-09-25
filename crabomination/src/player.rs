@@ -1205,6 +1205,14 @@ pub struct PlayerData {
     /// cleared at this player's `do_untap`. `#[serde(default)]`.
     #[serde(default)]
     pub hexproof_until_next_turn: bool,
+    /// Hexproof until end of turn (Everybody Lives!); cleared at the next
+    /// untap.
+    #[serde(default)]
+    pub hexproof_this_turn: bool,
+    /// "Can't lose life this turn" (Everybody Lives!) — life can still be
+    /// gained; cleared at the next untap.
+    #[serde(default)]
+    pub cant_lose_life_this_turn: bool,
     /// True while this player can't cast noncreature spells for the rest of
     /// the turn (Ranger-Captain of Eos's sacrifice ability). Set by
     /// `Effect::CantCastNoncreatureThisTurn`; reset for every player at the
@@ -1537,6 +1545,8 @@ impl Player {
             spells_uncounterable_this_turn: false,
             creature_spells_uncounterable_this_turn: false,
             hexproof_until_next_turn: false,
+            hexproof_this_turn: false,
+            cant_lose_life_this_turn: false,
             cast_blue_or_black_this_turn: false,
             spell_casts_this_turn: crate::copyvec::CopyVec::new(),
             cant_cast_noncreature_this_turn: false,

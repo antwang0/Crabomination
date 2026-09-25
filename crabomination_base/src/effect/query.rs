@@ -793,6 +793,9 @@ impl Effect {
             | Effect::SourceEntersTapped
             | Effect::AbandonThisScheme | Effect::GameIsADraw
             | Effect::RemoveTimeCounterFromSuspendedSource
+            | Effect::PhaseInHeldBySource
+            | Effect::AcquireAbilitiesOfExiledWithSource
+            | Effect::ExileOtherCreaturesKeepingUpTo { .. }
             | Effect::PumpAttackersThisTurn { .. }
             | Effect::TruceThisTurnAndNext
             | Effect::MayRepeat { .. }
@@ -1848,6 +1851,7 @@ impl Effect {
             | Effect::PhaseOut { what, .. }
             | Effect::GrantSuspend { what, .. }
             | Effect::Clockspin { what }
+            | Effect::SetCopiableNameAndTypes { what, .. }
             | Effect::ModularCounters { what }
             | Effect::BecomeBlocked { what }
             | Effect::RememberPermanentOnSource { what }
@@ -2334,7 +2338,10 @@ impl Effect {
             Effect::DiminishCreaturesExceptChosenType { power, toughness } => {
                 value_has_target(power) || value_has_target(toughness)
             }
-            Effect::LifeGainLockThisTurn { who } | Effect::LifeLockThisTurn { who } => sel_has_target(who),
+            Effect::LifeGainLockThisTurn { who }
+            | Effect::LifeLockThisTurn { who }
+            | Effect::PlayerHexproofThisTurn { who }
+            | Effect::CantLoseLifeThisTurn { who } => sel_has_target(who),
             Effect::LifeGainLockGame { who } => sel_has_target(who),
             Effect::GrantSpellsUncounterableThisTurn { who }
             | Effect::GrantCreatureSpellsUncounterableThisTurn { who } => sel_has_target(who),
@@ -2711,6 +2718,7 @@ impl Effect {
             | Effect::TokenCopyTappedAttacking { source: what }
             | Effect::GrantSuspend { what, .. }
             | Effect::Clockspin { what }
+            | Effect::SetCopiableNameAndTypes { what, .. }
             | Effect::ModularCounters { what }
             | Effect::BecomeBlocked { what }
             | Effect::Tap { what }
@@ -4241,6 +4249,7 @@ impl Effect {
             Effect::PhaseOut { what, .. }
             | Effect::GrantSuspend { what, .. }
             | Effect::Clockspin { what }
+            | Effect::SetCopiableNameAndTypes { what, .. }
             | Effect::ModularCounters { what }
             | Effect::BecomeBlocked { what }
             | Effect::Tap { what }
@@ -5091,6 +5100,7 @@ impl Effect {
                 Effect::PhaseOut { what, .. }
                 | Effect::GrantSuspend { what, .. }
             | Effect::Clockspin { what }
+            | Effect::SetCopiableNameAndTypes { what, .. }
                 | Effect::ModularCounters { what }
                 | Effect::BecomeBlocked { what }
                 | Effect::CantAttackThisTurn { what }
@@ -5253,6 +5263,8 @@ impl Effect {
                 Effect::Airbend { what } => sel_find(what, slot),
                 Effect::LifeGainLockThisTurn { who }
                 | Effect::LifeLockThisTurn { who }
+                | Effect::PlayerHexproofThisTurn { who }
+                | Effect::CantLoseLifeThisTurn { who }
                 | Effect::LifeLockUntilNextTurn { who }
                 | Effect::DistributeControlAmongOpponents { what: who }
                 | Effect::GrantSpellsUncounterableThisTurn { who }
