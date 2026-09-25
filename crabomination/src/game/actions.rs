@@ -5148,6 +5148,13 @@ impl GameState {
                 Some(b) => *b,
                 None => return Err(GameError::NotALand(card_id)),
             };
+            // CR 712.2 / 202.1a — a transforming DFC's back face prints no
+            // mana cost (a {0} back is `[Generic(0)]`, not empty), and only
+            // a modal DFC is cast by its back face; without this Insectile
+            // Aberration or Jace, Telepath Unbound was cast from hand free.
+            if back.cost.symbols.is_empty() {
+                return Err(GameError::NoManaCost);
+            }
             (card.definition.arc(), back)
         };
         // Swap the in-hand definition to the back face in place. The

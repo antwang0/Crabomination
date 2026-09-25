@@ -38,6 +38,10 @@
 //! counts toward Celebration's "two or more nonland permanents entered under
 //! your control this turn" and the artifact entry tally; only tokens and
 //! effect moves were counted.
+//!
+//! CR 712.2 — a transforming double-faced card's back face has no mana cost
+//! and is never cast; only a modal DFC's back face is. `CastSpellBack` took
+//! Insectile Aberration from hand for nothing.
 
 use crabomination::card::SelectionRequirement;
 use crabomination::catalog;
@@ -1035,4 +1039,16 @@ fn cr_608_3_resolved_permanent_spells_count_toward_celebration() {
     }
     assert!(g.evaluate_predicate(&pred, &ctx), "two spells resolved into permanents");
     assert_eq!(g.players[0].artifacts_entered_this_turn, 1, "Sol Ring");
+}
+
+#[test]
+fn cr_712_2_a_transform_back_face_is_never_cast() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let id = g.add_card_to_hand(0, catalog::delver_of_secrets());
+    let back = GameAction::CastSpellBack { card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None };
+    assert!(g.perform_action(back).is_err(), "Insectile Aberration has no mana cost");
+    assert_eq!(g.players[0].hand.iter().find(|c| c.id == id).map(|c| c.definition.name), Some("Delver of Secrets"));
 }
