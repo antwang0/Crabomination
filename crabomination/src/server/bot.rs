@@ -9682,6 +9682,12 @@ fn pick_self_pump_counter(state: &GameState, seat: usize, w: &EvalWeights) -> Op
                             crate::effect::StaticEffect::SelfIsCreatureWhileCountersAtLeast { kind: k, n }
                             if k == kind && card.counter_count(*kind) < *n)
                     })
+                    // CR 721 — Station: charge toward an unmet band, tapping
+                    // creatures only once combat is over (they'd have attacked).
+                    || (*kind == CounterType::Charge
+                        && ab.tap_other_filter.is_some()
+                        && state.step == crate::game::types::TurnStep::PostCombatMain
+                        && card.definition.station.iter().any(|b| card.counter_count(CounterType::Charge) < b.min))
             } else if ab.effect.is_adapt() {
                 card.counter_count(CounterType::PlusOnePlusOne) == 0
             } else {

@@ -450,3 +450,27 @@ fn cr_613_8_type_filtered_sets_read_layer_four_types() {
     activate(&mut g, vault, 1, None).expect("animate");
     assert_eq!(pt(&g, vault), (3, 3), "a 2/2 land creature under the anthem");
 }
+
+/// Bot: after combat, an idle creature stations Inspirit (CR 721 — the bot
+/// never activated a station ability, so every Spacecraft stayed inert).
+#[test]
+fn bot_stations_inspirit() {
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    let mut g = pod(2);
+    g.step = TurnStep::PostCombatMain;
+    let ins = g.add_card_to_battlefield(0, catalog::inspirit_flagship_vessel());
+    let giant = g.add_card_to_battlefield(0, catalog::hill_giant());
+    g.clear_sickness(giant);
+    let mut bot = HeuristicBot::new();
+    for _ in 0..10 {
+        g.priority.player_with_priority = 0;
+        let Some(action) = bot.next_action(&g, 0) else { break };
+        let pass = matches!(action, GameAction::PassPriority);
+        let _ = g.perform_action(action);
+        drain_stack(&mut g);
+        if pass {
+            break;
+        }
+    }
+    assert!(counters(&g, ins, CounterType::Charge) >= 3, "the bot stationed with the Hill Giant");
+}
