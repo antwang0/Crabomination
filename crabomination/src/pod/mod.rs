@@ -1239,6 +1239,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::GALADRIEL_COMMANDERS,
             main: decks::GALADRIEL_MAIN,
         },
+        // Hundred-and-fifty-first: Buckle Up (Kamigawa: Neon Dynasty) —
+        // Azorius Vehicles and artifacts under Kotori, Pilot Prodigy.
+        // `--pod-decks 151`.
+        PodDeck {
+            name: "Kotori, Pilot Prodigy (WU)",
+            commanders: decks::KOTORI_COMMANDERS,
+            main: decks::KOTORI_MAIN,
+        },
     ]
 }
 

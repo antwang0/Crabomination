@@ -4571,3 +4571,31 @@ pub const GALADRIEL_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
     forest, forest, forest, forest,
 ];
+
+pub const KOTORI_COMMANDERS: &[CardFactory] = &[kotori_pilot_prodigy];
+
+/// **Buckle Up**, the Kamigawa: Neon Dynasty Commander deck (NEC,
+/// 2022-02-18), exactly as MTGJSON's `BuckleUp_NEC` prints it: 69
+/// nonbasic cards + 15 Plains + 15 Islands = 99. Azorius Vehicles and artifacts under
+/// Kotori, Pilot Prodigy.
+pub const KOTORI_MAIN: &[CardFactory] = &[
+    shorikai_genesis_engine, jace_architect_of_thought, drumbellower, ironsoul_enforcer,
+    cyberdrive_awakener, kappa_cannoneer, katsumasa_the_animator, research_thief,
+    aeronaut_admiral, cataclysmic_gearhulk, indomitable_archangel, myrsmith,
+    sram_senior_edificer, teshar_ancestors_apostle, emry_lurker_of_the_loch, etherium_sculptor,
+    master_of_etherium, riddlesmith, sai_master_thopterist, vedalken_engineer, whirler_rogue,
+    arcanists_owl, hanna_ships_navigator, raff_capashen_ships_mage, foundry_inspector, gold_myr,
+    shimmer_myr, silver_myr, solemn_simulacrum, organic_extinction, universal_surveillance,
+    thoughtcast, dance_of_the_manse, release_to_memory, access_denied, armed_and_armored,
+    crush_contraband, dispatch, generous_gift, swords_to_plowshares, reality_shift,
+    aerial_surveyor, imposter_mech, imperial_recovery_unit, mobilizer_mech, prodigys_prototype,
+    surgehacker_mech, parhelion_ii, arcane_signet, azorius_signet, colossal_plow,
+    cultivators_caravan, fellwar_stone, mirage_mirror, peacewalker_colossus, raiders_karve,
+    skysovereign_consul_flagship, smugglers_copter, sol_ring, weatherlight,
+    swift_reconfiguration, thopter_spy_network, command_tower, exotic_orchard, port_town,
+    prairie_stream, skycloud_expanse, spire_of_industry, temple_of_enlightenment,
+    // Basics: 15 plains, 15 island
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island,
+];
