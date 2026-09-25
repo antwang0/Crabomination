@@ -3442,3 +3442,34 @@ pub const ZAFFAI_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, elementalists_palette, minds_desire,
     brasss_bounty, sunbirds_invocation, pyromancers_goggles,
 ];
+
+pub const ZURGO_COMMANDERS: &[CardFactory] = &[zurgo_stormrender];
+
+/// **Mardu Surge**, the Tarkir: Dragonstorm Commander deck (TDC, 2025-04-11),
+/// exactly as MTGJSON's `MarduSurge_TDC` prints it: 84 nonbasic cards +
+/// 5 Plains + 5 Swamps + 5 Mountains = 99. Mardu tokens and attack triggers
+/// under Zurgo Stormrender.
+pub const ZURGO_MAIN: &[CardFactory] = &[
+    neriv_crackling_vanguard, ainok_strike_leader, ironwill_forger, will_of_the_mardu,
+    bone_devourer, within_range, goldlust_triad, infantry_shield, redoubled_stormsinger,
+    adeline_resplendent_cathar, angel_of_invention, commanders_insignia, divine_visitation,
+    emeria_angel, grand_crescendo, hero_of_bladehold, hour_of_reckoning, legion_loyalty,
+    selfless_spirit, sun_titan, tocasias_welcome, twilight_drover, chittering_witch,
+    eliminate_the_competition, gix_yawgmoth_praetor, mindblade_render, ophiomancer,
+    yahenni_undying_partisan, grenzo_havoc_raiser, legion_warboss, ogre_battledriver,
+    siege_gang_commander, tempt_with_vengeance, kaya_geist_hunter, blade_of_selves,
+    idol_of_oblivion, myr_battlesphere, solemn_simulacrum, battlefield_forge, canyon_slough,
+    castle_ardenvale, castle_embereth, caves_of_koilos, clifftop_retreat, dragonskull_summit,
+    exotic_orchard, fetid_heath, isolated_chapel, shattered_sanctum, smoldering_marsh,
+    temple_of_silence, temple_of_triumph, vault_of_the_archangel, windbrisk_heights,
+    shadow_summoning, lightning_greaves, skullclamp, arcane_signet, sol_ring, command_tower,
+    goldnight_commander, lingering_souls, release_the_dogs, stroke_of_midnight,
+    swords_to_plowshares, bastion_of_remembrance, bitter_triumph, deadly_dispute,
+    morbid_opportunist, viscera_seer, abrade, beetleback_chief, loyal_apprentice, nomad_outpost,
+    aron_benalias_ruin, thalisse_reverent_medium, fellwar_stone, talisman_of_conviction,
+    talisman_of_hierarchy, wayfarers_bauble, bojuka_bog, path_of_ancestry, shattered_landscape,
+    terramorphic_expanse,
+    // Basics: 5 plains, 5 swamp, 5 mountain
+    plains, plains, plains, plains, plains, swamp, swamp, swamp, swamp, swamp, mountain,
+    mountain, mountain, mountain, mountain,
+];

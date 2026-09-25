@@ -937,6 +937,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ZAFFAI_COMMANDERS,
             main: decks::ZAFFAI_MAIN,
         },
+        // Hundred-and-thirteenth: the hundred-and-third official list (Mardu
+        // Surge, TDC) — Mardu tokens and attack triggers under Zurgo
+        // Stormrender. `--pod-decks 113`.
+        PodDeck {
+            name: "Zurgo Stormrender (RWB)",
+            commanders: decks::ZURGO_COMMANDERS,
+            main: decks::ZURGO_MAIN,
+        },
     ]
 }
 
@@ -1498,6 +1506,8 @@ mod tests {
             // CR 614.1c — enters-with counters read from a graveyard (Dearly
             // Departed); CR 702.16 protection from a chosen creature type.
             ("Jirina", [0x1714, 111, 9035]),
+            // CR 702.181a Mobilize, CR 614.1a token replacement, CR 903.3 commander attacks.
+            ("Zurgo Stormrender", [0x2B60, 113, 9037]),
         ] {
             let precon = *field.iter().find(|d| d.name.starts_with(name)).expect("the precon seat");
             assert_eq!(precon.card_count(), 100);
