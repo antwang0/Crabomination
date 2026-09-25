@@ -67,12 +67,16 @@ def cards(deck):
 
 def main():
     have = catalog_names()
-    present = lambda n: any(k in have for k in (n, n.split(" // ")[0], slug(n.split(" // ")[0])))
+    # A split / aftermath card's factory is the slug of BOTH halves
+    # (`commit_memory`), which the front-half probes missed; check it first
+    # so a front half that names some other card (`dusk`) can't stand in.
+    present = lambda n: any(k in have for k in (n, slug(n), n.split(" // ")[0], slug(n.split(" // ")[0])))
+    fn_of = lambda n: slug(n) if slug(n) in have else slug(n.split(" // ")[0])
     if "--deck" in sys.argv:
         deck = fetch(sys.argv[sys.argv.index("--deck") + 1] + ".json", "decks/")
-        print("commanders:", ", ".join(slug(c["name"].split(" // ")[0]) for c in deck["commander"]))
+        print("commanders:", ", ".join(fn_of(c["name"]) for c in deck["commander"]))
         main = [c["name"] for c in deck["mainBoard"] for _ in range(c.get("count", 1))]
-        print(f"main ({len(main)}):", ", ".join(slug(n.split(" // ")[0]) for n in main))
+        print(f"main ({len(main)}):", ", ".join(fn_of(n) for n in main))
         # The commanders too: the first draft checked only the 99 and called a
         # list complete whose partner pair wasn't in the catalog at all.
         print("missing:", sorted({n for n in cards(deck) if not present(n)}))
