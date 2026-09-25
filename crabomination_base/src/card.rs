@@ -6911,6 +6911,7 @@ impl CardDefinition {
             devoid: self.keywords.has_kw(&Keyword::Devoid),
             foretell: self.foretell_cost.is_some(),
             equipment: self.is_equipment(),
+            aura: self.subtypes.enchantment_subtypes.contains(&EnchantmentSubtype::Aura),
             colorless: colors.is_empty(),
             mana_value: self.cost.cmc(),
             has_x: self.cost.has_x(),

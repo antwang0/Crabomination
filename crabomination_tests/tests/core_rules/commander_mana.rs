@@ -668,7 +668,8 @@ fn cr_106_6_every_rider_allows_every_payment() {
                 | CommanderCastCounters | CommanderCastScry | SmallInstantSorceryExileInstead
                 | RedInstantSorceryCopy | XCostsOnly
                 | SpellFromGraveyard
-                | MonocoloredSpellOf(_) | OutlawSpellsOrAbilities | SpellsYouDontOwn | SpellOrAbilityCopy => {}
+                | MonocoloredSpellOf(_) | OutlawSpellsOrAbilities | SpellsYouDontOwn | SpellOrAbilityCopy
+                | AuraOrEquipmentSpells => {}
             }
         }
         use SpendRestriction::*;
@@ -694,6 +695,7 @@ fn cr_106_6_every_rider_allows_every_payment() {
             ForetellOnly,
             InstantSorceryUncounterable,
             EquipmentOnly,
+            AuraOrEquipmentSpells,
             ColorlessSpellsOrAbilities,
             HighMvOrX,
             DragonOrOmenSpell,

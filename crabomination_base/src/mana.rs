@@ -732,6 +732,9 @@ pub enum SpendRestriction {
     /// "Spend this mana only to cast spells you don't own" (Thieving
     /// Varmint) — `SpellKind::not_owned`, filled by `spell_kind_for`.
     SpellsYouDontOwn,
+    /// "Spend this mana only to cast Aura and/or Equipment spells."
+    /// (Codsworth, Handy Helper.) Spells only — an equip ability is not one.
+    AuraOrEquipmentSpells,
 }
 
 impl SpendRestriction {
@@ -763,6 +766,7 @@ impl SpendRestriction {
             SpendRestriction::DevoidSpellsOnly => "only devoid spells",
             SpendRestriction::ForetellOnly => "only to foretell or cast foretell spells",
             SpendRestriction::EquipmentOnly => "only Equipment",
+            SpendRestriction::AuraOrEquipmentSpells => "only Aura and Equipment spells",
             SpendRestriction::ColorlessSpellsOrAbilities => "only colorless spells or abilities",
             SpendRestriction::HighMvOrX => "only mana value 5+ or {X} spells",
             SpendRestriction::XCostsOnly => "only costs that contain {X}",
@@ -865,6 +869,9 @@ impl SpendRestriction {
             SpendRestriction::DevoidSpellsOnly => kind.devoid,
             SpendRestriction::ForetellOnly => kind.foretell,
             SpendRestriction::EquipmentOnly => kind.equipment,
+            SpendRestriction::AuraOrEquipmentSpells => {
+                !kind.activating_ability && (kind.equipment || kind.aura)
+            }
             SpendRestriction::ColorlessSpellsOrAbilities => {
                 kind.colorless || kind.activating_ability
             }
@@ -970,6 +977,8 @@ pub struct SpellKind {
     /// Casting an Equipment spell, or activating an ability of an Equipment
     /// (Freya Crescent's "cast an Equipment spell or activate an equip ability").
     pub equipment: bool,
+    /// Casting an Aura spell (Codsworth's "Aura and/or Equipment spells").
+    pub aura: bool,
     /// Casting a colorless spell (Sage of the Unknowable's "spend this mana
     /// only to cast a colorless spell or to activate an ability").
     pub colorless: bool,

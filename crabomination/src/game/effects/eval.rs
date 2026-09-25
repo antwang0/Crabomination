@@ -1107,6 +1107,18 @@ impl GameState {
                     .filter(|c| self.evaluate_requirement_on_card(filter, c, ctx.controller))
                     .count() as i32
             }
+            Value::AttachmentsOnDyingSubject { filter } => ctx
+                .trigger_source
+                .and_then(|e| e.as_card_id())
+                .and_then(|host| self.auras_at_death.get(&host))
+                .map(|riders| {
+                    riders
+                        .iter()
+                        .filter_map(|(id, _)| self.find_card_anywhere(*id))
+                        .filter(|c| self.evaluate_requirement_on_card(filter, c, ctx.controller))
+                        .count() as i32
+                })
+                .unwrap_or(0),
             Value::AurasYouControlledOnDyingSubject => ctx
                 .trigger_source
                 .and_then(|e| e.as_card_id())
@@ -2156,6 +2168,19 @@ impl GameState {
             Predicate::All(qs) => qs.iter().all(|q| self.evaluate_predicate(q, ctx)),
             Predicate::Any(qs) => qs.iter().any(|q| self.evaluate_predicate(q, ctx)),
             Predicate::SelectorExists(s) => !self.resolve_selector(s, ctx).is_empty(),
+            Predicate::YouDiscardedGreatestManaValueThisEffect => {
+                let (mut mine, mut theirs): (Option<u32>, u32) = (None, 0);
+                for id in self.scratch.discarded_card_ids_this_resolution.iter() {
+                    let Some(c) = self.find_card_anywhere(*id) else { continue };
+                    let mv = c.definition.cost.cmc();
+                    if c.owner == ctx.controller {
+                        mine = Some(mine.map_or(mv, |m| m.max(mv)));
+                    } else {
+                        theirs = theirs.max(mv);
+                    }
+                }
+                mine.is_some_and(|m| m >= theirs)
+            }
             Predicate::SelectorCountAtLeast { sel, n } => {
                 self.resolve_selector(sel, ctx).len() as i32 >= self.evaluate_value(n, ctx)
             }

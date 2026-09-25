@@ -21215,13 +21215,21 @@ impl GameState {
 
     /// CR 702.6 — summed "equip costs you pay cost {N} less" reduction across
     /// the player's permanents (Auriok Steelshaper).
-    fn equip_cost_reduction_for(&self, player: usize) -> u32 {
+    /// Strong Back's "equip abilities you activate that target enchanted
+    /// creature cost {N} less" is the same discount, gated on `target` being
+    /// the creature the Aura enchants.
+    fn equip_cost_reduction_for(&self, player: usize, target: crate::card::CardId) -> u32 {
         self.battlefield
             .iter()
             .filter(|c| c.controller == player)
-            .flat_map(|c| c.definition.static_abilities.iter())
-            .filter_map(|sa| match sa.effect {
+            .flat_map(|c| c.definition.static_abilities.iter().map(move |sa| (c, sa)))
+            .filter_map(|(c, sa)| match sa.effect {
                 crate::effect::StaticEffect::EquipCostReduction { amount } => Some(amount),
+                crate::effect::StaticEffect::CostReductionTargetingHost { amount }
+                    if c.attached_to == Some(target) =>
+                {
+                    Some(amount)
+                }
                 _ => None,
             })
             .sum()
@@ -21289,7 +21297,7 @@ impl GameState {
         // CR 702.6 — "Equip costs you pay cost {N} less" (Auriok Steelshaper),
         // and Belt of Giant Strength's own "{X} less, where X is the power of
         // the creature it targets".
-        let mut reduction = self.equip_cost_reduction_for(p);
+        let mut reduction = self.equip_cost_reduction_for(p, target);
         if self.battlefield[equip_pos].definition.static_abilities.iter().any(|sa| {
             matches!(sa.effect, crate::effect::StaticEffect::EquipCostReducedByTargetPower)
         }) {
@@ -30752,6 +30760,7 @@ fn static_effect_to_effects(
             // Consulted directly in `equip()`, not a layer effect.
             | StaticEffect::ControllerEquipAtInstantSpeed
             | StaticEffect::EquipCostReduction { .. }
+            | StaticEffect::CostReductionTargetingHost { .. }
             | StaticEffect::EquipCostReducedByTargetPower
             // Bludgeon Brawl — the granted subtype and bonus are synthesized
             // per artifact in `compute_battlefield`, not from a modification.

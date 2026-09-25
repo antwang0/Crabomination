@@ -2074,6 +2074,21 @@ pub(crate) fn cost_reduction_for_spell_full_over<'a>(
                         reduction += amount;
                     }
                 }
+                // Strong Back: your Aura spells targeting the creature this
+                // Aura enchants cost {amount} less (the equip half is read by
+                // `GameState::equip`).
+                StaticEffect::CostReductionTargetingHost { amount }
+                    if src.controller == caster
+                        && card
+                            .definition
+                            .subtypes
+                            .enchantment_subtypes
+                            .contains(&crate::card::EnchantmentSubtype::Aura)
+                        && src.attached_to.is_some()
+                        && matches!(target, Some(crate::game::Target::Permanent(pid)) if Some(*pid) == src.attached_to) =>
+                {
+                    reduction += amount;
+                }
                 // Elderwood Scion: your spells targeting this permanent cost
                 // {amount} less (the tax half is `TaxOpponentSpellsTargetingThis`).
                 StaticEffect::CostReductionForYourSpellsTargetingThis { amount }

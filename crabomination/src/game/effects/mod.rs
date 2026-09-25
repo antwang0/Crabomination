@@ -35456,6 +35456,120 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ReturnDyingSubjectAttachmentsTo { host } => {
+                // Cass, Hand of Vengeance — CR 603.10a: what rode the dying
+                // subject is read from the leaves-battlefield record.
+                let Some(host_id) = self
+                    .resolve_selector(host, ctx)
+                    .iter()
+                    .find_map(|e| e.as_permanent_id())
+                else {
+                    return Ok(());
+                };
+                let Some(dead) = ctx.trigger_source.and_then(|e| e.as_card_id()) else {
+                    return Ok(());
+                };
+                let riders: Vec<CardId> =
+                    self.auras_at_death.get(&dead).map(|r| r.iter().map(|(id, _)| *id).collect()).unwrap_or_default();
+                let me = ctx.controller;
+                for id in riders {
+                    if self.battlefield_find(host_id).is_none() {
+                        break;
+                    }
+                    let aura_in_yard = self.players[me].graveyard.iter().any(|c| {
+                        c.id == id
+                            && c.definition.subtypes.enchantment_subtypes.contains(&crate::card::EnchantmentSubtype::Aura)
+                    });
+                    if aura_in_yard {
+                        self.move_card_to(
+                            id,
+                            &ZoneDest::Battlefield { controller: PlayerRef::Seat(me), tapped: false },
+                            ctx,
+                            events,
+                        );
+                        if let Some(c) = self.battlefield_find_mut(id) {
+                            c.attached_to = Some(host_id);
+                        }
+                    } else if self
+                        .battlefield_find(id)
+                        .is_some_and(|c| c.controller == me && c.definition.is_equipment())
+                    {
+                        if let Some(c) = self.battlefield_find_mut(id) {
+                            c.attached_to = Some(host_id);
+                            c.attached_to_player = None;
+                        }
+                        events.push(GameEvent::AttachmentMoved { attachment: id, attached_to: Some(host_id) });
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::CreateTokenCopyOfAttachedToEach { source, hosts } => {
+                // Three Dog — one copy of the (possibly just sacrificed) Aura
+                // per host, each entering attached (CR 303.4f: no target).
+                let Some(src_id) = self.resolve_selector(source, ctx).into_iter().find_map(|e| match e {
+                    EntityRef::Permanent(c) | EntityRef::Card(c) => Some(c),
+                    _ => None,
+                }) else {
+                    return Ok(());
+                };
+                let Some(def) = self.find_card_anywhere(src_id).map(|c| c.definition.boxed_clone()) else {
+                    return Ok(());
+                };
+                let def: std::sync::Arc<crate::card::CardDefinition> = std::sync::Arc::from(def);
+                let targets: Vec<CardId> = self
+                    .resolve_selector(hosts, ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_permanent_id())
+                    .filter(|id| self.battlefield_find(*id).is_some())
+                    .collect();
+                for host in targets {
+                    let minted = self.mint_token_onto_battlefield(def.clone(), ctx.controller, false, events);
+                    if let Some(c) = self.battlefield_find_mut(minted) {
+                        c.attached_to = Some(host);
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::TreasurePerPairedManaValueInHand { max } => {
+                // Vault 21 chapter III — reveal the best-paying set: whole
+                // equal-mana-value groups, largest first, while two still fit.
+                let mut groups: Vec<u32> = Vec::new();
+                let mut mvs: Vec<u32> = self.players[ctx.controller]
+                    .hand
+                    .iter()
+                    .filter(|c| !c.definition.is_land())
+                    .map(|c| c.definition.cost.cmc())
+                    .collect();
+                mvs.sort_unstable();
+                for chunk in mvs.chunk_by(|a, b| a == b) {
+                    groups.push(chunk.len() as u32);
+                }
+                groups.sort_unstable_by(|a, b| b.cmp(a));
+                let (mut room, mut paid) = (*max, 0u32);
+                for g in groups {
+                    let take = g.min(room);
+                    if take < 2 {
+                        continue;
+                    }
+                    room -= take;
+                    paid += take;
+                }
+                if paid > 0 {
+                    self.run_effect(
+                        &Effect::CreateToken {
+                            who: PlayerRef::You,
+                            count: crate::card::Value::Const(paid as i32),
+                            definition: std::sync::Arc::new(crabomination_base::tokens::treasure_token()),
+                        },
+                        ctx,
+                        events,
+                    )?;
+                }
+                Ok(())
+            }
+
             Effect::GuessColorCountInHand { who, max } => {
                 // Scrying Glass. The guesser can't see the hand, so the auto
                 // policy guesses the most common colour in the guesser's own

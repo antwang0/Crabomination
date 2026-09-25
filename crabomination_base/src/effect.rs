@@ -1493,6 +1493,13 @@ pub enum Value {
     /// Eidolon's "draw a card for each Aura you controlled that was attached
     /// to it".
     AurasYouControlledOnDyingSubject,
+    /// CR 603.10a — the number of the dying creature's (the trigger
+    /// subject's) attachments at the moment it left the battlefield that
+    /// match `filter`, wherever those cards are now (an Aura is usually in a
+    /// graveyard by then, an Equipment still on the battlefield). Read from
+    /// `GameState.auras_at_death`. Gunner Conscript's "if it was enchanted" /
+    /// "if it was equipped", Cass's "if it was enchanted or equipped".
+    AttachmentsOnDyingSubject { filter: SelectionRequirement },
     /// The number of permanents matching `filter` attached to the permanent
     /// `what` resolves to — "as long as this creature is enchanted by exactly
     /// two Auras" (Timber Paladin).
@@ -1732,6 +1739,11 @@ pub enum Predicate {
     /// resolve-time filter on `EventKind::Expend` triggers (Roughshod Duo
     /// "Whenever you expend 4").
     ExpendReached(u32),
+    /// Among the cards discarded during this resolution, the effect's
+    /// controller discarded one and none an opponent discarded has a greater
+    /// mana value ("if you discarded the card with the greatest mana value
+    /// among those cards or tied for greatest" — Cait, Cage Brawler).
+    YouDiscardedGreatestManaValueThisEffect,
     /// CR 700.6 — `who` has the city's blessing. "As long as you have the
     /// city's blessing, …" (Ascend payoffs).
     HasCityBlessing { who: PlayerRef },
@@ -7066,6 +7078,26 @@ pub enum Effect {
     /// "Attach target Aura card from a graveyard to this creature" — the Aura
     /// returns to the battlefield already attached (Iridescent Drake).
     AttachAuraFromGraveyardTo { aura: Selector, host: Selector },
+    /// CR 603.10a — "return any number of Aura cards that were attached to it
+    /// from your graveyard to the battlefield attached to `host`, then attach
+    /// any number of Equipment that were attached to it to that creature"
+    /// (Cass, Hand of Vengeance). "It" is the dying trigger subject; its
+    /// attachments are read from `GameState.auras_at_death`. The controller
+    /// takes every one it may (each only helps the new host): the Aura cards
+    /// its controller owns still in their graveyard, and the Equipment it
+    /// controls still on the battlefield.
+    ReturnDyingSubjectAttachmentsTo { host: Selector },
+    /// CR 707.2 + 303.4f — for each permanent `hosts` resolves to, create a
+    /// token that's a copy of the Aura `source` resolves to (on the
+    /// battlefield or, after a sacrifice, as its last known card) entering
+    /// attached to that permanent (Three Dog, Galaxy News DJ).
+    CreateTokenCopyOfAttachedToEach { source: Selector, hosts: Selector },
+    /// "Reveal up to `max` nonland cards from your hand. For each of those
+    /// cards that has the same mana value as another card revealed this way,
+    /// create a Treasure token" (Vault 21: House Gambit). The controller
+    /// reveals the set that pays best: whole groups of equal mana value,
+    /// largest first, each only while at least two of it still fit.
+    TreasurePerPairedManaValueInHand { max: u32 },
     /// CR 701.3 — "Attach [this] to `host`" (The Aetherspark's +1). Moves the
     /// source's attachment without paying an equip cost; a `host` that resolves
     /// to nothing leaves it where it is.
@@ -12022,6 +12054,7 @@ pub fn static_affects_spell_cost(effect: &StaticEffect) -> bool {
         | SE::CostReductionPerControllerExperience { .. }
         | SE::CostReductionPerCounterOnSource { .. }
         | SE::CostReductionTargetingFilter { .. }
+        | SE::CostReductionTargetingHost { .. }
         | SE::CostReductionForYourSpellsTargetingThis { .. }
         | SE::CostReductionWhile { .. }
         | SE::ExileCastCostReduction { .. }

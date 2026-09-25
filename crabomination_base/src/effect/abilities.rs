@@ -1989,6 +1989,13 @@ pub enum StaticEffect {
     /// Brass Squire-style discounts). Reduces the controller's equip-cost
     /// generic by `amount`, never below the colored portion.
     EquipCostReduction { amount: u32 },
+    /// "Equip abilities you activate that target enchanted creature cost {N}
+    /// less to activate. Aura spells you cast that target enchanted creature
+    /// cost {N} less to cast." (Strong Back.) Reduces the generic part of
+    /// the controller's equip cost or Aura spell whose target is the
+    /// permanent this Aura enchants. Read by `GameState::equip` and the
+    /// spell cost-reduction walk.
+    CostReductionTargetingHost { amount: u32 },
     /// Belt of Giant Strength — "this ability costs {X} less to activate,
     /// where X is the power of the creature it targets", on the Equipment's
     /// own equip. Read by `GameState::equip`.

@@ -1367,6 +1367,11 @@ impl Effect {
             Effect::SpellTaxUntilYourNextTurn { .. } => false,
             Effect::CreateTokenAttachedTo { target, .. } => sel_has_target(target),
             Effect::CreateTokenAttachedToEach { target, .. } => sel_has_target(target),
+            Effect::ReturnDyingSubjectAttachmentsTo { host } => sel_has_target(host),
+            Effect::CreateTokenCopyOfAttachedToEach { source, hosts } => {
+                sel_has_target(source) || sel_has_target(hosts)
+            }
+            Effect::TreasurePerPairedManaValueInHand { .. } => false,
             Effect::ManifestDread { who } => player_has_target(who),
             Effect::ManifestDreadRepeatThenCounters { .. } => false,
             Effect::Cloak { .. } => false,
@@ -2720,7 +2725,8 @@ impl Effect {
             // CreateTokenAttachedTo — the `target` is the creature the minted
             // Aura/Role token attaches to (Splashy Spellcaster's Role).
             Effect::CreateTokenAttachedTo { target, .. }
-            | Effect::CreateTokenAttachedToEach { target, .. } => sel_filter(target),
+            | Effect::CreateTokenAttachedToEach { target, .. }
+            | Effect::ReturnDyingSubjectAttachmentsTo { host: target } => sel_filter(target),
             Effect::PumpPT { what, .. }
             | Effect::SetBasePT { what, .. }
             | Effect::SwitchPT { what, .. }
@@ -5112,7 +5118,8 @@ impl Effect {
                     .then_some(filter)
                     .or_else(|| eff_find(then, slot, mode, kicked)),
                 Effect::CreateTokenAttachedTo { target, .. }
-                | Effect::CreateTokenAttachedToEach { target, .. } => sel_find(target, slot),
+                | Effect::CreateTokenAttachedToEach { target, .. }
+                | Effect::ReturnDyingSubjectAttachmentsTo { host: target } => sel_find(target, slot),
                 Effect::CopySpell { what, .. }
                 | Effect::CopySpellWithRiders { what, .. }
                 | Effect::CopySpellAsOneOneSpirit { what }
