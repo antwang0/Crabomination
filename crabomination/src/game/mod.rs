@@ -30220,6 +30220,8 @@ fn static_effect_to_effects(
             // Panoptic Projektor — read at trigger dispatch via
             // `face_up_trigger_extra_fires`; no layer effect.
             | StaticEffect::DoubleControllerTurnedFaceUpTriggers
+            // Anhelo — read by `casualty_for`; no layer effect.
+            | StaticEffect::FirstInstantSorceryHasCasualty(_)
             // Rod of Absorption — read at the end of spell resolution via
             // `resolving_spell_absorber`; no layer effect.
             | StaticEffect::ExileResolvingInstantsAndSorceries

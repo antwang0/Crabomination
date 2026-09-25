@@ -6471,7 +6471,8 @@ impl GameState {
             .hand
             .iter()
             .find(|c| c.id == card_id)
-            .and_then(|c| c.definition.casualty_cost())
+            .map(|c| c.definition.clone())
+            .and_then(|d| self.casualty_for(p, &d))
             .ok_or(GameError::CardNotInHand(card_id))?;
         // CR 702.153a — Casualty N asks for a creature with power N or
         // greater, and that is the computed power.
@@ -7364,6 +7365,26 @@ impl GameState {
     /// {3}, less every `FaceDownSpellsCostLess` static they control (Dream
     /// Chisel) and any turn-scoped grant (Goblin Maskmaker). Surfaced as
     /// `PlayerView.face_down_cast_cost`.
+    /// CR 702.153 — the casualty number `seat` may pay casting `def`: its own
+    /// Casualty N, else a `FirstInstantSorceryHasCasualty` grant (Anhelo, the
+    /// Painter) when it is an instant or sorcery and `seat` has cast none yet
+    /// this turn.
+    pub fn casualty_for(&self, seat: usize, def: &crate::card::CardDefinition) -> Option<u32> {
+        def.casualty_cost().or_else(|| {
+            if !(def.is_instant() || def.is_sorcery()) || self.players[seat].instants_or_sorceries_cast_this_turn > 0 {
+                return None;
+            }
+            self.battlefield
+                .iter()
+                .filter(|c| c.controller == seat)
+                .flat_map(|c| &c.definition.static_abilities)
+                .find_map(|sa| match sa.effect {
+                    crate::effect::StaticEffect::FirstInstantSorceryHasCasualty(n) => Some(n),
+                    _ => None,
+                })
+        })
+    }
+
     pub fn face_down_cast_cost(&self, seat: usize) -> u32 {
         let reduction: u32 = self
             .battlefield

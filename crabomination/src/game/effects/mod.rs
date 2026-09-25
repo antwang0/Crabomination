@@ -30910,6 +30910,54 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::OwnerShufflesInExilesTopPlaysOrCasts { what } => {
+                for ent in self.resolve_selector(what, ctx) {
+                    let cid = match ent {
+                        EntityRef::Permanent(c) | EntityRef::Card(c) => c,
+                        _ => continue,
+                    };
+                    let Some(owner) = self.battlefield_find(cid).map(|c| c.owner) else { continue };
+                    self.move_card_to(
+                        cid,
+                        &ZoneDest::Library {
+                            who: crate::effect::PlayerRef::Seat(owner),
+                            pos: crate::effect::LibraryPosition::Shuffled,
+                        },
+                        ctx,
+                        events,
+                    );
+                    let Some(top) = self.players[owner].library.first().map(|c| c.id) else { continue };
+                    self.move_card_to(top, &ZoneDest::Exile, ctx, events);
+                    let Some(card) = self.exile.iter().find(|c| c.id == top) else { continue };
+                    if card.definition.is_land() {
+                        let dest = ZoneDest::Battlefield {
+                            controller: crate::effect::PlayerRef::Seat(owner),
+                            tapped: false,
+                        };
+                        self.move_card_to(top, &dest, ctx, events);
+                        continue;
+                    }
+                    let def = card.definition.arc();
+                    let auto_target = self.auto_target_for_effect_avoiding(&def.effect, owner, Some(top));
+                    let cast = self.cast_card_for_free(
+                        owner,
+                        top,
+                        crate::card::Zone::Exile,
+                        auto_target,
+                        vec![],
+                        None,
+                        None,
+                        false,
+                    );
+                    // A cast the owner can't make (no legal target) leaves the
+                    // card in exile, as declining would.
+                    if let Ok(cast_events) = cast {
+                        events.extend(cast_events);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::GrantSpellsFlashThisTurn { who } => {
                 if let Some(seat) = self.resolve_player(who, ctx) {
                     self.players[seat].spells_as_flash_this_turn = true;

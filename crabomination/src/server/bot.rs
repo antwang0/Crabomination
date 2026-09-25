@@ -6692,6 +6692,8 @@ struct BoardFacts {
     /// An alternative-cost grant for hand spells is on the board (Fist of
     /// Suns, Kentaro, Demon of Fate's Design).
     grants_alt_cost: bool,
+    /// A `FirstInstantSorceryHasCasualty` static is on the board (Anhelo).
+    grants_casualty: bool,
 }
 
 impl BoardFacts {
@@ -6707,6 +6709,7 @@ impl BoardFacts {
             grants_gy_cast: false,
             grants_gy_cast_any_turn: false,
             grants_alt_cost: state.players[seat].life_alt_next_spell_this_turn,
+            grants_casualty: false,
         };
         for c in state.battlefield.iter() {
             if c.controller != seat {
@@ -6722,6 +6725,7 @@ impl BoardFacts {
                     }
                     SE::CreatureSpellsGainOffspring { .. } => f.grants_offspring = true,
                     SE::GrantConspireToSpells { .. } => f.grants_conspire = true,
+                    SE::FirstInstantSorceryHasCasualty(_) => f.grants_casualty = true,
                     SE::GraveyardCardsHaveEscape { .. }
                     | SE::GraveyardCardsHaveEscapeMatching { .. } => f.grants_escape = true,
                     SE::YourISSpellsHaveReplicate | SE::YourSpellsHaveReplicate { .. } => {
@@ -6786,6 +6790,9 @@ fn hand_specialties(state: &GameState, seat: usize, facts: &BoardFacts) -> u32 {
         }
         if facts.grants_offspring && def.is_creature() {
             m |= spec::KICKER;
+        }
+        if facts.grants_casualty && (def.is_instant() || def.is_sorcery()) {
+            m |= spec::SAC_EXTRA;
         }
         if facts.grants_conspire && (def.is_instant() || def.is_sorcery()) {
             m |= spec::CONSPIRE;
@@ -7833,7 +7840,7 @@ pub(super) fn cast_candidates<'a>(
     gated_block!(mask, spec::SAC_EXTRA, castable, {
     for c in state.players[seat].hand.iter() {
         let def = &c.definition;
-        let casualty = def.casualty_cost();
+        let casualty = state.casualty_for(seat, def);
         let bargain = def.keywords.contains(&crate::card::Keyword::Bargain);
         if casualty.is_none() && !bargain {
             continue;

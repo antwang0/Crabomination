@@ -1666,6 +1666,10 @@ pub enum StaticEffect {
     /// ability triggers an additional time." Read at trigger dispatch off the
     /// `triggered_by_face_up` candidate flag.
     DoubleControllerTurnedFaceUpTriggers,
+    /// Anhelo, the Painter — "The first instant or sorcery spell you cast
+    /// each turn has casualty N." Read by `GameState::casualty_for` (the
+    /// `CastSpellCasualty` action and the bot's casualty block).
+    FirstInstantSorceryHasCasualty(u32),
     /// Rod of Absorption — "Whenever a player casts an instant or sorcery
     /// spell, exile it instead of putting it into a graveyard as it
     /// resolves." Read at the end of spell resolution

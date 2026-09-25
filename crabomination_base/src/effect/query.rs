@@ -1350,6 +1350,7 @@ impl Effect {
             Effect::FaceDownSpellsCostLessThisTurn { .. } => false,
             Effect::NextFaceDownSpellCostsLessThisTurn { .. } => false,
             Effect::GrantSpellsFlashThisTurn { .. } => false,
+            Effect::OwnerShufflesInExilesTopPlaysOrCasts { what } => sel_has_target(what),
             Effect::DoubleXOfSpell { .. } => false,
             Effect::PutFaceDownOntoBattlefield { what } => sel_has_target(what),
             Effect::GrantKeywordsToSpell { what, .. }

@@ -7157,6 +7157,12 @@ pub enum Effect {
     /// (Alchemist's Refuge). Sets `Player.spells_as_flash_this_turn`,
     /// cleared at the turn boundary.
     GrantSpellsFlashThisTurn { who: PlayerRef },
+    /// Audacious Swap — "The owner of target nonenchantment permanent
+    /// shuffles it into their library, then exiles the top card of their
+    /// library. If it's a land card, they put it onto the battlefield.
+    /// Otherwise, they may cast it without paying its mana cost." The owner
+    /// casts; a seat that can't (or declines) leaves the card in exile.
+    OwnerShufflesInExilesTopPlaysOrCasts { what: Selector },
     /// "Double the value of X" for the spell `what` resolves to while it is
     /// on the stack (Unbound Flourishing's cast trigger) — the stack item's
     /// X doubles, so an "enters with X counters" reads the doubled value.
