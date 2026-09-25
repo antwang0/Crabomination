@@ -1408,9 +1408,12 @@ pub struct TurnRegistries {
     /// into every matching permanent's trigger set for the rest of the turn, so
     /// permanents entering later carry them too (Mage Hunters' Onslaught).
     /// Cleared at cleanup.
+    /// The `usize` is the granting player: a filter's "you" is them, not
+    /// each permanent's own controller (Predators' Hour's "creatures you
+    /// control" read every seat's creatures as "yours").
     #[serde(default)]
     pub(crate) turn_granted_triggers:
-        Vec<(crate::card::SelectionRequirement, crate::card::TriggeredAbility)>,
+        Vec<(crate::card::SelectionRequirement, crate::card::TriggeredAbility, usize)>,
     /// Desperate Gambit — sources whose next damage this turn is doubled. The
     /// entry is consumed by the first damage each names.
     #[serde(default)]
@@ -4834,8 +4837,8 @@ impl GameState {
         // CR 611.2 — turn-scoped floating watchers ("whenever a creature blocks
         // this turn, …"). Unlike an EOT trigger grant, these reach permanents
         // that enter after the granting spell resolved.
-        for (filter, ability) in &self.turn.turn_granted_triggers {
-            if matches(filter, card.controller, None) {
+        for (filter, ability, granter) in &self.turn.turn_granted_triggers {
+            if matches(filter, *granter, None) {
                 out.push(ability);
             }
         }
@@ -10598,7 +10601,7 @@ impl GameState {
             };
             out.push(format!("Each {whose}{which} tapped for mana produces {makes} instead"));
         }
-        for (filter, ability) in &self.turn.turn_granted_triggers {
+        for (filter, ability, _) in &self.turn.turn_granted_triggers {
             out.push(format!(
                 "This turn, each {} has: {}",
                 crate::server::view::requirement_noun_public(filter),

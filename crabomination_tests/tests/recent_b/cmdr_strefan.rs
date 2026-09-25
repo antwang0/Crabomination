@@ -343,3 +343,21 @@ fn the_bot_casts_a_divided_damage_spell_at_distinct_hostile_targets() {
         );
     }
 }
+
+/// CR 611.2 — Predators' Hour's "creatures you control" watcher is read from
+/// the caster's side: an opponent's creature hitting that same turn (a
+/// passed-around extra combat, simulated by handing the opponent the turn)
+/// doesn't carry it. The turn-scoped filter used to be checked against each
+/// permanent's own controller, so every seat's creatures were "yours".
+#[test]
+fn cr_611_2_predators_hour_only_arms_the_casters_creatures() {
+    let mut g = main_phase(2);
+    let top = g.add_card_to_library(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let ph = g.add_card_to_hand(0, catalog::predators_hour());
+    cast(&mut g, ph, &[]);
+    assert!(!g.permanent_has_keyword(theirs, &Keyword::Menace));
+    g.active_player_idx = 1;
+    connect(&mut g, &[theirs], 0);
+    assert!(!g.exile.iter().any(|c| c.id == top), "their Bear has no Predators' Hour trigger");
+}

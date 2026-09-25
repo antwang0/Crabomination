@@ -1050,7 +1050,7 @@ impl GameState {
         // every permanent.
         let any_static_grant = !trigger_grants.is_empty()
             || (!self.turn.turn_granted_triggers.is_empty()
-                && self.turn.turn_granted_triggers.iter().any(|(_, t)| t.event.kind == kind));
+                && self.turn.turn_granted_triggers.iter().any(|(_, t, _)| t.event.kind == kind));
         // Instance grants (`Effect::GrantTriggeredAbility`) of this kind: none
         // in the catalog today, read so the hook cannot drop one silently.
         let any_own_grant = self.any_granted_trigger_of_kind(&kind);

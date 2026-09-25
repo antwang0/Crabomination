@@ -10380,7 +10380,7 @@ impl GameState {
             }
 
             Effect::GrantTriggeredAbilityThisTurnToMatching { filter, trigger } => {
-                self.turn.turn_granted_triggers.push((filter.clone(), (**trigger).clone()));
+                self.turn.turn_granted_triggers.push((filter.clone(), (**trigger).clone(), ctx.controller));
                 Ok(())
             }
 
@@ -10401,6 +10401,7 @@ impl GameState {
                             duration: crate::effect::Duration::EndOfTurn,
                         },
                     },
+                    ctx.controller,
                 ));
                 Ok(())
             }
