@@ -350,6 +350,27 @@ the handoff.
   Scheme's connive (convokers on the resolving spell), Colossal Grave-Reaver's
   pick (mill BATCHES aren't delimited in `milled_ids_this_turn`).
 
+## FIXED 2026-09-25 (the Commander routine, session `011z4qQX`, Counter Blitz) — who put a counter, and two targeting bugs a deck's tests found
+
+- **CR 122.6 — a counter never recorded who put it**, so every "whenever
+  YOU put one or more counters" card scoped on the permanent's controller
+  instead: Hapatra and Lasting Tarfire fired on an opponent's counters, All
+  Will Be One / Earth Kingdom General never saw your counters on an
+  opponent's creature. `GameEvent::CounterAdded.placer` is the resolving
+  spell or ability's controller (`resolution_causer`), wither / infect combat
+  damage its source's controller, else CR 122.6a's permanent controller
+  (`events::counter_placer`); `EventScope::YouPutCounters` reads it and
+  `Predicate::CounterPutOnCreatureThisTurn` is a per-seat mask. Tests:
+  `counters::you_put_counters_keys_on_the_placer`,
+  `cmdr_auntie::{hapatra,lasting_tarfire}_ignores_an_opponents_counters`.
+- **CR 603.7d — `ReflexiveTrigger` auto-targeted without its source** (the
+  sourced helper's own doc said reflexive bodies pass it), so a
+  source-relative slot filter matched nothing: Auron's "power less than
+  Auron's power" never exiled.
+- **CR 601.2b — `auto_extra_targets_for` read a trigger's `CapTargetsAt` X
+  as 0**, so an ETB "up to X targets" (Blitzball Stadium's support X) filled
+  only slot 0; it reads the X stamped on the permanent, as the push does.
+
 ## FIXED 2026-09-25 (the Commander routine, session `01RyGJHK`) — two resume-channel bugs the strict and 8-seat pods found
 
 - **An as-enters ask inside a non-replayable resolution leaked.** Living

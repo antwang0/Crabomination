@@ -2273,3 +2273,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 The Wise Mothman | Mutant Menace (PIP) | the "up to X target creatures" are your greatest-power creatures, chosen on resolution rather than targeted. |
 | 🟡 Rampaging Yao Guai | Mutant Menace (PIP) | the artifacts and enchantments are chosen on resolution, not targeted. |
 | 🟡 Struggle for Project Purity | Mutant Menace (PIP) | Brotherhood draws you one card per opponent, not per card they actually drew. |
+| 🟡 Endless Detour | Counter Blitz (FIC) | the kind of target (spell, nonland permanent, graveyard card) is chosen as a mode. |
+| 🟡 Lulu, Stern Guardian | Counter Blitz (FIC) | the stunned attacker is chosen as the trigger resolves, not as it's put on the stack. |
+| 🟡 Rikku, Resourceful Guardian | Counter Blitz (FIC) | "can't be blocked by creatures your opponents control" is unblockable (the same in free-for-all). |

@@ -155,8 +155,9 @@ lists were picked.
 | **Explorers of the Deep** (LCC precon) GU | Hakbal of the Surging Soul | GU | 100 | 🟡 all 100 implemented, 2 carry residuals (Xolatoyac, the Smiling Flood, Bygone Marvels) |
 | **Buckle Up** (NEC precon) WU | Kotori, Pilot Prodigy | WU | 100 | 🟡 all 100 implemented, 3 carry residuals (Armed and Armored, Katsumasa, the Animator, Dance of the Manse) |
 | **Revenant Recon** (MKC precon) UB | Mirko, Obsessive Theorist | UB | 100 | 🟡 all 100 implemented, 3 carry residuals (Marvo, Deep Operative, Watcher of Hours, Whispering Snitch) |
-| **Blight Curse** (ECC precon) BRG | Auntie Ool, Cursewretch | BRG | 100 | 🟡 all 100 implemented, 4 carry residuals (Hapatra, Vizier of Poisons, Lasting Tarfire, Eventide's Shadow, Puca's Covenant) |
+| **Blight Curse** (ECC precon) BRG | Auntie Ool, Cursewretch | BRG | 100 | 🟡 all 100 implemented, 2 carry residuals (Eventide's Shadow, Puca's Covenant) |
 | **Mutant Menace** (PIP precon) BGU | The Wise Mothman | BGU | 100 | 🟡 all 100 implemented, 3 carry residuals (The Wise Mothman, Rampaging Yao Guai, Struggle for Project Purity) |
+| **Counter Blitz** (FIC precon) GWU | Tidus, Yuna's Guardian | GWU | 100 | 🟡 all 100 implemented, 3 carry residuals (Endless Detour, Lulu, Stern Guardian, Rikku, Resourceful Guardian) |
 | **Dance of the Elements** (ECC precon) WUBRG | Ashling, the Limitless | WUBRG | 100 | 🟡 all 100 implemented, 5 carry residuals (Flamebraider, Smokebraider, Primal Beyond, Haunting Voyage, Horde of Notions) |
 | **Veloci-Ramp-Tor** (LCC precon) RGW | Pantlaza, Sun-Favored | RGW | 100 | 🟡 all 100 implemented, 2 carry residuals (Sunfrill Imitator, Wrathful Raptors) |
 | **Multiverse Reforged** (FRC precon) WUBR | Jace, Multiverse Architect (**planeswalker**) | WUBR | 100 | 🟡 all 100 implemented, 2 carry residuals (Dack Fayden, Helping Hand; Tamiyo, Upriser Crowned) |
@@ -2595,6 +2596,30 @@ Vehicle, an activated manland or a stationed Spacecraft stayed home: Kotori
 Inspirit / Morska (seed 15101, 1,000) and six seats (15102, 1,000): all
 decided; census (15103, 500): nothing unplayed. `--bench` byte-identical.
 
+The **hundred-and-sixty-fifth** is Final Fantasy Commander's **Counter Blitz**
+(`CounterBlitzFinalFantasyX_FIC`, 2025-06-13) — Bant +1/+1 counters and
+proliferate under Tidus, Yuna's Guardian, `--pod-decks 165`. Twenty-eight
+cards were missing (`cmdr_tidus.rs`). The primitive it needed first is
+**who put a counter** (CR 122.6): `GameEvent::CounterAdded.placer` (the
+resolving spell or ability's controller; CR 122.6a's permanent controller
+otherwise; wither/infect combat damage is its source's controller's) read by
+`EventScope::YouPutCounters` and a per-seat `CounterPutOnCreatureThisTurn` —
+Rikku, Generous Patron and Lord Jyscal, and the fix for six shipped "whenever
+you put" cards that fired on anyone's counters (Hapatra, Lasting Tarfire, All
+Will Be One, Earth Kingdom General, Terrasymbiosis, Stocking the Pantry). Then
+`Effect::BecomeCopyKeepingName` (CR 707.9b, Kimahri),
+`Effect::RemoveAllCountersFromAnyNumber` (Sin) and an opponents-only
+`EachPlayerReturnsAMatchingPermanent` (Summon: Valefor). Its tests found two
+engine bugs: ⚠ **a reflexive trigger chose its targets without its source**
+(CR 603.7d), so "exile target creature with power less than Auron's" matched
+nothing, and ⚠ **an ETB "up to X targets" filled one slot** — the filler read
+the trigger's `CapTargetsAt` X as 0 (Blitzball Stadium's support X). Residuals:
+**Endless Detour**, **Lulu**, **Rikku** (INCOMPLETE_CARDS). Four seats beside
+Auntie / Y'shtola / Frodo + Sam (seed 16501, 1,000, `--card-census`: nothing
+unplayed): all decided, Tidus 16.7 %; six seats beside Jace / Terra / Mirko /
+Brass / Cloud (16502, 1,000): all decided, Tidus 22.7 %; strict debug pods
+(16501 × 30, 16502 × 36 six-seat) all decided. `--bench` byte-identical.
+
 The **hundred-and-sixty-fourth** is Lorwyn Eclipsed Commander's **Blight
 Curse** (`BlightCurse_ECC`, 2026-01-23) — Jund -1/-1 counters under Auntie Ool,
 Cursewretch, `--pod-decks 164` (built as 163; Scions & Spellcraft landed
@@ -2613,7 +2638,8 @@ that survives it). One six-seat game (seed 16302, game 525) is a genuine
 mandatory loop: a stolen Marauding Raptor under Everlasting Torment wither-
 damages each entering Snake, Hapatra makes another (CR 104.4b — a draw; the
 engine ends it at the action cap). Residuals: **Hapatra**, **Lasting
-Tarfire**, **Eventide's Shadow**, **Puca's Covenant** (INCOMPLETE_CARDS).
+Tarfire** (both fixed since: counters record who put them, CR 122.6),
+**Eventide's Shadow**, **Puca's Covenant** (INCOMPLETE_CARDS).
 Four seats beside Frodo + Sam / Jace / Terra (seed 16301, 1,000): all decided,
 Auntie 17.5 %; six seats beside Mirko / Brass / Cloud / Lathril / Pantlaza
 (16302, 1,000): 999 decided, Auntie 12.2 %; census (16303, 500): nothing
