@@ -5474,3 +5474,33 @@ pub const HEROES_MAIN: &[CardFactory] = &[
     vibrant_cityscape, plains, plains, island, island, swamp, swamp, mountain, mountain, forest,
     forest, forest, forest,
 ];
+
+pub const DAVROS_COMMANDERS: &[CardFactory] = &[davros_dalek_creator];
+
+/// **Masters of Evil**, the Doctor Who Commander deck (WHO, 2023-10-13),
+/// exactly as MTGJSON's `MastersOfEvil_WHO` prints it: 93 nonbasic cards +
+/// 2 Islands + 2 Swamps + 2 Mountains = 99. Grixis Daleks, Cybermen
+/// and villainous choices under Davros, Dalek Creator.
+pub const DAVROS_MAIN: &[CardFactory] = &[
+    missy, auton_soldier, the_flood_of_mars, cyber_conversion, hunted_by_the_family, dalek_drone,
+    vashta_nerada, time_reaper, doomsday_confluence, the_toymakers_trap, vislor_turlough,
+    genesis_of_the_daleks, this_is_how_it_ends, death_in_heaven, delete, ensnared_by_the_mara,
+    day_of_the_moon, the_master_multiplied, the_master_mesmerist, rassilon_the_war_president,
+    the_master_gallifreys_end, the_valeyard, weeping_angel, the_beast_deathless_prince, the_rani,
+    sycorax_commander, the_cyber_controller, cult_of_skaro, the_dalek_emperor,
+    ashad_the_lone_cyberman, blink, the_master_formed_anew, cybermen_squadron, cybership,
+    wound_reflection, blasphemous_act, solemn_simulacrum, the_sound_of_drums, river_of_tears,
+    foreboding_ruins, shadowblood_ridge, smoldering_marsh, temple_of_deceit, choked_estuary,
+    sunken_hollow, darkwater_catacombs, fetid_pools, temple_of_malice, canyon_slough,
+    exotic_orchard, temple_of_epiphany, frostboil_snarl, stormcarved_coast, fiery_islet,
+    lavaclaw_reaches, shipwreck_marsh, drowned_catacomb, haunted_ridge, dragonskull_summit,
+    creeping_tar_pit, gallifrey_council_chamber, renegade_silent, zygon_infiltrator, dont_blink,
+    exterminate, dalek_squadron, sontaran_general, great_intelligences_plan, cyberman_patrol,
+    cybermat, clockwork_droid, midnight_crusader_shuttle, laser_screwdriver, arcane_signet,
+    sol_ring, thought_vessel, mind_stone, lightning_greaves, propaganda, feed_the_swarm, snuff_out,
+    commanders_sphere, wayfarers_bauble, talisman_of_dominance, talisman_of_indulgence,
+    command_tower, terramorphic_expanse, thriving_moor, path_of_ancestry, temple_of_the_false_god,
+    reliquary_tower, crumbling_necropolis, ominous_cemetery,
+    // Basics
+    island, island, swamp, swamp, mountain, mountain,
+];

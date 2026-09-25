@@ -1475,6 +1475,15 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::HEROES_COMMANDERS,
             main: decks::HEROES_MAIN,
         },
+        // Hundred-and-eighty-first: Masters of Evil (WHO, Doctor Who) — Grixis
+        // Daleks, Cybermen and villainous choices under Davros, Dalek Creator
+        // (CR 708.2 face-down Cybermen, CR 701.55 The Valeyard). `--pod-decks
+        // 181`.
+        PodDeck {
+            name: "Davros, Dalek Creator (UBR)",
+            commanders: decks::DAVROS_COMMANDERS,
+            main: decks::DAVROS_MAIN,
+        },
     ]
 }
 
@@ -2117,6 +2126,9 @@ mod tests {
             // CR 702.85 granted cascade, CR 615 Khârn's control swap, CR
             // 508.1d a forced attack.
             ("Abaddon", [0xABAD, 179, 9103]),
+            // CR 701.55 villainous choices (doubled by The Valeyard), CR 708.2
+            // face-down Cybermen.
+            ("Davros", [0xDA05, 181, 9105]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
