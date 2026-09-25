@@ -1403,6 +1403,11 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::INVISIBLE_WOMAN_COMMANDERS,
             main: decks::INVISIBLE_WOMAN_MAIN,
         },
+        PodDeck {
+            name: "Inquisitor Greyfax (WUB)",
+            commanders: decks::GREYFAX_COMMANDERS,
+            main: decks::GREYFAX_MAIN,
+        },
     ]
 }
 

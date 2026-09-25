@@ -5209,3 +5209,34 @@ pub const INVISIBLE_WOMAN_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, island, island, island, island, mountain, mountain,
     mountain, forest, forest, forest, forest, forest,
 ];
+
+pub const GREYFAX_COMMANDERS: &[CardFactory] = &[inquisitor_greyfax];
+
+/// **Forces of the Imperium**, the Warhammer 40,000 Commander deck (40K,
+/// 2022-10-07), exactly as MTGJSON's `ForcesOfTheImperium_40K` prints it:
+/// 79 nonbasic cards + 8 Plains + 5 Islands + 7 Swamps = 99. Esper Astartes tokens under
+/// Inquisitor Greyfax.
+pub const GREYFAX_MAIN: &[CardFactory] = &[
+    bastion_protector, collective_effort, deploy_to_the_front, fell_the_mighty,
+    hour_of_reckoning, launch_the_fleet, martial_coup, entrapment_maneuver, utter_end,
+    swords_to_plowshares, mortify, everflowing_chalice, mind_stone, skullclamp, sol_ring,
+    talisman_of_dominance, talisman_of_hierarchy, talisman_of_progress, arcane_signet,
+    commanders_sphere, reconnaissance_mission, choked_estuary, darkwater_catacombs,
+    exotic_orchard, port_town, prairie_stream, skycloud_expanse, sunken_hollow,
+    arcane_sanctum, ash_barrens, memorial_to_glory, command_tower, dismal_backwater,
+    evolving_wilds, path_of_ancestry, scoured_barrens, terramorphic_expanse, tranquil_cove,
+    marneus_calgar, celestine_the_living_saint, defenders_of_humanity, for_the_emperor,
+    space_marine_devastator, triumph_of_saint_katherine, ultramarines_honour_guard,
+    vexilus_praetor, zephyrim, sister_of_silence, vanguard_suppressor, arco_flagellant,
+    primaris_eliminator, assault_intercessor, belisarius_cawl, birth_of_the_imperium,
+    callidus_assassin, commissar_severina_raine, company_commander, cybernetica_datasmith,
+    epistolary_librarian, exterminatus, the_flesh_is_weak, inquisitor_eisenhorn,
+    neyam_shai_murad, sister_hospitaller, sister_repentia, the_golden_throne,
+    inquisitorial_rosette, knight_paladin, reaver_titan, redemptor_dreadnought,
+    thunderhawk_gunship, and_they_shall_know_no_fear, grey_knight_paragon,
+    space_marine_scout, thunderwolf_cavalry, sicarian_infiltrator, sanguinary_priest,
+    deny_the_witch, primaris_chaplain,
+    // Basics: 8 plains, 5 island, 7 swamp
+    plains, plains, plains, plains, plains, plains, plains, plains, island, island, island,
+    island, island, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
