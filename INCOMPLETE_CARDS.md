@@ -2057,6 +2057,14 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Vislor Turlough | Masters of Evil (WHO) | goaded for the rest of the game, not only while the opponent controls it. |
 | 🟡 Weeping Angel | Masters of Evil (WHO) | its combat damage to a creature is dealt, then that creature is shuffled away (not prevented). |
 | 🟡 Zygon Infiltrator | Masters of Evil (WHO) | the copy lasts until end of turn, not while the target stays tapped. |
+| 🟡 Clockspinning | Timey-Wimey (WHO) | targets a permanent only, not a suspended card. |
+| 🟡 Everybody Lives! | Timey-Wimey (WHO) | players don't gain hexproof, and they can still lose life. |
+| 🟡 Idris, Soul of the TARDIS | Timey-Wimey (WHO) | gains the exiled card's activated abilities, not its triggered ones. |
+| 🟡 The Day of the Doctor | Timey-Wimey (WHO) | chapter IV spares every Doctor you control, not up to three chosen ones. |
+| 🟡 The Eleventh Hour | Timey-Wimey (WHO) | Prisoner Zero keeps the copied creature's name and creature types (plus Alien). |
+| 🟡 The Pandorica | Timey-Wimey (WHO) | the permanent phases in when The Pandorica leaves the battlefield, not when it untaps. |
+| 🟡 The War Doctor | Timey-Wimey (WHO) | "one or more" triggers once per permanent or card. |
+| 🟡 Wedding Ring | Timey-Wimey (WHO) | the watch reads any artifact named Wedding Ring the opponent controls. |
 | 🟡 Biotransference | Necron Dynasties (40K) | only permanents become artifacts: creature spells and creature cards in other zones stay non-artifacts (its own cast trigger reads "artifact or creature spell", the same set). |
 | 🟡 Canoptek Wraith | Necron Dynasties (40K) | each fetched basic shares a name with some permanent, not with the one land chosen. |
 | 🟡 Necron Deathmark | Necron Dynasties (40K) | the destroy and the mill are two enters triggers, not one. |
