@@ -3488,6 +3488,11 @@ impl crate::game::GameState {
         if receipt.pool_before.treasure_amount() > self.players[p].mana_pool.treasure_amount() {
             self.players[p].cast_paid_with_treasure = true;
         }
+        // Coin of Mastery — how much artifact mana this payment spent.
+        let spent = receipt.pool_before.artifact_amount().saturating_sub(self.players[p].mana_pool.artifact_amount());
+        if spent > 0 {
+            self.players[p].cast_paid_artifact_mana = spent;
+        }
         // Generator Servant — mana spent on a creature spell grants it haste.
         if kind.creature && receipt.side_effects.spent(SpendRestriction::CreatureHaste) {
             let p = self.priority.player_with_priority;
@@ -11189,6 +11194,9 @@ impl GameState {
             self.players[p].cast_paid_with_treasure = false;
             card.cast_with_treasure_mana = true;
         }
+        if self.players[p].cast_paid_artifact_mana > 0 {
+            card.cast_artifact_mana = std::mem::take(&mut self.players[p].cast_paid_artifact_mana).min(255) as u8;
+        }
 
         let was_creature_spell = !card.casting_alt_half() && card.definition.is_creature();
         // CR 702.146e — casting a daybound spell while it's neither day nor
@@ -18161,6 +18169,10 @@ impl GameState {
                 c.definition.subtypes.artifact_subtypes.contains(&crate::card::ArtifactSubtype::Treasure)
             })
             .map(|_| self.players[p].mana_pool.total());
+        // Coin of Mastery — any artifact's mana is marked the same way.
+        let artifact_before = source
+            .filter(|c| c.definition.is_artifact())
+            .map(|_| self.players[p].mana_pool.total());
         // Tezzeret, Betrayer of Flesh's "first artifact ability each turn".
         let first_artifact_ability = !self.players[p].artifact_ability_activated_this_turn
             && source.is_some_and(|c| c.controller == p && c.definition.is_artifact());
@@ -18197,6 +18209,13 @@ impl GameState {
             let d = pool.total().saturating_sub(total);
             if d > 0 {
                 pool.mark_from_treasure(d);
+            }
+        }
+        if let Some(total) = artifact_before {
+            let pool = &mut self.players[p].mana_pool;
+            let d = pool.total().saturating_sub(total);
+            if d > 0 {
+                pool.mark_from_artifact(d);
             }
         }
         out

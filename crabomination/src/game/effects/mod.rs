@@ -36,6 +36,7 @@ mod player_counters;
 mod counter_kinds;
 mod counter_blitz;
 mod fantastic_four;
+mod turtle_power;
 mod revival;
 mod wakanda;
 mod chosen_color_damage;
@@ -21068,37 +21069,11 @@ impl GameState {
             }
             Effect::TokenCopyTappedAttacking { source } => self.token_copy_tapped_attacking(source, ctx, events),
             Effect::Myriad => {
-                use crate::game::types::AttackTarget;
-                // Source must currently be attacking a player.
-                let Some(src) = ctx.source else { return Ok(()); };
-                let Some(src_attack) = self.attacking.iter().find(|a| a.attacker == src) else {
-                    return Ok(());
-                };
-                let defending = match src_attack.target {
-                    AttackTarget::Player(p) => p,
-                    AttackTarget::Planeswalker(pw) => {
-                        self.battlefield_find(pw).map(|c| c.controller).unwrap_or(usize::MAX)
-                    }
-                    AttackTarget::Battle(b) => {
-                        self.battlefield_find(b).and_then(|c| c.protected_by).unwrap_or(usize::MAX)
-                    }
-                };
-                let Some(ctrl) = self.battlefield_find(src).map(|c| c.controller) else {
-                    return Ok(());
-                };
-                let def = self.battlefield_find(src).map(|c| c.definition.arc());
-                let Some(def) = def else { return Ok(()); };
-                // CR 702.116a — one copy per opponent other than the defender;
-                // a seat that has left the game is no opponent (CR 800.4a).
-                let mut opps = self.opponents_of(ctrl);
-                opps.retain(|&q| q != defending);
-                for opp in opps {
-                    let id = self.mint_token_onto_battlefield(def.clone(), ctrl, true, events);
-                    if self.put_into_combat_attacking(id, AttackTarget::Player(opp)) {
-                        self.attacking_token_cleanup
-                            .push((id, AttackingTokenCleanup::ExileAtEndOfCombat));
-                    }
-                }
+                self.copies_attack_each_other_opponent(ctx, false, AttackingTokenCleanup::ExileAtEndOfCombat, false, events);
+                Ok(())
+            }
+            Effect::CopiesAttackEachOtherOpponent { non_legendary, cleanup } => {
+                self.copies_attack_each_other_opponent(ctx, *non_legendary, *cleanup, true, events);
                 Ok(())
             }
 

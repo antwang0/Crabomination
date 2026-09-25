@@ -4986,7 +4986,12 @@ impl GameState {
                         _ => {}
                     }
                 }
-                (sekki, grows, kind.or_else(|| self.attached_replaces_damage_with_counters(recipient)))
+                (
+                    sekki,
+                    grows,
+                    kind.or_else(|| self.attached_replaces_damage_with_counters(recipient))
+                        .or_else(|| self.teammate_replaces_damage_with_counters(recipient)),
+                )
             }
             None => return dealt,
         };
@@ -5165,6 +5170,23 @@ impl GameState {
                 })
             })
             .or_else(|| self.attached_replaces_damage_with_counters(id))
+            .or_else(|| self.teammate_replaces_damage_with_counters(id))
+    }
+
+    /// Vigor — another permanent of the creature's controller turning damage
+    /// to it into counters.
+    fn teammate_replaces_damage_with_counters(&self, id: CardId) -> Option<crate::card::CounterType> {
+        let c = self.battlefield_find(id)?;
+        if !c.definition.is_creature() {
+            return None;
+        }
+        let ctrl = c.controller;
+        self.battlefield.iter().filter(|s| s.controller == ctrl && s.id != id).find_map(|s| {
+            s.definition.static_abilities.iter().find_map(|sa| match sa.effect {
+                crate::effect::StaticEffect::ReplaceDamageToOtherCreaturesYouControlWithCounters { kind } => Some(kind),
+                _ => None,
+            })
+        })
     }
 
     /// Panther Habit — an attachment turning damage to `id` into counters.

@@ -23254,6 +23254,7 @@ impl GameState {
                         triggered_by_attack: matches!(ev, GameEvent::AttackerDeclared(_)),
                         triggered_by_land_entry: matches!(ev, GameEvent::LandPlayed { .. }),
                         triggered_by_face_up: matches!(ev, GameEvent::TurnedFaceUp { .. }),
+                        triggered_by_draw: matches!(ev, GameEvent::CardDrawn { .. }),
                         damaged_creature_controller: self.damaged_creature_controller(ev),
                         from_mana_ability: matches!(
                             ev,
@@ -23410,6 +23411,7 @@ impl GameState {
                             triggered_by_attack: false,
                             triggered_by_land_entry: false,
                             triggered_by_face_up: false,
+                            triggered_by_draw: false,
                             damaged_creature_controller: self.damaged_creature_controller(ev),
                         });
                     }
@@ -23445,6 +23447,7 @@ impl GameState {
                                 triggered_by_attack: false,
                                 triggered_by_land_entry: false,
                                 triggered_by_face_up: false,
+                                triggered_by_draw: false,
                                 damaged_creature_controller: self.damaged_creature_controller(ev),
                             });
                         }
@@ -23492,6 +23495,7 @@ impl GameState {
                                 triggered_by_attack: false,
                                 triggered_by_land_entry: false,
                                 triggered_by_face_up: false,
+                                triggered_by_draw: false,
                                 damaged_creature_controller: None,
                             });
                         }
@@ -23607,6 +23611,7 @@ impl GameState {
                             triggered_by_attack: matches!(ev, GameEvent::AttackerDeclared(_)),
                             triggered_by_land_entry: false,
                             triggered_by_face_up: false,
+                            triggered_by_draw: false,
                             damaged_creature_controller: None,
                             from_mana_ability: matches!(
                                 ev,
@@ -23675,6 +23680,7 @@ impl GameState {
                                 triggered_by_attack: matches!(ev, GameEvent::AttackerDeclared(_)),
                                 triggered_by_land_entry: false,
                                 triggered_by_face_up: false,
+                                triggered_by_draw: false,
                                 damaged_creature_controller: None,
                                 from_mana_ability: false,
                             });
@@ -23721,6 +23727,7 @@ impl GameState {
                             triggered_by_attack: false,
                             triggered_by_land_entry: false,
                             triggered_by_face_up: false,
+                            triggered_by_draw: false,
                             damaged_creature_controller: None,
                             from_mana_ability: false,
                         });
@@ -23773,6 +23780,7 @@ impl GameState {
                                     triggered_by_attack: false,
                                     triggered_by_land_entry: false,
                                     triggered_by_face_up: false,
+                                    triggered_by_draw: false,
                                     damaged_creature_controller: None,
                                 });
                                 break;
@@ -23816,6 +23824,7 @@ impl GameState {
                             triggered_by_attack: false,
                             triggered_by_land_entry: false,
                             triggered_by_face_up: false,
+                            triggered_by_draw: false,
                             damaged_creature_controller: None,
                             });
                         }
@@ -23909,6 +23918,7 @@ impl GameState {
                             triggered_by_attack: false,
                             triggered_by_land_entry: false,
                             triggered_by_face_up: false,
+                            triggered_by_draw: false,
                             damaged_creature_controller: None,
                         });
                     }
@@ -23963,6 +23973,7 @@ impl GameState {
                                 triggered_by_attack: false,
                                 triggered_by_land_entry: false,
                                 triggered_by_face_up: false,
+                                triggered_by_draw: false,
                                 damaged_creature_controller: None,
                                 });
                             }
@@ -23991,6 +24002,7 @@ impl GameState {
                                 triggered_by_attack: false,
                                 triggered_by_land_entry: false,
                                 triggered_by_face_up: false,
+                                triggered_by_draw: false,
                                 damaged_creature_controller: None,
                                 });
                             }
@@ -24177,6 +24189,17 @@ impl GameState {
             .count()
     }
 
+    /// Krang (`StaticEffect::DoubleControllerDrawTriggers`) — how many extra
+    /// times a draw-caused trigger of `controller`'s permanent fires.
+    pub(crate) fn draw_trigger_extra_fires(&self, controller: usize) -> usize {
+        self.battlefield
+            .iter()
+            .filter(|c| c.controller == controller)
+            .flat_map(|c| &c.definition.static_abilities)
+            .filter(|sa| matches!(sa.effect, crate::effect::StaticEffect::DoubleControllerDrawTriggers))
+            .count()
+    }
+
     /// Hama Pashar (`StaticEffect::DungeonRoomsTriggerTwice`) — how many extra
     /// times a room ability of `owner`'s dungeon triggers.
     pub(crate) fn dungeon_room_extra_fires(&self, owner: usize) -> usize {
@@ -24233,6 +24256,7 @@ impl GameState {
                 triggered_by_attack,
                 triggered_by_land_entry,
                 triggered_by_face_up,
+                triggered_by_draw,
                 damaged_creature_controller,
                 from_mana_ability,
             } = candidate;
@@ -24393,8 +24417,15 @@ impl GameState {
                 } else {
                     0
                 };
+                // Krang: a draw-caused trigger of a permanent you control.
+                let draw_extra = if triggered_by_draw {
+                    self.draw_trigger_extra_fires(controller)
+                } else {
+                    0
+                };
                 let fires = 1
                     + crate::game::actions::ally_trigger_extra_fires(self, controller, source)
+                    + draw_extra
                     + death_extra
                     + attack_extra
                     + land_extra
@@ -30605,6 +30636,8 @@ fn static_effect_to_effects(
             // Panoptic Projektor — read at trigger dispatch via
             // `face_up_trigger_extra_fires`; no layer effect.
             | StaticEffect::DoubleControllerTurnedFaceUpTriggers
+            // Krang — read at trigger dispatch via `draw_trigger_extra_fires`.
+            | StaticEffect::DoubleControllerDrawTriggers
             // Anhelo — read by `casualty_for`; no layer effect.
             | StaticEffect::FirstInstantSorceryHasCasualty(_)
             // Rod of Absorption — read at the end of spell resolution via
@@ -30872,6 +30905,7 @@ fn static_effect_to_effects(
             // consulted at the combat + noncombat damage sites, not continuous.
             | StaticEffect::ReplaceDamageToSelfWithCounters { .. }
             | StaticEffect::ReplaceDamageToAttachedWithCounters { .. }
+            | StaticEffect::ReplaceDamageToOtherCreaturesYouControlWithCounters { .. }
             | StaticEffect::CombatDamageToPlayerBecomesCountersAndMill
             | StaticEffect::CombatDamageToPlayersBecomesMill { .. }
             // PumpSelfByControlledPermanents — needs a live battlefield

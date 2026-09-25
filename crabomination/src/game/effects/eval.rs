@@ -208,6 +208,16 @@ fn filter_can_match_land(f: &SelectionRequirement) -> bool {
 }
 
 impl GameState {
+    /// Every counter (keyword counters included, CR 122.1) on the
+    /// permanents `seat` controls.
+    pub(crate) fn counters_among_permanents_of(&self, seat: usize) -> u32 {
+        self.battlefield
+            .iter()
+            .filter(|c| c.controller == seat)
+            .map(|c| c.counters.values().sum::<u32>() + c.keyword_counters.values().sum::<u32>())
+            .sum()
+    }
+
     /// One of the five board/resource tallies the EXO Keeper and Oath cycles
     /// compare between two seats.
     pub fn player_tally(&self, seat: usize, what: crate::card::PlayerTally) -> i64 {
@@ -831,6 +841,15 @@ impl GameState {
                     .filter(|a| a.target == crate::game::types::AttackTarget::Player(p))
                     .count() as i32
             }),
+            Value::OpponentsAttackedThisTurn => {
+                // The list survives until the seat's next turn (O-Kagachi's
+                // "last turn"), so off-turn it is not "this turn".
+                let me = ctx.controller;
+                if self.active_player_idx != me {
+                    return 0;
+                }
+                self.players[me].attacked_players_this_turn.iter().filter(|&&d| d != me).count() as i32
+            }
             Value::OpponentsAttackedThisCombat => {
                 use crate::game::types::AttackTarget;
                 let mut seats = crate::fxhash::HashSet::default();
@@ -1451,6 +1470,10 @@ impl GameState {
                 self.scratch.destroyed_controllers_this_resolution.iter().filter(|&&(c, _)| c == p).count() as i32
             }
             Value::ConvergedValue => ctx.converged_value as i32,
+            Value::ArtifactManaSpentToCastSource => ctx
+                .source
+                .and_then(|id| self.find_card_anywhere(id))
+                .map_or(0, |c| i32::from(c.cast_artifact_mana)),
             Value::CardTypesAmongPermanentsAndGraveyard(who) => {
                 let Some(p) = self.resolve_player(who, ctx) else { return 0 };
                 let mut kinds: Vec<&crate::card::CardType> = Vec::new();
@@ -5451,6 +5474,9 @@ impl GameState {
                     // library/hand-search path — so counting through it made
                     // a `Tapped` inner filter count zero. `_static_on` takes
                     // the instance, so this costs no lookup.
+                    R::ManaValueAtMostCountersAmongYours => {
+                        card.definition.cost.cmc() <= self.counters_among_permanents_of(controller)
+                    }
                     R::ManaValueAtMostYourCount(inner) => {
                         let n = self
                             .battlefield
@@ -6342,6 +6368,9 @@ impl GameState {
                 card.definition.cost.cmc() <= self.devotion_to(controller, &[*color]).max(0) as u32
             }
             // Same battlefield-aware walk as the static side — see the
+            R::ManaValueAtMostCountersAmongYours => {
+                card.definition.cost.cmc() <= self.counters_among_permanents_of(controller)
+            }
             // note on its `ManaValueAtMostYourCount` arm.
             R::ManaValueAtMostYourCount(inner) => {
                 let n = self

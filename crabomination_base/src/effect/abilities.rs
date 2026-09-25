@@ -1719,6 +1719,11 @@ pub enum StaticEffect {
     /// ability triggers an additional time." Read at trigger dispatch off the
     /// `triggered_by_face_up` candidate flag.
     DoubleControllerTurnedFaceUpTriggers,
+    /// Krang, the All-Powerful — "If a player drawing a card causes a
+    /// triggered ability of a permanent you control to trigger, that ability
+    /// triggers an additional time." Read at trigger dispatch off the
+    /// `triggered_by_draw` candidate flag.
+    DoubleControllerDrawTriggers,
     /// Anhelo, the Painter — "The first instant or sorcery spell you cast
     /// each turn has casualty N." Read by `GameState::casualty_for` (the
     /// `CastSpellCasualty` action and the bot's casualty block).
@@ -2756,6 +2761,12 @@ pub enum StaticEffect {
     /// `ReplaceDamageToSelfWithCounters` of the permanent this is attached to,
     /// read at the same two damage sites.
     ReplaceDamageToAttachedWithCounters { kind: CounterType },
+    /// Vigor — "If damage would be dealt to another creature you control,
+    /// prevent that damage. Put a +1/+1 counter on that creature for each 1
+    /// damage prevented this way": the `ReplaceDamageToSelfWithCounters` of
+    /// every other creature the source's controller controls, read at the
+    /// same two damage sites.
+    ReplaceDamageToOtherCreaturesYouControlWithCounters { kind: CounterType },
     /// CR 614 — "If damage would be dealt to you, put that many `kind`
     /// counters on this permanent instead" (Delaying Shield).
     ReplaceDamageToYouWithCountersOnSource { kind: CounterType },

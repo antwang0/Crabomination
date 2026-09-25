@@ -3060,6 +3060,7 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::Amass { .. } => "Amass",
         Effect::EmpowerJace { .. } => "Empower Jace",
         Effect::Myriad => "Myriad",
+        Effect::CopiesAttackEachOtherOpponent { .. } => "Copies attack each other opponent",
         Effect::Enlist | Effect::EnlistThen { .. } => "Enlist",
         Effect::GrantNextInstantOrSorceryDiscountThisTurn { .. } => "Discount next spell",
         Effect::SupportCounters { .. } => "Support",

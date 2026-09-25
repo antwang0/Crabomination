@@ -1550,6 +1550,11 @@ pub struct TriggerCandidate {
     /// time".
     #[serde(default)]
     pub triggered_by_face_up: bool,
+    /// True if the originating event was a card draw — Krang, the
+    /// All-Powerful's "a player drawing a card causes a triggered ability …
+    /// triggers an additional time".
+    #[serde(default)]
+    pub triggered_by_draw: bool,
     /// The controller of the creature whose being dealt damage fired this
     /// trigger (a `DamageDealt` to a creature), else `None` — Wayta, Trainer
     /// Prodigy's "a creature you control being dealt damage causes …

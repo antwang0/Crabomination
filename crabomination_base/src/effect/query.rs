@@ -1315,7 +1315,7 @@ impl Effect {
             Effect::RevealTopToHandLoseLifeRepeat => false,
             Effect::Demonstrate => false,
             Effect::Cipher => false,
-            Effect::Myriad => false,
+            Effect::Myriad | Effect::CopiesAttackEachOtherOpponent { .. } => false,
             Effect::TokenCopyAttackingUntilEndOfCombat { source } => sel_has_target(source),
             Effect::RevealUntilSharesCardTypeToBattlefield { with } => sel_has_target(with),
             Effect::JoinCombatAttacking { what } => sel_has_target(what),

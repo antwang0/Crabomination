@@ -167,6 +167,12 @@ pub struct PlayerCold {
     /// is written so an ordinary cast never unshares the seat.
     #[serde(skip)]
     pub cast_paid_with_treasure: bool,
+    /// Transient: how much artifact-produced mana this seat's cast in flight
+    /// spent (the pool's `artifact` provenance fell). Consumed by
+    /// `finalize_cast` into `CardData::cast_artifact_mana`, read-guarded the
+    /// same way.
+    #[serde(skip)]
+    pub cast_paid_artifact_mana: u32,
     /// CR 903.4a — this seat's combined commander colour identity, computed
     /// once as the commanders are seated because identity is established
     /// before the game and never changes. Cached because the walk behind it

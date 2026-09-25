@@ -923,6 +923,10 @@ pub enum Value {
     /// to a defending player). One in a normal 1v1 combat; more in multiplayer
     /// when a batch spreads attackers across seats.
     OpponentsAttackedThisCombat,
+    /// The number of distinct opponents the context's controller attacked
+    /// (with a creature attacking that player, CR 508.1) this turn — Fast
+    /// Forward's "for each opponent you attacked this turn".
+    OpponentsAttackedThisTurn,
     /// Creatures attacking the player `PlayerRef` resolves to — "the number
     /// of creatures attacking them" (Within Range), planeswalkers and battles
     /// not counted (CR 506.3).
@@ -1263,6 +1267,10 @@ pub enum Value {
     /// from `EffectContext.converged_value` here. Used by Prismatic
     /// Ending and Pest Control.
     ConvergedValue,
+    /// Mana from artifact sources spent to cast the source (Coin of Mastery's
+    /// enters-with rider): the `CardData::cast_artifact_mana` stamp, so 0 for
+    /// a permanent that wasn't cast.
+    ArtifactManaSpentToCastSource,
     /// CR 702.157 — the number of times the source permanent's Squad cost was
     /// paid (`CardInstance.squad_count`). Reads `ctx.source`. Zero off-source.
     SquadCount,
@@ -8097,6 +8105,12 @@ pub enum Effect {
     /// are exiled at end of combat. No-op outside combat / when the source
     /// isn't attacking a player.
     Myriad,
+    /// Shredder, Shadow Master — Myriad's shape with its own terms: "for each
+    /// other opponent, create a token that's a copy of [the source] tapped and
+    /// attacking that player, except it isn't legendary", cleaned up by
+    /// `cleanup` at end of combat. Unlike Myriad the source must be attacking
+    /// a *player* ("attacks a player").
+    CopiesAttackEachOtherOpponent { non_legendary: bool, cleanup: AttackingTokenCleanup },
     /// "Create a token that's a copy of [card], tapped and attacking. Exile
     /// the token at end of combat" (Gyrus, Waker of Corpses). `source` names
     /// the card to copy, found on the battlefield, in exile or a graveyard

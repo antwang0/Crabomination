@@ -376,6 +376,8 @@ pub enum CreatureType {
     Gamma,
     // Warhammer 40,000 Commander (Magnus the Red, Mortarion).
     Primarch,
+    // Teenage Mutant Ninja Turtles Commander (Krang, the All-Powerful).
+    Utrom,
 }
 
 /// Land subtypes (basic land types + others).
@@ -3152,6 +3154,10 @@ pub enum SelectionRequirement {
     /// filter that the evaluating player controls (Spellstutter Sprite's
     /// "mana value X or less, where X is the number of Faeries you control").
     ManaValueAtMostYourCount(Box<SelectionRequirement>),
+    /// MV at most the number of counters (every kind, keyword counters
+    /// included — CR 122.1) among permanents the evaluating player controls
+    /// (Dimension X Pizzasaur's reflexive destroy).
+    ManaValueAtMostCountersAmongYours,
     /// LCI fathomless descent — MV at most the number of permanent cards in the
     /// evaluating player's graveyard (Squirming Emergence's reanimation cap).
     ManaValueAtMostPermanentsInYourGraveyard,
@@ -8882,6 +8888,10 @@ pub struct CardData {
     /// Treasure provenance fell during its payment). Read by
     /// `Predicate::CastWithTreasureMana`. Not serialized.
     pub cast_with_treasure_mana: bool,
+    /// Mana from artifact sources spent to cast this spell, capped at 255.
+    /// Read by `Value::ArtifactManaSpentToCastSource` (Coin of Mastery). Not
+    /// serialized.
+    pub cast_artifact_mana: u8,
     /// The source whose `PutFromHandOntoBattlefield` put this permanent onto
     /// the battlefield; cleared as it leaves (CR 400.7). Read by
     /// `SelectionRequirement::PutOntoBattlefieldBySource`. Not serialized.
@@ -9715,6 +9725,7 @@ impl CardInstance {
             plot_on_resolve: false,
             exile_with_on_resolve: None,
             cast_with_treasure_mana: false,
+            cast_artifact_mana: 0,
             put_onto_battlefield_by: None,
             cast_via_mayhem: false,
             cast_via_madness: false,
