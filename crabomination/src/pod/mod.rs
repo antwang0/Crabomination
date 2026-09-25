@@ -1152,6 +1152,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::INSPIRIT_COMMANDERS,
             main: decks::INSPIRIT_MAIN,
         },
+        // Hundred-and-fortieth: Maestros Massacre (Streets of New
+        // Capenna) — Grixis spell-copying and casualty under Anhelo,
+        // the Painter. `--pod-decks 140`.
+        PodDeck {
+            name: "Anhelo, the Painter (UBR)",
+            commanders: decks::ANHELO_COMMANDERS,
+            main: decks::ANHELO_MAIN,
+        },
     ]
 }
 

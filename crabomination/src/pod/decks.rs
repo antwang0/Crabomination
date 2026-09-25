@@ -4245,3 +4245,32 @@ pub const INSPIRIT_MAIN: &[CardFactory] = &[
     // Basics: 3 plains, 3 island, 3 mountain
     plains, plains, plains, island, island, island, mountain, mountain, mountain,
 ];
+
+pub const ANHELO_COMMANDERS: &[CardFactory] = &[anhelo_the_painter];
+
+/// **Maestros Massacre**, the Streets of New Capenna Commander deck
+/// (2022-04-29), exactly as MTGJSON's `MaestrosMassacre_NCC` prints it: 81
+/// nonbasic cards + 7 Island + 6 Swamp + 5 Mountain = 99. Grixis spell-
+/// copying and casualty under Anhelo, the Painter.
+pub const ANHELO_MAIN: &[CardFactory] = &[
+    parnesse_the_subtle_brush, bloodsoaked_champion, cormela_glamour_thief, dogged_detective,
+    goblin_electromancer, kess_dissident_mage, puppeteer_clique, rekindling_phoenix,
+    spellbinding_soprano, squee_the_immortal, sinister_concierge, syrix_carrier_of_the_flame,
+    skyclave_shade, woe_strider, army_of_the_damned, bedevil, call_the_skybreaker,
+    chain_reaction, clone_legion, damnable_pact, deep_analysis, drawn_from_dreams,
+    dread_summons, feed_the_swarm, flawless_forgery, hex, maestros_confluence, make_an_example,
+    ponder, preordain, reign_of_the_pit, rivers_rebuke, sever_the_bloodline,
+    talrands_invocation, xanders_pact, zndrsplts_judgment, a_little_chat, dig_through_time,
+    fact_or_fiction, frantic_search, maestros_charm, mystic_confluence, waste_management,
+    arcane_signet, audacious_swap, body_count, commanders_sphere, dimir_signet, fellwar_stone,
+    izzet_signet, lightning_greaves, rakdos_signet, sol_ring, mimic_vat, smugglers_buggy,
+    twinning_staff, wayfarers_bauble, cryptic_pursuit, determined_iteration, double_vision,
+    extravagant_replication, rite_of_the_raging_storm, maestros_theater, ash_barrens,
+    command_tower, crumbling_necropolis, grixis_panorama, myriad_landscape, path_of_ancestry,
+    thriving_bluff, thriving_isle, thriving_moor, cascade_bluffs, choked_estuary,
+    darkwater_catacombs, exotic_orchard, foreboding_ruins, shadowblood_ridge, smoldering_marsh,
+    sunken_hollow, temple_of_epiphany,
+    // Basics: 7 island, 6 swamp, 5 mountain
+    island, island, island, island, island, island, island, swamp, swamp, swamp, swamp, swamp,
+    swamp, mountain, mountain, mountain, mountain, mountain,
+];
