@@ -539,7 +539,7 @@ pub fn karvanista_loyal_lupari() -> CardDefinition {
             amount: Value::ONE,
         })],
         adventure: Some(Box::new(Adventure {
-            name: "Lupari Shield".into(),
+            name: "Lupari Shield",
             cost: cost(&[generic(1), g()]),
             card_types: vec![CardType::Sorcery],
             effect: Effect::GrantKeyword { what: humans(), keyword: Keyword::Indestructible, duration: Duration::UntilYourNextUntap },
@@ -1171,7 +1171,7 @@ pub fn twice_upon_a_time() -> CardDefinition {
         )),
         exile_on_resolve: true,
         adventure: Some(Box::new(Adventure {
-            name: "Unlikely Meeting".into(),
+            name: "Unlikely Meeting",
             cost: cost(&[generic(2), u()]),
             card_types: vec![CardType::Sorcery],
             effect: Effect::Search { who: PlayerRef::You, filter: doctors(), to: ZoneDest::Hand(PlayerRef::You) },
