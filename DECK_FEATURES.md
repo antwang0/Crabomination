@@ -147,6 +147,7 @@ lists were picked.
 | **Creative Energy** (M3C precon) URW | Satya, Aetherflux Genius | URW | 100 | 🟡 all 100 implemented, 6 carry residuals (Cayth, Filigree Racer, Hourglass of the Lost, Overclocked Electromancer, Razorfield Ripper, Sphinx of the Revelation) |
 | **Deep Clue Sea** (MKC precon) GWU | Morska, Undersea Sleuth | GWU | 100 | 🟡 all 100 implemented, 3 carry residuals (Aerial Extortionist, Alandra, Sky Dreamer, Erdwal Illuminator) |
 | **Counter Intelligence** (EOC precon) URW | Inspirit, Flagship Vessel (**Spacecraft**) | URW | 100 | 🟡 all 100 implemented, 6 carry residuals (Cloud Key, Inspirit, Depthshaker Titan, Moxite Refinery, Resourceful Defense, Ripples of Potential) |
+| **Explorers of the Deep** (LCC precon) GU | Hakbal of the Surging Soul | GU | 100 | 🟡 all 100 implemented, 2 carry residuals (Xolatoyac, the Smiling Flood, Bygone Marvels) |
 | **Coven Counters** (MIC precon) GW | Leinore, Autumn Sovereign | GW | 100 | 🟡 all 100 implemented, 4 carry residuals (Curse of Conformity, Celestial Judgment, Sigardian Zealot, Moorland Rescuer) |
 | **Arcane Maelstrom** (C20 precon) GUR | Kalamax, the Stormsire | GUR | 100 | 🟡 all 100 implemented, 4 carry residuals (Eon Frolicker, Haldan, Pako, Lavabrink Floodgates) |
 | **Enhanced Evolution** (C20 precon) BGU | Otrimi, the Ever-Playful | BGU | 100 | 🟡 all 100 implemented, 4 carry residuals (Capricopian, Manascape Refractor, Mindleecher, Vastwood Hydra) |
@@ -2412,6 +2413,21 @@ Loyalty**, **Tamiyo** (INCOMPLETE_CARDS). A 200-game census beside
 Hearthhull / Bright-Palm / Brimaz (seed 9551) decided 200/200 with zero
 panics and no card of the four lists unplayed, Ms. Bumbleflower winning
 38.0 %. `--bench` byte-identical.
+
+The **hundred-and-forty-fifth** is Lost Caverns of Ixalan Commander's
+**Explorers of the Deep** (`ExplorersOfTheDeep_LCC`, 2023-11-17) — Simic
+Merfolk and explore under Hakbal of the Surging Soul, `--pod-decks 145`
+(committed as 144 until Creative Energy landed). Twenty-one cards were
+missing (`cmdr_hakbal.rs`; Commit // Memory came with Obscura Operation). The
+primitives: `StaticEffect::ExploresTwice` (CR 701.44, Topography Tracker),
+`StaticEffect::GraveyardCardsHaveRetrace { filter }` (CR 702.81, Deeproot
+Historian, read by `effective_retrace`), `StaticEffect::
+TaxOpponentAbilitiesTargeting` (Kopala). Residuals: **Xolatoyac** (its
+flooded lands stop being Islands when it leaves) and **Bygone Marvels** (the
+auto-decider keeps a copy's target). Four-seat pods beside Inspirit / Morska /
+Satya (seed 14501, 1,000): all decided, Hakbal 50.9 %; six seats (14502,
+1,000): all decided, 43.7 %; census (14503, 500): nothing unplayed. `--bench`
+byte-identical.
 
 The **hundred-and-thirty-ninth** is Edge of Eternities Commander's **Counter
 Intelligence** (`CounterIntelligence_EOC`, 2025-08-01) — Jeskai artifacts and

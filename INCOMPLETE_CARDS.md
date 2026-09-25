@@ -2184,3 +2184,5 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Moxite Refinery | Counter Intelligence (EOC) | the X counters may come from among several of your artifacts and creatures, not one; its two modes are two abilities. |
 | 🟡 Resourceful Defense | Counter Intelligence (EOC) | the {4}{W} move takes every counter ("any number"). |
 | 🟡 Ripples of Potential | Counter Intelligence (EOC) | the phase-out is all or none of your permanents with counters, not a pick among those proliferated. |
+| 🟡 Xolatoyac, the Smiling Flood | Explorers of the Deep (LCC) | a flooded land is an Island only while Xolatoyac is on the battlefield (the ruling keeps it one until the counter goes). |
+| 🟡 Bygone Marvels | Explorers of the Deep (LCC) | the Descend 8 copies' new targets are the decider's; the auto-decider keeps the original's, so that copy returns nothing. |
