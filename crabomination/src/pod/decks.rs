@@ -1,6 +1,6 @@
 //! The Commander pod's target decks.
 //!
-//! Ten hand-picked commanders plus a hundred and twenty-three official preconstructed lists, each a
+//! Ten hand-picked commanders plus a hundred and thirty-three official preconstructed lists, each a
 //! 99 of cards this engine implements: legal under CR 903 (100 cards
 //! including the commander, singleton outside basics, every card inside the
 //! commander's CR 903.4 color identity) and Commander-legal per Scryfall's
@@ -8,7 +8,7 @@
 //!
 //! The ten were built by hand because the offline Scryfall cache cannot say
 //! how a precon splits into decks; MTGJSON's deck files can, and the eleventh
-//! through hundred-and-thirty-third (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
+//! through hundred-and-forty-third (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
 //! Win, Tails You Lose, Goblin Storm, Foundations Commander's Wretched Ranks,
 //! Tramplesaurus Rex and Keen Engineering, Commander Legends' Reap the Tides,
 //! Phyrexia: All Will Be One's Corrupting Influence, Zendikar Rising's Sneak
@@ -53,8 +53,9 @@
 //! Planeswalker Party, Secret Lair's 20 Ways to Win, Murders at Karlov Manor
 //! Commander's Blame Game, Bloomburrow Commander's Family Matters and
 //! Foundations Commander's Reign of Dragons, among others — seat 124 is
-//! Innistrad: Crimson Vow Commander's Spirit Squadron and seat 133 Duskmourn
-//! Commander's Jump Scare!) are taken from one card for card. What all of them keep
+//! Innistrad: Crimson Vow Commander's Spirit Squadron, seat 133 Duskmourn
+//! Commander's Jump Scare! and seat 143 Streets of New Capenna Commander's
+//! Obscura Operation) are taken from one card for card. What all of them keep
 //! from the precon idea is what the pod needs — fixed, legal, varied color
 //! identities, and built to play against each other.
 //! One is a Partner pair (CR 702.124b), one is a **planeswalker**
@@ -4329,4 +4330,33 @@ pub const KADENA_MAIN: &[CardFactory] = &[
     // Basics: 5 island, 3 swamp, 7 forest
     island, island, island, island, island, swamp, swamp, swamp, forest, forest, forest, forest,
     forest, forest, forest,
+];
+
+pub const KAMIZ_COMMANDERS: &[CardFactory] = &[kamiz_obscura_oculus];
+
+/// **Obscura Operation**, the Streets of New Capenna Commander deck (NCC,
+/// 2022-04-29), exactly as MTGJSON's `ObscuraOperation_NCC` prints it:
+/// 82 nonbasic cards + 5 Plains + 6 Islands + 6 Swamps = 99. Esper connive and evasion under
+/// Kamiz, Obscura Oculus.
+pub const KAMIZ_MAIN: &[CardFactory] = &[
+    tivit_seller_of_secrets, aerial_extortionist, cephalid_facetaker, skyway_robber,
+    misfortune_teller, oskar_rubbish_reclaimer, silent_blade_oni, wrexial_the_risen_deep,
+    alela_artful_provocateur, fallen_shinobi, drana_liberator_of_malakir, archon_of_coronation,
+    sun_titan, champion_of_wits, chasm_skulker, ghostly_pilferer, identity_thief, nadir_kraken,
+    custodi_lich, graveblade_marauder, daxos_of_meletis, dragonlord_ojutai,
+    shadowmage_infiltrator, thief_of_sanity, daring_saboteur, looter_il_kor, whirler_rogue,
+    inkfathom_witch, jailbreak, writ_of_return, austere_command, dusk_dawn, stolen_identity,
+    nightmare_unmaking, profane_command, treasure_cruise, an_offer_you_cant_refuse,
+    change_of_plans, lethal_scheme, obscura_charm, obscura_confluence, commit_memory, utter_end,
+    swords_to_plowshares, in_too_deep, life_insurance, smugglers_share, arcane_signet,
+    azorius_signet, commanders_sphere, currency_converter, dimir_signet, fellwar_stone,
+    mask_of_riddles, mask_of_the_schemer, orzhov_signet, quietus_spike, strionic_resonator,
+    sol_ring, swiftfoot_boots, wayfarers_bauble, fetid_heath, creeping_tar_pit, sunken_hollow,
+    choked_estuary, arcane_sanctum, darkwater_catacombs, exotic_orchard, port_town,
+    prairie_stream, skycloud_expanse, temple_of_silence, ash_barrens, command_tower,
+    esper_panorama, myriad_landscape, obscura_storefront, path_of_ancestry, rogues_passage,
+    thriving_heath, thriving_isle, thriving_moor,
+    // Basics: 5 plains, 6 island, 6 swamp
+    plains, plains, plains, plains, plains, island, island, island, island, island, island,
+    swamp, swamp, swamp, swamp, swamp, swamp,
 ];

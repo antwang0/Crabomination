@@ -1175,6 +1175,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::KADENA_COMMANDERS,
             main: decks::KADENA_MAIN,
         },
+        // Hundred-and-forty-third: the hundred-and-thirty-third official
+        // list (Obscura Operation, NCC) — Esper connive under Kamiz.
+        // `--pod-decks 143`.
+        PodDeck {
+            name: "Kamiz, Obscura Oculus (WUB)",
+            commanders: decks::KAMIZ_COMMANDERS,
+            main: decks::KAMIZ_MAIN,
+        },
     ]
 }
 
