@@ -1057,6 +1057,25 @@ impl GameState {
                 }
                 counts.values().max().copied().unwrap_or(0) + changelings
             }
+            Value::DistinctCreatureTypesAmongYourCreatures => {
+                let mut seen: Vec<crate::card::CreatureType> = Vec::new();
+                for c in self.battlefield.iter().filter(|c| c.controller == ctx.controller) {
+                    let Some(cp) = self.computed_permanent(c.id) else { continue };
+                    if !cp.card_types().contains(&crate::card::CardType::Creature) {
+                        continue;
+                    }
+                    // CR 702.73a — every creature type: more than any cap.
+                    if cp.keywords().has_kw(&crate::card::Keyword::Changeling) {
+                        return 1000;
+                    }
+                    for t in &cp.subtypes().creature_types {
+                        if !seen.contains(t) {
+                            seen.push(*t);
+                        }
+                    }
+                }
+                seen.len() as i32
+            }
             Value::AttachmentsOn { what, filter } => {
                 let Some(host) = self.resolve_selector(what, ctx).into_iter().find_map(|e| e.as_permanent_id())
                 else {

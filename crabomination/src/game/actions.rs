@@ -3308,6 +3308,24 @@ impl crate::game::GameState {
             };
             out.push(crate::effect::shortcut::encore(cost));
         }
+        // Solemn Doomguide — unearth at the static's cost, once however many
+        // grant it.
+        if let Some(cost) = self
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == owner)
+            .flat_map(|c| c.definition.static_abilities.iter())
+            .find_map(|sa| match &sa.effect {
+                StaticEffect::GraveyardCardsHaveUnearth { filter, cost }
+                    if self.evaluate_requirement_on_card(filter, card, owner) =>
+                {
+                    Some(cost.clone())
+                }
+                _ => None,
+            })
+        {
+            out.push(crate::effect::shortcut::unearth(cost));
+        }
         out
     }
 

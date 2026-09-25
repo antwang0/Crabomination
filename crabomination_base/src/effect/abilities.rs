@@ -1296,6 +1296,10 @@ pub enum StaticEffect {
         #[serde(default)]
         mana_cost: bool,
     },
+    /// CR 702.84 — "Each [filter] creature card in your graveyard has unearth
+    /// {cost}" (Solemn Doomguide). Surfaced beside the encore grant as a
+    /// virtual `from_graveyard` ability.
+    GraveyardCardsHaveUnearth { filter: SelectionRequirement, cost: crate::mana::ManaCost },
     /// "If one or more tokens would be created under your control, twice
     /// that many tokens are created instead." Used by Adrix and Nev,
     /// Twincasters (Quandrix uncommon legendary). Doubling Season uses a

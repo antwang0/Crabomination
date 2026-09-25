@@ -8671,6 +8671,15 @@ impl GameState {
                     matches!(sa.effect, StaticEffect::PreventAllDamageToAndFromEnchanted)
                         || matches!(sa.effect, StaticEffect::PreventAllDamageToEnchanted if incoming)
                         || matches!(sa.effect, StaticEffect::PreventAllDamageByEnchanted if !incoming)
+                        // Multiclass Baldric — "as long as you have a full
+                        // party", on the Equipment's host.
+                        || matches!(&sa.effect, StaticEffect::WhileCondition { condition, inner }
+                            if incoming
+                                && matches!(**inner, StaticEffect::PreventAllDamageToEnchanted)
+                                && self.evaluate_predicate(
+                                    condition,
+                                    &crate::game::effects::EffectContext::for_ability(src.id, src.controller, None),
+                                ))
                 })
         })
     }
@@ -22626,9 +22635,9 @@ impl GameState {
             // granted_triggers_timed for this permanent (Root Manipulation,
             // Rabid Attack-style "creatures gain '…trigger…' EOT"). Printed
             // triggers carry their definition index so `once_per_turn`
-            // (CR 603.3d) can be tracked per (source, index); granted
-            // triggers are never once-per-turn and use a sentinel index.
-            let n_printed = card.definition.triggered_abilities.len();
+            // (CR 603.3d) can be tracked per (source, index); a static grant
+            // counts down from `usize::MAX - 1`; the other grants are never
+            // once-per-turn and use the `usize::MAX` sentinel.
             let static_granted = if any_static_grant || !card.definition.station.is_empty() {
                 self.statics_granted_triggers_on(card, &trigger_grants)
             } else {
@@ -22676,7 +22685,10 @@ impl GameState {
                 .enumerate()
                 .map(|(i, t)| (i, card.id, t))
                 .chain(own_granted.iter().map(|g| (usize::MAX, card.id, &g.ability)))
-                .chain(static_granted.iter().map(|t| (usize::MAX, card.id, *t)))
+                // A static grant's index counts down from below the sentinel,
+                // so a once-each-turn grant (Folk Hero) keys CR 603.3d apart
+                // from the printed triggers and from its siblings.
+                .chain(static_granted.iter().enumerate().map(|(j, t)| (usize::MAX - 1 - j, card.id, *t)))
                 .chain(equip_granted.iter().map(|(src, t)| (usize::MAX, *src, t)));
             for (trig_idx, trig_source, ta) in all_triggers {
                 // PERF `(-129)`'s census: is this pair's whole event loop
@@ -22723,7 +22735,7 @@ impl GameState {
                 // already fired this turn or earlier in this same batch.
                 let once_key = (card.id, trig_idx);
                 if ta.event.once_per_turn
-                    && trig_idx < n_printed
+                    && trig_idx != usize::MAX
                     && (self.triggered_once_per_turn_used.contains(&once_key)
                         || once_fired_this_batch.contains(&once_key))
                 {
@@ -22872,6 +22884,26 @@ impl GameState {
                     } else {
                         self.event_amount_for(ev)
                     };
+                    // CR 603.2 / 603.3d — an event that fails a "once each
+                    // turn" trigger's condition didn't trigger it, so it
+                    // mustn't spend the turn's one fire (a played land before
+                    // Deep Gnome Terramancer's put-onto-battlefield one; an
+                    // off-type spell before Folk Hero's matching one). The
+                    // filter is asked again, with the rest, at the push.
+                    if ta.event.once_per_turn
+                        && let Some(f) = &ta.event.filter
+                        && !self.evaluate_predicate(
+                            f,
+                            &crate::game::effects::EffectContext::for_intervening_filter(
+                                controller,
+                                trig_source,
+                                subject,
+                                event_amount,
+                            ),
+                        )
+                    {
+                        continue;
+                    }
                     candidates.push(TriggerCandidate {
                         source: trig_source,
                         effect: ta.effect.clone(),
@@ -22896,7 +22928,7 @@ impl GameState {
                         ),
                         actor: crate::game::effects::events::event_actor(self, ev),
                     });
-                    if ta.event.once_per_turn && trig_idx < n_printed {
+                    if ta.event.once_per_turn && trig_idx != usize::MAX {
                         once_fired_this_batch.insert(once_key);
                     }
                     if !fanout {
@@ -28695,6 +28727,9 @@ fn is_event_hardcoded(ev: &GameEvent, spec: &crate::effect::EventSpec) -> bool {
 /// a scalar amount (CreatureDied, PermanentEntered, …).
 fn event_amount(event: &GameEvent) -> u32 {
     match event {
+        // CR 305.1 — 1 for an actual land play, 0 for a land put onto the
+        // battlefield (Deep Gnome Terramancer's "without being played").
+        GameEvent::LandPlayed { played, .. } => u32::from(*played),
         GameEvent::LifeGained { amount, .. }
         | GameEvent::LifeLost { amount, .. }
         | GameEvent::PaidLife { amount, .. }
@@ -30671,6 +30706,7 @@ fn static_effect_to_effects(
             // Varolz — surfaced as granted graveyard abilities, not a layer.
             | StaticEffect::GraveyardCreaturesHaveScavenge
             | StaticEffect::GraveyardCardsHaveEncore { .. }
+            | StaticEffect::GraveyardCardsHaveUnearth { .. }
             // ProliferateTwice / PoisonCappedAtOnePerTurn — consulted at the
             // proliferate resolver / `add_poison` funnel.
             | StaticEffect::ProliferateTwice

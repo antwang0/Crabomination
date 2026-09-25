@@ -8844,6 +8844,7 @@ fn sink_facts(state: &GameState, seat: usize, have: &SweepMana<'_>) -> u32 {
                     sa.effect,
                     crate::effect::StaticEffect::GraveyardCreaturesHaveScavenge
                         | crate::effect::StaticEffect::GraveyardCardsHaveEncore { .. }
+                        | crate::effect::StaticEffect::GraveyardCardsHaveUnearth { .. }
                 )
             });
         for (_, ab) in usable_abilities(state, c, &scan) {

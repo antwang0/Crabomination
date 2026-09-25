@@ -962,6 +962,10 @@ pub enum Value {
     /// creature type (Skemfar Shadowsage — "creatures you control that have
     /// a creature type in common"). Changelings count for every type.
     LargestCreatureTypeCount,
+    /// The number of different creature types among creatures the controller
+    /// controls (Valiant Changeling's discount). A changeling has every type,
+    /// so it saturates the count.
+    DistinctCreatureTypesAmongYourCreatures,
     /// Counters of the given type on `what`.
     CountersOn { what: Box<Selector>, kind: CounterType },
     /// All counters (every kind) on `what` — "for each counter on it"

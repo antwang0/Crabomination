@@ -3541,7 +3541,9 @@ fn every_granted_trigger_kind_reaches_a_walk_that_reads_its_bucket() {
 
     let mut unread: Vec<String> = Vec::new();
     for ((kind, scope, bucket), names) in &found {
-        if kind == "once_per_turn" {
+        // A static grant's once-each-turn is keyed apart (Folk Hero); only
+        // the timed and attachment grants still carry the sentinel.
+        if kind == "once_per_turn" && *bucket != 's' {
             unread.push(format!(
                 "a granted trigger with `once_per_turn` via bucket '{bucket}' ({} cards, e.g. {:?}) — \
                  the dispatcher's CR 603.3d key is the printed index, a grant gets the sentinel",
