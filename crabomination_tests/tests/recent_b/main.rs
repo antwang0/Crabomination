@@ -66,6 +66,7 @@ mod cmdr_cloud_fic;
 mod cmdr_terra;
 mod cmdr_sevinne;
 mod cmdr_lathril;
+mod cmdr_frodo;
 mod cmdr_emmara;
 mod cmdr_teferi;
 mod cmdr_lorehold;
