@@ -471,30 +471,6 @@ pub fn redoubled_stormsinger() -> CardDefinition {
     }
 }
 
-/// Surge to Victory — exile an instant or sorcery card from your graveyard;
-/// your creatures get +X/+0 (its mana value); each creature of yours dealing
-/// combat damage to a player this turn casts a copy of it free.
-pub fn surge_to_victory() -> CardDefinition {
-    CardDefinition {
-        name: "Surge to Victory",
-        cost: cost(&[generic(4), r(), r()]),
-        card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
-            Effect::ExileWithSource { what: target_filtered(instant_or_sorcery().from_your_graveyard()) },
-            Effect::PumpPT {
-                what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
-                power: Value::ManaValueOf(Box::new(Selector::CardExiledWithSource)),
-                toughness: Value::Const(0),
-                duration: Duration::EndOfTurn,
-            },
-            Effect::CreaturesYouControlDealingCombatDamageThisTurn {
-                body: Box::new(Effect::CopyCardAndCastFree { what: Selector::CardExiledWithSource }),
-            },
-        ]),
-        ..Default::default()
-    }
-}
-
 /// Volcanic Salvo — {X} less, X your creatures' total power; 6 damage to each
 /// of up to two target creatures and/or planeswalkers.
 pub fn volcanic_salvo() -> CardDefinition {

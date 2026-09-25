@@ -36956,6 +36956,14 @@ impl GameState {
                     .map(|c| c.definition.card_types.contains(&crate::card::CardType::Land))
                     .unwrap_or(false);
                 if is_land { return Ok(()); }
+                // A free cast is optional; it is declined when it would carry
+                // the battlefield past the engine's bound — `CopyCardAndCastFree`
+                // has the Surge to Victory / Leitmotif Composer story.
+                if self.battlefield.len() as i64 + self.spell_token_estimate(card_id, ctx.controller)
+                    > crate::recommend::MAX_BATTLEFIELD as i64
+                {
+                    return Ok(());
+                }
                 use crate::decision::{Decision, DecisionAnswer};
                 let source_for_ask = ctx.source.unwrap_or(CardId(0));
                 // Free cast = pure upside, so every non-scripted seat
