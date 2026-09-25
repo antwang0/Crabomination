@@ -1476,3 +1476,47 @@ fn friendly_filtered_slot_with_a_hostile_verb_census() {
         println!("  {n}");
     }
 }
+
+/// CR 601.2f — every static the spell-cost walks match is one the
+/// cost-static source filter admits (`static_affects_spell_cost`). The bot's
+/// affordability read walks only the sources that filter keeps, so a missing
+/// variant silently drops the discount — three were missing (Zimone,
+/// Infinite Analyst's per-counter discount; Advanced Reconstruction's
+/// non-hand one; Gonti, Canny Acquisitor's spells-you-don't-own one) and a
+/// strict six-seat pod tripped the reduction audit (seed 22024). Read off the
+/// source: the variants `cost_reduction_for_spell_full_over`,
+/// `extra_cost_for_spell_over` and `colored_spell_tax_for_spell_over` name
+/// against the ones the filter lists.
+#[test]
+fn every_static_the_spell_cost_walks_read_is_admitted_by_the_cost_filter() {
+    let root = concat!(env!("CARGO_MANIFEST_DIR"), "/..");
+    let actions = std::fs::read_to_string(format!("{root}/crabomination/src/game/actions.rs")).expect("actions.rs");
+    let effect = std::fs::read_to_string(format!("{root}/crabomination_base/src/effect.rs")).expect("effect.rs");
+    let body = |src: &str, head: &str| -> String {
+        let start = src.find(head).unwrap_or_else(|| panic!("{head} not found"));
+        let rest = &src[start..];
+        let end = rest.find("\n}\n").map_or(rest.len(), |e| e + 3);
+        rest[..end].to_string()
+    };
+    let names = |text: &str, prefix: &str| -> HashSet<String> {
+        text.match_indices(prefix)
+            .map(|(i, _)| text[i + prefix.len()..].chars().take_while(|c| c.is_alphanumeric()).collect::<String>())
+            .filter(|n| !n.is_empty())
+            .collect()
+    };
+    let filter = names(&body(&effect, "pub fn static_affects_spell_cost("), "SE::");
+    let mut read: HashSet<String> = HashSet::new();
+    for head in [
+        "pub(crate) fn cost_reduction_for_spell_full_over",
+        "pub(crate) fn extra_cost_for_spell_over",
+        "pub(crate) fn colored_spell_tax_for_spell_over",
+    ] {
+        read.extend(names(&body(&actions, head), "StaticEffect::"));
+    }
+    // The walks' tails read the *cast* card's own `SelfCost*` statics, which
+    // the source filter is not about.
+    let mut missing: Vec<String> =
+        read.into_iter().filter(|n| !n.starts_with("SelfCost") && !filter.contains(n)).collect();
+    missing.sort();
+    assert!(missing.is_empty(), "spell-cost statics the cost filter drops: {missing:?}");
+}

@@ -12182,6 +12182,13 @@ pub fn static_affects_spell_cost(effect: &StaticEffect) -> bool {
         | SE::CostReductionWhile { .. }
         | SE::ExileCastCostReduction { .. }
         | SE::FirstMatchingSpellEachTurnCostsLess { .. }
+        // Zimone's per-counter first-X-spell discount, Family Matters'
+        // non-hand discount and Grand Larceny's spells-you-don't-own one
+        // were missing, so the bot's affordability read (and its
+        // cost-static audit) dropped them.
+        | SE::FirstMatchingSpellEachTurnCostsLessPerCounter { .. }
+        | SE::NonHandCastCostReduction { .. }
+        | SE::SpellsYouDontOwnCostLess { .. }
         | SE::GrantAffinityToISSpells { .. }
         | SE::GrantAffinityToSpells { .. }
         | SE::GraveyardCastCostReduction { .. }
