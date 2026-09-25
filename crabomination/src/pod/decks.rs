@@ -5504,3 +5504,31 @@ pub const DAVROS_MAIN: &[CardFactory] = &[
     // Basics
     island, island, swamp, swamp, mountain, mountain,
 ];
+
+/// Blast from the Past (WHO, 2023-10-13) — The Fourth Doctor + Sarah Jane
+/// Smith (Doctor's companion, CR 702.124m), Bant-plus-blue historic spells
+/// and Sagas. Card for card.
+pub const FOURTH_DOCTOR_COMMANDERS: &[CardFactory] = &[the_fourth_doctor, sarah_jane_smith];
+
+pub const FOURTH_DOCTOR_MAIN: &[CardFactory] = &[
+    romana_ii, jo_grant, tegan_jovanka, barbara_wright, ian_chesterton, peri_brown,
+    crisis_of_conscience, the_caves_of_androzani, the_war_games, trial_of_a_time_lord,
+    the_night_of_the_doctor, traverse_eternity, k_9_mark_i, adric_mathematical_genius,
+    nyssa_of_traken, reverse_the_polarity, five_hundred_year_diary, an_unearthly_child,
+    leela_sevateem_warrior, ace_fearless_rebel, susan_foreman, the_five_doctors, jamie_mccrimmon,
+    the_sea_devils, city_of_death, gallifrey_stands, alistair_the_brigadier, the_first_doctor,
+    the_second_doctor, the_third_doctor, the_fifth_doctor, the_sixth_doctor, the_seventh_doctor,
+    the_eighth_doctor, vrestin_menoptra_leader, sergeant_john_benton, the_curse_of_fenric,
+    duggan_private_detective, bessie_the_doctors_roadster, aces_baseball_bat,
+    gallifrey_council_chamber, day_of_destiny, heroic_intervention, time_wipe, heroes_podium,
+    trenzalore_clocktower, twice_upon_a_time, port_town, exotic_orchard, temple_of_enlightenment,
+    fortified_village, prairie_stream, canopy_vista, sungrass_prairie, temple_of_plenty,
+    irrigated_farmland, temple_of_mystery, vineglimmer_snarl, scattered_groves, celestial_colonnade,
+    deserted_beach, glacial_fortress, horizon_canopy, overgrown_farmland, waterlogged_grove,
+    dreamroot_cascade, skycloud_expanse, banish_to_another_universe, time_lord_regeneration,
+    displaced_dinosaurs, sonic_screwdriver, tardis, swords_to_plowshares, path_to_exile,
+    return_to_dust, explore, three_visits, arcane_signet, sol_ring, talisman_of_unity, heros_blade,
+    talisman_of_progress, thought_vessel, mind_stone, thriving_isle, thriving_grove, thriving_heath,
+    ash_barrens, seaside_citadel, command_tower, path_of_ancestry, plains, plains, island, island,
+    forest, forest, forest,
+];

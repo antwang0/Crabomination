@@ -1484,6 +1484,15 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::DAVROS_COMMANDERS,
             main: decks::DAVROS_MAIN,
         },
+        // Hundred-and-eighty-second: Blast from the Past (WHO, Doctor Who) —
+        // Bant historic spells and Sagas under The Fourth Doctor + Sarah
+        // Jane Smith (CR 702.124m's Doctor's companion pair; Barbara
+        // Wright's granted read ahead, CR 714.3c). `--pod-decks 182`.
+        PodDeck {
+            name: "The Fourth Doctor + Sarah Jane Smith (GWU)",
+            commanders: decks::FOURTH_DOCTOR_COMMANDERS,
+            main: decks::FOURTH_DOCTOR_MAIN,
+        },
     ]
 }
 
