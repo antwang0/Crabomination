@@ -890,6 +890,9 @@ impl GameState {
                     if pl.spells_cast_from_exile_this_turn != 0 {
                         pl.spells_cast_from_exile_this_turn = 0;
                     }
+                    if pl.instants_sorceries_cast_from_graveyard_this_turn != 0 {
+                        pl.instants_sorceries_cast_from_graveyard_this_turn = 0;
+                    }
                     pl.oil_activity_this_turn = false;
                     pl.channel_life_for_mana = false;
                     // CR 603.7e — unused "your next creature spell this turn"
@@ -3266,6 +3269,10 @@ impl GameState {
             self.end_turn_requested = false;
             return self.do_end_the_turn(events);
         }
+        if self.end_combat_requested {
+            self.end_combat_requested = false;
+            return self.do_end_the_combat_phase(events);
+        }
 
         self.check_state_based_actions_into(&mut events);
 
@@ -3300,6 +3307,28 @@ impl GameState {
         self.set_combat_damage_dealt(false);
         // CR 724.1d — the turn skips straight to the cleanup step.
         self.step = TurnStep::End;
+        self.advance_step(events)
+    }
+
+    /// CR 724.2 — end the combat phase: exile the stack (724.2b), then leave
+    /// from the end of combat step without entering it, so "at end of combat"
+    /// triggers never fire (724.2e) while "until end of combat" effects expire
+    /// and every creature leaves combat (724.2d).
+    pub(crate) fn do_end_the_combat_phase(
+        &mut self,
+        mut events: Vec<GameEvent>,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        while let Some(item) = self.stack.pop() {
+            if let StackItem::Spell { card, .. } = item
+                && !card.is_token
+            {
+                let cid = card.id;
+                self.exile.push(*card);
+                events.push(GameEvent::PermanentExiled { card_id: cid });
+            }
+        }
+        self.check_state_based_actions_into(&mut events);
+        self.step = TurnStep::EndCombat;
         self.advance_step(events)
     }
 

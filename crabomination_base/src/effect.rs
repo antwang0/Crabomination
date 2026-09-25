@@ -2240,6 +2240,9 @@ pub enum Predicate {
     /// graveyard — reads `StackItem::Spell.card.cast_from_graveyard`. River
     /// Kelpie's "whenever a player casts a spell from a graveyard".
     CastSpellFromGraveyard,
+    /// The just-cast spell is the controller's first instant or sorcery cast
+    /// from a graveyard this turn (Sevinne, the Chronoclasm).
+    FirstInstantOrSorceryCastFromGraveyardThisTurn,
     /// True if `ctx.source` (the listening permanent's id) is currently
     /// in the engine's `permanents_gained_counter_this_turn` set — i.e.
     /// the listening permanent has had one or more counters put on it
@@ -10288,6 +10291,11 @@ pub enum Effect {
     /// and skips straight to the cleanup step. Sundial of the Infinite,
     /// Day's Undoing.
     EndTheTurn,
+    /// CR 724.2 — "End the combat phase." Exiles the stack (the resolving card
+    /// too), removes everything from combat and jumps to the next main phase
+    /// without an end of combat step (724.2e). No-op outside combat (724.2g).
+    /// Mandate of Peace.
+    EndTheCombatPhase,
     /// CR 614 — "Until end of turn, if a player taps a land for mana, it
     /// produces [something else] instead of any other type and amount."
     /// `mine_only` scopes it to the controller's own land taps (Harvest

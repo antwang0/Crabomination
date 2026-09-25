@@ -6213,6 +6213,13 @@ impl GameState {
         }
     }
 
+    /// True when `card_id` is the top card of some player's library, or is
+    /// mid-cast off it (the cast pipeline hops the card through hand).
+    pub fn is_library_top(&self, card_id: CardId) -> bool {
+        self.casting_hop == Some((card_id, crate::game::HopFrom::LibraryTop))
+            || self.players.iter().any(|p| p.library.first().is_some_and(|c| c.id == card_id))
+    }
+
     /// CR 401.6 — true when `card_id` is the top card of `p`'s library and a
     /// `PlayFromLibraryTop` static `p` controls covers it.
     pub fn library_top_playable(&self, p: usize, card_id: CardId) -> bool {
@@ -10972,6 +10979,9 @@ impl GameState {
                     || card.definition.card_types.contains(&CardType::Sorcery)
             }
         };
+        if is_instant_or_sorcery && card.cast_from_graveyard {
+            self.players[p].instants_sorceries_cast_from_graveyard_this_turn += 1;
+        }
         // Refine the spell-type tallies. Both gates default to 0 on
         // snapshot back-compat (player.rs `#[serde(default)]`).
         // One `Player::deref_mut` for the whole tally run below: `Player` is a

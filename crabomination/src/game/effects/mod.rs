@@ -2169,6 +2169,14 @@ impl GameState {
         ) {
             events.extend(evs);
         }
+        if spec.lock_copied
+            && let Ok(evs) = self.resolve_effect_driven(
+                &Effect::TapAndLockWhileSourcePresent { what: crate::effect::Selector::Target(0) },
+                &ctx,
+            )
+        {
+            events.extend(evs);
+        }
         // Layer the copy-exception abilities/keywords on top of the
         // copiable characteristics (e.g. Phantasmal Image's sacrifice rider),
         // and restore the copier's own name for the CR 707.2 name-retention
@@ -27497,6 +27505,14 @@ impl GameState {
 
             Effect::EndTheTurn => {
                 self.end_turn_requested = true;
+                Ok(())
+            }
+
+            // CR 724.2g — outside a combat phase nothing happens.
+            Effect::EndTheCombatPhase => {
+                if self.step.is_combat_phase() {
+                    self.end_combat_requested = true;
+                }
                 Ok(())
             }
 

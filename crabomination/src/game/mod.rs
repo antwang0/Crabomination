@@ -2687,6 +2687,10 @@ pub struct GameState {
     /// to cleanup).
     #[serde(skip)]
     pub(crate) end_turn_requested: bool,
+    /// CR 724.2 — set by `Effect::EndTheCombatPhase` during combat; consumed
+    /// like `end_turn_requested`, but the game resumes at the next main phase.
+    #[serde(skip)]
+    pub(crate) end_combat_requested: bool,
     /// CR 702.46 — Cipher. Set by `Effect::Cipher` to the creature the
     /// resolving spell should be exiled "encoded on"; the post-resolution
     /// routing consumes it to send the card to exile (with `encoded_on` stamped)
@@ -3990,6 +3994,7 @@ impl Clone for GameState {
             resolving_spell_to_battlefield_transformed: self
                 .resolving_spell_to_battlefield_transformed,
             end_turn_requested: self.end_turn_requested,
+            end_combat_requested: self.end_combat_requested,
             cipher_encode_pending: self.cipher_encode_pending,
             permanents_destroyed_this_resolution: self.permanents_destroyed_this_resolution,
             excess_damage_this_resolution: self.excess_damage_this_resolution,
@@ -4200,6 +4205,7 @@ impl GameState {
             resolving_spell_library_from_top: None,
             resolving_spell_to_battlefield_transformed: None,
             end_turn_requested: false,
+            end_combat_requested: false,
             cipher_encode_pending: None,
             permanents_destroyed_this_resolution: 0,
             excess_damage_this_resolution: 0,
@@ -27882,7 +27888,7 @@ impl GameState {
         // CR 724.1a — a spell that ended the turn is exiled along with the
         // rest of the stack instead of going to the graveyard (Day's
         // Undoing). The flag stays set; `resolve_top_of_stack` consumes it.
-        if self.end_turn_requested {
+        if self.end_turn_requested || self.end_combat_requested {
             self.exile.push(card);
             return Ok(events);
         }

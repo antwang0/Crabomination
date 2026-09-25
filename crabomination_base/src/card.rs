@@ -3329,6 +3329,9 @@ pub enum SelectionRequirement {
     /// `InGraveyard`; used by impulse "if you don't cast it" fallbacks
     /// (Chandra, Torch of Defiance) to detect an uncast exiled card.
     InExile,
+    /// True when the candidate is the top card of its owner's library —
+    /// Elsha of the Infinite's "if you cast a spell this way" flash grant.
+    OnTopOfLibrary,
     /// True when the candidate is a permanent **on the battlefield**. The
     /// on-board half of a mixed clause — "target creatures from the
     /// battlefield **and/or** creature cards from graveyards" (Angel of
@@ -5032,6 +5035,11 @@ pub struct EntersAsCopy {
     /// Vehicle subtype and crew N; subtypes of the lost types go with them.
     #[serde(default)]
     pub as_vehicle_crew: Option<u32>,
+    /// "When you do, tap the copied creature and it doesn't untap during its
+    /// controller's untap step for as long as [the copier stays]" (Wall of
+    /// Stolen Identity).
+    #[serde(default)]
+    pub lock_copied: bool,
 }
 
 /// CR 614 — one mode of a `CardDefinition.enters_as_choice` as-enters

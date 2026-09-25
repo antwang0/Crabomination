@@ -3167,6 +3167,10 @@ impl GameState {
                     _ => false,
                 })
             }
+            Predicate::FirstInstantOrSorceryCastFromGraveyardThisTurn => {
+                self.evaluate_predicate(&Predicate::CastSpellFromGraveyard, ctx)
+                    && self.players[ctx.controller].instants_sorceries_cast_from_graveyard_this_turn == 1
+            }
             Predicate::CastSpellFromLibrary => {
                 let Some(EntityRef::Card(cid)) = ctx.trigger_source else {
                     return false;
@@ -4293,6 +4297,7 @@ impl GameState {
                         .any(|(i, p)| i != controller && p.graveyard.iter().any(|c| c.id == cid)),
             ),
             R::InExile => Some(!on_bf && self.exile.iter().any(|c| c.id == cid)),
+            R::OnTopOfLibrary => Some(!on_bf && self.is_library_top(cid)),
             R::OnBattlefield => Some(on_bf),
             // A card is never a player, whichever seat the arm asks about.
             R::OpponentPlayer
@@ -5513,6 +5518,7 @@ impl GameState {
                         .enumerate()
                         .any(|(i, p)| i != controller && p.graveyard.iter().any(|c| c.id == *cid)),
                     R::InExile => self.exile.iter().any(|c| c.id == *cid),
+                    R::OnTopOfLibrary => self.is_library_top(*cid),
                     R::OnBattlefield => self.battlefield_find(*cid).is_some(),
                     R::ExiledWithSource => source.is_some_and(|s| {
                         self.exile.iter().any(|c| c.id == *cid && c.exiled_with == Some(s))
@@ -6321,6 +6327,7 @@ impl GameState {
                 .enumerate()
                 .any(|(i, p)| i != controller && p.graveyard.iter().any(|c| c.id == card.id)),
             R::InExile => self.exile.iter().any(|c| c.id == card.id),
+            R::OnTopOfLibrary => self.is_library_top(card.id),
             // This path evaluates a loose `CardInstance` (a library search
             // hit, a revealed card); nothing it is handed is on the
             // battlefield.
