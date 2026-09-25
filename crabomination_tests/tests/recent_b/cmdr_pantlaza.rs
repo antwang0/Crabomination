@@ -211,3 +211,23 @@ fn marauding_and_wrathful_raptors() {
     assert_eq!(g.computed_permanent(marauder).unwrap().power, 4);
     assert_eq!(g.players[1].life, life - 2, "Wrathful Raptors sent the 2 to a player");
 }
+
+/// CR 702.100 evolve, then CR 701.57 — the Egg dying discovers its
+/// last-known toughness (4 after one evolve counter).
+#[test]
+fn dinosaur_egg_evolves_then_discovers() {
+    let mut g = main_phase(2);
+    let egg = g.add_card_to_battlefield(0, catalog::dinosaur_egg());
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    cast(&mut g, bears, &[]).expect("cast");
+    assert_eq!(g.computed_permanent(egg).unwrap().toughness, 4, "evolved");
+    g.players[0].library.clear();
+    let found = g.add_card_to_library(0, catalog::ripjaw_raptor());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Bool(true)]));
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, &[Target::Permanent(egg)]).expect("bolt");
+    let bolt2 = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt2, &[Target::Permanent(egg)]).expect("bolt");
+    assert!(g.battlefield_find(egg).is_none());
+    assert!(!g.players[0].library.iter().any(|c| c.id == found), "the Raptor (MV 4) was discovered");
+}

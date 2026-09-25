@@ -13,7 +13,7 @@ use crate::card::{
     EventScope, EventSpec, ExileReturnZone, Keyword, SelectionRequirement as R, Selector, StaticAbility,
     StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{etb, myriad, on_attack, on_attack_ping_any, target_filtered};
+use crate::effect::shortcut::{etb, evolve, myriad, on_attack, on_attack_ping_any, on_dies, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, Predicate, ZoneDest};
 use crate::game::types::TurnStep;
 use crate::mana::{Color, ManaCost, cost, g, generic, r, w, x};
@@ -138,6 +138,21 @@ pub fn deathgorge_scavenger() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![etb(scavenge()), on_attack(scavenge())],
         ..dino("Deathgorge Scavenger", cost(&[generic(2), g()]), 3, 2)
+    }
+}
+
+/// Dinosaur Egg — evolve; dies: you may discover X, X its toughness (its
+/// last-known toughness, evolve counters included).
+pub fn dinosaur_egg() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            evolve(),
+            on_dies(Effect::MayDo {
+                description: "Discover X, where X is its toughness".into(),
+                body: Box::new(Effect::Discover { n: Value::ToughnessOf(Box::new(Selector::This)), filter: None }),
+            }),
+        ],
+        ..creature("Dinosaur Egg", cost(&[generic(1), g()]), vec![CreatureType::Dinosaur, CreatureType::Egg], 0, 3)
     }
 }
 

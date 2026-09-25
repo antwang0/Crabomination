@@ -2783,6 +2783,7 @@ static DECKS: &[Factory] = &[
     super::decks::bronzebeak_foragers,
     super::decks::deathgorge_scavenger,
     super::decks::descendants_path,
+    super::decks::dinosaur_egg,
     super::decks::drover_of_the_mighty,
     super::decks::from_the_rubble,
     super::decks::kinjallis_sunwing,
