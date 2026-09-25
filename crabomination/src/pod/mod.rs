@@ -1048,6 +1048,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::OLORO_COMMANDERS,
             main: decks::OLORO_MAIN,
         },
+        // Hundred-and-twenty-seventh: the hundred-and-seventeenth official
+        // list (Lorehold Spirit, SOC) — Boros Spirits under the planeswalker
+        // commander Quintorius, History Chaser. `--pod-decks 127`.
+        PodDeck {
+            name: "Quintorius, History Chaser (RW)",
+            commanders: decks::QUINTORIUS_COMMANDERS,
+            main: decks::QUINTORIUS_MAIN,
+        },
     ]
 }
 

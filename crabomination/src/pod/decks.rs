@@ -3858,3 +3858,34 @@ pub const OLORO_MAIN: &[CardFactory] = &[
     island, island, island, island, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
     swamp,
 ];
+
+pub const QUINTORIUS_COMMANDERS: &[CardFactory] = &[quintorius_history_chaser];
+
+/// **Lorehold Spirit**, the Secrets of Strixhaven Commander deck (SOC,
+/// 2026-04-24), exactly as MTGJSON's `LoreholdSpirit_SOC` prints it: 82
+/// nonbasic cards + 11 Plainss + 6 Mountains = 99. Boros Spirits and graveyard
+/// departures under the planeswalker Quintorius, History Chaser.
+pub const QUINTORIUS_MAIN: &[CardFactory] = &[
+    excava_the_risen_past, lorehold_archivist, augusta_order_returned, ceaseless_conflict,
+    vanguard_of_the_restless, advanced_reconstruction, fateful_tempest, naktamun_lorespinner,
+    relic_retriever, spirit_of_resilience, turbulent_steppe, moonshaker_cavalry,
+    staff_of_the_storyteller, wave_of_reckoning, fabled_passage, angel_of_indemnity,
+    ao_the_dawn_sky, archaeomancers_map, claim_jumper, drumbellower, guardian_of_faith,
+    guardian_scalelord, karmic_guide, monologue_tax, remorseful_cleric, selfless_spirit,
+    serra_paragon, sevinnes_reclamation, skyclave_apparition, sun_titan, tocasias_welcome,
+    tragic_arrogance, white_orchid_phantom, atsushi_the_blazing_sky, conspiracy_theorist,
+    laelia_the_blade_reforged, balefire_liege, hofri_ghostforge, quintorius_loremaster,
+    venerable_warsinger, bitterthorn_nissas_animus, currency_converter, battlefield_forge,
+    clifftop_retreat, emeria_the_sky_ruin, exotic_orchard, furycalm_snarl, glittering_massif,
+    lotus_field, radiant_summit, rugged_prairie, sunscorched_divide, temple_of_triumph,
+    arcane_signet, sol_ring, command_tower, primary_research, seize_the_spoils,
+    kirol_history_buff, lorehold_charm, fields_of_strife, terramorphic_expanse,
+    kami_of_ancient_law, path_to_exile, secret_rendezvous, swords_to_plowshares,
+    teshar_ancestors_apostle, anger, faithless_looting, squee_goblin_nabob,
+    quintorius_field_historian, rip_apart, containment_construct, fellwar_stone, millikin,
+    mind_stone, patchwork_banner, perpetual_timepiece, lorehold_campus, mistveil_plains,
+    sacred_peaks, study_hall,
+    // Basics: 11 plains, 6 mountain
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    mountain, mountain, mountain, mountain, mountain, mountain,
+];
