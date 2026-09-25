@@ -176,6 +176,7 @@ lists were picked.
 | **Cavalry Charge** (MOC precon) WUB | Sidar Jabari of Zhalfir | WUB | 100 | 🟡 all 100 implemented, 3 carry residuals (Path of the Enigma, Syr Elenora, Aryel) |
 | **Eternal Bargain** (C13 precon) WUB | Oloro, Ageless Ascetic | WUB | 100 | 🟡 all 100 implemented, 4 carry residuals (Order of Succession, Lim-Dûl's Vault, Springjack Pasture, Serene Master) |
 | **Power Hungry** (C13 precon) BRG | Prossh, Skyraider of Kher | BRG | 100 | 🟡 all 100 implemented, 4 carry residuals (Sudden Demise, Night Soil, Widespread Panic, Capricious Efreet) |
+| **Wakanda Forever** (MSC precon) GW | T'Challa, the Black Panther | GW | 100 | 🟡 all 100 implemented, 4 carry residuals (Ancestral Communion, Heart-Shaped Herb, Panther Habit, Wakanda Forever!) |
 | **Revival Trance** (FIC precon) RWB | Terra, Herald of Hope | RWB | 100 | 🟡 all 100 implemented, 9 carry residuals (Edgar, Espers to Magicite, General Leo, Gogo, Legions to Ashes, Locke, Esper Valigarmanda, The Warring Triad, Umaro) |
 | **Limit Break** (FIC precon) RGW | Cloud, Ex-SOLDIER | RGW | 100 | 🟡 all 100 implemented, 4 carry residuals (Professor Hojo, Helitrooper, Lifestream's Blessing, Yuffie) |
 | **Merciless Rage** (C19 precon) BR | Anje Falkenrath | BR | 100 | 🟡 all 100 implemented, 5 carry residuals (Archfiend of Spite, Boneyard Parley, Chainer, Hedonist's Trove, K'rrik) |
@@ -1605,6 +1606,29 @@ Galea / Kathril / Chishiro (seed 10400, 1,000 games) and Nelly / Eshki /
 Estrid (seed 10401, 1,000): all decided, Jirina 28.4 % and 24.3 %; census
 (seed 10401): no card of the list unplayed. `--bench` byte-identical;
 cube/sos/sealed (seed 10402): 7,500 decided.
+
+The **hundred-and-sixty-seventh** is the Marvel Super Heroes Commander deck
+**Wakanda Forever** (`WakandaForever_MSC`) — Selesnya artifacts, Vibranium
+tokens and the monarch under T'Challa, the Black Panther, `--pod-decks 167`.
+Thirty-two cards were missing, the commander among them (`cmdr_tchalla.rs`;
+the Vibranium token rides the Powerstone's `NoNonartifactSpells` mana
+restriction). The primitives: the attack-restriction scan and check read a
+gated static through `active_static` (Queen Mother Ramonda's "as long as
+you're the monarch", CR 508.1c — no card had wrapped one),
+`StaticEffect::ReplaceDamageToAttachedWithCounters` (Panther Habit),
+`Effect::RevealDeployOneTakeOne` (Wakanda Forever!, `game/effects/wakanda.rs`)
+and `CreatureType::Spy`. ⚠ **Found on the way:** `ReduceDamageToControllerFromSource`
+never matched a spell source — mid-resolution a spell is in no zone, and the
+filter was read as a battlefield permanent; the source is now read wherever it
+is and a resolving spell is rebuilt from the resolving snapshot (CR 615.10).
+Pods (seed 167, 1,000 each): 4 seats 1,000 decided, T'Challa 41.9 %; 6 seats
+against the Leinore / Sidar / Oloro / Prossh / Nalia precons 1,000 decided,
+9.8 %; 8 seats (seats 4-10) 1,000 decided, 13.9 %; 8 seats against this run's
+other lists 1,000 decided. Residuals: Ancestral Communion's copy keeps its
+target on auto seats; Heart-Shaped Herb's creature is the auto-pick and
+returns under you; Panther Habit is a replacement, not a prevention; Wakanda
+Forever!'s picks are the two biggest permanents. Census: no card of the list
+unplayed. Debug strict pods (400 games): clean. `--bench` byte-identical.
 
 The **hundred-and-sixtieth** is the Final Fantasy VI Commander deck
 **Revival Trance** (`RevivalTranceFinalFantasyVi_FIC`) — Mardu graveyard

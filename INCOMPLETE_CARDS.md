@@ -2144,6 +2144,10 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Night Soil | Power Hungry (C13) | the two creature cards come from your own graveyard, not any single graveyard. |
 | 🟡 Widespread Panic | Power Hungry (C13) | any shuffle a spell or ability makes counts, not only one its controller made of their own library. |
 | 🟡 Capricious Efreet | Power Hungry (C13) | the up-to-two opposing targets are the auto-picker's; no UI prompt for the optional slots. |
+| 🟡 Ancestral Communion | Wakanda Forever (MSC) | its copy keeps the original's target on auto seats (a second return of a card already moved does nothing). |
+| 🟡 Heart-Shaped Herb | Wakanda Forever (MSC) | the sacrificed creature is the auto-pick, and it returns under your control rather than its owner's. |
+| 🟡 Panther Habit | Wakanda Forever (MSC) | a replacement, not a prevention: damage that can't be prevented still becomes counters. |
+| 🟡 Wakanda Forever! | Wakanda Forever (MSC) | the battlefield and hand picks are the two highest-mana-value permanent cards revealed, not the player's choice. |
 | 🟡 Edgar, Master Machinist | Revival Trance (FIC) | an artifact cast from the graveyard with its permission enters untapped. |
 | 🟡 Espers to Magicite | Revival Trance (FIC) | the copied card is the first creature card exiled, not a chosen target; its artifact-only type is a layer-4 set, not a copiable value. |
 | 🟡 General Leo Cristophe | Revival Trance (FIC) | the "up to one" return target is required whenever a legal card exists. |
