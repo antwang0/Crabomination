@@ -3057,6 +3057,7 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::ExileAllGraveyards { .. } => "Exile all graveyards",
         Effect::CreateTokenAttacking { .. } => "Create attacking tokens",
         Effect::Amass { .. } => "Amass",
+        Effect::EmpowerJace { .. } => "Empower Jace",
         Effect::Myriad => "Myriad",
         Effect::Enlist => "Enlist",
         Effect::GrantNextInstantOrSorceryDiscountThisTurn { .. } => "Discount next spell",

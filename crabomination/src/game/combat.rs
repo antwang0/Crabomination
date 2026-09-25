@@ -4847,6 +4847,16 @@ impl GameState {
     /// CR 506.2 — whether `id` carries a computed `Keyword::CantBeAttacked`,
     /// so it can't be declared as an attack target (The Aetherspark).
     pub(crate) fn permanent_cant_be_attacked(&self, id: CardId) -> bool {
+        if !self.cant_attack_pw_type_this_turn.is_empty()
+            && let Some(pw) = self.battlefield_find(id)
+            && self.cant_attack_pw_type_this_turn.iter().any(|(a, ctrl, t)| {
+                *a == self.active_player_idx
+                    && *ctrl == pw.controller
+                    && pw.definition.subtypes.planeswalker_subtypes.contains(t)
+            })
+        {
+            return true;
+        }
         self.computed_permanent(id)
             .is_some_and(|cp| cp.keywords().has_kw(&Keyword::CantBeAttacked))
     }

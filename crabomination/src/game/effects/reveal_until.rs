@@ -47,8 +47,15 @@ impl GameState {
         }
         self.players[p].library.extend(rest);
         let dest = ZoneDest::Battlefield { controller: PlayerRef::Seat(p), tapped: false };
+        let placed: Vec<_> = hits.iter().map(|c| c.id).collect();
         for card in hits {
             self.place_card_in_dest(card, p, &dest, events);
+        }
+        // `Selector::LastMoved` names the cards put onto the battlefield (Dack
+        // Fayden goads and hands them out). Guarded like the sibling below:
+        // the scratch is a CoW group.
+        if !placed.is_empty() {
+            self.scratch.last_moved_cards = placed;
         }
         if !rest_bottom {
             self.shuffle_library(p, events);

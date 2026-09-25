@@ -1161,6 +1161,11 @@ pub struct PlayerData {
     /// cannot-lose, so any nonzero delta is dropped on the floor.
     #[serde(default)]
     pub life_locked_this_turn: bool,
+    /// "Their life total can't change" until this player's next turn
+    /// (Teferi's Reproach) — read beside `life_locked_this_turn`, cleared as
+    /// that player's turn begins.
+    #[serde(default)]
+    pub life_locked_until_next_turn: bool,
     /// True while spells this player controls can't be countered for the
     /// rest of the turn (Veil of Summer's "spells your opponents control
     /// can't counter spells you control this turn"). Set by
@@ -1514,6 +1519,7 @@ impl Player {
             creatures_cast_this_turn: 0,
             cannot_gain_life_this_turn: false,
             life_locked_this_turn: false,
+            life_locked_until_next_turn: false,
             spells_uncounterable_this_turn: false,
             creature_spells_uncounterable_this_turn: false,
             hexproof_until_next_turn: false,

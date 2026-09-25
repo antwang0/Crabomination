@@ -1009,9 +1009,13 @@ impl Effect {
             Effect::ExileTopRepeatOnDuplicateNames { who, .. }
             | Effect::LoseAllButLifeRemembered { who, .. }
             | Effect::UntapChosenPerCardInGraveyard { who } => player_has_target(who),
-            Effect::CantAttackPlayerThisTurn { who, defender } => {
+            Effect::CantAttackPlayerThisTurn { who, defender }
+            | Effect::CantAttackPlaneswalkerTypeThisTurn { who, defender, .. } => {
                 player_has_target(who) || player_has_target(defender)
             }
+            Effect::LifeLockUntilNextTurn { who } => sel_has_target(who),
+            Effect::DistributeControlAmongOpponents { what } => sel_has_target(what),
+            Effect::EachPlayerMillsYouMayCastOne { count } => value_has_target(count),
             Effect::ExileAnyNumberFromGraveyardOnSource { .. }
             | Effect::PreventAllDamageFromChosenColorGlobally
             | Effect::ShamansTrance => false,
@@ -1969,7 +1973,8 @@ impl Effect {
             | Effect::WeldArtifacts { what } => sel_has_target(what),
             Effect::CreateToken { who, count, .. }
             | Effect::CreateTokenAttacking { who, count, .. }
-            | Effect::Amass { who, count, .. } => {
+            | Effect::Amass { who, count, .. }
+            | Effect::EmpowerJace { who, count } => {
                 player_has_target(who) || value_has_target(count)
             }
             Effect::Incubate { who, amount } => {
@@ -2524,6 +2529,7 @@ impl Effect {
                 .or_else(|| implicit_player_in_value(count)),
             Effect::CreateTokenAttacking { who, .. }
             | Effect::Amass { who, .. }
+            | Effect::EmpowerJace { who, .. }
             | Effect::Incubate { who, .. } => implicit_player_if_bare_player_ref(who),
             Effect::GainLife { who, .. } | Effect::LoseLife { who, .. } => {
                 sel_filter(who).or_else(|| implicit_player_if_bare_player_field(who))
@@ -5167,6 +5173,8 @@ impl Effect {
                 Effect::Airbend { what } => sel_find(what, slot),
                 Effect::LifeGainLockThisTurn { who }
                 | Effect::LifeLockThisTurn { who }
+                | Effect::LifeLockUntilNextTurn { who }
+                | Effect::DistributeControlAmongOpponents { what: who }
                 | Effect::GrantSpellsUncounterableThisTurn { who }
                 | Effect::GrantCreatureSpellsUncounterableThisTurn { who }
                 | Effect::GrantHexproofFromColorThisTurn { who, .. }

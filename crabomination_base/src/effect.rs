@@ -7833,6 +7833,11 @@ pub enum Effect {
     /// control none. `extra_type` is added to the Army (Amass Zombies /
     /// Amass Orcs mint a token that's also that subtype).
     Amass { who: PlayerRef, count: Value, extra_type: Option<crate::card::CreatureType> },
+    /// "Empower Jace N" (Multiverse Reforged): put `count` loyalty counters on
+    /// a Jace planeswalker token `who` controls, first creating a blue Jace
+    /// token with "[−1]: Surveil 1" and "[−3]: Draw a card" if they control
+    /// none. The Amass shape (CR 701.43a) on a planeswalker token.
+    EmpowerJace { who: PlayerRef, count: Value },
     /// Create `count` tokens already tapped and attacking (CR 508.3a). The
     /// new tokens join the current combat attacking the same defender the
     /// effect's source is attacking (falling back to the controller's first
@@ -11354,6 +11359,28 @@ pub enum Effect {
     /// "Creatures `who` controls can't attack `defender` this turn"
     /// (Web of Inertia's punishment half). Cleared at cleanup.
     CantAttackPlayerThisTurn { who: PlayerRef, defender: PlayerRef },
+    /// "Until that player's next turn, … their life total can't change"
+    /// (Teferi's Reproach, CR 119.10).
+    LifeLockUntilNextTurn { who: Selector },
+    /// "For each of those permanents, choose a different opponent. Each
+    /// opponent gains control of the permanent for which they were chosen"
+    /// (Dack Fayden, Helping Hand). The permanents `what` resolves to are
+    /// paired with the controller's living opponents in turn order; one left
+    /// over past the last opponent stays put.
+    DistributeControlAmongOpponents { what: Selector },
+    /// "Each player mills `count` cards. For each player, you may cast a card
+    /// that player milled this way without paying its mana cost" (The
+    /// Ur-Sphinx). Every seat mills first (turn order from you); then one
+    /// free cast is offered from each seat's milled cards.
+    EachPlayerMillsYouMayCastOne { count: Value },
+    /// "Creatures `who` controls can't attack [subtype] planeswalkers
+    /// `defender` controls this turn" (Jace, Multiverse Architect). Cleared
+    /// at cleanup.
+    CantAttackPlaneswalkerTypeThisTurn {
+        who: PlayerRef,
+        defender: PlayerRef,
+        subtype: crate::card::PlaneswalkerSubtype,
+    },
 
     /// "Prevent all damage that sources of the color of your choice would deal
     /// this turn" (Prismatic Strands) — the recipient-less sibling of

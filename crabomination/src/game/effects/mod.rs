@@ -18635,6 +18635,55 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::DistributeControlAmongOpponents { what } => {
+                let me = ctx.controller;
+                let opponents: Vec<usize> = self
+                    .seats_in_turn_order_from(me)
+                    .into_iter()
+                    .filter(|&q| q != me && !self.same_team(me, q))
+                    .collect();
+                let permanents: Vec<_> = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_permanent_id())
+                    .collect();
+                for (cid, q) in permanents.into_iter().zip(opponents) {
+                    self.change_control(cid, q);
+                }
+                Ok(())
+            }
+
+            Effect::EachPlayerMillsYouMayCastOne { count } => {
+                let mut offers = Vec::new();
+                for q in self.seats_in_turn_order_from(ctx.controller) {
+                    let before: Vec<_> = self.players[q].graveyard.iter().map(|c| c.id).collect();
+                    self.run_effect(
+                        &Effect::Mill { who: Selector::Player(PlayerRef::Seat(q)), amount: count.clone() },
+                        ctx,
+                        events,
+                    )?;
+                    let milled: Vec<_> = self.players[q]
+                        .graveyard
+                        .iter()
+                        .map(|c| c.id)
+                        .filter(|id| !before.contains(id))
+                        .collect();
+                    if !milled.is_empty() {
+                        offers.push(Effect::CastAnyOrderWithoutPaying {
+                            what: Selector::ExactObjects(milled),
+                            source_zone: crate::card::Zone::Graveyard,
+                            filter: None,
+                            cap: Some(crate::effect::Value::ONE),
+                            total_mana_value: None,
+                        });
+                    }
+                }
+                if offers.is_empty() {
+                    return Ok(());
+                }
+                self.run_effect(&Effect::seq(offers), ctx, events)
+            }
+
             Effect::GainControlWhileSourceRemains { what } => {
                 // CR 611.2c — the steal lasts while the source stays on the
                 // battlefield; `on_left_battlefield` unwinds it.
@@ -20779,6 +20828,69 @@ impl GameState {
                         card_id: army, counter_type: CounterType::PlusOnePlusOne, count: scaled,
                     });
                     self.turn.permanents_gained_counter_this_turn.insert(army);
+                }
+                self.check_state_based_actions_into(events);
+                Ok(())
+            }
+
+            Effect::EmpowerJace { who, count } => {
+                use crate::card::{CardType, CounterType, PlaneswalkerSubtype};
+                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
+                let n = self.evaluate_value(count, ctx).max(0) as u32;
+                // A Jace token you control, else a fresh blue Jace token.
+                let jace = self
+                    .battlefield
+                    .iter()
+                    .find(|c| {
+                        c.controller == p
+                            && c.is_token
+                            && c.definition.subtypes.planeswalker_subtypes.contains(&PlaneswalkerSubtype::Jace)
+                    })
+                    .map(|c| c.id);
+                let jace = match jace {
+                    Some(id) => id,
+                    None => {
+                        let def = token_card_arc(&crate::card::TokenDefinition {
+                            name: "Jace".into(),
+                            card_types: vec![CardType::Planeswalker],
+                            colors: vec![Color::Blue],
+                            subtypes: crate::card::Subtypes {
+                                planeswalker_subtypes: vec![PlaneswalkerSubtype::Jace],
+                                ..Default::default()
+                            },
+                            loyalty_abilities: vec![
+                                crate::card::LoyaltyAbility {
+                                    loyalty_cost: -1,
+                                    effect: Effect::Surveil {
+                                        who: crate::effect::PlayerRef::You,
+                                        amount: crate::effect::Value::ONE,
+                                    },
+                                    ..Default::default()
+                                },
+                                crate::card::LoyaltyAbility {
+                                    loyalty_cost: -3,
+                                    effect: Effect::Draw {
+                                        who: crate::effect::Selector::You,
+                                        amount: crate::effect::Value::ONE,
+                                    },
+                                    ..Default::default()
+                                },
+                            ],
+                            ..Default::default()
+                        });
+                        self.mint_token_onto_battlefield(def, p, false, events)
+                    }
+                };
+                // CR 614.16 — counter replacement effects apply.
+                if n > 0 && self.battlefield.find_by_id(jace).is_some() {
+                    let scaled = self.scaled_counter_count(p, CounterType::Loyalty, n, true);
+                    if let Some(c) = self.battlefield_find_mut(jace) {
+                        c.add_counters(CounterType::Loyalty, scaled);
+                    }
+                    events.push(GameEvent::CounterAdded {
+                        card_id: jace, counter_type: CounterType::Loyalty, count: scaled,
+                    });
+                    self.turn.permanents_gained_counter_this_turn.insert(jace);
                 }
                 self.check_state_based_actions_into(events);
                 Ok(())
@@ -28572,6 +28684,18 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::CantAttackPlaneswalkerTypeThisTurn { who, defender, subtype } => {
+                let (Some(a), Some(d)) =
+                    (self.resolve_player(who, ctx), self.resolve_player(defender, ctx))
+                else {
+                    return Ok(());
+                };
+                if !self.cant_attack_pw_type_this_turn.contains(&(a, d, *subtype)) {
+                    self.cant_attack_pw_type_this_turn.push((a, d, *subtype));
+                }
+                Ok(())
+            }
+
             Effect::PreventAllDamageFromChosenColorGlobally => {
                 // Prismatic Strands — a turn-long fog keyed to one source
                 // color, with no recipient restriction (CR 615.1).
@@ -35598,6 +35722,15 @@ impl GameState {
 
             Effect::PreventSearchesThisTurn => {
                 self.no_search_this_turn = true;
+                Ok(())
+            }
+
+            Effect::LifeLockUntilNextTurn { who } => {
+                for ent in self.resolve_selector(who, ctx) {
+                    if let EntityRef::Player(p) = ent {
+                        self.players[p].life_locked_until_next_turn = true;
+                    }
+                }
                 Ok(())
             }
 

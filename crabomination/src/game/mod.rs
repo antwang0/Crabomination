@@ -1751,6 +1751,11 @@ pub struct ColdState {
     /// Checked when attacks are declared; cleared at cleanup.
     #[serde(default)]
     pub cant_attack_player_this_turn: Vec<(usize, usize)>,
+    /// "Creatures `.0` controls can't attack `.2` planeswalkers `.1` controls
+    /// this turn" (Jace, Multiverse Architect's unpaid tax). Read by
+    /// `permanent_cant_be_attacked` for the active player; cleared at cleanup.
+    #[serde(default)]
+    pub(crate) cant_attack_pw_type_this_turn: Vec<(usize, usize, crate::card::PlaneswalkerSubtype)>,
     /// CR 723.1 — `(controlled, controller)` pairs waiting for `controlled` to
     /// actually take a turn (Mindslaver). A later entry for the same seat
     /// overwrites the earlier one (CR 723.1a).
@@ -10344,7 +10349,7 @@ impl GameState {
     /// targeting `seat` on the floor.
     pub fn player_cannot_gain_life_now(&self, seat: usize) -> bool {
         use crate::effect::{PlayerStaticTarget, StaticEffect};
-        if self.players[seat].life_locked_this_turn {
+        if self.players[seat].life_locked_this_turn || self.players[seat].life_locked_until_next_turn {
             return true;
         }
         if self.players[seat].cannot_gain_life || self.players[seat].cannot_gain_life_this_turn {
@@ -10410,7 +10415,7 @@ impl GameState {
     /// by the lose-life paths (`Effect::LoseLife`, drain-target gates).
     pub fn player_cannot_lose_life_now(&self, seat: usize) -> bool {
         use crate::effect::{PlayerStaticTarget, StaticEffect};
-        if self.players[seat].life_locked_this_turn {
+        if self.players[seat].life_locked_this_turn || self.players[seat].life_locked_until_next_turn {
             return true;
         }
         self.battlefield.has_life_static() && self.battlefield.iter().any(|src| {
@@ -15189,6 +15194,10 @@ impl GameState {
                 }
                 crate::card::DynamicPt::BasePlusUnspentColorMana { base_p, base_t, color } => {
                     let n = self.players[card.controller].mana_pool.amount(color) as i32;
+                    (base_p + n, base_t + n)
+                }
+                crate::card::DynamicPt::BasePlusUnspentMana { base_p, base_t } => {
+                    let n = self.players[card.controller].mana_pool.total() as i32;
                     (base_p + n, base_t + n)
                 }
                 crate::card::DynamicPt::BasePlusCreaturesInControllerGraveyard { base } => {

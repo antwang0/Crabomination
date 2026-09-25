@@ -3996,6 +3996,11 @@ pub struct TokenDefinition {
     /// `CardDefinition.back_face` so `Effect::Transform` can toggle it.
     #[serde(default)]
     pub back_face: Option<Box<TokenDefinition>>,
+    /// A planeswalker token's loyalty abilities (CR 306.5d — "Empower Jace":
+    /// the blue Jace token's −1 and −3). Its loyalty comes from counters put
+    /// on it, not a printed value.
+    #[serde(default)]
+    pub loyalty_abilities: Vec<LoyaltyAbility>,
     /// "Create a [token] with N [kind] counters on it." The counters are part
     /// of the entry (CR 614.1c — placed as it is created): the mint sets them before the
     /// token's `PermanentEntered` is published or its ETB triggers fire, so a
@@ -5714,6 +5719,9 @@ pub enum DynamicPt {
     /// `color` mana in the controller's pool. Omnath, Locus of Mana (1/1 +
     /// green mana). Live-recomputes as mana is added/spent (CR 604.3).
     BasePlusUnspentColorMana { base_p: i32, base_t: i32, color: crate::mana::Color },
+    /// The any-color sibling: `base` + the controller's whole unspent pool
+    /// (Omnath, Locus of the Void — "+1/+1 for each unspent mana you have").
+    BasePlusUnspentMana { base_p: i32, base_t: i32 },
     /// Toughness = the controller's devotion to `color`, with a fixed
     /// printed power. Daxos, Blessed by the Sun (`2/*`).
     DevotionToToughness { color: crate::mana::Color, base_p: i32 },

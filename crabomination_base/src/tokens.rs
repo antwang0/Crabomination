@@ -60,6 +60,7 @@ pub fn token_to_card_definition(token: &TokenDefinition) -> CardDefinition {
         triggered_abilities: token.triggered_abilities.clone(),
         static_abilities: token.static_abilities.clone(),
         equipped_bonus: token.equipped_bonus.clone(),
+        loyalty_abilities: token.loyalty_abilities.clone(),
         back_face: token
             .back_face
             .as_ref()
