@@ -585,6 +585,21 @@ impl GameState {
                 ..Default::default()
             });
         }
+        // Nissa, Worldsoul Speaker — energy rather than mana for [filter]
+        // spells (CR 118.9); only offered when the seat has the energy.
+        let energy_alt = self.battlefield.iter().filter(|c| c.controller == p).find_map(|c| {
+            c.definition.static_abilities.iter().find_map(|sa| match &sa.effect {
+                crate::effect::StaticEffect::EnergyAlternativeCostForFilter { filter, energy }
+                    if self.players[p].energy >= *energy && self.evaluate_requirement_on_card(filter, card, p) =>
+                {
+                    Some(*energy)
+                }
+                _ => None,
+            })
+        });
+        if let Some(energy) = energy_alt {
+            return Some(crate::card::AlternativeCost { energy_cost: energy, ..Default::default() });
+        }
         // Marshland Bloodcaster — the next spell this turn may be paid for
         // with life equal to its mana value.
         if self.players[p].life_alt_next_spell_this_turn {
@@ -12860,6 +12875,9 @@ impl GameState {
         if alt.life_cost > 0 && self.players[p].life < alt.life_cost as i32 {
             return Err(GameError::InsufficientLife);
         }
+        if alt.energy_cost > 0 && self.players[p].energy < alt.energy_cost {
+            return Err(GameError::InsufficientEnergy);
+        }
 
         // Pre-flight: confirm the caster has enough cards in their
         // graveyard for the `exile_from_graveyard_count` additional
@@ -13286,6 +13304,9 @@ impl GameState {
         }
         if alt.once_per_turn_zero {
             self.players[p].zero_alt_cast_used_this_turn = true;
+        }
+        if alt.energy_cost > 0 {
+            self.spend_energy(p, alt.energy_cost);
         }
         // Pay the life portion of the alt cost (CR 119.4; applied
         // amount honors cannot-lose replacements).

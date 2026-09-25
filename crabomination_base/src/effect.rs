@@ -5028,6 +5028,9 @@ pub enum Effect {
     /// "Exile all other spells and counter all abilities" (Summary
     /// Dismissal). Uncounterable spells are exiled too; copies cease to exist.
     ExileAllOtherSpellsCounterAllAbilities,
+    /// "Double the number of each kind of counter you have" (Aetheric
+    /// Amplifier): `who`'s energy, experience and poison counters.
+    DoublePlayerCounters { who: PlayerRef },
     /// "Each player gains control of all nontoken permanents they own"
     /// (Brooding Saurian). Ends every theft of a nontoken permanent, the
     /// temporary ones included.

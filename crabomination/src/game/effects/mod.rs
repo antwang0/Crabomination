@@ -30,6 +30,7 @@ mod exchange_power;
 mod library_dig;
 mod order_of_succession;
 mod owners_control;
+mod player_counters;
 mod chosen_color_damage;
 mod fight_each;
 pub(crate) use eval::PrintedGates;
@@ -2787,6 +2788,14 @@ impl GameState {
                     self.battlefield_find(**id).is_some_and(|c| c.controller == p)
                 })
                 .count();
+            // Stridehangar Automaton — an artifact token among them.
+            let minted_artifact = self
+                .scratch.last_created_tokens
+                .get(tokens_mark..)
+                .unwrap_or(&[])
+                .iter()
+                .filter_map(|id| self.battlefield_find(*id))
+                .any(|c| c.controller == p && c.definition.is_artifact());
             // Jolene — a Treasure among them.
             let minted_treasure = self
                 .scratch.last_created_tokens
@@ -2807,6 +2816,11 @@ impl GameState {
                     crate::effect::StaticEffect::TokenCreationAddsTokenPerToken {
                         definition,
                     } => Some((definition.clone(), minted_count)),
+                    crate::effect::StaticEffect::ArtifactTokenCreationAddsToken { definition }
+                        if minted_artifact =>
+                    {
+                        Some((definition.clone(), 1))
+                    }
                     crate::effect::StaticEffect::TreasureCreationAddsTreasure if minted_treasure => {
                         Some((crabomination_base::tokens::treasure_token(), 1))
                     }
@@ -23031,6 +23045,10 @@ impl GameState {
             }
             Effect::EachPlayerTakesCreatureOfNext => {
                 self.each_player_takes_creature_of_next(ctx);
+                Ok(())
+            }
+            Effect::DoublePlayerCounters { who } => {
+                self.double_player_counters(who, ctx, events);
                 Ok(())
             }
             Effect::OwnersGainControlOfNontokens => {

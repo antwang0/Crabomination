@@ -2491,6 +2491,10 @@ pub enum StaticEffect {
     /// spells you cast, where X is that spell's mana value" (Kentaro, the
     /// Smiling Cat). Read by `effective_alternative_cost`.
     GenericAlternativeCostForFilter { filter: SelectionRequirement },
+    /// CR 118.9 — "You may pay `energy` {E} rather than pay the mana cost for
+    /// [filter] spells you cast" (Nissa, Worldsoul Speaker). Read by
+    /// `effective_alternative_cost`.
+    EnergyAlternativeCostForFilter { filter: SelectionRequirement, energy: u32 },
     /// CR 118.9 — "Once during each of your turns, you may cast a [filter]
     /// spell by paying life equal to its mana value rather than paying its
     /// mana cost" (Demon of Fate's Design). Read by
@@ -2543,6 +2547,10 @@ pub enum StaticEffect {
     /// Applied once per resolution that minted 1+ tokens for the controller
     /// (CR 614.13-style single application).
     TokenCreationAddsToken { definition: crate::card::TokenDefinition },
+    /// The artifact-token sibling: "If one or more artifact tokens would be
+    /// created under your control, those tokens plus a [definition] token are
+    /// created instead" (Stridehangar Automaton's Thopter).
+    ArtifactTokenCreationAddsToken { definition: crate::card::TokenDefinition },
     /// CR 614.1a — "If you would create one or more tokens, you may instead
     /// create that many [one of `options`] tokens" (Jinnie Fay). Applied per
     /// token at mint time by `GameState::token_replacement_for`.

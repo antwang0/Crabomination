@@ -5901,6 +5901,10 @@ pub struct AlternativeCost {
     pub mana_cost: ManaCost,
     /// Life paid as additional cost.
     pub life_cost: u32,
+    /// Energy paid instead of mana (CR 107.16) — "you may pay eight {E}
+    /// rather than pay the mana cost" (Nissa, Worldsoul Speaker).
+    #[serde(default)]
+    pub energy_cost: u32,
     /// If `Some`, the player must exile a card from their hand matching this
     /// filter as part of casting via the alternative.
     pub exile_filter: Option<SelectionRequirement>,

@@ -750,6 +750,7 @@ impl Effect {
             | Effect::EachPlayerTakesCreatureOfNext
             | Effect::LookTopFiveDigForLife
             | Effect::OwnersGainControlOfNontokens
+            | Effect::DoublePlayerCounters { .. }
             | Effect::DamageEachCreatureOfChosenColor { .. }
             | Effect::ForetellFromHand { .. }
             | Effect::EachPlayerCreatesTokenPerControlled { .. }
