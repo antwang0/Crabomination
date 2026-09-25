@@ -472,6 +472,38 @@ impl GameState {
     /// condition currently holds — it may attack despite Defender
     /// (Drowsing Tyrannodon).
     pub(crate) fn ignores_defender_for_attack(&self, card: &CardInstance) -> bool {
+        self.ignores_defender_against_anyone(card) || self.defender_waived_only_vs_last_turn_attackers(card)
+    }
+
+    /// Weathered Sentinels — Defender is waived only against a player who
+    /// attacked its controller during their last turn (that player's
+    /// `attacked_players_this_turn` lasts until their next turn begins), so
+    /// the declaration re-checks each such attack's target.
+    pub(crate) fn defender_waived_only_vs_last_turn_attackers(&self, card: &CardInstance) -> bool {
+        card.definition
+            .static_abilities
+            .iter()
+            .any(|sa| matches!(sa.effect, crate::effect::StaticEffect::CanAttackPlayersWhoAttackedYouLastTurn))
+            && !self.ignores_defender_against_anyone(card)
+            && self.players.iter().any(|pl| pl.attacked_players_this_turn.contains(&card.controller))
+    }
+
+    /// An attacker whose Defender is waived only by
+    /// `CanAttackPlayersWhoAttackedYouLastTurn`: it may attack only such a
+    /// player (no planeswalker or battle).
+    pub(crate) fn sentinel_bound(&self, attacker: CardId) -> bool {
+        let Some(card) = self.battlefield_find(attacker) else { return false };
+        card.definition
+            .static_abilities
+            .iter()
+            .any(|sa| matches!(sa.effect, crate::effect::StaticEffect::CanAttackPlayersWhoAttackedYouLastTurn))
+            && self
+                .computed_permanent(attacker)
+                .is_some_and(|c| c.keywords().contains(&Keyword::Defender))
+            && !self.ignores_defender_against_anyone(card)
+    }
+
+    fn ignores_defender_against_anyone(&self, card: &CardInstance) -> bool {
         use crate::effect::StaticEffect;
         // CR 508.1a — a turn-scoped grant (Krotiq Nestguard's activated ability).
         if self.attack_despite_defender_this_turn.contains(&card.id) {
@@ -1136,6 +1168,10 @@ impl GameState {
                         || self
                             .cant_attack_player_this_turn
                             .contains(&(self.active_player_idx, target_player))
+                        // CR 508.1a — Weathered Sentinels attacks only a player
+                        // who attacked you during their last turn.
+                        || (self.sentinel_bound(atk.attacker)
+                            && !self.players[target_player].attacked_players_this_turn.contains(&p))
                     {
                         return Err(GameError::InvalidAttackTarget(target_player));
                     }
@@ -1148,6 +1184,7 @@ impl GameState {
                         // CR 506.2 — "can't be attacked" (The Aetherspark
                         // while attached to a creature).
                         || self.permanent_cant_be_attacked(pw_id)
+                        || self.sentinel_bound(atk.attacker)
                         || self.same_team(self.active_player_idx, pw.controller)
                         || !self.players[pw.controller].is_alive()
                         || seat_restriction.is_some_and(|only| only != Some(pw.controller))
@@ -1167,6 +1204,7 @@ impl GameState {
                     let protector = b.protected_by;
                     if !b.definition.is_battle()
                         || self.permanent_cant_be_attacked(b_id)
+                        || self.sentinel_bound(atk.attacker)
                         || protector == Some(self.active_player_idx)
                         || protector.is_none_or(|pr| !self.players[pr].is_alive())
                     {

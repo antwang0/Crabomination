@@ -4522,11 +4522,17 @@ impl GameState {
                 Target::Player(_) => false,
             },
             R::DamagedAPlayerThisTurn => match target {
-                Target::Permanent(cid) => self.bf_hint_or_find(*cid, hint).is_some_and(|c| {
-                    self.players.iter().enumerate().any(|(p, pl)| {
-                        p != c.controller && pl.creatures_that_damaged_me_this_turn.contains(cid)
-                    })
-                }),
+                // CR 603.10 — a dying creature's own trigger reads it off the
+                // death snapshot (Wave of Rats).
+                Target::Permanent(cid) => self
+                    .bf_hint_or_find(*cid, hint)
+                    .map(|c| c.controller)
+                    .or_else(|| self.died_card_snapshots.get(cid).map(|c| c.controller))
+                    .is_some_and(|ctrl| {
+                        self.players.iter().enumerate().any(|(p, pl)| {
+                            p != ctrl && pl.creatures_that_damaged_me_this_turn.contains(cid)
+                        })
+                    }),
                 Target::Player(_) => false,
             },
             R::PlayerDamagedBySourceThisTurn => match target {

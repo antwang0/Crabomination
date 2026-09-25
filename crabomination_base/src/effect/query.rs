@@ -879,6 +879,9 @@ impl Effect {
             | Effect::RevealTopCastFreeIfLesserElseHand
             | Effect::RevealTopPutLandsRestBottomRandom { .. }
             | Effect::LookTopMayPutLandOrCreatureMvAtMost { .. }
+            | Effect::ExileOnePerCardTypeFromGraveyardGrow { .. }
+            | Effect::ContestOneLandPerPlayer
+            | Effect::TakeContestedLand
             | Effect::NextSpellHasFlashThisTurn
             | Effect::PreventNextDamageFromSourceThisTurn { .. }
             | Effect::SacrificeSourceUnlessPayValue { .. }

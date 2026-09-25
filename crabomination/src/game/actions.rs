@@ -460,6 +460,52 @@ impl GameState {
         Some(crate::effect::shortcut::prowl(cost, types.clone()))
     }
 
+    /// The blitz a `GrantBlitzToSpells` static `p` controls gives the spell
+    /// `card_id` (Henzie), its cost the spell's mana cost.
+    fn granted_blitz(
+        &self,
+        p: usize,
+        zone: AltCastZone,
+        card_id: CardId,
+    ) -> Option<crate::card::AlternativeCost> {
+        let card = self.alt_cast_source(p, zone).iter().find(|c| c.id == card_id)?;
+        let granted = self.battlefield.iter().filter(|c| c.controller == p).any(|c| {
+            c.definition.static_abilities.iter().any(|sa| match &sa.effect {
+                crate::effect::StaticEffect::GrantBlitzToSpells { filter } => {
+                    self.evaluate_requirement_on_card(filter, card, p)
+                }
+                _ => false,
+            })
+        });
+        if !granted {
+            return None;
+        }
+        let mut alt = crate::effect::shortcut::blitz(card.definition.cost.clone());
+        self.discount_blitz(p, &mut alt);
+        Some(alt)
+    }
+
+    /// Henzie's "blitz costs you pay cost {1} less for each time you've cast
+    /// your commander from the command zone this game", per such static.
+    fn discount_blitz(&self, p: usize, alt: &mut crate::card::AlternativeCost) {
+        let statics = self
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == p)
+            .flat_map(|c| c.definition.static_abilities.iter())
+            .filter(|sa| matches!(sa.effect, crate::effect::StaticEffect::BlitzCostLessPerCommanderCast))
+            .count() as u32;
+        if statics == 0 {
+            return;
+        }
+        let casts: u32 = self.players[p]
+            .commanders
+            .iter()
+            .map(|id| self.commander_cast_count.get(id).copied().unwrap_or(0))
+            .sum();
+        alt.mana_cost.reduce_generic(statics * casts);
+    }
+
     /// `effective_alternative_cost` over an explicit source zone — the
     /// grant-from-the-battlefield arms apply to any spell their controller
     /// casts, a commander cast from the command zone included (CR 903.8).
@@ -484,8 +530,16 @@ impl GameState {
             let hopped = self.casting_hop == Some((card_id, crate::game::HopFrom::Graveyard));
             return hopped.then(|| alt.clone());
         }
-        if printed.is_some() {
-            return printed;
+        if let Some(mut alt) = printed {
+            if alt.blitz {
+                self.discount_blitz(p, &mut alt);
+            }
+            return Some(alt);
+        }
+        // CR 702.152 — Henzie: "[filter] spells you cast have blitz", the
+        // blitz cost being the spell's own mana cost.
+        if let Some(granted) = self.granted_blitz(p, zone, card_id) {
+            return Some(granted);
         }
         // CR 702.76 — Hunting Velociraptor: "[filter] spells you cast have
         // prowl [cost]". The prowl gate reads the spell's own creature types.

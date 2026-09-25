@@ -476,6 +476,7 @@ fn counter_token(kind: CounterType) -> &'static str {
         CounterType::Suspect => "Suspect",
         CounterType::Hit => "Hit",
         CounterType::Everything => "Everything",
+        CounterType::Contested => "Contested",
     }
 }
 

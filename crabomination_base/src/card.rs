@@ -918,6 +918,9 @@ pub enum CounterType {
     /// Everything counter — Omo, Queen of Vesuva's mark: a land with one is
     /// every land type, a nonland creature with one every creature type.
     Everything,
+    /// Contested counter — Turf War's mark: a creature dealing combat damage
+    /// to a player takes one of their lands carrying one.
+    Contested,
 }
 
 /// Every zone a card can occupy.

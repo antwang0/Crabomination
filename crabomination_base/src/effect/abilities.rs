@@ -131,6 +131,25 @@ pub enum StaticEffect {
     /// (controller as context). Drowsing Tyrannodon ("…as long as you control
     /// a creature with power 4 or greater").
     CanAttackIgnoringDefenderWhile { condition: Predicate },
+    /// CR 508.1a — "This creature can attack players who attacked you during
+    /// their last turn as though it didn't have defender" (Weathered
+    /// Sentinels). The waiver is per defending player, so the declaration
+    /// checks each such attack's target (`GameState::defender_waived_only_vs_last_turn_attackers`).
+    CanAttackPlayersWhoAttackedYouLastTurn,
+    /// CR 702.152 — "Each [filter] spell you cast has blitz. The blitz cost
+    /// is equal to its mana cost" (Henzie "Toolbox" Torre). Surfaced as the
+    /// spell's alternative cost by `effective_alternative_cost_in` when it
+    /// has no printed one.
+    GrantBlitzToSpells { filter: SelectionRequirement },
+    /// "Blitz costs you pay cost {1} less for each time you've cast your
+    /// commander from the command zone this game" (Henzie) — applied to every
+    /// blitz cost, printed or granted, as its generic part.
+    BlitzCostLessPerCommanderCast,
+    /// "If you would create one or more Treasure tokens, instead create those
+    /// tokens plus an additional Treasure token" (Jolene, the Plunder Queen)
+    /// — one extra per resolution that minted a Treasure for the controller,
+    /// beside `TokenCreationAddsToken`.
+    TreasureCreationAddsTreasure,
     /// "[Creatures the selector picks] get +X/+Y", where X and Y are live
     /// [`Value`]s evaluated with the source as context — the dynamic-magnitude
     /// sibling of `PumpPT` (Meishin, the Mind Cage's "all creatures get -X/-0,

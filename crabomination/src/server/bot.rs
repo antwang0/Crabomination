@@ -6712,7 +6712,9 @@ impl BoardFacts {
                     // The {0} grants (Darksteel Monolith, One with the
                     // Multiverse) were invisible here, so neither was used.
                     | SE::ZeroAlternativeCostOncePerTurn { .. }
-                    | SE::ZeroAlternativeCostOncePerYourTurn { .. } => f.grants_alt_cost = true,
+                    | SE::ZeroAlternativeCostOncePerYourTurn { .. }
+                    // Henzie's granted blitz.
+                    | SE::GrantBlitzToSpells { .. } => f.grants_alt_cost = true,
                     _ => {}
                 }
             }
@@ -11430,6 +11432,30 @@ fn pick_attacks_inner(state: &GameState, seat: usize, guard: bool) -> Vec<Attack
             a.target = AttackTarget::Planeswalker(pw);
         }
     }
+    // CR 508.1a — Weathered Sentinels attacks only a player who attacked
+    // this seat during their last turn: re-aim it at one, or leave it home.
+    attacks.retain_mut(|a| {
+        if !state.sentinel_bound(a.attacker) {
+            return true;
+        }
+        let ok = |q: usize| {
+            state.players[q].is_alive()
+                && !state.same_team(seat, q)
+                && state.players[q].attacked_players_this_turn.contains(&seat)
+        };
+        if let AttackTarget::Player(q) = a.target
+            && ok(q)
+        {
+            return true;
+        }
+        match (0..state.players.len()).find(|&q| ok(q)) {
+            Some(q) => {
+                a.target = AttackTarget::Player(q);
+                true
+            }
+            None => false,
+        }
+    });
     // Last, because the tax depends on what each attacker is aimed at.
     trim_attacks_to_payable_tax(state, seat, statics, &mut attacks);
     attacks

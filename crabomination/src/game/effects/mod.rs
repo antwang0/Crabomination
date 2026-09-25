@@ -47,6 +47,8 @@ mod attach_from_zone;
 pub(crate) mod keyword_gifts;
 mod reveal_top_misc;
 mod library_top_deploy;
+mod graveyard_type_sweep;
+mod contested_lands;
 mod politics;
 mod targeting;
 /// The target enumerator's call-site census — see
@@ -2765,6 +2767,14 @@ impl GameState {
                     self.battlefield_find(**id).is_some_and(|c| c.controller == p)
                 })
                 .count();
+            // Jolene — a Treasure among them.
+            let minted_treasure = self
+                .scratch.last_created_tokens
+                .get(tokens_mark..)
+                .unwrap_or(&[])
+                .iter()
+                .filter_map(|id| self.battlefield_find(*id))
+                .any(|c| c.controller == p && c.definition.name == "Treasure");
             let riders: Vec<(crate::card::TokenDefinition, usize)> = self
                 .battlefield
                 .iter()
@@ -2777,6 +2787,9 @@ impl GameState {
                     crate::effect::StaticEffect::TokenCreationAddsTokenPerToken {
                         definition,
                     } => Some((definition.clone(), minted_count)),
+                    crate::effect::StaticEffect::TreasureCreationAddsTreasure if minted_treasure => {
+                        Some((crabomination_base::tokens::treasure_token(), 1))
+                    }
                     _ => None,
                 })
                 .collect();
@@ -35088,6 +35101,11 @@ impl GameState {
             Effect::LookTopMayPutLandOrCreatureMvAtMost { max_mv } => {
                 self.look_top_may_put_land_or_creature_mv_at_most(max_mv, ctx, events)
             }
+            Effect::ExileOnePerCardTypeFromGraveyardGrow { who } => {
+                self.exile_one_per_card_type_from_graveyard_grow(who, ctx, events)
+            }
+            Effect::ContestOneLandPerPlayer => self.contest_one_land_per_player(ctx, events),
+            Effect::TakeContestedLand => self.take_contested_land(ctx, events),
             Effect::ChooseCardTypeAmongForSource(options) => {
                 use crate::decision::{Decision, DecisionAnswer};
                 let Some(source) = ctx.source else { return Ok(()) };

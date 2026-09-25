@@ -30631,6 +30631,10 @@ fn static_effect_to_effects(
             | StaticEffect::OthersNamedLikeThisAreGoaded
             // Attack-permission static, read in `ignores_defender_for_attack`.
             | StaticEffect::CanAttackIgnoringDefenderWhile { .. }
+            | StaticEffect::CanAttackPlayersWhoAttackedYouLastTurn
+            | StaticEffect::GrantBlitzToSpells { .. }
+            | StaticEffect::BlitzCostLessPerCommanderCast
+            | StaticEffect::TreasureCreationAddsTreasure
             // Drannith Magistrate — cast-legality gate in `cast_from_zone_blocked`.
             | StaticEffect::OpponentsCantCastFromAnywhereButHand
             // Lier — read by the flashback-cast path / graveyard view.
