@@ -374,6 +374,7 @@ impl Effect {
             }
             Effect::SecretCouncilPermanentVote { per_vote, .. } => f(per_vote),
             Effect::EnlistThen { then } => f(then),
+            Effect::GuessManaValueAgainstValue { otherwise, .. } => f(otherwise),
             Effect::RemoveCountersFromAmongThen { then, .. } => f(then),
             Effect::SecretCouncilPermanentVoteMost { on_most, on_none, .. } => {
                 f(on_most);
