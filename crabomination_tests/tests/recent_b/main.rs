@@ -44,6 +44,7 @@ mod cmdr_chishiro;
 mod cmdr_zurgo;
 mod cmdr_veilpiercer;
 mod cmdr_leinore;
+mod cmdr_sidar;
 mod cmdr_emmara;
 mod cmdr_teferi;
 mod cmdr_lorehold;
