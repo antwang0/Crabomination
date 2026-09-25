@@ -114,6 +114,7 @@ lists were picked.
 | **Virtue and Valor** (WOC precon) GW | Ellivere of the Wild Court | GW | 100 | 🟡 all 100 implemented, 7 carry residuals (below) |
 | **Divine Convocation** (MOC precon) URW | Kasla, the Broken Halo | URW | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Symbiotic Swarm** (C20 precon) WBG | Kathril, Aspect Warper | WBG | 100 | 🟡 all 100 implemented, 6 carry residuals (below) |
+| **Painbow** (DMC precon) WUBRG | Jared Carthalion | WUBRG | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Hatsune Miku** (SLD precon) GW | Trostani, Selesnya's Voice | GW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Witherbloom Witchcraft** (C21 precon) BG | Willowdusk, Essence Seer | BG | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Witherbloom Pestilence** (SOC precon) BG | Dina, Essence Brewer | BG | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
@@ -1696,6 +1697,27 @@ Eshki / Nelly / Go-Shintai (seed 10241): 1,000 / 1,000, 15.3 %; census (seed
 10242): no card of the four unplayed; strict debug pods (seeds 10244-10246, 4
 and 6 seats): 180 / 180. `--bench` byte-identical; cube/sos/sealed (seed 10243):
 7,500 decided.
+
+The **hundred-and-tenth** is Dominaria United Commander's **Painbow**
+(`Painbow_DMC`) — five-color multicolor under Jared Carthalion, a
+planeswalker commander (CR 903.3a). Eighteen cards were missing; the
+primitives: `R::AllColors` (CR 105.2c — the Kavu tokens Iridian Maelstrom
+spares), `PumpTeamByControlledPermanents::per_own_color` (Knight of New
+Alara), `StaticEffect::OthersEnterWithSourceTapState` (Archelos, CR 614.1c),
+`PlaneswalkerSubtype::Jared`. Three finds: ⚠ **a "whenever you cast a spell
+with {X}" trigger read X as 0** — the cast-trigger push carried no X, so
+Geometer's Arthropod looked at nothing and Zaxara's Hydra died 0/0; ⚠ **a
+static over "multicolored creatures you control" was dropped whole**
+(Rienne) — `Multicolored`/`Monocolored` now route like `HasColor`; ⚠ **the
+bot's mana-value gate rejected affordable spells** under next-spell affinity
+or a turn-granted discount (a strict-pod `debug_assert`). Fallaji Wayfarer's
+all-colors CDA is exempt from its identity, as printed (CR 903.4).
+Residuals: **Primeval Spawn**, **Knight of New Alara**, **Unite the
+Coalition** (INCOMPLETE_CARDS). Release pods beside Kathril / Kasla /
+Ellivere (seed 11001, 1,000 games): 1,000 decided, Jared 10.8 %, and the
+census leaves no card of the four lists unplayed; strict debug pods beside
+the Chishiro / Zhulodok / Firkraag seats (seeds 11003/11004, 120 games)
+decided 120/120. Suite 21,644 / 0; `--bench` byte-identical.
 
 The **hundred-and-third** is Ikoria Commander's **Symbiotic Swarm**
 (`SymbioticSwarm_C20`) — Abzan keyword counters under Kathril, Aspect
