@@ -485,6 +485,9 @@ fn no_cost_sacrifice_is_spelled_as_the_first_step_of_the_effect() {
     // or (Grab the Prize) whose payoff reads the discard, which a cost-time
     // discard doesn't yet record.
     const SPELL_OPENERS: &[&str] = &[
+        // "Discard your hand, then draw eight cards" — the discard is the
+        // effect, not a cost.
+        "Blood for the Blood God!",
         "Bound // Determined",
         "Contract from Below",
         "Cycle of Renewal",

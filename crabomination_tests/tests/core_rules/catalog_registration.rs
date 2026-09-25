@@ -248,6 +248,11 @@ const ALLOWED_MODELLING: &[(&str, &str)] = &[
     // "cast from your graveyard by paying {3}{R} and exiling four other
     // cards" is Escape 4 spelled out.
     ("Squee, Dubious Monarch", "escape"),
+    // Sarcophagus — "cast this card from your graveyard by exiling another
+    // creature card from your graveyard in addition to paying its other
+    // costs" is Escape 1 at its mana cost, with the exiled card filtered
+    // (`CardDefinition::escape_exile_filter`).
+    ("Helbrute", "escape"),
     // Pit Scorpion predates the keyword: "whenever this deals damage to a
     // player, that player gets a poison counter". Poisonous is combat-only,
     // so this is an approximation and not an equivalence.

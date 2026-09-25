@@ -58,6 +58,7 @@ mod cmdr_jace;
 mod cmdr_caesar;
 mod cmdr_doom;
 mod cmdr_szarekh;
+mod cmdr_abaddon;
 mod cmdr_prosper;
 mod cmdr_galea;
 mod cmdr_chishiro;
