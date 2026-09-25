@@ -121,7 +121,7 @@ fn archivist_draws_the_monarch_a_card() {
     let hand = g.players[0].hand.len();
     step(&mut g, TurnStep::End);
     // The monarch's own end-step draw (CR 725.2) plus the Archivist's.
-    assert!(g.players[0].hand.len() >= hand + 1);
+    assert!(g.players[0].hand.len() > hand);
 }
 
 /// Beregond — a Human entering pumps the team with vigilance.
