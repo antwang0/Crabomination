@@ -5542,14 +5542,31 @@ pub fn decide_choose_target(
         return DecisionAnswer::Target(Target::Player(p));
     }
     // Only our own permanents are legal — give up the least valuable to keep
-    // (tokens first, then lowest-value real cards).
-    let worst_own = legal
-        .iter()
-        .filter_map(|t| match t {
+    // (tokens first, then lowest-value real cards). On a crowded board a
+    // permanent that makes a token copy each turn is passed over while
+    // another is legal: "copy another target permanent you control" landing
+    // on an Extravagant Replication token doubled the board every upkeep
+    // until it hit `MAX_BATTLEFIELD`.
+    let crowded = state.battlefield.len() >= crate::recommend::BOARD_GATE / 16;
+    let replicator = |id: crate::card::CardId| {
+        crowded
+            && state.battlefield_find(id).is_some_and(|c| {
+                c.definition
+                    .triggered_abilities
+                    .iter()
+                    .any(|t| matches!(t.effect, crate::effect::Effect::CreateTokenCopyOf { .. }))
+            })
+    };
+    let own = || {
+        legal.iter().filter_map(|t| match t {
             Target::Permanent(id) if owner(*id) == Some(seat) => Some(*id),
             _ => None,
         })
-        .min_by_key(|id| sacrifice_keep_value(state, *id, w));
+    };
+    let worst_own = own()
+        .filter(|id| !replicator(*id))
+        .min_by_key(|id| sacrifice_keep_value(state, *id, w))
+        .or_else(|| own().min_by_key(|id| sacrifice_keep_value(state, *id, w)));
     if let Some(id) = worst_own {
         return DecisionAnswer::Target(Target::Permanent(id));
     }
@@ -29189,6 +29206,34 @@ mod target_eval_tests {
                 Some(crate::decision::Decision::ChooseTarget { .. })
             ),
             "fixture: the trigger must suspend on a target pick"
+        );
+    }
+
+    /// Pod board-cap bug: "copy another target nonland permanent you
+    /// control" left to the own-side heuristic chose the cheapest token — an
+    /// Extravagant Replication copy — and the copies doubled every upkeep to
+    /// `MAX_BATTLEFIELD`. On a crowded board the replicator is passed over
+    /// while another own permanent is legal, and still taken when it is the
+    /// only one.
+    #[test]
+    fn a_crowded_board_does_not_copy_a_replicator() {
+        use crate::game::types::Target;
+        let mut g = two_player_game();
+        for _ in 0..crate::recommend::BOARD_GATE / 16 {
+            g.add_card_to_battlefield(0, catalog::plains());
+        }
+        let rep = g.add_card_to_battlefield(0, catalog::extravagant_replication());
+        g.battlefield_find_mut(rep).unwrap().is_token = true;
+        let ring = g.add_card_to_battlefield(0, catalog::sol_ring());
+        let w = EvalWeights::default();
+        let legal = [Target::Permanent(rep), Target::Permanent(ring)];
+        assert_eq!(
+            decide_choose_target(&g, 0, &legal, &w),
+            crate::decision::DecisionAnswer::Target(Target::Permanent(ring))
+        );
+        assert_eq!(
+            decide_choose_target(&g, 0, &legal[..1], &w),
+            crate::decision::DecisionAnswer::Target(Target::Permanent(rep))
         );
     }
 
