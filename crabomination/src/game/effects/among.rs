@@ -46,4 +46,22 @@ impl GameState {
         }
         seen.len() as i32
     }
+
+    /// `Predicate::AnOpponentsTopCardSharesCardTypeWith` — Gandalf, Westward
+    /// Voyager: some living opponent's top card shares a card type with the
+    /// card `sel` names (the spell that triggered it).
+    pub(crate) fn an_opponents_top_card_shares_type(&self, sel: &Selector, ctx: &EffectContext) -> bool {
+        let types: Vec<crate::card::CardType> = self
+            .among_card_ids(sel, ctx)
+            .into_iter()
+            .filter_map(|id| self.find_card_anywhere(id))
+            .flat_map(|c| c.definition.card_types.clone())
+            .collect();
+        self.opponents_of(ctx.controller).into_iter().filter(|&o| self.players[o].is_alive()).any(|o| {
+            self.players[o]
+                .library
+                .first()
+                .is_some_and(|top| top.definition.card_types.iter().any(|t| types.contains(t)))
+        })
+    }
 }

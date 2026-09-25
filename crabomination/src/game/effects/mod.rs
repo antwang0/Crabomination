@@ -48,6 +48,8 @@ mod shell_game;
 mod life_loss_grants;
 mod spell_damage;
 mod static_copy;
+// CR 701.38 — secret council ballots whose counts matter (Círdan, Trap the Trespassers).
+mod secret_council;
 // CR 707.9b — a spell copy that is also a 1/1 Spirit (Donal).
 mod spirit_copy;
 mod table_choices;
@@ -32204,6 +32206,12 @@ impl GameState {
             }
 
             Effect::Connive { what, amount } => self.connive(what, amount, ctx, events),
+            Effect::SecretCouncilPlayerVote { per_vote, unvoted } => {
+                self.secret_council_player_vote(per_vote, unvoted, effect, ctx, events)
+            }
+            Effect::SecretCouncilPermanentVote { filter, per_vote } => {
+                self.secret_council_permanent_vote(filter, per_vote, effect, ctx, events)
+            }
 
             Effect::CopySpellAsOneOneSpirit { what } => {
                 let ids: Vec<CardId> = match what {
@@ -39628,6 +39636,7 @@ impl GameState {
                         .collect(),
                 )
             }
+            PlayerRef::OpponentsWhoVotedTheSame => self.opponents_who_voted_the_same(ctx.controller),
             // CR 701.38 — Grudge Keeper: opponents none of whose votes matched
             // any of the controller's on the most recent ballot.
             PlayerRef::OpponentsWhoVotedDifferently => {
@@ -39927,6 +39936,7 @@ impl GameState {
                 // Singular fallback — `resolve_players` returns the full set.
                 self.resolve_players(pref, ctx).first().copied()
             }
+            PlayerRef::OpponentsWhoVotedTheSame => self.opponents_who_voted_the_same(ctx.controller).first().copied(),
             PlayerRef::EachPlayer => (0..self.players.len()).find(|i| self.players[*i].is_alive()),
             PlayerRef::EachPlayerWithoutMaxSpeed => (0..self.players.len())
                 .find(|i| self.players[*i].is_alive() && self.players[*i].speed < 4),

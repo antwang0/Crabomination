@@ -1454,6 +1454,7 @@ impl GameState {
             }
             Value::LastDiscardedCardTypes => self.last_discarded_card_types as i32,
             Value::CardTypesAmong(sel) => self.card_types_among(sel, ctx),
+            Value::PlayersIn(who) => self.resolve_players(who, ctx).len() as i32,
             Value::OpponentsControllingAnyOf(sel) => self.opponents_controlling_any_of(sel, ctx),
             Value::GreatestSameStoredResult => ctx
                 .source
@@ -3680,6 +3681,7 @@ impl GameState {
                         .iter()
                         .any(|id| Some(*id) != ctx.source)
                 }),
+            Predicate::AnOpponentsTopCardSharesCardTypeWith(sel) => self.an_opponents_top_card_shares_type(sel, ctx),
             Predicate::CelebrationActive { who } => self
                 .resolve_player(who, ctx)
                 .is_some_and(|p| self.players[p].nonland_permanents_entered_this_turn >= 2),

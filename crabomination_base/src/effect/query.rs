@@ -220,7 +220,8 @@ fn player_ref_selector(p: &PlayerRef) -> Option<&Selector> {
         | PlayerRef::RandomPlayer
         | PlayerRef::PlayerToYourRight
         | PlayerRef::HostileOpponent
-        | PlayerRef::OpponentsWhoVotedDifferently => None,
+        | PlayerRef::OpponentsWhoVotedDifferently
+        | PlayerRef::OpponentsWhoVotedTheSame => None,
     }
 }
 
@@ -365,6 +366,11 @@ impl Effect {
                 f(on_opponent);
                 f(on_you);
             }
+            Effect::SecretCouncilPlayerVote { per_vote, unvoted } => {
+                f(per_vote);
+                f(unvoted);
+            }
+            Effect::SecretCouncilPermanentVote { per_vote, .. } => f(per_vote),
             Effect::If { then, else_, .. }
             | Effect::IfRevealFromHand { then, else_, .. }
             | Effect::LookTopMayBottomAllElse { then, else_, .. } => {
@@ -747,6 +753,8 @@ impl Effect {
         }
         match self {
             Effect::DestroyAllNoRegenGainControllerLifePerManaValue { .. }
+            | Effect::SecretCouncilPlayerVote { .. }
+            | Effect::SecretCouncilPermanentVote { .. }
             | Effect::EachPlayerTakesCreatureOfNext
             | Effect::LookTopFiveDigForLife
             | Effect::OwnersGainControlOfNontokens

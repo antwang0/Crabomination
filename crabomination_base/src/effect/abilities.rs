@@ -2347,6 +2347,9 @@ pub enum StaticEffect {
     /// `chosen_type_etb_counter_specs`; the source's live power (layers applied)
     /// sets the count, so a pumped Biomancer grants more.
     OtherCreaturesEnterWithCountersEqualToSourcePower { kind: CounterType },
+    /// Arwen, Weaver of Hope — each other creature you control enters with
+    /// that many more `kind` counters as the source's live toughness.
+    OtherCreaturesEnterWithCountersEqualToSourceToughness { kind: CounterType },
     /// "Each other creature you control enters with an additional X `kind`
     /// counters on it, where X is the number of `kind` counters on this"
     /// (Bloodspore Thrinax). The counter-count sibling of the power one.

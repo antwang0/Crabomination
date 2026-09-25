@@ -152,6 +152,9 @@ pub enum PlayerRef {
     /// CR 701.38 — each opponent whose vote in the most recent ballot differed
     /// from the effect's controller's (Grudge Keeper).
     OpponentsWhoVotedDifferently,
+    /// Each opponent who voted, on the most recent ballot, for a choice the
+    /// controller also voted for (Erestor of the Council, Model of Unity).
+    OpponentsWhoVotedTheSame,
     /// A printed "**choose an opponent**" — ONE opponent, picked by the
     /// effect's controller. Not a fan-out: `GameState::default_hostile_
     /// opponent` is the engine's single ranked answer for an open choice of
@@ -178,6 +181,7 @@ impl PlayerRef {
             PlayerRef::EachOpponent
                 | PlayerRef::EachOpponentExceptTriggerer
                 | PlayerRef::OpponentsWhoVotedDifferently
+                | PlayerRef::OpponentsWhoVotedTheSame
                 | PlayerRef::EachPlayer
                 | PlayerRef::EachPlayerWithoutMaxSpeed
                 | PlayerRef::EachTeammate
@@ -1397,6 +1401,10 @@ pub enum Value {
     /// Number of players still in the game (not eliminated). "For each player"
     /// riders — Benediction of Moons's "gain 1 life for each player".
     PlayerCount,
+    /// How many players `who` names (a fan-out like
+    /// `OpponentsWhoVotedDifferently` counts its members) — Erestor's "scry X,
+    /// where X is the number of opponents who voted for a choice you didn't".
+    PlayersIn(PlayerRef),
     /// CR 700.11 — how many times the controller descended this turn (permanent
     /// cards put into their graveyard). The Mycotyrant's end-step token count.
     TimesDescendedThisTurn,
@@ -2502,6 +2510,11 @@ pub enum Predicate {
     /// attackers. Gates "Whenever you attack with one or more creatures with
     /// flying / power 4+" triggers (Teo, Spirited Glider; Bitter Work).
     AttackedWithCreatureMatching { who: PlayerRef, filter: SelectionRequirement },
+    /// Some opponent's top library card shares a card type with the card
+    /// `what` names (Gandalf, Westward Voyager's "each opponent reveals the
+    /// top card of their library. If any of those cards shares a card type
+    /// with that spell").
+    AnOpponentsTopCardSharesCardTypeWith(Selector),
     /// CR 700.13 — `who` has committed a crime this turn. Backed by
     /// `Player.committed_crime_this_turn`. Powers "as long as / if you've
     /// committed a crime this turn" riders (Nimble Brigand's evasion).
@@ -5142,6 +5155,17 @@ pub enum Effect {
     /// player; per vote, `on_opponent` runs with the voted-for opponent bound
     /// as `PlayerRef::Triggerer`, or `on_you` when the controller got it.
     EachPlayerVotesForAPlayer { on_opponent: Box<Effect>, on_you: Box<Effect> },
+    /// CR 701.38 secret council where any player (yourself included) may get
+    /// votes and the count matters (Círdan the Shipwright): `per_vote` runs
+    /// once per vote a player received, then `unvoted` once for each player
+    /// who received none — both with that player bound as
+    /// `PlayerRef::Triggerer`.
+    SecretCouncilPlayerVote { per_vote: Box<Effect>, unvoted: Box<Effect> },
+    /// CR 701.38 secret council for a permanent (Trap the Trespassers): each
+    /// player votes for a permanent matching `filter` (read with the
+    /// controller as "you"); `per_vote` then runs once per vote with the
+    /// voted-for permanent as `Target(0)`.
+    SecretCouncilPermanentVote { filter: SelectionRequirement, per_vote: Box<Effect> },
     /// Prisoner's Dilemma — each opponent secretly chooses silence or snitch.
     /// All silence: `all_silence` damage to each. All snitch: `all_snitch` to
     /// each. Otherwise `mixed` to each opponent who chose silence.

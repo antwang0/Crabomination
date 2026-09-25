@@ -7591,6 +7591,13 @@ impl GameState {
                             specs.push((*kind, n));
                         }
                     }
+                    // Arwen, Weaver of Hope — the same, off the live toughness.
+                    StaticEffect::OtherCreaturesEnterWithCountersEqualToSourceToughness { kind } => {
+                        let n = self.effective_toughness(src).max(0) as u32;
+                        if n > 0 {
+                            specs.push((*kind, n));
+                        }
+                    }
                     StaticEffect::OtherCreaturesEnterWithCountersEqualToSourceCounters { kind } => {
                         let n = src.counter_count(*kind);
                         if n > 0 {
@@ -30915,6 +30922,7 @@ fn static_effect_to_effects(
             | StaticEffect::TypeEntersWithCountersPerControlled { .. }
             | StaticEffect::TypedCreaturesEnterWithExtraCounter { .. }
             | StaticEffect::OtherCreaturesEnterWithCountersEqualToSourcePower { .. }
+            | StaticEffect::OtherCreaturesEnterWithCountersEqualToSourceToughness { .. }
             | StaticEffect::OtherCreaturesEnterWithCountersEqualToSourceCounters { .. }
             // Target-tax, read at `extra_cost_for_spell` (Jubilant Skybonder).
             | StaticEffect::TaxOpponentSpellsTargeting { .. }
