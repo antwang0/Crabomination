@@ -355,7 +355,8 @@ Nahiri, the Harbinger; Kari Zev; Marionette Master; Bloodthirsty Adversary;
 Aura of Silence; Compulsive Research; Mask of Griselbrand; Cankerbloom;
 Bitter Triumph; Ursine Monstrosity; Finale of Devastation; Teferi's
 Protection; Comeuppance; Decree of Justice; Experiment Twelve; Guardian
-Project; Pteramander; Mobilized District; Dragonkin Berserker. Still open:
+Project; Pteramander; Mobilized District; Dragonkin Berserker; Voracious Fell Beast; Lethal Scheme;
+Circuitous Route; Augur of Autumn. Still open:
 
 | Card | Gap |
 |---|---|

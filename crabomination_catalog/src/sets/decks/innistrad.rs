@@ -3239,7 +3239,7 @@ pub fn ground_pounder() -> CardDefinition {
 }
 
 /// Augur of Autumn — {1}{G}{G} 2/3 Human Druid. You may play lands from the top
-/// of your library. (The coven cast-creatures-from-top rider is omitted.)
+/// of your library; with coven, cast creature spells from there too.
 pub fn augur_of_autumn() -> CardDefinition {
     use crate::card::StaticAbility;
     use crate::effect::StaticEffect;
@@ -3253,12 +3253,21 @@ pub fn augur_of_autumn() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        static_abilities: vec![StaticAbility {
-            description: "You may play lands from the top of your library.",
-            effect: StaticEffect::PlayFromLibraryTop {
-                filter: SelectionRequirement::Land,
+        static_abilities: vec![
+            StaticAbility {
+                description: "You may play lands from the top of your library.",
+                effect: StaticEffect::PlayFromLibraryTop {
+                    filter: SelectionRequirement::Land,
+                },
             },
-        }],
+            StaticAbility {
+                description: "Coven — As long as you control three or more creatures with different powers, you may cast creature spells from the top of your library.",
+                effect: StaticEffect::WhileCondition {
+                    condition: crate::effect::Predicate::CovenActive { who: crate::effect::PlayerRef::You },
+                    inner: Box::new(StaticEffect::PlayFromLibraryTop { filter: SelectionRequirement::Creature }),
+                },
+            },
+        ],
         ..Default::default()
     }
 }

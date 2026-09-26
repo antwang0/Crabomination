@@ -1677,7 +1677,7 @@ pub fn sarumans_trickery() -> CardDefinition {
 }
 
 /// Voracious Fell Beast — {4}{B}{B} 4/4 Drake. Flying. ETB: each opponent
-/// sacrifices a creature; create a Food. (Food-per-sacrificed approximated to one.)
+/// sacrifices a creature; create a Food per creature sacrificed this way.
 pub fn voracious_fell_beast() -> CardDefinition {
     CardDefinition {
         name: "Voracious Fell Beast",
@@ -1696,9 +1696,11 @@ pub fn voracious_fell_beast() -> CardDefinition {
                 count: Value::Const(1),
                 filter: SelectionRequirement::Creature,
             },
+            // "a Food token for each creature sacrificed this way" — one per
+            // opponent who had one, not one in all.
             Effect::CreateToken {
                 who: PlayerRef::You,
-                count: Value::Const(1),
+                count: Value::count(Selector::SacrificedThisResolution { filter: SelectionRequirement::Creature }),
                 definition: std::sync::Arc::new(crate::game::effects::food_token()),
             },
         ]))],

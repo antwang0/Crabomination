@@ -475,3 +475,80 @@ fn mobilized_district_is_cheaper_per_legend() {
     drain_stack(&mut g);
     assert!(g.computed_permanent(md).unwrap().card_types().contains(&crabomination::card::CardType::Creature));
 }
+
+/// Voracious Fell Beast — "Create a Food token for each creature sacrificed
+/// this way": three opponents with a creature each make three Foods.
+#[test]
+fn voracious_fell_beast_makes_a_food_per_sacrifice() {
+    let mut g = crabomination::game::multi_player_game(4);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    for p in 1..4 {
+        g.add_card_to_battlefield(p, catalog::grizzly_bears());
+    }
+    let vfb = g.add_card_to_hand(0, catalog::voracious_fell_beast());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    cast(&mut g, vfb, None).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Food").count(), 3);
+}
+
+/// Circuitous Route — "basic land cards and/or Gate cards".
+#[test]
+fn circuitous_route_fetches_gates() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = main_phase();
+    let gate = g.add_card_to_library(0, catalog::azorius_guildgate());
+    let cr = g.add_card_to_hand(0, catalog::circuitous_route());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Search(Some(gate)), DecisionAnswer::Search(None)]));
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    cast(&mut g, cr, None).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(gate).is_some_and(|c| c.tapped));
+}
+
+/// Lethal Scheme — "Each creature that convoked this spell connives."
+#[test]
+fn lethal_scheme_convokers_connive() {
+    let mut g = main_phase();
+    for _ in 0..2 {
+        g.add_card_to_library(0, catalog::lightning_bolt());
+    }
+    let helper = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let victim = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let ls = g.add_card_to_hand(0, catalog::lethal_scheme());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpellConvoke {
+        card_id: ls, target: Some(Target::Permanent(victim)), additional_targets: vec![], mode: None, x_value: None,
+        convoke_creatures: vec![helper],
+    })
+    .expect("convoked");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none());
+    assert_eq!(
+        g.battlefield_find(helper).unwrap().counter_count(crabomination::card::CounterType::PlusOnePlusOne),
+        1,
+        "the convoker connived and discarded a nonland card",
+    );
+}
+
+/// Augur of Autumn — coven (three creatures with different powers) lets you
+/// cast creature spells from the top of your library; without it, no.
+#[test]
+fn augur_of_autumn_coven_casts_creatures_from_the_top() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::augur_of_autumn()); // power 2
+    g.add_card_to_battlefield(0, catalog::grizzly_bears()); // power 2
+    let top = g.add_card_to_library(0, catalog::llanowar_elves());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    assert!(cast(&mut g, top, None).is_err(), "no coven yet");
+    g.add_card_to_battlefield(0, catalog::hill_giant()); // power 3
+    g.add_card_to_battlefield(0, catalog::llanowar_elves()); // power 1
+    cast(&mut g, top, None).expect("coven: cast from the top");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(top).is_some());
+}

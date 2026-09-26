@@ -5325,16 +5325,17 @@ pub fn explosive_vegetation() -> CardDefinition {
 }
 
 /// Circuitous Route — {3}{G} Sorcery. Search your library for up to two
-/// basic land cards, put them onto the battlefield tapped, then shuffle.
-/// (The real card also fetches Gate lands; collapsed to basics for parity.)
+/// basic land cards and/or Gate cards, put them onto the battlefield tapped,
+/// then shuffle.
 pub fn circuitous_route() -> CardDefinition {
+    let gate_or_basic = || SelectionRequirement::IsBasicLand.or(SelectionRequirement::HasLandType(LandType::Gate));
     CardDefinition {
         name: "Circuitous Route",
         cost: cost(&[generic(3), g()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            search_to_battlefield(SelectionRequirement::IsBasicLand, true),
-            search_to_battlefield(SelectionRequirement::IsBasicLand, true),
+            search_to_battlefield(gate_or_basic(), true),
+            search_to_battlefield(gate_or_basic(), true),
         ]),
         ..Default::default()
     }

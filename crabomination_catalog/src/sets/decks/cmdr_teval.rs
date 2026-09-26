@@ -861,10 +861,8 @@ pub fn amphin_mutineer() -> CardDefinition {
 // ── Instants and sorceries ─────────────────────────────────────────────────────
 
 /// Lethal Scheme — {2}{B}{B} Instant. Convoke. Destroy target creature or
-/// planeswalker. Each creature that convoked this spell connives.
-///
-/// Approximation: the connive rider is omitted — the engine doesn't remember
-/// which creatures convoked a spell.
+/// planeswalker. Each creature that convoked this spell connives
+/// (`Selector::CreaturesThatConvokedSource`).
 pub fn lethal_scheme() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Convoke],
@@ -872,7 +870,11 @@ pub fn lethal_scheme() -> CardDefinition {
             "Lethal Scheme",
             cost(&[generic(2), b(), b()]),
             CardType::Instant,
-            Effect::Destroy { what: target_filtered(R::Creature.or(R::Planeswalker)) },
+            Effect::Seq(vec![
+                Effect::Destroy { what: target_filtered(R::Creature.or(R::Planeswalker)) },
+                // "Each creature that convoked this spell connives."
+                Effect::Connive { what: Selector::CreaturesThatConvokedSource, amount: Value::ONE },
+            ]),
         )
     }
 }
