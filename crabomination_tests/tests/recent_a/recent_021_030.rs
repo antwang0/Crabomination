@@ -222,6 +222,21 @@ mod recent22 {
         );
     }
 
+    /// CR 702.189a — firebending mana that was spent is gone: the step change
+    /// re-seeds only what is still in the pool. The whole tally used to be
+    /// re-added at every step, minting spent mana again.
+    #[test]
+    fn spent_firebending_mana_is_not_re_added() {
+        let mut g = two_player_game();
+        let jj = g.add_card_to_battlefield(0, catalog::jeong_jeong_the_deserter());
+        g.clear_sickness(jj);
+        attack_with(&mut g, jj);
+        g.players[0].mana_pool.empty();
+        g.empty_mana_pools();
+        assert_eq!(g.players[0].mana_pool.amount(Color::Red), 0, "spent, not re-minted");
+        assert_eq!(g.players[0].firebending_kept_red, 0);
+    }
+
     /// Once combat ends the firebending mana is cleared (doesn't leak into the
     /// second main phase).
     #[test]

@@ -16898,30 +16898,42 @@ impl GameState {
             {
                 continue;
             }
+            // CR 702.189a — the firebending red still unspent. What was spent
+            // is gone: re-adding the whole tally minted it again at every step
+            // change, and on top of a pool that already kept it (Upwelling, a
+            // red keeper, Kruphix) it was counted twice.
+            let firebent = if end_of_combat {
+                0
+            } else {
+                player.firebending_kept_red.min(player.mana_pool.amount(crate::mana::Color::Red))
+            };
+            player.firebending_kept_red = firebent;
             if all_persist {
-                // Pool survives intact; still handle firebending below.
+                // Pool survives intact, firebending red with it.
             } else if keepers.contains(&i) {
-                let total = player.mana_pool.total();
+                let total = player.mana_pool.total() - firebent;
                 player.mana_pool.empty();
                 player.mana_pool.add_colorless(total);
+                player.mana_pool.add(crate::mana::Color::Red, firebent);
             } else {
                 // Preserve the amounts of any colors this player keeps.
-                let kept: Vec<(crate::mana::Color, u32)> = color_keepers
-                    .iter()
-                    .filter(|(p, _)| *p == i)
-                    .map(|(_, col)| (*col, player.mana_pool.amount(*col)))
-                    .collect();
+                // One entry per color: two keepers of the same color (a
+                // copied Leyline Tyrant) doubled the kept mana every step
+                // until the pool's counter overflowed (six-seat pod, seed
+                // 34097).
+                let mut kept: Vec<(crate::mana::Color, u32)> = Vec::new();
+                for &(_, col) in color_keepers.iter().filter(|(p, _)| *p == i) {
+                    if !kept.iter().any(|(c, _)| *c == col) {
+                        kept.push((col, player.mana_pool.amount(col)));
+                    }
+                }
+                let red_kept = kept.iter().any(|(c, _)| *c == crate::mana::Color::Red);
                 player.mana_pool.empty();
                 for (col, amt) in kept {
                     player.mana_pool.add(col, amt);
                 }
-            }
-            if player.firebending_kept_red > 0 {
-                if end_of_combat {
-                    player.firebending_kept_red = 0;
-                } else {
-                    let red = player.firebending_kept_red;
-                    player.mana_pool.add(crate::mana::Color::Red, red);
+                if !red_kept {
+                    player.mana_pool.add(crate::mana::Color::Red, firebent);
                 }
             }
             // CR 500.4 exception — "you don't lose this mana as steps and phases

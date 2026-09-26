@@ -147,6 +147,21 @@ fn leyline_tyrant_keeps_red_mana() {
     assert_eq!(g.players[0].mana_pool.amount(Color::Green), 0);
 }
 
+/// CR 500.4 — two Leyline Tyrants keep the red mana once, not once each: the
+/// kept amount was re-added per keeper and doubled every step until the
+/// pool's counter overflowed (six-seat pod, decks 97-102, seed 34097).
+#[test]
+fn two_leyline_tyrants_keep_red_mana_once() {
+    let mut g = main_phase(2);
+    g.add_card_to_battlefield(0, catalog::leyline_tyrant());
+    g.add_card_to_battlefield(0, catalog::leyline_tyrant());
+    g.players[0].mana_pool.add(Color::Red, 3);
+    for _ in 0..3 {
+        g.empty_mana_pools();
+    }
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 3);
+}
+
 /// Pack tactics: Minion of the Mighty drops a Dragon in attacking.
 #[test]
 fn minion_of_the_mighty_brings_a_dragon() {
