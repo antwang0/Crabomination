@@ -261,6 +261,10 @@ fn parse_profile(name: &str) -> Option<Pilot> {
         // damage-order decision had no policy arm. Gate as A against
         // `gang`.
         "dmgorder" => Some(Pilot::Scored(EvalWeights::damage_order_on())),
+        // The default with option asks and votes back on option 0 (adopted
+        // 2026-09-26 on a pod A/B; votes are a Commander mechanic, so
+        // re-measure with `--commander --a dflt --b optvote-off`).
+        "optvote-off" => Some(Pilot::Scored(EvalWeights::option_eval_off())),
         // The attack chain (round 55): grow the declaration one creature
         // at a time from "nobody", each step priced by the attack sim,
         // and offer the finished set beside the holdback menu. Gate as A

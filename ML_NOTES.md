@@ -5505,3 +5505,28 @@ next seat's turn), every vote is `AutoDecider`'s option 0, the commander
 always goes home (`CommanderRedirect` is never the bot's choice), and the
 recast ignores tax. Each is now one flag and one A/B away from a reading.
 
+**Votes — adopted (`EvalWeights::option_eval`, 2026-09-26).**
+`Decision::ChooseOption` had no arm in `decide_pending_policy`, so every
+ballot and every other "choose one of these" a bot answered was option 0 —
+facing Tyrant's Choice it voted to sacrifice its best creature rather than
+lose 4 life. The arm settles each option on a clone (`settle_answer_with`)
+with the rest of the same source's asks answering alike, so a majority
+ballot is priced as "this option wins" rather than against everyone else
+voting option 0.
+
+- *Incidence* (an uncommitted census, every seat on the flag, all 183
+  decks in 46 four-deck groups x 20 games): 482 asks in 920 games, 138
+  (29 %) answered other than 0. Galadriel, Elven-Queen's per-combat vote is
+  95 of them and one group (Y'shtola / Galadriel / Daxos / Ixhel) 199;
+  Círdan, Elrond, Vault 11, Tivit, Lieutenants of the Guard and the
+  Planechase / Selvala / Fame-or-Fortune ballots the rest. **Two-player
+  pools: zero** (cube / sealed / SoS / fixed, 400 games each) — the flag
+  cannot move the duel ladder or `--bench`.
+- *Pod A/B* on the eleven groups with the most asks (the Galadriel group
+  8,000 games at seed 7300, ten more 4,000 each from 7400): 12,052 of
+  48,000, **25.11 % vs 25.00 % due, +52 wins at ~2.5 SE**; eight groups
+  1.00-1.01x up, three exact, none down. Tiny — votes are rare and most
+  are low-stakes — but one-signed and free (games/s unchanged). Control
+  `optvote-off`.
+
+

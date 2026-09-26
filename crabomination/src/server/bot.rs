@@ -1076,6 +1076,22 @@ pub struct EvalWeights {
     /// ([`target_eval_on`](Self::target_eval_on), profile `targeteval`,
     /// `.ladder/run_r53_targeteval.sh`).
     pub target_eval: bool,
+    /// Mid-resolution option asks judged by settled outcome:
+    /// `Decision::ChooseOption` had no arm in the policy table, so
+    /// AutoDecider answered it — option 0, always. That is every ballot a
+    /// bot cast (will of the council, council's dilemma, "each player votes
+    /// for a player", secret council) and every other "choose one of these"
+    /// ask: a bot facing Tyrant's Choice voted to sacrifice its best
+    /// creature rather than lose 4 life. Under the flag each option is
+    /// settled on a clone and the best taken, with the rest of the same
+    /// source's asks in that settle — later voters on the ballot, a Brago
+    /// extra vote — answering alike, so a majority ballot is scored as
+    /// "this option wins" rather than against every other seat voting
+    /// option 0. Real decisions only (`eval_modes`); sims keep option 0.
+    /// On by default since 2026-09-26 (the pod A/B is on
+    /// [`default_const`](Self::default_const)); control
+    /// [`option_eval_off`](Self::option_eval_off), profile `optvote-off`.
+    pub option_eval: bool,
     /// Walker chip attacks: the greedy pass attacks a planeswalker only
     /// when it can finish it, so a healthy walker sits unpressured to
     /// its ultimate (recorded: ten turns, a lost game). The flag adds
@@ -1259,6 +1275,7 @@ impl EvalWeights {
             chump_blocks: false,
             damage_order: false,
             target_eval: false,
+            option_eval: false,
             net_tail_guard: false,
             walker_chip: false,
             ability_arms: false,
@@ -1369,6 +1386,7 @@ impl EvalWeights {
             chump_blocks: false,
             damage_order: false,
             target_eval: false,
+            option_eval: false,
             net_tail_guard: false,
             walker_chip: false,
             ability_arms: false,
@@ -1462,6 +1480,7 @@ impl EvalWeights {
             chump_blocks: false,
             damage_order: false,
             target_eval: false,
+            option_eval: false,
             net_tail_guard: false,
             walker_chip: false,
             ability_arms: false,
@@ -2584,8 +2603,24 @@ impl EvalWeights {
             // [`round72_off`](Self::round72_off), profile `r72-off`;
             // `.ladder/run_r72_sacsinks.sh` re-runs the gate.
             sac_sinks_priced: true,
+            // 2026-09-26: option asks and votes by settled outcome, a pod
+            // A/B (`--commander --a optvote --b dflt`) on the eleven
+            // four-deck groups where ballots happen (seeds 7300/7400+):
+            // 12,052 of 48,000 hero games, 25.11 % against the 25.00 %
+            // due (+52 wins, ~2.5 SE), eight groups up, three exact, none
+            // down. Zero incidence in two-player play (cube / sealed / SoS /
+            // fixed, 400 games each), so it moves pods only. Control:
+            // [`option_eval_off`](Self::option_eval_off), profile
+            // `optvote-off`.
+            option_eval: true,
             ..Self::round56_default()
         }
+    }
+
+    /// The default with option asks back on option 0 — the control for
+    /// [`option_eval`](Self::option_eval) (profile `optvote-off`).
+    pub const fn option_eval_off() -> Self {
+        Self { option_eval: false, ..Self::default_const() }
     }
 
     /// The round-72 control: the default with the sink generators' sacrifice
@@ -3542,6 +3577,14 @@ fn decide_pending_policy_inner(
             if w.damage_order =>
         {
             decide_combat_damage_order(state, seat, *attacker, blockers, w)
+        }
+        // AutoDecider answers every "choose one of these" — a ballot
+        // included — with option 0. See [`EvalWeights::option_eval`].
+        crate::decision::Decision::ChooseOption { source, options, .. }
+            if w.option_eval && eval_modes && options.len() > 1 =>
+        {
+            let pick = decide_option_by_outcome(state, seat, *source, options.len(), w);
+            crate::decision::DecisionAnswer::Amount(pick as u32)
         }
         other => AutoDecider.decide(other),
     }
@@ -6386,6 +6429,18 @@ fn settle_answer(
     w: &EvalWeights,
     answer: crate::decision::DecisionAnswer,
 ) -> Option<i32> {
+    settle_answer_with(state, seat, w, answer, &|_| None)
+}
+
+/// [`settle_answer`], with `nested` answering any later decision it has an
+/// answer for ahead of the policy table.
+fn settle_answer_with(
+    state: &GameState,
+    seat: usize,
+    w: &EvalWeights,
+    answer: crate::decision::DecisionAnswer,
+    nested: &dyn Fn(&crate::decision::Decision) -> Option<crate::decision::DecisionAnswer>,
+) -> Option<i32> {
     let mut g = state.clone();
     dry_run(&mut g, GameAction::SubmitDecision(answer)).ok()?;
     let mut fuel = 64u32;
@@ -6404,7 +6459,9 @@ fn settle_answer(
         if g.pending_decision.is_some() {
             let answer = {
                 let pending = g.pending_decision.as_ref().unwrap();
-                decide_pending_policy(&g, pending.acting_player(), w, &pending.decision, false)
+                nested(&pending.decision).unwrap_or_else(|| {
+                    decide_pending_policy(&g, pending.acting_player(), w, &pending.decision, false)
+                })
             };
             dry_run(&mut g, GameAction::SubmitDecision(answer)).ok()?;
         } else if g.stack.is_empty() {
@@ -6417,6 +6474,36 @@ fn settle_answer(
     let v = eval_material(&g, seat, w);
     super::leaf_capture::maybe(&g, seat, v);
     Some(v)
+}
+
+/// Pick a `Decision::ChooseOption` answer by settled outcome
+/// ([`EvalWeights::option_eval`]). Each option is settled with every later
+/// ask from the same `source` answering it too — the rest of a ballot
+/// voting alike — so a majority vote is judged as "this option wins".
+/// Ties, and options that won't settle, keep the lower index: option 0 is
+/// what the bot answered before.
+fn decide_option_by_outcome(
+    state: &GameState,
+    seat: usize,
+    source: crate::card::CardId,
+    num_options: usize,
+    w: &EvalWeights,
+) -> usize {
+    use crate::decision::{Decision, DecisionAnswer};
+    let mut best: Option<(i32, usize)> = None;
+    for i in 0..num_options {
+        let answer = DecisionAnswer::Amount(i as u32);
+        let alike = |d: &Decision| {
+            matches!(d, Decision::ChooseOption { source: s, .. } if *s == source).then_some(answer.clone())
+        };
+        let Some(score) = settle_answer_with(state, seat, w, answer.clone(), &alike) else {
+            continue;
+        };
+        if best.is_none_or(|(b, _)| score > b) {
+            best = Some((score, i));
+        }
+    }
+    best.map_or(0, |(_, i)| i)
 }
 
 /// Judge a self-costly optional trigger by outcome: settle "yes" and "no"
@@ -24662,6 +24749,51 @@ mod tests {
         let pending = g.pending_decision.clone().expect("the Taunter asks for its target");
         let answer = decide_pending_policy(&g, me, &EvalWeights::default(), &pending.decision, true);
         assert_eq!(answer, crate::decision::DecisionAnswer::Target(Target::Player(2)), "{:?}", pending.decision);
+    }
+
+    /// A ballot is judged by what it does to the voter. Facing Tyrant's
+    /// Choice with a Craw Wurm out, Bob votes "torture" (4 of his 20 life)
+    /// over "death" (the Wurm) — Alice's "death" plus his "torture" ties,
+    /// and a tie goes to the later option. Every bot ballot used to go to
+    /// option 0, which here is voting to sacrifice the Wurm.
+    #[test]
+    fn a_bot_votes_for_the_option_that_costs_it_least() {
+        use crate::decision::{Decision, DecisionAnswer};
+        let mut g = two_player_game();
+        for p in &mut g.players {
+            p.wants_ui = true;
+        }
+        g.add_card_to_battlefield(1, catalog::craw_wurm());
+        let spell = g.add_card_to_hand(0, catalog::tyrants_choice());
+        g.players[0].mana_pool.add(crate::mana::Color::Black, 2);
+        g.perform_action(GameAction::CastSpell {
+            card_id: spell,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("cast");
+        let mut ballots = 0;
+        let bob_asked = loop {
+            match g.pending_decision.clone() {
+                Some(p) if matches!(p.decision, Decision::ChooseOption { .. }) => {
+                    if p.acting_player() == 1 {
+                        break p;
+                    }
+                    ballots += 1;
+                    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Amount(0))).expect("Alice: death");
+                }
+                Some(p) => panic!("unexpected ask {:?}", p.decision),
+                None => {
+                    g.perform_action(GameAction::PassPriority).expect("pass");
+                }
+            }
+            assert!(ballots <= 1 && !g.is_game_over(), "Bob was never asked");
+        };
+        let vote = |w: &EvalWeights| decide_pending_policy(&g, 1, w, &bob_asked.decision, true);
+        assert_eq!(vote(&EvalWeights::default()), DecisionAnswer::Amount(1), "torture");
+        assert_eq!(vote(&EvalWeights::option_eval_off()), DecisionAnswer::Amount(0), "the old answer");
     }
 
     /// Klauth's Will's "up to X target artifacts and/or enchantments" sits
