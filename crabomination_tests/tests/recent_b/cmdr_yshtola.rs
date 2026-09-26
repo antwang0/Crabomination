@@ -445,3 +445,38 @@ fn bot_aims_a_lockdown_aura_at_the_opponent() {
         }
     }
 }
+
+/// Hildibrand Manderville, dying, may be cast from the graveyard as Gentleman's
+/// Rise until the end of your next turn (CR 715.3 — the Adventure only, never
+/// the creature); the bot takes it, and the grant lapses after that turn.
+#[test]
+fn hildibrand_dies_into_a_graveyard_adventure() {
+    let mut g = main_phase(3);
+    let h = g.add_card_to_battlefield(0, catalog::hildibrand_manderville());
+    let kill = g.add_card_to_hand(0, catalog::doom_blade());
+    act(&mut g, GameAction::CastSpell {
+        card_id: kill, target: Some(Target::Permanent(h)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Doom Blade on Hildibrand");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == h));
+    let creature = GameAction::CastSpell { card_id: h, target: None, additional_targets: vec![], mode: None, x_value: None };
+    assert!(act(&mut g.clone(), creature).is_err(), "not the creature");
+    {
+        use crabomination::server::bot::{Bot, HeuristicBot};
+        let mut post = g.clone();
+        post.priority.player_with_priority = 0;
+        post.step = TurnStep::PostCombatMain;
+        flood(&mut post, 0);
+        let action = HeuristicBot::new().next_action(&post, 0);
+        assert!(matches!(action, Some(GameAction::CastAdventure { card_id, .. }) if card_id == h), "{action:?}");
+    }
+    let mut lapsed = g.clone();
+    act(&mut g, GameAction::CastAdventure { card_id: h, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("Gentleman's Rise from the graveyard");
+    assert_eq!(tokens(&g, 0, "Zombie"), 1);
+    assert!(g.exile.iter().any(|c| c.id == h), "on an adventure in exile");
+    // Unused, the grant ends with seat 0's next turn.
+    lapsed.expire_adventure_grants(0, lapsed.turn_number + 3);
+    assert!(act(&mut lapsed, GameAction::CastAdventure {
+        card_id: h, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).is_err());
+}

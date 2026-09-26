@@ -7,8 +7,6 @@
 //!   {3}, and the graveyard card isn't exiled.
 //! - **Estinien Varlineau** — counts opponents dealt combat damage by any
 //!   creature, not only by it or a Dragon.
-//! - **Hildibrand Manderville** — dying doesn't let you cast it from the
-//!   graveyard as an Adventure.
 //! - **Urianger Augurelt** — the card is exiled face up; a land played from
 //!   exile gains no life; its spells get no {2} discount.
 
@@ -459,16 +457,15 @@ pub fn hermes_overseer_of_elpis() -> CardDefinition {
 }
 
 /// Hildibrand Manderville // Gentleman's Rise — creature tokens you control
-/// get +1/+1; the Adventure makes a 2/2 Zombie.
-///
-/// ⚠ Residual: dying doesn't let you cast it from the graveyard as an
-/// Adventure.
+/// get +1/+1; the Adventure makes a 2/2 Zombie; dying, it may be cast from
+/// your graveyard as that Adventure until the end of your next turn.
 pub fn hildibrand_manderville() -> CardDefinition {
     legendary(CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "Creature tokens you control get +1/+1.",
             effect: StaticEffect::PumpPT { applies_to: yours(R::Creature.and(R::IsToken)), power: 1, toughness: 1 },
         }],
+        triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::GrantAdventureFromGraveyard)],
         adventure: Some(Box::new(Adventure {
             name: "Gentleman's Rise",
             cost: cost(&[generic(2), b()]),
