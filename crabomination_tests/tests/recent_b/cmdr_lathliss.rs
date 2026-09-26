@@ -107,6 +107,9 @@ fn goddric_celebrates_into_a_dragon() {
     }
     assert_eq!(pt(&g, gd), (4, 4));
     assert!(has(&g, gd, &Keyword::Flying));
+    // "He loses all other creature types" (CR 613.1d, layer 4).
+    let cp = g.computed_permanent(gd).unwrap();
+    assert_eq!(cp.subtypes().creature_types, vec![crabomination::card::CreatureType::Dragon]);
 }
 
 /// Goldlust Triad makes a Treasure off combat damage.

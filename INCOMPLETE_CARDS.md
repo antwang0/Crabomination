@@ -1849,7 +1849,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Magus of the Arena | Nature of the Beast (C13) | you pick the opponent's creature; the opponent should. |
 | 🟡 Naya Soulbeast | Nature of the Beast (C13) | the top cards are read as it enters, not revealed as it is cast. |
 | 🟡 Carnelian Orb of Dragonkind | Reign of Dragons (FDC) | its mana gives any creature spell haste, not only a Dragon. |
-| 🟡 Goddric, Cloaked Reveler | Reign of Dragons (FDC) | while celebrating it keeps its Human Noble types beside Dragon. |
 | 🟡 Leyline Tyrant | Reign of Dragons (FDC) | the dying payment is any mana, not only {R}. |
 | 🟡 Thundermane Dragon | Reign of Dragons (FDC) | a creature cast from the top doesn't gain haste; the top card isn't shown to you. |
 | 🟡 Donal, Herald of Wings | Spirit Squadron (VOC) | "only once each turn" is spent when the trigger fires, even if you decline the copy. |

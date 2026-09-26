@@ -15024,6 +15024,9 @@ impl GameState {
                             })
                             .map(|c| c.id)
                             .collect(),
+                        // "This creature loses all other creature types" under a
+                        // live gate (Goddric celebrating): the source itself.
+                        Sel::This => std::iter::once(card.id).collect(),
                         other => {
                             let Some(ids) = self.eager_static_targets(card, other) else { continue };
                             ids

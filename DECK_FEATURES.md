@@ -3306,8 +3306,7 @@ were missing (`cmdr_lathliss.rs`); the primitive is
 emitted `PermanentEntered`, whose funnel logs creatures but not the
 nonland/artifact entry tallies, so two creature spells never turned Goddric
 on (`game/entry_tally.rs`, CR 608.3; the persist/undying return had the
-same hole). Residuals: **Carnelian Orb of Dragonkind**, **Goddric, Cloaked
-Reveler**, **Leyline Tyrant**, **Thundermane Dragon**. A 200-game census
+same hole). Residuals: **Carnelian Orb of Dragonkind**, **Leyline Tyrant**, **Thundermane Dragon**. A 200-game census
 beside Marath / Brimaz / Bright-Palm (seed 92) decided 200/200 with zero
 panics and no card unplayed, Lathliss winning 59.5 %. `--bench`
 byte-identical.

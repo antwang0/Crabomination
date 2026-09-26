@@ -110,6 +110,12 @@ pub fn goddric_cloaked_reveler() -> CardDefinition {
                 StaticEffect::GrantKeyword { applies_to: Selector::This, keyword: Keyword::Flying },
                 "Celebration — flying.",
             ),
+            // "Is a Dragon": he loses his other creature types (the reminder
+            // text), then gains Dragon — same source, applied in this order.
+            celebrating(
+                StaticEffect::MatchingLoseAllCreatureTypes { applies_to: Selector::This },
+                "Celebration — loses all other creature types.",
+            ),
             celebrating(
                 StaticEffect::AddCreatureTypeToMatching { applies_to: Selector::This, creature_type: CreatureType::Dragon },
                 "Celebration — a Dragon.",
