@@ -1120,8 +1120,15 @@ impl GameState {
         // borrowed ability and clone only the survivors: this runs on every
         // step of every turn and a `TriggeredAbility` clone is an `Effect`
         // tree plus the event's filter predicate.
+        // CR 113.10b — a permanent that has lost all its abilities has no
+        // printed step trigger (Kimahri under a Darksteel Mutation kept
+        // re-copying every extra combat). Empty on every board without a strip
+        // source, which the lane word answers.
+        let stripped = self.stripped_permanents();
         let visit = |c: &crate::card::CardInstance| {
-            for t in c.definition.triggered_abilities.iter() {
+            let printed: &[crate::card::TriggeredAbility] =
+                if stripped.contains(&c.id) { &[] } else { &c.definition.triggered_abilities };
+            for t in printed.iter() {
                 // CR 113.6b — a command-zone-only trigger (Oloro's second
                 // upkeep ability) doesn't function from the battlefield; the
                 // command-zone walk below gathers it. Last in the `&&` so

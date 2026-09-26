@@ -11456,6 +11456,14 @@ impl GameState {
         self.permanents_with_abilities_removed_cold()
     }
 
+    /// CR 113.10b — the permanents whose printed triggered abilities are gone
+    /// (a layer-6 "loses all abilities"), for a trigger walk to skip. Empty on
+    /// every board without a strip source, which the dispatch lane answers
+    /// for a word load.
+    pub(crate) fn stripped_permanents(&self) -> Vec<CardId> {
+        if self.ability_strip_possible() { self.permanents_with_abilities_removed(true) } else { Vec::new() }
+    }
+
     /// The effect-set read behind
     /// [`permanents_with_abilities_removed`](Self::permanents_with_abilities_removed)'s
     /// presence gate. `#[inline(never)]` for `(-136)`'s reason: the gate

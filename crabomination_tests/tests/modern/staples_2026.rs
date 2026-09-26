@@ -698,6 +698,45 @@ fn dress_down_suppresses_printed_triggers() {
     );
 }
 
+/// CR 113.10b — the stripped permanent's *step*, *attack* and *combat-damage*
+/// triggers are gone too, not only the ones the main dispatcher walks: under
+/// Dress Down, Legion Warboss makes no Goblin at the beginning of combat, Kari
+/// Zev makes no Ragavan as it attacks, and Bloodthirster's hit neither untaps
+/// it nor adds a combat. Regression: a pod Kimahri copying Bloodthirster under
+/// a strip took 561 combats in one turn (seed 405034, game 128).
+#[test]
+fn a_stripped_creature_fires_no_step_attack_or_combat_damage_trigger() {
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.add_card_to_battlefield(0, catalog::dress_down());
+    drain_stack(&mut g);
+    g.add_card_to_battlefield(0, catalog::legion_warboss());
+    let kari = g.add_card_to_battlefield(0, catalog::kari_zev_skyship_raider());
+    let bt = g.add_card_to_battlefield(0, catalog::bloodthirster());
+    g.clear_sickness(kari);
+    g.clear_sickness(bt);
+    g.step = TurnStep::BeginCombat;
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.definition.name == "Goblin"), "no Warboss Goblin");
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: kari, target: AttackTarget::Player(1) },
+        Attack { attacker: bt, target: AttackTarget::Player(1) },
+    ]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.definition.name == "Ragavan"), "no Ragavan");
+    g.step = TurnStep::CombatDamage;
+    let ev = g.resolve_combat().expect("damage");
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert!(g.players[1].life < 20, "the attack connected");
+    assert!(g.battlefield_find(bt).unwrap().tapped, "Bloodthirster's untap trigger is gone");
+}
+
 /// Ox of Agonas: ETB dumps the hand and draws three; escaping adds a counter.
 #[test]
 fn ox_of_agonas_etb_and_escape_counter() {

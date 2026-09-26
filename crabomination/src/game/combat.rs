@@ -1980,6 +1980,9 @@ impl GameState {
         // walk the board once here rather than per attacker inside the loop
         // below. Consumed by value in the main loop so its `&mut self`
         // borrow of `battlefield.iter_mut()` is unblocked.
+        // CR 113.10b — an attacker stripped of all abilities has no printed
+        // attack trigger.
+        let stripped = self.stripped_permanents();
         let attacker_grants: Vec<AttackerGrants> = {
             let trigger_grants = self.trigger_grant_sources();
             let equip_grants = self.equip_granted_trigger_sources();
@@ -2110,9 +2113,9 @@ impl GameState {
             // An attachment's grant fires off the attachment when it says
             // so (`triggers_on_equipment`); every other trigger off the
             // attacker.
-            let own = card
-                .definition
-                .triggered_abilities
+            let printed: &[crate::card::TriggeredAbility] =
+                if stripped.contains(&id) { &[] } else { &card.definition.triggered_abilities };
+            let own = printed
                 .iter()
                 .enumerate()
                 .map(|(i, t)| (id, Some(i), t))
@@ -2235,7 +2238,7 @@ impl GameState {
                 // By value into whichever walk runs, so the body inlines
                 // (a `&mut` closure is an out-of-line call per permanent).
                 let visit = |c: &crate::card::CardInstance| {
-                    if c.controller != defender {
+                    if c.controller != defender || stripped.contains(&c.id) {
                         return;
                     }
                     for (i, t) in c.definition.triggered_abilities.iter().enumerate() {
@@ -2359,7 +2362,7 @@ impl GameState {
                     && t.event.scope == crate::effect::EventScope::OpponentOfYoursAttacked
             };
             let mut listeners: Vec<(CardId, usize, Effect, Option<crate::card::Predicate>)> = Vec::new();
-            for c in self.battlefield.iter() {
+            for c in self.battlefield.iter().filter(|c| !stripped.contains(&c.id)) {
                 for t in c.definition.triggered_abilities.iter().filter(|t| listens(t)) {
                     listeners.push((c.id, c.controller, t.effect.clone(), t.event.filter.clone()));
                 }
@@ -2393,7 +2396,7 @@ impl GameState {
             let any_attack: Vec<(CardId, usize, Effect, Option<crate::card::Predicate>)> = self
                 .battlefield
                 .iter()
-                .filter(|c| self.players[c.controller].is_alive())
+                .filter(|c| self.players[c.controller].is_alive() && !stripped.contains(&c.id))
                 .flat_map(|c| {
                     c.definition
                         .triggered_abilities
@@ -2431,7 +2434,7 @@ impl GameState {
             let mine: Vec<(CardId, Effect, Option<crate::card::Predicate>)> = self
                 .battlefield
                 .iter()
-                .filter(|c| c.controller == p)
+                .filter(|c| c.controller == p && !stripped.contains(&c.id))
                 .flat_map(|c| {
                     c.definition
                         .triggered_abilities
@@ -2590,6 +2593,9 @@ impl GameState {
                     && (ctrl == ap || t.event.scope == crate::effect::EventScope::AnyPlayer)
             };
             let visit = |c: &crate::card::CardInstance| {
+                if stripped.contains(&c.id) {
+                    return;
+                }
                 let ctrl = c.controller;
                 for t in &c.definition.triggered_abilities {
                     if listens(t, ctrl) {
@@ -6362,8 +6368,10 @@ impl GameState {
             ta.event.kind == EventKind::ControllerDealtCombatDamage
                 && ta.event.scope == crate::effect::EventScope::SelfSource
         };
+        // CR 113.10b — a stripped listener hears nothing.
+        let stripped = self.stripped_permanents();
         let visit = |c: &crate::card::CardInstance| {
-            if c.controller != damaged_player {
+            if c.controller != damaged_player || stripped.contains(&c.id) {
                 return;
             }
             for (i, ta) in c.definition.triggered_abilities.iter().enumerate() {
@@ -6748,7 +6756,14 @@ impl GameState {
             // (`GrantTriggeredAbility` on `granted_triggers_timed` — Summon:
             // Primal Odin's Zantetsuken) fire alike.
             let instance_granted = self.granted_triggers(c.id);
-            let printed = c.definition.triggered_abilities.iter().enumerate().map(|(i, t)| (Some(i), t));
+            // CR 113.10b — a dealer that has lost all its abilities (Darksteel
+            // Mutation, Turn to Frog) has no printed trigger to fire, as the
+            // main dispatcher reads it; grants from other sources still apply.
+            let stripped = self.ability_strip_possible()
+                && self.computed_permanent(source).is_some_and(|cp| cp.lost_all_abilities);
+            let printed_list: &[crate::card::TriggeredAbility] =
+                if stripped { &[] } else { &c.definition.triggered_abilities };
+            let printed = printed_list.iter().enumerate().map(|(i, t)| (Some(i), t));
             for (idx, t) in
                 printed.chain(static_granted.iter().chain(instance_granted).map(|t| (None, t)))
             {
@@ -6919,11 +6934,17 @@ impl GameState {
         let lane = self.battlefield.listener_lane();
         if lane != Ok(false) {
             let mut any_listener = false;
+            // CR 113.10b — a stripped listener hears nothing.
+            let strip_set = self.stripped_permanents();
             for c in &self.battlefield {
                 if c.dispatch_scan_bits() & crate::card::dispatch_bits::LISTENER == 0 {
                     continue;
                 }
+                // The lane records that a listener exists, stripped or not.
                 any_listener = true;
+                if strip_set.contains(&c.id) {
+                    continue;
+                }
                 let mine = attacker_controller == Some(c.controller);
                 let other = c.id != source;
                 for (idx, t) in c.definition.triggered_abilities.iter().enumerate() {
