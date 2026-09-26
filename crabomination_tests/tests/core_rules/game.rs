@@ -6252,10 +6252,12 @@ fn prowess_survives_an_unrelated_cast_trigger_and_is_not_doubled() {
         "Bria prints prowess; its unblockable grant is not a prowess trigger");
     assert_eq!(pump_after_a_bolt(catalog::sokka_tenacious_tactician), 1,
         "Sokka prints prowess; its token trigger is not a prowess trigger");
-    // Veyran's own trigger is the pump, on instants and sorceries — Lightning
-    // Bolt is one, so it fires once and the minted one must not fire too.
-    assert_eq!(pump_after_a_bolt(catalog::veyran_voice_of_duality), 1,
-        "Veyran pumps ONCE: its magecraft trigger is the prowess pump");
+    // Veyran prints magecraft, not prowess (it shipped with a stray
+    // `Keyword::Prowess`). Its own static makes that magecraft trigger an
+    // additional time — the 2021-04-16 ruling: "including Veyran's own" — so
+    // a Bolt is +2/+2, and no minted prowess pump rides on top.
+    assert_eq!(pump_after_a_bolt(catalog::veyran_voice_of_duality), 2,
+        "Veyran: magecraft, doubled by its own static");
 }
 
 // ── Combat module tests ─────────────────────────────────────────────────────

@@ -1111,9 +1111,8 @@ pub fn valiant_knight() -> CardDefinition {
     }
 }
 
-/// Custodi Lich — {3}{B}{B} 4/2 Zombie Cleric. ETB become the monarch; each
-/// opponent sacrifices a creature. (The printed "whenever you become the
-/// monarch, target player sacrifices" is approximated to the ETB edict.)
+/// Custodi Lich — {3}{B}{B} 4/2 Zombie Cleric. ETB become the monarch;
+/// whenever you become the monarch, target player sacrifices a creature.
 pub fn custodi_lich() -> CardDefinition {
     use crate::mana::b;
     CardDefinition {

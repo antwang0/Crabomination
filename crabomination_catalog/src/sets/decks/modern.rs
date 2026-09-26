@@ -12154,11 +12154,9 @@ pub fn sylvan_library() -> CardDefinition {
 /// draw step, if Howling Mine is untapped, that player draws an
 /// additional card."
 ///
-/// Approximation: the "is Howling Mine untapped" gate collapses (the
-/// trigger always fires); both players always draw an extra card on
-/// their draw step. Wired as a `StepBegins(Draw)/AnyPlayer` trigger
-/// over `Selector::Player(PlayerRef::ActivePlayer)` so each player
-/// draws their own extra card on their own turn.
+/// A `StepBegins(Draw)/AnyPlayer` trigger gated on the Mine being untapped,
+/// over `Selector::Player(PlayerRef::ActivePlayer)` so each player draws their
+/// own extra card on their own turn.
 pub fn howling_mine() -> CardDefinition {
     use crate::game::types::TurnStep;
     CardDefinition {
@@ -12166,7 +12164,9 @@ pub fn howling_mine() -> CardDefinition {
         cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::Draw), EventScope::AnyPlayer),
+            // "if this artifact is untapped" (CR 603.4).
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Draw), EventScope::AnyPlayer)
+                .with_filter(Predicate::EntityMatches { what: Selector::This, filter: SelectionRequirement::Untapped }),
             effect: Effect::Draw {
                 who: Selector::Player(PlayerRef::ActivePlayer),
                 amount: Value::Const(1),
@@ -24272,8 +24272,7 @@ pub fn phyrexian_altar() -> CardDefinition {
 
 /// Bastion of Remembrance — {2}{B} Enchantment. "When this enters, create a
 /// 1/1 white Human Soldier creature token. Whenever a creature you control
-/// dies, each opponent loses 1 life and you gain 1 life." (The ETB token is
-/// dropped; the aristocrat drain is the engine-relevant half.)
+/// dies, each opponent loses 1 life and you gain 1 life."
 pub fn bastion_of_remembrance() -> CardDefinition {
     CardDefinition {
         name: "Bastion of Remembrance",
@@ -38617,8 +38616,8 @@ pub fn elvish_promenade() -> CardDefinition {
 }
 
 /// Shalai, Voice of Plenty — {3}{W} 3/4 Legendary Angel with Flying. You and
-/// other creatures you control have hexproof. {4}{G}{G}: put a +1/+1 counter on
-/// each creature you control. (Planeswalker-hexproof grant is dropped.)
+/// planeswalkers and other creatures you control have hexproof. {4}{G}{G}: put
+/// a +1/+1 counter on each creature you control.
 pub fn shalai_voice_of_plenty() -> CardDefinition {
     use crate::effect::{StaticAbility, StaticEffect};
     CardDefinition {
@@ -38645,6 +38644,15 @@ pub fn shalai_voice_of_plenty() -> CardDefinition {
                         SelectionRequirement::Creature
                             .and(SelectionRequirement::ControlledByYou)
                             .and(SelectionRequirement::OtherThanSource),
+                    ),
+                    keyword: Keyword::Hexproof,
+                },
+            },
+            StaticAbility {
+                description: "Planeswalkers you control have hexproof.",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: Selector::EachPermanent(
+                        SelectionRequirement::Planeswalker.and(SelectionRequirement::ControlledByYou),
                     ),
                     keyword: Keyword::Hexproof,
                 },

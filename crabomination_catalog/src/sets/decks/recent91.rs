@@ -181,9 +181,9 @@ pub fn izzet_guildmage() -> CardDefinition {
     }
 }
 
-/// Veyran, Voice of Duality — {1}{U}{R} 2/2 Efreet Wizard, prowess. Magecraft:
-/// cast or copy an I/S → +1/+1 until end of turn. (The trigger-doubling half is
-/// dropped — no magecraft-trigger doubler static yet.)
+/// Veyran, Voice of Duality — {1}{U}{R} 2/2 Efreet Wizard. Magecraft: cast an
+/// I/S → +1/+1 until end of turn. Your I/S casts make your permanents' cast
+/// triggers trigger an additional time (copies raise no cast triggers).
 pub fn veyran_voice_of_duality() -> CardDefinition {
     CardDefinition {
         name: "Veyran, Voice of Duality",
@@ -196,7 +196,10 @@ pub fn veyran_voice_of_duality() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![Keyword::Prowess],
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "If you casting or copying an instant or sorcery spell causes a triggered ability of a permanent you control to trigger, that ability triggers an additional time.",
+            effect: crate::card::StaticEffect::DoubleYourInstantSorceryCastTriggers,
+        }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
                 .with_filter(cast_is_instant_or_sorcery()),

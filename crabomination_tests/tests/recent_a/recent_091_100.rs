@@ -91,7 +91,7 @@ mod recent91 {
         let v = g.add_card_to_battlefield(0, catalog::veyran_voice_of_duality());
         bolt_face(&mut g, 0, 1);
         let cp = g.computed_permanent(v).unwrap();
-        assert_eq!((cp.power, cp.toughness), (3, 3), "magecraft plus one plus one");
+        assert_eq!((cp.power, cp.toughness), (4, 4), "magecraft, triggering twice under Veyran's own static");
     }
 
     #[test]

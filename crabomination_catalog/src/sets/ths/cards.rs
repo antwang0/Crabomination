@@ -301,8 +301,8 @@ pub fn traveling_philosopher() -> CardDefinition {
     }
 }
 
-/// Cavalry Pegasus — {1}{W} Creature — Pegasus 1/1. Flying. (The "Humans
-/// you control gain flying when it attacks" rider is omitted.)
+/// Cavalry Pegasus — {1}{W} Creature — Pegasus 1/1. Flying. Whenever it
+/// attacks, each attacking Human gains flying until end of turn.
 pub fn cavalry_pegasus() -> CardDefinition {
     CardDefinition {
         name: "Cavalry Pegasus",

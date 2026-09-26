@@ -536,7 +536,7 @@ pub fn solitary_confinement() -> CardDefinition {
 }
 
 /// Shielded by Faith — {1}{W}{W} Aura. Enchanted creature has indestructible.
-/// (The "attach on any creature entering" rider is dropped.)
+/// Whenever a creature enters, you may attach it to that creature.
 pub fn shielded_by_faith() -> CardDefinition {
     CardDefinition {
         name: "Shielded by Faith",

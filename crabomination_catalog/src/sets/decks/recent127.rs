@@ -573,8 +573,17 @@ pub fn bandits_haul() -> CardDefinition {
 
 /// Claim Jumper — {2}{W} 3/3 Rabbit Mercenary with vigilance. ETB: if an
 /// opponent controls more lands than you, search your library for a Plains and
-/// put it onto the battlefield tapped. (The "repeat once" clause is dropped.)
+/// put it onto the battlefield tapped; then, if they still do, once more.
 pub fn claim_jumper() -> CardDefinition {
+    let fetch = || Effect::If {
+        cond: Predicate::OpponentControlsMoreLandsThanYou,
+        then: Box::new(Effect::Search {
+            who: PlayerRef::You,
+            filter: R::HasLandType(LandType::Plains),
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+        }),
+        else_: Box::new(Effect::Noop),
+    };
     CardDefinition {
         name: "Claim Jumper",
         cost: cost(&[generic(2), w()]),
@@ -586,18 +595,9 @@ pub fn claim_jumper() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
-        triggered_abilities: vec![etb(Effect::If {
-            cond: Predicate::OpponentControlsMoreLandsThanYou,
-            then: Box::new(Effect::Search {
-                who: PlayerRef::You,
-                filter: R::HasLandType(LandType::Plains),
-                to: ZoneDest::Battlefield {
-                    controller: PlayerRef::You,
-                    tapped: true,
-                },
-            }),
-            else_: Box::new(Effect::Noop),
-        })],
+        // "Then if an opponent controls more lands than you, repeat this
+        // process once."
+        triggered_abilities: vec![etb(Effect::Seq(vec![fetch(), fetch()]))],
         ..Default::default()
     }
 }

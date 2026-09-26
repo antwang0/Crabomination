@@ -130,3 +130,65 @@ fn legion_warboss_goblin_must_attack() {
     let kw = g.computed_permanent(gob).unwrap().keywords().to_vec();
     assert!(kw.contains(&Keyword::Haste) && kw.contains(&Keyword::MustAttack));
 }
+
+/// Shalai, Voice of Plenty — "You, planeswalkers you control, and other
+/// creatures you control have hexproof."
+#[test]
+fn shalai_gives_your_planeswalkers_hexproof() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::shalai_voice_of_plenty());
+    let pw = g.add_card_to_battlefield(0, catalog::chandra_torch_of_defiance());
+    assert!(g.computed_permanent(pw).unwrap().keywords().contains(&Keyword::Hexproof));
+}
+
+/// Howling Mine — "if this artifact is untapped": a tapped Mine draws nothing.
+#[test]
+fn howling_mine_only_while_untapped() {
+    let mut g = main_phase();
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let mine = g.add_card_to_battlefield(0, catalog::howling_mine());
+    g.battlefield_find_mut(mine).unwrap().tapped = true;
+    g.step = TurnStep::Draw;
+    g.fire_step_triggers(TurnStep::Draw);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.is_empty(), "tapped: no extra card");
+    g.battlefield_find_mut(mine).unwrap().tapped = false;
+    g.fire_step_triggers(TurnStep::Draw);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), 1);
+}
+
+/// Claim Jumper — "Then if an opponent controls more lands than you, repeat
+/// this process once": two lands behind, it fetches two Plains.
+#[test]
+fn claim_jumper_repeats_while_behind() {
+    let mut g = main_phase();
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::plains());
+        g.add_card_to_battlefield(1, catalog::island());
+    }
+    g.add_card_to_battlefield(0, catalog::plains());
+    let cj = g.add_card_to_hand(0, catalog::claim_jumper());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, cj, None).expect("claim jumper");
+    drain_stack(&mut g);
+    let plains = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Plains").count();
+    assert_eq!(plains, 3, "one, then once more while still behind");
+}
+
+/// Veyran, Voice of Duality — no prowess; its magecraft is one +1/+1 that its
+/// own static makes trigger twice (CR 603.2 "triggers an additional time").
+#[test]
+fn veyran_doubles_its_own_magecraft() {
+    let mut g = main_phase();
+    let v = g.add_card_to_battlefield(0, catalog::veyran_voice_of_duality());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast(&mut g, bolt, Some(Target::Player(1))).expect("bolt");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(v).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4));
+}
