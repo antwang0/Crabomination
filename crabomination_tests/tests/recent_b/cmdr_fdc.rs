@@ -6046,3 +6046,23 @@ fn prismari_performance_batch() {
     assert_eq!(pt(&g, bear), (5, 2));
     assert!(g.exile.iter().any(|c| c.id == div));
 }
+
+/// Battle for Bretagard III — tokens "with different names": one copy per
+/// name. Copying every token let token copies of the Saga (Anikthea) double
+/// the board each chapter, and a six-seat pod hit the board cap at 1,372.
+#[test]
+fn battle_for_bretagard_copies_one_token_per_name() {
+    let mut g = main_phase();
+    let def = catalog::battle_for_bretagard();
+    let saga = g.add_card_to_battlefield(0, catalog::battle_for_bretagard());
+    for _ in 0..2 {
+        let t = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.battlefield_find_mut(t).unwrap().is_token = true;
+    }
+    let elf = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    g.battlefield_find_mut(elf).unwrap().is_token = true;
+    let chapter = def.saga_chapters.iter().find(|(n, _)| *n == 3).expect("chapter III").1.clone();
+    let ctx = crabomination::game::effects::EffectContext::for_ability(saga, 0, None);
+    g.resolve_effect(&chapter, &ctx).expect("chapter III");
+    assert_eq!((count_named(&g, 0, "Grizzly Bears"), count_named(&g, 0, "Llanowar Elves")), (3, 2));
+}

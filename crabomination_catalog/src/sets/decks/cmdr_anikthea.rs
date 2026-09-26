@@ -6,8 +6,6 @@
 //! Residuals (each also on its card):
 //! - **Battle at the Helvault** — chapters I and II target one permanent per
 //!   *opponent*; your own permanents can't be picked.
-//! - **Battle for Bretagard** — chapter III copies every artifact and creature
-//!   token you control, duplicate names included.
 //! - **Ghoulish Impetus** — the goad is re-applied each of your upkeeps rather
 //!   than held by a static, so it outlives the Aura until your next turn.
 //! - **Ondu Spiritdancer** — declining the copy still spends the turn's use.
@@ -227,9 +225,8 @@ pub fn battle_at_the_helvault() -> CardDefinition {
 }
 
 /// Battle for Bretagard — I: a 1/1 white Human Warrior. II: a 1/1 green Elf
-/// Warrior. III: copy artifact and creature tokens you control.
-///
-/// Approximation: chapter III copies every such token, duplicate names too.
+/// Warrior. III: copy artifact and creature tokens you control with different
+/// names — one of each name.
 pub fn battle_for_bretagard() -> CardDefinition {
     saga(
         "Battle for Bretagard",
@@ -266,7 +263,7 @@ pub fn battle_for_bretagard() -> CardDefinition {
             (
                 3,
                 Effect::ForEach {
-                    selector: Selector::EachPermanent(
+                    selector: Selector::OnePerDistinctName(
                         R::IsToken.and(R::ControlledByYou).and(R::Artifact.or(R::Creature)),
                     ),
                     body: Box::new(copy_of(Selector::TriggerSource)),
