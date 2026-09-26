@@ -975,10 +975,16 @@ impl GameState {
                     // gift and calls the whole spell friendly, which had the
                     // bot stunning its own board.
                     let prefer_friendly = eff.prefers_friendly_target_for_slot(slot, mode);
+                    // A filter that already rules out the caster's side ("you
+                    // don't control") settles the side: every candidate is
+                    // the wanted one. Hate Mirage's token copies read as a
+                    // gift, so its optional slots were never spent on the
+                    // opponents' creatures it can only name — never cast.
+                    let side_fixed = req.excludes_your_side();
                     // 0 = wanted side, un-warded; 1 = wanted side, warded;
                     // 2 = the other side (a last resort, see `optional`).
                     let rank = |id: CardId, ctrl: usize| -> u8 {
-                        let wanted = (ctrl == controller) == prefer_friendly;
+                        let wanted = side_fixed || (ctrl == controller) == prefer_friendly;
                         match (wanted, self.has_hostile_ward(id, controller)) {
                             (true, false) => 0,
                             (true, true) => 1,

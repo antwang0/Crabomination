@@ -3233,6 +3233,10 @@ fn rebellion_rising_cards() {
     let x = g.add_card_to_battlefield(1, catalog::hill_giant());
     let y = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let h = g.add_card_to_hand(0, catalog::hate_mirage());
+    // The target walk the bot casts with names both: a filter that rules
+    // out your side settles the side, though a token copy reads as a gift.
+    let (t, extra) = g.auto_targets_for_effect_all_slots(&catalog::hate_mirage().effect, 0, None);
+    assert_eq!((t, extra), (Some(Target::Permanent(x)), vec![Target::Permanent(y)]));
     cast(&mut g, h, &[Target::Permanent(x), Target::Permanent(y)]);
     assert_eq!((count_named(&g, 0, "Hill Giant"), count_named(&g, 0, "Grizzly Bears")), (1, 1));
 

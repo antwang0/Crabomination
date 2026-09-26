@@ -3831,6 +3831,19 @@ impl SelectionRequirement {
         }
     }
 
+    /// True when no match can be controlled by the evaluating player — an
+    /// `And` holding `ControlledByOpponent` or `Not(ControlledByYou)` ("target
+    /// creature you don't control"). An `Or` qualifies only if both arms do.
+    pub fn excludes_your_side(&self) -> bool {
+        match self {
+            Self::ControlledByOpponent => true,
+            Self::Not(inner) => matches!(**inner, Self::ControlledByYou),
+            Self::And(a, b) => a.excludes_your_side() || b.excludes_your_side(),
+            Self::Or(a, b) => a.excludes_your_side() && b.excludes_your_side(),
+            _ => false,
+        }
+    }
+
     /// True when every match must be controlled by an opponent ("enchant
     /// creature an opponent controls") — an `And` holding
     /// `ControlledByOpponent`. An `Or` qualifies only if both arms do.
