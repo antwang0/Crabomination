@@ -1046,19 +1046,38 @@ fn kozileks_command_chooses_two_modes() {
     assert_eq!(g.players[1].hand.len(), 1, "target player scries X, then draws *one*");
 }
 
-/// Eldrazi Confluence "choose three, modes may repeat": the Scion mode is
-/// taken thrice by default, minting three tokens.
+/// Eldrazi Confluence "choose three, modes may repeat" (CR 700.2d): the
+/// Scion mode chosen thrice mints three tokens.
 #[test]
 fn eldrazi_confluence_chooses_scion_mode_three_times() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::eldrazi_confluence());
     g.players[0].mana_pool.add_colorless(4);
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: id, spree_modes: vec![1, 1, 1], target: None, additional_targets: vec![], x_value: None,
     }).expect("Eldrazi Confluence castable for {4}");
     drain_stack(&mut g);
     let scions = g.battlefield.iter().filter(|c| c.definition.name == "Eldrazi Scion").count();
     assert_eq!(scions, 3, "choose-three repeats the Scion mode for three tokens");
+}
+
+/// CR 700.2d / 601.2c — Eldrazi Confluence's -3/-3 and bounce instances each
+/// take their own target; the bounce returns to the moved card's owner.
+#[test]
+fn eldrazi_confluence_shrinks_one_and_bounces_another() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let ring = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let id = g.add_card_to_hand(0, catalog::eldrazi_confluence());
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: id, spree_modes: vec![0, 1, 2], target: Some(Target::Permanent(bear)),
+        additional_targets: vec![Target::Permanent(ring)], x_value: None,
+    }).expect("shrink, Scion, bounce");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "the Bears die to -3/-3");
+    assert!(g.players[1].hand.iter().any(|c| c.id == ring), "Sol Ring back in its owner's hand");
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Eldrazi Scion").count(), 1);
 }
 
 

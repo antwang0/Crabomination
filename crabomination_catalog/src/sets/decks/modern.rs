@@ -18694,9 +18694,8 @@ pub fn helix_pinnacle() -> CardDefinition {
 // ── Push claude/modern_decks additions ──────────────────────────────────
 
 /// Fiery Confluence — {2}{R}{R} Sorcery. Choose three; modes may repeat
-/// (CR 700.2d). `Effect::ChooseN` defaults to the burn-each-opponent mode
-/// thrice (6 to each opp); the sweep + artifact-destruction modes stay
-/// available to the mode-pick UI.
+/// (CR 700.2d), picked as it is cast (`Effect::ChooseModesCast`), each
+/// "destroy target artifact" instance with its own target.
 /// - Deal 1 damage to each creature.
 /// - Deal 2 damage to each opponent.
 /// - Destroy target artifact.
@@ -18705,8 +18704,10 @@ pub fn fiery_confluence() -> CardDefinition {
         name: "Fiery Confluence",
         cost: cost(&[generic(2), r(), r()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::ChooseN {
-            picks: vec![1, 1, 1],
+        effect: Effect::ChooseModesCast {
+            min: 3,
+            max: 3,
+            allow_repeats: true,
             modes: vec![
                 Effect::ForEach {
                     selector: Selector::EachPermanent(SelectionRequirement::Creature),
@@ -20730,16 +20731,17 @@ pub fn char() -> CardDefinition {
 }
 
 /// Eldrazi Confluence — {2}{C}{C} Instant. "Choose three. You may choose the
-/// same mode more than once." (CR 700.2d) — `Effect::ChooseN` defaults to
-/// the non-targeting Scion mode thrice; the -3/-3 and bounce modes stay
-/// available to the mode-pick UI.
+/// same mode more than once." (CR 700.2d) — picked as it is cast
+/// (`Effect::ChooseModesCast`), each targeted instance with its own target.
 pub fn eldrazi_confluence() -> CardDefinition {
     CardDefinition {
         name: "Eldrazi Confluence",
         cost: cost(&[generic(2), colorless(2)]),
         card_types: vec![CardType::Instant],
-        effect: Effect::ChooseN {
-            picks: vec![1, 1, 1],
+        effect: Effect::ChooseModesCast {
+            min: 3,
+            max: 3,
+            allow_repeats: true,
             modes: vec![
                 Effect::PumpPT {
                     what: target_filtered(SelectionRequirement::Creature),
@@ -20773,7 +20775,7 @@ pub fn eldrazi_confluence() -> CardDefinition {
                     what: target_filtered(
                         SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
                     ),
-                    to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+                    to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
                 },
             ],
         },

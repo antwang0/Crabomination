@@ -765,13 +765,33 @@ fn fiery_confluence_burns_opponent_for_six_via_repeated_mode() {
     g.players[0].mana_pool.add_colorless(2);
     let opp_life = g.players[1].life;
 
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: id, spree_modes: vec![1, 1, 1], target: None, additional_targets: vec![], x_value: None,
     }).expect("Fiery Confluence castable");
     drain_stack(&mut g);
 
-    // Default picks repeat the 2-damage-each-opponent mode three times.
+    // CR 700.2d — the 2-damage-each-opponent mode chosen three times.
     assert_eq!(g.players[1].life, opp_life - 6, "choose-three burns for 2×3 = 6");
+}
+
+/// CR 700.2d / 601.2c — Fiery Confluence's modes are chosen as it is cast,
+/// and each "destroy target artifact" instance takes its own target.
+#[test]
+fn fiery_confluence_mixes_modes_with_a_target_per_instance() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let b = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::fiery_confluence());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: id, spree_modes: vec![0, 2, 2], target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)], x_value: None,
+    }).expect("sweep once, destroy two artifacts");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none(), "both artifacts destroyed");
+    assert_eq!(g.battlefield_find(bear).map(|c| c.damage), Some(1), "one point to each creature");
 }
 
 #[test]
