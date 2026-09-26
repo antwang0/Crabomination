@@ -3513,7 +3513,11 @@ impl crate::game::GameState {
             self.players[p].cast_paid_artifact_mana = spent;
         }
         // Generator Servant — mana spent on a creature spell grants it haste.
-        if kind.creature && receipt.side_effects.spent(SpendRestriction::CreatureHaste) {
+        let dragon = kind.changeling || kind.creature_types.contains(&crate::card::CreatureType::Dragon);
+        if kind.creature
+            && (receipt.side_effects.spent(SpendRestriction::CreatureHaste)
+                || (dragon && receipt.side_effects.spent(SpendRestriction::DragonCreatureHaste)))
+        {
             let p = self.priority.player_with_priority;
             self.players[p].pending_creature_etb_keywords.push(crate::card::Keyword::Haste);
         }

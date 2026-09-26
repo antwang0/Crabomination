@@ -296,3 +296,20 @@ fn carnelian_orb_hastes_its_dragon() {
     drain_stack(&mut g);
     assert!(has(&g, d, &Keyword::Haste));
 }
+
+/// Carnelian Orb's haste rider is for a Dragon creature spell only; its {R}
+/// still pays for anything else.
+#[test]
+fn carnelian_orb_hastes_only_a_dragon() {
+    let mut g = main_phase(2);
+    let orb = g.add_card_to_battlefield(0, catalog::carnelian_orb_of_dragonkind());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility { card_id: orb, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None })
+        .expect("tap for R");
+    let ogre = g.add_card_to_hand(0, catalog::gray_ogre());
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell { card_id: ogre, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("the Orb's {R} pays for an Ogre");
+    drain_stack(&mut g);
+    assert!(!has(&g, ogre, &Keyword::Haste), "not a Dragon");
+}

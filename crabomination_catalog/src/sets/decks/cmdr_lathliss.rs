@@ -3,10 +3,6 @@
 //! `tests/recent_b/cmdr_lathliss.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Carnelian Orb of Dragonkind** — its mana gives any creature spell
-//!   haste, not only a Dragon.
-//! - **Goddric, Cloaked Reveler** — while celebrating it keeps its Human
-//!   Noble types beside Dragon.
 //! - **Thundermane Dragon** — a creature cast from the top doesn't gain
 //!   haste; the top card isn't shown to you.
 
@@ -64,8 +60,6 @@ pub fn breath_weapon() -> CardDefinition {
 
 /// Carnelian Orb of Dragonkind — {T}: add {R}; a Dragon creature spell it
 /// pays for gains haste.
-///
-/// ⚠ Residual: any creature spell it pays for gains haste.
 pub fn carnelian_orb_of_dragonkind() -> CardDefinition {
     CardDefinition {
         name: "Carnelian Orb of Dragonkind",
@@ -77,7 +71,7 @@ pub fn carnelian_orb_of_dragonkind() -> CardDefinition {
                 who: PlayerRef::You,
                 pool: ManaPayload::Restricted(
                     Box::new(ManaPayload::OfColor(Color::Red, Value::ONE)),
-                    SpendRestriction::CreatureHaste,
+                    SpendRestriction::DragonCreatureHaste,
                 ),
             },
             ..Default::default()
@@ -87,9 +81,8 @@ pub fn carnelian_orb_of_dragonkind() -> CardDefinition {
 }
 
 /// Goddric, Cloaked Reveler — haste; celebrating, it's a 4/4 flying Dragon
-/// with "{R}: Dragons you control get +1/+0 until end of turn".
-///
-/// ⚠ Residual: it keeps its Human Noble types.
+/// with "{R}: Dragons you control get +1/+0 until end of turn", and no
+/// other creature types.
 pub fn goddric_cloaked_reveler() -> CardDefinition {
     let celebrating = |inner: StaticEffect, description: &'static str| StaticAbility {
         description,

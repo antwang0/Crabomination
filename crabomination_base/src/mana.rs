@@ -689,6 +689,10 @@ pub enum SpendRestriction {
     /// turn." (Generator Servant.) Unrestricted spend; funding a creature
     /// stamps the pending-haste rider like `InstantSorceryUncounterable`.
     CreatureHaste,
+    /// "When you spend this mana to cast a Dragon creature spell, it gains
+    /// haste until end of turn." (Carnelian Orb of Dragonkind.) The
+    /// Dragon-only `CreatureHaste`; unrestricted spend.
+    DragonCreatureHaste,
     /// "When that mana is spent to cast a creature spell that shares a
     /// creature type with your commander, scry 1." (Path of Ancestry.)
     /// Unrestricted spend; the shared-type check and the trigger live in
@@ -807,6 +811,7 @@ impl SpendRestriction {
             // Riders, not restrictions — the mana spends freely.
             SpendRestriction::InstantSorceryUncounterable
             | SpendRestriction::CreatureHaste
+            | SpendRestriction::DragonCreatureHaste
             | SpendRestriction::CommanderTypeScry
             | SpendRestriction::CommanderCastCounters
             | SpendRestriction::CreatureCastCounter
@@ -934,6 +939,7 @@ impl SpendRestriction {
             // scry, Opal Palace's counters.
             SpendRestriction::InstantSorceryUncounterable
             | SpendRestriction::CreatureHaste
+            | SpendRestriction::DragonCreatureHaste
             | SpendRestriction::CommanderTypeScry
             | SpendRestriction::CommanderCastCounters
             | SpendRestriction::CreatureCastCounter
