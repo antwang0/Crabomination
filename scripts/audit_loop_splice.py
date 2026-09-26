@@ -32,7 +32,7 @@ arm destroys inline now, no `run_effect` at all) and
 `ExileRandomGraveyardCopyTapped` (its `Move` literal wrapped onto its own
 line, so `NEVER_ASKS` covers it and the entry never matched again).
 
-Reading now: **13 sites, 13 allowlisted, 0 unexplained** — 4 of the
+Reading now: **15 sites, 15 allowlisted, 0 unexplained** — 4 of the
 allowlist entries are OPEN, each with the primitive it is waiting on (see
 ENGINE_BACKLOG's forty-third find). It read 18/18/0 at the find's closing tip,
 15/15/0 once `Selector::ExactObjects` and `Effect::BindTargetObjects` closed
@@ -118,6 +118,15 @@ ALLOW = {
         "`is_mana_ability_public` gates the pick: CR 605.1a mana abilities "
         "do not use the stack and do not ask",
     ("resolve_destroy_targets_polymorph", "&Effect::RevealUntilFind {"): "ditto",
+    ("EachPlayerMillsYouMayCastOne",
+     "&Effect::Mill { who: Selector::Player(PlayerRef::Seat(q)), amount: count.clone() }"):
+        "a mill moves cards and asks nothing; the casts are gathered and "
+        "offered after the loop",
+    ("EachPlayerChoosesCreatureTypeThen", "then"):
+        "OPEN by the CATALOG: the one `per_player` body (Grave Sifter) is a "
+        "choiceless `Move`; a body that asks would need each later seat's "
+        "chosen type re-bound in its tail (the scratch is cleared after the "
+        "loop)",
     ("SearchExileLinked", "&Effect::Search {"):
         "the search asks, and the arm is a `for _ in 0..n` over one seat — "
         "OPEN, see ENGINE_BACKLOG: the tail needs the already-exiled picks' "

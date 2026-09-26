@@ -4854,16 +4854,22 @@ impl GameState {
                 if most == 0 {
                     return Ok(());
                 }
-                for (p, _) in counts.into_iter().filter(|(_, n)| *n == most) {
-                    self.run_effect(
-                        &Effect::Sacrifice {
-                            who: Selector::Player(PlayerRef::Seat(p)),
-                            count: count.clone(),
-                            filter: filter.clone(),
-                        },
-                        ctx,
-                        events,
-                    )?;
+                let seats: Vec<usize> =
+                    counts.into_iter().filter(|(_, n)| *n == most).map(|(p, _)| p).collect();
+                let sacrifice = |p: usize| Effect::Sacrifice {
+                    who: Selector::Player(PlayerRef::Seat(p)),
+                    count: count.clone(),
+                    filter: filter.clone(),
+                };
+                for (i, p) in seats.iter().copied().enumerate() {
+                    self.run_effect(&sacrifice(p), ctx, events)?;
+                    // CR 101.4 — every tied seat sacrifices, not only the ones
+                    // before the first whose pick suspends.
+                    if splice_after_suspend(&mut self.suspend_signal, || {
+                        per_seat_continuation(&seats[i + 1..], sacrifice)
+                    }) {
+                        return Ok(());
+                    }
                 }
                 Ok(())
             }
