@@ -73,8 +73,8 @@ pub fn ankle_shanker() -> CardDefinition {
 }
 
 /// Brutal Hordechief — each attacking creature of yours drains its defending
-/// player for 1; {3}{R/W}{R/W}: opponents' creatures block this turn if able.
-/// Residual: the blocks themselves stay their controllers' choice.
+/// player for 1; {3}{R/W}{R/W}: opponents' creatures block this turn if able,
+/// and you choose how they block (`ChooseBlocksThisTurn`).
 pub fn brutal_hordechief() -> CardDefinition {
     let rw = || hybrid(Color::Red, Color::White);
     CardDefinition {
@@ -87,11 +87,14 @@ pub fn brutal_hordechief() -> CardDefinition {
         }],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(3), rw(), rw()]),
-            effect: Effect::GrantKeyword {
-                what: Selector::EachPermanent(R::Creature.and(R::ControlledByOpponent)),
-                keyword: Keyword::MustBlock,
-                duration: Duration::EndOfTurn,
-            },
+            effect: Effect::Seq(vec![
+                Effect::GrantKeyword {
+                    what: Selector::EachPermanent(R::Creature.and(R::ControlledByOpponent)),
+                    keyword: Keyword::MustBlock,
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::ChooseBlocksThisTurn,
+            ]),
             ..Default::default()
         }],
         ..creature(

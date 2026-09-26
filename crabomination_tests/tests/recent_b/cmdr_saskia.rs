@@ -227,6 +227,23 @@ fn brutal_hordechief_drains_per_attacker() {
     assert_eq!(lost(&g, 0), -2);
 }
 
+/// Brutal Hordechief — "{3}{R/W}{R/W}: creatures your opponents control block
+/// this turn if able, and you choose how those creatures block".
+#[test]
+fn brutal_hordechief_hands_you_the_blocks() {
+    let mut g = pod(3);
+    let hc = g.add_card_to_battlefield(0, catalog::brutal_hordechief());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: hc, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert_eq!(g.block_chooser(), Some(0), "you declare the blocks");
+    assert!(g.computed_permanent(theirs).unwrap().keywords().contains(&Keyword::MustBlock));
+}
+
 /// Primeval Protector costs {1} less per opposing creature and grows your
 /// other creatures.
 #[test]
