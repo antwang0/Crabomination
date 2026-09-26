@@ -440,7 +440,7 @@ pub fn perch_protection() -> CardDefinition {
                 Effect::TakeExtraTurn { who: PlayerRef::ChosenPlayerOfSource, count: Value::ONE },
                 birds(),
                 Effect::PhaseOut { what: yours(R::Permanent), until_source_leaves: false },
-                Effect::LifeLockThisTurn { who: Selector::You },
+                Effect::LifeLockUntilNextTurn { who: Selector::You },
                 Effect::PlayerProtectionUntilNextTurn { who: PlayerRef::You },
             ]),
         })),

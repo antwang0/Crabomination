@@ -294,6 +294,19 @@ fn perch_protection_makes_birds() {
     assert!(g.exile.iter().any(|c| c.id == pp));
 }
 
+/// Perch Protection gifted: the life lock lasts "until your next turn", not
+/// only this turn (the recipient's extra turn comes first).
+#[test]
+fn perch_protection_gifted_locks_life_until_your_next_turn() {
+    let mut g = main_phase(2);
+    let pp = g.add_card_to_hand(0, catalog::perch_protection());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastGift { card_id: pp, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast with the gift");
+    drain_stack(&mut g);
+    assert!(g.players[0].life_locked_until_next_turn, "until your next turn");
+}
+
 /// Promise of Loyalty leaves each player one vowed creature that can't
 /// attack its caster.
 #[test]
