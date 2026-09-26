@@ -2705,6 +2705,11 @@ pub enum Predicate {
     /// *another* creature enter … this turn"). Compares the entered-ids list
     /// against `ctx.source`.
     AnotherCreatureEnteredThisTurn { who: PlayerRef },
+    /// "if it doesn't have the same name as another creature you control or a
+    /// creature card in your graveyard" (Guardian Project): the trigger
+    /// subject's name is on no other creature `ctx.controller` controls and on
+    /// no creature card in their graveyard.
+    TriggerSourceNameUniqueAmongYourCreatures,
     /// **Celebration** (WOE) — two or more nonland permanents entered under
     /// `who`'s control this turn. Reads
     /// `Player.nonland_permanents_entered_this_turn` (Armory Mice, Belligerent

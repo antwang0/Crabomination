@@ -3870,6 +3870,17 @@ impl GameState {
                         .iter()
                         .any(|id| Some(*id) != ctx.source)
                 }),
+            Predicate::TriggerSourceNameUniqueAmongYourCreatures => {
+                let Some(id) = ctx.trigger_source.and_then(|e| e.as_card_id()) else { return false };
+                let Some(name) = self.find_card_anywhere(id).map(|c| c.definition.name) else { return false };
+                let me = ctx.controller;
+                !self.battlefield.iter().any(|c| {
+                    c.id != id && c.controller == me && c.definition.is_creature() && c.definition.name == name
+                }) && !self.players[me]
+                    .graveyard
+                    .iter()
+                    .any(|c| c.definition.is_creature() && c.definition.name == name)
+            }
             Predicate::AnOpponentsTopCardSharesCardTypeWith(sel) => self.an_opponents_top_card_shares_type(sel, ctx),
             Predicate::CelebrationActive { who } => self
                 .resolve_player(who, ctx)
