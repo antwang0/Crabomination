@@ -1383,10 +1383,10 @@ pub fn austere_command() -> CardDefinition {
     }
 }
 
-/// Jeska's Will — {2}{R} Sorcery. Choose one — Add {R}{R}{R}; or exile the top
-/// three cards of your library, you may play them this turn. (Printed: the
-/// ritual scales with an opponent's hand size and you may choose both with a
-/// commander; both are simplified — fixed {R}{R}{R}, single mode.)
+/// Jeska's Will — {2}{R} Sorcery. Choose one — add {R} for each card in
+/// target opponent's hand; or exile the top three cards of your library, you
+/// may play them this turn. Both if you control a commander (read as it
+/// resolves, not as it is cast).
 pub fn jeskas_will() -> CardDefinition {
     use crate::card::MayPlayDuration;
     use crate::effect::ManaPayload;
