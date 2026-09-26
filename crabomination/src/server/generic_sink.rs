@@ -101,6 +101,11 @@ pub(super) fn pick_generic_ability(state: &GameState, seat: usize, w: &EvalWeigh
                 }
                 probes += 1;
                 let Some(settled) = state.accept(action.clone()) else { continue };
+                // A Class level buys static and triggered abilities the
+                // material eval can't price; one that can be paid is taken.
+                if matches!(ab.effect, Effect::AdvanceClassLevel) {
+                    return Some(action);
+                }
                 let base = *baseline.get_or_insert_with(|| eval_material(state, seat, w));
                 if let Some(ev) = evaluate_action_outcome(state, seat, &action, Some(&settled), w)
                     && ev > base
