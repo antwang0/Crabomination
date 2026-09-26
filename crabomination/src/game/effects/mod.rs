@@ -115,6 +115,7 @@ use crate::mana::Color;
 enum ScratchSave {
     CurrentVoter(Option<usize>),
     LastDieRoll(u8),
+    ChosenOpponent(Option<usize>),
 }
 
 /// Continuation for per-player decision loops that suspend mid-iteration:
@@ -1648,6 +1649,9 @@ impl GameState {
             ScratchBinding::LastDieRoll(face) => {
                 ScratchSave::LastDieRoll(std::mem::replace(&mut self.last_die_roll, *face))
             }
+            ScratchBinding::ChosenOpponent(seat) => {
+                ScratchSave::ChosenOpponent(self.scratch.chosen_opponent_scratch.replace(*seat))
+            }
         }
     }
 
@@ -1656,6 +1660,7 @@ impl GameState {
         match save {
             ScratchSave::CurrentVoter(prev) => self.current_voter = prev,
             ScratchSave::LastDieRoll(prev) => self.last_die_roll = prev,
+            ScratchSave::ChosenOpponent(prev) => self.scratch.chosen_opponent_scratch = prev,
         }
     }
 
@@ -20671,7 +20676,13 @@ impl GameState {
                     g.find_card_anywhere(id).map_or(0, |c| c.definition.cost.cmc())
                 };
                 let best = ids.iter().copied().max_by_key(|id| mv(self, *id)).unwrap_or(ids[0]);
-                let veto = match self.resolve_player(&PlayerRef::HostileOpponent, ctx) {
+                // "An opponent chooses": the one `ChooseOpponentThen` named,
+                // else the most hostile.
+                let chooser = self
+                    .scratch
+                    .chosen_opponent_scratch
+                    .or_else(|| self.resolve_player(&PlayerRef::HostileOpponent, ctx));
+                let veto = match chooser {
                     None => None,
                     Some(seat) => {
                         let source = ctx.source.unwrap_or(CardId(0));

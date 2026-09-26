@@ -5854,3 +5854,38 @@ fn choose_opponent_then_asks_a_prompting_controller_and_runs_for_its_pick() {
     let gained: Vec<i32> = g.players.iter().zip(&life).map(|(p, l)| p.life - l).collect();
     assert_eq!(gained, vec![0, 0, 0, 5], "only the named opponent gains");
 }
+
+/// A "choose an opponent, then …" body that asks keeps its opponent: the
+/// discard suspends on the chosen seat, and the life gain after it (the parked
+/// half) still names that seat, not the source's empty `chosen_player`.
+#[test]
+fn choose_opponent_then_keeps_its_opponent_across_a_suspend_in_the_body() {
+    use crabomination::effect::{Effect, Selector, Value};
+    let mut g = multi_player_game(4);
+    g.players[0].wants_ui = true;
+    g.players[3].wants_ui = true;
+    g.add_card_to_hand(3, catalog::grizzly_bears());
+    g.add_card_to_hand(3, catalog::lightning_bolt());
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let chosen = || Selector::Player(PlayerRef::ChosenPlayerOfSource);
+    g.stack.push(
+        TriggerPush::new(src, 0, Effect::ChooseOpponentThen {
+            then: Box::new(Effect::Seq(vec![
+                Effect::Discard { who: chosen(), amount: Value::Const(1), random: false },
+                Effect::GainLife { who: chosen(), amount: Value::Const(5) },
+            ])),
+        })
+        .build(),
+    );
+    let life = g.players[3].life;
+    g.resolve_top_of_stack().expect("resolve");
+    g.submit_decision(DecisionAnswer::Amount(2)).expect("name seat 3");
+    for _ in 0..8 {
+        let Some(p) = g.pending_decision.as_ref() else { break };
+        let answer = crabomination::decision::Decider::decide(&mut crabomination::decision::AutoDecider, &p.decision);
+        g.submit_decision(answer).expect("answer the discard");
+    }
+    assert!(g.pending_decision.is_none());
+    assert_eq!(g.players[3].hand.len(), 1, "seat 3 discarded");
+    assert_eq!(g.players[3].life, life + 5, "and seat 3, still bound, gained");
+}

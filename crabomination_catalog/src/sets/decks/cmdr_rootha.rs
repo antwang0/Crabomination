@@ -428,8 +428,7 @@ pub fn mirrorwing_dragon() -> CardDefinition {
 }
 
 /// Plargg and Nassari — your upkeep: each player exiles until a nonland card;
-/// an opponent vetoes one; cast up to two of the others free. Residual: the
-/// vetoing opponent is the hostile one.
+/// an opponent of your choice vetoes one; cast up to two of the others free.
 pub fn plargg_and_nassari() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],
@@ -440,14 +439,16 @@ pub fn plargg_and_nassari() -> CardDefinition {
                 Effect::ForEachOpponent {
                     body: Box::new(Effect::ExileTopUntilNonland { who: PlayerRef::Triggerer }),
                 },
-                Effect::OpponentVetoesOne {
-                    what: Selector::ExiledThisResolution { filter: R::Nonland },
-                    then: Box::new(Effect::CastAnyOrderWithoutPaying {
-                        what: Selector::SeparatedPile { chosen: false },
-                        source_zone: Zone::Exile,
-                        filter: None,
-                        cap: Some(Value::Const(2)),
-                        total_mana_value: None,
+                Effect::ChooseOpponentThen {
+                    then: Box::new(Effect::OpponentVetoesOne {
+                        what: Selector::ExiledThisResolution { filter: R::Nonland },
+                        then: Box::new(Effect::CastAnyOrderWithoutPaying {
+                            what: Selector::SeparatedPile { chosen: false },
+                            source_zone: Zone::Exile,
+                            filter: None,
+                            cap: Some(Value::Const(2)),
+                            total_mana_value: None,
+                        }),
                     }),
                 },
             ]),

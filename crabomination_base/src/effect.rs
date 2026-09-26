@@ -4666,8 +4666,9 @@ pub enum Effect {
     /// against the rest (The Nipton Lottery's "choose a creature at random …
     /// then destroy all other creatures").
     ChooseOneAtRandomAmong { what: Selector, chosen: Box<Effect>, other: Box<Effect> },
-    /// "An opponent chooses one of [`what`]" as a veto: the effect's
-    /// hostile opponent (`PlayerRef::HostileOpponent`) names one, and `then`
+    /// "An opponent chooses one of [`what`]" as a veto: the opponent a
+    /// wrapping `ChooseOpponentThen` named (else the most hostile) names one,
+    /// and `then`
     /// runs against the others via `Selector::SeparatedPile { chosen: false }`.
     /// A headless chooser names the highest mana value. Plargg and Nassari.
     OpponentVetoesOne { what: Selector, then: Box<Effect> },
@@ -11948,6 +11949,9 @@ pub enum ScratchBinding {
     /// CR 706.3a — the modified result this results-table arm was chosen by,
     /// read back by `Value::LastDieRoll`.
     LastDieRoll(u8),
+    /// The opponent `Effect::ChooseOpponentThen` named, read back by
+    /// [`PlayerRef::ChosenPlayerOfSource`] inside its body.
+    ChosenOpponent(usize),
 }
 
 impl Default for Effect {

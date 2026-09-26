@@ -2033,7 +2033,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Concord with the Kami | Upgrades Unleashed (NEC) | "choose one or more" takes every mode that can do something (a counter needs a target creature with a counter; the card and Spirit need their enchanted / equipped creature). |
 | 🟡 Gix, Yawgmoth Praetor | Mardu Surge (TDC) | the cards its activation exiles stay free to play for the rest of the turn, not only as the ability resolves. |
 | 🟡 Abstract Performance | Prismari Artistry (SOC) | the "face-down" pile is exiled face up (only the chooser's prompt hides it); the chooser is the hostile opponent, not one you choose. |
-| 🟡 Plargg and Nassari | Prismari Artistry (SOC) | the vetoing opponent is the hostile opponent, not one you choose. |
 | 🟡 Cataclysmic Prospecting | Desert Bloom (OTC) | mana spent from Deserts isn't tracked; the Treasures count the tapped Deserts you control as it resolves. |
 | 🟡 Dune Chanter | Desert Bloom (OTC) | land cards off the battlefield aren't Deserts (lands you control are). |
 | 🟡 Ao, the Dawn Sky | Lorehold Spirit (SOC) | the unpicked cards stay on top of the library, not the bottom in a random order. |

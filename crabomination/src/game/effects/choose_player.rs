@@ -109,10 +109,13 @@ impl GameState {
             }
         };
         let Some(&pick) = opps.get(i).or(opps.first()) else { return Ok(()) };
-        let prev = self.scratch.chosen_opponent_scratch.replace(pick);
-        let r = self.run_effect(then, ctx, events);
-        self.scratch.chosen_opponent_scratch = prev;
-        r
+        // Bound, not just set: a body that asks parks a continuation that
+        // resumes after this arm restored the scratch.
+        let bound = Effect::BindScratch {
+            scratch: crate::effect::ScratchBinding::ChosenOpponent(pick),
+            body: Box::new(then.clone()),
+        };
+        self.run_effect(&bound, ctx, events)
     }
 }
 
