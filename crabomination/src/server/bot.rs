@@ -11728,10 +11728,13 @@ fn goad_legal_target(state: &GameState, seat: usize, id: CardId, preferred: usiz
 }
 
 /// The live opponent a `MustAttackChosenPlayer` creature (Raving Dead) is
-/// bound to attack, stamped in its `chosen_player`.
+/// bound to attack, stamped in its `chosen_player`. Read off the computed
+/// keywords, as `must_attack` and the engine do: a granted one (encore, the
+/// Fantastic Four) binds too.
 fn chosen_attack_target(state: &GameState, seat: usize, id: CardId) -> Option<usize> {
     let c = state.battlefield_find(id)?;
-    if !c.definition.keywords.has_kw(&crate::card::Keyword::MustAttackChosenPlayer) {
+    c.chosen_player?;
+    if !state.computed_permanent(id).is_some_and(|cp| cp.keywords().has_kw(&crate::card::Keyword::MustAttackChosenPlayer)) {
         return None;
     }
     c.chosen_player
