@@ -8976,6 +8976,7 @@ fn sink_facts(state: &GameState, seat: usize, have: &SweepMana<'_>) -> u32 {
     // One grant scan for the whole tail. Six generators built their own; the
     // gates now skip all six on a board with nothing for them.
     let scan = state.grant_scan();
+    let restricted_floating = state.players[seat].mana_pool.restricted_total() > 0;
     let mut gy_ability_grant = false;
     // A static that makes artifacts Equipment (Bludgeon Brawl, Arterial
     // Alchemy): the per-card memo answers "is one out" without a walk.
@@ -9035,7 +9036,12 @@ fn sink_facts(state: &GameState, seat: usize, have: &SweepMana<'_>) -> u32 {
             // `{T}` or generic that read is pure cost (measured +0.292 % of
             // `fixed` when this gate was unconditional, against -0.562 % of
             // `cube`).
+            // Restricted floating mana (Vedalken Engineer's "only for
+            // artifacts") is outside `have`, and it can pay an artifact's
+            // ability: with any floating, the gate stays open (a four-seat
+            // debug pod asserted on Executioner's Capsule, seed 91040).
             if ab.mana_cost.symbols.iter().any(|sym| matches!(sym, crate::mana::ManaSymbol::Colored(_)))
+                && !restricted_floating
                 && !colors_coverable(&ab.mana_cost, have.get())
             {
                 continue;
