@@ -9,8 +9,6 @@
 //!   Pirate {1}.
 //! - **Merchant Raiders** — the lock lasts while it's on the battlefield,
 //!   not while you control it.
-//! - **Port Razer** — its trigger fires once a turn instead of "can't attack
-//!   a player it has already attacked this turn".
 //! - **Siren Stormtamer** — counters spells only, targeting you or any
 //!   permanent you control.
 //! - **Timestream Navigator** — it goes to the bottom as part of the effect,
@@ -529,14 +527,14 @@ pub fn merchant_raiders() -> CardDefinition {
     }
 }
 
-/// Port Razer — connecting untaps your creatures and adds a combat phase.
-///
-/// ⚠ Residual: the trigger fires once a turn instead of "can't attack a
-/// player it has already attacked this turn" (which is what ends the loop).
+/// Port Razer — connecting untaps your creatures and adds a combat phase; it
+/// can't attack a player it has already attacked this turn, which is what
+/// ends the loop.
 pub fn port_razer() -> CardDefinition {
     CardDefinition {
+        keywords: vec![Keyword::CantAttackPlayerAttackedThisTurn],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource).once_per_turn(),
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
             effect: Effect::Seq(vec![
                 Effect::Untap { what: yours(R::Creature), up_to: None },
                 Effect::AdditionalCombatPhase { count: Value::ONE },

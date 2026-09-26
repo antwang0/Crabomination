@@ -860,6 +860,16 @@ impl GameState {
                 {
                     return Some((line!(), GameError::CannotAttack(id)));
                 }
+                // CR 508.1a — Port Razer: not a player it attacked this turn.
+                Keyword::CantAttackPlayerAttackedThisTurn
+                    if defender.is_some_and(|d| {
+                        self.battlefield_find(id).is_some_and(|c| {
+                            c.cold_any(|k| k.combat_defenders.as_ref().is_some_and(|v| v.contains(&d)))
+                        })
+                    }) =>
+                {
+                    return Some((line!(), GameError::CannotAttack(id)));
+                }
                 // CR 508.1a — Branded Brawlers: any untapped land locks it.
                 Keyword::CantAttackIfDefenderHasUntappedLand
                     if defender.is_some_and(|d| {
@@ -2077,6 +2087,12 @@ impl GameState {
                 && let Some(v) = card.combat_defenders.as_mut()
             {
                 v.push(d);
+            }
+            if let AttackTarget::Player(d) = atk.target
+                && card.definition.keywords.has_kw(&Keyword::CantAttackPlayerAttackedThisTurn)
+                && !card.cold_any(|k| k.combat_defenders.as_ref().is_some_and(|v| v.contains(&d)))
+            {
+                card.combat_defenders.get_or_insert_with(Vec::new).push(d);
             }
             self.attacking.push(atk);
             // Raid (CR 702.108 ability word): the controller attacked this turn.

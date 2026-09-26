@@ -2438,6 +2438,10 @@ pub enum Keyword {
     /// `equipped_bonus`; "you" is the controller of each attached Aura that
     /// grants it, read in `attacker_target_block` against the defender.
     CantAttackAuraController,
+    /// CR 508.1a — "can't attack a player it has already attacked this turn"
+    /// (Port Razer). The players it attacked ride `combat_defenders`, reset as
+    /// each turn begins; read in `attacker_target_block`.
+    CantAttackPlayerAttackedThisTurn,
     /// CR 508.1a — "can't attack [seat] or planeswalkers [seat] controls",
     /// granted for a turn by an effect that names its controller
     /// (Illusionist's Gambit's "they can't attack you").
@@ -7705,7 +7709,9 @@ pub struct CardCold {
     /// Territorial Hellkite — `Some` while this creature tracks the players
     /// it attacks in its controller's current combat (armed by
     /// `Effect::ChooseRandomOpponentNotAttackedLastCombat`, filled at declare
-    /// attackers); `None` for every other creature.
+    /// attackers); Port Razer's players attacked this turn
+    /// (`Keyword::CantAttackPlayerAttackedThisTurn`); `None` for every other
+    /// creature.
     pub combat_defenders: Option<Vec<usize>>,
     /// Galea, Kindler of Hope — an Equipment spell cast off the library top
     /// "this way" gains "when this Equipment enters, attach it to target

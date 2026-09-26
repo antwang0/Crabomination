@@ -3215,11 +3215,11 @@ Admiral — also a block-walker leaf, so `can_block_attacker_computed` now
 takes the monarch; the walker's `_ => false` would otherwise have killed
 the evasion), `ControlledByPlayerDamagedByAtLeast` (Admiral Beckett Brass),
 `DiscardedThisTurn` (Ghost of Ramirez DePietro) and
-`Effect::ReturnToOwnersHandAtNextEndStep` (Zara). ⚠ **Port Razer loops
-without its attack restriction** ("can't attack a player it has already
-attacked this turn" has no primitive), so its trigger is once a turn to
-keep games finite. Residuals: **Admiral Beckett Brass**, **Gemcutter Buccaneer**, **Merchant
-Raiders**, **Port Razer**, **Siren Stormtamer**, **Timestream Navigator**, **Zara, Renegade Recruiter**. A 200-game
+`Effect::ReturnToOwnersHandAtNextEndStep` (Zara). **Port Razer**'s attack
+restriction is `Keyword::CantAttackPlayerAttackedThisTurn` since 2026-09-26
+(it was a once-a-turn trigger until then, to keep games finite). Residuals:
+**Admiral Beckett Brass**, **Gemcutter Buccaneer**, **Merchant Raiders**,
+**Siren Stormtamer**, **Timestream Navigator**, **Zara, Renegade Recruiter**. A 200-game
 census beside Galadriel / Kamiz / Zimone (seed 158) decided 200/200 with
 zero panics and no card unplayed, Brass winning 30.5 %. `--bench`
 byte-identical.

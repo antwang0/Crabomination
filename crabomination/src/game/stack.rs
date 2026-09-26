@@ -4433,6 +4433,11 @@ impl GameState {
             if card.attacked_this_turn {
                 card.attacked_this_turn = false;
             }
+            if card.definition.keywords.has_kw(&crate::card::Keyword::CantAttackPlayerAttackedThisTurn)
+                && card.cold_any(|k| k.combat_defenders.is_some())
+            {
+                card.combat_defenders = None;
+            }
             if card.blocked_this_turn {
                 card.blocked_this_turn = false;
             }
