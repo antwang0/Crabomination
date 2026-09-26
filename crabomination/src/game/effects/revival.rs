@@ -110,13 +110,15 @@ impl GameState {
         }
     }
 
-    /// `Effect::CastExiledFreeOwnersLoseLife` — you may cast any of the
-    /// exiled cards `what` names without paying their mana costs; each
-    /// spell's owner then loses life equal to its mana value (Kefka, Dancing
-    /// Mad). Lands can't be cast and are skipped.
-    pub(super) fn cast_exiled_free_owners_lose_life(
+    /// `Effect::CastExiledFree` / `CastExiledFreeOwnersLoseLife` — you may
+    /// cast any of the exiled cards `what` names without paying their mana
+    /// costs (Etali, Primal Storm); with `owners_lose_life`, each spell's owner
+    /// then loses life equal to its mana value (Kefka, Dancing Mad). Lands
+    /// can't be cast and are skipped.
+    pub(super) fn cast_exiled_free(
         &mut self,
         what: &Selector,
+        owners_lose_life: bool,
         ctx: &EffectContext,
         events: &mut Vec<GameEvent>,
     ) -> Result<(), GameError> {
@@ -146,6 +148,9 @@ impl GameState {
             let target = self.auto_target_for_effect_avoiding(&def.effect, me, Some(cid));
             if let Ok(mut ev) = self.cast_card_for_free(me, cid, Zone::Exile, target, vec![], None, None, false) {
                 events.append(&mut ev);
+                if !owners_lose_life {
+                    continue;
+                }
                 let lose = Effect::LoseLife {
                     who: Selector::Player(PlayerRef::Seat(owner)),
                     amount: Value::Const(mv as i32),

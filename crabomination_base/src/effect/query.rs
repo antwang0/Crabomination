@@ -811,6 +811,7 @@ impl Effect {
             | Effect::EachOpponentReturnsFromYourGraveyard { .. }
             | Effect::GrantCastSpellRiders { .. }
             | Effect::CastExiledFreeOwnersLoseLife { .. }
+            | Effect::CastExiledFree { .. }
             | Effect::DestroyOnePerOpponent { .. }
             | Effect::DamageEachCreatureOfChosenColor { .. }
             | Effect::ForetellFromHand { .. }

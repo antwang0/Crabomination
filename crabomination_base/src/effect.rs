@@ -5291,6 +5291,10 @@ pub enum Effect {
     /// their mana costs. Then each player who owns a spell you cast this way
     /// loses life equal to its mana value" (Kefka, Dancing Mad).
     CastExiledFreeOwnersLoseLife { what: Selector },
+    /// "You may cast any number of [nonland] cards exiled this way without
+    /// paying their mana costs" (Etali, Primal Storm) — Kefka's loop without
+    /// the owners' life loss. Lands are skipped.
+    CastExiledFree { what: Selector },
     /// CR 603.7 — "When that creature leaves the battlefield, return this
     /// card from exile to the battlefield under its owner's control" (Lucius
     /// the Eternal): a delayed trigger watching `what`, returning the source

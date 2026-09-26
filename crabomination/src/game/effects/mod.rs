@@ -23602,7 +23602,8 @@ impl GameState {
                 self.grant_cast_spell_riders(what, *haste, *sacrifice_eot, ctx);
                 Ok(())
             }
-            Effect::CastExiledFreeOwnersLoseLife { what } => self.cast_exiled_free_owners_lose_life(what, ctx, events),
+            Effect::CastExiledFreeOwnersLoseLife { what } => self.cast_exiled_free(what, true, ctx, events),
+            Effect::CastExiledFree { what } => self.cast_exiled_free(what, false, ctx, events),
             Effect::RevealDeployOneTakeOne { count, indestructible } => {
                 self.reveal_deploy_one_take_one(count, *indestructible, ctx, events);
                 Ok(())
