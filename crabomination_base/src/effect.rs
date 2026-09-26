@@ -4035,6 +4035,10 @@ pub enum Effect {
     // ── Combinators ──────────────────────────────────────────────────────────
     /// Do nothing.
     Noop,
+    /// Empty the resolution's `Selector::LastMoved` list, so a following
+    /// "if that moved nothing" reads only the next move (Kynaios and Tiro's
+    /// "each opponent who didn't put a land onto the battlefield").
+    ClearLastMoved,
     /// Execute each inner effect in order.
     Seq(Vec<Effect>),
     /// If `cond` holds, execute `then`, else `else_`.

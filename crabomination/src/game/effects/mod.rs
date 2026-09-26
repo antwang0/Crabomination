@@ -3530,6 +3530,10 @@ impl GameState {
     ) -> Result<(), GameError> {
         match effect {
             Effect::Noop => Ok(()),
+            Effect::ClearLastMoved => {
+                self.scratch.last_moved_cards.clear();
+                Ok(())
+            }
 
             Effect::ExileRandomFromHandMayPlayThisTurn { who } => {
                 let Some(seat) = self.resolve_player(who, ctx) else { return Ok(()) };

@@ -248,6 +248,23 @@ fn kynaios_and_tiro_share_lands_and_cards() {
     assert_eq!(g.players[2].hand.len(), 1, "seat 2 had no land and drew");
 }
 
+/// Kynaios and Tiro — an opponent holding a land who declines to put it
+/// down still draws ("each opponent who didn't put a land … this way").
+#[test]
+fn kynaios_and_tiro_a_declining_opponent_draws() {
+    let mut g = main_phase(2);
+    g.add_card_to_battlefield(0, catalog::kynaios_and_tiro_of_meletis());
+    for seat in 0..2 {
+        g.add_card_to_library(seat, catalog::grizzly_bears());
+    }
+    let land = g.add_card_to_hand(1, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![])]));
+    advance_to(&mut g, TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(land).is_none(), "seat 1 kept its land");
+    assert_eq!(g.players[1].hand.len(), 2, "the land and the drawn card");
+}
+
 /// Each end step, if a player other than Ludevic's controller lost life, the
 /// active player may draw.
 #[test]

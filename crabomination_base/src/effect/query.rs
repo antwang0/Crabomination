@@ -889,6 +889,7 @@ impl Effect {
             Effect::AsPlayer { who, body } => player_has_target(who) || body.requires_target(),
             Effect::NextSpellCantBeCountered { .. } => false,
             Effect::Noop
+            | Effect::ClearLastMoved
             | Effect::LicidDetach
             | Effect::SearchEachBasicLandType { .. }
             | Effect::SearchAnyNumber { .. }

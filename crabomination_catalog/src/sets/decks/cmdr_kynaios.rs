@@ -3,8 +3,6 @@
 //! `tests/recent_b/cmdr_kynaios.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Kynaios and Tiro of Meletis** — an opponent holding a land who
-//!   declines to put it onto the battlefield doesn't draw.
 //! - **Humble Defector** — the opponent who gains control is a random one.
 //! - **Sidar Kondo of Jamuraa** — the evasion covers creatures you control
 //!   with power 2 or less, not other players' small attackers.
@@ -344,15 +342,17 @@ pub fn kynaios_and_tiro_of_meletis() -> CardDefinition {
                 put_land(),
                 Effect::EachPlayerDoes {
                     who: PlayerRef::EachOpponent,
-                    body: Box::new(Effect::If {
-                        cond: Predicate::SelectorExists(Selector::CardsInZone {
-                            who: PlayerRef::You,
-                            zone: Zone::Hand,
-                            filter: R::Land,
-                        }),
-                        then: Box::new(put_land()),
-                        else_: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
-                    }),
+                    // "…then each opponent who didn't put a land onto the
+                    // battlefield this way draws a card" — declining counts.
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::ClearLastMoved,
+                        put_land(),
+                        Effect::If {
+                            cond: Predicate::SelectorExists(Selector::LastMoved),
+                            then: Box::new(Effect::Noop),
+                            else_: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+                        },
+                    ])),
                 },
             ]),
         }],

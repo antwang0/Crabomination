@@ -83,7 +83,7 @@ lists were picked.
 | **Political Puppets** (CMD precon) URW | Zedruu the Greathearted | URW | 100 | 🟡 all 100 implemented (Trade Secrets, banned, swapped for Divination), 2 carry residuals (below) |
 | **Eternal Might** (DRC precon) WUB | Temmet, Naktamun's Will | WUB | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Land's Wrath** (ZNC precon) RGW | Obuun, Mul Daya Ancestor | RGW | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
-| **Stalwart Unity** (C16 precon) RGWU | Kynaios and Tiro of Meletis | RGWU | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
+| **Stalwart Unity** (C16 precon) RGWU | Kynaios and Tiro of Meletis | RGWU | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Token Triumph** (SCD starter) GW | Emmara, Soul of the Accord | GW | 100 | ✅ complete |
 | **Raining Cats and Dogs** (SLD) RGW | Rin and Seri, Inseparable | RGW | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Growing Threat** (MOC precon) WB | Brimaz, Blight of Oreskos | WB | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
@@ -959,8 +959,7 @@ could not fire), `Effect::OnMatchingBlocksThisTurn` (Benefactor's Draught) and
 politics.rs`). ⚠ **The strict debug pod found Collective Voyage broken**: its
 join-forces body searched only seat 0's library and put those lands under the
 caster (`resolve_player`'s fan-out assert) — now `EachPlayerDoes`, with a CR
-207.2c test. Residuals: an opponent who declines Kynaios's land offer while
-holding one doesn't draw; Humble Defector goes to a random opponent; Sidar
+207.2c test. Residuals: Humble Defector goes to a random opponent; Sidar
 Kondo's evasion covers only your small creatures; Advokist counters a taker's
 greatest-power creature. Debug pods beside Zedruu / Obuun / Kaalia / Sigarda
 (seeds 9311/9312, 60 games) decided 60/60, zero panics; a 120-game census
