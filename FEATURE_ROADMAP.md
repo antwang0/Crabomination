@@ -700,10 +700,16 @@ Each a small targeted feature; sweep batch by batch.
 
 - ⏳ **In-app deck builder** (search, curve view, legality, sample-hand).
 - 🟡 **Import / export** — import ships (`decklist::parse_decklist`, Arena/MTGO
-  text; menu "Play Deck vs Bot" loads and validates). Commander: the menu's
-  deck picker (`deck_picker.rs`) chooses your stock deck and each bot's
-  from the 183 stock lists, with search. Remaining ⏳: export, .dec/.cod,
-  paste-from-clipboard.
+  text; menu "Play Deck File" / "Play Pasted Deck" load and validate, and a
+  Commander lobby takes a pasted list — the web build's only way in). Names
+  match past case, accents and typographic quotes (`decklist::fold_name`),
+  and a list that can't play opens a report of **every** problem, each
+  unknown card with the names it probably meant ("Lightnig Bolt", "Atraxa"),
+  where the status line used to name four. Commander: the menu's deck
+  picker (`deck_picker.rs`) chooses your stock deck and each bot's from the
+  183 stock lists, with search. Remaining ⏳: export, .dec/.cod, a warning
+  for cards whose implementation is partial (no runtime list —
+  INCOMPLETE_CARDS is prose).
 - ⏳ **Deck stats** (curve, pips, type breakdown).
 - ⏳ **Collection tracking**; ⏳ **Scryfall-like card search** over the catalog.
 

@@ -180,8 +180,10 @@ pub(crate) fn load_deck_env(key: &str) -> Option<Vec<crabomination::cube::CardFa
     });
     let parsed = crabomination::decklist::parse_decklist(&text);
     if !parsed.unknown.is_empty() {
-        eprintln!("{key}: {} card(s) not in the catalog: {}", parsed.unknown.len(),
-            parsed.unknown.join(", "));
+        eprintln!("{key}: {} card(s) not in the catalog:", parsed.unknown.len());
+        for u in &parsed.unknown {
+            eprintln!("  {u}");
+        }
         std::process::exit(1);
     }
     // CR 100.2a / 100.4a / 702.139c — main-deck legality, the sideboard size

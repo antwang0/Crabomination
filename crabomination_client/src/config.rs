@@ -139,7 +139,7 @@ pub struct GameplayConfig {
     pub player_name: String,
     /// Last-used "join address" menu field. Empty = default.
     pub join_addr: String,
-    /// Last-used decklist path for "Play Deck vs Bot". Empty = default.
+    /// Last-used decklist path for "Play Deck File". Empty = default.
     pub deck_path: String,
     /// Animation playback speed multiplier (the in-game `[` / `]` keys and
     /// slider persist here). Default: 1.0.

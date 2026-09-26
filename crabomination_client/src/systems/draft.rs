@@ -476,7 +476,7 @@ struct OpponentChoiceButton {
 struct ConfirmDeckButton;
 
 /// "Save Deck" on the deckbuilding screen — writes the staged main +
-/// sideboard as decklist text a later "Play Deck vs Bot" can re-import.
+/// sideboard as decklist text a later "Play Deck File" can re-import.
 #[derive(Component)]
 struct SaveDeckButton;
 

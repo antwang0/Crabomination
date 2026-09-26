@@ -37,6 +37,9 @@ pub struct HarnessArgs {
     /// `--deck-picker`: stay on the menu with Commander selected and the deck
     /// picker open; the screenshot is of the menu, not a match.
     pub deck_picker: bool,
+    /// `--import-report PATH`: import the decklist at PATH from the menu, as
+    /// "Play Deck File" would, so a screenshot shows the problems it finds.
+    pub import_report: Option<std::path::PathBuf>,
 }
 
 impl HarnessArgs {
@@ -60,7 +63,13 @@ impl HarnessArgs {
             viewer_out: args.iter().any(|a| a == "--viewer-out"),
             hold_seat: value("--hold-seat").and_then(|v| v.parse().ok()),
             deck_picker: args.iter().any(|a| a == "--deck-picker"),
+            import_report: value("--import-report").map(std::path::PathBuf::from),
         }
+    }
+
+    /// The screenshot is of the menu, not a match.
+    fn menu_shot(&self) -> bool {
+        self.deck_picker || self.import_report.is_some()
     }
 }
 
@@ -166,6 +175,23 @@ pub fn open_deck_picker_for_screenshot(
     }
 }
 
+/// `--import-report PATH`: import that list from the menu, once.
+pub fn import_for_screenshot(
+    args: Res<HarnessArgs>,
+    fields: Res<crate::menu::MenuFields>,
+    mut status: ResMut<crate::menu::MenuStatus>,
+    mut report: ResMut<crate::deck_import::ImportReport>,
+    mut done: Local<bool>,
+) {
+    let Some(path) = args.import_report.as_ref().filter(|_| !*done) else { return };
+    *done = true;
+    let text = std::fs::read_to_string(path).unwrap_or_default();
+    if let Err(problems) = crate::deck_import::import_deck(&text, fields.format) {
+        status.0 = problems.summary.clone();
+        report.0 = Some(problems);
+    }
+}
+
 /// `--settings-open`: open the Esc menu the first frame a view is up.
 pub fn open_settings_for_screenshot(
     args: Res<HarnessArgs>,
@@ -199,7 +225,7 @@ pub fn capture_screenshot(
 ) {
     let Some(path) = &args.screenshot else { return };
     // A match screenshot waits for the first view; a menu one does not.
-    if view.0.is_none() && !args.deck_picker {
+    if view.0.is_none() && !args.menu_shot() {
         return;
     }
     let t = clock.since_view.get_or_insert(0.0);

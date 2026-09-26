@@ -35,6 +35,14 @@
 //! [`DecklistParse::commander_list`], which is also where a Commander import
 //! is validated. Unresolvable names are reported rather than dropped
 //! silently, so an import UI can show exactly what's missing from the catalog.
+//!
+//! Names match without regard to case, accents and ligatures, or typographic
+//! quotes and dashes ([`fold_name`]: "Lim-Dul", "Juzam Djinn", a curly
+//! apostrophe pasted from a web page), and an unknown name carries the
+//! catalog names it most likely meant ([`UnknownCard::suggestions`]).
+
+use std::fmt;
+use std::sync::OnceLock;
 
 use crate::fxhash::HashMap;
 
@@ -53,12 +61,40 @@ pub struct DecklistParse {
     /// Doctor's companion pair. The parser only files them; legality is
     /// [`DecklistParse::commander_list`]'s job.
     pub commanders: Vec<CardFactory>,
-    /// `"4x Snapcaster Mage"`-style entries for names not in the catalog.
-    pub unknown: Vec<String>,
+    /// The lines whose names aren't in the catalog, in list order.
+    pub unknown: Vec<UnknownCard>,
     /// Every sideboard card got there by Arena's blank-line convention alone
     /// — no `Sideboard` header, no `SB:` prefix. A Commander deck has no
     /// sideboard (CR 903.5e), so in one a blank line is only grouping.
     pub sideboard_is_implicit: bool,
+}
+
+/// A decklist line whose card isn't in the catalog.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct UnknownCard {
+    pub count: u32,
+    /// The name as the list wrote it (set / collector suffix and export
+    /// markers stripped).
+    pub name: String,
+    /// Up to three catalog names it most likely meant: the cards it names
+    /// with the subtitle left off ("Atraxa"), else the nearest names within a
+    /// typo's reach ("Lightnig Bolt"). Empty when nothing is that close.
+    pub suggestions: Vec<&'static str>,
+}
+
+/// `2x Lightnig Bolt (did you mean Lightning Bolt?)`.
+impl fmt::Display for UnknownCard {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}x {}", self.count, self.name)?;
+        if let Some((last, rest)) = self.suggestions.split_last() {
+            f.write_str(" (did you mean ")?;
+            if !rest.is_empty() {
+                write!(f, "{} or ", rest.join(", "))?;
+            }
+            write!(f, "{last}?)")?;
+        }
+        Ok(())
+    }
 }
 
 /// A decklist read as a Commander deck: the command zone and the rest.
@@ -227,13 +263,141 @@ fn split_count(line: &str) -> (u32, &str) {
     (count.clamp(1, 99), rest.trim_start())
 }
 
+/// A card name as an import compares it: lowercase, accents and ligatures
+/// dropped (Lim-Dûl → lim-dul, Æ → ae), typographic quotes and dashes made
+/// plain, whitespace runs collapsed — so a list typed without accents or
+/// copied off a web page still finds its cards.
+pub fn fold_name(name: &str) -> String {
+    let mut out = String::with_capacity(name.len());
+    for c in name.chars().flat_map(char::to_lowercase) {
+        match c {
+            'à' | 'á' | 'â' | 'ã' | 'ä' | 'å' => out.push('a'),
+            'æ' => out.push_str("ae"),
+            'ç' => out.push('c'),
+            'è' | 'é' | 'ê' | 'ë' => out.push('e'),
+            'ì' | 'í' | 'î' | 'ï' => out.push('i'),
+            'ñ' => out.push('n'),
+            'ò' | 'ó' | 'ô' | 'õ' | 'ö' | 'ø' => out.push('o'),
+            'œ' => out.push_str("oe"),
+            'ù' | 'ú' | 'û' | 'ü' => out.push('u'),
+            'ý' | 'ÿ' => out.push('y'),
+            '\u{2018}' | '\u{2019}' | '\u{02bc}' | '`' | '´' => out.push('\''),
+            '\u{201c}' | '\u{201d}' => out.push('"'),
+            '\u{2010}'..='\u{2015}' | '\u{2212}' => out.push('-'),
+            c if c.is_whitespace() => {
+                if !out.is_empty() && !out.ends_with(' ') {
+                    out.push(' ');
+                }
+            }
+            c => out.push(c),
+        }
+    }
+    let len = out.trim_end().len();
+    out.truncate(len);
+    out
+}
+
+/// The catalog as an import reads it, built once.
+struct ImportIndex {
+    /// Every card under its folded name — and, where no card has that name,
+    /// under its back face's (a list that names a double-faced card by its
+    /// back). A name two factories share goes to the later one, as the
+    /// per-parse map this replaced did.
+    by_key: HashMap<String, CardFactory>,
+    /// Each card name, folded and printed, for [`suggest`].
+    names: Vec<(String, &'static str)>,
+}
+
+fn import_index() -> &'static ImportIndex {
+    static INDEX: OnceLock<ImportIndex> = OnceLock::new();
+    INDEX.get_or_init(|| {
+        let mut by_key: HashMap<String, CardFactory> = HashMap::default();
+        let mut names = Vec::new();
+        let mut backs = Vec::new();
+        for f in crate::card_registry::all_known_factories() {
+            let def = f();
+            let key = fold_name(def.name);
+            if by_key.insert(key.clone(), f).is_none() {
+                names.push((key, def.name));
+            }
+            if let Some(back) = def.back_face.as_ref() {
+                backs.push((fold_name(back.name), f));
+            }
+        }
+        for (key, f) in backs {
+            by_key.entry(key).or_insert(f);
+        }
+        ImportIndex { by_key, names }
+    })
+}
+
+/// What an unknown (folded) name most likely meant — see
+/// [`UnknownCard::suggestions`]. A typo's reach is one edit per five
+/// letters, at least one and at most three.
+fn suggest(key: &str) -> Vec<&'static str> {
+    const MAX: usize = 3;
+    let names = &import_index().names;
+    // "Atraxa" for "Atraxa, Praetors' Voice": the name before a subtitle.
+    let mut subtitled: Vec<&(String, &'static str)> = names
+        .iter()
+        .filter(|(k, _)| k.len() > key.len() && k.starts_with(key) && k[key.len()..].starts_with(','))
+        .collect();
+    if !subtitled.is_empty() {
+        subtitled.sort_by_key(|(k, _)| k.len());
+        return subtitled.iter().take(MAX).map(|(_, n)| *n).collect();
+    }
+    let reach = (key.chars().count() / 5).clamp(1, 3);
+    let mut best = reach;
+    let mut found: Vec<&'static str> = Vec::new();
+    for (k, name) in names {
+        if let Some(d) = edit_distance_within(key.as_bytes(), k.as_bytes(), best) {
+            if d < best || found.is_empty() {
+                found.clear();
+            }
+            best = d;
+            if found.len() < MAX {
+                found.push(name);
+            }
+        }
+    }
+    found
+}
+
+/// The optimal-string-alignment distance between `a` and `b` (insert,
+/// delete, substitute, or swap two neighbours, one edit each), or `None`
+/// once it has to exceed `max`.
+fn edit_distance_within(a: &[u8], b: &[u8], max: usize) -> Option<usize> {
+    if a.len().abs_diff(b.len()) > max {
+        return None;
+    }
+    let mut before: Vec<usize> = vec![0; b.len() + 1];
+    let mut prev: Vec<usize> = (0..=b.len()).collect();
+    let mut cur: Vec<usize> = vec![0; b.len() + 1];
+    for i in 1..=a.len() {
+        cur[0] = i;
+        let mut row_min = i;
+        for j in 1..=b.len() {
+            let sub = prev[j - 1] + usize::from(a[i - 1] != b[j - 1]);
+            let mut d = sub.min(prev[j] + 1).min(cur[j - 1] + 1);
+            if i > 1 && j > 1 && a[i - 1] == b[j - 2] && a[i - 2] == b[j - 1] {
+                d = d.min(before[j - 2] + 1);
+            }
+            cur[j] = d;
+            row_min = row_min.min(d);
+        }
+        if row_min > max {
+            return None;
+        }
+        std::mem::swap(&mut before, &mut prev);
+        std::mem::swap(&mut prev, &mut cur);
+    }
+    Some(prev[b.len()]).filter(|&d| d <= max)
+}
+
 /// Parse `text` against the full card registry. Never fails — unknown
 /// names land in `unknown` and section noise is skipped.
 pub fn parse_decklist(text: &str) -> DecklistParse {
-    let by_name: HashMap<String, CardFactory> = crate::card_registry::all_known_factories()
-        .into_iter()
-        .map(|f| (f().name.to_ascii_lowercase(), f))
-        .collect();
+    let by_key = &import_index().by_key;
 
     let mut parse = DecklistParse {
         main: Vec::new(),
@@ -294,14 +458,15 @@ pub fn parse_decklist(text: &str) -> DecklistParse {
         // those cards by their front face alone, so try the full string
         // first — a card genuinely *named* with a slash still wins —
         // then fall back to the part before the separator.
-        let name: &str = match by_name.contains_key(&name.to_ascii_lowercase()) {
+        let name: &str = match by_key.contains_key(&fold_name(name)) {
             true => name,
             false => match name.split_once("//") {
                 Some((front, _)) if !front.trim().is_empty() => front.trim(),
                 _ => name,
             },
         };
-        match by_name.get(&name.to_ascii_lowercase()) {
+        let key = fold_name(name);
+        match by_key.get(&key) {
             Some(&factory) => {
                 let bucket = if !factory().attraction_lights.is_empty() {
                     &mut parse.attractions
@@ -316,7 +481,7 @@ pub fn parse_decklist(text: &str) -> DecklistParse {
                     bucket.push(factory);
                 }
             }
-            None => parse.unknown.push(format!("{count}x {name}")),
+            None => parse.unknown.push(UnknownCard { count, name: name.to_string(), suggestions: suggest(&key) }),
         }
     }
     parse
@@ -370,7 +535,70 @@ SB: 1 Grizzly Bears
     fn reports_unknown_names_instead_of_dropping() {
         let parsed = parse_decklist("3 Definitely Not A Real Card\n2 Lightning Bolt\n");
         assert_eq!(parsed.main.len(), 2);
-        assert_eq!(parsed.unknown, vec!["3x Definitely Not A Real Card".to_string()]);
+        let [bogus] = parsed.unknown.as_slice() else { panic!("{:?}", parsed.unknown) };
+        assert_eq!(bogus.to_string(), "3x Definitely Not A Real Card");
+    }
+
+    /// A list typed without accents, or pasted from a web page with curly
+    /// apostrophes and odd spacing, finds its cards; a near miss names what
+    /// it probably meant, and a name with nothing close offers nothing.
+    #[test]
+    fn names_match_past_accents_and_quotes_and_a_miss_suggests_the_card() {
+        let parsed = parse_decklist(
+            "1 Juzam Djinn
+1 NAZGUL
+1 Atraxa,  Praetors\u{2019} Voice
+1 Jokulhaups
+",
+        );
+        assert!(parsed.unknown.is_empty(), "{:?}", parsed.unknown);
+        let names: Vec<_> = parsed.main.iter().map(|f| f().name).collect();
+        assert_eq!(names, ["Juzám Djinn", "Nazgûl", "Atraxa, Praetors' Voice", "Jökulhaups"]);
+
+        let parsed = parse_decklist("2 Lightnig Bolt
+1 Sol Rnig
+1 Atraxa
+1 Qwxzv Plumbus
+");
+        let lines: Vec<String> = parsed.unknown.iter().map(ToString::to_string).collect();
+        assert_eq!(
+            lines,
+            [
+                "2x Lightnig Bolt (did you mean Lightning Bolt?)",
+                "1x Sol Rnig (did you mean Sol Ring?)",
+                "1x Atraxa (did you mean Atraxa, Grand Unifier or Atraxa, Praetors' Voice?)",
+                "1x Qwxzv Plumbus",
+            ],
+        );
+        assert!(parsed.main.is_empty(), "a suggestion is never imported for you");
+    }
+
+    /// Folding may only merge spellings of one name: two cards whose names
+    /// fold alike would leave one of them impossible to import.
+    #[test]
+    fn no_two_card_names_fold_alike() {
+        let mut by_key: HashMap<String, &'static str> = HashMap::default();
+        let mut clashes = Vec::new();
+        for f in crate::card_registry::all_known_factories() {
+            let name = f().name;
+            if let Some(other) = by_key.insert(fold_name(name), name)
+                && other != name
+            {
+                clashes.push((other, name));
+            }
+        }
+        assert!(clashes.is_empty(), "{clashes:?}");
+    }
+
+    #[test]
+    fn edit_distance_counts_a_swap_as_one_edit_and_stops_at_the_cap() {
+        assert_eq!(edit_distance_within(b"sol ring", b"sol ring", 1), Some(0));
+        assert_eq!(edit_distance_within(b"sol rnig", b"sol ring", 1), Some(1));
+        assert_eq!(edit_distance_within(b"lightnig bolt", b"lightning bolt", 2), Some(1));
+        assert_eq!(edit_distance_within(b"kitten", b"sitting", 3), Some(3));
+        assert_eq!(edit_distance_within(b"kitten", b"sitting", 2), None);
+        assert_eq!(fold_name("  Lim-D\u{fb}l\u{2019}s   Vault "), "lim-dul's vault");
+        assert_eq!(fold_name("\u{c6}ther Vial"), "aether vial");
     }
 
     /// `Front // Back` — how Arena/MTGO export split, MDFC and prepare

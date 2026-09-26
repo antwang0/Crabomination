@@ -556,10 +556,13 @@ impl LobbyManager {
         } else {
             let parsed = crate::decklist::parse_decklist(text);
             if !parsed.unknown.is_empty() {
-                let shown: Vec<&str> = parsed.unknown.iter().take(4).map(String::as_str).collect();
                 error(
                     &mut out,
-                    format!("{} card(s) not in the catalog: {}", parsed.unknown.len(), shown.join(", ")),
+                    format!(
+                        "{} card(s) not in the catalog: {}",
+                        parsed.unknown.len(),
+                        crate::format::error_summary(&parsed.unknown, 4),
+                    ),
                 );
                 return out;
             }

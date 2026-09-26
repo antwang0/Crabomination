@@ -26,6 +26,7 @@ mod audit;
 mod card;
 mod config;
 mod debug_export;
+mod deck_import;
 mod deck_picker;
 #[cfg(not(target_arch = "wasm32"))]
 mod embedded_assets;
@@ -425,6 +426,7 @@ fn main() {
             (
                 layout_harness::open_settings_for_screenshot.run_if(in_state(AppState::InGame)),
                 layout_harness::open_deck_picker_for_screenshot.run_if(in_state(AppState::Menu)),
+                layout_harness::import_for_screenshot.run_if(in_state(AppState::Menu)),
                 layout_harness::capture_screenshot,
             ),
         )

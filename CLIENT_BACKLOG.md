@@ -333,8 +333,17 @@ Cross-references the detailed entries below where one exists.
   keybind remapping, audio (once there is audio).
 - 🟡 **Deck library** — Commander's deck picker (2026-09-26,
   `deck_picker.rs`) picks your stock deck and each bot's from the 183 stock
-  lists, with search. Remaining ⏳: save imported decks, list them in the
-  menu, paste-from-clipboard import.
+  lists, with search. Paste-from-clipboard import ✅ (menu "Play Pasted
+  Deck", lobby "Paste Deck"). Remaining ⏳: save imported decks, list them
+  in the menu.
+- ✅ **Deck import says what's wrong, all of it** (2026-09-26,
+  `deck_import.rs`) — a list that can't play opens a report of every
+  problem (each unknown card with the names it probably meant, or each
+  format rule it breaks) with Copy list / Close; the status line had named
+  four unknown cards and stopped. Names now match past accents and curly
+  quotes. The menu's two deck buttons share a row: the menu already fills
+  a 768-px-high window (its title is cut off at 783 px — open). Layout
+  harness: `--import-report PATH`.
 - ✅ **Symbols drew as boxes** (2026-09-26) — the UI font (Mirano Extended
   Light) has 13 of the ~80 non-ASCII symbols the client prints, and Bevy's
   shaper (parley) falls back only to fonts it is handed, so ☠ 👑 ♥ ✋ ⚔ ▶ ▼

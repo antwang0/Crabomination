@@ -327,7 +327,7 @@ fn build_sealed_state() -> GameState {
                 .unwrap_or_else(|e| refuse_opp(&format!("{e}")));
             let parse = crabomination::decklist::parse_decklist(&text);
             for bad in &parse.unknown {
-                eprintln!("sealed: opponent deck — skipping unrecognized line {bad:?}");
+                eprintln!("sealed: opponent deck — skipping unrecognized line {bad}");
             }
             if parse.main.len() < 40 {
                 refuse_opp(&format!(
@@ -390,7 +390,7 @@ fn build_sealed_state() -> GameState {
         Ok(text) => {
             let parse = crabomination::decklist::parse_decklist(&text);
             for bad in &parse.unknown {
-                eprintln!("sealed: skipping unrecognized line {bad:?}");
+                eprintln!("sealed: skipping unrecognized line {bad}");
             }
             if parse.main.len() < 40 {
                 if explicit {
@@ -549,11 +549,10 @@ pub(crate) struct MenuFields {
     host_port: String,
     join_addr: String,
     /// Path to a plain-text decklist (Arena / MTGO format) for the
-    /// "Play Deck vs Bot" import flow.
-    /// The deck-file field; a hosted Commander lobby submits this list too.
+    /// "Play Deck File" import flow; a Commander lobby submits this list too.
     pub(crate) deck_path: String,
     focused: FocusedField,
-    format: MatchFormat,
+    pub(crate) format: MatchFormat,
     /// Commander only: seats in the local pod, human included (2-4).
     pub(crate) pod_size: usize,
     /// Commander only: each seat's stock deck (the deck picker's choices).
@@ -715,12 +714,6 @@ pub(crate) struct MenuRoot;
 #[derive(Component)]
 struct PlayBotButton;
 
-/// "Play Deck vs Bot" — reads the decklist file named in the DeckPath
-/// field, validates it against the catalog, and starts a local-bot match
-/// with the imported deck.
-#[derive(Component)]
-struct ImportDeckButton;
-
 /// Feedback line under the import controls ("12 cards unknown: …",
 /// "deck.txt not found", "Imported 60 cards").
 #[derive(Component)]
@@ -831,8 +824,12 @@ impl Plugin for MenuPlugin {
             .init_resource::<CliBootHint>()
             .init_resource::<CliBootFormat>()
             .init_resource::<crate::deck_picker::DeckPicker>()
+            .init_resource::<crate::deck_import::ImportReport>()
             .add_systems(OnEnter(AppState::Menu), spawn_menu)
-            .add_systems(OnExit(AppState::Menu), (despawn_menu, crate::deck_picker::close_deck_picker))
+            .add_systems(
+                OnExit(AppState::Menu),
+                (despawn_menu, crate::deck_picker::close_deck_picker, crate::deck_import::close_import_report),
+            )
             .add_systems(
                 Update,
                 (
@@ -858,6 +855,16 @@ impl Plugin for MenuPlugin {
                     crate::deck_picker::handle_deck_picker_clicks,
                     crate::deck_picker::sync_deck_picker,
                     crate::deck_picker::refresh_deck_picker,
+                )
+                    .chain()
+                    .run_if(in_state(AppState::Menu)),
+            )
+            .add_systems(
+                Update,
+                (
+                    crate::deck_import::handle_import_buttons,
+                    crate::deck_import::handle_import_report,
+                    crate::deck_import::sync_import_report,
                 )
                     .chain()
                     .run_if(in_state(AppState::Menu)),
@@ -970,7 +977,7 @@ fn spawn_menu(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                     });
                     // Commander pod options — shown only while Commander is
                     // the selected format (`refresh_pod_options`). They
-                    // apply to both "Play vs Bot" and "Play Deck vs Bot".
+                    // apply to both "Play vs Bot" and "Play Deck File".
                     fmt.spawn((
                         Node {
                             flex_direction: FlexDirection::Row,
@@ -1052,18 +1059,25 @@ fn spawn_menu(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                 );
 
                 // Import a decklist (Arena / MTGO text format) and play
-                // it against the bot. The field holds a file path; status
-                // feedback (unknown cards, size problems) renders below.
-                // (Native-only: file path + in-process match.)
+                // it against the bot — from the file the field names, or
+                // off the clipboard (`deck_import`); the two buttons share a
+                // row because the menu already fills a 768-px-high screen.
+                // Status feedback renders below, the full problem list in
+                // the import report. (Native-only: file path + in-process
+                // match.)
                 if native { p.spawn(Node {
                     flex_direction: FlexDirection::Column,
                     align_items: AlignItems::Stretch,
                     row_gap: Val::Px(6.0),
-                    width: Val::Px(280.0),
+                    width: Val::Px(360.0),
                     ..default()
                 })
                 .with_children(|imp| {
-                    button(imp, &tf, "Play Deck vs Bot", BUTTON_PRIMARY_BG, ImportDeckButton);
+                    imp.spawn(Node { flex_direction: FlexDirection::Row, column_gap: Val::Px(6.0), ..default() })
+                        .with_children(|row| {
+                            wide_button(row, &tf, "Play Deck File", crate::deck_import::ImportDeckButton);
+                            wide_button(row, &tf, "Play Pasted Deck", crate::deck_import::PasteDeckButton);
+                        });
                     field(imp, &tf, "Deck file:", FocusedField::DeckPath);
                 }); }
 
@@ -1172,6 +1186,25 @@ fn button<M: Component>(
                 Pickable::IGNORE,
             ));
         });
+}
+
+/// A [`button`] that shares its row's width with its neighbours.
+fn wide_button<M: Component>(parent: &mut ChildSpawnerCommands, tf: &impl Fn(f32) -> TextFont, label: &str, marker: M) {
+    parent.spawn((
+        Button,
+        Node {
+            flex_grow: 1.0,
+            padding: UiRect::axes(Val::Px(8.0), Val::Px(10.0)),
+            justify_content: JustifyContent::Center,
+            align_items: AlignItems::Center,
+            border_radius: BorderRadius::all(RADIUS_BUTTON),
+            ..default()
+        },
+        BackgroundColor(BUTTON_PRIMARY_BG),
+        HoverTint::new(BUTTON_PRIMARY_BG),
+        marker,
+        children![(Text::new(label), tf(16.0), TextColor(theme::TEXT_PRIMARY), Pickable::IGNORE)],
+    ));
 }
 
 fn field(
@@ -1542,14 +1575,12 @@ fn refresh_menu_status(status: Res<MenuStatus>, mut q: Query<&mut Text, With<Men
 }
 
 fn handle_action_buttons(
-    mut commands: Commands,
     mut next_state: ResMut<NextState<AppState>>,
     mut pending: ResMut<PendingNetMode>,
     mut pending_draft: ResMut<PendingDraftFormat>,
     mut lobby_server: ResMut<PendingLobbyServer>,
     mut status: ResMut<MenuStatus>,
     fields: Res<MenuFields>,
-    import_q: Query<&Interaction, (Changed<Interaction>, With<ImportDeckButton>)>,
     play_q: Query<&Interaction, (Changed<Interaction>, With<PlayBotButton>)>,
     spectate_q: Query<&Interaction, (Changed<Interaction>, With<SpectateBotsButton>)>,
     load_q: Query<&Interaction, (Changed<Interaction>, With<LoadDebugStateButton>)>,
@@ -1588,66 +1619,6 @@ fn handle_action_buttons(
     if play_q.iter().any(|i| *i == Interaction::Pressed) {
         pending.0 = Some((NetMode::LocalBot, format));
         next_state.set(AppState::InGame);
-        return;
-    }
-    if import_q.iter().any(|i| *i == Interaction::Pressed) {
-        let path = fields.deck_path.trim();
-        match std::fs::read_to_string(path) {
-            Err(e) => status.0 = format!("Can't read {path}: {e}"),
-            Ok(text) => {
-                let parsed = crabomination::decklist::parse_decklist(&text);
-                if !parsed.unknown.is_empty() {
-                    // Refuse rather than silently playing a partial deck.
-                    let shown = parsed.unknown.iter().take(4).cloned()
-                        .collect::<Vec<_>>().join(", ");
-                    let more = parsed.unknown.len().saturating_sub(4);
-                    status.0 = format!(
-                        "{} card(s) not in the catalog: {shown}{}",
-                        parsed.unknown.len(),
-                        if more > 0 { format!(" (+{more} more)") } else { String::new() },
-                    );
-                } else if format == MatchFormat::Commander {
-                    // CR 903 — the commander section, pair, identity and
-                    // 100-card singleton rules, all checked by the engine.
-                    match parsed.commander_list() {
-                        Err(errs) => status.0 = join_errors(&errs),
-                        Ok(list) => {
-                            status.0.clear();
-                            commands.insert_resource(ImportedDeck {
-                                main: list.main,
-                                commanders: list.commanders,
-                            });
-                            pending.0 = Some((NetMode::LocalBot, format));
-                            next_state.set(AppState::InGame);
-                        }
-                    }
-                } else if let Err(errs) = crabomination::format::validate_deck(
-                    &parsed.main.iter().map(|f| f()).collect::<Vec<_>>(),
-                    // Validate against the menu's selected format, not a
-                    // hardcoded one — Cube/SoS pools play limited-style
-                    // 40-card rules. (Commander took the branch above.)
-                    match format {
-                        MatchFormat::Modern => crabomination::format::Format::Modern,
-                        MatchFormat::Commander => crabomination::format::Format::Commander,
-                        // Sealed lists are limited-legal 40s like the
-                        // draft pools.
-                        MatchFormat::Cube | MatchFormat::Sos | MatchFormat::Sealed => {
-                            crabomination::format::Format::Draft
-                        }
-                    },
-                ) {
-                    status.0 = join_errors(&errs);
-                } else {
-                    status.0.clear();
-                    commands.insert_resource(ImportedDeck {
-                        main: parsed.main,
-                        commanders: Vec::new(),
-                    });
-                    pending.0 = Some((NetMode::LocalBot, format));
-                    next_state.set(AppState::InGame);
-                }
-            }
-        }
         return;
     }
     if spectate_q.iter().any(|i| *i == Interaction::Pressed) {
@@ -1689,11 +1660,6 @@ fn handle_action_buttons(
     }
 }
 
-/// The first three validation errors and how many more, for the one-line
-/// menu status.
-fn join_errors<E: std::fmt::Display>(errs: &[E]) -> String {
-    crabomination::format::error_summary(errs, 3)
-}
 
 /// Trim a display name and fall back to "Player" when it's blank, so the
 /// server never receives an empty name.

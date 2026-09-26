@@ -118,6 +118,10 @@ struct LobbyDeckControls;
 /// Submits the menu's deck file as this seat's Commander list.
 #[derive(Component)]
 struct LobbyUseDeckButton;
+/// Submits the clipboard's decklist as this seat's Commander list — the
+/// only way to bring a deck on the web build, which can't read a file.
+#[derive(Component)]
+struct LobbyPasteDeckButton;
 /// Goes back to the seat's stock pod deck.
 #[derive(Component)]
 struct LobbyStockDeckButton;
@@ -351,6 +355,9 @@ fn spawn_lobby_browser(
                 .with_children(|row| {
                     button(row, &tf, theme::BUTTON_INFO_BG, LobbyUseDeckButton).with_children(|b| {
                         b.spawn((Text::new("Use My Deck File"), tf(13.0), TextColor(theme::TEXT_PRIMARY)));
+                    });
+                    button(row, &tf, theme::BUTTON_INFO_BG, LobbyPasteDeckButton).with_children(|b| {
+                        b.spawn((Text::new("Paste Deck"), tf(13.0), TextColor(theme::TEXT_PRIMARY)));
                     });
                     button(row, &tf, theme::BUTTON_NEUTRAL_BG, LobbyStockDeckButton).with_children(|b| {
                         b.spawn((Text::new("Stock Deck"), tf(13.0), TextColor(theme::TEXT_PRIMARY)));
@@ -687,18 +694,36 @@ fn update_deck_controls_visibility(
 }
 
 /// "Use My Deck File" sends the menu's deck file as this seat's Commander
-/// list (the server validates it and names any problem); "Stock Deck" sends
-/// an empty list, which goes back to the seat's stock pod deck.
+/// list and "Paste Deck" the clipboard's (the server validates it and names
+/// any problem); "Stock Deck" sends an empty list, which goes back to the
+/// seat's stock pod deck. A browser reads the clipboard asynchronously, so
+/// the paste waits in `pasting` until the read lands.
+#[allow(clippy::too_many_arguments)]
 fn handle_lobby_deck_buttons(
     use_q: Query<&Interaction, (Changed<Interaction>, With<LobbyUseDeckButton>)>,
+    paste_q: Query<&Interaction, (Changed<Interaction>, With<LobbyPasteDeckButton>)>,
     stock_q: Query<&Interaction, (Changed<Interaction>, With<LobbyStockDeckButton>)>,
     outbox: Option<Res<NetOutbox>>,
     fields: Option<Res<crate::menu::MenuFields>>,
     mut lobby: ResMut<LobbyState>,
+    mut clipboard: ResMut<bevy::clipboard::Clipboard>,
+    mut pasting: Local<Option<bevy::clipboard::ClipboardRead>>,
 ) {
     let Some(o) = outbox else { return };
     if stock_q.iter().any(|i| *i == Interaction::Pressed) {
         o.submit_msg(ClientMsg::SetLobbyDeck { decklist: String::new() });
+    }
+    if paste_q.iter().any(|i| *i == Interaction::Pressed) {
+        *pasting = Some(clipboard.fetch_text());
+    }
+    if let Some(read) = pasting.as_mut()
+        && let Some(result) = read.poll_result()
+    {
+        *pasting = None;
+        match result {
+            Ok(decklist) if !decklist.trim().is_empty() => o.submit_msg(ClientMsg::SetLobbyDeck { decklist }),
+            _ => lobby.last_error = Some("the clipboard has no text — copy a decklist first".into()),
+        }
     }
     if use_q.iter().any(|i| *i == Interaction::Pressed) {
         let path = fields.map(|f| f.deck_path.trim().to_string()).unwrap_or_default();
