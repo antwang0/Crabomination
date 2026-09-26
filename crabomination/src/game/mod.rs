@@ -21345,6 +21345,23 @@ impl GameState {
         }) {
             reduction += self.computed_permanent(target).map_or(0, |c| c.power.max(0) as u32);
         }
+        let conditional: Vec<(crate::effect::Predicate, u32)> = self.battlefield[equip_pos]
+            .definition
+            .static_abilities
+            .iter()
+            .filter_map(|sa| match &sa.effect {
+                crate::effect::StaticEffect::EquipCostReducedWhile { condition, amount } => {
+                    Some((condition.clone(), *amount))
+                }
+                _ => None,
+            })
+            .collect();
+        for (condition, amount) in conditional {
+            let ctx = crate::game::effects::EffectContext::for_ability(equipment, p, None);
+            if self.evaluate_predicate(&condition, &ctx) {
+                reduction += amount;
+            }
+        }
         if reduction > 0 {
             equip_cost.reduce_generic(reduction);
         }
@@ -30895,6 +30912,7 @@ fn static_effect_to_effects(
             // Read by `draw_one`, not a layer effect.
             | StaticEffect::ControllerDrawsFromBottom
             | StaticEffect::EquipCostReducedByTargetPower
+            | StaticEffect::EquipCostReducedWhile { .. }
             // Bludgeon Brawl — the granted subtype and bonus are synthesized
             // per artifact in `compute_battlefield`, not from a modification.
             | StaticEffect::ArtifactsAreEquipment

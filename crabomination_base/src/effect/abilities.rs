@@ -2032,6 +2032,9 @@ pub enum StaticEffect {
     /// where X is the power of the creature it targets", on the Equipment's
     /// own equip. Read by `GameState::equip`.
     EquipCostReducedByTargetPower,
+    /// "This ability costs {N} less to activate if [condition]" on its own
+    /// equip (Crown of Gondor: {3} less while you're the monarch).
+    EquipCostReducedWhile { condition: crate::effect::Predicate, amount: u32 },
     /// CR 613 — "Each noncreature, non-Equipment artifact is an Equipment
     /// with equip {X} and 'Equipped creature gets +X/+0,' where X is that
     /// artifact's mana value" (Bludgeon Brawl). Global; the granted subtype,

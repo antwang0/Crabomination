@@ -6,7 +6,6 @@
 //! - **Call for Aid** — nothing stops you sacrificing the borrowed creatures.
 //! - **Champions of Minas Tirith** — the opponent is never offered the
 //!   {X} payment, so while you're the monarch they can't attack you.
-//! - **Crown of Gondor** — its equip is never discounted.
 //! - **Denethor, Stone Seer** and **Éomer, King of Rohan** — you become the
 //!   monarch (the printed "target player").
 //! - **Fealty to the Realm** — the Aura's controller controls the creature,
@@ -335,9 +334,8 @@ pub fn court_of_ire() -> CardDefinition {
 }
 
 /// Crown of Gondor — +1/+1 per creature you control; a legend of yours
-/// entering with no monarch makes you the monarch; equip {4}.
-///
-/// Residual: the equip is never discounted.
+/// entering with no monarch makes you the monarch; equip {4}, {3} less while
+/// you're the monarch.
 pub fn crown_of_gondor() -> CardDefinition {
     CardDefinition {
         name: "Crown of Gondor",
@@ -346,6 +344,13 @@ pub fn crown_of_gondor() -> CardDefinition {
         supertypes: vec![Supertype::Legendary],
         subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
         keywords: vec![Keyword::Equip(cost(&[generic(4)]))],
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "Equip costs {3} less to activate if you're the monarch.",
+            effect: crate::card::StaticEffect::EquipCostReducedWhile {
+                condition: Predicate::IsMonarch { who: PlayerRef::You },
+                amount: 3,
+            },
+        }],
         equipped_bonus: Some(EquipBonus {
             scale: Some(EquipScale { filter: yours(), per_power: 1, per_toughness: 1, ..Default::default() }),
             ..Default::default()

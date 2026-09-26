@@ -357,3 +357,19 @@ fn champions_crown_you() {
     cast(&mut g, 0, c, None).expect("champions");
     assert_eq!(g.monarch, Some(0));
 }
+
+/// Crown of Gondor's equip costs {3} less while you're the monarch.
+#[test]
+fn crown_of_gondor_equips_for_one_as_the_monarch() {
+    let mut g = pod(2);
+    let crown = g.add_card_to_battlefield(0, catalog::crown_of_gondor());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mut ev = Vec::new();
+    g.set_monarch(0, &mut ev);
+    g.players[0].mana_pool = Default::default();
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::Equip { equipment: crown, target: bear }).expect("equip for {1}");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(crown).and_then(|c| c.attached_to), Some(bear));
+}
