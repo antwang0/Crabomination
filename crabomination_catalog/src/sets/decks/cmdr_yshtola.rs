@@ -300,10 +300,11 @@ pub fn emet_selch_of_the_third_seat() -> CardDefinition {
 /// Estinien Varlineau — noncreature spells grow it and give it flying; at
 /// your second main phase, draw and lose life per opponent it or a Dragon
 /// damaged in combat.
-///
-/// ⚠ Residual: counts opponents dealt combat damage by any creature.
 pub fn estinien_varlineau() -> CardDefinition {
-    let x = || Value::PlayersDealtCombatDamageThisTurn(PlayerRef::EachOpponent);
+    let x = || Value::PlayersDealtCombatDamageThisTurnBy {
+        who: PlayerRef::EachOpponent,
+        by: Box::new(R::IsSource.or(R::HasCreatureType(CreatureType::Dragon))),
+    };
     legendary(CardDefinition {
         triggered_abilities: vec![
             on_cast_noncreature(Effect::Seq(vec![

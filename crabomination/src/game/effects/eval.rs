@@ -756,6 +756,15 @@ impl GameState {
                 .iter()
                 .filter(|&&p| self.players[p].combat_damage_taken_this_turn > 0)
                 .count() as i32,
+            Value::PlayersDealtCombatDamageThisTurnBy { who, by } => self
+                .resolve_players(who, ctx)
+                .iter()
+                .filter(|&&p| {
+                    self.players[p].creatures_that_damaged_me_this_turn.iter().any(|&c| {
+                        self.evaluate_requirement_static(by, &Target::Permanent(c), ctx.controller, ctx.source)
+                    })
+                })
+                .count() as i32,
             Value::CombatDamageTakenThisTurn(p) => self
                 .resolve_players(p, ctx)
                 .iter()

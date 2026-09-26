@@ -152,6 +152,26 @@ fn estinien_takes_flight() {
     assert!(has(&g, e, &Keyword::Flying));
 }
 
+/// Estinien's second-main draw counts the opponents it or a Dragon dealt
+/// combat damage — two of three here (a Bear hit the third).
+#[test]
+fn estinien_counts_opponents_it_or_a_dragon_hit() {
+    let mut g = main_phase(4);
+    let e = g.add_card_to_battlefield(0, catalog::estinien_varlineau());
+    let dragon = g.add_card_to_battlefield(0, catalog::shivan_dragon());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for (seat, by) in [(1, e), (2, dragon), (3, bear)] {
+        g.players[seat].creatures_that_damaged_me_this_turn.push(by);
+    }
+    stock(&mut g, 0, 5);
+    let (lib, life) = (g.players[0].library.len(), g.players[0].life);
+    g.step = TurnStep::PostCombatMain;
+    g.fire_step_triggers(TurnStep::PostCombatMain);
+    drain_stack(&mut g);
+    assert_eq!(lib - g.players[0].library.len(), 2);
+    assert_eq!(life - g.players[0].life, 2);
+}
+
 /// Eye of Nidhogg makes a black 4/2 flying deathtouch Dragon.
 #[test]
 fn eye_of_nidhogg_dragonizes() {

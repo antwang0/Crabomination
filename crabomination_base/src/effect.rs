@@ -806,6 +806,11 @@ pub enum Value {
     /// (`combat_damage_taken_this_turn > 0`) — "the number of opponents that
     /// were dealt combat damage this turn" (Tymna the Weaver).
     PlayersDealtCombatDamageThisTurn(PlayerRef),
+    /// [`Value::PlayersDealtCombatDamageThisTurn`] narrowed to damage from a
+    /// creature matching `by` (read against the source as "this") — "your
+    /// opponents who were dealt combat damage by this or a Dragon this turn"
+    /// (Estinien Varlineau).
+    PlayersDealtCombatDamageThisTurnBy { who: PlayerRef, by: Box<crate::card::SelectionRequirement> },
     /// How many players control at least `n` more lands than you (Surveyor's
     /// Scope's "players who control at least two more lands than you").
     PlayersWithLandsAtLeastMore(u32),
