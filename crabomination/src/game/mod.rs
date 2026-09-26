@@ -23626,6 +23626,16 @@ impl GameState {
                     let fanout = crate::game::effects::events::event_kind_fans_out(&ta.event.kind)
                         && !ta.event.once_per_turn
                         && !ta.event.once_per_batch;
+                    // CR 603.10a — a graveyard-functioning death trigger on a
+                    // card that died in this very batch looks back to a moment
+                    // it was on the battlefield, where the ability doesn't
+                    // function: it sees none of the deaths it arrived with
+                    // (Furious Forebear under a Wrath).
+                    let died_with_them = from_gy_scope
+                        && ta.event.kind == crate::effect::EventKind::CreatureDied
+                        && events
+                            .iter()
+                            .any(|e| matches!(e, GameEvent::CreatureDied { card_id } if *card_id == card.id));
                     graveyard_subjects_seen.clear();
                     for ev in events {
                         if is_event_hardcoded(ev, &ta.event) {
@@ -23635,7 +23645,7 @@ impl GameState {
                             continue;
                         }
                         if let GameEvent::CreatureDied { card_id } = ev
-                            && (dies_suppressed || self.death_was_replaced(*card_id))
+                            && (died_with_them || dies_suppressed || self.death_was_replaced(*card_id))
                         {
                             continue;
                         }

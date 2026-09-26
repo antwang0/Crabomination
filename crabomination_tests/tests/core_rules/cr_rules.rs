@@ -12210,3 +12210,26 @@ fn cr_109_2_a_board_slot_cant_name_a_graveyard_card() {
     })
     .expect("a graveyard slot reaches it");
 }
+
+/// CR 603.10a's look-back is for the battlefield's abilities: Furious
+/// Forebear's "whenever a creature you control dies" works only from the
+/// graveyard, and it wasn't there when the Bear died beside it.
+#[test]
+fn cr_603_10a_graveyard_trigger_misses_the_creatures_it_died_with() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    use crabomination::game::types::{GameAction, TurnStep};
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let forebear = g.add_card_to_battlefield(0, catalog::furious_forebear());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let wrath = g.add_card_to_hand(0, catalog::wrath_of_god());
+    g.players[0].mana_pool.add(Color::White, 4);
+    g.players[0].mana_pool.add_colorless(4);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Bool(true)]));
+    g.perform_action(GameAction::CastSpell { card_id: wrath, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("Wrath of God");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == forebear), "no return: it died with the Bear");
+}

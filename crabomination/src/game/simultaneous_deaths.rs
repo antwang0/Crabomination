@@ -47,7 +47,16 @@ impl GameState {
             }
             let Some(snap) = self.died_card_snapshots.get(&observer) else { continue };
             for ta in &snap.definition.triggered_abilities {
-                if ta.event.kind != EventKind::CreatureDied || matches!(ta.event.scope, EventScope::SelfSource) {
+                // Battlefield abilities only: a graveyard-functioning trigger
+                // (Nether Traitor) wasn't in the graveyard when the others
+                // died, and a command-zone one isn't a permanent's.
+                if ta.event.kind != EventKind::CreatureDied
+                    || ta.event.zone.command_zone_only()
+                    || matches!(
+                        ta.event.scope,
+                        EventScope::SelfSource | EventScope::FromYourGraveyard | EventScope::FromYourGraveyardAnyPlayer
+                    )
+                {
                     continue;
                 }
                 let fanout = events::event_kind_fans_out(&ta.event.kind)

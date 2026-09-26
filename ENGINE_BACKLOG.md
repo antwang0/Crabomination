@@ -20,7 +20,7 @@ the handoff.
 | Part | Section | Lines |
 | --- | --- | --- |
 | Bugs & robustness | [FIXED 2026-09-26 (session `015BCEt5`) — the player-choice batch, and a board slot that reached a graveyard](#fixed-2026-09-26-session-015bcet5--the-player-choice-batch-and-a-board-slot-that-reached-a-graveyard) | 38 |
-| Bugs & robustness | [FIXED 2026-09-26 (session `01VVD5mW`) — Timey-Wimey's follow-ups and a residual sweep](#fixed-2026-09-26-session-01vvd5mw--timey-wimeys-follow-ups-and-a-residual-sweep) | 75 |
+| Bugs & robustness | [FIXED 2026-09-26 (session `01VVD5mW`) — Timey-Wimey's follow-ups and a residual sweep](#fixed-2026-09-26-session-01vvd5mw--timey-wimeys-follow-ups-and-a-residual-sweep) | 81 |
 | Bugs & robustness | [FIXED 2026-09-19 (the forty-sixth find) — a static's filter leaf that the chosen `AffectedPermanents` variant cannot carry is SILENTLY DROPPED, and a dropped leaf widens the static](#fixed-2026-09-19-the-forty-sixth-find--a-statics-filter-leaf-that-the-chosen-affectedpermanents-variant-cannot-carry-is-silently-dropped-and-a-dropped-leaf-widens-the-static) | 62 |
 | Bugs & robustness | [FIXED 2026-09-19 (the forty-fifth find) — the INVENTED-ability column, built the way this file's own "CLOSED WITH A REASON" note prescribed, and the eleven cards it named](#fixed-2026-09-19-the-forty-fifth-find--the-invented-ability-column-built-the-way-this-files-own-closed-with-a-reason-note-prescribed-and-the-eleven-cards-it-named) | 68 |
 | Bugs & robustness | [OPEN 2026-09-19 — nineteen cube-pool entries are DUPLICATED, so nineteen cards draft at double weight](#open-2026-09-19--nineteen-cube-pool-entries-are-duplicated-so-nineteen-cards-draft-at-double-weight) | 19 |
@@ -200,6 +200,12 @@ across nine precons.
   resolution that were *sequential* ("destroy …, then sacrifice …") are
   treated as simultaneous. Found through Valiant Endeavor, whose die-roll
   wipe was one-at-a-time and is now one `Destroy`.
+- ⚠ …and the converse: **a graveyard-functioning death trigger fired for the
+  creatures it died beside** — Furious Forebear under a Wrath returned itself
+  for the Bear, though under the look-back it was on the battlefield, where
+  that ability doesn't function. The dispatch's graveyard walk now skips a
+  batch's deaths for a card that died in the same batch; the look-back pass
+  never fires `FromYourGraveyard` scopes.
 - New primitives, each with its card: a per-creature attack lure
   (`LureTargetToSourceNextTurn`, Gideon, Battle-Forged — CR 508.1d, on Gideon
   Jura's clock), a per-source damage tally (`DamageDealtBySourceThisTurn`,
