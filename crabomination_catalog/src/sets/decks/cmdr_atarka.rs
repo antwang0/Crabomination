@@ -1,10 +1,6 @@
 //! Commander: the cards the **Draconic Destruction** starter deck (SCD,
 //! Atarka, World Render) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_atarka.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Atarka Monument** — animated, it is a colorless Dragon (the printed
-//!   red-and-green isn't applied).
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnterMode, EventKind, EventScope,
@@ -81,8 +77,7 @@ fn dragon_enters(scope: EventScope, effect: Effect) -> TriggeredAbility {
 }
 
 /// Atarka Monument — {T}: {R} or {G}; {4}{R}{G}: a 4/4 flying Dragon artifact
-/// creature until end of turn.
-/// Residual: the animated Dragon is colorless.
+/// creature until end of turn, red and green.
 pub fn atarka_monument() -> CardDefinition {
     CardDefinition {
         name: "Atarka Monument",
@@ -93,14 +88,22 @@ pub fn atarka_monument() -> CardDefinition {
             tap_for(ManaPayload::OfColor(Color::Green, Value::ONE)),
             ActivatedAbility {
                 mana_cost: cost(&[generic(4), r(), g()]),
-                effect: Effect::BecomeCreature {
-                    what: Selector::This,
-                    power: Value::Const(4),
-                    toughness: Value::Const(4),
-                    creature_types: vec![CreatureType::Dragon],
-                    keywords: vec![Keyword::Flying],
-                    duration: Duration::EndOfTurn,
-                },
+                effect: Effect::Seq(vec![
+                    Effect::BecomeCreature {
+                        what: Selector::This,
+                        power: Value::Const(4),
+                        toughness: Value::Const(4),
+                        creature_types: vec![CreatureType::Dragon],
+                        keywords: vec![Keyword::Flying],
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::BecomeColor {
+                        what: Selector::This,
+                        colors: vec![Color::Red, Color::Green],
+                        duration: Duration::EndOfTurn,
+                        additive: false,
+                    },
+                ]),
                 ..Default::default()
             },
         ],

@@ -2559,7 +2559,7 @@ Dragon rides Browbeat's `PlayersMayAccept` shape with the targeted opponent as
 the chooser. ⚠ **The bot never cast Unleash Fury**: it was classed as a combat
 trick, so the main phase held it, but `pick_combat_trick` read only constant
 pumps — a pump by the creature's own power is now priced at its current power.
-Residual: **Atarka Monument** animates colorless. Release pods beside Derevi /
+No residuals. Release pods beside Derevi /
 Hazel / Ranar (seed 8701, 1,000 games): 1,000 decided, Atarka 38.0 %; a
 1,000-game census (seed 8703) leaves no card of the four lists unplayed; strict
 debug pods (seed 8704, 60 games) decided 60/60. `--bench` byte-identical.

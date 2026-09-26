@@ -186,3 +186,24 @@ fn demanding_dragon_takes_a_creature_instead() {
     assert!(g.battlefield_find(bear).is_none());
     assert_eq!(lost(&g, 1), 0);
 }
+
+/// Atarka Monument animates into a red and green 4/4 flying Dragon.
+#[test]
+fn atarka_monument_animates_red_and_green() {
+    let mut g = pod(2);
+    let m = g.add_card_to_battlefield(0, catalog::atarka_monument());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: m,
+        ability_index: 2,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("{4}{R}{G}");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(m).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4));
+    assert_eq!(cp.colors.to_vec(), vec![Color::Red, Color::Green]);
+}
