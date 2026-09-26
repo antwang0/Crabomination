@@ -4564,8 +4564,9 @@ pub fn ral_zarek_guest_lecturer() -> CardDefinition {
                 loyalty_cost: -7,
                 effect: Effect::FlipCoin {
                     count: Value::Const(5),
+                    // One opponent, chosen: every opponent skipped in a pod.
                     on_heads: Box::new(Effect::SkipTurns {
-                        who: PlayerRef::EachOpponent,
+                        who: PlayerRef::HostileOpponent,
                         count: Value::Const(1),
                     }),
                     on_tails: Box::new(Effect::Noop),

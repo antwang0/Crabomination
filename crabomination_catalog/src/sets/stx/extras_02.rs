@@ -1794,9 +1794,10 @@ pub fn inscription_of_ruin() -> CardDefinition {
         effect: Effect::ChooseN {
             picks: vec![0, 2],
             modes: vec![
-                // Mode 0: target opp discards two.
+                // Mode 0: target opponent discards two — one seat, the
+                // chosen one (the each-opponent fan-out was the whole table).
                 Effect::Discard {
-                    who: Selector::Player(PR::EachOpponent),
+                    who: Selector::Player(PR::HostileOpponent),
                     amount: Value::Const(2),
                     random: false,
                 },

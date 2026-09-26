@@ -1281,6 +1281,22 @@ fn ral_zarek_minus_seven_skips_target_opp_turns_via_coin_flip() {
         "All 5 heads → P1 skips 5 turns");
 }
 
+/// Ral Zarek's −7 at three seats: "target opponent skips their next X
+/// turns" is one opponent, not the table (every opponent used to skip).
+#[test]
+fn ral_zarek_minus_seven_skips_one_opponent_in_a_pod() {
+    let mut g = multi_player_game(3);
+    let pw = g.add_card_to_battlefield(0, catalog::ral_zarek_guest_lecturer());
+    g.battlefield_find_mut(pw).unwrap().add_counters(crabomination::card::CounterType::Loyalty, 4);
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true); 5]));
+    g.perform_action(GameAction::ActivateLoyaltyAbility { x_value: None, card_id: pw, ability_index: 3, target: None })
+        .expect("-7");
+    drain_stack(&mut g);
+    let skips = [g.players[1].skip_turns, g.players[2].skip_turns];
+    assert_eq!(skips.iter().filter(|&&n| n == 5).count(), 1, "one opponent skips five: {skips:?}");
+    assert_eq!(skips.iter().sum::<u32>(), 5);
+}
+
 #[test]
 fn skip_turns_counter_decrements_on_turn_advance() {
     // Player 1 has skip_turns=2. When the engine would hand the turn
