@@ -10583,16 +10583,58 @@ fn teferis_protection_locks_life_and_self_exiles() {
     }).expect("TP castable");
     drain_stack(&mut g);
     assert!(g.exile.iter().any(|c| c.id == id), "exiles itself");
-    // Life is locked: a Lightning Bolt-style life loss is dropped.
+    // Life is locked: an untargeted life loss is dropped.
     let before = g.players[0].life;
+    let ctx = crabomination::game::effects::EffectContext::for_spell(1, None, 0, 0);
+    g.resolve_effect(&crabomination::effect::Effect::LoseLife {
+        who: crabomination::effect::Selector::Player(crabomination::effect::PlayerRef::EachOpponent),
+        amount: crabomination::effect::Value::Const(3),
+    }, &ctx).unwrap();
+    assert_eq!(g.players[0].life, before, "life total can't change");
+    // CR 702.16 — protection from everything: a Bolt can't target you.
     let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
     g.players[1].mana_pool.add(Color::Red, 1);
     g.priority.player_with_priority = 1;
-    g.perform_action(GameAction::CastSpell {
+    assert!(g.perform_action(GameAction::CastSpell {
         card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
-    }).expect("Bolt castable");
+    }).is_err(), "protection from everything");
+}
+
+/// Teferi's Protection lasts "until your next turn" — through an opponent's
+/// whole turn at a Commander table, commander damage included (CR 903.10a
+/// counts only damage dealt, and protection prevents it, CR 702.16e).
+#[test]
+fn teferis_protection_holds_through_the_next_opponents_turn() {
+    let mut g = game_with_format(crabomination::format::Format::Commander, 3);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::DeclareBlockers;
+    let id = g.add_card_to_hand(0, catalog::teferis_protection());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("TP at instant speed on seat 1's turn");
     drain_stack(&mut g);
-    assert_eq!(g.players[0].life, before, "life total can't change");
+    // Seat 2's turn: its commander attacks seat 0.
+    g.active_player_idx = 2;
+    let cmd = g.seat_commanders(2, vec![catalog::serra_angel()])[0];
+    let angel = g.players[2].command.iter().position(|c| c.id == cmd).unwrap();
+    let card = g.players[2].command.remove(angel);
+    g.battlefield.push(card);
+    g.clear_sickness(cmd);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 2;
+    g.perform_action(GameAction::DeclareAttackers(vec![crabomination::game::types::Attack {
+        attacker: cmd,
+        target: crabomination::game::types::AttackTarget::Player(0),
+    }])).expect("attack seat 0");
+    g.step = TurnStep::CombatDamage;
+    let ev = g.resolve_combat().expect("damage");
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 40);
+    assert_eq!(g.commander_damage.get(&(0, cmd)).copied().unwrap_or(0), 0, "prevented, so no commander damage");
 }
 
 // ── CR 614 — player-damage and life-gain replacements (Odyssey rares) ────────

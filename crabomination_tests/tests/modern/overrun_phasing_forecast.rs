@@ -813,9 +813,15 @@ fn teferis_protection_phases_out_your_permanents_and_prevents_damage() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).is_none(), "your permanents phase out (gone from battlefield)");
     assert!(g.phased_out.iter().any(|c| c.id == bear), "tracked in phased_out");
-    let life = g.players[0].life;
-    opponent_casts_bolt(&mut g);
-    assert_eq!(g.players[0].life, life, "damage to you is prevented");
+    // Protection from everything: an opponent's Bolt can't even target you.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(Color::Red, 1);
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "you can't be targeted");
     // Phases back in at your next untap step.
     g.active_player_idx = 0;
     g.do_phasing();

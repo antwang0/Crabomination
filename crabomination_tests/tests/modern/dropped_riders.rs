@@ -348,3 +348,21 @@ fn ursine_monstrosity_must_attack_a_chosen_opponent() {
     assert!(chosen == 1 || chosen == 2);
     assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::MustAttackChosenPlayer));
 }
+
+/// Finale of Devastation — "a creature card with mana value X or less" from
+/// "your library and/or graveyard": at X=1 a 4-drop is out of reach and a
+/// 1-drop in the graveyard is not.
+#[test]
+fn finale_of_devastation_is_capped_by_x_and_reaches_the_graveyard() {
+    let mut g = main_phase();
+    let big = g.add_card_to_library(0, catalog::serra_angel());
+    let elf = g.add_card_to_graveyard(0, catalog::llanowar_elves());
+    let id = g.add_card_to_hand(0, catalog::finale_of_devastation());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell { card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(1) })
+        .expect("X=1");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(big).is_none(), "mana value 5 > X");
+    assert!(g.battlefield_find(elf).is_some(), "the graveyard 1-drop");
+}

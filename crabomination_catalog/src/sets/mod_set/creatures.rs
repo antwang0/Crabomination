@@ -4875,9 +4875,8 @@ pub fn portal_to_phyrexia() -> CardDefinition {
 /// more, creatures you control get +X/+X and gain haste until end of turn.
 /// Shuffle."
 ///
-/// Approximation: always searches library (no gy search). The "+X/+X and
-/// haste" rider uses `ForEach(your creature) → PumpPT(X, X, EOT) +
-/// GrantKeyword(Haste, EOT)`.
+/// The "+X/+X and haste" rider uses `ForEach(your creature) → PumpPT(X, X,
+/// EOT) + GrantKeyword(Haste, EOT)`.
 pub fn finale_of_devastation() -> CardDefinition {
     use crate::effect::{Duration, Predicate};
     CardDefinition {
@@ -4885,9 +4884,12 @@ pub fn finale_of_devastation() -> CardDefinition {
         cost: cost(&[x(), g(), g()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Search {
+            // "Search your library and/or graveyard for a creature card with
+            // mana value X or less" — it tutored any creature, for any X.
+            Effect::SearchZones {
                 who: PlayerRef::You,
-                filter: SelectionRequirement::Creature,
+                zones: vec![crate::card::Zone::Library, crate::card::Zone::Graveyard],
+                filter: SelectionRequirement::Creature.and(SelectionRequirement::ManaValueAtMostXFromCost),
                 to: ZoneDest::Battlefield {
                     controller: PlayerRef::You,
                     tapped: false,

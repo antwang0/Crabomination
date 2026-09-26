@@ -1721,25 +1721,29 @@ pub fn catalog_draw() -> CardDefinition {
 /// can't change; you have protection from everything; phase out all permanents
 /// you control. Exile Teferi's Protection." The phase-out is faithful
 /// (`Effect::PhaseOut` — your permanents leave until your next untap step);
-/// "life total can't change" rides `Effect::LifeLockThisTurn` (gain AND loss
-/// dropped); "protection from everything" is approximated as preventing all
-/// damage to you this turn (the non-damage protection riders — can't be
-/// targeted etc. — are moot with every permanent phased out). Self-exiles on
-/// resolution (`exile_on_resolve`). Remaining drift: the locks are
-/// turn-scoped rather than "until your next turn".
+/// the life lock is `LifeLockUntilNextTurn` and "protection from everything"
+/// is protection from every seat until your next turn. Self-exiles on
+/// resolution (`exile_on_resolve`).
 pub fn teferis_protection() -> CardDefinition {
     CardDefinition {
         name: "Teferi's Protection",
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Instant],
         exile_on_resolve: true,
+        // "Until your next turn, your life total can't change and you gain
+        // protection from everything" — protection from every seat (CR
+        // 702.16: nothing can target you or deal you damage, commander damage
+        // included), held to your next turn across the whole table.
         effect: Effect::Seq(vec![
-            Effect::PreventAllCombatDamageThisTurn,
-            Effect::PreventAllDamageThisTurn {
-                target: Selector::You,
-                redirect_to: None,
+            Effect::ForEach {
+                selector: Selector::Player(PlayerRef::EachPlayer),
+                body: Box::new(Effect::GainProtectionFromPlayer {
+                    what: Selector::You,
+                    from: PlayerRef::Triggerer,
+                    duration: crate::effect::Duration::UntilNextTurn,
+                }),
             },
-            Effect::LifeLockThisTurn { who: Selector::You },
+            Effect::LifeLockUntilNextTurn { who: Selector::You },
             Effect::PhaseOut {
                 what: Selector::EachPermanent(SelectionRequirement::ControlledByYou),
                 until_source_leaves: false,
