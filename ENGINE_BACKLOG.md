@@ -146,6 +146,30 @@ across nine precons.
   find; Hour of Eternity / Lazotep Quarry copies kept their creature types;
   Archangel Avacyn waited for *your* upkeep.
 
+- ⚠ **Dancer's Chakrams' commander pump never applied**: it was gated on
+  `Predicate::SourceIsEquipped` — the *Equipment itself* being equipped —
+  instead of the Equipment being attached. No other Equipment reads that
+  predicate (audited). The pump now also skips the wearer (`IsHostOfSource`
+  resolves live because `IsCommander` is a live leaf; a card-only filter
+  with `IsHostOfSource` would still read it source-blind — a lead).
+- ⚠ **A condition-gated "loses all other creature types" on `This` never
+  landed** (Goddric): the live lose-types pass had no `Selector::This` arm.
+- New primitives, each with its card: a per-creature attack lure
+  (`LureTargetToSourceNextTurn`, Gideon, Battle-Forged — CR 508.1d, on Gideon
+  Jura's clock), a per-source damage tally (`DamageDealtBySourceThisTurn`,
+  Chandra, Fire of Kaladesh), `ExileFromHandLinked` +
+  `DistinctManaValuesExiledWith` (Azor's Gateway), `BecomeLegendary`
+  (Cacophony Unleashed), `MayPayXOfColor` (Leyline Tyrant), spend rules
+  `CreatureOfTypeOrLegendaryCreature` (The Ringhart Crest) and the
+  `DragonCreatureHaste` rider (Carnelian Orb). Journey to Eternity's die
+  trigger moved to the Aura so it can return itself transformed.
+- Open, deeper than a row: Tamiyo, Field Researcher's +1 needs a timed
+  grant to name its granter's controller (`GrantedTrigger.source` is kept but
+  never reaches the trigger's context); Knight of New Alara needs its P/T
+  pump to read layer-5 colors (a dependency, CR 613.8); Admiral Beckett
+  Brass needs a combat-only damager list; Ludevic's Olag copy and Cosima's
+  voyage are unbuilt.
+
 ## FIXED/OPEN 2026-09-23 (the Commander precon run) — what the 15..18-seat pods found
 
 - ✅ **CR 508.4 — "put onto the battlefield attacking" emitted `AttackerDeclared`** at six
