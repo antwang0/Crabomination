@@ -36,6 +36,11 @@ impl GameState {
             .is_some_and(|p| self.creature_is_attacking_seat(id, p))
     }
 
+    /// `id` attacks the player the firing trigger event named.
+    pub(crate) fn attacking_trigger_player(&self, id: CardId) -> bool {
+        self.trigger_event_player_scratch.is_some_and(|p| self.creature_is_attacking_seat(id, p))
+    }
+
     /// `id` attacks an opponent of `seat`, or a planeswalker one controls.
     pub(crate) fn creature_is_attacking_an_opponent_of(&self, id: CardId, seat: usize) -> bool {
         self.attacking.iter().any(|a| {

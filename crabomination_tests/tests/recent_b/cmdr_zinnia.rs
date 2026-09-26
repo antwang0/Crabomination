@@ -164,6 +164,32 @@ fn echoing_assault_copies_an_attacker() {
     assert!(cp.keywords().contains(&Keyword::Menace));
 }
 
+/// Echoing Assault triggers once for each player attacked (CR 603.2, "whenever
+/// you attack a player"), each copy of a creature attacking that player.
+#[test]
+fn echoing_assault_copies_one_attacker_per_player_attacked() {
+    let mut g = pod(3);
+    g.add_card_to_battlefield(0, catalog::echoing_assault());
+    let wurm = g.add_card_to_battlefield(0, catalog::craw_wurm());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for a in [wurm, bear] {
+        g.clear_sickness(a);
+    }
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: wurm, target: AttackTarget::Player(1) },
+        Attack { attacker: bear, target: AttackTarget::Player(2) },
+    ]))
+    .expect("attack");
+    drain_stack(&mut g);
+    let copy_of = |g: &GameState, name: &str, orig: CardId| {
+        let id = named(g, 0, name).into_iter().find(|&id| id != orig).expect("a copy");
+        g.attacking().iter().find(|a| a.attacker == id).map(|a| a.target)
+    };
+    assert_eq!(copy_of(&g, "Craw Wurm", wurm), Some(AttackTarget::Player(1)));
+    assert_eq!(copy_of(&g, "Grizzly Bears", bear), Some(AttackTarget::Player(2)));
+}
+
 /// Combat Celebrant exerted (CR 701.43d): the other creatures untap and an
 /// additional combat follows (CR 505.1a).
 #[test]

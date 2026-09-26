@@ -240,10 +240,9 @@ pub fn devilish_valet() -> CardDefinition {
     }
 }
 
-/// Echoing Assault — your creature tokens have menace; whenever you attack, a
-/// 1/1 token copy of an attacking nontoken creature joins it, sacrificed at
-/// the next end step.
-/// Residual: one copy per combat, not one per player attacked.
+/// Echoing Assault — your creature tokens have menace; whenever you attack a
+/// player, a 1/1 token copy of a nontoken creature attacking that player
+/// joins it, sacrificed at the next end step.
 pub fn echoing_assault() -> CardDefinition {
     CardDefinition {
         name: "Echoing Assault",
@@ -257,13 +256,14 @@ pub fn echoing_assault() -> CardDefinition {
             },
         }],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::YouAttack, EventScope::YourControl),
+            // CR 603.2 — once for each player attacked, "that player" bound.
+            event: EventSpec::new(EventKind::Attacks, EventScope::YouAttackedPlayer),
             effect: Effect::Seq(vec![
                 Effect::CreateTokenCopyOf {
                     who: PlayerRef::You,
                     count: Value::ONE,
                     source: target_filtered(
-                        R::Creature.and(R::NotToken).and(R::IsAttacking).and(R::ControlledByYou),
+                        R::Creature.and(R::NotToken).and(R::IsAttackingTriggerPlayer).and(R::ControlledByYou),
                     ),
                     extra_creature_types: vec![],
                     extra_card_types: vec![],

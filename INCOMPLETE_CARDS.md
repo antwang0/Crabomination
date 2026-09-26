@@ -1902,7 +1902,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Songbirds' Blessing | Virtue and Valor (WOC) | the Aura always goes onto the battlefield when it has a host; the host is the engine's pick. |
 | 🟡 Liberated Livestock | Virtue and Valor (WOC) | each token's Aura is the engine's pick (graveyard first). |
 | 🟡 Zinnia, Valley's Voice | Family Matters (BLC) | the granted offspring copy is Zinnia's own trigger (lost if Zinnia leaves first); a creature with its own kicker or offspring gets no second one. |
-| 🟡 Echoing Assault | Family Matters (BLC) | one copy per combat, not one per player attacked. |
 | 🟡 Combat Celebrant | Family Matters (BLC) | a second exert in a turn is allowed and does nothing (the bonus is once a turn). |
 | 🟡 Rose Room Treasurer | Family Matters (BLC) | the {X} is paid from floating mana. |
 | 🟡 Footbottom Feast | Counterpunch (CMD) | the cards are chosen as it resolves, not targeted on cast; they go on top in mana-value order (the greatest on top). |

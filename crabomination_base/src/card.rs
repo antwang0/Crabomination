@@ -2959,6 +2959,10 @@ pub enum SelectionRequirement {
     /// evaluating source's `chosen_player` — "creatures attacking the last
     /// chosen player" (Triarch Stalker). False without a source.
     IsAttackingChosenPlayerOfSource,
+    /// An attacking creature whose defender is the player the firing event
+    /// named — "target creature that's attacking that player" on a
+    /// `YouAttackedPlayer` trigger (Echoing Assault). False outside a trigger.
+    IsAttackingTriggerPlayer,
     /// An attacking creature that hasn't been blocked (CR 509.1h). Reads live
     /// combat state — Sneak's "return an unblocked creature you control".
     IsUnblocked,
