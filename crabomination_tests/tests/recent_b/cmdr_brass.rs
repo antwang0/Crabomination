@@ -478,3 +478,41 @@ fn siren_stormtamer_guards_you_and_your_creatures() {
     activate(&mut g, siren, 0, &[Target::Permanent(bolt)]).expect("counter the Bolt");
     assert!(g.battlefield_find(bear).is_some());
 }
+
+/// Siren Stormtamer counters an ability that targets a creature you control
+/// (aimed at through its source), and can't aim at one that targets another
+/// player's creature.
+#[test]
+fn siren_stormtamer_counters_an_ability_aimed_at_your_creature() {
+    let mut g = main_phase(3);
+    let siren = g.add_card_to_battlefield(0, catalog::siren_stormtamer());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    let pinger = g.add_card_to_battlefield(1, catalog::prodigal_sorcerer());
+    g.clear_sickness(pinger);
+    let ping = |g: &mut GameState, at: CardId| {
+        g.priority.player_with_priority = 1;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: pinger, ability_index: 0, target: Some(Target::Permanent(at)),
+            additional_targets: vec![], x_value: None, mode: None,
+        })
+        .expect("ping");
+    };
+    let counter = |g: &mut GameState| {
+        flood(g, 0);
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: siren, ability_index: 0, target: Some(Target::Permanent(pinger)),
+            additional_targets: vec![], x_value: None, mode: None,
+        })
+    };
+    ping(&mut g, theirs);
+    assert!(counter(&mut g).is_err(), "the ability targets another player's creature");
+    drain_stack(&mut g);
+    g.battlefield_find_mut(pinger).unwrap().tapped = false;
+    ping(&mut g, bear);
+    counter(&mut g).expect("the ability targets your creature");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(siren).is_none(), "sacrificed");
+    assert_eq!(g.battlefield_find(bear).map(|c| c.damage), Some(0), "the ping was countered");
+}

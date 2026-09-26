@@ -5411,6 +5411,13 @@ impl GameState {
                                     if self.battlefield.find_by_id(*id).is_some_and(|o| o.definition.is_creature()))
                             })
                     }),
+                    R::AbilityTargetsMatching(inner) => self.stack.iter().any(|si| {
+                        let StackItem::Trigger { source: s, target, additional_targets, .. } = si else { return false };
+                        *s == card.id
+                            && target.iter().chain(additional_targets.iter()).any(|t| {
+                                self.evaluate_requirement_static(inner, t, controller, source)
+                            })
+                    }),
                     R::SpellTargetsMatching(inner) => self.stack.iter().any(|si| {
                         let StackItem::Spell { card: c, target, additional_targets, .. } = si else { return false };
                         c.id == card.id
@@ -6756,6 +6763,7 @@ impl GameState {
             | R::SpellTargetsControllerOrControlled
             | R::SpellTargetsCreature
             | R::SpellTargetsMatching(_)
+            | R::AbilityTargetsMatching(_)
             | R::SpellWouldDestroyALandYouControl
             | R::CastSorceryThisTurn
             | R::SpellTargetsOnlySource

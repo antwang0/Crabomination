@@ -9,7 +9,8 @@
 //!   Pirate {1}.
 //! - **Merchant Raiders** — the lock lasts while it's on the battlefield,
 //!   not while you control it.
-//! - **Siren Stormtamer** — counters spells only, not abilities.
+//! - **Siren Stormtamer** — counters spells only, targeting you or any
+//!   permanent you control.
 //! - **Timestream Navigator** — it goes to the bottom as part of the effect,
 //!   not as a cost.
 //! - **Zara, Renegade Recruiter** — the stolen creature is the engine's pick,
@@ -575,21 +576,23 @@ pub fn ramirez_depietro_pillager() -> CardDefinition {
     })
 }
 
-/// Siren Stormtamer — flying; {U}, sacrifice it: counter a spell that
-/// targets you or a creature you control.
-///
-/// ⚠ Residual: counters spells only, not abilities.
+/// Siren Stormtamer — flying; {U}, sacrifice it: counter target spell or
+/// ability that targets you or a creature you control. An ability is aimed
+/// at through its source (`AbilityTargetsMatching`), and the counter takes
+/// that source's topmost ability on the stack.
 pub fn siren_stormtamer() -> CardDefinition {
+    let you_or_yours = || R::Player.and(R::ControlledByYou).or(R::Creature.and(R::ControlledByYou));
     CardDefinition {
         keywords: vec![Keyword::Flying],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[u()]),
             sac_cost: true,
             effect: Effect::CounterSpellOrAbility {
-                // "…that targets you or a creature you control."
-                what: target_filtered(R::IsSpellOnStack.and(R::SpellTargetsMatching(Box::new(
-                    R::Player.and(R::ControlledByYou).or(R::Creature.and(R::ControlledByYou)),
-                )))),
+                what: target_filtered(
+                    R::IsSpellOnStack
+                        .and(R::SpellTargetsMatching(Box::new(you_or_yours())))
+                        .or(R::HasAbilityOnStack.and(R::AbilityTargetsMatching(Box::new(you_or_yours())))),
+                ),
             },
             ..Default::default()
         }],

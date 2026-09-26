@@ -3137,6 +3137,11 @@ pub enum SelectionRequirement {
     /// inner filter (Echoing Boon's "targets a creature you control with the
     /// chosen name").
     SpellTargetsMatching(Box<SelectionRequirement>),
+    /// A permanent that is the source of an ability on the stack at least one
+    /// of whose targets matches the inner filter (Siren Stormtamer's "ability
+    /// that targets you or a creature you control"). `HasAbilityOnStack`'s
+    /// narrowing, as `SpellTargetsMatching` narrows `IsSpellOnStack`.
+    AbilityTargetsMatching(Box<SelectionRequirement>),
     /// A stack spell whose effect would destroy a land the evaluating player
     /// controls — either a mass destroy whose filter can catch one, or a
     /// targeted destroy pointed at one (Equinox).
