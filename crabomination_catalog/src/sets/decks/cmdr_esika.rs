@@ -19,8 +19,6 @@
 //! - **The Ringhart Crest** — its mana isn't restricted.
 //! - **Tibalt, Cosmic Impostor** (Valki's back) — cards it exiles can't be
 //!   played; the emblem isn't implemented.
-//! - **Withengar Unbound** (Elbrus's back) — "whenever a player loses the
-//!   game" isn't implemented.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
@@ -484,13 +482,15 @@ pub fn dowsing_dagger() -> CardDefinition {
 }
 
 /// Elbrus, the Binding Blade // Withengar Unbound — +1/+0; connecting
-/// unattaches and transforms it into a 13/13.
-///
-/// ⚠ Residual: Withengar's "whenever a player loses the game" isn't
-/// implemented.
+/// unattaches and transforms it into a 13/13 that grows by thirteen +1/+1
+/// counters whenever a player loses the game.
 pub fn elbrus_the_binding_blade() -> CardDefinition {
     let withengar = CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Intimidate, Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PlayerLeftGame, EventScope::AnyPlayer),
+            effect: Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::Const(13) },
+        }],
         ..legendary(creature("Withengar Unbound", ManaCost::default(), vec![CreatureType::Demon], 13, 13))
     };
     CardDefinition {

@@ -388,3 +388,24 @@ fn arlinn_packs_hope_plus_one_lasts_until_your_next_turn() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
 }
+
+/// Withengar Unbound — a player losing the game puts thirteen +1/+1 counters
+/// on it.
+#[test]
+fn withengar_grows_when_a_player_loses() {
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    let elbrus = g.add_card_to_battlefield(0, catalog::elbrus_the_binding_blade());
+    let mut ctx = EffectContext::for_ability(elbrus, 0, None);
+    ctx.source = Some(elbrus);
+    let ev = g.resolve_effect(&crabomination::effect::Effect::Transform { what: crabomination::effect::Selector::This }, &ctx);
+    if let Ok(ev) = ev {
+        g.dispatch_triggers_for_events(&ev);
+    }
+    assert_eq!(g.battlefield_find(elbrus).map(|c| c.definition.name), Some("Withengar Unbound"));
+    g.players[2].life = 0;
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(elbrus).unwrap().counter_count(CounterType::PlusOnePlusOne), 13);
+}
