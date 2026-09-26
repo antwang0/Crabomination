@@ -4763,8 +4763,7 @@ pub fn mizzium_tank() -> CardDefinition {
 }
 
 /// Narset's Reversal — {U}{U} Instant. Copy target instant or sorcery spell
-/// (may choose new targets), then return it to its owner's hand. (Modeled as a
-/// copy + Remand-style return; genuinely uncounterable spells are still bounced.)
+/// (may choose new targets), then return it to its owner's hand.
 pub fn narsets_reversal() -> CardDefinition {
     CardDefinition {
         name: "Narset's Reversal",

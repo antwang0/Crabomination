@@ -2259,11 +2259,10 @@ pub fn knight_of_autumn() -> CardDefinition {
     }
 }
 
-/// Spark Double — {3}{U}, 0/0 Shapeshifter. "You may have Spark Double
-/// enter as a copy of a creature you control, except it enters with an
-/// additional +1/+1 counter on it." (The planeswalker-copy half is
-/// omitted.) The extra counter rides an appended ETB trigger, which the
-/// CR-707.5 copy path fires.
+/// Spark Double — {3}{U}, 0/0 Illusion. "You may have Spark Double enter as a
+/// copy of a creature or planeswalker you control, except it enters with an
+/// additional +1/+1 counter (creature) or loyalty counter (planeswalker), and
+/// it isn't legendary." The extra counter rides an appended ETB trigger.
 pub fn spark_double() -> CardDefinition {
     use crate::card::{CounterType, EntersAsCopy};
     CardDefinition {
@@ -5242,14 +5241,9 @@ pub fn growing_ranks() -> CardDefinition {
 
 // ── Master of Death ────────────────────────────────────────────────────────
 
-/// Master of Death — {1}{U}{B} Creature — Zombie Wizard 3/1. At the
-/// beginning of your upkeep, you may pay 1 life. If you do, return
-/// Master of Death from your graveyard to your hand.
-///
-/// Recurring card-advantage creature. The upkeep trigger fires only
-/// while Master of Death is in your graveyard (EventScope::
-/// FromYourGraveyard). The "pay 1 life" gate is modeled as a MayDo
-/// wrapping LoseLife + Move(This → Hand).
+/// Master of Death — {1}{U}{B} Creature — Zombie Wizard 3/1. When it enters,
+/// surveil 2. At the beginning of your upkeep, if it's in your graveyard, you
+/// may pay 1 life to return it to your hand (`EventScope::FromYourGraveyard`).
 pub fn master_of_death() -> CardDefinition {
     CardDefinition {
         name: "Master of Death",
@@ -5702,18 +5696,9 @@ pub fn elite_spellbinder() -> CardDefinition {
 }
 
 /// Elder Gargaroth — {3}{G}{G}, 6/6 Beast with Vigilance, Reach, and
-/// Trample.
-///
-/// "Whenever this creature attacks or blocks, choose one — Create a 3/3
-/// green Beast creature token; or You gain 3 life; or Draw a card."
-///
-/// Both halves fire: `EventKind::Attacks` and `EventKind::Blocks`, one
-/// `TriggeredAbility` each, which is the shape "attacks or blocks" has here —
-/// a creature cannot do both in one combat, so two abilities cannot double up
-/// on one declaration. (The block half shipped dropped, with a note naming the
-/// event kind as missing; `declare_blockers` has dispatched one per blocker
-/// since long before, and the note outlived the gap — which is the column
-/// `audit_doc_drift` reads now.) AutoDecider picks mode 0 (the token).
+/// Trample. "Whenever this creature attacks or blocks, choose one — Create a
+/// 3/3 green Beast creature token; or You gain 3 life; or Draw a card."
+/// One `Attacks` and one `Blocks` trigger. AutoDecider picks mode 0 (the token).
 pub fn elder_gargaroth() -> CardDefinition {
     let beast_token = crate::card::TokenDefinition {
         name: "Beast".into(),
@@ -8010,9 +7995,8 @@ pub fn boros_elite() -> CardDefinition {
 }
 
 /// Brimaz, King of Oreskos — {1}{W}{W} 3/4 Legendary Cat Soldier, Vigilance.
-/// Whenever Brimaz attacks, create a 1/1 white Cat Soldier with vigilance
-/// that's attacking. (The "blocks → blocking token" half is dropped — no
-/// create-blocking-token primitive.) (BNG)
+/// Whenever Brimaz attacks, create an attacking 1/1 white Cat Soldier with
+/// vigilance; whenever it blocks, one blocking that creature. (BNG)
 pub fn brimaz_king_of_oreskos() -> CardDefinition {
     CardDefinition {
         name: "Brimaz, King of Oreskos",

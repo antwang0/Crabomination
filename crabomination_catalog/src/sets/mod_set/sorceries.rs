@@ -535,13 +535,9 @@ pub fn cabal_therapy() -> CardDefinition {
     }
 }
 
-/// Wear Down — {1}{G} Sorcery. Destroy target artifact and target
-/// enchantment. (Renamed from real "Wear // Tear"; condensed to a single
-/// half — modal-double-targeted sorceries are still future work.)
-///
-/// Approximation: a single-target Naturalize-style "destroy artifact or
-/// enchantment" — the multi-target half waits on a multi-target spell
-/// primitive.
+/// Wear Down — {1}{G} Sorcery. Gift a card. Destroy target artifact or
+/// enchantment. If the gift was promised, instead destroy two target
+/// artifacts and/or enchantments.
 pub fn wear_down() -> CardDefinition {
     CardDefinition {
         name: "Wear Down",

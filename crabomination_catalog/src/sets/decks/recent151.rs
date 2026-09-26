@@ -55,8 +55,10 @@ pub fn resurrected_cultist() -> CardDefinition {
     }
 }
 
-/// Overgrown Zealot — {1}{G} 0/4. {T}: add one mana of any color. (The
-/// turn-face-up-only ramp mode is omitted — the engine has no such spend gate.)
+/// Overgrown Zealot — {1}{G} 0/4. {T}: add one mana of any color. {T}: add two
+/// mana of any one color, spend only to turn permanents face up.
+/// Approximation: the spend gate (`FaceDownSpellsOrTurnFaceUp`) also admits
+/// casting face-down spells.
 pub fn overgrown_zealot() -> CardDefinition {
     CardDefinition {
         name: "Overgrown Zealot",

@@ -1918,14 +1918,9 @@ pub fn abrupt_decay() -> CardDefinition {
 
 // ── Ramp / search ────────────────────────────────────────────────────────────
 
-/// Kodama's Reach — {2}{G} Sorcery. Search your library for up to two basic
-/// land cards, reveal them, put one onto the battlefield tapped and the
-/// other into your hand. Then shuffle.
-///
-/// Modeled as two consecutive `Search` calls — first lands the basic on
-/// the battlefield tapped, second tucks one into hand. Decliner-friendly:
-/// the decider can answer `Search(None)` to opt out of either branch
-/// (`do_search` already honors a `None` answer).
+/// Kodama's Reach — {2}{G} Sorcery — Arcane. Search your library for up to
+/// two basic land cards, put one onto the battlefield tapped and the other
+/// into your hand, then shuffle. Two `Search`es, each declinable.
 pub fn kodamas_reach() -> CardDefinition {
     CardDefinition {
         name: "Kodama's Reach",
@@ -2317,13 +2312,8 @@ pub fn lightning_strike() -> CardDefinition {
 }
 
 /// Goblin Bombardment — {1}{R} Enchantment. Sacrifice a creature: Goblin
-/// Bombardment deals 1 damage to any target.
-///
-/// Activated ability with `sac_cost`-style sacrifice folded into the
-/// resolved effect via `SacrificeAndRemember(Creature, You)` so the
-/// engine drops the chosen creature before dealing damage. The 1-damage
-/// payload doesn't scale with sacrificed power — the sacrifice is the
-/// activation cost, not the payoff.
+/// Bombardment deals 1 damage to any target. The sacrifice is a true
+/// activation cost (`sac_other_filter`), paid at announcement.
 pub fn goblin_bombardment() -> CardDefinition {
     use crate::card::ActivatedAbility;
     CardDefinition {
@@ -6878,12 +6868,8 @@ pub fn plague_wind() -> CardDefinition {
     }
 }
 
-/// Carnage Tyrant — {4}{G}{G} 7/6 Dinosaur with Trample, Hexproof, and
-/// "Carnage Tyrant can't be countered."
-///
-/// The cast-time uncounterable rider is approximated by `Keyword::CantBeCountered`
-/// — the engine respects this flag in `CounterSpell`. Hexproof keeps the body
-/// safe from targeted removal post-resolution.
+/// Carnage Tyrant — {4}{G}{G} 7/6 Dinosaur. This spell can't be countered
+/// (`Keyword::CantBeCountered`). Trample, hexproof.
 pub fn carnage_tyrant() -> CardDefinition {
     use crate::card::Keyword;
     CardDefinition {
@@ -10390,12 +10376,8 @@ pub fn mortuary_mire() -> CardDefinition {
     }
 }
 
-/// Geier Reach Sanitarium — Legendary Land. {T}: Add {C}. {1}, {T}:
-/// Each player draws a card, then discards a card.
-///
-/// Wheel-engine land — fills graveyards on both sides for reanimator/
-/// dredge while filtering through duds. The "discard a card" half is
-/// modeled as a `Discard` over `EachPlayer` after the draw step.
+/// Geier Reach Sanitarium — Legendary Land. {T}: Add {C}. {2}, {T}: Each
+/// player draws a card, then discards a card.
 pub fn geier_reach_sanitarium() -> CardDefinition {
     use crate::card::ActivatedAbility;
     CardDefinition {
@@ -11964,15 +11946,8 @@ pub fn pernicious_deed() -> CardDefinition {
 }
 
 /// Wall of Roots — {1}{G} Creature — Plant Wall 0/5 with Defender.
-/// "Put a -0/-1 counter on this creature: Add {G}. Activate only once
-/// each turn."
-///
-/// The -0/-1 counter is modeled as a +1/+1 negative counter on the
-/// engine side; here we use a direct `PumpPT(-0/-1)` permanent
-/// modification stand-in. Approximation: in lieu of a true "permanent
-/// modification stack" the toughness drops by 1 each activation via a
-/// permanent `Duration::Permanent` pump. Mana ability so the activation
-/// doesn't go on the stack.
+/// "Put a -0/-1 counter on this creature: Add {G}. Activate only once each
+/// turn." A mana ability; the cost is a real `MinusZeroMinusOne` counter.
 pub fn wall_of_roots() -> CardDefinition {
     use crate::card::{ActivatedAbility, Keyword};
     CardDefinition {
@@ -18505,9 +18480,8 @@ pub fn tempest_angler() -> CardDefinition {
 }
 
 /// Decree of Justice — {X}{X}{2}{W}{W} Sorcery. Create X 4/4 white Angel
-/// creature tokens with flying.
-///
-/// Approximation: Create X tokens where X = XFromCost.
+/// creature tokens with flying. Cycling {2}{W}; when you cycle it, you may
+/// pay {X} to create X 1/1 white Soldier tokens.
 pub fn decree_of_justice() -> CardDefinition {
     use crate::mana::x;
     CardDefinition {
@@ -18783,8 +18757,8 @@ pub fn cam_and_farrik() -> CardDefinition {
 
 /// Magda, Brazen Outlaw — {1}{R}, 2/1 Legendary Dwarf Berserker.
 /// Other Dwarves you control get +1/+0. Whenever a Dwarf you control
-/// becomes tapped, create a Treasure token. (The five-Treasure sacrifice
-/// tutor is omitted.)
+/// becomes tapped, create a Treasure token. Sacrifice five Treasures: search
+/// for an artifact or Dragon card and put it onto the battlefield.
 pub fn magda_brazen_outlaw() -> CardDefinition {
     use crate::card::{ActivatedAbility, ArtifactSubtype, StaticAbility};
     use crate::effect::{StaticEffect, ZoneDest};
@@ -20188,11 +20162,8 @@ pub fn lightning_greaves() -> CardDefinition {
 }
 
 /// Bonesplitter — {1} Artifact — Equipment.
-/// Equipped creature gets +2/+0. Equip {1}.
-///
-/// First card to use the real attach-based equip path: the `equipped_bonus`
-/// flows onto the equipped creature via the layer system (CR 702.6) instead
-/// of the older grant-on-activate approximation.
+/// Equipped creature gets +2/+0. Equip {1}. The `equipped_bonus` reaches the
+/// equipped creature through the layer system (CR 702.6).
 pub fn bonesplitter() -> CardDefinition {
     use crate::card::EquipBonus;
     CardDefinition {
@@ -20864,19 +20835,11 @@ pub fn aluren() -> CardDefinition {
 // ── Modern supplement: Burn & Creature additions ────────────────────────────
 
 /// Chain Lightning — {R} Sorcery. Deal 3 damage to any target, then that
-/// player (or that permanent's controller) may pay {R}{R} to copy it.
-///
-/// The chain half shipped omitted, with a note saying the copy "is offered to
-/// a *different* player … which has no opponent-controlled pay-to-copy hook
-/// yet". `Effect::MayCopyThisSpell` is exactly that hook — CR 706, the
-/// Onslaught Chain cycle — and `ChainCopyCost::Mana` is the toll shape Chain
-/// Stasis uses. `ControllerOf` over a player target resolves to that player,
-/// which is what makes one `who` cover both halves of "that player or that
-/// permanent's controller".
-///
-/// Same caveat the Chain cycle carries: a permanent target that DIES to the
-/// damage leaves `ControllerOf(Target(0))` unresolvable and the chain ends
-/// there. That is a shared LKI gap, not this card's.
+/// player (or that permanent's controller) may pay {R}{R} to copy it
+/// (`MayCopyThisSpell`, CR 706). `ControllerOf` over a player target resolves
+/// to that player.
+/// Residual: a permanent target that dies to the damage leaves
+/// `ControllerOf(Target(0))` unresolvable, so the chain ends (shared LKI gap).
 pub fn chain_lightning() -> CardDefinition {
     CardDefinition {
         name: "Chain Lightning",
@@ -20935,11 +20898,7 @@ pub fn rift_bolt() -> CardDefinition {
     }
 }
 
-/// Trenchpost — Land — Locus.
-/// "{T}: Add {C}{C}."
-/// (Approximation: Locus subtype noted but not mechanically relevant
-/// without the Locus-counting static from Cloudpost.)
-/// Trenchpost — Locus Land. `{T}: Add {C}`; `{3}, {T}: Target player mills a
+/// Trenchpost — Land — Locus. `{T}: Add {C}`; `{3}, {T}: Target player mills a
 /// card for each Locus you control.`
 pub fn trenchpost() -> CardDefinition {
     use crate::card::ActivatedAbility;
@@ -58454,7 +58413,8 @@ pub fn gemhide_sliver() -> CardDefinition {
 }
 
 /// Diffusion Sliver — {1}{U} 1/1. Opponents' spells/abilities targeting your
-/// Slivers are taxed {2} — modeled as granting your Slivers ward {2}.
+/// Slivers are countered unless their controller pays {2} — ward {2} granted
+/// to your Slivers, which is that same trigger.
 pub fn diffusion_sliver() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![StaticAbility {

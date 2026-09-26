@@ -60,9 +60,8 @@ pub fn grave_betrayal() -> CardDefinition {
 }
 
 /// Angel of Serenity — {4}{W}{W}{W} 5/6 Angel. Flying; ETB exile up to three
-/// target creatures until it leaves (returning them to their owners' hands on
-/// leave). (The alternate "creature cards from graveyards" targets are omitted
-/// — the battlefield-removal half is modeled.)
+/// other target creatures from the battlefield and/or creature cards from
+/// graveyards until it leaves (then they return to their owners' hands).
 pub fn angel_of_serenity() -> CardDefinition {
     CardDefinition {
         name: "Angel of Serenity",

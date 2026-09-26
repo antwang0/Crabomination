@@ -289,9 +289,7 @@ pub fn indulge_excess() -> CardDefinition {
 }
 
 /// Killer Service — a Food per opponent on entry; at your end step you may
-/// pay {2} and sacrifice a token for a 4/4 Rhino Warrior.
-///
-/// Approximation: the token sacrificed is the engine's pick.
+/// pay {2} and sacrifice a token (your choice) for a 4/4 Rhino Warrior.
 pub fn killer_service() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![

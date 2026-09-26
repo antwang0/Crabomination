@@ -272,9 +272,7 @@ pub fn beastmaster_ascension() -> CardDefinition {
 }
 
 /// Aura Shards — {1}{G}{W} Enchantment. "Whenever a creature you control enters,
-/// you may destroy target artifact or enchantment." The optional clause is
-/// collapsed to a mandatory destroy-if-a-legal-target-exists (matching
-/// Reclamation Sage's ETB), and auto-targeting prefers an opponent's permanent.
+/// you may destroy target artifact or enchantment."
 pub fn aura_shards() -> CardDefinition {
     CardDefinition {
         name: "Aura Shards",

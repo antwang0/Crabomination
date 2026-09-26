@@ -277,26 +277,12 @@ pub fn tanazir_quandrix() -> CardDefinition {
 
 // ── Shadrix Silverquill (W/B) ──────────────────────────────────────────────
 
-/// Shadrix Silverquill — {3}{W}{B}, 2/5 Legendary Elder Dragon. Real
-/// Oracle: "Flying, double strike / At the beginning of combat on your
-/// turn, you may choose two. Each mode must target a different player.
-/// • Target player creates a 2/1 white and black Inkling creature token
-///   with flying.
-/// • Target player draws a card and loses 1 life.
-/// • Target player puts a +1/+1 counter on each creature they control."
-///
-/// Wired as a `StepBegins(BeginCombat)` trigger scoped `YourControl`
-/// (fires only on your turn) whose body is `MayDo` (the printed "you
-/// may") wrapping `ChooseN { picks: [1, 0] }` — the canonical line:
-/// mode 1 (draw + lose 1) on yourself and mode 0 (mint a 2/1 Inkling)
-/// on the opponent, which honors the printed "each mode must target a
-/// different player". Residual approximations: the trigger pipeline
-/// auto-fills only ONE target slot (`auto_extra_targets_for` handles
-/// just `ApplyToTargets`), so mode 1's "target player" is collapsed to
-/// the controller (`Selector::You`) and only mode 0 carries a real
-/// player-target slot (the hostile-default auto-picker aims it at the
-/// opponent); the inter-mode "different player" constraint itself has
-/// no enforcement primitive for decider-chosen picks.
+/// Shadrix Silverquill — {3}{W}{B}, 2/5 Legendary Elder Dragon. Flying, double
+/// strike. At the beginning of combat on your turn, you may choose two, each
+/// mode targeting a different player: that player creates a 2/1 flying Inkling;
+/// draws a card and loses 1 life; or puts a +1/+1 counter on each creature
+/// they control. Each picked mode owns its own player slot; the auto-filler
+/// never reuses a player (default: draw on you, Inkling on an opponent).
 pub fn shadrix_silverquill() -> CardDefinition {
     use crate::card::{
         CounterType, EventKind, EventScope, EventSpec, SelectionRequirement, Selector,

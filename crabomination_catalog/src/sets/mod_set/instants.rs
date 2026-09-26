@@ -299,11 +299,6 @@ pub fn tarfire() -> CardDefinition {
 
 /// Frantic Search — {2}{U} Instant. Draw two cards, then discard two cards.
 /// Untap up to three lands.
-///
-/// Approximation: "up to three lands" is implemented as "untap every land
-/// you control" — a small overshoot, but the spirit of the card (refill
-/// mana mid-turn) lands intact. A precise three-target version would need
-/// a multi-target prompt that the engine doesn't yet expose.
 pub fn frantic_search() -> CardDefinition {
     CardDefinition {
         name: "Frantic Search",

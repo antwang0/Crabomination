@@ -177,8 +177,7 @@ pub fn emeritus_of_truce() -> CardDefinition {
 /// Front: 1/2 Human Wizard. This creature enters prepared.
 ///
 /// Prepare spell: sorcery — "You may tap or untap target creature.
-/// Draw a card." The "may" is modeled as a third Noop mode on the
-/// `ChooseMode` (decline both tap and untap); the draw is unconditional.
+/// Draw a card." The "may" is a third `Noop` mode (decline both).
 pub fn elite_interceptor() -> CardDefinition {
     let spell = spell_back(
         "Rejoinder",
@@ -337,16 +336,10 @@ pub fn quill_blade_laureate() -> CardDefinition {
 /// Spiritcall Enthusiast // Scrollboost — {2}{W} // {1}{W}.
 ///
 /// Front: 3/3 Cat Cleric. "Whenever one or more tokens you control
-/// enter, this creature becomes prepared." (The engine fires the
-/// enters event per token; `AddCounter` of an already-present Prepared
-/// counter is idempotent at count 1 per the prepared-flag convention.)
+/// enter, this creature becomes prepared." (Once per batch.)
 ///
-/// Prepare spell: sorcery — printed "One or two target creatures each
-/// get +2/+2 until end of turn."
-///
-/// The pump is the printed "one or two target creatures each get
-/// +2/+2" via `ApplyToTargets { min 1, max 2 }` (audit fix: the second
-/// target used to be dropped).
+/// Prepare spell: sorcery — "One or two target creatures each get +2/+2
+/// until end of turn." (`ApplyToTargets { min 1, max 2 }`.)
 pub fn spiritcall_enthusiast() -> CardDefinition {
     let spell = spell_back(
         "Scrollboost",

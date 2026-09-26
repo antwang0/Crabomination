@@ -146,8 +146,8 @@ pub fn storm_fleet_arsonist() -> CardDefinition {
 
 /// Metallurgic Summonings — {3}{U}{U} Enchantment. Whenever you cast an
 /// instant/sorcery, create an X/X colorless Construct (X = that spell's mana
-/// value). {3}{U}{U}, exile this (modeled as sacrifice): return all I/S from
-/// your graveyard, if you control 6+ artifacts.
+/// value). {3}{U}{U}, exile this: return all I/S from your graveyard to your
+/// hand; activate only if you control six or more artifacts.
 pub fn metallurgic_summonings() -> CardDefinition {
     let construct = TokenDefinition {
         name: "Construct".into(),

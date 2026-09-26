@@ -1527,8 +1527,8 @@ pub fn captivating_cave() -> CardDefinition {
 }
 
 /// Volatile Fault — Land — Cave. {T}: Add {C}. {1}, {T}, Sacrifice: destroy
-/// target nonbasic land an opponent controls (the "may search for a basic"
-/// rider is dropped).
+/// target nonbasic land an opponent controls; that player may search for a
+/// basic land onto the battlefield; you create a Treasure.
 pub fn volatile_fault() -> CardDefinition {
     CardDefinition {
         name: "Volatile Fault",

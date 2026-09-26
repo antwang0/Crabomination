@@ -1798,11 +1798,8 @@ pub fn rockfall_vale() -> CardDefinition {
 
 /// Game Trail — Land. As this land enters, you may reveal a Mountain or
 /// Forest card from your hand. If you don't, this land enters tapped.
-/// `{T}: Add {R} or {G}.` (The Snarl shape — `Effect::IfRevealFromHand`.)
-///
-/// Approximation: like the Snarls, the check is a self ETB trigger rather
-/// than an as-enters replacement, and the reveal is automatic when a match
-/// exists.
+/// `{T}: Add {R} or {G}.` (`EntersTappedUnless`, the Snarl shape.)
+/// Approximation: the reveal is implicit — holding a match always untaps it.
 pub fn game_trail() -> CardDefinition {
     crate::sets::land_type_reveal_land(
         "Game Trail",

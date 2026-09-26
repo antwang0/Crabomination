@@ -85,7 +85,8 @@ pub fn boros_keyrune() -> CardDefinition {
         vec![Keyword::DoubleStrike],
     )
 }
-/// Dimir Keyrune — a 2/2 Horror that can't be blocked (modeled as EOT Unblockable).
+/// Dimir Keyrune — becomes a 2/2 Horror until end of turn that can't be
+/// blocked this turn.
 pub fn dimir_keyrune() -> CardDefinition {
     keyrune(
         "Dimir Keyrune",

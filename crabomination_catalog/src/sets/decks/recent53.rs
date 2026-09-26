@@ -967,8 +967,8 @@ pub fn ravos_soultender() -> CardDefinition {
 }
 
 /// Adriana, Captain of the Guard — {3}{R}{W} 4/4 Legendary Human Knight. Melee;
-/// other creatures you control have melee. (Melee is the engine's flat +1/+1
-/// on-attack approximation.)
+/// other creatures you control have melee (+1/+1 per opponent attacked this
+/// combat).
 pub fn adriana_captain_of_the_guard() -> CardDefinition {
     use crate::effect::shortcut::melee;
     CardDefinition {

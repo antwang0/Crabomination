@@ -1523,14 +1523,9 @@ pub fn brawn() -> CardDefinition {
 // ── Deep Analysis (STA reprint, Torment) ───────────────────────────────────
 
 /// Deep Analysis — {3}{U} Sorcery (STA reprint, originally Torment).
-///
-/// "Target player draws two cards and loses 2 life. / Flashback—{1}{U},
-/// Pay 3 life."
-///
-/// Wired as `Seq(Draw 2, LoseLife 2)` against the targeted player
-/// (collapsed to `PlayerRef::Target(0)`). Flashback {1}{U} via
-/// `Keyword::Flashback`; the "Pay 3 life" flashback rider is applied via
-/// `flashback_additional_cost` (`AdditionalCastCost::PayLife`).
+/// "Target player draws two cards. / Flashback—{1}{U}, Pay 3 life."
+/// The flashback life is `flashback_additional_cost` (`PayLife`).
+/// Approximation: "target player" is collapsed to you.
 pub fn deep_analysis() -> CardDefinition {
     CardDefinition {
         name: "Deep Analysis",

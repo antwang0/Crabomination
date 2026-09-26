@@ -212,11 +212,9 @@ pub fn echo_mage() -> CardDefinition {
     }
 }
 
-/// Eye of Doom — on entry each player puts a doom counter on a nonland
-/// permanent; {2}, {T}, sacrifice it: destroy each permanent with a doom
-/// counter.
-///
-/// Approximation: each player's counter goes where the engine picks.
+/// Eye of Doom — on entry each player chooses a nonland permanent and puts a
+/// doom counter on it; {2}, {T}, sacrifice it: destroy each permanent with a
+/// doom counter.
 pub fn eye_of_doom() -> CardDefinition {
     CardDefinition {
         name: "Eye of Doom",

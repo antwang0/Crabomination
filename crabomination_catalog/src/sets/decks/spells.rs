@@ -252,20 +252,8 @@ pub fn leyline_of_sanctity() -> CardDefinition {
 // ── Goryo's main-deck spells ────────────────────────────────────────────────
 
 /// Ephemerate — {W} Instant. Exile target creature you control, then return
-/// it to the battlefield under its owner's control. **Rebound**: cast from
-/// hand → exile on resolution, schedule a "may cast from exile next upkeep"
-/// trigger that re-runs the flicker effect with a fresh auto-target.
-///
-/// Modeled as `Seq([Exile target creature you control, Move target back to
-/// the battlefield])`. The same target slot is re-resolved on the second
-/// step — `Selector::Target(0)` finds the card in exile (the engine
-/// `evaluate_requirement_static` falls through to graveyard / exile so the
-/// target stays bound), and `move_card_to` walks all zones until it finds
-/// the card. ETB triggers fire because `place_card_in_dest` now invokes
-/// `fire_self_etb_triggers` on Battlefield zone changes. Rebound is wired
-/// via `Keyword::Rebound`: the cast-from-hand resolution path detects it
-/// and pushes a `YourNextUpkeep` `DelayedTrigger` whose body is the
-/// spell's effect — the body re-targets fresh on fire.
+/// it to the battlefield under its owner's control. Rebound
+/// (`Keyword::Rebound`): the next-upkeep recast re-targets fresh.
 pub fn ephemerate() -> CardDefinition {
     CardDefinition {
         name: "Ephemerate",

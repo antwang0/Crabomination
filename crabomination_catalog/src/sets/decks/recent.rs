@@ -12370,9 +12370,10 @@ pub fn rotten_reunion() -> CardDefinition {
 // (claude/modern_decks). Each rides an existing primitive; the only new
 // engine piece is `StaticEffect::ExtraCounterAllKinds` (Winding Constrictor). ===
 
-/// Winding Constrictor — {B}{G} 2/3 Snake. If one or more counters would be put
-/// on an artifact or creature you control, that many plus one are put on it
-/// instead. (The "counters you'd get" player-counter clause is approximated.)
+/// Winding Constrictor — {B}{G} 2/3 Snake. Counters put on a creature you
+/// control, and counters you get (energy, experience, poison), are that many
+/// plus one. Approximation: the permanent half is creature-gated, so a
+/// noncreature artifact gets no extra counter.
 pub fn winding_constrictor() -> CardDefinition {
     use crate::card::{StaticAbility, StaticEffect};
     CardDefinition {
