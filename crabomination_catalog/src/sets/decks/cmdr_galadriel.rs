@@ -12,8 +12,7 @@
 //! - **Gandalf, Westward Voyager** — the opponents' top cards are read, not
 //!   revealed.
 //! - **Mirkwood Trapper** — the shrunk attacker is the first one declared,
-//!   not a target; its second ability (an attacker's +2/+0 when you aren't
-//!   attacked) isn't implemented.
+//!   not a target.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
@@ -481,11 +480,9 @@ pub fn mirkwood_elk() -> CardDefinition {
 }
 
 /// Mirkwood Trapper — a player attacking you shrinks one of their attackers
-/// by 2 power.
+/// by 2 power; a player attacking only elsewhere pumps one of theirs by 2.
 ///
-/// ⚠ Residual: the shrunk attacker is the first one declared, not a target;
-/// the second ability (an attacker's +2/+0 when you aren't attacked) isn't
-/// implemented.
+/// ⚠ Residual: the shrunk attacker is the first one declared, not a target.
 pub fn mirkwood_trapper() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
@@ -498,6 +495,26 @@ pub fn mirkwood_trapper() -> CardDefinition {
                 power: Value::Const(-2),
                 toughness: Value::ZERO,
                 duration: Duration::EndOfTurn,
+            },
+        }, TriggeredAbility {
+            // "Whenever a player attacks, if they aren't attacking you, that
+            // player chooses an attacking creature" — their biggest.
+            event: EventSpec::new(EventKind::Attacks, EventScope::AnyPlayerAttacks).with_filter(Predicate::Not(
+                Box::new(Predicate::AttackedDefenderWithCountAtLeast {
+                    who: PlayerRef::Target(0),
+                    defender: PlayerRef::You,
+                    at_least: 1,
+                    include_planeswalkers: false,
+                }),
+            )),
+            effect: Effect::AsPlayer {
+                who: PlayerRef::Target(0),
+                body: Box::new(Effect::PumpPT {
+                    what: Selector::GreatestPowerControlledMatching(R::IsAttacking),
+                    power: Value::Const(2),
+                    toughness: Value::ZERO,
+                    duration: Duration::EndOfTurn,
+                }),
             },
         }],
         ..creature(

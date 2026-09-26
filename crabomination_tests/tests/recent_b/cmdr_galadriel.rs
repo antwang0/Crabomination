@@ -305,6 +305,24 @@ fn mirkwood_trapper_springs_the_trap() {
     assert_eq!(pt(&g, bear), (0, 2));
 }
 
+/// Mirkwood Trapper's second ability (CR 508.1 "whenever a player attacks"):
+/// a player attacking only someone else pumps their biggest attacker by 2;
+/// attacking you instead, the first ability shrinks it and this one is off.
+#[test]
+fn mirkwood_trapper_pumps_an_attack_aimed_elsewhere() {
+    let mut g = main_phase(3);
+    g.add_card_to_battlefield(0, catalog::mirkwood_trapper());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.active_player_idx = 1;
+    g.clear_sickness(bear);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bear, target: AttackTarget::Player(2) }]))
+        .expect("attack seat 2");
+    drain_stack(&mut g);
+    assert_eq!(pt(&g, bear), (4, 2));
+}
+
 /// Model of Unity taps for any color.
 #[test]
 fn model_of_unity_taps_for_mana() {
