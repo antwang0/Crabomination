@@ -29,9 +29,10 @@ pub(super) fn pick_generic_ability(state: &GameState, seat: usize, w: &EvalWeigh
     let mut best: Option<(i32, GameAction)> = None;
     for card in state.battlefield.iter().filter(|c| c.controller == seat) {
         for (idx, ab) in card.definition.activated_abilities.iter().enumerate() {
-            // A shape a generator above owns, a mana ability, or one whose
-            // tap it can't pay this turn.
-            if ability_sink_bits(ab) != 0
+            // A shape a generator above owns (they don't choose an X, so an
+            // `{X}` one stays here), a mana ability, or one whose tap it
+            // can't pay this turn.
+            if (ability_sink_bits(ab) != 0 && !ab.mana_cost.has_x())
                 || crate::game::actions::is_mana_ability(&ab.effect)
                 || ab.remove_counter_x.is_some()
                 || ab.from_hand
@@ -62,36 +63,56 @@ pub(super) fn pick_generic_ability(state: &GameState, seat: usize, w: &EvalWeigh
                 continue;
             }
             let cmc = ab.mana_cost.cmc();
-            if cmc > 0 && cmc > *mana.get_or_insert_with(|| mana_upper_bound(state, seat)) {
+            let budget = *mana.get_or_insert_with(|| mana_upper_bound(state, seat));
+            if cmc > 0 && cmc > budget {
                 continue;
             }
-            let (target, additional_targets) = if ab.effect.requires_target() {
-                match state.auto_targets_for_effect_all_slots_sourced(&ab.effect, seat, None, Some(card.id)) {
-                    (Some(t), extra) => (Some(t), extra),
-                    (None, _) => continue,
-                }
+            // `{X}`: the largest payable X first, at most three that find a
+            // target (Geth's X is its target's mana value).
+            let xs: Vec<Option<u32>> = if ab.mana_cost.has_x() {
+                (1..=budget.saturating_sub(cmc)).rev().map(Some).collect()
             } else {
-                (None, Vec::new())
+                vec![None]
             };
-            let action = GameAction::ActivateAbility {
-                card_id: card.id,
-                ability_index: idx,
-                target,
-                additional_targets,
-                x_value: None,
-                mode: None,
-            };
-            // An until-end-of-turn gain reads as permanent to the evaluator.
-            if action_outcome_is_temporary(state, &action) {
-                continue;
-            }
-            let Some(settled) = state.accept(action.clone()) else { continue };
-            let base = *baseline.get_or_insert_with(|| eval_material(state, seat, w));
-            if let Some(ev) = evaluate_action_outcome(state, seat, &action, Some(&settled), w)
-                && ev > base
-                && best.as_ref().is_none_or(|(b, _)| ev > *b)
-            {
-                best = Some((ev, action));
+            let mut probes = 0;
+            for x in xs {
+                if probes == 3 {
+                    break;
+                }
+                let (target, additional_targets) = if ab.effect.requires_target() {
+                    match state.auto_targets_for_effect_all_slots_x(&ab.effect, seat, None, false, Some(card.id), x) {
+                        (Some(t), extra) => (Some(t), extra),
+                        (None, _) => continue,
+                    }
+                } else {
+                    (None, Vec::new())
+                };
+                let action = GameAction::ActivateAbility {
+                    card_id: card.id,
+                    ability_index: idx,
+                    target,
+                    additional_targets,
+                    x_value: x,
+                    mode: None,
+                };
+                // An until-end-of-turn gain reads as permanent to the evaluator.
+                if action_outcome_is_temporary(state, &action) {
+                    break;
+                }
+                probes += 1;
+                let Some(settled) = state.accept(action.clone()) else { continue };
+                let base = *baseline.get_or_insert_with(|| eval_material(state, seat, w));
+                if let Some(ev) = evaluate_action_outcome(state, seat, &action, Some(&settled), w)
+                    && ev > base
+                    && best.as_ref().is_none_or(|(b, _)| ev > *b)
+                {
+                    best = Some((ev, action));
+                }
+                // Without `{X}` there is one action to try; with it and no
+                // target, the largest X is the one worth asking about.
+                if x.is_none() || !ab.effect.requires_target() {
+                    break;
+                }
             }
         }
     }
