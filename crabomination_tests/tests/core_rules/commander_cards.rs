@@ -1924,6 +1924,33 @@ fn damage_to_one_chosen_player_drains_the_other() {
     assert_eq!(g.players[3].life, l3);
 }
 
+/// Answers a `ChooseOption` with the option carrying this label.
+struct PickLabel(&'static str);
+impl crabomination::decision::Decider for PickLabel {
+    fn decide(&mut self, d: &crabomination::decision::Decision) -> crabomination::decision::DecisionAnswer {
+        match d {
+            crabomination::decision::Decision::ChooseOption { options, .. } => {
+                let i = options.iter().position(|o| o == self.0).expect("the label is offered");
+                crabomination::decision::DecisionAnswer::Amount(i as u32)
+            }
+            other => crabomination::decision::AutoDecider.decide(other),
+        }
+    }
+    fn kind(&self) -> crabomination::decision::DeciderKind {
+        crabomination::decision::DeciderKind::Scripted { answers: Vec::new(), asked: Vec::new() }
+    }
+}
+
+/// CR 614.12 — Sower of Discord's two players are its controller's choice,
+/// any two (itself included): here seats 1 and 3, not the least-life pair.
+#[test]
+fn sower_of_discord_pair_is_the_controllers_choice() {
+    let mut g = game_with_format(Format::Commander, 4);
+    g.decider = Box::new(PickLabel("Player 2 and Player 4"));
+    let sower = g.move_card_to_battlefield_for_test(0, catalog::sower_of_discord());
+    assert!(g.chosen_player_pairs.iter().any(|&(s, a, b)| s == sower && (a, b) == (1, 3)));
+}
+
 /// CR 601.2 — "for each nonland card type, you may cast a spell of that type
 /// from among them without paying its mana cost": one card per type, and a
 /// card of two types spends only one.

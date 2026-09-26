@@ -383,8 +383,8 @@ pub fn skull_storm() -> CardDefinition {
     }
 }
 
-/// Sower of Discord — flying; damage to one chosen player drains the other.
-/// Residual: the engine picks the pair.
+/// Sower of Discord — flying; as it enters, choose two players; damage to
+/// one drains the other.
 pub fn sower_of_discord() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying],

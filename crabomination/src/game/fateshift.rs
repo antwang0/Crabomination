@@ -6,7 +6,7 @@
 use crate::card::{CardId, CardType, Zone};
 use crate::effect::{Effect, PlayerRef, Selector, Value, ZoneDest};
 use crate::game::effects::EffectContext;
-use crate::game::types::GameEvent;
+use crate::game::types::{GameEvent, PendingEffectState};
 use crate::game::{GameError, GameState};
 
 impl GameState {
@@ -74,18 +74,62 @@ impl GameState {
         }
     }
 
+    /// "As this enters, choose two players" (Sower of Discord): one ballot of
+    /// every pair of living players, led by the headless pick — the two
+    /// opponents with the least life, or the only opponent and you.
     pub(crate) fn choose_two_players_for_source(&mut self, ctx: &EffectContext) {
+        use crate::decision::{Decision, DecisionAnswer};
         let Some(src) = ctx.source else { return };
         let me = ctx.controller;
         let mut opps = self.opponents_of(me);
         opps.sort_by_key(|&o| (self.players[o].life, o));
-        let pair = match opps.as_slice() {
+        let default = match opps.as_slice() {
             [a, b, ..] => (*a, *b),
             [a] => (*a, me),
             [] => return,
         };
+        let seats = self.player_ballot(me, false);
+        let mut pairs = vec![default];
+        for (i, &a) in seats.iter().enumerate() {
+            for &b in &seats[i + 1..] {
+                if !pairs.iter().any(|&(x, y)| (x, y) == (a, b) || (x, y) == (b, a)) {
+                    pairs.push((a, b));
+                }
+            }
+        }
+        let decision = Decision::ChooseOption {
+            source: src,
+            prompt: "Choose two players".to_string(),
+            options: pairs.iter().map(|(a, b)| format!("Player {} and Player {}", a + 1, b + 1)).collect(),
+        };
+        let answer = if pairs.len() == 1 {
+            DecisionAnswer::Amount(0)
+        } else if self.seat_prompts(me) {
+            let pending = PendingEffectState::ChosenPlayerPairPending { target_id: src, pairs };
+            self.suspend_signal = Some(Box::new((decision, pending, Effect::Noop)));
+            return;
+        } else if matches!(self.decider.kind(), crate::decision::DeciderKind::Auto) {
+            DecisionAnswer::Amount(0)
+        } else {
+            self.decider.decide(&decision)
+        };
+        self.apply_chosen_pair_answer(src, &pairs, &answer);
+    }
+
+    /// `ChosenPlayerPairPending`'s apply: the `Amount(i)` answer indexes `pairs`.
+    pub(crate) fn apply_chosen_pair_answer(
+        &mut self,
+        src: CardId,
+        pairs: &[(usize, usize)],
+        answer: &crate::decision::DecisionAnswer,
+    ) {
+        let i = match answer {
+            crate::decision::DecisionAnswer::Amount(i) => *i as usize,
+            _ => 0,
+        };
+        let Some(&(a, b)) = pairs.get(i).or(pairs.first()) else { return };
         self.chosen_player_pairs.retain(|(s, ..)| *s != src);
-        self.chosen_player_pairs.push((src, pair.0, pair.1));
+        self.chosen_player_pairs.push((src, a, b));
     }
 
     pub(crate) fn other_chosen_player_loses_life(
