@@ -8572,26 +8572,29 @@ pub fn tezzeret_cruel_captain() -> CardDefinition {
     }
 }
 
-/// Cruel Somnophage — {1}{U}{B} Creature — Phyrexian Horror. 0/0.
-/// This creature's power and toughness are each equal to the number of
-/// cards in your graveyard.
-///
-/// Dynamic P/T injection (Cosmogoyf/Tarmogoyf pattern). The compute_battlefield
-/// hardcoded site (`crabomination/src/game/mod.rs`) reads
-/// `players[controller].graveyard.len()` and injects a layer-7
-/// `SetPowerToughness(n, n)` effect when the card name matches.
+/// Cruel Somnophage — {1}{B} Creature — Nightmare */*. Power and toughness
+/// are each equal to the number of creature cards in all graveyards (CR
+/// 604.3). Adventure — Can't Wake Up {1}{U} Sorcery: target player mills
+/// four cards (CR 715).
 pub fn cruel_somnophage() -> CardDefinition {
     CardDefinition {
         name: "Cruel Somnophage",
-        dynamic_pt: Some(DynamicPt::ControllerGraveyardSize),
+        dynamic_pt: Some(DynamicPt::CreatureCardsInAllGraveyards { base_p: 0, base_t: 0 }),
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Nightmare],
             ..Default::default()
         },
-        // Base P/T is 0/0; the compute-time injection overrides with,
-        // (graveyard size, graveyard size).,
+        adventure: Some(Box::new(Adventure {
+            name: "Can't Wake Up",
+            cost: cost(&[generic(1), u()]),
+            card_types: vec![CardType::Sorcery],
+            effect: Effect::Mill {
+                who: target_filtered(SelectionRequirement::Player),
+                amount: Value::Const(4),
+            },
+        })),
         ..Default::default()
     }
 }

@@ -4442,6 +4442,31 @@ fn callous_sell_sword_enters_with_counter_per_creature_died() {
     assert_eq!(sell.toughness(), 4, "2 base + 2 counters");
 }
 
+/// CR 715.3: Burn Together — the chosen creature deals damage equal to its
+/// power to another target, then is sacrificed.
+#[test]
+fn burn_together_flings_your_creature_at_a_player() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let css = g.add_card_to_hand(0, catalog::callous_sell_sword());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let life = g.players[1].life;
+    g.perform_action(GameAction::CastAdventure {
+        card_id: css,
+        target: Some(Target::Permanent(bears)),
+        additional_targets: vec![Target::Player(1)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Burn Together castable for {R}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 2, "the Bears deal 2");
+    assert!(!g.battlefield.iter().any(|c| c.id == bears), "then it is sacrificed");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bears));
+    assert!(g.exile.iter().any(|c| c.id == css), "Sell-Sword goes on an adventure");
+}
+
 #[test]
 fn plunge_into_darkness_mode_one_pays_x_life_looks_and_exiles_rest() {
     // Mode 1: pay 2 life (ChooseAmount), look at the top 2, take Bolt into

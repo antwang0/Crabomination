@@ -18,8 +18,9 @@ use crate::mana::{Color, ManaCost, b, colorless, cost, g, generic, r, u, w};
 
 /// Callous Sell-Sword — {1}{B} 2/2 Human Soldier. Enters with a +1/+1
 /// counter for each creature that died under your control this turn
-/// (`Value::CreaturesDiedThisTurn`). The Adventure half (Burn Together)
-/// is omitted — no Adventure cost-mode primitive yet.
+/// (`Value::CreaturesDiedThisTurn`). Adventure — Burn Together {R}
+/// Sorcery: target creature you control deals damage equal to its power
+/// to any other target, then its controller sacrifices it (CR 715).
 pub fn callous_sell_sword() -> CardDefinition {
     use crate::card::CounterType;
     CardDefinition {
@@ -36,6 +37,21 @@ pub fn callous_sell_sword() -> CardDefinition {
             CounterType::PlusOnePlusOne,
             Value::CreaturesDiedThisTurn(PlayerRef::You),
         )),
+        adventure: Some(Box::new(crate::card::Adventure {
+            name: "Burn Together",
+            cost: cost(&[r()]),
+            card_types: vec![CardType::Sorcery],
+            effect: Effect::Seq(vec![
+                Effect::DealDamageEqualToPower {
+                    source: target_filtered(SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou)),
+                    target: Selector::TargetFiltered {
+                        slot: 1,
+                        filter: SelectionRequirement::Any.and(SelectionRequirement::OtherThanTargetSlot(0)),
+                    },
+                },
+                Effect::SacrificePermanent { what: Selector::Target(0) },
+            ]),
+        })),
         ..Default::default()
     }
 }

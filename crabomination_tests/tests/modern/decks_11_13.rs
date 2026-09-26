@@ -2254,26 +2254,48 @@ fn greasewrench_goblin_exhaust_loots_and_grows() {
     );
 }
 
+/// CR 604.3: Cruel Somnophage's P/T count creature cards in *all*
+/// graveyards — an opponent's creature card counts, a land doesn't.
 #[test]
-fn cruel_somnophage_pt_scales_with_your_graveyard() {
+fn cruel_somnophage_pt_counts_creature_cards_in_all_graveyards() {
     let mut g = two_player_game();
-    // Seed graveyard with three cards before Cruel Somnophage enters.
     g.add_card_to_graveyard(0, catalog::island());
-    g.add_card_to_graveyard(0, catalog::island());
-    g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    g.add_card_to_graveyard(1, catalog::lightning_bolt());
     let id = g.add_card_to_battlefield(0, catalog::cruel_somnophage());
 
-    let computed = g.compute_battlefield();
-    let card = computed.iter().find(|c| c.id == id).unwrap();
-    assert_eq!(card.power, 3, "Power = your graveyard size (3)");
-    assert_eq!(card.toughness, 3, "Toughness = your graveyard size (3)");
+    let card = g.compute_battlefield().into_iter().find(|c| c.id == id).unwrap();
+    assert_eq!((card.power, card.toughness), (2, 2), "two creature cards across both graveyards");
 
-    // Mill another card and watch P/T grow.
-    g.add_card_to_graveyard(0, catalog::island());
-    let computed = g.compute_battlefield();
-    let card = computed.iter().find(|c| c.id == id).unwrap();
-    assert_eq!(card.power, 4);
-    assert_eq!(card.toughness, 4);
+    g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let card = g.compute_battlefield().into_iter().find(|c| c.id == id).unwrap();
+    assert_eq!((card.power, card.toughness), (3, 3));
+}
+
+/// CR 715.3: Can't Wake Up, the Adventure half, mills the target player
+/// four and the card goes on an adventure in exile (CR 715.4).
+#[test]
+fn cant_wake_up_mills_four_then_exiles_on_adventure() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    for _ in 0..6 {
+        g.add_card_to_library(1, catalog::island());
+    }
+    let id = g.add_card_to_hand(0, catalog::cruel_somnophage());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    let gy_before = g.players[1].graveyard.len();
+    g.perform_action(GameAction::CastAdventure {
+        card_id: id,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Can't Wake Up castable for {1}{U}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].graveyard.len(), gy_before + 4);
+    assert!(g.exile.iter().any(|c| c.id == id), "the card rests on an adventure in exile");
 }
 
 #[test]
