@@ -633,6 +633,18 @@ pub fn evolve() -> TriggeredAbility {
     }
 }
 
+/// Evolve with a "whenever this creature evolves, [rider]" payoff. CR
+/// 702.100b: it evolves when its evolve ability *resolves* and puts the
+/// counter, so the rider runs after the counter, in the same resolution — a
+/// parallel trigger on the entering creature fired before the counter landed,
+/// and a Watchful Radstag smaller than its own 2/2 copies copied itself
+/// without end.
+pub fn evolve_then(rider: Effect) -> TriggeredAbility {
+    let mut t = evolve();
+    t.effect = Effect::Seq(vec![t.effect, rider]);
+    t
+}
+
 /// Eerie shortcut (DSK ability word): "Whenever an enchantment you control
 /// enters and whenever you fully unlock a Room, [body]." Returns the two
 /// triggered abilities that share `body` — an enchantment-ETB watcher and a
