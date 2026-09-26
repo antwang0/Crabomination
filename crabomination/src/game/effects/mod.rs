@@ -37333,17 +37333,21 @@ impl GameState {
                 else {
                     return Ok(());
                 };
-                let opps: Vec<usize> = (0..self.players.len())
-                    .filter(|&q| !self.players[q].eliminated && !self.same_team(q, p))
+                let opps: Vec<usize> = self
+                    .seats_in_turn_order_from(p)
+                    .into_iter()
+                    .filter(|&q| self.players[q].is_alive() && !self.same_team(q, p))
                     .collect();
-                for _ in opps {
+                for q in opps {
                     let tid = self.mint_token_onto_battlefield(def.clone(), p, false, events);
                     self.grant_keyword_eot(tid, Keyword::Haste);
+                    // CR 702.141a — each token "attacks that opponent this
+                    // turn if able": the CR 508.1d requirement Raving Dead
+                    // carries, bound to its own opponent.
                     if let Some(c) = self.battlefield_find_mut(tid) {
-                        // CR 701.38-style requirement: the token attacks (an
-                        // opponent) this turn if able.
-                        c.goaded_by.push(p);
+                        c.chosen_player = Some(q);
                     }
+                    self.grant_keyword_eot(tid, Keyword::MustAttackChosenPlayer);
                     self.delayed_triggers.push(crate::game::types::DelayedTrigger {
                         controller: p,
                         source: tid,

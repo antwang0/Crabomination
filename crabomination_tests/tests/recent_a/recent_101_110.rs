@@ -325,7 +325,8 @@ mod recent103 {
             .find(|c| c.is_token && c.definition.name == "Impulsive Pilferer")
             .expect("one token copy (one opponent)");
         assert!(g.computed_permanent(copy.id).unwrap().keywords().contains(&Keyword::Haste));
-        assert_eq!(copy.goaded_by, vec![0], "attacks-if-able requirement");
+        assert_eq!(copy.chosen_player, Some(1), "attacks-that-opponent-if-able requirement");
+        assert!(g.computed_permanent(copy.id).unwrap().keywords().contains(&Keyword::MustAttackChosenPlayer));
         let copy_id = copy.id;
         // The copy is sacrificed at the beginning of the next end step; its
         // dies-trigger still mints the Treasure.

@@ -5934,3 +5934,34 @@ fn cr_702_174b_octomancer_gifts_the_octopus_to_the_chosen_opponent() {
         g.battlefield.iter().filter(|c| c.definition.name == "Octopus").map(|c| c.controller).collect();
     assert_eq!(octopi, vec![3], "one Octopus, to the opponent with no creatures");
 }
+
+/// CR 702.141a — encore makes one token per opponent, each attacking *that*
+/// opponent if able: two tokens at one seat is an illegal declaration (they
+/// used to be goaded by their controller, which any opponent satisfied).
+#[test]
+fn cr_702_141a_each_encore_token_attacks_its_own_opponent() {
+    let mut g = multi_player_game(3);
+    let dead = g.add_card_to_graveyard(0, catalog::impulsive_pilferer());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: dead, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
+    }).expect("encore from the graveyard");
+    drain_stack(&mut g);
+    let tokens: Vec<(crabomination::card::CardId, Option<usize>)> = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Impulsive Pilferer")
+        .map(|c| (c.id, c.chosen_player))
+        .collect();
+    assert_eq!(tokens.iter().map(|t| t.1).collect::<Vec<_>>(), vec![Some(1), Some(2)], "one token per opponent");
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    let both_at_1 = tokens.iter().map(|t| Attack { attacker: t.0, target: AttackTarget::Player(1) }).collect();
+    assert!(
+        matches!(g.clone().perform_action(GameAction::DeclareAttackers(both_at_1)), Err(GameError::InvalidAttackTarget(2))),
+        "the second token must attack seat 2",
+    );
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: tokens[0].0, target: AttackTarget::Player(1) },
+        Attack { attacker: tokens[1].0, target: AttackTarget::Player(2) },
+    ])).expect("each token at its own opponent");
+}
