@@ -5630,9 +5630,11 @@ impl GameState {
             let mut events = vec![];
             self.return_monarch_guarded_exiles(self.monarch, &mut events);
         }
-        // CR 726.4 — the same succession for the initiative.
+        // CR 726.4 — the same succession for the initiative, and the heir
+        // *takes* it, so CR 726.2's "whenever a player takes the initiative,
+        // that player ventures into Undercity" triggers for them.
         if self.initiative == Some(p) {
-            self.initiative = if self.active_player_idx != p
+            let heir = if self.active_player_idx != p
                 && !self.players[self.active_player_idx].eliminated
             {
                 Some(self.active_player_idx)
@@ -5642,6 +5644,11 @@ impl GameState {
                     .map(|off| (self.active_player_idx + off) % n)
                     .find(|&q| q != p && !self.players[q].eliminated)
             };
+            self.initiative = None;
+            if let Some(q) = heir {
+                let mut events = vec![];
+                self.take_initiative(q, &mut events);
+            }
         }
     }
 

@@ -176,6 +176,9 @@ fn cr_726_4_the_initiative_passes_when_its_holder_leaves() {
     g.players[1].life = 0;
     g.check_state_based_actions();
     assert_eq!(g.initiative, Some(0), "the active player picks it up");
+    // CR 726.2 — and *takes* it, so it ventures into Undercity.
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].dungeon.as_ref().map(|(d, _)| d.as_str()), Some("Undercity"));
 }
 
 // ── CR 905 — Conspiracy Draft ───────────────────────────────────────────────
