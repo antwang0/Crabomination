@@ -19,7 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
-| Bugs & robustness | [FIXED 2026-09-26 (session `015BCEt5`) — the player-choice batch, and a board slot that reached a graveyard](#fixed-2026-09-26-session-015bcet5--the-player-choice-batch-and-a-board-slot-that-reached-a-graveyard) | 38 |
+| Bugs & robustness | [FIXED 2026-09-26 (session `015BCEt5`) — the player-choice batch, and a board slot that reached a graveyard](#fixed-2026-09-26-session-015bcet5--the-player-choice-batch-and-a-board-slot-that-reached-a-graveyard) | 45 |
 | Bugs & robustness | [FIXED 2026-09-26 (session `01VVD5mW`) — Timey-Wimey's follow-ups and a residual sweep](#fixed-2026-09-26-session-01vvd5mw--timey-wimeys-follow-ups-and-a-residual-sweep) | 90 |
 | Bugs & robustness | [FIXED 2026-09-19 (the forty-sixth find) — a static's filter leaf that the chosen `AffectedPermanents` variant cannot carry is SILENTLY DROPPED, and a dropped leaf widens the static](#fixed-2026-09-19-the-forty-sixth-find--a-statics-filter-leaf-that-the-chosen-affectedpermanents-variant-cannot-carry-is-silently-dropped-and-a-dropped-leaf-widens-the-static) | 62 |
 | Bugs & robustness | [FIXED 2026-09-19 (the forty-fifth find) — the INVENTED-ability column, built the way this file's own "CLOSED WITH A REASON" note prescribed, and the eleven cards it named](#fixed-2026-09-19-the-forty-fifth-find--the-invented-ability-column-built-the-way-this-files-own-closed-with-a-reason-note-prescribed-and-the-eleven-cards-it-named) | 68 |
@@ -141,6 +141,17 @@ the handoff.
   `may_target_offboard_card || mentions_offboard_zone`).
 - Denethor and Éomer crown a *target* player; a targeted `BecomeMonarch`
   reads as a gift to the auto-picker.
+- ⚠ **Hate Mirage was never cast** (unplayed in all five pod decks): its
+  token copies read as a gift, so the all-slots walk never spent an
+  optional slot on "creatures you don't control" — a filter that rules out
+  your side now settles the side (`excludes_your_side`).
+- 💡 **The ability census** (`--card-census` lists a played card's printed
+  abilities no seat activated): ~1,500 across the 183 seats. The pod-only
+  `server/generic_sink.rs` takes the ones no shape generator covers when the
+  resolved eval beats passing. ⏳ Still never taken: `{X}` abilities (Geth),
+  discard / graveyard / exile costs (Grimoire of the Dead, Chainer),
+  untap-a-land ramp (Arbor Elf), until-end-of-turn gains outside combat
+  (Whirler Rogue).
 
 ## FIXED 2026-09-26 (session `01VVD5mW`) — Timey-Wimey's follow-ups and a residual sweep
 
