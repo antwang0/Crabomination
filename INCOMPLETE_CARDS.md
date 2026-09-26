@@ -1891,7 +1891,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Cosima, God of the Voyage | From Cute to Brute (SLD) | the voyage ability isn't implemented. |
 | 🟡 Kytheon, Hero of Akros | From Cute to Brute (SLD) | Gideon's +2 lure isn't implemented. |
 | 🟡 Journey to Eternity | From Cute to Brute (SLD) | returns the creature, but not itself transformed. |
-| 🟡 Liliana, Heretical Healer | From Cute to Brute (SLD) | the Defiant Necromancer's −8 emblem isn't implemented. |
 | 🟡 Ludevic, Necrogenius | From Cute to Brute (SLD) | transforms for {U}{U}{B}{B} exiling one creature card; Olag is a 4/4 with counters, not a copy. |
 | 🟡 Nicol Bolas, the Ravager | From Cute to Brute (SLD) | the Arisen's −12 isn't implemented. |
 | 🟡 Kolvori, God of Kinship | From Cute to Brute (SLD) | The Ringhart Crest's mana isn't restricted. |

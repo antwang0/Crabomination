@@ -12,7 +12,6 @@
 //!   implemented.
 //! - **Journey to Eternity** — returns the creature, but not itself
 //!   transformed.
-//! - **Liliana, Defiant Necromancer** — the −8 emblem isn't implemented.
 //! - **Ludevic, Necrogenius** — transforms for {U}{U}{B}{B} exiling one
 //!   creature card; Olag is a plain 4/4 with counters, not a copy.
 //! - **Nicol Bolas, the Arisen** — the −12 isn't implemented.
@@ -901,9 +900,8 @@ pub fn kytheon_hero_of_akros() -> CardDefinition {
     })
 }
 
-/// Liliana, Heretical Healer // Liliana, Defiant Necromancer.
-///
-/// ⚠ Residual: the −8 emblem isn't implemented.
+/// Liliana, Heretical Healer // Liliana, Defiant Necromancer — the −8's
+/// emblem returns each creature that dies at the next end step.
 pub fn liliana_heretical_healer() -> CardDefinition {
     let necromancer = walker(
         "Liliana, Defiant Necromancer",
@@ -925,6 +923,31 @@ pub fn liliana_heretical_healer() -> CardDefinition {
                     to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
                 },
             },
+            // −8: "Whenever a creature dies, return it to the battlefield
+            // under your control at the beginning of the next end step."
+            loyalty(
+                -8,
+                Effect::CreateEmblem {
+                    who: PlayerRef::You,
+                    name: "Liliana, Defiant Necromancer".into(),
+                    statics: vec![],
+                    triggered: vec![TriggeredAbility {
+                        event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer),
+                        effect: Effect::DelayUntilWithCapture {
+                            kind: crate::effect::DelayedTriggerKind::NextEndStep,
+                            capture: Selector::TriggerSource,
+                            body: Box::new(Effect::If {
+                                cond: Predicate::EntityMatches { what: Selector::Target(0), filter: R::InGraveyard },
+                                then: Box::new(Effect::Move {
+                                    what: Selector::Target(0),
+                                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                                }),
+                                else_: Box::new(Effect::Noop),
+                            }),
+                        },
+                    }],
+                },
+            ),
         ],
     );
     legendary(CardDefinition {

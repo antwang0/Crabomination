@@ -409,3 +409,31 @@ fn withengar_grows_when_a_player_loses() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(elbrus).unwrap().counter_count(CounterType::PlusOnePlusOne), 13);
 }
+
+/// Liliana, Defiant Necromancer's −8 emblem: a creature that dies returns
+/// under your control at the beginning of the next end step.
+#[test]
+fn liliana_emblem_returns_the_dead_at_the_end_step() {
+    let mut g = main_phase();
+    library(&mut g, 0, 3);
+    let lili = g.add_card_to_battlefield(0, catalog::liliana_heretical_healer());
+    let mut ctx = EffectContext::for_ability(lili, 0, None);
+    ctx.source = Some(lili);
+    let ev = g.resolve_effect(&crabomination::effect::Effect::ExileSelfReturnTransformed, &ctx).expect("flip");
+    g.dispatch_triggers_for_events(&ev);
+    let lili = on_board(&g, 0, "Liliana, Defiant Necromancer").expect("the planeswalker side");
+    g.battlefield_find_mut(lili).unwrap().add_counters(CounterType::Loyalty, 10);
+    loyalty(&mut g, lili, 2, None);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, Some(Target::Permanent(bear))).expect("Bolt");
+    assert!(g.battlefield_find(bear).is_none(), "it died");
+    for _ in 0..20 {
+        if g.battlefield_find(bear).is_some() || g.step == TurnStep::Cleanup {
+            break;
+        }
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.battlefield_find(bear).map(|c| c.controller), Some(0), "back under Liliana's controller");
+}
