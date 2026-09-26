@@ -387,6 +387,7 @@ impl Effect {
                 f(else_);
             }
             Effect::ForEach { body, .. }
+            | Effect::WatchCombatDamageUntilYourNextTurn { body, .. }
             | Effect::Repeat { body, .. }
             | Effect::RepeatWhileClashWon { body }
             | Effect::EachPlayerDoes { body, .. }
