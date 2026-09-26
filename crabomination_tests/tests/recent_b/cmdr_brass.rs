@@ -447,3 +447,30 @@ fn port_razer_cant_attack_the_same_player_twice_in_a_turn() {
     g.do_untap();
     assert!(g.battlefield_find(razer).unwrap().combat_defenders.is_none());
 }
+
+/// Siren Stormtamer counters a spell that targets you or a *creature* you
+/// control — not one aimed at your artifact.
+#[test]
+fn siren_stormtamer_guards_you_and_your_creatures() {
+    let mut g = main_phase(2);
+    let siren = g.add_card_to_battlefield(0, catalog::siren_stormtamer());
+    let ring = g.add_card_to_battlefield(0, catalog::sol_ring());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let opp_cast = |g: &mut GameState, id: CardId, t: Target| {
+        flood(g, 1);
+        g.priority.player_with_priority = 1;
+        g.perform_action(GameAction::CastSpell { card_id: id, target: Some(t), additional_targets: vec![], mode: None, x_value: None })
+            .expect("opponent casts");
+    };
+    let nat = g.add_card_to_hand(1, catalog::naturalize());
+    opp_cast(&mut g, nat, Target::Permanent(ring));
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    let at_nat = GameAction::ActivateAbility { card_id: siren, ability_index: 0, target: Some(Target::Permanent(nat)), additional_targets: vec![], x_value: None, mode: None };
+    assert!(!g.would_accept(at_nat), "an artifact isn't a creature");
+    drain_stack(&mut g);
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    opp_cast(&mut g, bolt, Target::Permanent(bear));
+    activate(&mut g, siren, 0, &[Target::Permanent(bolt)]).expect("counter the Bolt");
+    assert!(g.battlefield_find(bear).is_some());
+}

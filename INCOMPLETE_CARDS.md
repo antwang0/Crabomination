@@ -1859,7 +1859,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Admiral Beckett Brass | Ahoy Mateys (LCC) | any damage from three Pirates this turn counts, not only combat damage. |
 | 🟡 Gemcutter Buccaneer | Ahoy Mateys (LCC) | Treasures get equip {3} only, not equip Pirate {1}. |
 | 🟡 Merchant Raiders | Ahoy Mateys (LCC) | the lock lasts while it's on the battlefield, not while you control it. |
-| 🟡 Siren Stormtamer | Ahoy Mateys (LCC) | counters spells only, targeting you or any permanent you control. |
+| 🟡 Siren Stormtamer | Ahoy Mateys (LCC) | counters spells only, not abilities. |
 | 🟡 Timestream Navigator | Ahoy Mateys (LCC) | it goes to the bottom as part of the effect, not as a cost. |
 | 🟡 Zara, Renegade Recruiter | Ahoy Mateys (LCC) | the stolen creature is the engine's pick, and you don't look at the rest of the hand. |
 | 🟡 Blue Mage's Cane | Scions & Spellcraft (FIC) | the copy costs the card's own mana cost, not {3}, and the graveyard card isn't exiled. |
