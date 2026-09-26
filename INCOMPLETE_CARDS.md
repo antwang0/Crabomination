@@ -370,6 +370,17 @@ Circuitous Route; Augur of Autumn. Still open:
 | 🟡 Smoke | "can't untap more than one creature" is modelled as no creature untapping. |
 | 🟡 Imprisoned in the Moon | the enchanted permanent doesn't gain "{T}: Add {C}". |
 
+## The pod-deck `audit_incomplete` rows (2026-09-26, session `0199ZAiL`)
+
+`audit_incomplete`'s comment scan intersected with the 183 pod decks gave 153
+rows. Read against their bodies: **37 docs were stale** (the body already did
+what the doc said was missing — rewritten, among them Ponder, Chain Lightning,
+Jeska's Will, Kodama's Reach, Ephemerate), **11 were substring false
+positives** (Indomitable / Brontodon / Oversimplify — the audit now matches a
+marker only at a word start), and **104 are real**: the audit's output is the
+list, each doc names its gap. One was a body bug and is fixed (Expressive
+Iteration bottomed an unseen card). Whole catalog: 841 → 795 rows.
+
 ## Commander additions of session `015BCEt5` (2026-09-26) — the approximations named
 
 `decks::cmdr_top1000` and `decks::cmdr_legends` add 27 COMMANDER_BACKLOG cards

@@ -50,15 +50,18 @@ sixty-seventh pass, so don't re-take that.
 15. **Cards & rules, leftover only:** `audit_dropped_may` 199; `audit_keyword_drift`'s last 4 (bestow / escalate / flashback / kicker) each need a PRIMITIVE; card skips `nocolors` 950 / `noback` 60 / `nosubtypes` 43 / `nokeywords` 29; `audit_incomplete` 858 documented approximations. `audit_panics` clean (70 sites off the bin/test paths: 59 guarded, 11 lock-poison, **0 bare**). ⚠ 605 `definition.is_*()` reads remain and **that is NOT a grep to run to the end**.
 ## NEXT — Commander. The other 3-hour handoff; <= 15 lines. Rewritten each Commander run.
 
-1. ⚠ **Several sessions share this branch: fetch before you start and before every push; rebase, never force** (a concurrent session shipped the same Liesa fix, same variant name, minutes apart this run). New pod seats go at the END of `target_decks()`. Disk: `rm -rf target/debug/incremental` + `find target/debug/deps -maxdepth 1 -type f -size +50M -mmin +20 -delete` before an optimized build (release-fast `bot_ladder` ~11 min). The previous NEXT, verbatim, is ENGINE_BACKLOG's last section.
-2. **State:** all 183 precon seats card-for-card; rules table done bar CR 800.4i (unreachable) and the N-seat encoder (by design). Work left is pod-found bugs and the 🟡 rows (INCOMPLETE_CARDS: ~300 Commander rows, mostly "the engine picks" choices).
-3. **Gates (session `019jxPyq`, 2026-09-26):** suite **23,097 / 0 / 7** strict (before the last card batches; targeted binaries green after); `--bench` **197,136 / 27.77 / 616.0 / 0 stalls byte-identical**, determinism ok, 336 games/s vs 306-326 at the session's base; cube/sos/sealed 3 seeds × 300 (26901-3) all decided bar one legal cube draw.
-4. **Pod smoke:** 3/4/5/6/8 seats × every deck, 200 games a group (seeds 301001+, 40x001+): ~40k games, **zero panics, zero hangs**; undecided = CR 104.4a all-lose draws + two action caps, one fixed below, one a 104-turn 178-permanent token stall (seed 407014 game 180, 6 seats — a board stall, not a loop).
-5. 🔎 **CR 113.10b bug class, fixed:** four trigger walks ignored "loses all abilities" (step triggers, attack self/listener walks, both combat-damage paths). Found by a pod cap: Kimahri copying Bloodthirster under a strip took 561 combats in a turn (Abyssal Persecutor kept the defender alive). `GameState::stripped_permanents()` is the one set; any NEW walk over `definition.triggered_abilities` on the battlefield must read it.
-6. 📐 **Method that paid: `audit_incomplete` ∩ `pod/decks.rs`, each body read against Scryfall.** ~40 shipped pod cards had a wrong or missing printed clause (Finale of Devastation tutored any creature at X=0; Teferi's Protection and Comeuppance were table-wide fogs; Etali milled instead of casting; Aura of Silence taxed its controller; Cankerbloom did all three modes; Veyran had a stray prowess). ~30 % of the doc comments flagged were stale — read the code, not the comment. Tests: `modern/dropped_riders.rs`. Not yet read: the `cmdr_*` rows of that list (`scratchpad`-style: `cargo run --bin audit_incomplete` then filter by pod names).
-7. **New primitives:** `StaticEffect::{CommanderTaxPaidInLife, MonarchControlsEnchanted, SelfFlashbackCostsLess, LifeTaxOpponentSpellsTargetingThis, EquipmentYouControlEquipZeroWhile, DoubleYourInstantSorceryCastTriggers}`, `Effect::CastExiledFree`, `Predicate::TriggerSourceNameUniqueAmongYourCreatures`.
-8. **Leads:** INCOMPLETE_CARDS "Pod-deck cards read against their oracle" (Comeuppance's reflection, Sylvan Library, Conduit of Worlds' {T}, Serra Avenger needs a per-player turns-taken count, Smoke); the 1-row decks list (Sandstone Oracle, Duneblast, Eye of Doom, …) are all "engine picks"; the hostile-opponent approximations (Fiery Justice, Waste Management) need a target-opponent slot beside divided/kicker slots.
-9. ⚠ Card fixes this run touch cube cards too (Etali, Legion Warboss, Puresteel, Howling Mine, Disallow, …): `--bench` can't see them — run the cube/sos/sealed pools after a card batch.
+1. ⚠ **Several sessions share this branch: fetch before you start and before every push; rebase, never force** — two Commander sessions (`019jxPyq`, `0199ZAiL`) ran at once this run and shipped the same Liesa fix minutes apart. New pod seats go at the END of `target_decks()`. Disk: `rm -rf target/debug/incremental` + `find target/debug/deps -maxdepth 1 -type f -size +50M -mmin +20 -delete` before an optimized build (release-fast `bot_ladder` ~11-14 min). The previous NEXT, verbatim, is ENGINE_BACKLOG's last section.
+2. **State:** all 183 precon seats card-for-card; rules table done bar CR 800.4i (unreachable) and the N-seat encoder (by design). Work left is pod-found bugs, the 🟡 rows (INCOMPLETE_CARDS: ~300 Commander rows, mostly "the engine picks") and `--card-census`'s never-activated abilities.
+3. **Gates:** `019jxPyq` — suite **23,097 / 0 / 7** strict, cube/sos/sealed 3 seeds × 300 decided bar one legal cube draw. `0199ZAiL` (tip before this merge) — suite **23,104 / 0 / 7** strict, workspace clippy **0**, `release-fast` check clean. Both: `--bench` **197,136 / 27.77 / 616.0 / 0 stalls byte-identical**, determinism ok.
+4. **Pod smoke:** `019jxPyq` 3/4/5/6/8 seats × every deck, ~40k games (seeds 301001+, 40x001+); `0199ZAiL` three rounds × every deck × 3-8 seats × 300 games (seeds 201003+/202003+/203003+) = 202,500 games, plus 72 strict debug games. **Zero panics, zero hangs.** Undecided: CR 104.4a all-lose draws, Darksteel Angel locks, legal token board caps (Okaun × Hornet Nest ≈ 1,000 Insects), and the loops fixed below.
+5. 🔎 **CR 113.10b bug class, fixed (`019jxPyq`):** four trigger walks ignored "loses all abilities". `GameState::stripped_permanents()` is the one set; any NEW walk over `definition.triggered_abilities` on the battlefield must read it.
+6. 🔎 **CR 701.40a, fixed (`0199ZAiL`):** only a manifested / cloaked card turns up for its mana cost; a Missy Cyberman or an Ixidron'd creature needs morph (`CardInstance::turn_up_by_morph_only`) — a {X}{X} Omarthis looped 3,812 times. Also Koma (another *Serpent*, two modes; it fed a Thopter loop) and Expressive Iteration (exiled/bottomed unseen cards).
+7. 📐 **Method that paid: `audit_incomplete` ∩ `pod/decks.rs`, each body read against Scryfall.** ~40 wrong clauses fixed (`019jxPyq`, tests `modern/dropped_riders.rs`); 37 stale docs rewritten and the audit's substring false positives (Indomitable, Brontodon) fixed (`0199ZAiL`) — 841 → 795 rows; the rest name real gaps. Read the code, not the comment.
+8. **New primitives:** `StaticEffect::{CommanderTaxPaidInLife, MonarchControlsEnchanted, SelfFlashbackCostsLess, LifeTaxOpponentSpellsTargetingThis, EquipmentYouControlEquipZeroWhile, DoubleYourInstantSorceryCastTriggers}`, `Effect::{CastExiledFree, Voyage}`, `TriggerZone::WhileSelfExiled` (Cosima), `Predicate::TriggerSourceNameUniqueAmongYourCreatures`.
+9. **Bot paths added, Commander games only (two-player traces unchanged):** Room doors (`server/room.rs`), a defender's fog + Prismatic Strands' tap-flashback (`server/fog.rs`), Cosima's voyage asks (`server/voyage.rs`), pre-combat evasion grants (`server/evasion.rs`); `019jxPyq`: votes and option asks by settled outcome.
+10. **Leads:** INCOMPLETE_CARDS "Pod-deck cards read against their oracle" (Comeuppance's reflection, Sylvan Library, Conduit of Worlds' {T}, Serra Avenger, Smoke); hostile-opponent approximations (Fiery Justice, Waste Management) need a target-opponent slot; Ace's Baseball Bat needs a filtered "must be blocked by X"; never-activated: Brash Taunter's fight, Bloodline Keeper's transform, many loyalty −N.
+11. ⚠ Card fixes touch cube cards too (Etali, Koma, Expressive Iteration, Disallow, …): `--bench` can't see them — run the cube/sos/sealed pools after a card batch.
+12. **Loop hunting:** `CRAB_CAP_DIAG=1 --first i --games 1` on a cap; a temporary per-action `eprintln!` in `play_one_pod_game_censused` on a debug build (it replays the release game exactly) names the loop in one build.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
@@ -854,14 +857,12 @@ A → B → C → D → E
 ```
 
 #### Open design questions
-1. **Partner / Background commanders** — in scope, or v2? `Deck.commanders:
-   Vec<…>` accommodates either way.
-2. **Brawl / Oathbreaker** — same machinery as Commander; opportunistic
-   to plan in once L/M land.
-3. **CR 810.5 priority timing within a team** — strict per-CR, or start
+1. **Brawl / Oathbreaker** — same machinery as Commander (partners and
+   Backgrounds shipped; FEATURE_ROADMAP's Commander status has them).
+2. **CR 810.5 priority timing within a team** — strict per-CR, or start
    with a simplified "active team's primary player has priority first,
    can pass to teammate"?
-4. **Range of influence** — Commander uses unlimited (everyone in range).
+3. **Range of influence** — Commander uses unlimited (everyone in range).
    Default to unlimited; skip the option unless explicitly requested.
 
 ### Draft

@@ -686,9 +686,12 @@ types). `YouControlACommander` read only your own designations (fixed).
 
 ## OPEN 2026-09-23 — cast variants NO bot ever emits
 
-`GameAction::is_cast` lists 47 variants; `server/bot.rs` builds none of
-these (grep `GameAction::<V>` in `bot.rs`): **foretell (`CastForetold`),
-mutate, room doors, waterbend, sacrifice-reduce, flashback-tap**.
+`GameAction::is_cast` lists 47 variants; the bot builds none of these
+(grep `GameAction::<V>` under `server/`): **mutate, waterbend,
+sacrifice-reduce**. ✅ Foretell (`server/foretell.rs`), room doors
+(`server/room.rs`, 2026-09-26: cast or unlock with idle mana, Commander
+games only — four pod Rooms) and flashback-tap (`server/fog.rs`, Prismatic
+Strands as a defender's fog) are emitted now.
 The engine paths exist and the client can take them; a bot plays the card
 only through its plain cast, or not at all. **Escape, replicate, buyback,
 entwine, squad, fuse, casualty, bargain and retrace** were the same until

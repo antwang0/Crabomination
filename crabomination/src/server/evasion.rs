@@ -101,7 +101,7 @@ mod tests {
         let passage = g.add_card_to_battlefield(0, crate::catalog::rogues_passage());
         let bear = g.add_card_to_battlefield(0, crate::catalog::grizzly_bears());
         let giant = g.add_card_to_battlefield(0, crate::catalog::hill_giant());
-        let wurm = g.add_card_to_battlefield(0, crate::catalog::craw_wurm());
+        g.add_card_to_battlefield(0, crate::catalog::craw_wurm()); // summoning sick
         for id in [bear, giant] {
             g.clear_sickness(id);
         }

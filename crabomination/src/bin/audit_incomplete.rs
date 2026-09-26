@@ -140,8 +140,13 @@ fn collect_rs_files(dir: &Path, out: &mut Vec<PathBuf>) {
     }
 }
 
+/// A marker counts only at the start of a word: "omit" inside Indomitable,
+/// "todo" inside Brontodon and "simplif" inside Oversimplify are card names.
 fn marker_hit(line_lc: &str) -> bool {
-    MARKERS.iter().any(|m| line_lc.contains(m))
+    let b = line_lc.as_bytes();
+    MARKERS.iter().any(|m| {
+        line_lc.match_indices(m).any(|(i, _)| i == 0 || !b[i - 1].is_ascii_alphanumeric())
+    })
 }
 
 fn run_comment_scan() {
