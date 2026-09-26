@@ -449,6 +449,8 @@ pub fn poll_net(
                 chess.running = running;
                 chess.armed_at = time.elapsed_secs_f64();
             }
+            // Table news: a seat dropped, came back, or didn't.
+            ServerMsg::Notice { text } => log.push_colored(text, crate::theme::TEXT_INFO),
             ServerMsg::Chat { seat, name, text } => {
                 chat.0.push((seat, name, text));
                 // The drainers only run in Lobby/InGame; don't let the inbox

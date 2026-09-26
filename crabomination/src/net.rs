@@ -248,6 +248,10 @@ pub enum ServerMsg {
     /// In-match chat from `seat` (display name `name`), already sanitized
     /// by the server. Relayed to every human seat and spectator.
     Chat { seat: usize, name: String, text: String },
+    /// Table news from the server for the game log: a seat dropped (and
+    /// how long it has to come back before it concedes), came back, or
+    /// didn't.
+    Notice { text: String },
 }
 
 // ── Projected view types ─────────────────────────────────────────────────────

@@ -351,6 +351,10 @@ Cross-references the detailed entries below where one exists.
   still going 2.5 s later — a local pod's bots finish in about a second,
   so it is for a network pod. Layout harness: `--viewer-out`,
   `--hold-seat N`, `--deck-picker`.
+- ✅ **A player drops from a network game** (2026-09-26) — the log says so
+  ("Ana disconnected — 60 s to reconnect before they concede", then
+  "reconnected" or "didn't reconnect" + the concession) and the table plays
+  on; before, every other seat waited on the empty chair for good.
 - ⏳ **Bo3 + sideboarding UI** — Learn/Lessons sideboard plumbing exists
   engine-side.
 - ⏳ **Replay viewer** — see "Replay scrubber" (Tier 3 below).

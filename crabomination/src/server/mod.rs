@@ -151,6 +151,11 @@ const DEADLOCK_DUMP_DIR: &str = "debug";
 /// ending the match. Only applies when reconnection is enabled (the standalone
 /// server passes a reattach channel); in-process and non-reconnectable matches
 /// end the instant their last human drops, exactly as before.
+///
+/// It is also how long *one* dropped seat has to come back while the rest of
+/// the table plays on: when it runs out the seat concedes (CR 104.3a), so a
+/// pod isn't left waiting forever the next time that seat must act. A
+/// non-reconnectable match concedes a dropped seat at once — it can't return.
 const RECONNECT_GRACE: Duration = Duration::from_secs(60);
 
 /// Optional per-action timeout (the "rope"): when the seat expected to act
@@ -566,6 +571,9 @@ fn run_match_inner(
     // never tracked for liveness.
     let mut seat_epoch: Vec<u64> = vec![0; n];
     let mut connected: Vec<bool> = vec![false; n];
+    // When each dropped seat that is still in the game concedes unless it
+    // reattaches first (reconnectable matches only; see `RECONNECT_GRACE`).
+    let mut seat_gone_until: Vec<Option<Instant>> = vec![None; n];
     let mut human_seats = 0usize;
 
     // Spectator channels: passive observers that get the same broadcast
@@ -710,6 +718,23 @@ fn run_match_inner(
             return capture_outcome(&state);
         }
 
+        // A seat whose reconnect grace ran out concedes. Not while every
+        // human is gone — that is the whole-match grace below, which ends
+        // the match rather than handing it to whoever dropped last.
+        if disconnect_deadline.is_none() {
+            let now = Instant::now();
+            for (seat, gone) in seat_gone_until.iter_mut().enumerate() {
+                if gone.take_if(|t| *t <= now).is_some() {
+                    if concede_dropped_seat(&mut state, seat, "didn't reconnect", &seat_tx, &spectator_tx) {
+                        broadcast_match_over(&state, &seat_tx, &spectator_tx);
+                        return capture_outcome(&state);
+                    }
+                    publish_snapshot(&state, &snapshot_sink);
+                }
+            }
+        }
+        let seat_deadline = seat_gone_until.iter().flatten().min().copied();
+
         // Pick how long to block waiting for the next message:
         // - spectator-only (no human seats): poll on the deadlock watchdog.
         // - all humans gone within the reconnect grace window: poll until
@@ -789,8 +814,12 @@ fn run_match_inner(
                     }
                 }
             }
-            let clock_deadline: Option<Instant> =
-                clock_since.and_then(|(seat, since)| clock_left[seat].map(|left| since + left));
+            // Wake for a flag fall or a dropped seat's grace, whichever is first.
+            let wake_at: Option<Instant> = clock_since
+                .and_then(|(seat, since)| clock_left[seat].map(|left| since + left))
+                .into_iter()
+                .chain(seat_deadline)
+                .min();
             // Optional rope: bound the wait when a human seat must act.
             let rope_deadline = action_timeout.and_then(|t| {
                 let actor = expected_actor(&state, &GameAction::PassPriority);
@@ -810,10 +839,10 @@ fn run_match_inner(
                 }
             });
             match rope_deadline {
-                None => match clock_deadline {
-                    // A running chess clock bounds the wait even without a
-                    // rope; on expiry the loop re-enters and the billing
-                    // above concedes the flagged seat.
+                None => match wake_at {
+                    // A running chess clock or a dropped seat's grace bounds
+                    // the wait even without a rope; on expiry the loop
+                    // re-enters and concedes the flagged or absent seat.
                     Some(d) => {
                         let wait = d.saturating_duration_since(Instant::now());
                         match merged_rx.recv_timeout(wait) {
@@ -861,8 +890,9 @@ fn run_match_inner(
                         }
                         continue;
                     }
-                    // The chess clock may flag before the rope does.
-                    let wait_until = clock_deadline.map_or(deadline, |c| c.min(deadline));
+                    // The chess clock or a dropped seat's grace may run
+                    // out before the rope does.
+                    let wait_until = wake_at.map_or(deadline, |c| c.min(deadline));
                     match merged_rx.recv_timeout(wait_until.saturating_duration_since(now)) {
                         Ok(msg) => Some(msg),
                         Err(mpsc::RecvTimeoutError::Timeout) => None, // loop re-checks
@@ -883,6 +913,26 @@ fn run_match_inner(
                 if seat < n && connected[seat] && epoch == seat_epoch[seat] {
                     connected[seat] = false;
                     connected_humans = connected_humans.saturating_sub(1);
+                    // A seat still in the game gets the grace to come back,
+                    // or — when it can't come back — concedes now, so the
+                    // rest of the table never waits on an empty chair.
+                    let in_game = !state.players[seat].eliminated && !state.is_game_over();
+                    if in_game && reconnect_enabled {
+                        seat_gone_until[seat] = Some(Instant::now() + reconnect_grace);
+                        let name = &state.players[seat].name;
+                        let secs = reconnect_grace.as_secs();
+                        broadcast_notice(
+                            &format!("{name} disconnected — {secs} s to reconnect before they concede"),
+                            &seat_tx,
+                            &spectator_tx,
+                        );
+                    } else if in_game && connected_humans > 0 {
+                        if concede_dropped_seat(&mut state, seat, "disconnected", &seat_tx, &spectator_tx) {
+                            broadcast_match_over(&state, &seat_tx, &spectator_tx);
+                            return capture_outcome(&state);
+                        }
+                        publish_snapshot(&state, &snapshot_sink);
+                    }
                     // Humans-gone shutdown keys on *humans only* — a lurking
                     // spectator must never keep an abandoned match alive. A
                     // reconnectable match opens its grace window (a player may
@@ -916,6 +966,10 @@ fn run_match_inner(
                     }
                     // Someone's back — cancel any pending grace expiry.
                     disconnect_deadline = None;
+                    if seat_gone_until[seat].take().is_some() {
+                        let name = &state.players[seat].name;
+                        broadcast_notice(&format!("{name} reconnected"), &seat_tx, &spectator_tx);
+                    }
                 }
                 continue;
             }
@@ -1204,8 +1258,39 @@ fn broadcast_match_over(
     }
 }
 
-/// Apply one action and broadcast results. Returns `true` if the action was
-/// accepted (state changed), `false` if it was rejected.
+/// A line of table news (a seat dropped, came back) for every human seat and
+/// spectator's game log.
+fn broadcast_notice(
+    text: &str,
+    seat_tx: &[Option<mpsc::Sender<ServerMsg>>],
+    spectator_tx: &[mpsc::Sender<ServerMsg>],
+) {
+    let msg = ServerMsg::Notice { text: text.to_string() };
+    for tx in seat_tx.iter().flatten().chain(spectator_tx) {
+        let _ = tx.send(msg.clone());
+    }
+}
+
+/// Concede for `seat`, which dropped and can't or didn't come back (CR
+/// 104.3a), telling the table why. Returns `true` if that ended the game.
+fn concede_dropped_seat(
+    state: &mut GameState,
+    seat: usize,
+    why: &str,
+    seat_tx: &[Option<mpsc::Sender<ServerMsg>>],
+    spectator_tx: &[mpsc::Sender<ServerMsg>],
+) -> bool {
+    // Out some other way while it was gone: nothing left to concede.
+    if state.players[seat].eliminated || state.is_game_over() {
+        return false;
+    }
+    broadcast_notice(&format!("{} {why}", state.players[seat].name), seat_tx, spectator_tx);
+    let events = state.concede(seat);
+    let wire: Vec<GameEventWire> = events.iter().map(Into::into).collect();
+    broadcast_update(state, &wire, seat_tx, spectator_tx);
+    state.is_game_over()
+}
+
 /// Broadcast a single combined `Update` (events + post-action view) to every
 /// seat and spectator — one length-prefixed write/flush per recipient instead
 /// of a back-to-back `Events` + `View` pair. Spectators always get seat 0's
@@ -1233,6 +1318,8 @@ fn broadcast_update(
     }
 }
 
+/// Apply one action and broadcast results. Returns `true` if the action was
+/// accepted (state changed), `false` if it was rejected.
 fn handle_action(
     state: &mut GameState,
     seat: usize,
@@ -1841,32 +1928,50 @@ mod tests {
     }
 
     /// One human dropping their channel mid-match must not crash the actor or
-    /// stop it from servicing the remaining human. The forwarder thread for
+    /// stop it from servicing the remaining humans. The forwarder thread for
     /// the dropped seat exits when its `recv` returns Err; the seat's `tx`
     /// is still in `seat_tx` but `let _ = tx.send(...)` swallows the error
-    /// so broadcasts don't propagate the panic.
+    /// so broadcasts don't propagate the panic. A match that can't take the
+    /// seat back concedes it at once (CR 104.3a) — the table would otherwise
+    /// wait on it forever the next time it had to act.
     #[test]
     fn human_disconnect_mid_match_does_not_crash_actor() {
-        let mut state = two_player_game();
+        let mut state = crate::game::multi_player_game(3);
+        state.step = TurnStep::PreCombatMain;
         let card_id = state.add_card_to_hand(0, catalog::plains());
 
         let (s0, c0) = seat_pair();
         let (s1, c1) = seat_pair();
+        let (s2, c2) = seat_pair();
         let handle = thread::spawn(move || {
-            run_match(state, vec![SeatOccupant::Human(s0), SeatOccupant::Human(s1)])
+            run_match(
+                state,
+                vec![SeatOccupant::Human(s0), SeatOccupant::Human(s1), SeatOccupant::Human(s2)],
+            )
         });
 
         drain_initial(&c0);
         drain_initial(&c1);
+        drain_initial(&c2);
 
-        // Seat 1 disconnects before doing anything. Give the forwarder
-        // thread a moment to notice and exit.
-        drop(c1);
-        thread::sleep(Duration::from_millis(20));
+        // Seat 2 disconnects before doing anything: the table hears why, then
+        // sees it concede.
+        drop(c2);
+        match c0.rx.recv_timeout(Duration::from_secs(2)).unwrap() {
+            ServerMsg::Notice { text } => assert_eq!(text, "P2 disconnected"),
+            other => panic!("expected the drop notice, got {other:?}"),
+        }
+        match c0.rx.recv_timeout(Duration::from_secs(2)).unwrap() {
+            ServerMsg::Update { events, .. } => assert!(
+                events.iter().any(|e| matches!(e, GameEventWire::PlayerConceded { player: 2 })),
+                "{events:?}",
+            ),
+            other => panic!("expected the concession, got {other:?}"),
+        }
 
         // Seat 0 keeps playing — this must succeed and produce a normal
         // combined Update on c0, no panic on the broadcast to the
-        // already-dead seat 1.
+        // already-dead seat 2.
         c0.tx
             .send(ClientMsg::SubmitAction(GameAction::PlayLand(card_id)))
             .unwrap();
@@ -1878,7 +1983,72 @@ mod tests {
         );
 
         drop(c0);
+        drop(c1);
         handle.join().unwrap();
+    }
+
+    /// The pod stall: the seat the table is waiting on drops and never comes
+    /// back. It gets the reconnect grace, then concedes (CR 104.3a), and the
+    /// rest of the table plays on — nobody is left waiting on an empty chair.
+    #[test]
+    fn a_dropped_seat_the_table_waits_on_concedes_when_its_grace_runs_out() {
+        let mut state = crate::game::multi_player_game(3);
+        state.step = TurnStep::PreCombatMain;
+        let (s0, c0) = seat_pair();
+        let (s1, c1) = seat_pair();
+        let (s2, c2) = seat_pair();
+        let (_reattach_tx, reattach_rx) = mpsc::channel();
+        let handle = thread::spawn(move || {
+            run_match_inner(
+                state,
+                vec![SeatOccupant::Human(s0), SeatOccupant::Human(s1), SeatOccupant::Human(s2)],
+                vec![],
+                None,
+                Some(reattach_rx),
+                None,
+                Duration::from_millis(150),
+                None,
+                None,
+            )
+        });
+        drain_initial(&c0);
+        drain_initial(&c1);
+        drain_initial(&c2);
+
+        // Seat 0 is active and holds priority — the seat everyone waits on.
+        drop(c0);
+        let msgs = drain_within(&c1.rx, 3, Duration::from_secs(3));
+        let notices: Vec<&str> = msgs
+            .iter()
+            .filter_map(|m| match m {
+                ServerMsg::Notice { text } => Some(text.as_str()),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(
+            notices,
+            ["P0 disconnected — 0 s to reconnect before they concede", "P0 didn't reconnect"],
+        );
+        let Some(ServerMsg::Update { events, view }) = msgs.last() else {
+            panic!("expected the concession after the notices: {msgs:?}");
+        };
+        assert!(
+            events.iter().any(|e| matches!(e, GameEventWire::PlayerConceded { player: 0 })),
+            "{events:?}",
+        );
+
+        // Whoever the game waits on now is still at the table, and can act.
+        let actor = view.priority;
+        assert_ne!(actor, 0, "the game still waits on the seat that left");
+        let tx = if actor == 1 { &c1 } else { &c2 };
+        tx.tx.send(ClientMsg::SubmitAction(GameAction::PassPriority)).unwrap();
+        let after = drain_within(&tx.rx, 1, Duration::from_secs(2));
+        assert!(matches!(after.first(), Some(ServerMsg::Update { .. })), "{after:?}");
+
+        drop(c1);
+        drop(c2);
+        let outcome = handle.join().unwrap();
+        assert_eq!(outcome.winner, None, "the match ended with no winner when the table emptied");
     }
 
     /// When every human seat drops, the match thread must terminate cleanly
@@ -1982,7 +2152,9 @@ mod tests {
         drop(c1);
         thread::sleep(Duration::from_millis(30));
 
-        // Seat 0 plays its land — proves the match is still running.
+        // Seat 0 hears about it, then plays its land — proves the match is
+        // still running.
+        assert!(matches!(c0.rx.recv().unwrap(), ServerMsg::Notice { .. }));
         c0.tx
             .send(ClientMsg::SubmitAction(GameAction::PlayLand(card0)))
             .unwrap();
@@ -2006,6 +2178,15 @@ mod tests {
             ),
             other => panic!("expected replayed View, got {other:?}"),
         }
+
+        // Back inside the grace: the table hears it, and the seat does not
+        // concede when the grace would have run out.
+        match c0.rx.recv_timeout(Duration::from_secs(2)).unwrap() {
+            ServerMsg::Notice { text } => assert_eq!(text, "P1 reconnected"),
+            other => panic!("expected the reconnect notice, got {other:?}"),
+        }
+        let later = drain_within(&c0.rx, 4, Duration::from_millis(400));
+        assert!(later.is_empty(), "a seat that came back must not concede: {later:?}");
 
         drop(c0);
         drop(c1b);
@@ -2052,7 +2233,8 @@ mod tests {
     }
 
     /// A reattach inside the grace window cancels the pending expiry and keeps
-    /// the match alive.
+    /// the match alive — as long as every dropped seat comes back; one that
+    /// stays away concedes (`a_seat_that_stays_away_concedes_to_the_one_that_came_back`).
     #[test]
     fn reconnect_within_grace_keeps_match_alive() {
         let state = two_player_game();
@@ -2088,6 +2270,10 @@ mod tests {
         assert!(matches!(c0b.rx.recv().unwrap(), ServerMsg::YourSeat(0)));
         assert!(matches!(c0b.rx.recv().unwrap(), ServerMsg::MatchStarted));
         assert!(matches!(c0b.rx.recv().unwrap(), ServerMsg::View(_)));
+        thread::sleep(Duration::from_millis(100));
+        let (s1b, c1b) = seat_pair();
+        reattach_tx.send((1, s1b)).unwrap();
+        assert!(matches!(c1b.rx.recv().unwrap(), ServerMsg::YourSeat(1)));
 
         // With seat 0 reconnected the deadline is cleared, so the match must
         // NOT end even after the original grace would have elapsed.
@@ -2096,14 +2282,56 @@ mod tests {
             "a within-grace reattach must keep the match running",
         );
 
-        // Tear down: drop the reconnected seat; with all humans gone again and
+        // Tear down: drop the reconnected seats; with all humans gone again and
         // no further reattach, the match ends after the grace window.
         drop(c0b);
+        drop(c1b);
         drop(reattach_tx);
         done_rx
             .recv_timeout(Duration::from_secs(2))
             .expect("match ends after the final grace window");
-        let _ = handle.join();
+        let outcome = handle.join().unwrap();
+        assert_eq!(outcome.winner, None, "an emptied table has no winner");
+    }
+
+    /// Both seats drop and only seat 0 comes back: the whole-match grace is
+    /// off, and seat 1's own grace runs out — it concedes (CR 104.3a), and the
+    /// seat that came back wins rather than waiting on it forever.
+    #[test]
+    fn a_seat_that_stays_away_concedes_to_the_one_that_came_back() {
+        let state = two_player_game();
+        let (s0, c0) = seat_pair();
+        let (s1, c1) = seat_pair();
+        let (reattach_tx, reattach_rx) = mpsc::channel();
+        let handle = thread::spawn(move || {
+            run_match_inner(
+                state,
+                vec![SeatOccupant::Human(s0), SeatOccupant::Human(s1)],
+                vec![],
+                None,
+                Some(reattach_rx),
+                None,
+                Duration::from_millis(200),
+                None,
+                None,
+            )
+        });
+        drain_initial(&c0);
+        drain_initial(&c1);
+
+        drop(c0);
+        drop(c1);
+        thread::sleep(Duration::from_millis(50));
+        let (s0b, c0b) = seat_pair();
+        reattach_tx.send((0, s0b)).unwrap();
+        let msgs = drain_within(&c0b.rx, 8, Duration::from_secs(3));
+        assert!(
+            msgs.iter().any(|m| matches!(m, ServerMsg::Notice { text } if text == "P1 didn't reconnect")),
+            "{msgs:?}",
+        );
+        assert!(msgs.iter().any(|m| matches!(m, ServerMsg::MatchOver { winner: Some(0) })), "{msgs:?}");
+        assert_eq!(handle.join().unwrap().winner, Some(Some(0)));
+        drop(reattach_tx);
     }
 
     // ── Mid-match spectators (run_match_reconnectable_spectatable) ───────────

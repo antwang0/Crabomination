@@ -658,7 +658,11 @@ Each a small targeted feature; sweep batch by batch.
 - ✅ **Reconnect / resume** — resume tokens + backoff retry + full snapshot
   restore + a "reconnecting (N/10)…" client banner; tokens persist to disk /
   localStorage so a crashed client gets a menu "Rejoin Last Match" button
-  (cleared on clean exit / match end).
+  (cleared on clean exit / match end). A seat that drops while the rest of
+  the table plays on gets the same 60 s (`RECONNECT_GRACE`), then concedes
+  (CR 104.3a) — a pod used to wait on it forever, the rope being off by
+  default; a non-reconnectable match (LAN host) concedes it at once. The
+  table hears each step as a log line (`ServerMsg::Notice`).
 - ✅ **Spectator mode** (read-only `ClientView` stream).
 - ✅ **Player identity** — editable display name reaches every seat + log lines,
   persisted across launches.
