@@ -1863,7 +1863,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Mirkwood Trapper | Elven Council (LTC) | the shrunk attacker is the first one declared, not a target; the second ability isn't implemented. |
 | 🟡 Sail into the West | Elven Council (LTC) | on embark every player wheels; the "may" isn't offered. |
 | 🟡 Admiral Beckett Brass | Ahoy Mateys (LCC) | any damage from three Pirates this turn counts, not only combat damage. |
-| 🟡 Departed Deckhand | Ahoy Mateys (LCC) | it's sacrificed when any spell or ability targets it. |
 | 🟡 Gemcutter Buccaneer | Ahoy Mateys (LCC) | Treasures get equip {3} only, not equip Pirate {1}. |
 | 🟡 Merchant Raiders | Ahoy Mateys (LCC) | the lock lasts while it's on the battlefield, not while you control it. |
 | 🟡 Port Razer | Ahoy Mateys (LCC) | its trigger fires once a turn instead of "can't attack a player it has already attacked this turn". |

@@ -5,8 +5,6 @@
 //! Residuals (each also on its card):
 //! - **Admiral Beckett Brass** — any damage from three Pirates this turn
 //!   counts, not only combat damage.
-//! - **Departed Deckhand** — it's sacrificed when any spell *or ability*
-//!   targets it.
 //! - **Gemcutter Buccaneer** — Treasures get equip {3} only, not equip
 //!   Pirate {1}.
 //! - **Merchant Raiders** — the lock lasts while it's on the battlefield,
@@ -291,14 +289,16 @@ pub fn coercive_recruiter() -> CardDefinition {
 
 /// Departed Deckhand — sacrificed when targeted; only Spirits block it;
 /// {3}{U}: another creature of yours gains that evasion this turn.
-///
-/// ⚠ Residual: any spell or ability targeting it sacrifices it.
 pub fn departed_deckhand() -> CardDefinition {
     let spirits_only = || Keyword::CantBeBlockedExceptBy(Box::new(R::HasCreatureType(CreatureType::Spirit)));
     CardDefinition {
         keywords: vec![spirits_only()],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::BecameTarget, EventScope::SelfSource),
+            // "…becomes the target of a spell" — not an ability.
+            event: EventSpec {
+                causer_filter: Some(R::IsSpellOnStack),
+                ..EventSpec::new(EventKind::BecameTarget, EventScope::SelfSource)
+            },
             effect: Effect::SacrificeSource,
         }],
         activated_abilities: vec![ActivatedAbility {

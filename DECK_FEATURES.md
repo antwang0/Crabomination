@@ -3218,7 +3218,7 @@ the evasion), `ControlledByPlayerDamagedByAtLeast` (Admiral Beckett Brass),
 `Effect::ReturnToOwnersHandAtNextEndStep` (Zara). ⚠ **Port Razer loops
 without its attack restriction** ("can't attack a player it has already
 attacked this turn" has no primitive), so its trigger is once a turn to
-keep games finite. Residuals: **Admiral Beckett Brass**, **Departed Deckhand**, **Gemcutter Buccaneer**, **Merchant
+keep games finite. Residuals: **Admiral Beckett Brass**, **Gemcutter Buccaneer**, **Merchant
 Raiders**, **Port Razer**, **Siren Stormtamer**, **Timestream Navigator**, **Zara, Renegade Recruiter**. A 200-game
 census beside Galadriel / Kamiz / Zimone (seed 158) decided 200/200 with
 zero panics and no card unplayed, Brass winning 30.5 %. `--bench`

@@ -216,6 +216,18 @@ fn departed_deckhand_departs() {
     assert!(g.players[0].graveyard.iter().any(|c| c.id == d));
 }
 
+/// Departed Deckhand leaves only when a *spell* targets it: an ability's
+/// ping just damages it.
+#[test]
+fn departed_deckhand_ignores_abilities() {
+    let mut g = main_phase(2);
+    let d = g.add_card_to_battlefield(0, catalog::departed_deckhand());
+    let tim = g.add_card_to_battlefield(0, catalog::prodigal_sorcerer());
+    g.clear_sickness(tim);
+    activate(&mut g, tim, 0, &[Target::Permanent(d)]).expect("ping it");
+    assert!(g.battlefield_find(d).is_some(), "an ability isn't a spell");
+}
+
 /// Don Andres pumps the creatures you've stolen.
 #[test]
 fn don_andres_empowers_the_stolen() {
