@@ -2379,8 +2379,8 @@ fn emergency_powers_wheels_and_exiles() {
     assert!(g.exile.iter().any(|c| c.id == spell), "Emergency Powers exiled itself");
 }
 
-/// Revival returns a small creature from the graveyard; Revenge halves each
-/// opponent's life and gains you that much.
+/// Revival returns a small creature from the graveyard; Revenge doubles your
+/// life total, then halves target opponent's, rounded up.
 #[test]
 fn revival_revenge_split() {
     // Revival (left half).
@@ -2406,10 +2406,10 @@ fn revival_revenge_split() {
     g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add_colorless(4);
-    g.perform_action(GameAction::CastSplitRight { card_id: cast, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("cast Revenge");
+    g.perform_action(GameAction::CastSplitRight { card_id: cast, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None }).expect("cast Revenge");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, 10, "opponent lost half of 20");
-    assert_eq!(g.players[0].life, my_life + 10, "gained the 10 lost");
+    assert_eq!(g.players[0].life, my_life * 2, "your life total doubled");
 }
 
 /// Rakdos, the Showstopper flips for each non-Demon/Devil/Imp creature and

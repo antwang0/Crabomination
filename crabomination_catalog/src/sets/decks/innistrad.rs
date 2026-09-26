@@ -1545,7 +1545,7 @@ pub fn catapult_fodder() -> CardDefinition {
             tap_cost: true,
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
             effect: Effect::LoseLife {
-                who: Selector::Player(PlayerRef::EachOpponent),
+                who: crate::effect::shortcut::target_filtered(SelectionRequirement::OpponentPlayer),
                 amount: Value::SacrificedToughness,
             },
             ..Default::default()

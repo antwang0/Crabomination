@@ -1874,7 +1874,7 @@ fn catapult_fodder_transforms_and_captain_drains() {
     g.players[0].mana_pool.add_colorless(2);
     g.step = TurnStep::PreCombatMain;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: fodder, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
+        card_id: fodder, ability_index: 0, target: Some(Target::Player(1)), additional_targets: vec![], x_value: None, mode: None,
     }).expect("captain drain");
     drain_stack(&mut g);
     let _ = victim;

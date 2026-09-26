@@ -4702,9 +4702,8 @@ pub fn eyes_everywhere() -> CardDefinition {
 
 /// Revival // Revenge — {W/B}{W/B} // {4}{W}{B} Sorcery // Sorcery. Revival
 /// returns a creature with mana value 3 or less from your graveyard to the
-/// battlefield; Revenge makes each opponent lose half their life (rounded up)
-/// and you gain that much. (The gain reads life the opponent lost this turn —
-/// exact in a duel.)
+/// battlefield; Revenge doubles your life total, then target opponent loses
+/// half their life, rounded up.
 pub fn revival_revenge() -> CardDefinition {
     CardDefinition {
         name: "Revival // Revenge",
@@ -4724,15 +4723,11 @@ pub fn revival_revenge() -> CardDefinition {
             right: crate::card::SplitHalf {
                 cost: cost(&[generic(4), w(), b()]),
                 card_types: vec![CardType::Sorcery],
+                // Doubling a life total is gaining that much (life-gain
+                // replacements apply); then one target opponent.
                 effect: Effect::Seq(vec![
-                    Effect::LoseHalfLife {
-                        who: Selector::Player(PlayerRef::EachOpponent),
-                        rounded_up: true,
-                    },
-                    Effect::GainLife {
-                        who: Selector::You,
-                        amount: Value::LifeLostThisTurn(PlayerRef::EachOpponent),
-                    },
+                    Effect::GainLife { who: Selector::You, amount: Value::LifeOf(PlayerRef::You) },
+                    Effect::LoseHalfLife { who: target_filtered(R::OpponentPlayer), rounded_up: true },
                 ]),
             },
             fuse: false,
