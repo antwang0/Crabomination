@@ -1219,6 +1219,10 @@ pub enum Value {
     /// zone this game, summed over both partners (the commander-tax count;
     /// Thunderclap Drake's copies).
     CommanderCastsFromCommandZone(PlayerRef),
+    /// CR 903.8 — times the commander(s) `what` names have been cast from the
+    /// command zone this game, each partner on its own count. A cost static
+    /// reads the spell being cast as `Selector::TriggerSource` (Myth Unbound).
+    CommanderCastsOf(Box<Selector>),
     /// Greatest power among creatures the controller controls *and* creature
     /// cards in the controller's graveyard (0 if none). Ambitious Dragonborn
     /// enters with X +1/+1 counters equal to this.

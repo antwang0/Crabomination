@@ -111,6 +111,34 @@ fn cr_903_9_myth_unbound_draws_on_both_routes_home() {
     assert_eq!(g.players[0].hand.len(), 2, "drew for the 903.9b return");
 }
 
+/// CR 903.8 — Myth Unbound discounts each commander by *its own* casts from
+/// the command zone: a partner cast three times doesn't make the other free.
+#[test]
+fn cr_903_8_myth_unbound_counts_each_partner_on_its_own() {
+    let mut g = main_phase(2);
+    let ids = g.seat_commanders(0, vec![catalog::hill_giant(), catalog::grizzly_bears()]);
+    let (giant, bears) = (ids[0], ids[1]);
+    g.commander_cast_count.insert(giant, 3);
+    g.add_card_to_battlefield(0, catalog::myth_unbound());
+    let cast = |g: &mut GameState| {
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::CastFromCommandZone {
+            card_id: bears,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+            alternative: false,
+            pitch_card: None,
+        })
+    };
+    g.players[0].mana_pool.add(Color::Green, 1);
+    assert!(cast(&mut g).is_err(), "the Giant's casts don't discount the Bears");
+    g.players[0].mana_pool.empty();
+    g.players[0].mana_pool.add(Color::Green, 2);
+    cast(&mut g).expect("{1}{G}, untaxed and undiscounted");
+}
+
 /// Empyrial Storm is copied once per cast of your commander from the command
 /// zone.
 #[test]

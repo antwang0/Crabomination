@@ -1432,6 +1432,17 @@ impl GameState {
                     .map(|id| self.commander_cast_count.get(id).copied().unwrap_or(0) as i32)
                     .sum()
             }
+            Value::CommanderCastsOf(what) => self
+                .resolve_selector(what, ctx)
+                .into_iter()
+                .filter_map(|e| match e {
+                    EntityRef::Card(id) | EntityRef::Permanent(id) => {
+                        self.commander_cast_count.get(&id).copied()
+                    }
+                    _ => None,
+                })
+                .map(|n| n as i32)
+                .sum(),
             Value::DistinctManaValuesInGraveyard(who) => {
                 let Some(p) = self.resolve_player(who, ctx) else { return 0 };
                 let mut mvs: Vec<u32> = self.players[p]

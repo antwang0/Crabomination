@@ -1965,7 +1965,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Will of the Temur | Temur Roar (TDC) | "if you control a commander as you cast this spell" is read as it resolves. |
 | 🟡 Estrid, the Masked | Adaptive Enchantment (C18) | the −7's Auras go on hosts the engine picks. |
 | 🟡 Genesis Storm | Adaptive Enchantment (C18) | the revealed permanent always goes onto the battlefield ("you may" isn't offered). |
-| 🟡 Myth Unbound | Adaptive Enchantment (C18) | the discount counts both partners' casts from the command zone together. |
 | 🟡 Clay Golem | Aura of Courage (AFC) | the d8 is rolled as the ability resolves, not paid as a cost. |
 | 🟡 Song of Inspiration | Aura of Courage (AFC) | the cards return before the roll (both results return them); only the life gain waits on it. |
 | 🟡 Valiant Endeavor | Aura of Courage (AFC) | the creatures with enough power are destroyed one at a time, not simultaneously. |

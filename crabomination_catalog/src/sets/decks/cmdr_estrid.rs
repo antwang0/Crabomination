@@ -421,15 +421,15 @@ pub fn loyal_unicorn() -> CardDefinition {
 }
 
 /// Myth Unbound — your commander costs {1} less per cast from the command
-/// zone; whenever it's put into the command zone, draw a card. ⚠ Partners'
-/// casts are counted together.
+/// zone (each partner its own count, CR 903.8); whenever it's put into the
+/// command zone, draw a card.
 pub fn myth_unbound() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "Your commander costs {1} less to cast for each time it's been cast from the command zone this game.",
             effect: StaticEffect::CostReductionByValue {
                 filter: R::IsCommander,
-                amount: Value::CommanderCastsFromCommandZone(PlayerRef::You),
+                amount: Value::CommanderCastsOf(Box::new(Selector::TriggerSource)),
             },
         }],
         triggered_abilities: vec![TriggeredAbility {

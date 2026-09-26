@@ -1993,9 +1993,12 @@ pub(crate) fn cost_reduction_for_spell_full_over<'a>(
                     if src.controller == caster
                         && state.evaluate_requirement_on_card(filter, card, caster) =>
                 {
-                    let ctx = crate::game::effects::EffectContext::for_trigger(
+                    // The spell being cast is the trigger source, so a
+                    // per-spell read can name it (Myth Unbound's commander).
+                    let mut ctx = crate::game::effects::EffectContext::for_trigger(
                         src.id, caster, None, 0,
                     );
+                    ctx.trigger_source = Some(crate::game::effects::EntityRef::Card(card.id));
                     reduction += state.evaluate_value(amount, &ctx).max(0) as u32;
                 }
                 StaticEffect::FirstMatchingSpellEachTurnCostsLessPerCounter { filter, kind }
