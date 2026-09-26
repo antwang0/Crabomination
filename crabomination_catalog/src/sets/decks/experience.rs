@@ -14,9 +14,8 @@ use crate::effect::{PlayerRef, ZoneDest};
 use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 /// Mizzix of the Izmagnus — {2}{U}{R} 2/2 Legendary Goblin Wizard. Cast an
-/// instant or sorcery → get an experience counter; those spells cost {X} less,
-/// X = your experience. (The printed "with mana value greater than your
-/// experience" runaway gate is approximated as any I/S cast.)
+/// instant or sorcery with mana value greater than your experience → get an
+/// experience counter; those spells cost {X} less, X = your experience.
 pub fn mizzix_of_the_izmagnus() -> CardDefinition {
     CardDefinition {
         name: "Mizzix of the Izmagnus",
@@ -30,8 +29,15 @@ pub fn mizzix_of_the_izmagnus() -> CardDefinition {
         power: 2,
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
-                .with_filter(cast_is_instant_or_sorcery()),
+            // "…with mana value greater than the number of experience
+            // counters you have" — it counted every instant and sorcery.
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(Predicate::All(vec![
+                cast_is_instant_or_sorcery(),
+                Predicate::ValueAtLeast(
+                    Value::ManaValueOf(Box::new(Selector::TriggerSource)),
+                    Value::Sum(vec![Value::ControllerExperience, Value::ONE]),
+                ),
+            ])),
             effect: Effect::AddExperience(Value::Const(1)),
         }],
         static_abilities: vec![StaticAbility {

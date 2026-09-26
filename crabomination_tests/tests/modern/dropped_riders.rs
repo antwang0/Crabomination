@@ -571,3 +571,17 @@ fn disallow_counters_a_triggered_ability() {
     drain_stack(&mut g);
     assert!(!g.battlefield.iter().any(|c| c.definition.name == "Goblin"));
 }
+
+/// Mizzix of the Izmagnus — experience only for an instant or sorcery with
+/// mana value *greater than* your experience: at 1, a Bolt gives none.
+#[test]
+fn mizzix_gains_experience_only_above_its_count() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::mizzix_of_the_izmagnus());
+    g.players[0].experience = 1;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast(&mut g, bolt, Some(Target::Player(1))).expect("bolt, {R} after the discount too");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].experience, 1, "mana value 1 is not greater than 1");
+}
