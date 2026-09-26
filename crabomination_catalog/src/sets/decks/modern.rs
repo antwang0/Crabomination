@@ -21138,10 +21138,8 @@ pub fn bola_slinger() -> CardDefinition {
 
 /// Kari Zev, Skyship Raider — {1}{R} Legendary Creature — Human Pirate 1/3.
 /// First strike, menace. Whenever Kari Zev attacks, create Ragavan, a
-/// legendary 2/1 red Monkey creature token. Ragavan is tapped and attacking.
-///
-/// Approximation: creates a 2/1 Monkey token on attack (the token being
-/// tapped-and-attacking and exiled at end of combat is omitted).
+/// legendary 2/1 red Monkey creature token, tapped and attacking; exile it at
+/// end of combat.
 pub fn kari_zev_skyship_raider() -> CardDefinition {
     CardDefinition {
         name: "Kari Zev, Skyship Raider",
@@ -21157,9 +21155,11 @@ pub fn kari_zev_skyship_raider() -> CardDefinition {
         keywords: vec![Keyword::FirstStrike, Keyword::Menace],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
-            effect: Effect::CreateToken {
+            effect: Effect::CreateTokenAttacking {
                 who: PlayerRef::You,
                 count: Value::Const(1),
+                cleanup: crate::effect::AttackingTokenCleanup::ExileAtEndOfCombat,
+                defender: None,
                 definition: std::sync::Arc::new(TokenDefinition {
                     name: "Ragavan".into(),
                     power: 2,

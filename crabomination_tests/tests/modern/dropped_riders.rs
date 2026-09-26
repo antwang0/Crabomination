@@ -218,3 +218,24 @@ fn nahiri_ultimate_hastes_and_returns() {
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == giant), "back to hand at the end step");
 }
+
+/// Kari Zev, Skyship Raider — Ragavan enters tapped and attacking (CR 508.3a)
+/// and is exiled at end of combat.
+#[test]
+fn kari_zev_ragavan_attacks_and_leaves() {
+    let mut g = main_phase();
+    let kari = g.add_card_to_battlefield(0, catalog::kari_zev_skyship_raider());
+    g.clear_sickness(kari);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![crabomination::game::types::Attack {
+        attacker: kari,
+        target: crabomination::game::types::AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    let rag = g.battlefield.iter().find(|c| c.definition.name == "Ragavan").expect("Ragavan").id;
+    assert!(g.battlefield_find(rag).unwrap().tapped);
+    assert!(g.attacking.iter().any(|a| a.attacker == rag), "tapped and attacking");
+    g.process_attacking_token_cleanup();
+    assert!(g.battlefield_find(rag).is_none(), "exiled at end of combat");
+}
