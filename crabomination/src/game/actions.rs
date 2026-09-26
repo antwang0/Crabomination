@@ -16794,8 +16794,17 @@ impl GameState {
             if events.is_empty() {
                 events.reserve(16);
             }
-            let result = if let Some(color) = fresh {
+            if let Some(color) = fresh {
                 covered[color_index(color)] = true;
+            }
+            // A prompting seat's any-color source (Command Tower) would
+            // suspend on its color prompt mid-payment and leave it pending
+            // after the payment gave up — answered later, it minted mana off
+            // a source that never stayed tapped (a six-seat pod recast one
+            // Aura into ward 400 times). Force it synchronous like the
+            // colored loop; a generic pip takes any color.
+            let forced = fresh.or_else(|| self.players[player].wants_ui.then_some(ManaColor::White));
+            let result = if let Some(color) = forced {
                 // Same one-color-decider device as the colored-pip loop:
                 // an `AnyOneColor` source must add the fresh color, not
                 // the AutoDecider's default White.

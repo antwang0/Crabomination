@@ -6052,3 +6052,19 @@ fn cr_702_104a_tribute_asks_the_chosen_opponent() {
     }
     assert_eq!(g.pending_decision.as_ref().expect("the tribute ask is posed").acting_player(), 2);
 }
+
+/// CR 605.3b — auto-tapping an any-color source for a generic pip resolves its
+/// mana ability on the spot, even for a seat that answers prompts: it used to
+/// suspend on the color choice mid-payment, the payment gave up, and the
+/// orphaned prompt later minted mana from a land that never stayed tapped (a
+/// seven-seat pod recast one Aura into ward 400 times off one Command Tower).
+#[test]
+fn auto_tap_resolves_an_any_color_source_inline_for_a_prompting_seat() {
+    let mut g = multi_player_game(3);
+    g.players[0].wants_ui = true;
+    let city = g.add_card_to_battlefield(0, catalog::city_of_brass());
+    g.auto_tap_for_cost(0, &crabomination::mana::cost(&[crabomination::mana::generic(1)]));
+    assert!(g.battlefield_find(city).unwrap().tapped, "the land paid");
+    assert_eq!(g.players[0].mana_pool.total(), 1, "and its mana is in the pool now");
+    assert!(g.pending_decision.is_none());
+}
