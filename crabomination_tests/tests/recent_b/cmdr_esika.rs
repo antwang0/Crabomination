@@ -304,6 +304,35 @@ fn kolvori_with_three_legends() {
     assert!(g.computed_permanent(kolvori).unwrap().keywords().contains(&Keyword::Vigilance));
 }
 
+/// The Ringhart Crest's {G} casts only a creature spell of the chosen type
+/// or a legendary creature spell (CR 106.6 — a spending restriction).
+#[test]
+fn ringhart_crest_mana_is_restricted() {
+    use crabomination::card::CreatureType;
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = main_phase();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::CreatureType(CreatureType::Elf)]));
+    let crest = g.add_card_to_hand(0, catalog::kolvori_god_of_kinship());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpellBack { card_id: crest, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast The Ringhart Crest");
+    drain_stack(&mut g);
+    g.players[0].mana_pool.empty();
+    let try_cast = |g: &mut GameState, id: CardId| {
+        g.perform_action(GameAction::CastSpell { card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None })
+    };
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(1);
+    assert!(try_cast(&mut g, bears).is_err(), "a Bear isn't an Elf or legendary");
+    g.players[0].mana_pool.empty();
+    let kinnan = g.add_card_to_hand(0, catalog::kinnan_bonder_prodigy());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    try_cast(&mut g, kinnan).expect("a legendary creature spell takes the Crest's {G}");
+    drain_stack(&mut g);
+    assert!(on_board(&g, 0, "Kinnan, Bonder Prodigy").is_some());
+}
+
 /// The snow duals enter tapped (table-driven).
 #[test]
 fn snow_duals_enter_tapped() {

@@ -12548,6 +12548,18 @@ impl GameState {
                             chosen.map(crate::mana::SpendRestriction::CreatureOfTypeOrItsAbility),
                         )
                     }
+                    // The Ringhart Crest: the chosen type's creature spells
+                    // or any legendary creature spell.
+                    ManaPayload::RestrictedToChosenTypeOrLegendary(inner) => {
+                        let chosen = ctx
+                            .source
+                            .and_then(|cid| self.battlefield_find(cid))
+                            .and_then(|c| c.chosen_creature_type);
+                        (
+                            inner.as_ref(),
+                            chosen.map(crate::mana::SpendRestriction::CreatureOfTypeOrLegendaryCreature),
+                        )
+                    }
                     // Throne of Eldraine: bound to the source's chosen color.
                     ManaPayload::RestrictedToChosenColorMono(inner) => {
                         let chosen = ctx
@@ -13143,6 +13155,7 @@ impl GameState {
                     | ManaPayload::RestrictedToChosenType(..)
                     | ManaPayload::RestrictedToChosenTypePlain(..)
                     | ManaPayload::RestrictedToChosenTypeOrAbility(..)
+                    | ManaPayload::RestrictedToChosenTypeOrLegendary(..)
                     | ManaPayload::RestrictedToChosenColorMono(..) => {
                         // One unwrap above already stripped the restriction;
                         // no card nests wrappers, so a doubly-wrapped payload

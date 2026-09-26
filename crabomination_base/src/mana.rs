@@ -596,6 +596,9 @@ pub enum SpendRestriction {
     /// "…a creature spell of [type] or activate an ability of a creature or
     /// creature card of [type]" (Secluded Courtyard's chosen type).
     CreatureOfTypeOrItsAbility(crate::card::CreatureType),
+    /// "…a creature spell of the chosen type or a legendary creature spell"
+    /// (The Ringhart Crest).
+    CreatureOfTypeOrLegendaryCreature(crate::card::CreatureType),
     /// "Spend this mana only to cast [A], [B], and/or [C] spells" — the
     /// several-type sibling of `CreatureOfType` (Master of Dark Rites:
     /// Vampire, Cleric, and/or Demon). A shorter list repeats a type. Unlike
@@ -759,6 +762,9 @@ impl SpendRestriction {
             SpendRestriction::CreatureOfTypeOrItsAbility(_) => {
                 "only creatures of the chosen type and their abilities"
             }
+            SpendRestriction::CreatureOfTypeOrLegendaryCreature(_) => {
+                "only creatures of the chosen type or legendary creatures"
+            }
             SpendRestriction::OutlawSpellsOrAbilities => "only outlaws and their abilities",
             SpendRestriction::SpellsYouDontOwn => "only spells you don't own",
             SpendRestriction::CreatureOfType(_) => "only spells of the chosen type",
@@ -847,6 +853,10 @@ impl SpendRestriction {
             SpendRestriction::CreatureOfTypeOrItsAbility(t) => {
                 (kind.creature || kind.creature_ability)
                     && (kind.changeling || kind.creature_types.contains(&t))
+            }
+            SpendRestriction::CreatureOfTypeOrLegendaryCreature(t) => {
+                kind.creature
+                    && (kind.legendary || kind.changeling || kind.creature_types.contains(&t))
             }
             SpendRestriction::SpellsYouDontOwn => kind.not_owned && !kind.activating_ability,
             SpendRestriction::OutlawSpellsOrAbilities => {

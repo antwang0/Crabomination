@@ -14,7 +14,6 @@
 //!   transformed.
 //! - **Ludevic, Necrogenius** — transforms for {U}{U}{B}{B} exiling one
 //!   creature card; Olag is a plain 4/4 with counters, not a copy.
-//! - **The Ringhart Crest** — its mana isn't restricted.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
@@ -793,15 +792,23 @@ pub fn kinnan_bonder_prodigy() -> CardDefinition {
 }
 
 /// Kolvori, God of Kinship // The Ringhart Crest.
-///
-/// ⚠ Residual: the Crest's mana isn't restricted.
 pub fn kolvori_god_of_kinship() -> CardDefinition {
     let crest = CardDefinition {
         name: "The Ringhart Crest",
         cost: cost(&[generic(1), g()]),
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Artifact],
-        activated_abilities: vec![tap_add(Color::Green)],
+        as_enters_effect: Some(Effect::NameCreatureType { what: Selector::This }),
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::RestrictedToChosenTypeOrLegendary(Box::new(ManaPayload::Colors(
+                    vec![Color::Green],
+                ))),
+            },
+            ..Default::default()
+        }],
         ..Default::default()
     };
     let three_legends = || Predicate::SelectorCountAtLeast {

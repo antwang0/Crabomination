@@ -3194,8 +3194,7 @@ from hand for nothing; a back that prints no mana cost is now refused.
 Residuals: **Azor's
 Gateway**, **Chandra, Fire of Kaladesh**, **Cosima**,
 **Kytheon** (Gideon), **Journey to Eternity**,
-**Ludevic**,
-**Kolvori** (the Crest). A 200-game census beside Y'shtola / Brass / Galadriel (seed 168) decided 200/200 with zero
+**Ludevic**. A 200-game census beside Y'shtola / Brass / Galadriel (seed 168) decided 200/200 with zero
 panics; Esika won 11.5 %.
 
 The **hundred-and-sixty-third** is Final Fantasy XIV's **Scions &

@@ -3193,6 +3193,7 @@ fn is_auto_handled_mana_ability(effect: &Effect) -> bool {
             | ManaPayload::RestrictedToChosenType(inner)
             | ManaPayload::RestrictedToChosenTypePlain(inner)
             | ManaPayload::RestrictedToChosenTypeOrAbility(inner)
+            | ManaPayload::RestrictedToChosenTypeOrLegendary(inner)
             | ManaPayload::RestrictedToChosenColorMono(inner) => no_choice_payload(inner),
             _ => false,
         }

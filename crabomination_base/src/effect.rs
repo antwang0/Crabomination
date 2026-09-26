@@ -2970,6 +2970,10 @@ pub enum ManaPayload {
     /// of the chosen type (Secluded Courtyard's "or activate an ability of a
     /// creature or creature card of the chosen type").
     RestrictedToChosenTypeOrAbility(Box<ManaPayload>),
+    /// `RestrictedToChosenTypePlain` that also funds any legendary creature
+    /// spell (The Ringhart Crest's "a creature spell of the chosen type or a
+    /// legendary creature spell").
+    RestrictedToChosenTypeOrLegendary(Box<ManaPayload>),
     /// Like `RestrictedToChosenType`, restricted to monocolored spells of the
     /// source's chosen color (Throne of Eldraine). Unrestricted with none.
     RestrictedToChosenColorMono(Box<ManaPayload>),
