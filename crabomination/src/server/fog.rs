@@ -96,7 +96,7 @@ pub(super) fn pick_fog(state: &GameState, seat: usize) -> Option<GameAction> {
             b.controller == seat
                 && !b.tapped
                 && b.definition.is_creature()
-                && state.computed_permanent(b.id).is_some_and(|cp| cp.colors.contains(&Color::White))
+                && state.computed_permanent(b.id).is_some_and(|cp| cp.colors.contains(Color::White))
         })?;
         Some(GameAction::CastFlashbackTap {
             card_id: c.id,
