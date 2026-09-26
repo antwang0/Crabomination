@@ -1985,7 +1985,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Genesis of the Daleks | Masters of Evil (WHO) | chapter IV counts the Daleks it destroyed, not every Dalek that died this turn. |
 | 🟡 Rassilon, the War President | Masters of Evil (WHO) | noncreature spells cast from exile don't have conspire. |
 | 🟡 The Master, Multiplied | Masters of Evil (WHO) | your triggered abilities can still make you sacrifice or exile your creature tokens. |
-| 🟡 The Sound of Drums | Masters of Evil (WHO) | the enchanted creature's combat damage isn't doubled. |
 | 🟡 The Toymaker's Trap | Masters of Evil (WHO) | numbers already chosen may be chosen again. |
 | 🟡 Time Reaper | Masters of Evil (WHO) | the 3 life is gained whether or not a card moved. |
 | 🟡 Vislor Turlough | Masters of Evil (WHO) | goaded for the rest of the game, not only while the opponent controls it. |

@@ -411,3 +411,34 @@ fn cr_603_2_the_toymakers_trap_charges_the_guess() {
         assert_eq!(g.players[0].hand.len(), hand + 1);
     }
 }
+
+/// The Sound of Drums — CR 614.1a: the enchanted creature's combat damage is
+/// doubled; an unenchanted attacker's isn't.
+#[test]
+fn the_sound_of_drums_doubles_combat_damage() {
+    let mut g = main_phase(3);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let other = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.clear_sickness(other);
+    let drums = g.add_card_to_battlefield(0, catalog::the_sound_of_drums());
+    g.battlefield_find_mut(drums).unwrap().attached_to = Some(bear);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: bear, target: AttackTarget::Player(1) },
+        Attack { attacker: other, target: AttackTarget::Player(2) },
+    ]))
+    .expect("attack");
+    let (life1, life2) = (g.players[1].life, g.players[2].life);
+    for _ in 0..8 {
+        if g.step == TurnStep::PostCombatMain {
+            break;
+        }
+        if let Ok(events) = g.advance_step(Vec::new()) {
+            g.dispatch_triggers_for_events(&events);
+        }
+        drain_stack(&mut g);
+    }
+    assert_eq!(life1 - g.players[1].life, 4, "the enchanted bear hits for double");
+    assert_eq!(life2 - g.players[2].life, 2, "the other bear doesn't");
+}

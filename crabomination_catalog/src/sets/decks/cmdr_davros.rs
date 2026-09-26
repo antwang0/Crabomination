@@ -11,8 +11,6 @@
 //!   don't have conspire.
 //! - **The Master, Multiplied** — your triggered abilities can still make you
 //!   sacrifice or exile your creature tokens.
-//! - **The Sound of Drums** — the enchanted creature's combat damage isn't
-//!   doubled.
 //! - **The Toymaker's Trap** — numbers already chosen may be chosen again.
 //! - **Time Reaper** — the life is gained whether or not a card moved.
 //! - **Vislor Turlough** — goaded for the rest of the game, not only while
@@ -1156,8 +1154,8 @@ pub fn the_rani() -> CardDefinition {
     }
 }
 
-/// The Sound of Drums — enchanted creature is goaded; {2}{R}: return it from
-/// your graveyard to your hand. Residual: its combat damage isn't doubled.
+/// The Sound of Drums — enchanted creature is goaded and deals double combat
+/// damage; {2}{R}: return it from your graveyard to your hand.
 pub fn the_sound_of_drums() -> CardDefinition {
     CardDefinition {
         name: "The Sound of Drums",
@@ -1165,10 +1163,13 @@ pub fn the_sound_of_drums() -> CardDefinition {
         card_types: vec![CardType::Enchantment],
         subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
         effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
-        static_abilities: vec![StaticAbility {
-            description: "Enchanted creature is goaded.",
-            effect: StaticEffect::AttachedIsGoaded,
-        }],
+        static_abilities: vec![
+            StaticAbility { description: "Enchanted creature is goaded.", effect: StaticEffect::AttachedIsGoaded },
+            StaticAbility {
+                description: "If enchanted creature would deal combat damage to a permanent or player, it deals double that damage instead.",
+                effect: StaticEffect::AttachedDealsDoubleCombatDamage,
+            },
+        ],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2), r()]),
             from_graveyard: true,
