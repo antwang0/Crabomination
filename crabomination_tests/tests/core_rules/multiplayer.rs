@@ -2606,7 +2606,7 @@ fn join_forces_resolves_with_the_auto_decider_declining_every_seat() {
     g.active_player_idx = 0;
     g.step = TurnStep::PreCombatMain;
     let aglow = g.add_card_to_hand(0, catalog::minds_aglow());
-    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 1);
     let hands: Vec<usize> = g.players.iter().map(|p| p.hand.len()).collect();
 
     g.perform_action(GameAction::CastSpell {
@@ -5759,7 +5759,7 @@ fn as_player_runs_the_body_for_the_chosen_opponent() {
     g.active_player_idx = 0;
     g.priority.player_with_priority = 0;
     g.step = TurnStep::PreCombatMain;
-    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Green, 1);
     g.perform_action(GameAction::CastSpell {
         card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast");
@@ -5888,4 +5888,49 @@ fn choose_opponent_then_keeps_its_opponent_across_a_suspend_in_the_body() {
     assert!(g.pending_decision.is_none());
     assert_eq!(g.players[3].hand.len(), 1, "seat 3 discarded");
     assert_eq!(g.players[3].life, life + 5, "and seat 3, still bound, gained");
+}
+
+// ── CR 702.174a — Gift names one opponent ─────────────────────────────────
+
+/// CR 702.174a — "you may choose an opponent" as the gift's additional cost:
+/// at four seats the gift goes to the one chosen opponent, not the table
+/// (Mind Spiral's Fish went to all three).
+#[test]
+fn cr_702_174a_gift_goes_to_the_chosen_opponent_only() {
+    use crabomination::decision::ScriptedDecider;
+    let mut g = multi_player_game(4);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_battlefield(3, catalog::grizzly_bears());
+    // Ballot: fewest creatures first, turn order breaking ties — [2, 1, 3].
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(2)]));
+    let spiral = g.add_card_to_hand(0, catalog::mind_spiral());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastGift {
+        card_id: spiral, target: Some(Target::Player(0)),
+        additional_targets: vec![Target::Permanent(bear)], mode: None, x_value: None,
+    }).expect("cast Mind Spiral with its gift promised");
+    drain_stack(&mut g);
+    let fish = |p: usize| g.battlefield.iter().filter(|c| c.controller == p && c.definition.name == "Fish").count();
+    assert_eq!((fish(1), fish(2), fish(3)), (0, 0, 1), "only the chosen opponent gets the Fish");
+}
+
+/// CR 702.174a / 702.174b — a permanent's gift trigger reads the opponent
+/// chosen while casting; headless, that is the one with the fewest creatures.
+#[test]
+fn cr_702_174b_octomancer_gifts_the_octopus_to_the_chosen_opponent() {
+    let mut g = multi_player_game(4);
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    let octo = g.add_card_to_hand(0, catalog::octomancer());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Green, 1);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastGift {
+        card_id: octo, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Octomancer with its gift promised");
+    drain_stack(&mut g);
+    let octopi: Vec<usize> =
+        g.battlefield.iter().filter(|c| c.definition.name == "Octopus").map(|c| c.controller).collect();
+    assert_eq!(octopi, vec![3], "one Octopus, to the opponent with no creatures");
 }

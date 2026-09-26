@@ -27974,11 +27974,23 @@ impl GameState {
             // A continuation (`override_effect`) is the same resolution as the
             // pass that suspended, so it keeps that pass's per-resolution
             // scratch.
+            // CR 702.174a — a gift spell's body names the promised opponent
+            // as `ChosenPlayerOfSource`; the card is in no zone to read it off.
+            let gift_to = card
+                .chosen_player
+                .filter(|&q| card.gift_promised && self.players.get(q).is_some_and(|pl| pl.is_alive()));
+            let prev_gift = match gift_to {
+                Some(q) => Some(self.scratch.chosen_opponent_scratch.replace(q)),
+                None => None,
+            };
             let res = if is_initial_pass {
                 self.resolve_effect(effect, &ctx)
             } else {
                 self.resolve_effect_resumed(effect, &ctx)
             };
+            if let Some(prev) = prev_gift {
+                self.scratch.chosen_opponent_scratch = prev;
+            }
             self.scratch.resolving_source = prev_src;
             events = res?;
             // CR 702.165 — a promised gift is given as the spell resolves its

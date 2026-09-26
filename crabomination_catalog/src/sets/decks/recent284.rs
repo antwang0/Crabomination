@@ -39,7 +39,7 @@ pub fn scrapshooter() -> CardDefinition {
                 .with_filter(Predicate::SourceGiftPromised),
             effect: Effect::Seq(vec![
                 Effect::Draw {
-                    who: Selector::Player(PlayerRef::EachOpponent),
+                    who: Selector::Player(PlayerRef::ChosenPlayerOfSource),
                     amount: Value::ONE,
                 },
                 Effect::Destroy {
@@ -80,7 +80,7 @@ pub fn kitnap() -> CardDefinition {
             Effect::If {
                 cond: Predicate::SourceGiftPromised,
                 then: Box::new(Effect::Draw {
-                    who: Selector::Player(PlayerRef::EachOpponent),
+                    who: Selector::Player(PlayerRef::ChosenPlayerOfSource),
                     amount: Value::ONE,
                 }),
                 else_: Box::new(Effect::AddCounter {

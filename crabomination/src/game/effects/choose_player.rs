@@ -70,6 +70,37 @@ impl GameState {
         Ok(())
     }
 
+    /// The living opponents of `me`, headless pick first: the one with the
+    /// fewest creatures (a gift goes where it helps least), turn order
+    /// breaking ties.
+    fn gift_ballot(&self, me: usize) -> Vec<usize> {
+        let mut opps: Vec<usize> = self
+            .seats_in_turn_order_from(me)
+            .into_iter()
+            .filter(|&p| p != me && !self.same_team(p, me) && self.players[p].is_alive())
+            .collect();
+        // Stable: turn order breaks ties.
+        opps.sort_by_key(|&p| self.battlefield.iter().filter(|c| c.controller == p && c.definition.is_creature()).count());
+        opps
+    }
+
+    /// CR 702.174a — "as an additional cost to cast this spell, you may
+    /// choose an opponent": the gift's recipient, picked while casting
+    /// (CR 601.2b), so it never suspends. A scripted or bot decider answers
+    /// the ballot; a headless or live-UI seat takes the headless pick.
+    pub(crate) fn choose_gift_recipient(&mut self, caster: usize, source: CardId) -> Option<usize> {
+        let opps = self.gift_ballot(caster);
+        let i = if opps.len() <= 1 || matches!(self.decider.kind(), crate::decision::DeciderKind::Auto) {
+            0
+        } else {
+            match self.decider.decide(&ballot_decision(source, &opps, "Promise the gift to")) {
+                DecisionAnswer::Amount(n) => n as usize,
+                _ => 0,
+            }
+        };
+        opps.get(i).or(opps.first()).copied()
+    }
+
     /// `Effect::ChooseOpponentThen` — the controller names an opponent for
     /// `then`. The headless pick is the opponent with the fewest creatures
     /// (the gift goes where it helps least), turn order breaking ties.
@@ -81,13 +112,7 @@ impl GameState {
         events: &mut Vec<GameEvent>,
     ) -> Result<(), GameError> {
         let me = ctx.controller;
-        let mut opps: Vec<usize> = self
-            .seats_in_turn_order_from(me)
-            .into_iter()
-            .filter(|&p| p != me && !self.same_team(p, me) && self.players[p].is_alive())
-            .collect();
-        // Stable: turn order breaks ties.
-        opps.sort_by_key(|&p| self.battlefield.iter().filter(|c| c.controller == p && c.definition.is_creature()).count());
+        let opps = self.gift_ballot(me);
         let i = match take_opt_scratch!(self.stashed_resolution_answer) {
             Some(DecisionAnswer::Amount(n)) => n as usize,
             _ if opps.len() <= 1 => 0,

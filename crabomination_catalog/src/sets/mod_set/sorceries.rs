@@ -560,7 +560,7 @@ pub fn wear_down() -> CardDefinition {
             label: "a card",
             gifted_effect: Effect::Seq(vec![
                 Effect::Draw {
-                    who: Selector::Player(PlayerRef::EachOpponent),
+                    who: Selector::Player(PlayerRef::ChosenPlayerOfSource),
                     amount: Value::ONE,
                 },
                 Effect::Destroy {

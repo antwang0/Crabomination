@@ -11,18 +11,18 @@ use crate::effect::shortcut::{each_your_creature, target_filtered};
 use crate::effect::{Duration, PlayerRef, ZoneDest};
 use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
-/// Opponent draws one card — the "Gift a card" payload.
+/// The promised opponent draws a card — the "Gift a card" payload (CR 702.174e).
 fn opponent_draws_one() -> Effect {
     Effect::Draw {
-        who: Selector::Player(PlayerRef::EachOpponent),
+        who: Selector::Player(PlayerRef::ChosenPlayerOfSource),
         amount: Value::Const(1),
     }
 }
 
-/// Opponent creates a Food token — the "Gift a Food" payload.
+/// The promised opponent creates a Food — the "Gift a Food" payload (CR 702.174d).
 fn opponent_food() -> Effect {
     Effect::CreateToken {
-        who: PlayerRef::EachOpponent,
+        who: PlayerRef::ChosenPlayerOfSource,
         count: Value::Const(1),
         definition: std::sync::Arc::new(crabomination_base::tokens::food_token()),
     }
@@ -65,7 +65,7 @@ pub fn crumb_and_get_it() -> CardDefinition {
             label: "a Food",
             gifted_effect: Effect::Seq(vec![
                 Effect::CreateToken {
-                    who: PlayerRef::EachOpponent,
+                    who: PlayerRef::ChosenPlayerOfSource,
                     count: Value::Const(1),
                     definition: std::sync::Arc::new(crabomination_base::tokens::food_token()),
                 },
@@ -98,7 +98,7 @@ pub fn blooming_blast() -> CardDefinition {
             label: "a Treasure",
             gifted_effect: Effect::Seq(vec![
                 Effect::CreateToken {
-                    who: PlayerRef::EachOpponent,
+                    who: PlayerRef::ChosenPlayerOfSource,
                     count: Value::Const(1),
                     definition: std::sync::Arc::new(crabomination_base::tokens::treasure_token()),
                 },
@@ -136,7 +136,7 @@ pub fn longstalk_brawl() -> CardDefinition {
             label: "a tapped Fish",
             gifted_effect: Effect::Seq(vec![
                 Effect::CreateToken {
-                    who: PlayerRef::EachOpponent,
+                    who: PlayerRef::ChosenPlayerOfSource,
                     count: Value::Const(1),
                     definition: std::sync::Arc::new(tapped_fish_token()),
                 },
@@ -170,7 +170,7 @@ pub fn into_the_flood_maw() -> CardDefinition {
             label: "a tapped Fish",
             gifted_effect: Effect::Seq(vec![
                 Effect::CreateToken {
-                    who: PlayerRef::EachOpponent,
+                    who: PlayerRef::ChosenPlayerOfSource,
                     count: Value::Const(1),
                     definition: std::sync::Arc::new(tapped_fish_token()),
                 },
@@ -295,7 +295,7 @@ pub fn mind_spiral() -> CardDefinition {
             label: "a tapped Fish",
             gifted_effect: Effect::Seq(vec![
                 Effect::CreateToken {
-                    who: PlayerRef::EachOpponent,
+                    who: PlayerRef::ChosenPlayerOfSource,
                     count: Value::Const(1),
                     definition: std::sync::Arc::new(tapped_fish_token()),
                 },
@@ -358,7 +358,7 @@ pub fn sazacaps_brew() -> CardDefinition {
             label: "a tapped Fish",
             gifted_effect: Effect::Seq(vec![
                 Effect::CreateToken {
-                    who: PlayerRef::EachOpponent,
+                    who: PlayerRef::ChosenPlayerOfSource,
                     count: Value::Const(1),
                     definition: std::sync::Arc::new(tapped_fish_token()),
                 },

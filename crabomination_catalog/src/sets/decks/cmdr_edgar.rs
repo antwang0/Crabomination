@@ -1057,7 +1057,7 @@ pub fn bilbos_gambit() -> CardDefinition {
             label: "a Treasure",
             gifted_effect: Effect::Seq(vec![
                 mint(
-                    PlayerRef::OpponentOf(Box::new(PlayerRef::You)),
+                    PlayerRef::ChosenPlayerOfSource,
                     Value::ONE,
                     treasure_token(),
                 ),

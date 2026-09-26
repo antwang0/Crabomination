@@ -45,7 +45,7 @@ pub fn parting_gust() -> CardDefinition {
             // for good (no return).
             gifted_effect: Effect::Seq(vec![
                 Effect::CreateToken {
-                    who: PlayerRef::EachOpponent,
+                    who: PlayerRef::ChosenPlayerOfSource,
                     count: Value::ONE,
                     definition: std::sync::Arc::new(tapped_fish_token()),
                 },
@@ -74,7 +74,7 @@ pub fn starfall_invocation() -> CardDefinition {
             label: "a card",
             gifted_effect: Effect::Seq(vec![
                 Effect::Draw {
-                    who: Selector::Player(PlayerRef::EachOpponent),
+                    who: Selector::Player(PlayerRef::ChosenPlayerOfSource),
                     amount: Value::ONE,
                 },
                 Effect::Destroy {

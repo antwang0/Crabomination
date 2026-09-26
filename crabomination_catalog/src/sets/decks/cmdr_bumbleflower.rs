@@ -3,9 +3,8 @@
 //! `tests/recent_b/cmdr_bumbleflower.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Octomancer** and **Perch Protection** — the gift goes to a random
-//!   opponent rather than one the caster chooses; Perch Protection's life
-//!   lock lasts this turn, not until your next turn.
+//! - **Perch Protection** — the life lock lasts this turn, not until your
+//!   next turn.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,
@@ -383,8 +382,6 @@ pub fn mr_foxglove() -> CardDefinition {
 
 /// Octomancer — gift an Octopus; at the beginning of each end step, a copy
 /// of target creature token that entered this turn.
-///
-/// ⚠ Residual: the gift goes to a random opponent.
 pub fn octomancer() -> CardDefinition {
     CardDefinition {
         gift: Some(Box::new(Gift { label: "an Octopus", gifted_effect: Effect::Noop })),
@@ -392,7 +389,7 @@ pub fn octomancer() -> CardDefinition {
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource)
                     .with_filter(Predicate::SourceGiftPromised),
-                effect: Effect::CreateToken { who: PlayerRef::RandomOpponent, count: Value::ONE, definition: Arc::new(octopus()) },
+                effect: Effect::CreateToken { who: PlayerRef::ChosenPlayerOfSource, count: Value::ONE, definition: Arc::new(octopus()) },
             },
             TriggeredAbility {
                 event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::AnyPlayer),
@@ -424,8 +421,7 @@ pub fn octomancer() -> CardDefinition {
 /// Perch Protection — four 2/2 flying Birds; gift an extra turn: your
 /// permanents phase out and you're protected until your next turn. Exile it.
 ///
-/// ⚠ Residual: the extra turn goes to a random opponent; the life lock lasts
-/// this turn only.
+/// ⚠ Residual: the life lock lasts this turn only.
 pub fn perch_protection() -> CardDefinition {
     let birds = || Effect::CreateToken {
         who: PlayerRef::You,
@@ -441,7 +437,7 @@ pub fn perch_protection() -> CardDefinition {
         gift: Some(Box::new(Gift {
             label: "an extra turn",
             gifted_effect: Effect::Seq(vec![
-                Effect::TakeExtraTurn { who: PlayerRef::RandomOpponent, count: Value::ONE },
+                Effect::TakeExtraTurn { who: PlayerRef::ChosenPlayerOfSource, count: Value::ONE },
                 birds(),
                 Effect::PhaseOut { what: yours(R::Permanent), until_source_leaves: false },
                 Effect::LifeLockThisTurn { who: Selector::You },

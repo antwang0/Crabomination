@@ -35930,7 +35930,7 @@ pub fn nocturnal_hunger() -> CardDefinition {
             label: "a Food",
             gifted_effect: Effect::Seq(vec![
                 Effect::CreateToken {
-                    who: PlayerRef::EachOpponent,
+                    who: PlayerRef::ChosenPlayerOfSource,
                     count: Value::Const(1),
                     definition: std::sync::Arc::new(crabomination_base::tokens::food_token()),
                 },

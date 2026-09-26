@@ -72,7 +72,7 @@ pub fn starforged_sword() -> CardDefinition {
             label: "a tapped Fish",
             gifted_effect: Effect::Seq(vec![
                 Effect::CreateToken {
-                    who: PlayerRef::EachOpponent,
+                    who: PlayerRef::ChosenPlayerOfSource,
                     count: Value::ONE,
                     definition: std::sync::Arc::new(tapped_fish()),
                 },
@@ -103,7 +103,7 @@ pub fn cruelclaws_heist() -> CardDefinition {
         gift: Some(Box::new(Gift {
             label: "a card",
             gifted_effect: Effect::Seq(vec![
-                Effect::Draw { who: Selector::Player(PlayerRef::Target(0)), amount: Value::ONE },
+                Effect::Draw { who: Selector::Player(PlayerRef::ChosenPlayerOfSource), amount: Value::ONE },
                 strip(),
                 Effect::GrantMayPlay {
                     what: Selector::CardExiledWithSource,
