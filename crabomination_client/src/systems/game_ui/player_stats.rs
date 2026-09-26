@@ -843,6 +843,11 @@ pub fn update_player_stats_chips(
     let Some(p) = cv.players.iter().find(|p| p.seat == cv.your_seat) else { return };
     commands.entity(row).despawn_children();
     commands.entity(row).with_children(|row| {
+        // Out of a pod that goes on: the dimmed "☠ OUT · cause" summary an
+        // opponent's row collapses to, not a live-looking status bar.
+        if p.eliminated && super::table_awareness::spawn_opponent_summary(row, &ui_fonts, p, cv) {
+            return;
+        }
         spawn_avatar(row, &ui_fonts, p.seat, &p.name);
         spawn_stat_chip(row, &ui_fonts, StatChipKind::Name, p.name.clone());
         spawn_life_badge(row, &ui_fonts, p.life, p.starting_life);

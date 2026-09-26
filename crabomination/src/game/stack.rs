@@ -5468,6 +5468,39 @@ impl GameState {
         }
     }
 
+    /// Stamp `seats`' [`Departure`](crate::player::Departure): this turn, and
+    /// how many seats had left before this batch — shared by the batch, since
+    /// its seats left at once. A seat already stamped keeps its stamp.
+    pub(crate) fn stamp_departures(&mut self, seats: &[usize]) {
+        let before = self.players.iter().filter(|q| q.left_game).count() as u32;
+        let turn = self.turn_number;
+        for &p in seats {
+            if self.players[p].departure.is_none() {
+                self.players[p].departure = Some(crate::player::Departure { turn, before });
+            }
+        }
+    }
+
+    /// Where `seat` finished, 1-based, once it is settled: the winner is 1st,
+    /// and a seat that left is behind every seat still in and every seat that
+    /// left after it (seats that left together share a placing). `None` for
+    /// a seat still playing an unfinished game.
+    pub fn placement(&self, seat: usize) -> Option<usize> {
+        let me = self.players.get(seat)?;
+        let Some(mine) = me.departure else {
+            return (self.game_over.is_some() && !me.eliminated).then_some(1);
+        };
+        let ahead = self
+            .players
+            .iter()
+            .filter(|q| match q.departure {
+                None => !q.eliminated,
+                Some(d) => d.before > mine.before,
+            })
+            .count();
+        Some(ahead + 1)
+    }
+
     /// CR 800.4a — handle a player leaving the game: all cards/tokens they
     /// own leave with them (every zone), and permanents they controlled but
     /// don't own revert to their owners' control. Objects leaving this way
@@ -7714,8 +7747,15 @@ impl GameState {
         // they own leaves with them, the spells and abilities they control
         // cease to exist, and permanents they controlled but didn't own
         // revert to their owners' control.
+        self.stamp_departures(&newly_eliminated);
         for &p in &newly_eliminated {
             self.objects_leave_with_player(p);
+            // A concession announced itself (`PlayerConceded`); every other
+            // way out is announced here, so a pod's log says who went out.
+            let cause = self.players[p].loss_cause.unwrap_or(crate::player::LossCause::Other);
+            if cause != crate::player::LossCause::Conceded {
+                events.push(GameEvent::PlayerLost { player: p, cause });
+            }
         }
         // CR 704.5w-x — after the departures, so a protector who left in this
         // sweep is replaced in it.

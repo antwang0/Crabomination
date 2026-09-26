@@ -1718,9 +1718,7 @@ pub fn start_net_session_from_menu(world: &mut World) {
     match mode {
         NetMode::LocalBot => spawn_inprocess_bot(world, format),
         NetMode::SpectateBots => spawn_spectate_bots(world, format),
-        NetMode::LayoutFixture { seats } => {
-            spawn_restored_state(world, crate::layout_harness::fixture_state(seats), 0);
-        }
+        NetMode::LayoutFixture { seats } => spawn_layout_fixture(world, seats),
         NetMode::LoadDebugState { path } => match spawn_loaded_debug_state(world, &path) {
             Ok(()) => eprintln!("net: loaded debug state from {}", path.display()),
             Err(e) => {
@@ -2112,16 +2110,38 @@ fn spawn_host_lan(world: &mut World, port: u16, format: MatchFormat) -> std::io:
     Ok(())
 }
 
-/// Load a previously exported debug state file. If the export carries a
-/// full `GameSnapshot` (the new format), the snapshot is restored into a
-/// real `GameState` and run as an in-process match against a `HeuristicBot`
-/// — meaning the user can keep playing from the saved board, which is
-/// the whole point of this debug workflow.
-///
-/// Older view-only exports fall back to read-only inspection: the
-/// `ClientView` is seeded into `CurrentView` directly, no `NetOutbox` is
-/// installed (so the input handler bails out), and the player can poke
-/// around the board but not advance it.
+/// The layout harness's fixture board, with its `--viewer-out` /
+/// `--hold-seat` variations applied.
+fn spawn_layout_fixture(world: &mut World, seats: usize) {
+    let args = world.get_resource::<crate::layout_harness::HarnessArgs>().cloned().unwrap_or_default();
+    let mut state = crate::layout_harness::fixture_state(seats);
+    if args.viewer_out {
+        crate::layout_harness::knock_out_viewer(&mut state);
+    }
+    let Some(held) = args.hold_seat.filter(|s| *s != 0 && *s < state.players.len()) else {
+        spawn_restored_state(world, state, 0);
+        return;
+    };
+    let (server_seat, ClientChannel { tx, rx }) = seat_pair();
+    let (held_seat, held_client) = seat_pair();
+    // The held player's end stays open and silent for the whole run.
+    std::mem::forget(held_client);
+    let mut held_seat = Some(held_seat);
+    let mut human = Some(server_seat);
+    let occupants: Vec<SeatOccupant> = (0..state.players.len())
+        .map(|seat| match seat {
+            0 => SeatOccupant::Human(human.take().expect("seat 0 once")),
+            s if s == held => SeatOccupant::Human(held_seat.take().expect("held seat once")),
+            _ => SeatOccupant::Bot(Box::new(HeuristicBot::new())),
+        })
+        .collect();
+    std::thread::spawn(move || {
+        run_match_full(state, occupants, vec![], None);
+    });
+    world.insert_resource(NetOutbox::new(tx));
+    world.insert_resource(NetInbox(Mutex::new(rx)));
+}
+
 /// Run `state` as a live local match with the human in `viewer_seat` and a
 /// HeuristicBot in every other seat (a restored pod keeps all its seats).
 fn spawn_restored_state(world: &mut World, state: GameState, viewer_seat: usize) {
@@ -2143,6 +2163,16 @@ fn spawn_restored_state(world: &mut World, state: GameState, viewer_seat: usize)
     world.insert_resource(LatestSnapshot(sink));
 }
 
+/// Load a previously exported debug state file. If the export carries a
+/// full `GameSnapshot` (the new format), the snapshot is restored into a
+/// real `GameState` and run as an in-process match against a `HeuristicBot`
+/// — meaning the user can keep playing from the saved board, which is
+/// the whole point of this debug workflow.
+///
+/// Older view-only exports fall back to read-only inspection: the
+/// `ClientView` is seeded into `CurrentView` directly, no `NetOutbox` is
+/// installed (so the input handler bails out), and the player can poke
+/// around the board but not advance it.
 fn spawn_loaded_debug_state(world: &mut World, path: &std::path::Path) -> std::io::Result<()> {
     let export = crate::debug_export::load_debug_export(path)
         .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;

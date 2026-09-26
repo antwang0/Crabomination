@@ -172,6 +172,8 @@ mod tests {
             damage_rewritten_this_turn: None,
             vote_controller: None,
             players: vec![PlayerView {
+                placement: None,
+                out_on_turn: None,
                 attraction_deck_size: 0,
                 attraction_junkyard: vec![],
                 locked_cast_colors: vec![],

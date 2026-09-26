@@ -28,6 +28,12 @@ pub struct HarnessArgs {
     /// `--settings-open`: open the Esc menu once the view is up, so a
     /// screenshot can show it.
     pub settings_open: bool,
+    /// `--viewer-out`: the viewer starts the fixture already knocked out
+    /// (21 commander damage), for the "You're out" panel and the standings.
+    pub viewer_out: bool,
+    /// `--hold-seat N`: seat N is a connected player who never acts, so the
+    /// game waits on them — a network pod that goes on without the viewer.
+    pub hold_seat: Option<usize>,
 }
 
 impl HarnessArgs {
@@ -48,6 +54,8 @@ impl HarnessArgs {
                 Some((w.parse().ok()?, h.parse().ok()?))
             }),
             settings_open: args.iter().any(|a| a == "--settings-open"),
+            viewer_out: args.iter().any(|a| a == "--viewer-out"),
+            hold_seat: value("--hold-seat").and_then(|v| v.parse().ok()),
         }
     }
 }
@@ -124,6 +132,16 @@ pub fn fixture_state(seats: usize) -> GameState {
     g
 }
 
+/// `--viewer-out`: knock seat 0 out of the fixture with 21 damage from
+/// seat 1's commander, and hand the turn to seat 1.
+pub fn knock_out_viewer(g: &mut GameState) {
+    let Some(&commander) = g.players.get(1).and_then(|p| p.commanders.first()) else { return };
+    g.commander_damage.insert((0, commander), 21);
+    g.check_state_based_actions();
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+}
+
 /// `--settings-open`: open the Esc menu the first frame a view is up.
 pub fn open_settings_for_screenshot(
     args: Res<HarnessArgs>,
@@ -190,6 +208,10 @@ mod tests {
         assert_eq!(h.screenshot.as_deref(), Some(std::path::Path::new("/tmp/a.png")));
         assert_eq!(h.screenshot_delay, 8.0);
         assert!(HarnessArgs::parse(&[]).fixture_seats.is_none());
+        let out: Vec<String> = ["--viewer-out", "--hold-seat", "1"].iter().map(|s| s.to_string()).collect();
+        let h = HarnessArgs::parse(&out);
+        assert!(h.viewer_out);
+        assert_eq!(h.hold_seat, Some(1));
     }
 
     #[test]

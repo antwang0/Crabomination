@@ -167,6 +167,10 @@ fn event_color(ev: &crabomination::net::GameEventWire) -> Color {
         | E::CreatureDied { .. }
         | E::PlaneswalkerDied { .. } => theme::TEXT_DANGER,
 
+        // A seat going out of a pod is the table's biggest event short of
+        // the game ending.
+        E::PlayerLost { .. } | E::PlayerConceded { .. } => theme::ACCENT_ORANGE,
+
         // Prevented damage is a protective/beneficial outcome — colour it
         // like life-gain rather than the red damage events.
         E::LifeGained { .. } | E::DamagePrevented { .. } => theme::TEXT_GOOD,
@@ -229,6 +233,7 @@ fn event_glyph(ev: &crabomination::net::GameEventWire) -> &'static str {
     match ev {
         E::DamageDealt { .. } | E::LifeLost { .. } | E::PoisonAdded { .. } => "▼ ",
         E::CreatureDied { .. } | E::PlaneswalkerDied { .. } => "✖ ",
+        E::PlayerLost { .. } | E::PlayerConceded { .. } => "☠ ",
         E::LifeGained { .. } | E::DamagePrevented { .. } => "▲ ",
         // Coin flips and die rolls — a die glyph flags randomization outcomes.
         E::CoinFlipWon { .. } | E::CoinFlipLost { .. } | E::DiceRolled { .. } => "⚄ ",
@@ -405,6 +410,28 @@ pub struct EndTurnButton;
 /// Toolbar toggle for `FastForward::manual_priority` ("Auto-pass: On/Off").
 #[derive(Component)]
 pub struct AutoPassButton;
+
+/// The in-turn action column (Pass / End Turn / Next Turn / Auto-pass).
+#[derive(Component)]
+pub struct ActionColumn;
+
+/// Hide the in-turn actions once the viewer is out of a pod that goes on:
+/// there is no priority left to pass.
+pub fn hide_actions_when_out(view: Res<CurrentView>, mut q: Query<&mut Node, With<ActionColumn>>) {
+    if !view.is_changed() {
+        return;
+    }
+    let out = view
+        .0
+        .as_ref()
+        .is_some_and(|cv| cv.players.iter().any(|p| p.seat == cv.your_seat && p.eliminated));
+    let want = if out { Display::None } else { Display::Flex };
+    for mut node in &mut q {
+        if node.display != want {
+            node.display = want;
+        }
+    }
+}
 
 #[derive(Component)]
 pub struct AutoPassButtonLabel;
@@ -769,6 +796,7 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                     ..default()
                 },
                 BackgroundColor(theme::HUD_BG),
+                ActionColumn,
             ))
             .with_children(|p| {
                 p.spawn((

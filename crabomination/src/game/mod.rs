@@ -19698,6 +19698,7 @@ impl GameState {
         let mut events = vec![GameEvent::PlayerConceded { player: seat }];
         // CR 800.4a — the conceding player's objects leave with them. SBAs
         // skip already-eliminated seats, so this won't fire for them there.
+        self.stamp_departures(&[seat]);
         self.objects_leave_with_player(seat);
         // Resolve the game-over / surviving-team determination.
         self.check_state_based_actions_into(&mut events);

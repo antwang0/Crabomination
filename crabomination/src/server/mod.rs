@@ -123,9 +123,12 @@ pub use tcp::{tcp_client, tcp_seat};
 pub use ws::ws_seat;
 pub use view::{project, project_spectator};
 
-/// A safety limit on how many actions a bot (or chain of bots) can take
-/// between human inputs. The loop polls bots to a fixed point; if that fixed
+/// A safety limit on how many rounds of bot actions can pass within one turn
+/// with no human input. The loop polls bots to a fixed point; if that fixed
 /// point never arrives, something is wrong and we'd rather panic than spin.
+/// Per turn, not per call: once every human is out of a pod (or in a
+/// bot-only spectated game) one call plays the rest of the game, which is
+/// progress however many actions it takes (`drive_bots`).
 const BOT_TICK_BUDGET: usize = 10_000;
 
 /// Wall-clock deadline for "no accepted action since the last progress tick."
@@ -1067,6 +1070,7 @@ fn drive_bots(
     last_progress_at: &mut Instant,
 ) -> bool {
     let mut budget: usize = BOT_TICK_BUDGET;
+    let mut budget_turn = state.turn_number;
     loop {
         let mut any_acted = false;
         for (seat, slot) in bots.iter_mut().enumerate() {
@@ -1095,6 +1099,11 @@ fn drive_bots(
         // Dump the live state for debugging before panicking — silent
         // panics with no state are a nightmare to triage from a bug
         // report.
+        // A new turn is progress: the budget catches a loop inside one.
+        if state.turn_number != budget_turn {
+            budget_turn = state.turn_number;
+            budget = BOT_TICK_BUDGET;
+        }
         if budget == 0 {
             report_deadlock(state, Duration::from_secs(0));
         }

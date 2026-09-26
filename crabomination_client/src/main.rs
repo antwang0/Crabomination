@@ -485,7 +485,12 @@ fn main() {
         // click → save + return to picker.
         .add_systems(
             Update,
-            (sync_audit_buttons, handle_audit_buttons, handle_surrender_button)
+            (
+                sync_audit_buttons,
+                handle_audit_buttons,
+                handle_surrender_button,
+                crate::systems::game_ui::hide_actions_when_out,
+            )
                 .run_if(in_state(AppState::InGame)),
         )
         // Button polling runs first so handle_game_input can read latched state.
@@ -796,6 +801,15 @@ fn main() {
                 .chain()
                 .run_if(in_state(AppState::InGame)),
         )
+        // "You're out" panel for a viewer knocked out of a game that goes on.
+        .add_systems(
+            Update,
+            (
+                crate::systems::eliminated::sync_out_panel,
+                crate::systems::eliminated::handle_out_panel_buttons,
+            )
+                .run_if(in_state(AppState::InGame)),
+        )
         // Battlefield-anchored gizmo overlays must run AFTER animate_combat_lurch,
         // which adds the lunge offset to each attacker/blocker's transform. If
         // they run before it (the default unordered placement), they read the
@@ -860,6 +874,7 @@ fn main() {
                 .run_if(in_state(AppState::InGame)),
         )
         .init_resource::<systems::game_over::AutoRematchState>()
+        .init_resource::<systems::eliminated::OutPanelState>()
         .init_resource::<systems::match_stats::MatchStats>()
         .init_resource::<systems::game_over::ActiveMatchKind>()
         // Defensive: the game-over systems read this as a required resource

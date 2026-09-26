@@ -3016,6 +3016,11 @@ pub enum GameEvent {
     /// CR 104.3a — `player` conceded and left the game. Emitted before the
     /// `GameOver` that the resulting state-based-action pass produces.
     PlayerConceded { player: usize },
+    /// CR 104.3 / 800.4a — `player` lost the game and left it, for any cause
+    /// but a concession (that is `PlayerConceded`). Emitted by the
+    /// state-based sweep, before any `GameOver` it produces: in a pod the
+    /// game goes on, and this is what says who went out.
+    PlayerLost { player: usize, cause: crate::player::LossCause },
     GameOver { winner: Option<usize> },
     /// CR 727.1 — the game was restarted; `starter` takes the first turn.
     GameRestarted { starter: usize },

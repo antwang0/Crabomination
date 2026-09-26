@@ -1345,6 +1345,43 @@ fn cr_800_4a_player_control_ends_when_either_side_leaves() {
     );
 }
 
+/// CR 104.3 / 800.4a — a pod goes on when a seat goes out, so the loss is
+/// announced (`PlayerLost`, with its cause) and stamped: placings rank the
+/// winner first, then every seat by how late it left, and seats that left
+/// in one sweep share a placing (CR 104.4a's simultaneous losses).
+#[test]
+fn cr_800_4a_a_seat_that_goes_out_is_announced_and_placed() {
+    use crabomination::player::LossCause;
+    let mut g = multi_player_game(4);
+    g.turn_number = 5;
+    g.players[3].life = 0;
+    let events = g.check_state_based_actions();
+    assert!(
+        events.iter().any(|e| matches!(e, GameEvent::PlayerLost { player: 3, cause: LossCause::LifeDepleted })),
+        "{events:?}",
+    );
+    assert!(!events.iter().any(|e| matches!(e, GameEvent::GameOver { .. })), "three seats remain");
+    assert_eq!(g.players[3].departure.map(|d| d.turn), Some(5));
+    assert_eq!(g.placement(3), Some(4));
+    assert_eq!(g.placement(0), None, "still playing");
+
+    // Two seats out in one sweep tie for 2nd; the game ends with seat 0 1st.
+    g.turn_number = 9;
+    g.players[1].life = 0;
+    g.players[2].poison_counters = 10;
+    let events = g.check_state_based_actions();
+    assert!(events.iter().any(|e| matches!(e, GameEvent::PlayerLost { player: 2, cause: LossCause::Poison })));
+    assert!(matches!(g.game_over, Some(Some(0))));
+    let places: Vec<_> = (0..4).map(|s| g.placement(s)).collect();
+    assert_eq!(places, [Some(1), Some(2), Some(2), Some(4)]);
+
+    // A concession is announced as one, not twice, and placed like any exit.
+    let mut g = multi_player_game(3);
+    let events = g.concede(1);
+    assert!(!events.iter().any(|e| matches!(e, GameEvent::PlayerLost { .. })), "{events:?}");
+    assert_eq!(g.placement(1), Some(3));
+}
+
 /// All seats eliminated simultaneously → draw (winner=None). Pre-existing
 /// behavior preserved through the team-aware refactor.
 #[test]

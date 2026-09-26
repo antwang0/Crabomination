@@ -1011,6 +1011,14 @@ pub struct PlayerView {
     /// eliminated portrait with the actual cause (CR 104.3).
     #[serde(default)]
     pub loss_reason: Option<String>,
+    /// Where this player finished, 1-based (`GameState::placement`): set once
+    /// they have left the game, and for the winner once it is over. Ties
+    /// share a placing.
+    #[serde(default)]
+    pub placement: Option<usize>,
+    /// The turn this player left the game on (CR 800.4a), if they have.
+    #[serde(default)]
+    pub out_on_turn: Option<u32>,
     /// Names of CR 114 emblems this player owns (command-zone, never
     /// leave). Surfaced so the UI can show active planeswalker-ultimate
     /// emblems. `#[serde(default)]` for snapshot back-compat.
@@ -2891,6 +2899,9 @@ pub enum GameEventWire {
     /// Wire mirror of `GameEvent::PlayerConceded` (CR 104.3a). Lets client
     /// UIs log "Player N conceded" distinctly from a life-loss game end.
     PlayerConceded { player: usize },
+    /// Wire mirror of `GameEvent::PlayerLost` (CR 104.3 / 800.4a): `player`
+    /// went out, and how (`LossCause::phrase`).
+    PlayerLost { player: usize, cause: String },
     /// Wire mirror of `GameEvent::ClassLevelReached` (CR 716.2). Lets client
     /// UIs log a Class levelling up.
     ClassLevelReached { player: usize, card_id: CardId, level: u8 },
@@ -3294,6 +3305,9 @@ impl From<&GameEvent> for GameEventWire {
             GameEvent::PlayerConceded { player } => {
                 GameEventWire::PlayerConceded { player: *player }
             }
+            GameEvent::PlayerLost { player, cause } => {
+                GameEventWire::PlayerLost { player: *player, cause: cause.phrase().to_string() }
+            }
             GameEvent::ClassLevelReached { source, player, level } => {
                 GameEventWire::ClassLevelReached {
                     player: *player,
@@ -3558,6 +3572,7 @@ impl GameEventWire {
             }
             E::Expended { player, total } => format!("{} expended (spell-mana {total})", pn(*player)),
             E::PlayerConceded { player } => format!("{} conceded", pn(*player)),
+            E::PlayerLost { player, cause } => format!("{} is out — {cause}", pn(*player)),
             E::ClassLevelReached { player, card_id, level } => {
                 format!("{}'s {} became level {level}", pn(*player), name(*card_id))
             }

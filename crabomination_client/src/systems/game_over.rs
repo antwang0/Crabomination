@@ -161,6 +161,11 @@ pub fn sync_game_over_modal(
             .collect();
         parts.join(" — ")
     };
+    // A pod ranks every seat instead: "2nd  Bot 1 — out on turn 9 ·
+    // commander damage", best first.
+    let standings = (cv.players.len() > 2).then(|| pod_standings(cv));
+    let placing = crate::systems::eliminated::placing_line(cv)
+        .filter(|_| cv.players.len() > 2 && winner != Some(cv.your_seat));
     let tf = |size: f32| ui_fonts.tf(size);
     let show_auto_rematch = matches!(*kind, ActiveMatchKind::SpectateBotVsBot);
 
@@ -206,13 +211,35 @@ pub fn sync_game_over_modal(
                     tf(22.0),
                     TextColor(subtitle_color),
                 ));
+                if let Some(line) = placing {
+                    p.spawn((Text::new(line), tf(16.0), TextColor(theme::TEXT_BODY)));
+                }
                 // Life summary line under the title — softer color so
-                // it doesn't compete with the result.
-                p.spawn((
-                    Text::new(life_summary),
-                    tf(14.0),
-                    TextColor(theme::TEXT_BODY),
-                ));
+                // it doesn't compete with the result. A pod gets the
+                // standings instead, one seat a line.
+                match &standings {
+                    None => {
+                        p.spawn((
+                            Text::new(life_summary),
+                            tf(14.0),
+                            TextColor(theme::TEXT_BODY),
+                        ));
+                    }
+                    Some(lines) => {
+                        p.spawn(Node {
+                            flex_direction: FlexDirection::Column,
+                            align_items: AlignItems::FlexStart,
+                            row_gap: Val::Px(3.0),
+                            ..default()
+                        })
+                        .with_children(|col| {
+                            for (line, you) in lines {
+                                let color = if *you { theme::ACCENT_GOLD } else { theme::TEXT_BODY };
+                                col.spawn((Text::new(line.clone()), tf(14.0), TextColor(color)));
+                            }
+                        });
+                    }
+                }
                 // Match stats block: turn count + one line per seat.
                 p.spawn((
                     Text::new(format!("Turn {}", stats.turns.max(1))),
@@ -355,6 +382,25 @@ pub fn sync_game_over_modal(
                 }
             });
         });
+}
+
+/// A pod's final standings, best placing first, one line a seat, flagged
+/// when it is the viewer's: "1st  Bot 2 — 31 life", "3rd  You — out on
+/// turn 9 · commander damage".
+pub fn pod_standings(cv: &crabomination::net::ClientView) -> Vec<(String, bool)> {
+    use crate::systems::eliminated::{ordinal, out_detail};
+    let mut seats: Vec<&crabomination::net::PlayerView> = cv.players.iter().collect();
+    seats.sort_by_key(|p| (p.placement.unwrap_or(usize::MAX), p.seat));
+    seats
+        .into_iter()
+        .map(|p| {
+            let you = p.seat == cv.your_seat;
+            let name = if you { "You" } else { p.name.as_str() };
+            let place = p.placement.map(ordinal).unwrap_or_else(|| "—".to_string());
+            let how = out_detail(p).unwrap_or_else(|| format!("{} life", p.life));
+            (format!("{place}  {name} — {how}"), you)
+        })
+        .collect()
 }
 
 fn format_auto_input(auto: &AutoRematchState) -> String {

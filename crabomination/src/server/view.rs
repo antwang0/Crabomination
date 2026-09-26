@@ -902,6 +902,8 @@ fn project_player(
             .map(|c| c.definition.name.to_string())
             .collect(),
         eliminated: player.eliminated,
+        placement: state.placement(player_seat),
+        out_on_turn: player.departure.map(|d| d.turn),
         loss_reason: player.loss_cause.map(|c| {
             match c {
                 crate::player::LossCause::LifeDepleted => "life",

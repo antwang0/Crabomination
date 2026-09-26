@@ -389,8 +389,12 @@ pub fn handle_surrender_button(
     }
 
     if surrender_btn.iter().any(|i| *i == Interaction::Pressed) {
-        // Nothing to concede once the game is already decided.
-        if view.0.as_ref().is_some_and(|cv| cv.game_over.is_some()) {
+        // Nothing to concede once the game is already decided, or once
+        // this seat is out of a pod that goes on.
+        let out = |cv: &crabomination::net::ClientView| {
+            cv.players.iter().any(|p| p.seat == cv.your_seat && p.eliminated)
+        };
+        if view.0.as_ref().is_some_and(|cv| cv.game_over.is_some() || out(cv)) {
             return;
         }
         match confirm.armed_until {
@@ -404,8 +408,10 @@ pub fn handle_surrender_button(
                 }
                 confirm.armed_until = None;
                 set_surrender_label(&mut label_q, "Surrender");
-                // The button lives in the Esc menu, which draws over the
-                // game-over screen the concession brings up.
+                // The button lives in the Esc menu, which draws over what
+                // the concession brings up: a duel's game-over screen, or in
+                // a pod that goes on without you the "You're out" panel
+                // (`eliminated::sync_out_panel`).
                 settings.0 = false;
             }
         }

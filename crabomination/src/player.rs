@@ -95,6 +95,30 @@ pub enum LossCause {
     Other,
 }
 
+impl LossCause {
+    /// How a player reads the cause in a log line ("Bot 2 is out — ...").
+    pub fn phrase(self) -> &'static str {
+        match self {
+            LossCause::LifeDepleted => "life total",
+            LossCause::Poison => "poison",
+            LossCause::Decked => "drew from an empty library",
+            LossCause::CommanderDamage => "commander damage",
+            LossCause::Conceded => "conceded",
+            LossCause::Other => "a lose-the-game effect",
+        }
+    }
+}
+
+/// CR 800.4a — when a seat left the game: the turn, and how many seats had
+/// left before it. Seats that leave in one state-based sweep share `before`
+/// (they left at the same time, CR 104.4a), so they share a placing
+/// (`GameState::placement`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Departure {
+    pub turn: u32,
+    pub before: u32,
+}
+
 /// One pending loyalty-ability copy grant (see
 /// `PlayerCold::loyalty_copy_grants`).
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -183,6 +207,10 @@ pub struct PlayerCold {
     /// back to the walk in that case, so an old snapshot still answers right.
     #[serde(default)]
     pub commander_identity: crate::mana::ColorSet,
+    /// When this seat left the game (CR 800.4a), stamped by the one leave
+    /// pass; `None` while it is in. Written once a game, so it lives here.
+    #[serde(default)]
+    pub departure: Option<Departure>,
     /// CR 603.7e — pending "your next creature spell this turn enters with these
     /// keywords" riders (Summon: Brynhildr's "Gestalt Mode" haste). Applied to
     /// the next creature spell's permanent as it enters and cleared at cleanup.
