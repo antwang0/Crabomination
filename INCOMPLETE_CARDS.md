@@ -1809,7 +1809,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Volcanic Offering | Built From Scratch (C14) | the choosing opponent is the caster's most hostile one, for both halves. |
 | 🟡 Avacyn's Judgment | Vampiric Bloodline (VOC) | no madness (its `{X}{R}` needs an X a madness cast can't choose); a plain 2-damage divider. |
 | 🟡 Shadowgrange Archfiend | Vampiric Bloodline (VOC) | no madness ("{2}{B}, Pay 8 life" has a life half a madness cost can't carry). |
-| 🟡 Imposing Grandeur | Vampiric Bloodline (VOC) | counts a commander in any zone. |
 | 🟡 Predators' Hour | Vampiric Bloodline (VOC) | the stolen card is exiled face up. |
 | 🟡 Sandstone Oracle | Call the Spirits (C15) | the chosen opponent is the one with the most cards in hand. |
 | 🟡 God-Pharaoh's Gift | Eternal Might (DRC) | exiles your greatest-power creature card (no choice). |

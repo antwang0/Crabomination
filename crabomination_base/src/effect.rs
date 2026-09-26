@@ -1612,6 +1612,11 @@ pub enum Value {
     /// `Effect::PutNameSticker` in this resolution put on something; 0 when
     /// it put none ("Add {R} for each unique vowel on that sticker").
     NameStickerUniqueVowels,
+    /// [`Value::GreatestCommanderManaValue`] counting only a commander the
+    /// player owns on the battlefield or in the command zone (Imposing
+    /// Grandeur, Stinging Study); one in a library, hand, graveyard or exile
+    /// adds nothing.
+    GreatestCommanderManaValueInPlayOrCommandZone(PlayerRef),
 }
 
 impl Value {

@@ -484,7 +484,7 @@ pub fn pendant_of_prosperity() -> CardDefinition {
 /// Stinging Study — draw X and lose X, X the mana value of a commander you
 /// own on the battlefield or in the command zone.
 pub fn stinging_study() -> CardDefinition {
-    let mv = Value::GreatestCommanderManaValue(PlayerRef::You);
+    let mv = Value::GreatestCommanderManaValueInPlayOrCommandZone(PlayerRef::You);
     CardDefinition {
         name: "Stinging Study",
         cost: cost(&[generic(4), b()]),

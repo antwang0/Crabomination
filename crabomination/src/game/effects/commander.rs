@@ -88,6 +88,21 @@ impl GameState {
         })
     }
 
+    /// [`Self::greatest_commander_mana_value`] over the commanders `seat` owns
+    /// on the battlefield (under anyone's control) or in their command zone.
+    pub(crate) fn greatest_commander_mana_value_in_play_or_command_zone(&self, seat: usize) -> u32 {
+        self.players.get(seat).map_or(0, |p| {
+            p.commanders
+                .iter()
+                .filter_map(|&id| {
+                    p.command.iter().find(|c| c.id == id).or_else(|| self.battlefield_find(id))
+                })
+                .map(|c| c.definition.cost.cmc())
+                .max()
+                .unwrap_or(0)
+        })
+    }
+
     /// CR 903.8 / Command Beacon — move one of `seat`'s commanders from the
     /// command zone to their hand.
     ///

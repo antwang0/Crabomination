@@ -254,6 +254,24 @@ fn stinging_study_reads_your_commander() {
     assert_eq!(g.players[0].life, l - 3);
 }
 
+/// CR 903.3 — X is a commander you own "on the battlefield or in the command
+/// zone": one left in the graveyard (its owner declined the CR 903.9a move)
+/// adds nothing.
+#[test]
+fn stinging_study_ignores_a_commander_in_the_graveyard() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 5);
+    let cmd = g.seat_commanders(0, vec![catalog::breena_the_demagogue()])[0];
+    let pos = g.players[0].command.iter().position(|c| c.id == cmd).unwrap();
+    let card = g.players[0].command.remove(pos);
+    g.players[0].graveyard.push(card);
+    g.commander_return_declined.push(cmd);
+    let (h, l) = (g.players[0].hand.len(), g.players[0].life);
+    let ss = g.add_card_to_hand(0, catalog::stinging_study());
+    cast(&mut g, 0, ss, None).expect("cast");
+    assert_eq!((g.players[0].hand.len(), g.players[0].life), (h, l));
+}
+
 /// Author of Shadows exiles the opponents' graveyards and lets you cast a
 /// nonland card from among them.
 #[test]

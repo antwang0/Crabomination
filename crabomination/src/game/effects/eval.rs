@@ -1715,6 +1715,10 @@ impl GameState {
                 .resolve_players(who, ctx)
                 .first()
                 .map_or(0, |&seat| self.greatest_commander_mana_value(seat) as i32),
+            Value::GreatestCommanderManaValueInPlayOrCommandZone(who) => self
+                .resolve_players(who, ctx)
+                .first()
+                .map_or(0, |&seat| self.greatest_commander_mana_value_in_play_or_command_zone(seat) as i32),
             Value::CommandersColorIdentityCount(who) => self
                 .resolve_players(who, ctx)
                 .first()

@@ -143,7 +143,7 @@ pub fn imposing_grandeur() -> CardDefinition {
                         },
                         Effect::Draw {
                             who: Selector::You,
-                            amount: Value::GreatestCommanderManaValue(PlayerRef::You),
+                            amount: Value::GreatestCommanderManaValueInPlayOrCommandZone(PlayerRef::You),
                         },
                     ])),
                 }),
