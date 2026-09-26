@@ -19,7 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
-| Bugs & robustness | [FIXED 2026-09-26 (session `012put2X`) — two pod hangs, two pod loops, and eleven Commander residuals](#fixed-2026-09-26-session-012put2x--two-pod-hangs-two-pod-loops-and-eleven-commander-residuals) | 47 |
+| Bugs & robustness | [FIXED 2026-09-26 (session `012put2X`) — two pod hangs, two pod loops, a debug-gate find, and ~20 Commander residuals](#fixed-2026-09-26-session-012put2x--two-pod-hangs-two-pod-loops-a-debug-gate-find-and-20-commander-residuals) | 70 |
 | Bugs & robustness | [FIXED 2026-09-26 (session `015BCEt5`) — the player-choice batch, and a board slot that reached a graveyard](#fixed-2026-09-26-session-015bcet5--the-player-choice-batch-and-a-board-slot-that-reached-a-graveyard) | 45 |
 | Bugs & robustness | [FIXED 2026-09-26 (session `01VVD5mW`) — Timey-Wimey's follow-ups and a residual sweep](#fixed-2026-09-26-session-01vvd5mw--timey-wimeys-follow-ups-and-a-residual-sweep) | 90 |
 | Bugs & robustness | [FIXED 2026-09-19 (the forty-sixth find) — a static's filter leaf that the chosen `AffectedPermanents` variant cannot carry is SILENTLY DROPPED, and a dropped leaf widens the static](#fixed-2026-09-19-the-forty-sixth-find--a-statics-filter-leaf-that-the-chosen-affectedpermanents-variant-cannot-carry-is-silently-dropped-and-a-dropped-leaf-widens-the-static) | 62 |
@@ -109,7 +109,7 @@ the handoff.
 
 # Bugs & robustness
 
-## FIXED 2026-09-26 (session `012put2X`) — two pod hangs, two pod loops, and eleven Commander residuals
+## FIXED 2026-09-26 (session `012put2X`) — two pod hangs, two pod loops, a debug-gate find, and ~20 Commander residuals
 
 - ⚠ **A pod HANG, not a cap** (8 seats, seed 49003 game 559): the action cap
   counts actions, so one action that never returns is invisible to it — the
@@ -141,6 +141,22 @@ the handoff.
   activations) — the same find as `01LEHArn`'s seed 56181, fixed there in
   `move_card_to`; this session's tests add the cross-controller case and the
   Elder shape.
+- ⚠ **A debug-only find, again**: the bot's `sink_facts` gate closed a
+  coloured ability whose pips the per-colour estimate couldn't cover, and
+  that estimate leaves non-rider restricted pool mana out — Vedalken
+  Engineer's artifact-only mana pays Executioner's Capsule. Release pods
+  just skipped the play; the debug build's gate-soundness `debug_assert!`
+  caught it (4 seats, seed 91040 game 15). Gate stays open while any
+  restricted mana floats. A debug census (`--games 20-30` a group) is still
+  the cheapest way to find what release pods wrap silently.
+- **Combat vs. any damage**: `creatures_that_damaged_me_this_turn` records
+  noncombat damage too; `creatures_that_combat_damaged_me_this_turn` is the
+  combat half (Beckett Brass's three Pirates, Estinien's Dragons).
+- ⚠ **Bisect note**: the pod golden table went red at an upstream commit
+  (`34774e835`, auto-tap for prompting seats — pod seats ARE `wants_ui`, so
+  a "prompting seats only" change moves every pod game); re-blessed there.
+  `git bisect reset` takes no `-q` — a failed reset left the stash popped
+  onto the bisect's detached HEAD.
 - Draws in the census are CR 104.4a simultaneous losses (every one read by
   `cap_diagnosis`'s new per-seat `[lost: …]`); the board caps are Oloro's
   Crawlspace holding off a doubling Gisa zombie army — a lock, not a defect.
@@ -152,7 +168,11 @@ the handoff.
   Buccaneer's Treasures, Pirate Hat); "for as long as you control" untap
   locks (Merchant Raiders, Shipbreaker Kraken, Dungeon Geists, Wall of Stolen
   Identity); Somnophore (its own damage, that player's creature); Sand Squid
-  (while tapped, may not untap).
+  (while tapped, may not untap); Hordewing Skaab (the batch's distinct
+  opponents); Estinien and Beckett Brass (combat damage only); "starting
+  with you" (The Horus Heresy, Druid of Purification); Perch Protection's
+  life lock until your next turn; stale rows closed (Humble Defector's
+  target opponent and the gift recipients were already chosen).
 - **Open:** Angel of Destiny's "each player it attacked this turn" (the last
   one only; `combat_defenders` is armed only for Port Razer's keyword);
   Khârn's "an opponent of your choice" inside a damage replacement (can't
