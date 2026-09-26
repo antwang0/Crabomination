@@ -40,7 +40,7 @@ lists were picked.
 | Zellix + Background UR | Zellix, Sanity Flayer **+** Passionate Archaeologist (**Choose a Background**, CR 702.124k) | UR | 98 + 2 | ✅ complete |
 | Yuriko UB | Yuriko, the Tiger's Shadow (**commander ninjutsu**, CR 702.49d) | UB | 100 | ✅ complete |
 | Adriana RW | Adriana, Captain of the Guard (**melee**, CR 702.121) | RW | 100 | ✅ complete |
-| **Sultai Arisen** (TDC precon) BGU | Teval, the Balanced Scale | BGU | 100 | 🟡 all 100 implemented, 8 carry residuals (below) |
+| **Sultai Arisen** (TDC precon) BGU | Teval, the Balanced Scale | BGU | 100 | 🟡 all 100 implemented, 7 carry residuals (below) |
 | **Mind Flayarrrs** (CLB precon) UB | Captain N'ghathrod | UB | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
 | **Blood Rites** (LCC precon) WB | Clavileño, First of the Blessed | WB | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Heads I Win, Tails You Lose** (SLD) UR | Zndrsplt, Eye of Wisdom **+** Okaun, Eye of Chaos (Partner with) | UR | 98 + 2 | ✅ complete |
@@ -3199,7 +3199,7 @@ Residuals: **Azor's
 Gateway**, **Chandra, Fire of Kaladesh**, **Cosima**,
 **Kytheon** (Gideon), **Journey to Eternity**,
 **Ludevic**,
-**Kolvori** (the Crest), **Valki** (Tibalt). A 200-game census beside Y'shtola / Brass / Galadriel (seed 168) decided 200/200 with zero
+**Kolvori** (the Crest). A 200-game census beside Y'shtola / Brass / Galadriel (seed 168) decided 200/200 with zero
 panics; Esika won 11.5 %.
 
 The **hundred-and-sixty-third** is Final Fantasy XIV's **Scions &

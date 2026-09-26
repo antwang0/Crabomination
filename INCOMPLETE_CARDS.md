@@ -1893,7 +1893,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Journey to Eternity | From Cute to Brute (SLD) | returns the creature, but not itself transformed. |
 | 🟡 Ludevic, Necrogenius | From Cute to Brute (SLD) | transforms for {U}{U}{B}{B} exiling one creature card; Olag is a 4/4 with counters, not a copy. |
 | 🟡 Kolvori, God of Kinship | From Cute to Brute (SLD) | The Ringhart Crest's mana isn't restricted. |
-| 🟡 Valki, God of Lies | From Cute to Brute (SLD) | Tibalt's exiled cards can't be played; the emblem isn't implemented. |
 | 🟡 Battle at the Helvault | Enduring Enchantments (CMM) | "for each player" covers opponents only: you can't exile one of your own permanents. |
 | 🟡 Battle for Bretagard | Enduring Enchantments (CMM) | chapter III copies every artifact and creature token you control, duplicate names included. |
 | 🟡 Cacophony Unleashed | Enduring Enchantments (CMM) | the animated 6/6 isn't legendary. |

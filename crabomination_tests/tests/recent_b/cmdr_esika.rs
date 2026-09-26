@@ -454,3 +454,26 @@ fn nicol_bolas_the_arisen_leaves_one_card() {
     loyalty(&mut g, arisen, 3, Some(Target::Player(1)));
     assert_eq!(g.players[1].library.len(), 1);
 }
+
+/// Tibalt, Cosmic Impostor's +2 exiles the top card of each library, and
+/// its controller may play those cards (his emblem).
+#[test]
+fn tibalt_cosmic_impostor_plays_what_he_exiles() {
+    let mut g = main_phase();
+    library(&mut g, 0, 3);
+    let theirs = g.add_card_to_library(1, catalog::grizzly_bears());
+    let valki = g.add_card_to_battlefield(0, catalog::valki_god_of_lies());
+    let mut ctx = EffectContext::for_ability(valki, 0, None);
+    ctx.source = Some(valki);
+    let ev = g.resolve_effect(&crabomination::effect::Effect::ExileSelfReturnTransformed, &ctx);
+    if let Ok(ev) = ev {
+        g.dispatch_triggers_for_events(&ev);
+    }
+    let tibalt = on_board(&g, 0, "Tibalt, Cosmic Impostor").unwrap_or_else(|| {
+        let id = valki;
+        g.battlefield_find(id).map(|_| id).expect("Tibalt")
+    });
+    loyalty(&mut g, tibalt, 0, None);
+    let c = g.exile.iter().find(|c| c.id == theirs).expect("exiled");
+    assert!(c.may_play_until.is_some_and(|p| p.player == 0), "yours to play");
+}

@@ -15,8 +15,6 @@
 //! - **Ludevic, Necrogenius** — transforms for {U}{U}{B}{B} exiling one
 //!   creature card; Olag is a plain 4/4 with counters, not a copy.
 //! - **The Ringhart Crest** — its mana isn't restricted.
-//! - **Tibalt, Cosmic Impostor** (Valki's back) — cards it exiles can't be
-//!   played; the emblem isn't implemented.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
@@ -1238,11 +1236,22 @@ pub fn treasure_map() -> CardDefinition {
     }
 }
 
-/// Valki, God of Lies // Tibalt, Cosmic Impostor.
-///
-/// ⚠ Residual: Tibalt's exiled cards can't be played; the emblem isn't
-/// implemented.
+/// Valki, God of Lies // Tibalt, Cosmic Impostor — the cards Tibalt exiles
+/// are yours to play with mana of any color (his emblem).
 pub fn valki_god_of_lies() -> CardDefinition {
+    // The emblem Tibalt gives as he enters: "you may play cards exiled with
+    // Tibalt, and spend mana as though it were mana of any color to cast
+    // those spells" — stamped on each card as his abilities exile it, so it
+    // outlives him as the emblem does.
+    let playable = |what: Selector| Effect::GrantMayPlay {
+        what,
+        duration: crate::card::MayPlayDuration::WhileExiled,
+        to_owner: false,
+        exile_after: false,
+        pay_own_cost: true,
+        any_color: true,
+    };
+    let exiled = || Selector::ExiledThisResolution { filter: R::Any };
     let tibalt = walker(
         "Tibalt, Cosmic Impostor",
         cost(&[generic(5), b(), r()]),
@@ -1251,14 +1260,23 @@ pub fn valki_god_of_lies() -> CardDefinition {
         vec![
             loyalty(
                 2,
-                Effect::ExileTopOfLibrary {
-                    who: Selector::Player(PlayerRef::EachPlayer),
-                    amount: Value::ONE,
-                    link_to_source: true,
-                    face_down: false,
-                },
+                Effect::Seq(vec![
+                    Effect::ExileTopOfLibrary {
+                        who: Selector::Player(PlayerRef::EachPlayer),
+                        amount: Value::ONE,
+                        link_to_source: true,
+                        face_down: false,
+                    },
+                    playable(exiled()),
+                ]),
             ),
-            loyalty(-3, Effect::Move { what: target_filtered(R::Artifact.or(R::Creature)), to: ZoneDest::Exile }),
+            loyalty(
+                -3,
+                Effect::Seq(vec![
+                    Effect::Move { what: target_filtered(R::Artifact.or(R::Creature)), to: ZoneDest::Exile },
+                    playable(exiled()),
+                ]),
+            ),
             loyalty(
                 -8,
                 Effect::Seq(vec![
@@ -1269,6 +1287,7 @@ pub fn valki_god_of_lies() -> CardDefinition {
                         },
                         to: ZoneDest::Exile,
                     },
+                    playable(exiled()),
                     Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colors(vec![Color::Red, Color::Red, Color::Red]) },
                 ]),
             ),
