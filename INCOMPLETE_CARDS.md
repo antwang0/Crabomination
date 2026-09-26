@@ -351,7 +351,6 @@ on existing primitives. What each rounds off:
 
 | Card | Approximation | What it needs |
 |---|---|---|
-| Liesa, Shroud of Dusk | the "pay 2 life instead of {2} of commander tax" rider is absent; tax is paid in mana | a per-card commander-tax payment mode (CR 903.8) |
 | Tiamat | "with different names" isn't enforced (`SearchUpToN`) — moot in a singleton deck | a distinct-names picker |
 | High Perfect Morcant | the "tap three Elves" cost is paid from its *other* Elves (`tap_n_filter`); Morcant itself isn't offered | a tap-N cost that may include the source |
 | Mythos of Illuna | the {R}{G} fight runs inside the spell, not as the token's own ETB trigger — no window to respond between entry and fight | a token copy carrying a granted triggered ability |

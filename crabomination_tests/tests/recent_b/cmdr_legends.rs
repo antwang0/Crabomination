@@ -281,6 +281,38 @@ fn liesa_taxes_each_spell_two_life() {
     }
 }
 
+/// CR 903.8 + Liesa's rider — her tax is 2 life per prior command-zone cast,
+/// not {2}; CR 119.4 — the cast is illegal when the life isn't there.
+#[test]
+fn cr_903_8_liesa_pays_her_commander_tax_in_life() {
+    let mut g = pod(4);
+    let liesa = g.seat_commanders(0, vec![catalog::liesa_shroud_of_dusk()])[0];
+    let cast_cmd = |g: &mut GameState| {
+        g.perform_action(GameAction::CastFromCommandZone {
+            card_id: liesa, target: None, additional_targets: vec![], mode: None, x_value: None,
+            alternative: false, pitch_card: None,
+        })
+    };
+    let recast = |g: &mut GameState| -> (u32, i32) {
+        flood(g, 0);
+        let (mana, life) = (g.players[0].mana_pool.total(), g.players[0].life);
+        cast_cmd(g).expect("cast");
+        drain_stack(g);
+        let spent = (mana - g.players[0].mana_pool.total(), life - g.players[0].life);
+        let mut events = Vec::new();
+        g.destroy_permanent(liesa, false, &mut events);
+        g.check_state_based_actions(); // CR 903.9a — home again
+        spent
+    };
+    assert_eq!(recast(&mut g), (5, 0), "first cast: printed cost only");
+    assert_eq!(recast(&mut g), (5, 2), "second: 2 life, no {{2}}");
+    assert_eq!(recast(&mut g), (5, 4), "third: 4 life");
+    g.players[0].life = 5;
+    flood(&mut g, 0);
+    assert!(cast_cmd(&mut g).is_err(), "6 life owed from 5");
+    assert!(g.players[0].command.iter().any(|c| c.id == liesa), "stays in the command zone");
+}
+
 /// Urtet: casting a Myr spell makes a Myr token; the activation grows every
 /// Myr by three counters, only on your turn.
 #[test]

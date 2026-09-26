@@ -425,13 +425,16 @@ pub fn child_of_alara() -> CardDefinition {
     }
 }
 
-/// Liesa, Shroud of Dusk — {2}{W}{W}{B} 5/5 flying, lifelink. Whenever a
-/// player casts a spell, they lose 2 life. (The commander-tax rider — pay 2
-/// life per previous command-zone cast instead of {2} — is not modelled:
-/// the tax is paid in mana, CR 903.8.)
+/// Liesa, Shroud of Dusk — {2}{W}{W}{B} 5/5 flying, lifelink. Its commander
+/// tax is 2 life per previous command-zone cast instead of {2} (CR 903.8).
+/// Whenever a player casts a spell, they lose 2 life.
 pub fn liesa_shroud_of_dusk() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "Rather than pay {2} for each previous time you've cast this spell from the command zone this game, pay 2 life that many times.",
+            effect: crate::effect::StaticEffect::CommanderTaxPaidInLife,
+        }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer),
             effect: Effect::LoseLife { who: Selector::Player(PlayerRef::Triggerer), amount: Value::Const(2) },
