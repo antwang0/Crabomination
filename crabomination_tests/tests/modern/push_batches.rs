@@ -3091,21 +3091,23 @@ fn putrefy_modern_destroys_artifact_or_creature() {
     assert!(g.battlefield_find(stone).is_none(), "Mind Stone destroyed");
 }
 
+/// Etali, Primal Storm — its attack exiles each player's top card, then its
+/// controller may cast the nonland ones free, an opponent's included; a land
+/// stays in exile.
 #[test]
-fn etali_primal_storm_attack_mills_each_player_one() {
+fn etali_primal_storm_casts_the_exiled_tops_free() {
     let mut g = two_player_game();
     let etali = g.add_card_to_battlefield(0, catalog::etali_primal_storm());
     g.clear_sickness(etali);
-    g.add_card_to_library(0, catalog::island());
-    g.add_card_to_library(1, catalog::island());
-    let p0_yard = g.players[0].graveyard.len();
-    let p1_yard = g.players[1].graveyard.len();
+    let island = g.add_card_to_library(0, catalog::island());
+    let bears = g.add_card_to_library(1, catalog::grizzly_bears());
     let trig = catalog::etali_primal_storm().triggered_abilities[0].effect.clone();
     let ctx = crabomination::game::effects::EffectContext::for_trigger(etali, 0, None, 0);
     let _ = g.resolve_effect(&trig, &ctx);
     drain_stack(&mut g);
-    assert_eq!(g.players[0].graveyard.len(), p0_yard + 1, "P0 milled 1");
-    assert_eq!(g.players[1].graveyard.len(), p1_yard + 1, "P1 milled 1");
+    assert_eq!(g.battlefield_find(bears).map(|c| c.controller), Some(0), "cast free by Etali's controller");
+    assert!(g.exile.iter().any(|c| c.id == island), "a land can't be cast");
+    assert_eq!(g.players[0].mana_pool.total(), 0);
 }
 
 #[test]

@@ -8844,14 +8844,8 @@ pub fn putrefy_modern() -> CardDefinition {
 
 /// Etali, Primal Storm — {4}{R}{R} Legendary Creature — Elder Dinosaur.
 /// 6/6. "Whenever this attacks, exile the top card of each player's
-/// library. You may cast any number of nonland cards exiled this way
+/// library, then you may cast any number of spells from among those cards
 /// without paying their mana costs."
-///
-/// Cube-style approximation: the "cast for free" rider is engine-wide
-/// ⏳ (no multi-player exile-then-may-cast loop). The attack trigger
-/// is approximated by milling each player 1 (the exile-to-removed-pile
-/// half), with the cast-without-paying clause dropped. A 6/6 attacker
-/// for 6 mana is still a fair body without the rider.
 pub fn etali_primal_storm() -> CardDefinition {
     use crate::card::Supertype as Sup;
     CardDefinition {
@@ -8867,10 +8861,15 @@ pub fn etali_primal_storm() -> CardDefinition {
         toughness: 6,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
-            effect: Effect::Mill {
-                who: Selector::Player(PlayerRef::EachPlayer),
-                amount: Value::Const(1),
-            },
+            effect: Effect::Seq(vec![
+                Effect::ExileTopOfLibrary {
+                    who: Selector::Player(PlayerRef::EachPlayer),
+                    amount: Value::Const(1),
+                    link_to_source: false,
+                    face_down: false,
+                },
+                Effect::CastExiledFree { what: Selector::ExiledThisResolution { filter: SelectionRequirement::Any } },
+            ]),
         }],
         ..Default::default()
     }
