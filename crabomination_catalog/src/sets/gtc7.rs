@@ -8,7 +8,7 @@ use crate::card::{
     EnchantmentSubtype, EventKind, EventScope, EventSpec, Keyword, SelectionRequirement as R,
     StaticAbility, Subtypes, TokenDefinition, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{etb, evolve, target_any, target_filtered};
+use crate::effect::shortcut::{etb, evolve, evolve_then, target_any, target_filtered};
 use crate::effect::{
     Duration, ExtraManaKind, PlayerRef, Predicate, Selector, StaticEffect, ZoneDest,
 };
@@ -140,9 +140,6 @@ pub fn simic_fluxmage() -> CardDefinition {
 /// "Evolves" shares evolve's exact trigger condition, so the two abilities are
 /// modeled as a paired trigger off the same greater-P/T ETB filter.
 pub fn renegade_krasis() -> CardDefinition {
-    let evolve_filter = R::Creature
-        .and(R::OtherThanSource)
-        .and(R::GreaterPowerOrToughnessThanSource);
     CardDefinition {
         name: "Renegade Krasis",
         cost: cost(&[generic(1), g(), g()]),
@@ -150,26 +147,18 @@ pub fn renegade_krasis() -> CardDefinition {
         subtypes: creatures(vec![CreatureType::Beast, CreatureType::Mutant]),
         power: 3,
         toughness: 2,
-        triggered_abilities: vec![
-            evolve(),
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
-                    .with_filter(Predicate::EntityMatches {
-                        what: Selector::TriggerSource,
-                        filter: evolve_filter,
-                    }),
-                effect: Effect::AddCounter {
-                    what: Selector::EachPermanent(
-                        R::Creature
-                            .and(R::ControlledByYou)
-                            .and(R::OtherThanSource)
-                            .and(R::WithCounter(CounterType::PlusOnePlusOne)),
-                    ),
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::ONE,
-                },
-            },
-        ],
+        // "Whenever Renegade Krasis evolves, put a +1/+1 counter on each
+        // other creature you control with a +1/+1 counter on it."
+        triggered_abilities: vec![evolve_then(Effect::AddCounter {
+            what: Selector::EachPermanent(
+                R::Creature
+                    .and(R::ControlledByYou)
+                    .and(R::OtherThanSource)
+                    .and(R::WithCounter(CounterType::PlusOnePlusOne)),
+            ),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::ONE,
+        })],
         ..Default::default()
     }
 }

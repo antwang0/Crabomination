@@ -17,7 +17,7 @@ use crate::card::{
     EnterMode, EquipBonus, EventKind, EventScope, EventSpec, Keyword, LandType, SelectionRequirement as R, Selector,
     StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value, WardCost,
 };
-use crate::effect::shortcut::{etb, evolve, monstrosity, on_attack, target_filtered};
+use crate::effect::shortcut::{etb, monstrosity, on_attack, target_filtered};
 use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, Predicate, ZoneDest};
 use crate::game::types::TurnStep;
 use crate::mana::{b, cost, g, generic, u, x, Color, ManaCost};
@@ -734,10 +734,12 @@ pub fn vexing_radgull() -> CardDefinition {
 /// Watchful Radstag — {2}{G} Creature — Elk Mutant 2/2. Evolve. Whenever it
 /// evolves, create a token that's a copy of it.
 pub fn watchful_radstag() -> CardDefinition {
-    let mut copies = evolve();
-    copies.effect = crate::effect::shortcut::token_copy_of(PlayerRef::You, Value::ONE, Selector::This);
     CardDefinition {
-        triggered_abilities: vec![evolve(), copies],
+        triggered_abilities: vec![crate::effect::shortcut::evolve_then(crate::effect::shortcut::token_copy_of(
+            PlayerRef::You,
+            Value::ONE,
+            Selector::This,
+        ))],
         ..creature("Watchful Radstag", cost(&[generic(2), g()]), vec![CreatureType::Elk, CreatureType::Mutant], 2, 2)
     }
 }

@@ -357,3 +357,21 @@ fn infesting_radroach_irradiates_on_hit() {
     assert_eq!(g.players[1].rad_counters, 2);
     assert!(g.battlefield_find(roach).unwrap().definition.keywords.contains(&Keyword::CantBlock));
 }
+
+/// CR 702.100b — Watchful Radstag copies itself when it *evolves*, i.e. after
+/// its evolve ability puts the counter. A Radstag shrunk to 1/1 copied itself
+/// before the counter landed, so every 2/2 copy re-triggered it: a six-seat
+/// pod stacked 514 copy triggers. Now the copy follows the counter, the
+/// Radstag is 2/2 when its copy enters, and the chain stops.
+#[test]
+fn cr_702_100b_watchful_radstag_copies_after_it_evolves() {
+    let mut g = pod(3);
+    let r = g.add_card_to_battlefield(0, catalog::watchful_radstag());
+    g.battlefield_find_mut(r).unwrap().add_counters(CounterType::MinusOneMinusOne, 1);
+    flood(&mut g, 0);
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    cast(&mut g, 0, bear, None).expect("a 2/2 enters beside a 1/1 Radstag");
+    let radstags = g.battlefield.iter().filter(|c| c.definition.name == "Watchful Radstag").count();
+    assert_eq!(radstags, 2, "one evolve, one copy");
+    assert!(g.stack.is_empty());
+}
