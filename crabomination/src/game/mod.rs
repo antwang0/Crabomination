@@ -157,6 +157,7 @@ mod empty_draw;
 // CR 702.63a — vanishing's last-counter sacrifice trigger.
 mod vanishing;
 mod simultaneous_deaths;
+mod vow;
 /// CR 800.4f/g — routing an ask whose seat has left the game.
 pub(crate) mod departed;
 #[doc(hidden)]
@@ -22759,6 +22760,10 @@ impl GameState {
         // dispatch — the whole thing is dead. Ask once.
         if !self.delayed_triggers.is_empty() {
             self.fire_delayed_event_watchers(events, batch_bits);
+        }
+        // A vowed creature is free to attack once its last vow counter is gone.
+        if events.iter().any(|e| matches!(e, GameEvent::CounterRemoved { counter_type: crate::card::CounterType::Vow, .. })) {
+            self.release_spent_vows(events);
         }
         // Phase 1: collect candidate triggers while the borrow on
         // `self.battlefield` is shared. Phase 2 will mutate `self.stack`

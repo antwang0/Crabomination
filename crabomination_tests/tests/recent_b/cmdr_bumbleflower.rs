@@ -313,6 +313,21 @@ fn promise_of_loyalty_keeps_one_vowed_creature_each() {
     }
 }
 
+/// CR 611.2b — Promise of Loyalty's restriction lasts "for as long as it has
+/// a vow counter on it": Vampire Hexmage stripping the counter frees it.
+#[test]
+fn cr_611_2b_promise_of_loyalty_ends_with_the_vow() {
+    let mut g = main_phase(2);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let hexmage = g.add_card_to_battlefield(0, catalog::vampire_hexmage());
+    let pl = g.add_card_to_hand(0, catalog::promise_of_loyalty());
+    cast_at(&mut g, pl, &[]).expect("cast");
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::CantAttackPlayer(0)));
+    activate(&mut g, hexmage, 0, &[Target::Permanent(bear)]).expect("remove all counters");
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::Vow), 0);
+    assert!(!g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::CantAttackPlayer(0)), "the vow is gone");
+}
+
 /// CR 702.175 — Steelburr Champion's offspring makes a 1/1 copy; an
 /// opponent's noncreature spell grows it.
 #[test]

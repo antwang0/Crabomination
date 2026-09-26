@@ -6,8 +6,6 @@
 //! - **Octomancer** and **Perch Protection** — the gift goes to a random
 //!   opponent rather than one the caster chooses; Perch Protection's life
 //!   lock lasts this turn, not until your next turn.
-//! - **Promise of Loyalty** — the attack restriction outlives a removed vow
-//!   counter.
 //! - **Tamiyo, Field Researcher** — a targeted opponent's creature draws its
 //!   controller the card, not Tamiyo's.
 
@@ -457,9 +455,8 @@ pub fn perch_protection() -> CardDefinition {
 }
 
 /// Promise of Loyalty — each player keeps one creature with a vow counter and
-/// sacrifices the rest; the vowed can't attack you.
-///
-/// ⚠ Residual: the restriction outlives a removed vow counter.
+/// sacrifices the rest; the vowed can't attack you while it keeps its vow
+/// counter.
 pub fn promise_of_loyalty() -> CardDefinition {
     CardDefinition {
         name: "Promise of Loyalty",

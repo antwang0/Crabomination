@@ -2588,8 +2588,7 @@ chained once per rule and gated by Class level), `Effect::ChooseColorForSelfOthe
 only its first target** (CR 603.3d — Ms. Bumbleflower's counter never landed;
 the self-cast and ETB paths already filled the rest), and **an emblem's
 free-cast static never applied** (CR 114.4 — Tamiyo's −7). Residuals:
-**Octomancer**, **Perch Protection**, **Promise of
-Loyalty**, **Tamiyo** (INCOMPLETE_CARDS). A 200-game census beside
+**Octomancer**, **Perch Protection**, **Tamiyo** (INCOMPLETE_CARDS). A 200-game census beside
 Hearthhull / Bright-Palm / Brimaz (seed 9551) decided 200/200 with zero
 panics and no card of the four lists unplayed, Ms. Bumbleflower winning
 38.0 %. `--bench` byte-identical.

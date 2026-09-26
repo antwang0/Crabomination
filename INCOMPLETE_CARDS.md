@@ -1836,7 +1836,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Flameblast Dragon | Nature's Vengeance (C18) | {X} is asked before {R}; a bot seat answers X out of floating mana only. |
 | 🟡 Octomancer | Peace Offering (BLC) | the Octopus gift goes to a random opponent rather than a chosen one. |
 | 🟡 Perch Protection | Peace Offering (BLC) | the extra-turn gift goes to a random opponent; the life lock lasts this turn only. |
-| 🟡 Promise of Loyalty | Peace Offering (BLC) | the attack restriction outlives a removed vow counter. |
 | 🟡 Tamiyo, Field Researcher | Peace Offering (BLC) | a targeted opponent's creature draws its own controller the card. |
 | 🟡 Fiery Justice | Nature of the Beast (C13) | the 5 life goes to the engine's most hostile opponent. |
 | 🟡 Magus of the Arena | Nature of the Beast (C13) | you pick the opponent's creature; the opponent should. |
