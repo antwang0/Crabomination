@@ -145,6 +145,10 @@ pub enum StaticEffect {
     /// commander from the command zone this game" (Henzie) — applied to every
     /// blitz cost, printed or granted, as its generic part.
     BlitzCostLessPerCommanderCast,
+    /// CR 903.8 — "Rather than pay {2} for each previous time you've cast this
+    /// spell from the command zone this game, pay 2 life that many times"
+    /// (Liesa, Shroud of Dusk). Read off the spell's own definition as it is cast.
+    CommanderTaxPaidInLife,
     /// "If you would create one or more Treasure tokens, instead create those
     /// tokens plus an additional Treasure token" (Jolene, the Plunder Queen)
     /// — one extra per resolution that minted a Treasure for the controller,

@@ -531,6 +531,17 @@ impl GameState {
         alt.mana_cost.reduce_generic(statics * casts);
     }
 
+    /// CR 903.8 — the commander tax on casting `card` from the command zone,
+    /// as `(generic, life)`: `{2}` per prior cast, or 2 life per prior cast
+    /// under the card's own `CommanderTaxPaidInLife` (Liesa, Shroud of Dusk).
+    pub(crate) fn commander_tax_for(&self, card: &crate::card::CardInstance) -> (u32, u32) {
+        let tax = self.commander_cast_count.get(&card.id).copied().unwrap_or(0).saturating_mul(2);
+        let in_life = card.definition.static_abilities.iter().any(|sa| {
+            matches!(sa.effect, crate::effect::StaticEffect::CommanderTaxPaidInLife)
+        });
+        if in_life { (0, tax) } else { (tax, 0) }
+    }
+
     /// `effective_alternative_cost` over an explicit source zone — the
     /// grant-from-the-battlefield arms apply to any spell their controller
     /// casts, a commander cast from the command zone included (CR 903.8).
@@ -13063,11 +13074,16 @@ impl GameState {
         } else {
             base_cost
         };
-        let prior = self.commander_cast_count.get(&card_id).copied().unwrap_or(0);
-        let commander_tax = prior.saturating_mul(2);
+        let (commander_tax, tax_life) = self.commander_tax_for(&card);
         if commander_tax > 0 {
             cost.symbols
                 .push(crate::mana::ManaSymbol::Generic(commander_tax));
+        }
+        // CR 119.4 — life is payable only up to the life total.
+        if tax_life > 0 && self.players[p].life < tax_life as i32 {
+            self.players[p].command.push(card);
+            self.offboard_keyword_grants = true;
+            return Err(GameError::InsufficientLife);
         }
         let tax = extra_cost_for_spell(self, p, &card, target.as_ref());
         if tax > 0 {
@@ -13104,7 +13120,7 @@ impl GameState {
                 return Err(e);
             }
         };
-        self.pay_life_cost(p, receipt.side_effects.life_lost);
+        self.pay_life_cost(p, receipt.side_effects.life_lost + tax_life);
         self.note_cast_payment_riders(&receipt, &spell_kind);
         let converged_value = converge_count(&receipt.pool_before, &self.players[p].mana_pool);
         let mana_spent = receipt
@@ -13547,12 +13563,19 @@ impl GameState {
         // cast for an alternative cost still pays {2} per prior cast from the
         // command zone. Pushed ahead of the reductions and the floor, as on
         // the regular command-zone path.
-        if !from_hand {
-            let prior = self.commander_cast_count.get(&card_id).copied().unwrap_or(0);
-            let commander_tax = prior.saturating_mul(2);
+        let tax_life = if from_hand {
+            0
+        } else {
+            let (commander_tax, tax_life) = self.commander_tax_for(&card);
             if commander_tax > 0 {
                 mana_cost.symbols.push(crate::mana::ManaSymbol::Generic(commander_tax));
             }
+            tax_life
+        };
+        // CR 119.4 — the alt cost's life and a life-paid tax come out of one total.
+        if tax_life > 0 && self.players[p].life < (tax_life + alt.life_cost) as i32 {
+            self.return_from_alt_cast(p, zone, card);
+            return Err(GameError::InsufficientLife);
         }
         let tax = extra_cost_for_spell(self, p, &card, target.as_ref());
         if tax > 0 {
@@ -13651,7 +13674,7 @@ impl GameState {
             }
         };
         self.note_cast_payment_riders(&receipt, &spell_kind);
-        self.pay_life_cost(p, receipt.side_effects.life_lost);
+        self.pay_life_cost(p, receipt.side_effects.life_lost + tax_life);
         let alt_mana_spent = receipt
             .pool_before
             .total()

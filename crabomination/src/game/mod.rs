@@ -31601,6 +31601,7 @@ fn static_effect_to_effects(
             | StaticEffect::CanAttackPlayersWhoAttackedYouLastTurn
             | StaticEffect::GrantBlitzToSpells { .. }
             | StaticEffect::BlitzCostLessPerCommanderCast
+            | StaticEffect::CommanderTaxPaidInLife
             | StaticEffect::TreasureCreationAddsTreasure
             | StaticEffect::SpellsYouDontOwnCostLess { .. }
             | StaticEffect::DoubleControllerCombatDamageToPlayerTriggers

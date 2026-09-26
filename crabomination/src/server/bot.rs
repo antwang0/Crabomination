@@ -8299,6 +8299,12 @@ pub(super) fn cast_candidates<'a>(
         let regular_ok = colors_coverable(&c.definition.cost, have_mana.get());
         let alt_ok = alt.is_some_and(|a| colors_coverable(&a.mana_cost, have_mana.get()));
         if !regular_ok && !alt_ok {
+        // A tax paid in life (Liesa) is legal down to exactly 0 (CR 119.4);
+        // the bot doesn't pay it that far.
+        let (_, tax_life) = state.commander_tax_for(c);
+        if tax_life > 0 && state.players[seat].life <= tax_life as i32 + 4 {
+            continue;
+        }
             continue;
         }
         let (target, additional_targets) = if c.definition.effect.requires_target() {
