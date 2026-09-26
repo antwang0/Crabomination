@@ -362,3 +362,31 @@ pub fn ojer_taq_deepest_foundation() -> CardDefinition {
         ..legendary_creature("Ojer Taq, Deepest Foundation", cost(&[generic(4), w(), w()]), vec![CreatureType::God], 6, 6)
     }
 }
+
+/// Excalibur, Sword of Eden — {12} Legendary Artifact — Equipment. This
+/// spell costs {X} less, X = the total mana value of historic permanents you
+/// control (artifacts, legendaries and Sagas, CR 700.6). Equipped creature
+/// gets +10/+0 and has vigilance. Equip legendary creature {2} — its only
+/// equip cost.
+pub fn excalibur_sword_of_eden() -> CardDefinition {
+    use crate::card::{ArtifactSubtype as AS, EnchantmentSubtype, EquipBonus};
+    let historic = R::Artifact
+        .or(R::HasSupertype(Supertype::Legendary))
+        .or(R::HasEnchantmentSubtype(EnchantmentSubtype::Saga));
+    CardDefinition {
+        name: "Excalibur, Sword of Eden",
+        cost: cost(&[generic(12)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![AS::Equipment], ..Default::default() },
+        static_abilities: vec![StaticAbility {
+            description: "This spell costs {X} less to cast, where X is the total mana value of historic permanents you control.",
+            effect: StaticEffect::SelfCostReducedByValue {
+                amount: Value::TotalManaValueOf(Box::new(Selector::ControlledBy { who: PlayerRef::You, filter: historic })),
+            },
+        }],
+        equip_filtered_cost: Some((R::Creature.and(R::HasSupertype(Supertype::Legendary)), cost(&[generic(2)]))),
+        equipped_bonus: Some(EquipBonus { power: 10, keywords: vec![Keyword::Vigilance], ..Default::default() }),
+        ..Default::default()
+    }
+}

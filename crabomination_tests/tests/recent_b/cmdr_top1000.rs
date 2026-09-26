@@ -306,3 +306,27 @@ fn ojer_taq_returns_as_its_temple_and_transforms_back() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(ojer).unwrap().definition.name, "Ojer Taq, Deepest Foundation");
 }
+
+/// CR 700.6 / 702.6a: Excalibur costs {X} less for the mana value of your
+/// historic permanents, and its only equip cost is "legendary creature {2}"
+/// — a nonlegendary creature can't be equipped at all.
+#[test]
+fn excalibur_discounts_by_historic_and_equips_only_legends() {
+    let mut g = pod(4);
+    g.add_card_to_battlefield(0, catalog::sol_ring()); // artifact, MV 1
+    let lotho = g.add_card_to_battlefield(0, catalog::lotho_corrupt_shirriff()); // legendary, MV 2
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let ex = g.add_card_to_hand(0, catalog::excalibur_sword_of_eden());
+    g.players[0].mana_pool.add_colorless(9); // 12 - (1 + 2)
+    g.perform_action(GameAction::CastSpell { card_id: ex, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast for nine");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ex).is_some());
+    g.players[0].mana_pool.add_colorless(4);
+    assert!(g.perform_action(GameAction::Equip { equipment: ex, target: bears }).is_err(), "not legendary");
+    g.perform_action(GameAction::Equip { equipment: ex, target: lotho }).expect("equip Lotho for {2}");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(lotho).unwrap();
+    assert_eq!(cp.power, 12);
+    assert!(cp.keywords().contains(&Keyword::Vigilance));
+}

@@ -21418,11 +21418,20 @@ impl GameState {
         let mut equip_cost = match (&fortify, brawl) {
             (Some(c), _) => c.clone(),
             (None, Some(granted)) => granted,
-            (None, None) => self.battlefield[equip_pos]
-                .definition
-                .has_equip()
-                .cloned()
-                .ok_or(GameError::NotEquipment(equipment))?,
+            (None, None) => match self.battlefield[equip_pos].definition.has_equip() {
+                Some(c) => c.clone(),
+                // "Equip legendary creature {2}" as the *only* equip cost
+                // (Excalibur, Sword of Eden): the host must match (CR 702.6a).
+                None => match self.battlefield[equip_pos].definition.equip_filtered_cost.clone() {
+                    Some((filter, c))
+                        if self.evaluate_requirement_static(&filter, &Target::Permanent(target), p, None) =>
+                    {
+                        c
+                    }
+                    Some(_) => return Err(GameError::SelectionRequirementViolated),
+                    None => return Err(GameError::NotEquipment(equipment)),
+                },
+            },
         };
         // "Equip creature token {N}" (Team Pennant): a cheaper alternate
         // cost when the target is a token. Take it whenever it applies —

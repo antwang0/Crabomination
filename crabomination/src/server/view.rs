@@ -1729,7 +1729,8 @@ fn project_permanent(
             .map(|c| c.subtypes().creature_types.as_slice())
             .unwrap_or(&card.definition.subtypes.creature_types)
             .contains(&crate::card::CreatureType::Flagbearer),
-        equippable: card.definition.is_equipment() && card.definition.has_equip().is_some(),
+        equippable: card.definition.is_equipment()
+            && (card.definition.has_equip().is_some() || card.definition.equip_filtered_cost.is_some()),
         equip_token_cost: card.definition.equip_token_cost.clone(),
         crew_value: card.definition.crew_cost().unwrap_or(0),
         saddle_value: card.definition.saddle_cost().unwrap_or(0),

@@ -9002,7 +9002,7 @@ fn sink_facts(state: &GameState, seat: usize, have: &SweepMana<'_>) -> u32 {
         if def.saddle_cost().is_some() {
             m |= sink::SADDLE;
         }
-        if (def.is_equipment() && def.has_equip().is_some())
+        if (def.is_equipment() && (def.has_equip().is_some() || def.equip_filtered_cost.is_some()))
             || (equipment_grant && state.granted_equipment(c).is_some())
         {
             m |= sink::EQUIP;
@@ -10879,7 +10879,14 @@ fn pick_equip(state: &GameState, seat: usize) -> Option<GameAction> {
         // A granted Equipment (Arterial Alchemy's Blood, Bludgeon Brawl's
         // artifacts) carries its equip cost on the static, not the card.
         let printed = eq.definition.is_equipment() && eq.definition.has_equip().is_some();
-        if !printed && state.granted_equipment(eq).is_none() {
+        // "Equip legendary creature {2}" as the only equip cost (Excalibur):
+        // offered only onto a host that matches.
+        let filtered_only = !printed
+            && eq.definition.is_equipment()
+            && eq.definition.equip_filtered_cost.as_ref().is_some_and(|(f, _)| {
+                state.evaluate_requirement_static(f, &Target::Permanent(target), seat, None)
+            });
+        if !printed && !filtered_only && state.granted_equipment(eq).is_none() {
             continue;
         }
         // Skip if already on the chosen target (no point re-equipping).
