@@ -1681,7 +1681,9 @@ impl Effect {
             }
             Effect::Discard { who, amount, .. } => sel_has_target(who) || value_has_target(amount),
             Effect::DiscardMatchingAtRandom { who, .. } => player_has_target(who),
-            Effect::ExileFromHand { who, amount } => sel_has_target(who) || value_has_target(amount),
+            Effect::ExileFromHand { who, amount } | Effect::ExileFromHandLinked { who, amount } => {
+                sel_has_target(who) || value_has_target(amount)
+            }
             Effect::ExileFromHandCopyCreature { who } => sel_has_target(who),
             Effect::CastUpToNFromOpponentsExile { count } => value_has_target(count),
             Effect::DiscardAnyNumber { who, .. } => sel_has_target(who),
@@ -3260,6 +3262,7 @@ impl Effect {
                 | Effect::SacrificeAllButN { .. }
                 | Effect::SacrificeAndRemember { .. }
                 | Effect::ExileFromHand { .. }
+                | Effect::ExileFromHandLinked { .. }
                 | Effect::ExileChosenFromHand { .. }
                 | Effect::ExilePlayerGraveyard { .. }
                 | Effect::ExileTopOfLibrary { .. }
@@ -4702,6 +4705,7 @@ impl Effect {
                 | Effect::GainAllActivatedAbilitiesOf { what, .. }
                 | Effect::LockOrUnlockRoomDoor { what } => sel_find(what, slot),
                 Effect::ExileFromHand { who, .. }
+                | Effect::ExileFromHandLinked { who, .. }
                 | Effect::ExileFromHandCopyCreature { who }
                 | Effect::ManifestFromHand { who, .. } => {
                     sel_find(who, slot)

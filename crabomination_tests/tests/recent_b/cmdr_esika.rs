@@ -392,6 +392,35 @@ fn cr_508_1d_gideon_battle_forged_lures_one_creature() {
     assert!(g.players[1].creature_attack_lures.is_empty(), "the lure lasts one turn");
 }
 
+/// Azor's Gateway transforms only once the cards it exiled span five
+/// different mana values — two Bears count once — and its controller picks
+/// each exiled card.
+#[test]
+fn azors_gateway_counts_different_mana_values() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = main_phase();
+    let gate = g.add_card_to_battlefield(0, catalog::azors_gateway());
+    for _ in 0..6 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let order = [
+        g.add_card_to_hand(0, catalog::grizzly_bears()),
+        g.add_card_to_hand(0, catalog::grizzly_bears()),
+        g.add_card_to_hand(0, catalog::llanowar_elves()),
+        g.add_card_to_hand(0, catalog::forest()),
+        g.add_card_to_hand(0, catalog::journey_to_eternity()),
+        g.add_card_to_hand(0, catalog::serra_angel()),
+    ];
+    g.decider = Box::new(ScriptedDecider::new(order.iter().map(|&id| DecisionAnswer::Discard(vec![id]))));
+    for (i, id) in order.into_iter().enumerate() {
+        g.battlefield_find_mut(gate).unwrap().tapped = false;
+        activate(&mut g, gate, 0, None).expect("{1}, {T}");
+        assert!(g.exile.iter().any(|c| c.id == id), "the chosen card was exiled");
+        let flipped = on_board(&g, 0, "Sanctum of the Sun").is_some();
+        assert_eq!(flipped, i == 5, "after exile #{}", i + 1);
+    }
+}
+
 /// The snow duals enter tapped (table-driven).
 #[test]
 fn snow_duals_enter_tapped() {

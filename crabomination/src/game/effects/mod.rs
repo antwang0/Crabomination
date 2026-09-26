@@ -9899,6 +9899,17 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ExileFromHandLinked { who, amount } => {
+                let before = self.scratch.last_moved_cards.len();
+                self.run_effect(&Effect::ExileFromHand { who: who.clone(), amount: amount.clone() }, ctx, events)?;
+                let moved: Vec<CardId> = self.scratch.last_moved_cards.get(before..).unwrap_or_default().to_vec();
+                for cid in moved {
+                    if let Some(c) = self.exile.iter_mut().find(|c| c.id == cid) {
+                        c.exiled_with = ctx.source;
+                    }
+                }
+                Ok(())
+            }
             Effect::ExileFromHand { who, amount } => {
                 // The exiling player picks, asked as a discard-shaped choice
                 // (a bot sheds its least useful cards — Ashiok −3, Kheru

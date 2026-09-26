@@ -1848,6 +1848,14 @@ impl GameState {
                 }
                 seen.len() as i32
             }
+            Value::DistinctManaValuesExiledWith => {
+                let Some(src) = ctx.source else { return 0 };
+                let mut seen: crate::fxhash::HashSet<u32> = crate::fxhash::HashSet::default();
+                for card in self.exile.iter().filter(|c| c.exiled_with == Some(src)) {
+                    seen.insert(card.definition.cost.cmc());
+                }
+                seen.len() as i32
+            }
             Value::CardsExiledWithSourceMatching(filter) => {
                 let Some(src) = ctx.source else { return 0 };
                 self.exile

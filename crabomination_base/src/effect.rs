@@ -1311,6 +1311,9 @@ pub enum Value {
     /// Curator's "four or more card types among cards exiled with this
     /// creature" threshold.
     DistinctCardTypesExiledWith,
+    /// Distinct mana values among cards in exile stamped `exiled_with =
+    /// source` (Azor's Gateway's "five or more different mana values").
+    DistinctManaValuesExiledWith,
     /// Number of cards in exile stamped `exiled_with = source` (the resolving
     /// source). Backs "as long as three or more cards are exiled with this
     /// creature" static thresholds (Veteran Survivor).
@@ -4896,6 +4899,10 @@ pub enum Effect {
     /// (auto-decider exiles by hand order). Like `Discard` but routes to
     /// exile instead of the graveyard (Ashiok, Nightmare Muse −3).
     ExileFromHand { who: Selector, amount: Value },
+    /// `ExileFromHand` whose cards are linked to the source (`exiled_with`),
+    /// for "exile a card from your hand" on a permanent that later counts
+    /// what it exiled (Azor's Gateway).
+    ExileFromHandLinked { who: Selector, amount: Value },
     /// "Exile a card from your hand face down. It becomes foretold. Its
     /// foretell cost is its mana cost reduced by {`reduce`}." (Ethereal
     /// Valkyrie.) The controller picks the card; it isn't foretelling

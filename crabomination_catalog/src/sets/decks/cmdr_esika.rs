@@ -3,8 +3,6 @@
 //! almost all double-faced. Tests in `tests/recent_b/cmdr_esika.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Azor's Gateway** — transforms off five cards exiled with it, not five
-//!   different mana values; the exiled card is the engine's pick.
 //! - **Chandra, Fire of Kaladesh** — flips when an opponent has lost 3 or
 //!   more life this turn, not after Chandra herself dealt 3 damage.
 //! - **Cosima, God of the Voyage** — the voyage ability isn't implemented.
@@ -275,9 +273,6 @@ pub fn arlinn_the_packs_hope() -> CardDefinition {
 /// Azor's Gateway // Sanctum of the Sun — {1}, {T}: draw, then exile a card
 /// from hand; with enough exiled, gain 5, untap, transform. The Sanctum taps
 /// for mana equal to your life.
-///
-/// ⚠ Residual: counts five cards exiled with it, not five mana values; the
-/// exiled card is the engine's pick.
 pub fn azors_gateway() -> CardDefinition {
     let sanctum = land(
         "Sanctum of the Sun",
@@ -293,14 +288,9 @@ pub fn azors_gateway() -> CardDefinition {
             tap_cost: true,
             effect: Effect::Seq(vec![
                 Effect::Draw { who: Selector::You, amount: Value::ONE },
-                Effect::ExileLinked {
-                    what: Selector::Take {
-                        inner: Box::new(Selector::CardsInZone { who: PlayerRef::You, zone: Zone::Hand, filter: R::Any }),
-                        count: Box::new(Value::ONE),
-                    },
-                },
+                Effect::ExileFromHandLinked { who: Selector::You, amount: Value::ONE },
                 Effect::If {
-                    cond: Predicate::ValueAtLeast(Value::CardsExiledWithSourceCount, Value::Const(5)),
+                    cond: Predicate::ValueAtLeast(Value::DistinctManaValuesExiledWith, Value::Const(5)),
                     then: Box::new(Effect::Seq(vec![
                         Effect::GainLife { who: Selector::You, amount: Value::Const(5) },
                         Effect::Untap { what: Selector::This, up_to: None },
