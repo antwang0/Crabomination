@@ -537,8 +537,7 @@ pub fn renewed_faith() -> CardDefinition {
 
 /// Mask of Griselbrand — {1}{B}{B} Legendary Equipment. Equipped creature has
 /// flying and lifelink. When equipped creature dies, you may pay X life (X =
-/// its power); if you do, draw X cards. Equip {3}. (The pay-X-life gate is
-/// approximated as an unconditional draw of the dying creature's power.)
+/// its power); if you do, draw X cards. Equip {3}.
 pub fn mask_of_griselbrand() -> CardDefinition {
     CardDefinition {
         name: "Mask of Griselbrand",
@@ -554,9 +553,16 @@ pub fn mask_of_griselbrand() -> CardDefinition {
             keywords: vec![Keyword::Flying, Keyword::Lifelink],
             triggered_abilities: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
-                effect: Effect::Draw {
-                    who: Selector::You,
+                // "you may pay X life, where X is its power. If you do, draw X
+                // cards."
+                effect: Effect::MayPayLife {
+                    description: "Pay X life to draw X cards?".into(),
                     amount: Value::PowerOf(Box::new(Selector::TriggerSource)),
+                    body: Box::new(Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::PowerOf(Box::new(Selector::TriggerSource)),
+                    }),
+                    else_: None,
                 },
             }],
             triggers_on_equipment: true,

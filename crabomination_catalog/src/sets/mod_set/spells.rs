@@ -300,9 +300,8 @@ pub fn aura_shards() -> CardDefinition {
 }
 
 /// Aura of Silence — {1}{W}{W} Enchantment. "Artifact and enchantment spells
-/// cost {2} more to cast." (Printed: only opponents' spells; modeled as an
-/// all-players `AdditionalCost` tax.) "Sacrifice this: Destroy target artifact
-/// or enchantment."
+/// your opponents cast cost {2} more to cast. Sacrifice this: Destroy target
+/// artifact or enchantment."
 pub fn aura_of_silence() -> CardDefinition {
     use crate::card::ActivatedAbility;
     CardDefinition {
@@ -310,8 +309,8 @@ pub fn aura_of_silence() -> CardDefinition {
         cost: cost(&[generic(1), w(), w()]),
         card_types: vec![CardType::Enchantment],
         static_abilities: vec![StaticAbility {
-            description: "Artifact and enchantment spells cost {2} more to cast.",
-            effect: StaticEffect::AdditionalCost {
+            description: "Artifact and enchantment spells your opponents cast cost {2} more to cast.",
+            effect: StaticEffect::OpponentSpellsCostMore {
                 filter: SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
                 amount: 2,
             },

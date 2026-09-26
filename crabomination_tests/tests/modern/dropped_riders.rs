@@ -255,3 +255,53 @@ fn bloodthirsty_adversary_recasts_a_graveyard_spell() {
     assert!(g.exile.iter().any(|c| c.id == bolt), "the card is exiled");
     assert_eq!(g.players[1].life, 17, "its copy was cast free at the opponent");
 }
+
+/// Aura of Silence — only *opponents'* artifact and enchantment spells cost
+/// {2} more; its controller's don't.
+#[test]
+fn aura_of_silence_taxes_opponents_only() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::aura_of_silence());
+    let ring = g.add_card_to_hand(0, catalog::sol_ring());
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, ring, None).expect("its controller pays {1}");
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    let ring2 = g.add_card_to_hand(1, catalog::sol_ring());
+    g.players[1].mana_pool.add_colorless(1);
+    assert!(cast(&mut g, ring2, None).is_err(), "an opponent owes {{3}}");
+}
+
+/// Compulsive Research — "discards two cards unless they discard a land card".
+#[test]
+fn compulsive_research_discards_a_land_instead() {
+    let mut g = main_phase();
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::lightning_bolt());
+    }
+    g.add_card_to_hand(0, catalog::island());
+    let cr = g.add_card_to_hand(0, catalog::compulsive_research());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, cr, None).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), 3, "one land discarded, three Bolts kept");
+}
+
+/// Mask of Griselbrand — "you may pay X life … If you do, draw X cards": the
+/// cards cost life.
+#[test]
+fn mask_of_griselbrand_pays_life_for_the_cards() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = main_phase();
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let giant = g.add_card_to_battlefield(0, catalog::hill_giant());
+    let mask = g.add_card_to_battlefield(0, catalog::mask_of_griselbrand());
+    g.battlefield_find_mut(mask).unwrap().attached_to = Some(giant);
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    g.remove_to_graveyard_with_triggers(giant);
+    drain_stack(&mut g);
+    assert_eq!((g.players[0].hand.len(), g.players[0].life), (3, 17));
+}

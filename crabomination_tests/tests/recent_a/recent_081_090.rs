@@ -256,9 +256,13 @@ mod recent81 {
         assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Lifelink),
             "equipped creature has lifelink");
         let hand = g.players[0].hand.len();
+        g.decider = Box::new(crabomination::decision::ScriptedDecider::new(vec![
+            crabomination::decision::DecisionAnswer::Bool(true),
+        ]));
         g.remove_to_graveyard_with_triggers(bear);
         drain_stack(&mut g);
-        assert_eq!(g.players[0].hand.len(), hand + 2, "drew cards equal to its power");
+        assert_eq!(g.players[0].hand.len(), hand + 2, "paid 2 life, drew cards equal to its power");
+        assert_eq!(g.players[0].life, 18);
     }
 
     #[test]

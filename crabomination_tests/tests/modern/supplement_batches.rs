@@ -1614,9 +1614,10 @@ fn boil_destroys_all_islands() {
     assert!(g.battlefield.iter().any(|c| c.id == f1), "Forest should survive");
 }
 
-/// Compulsive Research: caster draws three then discards two.
+/// Compulsive Research: caster draws three, then discards two unless they
+/// discard a land — three Islands drawn, so one Island goes.
 #[test]
-fn compulsive_research_draws_three_discards_two() {
+fn compulsive_research_draws_three_discards_a_land() {
     let mut g = two_player_game();
     for _ in 0..5 { g.add_card_to_library(0, catalog::island()); }
     let id = g.add_card_to_hand(0, catalog::compulsive_research());
@@ -1627,9 +1628,9 @@ fn compulsive_research_draws_three_discards_two() {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).unwrap();
     drain_stack(&mut g);
-    // -1 (cast) + 3 (draw) - 2 (discard) = net 0.
-    assert_eq!(g.players[0].hand.len(), hand_before, "net hand size unchanged");
-    assert_eq!(g.players[0].graveyard.len(), 3, "2 discards + the cast spell itself");
+    // -1 (cast) + 3 (draw) - 1 (a land discarded instead of two cards) = +1.
+    assert_eq!(g.players[0].hand.len(), hand_before + 1);
+    assert_eq!(g.players[0].graveyard.len(), 2, "the land + the cast spell itself");
 }
 
 /// Demolish: destroys target artifact.

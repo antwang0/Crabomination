@@ -470,9 +470,7 @@ pub fn boil() -> CardDefinition {
 /// Compulsive Research — {2}{U} Sorcery. Target player draws three cards.
 /// Then that player discards two cards unless they discard a land card.
 ///
-/// Approximation: caster draws three then discards two (auto-decider
-/// picks the first two non-land cards in hand). The "land instead of two"
-/// branch is omitted.
+/// ⚠ "Target player" is always you (the caster draws and discards).
 pub fn compulsive_research() -> CardDefinition {
     CardDefinition {
         name: "Compulsive Research",
@@ -483,10 +481,10 @@ pub fn compulsive_research() -> CardDefinition {
                 who: Selector::You,
                 amount: Value::Const(3),
             },
-            Effect::Discard {
-                who: Selector::You,
-                amount: Value::Const(2),
-                random: false,
+            Effect::DiscardUnlessKind {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                instead: SelectionRequirement::Land,
             },
         ]),
         ..Default::default()
