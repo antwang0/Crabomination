@@ -10,8 +10,6 @@
 //! - **Cosima, God of the Voyage** — the voyage ability isn't implemented.
 //! - **Gideon, Battle-Forged** (Kytheon's back) — the +2 lure isn't
 //!   implemented.
-//! - **Journey to Eternity** — returns the creature, but not itself
-//!   transformed.
 //! - **Ludevic, Necrogenius** — transforms for {U}{U}{B}{B} exiling one
 //!   creature card; Olag is a plain 4/4 with counters, not a copy.
 
@@ -728,9 +726,7 @@ pub fn jace_vryns_prodigy() -> CardDefinition {
 }
 
 /// Journey to Eternity // Atzal, Cave of Eternity — enchanted creature of
-/// yours dying comes back.
-///
-/// ⚠ Residual: the Aura doesn't return transformed.
+/// yours dying comes back, and the Aura returns as Atzal.
 pub fn journey_to_eternity() -> CardDefinition {
     let atzal = land(
         "Atzal, Cave of Eternity",
@@ -754,13 +750,19 @@ pub fn journey_to_eternity() -> CardDefinition {
         card_types: vec![CardType::Enchantment],
         subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
         effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature.and(R::ControlledByYou)) },
-        equipped_bonus: Some(EquipBonus {
-            triggered_abilities: vec![TriggeredAbility {
-                event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
-                effect: Effect::Move { what: Selector::This, to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false } },
-            }],
-            ..Default::default()
-        }),
+        // "When enchanted creature dies, return it to the battlefield under
+        // your control, then return Journey to Eternity to the battlefield
+        // transformed under your control."
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::EnchantedBySource),
+            effect: Effect::Seq(vec![
+                Effect::Move {
+                    what: Selector::TriggerSource,
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                },
+                Effect::ExileSelfReturnTransformed,
+            ]),
+        }],
         back_face: Some(Box::new(atzal)),
         ..Default::default()
     }

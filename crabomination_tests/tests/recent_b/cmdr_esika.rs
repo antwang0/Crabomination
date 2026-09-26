@@ -333,6 +333,21 @@ fn ringhart_crest_mana_is_restricted() {
     assert!(on_board(&g, 0, "Kinnan, Bonder Prodigy").is_some());
 }
 
+/// Journey to Eternity — the enchanted creature dying comes back, then the
+/// Aura returns transformed as Atzal (CR 712.14a — it returns transformed).
+#[test]
+fn journey_to_eternity_returns_as_atzal() {
+    let mut g = main_phase();
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let journey = g.add_card_to_hand(0, catalog::journey_to_eternity());
+    cast(&mut g, journey, Some(Target::Permanent(bears))).expect("enchant the Bears");
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, Some(Target::Permanent(bears))).expect("bolt the Bears");
+    assert!(on_board(&g, 0, "Grizzly Bears").is_some(), "the Bears come back");
+    assert!(on_board(&g, 0, "Atzal, Cave of Eternity").is_some(), "the Aura returns transformed");
+    assert!(on_board(&g, 0, "Journey to Eternity").is_none());
+}
+
 /// The snow duals enter tapped (table-driven).
 #[test]
 fn snow_duals_enter_tapped() {

@@ -1886,7 +1886,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Chandra, Fire of Kaladesh | From Cute to Brute (SLD) | flips when an opponent has lost 3 or more life this turn, not after Chandra dealt 3 damage. |
 | 🟡 Cosima, God of the Voyage | From Cute to Brute (SLD) | the voyage ability isn't implemented. |
 | 🟡 Kytheon, Hero of Akros | From Cute to Brute (SLD) | Gideon's +2 lure isn't implemented. |
-| 🟡 Journey to Eternity | From Cute to Brute (SLD) | returns the creature, but not itself transformed. |
 | 🟡 Ludevic, Necrogenius | From Cute to Brute (SLD) | transforms for {U}{U}{B}{B} exiling one creature card; Olag is a 4/4 with counters, not a copy. |
 | 🟡 Battle at the Helvault | Enduring Enchantments (CMM) | "for each player" covers opponents only: you can't exile one of your own permanents. |
 | 🟡 Battle for Bretagard | Enduring Enchantments (CMM) | chapter III copies every artifact and creature token you control, duplicate names included. |
