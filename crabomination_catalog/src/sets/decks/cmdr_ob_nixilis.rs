@@ -324,8 +324,11 @@ pub fn profane_command() -> CardDefinition {
         "Profane Command",
         cost(&[x(), b(), b()]),
         CardType::Sorcery,
-        Effect::ChooseN {
-            picks: vec![0, 2],
+        Effect::ChooseModesCast {
+            // "Choose two.", picked as it is cast (CR 700.2).
+            min: 2,
+            max: 2,
+            allow_repeats: false,
             modes: vec![
                 Effect::LoseLife { who: target_filtered(R::Player), amount: Value::XFromCost },
                 Effect::Move {

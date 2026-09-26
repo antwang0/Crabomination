@@ -235,8 +235,11 @@ pub fn silumgars_command() -> CardDefinition {
         name: "Silumgar's Command",
         cost: cost(&[generic(3), u(), b()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::ChooseN {
-            picks: vec![2, 3],
+        effect: Effect::ChooseModesCast {
+            // "Choose two.", picked as it is cast (CR 700.2).
+            min: 2,
+            max: 2,
+            allow_repeats: false,
             modes: vec![
                 Effect::CounterSpell {
                     what: target_filtered(SelectionRequirement::IsSpellOnStack.and(

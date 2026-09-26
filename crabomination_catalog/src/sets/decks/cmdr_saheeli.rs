@@ -338,8 +338,11 @@ pub fn saheelis_artistry() -> CardDefinition {
         name: "Saheeli's Artistry",
         cost: cost(&[generic(4), u(), u()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::ChooseN {
-            picks: vec![0, 1],
+        effect: Effect::ChooseModesCast {
+            // "Choose one or both.", picked as it is cast (CR 700.2).
+            min: 1,
+            max: 2,
+            allow_repeats: false,
             modes: vec![
                 token_copy(target_filtered(R::Artifact), vec![]),
                 token_copy(target_filtered(R::Creature), vec![CardType::Artifact]),

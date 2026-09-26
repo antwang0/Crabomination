@@ -248,11 +248,11 @@ fn reverse_engineer_and_saheelis_artistry() {
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let art = g.add_card_to_hand(0, catalog::saheelis_artistry());
     flood(&mut g, 0);
-    g.perform_action(GameAction::CastSpell {
+    g.perform_action(GameAction::CastSpellSpree {
         card_id: art,
+        spree_modes: vec![0, 1],
         target: Some(Target::Permanent(ring)),
         additional_targets: vec![Target::Permanent(bear)],
-        mode: None,
         x_value: None,
     })
     .expect("both modes");

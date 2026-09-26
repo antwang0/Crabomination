@@ -395,14 +395,20 @@ fn pestilence_demon_pings_everything() {
     }
 }
 
-/// Choose two (CR 700.2) — the default pair: target player loses X, target
+/// Choose two (CR 700.2), picked as it is cast: target player loses X, target
 /// creature gets −X/−X.
 #[test]
 fn profane_command_drains_and_shrinks() {
     let mut g = pod(3);
     let angel = g.add_card_to_battlefield(2, catalog::serra_angel());
     let cmd = g.add_card_to_hand(0, catalog::profane_command());
-    cast(&mut g, cmd, Some(Target::Player(1)), vec![Target::Permanent(angel)], Some(4)).expect("cast");
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: cmd, spree_modes: vec![0, 2], target: Some(Target::Player(1)),
+        additional_targets: vec![Target::Permanent(angel)], x_value: Some(4),
+    })
+    .expect("cast");
+    drain_stack(&mut g);
     assert_eq!(g.players[1].life, 16);
     assert!(g.battlefield_find(angel).is_none());
 }

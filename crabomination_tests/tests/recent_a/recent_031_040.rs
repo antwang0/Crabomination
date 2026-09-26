@@ -14,7 +14,7 @@ mod recent31 {
     fn modes(def: crabomination::card::CardDefinition) -> Vec<Effect> {
         match def.effect {
             Effect::ChooseMode(m) => m,
-            Effect::ChooseN { modes, .. } => modes,
+            Effect::ChooseN { modes, .. } | Effect::ChooseModesCast { modes, .. } => modes,
             other => panic!("not a modal card: {other:?}"),
         }
     }
