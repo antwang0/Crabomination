@@ -959,8 +959,7 @@ could not fire), `Effect::OnMatchingBlocksThisTurn` (Benefactor's Draught) and
 politics.rs`). ⚠ **The strict debug pod found Collective Voyage broken**: its
 join-forces body searched only seat 0's library and put those lands under the
 caster (`resolve_player`'s fan-out assert) — now `EachPlayerDoes`, with a CR
-207.2c test. Residuals: Humble Defector goes to a random opponent; Sidar
-Kondo's evasion covers only your small creatures; Advokist counters a taker's
+207.2c test. Residuals: Humble Defector goes to a random opponent; Advokist counters a taker's
 greatest-power creature. Debug pods beside Zedruu / Obuun / Kaalia / Sigarda
 (seeds 9311/9312, 60 games) decided 60/60, zero panics; a 120-game census
 (seed 9313) leaves no card unplayed (Kynaios 22.5 % there).

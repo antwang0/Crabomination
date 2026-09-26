@@ -4,8 +4,6 @@
 //!
 //! Residuals (each also on its card):
 //! - **Humble Defector** — the opponent who gains control is a random one.
-//! - **Sidar Kondo of Jamuraa** — the evasion covers creatures you control
-//!   with power 2 or less, not other players' small attackers.
 //! - **Orzhov Advokist** — a taker's counters go on their greatest-power
 //!   creature, and the attack restriction covers the creatures they control
 //!   as it resolves.
