@@ -1510,7 +1510,6 @@ impl Effect {
                 first.requires_target() || second.requires_target()
             }
             Effect::EachPlayerRollsSourceCantAttackHighest { .. } => false,
-            Effect::GoadACreatureOfEachOpponentAttackedBy { .. } => false,
             Effect::CopySpellForEachOtherLegalTarget { what } => sel_has_target(what),
             Effect::SpellDiscountUntilYourNextTurn { who, .. } => player_has_target(who),
             Effect::ChooseMode(modes) | Effect::AsEntersChooseMode(modes) => {

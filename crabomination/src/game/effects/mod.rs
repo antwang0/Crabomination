@@ -26,7 +26,6 @@ mod free_cast;
 mod graveyard_swap;
 mod graveyard_spread;
 mod dice_choices;
-mod goad_attacked;
 mod copy_each_target;
 mod exchange_power;
 mod library_dig;
@@ -11969,9 +11968,6 @@ impl GameState {
             }
             Effect::CopySpellForEachOtherLegalTarget { what } => {
                 self.copy_spell_for_each_other_legal_target(what, ctx, events)
-            }
-            Effect::GoadACreatureOfEachOpponentAttackedBy { attackers } => {
-                self.goad_a_creature_of_each_opponent_attacked_by(attackers, ctx)
             }
             Effect::RollTwoDiceAssign { sides, first, second } => {
                 self.roll_two_dice_assign(*sides, first, second, ctx, events)

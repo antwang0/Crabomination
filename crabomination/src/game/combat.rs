@@ -2371,10 +2371,11 @@ impl GameState {
                     );
                 }
             }
-            // CR 508.1 — "whenever you attack a player" (Karazikar): once per
-            // player the attacking player attacks, that player bound as the
-            // trigger source.
-            let mine: Vec<(CardId, Effect)> = self
+            // CR 508.1 — "whenever you attack a player" (Karazikar, Firkraag):
+            // once per player the attacking player attacks, that player bound
+            // as the trigger source and subject, so the queue can target
+            // "a creature that player controls" (CR 603.3d).
+            let mine: Vec<(CardId, Effect, Option<crate::card::Predicate>)> = self
                 .battlefield
                 .iter()
                 .filter(|c| c.controller == p)
@@ -2386,22 +2387,43 @@ impl GameState {
                             t.event.kind == EventKind::Attacks
                                 && t.event.scope == crate::effect::EventScope::YouAttackedPlayer
                         })
-                        .map(move |t| (c.id, t.effect.clone()))
+                        .map(move |t| (c.id, t.effect.clone(), t.event.filter.clone()))
                 })
                 .collect();
             if !mine.is_empty() {
+                let mut queue = Vec::new();
                 for a_def in self.attacking.iter().filter_map(|a| match a.target {
                     AttackTarget::Player(d) => Some(d),
                     _ => None,
                 }).collect::<std::collections::BTreeSet<_>>() {
-                    for (src, effect) in &mine {
-                        self.stack.push(
-                            TriggerPush::new(*src, p, effect.clone())
-                                .trigger_source(Some(crate::game::effects::EntityRef::Player(a_def)))
-                                .build(),
-                        );
+                    for (src, effect, filter) in &mine {
+                        let subject = Some(crate::game::effects::EntityRef::Player(a_def));
+                        if let Some(f) = filter {
+                            let mut ctx = crate::game::effects::EffectContext::for_trigger(*src, p, None, 0);
+                            ctx.trigger_source = subject;
+                            if !self.evaluate_predicate(f, &ctx) {
+                                continue;
+                            }
+                        }
+                        queue.push(crate::game::types::PendingTriggerPush {
+                            source: *src,
+                            controller: p,
+                            effect: effect.clone(),
+                            subject,
+                            event_amount: 0,
+                            mode: None,
+                            intervening_if: None,
+                            // No actor: it would stamp the attacker as the
+                            // trigger player over the attacked subject.
+                            actor: None,
+                            from_mana_ability: false,
+                            x_value: 0,
+                            converged_value: 0,
+                            mana_spent: 0,
+                        });
                     }
                 }
+                self.drain_trigger_queue(queue);
             }
         }
 

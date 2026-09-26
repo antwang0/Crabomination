@@ -174,6 +174,36 @@ fn karazikar_goads_the_attacked_players_creature() {
     assert!(g.is_goaded(c), "goaded");
 }
 
+/// CR 508.1 / 115.1 — Karazikar's "tap target creature that player controls"
+/// is a target, once per attacked player: a hexproof creature can't be
+/// chosen (the bigger Carnage Tyrant stays untapped), and each of the two
+/// attacked players has a creature of their own tapped and goaded.
+#[test]
+fn karazikar_targets_a_creature_of_each_attacked_player() {
+    let mut g = main_phase(3);
+    let k = g.add_card_to_battlefield(0, catalog::karazikar_the_eye_tyrant());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let tyrant = g.add_card_to_battlefield(1, catalog::carnage_tyrant());
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let other = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    g.clear_sickness(k);
+    g.clear_sickness(bear);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: k, target: AttackTarget::Player(1) },
+        Attack { attacker: bear, target: AttackTarget::Player(2) },
+    ]))
+    .expect("attack");
+    drain_stack(&mut g);
+    let tapped_goaded = |id| {
+        let c = g.battlefield_find(id).unwrap();
+        c.tapped && g.is_goaded(c)
+    };
+    assert!(!tapped_goaded(tyrant), "hexproof: not a legal target");
+    assert!(tapped_goaded(giant), "seat 1's trigger took seat 1's creature");
+    assert!(tapped_goaded(other), "seat 2's trigger took seat 2's creature");
+}
+
 /// Karazikar: an opponent attacking another opponent draws you both a card
 /// for 1 life each.
 #[test]

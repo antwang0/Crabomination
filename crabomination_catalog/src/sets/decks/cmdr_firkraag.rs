@@ -309,8 +309,8 @@ pub fn dissipation_field() -> CardDefinition {
 /// Firkraag, Cunning Instigator — flying, haste; Dragons you control
 /// attacking an opponent goad a creature of theirs; a creature that had to
 /// attack dealing combat damage to your opponent grows Firkraag and draws.
-/// Residuals: the goaded creature is the engine's pick; "had to attack" is
-/// goaded or must-attack when the damage is dealt.
+/// Residual: "had to attack" is goaded or must-attack when the damage is
+/// dealt.
 pub fn firkraag_cunning_instigator() -> CardDefinition {
     let dragon = || R::HasCreatureType(CreatureType::Dragon);
     CardDefinition {
@@ -318,10 +318,19 @@ pub fn firkraag_cunning_instigator() -> CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Haste],
         triggered_abilities: vec![
             TriggeredAbility {
-                event: EventSpec::new(EventKind::Attacks, EventScope::YourControl)
-                    .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: dragon() })
-                    .once_per_batch(),
-                effect: Effect::GoadACreatureOfEachOpponentAttackedBy { attackers: dragon() },
+                event: EventSpec::new(EventKind::Attacks, EventScope::YouAttackedPlayer).with_filter(Predicate::All(
+                    vec![
+                        Predicate::PlayerIsOpponent { who: PlayerRef::Triggerer },
+                        Predicate::ValueAtLeast(
+                            Value::AttackersOfPlayerMatching {
+                                who: PlayerRef::Triggerer,
+                                filter: dragon().and(R::ControlledByYou),
+                            },
+                            Value::ONE,
+                        ),
+                    ],
+                )),
+                effect: Effect::Goad { what: target_filtered(R::Creature.and(R::ControlledByTriggerPlayer)) },
             },
             TriggeredAbility {
                 event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::AnyPlayer)

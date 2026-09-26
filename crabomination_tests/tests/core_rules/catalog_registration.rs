@@ -2010,7 +2010,9 @@ const ATTACK_BATCH_SIGNED_OFF: &[&str] =
 /// flag; Ancestor Dragon (`shortcut::on_you_attack`), Choco and The Ur-Dragon
 /// all ride it. Only an ability that needs a per-attacker *filter* — "one or
 /// more **Halflings** you control" — has to stay on `Attacks` and carry
-/// `once_per_batch` instead.
+/// `once_per_batch` instead. `EventScope::YouAttackedPlayer` is the fourth:
+/// once per declaration *per attacked player*, which is how "attack an
+/// opponent, … that player" is printed (Firkraag).
 #[test]
 fn every_batched_attack_trigger_fires_once_a_declaration() {
     clause_ratchet(
@@ -2026,6 +2028,7 @@ fn every_batched_attack_trigger_fires_once_a_declaration() {
                 || body.contains("once_per_batch: true")
                 || body.contains("once_per_turn: true")
                 || body.contains("kind: YouAttack")
+                || body.contains("scope: YouAttackedPlayer")
         },
     );
 }

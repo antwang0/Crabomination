@@ -5565,6 +5565,33 @@ fn cr_701_15a_firkraag_goads_and_rewards_forced_attackers() {
     assert_eq!(g.players[0].hand.len(), 1);
 }
 
+/// CR 508.1 — Firkraag triggers once per opponent its Dragons attack, and
+/// each trigger targets a creature *that* player controls; an opponent only a
+/// non-Dragon attacks is left alone.
+#[test]
+fn firkraag_goads_a_target_creature_of_each_opponent_dragons_attack() {
+    let mut g = multi_player_game(4);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let f = g.add_card_to_battlefield(0, catalog::firkraag_cunning_instigator());
+    let drake = g.add_card_to_battlefield(0, catalog::shivan_dragon());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let targets: Vec<_> = (1..4).map(|s| g.add_card_to_battlefield(s, catalog::hill_giant())).collect();
+    for id in [f, drake, bear] {
+        g.clear_sickness(id);
+    }
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: f, target: AttackTarget::Player(1) },
+        Attack { attacker: drake, target: AttackTarget::Player(2) },
+        Attack { attacker: bear, target: AttackTarget::Player(3) },
+    ]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert!(goaded(&g, targets[0]) && goaded(&g, targets[1]), "each Dragon-attacked seat");
+    assert!(!goaded(&g, targets[2]), "only a Bear attacked seat 3");
+}
+
 /// CR 601.2f — Will Kenrith's −2: the target draws two, and its instants and
 /// sorceries cost {2} less until your next turn.
 #[test]

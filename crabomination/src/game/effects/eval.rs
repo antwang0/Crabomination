@@ -841,6 +841,18 @@ impl GameState {
                     .filter(|a| a.target == crate::game::types::AttackTarget::Player(p))
                     .count() as i32
             }),
+            Value::AttackersOfPlayerMatching { who, filter } => {
+                self.resolve_player(who, ctx).map_or(0, |p| {
+                    self.attacking
+                        .iter()
+                        .filter(|a| a.target == crate::game::types::AttackTarget::Player(p))
+                        .filter(|a| {
+                            self.battlefield_find(a.attacker)
+                                .is_some_and(|c| self.evaluate_requirement_on_card(filter, c, ctx.controller))
+                        })
+                        .count() as i32
+                })
+            }
             Value::OpponentsAttackedThisTurn => {
                 // The list survives until the seat's next turn (O-Kagachi's
                 // "last turn"), so off-turn it is not "this turn".

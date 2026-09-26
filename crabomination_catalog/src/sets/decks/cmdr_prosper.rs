@@ -423,12 +423,8 @@ pub fn hurl_through_hell() -> CardDefinition {
 
 /// Karazikar, the Eye Tyrant — attacking a player taps and goads one of
 /// their creatures; an opponent attacking another opponent draws both of you
-/// a card for 1 life. Residual: the goaded creature is the engine's pick.
+/// a card for 1 life.
 pub fn karazikar_the_eye_tyrant() -> CardDefinition {
-    let pick = || Selector::TakeGreatestPower {
-        inner: Box::new(Selector::ControlledBy { who: PlayerRef::Triggerer, filter: R::Creature }),
-        count: Box::new(Value::ONE),
-    };
     let both = |e: fn(Selector) -> Effect| {
         vec![e(Selector::You), e(Selector::Player(PlayerRef::Target(0)))]
     };
@@ -438,7 +434,10 @@ pub fn karazikar_the_eye_tyrant() -> CardDefinition {
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::Attacks, EventScope::YouAttackedPlayer),
-                effect: Effect::Seq(vec![Effect::Tap { what: pick() }, Effect::Goad { what: pick() }]),
+                effect: Effect::Seq(vec![
+                    Effect::Tap { what: target_filtered(R::Creature.and(R::ControlledByTriggerPlayer)) },
+                    Effect::Goad { what: Selector::Target(0) },
+                ]),
             },
             TriggeredAbility {
                 event: EventSpec::new(EventKind::Attacks, EventScope::OpponentOfYoursAttacked)

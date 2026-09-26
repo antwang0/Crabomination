@@ -931,6 +931,10 @@ pub enum Value {
     /// of creatures attacking them" (Within Range), planeswalkers and battles
     /// not counted (CR 506.3).
     CreaturesAttackingPlayer(PlayerRef),
+    /// Creatures attacking the player `who` resolves to that match `filter`
+    /// for the context's controller — "one or more Dragons you control attack
+    /// that player" (Firkraag).
+    AttackersOfPlayerMatching { who: PlayerRef, filter: SelectionRequirement },
     /// The game's current turn number (CR 500 — the first turn is 1). Powers
     /// "the first upkeep" gates (Sentinel Dispatch).
     TurnNumber,
@@ -3695,8 +3699,10 @@ pub enum EventScope {
     OpponentOfYoursAttacked,
     /// CR 508.1 — "Whenever you attack a player" (Karazikar, the Eye
     /// Tyrant): once per declaration per player the source's controller
-    /// attacks. The attacked player rides the trigger source
-    /// (`PlayerRef::Triggerer`); the target slot stays free.
+    /// attacks, gated by the trigger's filter. The attacked player rides the
+    /// trigger source (`PlayerRef::Triggerer`) and the trigger player, so a
+    /// target slot can read "target creature that player controls"
+    /// (`ControlledByTriggerPlayer`).
     YouAttackedPlayer,
     /// The creature the source Aura was attached to has died (left the
     /// battlefield). Matches a `CreatureDied` event whose subject is recorded
@@ -5206,12 +5212,6 @@ pub enum Effect {
     /// resolving controller's) aimed at a different one. Spells only; a
     /// targeted ability is not copied.
     CopySpellForEachOtherLegalTarget { what: Selector },
-    /// Firkraag — "whenever one or more [attackers] you control attack an
-    /// opponent, goad target creature that player controls": once per such
-    /// opponent, goad the engine's pick of their creatures (greatest power
-    /// among those not already goaded by you). Fired off a once-per-batch
-    /// `Attacks` trigger.
-    GoadACreatureOfEachOpponentAttackedBy { attackers: SelectionRequirement },
     /// CR 701.15 / 611.2b — `Goad` that lasts as long as `hold` does rather
     /// than until the goader's next turn (Hot Pursuit, Immortal Obligation).
     GoadWhile { what: Selector, hold: GoadLasts },

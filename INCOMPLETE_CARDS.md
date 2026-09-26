@@ -1977,7 +1977,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Unsettled Mariner | Everyone's Invited! (SLD) | modelled as ward {1} on your permanents: you aren't protected, and it doesn't stack with a printed ward. |
 | 🟡 Stick Together | Everyone's Invited! (SLD) | each player keeps the engine's pick: a largest party, strongest creatures first. |
 | 🟡 Harper Recruiter | Everyone's Invited! (SLD) | the engine picks the party revealed from the top four (a largest one). |
-| 🟡 Karazikar, the Eye Tyrant | Planar Portal (AFC) | the creature it taps and goads is the engine's pick (the attacked player's strongest), not a target. |
 | 🟡 Hellish Rebuke | Planar Portal (AFC) | modelled as the caster's watcher for the turn: the sacrifice-and-lose-2 trigger is yours, not the damaging permanent's controller's (same outcome). |
 | 🟡 Share the Spoils | Planar Portal (AFC) | each player's linked cards open at their upkeep; a land played from the pile doesn't refill it. |
 | 🟡 Danse Macabre | Planar Portal (AFC) | you sacrifice after the other players, not simultaneously. |
@@ -2204,7 +2203,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Klauth, Unrivaled Ancient | Draconic Rage (AFC) | "spend this mana only to cast spells" isn't enforced. |
 | 🟡 Sword of Hours | Draconic Rage (AFC) | "the damage dealt" is the damage to each recipient, one roll per recipient. |
 | 🟡 Baeloth Barrityl, Entertainer | Draconic Dissent (CLB) | the powers compared are each creature's own (printed, pumps, counters), not static anthems. |
-| 🟡 Firkraag, Cunning Instigator | Draconic Dissent (CLB) | the goaded creature is the engine's pick (greatest power), not a target; "had to attack this combat" reads as goaded or must-attack when the damage is dealt. |
+| 🟡 Firkraag, Cunning Instigator | Draconic Dissent (CLB) | "had to attack this combat" reads as goaded or must-attack when the damage is dealt. |
 | 🟡 Rowan Kenrith | Draconic Dissent (CLB) | the +2's forced attacks last until your next turn and reach the target's creatures at resolution only. |
 | 🟡 Apex of Power | Prismari Performance (C21) | the exiled cards may also be played as lands, not only cast. |
 | 🟡 Dazzling Sphinx | Prismari Performance (C21) | a found card you don't cast stays in exile rather than going to the bottom. |
