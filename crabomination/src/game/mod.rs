@@ -7115,6 +7115,17 @@ impl GameState {
             + u32::from(self.players[seat].token_doublings_this_turn)
     }
 
+    /// Spells on the stack (copies included; abilities not).
+    pub(crate) fn stack_spell_count(&self) -> usize {
+        self.stack.iter().filter(|s| matches!(s, StackItem::Spell { .. })).count()
+    }
+
+    /// `recommend::MAX_STACK` reached — the length test first, so an ordinary
+    /// stack never walks.
+    pub fn stack_spells_at_bound(&self) -> bool {
+        self.stack.len() >= crate::recommend::MAX_STACK && self.stack_spell_count() >= crate::recommend::MAX_STACK
+    }
+
     /// CR 614.13 — `base` tokens under `seat`'s doublers (`2^n`), capped at
     /// the simulator's board bound: a batch past it ends the game as
     /// `BoardCap` all the same. Every token mint loop sizes itself here — an

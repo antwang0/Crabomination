@@ -2020,12 +2020,13 @@ pub enum StopReason {
 /// it is a runaway, ended as undecided the way an action-capped one is.
 pub const MAX_BATTLEFIELD: usize = 1_024;
 
-/// The stack's simulator bound, `MAX_BATTLEFIELD`'s sibling: a spell-copy
-/// chain past it copies nothing more, and a stack past it ends the game as a
-/// `BoardCap`. A Venser, Fervent Forger copying a Replication Technique that
-/// copies Venser grew the stack to 1,692 items, and each action past that
-/// walked the whole stack per target pick — one never returned (a four-seat
-/// pod, seed 65002 game 41). No legitimate game approaches it.
+/// The stack's simulator bound on SPELLS, `MAX_BATTLEFIELD`'s sibling: a
+/// spell-copy chain past it copies nothing more, and a stack holding that
+/// many spells ends the game as a `BoardCap`. A Venser, Fervent Forger
+/// copying a Replication Technique that copies Venser grew the stack to 1,692
+/// items, and each action past that walked the whole stack per target pick —
+/// one never returned (a four-seat pod, seed 65002 game 41). Triggers are not
+/// counted: a 771-creature attack puts 771 legitimate triggers there.
 pub const MAX_STACK: usize = 512;
 
 /// Where the board-bound gates stop a token effect (a held cast, a declined
@@ -2048,7 +2049,7 @@ pub fn stop_reason(
         Some(StopReason::GameOver)
     } else if actions >= max_actions {
         Some(StopReason::ActionCap)
-    } else if g.battlefield.len() > MAX_BATTLEFIELD || g.stack.len() >= MAX_STACK {
+    } else if g.battlefield.len() > MAX_BATTLEFIELD || g.stack_spells_at_bound() {
         Some(StopReason::BoardCap)
     } else if stale >= STALE_ROUNDS {
         Some(StopReason::NoLegalMove)

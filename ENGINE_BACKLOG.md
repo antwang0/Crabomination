@@ -130,6 +130,9 @@ the handoff.
   stack's simulator bound beside `MAX_BATTLEFIELD`: copies stop there and
   the game ends as a `BoardCap`. ⚠ `stop_reason` must fire AT the bound
   (`>=`): at `>` the chain hovered just under it and ran 800,003 actions.
+  ⚠ **And it counts SPELLS, not stack items**: the first cut counted every
+  item and ended three legitimate five-seat games (771 Kazuul attack
+  triggers, 652 Trostani lifegain triggers, a Scute Swarm landfall burst).
 - ⚠ **Rot Hulk returned itself** (8 seats, seed 49013 game 630, 3,730 Woe
   Strider activations): its "return up to X target Zombie cards" picked at
   resolution, so a Hulk sacrificed in response came back with the Zombie
