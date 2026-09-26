@@ -157,3 +157,37 @@ fn tiamat_tutors_dragons_only_when_cast() {
         assert_eq!(g.players[0].hand.iter().any(|c| c.id == d1), was_cast, "was_cast={was_cast}");
     }
 }
+
+/// CR 701.47: each opponent's spell amasses Orcs 1 for Sauron's controller —
+/// the first makes a 0/0 Orc Army with a counter, the second grows it.
+#[test]
+fn sauron_amasses_on_each_opponent_spell() {
+    let mut g = pod(4);
+    g.add_card_to_battlefield(0, catalog::sauron_the_dark_lord());
+    for seat in [1, 2] {
+        let s = g.add_card_to_hand(seat, catalog::opt());
+        g.add_card_to_library(seat, catalog::island());
+        cast(&mut g, seat, s, None);
+    }
+    let armies: Vec<_> = g
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == 0 && c.definition.subtypes.creature_types.contains(&crabomination::card::CreatureType::Army))
+        .collect();
+    assert_eq!(armies.len(), 1, "one Army, grown");
+    assert_eq!(armies[0].counter_count(CounterType::PlusOnePlusOne), 2);
+}
+
+/// CR 701.68: Morcant entering makes each opponent blight 1 — a -1/-1
+/// counter on a creature they control; an opponent with none is skipped.
+#[test]
+fn morcant_makes_each_opponent_blight() {
+    let mut g = pod(4);
+    let b1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b2 = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    let m = g.add_card_to_hand(0, catalog::high_perfect_morcant());
+    cast(&mut g, 0, m, None);
+    for b in [b1, b2] {
+        assert_eq!(g.battlefield_find(b).unwrap().counter_count(CounterType::MinusOneMinusOne), 1);
+    }
+}

@@ -1,7 +1,8 @@
 //! Most-built commanders missing from the catalog (COMMANDER_BACKLOG §1):
 //! Aragorn, the Uniter; Zur the Enchanter; Flubs, the Fool; Galadriel,
-//! Light of Valinor; Arcades, the Strategist; Tiamat. Each is built from
-//! primitives other cards already exercise.
+//! Light of Valinor; Arcades, the Strategist; Tiamat; Sauron, the Dark Lord;
+//! High Perfect Morcant. Each is built from primitives other cards already
+//! exercise.
 //!
 //! - **Galadriel** — alliance's "one that hasn't been chosen this turn" is
 //!   `Effect::ChooseUnchosenModeThisTurn` (Teval's Judgment).
@@ -237,6 +238,85 @@ pub fn tiamat() -> CardDefinition {
             vec![CreatureType::Dragon, CreatureType::God],
             7,
             7,
+        )
+    }
+}
+
+/// Sauron, the Dark Lord — {3}{U}{B}{R} 7/6 Avatar Horror. Ward—sacrifice a
+/// legendary artifact or legendary creature. Whenever an opponent casts a
+/// spell, amass Orcs 1 (CR 701.47). Whenever an Army you control deals
+/// combat damage to a player, the Ring tempts you (CR 701.54). Whenever the
+/// Ring tempts you, you may discard your hand; if you do, draw four.
+pub fn sauron_the_dark_lord() -> CardDefinition {
+    let legendary_fodder = R::HasSupertype(Supertype::Legendary).and(R::Artifact.or(R::Creature));
+    CardDefinition {
+        keywords: vec![Keyword::Ward(crate::card::WardCost::SacrificeMatching(Box::new(legendary_fodder)))],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::OpponentControl),
+                effect: Effect::Amass { who: PlayerRef::You, count: Value::ONE, extra_type: Some(CreatureType::Orc) },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl).with_filter(
+                    Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: R::HasCreatureType(CreatureType::Army),
+                    },
+                ),
+                effect: Effect::RingTempts { who: PlayerRef::You },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::RingTempted, EventScope::YourControl),
+                effect: Effect::MayDo {
+                    description: "Discard your hand to draw four cards?".into(),
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::Discard {
+                            who: Selector::You,
+                            amount: Value::HandSizeOf(PlayerRef::You),
+                            random: false,
+                        },
+                        Effect::Draw { who: Selector::You, amount: Value::Const(4) },
+                    ])),
+                },
+            },
+        ],
+        ..legend(
+            "Sauron, the Dark Lord",
+            cost(&[generic(3), u(), b(), r()]),
+            vec![CreatureType::Avatar, CreatureType::Horror],
+            7,
+            6,
+        )
+    }
+}
+
+/// High Perfect Morcant — {2}{B}{G} 4/4 Elf Noble. Whenever it or another
+/// Elf you control enters, each opponent blights 1 (CR 701.68). Tap three
+/// untapped Elves you control: proliferate, only as a sorcery. (The tap
+/// cost picks from Morcant's *other* Elves; Morcant itself isn't offered.)
+pub fn high_perfect_morcant() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::HasCreatureType(CreatureType::Elf) },
+            ),
+            effect: Effect::EachPlayerDoes {
+                who: PlayerRef::EachOpponent,
+                body: Box::new(Effect::Blight { n: Value::ONE }),
+            },
+        }],
+        activated_abilities: vec![crate::card::ActivatedAbility {
+            tap_n_filter: Some((R::HasCreatureType(CreatureType::Elf), 3)),
+            sorcery_speed: true,
+            effect: Effect::Proliferate,
+            ..Default::default()
+        }],
+        ..legend(
+            "High Perfect Morcant",
+            cost(&[generic(2), b(), g()]),
+            vec![CreatureType::Elf, CreatureType::Noble],
+            4,
+            4,
         )
     }
 }
