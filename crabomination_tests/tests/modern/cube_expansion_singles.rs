@@ -978,41 +978,53 @@ fn phyrexian_obliterator_is_5_5_trample() {
 
 #[test]
 fn phyrexian_obliterator_damage_forces_opponent_to_sacrifice_that_many() {
-    // 3 damage to the Obliterator → the opponent sacrifices 3 permanents.
-    // (P0 bolts its own Obliterator to deliver the damage — the EachOpponent
-    // approximation has the opponent sacrifice regardless of who dealt it.)
+    // 3 damage to the Obliterator from the opponent's Bolt → the opponent
+    // sacrifices 3 permanents.
     let mut g = two_player_game();
-    let _oblit = g.add_card_to_battlefield(0, catalog::phyrexian_obliterator()); // 5/5, survives 3
-    // Opponent board: four permanents, so post-sacrifice there's a remainder
-    // to count against.
+    let oblit = g.add_card_to_battlefield(0, catalog::phyrexian_obliterator()); // 5/5, survives 3
     for _ in 0..4 {
         g.add_card_to_battlefield(1, catalog::grizzly_bears());
     }
-    let opp_perms_before = g.battlefield.iter().filter(|c| c.controller == 1).count();
-    assert_eq!(opp_perms_before, 4);
-
-    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
-    g.players[0].mana_pool.add(Color::Red, 1);
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
     g.perform_action(GameAction::CastSpell {
         card_id: bolt,
-        target: Some(Target::Permanent(_oblit)),
+        target: Some(Target::Permanent(oblit)),
         additional_targets: vec![],
         mode: None,
         x_value: None,
     })
     .expect("bolt castable");
     drain_stack(&mut g);
+    assert!(g.battlefield_find(oblit).is_some(), "Obliterator (5/5) survives 3 damage");
+    assert_eq!(g.battlefield.iter().filter(|c| c.controller == 1).count(), 1, "4 - 3");
+}
 
-    assert!(
-        g.battlefield_find(_oblit).is_some(),
-        "Obliterator (5/5) survives 3 damage",
-    );
-    let opp_perms_after = g.battlefield.iter().filter(|c| c.controller == 1).count();
-    assert_eq!(
-        opp_perms_after,
-        opp_perms_before - 3,
-        "opponent sacrifices 3 permanents (= the 3 damage dealt)",
-    );
+/// "That source's controller": bolting your own Obliterator costs you the
+/// permanents, not your opponent (it was modelled as each opponent).
+#[test]
+fn phyrexian_obliterator_self_damage_costs_its_own_controller() {
+    let mut g = two_player_game();
+    let oblit = g.add_card_to_battlefield(0, catalog::phyrexian_obliterator());
+    for p in 0..2 {
+        for _ in 0..3 {
+            g.add_card_to_battlefield(p, catalog::grizzly_bears());
+        }
+    }
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(oblit)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("bolt castable");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.controller == 0).count(), 1, "4 - 3");
+    assert_eq!(g.battlefield.iter().filter(|c| c.controller == 1).count(), 3, "untouched");
 }
 
 #[test]

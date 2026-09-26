@@ -4407,13 +4407,8 @@ pub fn shriekmaw() -> CardDefinition {
 /// source's controller sacrifices that many permanents."
 ///
 /// Wired as a `DealtDamage`/`SelfSource` trigger → `Effect::Sacrifice`
-/// with `count: TriggerEventAmount` (the same `DealtDamage` + Enrage plumbing
-/// the MKM/STX enrage creatures use). Approximation: the sacrificer is
-/// `EachOpponent` rather than "that source's controller" — `GameEvent::
-/// DamageDealt` carries no source, so the damaging source's controller can't
-/// be read. Faithful in 1v1 (damage to your Obliterator comes from the
-/// opponent in virtually every line); over-fires only if you damage your own
-/// Obliterator in multiplayer.
+/// with `count: TriggerEventAmount`; the sacrificer is the damaging source's
+/// controller (`LastDamagerControllerOf`, Belltower Sphinx's reader).
 pub fn phyrexian_obliterator() -> CardDefinition {
     CardDefinition {
         name: "Phyrexian Obliterator",
@@ -4429,7 +4424,7 @@ pub fn phyrexian_obliterator() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealtDamage, EventScope::SelfSource),
             effect: Effect::Sacrifice {
-                who: Selector::Player(PlayerRef::EachOpponent),
+                who: Selector::Player(PlayerRef::LastDamagerControllerOf(Box::new(Selector::This))),
                 count: Value::TriggerEventAmount,
                 filter: SelectionRequirement::Permanent,
             },
@@ -6811,8 +6806,7 @@ pub fn primeval_titan() -> CardDefinition {
 /// Archon of Cruelty — {6}{B}{B} Creature — Archon 6/6, Flying. "Whenever Archon
 /// of Cruelty enters or attacks, target opponent sacrifices a creature or
 /// planeswalker, loses 3 life, and discards a card. You draw a card and gain 3
-/// life." (MH2; the target-opponent clause uses `EachOpponent` — faithful in
-/// 1v1, fans out in multiplayer.)
+/// life." (MH2.)
 pub fn archon_of_cruelty() -> CardDefinition {
     let body = || {
         Effect::Seq(vec![
