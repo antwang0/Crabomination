@@ -4356,9 +4356,8 @@ pub enum Effect {
     LifeBidding { then: Box<Effect> },
     /// "You may pay {X}. When you do, [body with X]." — the controller
     /// picks X at resolution via `Decision::ChooseAmount` (0 = decline,
-    /// the AutoDecider default), capped by their FLOATED mana (the MayPay
-    /// convention: mana abilities aren't activatable mid-resolution), pays
-    /// {X} generic from the pool, and `body` runs with `ctx.x_value = X`
+    /// the AutoDecider default), capped by their pool plus one per untapped
+    /// mana source, pays {X} generic, and `body` runs with `ctx.x_value = X`
     /// so `Value::XFromCost` reads the chosen amount. Tester of the
     /// Tangential's "pay {X}: move X +1/+1 counters".
     MayPayX { description: String, body: Box<Effect> },
@@ -4366,6 +4365,10 @@ pub enum Effect {
     /// X (Numa, Joraga Chieftain). Opaque to the target walkers: a targeted
     /// body goes inside an [`Effect::Reflexive`].
     MayPayXTimes { times: u32, description: String, body: Box<Effect> },
+    /// "You may pay {X}{R}" — [`Effect::MayPayX`] plus a fixed `extra` part
+    /// paid in the same payment, so X is sized to what's left after it
+    /// (Flameblast Dragon).
+    MayPayXPlus { extra: crate::mana::ManaCost, description: String, body: Box<Effect> },
     /// "You may pay any amount of {R}" — [`Effect::MayPayX`] whose X is paid
     /// in `color` pips rather than generic (Leyline Tyrant).
     MayPayXOfColor { color: crate::mana::Color, description: String, body: Box<Effect> },

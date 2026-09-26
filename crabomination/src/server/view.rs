@@ -2793,7 +2793,7 @@ fn structural_children(effect: &Effect) -> Vec<&Effect> {
         Effect::MayDo { body, .. }
         | Effect::MayDoBy { body, .. }
         | Effect::MayPay { body, .. }
-        | Effect::MayPayX { body, .. } | Effect::MayPayXTimes { body, .. } | Effect::MayPayXOfColor { body, .. }
+        | Effect::MayPayX { body, .. } | Effect::MayPayXTimes { body, .. } | Effect::MayPayXPlus { body, .. } | Effect::MayPayXOfColor { body, .. }
         | Effect::CapTargetsAt { body, .. }
         | Effect::CapTargetsAtX { body }
         | Effect::TargetsExactlyX { body }
@@ -2895,7 +2895,7 @@ pub fn ability_effect_label(effect: &Effect) -> &'static str {
         // just runs `body`), so it must be transparent here too or a card
         // whose whole effect sits under one reads "Activate".
         Effect::Reflexive { body }
-        | Effect::MayPayX { body, .. } | Effect::MayPayXTimes { body, .. } | Effect::MayPayXOfColor { body, .. }
+        | Effect::MayPayX { body, .. } | Effect::MayPayXTimes { body, .. } | Effect::MayPayXPlus { body, .. } | Effect::MayPayXOfColor { body, .. }
         | Effect::OptionalTargets { body, .. }
         | Effect::WithX { body, .. } => ability_effect_label(body),
         Effect::MayDiscard { then, .. }

@@ -206,22 +206,18 @@ pub fn emissary_of_grudges() -> CardDefinition {
 }
 
 /// Flameblast Dragon — {4}{R}{R} 5/5 flier. Attacking: you may pay {X}{R} for
-/// X damage to any target. (Residual: X is asked first.)
+/// X damage to any target (one payment: X is sized after the {R}).
 pub fn flameblast_dragon() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
-            effect: Effect::MayPayX {
+            effect: Effect::MayPayXPlus {
+                extra: cost(&[r()]),
                 description: "Pay {X}{R}: X damage to any target".into(),
-                body: Box::new(Effect::MayPay {
-                    description: "Pay {R}".into(),
-                    mana_cost: cost(&[r()]),
-                    body: Box::new(Effect::DealDamage {
-                        to: target_filtered(R::Creature.or(R::Planeswalker).or(R::Player)),
-                        amount: Value::XFromCost,
-                    }),
-                    else_: None,
+                body: Box::new(Effect::DealDamage {
+                    to: target_filtered(R::Creature.or(R::Planeswalker).or(R::Player)),
+                    amount: Value::XFromCost,
                 }),
             },
         }],

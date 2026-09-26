@@ -358,3 +358,25 @@ fn turntimber_sower_plants_and_recurs() {
     activate(&mut g, 0, sower, 0, Some(Target::Permanent(land))).expect("sacrifice three");
     assert!(g.players[0].hand.iter().any(|c| c.id == land));
 }
+
+/// Flameblast Dragon pays {X}{R} as one payment: with four Mountains, X = 3
+/// and the {R} both come out of them (X used to be paid first, leaving no
+/// {R}, so the damage never happened).
+#[test]
+fn flameblast_dragon_pays_x_and_red_together() {
+    let mut g = pod(2);
+    let dragon = g.add_card_to_battlefield(0, catalog::flameblast_dragon());
+    for _ in 0..4 {
+        g.add_card_to_battlefield(0, catalog::mountain());
+    }
+    g.clear_sickness(dragon);
+    let life = g.players[1].life;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(3)]));
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: dragon, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 3, "X = 3 to the defending player");
+    assert!(g.battlefield.iter().filter(|c| c.definition.name == "Mountain").all(|c| c.tapped), "all four paid");
+}

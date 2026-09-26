@@ -1835,7 +1835,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Planetary Annihilation | World Shaper (EOC) | each player keeps the engine's pick of six lands. |
 | 🟡 Soul of Windgrace | World Shaper (EOC) | the land comes from the first graveyard holding one. |
 | 🟡 Emissary of Grudges | Nature's Vengeance (C18) | the opponent is chosen openly, and the reveal redirects any spell that targets you or your permanents, not only the chosen player's. |
-| 🟡 Flameblast Dragon | Nature's Vengeance (C18) | {X} is asked before {R}; a bot seat answers X out of floating mana only. |
 | 🟡 Fiery Justice | Nature of the Beast (C13) | the 5 life goes to the engine's most hostile opponent. |
 | 🟡 Magus of the Arena | Nature of the Beast (C13) | you pick the opponent's creature; the opponent should. |
 | 🟡 Naya Soulbeast | Nature of the Beast (C13) | the top cards are read as it enters, not revealed as it is cast. |
@@ -1895,7 +1894,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Liberated Livestock | Virtue and Valor (WOC) | each token's Aura is the engine's pick (graveyard first). |
 | 🟡 Zinnia, Valley's Voice | Family Matters (BLC) | the granted offspring copy is Zinnia's own trigger (lost if Zinnia leaves first); a creature with its own kicker or offspring gets no second one. |
 | 🟡 Combat Celebrant | Family Matters (BLC) | a second exert in a turn is allowed and does nothing (the bonus is once a turn). |
-| 🟡 Rose Room Treasurer | Family Matters (BLC) | the {X} is paid from floating mana. |
 | 🟡 Footbottom Feast | Counterpunch (CMD) | the cards are chosen as it resolves, not targeted on cast; they go on top in mana-value order (the greatest on top). |
 
 ### Seats 42, 46, 49, 53 and 55 (Peer Through Time C14, Wade into Battle C15, Chaos Incarnate SCD, Heavenly Inferno and Political Puppets CMD) — open residuals, 2026-09-24

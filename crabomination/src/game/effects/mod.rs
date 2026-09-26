@@ -7386,11 +7386,18 @@ impl GameState {
 
             Effect::MayPayX { description, body }
             | Effect::MayPayXTimes { description, body, .. }
+            | Effect::MayPayXPlus { description, body, .. }
             | Effect::MayPayXOfColor { description, body, .. } => {
                 let times = match effect {
                     Effect::MayPayXTimes { times, .. } => (*times).max(1),
                     _ => 1,
                 };
+                // "{X}{R}": the fixed part comes out of the same budget.
+                let extra = match effect {
+                    Effect::MayPayXPlus { extra, .. } => Some(extra),
+                    _ => None,
+                };
+                let reserved = extra.map_or(0, |e| e.cmc());
                 // "You may pay {X}. When you do, [body]." — X is chosen at
                 // resolution (0 = decline), capped by the controller's
                 // floated pool (MayPay convention: no mid-resolution mana
@@ -7403,6 +7410,7 @@ impl GameState {
                 // below is the truth and a failed one runs nothing).
                 let pool_max = (self.players[ctx.controller].mana_pool.total()
                     + self.mana_source_candidates(ctx.controller).len() as u32)
+                    .saturating_sub(reserved)
                     / times;
                 if pool_max == 0 {
                     return Ok(());
@@ -7436,7 +7444,13 @@ impl GameState {
                     Effect::MayPayXOfColor { color, .. } => {
                         crate::mana::ManaCost::new(vec![crate::mana::colored(*color); n as usize])
                     }
-                    _ => crate::mana::ManaCost::new(vec![crate::mana::generic(n * times)]),
+                    _ => {
+                        let mut symbols = vec![crate::mana::generic(n * times)];
+                        if let Some(e) = extra {
+                            symbols.extend(e.symbols.iter().cloned());
+                        }
+                        crate::mana::ManaCost::new(symbols)
+                    }
                 };
                 if !self.pay_mana_cost_with_picks(ctx.controller, &x_cost, None, events) {
                     return Ok(());
