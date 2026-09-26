@@ -39876,6 +39876,19 @@ impl GameState {
                 }
                 out
             }
+            Selector::OnePerDistinctName(filter) => {
+                let p = ctx.controller;
+                let mut seen: Vec<&str> = Vec::new();
+                let mut out = Vec::new();
+                for c in self.battlefield.iter().filter(|c| self.evaluate_requirement_on_card(filter, c, p)) {
+                    let name: &str = &c.definition.name;
+                    if !seen.contains(&name) {
+                        seen.push(name);
+                        out.push(EntityRef::Permanent(c.id));
+                    }
+                }
+                out
+            }
             Selector::PlayersControlling(filter) => {
                 let n = self.players.len();
                 (0..n)

@@ -361,6 +361,10 @@ pub enum Selector {
     /// their own best (mana value, then toughness), else an opponent's weakest.
     /// `rest: true` resolves to every match *not* chosen.
     OnePerDistinctPower { filter: SelectionRequirement, rest: bool },
+    /// "Any number of [filter] you control with different names" — one
+    /// permanent per name, the first in battlefield order (Battle for
+    /// Bretagard's chapter III).
+    OnePerDistinctName(SelectionRequirement),
 
     /// All cards moved by `Effect::Move` (and Mill / Exile shortcuts)
     /// in the current resolution. Used by Practiced Scrollsmith,
