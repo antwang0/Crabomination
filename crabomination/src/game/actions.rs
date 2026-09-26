@@ -9526,15 +9526,16 @@ impl GameState {
             }
             .unwrap_or(&card.definition.effect);
             let slot_bad = |slot: u8, tgt: &Target| {
-                crate::game::spree_targets::chosen_mode_slot_filter(
+                let filter = crate::game::spree_targets::chosen_mode_slot_filter(
                     target_effect,
                     &card.spree_modes,
                     slot,
                     kicked,
                 )
                 .unwrap_or_else(|| target_effect.target_filter_for_slot_in_mode_kicked(slot, mode, kicked))
-                .map(|f| f.resolve_x(x_value.unwrap_or(0)))
-                    .is_some_and(|filter| {
+                .map(|f| f.resolve_x(x_value.unwrap_or(0)));
+                self.target_out_of_zone(target_effect, filter.as_ref(), tgt)
+                    || filter.is_some_and(|filter| {
                         !self.evaluate_requirement_static(&filter, tgt, p, Some(card.id))
                     })
             };
@@ -13842,6 +13843,33 @@ impl GameState {
                 _ => false,
             })
         })
+    }
+
+    /// CR 109.2 — a slot that doesn't say "card" ("target creature") names a
+    /// permanent: a card in a graveyard or in exile is out of its reach
+    /// unless the effect can reach off the board or the filter names that
+    /// zone — the scope the target enumerator and auto-picker walk.
+    pub(crate) fn target_out_of_zone(
+        &self,
+        effect: &crate::effect::Effect,
+        filter: Option<&crate::card::SelectionRequirement>,
+        tgt: &Target,
+    ) -> bool {
+        let Target::Permanent(cid) = tgt else { return false };
+        // A permanent spell's cast target rides to its enters trigger; only a
+        // body that declares targets of its own is judged here.
+        if self.battlefield.find_by_id(*cid).is_some() || !effect.requires_target() {
+            return false;
+        }
+        let offboard = self.exile.iter().any(|c| c.id == *cid)
+            || self.players.iter().any(|pl| pl.graveyard.iter().any(|c| c.id == *cid));
+        // An ability on the stack is named by its source's id, and a
+        // sacrificed source is in a graveyard (Voidslime, Trickbind).
+        let names_an_ability = || {
+            self.stack.iter().any(|si| matches!(si, StackItem::Trigger { source, .. } if *source == *cid))
+        };
+        offboard
+            && !names_an_ability() && !effect.may_target_offboard_card() && !filter.is_some_and(|f| f.mentions_offboard_zone())
     }
 
     /// Validate that a target is legally targetable by the given controller.
@@ -19151,14 +19179,16 @@ impl GameState {
                 .chain(additional_targets.iter().cloned().map(Some))
                 .collect();
             let violation = (|| {
-                if let Some(tgt) = &target
-                    && let Some(filter) = ability
+                if let Some(tgt) = &target {
+                    let filter = ability
                         .effect
                         .target_filter_for_slot_in_mode(0, chosen_mode)
-                        .map(|f| f.resolve_x(x_value.unwrap_or(0)))
-                    && !self.evaluate_requirement_static(&filter, tgt, p, Some(card_id))
-                {
-                    return Some(GameError::SelectionRequirementViolated);
+                        .map(|f| f.resolve_x(x_value.unwrap_or(0)));
+                    if self.target_out_of_zone(&ability.effect, filter.as_ref(), tgt)
+                        || filter.is_some_and(|f| !self.evaluate_requirement_static(&f, tgt, p, Some(card_id)))
+                    {
+                        return Some(GameError::SelectionRequirementViolated);
+                    }
                 }
                 // Two-target activated abilities (Autumn-Tail): validate slots
                 // 1+ the same way — legality (hexproof/shroud/…) plus the
@@ -19170,11 +19200,12 @@ impl GameState {
                     if self.ability_target_has_protection(tgt, card_id) {
                         return Some(GameError::TargetHasProtection(card_id));
                     }
-                    if let Some(filter) = ability
+                    let filter = ability
                         .effect
                         .target_filter_for_slot((i + 1) as u8)
-                        .map(|f| f.resolve_x(x_value.unwrap_or(0)))
-                        && !self.evaluate_requirement_static(&filter, tgt, p, Some(card_id))
+                        .map(|f| f.resolve_x(x_value.unwrap_or(0)));
+                    if self.target_out_of_zone(&ability.effect, filter.as_ref(), tgt)
+                        || filter.is_some_and(|f| !self.evaluate_requirement_static(&f, tgt, p, Some(card_id)))
                     {
                         return Some(GameError::SelectionRequirementViolated);
                     }

@@ -12180,3 +12180,33 @@ fn cr_603_6a_permanents_entering_together_see_each_other() {
     assert_eq!(g.battlefield.len(), 3);
     assert_eq!(g.players[0].life - life, 2, "Soul Warden saw the two Bears enter with it");
 }
+
+/// CR 109.2 — "target creature" (no "card") names a creature *permanent*: a
+/// creature card in a graveyard is not a legal target of a burn spell, though
+/// the filter language reads `Creature` in every zone. A reanimation spell's
+/// "target creature card in a graveyard" still reaches it.
+#[test]
+fn cr_109_2_a_board_slot_cant_name_a_graveyard_card() {
+    let mut g = two_player_game();
+    let bears = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let r = g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(bears)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    });
+    assert!(r.is_err(), "bolt at a graveyard card: {r:?}");
+    let reanimate = g.add_card_to_hand(0, catalog::reanimate());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: reanimate,
+        target: Some(Target::Permanent(bears)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("a graveyard slot reaches it");
+}

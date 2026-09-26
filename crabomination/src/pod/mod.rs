@@ -2423,10 +2423,15 @@ mod tests {
         // Re-blessed 2026-09-23 (CR 800.4a): a player who has left the game is
         // no longer a legal target, so nothing is aimed at a departed seat and
         // a trigger that was is countered. Seeds 43 and 4242: same winners.
+        // Re-blessed 2026-09-26 (CR 109.2): a "target creature" slot can't
+        // name a creature card in a graveyard. Judith's Slaughter Pact was
+        // cast at a Walking Ballista that had died (and fizzled); the cast is
+        // rejected now and the bot takes its next play. Seed 4242 changes
+        // winner (seat 2 → 3); the other two are untouched.
         const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
             (0xC0FFEE, Some(1), 44, 1829),
             (43, Some(3), 57, 2395),
-            (4242, Some(2), 53, 2245),
+            (4242, Some(3), 49, 2136),
         ];
         let decks = rofellos_pod(4);
         let t = build_pod_template(&decks);

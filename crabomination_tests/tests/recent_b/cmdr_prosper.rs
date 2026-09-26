@@ -118,7 +118,6 @@ fn cr_614_lorcan_collects_and_exiles_warlocks() {
     assert_eq!(g.players[0].life, life - 4);
     assert!(g.computed_permanent(giant).unwrap().subtypes().creature_types.contains(&CreatureType::Warlock));
     bolt_as(&mut g, 0, Target::Permanent(giant));
-    bolt_as(&mut g, 0, Target::Permanent(giant));
     assert!(g.exile.iter().any(|c| c.id == giant), "a dying Warlock is exiled");
 }
 

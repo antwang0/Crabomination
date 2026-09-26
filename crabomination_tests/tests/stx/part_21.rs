@@ -1732,21 +1732,15 @@ fn witherbloom_heartfeeder_b172_drains_on_death() {
     let id = g.add_card_to_battlefield(0, catalog::witherbloom_heartfeeder_b172());
     let p0_life = g.players[0].life;
     let p1_life = g.players[1].life;
-    // Kill with Bolt+Bolt for 6 damage to heartfeeder's 3 toughness.
+    // One Bolt kills the 3-toughness body (a second, at its graveyard card,
+    // is not a legal cast — CR 109.2).
     let bolt1 = g.add_card_to_hand(1, catalog::lightning_bolt());
-    let bolt2 = g.add_card_to_hand(1, catalog::lightning_bolt());
-    g.players[1].mana_pool.add(Color::Red, 2);
+    g.players[1].mana_pool.add(Color::Red, 1);
     g.priority.player_with_priority = 1;
     g.perform_action(GameAction::CastSpell {
         card_id: bolt1, target: Some(Target::Permanent(id)),
         additional_targets: vec![], mode: None, x_value: None,
     }).expect("bolt1");
-    drain_stack(&mut g);
-    g.priority.player_with_priority = 1;
-    g.perform_action(GameAction::CastSpell {
-        card_id: bolt2, target: Some(Target::Permanent(id)),
-        additional_targets: vec![], mode: None, x_value: None,
-    }).expect("bolt2");
     drain_stack(&mut g);
     assert!(g.battlefield_find(id).is_none(), "heartfeeder dies");
     assert_eq!(g.players[0].life, p0_life + 2);
