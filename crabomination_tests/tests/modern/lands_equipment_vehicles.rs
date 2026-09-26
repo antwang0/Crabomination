@@ -628,6 +628,33 @@ fn smugglers_copter_crews_and_loots_on_attack() {
         "copter looted: a card was discarded to the graveyard");
 }
 
+/// Smuggler's Copter — "attacks or blocks": a crewed Copter blocking loots too.
+#[test]
+fn smugglers_copter_loots_on_block() {
+    use crabomination::decision::ScriptedDecider;
+    let mut g = two_player_game();
+    let copter = g.add_card_to_battlefield(0, catalog::smugglers_copter());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let raider = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(raider);
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_hand(0, catalog::island());
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::Crew { vehicle: copter, crew_creatures: vec![bear] }).expect("crew");
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: raider, target: AttackTarget::Player(0) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareBlockers(vec![(copter, raider)])).expect("copter blocks");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.definition.name == "Island"), "looted on the block");
+}
+
 /// An uncrewed Vehicle can't be declared as an attacker (it isn't a creature).
 #[test]
 fn uncrewed_vehicle_cannot_attack() {

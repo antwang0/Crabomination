@@ -12176,15 +12176,9 @@ pub fn howling_mine() -> CardDefinition {
     }
 }
 
-/// Ophiomancer — {2}{B} Creature — Human Shaman 1/1. "At the beginning
+/// Ophiomancer — {2}{B} Creature — Human Shaman 2/2. "At the beginning
 /// of each upkeep, if you control no Snakes, create a 1/1 black Snake
 /// creature token with deathtouch."
-///
-/// Approximation: the "if you control no Snakes" intervening-if is
-/// collapsed (the trigger always fires) — strictly more value than
-/// printed but the gameplay outcome (a steady stream of 1/1 deathtouch
-/// chump-blockers / aristocrat fodder) is preserved. Uses a one-off
-/// `TokenDefinition` for the Snake.
 pub fn ophiomancer() -> CardDefinition {
     use crate::card::TokenDefinition;
     use crate::game::types::TurnStep;
@@ -12220,7 +12214,11 @@ pub fn ophiomancer() -> CardDefinition {
             event: EventSpec::new(
                 EventKind::StepBegins(TurnStep::Upkeep),
                 EventScope::AnyPlayer,
-            ),
+            )
+            .with_filter(Predicate::Not(Box::new(Predicate::SelectorExists(Selector::ControlledBy {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::HasCreatureType(CreatureType::Snake),
+            })))),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
@@ -21379,8 +21377,7 @@ pub fn zopandrel_hunger_dominus() -> CardDefinition {
 /// under its owner's control."
 ///
 /// Wired via `Effect::ExileUntilSourceLeaves` (CR 603.6e, return to
-/// battlefield). Targets an opponent's creature (the printed "you may"
-/// optionality is dropped for the auto-decider's benefit).
+/// battlefield). "You may exile another target creature."
 pub fn fiend_hunter() -> CardDefinition {
     use crate::card::ExileReturnZone;
     CardDefinition {
@@ -23060,11 +23057,8 @@ pub fn esikas_chariot() -> CardDefinition {
 /// Flying. Whenever this Vehicle attacks or blocks, you may draw a card. If
 /// you do, discard a card. Crew 1.
 ///
-/// Crew 1 wired via `Keyword::Crew(1)`; the attack/block loot trigger fires
-/// on `EventKind::Attacks` (the engine fires Attacks for crewed Vehicles
-/// that attack). The block half is approximated by the attack trigger only
-/// (no DeclaredBlocker event for Vehicles yet). The "may draw then discard"
-/// rummage uses the standard loot pattern.
+/// Crew 1 wired via `Keyword::Crew(1)`; the loot rides one trigger on
+/// `EventKind::Attacks` and one on `EventKind::Blocks`.
 pub fn smugglers_copter() -> CardDefinition {
     CardDefinition {
         name: "Smuggler's Copter",
@@ -23077,23 +23071,19 @@ pub fn smugglers_copter() -> CardDefinition {
         keywords: vec![Keyword::Crew(1), Keyword::Flying],
         power: 3,
         toughness: 3,
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
-            effect: Effect::MayDo {
-                description: "draw a card, then discard a card".to_string(),
-                body: Box::new(Effect::Seq(vec![
-                    Effect::Draw {
-                        who: Selector::You,
-                        amount: Value::Const(1),
-                    },
-                    Effect::Discard {
-                        who: Selector::You,
-                        amount: Value::Const(1),
-                        random: false,
-                    },
-                ])),
-            },
-        }],
+        triggered_abilities: [EventKind::Attacks, EventKind::Blocks]
+            .into_iter()
+            .map(|kind| TriggeredAbility {
+                event: EventSpec::new(kind, EventScope::SelfSource),
+                effect: Effect::MayDo {
+                    description: "draw a card, then discard a card".to_string(),
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                        Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+                    ])),
+                },
+            })
+            .collect(),
         ..Default::default()
     }
 }

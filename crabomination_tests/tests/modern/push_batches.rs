@@ -570,6 +570,21 @@ fn ophiomancer_mints_on_the_opponents_upkeep_too() {
     assert!(g.battlefield.iter().any(|c| c.is_token && c.controller == 0), "a Snake for you on their upkeep");
 }
 
+/// CR 603.4 — "if you control no Snakes": with its Snake still around, the
+/// next upkeep makes none.
+#[test]
+fn ophiomancer_waits_while_you_control_a_snake() {
+    use crabomination::game::types::TurnStep;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::ophiomancer());
+    g.step = TurnStep::Upkeep;
+    for _ in 0..2 {
+        g.fire_step_triggers(TurnStep::Upkeep);
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.battlefield.iter().filter(|c| c.is_token).count(), 1);
+}
+
 #[test]
 fn yavimaya_elder_dies_searches_two_basics() {
     let mut g = two_player_game();
