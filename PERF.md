@@ -9578,6 +9578,23 @@ short to say so.
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
 
+### Commander 2026-09-26 (session `012put2X`) — guardrail read, no perf change intended
+
+A/B of the session-start tip (`939f85831`) against `470f7cb67` (this
+session's pod-safety bounds plus ~40 commits from concurrent sessions),
+release-fast, box otherwise idle:
+
+```text
+  --bench decisions        197,136 / 197,136   byte-identical
+  --bench games_per_s      10 ABAB pairs: median +0.97 %, mean -0.63 %, sd 5.93 %  (noise)
+  callgrind Ir, --games 6 --threads 1 --seed 1 --a gang --b gang
+    fixed                  697,664,500 -> 700,986,343   +0.48 %  (same work)
+    cube                 2,573,156,152 -> 2,393,141,580 -7.00 %  (different games: the pool's cards changed)
+```
+
+Under the 5 % bar; the `fixed` +0.48 % is spread over the window, not
+attributed.
+
 ### ML 2026-09-25 — `(-371)` the value net's forward pass, 3.4x in the search
 
 The net leaf had become 37.5 % of a net-leaf search. `CRAB_MCTS_TIMING` on
