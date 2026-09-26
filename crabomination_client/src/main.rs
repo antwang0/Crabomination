@@ -26,6 +26,7 @@ mod audit;
 mod card;
 mod config;
 mod debug_export;
+mod deck_picker;
 #[cfg(not(target_arch = "wasm32"))]
 mod embedded_assets;
 mod game;
@@ -421,8 +422,11 @@ fn main() {
         .init_resource::<layout_harness::ScreenshotClock>()
         .add_systems(
             Update,
-            (layout_harness::open_settings_for_screenshot, layout_harness::capture_screenshot)
-                .run_if(in_state(AppState::InGame)),
+            (
+                layout_harness::open_settings_for_screenshot.run_if(in_state(AppState::InGame)),
+                layout_harness::open_deck_picker_for_screenshot.run_if(in_state(AppState::Menu)),
+                layout_harness::capture_screenshot,
+            ),
         )
         .add_systems(Startup, setup)
         .add_systems(Startup, maximize_window)

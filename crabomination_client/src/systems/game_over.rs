@@ -625,9 +625,9 @@ fn rematch_in_place(
         .map(|f| f.player_name.trim().to_string())
         .filter(|n| !n.is_empty())
         .unwrap_or_else(|| "Player".to_string());
-    let (pod_size, pod_opponents) = menu_fields
+    let (pod_size, pod_decks) = menu_fields
         .as_ref()
-        .map_or((4, Default::default()), |f| (f.pod_size, f.pod_opponents));
+        .map_or((4, Default::default()), |f| (f.pod_size, f.pod_decks));
     // Audit-mode rematch reuses the same target card so the user
     // can re-attempt the same setup without re-picking from the
     // catalog. Otherwise the rematch deals the deck the match started
@@ -645,7 +645,7 @@ fn rematch_in_place(
                     chosen,
                     rematch_deck.and_then(|d| d.0.clone()),
                     pod_size,
-                    pod_opponents,
+                    pod_decks,
                     &human_name,
                 ),
             };

@@ -34,6 +34,9 @@ pub struct HarnessArgs {
     /// `--hold-seat N`: seat N is a connected player who never acts, so the
     /// game waits on them — a network pod that goes on without the viewer.
     pub hold_seat: Option<usize>,
+    /// `--deck-picker`: stay on the menu with Commander selected and the deck
+    /// picker open; the screenshot is of the menu, not a match.
+    pub deck_picker: bool,
 }
 
 impl HarnessArgs {
@@ -56,6 +59,7 @@ impl HarnessArgs {
             settings_open: args.iter().any(|a| a == "--settings-open"),
             viewer_out: args.iter().any(|a| a == "--viewer-out"),
             hold_seat: value("--hold-seat").and_then(|v| v.parse().ok()),
+            deck_picker: args.iter().any(|a| a == "--deck-picker"),
         }
     }
 }
@@ -142,6 +146,20 @@ pub fn knock_out_viewer(g: &mut GameState) {
     g.priority.player_with_priority = 1;
 }
 
+/// `--deck-picker`: select Commander and open the deck picker, once.
+pub fn open_deck_picker_for_screenshot(
+    args: Res<HarnessArgs>,
+    mut fields: ResMut<crate::menu::MenuFields>,
+    mut picker: ResMut<crate::deck_picker::DeckPicker>,
+    mut done: Local<bool>,
+) {
+    if args.deck_picker && !*done {
+        fields.select_format(crate::menu::MatchFormat::Commander);
+        picker.open = true;
+        *done = true;
+    }
+}
+
 /// `--settings-open`: open the Esc menu the first frame a view is up.
 pub fn open_settings_for_screenshot(
     args: Res<HarnessArgs>,
@@ -174,7 +192,8 @@ pub fn capture_screenshot(
     mut exit: MessageWriter<AppExit>,
 ) {
     let Some(path) = &args.screenshot else { return };
-    if view.0.is_none() {
+    // A match screenshot waits for the first view; a menu one does not.
+    if view.0.is_none() && !args.deck_picker {
         return;
     }
     let t = clock.since_view.get_or_insert(0.0);
