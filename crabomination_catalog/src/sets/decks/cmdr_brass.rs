@@ -505,17 +505,14 @@ pub fn king_narfis_betrayal() -> CardDefinition {
 }
 
 /// Merchant Raiders — it or another Pirate entering taps up to one creature,
-/// which stays tapped while this is around.
-///
-/// ⚠ Residual: the lock lasts while it's on the battlefield, not while you
-/// control it.
+/// which doesn't untap for as long as you control this.
 pub fn merchant_raiders() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![pirate_enters(Effect::ApplyToTargets {
             max_targets: 1,
             min_targets: 0,
             filter: R::Creature,
-            effect: Box::new(Effect::TapAndLockWhileSourcePresent { what: Selector::Target(0) }),
+            effect: Box::new(Effect::TapAndLockWhileSourcePresent { what: Selector::Target(0), while_you_control: true }),
         })],
         ..creature(
             "Merchant Raiders",

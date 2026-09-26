@@ -258,6 +258,10 @@ fn sand_squid_locks_a_creature_while_tapped() {
     g.active_player_idx = 1;
     g.do_untap();
     assert!(g.battlefield_find(victim).unwrap().tapped, "still locked");
+    // "…for as long as this creature remains tapped": untapped, it lets go.
+    g.battlefield_find_mut(squid).unwrap().tapped = false;
+    g.do_untap();
+    assert!(!g.battlefield_find(victim).unwrap().tapped, "released with the Squid untapped");
 }
 
 /// Righteous Indignation pumps a creature that blocks a black or red one.

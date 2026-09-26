@@ -415,6 +415,7 @@ pub fn shipbreaker_kraken() -> CardDefinition {
             filter: R::Creature,
             effect: Box::new(Effect::TapAndLockWhileSourcePresent {
                 what: Selector::Target(0),
+                while_you_control: true,
             }),
         })],
         ..creature(

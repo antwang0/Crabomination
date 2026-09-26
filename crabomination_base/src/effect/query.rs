@@ -1872,7 +1872,7 @@ impl Effect {
             | Effect::TurnFaceUpFree { what, .. }
             | Effect::Tap { what }
             | Effect::TapAndUntapLock { what }
-            | Effect::TapAndLockWhileSourcePresent { what }
+            | Effect::TapAndLockWhileSourcePresent { what, .. }
             | Effect::TapBlockedByAndSkipUntap { what }
             | Effect::RemoveFromCombat { what }
             | Effect::Untap { what, .. }
@@ -2744,7 +2744,7 @@ impl Effect {
             | Effect::Tap { what }
             | Effect::SetSaddled { what }
             | Effect::TapAndUntapLock { what }
-            | Effect::TapAndLockWhileSourcePresent { what }
+            | Effect::TapAndLockWhileSourcePresent { what, .. }
             | Effect::TapBlockedByAndSkipUntap { what }
             | Effect::TapOrUntap { what }
             | Effect::Untap { what, .. } => {
@@ -4292,7 +4292,7 @@ impl Effect {
             | Effect::Tap { what }
             | Effect::SetSaddled { what }
             | Effect::TapAndUntapLock { what }
-            | Effect::TapAndLockWhileSourcePresent { what }
+            | Effect::TapAndLockWhileSourcePresent { what, .. }
             | Effect::TapBlockedByAndSkipUntap { what }
             | Effect::Untap { what, .. } => {
                 matches!(
@@ -5153,7 +5153,7 @@ impl Effect {
                 | Effect::Tap { what }
                 | Effect::SetSaddled { what }
                 | Effect::TapAndUntapLock { what }
-                | Effect::TapAndLockWhileSourcePresent { what }
+                | Effect::TapAndLockWhileSourcePresent { what, .. }
                 | Effect::TapBlockedByAndSkipUntap { what }
                 | Effect::Untap { what, .. } => {
                     sel_find(what, slot).or_else(|| implicit_player_for_slot(what, slot))

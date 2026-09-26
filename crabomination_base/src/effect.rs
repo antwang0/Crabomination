@@ -7271,10 +7271,15 @@ pub enum Effect {
     /// Entrancing Lyre — tap `what` and lock it from untapping for as long as
     /// the source permanent stays tapped (`CardInstance.untap_locked_by`).
     TapAndUntapLock { what: Selector },
-    /// Shipbreaker Kraken — tap `what` and lock it from untapping for as long
-    /// as the source permanent stays on the battlefield
-    /// (`CardInstance.untap_locked_while_present`).
-    TapAndLockWhileSourcePresent { what: Selector },
+    /// Somnophore — tap `what` and lock it from untapping for as long as the
+    /// source permanent stays on the battlefield
+    /// (`CardInstance.untap_locked_while_present`); with `while_you_control`,
+    /// for as long as the effect's controller controls it (Shipbreaker Kraken).
+    TapAndLockWhileSourcePresent {
+        what: Selector,
+        #[serde(default)]
+        while_you_control: bool,
+    },
     /// CR 702.158d — "choose a sector, then [body] each creature in it."
     /// The controller picks alpha/beta/gamma; `body` reads the picks via
     /// `Selector::CreaturesInChosenSector` (Space Beleren's −1 and −5).

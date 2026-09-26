@@ -631,3 +631,19 @@ fn metrognome_pays_four_gnomes_for_a_forced_discard() {
         "four 1/1 Gnomes, the printed number",
     );
 }
+
+/// Somnophore — only its own damage to a player triggers it, and the pinned
+/// creature is one "that player" controls, not any opponent's.
+#[test]
+fn somnophore_pins_a_creature_of_the_player_it_hit() {
+    let mut g = multi_player_game(3);
+    let somn = g.add_card_to_battlefield(0, catalog::somnophore());
+    let other = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let mut ev = Vec::new();
+    g.deal_damage_to_from(crabomination::game::effects::EntityRef::Player(1), 2, Some(somn), &mut ev);
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).unwrap().tapped, "a creature of the player it hit");
+    assert!(!g.battlefield_find(other).unwrap().tapped);
+}

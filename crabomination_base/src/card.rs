@@ -9118,6 +9118,10 @@ pub struct CardData {
     /// linked source permanent remains on the battlefield (regardless of the
     /// source's tapped state). Released once the source leaves.
     pub untap_locked_while_present: Option<CardId>,
+    /// "…for as long as you control [the source]" (Shipbreaker Kraken, Merchant
+    /// Raiders): the seat whose control of that source the lock also needs.
+    /// `None` is Somnophore's "for as long as it remains on the battlefield".
+    pub untap_lock_controller: Option<u8>,
     /// Wall of Dust — "that creature can't attack during its controller's
     /// next turn". `Pending` is set when the ban lands; it promotes to
     /// `Active` at the bearer's controller's untap step and clears at that
@@ -9838,6 +9842,7 @@ impl CardInstance {
             created_by: None,
             damage_prevention_off_eot: false,
             untap_locked_while_present: None,
+            untap_lock_controller: None,
             attack_ban: AttackBan::None,
             damage_by_source_this_turn: crate::copyvec::CopyVec::new(),
             must_block: None,

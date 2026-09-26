@@ -3666,7 +3666,8 @@ impl GameState {
                 .is_some_and(|src| self.battlefield_find(src).is_some_and(|s| s.tapped))
             || card
                 .untap_locked_while_present
-                .is_some_and(|src| self.battlefield_find(src).is_some())
+                .and_then(|src| self.battlefield_find(src))
+                .is_some_and(|s| card.untap_lock_controller.is_none_or(|p| usize::from(p) == s.controller))
             // Vedalken Shackles / Entrancing Lyre keep *themselves* down while
             // the lock they installed still holds.
             || self
@@ -4102,11 +4103,11 @@ impl GameState {
             self.battlefield.iter().filter(|c| c.tapped).map(|c| c.id).collect()
         };
         // Shipbreaker Kraken — a presence-lock holds while its source is still
-        // on the battlefield.
-        let on_battlefield: crate::fxhash::HashSet<crate::card::CardId> = if !any_presence_lock {
-            crate::fxhash::HashSet::default()
+        // on the battlefield (id -> controller, for "as long as you control").
+        let on_battlefield: crate::fxhash::HashMap<crate::card::CardId, usize> = if !any_presence_lock {
+            crate::fxhash::HashMap::default()
         } else {
-            self.battlefield.iter().map(|c| c.id).collect()
+            self.battlefield.iter().map(|c| (c.id, c.controller)).collect()
         };
         // CR 502.3 — "Players can't untap more than one [filter] during their
         // untap steps" (Winter Moon, Imi Statue). Pre-resolve each cap's
@@ -4295,13 +4296,18 @@ impl GameState {
                     card.untap_locked_by = None;
                 }
                 if let Some(src) = card.untap_locked_while_present {
-                    if on_battlefield.contains(&src) {
+                    // Shipbreaker Kraken — the lock also ends once its locker
+                    // no longer controls the source (CR 611.2b: for good).
+                    if on_battlefield.get(&src).is_some_and(|&ctl| {
+                        card.untap_lock_controller.is_none_or(|p| usize::from(p) == ctl)
+                    }) {
                         if active {
                             card.clear_summoning_sickness();
                         }
                         continue;
                     }
                     card.untap_locked_while_present = None;
+                    card.untap_lock_controller = None;
                 }
                 // CR 502.3 — a tapped permanent beyond the first this player
                 // untaps under any active cap stays tapped.

@@ -875,14 +875,16 @@ pub fn mana_leech() -> CardDefinition {
     }
 }
 
-/// Somnophore — {2}{U}{U} 2/2 flier that pins a creature per hit.
+/// Somnophore — {2}{U}{U} 2/2 flier; whenever it deals damage to a player, it
+/// pins a creature that player controls while it remains on the battlefield.
 pub fn somnophore() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::PlayerDamaged, EventScope::YourSourceDamagedOpponent),
+            event: EventSpec::new(EventKind::DealsDamageToPlayer, EventScope::SelfSource),
             effect: Effect::TapAndLockWhileSourcePresent {
-                what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+                what: target_filtered(R::Creature.and(R::ControlledByTriggerPlayer)),
+                while_you_control: false,
             },
         }],
         ..creature("Somnophore", cost(&[generic(2), u(), u()]), vec![CreatureType::Illusion], 2, 2)

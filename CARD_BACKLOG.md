@@ -4134,8 +4134,6 @@ closed. Residuals in what the last three waves shipped:
   creature spell".
 - **Metrognome's forced-discard trigger is dropped** — there's no "an opponent
   caused you to discard this card" event.
-- **Somnophore reads `ControlledByOpponent`** rather than "that player"; exact
-  heads-up, wrong in multiplayer.
 - **`Effect::GrantKeywordToMatchingThisTurn` matches card-locally**, so a
   creature granted flying by an Aura is still stopped by Falter (CR 613.8
   dependency ordering isn't modeled).

@@ -293,6 +293,7 @@ pub fn dungeon_geists() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![etb(Effect::TapAndLockWhileSourcePresent {
             what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+            while_you_control: true,
         })],
         ..creature("Dungeon Geists", cost(&[generic(2), u(), u()]), vec![CreatureType::Spirit], 3, 3)
     }

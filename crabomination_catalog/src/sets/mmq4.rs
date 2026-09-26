@@ -289,14 +289,14 @@ pub fn righteous_indignation() -> CardDefinition {
     }
 }
 
-/// Rock Badger's Merfolk cousin — Sand Squid {3}{U} 2/2 islandwalker that pins
-/// a creature down for as long as it stays tapped.
+/// Sand Squid — {3}{U} 2/2 islandwalker that may stay tapped, pinning a
+/// creature down for as long as it remains tapped.
 pub fn sand_squid() -> CardDefinition {
     CardDefinition {
-        keywords: vec![Keyword::Landwalk(LandType::Island)],
+        keywords: vec![Keyword::Landwalk(LandType::Island), Keyword::MayChooseNotToUntap],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            effect: Effect::TapAndLockWhileSourcePresent {
+            effect: Effect::TapAndUntapLock {
                 what: target_filtered(R::Creature),
             },
             ..Default::default()

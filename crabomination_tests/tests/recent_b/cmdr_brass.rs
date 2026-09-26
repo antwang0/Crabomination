@@ -331,14 +331,22 @@ fn king_narfis_betrayal_betrays() {
     assert_eq!(g.exile.iter().filter(|c| c.exiled_with == Some(k)).count(), 2);
 }
 
-/// Merchant Raiders taps down a creature.
+/// CR 611.2b — Merchant Raiders taps down a creature "for as long as you
+/// control this creature": the lock holds through its controller's untap
+/// steps and ends for good once the Raiders changes hands.
 #[test]
 fn merchant_raiders_lock_a_creature() {
-    let mut g = main_phase(2);
+    let mut g = main_phase(3);
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let m = g.add_card_to_hand(0, catalog::merchant_raiders());
     cast_at(&mut g, m, &[Target::Permanent(bear)]).expect("cast");
     assert!(g.battlefield_find(bear).unwrap().tapped);
+    g.active_player_idx = 1;
+    g.do_untap();
+    assert!(g.battlefield_find(bear).unwrap().tapped, "locked while you control the Raiders");
+    g.battlefield_find_mut(m).unwrap().controller = 2;
+    g.do_untap();
+    assert!(!g.battlefield_find(bear).unwrap().tapped, "released once you don't");
 }
 
 /// Ramirez DePietro: lose 2, two Treasures.

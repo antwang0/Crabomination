@@ -2218,7 +2218,7 @@ impl GameState {
         }
         if spec.lock_copied
             && let Ok(evs) = self.resolve_effect_driven(
-                &Effect::TapAndLockWhileSourcePresent { what: crate::effect::Selector::Target(0) },
+                &Effect::TapAndLockWhileSourcePresent { what: crate::effect::Selector::Target(0), while_you_control: true },
                 &ctx,
             )
         {
@@ -16154,10 +16154,11 @@ impl GameState {
                 out
             }
 
-            Effect::TapAndLockWhileSourcePresent { what } => {
+            Effect::TapAndLockWhileSourcePresent { what, while_you_control } => {
                 // Shipbreaker Kraken — the lock releases when the source leaves
-                // the battlefield, not when it untaps.
+                // the battlefield (or leaves your control), not when it untaps.
                 let source = ctx.source;
+                let locker = while_you_control.then(|| u8::try_from(ctx.controller).unwrap_or(u8::MAX));
                 for ent in self.resolve_selector(what, ctx) {
                     if let Some(cid) = ent.as_permanent_id()
                         && let Some(c) = self.battlefield_find_mut(cid)
@@ -16171,6 +16172,7 @@ impl GameState {
                             });
                         }
                         c.untap_locked_while_present = source;
+                        c.untap_lock_controller = locker;
                     }
                 }
                 Ok(())
