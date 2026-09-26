@@ -1530,6 +1530,11 @@ pub enum StaticEffect {
     /// CR 614.5 / 303.4a — "If a source would deal damage to enchanted player,
     /// it deals double that damage instead" (Curse of Bloodletting).
     DoubleDamageToEnchantedPlayer,
+    /// CR 614.1a — "If enchanted creature would deal combat damage to a
+    /// permanent or player, it deals double that damage instead" (The Sound
+    /// of Drums): one doubling per such attachment, at the combat funnels
+    /// only (`GameState::attached_combat_damage_doubling`).
+    AttachedDealsDoubleCombatDamage,
     /// CR 614.5 — "If a source would deal damage to the chosen player or a
     /// permanent they control, it deals double that damage instead" (Sawhorn
     /// Nemesis): the player this permanent chose as it entered

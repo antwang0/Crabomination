@@ -3628,6 +3628,30 @@ impl GameState {
         amount.saturating_mul(1u32 << self.creature_combat_damage_doublers.min(8))
     }
 
+    /// CR 614.1a — The Sound of Drums: combat damage `source` deals, doubled
+    /// once per attachment on it carrying `AttachedDealsDoubleCombatDamage`.
+    /// Behind the damage-scaling presence gate, so a board without one pays a
+    /// memoized flag read.
+    pub(crate) fn attached_combat_damage_doubling(&self, source: Option<crate::card::CardId>, amount: u32) -> u32 {
+        let Some(src) = source else { return amount };
+        if amount == 0 || !self.battlefield.has_damage_scaler(crate::game::card_can_scale_damage) {
+            return amount;
+        }
+        let n: usize = self
+            .battlefield
+            .iter()
+            .filter(|c| c.attached_to == Some(src))
+            .map(|c| {
+                c.definition
+                    .static_abilities
+                    .iter()
+                    .filter(|sa| matches!(sa.effect, crate::effect::StaticEffect::AttachedDealsDoubleCombatDamage))
+                    .count()
+            })
+            .sum();
+        amount.saturating_mul(1u32 << n.min(8))
+    }
+
     /// CR 510.1a — this creature assigns no combat damage for the rest of the
     /// turn, whether by a printed keyword (Master of Cruelties) or a
     /// turn-scoped effect (Kukemssa Pirates). Both damage-assignment sites

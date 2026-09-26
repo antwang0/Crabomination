@@ -29864,6 +29864,7 @@ fn static_effect_scales_damage(effect: &crate::effect::StaticEffect) -> bool {
         | SE::DoubleDamageToOpponents
         | SE::DoubleDamageToOpponentPlayers
         | SE::DoubleDamageToEnchantedPlayer
+        | SE::AttachedDealsDoubleCombatDamage
         | SE::DoubleDamageToChosenPlayer
         | SE::DoubleDamageBetweenYouAndChosenPlayer
         | SE::HalveDamageToYou
@@ -31527,6 +31528,7 @@ fn static_effect_to_effects(
             | StaticEffect::OneSpellPerTurn
             | StaticEffect::EnchantedPlayerOneSpellPerTurn
             | StaticEffect::DoubleDamageToEnchantedPlayer
+            | StaticEffect::AttachedDealsDoubleCombatDamage
             | StaticEffect::DoubleDamageToChosenPlayer
             | StaticEffect::DoubleDamageBetweenYouAndChosenPlayer
             | StaticEffect::OneNoncreatureSpellPerTurn

@@ -4620,10 +4620,13 @@ impl GameState {
                         {
                             None
                         } else {
-                            Some(g.double_creature_combat_damage(g.scale_damage_to(
+                            Some(g.double_creature_combat_damage(g.attached_combat_damage_doubling(
                                 Some(atk.id),
-                                crate::game::effects::EntityRef::Permanent(blocker_id),
-                                assign,
+                                g.scale_damage_to(
+                                    Some(atk.id),
+                                    crate::game::effects::EntityRef::Permanent(blocker_id),
+                                    assign,
+                                ),
                             )))
                         };
                         (scaled, redirect_to, self_prevented)
@@ -4804,10 +4807,13 @@ impl GameState {
                                 combat_damage_value(bc).max(0) as u32,
                             );
                             let scaled = (power != 0).then(|| {
-                                g.double_creature_combat_damage(g.scale_damage_to(
+                                g.double_creature_combat_damage(g.attached_combat_damage_doubling(
                                     Some(bid),
-                                    crate::game::effects::EntityRef::Permanent(atk.id),
-                                    power,
+                                    g.scale_damage_to(
+                                        Some(bid),
+                                        crate::game::effects::EntityRef::Permanent(atk.id),
+                                        power,
+                                    ),
                                 ))
                             });
                             // Same fold as the attacker side: the post-shield
@@ -5308,7 +5314,7 @@ impl GameState {
             AttackTarget::Planeswalker(pw) => EntityRef::Permanent(pw),
             AttackTarget::Battle(b) => EntityRef::Permanent(b),
         };
-        self.scale_damage_to(source, ent, amount)
+        self.attached_combat_damage_doubling(source, self.scale_damage_to(source, ent, amount))
     }
 
     fn prevent_combat_to_target(
