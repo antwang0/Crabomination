@@ -2241,6 +2241,11 @@ pub struct ResolutionScratch {
     /// hold no event list of their own.
     #[serde(skip, default)]
     pub(crate) pending_cost_events: Vec<GameEvent>,
+    /// How many "becomes the target" dispatches `push_pending_trigger` is
+    /// nested inside. Past [`GameState::TARGET_TRIGGER_DEPTH`] the events wait
+    /// in `pending_cost_events` for the next dispatch (CR 603.3b).
+    #[serde(skip, default)]
+    pub(crate) target_trigger_depth: u8,
     /// CR 603.3 — the own dies / leaves triggers of a permanent that left as a
     /// COST (a sacrifice cost, an emerge / offering / casualty sacrifice).
     /// The death funnel pushes them at once; `remove_to_graveyard_as_cost`
@@ -24862,6 +24867,9 @@ impl GameState {
     /// Push a `PendingTriggerPush` onto the stack with the given
     /// (already-chosen) target. Mirrors the original inline push at
     /// the trigger-dispatch site.
+    /// See `ResolutionScratch::target_trigger_depth`.
+    const TARGET_TRIGGER_DEPTH: u8 = 8;
+
     pub fn push_pending_trigger(
         &mut self,
         pending: PendingTriggerPush,
@@ -24991,7 +24999,19 @@ impl GameState {
                 }
                 _ => None,
             }));
-            self.dispatch_triggers_for_events(&became);
+            // CR 603.3b — a trigger that fires off this one's targets waits
+            // for the next time a player would receive priority. Dispatched in
+            // place for the ordinary chain; past the depth, queued, so two
+            // Scalelord Reckoners aiming at each other's Dragons grow the stack
+            // one dispatch at a time instead of recursing until the thread's
+            // stack overflows (four-seat pod, decks 97-100, seed 33097 game 19).
+            if self.scratch.target_trigger_depth >= Self::TARGET_TRIGGER_DEPTH {
+                self.scratch.pending_cost_events.extend(became);
+            } else {
+                self.scratch.target_trigger_depth += 1;
+                self.dispatch_triggers_for_events(&became);
+                self.scratch.target_trigger_depth -= 1;
+            }
             // CR 702.21a — Ward triggers on "becomes the target of a spell or
             // ability an opponent controls", and a *triggered* ability is an
             // ability. The cast and activated-ability paths both charge the

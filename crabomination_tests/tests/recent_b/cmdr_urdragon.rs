@@ -193,6 +193,24 @@ fn scalelord_reckoner_retaliates() {
     assert!(g.battlefield_find(ring).is_none());
 }
 
+/// CR 603.3b — two opposing Scalelord Reckoners answer each other forever:
+/// each trigger targets the other's Dragon, which triggers it back. The
+/// chain grows the stack a dispatch at a time rather than recursing until
+/// the thread's stack overflows (four-seat pod, decks 97-100, seed 33097
+/// game 19), and it ends once one Reckoner is destroyed.
+#[test]
+fn cr_603_3b_facing_scalelord_reckoners_do_not_recurse_forever() {
+    let mut g = pod(3);
+    let a = g.add_card_to_battlefield(0, catalog::scalelord_reckoner());
+    let b = g.add_card_to_battlefield(1, catalog::scalelord_reckoner());
+    bolt(&mut g, 1, a);
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield_find(a).is_none() || g.battlefield_find(b).is_none(),
+        "a Reckoner's trigger resolved"
+    );
+}
+
 /// Scion of the Ur-Dragon becomes a copy of a Dragon it bins.
 #[test]
 fn scion_of_the_ur_dragon_becomes_a_binned_dragon() {
