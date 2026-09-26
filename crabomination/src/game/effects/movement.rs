@@ -1318,6 +1318,12 @@ impl GameState {
         {
             self.turn.damage_sources_this_turn.push((seat, src));
         }
+        if let Some(src) = source {
+            match self.turn.damage_by_source_this_turn.iter_mut().find(|(s, _)| *s == src) {
+                Some((_, n)) => *n = n.saturating_add(amount),
+                None => self.turn.damage_by_source_this_turn.push((src, amount)),
+            }
+        }
         // Reverse Polarity — tally artifact damage dealt to each player.
         if let (EntityRef::Player(victim), Some(src)) = (ent, source)
             && self.source_is_artifact(src)

@@ -1350,6 +1350,11 @@ pub struct TurnRegistries {
     /// (Case of the Burning Masks). Cleared at the turn boundary.
     #[serde(default)]
     pub(crate) damage_sources_this_turn: Vec<(usize, CardId)>,
+    /// Damage each source has dealt this turn, after prevention (Chandra,
+    /// Fire of Kaladesh's "if Chandra has dealt 3 or more damage this
+    /// turn"). Cleared at the turn boundary.
+    #[serde(default)]
+    pub(crate) damage_by_source_this_turn: Vec<(CardId, u32)>,
     /// `(seat, damage)` dealt to each player by artifact sources this turn
     /// (Reverse Polarity). Cleared at cleanup.
     #[serde(default)]

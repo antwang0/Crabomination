@@ -5129,6 +5129,7 @@ impl GameState {
         clear_cold!(self.assigns_no_combat_damage_this_turn);
         self.creature_combat_damage_doublers = 0;
         clear_turn!(self.damage_sources_this_turn);
+        clear_turn!(self.damage_by_source_this_turn);
         clear_turn!(self.noncombat_damage_bonus_this_turn);
         // Desperate Gambit's unspent doubler expires with the turn.
         clear_turn!(self.double_next_damage_from);

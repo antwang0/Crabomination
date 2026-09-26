@@ -1882,7 +1882,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Hildibrand Manderville | Scions & Spellcraft (FIC) | dying doesn't let you cast it from the graveyard as an Adventure. |
 | 🟡 Into the Story | Scions & Spellcraft (FIC) | any graveyard with seven cards discounts it, yours included. |
 | 🟡 Urianger Augurelt | Scions & Spellcraft (FIC) | the card is exiled face up; a land played from exile gains no life; its spells get no {2} discount. |
-| 🟡 Chandra, Fire of Kaladesh | From Cute to Brute (SLD) | flips when an opponent has lost 3 or more life this turn, not after Chandra dealt 3 damage. |
 | 🟡 Cosima, God of the Voyage | From Cute to Brute (SLD) | the voyage ability isn't implemented. |
 | 🟡 Ludevic, Necrogenius | From Cute to Brute (SLD) | transforms for {U}{U}{B}{B} exiling one creature card; Olag is a 4/4 with counters, not a copy. |
 | 🟡 Battle at the Helvault | Enduring Enchantments (CMM) | "for each player" covers opponents only: you can't exile one of your own permanents. |

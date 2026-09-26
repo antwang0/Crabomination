@@ -421,6 +421,23 @@ fn azors_gateway_counts_different_mana_values() {
     }
 }
 
+/// Chandra, Fire of Kaladesh flips once *she* has dealt 3 damage this
+/// turn — a Lightning Bolt to the same opponent doesn't count.
+#[test]
+fn chandra_flips_after_dealing_three_herself() {
+    let mut g = main_phase();
+    let chandra = g.add_card_to_battlefield(0, catalog::chandra_fire_of_kaladesh());
+    g.clear_sickness(chandra);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, Some(Target::Player(1))).expect("bolt the opponent");
+    for i in 0..3 {
+        let id = on_board(&g, 0, "Chandra, Fire of Kaladesh").expect("still unflipped");
+        g.battlefield_find_mut(id).unwrap().tapped = false;
+        activate(&mut g, id, 0, Some(Target::Player(1))).expect("ping");
+        assert_eq!(on_board(&g, 0, "Chandra, Roaring Flame").is_some(), i == 2, "after ping #{}", i + 1);
+    }
+}
+
 /// The snow duals enter tapped (table-driven).
 #[test]
 fn snow_duals_enter_tapped() {

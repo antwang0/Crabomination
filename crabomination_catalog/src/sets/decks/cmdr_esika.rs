@@ -3,8 +3,6 @@
 //! almost all double-faced. Tests in `tests/recent_b/cmdr_esika.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Chandra, Fire of Kaladesh** — flips when an opponent has lost 3 or
-//!   more life this turn, not after Chandra herself dealt 3 damage.
 //! - **Cosima, God of the Voyage** — the voyage ability isn't implemented.
 //! - **Ludevic, Necrogenius** — transforms for {U}{U}{B}{B} exiling one
 //!   creature card; Olag is a plain 4/4 with counters, not a copy.
@@ -307,9 +305,6 @@ pub fn azors_gateway() -> CardDefinition {
 }
 
 /// Chandra, Fire of Kaladesh // Chandra, Roaring Flame.
-///
-/// ⚠ Residual: flips when an opponent has lost 3+ life this turn, not after
-/// Chandra herself dealt 3 damage.
 pub fn chandra_fire_of_kaladesh() -> CardDefinition {
     let flame = walker(
         "Chandra, Roaring Flame",
@@ -345,7 +340,7 @@ pub fn chandra_fire_of_kaladesh() -> CardDefinition {
         activated_abilities: vec![tap(Effect::Seq(vec![
             Effect::DealDamage { to: player_or_walker(), amount: Value::ONE },
             Effect::If {
-                cond: Predicate::ValueAtLeast(Value::LifeLostThisTurn(PlayerRef::EachOpponent), Value::Const(3)),
+                cond: Predicate::ValueAtLeast(Value::DamageDealtBySourceThisTurn, Value::Const(3)),
                 then: Box::new(Effect::ExileSelfReturnTransformed),
                 else_: Box::new(Effect::Noop),
             },

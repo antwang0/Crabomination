@@ -1558,6 +1558,9 @@ pub enum Value {
     /// player this turn" (Impact Resonance): the largest per-source tally on a
     /// battlefield permanent, or the largest single hit a player took.
     GreatestDamageFromOneSourceThisTurn,
+    /// Damage the resolving source has dealt this turn (Chandra, Fire of
+    /// Kaladesh's "if Chandra has dealt 3 or more damage this turn").
+    DamageDealtBySourceThisTurn,
     /// "The greatest power among creatures sacrificed this way" — the largest
     /// power among the permanents sacrificed during this resolution, read off
     /// their death snapshots (Shadowgrange Archfiend).

@@ -1027,6 +1027,14 @@ impl GameState {
                 .map(|c| c.power())
                 .max()
                 .unwrap_or(0),
+            Value::DamageDealtBySourceThisTurn => {
+                let Some(src) = ctx.source else { return 0 };
+                self.turn
+                    .damage_by_source_this_turn
+                    .iter()
+                    .find(|(s, _)| *s == src)
+                    .map_or(0, |&(_, n)| n as i32)
+            }
             Value::GreatestDamageFromOneSourceThisTurn => {
                 let to_players = self.players.iter().map(|p| p.greatest_hit_this_turn).max().unwrap_or(0);
                 let to_permanents =
