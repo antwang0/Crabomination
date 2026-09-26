@@ -3015,6 +3015,20 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-09-26 (Commander session `01VVD5mW`) — the `--bench` invariant MOVES: 200,190 -> 200,398
+
+Intentional: CR 603.10a (`7690ef6a4`, `game/simultaneous_deaths.rs`) —
+creatures that die in one batch now see each other die, so a dying
+"whenever another creature dies" trigger fires for the rest of a sweep or a
+double block. Bisected: the parent `ac6805aa5` reads 200,190, the fix
+200,398. The suite's golden traces are unchanged.
+
+```text
+--bench          decisions 200,398 / 28.12 / 626.2 / 0 stalls (was 200,190 / 28.12 / 625.6)
+                 determinism ok; peak_rss_mib 32.1
+two-player pools cube 2,400 / sos 1,500 / sealed 3,600 games (seed 16601), all decided
+```
+
 ### 2026-09-25 (Commander session `011z4qQX`) — the `--bench` invariant MOVES: 195,806 -> 200,190
 
 Intentional: the bot's lockdown-Aura fix (`78cafe10`, "a lockdown Aura is
