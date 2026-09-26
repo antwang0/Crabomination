@@ -619,3 +619,61 @@ fn river_songs_diary_takes_hand_cast_spells_only() {
     drain_stack(&mut g);
     assert!(g.players[0].graveyard.iter().any(|c| c.id == top), "cast from exile: to the graveyard");
 }
+
+/// Imprisoned in the Moon — the enchanted permanent is a colorless land *with
+/// "{T}: Add {C}"* (CR 613.1f: the same effect removes the old abilities and
+/// grants this one). Its controller, not the Aura's, taps it for mana.
+#[test]
+fn imprisoned_in_the_moon_grants_tap_for_colorless() {
+    let mut g = main_phase();
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let aura = g.add_card_to_hand(0, catalog::imprisoned_in_the_moon());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, aura, Some(Target::Permanent(angel))).expect("Imprisoned in the Moon");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(angel).unwrap().lost_all_abilities);
+    g.priority.player_with_priority = 1;
+    let before = g.players[1].mana_pool.total();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: angel, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
+    })
+    .expect("the granted {T}: Add {C}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].mana_pool.total(), before + 1, "one colorless for the land's controller");
+    assert!(g.battlefield_find(angel).unwrap().tapped);
+}
+
+/// Serra Avenger — "You can't cast this spell during your first, second, or
+/// third turns of the game." Played through real turns (turn 1 is the
+/// starting seat's, CR 103.5; each later turn is counted as it is handed on):
+/// refused in player 0's first three main phases,
+/// cast in the fourth.
+#[test]
+fn serra_avenger_waits_for_your_fourth_turn() {
+    let mut g = two_player_game();
+    for p in 0..2 {
+        for _ in 0..12 {
+            g.add_card_to_library(p, catalog::plains());
+        }
+    }
+    let avenger = g.add_card_to_hand(0, catalog::serra_avenger());
+    for turn in 1..=4 {
+        while !(g.step == TurnStep::PreCombatMain && g.active_player_idx == 0) {
+            g.perform_action(GameAction::PassPriority).expect("pass priority");
+        }
+        g.players[0].mana_pool.add(Color::White, 2);
+        let r = cast(&mut g, avenger, None);
+        if turn < 4 {
+            assert!(
+                matches!(r, Err(GameError::SelectionRequirementViolated)),
+                "your turn {turn}: can't be cast, got {r:?}"
+            );
+            while g.step == TurnStep::PreCombatMain {
+                g.perform_action(GameAction::PassPriority).expect("leave main");
+            }
+        } else {
+            r.expect("your fourth turn: castable");
+        }
+    }
+}

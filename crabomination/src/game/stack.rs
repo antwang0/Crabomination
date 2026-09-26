@@ -5269,6 +5269,11 @@ impl GameState {
                 // by the skip and we advance to the next.
             }
         }
+        // `Value::TurnsBegunBy`: whoever now holds the turn has begun one
+        // more (the game's first turn never passes through here, so the
+        // Value credits it to `starting_player`).
+        let begun = &mut self.players[self.active_player_idx].turns_begun;
+        *begun = begun.saturating_add(1);
         // Sweep expired `may_play_until` permissions across every zone.
         // Runs *after* the turn-number bump, so `EndOfThisTurn` reads
         // `elapsed = turn_number - granted_turn >= 1`.

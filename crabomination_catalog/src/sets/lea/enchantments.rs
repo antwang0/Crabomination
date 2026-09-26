@@ -26,19 +26,18 @@ pub fn glorious_anthem() -> CardDefinition {
     }
 }
 
-/// Smoke — {R}{R} Enchantment (LEA). "Creatures don't untap during their
-/// controllers' untap steps." A global `PreventUntap` over `Creature`, which
-/// `do_untap` (CR 502.3) applies to every player's creatures.
+/// Smoke — {R}{R} Enchantment (LEA). "Players can't untap more than one
+/// creature during their untap steps." (Oracle; the LEA printing's "creatures
+/// don't untap" was errata'd.) `MaxOneUntapPerStep` over `Creature`, which
+/// `do_untap` (CR 502.3) applies to every player.
 pub fn smoke() -> CardDefinition {
     CardDefinition {
         name: "Smoke",
         cost: cost(&[r(), r()]),
         card_types: vec![CardType::Enchantment],
         static_abilities: vec![StaticAbility {
-            description: "Creatures don't untap during their controllers' untap steps.",
-            effect: StaticEffect::PreventUntap {
-                applies_to: Selector::EachPermanent(SelectionRequirement::Creature),
-            },
+            description: "Players can't untap more than one creature during their untap steps.",
+            effect: StaticEffect::MaxOneUntapPerStep { filter: SelectionRequirement::Creature },
         }],
         ..Default::default()
     }

@@ -356,7 +356,8 @@ Aura of Silence; Compulsive Research; Mask of Griselbrand; Cankerbloom;
 Bitter Triumph; Ursine Monstrosity; Finale of Devastation; Teferi's
 Protection; Comeuppance; Decree of Justice; Experiment Twelve; Guardian
 Project; Pteramander; Mobilized District; Dragonkin Berserker; Voracious Fell Beast; Lethal Scheme;
-Circuitous Route; Augur of Autumn. Still open:
+Circuitous Route; Augur of Autumn; Imprisoned in the Moon; Serra Avenger;
+Smoke. Still open:
 
 | Card | Gap |
 |---|---|
@@ -366,9 +367,6 @@ Circuitous Route; Augur of Autumn. Still open:
 | 🟡 Conduit of Worlds | only the play-lands-from-graveyard static; the {T} cast-a-permanent-card-from-graveyard ability is missing. |
 | 🟡 Sylvan Library | an optional "draw one, lose 4 life", not "draw two, then pay 4 life or put back each of two drawn this turn". |
 | 🟡 Master Biomancer | the "as a Mutant" type rider is missing. |
-| 🟡 Serra Avenger | "can't cast during your first three turns" is missing. |
-| 🟡 Smoke | "can't untap more than one creature" is modelled as no creature untapping. |
-| 🟡 Imprisoned in the Moon | the enchanted permanent doesn't gain "{T}: Add {C}". |
 
 ## The pod-deck `audit_incomplete` rows (2026-09-26, session `0199ZAiL`)
 

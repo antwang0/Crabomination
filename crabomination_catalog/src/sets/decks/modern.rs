@@ -18227,11 +18227,13 @@ pub fn song_of_the_dryads() -> CardDefinition {
 }
 
 /// Imprisoned in the Moon — {2}{U} Aura. Enchant creature, land, or
-/// planeswalker. Enchanted permanent is a colorless land and loses all other
-/// card types and abilities. (Its printed "{T}: Add {C}" is dropped — the
-/// permanent is neutralized to a do-nothing land.)
+/// planeswalker. Enchanted permanent is a colorless land with "{T}: Add {C}"
+/// and loses all other card types and abilities. The grant rides
+/// `equipped_bonus.activated_abilities`, which the layer-6 strip leaves alone
+/// (the same effect removes, then grants — CR 613.7).
 pub fn imprisoned_in_the_moon() -> CardDefinition {
-    use crate::card::{EnchantmentSubtype, EquipBonus};
+    use crate::card::{ActivatedAbility, EnchantmentSubtype, EquipBonus};
+    use crate::effect::ManaPayload;
     use crate::effect::shortcut::target_filtered;
     CardDefinition {
         name: "Imprisoned in the Moon",
@@ -18249,6 +18251,14 @@ pub fn imprisoned_in_the_moon() -> CardDefinition {
             set_card_types: Some(vec![CardType::Land]),
             set_colors: Some(vec![]),
             remove_abilities: true,
+            activated_abilities: vec![ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colorless(Value::ONE),
+                },
+                ..Default::default()
+            }],
             ..Default::default()
         }),
         ..Default::default()
@@ -25064,10 +25074,16 @@ pub fn blade_of_the_sixth_pride() -> CardDefinition {
     }
 }
 
-/// Serra Avenger — {W}{W} 3/3 Angel, Flying + Vigilance. (The "can't cast on
-/// your first three turns" restriction is dropped.)
+/// Serra Avenger — {W}{W} 3/3 Angel, Flying + Vigilance. "You can't cast this
+/// spell during your first, second, or third turns of the game." — a
+/// `cast_condition`: not your turn (a flash grant), or your fourth or later.
 pub fn serra_avenger() -> CardDefinition {
+    use crate::effect::Predicate;
     CardDefinition {
+        cast_condition: Some(Predicate::Any(vec![
+            Predicate::Not(Box::new(Predicate::IsTurnOf(PlayerRef::You))),
+            Predicate::ValueAtLeast(Value::TurnsBegunBy(PlayerRef::You), Value::Const(4)),
+        ])),
         name: "Serra Avenger",
         cost: cost(&[w(), w()]),
         card_types: vec![CardType::Creature],

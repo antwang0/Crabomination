@@ -1070,6 +1070,12 @@ impl GameState {
                 .filter(|c| self.evaluate_requirement_on_card(filter, c, ctx.controller))
                 .count() as i32,
             Value::TurnNumber => self.turn_number as i32,
+            // Turn 1 starts without an `advance_turn`, so it is not in the
+            // tally: it belongs to `starting_player` (CR 103.5).
+            Value::TurnsBegunBy(p) => self
+                .resolve_player(p, ctx)
+                .map(|p| (self.players[p].turns_begun + u32::from(p == self.starting_player)) as i32)
+                .unwrap_or(0),
             Value::DraftNoteNumber { agg } => {
                 let notes = &self.players[ctx.controller].draft_notes;
                 // A resolving instant/sorcery is already off the stack, so

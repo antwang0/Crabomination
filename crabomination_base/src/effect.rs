@@ -947,6 +947,11 @@ pub enum Value {
     /// The game's current turn number (CR 500 — the first turn is 1). Powers
     /// "the first upkeep" gates (Sentinel Dispatch).
     TurnNumber,
+    /// How many turns `who` has begun this game, the current one included —
+    /// "during your first, second, or third turns of the game" (Serra
+    /// Avenger) is `TurnsBegunBy(You) <= 3`. Extra turns count; skipped ones
+    /// don't (CR 500.7, 500.11 — a skipped turn never begins).
+    TurnsBegunBy(PlayerRef),
     /// CR 905.2b — a number the controller noted as they drafted cards with
     /// this source's name. `Max` takes the highest note (Lurking Automaton),
     /// `Sum` totals them (Cogwork Grinder). Zero outside a drafted game.

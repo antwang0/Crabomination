@@ -1216,6 +1216,12 @@ pub struct PlayerData {
     /// -7 coin-flip emblem). `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub extra_turns: u32,
+    /// Turns this player has begun this game after the first, bumped by
+    /// `advance_turn` as it hands them the turn (`Value::TurnsBegunBy`, which
+    /// adds the game's first turn back for the starting seat).
+    /// `#[serde(default)]`.
+    #[serde(default)]
+    pub turns_begun: u32,
     /// True while a continuous effect on the battlefield prevents this
     /// player from gaining life (CR 119.7). Set by
     /// `StaticEffect::CannotGainLife` in `compute_battlefield`'s player-
@@ -1669,6 +1675,7 @@ impl Player {
             creatures_dont_untap_next_untap: 0,
             firebending_kept_red: 0,
             extra_turns: 0,
+            turns_begun: 0,
             cannot_gain_life: false,
             wants_ui: false,
             smart_tap: false,
