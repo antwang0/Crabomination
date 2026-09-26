@@ -3314,6 +3314,7 @@ impl HeuristicBot {
                     && let Some(a) = super::foretell::pick_foretell(state, seat)
                         .or_else(|| super::spell_response::pick_idle_retrieval(state, seat))
                         .or_else(|| super::room::pick_room_door(state, seat))
+                        .or_else(|| super::manland::pick_manland(state, seat))
                         .or_else(|| super::evasion::pick_evasion_grant(state, seat))
                 {
                     return Some(BotStep::plain(a));

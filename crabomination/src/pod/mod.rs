@@ -2560,10 +2560,13 @@ mod tests {
         // activates, post-combat, any non-mana ability no shape generator
         // covers when the resolved outcome beats passing. Same winners; seed
         // 43 runs four turns longer, 0xC0FFEE seven actions.
+        // Re-blessed 2026-09-27 (`server/manland.rs`): the bot animates a
+        // creature-land with idle first-main mana so it can attack. Seed 43
+        // changes winner (seat 2 → 0); 0xC0FFEE and 4242 keep theirs.
         const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
-            (0xC0FFEE, Some(1), 63, 2895),
-            (43, Some(2), 70, 3443),
-            (4242, Some(0), 62, 2596),
+            (0xC0FFEE, Some(1), 68, 3053),
+            (43, Some(0), 88, 4140),
+            (4242, Some(0), 60, 2607),
         ];
         let decks = rofellos_pod(4);
         let t = build_pod_template(&decks);
