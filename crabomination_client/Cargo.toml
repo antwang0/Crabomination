@@ -42,6 +42,11 @@ crabomination = { path = "../crabomination", default-features = false }
 image = "0.25.10"
 imageproc = "0.27"
 ab_glyph = "0.2.32"
+# Bevy's text shaper, named directly for one call it does not re-export:
+# registering the symbol fallback fonts (`theme::register_symbol_fallbacks`).
+# The same version and features `bevy_text` takes — `system` (OS font
+# discovery) stays off, as it is in Bevy.
+parley = { version = "0.9.0", default-features = false, features = ["std"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 # The client IS a simulator now: its bot seat is `MctsBot` at 256 iterations,

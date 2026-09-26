@@ -108,7 +108,7 @@ pub fn sync_chat_ui(
 ) {
     let label = state
         .open
-        .then(|| format!("💬 {}▏  (Enter to send · Esc to cancel)", state.buffer));
+        .then(|| format!("💬 {}|  (Enter to send · Esc to cancel)", state.buffer));
     match (label, existing.iter().next()) {
         (Some(label), None) => {
             let Some(fonts) = fonts else { return };

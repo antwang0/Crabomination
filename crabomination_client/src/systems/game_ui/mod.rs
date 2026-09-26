@@ -1141,12 +1141,12 @@ pub fn update_turn_text(
     t.0 = if cv.game_over.is_some() {
         String::new()
     } else {
-        format!(
-            "Turn {} | {:?} | {}'s turn",
-            cv.turn,
-            cv.step,
-            player_name(cv, cv.active_player)
-        )
+        let whose = if cv.active_player == cv.your_seat {
+            "Your turn".to_string()
+        } else {
+            format!("{}'s turn", player_name(cv, cv.active_player))
+        };
+        format!("Turn {} | {:?} | {whose}", cv.turn, cv.step)
     };
 }
 

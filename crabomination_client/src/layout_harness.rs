@@ -129,6 +129,12 @@ pub fn fixture_state(seats: usize) -> GameState {
     for def in defs(&["Lightning Bolt", "Grizzly Bears"]) {
         g.add_card_to_exile(1, def);
     }
+    // An opposing monarch: the crown chip is a lone emoji on its row and
+    // leads the viewer's "👑 <name>", so both of the symbol fallback's
+    // lookups (Common and Latin runs) show up in a screenshot.
+    if seats > 2 {
+        g.monarch = Some(2);
+    }
     g.turn_number = 6;
     g.active_player_idx = 0;
     g.step = TurnStep::PreCombatMain;

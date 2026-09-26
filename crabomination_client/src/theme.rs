@@ -30,12 +30,31 @@ fn ui_font_features() -> FontFeatures {
         .build()
 }
 
+/// The symbol fallbacks, in the order a missing glyph is looked for.
+///
+/// The UI font has 13 of the ~80 non-ASCII symbols the HUD, log and menus use
+/// (☠ OUT, 👑, ▶ in the turn order, ♥ ✋ ⚔ on the player rows, the log's
+/// ▼ ▲ ✖ glyphs, ─ in its turn dividers …), and Bevy's shaper (parley) only
+/// falls back to fonts it has been told about — system font discovery is off
+/// — so every other one drew as an empty box. These are Noto subsets holding
+/// exactly the glyphs the source uses, built by `scripts/ui_fallback_fonts.py`
+/// (SIL OFL 1.1, `fonts/fallback/OFL.txt`); the emoji come from the
+/// monochrome Noto Emoji, so they tint with the text like everything else.
+pub const FALLBACK_FONT_PATHS: [&str; 4] = [
+    "fonts/fallback/NotoSansSymbols2.subset.ttf",
+    "fonts/fallback/NotoSansSymbols.subset.ttf",
+    "fonts/fallback/NotoSansMath.subset.ttf",
+    "fonts/fallback/NotoEmoji.subset.ttf",
+];
+
 /// Loaded handles for the UI font. Insert at startup, then accept
 /// `Res<UiFonts>` in any UI setup system and call `ui_fonts.tf(size)`
 /// instead of constructing `TextFont` directly.
 #[derive(Resource, Clone)]
 pub struct UiFonts {
     pub sans: Handle<Font>,
+    /// [`FALLBACK_FONT_PATHS`], held so they stay loaded.
+    pub fallbacks: Vec<Handle<Font>>,
 }
 
 impl UiFonts {
@@ -60,9 +79,54 @@ pub struct UiFontsPlugin;
 
 impl bevy::app::Plugin for UiFontsPlugin {
     fn build(&self, app: &mut bevy::app::App) {
-        let font = app.world().resource::<AssetServer>().load(FONT_PATH);
-        app.world_mut().insert_resource(UiFonts { sans: font });
+        let server = app.world().resource::<AssetServer>();
+        let font = server.load(FONT_PATH);
+        let fallbacks = FALLBACK_FONT_PATHS.iter().map(|p| server.load(*p)).collect();
+        app.world_mut().insert_resource(UiFonts { sans: font, fallbacks });
         app.add_systems(bevy::app::Update, update_hover_tint);
+        app.add_systems(
+            bevy::app::PostUpdate,
+            register_symbol_fallbacks.after(bevy::text::load_font_assets_into_font_collection),
+        );
+    }
+}
+
+/// The scripts a UI string's symbols are shaped under: parley looks up
+/// fallbacks by the run's script, and a symbol takes its neighbours' (Latin)
+/// or, alone, Common — Unknown and Inherited cover the rest.
+const FALLBACK_SCRIPTS: [&str; 4] = ["Latn", "Zyyy", "Zzzz", "Zinh"];
+
+/// Point parley's fallback lookup at [`FALLBACK_FONT_PATHS`] once they are
+/// in the font collection, and again whenever the collection is rebuilt
+/// (Bevy clears it when any font asset is removed). Text laid out before
+/// that is marked changed so it re-shapes with the symbols in.
+pub fn register_symbol_fallbacks(
+    ui_fonts: Option<Res<UiFonts>>,
+    fonts: Res<Assets<Font>>,
+    mut font_cx: ResMut<bevy::text::FontCx>,
+    mut text_fonts: Query<&mut TextFont>,
+) {
+    use parley::fontique::Script;
+    let Some(ui_fonts) = ui_fonts else { return };
+    let mut families = Vec::with_capacity(ui_fonts.fallbacks.len());
+    for handle in &ui_fonts.fallbacks {
+        // Bevy registers each font asset under an alias of its id.
+        let Some(font) = fonts.get(handle) else { return };
+        let Some(id) = font_cx.collection.family_id(&font.alias) else { return };
+        families.push(id);
+    }
+    let mut changed = false;
+    for script in FALLBACK_SCRIPTS {
+        let script = Script::from_str_unchecked(script);
+        if !font_cx.collection.fallback_families(script).eq(families.iter().copied()) {
+            font_cx.collection.set_fallbacks(script, families.iter().copied());
+            changed = true;
+        }
+    }
+    if changed {
+        for mut tf in &mut text_fonts {
+            tf.set_changed();
+        }
     }
 }
 
@@ -326,4 +390,66 @@ pub mod layer {
     const _: () = assert!(CHAT < TOP_PROMPT);
     const _: () = assert!(TOP_PROMPT < SCREEN_FLASH);
     const _: () = assert!(SCREEN_FLASH < ESCAPE_MENU);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{FALLBACK_FONT_PATHS, FONT_PATH};
+    use ab_glyph::{Font as _, FontRef};
+
+    /// Every non-ASCII character a client string literal uses has a glyph in
+    /// the UI font or one of the fallbacks — the boxes this closed were 67
+    /// of 80 symbols. A new symbol in the source without one fails here:
+    /// rerun `scripts/ui_fallback_fonts.py` (or pick a symbol that has one).
+    /// The scan is the script's: string literals, comment lines skipped,
+    /// variation selectors ignored.
+    #[test]
+    fn every_ui_symbol_has_a_glyph() {
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+        let bytes: Vec<Vec<u8>> = std::iter::once(FONT_PATH)
+            .chain(FALLBACK_FONT_PATHS)
+            .map(|p| std::fs::read(root.join("assets").join(p)).expect(p))
+            .collect();
+        let fonts: Vec<FontRef<'_>> =
+            bytes.iter().map(|b| FontRef::try_from_slice(b).expect("a font")).collect();
+        let mut symbols = std::collections::BTreeSet::new();
+        let mut stack = vec![root.join("src")];
+        while let Some(dir) = stack.pop() {
+            for entry in std::fs::read_dir(&dir).expect("src dir").flatten() {
+                let path = entry.path();
+                if path.is_dir() {
+                    stack.push(path);
+                    continue;
+                }
+                if path.extension().is_none_or(|e| e != "rs") {
+                    continue;
+                }
+                for line in std::fs::read_to_string(&path).expect("source").lines() {
+                    if line.trim_start().starts_with("//") {
+                        continue;
+                    }
+                    // The quoted spans of the line (escapes skipped).
+                    let (mut in_str, mut escaped) = (false, false);
+                    for ch in line.chars() {
+                        match (in_str, escaped, ch) {
+                            (true, true, _) => escaped = false,
+                            (true, false, '\\') => escaped = true,
+                            (_, false, '"') => in_str = !in_str,
+                            (true, false, c) if !c.is_ascii() && !('\u{FE00}'..='\u{FE0F}').contains(&c) => {
+                                symbols.insert((c, path.file_name().unwrap().to_string_lossy().into_owned()));
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+            }
+        }
+        assert!(symbols.len() > 50, "the scan found the HUD's symbols ({})", symbols.len());
+        let missing: Vec<String> = symbols
+            .iter()
+            .filter(|(c, _)| fonts.iter().all(|f| f.glyph_id(*c).0 == 0))
+            .map(|(c, file)| format!("{c} (U+{:04X}, {file})", *c as u32))
+            .collect();
+        assert!(missing.is_empty(), "no glyph in the UI font or a fallback: {missing:?}");
+    }
 }

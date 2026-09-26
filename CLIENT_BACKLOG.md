@@ -335,6 +335,14 @@ Cross-references the detailed entries below where one exists.
   `deck_picker.rs`) picks your stock deck and each bot's from the 183 stock
   lists, with search. Remaining ⏳: save imported decks, list them in the
   menu, paste-from-clipboard import.
+- ✅ **Symbols drew as boxes** (2026-09-26) — the UI font (Mirano Extended
+  Light) has 13 of the ~80 non-ASCII symbols the client prints, and Bevy's
+  shaper (parley) falls back only to fonts it is handed, so ☠ 👑 ♥ ✋ ⚔ ▶ ▼
+  ─ and 60 more were empty boxes on every screen. Four Noto subsets
+  (~36 KB, OFL) are registered as fontique fallbacks
+  (`theme::register_symbol_fallbacks`); `scripts/ui_fallback_fonts.py`
+  rebuilds them and `theme::tests::every_ui_symbol_has_a_glyph` fails on a
+  new symbol without a glyph.
 - ✅ **Knocked out of a pod** (2026-09-26) — the game-over screen ranks the
   table (`GameState::placement`: "You finished 3rd of 4", each seat's turn
   and cause); the log says who went out (`GameEvent::PlayerLost`); your

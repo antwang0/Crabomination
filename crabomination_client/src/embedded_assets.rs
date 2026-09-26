@@ -20,6 +20,23 @@ const EMBEDDED: &[(&str, &[u8])] = &[
         include_bytes!("../assets/fonts/MiranoExtendedFreebie-Light.ttf"),
     ),
     ("models/woodtable_1.glb", include_bytes!("../assets/models/woodtable_1.glb")),
+    // The symbol fallbacks (`theme::FALLBACK_FONT_PATHS`, ~36 KB together).
+    (
+        "fonts/fallback/NotoSansSymbols2.subset.ttf",
+        include_bytes!("../assets/fonts/fallback/NotoSansSymbols2.subset.ttf"),
+    ),
+    (
+        "fonts/fallback/NotoSansSymbols.subset.ttf",
+        include_bytes!("../assets/fonts/fallback/NotoSansSymbols.subset.ttf"),
+    ),
+    (
+        "fonts/fallback/NotoSansMath.subset.ttf",
+        include_bytes!("../assets/fonts/fallback/NotoSansMath.subset.ttf"),
+    ),
+    (
+        "fonts/fallback/NotoEmoji.subset.ttf",
+        include_bytes!("../assets/fonts/fallback/NotoEmoji.subset.ttf"),
+    ),
 ];
 
 /// Write any missing core asset into `asset_dir`. Existing files are left

@@ -374,7 +374,7 @@ mod tests {
 
     fn print(label: &str, rows: &[(usize, Vec2, Budget)]) {
         println!("{label}");
-        println!("seats  window      viewer px  opp px  width  height  off-screen  hand∩lands px²");
+        println!("seats  window      viewer px  opp px  width  height  off-screen  hand∩lands sq px");
         for (seats, vp, b) in rows {
             println!(
                 "{seats}      {:>4}x{:<4}  {:>8.0}  {:>6.0}  {:>4.0}%  {:>5.0}%  {:>10}  {:>13.0}",
@@ -431,7 +431,7 @@ mod tests {
             let row_area = BACK_GROUPS as f32 * b.viewer_card_px.powi(2) * CARD_HEIGHT / CARD_WIDTH;
             assert!(
                 b.hand_over_back_row < 0.1 * row_area,
-                "{seats} seats at {vp}: the hand covers {:.0} px² of the land row", b.hand_over_back_row,
+                "{seats} seats at {vp}: the hand covers {:.0} sq px of the land row", b.hand_over_back_row,
             );
         }
     }
