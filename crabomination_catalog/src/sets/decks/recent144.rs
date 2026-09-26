@@ -236,7 +236,7 @@ pub fn spellscorn_coven() -> CardDefinition {
             name: "Take It Back",
             cost: cost(&[generic(2), u()]),
             card_types: vec![CardType::Instant],
-            effect: Effect::CounterSpellToZone {
+            effect: Effect::MoveSpellToZone {
                 what: Selector::Target(0),
                 zone: CounteredSpellZone::OwnerHand,
             },

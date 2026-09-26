@@ -11784,7 +11784,7 @@ pub fn aether_gust() -> CardDefinition {
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Instant],
         effect: Effect::ChooseMode(vec![
-            Effect::CounterSpellToZone {
+            Effect::MoveSpellToZone {
                 what: target_filtered(
                     SelectionRequirement::IsSpellOnStack.and(red_or_green.clone()),
                 ),
@@ -16103,7 +16103,7 @@ pub fn detectives_phoenix() -> CardDefinition {
 /// without paying its mana cost.
 ///
 /// Shipped as a plain counter until 2026-09-07; the printed shape is Shell
-/// of the Last Kappa's `CounterSpellToZone { ExileWithSource }` plus the
+/// of the Last Kappa's `MoveSpellToZone { ExileWithSource }` plus the
 /// free cast re-seated to the card's owner (`EachPlayerDoes { OwnerOf }`),
 /// so a Queller that dies hands the spell back.
 pub fn spell_queller() -> CardDefinition {
@@ -16122,7 +16122,7 @@ pub fn spell_queller() -> CardDefinition {
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: Effect::CounterSpellToZone {
+                effect: Effect::MoveSpellToZone {
                     what: target_filtered(
                         SelectionRequirement::IsSpellOnStack
                             .and(SelectionRequirement::ManaValueAtMost(4)),
@@ -24869,7 +24869,7 @@ pub fn krark_the_thumbless() -> CardDefinition {
                     what: Selector::TriggerSource,
                     count: Value::Const(1),
                 }),
-                on_tails: Box::new(Effect::CounterSpellToZone {
+                on_tails: Box::new(Effect::MoveSpellToZone {
                     what: Selector::TriggerSource,
                     zone: crate::effect::CounteredSpellZone::OwnerHand,
                 }),

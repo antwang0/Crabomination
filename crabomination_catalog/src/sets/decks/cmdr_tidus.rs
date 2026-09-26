@@ -742,7 +742,7 @@ pub fn endless_detour() -> CardDefinition {
         cost: cost(&[g(), w(), u()]),
         card_types: vec![CardType::Instant],
         effect: Effect::ChooseMode(vec![
-            Effect::CounterSpellToZone {
+            Effect::MoveSpellToZone {
                 what: target_filtered(R::IsSpellOnStack),
                 zone: CounteredSpellZone::OwnerLibraryTopOrBottom,
             },

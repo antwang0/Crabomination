@@ -1875,7 +1875,7 @@ pub fn shell_of_the_last_kappa() -> CardDefinition {
             ActivatedAbility {
                 mana_cost: cost(&[generic(3)]),
                 tap_cost: true,
-                effect: Effect::CounterSpellToZone {
+                effect: Effect::MoveSpellToZone {
                     what: target_filtered(
                         R::IsSpellOnStack
                             .and(

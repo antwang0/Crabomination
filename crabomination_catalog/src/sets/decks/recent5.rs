@@ -216,7 +216,7 @@ pub fn venser_shaper_savant() -> CardDefinition {
 /// Whenever you cast a spell, choose up to one — • Return target spell you
 /// don't control to its owner's hand. • Return target nonland permanent to its
 /// owner's hand. ("Up to one" is a third, empty mode; the spell mode rides
-/// the countered-spell-to-hand path, as Reprieve does.)
+/// `MoveSpellToZone`, as Reprieve does — a bounce, not a counter.)
 pub fn hullbreaker_horror() -> CardDefinition {
     CardDefinition {
         name: "Hullbreaker Horror",
@@ -238,7 +238,7 @@ pub fn hullbreaker_horror() -> CardDefinition {
                     ),
                     to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
                 },
-                Effect::CounterSpellToZone {
+                Effect::MoveSpellToZone {
                     what: target_filtered(
                         SelectionRequirement::IsSpellOnStack
                             .and(SelectionRequirement::ControlledByYou.negate()),

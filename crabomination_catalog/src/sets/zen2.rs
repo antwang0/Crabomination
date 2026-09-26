@@ -164,7 +164,7 @@ pub fn mindbreak_trap() -> CardDefinition {
             max_targets: 3,
             min_targets: 1,
             filter: R::IsSpellOnStack,
-            effect: Box::new(Effect::CounterSpellToZone {
+            effect: Box::new(Effect::MoveSpellToZone {
                 what: Selector::Target(0),
                 zone: crate::effect::CounteredSpellZone::Exile,
             }),

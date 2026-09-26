@@ -4770,7 +4770,7 @@ pub fn narsets_reversal() -> CardDefinition {
                 what: target_filtered(R::IsSpellOnStack.and(instant_or_sorcery())),
                 count: Value::ONE,
             },
-            Effect::CounterSpellToZone {
+            Effect::MoveSpellToZone {
                 what: Selector::Target(0),
                 zone: crate::effect::CounteredSpellZone::OwnerHand,
             },

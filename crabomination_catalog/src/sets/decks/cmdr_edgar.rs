@@ -1048,7 +1048,7 @@ pub fn carmen_cruel_skymarcher() -> CardDefinition {
 /// its owner's hand. If the gift was promised, players can't cast spells this
 /// turn." (See the module residuals for the bounce and gift recipient.)
 pub fn bilbos_gambit() -> CardDefinition {
-    let bounce = Effect::CounterSpellToZone {
+    let bounce = Effect::MoveSpellToZone {
         what: target_filtered(R::IsSpellOnStack),
         zone: CounteredSpellZone::OwnerHand,
     };

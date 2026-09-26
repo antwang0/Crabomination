@@ -169,7 +169,7 @@ pub fn fatehold_charm() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::ChooseMode(vec![
             Effect::Seq(vec![draw(1), empower(2)]),
-            Effect::CounterSpellToZone {
+            Effect::MoveSpellToZone {
                 what: target_filtered(R::IsSpellOnStack),
                 zone: CounteredSpellZone::OwnerHand,
             },

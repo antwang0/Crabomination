@@ -474,7 +474,7 @@ pub fn subtlety() -> CardDefinition {
         keywords: vec![Keyword::Flash, Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::CounterSpellToZone {
+            effect: Effect::MoveSpellToZone {
                 what: target_filtered(SelectionRequirement::IsSpellOnStack),
                 zone: CounteredSpellZone::OwnerLibraryTopOrBottom,
             },

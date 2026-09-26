@@ -12459,3 +12459,50 @@ fn cr_712_2_a_transforming_dfcs_land_back_isnt_a_land_drop() {
     g.perform_action(GameAction::PlayLandBack(emeria)).expect("a modal DFC's land face");
     assert_eq!(g.battlefield_find(emeria).unwrap().definition.name, "Emeria, Shattered Skyclave");
 }
+
+// ── CR 701.6a — moving a spell is not countering it ─────────────────────────
+
+/// CR 701.6a — "to counter a spell … is to cancel it, removing it from the
+/// stack". Reprieve ("return target spell"), Commit ("put target spell …")
+/// and the other lifts don't counter, so a spell that can't be countered
+/// (Cavern of Souls) moves all the same; a real counter still can't touch it.
+#[test]
+fn cr_701_6a_returning_a_spell_ignores_cant_be_countered() {
+    let setup = || {
+        let mut g = two_player_game();
+        g.add_card_to_library(0, catalog::island());
+        let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+        g.players[1].mana_pool.add(Color::Red, 1);
+        g.active_player_idx = 1;
+        g.priority.player_with_priority = 1;
+        g.perform_action(GameAction::CastSpell {
+            card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
+        }).expect("Bolt");
+        for si in g.stack.iter_mut() {
+            if let crabomination::game::types::StackItem::Spell { uncounterable, .. } = si {
+                *uncounterable = true;
+            }
+        }
+        g.priority.player_with_priority = 0;
+        g.players[0].mana_pool.add(Color::Blue, 3);
+        g.players[0].mana_pool.add(Color::White, 1);
+        g.players[0].mana_pool.add_colorless(3);
+        (g, bolt)
+    };
+    let (mut g, bolt) = setup();
+    let rep = g.add_card_to_hand(0, catalog::reprieve());
+    g.perform_action(GameAction::CastSpell {
+        card_id: rep, target: Some(Target::Permanent(bolt)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Reprieve");
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == bolt), "returned though it can't be countered");
+    assert_eq!(g.players[0].life, 20);
+
+    let (mut g, bolt) = setup();
+    let lapse = g.add_card_to_hand(0, catalog::memory_lapse());
+    g.perform_action(GameAction::CastSpell {
+        card_id: lapse, target: Some(Target::Permanent(bolt)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Memory Lapse");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 17, "Memory Lapse counters, so it can't");
+}

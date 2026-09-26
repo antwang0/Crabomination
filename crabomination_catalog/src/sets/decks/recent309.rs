@@ -178,7 +178,7 @@ pub fn aven_interrupter() -> CardDefinition {
         supertypes: vec![],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::CounterSpellToZone {
+            effect: Effect::MoveSpellToZone {
                 what: target_filtered(R::IsSpellOnStack),
                 zone: CounteredSpellZone::ExilePlotted,
             },

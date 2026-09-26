@@ -74,7 +74,7 @@ pub fn reprieve() -> CardDefinition {
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::CounterSpellToZone {
+            Effect::MoveSpellToZone {
                 what: target_filtered(SelectionRequirement::IsSpellOnStack),
                 zone: CounteredSpellZone::OwnerHand,
             },
