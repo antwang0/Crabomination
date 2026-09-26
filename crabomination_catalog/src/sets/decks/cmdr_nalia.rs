@@ -174,7 +174,7 @@ pub fn calculating_lich() -> CardDefinition {
 pub fn deep_gnome_terramancer() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flash],
-        triggered_abilities: vec![TriggeredAbility {
+        triggered_abilities: vec![crate::effect::shortcut::once_each_turn_on_take(TriggeredAbility {
             event: EventSpec::new(EventKind::LandPlayed, EventScope::OpponentControl)
                 .with_filter(Predicate::ValueAtMost(Value::TriggerEventAmount, Value::Const(0)))
                 .once_per_turn(),
@@ -186,7 +186,7 @@ pub fn deep_gnome_terramancer() -> CardDefinition {
                     to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
                 }),
             },
-        }],
+        })],
         ..creature(
             "Deep Gnome Terramancer",
             cost(&[generic(1), w()]),

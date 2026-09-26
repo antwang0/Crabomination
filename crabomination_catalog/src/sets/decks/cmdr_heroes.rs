@@ -239,12 +239,12 @@ pub fn leonardo_the_balance() -> CardDefinition {
     let team = || Selector::EachPermanent(yours(R::Creature));
     legendary(CardDefinition {
         keywords: vec![character_select()],
-        triggered_abilities: vec![TriggeredAbility {
+        triggered_abilities: vec![crate::effect::shortcut::once_each_turn_on_take(TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
                 .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::IsToken })
                 .once_per_turn(),
             effect: may("Put a +1/+1 counter on each creature you control?", plus(team(), Value::ONE)),
-        }],
+        })],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[w(), u(), b(), r(), g()]),
             effect: Effect::Seq(vec![

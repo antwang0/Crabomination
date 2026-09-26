@@ -284,7 +284,7 @@ pub fn duelist_of_the_mind() -> CardDefinition {
         toughness: 3,
         dynamic_pt: Some(DynamicPt::CardsDrawnThisTurnPower { base_t: 3 }),
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
-        triggered_abilities: vec![TriggeredAbility {
+        triggered_abilities: vec![crate::effect::shortcut::once_each_turn_on_take(TriggeredAbility {
             event: EventSpec::new(EventKind::CommittedCrime, EventScope::YourControl)
                 .once_per_turn(),
             effect: Effect::MayDo {
@@ -301,7 +301,7 @@ pub fn duelist_of_the_mind() -> CardDefinition {
                     },
                 ])),
             },
-        }],
+        })],
         ..Default::default()
     }
 }

@@ -2287,7 +2287,7 @@ pub fn earth_kingdom_general() -> CardDefinition {
             // "Whenever you put one or more +1/+1 counters on a creature, you
             // may gain that much life. Do this only once each turn." Any
             // creature, keyed on who put the counters (CR 122.6).
-            TriggeredAbility {
+            crate::effect::shortcut::once_each_turn_on_take(TriggeredAbility {
                 event: EventSpec::new(
                     EventKind::CounterAdded(CounterType::PlusOnePlusOne),
                     EventScope::YouPutCounters,
@@ -2304,7 +2304,7 @@ pub fn earth_kingdom_general() -> CardDefinition {
                         amount: Value::TriggerEventAmount,
                     }),
                 },
-            },
+            }),
         ],
         ..Default::default()
     }

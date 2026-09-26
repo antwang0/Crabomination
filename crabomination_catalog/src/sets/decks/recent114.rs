@@ -403,7 +403,7 @@ pub fn calix_guided_by_fate() -> CardDefinition {
         // nonlegendary enchantment you control. Do this only once each turn."
         // `AnyPlayer` + a dealer filter is the "X or Y you control" shape
         // (Cabal Slaver's idiom); the copy source is a targeted choice.
-        TriggeredAbility {
+        crate::effect::shortcut::once_each_turn_on_take(TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::AnyPlayer)
                 .dealt_by(SelectionRequirement::ControlledByYou.and(
                     SelectionRequirement::IsSource
@@ -432,7 +432,7 @@ pub fn calix_guided_by_fate() -> CardDefinition {
                     extra_keywords: vec![],
                 }),
             },
-        }],
+        })],
         ..Default::default()
     }
 }

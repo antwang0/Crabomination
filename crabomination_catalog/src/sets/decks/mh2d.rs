@@ -523,7 +523,7 @@ pub fn nykthos_paragon() -> CardDefinition {
         },
         power: 4,
         toughness: 6,
-        triggered_abilities: vec![TriggeredAbility {
+        triggered_abilities: vec![crate::effect::shortcut::once_each_turn_on_take(TriggeredAbility {
             event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl).once_per_turn(),
             effect: Effect::MayDo {
                 description: "put that many +1/+1 counters on each creature you control".into(),
@@ -536,7 +536,7 @@ pub fn nykthos_paragon() -> CardDefinition {
                     amount: Value::TriggerEventAmount,
                 }),
             },
-        }],
+        })],
         ..Default::default()
     }
 }
