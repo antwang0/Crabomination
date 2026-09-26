@@ -5501,6 +5501,11 @@ fn expressive_iteration_bottoms_the_leftover() {
     let top = g.players[0].library.first().expect("library nonempty");
     assert_eq!(top.definition.name, "Island",
         "the leftover looked-at card was bottomed, not left on top");
+    // …and it is one of the three looked at: an unseen fourth card (an
+    // Island) was being bottomed while two of the three stayed on top.
+    let lib: Vec<&str> = g.players[0].library.iter().map(|c| c.definition.name).collect();
+    assert_eq!(lib.len(), 4, "{lib:?}");
+    assert!(["Lightning Bolt", "Serra Angel", "Grizzly Bears"].contains(&lib[3]), "{lib:?}");
 }
 
 /// Agonizing Remorse can hit the graveyard instead of the hand (mode 1)

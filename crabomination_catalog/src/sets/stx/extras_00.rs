@@ -1425,28 +1425,23 @@ pub fn galvanic_iteration() -> CardDefinition {
 /// of them on the bottom of your library, and exile one of them. You
 /// may play the exiled card this turn."
 ///
-/// 🟡 APPROXIMATION — the engine has no "look at top N and distribute
-/// one to hand / one to bottom / one to exile-with-may-play" primitive
-/// (a three-way `LookTopDistribute` is the exact missing piece;
-/// `LookPickToHand` can do hand+bottom but can't route a second pick to
-/// exile-with-play-permission from the same looked-at set). Current
-/// wiring: `LookPickToHand(3)` — pick one of the top three to hand,
-/// bottom the rest — then `ExileTopAndGrantMayPlay(1, pay_own_cost)`
-/// exiles the (new) top card playable this turn. Card economy matches
-/// the printed line exactly (+1 hand, +1 playable exile, rest
-/// bottomed); the only drift is that the exiled card comes from the
-/// post-bottoming top instead of the original three.
+/// One of the three goes to hand (your pick); the other two stay on top,
+/// then the top one is exiled playable this turn and the next bottomed —
+/// which of the two is exiled is the engine's (their order), not yours.
 pub fn expressive_iteration() -> CardDefinition {
     CardDefinition {
         name: "Expressive Iteration",
         cost: cost(&[u(), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
+            // The two unpicked stay on top, so the exile and the bottom
+            // below take exactly the other two of the three looked at.
             Effect::LookPickToHand(Box::new(LookPick {
                 who: PlayerRef::You,
                 count: Value::Const(3),
-    ..Default::default()
-})),
+                rest_on_top: true,
+                ..Default::default()
+            })),
             Effect::ExileTopAndGrantMayPlay {
                 who: PlayerRef::You,
                 count: Value::Const(1),
@@ -1456,8 +1451,6 @@ pub fn expressive_iteration() -> CardDefinition {
                 pay_own_cost: true,
                 uncast_penalty: None,
             },
-            // "...and the rest on the bottom of your library" — bottom the
-            // last leftover instead of leaving it on top.
             Effect::Move {
                 what: Selector::TopOfLibrary {
                     who: PlayerRef::You,
