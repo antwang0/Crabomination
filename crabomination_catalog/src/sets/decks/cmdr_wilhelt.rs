@@ -5,7 +5,8 @@
 //! Residuals (each also on its card):
 //! - **Shadow Kin** — copies the greatest-power creature card milled (the
 //!   engine's pick).
-//! - **Rooftop Storm** — Zombie creature spells cast from hand only.
+//! - **Rooftop Storm** — Zombie creature spells cast from hand or the command
+//!   zone only.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype, EventKind,
@@ -448,7 +449,8 @@ pub fn ravenous_rotbelly() -> CardDefinition {
 }
 
 /// Rooftop Storm — {5}{U} Enchantment. You may pay {0} rather than the mana
-/// cost for Zombie creature spells you cast. (Residual: from hand.)
+/// cost for Zombie creature spells you cast. (Residual: from hand or the
+/// command zone.)
 pub fn rooftop_storm() -> CardDefinition {
     CardDefinition {
         name: "Rooftop Storm",

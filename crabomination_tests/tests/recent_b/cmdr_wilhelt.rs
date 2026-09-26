@@ -391,3 +391,38 @@ fn hordewing_skaab_counts_the_opponents_its_zombies_hit() {
     assert!(g.players[3].life < 40, "the Bear connected too");
     assert_eq!(lib - g.players[0].library.len(), 2, "one draw per opponent the Zombies hit");
 }
+
+/// Rooftop Storm's {0} covers a Zombie commander cast from the command zone —
+/// "Zombie creature spells you cast", any zone — with CR 903.8's tax still
+/// owed on top (it was offered from hand only). The bot offers it too.
+#[test]
+fn cr_903_8_rooftop_storm_casts_a_zombie_commander_for_the_tax_alone() {
+    let mut g = pod(3);
+    let wilhelt = g.seat_commanders(0, vec![catalog::wilhelt_the_rotcleaver()])[0];
+    g.commander_cast_count.insert(wilhelt, 1);
+    let alt = |g: &mut GameState| {
+        g.perform_action(GameAction::CastFromCommandZone {
+            card_id: wilhelt, target: None, additional_targets: vec![], mode: None, x_value: None,
+            alternative: true, pitch_card: None,
+        })
+    };
+    g.players[0].mana_pool.add_colorless(2);
+    assert!(alt(&mut g.clone()).is_err(), "no Rooftop Storm, no {{0}}");
+    g.add_card_to_battlefield(0, catalog::rooftop_storm());
+    {
+        use crabomination::server::bot::{Bot, HeuristicBot};
+        // Creatures come down after combat.
+        let mut post = g.clone();
+        post.step = TurnStep::PostCombatMain;
+        let action = HeuristicBot::new().next_action(&post, 0);
+        assert!(
+            matches!(action, Some(GameAction::CastFromCommandZone { alternative: true, .. })),
+            "the bot takes the {{0}} cast: {action:?}",
+        );
+    }
+    alt(&mut g).expect("{0} plus the {2} tax");
+    assert_eq!(g.players[0].mana_pool.total(), 0, "the tax was paid");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(wilhelt).is_some());
+}
+

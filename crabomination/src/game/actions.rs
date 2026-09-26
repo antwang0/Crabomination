@@ -615,6 +615,23 @@ impl GameState {
                 ..Default::default()
             });
         }
+        // Rooftop Storm — "you may pay {0} rather than pay the mana cost for
+        // Zombie creature spells you cast": any zone, so a Zombie commander
+        // too, with CR 903.8's tax still owed on top. A hand cast takes the
+        // free-cast path (`player_casts_hand_spells_free`) instead.
+        if zone == AltCastZone::Command
+            && self.battlefield.iter().any(|c| {
+                c.controller == p
+                    && c.definition.static_abilities.iter().any(|sa| match &sa.effect {
+                        crate::effect::StaticEffect::CastFilteredSpellsFree { filter } => {
+                            self.evaluate_requirement_on_card(filter, card, p)
+                        }
+                        _ => false,
+                    })
+            })
+        {
+            return Some(crate::card::AlternativeCost::default());
+        }
         // Nissa, Worldsoul Speaker — energy rather than mana for [filter]
         // spells (CR 118.9); only offered when the seat has the energy.
         let energy_alt = self.battlefield.iter().filter(|c| c.controller == p).find_map(|c| {

@@ -1872,7 +1872,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Intet, the Dreamer | Mirror Mastery (CMD) | the card is exiled face up. |
 | 🟡 Ray of Command | Mirror Mastery (CMD) | the creature is tapped at the next end step, not as its control returns. |
 | 🟡 Shadow Kin | Undead Unleashed (MIC) | copies the greatest-power creature card milled (the engine's pick). |
-| 🟡 Rooftop Storm | Undead Unleashed (MIC) | the free cast covers Zombie creature spells cast from hand, not the command zone or other zones. |
+| 🟡 Rooftop Storm | Undead Unleashed (MIC) | the free cast covers Zombie creature spells cast from hand or the command zone (tax still owed), not from a graveyard or exile. |
 | 🟡 Hazel of the Rootbloom | Squirreled Away (BLC) | "tap X untapped tokens" taps every other untapped token you control (X is all of them). |
 | 🟡 Hazel's Brewmaster | Squirreled Away (BLC) | your Foods gain the activated abilities of every card exiled with it, not only the creature cards. |
 | 🟡 Sword of the Squeak | Squirreled Away (BLC) | "base power or toughness 1" reads printed power and toughness. |
