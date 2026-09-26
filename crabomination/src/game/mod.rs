@@ -24446,14 +24446,18 @@ impl GameState {
     }
 
     /// Rod of Absorption (`StaticEffect::ExileResolvingInstantsAndSorceries`)
-    /// — the first such permanent on the battlefield, which a resolving
-    /// instant or sorcery is exiled with instead of hitting a graveyard.
-    pub(crate) fn resolving_spell_absorber(&self) -> Option<CardId> {
+    /// and River Song's Diary (its hand-cast sibling) — the first such
+    /// permanent that takes `spell`, which it is exiled with instead of
+    /// hitting a graveyard.
+    pub(crate) fn resolving_spell_absorber(&self, spell: &crate::card::CardInstance) -> Option<CardId> {
+        use crate::effect::StaticEffect as SE;
         self.battlefield
             .iter()
             .find(|c| {
-                c.definition.static_abilities.iter().any(|sa| {
-                    matches!(sa.effect, crate::effect::StaticEffect::ExileResolvingInstantsAndSorceries)
+                c.definition.static_abilities.iter().any(|sa| match sa.effect {
+                    SE::ExileResolvingInstantsAndSorceries => true,
+                    SE::ExileResolvingHandCastInstantsAndSorceries => spell.cast_from_hand,
+                    _ => false,
                 })
             })
             .map(|c| c.id)
@@ -28494,7 +28498,7 @@ impl GameState {
         // sacrifice ability can cast it.
         if (card.definition.is_instant() || card.definition.is_sorcery())
             && !card.is_token
-            && let Some(rod) = self.resolving_spell_absorber()
+            && let Some(rod) = self.resolving_spell_absorber(&card)
         {
             let mut card = card;
             let card_id = card.id;
@@ -30935,6 +30939,7 @@ fn static_effect_to_effects(
             // Rod of Absorption — read at the end of spell resolution via
             // `resolving_spell_absorber`; no layer effect.
             | StaticEffect::ExileResolvingInstantsAndSorceries
+            | StaticEffect::ExileResolvingHandCastInstantsAndSorceries
             | StaticEffect::DoubleControllerLandEntryTriggers
             | StaticEffect::DoubleControllerCreatureDamagedTriggers
             // SuppressCreatureEtbTriggers — read at trigger dispatch via

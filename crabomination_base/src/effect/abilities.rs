@@ -1762,6 +1762,9 @@ pub enum StaticEffect {
     /// (`resolving_spell_absorber`): the card goes to exile stamped
     /// `exiled_with` this permanent, so `R::ExiledWithSource` finds it.
     ExileResolvingInstantsAndSorceries,
+    /// River Song's Diary — `ExileResolvingInstantsAndSorceries` for a spell
+    /// cast from its owner's hand only.
+    ExileResolvingHandCastInstantsAndSorceries,
     /// Ancient Greenwarden — "If a land entering causes a triggered ability
     /// of a permanent you control to trigger, that ability triggers an
     /// additional time." Read at trigger dispatch: a landfall trigger (the
