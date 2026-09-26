@@ -99,6 +99,22 @@ fn archangel_of_strife_splits_the_table() {
     assert_eq!(pt(&g, later), (3, 6));
 }
 
+/// CR 614.12 — war or peace is chosen *as* the Archangel enters, not by an
+/// enters trigger: once the spell resolves, nothing is on the stack and the
+/// table's creatures already carry their choice.
+#[test]
+fn cr_614_12_archangel_of_strife_chooses_as_it_enters() {
+    let mut g = pod(2);
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let arch = g.add_card_to_hand(0, catalog::archangel_of_strife());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell { card_id: arch, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    g.resolve_top_of_stack().expect("resolve");
+    assert!(g.stack.is_empty(), "no enters trigger to wait on");
+    assert_eq!(pt(&g, mine), (5, 2));
+}
+
 /// CR 601 — Basandra: nobody casts a spell during combat.
 #[test]
 fn basandra_shuts_combat_spells_off() {

@@ -181,15 +181,14 @@ pub fn changing_loyalty() -> CardDefinition {
 /// attacks, you draw a card and lose 1 life.
 pub fn coercive_impetus() -> CardDefinition {
     CardDefinition {
-        static_abilities: vec![StaticAbility {
-            description: "Enchanted creature gets +1/+1.",
-            effect: StaticEffect::PumpPT { applies_to: host(), power: 1, toughness: 1 },
-        }],
-        triggered_abilities: vec![
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::AnyPlayer),
-                effect: Effect::Goad { what: host() },
+        static_abilities: vec![
+            StaticAbility {
+                description: "Enchanted creature gets +1/+1.",
+                effect: StaticEffect::PumpPT { applies_to: host(), power: 1, toughness: 1 },
             },
+            StaticAbility { description: "Enchanted creature is goaded.", effect: StaticEffect::AttachedIsGoaded },
+        ],
+        triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::Attacks, EventScope::EnchantedBySource),
                 effect: Effect::Seq(vec![

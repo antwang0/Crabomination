@@ -1858,7 +1858,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Urianger Augurelt | Scions & Spellcraft (FIC) | the card is exiled face up; a land played from exile gains no life; its spells get no {2} discount. |
 | 🟡 Cosima, God of the Voyage | From Cute to Brute (SLD) | the voyage ability isn't implemented. |
 | 🟡 Ludevic, Necrogenius | From Cute to Brute (SLD) | transforms for {U}{U}{B}{B} exiling one creature card; Olag is a 4/4 with counters, not a copy. |
-| 🟡 Ghoulish Impetus | Enduring Enchantments (CMM) | the goad is applied on entry and each of your upkeeps, not held by a static, so it lasts until your next turn after the Aura leaves. |
 | 🟡 Brutal Hordechief | Open Hostility (C16) | its activated ability makes opponents' creatures block if able, but how they block stays their controllers' choice. |
 | 🟡 The Mimeoplasm | Devour for Power (CMD) | the engine picks the two cards: it copies the greatest-power creature card in any graveyard and counts the runner-up's power; a `*` power reads as its printed 0. |
 | 🟡 Desecrator Hag | Devour for Power (CMD) | a tie for greatest power is broken by graveyard order, not by the player. |
@@ -1902,7 +1901,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Kardur, Doomscourge | Chaos Incarnate (SCD) | creatures entering after its ETB are goaded by a delayed trigger, not a static rule. |
 | 🟡 Theater of Horrors | Chaos Incarnate (SCD) | the permission outlives the enchantment; lands among the exiled cards can't be played. |
 | 🟡 Wildfire Devils | Chaos Incarnate (SCD) | the random player gives up their first instant or sorcery in graveyard order. |
-| 🟡 Archangel of Strife | Heavenly Inferno (CMD) | war or peace is chosen as its ETB trigger resolves, not as it enters. |
 | 🟡 Jötun Grunt | Political Puppets (CMD) | the graveyard and the two cards of each installment are the engine's pick (an opponent's fullest, highest mana values). |
 | 🟡 Ruhan of the Fomori | Political Puppets (CMD) | the random opponent is stored on Ruhan, so another effect storing a player on it overwrites the pick. |
 
@@ -1997,7 +1995,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Field-Tested Frying Pan | Food and Fellowship (LTC) | the lifegain pump is the Equipment's own trigger, not an ability the equipped creature has. |
 | 🟡 Orator of Ojutai | Draconic Domination (C17) | the Dragon check reads your board and hand as it enters; there is no optional reveal. |
 | 🟡 Armored Skyhunter | Silverquill Influence (SOC) | an Equipment it puts onto the battlefield stays unattached. |
-| 🟡 Coercive Impetus | Silverquill Influence (SOC) | the goad is renewed by a trigger at the beginning of each combat, not a static. |
 | 🟡 Herald of Amity | Silverquill Influence (SOC) | the top eight are revealed rather than exiled; the uncast ones go to the bottom. |
 | 🟡 Concord with the Kami | Upgrades Unleashed (NEC) | "choose one or more" takes every mode that can do something (a counter needs a target creature with a counter; the card and Spirit need their enchanted / equipped creature). |
 | 🟡 Gix, Yawgmoth Praetor | Mardu Surge (TDC) | the cards its activation exiles stay free to play for the rest of the turn, not only as the ability resolves. |
@@ -2149,7 +2146,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Into the Pit | Death Toll (DSC) | the sacrifice is paid as the cast completes rather than as a cost before it. |
 | 🟡 Old Stickfingers | Death Toll (DSC) | reveals until one creature card X times, bottoming each run of misses before the next. |
 | 🟡 Eye of Doom | Mind Seize (C13) | each player's doom counter goes on the nonland permanent the engine picks. |
-| 🟡 Gond Gate | 20 Ways to Win (SLD) | "any color a Gate you control could produce" makes any color. |
 | 🟡 Indulge // Excess | Cabaretti Cacophony (NCC) | Excess counts creatures you control that dealt damage (combat or not) to a player this turn. |
 | 🟡 Killer Service | Cabaretti Cacophony (NCC) | the token sacrificed is the engine's pick. |
 | 🟡 Sizzling Soloist | Cabaretti Cacophony (NCC) | "attacks during its controller's next combat phase" is must-attack until your next turn. |

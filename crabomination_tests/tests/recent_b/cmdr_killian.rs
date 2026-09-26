@@ -178,11 +178,14 @@ fn coercive_impetus_pumps_and_draws() {
     let ci = g.add_card_to_hand(0, catalog::coercive_impetus());
     cast(&mut g, 0, ci, Some(Target::Permanent(bear))).expect("cast");
     assert_eq!(pt(&g, bear), (3, 3));
-    step(&mut g, TurnStep::BeginCombat);
+    // CR 701.15 — "is goaded" is a static: goaded at once, and only while attached.
     assert!(g.goaded_by_player(g.battlefield_find(bear).unwrap(), 0));
+    step(&mut g, TurnStep::BeginCombat);
     let (h, l) = (g.players[0].hand.len(), g.players[0].life);
     declare(&mut g, 1, vec![(bear, 2)]).expect("attack");
     assert_eq!((g.players[0].hand.len(), g.players[0].life), (h + 1, l - 1));
+    g.remove_to_graveyard_with_triggers(ci);
+    assert!(!g.is_goaded(g.battlefield_find(bear).unwrap()), "the goad leaves with the Aura");
 }
 
 /// Changing Loyalty — the enchanted creature dying returns under the Aura's

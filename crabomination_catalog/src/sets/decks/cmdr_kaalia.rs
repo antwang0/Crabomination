@@ -90,12 +90,12 @@ pub fn akroma_angel_of_fury() -> CardDefinition {
     })
 }
 
-/// Archangel of Strife — flying; each player chooses war (+3/+0 to their
-/// creatures) or peace (+0/+3). Residual: chosen as the ETB resolves.
+/// Archangel of Strife — flying; as it enters, each player chooses war (+3/+0
+/// to their creatures) or peace (+0/+3) (CR 614.12).
 pub fn archangel_of_strife() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![etb(Effect::EachPlayerChoosesWarOrPeace)],
+        as_enters_effect: Some(Effect::EachPlayerChoosesWarOrPeace),
         static_abilities: vec![StaticAbility {
             description: "Creatures controlled by players who chose war get +3/+0. \
                           Creatures controlled by players who chose peace get +0/+3.",
