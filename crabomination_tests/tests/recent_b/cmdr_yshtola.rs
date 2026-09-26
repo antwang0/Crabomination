@@ -229,6 +229,32 @@ fn into_the_story_draws_four() {
     assert_eq!(g.players[0].hand.len(), 4);
 }
 
+/// Into the Story's {3} discount reads opponents' graveyards only.
+#[test]
+fn into_the_story_discount_needs_an_opponents_graveyard() {
+    let mut g = main_phase(2);
+    stock(&mut g, 0, 5);
+    for _ in 0..7 {
+        g.add_card_to_graveyard(0, catalog::plains());
+    }
+    let i = g.add_card_to_hand(0, catalog::into_the_story());
+    let four = |g: &mut GameState| {
+        g.players[0].mana_pool.empty();
+        g.players[0].mana_pool.add(Color::Blue, 2);
+        g.players[0].mana_pool.add_colorless(2);
+    };
+    four(&mut g);
+    let cast = |g: &mut GameState| {
+        g.perform_action(GameAction::CastSpell { card_id: i, target: None, additional_targets: vec![], mode: None, x_value: None })
+    };
+    assert!(cast(&mut g).is_err(), "your own graveyard doesn't count");
+    for _ in 0..7 {
+        g.add_card_to_graveyard(1, catalog::plains());
+    }
+    four(&mut g);
+    cast(&mut g).expect("{2}{U}{U} with an opponent at seven");
+}
+
 /// Krile returns a creature card of the spell's mana value.
 #[test]
 fn krile_traces_aether() {

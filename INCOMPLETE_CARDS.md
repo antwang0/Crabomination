@@ -1840,7 +1840,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Hunting Wilds | Nature's Vengeance (C18) | the animated Forests keep their own color rather than becoming green. |
 | 🟡 Charnelhoard Wurm | Nature's Vengeance (C18) | damage to any player fires it, not only an opponent. |
 | 🟡 Flameblast Dragon | Nature's Vengeance (C18) | {X} is asked before {R}; a bot seat answers X out of floating mana only. |
-| 🟡 Martial Impetus | Peace Offering (BLC) | the attack pump also reaches the enchanted creature. |
 | 🟡 Octomancer | Peace Offering (BLC) | the Octopus gift goes to a random opponent rather than a chosen one. |
 | 🟡 Perch Protection | Peace Offering (BLC) | the extra-turn gift goes to a random opponent; the life lock lasts this turn only. |
 | 🟡 Promise of Loyalty | Peace Offering (BLC) | the attack restriction outlives a removed vow counter. |
@@ -1880,7 +1879,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Dancer's Chakrams | Scions & Spellcraft (FIC) | the commander pump also reaches the equipped creature when it's a commander. |
 | 🟡 Estinien Varlineau | Scions & Spellcraft (FIC) | counts opponents dealt combat damage by any creature, not only by it or a Dragon. |
 | 🟡 Hildibrand Manderville | Scions & Spellcraft (FIC) | dying doesn't let you cast it from the graveyard as an Adventure. |
-| 🟡 Into the Story | Scions & Spellcraft (FIC) | any graveyard with seven cards discounts it, yours included. |
 | 🟡 Urianger Augurelt | Scions & Spellcraft (FIC) | the card is exiled face up; a land played from exile gains no life; its spells get no {2} discount. |
 | 🟡 Cosima, God of the Voyage | From Cute to Brute (SLD) | the voyage ability isn't implemented. |
 | 🟡 Ludevic, Necrogenius | From Cute to Brute (SLD) | transforms for {U}{U}{B}{B} exiling one creature card; Olag is a 4/4 with counters, not a copy. |

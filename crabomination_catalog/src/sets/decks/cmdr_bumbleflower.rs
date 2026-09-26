@@ -6,8 +6,6 @@
 //! - **Octomancer** and **Perch Protection** — the gift goes to a random
 //!   opponent rather than one the caster chooses; Perch Protection's life
 //!   lock lasts this turn, not until your next turn.
-//! - **Martial Impetus** — its attack pump also reaches the enchanted
-//!   creature.
 //! - **Promise of Loyalty** — the attack restriction outlives a removed vow
 //!   counter.
 //! - **Tamiyo, Field Researcher** — a targeted opponent's creature draws its
@@ -316,8 +314,6 @@ pub fn kwain_itinerant_meddler() -> CardDefinition {
 
 /// Martial Impetus — +1/+1 and goaded; whenever it attacks, creatures
 /// attacking your opponents get +1/+1 until end of turn.
-///
-/// ⚠ Residual: the pump reaches the enchanted creature too.
 pub fn martial_impetus() -> CardDefinition {
     CardDefinition {
         name: "Martial Impetus",
@@ -330,7 +326,9 @@ pub fn martial_impetus() -> CardDefinition {
             toughness: 1,
             triggers_on_equipment: true,
             triggered_abilities: vec![on_attack(Effect::PumpPT {
-                what: Selector::EachPermanent(R::Creature.and(R::IsAttackingAnOpponent)),
+                // "each other creature": the Aura is the source here, so
+                // "other" is its host.
+                what: Selector::EachPermanent(R::Creature.and(R::IsAttackingAnOpponent).and(R::IsHostOfSource.negate())),
                 power: Value::ONE,
                 toughness: Value::ONE,
                 duration: Duration::EndOfTurn,

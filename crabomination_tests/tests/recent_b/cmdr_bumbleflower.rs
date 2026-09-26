@@ -242,6 +242,20 @@ fn cr_701_15_martial_impetus_goads_and_pumps() {
     assert!(g.goaded_by_player(g.battlefield_find(theirs).unwrap(), 0));
 }
 
+/// Martial Impetus's attack pump goes to each *other* creature attacking an
+/// opponent — the enchanted attacker keeps just the Aura's +1/+1.
+#[test]
+fn martial_impetus_pumps_the_other_attackers() {
+    let mut g = main_phase(2);
+    let host = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let other = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mi = g.add_card_to_hand(0, catalog::martial_impetus());
+    cast_at(&mut g, mi, &[Target::Permanent(host)]).expect("cast");
+    attack_with(&mut g, &[host, other], 1);
+    assert_eq!(pt(&g, host), (3, 3), "the Aura's own +1/+1 only");
+    assert_eq!(pt(&g, other), (3, 3), "the attack pump");
+}
+
 /// Mr. Foxglove draws up to the defender's hand size.
 #[test]
 fn mr_foxglove_draws_up_to_the_defenders_hand() {

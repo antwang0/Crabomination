@@ -2590,7 +2590,7 @@ chained once per rule and gated by Class level), `Effect::ChooseColorForSelfOthe
 only its first target** (CR 603.3d — Ms. Bumbleflower's counter never landed;
 the self-cast and ETB paths already filled the rest), and **an emblem's
 free-cast static never applied** (CR 114.4 — Tamiyo's −7). Residuals:
-**Martial Impetus**, **Octomancer**, **Perch Protection**, **Promise of
+**Octomancer**, **Perch Protection**, **Promise of
 Loyalty**, **Tamiyo** (INCOMPLETE_CARDS). A 200-game census beside
 Hearthhull / Bright-Palm / Brimaz (seed 9551) decided 200/200 with zero
 panics and no card of the four lists unplayed, Ms. Bumbleflower winning
@@ -3202,7 +3202,7 @@ spells under Y'shtola, Night's Blessed. Twenty-six cards were missing
 `CastWithoutPayingImmediate` — a `MayDo` around it hid the graveyard target
 from the auto-targeter and the trigger was dropped. Residuals: **Blue
 Mage's Cane**, **Dancer's Chakrams**, **Estinien Varlineau**, **Hildibrand
-Manderville**, **Into the Story**, **Urianger Augurelt**. A 200-game census
+Manderville**, **Urianger Augurelt**. A 200-game census
 beside Brass / Galadriel / Kamiz (seed 163) decided 200/200 with zero
 panics; Y'shtola won 55.5 %, and **Observed Stasis went uncast** (TODO open
 queue).

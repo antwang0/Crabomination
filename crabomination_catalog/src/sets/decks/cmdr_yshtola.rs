@@ -11,8 +11,6 @@
 //!   creature, not only by it or a Dragon.
 //! - **Hildibrand Manderville** — dying doesn't let you cast it from the
 //!   graveyard as an Adventure.
-//! - **Into the Story** — any graveyard with seven cards discounts it,
-//!   yours included.
 //! - **Urianger Augurelt** — the card is exiled face up; a land played from
 //!   exile gains no life; its spells get no {2} discount.
 
@@ -534,8 +532,6 @@ pub fn idyllic_beachfront() -> CardDefinition {
 
 /// Into the Story — costs {3} less if an opponent has seven or more cards
 /// in their graveyard; draw four.
-///
-/// ⚠ Residual: any graveyard with seven cards discounts it, yours included.
 pub fn into_the_story() -> CardDefinition {
     CardDefinition {
         name: "Into the Story",
@@ -545,7 +541,10 @@ pub fn into_the_story() -> CardDefinition {
             description: "This spell costs {3} less to cast if an opponent has seven or more cards in their graveyard.",
             effect: StaticEffect::SelfCostReducedIfPredicate {
                 amount: 3,
-                condition: Predicate::ValueAtLeast(Value::MaxGraveyardSize, Value::Const(7)),
+                condition: Predicate::ValueAtLeast(
+                    Value::GreatestGraveyardSizeAmong(PlayerRef::EachOpponent),
+                    Value::Const(7),
+                ),
             },
         }],
         effect: draw(Value::Const(4)),
