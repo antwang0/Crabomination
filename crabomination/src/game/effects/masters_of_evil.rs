@@ -9,6 +9,7 @@
 //! - Ashad's "first nonlegendary artifact spell each turn has casualty N".
 
 use super::{EffectContext, EntityRef};
+use crate::card::Zone;
 use crate::effect::{PlayerRef, Selector, ZoneDest};
 use crate::game::GameState;
 use crate::game::types::GameEvent;
@@ -23,12 +24,23 @@ impl GameState {
         events: &mut Vec<GameEvent>,
     ) {
         let dest = ZoneDest::Battlefield { controller: PlayerRef::Seat(ctx.controller), tapped };
+        // CR 400.7 — an off-battlefield card is taken only from the zone these
+        // effects put it in (a graveyard, exile, a library), never from a
+        // command zone or a hand. A second Missy's trigger for the same death
+        // "moved" the card the first had already returned from the
+        // battlefield to the battlefield — killing it, and both triggered
+        // again, 404 times (six-seat pod, seed 56181 game 269).
+        let reachable = |g: &GameState, id| {
+            matches!(g.find_card_zone(id), Some(Zone::Graveyard | Zone::Exile | Zone::Library))
+        };
         for ent in self.resolve_selector(what, ctx) {
             match ent {
                 EntityRef::Permanent(id) => {
                     if let Some(c) = self.battlefield_find_mut(id) {
                         c.turn_face_down_as_cyberman();
-                    } else if let Some(c) = self.find_card_anywhere_mut(id) {
+                    } else if reachable(self, id)
+                        && let Some(c) = self.find_card_anywhere_mut(id)
+                    {
                         // A selector can name an off-battlefield card as a
                         // permanent id (`Target(0)` of a graveyard slot).
                         c.turn_face_down_as_cyberman();
@@ -36,6 +48,9 @@ impl GameState {
                     }
                 }
                 EntityRef::Card(id) => {
+                    if !reachable(self, id) {
+                        continue;
+                    }
                     if let Some(c) = self.find_card_anywhere_mut(id) {
                         c.turn_face_down_as_cyberman();
                     }

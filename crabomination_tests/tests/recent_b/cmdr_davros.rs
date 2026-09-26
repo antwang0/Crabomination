@@ -99,6 +99,81 @@ fn cr_708_2_missy_converts_the_dead() {
     assert!(g.battlefield_find(droid).is_none(), "an artifact creature stays dead");
 }
 
+/// CR 400.7 / 903.9a — a dead commander its owner sent home before Missy's
+/// trigger resolved is a new object in the command zone: "return it" finds
+/// nothing.
+#[test]
+fn missy_cant_take_a_commander_from_the_command_zone() {
+    let mut g = main_phase(2);
+    g.add_card_to_battlefield(0, catalog::missy());
+    let cmd = g.seat_commanders(1, vec![catalog::hill_giant()])[0];
+    let pos = g.players[1].command.iter().position(|c| c.id == cmd).unwrap();
+    let card = g.players[1].command.remove(pos);
+    g.battlefield.push(card);
+    let mut ctx = EffectContext::for_spell(0, None, 0, 0);
+    ctx.source = Some(cmd);
+    let ev = g.resolve_effect(&Effect::Destroy { what: Selector::ExactObjects(vec![cmd]) }, &ctx).expect("destroy");
+    g.dispatch_triggers_for_events(&ev);
+    g.check_state_based_actions();
+    assert!(g.players[1].command.iter().any(|c| c.id == cmd), "home before the trigger resolves");
+    drain_stack(&mut g);
+    assert!(g.players[1].command.iter().any(|c| c.id == cmd), "still home");
+    assert!(g.battlefield_find(cmd).is_none());
+}
+
+/// CR 400.7 — two Missys trigger on one death; the first returns the card,
+/// and the second finds a new object on the battlefield and does nothing. It
+/// used to move it again (battlefield to battlefield), which killed it and
+/// retriggered both: a 404-cycle loop (six-seat pod, seed 56181 game 269,
+/// Missy beside a token copy of her).
+#[test]
+fn a_second_missy_does_not_return_the_card_again() {
+    let mut g = main_phase(2);
+    g.add_card_to_battlefield(0, catalog::missy());
+    g.add_card_to_battlefield(0, catalog::missy());
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    run(&mut g, Effect::Destroy { what: Selector::ExactObjects(vec![giant]) }, giant);
+    assert!(is_cyberman(&g, giant), "returned once, and still there");
+    assert!(g.stack.is_empty());
+}
+
+/// CR 708.2 / 603.10a — a face-down Cyberman has no abilities and is an
+/// artifact: when one whose card is Missy dies beside a Bear, it doesn't
+/// fire Missy's trigger for the Bear, and the other Missy doesn't return it.
+#[test]
+fn a_face_down_missy_has_no_death_trigger() {
+    let mut g = main_phase(2);
+    g.add_card_to_battlefield(0, catalog::missy());
+    let theirs = g.add_card_to_battlefield(1, catalog::missy());
+    run(&mut g, Effect::Destroy { what: Selector::ExactObjects(vec![theirs]) }, theirs);
+    assert!(is_cyberman(&g, theirs), "our Missy returned theirs as a Cyberman");
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    run(&mut g, Effect::Destroy { what: Selector::ExactObjects(vec![theirs, bear]) }, bear);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == theirs), "an artifact creature stays dead");
+    let b = g.battlefield_find(bear).expect("our Missy returns the Bear");
+    assert_eq!(b.controller, 0, "and only ours");
+}
+
+/// The same through lethal damage — one state-based sweep, the path the pod
+/// took (six-seat pod, seed 56181 game 269: a 404-cycle trigger loop).
+#[test]
+fn a_face_down_missy_dying_to_damage_has_no_death_trigger() {
+    let mut g = main_phase(2);
+    g.add_card_to_battlefield(0, catalog::missy());
+    let theirs = g.add_card_to_battlefield(1, catalog::missy());
+    run(&mut g, Effect::Destroy { what: Selector::ExactObjects(vec![theirs]) }, theirs);
+    assert!(is_cyberman(&g, theirs));
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(theirs).unwrap().damage = 6;
+    g.battlefield_find_mut(bear).unwrap().damage = 6;
+    let ev = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == theirs), "an artifact creature stays dead");
+    let b = g.battlefield_find(bear).expect("our Missy returns the Bear");
+    assert_eq!(b.controller, 0, "and only ours");
+}
+
 /// CR 708.2 — Cybership's combat damage puts the top two cards of that
 /// player's library onto your battlefield as face-down Cybermen.
 #[test]
