@@ -817,6 +817,7 @@ impl Effect {
             | Effect::EachPlayerCreatesTokenPerControlled { .. }
             | Effect::SourceEntersTapped
             | Effect::AbandonThisScheme | Effect::GameIsADraw | Effect::GrantAdventureFromGraveyard
+            | Effect::MarkDoneThisTurn
             | Effect::RemoveTimeCounterFromSuspendedSource
             | Effect::PhaseInHeldBySource
             | Effect::AcquireAbilitiesOfExiledWithSource

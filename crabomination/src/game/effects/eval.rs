@@ -3560,6 +3560,9 @@ impl GameState {
                 // CR 701.59 — true iff this spell's "collect evidence" cost was paid.
                 ctx.cast_collected_evidence
             }
+            Predicate::SourceDoneThisTurn => ctx
+                .source
+                .is_some_and(|s| self.triggered_once_per_turn_used.contains(&(s, crate::game::DONE_THIS_TURN_SLOT))),
             Predicate::SourceGiftPromised => {
                 // CR 702.165 — read the source permanent's persisted gift flag.
                 ctx.source

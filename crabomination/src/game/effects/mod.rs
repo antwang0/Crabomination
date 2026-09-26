@@ -30832,6 +30832,13 @@ impl GameState {
 
             Effect::ChooseOpponentThen { then } => self.choose_opponent_then(then, effect, ctx, events),
 
+            Effect::MarkDoneThisTurn => {
+                if let Some(src) = ctx.source {
+                    self.triggered_once_per_turn_used.insert((src, crate::game::DONE_THIS_TURN_SLOT));
+                }
+                Ok(())
+            }
+
             Effect::GrantAdventureFromGraveyard => {
                 if let Some(src) = ctx.source {
                     self.grant_adventure_from_graveyard(ctx.controller, src);

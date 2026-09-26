@@ -2524,6 +2524,10 @@ pub enum Predicate {
     /// the battlefield). Gates a permanent-gift card's "if the gift was
     /// promised, …" ETB (Scrapshooter, Starforged Sword).
     SourceGiftPromised,
+    /// "Do this only once each turn": the source already did it this turn
+    /// (`Effect::MarkDoneThisTurn`). Gates the trigger; see
+    /// `shortcut::may_once_each_turn`.
+    SourceDoneThisTurn,
     /// True if the most recently discarded card this resolution had mana value
     /// ≤ `n`. Reads `GameState.last_discarded_mana_value` (Hollow Marauder's
     /// "draw unless they discarded a card with mana value 4 or greater").
@@ -9482,6 +9486,11 @@ pub enum Effect {
     /// dies trigger (Hildibrand Manderville). Only the owner's own graveyard
     /// is "your graveyard".
     GrantAdventureFromGraveyard,
+    /// "Do this only once each turn" — spend the source's use for the turn,
+    /// where the printed action actually happens (inside a `MayDo`'s
+    /// accepted branch), so declining keeps it. Read by
+    /// `Predicate::SourceDoneThisTurn`.
+    MarkDoneThisTurn,
     /// "That player [does body]" — run `body` with `who` as its controller,
     /// so `You` / a controller-side choice reads that player (Skullwinder's
     /// "that player returns a card from their graveyard to their hand").

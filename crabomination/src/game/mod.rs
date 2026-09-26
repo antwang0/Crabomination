@@ -186,6 +186,11 @@ pub fn two_player_game() -> GameState {
 /// multiplayer tests; for format-specific life totals call
 /// `game_with_format(format, n)`.
 #[doc(hidden)]
+/// The `triggered_once_per_turn_used` slot "do this only once each turn"
+/// spends (`Effect::MarkDoneThisTurn`); `usize::MAX` is the Glasskite
+/// cycle's, and no printed trigger index reaches either.
+pub(crate) const DONE_THIS_TURN_SLOT: usize = usize::MAX - 1;
+
 pub fn multi_player_game(n: usize) -> GameState {
     let players: Vec<_> = (0..n)
         .map(|i| crate::player::Player::new(i, format!("P{i}")))

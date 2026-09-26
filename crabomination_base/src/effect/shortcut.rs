@@ -645,6 +645,25 @@ pub fn evolve_then(rider: Effect) -> TriggeredAbility {
     t
 }
 
+/// "Whenever [event], you may [body]. Do this only once each turn." The use
+/// is spent when the "may" is taken, not when the trigger fires — a declined
+/// copy leaves the turn's one for a later trigger (Donal, Ondu Spiritdancer,
+/// Ancient Cornucopia).
+pub fn may_once_each_turn(event: EventSpec, description: &str, body: Effect) -> TriggeredAbility {
+    let gate = Predicate::Not(Box::new(Predicate::SourceDoneThisTurn));
+    let filter = match event.filter.clone() {
+        Some(f) => Predicate::All(vec![f, gate]),
+        None => gate,
+    };
+    TriggeredAbility {
+        event: event.with_filter(filter),
+        effect: Effect::MayDo {
+            description: description.into(),
+            body: Box::new(Effect::Seq(vec![Effect::MarkDoneThisTurn, body])),
+        },
+    }
+}
+
 /// Eerie shortcut (DSK ability word): "Whenever an enchantment you control
 /// enters and whenever you fully unlock a Room, [body]." Returns the two
 /// triggered abilities that share `body` — an enchantment-ETB watcher and a
