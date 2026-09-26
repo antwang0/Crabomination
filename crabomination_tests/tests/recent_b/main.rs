@@ -130,6 +130,7 @@ mod cmdr_killian;
 mod cmdr_rootha;
 mod cmdr_yuma;
 mod cmdr_quintorius;
+mod cmdr_top1000;
 mod cmdr_sefris;
 mod cmdr_morska;
 mod cmdr_inspirit;

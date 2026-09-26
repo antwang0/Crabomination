@@ -2600,7 +2600,6 @@ fn cr_207_2c_collective_voyage_ramps_every_seat_under_its_own_control() {
 /// of the test is that it *resolves*: nothing is left pending.
 #[test]
 fn join_forces_resolves_with_the_auto_decider_declining_every_seat() {
-    use crabomination::mana::Color;
     let mut g = multi_player_game(4);
     g.priority.player_with_priority = 0;
     g.active_player_idx = 0;
@@ -5741,7 +5740,6 @@ fn cr_800_4g_a_may_reseated_onto_its_controller_is_asked_once() {
 fn as_player_runs_the_body_for_the_chosen_opponent() {
     use crabomination::card::{CardDefinition, CardType, SelectionRequirement as R};
     use crabomination::effect::{Effect, Value};
-    use crabomination::mana::Color;
     let mut g = multi_player_game(3);
     let spell = g.add_card_to_hand(0, CardDefinition {
         name: "Gift of Memory",
