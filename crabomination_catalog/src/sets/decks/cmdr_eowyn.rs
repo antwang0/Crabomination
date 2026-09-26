@@ -99,6 +99,17 @@ fn monarch() -> Effect {
     Effect::BecomeMonarch { who: PlayerRef::You }
 }
 
+/// "Target player becomes the monarch" in slot 0 (a gift: the bot's pick is
+/// its own seat).
+fn target_monarch() -> Effect {
+    Effect::BecomeMonarch { who: PlayerRef::Target(0) }
+}
+
+/// "Any target" in `slot`, after a player slot.
+fn any_target_at(slot: u8) -> Selector {
+    Selector::TargetFiltered { slot, filter: R::Creature.or(R::Player).or(R::Planeswalker) }
+}
+
 fn you_are_monarch() -> Predicate {
     Predicate::IsMonarch { who: PlayerRef::You }
 }
@@ -380,9 +391,7 @@ pub fn crown_of_gondor() -> CardDefinition {
 }
 
 /// Denethor, Stone Seer — scry 2 on entering; {3}{R}, {T}, sacrifice it:
-/// become the monarch and deal 3 to any target.
-///
-/// Residual: you become the monarch (the printed "target player").
+/// target player becomes the monarch and it deals 3 to any target.
 pub fn denethor_stone_seer() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![etb(Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) })],
@@ -390,7 +399,7 @@ pub fn denethor_stone_seer() -> CardDefinition {
             mana_cost: cost(&[generic(3), r()]),
             tap_cost: true,
             sac_cost: true,
-            effect: Effect::Seq(vec![monarch(), Effect::DealDamage { to: target_any(), amount: Value::Const(3) }]),
+            effect: Effect::Seq(vec![target_monarch(), Effect::DealDamage { to: any_target_at(1), amount: Value::Const(3) }]),
             ..Default::default()
         }],
         ..legend("Denethor, Stone Seer", cost(&[generic(1), u()]), vec![CreatureType::Human, CreatureType::Noble], 1, 3)
@@ -672,9 +681,8 @@ pub fn visions_of_glory() -> CardDefinition {
 }
 
 /// Éomer, King of Rohan — double strike; enters with a counter per other
-/// Human; makes you the monarch and deals its power to any target.
-///
-/// Residual: you become the monarch (the printed "target player").
+/// Human; target player becomes the monarch and it deals its power to any
+/// target.
 pub fn eomer_king_of_rohan() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::DoubleStrike],
@@ -683,8 +691,8 @@ pub fn eomer_king_of_rohan() -> CardDefinition {
             Value::count(Selector::EachPermanent(yours().and(human()).and(R::OtherThanSource))),
         )),
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            monarch(),
-            Effect::DealDamage { to: target_any(), amount: Value::PowerOf(Box::new(Selector::This)) },
+            target_monarch(),
+            Effect::DealDamage { to: any_target_at(1), amount: Value::PowerOf(Box::new(Selector::This)) },
         ]))],
         ..legend(
             "Éomer, King of Rohan",

@@ -186,14 +186,25 @@ fn crown_of_gondor_scales() {
     assert_eq!(pt(&g, bears), (4, 4));
 }
 
-/// Denethor — the sacrifice makes you the monarch and shoots 3.
+/// Denethor — the sacrifice makes *target player* the monarch (slot 0) and
+/// shoots 3 at any target (slot 1): here seat 2 is crowned, seat 1 is shot.
 #[test]
-fn denethor_crowns_and_shoots() {
-    let mut g = pod(2);
+fn denethor_crowns_a_target_player_and_shoots() {
+    let mut g = pod(4);
     let d = g.add_card_to_battlefield(0, catalog::denethor_stone_seer());
     g.clear_sickness(d);
-    activate(&mut g, 0, d, 0, Some(Target::Player(1))).expect("denethor");
-    assert_eq!(g.monarch, Some(0));
+    flood(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: d,
+        ability_index: 0,
+        target: Some(Target::Player(2)),
+        additional_targets: vec![Target::Player(1)],
+        x_value: None,
+        mode: None,
+    })
+    .expect("denethor");
+    drain_stack(&mut g);
+    assert_eq!(g.monarch, Some(2));
     assert_eq!(g.players[1].life, 17);
 }
 
@@ -327,17 +338,19 @@ fn visions_of_glory_doubles_the_ranks() {
     assert_eq!(named(&g, 0, "Human").len(), 3);
 }
 
-/// Éomer — enters with a counter per other Human, crowns you and shoots
-/// for its power.
+/// Éomer — enters with a counter per other Human; its enters trigger crowns
+/// a target player — the bot's pick is its own seat, a gift — and shoots for
+/// its power at an opponent.
 #[test]
 fn eomer_crowns_and_shoots() {
-    let mut g = pod(2);
+    let mut g = pod(4);
     g.add_card_to_battlefield(0, catalog::beregond_of_the_guard());
     g.add_card_to_battlefield(0, catalog::denethor_stone_seer());
     let e = g.add_card_to_hand(0, catalog::eomer_king_of_rohan());
     cast(&mut g, 0, e, None).expect("eomer");
     assert_eq!(g.battlefield_find(e).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
     assert_eq!(g.monarch, Some(0));
+    assert_eq!(g.players[0].life, 20, "the damage is aimed away from the caster");
 }
 
 /// Oath of Eorl — chapter I makes two Soldiers.

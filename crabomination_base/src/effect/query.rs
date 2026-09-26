@@ -3314,6 +3314,8 @@ impl Effect {
             // Doubling a life total is a gift — point Beacon of Immortality at
             // the caster, not the opponent.
             Effect::DoubleLife { .. } => true,
+            // "Target player becomes the monarch" is a gift (Éomer, Denethor).
+            Effect::BecomeMonarch { who: PlayerRef::Target(_) } => true,
             // Copying "target token you control" is friendly (Esika's Chariot).
             Effect::CreateTokenCopyOf { .. } | Effect::CreateTokenCopiesHasteSac { .. } => true,
             Effect::GrantKeyword { keyword, .. } => Self::keyword_is_friendly(keyword),
