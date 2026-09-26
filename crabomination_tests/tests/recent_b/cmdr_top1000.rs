@@ -180,3 +180,25 @@ fn jaheira_gives_your_tokens_a_green_mana_ability() {
     assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1);
     assert!(g.battlefield.iter().any(|c| c.id == t), "tapped, not sacrificed");
 }
+
+/// Torment of Hailfire, X = 3, in a four-seat pod: an opponent at 5 life
+/// pays 3 once, then must discard, then sacrifice; the other opponents
+/// just pay 9 (CR 107.3 — X is the announced value).
+#[test]
+fn torment_of_hailfire_punishes_each_opponent_x_times() {
+    let mut g = pod(4);
+    g.players[1].life = 5;
+    g.add_card_to_hand(1, catalog::island());
+    let keep = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let t = g.add_card_to_hand(0, catalog::torment_of_hailfire());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell { card_id: t, target: None, additional_targets: vec![], mode: None, x_value: Some(3) })
+        .expect("cast Torment");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 2, "paid once, above zero");
+    assert!(g.players[1].hand.is_empty(), "then discarded");
+    assert!(!g.battlefield.iter().any(|c| c.id == keep), "then sacrificed");
+    let start = g.players[0].life;
+    assert_eq!(g.players[2].life, start - 9);
+    assert_eq!(g.players[3].life, start - 9);
+}

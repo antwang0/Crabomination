@@ -4474,6 +4474,7 @@ static DECKS: &[Factory] = &[
     super::decks::imps_mischief,
     super::decks::boromir_warden_of_the_tower,
     super::decks::jaheira_friend_of_the_forest,
+    super::decks::torment_of_hailfire,
     super::decks::kresh_the_bloodbraided,
     super::decks::mezzio_mugger,
     super::decks::next_of_kin,

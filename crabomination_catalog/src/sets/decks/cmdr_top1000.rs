@@ -241,3 +241,37 @@ pub fn jaheira_friend_of_the_forest() -> CardDefinition {
         )
     }
 }
+
+/// Torment of Hailfire — {X}{B}{B} Sorcery. Repeat X times: each opponent
+/// loses 3 life unless that player sacrifices a nonland permanent or
+/// discards a card.
+///
+/// The victim's choice is heuristic (`Effect::Punisher` takes the first
+/// affordable option): pay the 3 life while it leaves them above zero, then
+/// discard, then sacrifice, and only then take the loss that kills them.
+/// Paying life first is listed as an option because it *is* the default;
+/// running it as the chooser keeps "that player" correct in a pod.
+pub fn torment_of_hailfire() -> CardDefinition {
+    let three = || Effect::LoseLife { who: Selector::You, amount: Value::Const(3) };
+    CardDefinition {
+        name: "Torment of Hailfire",
+        cost: cost(&[crate::mana::x(), b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Repeat {
+            count: Value::XFromCost,
+            body: Box::new(Effect::Punisher {
+                chooser: Selector::Player(PlayerRef::EachOpponent),
+                options: vec![
+                    three(),
+                    Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                    Effect::Sacrifice { who: Selector::You, count: Value::ONE, filter: R::Permanent.and(R::Nonland) },
+                ],
+                otherwise: Box::new(Effect::LoseLife {
+                    who: Selector::Player(PlayerRef::Triggerer),
+                    amount: Value::Const(3),
+                }),
+            }),
+        },
+        ..Default::default()
+    }
+}
