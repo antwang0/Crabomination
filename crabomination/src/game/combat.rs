@@ -5526,6 +5526,9 @@ impl GameState {
                     if !pl.creatures_that_damaged_me_this_turn.contains(&atk_id) {
                         pl.creatures_that_damaged_me_this_turn.push(atk_id);
                     }
+                    if !pl.creatures_that_combat_damaged_me_this_turn.contains(&atk_id) {
+                        pl.creatures_that_combat_damaged_me_this_turn.push(atk_id);
+                    }
                     // CR 702.76 — Prowl window: record the damaging creature's
                     // types for its controller (Changeling counts as every
                     // type, recorded via the controller-side any flag).

@@ -4588,6 +4588,7 @@ impl GameState {
             pl.lost_life_this_turn = false;
             pl.life_lost_this_turn = 0;
             pl.creatures_that_damaged_me_this_turn.clear();
+            pl.creatures_that_combat_damaged_me_this_turn.clear();
             pl.lands_entered_this_turn = 0;
             pl.creature_spell_countered_by_opponent_this_turn = false;
             pl.noncreature_destroyed_by_opponent_this_turn = false;

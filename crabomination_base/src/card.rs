@@ -3270,10 +3270,10 @@ pub enum SelectionRequirement {
     /// blocked by creatures the monarch controls").
     ControlledByMonarch,
     /// Controlled by a player whom at least `n` creatures matching `filter`
-    /// dealt damage this turn (Admiral Beckett Brass's "a player who was
-    /// dealt combat damage by three or more Pirates this turn"). Reads
-    /// `Player.creatures_that_damaged_me_this_turn` against the creatures'
-    /// current characteristics.
+    /// dealt combat damage this turn (Admiral Beckett Brass's "a player who
+    /// was dealt combat damage by three or more Pirates this turn"). Reads
+    /// `Player.creatures_that_combat_damaged_me_this_turn` against the
+    /// creatures' current characteristics.
     ControlledByPlayerDamagedByAtLeast { filter: Box<SelectionRequirement>, n: u32 },
     /// A card its owner discarded this turn (Ghost of Ramirez DePietro's
     /// "a card in a graveyard that was discarded … this turn").

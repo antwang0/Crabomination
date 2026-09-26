@@ -153,16 +153,20 @@ fn estinien_takes_flight() {
 }
 
 /// Estinien's second-main draw counts the opponents it or a Dragon dealt
-/// combat damage — two of three here (a Bear hit the third).
+/// combat damage — two of four here (a Bear hit the third in combat, the
+/// Dragon the fourth outside it).
 #[test]
 fn estinien_counts_opponents_it_or_a_dragon_hit() {
-    let mut g = main_phase(4);
+    let mut g = main_phase(5);
     let e = g.add_card_to_battlefield(0, catalog::estinien_varlineau());
     let dragon = g.add_card_to_battlefield(0, catalog::shivan_dragon());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     for (seat, by) in [(1, e), (2, dragon), (3, bear)] {
         g.players[seat].creatures_that_damaged_me_this_turn.push(by);
+        g.players[seat].creatures_that_combat_damaged_me_this_turn.push(by);
     }
+    // A Dragon's NONcombat damage to a fourth seat doesn't count.
+    g.players[4].creatures_that_damaged_me_this_turn.push(dragon);
     stock(&mut g, 0, 5);
     let (lib, life) = (g.players[0].library.len(), g.players[0].life);
     g.step = TurnStep::PostCombatMain;

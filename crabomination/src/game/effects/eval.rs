@@ -760,7 +760,7 @@ impl GameState {
                 .resolve_players(who, ctx)
                 .iter()
                 .filter(|&&p| {
-                    self.players[p].creatures_that_damaged_me_this_turn.iter().any(|&c| {
+                    self.players[p].creatures_that_combat_damaged_me_this_turn.iter().any(|&c| {
                         self.evaluate_requirement_static(by, &Target::Permanent(c), ctx.controller, ctx.source)
                     })
                 })
@@ -6284,7 +6284,7 @@ impl GameState {
             R::ControlledByPlayerDamagedByAtLeast { filter, n } => {
                 let p = card.controller;
                 self.players[p]
-                    .creatures_that_damaged_me_this_turn
+                    .creatures_that_combat_damaged_me_this_turn
                     .iter()
                     .filter(|id| {
                         self.find_card_anywhere(**id)

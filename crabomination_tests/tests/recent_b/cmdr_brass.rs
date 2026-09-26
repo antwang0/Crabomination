@@ -120,6 +120,28 @@ fn admiral_beckett_brass_takes_a_prize() {
     assert_eq!(g.battlefield_find(ring).unwrap().controller, 0);
 }
 
+/// Admiral Beckett Brass steals from a player three Pirates dealt COMBAT
+/// damage: the same three Pirates pinging a player outside combat don't
+/// qualify them.
+#[test]
+fn admiral_beckett_brass_counts_combat_damage_only() {
+    let mut g = main_phase(3);
+    g.add_card_to_battlefield(0, catalog::admiral_beckett_brass());
+    let pirates: Vec<CardId> = (0..3).map(|_| g.add_card_to_battlefield(0, catalog::breeches_brazen_plunderer())).collect();
+    let loot1 = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let loot2 = g.add_card_to_battlefield(2, catalog::sol_ring());
+    for &p in &pirates {
+        g.players[1].creatures_that_damaged_me_this_turn.push(p);
+        g.players[1].creatures_that_combat_damaged_me_this_turn.push(p);
+        g.players[2].creatures_that_damaged_me_this_turn.push(p);
+    }
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(loot1).unwrap().controller, 0, "combat damage from three Pirates");
+    assert_eq!(g.battlefield_find(loot2).unwrap().controller, 2, "noncombat damage doesn't qualify");
+}
+
 /// Admiral Brass returns a Pirate as a hasty 4/4 with a finality counter.
 #[test]
 fn admiral_brass_raises_the_crew() {

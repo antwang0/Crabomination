@@ -401,6 +401,11 @@ pub struct PlayerData {
     /// empty for snapshot back-compat.
     #[serde(default)]
     pub creatures_that_damaged_me_this_turn: crate::oftenempty::OftenEmpty<crate::card::CardId>,
+    /// The COMBAT half of `creatures_that_damaged_me_this_turn`: attackers
+    /// and blockers that dealt this player combat damage this turn (Admiral
+    /// Beckett Brass's three Pirates, Estinien Varlineau's Dragons).
+    #[serde(default)]
+    pub creatures_that_combat_damaged_me_this_turn: crate::oftenempty::OftenEmpty<crate::card::CardId>,
     /// Creature types among this player's creatures that dealt combat damage
     /// to a player this turn (CR 702.76 Prowl). Stamped at the combat-damage
     /// funnels, cleared at the turn boundary. `#[serde(default)]` for
@@ -1542,6 +1547,7 @@ impl Player {
             cast_from_library_top_this_turn: false,
             life_lost_this_turn: 0,
             creatures_that_damaged_me_this_turn: Default::default(),
+            creatures_that_combat_damaged_me_this_turn: Default::default(),
             lands_entered_this_turn: 0,
             creature_spell_countered_by_opponent_this_turn: false,
             noncreature_destroyed_by_opponent_this_turn: false,
