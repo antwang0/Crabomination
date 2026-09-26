@@ -1409,7 +1409,7 @@ fn graveyard_entry(
             })
             .or_else(|| state.graveyard_flashback_grant(seat, card))
             .map(|mut c| {
-                let (less, more) = state.flashback_cost_shift(seat);
+                let (less, more) = state.flashback_cost_shift(seat, card);
                 if more > 0 {
                     c.symbols.push(crate::mana::ManaSymbol::Generic(more));
                 }

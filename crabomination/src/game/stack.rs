@@ -5657,6 +5657,7 @@ impl GameState {
             };
             let mut events = vec![];
             self.return_monarch_guarded_exiles(self.monarch, &mut events);
+            self.sync_monarch_control();
         }
         // CR 726.4 — the same succession for the initiative, and the heir
         // *takes* it, so CR 726.2's "whenever a player takes the initiative,

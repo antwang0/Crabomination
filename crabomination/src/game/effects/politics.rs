@@ -14,6 +14,42 @@ use crate::game::types::GameEvent;
 use crate::game::{GameError, GameState};
 
 impl GameState {
+    /// CR 725 — "The monarch controls enchanted creature" (Fealty to the
+    /// Realm): hand each such Aura's host to the current monarch. The steal
+    /// is keyed to the Aura staying attached (CR 611.2c), so the first record
+    /// keeps the controller it reverts to.
+    pub(crate) fn sync_monarch_control(&mut self) {
+        let Some(monarch) = self.monarch else { return };
+        let hosts: Vec<(CardId, CardId)> = self
+            .battlefield
+            .iter()
+            .filter(|c| {
+                c.definition
+                    .static_abilities
+                    .iter()
+                    .any(|sa| matches!(sa.effect, crate::effect::StaticEffect::MonarchControlsEnchanted))
+            })
+            .filter_map(|c| c.attached_to.map(|host| (c.id, host)))
+            .collect();
+        for (aura, host) in hosts {
+            if let Some(prev) = self.change_control(host, monarch)
+                && !self.temporary_control.iter().any(|t| t.card == host)
+            {
+                self.temporary_control.push(crate::game::TempControl {
+                    card: host,
+                    original_controller: prev,
+                    duration: Duration::Permanent,
+                    source: Some(aura),
+                    while_source_tapped: false,
+                    while_source_attached: true,
+                    while_you_control_source: false,
+                    while_counter: None,
+                    installed: None,
+                });
+            }
+        }
+    }
+
     /// `Effect::EachPlayerMayCounterForPeace` — APNAP, each player with a
     /// creature is asked (log-replayed, so a prompting seat can suspend);
     /// each taker's greatest-power creature gets `counters`, and every

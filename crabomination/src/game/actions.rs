@@ -1823,10 +1823,17 @@ pub fn cost_reduction_for_spell(
 /// (flashback / retrace / escape / disturb / aftermath) pass `true`.
 impl crate::game::GameState {
     /// Catalyst Stone (CR 702.34) — `(less, more)` generic shift applied to
-    /// `p`'s flashback costs by battlefield statics.
-    pub(crate) fn flashback_cost_shift(&self, p: usize) -> (u32, u32) {
+    /// `p`'s flashback cost for `card` by battlefield statics and the card's
+    /// own "costs {X} less to cast this way" (Visions of Glory).
+    pub(crate) fn flashback_cost_shift(&self, p: usize, card: &crate::card::CardInstance) -> (u32, u32) {
         use crate::effect::StaticEffect;
         let (mut less, mut more) = (0u32, 0u32);
+        for sa in &card.definition.static_abilities {
+            if let StaticEffect::SelfFlashbackCostsLess { amount } = &sa.effect {
+                let ctx = crate::game::effects::EffectContext::for_spell(p, None, 0, 0);
+                less += self.evaluate_value(amount, &ctx).max(0) as u32;
+            }
+        }
         for c in &self.battlefield {
             for sa in &c.definition.static_abilities {
                 match self.active_static(&sa.effect, c) {
@@ -12055,7 +12062,7 @@ impl GameState {
         apply_colored_cost_statics(self, p, &card, &mut cost);
         // Catalyst Stone — flashback-specific shifts, applied after the
         // generic reductions so the tax can't be reduced away.
-        let (fb_less, fb_more) = self.flashback_cost_shift(p);
+        let (fb_less, fb_more) = self.flashback_cost_shift(p, &card);
         if fb_more > 0 {
             cost.symbols.push(crate::mana::ManaSymbol::Generic(fb_more));
         }

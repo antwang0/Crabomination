@@ -149,6 +149,10 @@ pub enum StaticEffect {
     /// spell from the command zone this game, pay 2 life that many times"
     /// (Liesa, Shroud of Dusk). Read off the spell's own definition as it is cast.
     CommanderTaxPaidInLife,
+    /// CR 725 — "The monarch controls enchanted creature" (Fealty to the
+    /// Realm). Applied when the monarch changes (`GameState::
+    /// sync_monarch_control`); the steal lasts while the Aura stays attached.
+    MonarchControlsEnchanted,
     /// "If you would create one or more Treasure tokens, instead create those
     /// tokens plus an additional Treasure token" (Jolene, the Plunder Queen)
     /// — one extra per resolution that minted a Treasure for the controller,
@@ -625,6 +629,9 @@ pub enum StaticEffect {
     /// "Flashback costs you pay cost {N} less" (Catalyst Stone). Applies to
     /// the source controller's flashback casts only.
     FlashbackCostReduction { amount: u32 },
+    /// "This spell costs {X} less to cast this way" on the flashback card
+    /// itself (Visions of Glory): read off the card being cast, not the board.
+    SelfFlashbackCostsLess { amount: crate::effect::Value },
     /// "Flashback costs your opponents pay cost {N} more" (Catalyst Stone) —
     /// the mirror of `FlashbackCostReduction`.
     OpponentFlashbackTax { amount: u32 },

@@ -4390,6 +4390,7 @@ impl GameState {
         self.monarch = Some(player);
         events.push(GameEvent::MonarchChanged { player });
         self.return_monarch_guarded_exiles(Some(player), events);
+        self.sync_monarch_control();
     }
 
     /// CR 726 — `player` takes the initiative. CR 726.3 strips it from whoever
@@ -31402,6 +31403,7 @@ fn static_effect_to_effects(
             | StaticEffect::ControllerMaySkipDraws
             // Catalyst Stone — read by `flashback_cost_shift` at cast time.
             | StaticEffect::FlashbackCostReduction { .. }
+            | StaticEffect::SelfFlashbackCostsLess { .. }
             | StaticEffect::OpponentFlashbackTax { .. }
             // Delaying Shield / Nefarious Lich — CR 614 replacements read at
             // damage/life-gain time; no layer effect.
@@ -31602,6 +31604,7 @@ fn static_effect_to_effects(
             | StaticEffect::GrantBlitzToSpells { .. }
             | StaticEffect::BlitzCostLessPerCommanderCast
             | StaticEffect::CommanderTaxPaidInLife
+            | StaticEffect::MonarchControlsEnchanted
             | StaticEffect::TreasureCreationAddsTreasure
             | StaticEffect::SpellsYouDontOwnCostLess { .. }
             | StaticEffect::DoubleControllerCombatDamageToPlayerTriggers
