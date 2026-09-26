@@ -20,7 +20,7 @@ the handoff.
 | Part | Section | Lines |
 | --- | --- | --- |
 | Bugs & robustness | [FIXED 2026-09-26 (session `015BCEt5`) — the player-choice batch, and a board slot that reached a graveyard](#fixed-2026-09-26-session-015bcet5--the-player-choice-batch-and-a-board-slot-that-reached-a-graveyard) | 38 |
-| Bugs & robustness | [FIXED 2026-09-26 (session `01VVD5mW`) — Timey-Wimey's follow-ups and a residual sweep](#fixed-2026-09-26-session-01vvd5mw--timey-wimeys-follow-ups-and-a-residual-sweep) | 81 |
+| Bugs & robustness | [FIXED 2026-09-26 (session `01VVD5mW`) — Timey-Wimey's follow-ups and a residual sweep](#fixed-2026-09-26-session-01vvd5mw--timey-wimeys-follow-ups-and-a-residual-sweep) | 90 |
 | Bugs & robustness | [FIXED 2026-09-19 (the forty-sixth find) — a static's filter leaf that the chosen `AffectedPermanents` variant cannot carry is SILENTLY DROPPED, and a dropped leaf widens the static](#fixed-2026-09-19-the-forty-sixth-find--a-statics-filter-leaf-that-the-chosen-affectedpermanents-variant-cannot-carry-is-silently-dropped-and-a-dropped-leaf-widens-the-static) | 62 |
 | Bugs & robustness | [FIXED 2026-09-19 (the forty-fifth find) — the INVENTED-ability column, built the way this file's own "CLOSED WITH A REASON" note prescribed, and the eleven cards it named](#fixed-2026-09-19-the-forty-fifth-find--the-invented-ability-column-built-the-way-this-files-own-closed-with-a-reason-note-prescribed-and-the-eleven-cards-it-named) | 68 |
 | Bugs & robustness | [OPEN 2026-09-19 — nineteen cube-pool entries are DUPLICATED, so nineteen cards draft at double weight](#open-2026-09-19--nineteen-cube-pool-entries-are-duplicated-so-nineteen-cards-draft-at-double-weight) | 19 |
@@ -207,6 +207,15 @@ across nine precons.
   that ability doesn't function. The dispatch's graveyard walk now skips a
   batch's deaths for a card that died in the same batch; the look-back pass
   never fires `FromYourGraveyard` scopes.
+- ⚠ **"That player" / "defending player" read as every opponent** — a
+  catalog audit (damage/attack triggers whose doc says that player or
+  defending player but whose body reads `ControlledByOpponent`,
+  `InOpponentGraveyard` or `EachOpponent`) found nine: Deluxe Dragster, Neyam
+  Shai Murad, Scion of Darkness, Hellkite Tyrant, Balefire Dragon, Polis
+  Crusher, Storm the Citadel, Territorial Hammerskull, Frenzied Trapbreaker,
+  Silent Skimmer. Invisible in two-player games; in a pod each hit the wrong
+  seats. Now `ControlledByTriggerPlayer` / `ControlledByDefendingPlayer` /
+  `PlayerRef::DefendingPlayer` (CR 603.2, 506.2).
 - New primitives, each with its card: a per-creature attack lure
   (`LureTargetToSourceNextTurn`, Gideon, Battle-Forged — CR 508.1d, on Gideon
   Jura's clock), a per-source damage tally (`DamageDealtBySourceThisTurn`,
