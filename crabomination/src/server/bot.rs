@@ -257,6 +257,13 @@ pub trait Bot: Send {
     fn next_action_settled(&mut self, state: &GameState, seat: usize) -> Option<BotStep> {
         self.next_action(state, seat).map(BotStep::plain)
     }
+
+    /// Push the profile settings the *engine* reads off the seat
+    /// (`Player::smart_tap`, `converge_rarest`, `hostile_player_targets`)
+    /// onto the seat this bot plays — the push every ladder driver makes
+    /// (`recommend::play_seeded_game`), done by the server for its bot
+    /// seats. Default: nothing to push.
+    fn push_seat_flags(&self, _player: &mut crate::player::Player) {}
 }
 
 /// A bot's step, with an optional settled state — the pre-committed result of
@@ -2990,6 +2997,16 @@ impl Default for HeuristicBot {
 }
 
 impl Bot for HeuristicBot {
+    /// A scored bot pushes all three seat flags; the uniform control pushes
+    /// none (`Pilot::Uniform`'s convention in the ladder drivers).
+    fn push_seat_flags(&self, player: &mut crate::player::Player) {
+        if self.scored {
+            player.smart_tap = self.weights.smart_tap;
+            player.converge_rarest = self.weights.converge_rarest;
+            player.hostile_player_targets = self.weights.hostile_player_targets;
+        }
+    }
+
     /// The whole tick runs inside one `with_frozen_layers` scope. Sound by
     /// construction — a bot only ever receives `&GameState`, so nothing it
     /// does here can invalidate the gathered continuous-effect set — and it
@@ -30008,6 +30025,49 @@ mod tail_guard_tests {
         next.perform_action(GameAction::DeclareAttackers(picked)).unwrap();
         let enc = super::super::encode::encode_state(&next, 1, super::super::net_eval::vocab());
         assert_eq!(d.successors[d.chosen], enc, "chosen must index the played declaration");
+    }
+
+    /// The encoder is two-seat (`1 - seat`), so a pod has no net read: the
+    /// slot declines every seat of a four-seat state, and a search bot on
+    /// the net leaf plays seat 2's main phase on the material leaf. Before
+    /// the guard this underflowed on seat 2 — the client and the lobby gave
+    /// every Commander pod seat that bot, so a pod froze on seat 2's first
+    /// searched main phase.
+    #[test]
+    fn a_pod_has_no_net_read_and_the_search_falls_back() {
+        let players = (0..4).map(|i| Player::new(i, format!("P{i}"))).collect();
+        let mut g = GameState::new(players);
+        for seat in 0..4 {
+            for _ in 0..10 {
+                g.add_card_to_library(seat, catalog::forest());
+            }
+        }
+        for _ in 0..2 {
+            g.add_card_to_battlefield(2, catalog::forest());
+        }
+        g.add_card_to_hand(2, catalog::grizzly_bears());
+        g.add_card_to_hand(2, catalog::forest());
+        g.turn_number = 3;
+        g.active_player_idx = 2;
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 2;
+        with_const_net(0.5, |slot| {
+            let mut w = EvalWeights::net_on_default();
+            w.net_slot = slot;
+            let mut bot = super::super::MctsBot::new(super::super::MctsConfig {
+                iterations: 8,
+                weights: w,
+                ..super::super::MctsConfig::default()
+            });
+            assert!(bot.next_action(&g, 2).is_some(), "seat 2 acts in its main phase");
+            for seat in 0..4 {
+                assert_eq!(super::super::net_eval::win_prob(&g, seat, slot), None, "seat {seat}");
+            }
+        });
+        let duel = two_player_game();
+        with_const_net(0.5, |slot| {
+            assert_eq!(super::super::net_eval::win_prob(&duel, 1, slot), Some(0.5), "a duel still reads");
+        });
     }
 }
 

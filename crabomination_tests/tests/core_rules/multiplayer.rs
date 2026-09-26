@@ -2002,6 +2002,15 @@ fn commander_deck_validator_catches_off_color_card() {
         cmd.iter().any(|e| matches!(e, CommanderDeckError::OffColorIdentity { .. })),
         "Lightning Bolt under a green commander should be flagged off-color",
     );
+    // The message names the identities in WUBRG letters — it printed the
+    // bit field (`ColorSet(8)`) to the menu and the lobby.
+    let text = cmd.iter().map(ToString::to_string).collect::<Vec<_>>().join("; ");
+    assert!(
+        text.contains("Lightning Bolt (identity R) is outside the commander's identity (G)"),
+        "{text}",
+    );
+    assert_eq!(crabomination::format::error_summary(&["a", "b", "c", "d", "e"], 3), "a; b; c (+2 more)");
+    assert_eq!(crabomination::format::error_summary(&["a", "b"], 3), "a; b");
 }
 
 #[test]

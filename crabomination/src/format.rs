@@ -694,13 +694,24 @@ impl std::fmt::Display for CommanderDeckError {
                 commander_identity,
             } => write!(
                 f,
-                "{card_name} (identity {card_identity:?}) is outside the commander's identity ({commander_identity:?})",
+                "{card_name} (identity {card_identity}) is outside the commander's identity ({commander_identity})",
             ),
         }
     }
 }
 
 impl std::error::Error for CommanderDeckError {}
+
+/// The first `shown` errors joined with "; ", plus how many were left out —
+/// a one-line status can't hold a deck's fifteen off-colour cards, but it can
+/// say there are fifteen.
+pub fn error_summary<E: std::fmt::Display>(errs: &[E], shown: usize) -> String {
+    let mut line = errs.iter().take(shown).map(ToString::to_string).collect::<Vec<_>>().join("; ");
+    if errs.len() > shown {
+        line.push_str(&format!(" (+{} more)", errs.len() - shown));
+    }
+    line
+}
 
 /// CR 702.124 — may `a` and `b` be a deck's two commanders? Plain Partner on
 /// both (702.124a), "partner with" naming each other (702.124c), a

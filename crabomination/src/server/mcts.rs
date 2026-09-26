@@ -1205,6 +1205,13 @@ impl MctsBot {
 }
 
 impl Bot for MctsBot {
+    /// Only the player-slot polarity flag: the search's candidates come from
+    /// the scored picker, so it self-targets without it, while a search seat
+    /// has never carried `smart_tap` (`recommend::play_seeded_game`'s push).
+    fn push_seat_flags(&self, player: &mut crate::player::Player) {
+        player.hostile_player_targets = self.cfg.weights.hostile_player_targets;
+    }
+
     fn next_action(&mut self, state: &GameState, seat: usize) -> Option<GameAction> {
         if self.cfg.search_combat
             && let Some(a) = self.combat_search(state, seat)

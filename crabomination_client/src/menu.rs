@@ -1649,9 +1649,10 @@ fn handle_action_buttons(
     }
 }
 
-/// The first three validation errors, for the one-line menu status.
-fn join_errors<E: ToString>(errs: &[E]) -> String {
-    errs.iter().take(3).map(ToString::to_string).collect::<Vec<_>>().join("; ")
+/// The first three validation errors and how many more, for the one-line
+/// menu status.
+fn join_errors<E: std::fmt::Display>(errs: &[E]) -> String {
+    crabomination::format::error_summary(errs, 3)
 }
 
 /// Trim a display name and fall back to "Player" when it's blank, so the
@@ -1797,7 +1798,14 @@ pub(crate) fn menu_player_name(world: &World) -> String {
 /// pilot — `net_eval_det1` at 64 iterations without the combat chains —
 /// and forty September replays showed its attack judgment two generations
 /// behind the lobby's (ML_NOTES "Round 65").
-pub(crate) fn local_bot() -> Box<dyn crabomination::server::Bot> {
+///
+/// A pod (more than two seats) gets the heuristic default, as the lobby's
+/// does: the net reads only two-seat games, and the search on the material
+/// leaf is unmeasured in a pod.
+pub(crate) fn local_bot(n_seats: usize) -> Box<dyn crabomination::server::Bot> {
+    if n_seats > 2 {
+        return Box::new(HeuristicBot::new());
+    }
     load_champion_once();
     Box::new(crabomination::server::MctsBot::new(crabomination::server::MctsConfig {
         iterations: 256,
@@ -1922,7 +1930,7 @@ pub(crate) fn local_occupants(
     n_seats: usize,
 ) -> Vec<SeatOccupant> {
     std::iter::once(SeatOccupant::Human(human))
-        .chain((1..n_seats).map(|_| SeatOccupant::Bot(local_bot())))
+        .chain((1..n_seats).map(|_| SeatOccupant::Bot(local_bot(n_seats))))
         .collect()
 }
 
@@ -2045,6 +2053,31 @@ fn spawn_spectate_bots(world: &mut World, format: MatchFormat) {
     world.insert_resource(LatestSnapshot(sink));
 }
 
+/// Direct host mode's seats: the host in seat 0, the joiner in seat 1, and a
+/// local bot in every seat past those — a Commander pod deals four, and the
+/// match actor wants one occupant a seat (it asserted, and the host thread
+/// died as the joiner connected). Direct mode has no lobby handshake to
+/// learn the joiner's name, so seat 1 is "Opponent".
+pub(crate) fn host_lan_seats(
+    state: &mut GameState,
+    host_name: &str,
+    host: crabomination::server::SeatChannel,
+    joiner: crabomination::server::SeatChannel,
+) -> Vec<SeatOccupant> {
+    let n_seats = state.players.len();
+    for (i, p) in state.players.iter_mut().enumerate() {
+        p.name = match i {
+            0 => host_name.to_string(),
+            1 => "Opponent".to_string(),
+            _ => format!("Bot {}", i - 1),
+        };
+    }
+    [SeatOccupant::Human(host), SeatOccupant::Human(joiner)]
+        .into_iter()
+        .chain((2..n_seats).map(|_| SeatOccupant::Bot(local_bot(n_seats))))
+        .collect()
+}
+
 #[cfg(not(target_arch = "wasm32"))]
 fn spawn_host_lan(world: &mut World, port: u16, format: MatchFormat) -> std::io::Result<()> {
     let bind = format!("0.0.0.0:{port}");
@@ -2069,16 +2102,8 @@ fn spawn_host_lan(world: &mut World, port: u16, format: MatchFormat) -> std::io:
             }
         };
         let mut state = format.build_state();
-        // Direct host mode has no lobby handshake to learn the joiner's
-        // name, so seat 1 gets a generic label rather than "P1".
-        name_seats(&mut state, &host_name, "Opponent");
-        run_match(
-            state,
-            vec![
-                SeatOccupant::Human(server_seat0),
-                SeatOccupant::Human(server_seat1),
-            ],
-        );
+        let occupants = host_lan_seats(&mut state, &host_name, server_seat0, server_seat1);
+        run_match(state, occupants);
         eprintln!("host: match ended");
     });
 
@@ -2414,6 +2439,28 @@ mod tests {
         assert_eq!(state.players[0].command.len(), 2, "Krark + Rograkh");
         assert_eq!(state.players[1].name, "Bot 1: Sigarda (GW)");
         assert!(state.players.iter().all(|p| p.life == 40));
+    }
+
+    /// Hosting a LAN game seats one occupant per dealt seat: a Commander
+    /// pod's four seats are the host, the joiner and two bots (two humans
+    /// alone tripped the match actor's one-occupant-a-seat assert).
+    #[test]
+    fn a_hosted_lan_pod_fills_the_seats_past_two_with_bots() {
+        for format in [MatchFormat::Modern, MatchFormat::Commander] {
+            let mut state = format.build_state();
+            let (host, _h) = crabomination::server::seat_pair();
+            let (joiner, _j) = crabomination::server::seat_pair();
+            let seats = host_lan_seats(&mut state, "Ann", host, joiner);
+            assert_eq!(seats.len(), state.players.len(), "{format:?}");
+            assert!(matches!(seats[1], SeatOccupant::Human(_)));
+            assert!(seats[2..].iter().all(|o| matches!(o, SeatOccupant::Bot(_))));
+            assert_eq!((state.players[0].name.as_str(), state.players[1].name.as_str()), ("Ann", "Opponent"));
+        }
+        let mut pod = MatchFormat::Commander.build_state();
+        let (host, _h) = crabomination::server::seat_pair();
+        let (joiner, _j) = crabomination::server::seat_pair();
+        host_lan_seats(&mut pod, "Ann", host, joiner);
+        assert_eq!(pod.players[3].name, "Bot 2");
     }
 }
 

@@ -51,7 +51,15 @@ use super::{
 /// 256 iterations at 52.35 / 54.75 / 55.25 over the heuristic default).
 /// The forward pass is vectorized, so the leaf costs no measurable wall
 /// clock at this depth (~half a second a searched decision, single-threaded).
-fn default_bot() -> Box<dyn super::Bot> {
+///
+/// A pod (more than two seats) gets the heuristic default instead: the net's
+/// encoder is two-seat (`net_eval::net_for_state`), and the search over the
+/// material leaf has never been measured in a pod, where the scored bot is
+/// what every pod census and test plays.
+fn default_bot(seats: usize) -> Box<dyn super::Bot> {
+    if seats > 2 {
+        return Box::new(super::HeuristicBot::new());
+    }
     Box::new(MctsBot::new(MctsConfig {
         iterations: 256,
         horizon_turns: 3,
@@ -232,6 +240,30 @@ impl Lobby {
         use rand::RngExt;
         crate::demo::build_commander_pod_seeded(&seats, rand::rng().random())
     }
+}
+
+/// Each seat's in-game name: a human's display name, and "Bot N" for a
+/// bot — with its deck in a Commander pod ("Bot 1: Sigarda (GW)", the local
+/// pod's labels), where a bot seat always plays the stock field's deck for
+/// that seat (`Lobby::take_state`, `demo::build_commander_state`).
+fn seat_names(lobby: &Lobby) -> Vec<String> {
+    let stock = (lobby.format == LobbyFormat::Commander).then(|| crate::pod::pod_field(lobby.capacity()));
+    let mut bots = 0;
+    lobby
+        .seats
+        .iter()
+        .enumerate()
+        .map(|(i, s)| match s {
+            Slot::Human { name, .. } => name.clone(),
+            Slot::Bot => {
+                bots += 1;
+                match stock.as_ref().and_then(|d| d.get(i)) {
+                    Some(deck) => format!("Bot {bots}: {}", deck.name),
+                    None => format!("Bot {bots}"),
+                }
+            }
+        })
+        .collect()
 }
 
 /// A seat in a filled lobby, ready to become a match occupant.
@@ -542,7 +574,7 @@ impl LobbyManager {
                     Some(LobbyDeck { commanders: list.commanders, main: list.main, label })
                 }
                 Err(errs) => {
-                    error(&mut out, errs.into_iter().take(3).collect::<Vec<_>>().join("; "));
+                    error(&mut out, crate::format::error_summary(&errs, 3));
                     return out;
                 }
             }
@@ -631,16 +663,15 @@ impl LobbyManager {
                 Slot::Bot => SeatSpec::Bot,
             })
             .collect();
-        let seat_labels = lobby
-            .seats
-            .iter()
-            .map(|s| match s {
-                Slot::Human { name, .. } => name.clone(),
-                Slot::Bot => "Bot".to_string(),
-            })
-            .collect();
-        out.start =
-            Some(StartMatch { format: lobby.format, state: lobby.take_state(), seats, seat_labels });
+        let seat_labels = seat_names(&lobby);
+        let format = lobby.format;
+        let mut state = lobby.take_state();
+        // The dealt state names its seats "Player N" (`demo::deal_pod`); the
+        // HUD, the log and chat read these, so the lobby's names go in.
+        for (p, name) in state.players.iter_mut().zip(&seat_labels) {
+            p.name = name.clone();
+        }
+        out.start = Some(StartMatch { format, state, seats, seat_labels });
     }
 
     /// Remove `conn` from whatever lobby it's in. Notifies the remaining human
@@ -970,7 +1001,7 @@ fn apply<G: Send + 'static>(
                     humans += 1;
                 }
                 SeatSpec::Bot => {
-                    occupants.push(SeatOccupant::Bot(default_bot()));
+                    occupants.push(SeatOccupant::Bot(default_bot(start.seats.len())));
                     bots += 1;
                 }
             }
@@ -1231,6 +1262,27 @@ mod tests {
         }).unwrap();
         assert_eq!(info.host_name, "Alice", "host stays the creator");
         assert_eq!(info.member_names, vec!["Alice".to_string(), "Bob".to_string()]);
+    }
+
+    /// The started match carries the lobby's names: the HUD, log and chat
+    /// read `Player::name`, which kept the deal's "Player N" before.
+    #[test]
+    fn a_started_match_names_its_seats_from_the_lobby() {
+        let mut m = LobbyManager::new();
+        m.register(ConnId(1));
+        m.handle(ConnId(1), ClientMsg::JoinMatch { name: "Alice".into() });
+        m.handle(ConnId(1), ClientMsg::CreateLobby { name: "edh".into(), format: LobbyFormat::Commander });
+        let start = m.handle(ConnId(1), ClientMsg::StartLobby).start.expect("host start");
+        let names: Vec<&str> = start.state.players.iter().map(|p| p.name.as_str()).collect();
+        let stock = crate::pod::pod_field(4);
+        assert_eq!(names[0], "Alice");
+        assert_eq!(names[1], format!("Bot 1: {}", stock[1].name));
+        assert_eq!(names[3], format!("Bot 3: {}", stock[3].name));
+        // The dealt deck is the one the name claims.
+        let dealt: Vec<&str> = start.state.players[2].command.iter().map(|c| c.definition.name).collect();
+        let named: Vec<&str> = stock[2].commanders.iter().map(|f| f().name).collect();
+        assert_eq!(dealt, named);
+        assert_eq!(start.seat_labels, names);
     }
 
     #[test]

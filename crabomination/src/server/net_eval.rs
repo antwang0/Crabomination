@@ -93,10 +93,23 @@ pub fn slot_loaded(slot: u8) -> bool {
     net_for(slot).is_some()
 }
 
+/// The slot's net for `state`, or `None` when the slot is empty *or* the
+/// state has other than two seats. The encoder is two-seat (it reads the
+/// opponent as `1 - seat`), so a Commander pod has no encoding: seat 2 would
+/// underflow, and seat 1 would see seat 0 as its only opponent. Every caller
+/// already treats `None` as "use the heuristic", so a pod bot built on a net
+/// profile plays on the material leaf instead of crashing.
+fn net_for_state(state: &GameState, slot: u8) -> Option<Arc<dyn NetEvaluator>> {
+    if state.players.len() != 2 {
+        return None;
+    }
+    net_for(slot)
+}
+
 /// The net's win probability for `seat`, or `None` when the slot is empty
-/// (callers fall back to the heuristic).
+/// or the state is not a two-seat game (callers fall back to the heuristic).
 pub fn win_prob(state: &GameState, seat: usize, slot: u8) -> Option<f32> {
-    let net = net_for(slot)?;
+    let net = net_for_state(state, slot)?;
     let enc = {
         let _t = super::mcts::timing::lap(&super::mcts::timing::ENC_NS);
         encode_state(state, seat, vocab())
@@ -110,7 +123,7 @@ pub fn win_prob(state: &GameState, seat: usize, slot: u8) -> Option<f32> {
 /// its net carries no policy head; the search falls back to its heuristic
 /// priors either way.
 pub fn policy_logit(state: &GameState, seat: usize, slot: u8) -> Option<f32> {
-    let net = net_for(slot)?;
+    let net = net_for_state(state, slot)?;
     net.eval_policy(encode_state(state, seat, vocab()))
 }
 
@@ -125,7 +138,7 @@ pub fn slot_has_policy(slot: u8) -> bool {
 /// from the slot net's belief head — the weighted redeal's input. `None`
 /// when the slot is empty or its net carries no belief head.
 pub fn opp_hand_probs(state: &GameState, seat: usize, slot: u8) -> Option<Vec<f32>> {
-    let net = net_for(slot)?;
+    let net = net_for_state(state, slot)?;
     net.eval_opp_hand(encode_state(state, seat, vocab()))
 }
 

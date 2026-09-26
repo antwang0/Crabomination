@@ -422,11 +422,15 @@ pub fn poll_net(
                 // `Rope` follows if a clock is still running for us.
                 rope.deadline = None;
             }
-            ServerMsg::Events(evs) => events.0 = evs,
+            // Appended, not assigned: the server sends one `Update` per
+            // action and bots act back-to-back, so a frame can drain several
+            // (a pod's three bots, routinely). Assigning kept only the last
+            // batch, and the log, match stats and impact effects lost the rest.
+            ServerMsg::Events(evs) => events.0.extend(evs),
             // Combined per-action frame: apply the events (for animation)
             // and the post-action view together.
             ServerMsg::Update { events: evs, view: v } => {
-                events.0 = evs;
+                events.0.extend(evs);
                 view.0 = Some(*v);
                 got_game_msg = true;
                 rope.deadline = None;
@@ -1398,6 +1402,54 @@ pub fn cast_action_card_id(action: &GameAction) -> crabomination::card::CardId {
 mod tests {
     use super::*;
     use crabomination::card::CardId;
+
+    /// Every `Update` drained in one frame reaches the event buffer. Bots
+    /// act back-to-back and the server sends one `Update` per action, so a
+    /// pod frame routinely drains several; the buffer was assigned per
+    /// message, and the game log showed only the frame's last action.
+    #[test]
+    fn a_frame_keeps_the_events_of_every_update_it_drains() {
+        use bevy::ecs::system::RunSystemOnce;
+        use crabomination::net::GameEventWire;
+        let state = crabomination::demo::build_demo_state_seeded(7);
+        let (tx, rx) = mpsc::channel();
+        for turn in [3, 4] {
+            tx.send(ServerMsg::Update {
+                events: vec![GameEventWire::TurnStarted { player: 0, turn }],
+                view: Box::new(crabomination::server::view::project(&state, 0)),
+            })
+            .unwrap();
+        }
+        let mut world = World::new();
+        world.insert_resource(NetInbox(Mutex::new(rx)));
+        world.init_resource::<CurrentView>();
+        world.init_resource::<OurSeat>();
+        world.init_resource::<LatestServerEvents>();
+        world.init_resource::<MatchEnded>();
+        world.init_resource::<PendingManaCast>();
+        world.init_resource::<LobbyState>();
+        world.init_resource::<ResumeInfo>();
+        world.init_resource::<RopeClock>();
+        world.init_resource::<ChessClock>();
+        world.init_resource::<ChatInbox>();
+        world.init_resource::<Time>();
+        world.init_resource::<crate::game::BlockingState>();
+        world.init_resource::<crate::game::GameLog>();
+        world.run_system_once(poll_net).unwrap();
+        let turns: Vec<u32> = world
+            .resource::<LatestServerEvents>()
+            .0
+            .iter()
+            .filter_map(|e| match e {
+                GameEventWire::TurnStarted { turn, .. } => Some(*turn),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(turns, [3, 4], "both updates' events, in order");
+        // The next frame starts from an empty buffer.
+        world.run_system_once(poll_net).unwrap();
+        assert!(world.resource::<LatestServerEvents>().0.is_empty());
+    }
 
     #[test]
     fn actions_that_pay_mana_are_held_for_manual_tapping() {

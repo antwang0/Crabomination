@@ -612,6 +612,12 @@ fn run_match_inner(
                 human_seats += 1;
             }
             SeatOccupant::Bot(b) => {
+                // The bot's profile flags the engine reads off the seat; a
+                // client or lobby bot otherwise played without them (the
+                // caster-first player slots round 67 fixed for the ladder).
+                if let Some(p) = state.players.get_mut(i) {
+                    b.push_seat_flags(p);
+                }
                 seat_tx.push(None);
                 bots.push(Some(b));
             }

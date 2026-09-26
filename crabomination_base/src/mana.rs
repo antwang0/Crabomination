@@ -155,6 +155,18 @@ impl ColorSet {
     }
 }
 
+/// WUBRG letters ("UR", "WUBRG"), or "colorless" for the empty set — the
+/// form a player reads a colour identity in (the derived `Debug` prints the
+/// bit field, `ColorSet(10)`).
+impl fmt::Display for ColorSet {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.is_empty() {
+            return f.write_str("colorless");
+        }
+        self.iter().try_for_each(|c| write!(f, "{c}"))
+    }
+}
+
 impl FromIterator<Color> for ColorSet {
     fn from_iter<I: IntoIterator<Item = Color>>(iter: I) -> Self {
         let mut s = Self::empty();
