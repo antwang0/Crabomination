@@ -2398,6 +2398,15 @@ mod tests {
     #[test]
     fn cr_903_seeded_pod_outcomes_match_the_committed_table() {
         // (seed, winner, turns, actions)
+        // Re-blessed 2026-09-26 (CR 605.3b, auto-tap resolves a prompting
+        // seat's any-color source inline): a pod seat's Command Tower /
+        // Arcane Signet tapped for a generic pip used to add nothing and
+        // leave its color prompt pending. Seed 43 61→58 turns and 4242
+        // 49→62, both now won by seat 0; 0xC0FFEE unmoved. Aggregate, 2,000
+        // games a seat count at seed 9991, before/after: 19.67/19.51,
+        // 32.92/32.62, 45.96/45.62, 57.25/56.80, 68.47/67.89, 83.14/81.91,
+        // 98.68/97.39 turns, every block 2,000/2,000 decided. `--bench`
+        // byte-identical (197,136).
         // Re-blessed 2026-09-24 (CR 117.3c, a bot seat lets its own ability
         // from a source resolve before activating it again): seed 43
         // 2394→2395 actions, same winner and turns; the other two unmoved.
