@@ -3,8 +3,6 @@
 //! `tests/recent_b/cmdr_kamiz.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Commit // Memory** — Commit can't target a spell, only a nonland
-//!   permanent.
 //! - **Kamiz, Obscura Oculus** — the lesser-power attacker given double
 //!   strike is the engine's pick.
 //! - **Obscura Confluence** — its third mode returns a creature card from
@@ -157,11 +155,9 @@ pub fn change_of_plans() -> CardDefinition {
 }
 
 /// Commit // Memory — {3}{U} instant // {4}{U}{U} sorcery, aftermath.
-/// Commit puts a nonland permanent second from the top of its owner's
-/// library; Memory has each player shuffle hand and graveyard in and draw
-/// seven.
-///
-/// ⚠ Residual: Commit can't target a spell.
+/// Commit puts a spell or nonland permanent second from the top of its
+/// owner's library; Memory has each player shuffle hand and graveyard in and
+/// draw seven.
 pub fn commit_memory() -> CardDefinition {
     CardDefinition {
         split: Some(Box::new(SplitCard {
@@ -180,10 +176,18 @@ pub fn commit_memory() -> CardDefinition {
             "Commit // Memory",
             cost(&[generic(3), u()]),
             true,
-            Effect::Move {
-                what: target_filtered(R::Permanent.and(R::Nonland)),
-                to: ZoneDest::Library { who: PlayerRef::OwnerOfMoved, pos: LibraryPosition::FromTop(1) },
-            },
+            // "Target spell or nonland permanent": one mode per kind, as
+            // Sudden Setback does.
+            Effect::ChooseMode(vec![
+                Effect::MoveSpellToZone {
+                    what: target_filtered(R::IsSpellOnStack),
+                    zone: crate::effect::CounteredSpellZone::OwnerLibrarySecondFromTop,
+                },
+                Effect::Move {
+                    what: target_filtered(R::Permanent.and(R::Nonland)),
+                    to: ZoneDest::Library { who: PlayerRef::OwnerOfMoved, pos: LibraryPosition::FromTop(1) },
+                },
+            ]),
         )
     }
 }
