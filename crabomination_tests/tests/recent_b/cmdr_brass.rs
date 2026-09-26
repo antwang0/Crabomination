@@ -429,23 +429,27 @@ fn arm_mounted_anchor_equips_free_from_a_small_hand() {
 /// CR 508.1a — Port Razer can't attack a player it has already attacked this
 /// turn: its extra combat goes at another opponent (the trigger used to be
 /// once a turn instead, and the razer could swing at the same player again).
+/// Bloodthirster (The Ruinous Powers) prints the same restriction.
 #[test]
 fn port_razer_cant_attack_the_same_player_twice_in_a_turn() {
-    let mut g = main_phase(3);
-    let razer = g.add_card_to_battlefield(0, catalog::port_razer());
-    let life = g.players[1].life;
-    connect(&mut g, &[razer], 1);
-    assert_eq!(g.players[1].life, life - 4, "it connected");
-    g.attacking.clear();
-    g.battlefield_find_mut(razer).unwrap().tapped = false;
-    g.step = TurnStep::DeclareAttackers;
-    g.priority.player_with_priority = 0;
-    let at = |p: usize| GameAction::DeclareAttackers(vec![Attack { attacker: razer, target: AttackTarget::Player(p) }]);
-    assert!(g.perform_action(at(1)).is_err(), "already attacked seat 1 this turn");
-    g.perform_action(at(2)).expect("seat 2 is fair game");
-    // The record is this turn's: it clears as the next turn begins.
-    g.do_untap();
-    assert!(g.battlefield_find(razer).unwrap().combat_defenders.is_none());
+    for (def, power) in [(catalog::port_razer(), 4), (catalog::bloodthirster(), 6)] {
+        let name = def.name;
+        let mut g = main_phase(3);
+        let razer = g.add_card_to_battlefield(0, def);
+        let life = g.players[1].life;
+        connect(&mut g, &[razer], 1);
+        assert_eq!(g.players[1].life, life - power, "{name} connected");
+        g.attacking.clear();
+        g.battlefield_find_mut(razer).unwrap().tapped = false;
+        g.step = TurnStep::DeclareAttackers;
+        g.priority.player_with_priority = 0;
+        let at = |p: usize| GameAction::DeclareAttackers(vec![Attack { attacker: razer, target: AttackTarget::Player(p) }]);
+        assert!(g.perform_action(at(1)).is_err(), "{name} already attacked seat 1 this turn");
+        g.perform_action(at(2)).expect("seat 2 is fair game");
+        // The record is this turn's: it clears as the next turn begins.
+        g.do_untap();
+        assert!(g.battlefield_find(razer).unwrap().combat_defenders.is_none());
+    }
 }
 
 /// Siren Stormtamer counters a spell that targets you or a *creature* you

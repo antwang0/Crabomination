@@ -267,3 +267,34 @@ fn cr_122_1_venomcrawler_grows_on_deaths() {
     run(&mut g, Effect::Destroy { what: Selector::ExactObjects(vec![bear]) }, bear);
     assert_eq!(g.battlefield_find(crawler).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
 }
+
+/// CR 601.2c — Chaos Mutation's "target creatures controlled by different
+/// players": two of one player's creatures is an illegal cast; one each is
+/// exiled and each controller reveals a creature onto the battlefield.
+#[test]
+fn cr_601_2c_chaos_mutation_targets_creatures_of_different_players() {
+    let mut g = main_phase(3);
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let a2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    for seat in 1..3 {
+        g.add_card_to_library(seat, catalog::serra_angel());
+    }
+    let cast = |g: &mut GameState, targets: Vec<CardId>| {
+        let id = g.add_card_to_hand(0, catalog::chaos_mutation());
+        flood(g, 0);
+        g.priority.player_with_priority = 0;
+        let mut t = targets.into_iter().map(Target::Permanent);
+        let r = g.perform_action(GameAction::CastSpell {
+            card_id: id, target: t.next(), additional_targets: t.collect(), mode: None, x_value: None,
+        });
+        drain_stack(g);
+        r
+    };
+    assert!(cast(&mut g, vec![a, a2]).is_err(), "two creatures of one player");
+    cast(&mut g, vec![a, b]).expect("one creature of each opponent");
+    assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none());
+    assert!(g.battlefield_find(a2).is_some());
+    assert_eq!(named(&g, 1, "Serra Angel").len(), 1);
+    assert_eq!(named(&g, 2, "Serra Angel").len(), 1);
+}

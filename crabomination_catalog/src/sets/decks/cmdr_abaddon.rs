@@ -287,11 +287,11 @@ pub fn bloodcrusher_of_khorne() -> CardDefinition {
 }
 
 /// Bloodthirster — flying, trample; its combat damage to a player untaps it
-/// and adds a combat phase. Residual: it may attack a player it already
-/// attacked this turn.
+/// and adds a combat phase, and it can't attack a player it already attacked
+/// this turn (Port Razer's keyword), which ends the loop.
 pub fn bloodthirster() -> CardDefinition {
     CardDefinition {
-        keywords: vec![Keyword::Flying, Keyword::Trample],
+        keywords: vec![Keyword::Flying, Keyword::Trample, Keyword::CantAttackPlayerAttackedThisTurn],
         triggered_abilities: vec![on_combat_damage_to_player(Effect::Seq(vec![
             Effect::Untap { what: Selector::This, up_to: None },
             Effect::AdditionalCombatPhase { count: Value::ONE },
@@ -317,24 +317,27 @@ pub fn chaos_defiler() -> CardDefinition {
     }
 }
 
-/// Chaos Mutation — exile any number of target creatures; each controller
-/// reveals until a creature card and puts it onto the battlefield, the rest
-/// on the bottom. Residual: two targets may share a controller.
+/// Chaos Mutation — exile any number of target creatures controlled by
+/// different players (CR 601.2c, `ForEachPlayerTarget`); each controller
+/// reveals until a creature card and puts it onto the battlefield, the rest on
+/// the bottom.
 pub fn chaos_mutation() -> CardDefinition {
     spell(
         "Chaos Mutation",
         cost(&[generic(3), u(), r()]),
         CardType::Instant,
-        Effect::ApplyToTargets {
-            max_targets: 8,
-            min_targets: 0,
-            filter: R::Creature,
-            effect: Box::new(Effect::AsPlayer {
-                who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
-                body: Box::new(Effect::Seq(vec![
-                    Effect::Move { what: Selector::Target(0), to: ZoneDest::Exile },
-                    Effect::RevealUntilOneToBattlefieldRestBottom { filter: R::Creature, damage_controller: false },
-                ])),
+        Effect::ForEachPlayerTarget {
+            body: Box::new(Effect::ApplyToTargets {
+                max_targets: 8,
+                min_targets: 0,
+                filter: R::Creature,
+                effect: Box::new(Effect::AsPlayer {
+                    who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::Move { what: Selector::Target(0), to: ZoneDest::Exile },
+                        Effect::RevealUntilOneToBattlefieldRestBottom { filter: R::Creature, damage_controller: false },
+                    ])),
+                }),
             }),
         },
     )
