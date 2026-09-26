@@ -2485,6 +2485,9 @@ pub struct ActionCensus {
     /// The same actions keyed by *card* alone, for the question the per-seat
     /// line cannot answer: which cards a run never played at all.
     cards: HashMap<String, usize>,
+    /// Printed activated (`false`) and loyalty (`true`) abilities by card and
+    /// index: which abilities of a played card no seat ever activated.
+    abilities: HashMap<(String, bool, usize), usize>,
 }
 
 /// An action about to be taken, with the card it names peeled off so
@@ -2492,6 +2495,7 @@ pub struct ActionCensus {
 pub struct CensusKey {
     line: String,
     card: Option<String>,
+    ability: Option<(bool, usize)>,
 }
 
 impl ActionCensus {
@@ -2526,6 +2530,12 @@ impl ActionCensus {
         &self.cards
     }
 
+    /// How often each printed ability was activated, keyed by card name,
+    /// loyalty-ness and index. Read by key, as [`Self::card_counts`].
+    pub fn ability_counts(&self) -> &HashMap<(String, bool, usize), usize> {
+        &self.abilities
+    }
+
     /// Fold another game's census in, so a run can total across games.
     pub fn merge(&mut self, other: &Self) {
         for (k, n) in &other.counts {
@@ -2533,6 +2543,9 @@ impl ActionCensus {
         }
         for (k, n) in &other.cards {
             *self.cards.entry(k.clone()).or_insert(0) += n;
+        }
+        for (k, n) in &other.abilities {
+            *self.abilities.entry(k.clone()).or_insert(0) += n;
         }
     }
 
@@ -2551,16 +2564,27 @@ impl ActionCensus {
     ) -> Option<CensusKey> {
         self.on.then(|| {
             let (line, card) = Self::key(g, a);
-            CensusKey { line: format!("p{seat} {line}"), card }
+            use crate::game::GameAction as A;
+            let ability = match a {
+                A::ActivateAbility { ability_index, .. } | A::ActivateAbilityWaterbend { ability_index, .. } => {
+                    Some((false, *ability_index))
+                }
+                A::ActivateLoyaltyAbility { ability_index, .. } => Some((true, *ability_index)),
+                _ => None,
+            };
+            CensusKey { line: format!("p{seat} {line}"), card, ability }
         })
     }
 
     /// Count a key from [`Self::key_for`], once the action is known to have
     /// been accepted.
     pub fn bump(&mut self, key: Option<CensusKey>) {
-        if let Some(CensusKey { line, card }) = key {
+        if let Some(CensusKey { line, card, ability }) = key {
             *self.counts.entry(line).or_insert(0) += 1;
             if let Some(c) = card {
+                if let Some((loyalty, i)) = ability {
+                    *self.abilities.entry((c.clone(), loyalty, i)).or_insert(0) += 1;
+                }
                 *self.cards.entry(c).or_insert(0) += 1;
             }
         }

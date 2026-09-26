@@ -2651,5 +2651,29 @@ fn report_card_census(
         for (name, is_land) in &never {
             println!("      {} {name}", if *is_land { "land " } else { "spell" });
         }
+        // A played card's printed abilities no seat ever activated — a
+        // dead ability is a card the census above calls covered. Mana
+        // abilities are paid through auto-tap, not taken as actions.
+        let abilities = census.ability_counts();
+        let mut seen = std::collections::BTreeSet::new();
+        for f in d.commanders.iter().chain(d.main.iter()) {
+            let def = f();
+            if !seen.insert(def.name) || !counts.contains_key(def.name) {
+                continue;
+            }
+            let dead = |loyalty: bool, i: usize| !abilities.contains_key(&(def.name.to_string(), loyalty, i));
+            for (i, ab) in def.activated_abilities.iter().enumerate() {
+                if !crabomination::game::actions::is_mana_ability_public(&ab.effect) && dead(false, i) {
+                    let label = crabomination::server::view::ability_effect_label(&ab.effect);
+                    println!("      never activated: {} #{i} [{label}]", def.name);
+                }
+            }
+            for (i, ab) in def.loyalty_abilities.iter().enumerate() {
+                if dead(true, i) {
+                    let label = crabomination::server::view::ability_effect_label(&ab.effect);
+                    println!("      never activated: {} loyalty #{i} [{label}]", def.name);
+                }
+            }
+        }
     }
 }

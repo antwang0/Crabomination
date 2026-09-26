@@ -2843,7 +2843,8 @@ fn ability_effect_text(effect: &Effect) -> String {
     humanised_variant_name(effect)
 }
 
-pub(crate) fn ability_effect_label(effect: &Effect) -> &'static str {
+#[doc(hidden)]
+pub fn ability_effect_label(effect: &Effect) -> &'static str {
     match effect {
         Effect::AddMana { .. } => "Add mana",
         // Walk into structural combinators: pick the most representative
