@@ -12423,3 +12423,25 @@ fn cr_603_12_reflexive_that_player_is_the_damaged_seat() {
     let (g, _, lands, _) = run(catalog::grizzly_bears, Some(catalog::natures_will));
     assert!(g.battlefield_find(lands[0]).unwrap().tapped && !g.battlefield_find(lands[1]).unwrap().tapped, "Nature's Will");
 }
+
+/// CR 605.1a / 106.3 — a mana ability with an activation condition is a
+/// source the payment planner can tap once the condition holds: Whisperer of
+/// the Wilds' ferocious {G}{G} pays a {G}{G} spell alone.
+#[test]
+fn conditional_mana_ability_is_auto_tapped_when_its_condition_holds() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let w = g.add_card_to_battlefield(0, catalog::whisperer_of_the_wilds());
+    g.clear_sickness(w);
+    g.add_card_to_battlefield(0, catalog::craw_wurm());
+    let companion = g.add_card_to_hand(0, catalog::garruks_companion());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: companion,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("ferocious pays {G}{G}");
+}

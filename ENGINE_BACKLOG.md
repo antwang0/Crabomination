@@ -263,12 +263,14 @@ across nine precons.
   only attacks on its controller, but the planner aimed everything at one taxed seat and
   the tax trim dropped the forced attacker. `pod_attack::retarget_taxed_attacks` re-aims
   a taxed attacker at the cheapest legal defender first: 0 rejections in those 40 games.
-- 🔴 OPEN — **a mana ability with an activation `condition` is never auto-tapped.**
-  `mana_shape::is_countable_mana_ability` excludes any `condition`, so the payment
-  planner skips Whisperer of the Wilds' ferocious {G}{G} and Glistening Sphere's
-  corrupted three-of-one-color; both work when activated directly. The fix is a
-  state-aware check where the table is built (the condition reads the board), not
-  in the definition-only predicate.
+- ✅ (2026-09-26, `015BCEt5`) **a mana ability with an activation `condition` was
+  never auto-tapped**: the payment table claimed each colour for the first ability
+  that makes it, so Whisperer of the Wilds paid {G} with its plain ability and never
+  its ferocious {G}{G}, and a conditional ability first in the list was tapped with
+  its condition false. The table's live walk now claims a colour for a conditional
+  ability only while its condition holds, over a smaller unconditional one; a card
+  with one skips the definition-only memo. ⏳ The bot's affordability estimate
+  (`available_mana`) still counts only unconditional sources — conservative.
 - ✅ **"You may play that card" cast for FREE on 43 cards.** `ExileTopAndGrantMayPlay`
   and `GrantMayPlay` default `pay_own_cost` to a free cast, right only when the
   Oracle says "without paying its mana cost"; forty impulse cards (Abbot of Keral

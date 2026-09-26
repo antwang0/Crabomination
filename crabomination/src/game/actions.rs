@@ -1024,6 +1024,11 @@ mod mana_summary {
 /// is the row's `first_idx` and rank, and each colour is claimed by the
 /// first ability that makes it.
 fn mana_summary_of(def: &crate::card::CardDefinition) -> Option<u64> {
+    // A mana ability gated on the board ("activate only if", ferocious) is
+    // state, not definition: no memo, the table's live walk decides.
+    if def.activated_abilities.iter().any(|a| a.condition.is_some() && is_mana_ability(&a.effect)) {
+        return None;
+    }
     let mut first: Option<(usize, &crate::effect::ActivatedAbility)> = None;
     let mut colors = crate::mana::ColorSet::empty();
     let mut color_idx = [0usize; 5];
@@ -16404,11 +16409,28 @@ impl GameState {
             // claiming each colour once is the same table.
             let mut colors = crate::mana::ColorSet::empty();
             let mut color_idx = [0usize; 5];
+            // CR 605.1a — a conditional mana ability ("{T}: Add {G}{G}.
+            // Activate only if …", Whisperer of the Wilds) claims a colour
+            // only while its condition holds, and then over a smaller
+            // unconditional one: the first-claims-it rule tapped the {G}.
+            let mut claimed_amount = [0u32; 5];
             for (i, a) in abilities.iter() {
+                if let Some(cond) = &a.condition {
+                    let ctx = crate::game::effects::EffectContext::for_ability(c.id, player, None);
+                    if !self.evaluate_predicate(cond, &ctx) {
+                        continue;
+                    }
+                }
+                let amount = crate::game::mana_shape::mana_ability_output(&a.effect).0;
                 for col in effect_produced_colors(&a.effect).iter() {
+                    let k = color_index(col);
                     if !colors.contains(col) {
                         colors.insert(col);
-                        color_idx[color_index(col)] = *i;
+                        color_idx[k] = *i;
+                        claimed_amount[k] = amount;
+                    } else if a.condition.is_some() && amount > claimed_amount[k] {
+                        color_idx[k] = *i;
+                        claimed_amount[k] = amount;
                     }
                 }
             }
