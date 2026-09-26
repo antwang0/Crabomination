@@ -1886,7 +1886,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Hildibrand Manderville | Scions & Spellcraft (FIC) | dying doesn't let you cast it from the graveyard as an Adventure. |
 | 🟡 Into the Story | Scions & Spellcraft (FIC) | any graveyard with seven cards discounts it, yours included. |
 | 🟡 Urianger Augurelt | Scions & Spellcraft (FIC) | the card is exiled face up; a land played from exile gains no life; its spells get no {2} discount. |
-| 🟡 Arlinn, the Pack's Hope | From Cute to Brute (SLD) | the +1's flash and extra +1/+1 counter last this turn, not until your next turn. |
 | 🟡 Azor's Gateway | From Cute to Brute (SLD) | transforms off five cards exiled with it, not five different mana values; the exiled card is the engine's pick. |
 | 🟡 Chandra, Fire of Kaladesh | From Cute to Brute (SLD) | flips when an opponent has lost 3 or more life this turn, not after Chandra dealt 3 damage. |
 | 🟡 Cosima, God of the Voyage | From Cute to Brute (SLD) | the voyage ability isn't implemented. |

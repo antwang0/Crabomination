@@ -984,7 +984,7 @@ fn project_player(
             .map(|r| requirement_noun(r).to_string())
             .collect(),
         nonmana_abilities_locked: player.cant_activate_nonmana_abilities_this_turn,
-        creature_flash_this_turn: player.creature_spells_as_flash_this_turn,
+        creature_flash_this_turn: player.creature_spells_as_flash_this_turn || player.creature_flash_until_your_turn,
         graveyard_top_castable: player.cast_from_graveyard_top_this_turn,
         // Insist / Overmaster — "your next [kind] spell can't be countered".
         uncounterable_next: player

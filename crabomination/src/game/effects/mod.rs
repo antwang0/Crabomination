@@ -14679,6 +14679,21 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::CreaturesEnterWithExtraCounterUntilYourNextTurn { who } => {
+                if let Some(p) = self.resolve_player(who, ctx) {
+                    let pl = &mut self.players[p];
+                    pl.extra_etb_p1p1_until_your_turn = pl.extra_etb_p1p1_until_your_turn.saturating_add(1);
+                }
+                Ok(())
+            }
+
+            Effect::GrantCreatureSpellsFlashUntilYourNextTurn { who } => {
+                if let Some(seat) = self.resolve_player(who, ctx) {
+                    self.players[seat].creature_flash_until_your_turn = true;
+                }
+                Ok(())
+            }
+
             Effect::CreaturesEnterWithExtraCounterThisTurn { who } => {
                 if let Some(p) = self.resolve_player(who, ctx) {
                     self.players[p].extra_etb_p1p1_counters_this_turn =

@@ -3,8 +3,6 @@
 //! almost all double-faced. Tests in `tests/recent_b/cmdr_esika.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Arlinn, the Pack's Hope** — the +1's flash and extra +1/+1 counter
-//!   last this turn, not until your next turn.
 //! - **Azor's Gateway** — transforms off five cards exiled with it, not five
 //!   different mana values; the exiled card is the engine's pick.
 //! - **Chandra, Fire of Kaladesh** — flips when an opponent has lost 3 or
@@ -235,12 +233,10 @@ pub fn arlinn_kord() -> CardDefinition {
     }
 }
 
-/// Arlinn, the Pack's Hope // Arlinn, the Moon's Fury — daybound; −3: two
-/// Wolves. Night: +2: {R}{G}; 0: a 5/5 trampling, indestructible, hasty
-/// Werewolf.
-///
-/// ⚠ Residual: the +1's flash and extra counter last this turn, not until
-/// your next turn.
+/// Arlinn, the Pack's Hope // Arlinn, the Moon's Fury — daybound; +1: until
+/// your next turn, creature spells have flash and creatures enter with an
+/// extra +1/+1 counter; −3: two Wolves. Night: +2: {R}{G}; 0: a 5/5
+/// trampling, indestructible, hasty Werewolf.
 pub fn arlinn_the_packs_hope() -> CardDefinition {
     let fury = CardDefinition {
         keywords: vec![Keyword::Nightbound],
@@ -277,8 +273,8 @@ pub fn arlinn_the_packs_hope() -> CardDefinition {
                 loyalty(
                     1,
                     Effect::Seq(vec![
-                        Effect::GrantCreatureSpellsFlashThisTurn { who: PlayerRef::You },
-                        Effect::CreaturesEnterWithExtraCounterThisTurn { who: PlayerRef::You },
+                        Effect::GrantCreatureSpellsFlashUntilYourNextTurn { who: PlayerRef::You },
+                        Effect::CreaturesEnterWithExtraCounterUntilYourNextTurn { who: PlayerRef::You },
                     ]),
                 ),
                 loyalty(-3, make(PlayerRef::You, 2, wolf())),

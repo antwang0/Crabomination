@@ -4499,6 +4499,9 @@ impl GameState {
             // so each write below was its own `Arc::make_mut`.
             let me = &mut *self.players[p];
             me.extra_land_plays = 0;
+            // "Until your next turn" grants end as it begins (CR 611.2b).
+            me.extra_etb_p1p1_until_your_turn = 0;
+            me.creature_flash_until_your_turn = false;
             // CR 702.179 — "speed increases once on each of your turns": clear the
             // active player's per-turn speed-bump flag as their turn begins.
             me.speed_increased_this_turn = false;

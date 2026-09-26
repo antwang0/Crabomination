@@ -892,6 +892,14 @@ pub struct PlayerData {
     /// amplifies counters *placed*, Hardened-Scales style).
     #[serde(default)]
     pub extra_etb_p1p1_counters_this_turn: u32,
+    /// The same grant "until your next turn" (Arlinn, the Pack's Hope's +1);
+    /// cleared as this player's next turn begins.
+    #[serde(default)]
+    pub extra_etb_p1p1_until_your_turn: u32,
+    /// "Until your next turn, you may cast creature spells as though they
+    /// had flash" (Arlinn); cleared as this player's next turn begins.
+    #[serde(default)]
+    pub creature_flash_until_your_turn: bool,
     /// Cards this player discarded this turn (Hollow One's cost reduction).
     /// Bumped in `discard_card`; reset in `do_untap`.
     #[serde(default)]
@@ -1529,6 +1537,8 @@ impl Player {
             instants_sorceries_cast_from_graveyard_this_turn: 0,
             extra_plus_one_counters_this_turn: 0,
             extra_etb_p1p1_counters_this_turn: 0,
+            extra_etb_p1p1_until_your_turn: 0,
+            creature_flash_until_your_turn: false,
             pending_is_discounts: Default::default(),
             pending_spell_discounts: Default::default(),
             pending_affinity_next_spell: Default::default(),

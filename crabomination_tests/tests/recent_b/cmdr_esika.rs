@@ -362,3 +362,29 @@ fn gideon_battle_forged_zero_prevents_damage_to_him() {
     let c = g.battlefield_find(gideon).expect("still here");
     assert_eq!(c.counter_count(CounterType::Loyalty), 3, "no damage got through");
 }
+
+/// Arlinn, the Pack's Hope's +1 lasts until your next turn: a creature cast
+/// on the opponent's turn has flash and enters with the extra counter.
+#[test]
+fn arlinn_packs_hope_plus_one_lasts_until_your_next_turn() {
+    let mut g = main_phase();
+    library(&mut g, 0, 3);
+    library(&mut g, 1, 3);
+    let arlinn = g.add_card_to_battlefield(0, catalog::arlinn_the_packs_hope());
+    loyalty(&mut g, arlinn, 0, None);
+    for _ in 0..40 {
+        if g.active_player_idx == 1 && g.step == TurnStep::PreCombatMain {
+            break;
+        }
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.active_player_idx, 1);
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    flood(&mut g);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("flash on the opponent's turn");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}

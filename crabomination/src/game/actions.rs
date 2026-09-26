@@ -15250,7 +15250,8 @@ impl GameState {
             || (statics & cast_static::FLASH != 0 && self.battlefield_grants_flash(p, card))
             || self.flash_surcharge_for(p, card).is_some()
             || self.flash_additional_cost_for(p, card).is_some()
-            || (self.players[p].creature_spells_as_flash_this_turn
+            || ((self.players[p].creature_spells_as_flash_this_turn
+                || self.players[p].creature_flash_until_your_turn)
                 && card.definition.is_creature())
             || self.players[p].next_spell_flash_this_turn
             || self.players[p]

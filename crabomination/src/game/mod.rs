@@ -7572,7 +7572,8 @@ impl GameState {
         {
             let mut specs = vec![];
             if ec.definition.is_creature() {
-                let extra = self.players[controller].extra_etb_p1p1_counters_this_turn;
+                let extra = self.players[controller].extra_etb_p1p1_counters_this_turn
+                + self.players[controller].extra_etb_p1p1_until_your_turn;
                 if extra > 0 {
                     specs.push((crate::card::CounterType::PlusOnePlusOne, extra));
                 }
@@ -7717,7 +7718,8 @@ impl GameState {
         }
         // Combine Guildmage — a turn-scoped "each creature you control enters
         // with an additional +1/+1 counter" grant on the controller.
-        let extra = self.players[controller].extra_etb_p1p1_counters_this_turn;
+        let extra = self.players[controller].extra_etb_p1p1_counters_this_turn
+                + self.players[controller].extra_etb_p1p1_until_your_turn;
         if extra > 0 {
             specs.push((crate::card::CounterType::PlusOnePlusOne, extra));
         }

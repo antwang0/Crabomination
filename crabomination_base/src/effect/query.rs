@@ -1086,6 +1086,7 @@ impl Effect {
             Effect::TaxAttackersUntilYourNextTurn { .. } => false,
             // Player-scoped ETB-counter grant; no cast-time target.
             Effect::CreaturesEnterWithExtraCounterThisTurn { .. } => false,
+            Effect::CreaturesEnterWithExtraCounterUntilYourNextTurn { .. } => false,
             // Random graveyard pick at resolution — no cast-time target.
             Effect::ExileRandomGraveyardCopyTapped { .. } => false,
             // Registers a floating trigger; no cast-time target.
@@ -1240,7 +1241,8 @@ impl Effect {
             | Effect::PlayerCantCastMatchingThisTurn { who, .. }
             | Effect::PlayerCantActivateNonManaAbilitiesThisTurn { who }
             | Effect::ChooseFromHandToTopOfLibrary { who, .. }
-            | Effect::GrantCreatureSpellsFlashThisTurn { who } => player_has_target(who),
+            | Effect::GrantCreatureSpellsFlashThisTurn { who }
+            | Effect::GrantCreatureSpellsFlashUntilYourNextTurn { who } => player_has_target(who),
             Effect::CastFromGraveyardTopThisTurn
             | Effect::Doomsday
             | Effect::EachPlayerSacrificesGreatestManaValueUnlessPays

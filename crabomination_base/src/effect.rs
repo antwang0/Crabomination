@@ -7194,6 +7194,9 @@ pub enum Effect {
     /// (stacking across activations); cleared at cleanup. Distinct from
     /// `GrantExtraPlusOneCountersThisTurn`, which amplifies counters *placed*.
     CreaturesEnterWithExtraCounterThisTurn { who: PlayerRef },
+    /// As `CreaturesEnterWithExtraCounterThisTurn`, "until your next turn"
+    /// (Arlinn, the Pack's Hope).
+    CreaturesEnterWithExtraCounterUntilYourNextTurn { who: PlayerRef },
     /// CR 509.1h — "target unblocked attacking creature becomes blocked."
     /// Marks the attacker blocked with no blockers assigned, so (absent
     /// trample) it deals no combat damage. Curtain of Light.
@@ -7476,6 +7479,8 @@ pub enum Effect {
     /// "You may cast creature spells this turn as though they had flash"
     /// (Winding Canyons). Sets `Player.creature_spells_as_flash_this_turn`.
     GrantCreatureSpellsFlashThisTurn { who: PlayerRef },
+    /// As `GrantCreatureSpellsFlashThisTurn`, "until your next turn" (Arlinn).
+    GrantCreatureSpellsFlashUntilYourNextTurn { who: PlayerRef },
     /// "You may cast spells this turn as though they had flash"
     /// (Alchemist's Refuge). Sets `Player.spells_as_flash_this_turn`,
     /// cleared at the turn boundary.
