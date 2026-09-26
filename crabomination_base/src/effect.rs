@@ -9464,6 +9464,11 @@ pub enum Effect {
     /// fewest creatures (the gift goes where it helps least), turn order
     /// breaking ties. Sylvan Offering.
     ChooseOpponentThen { then: Box<Effect> },
+    /// "You may cast it from your graveyard as an Adventure until the end of
+    /// your next turn" — the source card, now in its owner's graveyard, on a
+    /// dies trigger (Hildibrand Manderville). Only the owner's own graveyard
+    /// is "your graveyard".
+    GrantAdventureFromGraveyard,
     /// "That player [does body]" — run `body` with `who` as its controller,
     /// so `You` / a controller-side choice reads that player (Skullwinder's
     /// "that player returns a card from their graveyard to their hand").

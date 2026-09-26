@@ -30806,6 +30806,13 @@ impl GameState {
 
             Effect::ChooseOpponentThen { then } => self.choose_opponent_then(then, effect, ctx, events),
 
+            Effect::GrantAdventureFromGraveyard => {
+                if let Some(src) = ctx.source {
+                    self.grant_adventure_from_graveyard(ctx.controller, src);
+                }
+                Ok(())
+            }
+
             Effect::PayLifeLookTake { who } => {
                 use crate::decision::{Decision, DecisionAnswer};
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };

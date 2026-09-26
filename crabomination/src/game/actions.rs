@@ -7903,6 +7903,26 @@ impl GameState {
         x_value: Option<u32>,
     ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
+        // Hildibrand Manderville — an Adventure cast from the graveyard under
+        // a grant: hop the card into hand for this same pipeline, restore it
+        // on failure, spend the grant on success.
+        if !self.players[p].hand.iter().any(|c| c.id == card_id) && self.adventure_grant_live(p, card_id) {
+            let card = Self::take_card(&mut self.players[p].graveyard, card_id)
+                .ok_or(GameError::CardNotInHand(card_id))?;
+            self.players[p].hand.push(card);
+            self.casting_hop = Some((card_id, crate::game::HopFrom::Graveyard));
+            let r = self.cast_adventure(card_id, target, additional_targets, mode, x_value);
+            self.casting_hop = None;
+            match &r {
+                Err(_) => {
+                    if let Some(card) = Self::take_card(&mut self.players[p].hand, card_id) {
+                        self.players[p].send_to_graveyard(card);
+                    }
+                }
+                Ok(_) => self.players[p].adventure_graveyard_grants.retain(|&(c, _)| c != card_id),
+            }
+            return r;
+        }
         let adv = self
             .players[p]
             .hand

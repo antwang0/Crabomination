@@ -126,6 +126,8 @@ pub mod as_enters;
 pub mod combat;
 // CR 508.1d — "attack [this] if able" during a player's next turn.
 mod attack_lure;
+
+mod adventure_grant;
 mod goad;
 mod ascend;
 // CR 106.7 — "could produce" mana.

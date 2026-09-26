@@ -816,7 +816,7 @@ impl Effect {
             | Effect::ForetellFromHand { .. }
             | Effect::EachPlayerCreatesTokenPerControlled { .. }
             | Effect::SourceEntersTapped
-            | Effect::AbandonThisScheme | Effect::GameIsADraw
+            | Effect::AbandonThisScheme | Effect::GameIsADraw | Effect::GrantAdventureFromGraveyard
             | Effect::RemoveTimeCounterFromSuspendedSource
             | Effect::PhaseInHeldBySource
             | Effect::AcquireAbilitiesOfExiledWithSource

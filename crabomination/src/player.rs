@@ -310,6 +310,12 @@ pub struct PlayerCold {
     /// by `GameState::creature_lure_of`, cleared with `attack_lure`.
     #[serde(default)]
     pub creature_attack_lures: Vec<(crate::card::CardId, crate::card::CardId, u32)>,
+    /// "You may cast it from your graveyard as an Adventure until the end of
+    /// your next turn" (Hildibrand Manderville): each card and the turn the
+    /// grant was made on. Read by `GameState::adventure_grant_live`, lapsed
+    /// at the end of this player's first turn after it.
+    #[serde(default)]
+    pub adventure_graveyard_grants: Vec<(crate::card::CardId, u32)>,
     /// "Can't cast spells until your next turn" (Innocuous Researcher):
     /// re-arms `silenced_this_turn` at every turn boundary until this
     /// player's own untap clears it.
