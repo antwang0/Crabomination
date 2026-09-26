@@ -69,7 +69,7 @@ fn cast_with_treasure() -> Predicate {
 }
 
 fn cascade_for_trigger_source() -> Effect {
-    Effect::Cascade { max_mv: Value::ManaValueOf(Box::new(Selector::TriggerSource)) }
+    Effect::Cascade { max_mv: Value::ManaValueOf(Box::new(Selector::TriggerSource)), filter: None }
 }
 
 /// Bello, Bard of the Brambles — on your turn, your non-Equipment artifacts

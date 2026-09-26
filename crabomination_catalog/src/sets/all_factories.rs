@@ -4486,6 +4486,7 @@ static DECKS: &[Factory] = &[
     super::decks::tiamat,
     super::decks::sauron_the_dark_lord,
     super::decks::high_perfect_morcant,
+    super::decks::jodah_the_unifier,
     super::decks::kresh_the_bloodbraided,
     super::decks::mezzio_mugger,
     super::decks::next_of_kin,

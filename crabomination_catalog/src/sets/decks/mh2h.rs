@@ -329,6 +329,7 @@ pub fn bloodbraid_marauder() -> CardDefinition {
             ),
             effect: Effect::Cascade {
                 max_mv: Value::Const(2),
+                filter: None,
             },
         }],
         ..Default::default()

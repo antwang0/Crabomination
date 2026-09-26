@@ -77,7 +77,7 @@ pub fn yidris_maelstrom_wielder() -> CardDefinition {
                         what: Selector::TriggerSource,
                         filter: R::Not(Box::new(R::SpellNotCastFromHand)),
                     },
-                    then: Box::new(Effect::Cascade { max_mv: Value::ManaValueOf(Box::new(Selector::TriggerSource)) }),
+                    then: Box::new(Effect::Cascade { max_mv: Value::ManaValueOf(Box::new(Selector::TriggerSource)), filter: None }),
                     else_: Box::new(Effect::Noop),
                 }),
             },

@@ -42,7 +42,7 @@ fn artifact(name: &'static str, mana: ManaCost) -> CardDefinition {
 /// Zhulodok, Void Gorger — colorless spells of mana value 7 or more cast from
 /// your hand cascade twice.
 pub fn zhulodok_void_gorger() -> CardDefinition {
-    let cascade = || Effect::Cascade { max_mv: Value::ManaValueOf(Box::new(Selector::TriggerSource)) };
+    let cascade = || Effect::Cascade { max_mv: Value::ManaValueOf(Box::new(Selector::TriggerSource)), filter: None };
     CardDefinition {
         supertypes: vec![Supertype::Legendary],
         triggered_abilities: vec![TriggeredAbility {

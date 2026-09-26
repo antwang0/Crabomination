@@ -148,7 +148,7 @@ fn may_planeswalk() -> Effect {
 }
 
 fn cascade_next_spell() -> Effect {
-    Effect::OnYourNextSpellCastThisTurn { body: Box::new(Effect::Cascade { max_mv: Value::TriggerEventAmount }) }
+    Effect::OnYourNextSpellCastThisTurn { body: Box::new(Effect::Cascade { max_mv: Value::TriggerEventAmount, filter: None }) }
 }
 
 fn doctors() -> R {

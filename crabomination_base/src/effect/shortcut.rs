@@ -830,6 +830,7 @@ pub fn cascade(mv: u32) -> TriggeredAbility {
         event: EventSpec::new(EventKind::SpellCast, EventScope::SelfSource),
         effect: Effect::Cascade {
             max_mv: Value::Const(mv as i32),
+            filter: None,
         },
     }
 }

@@ -925,6 +925,7 @@ pub fn creative_technique() -> CardDefinition {
             },
             Effect::Cascade {
                 max_mv: Value::Const(99),
+                filter: None,
             },
         ]),
         triggered_abilities: vec![crate::effect::shortcut::demonstrate()],

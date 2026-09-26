@@ -348,7 +348,7 @@ pub fn smoldering_stagecoach() -> CardDefinition {
         card_type: t,
         // The next-cast dispatch carries the cast spell's mana value as the
         // event amount (CR 702.85a — "less than this spell's mana value").
-        body: Box::new(Effect::Cascade { max_mv: Value::TriggerEventAmount }),
+        body: Box::new(Effect::Cascade { max_mv: Value::TriggerEventAmount, filter: None }),
     };
     CardDefinition {
         name: "Smoldering Stagecoach",

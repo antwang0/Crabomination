@@ -95,7 +95,7 @@ fn on_instant_or_sorcery_cast(effect: Effect) -> TriggeredAbility {
 fn next_spell_cascades(filter: R) -> Effect {
     Effect::OnYourNextSpellMatchingThisTurn {
         filter,
-        body: Box::new(Effect::Cascade { max_mv: Value::ManaValueOf(Box::new(Selector::TriggerSource)) }),
+        body: Box::new(Effect::Cascade { max_mv: Value::ManaValueOf(Box::new(Selector::TriggerSource)), filter: None }),
     }
 }
 
@@ -147,7 +147,7 @@ pub fn abaddon_the_despoiler() -> CardDefinition {
                     Value::TotalLifeLostThisTurn(PlayerRef::EachOpponent),
                 ),
             ])),
-            effect: Effect::Cascade { max_mv: Value::ManaValueOf(Box::new(Selector::TriggerSource)) },
+            effect: Effect::Cascade { max_mv: Value::ManaValueOf(Box::new(Selector::TriggerSource)), filter: None },
         }],
         ..legend(
             "Abaddon the Despoiler",
@@ -572,7 +572,7 @@ pub fn let_the_galaxy_burn() -> CardDefinition {
         keywords: vec![Keyword::Cascade],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::SelfSource),
-            effect: Effect::Cascade { max_mv: Value::ManaValueOf(Box::new(Selector::TriggerSource)) },
+            effect: Effect::Cascade { max_mv: Value::ManaValueOf(Box::new(Selector::TriggerSource)), filter: None },
         }],
         ..spell(
             "Let the Galaxy Burn",

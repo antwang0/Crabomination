@@ -1126,7 +1126,7 @@ pub fn tibalts_trickery() -> CardDefinition {
                         ignore_lowest: 0,
                         on_doubles: None,
                     },
-                    Effect::Cascade { max_mv: Value::Const(1000) },
+                    Effect::Cascade { max_mv: Value::Const(1000), filter: None },
                 ])),
             },
         ]),

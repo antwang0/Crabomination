@@ -2572,7 +2572,7 @@ pub fn witherbloom_the_balancer() -> CardDefinition {
 /// spells you cast from your hand have cascade" grant is now wired too, as
 /// a second SpellCast/YourControl trigger gated on
 /// `Predicate::CastFromHand` + an instant/sorcery filter, whose body is
-/// `Effect::Cascade { max_mv: ManaValueOf(TriggerSource) }` — cascading at
+/// `Effect::Cascade { max_mv: ManaValueOf(TriggerSource), filter: None }` — cascading at
 /// the cast spell's own mana value. The `CastFromHand` gate keeps the grant
 /// from re-triggering on the spells it cascades into (those are cast from
 /// exile, not hand).
@@ -2601,6 +2601,7 @@ pub fn quandrix_the_proof() -> CardDefinition {
                 event: EventSpec::new(EventKind::SpellCast, EventScope::SelfSource),
                 effect: Effect::Cascade {
                     max_mv: Value::ManaValueOf(Box::new(Selector::This)),
+                    filter: None,
                 },
             },
             // "Instant and sorcery spells you cast from your hand have cascade."
@@ -2617,6 +2618,7 @@ pub fn quandrix_the_proof() -> CardDefinition {
                 ),
                 effect: Effect::Cascade {
                     max_mv: Value::ManaValueOf(Box::new(Selector::TriggerSource)),
+                    filter: None,
                 },
             },
         ],

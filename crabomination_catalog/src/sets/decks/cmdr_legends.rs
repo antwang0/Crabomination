@@ -1,8 +1,9 @@
 //! Most-built commanders missing from the catalog (COMMANDER_BACKLOG §1):
 //! Aragorn, the Uniter; Zur the Enchanter; Flubs, the Fool; Galadriel,
 //! Light of Valinor; Arcades, the Strategist; Tiamat; Sauron, the Dark Lord;
-//! High Perfect Morcant. Each is built from primitives other cards already
-//! exercise.
+//! High Perfect Morcant; Jodah, the Unifier. Each is built from primitives
+//! other cards already exercise (Jodah adds a filter to cascade's walk and
+//! `Predicate::CastSpellFromHand`).
 //!
 //! - **Galadriel** — alliance's "one that hasn't been chosen this turn" is
 //!   `Effect::ChooseUnchosenModeThisTurn` (Teval's Judgment).
@@ -317,6 +318,42 @@ pub fn high_perfect_morcant() -> CardDefinition {
             vec![CreatureType::Elf, CreatureType::Noble],
             4,
             4,
+        )
+    }
+}
+
+/// Jodah, the Unifier — {W}{U}{B}{R}{G} 5/5. Legendary creatures you control
+/// get +X/+X, X = the number of legendary creatures you control. Whenever
+/// you cast a legendary spell from your hand, exile from the top until a
+/// legendary nonland card with lesser mana value; you may cast it free; the
+/// rest go to the bottom (cascade's walk, CR 702.85a, narrowed to
+/// legendaries).
+pub fn jodah_the_unifier() -> CardDefinition {
+    let my_legends = || Selector::EachPermanent(
+        R::Creature.and(R::HasSupertype(Supertype::Legendary)).and(R::ControlledByYou),
+    );
+    let x = || Value::CountOf(Box::new(my_legends()));
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Legendary creatures you control get +X/+X, where X is the number of legendary creatures you control.",
+            effect: StaticEffect::PumpPTByValue { applies_to: my_legends(), power: x(), toughness: x() },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(Predicate::All(vec![
+                Predicate::CastSpellMatches(R::HasSupertype(Supertype::Legendary)),
+                Predicate::CastSpellFromHand,
+            ])),
+            effect: Effect::Cascade {
+                max_mv: Value::ManaValueOf(Box::new(Selector::TriggerSource)),
+                filter: Some(R::HasSupertype(Supertype::Legendary)),
+            },
+        }],
+        ..legend(
+            "Jodah, the Unifier",
+            cost(&[w(), u(), b(), r(), g()]),
+            vec![CreatureType::Human, CreatureType::Wizard],
+            5,
+            5,
         )
     }
 }

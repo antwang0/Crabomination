@@ -191,3 +191,24 @@ fn morcant_makes_each_opponent_blight() {
         assert_eq!(g.battlefield_find(b).unwrap().counter_count(CounterType::MinusOneMinusOne), 1);
     }
 }
+
+/// Jodah: a legendary spell cast from hand exiles past a nonlegendary
+/// card to a legendary one of lesser mana value and casts it free (CR
+/// 702.85a's walk, narrowed); legendary creatures get +X/+X.
+#[test]
+fn jodah_cascades_into_a_lesser_legend() {
+    let mut g = pod(4);
+    let jodah = g.add_card_to_battlefield(0, catalog::jodah_the_unifier());
+    // Library top → bottom (`add_card_to_library` appends to the bottom):
+    // a nonlegendary Bears the walk skips, then Lotho (legendary, MV 2).
+    g.players[0].library.clear();
+    let bears = g.add_card_to_library(0, catalog::grizzly_bears());
+    let lotho = g.add_card_to_library(0, catalog::lotho_corrupt_shirriff());
+    let zur = g.add_card_to_hand(0, catalog::zur_the_enchanter()); // legendary, MV 4
+    cast(&mut g, 0, zur, None);
+    assert!(g.battlefield.iter().any(|c| c.id == lotho), "Lotho cast free off the walk");
+    assert!(!g.battlefield.iter().any(|c| c.id == bears), "the Bears went to the bottom");
+    // Jodah, Zur and Lotho: three legends, each +3/+3.
+    let jp = g.computed_permanent(jodah).unwrap();
+    assert_eq!((jp.power, jp.toughness), (8, 8));
+}

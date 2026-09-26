@@ -37823,7 +37823,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::Cascade { max_mv } => {
+            Effect::Cascade { max_mv, filter } => {
                 // CR 702.85: exile cards from the top of the controller's
                 // library until a nonland card with MV < max_mv is exiled;
                 // the controller may cast it for free; the rest go to the
@@ -37840,9 +37840,10 @@ impl GameState {
                     let cid = top.id;
                     let is_land = top.definition.card_types.contains(&CardType::Land);
                     let mv = top.definition.cost.cmc();
+                    let fits = filter.as_ref().is_none_or(|f| self.evaluate_requirement_on_card(f, top, p));
                     self.move_card_to(cid, &ZoneDest::Exile, ctx, events);
                     exiled.push(cid);
-                    if !is_land && mv < cap {
+                    if !is_land && mv < cap && fits {
                         hit = Some(cid);
                         break;
                     }

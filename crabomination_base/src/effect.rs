@@ -2319,6 +2319,11 @@ pub enum Predicate {
     /// exile — reads the `StackItem::Spell.card.cast_from_exile` flag.
     /// Nassari, Dean of Expression's "whenever you cast a spell from exile".
     CastSpellFromExile,
+    /// True if the just-cast spell (via `ctx.trigger_source`) was cast from
+    /// its caster's hand — reads the `StackItem::Spell.card.cast_from_hand`
+    /// flag. Jodah, the Unifier's "whenever you cast a legendary spell from
+    /// your hand". (`CastFromHand` is the resolving spell's own flag.)
+    CastSpellFromHand,
     /// `CastSpellFromExile`, and it is the caster's first spell cast from
     /// exile this turn (`Player.spells_cast_from_exile_this_turn == 1`) —
     /// Wild-Magic Sorcerer.
@@ -9147,7 +9152,14 @@ pub enum Effect {
     /// `Value::Const(printed_mv)` (cascade's MV gate is the printed cost,
     /// unaffected by cost reduction per CR 702.85b). The shortcut
     /// [`cascade`] wires the standard SpellCast/SelfSource trigger.
-    Cascade { max_mv: Value },
+    ///
+    /// `filter` narrows what stops the walk: Jodah, the Unifier's
+    /// "until you exile a legendary nonland card with lesser mana value".
+    Cascade {
+        max_mv: Value,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        filter: Option<SelectionRequirement>,
+    },
     /// CR 702.20 — Ripple N. The source spell's cast trigger: reveal the top N
     /// cards of your library; you may cast any with the same name as the source
     /// for free; put the rest on the bottom. Cast-from-library recursion (a

@@ -539,6 +539,7 @@ pub fn wild_magic_sorcerer() -> CardDefinition {
                 .with_filter(Predicate::FirstSpellCastFromExileThisTurn),
             effect: Effect::Cascade {
                 max_mv: Value::ManaValueOf(Box::new(Selector::TriggerSource)),
+                filter: None,
             },
         }],
         ..creature(

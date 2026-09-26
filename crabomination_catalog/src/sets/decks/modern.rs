@@ -26901,6 +26901,7 @@ pub fn maelstrom_nexus() -> CardDefinition {
             // until a nonland card with lesser MV).
             effect: Effect::Cascade {
                 max_mv: Value::ManaValueOf(Box::new(Selector::TriggerSource)),
+                filter: None,
             },
         }],
         ..Default::default()

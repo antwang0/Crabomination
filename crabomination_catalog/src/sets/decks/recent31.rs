@@ -720,6 +720,7 @@ pub fn the_first_sliver() -> CardDefinition {
                 ),
                 effect: Effect::Cascade {
                     max_mv: Value::ManaValueOf(Box::new(Selector::TriggerSource)),
+                    filter: None,
                 },
             },
         ],

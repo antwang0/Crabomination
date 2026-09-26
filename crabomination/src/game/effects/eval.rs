@@ -3290,6 +3290,15 @@ impl GameState {
                     _ => false,
                 })
             }
+            Predicate::CastSpellFromHand => {
+                let Some(EntityRef::Card(cid)) = ctx.trigger_source else {
+                    return false;
+                };
+                self.stack.iter().any(|si| match si {
+                    StackItem::Spell { card, .. } if card.id == cid => card.cast_from_hand,
+                    _ => false,
+                })
+            }
             Predicate::TwoShareAllCardTypes(what) => {
                 let sets: Vec<Vec<crate::card::CardType>> = self
                     .resolve_selector(what, ctx)
