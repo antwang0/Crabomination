@@ -277,9 +277,9 @@ pub fn sky_hussar() -> CardDefinition {
 }
 
 /// Stalking Vengeance — {5}{R}{R} 5/5 Avatar with haste. Whenever another
-/// creature you control dies, it deals damage equal to its power to any target.
-/// (Modeled as each opponent — faithful in 1v1; the dead creature's power
-/// carries via its die snapshot, CR 603.10.)
+/// creature you control dies, it deals damage equal to its power to target
+/// player (the dead creature's power via its die snapshot, CR 603.10).
+/// Residual: a planeswalker can't be the target.
 pub fn stalking_vengeance() -> CardDefinition {
     use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
     CardDefinition {

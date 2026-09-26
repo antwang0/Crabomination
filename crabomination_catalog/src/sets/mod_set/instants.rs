@@ -454,9 +454,7 @@ pub fn daze() -> CardDefinition {
 ///
 /// Token target is the **countered spell's controller** via
 /// `PlayerRef::ControllerOf(Target(0))` — `stack_caster_for_card`
-/// resolves a stack-resident spell back to its caster. Pre-fix this
-/// was approximated as `EachOpponent` of the Swan Song caster
-/// (equivalent in 2-player play but wrong in multiplayer).
+/// resolves a stack-resident spell back to its caster.
 pub fn swan_song() -> CardDefinition {
     CardDefinition {
         name: "Swan Song",

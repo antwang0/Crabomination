@@ -105,8 +105,8 @@ pub fn crusader_of_odric() -> CardDefinition {
     }
 }
 
-/// Angel of Finality — {3}{W} Angel 3/4 with flying. ETB: exile a graveyard.
-/// (Printed "target player's graveyard" is modeled as each opponent's, 1v1.)
+/// Angel of Finality — {3}{W} Angel 3/4 with flying. ETB: exile target
+/// player's graveyard.
 pub fn angel_of_finality() -> CardDefinition {
     CardDefinition {
         name: "Angel of Finality",

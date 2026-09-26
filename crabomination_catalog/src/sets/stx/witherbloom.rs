@@ -266,11 +266,8 @@ pub fn witherbloom_vinemaster() -> CardDefinition {
 /// plain `CastSpell { mode }` still works as a single-mode fallback
 /// (bot / back-compat path).
 ///
-/// Approximations: mode 0's printed mandatory "you return a land card"
-/// is modeled as `MayDo` (decline = the empty-graveyard no-op case);
-/// mode 3's printed "target opponent" is modeled as `EachOpponent`,
-/// which is equivalent in two-player games and avoids a fourth target
-/// slot.
+/// Approximation: mode 0's printed mandatory "you return a land card"
+/// is modeled as `MayDo` (decline = the empty-graveyard no-op case).
 pub fn witherbloom_command() -> CardDefinition {
     CardDefinition {
         name: "Witherbloom Command",
@@ -316,9 +313,9 @@ pub fn witherbloom_command() -> CardDefinition {
                     toughness: Value::Const(-1),
                     duration: Duration::EndOfTurn,
                 },
-                // Mode 3: each opponent loses 2 life and you gain 2 life.
+                // Mode 3: target opponent loses 2 life and you gain 2 life.
                 Effect::Drain {
-                    from: target_filtered(SelectionRequirement::Player),
+                    from: target_filtered(SelectionRequirement::OpponentPlayer),
                     to: Selector::You,
                     amount: Value::Const(2),
                 },

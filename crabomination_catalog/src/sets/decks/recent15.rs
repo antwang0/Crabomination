@@ -9,9 +9,8 @@ use crate::effect::shortcut::etb;
 use crate::effect::{Duration, Effect, PlayerRef, Predicate};
 use crate::mana::{Color, b, cost, g, generic};
 
-/// Shaman of the Pack — {1}{B}{G} Elf Shaman 3/2. ETB: each opponent loses life
-/// equal to the number of Elves you control. (Printed "target opponent" is
-/// modeled as each opponent — exact in 1v1.)
+/// Shaman of the Pack — {1}{B}{G} Elf Shaman 3/2. ETB: target opponent loses
+/// life equal to the number of Elves you control.
 pub fn shaman_of_the_pack() -> CardDefinition {
     CardDefinition {
         name: "Shaman of the Pack",

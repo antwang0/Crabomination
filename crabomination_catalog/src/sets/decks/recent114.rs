@@ -279,9 +279,8 @@ pub fn nevermore() -> CardDefinition {
     }
 }
 
-/// Grasp of Fate — {1}{W}{W} Enchantment. ETB: exile a nonland permanent an
-/// opponent controls until this leaves. (Printed "for each opponent, up to
-/// one" — modeled as a single exile, faithful in 1v1.)
+/// Grasp of Fate — {1}{W}{W} Enchantment. ETB: for each opponent, exile up to
+/// one nonland permanent that player controls until this leaves.
 pub fn grasp_of_fate() -> CardDefinition {
     CardDefinition {
         name: "Grasp of Fate",
