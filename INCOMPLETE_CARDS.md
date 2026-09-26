@@ -1844,7 +1844,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Fiery Justice | Nature of the Beast (C13) | the 5 life goes to the engine's most hostile opponent. |
 | 🟡 Magus of the Arena | Nature of the Beast (C13) | you pick the opponent's creature; the opponent should. |
 | 🟡 Naya Soulbeast | Nature of the Beast (C13) | the top cards are read as it enters, not revealed as it is cast. |
-| 🟡 Thundermane Dragon | Reign of Dragons (FDC) | a creature cast from the top doesn't gain haste; the top card isn't shown to you. |
+| 🟡 Thundermane Dragon | Reign of Dragons (FDC) | the top card isn't shown to you; any creature cast from your library gets the haste, not only one this permission cast. |
 | 🟡 Donal, Herald of Wings | Spirit Squadron (VOC) | "only once each turn" is spent when the trigger fires, even if you decline the copy. |
 | 🟡 Haunting Imitation | Spirit Squadron (VOC) | the top cards are read, not revealed. |
 | 🟡 Spectral Arcanist | Spirit Squadron (VOC) | the graveyard spell is chosen as a target when the trigger goes on the stack, not as it resolves. |

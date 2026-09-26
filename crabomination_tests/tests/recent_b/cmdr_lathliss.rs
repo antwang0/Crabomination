@@ -278,6 +278,11 @@ fn thundermane_dragon_casts_from_the_top() {
     act(&mut g, GameAction::CastSpell { card_id: top, target: None, additional_targets: vec![], mode: None, x_value: None })
         .expect("cast from the top");
     assert!(g.battlefield_find(top).is_some());
+    assert!(has(&g, top, &Keyword::Haste), "cast this way, it gains haste");
+    let from_hand = g.add_card_to_hand(0, catalog::goldlust_triad());
+    act(&mut g, GameAction::CastSpell { card_id: from_hand, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast from hand");
+    assert!(!has(&g, from_hand, &Keyword::Haste), "a hand cast gets no haste");
 }
 
 /// Carnelian Orb's red mana hastes the creature it pays for.

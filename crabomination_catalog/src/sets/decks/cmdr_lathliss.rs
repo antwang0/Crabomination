@@ -3,8 +3,7 @@
 //! `tests/recent_b/cmdr_lathliss.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Thundermane Dragon** — a creature cast from the top doesn't gain
-//!   haste; the top card isn't shown to you.
+//! - **Thundermane Dragon** — the top card isn't shown to you.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,
@@ -401,14 +400,25 @@ pub fn the_elder_dragon_war() -> CardDefinition {
 /// Thundermane Dragon — flying; you may cast creature spells with power 4 or
 /// greater from the top of your library.
 ///
-/// ⚠ Residual: no haste for a creature cast that way; the top card isn't
-/// shown to you.
+/// ⚠ Residual: the top card isn't shown to you, and any creature spell cast
+/// from your library gets the haste rider, not only one this permission let
+/// you cast.
 pub fn thundermane_dragon() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying],
         static_abilities: vec![StaticAbility {
             description: "You may cast creature spells with power 4 or greater from the top of your library.",
             effect: StaticEffect::PlayFromLibraryTop { filter: R::Creature.and(R::PowerAtLeast(4)) },
+        }],
+        // "If you cast a creature spell this way, it gains haste until end of
+        // turn": the cast trigger resolves first, so the rider lands on that
+        // creature as it enters.
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(Predicate::All(vec![
+                Predicate::CastSpellFromLibrary,
+                Predicate::CastSpellMatches(R::Creature.and(R::PowerAtLeast(4))),
+            ])),
+            effect: Effect::GrantNextCreatureSpellKeyword { keyword: Keyword::Haste },
         }],
         ..creature("Thundermane Dragon", cost(&[generic(3), r()]), vec![CreatureType::Dragon], 4, 4)
     }
