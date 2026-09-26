@@ -148,8 +148,8 @@ the handoff.
 - 💡 **The ability census** (`--card-census` lists a played card's printed
   abilities no seat activated): ~1,500 across the 183 seats. The pod-only
   `server/generic_sink.rs` takes the ones no shape generator covers when the
-  resolved eval beats passing. ⏳ Still never taken: `{X}` abilities (Geth),
-  discard / graveyard / exile costs (Grimoire of the Dead, Chainer),
+  resolved eval beats passing. ⏳ Still never taken: discard / graveyard /
+  exile costs (Grimoire of the Dead, Chainer),
   untap-a-land ramp (Arbor Elf), until-end-of-turn gains outside combat
   (Whirler Rogue).
   `{X}` abilities (Geth) and Class levels (no eval can price one) are taken
