@@ -3015,6 +3015,27 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-09-26 (Commander session `015BCEt5`) — the `--bench` invariant MOVES: 200,398 -> 197,136
+
+Intentional: CR 109.2 (`a90fc51d3` + the walker fix after it). The bot aimed
+removal at creature *cards in a graveyard*: `auto_targets_for_effect_all_slots`
+fell back to a graveyard sweep for a board slot ("destroy target creature")
+that the single-slot picker never took, and the cast validator accepted the
+zone-free filter, so Doom Blade / Pacifism / Swords went at a Prodigal
+Sorcerer or Air Elemental that had already died, and fizzled (6,700 such
+probes a bench run, counted with a debug print). Split: the validator alone
+reads 196,136, the validator plus the walker gate 197,136; with the check
+disabled by an env switch the same binary read 200,398. Golden traces are
+unchanged; the pod golden table's seed 4242 changes winner.
+
+```text
+--bench          decisions 197,136 / 27.77 / 616.0 / 0 stalls (was 200,398 / 28.12 / 626.2)
+                 determinism ok; peak_rss_mib 31.4-33.3
+games_per_s      441.9 / 462.3 (two runs; 388.9 / 413.9 at the previous tip, same
+                 host, unpaired — the removed probes are fewer clones, not more)
+two-player pools cube 2,400 (1 draw) / sos 1,500 / sealed 3,600 games (seed 26601), all decided
+```
+
 ### 2026-09-26 (Commander session `01VVD5mW`) — the `--bench` invariant MOVES: 200,190 -> 200,398
 
 Intentional: CR 603.10a (`7690ef6a4`, `game/simultaneous_deaths.rs`) —

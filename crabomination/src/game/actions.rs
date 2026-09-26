@@ -13868,7 +13868,9 @@ impl GameState {
             self.stack.iter().any(|si| matches!(si, StackItem::Trigger { source, .. } if *source == *cid))
         };
         offboard
-            && !names_an_ability() && !effect.may_target_offboard_card() && !filter.is_some_and(|f| f.mentions_offboard_zone())
+            && !names_an_ability()
+            && !effect.may_target_offboard_card()
+            && !filter.is_some_and(|f| f.mentions_offboard_zone())
     }
 
     /// Validate that a target is legally targetable by the given controller.

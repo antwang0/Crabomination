@@ -1042,8 +1042,11 @@ impl GameState {
                 // Graveyard cards (e.g. an `InGraveyard` reflexive return —
                 // Curious Forager's "return target permanent card from your
                 // graveyard"). The battlefield walk above can't see them, so
-                // sweep every graveyard as a last resort.
-                if found.is_none() {
+                // sweep every graveyard as a last resort — gated as the
+                // single-slot picker is (CR 109.2): a board slot ("destroy
+                // target creature") has no graveyard fallback, or Doom Blade
+                // was aimed at a creature card that had already died.
+                if found.is_none() && (eff.may_target_offboard_card() || req.mentions_offboard_zone()) {
                     found = first_legal_graveyard_card(self, is_legal_gy);
                 }
                 found

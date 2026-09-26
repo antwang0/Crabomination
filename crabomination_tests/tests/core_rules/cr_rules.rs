@@ -12233,3 +12233,17 @@ fn cr_603_10a_graveyard_trigger_misses_the_creatures_it_died_with() {
     drain_stack(&mut g);
     assert!(g.players[0].graveyard.iter().any(|c| c.id == forebear), "no return: it died with the Bear");
 }
+
+/// CR 109.2 — the all-slots target walk has no graveyard fallback for a board
+/// slot: with no creature on the battlefield, Doom Blade finds no target
+/// rather than a creature card in a graveyard (the single-slot picker already
+/// agreed; the bot probed Doom Blade at dead creatures thousands of times a
+/// bench run).
+#[test]
+fn cr_109_2_the_all_slots_walk_has_no_graveyard_fallback_for_a_board_slot() {
+    let mut g = two_player_game();
+    g.add_card_to_graveyard(1, catalog::prodigal_sorcerer());
+    let e = catalog::doom_blade().effect;
+    assert_eq!(g.auto_targets_for_effect_all_slots(&e, 0, None), (None, vec![]));
+    assert_eq!(g.auto_target_for_effect(&e, 0), None);
+}
