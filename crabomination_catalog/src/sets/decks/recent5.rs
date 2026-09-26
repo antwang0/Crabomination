@@ -13,8 +13,9 @@ use crate::effect::{Duration, PlayerRef, Predicate, ZoneDest};
 use crate::mana::{Color, ManaCost, b, cost, g, generic, phyrexian, u, w};
 
 /// Plaguecrafter — {2}{B} 3/2. ETB: each player sacrifices a creature or
-/// planeswalker. (The "each player who can't, discards" rider is dropped.)
+/// planeswalker; each player who can't discards a card.
 pub fn plaguecrafter() -> CardDefinition {
+    let victim = || SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker);
     CardDefinition {
         name: "Plaguecrafter",
         cost: cost(&[generic(2), b()]),
@@ -25,10 +26,13 @@ pub fn plaguecrafter() -> CardDefinition {
         },
         power: 3,
         toughness: 2,
-        triggered_abilities: vec![etb(Effect::Sacrifice {
-            who: Selector::Player(PlayerRef::EachPlayer),
-            count: Value::ONE,
-            filter: SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+        triggered_abilities: vec![etb(Effect::EachPlayerDoes {
+            who: PlayerRef::EachPlayer,
+            body: Box::new(Effect::If {
+                cond: Predicate::SelectorExists(Selector::ControlledBy { who: PlayerRef::You, filter: victim() }),
+                then: Box::new(Effect::Sacrifice { who: Selector::You, count: Value::ONE, filter: victim() }),
+                else_: Box::new(Effect::Discard { who: Selector::You, amount: Value::ONE, random: false }),
+            }),
         })],
         ..Default::default()
     }

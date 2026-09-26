@@ -745,8 +745,8 @@ pub fn griffin_guide() -> CardDefinition {
 }
 
 /// Angelic Destiny — {2}{W}{W} Aura. Enchanted creature gets +4/+4 and has
-/// flying and first strike. When it dies, return this to its owner's hand.
-/// (The "is an Angel" type-add rider is dropped.)
+/// flying and first strike, and is an Angel in addition to its other types.
+/// When it dies, return this to its owner's hand.
 pub fn angelic_destiny() -> CardDefinition {
     CardDefinition {
         name: "Angelic Destiny",
@@ -766,6 +766,13 @@ pub fn angelic_destiny() -> CardDefinition {
             keywords: vec![Keyword::Flying, Keyword::FirstStrike],
             ..Default::default()
         }),
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "Enchanted creature is an Angel in addition to its other types.",
+            effect: crate::card::StaticEffect::AddCreatureTypeToMatching {
+                applies_to: Selector::AttachedTo(Box::new(Selector::This)),
+                creature_type: crate::card::CreatureType::Angel,
+            },
+        }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::EnchantedBySource),
             effect: Effect::Move {

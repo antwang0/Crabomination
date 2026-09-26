@@ -294,7 +294,7 @@ pub fn captured_by_lagacs() -> CardDefinition {
 }
 
 /// Battle Screech — {2}{W}{W} Sorcery. Create two 1/1 white Bird tokens with
-/// flying. (The tap-three-white-creatures Flashback is dropped.)
+/// flying. Flashback — tap three untapped white creatures you control.
 pub fn battle_screech() -> CardDefinition {
     let bird = TokenDefinition {
         name: "Bird".into(),

@@ -1,0 +1,132 @@
+//! Pod-deck cards whose printed rider shipped dropped: each test asserts the
+//! rider, not the card's already-covered body.
+
+use crabomination::card::{CardId, CreatureType, Keyword};
+use crabomination::catalog;
+use crabomination::game::{drain_stack, two_player_game};
+use crabomination::game::*;
+use crabomination::mana::Color;
+use crabomination::TurnStep;
+
+fn main_phase() -> GameState {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g
+}
+
+fn cast(g: &mut GameState, id: CardId, target: Option<Target>) -> Result<Vec<GameEvent>, GameError> {
+    g.perform_action(GameAction::CastSpell { card_id: id, target, additional_targets: vec![], mode: None, x_value: None })
+}
+
+/// Puresteel Paladin — metalcraft: Equipment you control have equip {0}.
+/// Colossus Hammer's {8} is free with three artifacts, and not with two.
+#[test]
+fn puresteel_paladin_metalcraft_equips_for_zero() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::puresteel_paladin());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let hammer = g.add_card_to_battlefield(0, catalog::colossus_hammer());
+    g.add_card_to_battlefield(0, catalog::sol_ring());
+    assert!(g.perform_action(GameAction::Equip { equipment: hammer, target: bear }).is_err(), "two artifacts");
+    g.add_card_to_battlefield(0, catalog::sol_ring());
+    g.perform_action(GameAction::Equip { equipment: hammer, target: bear }).expect("equip {0}");
+    assert_eq!(g.battlefield_find(hammer).unwrap().attached_to, Some(bear));
+}
+
+/// Colossus Hammer — "Equipped creature gets +10/+10 and loses flying."
+#[test]
+fn colossus_hammer_takes_flying_away() {
+    let mut g = main_phase();
+    let angel = g.add_card_to_battlefield(0, catalog::serra_angel());
+    let hammer = g.add_card_to_battlefield(0, catalog::colossus_hammer());
+    g.players[0].mana_pool.add_colorless(8);
+    g.perform_action(GameAction::Equip { equipment: hammer, target: angel }).expect("equip");
+    let cp = g.computed_permanent(angel).unwrap();
+    assert_eq!((cp.power, cp.toughness), (14, 14));
+    assert!(!cp.keywords().contains(&Keyword::Flying));
+}
+
+/// Terror of the Peaks — an opponent's spell targeting it costs an additional
+/// 3 life, an additional cost CR 119.4 won't let 2 life pay.
+#[test]
+fn terror_of_the_peaks_taxes_targeting_spells_three_life() {
+    let mut g = main_phase();
+    let terror = g.add_card_to_battlefield(0, catalog::terror_of_the_peaks());
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].life = 2;
+    g.players[1].mana_pool.add(Color::Red, 1);
+    assert!(cast(&mut g, bolt, Some(Target::Permanent(terror))).is_err(), "2 life can't pay 3");
+    g.players[1].life = 20;
+    cast(&mut g, bolt, Some(Target::Permanent(terror))).expect("bolt");
+    assert_eq!(g.players[1].life, 17);
+    let face = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    cast(&mut g, face, Some(Target::Player(0))).expect("bolt the player");
+    assert_eq!(g.players[1].life, 17, "only spells that target it");
+}
+
+/// Hagra Mauling — {1} less if an opponent controls no basic lands.
+#[test]
+fn hagra_mauling_is_cheaper_against_no_basics() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let hm = g.add_card_to_hand(0, catalog::hagra_mauling());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, hm, Some(Target::Permanent(bear))).expect("{1}{B}{B} with no basics opposite");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none());
+    let hm2 = g.add_card_to_hand(0, catalog::hagra_mauling());
+    let bear2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_battlefield(1, catalog::forest());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    assert!(cast(&mut g, hm2, Some(Target::Permanent(bear2))).is_err(), "full price with a Forest there");
+}
+
+/// Plaguecrafter — "Each player who can't [sacrifice] discards a card."
+#[test]
+fn plaguecrafter_makes_the_empty_board_discard() {
+    let mut g = main_phase();
+    g.add_card_to_hand(1, catalog::island());
+    let pc = g.add_card_to_hand(0, catalog::plaguecrafter());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, pc, None).expect("plaguecrafter");
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.is_empty(), "no creature or planeswalker: discard");
+    assert!(g.battlefield_find(pc).is_none(), "its controller sacrificed it");
+}
+
+/// Angelic Destiny — the enchanted creature "is an Angel in addition to its
+/// other types".
+#[test]
+fn angelic_destiny_makes_an_angel() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let ad = g.add_card_to_hand(0, catalog::angelic_destiny());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, ad, Some(Target::Permanent(bear))).expect("destiny");
+    drain_stack(&mut g);
+    let types = g.computed_permanent(bear).unwrap().subtypes().creature_types.clone();
+    assert!(types.contains(&CreatureType::Angel) && types.contains(&CreatureType::Bear));
+}
+
+/// Legion Warboss — the Goblin "gains haste until end of turn and attacks
+/// this combat if able".
+#[test]
+fn legion_warboss_goblin_must_attack() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::legion_warboss());
+    g.step = TurnStep::BeginCombat;
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    let gob = g.battlefield.iter().find(|c| c.definition.name == "Goblin").unwrap().id;
+    let kw = g.computed_permanent(gob).unwrap().keywords().to_vec();
+    assert!(kw.contains(&Keyword::Haste) && kw.contains(&Keyword::MustAttack));
+}

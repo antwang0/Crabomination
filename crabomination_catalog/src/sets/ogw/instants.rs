@@ -344,7 +344,8 @@ pub fn witness_the_end() -> CardDefinition {
 }
 
 /// Kozilek's Return — {2}{R} Devoid Instant. Deals 2 damage to each creature.
-/// (The graveyard-recur rider on casting a 7+ MV Eldrazi is dropped.)
+/// When you cast a 7+ mana value Eldrazi creature spell, you may exile it
+/// from your graveyard to deal 5 damage to each creature.
 pub fn kozileks_return() -> CardDefinition {
     use crate::effect::Selector;
     CardDefinition {

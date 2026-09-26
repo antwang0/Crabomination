@@ -1140,8 +1140,8 @@ fn legion_warboss_makes_a_goblin_at_combat() {
     let goblins_after = g.battlefield.iter()
         .filter(|c| c.is_token && c.definition.name == "Goblin").count();
     assert_eq!(goblins_after, goblins_before + 1, "begin-combat made a Goblin");
-    let gob = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Goblin").unwrap();
-    assert!(gob.definition.keywords.contains(&Keyword::Haste), "the Goblin has haste");
+    let gob = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Goblin").unwrap().id;
+    assert!(g.computed_permanent(gob).unwrap().keywords().contains(&Keyword::Haste), "the Goblin has haste");
 }
 
 #[test]

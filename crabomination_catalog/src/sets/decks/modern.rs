@@ -26644,7 +26644,7 @@ pub fn pinnacle_emissary() -> CardDefinition {
 
 /// Metamorphosis Fanatic — {4}{B}{B} 4/4 Lifelink. ETB: return up to one
 /// target creature card from your graveyard to the battlefield with a lifelink
-/// counter on it. (Miracle is dropped — no miracle alt-cast primitive.)
+/// counter on it. Miracle {1}{B}.
 pub fn metamorphosis_fanatic() -> CardDefinition {
     use crate::effect::shortcut::etb;
     CardDefinition {
@@ -29695,8 +29695,8 @@ pub fn flusterstorm() -> CardDefinition {
 }
 
 /// Legion Warboss — {2}{R} 2/2 Goblin Soldier. Mentor (CR 702.134). At the
-/// beginning of combat on your turn, create a 1/1 red Goblin with haste. (The
-/// token's "attacks this combat if able" rider is dropped.)
+/// beginning of combat on your turn, create a 1/1 red Goblin that gains haste
+/// until end of turn and attacks this combat if able.
 pub fn legion_warboss() -> CardDefinition {
     use crate::card::TokenDefinition;
     use crate::effect::shortcut::mentor;
@@ -29710,9 +29710,9 @@ pub fn legion_warboss() -> CardDefinition {
             creature_types: vec![CreatureType::Goblin],
             ..Default::default()
         },
-        keywords: vec![Keyword::Haste],
         ..Default::default()
     };
+    let token = || Selector::LastCreatedToken;
     CardDefinition {
         name: "Legion Warboss",
         cost: cost(&[generic(2), r()]),
@@ -29730,11 +29730,17 @@ pub fn legion_warboss() -> CardDefinition {
                     EventKind::StepBegins(crate::game::TurnStep::BeginCombat),
                     EventScope::ActivePlayer,
                 ),
-                effect: Effect::CreateToken {
-                    who: PlayerRef::You,
-                    count: Value::Const(1),
-                    definition: std::sync::Arc::new(haste_goblin),
-                },
+                // "That token gains haste until end of turn and attacks this
+                // combat if able."
+                effect: Effect::Seq(vec![
+                    Effect::CreateToken {
+                        who: PlayerRef::You,
+                        count: Value::Const(1),
+                        definition: std::sync::Arc::new(haste_goblin),
+                    },
+                    Effect::GrantKeyword { what: token(), keyword: Keyword::Haste, duration: Duration::EndOfTurn },
+                    Effect::GrantKeyword { what: token(), keyword: Keyword::MustAttack, duration: Duration::EndOfTurn },
+                ]),
             },
         ],
         ..Default::default()
@@ -30976,8 +30982,8 @@ pub fn skirk_marauder() -> CardDefinition {
     }
 }
 
-/// Twisted Abomination — {5}{B} 5/3 Zombie Mutant. Swampcycling {2}. (The
-/// "{B}: Regenerate" ability is dropped; body + Swampcycling are faithful.)
+/// Twisted Abomination — {5}{B} 5/3 Zombie Mutant. {B}: Regenerate.
+/// Swampcycling {2}.
 pub fn twisted_abomination() -> CardDefinition {
     CardDefinition {
         name: "Twisted Abomination",
@@ -38916,8 +38922,8 @@ pub fn grim_tutor() -> CardDefinition {
 }
 
 /// Puresteel Paladin — {W}{W} 2/2 Human Knight. Whenever an Equipment you
-/// control enters, you may draw a card. (The Metalcraft equip-{0} grant is
-/// dropped — no card-driven equip-cost reduction primitive yet.)
+/// control enters, you may draw a card. Metalcraft — Equipment you control
+/// have equip {0}.
 pub fn puresteel_paladin() -> CardDefinition {
     CardDefinition {
         name: "Puresteel Paladin",
@@ -38929,6 +38935,12 @@ pub fn puresteel_paladin() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
+        static_abilities: vec![StaticAbility {
+            description: "Metalcraft — Equipment you control have equip {0} as long as you control three or more artifacts.",
+            effect: StaticEffect::EquipmentYouControlEquipZeroWhile {
+                condition: Predicate::MetalcraftActive { who: PlayerRef::You },
+            },
+        }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
                 .with_filter(Predicate::EntityMatches {
@@ -48354,8 +48366,7 @@ pub fn welding_jar() -> CardDefinition {
 }
 
 /// Colossus Hammer — {1} Equipment. Equipped creature gets +10/+10 and
-/// loses flying ("loses flying" is dropped — EquipBonus has no
-/// keyword-removal yet). Equip {8}.
+/// loses flying. Equip {8}.
 pub fn colossus_hammer() -> CardDefinition {
     use crate::card::EquipBonus;
     CardDefinition {
@@ -48370,6 +48381,7 @@ pub fn colossus_hammer() -> CardDefinition {
         equipped_bonus: Some(EquipBonus {
             power: 10,
             toughness: 10,
+            remove_keywords: vec![Keyword::Flying],
             ..Default::default()
         }),
         ..Default::default()
@@ -54705,12 +54717,23 @@ pub fn bala_ged_recovery() -> CardDefinition {
 }
 
 /// Hagra Mauling // Hagra Broodpit — {2}{B}{B} Instant: destroy target
-/// creature (the no-basics discount is dropped).
+/// creature; {1} less if an opponent controls no basic lands.
 pub fn hagra_mauling() -> CardDefinition {
     CardDefinition {
         name: "Hagra Mauling",
         cost: cost(&[generic(2), b(), b()]),
         card_types: vec![CardType::Instant],
+        // "This spell costs {1} less to cast if an opponent controls no basic lands."
+        self_cost_reduction_if: Some((
+            Predicate::ForAnyPlayer {
+                who: PlayerRef::EachOpponent,
+                pred: Box::new(Predicate::Not(Box::new(Predicate::SelectorExists(Selector::ControlledBy {
+                    who: PlayerRef::Triggerer,
+                    filter: SelectionRequirement::IsBasicLand,
+                })))),
+            },
+            1,
+        )),
         effect: Effect::Destroy {
             what: target_filtered(SelectionRequirement::Creature),
         },

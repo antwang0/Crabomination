@@ -810,8 +810,7 @@ pub fn warstorm_surge() -> CardDefinition {
 
 /// Terror of the Peaks — {3}{R}{R} 5/4 Dragon. Flying; whenever another creature
 /// you control enters, it deals damage equal to that creature's power to any
-/// target. (The "opponents' spells targeting this cost 3 life more" rider is
-/// dropped — there's no life-tax on targeting yet.)
+/// target. Spells your opponents cast that target it cost an additional 3 life.
 pub fn terror_of_the_peaks() -> CardDefinition {
     CardDefinition {
         name: "Terror of the Peaks",
@@ -824,6 +823,10 @@ pub fn terror_of_the_peaks() -> CardDefinition {
         power: 5,
         toughness: 4,
         keywords: vec![Keyword::Flying],
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "Spells your opponents cast that target this creature cost an additional 3 life to cast.",
+            effect: crate::card::StaticEffect::LifeTaxOpponentSpellsTargetingThis { life: 3 },
+        }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
                 .with_filter(Predicate::EntityMatches {

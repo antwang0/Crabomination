@@ -173,8 +173,8 @@ pub fn vanquishers_banner() -> CardDefinition {
 }
 
 /// Icon of Ancestry — {3} Artifact. As it enters, choose a creature type.
-/// Creatures you control of the chosen type get +1/+1. (The {3}, {T} dig for a
-/// creature of the chosen type is dropped.)
+/// Creatures you control of the chosen type get +1/+1. {3}, {T}: look at the
+/// top three, take a creature of the chosen type.
 pub fn icon_of_ancestry() -> CardDefinition {
     CardDefinition {
         name: "Icon of Ancestry",
