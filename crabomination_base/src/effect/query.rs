@@ -415,6 +415,7 @@ impl Effect {
             | Effect::TargetsExactlyX { body, .. }
             | Effect::CapTargetsAt { body, .. }
             | Effect::ForEachOpponentTarget { body }
+            | Effect::ForEachPlayerTarget { body }
             | Effect::BindTargetSlot { body, .. }
             | Effect::BindTargetObjects { body, .. }
             | Effect::BindScratch { body, .. }
@@ -1536,6 +1537,7 @@ impl Effect {
             | Effect::TargetsExactlyX { body }
             | Effect::CapTargetsAt { body, .. }
             | Effect::ForEachOpponentTarget { body }
+            | Effect::ForEachPlayerTarget { body }
             | Effect::BindTargetSlot { body, .. }
             | Effect::BindTargetObjects { body, .. }
             | Effect::BindScratch { body, .. } => body.requires_target(),
@@ -3010,6 +3012,7 @@ impl Effect {
             | Effect::TargetsExactlyX { body }
             | Effect::CapTargetsAt { body, .. }
             | Effect::ForEachOpponentTarget { body }
+            | Effect::ForEachPlayerTarget { body }
             | Effect::BindTargetSlot { body, .. }
             | Effect::BindTargetObjects { body, .. }
             | Effect::BindScratch { body, .. } => body.primary_target_filter(),
@@ -3226,6 +3229,7 @@ impl Effect {
             | Effect::TargetsExactlyX { body }
             | Effect::CapTargetsAt { body, .. }
             | Effect::ForEachOpponentTarget { body }
+            | Effect::ForEachPlayerTarget { body }
             | Effect::BindTargetSlot { body, .. }
             | Effect::BindTargetObjects { body, .. }
             | Effect::BindScratch { body, .. }
@@ -3362,6 +3366,7 @@ impl Effect {
             | Effect::TargetsExactlyX { body }
             | Effect::CapTargetsAt { body, .. }
             | Effect::ForEachOpponentTarget { body }
+            | Effect::ForEachPlayerTarget { body }
             | Effect::BindTargetSlot { body, .. }
             | Effect::BindTargetObjects { body, .. }
             | Effect::BindScratch { body, .. }
@@ -3476,6 +3481,7 @@ impl Effect {
             | Effect::TargetsExactlyX { body }
             | Effect::CapTargetsAt { body, .. }
             | Effect::ForEachOpponentTarget { body }
+            | Effect::ForEachPlayerTarget { body }
             | Effect::BindTargetSlot { body, .. }
             | Effect::BindTargetObjects { body, .. }
             | Effect::BindScratch { body, .. }
@@ -3573,6 +3579,7 @@ impl Effect {
             | Effect::TargetsExactlyX { body }
             | Effect::CapTargetsAt { body, .. }
             | Effect::ForEachOpponentTarget { body }
+            | Effect::ForEachPlayerTarget { body }
             | Effect::BindTargetSlot { body, .. }
             | Effect::BindTargetObjects { body, .. }
             | Effect::BindScratch { body, .. }
@@ -4024,6 +4031,7 @@ impl Effect {
             | Effect::TargetsExactlyX { body }
             | Effect::CapTargetsAt { body, .. }
             | Effect::ForEachOpponentTarget { body }
+            | Effect::ForEachPlayerTarget { body }
             | Effect::BindTargetSlot { body, .. }
             | Effect::BindTargetObjects { body, .. }
             | Effect::BindScratch { body, .. }
@@ -4375,6 +4383,7 @@ impl Effect {
             | Effect::TargetsExactlyX { body }
             | Effect::CapTargetsAt { body, .. }
             | Effect::ForEachOpponentTarget { body }
+            | Effect::ForEachPlayerTarget { body }
             | Effect::BindTargetSlot { body, .. }
             | Effect::BindTargetObjects { body, .. }
             | Effect::BindScratch { body, .. }
@@ -5491,6 +5500,7 @@ impl Effect {
             | Effect::TargetsExactlyX { body }
             | Effect::CapTargetsAt { body, .. }
             | Effect::ForEachOpponentTarget { body }
+            | Effect::ForEachPlayerTarget { body }
             | Effect::BindTargetSlot { body, .. }
             | Effect::BindTargetObjects { body, .. }
             | Effect::BindScratch { body, .. }
@@ -5543,6 +5553,7 @@ impl Effect {
             | Effect::CapTargetsAtX { body }
             | Effect::CapTargetsAt { body, .. }
             | Effect::ForEachOpponentTarget { body }
+            | Effect::ForEachPlayerTarget { body }
             | Effect::BindTargetSlot { body, .. }
             | Effect::BindTargetObjects { body, .. }
             | Effect::BindScratch { body, .. }
@@ -5590,7 +5601,7 @@ impl Effect {
     /// walking the same modal and transparent wrappers.
     pub fn per_opponent_targets(&self, mode: Option<usize>) -> bool {
         match self {
-            Effect::ForEachOpponentTarget { .. } => true,
+            Effect::ForEachOpponentTarget { .. } | Effect::ForEachPlayerTarget { .. } => true,
             Effect::ChooseMode(modes) => match mode {
                 Some(m) => modes.get(m).is_some_and(|e| e.per_opponent_targets(None)),
                 None => modes.iter().any(|e| e.per_opponent_targets(None)),
@@ -5621,6 +5632,36 @@ impl Effect {
         }
     }
 
+    /// [`Self::per_opponent_targets`] for the "for each **player**" form
+    /// (`Effect::ForEachPlayerTarget`): the target cap counts you too.
+    pub fn per_player_targets(&self, mode: Option<usize>) -> bool {
+        match self {
+            Effect::ForEachPlayerTarget { .. } => true,
+            Effect::ChooseMode(modes) => match mode {
+                Some(m) => modes.get(m).is_some_and(|e| e.per_player_targets(None)),
+                None => modes.iter().any(|e| e.per_player_targets(None)),
+            },
+            Effect::Seq(parts) => parts.iter().any(|e| e.per_player_targets(mode)),
+            Effect::MayDo { body, .. }
+            | Effect::MayDoBy { body, .. }
+            | Effect::CapTargetsAtX { body }
+            | Effect::TargetsExactlyX { body }
+            | Effect::CapTargetsAt { body, .. }
+            | Effect::OptionalTargets { body, .. }
+            | Effect::WithX { body, .. }
+            | Effect::MayPayX { body, .. } | Effect::MayPayXTimes { body, .. } | Effect::MayPayXOfColor { body, .. }
+            | Effect::MayPay { body, .. }
+            | Effect::MayPayBy { body, .. }
+            | Effect::MaySacrifice { then: body, .. }
+            | Effect::MaySacrificeSource { then: body, .. }
+            | Effect::MayTap { then: body, .. }
+            | Effect::MayDiscard { then: body, .. }
+            | Effect::MayDiscardMatching { then: body, .. }
+            | Effect::MayPayLife { body, .. } => body.per_player_targets(mode),
+            _ => false,
+        }
+    }
+
     pub fn distinct_target_count(&self, mode: Option<usize>) -> Option<u8> {
         match self {
             Effect::DealDamageDivided { max_targets, .. }
@@ -5640,6 +5681,7 @@ impl Effect {
             | Effect::TargetsExactlyX { body }
             | Effect::CapTargetsAt { body, .. }
             | Effect::ForEachOpponentTarget { body }
+            | Effect::ForEachPlayerTarget { body }
             | Effect::BindTargetSlot { body, .. }
             | Effect::BindTargetObjects { body, .. }
             | Effect::BindScratch { body, .. }

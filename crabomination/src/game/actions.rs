@@ -5733,12 +5733,11 @@ impl GameState {
             // CR 601.2c — one target per opponent (`ForEachOpponentTarget`):
             // no slot past the opponent count, and no candidate under a
             // controller already named.
-            let per_opponent = self
-                .find_card_anywhere(card_id)
-                .is_some_and(|c| c.definition.effect.per_opponent_targets(mode));
-            let slot_info = slot_info.filter(|_| {
-                !per_opponent || 1 + additional_targets.len() < self.opponents_of(p).len()
+            let (per_opponent, per_player) = self.find_card_anywhere(card_id).map_or((false, false), |c| {
+                (c.definition.effect.per_opponent_targets(mode), c.definition.effect.per_player_targets(mode))
             });
+            let seats = if per_player { self.living_seats().count() } else { self.opponents_of(p).len() };
+            let slot_info = slot_info.filter(|_| !per_opponent || 1 + additional_targets.len() < seats);
             if let Some((filter, source_name, slot_text, optional, distinct)) = slot_info {
                 let chosen: Vec<&Target> =
                     target.iter().chain(additional_targets.iter()).collect();

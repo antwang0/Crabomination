@@ -25079,6 +25079,11 @@ impl GameState {
                     cap = cap.min(self.opponents_of(controller).len());
                     body
                 }
+                Effect::ForEachPlayerTarget { body } => {
+                    distinct_controllers = true;
+                    cap = cap.min(self.living_seats().count());
+                    body
+                }
                 Effect::CapTargetsAt { amount, body } => {
                     let mut ctx = crate::game::effects::EffectContext::for_trigger(
                         source,

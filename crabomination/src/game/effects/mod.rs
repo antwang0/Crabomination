@@ -8203,16 +8203,19 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::ForEachOpponentTarget { body } => {
-                // CR 601.2c — "for each opponent, … up to one target X that
-                // player controls": keep at most one target per controller,
-                // and at most one per opponent. The picker already chooses
-                // that way; this is the resolution-side half, which a copy
-                // effect or a UI-supplied list needs (CR 115.7 lets a copy
+            Effect::ForEachOpponentTarget { body } | Effect::ForEachPlayerTarget { body } => {
+                // CR 601.2c — "for each opponent [player], … up to one target
+                // X that player controls": keep at most one target per
+                // controller, and at most one per seat. The picker already
+                // chooses that way; this is the resolution-side half, which a
+                // copy effect or a UI-supplied list needs (CR 115.7 lets a copy
                 // change targets, and nothing stops it doubling up).
-                let cap = self
-                    .resolve_players(&crate::effect::PlayerRef::EachOpponent, ctx)
-                    .len();
+                let seats = if matches!(effect, Effect::ForEachPlayerTarget { .. }) {
+                    crate::effect::PlayerRef::EachPlayer
+                } else {
+                    crate::effect::PlayerRef::EachOpponent
+                };
+                let cap = self.resolve_players(&seats, ctx).len();
                 let mut seen: Vec<usize> = Vec::new();
                 let mut kept: Vec<Target> = Vec::new();
                 for t in &ctx.targets {

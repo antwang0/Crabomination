@@ -8305,6 +8305,12 @@ pub enum Effect {
     /// Every other card in the family prints "up to one", and for all eight
     /// the targets are pure upside, so no real seat declines one.
     ForEachOpponentTarget { body: Box<Effect> },
+    /// [`Effect::ForEachOpponentTarget`] over **every** player, you included
+    /// — "for each player, … up to one target X that player controls"
+    /// (Battle at the Helvault, Unexplained Absence, The Curse of Fenric).
+    /// The cap is the living player count; the one-per-controller rule is the
+    /// same.
+    ForEachPlayerTarget { body: Box<Effect> },
     /// Transparent wrapper declaring that target slots `>= min` are optional
     /// ("up to one target …") for an otherwise-conventional `body` whose slots
     /// come from *distinct* effects — the case `ApplyToTargets` can't express
