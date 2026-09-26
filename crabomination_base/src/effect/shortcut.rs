@@ -650,18 +650,39 @@ pub fn evolve_then(rider: Effect) -> TriggeredAbility {
 /// copy leaves the turn's one for a later trigger (Donal, Ondu Spiritdancer,
 /// Ancient Cornucopia).
 pub fn may_once_each_turn(event: EventSpec, description: &str, body: Effect) -> TriggeredAbility {
+    once_each_turn_on_take(TriggeredAbility {
+        event,
+        effect: Effect::MayDo { description: description.into(), body: Box::new(body) },
+    })
+}
+
+/// [`may_once_each_turn`] for a trigger already written with
+/// `.once_per_turn()` around a `MayDo` / `MayPayLife`: the per-turn limit
+/// moves off the trigger and onto the taken branch. A mandatory body is
+/// spent as it resolves, which is the same limit.
+pub fn once_each_turn_on_take(mut t: TriggeredAbility) -> TriggeredAbility {
     let gate = Predicate::Not(Box::new(Predicate::SourceDoneThisTurn));
-    let filter = match event.filter.clone() {
+    t.event.once_per_turn = false;
+    t.event.filter = Some(match t.event.filter.take() {
         Some(f) => Predicate::All(vec![f, gate]),
         None => gate,
+    });
+    let mark = |body: Box<Effect>| Box::new(Effect::Seq(vec![Effect::MarkDoneThisTurn, *body]));
+    let taken = match t.effect {
+        Effect::MayDo { description, body } => Effect::MayDo { description, body: mark(body) },
+        Effect::MayPayLife { description, amount, body, else_ } => {
+            Effect::MayPayLife { description, amount, body: mark(body), else_ }
+        }
+        other => Effect::Seq(vec![Effect::MarkDoneThisTurn, other]),
     };
-    TriggeredAbility {
-        event: event.with_filter(filter),
-        effect: Effect::MayDo {
-            description: description.into(),
-            body: Box::new(Effect::Seq(vec![Effect::MarkDoneThisTurn, body])),
-        },
-    }
+    // Asked again as it resolves: two triggers from one event both pass the
+    // filter, and not every dispatcher re-checks it (CR 603.4).
+    t.effect = Effect::If {
+        cond: Predicate::Not(Box::new(Predicate::SourceDoneThisTurn)),
+        then: Box::new(taken),
+        else_: Box::new(Effect::Noop),
+    };
+    t
 }
 
 /// Eerie shortcut (DSK ability word): "Whenever an enchantment you control
