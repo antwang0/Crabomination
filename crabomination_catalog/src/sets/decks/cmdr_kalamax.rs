@@ -18,7 +18,7 @@ use crate::card::{
     StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{etb, on_attack, target_filtered};
-use crate::effect::{Effect, ManaPayload, PlayerRef, Predicate, ZoneDest};
+use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, Predicate, ZoneDest};
 use crate::game::types::TurnStep;
 use crate::mana::{Color, ManaCost, cost, g, generic, hybrid, r, u, x};
 use std::sync::Arc;
@@ -146,17 +146,29 @@ pub fn decoy_gambit() -> CardDefinition {
     )
 }
 
-/// Eon Frolicker — flying; cast, it gives an opponent an extra turn.
-/// Residual: the protection from that player isn't granted.
+/// Eon Frolicker — flying; cast, it gives target opponent an extra turn, and
+/// you and your planeswalkers protection from them until your next turn.
 pub fn eon_frolicker() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource)
                 .with_filter(Predicate::TriggerSourceEnteredByCast),
-            effect: Effect::TakeExtraTurn {
-                who: PlayerRef::Target(0),
-                count: Value::ONE,
+            effect: Effect::TargetPlayerThen {
+                filter: R::OpponentPlayer,
+                then: Box::new(Effect::Seq(vec![
+                    Effect::TakeExtraTurn { who: PlayerRef::Target(0), count: Value::ONE },
+                    Effect::GainProtectionFromPlayer {
+                        what: Selector::You,
+                        from: PlayerRef::Target(0),
+                        duration: Duration::UntilNextTurn,
+                    },
+                    Effect::GainProtectionFromPlayer {
+                        what: Selector::EachPermanent(R::Planeswalker.and(R::ControlledByYou)),
+                        from: PlayerRef::Target(0),
+                        duration: Duration::UntilNextTurn,
+                    },
+                ])),
             },
         }],
         ..creature("Eon Frolicker", cost(&[generic(2), u(), u()]), vec![CreatureType::Elemental, CreatureType::Otter], 5, 5)

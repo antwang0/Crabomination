@@ -4473,6 +4473,9 @@ impl GameState {
         // "Protection from everything until your next turn" expires as that
         // player's turn begins (The One Ring).
         self.players[p].protected_from_everything = false;
+        if self.players[p].protected_from_seats_until_next_turn != 0 {
+            self.players[p].protected_from_seats_until_next_turn = 0;
+        }
         self.players[p].life_locked_until_next_turn = false;
         // "Opponents' spells cost more until your next turn" expires too
         // (Elspeth Conquers Death II).
@@ -4611,6 +4614,9 @@ impl GameState {
             pl.all_damage_prevented_this_turn = false;
             if !pl.protection_colors_eot.is_empty() {
                 pl.protection_colors_eot = crate::mana::ColorSet::empty();
+            }
+            if pl.protected_from_seats_eot != 0 {
+                pl.protected_from_seats_eot = 0;
             }
             pl.cards_to_graveyard_this_turn = 0;
             pl.creature_cards_to_graveyard_this_turn = 0;

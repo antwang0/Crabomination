@@ -123,3 +123,33 @@ fn ballot_decision(source: CardId, seats: &[usize], prompt: &str) -> Decision {
         options: seats.iter().map(|q| format!("Player {}", q + 1)).collect(),
     }
 }
+
+impl GameState {
+    /// `Effect::GainProtectionFromPlayer` (CR 702.16). `UntilNextTurn` lasts
+    /// until the protected player's next turn; every other duration is read
+    /// as end of turn for a player.
+    pub(super) fn gain_protection_from_player(
+        &mut self,
+        what: &crate::effect::Selector,
+        from: &crate::effect::PlayerRef,
+        duration: crate::effect::Duration,
+        ctx: &EffectContext,
+    ) {
+        use crate::game::effects::EntityRef;
+        let Some(q) = self.resolve_player(from, ctx) else { return };
+        let bit = 1u64.checked_shl(q as u32).unwrap_or(0);
+        let kw = crate::card::Keyword::ProtectionFromMatching(Box::new(
+            crate::card::SelectionRequirement::ControlledBySeat(q as u8),
+        ));
+        for ent in self.resolve_selector(what, ctx) {
+            match ent {
+                EntityRef::Player(p) if duration == crate::effect::Duration::UntilNextTurn => {
+                    self.players[p].protected_from_seats_until_next_turn |= bit;
+                }
+                EntityRef::Player(p) => self.players[p].protected_from_seats_eot |= bit,
+                EntityRef::Permanent(cid) => self.grant_keyword_for(cid, kw.clone(), duration, ctx),
+                _ => {}
+            }
+        }
+    }
+}

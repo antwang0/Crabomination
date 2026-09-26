@@ -451,6 +451,17 @@ impl GameState {
             }
             return 0;
         }
+        // CR 702.16e — protection from a player prevents damage from sources
+        // that player controls (Guardian Archon, Eon Frolicker).
+        if let (EntityRef::Player(p), Some(src)) = (ent, source)
+            && (self.players[p].protected_from_seats_eot | self.players[p].protected_from_seats_until_next_turn) != 0
+            && self.damage_source_controller(src).is_some_and(|q| self.players[p].protected_from_seat(q))
+        {
+            if amount > 0 {
+                events.push(GameEvent::DamagePrevented { amount, to_player: Some(p), to_card: None });
+            }
+            return 0;
+        }
         // CR 702.16e — protection from a color prevents that color's damage
         // to the player (Seht's Tiger).
         if let (EntityRef::Player(p), Some(src)) = (ent, source)

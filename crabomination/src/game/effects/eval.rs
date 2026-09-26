@@ -4366,6 +4366,11 @@ impl GameState {
                 self.stack_spell_caster(cid).is_some_and(|c| !self.same_team(c, controller))
             }),
             R::ControlledByActivePlayer => Some(on_bf && card.controller == self.active_player_idx),
+            R::ControlledBySeat(q) => Some(if on_bf {
+                card.controller == *q as usize
+            } else {
+                self.stack_spell_caster(cid) == Some(*q as usize)
+            }),
             // Ownership is stable across zones; the walker's `find_card_anywhere`
             // lands on this object.
             R::OwnedByYou => Some(card.owner == controller),
@@ -4684,6 +4689,13 @@ impl GameState {
                     self.bf_hint_or_find(*cid, hint).is_some_and(|c| c.controller == self.active_player_idx)
                 }
                 Target::Player(p) => *p == self.active_player_idx,
+            },
+            R::ControlledBySeat(q) => match target {
+                Target::Permanent(cid) => match self.bf_hint_or_find(*cid, hint) {
+                    Some(c) => c.controller == *q as usize,
+                    None => self.stack_spell_caster(*cid) == Some(*q as usize),
+                },
+                Target::Player(p) => *p == *q as usize,
             },
             R::ControlledByOpponent => match target {
                 Target::Permanent(cid) => match self.bf_hint_or_find(*cid, hint) {
@@ -6150,6 +6162,7 @@ impl GameState {
             R::ControlledByYou => card.controller == controller,
             R::ControlledByOpponent => !self.same_team(card.controller, controller),
             R::ControlledByActivePlayer => card.controller == self.active_player_idx,
+            R::ControlledBySeat(q) => card.controller == *q as usize,
             R::HasAwaken => card.definition.alternative_cost.as_ref().is_some_and(|a| a.awaken),
             R::PutIntoGraveyardFromBattlefieldThisTurn => {
                 self.deaths.graveyard_from_battlefield_this_turn.contains(&card.id)

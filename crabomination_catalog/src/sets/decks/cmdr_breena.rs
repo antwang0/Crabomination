@@ -308,19 +308,25 @@ pub fn deathbringer_regent() -> CardDefinition {
 
 /// Guardian Archon — flying; as it enters, secretly choose an opponent; once:
 /// you and target permanent you control gain protection from them this turn.
-/// Residual: the permanent gains hexproof and indestructible; your own
-/// protection isn't modeled.
+/// Residual: the choice isn't secret.
 pub fn guardian_archon() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying],
         as_enters_effect: Some(Effect::ChoosePlayerForSource { opponent: true }),
         activated_abilities: vec![ActivatedAbility {
             activate_once: true,
-            effect: Effect::GrantKeywords {
-                what: target_filtered(R::Permanent.and(R::ControlledByYou)),
-                keywords: vec![Keyword::Hexproof, Keyword::Indestructible],
-                duration: Duration::EndOfTurn,
-            },
+            effect: Effect::Seq(vec![
+                Effect::GainProtectionFromPlayer {
+                    what: target_filtered(R::Permanent.and(R::ControlledByYou)),
+                    from: PlayerRef::ChosenPlayerOfSource,
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GainProtectionFromPlayer {
+                    what: Selector::You,
+                    from: PlayerRef::ChosenPlayerOfSource,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
             ..Default::default()
         }],
         ..creature("Guardian Archon", cost(&[generic(4), w(), w()]), vec![CreatureType::Archon], 5, 5)

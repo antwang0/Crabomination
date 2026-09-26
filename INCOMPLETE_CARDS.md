@@ -1943,7 +1943,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Breena, the Demagogue | Silverquill Statement (C21) | the two +1/+1 counters go on your greatest-power creature (the engine's pick). |
 | 🟡 Author of Shadows | Silverquill Statement (C21) | the castable card is the first nonland card exiled this way, not a chosen one. |
 | 🟡 Bold Plagiarist | Silverquill Statement (C21) | copies +1/+1 counters only, and reads the counters' recipient, not who put them. |
-| 🟡 Guardian Archon | Silverquill Statement (C21) | protection from the chosen player is hexproof and indestructible on the permanent; your own protection isn't modeled; the choice isn't secret. |
+| 🟡 Guardian Archon | Silverquill Statement (C21) | the choice isn't secret. |
 | 🟡 Inkshield | Silverquill Statement (C21) | the Inklings count the unblocked power attacking you as it resolves, not the damage prevented. |
 | 🟡 Nils, Discipline Enforcer | Silverquill Statement (C21) | each player's counter goes on their first creature, chosen rather than targeted. |
 | 🟡 Tragic Arrogance | Silverquill Statement (C21) | the engine chooses for the caster: its own best of each type, each opponent's weakest (lowest mana value). |
@@ -2088,7 +2088,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Celestial Judgment | Coven Counters (MIC) | the creature kept per power is the engine's pick (the caster's best, else an opponent's weakest), not a prompt. |
 | 🟡 Sigardian Zealot | Coven Counters (MIC) | the chosen set is one of your creatures per power (the engine's pick); no opponent's creature is ever chosen. |
 | 🟡 Moorland Rescuer | Coven Counters (MIC) | the returned set is a greedy largest-power-first pick under the cap, not a prompt. |
-| 🟡 Eon Frolicker | Arcane Maelstrom (C20) | the protection from the chosen player until your next turn isn't granted (the extra turn is). |
 | 🟡 Haldan, Avid Arcanist | Arcane Maelstrom (C20) | the play permission is stamped as Pako exiles a card while you control Haldan (not re-read if Haldan comes or goes later); creature cards are playable too. |
 | 🟡 Pako, Arcane Retriever | Arcane Maelstrom (C20) | see Haldan: its fetch counters and exile are exact; the Haldan-granted permission is stamped at exile. |
 | 🟡 Lavabrink Floodgates | Arcane Maelstrom (C20) | each upkeep's player may only add a doom counter (removing one isn't offered). |

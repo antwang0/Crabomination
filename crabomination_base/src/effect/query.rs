@@ -1948,6 +1948,7 @@ impl Effect {
             | Effect::ReplaceColorWord { what, .. }
             | Effect::ReplaceBasicLandType { what, .. }
             | Effect::GrantProtectionFromChosenColor { what, .. }
+            | Effect::GainProtectionFromPlayer { what, .. }
             | Effect::GrantKeywordWhileSourceTapped { what, .. }
             | Effect::SacrificeThenRevealUntilSharedType { what } => sel_has_target(what),
             Effect::RevealLibraryNamedCountPunish { who, .. }
@@ -2789,7 +2790,8 @@ impl Effect {
             | Effect::GrantKeywords { what, .. }
             | Effect::ReplaceColorWord { what, .. }
             | Effect::ReplaceBasicLandType { what, .. }
-            | Effect::GrantProtectionFromChosenColor { what, .. } => sel_filter(what),
+            | Effect::GrantProtectionFromChosenColor { what, .. }
+            | Effect::GainProtectionFromPlayer { what, .. } => sel_filter(what),
             Effect::Move { what, .. } => sel_filter(what),
             // Player-targeting effects: surface the filter so the bot's
             // auto-target heuristic can find the opp / caster without a
@@ -3317,6 +3319,7 @@ impl Effect {
             Effect::DoubleLife { .. } => true,
             // "Target player becomes the monarch" is a gift (Éomer, Denethor).
             Effect::BecomeMonarch { who: PlayerRef::Target(_) } => true,
+            Effect::GainProtectionFromPlayer { .. } => true,
             // Copying "target token you control" is friendly (Esika's Chariot).
             Effect::CreateTokenCopyOf { .. } | Effect::CreateTokenCopiesHasteSac { .. } => true,
             Effect::GrantKeyword { keyword, .. } => Self::keyword_is_friendly(keyword),
@@ -5158,7 +5161,8 @@ impl Effect {
                 }
                 Effect::GrantKeyword { what, .. }
                 | Effect::GrantKeywords { what, .. }
-                | Effect::GrantProtectionFromChosenColor { what, .. } => sel_find(what, slot),
+                | Effect::GrantProtectionFromChosenColor { what, .. }
+                | Effect::GainProtectionFromPlayer { what, .. } => sel_find(what, slot),
                 Effect::AddCounter { what, .. } | Effect::RemoveCounter { what, .. } => {
                     sel_find(what, slot)
                 }

@@ -389,3 +389,47 @@ fn bold_plagiarists_do_not_loop() {
     assert_eq!(g.battlefield_find(a).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
     assert_eq!(g.battlefield_find(b).unwrap().counter_count(CounterType::PlusOnePlusOne), 0);
 }
+
+/// CR 702.16b/e — Guardian Archon's reveal: you and the target permanent gain
+/// protection from the chosen opponent until end of turn. That player can't
+/// target you or it and their damage to you is prevented; another opponent
+/// is unaffected, and the protection ends at cleanup.
+#[test]
+fn cr_702_16_guardian_archon_protects_you_and_a_permanent_from_one_player() {
+    use crabomination::decision::Decider;
+    struct Seat3;
+    impl Decider for Seat3 {
+        fn decide(&mut self, d: &crabomination::decision::Decision) -> DecisionAnswer {
+            match d {
+                crabomination::decision::Decision::ChooseOption { options, .. } => {
+                    DecisionAnswer::Amount(options.iter().position(|o| o == "Player 3").unwrap() as u32)
+                }
+                other => crabomination::decision::AutoDecider.decide(other),
+            }
+        }
+        fn kind(&self) -> crabomination::decision::DeciderKind {
+            crabomination::decision::DeciderKind::Scripted { answers: vec![], asked: vec![] }
+        }
+    }
+    let mut g = pod(3);
+    g.decider = Box::new(Seat3);
+    let archon = g.move_card_to_battlefield_for_test(0, catalog::guardian_archon());
+    g.decider = Box::new(crabomination::decision::AutoDecider);
+    assert_eq!(g.battlefield_find(archon).unwrap().chosen_player, Some(2));
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    activate(&mut g, 0, archon, 0, Some(Target::Permanent(bears)), None).expect("reveal");
+    for seat in [2, 1] {
+        let bolt = g.add_card_to_hand(seat, catalog::lightning_bolt());
+        let at_you = cast(&mut g, seat, bolt, Some(Target::Player(0)));
+        let bolt = g.add_card_to_hand(seat, catalog::lightning_bolt());
+        let at_bears = cast(&mut g, seat, bolt, Some(Target::Permanent(bears)));
+        assert_eq!((at_you.is_err(), at_bears.is_err()), (seat == 2, seat == 2), "seat {seat}: {at_you:?} {at_bears:?}");
+    }
+    assert_eq!(g.players[0].life, 17, "only seat 1's bolt landed");
+    assert!(g.battlefield_find(bears).is_none(), "seat 1's second bolt killed the Bears");
+    g.step = TurnStep::End;
+    let _ = g.advance_step(Vec::new());
+    drain_stack(&mut g);
+    let bolt = g.add_card_to_hand(2, catalog::lightning_bolt());
+    cast(&mut g, 2, bolt, Some(Target::Player(0))).expect("the protection ended at cleanup");
+}

@@ -28508,6 +28508,10 @@ impl GameState {
             }
 
             Effect::ChoosePlayerForSource { opponent } => self.choose_player_for_source(*opponent, ctx),
+            Effect::GainProtectionFromPlayer { what, from, duration } => {
+                self.gain_protection_from_player(what, from, *duration, ctx);
+                Ok(())
+            }
 
             Effect::RememberPlayerOnSource { who } => {
                 let Some(src) = ctx.source else { return Ok(()) };

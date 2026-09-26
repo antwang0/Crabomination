@@ -808,6 +808,14 @@ pub struct PlayerData {
     /// player and their damage to them is prevented. Cleared at cleanup.
     #[serde(default)]
     pub protection_colors_eot: crate::mana::ColorSet,
+    /// CR 702.16 — "you gain protection from [player]": bit `q` set means
+    /// nothing seat `q` controls can target this player or deal them damage.
+    /// This mask ends at cleanup; the next one as this player's turn begins
+    /// (Guardian Archon, Eon Frolicker).
+    #[serde(default)]
+    pub protected_from_seats_eot: u64,
+    #[serde(default)]
+    pub protected_from_seats_until_next_turn: u64,
     /// "Can't block with more than N creatures this combat" (Mirri,
     /// Weatherlight Duelist's attack trigger). Cleared as combat ends.
     #[serde(default)]
@@ -1353,6 +1361,12 @@ pub struct Player {
 }
 
 impl Player {
+    /// CR 702.16 — this player has protection from seat `q` (either mask).
+    pub fn protected_from_seat(&self, q: usize) -> bool {
+        let bit = 1u64.checked_shl(q as u32).unwrap_or(0);
+        (self.protected_from_seats_eot | self.protected_from_seats_until_next_turn) & bit != 0
+    }
+
     /// This seat's write counter — see [`Player::writes`].
     #[inline]
     pub fn writes(&self) -> u32 {
@@ -1529,6 +1543,8 @@ impl Player {
             protected_from_everything: false,
             all_damage_prevented_this_turn: false,
             protection_colors_eot: crate::mana::ColorSet::empty(),
+            protected_from_seats_eot: 0,
+            protected_from_seats_until_next_turn: 0,
             block_cap_this_combat: None,
             cards_exiled_this_turn: 0,
             cards_to_graveyard_this_turn: 0,

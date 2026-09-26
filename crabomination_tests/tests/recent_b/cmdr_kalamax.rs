@@ -181,3 +181,30 @@ fn wort_grants_conspire() {
     drain_stack(&mut g);
     assert_eq!(lost(&g, 1), 6);
 }
+
+/// CR 702.16 — Eon Frolicker cast: the target opponent takes the extra turn,
+/// and until your next turn you have protection from that player: its bolt
+/// can't target you, the other opponent's can.
+#[test]
+fn cr_702_16_eon_frolicker_protects_you_from_the_extra_turn_player() {
+    let mut g = pod(3);
+    let eon = g.add_card_to_hand(0, catalog::eon_frolicker());
+    cast(&mut g, eon, &[]);
+    assert!(g.battlefield_find(eon).is_some());
+    let from: Vec<usize> = (1..3).filter(|&q| g.players[0].protected_from_seat(q)).collect();
+    assert_eq!(from.len(), 1, "protection from exactly the target opponent");
+    for seat in [1, 2] {
+        let bolt = g.add_card_to_hand(seat, catalog::lightning_bolt());
+        flood(&mut g, seat);
+        g.priority.player_with_priority = seat;
+        let r = g.perform_action(GameAction::CastSpell {
+            card_id: bolt,
+            target: Some(Target::Player(0)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        });
+        assert_eq!(r.is_err(), seat == from[0], "seat {seat}");
+        drain_stack(&mut g);
+    }
+}

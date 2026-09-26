@@ -13919,6 +13919,11 @@ impl GameState {
                 if self.players[*p].protected_from_everything {
                     return Err(GameError::InvalidTarget);
                 }
+                // CR 702.16b — protection from a player: nothing that player
+                // controls can target this one (Guardian Archon).
+                if self.players[*p].protected_from_seat(caster) {
+                    return Err(GameError::InvalidTarget);
+                }
                 // CR 702.16b — protection from a color: that color's sources
                 // can't target this player (Seht's Tiger).
                 if !self.players[*p].protection_colors_eot.is_empty()

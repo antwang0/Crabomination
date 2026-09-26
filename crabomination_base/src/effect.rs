@@ -7693,6 +7693,12 @@ pub enum Effect {
     /// `Keyword::Protection(color)`). Mother of Runes, Giver of Runes, Gods
     /// Willing, Apostle's Blessing.
     GrantProtectionFromChosenColor { what: Selector, duration: Duration },
+    /// CR 702.16 — each permanent and player `what` picks gains protection
+    /// from the player `from` resolves to, for `duration` (`EndOfTurn` or
+    /// `UntilNextTurn`): a permanent gets `ProtectionFromMatching(
+    /// ControlledBySeat)`; a player can't be targeted or dealt damage by
+    /// anything that player controls. Guardian Archon, Eon Frolicker.
+    GainProtectionFromPlayer { what: Selector, from: PlayerRef, duration: Duration },
     /// Grant a transient triggered ability to each permanent picked by
     /// `what`, for `duration`. Stashed in `GameState.
     /// granted_triggers_eot`; `Duration::Permanent` bakes the trigger onto the

@@ -2750,6 +2750,9 @@ pub enum SelectionRequirement {
     /// three seats or more it is one seat of several. False outside combat or
     /// when the source is not attacking.
     ControlledByDefendingPlayer,
+    /// Controlled by one fixed seat (a spell by its caster) — the filter of a
+    /// resolved "protection from that player" grant.
+    ControlledBySeat(u8),
     /// CR 108.3 — the object's owner is you (regardless of who controls it).
     /// Gruul Charm's "gain control of all permanents you own".
     OwnedByYou,
