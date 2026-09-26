@@ -60,7 +60,7 @@ impl GameState {
         if !rest_bottom {
             self.shuffle_library(p, events);
         }
-        self.check_state_based_actions_into(events);
+        self.check_state_based_actions_mid_resolution(events);
         Ok(())
     }
 
@@ -96,7 +96,7 @@ impl GameState {
         if damage_controller && revealed > 0 {
             self.deal_damage_to_from(super::EntityRef::Player(p), revealed, ctx.source, events);
         }
-        self.check_state_based_actions_into(events);
+        self.check_state_based_actions_mid_resolution(events);
         Ok(())
     }
 

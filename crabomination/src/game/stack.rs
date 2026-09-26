@@ -6139,6 +6139,20 @@ impl GameState {
     /// The sweep proper. Appends to `events`; never reads it, so a caller may
     /// pass a buffer that already holds this action's earlier events.
     pub fn check_state_based_actions_into(&mut self, events: &mut Vec<GameEvent>) {
+        self.check_state_based_actions_inner(events, false);
+    }
+
+    /// The sweep an effect runs part-way through its own resolution so a later
+    /// step can read the result ("sacrifice, then return a card put into a
+    /// graveyard this way"). CR 704.3 checks state-based actions only when a
+    /// player would receive priority, so the CR 903.9a commander return waits
+    /// for the real sweep after the resolution: Danse Macabre can reanimate a
+    /// commander it made someone sacrifice.
+    pub(crate) fn check_state_based_actions_mid_resolution(&mut self, events: &mut Vec<GameEvent>) {
+        self.check_state_based_actions_inner(events, true);
+    }
+
+    fn check_state_based_actions_inner(&mut self, events: &mut Vec<GameEvent>, mid_resolution: bool) {
         if sba_census::on() {
             self.sba_census_tick();
         }
@@ -6154,7 +6168,12 @@ impl GameState {
         // this sweep sits in the graveyard until the next one, as the rule
         // has it ("put into that zone since the last time state-based
         // actions were checked").
-        if self.players.iter().any(|p| !p.commanders.is_empty()) {
+        // Nor while a resolution waits on a pending answer: no player
+        // receives priority until it finishes (CR 704.3).
+        if !mid_resolution
+            && self.pending_decision.is_none()
+            && self.players.iter().any(|p| !p.commanders.is_empty())
+        {
             self.commander_zone_return_sba();
         }
 

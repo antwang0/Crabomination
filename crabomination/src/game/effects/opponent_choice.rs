@@ -107,7 +107,7 @@ impl GameState {
                 }
             }
         }
-        self.check_state_based_actions_into(events);
+        self.check_state_based_actions_mid_resolution(events);
         Ok(())
     }
 }

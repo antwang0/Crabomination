@@ -3224,6 +3224,46 @@ fn cr_903_9a_commander_dies_then_returns_as_an_sba() {
     assert!(g.players[0].graveyard.iter().all(|c| c.id != cmd));
 }
 
+/// CR 704.3 / 903.9a — state-based actions wait for the spell to finish, so a
+/// commander sacrificed by the first step of a resolution is still in the
+/// graveyard when a later step reads it. Danse Macabre makes each opponent
+/// sacrifice, then returns a creature sacrificed this way: the opponent's
+/// commander comes back under the caster's control rather than going home
+/// while the spell waits on its pick (four-seat pod, seed 24058 game 17).
+#[test]
+fn cr_704_3_commander_return_waits_for_the_resolution() {
+    let mut g = two_player_game();
+    let cmd = g.seat_commanders(1, vec![test_commander()])[0];
+    command_zone_to_battlefield(&mut g, 1, cmd);
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].wants_ui = true;
+    let danse = g.add_card_to_hand(0, catalog::danse_macabre());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Black, 5);
+    g.perform_action(GameAction::CastSpell {
+        card_id: danse,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .unwrap();
+    drain_stack(&mut g);
+    // The reanimation asks which sacrificed card comes back. A sweep while the
+    // spell waits on that answer is not a priority check: the commander stays.
+    assert!(g.pending_decision.is_some(), "the UI seat picks the card");
+    g.check_state_based_actions();
+    g.submit_decision(DecisionAnswer::Cards(vec![cmd])).expect("pick the commander");
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+
+    let c = g.battlefield.iter().find(|c| c.id == cmd).expect("reanimated, not sent home");
+    assert_eq!(c.controller, 0);
+    assert!(g.players[1].command.iter().all(|c| c.id != cmd));
+}
+
 /// Put `cmd` from its owner's command zone onto the battlefield, the way the
 /// 903.9a test does — the seating is what the tally is keyed on, not the zone.
 fn command_zone_to_battlefield(g: &mut GameState, seat: usize, cmd: crabomination::card::CardId) {

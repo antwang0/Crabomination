@@ -5960,7 +5960,7 @@ impl GameState {
                         });
                     }
                 }
-                self.check_state_based_actions_into(events);
+                self.check_state_based_actions_mid_resolution(events);
                 Ok(())
             }
 
@@ -7455,7 +7455,7 @@ impl GameState {
                 } else if let Some(e) = else_ {
                     self.run_effect(e, ctx, events)?;
                 }
-                self.check_state_based_actions_into(events);
+                self.check_state_based_actions_mid_resolution(events);
                 Ok(())
             }
 
@@ -7762,7 +7762,7 @@ impl GameState {
                     // player-target damage to poison counters.
                     self.deal_damage_to_from(ent, amt, ctx.source, events);
                 }
-                self.check_state_based_actions_into(events);
+                self.check_state_based_actions_mid_resolution(events);
                 Ok(())
             }
 
@@ -7798,7 +7798,7 @@ impl GameState {
                         self.deal_damage_to_from(ent, spill, ctx.source, events);
                     }
                 }
-                self.check_state_based_actions_into(events);
+                self.check_state_based_actions_mid_resolution(events);
                 Ok(())
             }
 
@@ -7832,7 +7832,7 @@ impl GameState {
                 for id in recipients {
                     self.deal_damage_to_from(EntityRef::Permanent(id), amt, ctx.source, events);
                 }
-                self.check_state_based_actions_into(events);
+                self.check_state_based_actions_mid_resolution(events);
                 Ok(())
             }
 
@@ -7858,7 +7858,7 @@ impl GameState {
                 for id in recipients {
                     self.deal_damage_to_from(EntityRef::Permanent(id), amt, ctx.source, events);
                 }
-                self.check_state_based_actions_into(events);
+                self.check_state_based_actions_mid_resolution(events);
                 Ok(())
             }
 
@@ -7877,7 +7877,7 @@ impl GameState {
                         self.deal_damage_to_from(*ent, amt, Some(src), events);
                     }
                 }
-                self.check_state_based_actions_into(events);
+                self.check_state_based_actions_mid_resolution(events);
                 Ok(())
             }
 
@@ -7907,7 +7907,7 @@ impl GameState {
                             EntityRef::Player(controller), amt - dealt, ctx.source, events);
                     }
                 }
-                self.check_state_based_actions_into(events);
+                self.check_state_based_actions_mid_resolution(events);
                 Ok(())
             }
 
@@ -7986,7 +7986,7 @@ impl GameState {
                         }
                     }
                 }
-                self.check_state_based_actions_into(events);
+                self.check_state_based_actions_mid_resolution(events);
                 Ok(())
             }
 
@@ -8073,7 +8073,7 @@ impl GameState {
                 for t in &targets {
                     self.deal_damage_to_from(target_to_entity(t), per, ctx.source, events);
                 }
-                self.check_state_based_actions_into(events);
+                self.check_state_based_actions_mid_resolution(events);
                 Ok(())
             }
 
@@ -8101,7 +8101,7 @@ impl GameState {
                     }
                     self.turn.permanents_gained_counter_this_turn.insert(id);
                 }
-                self.check_state_based_actions_into(events);
+                self.check_state_based_actions_mid_resolution(events);
                 Ok(())
             }
 
@@ -8307,7 +8307,7 @@ impl GameState {
                     }
                     self.turn.permanents_gained_counter_this_turn.insert(id);
                 }
-                self.check_state_based_actions_into(events);
+                self.check_state_based_actions_mid_resolution(events);
                 Ok(())
             }
 
@@ -8368,7 +8368,7 @@ impl GameState {
                         events,
                     );
                 }
-                self.check_state_based_actions_into(events);
+                self.check_state_based_actions_mid_resolution(events);
                 Ok(())
             }
 
@@ -8391,7 +8391,7 @@ impl GameState {
                         self.deal_damage_to_from(tgt, power as u32, Some(id), events);
                     }
                 }
-                self.check_state_based_actions_into(events);
+                self.check_state_based_actions_mid_resolution(events);
                 Ok(())
             }
 
@@ -8427,7 +8427,7 @@ impl GameState {
                     .unwrap_or(0);
                 if power > 0 {
                     self.deal_damage_to_from(tgt, power as u32, Some(src_id), events);
-                    self.check_state_based_actions_into(events);
+                    self.check_state_based_actions_mid_resolution(events);
                 }
                 Ok(())
             }
@@ -8446,7 +8446,7 @@ impl GameState {
                         self.deal_damage_to_from(tgt, n as u32, Some(src_id), events);
                     }
                 }
-                self.check_state_based_actions_into(events);
+                self.check_state_based_actions_mid_resolution(events);
                 Ok(())
             }
 
@@ -8482,7 +8482,7 @@ impl GameState {
                 for r in recipients {
                     self.deal_damage_to_from(r, power as u32, Some(src_id), events);
                 }
-                self.check_state_based_actions_into(events);
+                self.check_state_based_actions_mid_resolution(events);
                 Ok(())
             }
 
@@ -8517,7 +8517,7 @@ impl GameState {
                         }
                     }
                 }
-                self.check_state_based_actions_into(events);
+                self.check_state_based_actions_mid_resolution(events);
                 Ok(())
             }
 
@@ -8578,7 +8578,7 @@ impl GameState {
                         events.push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
                     }
                 }
-                self.check_state_based_actions_into(events);
+                self.check_state_based_actions_mid_resolution(events);
                 Ok(())
             }
 
@@ -8598,7 +8598,7 @@ impl GameState {
                         events.push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
                     }
                 }
-                self.check_state_based_actions_into(events);
+                self.check_state_based_actions_mid_resolution(events);
                 Ok(())
             }
 
@@ -8615,7 +8615,7 @@ impl GameState {
                     if amt == 0 { continue; }
                     self.deal_damage_to_from(EntityRef::Player(p), amt, ctx.source, events);
                 }
-                self.check_state_based_actions_into(events);
+                self.check_state_based_actions_mid_resolution(events);
                 Ok(())
             }
 
@@ -8739,7 +8739,7 @@ impl GameState {
                         events.append(&mut die_evs);
                     }
                 }
-                self.check_state_based_actions_into(events);
+                self.check_state_based_actions_mid_resolution(events);
                 Ok(())
             }
 
@@ -8759,7 +8759,7 @@ impl GameState {
                         }
                     }
                 }
-                self.check_state_based_actions_into(events);
+                self.check_state_based_actions_mid_resolution(events);
                 Ok(())
             }
 
@@ -8787,7 +8787,7 @@ impl GameState {
                             events.push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
                         }
                     }
-                    self.check_state_based_actions_into(events);
+                    self.check_state_based_actions_mid_resolution(events);
                 }
                 Ok(())
             }
@@ -8943,7 +8943,7 @@ impl GameState {
                         }
                     }
                 }
-                self.check_state_based_actions_into(events);
+                self.check_state_based_actions_mid_resolution(events);
                 Ok(())
             }
 
@@ -8972,7 +8972,7 @@ impl GameState {
                         }
                     }
                 }
-                self.check_state_based_actions_into(events);
+                self.check_state_based_actions_mid_resolution(events);
                 Ok(())
             }
 
@@ -9444,7 +9444,7 @@ impl GameState {
                 {
                     c.attached_to = Some(host);
                 }
-                self.check_state_based_actions_into(events);
+                self.check_state_based_actions_mid_resolution(events);
                 Ok(())
             }
 
@@ -11549,7 +11549,7 @@ impl GameState {
                     }
                 }
                 events.push(GameEvent::BecameMonstrous { card_id: src, n: base });
-                self.check_state_based_actions_into(events);
+                self.check_state_based_actions_mid_resolution(events);
                 Ok(())
             }
 
@@ -12464,7 +12464,7 @@ impl GameState {
                         });
                     }
                 }
-                self.check_state_based_actions_into(events);
+                self.check_state_based_actions_mid_resolution(events);
                 Ok(())
             }
 
@@ -13273,7 +13273,7 @@ impl GameState {
                         }
                     }
                 }
-                self.check_state_based_actions_into(events);
+                self.check_state_based_actions_mid_resolution(events);
                 Ok(())
             }
 
@@ -13290,7 +13290,7 @@ impl GameState {
                 for (cid, _) in &victims {
                     self.destroy_permanent(*cid, *no_regen, events);
                 }
-                self.check_state_based_actions_into(events);
+                self.check_state_based_actions_mid_resolution(events);
                 for (cid, seat) in victims {
                     if self.players[seat].graveyard.iter().any(|c| c.id == cid)
                         || self.players.iter().any(|p| p.graveyard.iter().any(|c| c.id == cid))
@@ -14101,7 +14101,7 @@ impl GameState {
                         );
                     }
                 }
-                self.check_state_based_actions_into(events);
+                self.check_state_based_actions_mid_resolution(events);
                 Ok(())
             }
 
@@ -17038,7 +17038,7 @@ impl GameState {
                     }
                     self.transform_permanent(id, events);
                 }
-                self.check_state_based_actions_into(events);
+                self.check_state_based_actions_mid_resolution(events);
                 Ok(())
             }
 
@@ -17068,7 +17068,7 @@ impl GameState {
                 for id in ids {
                     self.flip_permanent(id, events);
                 }
-                self.check_state_based_actions_into(events);
+                self.check_state_based_actions_mid_resolution(events);
                 Ok(())
             }
 
@@ -17127,7 +17127,7 @@ impl GameState {
                     &ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
                     events,
                 );
-                self.check_state_based_actions_into(events);
+                self.check_state_based_actions_mid_resolution(events);
                 Ok(())
             }
 
@@ -17837,7 +17837,7 @@ impl GameState {
                     }
                     self.turn.permanents_gained_counter_this_turn.insert(cid);
                 }
-                self.check_state_based_actions_into(events);
+                self.check_state_based_actions_mid_resolution(events);
                 Ok(())
             }
             Effect::AddCountersUpTo { what, kind, max, filter } => {
@@ -17896,7 +17896,7 @@ impl GameState {
                     }
                     self.turn.permanents_gained_counter_this_turn.insert(cid);
                 }
-                self.check_state_based_actions_into(events);
+                self.check_state_based_actions_mid_resolution(events);
                 Ok(())
             }
             Effect::AddCounter { what, kind, amount } => {
@@ -17982,7 +17982,7 @@ impl GameState {
                         _ => {}
                     }
                 }
-                self.check_state_based_actions_into(events);
+                self.check_state_based_actions_mid_resolution(events);
                 Ok(())
             }
 
@@ -18010,7 +18010,7 @@ impl GameState {
                     }
                     self.turn.permanents_gained_counter_this_turn.insert(cid);
                 }
-                self.check_state_based_actions_into(events);
+                self.check_state_based_actions_mid_resolution(events);
                 Ok(())
             }
 
@@ -18043,7 +18043,7 @@ impl GameState {
                     }
                     self.turn.permanents_gained_counter_this_turn.insert(cid);
                 }
-                self.check_state_based_actions_into(events);
+                self.check_state_based_actions_mid_resolution(events);
                 Ok(())
             }
 
@@ -18077,7 +18077,7 @@ impl GameState {
                     }
                     self.turn.permanents_gained_counter_this_turn.insert(cid);
                 }
-                self.check_state_based_actions_into(events);
+                self.check_state_based_actions_mid_resolution(events);
                 Ok(())
             }
 
@@ -18173,7 +18173,7 @@ impl GameState {
                         events,
                     )?;
                 }
-                self.check_state_based_actions_into(events);
+                self.check_state_based_actions_mid_resolution(events);
                 Ok(())
             }
 
@@ -18364,7 +18364,7 @@ impl GameState {
                     }
                     self.turn.permanents_gained_counter_this_turn.insert(s);
                 }
-                self.check_state_based_actions_into(events);
+                self.check_state_based_actions_mid_resolution(events);
                 Ok(())
             }
 
@@ -18652,7 +18652,7 @@ impl GameState {
                             break;
                         }
                 }
-                self.check_state_based_actions_into(events);
+                self.check_state_based_actions_mid_resolution(events);
                 Ok(())
             }
 
@@ -20874,7 +20874,7 @@ impl GameState {
                         }
                     }
                 }
-                self.check_state_based_actions_into(events);
+                self.check_state_based_actions_mid_resolution(events);
                 Ok(())
             }
 
@@ -20921,7 +20921,7 @@ impl GameState {
                     });
                     self.turn.permanents_gained_counter_this_turn.insert(army);
                 }
-                self.check_state_based_actions_into(events);
+                self.check_state_based_actions_mid_resolution(events);
                 Ok(())
             }
 
@@ -20984,7 +20984,7 @@ impl GameState {
                     });
                     self.turn.permanents_gained_counter_this_turn.insert(jace);
                 }
-                self.check_state_based_actions_into(events);
+                self.check_state_based_actions_mid_resolution(events);
                 Ok(())
             }
 
@@ -23052,7 +23052,7 @@ impl GameState {
                         self.add_poison(p, base, events);
                     }
                 }
-                self.check_state_based_actions_into(events);
+                self.check_state_based_actions_mid_resolution(events);
                 Ok(())
             }
 
@@ -24519,7 +24519,7 @@ impl GameState {
 
             Effect::DamagedCreaturesDieThisTurn => {
                 self.damaged_creatures_die_this_turn = true;
-                self.check_state_based_actions_into(events);
+                self.check_state_based_actions_mid_resolution(events);
                 Ok(())
             }
 
@@ -25334,7 +25334,7 @@ impl GameState {
                         }
                     }
                 }
-                self.check_state_based_actions_into(events);
+                self.check_state_based_actions_mid_resolution(events);
                 Ok(())
             }
 
@@ -27403,7 +27403,7 @@ impl GameState {
                         self.players[opp].eliminated = true;
                     }
                 }
-                self.check_state_based_actions_into(events);
+                self.check_state_based_actions_mid_resolution(events);
                 Ok(())
             }
 
@@ -27641,7 +27641,7 @@ impl GameState {
                         );
                     }
                 }
-                self.check_state_based_actions_into(events);
+                self.check_state_based_actions_mid_resolution(events);
                 Ok(())
             }
 
@@ -27818,7 +27818,7 @@ impl GameState {
                         remaining -= share;
                     }
                 }
-                self.check_state_based_actions_into(events);
+                self.check_state_based_actions_mid_resolution(events);
                 Ok(())
             }
 
@@ -28590,7 +28590,7 @@ impl GameState {
                         events.push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
                     }
                 }
-                self.check_state_based_actions_into(events);
+                self.check_state_based_actions_mid_resolution(events);
                 Ok(())
             }
 
@@ -28640,7 +28640,7 @@ impl GameState {
                         c.remembered_amount = Some(-applied);
                     }
                 }
-                self.check_state_based_actions_into(events);
+                self.check_state_based_actions_mid_resolution(events);
                 Ok(())
             }
 
@@ -30328,7 +30328,7 @@ impl GameState {
                         self.deal_damage_to_from(ent, dmg, ctx.source, events);
                     }
                 }
-                self.check_state_based_actions_into(events);
+                self.check_state_based_actions_mid_resolution(events);
                 Ok(())
             }
 
@@ -30363,7 +30363,7 @@ impl GameState {
                 for land in lands {
                     self.place_card_in_dest(land, p, &dest, events);
                 }
-                self.check_state_based_actions_into(events);
+                self.check_state_based_actions_mid_resolution(events);
                 Ok(())
             }
 
@@ -30394,7 +30394,7 @@ impl GameState {
                         self.deal_damage_to_from(ent, mv, ctx.source, events);
                     }
                 }
-                self.check_state_based_actions_into(events);
+                self.check_state_based_actions_mid_resolution(events);
                 Ok(())
             }
 
@@ -32284,7 +32284,7 @@ impl GameState {
                         self.players[p]
                             .loss_cause
                             .get_or_insert(crate::player::LossCause::Other);
-                        self.check_state_based_actions_into(events);
+                        self.check_state_based_actions_mid_resolution(events);
                     }
                 }
                 Ok(())
@@ -32459,7 +32459,7 @@ impl GameState {
                         events.push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
                     }
                 }
-                self.check_state_based_actions_into(events);
+                self.check_state_based_actions_mid_resolution(events);
                 Ok(())
             }
 
@@ -39199,7 +39199,7 @@ impl GameState {
                                     .get_or_insert(crate::player::LossCause::Other);
                             }
                         }
-                        self.check_state_based_actions_into(events);
+                        self.check_state_based_actions_mid_resolution(events);
                     }
                     [_] => {}
                     _ => self.game_over = Some(None),
@@ -39214,7 +39214,7 @@ impl GameState {
                     && !self.player_cant_lose_game(loser)
                 {
                     self.players[loser].eliminated = true;
-                    self.check_state_based_actions_into(events);
+                    self.check_state_based_actions_mid_resolution(events);
                 }
                 Ok(())
             }
@@ -42386,7 +42386,7 @@ impl GameState {
                                     count: *n, placer: self.resolution_causer,
                                 });
                             }
-                            self.check_state_based_actions_into(events);
+                            self.check_state_based_actions_mid_resolution(events);
                             true
                         } else {
                             false
