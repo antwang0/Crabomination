@@ -2989,8 +2989,17 @@ pub fn tribal_golem() -> CardDefinition {
             grant(CreatureType::Goblin, Keyword::Haste),
             grant(CreatureType::Soldier, Keyword::FirstStrike),
             grant(CreatureType::Wizard, Keyword::Flying),
-            grant(CreatureType::Zombie, Keyword::Regenerate(1)),
         ],
+        // "{B}: Regenerate this creature" as long as you control a Zombie.
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[b()]),
+            condition: Some(Predicate::SelectorExists(Selector::ControlledBy {
+                who: PlayerRef::You,
+                filter: R::Creature.and(R::HasCreatureType(CreatureType::Zombie)),
+            })),
+            effect: Effect::Regenerate { what: Selector::This },
+            ..Default::default()
+        }],
         ..creature("Tribal Golem", cost(&[generic(6)]), vec![CreatureType::Golem], 4, 4)
     }
 }

@@ -3882,21 +3882,25 @@ mod recent {
         assert_eq!(foods, 2, "half of 4 = 2 Food");
     }
 
-    /// Archangel of Wrath deals 2 per kick on ETB (multikicker twice → 4 total).
+    /// CR 702.32b — Archangel of Wrath's kicker is {B} and/or {R}: kicked with
+    /// one it deals 2 on entering, with both 2 more.
     #[test]
     fn archangel_of_wrath_kicked_twice_burns_four() {
-        let mut g = two_player_game();
-        let aa = g.add_card_to_hand(0, catalog::archangel_of_wrath());
-        g.players[0].mana_pool.add(Color::White, 2);
-        g.players[0].mana_pool.add(Color::Red, 2);
-        g.players[0].mana_pool.add_colorless(2);
-        let life = g.players[1].life;
-        g.perform_action(GameAction::CastSpellMultikicked {
-            card_id: aa, times: 2, target: Some(Target::Player(1)),
-            additional_targets: vec![Target::Player(1)], mode: None, x_value: None,
-        }).expect("cast kicked twice");
-        drain_stack(&mut g);
-        assert_eq!(g.players[1].life, life - 4, "two ETB triggers each dealt 2");
+        for (kickers, burn) in [(vec![1u8], 2), (vec![0u8, 1u8], 4)] {
+            let mut g = two_player_game();
+            let aa = g.add_card_to_hand(0, catalog::archangel_of_wrath());
+            g.players[0].mana_pool.add(Color::White, 2);
+            g.players[0].mana_pool.add(Color::Black, 1);
+            g.players[0].mana_pool.add(Color::Red, 1);
+            g.players[0].mana_pool.add_colorless(2);
+            let life = g.players[1].life;
+            g.perform_action(GameAction::CastSpellKickers {
+                card_id: aa, kickers: kickers.clone(), target: Some(Target::Player(1)),
+                additional_targets: vec![Target::Player(1)], mode: None, x_value: None,
+            }).expect("cast kicked");
+            drain_stack(&mut g);
+            assert_eq!(g.players[1].life, life - burn, "kickers {kickers:?}");
+        }
     }
 
     /// Ascendant Packleader enters with a counter when you control an MV-4 permanent.

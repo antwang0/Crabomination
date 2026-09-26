@@ -10501,9 +10501,9 @@ pub fn the_goose_mother() -> CardDefinition {
     }
 }
 
-/// Archangel of Wrath — {2}{W}{W} 3/4 Angel. Flying, lifelink. Kicker (multi,
-/// approximated from the printed {B} and/or {R}): when it enters, deals 2 damage
-/// to any target for each time it was kicked (up to twice).
+/// Archangel of Wrath — {2}{W}{W} 3/4 Angel. Flying, lifelink. Kicker {B}
+/// and/or {R} (CR 702.32b): when it enters, if it was kicked, 2 damage to any
+/// target; if it was kicked twice, 2 more.
 pub fn archangel_of_wrath() -> CardDefinition {
     CardDefinition {
         name: "Archangel of Wrath",
@@ -10518,20 +10518,22 @@ pub fn archangel_of_wrath() -> CardDefinition {
         keywords: vec![
             Keyword::Flying,
             Keyword::Lifelink,
-            Keyword::Multikicker(cost(&[r()])),
         ],
+        kicker_options: vec![cost(&[b()]), cost(&[r()])],
         triggered_abilities: vec![
             TriggeredAbility {
-                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource)
-                    .with_filter(Predicate::ValueAtLeast(Value::TimesKicked, Value::Const(1))),
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource).with_filter(
+                    Predicate::Any(vec![Predicate::SpellWasKickedWith(0), Predicate::SpellWasKickedWith(1)]),
+                ),
                 effect: Effect::DealDamage {
                     to: target_filtered(SelectionRequirement::Any),
                     amount: Value::Const(2),
                 },
             },
             TriggeredAbility {
-                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource)
-                    .with_filter(Predicate::ValueAtLeast(Value::TimesKicked, Value::Const(2))),
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource).with_filter(
+                    Predicate::All(vec![Predicate::SpellWasKickedWith(0), Predicate::SpellWasKickedWith(1)]),
+                ),
                 effect: Effect::DealDamage {
                     to: target_filtered(SelectionRequirement::Any),
                     amount: Value::Const(2),

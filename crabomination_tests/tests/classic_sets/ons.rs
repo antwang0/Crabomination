@@ -2480,6 +2480,24 @@ fn tribal_golem_borrows_keywords() {
     assert!(!kws.contains(&Keyword::Flying), "no Wizard, no flying");
 }
 
+/// Tribal Golem's "{B}: Regenerate this creature" works only while you control
+/// a Zombie (an activation condition, not a keyword that costs {1}).
+#[test]
+fn tribal_golem_regenerates_for_black_only_with_a_zombie() {
+    let mut g = main_phase();
+    let golem = g.add_card_to_battlefield(0, catalog::tribal_golem());
+    let activate = |g: &mut GameState| {
+        g.players[0].mana_pool.add(Color::Black, 1);
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: golem, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
+        })
+    };
+    assert!(activate(&mut g).is_err(), "no Zombie, no regeneration");
+    g.add_card_to_battlefield(0, catalog::gravedigger());
+    activate(&mut g).expect("a Zombie turns it on");
+}
+
 /// Run Wild hands out trample and a regeneration outlet.
 #[test]
 fn run_wild_grants_trample_and_regen() {

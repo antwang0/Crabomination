@@ -801,10 +801,7 @@ pub fn branch_of_vitu_ghazi() -> CardDefinition {
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::TurnedFaceUp, EventScope::SelfSource),
-            effect: Effect::AddManaKeptThisTurn {
-                who: PlayerRef::You,
-                colors: vec![Color::White, Color::White],
-            },
+            effect: Effect::AddManaKeptThisTurnAnyOneColor { who: PlayerRef::You, amount: Value::Const(2) },
         }],
         ..Default::default()
     }
