@@ -80,6 +80,7 @@ pub fn arterial_alchemy() -> CardDefinition {
                 filter: blood_tokens().and(R::ControlledByYou),
                 equip: cost(&[generic(2)]),
                 power: 2,
+                filtered_equip: None,
             },
         }],
         ..Default::default()

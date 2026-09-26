@@ -1856,7 +1856,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Mirkwood Trapper | Elven Council (LTC) | the shrunk attacker is the first one declared, not a target; the second ability isn't implemented. |
 | 🟡 Sail into the West | Elven Council (LTC) | on embark every player wheels; the "may" isn't offered. |
 | 🟡 Admiral Beckett Brass | Ahoy Mateys (LCC) | any damage from three Pirates this turn counts, not only combat damage. |
-| 🟡 Gemcutter Buccaneer | Ahoy Mateys (LCC) | Treasures get equip {3} only, not equip Pirate {1}. |
 | 🟡 Merchant Raiders | Ahoy Mateys (LCC) | the lock lasts while it's on the battlefield, not while you control it. |
 | 🟡 Timestream Navigator | Ahoy Mateys (LCC) | it goes to the bottom as part of the effect, not as a cost. |
 | 🟡 Zara, Renegade Recruiter | Ahoy Mateys (LCC) | the stolen creature is the engine's pick, and you don't look at the rest of the hand. |

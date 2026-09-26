@@ -3092,7 +3092,7 @@ pub fn glowcap_lantern() -> CardDefinition {
 
 /// Pirate Hat — {1}{U} Artifact Equipment. Equipped creature gets +1/+1 and has
 /// "Whenever this creature attacks, draw a card, then discard a card." Equip
-/// {2}. (The cheaper Equip Pirate {1} is omitted.)
+/// Pirate {1}. Equip {2}.
 pub fn pirate_hat() -> CardDefinition {
     use crate::card::EquipBonus;
     CardDefinition {
@@ -3104,6 +3104,10 @@ pub fn pirate_hat() -> CardDefinition {
             ..Default::default()
         },
         keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
+        equip_filtered_cost: Some((
+            SelectionRequirement::HasCreatureType(CreatureType::Pirate),
+            cost(&[generic(1)]),
+        )),
         equipped_bonus: Some(EquipBonus {
             power: 1,
             toughness: 1,

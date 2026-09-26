@@ -411,17 +411,17 @@ pub fn francisco_fowl_marauder() -> CardDefinition {
 }
 
 /// Gemcutter Buccaneer — it or another Pirate entering makes a tapped
-/// Treasure; your Treasures are Equipment with +2/+0.
-///
-/// ⚠ Residual: Treasures get equip {3} only, not equip Pirate {1}.
+/// Treasure; your Treasures are Equipment with +2/+0, equip Pirate {1} and
+/// equip {3}.
 pub fn gemcutter_buccaneer() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![StaticAbility {
-            description: "Treasures you control are Equipment with \"Equipped creature gets +2/+0\" and equip {3}.",
+            description: "Treasures you control are Equipment with \"Equipped creature gets +2/+0,\" equip Pirate {1}, and equip {3}.",
             effect: StaticEffect::MatchingArtifactsAreEquipment {
                 filter: R::HasArtifactSubtype(ArtifactSubtype::Treasure).and(R::ControlledByYou),
                 equip: cost(&[generic(3)]),
                 power: 2,
+                filtered_equip: Some(Box::new((pirate(), cost(&[generic(1)])))),
             },
         }],
         triggered_abilities: vec![pirate_enters(treasures(1, true))],

@@ -2044,7 +2044,15 @@ pub enum StaticEffect {
     /// and have 'Equipped creature gets +`power`/+0' and equip `equip`"
     /// (Arterial Alchemy: Blood tokens you control). `filter` reads the
     /// source's controller as "you". Rides Bludgeon Brawl's per-artifact pass.
-    MatchingArtifactsAreEquipment { filter: SelectionRequirement, equip: crate::mana::ManaCost, power: i32 },
+    /// `filtered_equip` is a cheaper "equip [quality] {N}" (Gemcutter
+    /// Buccaneer's "equip Pirate {1}"), as `CardDefinition::equip_filtered_cost`.
+    MatchingArtifactsAreEquipment {
+        filter: SelectionRequirement,
+        equip: crate::mana::ManaCost,
+        power: i32,
+        #[serde(default)]
+        filtered_equip: Option<Box<(SelectionRequirement, crate::mana::ManaCost)>>,
+    },
     /// CR 702.35 — "Each [filter] card you own that isn't on the battlefield
     /// has madness. The madness cost is equal to its mana cost." (Falkenrath
     /// Gorger.) Consulted where a discard looks for a madness cost.

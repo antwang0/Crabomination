@@ -276,6 +276,32 @@ fn gemcutter_buccaneer_cuts_gems() {
     assert_eq!(pt(&g, bear), (4, 2));
 }
 
+/// CR 702.6 — "equip Pirate {1}": a Pirate host costs {1}, anything else the
+/// full equip. Gemcutter Buccaneer's granted Treasure equip and Pirate Hat's
+/// printed one.
+#[test]
+fn equip_pirate_costs_one() {
+    for hat in [false, true] {
+        let mut g = main_phase(2);
+        let eq = if hat {
+            g.add_card_to_battlefield(0, catalog::pirate_hat())
+        } else {
+            let gb = g.add_card_to_hand(0, catalog::gemcutter_buccaneer());
+            cast_at(&mut g, gb, &[]).expect("cast");
+            g.battlefield.iter().find(|c| c.definition.name == "Treasure").expect("a Treasure").id
+        };
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let pirate = g.add_card_to_battlefield(0, catalog::breeches_brazen_plunderer());
+        g.priority.player_with_priority = 0;
+        g.players[0].mana_pool = Default::default();
+        g.players[0].mana_pool.add_colorless(1);
+        assert!(g.perform_action(GameAction::Equip { equipment: eq, target: bear }).is_err(), "a Bear pays the full equip");
+        g.perform_action(GameAction::Equip { equipment: eq, target: pirate }).expect("equip Pirate {1}");
+        crabomination::game::drain_stack(&mut g);
+        assert_eq!(g.battlefield_find(eq).and_then(|c| c.attached_to), Some(pirate), "hat={hat}");
+    }
+}
+
 /// Ghost of Ramirez returns a card milled this turn.
 #[test]
 fn ghost_of_ramirez_recovers() {

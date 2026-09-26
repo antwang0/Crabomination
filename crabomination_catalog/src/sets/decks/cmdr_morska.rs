@@ -119,6 +119,7 @@ pub fn armed_with_proof() -> CardDefinition {
                 filter: clue().and(R::ControlledByYou),
                 equip: cost(&[generic(2)]),
                 power: 2,
+                filtered_equip: None,
             },
         }],
         ..Default::default()

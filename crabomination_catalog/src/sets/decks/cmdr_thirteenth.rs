@@ -253,6 +253,7 @@ pub fn dan_lewis() -> CardDefinition {
                 filter: yours(R::Artifact),
                 equip: cost(&[generic(1)]),
                 power: 1,
+                filtered_equip: None,
             },
         }],
         ..companion(creature("Dan Lewis", cost(&[generic(1), r()]), vec![CreatureType::Human], 2, 2))

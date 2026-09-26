@@ -21272,11 +21272,33 @@ impl GameState {
                     let mv = def.cost.cmc();
                     Some((crate::mana::cost(&[crate::mana::generic(mv)]), mv as i32))
                 }
-                crate::effect::StaticEffect::MatchingArtifactsAreEquipment { filter, equip, power }
+                crate::effect::StaticEffect::MatchingArtifactsAreEquipment { filter, equip, power, .. }
                     if self.evaluate_requirement_on_card(filter, card, src.controller) =>
                 {
                     Some((equip.clone(), *power))
                 }
+                _ => None,
+            })
+        })
+    }
+
+    /// The cheaper "equip [quality] {N}" a `MatchingArtifactsAreEquipment`
+    /// grant carries for `card` (Gemcutter Buccaneer's "equip Pirate {1}").
+    fn granted_filtered_equip(
+        &self,
+        card: &CardInstance,
+    ) -> Option<(crate::card::SelectionRequirement, crate::mana::ManaCost)> {
+        let def = &card.definition;
+        if !def.is_artifact() || def.is_creature() || def.is_equipment() {
+            return None;
+        }
+        self.battlefield.iter().find_map(|src| {
+            src.definition.static_abilities.iter().find_map(|sa| match &sa.effect {
+                crate::effect::StaticEffect::MatchingArtifactsAreEquipment {
+                    filter,
+                    filtered_equip: Some(fe),
+                    ..
+                } if self.evaluate_requirement_on_card(filter, card, src.controller) => Some((**fe).clone()),
                 _ => None,
             })
         })
@@ -21357,8 +21379,11 @@ impl GameState {
         // "Equip [quality] {N}" (Thinking Cap's Detective discount) — same
         // strictly-cheaper logic, gated on the host matching the filter.
         if fortify.is_none()
-            && let Some((filter, alt)) =
-                self.battlefield[equip_pos].definition.equip_filtered_cost.clone()
+            && let Some((filter, alt)) = self.battlefield[equip_pos]
+                .definition
+                .equip_filtered_cost
+                .clone()
+                .or_else(|| self.granted_filtered_equip(&self.battlefield[equip_pos]))
             && self.evaluate_requirement_static(&filter, &Target::Permanent(target), p, None)
         {
             equip_cost = alt;
