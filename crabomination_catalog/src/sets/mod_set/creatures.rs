@@ -2208,7 +2208,7 @@ pub fn suture_priest() -> CardDefinition {
                         filter: SelectionRequirement::Creature,
                     }),
                 effect: Effect::LoseLife {
-                    who: Selector::Player(PlayerRef::EachOpponent),
+                    who: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::TriggerSource))),
                     amount: Value::Const(1),
                 },
             },

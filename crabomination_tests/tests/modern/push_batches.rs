@@ -2160,12 +2160,20 @@ fn master_of_cruelties_attack_sets_opp_life_to_one() {
     g.clear_sickness(master);
     g.players[1].life = 20;
 
-    // Fire the attack trigger directly via event bus.
-    let trig = catalog::master_of_cruelties().triggered_abilities[0].effect.clone();
-    let ctx = crabomination::game::effects::EffectContext::for_trigger(
-        master, 0, None, 0,
-    );
-    let _ = g.resolve_effect(&trig, &ctx);
+    // Attack unblocked; the trigger reads the defending player.
+    use crabomination::game::types::{Attack, AttackTarget};
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: master, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    while g.step != TurnStep::DeclareBlockers {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+    }
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no blocks");
     drain_stack(&mut g);
 
     assert_eq!(g.players[1].life, 1, "Opp's life set to 1");

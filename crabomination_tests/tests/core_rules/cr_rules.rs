@@ -12336,3 +12336,38 @@ fn cr_506_2_simian_sling_pings_the_defending_player() {
     assert_eq!(g.players[1].life, 19, "the defending player takes the ping");
     assert_eq!(g.players[2].life, 20, "the other opponent doesn't");
 }
+
+/// CR 506.2 / 603.2 in a pod — Master of Cruelties sets only the defending
+/// player's life to 1; Blood Seeker drains the controller of the creature
+/// that entered, not each opponent.
+#[test]
+fn cr_603_2_master_of_cruelties_and_blood_seeker_pick_one_seat() {
+    use crabomination::game::types::{GameAction, TurnStep};
+    let mut g = crabomination::game::multi_player_game(3);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let master = g.add_card_to_battlefield(0, catalog::master_of_cruelties());
+    g.clear_sickness(master);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: master, target: AttackTarget::Player(1) }]))
+        .expect("attack seat 1");
+    drain_stack(&mut g);
+    while g.step != TurnStep::DeclareBlockers {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+    }
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no blocks");
+    drain_stack(&mut g);
+    assert_eq!((g.players[1].life, g.players[2].life), (1, 20));
+
+    let mut g = crabomination::game::multi_player_game(3);
+    g.add_card_to_battlefield(0, catalog::blood_seeker());
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([crabomination::decision::DecisionAnswer::Bool(true)]));
+    let mut ev = Vec::new();
+    let bear = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    ev.push(crabomination::game::types::GameEvent::PermanentEntered { card_id: bear });
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert_eq!((g.players[1].life, g.players[2].life), (20, 19), "that player is the Bear's controller");
+}

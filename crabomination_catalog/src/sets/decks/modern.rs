@@ -14509,7 +14509,7 @@ pub fn master_of_cruelties() -> CardDefinition {
             event: EventSpec::new(EventKind::AttacksAndIsntBlocked, EventScope::SelfSource),
             effect: Effect::Seq(vec![
                 Effect::SetLifeTotal {
-                    who: Selector::Player(PlayerRef::EachOpponent),
+                    who: Selector::Player(PlayerRef::DefendingPlayer),
                     amount: Value::Const(1),
                 },
                 Effect::GrantKeyword {
@@ -30050,7 +30050,7 @@ pub fn blood_seeker() -> CardDefinition {
                     filter: SelectionRequirement::Creature,
                 }),
             effect: Effect::LoseLife {
-                who: Selector::Player(PlayerRef::EachOpponent),
+                who: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::TriggerSource))),
                 amount: Value::Const(1),
             },
         }],
@@ -32431,7 +32431,7 @@ pub fn pelakka_predation() -> CardDefinition {
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::DiscardChosen {
-            from: Selector::Player(PlayerRef::EachOpponent),
+            from: target_filtered(SelectionRequirement::OpponentPlayer),
             count: Value::Const(1),
             filter: SelectionRequirement::ManaValueAtLeast(3),
         },
@@ -33384,12 +33384,12 @@ pub fn concealing_curtains() -> CardDefinition {
             event: EventSpec::new(EventKind::Transformed, EventScope::SelfSource),
             effect: Effect::Seq(vec![
                 Effect::DiscardChosen {
-                    from: Selector::Player(PlayerRef::EachOpponent),
+                    from: target_filtered(SelectionRequirement::OpponentPlayer),
                     count: Value::Const(1),
                     filter: SelectionRequirement::Nonland,
                 },
                 Effect::Draw {
-                    who: Selector::Player(PlayerRef::EachOpponent),
+                    who: Selector::Player(PlayerRef::Target(0)),
                     amount: Value::Const(1),
                 },
             ]),
@@ -66831,7 +66831,7 @@ pub fn mardu_charm() -> CardDefinition {
                 },
             ]),
             Effect::DiscardChosen {
-                from: Selector::Player(PlayerRef::EachOpponent),
+                from: target_filtered(SelectionRequirement::OpponentPlayer),
                 count: Value::Const(1),
                 filter: SelectionRequirement::Noncreature.and(SelectionRequirement::Nonland),
             },

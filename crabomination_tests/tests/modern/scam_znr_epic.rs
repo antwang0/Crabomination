@@ -904,7 +904,7 @@ fn pelakka_predation_discards_expensive() {
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::CastSpell {
-        card_id: pp, target: None, additional_targets: vec![], mode: None, x_value: None,
+        card_id: pp, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast");
     drain_stack(&mut g);
     assert!(g.players[1].graveyard.iter().any(|c| c.definition.name == "Serra Angel"));

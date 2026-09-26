@@ -123,7 +123,7 @@ pub fn doomsday_specter() -> CardDefinition {
                     EventScope::SelfSource,
                 ),
                 effect: Effect::DiscardChosen {
-                    from: Selector::Player(PlayerRef::EachOpponent),
+                    from: Selector::Player(PlayerRef::Target(0)),
                     count: Value::ONE,
                     filter: R::Any,
                 },
