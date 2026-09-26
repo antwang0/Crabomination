@@ -40,6 +40,7 @@ mod turtle_power;
 mod blast_from_the_past;
 mod time_travel;
 mod phasing;
+mod supertypes;
 mod revival;
 mod wakanda;
 mod chosen_color_damage;
@@ -17434,6 +17435,13 @@ impl GameState {
                         modification: Modification::ReplaceBasicLandType(from, to),
                     });
                 }
+                Ok(())
+            }
+
+            Effect::BecomeLegendary { what, duration } => {
+                let ids: Vec<CardId> =
+                    self.resolve_selector(what, ctx).iter().filter_map(|e| e.as_permanent_id()).collect();
+                self.become_legendary(&ids, ctx.source.unwrap_or(CardId(0)), *duration, ctx.controller);
                 Ok(())
             }
 

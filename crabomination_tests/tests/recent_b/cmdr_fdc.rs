@@ -4061,6 +4061,10 @@ fn cr_603_4_cacophony_wipes_only_when_cast_and_animates() {
     assert!(g.battlefield_find(bear).is_none());
     assert!(g.battlefield_find(behemoth).is_some(), "an enchantment creature survives");
     assert_eq!(pt(&g, c), (6, 6), "its own entry animates it");
+    assert!(
+        g.computed_permanent(c).unwrap().supertypes().contains(&crabomination::card::Supertype::Legendary),
+        "a legendary 6/6"
+    );
 
     let mut g = main_phase();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());

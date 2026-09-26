@@ -1836,7 +1836,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Planetary Annihilation | World Shaper (EOC) | each player keeps the engine's pick of six lands. |
 | 🟡 Soul of Windgrace | World Shaper (EOC) | the land comes from the first graveyard holding one. |
 | 🟡 Emissary of Grudges | Nature's Vengeance (C18) | the opponent is chosen openly, and the reveal redirects any spell that targets you or your permanents, not only the chosen player's. |
-| 🟡 Hunting Wilds | Nature's Vengeance (C18) | the animated Forests keep their own color rather than becoming green. |
 | 🟡 Flameblast Dragon | Nature's Vengeance (C18) | {X} is asked before {R}; a bot seat answers X out of floating mana only. |
 | 🟡 Octomancer | Peace Offering (BLC) | the Octopus gift goes to a random opponent rather than a chosen one. |
 | 🟡 Perch Protection | Peace Offering (BLC) | the extra-turn gift goes to a random opponent; the life lock lasts this turn only. |
@@ -1881,7 +1880,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Ludevic, Necrogenius | From Cute to Brute (SLD) | transforms for {U}{U}{B}{B} exiling one creature card; Olag is a 4/4 with counters, not a copy. |
 | 🟡 Battle at the Helvault | Enduring Enchantments (CMM) | "for each player" covers opponents only: you can't exile one of your own permanents. |
 | 🟡 Battle for Bretagard | Enduring Enchantments (CMM) | chapter III copies every artifact and creature token you control, duplicate names included. |
-| 🟡 Cacophony Unleashed | Enduring Enchantments (CMM) | the animated 6/6 isn't legendary. |
 | 🟡 Ghoulish Impetus | Enduring Enchantments (CMM) | the goad is applied on entry and each of your upkeeps, not held by a static, so it lasts until your next turn after the Aura leaves. |
 | 🟡 Ondu Spiritdancer | Enduring Enchantments (CMM) | declining the copy still spends the turn's use. |
 | 🟡 Brutal Hordechief | Open Hostility (C16) | its activated ability makes opponents' creatures block if able, but how they block stays their controllers' choice. |

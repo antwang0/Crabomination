@@ -304,6 +304,7 @@ fn hunting_wilds_kicked_animates_its_forests() {
         assert!(c.card_types().contains(&crabomination::card::CardType::Creature));
         assert_eq!((c.power, c.toughness), (3, 3));
         assert!(!g.battlefield_find(f).unwrap().tapped);
+        assert_eq!(c.colors.to_vec(), vec![Color::Green], "they become green");
     }
 }
 

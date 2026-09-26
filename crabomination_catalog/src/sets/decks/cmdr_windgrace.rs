@@ -7,7 +7,6 @@
 //! - **Emissary of Grudges** — the choice isn't secret, and its reveal
 //!   redirects any spell that targets you or your permanents, not only the
 //!   chosen player's.
-//! - **Hunting Wilds** — the animated Forests stay their own color.
 //! - **Flameblast Dragon** — {X} is asked before {R}, so a bot seat, which
 //!   answers X out of floating mana only, rarely pays.
 
@@ -279,8 +278,8 @@ pub fn gyrus_waker_of_corpses() -> CardDefinition {
 }
 
 /// Hunting Wilds — {3}{G} sorcery, kicker {3}{G}: up to two Forests onto the
-/// battlefield tapped; kicked, they untap and become 3/3 haste creatures.
-/// (Residual: they keep their own color.)
+/// battlefield tapped; kicked, they untap and become 3/3 green haste
+/// creatures.
 pub fn hunting_wilds() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Kicker(cost(&[generic(3), g()]))],
@@ -305,6 +304,12 @@ pub fn hunting_wilds() -> CardDefinition {
                             creature_types: vec![],
                             keywords: vec![Keyword::Haste],
                             duration: Duration::Permanent,
+                        },
+                        Effect::BecomeColor {
+                            what: Selector::LastMoved,
+                            colors: vec![Color::Green],
+                            duration: Duration::Permanent,
+                            additive: false,
                         },
                     ])),
                     else_: Box::new(Effect::Noop),

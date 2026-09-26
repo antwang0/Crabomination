@@ -8,7 +8,6 @@
 //!   *opponent*; your own permanents can't be picked.
 //! - **Battle for Bretagard** — chapter III copies every artifact and creature
 //!   token you control, duplicate names included.
-//! - **Cacophony Unleashed** — the animated form isn't legendary.
 //! - **Ghoulish Impetus** — the goad is re-applied each of your upkeeps rather
 //!   than held by a static, so it outlives the Aura until your next turn.
 //! - **Ondu Spiritdancer** — declining the copy still spends the turn's use.
@@ -330,10 +329,8 @@ pub fn boon_of_the_spirit_realm() -> CardDefinition {
 }
 
 /// Cacophony Unleashed — cast: destroy all nonenchantment creatures.
-/// Constellation: it becomes a 6/6 Nightmare God with menace and deathtouch
-/// until end of turn.
-///
-/// Approximation: the animated form isn't legendary.
+/// Constellation: it becomes a legendary 6/6 Nightmare God with menace and
+/// deathtouch until end of turn.
 pub fn cacophony_unleashed() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![
@@ -347,14 +344,17 @@ pub fn cacophony_unleashed() -> CardDefinition {
                 }),
                 else_: Box::new(Effect::Noop),
             }),
-            constellation(Effect::BecomeCreature {
-                what: Selector::This,
-                power: Value::Const(6),
-                toughness: Value::Const(6),
-                creature_types: vec![CreatureType::Nightmare, CreatureType::God],
-                keywords: vec![Keyword::Menace, Keyword::Deathtouch],
-                duration: Duration::EndOfTurn,
-            }),
+            constellation(Effect::Seq(vec![
+                Effect::BecomeCreature {
+                    what: Selector::This,
+                    power: Value::Const(6),
+                    toughness: Value::Const(6),
+                    creature_types: vec![CreatureType::Nightmare, CreatureType::God],
+                    keywords: vec![Keyword::Menace, Keyword::Deathtouch],
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::BecomeLegendary { what: Selector::This, duration: Duration::EndOfTurn },
+            ])),
         ],
         ..enchantment("Cacophony Unleashed", cost(&[generic(5), b(), b()]))
     }

@@ -3335,7 +3335,7 @@ read against the defender, so the pod's attack picker honours it too),
 card, tapped and attacking, exiled at end of combat) and
 `Effect::RevealUntilSharesCardTypeToBattlefield` (Reality Scramble).
 Residuals: **Emissary of Grudges** (open choice, any redirectable spell),
-**Hunting Wilds** (Forests keep their color), **Flameblast Dragon** (X asked before {R}; a bot pays X only from
+**Flameblast Dragon** (X asked before {R}; a bot pays X only from
 floating mana). A 400-game census beside Hearthhull / Willowdusk / Winter
 (seed 9431, release) decided 400/400, Windgrace winning 12.2 %, every card of
 the four lists played. `--bench` byte-identical.
@@ -3357,7 +3357,7 @@ of Suns were dead text; `BoardFacts.grants_alt_cost` now asks
 `effective_alternative_cost` (a life payment of at most a third of the
 seat's life). Residuals: **Battle at the Helvault** targets opponents'
 permanents only; **Battle for Bretagard** copies duplicate names;
-**Cacophony Unleashed** isn't legendary when animated; **Ghoulish Impetus**
+**Ghoulish Impetus**
 goads each of your upkeeps (the goad outlives the Aura until your next
 turn); **Ondu Spiritdancer**'s declined copy spends the turn. Pods (release,
 seed 10211, 1,000 games beside Brimaz / Inalla / Isperia): 1,000/1,000

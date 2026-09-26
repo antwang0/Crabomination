@@ -7622,6 +7622,10 @@ pub enum Effect {
         #[serde(default)]
         excluded: Vec<crate::card::CreatureType>,
     },
+    /// Each permanent picked by `what` becomes legendary for `duration`
+    /// (CR 205.4 / layer-4 `AddSupertype`) — Cacophony Unleashed's "becomes
+    /// a legendary 6/6 … until end of turn".
+    BecomeLegendary { what: Selector, duration: Duration },
     /// Each permanent picked by `what` becomes exactly `colors` (replacing
     /// its colors) for `duration` (CR 105 / layer-5 `SetColors`). The
     /// fixed-color sibling of `BecomeChosenColor`. Crimson Wisps ("becomes
