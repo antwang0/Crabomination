@@ -2083,7 +2083,7 @@ pub fn bloodchief_ascension() -> CardDefinition {
                 effect: Effect::MayDo {
                     description: "That player loses 2 life and you gain 2".into(),
                     body: Box::new(Effect::Drain {
-                        from: Selector::Player(PlayerRef::EachOpponent),
+                        from: Selector::Player(PlayerRef::OwnerOf(Box::new(Selector::TriggerSource))),
                         to: Selector::You,
                         amount: Value::Const(2),
                     }),

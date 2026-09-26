@@ -45,7 +45,7 @@ pub fn kappa_tech_wrecker() -> CardDefinition {
                         },
                         Effect::Exile {
                             what: target_filtered(
-                                R::Artifact.or(R::Enchantment).and(R::ControlledByOpponent),
+                                R::Artifact.or(R::Enchantment).and(R::ControlledByTriggerPlayer),
                             ),
                         },
                     ])),
@@ -88,7 +88,7 @@ pub fn biting_palm_ninja() -> CardDefinition {
                             amount: Value::Const(1),
                         },
                         Effect::ExileChosenFromHand {
-                            from: Selector::Player(PlayerRef::EachOpponent),
+                            from: Selector::Player(PlayerRef::TriggerEventPlayer),
                             count: Value::Const(1),
                             filter: R::Nonland,
                             link_to_source: false,
@@ -126,7 +126,7 @@ pub fn dokuchi_silencer() -> CardDefinition {
                 then: Box::new(Effect::Reflexive {
                     body: Box::new(Effect::Destroy {
                         what: target_filtered(
-                            R::Creature.or(R::Planeswalker).and(R::ControlledByOpponent),
+                            R::Creature.or(R::Planeswalker).and(R::ControlledByTriggerPlayer),
                         ),
                     }),
                 }),

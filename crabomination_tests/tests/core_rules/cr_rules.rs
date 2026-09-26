@@ -12384,3 +12384,42 @@ fn cr_115_1_target_opponent_is_one_opponent() {
     let lost = (40 - g.players[1].life - g.players[2].life) as u32;
     assert_eq!(lost, 1, "one opponent loses 1 (Flayer), not both");
 }
+
+/// CR 603.2 — a combat-damage trigger's "that player" survives a reflexive
+/// "when you do" (CR 603.12): in a pod, Kappa Tech-Wrecker exiles only the
+/// damaged seat's artifact, Biting-Palm Ninja only its hand card, and
+/// Nature's Will taps only its lands.
+#[test]
+fn cr_603_12_reflexive_that_player_is_the_damaged_seat() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    use crabomination::game::types::{GameAction, TurnStep};
+    let run = |attacker: fn() -> crabomination::card::CardDefinition, extra: Option<fn() -> crabomination::card::CardDefinition>| {
+        let mut g = crabomination::game::multi_player_game(3);
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        let a = g.add_card_to_battlefield(0, attacker());
+        if let Some(e) = extra {
+            g.add_card_to_battlefield(0, e());
+        }
+        g.clear_sickness(a);
+        let rings = [g.add_card_to_battlefield(1, catalog::sol_ring()), g.add_card_to_battlefield(2, catalog::sol_ring())];
+        let lands = [g.add_card_to_battlefield(1, catalog::swamp()), g.add_card_to_battlefield(2, catalog::swamp())];
+        let hands = [g.add_card_to_hand(1, catalog::serra_angel()), g.add_card_to_hand(2, catalog::serra_angel())];
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+        g.step = TurnStep::DeclareAttackers;
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: a, target: AttackTarget::Player(1) }]))
+            .expect("attack seat 1");
+        while g.step != TurnStep::EndCombat && !g.is_game_over() {
+            let _ = g.advance_step(Vec::new());
+            drain_stack(&mut g);
+        }
+        (g, rings, lands, hands)
+    };
+    let (g, rings, _, _) = run(catalog::kappa_tech_wrecker, None);
+    assert!(g.battlefield_find(rings[0]).is_none() && g.battlefield_find(rings[1]).is_some(), "Kappa");
+    let (g, _, _, hands) = run(catalog::biting_palm_ninja, None);
+    assert!(g.players[1].hand.iter().all(|c| c.id != hands[0]), "Biting-Palm exiles seat 1's card");
+    assert!(g.players[2].hand.iter().any(|c| c.id == hands[1]), "and not seat 2's");
+    let (g, _, lands, _) = run(catalog::grizzly_bears, Some(catalog::natures_will));
+    assert!(g.battlefield_find(lands[0]).unwrap().tapped && !g.battlefield_find(lands[1]).unwrap().tapped, "Nature's Will");
+}

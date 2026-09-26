@@ -1218,7 +1218,7 @@ pub fn natures_will() -> CardDefinition {
                 .once_per_batch(),
             effect: Effect::Seq(vec![
                 Effect::Tap {
-                    what: Selector::EachPermanent(R::Land.and(R::ControlledByOpponent)),
+                    what: Selector::EachPermanent(R::Land.and(R::ControlledByTriggerPlayer)),
                 },
                 Effect::Untap {
                     what: Selector::EachPermanent(R::Land.and(R::ControlledByYou)),
