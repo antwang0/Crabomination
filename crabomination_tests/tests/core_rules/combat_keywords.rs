@@ -231,6 +231,22 @@ fn cr_702_142_boast_only_once_per_turn() {
     assert!(res.is_err(), "Boast is once per turn");
 }
 
+/// Dragonkin Berserker — "Boast abilities you activate cost {1} less to
+/// activate for each Dragon you control": with one Dragon, {3}{R}.
+#[test]
+fn cr_702_142_boast_costs_less_per_dragon() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::dragonkin_berserker());
+    g.battlefield_find_mut(id).unwrap().attacked_this_turn = true;
+    g.add_card_to_battlefield(0, catalog::shivan_dragon());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
+    }).expect("{3}{R} with a Dragon out");
+    assert_eq!(g.players[0].mana_pool.total(), 0);
+}
+
 #[test]
 fn cr_702_158_connive_draws_discards_and_counters_per_nonland() {
     let mut g = two_player_game();

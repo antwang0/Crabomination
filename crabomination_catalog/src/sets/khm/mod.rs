@@ -10,10 +10,25 @@ use crate::card::{
 use crate::effect::shortcut::boast;
 use crate::mana::{cost, generic, r};
 
-/// Dragonkin Berserker — {1}{R} 2/2 Dragon Berserker. Boast — {3}{R}: Put a
-/// +1/+1 counter on this. (The "whenever you boast, make a Dragon token if
-/// you control no other Dragon" payoff rider is omitted.)
+/// Dragonkin Berserker — {1}{R} 2/2 Human Berserker, first strike. Boast —
+/// {4}{R}: create a 5/5 red flying Dragon; boasts cost {1} less per Dragon you
+/// control.
 pub fn dragonkin_berserker() -> CardDefinition {
+    let dragon = crate::card::TokenDefinition {
+        name: "Dragon".into(),
+        power: 5,
+        toughness: 5,
+        keywords: vec![crate::card::Keyword::Flying],
+        card_types: vec![CardType::Creature],
+        colors: vec![crate::mana::Color::Red],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
+        ..Default::default()
+    };
+    let make_dragon = Effect::CreateToken {
+        who: crate::effect::PlayerRef::You,
+        count: Value::Const(1),
+        definition: std::sync::Arc::new(dragon),
+    };
     CardDefinition {
         name: "Dragonkin Berserker",
         cost: cost(&[generic(1), r()]),
@@ -25,26 +40,12 @@ pub fn dragonkin_berserker() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![crate::card::Keyword::FirstStrike],
-        activated_abilities: vec![boast(
-            cost(&[generic(4), r()]),
-            Effect::CreateToken {
-                who: crate::effect::PlayerRef::You,
-                count: Value::Const(1),
-                definition: std::sync::Arc::new(crate::card::TokenDefinition {
-                    name: "Dragon".into(),
-                    power: 5,
-                    toughness: 5,
-                    keywords: vec![crate::card::Keyword::Flying],
-                    card_types: vec![CardType::Creature],
-                    colors: vec![crate::mana::Color::Red],
-                    subtypes: Subtypes {
-                        creature_types: vec![CreatureType::Dragon],
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                }),
-            },
-        )],
+        // "Boast abilities you activate cost {1} less to activate for each
+        // Dragon you control" — its own boast is the only one in reach.
+        activated_abilities: vec![crate::card::ActivatedAbility {
+            cost_reduction_per: Some(crate::card::SelectionRequirement::HasCreatureType(CreatureType::Dragon)),
+            ..boast(cost(&[generic(4), r()]), make_dragon)
+        }],
         ..Default::default()
     }
 }

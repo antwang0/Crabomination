@@ -355,7 +355,7 @@ Nahiri, the Harbinger; Kari Zev; Marionette Master; Bloodthirsty Adversary;
 Aura of Silence; Compulsive Research; Mask of Griselbrand; Cankerbloom;
 Bitter Triumph; Ursine Monstrosity; Finale of Devastation; Teferi's
 Protection; Comeuppance; Decree of Justice; Experiment Twelve; Guardian
-Project; Pteramander; Mobilized District. Still open:
+Project; Pteramander; Mobilized District; Dragonkin Berserker. Still open:
 
 | Card | Gap |
 |---|---|
@@ -366,7 +366,6 @@ Project; Pteramander; Mobilized District. Still open:
 | 🟡 Sylvan Library | an optional "draw one, lose 4 life", not "draw two, then pay 4 life or put back each of two drawn this turn". |
 | 🟡 Master Biomancer | the "as a Mutant" type rider is missing. |
 | 🟡 Serra Avenger | "can't cast during your first three turns" is missing. |
-| 🟡 Dragonkin Berserker | the boast discount per Dragon you control is missing. |
 | 🟡 Smoke | "can't untap more than one creature" is modelled as no creature untapping. |
 | 🟡 Imprisoned in the Moon | the enchanted permanent doesn't gain "{T}: Add {C}". |
 
