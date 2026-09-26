@@ -3158,6 +3158,13 @@ pub fn encore(cost: crate::mana::ManaCost) -> ActivatedAbility {
     }
 }
 
+/// "Target opponent" for an ability whose only use of the slot is a
+/// `PlayerRef::Target(0)` ("target opponent gains control of …"): an inert
+/// life loss of 0 declares the slot's opponent filter.
+pub fn declare_target_opponent() -> Effect {
+    Effect::LoseLife { who: target_filtered(SelectionRequirement::OpponentPlayer), amount: Value::Const(0) }
+}
+
 /// Scavenge (CR 702.97): "[cost], Exile this card from your graveyard: Put a
 /// number of +1/+1 counters equal to this card's power on target creature.
 /// Activate only as a sorcery." Rides the gy-activation + exile-self-cost path;

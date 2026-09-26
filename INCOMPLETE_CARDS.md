@@ -1803,7 +1803,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 God-Pharaoh's Gift | Eternal Might (DRC) | exiles your greatest-power creature card (no choice). |
 | 🟡 Scaretiller | Land's Wrath (ZNC) | the mode is the engine's: a land from hand when there is one, else the first land card in your graveyard (untargeted). |
 | 🟡 The Mending of Dominaria | Land's Wrath (ZNC) | chapters I and II return your greatest-power creature card; the "may" is always taken. |
-| 🟡 Humble Defector | Stalwart Unity (C16) | the opponent who gains control is random, not targeted. |
 | 🟡 Orzhov Advokist | Stalwart Unity (C16) | a taker's counters go on their greatest-power creature; the attack restriction covers the creatures they control as it resolves. |
 | 🟡 Highcliff Felidar | Raining Cats and Dogs (SLD) | the destructions run one opponent at a time, not simultaneously; the engine picks among tied creatures. |
 | 🟡 Jinnie Fay, Jetmir's Second | Raining Cats and Dogs (SLD) | not optional: a creature token is replaced by the bigger Cat or Dog whenever one beats its printed body, and a noncreature token never is. |

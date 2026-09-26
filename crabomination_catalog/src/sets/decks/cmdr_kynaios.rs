@@ -3,7 +3,6 @@
 //! `tests/recent_b/cmdr_kynaios.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Humble Defector** — the opponent who gains control is a random one.
 //! - **Orzhov Advokist** — a taker's counters go on their greatest-power
 //!   creature, and the attack restriction covers the creatures they control
 //!   as it resolves.
@@ -13,7 +12,7 @@ use crate::card::{
     EventSpec, Keyword, SelectionRequirement as R, Selector, StaticAbility, StaticEffect, Subtypes,
     Supertype, TokenDefinition, TriggeredAbility, Value, Zone,
 };
-use crate::effect::shortcut::target_filtered;
+use crate::effect::shortcut::{declare_target_opponent, target_filtered};
 use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, Predicate};
 use crate::game::TurnStep;
 use crate::mana::{Color, cost, g, generic, r, u, w};
@@ -250,18 +249,19 @@ pub fn hoofprints_of_the_stag() -> CardDefinition {
     }
 }
 
-/// Humble Defector — {T}: draw two cards, then an opponent gains control of
-/// it; only during your turn.
+/// Humble Defector — {T}: draw two cards, then target opponent gains control
+/// of it; only during your turn.
 pub fn humble_defector() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             condition: your_turn(),
             effect: Effect::Seq(vec![
+                declare_target_opponent(),
                 Effect::Draw { who: Selector::You, amount: Value::Const(2) },
                 Effect::GainControl {
                     what: Selector::This,
-                    to: Some(PlayerRef::RandomOpponent),
+                    to: Some(PlayerRef::Target(0)),
                     duration: Duration::Permanent,
                 },
             ]),

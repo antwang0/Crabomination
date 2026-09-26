@@ -20,7 +20,7 @@ use crate::card::{
     Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value, Zone,
 };
 use crate::effect::shortcut::{
-    battalion, etb, exploit, mint_treasures, on_attack, on_dies, on_you_attack, squad_etb, target_filtered,
+    battalion, declare_target_opponent, etb, exploit, mint_treasures, on_attack, on_dies, on_you_attack, squad_etb, target_filtered,
     training,
 };
 use crate::effect::{AttackingTokenCleanup, Duration, Effect, ManaPayload, PlayerRef, Predicate, ZoneDest};
@@ -103,12 +103,6 @@ fn bobblehead(name: &'static str, second: ActivatedAbility) -> CardDefinition {
     }
 }
 
-/// "Target opponent" for an ability whose only use of the slot is a
-/// `PlayerRef::Target(0)`: an inert life-loss of 0 declares the slot's
-/// opponent filter.
-fn declare_target_opponent() -> Effect {
-    Effect::LoseLife { who: target_filtered(R::OpponentPlayer), amount: Value::Const(0) }
-}
 
 /// Aradesh, the Founder — enlist; a creature that enlisted gains double
 /// strike, and draws you a card at power 4+. Residual: only Aradesh's own

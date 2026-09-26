@@ -186,17 +186,19 @@ fn hoofprints_of_the_stag_counts_draws_into_an_elemental() {
     assert_eq!(count_named(&g, 0, "Elemental"), 1);
 }
 
+/// "Target opponent gains control" — the targeted seat, not a random one
+/// (it was `RandomOpponent`, CR 115.1).
 #[test]
-fn humble_defector_draws_two_then_defects() {
-    let mut g = main_phase(2);
+fn humble_defector_draws_two_then_defects_to_the_target() {
+    let mut g = main_phase(3);
     let d = g.add_card_to_battlefield(0, catalog::humble_defector());
     g.clear_sickness(d);
     for _ in 0..2 {
         g.add_card_to_library(0, catalog::plains());
     }
-    activate(&mut g, d, 0, None).expect("activate");
+    activate(&mut g, d, 0, Some(Target::Player(2))).expect("activate");
     assert_eq!(g.players[0].hand.len(), 2);
-    assert_eq!(g.computed_permanent(d).unwrap().controller, 1);
+    assert_eq!(g.computed_permanent(d).unwrap().controller, 2);
 }
 
 #[test]
