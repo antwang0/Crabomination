@@ -30898,6 +30898,7 @@ fn static_effect_to_effects(
             | StaticEffect::DoubleControllerTriggersMatching { .. }
             | StaticEffect::DoubleControllerLegendaryCreatureTriggers
             | StaticEffect::DoubleControllerPermanentTriggers
+            | StaticEffect::DoubleYourInstantSorceryCastTriggers
             | StaticEffect::DoubleControllerDeathTriggers
             | StaticEffect::DoubleControllerAttackTriggers
             // Hama Pashar — read in `Effect::Venture` via

@@ -1793,6 +1793,11 @@ pub enum StaticEffect {
     /// ability triggers an additional time" (Fractured Realm) — the
     /// unconditional sibling of the type/supertype-keyed doublers.
     DoubleControllerPermanentTriggers,
+    /// "If you casting … an instant or sorcery spell causes a triggered
+    /// ability of a permanent you control to trigger, that ability triggers an
+    /// additional time" (Veyran, Voice of Duality). Read by
+    /// `fire_spell_cast_triggers`; copies raise no cast triggers here.
+    DoubleYourInstantSorceryCastTriggers,
     /// CR 614.x — "Creatures entering the battlefield don't cause triggered
     /// abilities to trigger." Torpor Orb, Tocatli Honor Guard. When any
     /// permanent with this static is in play, an entering **creature**

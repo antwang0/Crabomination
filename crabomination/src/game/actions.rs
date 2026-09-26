@@ -14745,6 +14745,24 @@ impl GameState {
     /// evaluated with `Selector::TriggerSource` bound to this card so
     /// "whenever you cast a spell with property X" filters can read the
     /// cast spell's mana value, color, type, etc.
+    /// Veyran — how many `DoubleYourInstantSorceryCastTriggers` statics
+    /// `caster` controls, when `cast_card` is an instant or sorcery spell.
+    fn instant_sorcery_cast_doublers(&self, caster: usize, cast_card: CardId) -> usize {
+        let is_or = self.stack.iter().any(|si| {
+            matches!(si, StackItem::Spell { card, .. } if card.id == cast_card
+                && (card.definition.is_instant() || card.definition.is_sorcery()))
+        });
+        if !is_or {
+            return 0;
+        }
+        self.battlefield
+            .iter()
+            .filter(|c| c.controller == caster)
+            .flat_map(|c| c.definition.static_abilities.iter())
+            .filter(|sa| matches!(sa.effect, crate::effect::StaticEffect::DoubleYourInstantSorceryCastTriggers))
+            .count()
+    }
+
     pub(crate) fn fire_spell_cast_triggers(
         &mut self,
         controller: usize,
@@ -15099,6 +15117,9 @@ impl GameState {
             }
         }
 
+        // Veyran, Voice of Duality — your instant or sorcery cast makes each
+        // of your permanents' cast triggers fire once more per such static.
+        let is_or_doublers = if candidates.is_empty() { 0 } else { self.instant_sorcery_cast_doublers(controller, cast_card) };
         for (source, listener_controller, effect, filter, trig_idx, once_per_turn) in candidates {
             // CR 603.3d — "This ability triggers only once each turn"
             // (Whispering Wizard, Welcoming Vampire-style SpellCast payoffs).
@@ -15187,7 +15208,15 @@ impl GameState {
             // CR 603.x — Harmonic Prodigy / Veyran / Katara: a SpellCast
             // (Magecraft) trigger of a matching-subtype permanent fires an
             // additional time per doubler the controller controls.
-            let fires = 1 + ally_trigger_extra_fires(self, listener_controller, source);
+            let veyran = if is_or_doublers > 0
+                && listener_controller == controller
+                && self.battlefield_find(source).is_some_and(|c| c.controller == controller)
+            {
+                is_or_doublers
+            } else {
+                0
+            };
+            let fires = 1 + ally_trigger_extra_fires(self, listener_controller, source) + veyran;
             // "Whenever you cast a spell with {X} …" reads that spell's X
             // (Zaxara, Geometer's Arthropod) — it's still on the stack.
             let spell_x = self
