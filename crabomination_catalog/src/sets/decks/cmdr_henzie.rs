@@ -406,8 +406,11 @@ pub fn riveteers_confluence() -> CardDefinition {
         name: "Riveteers Confluence",
         cost: cost(&[generic(2), b(), r(), g()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::ChooseN {
-            picks: vec![0, 1, 2],
+        effect: // "Choose three. You may choose the same mode more than once."
+        Effect::ChooseModesCast {
+            min: 3,
+            max: 3,
+            allow_repeats: true,
             modes: vec![
                 Effect::Seq(vec![
                     Effect::Draw { who: Selector::You, amount: Value::ONE },

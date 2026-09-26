@@ -287,8 +287,11 @@ pub fn maestros_confluence() -> CardDefinition {
         "Maestros Confluence",
         cost(&[generic(3), u(), b(), r()]),
         CardType::Sorcery,
-        Effect::ChooseN {
-            picks: vec![1, 1, 2],
+        // "Choose three. You may choose the same mode more than once."
+        Effect::ChooseModesCast {
+            min: 3,
+            max: 3,
+            allow_repeats: true,
             modes: vec![
                 to_hand(target_filtered(instant_or_sorcery().and(R::Monocolored).and(R::InYourGraveyard))),
                 Effect::PumpPT {

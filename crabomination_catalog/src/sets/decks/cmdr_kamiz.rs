@@ -462,8 +462,11 @@ pub fn obscura_confluence() -> CardDefinition {
         "Obscura Confluence",
         cost(&[generic(1), w(), u(), b()]),
         true,
-        Effect::ChooseN {
-            picks: vec![0, 1, 2],
+        // "Choose three. You may choose the same mode more than once."
+        Effect::ChooseModesCast {
+            min: 3,
+            max: 3,
+            allow_repeats: true,
             modes: vec![
                 Effect::Seq(vec![
                     Effect::LoseAllAbilities {

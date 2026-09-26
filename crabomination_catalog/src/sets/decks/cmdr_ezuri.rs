@@ -3,8 +3,6 @@
 //! `tests/recent_b/cmdr_ezuri.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Verdant Confluence** — the mode picks are the card's default (two
-//!   counters, two basics); `Effect::ChooseN` has no cast-time mode choice.
 //! - **Skullwinder** — "choose an opponent" is the engine's pick (fewest
 //!   creatures, as for Sylvan Offering).
 
@@ -320,16 +318,18 @@ pub fn thelonite_hermit() -> CardDefinition {
     }
 }
 
-/// Verdant Confluence — choose three, repeats allowed (CR 700.2d). The
-/// default picks are two basics and two counters on a creature; the
-/// graveyard-return mode is there for a mode-picking seat.
+/// Verdant Confluence — choose three, repeats allowed (CR 700.2d), picked as
+/// it is cast.
 pub fn verdant_confluence() -> CardDefinition {
     CardDefinition {
         name: "Verdant Confluence",
         cost: cost(&[generic(4), g(), g()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::ChooseN {
-            picks: vec![0, 2, 2],
+        effect: // "Choose three. You may choose the same mode more than once."
+        Effect::ChooseModesCast {
+            min: 3,
+            max: 3,
+            allow_repeats: true,
             modes: vec![
                 Effect::AddCounter {
                     what: target_filtered(R::Creature),

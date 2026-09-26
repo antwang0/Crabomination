@@ -2854,7 +2854,12 @@ fn cr_700_2d_mystic_confluence_counters_and_draws_two() {
     g.priority.player_with_priority = 0;
     let m = g.add_card_to_hand(0, catalog::mystic_confluence());
     let before = g.players[0].hand.len();
-    cast(&mut g, m, &[Target::Permanent(giant)]);
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: m, spree_modes: vec![0, 2, 2], target: Some(Target::Permanent(giant)), additional_targets: vec![], x_value: None,
+    })
+    .expect("counter unless {3}, draw, draw");
+    drain_stack(&mut g);
     assert!(g.battlefield_find(giant).is_none(), "no mana left to pay {{3}}");
     assert_eq!(g.players[0].hand.len(), before - 1 + 2);
 }
@@ -3030,8 +3035,10 @@ fn bot_casts_meteor_blast_confluence_and_aethersnatch() {
         g.priority.player_with_priority = 0;
         let a = g.add_card_to_hand(0, answer);
         g.players[0].mana_pool.add(Color::Blue, blue);
+        // The Confluence picks its counter mode as it is cast (CR 700.2d).
         match HeuristicBot::new().next_action(&g, 0) {
             Some(GameAction::CastSpell { card_id, target: Some(Target::Permanent(t)), .. })
+            | Some(GameAction::CastSpellSpree { card_id, target: Some(Target::Permanent(t)), .. })
                 if card_id == a && t == giant => {}
             other => panic!("expected an answer to the Giant, got {other:?}"),
         }

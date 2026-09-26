@@ -304,7 +304,8 @@ fn thelonite_hermit_unmorphs_into_an_army() {
     assert_eq!(pt(&g, saps[0]), (2, 2));
 }
 
-/// The default picks: two +1/+1 counters and two basic lands.
+/// Picked as it is cast (CR 700.2d, repeats allowed): two +1/+1 counters and
+/// two basic lands.
 #[test]
 fn verdant_confluence_default_modes() {
     let mut g = main_phase(2);
@@ -313,7 +314,12 @@ fn verdant_confluence_default_modes() {
         g.add_card_to_library(0, catalog::forest());
     }
     let vc = g.add_card_to_hand(0, catalog::verdant_confluence());
-    cast(&mut g, vc, Some(Target::Permanent(bear))).expect("cast");
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: vc, spree_modes: vec![0, 2, 2], target: Some(Target::Permanent(bear)), additional_targets: vec![], x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
     assert_eq!(pt(&g, bear), (4, 4));
     let forests = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Forest").count();
     assert_eq!(forests, 2);

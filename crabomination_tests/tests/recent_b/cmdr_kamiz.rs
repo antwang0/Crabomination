@@ -318,7 +318,8 @@ fn writ_of_return_reanimates() {
     assert!(g.battlefield_find(angel).is_some_and(|c| c.tapped));
 }
 
-/// Obscura Confluence: a connive and a 1/1 on the default picks.
+/// Obscura Confluence, picked as cast (CR 700.2d): a 1/1, a connive and a
+/// creature card back.
 #[test]
 fn obscura_confluence_resolves_its_picks() {
     let mut g = main_phase(2);
@@ -327,7 +328,11 @@ fn obscura_confluence_resolves_its_picks() {
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.add_card_to_graveyard(0, catalog::grizzly_bears());
     let c = g.add_card_to_hand(0, catalog::obscura_confluence());
-    cast_at(&mut g, c, &[Target::Permanent(angel), Target::Permanent(bear)]).expect("default picks");
+    act(&mut g, GameAction::CastSpellSpree {
+        card_id: c, spree_modes: vec![0, 1, 2], target: Some(Target::Permanent(angel)),
+        additional_targets: vec![Target::Permanent(bear)], x_value: None,
+    })
+    .expect("three modes");
     let cp = g.computed_permanent(angel).unwrap();
     assert_eq!((cp.power, cp.toughness), (1, 1));
     assert!(!cp.keywords().contains(&Keyword::Flying));

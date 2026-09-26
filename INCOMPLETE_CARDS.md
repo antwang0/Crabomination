@@ -1801,7 +1801,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 |---|---|
 | 🟡 Loaming Shaman | "any number of target cards from target player's graveyard" shuffles the **whole** graveyard back; no pick. Needs a multi-target any-number graveyard selector. |
 | 🟡 Forgotten Ancient | "move any number of +1/+1 counters" is all-or-nothing, spread evenly over your other creatures (`DistributeCountersFromSource`); no per-recipient amounts. |
-| 🟡 Verdant Confluence | modes are the default picks (two counters, two basics); `ChooseN` has no cast-time mode choice. |
 
 ### Seats 33, 34, 36, 37 and 40 (Angels SLD, Built From Scratch C14, Vampiric Bloodline VOC, Plunder the Graves C15, Call the Spirits C15) — open residuals, 2026-09-24
 
@@ -2135,7 +2134,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Liliana, Untouched by Death | Grave Danger (SCD) | the −3 covers the Zombie cards in your graveyard as it resolves, not later arrivals that turn. |
 | 🟡 Arcane Lighthouse | Forged in Stone (C14) | creatures lose hexproof/shroud until end of turn; a grant made later that turn is not stopped ("can't have"). |
 | 🟡 Nahiri, the Lithomancer | Forged in Stone (C14) | the +2 attaches your first Equipment; the −2 puts your first Equipment card from hand, else graveyard — no pick. |
-| 🟡 Mystic Confluence | Seize Control (C15) | the modes are the default picks (counter unless {3}, draw two); `ChooseN` has no cast-time mode choice with repeats. |
 | 🟡 Collective Effort | Rebellion Rising (ONC) | escalate is paid as it resolves (the standing `Escalate` approximation), tapping your first untapped creature. |
 | 🟡 Goldwardens' Gambit | Rebellion Rising (ONC) | each token takes your highest-mana-value unattached Equipment; no pick, and an attached one is never moved. |
 | 🟡 Neyali, Suns' Vanguard | Rebellion Rising (ONC) | "tokens attack a player" also counts tokens attacking a planeswalker an opponent controls. |

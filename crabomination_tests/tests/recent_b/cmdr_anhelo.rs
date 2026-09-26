@@ -239,8 +239,13 @@ fn maestros_confluence_shrinks_and_goads() {
     let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
     let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let mc = g.add_card_to_hand(0, catalog::maestros_confluence());
-    cast_full(&mut g, 0, mc, Some(Target::Permanent(angel)), vec![Target::Permanent(angel)], None)
-        .expect("confluence");
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: mc, spree_modes: vec![1, 1, 2], target: Some(Target::Permanent(angel)),
+        additional_targets: vec![Target::Permanent(angel)], x_value: None,
+    })
+    .expect("confluence");
+    drain_stack(&mut g);
     assert!(g.battlefield_find(angel).is_none(), "-6/-6");
     assert!(g.goaded_by_player(g.battlefield_find(bears).unwrap(), 0));
 }
