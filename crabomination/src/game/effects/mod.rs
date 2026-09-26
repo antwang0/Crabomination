@@ -14937,7 +14937,8 @@ impl GameState {
                 if revealed.is_empty() {
                     return Ok(());
                 }
-                let Some(opp) = self.opponents_of(seat).into_iter().next() else {
+                // "An opponent" is the controller's pick (not a target).
+                let Some(opp) = self.choose_opponent_at_once(seat, src, "Choose the opponent who picks") else {
                     return Ok(());
                 };
                 let candidates: Vec<(CardId, String)> = revealed
@@ -19766,7 +19767,7 @@ impl GameState {
                 // gives the token (the printed default when nobody acts).
                 use crate::decision::{Decision, DecisionAnswer};
                 let src = ctx.source.unwrap_or(CardId(0));
-                let opponent = self.opponents_of(ctx.controller).first().copied();
+                let opponent = self.choose_opponent_at_once(ctx.controller, src, "Choose the opponent who picks");
                 for _ in 0..*times {
                     let draw_instead = opponent.is_some()
                         && matches!(
@@ -24645,7 +24646,7 @@ impl GameState {
                         EntityRef::Player(o) => Some(o),
                         _ => None,
                     })
-                    .or_else(|| self.opponents_of(p).into_iter().next());
+                    .or_else(|| self.choose_opponent_at_once(p, ctx.source.unwrap_or(CardId(0)), "Choose the opponent who picks"));
                 let Some(opp) = opp else { return Ok(()) };
                 // CR 701.19 — the searcher picks up to `count` cards with
                 // different names.
@@ -28025,7 +28026,9 @@ impl GameState {
                 // A bot chooser hands back the least useful match (lowest MV);
                 // a UI opponent is prompted for real.
                 matches.sort_by_key(|(_, _, mv)| *mv);
-                let chooser = self.opponents_of(p).first().copied().unwrap_or(p);
+                let chooser = self
+                        .choose_opponent_at_once(p, ctx.source.unwrap_or(CardId(0)), "Choose the opponent who picks")
+                        .unwrap_or(p);
                 let mut cursor = 0usize;
                 let candidates: Vec<(CardId, String)> =
                     matches.iter().map(|(id, n, _)| (*id, n.clone())).collect();
@@ -28139,7 +28142,9 @@ impl GameState {
                 let chosen = if eligible.is_empty() {
                     None
                 } else {
-                    let chooser = self.opponents_of(p).first().copied().unwrap_or(p);
+                    let chooser = self
+                        .choose_opponent_at_once(p, ctx.source.unwrap_or(CardId(0)), "Choose the opponent who picks")
+                        .unwrap_or(p);
                     let mut cursor = 0usize;
                     let candidates: Vec<(CardId, String)> =
                         eligible.iter().map(|(id, n, _)| (*id, n.clone())).collect();

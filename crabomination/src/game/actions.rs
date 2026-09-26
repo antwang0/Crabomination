@@ -11091,7 +11091,8 @@ impl GameState {
                     }
                 }
                 A::OpponentGainsLife { amount } => {
-                    if let Some(opp) = self.opponents_of(p).first().copied() {
+                    // "An opponent" is the caster's pick (not a target).
+                    if let Some(opp) = self.choose_opponent_at_once(p, CardId(0), "Choose the opponent who gains life") {
                         let applied = self.adjust_life_applied(opp, *amount as i32);
                         if applied > 0 {
                             events.push(GameEvent::LifeGained {

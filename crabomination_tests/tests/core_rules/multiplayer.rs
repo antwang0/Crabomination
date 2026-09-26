@@ -5959,6 +5959,29 @@ fn cr_702_174a_gift_goes_to_the_chosen_opponent_only() {
     assert_eq!((fish(1), fish(2), fish(3)), (0, 0, 1), "only the chosen opponent gets the Fish");
 }
 
+/// CR 102.2 / 601.2h — "an opponent gains 5 life" (Roar of Jukai's splice
+/// cost) names no target, so the caster picks which opponent; it used to be
+/// the lowest seat every time.
+#[test]
+fn cr_601_2h_splice_life_goes_to_the_opponent_the_caster_picks() {
+    use crabomination::decision::ScriptedDecider;
+    let mut g = multi_player_game(4);
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // Ballot: fewest creatures first, turn order breaking ties — [2, 3, 1].
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(1)]));
+    let ray = g.add_card_to_hand(0, catalog::glacial_ray());
+    let roar = g.add_card_to_hand(0, catalog::roar_of_jukai());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Red, 4);
+    let before: Vec<i32> = g.players.iter().map(|p| p.life).collect();
+    g.perform_action(GameAction::CastSpellSpliced {
+        card_id: ray, splice_cards: vec![roar], target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("spliced cast");
+    drain_stack(&mut g);
+    let delta: Vec<i32> = g.players.iter().zip(&before).map(|(p, b)| p.life - b).collect();
+    assert_eq!(delta, vec![0, -2, 0, 5], "the fourth seat gains 5; the Ray hits seat 1");
+}
+
 /// CR 702.174a / 702.174b — a permanent's gift trigger reads the opponent
 /// chosen while casting; headless, that is the one with the fewest creatures.
 #[test]
