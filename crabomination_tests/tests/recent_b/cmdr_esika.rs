@@ -437,3 +437,20 @@ fn liliana_emblem_returns_the_dead_at_the_end_step() {
     }
     assert_eq!(g.battlefield_find(bear).map(|c| c.controller), Some(0), "back under Liliana's controller");
 }
+
+/// Nicol Bolas, the Arisen's −12 exiles all but the last card of target
+/// player's library.
+#[test]
+fn nicol_bolas_the_arisen_leaves_one_card() {
+    let mut g = main_phase();
+    library(&mut g, 1, 6);
+    let bolas = g.add_card_to_battlefield(0, catalog::nicol_bolas_the_ravager());
+    let mut ctx = EffectContext::for_ability(bolas, 0, None);
+    ctx.source = Some(bolas);
+    let ev = g.resolve_effect(&crabomination::effect::Effect::ExileSelfReturnTransformed, &ctx).expect("flip");
+    g.dispatch_triggers_for_events(&ev);
+    let arisen = on_board(&g, 0, "Nicol Bolas, the Arisen").expect("the planeswalker side");
+    g.battlefield_find_mut(arisen).unwrap().add_counters(CounterType::Loyalty, 10);
+    loyalty(&mut g, arisen, 3, Some(Target::Player(1)));
+    assert_eq!(g.players[1].library.len(), 1);
+}

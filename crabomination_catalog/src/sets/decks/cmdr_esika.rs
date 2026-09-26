@@ -14,7 +14,6 @@
 //!   transformed.
 //! - **Ludevic, Necrogenius** — transforms for {U}{U}{B}{B} exiling one
 //!   creature card; Olag is a plain 4/4 with counters, not a copy.
-//! - **Nicol Bolas, the Arisen** — the −12 isn't implemented.
 //! - **The Ringhart Crest** — its mana isn't restricted.
 //! - **Tibalt, Cosmic Impostor** (Valki's back) — cards it exiles can't be
 //!   played; the emblem isn't implemented.
@@ -998,9 +997,8 @@ pub fn ludevic_necrogenius() -> CardDefinition {
     })
 }
 
-/// Nicol Bolas, the Ravager // Nicol Bolas, the Arisen.
-///
-/// ⚠ Residual: the −12 isn't implemented.
+/// Nicol Bolas, the Ravager // Nicol Bolas, the Arisen — the −12 exiles all
+/// but the last card of target player's library.
 pub fn nicol_bolas_the_ravager() -> CardDefinition {
     let arisen = walker(
         "Nicol Bolas, the Arisen",
@@ -1015,6 +1013,16 @@ pub fn nicol_bolas_the_ravager() -> CardDefinition {
                 Effect::Move {
                     what: target_filtered(R::Creature.or(R::Planeswalker).and(R::InGraveyard)),
                     to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                },
+            ),
+            // −12: exile all but the last card of target player's library.
+            loyalty(
+                -12,
+                Effect::ExileTopOfLibrary {
+                    who: target_filtered(R::Player),
+                    amount: Value::Diff(Box::new(Value::LibrarySizeOf(PlayerRef::Target(0))), Box::new(Value::ONE)),
+                    link_to_source: false,
+                    face_down: false,
                 },
             ),
         ],
