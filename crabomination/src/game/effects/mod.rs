@@ -38533,7 +38533,14 @@ impl GameState {
                         }
                     }
                 }
+                // Paying can take the card with it — a life payment that
+                // drops the controller out of a pod removes every card they
+                // own (CR 800.4a; pod seed 25048, Emet-Selch recasting Rite
+                // of Replication). The cast then has nothing to cast.
                 let cast_zone = if *copy { crate::card::Zone::Hand } else { *source_zone };
+                if self.find_card_zone(cast_id) != Some(cast_zone) {
+                    return Ok(());
+                }
                 let cast_events = self.cast_card_from_zone_spending(
                     ctx.controller,
                     cast_id,
