@@ -223,3 +223,34 @@ fn high_tide_doubles_every_players_islands() {
         assert_eq!(g.players[seat].mana_pool.total(), want);
     }
 }
+
+/// CR 702.176: Beseech the Mirror bargained casts a tutored card of mana
+/// value 4 or less for free; unbargained, the card goes to hand.
+#[test]
+fn beseech_the_mirror_casts_free_only_when_bargained() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    for bargain in [true, false] {
+        let mut g = pod(4);
+        let fodder = g.add_card_to_battlefield(0, catalog::ornithopter());
+        let bears = g.add_card_to_library(0, catalog::grizzly_bears());
+        g.add_card_to_library(0, catalog::island());
+        let spell = g.add_card_to_hand(0, catalog::beseech_the_mirror());
+        flood(&mut g, 0);
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(bears)), DecisionAnswer::Bool(true)]));
+        let r = if bargain {
+            g.perform_action(GameAction::CastSpellBargain {
+                card_id: spell, sacrifice: Some(fodder), target: None, additional_targets: vec![], mode: None, x_value: None,
+            })
+        } else {
+            g.perform_action(GameAction::CastSpell {
+                card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+            })
+        };
+        r.expect("cast Beseech the Mirror");
+        drain_stack(&mut g);
+        let on_field = g.battlefield.iter().any(|c| c.id == bears);
+        let in_hand = g.players[0].hand.iter().any(|c| c.id == bears);
+        assert_eq!((on_field, in_hand), (bargain, !bargain), "bargain={bargain}");
+        assert!(!g.exile.iter().any(|c| c.id == bears));
+    }
+}

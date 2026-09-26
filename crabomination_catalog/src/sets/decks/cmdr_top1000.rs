@@ -288,3 +288,37 @@ pub fn high_tide() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Beseech the Mirror — {1}{B}{B}{B} Sorcery. Bargain. Search your library
+/// for a card, exile it face down, then shuffle. If this spell was
+/// bargained, you may cast the exiled card without paying its mana cost if
+/// its mana value is 4 or less (CR 702.176). Put it into your hand if it
+/// wasn't cast this way.
+pub fn beseech_the_mirror() -> CardDefinition {
+    CardDefinition {
+        name: "Beseech the Mirror",
+        cost: cost(&[generic(1), b(), b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Bargain],
+        effect: Effect::Seq(vec![
+            Effect::Search { who: PlayerRef::You, filter: R::Any, to: crate::effect::ZoneDest::Exile },
+            Effect::If {
+                cond: Predicate::SpellWasBargained,
+                then: Box::new(Effect::CastWithoutPayingImmediate {
+                    what: Selector::ExiledThisResolution { filter: R::Nonland.and(R::ManaValueAtMost(4)) },
+                    source_zone: crate::card::Zone::Exile,
+                    exile_after: false,
+                    copy: false,
+                    reduce_generic: 0,
+                    pay_own_cost: false,
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+            Effect::Move {
+                what: Selector::ExiledThisResolution { filter: R::InExile },
+                to: crate::effect::ZoneDest::Hand(PlayerRef::You),
+            },
+        ]),
+        ..Default::default()
+    }
+}
