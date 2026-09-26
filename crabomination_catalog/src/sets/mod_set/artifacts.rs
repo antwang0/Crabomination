@@ -577,11 +577,8 @@ pub fn star_compass() -> CardDefinition {
 /// token. • Each opponent loses 3 life."
 ///
 /// (Shipped as an unrelated `{2}, {T}: +2/+2` pump until the `token`
-/// oracle-verb class read it. The **this turn** half is the approximation:
-/// `Effect::ChooseUnchosenMode` records the pick on the source for the whole
-/// game rather than resetting each turn, so the Monument runs out after three
-/// discards instead of three a turn. A `reset_each_turn` window wants a
-/// per-turn sibling of `CardInstance.modes_chosen`; filed in CARD_BACKLOG.)
+/// oracle-verb class read it; the menu resets each turn through
+/// `Effect::ChooseUnchosenModeThisTurn`.)
 pub fn monument_to_endurance() -> CardDefinition {
     CardDefinition {
         name: "Monument to Endurance",
@@ -589,7 +586,7 @@ pub fn monument_to_endurance() -> CardDefinition {
         card_types: vec![CardType::Artifact],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CardDiscarded, EventScope::YourControl),
-            effect: Effect::ChooseUnchosenMode {
+            effect: Effect::ChooseUnchosenModeThisTurn {
                 modes: vec![
                     Effect::Draw { who: Selector::You, amount: Value::Const(1) },
                     Effect::CreateToken {

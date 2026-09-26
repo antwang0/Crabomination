@@ -1419,7 +1419,7 @@ ability, and the Berserker's boast. ⚠ **The three change bot play on
 |---|---|---|
 | Elegy Acolyte | the Void end-step trigger ran a **copy of its own combat trigger** (draw and lose 1) | the printed 2/2 colorless Robot |
 | Glaring Fleshraker | one ETB "deal 2 to any target"; the card prints **neither** ETB nor that damage | "colorless spell cast → Eldrazi Spawn" and "another colorless creature enters → 1 to each opponent" |
-| Monument to Endurance | `{2}, {T}: target creature gets +2/+2`, an ability the card does not have at all | the printed discard-triggered `Effect::ChooseUnchosenMode` over draw / Treasure / drain 3 |
+| Monument to Endurance | `{2}, {T}: target creature gets +2/+2`, an ability the card does not have at all | the printed discard-triggered `Effect::ChooseUnchosenModeThisTurn` over draw / Treasure / drain 3 |
 
 ⚠ **Fleshraker's two triggers chain**: the Eldrazi Spawn the cast trigger mints
 is itself a colorless creature entering, so one colorless cast drains an

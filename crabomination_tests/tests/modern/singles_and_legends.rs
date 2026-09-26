@@ -198,9 +198,9 @@ fn blazemire_verge_red_gated_on_swamp_or_mountain() {
 // ── Monument to Endurance ───────────────────────────────────────────────────
 
 /// "Whenever you discard a card, choose one that hasn't been chosen this turn."
-/// Shipped as an unrelated `{2}, {T}: +2/+2` pump until the `token`
-/// oracle-verb class; the "this turn" window is still an approximation (the
-/// pick is recorded for the game, see the card's doc comment).
+/// CR 700.2: each discard picks a mode unused this turn; a new turn resets
+/// the menu. Shipped as an unrelated `{2}, {T}: +2/+2` pump until the
+/// `token` oracle-verb class.
 #[test]
 fn monument_to_endurance_fires_a_fresh_mode_on_each_discard() {
     let mut g = two_player_game();
@@ -210,21 +210,31 @@ fn monument_to_endurance_fires_a_fresh_mode_on_each_discard() {
     for _ in 0..5 {
         g.add_card_to_library(0, catalog::forest());
     }
-    let pitch: Vec<_> = (0..3).map(|_| g.add_card_to_hand(0, catalog::grizzly_bears())).collect();
-    let life_before = g.players[1].life;
-    for card in pitch {
+    let discard = |g: &mut GameState| {
+        let card = g.add_card_to_hand(0, catalog::grizzly_bears());
         let mut evs = Vec::new();
         g.discard_card(0, card, &mut evs);
         g.dispatch_triggers_for_events(&evs);
-        drain_stack(&mut g);
+        drain_stack(g);
+    };
+    let life_before = g.players[1].life;
+    for _ in 0..3 {
+        discard(&mut g);
     }
+    // The record is `[turn as 4 LE bytes] ++ picks`.
     let chosen = &g.battlefield_find(mon).expect("Monument still out").modes_chosen;
-    assert_eq!(chosen.len(), 3, "one fresh mode per discard, never a repeat");
-    let mut sorted = chosen.clone();
+    let mut sorted = chosen[4..].to_vec();
     sorted.sort_unstable();
     assert_eq!(sorted, vec![0, 1, 2], "all three modes get used exactly once");
-    assert!(g.battlefield.iter().any(|c| c.definition.name == "Treasure"), "the Treasure mode ran");
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Treasure").count(), 1);
     assert_eq!(g.players[1].life, life_before - 3, "the drain mode ran");
+    // A fourth discard this turn finds nothing left to choose.
+    discard(&mut g);
+    assert_eq!(g.battlefield_find(mon).unwrap().modes_chosen.len(), 4 + 3);
+    // Next turn the menu is fresh again.
+    g.turn_number += 1;
+    discard(&mut g);
+    assert_eq!(g.battlefield_find(mon).unwrap().modes_chosen.len(), 4 + 1);
 }
 
 // ── Exotic Orchard ──────────────────────────────────────────────────────────
