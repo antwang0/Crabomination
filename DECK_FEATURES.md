@@ -100,7 +100,7 @@ lists were picked.
 | **Ahoy Mateys** (LCC precon) UBR | Admiral Brass, Unsinkable | UBR | 100 | 🟡 all 100 implemented, 6 carry residuals (below) |
 | **Scions & Spellcraft** (FIC precon) WUB | Y'shtola, Night's Blessed | WUB | 100 | 🟡 all 100 implemented, 6 carry residuals (below) |
 | **From Cute to Brute** (SLD Commander deck) WUBRG | Esika, God of the Tree | WUBRG | 100 | 🟡 all 100 implemented, 10 carry residuals (below) |
-| **Enduring Enchantments** (CMM precon) WBG | Anikthea, Hand of Erebos | WBG | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
+| **Enduring Enchantments** (CMM precon) WBG | Anikthea, Hand of Erebos | WBG | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Open Hostility** (C16 precon) WBRG | Saskia the Unyielding | WBRG | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Devour for Power** (CMD precon) BGU | The Mimeoplasm | BGU | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Mirror Mastery** (CMD precon) GUR | Riku of Two Reflections | GUR | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
@@ -145,7 +145,7 @@ lists were picked.
 | **Desert Bloom** (OTC precon) RGW | Yuma, Proud Protector | RGW | 100 | 🟡 all 100 implemented, 2 carry residuals (Cataclysmic Prospecting, Dune Chanter) |
 | **Lorehold Spirit** (SOC precon) RW | Quintorius, History Chaser (**planeswalker**) | RW | 100 | 🟡 all 100 implemented, 3 carry residuals (Ao, the Dawn Sky, Quintorius, Loremaster, Serra Paragon) |
 | **Dungeons of Death** (AFC precon) WUB | Sefris of the Hidden Ways | WUB | 100 | 🟡 all 100 implemented, 4 carry residuals (Grave Endeavor, Nihiloor, Phantom Steed, Rod of Absorption) |
-| **Deadly Disguise** (MKC precon) RGW | Kaust, Eyes of the Glade | RGW | 100 | 🟡 all 100 implemented, 4 carry residuals (Boltbender, Tesak, Unexplained Absence, Veiled Ascension) |
+| **Deadly Disguise** (MKC precon) RGW | Kaust, Eyes of the Glade | RGW | 100 | 🟡 all 100 implemented, 3 carry residuals (Boltbender, Tesak, Veiled Ascension) |
 | **Quandrix Unlimited** (SOC precon) GU | Zimone, Infinite Analyst | GU | 100 | 🟡 all 100 implemented, 3 carry residuals (Kinetic Ooze, Primo, Unbound Flourishing) |
 | **Maestros Massacre** (NCC precon) UBR | Anhelo, the Painter | UBR | 100 | 🟡 all 100 implemented, 7 carry residuals (Maestros Confluence, Parnesse, Sinister Concierge, Syrix, Waste Management, Xander's Pact, Zndrsplt's Judgment) |
 | **Creative Energy** (M3C precon) URW | Satya, Aetherflux Genius | URW | 100 | 🟡 all 100 implemented, 6 carry residuals (Cayth, Filigree Racer, Hourglass of the Lost, Overclocked Electromancer, Razorfield Ripper, Sphinx of the Revelation) |
@@ -158,7 +158,7 @@ lists were picked.
 | **Revenant Recon** (MKC precon) UB | Mirko, Obsessive Theorist | UB | 100 | 🟡 all 100 implemented, 3 carry residuals (Marvo, Deep Operative, Watcher of Hours, Whispering Snitch) |
 | **Blight Curse** (ECC precon) BRG | Auntie Ool, Cursewretch | BRG | 100 | 🟡 all 100 implemented, 2 carry residuals (Eventide's Shadow, Puca's Covenant) |
 | **Mutant Menace** (PIP precon) BGU | The Wise Mothman | BGU | 100 | 🟡 all 100 implemented, 3 carry residuals (The Wise Mothman, Rampaging Yao Guai, Struggle for Project Purity) |
-| **Science!** (PIP precon) URW | Dr. Madison Li | URW | 100 | 🟡 all 100 implemented, 6 carry residuals (C.A.M.P., Endurance Bobblehead, Expert-Level Safe, Plasma Caster, Vault 13, Vault 112) |
+| **Science!** (PIP precon) URW | Dr. Madison Li | URW | 100 | 🟡 all 100 implemented, 5 carry residuals (C.A.M.P., Endurance Bobblehead, Expert-Level Safe, Plasma Caster, Vault 112) |
 | **Counter Blitz** (FIC precon) GWU | Tidus, Yuna's Guardian | GWU | 100 | 🟡 all 100 implemented, 3 carry residuals (Endless Detour, Lulu, Stern Guardian, Rikku, Resourceful Guardian) |
 | **The Fantastic Four** (MSC precon) WURG | Invisible Woman | WURG | 100 | 🟡 all 100 implemented, 2 carry residuals (Mister Fantastic; Tragic Arrogance's engine-chosen keeps) |
 | **Scrappy Survivors** (PIP precon) RGW | Dogmeat, Ever Loyal | RGW | 100 | 🟡 all 100 implemented, 5 carry residuals (Agility Bobblehead, Brotherhood Outcast, Inventory Management, Perception Bobblehead, Vault 101) |
@@ -1389,8 +1389,7 @@ next face-down cast, and `StaticEffect::DoubleControllerTurnedFaceUpTriggers`
 over a new `triggered_by_face_up` candidate flag (Panoptic Projektor); and
 `CardDefinition.turned_face_up_counters`, applied inside
 `CardInstance::turn_face_up`, so Hooded Hydra is never a face-up 0/0 for state-based actions to kill. Residuals: **Boltbender** re-aims one
-target spell; **Tesak** doesn't grant unleash; **Unexplained Absence** never
-takes your own permanent; **Veiled
+target spell; **Tesak** doesn't grant unleash; **Veiled
 Ascension**'s entering flying counter comes from a trigger. Pods (1,000 games
 each, all decided): 4 seats beside Urza / Osgir / Eshki (seed 11108) Kaust
 20.5 %, census: no card of the four unplayed; 6 seats beside Zimone / Sefris /
@@ -2169,8 +2168,8 @@ eighth planeswalker commander. Seventeen cards were missing; the primitives
 Barrier walk without a permanent), `StaticEffect::AttackTaxOnYourPlaneswalkers`
 (Onakke Oathkeeper, CR 508.1g) and `Effect::ShuffleInThenCastFromTopFree` (Guff
 Rewrites History). Residuals: **Chandra, Legacy of Fire**'s 0 takes one loyalty
-from each walker with two or more; **Guff Rewrites History** picks opponents'
-permanents only; **Leori**'s type is the most common one you have; **Narset of the
+from each walker with two or more; **Guff Rewrites History** bottoms the
+exiled lands in exile order; **Leori**'s type is the most common one you have; **Narset of the
 Ancient Way**'s −2 target is chosen on activation; **Repeated Reverberation**'s
 three halves are separate riders; **Sparkshaper Visionary** turns all or none;
 **Vronos**'s +1 phases out all your other walkers.
@@ -2906,7 +2905,7 @@ SecretNumbersMatch` (Expert-Level Safe), `Effect::
 EnchantedPlayerPaysPerArtifactOrNoAttacks` (Overencumbered), `Effect::
 ReturnSomeExiledWithSourceRestToBottom` (Vault 13), `Value::BasePowerOf`,
 `CreatureType::Synth`, `CounterType::Brain`. Residuals: **C.A.M.P.**,
-**Endurance Bobblehead**, **Expert-Level Safe**, **Plasma Caster**, **Vault 13**,
+**Endurance Bobblehead**, **Expert-Level Safe**, **Plasma Caster**,
 **Vault 112** (INCOMPLETE_CARDS). Four seats beside Esika / T'Challa / Mothman
 (seed 16901, 1,000) and six beside Tidus / Auntie / Y'shtola / Frodo + Sam /
 Jace (16902, 1,000): all decided, Madison 14.3 / 2.3 % (an open lead);
@@ -3352,8 +3351,7 @@ never cast through a board-granted alternative cost** — its alt-cost block
 read only a card's printed one, so Demon of Fate's Design, Kentaro and Fist
 of Suns were dead text; `BoardFacts.grants_alt_cost` now asks
 `effective_alternative_cost` (a life payment of at most a third of the
-seat's life). Residuals: **Battle at the Helvault** targets opponents'
-permanents only; **Battle for Bretagard** copies duplicate names;
+seat's life). Residuals: **Battle for Bretagard** copies duplicate names;
 **Ghoulish Impetus**
 goads each of your upkeeps (the goad outlives the Aura until your next
 turn); **Ondu Spiritdancer**'s declined copy spends the turn. Pods (release,

@@ -1130,19 +1130,19 @@ pub fn overencumbered() -> CardDefinition {
 /// scry 2. III — Return two cards exiled with this Saga to the battlefield
 /// under their owners' control and put the rest on the bottom of their
 /// owners' libraries.
-///
-/// ⚠ Residual: chapter I's "one per player" isn't enforced on the targets.
 pub fn vault_13_dwellers_journey() -> CardDefinition {
     saga("Vault 13: Dweller's Journey", cost(&[generic(3), w()]), vec![
         (
             1,
-            Effect::ApplyToTargets {
-                min_targets: 0,
-                max_targets: 4,
-                filter: R::Creature.or(R::Enchantment).and(R::OtherThanSource),
-                effect: Box::new(Effect::ExileUntilSourceLeaves {
-                    what: Selector::Target(0),
-                    return_to: crate::card::ExileReturnZone::Battlefield,
+            Effect::ForEachPlayerTarget {
+                body: Box::new(Effect::ApplyToTargets {
+                    min_targets: 0,
+                    max_targets: 8,
+                    filter: R::Creature.or(R::Enchantment).and(R::OtherThanSource),
+                    effect: Box::new(Effect::ExileUntilSourceLeaves {
+                        what: Selector::Target(0),
+                        return_to: crate::card::ExileReturnZone::Battlefield,
+                    }),
                 }),
             },
         ),

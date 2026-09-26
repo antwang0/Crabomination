@@ -319,6 +319,36 @@ fn unexplained_absence_exiles_and_cloaks() {
     assert!(g.battlefield.iter().any(|c| c.controller == 1 && c.face_down), "they cloaked");
 }
 
+/// CR 601.2c — "for each player, … up to one target … that player controls"
+/// (`Effect::ForEachPlayerTarget`): at three seats one permanent of each
+/// player, the caster's own included, and never two of the same player's.
+#[test]
+fn cr_601_2c_unexplained_absence_takes_one_per_player_you_included() {
+    let mut g = pod(3);
+    let mine = g.add_card_to_battlefield(0, catalog::serra_angel());
+    let a = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let a2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(2, catalog::serra_angel());
+    for p in 0..3 {
+        g.add_card_to_library(p, catalog::island());
+    }
+    let cast_at = |g: &mut GameState, targets: Vec<CardId>| {
+        let ua = g.add_card_to_hand(0, catalog::unexplained_absence());
+        flood(g, 0);
+        g.priority.player_with_priority = 0;
+        let mut t = targets.into_iter().map(Target::Permanent);
+        let r = g.perform_action(GameAction::CastSpell {
+            card_id: ua, target: t.next(), additional_targets: t.collect(), mode: None, x_value: None,
+        });
+        drain_stack(g);
+        r
+    };
+    assert!(cast_at(&mut g, vec![a, a2]).is_err(), "two of one player's permanents");
+    cast_at(&mut g, vec![a, b, mine]).expect("one of each player's");
+    assert!([a, b, mine].iter().all(|&id| g.battlefield_find(id).is_none()));
+    assert!(g.battlefield_find(a2).is_some());
+}
+
 /// Veiled Ascension — face-down creatures get flying counters, and the
 /// upkeep cloaks.
 #[test]

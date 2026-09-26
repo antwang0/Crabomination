@@ -191,19 +191,16 @@ pub fn anikthea_hand_of_erebos() -> CardDefinition {
     }
 }
 
-/// Battle at the Helvault — I, II: exile up to one non-Saga nonland permanent
-/// each opponent controls until this Saga leaves. III: Avacyn, a legendary
-/// 8/8 flying, vigilant, indestructible Angel.
-///
-/// Approximation: "for each player" covers opponents only.
+/// Battle at the Helvault — I, II: for each player, exile up to one non-Saga
+/// nonland permanent that player controls until this Saga leaves. III: Avacyn,
+/// a legendary 8/8 flying, vigilant, indestructible Angel.
 pub fn battle_at_the_helvault() -> CardDefinition {
-    let exile = || Effect::ForEachOpponentTarget {
+    let exile = || Effect::ForEachPlayerTarget {
         body: Box::new(Effect::ApplyToTargets {
             max_targets: 8,
             min_targets: 0,
             filter: R::Permanent
                 .and(R::Nonland)
-                .and(R::ControlledByOpponent)
                 .and(R::Not(Box::new(R::HasEnchantmentSubtype(EnchantmentSubtype::Saga)))),
             effect: Box::new(Effect::ExileUntilSourceLeaves {
                 what: Selector::Target(0),

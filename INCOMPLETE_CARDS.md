@@ -1868,7 +1868,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Urianger Augurelt | Scions & Spellcraft (FIC) | the card is exiled face up; a land played from exile gains no life; its spells get no {2} discount. |
 | 🟡 Cosima, God of the Voyage | From Cute to Brute (SLD) | the voyage ability isn't implemented. |
 | 🟡 Ludevic, Necrogenius | From Cute to Brute (SLD) | transforms for {U}{U}{B}{B} exiling one creature card; Olag is a 4/4 with counters, not a copy. |
-| 🟡 Battle at the Helvault | Enduring Enchantments (CMM) | "for each player" covers opponents only: you can't exile one of your own permanents. |
 | 🟡 Battle for Bretagard | Enduring Enchantments (CMM) | chapter III copies every artifact and creature token you control, duplicate names included. |
 | 🟡 Ghoulish Impetus | Enduring Enchantments (CMM) | the goad is applied on entry and each of your upkeeps, not held by a static, so it lasts until your next turn after the Aura leaves. |
 | 🟡 Ondu Spiritdancer | Enduring Enchantments (CMM) | declining the copy still spends the turn's use. |
@@ -2038,7 +2037,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Rod of Absorption | Dungeons of Death (AFC) | every instant or sorcery resolving while it is on the battlefield is exiled, including one cast before it arrived. |
 | 🟡 Boltbender | Deadly Disguise (MKC) | turning it up re-aims one target spell, not any number of spells and abilities. |
 | 🟡 Tesak, Judith's Hellhound | Deadly Disguise (MKC) | other Dogs you control don't gain unleash. |
-| 🟡 Unexplained Absence | Deadly Disguise (MKC) | it never takes one of your own permanents (the printed "for each player" includes you). |
 | 🟡 Veiled Ascension | Deadly Disguise (MKC) | an entering face-down creature gets its flying counter from a trigger, not as it enters. |
 | 🟡 Kinetic Ooze | Quandrix Unlimited (SOC) | at X 10 or more it doubles the counters on each other creature you control, not on targets you choose. |
 | 🟡 Primo, the Unbounded | Quandrix Unlimited (SOC) | when several base-power-0 creatures connect at once, the Fractal reads the first one's damage, not the total. |
@@ -2210,7 +2208,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Selective Obliteration | Eldrazi Incursion (M3C) | each player's color is the one most common among their permanents. |
 | 🟡 Twins of Discord | Eldrazi Incursion (M3C) | the granted bloodthirst rides colorless creature spells you cast, not every entry. |
 | 🟡 Chandra, Legacy of Fire | Planeswalker Party (CMM) | the 0 removes a loyalty counter from each planeswalker you control with two or more, not "any number of permanents" chosen. |
-| 🟡 Guff Rewrites History | Planeswalker Party (CMM) | only opponents' permanents are chosen (never your own); the exiled lands go to the bottom in exile order. |
+| 🟡 Guff Rewrites History | Planeswalker Party (CMM) | the exiled lands go to the bottom in exile order. |
 | 🟡 Leori, Sparktouched Hunter | Planeswalker Party (CMM) | the planeswalker type is the one most common among yours on the battlefield and in hand, not a free choice. |
 | 🟡 Narset of the Ancient Way | Planeswalker Party (CMM) | the −2's damage target is chosen as it's activated, not by a reflexive trigger. |
 | 🟡 Repeated Reverberation | Planeswalker Party (CMM) | the instant, sorcery and loyalty-ability halves are three separate "next" riders; each can fire. |
@@ -2266,7 +2264,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Endurance Bobblehead | Science! (PIP) | the X creatures are your greatest-power ones, chosen on resolution rather than targeted. |
 | 🟡 Expert-Level Safe | Science! (PIP) | both numbers are drawn uniformly at random (the equilibrium strategy); no player is asked. |
 | 🟡 Plasma Caster | Science! (PIP) | the target may be any blocking creature, not only one blocking the equipped creature. |
-| 🟡 Vault 13: Dweller's Journey | Science! (PIP) | chapter I's "one per player" isn't enforced on its targets. |
 | 🟡 Vault 112: Sadistic Simulation | Science! (PIP) | chapter III reveals rather than exiles, and only a spell (not a land) may be played from among them. |
 | 🟡 Agility Bobblehead | Scrappy Survivors (PIP) | the X creatures are your greatest-power ones, chosen on resolution rather than targeted. |
 | 🟡 Brotherhood Outcast | Scrappy Survivors (PIP) | the returned Aura or Equipment card is picked (greatest mana value first) rather than targeted, and its host is the engine's pick. |
@@ -2299,7 +2296,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Peri Brown | Blast from the Past (WHO) | every historic spell has convoke, not only the first each turn. |
 | 🟡 Reverse the Polarity | Blast from the Past (WHO) | "can't be blocked" reaches only the creatures on the battlefield as it resolves. |
 | 🟡 Susan Foreman | Blast from the Past (WHO) | the planeswalk replacement does nothing (no Planechase). |
-| 🟡 The Curse of Fenric | Blast from the Past (WHO) | I spares your own creatures; II doesn't rename the creature Fenric or make it legendary, so III's Mutant fights any other creature. |
+| 🟡 The Curse of Fenric | Blast from the Past (WHO) | II doesn't rename the creature Fenric or make it legendary, so III's Mutant fights any other creature. |
 | 🟡 The Eighth Doctor | Blast from the Past (WHO) | the historic land and permanent spell are separate allowances, and the cast permanent isn't exiled if it leaves later. |
 | 🟡 The Fourth Doctor | Blast from the Past (WHO) | no Food for a land played from the top. |
 | 🟡 The Second Doctor | Blast from the Past (WHO) | an opponent who draws has only its current creatures barred from attacking you. |

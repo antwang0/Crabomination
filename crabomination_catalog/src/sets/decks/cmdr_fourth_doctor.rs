@@ -917,19 +917,19 @@ pub fn the_caves_of_androzani() -> CardDefinition {
     ])
 }
 
-/// The Curse of Fenric — kills a creature per opponent for a deathtouch
-/// Mutant; blanks a creature into a 6/6; a Mutant fights it.
+/// The Curse of Fenric — kills up to one creature per player for a
+/// deathtouch Mutant; blanks a creature into a 6/6; a Mutant fights it.
 ///
-/// ⚠ Residual: I spares your own creatures; II doesn't rename the creature
-/// Fenric or make it legendary; III's Mutant fights any other creature.
+/// ⚠ Residual: II doesn't rename the creature Fenric or make it legendary;
+/// III's Mutant fights any other creature.
 pub fn the_curse_of_fenric() -> CardDefinition {
     let mutant = token("Mutant", vec![Color::Green], vec![CreatureType::Mutant], 3, 3, vec![Keyword::Deathtouch]);
     saga("The Curse of Fenric", cost(&[generic(2), g(), w()]), vec![
-        (1, Effect::ForEachOpponentTarget {
+        (1, Effect::ForEachPlayerTarget {
             body: Box::new(Effect::ApplyToTargets {
-                max_targets: 1,
+                max_targets: 8,
                 min_targets: 0,
-                filter: R::Creature.and(R::ControlledByOpponent),
+                filter: R::Creature,
                 effect: Box::new(Effect::Seq(vec![
                     Effect::CreateToken {
                         who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),

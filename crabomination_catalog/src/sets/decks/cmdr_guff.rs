@@ -279,19 +279,18 @@ pub fn gatewatch_beacon() -> CardDefinition {
     }
 }
 
-/// Guff Rewrites History — an opponent's nonenchantment, nonland permanent
-/// each is shuffled away; each of them flips a free spell off the top.
-/// Residual: opponents' permanents only.
+/// Guff Rewrites History — each player's nonenchantment, nonland permanent is
+/// shuffled away; each of them flips a free spell off the top.
 pub fn guff_rewrites_history() -> CardDefinition {
     CardDefinition {
         name: "Guff Rewrites History",
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::ForEachOpponentTarget {
+        effect: Effect::ForEachPlayerTarget {
             body: Box::new(Effect::ApplyToTargets {
-                max_targets: 5,
+                max_targets: 8,
                 min_targets: 0,
-                filter: R::Nonland.and(R::Not(Box::new(R::Enchantment))).and(R::ControlledByOpponent),
+                filter: R::Nonland.and(R::Not(Box::new(R::Enchantment))),
                 effect: Box::new(Effect::ShuffleInThenCastFromTopFree { what: Selector::Target(0) }),
             }),
         },

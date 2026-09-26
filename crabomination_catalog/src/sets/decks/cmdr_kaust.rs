@@ -422,22 +422,20 @@ pub fn true_identity() -> CardDefinition {
     }
 }
 
-/// Unexplained Absence — exile nonland permanents; each one's controller
-/// cloaks the top card of their library.
-///
-/// Residual: it never takes one of your own permanents.
+/// Unexplained Absence — exile up to one nonland permanent per player; each
+/// one's controller cloaks the top card of their library.
 pub fn unexplained_absence() -> CardDefinition {
     CardDefinition {
         name: "Unexplained Absence",
         cost: cost(&[generic(3), w()]),
         card_types: vec![CardType::Instant],
-        // One target per opponent (`ForEachOpponentTarget` caps and spreads
-        // the slots).
-        effect: Effect::ForEachOpponentTarget {
+        // One target per player, you included (`ForEachPlayerTarget` caps
+        // and spreads the slots).
+        effect: Effect::ForEachPlayerTarget {
             body: Box::new(Effect::ApplyToTargets {
                 max_targets: 8,
                 min_targets: 0,
-                filter: R::Permanent.and(R::Not(Box::new(R::Land))).and(R::ControlledByOpponent),
+                filter: R::Permanent.and(R::Not(Box::new(R::Land))),
                 effect: Box::new(Effect::Seq(vec![
                     Effect::Cloak {
                         who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
