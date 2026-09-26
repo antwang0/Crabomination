@@ -2540,10 +2540,15 @@ mod tests {
         // activates, post-combat, any non-mana ability no shape generator
         // covers when the resolved outcome beats passing. Same winners; seed
         // 43 runs four turns longer, 0xC0FFEE seven actions.
+        // Re-blessed 2026-09-26 (bisected to 34774e835, "Auto-tap resolves an
+        // any-color source inline"): the generic-pip loop now activates an
+        // any-color source synchronously instead of leaving it for the
+        // colored loop, so which lands pay a generic pip changes. Seeds 43
+        // and 4242 change winner (seat 3 → 0); 0xC0FFEE is untouched.
         const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
             (0xC0FFEE, Some(1), 44, 1836),
-            (43, Some(3), 61, 2743),
-            (4242, Some(3), 49, 2136),
+            (43, Some(0), 58, 2712),
+            (4242, Some(0), 62, 2596),
         ];
         let decks = rofellos_pod(4);
         let t = build_pod_template(&decks);
