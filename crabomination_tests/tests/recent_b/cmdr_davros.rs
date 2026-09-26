@@ -174,6 +174,46 @@ fn a_face_down_missy_dying_to_damage_has_no_death_trigger() {
     assert_eq!(b.controller, 0, "and only ours");
 }
 
+/// CR 708.2 — a creature Missy returns face down has no abilities: a
+/// sacrificed Sakura-Tribe Elder comes back as a vanilla 2/2 Cyberman and
+/// can't be sacrificed again (a pod ran this loop 1,918 times in a turn).
+#[test]
+fn cr_708_2_a_missy_cyberman_has_no_abilities() {
+    let mut g = main_phase(3);
+    g.add_card_to_battlefield(0, catalog::missy());
+    let elder = g.add_card_to_battlefield(0, catalog::sakura_tribe_elder());
+    let activate = |g: &mut GameState| {
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: elder, ability_index: 0, target: None,
+            additional_targets: vec![], x_value: None, mode: None,
+        })
+    };
+    activate(&mut g).expect("sacrifice the Elder");
+    drain_stack(&mut g);
+    assert!(is_cyberman(&g, elder), "it returns as a Cyberman");
+    assert!(activate(&mut g).is_err(), "a face-down Cyberman has no sacrifice ability");
+    // CR 603.10a — it dies as an artifact creature, so Missy (another
+    // NONartifact creature) looks back and doesn't return it again.
+    run(&mut g, Effect::Destroy { what: Selector::ExactObjects(vec![elder]) }, elder);
+    assert!(g.battlefield_find(elder).is_none(), "a dead Cyberman stays dead");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == elder && !c.face_down));
+}
+
+/// CR 400.7 — two Missys trigger on one death; the first returns the card,
+/// and the second finds a new object on the battlefield and does nothing (it
+/// used to move it again, turning it face up under its controller).
+#[test]
+fn cr_400_7_a_second_missy_leaves_the_returned_cyberman_alone() {
+    let mut g = main_phase(3);
+    g.add_card_to_battlefield(0, catalog::missy());
+    g.add_card_to_battlefield(1, catalog::missy());
+    let giant = g.add_card_to_battlefield(2, catalog::hill_giant());
+    run(&mut g, Effect::Destroy { what: Selector::ExactObjects(vec![giant]) }, giant);
+    assert!(is_cyberman(&g, giant), "still a face-down Cyberman");
+    assert!(g.battlefield_find(giant).unwrap().definition.activated_abilities.is_empty());
+}
+
 /// CR 708.2 — Cybership's combat damage puts the top two cards of that
 /// player's library onto your battlefield as face-down Cybermen.
 #[test]
