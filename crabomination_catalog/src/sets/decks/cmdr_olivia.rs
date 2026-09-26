@@ -3,8 +3,6 @@
 //! `tests/recent_b/cmdr_olivia.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Back in Town** — the X outlaw cards are chosen as it resolves, not
-//!   targeted.
 //! - **Dire Fleet Ravager** — the players lose their thirds one after
 //!   another (each reads only its own life, so the totals match).
 //! - **Vihaan, Goldwaker** — its vigilance/haste grant reads printed types,
@@ -169,21 +167,23 @@ pub fn angraths_marauders() -> CardDefinition {
 }
 
 /// Back in Town — X outlaw creature cards from your graveyard to the
-/// battlefield. Residual: chosen as it resolves, not targeted.
+/// battlefield, targeted.
 pub fn back_in_town() -> CardDefinition {
     spell(
         "Back in Town",
         cost(&[x(), generic(2), b()]),
         CardType::Sorcery,
-        Effect::MoveChosen {
-            from: Selector::EachMatching {
-                zone: ZoneRef::Graveyard(PlayerRef::You),
-                filter: R::Creature.and(R::IsOutlaw),
-            },
-            filter: None,
-            count: Value::XFromCost,
-            up_to: false,
-            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+        // CR 601.2c — "X target outlaw creature cards".
+        Effect::TargetsExactlyX {
+            body: Box::new(Effect::ApplyToTargets {
+                max_targets: 20,
+                min_targets: 0,
+                filter: R::Creature.and(R::IsOutlaw).and(R::InYourGraveyard),
+                effect: Box::new(Effect::Move {
+                    what: Selector::Target(0),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                }),
+            }),
         },
     )
 }

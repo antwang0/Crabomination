@@ -380,7 +380,8 @@ fn back_in_town_returns_outlaws() {
     let b = g.add_card_to_graveyard(0, catalog::misfortune_teller());
     let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
     let bit = g.add_card_to_hand(0, catalog::back_in_town());
-    cast_x(&mut g, bit, &[], Some(3)).expect("cast");
+    // CR 601.2c — X is the number of targets.
+    cast_x(&mut g, bit, &[Target::Permanent(a), Target::Permanent(b)], Some(2)).expect("cast");
     assert!(g.battlefield_find(a).is_some() && g.battlefield_find(b).is_some());
     assert!(g.battlefield_find(bear).is_none());
 }

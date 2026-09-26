@@ -137,7 +137,7 @@ lists were picked.
 | **Timeless Wisdom** (C20 precon) URW | Gavi, Nest Warden | URW | 100 | 🟡 all 100 implemented, 4 carry residuals (Akim, the Soaring Wind, Crystalline Resonance, Ethereal Forager, Nimble Obstructionist) |
 | **Miracle Worker** (DSC precon) WUB | Aminatou, Veil Piercer | WUB | 100 | 🟡 all 100 implemented, 6 carry residuals (INCOMPLETE_CARDS) |
 | **Ruthless Regiment** (C20 precon) RWB | Jirina Kudro | RWB | 100 | 🟡 all 100 implemented, 2 carry residuals (Sanctuary Blade, Odric, Master Tactician) |
-| **Most Wanted** (OTC precon) RWB | Olivia, Opulent Outlaw | RWB | 100 | 🟡 all 100 implemented, 3 carry residuals (Back in Town, Dire Fleet Ravager, Vihaan, Goldwaker) |
+| **Most Wanted** (OTC precon) RWB | Olivia, Opulent Outlaw | RWB | 100 | 🟡 all 100 implemented, 2 carry residuals (Dire Fleet Ravager, Vihaan, Goldwaker) |
 | **Tricky Terrain** (M3C precon) GU | Omo, Queen of Vesuva | GU | 100 | 🟡 all 100 implemented, 7 carry residuals (Omo, Horizon of Progress, Desert Warfare, Sunken Palace, Magus of the Candelabra, Rampant Frogantua, March from Velis Vel) |
 | **Everyone's Invited!** (SLD) WUBRG | Morophon, the Boundless | WUBRG | 100 | 🟡 all 100 implemented, 6 carry residuals (Amoeboid Changeling, Nameless Inversion, Moritte of the Frost, Unsettled Mariner, Stick Together, Harper Recruiter) |
 | **Planar Portal** (AFC precon) BR | Prosper, Tome-Bound | BR | 100 | 🟡 all 100 implemented, 4 carry residuals (Karazikar, Hellish Rebuke, Share the Spoils, Danse Macabre) |
