@@ -1617,8 +1617,11 @@ fn every_card_has_the_trigger_limit_it_prints() {
         // `def.triggered_abilities`. A modal card keeps its triggers inside
         // the mode (Hollowmurk Siege's Sultai half carries `.once_per_turn()`
         // and is invisible at the top level), and a top-level-only read
-        // reports it as a miss.
-        if !format!("{def:?}").contains("once_per_turn: true") {
+        // reports it as a miss. "Do this only once each turn" may instead
+        // spend the use where the "may" is taken
+        // (`shortcut::once_each_turn_on_take`), which is the printed limit too.
+        let dbg = format!("{def:?}");
+        if !dbg.contains("once_per_turn: true") && !dbg.contains("MarkDoneThisTurn") {
             missing.push(def.name);
         }
     }
