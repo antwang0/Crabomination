@@ -433,3 +433,20 @@ fn cr_702_16_guardian_archon_protects_you_and_a_permanent_from_one_player() {
     let bolt = g.add_card_to_hand(2, catalog::lightning_bolt());
     cast(&mut g, 2, bolt, Some(Target::Player(0))).expect("the protection ended at cleanup");
 }
+
+/// CR 702.16b / 704.5m — protection from a player sheds that player's Curse
+/// from the protected player: it can't be enchanted by anything that player
+/// controls.
+#[test]
+fn cr_702_16_protection_from_a_player_sheds_their_curse() {
+    let mut g = pod(3);
+    let curse = g.add_card_to_battlefield(1, catalog::curse_of_the_pierced_heart());
+    let other = g.add_card_to_battlefield(2, catalog::curse_of_the_pierced_heart());
+    for id in [curse, other] {
+        g.battlefield.find_by_id_mut(id).unwrap().attached_to_player = Some(0);
+    }
+    g.players[0].protected_from_seats_eot = 1 << 1;
+    let _ = g.check_state_based_actions();
+    assert!(g.battlefield_find(curse).is_none(), "seat 1's Curse falls off");
+    assert!(g.battlefield_find(other).is_some(), "seat 2's stays");
+}

@@ -126,8 +126,9 @@ the handoff.
   Firkraag (was the greatest-power pick, hexproof included).
 - **Protection from a player** (CR 702.16): `GainProtectionFromPlayer`;
   permanents via `ProtectionFromMatching(ControlledBySeat)`, players via two
-  seat masks (targeting and damage). Guardian Archon, Eon Frolicker.
-  ⏳ Enchanting a protected *player* (a Curse) isn't checked.
+  seat masks (targeting, damage, and CR 704.5m shedding a Curse — also for
+  a player's protection from everything or a color, which never shed one).
+  Guardian Archon, Eon Frolicker.
 - ⚠ **Myth Unbound summed both partners' casts** (CR 903.8) —
   `Value::CommanderCastsOf`; a cost static now sees the spell being cast as
   its trigger source.
