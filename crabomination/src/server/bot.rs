@@ -3895,7 +3895,7 @@ fn pick_stack_response(state: &GameState, seat: usize, w: &EvalWeights) -> Optio
             continue;
         }
         let action = match &c.definition.effect {
-            Effect::ChooseModesCast { .. } => match modal_counter_cast(c, spell_id) {
+            Effect::ChooseModesCast { .. } => match modal_counter_cast(state, seat, c, spell_id) {
                 Some(a) => a,
                 None => continue,
             },
@@ -4391,29 +4391,43 @@ fn pick_prepare_response(state: &GameState, seat: usize, w: &EvalWeights) -> Opt
 /// unconditional step of a `Seq` counts: Narset's Reversal copies the spell
 /// *before* it bounces it, so reading only the first step left it castable
 /// by no path (a 22-seat `--card-census` found it unplayed).
-/// A "choose three, repeats allowed" answer (Mystic Confluence) cast at
-/// `spell_id`: its counter mode, then an untargeted mode (draw) for the rest
-/// of the picks, else the counter mode again at the same spell.
-fn modal_counter_cast(c: &crate::card::CardInstance, spell_id: CardId) -> Option<GameAction> {
+/// A cast-time modal answer (Mystic Confluence, Silumgar's Command) cast at
+/// `spell_id`: its counter mode, then — for the rest of the picks — an
+/// untargeted mode (draw), else another mode with a legal target, else the
+/// counter mode again at the same spell when repeats are allowed.
+fn modal_counter_cast(
+    state: &GameState,
+    seat: usize,
+    c: &crate::card::CardInstance,
+    spell_id: CardId,
+) -> Option<GameAction> {
+    use crate::game::Target;
     let Effect::ChooseModesCast { modes, min, allow_repeats, .. } = &c.definition.effect else { return None };
     let counter = modes.iter().position(effect_counters_spells)? as u8;
-    let filler = modes.iter().position(|m| !m.requires_target()).map(|i| i as u8);
-    let mut picks = vec![counter];
+    let mut picks: Vec<(u8, Option<Target>)> = vec![(counter, Some(Target::Permanent(spell_id)))];
+    let free = |picks: &[(u8, Option<Target>)], i: u8| *allow_repeats || !picks.iter().any(|p| p.0 == i);
     while picks.len() < (*min as usize).max(1) {
-        match filler {
-            Some(f) if *allow_repeats || !picks.contains(&f) => picks.push(f),
-            _ if *allow_repeats => picks.push(counter),
-            _ => return None,
+        let untargeted = (0..modes.len() as u8).find(|&i| !modes[i as usize].requires_target() && free(&picks, i));
+        let targeted = || {
+            (0..modes.len() as u8).filter(|&i| i != counter && free(&picks, i)).find_map(|i| {
+                let (t, _) = state.auto_targets_for_effect_all_slots(&modes[i as usize], seat, None);
+                t.map(|t| (i, Some(t)))
+            })
+        };
+        match untargeted.map(|i| (i, None)).or_else(targeted) {
+            Some(p) => picks.push(p),
+            None if *allow_repeats => picks.push((counter, Some(Target::Permanent(spell_id)))),
+            None => return None,
         }
     }
-    picks.sort_unstable();
-    let slots = picks.iter().filter(|&&i| i == counter).count();
-    let spell = crate::game::Target::Permanent(spell_id);
+    // Printed order, so each target-bearing pick meets its own slot.
+    picks.sort_by_key(|p| p.0);
+    let mut slots = picks.iter().filter_map(|p| p.1.clone());
     Some(GameAction::CastSpellSpree {
         card_id: c.id,
-        spree_modes: picks,
-        target: Some(spell.clone()),
-        additional_targets: vec![spell; slots - 1],
+        target: slots.next(),
+        additional_targets: slots.collect(),
+        spree_modes: picks.into_iter().map(|p| p.0).collect(),
         x_value: None,
     })
 }
@@ -7569,7 +7583,9 @@ pub(super) fn cast_candidates<'a>(
                 spree_modes: picks,
                 target: slots.next(),
                 additional_targets: slots.collect(),
-                x_value: None,
+                // An {X} modal (Profane Command) at the X the pool affords, as
+                // a plain cast is.
+                x_value: x_relevant(&c.definition).then(|| max_affordable_x(state, seat, c, w)),
             })
         };
         let mut candidates: Vec<Vec<u8>> = (0..modes.len() as u8).map(|i| vec![i]).collect();
@@ -7583,6 +7599,17 @@ pub(super) fn cast_candidates<'a>(
             && *min > 1
         {
             candidates = mode_combinations(modes.len() as u8, *min as usize, *allow_repeats);
+        }
+        // "Choose one or both" / "one or more" (Saheeli's Artistry, Sublime
+        // Epiphany): every mode at once too, as Spree's combination is. Pods
+        // only for now: two-seat play (Choreographed Sparks) stays as the
+        // nets' gate runs measured it.
+        if let Effect::ChooseModesCast { min: 1, max, .. } = &c.definition.effect
+            && state.players.len() > 2
+            && *max as usize >= modes.len()
+            && modes.len() > 1
+        {
+            candidates.push((0..modes.len() as u8).collect());
         }
         for picks in candidates {
             let Some(action) = pick(picks) else { continue };
