@@ -18,7 +18,7 @@ use std::sync::Arc;
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,
     EquipBonus, EquipScale, EventKind, EventScope, EventSpec, Keyword, SelectionRequirement as R, Selector,
-    Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value, WardCost,
+    StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value, WardCost,
 };
 use crate::effect::shortcut::{dash, etb, on_attack, target_any, target_filtered};
 use crate::effect::{
@@ -278,9 +278,7 @@ pub fn boromir_gondors_hope() -> CardDefinition {
 }
 
 /// Call for Aid — borrow all of an opponent's creatures for the turn,
-/// untapped and hasty; you can't attack that player.
-///
-/// Residual: nothing stops you sacrificing them.
+/// untapped and hasty; you can't attack that player or sacrifice them.
 pub fn call_for_aid() -> CardDefinition {
     let theirs = || Selector::ControlledBy { who: PlayerRef::Target(0), filter: R::Creature };
     spell(
@@ -290,6 +288,8 @@ pub fn call_for_aid() -> CardDefinition {
         Effect::Seq(vec![
             Effect::Untap { what: theirs(), up_to: None },
             Effect::GrantKeyword { what: theirs(), keyword: Keyword::Haste, duration: Duration::EndOfTurn },
+            // "You can't sacrifice those creatures this turn" (CR 701.16).
+            Effect::GrantKeyword { what: theirs(), keyword: Keyword::CantBeSacrificed, duration: Duration::EndOfTurn },
             Effect::CantAttackPlayerThisTurn { who: PlayerRef::You, defender: PlayerRef::Target(0) },
             Effect::GainControl { what: theirs(), to: None, duration: Duration::EndOfTurn },
         ]),
@@ -437,9 +437,8 @@ pub fn faramir_steward_of_gondor() -> CardDefinition {
 }
 
 /// Fealty to the Realm — makes you the monarch; the monarch controls the
-/// enchanted creature, which attacks each combat.
-///
-/// Residual: the Aura's controller controls it, not the monarch.
+/// enchanted creature (CR 725), which attacks each combat and can't attack
+/// you.
 pub fn fealty_to_the_realm() -> CardDefinition {
     CardDefinition {
         name: "Fealty to the Realm",
@@ -448,10 +447,20 @@ pub fn fealty_to_the_realm() -> CardDefinition {
         subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
         effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
         equipped_bonus: Some(EquipBonus { keywords: vec![Keyword::MustAttack], ..Default::default() }),
-        triggered_abilities: vec![etb(Effect::Seq(vec![
-            monarch(),
-            Effect::GainControlWhileSourceRemains { what: Selector::attached_to(Selector::This) },
-        ]))],
+        static_abilities: vec![
+            StaticAbility {
+                description: "The monarch controls enchanted creature.",
+                effect: StaticEffect::MonarchControlsEnchanted,
+            },
+            StaticAbility {
+                description: "Enchanted creature can't attack you.",
+                effect: StaticEffect::CreaturesCantAttackController {
+                    protect_planeswalkers: false,
+                    filter: Some(R::IsHostOfSource),
+                },
+            },
+        ],
+        triggered_abilities: vec![etb(Effect::Seq(vec![monarch(), Effect::GainControlWhileSourceAttached]))],
         ..Default::default()
     }
 }
@@ -471,9 +480,8 @@ pub fn forth_eorlingas() -> CardDefinition {
 }
 
 /// Gilraen, Dúnedain Protector — {2}, {T}: blink another creature of yours
-/// through the next end step, back with vigilance and lifelink counters.
-///
-/// Residual: it always comes back at the next end step.
+/// through the next end step, back with vigilance and lifelink counters —
+/// or at once, without them.
 pub fn gilraen_dunedain_protector() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![ActivatedAbility {
@@ -481,25 +489,32 @@ pub fn gilraen_dunedain_protector() -> CardDefinition {
             tap_cost: true,
             effect: Effect::Seq(vec![
                 Effect::Exile { what: target_filtered(yours().and(R::OtherThanSource)) },
-                Effect::DelayUntilWithCapture {
-                    kind: DelayedTriggerKind::NextEndStep,
-                    capture: Selector::Target(0),
-                    body: Box::new(Effect::Seq(vec![
-                        Effect::Move {
-                            what: Selector::TargetFiltered { slot: 0, filter: R::InExile },
-                            to: ZoneDest::Battlefield { controller: PlayerRef::OwnerOfMoved, tapped: false },
-                        },
-                        Effect::AddKeywordCounter {
-                            what: Selector::Target(0),
-                            keyword: Keyword::Vigilance,
-                            amount: Value::ONE,
-                        },
-                        Effect::AddKeywordCounter {
-                            what: Selector::Target(0),
-                            keyword: Keyword::Lifelink,
-                            amount: Value::ONE,
-                        },
-                    ])),
+                Effect::MayDoElse {
+                    description: "Return it to the battlefield now?".into(),
+                    body: Box::new(Effect::Move {
+                        what: Selector::TargetFiltered { slot: 0, filter: R::InExile },
+                        to: ZoneDest::Battlefield { controller: PlayerRef::OwnerOfMoved, tapped: false },
+                    }),
+                    else_: Box::new(Effect::DelayUntilWithCapture {
+                        kind: DelayedTriggerKind::NextEndStep,
+                        capture: Selector::Target(0),
+                        body: Box::new(Effect::Seq(vec![
+                            Effect::Move {
+                                what: Selector::TargetFiltered { slot: 0, filter: R::InExile },
+                                to: ZoneDest::Battlefield { controller: PlayerRef::OwnerOfMoved, tapped: false },
+                            },
+                            Effect::AddKeywordCounter {
+                                what: Selector::Target(0),
+                                keyword: Keyword::Vigilance,
+                                amount: Value::ONE,
+                            },
+                            Effect::AddKeywordCounter {
+                                what: Selector::Target(0),
+                                keyword: Keyword::Lifelink,
+                                amount: Value::ONE,
+                            },
+                        ])),
+                    }),
                 },
             ]),
             ..Default::default()
@@ -661,12 +676,16 @@ pub fn theoden_king_of_rohan() -> CardDefinition {
 }
 
 /// Visions of Glory — a 1/1 Human per creature you control; flashback
-/// {8}{W}{W}.
-///
-/// Residual: the flashback isn't discounted by your commander's mana value.
+/// {8}{W}{W}, {X} less where X is your commander's greatest mana value.
 pub fn visions_of_glory() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flashback(cost(&[generic(8), w(), w()]))],
+        static_abilities: vec![StaticAbility {
+            description: "This spell costs {X} less to cast this way, where X is the greatest mana value of a commander you own on the battlefield or in the command zone.",
+            effect: StaticEffect::SelfFlashbackCostsLess {
+                amount: Value::GreatestCommanderManaValueInPlayOrCommandZone(PlayerRef::You),
+            },
+        }],
         ..spell(
             "Visions of Glory",
             cost(&[generic(4), w()]),

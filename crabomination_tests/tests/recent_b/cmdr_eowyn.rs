@@ -3,6 +3,7 @@
 
 use crabomination::card::{CardId, CounterType, Keyword};
 use crabomination::catalog;
+use crabomination::decision::{DecisionAnswer, ScriptedDecider};
 use crabomination::game::types::{Attack, AttackTarget, GameAction, Target, TurnStep};
 use crabomination::game::*;
 use crabomination::mana::Color;
@@ -160,6 +161,7 @@ fn call_for_aid_borrows_an_army() {
     assert_eq!(c.controller, 0);
     assert!(!c.tapped);
     assert!(keywords(&g, angel).contains(&Keyword::Haste));
+    assert!(keywords(&g, angel).contains(&Keyword::CantBeSacrificed), "CR 701.16: can't sacrifice them");
 }
 
 /// Court of Ire — 7 damage at your upkeep while you're the monarch.
@@ -229,6 +231,31 @@ fn fealty_to_the_realm_takes_a_creature() {
     assert_eq!(g.battlefield_find(angel).unwrap().controller, 0);
 }
 
+/// CR 725 — "The monarch controls enchanted creature": when the crown moves,
+/// the creature follows it, and it can't attack Fealty's controller. The
+/// Aura leaving hands it back to its owner (CR 611.2c).
+#[test]
+fn fealty_to_the_realm_follows_the_monarch() {
+    let mut g = pod(3);
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let f = g.add_card_to_hand(0, catalog::fealty_to_the_realm());
+    cast(&mut g, 0, f, Some(Target::Permanent(angel))).expect("fealty");
+    let aura = g.battlefield.iter().find(|c| c.definition.name == "Fealty to the Realm").unwrap().id;
+    let mut ev = vec![];
+    g.set_monarch(2, &mut ev);
+    assert_eq!(g.battlefield_find(angel).unwrap().controller, 2, "the new monarch takes it");
+    g.active_player_idx = 2;
+    g.priority.player_with_priority = 2;
+    g.clear_sickness(angel);
+    g.step = TurnStep::DeclareAttackers;
+    let at = |p| vec![Attack { attacker: angel, target: AttackTarget::Player(p) }];
+    assert!(g.perform_action(GameAction::DeclareAttackers(at(0))).is_err(), "can't attack you");
+    g.perform_action(GameAction::DeclareAttackers(at(1))).expect("may attack its owner");
+    g.remove_to_graveyard_with_triggers(aura);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(angel).unwrap().controller, 1, "back to its owner");
+}
+
 /// Forth Eorlingas! — X Knights, and their damage makes you the monarch.
 #[test]
 fn forth_eorlingas_rides_to_the_crown() {
@@ -253,11 +280,27 @@ fn gilraen_blinks_with_counters() {
     let gi = g.add_card_to_battlefield(0, catalog::gilraen_dunedain_protector());
     let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.clear_sickness(gi);
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(false)]));
     activate(&mut g, 0, gi, 0, Some(Target::Permanent(bears))).expect("gilraen");
     assert!(g.battlefield_find(bears).is_none());
     step(&mut g, TurnStep::End);
     let kw = keywords(&g, bears);
     assert!(kw.contains(&Keyword::Vigilance) && kw.contains(&Keyword::Lifelink));
+}
+
+/// Gilraen — "You may return that card to the battlefield": taken, it comes
+/// back at once and without the counters.
+#[test]
+fn gilraen_may_return_at_once() {
+    let mut g = pod(2);
+    let gi = g.add_card_to_battlefield(0, catalog::gilraen_dunedain_protector());
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(gi);
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    activate(&mut g, 0, gi, 0, Some(Target::Permanent(bears))).expect("gilraen");
+    assert!(g.battlefield_find(bears).is_some(), "back at once");
+    step(&mut g, TurnStep::End);
+    assert!(!keywords(&g, bears).contains(&Keyword::Vigilance));
 }
 
 /// Gimli — grows off another legend and makes Treasure on a hit.
@@ -336,6 +379,23 @@ fn visions_of_glory_doubles_the_ranks() {
     let v = g.add_card_to_hand(0, catalog::visions_of_glory());
     cast(&mut g, 0, v, None).expect("visions");
     assert_eq!(named(&g, 0, "Human").len(), 3);
+}
+
+/// Visions of Glory — "costs {X} less to cast this way": a five-drop
+/// commander in the command zone makes the {8}{W}{W} flashback {3}{W}{W}.
+#[test]
+fn visions_of_glory_flashback_is_discounted_by_the_commander() {
+    let mut g = pod(2);
+    g.seat_commanders(0, vec![catalog::serra_angel()]);
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let v = g.add_card_to_graveyard(0, catalog::visions_of_glory());
+    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.perform_action(GameAction::CastFlashback { card_id: v, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("{3}{W}{W} is enough");
+    drain_stack(&mut g);
+    assert_eq!(named(&g, 0, "Human").len(), 1);
+    assert_eq!(g.players[0].mana_pool.total(), 0);
 }
 
 /// Éomer — enters with a counter per other Human; its enters trigger crowns
