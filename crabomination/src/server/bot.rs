@@ -4390,6 +4390,7 @@ fn effect_counters_spells(eff: &Effect) -> bool {
         Effect::CounterSpell { .. }
         | Effect::CounterSpellExileSameNamed { .. }
         | Effect::CounterSpellToZone { .. }
+        | Effect::MoveSpellToZone { .. }
         | Effect::CounterUnlessPaid { .. }
         | Effect::CounterUnless { .. }
         // Taking the spell answers it the same way (Aethersnatch).

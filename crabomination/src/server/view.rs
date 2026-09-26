@@ -2952,6 +2952,7 @@ pub fn ability_effect_label(effect: &Effect) -> &'static str {
         }
         Effect::CounterSpell { .. } => "Counter spell",
         Effect::CounterSpellToZone { .. } => "Counter spell (alt zone)",
+        Effect::MoveSpellToZone { .. } => "Move spell",
         Effect::CounterAbility { .. } => "Counter ability",
         Effect::CounterUnlessPaid { .. } => "Counter unless paid",
         Effect::CounterUnless { .. } => "Ward (counter unless cost paid)",

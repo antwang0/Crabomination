@@ -2879,6 +2879,8 @@ pub enum CounteredSpellZone {
     OwnerLibraryTopOrBottom,
     /// Owner's hand (Remand).
     OwnerHand,
+    /// Second from the top of the owner's library (Commit).
+    OwnerLibrarySecondFromTop,
     /// Exile (Spell Crumple).
     Exile,
     /// CR 702.170 — exile and mark plotted, so its owner may cast it for free
@@ -8764,6 +8766,14 @@ pub enum Effect {
     /// (top of library for Memory Lapse; exile for Spell Crumple; owner's
     /// hand for Remand).
     CounterSpellToZone {
+        what: Selector,
+        zone: CounteredSpellZone,
+    },
+    /// "Return / put / exile target spell …" — the same lift as
+    /// `CounterSpellToZone`, but not a counter (CR 701.6a): a spell that
+    /// can't be countered moves all the same (Reprieve, Sudden Setback,
+    /// Spell Queller, Commit).
+    MoveSpellToZone {
         what: Selector,
         zone: CounteredSpellZone,
     },

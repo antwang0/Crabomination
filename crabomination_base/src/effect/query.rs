@@ -1908,6 +1908,7 @@ impl Effect {
             | Effect::CounterSpellExileSameNamed { what }
             | Effect::CounterSpellDrawIfUnderpaid { what }
             | Effect::CounterSpellToZone { what, .. }
+            | Effect::MoveSpellToZone { what, .. }
             | Effect::CounterSpellExileNameLock { what }
             | Effect::ExileSpellLinked { what }
             | Effect::CounterAbility { what }
@@ -2702,6 +2703,7 @@ impl Effect {
             | Effect::CounterSpellExileMayPlayFree { what }
             | Effect::CounterSpellDrawIfUnderpaid { what }
             | Effect::CounterSpellToZone { what, .. }
+            | Effect::MoveSpellToZone { what, .. }
             | Effect::CounterSpellExileNameLock { what }
             | Effect::ExileSpellLinked { what }
             | Effect::CounterAbility { what }
@@ -3847,6 +3849,7 @@ impl Effect {
             | Effect::CounterSpellDrawIfUnderpaid { .. }
             | Effect::CounterSpellToZone { .. }
             | Effect::CounterSpellExileNameLock { .. } => "counter target spell".into(),
+            Effect::MoveSpellToZone { .. } => "move target spell".into(),
             Effect::Fight { .. } => "fight".into(),
             Effect::DealDamageEqualToPower { .. } => "deal damage equal to power".into(),
             Effect::DealDamageFrom { .. } => "deal damage".into(),
@@ -4277,6 +4280,7 @@ impl Effect {
             | Effect::CounterSpellIfNameExiledWithSource { .. }
             | Effect::CounterSpellDrawIfUnderpaid { .. }
             | Effect::CounterSpellToZone { .. }
+            | Effect::MoveSpellToZone { .. }
             | Effect::CounterSpellExileNameLock { .. }
             | Effect::ExileSpellLinked { .. }
             | Effect::CounterAbility { .. }
@@ -5072,6 +5076,7 @@ impl Effect {
                 | Effect::CounterSpellExileMayPlayFree { what }
                 | Effect::CounterSpellDrawIfUnderpaid { what }
                 | Effect::CounterSpellToZone { what, .. }
+                | Effect::MoveSpellToZone { what, .. }
                 | Effect::CounterSpellExileNameLock { what }
                 | Effect::ExileSpellLinked { what }
                 | Effect::CounterAbility { what }
