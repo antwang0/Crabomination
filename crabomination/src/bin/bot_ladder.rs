@@ -970,6 +970,9 @@ struct Args {
     /// decks (1-based, as the tally numbers them) instead of the first
     /// `--seats` — the official precons at a real four-seat table.
     pod_decks: Option<Vec<usize>>,
+    /// `--b` was given. With `--commander` that makes the run a pod A/B —
+    /// `--a` in one seat, `--b` in the rest — instead of an `--a` mirror.
+    b_given: bool,
 }
 
 fn parse_args() -> Result<Args, String> {
@@ -988,6 +991,7 @@ fn parse_args() -> Result<Args, String> {
     let mut seats = 4usize;
     let mut first_game = 0u32;
     let mut pod_decks = None;
+    let mut b_given = false;
     let mut games = if commander { 300 } else { games };
     let argv: Vec<String> = std::env::args().skip(1).collect();
     let mut i = 0;
@@ -1001,7 +1005,10 @@ fn parse_args() -> Result<Args, String> {
         let mut step = 2;
         match argv[i].as_str() {
             "--a" => a_name = need(i)?,
-            "--b" => b_name = need(i)?,
+            "--b" => {
+                b_name = need(i)?;
+                b_given = true;
+            }
             "--games" => games = need(i)?.parse().map_err(|_| "--games must be a number")?,
             "--seed" => seed = need(i)?.parse().map_err(|_| "--seed must be a number")?,
             "--threads" => threads = need(i)?.parse().map_err(|_| "--threads must be a number")?,
@@ -1061,7 +1068,10 @@ fn parse_args() -> Result<Args, String> {
                      --first I with --commander starts at game index I (replay one\n\
                      undecided game with --first I --games 1).\n\
                      --pod-decks I,J,.. with --commander seats exactly those target\n\
-                     decks (1-based, the tally's numbering) instead of the first N."
+                     decks (1-based, the tally's numbering) instead of the first N.\n\
+                     --commander with --b is a pod A/B: --a in one seat, --b in every\n\
+                     other, each deal played once with --a in each seat; reports --a's\n\
+                     share of wins against the 1/N a mirror gives."
                 );
                 std::process::exit(0);
             }
@@ -1165,6 +1175,7 @@ fn parse_args() -> Result<Args, String> {
         card_census,
         first_game,
         pod_decks,
+        b_given,
     })
 }
 
@@ -1206,21 +1217,34 @@ fn run_commander_pods(args: &Args, threads: usize) -> i32 {
     };
     // CR 800.1 sets no ceiling; the engine's seat masks do (`MAX_SEATS`).
     let seats = picked.as_ref().map_or(args.seats.clamp(2, all.len().min(MAX_SEATS)), Vec::len);
-    // The net observation encoder is fixed at two seats — `encode_state_inner`
-    // reads the opponent as `1 - seat` — so an MCTS/net pilot in a 4-seat pod
-    // would index out of bounds rather than play badly. Refusing here is the
-    // whole guard: changing the encoder invalidates every trained net, which
-    // is not a thing a Commander run gets to do as a side effect.
-    if seats > 2 && matches!(args.a, crabomination::recommend::Pilot::Mcts(_)) {
+    // The net observation encoder is fixed at two seats (`encode_state_inner`
+    // reads the opponent as `1 - seat`), so `net_eval` declines a pod state
+    // and a net profile there would silently play its material leaf — a
+    // different pilot under the net's name. Refused; the search on the
+    // material leaf is a pilot in its own right and runs.
+    let net_slot = |p: &crabomination::recommend::Pilot| match p {
+        crabomination::recommend::Pilot::Scored(w) => w.net_slot,
+        crabomination::recommend::Pilot::Mcts(cfg) => cfg.weights.net_slot,
+        crabomination::recommend::Pilot::Uniform => 0,
+    };
+    let pilots_used: Vec<(&str, &crabomination::recommend::Pilot)> = if args.b_given {
+        vec![(&args.a_name, &args.a), (&args.b_name, &args.b)]
+    } else {
+        vec![(&args.a_name, &args.a)]
+    };
+    if seats > 2 && let Some((name, _)) = pilots_used.iter().find(|(_, p)| net_slot(p) != 0) {
         eprintln!(
-            "error: --a {} is a search/net pilot and the observation encoder is two-seat only;\n\
-             run Commander pods with a scored or uniform profile, or --seats 2.",
-            args.a_name,
+            "error: {name} reads the value net, and the observation encoder is two-seat only;\n\
+             in a pod it would play the material leaf under the net's name. Use a\n\
+             scored, uniform or material-leaf search profile, or --seats 2.",
         );
         return 2;
     }
     let field = picked.unwrap_or_else(|| pod_field(seats));
     let max_actions = seats.max(4) * PLAYS_PER_SEAT;
+    if args.b_given {
+        return run_pod_ab(args, &field, max_actions, threads);
+    }
     let games = args.games as u32;
     println!(
         "commander: {seats}-seat pods, {games} games on {threads} threads, seed {}, decks: {}",
@@ -1309,6 +1333,89 @@ fn run_commander_pods(args: &Args, threads: usize) -> i32 {
     }
     // A pod that never decides is a broken pod, not a slow one.
     i32::from(tally.games == 0)
+}
+
+/// `--commander --b`: the pod A/B. `--a` (the hero) in one seat and `--b`
+/// in every other; each deal is played once with the hero in each seat
+/// (`pod::run_pod_hero_games`), so `--games` rounds up to whole deal groups.
+/// The read is the hero's share of wins against `1 / seats`, with a
+/// standard error over the groups — the independent unit.
+fn run_pod_ab(
+    args: &Args,
+    field: &[crabomination::pod::PodDeck],
+    max_actions: usize,
+    threads: usize,
+) -> i32 {
+    use crabomination::pod::{HeroTally, run_pod_hero_games};
+    let seats = field.len();
+    let groups = (args.games as u32).div_ceil(seats as u32).max(1);
+    let games = groups * seats as u32;
+    println!(
+        "commander A/B: {} in one seat vs {} in the other {}, {groups} deals x {seats} seats = {games} games \
+         on {threads} threads, seed {}, decks: {}",
+        args.a_name,
+        args.b_name,
+        seats - 1,
+        args.seed,
+        field.iter().map(|d| d.name).collect::<Vec<_>>().join(" | "),
+    );
+    let started = std::time::Instant::now();
+    // Whole groups per worker, so no group waits on two workers' merge order
+    // (the merge is order-independent either way).
+    let per = groups.div_ceil(threads.max(1) as u32).max(1) * seats as u32;
+    let mut total = HeroTally::default();
+    std::thread::scope(|scope| {
+        let mut handles = Vec::new();
+        let mut first = args.first_game;
+        let end = args.first_game.saturating_add(games);
+        while first < end {
+            let count = per.min(end - first);
+            let (seed, hero, rest) = (args.seed, args.a, args.b);
+            let spawn = std::thread::Builder::new()
+                .name(format!("pod-ab-{first}"))
+                .stack_size(32 * 1024 * 1024);
+            handles.push(
+                spawn
+                    .spawn_scoped(scope, move || {
+                        run_pod_hero_games(field, first, count, seed, max_actions, hero, rest)
+                    })
+                    .expect("spawn pod A/B worker"),
+            );
+            first += count;
+        }
+        for h in handles {
+            total.merge(&h.join().expect("pod A/B worker"));
+        }
+    });
+    let elapsed = started.elapsed().as_secs_f64();
+    let t = &total.tally;
+    let (share, se) = total.share();
+    let null = 1.0 / seats as f64;
+    println!(
+        "  games {} in {elapsed:.1}s ({:.2}/s) — decided {}, undecided {} (draw {} / action cap {} / board cap {} / no legal move {})",
+        t.games,
+        f64::from(t.games) / elapsed.max(1e-9),
+        t.games - t.undecided(),
+        t.undecided(),
+        t.draws,
+        t.action_capped,
+        t.board_capped,
+        t.no_legal_move,
+    );
+    println!(
+        "  {} wins {} of {} games: share {:.1} % ± {:.1} (null {:.1} %) — {:.2}x its seat's due, 95 % [{:.2}x, {:.2}x]",
+        args.a_name,
+        total.hero_wins,
+        t.games,
+        100.0 * share,
+        100.0 * se,
+        100.0 * null,
+        share / null,
+        (share - 1.96 * se) / null,
+        (share + 1.96 * se) / null,
+    );
+    println!("  turns/game {:.2}   actions/game {:.1}", t.mean_turns(), t.total_actions as f64 / f64::from(t.games.max(1)));
+    i32::from(t.games == 0)
 }
 
 /// One archetype's result.

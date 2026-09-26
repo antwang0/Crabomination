@@ -1757,6 +1757,91 @@ pub fn run_pod_games_censused(
     tally
 }
 
+/// A pod A/B's result: one pilot (the *hero*) in one seat, another in every
+/// other seat. Kept per deal group — the `n` games of one deal with the hero
+/// in each seat once — because the group, not the game, is the independent
+/// unit (its games share decks and shuffle).
+#[derive(Debug, Default, Clone)]
+pub struct HeroTally {
+    pub tally: PodTally,
+    /// Games the hero's seat won.
+    pub hero_wins: u32,
+    /// `group -> (hero wins, games played)` for every group touched.
+    pub groups: std::collections::BTreeMap<u32, (u32, u32)>,
+}
+
+impl HeroTally {
+    /// Fold another worker's tally in; a group split across workers joins up.
+    pub fn merge(&mut self, other: &HeroTally) {
+        self.tally.merge(&other.tally);
+        self.hero_wins += other.hero_wins;
+        for (g, (w, n)) in &other.groups {
+            let e = self.groups.entry(*g).or_default();
+            e.0 += w;
+            e.1 += n;
+        }
+    }
+
+    /// The hero's share of games won, and its standard error over the deal
+    /// groups (independent draws; the games inside one are not). Equal
+    /// pilots win `1 / seats` of the games.
+    pub fn share(&self) -> (f64, f64) {
+        let shares: Vec<f64> =
+            self.groups.values().filter(|(_, n)| *n > 0).map(|(w, n)| f64::from(*w) / f64::from(*n)).collect();
+        let k = shares.len() as f64;
+        if k == 0.0 {
+            return (0.0, 0.0);
+        }
+        let mean = shares.iter().sum::<f64>() / k;
+        let var = if k > 1.0 { shares.iter().map(|s| (s - mean).powi(2)).sum::<f64>() / (k - 1.0) } else { 0.0 };
+        (mean, (var / k).sqrt())
+    }
+}
+
+/// Play pod A/B games `first .. first + count`: `hero` in one seat, `field`
+/// in the rest. Game `i` is deal group `i / n` with the hero in seat `i % n`,
+/// so every seat hosts the hero once per deal — the seat advantage and the
+/// deal cancel inside a group, the pod version of the two-player ladder's
+/// seat-swapped pairs. Group `g` rotates the decks by `g % n` and shuffles
+/// off a seed that is a pure function of `seed_base` and `g`, so a worker
+/// pool can split the range anywhere.
+pub fn run_pod_hero_games(
+    decks: &[PodDeck],
+    first: u32,
+    count: u32,
+    seed_base: u64,
+    max_actions: usize,
+    hero: Pilot,
+    field: Pilot,
+) -> HeroTally {
+    let n = decks.len();
+    let mut out = HeroTally { tally: PodTally { wins: vec![0; n], ..Default::default() }, ..Default::default() };
+    if n < 2 {
+        return out;
+    }
+    let templates: Vec<GameState> = (0..n)
+        .map(|rot| {
+            let seated: Vec<PodDeck> = (0..n).map(|seat| decks[(seat + n - rot) % n]).collect();
+            build_pod_template(&seated)
+        })
+        .collect();
+    for i in first..first.saturating_add(count) {
+        let (group, hero_seat) = (i / n as u32, i as usize % n);
+        let rot = group as usize % n;
+        let seed = seed_base.wrapping_add(u64::from(group).wrapping_mul(0x9E37_79B9_7F4A_7C15));
+        let pilots: Vec<Pilot> = (0..n).map(|s| if s == hero_seat { hero } else { field }).collect();
+        let o = play_one_pod_game(&templates[rot], &pilots, max_actions, seed);
+        let won = o.winner == Some(hero_seat) && o.stop == StopReason::GameOver;
+        out.hero_wins += u32::from(won);
+        let e = out.groups.entry(group).or_default();
+        e.0 += u32::from(won);
+        e.1 += 1;
+        // Wins by seat, as the smoke test tallies them.
+        out.tally.record(i, &o);
+    }
+    out
+}
+
 /// [`run_pod_games`] over `0 .. games`.
 pub fn run_pod(
     decks: &[PodDeck],
@@ -2271,6 +2356,29 @@ mod tests {
         // And the run is decided end to end, which is the smoke test's own
         // claim at a size the suite can carry.
         assert_eq!(whole.undecided(), 0, "six three-seat pods, all decided");
+    }
+
+    /// The pod A/B's null: with the same pilot everywhere, the `n` games of
+    /// a deal group are one game played `n` times, so the "hero" wins it
+    /// exactly once when it decides — a share of `1 / n` with no spread. Any
+    /// seat- or deal-dependence leaking into the hero's count breaks that.
+    #[test]
+    fn a_mirror_pod_ab_gives_the_hero_one_seat_in_n_exactly() {
+        let field = pod_field(3);
+        let pilot = Pilot::Scored(crate::server::bot::EvalWeights::baseline());
+        let t = run_pod_hero_games(&field, 0, 6, 7, 3_000, pilot, pilot);
+        assert_eq!(t.tally.games, 6);
+        assert_eq!(t.groups.len(), 2);
+        for (g, (w, n)) in &t.groups {
+            assert_eq!(*n, 3, "group {g}");
+            assert_eq!(*w, 1, "group {g}: one game, won once from whichever seat won it");
+        }
+        let (share, se) = t.share();
+        assert!((share - 1.0 / 3.0).abs() < 1e-9 && se < 1e-9, "{share} ± {se}");
+        // Split across workers, the same answer.
+        let mut split = run_pod_hero_games(&field, 0, 4, 7, 3_000, pilot, pilot);
+        split.merge(&run_pod_hero_games(&field, 4, 2, 7, 3_000, pilot, pilot));
+        assert_eq!((split.hero_wins, split.groups), (t.hero_wins, t.groups));
     }
 
     /// The Commander guardrail the two-player golden traces are, at pod
