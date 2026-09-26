@@ -11233,14 +11233,16 @@ fn turns_to_lethal(life: i32, clock: i32) -> i32 {
 /// — and which named a *teammate* in a 2HG game, because seat order is not team
 /// order and every attack it declared was then rejected.
 fn attack_target_player(state: &GameState, seat: usize) -> usize {
-    if let Some(m) = state.monarch
+    let pick = if let Some(m) = state.monarch
         && m != seat
         && state.players.get(m).is_some_and(|p| p.is_alive())
         && !state.same_team(seat, m)
     {
-        return m;
-    }
-    state.default_hostile_opponent(seat).unwrap_or_else(|| state.next_alive_seat(seat))
+        m
+    } else {
+        state.default_hostile_opponent(seat).unwrap_or_else(|| state.next_alive_seat(seat))
+    };
+    super::pod_attack::attackable_or(state, seat, pick)
 }
 
 fn pick_attacks_inner(state: &GameState, seat: usize, guard: bool) -> Vec<Attack> {

@@ -80,6 +80,23 @@ pub(crate) fn spread_face_attacks(
     out.extend(free[next..].iter().map(|&id| at(id, first)));
 }
 
+/// CR 508.1a — `pick` if `seat` may attack it, else the most hostile seat it
+/// may attack. Mystic Barrier bars all but one opponent: aimed at a barred
+/// seat, every creature failed the declaration gate and a 947-creature board
+/// never attacked (eight-seat pod, seed 23081 game 50). A duel keeps `pick`.
+pub(crate) fn attackable_or(state: &GameState, seat: usize, pick: usize) -> usize {
+    if state.players.len() <= 2 {
+        return pick;
+    }
+    let open = state.attackable_players_for(seat);
+    if open.is_empty() || open.contains(&pick) {
+        return pick;
+    }
+    open.into_iter()
+        .min_by_key(|&d| (std::cmp::Reverse(state.hostile_opponent_score(seat, d)), d))
+        .unwrap_or(pick)
+}
+
 /// CR 508.1g — re-aim each attacker whose declared player costs a tax at the
 /// cheapest defender it may legally attack instead (a goader only if nothing
 /// else is open, CR 701.15b). Returns whether any attack moved. A duel has
@@ -163,6 +180,23 @@ mod tests {
             }
         }
         n
+    }
+
+    /// CR 508.1a — under Mystic Barrier (right) seat 0 may attack only seat 3,
+    /// so the bot swings there even though seat 1 is the softer target.
+    #[test]
+    fn cr_508_1a_a_barrier_aims_the_attack_at_the_one_open_seat() {
+        let (mut g, bears) = table([40, 4, 40, 40]);
+        for &b in &bears {
+            g.clear_sickness(b);
+        }
+        let barrier = g.add_card_to_battlefield(1, crate::catalog::mystic_barrier());
+        g.battlefield_find_mut(barrier).unwrap().modes_chosen = vec![1];
+        g.priority.player_with_priority = 0;
+        assert_eq!(g.attackable_players_for(0), vec![3]);
+        let out = crate::server::bot::pick_attacks(&g, 0);
+        assert!(!out.is_empty(), "the bears attack");
+        assert_eq!(aimed(&out), [0, 0, 0, out.len()]);
     }
 
     /// CR 508.1b — each attacker picks its own defender: two 2/2s finish a
