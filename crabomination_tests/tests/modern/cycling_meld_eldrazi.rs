@@ -1572,8 +1572,8 @@ fn the_cards_that_print_cycling_carry_it() {
         (catalog::hollow_one(), two.clone()),
         (catalog::ominous_seas(), two.clone()),
         (catalog::viscera_dragger(), two.clone()),
-        // Cycling {2}{W}. ⚠ Its cycle TRIGGER ("you may pay {X}: X Soldiers")
-        // has no primitive and is still not modelled; the keyword is.
+        // Cycling {2}{W}; its cycle trigger ("you may pay {X}: X Soldiers")
+        // is `dropped_riders::decree_of_justice_cycles_into_soldiers`.
         (catalog::decree_of_justice(), cost(&[generic(2), w()])),
     ] {
         let name = def.name;

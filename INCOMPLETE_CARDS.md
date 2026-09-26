@@ -344,6 +344,33 @@ rider pips on one cast are two scry triggers and two counters-per-cast, which
 is what the 2020-11-10 Mana Reflection rulings on both cards say. Nothing is
 rounded off; no row here.
 
+## Pod-deck cards read against their oracle (2026-09-26) — what the fixes left
+
+`audit_incomplete` intersected with `pod/decks.rs`, each flagged body read
+against Scryfall. Fixed in the same pass (tests in `modern/dropped_riders.rs`):
+Etali, Primal Storm; Puresteel Paladin; Colossus Hammer; Terror of the Peaks;
+Hagra Mauling; Plaguecrafter; Angelic Destiny; Legion Warboss; Veyran;
+Shalai; Howling Mine; Claim Jumper; Ophiomancer; Smuggler's Copter; Magda;
+Nahiri, the Harbinger; Kari Zev; Marionette Master; Bloodthirsty Adversary;
+Aura of Silence; Compulsive Research; Mask of Griselbrand; Cankerbloom;
+Bitter Triumph; Ursine Monstrosity; Finale of Devastation; Teferi's
+Protection; Comeuppance. Still open:
+
+| Card | Gap |
+|---|---|
+| 🟡 Comeuppance | the prevention ships; the reflected damage (to the creature, else its controller) does not, and your own sources are prevented too. |
+| 🟡 Compulsive Research | "target player" is always you. |
+| 🟡 Guardian Project | the "if it doesn't have the same name as another creature you control or a creature card in your graveyard" condition is missing (needs a same-name-as-trigger-source requirement). |
+| 🟡 Ajani's Chosen | "if that enchantment is an Aura, you may attach it to the token" is missing (a bot's yes would move an opponent-side Aura onto its token). |
+| 🟡 Mobilized District | the "{1} less per legendary creature and planeswalker you control" discount on its animation is missing. |
+| 🟡 Conduit of Worlds | only the play-lands-from-graveyard static; the {T} cast-a-permanent-card-from-graveyard ability is missing. |
+| 🟡 Sylvan Library | an optional "draw one, lose 4 life", not "draw two, then pay 4 life or put back each of two drawn this turn". |
+| 🟡 Master Biomancer | the "as a Mutant" type rider is missing. |
+| 🟡 Serra Avenger | "can't cast during your first three turns" is missing. |
+| 🟡 Dragonkin Berserker | the boast discount per Dragon you control is missing. |
+| 🟡 Smoke | "can't untap more than one creature" is modelled as no creature untapping. |
+| 🟡 Imprisoned in the Moon | the enchanted permanent doesn't gain "{T}: Add {C}". |
+
 ## Commander additions of session `015BCEt5` (2026-09-26) — the approximations named
 
 `decks::cmdr_top1000` and `decks::cmdr_legends` add 27 COMMANDER_BACKLOG cards
@@ -572,7 +599,7 @@ modelled at all, so there is no filter to correct.
 | Card | Residual |
 | --- | --- |
 | Rootcoil Creeper | 🟡 two of its three abilities are missing: the graveyard-restricted "add two mana of any one color", and "{G}{U}, {T}, Exile this creature: Return **target card with flashback you own from exile** to your hand". Only the any-colour mana ability ships. |
-| Bloodthirsty Adversary | 🟡 the kicker payoff — "exile up to that many target instant and/or sorcery cards with mana value 3 or less from your graveyard and copy them" — is not modelled; only `Multikicker` and the +1/+1 counters ship. |
+| Bloodthirsty Adversary | 🟡 the kicker payoff ships (exile, copy, cast free) but the cards are the engine's pick in graveyard order, not targets. |
 | Rydia, Summoner of Mist | 🟡 the **Summon** ability ("{X}, {T}: Return target Saga card with mana value X from your graveyard to the battlefield with a finality counter on it") is not modelled; only the landfall loot ships. |
 
 Three approximations the fixes left standing, each documented at its variant:

@@ -13519,8 +13519,8 @@ pub fn granite_witness() -> CardDefinition {
 }
 
 /// Experiment Twelve — {3}{G} 4/4 Elf Lizard Warrior with trample. Disguise
-/// {4}{G}. When turned face up, put +1/+1 counters on it equal to its power.
-/// (MKM — the "another creature you control" clause is simplified to this one.)
+/// {4}{G}. Whenever it or another creature you control is turned face up, put
+/// +1/+1 counters on that creature equal to its power.
 pub fn experiment_twelve() -> CardDefinition {
     CardDefinition {
         name: "Experiment Twelve",
@@ -13541,11 +13541,16 @@ pub fn experiment_twelve() -> CardDefinition {
             Keyword::Disguise(cost(&[generic(4), g()])),
         ],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::TurnedFaceUp, EventScope::SelfSource),
+            // "Whenever this creature or another creature you control is
+            // turned face up, put +1/+1 counters on that creature equal to
+            // its power."
+            event: EventSpec::new(EventKind::TurnedFaceUp, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches { what: Selector::TriggerSource, filter: SelectionRequirement::Creature },
+            ),
             effect: Effect::AddCounter {
-                what: Selector::This,
+                what: Selector::TriggerSource,
                 kind: CounterType::PlusOnePlusOne,
-                amount: Value::PowerOf(Box::new(Selector::This)),
+                amount: Value::PowerOf(Box::new(Selector::TriggerSource)),
             },
         }],
         ..Default::default()
@@ -18510,11 +18515,28 @@ pub fn decree_of_justice() -> CardDefinition {
         name: "Decree of Justice",
         cost: cost(&[x(), x(), generic(2), w(), w()]),
         card_types: vec![CardType::Sorcery],
-        // ⚠ The cycling TRIGGER ("When you cycle this card, you may pay {X}.
-        // If you do, create X 1/1 Soldiers") is not modelled — there is no
-        // cycle-trigger primitive. The keyword itself is, and without it the
-        // card could not be cycled at all.
         keywords: vec![Keyword::Cycling(cost(&[generic(2), w()]))],
+        // "When you cycle this card, you may pay {X}. If you do, create X 1/1
+        // white Soldier creature tokens."
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardCycled, EventScope::SelfSource),
+            effect: Effect::MayPayX {
+                description: "Pay {X} for X 1/1 Soldiers?".into(),
+                body: Box::new(Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::XFromCost,
+                    definition: std::sync::Arc::new(TokenDefinition {
+                        name: "Soldier".into(),
+                        power: 1,
+                        toughness: 1,
+                        card_types: vec![CardType::Creature],
+                        colors: vec![Color::White],
+                        subtypes: Subtypes { creature_types: vec![CreatureType::Soldier], ..Default::default() },
+                        ..Default::default()
+                    }),
+                }),
+            },
+        }],
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::XFromCost,

@@ -389,3 +389,33 @@ fn comeuppance_is_not_a_fog() {
     g.resolve_combat().expect("damage");
     assert_eq!(g.players[1].life, 18);
 }
+
+/// Decree of Justice — "When you cycle this card, you may pay {X}. If you do,
+/// create X 1/1 white Soldier creature tokens."
+#[test]
+fn decree_of_justice_cycles_into_soldiers() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = main_phase();
+    g.add_card_to_library(0, catalog::island());
+    let d = g.add_card_to_hand(0, catalog::decree_of_justice());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Amount(2)]));
+    g.perform_action(GameAction::Cycle { card_id: d, x_value: None }).expect("cycle");
+    drain_stack(&mut g);
+    let soldiers = g.battlefield.iter().filter(|c| c.definition.name == "Soldier").count();
+    assert_eq!(soldiers, 2);
+}
+
+/// Experiment Twelve — "this creature *or another creature you control* is
+/// turned face up": another disguised creature flipping grows too.
+#[test]
+fn experiment_twelve_grows_your_other_flips() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::experiment_twelve());
+    let other = g.add_card_to_battlefield(0, catalog::hill_giant());
+    let ev = vec![GameEvent::TurnedFaceUp { card_id: other }];
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(other).unwrap().counter_count(crabomination::card::CounterType::PlusOnePlusOne), 3);
+}
