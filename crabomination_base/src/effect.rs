@@ -9381,8 +9381,9 @@ pub enum Effect {
     /// "Choose an opponent. [then]" — not a target (CR 115.10 doesn't apply):
     /// the controller names an opponent, stamped on the source's
     /// `chosen_player` for `PlayerRef::ChosenPlayerOfSource` inside `then`.
-    /// The pick is the opponent with the fewest creatures (the gift goes
-    /// where it helps least); turn order breaks ties. Sylvan Offering.
+    /// Asked as a seat ballot; the headless pick is the opponent with the
+    /// fewest creatures (the gift goes where it helps least), turn order
+    /// breaking ties. Sylvan Offering.
     ChooseOpponentThen { then: Box<Effect> },
     /// "That player [does body]" — run `body` with `who` as its controller,
     /// so `You` / a controller-side choice reads that player (Skullwinder's
@@ -11573,6 +11574,11 @@ pub enum Effect {
     /// twin of [`Effect::RememberPermanentOnSource`]. Backs the Torment
     /// Nightmare Horrors' "that player gains N life" leave trigger.
     RememberPlayerOnSource { who: PlayerRef },
+    /// CR 614.12 — "as this enters, choose a player" (`opponent`: "choose an
+    /// opponent"): the controller's pick, stamped on the source's
+    /// `chosen_player`. Offered as a seat ballot led by the most hostile
+    /// opponent, the headless answer. True-Name Nemesis, Stuffy Doll.
+    ChoosePlayerForSource { opponent: bool },
     /// CR 701.6a-adjacent — "Target spell's controller exiles it with `count`
     /// delay counters on it"; at each of their upkeeps one comes off, and the
     /// last removal puts it back on the stack (Ertai's Meddling). Ticked by

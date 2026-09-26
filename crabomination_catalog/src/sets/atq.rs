@@ -327,7 +327,7 @@ pub fn coral_helm() -> CardDefinition {
 /// Cursed Rack — the chosen opponent plays with a four-card hand.
 pub fn cursed_rack() -> CardDefinition {
     CardDefinition {
-        as_enters_effect: Some(Effect::RememberPlayerOnSource { who: PlayerRef::HostileOpponent }),
+        as_enters_effect: Some(Effect::ChoosePlayerForSource { opponent: true }),
         static_abilities: vec![StaticAbility {
             description: "The chosen player's maximum hand size is four.",
             effect: StaticEffect::ChosenPlayerMaxHandSize(4),

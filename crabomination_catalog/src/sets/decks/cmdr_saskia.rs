@@ -305,11 +305,10 @@ pub fn primeval_protector() -> CardDefinition {
 /// Saskia the Unyielding — vigilance, haste; as it enters, choose a player;
 /// whenever a creature you control deals combat damage to a player, it deals
 /// that much damage to the chosen player.
-/// Residual: the chosen player is the engine's most hostile opponent.
 pub fn saskia_the_unyielding() -> CardDefinition {
     legendary(CardDefinition {
         keywords: vec![Keyword::Vigilance, Keyword::Haste],
-        as_enters_effect: Some(Effect::RememberPlayerOnSource { who: PlayerRef::HostileOpponent }),
+        as_enters_effect: Some(Effect::ChoosePlayerForSource { opponent: false }),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl).with_filter(
                 Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature },

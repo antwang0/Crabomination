@@ -27389,6 +27389,10 @@ impl GameState {
                 }
                 Ok(events)
             }
+            PendingEffectState::ChosenPlayerPending { target_id, seats } => {
+                self.apply_chosen_player_answer(target_id, &seats, answer)?;
+                Ok(Vec::new())
+            }
             PendingEffectState::NameCardPending { target_id, restrict_to } => {
                 let DecisionAnswer::NamedCard(name) = answer else {
                     return Err(GameError::DecisionAnswerMismatch);

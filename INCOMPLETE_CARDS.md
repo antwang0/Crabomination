@@ -1886,7 +1886,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Cacophony Unleashed | Enduring Enchantments (CMM) | the animated 6/6 isn't legendary. |
 | 🟡 Ghoulish Impetus | Enduring Enchantments (CMM) | the goad is applied on entry and each of your upkeeps, not held by a static, so it lasts until your next turn after the Aura leaves. |
 | 🟡 Ondu Spiritdancer | Enduring Enchantments (CMM) | declining the copy still spends the turn's use. |
-| 🟡 Saskia the Unyielding | Open Hostility (C16) | "choose a player" is the engine's most hostile opponent (the card allows any player, you included). |
 | 🟡 Brutal Hordechief | Open Hostility (C16) | its activated ability makes opponents' creatures block if able, but how they block stays their controllers' choice. |
 | 🟡 The Mimeoplasm | Devour for Power (CMD) | the engine picks the two cards: it copies the greatest-power creature card in any graveyard and counts the runner-up's power; a `*` power reads as its printed 0. |
 | 🟡 Desecrator Hag | Devour for Power (CMD) | a tie for greatest power is broken by graveyard order, not by the player. |
@@ -1955,7 +1954,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Breena, the Demagogue | Silverquill Statement (C21) | the two +1/+1 counters go on your greatest-power creature (the engine's pick). |
 | 🟡 Author of Shadows | Silverquill Statement (C21) | the castable card is the first nonland card exiled this way, not a chosen one. |
 | 🟡 Bold Plagiarist | Silverquill Statement (C21) | copies +1/+1 counters only, and reads the counters' recipient, not who put them. |
-| 🟡 Guardian Archon | Silverquill Statement (C21) | protection from the chosen player is hexproof and indestructible on the permanent; your own protection isn't modeled; the choice is the engine's most hostile opponent. |
+| 🟡 Guardian Archon | Silverquill Statement (C21) | protection from the chosen player is hexproof and indestructible on the permanent; your own protection isn't modeled; the choice isn't secret. |
 | 🟡 Inkshield | Silverquill Statement (C21) | the Inklings count the unblocked power attacking you as it resolves, not the damage prevented. |
 | 🟡 Nils, Discipline Enforcer | Silverquill Statement (C21) | each player's counter goes on their first creature, chosen rather than targeted. |
 | 🟡 Tragic Arrogance | Silverquill Statement (C21) | the engine chooses for the caster: its own best of each type, each opponent's weakest (lowest mana value). |
@@ -2205,7 +2204,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Demonic Covenant | Death Toll (DSC) | the draw also fires when Demons attack only a planeswalker. |
 | 🟡 Into the Pit | Death Toll (DSC) | the sacrifice is paid as the cast completes rather than as a cost before it. |
 | 🟡 Old Stickfingers | Death Toll (DSC) | reveals until one creature card X times, bottoming each run of misses before the next. |
-| 🟡 True-Name Nemesis | Mind Seize (C13) | the chosen player is the engine's most hostile opponent, not the controller's pick. |
 | 🟡 Eye of Doom | Mind Seize (C13) | each player's doom counter goes on the nonland permanent the engine picks. |
 | 🟡 Gond Gate | 20 Ways to Win (SLD) | "any color a Gate you control could produce" makes any color. |
 | 🟡 Indulge // Excess | Cabaretti Cacophony (NCC) | Excess counts creatures you control that dealt damage (combat or not) to a player this turn. |
@@ -2222,7 +2220,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Baeloth Barrityl, Entertainer | Draconic Dissent (CLB) | the powers compared are each creature's own (printed, pumps, counters), not static anthems. |
 | 🟡 Firkraag, Cunning Instigator | Draconic Dissent (CLB) | the goaded creature is the engine's pick (greatest power), not a target; "had to attack this combat" reads as goaded or must-attack when the damage is dealt. |
 | 🟡 Rowan Kenrith | Draconic Dissent (CLB) | the +2's forced attacks last until your next turn and reach the target's creatures at resolution only. |
-| 🟡 Stuffy Doll | Draconic Dissent (CLB) | the chosen player is the engine's most hostile opponent. |
 | 🟡 Apex of Power | Prismari Performance (C21) | the exiled cards may also be played as lands, not only cast. |
 | 🟡 Dazzling Sphinx | Prismari Performance (C21) | a found card you don't cast stays in exile rather than going to the bottom. |
 | 🟡 Muse Vortex | Prismari Performance (C21) | the uncast cards go to the bottom in exile order, not a random one. |

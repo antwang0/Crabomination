@@ -196,7 +196,7 @@ pub fn crash_of_rhino_beetles() -> CardDefinition {
 pub fn emissary_of_grudges() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Haste],
-        as_enters_effect: Some(Effect::RememberPlayerOnSource { who: PlayerRef::HostileOpponent }),
+        as_enters_effect: Some(Effect::ChoosePlayerForSource { opponent: true }),
         activated_abilities: vec![ActivatedAbility {
             activate_once: true,
             effect: Effect::ChooseNewTargetsForSpell {

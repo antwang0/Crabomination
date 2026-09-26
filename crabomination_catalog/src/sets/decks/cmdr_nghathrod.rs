@@ -94,12 +94,9 @@ pub fn port_of_karfell() -> CardDefinition {
 /// choose a player. Its power and toughness are each equal to the number of
 /// cards in the chosen player's graveyard. Whenever the chosen player casts a
 /// spell, that player mills a card.
-///
-/// The choice is the engine's ranked hostile opponent — "a player" admits you
-/// too, which a self-mill deck might prefer.
 pub fn sewer_nemesis() -> CardDefinition {
     CardDefinition {
-        as_enters_effect: Some(Effect::RememberPlayerOnSource { who: PlayerRef::HostileOpponent }),
+        as_enters_effect: Some(Effect::ChoosePlayerForSource { opponent: false }),
         dynamic_pt: Some(crate::card::DynamicPt::ChosenPlayerGraveyardMatching {
             base_p: 0,
             base_t: 0,

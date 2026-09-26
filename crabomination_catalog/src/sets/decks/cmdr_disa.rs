@@ -475,7 +475,7 @@ pub fn riveteers_charm() -> CardDefinition {
 /// doubled.
 pub fn sawhorn_nemesis() -> CardDefinition {
     CardDefinition {
-        as_enters_effect: Some(Effect::RememberPlayerOnSource { who: PlayerRef::HostileOpponent }),
+        as_enters_effect: Some(Effect::ChoosePlayerForSource { opponent: false }),
         static_abilities: vec![StaticAbility {
             description: "If a source would deal damage to the chosen player or a permanent they control, it deals double that damage instead.",
             effect: StaticEffect::DoubleDamageToChosenPlayer,

@@ -5822,3 +5822,35 @@ fn cr_800_1_a_game_holds_at_most_max_seats_players() {
     assert_eq!(g.players.len(), 64);
     let _ = multi_player_game(65);
 }
+
+/// "Choose an opponent" (not a target, CR 115.10) is the controller's pick at
+/// N > 2: a prompting seat is asked, and the body runs for the seat it named.
+/// No opponent has a creature, so the ballot is turn order and index 2 is
+/// seat 3 — not the fewest-creatures default the headless pick takes.
+#[test]
+fn choose_opponent_then_asks_a_prompting_controller_and_runs_for_its_pick() {
+    use crabomination::effect::{Effect, Selector, Value};
+    let mut g = multi_player_game(4);
+    g.players[0].wants_ui = true;
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.stack.push(
+        TriggerPush::new(src, 0, Effect::ChooseOpponentThen {
+            then: Box::new(Effect::GainLife {
+                who: Selector::Player(PlayerRef::ChosenPlayerOfSource),
+                amount: Value::Const(5),
+            }),
+        })
+        .build(),
+    );
+    let life: Vec<i32> = g.players.iter().map(|p| p.life).collect();
+    g.resolve_top_of_stack().expect("resolve");
+    let pending = g.pending_decision.as_ref().expect("the controller is asked");
+    let crabomination::decision::Decision::ChooseOption { options, .. } = &pending.decision else {
+        panic!("a seat ballot, got {:?}", pending.decision);
+    };
+    assert_eq!(options, &["Player 2", "Player 3", "Player 4"]);
+    g.submit_decision(DecisionAnswer::Amount(2)).expect("answer");
+    assert!(g.pending_decision.is_none());
+    let gained: Vec<i32> = g.players.iter().zip(&life).map(|(p, l)| p.life - l).collect();
+    assert_eq!(gained, vec![0, 0, 0, 5], "only the named opponent gains");
+}

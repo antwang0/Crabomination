@@ -2318,6 +2318,9 @@ pub enum PendingEffectState {
         #[serde(default)]
         restrict_to: Option<crate::card::SelectionRequirement>,
     },
+    /// Suspended on the seat ballot of `Effect::ChoosePlayerForSource`; the
+    /// `Amount(i)` answer stamps `seats[i]` on `target_id.chosen_player`.
+    ChosenPlayerPending { target_id: CardId, seats: Vec<usize> },
     /// Suspended on a `NameCard` decision for `Effect::NameOpponentCastLock`
     /// (Academic Probation). The chooser names a card and the engine records
     /// it in `players[caster].opponents_cant_cast_named`.

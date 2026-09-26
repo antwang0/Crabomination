@@ -540,13 +540,12 @@ pub fn sly_instigator() -> CardDefinition {
 }
 
 /// Stuffy Doll — indestructible; damage dealt to it is dealt to the chosen
-/// player; {T}: 1 damage to itself. Residual: the chosen player is the
-/// engine's most hostile opponent.
+/// player; {T}: 1 damage to itself.
 pub fn stuffy_doll() -> CardDefinition {
     CardDefinition {
         card_types: vec![CardType::Artifact, CardType::Creature],
         keywords: vec![Keyword::Indestructible],
-        as_enters_effect: Some(Effect::RememberPlayerOnSource { who: PlayerRef::HostileOpponent }),
+        as_enters_effect: Some(Effect::ChoosePlayerForSource { opponent: false }),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealtDamage, EventScope::SelfSource),
             effect: Effect::DealDamage {

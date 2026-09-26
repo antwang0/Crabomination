@@ -313,7 +313,7 @@ pub fn deathbringer_regent() -> CardDefinition {
 pub fn guardian_archon() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying],
-        as_enters_effect: Some(Effect::RememberPlayerOnSource { who: PlayerRef::HostileOpponent }),
+        as_enters_effect: Some(Effect::ChoosePlayerForSource { opponent: true }),
         activated_abilities: vec![ActivatedAbility {
             activate_once: true,
             effect: Effect::GrantKeywords {

@@ -9,7 +9,7 @@ use crabomination::catalog;
 use crabomination::effect::{Effect, Selector};
 use crabomination::game::types::Target;
 use crabomination::game::*;
-use crabomination::game::{cast, drain_stack, two_player_game};
+use crabomination::game::{cast, drain_stack, multi_player_game, two_player_game};
 
 /// The shape both class tables below are written in. Aliased because a bare
 /// `[(&str, fn() -> CardDefinition); N]` trips `clippy::type_complexity`; the
@@ -776,4 +776,63 @@ fn cr_614_12_crowd_control_warden_counts_as_it_enters() {
         "CR 614.12 — one counter per other creature, counted as it enters"
     );
     assert!(g.stack.is_empty(), "no trigger carries it");
+}
+
+// ── "Choose a player" / "choose an opponent" (CR 614.12; not a target) ────────
+
+/// The `ChooseOption` ballot a scripted decider was shown, by its labels.
+fn ballots(g: &GameState) -> Vec<Vec<String>> {
+    let crabomination::decision::DeciderKind::Scripted { asked, .. } = g.decider.kind() else {
+        return Vec::new();
+    };
+    asked
+        .into_iter()
+        .filter_map(|d| match d {
+            crabomination::decision::Decision::ChooseOption { options, .. } => Some(options),
+            _ => None,
+        })
+        .collect()
+}
+
+/// CR 614.12 — "as this enters, choose a player" is its controller's pick,
+/// and a player includes the controller (True-Name Nemesis can be protected
+/// from you). Four seats: every seat is offered, and the pick is stamped.
+#[test]
+fn cr_614_12_choose_a_player_offers_every_seat_and_stamps_the_pick() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = multi_player_game(4);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(3)]));
+    let id = g.move_card_to_battlefield_for_test(0, catalog::true_name_nemesis());
+    let asked = ballots(&g);
+    assert_eq!(asked.len(), 1, "one ask");
+    assert_eq!(asked[0].len(), 4, "every living seat is on the ballot");
+    assert_eq!(asked[0][3], "Player 1", "the controller comes last");
+    assert_eq!(g.battlefield_find(id).unwrap().chosen_player, Some(0), "the answer is the pick");
+}
+
+/// "Choose an opponent" never offers the controller, and a headless seat
+/// takes the ballot's first entry — the most hostile opponent, the engine's
+/// old fixed pick (Cursed Rack).
+#[test]
+fn cr_614_12_choose_an_opponent_offers_only_opponents_and_defaults_to_the_hostile_one() {
+    use crabomination::decision::ScriptedDecider;
+    let mut g = multi_player_game(4);
+    g.decider = Box::new(ScriptedDecider::default());
+    let id = g.move_card_to_battlefield_for_test(0, catalog::cursed_rack());
+    let asked = ballots(&g);
+    assert_eq!(asked.len(), 1);
+    assert_eq!(asked[0].len(), 3);
+    assert!(!asked[0].contains(&"Player 1".to_string()), "you are not an opponent");
+    assert_eq!(g.battlefield_find(id).unwrap().chosen_player, g.default_hostile_opponent(0));
+}
+
+/// With one opponent there is nothing to choose, so nothing is asked.
+#[test]
+fn cr_614_12_choose_an_opponent_with_one_opponent_asks_nothing() {
+    use crabomination::decision::ScriptedDecider;
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::default());
+    let id = g.move_card_to_battlefield_for_test(0, catalog::cursed_rack());
+    assert!(ballots(&g).is_empty());
+    assert_eq!(g.battlefield_find(id).unwrap().chosen_player, Some(1));
 }

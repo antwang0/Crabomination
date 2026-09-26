@@ -1013,6 +1013,7 @@ impl Effect {
             | Effect::RandomGraveyardCardToBattlefieldElse { .. }
             | Effect::DistributeCountersAmongLastCreated { .. }
             | Effect::RevealAndReplayNamedPermanent
+            | Effect::ChoosePlayerForSource { .. }
             | Effect::CopyEachCreatureToken => false,
             // Turn-scoped registrations whose "target" is a player slot or
             // nothing at all.

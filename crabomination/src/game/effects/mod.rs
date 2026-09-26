@@ -48,6 +48,7 @@ pub(crate) use eval::PrintedGates;
 pub(crate) mod events;
 mod movement;
 mod opponent_choice;
+mod choose_player;
 mod player_scope;
 mod reselect;
 mod reveal_cast;
@@ -28495,6 +28496,8 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ChoosePlayerForSource { opponent } => self.choose_player_for_source(*opponent, ctx),
+
             Effect::RememberPlayerOnSource { who } => {
                 let Some(src) = ctx.source else { return Ok(()) };
                 let pick = self.resolve_player(who, ctx);
@@ -30752,26 +30755,7 @@ impl GameState {
 
             Effect::AsPlayer { who, body } => self.run_as_player(who, body, ctx, events),
 
-            Effect::ChooseOpponentThen { then } => {
-                // The opponent with the fewest creatures, turn order breaking
-                // ties: the gift goes where it helps least.
-                let pick = self
-                    .seats_in_turn_order_from(ctx.controller)
-                    .into_iter()
-                    .filter(|&p| p != ctx.controller && !self.same_team(p, ctx.controller))
-                    .filter(|&p| self.players[p].is_alive())
-                    .min_by_key(|&p| {
-                        self.battlefield
-                            .iter()
-                            .filter(|c| c.controller == p && c.definition.is_creature())
-                            .count()
-                    });
-                let Some(pick) = pick else { return Ok(()) };
-                let prev = self.scratch.chosen_opponent_scratch.replace(pick);
-                let r = self.run_effect(then, ctx, events);
-                self.scratch.chosen_opponent_scratch = prev;
-                r
-            }
+            Effect::ChooseOpponentThen { then } => self.choose_opponent_then(then, effect, ctx, events),
 
             Effect::PayLifeLookTake { who } => {
                 use crate::decision::{Decision, DecisionAnswer};

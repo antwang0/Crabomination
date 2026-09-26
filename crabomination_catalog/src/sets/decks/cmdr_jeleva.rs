@@ -431,12 +431,10 @@ pub fn thraximundar() -> CardDefinition {
 
 /// True-Name Nemesis — as it enters, choose a player; protection from that
 /// player.
-///
-/// Approximation: the chosen player is the engine's most hostile opponent.
 pub fn true_name_nemesis() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::ProtectionFromChosenPlayer],
-        as_enters_effect: Some(Effect::RememberPlayerOnSource { who: PlayerRef::HostileOpponent }),
+        as_enters_effect: Some(Effect::ChoosePlayerForSource { opponent: false }),
         ..creature(
             "True-Name Nemesis",
             cost(&[generic(1), u(), u()]),
