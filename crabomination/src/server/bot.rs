@@ -8896,7 +8896,7 @@ fn gate_blame(_state: &GameState, _action: Option<&GameAction>) -> &'static str 
 
 /// The shape bits one activated ability contributes to [`sink_facts`]. Each
 /// arm calls the same predicate its generator does, so the two cannot drift.
-fn ability_sink_bits(ab: &crate::effect::ActivatedAbility) -> u32 {
+pub(super) fn ability_sink_bits(ab: &crate::effect::ActivatedAbility) -> u32 {
     use crate::effect::Selector;
     let mut m = 0;
     if ab.sac_cost || ab.sac_other_filter.is_some() {
@@ -9577,6 +9577,12 @@ fn main_phase_action_with(
     // Spend "{X}, remove X counters" abilities (Marath) on their best mode
     // and size. Dry-run-scored against passing.
     gated_pick!(state, sinks, sink::AB_X_COUNTERS, super::x_counter_sink::pick_x_counter_ability(state, seat, w));
+
+    // Pods: any other non-mana ability that beats passing (Arbor Elf, Elvish
+    // Piper, the scry and tutor rocks). Two seats return at once.
+    if let Some(action) = super::generic_sink::pick_generic_ability(state, seat, w) {
+        return BotStep::plain(action);
+    }
 
     BotStep::plain(GameAction::PassPriority)
 }
@@ -15977,6 +15983,11 @@ fn def_carries_mana_ability(p: &crate::card::CardInstance) -> bool {
     })
 }
 
+/// [`available_mana`]'s total — an upper bound on the mana `seat` can make.
+pub(super) fn mana_upper_bound(state: &GameState, seat: usize) -> u32 {
+    available_mana(state, seat).total
+}
+
 fn available_mana(state: &GameState, seat: usize) -> AvailableMana {
     use crate::mana::{Color, ColorSet};
     let pool = &state.players[seat].mana_pool;
@@ -18618,7 +18629,7 @@ fn contains_temp_stat_leaf(e: &Effect) -> bool {
 /// True when `action` is a cast whose (mode-resolved) effect contains a
 /// temporary leaf — such candidates skip the outcome evaluation (see
 /// [`contains_temporary_leaf`]) and compete on static score alone.
-fn action_outcome_is_temporary(state: &GameState, action: &GameAction) -> bool {
+pub(super) fn action_outcome_is_temporary(state: &GameState, action: &GameAction) -> bool {
     let (card_id, mode) = match action {
         GameAction::CastSpell { card_id, mode, .. } => (*card_id, *mode),
         _ => return false,

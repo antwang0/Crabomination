@@ -17117,6 +17117,19 @@ is a `--bench` reading and none of it belongs in the Baseline.
 
 ## Perf candidates
 
+### 2026-09-26 (session `015BCEt5`) — the pod-only generic ability pass costs ~9 % of pod throughput
+
+`server/generic_sink.rs` probes (clone + activate + settle + eval) every
+uncovered non-mana ability of the active seat once per post-combat main
+phase, pods only (two seats return at once: `--bench` 197,136
+byte-identical). Measured `--commander --seats 4 --games 2000 --seed 43`,
+release-fast, same host, two runs a side: 237.3 / 230.8 games/s before,
+213.4 / 212.1 after (-9 %); both main phases, before the post-combat gate
+and the hand/graveyard/exile/command-zone skips, it was -21 %. The top
+probed abilities are ones that never beat passing (Ghost Vacuum's exile,
+Guardian Idol's animate, a Restless land's animate): a per-turn negative
+memo keyed on (card, ability) would take most of the rest.
+
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.

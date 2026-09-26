@@ -2428,9 +2428,13 @@ mod tests {
         // cast at a Walking Ballista that had died (and fizzled); the cast is
         // rejected now and the bot takes its next play. Seed 4242 changes
         // winner (seat 2 → 3); the other two are untouched.
+        // Re-blessed 2026-09-26 (`server/generic_sink.rs`): in a pod the bot
+        // activates, post-combat, any non-mana ability no shape generator
+        // covers when the resolved outcome beats passing. Same winners; seed
+        // 43 runs four turns longer, 0xC0FFEE seven actions.
         const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
-            (0xC0FFEE, Some(1), 44, 1829),
-            (43, Some(3), 57, 2395),
+            (0xC0FFEE, Some(1), 44, 1836),
+            (43, Some(3), 61, 2743),
             (4242, Some(3), 49, 2136),
         ];
         let decks = rofellos_pod(4);

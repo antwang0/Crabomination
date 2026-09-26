@@ -96,6 +96,7 @@ mod spell_response;
 mod fight_pick;
 mod transform_sink;
 mod x_counter_sink;
+mod generic_sink;
 mod renewal_guard;
 pub mod encode;
 pub mod vocab_snapshot;
