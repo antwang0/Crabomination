@@ -83,29 +83,29 @@ lists were picked.
 | **Political Puppets** (CMD precon) URW | Zedruu the Greathearted | URW | 100 | 🟡 all 100 implemented (Trade Secrets, banned, swapped for Divination), 2 carry residuals (below) |
 | **Eternal Might** (DRC precon) WUB | Temmet, Naktamun's Will | WUB | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Land's Wrath** (ZNC precon) RGW | Obuun, Mul Daya Ancestor | RGW | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
-| **Stalwart Unity** (C16 precon) RGWU | Kynaios and Tiro of Meletis | RGWU | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
+| **Stalwart Unity** (C16 precon) RGWU | Kynaios and Tiro of Meletis | RGWU | 100 | 🟡 all 100 implemented, 1 carries a residual (Orzhov Advokist) |
 | **Token Triumph** (SCD starter) GW | Emmara, Soul of the Accord | GW | 100 | ✅ complete |
 | **Raining Cats and Dogs** (SLD) RGW | Rin and Seri, Inseparable | RGW | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Growing Threat** (MOC precon) WB | Brimaz, Blight of Oreskos | WB | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Call for Backup** (MOC precon) RGW | Bright-Palm, Soul Awakener | RGW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **World Shaper** (EOC precon) BRG | Hearthhull, the Worldseed | BRG | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
 | **Nature's Vengeance** (C18 precon) BRG | Lord Windgrace | BRG | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
-| **Peace Offering** (BLC precon) GWU | Ms. Bumbleflower | GWU | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
+| **Peace Offering** (BLC precon) GWU | Ms. Bumbleflower | GWU | 100 | ✅ complete |
 | **Nature of the Beast** (C13 precon) RGW | Marath, Will of the Wild | RGW | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Reign of Dragons** (FDC precon) R | Lathliss, Dragon Queen | R | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Spirit Squadron** (VOC precon) WU | Millicent, Restless Revenant | WU | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Jump Scare!** (DSC precon) GU | Zimone, Mystery Unraveler | GU | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
-| **Obscura Operation** (NCC precon) WUB | Kamiz, Obscura Oculus | WUB | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
-| **Elven Council** (LTC precon) GU | Galadriel, Elven-Queen | GU | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
+| **Obscura Operation** (NCC precon) WUB | Kamiz, Obscura Oculus | WUB | 100 | 🟡 all 100 implemented, 3 carry residuals (Kamiz, Obscura Oculus, Obscura Confluence, Oskar, Rubbish Reclaimer) |
+| **Elven Council** (LTC precon) GU | Galadriel, Elven-Queen | GU | 100 | 🟡 all 100 implemented, 5 carry residuals (Celeborn the Wise, Elrond of the White Council, Gandalf, Westward Voyager, Mirkwood Trapper, Sail into the West) |
 | **Ahoy Mateys** (LCC precon) UBR | Admiral Brass, Unsinkable | UBR | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
-| **Scions & Spellcraft** (FIC precon) WUB | Y'shtola, Night's Blessed | WUB | 100 | 🟡 all 100 implemented, 6 carry residuals (below) |
+| **Scions & Spellcraft** (FIC precon) WUB | Y'shtola, Night's Blessed | WUB | 100 | 🟡 all 100 implemented, 2 carry residuals (Blue Mage's Cane, Urianger Augurelt) |
 | **From Cute to Brute** (SLD Commander deck) WUBRG | Esika, God of the Tree | WUBRG | 100 | 🟡 all 100 implemented, 10 carry residuals (below) |
-| **Enduring Enchantments** (CMM precon) WBG | Anikthea, Hand of Erebos | WBG | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
+| **Enduring Enchantments** (CMM precon) WBG | Anikthea, Hand of Erebos | WBG | 100 | 🟡 all 100 implemented, 2 carry residuals (Ghoulish Impetus, Ondu Spiritdancer) |
 | **Open Hostility** (C16 precon) WBRG | Saskia the Unyielding | WBRG | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Devour for Power** (CMD precon) BGU | The Mimeoplasm | BGU | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Mirror Mastery** (CMD precon) GUR | Riku of Two Reflections | GUR | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **First Flight** (SCD precon) WU | Isperia, Supreme Judge | WU | 100 | ✅ complete |
-| **Undead Unleashed** (MIC precon) UB | Wilhelt, the Rotcleaver | UB | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
+| **Undead Unleashed** (MIC precon) UB | Wilhelt, the Rotcleaver | UB | 100 | 🟡 all 100 implemented, 2 carry residuals (Shadow Kin, Rooftop Storm) |
 | **Arm for Battle** (CMR precon) RW | Wyleth, Soul of Steel | RW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Fae Dominion** (WOC precon) UB | Tegwyll, Duke of Splendor | UB | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Invent Superiority** (C16 precon) WUBR | Breya, Etherium Shaper | WUBR | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
@@ -119,7 +119,7 @@ lists were picked.
 | **Draconic Destruction** (SCD starter) RG | Atarka, World Render | RG | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Family Matters** (BLC precon) URW | Zinnia, Valley's Voice | URW | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Virtue and Valor** (WOC precon) GW | Ellivere of the Wild Court | GW | 100 | 🟡 all 100 implemented, 7 carry residuals (below) |
-| **Divine Convocation** (MOC precon) URW | Kasla, the Broken Halo | URW | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
+| **Divine Convocation** (MOC precon) URW | Kasla, the Broken Halo | URW | 100 | 🟡 all 100 implemented, 1 carries a residual (Path of the Ghosthunter) |
 | **Symbiotic Swarm** (C20 precon) WBG | Kathril, Aspect Warper | WBG | 100 | 🟡 all 100 implemented, 6 carry residuals (below) |
 | **Painbow** (DMC precon) WUBRG | Jared Carthalion | WUBRG | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Hatsune Miku** (SLD precon) GW | Trostani, Selesnya's Voice | GW | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
@@ -169,7 +169,7 @@ lists were picked.
 | **Blast from the Past** (WHO precon) GWU | The Fourth Doctor + Sarah Jane Smith | GWU | 100 | 🟡 all 100 implemented, 10 carry residuals (Ace's Baseball Bat, Displaced Dinosaurs, Nyssa of Traken, Peri Brown, Reverse the Polarity, Susan Foreman, The Curse of Fenric, The Eighth Doctor, The Fourth Doctor, The Second Doctor) |
 | **Doom Prevails** (MSC precon) UBR | Doctor Doom, King of Latveria | UBR | 100 | 🟡 all 100 implemented, 3 carry residuals (Extract Power, Kang Dynasty, Lady Loki) |
 | **The Ruinous Powers** (40K precon) UBR | Abaddon the Despoiler | UBR | 100 | 🟡 all 100 implemented, 3 carry residuals (Khârn the Betrayer, The Lost and the Damned, The Ruinous Powers) |
-| **Masters of Evil** (WHO precon) UBR | Davros, Dalek Creator | UBR | 100 | 🟡 all 100 implemented, 11 carry residuals (Day of the Moon, Doomsday Confluence, Genesis of the Daleks, Rassilon, The Master Multiplied, The Sound of Drums, The Toymaker's Trap, Time Reaper, Vislor Turlough, Weeping Angel, Zygon Infiltrator) |
+| **Masters of Evil** (WHO precon) UBR | Davros, Dalek Creator | UBR | 100 | 🟡 all 100 implemented, 10 carry residuals (Day of the Moon, Doomsday Confluence, Genesis of the Daleks, Rassilon, the War President, The Master, Multiplied, The Toymaker's Trap, Time Reaper, Vislor Turlough, Weeping Angel, Zygon Infiltrator) |
 | **Timey-Wimey** (WHO precon) URW | The Tenth Doctor + Rose Tyler | URW | 100 | 🟡 all 100 implemented, 2 carry residuals (Clockspinning, The Day of the Doctor) |
 | **Necron Dynasties** (40K precon) B | Szarekh, the Silent King | B | 100 | 🟡 all 100 implemented, 4 carry residuals (Biotransference, Canoptek Wraith, Necron Deathmark, Out of the Tombs) |
 | **Dance of the Elements** (ECC precon) WUBRG | Ashling, the Limitless | WUBRG | 100 | 🟡 all 100 implemented, 5 carry residuals (Flamebraider, Smokebraider, Primal Beyond, Haunting Voyage, Horde of Notions) |
