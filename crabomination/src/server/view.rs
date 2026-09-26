@@ -3124,6 +3124,7 @@ pub fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::AdvanceClassLevel => "Level up",
         Effect::PutFromHandOntoBattlefield { .. } => "Put a card onto the battlefield",
         Effect::ExileSelfReturnTransformed => "Exile, return transformed",
+        Effect::ReturnSelfTransformedTappedToOwner => "Return transformed",
         Effect::LookPickToHand { .. } => "Look and take a card",
         Effect::GrantProtectionFromChosenColor { .. }
         | Effect::GrantProtectionFromColorsOf { .. } => "Grant protection",

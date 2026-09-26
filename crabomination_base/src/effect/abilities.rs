@@ -1354,6 +1354,11 @@ pub enum StaticEffect {
     /// Primal Vigor's token half — `DoubleTokens` for every player, whoever
     /// controls the source (CR 614.13).
     DoubleTokensEveryone,
+    /// "If one or more creature tokens would be created under your control,
+    /// three times that many of those tokens are created instead" (Ojer
+    /// Taq, CR 614.1a). Applied with the doublers in
+    /// `GameState::scaled_token_count`, to creature tokens only.
+    TripleCreatureTokens,
     /// "The first time you would create one or more tokens each turn, you may
     /// instead create that many tokens that are copies of enchanted permanent"
     /// (Moonlit Meditation). A once-per-turn CR 614 replacement on the token

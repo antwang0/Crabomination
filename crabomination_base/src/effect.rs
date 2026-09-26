@@ -11008,6 +11008,12 @@ pub enum Effect {
     /// same effect to return the card transformed from a graveyard (Garland,
     /// Knight of Cornelia).
     ExileSelfReturnTransformed,
+    /// "When this dies, return it to the battlefield tapped and transformed
+    /// under its owner's control" (the LCI Ojer gods). The dies-trigger
+    /// sibling of `ExileSelfReturnTransformed`: from the graveyard only,
+    /// tapped, and under the card's owner rather than the trigger's
+    /// controller (CR 400.3 — a stolen god returns to its owner).
+    ReturnSelfTransformedTappedToOwner,
     /// The mirror of `ExileSelfReturnTransformed` — "exile this, then return it
     /// to the battlefield (front face up)". Used by the FIN Dominants' Saga
     /// chapter III to reset the flip cycle.

@@ -322,3 +322,43 @@ pub fn beseech_the_mirror() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Ojer Taq, Deepest Foundation // Temple of Civilization — {4}{W}{W} 6/6
+/// Legendary God. Vigilance. Creature tokens created under your control are
+/// tripled (CR 614.1a). When it dies, it returns tapped and transformed
+/// under its owner's control. The Temple taps for {W}; {2}{W}, {T}:
+/// transform it, only as a sorcery and only if you attacked with three or
+/// more creatures this turn.
+pub fn ojer_taq_deepest_foundation() -> CardDefinition {
+    let temple = CardDefinition {
+        name: "Temple of Civilization",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            crate::sets::tap_add(Color::White),
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(2), w()]),
+                sorcery_speed: true,
+                // The turn's tally, not `AttackedWithCountAtLeast` (the live
+                // attackers, gone by the postcombat main phase).
+                condition: Some(Predicate::ValueAtLeast(
+                    Value::CreaturesAttackedWithThisTurn(PlayerRef::You),
+                    Value::Const(3),
+                )),
+                effect: Effect::Transform { what: Selector::This },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    };
+    CardDefinition {
+        keywords: vec![Keyword::Vigilance],
+        static_abilities: vec![StaticAbility {
+            description: "If one or more creature tokens would be created under your control, three times that many of those tokens are created instead.",
+            effect: StaticEffect::TripleCreatureTokens,
+        }],
+        triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::ReturnSelfTransformedTappedToOwner)],
+        back_face: Some(Box::new(temple)),
+        ..legendary_creature("Ojer Taq, Deepest Foundation", cost(&[generic(4), w(), w()]), vec![CreatureType::God], 6, 6)
+    }
+}

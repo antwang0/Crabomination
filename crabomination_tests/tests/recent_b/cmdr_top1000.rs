@@ -254,3 +254,55 @@ fn beseech_the_mirror_casts_free_only_when_bargained() {
         assert!(!g.exile.iter().any(|c| c.id == bears));
     }
 }
+
+/// CR 614.1a / 616.1: Ojer Taq triples creature tokens (after Anointed
+/// Procession's doubling, 2 → 4 → 12) and leaves a noncreature token alone.
+#[test]
+fn ojer_taq_triples_creature_tokens_only() {
+    let mut g = pod(4);
+    g.add_card_to_battlefield(0, catalog::ojer_taq_deepest_foundation());
+    let s = g.add_card_to_hand(0, catalog::raise_the_alarm());
+    cast(&mut g, 0, s, None).unwrap();
+    assert_eq!(count_named(&g, 0, "Soldier"), 6);
+    let t = g.add_card_to_hand(0, catalog::strike_it_rich());
+    cast(&mut g, 0, t, None).unwrap();
+    assert_eq!(count_named(&g, 0, "Treasure"), 1, "a Treasure isn't a creature token");
+    g.add_card_to_battlefield(0, catalog::anointed_procession());
+    let s = g.add_card_to_hand(0, catalog::raise_the_alarm());
+    cast(&mut g, 0, s, None).unwrap();
+    assert_eq!(count_named(&g, 0, "Soldier"), 6 + 12);
+}
+
+/// CR 712 / 400.3: Ojer Taq dies and returns tapped as Temple of
+/// Civilization under its owner's control, even when a pod opponent stole
+/// it; the Temple taps for {W} and transforms back only as a sorcery after
+/// its controller attacked with three creatures this turn.
+#[test]
+fn ojer_taq_returns_as_its_temple_and_transforms_back() {
+    let mut g = pod(4);
+    let ojer = g.add_card_to_battlefield(0, catalog::ojer_taq_deepest_foundation());
+    g.battlefield_find_mut(ojer).unwrap().controller = 2; // stolen
+    let kill = g.add_card_to_hand(1, catalog::doom_blade());
+    g.active_player_idx = 1;
+    cast(&mut g, 1, kill, Some(Target::Permanent(ojer))).unwrap();
+    let temple = g.battlefield_find(ojer).expect("back on the battlefield");
+    assert_eq!(temple.definition.name, "Temple of Civilization");
+    assert_eq!(temple.controller, 0, "returns under its owner");
+    assert!(temple.tapped);
+
+    g.active_player_idx = 0;
+    g.step = TurnStep::PostCombatMain;
+    g.battlefield_find_mut(ojer).unwrap().tapped = false;
+    let transform = |g: &mut GameState| {
+        g.priority.player_with_priority = 0;
+        flood(g, 0);
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: ojer, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
+        })
+    };
+    assert!(transform(&mut g).is_err(), "no attack with three creatures this turn");
+    g.players[0].creatures_attacked_this_turn = 3;
+    transform(&mut g).expect("transform the Temple");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(ojer).unwrap().definition.name, "Ojer Taq, Deepest Foundation");
+}

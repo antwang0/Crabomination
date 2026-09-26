@@ -7121,6 +7121,14 @@ impl GameState {
     /// uncapped one ran 2^32 mints (Cadric copying an Adrix and Nev while
     /// thirty-odd Adrix copies doubled it: an eight-seat pod hung).
     pub(crate) fn doubled_token_count(&self, seat: usize, base: u32) -> u32 {
+        self.scaled_token_count(seat, base, false)
+    }
+
+    /// `doubled_token_count`, then ×3 for each `TripleCreatureTokens`
+    /// permanent `seat` controls when the batch is creature tokens (Ojer
+    /// Taq). CR 616.1 lets the affected player order the replacements; the
+    /// product is the same either way.
+    pub(crate) fn scaled_token_count(&self, seat: usize, base: u32, creature: bool) -> u32 {
         let cap = crate::recommend::MAX_BATTLEFIELD as u32 + 1;
         let mut n = base.min(cap);
         for _ in 0..self.token_doublers_for(seat) {
@@ -7129,7 +7137,27 @@ impl GameState {
             }
             n = n.saturating_mul(2);
         }
+        if creature && n > 0 {
+            for _ in 0..self.creature_token_triplers_for(seat) {
+                if n >= cap {
+                    break;
+                }
+                n = n.saturating_mul(3);
+            }
+        }
         n.min(cap)
+    }
+
+    /// Number of `StaticEffect::TripleCreatureTokens` permanents `seat`
+    /// controls (Ojer Taq).
+    pub fn creature_token_triplers_for(&self, seat: usize) -> u32 {
+        use crate::effect::StaticEffect;
+        self.battlefield
+            .iter()
+            .filter(|c| c.controller == seat)
+            .flat_map(|c| c.definition.static_abilities.iter())
+            .filter(|sa| matches!(sa.effect, StaticEffect::TripleCreatureTokens))
+            .count() as u32
     }
 
     /// CR 614 — the host of `seat`'s live
@@ -30674,6 +30702,7 @@ fn static_effect_to_effects(
             // via `GameState::token_doublers_for(seat)`; no layer effect.
             | StaticEffect::DoubleTokens
             | StaticEffect::DoubleTokensEveryone
+            | StaticEffect::TripleCreatureTokens
             | StaticEffect::DoublePlusOneCountersEveryone
             | StaticEffect::FirstTokensEachTurnBecomeCopiesOfAttached
             | StaticEffect::FirstTokensOnYourTurnBecomeCopiesOfChosen

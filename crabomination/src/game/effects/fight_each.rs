@@ -26,7 +26,8 @@ impl GameState {
             })
             .map(|c| c.id)
             .collect();
-        let per_creature = self.doubled_token_count(you, 1);
+        let per_creature =
+            self.scaled_token_count(you, 1, definition.card_types.contains(&crate::card::CardType::Creature));
         let def = token_card_arc(definition);
         let mut pairs = Vec::with_capacity(prey.len());
         for &victim in &prey {

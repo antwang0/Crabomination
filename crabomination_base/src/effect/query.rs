@@ -2146,7 +2146,7 @@ impl Effect {
             | Effect::DamagedCreaturesDieThisTurn
             | Effect::CreatureDeathsDrainToughnessThisTurn => false,
             Effect::AddCountersOfChosenKind { amount, .. } => value_has_target(amount),
-            Effect::ExileSelfReturnTransformed => false,
+            Effect::ExileSelfReturnTransformed | Effect::ReturnSelfTransformedTappedToOwner => false,
             Effect::PutOnLibraryFromHand { who, count } => {
                 player_has_target(who) || value_has_target(count)
             }

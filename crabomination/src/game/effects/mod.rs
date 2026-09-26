@@ -20852,7 +20852,11 @@ impl GameState {
                     // Season for the token half) doubles the count, capped at
                     // the board bound (a bot probe of Storm Herd at 15,197
                     // life minted all 15,197: 22 s for one decision).
-                    let n = self.doubled_token_count(p, base);
+                    let n = self.scaled_token_count(
+                        p,
+                        base,
+                        definition.card_types.contains(&crate::card::CardType::Creature),
+                    );
                     // Moonlit Meditation — the turn's first token batch may
                     // instead be that many copies of the Aura's host.
                     if n > 0
@@ -21073,7 +21077,11 @@ impl GameState {
                 };
                 let Some(target) = target else { return Ok(()); };
                 // CR 614.13 — doublers apply to tokens created attacking too.
-                let n = self.doubled_token_count(p, self.evaluate_value(count, ctx).max(0) as u32);
+                let n = self.scaled_token_count(
+                    p,
+                    self.evaluate_value(count, ctx).max(0) as u32,
+                    definition.card_types.contains(&crate::card::CardType::Creature),
+                );
                 // Mint-time dynamic P/T, resolved in the minting effect's
                 // context (Gemini Engine's Twin copies the Engine's P/T).
                 let dyn_pt = definition.dynamic_pt.as_ref().map(|(pv, tv)| {
@@ -21239,7 +21247,7 @@ impl GameState {
                 extra_keywords,
             } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
-                let n = self.doubled_token_count(p, self.evaluate_value(count, ctx).max(0) as u32);
+                let base = self.evaluate_value(count, ctx).max(0) as u32;
                 // Resolve the source permanent. Walk battlefield first;
                 // fall back to graveyard / hand / exile via the same
                 // sequence `move_card_to` uses, so a fresh copy can be
@@ -21329,6 +21337,7 @@ impl GameState {
                 // One allocation for the whole batch; the mint takes
                 // `Into<Arc<_>>`, so `clone` below is a refcount bump.
                 let def: std::sync::Arc<crate::card::CardDefinition> = std::sync::Arc::from(def);
+                let n = self.scaled_token_count(p, base, def.is_creature());
                 for _ in 0..n {
                     self.mint_token_onto_battlefield(def.clone(), p, *enters_tapped, events);
                 }
@@ -21385,7 +21394,7 @@ impl GameState {
 
             Effect::CreateTokenCopiesHasteSac { who, count, source, exile } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
-                let n = self.doubled_token_count(p, self.evaluate_value(count, ctx).max(0) as u32);
+                let base = self.evaluate_value(count, ctx).max(0) as u32;
                 let src_id = self
                     .resolve_selector(source, ctx)
                     .into_iter()
@@ -21396,6 +21405,7 @@ impl GameState {
                 let Some(src_id) = src_id else { return Ok(()); };
                 let Some(def) = self.battlefield.find_by_id(src_id).map(|c| c.definition.arc())
                 else { return Ok(()); };
+                let n = self.scaled_token_count(p, base, def.is_creature());
                 for _ in 0..n {
                     let tid = self.mint_token_onto_battlefield(def.clone(), p, false, events);
                     self.grant_keyword_eot(tid, Keyword::Haste);
@@ -21434,7 +21444,7 @@ impl GameState {
                     return Ok(());
                 };
                 // Token doublers (Doubling Season / Parallel Lives) apply.
-                let n = self.doubled_token_count(p, 1);
+                let n = self.scaled_token_count(p, 1, true);
                 for _ in 0..n {
                     self.mint_token_onto_battlefield(def.clone(), p, false, events);
                 }
@@ -35931,7 +35941,8 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::ExileSelfReturnTransformed => {
+            Effect::ExileSelfReturnTransformed | Effect::ReturnSelfTransformedTappedToOwner => {
+                let to_owner = matches!(effect, Effect::ReturnSelfTransformedTappedToOwner);
                 // CR 714.4 — exile this Saga (or lift the card out of a
                 // graveyard), then return it transformed under its
                 // controller's control. Routed through `place_card_in_dest`
@@ -35942,7 +35953,7 @@ impl GameState {
                 // chapter), but a graveyard-activated ability can also return
                 // the card transformed (Garland's "return this card from your
                 // graveyard to the battlefield transformed").
-                let on_bf = self.battlefield.find_by_id(id).is_some();
+                let on_bf = !to_owner && self.battlefield.find_by_id(id).is_some();
                 let has_back = self
                     .find_card_anywhere(id)
                     .is_some_and(|c| c.definition.back_face.is_some());
@@ -35966,10 +35977,11 @@ impl GameState {
                 card.set_definition(back);
                 card.transformed = true;
                 events.push(GameEvent::Transformed { card_id: id });
+                let controller = if to_owner { card.owner } else { ctx.controller };
                 self.place_card_in_dest(
                     card,
-                    ctx.controller,
-                    &ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    controller,
+                    &ZoneDest::Battlefield { controller: PlayerRef::You, tapped: to_owner },
                     events,
                 );
                 Ok(())
