@@ -10672,6 +10672,19 @@ pub(super) fn pick_energy_payoff(state: &GameState, seat: usize) -> Option<GameA
                 }
                 _ => false,
             };
+            // An until-end-of-turn stat boost bought in a main phase buys
+            // nothing: combat pumps go through the trick picker, which reads
+            // activated pumps too. Taken here, Aetherwind Basker's "Pay {E}:
+            // +1/+1" spent a pod seat's whole stock one {E} an action, every
+            // main phase, until the game hit the play cap (4-seat seed
+            // 125034, game 153).
+            let body = match &ab.effect {
+                Effect::PayEnergy { then, .. } => then.as_ref(),
+                e => e,
+            };
+            if only_temporary_stats(body) {
+                continue;
+            }
             if idle {
                 continue;
             }
@@ -18678,6 +18691,20 @@ fn contains_temp_stat_leaf(e: &Effect) -> bool {
     }
 }
 
+/// Every leaf of `e` is a stat change that ends with the turn or the combat:
+/// a pump, a base P/T rewrite or a P/T switch. A keyword grant is not one — an
+/// evasion bought before attacks (Aetherstream Leopard) is the point.
+fn only_temporary_stats(e: &Effect) -> bool {
+    use crate::effect::Duration;
+    match e {
+        Effect::PumpPT { duration: Duration::EndOfTurn | Duration::EndOfCombat, .. }
+        | Effect::SetBasePT { duration: Duration::EndOfTurn | Duration::EndOfCombat, .. }
+        | Effect::SwitchPT { duration: Duration::EndOfTurn | Duration::EndOfCombat, .. } => true,
+        Effect::Seq(v) => !v.is_empty() && v.iter().all(only_temporary_stats),
+        _ => false,
+    }
+}
+
 /// True when `action` is a cast whose (mode-resolved) effect contains a
 /// temporary leaf — such candidates skip the outcome evaluation (see
 /// [`contains_temporary_leaf`]) and compete on static score alone.
@@ -21261,6 +21288,18 @@ mod tests {
             }
             _ => panic!("expected an activate-ability action"),
         }
+    }
+
+    /// An until-end-of-turn pump is not an energy payoff in a main phase:
+    /// Aetherwind Basker's "Pay {E}: +1/+1" spent a pod seat's whole stock
+    /// one {E} an action until the game hit the play cap.
+    #[test]
+    fn bot_keeps_energy_for_an_end_of_turn_pump() {
+        let mut g = two_player_game();
+        let basker = g.add_card_to_battlefield(0, catalog::aetherwind_basker());
+        g.clear_sickness(basker);
+        g.players[0].energy = 40;
+        assert!(pick_energy_payoff(&g, 0).is_none(), "no main-phase pump for 1 energy apiece");
     }
 
     /// The bot also recognises the real-cost energy form
