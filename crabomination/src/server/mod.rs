@@ -94,6 +94,7 @@ mod foretell;
 mod room;
 mod fog;
 mod voyage;
+mod evasion;
 mod cycling;
 mod spell_response;
 mod fight_pick;
