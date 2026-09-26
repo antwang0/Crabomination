@@ -1644,7 +1644,7 @@ pub fn ruination_guide() -> CardDefinition {
 }
 
 /// Dominator Drone — {2}{B} 3/2 Eldrazi Drone. Devoid, Ingest; ETB, if you
-/// control another colorless creature, target opponent loses 2 life.
+/// control another colorless creature, each opponent loses 2 life.
 pub fn dominator_drone() -> CardDefinition {
     use crate::card::SelectionRequirement;
     use crate::effect::shortcut::etb;
@@ -1715,7 +1715,7 @@ pub fn kozileks_translator() -> CardDefinition {
 /// another colorless creature you control enters, target opponent loses 1 life.
 pub fn flayer_drone() -> CardDefinition {
     use crate::card::{EventKind, EventScope, EventSpec, SelectionRequirement, TriggeredAbility};
-    use crate::effect::{PlayerRef, Predicate, Selector, Value};
+    use crate::effect::{Predicate, Selector, Value};
     let drain = TriggeredAbility {
         event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(
             Predicate::EntityMatches {
@@ -1726,7 +1726,7 @@ pub fn flayer_drone() -> CardDefinition {
             },
         ),
         effect: Effect::LoseLife {
-            who: Selector::Player(PlayerRef::EachOpponent),
+            who: crate::effect::shortcut::target_filtered(crate::card::SelectionRequirement::OpponentPlayer),
             amount: Value::Const(1),
         },
     };
@@ -2199,7 +2199,7 @@ pub fn kor_castigator() -> CardDefinition {
 /// you cast it, you may pay {1}{C}; if you do, target opponent sacrifices a creature.
 pub fn bearer_of_silence() -> CardDefinition {
     use crate::card::SelectionRequirement;
-    use crate::effect::{PlayerRef, Selector, Value};
+    use crate::effect::Value;
     CardDefinition {
         keywords: vec![Keyword::Devoid, Keyword::Flying, Keyword::CantBlock],
         // ⚠ "Creature — Eldrazi", **not** a Drone — the `drone` helper's
@@ -2212,10 +2212,13 @@ pub fn bearer_of_silence() -> CardDefinition {
         triggered_abilities: vec![on_cast(Effect::MayPay {
             description: "Pay {1}{C}: target opponent sacrifices a creature".into(),
             mana_cost: cost(&[crate::mana::generic(1), crate::mana::colorless(1)]),
-            body: Box::new(Effect::Sacrifice {
-                who: Selector::Player(PlayerRef::EachOpponent),
-                count: Value::Const(1),
-                filter: SelectionRequirement::Creature,
+            // CR 603.12 — "if you do, target opponent" targets after paying.
+            body: Box::new(Effect::Reflexive {
+                body: Box::new(Effect::Sacrifice {
+                    who: crate::effect::shortcut::target_filtered(crate::card::SelectionRequirement::OpponentPlayer),
+                    count: Value::Const(1),
+                    filter: SelectionRequirement::Creature,
+                }),
             }),
             else_: None,
         })],

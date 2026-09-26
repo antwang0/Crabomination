@@ -12371,3 +12371,16 @@ fn cr_603_2_master_of_cruelties_and_blood_seeker_pick_one_seat() {
     drain_stack(&mut g);
     assert_eq!((g.players[1].life, g.players[2].life), (20, 19), "that player is the Bear's controller");
 }
+
+/// CR 115.1 — "target opponent" names one opponent: in a pod, Flayer
+/// Drone's drain reaches exactly one of them.
+#[test]
+fn cr_115_1_target_opponent_is_one_opponent() {
+    let mut g = crabomination::game::multi_player_game(3);
+    g.add_card_to_battlefield(0, catalog::flayer_drone());
+    let eldrazi = g.add_card_to_battlefield(0, catalog::dominator_drone());
+    g.dispatch_triggers_for_events(&[crabomination::game::types::GameEvent::PermanentEntered { card_id: eldrazi }]);
+    drain_stack(&mut g);
+    let lost = (40 - g.players[1].life - g.players[2].life) as u32;
+    assert_eq!(lost, 1, "one opponent loses 1 (Flayer), not both");
+}

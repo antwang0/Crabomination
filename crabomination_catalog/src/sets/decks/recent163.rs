@@ -260,7 +260,7 @@ pub fn seekers_folly() -> CardDefinition {
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::ChooseMode(vec![
-            discard(Selector::Player(PlayerRef::EachOpponent), 2, false),
+            discard(crate::effect::shortcut::target_filtered(crate::card::SelectionRequirement::OpponentPlayer), 2, false),
             Effect::PumpPT {
                 what: each_opponent_creature(),
                 power: Value::Const(-1),
