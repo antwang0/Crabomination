@@ -137,7 +137,7 @@ impl GameState {
             let kinds: Vec<CounterType> = c.counters.iter().filter(|(_, n)| **n > 0).map(|(k, _)| *k).collect();
             // Remove when the kind is bad for the owner-side we're serving.
             let choice = kinds.iter().map(|&k| {
-                let good_for_holder = !harmful(k) && !(k == CounterType::Time && removal_rewarded);
+                let good_for_holder = !(harmful(k) || k == CounterType::Time && removal_rewarded);
                 (k, good_for_holder != mine)
             });
             let Some((kind, remove)) = choice.clone().find(|&(_, remove)| !remove).or_else(|| choice.clone().next()) else {

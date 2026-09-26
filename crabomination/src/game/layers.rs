@@ -17,8 +17,6 @@
 //!      7d. P/T switching
 //!      Counters (+1/+1, -1/-1) are applied after 7c per CR 613.7f.
 
-use crate::game::KeywordSlice;
-
 use crate::card::{
     CardId, CardType, CounterType, CreatureType, Keyword, LandType, SelectionRequirement, Subtypes,
     Supertype,

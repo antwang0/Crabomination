@@ -2246,7 +2246,7 @@ impl GameState {
                 // "Except it has vanishing 3 if that creature doesn't have
                 // vanishing" (Flesh Duplicate): a copied vanishing stands.
                 let vanishing = |k: &Keyword| matches!(k, Keyword::Vanishing(_));
-                if !def.keywords.contains(kw) && !(vanishing(kw) && def.keywords.iter().any(vanishing)) {
+                if !(def.keywords.contains(kw) || vanishing(kw) && def.keywords.iter().any(vanishing)) {
                     def.keywords.push(kw.clone());
                 }
             }
