@@ -186,9 +186,10 @@ across nine precons.
   Unbound's +1, Gideon, Battle-Forged's +1, Arlinn, the Pack's Hope's +1
   (new Player flags). A catalog audit (oracle "until your next turn" vs. no
   next-turn duration in the body, goad/detain excluded) lists 16 more
-  candidates, mostly 2-player-pool cards — a lead, not a verdict: Dovin, Hand
-  of Control's −1, Rowan's back face, Amplifire, Rootwise Survivor, Eon
-  Frolicker, Mythos of Vadrok, Crystalline Resonance.
+  candidates, mostly 2-player-pool cards — a lead, not a verdict. Worked
+  2026-09-26 (`015BCEt5`): Dovin's −1, Rootwise Survivor's haste, Eon
+  Frolicker's protection and Mythos of Vadrok's rider fixed; Amplifire was
+  already right. Left: Rowan's back face, Crystalline Resonance.
 - Cast-only exile permissions (`MayPlayPermission.cast_only`): Dream
   Pillager, Stolen Strategy, Dead Man's Chest let a land be played. Sisay
   fetched mana value *up to* its power; Kaalia triggered on a planeswalker
