@@ -4,8 +4,6 @@
 //!
 //! Residuals (each also on its card):
 //! - **Call for Aid** — nothing stops you sacrificing the borrowed creatures.
-//! - **Champions of Minas Tirith** — the opponent is never offered the
-//!   {X} payment, so while you're the monarch they can't attack you.
 //! - **Denethor, Stone Seer** and **Éomer, King of Rohan** — you become the
 //!   monarch (the printed "target player").
 //! - **Fealty to the Realm** — the Aura's controller controls the creature,
@@ -288,9 +286,8 @@ pub fn call_for_aid() -> CardDefinition {
 }
 
 /// Champions of Minas Tirith — entering makes you the monarch; while you
-/// are, an opponent's combat on their turn can't come at you.
-///
-/// Residual: the opponent is never offered the {X} payment.
+/// are, an opponent's combat can't come at you unless they pay {X} (X = cards
+/// in their hand).
 pub fn champions_of_minas_tirith() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![
@@ -298,7 +295,20 @@ pub fn champions_of_minas_tirith() -> CardDefinition {
             TriggeredAbility {
                 event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::OpponentControl)
                     .with_filter(you_are_monarch()),
-                effect: Effect::CantAttackPlayerThisTurn { who: PlayerRef::ActivePlayer, defender: PlayerRef::You },
+                // "That opponent may pay {X}, where X is the number of cards in
+                // their hand. If they don't, they can't attack you this combat."
+                effect: Effect::WithX {
+                    x: Value::HandSizeOf(PlayerRef::ActivePlayer),
+                    body: Box::new(Effect::UnlessPlayerPays {
+                        who: PlayerRef::ActivePlayer,
+                        cost: crate::card::WardCost::GenericXFromCost,
+                        then: Box::new(Effect::CantAttackPlayerThisTurn {
+                            who: PlayerRef::ActivePlayer,
+                            defender: PlayerRef::You,
+                        }),
+                        if_paid: None,
+                    }),
+                },
             },
         ],
         ..creature(

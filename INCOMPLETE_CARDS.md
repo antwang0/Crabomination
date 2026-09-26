@@ -2089,7 +2089,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Razorfield Ripper | Creative Energy (M3C) | reconfigure costs only {2}, not the {E}{E}{E} option. |
 | 🟡 Sphinx of the Revelation | Creative Energy (M3C) | the X {E} is paid as the ability resolves, not as a cost. |
 | 🟡 Call for Aid | Riders of Rohan (LTC) | nothing stops you sacrificing the borrowed creatures. |
-| 🟡 Champions of Minas Tirith | Riders of Rohan (LTC) | the opponent is never offered the {X} payment, so while you're the monarch they can't attack you. |
 | 🟡 Denethor, Stone Seer | Riders of Rohan (LTC) | you become the monarch rather than a target player. |
 | 🟡 Éomer, King of Rohan | Riders of Rohan (LTC) | you become the monarch rather than a target player. |
 | 🟡 Fealty to the Realm | Riders of Rohan (LTC) | the Aura's controller controls the creature, not whoever is the monarch. |

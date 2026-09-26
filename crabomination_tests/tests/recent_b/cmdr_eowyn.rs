@@ -373,3 +373,30 @@ fn crown_of_gondor_equips_for_one_as_the_monarch() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(crown).and_then(|c| c.attached_to), Some(bear));
 }
+
+/// Champions of Minas Tirith — while you're the monarch, each opponent's
+/// combat asks them to pay {X} (X = cards in their hand) or not attack you.
+#[test]
+fn champions_of_minas_tirith_offer_the_x() {
+    for pays in [false, true] {
+        let mut g = pod(2);
+        g.add_card_to_battlefield(0, catalog::champions_of_minas_tirith());
+        let mut ev = Vec::new();
+        g.set_monarch(0, &mut ev);
+        g.add_card_to_hand(1, catalog::island());
+        g.add_card_to_hand(1, catalog::island());
+        g.players[1].mana_pool.add_colorless(2);
+        g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+            crabomination::decision::DecisionAnswer::Bool(pays),
+        ]));
+        g.active_player_idx = 1;
+        g.step = TurnStep::BeginCombat;
+        g.fire_step_triggers(TurnStep::BeginCombat);
+        drain_stack(&mut g);
+        let banned = g.cant_attack_player_this_turn.contains(&(1, 0));
+        assert_eq!(banned, !pays, "paid {pays}: attack ban {banned}");
+        if pays {
+            assert_eq!(g.players[1].mana_pool.total(), 0, "paid {{2}}");
+        }
+    }
+}
