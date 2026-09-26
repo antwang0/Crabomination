@@ -246,11 +246,9 @@ pub fn merfolk_skydiver() -> CardDefinition {
     }
 }
 
-/// Pteramander — {U}, 1/1 Salamander Drake with Flying. `{7}: Adapt 4`
-/// (CR 702.108 — put four +1/+1 counters on it if it has none). The
-/// printed "{7} costs {1} less per instant/sorcery in your graveyard"
-/// rebate is collapsed to the flat {7} (no count-based cost-rebate
-/// primitive yet).
+/// Pteramander — {U}, 1/1 Salamander Drake with Flying. `{7}{U}: Adapt 4`
+/// (CR 702.108), {1} less for each instant and sorcery card in your
+/// graveyard.
 pub fn pteramander() -> CardDefinition {
     CardDefinition {
         name: "Pteramander",
@@ -268,6 +266,12 @@ pub fn pteramander() -> CardDefinition {
             discard_cost: None,
             mana_cost: cost(&[generic(7), u()]),
             effect: crate::effect::shortcut::adapt(4),
+            // "{1} less to activate for each instant and sorcery card in your
+            // graveyard."
+            cost_reduction_per_graveyard: Some(
+                SelectionRequirement::HasCardType(CardType::Instant)
+                    .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+            ),
             ..Default::default()
         }],
         ..Default::default()

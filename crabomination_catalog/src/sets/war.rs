@@ -3899,8 +3899,8 @@ pub fn emergence_zone() -> CardDefinition {
 }
 
 /// Mobilized District — Land. {T}: Add {C}. {4}: becomes a 3/3 Citizen with
-/// vigilance until end of turn (still a land). (The per-legendary cost reduction
-/// is dropped.)
+/// vigilance until end of turn (still a land); {1} less for each legendary
+/// creature and planeswalker you control.
 pub fn mobilized_district() -> CardDefinition {
     CardDefinition {
         name: "Mobilized District",
@@ -3917,6 +3917,11 @@ pub fn mobilized_district() -> CardDefinition {
                     keywords: vec![Keyword::Vigilance],
                     duration: Duration::EndOfTurn,
                 },
+                // "{1} less for each legendary creature and planeswalker you
+                // control."
+                cost_reduction_per: Some(
+                    R::HasSupertype(crate::card::Supertype::Legendary).and(R::Creature.or(R::Planeswalker)),
+                ),
                 ..Default::default()
             },
         ],

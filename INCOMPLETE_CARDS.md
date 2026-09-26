@@ -355,14 +355,13 @@ Nahiri, the Harbinger; Kari Zev; Marionette Master; Bloodthirsty Adversary;
 Aura of Silence; Compulsive Research; Mask of Griselbrand; Cankerbloom;
 Bitter Triumph; Ursine Monstrosity; Finale of Devastation; Teferi's
 Protection; Comeuppance; Decree of Justice; Experiment Twelve; Guardian
-Project. Still open:
+Project; Pteramander; Mobilized District. Still open:
 
 | Card | Gap |
 |---|---|
 | 🟡 Comeuppance | the prevention ships; the reflected damage (to the creature, else its controller) does not, and your own sources are prevented too. |
 | 🟡 Compulsive Research | "target player" is always you. |
 | 🟡 Ajani's Chosen | "if that enchantment is an Aura, you may attach it to the token" is missing (a bot's yes would move an opponent-side Aura onto its token). |
-| 🟡 Mobilized District | the "{1} less per legendary creature and planeswalker you control" discount on its animation is missing. |
 | 🟡 Conduit of Worlds | only the play-lands-from-graveyard static; the {T} cast-a-permanent-card-from-graveyard ability is missing. |
 | 🟡 Sylvan Library | an optional "draw one, lose 4 life", not "draw two, then pay 4 life or put back each of two drawn this turn". |
 | 🟡 Master Biomancer | the "as a Mutant" type rider is missing. |

@@ -440,3 +440,38 @@ fn guardian_project_skips_a_repeated_name() {
     enter(&mut g, catalog::hill_giant());
     assert_eq!(g.players[0].hand.len(), 1);
 }
+
+/// Pteramander — "{1} less to activate for each instant and sorcery card in
+/// your graveyard": seven of them make Adapt 4 cost {U}.
+#[test]
+fn pteramander_adapts_cheaper_per_graveyard_spell() {
+    let mut g = main_phase();
+    let pt = g.add_card_to_battlefield(0, catalog::pteramander());
+    for _ in 0..7 {
+        g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    }
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: pt, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("{U} after seven off");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(pt).unwrap().counter_count(crabomination::card::CounterType::PlusOnePlusOne), 4);
+}
+
+/// Mobilized District — "{1} less for each legendary creature and
+/// planeswalker you control": two legends make its {4} a {2}.
+#[test]
+fn mobilized_district_is_cheaper_per_legend() {
+    let mut g = main_phase();
+    let md = g.add_card_to_battlefield(0, catalog::mobilized_district());
+    g.add_card_to_battlefield(0, catalog::magda_brazen_outlaw());
+    g.add_card_to_battlefield(0, catalog::kari_zev_skyship_raider());
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: md, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("{2} with two legends");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(md).unwrap().card_types().contains(&crabomination::card::CardType::Creature));
+}
