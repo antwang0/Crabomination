@@ -17,8 +17,6 @@
 //!   a player it has already attacked this turn".
 //! - **Siren Stormtamer** — counters spells only, targeting you or any
 //!   permanent you control.
-//! - **The Grim Captain's Locker** — the escape-granting ability isn't
-//!   implemented.
 //! - **Timestream Navigator** — it goes to the bottom as part of the effect,
 //!   not as a cost.
 //! - **Zara, Renegade Recruiter** — the stolen creature is the engine's pick,
@@ -671,20 +669,30 @@ pub fn storm_fleet_negotiator() -> CardDefinition {
     }
 }
 
-/// The Grim Captain's Locker — {T}: surveil 1.
-///
-/// ⚠ Residual: the escape-granting ability isn't implemented.
+/// The Grim Captain's Locker — {T}: surveil 1; {T}: your graveyard's creature
+/// cards gain escape {3}{B} (exile four others) this turn.
 pub fn the_grim_captains_locker() -> CardDefinition {
     CardDefinition {
         name: "The Grim Captain's Locker",
         cost: cost(&[generic(3), b()]),
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Artifact],
-        activated_abilities: vec![ActivatedAbility {
-            tap_cost: true,
-            effect: Effect::Surveil { who: PlayerRef::You, amount: Value::ONE },
-            ..Default::default()
-        }],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::Surveil { who: PlayerRef::You, amount: Value::ONE },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::GrantEscapeWithCostThisTurn {
+                    what: Selector::CardsInZone { who: PlayerRef::You, zone: crate::card::Zone::Graveyard, filter: R::Creature },
+                    cost: cost(&[generic(3), b()]),
+                    exile_count: 4,
+                },
+                ..Default::default()
+            },
+        ],
         ..Default::default()
     }
 }

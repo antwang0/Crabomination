@@ -6663,6 +6663,10 @@ pub enum Effect {
     /// Recorded in `GameState::granted_escape_eot`, read first by
     /// `effective_escape_grant`; cleared at cleanup.
     GrantEscapeThisTurn { what: Selector, exile_count: u32 },
+    /// As `GrantEscapeThisTurn` with a printed escape cost ("each creature
+    /// card in your graveyard gains 'Escape—{3}{B}, exile four other cards'"
+    /// — The Grim Captain's Locker).
+    GrantEscapeWithCostThisTurn { what: Selector, cost: crate::mana::ManaCost, exile_count: u32 },
     /// "Target creature card in your graveyard gains embalm until end of turn.
     /// The embalm cost is equal to its mana cost." (CR 702.88 — Cursecloth
     /// Wrappings.) Pushes a real embalm activation onto the card's

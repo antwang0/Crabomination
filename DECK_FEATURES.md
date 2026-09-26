@@ -97,7 +97,7 @@ lists were picked.
 | **Jump Scare!** (DSC precon) GU | Zimone, Mystery Unraveler | GU | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
 | **Obscura Operation** (NCC precon) WUB | Kamiz, Obscura Oculus | WUB | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Elven Council** (LTC precon) GU | Galadriel, Elven-Queen | GU | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
-| **Ahoy Mateys** (LCC precon) UBR | Admiral Brass, Unsinkable | UBR | 100 | 🟡 all 100 implemented, 8 carry residuals (below) |
+| **Ahoy Mateys** (LCC precon) UBR | Admiral Brass, Unsinkable | UBR | 100 | 🟡 all 100 implemented, 7 carry residuals (below) |
 | **Scions & Spellcraft** (FIC precon) WUB | Y'shtola, Night's Blessed | WUB | 100 | 🟡 all 100 implemented, 6 carry residuals (below) |
 | **From Cute to Brute** (SLD Commander deck) WUBRG | Esika, God of the Tree | WUBRG | 100 | 🟡 all 100 implemented, 10 carry residuals (below) |
 | **Enduring Enchantments** (CMM precon) WBG | Anikthea, Hand of Erebos | WBG | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
@@ -3228,8 +3228,7 @@ without its attack restriction** ("can't attack a player it has already
 attacked this turn" has no primitive), so its trigger is once a turn to
 keep games finite. Residuals: **Admiral Beckett Brass**, **Arm-Mounted
 Anchor**, **Departed Deckhand**, **Gemcutter Buccaneer**, **Merchant
-Raiders**, **Port Razer**, **Siren Stormtamer**, **The Grim Captain's
-Locker**, **Timestream Navigator**, **Zara, Renegade Recruiter**. A 200-game
+Raiders**, **Port Razer**, **Siren Stormtamer**, **Timestream Navigator**, **Zara, Renegade Recruiter**. A 200-game
 census beside Galadriel / Kamiz / Zimone (seed 158) decided 200/200 with
 zero panics and no card unplayed, Brass winning 30.5 %. `--bench`
 byte-identical.

@@ -1877,7 +1877,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Merchant Raiders | Ahoy Mateys (LCC) | the lock lasts while it's on the battlefield, not while you control it. |
 | 🟡 Port Razer | Ahoy Mateys (LCC) | its trigger fires once a turn instead of "can't attack a player it has already attacked this turn". |
 | 🟡 Siren Stormtamer | Ahoy Mateys (LCC) | counters spells only, targeting you or any permanent you control. |
-| 🟡 The Grim Captain's Locker | Ahoy Mateys (LCC) | the escape-granting ability isn't implemented. |
 | 🟡 Timestream Navigator | Ahoy Mateys (LCC) | it goes to the bottom as part of the effect, not as a cost. |
 | 🟡 Zara, Renegade Recruiter | Ahoy Mateys (LCC) | the stolen creature is the engine's pick, and you don't look at the rest of the hand. |
 | 🟡 Blue Mage's Cane | Scions & Spellcraft (FIC) | the copy costs the card's own mana cost, not {3}, and the graveyard card isn't exiled. |

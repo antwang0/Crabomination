@@ -13521,13 +13521,11 @@ impl GameState {
             }
 
             Effect::GrantEscapeThisTurn { what, exile_count } => {
-                for ent in self.resolve_selector(what, ctx) {
-                    if let Some(cid) = ent.as_card_id()
-                        && !self.granted_escape_eot.iter().any(|(id, _)| *id == cid)
-                    {
-                        self.granted_escape_eot.push((cid, *exile_count));
-                    }
-                }
+                self.grant_escape_this_turn(what, *exile_count, None, ctx);
+                Ok(())
+            }
+            Effect::GrantEscapeWithCostThisTurn { what, cost, exile_count } => {
+                self.grant_escape_this_turn(what, *exile_count, Some(cost.clone()), ctx);
                 Ok(())
             }
 

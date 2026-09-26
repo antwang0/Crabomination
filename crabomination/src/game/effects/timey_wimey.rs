@@ -334,4 +334,20 @@ impl GameState {
             .collect();
         self.run_effect(&Effect::Exile { what: Selector::ExactObjects(others) }, ctx, events)
     }
+
+    /// `Effect::GrantEscapeThisTurn` / `GrantEscapeWithCostThisTurn` — each
+    /// selected graveyard card gains escape until end of turn (CR 702.138).
+    pub(super) fn grant_escape_this_turn(
+        &mut self,
+        what: &Selector,
+        exile_count: u32,
+        cost: Option<crate::mana::ManaCost>,
+        ctx: &EffectContext,
+    ) {
+        for cid in self.resolve_selector(what, ctx).into_iter().filter_map(|e| e.as_card_id()) {
+            if !self.granted_escape_eot.iter().any(|(id, ..)| *id == cid) {
+                self.granted_escape_eot.push((cid, exile_count, cost.clone()));
+            }
+        }
+    }
 }

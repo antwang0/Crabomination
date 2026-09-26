@@ -1770,10 +1770,12 @@ pub struct ColdState {
     /// Checked when attacks are declared; cleared at cleanup.
     #[serde(default)]
     pub cant_attack_player_this_turn: Vec<(usize, usize)>,
-    /// Desdemona's until-end-of-turn escape grants: `(card, exile count)`.
-    /// Read by `effective_escape_grant`; cleared at cleanup.
+    /// Until-end-of-turn escape grants: `(card, exile count, cost)` — `None`
+    /// is the card's own mana cost (Desdemona), `Some` a printed one (The
+    /// Grim Captain's Locker's {3}{B}). Read by `effective_escape_grant`;
+    /// cleared at cleanup.
     #[serde(default)]
-    pub(crate) granted_escape_eot: Vec<(CardId, u32)>,
+    pub(crate) granted_escape_eot: Vec<(CardId, u32, Option<crate::mana::ManaCost>)>,
     /// Don't Blink — "until end of turn, if one or more creatures would enter
     /// from exile or after being cast from exile, their owners shuffle them
     /// into their libraries instead". Read at both entry routes; cleared at
@@ -9764,8 +9766,8 @@ impl GameState {
         if let Some((c, n)) = card.definition.has_escape() {
             return Some((c.clone(), n, None));
         }
-        if let Some((_, n)) = self.granted_escape_eot.iter().find(|(id, _)| *id == card.id) {
-            return Some((card.definition.cost.clone(), *n, None));
+        if let Some((_, n, fixed)) = self.granted_escape_eot.iter().find(|(id, ..)| *id == card.id) {
+            return Some((fixed.clone().unwrap_or_else(|| card.definition.cost.clone()), *n, None));
         }
         if card.definition.is_land() {
             return None;

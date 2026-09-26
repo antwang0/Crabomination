@@ -375,3 +375,28 @@ fn zara_recruits_from_their_hand() {
     assert_eq!(b.controller, 0);
     assert!(g.attacking.iter().any(|a| a.attacker == bear));
 }
+
+/// The Grim Captain's Locker's second {T}: creature cards in your graveyard
+/// gain escape {3}{B} (exile four others) until end of turn.
+#[test]
+fn grim_captains_locker_grants_escape() {
+    let mut g = main_phase(2);
+    let locker = g.add_card_to_battlefield(0, catalog::the_grim_captains_locker());
+    let giant = g.add_card_to_graveyard(0, catalog::hill_giant());
+    let fodder: Vec<CardId> = (0..4).map(|_| g.add_card_to_graveyard(0, catalog::island())).collect();
+    activate(&mut g, locker, 1, &[]).expect("grant escape");
+    g.players[0].mana_pool = Default::default();
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    act(&mut g, GameAction::CastEscape {
+        card_id: giant,
+        exile_cards: fodder,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("escape for {3}{B}");
+    crabomination::game::drain_stack(&mut g);
+    assert!(g.battlefield_find(giant).is_some());
+}

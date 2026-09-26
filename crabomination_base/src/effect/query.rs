@@ -1832,6 +1832,7 @@ impl Effect {
             | Effect::WhenTargetLeavesBattlefieldThisTurn { what, .. }
             | Effect::GrantFlashbackThisTurn { what }
             | Effect::GrantEscapeThisTurn { what, .. }
+            | Effect::GrantEscapeWithCostThisTurn { what, .. }
             | Effect::GrantEmbalmThisTurn { what }
             | Effect::GrantHarmonizeThisTurn { what }
             | Effect::GrantMiracle { what, .. }
@@ -2632,6 +2633,7 @@ impl Effect {
             | Effect::WhenTargetLeavesBattlefieldThisTurn { what, .. }
             | Effect::GrantFlashbackThisTurn { what }
             | Effect::GrantEscapeThisTurn { what, .. }
+            | Effect::GrantEscapeWithCostThisTurn { what, .. }
             | Effect::GrantEmbalmThisTurn { what }
             | Effect::GrantHarmonizeThisTurn { what }
             | Effect::GrantMiracle { what, .. }
@@ -3481,6 +3483,7 @@ impl Effect {
             // (Snapcaster Mage, Slickshot Lockpicker).
             Effect::GrantFlashbackThisTurn { .. }
             | Effect::GrantEscapeThisTurn { .. }
+            | Effect::GrantEscapeWithCostThisTurn { .. }
             | Effect::GrantEmbalmThisTurn { .. }
             | Effect::GrantHarmonizeThisTurn { .. } => true,
             // "Return target Aura card from your graveyard" — the pick only
@@ -5002,6 +5005,7 @@ impl Effect {
                 | Effect::WhenTargetLeavesBattlefieldThisTurn { what, .. }
                 | Effect::GrantFlashbackThisTurn { what }
                 | Effect::GrantEscapeThisTurn { what, .. }
+            | Effect::GrantEscapeWithCostThisTurn { what, .. }
                 | Effect::GrantEmbalmThisTurn { what }
                 | Effect::GrantMiracle { what, .. }
                 | Effect::GrantMiracleReduced { what, .. }

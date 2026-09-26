@@ -6975,7 +6975,7 @@ fn graveyard_specialties(state: &GameState, seat: usize) -> u32 {
         if c.granted_flashback_eot.is_some() || c.granted_harmonize_eot.is_some() {
             m |= spec::GY_RECAST;
         }
-        if state.granted_escape_eot.iter().any(|(id, _)| *id == c.id) {
+        if state.granted_escape_eot.iter().any(|(id, ..)| *id == c.id) {
             m |= spec::GY_ESCAPE;
         }
         if def.activated_abilities.iter().any(|ab| ab.from_graveyard) {
