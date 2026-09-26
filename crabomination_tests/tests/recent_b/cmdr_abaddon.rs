@@ -70,9 +70,23 @@ fn cr_615_kharn_changes_hands_instead_of_taking_damage() {
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
     cast_as(&mut g, 0, bolt, Some(Target::Permanent(kharn))).expect("bolt");
     let k = g.battlefield_find(kharn).expect("Khârn survives: the damage was prevented");
-    assert_eq!(k.controller, 1, "the next opponent in turn order takes it");
+    assert_eq!(k.controller, 1, "headless: the fewest-creatures opponent, turn order breaking ties");
     assert_eq!(k.damage, 0);
     assert_eq!(g.players[0].hand.len(), hand + 2, "its old controller draws two");
+}
+
+/// CR 615 / 102.2 — "an opponent of your choice": Khârn's controller picks
+/// who gets it (it used to be the next seat in turn order every time).
+#[test]
+fn cr_615_kharn_goes_to_the_opponent_its_controller_picks() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = main_phase(4);
+    let kharn = g.add_card_to_battlefield(0, catalog::kharn_the_betrayer());
+    // Ballot: fewest creatures first, turn order breaking ties — [1, 2, 3].
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(2)]));
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast_as(&mut g, 0, bolt, Some(Target::Permanent(kharn))).expect("bolt");
+    assert_eq!(g.battlefield_find(kharn).map(|k| k.controller), Some(3));
 }
 
 /// CR 508.1d — Seeker of Slaanesh: its controller's opponent can't declare

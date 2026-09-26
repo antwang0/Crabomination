@@ -5196,8 +5196,8 @@ impl GameState {
                 .then_some(c.controller)
         });
         if let Some(controller) = betrayed {
-            let n = self.players.len();
-            if let Some(to) = self.opponents_of(controller).into_iter().min_by_key(|&q| (q + n - controller) % n) {
+            // "An opponent of your choice" — the controller's ballot.
+            if let Some(to) = self.choose_opponent_at_once(controller, recipient, "Choose the opponent who gains control") {
                 self.change_control(recipient, to);
             }
             return true;

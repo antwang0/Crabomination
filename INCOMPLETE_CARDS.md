@@ -1970,7 +1970,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Kang Dynasty | Doom Prevails (MSC) | the draw rider reads any goaded creature an opponent controls dealing combat damage off your turn, not only the ones this Saga goaded. |
 | 🟡 Lady Loki, Agent of Chaos | Doom Prevails (MSC) | "your first instant, sorcery or Villain spell each turn" counts from when she is on the battlefield, not from the start of the turn. |
 | 🟡 Extract Power | Doom Prevails (MSC) | the exiled cards are face up. |
-| 🟡 Khârn the Betrayer | The Ruinous Powers (40K) | the next opponent in turn order gains control of it, not an opponent of your choice. |
 | 🟡 The Lost and the Damned | The Ruinous Powers (40K) | a land played from outside your hand (graveyard, exile) doesn't count. |
 | 🟡 The Ruinous Powers | The Ruinous Powers (40K) | the life-loss rider reads any spell you cast from exile that you don't own, and an exiled land can't be played. |
 | 🟡 Day of the Moon | Masters of Evil (WHO) | only the latest chosen name is goaded, not every name chosen for it. |
