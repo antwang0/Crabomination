@@ -7,7 +7,7 @@ use crate::card::{
     Keyword, MayPlayDuration, SelectionRequirement as R, StaticAbility, Subtypes, Supertype,
     TokenDefinition, TriggeredAbility,
 };
-use crate::effect::shortcut::{animate_land, deal, target_filtered, valiant};
+use crate::effect::shortcut::{deal, target_filtered, valiant};
 use crate::effect::{LookPick, 
     DelayedTriggerKind, Duration, Effect, EventKind, EventScope, EventSpec, ManaPayload,
     OpeningHandEffect, PlayerRef, PlayerStaticTarget, Predicate, Selector, SpreeMode, StaticEffect,
@@ -1183,8 +1183,7 @@ pub fn getaway_glamer() -> CardDefinition {
 
 /// Rootwise Survivor — {3}{G}{G} Human Survivor 3/4. Haste. Survival — put
 /// three +1/+1 counters on up to one target land you control; it becomes a 0/0
-/// Elemental in addition to its types and gains haste. (Haste is modeled as
-/// permanent rather than until-your-next-turn.)
+/// Elemental in addition to its types and gains haste until your next turn.
 pub fn rootwise_survivor() -> CardDefinition {
     CardDefinition {
         name: "Rootwise Survivor",
@@ -1197,7 +1196,29 @@ pub fn rootwise_survivor() -> CardDefinition {
         power: 3,
         toughness: 4,
         keywords: vec![Keyword::Haste],
-        triggered_abilities: vec![survival(animate_land(0, 3))],
+        triggered_abilities: vec![survival({
+            let land = R::Land.and(R::ControlledByYou);
+            Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: Selector::TargetFiltered { slot: 0, filter: land },
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(3),
+                },
+                Effect::BecomeCreature {
+                    what: Selector::Target(0),
+                    power: Value::Const(0),
+                    toughness: Value::Const(0),
+                    creature_types: vec![CreatureType::Elemental],
+                    keywords: vec![],
+                    duration: Duration::Permanent,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::Target(0),
+                    keyword: Keyword::Haste,
+                    duration: Duration::UntilNextTurn,
+                },
+            ])
+        })],
         ..Default::default()
     }
 }

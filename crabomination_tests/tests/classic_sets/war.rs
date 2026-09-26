@@ -2233,6 +2233,33 @@ fn dovin_taxes_noncreature_spells() {
     assert!(g.perform_action(GameAction::CastSpell { card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None }).is_ok(), "creature spell untaxed");
 }
 
+/// Dovin, Hand of Control's −1: until *your next turn* all damage to and by
+/// the target is prevented — it still holds on the opponent's turn, where the
+/// old combat-only-this-turn model had lapsed.
+#[test]
+fn dovin_minus_one_lasts_until_your_next_turn() {
+    let mut g = two_player_game();
+    let dovin = g.add_card_to_battlefield(0, catalog::dovin_hand_of_control());
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: dovin, ability_index: 0, target: Some(Target::Permanent(giant)), x_value: None,
+    }).expect("-1");
+    drain_stack(&mut g);
+    // The opponent's turn: its own bolt at the Giant does nothing.
+    g.active_player_idx = 1;
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Permanent(giant)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("bolt the Giant");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(giant).is_some_and(|c| c.damage == 0), "damage to it is prevented");
+}
+
 /// Ajani, the Greathearted grants vigilance and his −2 pumps your team and
 /// bumps your other planeswalkers.
 #[test]

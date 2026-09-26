@@ -4382,7 +4382,7 @@ pub fn awakening_of_vitu_ghazi() -> CardDefinition {
 
 /// Dovin, Hand of Control — {2}{W/U} loyalty 5. Static: opponents' artifact,
 /// instant, and sorcery spells cost {1} more. −1: neutralize an opponent's
-/// permanent. (The −1's prevention is modeled combat-only for the turn.)
+/// permanent: until your next turn, all damage to and by it is prevented.
 pub fn dovin_hand_of_control() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![StaticAbility {
@@ -4396,7 +4396,7 @@ pub fn dovin_hand_of_control() -> CardDefinition {
         }],
         loyalty_abilities: vec![LoyaltyAbility {
             loyalty_cost: -1,
-            effect: Effect::PreventAllCombatDamageInvolving {
+            effect: Effect::PreventDamageToAndByUntilYourNextTurn {
                 target: target_filtered(R::Permanent.and(R::ControlledByOpponent)),
             },
             ..Default::default()

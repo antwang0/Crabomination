@@ -3675,10 +3675,7 @@ fn cr_903_4_computed_color_identity_matches_scryfall() {
 /// starts computing wrongly fails the test. Mirrored in `INCOMPLETE_CARDS.md`.
 const KNOWN_IDENTITY_GAPS: &[(&str, &str)] = &[
     // Approximated text drops a printed colored symbol.
-    ("Mythos of Nethroi", "the \"or if {G}{W} was spent\" half is not modelled"),
     ("Mythos of Illuna", "the \"if {G}{U} was spent\" half is not modelled"),
-    ("Mythos of Vadrok", "the \"if {R}{W} was spent\" half is not modelled"),
-    ("Mythos of Snapdax", "the \"if {W}{B} was spent\" half is not modelled"),
     ("Balduvian Fallen", "the \"+1/+0 for each {R} spent\" cumulative-upkeep payoff is dropped"),
     ("Tribal Golem", "the granted \"{B}: Regenerate\" (Zombie clause) is dropped"),
     ("Archangel of Wrath", "Kicker is single-cost; \"{B} and/or {R}\" keeps only one half"),

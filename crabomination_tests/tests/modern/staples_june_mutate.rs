@@ -1617,6 +1617,35 @@ fn mythos_of_vadrok_divides_damage() {
     assert!(g.battlefield_find(victim).is_none(), "the 2/2 took lethal from the 5 damage");
 }
 
+/// CR 701.35a — with {W}{U} spent, Mythos of Vadrok detains what it damaged:
+/// until its caster's next turn the survivor can't attack or block.
+#[test]
+fn mythos_of_vadrok_with_white_and_blue_detains_its_targets() {
+    let mut g = two_player_game();
+    let wurm = g.add_card_to_battlefield(1, catalog::colossal_dreadmaw()); // 6/6
+    let m = g.add_card_to_hand(0, catalog::mythos_of_vadrok());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: m, target: Some(Target::Permanent(wurm)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Mythos of Vadrok with {W}{U}");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(wurm).unwrap().detained_by, Some(0), "detained by the caster");
+    // Without {W}{U}, nothing is detained.
+    let mut g = two_player_game();
+    let wurm = g.add_card_to_battlefield(1, catalog::colossal_dreadmaw());
+    let m = g.add_card_to_hand(0, catalog::mythos_of_vadrok());
+    g.players[0].mana_pool.add(Color::Red, 4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: m, target: Some(Target::Permanent(wurm)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Mythos of Vadrok");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(wurm).unwrap().detained_by, None);
+}
+
 /// Kogla's ETB fights an opponent creature; its activation grants indestructible.
 #[test]
 fn kogla_fights_on_etb_and_protects() {
@@ -1723,6 +1752,31 @@ fn mythos_of_nethroi_destroys_creature() {
     }).expect("cast Mythos of Nethroi");
     drain_stack(&mut g);
     assert!(g.battlefield_find(victim).is_none(), "target creature destroyed");
+}
+
+/// Mythos of Nethroi's target is any nonland permanent, destroyed only if it's
+/// a creature or {G}{W} was spent: a Mind Stone survives a plain cast and dies
+/// to a {G}{W} one.
+#[test]
+fn mythos_of_nethroi_destroys_a_noncreature_only_with_green_and_white() {
+    for (gw, dies) in [(false, false), (true, true)] {
+        let mut g = two_player_game();
+        let m = g.add_card_to_hand(0, catalog::mythos_of_nethroi());
+        let stone = g.add_card_to_battlefield(1, catalog::mind_stone());
+        g.players[0].mana_pool.add(Color::Black, 1);
+        if gw {
+            g.players[0].mana_pool.add(Color::Green, 1);
+            g.players[0].mana_pool.add(Color::White, 1);
+        } else {
+            g.players[0].mana_pool.add_colorless(2);
+        }
+        g.perform_action(GameAction::CastSpell {
+            card_id: m, target: Some(Target::Permanent(stone)),
+            additional_targets: vec![], mode: None, x_value: None,
+        }).expect("cast Mythos of Nethroi");
+        drain_stack(&mut g);
+        assert_eq!(g.battlefield_find(stone).is_none(), dies, "{{G}}{{W}} spent: {gw}");
+    }
 }
 
 /// Mutual Destruction sacrifices a creature (additional cost) and destroys one.
@@ -2501,6 +2555,26 @@ fn mythos_of_snapdax_keeps_one_per_type() {
     // Each player keeps their best creature; player 0 also keeps the artifact.
     assert_eq!(names(0), vec!["Mind Stone", "Serra Angel"]);
     assert_eq!(names(1), vec!["Serra Angel"]);
+}
+
+/// Mythos of Snapdax with {B}{R} spent: the caster chooses for everyone, so
+/// the opponent keeps its *weakest* creature (Tragic Arrogance's pick).
+#[test]
+fn mythos_of_snapdax_with_black_and_red_you_choose() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_battlefield(1, catalog::serra_angel());
+    let spell = g.add_card_to_hand(0, catalog::mythos_of_snapdax());
+    g.players[0].mana_pool.add(crabomination::mana::Color::White, 2);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Black, 1);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Red, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Mythos of Snapdax");
+    drain_stack(&mut g);
+    let theirs: Vec<&str> = g.battlefield.iter().filter(|c| c.controller == 1).map(|c| c.definition.name).collect();
+    assert_eq!(theirs, vec!["Grizzly Bears"]);
 }
 
 /// Clackbridge Troll: ETB gifts the opponent three Goats; the begin-combat

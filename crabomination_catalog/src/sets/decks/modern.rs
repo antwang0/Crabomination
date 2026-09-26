@@ -62651,15 +62651,25 @@ pub fn nethroi_apex_of_death() -> CardDefinition {
 
 // ── Ikoria batch 7 ───────────────────────────────────────────────────────────
 
-/// Mythos of Nethroi — {2}{B} Instant. Destroy target creature. (The {G}{W}-spent
-/// upgrade to "any nonland permanent" is dropped — no spend-tracking here.)
+/// Mythos of Nethroi — {2}{B} Instant. Destroy target nonland permanent if
+/// it's a creature or if {G}{W} was spent to cast this spell.
 pub fn mythos_of_nethroi() -> CardDefinition {
     CardDefinition {
         name: "Mythos of Nethroi",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Destroy {
-            what: target_filtered(SelectionRequirement::Creature),
+        effect: Effect::If {
+            cond: Predicate::Any(vec![
+                Predicate::EntityMatches { what: Selector::Target(0), filter: SelectionRequirement::Creature },
+                Predicate::All(vec![
+                    Predicate::ManaSpentOfColorAtLeast { color: Color::Green, at_least: 1 },
+                    Predicate::ManaSpentOfColorAtLeast { color: Color::White, at_least: 1 },
+                ]),
+            ]),
+            then: Box::new(Effect::Destroy {
+                what: target_filtered(SelectionRequirement::Nonland.and(SelectionRequirement::Permanent)),
+            }),
+            else_: Box::new(Effect::Noop),
         },
         ..Default::default()
     }
@@ -63131,19 +63141,32 @@ pub fn mythos_of_illuna() -> CardDefinition {
 }
 
 /// Mythos of Vadrok — {2}{R}{R} Sorcery. Deal 5 damage divided as you choose
-/// among any number of target creatures and/or planeswalkers. (The {W}{U}-spent
-/// can't-attack rider is dropped.)
+/// among any number of target creatures and/or planeswalkers; with {W}{U}
+/// spent, they're detained until your next turn.
 pub fn mythos_of_vadrok() -> CardDefinition {
     CardDefinition {
         name: "Mythos of Vadrok",
         cost: cost(&[generic(2), r(), r()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::DealDamageDivided {
-            retaliate_to_source: false,
-            total: Value::Const(5),
-            filter: SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
-            max_targets: 5,
-        },
+        // "If {W}{U} was spent, until your next turn, those permanents can't
+        // attack or block and their activated abilities can't be activated"
+        // is detain's wording (CR 701.35a).
+        effect: Effect::Seq(vec![
+            Effect::DealDamageDivided {
+                retaliate_to_source: false,
+                total: Value::Const(5),
+                filter: SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                max_targets: 5,
+            },
+            Effect::If {
+                cond: Predicate::All(vec![
+                    Predicate::ManaSpentOfColorAtLeast { color: Color::White, at_least: 1 },
+                    Predicate::ManaSpentOfColorAtLeast { color: Color::Blue, at_least: 1 },
+                ]),
+                then: Box::new(Effect::Detain { what: Selector::AllTargets }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
         ..Default::default()
     }
 }
@@ -63420,16 +63443,24 @@ pub fn lavabrink_venturer() -> CardDefinition {
 
 /// Mythos of Snapdax — {2}{W}{W} Sorcery. Each player keeps one artifact,
 /// creature, enchantment, and planeswalker among their nonland permanents and
-/// sacrifices the rest. (The {B}{R}-spent "you choose theirs" upgrade is
-/// dropped — no by-color mana-provenance tracking.)
+/// sacrifices the rest; with {B}{R} spent, you choose for every player.
 pub fn mythos_of_snapdax() -> CardDefinition {
     CardDefinition {
         name: "Mythos of Snapdax",
         cost: cost(&[generic(2), w(), w()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::SacrificeAllButOnePerType {
-            who: Selector::Player(PlayerRef::EachPlayer),
-            include_land: false,
+        effect: Effect::If {
+            cond: Predicate::All(vec![
+                Predicate::ManaSpentOfColorAtLeast { color: Color::Black, at_least: 1 },
+                Predicate::ManaSpentOfColorAtLeast { color: Color::Red, at_least: 1 },
+            ]),
+            then: Box::new(Effect::SacrificeAllButOnePerTypeYouChoose {
+                who: Selector::Player(PlayerRef::EachPlayer),
+            }),
+            else_: Box::new(Effect::SacrificeAllButOnePerType {
+                who: Selector::Player(PlayerRef::EachPlayer),
+                include_land: false,
+            }),
         },
         ..Default::default()
     }
