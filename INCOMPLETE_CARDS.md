@@ -1860,7 +1860,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Desecrator Hag | Devour for Power (CMD) | a tie for greatest power is broken by graveyard order, not by the player. |
 | 🟡 Intet, the Dreamer | Mirror Mastery (CMD) | the card is exiled face up. |
 | 🟡 Ray of Command | Mirror Mastery (CMD) | the creature is tapped at the next end step, not as its control returns. |
-| 🟡 Hordewing Skaab | Undead Unleashed (MIC) | draws/discards one per opponent dealt combat damage this turn, not only those its Zombies' batch damaged. |
 | 🟡 Shadow Kin | Undead Unleashed (MIC) | copies the greatest-power creature card milled (the engine's pick). |
 | 🟡 Rooftop Storm | Undead Unleashed (MIC) | the free cast covers Zombie creature spells cast from hand, not the command zone or other zones. |
 | 🟡 Hazel of the Rootbloom | Squirreled Away (BLC) | "tap X untapped tokens" taps every other untapped token you control (X is all of them). |
@@ -1990,7 +1989,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Canoptek Wraith | Necron Dynasties (40K) | each fetched basic shares a name with some permanent, not with the one land chosen. |
 | 🟡 Necron Deathmark | Necron Dynasties (40K) | the destroy and the mill are two enters triggers, not one. |
 | 🟡 Out of the Tombs | Necron Dynasties (40K) | the creature returned instead of an empty draw is the greatest-mana-value one, not asked (the draw funnel can't suspend). |
-| 🟡 Wall of Stolen Identity | Mystic Intellect (C19) | the tap-and-lock happens as it enters, not as a reflexive "when you do" trigger; the lock lasts while the Wall is on the battlefield, not while you control it. |
+| 🟡 Wall of Stolen Identity | Mystic Intellect (C19) | the tap-and-lock happens as it enters, not as a reflexive "when you do" trigger. |
 | 🟡 Mandate of Peace | Mystic Intellect (C19) | a trigger waiting to be put on the stack still goes on (CR 724.2a says it ceases to exist). |
 | 🟡 Elsha of the Infinite | Mystic Intellect (C19) | its flash also covers a top-of-library cast another permission allowed (Mystic Forge). |
 | 🟡 Serpent's Soul-Jar | Elven Empire (KHC) | every creature card it exiled becomes castable until end of turn, not one of them. |

@@ -7066,6 +7066,10 @@ impl GameState {
             // ("one or more creatures you control deal combat damage"),
             // checked after the filter. This hook runs once per dealer, so
             // the batch slot lives on the per-sub-step set.
+            // "…the number of opponents dealt damage this way" (Hordewing
+            // Skaab): an across-players batch that counts its subjects reads
+            // the distinct players hit, not the first dealer's damage.
+            let mut counts_players = false;
             if let Some((i, per_turn)) = once {
                 if per_turn {
                     if !self.triggered_once_per_turn_used.insert((trig_source, i)) {
@@ -7085,6 +7089,13 @@ impl GameState {
                                 .is_some_and(|t| t.event.batch_across_players)
                         })
                     {
+                        if matches!(subject, BatchSubject::Player(_))
+                            && self.battlefield_find(trig_source).is_some_and(|c| {
+                                c.definition.triggered_abilities.get(i).is_some_and(|t| t.event.batch_counts_subjects)
+                            })
+                        {
+                            counts_players = true;
+                        }
                         subject = BatchSubject::AnyPlayer;
                     }
                     let key = (trig_source, i, subject);
@@ -7093,6 +7104,10 @@ impl GameState {
                         continue;
                     }
                     self.combat_trigger_fired_this_step.push(key);
+                    // The first player the batch counts.
+                    if counts_players && let Target::Player(p) = default_target {
+                        self.combat_trigger_fired_this_step.push((trig_source, i, BatchSubject::Player(p)));
+                    }
                 }
             }
             // Most combat-damage triggers implicitly target the damaged player
@@ -7201,7 +7216,7 @@ impl GameState {
                     .x_value(damage_amount)
                     // CR 119.3 — the damage dealt, so Value::TriggerEventAmount
                     // riders scale by the hit (Visions of Brutality).
-                    .event_amount(damage_amount)
+                    .event_amount(if counts_players { 1 } else { damage_amount })
                     .build(),
             );
         }
@@ -7213,10 +7228,30 @@ impl GameState {
     /// batch adds its damage to the fire on the stack, so the one trigger
     /// reads the batch's total. A no-op for every other batched trigger.
     fn add_to_batched_damage(&mut self, src: CardId, idx: usize, to: &Target, amount: u32) {
-        let sums = self.battlefield_find(src).is_some_and(|c| {
-            c.definition.triggered_abilities.get(idx).is_some_and(|t| t.event.batch_sums_damage)
-        });
+        let Some(event) = self
+            .battlefield_find(src)
+            .and_then(|c| c.definition.triggered_abilities.get(idx).map(|t| (t.event.batch_sums_damage, t.event.batch_counts_subjects && t.event.batch_across_players)))
+        else {
+            return;
+        };
+        let (sums, counts_players) = event;
         let Target::Player(p) = *to else { return };
+        // A player the across-players batch hasn't counted yet adds one.
+        if counts_players {
+            let seen = (src, idx, BatchSubject::Player(p));
+            if !self.combat_trigger_fired_this_step.contains(&seen) {
+                self.combat_trigger_fired_this_step.push(seen);
+                if let Some(StackItem::Trigger { event_amount, .. }) = self
+                    .stack
+                    .iter_mut()
+                    .rev()
+                    .find(|si| matches!(si, StackItem::Trigger { source, .. } if *source == src))
+                {
+                    *event_amount += 1;
+                }
+            }
+            return;
+        }
         if !sums {
             return;
         }

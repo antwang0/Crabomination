@@ -3,8 +3,6 @@
 //! `tests/recent_b/cmdr_wilhelt.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Hordewing Skaab** — draws for the opponents dealt combat damage this
-//!   turn, not only those its Zombies' batch damaged.
 //! - **Shadow Kin** — copies the greatest-power creature card milled (the
 //!   engine's pick).
 //! - **Rooftop Storm** — Zombie creature spells cast from hand only.
@@ -324,10 +322,15 @@ pub fn havengul_runebinder() -> CardDefinition {
 
 /// Hordewing Skaab — {4}{U} 3/3 flying Zombie Horror. Other Zombies you
 /// control have flying. Your Zombies' combat damage to opponents: you may draw
-/// that many (one per opponent) and discard that many. (Residual: counts every
-/// opponent dealt combat damage this turn.)
+/// one per opponent they dealt damage and discard that many.
 pub fn hordewing_skaab() -> CardDefinition {
-    let n = || Value::PlayersDealtCombatDamageThisTurn(PlayerRef::EachOpponent);
+    // "The number of opponents dealt damage this way": the batch's distinct
+    // players (`batch_counts_subjects` on an across-players batch).
+    let n = || Value::TriggerEventAmount;
+    let mut hit = EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl)
+        .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: zombie() })
+        .once_per_batch_across_players();
+    hit.batch_counts_subjects = true;
     CardDefinition {
         keywords: vec![Keyword::Flying],
         static_abilities: vec![StaticAbility {
@@ -338,9 +341,7 @@ pub fn hordewing_skaab() -> CardDefinition {
             },
         }],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl)
-                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: zombie() })
-                .once_per_batch_across_players(),
+            event: hit,
             effect: Effect::MayDo {
                 description: "Draw a card per opponent dealt damage, then discard that many?".into(),
                 body: Box::new(Effect::Seq(vec![

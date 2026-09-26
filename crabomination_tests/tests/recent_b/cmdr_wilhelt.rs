@@ -352,3 +352,42 @@ fn the_bot_casts_hour_of_eternity_at_its_graveyard() {
         "{action:?}",
     );
 }
+
+/// Hordewing Skaab counts the opponents its Zombies' batch damaged — two
+/// here — not every opponent dealt combat damage (a Bear hit a third).
+#[test]
+fn hordewing_skaab_counts_the_opponents_its_zombies_hit() {
+    let mut g = pod(4);
+    let skaab = g.add_card_to_battlefield(0, catalog::hordewing_skaab());
+    let servant = g.add_card_to_battlefield(0, catalog::wayward_servant());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for id in [skaab, servant, bear] {
+        g.clear_sickness(id);
+    }
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let lib = g.players[0].library.len();
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: skaab, target: AttackTarget::Player(1) },
+        Attack { attacker: servant, target: AttackTarget::Player(2) },
+        Attack { attacker: bear, target: AttackTarget::Player(3) },
+    ]))
+    .expect("attack");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareBlockers;
+    for seat in 1..4 {
+        g.priority.player_with_priority = seat;
+        let _ = g.perform_action(GameAction::DeclareBlockers(vec![]));
+    }
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    while g.step != TurnStep::EndCombat {
+        if let Ok(ev) = g.advance_step(Vec::new()) {
+            g.dispatch_triggers_for_events(&ev);
+        }
+        drain_stack(&mut g);
+    }
+    assert!(g.players[3].life < 40, "the Bear connected too");
+    assert_eq!(lib - g.players[0].library.len(), 2, "one draw per opponent the Zombies hit");
+}
