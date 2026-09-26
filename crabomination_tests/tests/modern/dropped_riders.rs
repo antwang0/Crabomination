@@ -366,3 +366,26 @@ fn finale_of_devastation_is_capped_by_x_and_reaches_the_graveyard() {
     assert!(g.battlefield_find(big).is_none(), "mana value 5 > X");
     assert!(g.battlefield_find(elf).is_some(), "the graveyard 1-drop");
 }
+
+/// Comeuppance — it protects you and your planeswalkers; it was a fog for the
+/// whole table (your own attackers dealt nothing).
+#[test]
+fn comeuppance_is_not_a_fog() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let c = g.add_card_to_hand(0, catalog::comeuppance());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    cast(&mut g, c, None).expect("comeuppance");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![crabomination::game::types::Attack {
+        attacker: bear,
+        target: crabomination::game::types::AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().expect("damage");
+    assert_eq!(g.players[1].life, 18);
+}

@@ -1753,19 +1753,26 @@ pub fn teferis_protection() -> CardDefinition {
     }
 }
 
-/// Comeuppance — {3}{W} Instant. "The next time a source of an opponent's choice
-/// would deal damage to you or a permanent you control this turn, prevent it;
-/// that source's controller takes that much." The redirection is not modeled;
-/// approximated as preventing all damage to you this turn.
+/// Comeuppance — {3}{W} Instant. "Prevent all damage that would be dealt to
+/// you and planeswalkers you control this turn by sources you don't control.
+/// If damage from a creature source is prevented this way, Comeuppance deals
+/// that much damage to that creature. If damage from a noncreature source is
+/// prevented this way, Comeuppance deals that much damage to the source's
+/// controller." ⚠ The prevention ships; the reflected damage does not, and
+/// your own sources are prevented too.
 pub fn comeuppance() -> CardDefinition {
     CardDefinition {
         name: "Comeuppance",
         cost: cost(&[generic(3), w()]),
         card_types: vec![CardType::Instant],
+        // You and your planeswalkers, not a fog for the table.
         effect: Effect::Seq(vec![
-            Effect::PreventAllCombatDamageThisTurn,
             Effect::PreventAllDamageThisTurn {
                 target: Selector::You,
+                redirect_to: None,
+            },
+            Effect::PreventAllDamageThisTurn {
+                target: Selector::EachPermanent(SelectionRequirement::Planeswalker.and(SelectionRequirement::ControlledByYou)),
                 redirect_to: None,
             },
         ]),
