@@ -36686,6 +36686,17 @@ impl GameState {
                 let targets = self.resolve_players(who, ctx);
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
                 let granted_turn = self.turn_number;
+                // "Until you exile another card with this": the new exile
+                // revokes the permission on the source's previous card.
+                let linked = *duration == crate::card::MayPlayDuration::UntilSourceExilesAnother;
+                if linked && let Some(src) = ctx.source {
+                    for c in self.exile.iter_mut().filter(|c| c.exiled_with == Some(src)) {
+                        if c.may_play_until.is_some_and(|p| p.duration == *duration) {
+                            c.may_play_until = None;
+                        }
+                    }
+                }
+                let dest = if linked { ZoneDest::ExileWithSourceStamp } else { ZoneDest::Exile };
                 // Plural `who` (EachOpponent) peels from every resolved
                 // library — Nassari, Dean of Expression exiles the top card
                 // of each opponent's library, all castable by Nassari's
@@ -36694,7 +36705,7 @@ impl GameState {
                     for _ in 0..n {
                         let Some(top_id) = self.players[p].library.first().map(|c| c.id) else { break; };
                         let mut local_events = Vec::new();
-                        self.move_card_to(top_id, &crate::effect::ZoneDest::Exile, ctx, &mut local_events);
+                        self.move_card_to(top_id, &dest, ctx, &mut local_events);
                         events.extend(local_events);
                         // "…with mana value X or less" — over-cap cards stay
                         // exiled without a permission (Kotis).

@@ -5808,7 +5808,7 @@ pub fn relentless_pursuit() -> CardDefinition {
 
 /// Furious Rise — {2}{R} Enchantment. At the beginning of your end step, if you
 /// control a creature with power 4 or greater, exile the top card of your
-/// library; you may play it while it remains exiled.
+/// library; you may play it until you exile another card with this.
 pub fn furious_rise() -> CardDefinition {
     CardDefinition {
         name: "Furious Rise",
@@ -5831,7 +5831,7 @@ pub fn furious_rise() -> CardDefinition {
                 then: Box::new(Effect::ExileTopAndGrantMayPlay {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    duration: crate::card::MayPlayDuration::WhileExiled,
+                    duration: crate::card::MayPlayDuration::UntilSourceExilesAnother,
                     pay_any_color: false,
                     max_mana_value: None,
                     pay_own_cost: true,

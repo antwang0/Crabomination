@@ -3129,17 +3129,28 @@ fn commanding_presence_pumps() {
     assert!(cp.keywords().contains(&crabomination::card::Keyword::FirstStrike));
 }
 
-/// Furious Rise exiles a card to play while you control a big creature.
+/// Furious Rise exiles a card to play while you control a big creature; the
+/// card stays playable across turns "until you exile another card with" it,
+/// and the next exile revokes it (`MayPlayDuration::UntilSourceExilesAnother`).
 #[test]
 fn furious_rise_exiles_with_big_creature() {
     let mut g = two_player_game();
     let rise = g.add_card_to_battlefield(0, catalog::furious_rise());
     g.add_card_to_battlefield(0, catalog::terror_of_mount_velus()); // 5/5
-    g.add_card_to_library(0, catalog::lightning_bolt());
+    let second = g.add_card_to_library(0, catalog::grizzly_bears());
+    let first = g.add_card_to_library(0, catalog::lightning_bolt());
+    g.players[0].library.sort_by_key(|c| c.id != first);
     let eff = g.battlefield_find(rise).unwrap().definition.triggered_abilities[0].effect.clone();
     let ctx = crabomination::game::effects::EffectContext::for_trigger(rise, 0, None, 0);
+    let playable = |g: &GameState, id| g.exile.iter().any(|c| c.id == id && c.may_play_until.is_some());
     g.resolve_effect(&eff, &ctx).unwrap();
-    assert!(g.exile.iter().any(|c| c.definition.name == "Lightning Bolt"), "top card exiled to play");
+    assert!(playable(&g, first), "top card exiled to play");
+    g.turn_number += 2;
+    g.do_cleanup(&mut Vec::new());
+    assert!(playable(&g, first), "no turn sweep ends the permission");
+    g.resolve_effect(&eff, &ctx).unwrap();
+    assert!(playable(&g, second), "the next card is playable");
+    assert!(!playable(&g, first), "exiling another card with it ends the first card's permission");
 }
 
 /// Nightmare Shepherd exiles a dying creature to make a 1/1 Nightmare copy.

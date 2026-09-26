@@ -43,9 +43,8 @@ pub fn izzet_generatorium() -> CardDefinition {
 
 /// Unstable Amulet — {1}{R} artifact. ETB: get {E}{E}. Whenever you cast a
 /// spell from anywhere other than your hand, deal 1 damage to each opponent.
-/// {T}, Pay {E}{E}: exile the top card of your library; you may play it this
-/// turn. (The "until you exile another card with this" window is approximated
-/// as end-of-turn.)
+/// {T}, Pay {E}{E}: exile the top card of your library; you may play it until
+/// you exile another card with this.
 pub fn unstable_amulet() -> CardDefinition {
     CardDefinition {
         name: "Unstable Amulet",
@@ -72,7 +71,7 @@ pub fn unstable_amulet() -> CardDefinition {
             effect: Effect::ExileTopAndGrantMayPlay {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                duration: MayPlayDuration::EndOfThisTurn,
+                duration: MayPlayDuration::UntilSourceExilesAnother,
                 pay_any_color: false,
                 max_mana_value: None,
                 pay_own_cost: true,

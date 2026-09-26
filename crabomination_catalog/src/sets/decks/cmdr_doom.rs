@@ -968,7 +968,7 @@ pub fn stilt_man_towering_terror() -> CardDefinition {
 }
 
 /// Superior Foes of Spider-Man — trample; casting a spell of mana value 4+
-/// may exile your top card to play. Residual: playable this turn only.
+/// may exile your top card, playable until it exiles another.
 pub fn superior_foes_of_spider_man() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Trample],
@@ -981,7 +981,7 @@ pub fn superior_foes_of_spider_man() -> CardDefinition {
                 body: Box::new(Effect::ExileTopAndGrantMayPlay {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    duration: MayPlayDuration::EndOfThisTurn,
+                    duration: MayPlayDuration::UntilSourceExilesAnother,
                     pay_any_color: false,
                     max_mana_value: None,
                     pay_own_cost: true,

@@ -1171,6 +1171,10 @@ pub enum MayPlayDuration {
     /// [`MAY_PLAY_DORMANT`] by the turn sweep and re-armed for `holder` when
     /// an opponent of theirs loses life during their turn.
     HolderTurnsAfterOpponentLostLife { holder: usize },
+    /// "You may play that card until you exile another card with this"
+    /// (Superior Foes of Spider-Man, Furious Rise, Unstable Amulet). Never
+    /// swept; the next card the source exiles this way revokes it.
+    UntilSourceExilesAnother,
 }
 
 impl MayPlayDuration {
