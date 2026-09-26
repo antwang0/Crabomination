@@ -419,3 +419,24 @@ fn experiment_twelve_grows_your_other_flips() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(other).unwrap().counter_count(crabomination::card::CounterType::PlusOnePlusOne), 3);
 }
+
+/// Guardian Project — no card when the entering creature shares a name with a
+/// creature card in your graveyard; a card when it's the only one.
+#[test]
+fn guardian_project_skips_a_repeated_name() {
+    let mut g = main_phase();
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    g.add_card_to_battlefield(0, catalog::guardian_project());
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let enter = |g: &mut GameState, def| {
+        let id = g.add_card_to_battlefield(0, def);
+        g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: id }]);
+        drain_stack(g);
+    };
+    enter(&mut g, catalog::grizzly_bears());
+    assert!(g.players[0].hand.is_empty(), "a Bears is in the graveyard");
+    enter(&mut g, catalog::hill_giant());
+    assert_eq!(g.players[0].hand.len(), 1);
+}

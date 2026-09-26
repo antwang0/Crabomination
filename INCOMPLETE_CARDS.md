@@ -354,13 +354,13 @@ Shalai; Howling Mine; Claim Jumper; Ophiomancer; Smuggler's Copter; Magda;
 Nahiri, the Harbinger; Kari Zev; Marionette Master; Bloodthirsty Adversary;
 Aura of Silence; Compulsive Research; Mask of Griselbrand; Cankerbloom;
 Bitter Triumph; Ursine Monstrosity; Finale of Devastation; Teferi's
-Protection; Comeuppance. Still open:
+Protection; Comeuppance; Decree of Justice; Experiment Twelve; Guardian
+Project. Still open:
 
 | Card | Gap |
 |---|---|
 | 🟡 Comeuppance | the prevention ships; the reflected damage (to the creature, else its controller) does not, and your own sources are prevented too. |
 | 🟡 Compulsive Research | "target player" is always you. |
-| 🟡 Guardian Project | the "if it doesn't have the same name as another creature you control or a creature card in your graveyard" condition is missing (needs a same-name-as-trigger-source requirement). |
 | 🟡 Ajani's Chosen | "if that enchantment is an Aura, you may attach it to the token" is missing (a bot's yes would move an opponent-side Aura onto its token). |
 | 🟡 Mobilized District | the "{1} less per legendary creature and planeswalker you control" discount on its animation is missing. |
 | 🟡 Conduit of Worlds | only the play-lands-from-graveyard static; the {T} cast-a-permanent-card-from-graveyard ability is missing. |

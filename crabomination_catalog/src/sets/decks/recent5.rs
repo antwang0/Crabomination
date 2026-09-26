@@ -401,7 +401,8 @@ pub fn garruks_uprising() -> CardDefinition {
 }
 
 /// Guardian Project — {3}{G} Enchantment. Whenever a nontoken creature you
-/// control enters, draw a card. (The same-name exclusion is dropped.)
+/// control enters, if it doesn't share a name with another creature you
+/// control or a creature card in your graveyard, draw a card.
 pub fn guardian_project() -> CardDefinition {
     CardDefinition {
         name: "Guardian Project",
@@ -409,12 +410,15 @@ pub fn guardian_project() -> CardDefinition {
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
-                .with_filter(Predicate::EntityMatches {
-                    what: Selector::TriggerSource,
-                    filter: SelectionRequirement::Creature.and(SelectionRequirement::Not(
-                        Box::new(SelectionRequirement::IsToken),
-                    )),
-                }),
+                .with_filter(Predicate::All(vec![
+                    Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::Creature.and(SelectionRequirement::Not(
+                            Box::new(SelectionRequirement::IsToken),
+                        )),
+                    },
+                    Predicate::TriggerSourceNameUniqueAmongYourCreatures,
+                ])),
             effect: Effect::Draw {
                 who: Selector::You,
                 amount: Value::ONE,
