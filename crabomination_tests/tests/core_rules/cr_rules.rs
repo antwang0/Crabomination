@@ -12283,3 +12283,30 @@ fn cr_603_2_that_player_is_the_damaged_one_in_a_pod() {
         }
     }
 }
+
+/// CR 506.2 — "defending player" is the player an attacker attacks: in a
+/// pod, Silent Skimmer drains only that seat and Territorial Hammerskull
+/// can't tap another opponent's creature.
+#[test]
+fn cr_506_2_defending_player_is_the_attacked_seat() {
+    use crabomination::game::types::{GameAction, TurnStep};
+    let mut g = crabomination::game::multi_player_game(3);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let skimmer = g.add_card_to_battlefield(0, catalog::silent_skimmer());
+    let skull = g.add_card_to_battlefield(0, catalog::territorial_hammerskull());
+    for id in [skimmer, skull] {
+        g.clear_sickness(id);
+    }
+    let bystander = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: skimmer, target: AttackTarget::Player(1) },
+        Attack { attacker: skull, target: AttackTarget::Player(1) },
+    ]))
+    .expect("attack seat 1");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 18, "the defending player loses 2");
+    assert_eq!(g.players[2].life, 20, "the other opponent doesn't");
+    assert!(!g.battlefield_find(bystander).unwrap().tapped, "not the defending player's creature");
+}

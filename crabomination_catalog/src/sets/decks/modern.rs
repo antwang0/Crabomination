@@ -4795,7 +4795,7 @@ pub fn territorial_hammerskull() -> CardDefinition {
         toughness: 3,
         triggered_abilities: vec![on_attack(Effect::Tap {
             what: target_filtered(
-                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByDefendingPlayer),
             ),
         })],
         ..Default::default()
@@ -34154,7 +34154,7 @@ pub fn outland_liberator() -> CardDefinition {
                 what: target_filtered(
                     SelectionRequirement::Artifact
                         .or(SelectionRequirement::Enchantment)
-                        .and(SelectionRequirement::ControlledByOpponent),
+                        .and(SelectionRequirement::ControlledByDefendingPlayer),
                 ),
             },
         }],

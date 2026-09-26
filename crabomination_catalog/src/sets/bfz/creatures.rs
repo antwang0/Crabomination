@@ -664,7 +664,7 @@ pub fn silent_skimmer() -> CardDefinition {
         keywords: vec![Keyword::Devoid, Keyword::Flying],
         triggered_abilities: vec![on_attack(crate::effect::shortcut::lose_life(
             2,
-            Selector::Player(PlayerRef::EachOpponent),
+            Selector::Player(PlayerRef::DefendingPlayer),
         ))],
         ..eldrazi(
             "Silent Skimmer",
