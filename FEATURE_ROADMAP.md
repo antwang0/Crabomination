@@ -115,7 +115,8 @@ Per-deck card completion lives in `DECK_FEATURES.md`.
 | A spell-copy chain can't grow the stack without bound | ✅ *since 2026-09-26* | `recommend::MAX_STACK` (512 *spells* — triggers aren't counted, a 771-creature attack puts 771 there legitimately): `copy_stack_spell_controlled` copies nothing past it and `stop_reason` ends the game as a `BoardCap` at it. Venser, Fervent Forger copying a Replication Technique that copies Venser reached 1,692 stack items and one action never returned (`a_spell_copy_chain_stops_at_the_stack_bound`) |
 | A token batch can't ask for an unbounded mint | ✅ *since 2026-09-26* | `GameState::doubled_token_count` — every token mint loop (create, copy, populate, attacking, Incubator, fight-each) doubles per CR 614.13 doubler and caps at `recommend::MAX_BATTLEFIELD`; an 8-seat pod hung on 2^32 Adrix and Nev copies (`cr_614_13_forty_token_doublers_mint_a_bounded_batch`) |
 | Bot takes every decision the pod decks introduce | 🟡 | `server/bot.rs` `cast_candidates` — escape, replicate, buyback, entwine, squad, fuse, casualty, bargain and retrace got candidate blocks 2026-09-23; a short payment floats spend-restricted sources (`pay_with_restricted_sources`, CR 106.6); an X spell's targets are picked at its X (Finale of Promise) and a pay-X-life X is sized from life (Toxic Deluge); a friendly pump prefers Zada. A 24-seat `--card-census` plays every card of all 24 lists. Open: 6 cast variants no bot emits (ENGINE_BACKLOG, none in a pod list) |
-| A net / MCTS pilot in a pod | ⛔ by design | the observation encoder is two-seat (`encode_state_inner`'s `1 - seat`, `sources: &[_; 2]`); `bot_ladder --commander` refuses one above two seats rather than index out of bounds. Design notes for an N-seat encoding are in `ML_NOTES.md`; widening it retrains every net |
+| A net pilot in a pod | ⛔ by design | the observation encoder is two-seat (`encode_state_inner`'s `1 - seat`, `sources: &[_; 2]`). Since 2026-09-26 `net_eval` answers `None` for any state that is not two seats (`net_for_state`), so a net profile in a pod plays its material leaf rather than panicking — the client's local pods and the hosted lobby both seated the net-leaf search in every pod seat, and seat 2's first searched main phase underflowed. Pods now seat the heuristic default; `bot_ladder --commander` refuses a net profile (it would be the material leaf under the net's name) and runs the material-leaf search: `mcts-dflt-256` in a `dflt` field 0.87x [0.56x, 1.18x], 92 games at ~52 CPU-s a game. Design notes for an N-seat encoding are in `ML_NOTES.md`; widening it retrains every net |
+| Measure a bot change in a pod | ✅ *since 2026-09-26* | `bot_ladder --commander --a A --b B`: `A` in one seat, `B` in the rest, each deal once with `A` in every seat (`pod::run_pod_hero_games`); A's share of wins against the 1/N a mirror gives, standard error over deal groups. The mirror null is exact (25.0 % ± 0.0). `dflt` 1.47x in a `baseline` field, `baseline` 0.63x in a `dflt` field. Measured null (not adopted): ranking opponents by board power (1.01x over five fields) and "kill a seat you can before anything else" (1.00x, near-zero incidence). Adopted at zero incidence as the rules fix: chump a commander about to deal its 21st point (CR 903.10a) |
 
 ## Tier 1 — High-leverage engine primitives
 
@@ -685,8 +686,10 @@ Each a small targeted feature; sweep batch by batch.
 
 - ⏳ **In-app deck builder** (search, curve view, legality, sample-hand).
 - 🟡 **Import / export** — import ships (`decklist::parse_decklist`, Arena/MTGO
-  text; menu "Play Deck vs Bot" loads and validates). Remaining ⏳: export,
-  .dec/.cod, paste-from-clipboard, choosing opponent's deck.
+  text; menu "Play Deck vs Bot" loads and validates). Commander: the menu's
+  deck picker (`deck_picker.rs`) chooses your stock deck and each bot's
+  from the 183 stock lists, with search. Remaining ⏳: export, .dec/.cod,
+  paste-from-clipboard.
 - ⏳ **Deck stats** (curve, pips, type breakdown).
 - ⏳ **Collection tracking**; ⏳ **Scryfall-like card search** over the catalog.
 

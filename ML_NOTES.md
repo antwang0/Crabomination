@@ -5473,3 +5473,35 @@ Open learner-side leads, found in the same survey and **not** acted on
   at every snapshot (`RecordedGame.heur`), read only by `--calibrate` /
   `--pairwise`, never by `actor_loop` — part of a ~6 % snapshot block. Only
   worth taking if the actors ever become the bottleneck.
+
+## Commander — the pod A/B, and what the heuristic's pod play is (not) limited by (2026-09-26)
+
+**Instrument.** `bot_ladder --commander --a A --b B` (`pod::run_pod_hero_games`):
+A in one seat, B in the other N-1, each deal played N times with A in each
+seat, so seat order and the deal cancel inside a deal group — the pod
+version of the duel ladder's seat-swapped pairs. Read: A's share of wins
+against 1/N, standard error over deal groups. The mirror null is exact (the
+same pilot everywhere plays one game N times; A wins it once): 25.0 % ± 0.0.
+Release-fast, 24 threads: a 4,000-game four-seat run is 5-25 s.
+
+**Readings** (four seats; field = `pod_field(4)` unless named):
+
+| A in a B field | share | x its seat's due |
+|---|---|---|
+| `dflt` in `baseline` (2,000) | 36.8 % ± 0.8 | 1.47x |
+| `baseline` in `dflt` (2,000) | 15.8 % ± 0.6 | 0.63x |
+| `mcts-dflt-256` (material leaf) in `dflt` (92) | 21.7 % ± 3.9 | 0.87x [0.56, 1.18], ~52 CPU-s a game |
+| board power in the defender ranking, five fields (4,000 each) | — | 1.02 / 0.99 / 1.03 / 1.02 / 0.99x |
+| kill-first defender (over an opposing monarch) (4,000 x 2) | 24.9 % ± 0.1 | 1.00x, near-zero incidence |
+| chump a commander about to deal its 21st point, four fields | 25.0 % ± 0.0-0.1 | 1.00x, zero incidence — adopted as the rules fix |
+
+The other fields were precon seats 53/55/64/89, 100/116/121/140 and
+150/163/170/181. **Which opponent the heuristic attacks is not what limits
+it in a pod** — the survey's "it gangs up on the weakest seat" is true and
+costs nothing measurable against a field of itself, and precon pods almost
+never end by commander damage. The survey's other pod leads, unmeasured:
+the attack/block sims see one opponent's crack-back (their horizon is the
+next seat's turn), every vote is `AutoDecider`'s option 0, the commander
+always goes home (`CommanderRedirect` is never the bot's choice), and the
+recast ignores tax. Each is now one flag and one A/B away from a reading.
+

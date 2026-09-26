@@ -331,8 +331,18 @@ Cross-references the detailed entries below where one exists.
   resolution presets, maximize-on-launch, render quality, animation
   speed, hand sorting — applied live and persisted. Remaining ⏳:
   keybind remapping, audio (once there is audio).
-- ⏳ **Deck library** — save imported decks, list them in the menu, pick
-  the opponent's deck, paste-from-clipboard import.
+- 🟡 **Deck library** — Commander's deck picker (2026-09-26,
+  `deck_picker.rs`) picks your stock deck and each bot's from the 183 stock
+  lists, with search. Remaining ⏳: save imported decks, list them in the
+  menu, paste-from-clipboard import.
+- ✅ **Knocked out of a pod** (2026-09-26) — the game-over screen ranks the
+  table (`GameState::placement`: "You finished 3rd of 4", each seat's turn
+  and cause); the log says who went out (`GameEvent::PlayerLost`); your
+  own HUD row collapses to "☠ OUT · cause" and the turn buttons hide; a
+  "You're out" panel (Keep watching / Leave game) shows if the game is
+  still going 2.5 s later — a local pod's bots finish in about a second,
+  so it is for a network pod. Layout harness: `--viewer-out`,
+  `--hold-seat N`, `--deck-picker`.
 - ⏳ **Bo3 + sideboarding UI** — Learn/Lessons sideboard plumbing exists
   engine-side.
 - ⏳ **Replay viewer** — see "Replay scrubber" (Tier 3 below).
