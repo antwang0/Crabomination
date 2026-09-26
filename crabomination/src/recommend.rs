@@ -2001,9 +2001,10 @@ pub enum StopReason {
     GameOver,
     /// `actions >= max_actions`.
     ActionCap,
-    /// The battlefield passed [`MAX_BATTLEFIELD`]: a token-doubling board
-    /// whose next action costs more than the last, bounded here so one
-    /// game cannot hold a thread for hours. Counted with the action cap.
+    /// The battlefield passed [`MAX_BATTLEFIELD`] (or the stack
+    /// [`MAX_STACK`]): a token-doubling board or a copy chain whose next
+    /// action costs more than the last, bounded here so one game cannot
+    /// hold a thread for hours. Counted with the action cap.
     BoardCap,
     /// [`STALE_ROUNDS`] consecutive rounds in which neither bot had an
     /// action accepted.
@@ -2018,6 +2019,14 @@ pub enum StopReason {
 /// legitimate 40-card game approaches a thousand permanents; a board past
 /// it is a runaway, ended as undecided the way an action-capped one is.
 pub const MAX_BATTLEFIELD: usize = 1_024;
+
+/// The stack's simulator bound, `MAX_BATTLEFIELD`'s sibling: a spell-copy
+/// chain past it copies nothing more, and a stack past it ends the game as a
+/// `BoardCap`. A Venser, Fervent Forger copying a Replication Technique that
+/// copies Venser grew the stack to 1,692 items, and each action past that
+/// walked the whole stack per target pick — one never returned (a four-seat
+/// pod, seed 65002 game 41). No legitimate game approaches it.
+pub const MAX_STACK: usize = 512;
 
 /// Where the board-bound gates stop a token effect (a held cast, a declined
 /// free cast, a capped copy fan-out): an eighth short of `MAX_BATTLEFIELD`,
@@ -2039,7 +2048,7 @@ pub fn stop_reason(
         Some(StopReason::GameOver)
     } else if actions >= max_actions {
         Some(StopReason::ActionCap)
-    } else if g.battlefield.len() > MAX_BATTLEFIELD {
+    } else if g.battlefield.len() > MAX_BATTLEFIELD || g.stack.len() >= MAX_STACK {
         Some(StopReason::BoardCap)
     } else if stale >= STALE_ROUNDS {
         Some(StopReason::NoLegalMove)

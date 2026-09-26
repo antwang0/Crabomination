@@ -1766,6 +1766,11 @@ impl GameState {
         events: &mut Vec<GameEvent>,
     ) {
         use crate::game::types::StackItem;
+        // A simulator bound, not a rule (`recommend::MAX_STACK`): a copy
+        // chain stops copying once the stack is that deep.
+        if self.stack.len() >= crate::recommend::MAX_STACK {
+            return;
+        }
         // Locate the matching Spell on the stack (topmost wins).
         let Some(idx) = self.stack.iter().rposition(|s| {
             matches!(s, StackItem::Spell { card, .. } if card.id == cid)
@@ -1809,6 +1814,7 @@ impl GameState {
         } else {
             n
         };
+        let n = n.min(crate::recommend::MAX_STACK - self.stack.len());
         // A copy someone else controls (Narset's Reversal, Twincast on an
         // opponent's spell) defaults to ITS controller's own pick: offering
         // the original first had the new controller keep a Bolt aimed at

@@ -127,3 +127,29 @@ fn cr_614_13_tokens_created_attacking_are_doubled() {
     let attackers = g.attacking.iter().filter(|a| g.battlefield_find(a.attacker).is_some_and(|c| c.is_token)).count();
     assert_eq!(attackers, 2, "doubled, both attacking");
 }
+
+/// A spell-copy chain is bounded by the simulator's stack bound
+/// (`recommend::MAX_STACK`): a Venser, Fervent Forger copying a Replication
+/// Technique that copies Venser grew a pod's stack to 1,692 items until one
+/// action never returned. Ten thousand copies asked for stop at the bound.
+#[test]
+fn a_spell_copy_chain_stops_at_the_stack_bound() {
+    use crabomination::card::Value;
+    use crabomination::effect::{Effect, Selector};
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("bolt");
+    let mut ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    ctx.targets = vec![Target::Permanent(bolt)];
+    g.resolve_effect(&Effect::CopySpell { what: Selector::Target(0), count: Value::Const(10_000) }, &ctx)
+        .expect("copies");
+    assert!(g.stack.len() <= crabomination::recommend::MAX_STACK + 1, "stack {}", g.stack.len());
+    assert!(g.stack.len() > 100, "the copies up to the bound were made");
+}
