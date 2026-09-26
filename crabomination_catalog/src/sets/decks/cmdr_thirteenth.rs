@@ -831,7 +831,7 @@ pub fn river_songs_diary() -> CardDefinition {
         subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Book], ..Default::default() },
         static_abilities: vec![StaticAbility {
             description: "Whenever a player casts an instant or sorcery spell from their hand, exile it instead of putting it into a graveyard as it resolves.",
-            effect: StaticEffect::ExileResolvingInstantsAndSorceries,
+            effect: StaticEffect::ExileResolvingHandCastInstantsAndSorceries,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl).with_filter(

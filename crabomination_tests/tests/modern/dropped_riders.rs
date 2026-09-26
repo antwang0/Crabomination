@@ -585,3 +585,37 @@ fn mizzix_gains_experience_only_above_its_count() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].experience, 1, "mana value 1 is not greater than 1");
 }
+
+/// River Song's Diary — only an instant or sorcery cast *from a hand* is
+/// exiled with it; one cast from exile (Etali's free cast) is not.
+#[test]
+fn river_songs_diary_takes_hand_cast_spells_only() {
+    use crabomination::effect::{Effect, PlayerRef, Selector, Value};
+    let mut g = main_phase();
+    let diary = g.add_card_to_battlefield(0, catalog::river_songs_diary());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast(&mut g, bolt, Some(Target::Player(1))).expect("bolt");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bolt && c.exiled_with == Some(diary)), "hand-cast: exiled with the Diary");
+    let top = g.add_card_to_library(0, catalog::lightning_bolt());
+    g.players[0].library.rotate_right(1);
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(
+        &Effect::Seq(vec![
+            Effect::ExileTopOfLibrary {
+                who: Selector::Player(PlayerRef::You),
+                amount: Value::ONE,
+                link_to_source: false,
+                face_down: false,
+            },
+            Effect::CastExiledFree {
+                what: Selector::ExiledThisResolution { filter: crabomination::card::SelectionRequirement::Any },
+            },
+        ]),
+        &ctx,
+    )
+    .expect("free cast from exile");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == top), "cast from exile: to the graveyard");
+}

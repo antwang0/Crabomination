@@ -2285,7 +2285,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Lunar Hatchling | Paradox Power (WHO) | its escape doesn't also exile a land you control. |
 | 🟡 Me, the Immortal | Paradox Power (WHO) | its counters don't stay with it as it changes zones. |
 | 🟡 Psychic Paper | Paradox Power (WHO) | no chosen creature name and type (ward 1 and unblockable only). |
-| 🟡 River Song's Diary | Paradox Power (WHO) | every resolving instant and sorcery is exiled, not only those cast from a hand. |
 | 🟡 Ryan Sinclair | Paradox Power (WHO) | cards with mana value above its power are skipped (discover) rather than ending the reveal. |
 | 🟡 Strax, Sontaran Nurse | Paradox Power (WHO) | the creature it fights is picked from the random player's, not targeted. |
 | 🟡 The Fugitive Doctor | Paradox Power (WHO) | the granted flashback costs the card's mana cost, not {2}{R}{G}. |
