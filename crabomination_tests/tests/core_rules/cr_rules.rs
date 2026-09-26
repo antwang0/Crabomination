@@ -12157,3 +12157,26 @@ fn cr_603_10a_creatures_dying_together_see_each_other() {
     assert_eq!(g.players[0].hand.len(), 3, "the Reaper saw all three deaths");
     assert_eq!(opp - g.players[1].life, 3, "Blood Artist saw all three");
 }
+
+/// CR 603.6a — permanents entering at the same time see each other enter:
+/// Soul Warden returned by Living Death gains life for both Bears beside it.
+#[test]
+fn cr_603_6a_permanents_entering_together_see_each_other() {
+    use crabomination::game::types::{GameAction, TurnStep};
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.add_card_to_graveyard(0, catalog::soul_warden());
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let ld = g.add_card_to_hand(0, catalog::living_death());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell { card_id: ld, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("Living Death");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.len(), 3);
+    assert_eq!(g.players[0].life - life, 2, "Soul Warden saw the two Bears enter with it");
+}
