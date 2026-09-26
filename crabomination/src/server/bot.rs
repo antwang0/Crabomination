@@ -3894,12 +3894,18 @@ fn pick_stack_response(state: &GameState, seat: usize, w: &EvalWeights) -> Optio
         if !can_afford_in_state_with(state, seat, c, w, &sweep) {
             continue;
         }
-        let action = GameAction::CastSpell {
-            card_id: c.id,
-            target: Some(crate::game::Target::Permanent(spell_id)),
-            additional_targets: vec![],
-            mode: None,
-            x_value: None,
+        let action = match &c.definition.effect {
+            Effect::ChooseModesCast { .. } => match modal_counter_cast(c, spell_id) {
+                Some(a) => a,
+                None => continue,
+            },
+            _ => GameAction::CastSpell {
+                card_id: c.id,
+                target: Some(crate::game::Target::Permanent(spell_id)),
+                additional_targets: vec![],
+                mode: None,
+                x_value: None,
+            },
         };
         if let Some(next) = state.accept(action.clone()) {
             return Some(Picked::Probed(action, Box::new(next)));
@@ -4385,6 +4391,33 @@ fn pick_prepare_response(state: &GameState, seat: usize, w: &EvalWeights) -> Opt
 /// unconditional step of a `Seq` counts: Narset's Reversal copies the spell
 /// *before* it bounces it, so reading only the first step left it castable
 /// by no path (a 22-seat `--card-census` found it unplayed).
+/// A "choose three, repeats allowed" answer (Mystic Confluence) cast at
+/// `spell_id`: its counter mode, then an untargeted mode (draw) for the rest
+/// of the picks, else the counter mode again at the same spell.
+fn modal_counter_cast(c: &crate::card::CardInstance, spell_id: CardId) -> Option<GameAction> {
+    let Effect::ChooseModesCast { modes, min, allow_repeats, .. } = &c.definition.effect else { return None };
+    let counter = modes.iter().position(effect_counters_spells)? as u8;
+    let filler = modes.iter().position(|m| !m.requires_target()).map(|i| i as u8);
+    let mut picks = vec![counter];
+    while picks.len() < (*min as usize).max(1) {
+        match filler {
+            Some(f) if *allow_repeats || !picks.contains(&f) => picks.push(f),
+            _ if *allow_repeats => picks.push(counter),
+            _ => return None,
+        }
+    }
+    picks.sort_unstable();
+    let slots = picks.iter().filter(|&&i| i == counter).count();
+    let spell = crate::game::Target::Permanent(spell_id);
+    Some(GameAction::CastSpellSpree {
+        card_id: c.id,
+        spree_modes: picks,
+        target: Some(spell.clone()),
+        additional_targets: vec![spell; slots - 1],
+        x_value: None,
+    })
+}
+
 fn effect_counters_spells(eff: &Effect) -> bool {
     match eff {
         Effect::CounterSpell { .. }
@@ -4398,10 +4431,12 @@ fn effect_counters_spells(eff: &Effect) -> bool {
         Effect::Seq(v) => v.iter().any(effect_counters_spells),
         // An X bound from the countered spell (Counterpoint's recast cap).
         Effect::WithX { body, .. } => effect_counters_spells(body),
-        // A "choose N" whose default picks counter (Mystic Confluence).
+        // A "choose N" whose default picks counter.
         Effect::ChooseN { picks, modes } => {
             picks.iter().any(|&i| modes.get(i as usize).is_some_and(effect_counters_spells))
         }
+        // A cast-time modal with a counter mode (Mystic Confluence).
+        Effect::ChooseModesCast { modes, .. } => modes.iter().any(effect_counters_spells),
         _ => false,
     }
 }
