@@ -305,3 +305,46 @@ fn mask_of_griselbrand_pays_life_for_the_cards() {
     drain_stack(&mut g);
     assert_eq!((g.players[0].hand.len(), g.players[0].life), (3, 17));
 }
+
+/// Cankerbloom — "Choose one": the artifact mode destroys the artifact and
+/// proliferates nothing (it did all three).
+#[test]
+fn cankerbloom_chooses_one_mode() {
+    use crabomination::card::CounterType;
+    let mut g = main_phase();
+    let cb = g.add_card_to_battlefield(0, catalog::cankerbloom());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    let ring = g.add_card_to_battlefield(1, catalog::sol_ring());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: cb,
+        ability_index: 0,
+        target: Some(Target::Permanent(ring)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: Some(0),
+    })
+    .expect("sac for the artifact mode");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ring).is_none());
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1, "no proliferate");
+}
+
+/// Ursine Monstrosity — "choose an opponent at random. This creature attacks
+/// that player this combat if able" (CR 508.1d) names a defender.
+#[test]
+fn ursine_monstrosity_must_attack_a_chosen_opponent() {
+    let mut g = crabomination::game::multi_player_game(3);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let bear = g.add_card_to_battlefield(0, catalog::ursine_monstrosity());
+    g.add_card_to_library(0, catalog::island());
+    g.step = TurnStep::BeginCombat;
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    let c = g.battlefield_find(bear).unwrap();
+    let chosen = c.chosen_player.expect("an opponent is chosen");
+    assert!(chosen == 1 || chosen == 2);
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::MustAttackChosenPlayer));
+}

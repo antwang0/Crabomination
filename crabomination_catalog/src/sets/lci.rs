@@ -776,18 +776,17 @@ pub fn coati_scavenger() -> CardDefinition {
     }
 }
 
-/// Bitter Triumph — {1}{B} Instant. Additional cost: discard a card (the "or
-/// pay 3 life" alternative is approximated as discard). Destroy target creature
-/// or planeswalker.
+/// Bitter Triumph — {1}{B} Instant. Additional cost: discard a card or pay 3
+/// life (`AdditionalCastCost::OneOf`). Destroy target creature or planeswalker.
 pub fn bitter_triumph() -> CardDefinition {
     CardDefinition {
         name: "Bitter Triumph",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Instant],
-        additional_cast_cost: vec![AdditionalCastCost::Discard {
-            count: 1,
-            filter: None,
-        }],
+        additional_cast_cost: vec![AdditionalCastCost::OneOf(vec![
+            AdditionalCastCost::Discard { count: 1, filter: None },
+            AdditionalCastCost::PayLife { amount: 3 },
+        ])],
         effect: Effect::Destroy {
             what: target_filtered(
                 SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),

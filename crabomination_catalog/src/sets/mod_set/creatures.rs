@@ -5419,11 +5419,8 @@ pub fn sowing_mycospawn() -> CardDefinition {
 /// turn, it gains indestructible and gets +1/+1 for each card type among cards
 /// in your graveyard."
 ///
-/// The random opponent is dropped — the engine has no "attacks a *named*
-/// player if able" restriction, so the grant is `Keyword::MustAttack` for the
-/// turn, which is the same requirement in a two-player game. Everything else
-/// is the printed card; the body it replaced (0/0 entering with five counters
-/// and an ETB draw) was a different card wearing this one's name.
+/// The random opponent is stamped by `MustAttackPlayerThisTurn` (the
+/// `MustAttackChosenPlayer` keyword).
 pub fn ursine_monstrosity() -> CardDefinition {
     use crate::effect::Duration;
     CardDefinition {
@@ -5447,9 +5444,14 @@ pub fn ursine_monstrosity() -> CardDefinition {
                     who: Selector::You,
                     amount: Value::Const(1),
                 },
-                Effect::GrantKeywords {
+                // CR 508.1d — "attacks that player this combat if able".
+                Effect::MustAttackPlayerThisTurn {
+                    attacker: Selector::This,
+                    defender: Selector::Player(PlayerRef::RandomOpponent),
+                },
+                Effect::GrantKeyword {
                     what: Selector::This,
-                    keywords: vec![Keyword::Indestructible, Keyword::MustAttack],
+                    keyword: Keyword::Indestructible,
                     duration: Duration::EndOfTurn,
                 },
                 Effect::PumpPT {

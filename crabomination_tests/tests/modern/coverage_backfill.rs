@@ -136,7 +136,7 @@ fn ursine_monstrosity_begin_combat_mills_and_pumps_per_graveyard_type() {
     // Instant (Bolt) + Creature (the milled Bears) = 2 types, on a printed 3/3.
     assert_eq!((u.power, u.toughness), (5, 5), "3/3 +1/+1 per graveyard card type");
     assert!(u.keywords().contains(&crabomination::card::Keyword::Indestructible));
-    assert!(u.keywords().contains(&crabomination::card::Keyword::MustAttack));
+    assert!(u.keywords().contains(&crabomination::card::Keyword::MustAttackChosenPlayer));
 }
 
 /// ⚠ The trigger is **"when you cast this spell"**, not enters-the-

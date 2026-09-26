@@ -467,12 +467,8 @@ pub fn soul_guide_lantern() -> CardDefinition {
     }
 }
 
-/// Cankerbloom — {1}{G}, 3/2 Fungus. {G}, Sacrifice this: Destroy target
-/// artifact or enchantment. Then proliferate.
-///
-/// Reuses `sac_cost: true` (Haywire Mite shape) plus `Effect::Proliferate`
-/// as the tail step. Plant subtype dropped because `CreatureType` doesn't
-/// enumerate it; `Fungus` stands in.
+/// Cankerbloom — {1}{G}, 3/2 Phyrexian Fungus. {1}, Sacrifice this: choose one
+/// — destroy target artifact; destroy target enchantment; or proliferate.
 pub fn cankerbloom() -> CardDefinition {
     use crate::card::CreatureType;
     use crate::mana::g;
@@ -491,12 +487,10 @@ pub fn cankerbloom() -> CardDefinition {
             discard_cost: None,
             tap_cost: false,
             mana_cost: cost(&[generic(1)]),
-            effect: Effect::Seq(vec![
-                Effect::Destroy {
-                    what: target_filtered(
-                        SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
-                    ),
-                },
+            // "Choose one —" (CR 700.2): it did all three.
+            effect: Effect::ChooseMode(vec![
+                Effect::Destroy { what: target_filtered(SelectionRequirement::Artifact) },
+                Effect::Destroy { what: target_filtered(SelectionRequirement::Enchantment) },
                 Effect::Proliferate,
             ]),
             once_per_turn: false,

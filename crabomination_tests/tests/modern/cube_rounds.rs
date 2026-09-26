@@ -2419,41 +2419,28 @@ fn soul_guide_lantern_second_ability_sacrifices_and_draws() {
         "Sac ability draws a card");
 }
 
-/// Cankerbloom sacrifices itself to destroy an artifact or enchantment,
-/// then proliferates. We can verify the destroy half cleanly; proliferate
-/// in isolation is gameplay-equivalent to "no-op when nothing has counters",
-/// so we set up a counter to assert the proliferate fired.
+/// Cankerbloom — "Choose one": the proliferate mode proliferates and destroys
+/// nothing.
 #[test]
-fn cankerbloom_sacs_to_destroy_and_proliferate() {
+fn cankerbloom_sacs_to_proliferate() {
     use crabomination::card::CounterType;
     let mut g = two_player_game();
     let canker = g.add_card_to_battlefield(0, catalog::cankerbloom());
     let opp_artifact = g.add_card_to_battlefield(1, catalog::sol_ring());
-    // Put a counter on something so proliferate has work to do.
     let counted = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    {
-        let bear = g.battlefield.iter_mut().find(|c| c.id == counted).unwrap();
-        bear.counters.insert(CounterType::PlusOnePlusOne, 1);
-    }
+    g.battlefield.iter_mut().find(|c| c.id == counted).unwrap().counters.insert(CounterType::PlusOnePlusOne, 1);
     g.clear_sickness(canker);
     g.players[0].mana_pool.add(Color::Green, 1);
-
     g.perform_action(GameAction::ActivateAbility {
         card_id: canker,
         ability_index: 0,
-        target: Some(Target::Permanent(opp_artifact)), additional_targets: Vec::new(), x_value: None , mode: None})
+        target: None, additional_targets: Vec::new(), x_value: None, mode: Some(2)})
     .expect("Cankerbloom activates");
     drain_stack(&mut g);
-
-    // The opp Sol Ring is destroyed; Cankerbloom is sacrificed.
-    assert!(!g.battlefield.iter().any(|c| c.id == opp_artifact));
-    assert!(g.players[1].graveyard.iter().any(|c| c.id == opp_artifact));
-    assert!(!g.battlefield.iter().any(|c| c.id == canker));
-    assert!(g.players[0].graveyard.iter().any(|c| c.id == canker));
-    // Proliferate added one more +1/+1 counter.
+    assert!(g.battlefield.iter().any(|c| c.id == opp_artifact), "the proliferate mode destroys nothing");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == canker), "sacrificed");
     let bear_view = g.battlefield.iter().find(|c| c.id == counted).unwrap();
-    assert_eq!(*bear_view.counters.get(&CounterType::PlusOnePlusOne).unwrap_or(&0), 2,
-        "Proliferate should bump the +1/+1 counter from 1 to 2");
+    assert_eq!(*bear_view.counters.get(&CounterType::PlusOnePlusOne).unwrap_or(&0), 2);
 }
 
 
