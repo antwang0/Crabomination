@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED 2026-09-26 (session `015BCEt5`) — the player-choice batch, and a board slot that reached a graveyard](#fixed-2026-09-26-session-015bcet5--the-player-choice-batch-and-a-board-slot-that-reached-a-graveyard) | 38 |
 | Bugs & robustness | [FIXED 2026-09-26 (session `01VVD5mW`) — Timey-Wimey's follow-ups and a residual sweep](#fixed-2026-09-26-session-01vvd5mw--timey-wimeys-follow-ups-and-a-residual-sweep) | 75 |
 | Bugs & robustness | [FIXED 2026-09-19 (the forty-sixth find) — a static's filter leaf that the chosen `AffectedPermanents` variant cannot carry is SILENTLY DROPPED, and a dropped leaf widens the static](#fixed-2026-09-19-the-forty-sixth-find--a-statics-filter-leaf-that-the-chosen-affectedpermanents-variant-cannot-carry-is-silently-dropped-and-a-dropped-leaf-widens-the-static) | 62 |
 | Bugs & robustness | [FIXED 2026-09-19 (the forty-fifth find) — the INVENTED-ability column, built the way this file's own "CLOSED WITH A REASON" note prescribed, and the eleven cards it named](#fixed-2026-09-19-the-forty-fifth-find--the-invented-ability-column-built-the-way-this-files-own-closed-with-a-reason-note-prescribed-and-the-eleven-cards-it-named) | 68 |
@@ -106,6 +107,39 @@ the handoff.
 
 
 # Bugs & robustness
+
+## FIXED 2026-09-26 (session `015BCEt5`) — the player-choice batch, and a board slot that reached a graveyard
+
+- **"Choose a player / an opponent" is a real ask** (`effects/choose_player.rs`):
+  `Effect::ChoosePlayerForSource` (CR 614.12, as-enters) and
+  `ChooseOpponentThen` offer a `ChooseOption` seat ballot led by the old
+  headless pick, so a bot answers as before and a prompting or scripted
+  seat picks any seat. Sower of Discord's pair is one ballot of pairs.
+  12 as-enters cards, the Offerings, Plargg and Nassari.
+- ⚠ **`ChooseOpponentThen`'s body lost its opponent across a suspend**: the
+  parked half resumed after the arm restored the scratch and named the
+  source's empty `chosen_player` (Infernal Offering's sacrifices). Bound now
+  (`ScratchBinding::ChosenOpponent`).
+- **"Whenever you attack a player"** triggers go through the trigger queue,
+  one per attacked player, subject = that player, so "target creature that
+  player controls" is a target (`ControlledByTriggerPlayer`): Karazikar,
+  Firkraag (was the greatest-power pick, hexproof included).
+- **Protection from a player** (CR 702.16): `GainProtectionFromPlayer`;
+  permanents via `ProtectionFromMatching(ControlledBySeat)`, players via two
+  seat masks (targeting and damage). Guardian Archon, Eon Frolicker.
+  ⏳ Enchanting a protected *player* (a Curse) isn't checked.
+- ⚠ **Myth Unbound summed both partners' casts** (CR 903.8) —
+  `Value::CommanderCastsOf`; a cost static now sees the spell being cast as
+  its trigger source.
+- ⚠ **CR 109.2 — a board slot accepted a graveyard card**: the cast and
+  activation validators applied the zone-free filter, so Lightning Bolt
+  could be cast at a creature card in a graveyard (and fizzle). The bot
+  did exactly that — Judith's Slaughter Pact probed at a Walking Ballista
+  that had just died, seed 4242 of the pod golden table. The validators
+  now take the enumerator's scope (`target_out_of_zone`:
+  `may_target_offboard_card || mentions_offboard_zone`).
+- Denethor and Éomer crown a *target* player; a targeted `BecomeMonarch`
+  reads as a gift to the auto-picker.
 
 ## FIXED 2026-09-26 (session `01VVD5mW`) — Timey-Wimey's follow-ups and a residual sweep
 

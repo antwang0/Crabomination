@@ -1796,7 +1796,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Loaming Shaman | "any number of target cards from target player's graveyard" shuffles the **whole** graveyard back; no pick. Needs a multi-target any-number graveyard selector. |
 | 🟡 Forgotten Ancient | "move any number of +1/+1 counters" is all-or-nothing, spread evenly over your other creatures (`DistributeCountersFromSource`); no per-recipient amounts. |
 | 🟡 Verdant Confluence | modes are the default picks (two counters, two basics); `ChooseN` has no cast-time mode choice. |
-| 🟡 Skullwinder | "choose an opponent" is the engine's pick (fewest creatures). |
 
 ### Seats 33, 34, 36, 37 and 40 (Angels SLD, Built From Scratch C14, Vampiric Bloodline VOC, Plunder the Graves C15, Call the Spirits C15) — open residuals, 2026-09-24
 
@@ -1804,7 +1803,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 |---|---|---|
 | 🟡 Angel of Destiny | Angels (SLD) | "each player this creature attacked this turn" is the last player it attacked. |
 | 🟡 Dawnbreak Reclaimer | Angels (SLD) | both graveyard picks are the engine's (the cheapest creature card each way). |
-| 🟡 Bitter Feud | Built From Scratch (C14) | the two chosen players are its controller and the engine's pick of opponent. |
 | 🟡 Impact Resonance | Built From Scratch (C14) | X is read as the spell resolves, from per-source tallies and each player's largest single hit. |
 | 🟡 Volcanic Offering | Built From Scratch (C14) | the choosing opponent is the caster's most hostile one, for both halves. |
 | 🟡 Avacyn's Judgment | Vampiric Bloodline (VOC) | no madness (its `{X}{R}` needs an X a madness cast can't choose); a plain 2-damage divider. |

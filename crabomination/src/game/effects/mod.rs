@@ -34191,8 +34191,8 @@ impl GameState {
                 self.exile_source_and_top_then_manifest(ctx, events);
                 Ok(())
             }
-            Effect::ChooseTwoPlayersForSource => {
-                self.choose_two_players_for_source(ctx);
+            Effect::ChooseTwoPlayersForSource { with_you } => {
+                self.choose_two_players_for_source(*with_you, ctx);
                 Ok(())
             }
             Effect::OtherChosenPlayerLosesLife { amount } => {

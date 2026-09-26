@@ -76,7 +76,12 @@ fn bitter_feud_doubles_damage_between_you_and_the_chosen_player() {
     let mut g = main_phase(3);
     let feud = g.add_card_to_hand(0, catalog::bitter_feud());
     cast(&mut g, feud, &[]);
-    let rival = g.battlefield_find(feud).and_then(|c| c.chosen_player).expect("chose a player");
+    let rival = g
+        .chosen_player_pairs
+        .iter()
+        .find(|(s, ..)| *s == feud)
+        .map(|&(_, a, b)| if a == 0 { b } else { a })
+        .expect("chose two players, you among them by default");
     let other = if rival == 1 { 2 } else { 1 };
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
     cast(&mut g, bolt, &[Target::Player(rival)]);
@@ -84,6 +89,47 @@ fn bitter_feud_doubles_damage_between_you_and_the_chosen_player() {
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
     cast(&mut g, bolt, &[Target::Player(other)]);
     assert_eq!(g.players[other].life, 20 - 3);
+}
+
+/// CR 614.12 — Bitter Feud's two players are any two its controller names,
+/// itself not among them: seats 1 and 2 feud, so seat 1's bolt at seat 2 is
+/// doubled and the controller's own bolt at seat 1 is not.
+#[test]
+fn bitter_feud_can_set_two_opponents_against_each_other() {
+    struct Pick;
+    impl crabomination::decision::Decider for Pick {
+        fn decide(&mut self, d: &crabomination::decision::Decision) -> DecisionAnswer {
+            match d {
+                crabomination::decision::Decision::ChooseOption { options, .. } => DecisionAnswer::Amount(
+                    options.iter().position(|o| o == "Player 2 and Player 3").expect("offered") as u32,
+                ),
+                other => crabomination::decision::Decider::decide(&mut crabomination::decision::AutoDecider, other),
+            }
+        }
+        fn kind(&self) -> crabomination::decision::DeciderKind {
+            crabomination::decision::DeciderKind::Scripted { answers: vec![], asked: vec![] }
+        }
+    }
+    let mut g = main_phase(3);
+    g.decider = Box::new(Pick);
+    g.move_card_to_battlefield_for_test(0, catalog::bitter_feud());
+    g.decider = Box::new(crabomination::decision::AutoDecider);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, &[Target::Player(1)]);
+    assert_eq!(g.players[1].life, 17, "you aren't in the feud");
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    flood(&mut g, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(2)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("seat 1 bolts seat 2");
+    drain_stack(&mut g);
+    assert_eq!(g.players[2].life, 14, "doubled between the feuding pair");
 }
 
 /// Cast from hand it is a 1/1; dying, it goes to exile with three time

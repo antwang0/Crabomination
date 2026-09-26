@@ -5433,10 +5433,15 @@ pub enum Effect {
     /// Jeskai Infiltrator — "exile it and the top card of your library in a
     /// face-down pile, shuffle that pile, then manifest those cards."
     ExileSourceAndTopThenManifest,
-    /// Sower of Discord — "as this enters, choose two players": two
-    /// opponents with the least life (you and your only opponent at two
-    /// seats). Stored in `ColdState::chosen_player_pairs`.
-    ChooseTwoPlayersForSource,
+    /// "As this enters, choose two players" (CR 614.12): the controller's
+    /// pick from a ballot of pairs, stored in `ColdState::chosen_player_pairs`
+    /// (Sower of Discord, Bitter Feud).
+    ChooseTwoPlayersForSource {
+        /// The headless pick is you and the most hostile opponent (Bitter
+        /// Feud), not the two least-life opponents (Sower of Discord).
+        #[serde(default)]
+        with_you: bool,
+    },
     /// Sower of Discord's trigger body — the damaged player (the trigger's
     /// `TriggerEventPlayer`) is one of the source's chosen pair: the other
     /// loses `amount` life. A no-op for anyone else.

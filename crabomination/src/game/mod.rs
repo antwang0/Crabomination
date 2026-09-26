@@ -9222,9 +9222,9 @@ impl GameState {
                             d += 1;
                         }
                         StaticEffect::DoubleDamageBetweenYouAndChosenPlayer
-                            if c.chosen_player.is_some_and(|q| {
+                            if self.chosen_pair_of(c).is_some_and(|(a, b)| {
                                 source_info.as_ref().is_some_and(|(s, _)| {
-                                    (*s == c.controller && p == q) || (*s == q && p == c.controller)
+                                    (*s == a && p == b) || (*s == b && p == a)
                                 })
                             }) =>
                         {

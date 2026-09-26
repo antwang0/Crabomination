@@ -388,7 +388,7 @@ pub fn skull_storm() -> CardDefinition {
 pub fn sower_of_discord() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying],
-        as_enters_effect: Some(Effect::ChooseTwoPlayersForSource),
+        as_enters_effect: Some(Effect::ChooseTwoPlayersForSource { with_you: false }),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::PlayerDamaged, EventScope::AnyPlayer),
             effect: Effect::OtherChosenPlayerLosesLife { amount: Value::TriggerEventAmount },

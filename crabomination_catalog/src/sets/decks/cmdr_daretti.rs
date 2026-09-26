@@ -42,14 +42,14 @@ fn not_yours(filter: R) -> R {
     filter.and(R::ControlledByYou.negate())
 }
 
-/// Bitter Feud — as it enters, choose a second player; damage between you
-/// and them, either way, is doubled (CR 614.5).
+/// Bitter Feud — as it enters, choose two players; damage between them,
+/// either way, is doubled (CR 614.5).
 pub fn bitter_feud() -> CardDefinition {
     CardDefinition {
         name: "Bitter Feud",
         cost: cost(&[generic(4), r()]),
         card_types: vec![CardType::Enchantment],
-        as_enters_effect: Some(Effect::RememberPlayerOnSource { who: PlayerRef::HostileOpponent }),
+        as_enters_effect: Some(Effect::ChooseTwoPlayersForSource { with_you: true }),
         static_abilities: vec![StaticAbility {
             description: "Damage a source controlled by one of the chosen players would deal to the other \
                           chosen player or their permanents is doubled.",

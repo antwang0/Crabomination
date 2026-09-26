@@ -74,19 +74,21 @@ impl GameState {
         }
     }
 
-    /// "As this enters, choose two players" (Sower of Discord): one ballot of
-    /// every pair of living players, led by the headless pick — the two
-    /// opponents with the least life, or the only opponent and you.
-    pub(crate) fn choose_two_players_for_source(&mut self, ctx: &EffectContext) {
+    /// "As this enters, choose two players": one ballot of every pair of
+    /// living players, led by the headless pick — you and the most hostile
+    /// opponent (`with_you`, Bitter Feud), else the two opponents with the
+    /// least life, or the only opponent and you (Sower of Discord).
+    pub(crate) fn choose_two_players_for_source(&mut self, with_you: bool, ctx: &EffectContext) {
         use crate::decision::{Decision, DecisionAnswer};
         let Some(src) = ctx.source else { return };
         let me = ctx.controller;
         let mut opps = self.opponents_of(me);
         opps.sort_by_key(|&o| (self.players[o].life, o));
-        let default = match opps.as_slice() {
-            [a, b, ..] => (*a, *b),
-            [a] => (*a, me),
-            [] => return,
+        let default = match (with_you, self.default_hostile_opponent(me), opps.as_slice()) {
+            (true, Some(q), _) => (me, q),
+            (_, _, [a, b, ..]) => (*a, *b),
+            (_, _, [a]) => (*a, me),
+            _ => return,
         };
         let seats = self.player_ballot(me, false);
         let mut pairs = vec![default];
@@ -114,6 +116,16 @@ impl GameState {
             self.decider.decide(&decision)
         };
         self.apply_chosen_pair_answer(src, &pairs, &answer);
+    }
+
+    /// The two players `c` chose as it entered — its recorded pair, else its
+    /// controller and its `chosen_player`.
+    pub(crate) fn chosen_pair_of(&self, c: &crate::card::CardInstance) -> Option<(usize, usize)> {
+        self.chosen_player_pairs
+            .iter()
+            .find(|(s, ..)| *s == c.id)
+            .map(|&(_, a, b)| (a, b))
+            .or_else(|| c.chosen_player.map(|q| (c.controller, q)))
     }
 
     /// `ChosenPlayerPairPending`'s apply: the `Amount(i)` answer indexes `pairs`.

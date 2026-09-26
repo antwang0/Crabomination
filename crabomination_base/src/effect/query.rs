@@ -2293,7 +2293,7 @@ impl Effect {
             | Effect::EachPlayerChoosesColorExileOthers
             | Effect::ManifestTopAttachSource
             | Effect::ExileSourceAndTopThenManifest
-            | Effect::ChooseTwoPlayersForSource
+            | Effect::ChooseTwoPlayersForSource { .. }
             | Effect::OtherChosenPlayerLosesLife { .. }
             | Effect::RotateNonlandPermanents
             | Effect::CastTopFreeIfElseDraw { .. }
