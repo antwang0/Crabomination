@@ -91,6 +91,7 @@ mod pod_attack;
 mod combat_only;
 mod suspend;
 mod foretell;
+mod room;
 mod cycling;
 mod spell_response;
 mod fight_pick;

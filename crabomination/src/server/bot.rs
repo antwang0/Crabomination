@@ -3241,6 +3241,7 @@ impl HeuristicBot {
                         .or_else(|| super::spell_response::pick_idle_retrieval(state, seat))
                 {
                     return Some(BotStep::plain(a));
+                        .or_else(|| super::room::pick_room_door(state, seat))
                 }
                 Some(action)
             }
