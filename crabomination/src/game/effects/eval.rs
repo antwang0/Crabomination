@@ -187,7 +187,8 @@ pub(crate) fn effect_destroys_lands(e: &crate::effect::Effect) -> (bool, bool) {
         Effect::DestroyTargets { filter } | Effect::DestroyTargetsPolymorph { filter } => {
             (filter_can_match_land(filter), false)
         }
-        Effect::DestroyEachMatchingWithManaValue { filter, .. } => {
+        Effect::DestroyEachMatchingWithManaValue { filter, .. }
+        | Effect::DestroyEachMatchingWithPowerAtLeast { filter, .. } => {
             (false, filter_can_match_land(filter))
         }
         Effect::DestroyLandOfEachBasicType => (false, true),

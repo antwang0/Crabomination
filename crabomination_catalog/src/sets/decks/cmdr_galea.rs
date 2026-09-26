@@ -6,7 +6,6 @@
 //! - **Clay Golem** — the d8 is rolled as the ability resolves, not as a cost.
 //! - **Song of Inspiration** — the cards come back before the roll (both
 //!   results return them, so only the life total waits on it).
-//! - **Valiant Endeavor** — the creatures are destroyed one at a time.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype, EquipBonus,
@@ -498,7 +497,7 @@ pub fn storvald_frost_giant_jarl() -> CardDefinition {
 }
 
 /// Valiant Endeavor — roll two d6: destroy each creature with power at least
-/// one result, then make Knights equal to the other. ⚠ One at a time.
+/// one result, then make Knights equal to the other.
 pub fn valiant_endeavor() -> CardDefinition {
     let knight = TokenDefinition {
         name: "Knight".into(),
@@ -516,16 +515,9 @@ pub fn valiant_endeavor() -> CardDefinition {
         CardType::Sorcery,
         Effect::RollTwoDiceAssign {
             sides: 6,
-            first: Box::new(Effect::ForEach {
-                selector: Selector::EachPermanent(R::Creature),
-                body: Box::new(Effect::If {
-                    cond: Predicate::ValueAtLeast(
-                        Value::PowerOf(Box::new(Selector::TriggerSource)),
-                        Value::LastDieRoll,
-                    ),
-                    then: Box::new(Effect::Destroy { what: Selector::TriggerSource }),
-                    else_: Box::new(Effect::Noop),
-                }),
+            first: Box::new(Effect::DestroyEachMatchingWithPowerAtLeast {
+                filter: R::Creature,
+                value: Value::LastDieRoll,
             }),
             second: Box::new(Effect::CreateToken {
                 who: PlayerRef::You,

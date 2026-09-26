@@ -1957,7 +1957,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Genesis Storm | Adaptive Enchantment (C18) | the revealed permanent always goes onto the battlefield ("you may" isn't offered). |
 | 🟡 Clay Golem | Aura of Courage (AFC) | the d8 is rolled as the ability resolves, not paid as a cost. |
 | 🟡 Song of Inspiration | Aura of Courage (AFC) | the cards return before the roll (both results return them); only the life gain waits on it. |
-| 🟡 Valiant Endeavor | Aura of Courage (AFC) | the creatures with enough power are destroyed one at a time, not simultaneously. |
 | 🟡 Sanctuary Blade | Ruthless Regiment (C20) | the colour is chosen by a trigger as it becomes attached (not a replacement), so protection starts once that trigger resolves. |
 | 🟡 Odric, Master Tactician | Ruthless Regiment (C20) | you choose blocks for the rest of the turn, not only this combat (differs only with an extra combat). |
 | 🟡 Dire Fleet Ravager | Most Wanted (OTC) | the players lose their thirds one after another (each reads only its own life, so the totals match). |

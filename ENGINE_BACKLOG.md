@@ -19,7 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
-| Bugs & robustness | [FIXED 2026-09-26 (session `01VVD5mW`) — Timey-Wimey's follow-ups and a residual sweep](#fixed-2026-09-26-session-01vvd5mw--timey-wimeys-follow-ups-and-a-residual-sweep) | 64 |
+| Bugs & robustness | [FIXED 2026-09-26 (session `01VVD5mW`) — Timey-Wimey's follow-ups and a residual sweep](#fixed-2026-09-26-session-01vvd5mw--timey-wimeys-follow-ups-and-a-residual-sweep) | 75 |
 | Bugs & robustness | [FIXED 2026-09-19 (the forty-sixth find) — a static's filter leaf that the chosen `AffectedPermanents` variant cannot carry is SILENTLY DROPPED, and a dropped leaf widens the static](#fixed-2026-09-19-the-forty-sixth-find--a-statics-filter-leaf-that-the-chosen-affectedpermanents-variant-cannot-carry-is-silently-dropped-and-a-dropped-leaf-widens-the-static) | 62 |
 | Bugs & robustness | [FIXED 2026-09-19 (the forty-fifth find) — the INVENTED-ability column, built the way this file's own "CLOSED WITH A REASON" note prescribed, and the eleven cards it named](#fixed-2026-09-19-the-forty-fifth-find--the-invented-ability-column-built-the-way-this-files-own-closed-with-a-reason-note-prescribed-and-the-eleven-cards-it-named) | 68 |
 | Bugs & robustness | [OPEN 2026-09-19 — nineteen cube-pool entries are DUPLICATED, so nineteen cards draft at double weight](#open-2026-09-19--nineteen-cube-pool-entries-are-duplicated-so-nineteen-cards-draft-at-double-weight) | 19 |
@@ -155,6 +155,17 @@ across nine precons.
   with `IsHostOfSource` would still read it source-blind — a lead).
 - ⚠ **A condition-gated "loses all other creature types" on `This` never
   landed** (Goddric): the live lose-types pass had no `Selector::This` arm.
+- ⚠ **Creatures dying together didn't see each other die** (CR 603.10a).
+  The battlefield walk finds "whenever another creature dies" observers
+  only on the battlefield, and the self-death funnel fires a dying card's
+  triggers only for its own death — so under Wrath of God, Midnight Reaper
+  drew one card (its own death), not one per nontoken creature, and every
+  Zulaport / Pitiless Plunderer / Grim Haruspex that died in the sweep saw
+  nothing else. `game/simultaneous_deaths.rs` reads the death snapshots of a
+  batch with two or more deaths. Known over-reach: two deaths in one
+  resolution that were *sequential* ("destroy …, then sacrifice …") are
+  treated as simultaneous. Found through Valiant Endeavor, whose die-roll
+  wipe was one-at-a-time and is now one `Destroy`.
 - New primitives, each with its card: a per-creature attack lure
   (`LureTargetToSourceNextTurn`, Gideon, Battle-Forged — CR 508.1d, on Gideon
   Jura's clock), a per-source damage tally (`DamageDealtBySourceThisTurn`,

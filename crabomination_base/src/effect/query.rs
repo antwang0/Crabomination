@@ -2398,6 +2398,7 @@ impl Effect {
                 then.requires_target()
             }
             Effect::DestroyEachMatchingWithManaValue { .. }
+            | Effect::DestroyEachMatchingWithPowerAtLeast { .. }
             | Effect::ExtraManaOnLandTapThisTurn { .. } => false,
             Effect::GuessColorCountInHand { who, .. } => player_has_target(who),
             Effect::MayExileSelfThen { body } => body.requires_target(),

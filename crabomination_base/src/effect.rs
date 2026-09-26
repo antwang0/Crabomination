@@ -6636,6 +6636,9 @@ pub enum Effect {
     /// permanent matching `filter` whose mana value equals `value` (Powder
     /// Keg's "each artifact and creature").
     DestroyEachMatchingWithManaValue { filter: SelectionRequirement, value: Value },
+    /// "Destroy each [filter] with power `value` or greater", `value` read as
+    /// it resolves and the destruction simultaneous (Valiant Endeavor's die).
+    DestroyEachMatchingWithPowerAtLeast { filter: SelectionRequirement, value: Value },
     /// "Destroy `what` and all other permanents with the same name" (Wake of
     /// Destruction).
     DestroyAllSharingNameWith { what: Selector },

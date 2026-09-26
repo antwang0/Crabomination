@@ -13368,6 +13368,16 @@ impl GameState {
                 )
             }
 
+            Effect::DestroyEachMatchingWithPowerAtLeast { filter, value } => {
+                let n = self.evaluate_value(value, ctx);
+                let req = filter.clone().and(crate::card::SelectionRequirement::PowerAtLeast(n));
+                self.run_effect(
+                    &Effect::Destroy { what: crate::effect::Selector::EachPermanent(req) },
+                    ctx,
+                    events,
+                )
+            }
+
             Effect::ChooseNumberDestroyByPower { max } => {
                 use crate::card::SelectionRequirement as R;
                 use crate::decision::{Decision, DecisionAnswer};

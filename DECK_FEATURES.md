@@ -1278,7 +1278,7 @@ spell and `fire_self_etb_triggers` gather self-ETBs in two walkers),
 `NextSpellHasFlashThisTurn` (Ride the Avalanche, whose delayed "when you next
 cast" trigger now picks its target with the spell's mana value in scope).
 Residuals: Clay Golem rolls on resolution; Song of Inspiration returns the
-cards before the roll; Valiant Endeavor destroys one creature at a time.
+cards before the roll.
 Four-seat pods beside Killian / Vrondiss / Kathril (seed 10250, 1,000 games,
 all decided): Galea 5.3 % — the bot does not build a Voltron threat; beside
 Estrid / Eshki / Nelly (seed 10251): 1,000 / 1,000, 5.3 %; census (seed 10252):

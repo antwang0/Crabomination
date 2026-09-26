@@ -12128,3 +12128,32 @@ fn cr_603_10_dies_trigger_reads_computed_last_known_power() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, life - 4);
 }
+
+/// CR 603.10a — creatures that die at the same time see each other die:
+/// under Wrath of God, Midnight Reaper ("whenever a nontoken creature you
+/// control dies") triggers for itself, the Bear and Blood Artist, and Blood
+/// Artist drains for all three.
+#[test]
+fn cr_603_10a_creatures_dying_together_see_each_other() {
+    use crabomination::game::types::{GameAction, TurnStep};
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::plains());
+    }
+    g.add_card_to_battlefield(0, catalog::midnight_reaper());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::blood_artist());
+    let wrath = g.add_card_to_hand(0, catalog::wrath_of_god());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    let opp = g.players[1].life;
+    g.perform_action(GameAction::CastSpell { card_id: wrath, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("Wrath of God");
+    drain_stack(&mut g);
+    assert!(g.battlefield.is_empty());
+    assert_eq!(g.players[0].hand.len(), 3, "the Reaper saw all three deaths");
+    assert_eq!(opp - g.players[1].life, 3, "Blood Artist saw all three");
+}

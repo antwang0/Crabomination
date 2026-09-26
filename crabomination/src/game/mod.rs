@@ -156,6 +156,7 @@ mod unattach;
 mod empty_draw;
 // CR 702.63a — vanishing's last-counter sacrifice trigger.
 mod vanishing;
+mod simultaneous_deaths;
 /// CR 800.4f/g — routing an ask whose seat has left the game.
 pub(crate) mod departed;
 #[doc(hidden)]
@@ -22778,6 +22779,8 @@ impl GameState {
         // allocation per pair).
         let scan = self.dispatch_board_scan();
         let dies_suppressed = scan.dies_suppressed;
+        // CR 603.10a — creatures that died together see each other die.
+        candidates.extend(self.simultaneous_death_observer_candidates(events, dies_suppressed));
         // Which permanents have lost their abilities (Turn to Frog,
         // Mercurial Transformation, Lignify) — printed triggered abilities
         // are skipped while a strip-abilities effect is in scope per CR

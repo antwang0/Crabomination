@@ -300,3 +300,26 @@ fn abundant_growth_draws_and_fixes() {
     assert_eq!(g.players[0].hand.len(), 1);
     assert_eq!(g.battlefield_find(ag).unwrap().attached_to, Some(land));
 }
+
+/// Valiant Endeavor destroys every creature with power at least the chosen
+/// die at once (CR 603.10a — Midnight Reaper sees its own death and the
+/// Giant's), then makes Knights equal to the other die.
+#[test]
+fn valiant_endeavor_destroys_simultaneously() {
+    let mut g = main_phase(2);
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::plains());
+    }
+    let reaper = g.add_card_to_battlefield(0, catalog::midnight_reaper());
+    let giant = g.add_card_to_battlefield(0, catalog::hill_giant());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::DieRoll(3), DecisionAnswer::DieRoll(3)]));
+    let hand = g.players[0].hand.len();
+    let ve = g.add_card_to_hand(0, catalog::valiant_endeavor());
+    cast_at(&mut g, ve, &[]).expect("cast");
+    assert!(g.battlefield_find(reaper).is_none() && g.battlefield_find(giant).is_none());
+    assert!(g.battlefield_find(bear).is_some(), "power 2 < 3");
+    assert_eq!(g.players[0].hand.len(), hand + 2, "the Reaper saw both deaths");
+    let knights = g.battlefield.iter().filter(|c| c.is_token && c.definition.name == "Knight").count();
+    assert_eq!(knights, 3);
+}
