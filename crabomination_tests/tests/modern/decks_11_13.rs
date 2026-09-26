@@ -2164,6 +2164,21 @@ fn vivien_reid_minus_eight_emblem_anthems_your_creatures() {
     assert_eq!((theirs.power, theirs.toughness), (2, 2), "opponent unbuffed");
 }
 
+/// Attack seat 1 with `attacker` and run combat to its end.
+fn balefire_connects(g: &mut GameState, attacker: crabomination::card::CardId) {
+    use crabomination::game::types::{Attack, AttackTarget, GameAction};
+    g.clear_sickness(attacker);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    while g.step != TurnStep::EndCombat && !g.is_game_over() {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(g);
+    }
+}
+
 #[test]
 fn balefire_dragon_combat_damage_burns_each_opp_creature() {
     let mut g = two_player_game();
@@ -2171,14 +2186,8 @@ fn balefire_dragon_combat_damage_burns_each_opp_creature() {
     g.battlefield.iter_mut().find(|c| c.id == dragon).unwrap().tapped = false;
     let bear1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let bear2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    // Fire the trigger directly (the combat-damage event is tested separately
-    // in the combat test suite). We exercise the trigger's effect by event-
-    // bus push here.
-    let trig = catalog::balefire_dragon().triggered_abilities[0].effect.clone();
-    let ctx = crabomination::game::effects::EffectContext::for_trigger(
-        dragon, 0, None, 0,
-    );
-    let _ = g.resolve_effect(&trig, &ctx);
+    // "That player" is the damaged one, so the trigger runs from real combat.
+    balefire_connects(&mut g, dragon);
 
     // Each opp creature took 6 damage and died via SBA.
     assert!(g.battlefield_find(bear1).is_none(), "Bear 1 perished");
@@ -2195,9 +2204,9 @@ fn balefire_dragon_sweep_scales_with_its_power() {
     g.battlefield.iter_mut().find(|c| c.id == dragon).unwrap()
         .add_counters(CounterType::PlusOnePlusOne, 1); // now 7/7
     let wurm = g.add_card_to_battlefield(1, catalog::pelakka_wurm()); // 7/7
-    let trig = catalog::balefire_dragon().triggered_abilities[0].effect.clone();
-    let ctx = crabomination::game::effects::EffectContext::for_trigger(dragon, 0, None, 0);
-    let _ = g.resolve_effect(&trig, &ctx);
+    // The Wurm is tapped so it can't block.
+    g.battlefield_find_mut(wurm).unwrap().tapped = true;
+    balefire_connects(&mut g, dragon);
     assert!(g.battlefield_find(wurm).is_none(),
         "a 7-power Balefire deals 7 → the 7-toughness Wurm dies");
 }

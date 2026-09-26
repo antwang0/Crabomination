@@ -12247,3 +12247,39 @@ fn cr_109_2_the_all_slots_walk_has_no_graveyard_fallback_for_a_board_slot() {
     assert_eq!(g.auto_targets_for_effect_all_slots(&e, 0, None), (None, vec![]));
     assert_eq!(g.auto_target_for_effect(&e, 0), None);
 }
+
+/// CR 603.2 — "that player" on a combat-damage trigger is the player dealt
+/// the damage, not every opponent: in a three-seat pod Hellkite Tyrant takes
+/// only the damaged seat's artifacts and Balefire Dragon burns only its
+/// creatures.
+#[test]
+fn cr_603_2_that_player_is_the_damaged_one_in_a_pod() {
+    use crabomination::game::types::{GameAction, TurnStep};
+    for dragon in [catalog::hellkite_tyrant as fn() -> _, catalog::balefire_dragon] {
+        let mut g = crabomination::game::multi_player_game(3);
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        let d = g.add_card_to_battlefield(0, dragon());
+        g.clear_sickness(d);
+        let ring1 = g.add_card_to_battlefield(1, catalog::sol_ring());
+        let ring2 = g.add_card_to_battlefield(2, catalog::sol_ring());
+        let bear1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        let bear2 = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+        g.step = TurnStep::DeclareAttackers;
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: d, target: AttackTarget::Player(1) }]))
+            .expect("attack seat 1");
+        while g.step != TurnStep::EndCombat && !g.is_game_over() {
+            let _ = g.advance_step(Vec::new());
+            drain_stack(&mut g);
+        }
+        assert!(g.players[1].life < 20, "it connected");
+        assert!(g.battlefield_find(bear2).is_some(), "seat 2's creature is untouched");
+        assert_eq!(g.battlefield_find(ring2).unwrap().controller, 2, "seat 2 keeps its artifact");
+        let name = g.battlefield_find(d).unwrap().definition.name;
+        if name == "Hellkite Tyrant" {
+            assert_eq!(g.battlefield_find(ring1).unwrap().controller, 0, "seat 1's artifact is taken");
+        } else {
+            assert!(g.battlefield_find(bear1).is_none(), "seat 1's creature burns");
+        }
+    }
+}

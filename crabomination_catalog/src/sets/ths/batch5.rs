@@ -256,7 +256,7 @@ pub fn polis_crusher() -> CardDefinition {
                 ..EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource)
             },
             effect: Effect::Destroy {
-                what: target_filtered(R::Enchantment.and(R::ControlledByOpponent)),
+                what: target_filtered(R::Enchantment.and(R::ControlledByTriggerPlayer)),
             },
         }],
         ..creature(

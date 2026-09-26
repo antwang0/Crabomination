@@ -290,7 +290,7 @@ pub fn hellkite_tyrant() -> CardDefinition {
             TriggeredAbility {
                 event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
                 effect: Effect::GainControl {
-                    what: Selector::EachPermanent(R::Artifact.and(R::ControlledByOpponent)),
+                    what: Selector::EachPermanent(R::Artifact.and(R::ControlledByTriggerPlayer)),
                     to: Some(PlayerRef::You),
                     duration: Duration::Permanent,
                 },

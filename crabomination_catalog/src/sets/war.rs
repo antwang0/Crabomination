@@ -4805,7 +4805,7 @@ pub fn storm_the_citadel() -> CardDefinition {
                     ),
                     effect: Effect::Destroy {
                         what: target_filtered(
-                            (R::Artifact.or(R::Enchantment)).and(R::ControlledByOpponent),
+                            (R::Artifact.or(R::Enchantment)).and(R::ControlledByTriggerPlayer),
                         ),
                     },
                 }),

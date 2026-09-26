@@ -8664,7 +8664,7 @@ pub fn balefire_dragon() -> CardDefinition {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
             effect: Effect::ForEach {
                 selector: Selector::EachPermanent(
-                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByTriggerPlayer),
                 ),
                 body: Box::new(Effect::DealDamage {
                     to: Selector::TriggerSource,
