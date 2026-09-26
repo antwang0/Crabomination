@@ -183,6 +183,31 @@ fn blazemire_verge_red_gated_on_swamp_or_mountain() {
 
 // ── Koma, Cosmos Serpent ────────────────────────────────────────────────────
 
+/// Koma sacrifices another **Serpent** (a Bear won't do), and the tap mode
+/// also locks the target's activated abilities for the turn. It used to sac
+/// any creature and only tap, which fed a Thopter loop to the pod action cap
+/// (7-seat seed 201007, game 151).
+#[test]
+fn koma_sacrifices_a_serpent_to_tap_and_lock() {
+    let mut g = two_player_game();
+    let koma = g.add_card_to_battlefield(0, catalog::koma_cosmos_serpent());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let port = g.add_card_to_battlefield(1, catalog::rishadan_port());
+    let tap = |g: &mut GameState| {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: koma, ability_index: 0, target: Some(Target::Permanent(port)),
+            additional_targets: Vec::new(), x_value: None, mode: Some(0),
+        })
+    };
+    assert!(tap(&mut g).is_err(), "no other Serpent to sacrifice");
+    let serpent = g.add_card_to_battlefield(0, catalog::floodtide_serpent());
+    tap(&mut g).expect("sacrifice the Serpent");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(serpent).is_none() && g.battlefield_find(bear).is_some());
+    assert!(g.battlefield_find(port).unwrap().tapped);
+    assert!(g.abilities_locked_this_turn.contains(&port));
+}
+
 // ── Mesmeric Orb ────────────────────────────────────────────────────────────
 
 // ── Chalice of the Void ─────────────────────────────────────────────────────

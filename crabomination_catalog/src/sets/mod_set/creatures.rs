@@ -4998,10 +4998,6 @@ pub fn silent_clearing() -> CardDefinition {
 /// Sacrifice another Serpent: Choose one — Tap target permanent. Its
 /// activated abilities can't be activated this turn. / Koma, Cosmos Serpent
 /// gains indestructible until end of turn."
-///
-/// Approximation: CantBeCountered + upkeep token mint. The sac-serpent
-/// abilities are collapsed to a single sac-any-creature activation that
-/// taps a target permanent (the most common mode).
 pub fn koma_cosmos_serpent() -> CardDefinition {
     use crate::card::TokenDefinition;
     let coil = TokenDefinition {
@@ -5050,12 +5046,20 @@ pub fn koma_cosmos_serpent() -> CardDefinition {
             discard_cost: None,
             tap_cost: false,
             mana_cost: ManaCost::default(),
-            sac_other_filter: Some((SelectionRequirement::Creature, 1)),
+            sac_other_filter: Some((SelectionRequirement::HasCreatureType(CreatureType::Serpent), 1)),
             tap_other_filter: None,
             from_hand: false,
-            effect: Effect::Seq(vec![Effect::Tap {
-                what: target_filtered(SelectionRequirement::Permanent),
-            }]),
+            effect: Effect::ChooseMode(vec![
+                Effect::Seq(vec![
+                    Effect::Tap { what: target_filtered(SelectionRequirement::Permanent) },
+                    Effect::LockActivatedAbilitiesThisTurn { what: Selector::Target(0) },
+                ]),
+                Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::Indestructible,
+                    duration: crate::effect::Duration::EndOfTurn,
+                },
+            ]),
             ..Default::default()
         }],
         ..Default::default()
