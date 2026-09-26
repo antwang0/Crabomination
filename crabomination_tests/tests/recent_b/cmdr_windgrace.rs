@@ -66,6 +66,24 @@ fn declare(g: &mut GameState, seat: usize, attacks: Vec<Attack>) -> Result<(), S
     g.would_accept(GameAction::DeclareAttackers(attacks)).then_some(()).ok_or_else(|| "rejected".to_string())
 }
 
+/// Charnelhoard Wurm triggers on damage to an opponent, not to its own
+/// controller.
+#[test]
+fn charnelhoard_wurm_triggers_only_on_an_opponent() {
+    use crabomination::game::effects::EntityRef;
+    let mut g = pod(2);
+    let wurm = g.add_card_to_battlefield(0, catalog::charnelhoard_wurm());
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let mut ev = Vec::new();
+    g.deal_damage_to_from(EntityRef::Player(0), 2, Some(wurm), &mut ev);
+    g.dispatch_triggers_for_events(&ev);
+    assert!(g.stack.is_empty(), "damage to you isn't damage to an opponent");
+    let mut ev = Vec::new();
+    g.deal_damage_to_from(EntityRef::Player(1), 2, Some(wurm), &mut ev);
+    g.dispatch_triggers_for_events(&ev);
+    assert_eq!(g.stack.len(), 1, "the opponent was dealt damage");
+}
+
 /// CR 606.3 — Lord Windgrace's +2 discards, then draws; a land discarded
 /// this way draws one more.
 #[test]

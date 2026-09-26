@@ -3201,7 +3201,7 @@ spells under Y'shtola, Night's Blessed. Twenty-six cards were missing
 (Reaper's Scythe). Emet-Selch's graveyard recast is the bare
 `CastWithoutPayingImmediate` — a `MayDo` around it hid the graveyard target
 from the auto-targeter and the trigger was dropped. Residuals: **Blue
-Mage's Cane**, **Dancer's Chakrams**, **Estinien Varlineau**, **Hildibrand
+Mage's Cane**, **Estinien Varlineau**, **Hildibrand
 Manderville**, **Urianger Augurelt**. A 200-game census
 beside Brass / Galadriel / Kamiz (seed 163) decided 200/200 with zero
 panics; Y'shtola won 55.5 %, and **Observed Stasis went uncast** (TODO open
@@ -3335,8 +3335,7 @@ read against the defender, so the pod's attack picker honours it too),
 card, tapped and attacking, exiled at end of combat) and
 `Effect::RevealUntilSharesCardTypeToBattlefield` (Reality Scramble).
 Residuals: **Emissary of Grudges** (open choice, any redirectable spell),
-**Hunting Wilds** (Forests keep their color), **Charnelhoard Wurm** (any
-player), **Flameblast Dragon** (X asked before {R}; a bot pays X only from
+**Hunting Wilds** (Forests keep their color), **Flameblast Dragon** (X asked before {R}; a bot pays X only from
 floating mana). A 400-game census beside Hearthhull / Willowdusk / Winter
 (seed 9431, release) decided 400/400, Windgrace winning 12.2 %, every card of
 the four lists played. `--bench` byte-identical.

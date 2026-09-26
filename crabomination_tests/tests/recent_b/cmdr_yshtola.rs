@@ -125,6 +125,23 @@ fn dancers_chakrams_dance() {
     assert!(has(&g, hero, &Keyword::Lifelink));
 }
 
+/// Dancer's Chakrams pumps *other* commanders: a commander wearing it gets
+/// the equip bonus once, not the commander pump on top.
+#[test]
+fn dancers_chakrams_pumps_other_commanders() {
+    let mut g = main_phase(2);
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].commanders.push(a);
+    g.players[0].commanders.push(b);
+    let c = g.add_card_to_hand(0, catalog::dancers_chakrams());
+    cast_at(&mut g, c, &[]).expect("cast");
+    assert_eq!((pt(&g, a), pt(&g, b)), ((4, 4), (4, 4)), "on the Hero, both commanders are other");
+    act(&mut g, GameAction::Equip { equipment: c, target: a }).expect("equip {3}");
+    assert_eq!(pt(&g, a), (4, 4), "the wearer takes the equip bonus only");
+    assert_eq!(pt(&g, b), (4, 4));
+}
+
 /// Estinien grows and flies on noncreature spells.
 #[test]
 fn estinien_takes_flight() {

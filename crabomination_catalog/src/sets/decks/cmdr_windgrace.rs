@@ -8,8 +8,6 @@
 //!   redirects any spell that targets you or your permanents, not only the
 //!   chosen player's.
 //! - **Hunting Wilds** — the animated Forests stay their own color.
-//! - **Charnelhoard Wurm** — damage to any player (not only an opponent)
-//!   fires it.
 //! - **Flameblast Dragon** — {X} is asked before {R}, so a bot seat, which
 //!   answers X out of floating mana only, rarely pays.
 
@@ -149,14 +147,14 @@ pub fn lord_windgrace() -> CardDefinition {
     }
 }
 
-/// Charnelhoard Wurm — {4}{B}{R}{G} 6/6 trample. Dealing damage to a player:
-/// you may return a card from your graveyard to hand. (Residual: any player,
-/// not only an opponent.)
+/// Charnelhoard Wurm — {4}{B}{R}{G} 6/6 trample. Dealing damage to an
+/// opponent: you may return a card from your graveyard to hand.
 pub fn charnelhoard_wurm() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Trample],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::DealsDamageToPlayer, EventScope::SelfSource),
+            event: EventSpec::new(EventKind::DealsDamageToPlayer, EventScope::SelfSource)
+                .with_filter(Predicate::PlayerIsOpponent { who: PlayerRef::TriggerEventPlayer }),
             effect: Effect::MayDo {
                 description: "Return a card from your graveyard to your hand?".into(),
                 body: Box::new(Effect::Move {

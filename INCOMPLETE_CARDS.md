@@ -1837,7 +1837,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Soul of Windgrace | World Shaper (EOC) | the land comes from the first graveyard holding one. |
 | 🟡 Emissary of Grudges | Nature's Vengeance (C18) | the opponent is chosen openly, and the reveal redirects any spell that targets you or your permanents, not only the chosen player's. |
 | 🟡 Hunting Wilds | Nature's Vengeance (C18) | the animated Forests keep their own color rather than becoming green. |
-| 🟡 Charnelhoard Wurm | Nature's Vengeance (C18) | damage to any player fires it, not only an opponent. |
 | 🟡 Flameblast Dragon | Nature's Vengeance (C18) | {X} is asked before {R}; a bot seat answers X out of floating mana only. |
 | 🟡 Octomancer | Peace Offering (BLC) | the Octopus gift goes to a random opponent rather than a chosen one. |
 | 🟡 Perch Protection | Peace Offering (BLC) | the extra-turn gift goes to a random opponent; the life lock lasts this turn only. |
@@ -1875,7 +1874,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Timestream Navigator | Ahoy Mateys (LCC) | it goes to the bottom as part of the effect, not as a cost. |
 | 🟡 Zara, Renegade Recruiter | Ahoy Mateys (LCC) | the stolen creature is the engine's pick, and you don't look at the rest of the hand. |
 | 🟡 Blue Mage's Cane | Scions & Spellcraft (FIC) | the copy costs the card's own mana cost, not {3}, and the graveyard card isn't exiled. |
-| 🟡 Dancer's Chakrams | Scions & Spellcraft (FIC) | the commander pump also reaches the equipped creature when it's a commander. |
 | 🟡 Estinien Varlineau | Scions & Spellcraft (FIC) | counts opponents dealt combat damage by any creature, not only by it or a Dragon. |
 | 🟡 Hildibrand Manderville | Scions & Spellcraft (FIC) | dying doesn't let you cast it from the graveyard as an Adventure. |
 | 🟡 Urianger Augurelt | Scions & Spellcraft (FIC) | the card is exiled face up; a land played from exile gains no life; its spells get no {2} discount. |

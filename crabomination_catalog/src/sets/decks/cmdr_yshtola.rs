@@ -5,8 +5,6 @@
 //! Residuals (each also on its card):
 //! - **Blue Mage's Cane** — the copy costs the card's own mana cost, not
 //!   {3}, and the graveyard card isn't exiled.
-//! - **Dancer's Chakrams** — the commander pump also reaches the equipped
-//!   creature when it's a commander.
 //! - **Estinien Varlineau** — counts opponents dealt combat damage by any
 //!   creature, not only by it or a Dragon.
 //! - **Hildibrand Manderville** — dying doesn't let you cast it from the
@@ -228,24 +226,23 @@ pub fn champions_from_beyond() -> CardDefinition {
 /// Dancer's Chakrams — job select; equipped creature gets +2/+2, lifelink,
 /// is a Performer, and your other commanders get +2/+2 and lifelink; equip
 /// {3}.
-///
-/// ⚠ Residual: the commander pump also reaches the equipped creature when
-/// it's a commander.
 pub fn dancers_chakrams() -> CardDefinition {
-    let commanders = || yours(R::Creature.and(R::IsCommander));
+    // "Other commanders": not the one wearing the Chakrams.
+    let commanders = || yours(R::Creature.and(R::IsCommander).and(R::IsHostOfSource.negate()));
+    let attached = || Predicate::EntityMatches { what: Selector::This, filter: R::AttachedToCreature };
     CardDefinition {
         static_abilities: vec![
             StaticAbility {
                 description: "Other commanders you control get +2/+2.",
                 effect: StaticEffect::WhileCondition {
-                    condition: Predicate::SourceIsEquipped,
+                    condition: attached(),
                     inner: Box::new(StaticEffect::PumpPT { applies_to: commanders(), power: 2, toughness: 2 }),
                 },
             },
             StaticAbility {
                 description: "Other commanders you control have lifelink.",
                 effect: StaticEffect::WhileCondition {
-                    condition: Predicate::SourceIsEquipped,
+                    condition: attached(),
                     inner: Box::new(StaticEffect::GrantKeyword { applies_to: commanders(), keyword: Keyword::Lifelink }),
                 },
             },
