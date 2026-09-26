@@ -275,3 +275,16 @@ pub fn torment_of_hailfire() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// High Tide — {U} Instant. Until end of turn, whenever a player taps an
+/// Island for mana, that player adds an additional {U} (CR 605.1b — a
+/// triggered mana ability; Bubbling Muck's turn-scoped primitive).
+pub fn high_tide() -> CardDefinition {
+    CardDefinition {
+        name: "High Tide",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ExtraManaOnLandTapThisTurn { land: crate::card::LandType::Island, extra: Color::Blue },
+        ..Default::default()
+    }
+}

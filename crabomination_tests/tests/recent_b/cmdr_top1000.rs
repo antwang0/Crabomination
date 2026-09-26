@@ -202,3 +202,24 @@ fn torment_of_hailfire_punishes_each_opponent_x_times() {
     assert_eq!(g.players[2].life, start - 9);
     assert_eq!(g.players[3].life, start - 9);
 }
+
+/// CR 605.1b: under High Tide every player's Island taps for {U}{U} this
+/// turn (the ability says "a player"), a Forest doesn't.
+#[test]
+fn high_tide_doubles_every_players_islands() {
+    let mut g = pod(4);
+    let mine = g.add_card_to_battlefield(0, catalog::island());
+    let theirs = g.add_card_to_battlefield(2, catalog::island());
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    let h = g.add_card_to_hand(0, catalog::high_tide());
+    cast(&mut g, 0, h, None).unwrap();
+    for (seat, land, want) in [(0, mine, 2), (2, theirs, 2), (0, forest, 1)] {
+        g.players[seat].mana_pool = Default::default();
+        g.priority.player_with_priority = seat;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: land, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
+        })
+        .expect("tap for mana");
+        assert_eq!(g.players[seat].mana_pool.total(), want);
+    }
+}
