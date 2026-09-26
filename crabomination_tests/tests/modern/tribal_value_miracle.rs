@@ -1556,6 +1556,20 @@ fn thespians_stage_becomes_copy_of_target_land() {
     // Permanent duration: cleanup does not revert.
     g.do_cleanup(&mut Vec::new());
     assert_eq!(g.battlefield_find(stage).unwrap().definition.name, "Island");
+    // "…except it has this ability": the Island can copy again.
+    let forest = g.add_card_to_battlefield(1, catalog::forest());
+    g.battlefield_find_mut(stage).unwrap().tapped = false;
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let idx = g.battlefield_find(stage).unwrap().definition.activated_abilities.len() - 1;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: stage, ability_index: idx,
+        target: Some(Target::Permanent(forest)), additional_targets: Vec::new(), x_value: None, mode: None,
+    }).expect("re-copy");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(stage).unwrap().definition.name, "Forest");
 }
 
 /// CR 121.2a — Thought Reflection doubles each draw; two copies quadruple,

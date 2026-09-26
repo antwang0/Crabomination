@@ -27,8 +27,7 @@ use crate::mana::{
 // ── Cantrips & card selection ────────────────────────────────────────────────
 
 /// Ponder — {U} Sorcery. Look at the top three cards of your library, then
-/// put them back in any order, then draw a card. (The "you may shuffle" rider
-/// is dropped.)
+/// put them back in any order; you may shuffle; draw a card.
 pub fn ponder() -> CardDefinition {
     CardDefinition {
         name: "Ponder",
@@ -17915,17 +17914,16 @@ pub fn time_wipe() -> CardDefinition {
     }
 }
 
-/// Disallow — {1}{U}{U} Instant. Counter target spell. (The printed
-/// "or activated or triggered ability" modes are approximated as a
-/// spell-only counter.)
+/// Disallow — {1}{U}{U} Instant. Counter target spell, activated ability, or
+/// triggered ability.
 pub fn disallow() -> CardDefinition {
     use crate::effect::shortcut::target_filtered;
     CardDefinition {
         name: "Disallow",
         cost: cost(&[generic(1), u(), u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::CounterSpell {
-            what: target_filtered(SelectionRequirement::IsSpellOnStack),
+        effect: Effect::CounterSpellOrAbility {
+            what: target_filtered(SelectionRequirement::IsSpellOnStack.or(SelectionRequirement::HasAbilityOnStack)),
         },
         ..Default::default()
     }

@@ -552,3 +552,22 @@ fn augur_of_autumn_coven_casts_creatures_from_the_top() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(top).is_some());
 }
+
+/// Disallow — "Counter target spell, activated ability, or triggered
+/// ability": it counters Legion Warboss's begin-combat trigger.
+#[test]
+fn disallow_counters_a_triggered_ability() {
+    let mut g = main_phase();
+    g.active_player_idx = 1;
+    let boss = g.add_card_to_battlefield(1, catalog::legion_warboss());
+    g.step = TurnStep::BeginCombat;
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    assert!(!g.stack.is_empty(), "the Warboss trigger waits on the stack");
+    let d = g.add_card_to_hand(0, catalog::disallow());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    cast(&mut g, d, Some(Target::Permanent(boss))).expect("Disallow the trigger");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.definition.name == "Goblin"));
+}

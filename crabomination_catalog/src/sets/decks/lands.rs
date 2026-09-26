@@ -642,10 +642,8 @@ pub fn vesuva() -> CardDefinition {
 }
 
 /// Thespian's Stage — Land. `{T}: Add {C}`; `{2}, {T}`: becomes a copy of
-/// target land. (The printed "except it has this ability" rider is dropped —
-/// the copy loses the re-copy ability.)
+/// target land, except it has this ability.
 pub fn thespians_stage() -> CardDefinition {
-    use crate::effect::Duration;
     CardDefinition {
         name: "Thespian's Stage",
         card_types: vec![CardType::Land],
@@ -654,13 +652,16 @@ pub fn thespians_stage() -> CardDefinition {
             ActivatedAbility {
                 tap_cost: true,
                 mana_cost: cost(&[generic(2)]),
-                effect: Effect::BecomeCopyOfFor {
+                // "…except it has this ability" (it keeps its own activated
+                // abilities through the copy).
+                effect: Effect::BecomeCopyOf {
                     what: Selector::This,
                     source: target_filtered(
                         SelectionRequirement::Land.and(SelectionRequirement::OtherThanSource),
                     ),
-                    duration: Duration::Permanent,
-                    non_legendary: false,
+                    extra_creature_types: vec![],
+                    keep_own_triggered: false,
+                    keep_own_activated: true,
                 },
                 ..Default::default()
             },
