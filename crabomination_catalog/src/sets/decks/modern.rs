@@ -63119,25 +63119,53 @@ pub fn kogla_the_titan_ape() -> CardDefinition {
     }
 }
 
-/// Mythos of Illuna — {2}{U}{U} Sorcery. Create a token that's a copy of target
-/// permanent. (The {R}{G}-spent fight rider is dropped — no spend-tracking.)
+/// Mythos of Illuna — {2}{U}{U} Sorcery. Create a token that's a copy of
+/// target permanent. If {R}{G} was spent to cast it, the token instead has
+/// "when this token enters, if it's a creature, it fights up to one target
+/// creature you don't control". The fight is resolved as part of the spell
+/// (targets chosen on cast, slot 1 declinable), not as a separate trigger
+/// on the token — the one gap is responding between the entry and the fight.
 pub fn mythos_of_illuna() -> CardDefinition {
     CardDefinition {
         name: "Mythos of Illuna",
         cost: cost(&[generic(2), u(), u()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::CreateTokenCopyOf {
-            extra_keywords: vec![],
-            who: PlayerRef::You,
-            count: Value::Const(1),
-            source: target_filtered(SelectionRequirement::Permanent),
-            extra_creature_types: vec![],
-            extra_card_types: vec![],
-            override_pt: None,
-            override_colors: None,
-            enters_tapped: false,
-            non_legendary: false,
-            legendary: false,
+        effect: Effect::OptionalTargets {
+            min: 1,
+            body: Box::new(Effect::Seq(vec![
+                Effect::CreateTokenCopyOf {
+                    extra_keywords: vec![],
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    source: target_filtered(SelectionRequirement::Permanent),
+                    extra_creature_types: vec![],
+                    extra_card_types: vec![],
+                    override_pt: None,
+                    override_colors: None,
+                    enters_tapped: false,
+                    non_legendary: false,
+                    legendary: false,
+                },
+                Effect::If {
+                    cond: Predicate::All(vec![
+                        Predicate::ManaSpentOfColorAtLeast { color: Color::Red, at_least: 1 },
+                        Predicate::ManaSpentOfColorAtLeast { color: Color::Green, at_least: 1 },
+                        Predicate::EntityMatches {
+                            what: Selector::LastCreatedToken,
+                            filter: SelectionRequirement::Creature,
+                        },
+                    ]),
+                    then: Box::new(Effect::Fight {
+                        attacker: Selector::LastCreatedToken,
+                        defender: Selector::TargetFiltered {
+                            slot: 1,
+                            filter: SelectionRequirement::Creature
+                                .and(SelectionRequirement::Not(Box::new(SelectionRequirement::ControlledByYou))),
+                        },
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ])),
         },
         ..Default::default()
     }

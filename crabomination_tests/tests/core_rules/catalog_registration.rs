@@ -3675,7 +3675,6 @@ fn cr_903_4_computed_color_identity_matches_scryfall() {
 /// starts computing wrongly fails the test. Mirrored in `INCOMPLETE_CARDS.md`.
 const KNOWN_IDENTITY_GAPS: &[(&str, &str)] = &[
     // Approximated text drops a printed colored symbol.
-    ("Mythos of Illuna", "the \"if {G}{U} was spent\" half is not modelled"),
     ("Balduvian Fallen", "the \"+1/+0 for each {R} spent\" cumulative-upkeep payoff is dropped"),
     // A printed face the catalog has not implemented at all.
     // No primitive for "pay {W}{U}{B}{R}{G} rather than the mana cost".

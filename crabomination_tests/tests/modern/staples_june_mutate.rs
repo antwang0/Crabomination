@@ -1544,6 +1544,34 @@ fn mythos_of_illuna_copies_permanent() {
     assert_eq!(bears, 1, "a Grizzly Bears token copy under our control");
 }
 
+/// Mythos of Illuna with {R}{G} spent: the creature token copy fights the
+/// second target (CR 701.12a); without it, no fight (CR 601.2h records
+/// what paid the cost).
+#[test]
+fn mythos_of_illuna_fights_only_with_red_and_green_spent() {
+    for spent in [true, false] {
+        let mut g = two_player_game();
+        let orig = g.add_card_to_battlefield(0, catalog::serra_angel()); // 4/4
+        let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        let m = g.add_card_to_hand(0, catalog::mythos_of_illuna());
+        g.players[0].mana_pool.add(Color::Blue, 2);
+        if spent {
+            g.players[0].mana_pool.add(Color::Red, 1);
+            g.players[0].mana_pool.add(Color::Green, 1);
+        } else {
+            g.players[0].mana_pool.add_colorless(2);
+        }
+        g.perform_action(GameAction::CastSpell {
+            card_id: m, target: Some(Target::Permanent(orig)),
+            additional_targets: vec![Target::Permanent(victim)], mode: None, x_value: None,
+        }).expect("cast Mythos of Illuna");
+        drain_stack(&mut g);
+        let angels = g.battlefield.iter().filter(|c| c.definition.name == "Serra Angel").count();
+        assert_eq!(angels, 2, "the copy is made either way");
+        assert_eq!(g.battlefield.iter().any(|c| c.id == victim), !spent, "fought iff {{R}}{{G}} spent");
+    }
+}
+
 /// Mythos of Brokkos returns up to two permanent cards from the graveyard.
 #[test]
 fn mythos_of_brokkos_returns_two() {
