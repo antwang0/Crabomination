@@ -6,8 +6,6 @@
 //! - **Octomancer** and **Perch Protection** — the gift goes to a random
 //!   opponent rather than one the caster chooses; Perch Protection's life
 //!   lock lasts this turn, not until your next turn.
-//! - **Tamiyo, Field Researcher** — a targeted opponent's creature draws its
-//!   controller the card, not Tamiyo's.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,
@@ -519,8 +517,6 @@ pub fn steelburr_champion() -> CardDefinition {
 /// card for combat damage until your next turn. −2: tap up to two nonland
 /// permanents; they skip their next untap. −7: draw three and an emblem
 /// casting your hand spells for free.
-///
-/// ⚠ Residual: a targeted opponent's creature draws its own controller.
 pub fn tamiyo_field_researcher() -> CardDefinition {
     CardDefinition {
         name: "Tamiyo, Field Researcher",
@@ -536,13 +532,11 @@ pub fn tamiyo_field_researcher() -> CardDefinition {
                     max_targets: 2,
                     min_targets: 0,
                     filter: R::Creature,
-                    effect: Box::new(Effect::GrantTriggeredAbility {
+                    // A delayed trigger of Tamiyo's controller, not a grant:
+                    // an opponent's creature draws *you* the card.
+                    effect: Box::new(Effect::WatchCombatDamageUntilYourNextTurn {
                         what: Selector::Target(0),
-                        trigger: Box::new(TriggeredAbility {
-                            event: EventSpec::new(EventKind::DealsCombatDamage, EventScope::SelfSource),
-                            effect: draw(PlayerRef::You, 1),
-                        }),
-                        duration: Duration::UntilNextTurn,
+                        body: Box::new(draw(PlayerRef::You, 1)),
                     }),
                 },
                 ..Default::default()

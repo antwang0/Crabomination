@@ -2269,6 +2269,7 @@ impl Effect {
                 player_has_target(who) || value_has_target(count) || sel_has_target(source)
             }
             Effect::GrantTriggeredAbility { what, .. } => sel_has_target(what),
+            Effect::WatchCombatDamageUntilYourNextTurn { what, .. } => sel_has_target(what),
             Effect::PreventAllCombatDamageThisTurn => false,
             // The copy retargets itself; the chain rider declares no slot.
             Effect::MayCopyThisSpell { who, .. } => player_has_target(who),
@@ -3073,6 +3074,7 @@ impl Effect {
             | Effect::LoseAllLandwalk { what, .. }
             | Effect::SkipNextUntap { what }
             | Effect::GrantTriggeredAbility { what, .. }
+            | Effect::WatchCombatDamageUntilYourNextTurn { what, .. }
             | Effect::GainActivatedAbility { what, .. }
             | Effect::AddCardTypeIndefinitely { what, .. }
             | Effect::LoseCardTypeUntilEot { what, .. }
@@ -5244,6 +5246,7 @@ impl Effect {
                 | Effect::LoseAllLandwalk { what, .. }
                 | Effect::SkipNextUntap { what }
                 | Effect::GrantTriggeredAbility { what, .. }
+                | Effect::WatchCombatDamageUntilYourNextTurn { what, .. }
                 | Effect::GainActivatedAbility { what, .. }
                 | Effect::AddCardTypeIndefinitely { what, .. }
                 | Effect::LoseCardTypeUntilEot { what, .. }

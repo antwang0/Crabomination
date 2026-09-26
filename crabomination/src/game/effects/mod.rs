@@ -9,6 +9,7 @@
 // Values over a selector's cards (Occult Epiphany, Sudden Salvation).
 mod among;
 mod combat_copies;
+mod combat_damage_watch;
 // CR 701.50 — connive on a selected permanent (Kamiz, Change of Plans).
 mod connive;
 mod commander;
@@ -16724,6 +16725,11 @@ impl GameState {
                         modification: Modification::SetPower(p),
                     });
                 }
+                Ok(())
+            }
+
+            Effect::WatchCombatDamageUntilYourNextTurn { what, body } => {
+                self.watch_combat_damage_until_your_next_turn(what, body, ctx);
                 Ok(())
             }
 

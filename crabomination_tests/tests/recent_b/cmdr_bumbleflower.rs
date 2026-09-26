@@ -368,6 +368,32 @@ fn tamiyo_locks_down_and_ults() {
     assert_eq!(g.players[0].emblems.len(), 1);
 }
 
+/// CR 603.7d — Tamiyo's +1 is a delayed trigger of *hers*: the opponent's
+/// marked creature hitting you draws you the card, not its controller.
+#[test]
+fn cr_603_7d_tamiyo_plus_one_draws_its_controller() {
+    let mut g = main_phase(2);
+    library(&mut g, 0, 3);
+    library(&mut g, 1, 3);
+    let t = g.add_card_to_battlefield(0, catalog::tamiyo_field_researcher());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    act(&mut g, GameAction::ActivateLoyaltyAbility { card_id: t, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: None })
+        .expect("+1");
+    let (mine, theirs) = (g.players[0].hand.len(), g.players[1].hand.len());
+    g.active_player_idx = 1;
+    g.clear_sickness(bear);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bear, target: AttackTarget::Player(0) }]))
+        .expect("the Bear attacks");
+    while g.step != TurnStep::EndCombat && !g.is_game_over() {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.players[0].life, 18, "it connected");
+    assert_eq!((g.players[0].hand.len(), g.players[1].hand.len()), (mine + 1, theirs), "Tamiyo's controller draws");
+}
+
 /// Tenuous Truce: both draw at the enchanted opponent's end step; attacking
 /// them breaks it.
 #[test]

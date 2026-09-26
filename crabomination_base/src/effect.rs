@@ -7712,6 +7712,10 @@ pub enum Effect {
     /// ControlledBySeat)`; a player can't be targeted or dealt damage by
     /// anything that player controls. Guardian Archon, Eon Frolicker.
     GainProtectionFromPlayer { what: Selector, from: PlayerRef, duration: Duration },
+    /// CR 603.7d — "until your next turn, whenever [those creatures] deal
+    /// combat damage, [body]": a delayed trigger per permanent `what` picks,
+    /// controlled by this effect's controller (Tamiyo, Field Researcher's +1).
+    WatchCombatDamageUntilYourNextTurn { what: Selector, body: Box<Effect> },
     /// Grant a transient triggered ability to each permanent picked by
     /// `what`, for `duration`. Stashed in `GameState.
     /// granted_triggers_eot`; `Duration::Permanent` bakes the trigger onto the
