@@ -307,3 +307,53 @@ fn urtet_mints_and_pumps_myr() {
         assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne), 3);
     }
 }
+
+
+/// CR 603.2d: under Isshin an attack trigger fires twice — Zur's attack
+/// tutor finds two enchantments.
+#[test]
+fn isshin_doubles_attack_triggers() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::isshin_two_heavens_as_one());
+    let zur = g.add_card_to_battlefield(0, catalog::zur_the_enchanter());
+    let a = g.add_card_to_library(0, catalog::honor_of_the_pure());
+    let b = g.add_card_to_library(0, catalog::intangible_virtue());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(a)), DecisionAnswer::Search(Some(b))]));
+    attack(&mut g, zur);
+    assert!(g.battlefield_find(a).is_some() && g.battlefield_find(b).is_some(), "both tutors resolved");
+}
+
+/// Tergrid takes an opponent's sacrificed nontoken permanent and a
+/// discarded permanent card from the graveyard (CR 701.16, 701.9).
+#[test]
+fn tergrid_steals_sacrificed_and_discarded_permanents() {
+    let mut g = pod(4);
+    g.add_card_to_battlefield(0, catalog::tergrid_god_of_fright());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Bool(true)]));
+    let bears = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    let mut evs = Vec::new();
+    g.sacrifice_one(bears, 2, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bears).map(|c| c.controller), Some(0), "the sacrificed Bears");
+    let pitched = g.add_card_to_hand(3, catalog::serra_angel());
+    let mut evs = Vec::new();
+    g.discard_card(3, pitched, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(pitched).map(|c| c.controller), Some(0), "the discarded Angel");
+}
+
+/// CR 508.3a / 508.4: Najeela attacking makes one Warrior token tapped and
+/// attacking the same player; the token entered attacking, so it doesn't
+/// "attack" and trigger Najeela again.
+#[test]
+fn najeela_makes_one_attacking_warrior_per_attacking_warrior() {
+    let mut g = two_player_game();
+    let naj = g.add_card_to_battlefield(0, catalog::najeela_the_blade_blossom());
+    attack(&mut g, naj);
+    let tokens: Vec<_> = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Warrior").collect();
+    assert_eq!(tokens.len(), 1);
+    assert!(tokens[0].tapped);
+    assert!(g.attacking.iter().any(|a| a.attacker == tokens[0].id && a.target == AttackTarget::Player(1)));
+}

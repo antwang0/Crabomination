@@ -486,3 +486,159 @@ pub fn urtet_remnant_of_memnarch() -> CardDefinition {
         ..legend("Urtet, Remnant of Memnarch", cost(&[generic(3)]), vec![CreatureType::Myr], 2, 2)
     }
 }
+
+/// Isshin, Two Heavens as One — {R}{W}{B} 3/4 Human Samurai. If a creature
+/// attacking causes a triggered ability of a permanent you control to
+/// trigger, that ability triggers an additional time (CR 603.2d; Wulfgar's
+/// `DoubleControllerAttackTriggers`).
+pub fn isshin_two_heavens_as_one() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "If a creature attacking causes a triggered ability of a permanent you control to trigger, that ability triggers an additional time.",
+            effect: StaticEffect::DoubleControllerAttackTriggers,
+        }],
+        ..legend(
+            "Isshin, Two Heavens as One",
+            cost(&[r(), w(), b()]),
+            vec![CreatureType::Human, CreatureType::Samurai],
+            3,
+            4,
+        )
+    }
+}
+
+/// Tergrid, God of Fright // Tergrid's Lantern — {3}{B}{B} 4/5 menace God.
+/// Whenever an opponent sacrifices a nontoken permanent or discards a
+/// permanent card, you may put that card from a graveyard onto the
+/// battlefield under your control. The Lantern ({3}{B} legendary artifact):
+/// {T}: target player loses 3 life unless they sacrifice a nonland permanent
+/// or discard a card; {3}{B}: untap it.
+pub fn tergrid_god_of_fright() -> CardDefinition {
+    let steal = || Effect::MayDo {
+        description: "Put that card onto the battlefield under your control?".into(),
+        body: Box::new(Effect::Move {
+            what: Selector::TriggerSource,
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+        }),
+    };
+    let lantern = CardDefinition {
+        name: "Tergrid's Lantern",
+        cost: cost(&[generic(3), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![
+            crate::card::ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::Punisher {
+                    chooser: target_filtered(R::Player),
+                    options: vec![
+                        Effect::Sacrifice { who: Selector::You, count: Value::ONE, filter: R::Permanent.and(R::Nonland) },
+                        Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                    ],
+                    otherwise: Box::new(Effect::LoseLife {
+                        who: Selector::Player(PlayerRef::Triggerer),
+                        amount: Value::Const(3),
+                    }),
+                },
+                ..Default::default()
+            },
+            crate::card::ActivatedAbility {
+                mana_cost: cost(&[generic(3), b()]),
+                effect: Effect::Untap { what: Selector::This, up_to: None },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    };
+    CardDefinition {
+        keywords: vec![Keyword::Menace],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PermanentSacrificed, EventScope::OpponentControl).with_filter(
+                    Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::IsToken.negate() },
+                ),
+                effect: steal(),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CardDiscarded, EventScope::OpponentControl).with_filter(
+                    Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Permanent },
+                ),
+                effect: steal(),
+            },
+        ],
+        back_face: Some(Box::new(lantern)),
+        ..legend("Tergrid, God of Fright", cost(&[generic(3), b(), b()]), vec![CreatureType::God], 4, 5)
+    }
+}
+
+/// Najeela, the Blade-Blossom — {2}{R} 3/2 Human Warrior. Whenever a Warrior
+/// attacks, you may have its controller create a 1/1 white Warrior token
+/// tapped and attacking (CR 508.3a). {W}{U}{B}{R}{G}: untap all attacking
+/// creatures; they gain trample, lifelink and haste until end of turn; after
+/// this phase there is an additional combat phase (CR 505.1b). Activate
+/// only during combat.
+///
+/// The "you may" is taken for your own Warriors and declined for an
+/// opponent's (a token attacking beside their Warrior never helps you), so
+/// the trigger is scoped to Warriors you control.
+pub fn najeela_the_blade_blossom() -> CardDefinition {
+    use crate::game::types::TurnStep;
+    let warrior = TokenDefinition {
+        name: "Warrior".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Warrior], ..Default::default() },
+        ..Default::default()
+    };
+    let attackers = || Selector::EachPermanent(R::Creature.and(R::IsAttacking));
+    let during_combat = Predicate::Any(
+        [
+            TurnStep::BeginCombat,
+            TurnStep::DeclareAttackers,
+            TurnStep::DeclareBlockers,
+            TurnStep::FirstStrikeDamage,
+            TurnStep::CombatDamage,
+            TurnStep::EndCombat,
+        ]
+        .into_iter()
+        .map(Predicate::CurrentStepIs)
+        .collect(),
+    );
+    let grant = |keyword| Effect::GrantKeyword { what: attackers(), keyword, duration: Duration::EndOfTurn };
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::HasCreatureType(CreatureType::Warrior),
+            }),
+            effect: Effect::CreateTokenAttacking {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: Arc::new(warrior),
+                cleanup: Default::default(),
+                defender: Some(PlayerRef::DefendingPlayer),
+            },
+        }],
+        activated_abilities: vec![crate::card::ActivatedAbility {
+            mana_cost: cost(&[w(), u(), b(), r(), g()]),
+            condition: Some(during_combat),
+            effect: Effect::Seq(vec![
+                Effect::Untap { what: attackers(), up_to: None },
+                grant(Keyword::Trample),
+                grant(Keyword::Lifelink),
+                grant(Keyword::Haste),
+                Effect::AdditionalCombatPhase { count: Value::ONE },
+            ]),
+            ..Default::default()
+        }],
+        ..legend(
+            "Najeela, the Blade-Blossom",
+            cost(&[generic(2), r()]),
+            vec![CreatureType::Human, CreatureType::Warrior],
+            3,
+            2,
+        )
+    }
+}
