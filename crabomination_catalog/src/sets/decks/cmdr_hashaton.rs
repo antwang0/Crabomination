@@ -403,18 +403,26 @@ pub fn rhet_tomb_mystic() -> CardDefinition {
     }
 }
 
-/// Rot Hulk — menace; on entry, return up to X Zombie cards from your
-/// graveyard to the battlefield, X the number of opponents.
+/// Rot Hulk — menace; on entry, return up to X target Zombie cards from your
+/// graveyard to the battlefield, X the number of opponents. The targets are
+/// chosen as the trigger goes on the stack (CR 603.3d): picked as it resolved,
+/// a Rot Hulk sacrificed in response returned itself, and a sac outlet looped
+/// it for ever (an eight-seat pod, 3,730 Woe Strider activations).
 pub fn rot_hulk() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Menace],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Repeat {
-                count: Value::OpponentCount,
-                body: Box::new(Effect::Move {
-                    what: best_in(Zone::Graveyard, R::Creature.and(zombie())),
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            effect: Effect::CapTargetsAt {
+                amount: Value::OpponentCount,
+                body: Box::new(Effect::ApplyToTargets {
+                    max_targets: 16,
+                    min_targets: 0,
+                    filter: zombie().and(R::InYourGraveyard),
+                    effect: Box::new(Effect::Move {
+                        what: Selector::Target(0),
+                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    }),
                 }),
             },
         }],

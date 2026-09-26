@@ -2283,6 +2283,13 @@ fn woe_strider_goat_and_escape() {
     }).expect("sac to scry");
     drain_stack(&mut g);
     assert!(g.battlefield_find(goat_id).is_none(), "goat sacrificed");
+    assert!(
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: strider, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
+        })
+        .is_err(),
+        "no other creature to sacrifice"
+    );
     // Escape: bin it plus four other cards, recast from the graveyard.
     g.remove_to_graveyard_with_triggers(strider);
     drain_stack(&mut g);

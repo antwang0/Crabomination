@@ -270,6 +270,21 @@ fn rot_hulk_returns_a_zombie_per_opponent() {
     assert_eq!(count_named(&g, 0, "Wayward Servant"), 2);
 }
 
+/// CR 603.3d — Rot Hulk's targets are chosen as the trigger goes on the
+/// stack: a Rot Hulk that dies in response isn't among them, so it doesn't
+/// return itself (a sac outlet looped it 3,730 times in an eight-seat pod).
+#[test]
+fn cr_603_3d_rot_hulk_cannot_return_itself_in_response() {
+    let mut g = main_phase(3);
+    let h = g.add_card_to_battlefield(0, catalog::rot_hulk());
+    g.fire_self_etb_triggers(h, 0);
+    assert_eq!(g.stack.len(), 1, "the entry trigger, with no target to take");
+    g.destroy_permanent(h, false, &mut Vec::new());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(h).is_none(), "it stays in the graveyard");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == h));
+}
+
 #[test]
 fn temmet_loots_on_attack_and_pumps_zombies_per_draw() {
     let mut g = main_phase(2);
