@@ -21391,6 +21391,20 @@ impl GameState {
             .sum()
     }
 
+    /// Puresteel Paladin — does a static `player` controls give their
+    /// Equipment equip {0} right now?
+    fn equipment_equips_free(&self, player: usize) -> bool {
+        self.battlefield.iter().filter(|c| c.controller == player).any(|c| {
+            c.definition.static_abilities.iter().any(|sa| match &sa.effect {
+                crate::effect::StaticEffect::EquipmentYouControlEquipZeroWhile { condition } => {
+                    let ctx = crate::game::effects::EffectContext::for_ability(c.id, player, None);
+                    self.evaluate_predicate(condition, &ctx)
+                }
+                _ => false,
+            })
+        })
+    }
+
     fn equip(
         &mut self,
         equipment: crate::card::CardId,
@@ -21490,6 +21504,9 @@ impl GameState {
         }
         if reduction > 0 {
             equip_cost.reduce_generic(reduction);
+        }
+        if fortify.is_none() && self.equipment_equips_free(p) {
+            equip_cost = crate::mana::ManaCost::default();
         }
         // The target must be a creature (equip, CR 702.6c) — or a land
         // (fortify, CR 702.71c) — the activating player controls. Use the
@@ -31581,7 +31598,9 @@ fn static_effect_to_effects(
             | StaticEffect::OtherCreaturesEnterWithCountersEqualToSourceCounters { .. }
             // Target-tax, read at `extra_cost_for_spell` (Jubilant Skybonder).
             | StaticEffect::TaxOpponentSpellsTargeting { .. }
+            | StaticEffect::EquipmentYouControlEquipZeroWhile { .. }
             | StaticEffect::TaxOpponentSpellsTargetingThis { .. }
+            | StaticEffect::LifeTaxOpponentSpellsTargetingThis { .. }
             | StaticEffect::OpponentsCantCastDuringYourTurn
             | StaticEffect::OpponentsCantCastDuringYourTurnWhileAttached
             // Ranar — read by the foretell special action; no layer.

@@ -1515,6 +1515,36 @@ impl<'a> CostStaticSources<'a> {
     }
 }
 
+/// The life a spell `caster` casts owes for targeting an opponent's permanent
+/// that says so (Terror of the Peaks: "cost an additional 3 life to cast").
+/// One tax per such permanent, however many of the spell's targets name it.
+pub fn life_tax_for_spell(
+    state: &crate::game::GameState,
+    caster: usize,
+    target: Option<&crate::game::Target>,
+    additional_targets: &[crate::game::Target],
+) -> u32 {
+    let mut seen: smallvec::SmallVec<[crate::card::CardId; 2]> = smallvec::SmallVec::new();
+    let mut life = 0;
+    for t in target.into_iter().chain(additional_targets) {
+        let crate::game::Target::Permanent(pid) = t else { continue };
+        if seen.contains(pid) {
+            continue;
+        }
+        seen.push(*pid);
+        let Some(src) = state.battlefield_find(*pid) else { continue };
+        if state.same_team(src.controller, caster) {
+            continue;
+        }
+        for sa in &src.definition.static_abilities {
+            if let crate::effect::StaticEffect::LifeTaxOpponentSpellsTargetingThis { life: n } = sa.effect {
+                life += n;
+            }
+        }
+    }
+    life
+}
+
 pub fn extra_cost_for_spell(
     state: &crate::game::GameState,
     caster: usize,
@@ -10003,11 +10033,9 @@ impl GameState {
         // "Pay X life" additional cost — pre-flight before any payment
         // mutation (CR 119.4: paying down to exactly 0 is legal; below is
         // not). The life itself is paid after the mana receipt succeeds.
-        let pay_x_life: u32 = if card.definition.additional_cost_pay_x_life {
-            x_value.unwrap_or(0)
-        } else {
-            0
-        };
+        // Terror of the Peaks' targeting tax is paid with it.
+        let pay_x_life: u32 = if card.definition.additional_cost_pay_x_life { x_value.unwrap_or(0) } else { 0 };
+        let pay_x_life = pay_x_life + life_tax_for_spell(self, p, target.as_ref(), &additional_targets);
         if self.effective_life(p) < pay_x_life as i32 {
             cast_census::rollback(line!());
             self.players[p].hand.push(card);
@@ -13082,6 +13110,7 @@ impl GameState {
             base_cost
         };
         let (commander_tax, tax_life) = self.commander_tax_for(&card);
+        let tax_life = tax_life + life_tax_for_spell(self, p, target.as_ref(), &additional_targets);
         if commander_tax > 0 {
             cost.symbols
                 .push(crate::mana::ManaSymbol::Generic(commander_tax));
@@ -13579,6 +13608,7 @@ impl GameState {
             }
             tax_life
         };
+        let tax_life = tax_life + life_tax_for_spell(self, p, target.as_ref(), &additional_targets);
         // CR 119.4 — the alt cost's life and a life-paid tax come out of one total.
         if tax_life > 0 && self.players[p].life < (tax_life + alt.life_cost) as i32 {
             self.return_from_alt_cast(p, zone, card);

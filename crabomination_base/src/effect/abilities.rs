@@ -738,6 +738,10 @@ pub enum StaticEffect {
     /// `TaxOpponentSpellsTargeting`: the tax applies only when the chosen
     /// target is the source permanent itself. Read in `extra_cost_for_spell`.
     TaxOpponentSpellsTargetingThis { amount: u32 },
+    /// "Spells your opponents cast that target this creature cost an
+    /// additional `life` life to cast" (Terror of the Peaks) — an additional
+    /// cost, so CR 119.4 gates the cast. Read by `life_tax_for_spell`.
+    LifeTaxOpponentSpellsTargetingThis { life: u32 },
     /// Elderwood Scion — "spells you cast that target this creature cost
     /// {amount} less". Read with the cast's chosen target by
     /// `cost_reduction_for_spell`.
@@ -2056,6 +2060,10 @@ pub enum StaticEffect {
     /// "This ability costs {N} less to activate if [condition]" on its own
     /// equip (Crown of Gondor: {3} less while you're the monarch).
     EquipCostReducedWhile { condition: crate::effect::Predicate, amount: u32 },
+    /// "Equipment you control have equip {0}" while `condition` holds
+    /// (Puresteel Paladin's metalcraft). The {0} equip is always the cheaper
+    /// of the two, so `GameState::equip` pays it in place of the printed one.
+    EquipmentYouControlEquipZeroWhile { condition: crate::effect::Predicate },
     /// CR 613 — "Each noncreature, non-Equipment artifact is an Equipment
     /// with equip {X} and 'Equipped creature gets +X/+0,' where X is that
     /// artifact's mana value" (Bludgeon Brawl). Global; the granted subtype,
