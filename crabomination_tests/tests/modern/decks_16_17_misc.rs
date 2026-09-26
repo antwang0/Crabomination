@@ -2504,6 +2504,29 @@ fn relic_of_progenitus_exiles_opponent_graveyard() {
     assert_eq!(g.players[1].graveyard.len(), 1, "exactly one card left the graveyard");
 }
 
+/// Relic of Progenitus's second ability exiles ALL graveyards, the caster's
+/// too, and draws — it shipped as one target player's shuffle-back.
+#[test]
+fn relic_of_progenitus_exiles_all_graveyards() {
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    for p in 0..3 {
+        g.add_card_to_graveyard(p, catalog::grizzly_bears());
+    }
+    g.add_card_to_library(0, catalog::forest());
+    let relic = g.add_card_to_battlefield(0, catalog::relic_of_progenitus());
+    g.players[0].mana_pool.add_colorless(1);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: relic, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
+    })
+    .expect("{1}, exile Relic");
+    drain_stack(&mut g);
+    assert!(g.players.iter().all(|p| p.graveyard.is_empty()), "every graveyard exiled");
+    assert_eq!(g.players[0].hand.len(), hand + 1, "and a card drawn");
+}
+
 #[test]
 fn stonecoil_serpent_enters_with_x_counters() {
     let mut g = two_player_game();

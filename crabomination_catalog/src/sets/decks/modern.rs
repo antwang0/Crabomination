@@ -1997,11 +1997,6 @@ pub fn lotus_petal() -> CardDefinition {
 
 /// Tormod's Crypt — {0} Artifact. {T}, Sacrifice this: Exile all cards from
 /// target player's graveyard.
-///
-/// Approximated as "exile each card in each opponent's graveyard" (matching
-/// Soul-Guide Lantern's first ability) — strictly more powerful than the
-/// real card in multiplayer but gameplay-equivalent in 1v1 against an
-/// opponent with the only relevant graveyard.
 pub fn tormods_crypt() -> CardDefinition {
     use crate::card::ActivatedAbility;
     CardDefinition {
@@ -15963,8 +15958,6 @@ pub fn death_greeters_champion() -> CardDefinition {
 
 /// Relic of Progenitus — {1} Artifact. {T}: Target player exiles a card
 /// from their graveyard. {1}, Exile Relic: Exile all graveyards, draw 1.
-///
-/// Approximation: first ability only (exile each opponent's top gy card).
 pub fn relic_of_progenitus() -> CardDefinition {
     use crate::card::ActivatedAbility;
     CardDefinition {
@@ -15997,13 +15990,10 @@ pub fn relic_of_progenitus() -> CardDefinition {
                 discard_cost: None,
                 tap_cost: false,
                 mana_cost: cost(&[generic(1)]),
+                // "Exile all graveyards" — every player's, no target. It
+                // shipped as one target player's shuffle into their library.
                 effect: Effect::Seq(vec![
-                    Effect::ForEach {
-                        selector: target_filtered(SelectionRequirement::Player),
-                        body: Box::new(Effect::ShuffleGraveyardIntoLibrary {
-                            who: PlayerRef::Triggerer,
-                        }),
-                    },
+                    Effect::ExilePlayerGraveyard { who: PlayerRef::EachPlayer, filter: None },
                     Effect::Draw {
                         who: Selector::You,
                         amount: Value::Const(1),
