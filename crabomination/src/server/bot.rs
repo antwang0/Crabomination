@@ -8208,8 +8208,13 @@ pub(super) fn cast_candidates<'a>(
             continue;
         };
         // The printed cost's colours pre-filter the regular cast; a mana-only
-        // alternative cost (dash) gets its own, since the two can differ.
-        let alt = c.definition.alternative_cost.as_ref().filter(|a| mana_only_alt_cost(a));
+        // alternative cost (dash) gets its own, since the two can differ. The
+        // effective one, so a granted cost counts too (Rooftop Storm's {0}
+        // for a Zombie commander, Kentaro's {X}).
+        let alt = state
+            .effective_alternative_cost_in(seat, crate::game::actions::AltCastZone::Command, id)
+            .filter(mana_only_alt_cost);
+        let alt = alt.as_ref();
         let regular_ok = colors_coverable(&c.definition.cost, have_mana.get());
         let alt_ok = alt.is_some_and(|a| colors_coverable(&a.mana_cost, have_mana.get()));
         if !regular_ok && !alt_ok {
