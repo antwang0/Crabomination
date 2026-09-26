@@ -2108,6 +2108,14 @@ impl GameState {
             }
             return;
         }
+        // A permanent already on the battlefield can't be put onto it: the
+        // card a "return it" names has become a new object there (CR 400.7).
+        // Moving it anyway was a blink — it left and re-entered, so two
+        // Missys' triggers for one death killed the returned card and both
+        // fired again, forever.
+        if matches!(dest, ZoneDest::Battlefield { .. }) && self.battlefield.find_by_id(cid).is_some() {
+            return;
+        }
         // CR 400.4a — a nonpermanent card that would enter the battlefield
         // remains in its previous zone. Face-down cards are exempt: they enter
         // as 2/2 creatures (CR 708.2a), whatever the real card's types are.

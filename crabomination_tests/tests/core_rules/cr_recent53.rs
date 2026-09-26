@@ -768,3 +768,43 @@ fn cr_603_6_a_milled_self_source_graveyard_trigger_fires_once() {
         "one card reaching the graveyard is one trigger, whichever records the batch carries",
     );
 }
+
+/// CR 400.7 — two "whenever another creature dies, return it to the
+/// battlefield" triggers for one death: the first returns the card, and the
+/// second finds a new object on the battlefield and does nothing. The move
+/// used to blink it (leave and re-enter), killing nothing but firing every
+/// leave and enter trigger again — two Missys looped 404 times that way.
+#[test]
+fn cr_400_7_a_second_return_it_trigger_does_nothing() {
+    use crabomination::card::{CardDefinition, EventKind, EventScope, EventSpec, TriggeredAbility};
+    use crabomination::effect::{PlayerRef, ZoneDest};
+    let returner = || CardDefinition {
+        name: "Test Returner",
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer),
+            effect: Effect::Move {
+                what: Selector::TriggerSource,
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+        }],
+        ..Default::default()
+    };
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, returner());
+    g.add_card_to_battlefield(0, returner());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    let evs = g.resolve_effect(&Effect::Destroy { what: Selector::ExactObjects(vec![bear]) }, &ctx).expect("destroy");
+    g.dispatch_triggers_for_events(&evs);
+    assert_eq!(g.stack.len(), 2, "both return triggers");
+    let entered = g.resolve_top_of_stack().expect("first");
+    assert!(g.battlefield_find(bear).is_some(), "returned");
+    g.dispatch_triggers_for_events(&entered);
+    let second = g.resolve_top_of_stack().expect("second");
+    assert!(
+        !second.iter().any(|e| matches!(e, GameEvent::PermanentEntered { .. } | GameEvent::CreatureDied { .. })),
+        "the second return moves nothing: {second:?}"
+    );
+    assert!(g.battlefield_find(bear).is_some());
+}
