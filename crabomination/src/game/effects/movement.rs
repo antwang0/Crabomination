@@ -2713,19 +2713,17 @@ impl GameState {
                         card.counters.remove(&CounterType::Loyalty);
                     }
                 }
-                // CR 310.7 — a Battle enters with defense counters equal to its
-                // printed defense, and (CR 310.6) its controller chooses an
-                // opponent to protect it. In 2-player there is a single
-                // opponent; multiplayer protector choice is a follow-up.
+                // CR 310.4b — a battle enters with defense counters equal to
+                // its printed defense, and (CR 310.8a / 310.11a) its
+                // controller chooses one of their opponents to protect it.
                 if card.definition.is_battle() {
                     let defense = card.definition.defense;
                     if defense > 0 {
                         card.counters.insert(CounterType::Defense, defense);
                     }
                     if card.protected_by.is_none() {
-                        let ctrl = card.controller;
-                        card.protected_by = (0..self.players.len())
-                            .find(|&p| p != ctrl && self.players[p].is_alive());
+                        card.protected_by =
+                            self.choose_opponent_at_once(card.controller, card.id, "Choose the Siege's protector");
                     }
                 }
                 let cid = card.id;

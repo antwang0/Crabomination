@@ -33317,9 +33317,9 @@ impl GameState {
                     },
                 };
                 self.copy_stack_spell(spell_id, 1, true, events);
-                // Pick an opponent (the lowest-seat opponent by default; a
-                // single-opponent game has exactly one).
-                if let Some(&opp) = self.opponents_of(ctx.controller).first() {
+                // CR 702.144a — "choose an opponent. That player copies the
+                // spell": the caster names the seat.
+                if let Some(opp) = self.choose_opponent_at_once(ctx.controller, spell_id, "Choose an opponent to copy it") {
                     self.copy_stack_spell_controlled(spell_id, 1, true, Some(opp), None, events);
                 }
                 Ok(())
@@ -38881,11 +38881,12 @@ impl GameState {
                 // trigger half runs. Seat-routed to the opponent, so a
                 // networked human answers their own tribute prompt.
                 let Some(source) = ctx.source else { return Ok(()) };
-                let opp = self
-                    .opponents_of(ctx.controller)
-                    .first()
-                    .copied()
-                    .unwrap_or(ctx.controller);
+                // CR 702.104a — "choose an opponent. That player may …": the
+                // controller names the seat.
+                let Some(opp) = self.choose_opponent_at_once(ctx.controller, source, "Choose an opponent for tribute")
+                else {
+                    return self.run_effect(otherwise, ctx, events);
+                };
                 let mut cursor = 0;
                 let Some(yes) = self.ask_seat_bool(
                     &mut cursor,

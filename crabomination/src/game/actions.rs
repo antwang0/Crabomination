@@ -8953,7 +8953,7 @@ impl GameState {
         // CR 702.174a — the promise names one opponent; the gift body reads it
         // back through `PlayerRef::ChosenPlayerOfSource`.
         if card.gift_promised {
-            card.chosen_player = self.choose_gift_recipient(p, card_id);
+            card.chosen_player = self.choose_opponent_at_once(p, card_id, "Promise the gift to");
         }
         // CR 709.5 — a Room cast remembers which door was cast (reusing the
         // split-cast slot); resolution unlocks that door.

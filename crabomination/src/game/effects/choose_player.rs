@@ -84,21 +84,54 @@ impl GameState {
         opps
     }
 
-    /// CR 702.174a — "as an additional cost to cast this spell, you may
-    /// choose an opponent": the gift's recipient, picked while casting
-    /// (CR 601.2b), so it never suspends. A scripted or bot decider answers
-    /// the ballot; a headless or live-UI seat takes the headless pick.
-    pub(crate) fn choose_gift_recipient(&mut self, caster: usize, source: CardId) -> Option<usize> {
-        let opps = self.gift_ballot(caster);
+    /// "Choose an opponent" made where no resolution can suspend — a cast's
+    /// additional cost (Gift, CR 702.174a / 601.2b), a replacement as a
+    /// permanent enters (a Siege's protector, CR 310.11a; Tribute, CR
+    /// 702.104a), a state-based action (CR 704.5w-x) or a cast trigger's copy
+    /// (Demonstrate, CR 702.144a). A scripted or bot decider answers the
+    /// [`gift_ballot`](Self::gift_ballot); a headless or live-UI seat takes
+    /// its headless pick.
+    pub(crate) fn choose_opponent_at_once(&mut self, chooser: usize, source: CardId, prompt: &str) -> Option<usize> {
+        let opps = self.gift_ballot(chooser);
         let i = if opps.len() <= 1 || matches!(self.decider.kind(), crate::decision::DeciderKind::Auto) {
             0
         } else {
-            match self.decider.decide(&ballot_decision(source, &opps, "Promise the gift to")) {
+            match self.decider.decide(&ballot_decision(source, &opps, prompt)) {
                 DecisionAnswer::Amount(n) => n as usize,
                 _ => 0,
             }
         };
         opps.get(i).or(opps.first()).copied()
+    }
+
+    /// CR 704.5w / 704.5x — a battle with no protector in the game (its
+    /// protector left) and nothing attacking it, or a Siege its own controller
+    /// protects (a control change), gets a new protector from its
+    /// controller's opponents; with none to choose, it goes to its owner's
+    /// graveyard.
+    pub(crate) fn reseat_battle_protectors(&mut self, events: &mut Vec<GameEvent>) {
+        use crate::game::types::AttackTarget;
+        let stale: Vec<(CardId, usize)> = self
+            .battlefield
+            .iter()
+            .filter(|c| c.definition.is_battle())
+            .filter(|c| match c.protected_by {
+                Some(pr) if pr == c.controller => true,
+                Some(pr) if self.players.get(pr).is_some_and(|pl| pl.is_alive()) => false,
+                _ => !self.attacking.iter().any(|a| a.target == AttackTarget::Battle(c.id)),
+            })
+            .map(|c| (c.id, c.controller))
+            .collect();
+        for (id, ctrl) in stale {
+            match self.choose_opponent_at_once(ctrl, id, "Choose the Siege's protector") {
+                Some(q) => {
+                    if let Some(c) = self.battlefield_find_mut(id) {
+                        c.protected_by = Some(q);
+                    }
+                }
+                None => events.extend(self.remove_to_graveyard_with_triggers(id)),
+            }
+        }
     }
 
     /// `Effect::ChooseOpponentThen` — the controller names an opponent for

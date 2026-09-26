@@ -2562,16 +2562,14 @@ impl GameState {
                             });
                         }
                     }
-                    // CR 310.6 — a cast Siege's controller chooses an opponent
-                    // to protect it (the lone opponent in 2-player; multiplayer
-                    // choice is a follow-up).
+                    // CR 310.8a / 310.11a — as a cast Siege enters, its
+                    // controller chooses one of their opponents to protect it.
                     if let Some(c) = self.battlefield.find_by_id(card_id)
                         && c.definition.is_battle()
                         && c.protected_by.is_none()
                     {
                         let ctrl = c.controller;
-                        let protector = (0..self.players.len())
-                            .find(|&pl| pl != ctrl && self.players[pl].is_alive());
+                        let protector = self.choose_opponent_at_once(ctrl, card_id, "Choose the Siege's protector");
                         if let Some(c) = self.battlefield.find_by_id_mut(card_id) {
                             c.protected_by = protector;
                         }
@@ -7297,7 +7295,7 @@ impl GameState {
             self.remove_from_battlefield_to_graveyard_raw(id);
         }
 
-        // CR 310.10 / 704.5x — a battle with no defense counters is defeated.
+        // CR 310.7 / 704.5v — a battle with no defense counters is defeated.
         let defeated_battles: Vec<CardId> = if !scan.battle {
             Vec::new()
         } else {
@@ -7718,6 +7716,11 @@ impl GameState {
         // revert to their owners' control.
         for &p in &newly_eliminated {
             self.objects_leave_with_player(p);
+        }
+        // CR 704.5w-x — after the departures, so a protector who left in this
+        // sweep is replaced in it.
+        if scan.battle {
+            self.reseat_battle_protectors(events);
         }
 
         // CR 104.2 / 810.7: the game ends when only one *team* has

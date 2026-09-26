@@ -5965,3 +5965,92 @@ fn cr_702_141a_each_encore_token_attacks_its_own_opponent() {
         Attack { attacker: tokens[1].0, target: AttackTarget::Player(2) },
     ])).expect("each token at its own opponent");
 }
+
+// ── CR 310.11a / 704.5w-x — a Siege's protector is one chosen opponent ────
+
+/// CR 310.11a — as a Siege enters, its controller chooses its protector from
+/// among their opponents; it was the lowest-numbered one.
+#[test]
+fn cr_310_11a_the_siege_controller_chooses_its_protector() {
+    use crabomination::decision::ScriptedDecider;
+    let mut g = multi_player_game(4);
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // Ballot: fewest creatures first — [2, 3, 1]; the answer names seat 3.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(1)]));
+    let battle = g.move_card_to_battlefield_for_test(0, catalog::invasion_of_zendikar());
+    assert_eq!(g.battlefield_find(battle).unwrap().protected_by, Some(3));
+}
+
+/// CR 704.5x — a Siege whose controller becomes its protector (a control
+/// change) gets a new protector among the new controller's opponents.
+#[test]
+fn cr_704_5x_a_stolen_siege_gets_a_new_protector() {
+    let mut g = multi_player_game(3);
+    let battle = g.add_card_to_battlefield(0, catalog::invasion_of_zendikar());
+    g.battlefield_find_mut(battle).unwrap().protected_by = Some(1);
+    let ctx = EffectContext::for_spell(1, None, 0, 0);
+    g.resolve_effect(
+        &crabomination::effect::Effect::GainControl {
+            what: crabomination::effect::Selector::ExactObjects(vec![battle]),
+            to: Some(PlayerRef::Seat(1)),
+            duration: crabomination::effect::Duration::Permanent,
+        },
+        &ctx,
+    ).expect("seat 1 takes the Siege it protects");
+    g.check_state_based_actions();
+    let b = g.battlefield_find(battle).expect("still on the battlefield");
+    assert_eq!(b.controller, 1);
+    assert!(matches!(b.protected_by, Some(0 | 2)), "an opponent of seat 1, not seat 1: {:?}", b.protected_by);
+}
+
+/// CR 704.5w — a battle whose protector has left the game gets a new one.
+#[test]
+fn cr_704_5w_a_battle_whose_protector_left_gets_a_new_one() {
+    let mut g = multi_player_game(4);
+    let battle = g.add_card_to_battlefield(0, catalog::invasion_of_zendikar());
+    g.battlefield_find_mut(battle).unwrap().protected_by = Some(2);
+    g.players[2].life = 0;
+    g.check_state_based_actions();
+    assert!(!g.players[2].is_alive());
+    let pr = g.battlefield_find(battle).expect("the Siege stays").protected_by;
+    assert!(matches!(pr, Some(1 | 3)), "a live opponent protects it: {pr:?}");
+}
+
+/// CR 702.144a — Demonstrate's second copy goes to an opponent the caster
+/// chooses (headless: the one with the fewest creatures), not seat 1 by index.
+#[test]
+fn cr_702_144a_demonstrate_copies_for_the_chosen_opponent() {
+    let mut g = multi_player_game(3);
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let back = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::healing_technique());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(back)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Healing Technique");
+    g.resolve_top_of_stack().expect("the demonstrate trigger");
+    let casters: Vec<usize> = g.stack.iter().filter_map(|si| match si {
+        crabomination::game::types::StackItem::Spell { caster, .. } => Some(*caster),
+        _ => None,
+    }).collect();
+    assert_eq!(casters.iter().filter(|&&c| c == 2).count(), 1, "seat 2 copies it: {casters:?}");
+    assert!(!casters.contains(&1), "seat 1 does not: {casters:?}");
+}
+
+/// CR 702.104a — tribute asks the opponent the controller chooses (headless:
+/// the fewest creatures), not the lowest seat.
+#[test]
+fn cr_702_104a_tribute_asks_the_chosen_opponent() {
+    let mut g = multi_player_game(4);
+    for p in g.players.iter_mut() {
+        p.wants_ui = true;
+    }
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let demolok = g.add_card_to_battlefield(0, catalog::nessian_demolok());
+    g.fire_self_etb_triggers(demolok, 0);
+    while g.pending_decision.is_none() && !g.stack.is_empty() {
+        g.resolve_top_of_stack().expect("resolve the tribute trigger");
+    }
+    assert_eq!(g.pending_decision.as_ref().expect("the tribute ask is posed").acting_player(), 2);
+}
