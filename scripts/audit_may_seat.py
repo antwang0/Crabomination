@@ -22,7 +22,7 @@ The two ways it goes unnoticed are both worth stating:
   perspectives align on declining".
 
 The fix is the seat-routed sibling — `Effect::MayDoBy { who, … }` /
-`MayPayBy`, or `EachPlayerDoes`, which re-seats `ctx.controller` per player
+`MayPayBy`, or `EachPlayerDoes` / `AsPlayer`, which re-seat `ctx.controller`
 and so makes a nested plain `MayDo` correct.
 
 ⚠ **A "may" after the other player's name is often still yours.** "At the
@@ -59,7 +59,7 @@ OTHER_MAY = re.compile(
 # The seat-routed forms, and the wrappers that re-seat `ctx.controller`.
 ROUTED = re.compile(
     r"MayDoBy|MayPayBy|MayDiscardBy|MaySacrificeBy|EachPlayerDoes|EachPlayerMay"
-    r"|UnlessPlayerPays|TemptingOffer|JoinForces|VoteTally|ask_seat"
+    r"|UnlessPlayerPays|TemptingOffer|JoinForces|VoteTally|ask_seat|AsPlayer"
 )
 # The controller-asked forms.
 CONTROLLER_ASKED = re.compile(r"Effect::May(Do|Pay)\b")
