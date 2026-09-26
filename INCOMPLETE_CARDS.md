@@ -1966,7 +1966,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Lady Loki, Agent of Chaos | Doom Prevails (MSC) | "your first instant, sorcery or Villain spell each turn" counts from when she is on the battlefield, not from the start of the turn. |
 | 🟡 Extract Power | Doom Prevails (MSC) | the exiled cards are face up. |
 | 🟡 Khârn the Betrayer | The Ruinous Powers (40K) | the next opponent in turn order gains control of it, not an opponent of your choice. |
-| 🟡 The Horus Heresy | The Ruinous Powers (40K) | chapter III's choices start with the next opponent, not with you. |
 | 🟡 The Lost and the Damned | The Ruinous Powers (40K) | a land played from outside your hand (graveyard, exile) doesn't count. |
 | 🟡 The Ruinous Powers | The Ruinous Powers (40K) | the life-loss rider reads any spell you cast from exile that you don't own, and an exiled land can't be played. |
 | 🟡 Day of the Moon | Masters of Evil (WHO) | only the latest chosen name is goaded, not every name chosen for it. |
@@ -2162,7 +2161,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Berserker's Frenzy | Draconic Rage (AFC) | the 1–14 result's "any number of creatures" is every creature your opponents control. |
 | 🟡 Component Pouch | Draconic Rage (AFC) | "two mana of different colors" may be one color twice. |
 | 🟡 Dragonborn Champion | Draconic Rage (AFC) | damage a source you control deals to you doesn't draw. |
-| 🟡 Druid of Purification | Draconic Rage (AFC) | every player chooses (no "may"), starting with the next player rather than you. |
+| 🟡 Druid of Purification | Draconic Rage (AFC) | every player chooses (no "may"). |
 | 🟡 Klauth, Unrivaled Ancient | Draconic Rage (AFC) | "spend this mana only to cast spells" isn't enforced. |
 | 🟡 Sword of Hours | Draconic Rage (AFC) | "the damage dealt" is the damage to each recipient, one roll per recipient. |
 | 🟡 Baeloth Barrityl, Entertainer | Draconic Dissent (CLB) | the powers compared are each creature's own (printed, pumps, counters), not static anthems. |

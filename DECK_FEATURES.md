@@ -168,7 +168,7 @@ lists were picked.
 | **Turtle Power!** (TMC precon) WUBRG | Heroes in a Half Shell | WUBRG | 100 | 🟡 all 100 implemented, 4 carry residuals (Heroes in a Half Shell, Coin of Mastery, Special Move, Vigor) |
 | **Blast from the Past** (WHO precon) GWU | The Fourth Doctor + Sarah Jane Smith | GWU | 100 | 🟡 all 100 implemented, 10 carry residuals (Ace's Baseball Bat, Displaced Dinosaurs, Nyssa of Traken, Peri Brown, Reverse the Polarity, Susan Foreman, The Curse of Fenric, The Eighth Doctor, The Fourth Doctor, The Second Doctor) |
 | **Doom Prevails** (MSC precon) UBR | Doctor Doom, King of Latveria | UBR | 100 | 🟡 all 100 implemented, 3 carry residuals (Extract Power, Kang Dynasty, Lady Loki) |
-| **The Ruinous Powers** (40K precon) UBR | Abaddon the Despoiler | UBR | 100 | 🟡 all 100 implemented, 4 carry residuals (Khârn the Betrayer, The Horus Heresy, The Lost and the Damned, The Ruinous Powers) |
+| **The Ruinous Powers** (40K precon) UBR | Abaddon the Despoiler | UBR | 100 | 🟡 all 100 implemented, 3 carry residuals (Khârn the Betrayer, The Lost and the Damned, The Ruinous Powers) |
 | **Masters of Evil** (WHO precon) UBR | Davros, Dalek Creator | UBR | 100 | 🟡 all 100 implemented, 11 carry residuals (Day of the Moon, Doomsday Confluence, Genesis of the Daleks, Rassilon, The Master Multiplied, The Sound of Drums, The Toymaker's Trap, Time Reaper, Vislor Turlough, Weeping Angel, Zygon Infiltrator) |
 | **Timey-Wimey** (WHO precon) URW | The Tenth Doctor + Rose Tyler | URW | 100 | 🟡 all 100 implemented, 2 carry residuals (Clockspinning, The Day of the Doctor) |
 | **Necron Dynasties** (40K precon) B | Szarekh, the Silent King | B | 100 | 🟡 all 100 implemented, 4 carry residuals (Biotransference, Canoptek Wraith, Necron Deathmark, Out of the Tombs) |

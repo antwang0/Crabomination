@@ -14364,8 +14364,8 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::EachPlayerChoosesToDestroy { filter } => {
-                self.each_player_chooses_to_destroy(filter, effect, ctx, events)
+            Effect::EachPlayerChoosesToDestroy { filter, starting_with_you } => {
+                self.each_player_chooses_to_destroy(filter, *starting_with_you, effect, ctx, events)
             }
 
             Effect::PlayerChoosesToDestroy { who, filter, no_regen } => {

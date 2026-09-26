@@ -202,12 +202,13 @@ pub fn dragonborn_champion() -> CardDefinition {
 }
 
 /// Druid of Purification — enters: each player chooses an artifact or
-/// enchantment you don't control; destroy each chosen. Residual: nobody may
-/// decline, and the choosing starts with the next player.
+/// enchantment you don't control, starting with you; destroy each chosen.
+/// Residual: nobody may decline.
 pub fn druid_of_purification() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![etb(Effect::EachPlayerChoosesToDestroy {
             filter: R::Artifact.or(R::Enchantment).and(R::ControlledByOpponent),
+            starting_with_you: true,
         })],
         ..creature(
             "Druid of Purification",

@@ -98,7 +98,7 @@ fn each_player_chooses_a_creature_you_dont_control_to_destroy() {
     ]));
     let ctx = EffectContext::for_spell(0, None, 0, 0);
     g.resolve_effect(
-        &Effect::EachPlayerChoosesToDestroy { filter: R::Creature.and(R::ControlledByOpponent) },
+        &Effect::EachPlayerChoosesToDestroy { filter: R::Creature.and(R::ControlledByOpponent), starting_with_you: false },
         &ctx,
     )
     .expect("resolve");

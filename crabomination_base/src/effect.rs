@@ -7089,7 +7089,14 @@ pub enum Effect {
     /// "Starting with the next opponent in turn order, each player chooses a
     /// [filter]. Destroy the chosen [permanents]" (Sadistic Shell Game); the
     /// filter's "you" is the resolving controller.
-    EachPlayerChoosesToDestroy { filter: SelectionRequirement },
+    /// `starting_with_you`: "starting with you" (The Horus Heresy, Druid of
+    /// Purification) rather than with the next opponent — the caster picks
+    /// first and every later seat sees the pick (CR 101.4).
+    EachPlayerChoosesToDestroy {
+        filter: SelectionRequirement,
+        #[serde(default)]
+        starting_with_you: bool,
+    },
     /// "Destroy target [filter] that player controls of their choice" (The
     /// Abyss, Magus of the Abyss): `who` picks one permanent they control
     /// matching `filter` and it is destroyed — `no_regen` for "it can't be

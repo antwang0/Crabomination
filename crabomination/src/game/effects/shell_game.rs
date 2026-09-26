@@ -18,13 +18,16 @@ impl GameState {
     pub(super) fn each_player_chooses_to_destroy(
         &mut self,
         filter: &SelectionRequirement,
+        starting_with_you: bool,
         effect: &Effect,
         ctx: &EffectContext,
         events: &mut Vec<GameEvent>,
     ) -> Result<(), GameError> {
         let source = ctx.source.unwrap_or(CardId(0));
         let mut order = self.seats_in_turn_order_from(ctx.controller);
-        order.rotate_left(1);
+        if !starting_with_you {
+            order.rotate_left(1);
+        }
         let legal: Vec<Target> = self
             .battlefield
             .iter()

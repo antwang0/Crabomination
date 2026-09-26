@@ -850,8 +850,8 @@ pub fn tallyman_of_nurgle() -> CardDefinition {
 
 /// The Horus Heresy — I: for each opponent, gain control of up to one target
 /// nonlegendary creature of theirs while this remains. II: draw a card per
-/// creature you control but don't own. III: each player chooses a creature;
-/// destroy them. Residual: III's choices start with the next opponent.
+/// creature you control but don't own. III: starting with you, each player
+/// chooses a creature; destroy them.
 pub fn the_horus_heresy() -> CardDefinition {
     saga(
         "The Horus Heresy",
@@ -876,7 +876,7 @@ pub fn the_horus_heresy() -> CardDefinition {
                     yours(R::Creature).and(R::Not(Box::new(R::OwnedByYou))),
                 )))),
             ),
-            (3, Effect::EachPlayerChoosesToDestroy { filter: R::Creature }),
+            (3, Effect::EachPlayerChoosesToDestroy { filter: R::Creature, starting_with_you: true }),
         ],
     )
 }
