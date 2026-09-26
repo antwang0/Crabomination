@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED 2026-09-26 (session `012put2X`) — two pod hangs, two pod loops, and eleven Commander residuals](#fixed-2026-09-26-session-012put2x--two-pod-hangs-two-pod-loops-and-eleven-commander-residuals) | 47 |
 | Bugs & robustness | [FIXED 2026-09-26 (session `015BCEt5`) — the player-choice batch, and a board slot that reached a graveyard](#fixed-2026-09-26-session-015bcet5--the-player-choice-batch-and-a-board-slot-that-reached-a-graveyard) | 45 |
 | Bugs & robustness | [FIXED 2026-09-26 (session `01VVD5mW`) — Timey-Wimey's follow-ups and a residual sweep](#fixed-2026-09-26-session-01vvd5mw--timey-wimeys-follow-ups-and-a-residual-sweep) | 90 |
 | Bugs & robustness | [FIXED 2026-09-19 (the forty-sixth find) — a static's filter leaf that the chosen `AffectedPermanents` variant cannot carry is SILENTLY DROPPED, and a dropped leaf widens the static](#fixed-2026-09-19-the-forty-sixth-find--a-statics-filter-leaf-that-the-chosen-affectedpermanents-variant-cannot-carry-is-silently-dropped-and-a-dropped-leaf-widens-the-static) | 62 |
@@ -107,6 +108,53 @@ the handoff.
 
 
 # Bugs & robustness
+
+## FIXED 2026-09-26 (session `012put2X`) — two pod hangs, two pod loops, and eleven Commander residuals
+
+- ⚠ **A pod HANG, not a cap** (8 seats, seed 49003 game 559): the action cap
+  counts actions, so one action that never returns is invisible to it — the
+  census block ran 87 minutes on one thread. Cadric, Soul Kindler copied an
+  Adrix and Nev with thirty-odd Adrix copies out; `CreateTokenCopiesHasteSac`
+  doubled per doubler with no cap, 2^32 mints inside one bot probe. Only
+  `CreateToken` was capped. **`GameState::doubled_token_count`** now sizes
+  every mint loop (copy, populate, Incubator, fight-each, attacking); the game
+  ends as a `BoardCap`. `CreateTokenAttacking` skipped CR 614.13 doublers
+  altogether and doubles now. Find it with `gdb -p <pid> -batch -ex "thread
+  apply all bt"`, then bisect `--first i --games 1` under `timeout 20`.
+- ⚠ **A second pod HANG, the stack's this time** (4 seats, seed 65002 game
+  41): Venser, Fervent Forger's ETB copies an opponent's Replication
+  Technique twice; each copy makes a token Venser whose ETB copies it again.
+  A real (player-stoppable) combo — the bot always takes the copy mode — and
+  each action past ~1,700 stack items walked the whole stack per target
+  pick, until one never returned. **`recommend::MAX_STACK` (512)** is the
+  stack's simulator bound beside `MAX_BATTLEFIELD`: copies stop there and
+  the game ends as a `BoardCap`. ⚠ `stop_reason` must fire AT the bound
+  (`>=`): at `>` the chain hovered just under it and ran 800,003 actions.
+- ⚠ **Rot Hulk returned itself** (8 seats, seed 49013 game 630, 3,730 Woe
+  Strider activations): its "return up to X target Zombie cards" picked at
+  resolution, so a Hulk sacrificed in response came back with the Zombie
+  sacrificed before it. Targets on entry now (CR 603.3d).
+- ⚠ **Two Missys** (6 seats, seed 47010 game 5, 1,918 Sakura-Tribe Elder
+  activations) — the same find as `01LEHArn`'s seed 56181, fixed there in
+  `move_card_to`; this session's tests add the cross-controller case and the
+  Elder shape.
+- Draws in the census are CR 104.4a simultaneous losses (every one read by
+  `cap_diagnosis`'s new per-seat `[lost: …]`); the board caps are Oloro's
+  Crawlspace holding off a doubling Gisa zombie army — a lock, not a defect.
+- Residuals closed: `MayPlayDuration::UntilSourceExilesAnother` (Superior
+  Foes, Furious Rise, Unstable Amulet); `AbilityTargetsMatching` (Siren
+  Stormtamer counters abilities); `IsAttackingTriggerPlayer` (Echoing
+  Assault, once per player attacked); Bloodthirster's attack restriction;
+  Chaos Mutation's different controllers; equip Pirate {1} (Gemcutter
+  Buccaneer's Treasures, Pirate Hat); "for as long as you control" untap
+  locks (Merchant Raiders, Shipbreaker Kraken, Dungeon Geists, Wall of Stolen
+  Identity); Somnophore (its own damage, that player's creature); Sand Squid
+  (while tapped, may not untap).
+- **Open:** Angel of Destiny's "each player it attacked this turn" (the last
+  one only; `combat_defenders` is armed only for Port Razer's keyword);
+  Khârn's "an opponent of your choice" inside a damage replacement (can't
+  suspend there); `Will of the X` read "as you cast" at resolution
+  (modes are also chosen at resolution — CR 601.2b, a cast-time mode pick).
 
 ## FIXED 2026-09-26 (session `015BCEt5`) — the player-choice batch, and a board slot that reached a graveyard
 

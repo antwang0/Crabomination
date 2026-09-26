@@ -81,7 +81,7 @@ lists were picked.
 | **Chaos Incarnate** (SCD) BR | Kardur, Doomscourge | BR | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Heavenly Inferno** (CMD precon) RWB | Kaalia of the Vast | RWB | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Political Puppets** (CMD precon) URW | Zedruu the Greathearted | URW | 100 | 🟡 all 100 implemented (Trade Secrets, banned, swapped for Divination), 2 carry residuals (below) |
-| **Eternal Might** (DRC precon) WUB | Temmet, Naktamun's Will | WUB | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
+| **Eternal Might** (DRC precon) WUB | Temmet, Naktamun's Will | WUB | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Land's Wrath** (ZNC precon) RGW | Obuun, Mul Daya Ancestor | RGW | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Stalwart Unity** (C16 precon) RGWU | Kynaios and Tiro of Meletis | RGWU | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Token Triumph** (SCD starter) GW | Emmara, Soul of the Accord | GW | 100 | ✅ complete |
@@ -97,7 +97,7 @@ lists were picked.
 | **Jump Scare!** (DSC precon) GU | Zimone, Mystery Unraveler | GU | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
 | **Obscura Operation** (NCC precon) WUB | Kamiz, Obscura Oculus | WUB | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Elven Council** (LTC precon) GU | Galadriel, Elven-Queen | GU | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
-| **Ahoy Mateys** (LCC precon) UBR | Admiral Brass, Unsinkable | UBR | 100 | 🟡 all 100 implemented, 6 carry residuals (below) |
+| **Ahoy Mateys** (LCC precon) UBR | Admiral Brass, Unsinkable | UBR | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Scions & Spellcraft** (FIC precon) WUB | Y'shtola, Night's Blessed | WUB | 100 | 🟡 all 100 implemented, 6 carry residuals (below) |
 | **From Cute to Brute** (SLD Commander deck) WUBRG | Esika, God of the Tree | WUBRG | 100 | 🟡 all 100 implemented, 10 carry residuals (below) |
 | **Enduring Enchantments** (CMM precon) WBG | Anikthea, Hand of Erebos | WBG | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
@@ -117,7 +117,7 @@ lists were picked.
 | **Squirreled Away** (BLC precon) BG | Hazel of the Rootbloom | BG | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Evasive Maneuvers** (C13 precon) GWU | Derevi, Empyrial Tactician | GWU | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Draconic Destruction** (SCD starter) RG | Atarka, World Render | RG | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
-| **Family Matters** (BLC precon) URW | Zinnia, Valley's Voice | URW | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
+| **Family Matters** (BLC precon) URW | Zinnia, Valley's Voice | URW | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Virtue and Valor** (WOC precon) GW | Ellivere of the Wild Court | GW | 100 | 🟡 all 100 implemented, 7 carry residuals (below) |
 | **Divine Convocation** (MOC precon) URW | Kasla, the Broken Halo | URW | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Symbiotic Swarm** (C20 precon) WBG | Kathril, Aspect Warper | WBG | 100 | 🟡 all 100 implemented, 6 carry residuals (below) |
@@ -167,8 +167,8 @@ lists were picked.
 | **Avengers Assemble** (MSC precon) URW | Captain America, Team Leader | URW | 100 | 🟡 all 100 implemented, 6 carry residuals (Captain Marvel, Heroic Return, Heroic Sacrifice, Scarlet Witch, Speed, Winter Soldier) |
 | **Turtle Power!** (TMC precon) WUBRG | Heroes in a Half Shell | WUBRG | 100 | 🟡 all 100 implemented, 4 carry residuals (Heroes in a Half Shell, Coin of Mastery, Special Move, Vigor) |
 | **Blast from the Past** (WHO precon) GWU | The Fourth Doctor + Sarah Jane Smith | GWU | 100 | 🟡 all 100 implemented, 10 carry residuals (Ace's Baseball Bat, Displaced Dinosaurs, Nyssa of Traken, Peri Brown, Reverse the Polarity, Susan Foreman, The Curse of Fenric, The Eighth Doctor, The Fourth Doctor, The Second Doctor) |
-| **Doom Prevails** (MSC precon) UBR | Doctor Doom, King of Latveria | UBR | 100 | 🟡 all 100 implemented, 4 carry residuals (Extract Power, Kang Dynasty, Lady Loki, Superior Foes of Spider-Man) |
-| **The Ruinous Powers** (40K precon) UBR | Abaddon the Despoiler | UBR | 100 | 🟡 all 100 implemented, 6 carry residuals (Bloodthirster, Chaos Mutation, Khârn the Betrayer, The Horus Heresy, The Lost and the Damned, The Ruinous Powers) |
+| **Doom Prevails** (MSC precon) UBR | Doctor Doom, King of Latveria | UBR | 100 | 🟡 all 100 implemented, 3 carry residuals (Extract Power, Kang Dynasty, Lady Loki) |
+| **The Ruinous Powers** (40K precon) UBR | Abaddon the Despoiler | UBR | 100 | 🟡 all 100 implemented, 4 carry residuals (Khârn the Betrayer, The Horus Heresy, The Lost and the Damned, The Ruinous Powers) |
 | **Masters of Evil** (WHO precon) UBR | Davros, Dalek Creator | UBR | 100 | 🟡 all 100 implemented, 11 carry residuals (Day of the Moon, Doomsday Confluence, Genesis of the Daleks, Rassilon, The Master Multiplied, The Sound of Drums, The Toymaker's Trap, Time Reaper, Vislor Turlough, Weeping Angel, Zygon Infiltrator) |
 | **Timey-Wimey** (WHO precon) URW | The Tenth Doctor + Rose Tyler | URW | 100 | 🟡 all 100 implemented, 2 carry residuals (Clockspinning, The Day of the Doctor) |
 | **Necron Dynasties** (40K precon) B | Szarekh, the Silent King | B | 100 | 🟡 all 100 implemented, 4 carry residuals (Biotransference, Canoptek Wraith, Necron Deathmark, Out of the Tombs) |
