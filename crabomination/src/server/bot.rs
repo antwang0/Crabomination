@@ -15303,6 +15303,25 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
     // must chump an infect/toxic attacker to avoid a poison-out even at a
     // healthy life total. Infect deals its power as poison; Toxic N adds N on
     // top of normal combat damage.
+    // CR 903.10a — 21 combat damage from one commander loses the game at any
+    // life total. A commander whose unblocked hit reaches 21 on this seat is
+    // chumped like a lethal swing; the life check alone let it through at 30
+    // life. (Measured at zero incidence in four 4,000-game pod A/Bs — the
+    // precon fields almost never kill by commander damage — and kept as the
+    // rules fix it is.) No commanders, no walk: the duel path pays nothing.
+    let commander_lethal: crate::game::types::SmallIdSet<CardId> = if state.commander_damage.is_empty() {
+        Default::default()
+    } else {
+        attacker_info
+            .iter()
+            .filter(|a| a.target == AttackTarget::Player(seat))
+            .filter_map(|a| {
+                let cmd = state.commander_card_of(a.id)?;
+                let dealt = state.commander_damage.get(&(seat, cmd)).copied().unwrap_or(0);
+                (dealt.saturating_add(a.power.max(0) as u32) >= 21).then_some(a.id)
+            })
+            .collect()
+    };
     let incoming_poison: u32 = attacker_info.iter().map(|a| a.poison).sum();
     let poison_threatened =
         incoming_poison > 0 && state.players[seat].poison_counters + incoming_poison >= 10;
@@ -15497,7 +15516,7 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
                 // cost (it survives and isn't tapped). Free value even with no
                 // life pressure — block the biggest attacker it can.
                 200 + *a_pow
-            } else if life_threatened || defend_attackers.contains(a_id) {
+            } else if life_threatened || defend_attackers.contains(a_id) || commander_lethal.contains(a_id) {
                 // Chump-block to stop lethal damage (or to save a doomed
                 // planeswalker). A trampler tramples over a chump
                 // (CR 702.19e), so a lone chump only stops `blocker_toughness`
@@ -23793,6 +23812,34 @@ mod tests {
         let blocks = pick_blocks_for_test(&g, 1);
         assert!(blocks.iter().any(|(b, _)| *b == chump),
             "bot chumps the infect attacker to avoid a poison-out");
+    }
+
+    /// CR 903.10a — 21 combat damage from one commander loses the game at
+    /// any life total, so the bot chumps a commander whose unblocked hit
+    /// reaches 21 even at 30 life (the life check alone let it through). One
+    /// that stays short of 21 is not chumped.
+    #[test]
+    fn bot_chumps_a_commander_about_to_deal_its_21st_point() {
+        use crate::card::{CardDefinition, CardType};
+        use crate::game::types::{Attack, AttackTarget};
+        let mut g = crate::game::multi_player_game(3);
+        let general = g.add_card_to_battlefield(0, CardDefinition {
+            name: "Voltron General",
+            card_types: vec![CardType::Creature],
+            power: 6,
+            toughness: 6,
+            ..Default::default()
+        });
+        g.players[0].commanders.push(general);
+        let chump = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        g.players[1].life = 30;
+        g.attacking = vec![Attack { attacker: general, target: AttackTarget::Player(1) }];
+        g.commander_damage.insert((1, general), 15);
+        let blocks = pick_blocks_for_test(&g, 1);
+        assert!(blocks.iter().any(|(b, _)| *b == chump), "15 + 6 is the 21st point: chump it");
+        g.commander_damage.insert((1, general), 14);
+        let blocks = pick_blocks_for_test(&g, 1);
+        assert!(!blocks.iter().any(|(b, _)| *b == chump), "14 + 6 is 20: take it at 30 life");
     }
 
     /// Color-choice mana abilities (Ornithopter of Paradise's `{T}: Add one
