@@ -239,3 +239,19 @@ fn kari_zev_ragavan_attacks_and_leaves() {
     g.process_attacking_token_cleanup();
     assert!(g.battlefield_find(rag).is_none(), "exiled at end of combat");
 }
+
+/// Bloodthirsty Adversary — kicked once, it exiles an instant with mana value
+/// 3 or less from your graveyard, copies it and casts the copy free.
+#[test]
+fn bloodthirsty_adversary_recasts_a_graveyard_spell() {
+    let mut g = main_phase();
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let adv = g.add_card_to_battlefield(0, catalog::bloodthirsty_adversary());
+    g.battlefield_find_mut(adv).unwrap().kick_count = 1;
+    let etb = catalog::bloodthirsty_adversary().triggered_abilities[0].effect.clone();
+    let ctx = crabomination::game::effects::EffectContext::for_trigger(adv, 0, None, 0);
+    g.resolve_effect(&etb, &ctx).expect("etb");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bolt), "the card is exiled");
+    assert_eq!(g.players[1].life, 17, "its copy was cast free at the opponent");
+}

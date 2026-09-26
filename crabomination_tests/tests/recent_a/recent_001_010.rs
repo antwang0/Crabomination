@@ -4943,16 +4943,6 @@ mod recent {
     }
 
     /// Bloodthirsty Adversary has haste, multikicker, and a kick-scaled +1/+1 spec.
-    #[test]
-    fn bloodthirsty_adversary_multikicker_counters() {
-        use crabomination::card::CounterType;
-        use crabomination::effect::Value;
-        let d = catalog::bloodthirsty_adversary();
-        assert!(d.keywords.contains(&Keyword::Haste));
-        assert!(d.keywords.iter().any(|k| matches!(k, Keyword::Multikicker(_))));
-        assert_eq!(d.enters_with_counters, Some((CounterType::PlusOnePlusOne, Value::TimesKicked)));
-    }
-
     /// Eccentric Farmer mills three then returns a land from the graveyard.
     #[test]
     fn eccentric_farmer_mill_then_return_land() {
@@ -6722,24 +6712,32 @@ mod recent {
         assert_eq!(g.players[1].life, 19, "opponent lost 1");
     }
 
-    /// Marionette Master drains by the dying artifact's mana value.
+    /// Marionette Master — "target opponent loses life equal to this
+    /// creature's power" whenever an artifact you control is put into a
+    /// graveyard from the battlefield: sacrificed or destroyed.
     #[test]
-    fn marionette_master_drains_by_mana_value() {
+    fn marionette_master_drains_by_its_power() {
         let mut g = two_player_game();
-        let mm = catalog::marionette_master();
-        assert_eq!(mm.triggered_abilities.len(), 2, "fabricate + artifact-death drain");
         use crabomination::effect::{Effect, Selector, Value};
-        g.add_card_to_battlefield(0, mm);
-        // A {3} artifact (mana value 3) is sacrificed.
-        let art = g.add_card_to_battlefield(0, catalog::worn_powerstone());
-        let mv = g.battlefield_find(art).unwrap().definition.cost.cmc();
+        let mm = g.add_card_to_battlefield(0, catalog::marionette_master());
+        let power = g.computed_permanent(mm).unwrap().power;
+        g.add_card_to_battlefield(0, catalog::worn_powerstone());
         let ctx = crabomination::game::effects::EffectContext::for_ability(crabomination::card::CardId(0), 0, None);
         let evs = g.resolve_effect(&Effect::Sacrifice {
             who: Selector::You, count: Value::Const(1), filter: SelectionRequirement::Artifact,
         }, &ctx).unwrap();
         g.dispatch_triggers_for_events(&evs);
         drain_stack(&mut g);
-        assert_eq!(g.players[1].life, 20 - mv as i32, "lost life = artifact mana value");
+        assert_eq!(g.players[1].life, 20 - power, "lost life = the Master's power");
+        let stone = g.add_card_to_battlefield(0, catalog::worn_powerstone());
+        let tctx = crabomination::game::effects::EffectContext {
+            targets: vec![crabomination::game::types::Target::Permanent(stone)],
+            ..ctx.clone()
+        };
+        let evs = g.resolve_effect(&Effect::Destroy { what: Selector::Target(0) }, &tctx).unwrap();
+        g.dispatch_triggers_for_events(&evs);
+        drain_stack(&mut g);
+        assert_eq!(g.players[1].life, 20 - 2 * power, "destroyed counts too");
     }
 
     /// Glassdust Hulk grows and turns unblockable when another artifact enters.

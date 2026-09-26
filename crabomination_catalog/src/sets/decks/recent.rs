@@ -673,12 +673,26 @@ pub fn intrepid_adversary() -> CardDefinition {
 }
 
 /// Bloodthirsty Adversary — {1}{R} 2/2 Vampire. Haste. ETB pay {2}{R} any
-/// number of times for that many +1/+1 counters (modeled as Multikicker). The
-/// "exile up to that many I/S of MV ≤3 from your graveyard and copy them" value
-/// rider is deferred (TODO.md).
+/// number of times for that many +1/+1 counters (modeled as Multikicker), then
+/// exile up to that many instant and/or sorcery cards with mana value 3 or less
+/// from your graveyard, copy them, and cast the copies free. ⚠ The cards are
+/// the engine's pick (graveyard order), not targets.
 pub fn bloodthirsty_adversary() -> CardDefinition {
     use crate::card::CounterType;
+    let spells = SelectionRequirement::HasCardType(CardType::Instant)
+        .or(SelectionRequirement::HasCardType(CardType::Sorcery))
+        .and(SelectionRequirement::ManaValueAtMost(3));
     CardDefinition {
+        triggered_abilities: vec![etb(Effect::ForEach {
+            selector: Selector::Take {
+                inner: Box::new(Selector::CardsInZone { who: PlayerRef::You, zone: crate::card::Zone::Graveyard, filter: spells }),
+                count: Box::new(Value::TimesKicked),
+            },
+            body: Box::new(Effect::Seq(vec![
+                Effect::Move { what: Selector::TriggerSource, to: ZoneDest::Exile },
+                Effect::CopyCardAndCastFree { what: Selector::TriggerSource },
+            ])),
+        })],
         name: "Bloodthirsty Adversary",
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Creature],
@@ -12801,13 +12815,16 @@ pub fn disciple_of_the_vault() -> CardDefinition {
 }
 
 /// Marionette Master — {4}{B}{B} 1/3 Human Artificer. Fabricate 3; whenever an
-/// artifact you control is sacrificed, target opponent loses life equal to that
-/// artifact's mana value. (Destroy case approximated to the sacrifice path.)
+/// artifact you control is put into a graveyard from the battlefield, target
+/// opponent loses life equal to this creature's power.
 pub fn marionette_master() -> CardDefinition {
     use crate::effect::shortcut::fabricate;
     let mut abilities = vec![fabricate(3)];
     abilities.push(TriggeredAbility {
-        event: EventSpec::new(EventKind::PermanentSacrificed, EventScope::YourControl).with_filter(
+        // "Whenever an artifact you control is put into a graveyard from the
+        // battlefield, target opponent loses life equal to this creature's
+        // power" — any route to the graveyard, and the Master's power.
+        event: EventSpec::new(EventKind::PermanentDied, EventScope::YourControl).with_filter(
             Predicate::EntityMatches {
                 what: Selector::TriggerSource,
                 filter: SelectionRequirement::Artifact,
@@ -12815,7 +12832,7 @@ pub fn marionette_master() -> CardDefinition {
         ),
         effect: Effect::LoseLife {
             who: target_filtered(SelectionRequirement::OpponentPlayer),
-            amount: Value::ManaValueOf(Box::new(Selector::TriggerSource)),
+            amount: Value::PowerOf(Box::new(Selector::This)),
         },
     });
     CardDefinition {
