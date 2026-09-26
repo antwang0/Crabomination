@@ -59,6 +59,7 @@ sixty-seventh pass, so don't re-take that.
 7. **Leads:** Y'shtola (163) won 56 % of six-seat pods (seed 17302) — what her drain does that the attack decks don't; constant shrinks (Disfigure) are still combat tricks (moves 2-player traces); Sidar Kondo's evasion covers only your small creatures (needs a blocker-controller condition); Trove Warden returns on any leave, not "dies"; INCOMPLETE_CARDS' Commander rows are mostly "the engine picks" choices.
 8. ⚠ **CR 511.3** and **CR 601.2c** are enforced (combatants leave at end of combat; an unfillable required target makes the cast illegal) — a card body written around the old timing is a bug.
 9. **⚠ OPEN CLAIM (session `015BCEt5`, 2026-09-26):** the player-choice residual batch — "choose a player / an opponent", "an opponent of your choice", "target player" read as you, and "that player" per-attacked-player targets (`player_ballot`, `YouAttackedPlayer`). Claim a residual *batch* in this line, pushed on its own, before starting it.
+10. ⚠ **`--bench` invariant is now 200,398** (was 200,190): session `01VVD5mW`'s CR 603.10a fix — creatures dying in one batch see each other die (`game/simultaneous_deaths.rs`; Midnight Reaper under a Wrath). Bisect and pools in PERF. The same session closed ~45 Commander residual rows (ENGINE_BACKLOG `01VVD5mW`); open there: Tamiyo, Field Researcher's granter, Knight of New Alara's layer-5 read, Beckett Brass's combat-only tally.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
