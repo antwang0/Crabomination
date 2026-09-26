@@ -251,3 +251,26 @@ fn knight_paladin_and_thunderhawk_enter() {
     cast(&mut g, th, None).expect("cast");
     assert_eq!(count(&g, 0, "Astartes Warrior"), 2);
 }
+
+/// Neyam Shai Murad trades with the player it damaged: another opponent's
+/// graveyard is out of reach.
+#[test]
+fn neyam_trades_only_with_the_damaged_player() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = main_phase(3);
+    let neyam = g.add_card_to_battlefield(0, catalog::neyam_shai_murad());
+    g.clear_sickness(neyam);
+    let theirs = g.add_card_to_graveyard(2, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: neyam, target: AttackTarget::Player(1) }]))
+        .expect("attack seat 1");
+    while g.step != TurnStep::EndCombat && !g.is_game_over() {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.players[1].life, 17, "Neyam connected");
+    assert!(g.players[2].graveyard.iter().any(|c| c.id == theirs), "seat 2's card stays put");
+}

@@ -7,8 +7,8 @@
 //!   creature that shares a name with another permanent, not only the copy's.
 //! - **Cybernetica Datasmith** — the two target players may be the same.
 //! - **Inquisitor Eisenhorn** — the first-draw reveal is automatic.
-//! - **Neyam Shai Murad** — the returned card may come from any opponent's
-//!   graveyard, and the card you take is the engine's pick, not theirs.
+//! - **Neyam Shai Murad** — the card you take is the engine's pick, not
+//!   theirs.
 //! - **Redemptor Dreadnought** — the optional graveyard exile (and the
 //!   attack pump it feeds) isn't offered.
 //! - **Triumph of Saint Katherine** — Praesidium Protectiva isn't
@@ -520,7 +520,7 @@ pub fn marneus_calgar() -> CardDefinition {
 /// Neyam Shai Murad — connecting may trade graveyard cards: that player gets
 /// a permanent card back to hand, you reanimate one of yours.
 ///
-/// ⚠ Residual: any opponent's graveyard; the engine picks your card.
+/// ⚠ Residual: the engine picks your card.
 pub fn neyam_shai_murad() -> CardDefinition {
     legendary(CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
@@ -529,7 +529,7 @@ pub fn neyam_shai_murad() -> CardDefinition {
                 description: "Trade graveyard permanents with that player?".into(),
                 body: Box::new(Effect::Seq(vec![
                     Effect::Move {
-                        what: target_filtered(R::PermanentCard.and(R::InOpponentGraveyard)),
+                        what: target_filtered(R::PermanentCard.and(R::InGraveyard).and(R::ControlledByTriggerPlayer)),
                         to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
                     },
                     Effect::Move {

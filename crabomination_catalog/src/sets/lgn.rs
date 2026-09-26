@@ -1960,7 +1960,7 @@ pub fn scion_of_darkness() -> CardDefinition {
             effect: Effect::MayDo {
                 description: "Reanimate a creature from their graveyard?".into(),
                 body: Box::new(Effect::Move {
-                    what: target_filtered(R::Creature.and(R::InOpponentGraveyard)),
+                    what: target_filtered(R::Creature.and(R::InGraveyard).and(R::ControlledByTriggerPlayer)),
                     to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
                 }),
             },
