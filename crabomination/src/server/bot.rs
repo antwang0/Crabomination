@@ -3127,7 +3127,9 @@ impl HeuristicBot {
                     };
                     Some(BotStep::plain(GameAction::DeclareBlockers(blocks)))
                 } else if state.blockers_declared() && state.stack.is_empty() {
-                    if let Some(a) = super::combat_only::pick_combat_only_spell(state, seat, &self.weights) {
+                    if let Some(a) = super::combat_only::pick_combat_only_spell(state, seat, &self.weights)
+                        .or_else(|| super::fog::pick_fog(state, seat))
+                    {
                         return Some(BotStep::plain(a));
                     }
                     // Post-block priority: a held pump trick that flips a
@@ -3239,9 +3241,9 @@ impl HeuristicBot {
                     && state.stack.is_empty()
                     && let Some(a) = super::foretell::pick_foretell(state, seat)
                         .or_else(|| super::spell_response::pick_idle_retrieval(state, seat))
+                        .or_else(|| super::room::pick_room_door(state, seat))
                 {
                     return Some(BotStep::plain(a));
-                        .or_else(|| super::room::pick_room_door(state, seat))
                 }
                 Some(action)
             }
@@ -3487,6 +3489,14 @@ fn decide_pending_policy_inner(
         // Bottom flood and unplayable spells, draw wants first.
         crate::decision::Decision::Scry { player, cards, mode } if *player == seat => {
             decide_scry(state, seat, cards, *mode)
+        }
+        // Prismatic Strands names the color hitting the bot hardest.
+        crate::decision::Decision::ChooseColor { source, legal }
+            if state.find_card_anywhere(*source).is_some_and(|c| {
+                matches!(c.definition.effect, Effect::PreventAllDamageFromChosenColorGlobally)
+            }) && super::fog::fog_color(state, seat).is_some_and(|c| legal.contains(&c)) =>
+        {
+            crate::decision::DecisionAnswer::Color(super::fog::fog_color(state, seat).unwrap_or(legal[0]))
         }
         // AutoDecider takes the first legal color (usually White). Pick
         // the color the bot's HAND actually demands — the most colored
@@ -7165,7 +7175,7 @@ pub(super) fn cast_candidates<'a>(
         // Pure temp-pump instants are combat tricks: held for the fight
         // window (`pick_combat_trick`), not main-phased where the buff
         // telegraphs and fizzles at cleanup.
-        if is_combat_trick(&c.definition) {
+        if is_combat_trick(&c.definition) || super::fog::held_fog(state, seat, &c.definition) {
             continue;
         }
         // Spree spells need `CastSpellSpree` with chosen modes — a plain
@@ -8289,6 +8299,12 @@ pub(super) fn cast_candidates<'a>(
         let Some(c) = state.players[seat].command.iter().find(|c| c.id == id) else {
             continue;
         };
+        // A tax paid in life (Liesa) is legal down to exactly 0 (CR 119.4);
+        // the bot doesn't pay it that far.
+        let (_, tax_life) = state.commander_tax_for(c);
+        if tax_life > 0 && state.players[seat].life <= tax_life as i32 + 4 {
+            continue;
+        }
         // The printed cost's colours pre-filter the regular cast; a mana-only
         // alternative cost (dash) gets its own, since the two can differ. The
         // effective one, so a granted cost counts too (Rooftop Storm's {0}
@@ -8300,12 +8316,6 @@ pub(super) fn cast_candidates<'a>(
         let regular_ok = colors_coverable(&c.definition.cost, have_mana.get());
         let alt_ok = alt.is_some_and(|a| colors_coverable(&a.mana_cost, have_mana.get()));
         if !regular_ok && !alt_ok {
-        // A tax paid in life (Liesa) is legal down to exactly 0 (CR 119.4);
-        // the bot doesn't pay it that far.
-        let (_, tax_life) = state.commander_tax_for(c);
-        if tax_life > 0 && state.players[seat].life <= tax_life as i32 + 4 {
-            continue;
-        }
             continue;
         }
         let (target, additional_targets) = if c.definition.effect.requires_target() {
