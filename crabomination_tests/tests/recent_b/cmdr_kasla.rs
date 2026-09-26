@@ -102,10 +102,21 @@ fn wand_grants_the_next_spell_convoke() {
     })
     .expect("wand");
     drain_stack(&mut g);
+    // CR 310.8e — "each battle they protect": seat 1's Siege, which seat 2
+    // protects, takes the point; seat 0's own, which seat 1 protects, too.
+    let mine = g.add_card_to_battlefield(0, catalog::invasion_of_zendikar());
+    let theirs = g.add_card_to_battlefield(1, catalog::invasion_of_zendikar());
+    for (b, pr) in [(mine, 1), (theirs, 2)] {
+        let c = g.battlefield_find_mut(b).unwrap();
+        c.protected_by = Some(pr);
+        c.counters.insert(crabomination::card::CounterType::Defense, 3);
+    }
     let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
     convoke(&mut g, bear, &[], &[helper]);
     assert_eq!(g.players[1].starting_life - g.players[1].life, 1);
     assert_eq!(g.players[2].starting_life - g.players[2].life, 1);
+    let defense = |g: &GameState, b| g.battlefield_find(b).unwrap().counter_count(crabomination::card::CounterType::Defense);
+    assert_eq!((defense(&g, mine), defense(&g, theirs)), (2, 2), "each battle an opponent protects");
     // Spent: the next spell has no convoke.
     let bear2 = g.add_card_to_hand(0, catalog::grizzly_bears());
     flood(&mut g, 0);

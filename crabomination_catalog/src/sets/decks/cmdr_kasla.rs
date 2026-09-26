@@ -5,7 +5,6 @@
 //! Residuals (each also on its card):
 //! - **Path of the Ghosthunter** — with no planar deck the Will of the
 //!   Planeswalkers vote isn't held (its outcome would change nothing).
-//! - **Joyful Stormsculptor** — battles take no damage (the engine has none).
 
 use crate::card::{
     ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope, EventSpec,
@@ -206,8 +205,7 @@ pub fn flockchaser_phantom() -> CardDefinition {
 }
 
 /// Joyful Stormsculptor — two 1/1 Elementals on entry; each convoke spell you
-/// cast pings each opponent.
-/// Residual: battles take no damage.
+/// cast pings each opponent and each battle they protect.
 pub fn joyful_stormsculptor() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![
@@ -215,7 +213,13 @@ pub fn joyful_stormsculptor() -> CardDefinition {
                 token("Elemental", vec![Color::Blue, Color::Red], CreatureType::Elemental, 1, 1, vec![]),
                 Value::Const(2),
             )),
-            on_convoke_cast(Effect::DealDamage { to: Selector::Player(PlayerRef::EachOpponent), amount: Value::ONE }),
+            on_convoke_cast(Effect::Seq(vec![
+                Effect::DealDamage { to: Selector::Player(PlayerRef::EachOpponent), amount: Value::ONE },
+                Effect::DealDamage {
+                    to: Selector::EachPermanent(R::HasCardType(CardType::Battle).and(R::ProtectedByOpponent)),
+                    amount: Value::ONE,
+                },
+            ])),
         ],
         ..creature(
             "Joyful Stormsculptor",
