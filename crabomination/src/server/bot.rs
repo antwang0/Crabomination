@@ -8128,6 +8128,24 @@ pub(super) fn cast_candidates<'a>(
     }
     });
 
+    // An Adventure granted from the graveyard (Hildibrand Manderville): every
+    // one, targeted or not — the card is otherwise dead there. Empty outside
+    // such a grant, so the loop is free.
+    for &(id, _) in state.players[seat].adventure_graveyard_grants.iter() {
+        let Some(c) = state.players[seat].graveyard.iter().find(|c| c.id == id) else { continue };
+        let Some(adv) = c.definition.has_adventure() else { continue };
+        let (target, additional_targets) = if adv.effect.requires_target() {
+            let (t, extras) = state.auto_targets_for_effect_all_slots(&adv.effect, seat, None);
+            if t.is_none() {
+                continue;
+            }
+            (t, extras)
+        } else {
+            (None, vec![])
+        };
+        castable.push((GameAction::CastAdventure { card_id: id, target, additional_targets, mode: None, x_value: None }, false));
+    }
+
     // Omen (CR 702.183): for any hand card with an Omen half that *targets*
     // something, offer a `CastOmen` candidate (the card shuffles back into the
     // library on resolution, so the creature is still drawable later).
