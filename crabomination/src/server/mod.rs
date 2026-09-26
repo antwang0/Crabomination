@@ -93,6 +93,7 @@ mod suspend;
 mod foretell;
 mod room;
 mod fog;
+mod voyage;
 mod cycling;
 mod spell_response;
 mod fight_pick;

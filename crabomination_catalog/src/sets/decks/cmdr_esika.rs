@@ -356,9 +356,10 @@ pub fn chandra_fire_of_kaladesh() -> CardDefinition {
     })
 }
 
-/// Cosima, God of the Voyage // The Omenkeel.
-///
-/// ⚠ Residual: the voyage ability isn't implemented.
+/// Cosima, God of the Voyage // The Omenkeel. At your upkeep Cosima may
+/// exile itself; while so exiled, each land you control entering either adds
+/// a voyage counter or returns it with that many +1/+1 counters and draws
+/// that many (`TriggerZone::WhileSelfExiled`, `Effect::Voyage`).
 pub fn cosima_god_of_the_voyage() -> CardDefinition {
     let omenkeel = CardDefinition {
         name: "The Omenkeel",
@@ -382,8 +383,26 @@ pub fn cosima_god_of_the_voyage() -> CardDefinition {
         }],
         ..Default::default()
     };
+    let voyage_landfall = TriggeredAbility {
+        event: EventSpec { zone: crate::effect::TriggerZone::WhileSelfExiled, ..EventSpec::new(EventKind::LandPlayed, EventScope::YourControl) },
+        effect: Effect::MayDoElse {
+            description: "Put a voyage counter on Cosima? (No returns it)".into(),
+            body: Box::new(Effect::Voyage { home: false }),
+            else_: Box::new(Effect::Voyage { home: true }),
+        },
+    };
     legendary(CardDefinition {
         back_face: Some(Box::new(omenkeel)),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+                effect: Effect::MayDo {
+                    description: "Exile Cosima on its voyage?".into(),
+                    body: Box::new(Effect::Move { what: Selector::This, to: ZoneDest::ExileWithSourceStamp }),
+                },
+            },
+            voyage_landfall,
+        ],
         ..creature("Cosima, God of the Voyage", cost(&[generic(2), u()]), vec![CreatureType::God], 2, 4)
     })
 }

@@ -3,6 +3,7 @@
 
 use crabomination::card::{CardId, CounterType, Keyword};
 use crabomination::catalog;
+use crabomination::decision::{DecisionAnswer, ScriptedDecider};
 use crabomination::game::types::{Attack, AttackTarget, GameAction, Target, TurnStep};
 use crabomination::game::*;
 use crabomination::mana::Color;
@@ -610,4 +611,44 @@ fn tibalt_cosmic_impostor_plays_what_he_exiles() {
     loyalty(&mut g, tibalt, 0, None);
     let c = g.exile.iter().find(|c| c.id == theirs).expect("exiled");
     assert!(c.may_play_until.is_some_and(|p| p.player == 0), "yours to play");
+}
+
+/// Cosima, God of the Voyage: it exiles itself at upkeep; while so exiled,
+/// each land you play adds a voyage counter, and declining one brings it
+/// home with that many +1/+1 counters and draws that many. Exiled by
+/// anything else, a land does nothing for it.
+#[test]
+fn cosima_voyages_and_comes_home_with_its_counters() {
+    let mut g = main_phase();
+    let cosima = g.add_card_to_battlefield(0, catalog::cosima_god_of_the_voyage());
+    library(&mut g, 0, 5);
+    let play = |g: &mut GameState, answer: bool| {
+        g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(answer)]));
+        g.players[0].lands_played_this_turn = 0;
+        let land = g.add_card_to_hand(0, catalog::island());
+        g.perform_action(GameAction::PlayLand(land)).expect("land");
+        drain_stack(g);
+    };
+    let exiled = |g: &GameState| g.exile.iter().find(|c| c.id == cosima).map(|c| c.counter_count(CounterType::Voyage));
+    // Not on the voyage: a land does nothing for it.
+    play(&mut g, true);
+    assert!(g.battlefield_find(cosima).is_some());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    g.step = TurnStep::PreCombatMain;
+    assert_eq!(exiled(&g), Some(0), "set sail");
+    play(&mut g, true);
+    play(&mut g, true);
+    assert_eq!(exiled(&g), Some(2));
+    let hand = g.players[0].hand.len();
+    play(&mut g, false);
+    assert!(g.battlefield_find(cosima).is_some(), "home");
+    assert_eq!(pt(&g, cosima), (4, 6), "two +1/+1 counters");
+    assert_eq!(g.players[0].hand.len(), hand + 2, "drew two");
+    // Exiled by something else, it doesn't voyage.
+    g.remove_from_battlefield_to_exile(cosima);
+    play(&mut g, false);
+    assert!(g.battlefield_find(cosima).is_none(), "a plain exile stays exiled");
 }

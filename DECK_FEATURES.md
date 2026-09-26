@@ -99,7 +99,7 @@ lists were picked.
 | **Elven Council** (LTC precon) GU | Galadriel, Elven-Queen | GU | 100 | 🟡 all 100 implemented, 5 carry residuals (Celeborn the Wise, Elrond of the White Council, Gandalf, Westward Voyager, Mirkwood Trapper, Sail into the West) |
 | **Ahoy Mateys** (LCC precon) UBR | Admiral Brass, Unsinkable | UBR | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Scions & Spellcraft** (FIC precon) WUB | Y'shtola, Night's Blessed | WUB | 100 | 🟡 all 100 implemented, 2 carry residuals (Blue Mage's Cane, Urianger Augurelt) |
-| **From Cute to Brute** (SLD Commander deck) WUBRG | Esika, God of the Tree | WUBRG | 100 | 🟡 all 100 implemented, 10 carry residuals (below) |
+| **From Cute to Brute** (SLD Commander deck) WUBRG | Esika, God of the Tree | WUBRG | 100 | 🟡 all 100 implemented, 9 carry residuals (below; Cosima's voyage ships 2026-09-26) |
 | **Enduring Enchantments** (CMM precon) WBG | Anikthea, Hand of Erebos | WBG | 100 | 🟡 all 100 implemented, 2 carry residuals (Ghoulish Impetus, Ondu Spiritdancer) |
 | **Open Hostility** (C16 precon) WBRG | Saskia the Unyielding | WBRG | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Devour for Power** (CMD precon) BGU | The Mimeoplasm | BGU | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
@@ -3187,7 +3187,7 @@ Map). ⚠ Found on the way: **CR 712.2 — a transforming DFC's back face was
 castable** — `CastSpellBack` swapped in any back and cast it for its
 (empty) cost, so Insectile Aberration or Jace, Telepath Unbound came down
 from hand for nothing; a back that prints no mana cost is now refused.
-Residuals: **Cosima**, **Ludevic**. A 200-game census beside Y'shtola / Brass / Galadriel (seed 168) decided 200/200 with zero
+Residuals: **Ludevic** (Cosima's voyage shipped 2026-09-26: `TriggerZone::WhileSelfExiled` + `Effect::Voyage`). A 200-game census beside Y'shtola / Brass / Galadriel (seed 168) decided 200/200 with zero
 panics; Esika won 11.5 %.
 
 The **hundred-and-sixty-third** is Final Fantasy XIV's **Scions &

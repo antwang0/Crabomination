@@ -5079,6 +5079,9 @@ fn cheaper_permanent_than(state: &GameState, seat: usize, source: CardId, w: &Ev
 /// which means a bot would never take a beneficial "you may" (Provoke's
 /// "you may", Boast token riders, etc.); this makes those fire.
 pub fn optional_trigger_beneficial(state: &GameState, source: CardId, description: &str) -> bool {
+    if let Some(answer) = super::voyage::voyage_answer(state, source) {
+        return answer;
+    }
     let Some(def) = optional_trigger_def(state, source) else { return true };
     // Find the `MayDo` body whose description matches the prompt. Scan the
     // card's spell effect, its triggered abilities, and any static-ability
