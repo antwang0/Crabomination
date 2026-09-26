@@ -160,6 +160,9 @@ fn god_pharaohs_gift_makes_a_hasty_four_four_copy() {
     assert_eq!(pt(&g, copy), (4, 4));
     assert!(g.permanent_has_keyword(copy, &Keyword::Haste));
     assert!(g.permanent_has_keyword(copy, &Keyword::Flying));
+    // Its ruling: a Zombie instead of its other creature types.
+    let cp = g.computed_permanent(copy).unwrap();
+    assert_eq!(cp.subtypes().creature_types, vec![crabomination::card::CreatureType::Zombie]);
 }
 
 #[test]
@@ -180,6 +183,8 @@ fn hashaton_pays_to_copy_a_discarded_creature() {
     let copy = copy.expect("a token copy");
     assert_eq!(pt(&g, copy), (4, 4));
     assert!(g.battlefield_find(copy).unwrap().tapped);
+    let cp = g.computed_permanent(copy).unwrap();
+    assert_eq!(cp.subtypes().creature_types, vec![crabomination::card::CreatureType::Zombie]);
 }
 
 #[test]

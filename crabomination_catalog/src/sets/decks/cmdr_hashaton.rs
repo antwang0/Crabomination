@@ -3,8 +3,6 @@
 //! `tests/recent_b/cmdr_hashaton.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Hashaton** / **God-Pharaoh's Gift** — "except it's a 4/4 black Zombie"
-//!   adds Zombie to the copy's creature types instead of replacing them.
 //! - **God-Pharaoh's Gift** — exiles your greatest-power creature card
 //!   (the pick is the engine's).
 //! - **Rot Hulk** — the returns are the greatest-power Zombie cards, not
@@ -71,19 +69,24 @@ fn another_zombie_enters(effect: Effect) -> TriggeredAbility {
 /// "Create a token that's a copy of [source], except it's a 4/4 black
 /// Zombie."
 fn black_zombie_copy(source: Selector, tapped: bool) -> Effect {
-    Effect::CreateTokenCopyOf {
-        who: PlayerRef::You,
-        count: Value::Const(1),
-        source,
-        extra_creature_types: vec![CreatureType::Zombie],
-        extra_card_types: vec![],
-        override_pt: Some((4, 4)),
-        override_colors: Some(vec![Color::Black]),
-        enters_tapped: tapped,
-        non_legendary: false,
-        legendary: false,
-        extra_keywords: vec![],
-    }
+    Effect::Seq(vec![
+        Effect::CreateTokenCopyOf {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            source,
+            extra_creature_types: vec![CreatureType::Zombie],
+            extra_card_types: vec![],
+            override_pt: Some((4, 4)),
+            override_colors: Some(vec![Color::Black]),
+            enters_tapped: tapped,
+            non_legendary: false,
+            legendary: false,
+            extra_keywords: vec![],
+        },
+        // Per the rulings, a Zombie *instead of* its other creature types
+        // (unlike eternalize) — CR 707.9b.
+        Effect::SetCopiableCreatureTypes { what: Selector::LastCreatedToken, creature_types: vec![CreatureType::Zombie] },
+    ])
 }
 
 /// Your greatest-power card in `zone` matching `filter`.

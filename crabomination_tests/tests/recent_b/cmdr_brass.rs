@@ -400,3 +400,16 @@ fn grim_captains_locker_grants_escape() {
     crabomination::game::drain_stack(&mut g);
     assert!(g.battlefield_find(giant).is_some());
 }
+
+/// Arm-Mounted Anchor's equip costs {2} less with one or fewer cards in hand.
+#[test]
+fn arm_mounted_anchor_equips_free_from_a_small_hand() {
+    let mut g = main_phase(2);
+    let anchor = g.add_card_to_battlefield(0, catalog::arm_mounted_anchor());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].hand.clear();
+    g.players[0].mana_pool = Default::default();
+    act(&mut g, GameAction::Equip { equipment: anchor, target: bear }).expect("equip for {0}");
+    crabomination::game::drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(anchor).and_then(|c| c.attached_to), Some(bear));
+}

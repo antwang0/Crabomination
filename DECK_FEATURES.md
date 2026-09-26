@@ -81,7 +81,7 @@ lists were picked.
 | **Chaos Incarnate** (SCD) BR | Kardur, Doomscourge | BR | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Heavenly Inferno** (CMD precon) RWB | Kaalia of the Vast | RWB | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Political Puppets** (CMD precon) URW | Zedruu the Greathearted | URW | 100 | 🟡 all 100 implemented (Trade Secrets, banned, swapped for Divination), 2 carry residuals (below) |
-| **Eternal Might** (DRC precon) WUB | Temmet, Naktamun's Will | WUB | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
+| **Eternal Might** (DRC precon) WUB | Temmet, Naktamun's Will | WUB | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Land's Wrath** (ZNC precon) RGW | Obuun, Mul Daya Ancestor | RGW | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Stalwart Unity** (C16 precon) RGWU | Kynaios and Tiro of Meletis | RGWU | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Token Triumph** (SCD starter) GW | Emmara, Soul of the Accord | GW | 100 | ✅ complete |
@@ -97,7 +97,7 @@ lists were picked.
 | **Jump Scare!** (DSC precon) GU | Zimone, Mystery Unraveler | GU | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
 | **Obscura Operation** (NCC precon) WUB | Kamiz, Obscura Oculus | WUB | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Elven Council** (LTC precon) GU | Galadriel, Elven-Queen | GU | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
-| **Ahoy Mateys** (LCC precon) UBR | Admiral Brass, Unsinkable | UBR | 100 | 🟡 all 100 implemented, 7 carry residuals (below) |
+| **Ahoy Mateys** (LCC precon) UBR | Admiral Brass, Unsinkable | UBR | 100 | 🟡 all 100 implemented, 6 carry residuals (below) |
 | **Scions & Spellcraft** (FIC precon) WUB | Y'shtola, Night's Blessed | WUB | 100 | 🟡 all 100 implemented, 6 carry residuals (below) |
 | **From Cute to Brute** (SLD Commander deck) WUBRG | Esika, God of the Tree | WUBRG | 100 | 🟡 all 100 implemented, 10 carry residuals (below) |
 | **Enduring Enchantments** (CMM precon) WBG | Anikthea, Hand of Erebos | WBG | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
@@ -894,10 +894,7 @@ The **fiftieth** is Aetherdrift Commander's **Eternal Might** (`EternalMight_DRC
 — Esper Zombies under Temmet, Naktamun's Will, with Hashaton, Scarab's Fist in
 the 99 (seat 49 before rebasing over Chaos Incarnate). Seventeen cards were
 missing; the primitive: `StaticEffect::GrantCyclingToYourHandCards`
-(Rhet-Tomb Mystic). ⚠ **No bot path cycles at all** — nothing constructs
-`GameAction::Cycle`, so the three Deserts and the Mystic's grant are human and
-UI paths only. Residuals: the "4/4 black Zombie" copies (Hashaton,
-God-Pharaoh's Gift) add Zombie rather than replace the creature types; the
+(Rhet-Tomb Mystic); the bot cycles them since `server/cycling.rs`. Residuals: the
 Gift and Rot Hulk take the greatest-power creature cards rather than a choice
 or targets. Debug pods beside Breya / Wyleth / Edgar / Sigarda (seeds
 9281/9282, 60 games) decided 60/60, zero panics, Temmet winning 30 % of each;
@@ -3225,8 +3222,7 @@ the evasion), `ControlledByPlayerDamagedByAtLeast` (Admiral Beckett Brass),
 `Effect::ReturnToOwnersHandAtNextEndStep` (Zara). ⚠ **Port Razer loops
 without its attack restriction** ("can't attack a player it has already
 attacked this turn" has no primitive), so its trigger is once a turn to
-keep games finite. Residuals: **Admiral Beckett Brass**, **Arm-Mounted
-Anchor**, **Departed Deckhand**, **Gemcutter Buccaneer**, **Merchant
+keep games finite. Residuals: **Admiral Beckett Brass**, **Departed Deckhand**, **Gemcutter Buccaneer**, **Merchant
 Raiders**, **Port Razer**, **Siren Stormtamer**, **Timestream Navigator**, **Zara, Renegade Recruiter**. A 200-game
 census beside Galadriel / Kamiz / Zimone (seed 158) decided 200/200 with
 zero panics and no card unplayed, Brass winning 30.5 %. `--bench`

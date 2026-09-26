@@ -5,8 +5,6 @@
 //! Residuals (each also on its card):
 //! - **Admiral Beckett Brass** — any damage from three Pirates this turn
 //!   counts, not only combat damage.
-//! - **Arm-Mounted Anchor** — equip always costs {2}; the hand-size discount
-//!   isn't modelled.
 //! - **Departed Deckhand** — it's sacrificed when any spell *or ability*
 //!   targets it.
 //! - **Gemcutter Buccaneer** — Treasures get equip {3} only, not equip
@@ -176,10 +174,8 @@ pub fn admiral_brass_unsinkable() -> CardDefinition {
 }
 
 /// Arm-Mounted Anchor — equipped creature gets +2/+2 and menace; connecting,
-/// draw two, then discard two unless you discard a Pirate; equip {2}.
-///
-/// ⚠ Residual: equip always costs {2}; the hand-size discount isn't
-/// modelled.
+/// draw two, then discard two unless you discard a Pirate; equip {2}, {2} less
+/// with one or fewer cards in hand.
 pub fn arm_mounted_anchor() -> CardDefinition {
     CardDefinition {
         name: "Arm-Mounted Anchor",
@@ -187,6 +183,13 @@ pub fn arm_mounted_anchor() -> CardDefinition {
         card_types: vec![CardType::Artifact],
         subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
         keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "Equip costs {2} less to activate if you have one or fewer cards in hand.",
+            effect: crate::card::StaticEffect::EquipCostReducedWhile {
+                condition: Predicate::ValueAtMost(Value::HandSizeOf(PlayerRef::You), Value::ONE),
+                amount: 2,
+            },
+        }],
         equipped_bonus: Some(EquipBonus {
             power: 2,
             toughness: 2,

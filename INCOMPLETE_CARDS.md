@@ -1812,8 +1812,7 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Imposing Grandeur | Vampiric Bloodline (VOC) | counts a commander in any zone. |
 | 🟡 Predators' Hour | Vampiric Bloodline (VOC) | the stolen card is exiled face up. |
 | 🟡 Sandstone Oracle | Call the Spirits (C15) | the chosen opponent is the one with the most cards in hand. |
-| 🟡 Hashaton, Scarab's Fist | Eternal Might (DRC) | "except it's a 4/4 black Zombie" adds Zombie rather than replacing the creature types. |
-| 🟡 God-Pharaoh's Gift | Eternal Might (DRC) | exiles your greatest-power creature card (no choice); the copy adds Zombie rather than replacing the creature types. |
+| 🟡 God-Pharaoh's Gift | Eternal Might (DRC) | exiles your greatest-power creature card (no choice). |
 | 🟡 Rot Hulk | Eternal Might (DRC) | returns your greatest-power Zombie cards, not targets chosen on entry. |
 | 🟡 Scaretiller | Land's Wrath (ZNC) | the mode is the engine's: a land from hand when there is one, else the first land card in your graveyard (untargeted). |
 | 🟡 The Mending of Dominaria | Land's Wrath (ZNC) | chapters I and II return your greatest-power creature card; the "may" is always taken. |
@@ -1871,7 +1870,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Mirkwood Trapper | Elven Council (LTC) | the shrunk attacker is the first one declared, not a target; the second ability isn't implemented. |
 | 🟡 Sail into the West | Elven Council (LTC) | on embark every player wheels; the "may" isn't offered. |
 | 🟡 Admiral Beckett Brass | Ahoy Mateys (LCC) | any damage from three Pirates this turn counts, not only combat damage. |
-| 🟡 Arm-Mounted Anchor | Ahoy Mateys (LCC) | equip always costs {2}; the hand-size discount isn't modelled. |
 | 🟡 Departed Deckhand | Ahoy Mateys (LCC) | it's sacrificed when any spell or ability targets it. |
 | 🟡 Gemcutter Buccaneer | Ahoy Mateys (LCC) | Treasures get equip {3} only, not equip Pirate {1}. |
 | 🟡 Merchant Raiders | Ahoy Mateys (LCC) | the lock lasts while it's on the battlefield, not while you control it. |
