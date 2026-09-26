@@ -7,7 +7,6 @@
 //!   haste, not only a Dragon.
 //! - **Goddric, Cloaked Reveler** — while celebrating it keeps its Human
 //!   Noble types beside Dragon.
-//! - **Leyline Tyrant** — the dying payment is any mana, not only {R}.
 //! - **Thundermane Dragon** — a creature cast from the top doesn't gain
 //!   haste; the top card isn't shown to you.
 
@@ -185,9 +184,7 @@ pub fn hit_the_mother_lode() -> CardDefinition {
 }
 
 /// Leyline Tyrant — flying; your red mana doesn't empty between steps;
-/// dying, you may pay any amount to deal that much damage.
-///
-/// ⚠ Residual: the payment may be any mana, not only {R}.
+/// dying, you may pay any amount of {R} to deal that much damage.
 pub fn leyline_tyrant() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying],
@@ -195,7 +192,8 @@ pub fn leyline_tyrant() -> CardDefinition {
             description: "You don't lose unspent red mana as steps and phases end.",
             effect: StaticEffect::UnspentColorManaPersists(Color::Red),
         }],
-        triggered_abilities: vec![on_dies(Effect::MayPayX {
+        triggered_abilities: vec![on_dies(Effect::MayPayXOfColor {
+            color: Color::Red,
             description: "Pay any amount of {R} to deal that much damage?".into(),
             body: Box::new(Effect::DealDamage { to: target_any(), amount: Value::XFromCost }),
         })],

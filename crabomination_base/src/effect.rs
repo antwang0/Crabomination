@@ -4334,6 +4334,9 @@ pub enum Effect {
     /// X (Numa, Joraga Chieftain). Opaque to the target walkers: a targeted
     /// body goes inside an [`Effect::Reflexive`].
     MayPayXTimes { times: u32, description: String, body: Box<Effect> },
+    /// "You may pay any amount of {R}" — [`Effect::MayPayX`] whose X is paid
+    /// in `color` pips rather than generic (Leyline Tyrant).
+    MayPayXOfColor { color: crate::mana::Color, description: String, body: Box<Effect> },
 
     /// Optional **paid** branch: the controller is asked yes/no, and if
     /// they accept *and* can afford `mana_cost`, the engine deducts the

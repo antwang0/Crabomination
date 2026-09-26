@@ -162,6 +162,33 @@ fn two_leyline_tyrants_keep_red_mana_once() {
     assert_eq!(g.players[0].mana_pool.amount(Color::Red), 3);
 }
 
+/// Leyline Tyrant's death payment takes only {R}: floating green can't fund
+/// it, floating red can.
+#[test]
+fn leyline_tyrant_death_payment_takes_red_only() {
+    for (color, dealt) in [(Color::Green, 0), (Color::Red, 2)] {
+        let mut g = main_phase(2);
+        let tyrant = g.add_card_to_battlefield(0, catalog::leyline_tyrant());
+        let blade = g.add_card_to_hand(0, catalog::doom_blade());
+        g.players[0].mana_pool.add(Color::Black, 1);
+        g.players[0].mana_pool.add_colorless(1);
+        g.players[0].mana_pool.add(color, 2);
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(2)]));
+        let life = g.players[1].life;
+        g.perform_action(GameAction::CastSpell {
+            card_id: blade,
+            target: Some(Target::Permanent(tyrant)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("Doom Blade");
+        drain_stack(&mut g);
+        assert!(g.battlefield_find(tyrant).is_none());
+        assert_eq!(life - g.players[1].life, dealt, "paid with {color:?}");
+    }
+}
+
 /// Pack tactics: Minion of the Mighty drops a Dragon in attacking.
 #[test]
 fn minion_of_the_mighty_brings_a_dragon() {

@@ -7369,7 +7369,9 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::MayPayX { description, body } | Effect::MayPayXTimes { description, body, .. } => {
+            Effect::MayPayX { description, body }
+            | Effect::MayPayXTimes { description, body, .. }
+            | Effect::MayPayXOfColor { description, body, .. } => {
                 let times = match effect {
                     Effect::MayPayXTimes { times, .. } => (*times).max(1),
                     _ => 1,
@@ -7415,7 +7417,12 @@ impl GameState {
                 if n == 0 {
                     return Ok(());
                 }
-                let x_cost = crate::mana::ManaCost::new(vec![crate::mana::generic(n * times)]);
+                let x_cost = match effect {
+                    Effect::MayPayXOfColor { color, .. } => {
+                        crate::mana::ManaCost::new(vec![crate::mana::colored(*color); n as usize])
+                    }
+                    _ => crate::mana::ManaCost::new(vec![crate::mana::generic(n * times)]),
+                };
                 if !self.pay_mana_cost_with_picks(ctx.controller, &x_cost, None, events) {
                     return Ok(());
                 }
