@@ -3684,3 +3684,27 @@ const KNOWN_IDENTITY_GAPS: &[(&str, &str)] = &[
     ("Maraxus of Keld", "the catalog card is the Vanguard avatar; the cache holds the creature"),
     ("Bounty Hunter", "the cache entry is the Vanguard avatar; the catalog holds the creature"),
 ];
+
+/// CR 712.1 — the catalog's transforming DFCs (`is_transforming_dfc`: an
+/// ability on either face turns the card over) and its modal DFCs must not
+/// be confused: a transforming card's back face prints no mana cost (CR
+/// 712.2 — it's never cast), and a card whose land back face is played
+/// from hand must be modal. Search for Azcanta's back face was a land drop
+/// from hand until the transforming ones were told apart.
+#[test]
+fn cr_712_transforming_and_modal_dfcs_are_told_apart() {
+    let mut transforming = 0;
+    let mut wrong = Vec::new();
+    for f in crabomination_catalog::sets::all_factories::all_catalog_card_factories() {
+        let d = f();
+        let Some(back) = d.back_face.as_deref() else { continue };
+        if d.is_transforming_dfc() {
+            transforming += 1;
+            if !back.cost.symbols.is_empty() {
+                wrong.push(format!("{} // {}: transforms, yet its back face has a mana cost", d.name, back.name));
+            }
+        }
+    }
+    assert!(transforming > 50, "only {transforming} transforming DFCs found — is the detector blind?");
+    assert!(wrong.is_empty(), "{}", wrong.join("\n"));
+}

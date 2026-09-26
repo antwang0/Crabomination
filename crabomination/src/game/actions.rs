@@ -4477,11 +4477,17 @@ impl GameState {
             }
         };
         if back_face {
-            // Swap to the back face's definition. Reject if there isn't one.
+            // Swap to the back face's definition. Reject if there isn't one,
+            // or if the card transforms rather than being modal (CR 712.2 —
+            // Search for Azcanta's back face was a land drop from hand).
             let Some(back) = card.definition.back_face.clone() else {
                 restore(self, card);
                 return Err(GameError::NotALand(card_id));
             };
+            if card.definition.is_transforming_dfc() {
+                restore(self, card);
+                return Err(GameError::NotALand(card_id));
+            }
             // Keep the front installed until the play is accepted — a
             // rejected play must restore the card unmodified.
             let front = card.definition.arc();

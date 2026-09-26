@@ -6315,6 +6315,34 @@ pub(crate) mod debug_flag {
 }
 
 impl CardDefinition {
+    /// CR 712.1 — a *transforming* double-faced card, told apart from a
+    /// modal one (CR 712.1b) by the face that turns it over: some ability
+    /// on either face transforms or returns it transformed (Search for
+    /// Azcanta's upkeep trigger, the Ojer gods' death trigger, the
+    /// Temple's "transform this land"). Only a modal DFC's back face may be
+    /// played or cast from hand (CR 712.2); a transforming card is put onto
+    /// the battlefield front face up.
+    pub fn is_transforming_dfc(&self) -> bool {
+        use crate::effect::Effect;
+        let Some(back) = self.back_face.as_deref() else { return false };
+        let turns = |e: &Effect| {
+            matches!(
+                e,
+                Effect::Transform { .. }
+                    | Effect::ExileSelfReturnTransformed
+                    | Effect::ReturnSelfTransformedTappedToOwner
+                    | Effect::ReturnSelfTransformedAttached
+                    | Effect::ReturnSelfTransformedAttachedTo { .. }
+            )
+        };
+        [self, back].iter().any(|face| {
+            let granted = face.equipped_bonus.iter().flat_map(|b| b.triggered_abilities.iter());
+            face.triggered_abilities.iter().chain(granted).any(|t| t.effect.any_nested(&turns))
+                || face.activated_abilities.iter().any(|a| a.effect.any_nested(&turns))
+                || face.effect.any_nested(&turns)
+        })
+    }
+
     /// CR 123.1 / 707.2 — this definition's copiable values: itself, or, on a
     /// name-stickered definition, the same card with its unstickered name.
     pub fn copiable(self: &Arc<Self>) -> Arc<Self> {

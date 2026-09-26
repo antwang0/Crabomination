@@ -12445,3 +12445,17 @@ fn conditional_mana_ability_is_auto_tapped_when_its_condition_holds() {
     })
     .expect("ferocious pays {G}{G}");
 }
+
+/// CR 712.2 — only a modal DFC's back face may be played from hand. Search
+/// for Azcanta transforms into its land; Emeria's Call is modal.
+#[test]
+fn cr_712_2_a_transforming_dfcs_land_back_isnt_a_land_drop() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let azcanta = g.add_card_to_hand(0, catalog::search_for_azcanta());
+    assert!(g.perform_action(GameAction::PlayLandBack(azcanta)).is_err());
+    assert!(g.players[0].hand.iter().any(|c| c.id == azcanta && c.definition.name == "Search for Azcanta"));
+    let emeria = g.add_card_to_hand(0, catalog::emerias_call());
+    g.perform_action(GameAction::PlayLandBack(emeria)).expect("a modal DFC's land face");
+    assert_eq!(g.battlefield_find(emeria).unwrap().definition.name, "Emeria, Shattered Skyclave");
+}

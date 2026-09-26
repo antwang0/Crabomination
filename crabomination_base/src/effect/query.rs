@@ -354,6 +354,21 @@ impl Effect {
     /// 603.7 payoffs whose targets are picked fresh when they resolve) has to
     /// say so itself; that is a property of the question being asked, not of
     /// the tree.
+    /// True if `pred` holds for this effect or any effect nested in it
+    /// (depth-first over `for_each_inner`).
+    pub fn any_nested(&self, pred: &impl Fn(&Effect) -> bool) -> bool {
+        if pred(self) {
+            return true;
+        }
+        let mut hit = false;
+        self.for_each_inner(&mut |e| {
+            if !hit && e.any_nested(pred) {
+                hit = true;
+            }
+        });
+        hit
+    }
+
     pub fn for_each_inner<'a>(&'a self, f: &mut impl FnMut(&'a Effect)) {
         match self {
             Effect::Seq(v)
@@ -374,6 +389,14 @@ impl Effect {
             }
             Effect::SecretCouncilPermanentVote { per_vote, .. } => f(per_vote),
             Effect::EnlistThen { then } => f(then),
+            Effect::LookPickToHand(lp) => {
+                if let Some(e) = lp.then_if_picked.as_deref() {
+                    f(e);
+                }
+                if let Some(e) = lp.then_if_not_picked.as_deref() {
+                    f(e);
+                }
+            }
             Effect::GuessManaValueAgainstValue { otherwise, .. } => f(otherwise),
             Effect::RemoveCountersFromAmongThen { then, .. } => f(then),
             Effect::SecretCouncilPermanentVoteMost { on_most, on_none, .. } => {
