@@ -2733,6 +2733,11 @@ pub enum StaticEffect {
     /// of all artifact cards in your graveyard" (Trazyn the Infinite) — the
     /// own-graveyard, artifact sibling of the Necrotic Ooze grant.
     HasActivatedAbilitiesOfYourGraveyardArtifacts,
+    /// "[This] has all activated abilities of all [filter] cards in your
+    /// graveyard" (Thranduil, the Elvenking — Elf cards). The filtered
+    /// generalization of `HasActivatedAbilitiesOfYourGraveyardArtifacts`;
+    /// graveyard-only activations stay behind, as for Necrotic Ooze.
+    HasActivatedAbilitiesOfYourGraveyardMatching { filter: crate::card::SelectionRequirement },
     /// Marvin, Murderous Mimic — "has all activated abilities of creatures you
     /// control that don't have the same name as this creature." The
     /// battlefield sibling of `HasActivatedAbilitiesOfGraveyardCreatures`;

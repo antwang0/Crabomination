@@ -1,7 +1,8 @@
 //! Most-built commanders missing from the catalog (COMMANDER_BACKLOG §1):
 //! Aragorn, the Uniter; Zur the Enchanter; Flubs, the Fool; Galadriel,
 //! Light of Valinor; Arcades, the Strategist; Tiamat; Sauron, the Dark Lord;
-//! High Perfect Morcant; Jodah, the Unifier. Each is built from primitives
+//! High Perfect Morcant; Jodah, the Unifier; Thranduil; Queza; Child of
+//! Alara; Liesa; Urtet. Each is built from primitives
 //! other cards already exercise (Jodah adds a filter to cascade's walk and
 //! `Predicate::CastSpellFromHand`).
 //!
@@ -355,5 +356,133 @@ pub fn jodah_the_unifier() -> CardDefinition {
             5,
             5,
         )
+    }
+}
+
+/// Thranduil, the Elvenking — {2}{B}{G}{U} 5/6. Has all activated abilities
+/// of all Elf cards in your graveyard. Whenever another legendary Elf you
+/// control enters, draw two cards, then discard a card.
+pub fn thranduil_the_elvenking() -> CardDefinition {
+    let elf = || R::HasCreatureType(CreatureType::Elf);
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Thranduil has all activated abilities of all Elf cards in your graveyard.",
+            effect: StaticEffect::HasActivatedAbilitiesOfYourGraveyardMatching { filter: elf() },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: elf().and(R::HasSupertype(Supertype::Legendary)),
+                },
+            ),
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+                Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+            ]),
+        }],
+        ..legend(
+            "Thranduil, the Elvenking",
+            cost(&[generic(2), b(), g(), u()]),
+            vec![CreatureType::Elf, CreatureType::Noble],
+            5,
+            6,
+        )
+    }
+}
+
+/// Queza, Augur of Agonies — {1}{W}{U}{B} 3/4 Octopus Advisor. Whenever you
+/// draw a card, target opponent loses 1 life and you gain 1 life.
+pub fn queza_augur_of_agonies() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl),
+            effect: Effect::Drain {
+                from: target_filtered(R::Player.and(R::OpponentPlayer)),
+                to: Selector::You,
+                amount: Value::ONE,
+            },
+        }],
+        ..legend(
+            "Queza, Augur of Agonies",
+            cost(&[generic(1), w(), u(), b()]),
+            vec![CreatureType::Octopus, CreatureType::Advisor],
+            3,
+            4,
+        )
+    }
+}
+
+/// Child of Alara — {W}{U}{B}{R}{G} 6/6 trample. When it dies, destroy all
+/// nonland permanents; they can't be regenerated (CR 701.19c).
+pub fn child_of_alara() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::DestroyNoRegen {
+            what: Selector::EachPermanent(R::Nonland),
+        })],
+        ..legend("Child of Alara", cost(&[w(), u(), b(), r(), g()]), vec![CreatureType::Avatar], 6, 6)
+    }
+}
+
+/// Liesa, Shroud of Dusk — {2}{W}{W}{B} 5/5 flying, lifelink. Whenever a
+/// player casts a spell, they lose 2 life. (The commander-tax rider — pay 2
+/// life per previous command-zone cast instead of {2} — is not modelled:
+/// the tax is paid in mana, CR 903.8.)
+pub fn liesa_shroud_of_dusk() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Lifelink],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer),
+            effect: Effect::LoseLife { who: Selector::Player(PlayerRef::Triggerer), amount: Value::Const(2) },
+        }],
+        ..legend(
+            "Liesa, Shroud of Dusk",
+            cost(&[generic(2), w(), w(), b()]),
+            vec![CreatureType::Angel],
+            5,
+            5,
+        )
+    }
+}
+
+/// Urtet, Remnant of Memnarch — {3} 2/2 Legendary Artifact Creature — Myr.
+/// Whenever you cast a Myr spell, create a 1/1 Myr artifact creature token.
+/// At the beginning of combat on your turn, untap each Myr you control.
+/// {W}{U}{B}{R}{G}, {T}: three +1/+1 counters on each Myr you control, only
+/// during your turn.
+pub fn urtet_remnant_of_memnarch() -> CardDefinition {
+    use crate::game::types::TurnStep;
+    let myr = || R::HasCreatureType(CreatureType::Myr);
+    let my_myr = || Selector::EachPermanent(myr().and(R::ControlledByYou));
+    let token = TokenDefinition {
+        name: "Myr".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Myr], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                    .with_filter(Predicate::CastSpellMatches(myr())),
+                effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(token) },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::YourControl),
+                effect: Effect::Untap { what: my_myr(), up_to: None },
+            },
+        ],
+        activated_abilities: vec![crate::card::ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[w(), u(), b(), r(), g()]),
+            condition: Some(Predicate::IsTurnOf(PlayerRef::You)),
+            effect: Effect::AddCounter { what: my_myr(), kind: CounterType::PlusOnePlusOne, amount: Value::Const(3) },
+            ..Default::default()
+        }],
+        ..legend("Urtet, Remnant of Memnarch", cost(&[generic(3)]), vec![CreatureType::Myr], 2, 2)
     }
 }

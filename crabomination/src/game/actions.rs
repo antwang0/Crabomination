@@ -1076,6 +1076,7 @@ fn mana_summary_of(def: &crate::card::CardDefinition) -> Option<u64> {
             | SE::HasActivatedAbilitiesOfExiledWithCounter { .. }
             | SE::HasActivatedAbilitiesOfGraveyardCreatures
             | SE::HasActivatedAbilitiesOfYourGraveyardArtifacts
+            | SE::HasActivatedAbilitiesOfYourGraveyardMatching { .. }
             | SE::HasActivatedAbilitiesOfOtherNamedControlledCreatures
             | SE::HasActivatedAbilitiesOfOpponentCreatures
             | SE::HasActivatedAbilitiesOfCounteredCreatures
@@ -17657,6 +17658,7 @@ impl GameState {
         let (mut welder, mut ooze, mut marvin, mut kraj, mut safehouse, mut snoop) =
             (false, false, false, false, false, false);
         let (mut drana, mut refractor, mut trazyn) = (false, false, false);
+        let mut gy_filters: Vec<&crate::card::SelectionRequirement> = Vec::new();
         let mut caged: Option<crate::card::CounterType> = None;
         let mut brained: Option<crate::card::CounterType> = None;
         for sa in &me.definition.static_abilities {
@@ -17670,6 +17672,9 @@ impl GameState {
                 }
                 StaticEffect::HasActivatedAbilitiesOfGraveyardCreatures => ooze = true,
                 StaticEffect::HasActivatedAbilitiesOfYourGraveyardArtifacts => trazyn = true,
+                StaticEffect::HasActivatedAbilitiesOfYourGraveyardMatching { ref filter } => {
+                    gy_filters.push(filter)
+                }
                 StaticEffect::HasActivatedAbilitiesOfOtherNamedControlledCreatures => {
                     marvin = true
                 }
@@ -17814,6 +17819,22 @@ impl GameState {
         // controller's own graveyard.
         if trazyn && let Some(pl) = self.players.get(me.controller) {
             for card in pl.graveyard.iter().filter(|c| c.definition.is_artifact()) {
+                for ab in &card.definition.activated_abilities {
+                    if !(ab.from_graveyard || ab.exile_self_cost) {
+                        out.push(ab);
+                    }
+                }
+            }
+        }
+        // Thranduil — the same, from the controller's graveyard cards that
+        // match the static's filter (Elf cards).
+        if !gy_filters.is_empty()
+            && let Some(pl) = self.players.get(me.controller)
+        {
+            for card in &pl.graveyard {
+                if !gy_filters.iter().any(|f| self.evaluate_requirement_on_card(f, card, me.controller)) {
+                    continue;
+                }
                 for ab in &card.definition.activated_abilities {
                     if !(ab.from_graveyard || ab.exile_self_cost) {
                         out.push(ab);

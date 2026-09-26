@@ -31023,6 +31023,7 @@ fn static_effect_to_effects(
             // Necrotic Ooze — surfaced via `granted_abilities_for`, not a layer.
             | StaticEffect::HasActivatedAbilitiesOfGraveyardCreatures
             | StaticEffect::HasActivatedAbilitiesOfYourGraveyardArtifacts
+            | StaticEffect::HasActivatedAbilitiesOfYourGraveyardMatching { .. }
             | StaticEffect::HasActivatedAbilitiesOfOtherNamedControlledCreatures
             | StaticEffect::HasActivatedAbilitiesOfOpponentCreatures
             | StaticEffect::HasActivatedAbilitiesOfGraveyardLands

@@ -212,3 +212,98 @@ fn jodah_cascades_into_a_lesser_legend() {
     let jp = g.computed_permanent(jodah).unwrap();
     assert_eq!((jp.power, jp.toughness), (8, 8));
 }
+
+/// Thranduil gains the activated abilities of Elf cards in its controller's
+/// graveyard (CR 113.6 — abilities a static grants): a dead Llanowar Elves
+/// lets it tap for {G}; an opponent's dead Elf doesn't.
+#[test]
+fn thranduil_uses_elf_abilities_from_your_graveyard() {
+    let mut g = pod(4);
+    let t = g.add_card_to_battlefield(0, catalog::thranduil_the_elvenking());
+    g.clear_sickness(t);
+    let activate = |g: &mut GameState| {
+        g.players[0].mana_pool = Default::default();
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: t, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
+        })
+    };
+    g.add_card_to_graveyard(1, catalog::llanowar_elves());
+    assert!(activate(&mut g).is_err(), "an opponent's graveyard grants nothing");
+    g.add_card_to_graveyard(0, catalog::llanowar_elves());
+    activate(&mut g).expect("the Elves' mana ability");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1);
+}
+
+/// Queza drains the targeted opponent 1 per card you draw.
+#[test]
+fn queza_drains_per_card_drawn() {
+    let mut g = pod(4);
+    g.add_card_to_battlefield(0, catalog::queza_augur_of_agonies());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let (me, opps) = (g.players[0].life, (1..4).map(|p| g.players[p].life).sum::<i32>());
+    let mut evs = Vec::new();
+    for _ in 0..2 {
+        g.draw_one_or_deck(0, &mut evs);
+    }
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, me + 2);
+    assert_eq!((1..4).map(|p| g.players[p].life).sum::<i32>(), opps - 2);
+}
+
+/// CR 701.19c: Child of Alara's death destroys every nonland permanent, a
+/// regeneration shield notwithstanding; lands stay.
+#[test]
+fn child_of_alara_wipes_nonlands_on_death() {
+    let mut g = pod(4);
+    let child = g.add_card_to_battlefield(0, catalog::child_of_alara());
+    let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let land = g.add_card_to_battlefield(2, catalog::forest());
+    let kill = g.add_card_to_hand(3, catalog::murder()); // Child is black: no Doom Blade
+    cast(&mut g, 3, kill, Some(Target::Permanent(child)));
+    assert!(g.battlefield_find(bears).is_none());
+    assert!(g.battlefield_find(land).is_some());
+}
+
+/// Liesa: every player's spell costs its caster 2 life (CR 603.2).
+#[test]
+fn liesa_taxes_each_spell_two_life() {
+    let mut g = pod(4);
+    g.add_card_to_battlefield(0, catalog::liesa_shroud_of_dusk());
+    for seat in [0, 2] {
+        g.add_card_to_library(seat, catalog::island());
+        let life = g.players[seat].life;
+        let s = g.add_card_to_hand(seat, catalog::opt());
+        cast(&mut g, seat, s, None);
+        assert_eq!(g.players[seat].life, life - 2, "seat {seat}");
+    }
+}
+
+/// Urtet: casting a Myr spell makes a Myr token; the activation grows every
+/// Myr by three counters, only on your turn.
+#[test]
+fn urtet_mints_and_pumps_myr() {
+    let mut g = pod(4);
+    let urtet = g.add_card_to_battlefield(0, catalog::urtet_remnant_of_memnarch());
+    g.clear_sickness(urtet);
+    let myr = g.add_card_to_hand(0, catalog::iron_myr());
+    cast(&mut g, 0, myr, None);
+    let myrs: Vec<CardId> = g
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == 0 && c.definition.subtypes.creature_types.contains(&crabomination::card::CreatureType::Myr))
+        .map(|c| c.id)
+        .collect();
+    assert_eq!(myrs.len(), 3, "Urtet, Iron Myr and the token");
+    flood(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: urtet, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("pump");
+    drain_stack(&mut g);
+    for id in myrs {
+        assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne), 3);
+    }
+}
