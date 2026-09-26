@@ -11072,6 +11072,12 @@ pub enum Effect {
     /// attack [this] if able" (Gideon Jura's +2). Sets each resolved player's
     /// `attack_lure` to the source; the declaration enforces it.
     LureCreaturesToSourceNextTurn { who: Selector },
+    /// CR 508.1d — "Up to one target creature an opponent controls attacks
+    /// [this] during its controller's next turn if able" (Gideon,
+    /// Battle-Forged's +2). The one-creature sibling of
+    /// `LureCreaturesToSourceNextTurn`, kept on the controller's
+    /// `creature_attack_lures`.
+    LureTargetToSourceNextTurn { what: Selector },
 
     /// CR 701.16 — "[source's controller] sacrifices [the source] unless they
     /// pay {X}, where X is its mana value." The pay-or-sacrifice threat used by

@@ -1722,6 +1722,7 @@ impl Effect {
             }
             Effect::Explore { who } => sel_has_target(who),
             Effect::Goad { what }
+            | Effect::LureTargetToSourceNextTurn { what }
             | Effect::GoadForTheGame { what }
             | Effect::Ungoad { what }
             | Effect::GoadWhile { what, .. }
@@ -3049,6 +3050,7 @@ impl Effect {
             Effect::Earthbend { .. } => Some(&EARTHBEND_TARGET),
             Effect::Airbend { what } => sel_filter(what),
             Effect::Goad { what }
+            | Effect::LureTargetToSourceNextTurn { what }
             | Effect::GoadForTheGame { what }
             | Effect::Ungoad { what }
             | Effect::GoadWhile { what, .. }
@@ -5203,6 +5205,7 @@ impl Effect {
                 | Effect::FlipUntilLossThenTokenCopies { what }
                 | Effect::RemoveAllCountersDiscountNextSpell { what }
                 | Effect::Goad { what }
+                | Effect::LureTargetToSourceNextTurn { what }
                 | Effect::GoadForTheGame { what }
                 | Effect::Ungoad { what }
                 | Effect::GoadWhile { what, .. }

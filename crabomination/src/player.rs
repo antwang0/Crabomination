@@ -277,6 +277,11 @@ pub struct PlayerCold {
     /// cleared at the end of this player's next turn.
     #[serde(default)]
     pub attack_lure: Option<(crate::card::CardId, u32)>,
+    /// CR 508.1d — one-creature lures on this player's creatures (Gideon,
+    /// Battle-Forged's +2): (creature, lured permanent, turn set on). Read
+    /// by `GameState::creature_lure_of`, cleared with `attack_lure`.
+    #[serde(default)]
+    pub creature_attack_lures: Vec<(crate::card::CardId, crate::card::CardId, u32)>,
     /// "Can't cast spells until your next turn" (Innocuous Researcher):
     /// re-arms `silenced_this_turn` at every turn boundary until this
     /// player's own untap clears it.

@@ -1284,6 +1284,7 @@ impl GameState {
             let requirement = has_legal_target
                 && (g.any_goad_present()
                     || g.attack_lure_of(p).is_some()
+                    || g.any_creature_lure(p)
                     || statics & attack_static::MUST_ATTACK_WITH_ONE != 0
                     || g.board_keyword_in_scope(&[
                         Keyword::MustAttack,
@@ -1545,6 +1546,26 @@ impl GameState {
                     && !attacks.iter().any(|a| a.attacker == c.id)
                 {
                     return Err(attack_reject(line!(), GameError::CannotAttack(c.id)));
+                }
+            }
+        }
+
+        // CR 508.1d — a one-creature lure (Gideon, Battle-Forged's +2): that
+        // creature attacks the lured walker if able.
+        if self.any_creature_lure(p) {
+            for c in &self.battlefield {
+                if c.controller != p {
+                    continue;
+                }
+                let Some(pw) = self.creature_lure_of(p, c.id) else { continue };
+                match attacks.iter().find(|a| a.attacker == c.id) {
+                    Some(a) if a.target != AttackTarget::Planeswalker(pw) => {
+                        return Err(attack_reject(line!(), GameError::CannotAttack(c.id)));
+                    }
+                    None if able_to_attack(c) => {
+                        return Err(attack_reject(line!(), GameError::CannotAttack(c.id)));
+                    }
+                    _ => {}
                 }
             }
         }

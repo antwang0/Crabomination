@@ -8,8 +8,6 @@
 //! - **Chandra, Fire of Kaladesh** — flips when an opponent has lost 3 or
 //!   more life this turn, not after Chandra herself dealt 3 damage.
 //! - **Cosima, God of the Voyage** — the voyage ability isn't implemented.
-//! - **Gideon, Battle-Forged** (Kytheon's back) — the +2 lure isn't
-//!   implemented.
 //! - **Ludevic, Necrogenius** — transforms for {U}{U}{B}{B} exiling one
 //!   creature card; Olag is a plain 4/4 with counters, not a copy.
 
@@ -851,8 +849,6 @@ pub fn kolvori_god_of_kinship() -> CardDefinition {
 }
 
 /// Kytheon, Hero of Akros // Gideon, Battle-Forged.
-///
-/// ⚠ Residual: Gideon's +2 lure isn't implemented.
 pub fn kytheon_hero_of_akros() -> CardDefinition {
     let gideon = walker(
         "Gideon, Battle-Forged",
@@ -860,7 +856,12 @@ pub fn kytheon_hero_of_akros() -> CardDefinition {
         PlaneswalkerSubtype::Gideon,
         3,
         vec![
-            loyalty(2, Effect::Noop),
+            // +2: up to one target creature an opponent controls attacks
+            // Gideon during its controller's next turn if able.
+            loyalty(
+                2,
+                Effect::LureTargetToSourceNextTurn { what: target_filtered(R::Creature.and(R::ControlledByOpponent)) },
+            ),
             loyalty(
                 1,
                 Effect::Seq(vec![

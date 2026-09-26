@@ -34201,6 +34201,17 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::LureTargetToSourceNextTurn { what } => {
+                let Some(src) = ctx.source else { return Ok(()) };
+                let turn = self.turn_number;
+                for e in self.resolve_selector(what, ctx) {
+                    let Some(id) = e.as_permanent_id() else { continue };
+                    let Some(owner) = self.battlefield_find(id).map(|c| c.controller) else { continue };
+                    self.players[owner].creature_attack_lures.push((id, src, turn));
+                }
+                Ok(())
+            }
+
             Effect::LureCreaturesToSourceNextTurn { who } => {
                 let Some(src) = ctx.source else { return Ok(()) };
                 let turn = self.turn_number;

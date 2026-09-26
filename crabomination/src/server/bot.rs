@@ -11667,6 +11667,9 @@ fn pick_attacks_inner(state: &GameState, seat: usize, guard: bool) -> Vec<Attack
         if let Some(pw) = state.attack_lure_of(seat) {
             a.target = AttackTarget::Planeswalker(pw);
         }
+        if let Some(pw) = state.creature_lure_of(seat, a.attacker) {
+            a.target = AttackTarget::Planeswalker(pw);
+        }
     }
     // CR 508.1a — Weathered Sentinels attacks only a player who attacked
     // this seat during their last turn: re-aim it at one, or leave it home.
@@ -11773,6 +11776,7 @@ fn restore_forced_attackers(
     let statics = crate::game::combat::attack_static_scan(state);
     if !attack_requirement_present(state)
         && state.attack_lure_of(seat).is_none()
+        && !state.any_creature_lure(seat)
         && statics & crate::game::combat::attack_static::MUST_ATTACK_WITH_ONE == 0
     {
         return;
@@ -11818,7 +11822,9 @@ fn restore_forced_attackers_unchecked(
             // exists" is just a non-empty batch; spelled as the engine
             // spells it so the two read alike.
             let others = attackers.iter().any(|id| *id != c.id);
-            if !(lured || must_attack(state, c, cp.keywords(), others))
+            if !(lured
+                || must_attack(state, c, cp.keywords(), others)
+                || state.creature_lure_of(seat, c.id).is_some())
                 || !state.attacker_is_able(seat, c, Some(&cp), power_caps, statics)
             {
                 continue;

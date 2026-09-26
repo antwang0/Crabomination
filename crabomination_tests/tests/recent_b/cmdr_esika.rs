@@ -348,6 +348,50 @@ fn journey_to_eternity_returns_as_atzal() {
     assert!(on_board(&g, 0, "Journey to Eternity").is_none());
 }
 
+/// CR 508.1d — Gideon, Battle-Forged's +2: the target creature attacks
+/// Gideon during its controller's next turn if able; its other creatures
+/// are free, and the lure ends with that turn.
+#[test]
+fn cr_508_1d_gideon_battle_forged_lures_one_creature() {
+    let mut g = main_phase();
+    let gideon = g.add_card_to_battlefield(0, *catalog::kytheon_hero_of_akros().back_face.unwrap());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let elves = g.add_card_to_battlefield(1, catalog::llanowar_elves());
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: gideon,
+        ability_index: 0,
+        target: Some(Target::Permanent(bear)),
+        x_value: None,
+    })
+    .expect("+2");
+    drain_stack(&mut g);
+    for id in [bear, elves] {
+        g.clear_sickness(id);
+    }
+    g.turn_number += 1;
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    let pw = AttackTarget::Planeswalker(gideon);
+    let at = |id, t| Attack { attacker: id, target: t };
+    let ok = |g: &GameState, a: Vec<Attack>| g.would_accept(GameAction::DeclareAttackers(a));
+    assert!(!ok(&g, vec![]), "the Bears stayed home");
+    assert!(!ok(&g, vec![at(bear, AttackTarget::Player(0))]), "the Bears aimed elsewhere");
+    assert!(ok(&g, vec![at(bear, pw)]), "the Elves are free");
+    assert!(ok(&g, vec![at(bear, pw), at(elves, AttackTarget::Player(0))]));
+    let picked = crabomination::server::bot::pick_attacks(&g, 1);
+    assert!(picked.iter().any(|a| a.attacker == bear && a.target == pw), "{picked:?}");
+    g.step = TurnStep::End;
+    for _ in 0..6 {
+        if g.active_player_idx != 1 {
+            break;
+        }
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+    }
+    assert!(g.players[1].creature_attack_lures.is_empty(), "the lure lasts one turn");
+}
+
 /// The snow duals enter tapped (table-driven).
 #[test]
 fn snow_duals_enter_tapped() {

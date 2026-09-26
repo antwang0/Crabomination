@@ -3193,7 +3193,6 @@ castable** — `CastSpellBack` swapped in any back and cast it for its
 from hand for nothing; a back that prints no mana cost is now refused.
 Residuals: **Azor's
 Gateway**, **Chandra, Fire of Kaladesh**, **Cosima**,
-**Kytheon** (Gideon),
 **Ludevic**. A 200-game census beside Y'shtola / Brass / Galadriel (seed 168) decided 200/200 with zero
 panics; Esika won 11.5 %.
 
