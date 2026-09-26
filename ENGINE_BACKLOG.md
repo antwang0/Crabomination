@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED 2026-09-26 (session `01VVD5mW`) — Timey-Wimey's follow-ups and a residual sweep](#fixed-2026-09-26-session-01vvd5mw--timey-wimeys-follow-ups-and-a-residual-sweep) | 45 |
 | Bugs & robustness | [FIXED 2026-09-19 (the forty-sixth find) — a static's filter leaf that the chosen `AffectedPermanents` variant cannot carry is SILENTLY DROPPED, and a dropped leaf widens the static](#fixed-2026-09-19-the-forty-sixth-find--a-statics-filter-leaf-that-the-chosen-affectedpermanents-variant-cannot-carry-is-silently-dropped-and-a-dropped-leaf-widens-the-static) | 62 |
 | Bugs & robustness | [FIXED 2026-09-19 (the forty-fifth find) — the INVENTED-ability column, built the way this file's own "CLOSED WITH A REASON" note prescribed, and the eleven cards it named](#fixed-2026-09-19-the-forty-fifth-find--the-invented-ability-column-built-the-way-this-files-own-closed-with-a-reason-note-prescribed-and-the-eleven-cards-it-named) | 68 |
 | Bugs & robustness | [OPEN 2026-09-19 — nineteen cube-pool entries are DUPLICATED, so nineteen cards draft at double weight](#open-2026-09-19--nineteen-cube-pool-entries-are-duplicated-so-nineteen-cards-draft-at-double-weight) | 19 |
@@ -104,6 +105,46 @@ the handoff.
 
 
 # Bugs & robustness
+
+## FIXED 2026-09-26 (session `01VVD5mW`) — Timey-Wimey's follow-ups and a residual sweep
+
+The Timey-Wimey build here was superseded (`018BnccM` landed it first as seat
+183); what survived is what that build lacked, plus residual rows closed
+across nine precons.
+
+- ⚠ **Vanishing's sacrifice was not a trigger** (CR 702.63a). The upkeep
+  sacrificed on the spot when the last counter came off, and nothing else
+  removing the last counter (time travel, Clockspinning) sacrificed at all;
+  a vanishing permanent with no counters (Out of Time, nothing phased) was
+  sacrificed at its first upkeep. `game/vanishing.rs` synthesizes the
+  last-counter trigger, stacked under the permanent's own triggers.
+- ⚠ **Tokens and copies with vanishing entered with no counters** — The
+  Girl in the Fireplace's Human Noble and every Flesh Duplicate copy died at
+  their first upkeep (`mint_token_with_counters`,
+  `reseed_entering_counters_after_copy`).
+- ⚠ **Idris, Soul of the TARDIS had no abilities**: its "has the exiled
+  card's activated abilities" static read the imprint link, which
+  `ExileUntilSourceLeaves` never sets. The abilities (triggered ones too)
+  are stamped as the card is exiled (`AcquireAbilitiesOfExiledWithSource`).
+- ⚠ **Time travel ticked exiled cards that aren't suspended**, and the
+  WhileSuspended trigger walk ignored gained suspend; one predicate now
+  (`CardInstance::is_suspended`, `R::IsSuspended`). A suspended card's last
+  counter still triggers it (Dinosaurs on a Spaceship).
+- ⚠ **A granted Changeling never met a type lord**: `AllWithCreatureType`
+  read the printed keyword list (Mirror Entity, Shields of Velis Vel).
+- ⚠ **"Until your next turn" coded as "this turn"**: Jace, Telepath
+  Unbound's +1, Gideon, Battle-Forged's +1, Arlinn, the Pack's Hope's +1
+  (new Player flags). A catalog audit (oracle "until your next turn" vs. no
+  next-turn duration in the body, goad/detain excluded) lists 16 more
+  candidates, mostly 2-player-pool cards — a lead, not a verdict: Dovin, Hand
+  of Control's −1, Rowan's back face, Amplifire, Rootwise Survivor, Eon
+  Frolicker, Mythos of Vadrok, Crystalline Resonance.
+- Cast-only exile permissions (`MayPlayPermission.cast_only`): Dream
+  Pillager, Stolen Strategy, Dead Man's Chest let a land be played. Sisay
+  fetched mana value *up to* its power; Kaalia triggered on a planeswalker
+  attack; Dennick lacked its graveyard lock; Chaos Wand stranded an uncast
+  find; Hour of Eternity / Lazotep Quarry copies kept their creature types;
+  Archangel Avacyn waited for *your* upkeep.
 
 ## FIXED/OPEN 2026-09-23 (the Commander precon run) — what the 15..18-seat pods found
 
