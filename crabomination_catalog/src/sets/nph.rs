@@ -1587,7 +1587,7 @@ pub fn mycosynth_wellspring() -> CardDefinition {
         triggered_abilities: vec![
             etb(fetch.clone()),
             TriggeredAbility {
-                event: EventSpec::new(EventKind::PutIntoGraveyard, EventScope::SelfSource),
+                event: EventSpec::new(EventKind::PermanentDied, EventScope::SelfSource),
                 effect: fetch,
             },
         ],

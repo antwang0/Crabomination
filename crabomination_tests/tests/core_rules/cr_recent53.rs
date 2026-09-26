@@ -728,12 +728,25 @@ fn cr_603_6_card_exiled_fans_out_per_card() {
 /// so a `SelfSource` "when this is put into a graveyard from anywhere" fires
 /// out of the graveyard the card just landed in — and a mill puts BOTH a
 /// `CardPutIntoGraveyard` and a `CardMilled` for it in the batch. The
-/// subject dedupe that the battlefield walk got has to be there too, or Ichor
-/// Wellspring draws two cards for one mill.
+/// subject dedupe that the battlefield walk got has to be there too, or a
+/// "from anywhere" drawer draws two cards for one mill. (The vehicle was Ichor
+/// Wellspring until its trigger was read "from the battlefield", as printed.)
 #[test]
 fn cr_603_6_a_milled_self_source_graveyard_trigger_fires_once() {
+    use crabomination::card::{CardDefinition, EventKind, EventScope, EventSpec, TriggeredAbility};
     let mut g = two_player_game();
-    g.add_card_to_library(0, catalog::ichor_wellspring());
+    g.add_card_to_library(
+        0,
+        CardDefinition {
+            name: "Test Anywhere Drawer",
+            card_types: vec![CardType::Artifact],
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::PutIntoGraveyard, EventScope::SelfSource),
+                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            }],
+            ..Default::default()
+        },
+    );
     for _ in 0..4 {
         g.add_card_to_library(0, catalog::forest()); // something to draw
     }

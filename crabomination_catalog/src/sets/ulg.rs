@@ -61,7 +61,7 @@ fn sticky_aura(name: &'static str, c: crate::mana::ManaCost, bonus: EquipBonus) 
         effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
         equipped_bonus: Some(bonus),
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::PutIntoGraveyard, EventScope::SelfSource),
+            event: EventSpec::new(EventKind::PermanentDied, EventScope::SelfSource),
             effect: Effect::Move {
                 what: Selector::This,
                 to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),

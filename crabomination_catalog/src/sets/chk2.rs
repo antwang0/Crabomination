@@ -1853,7 +1853,7 @@ pub fn oathkeeper_takenos_daisho() -> CardDefinition {
             ..Default::default()
         }),
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::PutIntoGraveyard, EventScope::SelfSource),
+            event: EventSpec::new(EventKind::PermanentDied, EventScope::SelfSource),
             effect: Effect::Move {
                 what: Selector::AttachedTo(Box::new(Selector::This)),
                 to: ZoneDest::Exile,

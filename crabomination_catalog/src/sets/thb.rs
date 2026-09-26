@@ -3985,7 +3985,7 @@ pub fn mantle_of_the_wolf() -> CardDefinition {
         ..Default::default()
     });
     c.triggered_abilities = vec![TriggeredAbility {
-        event: EventSpec::new(EventKind::PutIntoGraveyard, EventScope::SelfSource),
+        event: EventSpec::new(EventKind::PermanentDied, EventScope::SelfSource),
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),

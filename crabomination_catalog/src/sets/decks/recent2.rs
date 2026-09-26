@@ -869,7 +869,7 @@ pub fn tarrians_soulcleaver() -> CardDefinition {
         equipped_bonus: Some(EquipBonus {
             keywords: vec![Keyword::Vigilance],
             triggered_abilities: vec![TriggeredAbility {
-                event: EventSpec::new(EventKind::PutIntoGraveyard, EventScope::AnyPlayer)
+                event: EventSpec::new(EventKind::PermanentDied, EventScope::AnyPlayer)
                     .with_filter(Predicate::EntityMatches {
                         what: Selector::TriggerSource,
                         filter: SelectionRequirement::Or(

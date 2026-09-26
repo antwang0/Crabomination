@@ -550,7 +550,7 @@ pub fn unquenchable_fury() -> CardDefinition {
             ..Default::default()
         }),
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::PutIntoGraveyard, EventScope::SelfSource),
+            event: EventSpec::new(EventKind::PermanentDied, EventScope::SelfSource),
             effect: Effect::Move {
                 what: Selector::This,
                 to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::This))),

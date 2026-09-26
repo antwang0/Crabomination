@@ -51495,8 +51495,7 @@ pub fn time_sieve() -> CardDefinition {
 }
 
 /// Ichor Wellspring — {2} Artifact. Draws a card when it enters and when
-/// it hits a graveyard (the printed "from the battlefield" qualifier is
-/// approximated as any graveyard entry).
+/// it is put into a graveyard from the battlefield.
 pub fn ichor_wellspring() -> CardDefinition {
     use crate::effect::shortcut::etb;
     CardDefinition {
@@ -51509,7 +51508,7 @@ pub fn ichor_wellspring() -> CardDefinition {
                 amount: Value::Const(1),
             }),
             TriggeredAbility {
-                event: EventSpec::new(EventKind::PutIntoGraveyard, EventScope::SelfSource),
+                event: EventSpec::new(EventKind::PermanentDied, EventScope::SelfSource),
                 effect: Effect::Draw {
                     who: Selector::You,
                     amount: Value::Const(1),

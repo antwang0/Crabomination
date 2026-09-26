@@ -472,3 +472,32 @@ fn vastwood_surge_ramps_and_kicked_grows() {
     drain_stack(&mut g);
     assert_eq!(counters(&g, bear), 2);
 }
+
+/// "When this is put into a graveyard from the battlefield" does not fire on a
+/// discard: Unquenchable Fury came back from every cleanup discard, so its
+/// controller discarded it forever (CR 514.3a cleanup loop, eight-seat pod
+/// seed 31105 game 158). The same shape, table-driven over the cards that
+/// read it; each still fires when it dies (`unquenchable_fury_burns_by_hand_and_returns`).
+#[test]
+fn from_the_battlefield_triggers_ignore_a_discard() {
+    for make in [
+        catalog::unquenchable_fury as fn() -> crabomination::card::CardDefinition,
+        catalog::cessation,
+        catalog::mantle_of_the_wolf,
+        catalog::ichor_wellspring,
+        catalog::mycosynth_wellspring,
+        catalog::oathkeeper_takenos_daisho,
+    ] {
+        let mut g = main_phase(2);
+        g.add_card_to_library(0, catalog::forest());
+        let id = g.add_card_to_hand(0, make());
+        let mut evs = Vec::new();
+        assert!(g.discard_card(0, id, &mut evs));
+        g.dispatch_triggers_for_events(&evs);
+        drain_stack(&mut g);
+        let name = make().name;
+        assert!(g.players[0].graveyard.iter().any(|c| c.id == id), "{name} stays discarded");
+        assert!(g.players[0].hand.is_empty(), "{name}: nothing drawn or returned");
+        assert!(g.battlefield.is_empty(), "{name}: no tokens");
+    }
+}

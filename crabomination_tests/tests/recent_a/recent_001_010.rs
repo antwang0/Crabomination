@@ -7607,6 +7607,17 @@ mod recent2 {
             Some(1),
             "equipped creature grew by a +1/+1 counter"
         );
+        // "From the battlefield": a creature card discarded from hand is not one.
+        let card = g.add_card_to_hand(0, catalog::grizzly_bears());
+        let mut evs = Vec::new();
+        assert!(g.discard_card(0, card, &mut evs));
+        g.dispatch_triggers_for_events(&evs);
+        drain_stack(&mut g);
+        assert_eq!(
+            g.battlefield_find(bear).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied(),
+            Some(1),
+            "a discard does not grow it"
+        );
     }
 
     /// Snarespinner pumps +2/+0 when it blocks a flier (but not a grounded attacker).
