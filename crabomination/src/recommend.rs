@@ -2752,7 +2752,7 @@ pub(crate) fn cap_diagnosis(g: &GameState, actions: usize) -> String {
             .count();
         let _ = write!(
             s,
-            "\n  p{seat}: life {} bf {} ({untapped} untapped) hand {} gy {} lib {} pool {}{}{}",
+            "\n  p{seat}: life {} bf {} ({untapped} untapped) hand {} gy {} lib {} pool {}{}{}{}",
             p.life,
             g.battlefield.iter().filter(|c| c.controller == seat).count(),
             p.hand.len(),
@@ -2763,6 +2763,9 @@ pub(crate) fn cap_diagnosis(g: &GameState, actions: usize) -> String {
             // interesting half: it says the seat has not attempted a draw.
             if p.pending_deck_loss { " [deck-loss armed]" } else { "" },
             if p.skip_next_draw_step > 0 { " [draw steps skipped]" } else { "" },
+            // A draw is every remaining seat losing at once (CR 104.4a); the
+            // causes say whether that was one event or a loop.
+            p.loss_cause.map(|c| format!(" [lost: {c:?}]")).unwrap_or_default(),
         );
     }
     let name_of = |id: crate::card::CardId| {
