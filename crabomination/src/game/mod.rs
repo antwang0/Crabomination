@@ -7115,6 +7115,23 @@ impl GameState {
             + u32::from(self.players[seat].token_doublings_this_turn)
     }
 
+    /// CR 614.13 — `base` tokens under `seat`'s doublers (`2^n`), capped at
+    /// the simulator's board bound: a batch past it ends the game as
+    /// `BoardCap` all the same. Every token mint loop sizes itself here — an
+    /// uncapped one ran 2^32 mints (Cadric copying an Adrix and Nev while
+    /// thirty-odd Adrix copies doubled it: an eight-seat pod hung).
+    pub(crate) fn doubled_token_count(&self, seat: usize, base: u32) -> u32 {
+        let cap = crate::recommend::MAX_BATTLEFIELD as u32 + 1;
+        let mut n = base.min(cap);
+        for _ in 0..self.token_doublers_for(seat) {
+            if n >= cap {
+                break;
+            }
+            n = n.saturating_mul(2);
+        }
+        n.min(cap)
+    }
+
     /// CR 614 — the host of `seat`'s live
     /// `FirstTokensEachTurnBecomeCopiesOfAttached` Aura (Moonlit Meditation),
     /// or `None` when the replacement is spent, absent, or unattached.

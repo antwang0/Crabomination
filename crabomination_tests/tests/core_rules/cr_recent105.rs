@@ -72,3 +72,58 @@ fn cr_614_a_bounced_one_is_exiled_too_and_the_replacement_is_spent() {
     // CR 400.7 — whatever comes back later is a new object.
     assert!(g.replacement_effects.is_empty(), "the object-bound replacement lapsed");
 }
+
+/// CR 614.13 — stacked token doublers multiply, and every mint loop is capped
+/// at the simulator's board bound: forty Adrix and Nevs doubling a Cadric
+/// copy, a populate and a token copy used to ask for 2^32 mints (an
+/// eight-seat pod hung inside one bot probe).
+#[test]
+fn cr_614_13_forty_token_doublers_mint_a_bounded_batch() {
+    use crabomination::card::Value;
+    use crabomination::effect::{Effect, PlayerRef, Selector};
+    let mut g = two_player_game();
+    for _ in 0..40 {
+        g.add_card_to_battlefield(0, catalog::adrix_and_nev_twincasters());
+    }
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mut ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    ctx.targets = vec![Target::Permanent(bear)];
+    let before = g.battlefield.len();
+    g.resolve_effect(
+        &Effect::CreateTokenCopiesHasteSac { who: PlayerRef::You, count: Value::ONE, source: Selector::Target(0), exile: false },
+        &ctx,
+    )
+    .expect("copies");
+    let made = g.battlefield.len() - before;
+    assert!(made > 1000 && made <= 1025, "doubled to the board bound, not 2^40: {made}");
+}
+
+/// CR 614.13 — a token doubler doubles tokens created tapped and attacking
+/// too (Mobilize, Myriad-style riders): one Adrix and Nev turns one attacking
+/// token into two. The attacking-token mint used to skip the doublers.
+#[test]
+fn cr_614_13_tokens_created_attacking_are_doubled() {
+    use crabomination::card::Value;
+    use crabomination::effect::{AttackingTokenCleanup, Effect, PlayerRef};
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::adrix_and_nev_twincasters());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.step = TurnStep::DeclareAttackers;
+    g.attacking.push(Attack { attacker: bear, target: AttackTarget::Player(1) });
+    let mut ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    ctx.source = Some(bear);
+    g.resolve_effect(
+        &Effect::CreateTokenAttacking {
+            who: PlayerRef::You,
+            count: Value::ONE,
+            definition: std::sync::Arc::new(crabomination_base::tokens::spirit_token()),
+            cleanup: AttackingTokenCleanup::default(),
+            defender: None,
+        },
+        &ctx,
+    )
+    .expect("tokens");
+    let attackers = g.attacking.iter().filter(|a| g.battlefield_find(a.attacker).is_some_and(|c| c.is_token)).count();
+    assert_eq!(attackers, 2, "doubled, both attacking");
+}

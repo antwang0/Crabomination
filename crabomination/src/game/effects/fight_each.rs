@@ -26,7 +26,7 @@ impl GameState {
             })
             .map(|c| c.id)
             .collect();
-        let per_creature = 1u32 << self.token_doublers_for(you).min(16);
+        let per_creature = self.doubled_token_count(you, 1);
         let def = token_card_arc(definition);
         let mut pairs = Vec::with_capacity(prey.len());
         for &victim in &prey {

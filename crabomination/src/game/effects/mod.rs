@@ -20846,21 +20846,13 @@ impl GameState {
                     .as_ref()
                     .map(|(kind, v)| (*kind, v, ctx));
                 for p in players {
-                    let mut n = base;
                     // CR 614.13 token-doubling replacement: each
                     // `StaticEffect::DoubleTokens` permanent that player has on
                     // the battlefield (Adrix and Nev, Twincasters; Doubling
-                    // Season for the token half) doubles the count. Stacking
-                    // doublers multiply (2^k for k active doublers).
-                    let doublers = self.token_doublers_for(p);
-                    for _ in 0..doublers {
-                        n = n.saturating_mul(2);
-                    }
-                    // A simulator bound, not a rule: one batch past the board
-                    // bound ends the game as `BoardCap` all the same, and a
-                    // bot probe of Storm Herd at 15,197 life minted all 15,197
-                    // (22 s for one decision in an 8-seat pod).
-                    n = n.min(crate::recommend::MAX_BATTLEFIELD as u32 + 1);
+                    // Season for the token half) doubles the count, capped at
+                    // the board bound (a bot probe of Storm Herd at 15,197
+                    // life minted all 15,197: 22 s for one decision).
+                    let n = self.doubled_token_count(p, base);
                     // Moonlit Meditation — the turn's first token batch may
                     // instead be that many copies of the Aura's host.
                     if n > 0
@@ -20923,8 +20915,7 @@ impl GameState {
                 let n = self.evaluate_value(amount, ctx).max(0) as u32;
                 for p in players {
                     // CR 614.13 — token doublers apply to the Incubator mint.
-                    let doublers = self.token_doublers_for(p);
-                    let copies = 1u32 << doublers.min(16);
+                    let copies = self.doubled_token_count(p, 1);
                     for _ in 0..copies {
                         let def = token_card_arc(&incubator_token());
                         let id = self.mint_token_onto_battlefield(def, p, false, events);
@@ -21081,7 +21072,8 @@ impl GameState {
                         }),
                 };
                 let Some(target) = target else { return Ok(()); };
-                let n = self.evaluate_value(count, ctx).max(0) as u32;
+                // CR 614.13 — doublers apply to tokens created attacking too.
+                let n = self.doubled_token_count(p, self.evaluate_value(count, ctx).max(0) as u32);
                 // Mint-time dynamic P/T, resolved in the minting effect's
                 // context (Gemini Engine's Twin copies the Engine's P/T).
                 let dyn_pt = definition.dynamic_pt.as_ref().map(|(pv, tv)| {
@@ -21247,11 +21239,7 @@ impl GameState {
                 extra_keywords,
             } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
-                let mut n = self.evaluate_value(count, ctx).max(0) as u32;
-                let doublers = self.token_doublers_for(p);
-                for _ in 0..doublers {
-                    n = n.saturating_mul(2);
-                }
+                let n = self.doubled_token_count(p, self.evaluate_value(count, ctx).max(0) as u32);
                 // Resolve the source permanent. Walk battlefield first;
                 // fall back to graveyard / hand / exile via the same
                 // sequence `move_card_to` uses, so a fresh copy can be
@@ -21397,10 +21385,7 @@ impl GameState {
 
             Effect::CreateTokenCopiesHasteSac { who, count, source, exile } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
-                let mut n = self.evaluate_value(count, ctx).max(0) as u32;
-                for _ in 0..self.token_doublers_for(p) {
-                    n = n.saturating_mul(2);
-                }
+                let n = self.doubled_token_count(p, self.evaluate_value(count, ctx).max(0) as u32);
                 let src_id = self
                     .resolve_selector(source, ctx)
                     .into_iter()
@@ -21449,10 +21434,7 @@ impl GameState {
                     return Ok(());
                 };
                 // Token doublers (Doubling Season / Parallel Lives) apply.
-                let mut n: u32 = 1;
-                for _ in 0..self.token_doublers_for(p) {
-                    n = n.saturating_mul(2);
-                }
+                let n = self.doubled_token_count(p, 1);
                 for _ in 0..n {
                     self.mint_token_onto_battlefield(def.clone(), p, false, events);
                 }
