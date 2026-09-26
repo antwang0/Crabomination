@@ -192,3 +192,29 @@ fn veyran_doubles_its_own_magecraft() {
     let cp = g.computed_permanent(v).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 4));
 }
+
+/// Magda, Brazen Outlaw — "*Other* Dwarves you control get +1/+0."
+#[test]
+fn magda_pumps_other_dwarves_only() {
+    let mut g = main_phase();
+    let magda = g.add_card_to_battlefield(0, catalog::magda_brazen_outlaw());
+    assert_eq!(g.computed_permanent(magda).unwrap().power, 2);
+}
+
+/// Nahiri, the Harbinger −8 — the fetched creature gains haste and returns to
+/// your hand at the beginning of the next end step.
+#[test]
+fn nahiri_ultimate_hastes_and_returns() {
+    let mut g = main_phase();
+    let nahiri = g.add_card_to_battlefield(0, catalog::nahiri_the_harbinger());
+    g.battlefield_find_mut(nahiri).unwrap().add_counters(crabomination::card::CounterType::Loyalty, 4);
+    let giant = g.add_card_to_library(0, catalog::hill_giant());
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: nahiri, ability_index: 2, target: None, x_value: None })
+        .expect("-8");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(giant).unwrap().keywords().contains(&Keyword::Haste));
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == giant), "back to hand at the end step");
+}

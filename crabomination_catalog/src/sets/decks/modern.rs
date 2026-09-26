@@ -18783,7 +18783,8 @@ pub fn magda_brazen_outlaw() -> CardDefinition {
             effect: StaticEffect::PumpPT {
                 applies_to: Selector::EachPermanent(
                     SelectionRequirement::HasCreatureType(CreatureType::Dwarf)
-                        .and(SelectionRequirement::ControlledByYou),
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
                 ),
                 power: 1,
                 toughness: 0,

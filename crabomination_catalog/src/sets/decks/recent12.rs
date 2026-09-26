@@ -603,7 +603,7 @@ pub fn coastal_breach() -> CardDefinition {
 /// +2: you may discard a card; if you do, draw a card.
 /// −2: exile target enchantment, tapped artifact, or tapped creature.
 /// −8: search your library for an artifact or creature card and put it onto the
-/// battlefield. (Printed haste + return-to-hand rider on the −8 is dropped.)
+/// battlefield; it gains haste and returns to your hand at the next end step.
 pub fn nahiri_the_harbinger() -> CardDefinition {
     CardDefinition {
         name: "Nahiri, the Harbinger",
@@ -647,14 +647,31 @@ pub fn nahiri_the_harbinger() -> CardDefinition {
             },
             LoyaltyAbility {
                 loyalty_cost: -8,
-                effect: Effect::Search {
-                    who: PlayerRef::You,
-                    filter: SelectionRequirement::Artifact.or(SelectionRequirement::Creature),
-                    to: ZoneDest::Battlefield {
-                        controller: PlayerRef::You,
-                        tapped: false,
+                // "It gains haste. Return it to your hand at the beginning of
+                // the next end step."
+                effect: Effect::Seq(vec![
+                    Effect::Search {
+                        who: PlayerRef::You,
+                        filter: SelectionRequirement::Artifact.or(SelectionRequirement::Creature),
+                        to: ZoneDest::Battlefield {
+                            controller: PlayerRef::You,
+                            tapped: false,
+                        },
                     },
-                },
+                    Effect::GrantKeyword {
+                        what: Selector::LastMoved,
+                        keyword: Keyword::Haste,
+                        duration: crate::effect::Duration::Permanent,
+                    },
+                    Effect::DelayUntilWithCapture {
+                        kind: crate::effect::DelayedTriggerKind::NextEndStep,
+                        capture: Selector::LastMoved,
+                        body: Box::new(Effect::Move {
+                            what: Selector::TargetFiltered { slot: 0, filter: SelectionRequirement::OnBattlefield },
+                            to: ZoneDest::Hand(PlayerRef::You),
+                        }),
+                    },
+                ]),
                 x_cost: false,
             },
         ],
