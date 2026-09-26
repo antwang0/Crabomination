@@ -2387,6 +2387,43 @@ impl GameState {
                     );
                 }
             }
+            // CR 508.1 — "whenever a player attacks" (Mirkwood Trapper): once
+            // per declaration, the attacking player in the target slot and as
+            // the trigger source.
+            let any_attack: Vec<(CardId, usize, Effect, Option<crate::card::Predicate>)> = self
+                .battlefield
+                .iter()
+                .filter(|c| self.players[c.controller].is_alive())
+                .flat_map(|c| {
+                    c.definition
+                        .triggered_abilities
+                        .iter()
+                        .filter(|t| {
+                            t.event.kind == EventKind::Attacks
+                                && t.event.scope == crate::effect::EventScope::AnyPlayerAttacks
+                        })
+                        .map(move |t| (c.id, c.controller, t.effect.clone(), t.event.filter.clone()))
+                })
+                .collect();
+            for (src, ctrl, effect, filter) in any_attack {
+                let subject = Some(crate::game::effects::EntityRef::Player(p));
+                let ctx = crate::game::effects::EffectContext {
+                    controller: ctrl,
+                    source: Some(src),
+                    targets: vec![Target::Player(p)],
+                    trigger_source: subject,
+                    ..crate::game::effects::EffectContext::default()
+                };
+                if filter.as_ref().is_some_and(|f| !self.evaluate_predicate(f, &ctx)) {
+                    continue;
+                }
+                self.stack.push(
+                    TriggerPush::new(src, ctrl, effect)
+                        .target(Some(Target::Player(p)))
+                        .trigger_source(subject)
+                        .build(),
+                );
+            }
             // CR 508.1 — "whenever you attack a player" (Karazikar, Firkraag):
             // once per player the attacking player attacks, that player bound
             // as the trigger source and subject, so the queue can target

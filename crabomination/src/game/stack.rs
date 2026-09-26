@@ -1064,6 +1064,7 @@ impl GameState {
             EventScope::ControllerAttackedByOpponent
             | EventScope::ControllerPlaneswalkerAttackedByOpponent
         | EventScope::OpponentOfYoursAttacked
+        | EventScope::AnyPlayerAttacks
         | EventScope::YouAttackedPlayer => false, // combat-based
         };
         // One board-level scan for the whole walk: the per-card shim rebuilds

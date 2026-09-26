@@ -1121,6 +1121,7 @@ fn event_matches_spec_rest(
         EventScope::ControllerAttackedByOpponent
         | EventScope::ControllerPlaneswalkerAttackedByOpponent
         | EventScope::OpponentOfYoursAttacked
+        | EventScope::AnyPlayerAttacks
         | EventScope::YouAttackedPlayer => false,
         // "When enchanted creature dies / is dealt damage" — the subject must
         // be enchanted by this source Aura. Deaths read the death-time snapshot
@@ -1578,6 +1579,7 @@ pub(crate) fn emblem_event_matches(
         | EventScope::ControllerAttackedByOpponent
         | EventScope::ControllerPlaneswalkerAttackedByOpponent
         | EventScope::OpponentOfYoursAttacked
+        | EventScope::AnyPlayerAttacks
         | EventScope::YouAttackedPlayer => false,
     }
 }

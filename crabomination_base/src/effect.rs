@@ -3711,6 +3711,12 @@ pub enum EventScope {
     /// attacking player into the target slot (`PlayerRef::Target(0)`) and the
     /// attacked opponent as the trigger source (`PlayerRef::Triggerer`).
     OpponentOfYoursAttacked,
+    /// CR 508.1 — "Whenever a player attacks" (Mirkwood Trapper): once per
+    /// declaration with at least one attacker, whoever declares it. The
+    /// attacking player rides the target slot (`PlayerRef::Target(0)`) and
+    /// the trigger source, so the filter can ask whom they attacked — the
+    /// declaration is complete when it is dispatched.
+    AnyPlayerAttacks,
     /// CR 508.1 — "Whenever you attack a player" (Karazikar, the Eye
     /// Tyrant): once per declaration per player the source's controller
     /// attacks, gated by the trigger's filter. The attacked player rides the
