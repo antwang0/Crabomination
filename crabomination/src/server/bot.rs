@@ -6912,7 +6912,7 @@ fn hand_specialties(state: &GameState, seat: usize, facts: &BoardFacts) -> u32 {
         if facts.grants_conspire && (def.is_instant() || def.is_sorcery()) {
             m |= spec::CONSPIRE;
         }
-        if state.players[seat].next_spell_convoke_this_turn {
+        if state.players[seat].next_spell_convoke_this_turn || state.players[seat].next_spell_improvise_this_turn {
             m |= spec::CONVOKE;
         }
         // Gorex's filtered delve rides the delve block.
@@ -7401,6 +7401,7 @@ pub(super) fn cast_candidates<'a>(
             || state.players[seat].next_spell_convoke_this_turn
             || (facts.grants_convoke && state.spell_granted_convoke(seat, c));
         let improvise = c.definition.keywords.has_kw(&crate::card::Keyword::Improvise)
+            || state.players[seat].next_spell_improvise_this_turn
             || (facts.grants_convoke && state.spell_granted_improvise(seat, c));
         if !convoke && !improvise {
             continue;

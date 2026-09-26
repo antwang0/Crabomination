@@ -11492,6 +11492,10 @@ pub enum Effect {
     /// "The next spell you cast this turn has convoke" (CR 702.51 — Wand of
     /// the Worldsoul, Flockchaser Phantom).
     NextSpellGainsConvokeThisTurn,
+    /// "The next spell you cast this turn has improvise" (CR 702.126 —
+    /// Archway of Innovation). The artifact sibling of
+    /// `NextSpellGainsConvokeThisTurn`.
+    NextSpellGainsImproviseThisTurn,
     /// For each of `keywords` a creature card in your graveyard has, a counter
     /// of it on a creature you control; then a +1/+1 counter on the source per
     /// counter placed (Kathril, Aspect Warper).

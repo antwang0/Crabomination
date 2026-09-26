@@ -330,3 +330,29 @@ fn excalibur_discounts_by_historic_and_equips_only_legends() {
     assert_eq!(cp.power, 12);
     assert!(cp.keywords().contains(&Keyword::Vigilance));
 }
+
+/// CR 702.126: after Archway's second ability, the next spell taps an
+/// artifact for {1} of its generic cost; the grant is spent by that cast.
+#[test]
+fn archway_grants_improvise_to_the_next_spell() {
+    let mut g = pod(4);
+    let arch = g.add_card_to_battlefield(0, catalog::archway_of_innovation());
+    let rock = g.add_card_to_battlefield(0, catalog::ornithopter());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: arch, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("{U}, {T}");
+    drain_stack(&mut g);
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears()); // {1}{G}
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpellConvoke {
+        card_id: bears, target: None, additional_targets: vec![], mode: None, x_value: None,
+        convoke_creatures: vec![rock],
+    })
+    .expect("the Ornithopter improvises the {1}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bears).is_some());
+    assert!(g.battlefield_find(rock).unwrap().tapped);
+    assert!(!g.players[0].next_spell_improvise_this_turn, "spent");
+}

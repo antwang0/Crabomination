@@ -4669,6 +4669,7 @@ impl GameState {
             pl.zero_alt_cast_used_this_turn = false;
             pl.life_alt_next_spell_this_turn = false;
             pl.next_spell_convoke_this_turn = false;
+            pl.next_spell_improvise_this_turn = false;
             pl.next_spell_flash_this_turn = false;
             if !pl.next_typed_spell_flash_this_turn.is_empty() {
                 pl.next_typed_spell_flash_this_turn.clear();

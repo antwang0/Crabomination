@@ -9086,6 +9086,7 @@ impl GameState {
             || (cost_statics & cast_static::GRANT_CONVOKE != 0
                 && self.spell_granted_convoke(p, &card));
         let has_improvise = card.definition.keywords.has_kw(&crate::card::Keyword::Improvise)
+            || self.players[p].next_spell_improvise_this_turn
             || (cost_statics & cast_static::GRANT_CONVOKE != 0
                 && self.spell_granted_improvise(p, &card));
         // CR 701.67 — waterbend helpers ride the same `convoke_creatures` slot;
@@ -10150,6 +10151,7 @@ impl GameState {
             self.players[p].next_spell_convoke_this_turn = false;
             self.convoke_granted_spells.push(card_id);
         }
+        self.players[p].next_spell_improvise_this_turn = false;
         if self.players[p].next_spell_flash_this_turn {
             self.players[p].next_spell_flash_this_turn = false;
         }

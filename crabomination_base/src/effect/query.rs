@@ -949,6 +949,7 @@ impl Effect {
             | Effect::RevealTopPutAttached { .. }
             | Effect::RevealUntilPutAttachedElseHand { .. }
             | Effect::NextSpellGainsConvokeThisTurn
+            | Effect::NextSpellGainsImproviseThisTurn
             | Effect::KeywordCountersFromGraveyard { .. }
             | Effect::RevealTopChooseByKeyword { .. }
             | Effect::ChooseCardTypeAmongForSource(_)

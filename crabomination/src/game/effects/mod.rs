@@ -36580,6 +36580,10 @@ impl GameState {
                 self.players[ctx.controller].next_spell_convoke_this_turn = true;
                 Ok(())
             }
+            Effect::NextSpellGainsImproviseThisTurn => {
+                self.players[ctx.controller].next_spell_improvise_this_turn = true;
+                Ok(())
+            }
             Effect::NextSpellHasFlashThisTurn => {
                 self.players[ctx.controller].next_spell_flash_this_turn = true;
                 Ok(())

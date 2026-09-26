@@ -390,3 +390,35 @@ pub fn excalibur_sword_of_eden() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Archway of Innovation — Land. Enters tapped unless you control an Island.
+/// {T}: Add {U}. {U}, {T}: the next spell you cast this turn has improvise
+/// (CR 702.126).
+pub fn archway_of_innovation() -> CardDefinition {
+    CardDefinition {
+        name: "Archway of Innovation",
+        card_types: vec![CardType::Land],
+        static_abilities: vec![StaticAbility {
+            description: "This land enters tapped unless you control an Island.",
+            effect: StaticEffect::EntersTappedUnless {
+                applies_to: Selector::This,
+                condition: Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        R::HasLandType(crate::card::LandType::Island).and(R::ControlledByYou),
+                    ),
+                    n: Value::ONE,
+                },
+            },
+        }],
+        activated_abilities: vec![
+            crate::sets::tap_add(Color::Blue),
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[u()]),
+                effect: Effect::NextSpellGainsImproviseThisTurn,
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}

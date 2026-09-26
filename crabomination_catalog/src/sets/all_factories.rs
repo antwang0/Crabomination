@@ -4479,6 +4479,7 @@ static DECKS: &[Factory] = &[
     super::decks::beseech_the_mirror,
     super::decks::ojer_taq_deepest_foundation,
     super::decks::excalibur_sword_of_eden,
+    super::decks::archway_of_innovation,
     super::decks::aragorn_the_uniter,
     super::decks::zur_the_enchanter,
     super::decks::flubs_the_fool,
