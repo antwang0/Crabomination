@@ -152,6 +152,9 @@ the handoff.
   discard / graveyard / exile costs (Grimoire of the Dead, Chainer),
   untap-a-land ramp (Arbor Elf), until-end-of-turn gains outside combat
   (Whirler Rogue).
+  `{X}` abilities (Geth) and Class levels (no eval can price one) are taken
+  now. 💡 **The two-player bot never levels a Class either** — the generic
+  pass is pods-only to keep `--bench` fixed; porting the Class rule moves it.
 
 ## FIXED 2026-09-26 (session `01VVD5mW`) — Timey-Wimey's follow-ups and a residual sweep
 
