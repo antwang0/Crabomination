@@ -649,7 +649,11 @@ pub fn pestilent_cauldron() -> CardDefinition {
 /// Plargg). Other tapped creatures you control get +1/+0; other untapped
 /// creatures get +0/+1; whenever you attack, untap each creature you control.
 /// (The optional "then tap any number" rider auto-resolves to no re-taps.)
-pub fn augusta_dean_of_order() -> CardDefinition {
+///
+/// Not a catalog factory of its own: as one it resolved by name to a
+/// mono-white card, letting the {1}{R} front's MDFC into a mono-white
+/// Commander deck (CR 903.4 counts both faces). Reach it through Plargg.
+pub(crate) fn augusta_dean_of_order() -> CardDefinition {
     let other_mine = |extra: SelectionRequirement| {
         Selector::EachPermanent(
             SelectionRequirement::Creature

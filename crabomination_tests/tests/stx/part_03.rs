@@ -1095,7 +1095,7 @@ fn witherbloom_lifedrinker_grows_on_lifegain() {
 #[test]
 fn augusta_dean_of_order_untaps_attackers_on_attack() {
     let mut g = two_player_game();
-    g.add_card_to_battlefield(0, catalog::augusta_dean_of_order());
+    g.add_card_to_battlefield(0, *catalog::plargg_dean_of_chaos().back_face.expect("Plargg's back face"));
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.clear_sickness(bear);
     while g.step != crabomination::game::types::TurnStep::DeclareAttackers {

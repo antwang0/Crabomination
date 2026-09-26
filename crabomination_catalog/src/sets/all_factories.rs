@@ -19735,7 +19735,6 @@ static STX: &[Factory] = &[
     super::stx::crux_of_fate,
     super::stx::plargg_dean_of_chaos,
     super::stx::pestilent_cauldron,
-    super::stx::augusta_dean_of_order,
     super::stx::sky_diamond,
     super::stx::marble_diamond,
     super::stx::fire_diamond,

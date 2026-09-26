@@ -3678,7 +3678,6 @@ const KNOWN_IDENTITY_GAPS: &[(&str, &str)] = &[
     ("Mythos of Illuna", "the \"if {G}{U} was spent\" half is not modelled"),
     ("Balduvian Fallen", "the \"+1/+0 for each {R} spent\" cumulative-upkeep payoff is dropped"),
     // A printed face the catalog has not implemented at all.
-    ("Augusta, Dean of Order", "the Plargg, Dean of Chaos MDFC face ({1}{R}) is unimplemented"),
     // No primitive for "pay {W}{U}{B}{R}{G} rather than the mana cost".
     ("Fist of Suns", "the five-color alternative cost for other spells is unimplemented"),
     ("Leyline of Mutation", "same five-color alternative cost as Fist of Suns"),

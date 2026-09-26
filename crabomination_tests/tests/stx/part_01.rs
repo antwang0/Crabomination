@@ -3056,7 +3056,7 @@ fn plargg_dean_of_chaos_reveals_and_free_casts_cheap_card() {
 #[test]
 fn augusta_dean_of_order_tapped_untapped_anthems() {
     let mut g = two_player_game();
-    g.add_card_to_battlefield(0, catalog::augusta_dean_of_order());
+    g.add_card_to_battlefield(0, *catalog::plargg_dean_of_chaos().back_face.expect("Plargg's back face"));
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
 
     // Untapped: +0/+1 → 2/3.
@@ -5401,13 +5401,32 @@ fn campus_lands_have_no_basic_land_types() {
 #[test]
 fn dean_back_faces_have_printed_creature_types() {
     use crabomination::card::CreatureType;
-    let augusta = catalog::augusta_dean_of_order();
+    let augusta = *catalog::plargg_dean_of_chaos().back_face.expect("Plargg's back face");
     assert_eq!(augusta.subtypes.creature_types,
         vec![CreatureType::Human, CreatureType::Cleric]);
     let shaile = catalog::shaile_dean_of_radiance();
     let embrose = shaile.back_face.as_ref().expect("Shaile has a back face");
     assert_eq!(embrose.subtypes.creature_types,
         vec![CreatureType::Human, CreatureType::Warlock]);
+}
+
+/// CR 903.4: an MDFC's color identity counts both faces — Plargg // Augusta
+/// is red-white, and the back face resolves only through its front (no
+/// standalone mono-white Augusta factory).
+#[test]
+fn plargg_augusta_identity_is_red_white() {
+    use crabomination::mana::Color;
+    let id = crabomination::format::color_identity(&catalog::plargg_dean_of_chaos());
+    let mut got: Vec<Color> = id.iter().collect();
+    got.sort_by_key(|c| *c as u8);
+    let mut want = vec![Color::White, Color::Red];
+    want.sort_by_key(|c| *c as u8);
+    assert_eq!(got, want);
+    assert!(
+        crabomination_catalog::sets::all_factories::all_catalog_card_factories()
+            .all(|f| f().name != "Augusta, Dean of Order"),
+        "Augusta is a back face, not a catalog card"
+    );
 }
 
 /// Explore the Vastlands (Wandering Archaic's back face): each player

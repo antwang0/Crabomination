@@ -626,7 +626,7 @@ is real and the fix belongs with the bot's fight evaluation, not the filter.
 
 `cr_903_4_computed_color_identity_matches_scryfall` (core_rules /
 `catalog_registration.rs`) compares every implemented card's computed identity
-against Scryfall's `color_identity`: **18,058 cards resolved, 7 divergences**,
+against Scryfall's `color_identity`: **18,058 cards resolved, 6 divergences**,
 each a card gap rather than an identity-walk gap. The list in that test is the
 ratchet; this is the engineering view of it.
 
@@ -634,7 +634,6 @@ ratchet; this is the engineering view of it.
 |---|---|---|
 | Mythos of Illuna | the "if {G}{U} was spent to cast this" fight half is dropped | the copy token needs to fight after it enters under `ManaSpentOfColorAtLeast`; Nethroi, Vadrok and Snapdax are wired |
 | Balduvian Fallen | the "+1/+0 for each {R} spent to pay cumulative upkeep" payoff is dropped | a per-color read of what paid a cumulative upkeep; no primitive |
-| Augusta, Dean of Order | the Plargg, Dean of Chaos MDFC face ({1}{R}) is unimplemented | MDFC wiring exists; the face was never written |
 | Fist of Suns, Leyline of Mutation | "You may pay {W}{U}{B}{R}{G} rather than pay the mana cost for spells you cast" | no primitive for a static alternative cost granted to *other* spells |
 | Maraxus of Keld, Bounty Hunter | not card gaps — the Scryfall cache resolves the name to a different card (one Vanguard avatar, one creature) than the catalog holds | nothing; the rows document the collision |
 
@@ -1135,7 +1134,6 @@ bound, a `let` helper), and the struct-form `EventSpec { .. }`. First run
 |---|---|---|
 | Long Feng, Grand Secretariat | `CreatureDied` | "another creature you control or a land you control is put into a graveyard from the battlefield" — `PermanentDied` + creature-or-land |
 | Phyrexian Ironworks | `Attacks` / `YourControl` — {E} per attacker | "whenever you attack" — `YouAttack`, once a combat |
-| Augusta, Dean of Order | the same — the untap-and-retap ran once per attacker | `YouAttack` |
 | Foundry Street Denizen, Court Street Denizen, Sage's Row Denizen | a colour alone — a red / white / blue enchantment or artifact entering triggered | "another red creature" — the colour *and* `Creature` |
 
 And one the `trig` fixes exposed rather than the column: **the ten
