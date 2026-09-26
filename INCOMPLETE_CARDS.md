@@ -1839,7 +1839,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Magus of the Arena | Nature of the Beast (C13) | you pick the opponent's creature; the opponent should. |
 | 🟡 Naya Soulbeast | Nature of the Beast (C13) | the top cards are read as it enters, not revealed as it is cast. |
 | 🟡 Thundermane Dragon | Reign of Dragons (FDC) | the top card isn't shown to you; any creature cast from your library gets the haste, not only one this permission cast. |
-| 🟡 Donal, Herald of Wings | Spirit Squadron (VOC) | "only once each turn" is spent when the trigger fires, even if you decline the copy. |
 | 🟡 Haunting Imitation | Spirit Squadron (VOC) | the top cards are read, not revealed. |
 | 🟡 Spectral Arcanist | Spirit Squadron (VOC) | the graveyard spell is chosen as a target when the trigger goes on the stack, not as it resolves. |
 | 🟡 Ashaya, Soul of the Wild | Jump Scare! (DSC) | its P/T counts printed lands only, not the creatures it makes lands. |
@@ -1862,7 +1861,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Cosima, God of the Voyage | From Cute to Brute (SLD) | the voyage ability isn't implemented. |
 | 🟡 Ludevic, Necrogenius | From Cute to Brute (SLD) | transforms for {U}{U}{B}{B} exiling one creature card; Olag is a 4/4 with counters, not a copy. |
 | 🟡 Ghoulish Impetus | Enduring Enchantments (CMM) | the goad is applied on entry and each of your upkeeps, not held by a static, so it lasts until your next turn after the Aura leaves. |
-| 🟡 Ondu Spiritdancer | Enduring Enchantments (CMM) | declining the copy still spends the turn's use. |
 | 🟡 Brutal Hordechief | Open Hostility (C16) | its activated ability makes opponents' creatures block if able, but how they block stays their controllers' choice. |
 | 🟡 The Mimeoplasm | Devour for Power (CMD) | the engine picks the two cards: it copies the greatest-power creature card in any graveyard and counts the runner-up's power; a `*` power reads as its printed 0. |
 | 🟡 Desecrator Hag | Devour for Power (CMD) | a tie for greatest power is broken by graveyard order, not by the player. |
@@ -1914,7 +1912,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 
 | Card | Deck | Gap |
 |---|---|---|
-| 🟡 Ancient Cornucopia | Hatsune Miku (SLD) | "do this only once each turn" limits the trigger, so a declined gain still spends the turn's one. |
 | 🟡 Aurora Phoenix | Exit from Exile (CLB) | a spell given cascade by a trigger (Wild-Magic Sorcerer) doesn't carry the keyword, so it doesn't return the Phoenix. |
 | 🟡 Durnan of the Yawning Portal | Exit from Exile (CLB) | exiles the first creature card among the top four (no choice), and the cast from exile has no undaunted. |
 | 🟡 Revival Experiment | Witherbloom Witchcraft (C21) | the engine picks the cards — the highest mana value per permanent type, a multi-typed card counting for the first type it fills. |

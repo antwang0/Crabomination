@@ -3,8 +3,6 @@
 //! `tests/recent_b/cmdr_millicent.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Donal, Herald of Wings** — "only once each turn" is spent when the
-//!   trigger fires, even if you decline the copy.
 //! - **Haunting Imitation** — the top cards aren't revealed, only read.
 //! - **Spectral Arcanist** — the graveyard spell is chosen as a target when
 //!   the trigger goes on the stack, not as it resolves.
@@ -184,27 +182,16 @@ pub fn disorder_in_the_court() -> CardDefinition {
 
 /// Donal, Herald of Wings — once each turn, you may copy a nonlegendary
 /// creature spell with flying you cast; the copy is a 1/1 Spirit too.
-///
-/// ⚠ Residual: the once-a-turn use is spent when the trigger fires, even if
-/// you decline the copy.
 pub fn donal_herald_of_wings() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
-                .with_filter(Predicate::CastSpellMatches(
-                    R::Creature
-                        .and(R::HasSupertype(Supertype::Legendary).negate())
-                        .and(R::HasKeyword(Keyword::Flying)),
-                ))
-                .once_per_turn(),
-            effect: Effect::MayDo {
-                description: "Copy that spell as a 1/1 Spirit?".into(),
-                body: Box::new(Effect::CopySpellAsOneOneSpirit {
-                    what: Selector::TriggerSource,
-                }),
-            },
-        }],
+        triggered_abilities: vec![crate::effect::shortcut::may_once_each_turn(
+            EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(Predicate::CastSpellMatches(
+                R::Creature.and(R::HasSupertype(Supertype::Legendary).negate()).and(R::HasKeyword(Keyword::Flying)),
+            )),
+            "Copy that spell as a 1/1 Spirit?",
+            Effect::CopySpellAsOneOneSpirit { what: Selector::TriggerSource },
+        )],
         ..creature(
             "Donal, Herald of Wings",
             cost(&[generic(2), u(), u()]),

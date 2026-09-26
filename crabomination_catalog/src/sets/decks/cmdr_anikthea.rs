@@ -8,7 +8,6 @@
 //!   *opponent*; your own permanents can't be picked.
 //! - **Ghoulish Impetus** — the goad is re-applied each of your upkeeps rather
 //!   than held by a static, so it outlives the Aura until your next turn.
-//! - **Ondu Spiritdancer** — declining the copy still spends the turn's use.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,
@@ -574,22 +573,14 @@ pub fn nyxborn_behemoth() -> CardDefinition {
 
 /// Ondu Spiritdancer — once each turn, when an enchantment you control
 /// enters, you may copy it.
-///
-/// Approximation: declining the copy still spends the turn's use.
 pub fn ondu_spiritdancer() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
-                .with_filter(Predicate::EntityMatches {
-                    what: Selector::TriggerSource,
-                    filter: R::Enchantment,
-                })
-                .once_per_turn(),
-            effect: Effect::MayDo {
-                description: "Create a token copy of the entering enchantment?".into(),
-                body: Box::new(copy_of(Selector::TriggerSource)),
-            },
-        }],
+        triggered_abilities: vec![crate::effect::shortcut::may_once_each_turn(
+            EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Enchantment }),
+            "Create a token copy of the entering enchantment?",
+            copy_of(Selector::TriggerSource),
+        )],
         ..creature(
             "Ondu Spiritdancer",
             cost(&[generic(4), w()]),

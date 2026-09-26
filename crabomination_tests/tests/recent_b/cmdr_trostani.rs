@@ -102,6 +102,25 @@ fn ancient_cornucopia_gains_per_color_once_a_turn() {
     assert_eq!(g.players[0].life, life + 2, "once each turn");
 }
 
+/// "Do this only once each turn" limits the gain, not the trigger: a declined
+/// gain leaves the turn's one for the next colored spell.
+#[test]
+fn ancient_cornucopia_declined_gain_keeps_the_turns_use() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::ancient_cornucopia());
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(false),
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
+    let life = g.players[0].life;
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    cast(&mut g, 0, bear, None).expect("cast");
+    assert_eq!(g.players[0].life, life, "declined");
+    let rhys = g.add_card_to_hand(0, catalog::rhys_the_redeemed());
+    cast(&mut g, 0, rhys, None).expect("cast");
+    assert_eq!(g.players[0].life, life + 2, "taken on the second spell");
+}
+
 /// Angel of Indemnity returns a permanent card with mana value 4 or less;
 /// its encore makes one hasty attacking copy per opponent (CR 702.141).
 #[test]

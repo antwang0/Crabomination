@@ -1,10 +1,6 @@
 //! Commander: the cards the **Hatsune Miku** Secret Lair precon (SLD,
 //! Trostani, Selesnya's Voice) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_trostani.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Ancient Cornucopia** — "do this only once each turn" limits the trigger,
-//!   not the gain: a declined gain still spends the turn's one.
 
 use std::sync::Arc;
 
@@ -86,25 +82,18 @@ fn copy_of(source: Selector) -> Effect {
 }
 
 /// Ancient Cornucopia — casting a colored spell gains 1 life per color, once
-/// each turn; taps for any color. Residual: the once-a-turn limit is on the
-/// trigger, so a declined gain still spends it.
+/// each turn; taps for any color.
 pub fn ancient_cornucopia() -> CardDefinition {
     CardDefinition {
         name: "Ancient Cornucopia",
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Artifact],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
-                .with_filter(Predicate::CastSpellMatches(R::Not(Box::new(R::Colorless))))
-                .once_per_turn(),
-            effect: Effect::MayDo {
-                description: "Gain 1 life for each of that spell's colors?".into(),
-                body: Box::new(Effect::GainLife {
-                    who: Selector::You,
-                    amount: Value::ColorCountOf(Box::new(Selector::TriggerSource)),
-                }),
-            },
-        }],
+        triggered_abilities: vec![crate::effect::shortcut::may_once_each_turn(
+            EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::CastSpellMatches(R::Not(Box::new(R::Colorless)))),
+            "Gain 1 life for each of that spell's colors?",
+            Effect::GainLife { who: Selector::You, amount: Value::ColorCountOf(Box::new(Selector::TriggerSource)) },
+        )],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::ONE) },
