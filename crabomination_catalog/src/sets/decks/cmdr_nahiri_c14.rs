@@ -5,7 +5,6 @@
 //! Residuals (each also on its card):
 //! - **Arcane Lighthouse** — the creatures lose hexproof and shroud until end
 //!   of turn; a grant made later that turn is not stopped ("can't have").
-//! - **Benevolent Offering** — each "choose an opponent" is the engine's pick.
 //! - **Nahiri, the Lithomancer** — the +2 attaches your first Equipment, the
 //!   −2 puts your first Equipment card from hand, else graveyard.
 
@@ -256,7 +255,7 @@ pub fn arcane_lighthouse() -> CardDefinition {
 }
 
 /// Benevolent Offering — Spirits for you and an opponent; then life for you
-/// and an opponent by creature count. ⚠ The opponents are the engine's pick.
+/// and an opponent by creature count.
 pub fn benevolent_offering() -> CardDefinition {
     let chosen = || PlayerRef::ChosenPlayerOfSource;
     CardDefinition {

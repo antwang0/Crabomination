@@ -3,8 +3,6 @@
 //! `tests/recent_b/cmdr_fdc.rs` (the precon-batch module).
 //!
 //! Residuals (each also on its card):
-//! - **Sylvan Offering** — "choose an opponent" is the engine's pick (the
-//!   opponent with the fewest creatures), not a prompt.
 //! - **Siege Behemoth** — every creature you control assigns as though
 //!   unblocked while it attacks; the per-creature "you may" is always yes.
 
@@ -357,8 +355,7 @@ pub fn siege_behemoth() -> CardDefinition {
 }
 
 /// Sylvan Offering — you and a chosen opponent each get an X/X Treefolk; you
-/// and a chosen opponent each get X Elf Warriors. ⚠ The opponent is the
-/// engine's pick.
+/// and a chosen opponent each get X Elf Warriors.
 pub fn sylvan_offering() -> CardDefinition {
     let treefolk = || {
         Arc::new(TokenDefinition {

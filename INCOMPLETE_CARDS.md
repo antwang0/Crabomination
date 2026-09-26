@@ -1930,7 +1930,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | Card | Deck | Gap |
 |---|---|---|
 | 🟡 Domineering Will | Peer Through Time (C14) | "target player" is always you; the three creatures are the real targets. |
-| 🟡 Intellectual Offering | Peer Through Time (C14) | each "choose an opponent" is the engine's pick (fewest creatures). |
 | 🟡 Shaper Parasite | Peer Through Time (C14) | +2/−2 or −2/+2 is chosen as the trigger goes on the stack, not as it resolves. |
 | 🟡 Infinite Reflection | Peer Through Time (C14) | the ETB copy also rewrites the enchanted creature itself when it is yours (a copy of itself). |
 | 🟡 Kardur, Doomscourge | Chaos Incarnate (SCD) | creatures entering after its ETB are goaded by a delayed trigger, not a static rule. |
@@ -2174,19 +2173,17 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Bloodlord of Vaasgoth | Vampiric Bloodlust (C17) | the granted bloodthirst is checked as the cast trigger resolves, not as the creature enters. |
 | 🟡 Mathas, Fiend Seeker | Vampiric Bloodlust (C17) | a bounty counter grants its dies trigger only while Mathas is on the battlefield. |
 | 🟡 Kheru Mind-Eater | Vampiric Bloodlust (C17) | the exiled card is exiled face up. |
-| 🟡 Sylvan Offering | Guided by Nature (C14) | "choose an opponent" is the engine's pick (fewest creatures). |
 | 🟡 Siege Behemoth | Guided by Nature (C14) | the per-creature "you may assign as though unblocked" is always yes. |
 | 🟡 Havengul Lich | Grave Danger (SCD) | the cast permission lands; the Lich does not gain the cast card's activated abilities. |
 | 🟡 Liliana, Untouched by Death | Grave Danger (SCD) | the −3 covers the Zombie cards in your graveyard as it resolves, not later arrivals that turn. |
 | 🟡 Arcane Lighthouse | Forged in Stone (C14) | creatures lose hexproof/shroud until end of turn; a grant made later that turn is not stopped ("can't have"). |
-| 🟡 Benevolent Offering | Forged in Stone (C14) | each "choose an opponent" is the engine's pick. |
 | 🟡 Nahiri, the Lithomancer | Forged in Stone (C14) | the +2 attaches your first Equipment; the −2 puts your first Equipment card from hand, else graveyard — no pick. |
 | 🟡 Mystic Confluence | Seize Control (C15) | the modes are the default picks (counter unless {3}, draw two); `ChooseN` has no cast-time mode choice with repeats. |
 | 🟡 Collective Effort | Rebellion Rising (ONC) | escalate is paid as it resolves (the standing `Escalate` approximation), tapping your first untapped creature. |
 | 🟡 Goldwardens' Gambit | Rebellion Rising (ONC) | each token takes your highest-mana-value unattached Equipment; no pick, and an attached one is never moved. |
 | 🟡 Neyali, Suns' Vanguard | Rebellion Rising (ONC) | "tokens attack a player" also counts tokens attacking a planeswalker an opponent controls. |
 | 🟡 Divine Reckoning | Feline Ferocity (C17) | each player keeps their highest-mana-value creature (the engine's pick, as Deadly Vanity). |
-| 🟡 Stalking Leonin | Feline Ferocity (C17) | the opponent is chosen openly by the engine (the one with the fewest creatures), not secretly by the player. |
+| 🟡 Stalking Leonin | Feline Ferocity (C17) | the opponent is chosen openly (the headless pick is the one with the fewest creatures), not secretly. |
 | 🟡 Cliffside Rescuer | Primal Genesis (C19) | protection from each opponent is protection from what opponents control (`ProtectionFromMatching(ControlledByOpponent)`). |
 | 🟡 Tahngarth, First Mate | Primal Genesis (C19) | it attacks its new controller's default opponent, not a chosen player that opponent is attacking. |
 | 🟡 Aeon Chronicler | Entropic Uprising (C16) | no Suspend X: suspend takes no X, and bots suspend only cards with no mana cost, so the time-counter draw never comes up. |

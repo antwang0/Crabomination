@@ -5,8 +5,6 @@
 //! Residuals (each also on its card):
 //! - **Domineering Will** — "target player" is always you (the engine's
 //!   recipient); the three creatures are the real targets.
-//! - **Intellectual Offering** — each "choose an opponent" is the engine's
-//!   pick (`ChooseOpponentThen`: the one with the fewest creatures).
 //! - **Shaper Parasite** — +2/−2 or −2/+2 is picked as the trigger is put on
 //!   the stack, not as it resolves.
 //! - **Infinite Reflection** — the ETB copies onto every nontoken creature you

@@ -213,9 +213,8 @@ pub fn flesh_carver() -> CardDefinition {
 
 /// Infernal Offering — you and a chosen opponent each sacrifice a creature
 /// and each who did draws two; then you and a chosen opponent each return a
-/// creature card from graveyard to the battlefield. Both opponents are the
-/// engine's pick (`ChooseOpponentThen`); each return takes the first creature
-/// card in graveyard order.
+/// creature card from graveyard to the battlefield. Each return takes the
+/// first creature card in graveyard order.
 pub fn infernal_offering() -> CardDefinition {
     let chosen = || Selector::Player(PlayerRef::ChosenPlayerOfSource);
     let sacrificed = |who: PlayerRef| {

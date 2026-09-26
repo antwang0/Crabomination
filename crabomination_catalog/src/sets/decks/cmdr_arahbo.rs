@@ -5,8 +5,7 @@
 //! Residuals (each also on its card):
 //! - **Divine Reckoning** — each player keeps their highest-mana-value
 //!   creature (the engine's pick, as Deadly Vanity).
-//! - **Stalking Leonin** — the opponent is chosen openly by the engine (the
-//!   one with the fewest creatures), not secretly by the player.
+//! - **Stalking Leonin** — the opponent is chosen openly, not secretly.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Keyword, LandType,
