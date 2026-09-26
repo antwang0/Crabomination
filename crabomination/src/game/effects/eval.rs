@@ -4375,6 +4375,9 @@ impl GameState {
             } else {
                 self.stack_spell_caster(cid).is_some_and(|c| !self.same_team(c, controller))
             }),
+            R::ProtectedByOpponent => {
+                Some(on_bf && card.protected_by.is_some_and(|p| p != controller && !self.same_team(p, controller)))
+            }
             R::ControlledByActivePlayer => Some(on_bf && card.controller == self.active_player_idx),
             R::ControlledBySeat(q) => Some(if on_bf {
                 card.controller == *q as usize
@@ -4716,6 +4719,12 @@ impl GameState {
                         .is_some_and(|ctrl| !self.same_team(ctrl, controller)),
                 },
                 Target::Player(p) => !self.same_team(*p, controller),
+            },
+            R::ProtectedByOpponent => match target {
+                Target::Permanent(cid) => self.bf_hint_or_find(*cid, hint).is_some_and(|c| {
+                    c.protected_by.is_some_and(|p| p != controller && !self.same_team(p, controller))
+                }),
+                Target::Player(_) => false,
             },
             R::ControlledByTriggerPlayer => {
                 let Some(who) = self.trigger_event_player_scratch else { return false };
@@ -6180,6 +6189,9 @@ impl GameState {
             R::Not(inner) => !self.evaluate_requirement_on_card_inner(inner, card, controller),
             R::ControlledByYou => card.controller == controller,
             R::ControlledByOpponent => !self.same_team(card.controller, controller),
+            R::ProtectedByOpponent => {
+                card.protected_by.is_some_and(|p| p != controller && !self.same_team(p, controller))
+            }
             R::ControlledByActivePlayer => card.controller == self.active_player_idx,
             R::ControlledBySeat(q) => card.controller == *q as usize,
             R::HasAwaken => card.definition.alternative_cost.as_ref().is_some_and(|a| a.awaken),
