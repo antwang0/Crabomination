@@ -213,3 +213,31 @@ fn mistmeadow_vanisher_flickers_on_tap() {
     assert!(g.battlefield_find(wurm).is_none());
     assert!(g.exile.iter().any(|c| c.id == wurm));
 }
+
+/// Deluxe Dragster casts from the graveyard of the player it damaged, not
+/// another opponent's.
+#[test]
+fn deluxe_dragster_casts_from_the_damaged_players_graveyard() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = pod(3);
+    let dragster = g.add_card_to_battlefield(0, catalog::deluxe_dragster());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(dragster);
+    g.clear_sickness(bear);
+    let other = g.add_card_to_graveyard(2, catalog::lightning_bolt());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::Crew { vehicle: dragster, crew_creatures: vec![bear] }).expect("crew");
+    drain_stack(&mut g);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: dragster, target: AttackTarget::Player(1) }]))
+        .expect("attack seat 1");
+    while g.step != TurnStep::EndCombat && !g.is_game_over() {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.players[1].life, 16, "the Dragster connected");
+    assert!(g.players[2].graveyard.iter().any(|c| c.id == other), "seat 2's Bolt stays put");
+}

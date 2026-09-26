@@ -1893,7 +1893,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Vitality Hunter | Symbiotic Swarm (C20) | the lifelink counters go on your X greatest-power creatures, not X chosen targets. |
 | 🟡 Yannik, Scavenging Sentinel | Symbiotic Swarm (C20) | the engine exiles your highest mana value other creature; X reads its printed power. |
 | 🟡 Archon of Valor's Reach | Symbiotic Swarm (C20) | the bot always names instant. |
-| 🟡 Deluxe Dragster | Divine Convocation (MOC) | the free spell may come from any opponent's graveyard, not only the damaged player's. |
 | 🟡 Path of the Ghosthunter | Divine Convocation (MOC) | with no planar deck the Will of the Planeswalkers vote isn't held (planeswalk and chaos would do nothing). |
 | 🟡 Joyful Stormsculptor | Divine Convocation (MOC) | battles take no damage (the engine has none). |
 | 🟡 Indomitable Might | Virtue and Valor (WOC) | the damage always goes as though unblocked; the controller doesn't choose. |

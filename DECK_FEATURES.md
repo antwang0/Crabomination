@@ -2500,7 +2500,7 @@ Elementals are built around exactly that. The primitives:
 Phantom; the bot sees the grant), `R::HasConvoke` (printed, static- or
 next-spell-granted — Kasla, Joyful Stormsculptor, Saint Traft),
 `Selector::CreaturesThatConvokedSource` (Venerated Loxodon) and
-`R::LoyaltyActivatedThisTurn` (Cut Short). Residuals: **Deluxe Dragster**,
+`R::LoyaltyActivatedThisTurn` (Cut Short). Residuals:
 **Path of the Ghosthunter**, **Joyful Stormsculptor** (INCOMPLETE_CARDS).
 Release pods beside Ellivere / Zinnia / Atarka (seed 10101, 1,000 games):
 1,000 decided, Kasla 13.5 %, and the census leaves no card of the four lists

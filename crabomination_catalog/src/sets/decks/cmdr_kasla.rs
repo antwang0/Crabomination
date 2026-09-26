@@ -3,8 +3,6 @@
 //! `tests/recent_b/cmdr_kasla.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Deluxe Dragster** — the free spell may come from any opponent's
-//!   graveyard, not only the damaged player's.
 //! - **Path of the Ghosthunter** — with no planar deck the Will of the
 //!   Planeswalkers vote isn't held (its outcome would change nothing).
 //! - **Joyful Stormsculptor** — battles take no damage (the engine has none).
@@ -140,7 +138,6 @@ pub fn cut_short() -> CardDefinition {
 
 /// Deluxe Dragster — only Vehicles block it; its combat damage lets you cast
 /// an instant or sorcery from that player's graveyard free, exiled after.
-/// Residual: the card may come from any opponent's graveyard.
 pub fn deluxe_dragster() -> CardDefinition {
     CardDefinition {
         name: "Deluxe Dragster",
@@ -159,7 +156,8 @@ pub fn deluxe_dragster() -> CardDefinition {
                 what: target_filtered(
                     R::HasCardType(CardType::Instant)
                         .or(R::HasCardType(CardType::Sorcery))
-                        .and(R::InOpponentGraveyard),
+                        .and(R::InGraveyard)
+                        .and(R::ControlledByTriggerPlayer),
                 ),
                 source_zone: crate::card::Zone::Graveyard,
                 exile_after: true,
