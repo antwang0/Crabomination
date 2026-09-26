@@ -289,6 +289,21 @@ fn trove_warden_stores_and_releases_permanent_cards() {
     assert!(g.battlefield_find(stored).is_some());
 }
 
+/// "When this creature dies": a bounced Trove Warden leaves its cards in exile.
+#[test]
+fn a_bounced_trove_warden_keeps_its_cards_exiled() {
+    let mut g = main_phase(2);
+    let w = g.add_card_to_battlefield(0, catalog::trove_warden());
+    let stored = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let forest = g.add_card_to_hand(0, catalog::forest());
+    g.perform_action(GameAction::PlayLand(forest)).expect("play");
+    drain_stack(&mut g);
+    let bounce = g.add_card_to_hand(0, catalog::unsummon());
+    cast(&mut g, bounce, &[Target::Permanent(w)]);
+    assert!(g.players[0].hand.iter().any(|c| c.id == w), "bounced");
+    assert!(g.exile.iter().any(|c| c.id == stored), "still exiled");
+}
+
 #[test]
 fn waker_of_the_wilds_awakens_a_land() {
     let mut g = main_phase(2);

@@ -12,7 +12,7 @@
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,
-    EventKind, EventScope, EventSpec, ExileReturnZone, Keyword, LandType, SelectionRequirement as R,
+    EventKind, EventScope, EventSpec, Keyword, LandType, SelectionRequirement as R,
     Selector, SplitCard, SplitHalf, StaticAbility, StaticEffect, Subtypes, Supertype, TriggeredAbility,
     Value, Zone,
 };
@@ -432,10 +432,18 @@ pub fn together_forever() -> CardDefinition {
 pub fn trove_warden() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Vigilance],
-        triggered_abilities: vec![landfall(Effect::ExileUntilSourceLeaves {
-            what: target_filtered(R::Permanent.and(R::ManaValueAtMost(3)).from_your_graveyard()),
-            return_to: ExileReturnZone::Battlefield,
-        })],
+        // "When this creature dies" — not "leaves": a bounced or exiled Warden
+        // leaves its cards in exile, so the link is `ExileLinked` and the
+        // return is its own death trigger.
+        triggered_abilities: vec![
+            landfall(Effect::ExileLinked {
+                what: target_filtered(R::Permanent.and(R::ManaValueAtMost(3)).from_your_graveyard()),
+            }),
+            crate::effect::shortcut::on_dies(Effect::Move {
+                what: Selector::CardExiledWithSource,
+                to: ZoneDest::Battlefield { controller: PlayerRef::OwnerOfMoved, tapped: false },
+            }),
+        ],
         ..creature("Trove Warden", cost(&[generic(2), w(), w()]), vec![CreatureType::Cat, CreatureType::Beast], 3, 4)
     }
 }

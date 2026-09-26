@@ -925,8 +925,8 @@ residuals closed). ⚠ **No bot path cycled** (Eternal Might): a pod seat now
 cycles a spare land (six lands out) or a card more than two mana over its land
 count at an opponent's end step (`server/cycling.rs`, pods only). Residuals:
 **Scaretiller** picks its mode (hand land first, else an untargeted graveyard
-land); **The Mending of Dominaria** regrows the greatest-power creature card;
-**Trove Warden**'s cards return when it leaves by any route. Debug pods beside
+land); **The Mending of Dominaria** regrows the greatest-power creature card.
+Debug pods beside
 Arahbo / Yidris / Temmet / Sigarda (seeds 9301/9302, 60 games) decided 60/60,
 zero panics; a 120-game census (seed 9303) leaves no Obuun card unplayed.
 `--bench` byte-identical through all of it.
