@@ -10340,8 +10340,10 @@ impl GameState {
                 for ent in self.resolve_selector(what, ctx) {
                     if let Some(cid) = ent.as_permanent_id()
                         && let Some(c) = self.battlefield_find_mut(cid)
+                        && !c.face_down
                     {
                         c.turn_face_down();
+                        c.turn_up_by_morph_only = true;
                     }
                 }
                 Ok(())

@@ -7779,9 +7779,12 @@ impl GameState {
                 c.reduce_generic(morph_discount);
                 Some(c)
             }
-            // A face-down Forest (Yedora) is not a manifested card: only a
-            // morph-family cost turns it up.
-            None if real.is_creature() && !c.definition.is_land() => Some(real.cost.clone()),
+            // A face-down Forest (Yedora), an Ixidron'd creature or a Missy
+            // Cyberman is not a manifested card: only a morph-family cost
+            // turns it up.
+            None if real.is_creature() && !c.definition.is_land() && !c.turn_up_by_morph_only => {
+                Some(real.cost.clone())
+            }
             None => None,
         }
     }

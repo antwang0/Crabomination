@@ -8909,6 +8909,10 @@ pub struct CardData {
     /// real card carries no keyword to re-derive this, so it's tracked here and
     /// serialized.
     pub cloaked: bool,
+    /// Face down by an effect that is neither manifest nor cloak (Ixidron,
+    /// Missy's Cybermen): only a morph-family cost turns it up, not its mana
+    /// cost (CR 701.40a is manifest's rule, not theirs).
+    pub turn_up_by_morph_only: bool,
     /// CR 709.5c — Room unlocked-door designations (bit 0 = left, bit 1 =
     /// right). The live `definition` is rebuilt to the union of unlocked
     /// doors' abilities (`room_definition_with`).
@@ -9821,6 +9825,7 @@ impl CardInstance {
             case_solved: false,
             class_level: 0,
             cloaked: false,
+            turn_up_by_morph_only: false,
             is_token: false,
             loyalty_uses_this_turn: 0,
             loyalty_twice_this_turn: false,
@@ -10314,6 +10319,7 @@ impl CardInstance {
         self.face_up_def = Some(self.definition.arc());
         self.set_definition(Arc::new(facedown_cyberman_definition()));
         self.face_down = true;
+        self.turn_up_by_morph_only = true;
     }
 
     /// CR 702.182 — Cloak this card: turn it face down with a ward-{2} body. It
@@ -10460,6 +10466,7 @@ impl CardInstance {
         self.set_definition(real);
         self.face_down = false;
         self.cloaked = false;
+        self.turn_up_by_morph_only = false;
         if let Some((kind, n)) = counters {
             self.add_counters(kind, n);
         }
@@ -11104,6 +11111,9 @@ struct CardInstanceWire {
     /// for back-compat.
     #[serde(default)]
     cloaked: bool,
+    /// Face down by Ixidron / Missy: morph-family turn-up only.
+    #[serde(default)]
+    turn_up_by_morph_only: bool,
     /// CR 712 — showing the back face. `name` always stores the FRONT face's
     /// name so the registry resolves it; the back is recovered as
     /// `front.back_face` on load. `#[serde(default)]` for back-compat.
@@ -11400,6 +11410,7 @@ impl serde::Serialize for CardInstance {
             face_down_permanent: self.face_up_def.is_some(),
             licid_attached: self.licid_creature_def.is_some(),
             cloaked: self.cloaked,
+            turn_up_by_morph_only: self.turn_up_by_morph_only,
             transformed: self.transformed,
             flipped: self.flipped,
             is_token: self.is_token,
@@ -11534,6 +11545,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
             // Set `cloaked` first so the warded face-down body is restored.
             c.cloaked = wire.cloaked;
             c.turn_face_down();
+            c.turn_up_by_morph_only = wire.turn_up_by_morph_only;
         }
         // CR 712 — restore a transformed permanent: stash the front, flip the
         // active definition to the back face.

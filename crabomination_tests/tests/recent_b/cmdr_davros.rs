@@ -99,6 +99,23 @@ fn cr_708_2_missy_converts_the_dead() {
     assert!(g.battlefield_find(droid).is_none(), "an artifact creature stays dead");
 }
 
+/// Missy's rulings: a returned Cyberman is not manifested, so its mana cost
+/// can't turn it face up (only a morph cost could). A {X}{X} 0/0 turned up
+/// for {0}, died, and came back — 3,812 times to the pod action cap (8 seats,
+/// seed 202008, game 20).
+#[test]
+fn a_missy_cyberman_cant_be_turned_up_for_its_mana_cost() {
+    let mut g = main_phase(2);
+    g.add_card_to_battlefield(0, catalog::missy());
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    run(&mut g, Effect::Destroy { what: Selector::ExactObjects(vec![giant]) }, giant);
+    assert!(is_cyberman(&g, giant));
+    g.players[0].mana_pool.add(Color::Red, 4);
+    g.priority.player_with_priority = 0;
+    assert!(g.perform_action(GameAction::TurnFaceUp { card_id: giant }).is_err());
+    assert!(is_cyberman(&g, giant), "still face down");
+}
+
 /// CR 400.7 / 903.9a — a dead commander its owner sent home before Missy's
 /// trigger resolved is a new object in the command zone: "return it" finds
 /// nothing.
