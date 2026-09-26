@@ -23908,11 +23908,22 @@ impl GameState {
             }
             _ => None,
         });
-        for (card, cast_off) in
-            self.exile.iter().filter(|c| c.is_suspended()).map(|c| (c, false)).chain(last_counter_cast.map(|c| (c, true)))
+        // Cosima's voyage functions from exile while it exiled itself.
+        let self_exiled = |c: &crate::card::CardInstance| c.exiled_with == Some(c.id);
+        for (card, cast_off) in self
+            .exile
+            .iter()
+            .filter(|c| c.is_suspended() || self_exiled(c))
+            .map(|c| (c, false))
+            .chain(last_counter_cast.map(|c| (c, true)))
         {
             for ta in &card.definition.triggered_abilities {
-                if ta.event.zone != crate::effect::TriggerZone::WhileSuspended
+                let zone_ok = match ta.event.zone {
+                    crate::effect::TriggerZone::WhileSuspended => cast_off || card.is_suspended(),
+                    crate::effect::TriggerZone::WhileSelfExiled => !cast_off && self_exiled(card),
+                    _ => false,
+                };
+                if !zone_ok
                     || (cast_off && ta.event.kind != crate::effect::EventKind::CounterRemoved(crate::card::CounterType::Time))
                 {
                     continue;

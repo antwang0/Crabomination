@@ -792,7 +792,8 @@ impl Effect {
             }
         }
         match self {
-            Effect::DestroyAllNoRegenGainControllerLifePerManaValue { .. }
+            Effect::Voyage { .. }
+            | Effect::DestroyAllNoRegenGainControllerLifePerManaValue { .. }
             | Effect::SecretCouncilPlayerVote { .. }
             | Effect::SecretCouncilPermanentVote { .. }
             | Effect::SecretCouncilPermanentVoteMost { .. }

@@ -3861,6 +3861,10 @@ pub enum TriggerZone {
     /// and a time counter) and nowhere else: Nihilith's "if this card is
     /// suspended". Gathered by the dispatch's suspended-exile walk.
     WhileSuspended,
+    /// From exile while the card was exiled by its own ability
+    /// (`exiled_with` is its own id) and nowhere else: the ability Cosima,
+    /// God of the Voyage "gains" as it exiles itself.
+    WhileSelfExiled,
 }
 
 impl TriggerZone {
@@ -3871,7 +3875,7 @@ impl TriggerZone {
     /// True if the trigger does *not* function from the battlefield: the
     /// command zone is the only place (Oloro), or exile while suspended.
     pub fn command_zone_only(self) -> bool {
-        matches!(self, Self::CommandZoneOnly | Self::WhileSuspended)
+        matches!(self, Self::CommandZoneOnly | Self::WhileSuspended | Self::WhileSelfExiled)
     }
 }
 
@@ -6886,6 +6890,10 @@ pub enum Effect {
     /// stack for as long as it's there (Judith, Carnage Connoisseur).
     /// Recorded in `GameState.spell_keyword_grants`.
     GrantKeywordsToSpell { what: Selector, keywords: Vec<Keyword> },
+    /// Cosima, God of the Voyage's exiled landfall, run from exile: put a
+    /// voyage counter on the source, or (`home`) return it to the battlefield
+    /// with X +1/+1 counters and draw X, X being its voyage counters.
+    Voyage { home: bool },
     /// "That creature enters with N additional [kind] counters" on a spell
     /// still on the stack — stamps the spell's `pending_etb_counters`
     /// (Bloodlord of Vaasgoth's granted bloodthirst).

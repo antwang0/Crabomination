@@ -967,6 +967,8 @@ pub enum CounterType {
     Ribbon,
     /// Rex, Cyber-Hound's mark on an exiled creature card.
     Brain,
+    /// Cosima, God of the Voyage's tally while it is exiled on its voyage.
+    Voyage,
 }
 
 /// Every zone a card can occupy.
