@@ -12310,3 +12310,29 @@ fn cr_506_2_defending_player_is_the_attacked_seat() {
     assert_eq!(g.players[2].life, 20, "the other opponent doesn't");
     assert!(!g.battlefield_find(bystander).unwrap().tapped, "not the defending player's creature");
 }
+
+/// CR 506.2 — Simian Sling's "becomes blocked" ping hits the defending
+/// player only, not each opponent.
+#[test]
+fn cr_506_2_simian_sling_pings_the_defending_player() {
+    use crabomination::game::types::{GameAction, TurnStep};
+    let mut g = crabomination::game::multi_player_game(3);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let sling = g.add_card_to_battlefield(0, catalog::simian_sling());
+    g.clear_sickness(sling);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: sling, target: AttackTarget::Player(1) }]))
+        .expect("attack seat 1");
+    drain_stack(&mut g);
+    while g.step != TurnStep::DeclareBlockers {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+    }
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![(bear, sling)])).expect("block");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 19, "the defending player takes the ping");
+    assert_eq!(g.players[2].life, 20, "the other opponent doesn't");
+}

@@ -43624,12 +43624,11 @@ pub fn gingerbrute() -> CardDefinition {
 
 /// Simian Sling — {R} Artifact Creature — Equipment Monkey 1/1. Equipped
 /// creature gets +1/+1. Whenever this creature or the equipped creature becomes
-/// blocked, it deals 1 damage to the defending player (approximated as each
-/// opponent). Reconfigure {2} (CR 702.151).
+/// blocked, it deals 1 damage to the defending player. Reconfigure {2} (CR 702.151).
 pub fn simian_sling() -> CardDefinition {
     use crate::card::{ArtifactSubtype, EquipBonus};
     let ping = || Effect::DealDamage {
-        to: Selector::Player(PlayerRef::EachOpponent),
+        to: Selector::Player(PlayerRef::DefendingPlayer),
         amount: Value::Const(1),
     };
     CardDefinition {

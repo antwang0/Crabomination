@@ -181,7 +181,7 @@ pub fn blue_mages_cane() -> CardDefinition {
             triggered_abilities: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
                 effect: Effect::CastWithoutPayingImmediate {
-                    what: target_filtered(instant_or_sorcery().and(R::InOpponentGraveyard)),
+                    what: target_filtered(instant_or_sorcery().and(R::InGraveyard).and(R::OwnedByDefendingPlayer)),
                     source_zone: Zone::Graveyard,
                     exile_after: false,
                     copy: true,

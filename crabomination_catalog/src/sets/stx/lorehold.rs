@@ -13922,7 +13922,7 @@ pub fn lorehold_cinderwell_b182() -> CardDefinition {
         power: 3,
         toughness: 2,
         triggered_abilities: vec![on_unblocked(Effect::DealDamage {
-            to: Selector::Player(PlayerRef::EachOpponent),
+            to: Selector::Player(PlayerRef::DefendingPlayer),
             amount: Value::Const(1),
         })],
         ..Default::default()
