@@ -327,6 +327,32 @@ fn sidar_kondo_shields_small_attackers_from_ground_blockers() {
     g.perform_action(GameAction::DeclareBlockers(vec![(flier, bear)])).expect("a flier may block");
 }
 
+/// CR 509.1b at three seats — the restriction is on Sidar's opponents'
+/// blockers: another opponent's small attacker is shielded from them too,
+/// and Sidar's own controller still blocks it.
+#[test]
+fn sidar_kondo_restricts_opposing_blockers_not_your_attackers() {
+    let mut g = main_phase(3);
+    g.add_card_to_battlefield(0, catalog::sidar_kondo_of_jamuraa());
+    g.active_player_idx = 1;
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let wall = g.add_card_to_battlefield(2, catalog::celestial_force());
+    attack_with(&mut g, &[bear], 2);
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 2;
+    assert!(g.perform_action(GameAction::DeclareBlockers(vec![(wall, bear)])).is_err(), "Sidar's opponent");
+
+    let mut g = main_phase(3);
+    g.add_card_to_battlefield(0, catalog::sidar_kondo_of_jamuraa());
+    let mine = g.add_card_to_battlefield(0, catalog::celestial_force());
+    g.active_player_idx = 1;
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    attack_with(&mut g, &[bear], 0);
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareBlockers(vec![(mine, bear)])).expect("your own creature blocks");
+}
+
 /// CR 509.1b — the evasion is only for power 2 or less: a 3/3 is blockable.
 #[test]
 fn sidar_kondo_does_not_shield_bigger_attackers() {

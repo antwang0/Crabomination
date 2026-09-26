@@ -463,12 +463,15 @@ pub fn sidar_kondo_of_jamuraa() -> CardDefinition {
         keywords: vec![Keyword::Flanking, Keyword::Partner],
         static_abilities: vec![StaticAbility {
             description: "Creatures your opponents control without flying or reach can't block creatures with power 2 or less.",
+            // The restriction is on the blockers, so it covers any small
+            // attacker — another opponent's too — and never your own blocks.
             effect: StaticEffect::GrantKeyword {
-                applies_to: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
-                keyword: Keyword::CantBeBlockedExceptByWhilePowerAtMost(
-                    2,
-                    Box::new(R::HasKeyword(Keyword::Flying).or(R::HasKeyword(Keyword::Reach))),
+                applies_to: Selector::EachPermanent(
+                    R::Creature
+                        .and(R::ControlledByOpponent)
+                        .and(R::Not(Box::new(R::HasKeyword(Keyword::Flying).or(R::HasKeyword(Keyword::Reach))))),
                 ),
+                keyword: Keyword::CantBlockPowerAtMost(2),
             },
         }],
         ..creature(
