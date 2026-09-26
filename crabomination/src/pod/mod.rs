@@ -2399,7 +2399,8 @@ mod tests {
     fn cr_903_seeded_pod_outcomes_match_the_committed_table() {
         // (seed, winner, turns, actions)
         // Re-blessed 2026-09-26 (CR 605.3b, auto-tap resolves a prompting
-        // seat's any-color source inline): a pod seat's Command Tower /
+        // seat's any-color source inline — bisected to 34774e835, and which
+        // lands pay a generic pip changes with it): a pod seat's Command Tower /
         // Arcane Signet tapped for a generic pip used to add nothing and
         // leave its color prompt pending. Seed 43 61→58 turns and 4242
         // 49→62, both now won by seat 0; 0xC0FFEE unmoved. Aggregate, 2,000
@@ -2549,11 +2550,6 @@ mod tests {
         // activates, post-combat, any non-mana ability no shape generator
         // covers when the resolved outcome beats passing. Same winners; seed
         // 43 runs four turns longer, 0xC0FFEE seven actions.
-        // Re-blessed 2026-09-26 (bisected to 34774e835, "Auto-tap resolves an
-        // any-color source inline"): the generic-pip loop now activates an
-        // any-color source synchronously instead of leaving it for the
-        // colored loop, so which lands pay a generic pip changes. Seeds 43
-        // and 4242 change winner (seat 3 → 0); 0xC0FFEE is untouched.
         const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
             (0xC0FFEE, Some(1), 44, 1836),
             (43, Some(0), 58, 2712),
