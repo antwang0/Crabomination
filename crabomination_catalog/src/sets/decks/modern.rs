@@ -5949,26 +5949,22 @@ pub fn jayas_greeting() -> CardDefinition {
 }
 
 /// Telling Time — {1}{U} Instant. Look at the top three cards of your
-/// library. Put one into your hand, one into the bottom of your
-/// library, and one on top of your library.
-///
-/// Approximation: `Scry 2 + Draw 1` — same rate as Anticipate / Magma
-/// Jet's scry. The "put one on top, one on bottom" half collapses to
-/// Scry's two-position (top or bottom) decision.
+/// library. Put one of those cards into your hand, one on top of your
+/// library, and one on the bottom of your library. (Neither a scry nor a
+/// draw.)
 pub fn telling_time() -> CardDefinition {
     CardDefinition {
         name: "Telling Time",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::Scry {
+            Effect::LookPickToHand(Box::new(LookPick {
                 who: PlayerRef::You,
-                amount: Value::Const(2),
-            },
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
-            },
+                count: Value::Const(3),
+                rest_on_top: true,
+                ..Default::default()
+            })),
+            Effect::LookTopPutOneOnBottom { count: Value::Const(2) },
         ]),
         ..Default::default()
     }

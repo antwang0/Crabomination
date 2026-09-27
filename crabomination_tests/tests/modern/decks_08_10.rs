@@ -791,23 +791,26 @@ fn jayas_greeting_deals_three_and_scries() {
         "Jaya's Greeting (3 dmg) should kill Grizzly Bears");
 }
 
-/// Telling Time: scry 2 + draw 1 net 0 hand.
+/// Telling Time — of the top three, one to hand, one stays on top, one goes
+/// to the bottom; the fourth card is untouched, and nothing is drawn.
 #[test]
-fn telling_time_resolves_and_draws() {
+fn telling_time_hands_one_tops_one_bottoms_one() {
     let mut g = two_player_game();
-    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    for _ in 0..4 { g.add_card_to_library(0, catalog::island()); }
+    let fourth = g.players[0].library[3].id;
     let id = g.add_card_to_hand(0, catalog::telling_time());
     g.players[0].mana_pool.add_colorless(1);
     g.players[0].mana_pool.add(Color::Blue, 1);
     let hand_before = g.players[0].hand.len();
-
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Telling Time castable for {1}{U}");
     drain_stack(&mut g);
-
-    assert_eq!(g.players[0].hand.len(), hand_before,
-        "Telling Time net 0 hand (cast -1, draw +1)");
+    assert_eq!(g.players[0].hand.len(), hand_before, "cast -1, one to hand +1");
+    let lib = &g.players[0].library;
+    assert_eq!(lib.len(), 3);
+    assert_eq!(lib[1].id, fourth, "one on top, the untouched fourth, one on the bottom");
+    assert_eq!(g.players[0].cards_drawn_this_turn, 0, "not a draw");
 }
 
 /// Read the Tides mode 0: -1 cast + 3 draw = +2 hand.
