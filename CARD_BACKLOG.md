@@ -4797,19 +4797,16 @@ Deferred riders:
 
 ## 1v1-collapsed "target player" effects (multiplayer worklist)
 
-The engine plays 1v1, so several printed "target player" clauses are
-collapsed to `You` / `EachOpponent` — observably identical in two-player
-games, wrong in multiplayer. When a multiplayer push lands, convert each
-to a real player-target slot (the Time Warp fix in the 2026-07 STX audit
-is the template: `PlayerRef::Target(0)` + a `Player` slot filter):
+Printed "target player" clauses collapsed to `You` / `EachOpponent` —
+identical in a duel, wrong in a pod. Convert each to a real player-target
+slot (`PlayerRef::Target(0)`; inside a modal cast too, as Quandrix Command /
+Maestros Confluence). Re-read 2026-09-27: Inquisition, Tendrils, Callous
+Bloodmage and Tempted by the Oriq were already converted. None left is in a
+pod list:
 
 | Card | Where | Printed scope | Collapsed to |
 |---|---|---|---|
-| Inquisition of Kozilek | `decks/spells.rs` | target player | EachOpponent |
-| Tendrils of Agony | `stx/extras_01.rs` | target player loses 2 | Drain EachOpponent |
-| Callous Bloodmage (mode 3) | `stx/witherbloom.rs` | target player's graveyard | ExilePlayerGraveyard EachOpponent |
-| Primal Command (mode 2) | `decks/modern.rs` | target player shuffles graveyard | You only |
-| Tempted by the Oriq | `stx/extras_00.rs` | per-opponent steal | single steal (max_targets 1) |
+| Primal Command | `decks/modern.rs` | choose two, both "target player" | fixed picks: you gain 7 + search |
 | Multiple Choice (X=2) | `stx/mono.rs` | "may choose a player" (any, incl. self) | EachOpponent returns |
 | Devastating Mastery (alt rider) | `stx/silverquill.rs` | "an opponent chooses" | EachOpponent (= the opponent in 1v1) |
 
