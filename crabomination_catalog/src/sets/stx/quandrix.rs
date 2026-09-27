@@ -154,11 +154,10 @@ pub fn decisive_denial() -> CardDefinition {
 /// chosen modes, each target-bearing mode consuming its own target
 /// slot; a plain `CastSpell { mode }` runs a single mode (bot path).
 ///
-/// Residual nuances on mode 3: the printed "target player" is
-/// approximated as the caster (`PlayerRef::You` — no player target
-/// slot), and the printed three CARDS are cast-time targets while here
-/// they're picked at resolution — no rules-visible difference for
-/// graveyard objects (no hexproof/ward in that zone).
+/// Residual nuance on mode 3: the printed three CARDS are cast-time targets
+/// while here they're picked at resolution from the target player's
+/// graveyard — no rules-visible difference for graveyard objects (no
+/// hexproof/ward in that zone).
 pub fn quandrix_command() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Command",
@@ -192,11 +191,10 @@ pub fn quandrix_command() -> CardDefinition {
                     kind: CounterType::PlusOnePlusOne,
                     amount: Value::Const(2),
                 },
-                // Mode 3: shuffle up to three cards from your graveyard
-                // into your library (see doc — player/card targeting is
-                // pending engine support).
+                // Mode 3: target player shuffles up to three cards from
+                // their graveyard into their library (see doc).
                 Effect::ShuffleGraveyardCardsIntoLibrary {
-                    who: PlayerRef::You,
+                    who: PlayerRef::Target(0),
                     filter: SelectionRequirement::Any,
                     max: Value::Const(3),
                     to_top: false,

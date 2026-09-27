@@ -275,6 +275,33 @@ fn quandrix_command_shuffle_mode_recycles_three_graveyard_cards() {
         "one island + the spent Command remain in the graveyard");
 }
 
+/// Quandrix Command's mode 3 is "*target player* shuffles …": aimed at the
+/// opponent, it's their graveyard that goes back (graveyard hate), not yours.
+#[test]
+fn quandrix_command_shuffle_mode_targets_a_player() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for _ in 0..4 { g.add_card_to_graveyard(1, catalog::island()); }
+    g.add_card_to_graveyard(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::quandrix_command());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let lib_before = g.players[1].library.len();
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: id,
+        spree_modes: vec![2, 3],
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![Target::Player(1)],
+        x_value: None,
+    })
+    .expect("castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].library.len(), lib_before + 3);
+    assert_eq!(g.players[1].graveyard.len(), 1);
+    assert_eq!(g.players[0].graveyard.len(), 2, "yours untouched (the Island and the Command)");
+}
+
 /// Silverquill Command "choose two" — pump+flying (mode 0) on my creature
 /// and a forced sacrifice (mode 3) from the targeted opponent.
 #[test]

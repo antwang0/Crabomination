@@ -4808,7 +4808,6 @@ is the template: `PlayerRef::Target(0)` + a `Player` slot filter):
 | Inquisition of Kozilek | `decks/spells.rs` | target player | EachOpponent |
 | Tendrils of Agony | `stx/extras_01.rs` | target player loses 2 | Drain EachOpponent |
 | Callous Bloodmage (mode 3) | `stx/witherbloom.rs` | target player's graveyard | ExilePlayerGraveyard EachOpponent |
-| Quandrix Command (mode 3) | `stx/quandrix.rs` | target player shuffles ≤3 target cards | You, no card targeting |
 | Primal Command (mode 2) | `decks/modern.rs` | target player shuffles graveyard | You only |
 | Tempted by the Oriq | `stx/extras_00.rs` | per-opponent steal | single steal (max_targets 1) |
 | Multiple Choice (X=2) | `stx/mono.rs` | "may choose a player" (any, incl. self) | EachOpponent returns |

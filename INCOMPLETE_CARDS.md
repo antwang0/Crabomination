@@ -365,9 +365,9 @@ between the activation and that cast isn't refused); Deep Analysis' target
 player; Mishra's Factory's pump; Astrologian's Planisphere's third draw;
 Fiery Justice's life (now the healthiest opponent, not the one being raced).
 
-Read and left open: Quandrix Command's mode 4 (target player needs a player
-slot inside a modal cast — still the caster). Telling Time, Zack Fair and
-Waste Management since done.
+Read and left open: none. Telling Time, Zack Fair, Waste Management and
+Quandrix Command's "target player" (a player slot inside the modal cast, as
+Maestros Confluence's goad) since done.
 
 ## The pod-deck `audit_incomplete` rows (2026-09-26, session `0199ZAiL`)
 
