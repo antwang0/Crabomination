@@ -1070,3 +1070,23 @@ fn ondu_spiritdancer_copies_the_entering_enchantment_once_a_turn() {
     assert_eq!(count("Ondu Spiritdancer"), 1);
     assert_eq!(count("Soaring Lightbringer"), 3, "two cast, one copy");
 }
+
+/// Speed, Young Avenger — "target creature with haste can't be blocked this
+/// turn except by creatures with haste": a haste blocker still can, so it is
+/// not plain unblockability.
+#[test]
+fn speed_young_avenger_is_blockable_by_haste() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = main_phase();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let speed = g.add_card_to_battlefield(0, catalog::speed_young_avenger());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, bolt, Some(Target::Player(1))).expect("bolt");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(speed).unwrap();
+    let kws = cp.keywords();
+    assert!(!kws.contains(&Keyword::Unblockable));
+    assert!(kws.iter().any(|k| matches!(k, Keyword::CantBeBlockedExceptBy(_))));
+}

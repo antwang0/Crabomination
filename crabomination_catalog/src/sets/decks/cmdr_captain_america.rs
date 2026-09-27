@@ -632,10 +632,8 @@ pub fn she_hulk_wallbreaker() -> CardDefinition {
 }
 
 /// Speed, Young Avenger — haste; a noncreature spell lets you pay {1} to make
-/// a hasty creature evasive this turn.
-///
-/// ⚠ Residual: "can't be blocked except by creatures with haste" is
-/// unblockable.
+/// a hasty creature evasive this turn: it can't be blocked except by
+/// creatures with haste.
 pub fn speed_young_avenger() -> CardDefinition {
     legendary(CardDefinition {
         keywords: vec![Keyword::Haste],
@@ -648,7 +646,7 @@ pub fn speed_young_avenger() -> CardDefinition {
                 body: Box::new(Effect::ReflexiveTrigger {
                     body: Box::new(keyword_eot(
                         target_filtered(R::Creature.and(R::HasKeyword(Keyword::Haste))),
-                        Keyword::Unblockable,
+                        Keyword::CantBeBlockedExceptBy(Box::new(R::HasKeyword(Keyword::Haste))),
                     )),
                 }),
                 else_: None,
