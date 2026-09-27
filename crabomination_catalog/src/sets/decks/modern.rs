@@ -9025,7 +9025,7 @@ pub fn seasoned_pyromancer() -> CardDefinition {
 }
 
 /// Aether Figment — {1}{U} Creature — Illusion, 1/1, can't be blocked.
-/// Kicker {3}: enters with a +1/+1 counter if it was kicked (CR 702.32 +
+/// Kicker {3}: enters with two +1/+1 counters if it was kicked (CR 702.32 +
 /// ETB-kicked context).
 pub fn aether_figment() -> CardDefinition {
     CardDefinition {
@@ -9044,7 +9044,7 @@ pub fn aether_figment() -> CardDefinition {
             then: Box::new(Effect::AddCounter {
                 what: Selector::This,
                 kind: CounterType::PlusOnePlusOne,
-                amount: Value::Const(1),
+                amount: Value::Const(2),
             }),
             else_: Box::new(Effect::Noop),
         })],
@@ -63317,13 +63317,17 @@ pub fn mosscoat_goriak() -> CardDefinition {
 }
 
 /// Gust of Wind — {3}{U} Sorcery. Return target nonland permanent you don't
-/// control to its owner's hand, then draw a card. (The "costs {2} less if you
-/// control a flyer" reduction is dropped — no conditional self-cost layer.)
+/// control to its owner's hand, then draw a card. Costs {2} less if you
+/// control a creature with flying.
 pub fn gust_of_wind() -> CardDefinition {
     CardDefinition {
         name: "Gust of Wind",
         cost: cost(&[generic(3), u()]),
         card_types: vec![CardType::Sorcery],
+        self_cost_reduction_if_control: vec![(
+            SelectionRequirement::Creature.and(SelectionRequirement::HasKeyword(Keyword::Flying)),
+            2,
+        )],
         effect: Effect::Seq(vec![
             Effect::Move {
                 what: target_filtered(

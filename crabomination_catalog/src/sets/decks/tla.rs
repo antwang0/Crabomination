@@ -1664,13 +1664,17 @@ pub fn energybending() -> CardDefinition {
     }
 }
 
-/// Swampsnare Trap — {2}{B} Aura. Enchanted creature gets -5/-3. (The cost
-/// reduction vs. fliers is dropped.)
+/// Swampsnare Trap — {2}{B} Aura. Enchanted creature gets -5/-3. Costs {1}
+/// less if it targets a creature with flying.
 pub fn swampsnare_trap() -> CardDefinition {
     CardDefinition {
         name: "Swampsnare Trap",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Enchantment],
+        self_cost_reduction_if_target: Some((
+            SelectionRequirement::Creature.and(SelectionRequirement::HasKeyword(Keyword::Flying)),
+            1,
+        )),
         subtypes: Subtypes {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()

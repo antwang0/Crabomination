@@ -1540,3 +1540,27 @@ fn sphinx_of_foresight_scries_three_from_the_opening_hand() {
     ev.extend(drain_stack(&mut g));
     assert!(ev.iter().any(|e| matches!(e, GameEvent::ScriedOrSurveiled { player: 0, surveil: false, looked_at: 3 })));
 }
+
+/// Conditional self-cost reductions that shipped dropped: Gust of Wind ("{2}
+/// less if you control a creature with flying") and Swampsnare Trap ("{1}
+/// less if it targets a creature with flying").
+#[test]
+fn flyer_conditional_cost_reductions() {
+    let mut g = main_phase();
+    let opp = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    let gust = g.add_card_to_hand(0, catalog::gust_of_wind());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    assert!(cast(&mut g, gust, Some(Target::Permanent(opp))).is_err(), "{{3}}{{U}} without a flyer");
+    g.add_card_to_battlefield(0, catalog::serra_angel());
+    cast(&mut g, gust, Some(Target::Permanent(opp))).expect("{1}{U} with one");
+    drain_stack(&mut g);
+    let flyer = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let trap = g.add_card_to_hand(0, catalog::swampsnare_trap());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    assert!(cast(&mut g, trap, Some(Target::Permanent(bear))).is_err(), "full price on a ground creature");
+    cast(&mut g, trap, Some(Target::Permanent(flyer))).expect("{1}{B} on a flyer");
+}

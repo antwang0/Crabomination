@@ -8,7 +8,7 @@ use crate::card::{
     Value,
 };
 use crate::effect::shortcut::target_filtered;
-use crate::effect::{Duration, ManaPayload, PlayerRef, Selector, StaticEffect, ZoneDest, ZoneRef};
+use crate::effect::{Duration, ManaPayload, PlayerRef, Selector, StaticEffect, ZoneRef};
 use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 /// Tower Drake — {2}{U} 2/1 Drake with flying. {W}: gets +0/+1 until end of turn.

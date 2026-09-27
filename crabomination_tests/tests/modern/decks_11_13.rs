@@ -669,7 +669,7 @@ fn aether_figment_kicked_enters_as_a_three_three() {
     drain_stack(&mut g);
     let cp = g.battlefield.iter().find(|c| c.definition.name == "Aether Figment")
         .map(|c| g.computed_permanent(c.id).unwrap()).expect("in play");
-    assert_eq!((cp.power, cp.toughness), (2, 2), "kicked Figment enters with a +1/+1 counter");
+    assert_eq!((cp.power, cp.toughness), (3, 3), "kicked Figment enters with two +1/+1 counters");
 }
 
 #[test]
@@ -685,7 +685,7 @@ fn aether_figment_unkicked_is_a_two_two() {
     drain_stack(&mut g);
     let cp = g.battlefield.iter().find(|c| c.definition.name == "Aether Figment")
         .map(|c| g.computed_permanent(c.id).unwrap()).expect("in play");
-    assert_eq!((cp.power, cp.toughness), (1, 1), "unkicked Figment is a vanilla 2/2");
+    assert_eq!((cp.power, cp.toughness), (1, 1), "unkicked Figment is a vanilla 1/1");
 }
 
 #[test]
