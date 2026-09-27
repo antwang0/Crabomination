@@ -8,6 +8,7 @@
 use smallvec::SmallVec;
 
 use super::GameState;
+use super::types::GameEvent;
 use crate::card::{CardInstance, GoadHold};
 use crate::effect::StaticEffect;
 
@@ -110,6 +111,25 @@ impl GameState {
         match hold {
             GoadHold::WhileOnBattlefield(src) => self.battlefield_find(src).is_some(),
             GoadHold::Obligation(kind) => c.counter_count(kind) > 0,
+        }
+    }
+
+    /// CR 611.2b — an obligation ends for good when its last counter comes
+    /// off: drop the hold, so a counter put back later doesn't re-arm it
+    /// (Immortal Obligation's duty counter).
+    pub(crate) fn release_spent_obligations(&mut self, events: &[GameEvent]) {
+        for ev in events {
+            let GameEvent::CounterRemoved { card_id, counter_type, .. } = ev else { continue };
+            let spent = |c: &CardInstance| {
+                c.counter_count(*counter_type) == 0
+                    && c.cold_any(|k| k.goad_holds.iter().any(|&(_, h)| h == GoadHold::Obligation(*counter_type)))
+            };
+            if !self.battlefield_find(*card_id).is_some_and(spent) {
+                continue;
+            }
+            if let Some(c) = self.battlefield_find_mut(*card_id) {
+                c.goad_holds.retain(|&(_, h)| h != GoadHold::Obligation(*counter_type));
+            }
         }
     }
 }

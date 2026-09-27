@@ -233,6 +233,31 @@ fn cr_611_2b_immortal_obligation_binds_while_the_duty_counter_stays() {
     declare(&mut g, 1, vec![at(bear, 0)]).expect("free of its duty");
 }
 
+/// CR 611.2b — "for as long as" ends when the condition first fails: a duty
+/// counter put back after the last one came off doesn't re-bind the creature.
+#[test]
+fn cr_611_2b_immortal_obligation_a_returned_duty_counter_does_not_rearm() {
+    use crabomination::effect::{Effect, Selector, Value};
+    let mut g = main_phase(3);
+    let bear = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let io = g.add_card_to_hand(0, catalog::immortal_obligation());
+    cast_at(&mut g, io, &[Target::Permanent(bear)]).expect("cast");
+    assert!(goaded_by(&g, bear, 0));
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    let what = Selector::ExactObjects(vec![bear]);
+    for e in [
+        Effect::RemoveCounter { what: what.clone(), kind: CounterType::Duty, amount: Value::ONE },
+        Effect::AddCounter { what, kind: CounterType::Duty, amount: Value::ONE },
+    ] {
+        let evs = g.resolve_effect(&e, &ctx).expect("resolve");
+        g.dispatch_triggers_for_events(&evs);
+    }
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::Duty), 1);
+    assert!(!goaded(&g, bear), "the obligation ended with the first counter");
+    g.clear_sickness(bear);
+    declare(&mut g, 1, vec![at(bear, 0)]).expect("free to attack the caster");
+}
+
 /// Agitator Ant: each taker's creature gets two +1/+1 counters and is goaded
 /// by the Ant's controller — its own included.
 #[test]
