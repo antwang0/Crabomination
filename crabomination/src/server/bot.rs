@@ -3388,6 +3388,7 @@ impl HeuristicBot {
                         .or_else(|| super::counter_sink::pick_counter_sink(state, seat))
                         .or_else(|| super::channel::pick_channel(state, seat, &self.weights))
                         .or_else(|| super::goad_attach::pick_goad_attach(state, seat))
+                        .or_else(|| super::grant_cast::pick_grant_cast(state, seat, &self.weights))
                 {
                     return Some(BotStep::plain(a));
                 }
@@ -18567,7 +18568,7 @@ fn evaluate_action_sequence(
 /// bot's own pending-decision policy — the state `evaluate_action_sequence`
 /// scores at depth 0, handed back whole. `None` on rejection or a
 /// resolution that won't settle within the fuel.
-fn settle_to_quiescence(
+pub(super) fn settle_to_quiescence(
     state: &GameState,
     action: &GameAction,
     settled: Option<&GameState>,

@@ -102,6 +102,7 @@ mod regenerate;
 mod counter_sink;
 mod cycling;
 mod channel;
+mod grant_cast;
 mod defensive_ability;
 mod team_combat;
 mod goad_attach;
