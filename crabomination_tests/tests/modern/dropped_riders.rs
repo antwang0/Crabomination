@@ -1472,3 +1472,24 @@ fn your_graveyard_targets_are_yours_and_a_graveyard_is_any() {
     g.resolve_effect(&reanimate, &ctx).unwrap();
     assert_eq!(g.battlefield_find(bear).map(|c| c.controller), Some(0));
 }
+
+/// "Exile target creature you **own**, then return it under your control"
+/// (Slip On the Ring, Charming Prince, Sword of Hearth and Home) read "you
+/// control": a borrowed creature could be flickered to keep it for good, and
+/// your own stolen one couldn't be taken back.
+#[test]
+fn slip_on_the_ring_targets_by_owner_not_controller() {
+    let mut g = main_phase();
+    let borrowed = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(borrowed).unwrap().controller = 0;
+    let stolen = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(stolen).unwrap().controller = 1;
+    let slip = g.add_card_to_hand(0, catalog::slip_on_the_ring());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    assert!(cast(&mut g, slip, Some(Target::Permanent(borrowed))).is_err(), "not yours to flicker");
+    cast(&mut g, slip, Some(Target::Permanent(stolen))).expect("your own card, back home");
+    drain_stack(&mut g);
+    let back = g.battlefield.iter().find(|c| c.owner == 0 && c.definition.name == "Grizzly Bears").unwrap();
+    assert_eq!(back.controller, 0);
+}

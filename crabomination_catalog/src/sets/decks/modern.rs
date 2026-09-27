@@ -36364,7 +36364,7 @@ pub fn charming_prince() -> CardDefinition {
                 Effect::ExileReturnNextEndStep {
                     what: target_filtered(
                         SelectionRequirement::Creature
-                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::OwnedByYou)
                             .and(SelectionRequirement::OtherThanSource),
                     ),
                 },
@@ -57839,7 +57839,7 @@ pub fn sword_of_hearth_and_home() -> CardDefinition {
                     Effect::Exile {
                         what: target_filtered(
                             SelectionRequirement::Creature
-                                .and(SelectionRequirement::ControlledByYou),
+                                .and(SelectionRequirement::OwnedByYou),
                         ),
                     },
                     Effect::Move {

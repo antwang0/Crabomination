@@ -414,7 +414,7 @@ pub fn slip_on_the_ring() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::Exile {
                 what: target_filtered(
-                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    SelectionRequirement::Creature.and(SelectionRequirement::OwnedByYou),
                 ),
             },
             Effect::Move {

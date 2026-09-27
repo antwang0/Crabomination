@@ -228,14 +228,16 @@ mod recent31 {
             "sacrificed another creature");
     }
 
+    /// Printed "Target creature can't block this turn" — it shipped as fear
+    /// on a creature you control.
     #[test]
-    fn demonic_dread_has_cascade_and_grants_fear() {
+    fn demonic_dread_has_cascade_and_stops_a_blocker() {
         let mut g = two_player_game();
-        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
         let mut ctx = ctx0(&g);
         ctx.targets = vec![Target::Permanent(bear)];
         g.resolve_effect(&catalog::demonic_dread().effect, &ctx).unwrap();
-        assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Fear));
+        assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::CantBlock));
         // Cascade rides a printed cast trigger.
         assert!(catalog::demonic_dread().triggered_abilities.iter()
             .any(|t| matches!(t.effect, Effect::Cascade { .. })));

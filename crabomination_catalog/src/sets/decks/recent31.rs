@@ -614,18 +614,16 @@ pub fn butcher_of_the_horde() -> CardDefinition {
     }
 }
 
-/// Demonic Dread — {1}{B}{R} Sorcery. Cascade. Target creature you control
-/// gains fear until end of turn.
+/// Demonic Dread — {1}{B}{R} Sorcery. Cascade. Target creature can't block
+/// this turn.
 pub fn demonic_dread() -> CardDefinition {
     CardDefinition {
         name: "Demonic Dread",
         cost: cost(&[generic(1), b(), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::GrantKeyword {
-            what: target_filtered(
-                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-            ),
-            keyword: Keyword::Fear,
+            what: target_filtered(SelectionRequirement::Creature),
+            keyword: Keyword::CantBlock,
             duration: Duration::EndOfTurn,
         },
         triggered_abilities: vec![cascade(3)],

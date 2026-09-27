@@ -454,14 +454,14 @@ pub fn prismatic_boon() -> CardDefinition {
     )
 }
 
-/// Telim'Tor's Edict — {R}: exile one of your own permanents, then replace
-/// the card.
+/// Telim'Tor's Edict — {R}: exile a permanent you own or control, then
+/// replace the card.
 pub fn telimtors_edict() -> CardDefinition {
     instant(
         "Telim'Tor's Edict",
         cost(&[r()]),
         Effect::Seq(vec![
-            Effect::Exile { what: target_filtered(R::Permanent.and(R::ControlledByYou)) },
+            Effect::Exile { what: target_filtered(R::Permanent.and(R::OwnedByYou.or(R::ControlledByYou))) },
             Effect::AtNextTurnsUpkeep { body: Box::new(crate::effect::shortcut::draw(1)) },
         ]),
     )
