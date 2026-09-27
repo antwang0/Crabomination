@@ -9256,7 +9256,7 @@ pub fn goblin_instigator() -> CardDefinition {
 }
 
 /// Goblin Trashmaster — {2}{R}{R} 3/3 Goblin. Other Goblins you control get
-/// +1/+1. {T}, Sacrifice a Goblin: Destroy target artifact.
+/// +1/+1. Sacrifice a Goblin: Destroy target artifact.
 pub fn goblin_trashmaster() -> CardDefinition {
     use crate::card::{ActivatedAbility, StaticAbility, StaticEffect};
     CardDefinition {
@@ -9284,7 +9284,6 @@ pub fn goblin_trashmaster() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
-            tap_cost: true,
             effect: Effect::Destroy {
                 what: crate::effect::shortcut::target_filtered(SelectionRequirement::Artifact),
             },
@@ -9292,6 +9291,8 @@ pub fn goblin_trashmaster() -> CardDefinition {
                 SelectionRequirement::HasCreatureType(CreatureType::Goblin),
                 1,
             )),
+            // "Sacrifice a Goblin" — itself included.
+            sac_other_may_be_source: true,
             ..Default::default()
         }],
         ..Default::default()

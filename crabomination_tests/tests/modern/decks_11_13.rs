@@ -288,18 +288,24 @@ fn goblin_instigator_enters_with_a_token() {
     assert_eq!(goblins, 2, "Instigator plus its 1/1 Goblin token");
 }
 
+/// "Sacrifice a Goblin: Destroy target artifact" — no {T} (the ability works
+/// while summoning sick, twice in a row).
 #[test]
 fn goblin_trashmaster_sacrifices_a_goblin_to_destroy_an_artifact() {
     let mut g = two_player_game();
     let tm = g.add_card_to_battlefield(0, catalog::goblin_trashmaster());
-    g.add_card_to_battlefield(0, catalog::mons_goblin_raiders()); // sac fodder
-    g.clear_sickness(tm);
-    let art = g.add_card_to_battlefield(1, catalog::ornithopter()); // an artifact
-    g.perform_action(GameAction::ActivateAbility {
-        card_id: tm, ability_index: 0, target: Some(Target::Permanent(art)), additional_targets: Vec::new(), x_value: None, mode: None,
-    }).expect("Trashmaster sac-destroys an artifact");
-    drain_stack(&mut g);
-    assert!(g.battlefield_find(art).is_none(), "the artifact is destroyed");
+    for _ in 0..2 {
+        g.add_card_to_battlefield(0, catalog::mons_goblin_raiders()); // sac fodder
+    }
+    for _ in 0..2 {
+        let art = g.add_card_to_battlefield(1, catalog::ornithopter()); // an artifact
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: tm, ability_index: 0, target: Some(Target::Permanent(art)), additional_targets: Vec::new(), x_value: None, mode: None,
+        }).expect("Trashmaster sac-destroys an artifact");
+        drain_stack(&mut g);
+        assert!(g.battlefield_find(art).is_none(), "the artifact is destroyed");
+    }
+    assert!(g.battlefield_find(tm).is_some_and(|c| !c.tapped));
 }
 
 #[test]
