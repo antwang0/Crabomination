@@ -687,8 +687,9 @@ types). `YouControlACommander` read only your own designations (fixed).
 ## OPEN 2026-09-23 — cast variants NO bot ever emits
 
 `GameAction::is_cast` lists 47 variants; the bot builds none of these
-(grep `GameAction::<V>` under `server/`): **mutate, waterbend,
-sacrifice-reduce**. ✅ Foretell (`server/foretell.rs`), room doors
+(grep `GameAction::<V>` under `server/`): **waterbend,
+sacrifice-reduce**. ✅ Mutate (`server/mutate.rs`, 2026-09-27, pods only — the
+Otrimi seat is a mutate deck), ✅ Foretell (`server/foretell.rs`), room doors
 (`server/room.rs`, 2026-09-26: cast or unlock with idle mana, Commander
 games only — four pod Rooms) and flashback-tap (`server/fog.rs`, Prismatic
 Strands as a defender's fog) are emitted now.
