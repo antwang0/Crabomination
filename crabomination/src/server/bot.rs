@@ -1092,6 +1092,19 @@ pub struct EvalWeights {
     /// [`default_const`](Self::default_const)); control
     /// [`option_eval_off`](Self::option_eval_off), profile `optvote-off`.
     pub option_eval: bool,
+    /// The attack sim's crack-back horizon at three or more seats. The sim
+    /// stops once the *next* turn's combat has resolved, which in a duel is
+    /// the opponent's whole crack-back and in a four-seat pod is one of
+    /// three: an alpha strike looked safe whenever the seat after us was
+    /// busy elsewhere, whatever the other two had on board. Under the flag
+    /// it runs through every live opponent's combat before our next turn,
+    /// and every defender in a sim combat declares its own blocks (the
+    /// loop let only the lowest seat that could block declare; the engine
+    /// merges one declaration per defender, as the real pod driver sends
+    /// them). Duels are unchanged. On by default since 2026-09-27;
+    /// control [`pod_horizon_off`](Self::pod_horizon_off), profile
+    /// `podhorizon-off`.
+    pub pod_horizon: bool,
     /// Walker chip attacks: the greedy pass attacks a planeswalker only
     /// when it can finish it, so a healthy walker sits unpressured to
     /// its ultimate (recorded: ten turns, a lost game). The flag adds
@@ -1276,6 +1289,7 @@ impl EvalWeights {
             damage_order: false,
             target_eval: false,
             option_eval: false,
+            pod_horizon: false,
             net_tail_guard: false,
             walker_chip: false,
             ability_arms: false,
@@ -1387,6 +1401,7 @@ impl EvalWeights {
             damage_order: false,
             target_eval: false,
             option_eval: false,
+            pod_horizon: false,
             net_tail_guard: false,
             walker_chip: false,
             ability_arms: false,
@@ -1481,6 +1496,7 @@ impl EvalWeights {
             damage_order: false,
             target_eval: false,
             option_eval: false,
+            pod_horizon: false,
             net_tail_guard: false,
             walker_chip: false,
             ability_arms: false,
@@ -2613,6 +2629,19 @@ impl EvalWeights {
             // [`option_eval_off`](Self::option_eval_off), profile
             // `optvote-off`.
             option_eval: true,
+            // 2026-09-27: the attack sim's crack-back through every live
+            // opponent's turn, every sim defender blocking. Pod A/B
+            // (`--commander --a podhorizon --b dflt`, four-seat groups
+            // 2,000 games, six-seat 1,800): four seats 12,291 / 48,000 =
+            // 1.024x (24 groups, seeds 8100+/8200+) and 6,114 / 24,000 =
+            // 1.019x on the final build (seeds 8500+); six seats 2,572 /
+            // 14,400 = 1.072x and 2,558 / 14,400 = 1.066x (seeds 8300+ /
+            // 8600+). Duels untouched (no extra turn, the one-declaration
+            // block path). Cost, every seat on it: 4 / 6 / 8 seats 1.37x /
+            // 1.60x / 2.34x pod wall clock. Control:
+            // [`pod_horizon_off`](Self::pod_horizon_off), profile
+            // `podhorizon-off`.
+            pod_horizon: true,
             ..Self::round56_default()
         }
     }
@@ -2621,6 +2650,14 @@ impl EvalWeights {
     /// [`option_eval`](Self::option_eval) (profile `optvote-off`).
     pub const fn option_eval_off() -> Self {
         Self { option_eval: false, ..Self::default_const() }
+    }
+
+    /// The default with the attack sim's crack-back back on the next seat
+    /// only — the control for [`pod_horizon`](Self::pod_horizon) (profile
+    /// `podhorizon-off`; a pod question: `--commander --a dflt --b
+    /// podhorizon-off`).
+    pub const fn pod_horizon_off() -> Self {
+        Self { pod_horizon: false, ..Self::default_const() }
     }
 
     /// The round-72 control: the default with the sink generators' sacrifice
@@ -13722,19 +13759,32 @@ fn sim_outcome(
 /// head trains on and ranks). `None` when the sim cannot complete.
 fn simulate_attack_leaf(
     base: &GameState,
-    _seat: usize,
+    seat: usize,
     attacks: &[Attack],
     w: &EvalWeights,
 ) -> Option<GameState> {
     let mut g = base.clone();
     dry_run(&mut g, GameAction::DeclareAttackers(attacks.to_vec())).ok()?;
     let start_turn = g.turn_number;
+    // `pod_horizon`: every live opponent's turn before ours, not just the
+    // next seat's. Zero extra turns in a duel.
+    let extra_turns = if w.pod_horizon {
+        let opponents = g.players.iter().enumerate().filter(|&(i, p)| i != seat && p.is_alive()).count();
+        opponents.saturating_sub(1) as u32
+    } else {
+        0
+    };
     // One turn cycle of pure priority passes is on the order of fifty
     // actions; the rest is headroom for triggers and decisions.
-    let mut fuel = 400u32;
+    let mut fuel = 400u32 * (1 + extra_turns);
     // Break when this turn's opponent combat has resolved; the race
     // horizon can push the stop out one more cycle (see below).
-    let mut stop_turn = start_turn;
+    let mut stop_turn = start_turn + extra_turns;
+    // `pod_horizon` at three or more live seats: every defender declares its
+    // own blocks; `blocked` holds the (turn, seat) pairs that have. A duel
+    // keeps the one-declaration path exactly.
+    let each_defender = extra_turns > 0;
+    let mut blocked: crate::game::types::SmallIdSet<(u32, usize)> = Default::default();
     let mut extended = false;
     let mut declared: crate::game::types::SmallIdSet<(u32, TurnStep)> = Default::default();
     // `sim_main_cast_cap`: main-phase casts taken so far in this sim.
@@ -13784,10 +13834,23 @@ fn simulate_attack_leaf(
                 GameAction::DeclareAttackers(pick_attacks_w(&g, declarer, w))
             }
             TurnStep::DeclareBlockers if !declared.contains(&key) && !g.attacking().is_empty() => {
-                match (0..g.players.len()).find(|&s| g.may_declare_blocks(s)) {
+                let turn = g.turn_number;
+                match (0..g.players.len())
+                    .find(|&s| g.may_declare_blocks(s) && !blocked.contains(&(turn, s)))
+                {
                     Some(defender) => {
-                        declared.insert(key);
+                        if each_defender {
+                            blocked.insert((turn, defender));
+                        } else {
+                            declared.insert(key);
+                        }
                         GameAction::DeclareBlockers(pick_blocks(&g, defender))
+                    }
+                    // Every defender has declared: close the step and let
+                    // its priority window play out as a duel's does.
+                    None if each_defender => {
+                        declared.insert(key);
+                        continue;
                     }
                     None => GameAction::PassPriority,
                 }
@@ -21788,6 +21851,34 @@ mod tests {
         assert!(all_in.is_some() && none.is_some(), "both lines must simulate");
         assert_ne!(all_in, none, "the two lines must not score identically \
              — if they do, the simulation is not reaching the crack-back");
+    }
+
+    /// At three seats the crack-back that kills us can come from the seat
+    /// *after* next. Seat 1 has nothing; seat 2's Craw Wurm is lethal to us
+    /// at 5 life unless the Hill Giant stays home to chump it. One turn
+    /// out, the swing at seat 1 looks free — seat 1 has nothing to hit back
+    /// with. `pod_horizon` reaches seat 2's combat and prices it as a loss.
+    #[test]
+    fn pod_horizon_reaches_the_crack_back_from_the_seat_after_next() {
+        let mut g = crate::game::multi_player_game(3);
+        g.step = TurnStep::DeclareAttackers;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.players[0].life = 5;
+        let giant = g.add_card_to_battlefield(0, catalog::hill_giant());
+        g.clear_sickness(giant);
+        let wurm = g.add_card_to_battlefield(2, catalog::craw_wurm());
+        g.clear_sickness(wurm);
+        for seat in 0..3 {
+            for _ in 0..10 {
+                g.add_card_to_library(seat, catalog::forest());
+            }
+        }
+        let swing = [Attack { attacker: giant, target: AttackTarget::Player(1) }];
+        let score = |w: &EvalWeights, a: &[Attack]| simulate_attack_outcome(&g, 0, a, w).expect("simulates");
+        let (near, far) = (EvalWeights::pod_horizon_off(), EvalWeights::default());
+        assert!(score(&near, &swing) > score(&near, &[]), "one turn out, the swing is free damage");
+        assert!(score(&far, &swing) < score(&far, &[]), "through seat 2's turn, the swing loses the game");
     }
 
     /// Helper: a 1/1 creature with one extra keyword for attack-filter tests.

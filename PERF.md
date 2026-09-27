@@ -17134,6 +17134,21 @@ is a `--bench` reading and none of it belongs in the Baseline.
 
 ## Perf candidates
 
+### 2026-09-27 — the pod crack-back horizon costs 27-57 % of default-pilot pod throughput
+
+`EvalWeights::pod_horizon` (adopted on a pod A/B, ML_NOTES) runs the attack
+sim through every live opponent's turn instead of the next seat's, so each
+attack candidate's sim is `opponents` turns long, not one. Duels take no
+extra turn and keep the old block path: `--bench` 197,136 byte-identical.
+Measured `--commander --seats N --a <pilot> --games 480 --seed 8400`,
+release-fast, every seat on the pilot, one run a side: 4 / 6 / 8 seats
+218.3 → 159.8 / 138.2 → 86.2 / 87.6 → 37.4 games/s (`podhorizon-off` →
+`dflt`). Plain `--commander` (the censuses) pilots `baseline`, which it does
+not touch. Candidate: skip an opponent's simulated turn when it has nothing
+that can attack us (no untapped creature, no haste in hand is unknowable —
+so "no creature at all" is the safe cut), and stop at the first turn that
+kills the seat.
+
 ### 2026-09-26 (session `015BCEt5`) — the pod-only generic ability pass costs ~9 % of pod throughput
 
 `server/generic_sink.rs` probes (clone + activate + settle + eval) every

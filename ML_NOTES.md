@@ -5529,4 +5529,28 @@ voting option 0.
   are low-stakes — but one-signed and free (games/s unchanged). Control
   `optvote-off`.
 
+**The crack-back horizon — adopted (`EvalWeights::pod_horizon`,
+2026-09-27).** The attack sim stopped once the *next* turn's combat had
+resolved: a duel's whole crack-back, one opponent of three in a four-seat
+pod. Under the flag it runs through every live opponent's turn before ours,
+and every defender in a sim combat declares its own blocks (the loop let the
+lowest seat that could block declare and no one else). Duels are untouched
+by construction. Pod A/B, `podhorizon` in one seat vs `dflt`:
+
+| seats | groups x games | hero wins / games | x due |
+|---|---|---|---|
+| 4 | 12 x 2,000 (seeds 8100+) | 6,102 / 24,000 | 1.017x |
+| 4 | 12 x 2,000 (seeds 8200+) | 6,189 / 24,000 | 1.032x |
+| 6 | 8 x 1,800 (seeds 8300+) | 2,572 / 14,400 | 1.072x |
+| 4, final build | 12 x 2,000 (seeds 8500+) | 6,114 / 24,000 | 1.019x |
+| 6, final build | 8 x 1,800 (seeds 8600+) | 2,558 / 14,400 | 1.066x |
+
+The effect grows with the seats the old horizon missed. Groups: 26 of 36
+four-seat up, 14 of 16 six-seat. Costs: pods run 1.37x / 1.60x / 2.34x longer
+at 4 / 6 / 8 seats with every seat on it (PERF candidates), and the default
+pilot's pods last ~10 % more turns (four seats 56.9 → 62.9 at seed 9991) —
+fewer alpha strikes. The first cut of the flag also skipped one trick window
+after sim blocks in duels; the final build keeps the duel path exact, and
+the final-build rows reproduce the first. Control `podhorizon-off`.
+
 

@@ -2398,6 +2398,16 @@ mod tests {
     #[test]
     fn cr_903_seeded_pod_outcomes_match_the_committed_table() {
         // (seed, winner, turns, actions)
+        // Re-blessed 2026-09-27 (`EvalWeights::pod_horizon` adopted: the
+        // attack sim prices the crack-back of every opponent before our next
+        // turn, not just the next seat's). Seed 0xC0FFEE 44→63 turns, same
+        // winner; seed 43 58→70 turns and seat 0 → seat 2; 4242 unmoved.
+        // The default pilot's aggregate, 2,000 games a seat count at seed
+        // 9991, `podhorizon-off` / `dflt`: 22.10/22.10 (duels untouched),
+        // 39.42/41.47, 56.92/62.88, 69.60/78.65, 78.81/86.11, 94.72/107.00,
+        // 110.99/124.69 turns, every block 2,000/2,000 decided — fewer alpha
+        // strikes, longer pods. (`bot_ladder --commander` without `--a`
+        // pilots `baseline`, which this does not touch.)
         // Re-blessed 2026-09-26 (CR 605.3b, auto-tap resolves a prompting
         // seat's any-color source inline — bisected to 34774e835, and which
         // lands pay a generic pip changes with it): a pod seat's Command Tower /
@@ -2551,8 +2561,8 @@ mod tests {
         // covers when the resolved outcome beats passing. Same winners; seed
         // 43 runs four turns longer, 0xC0FFEE seven actions.
         const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
-            (0xC0FFEE, Some(1), 44, 1836),
-            (43, Some(0), 58, 2712),
+            (0xC0FFEE, Some(1), 63, 2895),
+            (43, Some(2), 70, 3443),
             (4242, Some(0), 62, 2596),
         ];
         let decks = rofellos_pod(4);
