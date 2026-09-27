@@ -11239,20 +11239,29 @@ fn pick_equip(state: &GameState, seat: usize) -> Option<GameAction> {
             continue;
         }
         let action = GameAction::Equip { equipment: eq.id, target };
-        // Moving an Equipment off one of our own creatures must leave the new
-        // host strictly stronger than the old one is now. A base-P/T setter
-        // (Belt of Giant Strength's 10/10) *lowers* an 11/11, so "equip the
-        // biggest" flipped it between two It That Betrays every tick — 11,365
-        // equips and an action-capped 12-seat pod.
+        // Moving an Equipment off one of our own creatures must raise the total
+        // power of our creatures. A base-P/T setter (Belt of Giant Strength's
+        // 10/10) *lowers* an 11/11, so "equip the biggest" flipped it between
+        // two It That Betrays every tick — 11,365 equips and an action-capped
+        // 12-seat pod. Comparing only the new host against the old one let
+        // Wrecking Ball Arm (base 7/7) and Conqueror's Flail trade two hosts
+        // in a 4-cycle (5,592 equips, seed 992100 game 108): the Arm's move
+        // "gained" 10 -> 11 while its new host fell 21 -> 11. The side's total
+        // strictly rises on every accepted move, so no cycle survives it.
         let moving_from = eq
             .attached_to
             .and_then(|h| state.battlefield_find(h))
             .filter(|h| h.controller == seat && h.definition.is_creature());
-        if let Some(host) = moving_from {
-            let before = cpow(host);
+        if moving_from.is_some() {
+            let side_power = |g: &GameState| -> i32 {
+                g.battlefield
+                    .iter()
+                    .filter(|c| c.controller == seat && c.definition.is_creature())
+                    .map(|c| g.computed_permanent(c.id).map_or(0, |cp| cp.power))
+                    .sum()
+            };
             let Some(after) = state.accept(action.clone()) else { continue };
-            let gained = after.computed_permanent(target).map(|cp| cp.power).unwrap_or(i32::MIN);
-            if gained <= before {
+            if side_power(&after) <= side_power(state) {
                 continue;
             }
             return Some(action);
@@ -21958,6 +21967,30 @@ mod tests {
         if let GameAction::ActivateAbility { card_id, .. } = action {
             assert_ne!(card_id, petal, "bot must NOT auto-tap a sac-cost mana source");
         }
+    }
+
+    /// Regression (seed 992100 game 108, 5,592 equips): an Equipment moves off
+    /// one of our creatures only when the side's total power rises. Wrecking
+    /// Ball Arm (base 7/7) on the Bears onto the Bonesplitter'd Wurm reads 8 ->
+    /// 9 for the Wurm but 2 for the Bears — a loss of 6, so it stays.
+    #[test]
+    fn pick_equip_keeps_a_base_setter_that_would_lower_the_side() {
+        let mut g = two_player_game();
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        let wurm = g.add_card_to_battlefield(0, catalog::craw_wurm());
+        let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let blade = g.add_card_to_battlefield(0, catalog::bonesplitter());
+        let arm = g.add_card_to_battlefield(0, catalog::wrecking_ball_arm());
+        g.battlefield_find_mut(blade).unwrap().attached_to = Some(wurm);
+        g.battlefield_find_mut(arm).unwrap().attached_to = Some(bears);
+        g.players[0].mana_pool.add_colorless(20);
+        assert_eq!(g.computed_permanent(bears).unwrap().power, 7);
+        assert!(
+            !matches!(pick_equip(&g, 0), Some(GameAction::Equip { equipment, .. }) if equipment == arm),
+            "moving the Arm onto the Wurm lowers the side's total",
+        );
     }
 
     /// Bot activates a planeswalker's loyalty ability when one is
