@@ -17738,16 +17738,24 @@ impl GameState {
     fn rebind_object_stamp(&mut self, card: CardId, from: u64, to: u64) {
         use crate::effect::{Effect, Predicate};
         for d in self.delayed_triggers.iter_mut() {
-            if d.source != card {
-                continue;
-            }
-            if let Effect::If {
-                cond: Predicate::SourceIsSameObjectOnBattlefield { battlefield_timestamp },
-                ..
-            } = &mut d.effect
-                && *battlefield_timestamp == from
-            {
-                *battlefield_timestamp = to;
+            let bound = match &mut d.effect {
+                Effect::If { cond: Predicate::SourceIsSameObjectOnBattlefield { battlefield_timestamp }, .. }
+                    if d.source == card =>
+                {
+                    battlefield_timestamp
+                }
+                // The target-side capture (`DelayUntilWithCapture`) binds the
+                // same way: a token captured before its entry is stamped
+                // (Ashling's end-step sacrifice) waits UNBOUND for it.
+                Effect::If { cond: Predicate::TargetIsCapturedObject { battlefield_timestamp }, .. }
+                    if d.target == Some(Target::Permanent(card)) =>
+                {
+                    battlefield_timestamp
+                }
+                _ => continue,
+            };
+            if *bound == from {
+                *bound = to;
             }
         }
     }

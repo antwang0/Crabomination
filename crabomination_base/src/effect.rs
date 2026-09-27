@@ -12130,6 +12130,12 @@ pub enum ScratchBinding {
     /// The opponent `Effect::ChooseOpponentThen` named, read back by
     /// [`PlayerRef::ChosenPlayerOfSource`] inside its body.
     ChosenOpponent(usize),
+    /// The seat a body runs as (`MayDoBy`'s "that player may …"): the
+    /// context's controller, not resolver scratch.
+    Controller(usize),
+    /// The amount a body reads as `Value::TriggerEventAmount` (what
+    /// `MayPayGenericUpTo` was paid): the context's `event_amount`.
+    EventAmount(u32),
 }
 
 impl Default for Effect {

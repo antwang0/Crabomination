@@ -12706,3 +12706,58 @@ fn cr_608_2_a_parked_per_target_body_resumes_on_its_own_target() {
     assert_eq!(g.computed_permanent(giant).unwrap().power, 5, "the Giant got +2/+2");
     assert_eq!(g.computed_permanent(bear).unwrap().power, 2, "the Bears did not");
 }
+
+/// A "that player may …" body that parks resumes as THAT player: the target
+/// opponent's {X} ask used to resume as the caster, who then paid and drew.
+#[test]
+fn a_parked_may_do_by_body_resumes_as_its_player() {
+    use crabomination::card::{CardDefinition, CardType};
+    use crabomination::decision::Decision;
+    use crabomination::effect::{Effect, PlayerRef, Selector, Value};
+    let offer = CardDefinition {
+        name: "Test Scholarly Offer",
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::MayDoBy {
+            who: PlayerRef::Target(0),
+            description: "Pay {X} to draw X?".into(),
+            body: Box::new(Effect::MayPayX {
+                description: "Pay {X}?".into(),
+                body: Box::new(Effect::Draw { who: Selector::You, amount: Value::XFromCost }),
+            }),
+        },
+        ..Default::default()
+    };
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[1].wants_ui = true;
+    for seat in 0..2 {
+        for _ in 0..4 {
+            g.add_card_to_library(seat, catalog::island());
+        }
+    }
+    let id = g.add_card_to_hand(0, offer);
+    g.players[1].mana_pool.add_colorless(2);
+    let (hand0, hand1) = (g.players[0].hand.len() - 1, g.players[1].hand.len());
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast");
+    for _ in 0..30 {
+        if let Some(pd) = g.pending_decision.as_ref() {
+            let answer = match &pd.decision {
+                Decision::ChooseAmount { .. } => DecisionAnswer::Amount(2),
+                _ => DecisionAnswer::Bool(true),
+            };
+            g.perform_action(GameAction::SubmitDecision(answer)).expect("answer");
+            continue;
+        }
+        if g.stack.is_empty() {
+            break;
+        }
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    assert_eq!(g.players[1].hand.len(), hand1 + 2, "the opponent drew two");
+    assert_eq!(g.players[0].hand.len(), hand0, "the caster drew nothing");
+    assert_eq!(g.players[1].mana_pool.total(), 0, "and paid for it");
+}

@@ -120,6 +120,8 @@ enum ScratchSave {
     CurrentVoter(Option<usize>),
     LastDieRoll(u8),
     ChosenOpponent(Option<usize>),
+    /// A context pin (`Controller`, `EventAmount`): nothing on `GameState`.
+    Nothing,
 }
 
 /// Continuation for per-player decision loops that suspend mid-iteration:
@@ -1664,6 +1666,7 @@ impl GameState {
             ScratchBinding::ChosenOpponent(seat) => {
                 ScratchSave::ChosenOpponent(self.scratch.chosen_opponent_scratch.replace(*seat))
             }
+            ScratchBinding::Controller(_) | ScratchBinding::EventAmount(_) => ScratchSave::Nothing,
         }
     }
 
@@ -1673,6 +1676,7 @@ impl GameState {
             ScratchSave::CurrentVoter(prev) => self.current_voter = prev,
             ScratchSave::LastDieRoll(prev) => self.last_die_roll = prev,
             ScratchSave::ChosenOpponent(prev) => self.scratch.chosen_opponent_scratch = prev,
+            ScratchSave::Nothing => {}
         }
     }
 
@@ -7192,7 +7196,13 @@ impl GameState {
                 }
                 let mut sub = ctx.clone();
                 sub.controller = seat;
-                self.run_effect(body, &sub, events)
+                self.run_effect(body, &sub, events)?;
+                // A parked body resumes as the stack item's controller.
+                rewrap_parked(&mut self.suspend_signal, |carried| Effect::BindScratch {
+                    scratch: ScratchBinding::Controller(seat),
+                    body: Box::new(carried),
+                });
+                Ok(())
             }
 
             Effect::MayDo { description, body } => {
@@ -7595,6 +7605,10 @@ impl GameState {
                 let mut body_ctx = ctx.clone();
                 body_ctx.event_amount = paid;
                 self.run_effect(body, &body_ctx, events)?;
+                rewrap_parked(&mut self.suspend_signal, |carried| Effect::BindScratch {
+                    scratch: ScratchBinding::EventAmount(paid),
+                    body: Box::new(carried),
+                });
                 Ok(())
             }
 
@@ -8262,8 +8276,13 @@ impl GameState {
                 // iteration ran under, restored around `body` — and put back
                 // around whatever `body` parks, because a continuation resumes
                 // long after the loop that built it restored the field.
+                let pinned = match scratch {
+                    ScratchBinding::Controller(p) => Some(EffectContext { controller: *p, ..ctx.clone() }),
+                    ScratchBinding::EventAmount(n) => Some(EffectContext { event_amount: *n, ..ctx.clone() }),
+                    _ => None,
+                };
                 let restore = self.bind_scratch(scratch);
-                let r = self.run_effect(body, ctx, events);
+                let r = self.run_effect(body, pinned.as_ref().unwrap_or(ctx), events);
                 self.restore_scratch(restore);
                 r?;
                 rewrap_parked(&mut self.suspend_signal, |carried| Effect::BindScratch {
@@ -29574,7 +29593,12 @@ impl GameState {
                 let mut sub = ctx.clone();
                 sub.controller = seat;
                 sub.targets = vec![Target::Player(other)];
-                self.run_effect(body, &sub, events)
+                self.run_effect(body, &sub, events)?;
+                rewrap_parked(&mut self.suspend_signal, |carried| Effect::BindScratch {
+                    scratch: ScratchBinding::Controller(seat),
+                    body: Box::new(carried),
+                });
+                Ok(())
             }
 
             Effect::MoveAllCountersOfKind { from, to, kind } => {
@@ -31231,7 +31255,19 @@ impl GameState {
                 let effect = match target {
                     Some(Target::Permanent(cid)) if self.battlefield_find(cid).is_none() => match self.find_card_anywhere(cid) {
                         Some(c) => Effect::If {
-                            cond: crate::effect::Predicate::TargetIsCapturedObject { battlefield_timestamp: c.battlefield_timestamp },
+                            // An object whose entry is still undispatched in
+                            // this resolution gets its entry stamp later: wait
+                            // for it UNBOUND (Ashling's freshly minted token).
+                            cond: crate::effect::Predicate::TargetIsCapturedObject {
+                                battlefield_timestamp: if events
+                                    .iter()
+                                    .any(|e| matches!(e, GameEvent::PermanentEntered { card_id, .. } if *card_id == cid))
+                                {
+                                    crate::effect::UNBOUND_OBJECT_STAMP
+                                } else {
+                                    c.battlefield_timestamp
+                                },
+                            },
                             then: body.clone(),
                             else_: Box::new(Effect::Noop),
                         },
