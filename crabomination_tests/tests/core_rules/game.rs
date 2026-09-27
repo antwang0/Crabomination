@@ -6480,7 +6480,7 @@ fn cr_704_5c_empty_library_draw_eliminates_player() {
 #[test]
 fn set_starting_player_seats_the_die_roll_winner() {
     // `GameState::new` always seats player 0, which handed the human the
-    // play in every sealed game. CR 103.5 / 103.7a: the starting seat
+    // play in every sealed game. CR 103.5 / 103.8a: the starting seat
     // takes turn 1, opens with priority, and skips its first draw.
     let mut g = two_player_game();
     assert_eq!(g.starting_player, 0, "the default is seat 0");

@@ -1218,7 +1218,7 @@ pub fn update_player_stats_chips(
         }
         // CR 506.2 / 509.1b — a global combat cap; surface it once, on the
         // active player's row, so neither seat plans an illegal declaration.
-        // CR 103.5 / 103.7a — who won the die roll. The seat on the play
+        // CR 103.5 / 103.8a — who won the die roll. The seat on the play
         // took the first turn and skipped its first draw; the difference
         // shapes every mulligan and race decision, so name it outright
         // rather than leaving the player to infer it from turn 1.

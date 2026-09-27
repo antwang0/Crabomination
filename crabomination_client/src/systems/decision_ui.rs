@@ -1955,7 +1955,7 @@ fn spawn_mulligan_modal(
         format!("Mulligan {mulligans_taken} — keep this hand?")
     };
 
-    // CR 103.7a — the player on the play skips their first draw, which is
+    // CR 103.8a — the player on the play skips their first draw, which is
     // the whole reason a marginal hand plays differently from each seat.
     let (play_line, play_color) = if on_the_play {
         ("\u{25b6}  You are on the play (no first draw)".to_string(), theme::ACCENT_GOLD)
