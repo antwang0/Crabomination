@@ -97,6 +97,7 @@ mod voyage;
 mod evasion;
 mod manland;
 mod selection_sink;
+mod regenerate;
 mod cycling;
 mod spell_response;
 mod fight_pick;

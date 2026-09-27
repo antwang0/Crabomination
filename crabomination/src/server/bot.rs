@@ -19625,7 +19625,8 @@ fn pick_stack_response_top(state: &GameState, seat: usize, w: &EvalWeights) -> O
         pick_stack_response(state, seat, w)
     }
     .or_else(|| pick_sweeper_shield(state, seat, w))
-    .or_else(|| pick_retarget_shield(state, seat, w));
+    .or_else(|| pick_retarget_shield(state, seat, w))
+    .or_else(|| super::regenerate::pick_regen_response(state, seat).map(Picked::Plain));
     if picked.is_some() {
         response_census::add(9, 1);
     }
