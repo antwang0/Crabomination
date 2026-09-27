@@ -7202,7 +7202,7 @@ fn hand_specialties(state: &GameState, seat: usize, facts: &BoardFacts) -> u32 {
             m |= spec::CONVOKE;
         }
         // Gorex's filtered delve rides the delve block.
-        if def.graveyard_exile_discount.is_some() {
+        if def.graveyard_exile_cost.is_some() {
             m |= spec::DELVE;
         }
         if matches!(
@@ -7623,7 +7623,7 @@ pub(super) fn cast_candidates<'a>(
     gated_block!(mask, spec::DELVE, castable, {
     for c in state.players[seat].hand.iter().filter(|c| {
         c.definition.keywords.has_kw(&crate::card::Keyword::Delve)
-            || c.definition.graveyard_exile_discount.is_some()
+            || c.definition.graveyard_exile_cost.is_some()
     }) {
         let generic_pips: u32 = c
             .definition
@@ -7636,19 +7636,24 @@ pub(super) fn cast_candidates<'a>(
             })
             .sum();
         // Gorex's filtered discount: only matching cards, `per` generic each.
-        let (per, gy_ids): (u32, Vec<CardId>) = match &c.definition.graveyard_exile_discount {
-            Some((f, per)) => (
-                (*per).max(1),
-                state.players[seat]
+        let (per, gy_ids, max): (u32, Vec<CardId>, usize) = match &c.definition.graveyard_exile_cost {
+            Some(x) => {
+                let mut ids: Vec<(i32, CardId)> = state.players[seat]
                     .graveyard
                     .iter()
-                    .filter(|g| state.evaluate_requirement_on_card(f, g, seat))
-                    .map(|g| g.id)
-                    .collect(),
-            ),
-            None => (1, state.players[seat].graveyard.iter().map(|g| g.id).collect()),
+                    .filter(|g| state.evaluate_requirement_on_card(&x.filter, g, seat))
+                    .map(|g| (g.definition.power, g.id))
+                    .collect();
+                // A capped exile feeds a payoff that reads the card (Redemptor
+                // Dreadnought's power): take the biggest first.
+                if x.max.is_some() {
+                    ids.sort_by_key(|&(pw, _)| std::cmp::Reverse(pw));
+                }
+                (x.discount.max(1), ids.into_iter().map(|(_, id)| id).collect(), x.max.map_or(usize::MAX, |m| m as usize))
+            }
+            None => (1, state.players[seat].graveyard.iter().map(|g| g.id).collect(), usize::MAX),
         };
-        let take = (generic_pips.div_ceil(per) as usize).min(gy_ids.len());
+        let take = (generic_pips.div_ceil(per) as usize).min(gy_ids.len()).min(max);
         if take == 0 {
             continue;
         }

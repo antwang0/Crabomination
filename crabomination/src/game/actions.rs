@@ -9257,9 +9257,9 @@ impl GameState {
         // Keyword::Delve and every listed card must currently sit in the
         // caster's graveyard. The cards aren't exiled here — only after the
         // reduced cost is paid — so a rejected cast leaves them in place.
-        let exile_discount = card.definition.graveyard_exile_discount.clone();
+        let exile_cost = card.definition.graveyard_exile_cost.clone();
         if !delve_cards.is_empty()
-            && exile_discount.is_none()
+            && exile_cost.is_none()
             && !card.definition.keywords.has_kw(&crate::card::Keyword::Delve)
             && !self.controller_grants_spells_delve(p)
         {
@@ -9267,10 +9267,17 @@ impl GameState {
             self.players[p].hand.push(card);
             return Err(GameError::SorcerySpeedOnly); // reuse: spell doesn't have delve
         }
+        if let Some(max) = exile_cost.as_ref().and_then(|x| x.max)
+            && delve_cards.len() > max as usize
+        {
+            cast_census::rollback(line!());
+            self.players[p].hand.push(card);
+            return Err(GameError::InvalidTarget);
+        }
         for cid in delve_cards {
             let fits = self.players[p].graveyard.iter().any(|c| {
                 c.id == *cid
-                    && exile_discount.as_ref().is_none_or(|(f, _)| self.evaluate_requirement_on_card(f, c, p))
+                    && exile_cost.as_ref().is_none_or(|x| self.evaluate_requirement_on_card(&x.filter, c, p))
             });
             if !fits {
                 cast_census::rollback(line!());
@@ -10057,7 +10064,7 @@ impl GameState {
         // `reduce_generic`; the cards themselves are exiled only after a
         // successful payment (below).
         if !delve_cards.is_empty() {
-            let per = card.definition.graveyard_exile_discount.as_ref().map_or(1, |(_, n)| *n);
+            let per = card.definition.graveyard_exile_cost.as_ref().map_or(1, |x| x.discount);
             cost.reduce_generic(delve_cards.len() as u32 * per);
         }
         // Trinisphere floor (CR 117.7 / replacement-style): applied after
@@ -10191,7 +10198,7 @@ impl GameState {
         // (CR 702.66: they're exiled as part of paying the cost). Bumps the
         // per-turn exile tally so "if cards were exiled this turn" payoffs see
         // them.
-        let stamp = (card.definition.graveyard_exile_discount.is_some() || card.definition.links_delved_cards)
+        let stamp = (card.definition.graveyard_exile_cost.is_some() || card.definition.links_delved_cards)
             .then_some(card.id);
         for cid in delve_cards {
             if let Some(mut exiled) = Self::take_card(&mut self.players[p].graveyard, *cid) {

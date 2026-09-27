@@ -277,7 +277,7 @@ pub fn gorex_the_tombshell() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],
         keywords: vec![Keyword::Deathtouch],
-        graveyard_exile_discount: Some((R::Creature, 2)),
+        graveyard_exile_cost: Some(crate::card::GraveyardExileCost { filter: R::Creature, discount: 2, max: None }),
         triggered_abilities: vec![
             TriggeredAbility { event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource), effect: return_one() },
             TriggeredAbility { event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource), effect: return_one() },
