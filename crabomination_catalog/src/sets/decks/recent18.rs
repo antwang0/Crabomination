@@ -249,20 +249,22 @@ pub fn stormfist_crusader() -> CardDefinition {
 }
 
 /// Run Away Together — {1}{U} Instant. Choose two target creatures controlled by
-/// different players. Return those creatures to their owners' hands. (The
-/// different-controllers restriction is approximated as any two creatures.)
+/// different players. Return those creatures to their owners' hands. The
+/// one-per-controller rule is `ForEachPlayerTarget`'s (CR 601.2c).
 pub fn run_away_together() -> CardDefinition {
     CardDefinition {
         name: "Run Away Together",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::ApplyToTargets {
-            max_targets: 2,
-            min_targets: 0,
-            filter: SelectionRequirement::Creature,
-            effect: Box::new(Effect::Move {
-                what: Selector::Target(0),
-                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+        effect: Effect::ForEachPlayerTarget {
+            body: Box::new(Effect::ApplyToTargets {
+                max_targets: 2,
+                min_targets: 0,
+                filter: SelectionRequirement::Creature,
+                effect: Box::new(Effect::Move {
+                    what: Selector::Target(0),
+                    to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+                }),
             }),
         },
         ..Default::default()
