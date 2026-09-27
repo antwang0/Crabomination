@@ -2749,6 +2749,13 @@ fn report_card_census(
     for (line, n) in census.top_actions(5).into_iter().chain(census.top_actions(40).into_iter().filter(|(l, _)| !l.ends_with("PassPriority")).take(3)) {
         println!("    top action {n:>7}  {line}");
     }
+    // `CRAB_CENSUS_ACTION=CastMutate` — every action line naming it, for a
+    // check that a new bot path is actually taken.
+    if let Ok(want) = std::env::var("CRAB_CENSUS_ACTION") {
+        for (line, n) in census.top_actions(usize::MAX).into_iter().filter(|(l, _)| l.contains(want.as_str())) {
+            println!("    action     {n:>7}  {line}");
+        }
+    }
     for d in field {
         let mut never: Vec<(&str, bool)> = Vec::new();
         let mut seen = std::collections::BTreeSet::new();
