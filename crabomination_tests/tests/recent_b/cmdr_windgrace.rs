@@ -390,7 +390,7 @@ fn emissary_of_grudges_answers_only_the_chosen_player() {
     let em = g.add_card_to_battlefield(0, catalog::emissary_of_grudges());
     g.battlefield_find_mut(em).unwrap().chosen_player = Some(1);
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    let mut shock_from = |g: &mut GameState, seat: usize| {
+    let shock_from = |g: &mut GameState, seat: usize| {
         let s = g.add_card_to_hand(seat, catalog::shock());
         flood(g, seat);
         g.priority.player_with_priority = seat;
