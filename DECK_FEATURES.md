@@ -109,7 +109,7 @@ lists were picked.
 | **Arm for Battle** (CMR precon) RW | Wyleth, Soul of Steel | RW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Fae Dominion** (WOC precon) UB | Tegwyll, Duke of Splendor | UB | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Invent Superiority** (C16 precon) WUBR | Breya, Etherium Shaper | WUBR | 100 | ✅ complete |
-| **Entropic Uprising** (C16 precon) UBRG | Yidris, Maelstrom Wielder | UBRG | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
+| **Entropic Uprising** (C16 precon) UBRG | Yidris, Maelstrom Wielder | UBRG | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Endless Punishment** (DSC precon) BR | Valgavoth, Harrower of Souls | BR | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Arcane Wizardry** (C17 precon) UBR | Inalla, Archmage Ritualist | UBR | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Urza's Iron Alliance** (BRC precon) WUB | Urza, Chief Artificer | WUB | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
@@ -1036,8 +1036,8 @@ census found Wheel of Fate unplayed**: no bot path suspended a card, and
 suspend-only cards (no mana cost) had no other way in —
 `server/suspend.rs` now suspends them, and the census counts a suspend or a
 foretell as a play. Residuals: **Aeon Chronicler** has no Suspend X;
-**Vial Smasher** never hits a planeswalker; **Blood Tyrant** grows by the
-living players, not the life lost. Four-seat pods beside Breya / Tegwyll /
+**Vial Smasher** never hits a planeswalker (Blood Tyrant grows by the life
+actually lost since 2026-09-27). Four-seat pods beside Breya / Tegwyll /
 Adrix (seed 10129, 1,000 games, all decided): Yidris 28.6 %; the census (seed
 10130) leaves no card unplayed.
 
