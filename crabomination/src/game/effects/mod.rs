@@ -10334,6 +10334,89 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::PayLifeOrPutBackDrawnThisTurn { count, life } => {
+                let p = ctx.controller;
+                let source = ctx.source.unwrap_or(CardId(0));
+                let hand = &self.players[p].hand;
+                let k = (self.players[p].cards_drawn_this_turn as usize).min(hand.len());
+                let candidates: Vec<(CardId, String)> = hand[hand.len() - k..]
+                    .iter()
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                let n = (*count as usize).min(candidates.len());
+                if n == 0 {
+                    self.clear_answer_log();
+                    return Ok(());
+                }
+                let mut cursor = 0usize;
+                let auto: Vec<CardId> = candidates.iter().take(n).map(|(id, _)| *id).collect();
+                let Some(mut chosen) = self.ask_seat_cards_logged(
+                    &mut cursor,
+                    p,
+                    format!("Choose {n} cards drawn this turn: pay {life} life for each or put it back"),
+                    source,
+                    candidates.clone(),
+                    n as u32,
+                    n as u32,
+                    crate::decision::PickValue::Cost,
+                    effect,
+                    auto,
+                ) else {
+                    return Ok(());
+                };
+                // Exactly `n` — "choose two" is not optional.
+                for (id, _) in &candidates {
+                    if chosen.len() >= n {
+                        break;
+                    }
+                    if !chosen.contains(id) {
+                        chosen.push(*id);
+                    }
+                }
+                let mut pays = Vec::with_capacity(chosen.len());
+                let mut life_left = self.players[p].life;
+                for cid in &chosen {
+                    let name = candidates
+                        .iter()
+                        .find(|(id, _)| id == cid)
+                        .map(|(_, n)| n.clone())
+                        .unwrap_or_default();
+                    // CR 119.4 — life can be paid only while the total covers it.
+                    let pay = life_left >= *life as i32
+                        && match self.ask_seat_bool(
+                            &mut cursor,
+                            p,
+                            format!("Pay {life} life to keep {name}? (Otherwise it goes on top of your library.)"),
+                            source,
+                            effect,
+                            crate::decision::OptionalKind::PayLife {
+                                life: *life,
+                                purpose: crate::decision::PayFor::Payoff,
+                            },
+                        ) {
+                            Some(b) => b,
+                            None => return Ok(()),
+                        };
+                    if pay {
+                        life_left -= *life as i32;
+                    }
+                    pays.push(pay);
+                }
+                self.clear_answer_log();
+                // Put back in reverse so the first chosen ends up on top.
+                for (cid, pay) in chosen.iter().zip(&pays).rev() {
+                    if !*pay && let Some(card) = Self::take_card(&mut self.players[p].hand, *cid) {
+                        self.players[p].library.insert(0, card);
+                    }
+                }
+                for (_, pay) in chosen.iter().zip(&pays) {
+                    if *pay {
+                        self.pay_life_cost(p, *life);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::TurnFaceDown { what } => {
                 // CR 708.2a/708.2b — `turn_face_down` stashes the real card and
                 // swaps in the vanilla 2/2 body; it no-ops if already face down.

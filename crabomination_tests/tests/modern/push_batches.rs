@@ -452,25 +452,39 @@ fn howling_mine_draws_an_extra_card_each_turn() {
         "Howling Mine drew P1 a card on their draw step");
 }
 
+/// Sylvan Library — draw two additional cards, then choose two cards drawn
+/// this turn (the draw step's own card among them) and for each pay 4 life or
+/// put it on top. Here: keep the first by paying, put the third back.
 #[test]
-fn sylvan_library_offers_draw_in_exchange_for_four_life() {
+fn sylvan_library_draws_two_then_pays_or_puts_back_two_drawn() {
     use crabomination::game::types::TurnStep;
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::sylvan_library());
-    for _ in 0..3 {
+    g.players[0].library.clear();
+    for _ in 0..4 {
         g.add_card_to_library(0, catalog::forest());
     }
+    let order: Vec<_> = g.players[0].library.iter().map(|c| c.id).collect();
     let life_before = g.players[0].life;
-    let hand_before = g.players[0].hand.len();
-    // Force the decider to accept the MayDo (draw + lose 4).
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    // The draw step's turn-based draw (CR 504.1) — a card drawn this turn too.
+    let first = g.players[0].draw_top().unwrap();
+    assert_eq!(first, order[0]);
+    let (second, third) = (order[1], order[2]);
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),                    // draw two more
+        DecisionAnswer::Cards(vec![first, third]),     // the two chosen
+        DecisionAnswer::Bool(true),                    // pay 4 for `first`
+        DecisionAnswer::Bool(false),                   // put `third` back
+    ]));
     g.active_player_idx = 0;
     g.step = TurnStep::Draw;
     g.priority.player_with_priority = 0;
     g.fire_step_triggers(TurnStep::Draw);
     drain_stack(&mut g);
-    assert_eq!(g.players[0].life, life_before - 4, "Paid 4 life");
-    assert!(g.players[0].hand.len() > hand_before, "Drew the extra card");
+    assert_eq!(g.players[0].life, life_before - 4, "paid 4 life once");
+    let in_hand = |id| g.players[0].hand.iter().any(|c| c.id == id);
+    assert!(in_hand(first) && in_hand(second), "the paid-for card and the unchosen one stay");
+    assert_eq!(g.players[0].library.first().map(|c| c.id), Some(third), "the other goes on top");
 }
 
 // ── Dark Confidant — "lose life equal to CMC" trigger ────────────────────────

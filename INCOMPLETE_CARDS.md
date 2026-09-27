@@ -357,7 +357,8 @@ Bitter Triumph; Ursine Monstrosity; Finale of Devastation; Teferi's
 Protection; Comeuppance; Decree of Justice; Experiment Twelve; Guardian
 Project; Pteramander; Mobilized District; Dragonkin Berserker; Voracious Fell Beast; Lethal Scheme;
 Circuitous Route; Augur of Autumn; Imprisoned in the Moon; Serra Avenger;
-Smoke. Still open:
+Smoke; Sylvan Library ("drawn this turn" read as the hand's tail — see
+`Effect::PayLifeOrPutBackDrawnThisTurn`). Still open:
 
 | Card | Gap |
 |---|---|
@@ -365,7 +366,6 @@ Smoke. Still open:
 | 🟡 Compulsive Research | "target player" is always you. |
 | 🟡 Ajani's Chosen | "if that enchantment is an Aura, you may attach it to the token" is missing (a bot's yes would move an opponent-side Aura onto its token). |
 | 🟡 Conduit of Worlds | only the play-lands-from-graveyard static; the {T} cast-a-permanent-card-from-graveyard ability is missing. |
-| 🟡 Sylvan Library | an optional "draw one, lose 4 life", not "draw two, then pay 4 life or put back each of two drawn this turn". |
 | 🟡 Master Biomancer | the "as a Mutant" type rider is missing. |
 
 ## The pod-deck `audit_incomplete` rows (2026-09-26, session `0199ZAiL`)

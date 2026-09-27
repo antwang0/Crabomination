@@ -12091,11 +12091,8 @@ pub fn phyrexian_reclamation() -> CardDefinition {
 /// cards in your hand drawn this turn. For each of those cards, pay 4
 /// life or put the card on top of your library."
 ///
-/// Approximation: the "draw 2 extra, return 2 unless you pay 8" loop
-/// is collapsed to a flat "draw 1 extra each turn, lose 4 life" — same
-/// net outcome (1 extra card / 4 life) without the multi-step decision
-/// shape. The "pick which two to return" choice is dropped (no
-/// hand-card-selection primitive on a triggered ability today).
+/// The draw is a `MayDo`; the rest is `PayLifeOrPutBackDrawnThisTurn`, whose
+/// "drawn this turn" is the tail of the hand (see its doc).
 pub fn sylvan_library() -> CardDefinition {
     use crate::game::types::TurnStep;
     CardDefinition {
@@ -12108,16 +12105,13 @@ pub fn sylvan_library() -> CardDefinition {
                 EventScope::YourControl,
             ),
             effect: Effect::MayDo {
-                description: "Draw a card and lose 4 life.".to_string(),
+                description: "Draw two additional cards (then pay 4 life or put back each of two drawn this turn).".to_string(),
                 body: Box::new(Effect::Seq(vec![
                     Effect::Draw {
                         who: Selector::You,
-                        amount: Value::Const(1),
+                        amount: Value::Const(2),
                     },
-                    Effect::LoseLife {
-                        who: Selector::You,
-                        amount: Value::Const(4),
-                    },
+                    Effect::PayLifeOrPutBackDrawnThisTurn { count: 2, life: 4 },
                 ])),
             },
         }],

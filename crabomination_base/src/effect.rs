@@ -5849,6 +5849,14 @@ pub enum Effect {
     /// hand." Moonlight Bargain. The auto payer buys every card it can afford
     /// while staying above 1 life.
     LookTopEachPayLifeOrBin { count: Value, life: u32 },
+    /// "Choose `count` cards in your hand drawn this turn. For each of those
+    /// cards, pay `life` life or put the card on top of your library."
+    /// (Sylvan Library.) The cards drawn this turn are read as the last
+    /// `cards_drawn_this_turn` cards of the hand — a draw appends — so a card
+    /// put into hand some other way after a draw this turn can stand in for
+    /// one. The controller chooses the cards, then answers one pay-or-return
+    /// per card; the returns go on top in the chosen order.
+    PayLifeOrPutBackDrawnThisTurn { count: u32, life: u32 },
     /// CR 708.2a — turn each resolved permanent face down: it becomes a 2/2
     /// creature with no name, types, or abilities. A no-op on a permanent
     /// that is already face down (CR 708.2b). Ixidron.

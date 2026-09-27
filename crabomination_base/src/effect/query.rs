@@ -987,6 +987,7 @@ impl Effect {
             | Effect::GrantKeywordToMatchingThisTurn { .. }
             | Effect::RevealTopDeployIfMatch { .. }
             | Effect::LookTopEachPayLifeOrBin { .. }
+            | Effect::PayLifeOrPutBackDrawnThisTurn { .. }
             | Effect::ShareKeywordsAmongYourCreatures { .. }
             | Effect::ExchangeControlWithTriggeringSpell { .. }
             | Effect::ExileAnyNumberUntilSourceLeaves { .. }
