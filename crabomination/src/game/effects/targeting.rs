@@ -381,7 +381,7 @@ impl GameState {
             let mut others: Vec<(CardId, i32)> = self
                 .living_seats()
                 .filter(|&p| p != primary_player && p != controller && !self.same_team(p, controller))
-                .flat_map(|p| collect_legal_on_player(p))
+                .flat_map(collect_legal_on_player)
                 .collect();
             others.sort_by_cached_key(|c| (hostile_ward(c.0), std::cmp::Reverse(c.1)));
             if let Some(&(cid, _)) = others.first() {
