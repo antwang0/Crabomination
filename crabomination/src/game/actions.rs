@@ -11480,20 +11480,27 @@ impl GameState {
             uncounterable,
         });
         // Push Storm copies above the original (they resolve first, CR 702.40).
-        // Each is a token copy that can't be countered, inheriting target/mode.
+        // Each is a token copy that can't be countered, inheriting the mode;
+        // CR 702.40a — "you may choose new targets for the copies" (the
+        // original is offered first, so the default keeps it).
         if let Some((def, n)) = storm_copies {
             for _ in 0..n {
+                let copy_target = if target.is_some() {
+                    self.repoint_copy_target(&def, p, &target)
+                } else {
+                    None
+                };
                 let new_id = self.next_id();
                 let mut copy_inst = crate::card::CardInstance::new(new_id, def.clone(), p);
                 copy_inst.is_token = true;
                 copy_inst.cast_target_was_battlefield = matches!(
-                    &target,
+                    &copy_target,
                     Some(Target::Permanent(tid)) if self.battlefield_find(*tid).is_some()
                 );
                 self.stack.push(StackItem::Spell {
                     card: Box::new(copy_inst),
                     caster: p,
-                    target: target.clone(),
+                    target: copy_target,
                     additional_targets: additional_targets.clone(),
                     mode,
                     x_value,

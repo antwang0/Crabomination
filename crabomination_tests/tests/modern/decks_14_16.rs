@@ -840,6 +840,38 @@ fn grapeshot_storm_copies_for_each_prior_spell() {
     assert_eq!(g.players[1].life, foe_life - 3, "Storm copies once per prior spell");
 }
 
+/// CR 702.40a — "you may choose new targets for the copies": one Grapeshot
+/// copy is re-aimed at a creature, the other stays on the player.
+#[test]
+fn cr_702_40a_storm_copies_may_choose_new_targets() {
+    let mut g = two_player_game();
+    for _ in 0..2 {
+        let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+        g.players[0].mana_pool.add(Color::Red, 1);
+        g.perform_action(GameAction::CastSpell {
+            card_id: bolt, target: Some(Target::Player(0)),
+            additional_targets: vec![], mode: None, x_value: None,
+        }).expect("bolt castable");
+        drain_stack(&mut g);
+    }
+    let elf = g.add_card_to_battlefield(1, catalog::llanowar_elves());
+    let gp = g.add_card_to_hand(0, catalog::grapeshot());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let foe_life = g.players[1].life;
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Target(Target::Permanent(elf)),
+        DecisionAnswer::Target(Target::Player(1)),
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: gp, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Grapeshot castable for {1}{R}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(elf).is_none(), "a copy was re-aimed at the Elves");
+    assert_eq!(g.players[1].life, foe_life - 2, "the original and the other copy");
+}
+
 #[test]
 fn searing_blood_deals_two_damage_to_creature() {
     let mut g = two_player_game();

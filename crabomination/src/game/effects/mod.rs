@@ -1987,7 +1987,7 @@ impl GameState {
         )
     }
 
-    fn repoint_copy_target(
+    pub(crate) fn repoint_copy_target(
         &mut self,
         def: &crate::card::CardDefinition,
         caster: usize,
