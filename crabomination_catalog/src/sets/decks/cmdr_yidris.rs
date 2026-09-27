@@ -107,16 +107,23 @@ pub fn blood_tyrant() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Trample],
         triggered_abilities: vec![
-            upkeep(Effect::Seq(vec![
-                Effect::LoseLife { who: Selector::Player(PlayerRef::EachPlayer), amount: Value::ONE },
-                Effect::AddCounter {
-                    what: Selector::This,
-                    kind: crate::card::CounterType::PlusOnePlusOne,
-                    // One per player who lost the life — every living player
-                    // (a life-loss lock isn't counted out).
-                    amount: Value::CountOf(Box::new(Selector::Player(PlayerRef::EachPlayer))),
-                },
-            ])),
+            // "For each 1 life lost this way": X snapshots the turn's life
+            // lost before the drain, so a seat whose loss is prevented or
+            // replaced adds nothing.
+            upkeep(Effect::WithX {
+                x: Value::TotalLifeLostThisTurn(PlayerRef::EachPlayer),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::LoseLife { who: Selector::Player(PlayerRef::EachPlayer), amount: Value::ONE },
+                    Effect::AddCounter {
+                        what: Selector::This,
+                        kind: crate::card::CounterType::PlusOnePlusOne,
+                        amount: Value::Diff(
+                            Box::new(Value::TotalLifeLostThisTurn(PlayerRef::EachPlayer)),
+                            Box::new(Value::XFromCost),
+                        ),
+                    },
+                ])),
+            }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::PlayerLeftGame, EventScope::SelfSource),
                 effect: Effect::AddCounter {

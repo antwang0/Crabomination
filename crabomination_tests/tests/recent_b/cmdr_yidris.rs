@@ -215,8 +215,8 @@ fn aeon_chronicler_counts_the_hand() {
     assert_eq!(g.computed_permanent(a).unwrap().power, 3);
 }
 
-/// Each upkeep everyone bleeds and it grows by one per player; a player
-/// leaving adds five.
+/// Each upkeep everyone bleeds and it grows by the life lost — a seat that
+/// can't lose life adds nothing; a player leaving adds five.
 #[test]
 fn blood_tyrant_feeds() {
     let mut g = pod(3);
@@ -225,10 +225,13 @@ fn blood_tyrant_feeds() {
     upkeep(&mut g);
     assert!(g.players.iter().zip(&life).all(|(p, l)| p.life == l - 1));
     assert_eq!(g.battlefield_find(t).unwrap().counter_count(CounterType::PlusOnePlusOne), 3);
+    g.players[1].cant_lose_life_this_turn = true;
+    upkeep(&mut g);
+    assert_eq!(g.battlefield_find(t).unwrap().counter_count(CounterType::PlusOnePlusOne), 5, "seat 1 lost none");
     g.players[2].life = 0;
     g.check_state_based_actions();
     drain_stack(&mut g);
-    assert_eq!(g.battlefield_find(t).unwrap().counter_count(CounterType::PlusOnePlusOne), 8);
+    assert_eq!(g.battlefield_find(t).unwrap().counter_count(CounterType::PlusOnePlusOne), 10);
 }
 
 /// Two target players, each to control the other's next turn.
