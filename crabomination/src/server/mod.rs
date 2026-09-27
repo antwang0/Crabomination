@@ -104,6 +104,7 @@ mod cycling;
 mod channel;
 mod grant_cast;
 mod command_zone;
+mod keyword_shield;
 mod defensive_ability;
 mod team_combat;
 mod goad_attach;
