@@ -521,8 +521,10 @@ pub fn skyboon_evangelist() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![
             etb(Effect::SupportCounters { max_targets: 6, filter: R::Creature.and(R::OtherThanSource) }),
+            // "A creature with a counter on it attacks one of your opponents"
+            // — anyone's creature; "your opponents" is read from this seat.
             TriggeredAbility {
-                event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).with_filter(
+                event: EventSpec::new(EventKind::Attacks, EventScope::AnyPlayer).with_filter(
                     Predicate::EntityMatches {
                         what: Selector::TriggerSource,
                         filter: R::WithAnyCounter.and(R::IsAttackingOpponentPlayer),

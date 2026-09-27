@@ -313,7 +313,10 @@ pub fn reaper_of_the_wilds() -> CardDefinition {
     };
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours),
+            // "Another creature" — anyone's, not only yours.
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer).with_filter(
+                Predicate::Not(Box::new(Predicate::TriggerSourceIsSelf)),
+            ),
             effect: Effect::Scry {
                 who: PlayerRef::You,
                 amount: Value::ONE,

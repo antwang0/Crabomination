@@ -1317,3 +1317,64 @@ fn instill_furor_fires_only_on_its_hosts_controllers_end_step() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).is_none(), "its own end step, no attack");
 }
+
+/// "Another creature dies" / "another nontoken Elf enters" / "a Warrior
+/// attacks" / "a creature with a counter attacks one of your opponents" name
+/// anyone's creature; these four shipped scoped to their controller's.
+#[test]
+fn anyones_creature_triggers_see_an_opponents_creature() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    use crabomination::game::types::{Attack, AttackTarget};
+    // Reaper of the Wilds: an opponent's creature dying scries.
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::reaper_of_the_wilds());
+    g.add_card_to_library(0, catalog::forest());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, Some(Target::Permanent(bear))).expect("bolt the bear");
+    let ev = drain_stack(&mut g);
+    assert!(ev.iter().any(|e| matches!(e, GameEvent::ScriedOrSurveiled { player: 0, .. })));
+    // Wirewood Hivemaster: an opponent's nontoken Elf, and not itself.
+    let mut g = main_phase();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.add_card_to_battlefield(0, catalog::wirewood_hivemaster());
+    let insects = |g: &GameState| g.battlefield.iter().filter(|c| c.definition.name == "Insect").count();
+    drain_stack(&mut g);
+    assert_eq!(insects(&g), 0, "itself entering is not another Elf");
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(Color::Green, 1);
+    let elf = g.add_card_to_hand(1, catalog::llanowar_elves());
+    cast(&mut g, elf, None).expect("their Elf");
+    drain_stack(&mut g);
+    assert_eq!(insects(&g), 1);
+    // Najeela: an opponent's Warrior attacking asks; the headless seat declines.
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::najeela_the_blade_blossom());
+    let orc = g.add_card_to_battlefield(1, catalog::elvish_warrior());
+    g.clear_sickness(orc);
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: orc, target: AttackTarget::Player(0) }]))
+        .expect("their Warrior attacks");
+    drain_stack(&mut g);
+    let tok = g.battlefield.iter().find(|c| c.definition.name == "Warrior").expect("the token, on a yes");
+    assert_eq!(tok.controller, 1, "its controller creates it");
+    // Skyboon Evangelist: at three seats, seat 1's countered creature
+    // attacking seat 2 (Skyboon's other opponent) gains flying.
+    let mut g = multi_player_game(3);
+    g.add_card_to_battlefield(0, catalog::skyboon_evangelist());
+    let atk = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(atk).unwrap().add_counters(crabomination::card::CounterType::PlusOnePlusOne, 1);
+    g.clear_sickness(atk);
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: atk, target: AttackTarget::Player(2) }]))
+        .expect("attack seat 2");
+    drain_stack(&mut g);
+    assert!(g.permanent_has_keyword(atk, &Keyword::Flying));
+}

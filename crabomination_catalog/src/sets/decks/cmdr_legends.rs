@@ -611,17 +611,30 @@ pub fn najeela_the_blade_blossom() -> CardDefinition {
     );
     let grant = |keyword| Effect::GrantKeyword { what: attackers(), keyword, duration: Duration::EndOfTurn };
     CardDefinition {
+        // "Whenever a Warrior attacks" — anyone's; "you may have its
+        // controller create" one. Yours always does; another player's only
+        // on a yes (the headless seat declines).
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).with_filter(Predicate::EntityMatches {
+            event: EventSpec::new(EventKind::Attacks, EventScope::AnyPlayer).with_filter(Predicate::EntityMatches {
                 what: Selector::TriggerSource,
                 filter: R::HasCreatureType(CreatureType::Warrior),
             }),
-            effect: Effect::CreateTokenAttacking {
-                who: PlayerRef::You,
-                count: Value::ONE,
-                definition: Arc::new(warrior),
-                cleanup: Default::default(),
-                defender: Some(PlayerRef::DefendingPlayer),
+            effect: {
+                let make = Effect::CreateTokenAttacking {
+                    who: PlayerRef::ControllerOf(Box::new(Selector::TriggerSource)),
+                    count: Value::ONE,
+                    definition: Arc::new(warrior),
+                    cleanup: Default::default(),
+                    defender: Some(PlayerRef::DefendingPlayer),
+                };
+                Effect::If {
+                    cond: Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::ControlledByYou },
+                    then: Box::new(make.clone()),
+                    else_: Box::new(Effect::MayDo {
+                        description: "Have that Warrior's controller create a 1/1 Warrior attacking?".into(),
+                        body: Box::new(make),
+                    }),
+                }
             },
         }],
         activated_abilities: vec![crate::card::ActivatedAbility {

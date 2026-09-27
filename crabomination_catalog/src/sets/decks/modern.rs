@@ -38037,11 +38037,13 @@ pub fn wirewood_hivemaster() -> CardDefinition {
         power: 1,
         toughness: 1,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+            // "Another nontoken Elf" — anyone's, not only yours.
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnyPlayer)
                 .with_filter(Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: SelectionRequirement::HasCreatureType(CreatureType::Elf)
-                        .and(SelectionRequirement::NotToken),
+                        .and(SelectionRequirement::NotToken)
+                        .and(SelectionRequirement::OtherThanSource),
                 }),
             effect: Effect::MayDo {
                 description: "Create a 1/1 green Insect?".into(),
