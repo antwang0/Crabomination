@@ -244,6 +244,57 @@ fn cr_903_8_commander_tax_is_two_generic_per_prior_cast() {
     assert_eq!(cast(&mut g), 4, "printed cost plus the tax");
 }
 
+/// CR 903.8 — the tax counts casts *from the command zone* only: a commander
+/// kept in hand (CR 903.9b redirect declined) casts for its printed cost and
+/// adds nothing, and a countered command-zone cast still counts.
+#[test]
+fn cr_903_8_only_command_zone_casts_count_toward_the_tax() {
+    let mut g = main_phase();
+    let cmd = g.seat_commanders(0, vec![catalog::grizzly_bears()])[0];
+    let paid = |g: &mut GameState, action: GameAction| {
+        mana(g, 0);
+        let before = g.players[0].mana_pool.total();
+        g.priority.player_with_priority = 0;
+        g.perform_action(action).expect("cast");
+        before - g.players[0].mana_pool.total()
+    };
+    let from_zone = || GameAction::CastFromCommandZone {
+        card_id: cmd, target: None, additional_targets: vec![], mode: None, x_value: None,
+        alternative: false, pitch_card: None,
+    };
+    // Cast #1, countered: back to the command zone, and it still counts.
+    assert_eq!(paid(&mut g, from_zone()), 2);
+    let counter = g.add_card_to_hand(1, catalog::counterspell());
+    g.players[1].mana_pool.add(Color::Blue, 2);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: counter, target: Some(Target::Permanent(cmd)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("counter");
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    assert!(g.players[0].command.iter().any(|c| c.id == cmd), "countered, then home");
+    // Cast #2 pays one tax, resolves.
+    assert_eq!(paid(&mut g, from_zone()), 4);
+    drain_stack(&mut g);
+    // Bounced with the redirect declined: it stays in hand.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)]));
+    use crabomination::effect::{Effect, PlayerRef, Selector, ZoneDest};
+    let home = crabomination::game::effects::EffectContext::for_ability(cmd, 0, None);
+    g.resolve_effect(&Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::OwnerOfMoved) }, &home)
+        .expect("bounce");
+    let mut events = Vec::new();
+    assert!(g.players[0].hand.iter().any(|c| c.id == cmd), "kept in hand");
+    let hand_cast = GameAction::CastSpell { card_id: cmd, target: None, additional_targets: vec![], mode: None, x_value: None };
+    assert_eq!(paid(&mut g, hand_cast), 2, "from hand: no tax");
+    drain_stack(&mut g);
+    // Home again: the next command-zone cast is the third, taxed {4}.
+    g.decider = Box::new(ScriptedDecider::new([]));
+    g.destroy_permanent(cmd, false, &mut events);
+    g.check_state_based_actions();
+    assert_eq!(paid(&mut g, from_zone()), 6, "two prior command-zone casts");
+}
+
 /// CR 903.8 — putting a commander onto the battlefield from the command zone
 /// (`Effect::PutCommanderOntoBattlefield`) is not a cast, so it adds no tax;
 /// `ZoneDest::Command` moves a permanent straight back to its owner's command
