@@ -884,7 +884,8 @@ fn conduit_of_worlds_casts_from_the_graveyard_then_locks() {
 #[test]
 fn colorless_manlands_are_artifacts_and_pump() {
     use crabomination::card::CardType;
-    let table: [(fn() -> CardDefinition, u32, u32, i32, bool); 3] = [
+    type Row = (fn() -> CardDefinition, u32, u32, i32, bool);
+    let table: [Row; 3] = [
         (catalog::mishras_factory, 1, 0, 1, false),
         (catalog::blinkmoth_nexus, 1, 1, 1, false),
         (catalog::mishras_foundry, 2, 1, 2, true),
