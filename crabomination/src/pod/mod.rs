@@ -2398,6 +2398,12 @@ mod tests {
     #[test]
     fn cr_903_seeded_pod_outcomes_match_the_committed_table() {
         // (seed, winner, turns, actions)
+        // Re-blessed 2026-09-27 (`server/channel.rs`, a pod bot channels a
+        // spare Kamigawa land — bisected by disabling it alone): seed 43
+        // 86→65 turns, same winner; 0xC0FFEE 3171→3174 actions; 4242
+        // unmoved. 6 seats × decks 1-6, 150 games at seed 3100001,
+        // before/after: 68.51/68.49 turns, all decided; `--bench` 197,136
+        // byte-identical.
         // Re-blessed 2026-09-27 (CR 103.5c, a multiplayer game's first
         // mulligan is free — bisected: reverting it alone restores the old
         // rows): seed 0xC0FFEE seat 1 → seat 3, 68→71 turns; 4242 seat 0 →
@@ -2573,8 +2579,8 @@ mod tests {
         // Forge of Heroes-style counter on the bot's own permanent. Same
         // winners; seed 43 two turns sooner.
         const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
-            (0xC0FFEE, Some(3), 71, 3171),
-            (43, Some(0), 86, 4128),
+            (0xC0FFEE, Some(3), 71, 3174),
+            (43, Some(0), 65, 3025),
             (4242, Some(3), 74, 3378),
         ];
         let decks = rofellos_pod(4);
