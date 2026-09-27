@@ -214,6 +214,20 @@ fn crackling_spellslinger_gives_the_next_spell_storm() {
     drain_stack(&mut g);
     bolt_face(&mut g);
     assert_eq!(g.players[1].life, 20 - 3 * 4, "not cast: no storm");
+
+    // CR 702.40a — the count is the spells cast BEFORE the storm spell: a
+    // Bolt cast in response to the copy trigger adds no copy.
+    let mut g = main_phase();
+    let sling = g.add_card_to_hand(0, catalog::crackling_spellslinger());
+    cast(&mut g, sling, None);
+    let first = g.add_card_to_hand(0, catalog::lightning_bolt());
+    flood(&mut g);
+    g.perform_action(cast_action(first, Some(Target::Player(1)))).expect("the storm spell");
+    let response = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.priority.player_with_priority = 0;
+    g.perform_action(cast_action(response, Some(Target::Player(1)))).expect("in response");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 20 - 3 * 3, "the response, one copy, the storm spell");
 }
 
 /// Storm copies a token-making sorcery (CR 702.40a).

@@ -14937,10 +14937,13 @@ impl GameState {
                     } else {
                         (None, None)
                     };
+                    // X is the spells cast before the one it saw (CR 702.40a's
+                    // storm count, fixed now — Crackling Spellslinger).
                     self.stack.push(
                         TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
                             .trigger_source(Some(crate::game::effects::EntityRef::Card(cast_card)))
                             .event_amount(cast_mv)
+                            .x_value(self.spells_cast_this_turn.saturating_sub(1))
                             .target(target)
                             .mode(mode)
                             .build(),

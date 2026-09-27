@@ -214,9 +214,8 @@ pub fn thunderclap_drake() -> CardDefinition {
 }
 
 /// Crackling Spellslinger — flash; cast, it gives the next instant or
-/// sorcery this turn storm. ⚠ The storm count is read as the copy trigger
-/// resolves, not as the spell is cast (they differ only if spells are cast in
-/// response to that trigger).
+/// sorcery this turn storm. The count is fixed as that spell is cast (the
+/// watcher's X).
 pub fn crackling_spellslinger() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flash],
@@ -228,10 +227,7 @@ pub fn crackling_spellslinger() -> CardDefinition {
                 // CR 702.40a — a copy for each spell cast before it this turn.
                 body: Box::new(Effect::CopySpellMayChooseTargets {
                     what: Selector::TriggerSource,
-                    count: Value::Diff(
-                        Box::new(Value::SpellsCastThisTurnTotal),
-                        Box::new(Value::ONE),
-                    ),
+                    count: Value::XFromCost,
                 }),
             },
         }],
