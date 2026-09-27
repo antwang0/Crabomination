@@ -189,6 +189,10 @@ fn cr_800_4_hot_pursuit_steals_once_two_have_lost() {
     let giant = g.add_card_to_battlefield(3, catalog::hill_giant());
     let hp = g.add_card_to_hand(0, catalog::hot_pursuit());
     cast_at(&mut g, hp, &[Target::Permanent(bear)]).expect("cast");
+    // The entry trigger picks its own target (the bigger threat since
+    // 2026-09-27); the rule under test is the steal, so follow whichever
+    // creature it suspected.
+    let (bear, giant) = if g.battlefield_find(bear).unwrap().suspected { (bear, giant) } else { (giant, bear) };
     g.battlefield_find_mut(bear).unwrap().tapped = true;
     let mut one_out = g.clone();
     one_out.players[1].eliminated = true;

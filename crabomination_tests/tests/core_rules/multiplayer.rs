@@ -183,6 +183,21 @@ fn cr_103_5c_first_multiplayer_mulligan_is_free() {
     assert_eq!(g.players[1].hand.len(), 6);
 }
 
+/// CR 102.2 / 800 — at N seats a hostile auto-target whose ranked opponent
+/// has nothing legal goes to another opponent's permanent, never the
+/// caster's own (Liliana, the Last Hope's +1 shrank its controller's Bear
+/// while a third seat's sat there). A duel has no other opponent.
+#[test]
+fn hostile_auto_target_falls_through_to_another_opponent() {
+    use crabomination::game::types::Target;
+    let mut g = multi_player_game(4);
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let plus_one = catalog::liliana_the_last_hope().loyalty_abilities[0].effect.clone();
+    let t = g.auto_target_for_effect(&plus_one, 0);
+    assert_eq!(t, Some(Target::Permanent(theirs)), "not {mine:?}");
+}
+
 // ── Teams ─────────────────────────────────────────────────────────────────
 
 #[test]

@@ -373,6 +373,21 @@ impl GameState {
         if let Some(&(cid, _)) = primary_candidates.first() {
             return Some(Target::Permanent(cid));
         }
+        // A hostile pick whose ranked opponent has nothing legal goes to the
+        // other opponents next, ranked the same way — the battlefield-order
+        // walk below took the caster's own creature for Liliana's −2/−1 while
+        // a third seat's sat there. A duel has no other opponent.
+        if !prefer_friendly && self.players.len() > 2 {
+            let mut others: Vec<(CardId, i32)> = self
+                .living_seats()
+                .filter(|&p| p != primary_player && p != controller && !self.same_team(p, controller))
+                .flat_map(|p| collect_legal_on_player(p))
+                .collect();
+            others.sort_by_cached_key(|c| (hostile_ward(c.0), std::cmp::Reverse(c.1)));
+            if let Some(&(cid, _)) = others.first() {
+                return Some(Target::Permanent(cid));
+            }
+        }
         for pass_warded in [false, true] {
             if let Some(t) = self
                 .battlefield
