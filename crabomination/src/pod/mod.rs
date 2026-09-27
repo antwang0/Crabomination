@@ -2398,6 +2398,12 @@ mod tests {
     #[test]
     fn cr_903_seeded_pod_outcomes_match_the_committed_table() {
         // (seed, winner, turns, actions)
+        // Re-blessed 2026-09-27 (CR 103.5c, a multiplayer game's first
+        // mulligan is free — bisected: reverting it alone restores the old
+        // rows): seed 0xC0FFEE seat 1 → seat 3, 68→71 turns; 4242 seat 0 →
+        // seat 3, 60→74; 43 unmoved. `bot_ladder --commander` (baseline
+        // pilot), 2,000 games at seed 9991, before/after: 32.56/32.38,
+        // 45.41/45.30, 67.85/68.19 turns at 3/4/6 seats, all decided.
         // Re-blessed 2026-09-27 (`EvalWeights::pod_horizon` adopted: the
         // attack sim prices the crack-back of every opponent before our next
         // turn, not just the next seat's). Seed 0xC0FFEE 44→63 turns, same
@@ -2567,9 +2573,9 @@ mod tests {
         // Forge of Heroes-style counter on the bot's own permanent. Same
         // winners; seed 43 two turns sooner.
         const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
-            (0xC0FFEE, Some(1), 68, 3053),
+            (0xC0FFEE, Some(3), 71, 3171),
             (43, Some(0), 86, 4128),
-            (4242, Some(0), 60, 2607),
+            (4242, Some(3), 74, 3378),
         ];
         let decks = rofellos_pod(4);
         let t = build_pod_template(&decks);
