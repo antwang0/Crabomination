@@ -14,20 +14,7 @@ use crate::effect::shortcut::{etb, mint_treasures, on_dies, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, StaticEffect, ZoneDest};
 use crate::mana::{Color, b, cost, g, generic, r, w};
 
-/// A 1/1 colorless Spirit creature token.
-fn colorless_spirit_token() -> TokenDefinition {
-    TokenDefinition {
-        name: "Spirit".into(),
-        power: 1,
-        toughness: 1,
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Spirit],
-            ..Default::default()
-        },
-        ..Default::default()
-    }
-}
+use crabomination_base::tokens::colorless_spirit_token;
 
 /// A 2/2 red Spirit creature token with menace.
 fn red_menace_spirit_token() -> TokenDefinition {

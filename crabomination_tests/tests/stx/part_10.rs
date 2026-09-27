@@ -812,54 +812,60 @@ fn pestmaster_pumps_on_pest_token_death_via_cached_controller() {
 }
 
 #[test]
-fn felisa_pumps_inkling_on_pest_token_with_counter_death() {
+fn counter_death_trigger_reads_a_dying_pest_token() {
     // Lock-in for the push (modern_decks batch 47) token-death snapshot
-    // cache: Felisa's "creature with +1/+1 counter dies → 1/1 W/B
-    // Inkling" trigger fires for TOKEN deaths too. Before the cache
-    // landed, the CR 111.7c "token ceases to exist" SBA removed the
-    // dying token from every zone in the same sweep — by dispatch time
-    // the `WithCounter(+1/+1)` filter (evaluated via
-    // evaluate_requirement_static on the dying card) returned false
-    // because no zone had the card.
+    // cache: a "creature with a +1/+1 counter dies" filter must read a
+    // dying TOKEN's counters. Before the cache landed, the CR 111.7c
+    // "token ceases to exist" SBA removed the dying token from every zone
+    // in the same sweep, so the `WithCounter(+1/+1)` filter returned false.
+    // (This test used Felisa, whose print says "nontoken"; Gladehart
+    // Cavalry counts tokens.)
     let mut g = two_player_game();
-    let _felisa = g.add_card_to_battlefield(0, catalog::felisa_fang_of_silverquill());
-    // Mint a Pest token under P0 (the Pest also has a +1/+1 counter
-    // applied directly to the battlefield instance — simulating a
-    // mid-game scenario where, say, Silverquill Memorize pumped a
-    // friendly Pest before it died).
+    g.add_card_to_battlefield(0, catalog::gladehart_cavalry());
     let ps = g.add_card_to_hand(0, catalog::pest_summoning());
     big_mana!(g);
     cast!(g, ps, None);
     drain_stack(&mut g);
-    // Find the first Pest token.
     let pest_id = g
         .battlefield
         .iter()
         .find(|c| c.definition.subtypes.creature_types.contains(&CreatureType::Pest))
         .map(|c| c.id)
         .expect("Pest token created");
-    // Add a +1/+1 counter directly.
     if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == pest_id) {
         c.add_counters(CounterType::PlusOnePlusOne, 1);
     }
-    let bf_before = g.battlefield.len();
-    // Kill the Pest with a Bolt.
+    let life = g.players[0].life;
     bolt!(g, Target::Permanent(pest_id));
     drain_stack(&mut g);
-    // The Pest is gone (ceased to exist), Bolt is in graveyard, and
-    // Felisa minted an Inkling because the cache let her counter
-    // filter resolve on the dying token. Net: -1 pest, -0 bolt
-    // (still in gy, off bf) + 1 inkling = bf_before.
-    let inkling_present = g
-        .battlefield
-        .iter()
-        .any(|c| c.definition.name == "Inkling");
-    assert!(
-        inkling_present,
-        "Felisa mints an Inkling when a counter-bearing Pest token dies"
-    );
-    // Sanity: bf size is unchanged (pest out, inkling in).
-    assert_eq!(g.battlefield.len(), bf_before);
+    // +2 from the Cavalry, +1 from the Pest's own dies trigger.
+    assert_eq!(g.players[0].life, life + 3);
+}
+
+/// Felisa — "whenever a NONTOKEN creature you control dies, if it had
+/// counters on it, create X tapped 2/1 Inklings", X its counter count of
+/// any kind. A token with counters makes none.
+#[test]
+fn felisa_mints_an_inkling_per_counter_of_a_nontoken_death() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::felisa_fang_of_silverquill());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::Charge, 1);
+    let ps = g.add_card_to_hand(0, catalog::pest_summoning());
+    big_mana!(g);
+    cast!(g, ps, None);
+    drain_stack(&mut g);
+    let pest = g.battlefield.iter().find(|c| c.definition.name == "Pest").map(|c| c.id).unwrap();
+    g.battlefield_find_mut(pest).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    bolt!(g, Target::Permanent(pest));
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.definition.name == "Inkling"), "a token's death makes none");
+    bolt!(g, Target::Permanent(bear));
+    drain_stack(&mut g);
+    let ink: Vec<_> = g.battlefield.iter().filter(|c| c.definition.name == "Inkling").collect();
+    assert_eq!(ink.len(), 2, "one per counter, any kind");
+    assert!(ink.iter().all(|c| c.tapped && c.definition.power == 2 && c.definition.toughness == 1));
 }
 
 #[test]

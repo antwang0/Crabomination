@@ -7302,15 +7302,19 @@ mod recent2 {
         assert_eq!((r.power(), r.toughness()), (4, 3));
     }
 
-    /// Searchlight Companion makes a Spirit token on ETB.
+    /// Searchlight Companion makes a 1/1 colorless Spirit token on ETB (it
+    /// made the 2/2 red-white Lorehold one).
     #[test]
     fn searchlight_companion_makes_a_spirit() {
         let mut g = two_player_game();
         g.move_card_to_battlefield_for_test(0, catalog::searchlight_companion());
         drain_stack(&mut g);
-        let spirits = g.battlefield.iter()
-            .filter(|c| c.is_token && c.definition.name == "Spirit").count();
-        assert_eq!(spirits, 1);
+        let spirits: Vec<_> = g.battlefield.iter()
+            .filter(|c| c.is_token && c.definition.name == "Spirit").collect();
+        assert_eq!(spirits.len(), 1);
+        assert_eq!((spirits[0].definition.power, spirits[0].definition.toughness), (1, 1));
+        let id = spirits[0].id;
+        assert!(g.card_colors_anywhere(id).is_empty());
     }
 
     /// Resolute Reinforcements has flash and makes a Soldier on ETB.

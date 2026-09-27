@@ -266,7 +266,7 @@ pub fn devastating_mastery() -> CardDefinition {
 /// shares the SOS catalog's `inkling_token()` definition (1/1 W/B
 /// Inkling with flying) for visual + tribal consistency.
 pub fn felisa_fang_of_silverquill() -> CardDefinition {
-    use crate::card::{CounterType, Predicate};
+    use crate::card::Predicate;
     use crate::catalog::sets::sos::inkling_token;
     use crate::effect::PlayerRef;
     CardDefinition {
@@ -284,17 +284,28 @@ pub fn felisa_fang_of_silverquill() -> CardDefinition {
         triggered_abilities: vec![
             // Mentor — the card's second line, shipped missing.
             crate::effect::shortcut::mentor(),
+            // "Whenever a nontoken creature you control dies, if it had
+            // counters on it, create X tapped 2/1 ... Inklings", X its counter
+            // count (any kind, read off its last-known state, CR 603.10).
             TriggeredAbility {
-                event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours).with_filter(
-                    Predicate::EntityMatches {
-                        what: Selector::TriggerSource,
-                        filter: SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne),
-                    },
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl).with_filter(
+                    Predicate::All(vec![
+                        Predicate::EntityMatches { what: Selector::TriggerSource, filter: SelectionRequirement::NotToken },
+                        Predicate::ValueAtLeast(
+                            Value::TotalCountersOn { what: Box::new(Selector::TriggerSource) },
+                            Value::ONE,
+                        ),
+                    ]),
                 ),
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
-                    count: Value::Const(1),
-                    definition: std::sync::Arc::new(inkling_token()),
+                    count: Value::TotalCountersOn { what: Box::new(Selector::TriggerSource) },
+                    definition: std::sync::Arc::new(crate::card::TokenDefinition {
+                        power: 2,
+                        toughness: 1,
+                        tapped: true,
+                        ..inkling_token()
+                    }),
                 },
             },
         ],

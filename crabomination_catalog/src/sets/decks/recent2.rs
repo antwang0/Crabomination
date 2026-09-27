@@ -276,7 +276,8 @@ pub fn searchlight_companion() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: std::sync::Arc::new(crabomination_base::tokens::spirit_token()),
+            // A 1/1 colorless Spirit (it minted the 2/2 red-white Lorehold one).
+            definition: std::sync::Arc::new(crabomination_base::tokens::colorless_spirit_token()),
         })],
         ..Default::default()
     }

@@ -474,6 +474,18 @@ pub fn fractal_token() -> TokenDefinition {
     }
 }
 
+/// 1/1 colorless Spirit creature token.
+pub fn colorless_spirit_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Spirit".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        ..Default::default()
+    }
+}
+
 /// 2/2 red-and-white Spirit creature token. Used by Lorehold-flavoured
 /// SOS cards (Group Project, Living History's ETB, etc.).
 pub fn spirit_token() -> TokenDefinition {

@@ -275,7 +275,7 @@ fn embrace_the_paradox_may_put_land_when_yes() {
 
 #[test]
 fn felisa_silverquill_dies_with_counter_creates_inkling_token() {
-    // Felisa's "creature with +1/+1 counter dies → 1/1 W/B Inkling token"
+    // Felisa's "nontoken creature with counters dies → tapped 2/1 Inkling"
     // trigger. Kill the counter-bearing bear via Murder so the death
     // trigger fires through the normal cast → resolution → SBA → dispatch
     // pipeline (the AnotherOfYours scope needs the unified dispatcher,
