@@ -351,7 +351,7 @@ pub fn watchdog() -> CardDefinition {
             effect: StaticEffect::WhileCondition {
                 condition: Predicate::EntityMatches { what: Selector::This, filter: R::Untapped },
                 inner: Box::new(StaticEffect::PumpPT {
-                    applies_to: Selector::EachPermanent(R::Creature.and(R::IsAttacking)),
+                    applies_to: Selector::EachPermanent(R::Creature.and(R::IsAttackingYou)),
                     power: -1,
                     toughness: 0,
                 }),

@@ -1869,7 +1869,7 @@ pub fn flash_foliage() -> CardDefinition {
                     },
                     ..Default::default()
                 }),
-                filter: SelectionRequirement::Creature.and(SelectionRequirement::IsAttacking),
+                filter: SelectionRequirement::Creature.and(SelectionRequirement::IsAttackingYou),
             },
             Effect::Draw {
                 who: Selector::You,

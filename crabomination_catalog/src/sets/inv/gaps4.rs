@@ -486,7 +486,7 @@ pub fn hunting_kavu() -> CardDefinition {
                 Effect::Exile {
                     what: target_filtered(
                         R::Creature
-                            .and(R::IsAttacking)
+                            .and(R::IsAttackingYou)
                             .and(R::HasKeyword(Keyword::Flying).negate()),
                     ),
                 },

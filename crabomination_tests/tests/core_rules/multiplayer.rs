@@ -6169,3 +6169,39 @@ fn auto_tap_resolves_an_any_color_source_inline_for_a_prompting_seat() {
     assert_eq!(g.players[0].mana_pool.total(), 1, "and its mana is in the pool now");
     assert!(g.pending_decision.is_none());
 }
+
+/// CR 506.3 — "attacking you" is one seat's attackers, not the table's: seat
+/// 0's Watchdog doesn't shrink, and its Hunting Kavu can't exile, a creature
+/// attacking seat 2 (both read plain "attacking" before).
+#[test]
+fn cr_506_3_attacking_you_excludes_attacks_on_another_seat() {
+    use crabomination::game::types::{Attack, AttackTarget, GameAction, Target};
+    let mut g = multi_player_game(3);
+    let dog = g.add_card_to_battlefield(0, catalog::watchdog());
+    let kavu = g.add_card_to_battlefield(0, catalog::hunting_kavu());
+    g.clear_sickness(kavu);
+    let at_me = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let at_them = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(at_me);
+    g.clear_sickness(at_them);
+    g.step = TurnStep::DeclareAttackers;
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.declare_attackers(vec![
+        Attack { attacker: at_me, target: AttackTarget::Player(0) },
+        Attack { attacker: at_them, target: AttackTarget::Player(2) },
+    ])
+    .expect("declare attackers");
+    assert!(g.battlefield_find(dog).is_some_and(|c| !c.tapped));
+    assert_eq!(g.computed_permanent(at_me).unwrap().power, 1, "attacking me: -1/-0");
+    assert_eq!(g.computed_permanent(at_them).unwrap().power, 2, "attacking seat 2: untouched");
+    g.players[0].mana_pool.add(crabomination::mana::Color::Red, 1);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    let exile = |t| GameAction::ActivateAbility {
+        card_id: kavu, ability_index: 0, target: Some(Target::Permanent(t)), additional_targets: vec![], x_value: None, mode: None,
+    };
+    assert!(!g.would_accept(exile(at_them)));
+    assert!(g.would_accept(exile(at_me)));
+}

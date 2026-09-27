@@ -107,9 +107,7 @@ pub fn qasali_ambusher() -> CardDefinition {
             flash: true,
             condition: Some(Predicate::All(vec![
                 Predicate::SelectorExists(Selector::EachPermanent(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::IsAttacking)
-                        .and(SelectionRequirement::ControlledByOpponent),
+                    SelectionRequirement::Creature.and(SelectionRequirement::IsAttackingYou),
                 )),
                 Predicate::SelectorExists(Selector::EachPermanent(
                     SelectionRequirement::HasLandType(LandType::Forest)
