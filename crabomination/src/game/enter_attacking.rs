@@ -36,6 +36,18 @@ impl GameState {
             .is_some_and(|p| self.creature_is_attacking_seat(id, p))
     }
 
+    /// `id` (a permanent, or a spell by its caster) is controlled by the
+    /// player `source` chose.
+    pub(crate) fn controlled_by_chosen_player_of(&self, id: CardId, source: Option<CardId>) -> bool {
+        let Some(p) = source.and_then(|s| self.battlefield_find(s)).and_then(|c| c.chosen_player) else {
+            return false;
+        };
+        match self.battlefield_find(id) {
+            Some(c) => c.controller == p,
+            None => self.stack_spell_caster(id) == Some(p),
+        }
+    }
+
     /// `id` attacks the player the firing trigger event named.
     pub(crate) fn attacking_trigger_player(&self, id: CardId) -> bool {
         self.trigger_event_player_scratch.is_some_and(|p| self.creature_is_attacking_seat(id, p))

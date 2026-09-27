@@ -197,7 +197,11 @@ pub fn emissary_of_grudges() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             activate_once: true,
             effect: Effect::ChooseNewTargetsForSpell {
-                what: target_filtered(R::IsSpellOnStack.and(R::SpellTargetsControllerOrControlled)),
+                what: target_filtered(
+                    R::IsSpellOnStack
+                        .and(R::SpellTargetsControllerOrControlled)
+                        .and(R::ControlledByChosenPlayerOfSource),
+                ),
             },
             ..Default::default()
         }],

@@ -380,3 +380,34 @@ fn flameblast_dragon_pays_x_and_red_together() {
     assert_eq!(g.players[1].life, life - 3, "X = 3 to the defending player");
     assert!(g.battlefield.iter().filter(|c| c.definition.name == "Mountain").all(|c| c.tapped), "all four paid");
 }
+
+/// Emissary of Grudges' reveal redirects "target spell ... if it's controlled
+/// by the chosen player": at four seats, the chosen opponent's Shock aimed at
+/// our creature is a legal target, another opponent's is not.
+#[test]
+fn emissary_of_grudges_answers_only_the_chosen_player() {
+    let mut g = pod(4);
+    let em = g.add_card_to_battlefield(0, catalog::emissary_of_grudges());
+    g.battlefield_find_mut(em).unwrap().chosen_player = Some(1);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mut shock_from = |g: &mut GameState, seat: usize| {
+        let s = g.add_card_to_hand(seat, catalog::shock());
+        flood(g, seat);
+        g.priority.player_with_priority = seat;
+        g.perform_action(GameAction::CastSpell {
+            card_id: s, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+        })
+        .expect("shock the bear");
+        s
+    };
+    let from_two = shock_from(&mut g, 2);
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    let redirect = |t| GameAction::ActivateAbility {
+        card_id: em, ability_index: 0, target: Some(Target::Permanent(t)), additional_targets: vec![], x_value: None, mode: None,
+    };
+    assert!(!g.would_accept(redirect(from_two)), "seat 2 isn't the chosen player");
+    let from_one = shock_from(&mut g, 1);
+    g.priority.player_with_priority = 0;
+    assert!(g.would_accept(redirect(from_one)), "seat 1's spell is");
+}

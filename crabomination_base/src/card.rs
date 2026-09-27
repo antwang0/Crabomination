@@ -2773,6 +2773,10 @@ pub enum SelectionRequirement {
     /// Controlled by one fixed seat (a spell by its caster) — the filter of a
     /// resolved "protection from that player" grant.
     ControlledBySeat(u8),
+    /// Controlled by the player the effect's source chose as it entered
+    /// (`chosen_player`) — a spell by its caster. Emissary of Grudges: "if
+    /// it's controlled by the chosen player".
+    ControlledByChosenPlayerOfSource,
     /// CR 108.3 — the object's owner is you (regardless of who controls it).
     /// Gruul Charm's "gain control of all permanents you own".
     OwnedByYou,
