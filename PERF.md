@@ -3015,6 +3015,29 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-09-27 (Commander session `01PdWYgx`) — guardrail, no perf work
+
+Engine edits on paths every pool can reach: `finalize_cast` reads
+`CardDefinition::x_as_cast` (one `Option` test a cast) and the storm loop
+re-aims copies; the permission cast checks `one_cast_group`; four grant arms
+arm the step-bounded gate; three new effect/predicate arms. Card fixes reach
+the cube (Chandra, Torch of Defiance) and SOS (Nita).
+
+```text
+--bench          decisions 197,136 / 27.77 / 616.0 / 0 stalls — byte-identical
+                 determinism ok (all pairs split)
+bench_ab.py      16 pairs, base 6083cf0c1 (session start, release-fast) vs HEAD:
+                 +0.49 % median (sd 4.75), then -3.83 % median (sd 5.26) on a
+                 rerun — the base side moved, the candidate's median didn't
+callgrind Ir     release-fast (both mimalloc), --games 6 --threads 1 --seed 1:
+                 fixed 709,450,985 -> 710,539,910 (+0.15 %),
+                 cube 2,420,903,417 -> 2,424,222,228 (+0.14 %, games differ)
+two-player pools cube/sos/sealed x 300 an archetype, seeds 93001-93003 = 22,500
+                 games, all decided
+pod              19,800 release games at 3-8 seats + 8,250 strict debug-assertion
+                 games, all decided bar one legal draw
+```
+
 ### 2026-09-26 (Commander session `015BCEt5`) — the `--bench` invariant MOVES: 200,398 -> 197,136
 
 Intentional: CR 109.2 (`a90fc51d3` + the walker fix after it). The bot aimed
