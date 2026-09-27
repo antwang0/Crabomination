@@ -255,6 +255,7 @@ pub fn sync_command_zone_cost_badges(
     ui_fonts: Res<UiFonts>,
     cards: Query<(&GameCardId, &GlobalTransform), With<CommandZoneCard>>,
     camera_q: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
+    ui_scale: Res<UiScale>,
     mut badges: Query<(Entity, &CommandZoneCostBadge, &mut Node, &mut Text)>,
 ) {
     let desired = view.0.as_ref().map(command_zone_cost_labels).unwrap_or_default();
@@ -266,9 +267,7 @@ pub fn sync_command_zone_cost_badges(
         .iter()
         .filter(|(gid, _)| desired.contains_key(&gid.0))
         .filter_map(|(gid, gtf)| {
-            camera
-                .world_to_viewport(cam_xform, gtf.transform_point(bottom_local))
-                .ok()
+            crate::theme::project_to_ui(camera, cam_xform, &ui_scale, gtf.transform_point(bottom_local))
                 .map(|v| (gid.0, v))
         })
         .collect();
@@ -415,6 +414,7 @@ pub fn sync_lethal_commander_warnings(
     ui_fonts: Res<UiFonts>,
     cards: Query<(&GameCardId, &GlobalTransform), With<BattlefieldCard>>,
     camera_q: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
+    ui_scale: Res<UiScale>,
     mut chips: Query<(Entity, &LethalCommanderChip, &mut Node, &mut Text)>,
     banner: Query<(Entity, &LethalCommanderBanner)>,
 ) {
@@ -471,9 +471,7 @@ pub fn sync_lethal_commander_warnings(
         .iter()
         .filter(|(gid, _)| want.contains_key(&gid.0))
         .filter_map(|(gid, gtf)| {
-            camera
-                .world_to_viewport(cam_xform, gtf.transform_point(top_local))
-                .ok()
+            crate::theme::project_to_ui(camera, cam_xform, &ui_scale, gtf.transform_point(top_local))
                 .map(|v| (gid.0, Vec2::new(v.x - 18.0, v.y - 36.0)))
         })
         .collect();

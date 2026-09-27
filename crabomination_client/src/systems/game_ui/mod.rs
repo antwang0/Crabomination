@@ -389,9 +389,17 @@ pub struct AttackAllPanel;
 #[derive(Component)]
 pub struct AttackButtonLabel;
 
+/// The viewer's own HUD panel, top-left. (`PlayerHudPanel` is on every
+/// seat's chip row.)
+#[derive(Component)]
+pub struct ViewerHudPanel;
+
+/// The left control column: phase chart, action buttons, prompt line.
+#[derive(Component)]
+pub struct LeftControlColumn;
+
 /// The viewer's HUD panel's wrapping row of stat chips and mana pips, which
-/// `fit_player_hud_width` caps. (`PlayerHudPanel` is on every seat's chip
-/// row, so it can't pick out the viewer's.)
+/// `fit_player_hud_width` caps.
 #[derive(Component)]
 pub struct ViewerChipRows;
 
@@ -557,6 +565,7 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
             BorderColor::all(Color::NONE),
             Button,
             PlayerHudPanel { seat: usize::MAX },
+            ViewerHudPanel,
             InGameRoot,
         ))
         .with_children(|p| {
@@ -631,6 +640,7 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                 align_items: AlignItems::FlexStart,
                 ..default()
             },
+            LeftControlColumn,
             InGameRoot,
         ))
         .id();
@@ -1127,6 +1137,26 @@ pub fn position_log_below_opponents(
     }
 }
 
+/// Keep the left control column just below the viewer's HUD panel, whose
+/// chips wrap to a second or third line in a narrow window or a large UI:
+/// at a fixed `top` the panel covered the phase chart's first rows.
+pub fn position_left_column_below_hud(
+    hud_q: Query<&bevy::ui::ComputedNode, With<ViewerHudPanel>>,
+    mut column_q: Query<&mut Node, With<LeftControlColumn>>,
+) {
+    let Ok(hud) = hud_q.single() else { return };
+    let Ok(mut column) = column_q.single_mut() else { return };
+    let hud_h = hud.size().y * hud.inverse_scale_factor();
+    if hud_h <= 0.0 {
+        return;
+    }
+    // The panel sits at top:10; leave 10 px under it (110 for a one-row panel).
+    let target = Val::Px((10.0 + hud_h + 10.0).max(110.0).round());
+    if column.top != target {
+        column.top = target;
+    }
+}
+
 /// Wrap the viewer's HUD chips at the width the camera fit reserves for the
 /// panel (`framing::player_panel_width`), or sooner when a pod's opponent
 /// panel is wider than the fit assumes, so they never run under the
@@ -1135,23 +1165,45 @@ pub fn position_log_below_opponents(
 /// The cap goes on the chip row, not the panel: an absolute panel with a
 /// `max_width` wrapped its row but sized its own height for one line, so
 /// the second hung below it.
+#[allow(clippy::type_complexity)]
 pub fn fit_player_hud_width(
     windows: Query<&Window, With<bevy::window::PrimaryWindow>>,
     opponents_q: Query<&bevy::ui::ComputedNode, With<OpponentStatusPanel>>,
-    mut rows_q: Query<&mut Node, With<ViewerChipRows>>,
+    mut rows_q: Query<&mut Node, (With<ViewerChipRows>, Without<PlayerStatsRow>)>,
+    mut stats_q: Query<(&mut Node, Option<&Children>), (With<PlayerStatsRow>, Without<ViewerChipRows>)>,
+    pips_q: Query<&bevy::ui::ComputedNode, With<ManaPipRow>>,
+    sizes: Query<&bevy::ui::ComputedNode>,
+    ui_scale: Res<UiScale>,
 ) {
     let Ok(window) = windows.single() else { return };
     let Ok(mut rows) = rows_q.single_mut() else { return };
-    let w = window.width();
+    let Ok((mut stats, chips)) = stats_q.single_mut() else { return };
+    // In UI px, which `UiScale` multiplies, as the panels are laid out.
+    let w = window.width() / ui_scale.0;
+    let ui_px = |n: &bevy::ui::ComputedNode| n.size().x * n.inverse_scale_factor();
     // Both panels sit 10 px in from their edges; keep 10 px between them.
-    let beside_opponents = opponents_q
-        .single()
-        .map_or(f32::INFINITY, |p| w - 30.0 - p.size().x * p.inverse_scale_factor());
+    let beside_opponents = opponents_q.single().map_or(f32::INFINITY, |p| w - 30.0 - ui_px(p));
     let panel = (crate::card::framing::player_panel_width(w) - 10.0).min(beside_opponents);
     // Less the panel's padding (8 px) and border (2 px) either side.
-    let target = Val::Px((panel.max(260.0) - 20.0).round());
-    if rows.max_width != target {
-        rows.max_width = target;
+    let max = (panel.max(260.0) - 20.0).round();
+    if rows.max_width != Val::Px(max) {
+        rows.max_width = Val::Px(max);
+    }
+    // Wrap only when the chips don't fit. A row that fits to within a
+    // rounding error could still wrap its last chip — at 80 % "→ your
+    // priority" dropped to a second line, and hung below the panel, which
+    // had sized itself for one.
+    let chips: Vec<f32> =
+        chips.into_iter().flat_map(|c| c.iter()).filter_map(|c| sizes.get(c).ok().map(ui_px)).collect();
+    let pips = pips_q.single().map_or(0.0, ui_px);
+    // The rows' gaps: 4 px between chips, 6 px before the mana pips.
+    let content = chips.iter().sum::<f32>() + 4.0 * chips.len().saturating_sub(1) as f32 + 6.0 + pips;
+    let wrap = if content > max { FlexWrap::Wrap } else { FlexWrap::NoWrap };
+    if stats.flex_wrap != wrap {
+        stats.flex_wrap = wrap;
+    }
+    if rows.flex_wrap != wrap {
+        rows.flex_wrap = wrap;
     }
 }
 

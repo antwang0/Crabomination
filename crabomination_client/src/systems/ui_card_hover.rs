@@ -34,6 +34,7 @@ pub fn ui_card_hover_preview(
     sources: Query<(&Interaction, &UiCardHover)>,
     asset_server: Res<AssetServer>,
     mut existing: Query<(Entity, &mut Node, &UiCardHoverPreview)>,
+    ui_scale: Res<UiScale>,
 ) {
     let despawn_all =
         |commands: &mut Commands, existing: &Query<(Entity, &mut Node, &UiCardHoverPreview)>| {
@@ -58,7 +59,8 @@ pub fn ui_card_hover_preview(
         return;
     };
 
-    let win = Vec2::new(window.width(), window.height());
+    // Window px to the UI px the preview is laid out in.
+    let (cursor, win) = (cursor / ui_scale.0, Vec2::new(window.width(), window.height()) / ui_scale.0);
     let (x, y) = preview_anchor(
         cursor,
         win,

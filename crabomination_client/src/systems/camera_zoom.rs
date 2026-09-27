@@ -24,7 +24,7 @@ const CAM_ZOOM_SCALE: f32 = 0.45;
 const CAM_LERP_SPEED: f32 = 7.0;
 
 /// The camera's resting pose, refit by [`adjust_camera_home_for_seats`]
-/// whenever the seat count or the window size changes
+/// whenever the seat count, the window size or the UI size changes
 /// ([`crate::card::framing::home_pose`]: the closest pose that keeps the
 /// table on screen and clear of the HUD).
 #[derive(Resource)]
@@ -32,8 +32,8 @@ pub struct CameraHome {
     pub pose: Transform,
     /// The table point the home pose looks at.
     pub target: Vec3,
-    /// `(seats, logical window size)` the pose was fit for.
-    fitted_for: Option<(usize, UVec2)>,
+    /// `(seats, logical window size, UiScale bits)` the pose was fit for.
+    fitted_for: Option<(usize, UVec2, u32)>,
 }
 
 impl Default for CameraHome {
@@ -43,11 +43,13 @@ impl Default for CameraHome {
     }
 }
 
-/// Refit the home pose for the current seat count and window size. The fit
+/// Refit the home pose for the current seat count, window size and UI size
+/// (the HUD panels it keeps the table clear of scale with it). The fit
 /// is a few milliseconds and only runs when either changes.
 pub fn adjust_camera_home_for_seats(
     view: Res<crate::net_plugin::CurrentView>,
     windows: Query<&Window, With<bevy::window::PrimaryWindow>>,
+    ui_scale: Res<UiScale>,
     mut home: ResMut<CameraHome>,
 ) {
     let Some(cv) = &view.0 else { return };
@@ -56,11 +58,11 @@ pub fn adjust_camera_home_for_seats(
     if size.x < 1.0 || size.y < 1.0 {
         return;
     }
-    let key = (cv.players.len(), size.as_uvec2());
+    let key = (cv.players.len(), size.as_uvec2(), ui_scale.0.to_bits());
     if home.fitted_for == Some(key) {
         return;
     }
-    let pose = crate::card::framing::home_pose(key.0, size);
+    let pose = crate::card::framing::home_pose(key.0, size, ui_scale.0);
     // The fit looks down the pose's forward axis at the table plane.
     let forward = pose.forward();
     let target = pose.translation + forward * (-pose.translation.y / forward.y);

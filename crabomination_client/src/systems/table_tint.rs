@@ -89,6 +89,7 @@ pub fn sync_seat_name_plates(
     view: Res<CurrentView>,
     ui_fonts: Res<crate::theme::UiFonts>,
     camera_q: Query<(&Camera, &GlobalTransform), With<crate::MainCamera>>,
+    ui_scale: Res<UiScale>,
     mut plates: Query<(Entity, &SeatNamePlate, &mut Node, &mut Text, &bevy::ui::ComputedNode)>,
 ) {
     let pod = view.0.as_ref().filter(|cv| cv.players.len() > 2);
@@ -100,11 +101,11 @@ pub fn sync_seat_name_plates(
         return;
     };
     let n = cv.players.len();
-    // Centre of the top of the seat's deck pile, in viewport px.
+    // Centre of the top of the seat's deck pile, in UI px.
     let pile_top = |p: &crabomination::net::PlayerView| {
         let base = crate::card::layout::deck_position(p.seat, cv.your_seat, n);
         let top = base + Vec3::Y * crate::card::pile_height(p.library.size);
-        camera.world_to_viewport(cam_xform, top).ok()
+        crate::theme::project_to_ui(camera, cam_xform, &ui_scale, top)
     };
     let mut placed = vec![false; n];
     for (e, plate, mut node, mut text, computed) in &mut plates {

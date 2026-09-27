@@ -175,6 +175,28 @@ pub fn setup_quality_panel(
                 }
             });
 
+            // ── UI size ───────────────────────────────────────────────
+            // The main menu's Settings row, here too so it can change
+            // mid-match. Labelled by `handle_ui_size_button`.
+            p.spawn((
+                Text::new("UI size"),
+                tf(11.0),
+                TextColor(theme::TEXT_SECONDARY),
+            ));
+            p.spawn((
+                Button,
+                Node {
+                    padding: UiRect::axes(Val::Px(8.0), Val::Px(5.0)),
+                    align_self: AlignSelf::FlexStart,
+                    border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
+                    ..default()
+                },
+                BackgroundColor(theme::BUTTON_NEUTRAL_BG),
+                HoverTint::new(theme::BUTTON_NEUTRAL_BG),
+                UiSizeButton,
+                children![(Text::new(""), tf(12.0), TextColor(theme::TEXT_PRIMARY), Pickable::IGNORE)],
+            ));
+
             // ── Match ─────────────────────────────────────────────────
             // Export State (also X) and Surrender (two-click confirm). Their
             // handlers are `game_ui::buttons`' — they find the buttons by
@@ -451,6 +473,37 @@ pub fn handle_leave_game_button(
     settings.0 = false;
     pending.0 = None;
     next_state.set(crate::menu::AppState::Menu);
+}
+
+/// The Esc menu's UI size button.
+#[derive(Component)]
+pub struct UiSizeButton;
+
+/// Cycle the UI size on a click and persist it; keep the button's label
+/// current (Auto's percentage moves with the window).
+pub fn handle_ui_size_button(
+    mut store: ResMut<crate::config::ConfigStore>,
+    ui_scale: Res<UiScale>,
+    clicks: Query<&Interaction, (Changed<Interaction>, With<UiSizeButton>)>,
+    labels: Query<&Children, With<UiSizeButton>>,
+    mut texts: Query<&mut Text>,
+) {
+    if clicks.iter().any(|i| *i == Interaction::Pressed) {
+        // `update_ui_scale_from_window` applies it next frame.
+        crate::config::update_store(&mut store, |c| {
+            c.graphics.ui_size = theme::next_ui_size(c.graphics.ui_size);
+        });
+    }
+    let label = crate::systems::settings_menu::ui_size_label(store.0.graphics.ui_size, ui_scale.0);
+    for children in &labels {
+        for child in children.iter() {
+            if let Ok(mut t) = texts.get_mut(child)
+                && t.0 != label
+            {
+                t.0 = label.clone();
+            }
+        }
+    }
 }
 
 pub fn handle_quality_buttons(

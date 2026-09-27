@@ -36,6 +36,7 @@ pub fn sync_agenda_badges(
     ui_fonts: Res<UiFonts>,
     cards: Query<(&GameCardId, &GlobalTransform), With<CommandZoneCard>>,
     camera_q: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
+    ui_scale: Res<UiScale>,
     mut badges: Query<(Entity, &AgendaBadge, &mut Node, &mut Text)>,
 ) {
     let Some(cv) = &view.0 else {
@@ -65,10 +66,13 @@ pub fn sync_agenda_badges(
         }
     }
 
-    fn anchor(camera: &Camera, cam_xform: &GlobalTransform, world: Vec3) -> Option<(f32, f32)> {
-        camera
-            .world_to_viewport(cam_xform, world)
-            .ok()
+    fn anchor(
+        camera: &Camera,
+        cam_xform: &GlobalTransform,
+        ui_scale: &UiScale,
+        world: Vec3,
+    ) -> Option<(f32, f32)> {
+        crate::theme::project_to_ui(camera, cam_xform, ui_scale, world)
             .map(|v| (v.x - BADGE_OFFSET_X, v.y - BADGE_OFFSET_Y))
     }
 
@@ -78,7 +82,7 @@ pub fn sync_agenda_badges(
             Some(names) => {
                 seen.insert(badge.0);
                 if let Some(world) = card_corner.get(&badge.0).copied()
-                    && let Some((x, y)) = anchor(camera, cam_xform, world)
+                    && let Some((x, y)) = anchor(camera, cam_xform, &ui_scale, world)
                 {
                     node.display = Display::Flex;
                     node.left = Val::Px(x);
@@ -101,7 +105,7 @@ pub fn sync_agenda_badges(
         let (left, top) = card_corner
             .get(&id)
             .copied()
-            .and_then(|world| anchor(camera, cam_xform, world))
+            .and_then(|world| anchor(camera, cam_xform, &ui_scale, world))
             .unwrap_or((-1000.0, -1000.0));
         commands.spawn((
             AgendaBadge(id),

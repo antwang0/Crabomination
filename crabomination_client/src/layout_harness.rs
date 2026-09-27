@@ -7,7 +7,9 @@
 //! primary window once the view has been up for `--screenshot-delay` seconds
 //! (default 8, for card art to stream in) and then exits. `--window <WxH>`
 //! opens the window at that size instead of maximized, so one machine can
-//! render several aspect ratios. `--settings-open` opens the Esc menu.
+//! render several aspect ratios. `--settings-open` opens the Esc menu;
+//! `--menu` (or `--menu-format FORMAT`) screenshots the main menu instead;
+//! `--ui-size PERCENT` draws the UI at that size (0 = Auto).
 //!
 //!     cargo run --profile play -p crabomination_client -- \
 //!         --layout-fixture 4 --window 1920x1080 --screenshot /tmp/pod.png
@@ -38,8 +40,15 @@ pub struct HarnessArgs {
     /// picker open; the screenshot is of the menu, not a match.
     pub deck_picker: bool,
     /// `--import-report PATH`: import the decklist at PATH from the menu, as
-    /// "Play Deck File" would, so a screenshot shows the problems it finds.
+    /// the decklist "From File" button would, so a screenshot shows the problems it finds.
     pub import_report: Option<std::path::PathBuf>,
+    /// `--menu`: stay on the main menu; the screenshot is of it.
+    /// `--menu-format FORMAT` does too, with that format selected
+    /// (`commander` shows the pod options).
+    pub menu: bool,
+    pub menu_format: Option<crate::menu::MatchFormat>,
+    /// `--ui-size PERCENT` (0 = Auto): the UI size for this run.
+    pub ui_size: Option<u16>,
 }
 
 impl HarnessArgs {
@@ -64,12 +73,15 @@ impl HarnessArgs {
             hold_seat: value("--hold-seat").and_then(|v| v.parse().ok()),
             deck_picker: args.iter().any(|a| a == "--deck-picker"),
             import_report: value("--import-report").map(std::path::PathBuf::from),
+            menu: args.iter().any(|a| a == "--menu"),
+            menu_format: value("--menu-format").and_then(|f| crate::menu::MatchFormat::from_cli(&f)),
+            ui_size: value("--ui-size").and_then(|v| v.parse().ok()),
         }
     }
 
     /// The screenshot is of the menu, not a match.
     fn menu_shot(&self) -> bool {
-        self.deck_picker || self.import_report.is_some()
+        self.deck_picker || self.import_report.is_some() || self.menu || self.menu_format.is_some()
     }
 }
 
@@ -162,16 +174,22 @@ pub fn knock_out_viewer(g: &mut GameState) {
 }
 
 /// `--deck-picker`: select Commander and open the deck picker, once.
+/// `--menu-format FORMAT`: select that format, once.
 pub fn open_deck_picker_for_screenshot(
     args: Res<HarnessArgs>,
     mut fields: ResMut<crate::menu::MenuFields>,
     mut picker: ResMut<crate::deck_picker::DeckPicker>,
     mut done: Local<bool>,
 ) {
-    if args.deck_picker && !*done {
+    if *done {
+        return;
+    }
+    *done = true;
+    if args.deck_picker {
         fields.select_format(crate::menu::MatchFormat::Commander);
         picker.open = true;
-        *done = true;
+    } else if let Some(format) = args.menu_format {
+        fields.select_format(format);
     }
 }
 

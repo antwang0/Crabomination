@@ -575,6 +575,7 @@ pub fn sync_keyword_labels(
     ui_fonts: Res<UiFonts>,
     cards: Query<(&GameCardId, &GlobalTransform), With<BattlefieldCard>>,
     camera_q: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
+    ui_scale: Res<UiScale>,
     mut labels: Query<(Entity, &KeywordLabel, &mut Node, &mut Text)>,
     mut desired_cache: Local<HashMap<CardId, String>>,
 ) {
@@ -648,7 +649,7 @@ pub fn sync_keyword_labels(
     }
     let desired = &*desired_cache;
 
-    // card_id → the viewport point a strip hangs from: the midpoint of the
+    // card_id → the UI point a strip hangs from: the midpoint of the
     // card's top edge *as seen*, the highest of its four edge midpoints on
     // screen. The card's own top edge put an opponent's strips under their
     // cards (which face them) and a tapped card's beside it — and in a pod
@@ -667,7 +668,7 @@ pub fn sync_keyword_labels(
         }
         let top = edges
             .iter()
-            .filter_map(|&e| camera.world_to_viewport(cam_xform, gtf.transform_point(e)).ok())
+            .filter_map(|&e| crate::theme::project_to_ui(camera, cam_xform, &ui_scale, gtf.transform_point(e)))
             .min_by(|a, b| a.y.total_cmp(&b.y));
         if let Some(top) = top {
             card_top.insert(gid.0, top);

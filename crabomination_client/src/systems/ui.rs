@@ -1112,6 +1112,7 @@ pub fn hover_card_preview(
     asset_server: Res<AssetServer>,
     ui_fonts: Res<UiFonts>,
     mut existing: Query<(Entity, &mut Node, &HoverCardPreview)>,
+    ui_scale: Res<UiScale>,
 ) {
     let alt_held = keyboard.pressed(KeyCode::AltLeft) || keyboard.pressed(KeyCode::AltRight);
     let despawn_all = |commands: &mut Commands, existing: &Query<(Entity, &mut Node, &HoverCardPreview)>| {
@@ -1183,7 +1184,8 @@ pub fn hover_card_preview(
             .sum::<f32>()
     };
 
-    let win = Vec2::new(window.width(), window.height());
+    // Window px to the UI px the preview is laid out in.
+    let (cursor, win) = (cursor / ui_scale.0, Vec2::new(window.width(), window.height()) / ui_scale.0);
     let (x, y) = preview_anchor(
         cursor,
         win,

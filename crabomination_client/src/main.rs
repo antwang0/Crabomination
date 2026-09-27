@@ -83,7 +83,7 @@ use systems::game_ui::{
     animate_life_flash, record_life_history, sync_life_graph, toggle_life_graph,
     trigger_life_flash, LifeFlashTracker, LifeHistory,
     update_combat_preview_panel,
-    fit_player_hud_width, position_log_below_opponents,
+    fit_player_hud_width, position_left_column_below_hud, position_log_below_opponents,
     update_log_text, update_mana_pips, update_opponent_panel_tint, update_opponent_stats_rows,
     update_hint, update_pass_button, update_phase_chart, update_player_chip_target_outline,
     update_player_stats_chips, update_stack_panel,
@@ -99,6 +99,7 @@ use systems::gizmos::{
 };
 use systems::quality::{
     close_settings_on_esc, handle_leave_game_button, handle_quality_buttons, handle_speed_slider,
+    handle_ui_size_button,
     open_settings_on_esc, setup_quality_panel, sync_settings_visibility,
     update_speed_slider_visuals, SettingsOpen,
 };
@@ -259,7 +260,7 @@ fn main() {
     // Whole-config resource for the persistence systems (settings writes
     // rewrite the file without losing other sections). Cloned before the
     // sections move into their own resources below.
-    let cfg_store = config::ConfigStore(config::Config {
+    let mut cfg_store = config::ConfigStore(config::Config {
         paths: cfg.paths.clone(),
         graphics: gfx.clone(),
         gameplay: gameplay.clone(),
@@ -271,6 +272,11 @@ fn main() {
     let initial_anim_speed = AnimationSpeed(gameplay.animation_speed.clamp(0.25, 4.0));
     let cfg_window_mode = gfx.window_mode;
     let harness = layout_harness::HarnessArgs::parse(&std::env::args().skip(1).collect::<Vec<_>>());
+    // `--ui-size N` for this run only; nothing saves it unless a setting
+    // is changed.
+    if let Some(percent) = harness.ui_size {
+        cfg_store.0.graphics.ui_size = percent;
+    }
     // `--window WxH` pins the size (and skips `maximize_window`) so the
     // layout harness can render one aspect ratio after another.
     let (cfg_window_w, cfg_window_h) = harness.window.unwrap_or((gfx.window_width, gfx.window_height));
@@ -323,9 +329,7 @@ fn main() {
                 // four corners (turn/log ~280px right, player panel ~260px
                 // left, stack ~420px centred) and the hand needs vertical
                 // room, so the resize floor is raised to 1024×768 — below
-                // that the corner panels overlap and the hand clips. (The
-                // resolution-aware `UiScale` hook stays a no-op; see
-                // `pick_ui_scale`.)
+                // that the corner panels overlap and the hand clips.
                 .set(WindowPlugin {
                     primary_window: Some(Window {
                         mode: match cfg_window_mode {
@@ -604,7 +608,7 @@ fn main() {
                 update_mana_pips,
                 update_opponent_stats_rows,
                 update_opponent_panel_tint,
-                position_log_below_opponents,
+                (position_log_below_opponents, position_left_column_below_hud),
                 fit_player_hud_width,
                 update_hint,
                 update_phase_chart,
@@ -1034,10 +1038,11 @@ fn main() {
                 .chain()
                 .run_if(in_state(AppState::InGame)),
         )
-        // "Leave Game" button in the settings menu → back to main menu.
+        // "Leave Game" button in the settings menu → back to main menu; the
+        // UI size button beside the quality row.
         .add_systems(
             Update,
-            handle_leave_game_button.run_if(in_state(AppState::InGame)),
+            (handle_leave_game_button, handle_ui_size_button).run_if(in_state(AppState::InGame)),
         )
         // Animation-speed slider: drag to set, label/fill mirror state.
         .add_systems(
@@ -1295,25 +1300,20 @@ fn update_hand_zoom_from_window(
     }
 }
 
-/// 2-D UI scale tier. Currently a no-op — every tier returns `1.0` —
-/// because earlier non-1.0 values grew the corner HUD panels enough
-/// to cover the bottom-center hand area at 1080p. Kept as a stub so
-/// re-enabling it is a one-line tuning change once the HUD layout
-/// stops anchoring everything to the corners.
-fn pick_ui_scale(_logical_height: f32) -> f32 {
-    1.0
-}
-
-/// Drive Bevy's built-in `UiScale` from the primary window's logical
-/// height. Currently a no-op (see `pick_ui_scale`) but the system
-/// stays registered so re-enabling resolution-aware UI scaling
-/// doesn't need to re-touch `main()`.
+/// Drive Bevy's built-in `UiScale` from the Settings "UI size" and the
+/// primary window's logical height (`theme::ui_scale_for`). It was pinned at
+/// 1.0 because a larger UI grew the corner panels over the table; the
+/// camera fit now reserves them at their scaled size
+/// (`framing::hud_rects`), and everything placed at a projected or cursor
+/// position divides the scale back out (`theme::project_to_ui`).
 fn update_ui_scale_from_window(
-    windows: Query<&Window>,
+    windows: Query<&Window, With<bevy::window::PrimaryWindow>>,
+    store: Option<Res<config::ConfigStore>>,
     mut scale: ResMut<UiScale>,
 ) {
     let Ok(window) = windows.single() else { return };
-    let target = pick_ui_scale(window.height());
+    let percent = store.map_or(0, |s| s.0.graphics.ui_size);
+    let target = theme::ui_scale_for(window.size(), percent);
     if (scale.0 - target).abs() > 0.001 {
         scale.0 = target;
     }

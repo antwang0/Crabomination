@@ -1534,15 +1534,9 @@ pub fn update_mana_pips(
         entries.push((None, "C", colorless));
     }
 
+    // An empty pool shows nothing: a "(no mana)" placeholder was the usual
+    // state, and when the chip row wrapped it took a line to itself.
     commands.entity(row).with_children(|row| {
-        if entries.is_empty() {
-            row.spawn((
-                Text::new("(no mana)"),
-                ui_fonts.tf(11.0),
-                TextColor(theme::TEXT_MUTED),
-            ));
-            return;
-        }
         for (color, sym, count) in entries {
             let (bg, fg) = mana_pip_colors(color);
             row.spawn((

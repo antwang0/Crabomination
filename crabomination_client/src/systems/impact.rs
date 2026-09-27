@@ -150,6 +150,7 @@ pub fn spawn_impact_effects(
     ui_fonts: Res<UiFonts>,
     cards: Query<(&GlobalTransform, &GameCardId)>,
     camera_q: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
+    ui_scale: Res<UiScale>,
     existing_vignettes: Query<Entity, With<HitVignette>>,
 ) {
     if events.0.is_empty() {
@@ -218,8 +219,12 @@ pub fn spawn_impact_effects(
                 if *amount > 0
                     && let Some(world) = card_world
                     && let Ok((camera, cam_xform)) = camera_q.single()
-                    && let Ok(screen) =
-                        camera.world_to_viewport(cam_xform, world + Vec3::Y * 0.6)
+                    && let Some(screen) = crate::theme::project_to_ui(
+                        camera,
+                        cam_xform,
+                        &ui_scale,
+                        world + Vec3::Y * 0.6,
+                    )
                 {
                     spawn_damage_numeral(&mut commands, &ui_fonts, *amount, screen);
                 }

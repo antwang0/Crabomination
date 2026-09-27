@@ -626,6 +626,7 @@ pub fn sync_attack_target_labels(
     attacking: Res<crate::game::AttackingState>,
     ui_fonts: Res<UiFonts>,
     camera_q: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
+    ui_scale: Res<UiScale>,
     mut labels: Query<(Entity, &AttackTargetLabel, &mut Node, &Children)>,
     mut texts: Query<&mut Text>,
 ) {
@@ -647,7 +648,7 @@ pub fn sync_attack_target_labels(
     let screen_pos = |seat: usize| -> Option<Vec2> {
         let mut anchor = crate::card::layout::player_hand_anchor(seat, cv.your_seat, n);
         anchor.y = 0.3;
-        camera.world_to_viewport(cam_xform, anchor).ok()
+        crate::theme::project_to_ui(camera, cam_xform, &ui_scale, anchor)
     };
     let text_for = |seat: usize, count: usize| {
         format!("⚔ {} ← {count}", seat_label(&cv.players, cv.your_seat, seat))

@@ -246,6 +246,53 @@ pub const RADIUS_BUTTON: Val = Val::Px(4.0);
 /// stay square-cornered — they shouldn't read as floating cards.)
 pub const RADIUS_PANEL: Val = Val::Px(8.0);
 
+// ── UI size ──────────────────────────────────────────────────────────────────
+
+/// The sizes the Settings "UI size" row cycles through, in percent; 0 is
+/// Auto (`GraphicsConfig::ui_size`).
+pub const UI_SIZES: [u16; 9] = [0, 80, 90, 100, 115, 130, 150, 175, 200];
+
+/// The UI size after `percent` in [`UI_SIZES`] (from the last, the first).
+pub fn next_ui_size(percent: u16) -> u16 {
+    let idx = UI_SIZES.iter().position(|&p| p == percent).unwrap_or(0);
+    UI_SIZES[(idx + 1) % UI_SIZES.len()]
+}
+
+/// The smallest window, in UI px, the in-game HUD fits: the left column
+/// (phase chart, action buttons, prompt) runs ~630 px down from the top, and
+/// the two top panels need ~1000 px side by side.
+pub const MIN_UI_VIEWPORT: Vec2 = Vec2::new(1024.0, 640.0);
+
+/// `UiScale` for a window of `logical` size at UI size `percent` (0 = Auto).
+/// Auto is 100 % up to a 1080-px-high window — the size the HUD is laid out
+/// for — and grows with the height past it, to 200 % at 2160: a 4K monitor
+/// at 100 % OS scaling drew the 1080p HUD, 11-14 px text, in its corners.
+/// Any size is capped where the HUD would outgrow the window
+/// ([`MIN_UI_VIEWPORT`]): 130 % of a 1280x720 window ran the prompt off its
+/// bottom edge.
+pub fn ui_scale_for(logical: Vec2, percent: u16) -> f32 {
+    let wanted = if percent == 0 {
+        (logical.y / 1080.0).clamp(1.0, 2.0)
+    } else {
+        f32::from(percent) / 100.0
+    };
+    wanted.min((logical / MIN_UI_VIEWPORT).min_element())
+}
+
+/// The world point `world`, seen through the main camera, as the `Val::Px`
+/// position of a UI node over it. `UiScale` multiplies every `Val::Px`, so a
+/// node placed at a viewport position — projected, or the cursor's —
+/// divides the scale back out, or it lands that factor further from the
+/// window's corner than the thing it labels.
+pub fn project_to_ui(
+    camera: &Camera,
+    cam_xform: &GlobalTransform,
+    ui_scale: &UiScale,
+    world: Vec3,
+) -> Option<Vec2> {
+    camera.world_to_viewport(cam_xform, world).ok().map(|v| v / ui_scale.0)
+}
+
 // ── Hover tint ───────────────────────────────────────────────────────────────
 
 /// Attach to any `Button` whose background should brighten on hover/press.
@@ -403,6 +450,29 @@ mod tests {
     /// rerun `scripts/ui_fallback_fonts.py` (or pick a symbol that has one).
     /// The scan is the script's: string literals, comment lines skipped,
     /// variation selectors ignored.
+    /// Auto grows the UI with the window past 1080 px high; a chosen size is
+    /// that size; and neither outgrows a window too small for the HUD.
+    #[test]
+    fn ui_scale_is_auto_or_chosen_and_fits_the_window() {
+        use super::ui_scale_for;
+        use bevy::math::Vec2;
+        let at = |w: f32, h: f32, percent: u16| (ui_scale_for(Vec2::new(w, h), percent) * 1000.0).round() / 1000.0;
+        assert_eq!(at(1920.0, 1080.0, 0), 1.0);
+        assert_eq!(at(2560.0, 1440.0, 0), 1.333);
+        assert_eq!(at(3840.0, 2160.0, 0), 2.0);
+        assert_eq!(at(1280.0, 720.0, 0), 1.0);
+        assert_eq!(at(1920.0, 1080.0, 80), 0.8);
+        assert_eq!(at(1920.0, 1080.0, 150), 1.5);
+        // 720 px holds a 640-px-high HUD at 112.5 % at most.
+        assert_eq!(at(1280.0, 720.0, 130), 1.125);
+        assert_eq!(
+            crate::systems::settings_menu::ui_size_label(130, 1.125),
+            "130 % (113 % in this window)"
+        );
+        assert_eq!(crate::systems::settings_menu::ui_size_label(0, 1.333), "Auto (133 %)");
+        assert_eq!(crate::systems::settings_menu::ui_size_label(90, 0.9), "90 %");
+    }
+
     #[test]
     fn every_ui_symbol_has_a_glyph() {
         let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));

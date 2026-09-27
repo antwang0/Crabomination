@@ -36,9 +36,9 @@ pub fn legacy_pose(n_seats: usize) -> Transform {
 const VIEW_DIRECTION: Vec3 = Vec3::new(0.0, 32.0, 14.0);
 
 /// The camera's resting pose for a table of `n_seats` in a window of
-/// `viewport` logical pixels.
-pub fn home_pose(n_seats: usize, viewport: Vec2) -> Transform {
-    fit_pose(n_seats, viewport)
+/// `viewport` logical pixels, its HUD drawn at `ui_scale` (`UiScale`).
+pub fn home_pose(n_seats: usize, viewport: Vec2, ui_scale: f32) -> Transform {
+    fit_pose(n_seats, viewport, ui_scale)
 }
 
 /// The viewer's hand scale for a window `logical_height` px tall: larger
@@ -53,7 +53,7 @@ pub fn hand_zoom_for(logical_height: f32) -> f32 {
     }
 }
 
-/// Right edge of the viewer's HUD panel in a viewport `w` logical px wide:
+/// Right edge of the viewer's HUD panel in a viewport `w` UI px wide:
 /// short of the opponent panel in the top-right corner. The panel's chips
 /// wrap there (`game_ui::fit_player_hud_width`), so the rect [`hud_rects`]
 /// frames the table against is the panel's real extent.
@@ -66,8 +66,12 @@ pub fn player_panel_width(w: f32) -> f32 {
 /// The table is a trapezoid (its far edge is narrow), so it can sit between
 /// the top corner panels while its wide near edge only has to clear the
 /// action buttons.
-pub fn hud_rects(viewport: Vec2, n_seats: usize) -> [Rect; 6] {
-    let w = viewport.x;
+///
+/// The panels are laid out in UI px, which `UiScale` multiplies, so they are
+/// placed in a viewport `ui_scale` times smaller and the rects scaled back
+/// up: a UI at 150 % reserves panels half as large again.
+pub fn hud_rects(viewport: Vec2, n_seats: usize, ui_scale: f32) -> [Rect; 6] {
+    let w = viewport.x / ui_scale;
     // One 45 px row per opponent under a turn-order strip in a pod.
     let opp_panel_h = if n_seats > 2 { 30.0 + 45.0 * (n_seats - 1) as f32 } else { 70.0 };
     [
@@ -89,6 +93,7 @@ pub fn hud_rects(viewport: Vec2, n_seats: usize) -> [Rect; 6] {
         Rect::new(w - 460.0, 0.0, w, opp_panel_h),
         Rect::new(w - 292.0, opp_panel_h, w, opp_panel_h + 436.0),
     ]
+    .map(|r| Rect { min: r.min * ui_scale, max: r.max * ui_scale })
 }
 
 /// Share of a hand card (from its top edge) that must stay on screen; the
@@ -134,13 +139,13 @@ fn clear(cards: &[([Vec3; 8], bool)], cam: &Transform, viewport: Vec2, hud: &[Re
 /// out largest wins. Taking the closest distance alone let the view slide
 /// toward the viewer once the near corner had room, growing the viewer's
 /// cards at the far seats' expense.
-pub fn fit_pose(n_seats: usize, viewport: Vec2) -> Transform {
+pub fn fit_pose(n_seats: usize, viewport: Vec2, ui_scale: f32) -> Transform {
     let back = VIEW_DIRECTION.normalize();
     let board = sample_board(n_seats, hand_zoom_for(viewport.y));
     let cards = fit_cards(&board);
     let references: Vec<[Vec3; 8]> =
         board.iter().filter(|c| c.reference).map(|c| corners(&c.transform, 0.0)).collect();
-    let hud = hud_rects(viewport, n_seats);
+    let hud = hud_rects(viewport, n_seats, ui_scale);
     let pose = |target: Vec3, d: f32| {
         Transform::from_translation(target + back * d).looking_at(target, Vec3::Y)
     };
@@ -374,7 +379,12 @@ mod tests {
 
     const VIEWPORTS: [(f32, f32); 4] = [(1280.0, 720.0), (1920.0, 1080.0), (2560.0, 1080.0), (3840.0, 2160.0)];
 
-    fn table(pose: fn(usize, Vec2) -> Transform) -> Vec<(usize, Vec2, Budget)> {
+    /// The UI scale a window of this size gets at the default (Auto) size.
+    fn auto(vp: Vec2) -> f32 {
+        crate::theme::ui_scale_for(vp, 0)
+    }
+
+    fn table(pose: impl Fn(usize, Vec2) -> Transform) -> Vec<(usize, Vec2, Budget)> {
         let mut rows = Vec::new();
         for seats in [2, 4] {
             for (w, h) in VIEWPORTS {
@@ -410,7 +420,7 @@ mod tests {
     #[test]
     fn budget() {
         print("legacy fixed camera", &table(|n, _| legacy_pose(n)));
-        let fitted = table(home_pose);
+        let fitted = table(|n, vp| home_pose(n, vp, auto(vp)));
         print("fitted camera", &fitted);
         // Floors: what this layout measured when it landed, less a few
         // percent. Before the fit, the fixed camera gave 121 px (1v1) and
@@ -421,7 +431,10 @@ mod tests {
             (2, 1280, 720) => 73.0,
             (2, 1920, 1080) => 125.0,
             (2, 2560, 1080) => 131.0,
-            (2, 3840, 2160) => 270.0,
+            // 3840x2160 draws the UI at 200 % (Auto), so its layout is
+            // 1920x1080's doubled and so are its floors. At 100 % it was
+            // 279 / 212 px, the HUD a quarter of the size it is at 1080p.
+            (2, 3840, 2160) => 250.0,
             // Pods seat two to an edge, a table bound by width. With the
             // action buttons moved up under the phase chart (from the
             // near-left corner, where they cost 88 → 99 px here), the game
@@ -430,7 +443,7 @@ mod tests {
             (_, 1280, 720) => 45.0,
             (_, 1920, 1080) => 95.0,
             (_, 2560, 1080) => 102.0,
-            _ => 205.0,
+            _ => 190.0,
         };
         for (seats, vp, b) in &fitted {
             assert!(
@@ -457,7 +470,7 @@ mod tests {
                 let vp = Vec2::new(w, h);
                 let cards = fit_cards(&sample_board(seats, hand_zoom_for(h)));
                 assert!(
-                    clear(&cards, &home_pose(seats, vp), vp, &hud_rects(vp, seats)),
+                    clear(&cards, &home_pose(seats, vp, auto(vp)), vp, &hud_rects(vp, seats, auto(vp))),
                     "{seats} seats at {vp}",
                 );
             }

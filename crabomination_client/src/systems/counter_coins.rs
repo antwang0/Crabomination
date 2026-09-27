@@ -540,12 +540,11 @@ fn counter_label_text(kind: CounterType, count: u32, impending: bool) -> String 
 fn label_anchor(
     camera: &Camera,
     cam_xform: &GlobalTransform,
+    ui_scale: &UiScale,
     world: Vec3,
     row: usize,
 ) -> Option<(f32, f32)> {
-    camera
-        .world_to_viewport(cam_xform, world)
-        .ok()
+    crate::theme::project_to_ui(camera, cam_xform, ui_scale, world)
         .map(|v| (v.x - 26.0, v.y - 12.0 + row as f32 * 20.0))
 }
 
@@ -565,6 +564,7 @@ pub fn sync_counter_labels(
     ui_fonts: Res<crate::theme::UiFonts>,
     cards: Query<(&GameCardId, &GlobalTransform), With<BattlefieldCard>>,
     camera_q: Query<(&Camera, &GlobalTransform), With<crate::MainCamera>>,
+    ui_scale: Res<UiScale>,
     mut labels: Query<(Entity, &CounterLabel, &mut Node, &mut Text, &mut TextColor)>,
     mut desired_cache: Local<HashMap<(CardId, CounterType), (u32, usize, bool)>>,
 ) {
@@ -613,7 +613,7 @@ pub fn sync_counter_labels(
             Some(&(count, row, impending)) => {
                 seen.insert((label.card_id, label.kind));
                 if let Some(world) = card_anchor.get(&label.card_id).copied()
-                    && let Some((x, y)) = label_anchor(camera, cam_xform, world, row)
+                    && let Some((x, y)) = label_anchor(camera, cam_xform, &ui_scale, world, row)
                 {
                     node.display = Display::Flex;
                     node.left = Val::Px(x);
@@ -646,7 +646,7 @@ pub fn sync_counter_labels(
         let (left, top) = card_anchor
             .get(&id)
             .copied()
-            .and_then(|world| label_anchor(camera, cam_xform, world, row))
+            .and_then(|world| label_anchor(camera, cam_xform, &ui_scale, world, row))
             .unwrap_or((-1000.0, -1000.0));
         commands.spawn((
             CounterLabel { card_id: id, kind },

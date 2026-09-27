@@ -42,6 +42,7 @@ pub fn sync_regen_badges(
     ui_fonts: Res<UiFonts>,
     cards: Query<(&GameCardId, &GlobalTransform), With<BattlefieldCard>>,
     camera_q: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
+    ui_scale: Res<UiScale>,
     mut badges: Query<(Entity, &RegenBadge, &mut Node, &mut Text)>,
 ) {
     let Some(cv) = &view.0 else {
@@ -67,9 +68,7 @@ pub fn sync_regen_badges(
     }
 
     let anchor = |world: Vec3| -> Option<(f32, f32)> {
-        camera
-            .world_to_viewport(cam_xform, world)
-            .ok()
+        crate::theme::project_to_ui(camera, cam_xform, &ui_scale, world)
             .map(|v| (v.x + BADGE_OFFSET_X, v.y - BADGE_OFFSET_Y))
     };
 

@@ -709,7 +709,7 @@ Each a small targeted feature; sweep batch by batch.
 
 - ⏳ **In-app deck builder** (search, curve view, legality, sample-hand).
 - 🟡 **Import / export** — import ships (`decklist::parse_decklist`, Arena/MTGO
-  text; menu "Play Deck File" / "Play Pasted Deck" load and validate, and a
+  text; the menu's decklist "From File" / "From Clipboard" load and validate, and a
   Commander lobby takes a pasted list — the web build's only way in). Names
   match past case, accents and typographic quotes (`decklist::fold_name`),
   and a list that can't play opens a report of **every** problem, each

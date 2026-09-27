@@ -74,6 +74,51 @@ eye; `framing::tests::budget` gates the table sizes.
     placement read the opponent panel's height as logical, parking the log
     45 % of that height too low on a 1.45x display.
 
+## UI size and the menu (2026-09-27) — shipped
+
+- ✅ **UI size** — Settings (and the in-game Esc menu) cycle Auto / 80 % /
+  90 % / 100 % / 115 % / 130 % / 150 % / 175 % / 200 %, persisted as
+  `graphics.ui_size` (0 = Auto) and applied through Bevy's `UiScale`
+  (`theme::ui_scale_for`). Auto is 100 % up to a 1080-px-high window and
+  grows with the height to 200 % at 2160, so a 4K window lays out as 1080p
+  doubled (`framing::tests::budget`: 259 / 199 px cards, exactly twice
+  1080p's). Any size is capped where the HUD would outgrow the window
+  (`theme::MIN_UI_VIEWPORT`, 1024x640 UI px): 130 % of 1280x720 ran the
+  prompt off the bottom, and is drawn at 112.5 %, which the row says.
+  Layout harness: `--ui-size PERCENT`.
+  - ⚠ **`UiScale` multiplies every `Val::Px`; a camera projection and the
+    cursor are window px.** Every node placed over a card or at the
+    cursor divides the scale back out — `theme::project_to_ui` for the
+    twelve overlay modules (keyword strips, P/T and the other badges,
+    counter labels, name plates, damage numerals, …), and the two hover
+    previews, the ability and hand menus and the draft tooltip at their
+    use. This is why `UiScale` had been pinned at 1.0: at any other value
+    each of them lands that factor further from the window's corner.
+  - ⚠ `ComputedNode::inverse_scale_factor` includes `UiScale`, so
+    `size() * inverse_scale_factor()` is already UI px.
+  - The camera fit reserves the panels at their scaled size
+    (`hud_rects(viewport, seats, ui_scale)`), and the left column now
+    follows the player panel down when its chips wrap
+    (`position_left_column_below_hud`).
+  - ⚠ **A wrapping chip row can wrap a chip that fits.** At 80 % the last
+    chip dropped to a second line with room to spare — a rounding error
+    against a container sized to its content — and hung below a panel sized
+    for one. `fit_player_hud_width` turns wrapping on only when the chips'
+    measured widths exceed the cap. The "(no mana)" placeholder is gone: an
+    empty pool, the usual state, took a line of its own when the row
+    wrapped.
+- ✅ **The main menu is two sections** — Play (vs bot, draft, spectate,
+  your own decklist) and Online (name, host, join) side by side under the
+  format selector, with Settings and the developer tools (Audit Cards, Load
+  Latest Debug State) in a small neutral row at the foot. It was one
+  560-px column of nine buttons in seven unrelated colours that ran past
+  the top of a 783-px window; it is ~645 px high at 100 %, green starts a
+  game against the bot, blue opens another mode. The decklist buttons read
+  "From File" / "From Clipboard" under "Your own decklist". The panel
+  centres with auto margins in a scrollable root, so a window too short
+  for it scrolls rather than cutting off the title. Layout harness:
+  `--menu`, `--menu-format FORMAT`.
+
 ## Paper-cut sweep (2026-09-12) — shipped, with residuals
 
 A read of the client turned up four defects that read as bugs rather than
@@ -207,12 +252,8 @@ cut, and the first two would make the third and fourth reviewable:
   `G`. It also can't express that `G` means graveyard *and* green. Derive
   the overlay and the handlers from one binding table; that is also the
   foundation for keybind remapping.
-- ⏳ **`UiScale` is a stub, so text scaling is impossible, not merely
-  absent.** `main.rs:1246` returns `1.0` unconditionally because non-1.0
-  values grew the corner HUD over the hand area. With 837 `Val::Px`
-  literals and **135 text nodes at ≤13 px** (75 at 13, 38 at 12, 18 at 11,
-  4 at ≤10) on a 4K-capable client, this outranks most of Tier 1 below.
-  Subsumed by "Responsive HUD Layout".
+- ✅ **`UiScale` was a stub, so text scaling was impossible** — shipped
+  2026-09-27 as the UI size setting ("UI size and the menu", above).
 
 ## Client / UI follow-ups (M15 run)
 
@@ -377,13 +418,14 @@ Cross-references the detailed entries below where one exists.
 **Bigger projects**
 - 🟡 **Settings screen** — ✅ main-menu Settings panel
   (`systems/settings_menu.rs`): window mode (windowed / borderless),
-  resolution presets, maximize-on-launch, render quality, animation
-  speed, hand sorting — applied live and persisted. Remaining ⏳:
+  resolution presets, maximize-on-launch, render quality, UI size (also in
+  the in-game Esc menu), animation speed, hand sorting — applied live and
+  persisted. Remaining ⏳:
   keybind remapping, audio (once there is audio).
 - 🟡 **Deck library** — Commander's deck picker (2026-09-26,
   `deck_picker.rs`) picks your stock deck and each bot's from the 183 stock
-  lists, with search. Paste-from-clipboard import ✅ (menu "Play Pasted
-  Deck", lobby "Paste Deck"). Power tiers ✅ (2026-09-27, `pod::power`):
+  lists, with search. Paste-from-clipboard import ✅ (menu decklist "From
+  Clipboard", lobby "Paste Deck"). Power tiers ✅ (2026-09-27, `pod::power`):
   each row shows the deck's tier 1-5 from its measured six-seat win share
   under bot play (`scripts/pod_power.sh` regenerates the table), and a bot
   seat left on Random is dealt a deck within one tier of yours — the same
@@ -396,9 +438,7 @@ Cross-references the detailed entries below where one exists.
   problem (each unknown card with the names it probably meant, or each
   format rule it breaks) with Copy list / Close; the status line had named
   four unknown cards and stopped. Names now match past accents and curly
-  quotes. The menu's two deck buttons share a row: the menu already fills
-  a 768-px-high window (its title is cut off at 783 px — open). Layout
-  harness: `--import-report PATH`.
+  quotes. Layout harness: `--import-report PATH`.
 - ✅ **Symbols drew as boxes** (2026-09-26) — the UI font (Mirano Extended
   Light) has 13 of the ~80 non-ASCII symbols the client prints, and Bevy's
   shaper (parley) falls back only to fonts it is handed, so ☠ 👑 ♥ ✋ ⚔ ▶ ▼
@@ -423,8 +463,8 @@ Cross-references the detailed entries below where one exists.
   engine-side.
 - ⏳ **Replay viewer** — see "Replay scrubber" (Tier 3 below).
 - ⏳ **Accessibility pass** — colorblind-safe target rings (shape, not
-  only color), text scaling, reduced-motion toggle, finish keyboard-only
-  play; see "Theme variants".
+  only color), reduced-motion toggle, finish keyboard-only play; see
+  "Theme variants". (Text scaling ✅ — the UI size setting.)
 
 ### Conspire cast UI (follow-up)
 
@@ -567,8 +607,8 @@ the in-place fixes; capture the intent here.
 ### Settings Menu
 The animation-speed slider is currently wedged into the quality panel
 (`quality.rs::setup_quality_panel`). A proper Settings panel (audio,
-key rebinds, UI scale, accessibility) would cleanly separate these and
-give a natural home for future global preferences.
+key rebinds, accessibility) would cleanly separate these and give a
+natural home for future global preferences. (UI size ✅, in both.)
 
 ### Auto-Pass Toggle
 `auto_advance_p0` (`game_ui.rs:2000+`) decides for the player when to pass
@@ -647,6 +687,8 @@ bottom player panel collides with the stack panel + AttackAllPanel;
 at 1440p+ everything sits in a small island. Audit `Val::Px` →
 `Val::Percent` / `Val::Vw` / `Val::Vh` per panel and add a `UiScale`
 resource. Subsumes the existing "Responsive Stack Display" entry above.
+(`UiScale` ✅ 2026-09-27: Auto is 200 % at 2160 px high, so a 4K window
+lays out as 1080p doubled rather than as a small island.)
 
 🟡 **The table half is done (2026-09-23); the HUD half is not.** The camera
 is now fitted to the window (`card/framing.rs`): the closest pose that keeps

@@ -89,6 +89,7 @@ pub fn spawn_ability_menu(
     ui_fonts: Res<UiFonts>,
     menu_state: Res<AbilityMenuState>,
     existing: Query<Entity, With<AbilityMenu>>,
+    ui_scale: Res<UiScale>,
 ) {
     if !menu_state.is_changed() { return; }
 
@@ -237,7 +238,8 @@ pub fn spawn_ability_menu(
     }
     let card_name = pv.name.clone();
 
-    let pos = menu_state.spawn_pos;
+    // The cursor, in window px; a node's `Val::Px` is scaled by `UiScale`.
+    let pos = menu_state.spawn_pos / ui_scale.0;
 
     commands
         .spawn((

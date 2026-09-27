@@ -1,7 +1,7 @@
 //! Bring your own deck to a local match, and say in full why one can't play.
 //!
-//! "Play Deck File" reads the file named in the menu's Deck file field;
-//! "Play Pasted Deck" reads the clipboard, so a list copied off Moxfield,
+//! The menu's decklist buttons: "From File" reads the file named in its Deck
+//! file field; "From Clipboard" reads the clipboard, so a list copied off Moxfield,
 //! Archidekt or an Arena export needs no file. Either way the deck has to be
 //! all catalog cards and legal for the menu's format ([`import_deck`]). When
 //! it isn't, the status line says so in brief and the import report lists
@@ -83,12 +83,12 @@ fn illegal(format: MatchFormat) -> String {
     format!("It isn't a legal {} deck:", format.label())
 }
 
-/// "Play Deck File" — reads the decklist file named in the Deck file
+/// Decklist "From File" — reads the decklist file named in the Deck file
 /// field and starts a local-bot match with it.
 #[derive(Component)]
 pub(crate) struct ImportDeckButton;
 
-/// "Play Pasted Deck" — the same, reading the clipboard.
+/// Decklist "From Clipboard" — the same, reading the clipboard.
 #[derive(Component)]
 pub(crate) struct PasteDeckButton;
 

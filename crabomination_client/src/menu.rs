@@ -549,7 +549,7 @@ pub(crate) struct MenuFields {
     host_port: String,
     join_addr: String,
     /// Path to a plain-text decklist (Arena / MTGO format) for the
-    /// "Play Deck File" import flow; a Commander lobby submits this list too.
+    /// decklist ("From File") import flow; a Commander lobby submits this list too.
     pub(crate) deck_path: String,
     focused: FocusedField,
     pub(crate) format: MatchFormat,
@@ -935,13 +935,23 @@ fn apply_cli_boot_hint(
 // ── UI setup ─────────────────────────────────────────────────────────────────
 
 use crate::theme::{
-    self, HoverTint, UiFonts, BUTTON_ACCENT_BG, BUTTON_DANGER_BG, BUTTON_INFO_BG,
-    BUTTON_PRIMARY_BG, BUTTON_WARN_BG, FIELD_BG, FIELD_BG_FOCUSED, PANEL_BG,
-    RADIUS_BUTTON, RADIUS_PANEL,
+    self, HoverTint, UiFonts, BUTTON_INFO_BG, BUTTON_PRIMARY_BG, BUTTON_WARN_BG, FIELD_BG,
+    FIELD_BG_FOCUSED, PANEL_BG, RADIUS_BUTTON, RADIUS_PANEL,
 };
+
+/// Width of the menu panel. Two sections side by side: the menu was one
+/// 560-px column that ran past the top of a 768-px-high window.
+const MENU_W: f32 = 760.0;
+/// Its padding, each side.
+const MENU_PAD: f32 = 24.0;
 
 fn spawn_menu(mut commands: Commands, ui_fonts: Res<UiFonts>) {
     let tf = |size: f32| ui_fonts.tf(size);
+    // Everything driven by an in-process match thread (vs Bot, Draft,
+    // Spectate, Audit) or the local filesystem (decklists, debug state) is
+    // native-only: wasm has no threads to run the match on, so the browser
+    // build is online (lobby) play.
+    let native = cfg!(not(target_arch = "wasm32"));
 
     commands
         .spawn((
@@ -951,24 +961,31 @@ fn spawn_menu(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                 top: Val::Px(0.0),
                 width: Val::Percent(100.0),
                 height: Val::Percent(100.0),
-                justify_content: JustifyContent::Center,
-                align_items: AlignItems::Center,
+                flex_direction: FlexDirection::Column,
+                overflow: Overflow::scroll_y(),
                 ..default()
             },
             BackgroundColor(theme::OVERLAY_BG),
+            crate::systems::scroll::Scrollable::default(),
             MenuRoot,
         ))
         .with_children(|root| {
             root.spawn((
                 Node {
                     flex_direction: FlexDirection::Column,
-                    padding: UiRect::all(Val::Px(28.0)),
-                    row_gap: Val::Px(18.0),
+                    // Auto margins centre the panel while it fits, and park
+                    // it at the top — scrollable — in a window too short for
+                    // it: a centred panel overflows upward, where nothing
+                    // scrolls.
+                    margin: UiRect::all(Val::Auto),
+                    flex_shrink: 0.0,
+                    padding: UiRect::all(Val::Px(MENU_PAD)),
+                    row_gap: Val::Px(16.0),
                     align_items: AlignItems::Center,
                     // Fixed width: the status / download-progress lines below
                     // change length as they update, and a fit-content panel
                     // would visibly resize with them.
-                    width: Val::Px(560.0),
+                    width: Val::Px(MENU_W),
                     border_radius: BorderRadius::all(RADIUS_PANEL),
                     ..default()
                 },
@@ -981,26 +998,23 @@ fn spawn_menu(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                     TextColor(theme::ACCENT_GOLD),
                 ));
 
-                // Format selector — Modern (BRG / Goryo's demo decks) vs
-                // Cube (random 2-color deck per seat).
+                // Format selector — it applies to every way to start a game
+                // below, online ones included (a hosted lobby's format).
                 p.spawn(Node {
                     flex_direction: FlexDirection::Column,
                     align_items: AlignItems::Center,
-                    row_gap: Val::Px(4.0),
+                    row_gap: Val::Px(6.0),
                     ..default()
                 })
                 .with_children(|fmt| {
-                    fmt.spawn((
-                        Text::new("Format"),
-                        tf(13.0),
-                        TextColor(theme::TEXT_BODY),
-                    ));
                     fmt.spawn(Node {
                         flex_direction: FlexDirection::Row,
+                        align_items: AlignItems::Center,
                         column_gap: Val::Px(8.0),
                         ..default()
                     })
                     .with_children(|row| {
+                        row.spawn((Text::new("Format"), tf(13.0), TextColor(theme::TEXT_BODY)));
                         format_toggle(row, &tf, MatchFormat::Modern);
                         format_toggle(row, &tf, MatchFormat::Cube);
                         format_toggle(row, &tf, MatchFormat::Sos);
@@ -1009,7 +1023,7 @@ fn spawn_menu(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                     });
                     // Commander pod options — shown only while Commander is
                     // the selected format (`refresh_pod_options`). They
-                    // apply to both "Play vs Bot" and "Play Deck File".
+                    // apply to both "Play vs Bot" and a decklist you bring.
                     fmt.spawn((
                         Node {
                             flex_direction: FlexDirection::Row,
@@ -1025,141 +1039,75 @@ fn spawn_menu(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                     });
                 });
 
-                // Rejoin — offered only when a crash left a persisted resume
-                // token behind (a clean exit clears it).
-                if let Some((addr, _, _)) = load_persisted_resume() {
-                    button(
-                        p,
-                        &tf,
-                        &format!("Rejoin Last Match ({addr})"),
-                        BUTTON_WARN_BG,
-                        RejoinButton,
-                    );
-                }
-
-                // Everything driven by an in-process match thread (vs Bot,
-                // Draft, Spectate, Audit) or the local filesystem (debug
-                // state) is native-only: wasm has no threads to run the
-                // match on, so the browser build is online (lobby) play.
-                let native = cfg!(not(target_arch = "wasm32"));
-
-                // Play vs Bot
-                if native {
-                    button(p, &tf, "Play vs Bot", BUTTON_PRIMARY_BG, PlayBotButton);
-
-                    // Draft — opens the 8-seat booster draft for the
-                    // selected format (Cube or SoS). Modern / Commander
-                    // fall back to the Cube pool.
-                    button(p, &tf, "Draft (Cube / SoS)", BUTTON_INFO_BG, DraftButton);
-
-                    // Spectate Bot vs Bot
-                    button(
-                        p,
-                        &tf,
-                        "Spectate Bot vs Bot",
-                        BUTTON_ACCENT_BG,
-                        SpectateBotsButton,
-                    );
-
-                    // Load Debug State (most recent file in <repo>/debug/)
-                    button(
-                        p,
-                        &tf,
-                        "Load Latest Debug State",
-                        BUTTON_DANGER_BG,
-                        LoadDebugStateButton,
-                    );
-
-                    // Audit Cards — opens the card picker for verifying
-                    // individual card implementations one-by-one.
-                    button(
-                        p,
-                        &tf,
-                        "Audit Cards",
-                        BUTTON_ACCENT_BG,
-                        AuditCardsButton,
-                    );
-                }
-
-                // Settings — window mode / resolution, quality, gameplay.
-                button(
-                    p,
-                    &tf,
-                    "Settings",
-                    theme::BUTTON_NEUTRAL_BG,
-                    crate::systems::settings_menu::OpenSettingsButton,
-                );
-
-                // Import a decklist (Arena / MTGO text format) and play
-                // it against the bot — from the file the field names, or
-                // off the clipboard (`deck_import`); the two buttons share a
-                // row because the menu already fills a 768-px-high screen.
-                // Status feedback renders below, the full problem list in
-                // the import report. (Native-only: file path + in-process
-                // match.)
-                if native { p.spawn(Node {
-                    flex_direction: FlexDirection::Column,
+                // The two ways to play, side by side. Green starts a game
+                // against the bot now; blue opens another mode.
+                p.spawn(Node {
+                    flex_direction: FlexDirection::Row,
                     align_items: AlignItems::Stretch,
-                    row_gap: Val::Px(6.0),
-                    width: Val::Px(360.0),
+                    column_gap: Val::Px(16.0),
+                    width: Val::Percent(100.0),
                     ..default()
                 })
-                .with_children(|imp| {
-                    imp.spawn(Node { flex_direction: FlexDirection::Row, column_gap: Val::Px(6.0), ..default() })
-                        .with_children(|row| {
-                            wide_button(row, &tf, "Play Deck File", crate::deck_import::ImportDeckButton);
-                            wide_button(row, &tf, "Play Pasted Deck", crate::deck_import::PasteDeckButton);
+                .with_children(|cols| {
+                    if native {
+                        section(cols, &tf, "Play", |s| {
+                            button(s, &tf, "Play vs Bot", BUTTON_PRIMARY_BG, PlayBotButton);
+                            // Draft — the 8-seat booster draft for the
+                            // selected format (Cube or SoS). Modern /
+                            // Commander fall back to the Cube pool.
+                            button(s, &tf, "Draft (Cube / SoS)", BUTTON_INFO_BG, DraftButton);
+                            button(s, &tf, "Spectate Bot vs Bot", BUTTON_INFO_BG, SpectateBotsButton);
+                            // Import a decklist (Arena / MTGO text format)
+                            // and play it against the bot — from the file
+                            // the field names, or off the clipboard
+                            // (`deck_import`). Status feedback renders
+                            // below, the full problem list in the import
+                            // report.
+                            s.spawn((
+                                Text::new("Your own decklist"),
+                                tf(12.0),
+                                TextColor(theme::TEXT_SECONDARY),
+                                Node { margin: UiRect::top(Val::Px(6.0)), ..default() },
+                            ));
+                            s.spawn(Node { flex_direction: FlexDirection::Row, column_gap: Val::Px(6.0), ..default() })
+                                .with_children(|row| {
+                                    wide_button(row, &tf, "From File", crate::deck_import::ImportDeckButton);
+                                    wide_button(row, &tf, "From Clipboard", crate::deck_import::PasteDeckButton);
+                                });
+                            field(s, &tf, "Deck file:", FocusedField::DeckPath);
                         });
-                    field(imp, &tf, "Deck file:", FocusedField::DeckPath);
-                }); }
-
-                // Display name (shown to other players in lobbies).
-                p.spawn(Node {
-                    flex_direction: FlexDirection::Column,
-                    align_items: AlignItems::Stretch,
-                    row_gap: Val::Px(6.0),
-                    width: Val::Px(280.0),
-                    ..default()
-                })
-                .with_children(|name| {
-                    field(name, &tf, "Name:", FocusedField::PlayerName);
+                    }
+                    section(cols, &tf, "Online", |s| {
+                        // Rejoin — offered only when a crash left a
+                        // persisted resume token behind (a clean exit
+                        // clears it).
+                        if let Some((addr, _, _)) = load_persisted_resume() {
+                            button(s, &tf, &format!("Rejoin Last Match ({addr})"), BUTTON_WARN_BG, RejoinButton);
+                        }
+                        // Display name (shown to other players in lobbies).
+                        field(s, &tf, "Name:", FocusedField::PlayerName);
+                        // Host LAN (native-only: browsers can't listen on TCP).
+                        if native {
+                            button(s, &tf, "Host LAN Game", BUTTON_INFO_BG, HostButton);
+                            field(s, &tf, "Port:", FocusedField::HostPort);
+                        }
+                        button(s, &tf, "Join LAN Game", BUTTON_INFO_BG, JoinButton);
+                        field(s, &tf, "Server:", FocusedField::JoinAddr);
+                    });
                 });
 
-                // Host LAN (native-only: browsers can't listen on TCP).
-                if native { p.spawn(Node {
-                    flex_direction: FlexDirection::Column,
-                    align_items: AlignItems::Stretch,
-                    row_gap: Val::Px(6.0),
-                    width: Val::Px(280.0),
-                    ..default()
-                })
-                .with_children(|host| {
-                    button(host, &tf, "Host LAN Game", BUTTON_INFO_BG, HostButton);
-                    field(
-                        host,
-                        &tf,
-                        "Port:",
-                        FocusedField::HostPort,
-                    );
-                }); }
-
-                // Join LAN
-                p.spawn(Node {
-                    flex_direction: FlexDirection::Column,
-                    align_items: AlignItems::Stretch,
-                    row_gap: Val::Px(6.0),
-                    width: Val::Px(280.0),
-                    ..default()
-                })
-                .with_children(|join| {
-                    button(join, &tf, "Join LAN Game", BUTTON_WARN_BG, JoinButton);
-                    field(
-                        join,
-                        &tf,
-                        "Server:",
-                        FocusedField::JoinAddr,
-                    );
-                });
+                // Settings, and the developer tools, out of the way.
+                p.spawn(Node { flex_direction: FlexDirection::Row, column_gap: Val::Px(8.0), ..default() })
+                    .with_children(|row| {
+                        small_button(row, &tf, "Settings", crate::systems::settings_menu::OpenSettingsButton);
+                        if native {
+                            // Audit Cards — the card picker for verifying
+                            // individual card implementations one by one.
+                            small_button(row, &tf, "Audit Cards", AuditCardsButton);
+                            // The most recent file in <repo>/debug/.
+                            small_button(row, &tf, "Load Latest Debug State", LoadDebugStateButton);
+                        }
+                    });
 
                 p.spawn((
                     Text::new("Click a text field to edit. Backspace deletes, Ctrl+V pastes."),
@@ -1174,7 +1122,7 @@ fn spawn_menu(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                     Text::new(""),
                     tf(12.0),
                     TextColor(theme::ACCENT_ORANGE),
-                    Node { max_width: Val::Px(504.0), ..default() },
+                    Node { max_width: Val::Px(MENU_W - 2.0 * MENU_PAD), ..default() },
                     MenuStatusText,
                 ));
 
@@ -1182,11 +1130,55 @@ fn spawn_menu(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                     Text::new(""),
                     tf(11.0),
                     TextColor(theme::TEXT_SECONDARY),
-                    Node { max_width: Val::Px(504.0), ..default() },
+                    Node { max_width: Val::Px(MENU_W - 2.0 * MENU_PAD), ..default() },
                     DownloadProgressText,
                 ));
             });
         });
+}
+
+/// A titled group of menu actions: a raised panel taking an equal share of
+/// its row, its buttons and fields stretched to its width.
+fn section(
+    parent: &mut ChildSpawnerCommands,
+    tf: &impl Fn(f32) -> TextFont,
+    title: &str,
+    body: impl FnOnce(&mut ChildSpawnerCommands),
+) {
+    parent
+        .spawn((
+            Node {
+                flex_direction: FlexDirection::Column,
+                flex_grow: 1.0,
+                flex_basis: Val::Px(0.0),
+                align_items: AlignItems::Stretch,
+                row_gap: Val::Px(8.0),
+                padding: UiRect::all(Val::Px(14.0)),
+                border_radius: BorderRadius::all(RADIUS_PANEL),
+                ..default()
+            },
+            BackgroundColor(theme::PANEL_BG_RAISED),
+        ))
+        .with_children(|s| {
+            s.spawn((Text::new(title), tf(15.0), TextColor(theme::ACCENT_GOLD)));
+            body(s);
+        });
+}
+
+/// A small neutral button for the menu's tools row.
+fn small_button<M: Component>(parent: &mut ChildSpawnerCommands, tf: &impl Fn(f32) -> TextFont, label: &str, marker: M) {
+    parent.spawn((
+        Button,
+        Node {
+            padding: UiRect::axes(Val::Px(14.0), Val::Px(6.0)),
+            border_radius: BorderRadius::all(RADIUS_BUTTON),
+            ..default()
+        },
+        BackgroundColor(theme::BUTTON_NEUTRAL_BG),
+        HoverTint::new(theme::BUTTON_NEUTRAL_BG),
+        marker,
+        children![(Text::new(label), tf(13.0), TextColor(theme::TEXT_PRIMARY), Pickable::IGNORE)],
+    ));
 }
 
 fn button<M: Component>(

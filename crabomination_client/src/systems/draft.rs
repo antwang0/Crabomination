@@ -476,7 +476,7 @@ struct OpponentChoiceButton {
 struct ConfirmDeckButton;
 
 /// "Save Deck" on the deckbuilding screen — writes the staged main +
-/// sideboard as decklist text a later "Play Deck File" can re-import.
+/// sideboard as decklist text a later decklist "From File" can re-import.
 #[derive(Component)]
 struct SaveDeckButton;
 
@@ -2370,6 +2370,7 @@ fn update_draft_alt_tooltip(
     windows: Query<&Window>,
     hovered: Query<(&Interaction, &DraftCardName)>,
     mut tooltip: Query<(&mut Text, &mut Node), With<DraftAltTooltip>>,
+    ui_scale: Res<UiScale>,
 ) {
     let Ok((mut text, mut node)) = tooltip.single_mut() else { return };
     let alt_held = keys.pressed(KeyCode::AltLeft) || keys.pressed(KeyCode::AltRight);
@@ -2386,6 +2387,7 @@ fn update_draft_alt_tooltip(
             {
                 // Offset slightly so the tooltip doesn't sit under the
                 // cursor and steal hover hits from neighbouring tiles.
+                let cursor = cursor / ui_scale.0;
                 node.left = Val::Px(cursor.x + 14.0);
                 node.top = Val::Px(cursor.y + 14.0);
             }

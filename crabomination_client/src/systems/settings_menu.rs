@@ -1,5 +1,5 @@
-//! Main-menu Settings panel — window mode / resolution, render quality,
-//! animation speed, and hand sorting, all persisted through
+//! Main-menu Settings panel — window mode / resolution, render quality, UI
+//! size, animation speed, and hand sorting, all persisted through
 //! `config::ConfigStore` so they survive restarts.
 //!
 //! Lives in `AppState::Menu` (the in-game Esc panel keeps its quality +
@@ -34,6 +34,7 @@ pub enum SettingRow {
     Resolution,
     Maximize,
     Quality,
+    UiSize,
     AnimSpeed,
     SortHand,
 }
@@ -125,6 +126,7 @@ fn spawn_panel(commands: &mut Commands, ui_fonts: &UiFonts) {
             SettingRow::Resolution,
             SettingRow::Maximize,
             SettingRow::Quality,
+            SettingRow::UiSize,
             SettingRow::AnimSpeed,
             SettingRow::SortHand,
         ] {
@@ -182,6 +184,7 @@ pub fn update_setting_labels(
     store: Res<ConfigStore>,
     quality: Res<RenderQuality>,
     speed: Res<AnimationSpeed>,
+    ui_scale: Res<UiScale>,
     rows: Query<(&SettingRow, &Children)>,
     mut texts: Query<&mut Text>,
 ) {
@@ -203,6 +206,7 @@ pub fn update_setting_labels(
                 if g.maximize_on_launch { "On" } else { "Off" }
             ),
             SettingRow::Quality => format!("Render quality:  {}", quality.label()),
+            SettingRow::UiSize => format!("UI size:  {}", ui_size_label(g.ui_size, ui_scale.0)),
             SettingRow::AnimSpeed => format!("Animation speed:  {:.1}×", speed.0),
             SettingRow::SortHand => format!(
                 "Sort hand:  {}",
@@ -216,6 +220,19 @@ pub fn update_setting_labels(
                 t.0 = label.clone();
             }
         }
+    }
+}
+
+/// The UI size: the chosen size, and the size it comes to in this window
+/// (`scale`, the live `UiScale`) when that differs — always for Auto, and
+/// for a size the window is too small for (`theme::ui_scale_for`). The
+/// in-game Esc menu's button reads this; the Settings row prefixes it.
+pub(crate) fn ui_size_label(percent: u16, scale: f32) -> String {
+    let now = (scale * 100.0).round() as u16;
+    match percent {
+        0 => format!("Auto ({now} %)"),
+        p if p == now => format!("{p} %"),
+        p => format!("{p} % ({now} % in this window)"),
     }
 }
 
@@ -283,6 +300,11 @@ pub fn handle_setting_rows(
                 let next = all[(idx + 1) % all.len()];
                 quality_msgs.write(ChangeQuality(next));
                 store.0.graphics.render_quality = next;
+                dirty = true;
+            }
+            SettingRow::UiSize => {
+                // `update_ui_scale_from_window` applies it next frame.
+                store.0.graphics.ui_size = theme::next_ui_size(store.0.graphics.ui_size);
                 dirty = true;
             }
             SettingRow::AnimSpeed => {

@@ -139,7 +139,7 @@ pub struct GameplayConfig {
     pub player_name: String,
     /// Last-used "join address" menu field. Empty = default.
     pub join_addr: String,
-    /// Last-used decklist path for "Play Deck File". Empty = default.
+    /// Last-used decklist path for the menu's decklist "From File". Empty = default.
     pub deck_path: String,
     /// Animation playback speed multiplier (the in-game `[` / `]` keys and
     /// slider persist here). Default: 1.0.
@@ -267,6 +267,10 @@ pub struct GraphicsConfig {
     pub key_light_illuminance: f32,
     /// Fill directional light illuminance (lux). Default: 1500.
     pub fill_light_illuminance: f32,
+    /// Size of the 2-D UI — every panel, button and label — in percent;
+    /// 0 = Auto, which grows past 100 % on a window taller than 1080
+    /// logical px (`theme::ui_scale_for`). Default: Auto.
+    pub ui_size: u16,
 }
 
 impl Default for GraphicsConfig {
@@ -282,6 +286,7 @@ impl Default for GraphicsConfig {
             ambient_brightness: 600.0,
             key_light_illuminance: 3500.0,
             fill_light_illuminance: 1500.0,
+            ui_size: 0,
         }
     }
 }
