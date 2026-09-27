@@ -522,8 +522,7 @@ pub fn wayta_trainer_prodigy() -> CardDefinition {
 }
 
 /// Wrathful Raptors — trample; a Dinosaur you control dealt damage deals
-/// that much to any target that isn't a Dinosaur. Residual: damage that
-/// kills the Raptors in the same event doesn't trigger them.
+/// that much to any target that isn't a Dinosaur.
 pub fn wrathful_raptors() -> CardDefinition {
     let not_dino = || dinosaur().negate();
     CardDefinition {

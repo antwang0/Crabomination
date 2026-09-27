@@ -23613,12 +23613,15 @@ impl GameState {
                 // `PermanentSacrificed`/`CreatureSacrificed` ("when you
                 // sacrifice this") all fire from LKI — the source has left
                 // the battlefield by dispatch.
-                let lki_self = matches!(
-                    ta.event.kind,
-                    crate::effect::EventKind::DealtDamage
-                        | crate::effect::EventKind::PermanentSacrificed
-                        | crate::effect::EventKind::CreatureSacrificed
-                ) && ta.event.scope == crate::effect::EventScope::SelfSource
+                // CR 603.10 — any-scope `DealtDamage` too: a watcher killed by
+                // the same damage existed just after it (Wrathful Raptors).
+                let lki_self = ta.event.kind == crate::effect::EventKind::DealtDamage
+                    && ta.event.scope != crate::effect::EventScope::EnchantedBySource
+                    || matches!(
+                        ta.event.kind,
+                        crate::effect::EventKind::PermanentSacrificed
+                            | crate::effect::EventKind::CreatureSacrificed
+                    ) && ta.event.scope == crate::effect::EventScope::SelfSource
                     // A *granted* "when this dies" also needs the LKI path; the
                     // printed one already fires through the battlefield walk.
                     || is_granted

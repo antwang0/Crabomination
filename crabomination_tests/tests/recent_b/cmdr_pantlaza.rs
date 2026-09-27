@@ -231,3 +231,37 @@ fn dinosaur_egg_evolves_then_discovers() {
     assert!(g.battlefield_find(egg).is_none());
     assert!(!g.players[0].library.iter().any(|c| c.id == found), "the Raptor (MV 4) was discovered");
 }
+
+/// CR 603.10 — the objects checked for a trigger are the ones that exist just
+/// *after* the event, and a creature dealt lethal damage is still there then
+/// (it dies to the later SBA). Wrathful Raptors dealt lethal damage — or
+/// watching a Dinosaur that is — still sends that damage on.
+#[test]
+fn cr_603_10_wrathful_raptors_triggers_on_lethal_damage() {
+    let mut g = main_phase(2);
+    let raptors = g.add_card_to_battlefield(0, catalog::wrathful_raptors());
+    g.battlefield_find_mut(raptors).unwrap().damage = 4;
+    let life = g.players[1].life;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Player(1))]));
+    shock(&mut g, raptors);
+    assert!(g.battlefield_find(raptors).is_none(), "the Raptors died");
+    assert_eq!(g.players[1].life, life - 2, "their own lethal damage still went on");
+}
+
+/// CR 603.10 — the other half: a small Dinosaur shocked to death still
+/// triggers the living Raptors.
+#[test]
+fn cr_603_10_wrathful_raptors_sees_a_dinosaur_die_to_its_damage() {
+    let mut g = main_phase(2);
+    g.add_card_to_battlefield(0, catalog::wrathful_raptors());
+    let egg = g.add_card_to_battlefield(0, catalog::dinosaur_egg());
+    g.battlefield_find_mut(egg).unwrap().damage = 2;
+    let life = g.players[1].life;
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Target(Target::Player(1)),
+        DecisionAnswer::Bool(false),
+    ]));
+    shock(&mut g, egg);
+    assert!(g.battlefield_find(egg).is_none(), "the Egg died");
+    assert_eq!(g.players[1].life, life - 2);
+}
