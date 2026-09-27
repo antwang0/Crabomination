@@ -268,18 +268,21 @@ pub fn ferocity() -> CardDefinition {
 }
 
 /// Volcanic Wind — {4}{R}{R}. Damage equal to the board's creature count,
-/// divided as you choose.
+/// divided as you choose; the count is fixed as it is cast.
 pub fn volcanic_wind() -> CardDefinition {
-    sorcery(
-        "Volcanic Wind",
-        cost(&[generic(4), r(), r()]),
-        Effect::DealDamageDivided {
-            total: Value::CountOf(Box::new(Selector::EachPermanent(R::Creature))),
-            filter: R::Creature,
-            max_targets: 6,
-            retaliate_to_source: false,
-        },
-    )
+    CardDefinition {
+        x_as_cast: Some(Value::CountOf(Box::new(Selector::EachPermanent(R::Creature)))),
+        ..sorcery(
+            "Volcanic Wind",
+            cost(&[generic(4), r(), r()]),
+            Effect::DealDamageDivided {
+                total: Value::XFromCost,
+                filter: R::Creature,
+                max_targets: 6,
+                retaliate_to_source: false,
+            },
+        )
+    }
 }
 
 /// Puppet's Verdict — {1}{R}{R}. A coin flip decides which half of the board

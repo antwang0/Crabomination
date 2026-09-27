@@ -381,6 +381,29 @@ fn monstrous_onslaught_divides_the_greatest_power() {
     assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none(), "6 split 3/3");
 }
 
+/// CR 601.2d — X is "the greatest power … as you cast this spell": losing the
+/// big creature in response doesn't shrink the damage.
+#[test]
+fn cr_601_2d_monstrous_onslaught_fixes_x_as_it_is_cast() {
+    let mut g = main_phase();
+    let surrak = g.add_card_to_battlefield(0, catalog::surrak_and_goreclaw());
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::monstrous_onslaught());
+    green(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    g.remove_from_battlefield_to_graveyard_raw(surrak);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none(), "6 split 3/3");
+}
+
 /// Surrak and Goreclaw: another nontoken creature enters with a counter,
 /// haste and trample; a token gets only the trample.
 #[test]

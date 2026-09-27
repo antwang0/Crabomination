@@ -151,15 +151,15 @@ pub fn ezuris_predation() -> CardDefinition {
 }
 
 /// Monstrous Onslaught — your biggest creature's power, divided among any
-/// number of target creatures. ⚠ X is read at resolution, not "as you cast
-/// this spell": a pump or removal in response changes it.
+/// number of target creatures. X is fixed as it is cast.
 pub fn monstrous_onslaught() -> CardDefinition {
     CardDefinition {
         name: "Monstrous Onslaught",
         cost: cost(&[generic(3), g(), g()]),
         card_types: vec![CardType::Sorcery],
+        x_as_cast: Some(Value::PowerOf(Box::new(Selector::GreatestPowerYouControl))),
         effect: Effect::DealDamageDivided {
-            total: Value::PowerOf(Box::new(Selector::GreatestPowerYouControl)),
+            total: Value::XFromCost,
             filter: R::Creature,
             max_targets: 8,
             retaliate_to_source: false,

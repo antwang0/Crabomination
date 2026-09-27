@@ -345,11 +345,12 @@ pub fn heros_heirloom() -> CardDefinition {
 }
 
 /// Lifestream's Blessing — draw your greatest power; foretold, gain twice
-/// that. Residual: X is read as it resolves.
+/// that. X is fixed as it is cast.
 pub fn lifestreams_blessing() -> CardDefinition {
-    let x = || Value::GreatestPowerControlled { who: PlayerRef::You };
+    let x = || Value::XFromCost;
     CardDefinition {
         foretell_cost: Some(cost(&[generic(4), g()])),
+        x_as_cast: Some(Value::GreatestPowerControlled { who: PlayerRef::You }),
         ..spell(
             "Lifestream's Blessing",
             cost(&[generic(4), g(), g()]),
