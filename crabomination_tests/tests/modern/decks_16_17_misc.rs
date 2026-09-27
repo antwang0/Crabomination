@@ -1784,8 +1784,10 @@ fn sentinel_of_the_nameless_city_ward_counters_unpaid_spell() {
     );
 }
 
+/// Sylvan Safekeeper — "Sacrifice a land: target creature you control gains
+/// shroud" (it sacrificed only a Forest and reached any creature).
 #[test]
-fn sylvan_safekeeper_cannot_activate_without_a_forest() {
+fn sylvan_safekeeper_cannot_activate_without_a_land() {
     use crabomination::game::types::Target;
     let mut g = two_player_game();
     let sk = g.add_card_to_battlefield(0, catalog::sylvan_safekeeper());
@@ -1799,11 +1801,23 @@ fn sylvan_safekeeper_cannot_activate_without_a_forest() {
         additional_targets: Vec::new(),
         x_value: None, mode: None,
     });
-    assert!(res.is_err(), "no Forest to sacrifice → activation rejected");
+    assert!(res.is_err(), "no land to sacrifice → activation rejected");
     use crabomination::card::Keyword;
-    let computed = g.compute_battlefield();
-    let view = computed.iter().find(|c| c.id == bear).unwrap();
-    assert!(!view.keywords().contains(&Keyword::Shroud), "no shroud granted");
+    assert!(!g.permanent_has_keyword(bear, &Keyword::Shroud), "no shroud granted");
+    // Any land pays; an opponent's creature is not a legal target.
+    let plains = g.add_card_to_battlefield(0, catalog::plains());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let activate = |g: &mut GameState, t| {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: sk, ability_index: 0, target: Some(Target::Permanent(t)),
+            additional_targets: Vec::new(), x_value: None, mode: None,
+        })
+    };
+    assert!(activate(&mut g, theirs).is_err(), "target creature YOU control");
+    activate(&mut g, bear).expect("a Plains pays");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(plains).is_none(), "sacrificed");
+    assert!(g.permanent_has_keyword(bear, &Keyword::Shroud));
 }
 
 #[test]

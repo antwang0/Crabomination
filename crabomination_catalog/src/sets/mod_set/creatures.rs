@@ -987,16 +987,11 @@ pub fn tishanas_tidebinder() -> CardDefinition {
     }
 }
 
-/// Sylvan Safekeeper — {G}, 1/1 Human Wizard. Sacrifice a Forest: Target
-/// creature gains shroud until end of turn.
-///
-/// The "Sacrifice a Forest" cost is now a proper pre-resolution
-/// activation cost via `sac_other_filter: Some((Forest, 1))` — the
-/// engine gates the activation on the controller actually owning a
-/// Forest to sacrifice (rejecting cleanly otherwise) instead of folding
-/// the sacrifice into resolution.
+/// Sylvan Safekeeper — {G}, 1/1 Human Wizard. Sacrifice a land: target
+/// creature you control gains shroud until end of turn. (It shipped as
+/// "sacrifice a Forest" over any creature.)
 pub fn sylvan_safekeeper() -> CardDefinition {
-    use crate::card::{ActivatedAbility, LandType};
+    use crate::card::ActivatedAbility;
     use crate::effect::Duration;
     use crate::effect::shortcut::target_filtered;
     CardDefinition {
@@ -1015,7 +1010,7 @@ pub fn sylvan_safekeeper() -> CardDefinition {
             tap_cost: false,
             mana_cost: ManaCost::default(),
             effect: Effect::GrantKeyword {
-                what: target_filtered(SelectionRequirement::Creature),
+                what: target_filtered(SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou)),
                 keyword: Keyword::Shroud,
                 duration: Duration::EndOfTurn,
             },
@@ -1028,11 +1023,7 @@ pub fn sylvan_safekeeper() -> CardDefinition {
             exile_self_cost: false,
             exile_other_filter: None,
             self_counter_cost_reduction: None,
-            // Sacrifice a Forest as an activation cost.
-            sac_other_filter: Some((
-                SelectionRequirement::Land.and(SelectionRequirement::HasLandType(LandType::Forest)),
-                1,
-            )),
+            sac_other_filter: Some((SelectionRequirement::Land, 1)),
             tap_other_filter: None,
             from_hand: false,
             ..Default::default()
