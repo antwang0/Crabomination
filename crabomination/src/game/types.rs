@@ -2738,8 +2738,9 @@ pub enum GameEvent {
     /// from `LifeLost`, which also fires for damage and drains.
     PaidLife { player: usize, amount: u32 },
     /// CR 701.22/701.42 — `player` scried or surveiled (a nonzero peek).
-    /// `surveil` distinguishes the two for surveil-only / scry-only payoffs.
-    ScriedOrSurveiled { player: usize, surveil: bool },
+    /// `surveil` distinguishes the two for surveil-only / scry-only payoffs;
+    /// `looked_at` is the trigger amount ("for each card looked at").
+    ScriedOrSurveiled { player: usize, surveil: bool, looked_at: u32 },
     /// CR 701.34 — `player` proliferated (once per proliferate instance;
     /// a doubled proliferate emits two events).
     Proliferated { player: usize },

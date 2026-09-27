@@ -1884,7 +1884,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Kamiz, Obscura Oculus | Obscura Operation (NCC) | the lesser-power attacker given double strike is the engine's pick. |
 | 🟡 Obscura Confluence | Obscura Operation (NCC) | the third mode returns a creature card from your graveyard (the engine's pick), not a target player's choice. |
 | 🟡 Oskar, Rubbish Reclaimer | Obscura Operation (NCC) | the discarded card may be cast from the graveyard until end of turn rather than right away. |
-| 🟡 Celeborn the Wise | Elven Council (LTC) | +1/+1 per scry or surveil, not per card looked at. |
 | 🟡 Elrond of the White Council | Elven Council (LTC) | the voter's creature is the engine's pick, and it may attack its owner. |
 | 🟡 Gandalf, Westward Voyager | Elven Council (LTC) | the opponents' top cards are read, not revealed. |
 | 🟡 Mirkwood Trapper | Elven Council (LTC) | the shrunk attacker is the first one declared, not a target. |

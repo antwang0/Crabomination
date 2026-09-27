@@ -152,9 +152,8 @@ pub fn asceticism() -> CardDefinition {
     }
 }
 
-/// Celeborn the Wise — attacking with Elves, scry 1; scrying grows it.
-///
-/// ⚠ Residual: +1/+1 per scry or surveil, not per card looked at.
+/// Celeborn the Wise — attacking with Elves, scry 1; whenever you scry it gets
+/// +1/+1 for each card looked at.
 pub fn celeborn_the_wise() -> CardDefinition {
     legendary(CardDefinition {
         triggered_abilities: vec![
@@ -164,11 +163,11 @@ pub fn celeborn_the_wise() -> CardDefinition {
                 effect: scry(PlayerRef::You, Value::ONE),
             },
             TriggeredAbility {
-                event: EventSpec::new(EventKind::ScriedOrSurveiled, EventScope::YourControl),
+                event: EventSpec::new(EventKind::Scried, EventScope::YourControl),
                 effect: Effect::PumpPT {
                     what: Selector::This,
-                    power: Value::ONE,
-                    toughness: Value::ONE,
+                    power: Value::TriggerEventAmount,
+                    toughness: Value::TriggerEventAmount,
                     duration: Duration::EndOfTurn,
                 },
             },

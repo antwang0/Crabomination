@@ -26715,7 +26715,7 @@ impl GameState {
                     // (Matoya). Emitted here so both the synchronous and the
                     // suspended (human) resolution paths report it; RearrangeTop
                     // (Index/Spire Owl) is deliberately excluded.
-                    GameEvent::ScriedOrSurveiled { player, surveil: false },
+                    GameEvent::ScriedOrSurveiled { player, surveil: false, looked_at: count as u32 },
                 ])
             }
             PendingEffectState::RearrangePeeked { count, player } => {
@@ -26799,7 +26799,7 @@ impl GameState {
                     lib.insert(0, c);
                 }
                 out.push(GameEvent::SurveilPerformed { player, looked_at: count, graveyarded });
-                out.push(GameEvent::ScriedOrSurveiled { player, surveil: true });
+                out.push(GameEvent::ScriedOrSurveiled { player, surveil: true, looked_at: count as u32 });
                 Ok(out)
             }
             PendingEffectState::LearnPending { player } => {
@@ -28885,6 +28885,8 @@ impl GameState {
                 .map(|c| c.counter_count(crate::card::CounterType::Age))
                 .unwrap_or(0),
             GameEvent::BecameMonstrous { n, .. } => *n,
+            // Celeborn the Wise — "for each card looked at while scrying".
+            GameEvent::ScriedOrSurveiled { looked_at, .. } => *looked_at,
             // Nicanzil: 1 when a land was explored, 0 for a nonland.
             GameEvent::Explored { explored_land, .. } => *explored_land as u32,
             _ => event_amount(ev),

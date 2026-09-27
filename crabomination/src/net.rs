@@ -3015,7 +3015,7 @@ impl From<&GameEvent> for GameEventWire {
                 player: *player,
                 amount: *amount,
             },
-            GameEvent::ScriedOrSurveiled { player, surveil } => {
+            GameEvent::ScriedOrSurveiled { player, surveil, .. } => {
                 GameEventWire::ScriedOrSurveiled { player: *player, surveil: *surveil }
             }
             GameEvent::Proliferated { player } => {

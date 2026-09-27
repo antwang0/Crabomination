@@ -1001,3 +1001,25 @@ fn primeval_spawn_casts_spells_totalling_ten() {
     let bears = g.battlefield.iter().filter(|c| c.definition.name == "Grizzly Bears").count();
     assert_eq!(bears, 5, "five two-drops total ten");
 }
+
+/// Celeborn the Wise — "Whenever you scry, Celeborn gets +1/+1 until end of
+/// turn for each card looked at while scrying this way": scry 2 is +2/+2, and
+/// a surveil is not a scry.
+#[test]
+fn celeborn_grows_per_card_scried() {
+    use crabomination::effect::{Effect, PlayerRef, Value};
+    let mut g = main_phase();
+    let celeborn = g.add_card_to_battlefield(0, catalog::celeborn_the_wise());
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    let ev = g.resolve_effect(&Effect::Surveil { who: PlayerRef::You, amount: Value::Const(1) }, &ctx).expect("surveil");
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(celeborn).unwrap().power, 3, "surveil isn't scry");
+    let ev = g.resolve_effect(&Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) }, &ctx).expect("scry");
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(celeborn).unwrap().power, 5);
+}
