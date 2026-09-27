@@ -4,6 +4,11 @@
 //! census never activated one. The bot now spends idle first-main mana on one,
 //! aimed at its biggest ready attacker that lacks the keyword. Commander games
 //! only, so two-player play is unchanged.
+//!
+//! Haste grants had the same gap (a 6-seat `--a dflt` census, seed 1360001:
+//! Flamekin Village, Crashing Drawbridge, Otepec Huntmaster, Skyship Stalker
+//! never activated): [`pick_haste_grant`] gives haste to the biggest creature
+//! that entered this turn (CR 302.6, 702.10b), so it can join the attack.
 
 use crate::card::{Keyword, KeywordSlice};
 use crate::effect::{Duration, Effect, Selector};
@@ -85,6 +90,74 @@ pub(super) fn pick_evasion_grant(state: &GameState, seat: usize) -> Option<GameA
     None
 }
 
+/// Whom a haste grant in `e` reaches, if `e` is one.
+fn haste_reach(e: &Effect) -> Option<&Selector> {
+    match e {
+        Effect::GrantKeyword { what, keyword: Keyword::Haste, duration: Duration::EndOfTurn } => Some(what),
+        _ => None,
+    }
+}
+
+/// The first accepted haste grant that lets `seat`'s biggest summoning-sick
+/// creature attack this turn, in `seat`'s first main phase of a Commander
+/// game.
+pub(super) fn pick_haste_grant(state: &GameState, seat: usize) -> Option<GameAction> {
+    if state.players[seat].commanders.is_empty()
+        || state.step != TurnStep::PreCombatMain
+        || state.active_player_idx != seat
+        || !state.stack.is_empty()
+    {
+        return None;
+    }
+    let mut sick: Vec<(i32, crate::card::CardId)> = state
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == seat && c.summoning_sick && c.definition.is_creature())
+        .filter_map(|c| {
+            let cp = state.computed_permanent(c.id)?;
+            let kws = cp.keywords();
+            (!kws.has_kw(&Keyword::Haste) && !kws.has_kw(&Keyword::Defender) && cp.power > 0)
+                .then_some((cp.power, c.id))
+        })
+        .collect();
+    if sick.is_empty() {
+        return None;
+    }
+    sick.sort_by_key(|(power, id)| (std::cmp::Reverse(*power), *id));
+    for c in state.battlefield.iter().filter(|c| c.controller == seat) {
+        for (i, ab) in c.definition.activated_abilities.iter().enumerate() {
+            let Some(what) = haste_reach(&ab.effect) else { continue };
+            if ab.sac_cost || ab.sac_other_filter.is_some() || ab.discard_cost.is_some() || ab.life_cost > 0 {
+                continue;
+            }
+            let aims: Vec<Option<Target>> = match what {
+                Selector::Target(0) | Selector::TargetFiltered { slot: 0, .. } => {
+                    sick.iter().map(|&(_, id)| Some(Target::Permanent(id))).collect()
+                }
+                // "This creature gains haste", on a sick source; a board-wide
+                // grant, when a sick creature is ours.
+                Selector::This if sick.iter().any(|&(_, id)| id == c.id) => vec![None],
+                Selector::EachPermanent(_) => vec![None],
+                _ => continue,
+            };
+            for target in aims {
+                let action = GameAction::ActivateAbility {
+                    card_id: c.id,
+                    ability_index: i,
+                    target,
+                    additional_targets: Vec::new(),
+                    x_value: None,
+                    mode: None,
+                };
+                if state.would_accept(action.clone()) {
+                    return Some(action);
+                }
+            }
+        }
+    }
+    None
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -113,5 +186,29 @@ mod tests {
             Some(GameAction::ActivateAbility { card_id, target: Some(Target::Permanent(t)), .. })
                 if card_id == passage && t == giant
         ), "the sick Wurm can't attack; the Giant outsizes the Bear");
+    }
+
+    /// CR 702.10b — Flamekin Village gives the Hill Giant cast this turn
+    /// haste in the first main phase; with nothing sick it stays a land.
+    #[test]
+    fn flamekin_village_hastes_a_fresh_creature() {
+        let mut g = crate::game::multi_player_game(3);
+        g.seat_commanders(0, vec![crate::catalog::llanowar_elves()]);
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        let village = g.add_card_to_battlefield(0, crate::catalog::flamekin_village());
+        g.clear_sickness(village);
+        let bear = g.add_card_to_battlefield(0, crate::catalog::grizzly_bears());
+        g.clear_sickness(bear);
+        g.players[0].mana_pool.add(Color::Red, 1);
+        assert!(pick_haste_grant(&g, 0).is_none(), "nothing sick");
+        let giant = g.add_card_to_battlefield(0, crate::catalog::hill_giant());
+        let a = pick_haste_grant(&g, 0).expect("haste");
+        assert!(matches!(a, GameAction::ActivateAbility { card_id, target: Some(Target::Permanent(t)), .. }
+            if card_id == village && t == giant));
+        g.perform_action(a).expect("activate");
+        crate::game::drain_stack(&mut g);
+        assert!(g.computed_permanent(giant).unwrap().keywords().has_kw(&Keyword::Haste));
     }
 }
