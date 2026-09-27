@@ -8440,7 +8440,7 @@ impl GameState {
             // Last hone counter removed — castable from exile for {4} less.
             let mut cost = card.definition.cost.clone();
             cost.reduce_generic(4);
-            card.may_play_until = Some(MayPlayPermission { cast_only: false, locks_further_casts: false,
+            card.may_play_until = Some(MayPlayPermission { cast_only: false, locks_further_casts: false, one_cast_group: None,
                 player: active,
                 granted_turn: turn,
                 duration: MayPlayDuration::EndOfControllersNextTurn,
@@ -20710,7 +20710,7 @@ impl GameState {
             }
             let mut card = self.players[victim].library.remove(0);
             card.face_down = true;
-            card.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false, locks_further_casts: false,
+            card.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false, locks_further_casts: false, one_cast_group: None,
                 player: p,
                 granted_turn: self.turn_number,
                 duration: crate::card::MayPlayDuration::WhileExiled,
@@ -20730,7 +20730,7 @@ impl GameState {
                 return DrawOutcome::Skipped;
             };
             self.players[p].library.remove(0);
-            card.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false, locks_further_casts: false,
+            card.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false, locks_further_casts: false, one_cast_group: None,
                 player: p,
                 granted_turn: self.turn_number,
                 duration: crate::card::MayPlayDuration::EndOfThisTurn,
@@ -21283,7 +21283,7 @@ impl GameState {
         };
         let granted_turn = self.turn_number;
         if let Some(card) = self.players[p].hand.iter_mut().find(|c| c.id == card_id) {
-            card.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false, locks_further_casts: false,
+            card.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false, locks_further_casts: false, one_cast_group: None,
                 player: p,
                 granted_turn,
                 // CR 702.94 — the window is the reveal offer, not the whole
@@ -26826,7 +26826,7 @@ impl GameState {
                     out.push(GameEvent::CardPutIntoGraveyard { player, card_id: cid, is_land });
                     out.push(GameEvent::CardSurveiledIntoGraveyard { player, card_id: cid });
                     if eye && let Some(card) = self.players[player].graveyard.iter_mut().find(|c| c.id == cid) {
-                        card.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false, locks_further_casts: false,
+                        card.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false, locks_further_casts: false, one_cast_group: None,
                             player,
                             granted_turn: self.turn_number,
                             duration: crate::card::MayPlayDuration::EndOfThisTurn,
@@ -27447,7 +27447,7 @@ impl GameState {
                         if extra_cost > 0 {
                             taxed.symbols.push(crate::mana::ManaSymbol::Generic(extra_cost));
                         }
-                        card.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false, locks_further_casts: false,
+                        card.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false, locks_further_casts: false, one_cast_group: None,
                             player: owner,
                             granted_turn: turn,
                             duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,

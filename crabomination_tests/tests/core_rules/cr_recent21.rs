@@ -58,7 +58,7 @@ fn cr_601_3a_play_card_exiled_with_grant() {
     let card = g.add_card_to_exile(1, catalog::gutter_skulk()); // {1}{B} 2/2, owned by p1
     {
         let c = g.exile.iter_mut().find(|c| c.id == card).unwrap();
-        c.may_play_until = Some(MayPlayPermission { cast_only: false, locks_further_casts: false,
+        c.may_play_until = Some(MayPlayPermission { cast_only: false, locks_further_casts: false, one_cast_group: None,
             player: 0,
             granted_turn: g.turn_number,
             duration: MayPlayDuration::WhileExiled,

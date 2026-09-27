@@ -9072,6 +9072,10 @@ pub enum Effect {
     /// its caster unable to cast further spells this turn — Conduit of
     /// Worlds' "if you do, you can't cast additional spells this turn".
     LockSpellsAfterGrantedCast { what: Selector },
+    /// Mark the may-play permissions on each card `what` resolves to as one
+    /// group (chain after `GrantMayPlay`): "you may cast a spell from among
+    /// them" — the first cast through any of them consumes the rest.
+    OneCastAmongGranted { what: Selector },
     /// Stamp a conditional surcharge onto cards just granted a may-play
     /// permission (chain after `GrantMayPlay` in a `Seq`): "it costs
     /// [cost] more to cast this way unless the spell targets a permanent

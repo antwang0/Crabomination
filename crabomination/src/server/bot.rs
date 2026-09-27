@@ -27779,7 +27779,7 @@ mod stack_response_tests {
         let theirs = g.add_card_to_exile(1, catalog::lightning_bolt());
         let stamp = |g: &mut GameState, id, player| {
             if let Some(c) = g.exile.iter_mut().find(|c| c.id == id) {
-                c.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false, locks_further_casts: false,
+                c.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false, locks_further_casts: false, one_cast_group: None,
                     player,
                     granted_turn: 0,
                     duration: crate::card::MayPlayDuration::EndOfThisTurn,

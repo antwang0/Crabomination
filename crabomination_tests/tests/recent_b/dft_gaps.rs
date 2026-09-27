@@ -685,7 +685,7 @@ fn a_may_play_grant_lets_you_play_an_exiled_land() {
     let mut g = main_phase();
     let land = g.add_card_to_exile(0, catalog::mountain());
     g.find_card_anywhere_mut(land).unwrap().may_play_until =
-        Some(crabomination::card::MayPlayPermission { cast_only: false, locks_further_casts: false,
+        Some(crabomination::card::MayPlayPermission { cast_only: false, locks_further_casts: false, one_cast_group: None,
             player: 0,
             granted_turn: g.turn_number,
             duration: crabomination::card::MayPlayDuration::WhileExiled,

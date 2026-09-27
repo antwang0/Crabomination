@@ -3563,7 +3563,7 @@ impl GameState {
                 let idx = self.rng.draw().random_range(0..len);
                 let mut card = self.players[seat].hand.remove(idx);
                 card.granted_alt_cast_cost_eot = Some(card.definition.cost.clone());
-                card.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false, locks_further_casts: false,
+                card.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false, locks_further_casts: false, one_cast_group: None,
                     player: seat,
                     granted_turn: self.turn_number,
                     duration: crate::card::MayPlayDuration::EndOfThisTurn,
@@ -5551,7 +5551,7 @@ impl GameState {
                     if card.definition.is_land() {
                         continue; // lands ride the land-play gate
                     }
-                    card.may_play_until = Some(MayPlayPermission { cast_only: false, locks_further_casts: false,
+                    card.may_play_until = Some(MayPlayPermission { cast_only: false, locks_further_casts: false, one_cast_group: None,
                         player: p,
                         granted_turn: turn,
                         duration: MayPlayDuration::EndOfThisTurn,
@@ -13660,7 +13660,7 @@ impl GameState {
                             }
                             _ => unreachable!(),
                         };
-                        card.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false, locks_further_casts: false,
+                        card.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false, locks_further_casts: false, one_cast_group: None,
                             player: granter,
                             granted_turn,
                             // CR 702.94 — a granted miracle window is also
@@ -17987,7 +17987,7 @@ impl GameState {
                     self.move_card_to(cid, &ZoneDest::Exile, ctx, events);
                     if let Some(card) = self.exile.iter_mut().find(|c| c.id == cid) {
                         let owner = card.owner;
-                        card.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false, locks_further_casts: false,
+                        card.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false, locks_further_casts: false, one_cast_group: None,
                             player: owner,
                             granted_turn: turn,
                             duration: crate::card::MayPlayDuration::WhileExiled,
@@ -25559,7 +25559,7 @@ impl GameState {
                     .expect("pick chosen from the top of this library just above");
                 card.exiled_with = ctx.source;
                 card.face_down = true;
-                card.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false, locks_further_casts: false,
+                card.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false, locks_further_casts: false, one_cast_group: None,
                     player: ctx.controller,
                     granted_turn: self.turn_number,
                     duration: crate::card::MayPlayDuration::WhileExiled,
@@ -27501,7 +27501,7 @@ impl GameState {
                         cost.symbols.push(crate::mana::generic(*surcharge));
                     }
                     card.granted_alt_cast_cost_eot = Some(cost);
-                    card.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false, locks_further_casts: false,
+                    card.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false, locks_further_casts: false, one_cast_group: None,
                         player: opp,
                         granted_turn: turn,
                         duration: crate::card::MayPlayDuration::WhileExiled,
@@ -28518,7 +28518,7 @@ impl GameState {
                 let granted_turn = self.turn_number;
                 for id in ids {
                     if let Some(card) = self.exile.iter_mut().find(|c| c.id == id) {
-                        card.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false, locks_further_casts: false,
+                        card.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false, locks_further_casts: false, one_cast_group: None,
                             player: p,
                             granted_turn,
                             duration: crate::card::MayPlayDuration::EndOfThisTurn,
@@ -28867,7 +28867,7 @@ impl GameState {
                 for pos in to_remove {
                     if let StackItem::Spell { mut card, .. } = self.stack.remove(pos) {
                         let card_id = card.id;
-                        card.may_play_until = Some(MayPlayPermission { cast_only: false, locks_further_casts: false,
+                        card.may_play_until = Some(MayPlayPermission { cast_only: false, locks_further_casts: false, one_cast_group: None,
                             player: ctx.controller,
                             granted_turn: self.turn_number,
                             duration: MayPlayDuration::WhileExiled,
@@ -32089,7 +32089,7 @@ impl GameState {
                     card.exiled_with = ctx.source;
                     // "That opponent may cast it without paying its mana cost" —
                     // a free may-play for the opponent while it stays exiled.
-                    card.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false, locks_further_casts: false,
+                    card.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false, locks_further_casts: false, one_cast_group: None,
                         player: opp,
                         granted_turn: self.turn_number,
                         duration: crate::card::MayPlayDuration::WhileExiled,
@@ -36902,7 +36902,7 @@ impl GameState {
                             _ => ctx.controller,
                         };
                         if let Some(card) = self.find_card_anywhere_mut(top_id) {
-                            card.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false, locks_further_casts: false,
+                            card.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false, locks_further_casts: false, one_cast_group: None,
                                 player: grantee,
                                 granted_turn,
                                 duration: duration.bound_to(ctx.controller),
@@ -36976,7 +36976,7 @@ impl GameState {
                     let (card, granted_turn) = card;
                     // Nonland branch: impulse may-play (pay its own cost) until
                     // the end of the controller's next turn.
-                    card.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false, locks_further_casts: false,
+                    card.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false, locks_further_casts: false, one_cast_group: None,
                         player: p,
                         granted_turn,
                         duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
@@ -37002,7 +37002,7 @@ impl GameState {
                     .expect("id read off the top of this library just above");
                 card.exiled_with = ctx.source;
                 card.face_down = true;
-                card.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false, locks_further_casts: false,
+                card.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false, locks_further_casts: false, one_cast_group: None,
                     player: to,
                     granted_turn: self.turn_number,
                     duration: crate::card::MayPlayDuration::WhileExiled,
@@ -37640,7 +37640,7 @@ impl GameState {
                     if playable
                         && let Some(card) = self.find_card_anywhere_mut(id)
                     {
-                        card.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false, locks_further_casts: false,
+                        card.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false, locks_further_casts: false, one_cast_group: None,
                             player: me,
                             granted_turn,
                             duration: crate::card::MayPlayDuration::EndOfThisTurn,
@@ -37918,7 +37918,7 @@ impl GameState {
                         granter_player
                     };
                     if let Some(card) = self.find_card_anywhere_mut(cid) {
-                        card.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false, locks_further_casts: false,
+                        card.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false, locks_further_casts: false, one_cast_group: None,
                             player: recipient,
                             granted_turn,
                             duration: *duration,
@@ -37954,7 +37954,7 @@ impl GameState {
                         _ => continue,
                     };
                     if let Some(card) = self.find_card_anywhere_mut(cid) {
-                        card.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false, locks_further_casts: false,
+                        card.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false, locks_further_casts: false, one_cast_group: None,
                             player,
                             granted_turn,
                             duration: *duration,
@@ -37990,6 +37990,19 @@ impl GameState {
                         && let Some(perm) = card.may_play_until.as_mut()
                     {
                         perm.locks_further_casts = true;
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::OneCastAmongGranted { what } => {
+                let group = ctx.source;
+                for ent in self.resolve_selector(what, ctx) {
+                    let (EntityRef::Card(cid) | EntityRef::Permanent(cid)) = ent else { continue };
+                    if let Some(card) = self.find_card_anywhere_mut(cid)
+                        && let Some(perm) = card.may_play_until.as_mut()
+                    {
+                        perm.one_cast_group = group;
                     }
                 }
                 Ok(())
@@ -38344,7 +38357,7 @@ impl GameState {
                         // (Transforming Flourish); the impulse-draw family
                         // keeps granting to the effect's controller.
                         let grantee = if *grant_to_exiling_player { p } else { ctx.controller };
-                        card.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false, locks_further_casts: false,
+                        card.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false, locks_further_casts: false, one_cast_group: None,
                             player: grantee,
                             granted_turn,
                             duration: *duration,

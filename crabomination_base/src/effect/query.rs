@@ -2120,7 +2120,8 @@ impl Effect {
             Effect::GrantMayPlay { what, .. }
             | Effect::GrantMayPlayForLife { what, .. }
             | Effect::StampMayPlaySurcharge { what, .. }
-            | Effect::LockSpellsAfterGrantedCast { what } => sel_has_target(what),
+            | Effect::LockSpellsAfterGrantedCast { what }
+            | Effect::OneCastAmongGranted { what } => sel_has_target(what),
             Effect::GrantCastBackFromGraveyard { what } => sel_has_target(what),
             Effect::GainActivatedAbility { what, .. } => sel_has_target(what),
             Effect::AddCardTypeIndefinitely { what, .. }
@@ -3126,6 +3127,7 @@ impl Effect {
             | Effect::GrantMayPlayForLife { what, .. }
             | Effect::StampMayPlaySurcharge { what, .. }
             | Effect::LockSpellsAfterGrantedCast { what }
+            | Effect::OneCastAmongGranted { what }
             | Effect::DoubleCountersOnEach { what, .. }
             | Effect::DoubleAllCountersOn { what }
             | Effect::NameCreatureType { what }

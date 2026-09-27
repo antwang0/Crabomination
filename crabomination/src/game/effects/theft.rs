@@ -56,7 +56,7 @@ impl GameState {
     fn grant_any_type_play(&mut self, id: CardId, to: usize) {
         let turn = self.turn_number;
         if let Some(card) = self.exile.iter_mut().find(|c| c.id == id) {
-            card.may_play_until = Some(MayPlayPermission { cast_only: false, locks_further_casts: false,
+            card.may_play_until = Some(MayPlayPermission { cast_only: false, locks_further_casts: false, one_cast_group: None,
                 player: to,
                 granted_turn: turn,
                 duration: MayPlayDuration::WhileExiled,

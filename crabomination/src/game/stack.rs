@@ -5326,7 +5326,7 @@ impl GameState {
                     | crate::card::MayPlayDuration::TurnsHolderAttacksWithACommander { .. }
                     | crate::card::MayPlayDuration::HolderTurnsAfterOpponentLostLife { .. } => {
                         if perm.player != crate::card::MAY_PLAY_DORMANT {
-                            c.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false, locks_further_casts: false,
+                            c.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false, locks_further_casts: false, one_cast_group: None,
                                 player: crate::card::MAY_PLAY_DORMANT,
                                 ..perm
                             });

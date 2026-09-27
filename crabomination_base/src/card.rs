@@ -1248,6 +1248,11 @@ pub struct MayPlayPermission {
     /// `Effect::LockSpellsAfterGrantedCast`.
     #[serde(default)]
     pub locks_further_casts: bool,
+    /// "You may cast a spell from among them": the grants sharing this id
+    /// (the granting source) allow one cast between them — casting one
+    /// clears the rest. Set by `Effect::OneCastAmongGranted`.
+    #[serde(default)]
+    pub one_cast_group: Option<CardId>,
 }
 
 /// CR 122 — the counters on a permanent, in the order they were first added.
