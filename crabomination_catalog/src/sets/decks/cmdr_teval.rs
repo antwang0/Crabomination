@@ -1736,8 +1736,9 @@ pub fn witchs_clinic() -> CardDefinition {
 /// player with the most life or tied for most life. Target creature can't be
 /// blocked by creatures that player controls this turn.
 ///
-/// Approximation: while an opponent has the most life (or is tied for it), the
-/// target can't be blocked at all this turn.
+/// The player is the opponent with the most life (earliest seat among ties)
+/// whenever an opponent has or shares the table's most life; naming yourself
+/// would do nothing, so that case is a no-op.
 pub fn the_black_gate() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],
@@ -1751,10 +1752,13 @@ pub fn the_black_gate() -> CardDefinition {
                     mana_cost: cost(&[generic(1), b()]),
                     tap_cost: true,
                     effect: Effect::If {
-                        cond: Predicate::PlayerHasMostLife { who: PlayerRef::EachOpponent },
-                        then: Box::new(Effect::GrantKeyword {
+                        cond: Predicate::ValueAtLeast(
+                            Value::LifeOf(PlayerRef::HighestLifeOpponent),
+                            Value::LifeOf(PlayerRef::HighestLife),
+                        ),
+                        then: Box::new(Effect::CantBeBlockedByPlayer {
                             what: target_filtered(R::Creature),
-                            keyword: Keyword::Unblockable,
+                            by: PlayerRef::HighestLifeOpponent,
                             duration: Duration::EndOfTurn,
                         }),
                         else_: Box::new(Effect::Noop),

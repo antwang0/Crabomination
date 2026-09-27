@@ -1,7 +1,7 @@
 //! Commander: the Teval, the Balanced Scale batch (`decks::cmdr_teval`), and
 //! the Wretched Ranks precon's missing cards (`decks::cmdr_gisa`), at the end.
 
-use crabomination::card::{CardDefinition, CardId, CardType, CounterType, CreatureType, Keyword};
+use crabomination::card::{CardDefinition, CardId, CardType, CounterType, CreatureType, Keyword, SelectionRequirement};
 use crabomination::catalog;
 use crabomination::game::types::{Attack, AttackTarget, GameAction, Target, TurnStep};
 use crabomination::game::*;
@@ -1175,12 +1175,19 @@ fn cmdr_teval_utility_land_activations() {
     assert!(has_keyword(&g, bears, Keyword::Shadow));
     assert!(g.computed_permanent(bears).unwrap().subtypes().creature_types.contains(&CreatureType::Wraith));
 
-    // The Black Gate: unblockable while an opponent has the most life.
-    let mut g = main_phase();
+    // The Black Gate (CR 509.1b): can't be blocked by creatures the player
+    // with the most life controls — seat 2 here, so seat 1 can still block.
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[2].life = 45;
     let gate = g.add_card_to_battlefield(0, catalog::the_black_gate());
     let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     activate(&mut g, gate, 1, Some(Target::Permanent(bears)));
-    assert!(has_keyword(&g, bears, Keyword::Unblockable));
+    let seat2 = Keyword::CantBeBlockedBy(Box::new(SelectionRequirement::ControlledBySeat(2)));
+    assert!(has_keyword(&g, bears, seat2));
+    assert!(!has_keyword(&g, bears, Keyword::Unblockable));
 }
 
 /// The Dimir mana lands' conditional abilities.
