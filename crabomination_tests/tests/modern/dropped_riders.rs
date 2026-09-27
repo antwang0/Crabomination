@@ -1049,3 +1049,24 @@ fn mirkwood_trapper_shrinks_a_target_attacker() {
     let p = |g: &GameState, c| g.computed_permanent(c).unwrap().power;
     assert_eq!((p(&g, bear), p(&g, wurm)), (2, 4));
 }
+
+/// Ondu Spiritdancer — "Whenever an enchantment you control enters, you may
+/// create a token that's a copy of it. Do this only once each turn": the
+/// second enchantment that turn isn't copied (and isn't asked about).
+#[test]
+fn ondu_spiritdancer_copies_the_entering_enchantment_once_a_turn() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = main_phase();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Bool(true)]));
+    g.add_card_to_battlefield(0, catalog::ondu_spiritdancer());
+    for _ in 0..2 {
+        let e = g.add_card_to_hand(0, catalog::soaring_lightbringer());
+        g.players[0].mana_pool.add(Color::White, 1);
+        g.players[0].mana_pool.add_colorless(4);
+        cast(&mut g, e, None).expect("cast");
+        drain_stack(&mut g);
+    }
+    let count = |n: &str| g.battlefield.iter().filter(|c| c.definition.name == n).count();
+    assert_eq!(count("Ondu Spiritdancer"), 1);
+    assert_eq!(count("Soaring Lightbringer"), 3, "two cast, one copy");
+}
