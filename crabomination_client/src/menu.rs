@@ -596,11 +596,27 @@ pub(crate) struct PodDecks {
 }
 
 impl Default for PodDecks {
-    /// Sigarda for the human, as "Play vs Bot" always dealt, and a random
-    /// deck per bot.
+    /// A random middle-tier deck for the human and a random deck per bot
+    /// (dealt near its power). The human's default used to be Sigarda —
+    /// the first stock deck, and tier 1 under bot play — every launch.
     fn default() -> Self {
-        Self { you: DeckChoice::Stock(0), bots: [DeckChoice::Random; 3] }
+        Self { you: middle_tier_deck(&mut rand::rng()), bots: [DeckChoice::Random; 3] }
     }
+}
+
+/// A stock deck drawn at random from the middle power tier
+/// ([`crabomination::pod::power::MIDDLE`]); the first stock deck if the
+/// table rates none there.
+fn middle_tier_deck(rng: &mut impl rand::Rng) -> DeckChoice {
+    use crabomination::pod::power;
+    use rand::seq::IndexedRandom;
+    let middle: Vec<usize> = crabomination::pod::target_decks()
+        .iter()
+        .enumerate()
+        .filter(|(_, d)| power::tier(d.name) == Some(power::MIDDLE))
+        .map(|(i, _)| i)
+        .collect();
+    DeckChoice::Stock(middle.choose(rng).copied().unwrap_or(0))
 }
 
 impl PodDecks {
@@ -2459,6 +2475,26 @@ mod tests {
         assert_eq!(dealt, names(resolve_pod_decks(&choices, 11, None)));
         // The same fixed deck twice is allowed — a mirror is a choice.
         assert_eq!(names(resolve_pod_decks(&[DeckChoice::Stock(2); 2], 11, None)), ["Hanna (UW)"; 2]);
+    }
+
+    /// The human's default deck is a middle-tier one, and not always the
+    /// same one.
+    #[test]
+    fn the_default_human_deck_is_a_random_middle_tier_deck() {
+        use crabomination::pod::power;
+        use rand::SeedableRng;
+        let mut rng = rand::rngs::StdRng::seed_from_u64(7);
+        let field = crabomination::pod::target_decks();
+        let picks: Vec<usize> = (0..20)
+            .map(|_| match middle_tier_deck(&mut rng) {
+                DeckChoice::Stock(i) => i,
+                DeckChoice::Random => panic!("a fixed pick"),
+            })
+            .collect();
+        for &i in &picks {
+            assert_eq!(power::tier(field[i].name), Some(power::MIDDLE), "{}", field[i].name);
+        }
+        assert!(picks.iter().any(|&i| i != picks[0]), "one deck every time: {picks:?}");
     }
 
     /// With your deck's power as the anchor, every Random bot is dealt a

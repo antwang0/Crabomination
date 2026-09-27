@@ -430,7 +430,7 @@ mod tests {
 
     #[test]
     fn the_menu_label_sums_up_the_bot_picks() {
-        let mut decks = crate::menu::PodDecks::default();
+        let mut decks = crate::menu::PodDecks { you: DeckChoice::Stock(0), ..Default::default() };
         assert_eq!(decks_summary(&decks, 4), "Decks: Sigarda (GW) vs random");
         decks.bots[0] = DeckChoice::Stock(1);
         assert_eq!(decks_summary(&decks, 4), "Decks: Sigarda (GW) vs 1 picked, 2 random");

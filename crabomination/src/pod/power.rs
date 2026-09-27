@@ -10,8 +10,11 @@
 /// Tiers run 1 (weakest) ..= `TIERS` (strongest).
 pub const TIERS: u8 = 5;
 
+/// The middle tier: decks that win about their share (0.75-1.25x).
+pub const MIDDLE: u8 = 3;
+
 /// The tier a deck the table predates is dealt as: the middle.
-pub const UNRATED: u8 = 3;
+pub const UNRATED: u8 = MIDDLE;
 
 /// `name`'s measured six-seat win share, wins per thousand games — `None`
 /// for a deck added since the table was generated.
