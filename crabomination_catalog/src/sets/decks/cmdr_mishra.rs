@@ -153,7 +153,7 @@ pub fn blast_furnace_hellkite() -> CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "Creatures attacking your opponents have double strike.",
             effect: StaticEffect::GrantKeyword {
-                applies_to: Selector::EachPermanent(R::Creature.and(R::IsAttackingAnOpponent)),
+                applies_to: Selector::EachPermanent(R::Creature.and(R::IsAttackingOpponentPlayer)),
                 keyword: Keyword::DoubleStrike,
             },
         }],

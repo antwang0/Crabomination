@@ -323,7 +323,7 @@ pub fn martial_impetus() -> CardDefinition {
             triggered_abilities: vec![on_attack(Effect::PumpPT {
                 // "each other creature": the Aura is the source here, so
                 // "other" is its host.
-                what: Selector::EachPermanent(R::Creature.and(R::IsAttackingAnOpponent).and(R::IsHostOfSource.negate())),
+                what: Selector::EachPermanent(R::Creature.and(R::IsAttackingOpponentPlayer).and(R::IsHostOfSource.negate())),
                 power: Value::ONE,
                 toughness: Value::ONE,
                 duration: Duration::EndOfTurn,

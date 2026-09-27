@@ -258,7 +258,7 @@ pub fn death_kiss() -> CardDefinition {
                 event: EventSpec::new(EventKind::Attacks, EventScope::OpponentControl).with_filter(
                     Predicate::EntityMatches {
                         what: Selector::TriggerSource,
-                        filter: R::IsAttackingAnOpponent,
+                        filter: R::IsAttackingOpponentPlayer,
                     },
                 ),
                 effect: Effect::DoublePower {

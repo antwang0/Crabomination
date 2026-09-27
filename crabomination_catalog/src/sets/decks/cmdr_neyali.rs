@@ -103,7 +103,7 @@ pub fn neyali_suns_vanguard() -> CardDefinition {
             event: EventSpec::new(EventKind::Attacks, EventScope::YourControl)
                 .with_filter(Predicate::EntityMatches {
                     what: Selector::TriggerSource,
-                    filter: R::IsToken.and(R::IsAttackingAnOpponent),
+                    filter: R::IsToken.and(R::IsAttackingOpponentPlayer),
                 })
                 .once_per_batch(),
             effect: Effect::ExileTopAndGrantMayPlay {

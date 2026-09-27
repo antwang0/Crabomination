@@ -2971,6 +2971,7 @@ pub enum SelectionRequirement {
     /// An attacking creature whose defender is an opponent of the evaluating
     /// player or a planeswalker one controls — "creatures attacking your
     /// opponents and/or planeswalkers they control" (Roar of Resistance).
+    /// Plain "attacking one of your opponents" is `IsAttackingOpponentPlayer`.
     IsAttackingAnOpponent,
     /// Attacking an opponent of the evaluating player — the player, not a
     /// planeswalker or battle ("whenever Kaalia attacks an opponent").

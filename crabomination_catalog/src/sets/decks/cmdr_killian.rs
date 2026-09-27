@@ -453,7 +453,7 @@ pub fn scriv_the_obligator() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::EnchantedBySource),
             effect: Effect::If {
-                cond: Predicate::EntityMatches { what: host(), filter: R::IsAttackingAnOpponent },
+                cond: Predicate::EntityMatches { what: host(), filter: R::IsAttackingOpponentPlayer },
                 then: Box::new(Effect::PumpPT {
                     what: host(),
                     power: Value::Const(2),

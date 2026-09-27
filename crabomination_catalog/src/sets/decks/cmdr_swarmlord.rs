@@ -356,7 +356,7 @@ pub fn genestealer_locus() -> CardDefinition {
             },
             TriggeredAbility {
                 event: EventSpec::new(EventKind::Attacks, EventScope::AnyPlayer)
-                    .with_filter(trigger_is(R::IsAttackingAnOpponent)),
+                    .with_filter(trigger_is(R::IsAttackingOpponentPlayer)),
                 effect: pump(0, 1),
             },
         ],

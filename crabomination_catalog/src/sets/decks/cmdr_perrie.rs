@@ -525,7 +525,7 @@ pub fn skyboon_evangelist() -> CardDefinition {
                 event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).with_filter(
                     Predicate::EntityMatches {
                         what: Selector::TriggerSource,
-                        filter: R::WithAnyCounter.and(R::IsAttackingAnOpponent),
+                        filter: R::WithAnyCounter.and(R::IsAttackingOpponentPlayer),
                     },
                 ),
                 effect: Effect::GrantKeyword {

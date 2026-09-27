@@ -130,6 +130,24 @@ fn blast_furnace_hellkite_gives_attackers_double_strike() {
     assert_eq!(g.players[1].life, life - 4);
 }
 
+/// CR 506.3 / 508.1b — "attacking your opponents" is the player: a creature
+/// attacking an opponent's planeswalker doesn't get double strike.
+#[test]
+fn cr_506_3_blast_furnace_hellkite_skips_attackers_of_a_planeswalker() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::blast_furnace_hellkite());
+    let walker = g.add_card_to_battlefield(1, catalog::chandra_torch_of_defiance());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear,
+        target: AttackTarget::Planeswalker(walker),
+    }]))
+    .expect("attack the planeswalker");
+    drain_stack(&mut g);
+    assert!(!g.permanent_has_keyword(bear, &Keyword::DoubleStrike));
+}
+
 /// CR 602.2 — Fain sacrifices a creature for two +1/+1 counters, then turns a
 /// counter into a Treasure; {3}{B} untaps it between the two.
 #[test]
