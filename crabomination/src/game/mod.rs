@@ -17708,7 +17708,7 @@ impl GameState {
                 if let Some(c) = self.battlefield_find_mut(cid)
                     && !c.definition.keywords.contains(&kw)
                 {
-                    c.definition_make_mut().keywords.push(kw);
+                    c.bake_grant().keywords.push(kw);
                 }
             }
             other => self.keyword_layer_effect(

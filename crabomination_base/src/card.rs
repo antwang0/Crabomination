@@ -7931,6 +7931,11 @@ pub struct CardCold {
     /// while `name_stickers` is non-empty. In-memory only: the wire stores
     /// its name plus `name_stickers` and re-applies them on load.
     pub name_sticker_base: Option<Arc<CardDefinition>>,
+    /// CR 400.7 — this permanent's definition before a `Duration::Permanent`
+    /// keyword / trigger grant was baked into it ([`CardInstance::bake_grant`]);
+    /// restored as it leaves the battlefield so the grant ends with the
+    /// object. Any wholesale definition swap drops it. In-memory only.
+    pub pre_grant_definition: Option<Arc<CardDefinition>>,
 }
 
 /// `slice.has_kw(&Keyword::X)` without the out-of-line `Keyword::eq` call.
@@ -9393,6 +9398,30 @@ impl CardData {
         self.definition.memo.clear();
         bump_definition_epoch();
         self.definition.def = def;
+        if self.pre_grant_definition.is_some() {
+            self.pre_grant_definition = None;
+        }
+    }
+
+    /// [`Self::definition_make_mut`] for a grant that lasts as long as this
+    /// permanent does: the first bake stashes the pre-grant definition for
+    /// [`Self::revert_baked_grants`] (CR 400.7).
+    pub fn bake_grant(&mut self) -> &mut CardDefinition {
+        if self.pre_grant_definition.is_none() {
+            self.pre_grant_definition = Some(self.definition.arc());
+        }
+        self.definition_make_mut()
+    }
+
+    /// CR 400.7 — the object that left the battlefield is gone, and with it
+    /// every grant [`Self::bake_grant`] wrote into its definition.
+    pub fn revert_baked_grants(&mut self) {
+        if self.pre_grant_definition.is_none() {
+            return;
+        }
+        if let Some(def) = self.pre_grant_definition.take() {
+            self.set_definition(def);
+        }
     }
 
     /// [`CardDefinition::gather_scan_bits`] for this object, memoized on the

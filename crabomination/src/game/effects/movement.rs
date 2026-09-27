@@ -2957,6 +2957,12 @@ impl GameState {
             // All four are `CardCold` fields; clearing unconditionally would
             // unshare the group for every permanent that leaves the
             // battlefield, and they are empty on nearly all of them.
+            // Keywords and triggers a permanent grant baked into the
+            // definition go too, as does a permanent "loses [keyword]".
+            c.revert_baked_grants();
+            if !c.removed_keywords.is_empty() {
+                c.removed_keywords.clear();
+            }
             if !c.granted_activated_abilities.is_empty()
                 || !c.granted_activated_eot.is_empty()
                 || !c.exhausted_abilities.is_empty()

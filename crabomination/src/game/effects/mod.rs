@@ -16920,8 +16920,8 @@ impl GameState {
 
             Effect::GrantTriggeredAbility { what, trigger, duration } => {
                 // A permanent grant is baked onto the card's own trigger list
-                // via `Arc::make_mut` — a leak-free no-op once the card leaves
-                // the battlefield (mirrors `GrantKeyword`'s permanent path;
+                // (`bake_grant`), reverted as the card leaves the battlefield
+                // (CR 400.7; mirrors `GrantKeyword`'s permanent path;
                 // Emissary of Soulfire models each exalted counter as a
                 // permanently-granted `exalted()` instance). Every other
                 // duration rides `granted_triggers_timed` under the layer
@@ -16944,7 +16944,7 @@ impl GameState {
                         ),
                         None => {
                             if let Some(c) = self.battlefield_find_mut(cid) {
-                                c.definition_make_mut().triggered_abilities.push((**trigger).clone());
+                                c.bake_grant().triggered_abilities.push((**trigger).clone());
                             }
                         }
                     }

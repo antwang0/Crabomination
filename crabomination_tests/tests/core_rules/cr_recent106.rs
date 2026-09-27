@@ -1052,3 +1052,48 @@ fn cr_712_2_a_transform_back_face_is_never_cast() {
     assert!(g.perform_action(back).is_err(), "Insectile Aberration has no mana cost");
     assert_eq!(g.players[0].hand.iter().find(|c| c.id == id).map(|c| c.definition.name), Some("Delver of Secrets"));
 }
+
+/// CR 400.7 — a permanent that leaves the battlefield becomes a new object
+/// with no memory of it: a keyword or trigger an effect granted "for as long
+/// as it's on the battlefield" (a `Duration::Permanent` grant) must not ride
+/// the card into its hand, graveyard or exile, nor back onto the battlefield.
+#[test]
+fn cr_400_7_permanent_grants_end_when_the_object_leaves() {
+    use crabomination::card::{EventKind, EventScope, EventSpec, Keyword, TriggeredAbility};
+    use crabomination::effect::{Duration, Effect, Selector, Value};
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    let all = Selector::EachPermanent(SelectionRequirement::Creature);
+    g.resolve_effect(&Effect::GrantKeyword { what: all.clone(), keyword: Keyword::Flying, duration: Duration::Permanent }, &ctx)
+        .unwrap();
+    let dies_draw = TriggeredAbility {
+        event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+        effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+    };
+    g.resolve_effect(&Effect::GrantTriggeredAbility { what: all, trigger: Box::new(dies_draw), duration: Duration::Permanent }, &ctx)
+        .unwrap();
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Flying));
+    g.remove_from_battlefield_to_hand(bear);
+    let card = g.players[0].hand.iter().find(|c| c.id == bear).expect("bounced");
+    assert!(!card.definition.keywords.contains(&Keyword::Flying), "the grant stayed with the old object");
+    assert!(card.definition.triggered_abilities.is_empty(), "so did the granted trigger");
+
+    // The granted dies trigger still sees its own death (CR 603.10a).
+    let bear2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::forest());
+    let all = Selector::EachPermanent(SelectionRequirement::Creature);
+    let dies_draw = TriggeredAbility {
+        event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+        effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+    };
+    g.resolve_effect(&Effect::GrantTriggeredAbility { what: all, trigger: Box::new(dies_draw), duration: Duration::Permanent }, &ctx)
+        .unwrap();
+    let hand = g.players[0].hand.len();
+    let evs = g.resolve_effect(&Effect::Destroy { what: Selector::EachPermanent(SelectionRequirement::Creature) }, &ctx).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "the granted trigger fired on the death");
+    let dead = g.players[0].graveyard.iter().find(|c| c.id == bear2).expect("died");
+    assert!(dead.definition.triggered_abilities.is_empty(), "and stayed with the dead object");
+}
