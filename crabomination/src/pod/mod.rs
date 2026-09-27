@@ -2496,6 +2496,12 @@ mod tests {
     #[test]
     fn cr_903_seeded_pod_outcomes_match_the_committed_table() {
         // (seed, winner, turns, actions)
+        // Re-blessed 2026-09-27 (`server/pre_combat_tap.rs`, a pod bot taps
+        // an opponent's biggest would-be attacker at their beginning of
+        // combat): seed 4242 74→61 turns, same winner; the other two
+        // unmoved. `bot_ladder --commander --a dflt`, 2,000 games at seed
+        // 9991, before/after: 41.02/41.02, 61.08/61.07, 83.87/83.83 turns at
+        // 3/4/6 seats, every block 2,000/2,000 decided.
         // Re-blessed 2026-09-27 (pod end-step sinks — bisected by disabling
         // each alone): `pick_cash_in` (a rock's "sacrifice: draw" at six
         // lands) moves seed 43 65→67 turns, same winner;
@@ -2690,7 +2696,7 @@ mod tests {
         const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
             (0xC0FFEE, Some(3), 71, 3175),
             (43, Some(0), 67, 3165),
-            (4242, Some(3), 74, 3378),
+            (4242, Some(3), 61, 2859),
         ];
         let decks = rofellos_pod(4);
         let t = build_pod_template(&decks);

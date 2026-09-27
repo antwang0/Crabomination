@@ -101,6 +101,7 @@ mod selection_sink;
 mod regenerate;
 mod counter_sink;
 mod end_step_ping;
+mod pre_combat_tap;
 #[cfg(test)]
 mod ability_probe;
 mod cycling;

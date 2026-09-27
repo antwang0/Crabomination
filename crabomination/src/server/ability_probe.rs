@@ -6,7 +6,9 @@
 //! post-combat main and at an opponent's end step activates it. Feed it the
 //! `never activated` names from a `--card-census` run: a card the census never
 //! saw used but the probe does is a coverage gap, and one the probe skips too
-//! is a bot gap. Without `CRAB_PROBE` the test does nothing.
+//! is a bot gap. A planeswalker gets `CRAB_PROBE_LOYALTY` loyalty on top of
+//! its printed number (default 4, enough for most ultimates; 0 shows the
+//! everyday pick). Without `CRAB_PROBE` the test does nothing.
 
 use crate::game::types::{GameAction, TurnStep};
 use crate::server::bot::{Bot, HeuristicBot};
@@ -33,7 +35,7 @@ fn probe_abilities() {
             if let Some(c) = g.battlefield_find_mut(m)
                 && c.definition.is_planeswalker()
             {
-                c.add_counters(crate::card::CounterType::Loyalty, 4);
+                c.add_counters(crate::card::CounterType::Loyalty, std::env::var("CRAB_PROBE_LOYALTY").ok().and_then(|v| v.parse().ok()).unwrap_or(4));
             }
             for f in [
                 crate::catalog::forest,
@@ -61,15 +63,16 @@ fn probe_abilities() {
             }
             let mut bot = HeuristicBot::new();
             let a = bot.next_action(&g, 0);
-            let used = matches!(&a, Some(GameAction::ActivateAbility { card_id, .. } | GameAction::ActivateLoyaltyAbility { card_id, .. }) if *card_id == m);
-            hits.push(format!(
-                "{step:?}={}",
-                if used {
-                    "USED".to_string()
-                } else {
-                    format!("{:?}", a).chars().take(40).collect()
+            let used = match &a {
+                Some(GameAction::ActivateAbility { card_id, ability_index, .. }) if *card_id == m => {
+                    Some(format!("USED #{ability_index}"))
                 }
-            ));
+                Some(GameAction::ActivateLoyaltyAbility { card_id, ability_index, .. }) if *card_id == m => {
+                    Some(format!("USED loyalty #{ability_index}"))
+                }
+                _ => None,
+            };
+            hits.push(format!("{step:?}={}", used.unwrap_or_else(|| format!("{a:?}").chars().take(40).collect())));
         }
         eprintln!("PROBE {name}: {}", hits.join(" | "));
     }

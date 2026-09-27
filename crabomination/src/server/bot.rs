@@ -3436,6 +3436,7 @@ impl HeuristicBot {
                     .or_else(|| super::spell_response::pick_substitution_response(state, seat, &self.weights))
                     .or_else(|| pick_combat_only_instant(state, seat, &self.weights))
                     .or_else(|| super::lethal_pump::pick_lethal_pump(state, seat))
+                    .or_else(|| super::pre_combat_tap::pick_pre_combat_tap(state, seat))
                     // Eiganjo's "attacking or blocking creature", once blocks are in.
                     .or_else(|| {
                         (state.step == TurnStep::DeclareBlockers)
