@@ -44,14 +44,14 @@ lists were picked.
 | **Mind Flayarrrs** (CLB precon) UB | Captain N'ghathrod | UB | 100 | 🟡 all 100 implemented, 5 carry residuals (below) |
 | **Blood Rites** (LCC precon) WB | Clavileño, First of the Blessed | WB | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Heads I Win, Tails You Lose** (SLD) UR | Zndrsplt, Eye of Wisdom **+** Okaun, Eye of Chaos (Partner with) | UR | 98 + 2 | ✅ complete |
-| **Goblin Storm** (SLD) R | Zada, Hedron Grinder | R | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
+| **Goblin Storm** (SLD) R | Zada, Hedron Grinder | R | 100 | ✅ complete |
 | **Wretched Ranks** (FDC precon) B | Ghoulcaller Gisa | B | 100 | ✅ complete |
-| **Tramplesaurus Rex** (FDC precon) G | Ghalta, Primal Hunger | G | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
-| **Keen Engineering** (FDC precon) U | Sai, Master Thopterist | U | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
+| **Tramplesaurus Rex** (FDC precon) G | Ghalta, Primal Hunger | G | 100 | ✅ complete |
+| **Keen Engineering** (FDC precon) U | Sai, Master Thopterist | U | 100 | ✅ complete |
 | **Reap the Tides** (CMR precon) GU | Aesi, Tyrant of Gyre Strait | GU | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Corrupting Influence** (ONC precon) WBG | Ixhel, Scion of Atraxa | WBG | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
-| **Sneak Attack** (ZNC precon) UB | Anowon, the Ruin Thief | UB | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
-| **Jeskai Striker** (TDC precon) URW | Shiko and Narset, Unified | URW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
+| **Sneak Attack** (ZNC precon) UB | Anowon, the Ruin Thief | UB | 100 | ✅ complete |
+| **Jeskai Striker** (TDC precon) URW | Shiko and Narset, Unified | URW | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Sliver Swarm** (CMM precon) WUBRG | Sliver Gravemother | WUBRG | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Quick Draw** (OTC precon) UR | Stella Lee, Wild Card | UR | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Vampiric Bloodlust** (C17 precon) BRW | Edgar Markov | BRW | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
@@ -68,14 +68,14 @@ lists were picked.
 | **Graveyard Overdrive** (M3C precon) BRG | Disa the Restless | BRG | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Sworn to Darkness** (C14 precon) B | Ob Nixilis of the Black Oath (**planeswalker**) | B | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Seize Control** (C15 precon) UR | Mizzix of the Izmagnus | UR | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
-| **Rebellion Rising** (ONC precon) RW | Neyali, Suns' Vanguard | RW | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
+| **Rebellion Rising** (ONC precon) RW | Neyali, Suns' Vanguard | RW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Feline Ferocity** (C17 precon) GW | Arahbo, Roar of the World | GW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Primal Genesis** (C19 precon) RGW | Ghired, Conclave Exile | RGW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Breed Lethality** (C16 precon) WUBG | Atraxa, Praetors' Voice | WUBG | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Call the Spirits** (C15 precon) WB | Daxos the Returned | WB | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Peer Through Time** (C14 precon) U | Teferi, Temporal Archmage (**planeswalker**) | U | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Quantum Quandrix** (C21 precon) GU | Adrix and Nev, Twincasters | GU | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
-| **Lorehold Legacies** (C21 precon) RW | Osgir, the Reconstructor | RW | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
+| **Lorehold Legacies** (C21 precon) RW | Osgir, the Reconstructor | RW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Counterpunch** (CMD precon) WBG | Ghave, Guru of Spores | WBG | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Wade into Battle** (C15 precon) RW | Kalemne, Disciple of Iroas | RW | 100 | ✅ all 100 implemented |
 | **Chaos Incarnate** (SCD) BR | Kardur, Doomscourge | BR | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
@@ -108,7 +108,7 @@ lists were picked.
 | **Undead Unleashed** (MIC precon) UB | Wilhelt, the Rotcleaver | UB | 100 | 🟡 all 100 implemented, 2 carry residuals (Shadow Kin, Rooftop Storm) |
 | **Arm for Battle** (CMR precon) RW | Wyleth, Soul of Steel | RW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Fae Dominion** (WOC precon) UB | Tegwyll, Duke of Splendor | UB | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
-| **Invent Superiority** (C16 precon) WUBR | Breya, Etherium Shaper | WUBR | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
+| **Invent Superiority** (C16 precon) WUBR | Breya, Etherium Shaper | WUBR | 100 | ✅ complete |
 | **Entropic Uprising** (C16 precon) UBRG | Yidris, Maelstrom Wielder | UBRG | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Endless Punishment** (DSC precon) BR | Valgavoth, Harrower of Souls | BR | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Arcane Wizardry** (C17 precon) UBR | Inalla, Archmage Ritualist | UBR | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
@@ -178,7 +178,7 @@ lists were picked.
 | **Hail, Caesar** (PIP precon) RWB | Caesar, Legion's Emperor | RWB | 100 | 🟡 all 100 implemented, 4 carry residuals (Aradesh, Colonel Autumn, Mr. House, Mysterious Stranger) |
 | **Mystic Intellect** (C19 precon) URW | Sevinne, the Chronoclasm | URW | 100 | 🟡 all 100 implemented (Dockside Extortionist, banned, swapped for Ragavan), 3 carry residuals (Wall of Stolen Identity, Mandate of Peace, Elsha of the Infinite) |
 | **The Hosts of Mordor** (LTC precon) UBR | Sauron, Lord of the Rings | UBR | 100 | 🟡 all 100 implemented, 3 carry residuals (Moria Scavenger, Shelob, Dread Weaver, Summons of Saruman) |
-| **Elven Empire** (KHC precon) BG | Lathril, Blade of the Elves | BG | 100 | 🟡 all 100 implemented, 2 carry residuals (Serpent's Soul-Jar, Roots of Wisdom) |
+| **Elven Empire** (KHC precon) BG | Lathril, Blade of the Elves | BG | 100 | 🟡 all 100 implemented, 1 carries a residual (Roots of Wisdom) |
 | **Food and Fellowship** (LTC precon) WBG | Frodo, Adventurous Hobbit **+** Sam, Loyal Attendant (Partner with) | WBG | 98 + 2 | 🟡 all 100 implemented, 3 carry residuals (Gollum, Motivated Pony, Field-Tested Frying Pan) |
 | **Coven Counters** (MIC precon) GW | Leinore, Autumn Sovereign | GW | 100 | 🟡 all 100 implemented, 4 carry residuals (Curse of Conformity, Celestial Judgment, Sigardian Zealot, Moorland Rescuer) |
 | **Arcane Maelstrom** (C20 precon) GUR | Kalamax, the Stormsire | GUR | 100 | 🟡 all 100 implemented, 4 carry residuals (Eon Frolicker, Haldan, Pako, Lavabrink Floodgates) |
@@ -191,8 +191,8 @@ lists were picked.
 | **Eternal Bargain** (C13 precon) WUB | Oloro, Ageless Ascetic | WUB | 100 | 🟡 all 100 implemented, 4 carry residuals (Order of Succession, Lim-Dûl's Vault, Springjack Pasture, Serene Master) |
 | **Power Hungry** (C13 precon) BRG | Prossh, Skyraider of Kher | BRG | 100 | 🟡 all 100 implemented, 4 carry residuals (Sudden Demise, Night Soil, Widespread Panic, Capricious Efreet) |
 | **Wakanda Forever** (MSC precon) GW | T'Challa, the Black Panther | GW | 100 | 🟡 all 100 implemented, 4 carry residuals (Ancestral Communion, Heart-Shaped Herb, Panther Habit, Wakanda Forever!) |
-| **Revival Trance** (FIC precon) RWB | Terra, Herald of Hope | RWB | 100 | 🟡 all 100 implemented, 9 carry residuals (Edgar, Espers to Magicite, General Leo, Gogo, Legions to Ashes, Locke, Esper Valigarmanda, The Warring Triad, Umaro) |
-| **Limit Break** (FIC precon) RGW | Cloud, Ex-SOLDIER | RGW | 100 | 🟡 all 100 implemented, 4 carry residuals (Professor Hojo, Helitrooper, Lifestream's Blessing, Yuffie) |
+| **Revival Trance** (FIC precon) RWB | Terra, Herald of Hope | RWB | 100 | 🟡 all 100 implemented, 8 carry residuals (Edgar, Espers to Magicite, General Leo, Gogo, Legions to Ashes, Esper Valigarmanda, The Warring Triad, Umaro) |
+| **Limit Break** (FIC precon) RGW | Cloud, Ex-SOLDIER | RGW | 100 | 🟡 all 100 implemented, 3 carry residuals (Professor Hojo, Helitrooper, Yuffie) |
 | **Merciless Rage** (C19 precon) BR | Anje Falkenrath | BR | 100 | 🟡 all 100 implemented, 5 carry residuals (Archfiend of Spite, Boneyard Parley, Chainer, Hedonist's Trove, K'rrik) |
 | **Bedecked Brokers** (NCC precon) GWU | Perrie, the Pulverizer | GWU | 100 | 🟡 all 100 implemented, 5 carry residuals (Kros, Aven Mimeomancer, Agent's Toolkit, Littjara Mirrorlake, Skyship Plunderer) |
 | **Living Energy** (DRC precon) GUR | Saheeli, Radiant Creator | GUR | 100 | 🟡 all 100 implemented, 4 carry residuals (Aetherflux Conduit, Territorial Aetherkite, Rampaging Aetherhood, Saheeli) |
@@ -311,9 +311,8 @@ stalled attrition board at fourteen players is the finding.
 
 The **fifteenth** is the Secret Lair **Goblin Storm** list (MTGJSON's
 `GoblinStorm_SLD`): rituals, Zada copying a one-target spell onto every
-creature, and General Kreat's Goblin-per-attacking-Goblin. Residual: Throne
-of Eldraine's draw ability doesn't enforce "spend only mana of the chosen
-color". ⚠⚠ **Its first 15-seat run found a CR 508.4 bug in the engine, not
+creature, and General Kreat's Goblin-per-attacking-Goblin. Throne of Eldraine's
+"spend only mana of the chosen color" is enforced (`spend_only_chosen_color`). ⚠⚠ **Its first 15-seat run found a CR 508.4 bug in the engine, not
 the deck:** every "put onto the battlefield attacking" site (token-attacking,
 Myriad, Mobilize, Ninjutsu, two put-a-card-in-attacking effects) emitted
 `AttackerDeclared`, so Kreat's attack trigger fired for its own tokens —
@@ -344,8 +343,8 @@ missing and three needed primitives, each built for its class —
 `SelectionRequirement::IsAttackingYou` (CR 506.3: Arachnogenesis counts the
 creatures attacking *you*, not the table's attackers),
 `Effect::CreateTokensToFightEach` (CR 701.14: Ezuri's Predation) and
-`Value::GreatestCommanderManaValue` (CR 903.3: Tangleweave Armor). Residual:
-Monstrous Onslaught reads X at resolution, not as it is cast. Seed 9980,
+`Value::GreatestCommanderManaValue` (CR 903.3: Tangleweave Armor). Monstrous Onslaught fixes X as it is cast (`CardDefinition::x_as_cast`,
+2026-09-27). Seed 9980,
 1,000 games at 17 seats: **1,000 decided, zero panics**; Ghalta wins 8.2 %;
 `--card-census` 841 distinct, every list fully played.
 
@@ -366,8 +365,7 @@ opponent and never at itself), `SelectionRequirement::ControllerDamagedBySourceT
 permanents (Forsaken Monument's "tap a permanent for {C}"), and
 `StaticEffect::PreventUntapGlobal` honouring an Aura's `AttachedTo(This)`
 (Fall from Favor — it fell to `_ => false`, so the lock never held).
-Residual: **Steel Hellkite** reads `creatures_that_damaged_me_this_turn`, which
-also holds noncombat damage. Seed 9990, 1,000 games at 18 seats: **998
+Steel Hellkite reads combat damage only (2026-09-27). Seed 9990, 1,000 games at 18 seats: **998
 decided, 1 action cap, 1 board cap, zero panics**; Sai wins 3.1 %;
 `--card-census` 892 distinct, every card of all eighteen lists played.
 
@@ -411,8 +409,8 @@ Dimir Rogues under Anowon. Fifteen cards were missing; two primitives:
 trigger read the FIRST dealer's damage; Anowon mills the batch's total) and
 `Value::GreatestGraveyardSizeAmong` ("an opponent has eight or more cards in
 their graveyard" read only the first opponent — Jace's Phantasm fixed with
-it). Residual: **Whispersteel Dagger** opens every creature card in the
-graveyard, not one (Master Thief's "for as long as you control" is exact since
+it). Whispersteel Dagger opens one paid creature spell
+(`Effect::OneCastAmongGranted`, 2026-09-27) (Master Thief's "for as long as you control" is exact since
 `Effect::GainControlWhileYouControlSource`). Seed 10031, 1,000 games at 21 seats: **996 decided, 4
 action caps, 0 board caps, zero panics**; Anowon wins 7.9 %, and 32.8 % of
 four-seat pods beside Teval / N'ghathrod / Ixhel (seed 10032, all decided).
@@ -788,8 +786,7 @@ creatures you control") and `Effect::RevealUntilOneToBattlefieldRestBottom`
 naming X ("an artifact card with mana value X") was evaluated unresolved and
 refused every card; it now reads the activation's X. Wake the Past's "they gain
 haste" needed `ReturnAllMatchingFromGraveyardToBattlefield` to record its cards
-for `Selector::LastMoved`. Residuals: **Archaeomancer's Map** reads "that player
-controls more lands than you" as any opponent; **Key to the City**'s "up to
+for `Selector::LastMoved`. Residuals: **Key to the City**'s "up to
 one" always targets; **Laelia** counts only her own attack's library exile (no
 event announces a library exile), and a battlefield exile beside the graveyard.
 Four-seat pods beside Mizzix / Adrix / Daxos (seed 10123, 1,000 games, all
@@ -870,8 +867,8 @@ the pod's first WUBR identity. Seventeen cards were missing; the one new rule
 piece is `EventKind::EnchantedPlayerLeftGame` (Curse of Vengeance's "when
 enchanted player loses the game", queued from `objects_leave_with_player`,
 the one CR 800.4a funnel, while the Aura is still attached) with
-`CounterType::Spite`. Residual: **Armory Automaton** attaches the Equipment
-you control, not other players'. Four-seat pods beside Tegwyll / Osgir /
+`CounterType::Spite`. Armory Automaton takes any player's Equipment
+(2026-09-27). Four-seat pods beside Tegwyll / Osgir /
 Adrix (seed 10127, 1,000 games, all decided): Breya 17.1 %; a 300-game census
 (seed 10128) leaves no card of the four decks unplayed. `--bench`
 byte-identical.
@@ -908,9 +905,9 @@ Vast. Seventeen cards were missing; the primitives: `StaticEffect::WarOrPeace`
 `Value::SourceActivationsThisTurn` (Dragon Whelp), and the target walk now reads
 a player ref's own selector filter (`pref_find`) — "target opponent's
 graveyard" (Tariel) and "each player other than target player" (Death by
-Dragons) had no way to say which players were legal. Residuals: **Archangel of
-Strife**'s choice is made as its ETB resolves; **Kaalia** also triggers
-attacking a planeswalker.
+Dragons) had no way to say which players were legal. Residual: **Archangel of
+Strife**'s choice is made as its ETB resolves (Kaalia triggers on attacking a
+player only since `IsAttackingOpponentPlayer`).
 
 The **fifty-fourth** is Zendikar Rising Commander's **Land's Wrath**
 (`LandSWrath_ZNC`) — Naya landfall under Obuun, Mul Daya Ancestor (seat 53
@@ -1652,8 +1649,7 @@ Prossh / Nalia precons 1,000 decided, 12.0 %; 8 seats (seats 4-10) 1,000
 decided, 19.7 %. Residuals (INCOMPLETE_CARDS): Edgar's recast artifact enters
 untapped; Espers to Magicite copies the first exiled creature card as a
 layer-4 artifact; General Leo's return is required; Gogo takes the copied
-name; Legions to Ashes exiles every player's namesake tokens; Locke's milled
-cards are all playable; Esper Valigarmanda's chapter I takes the first
+name; Legions to Ashes exiles every player's namesake tokens; Esper Valigarmanda's chapter I takes the first
 instant or sorcery; The Warring Triad mills in its effect and pays you;
 Umaro's mode and target are picked as it resolves. Census: no card of the
 list unplayed. Debug strict pods (400 games): clean. `--bench`
@@ -1673,7 +1669,7 @@ the Leinore / Sidar / Oloro / Prossh / Nalia precons 1,000 decided, 5.6 %;
 8 seats (seats 4-10) 1,000 decided, 14.6 % — the strongest of this run's
 lists. Residuals: Professor Hojo has no first-targeting discount and draws for
 any permanent's targeting ability; Helitrooper's equip discount covers every
-equip; Lifestream's Blessing reads X as it resolves; Yuffie's Equipment is
+equip; Yuffie's Equipment is
 the engine's pick. Census: every card played across the three pods (Clever
 Concealment went uncast in the 4-seat run only). Debug strict pods (400
 games): clean. `--bench` byte-identical.
@@ -3147,9 +3143,9 @@ Twenty-six cards were missing (`cmdr_lathril.rs`). The primitives:
 resolution and every walker arm) and
 `DynamicPt::CreaturesOfTypeControlledAndInGraveyard` (Abomination of
 Llanowar). Bounty of Skemfar is two chained `LookPick`s (a land, then an
-Elf from what is left of the six). Residuals: **Serpent's Soul-Jar** (every
-exiled creature castable, not one) and **Roots of Wisdom** (returns from
-among the milled three). Pods beside Sevinne / Anje / Kotori (seed 9210,
+Elf from what is left of the six). Residual: **Roots of Wisdom** (returns from
+among the milled three); Serpent's Soul-Jar opens one creature spell since
+2026-09-27. Pods beside Sevinne / Anje / Kotori (seed 9210,
 1,000; census: nothing unplayed), the first three seats (9211, 1,000), six
 seats (9212, 1,000): all decided; Lathril 51.6 / 56.3 / 33.2 % — the
 strongest recent seat (Lathril's ten-Elf drain). Strict debug pods 90 / 90.
@@ -3396,7 +3392,7 @@ were missing; two primitives: `CounterType::Rally` (Aligned Heart's flurry
 tally) and `Effect::MayCastFromHandFreeMatching` (a filtered free cast from
 hand, shared with Kellan). Residuals: **Shiny Impetus** re-goads
 at each beginning of combat rather than holding one continuous goad while
-attached; **Tempest Technique**'s storm copies keep the original's target.
+attached; Tempest Technique's storm copies may re-aim (CR 702.40a, 2026-09-27).
 Seed 10041, 1,000 games at 22 seats: **995 decided, 5 action caps (432-511
 turns), 0 board caps, zero panics**; Shiko wins 1.2 %, and 28.9 % of four-seat
 pods beside Zellix / Zndrsplt / Hanna (seed 10042, all decided).

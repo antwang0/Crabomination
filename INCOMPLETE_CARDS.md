@@ -2014,7 +2014,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Wall of Stolen Identity | Mystic Intellect (C19) | the tap-and-lock happens as it enters, not as a reflexive "when you do" trigger. |
 | 🟡 Mandate of Peace | Mystic Intellect (C19) | a trigger waiting to be put on the stack still goes on (CR 724.2a says it ceases to exist). |
 | 🟡 Elsha of the Infinite | Mystic Intellect (C19) | its flash also covers a top-of-library cast another permission allowed (Mystic Forge). |
-| 🟡 Serpent's Soul-Jar | Elven Empire (KHC) | every creature card it exiled becomes castable until end of turn, not one of them. |
 | 🟡 Roots of Wisdom | Elven Empire (KHC) | the land or Elf card comes from among the three milled, not from anywhere in the graveyard. |
 | 🟡 Gollum, Obsessed Stalker | Food and Fellowship (LTC) | the drain reaches players this Gollum dealt any damage this game, not every Gollum's combat damage. |
 | 🟡 Motivated Pony | Food and Fellowship (LTC) | the untap rider checks for any artifact entering under your control this turn, not a Food. |
@@ -2118,13 +2117,11 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 General Leo Cristophe | Revival Trance (FIC) | the "up to one" return target is required whenever a legal card exists. |
 | 🟡 Gogo, Mysterious Mime | Revival Trance (FIC) | the copy takes the copied creature's name. |
 | 🟡 Legions to Ashes | Revival Trance (FIC) | same-named tokens of every player are exiled, not only those of the target's controller. |
-| 🟡 Locke, Treasure Hunter | Revival Trance (FIC) | any of the milled cards may be played this turn, not only one spell. |
 | 🟡 Summon: Esper Valigarmanda | Revival Trance (FIC) | chapter I exiles the first instant or sorcery card of each graveyard rather than a chosen one. |
 | 🟡 The Warring Triad | Revival Trance (FIC) | the mill is part of the effect, not a cost, and the mana always goes to you. |
 | 🟡 Umaro, Raging Yeti | Revival Trance (FIC) | the random mode, and a damage target, are chosen as the trigger resolves. |
 | 🟡 Professor Hojo | Limit Break (FIC) | no "first activated ability targeting your creature costs {2} less" discount; the draw fires for any permanent's ability targeting your creature. |
 | 🟡 Helitrooper | Limit Break (FIC) | the {2} equip discount applies to every equip you activate, not only ones targeting it. |
-| 🟡 Lifestream's Blessing | Limit Break (FIC) | X (greatest power) is read as it resolves, not as it was cast. |
 | 🟡 Yuffie, Materia Hunter | Limit Break (FIC) | the Equipment attached is the engine's pick among yours. |
 | 🟡 Archfiend of Spite | Merciless Rage (C19) | the damaging player always sacrifices when they have that many permanents; they never choose the life loss. |
 | 🟡 Boneyard Parley | Merciless Rage (C19) | the up-to-five creature cards are an untargeted pick (the first five in seat order). |

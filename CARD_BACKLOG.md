@@ -4899,9 +4899,6 @@ existing primitives):
 - **Ethersworn Canonist** — "one *nonartifact* spell per turn" needs a
   per-player nonartifact-spell counter (the existing `OneSpellPerTurn` static
   counts every spell). Add a filtered variant + tracker.
-- **Steel Hellkite** — `{X}: destroy each nonland permanent with MV X whose
-  controller was dealt combat damage by this creature this turn` needs a
-  combat-damage-by-source player set + an X-filtered mass destroy.
 - **Minas Tirith** — "enters tapped unless you control a legendary creature"
   needs a conditional `EntersTapped` (no predicate-gated enters-tapped yet).
 - **Fabled Passage** — search a basic tapped, then untap it if you control 4+
@@ -5452,10 +5449,6 @@ tests in `classic_sets/mmq{,2,3,4,5,6}`).
 
 Residuals in what shipped:
 
-- **Volcanic Wind's X is read at resolution**, not "as you cast this spell", so
-  a creature that dies in response shrinks the total.
-- **Mercadia's Downfall reads `ControlledByOpponent`** rather than "defending
-  player" — exact heads-up, wrong in multiplayer.
 - **Ley Line's target is picked by the enchantment's controller.**
   `Effect::MayDoBy` routes the *may* and the counter to the active player, but
   the trigger's target slot is still filled at push time by the trigger's own
