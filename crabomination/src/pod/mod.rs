@@ -1576,12 +1576,66 @@ pub fn play_one_pod_game(
 /// armed for this game only, rendered if the game did not decide.
 /// `max_actions` is the budget in plays (non-pass actions); see
 /// `PodOutcome::plays`.
+/// CR 732.1b / 732.2a — an optional loop repeats as many times as its player
+/// chooses. A seat past this many activations of one ability of one permanent
+/// in a turn is in a loop the bot cannot price (Woe Strider sacrificing
+/// Prowling Geistcatcher's returns, which pay Gravespawn Sovereign to bring
+/// the Geistcatcher back: 2,723 scries in one main phase); its next one is a
+/// pass instead. Pods only — the two-player drivers never reach it.
+const POD_SAME_ACTIVATION_PER_TURN: u32 = 64;
+
+/// This turn's activation counts by (seat, source, ability index); see
+/// [`POD_SAME_ACTIVATION_PER_TURN`].
+#[derive(Default)]
+struct RepeatGuard {
+    turn: u32,
+    seen: Vec<(usize, crate::card::CardId, usize, u32)>,
+}
+
+impl RepeatGuard {
+    /// Count `action` for `seat`; `false` once it is past the per-turn cap.
+    fn admit(&mut self, turn: u32, seat: usize, action: &crate::game::GameAction) -> bool {
+        let crate::game::GameAction::ActivateAbility { card_id, ability_index, .. } = *action else { return true };
+        if turn != self.turn {
+            self.turn = turn;
+            self.seen.clear();
+        }
+        let key = (seat, card_id, ability_index);
+        let n = match self.seen.iter_mut().find(|r| (r.0, r.1, r.2) == key) {
+            Some(r) => {
+                r.3 += 1;
+                r.3
+            }
+            None => {
+                self.seen.push((seat, card_id, ability_index, 1));
+                1
+            }
+        };
+        n <= POD_SAME_ACTIVATION_PER_TURN
+    }
+}
+
 /// `CRAB_POD_TRACE=<n>`: from action `n` on, every accepted action of a pod
 /// game on stderr — turn, step, stack depth, seat, action. Names a capped
 /// game's loop without a rebuild (`--first I --games 1` replays it).
 fn pod_trace_from() -> Option<usize> {
     static FROM: std::sync::OnceLock<Option<usize>> = std::sync::OnceLock::new();
     *FROM.get_or_init(|| std::env::var("CRAB_POD_TRACE").ok().and_then(|s| s.parse().ok()))
+}
+
+/// The action's `Debug`, then the name of every `CardId` it mentions.
+fn trace_line(g: &GameState, action: &crate::game::GameAction) -> String {
+    let dbg = format!("{action:?}");
+    let names: Vec<String> = dbg
+        .split("CardId(")
+        .skip(1)
+        .filter_map(|rest| rest.split(')').next()?.parse::<u32>().ok())
+        .map(|n| {
+            let id = crate::card::CardId(n);
+            g.find_card_anywhere(id).map_or_else(|| format!("{n}=?"), |c| format!("{n}={}", c.definition.name))
+        })
+        .collect();
+    if names.is_empty() { dbg } else { format!("{dbg} [{}]", names.join(", ")) }
 }
 
 pub fn play_one_pod_game_censused(
@@ -1619,6 +1673,7 @@ pub fn play_one_pod_game_censused(
     let (mut actions, mut plays, mut stale) = (0usize, 0usize, 0usize);
     let (diag_floor, mut diag_said) = (crate::recommend::cap_diag_floor().flatten(), false);
     let trace_from = pod_trace_from();
+    let mut repeats = RepeatGuard::default();
     // One `OnceLock` read a game, not a bool per action: off, `record` is a
     // field test and the `Debug` format below never runs.
     let mut census =
@@ -1637,12 +1692,16 @@ pub fn play_one_pod_game_censused(
             // them here instead was a deadlock — a pending decision the loop
             // never polled suppressed every other seat's actions.
             let Some(step) = bot.next_action_settled(&g, seat) else { continue };
-            let crate::server::bot::BotStep { action, settled } = step;
+            let crate::server::bot::BotStep { mut action, mut settled } = step;
+            if !repeats.admit(g.turn_number, seat, &action) {
+                action = crate::game::GameAction::PassPriority;
+                settled = None;
+            }
             let is_pass = matches!(action, crate::game::GameAction::PassPriority);
             // Keyed against the pre-action state: a cast names the card while
             // it is still in the zone it is cast from.
             let key = census.key_for(&g, seat, &action);
-            let traced = trace_from.is_some_and(|n| actions >= n).then(|| format!("{action:?}"));
+            let traced = trace_from.is_some_and(|n| actions >= n).then(|| trace_line(&g, &action));
             let ok = if let Some(settled) = settled {
                 g = *settled;
                 true
@@ -2330,6 +2389,29 @@ mod tests {
             assert!(o.winner.is_some(), "seed {seed} left the pod undecided");
             assert!(o.turns > 0);
         }
+    }
+
+    /// CR 732.2a — an optional loop stops where its player chooses: past the
+    /// per-turn cap the same activation of the same permanent is a pass.
+    #[test]
+    fn cr_732_2a_a_seat_stops_repeating_one_activation_past_the_cap() {
+        let act = |card, ability_index| crate::game::GameAction::ActivateAbility {
+            card_id: crate::card::CardId(card),
+            ability_index,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        };
+        let mut guard = RepeatGuard::default();
+        for _ in 0..POD_SAME_ACTIVATION_PER_TURN {
+            assert!(guard.admit(7, 1, &act(408, 0)));
+        }
+        assert!(!guard.admit(7, 1, &act(408, 0)), "the 65th in one turn is a pass");
+        assert!(guard.admit(7, 1, &act(408, 1)), "another ability");
+        assert!(guard.admit(7, 2, &act(408, 0)), "another seat");
+        assert!(guard.admit(7, 1, &crate::game::GameAction::PassPriority));
+        assert!(guard.admit(8, 1, &act(408, 0)), "a new turn resets it");
     }
 
     /// The pod loop is reproducible: same seed, same outcome. Cross-process
