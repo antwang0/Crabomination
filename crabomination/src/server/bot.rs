@@ -3262,7 +3262,9 @@ impl HeuristicBot {
                 if let Some(a) = pick_ninjutsu(state, seat) {
                     return Some(BotStep::plain(a));
                 }
-                if let Some(a) = super::combat_only::pick_combat_only_spell(state, seat, &self.weights) {
+                if let Some(a) = super::combat_only::pick_combat_only_spell(state, seat, &self.weights)
+                    .or_else(|| super::team_combat::pick_team_combat_ability(state, seat, &self.weights))
+                {
                     return Some(BotStep::plain(a));
                 }
                 Some(
@@ -9920,7 +9922,7 @@ fn ability_sacrifices_a_permanent(ab: &crate::effect::ActivatedAbility) -> bool 
 
 /// [`ability_sacrifices_a_permanent`] behind [`EvalWeights::sac_sinks_priced`],
 /// for the generators whose historical gate was the narrow one.
-fn sink_sacrifice_cost(ab: &crate::effect::ActivatedAbility, w: &EvalWeights) -> bool {
+pub(super) fn sink_sacrifice_cost(ab: &crate::effect::ActivatedAbility, w: &EvalWeights) -> bool {
     if w.sac_sinks_priced { ability_sacrifices_a_permanent(ab) } else { ab.sac_cost }
 }
 
@@ -10289,7 +10291,7 @@ fn pick_reach_burn(state: &GameState, seat: usize) -> Option<GameAction> {
 /// considered; dry-run-gated so cost / timing bottom out in `would_accept`.
 /// True when `req` constrains its subjects to creatures the controller owns
 /// (a `ControlledByYou` clause anywhere in its And/Or tree).
-fn requirement_restricts_to_your_creatures(req: &crate::card::SelectionRequirement) -> bool {
+pub(super) fn requirement_restricts_to_your_creatures(req: &crate::card::SelectionRequirement) -> bool {
     use crate::card::SelectionRequirement as R;
     match req {
         R::ControlledByYou => true,
