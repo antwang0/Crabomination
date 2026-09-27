@@ -169,3 +169,35 @@ fn xyris_punishes_extra_draws() {
     drain_stack(&mut g);
     assert_eq!(named(&g, "Snake").len(), 2);
 }
+
+/// Primeval Spawn (CR 614.1a / 614.12 self-replacement): cast for mana it
+/// enters; reanimated (not cast) or cast free under Omniscience (no mana
+/// spent), it is exiled instead.
+#[test]
+fn primeval_spawn_is_exiled_entering_uncast_or_free() {
+    let mut g = pod(2);
+    let paid = g.add_card_to_hand(0, catalog::primeval_spawn());
+    cast(&mut g, paid, &[]);
+    assert!(g.battlefield_find(paid).is_some(), "cast for mana, it enters");
+
+    let dead = g.add_card_to_graveyard(0, catalog::primeval_spawn());
+    let rean = g.add_card_to_hand(0, catalog::reanimate());
+    cast(&mut g, rean, &[Target::Permanent(dead)]);
+    assert!(g.battlefield_find(dead).is_none(), "reanimated, it isn't cast");
+    assert!(g.exile.iter().any(|c| c.id == dead));
+
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::omniscience());
+    let free = g.add_card_to_hand(0, catalog::primeval_spawn());
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: free,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("free cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(free).is_none(), "no mana spent");
+    assert!(g.exile.iter().any(|c| c.id == free));
+}

@@ -2,9 +2,6 @@
 //! needed beyond what the catalog had. Tests in `tests/recent_b/cmdr_jared.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Primeval Spawn** — it isn't exiled when it would enter without being
-//!   cast, and its leave trigger casts one spell of mana value 10 or less
-//!   rather than any number with total mana value 10 or less.
 //! - **Knight of New Alara** — counts printed colors (a Kavu token is all
 //!   colors; a static that paints a creature all colors isn't seen).
 //! - **Unite the Coalition** — a repeated mode needs a different target the
@@ -324,12 +321,16 @@ pub fn path_to_the_world_tree() -> CardDefinition {
     }
 }
 
-/// Primeval Spawn — vigilance, trample, lifelink; leaving, exile the top ten
-/// and cast any number of spells with total mana value 10 or less from among
-/// them free. Residual: it isn't exiled when entering uncast.
+/// Primeval Spawn — exiled if it enters uncast or free; vigilance, trample,
+/// lifelink; leaving, exile the top ten and cast any number of spells with
+/// total mana value 10 or less from among them free.
 pub fn primeval_spawn() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Vigilance, Keyword::Trample, Keyword::Lifelink],
+        static_abilities: vec![StaticAbility {
+            description: "If this creature would enter and it wasn't cast or no mana was spent to cast it, exile it instead.",
+            effect: StaticEffect::ExileSelfIfEntersUncastOrFree,
+        }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
