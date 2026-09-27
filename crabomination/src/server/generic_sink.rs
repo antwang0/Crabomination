@@ -9,7 +9,7 @@
 //! Two seats never reach it, so the two-player bench pool is untouched.
 
 use crate::game::GameState;
-use crate::game::types::{GameAction, TurnStep};
+use crate::game::types::{GameAction, Target, TurnStep};
 
 use super::bot::{
     EvalWeights, ability_sink_bits, action_outcome_is_temporary, eval_material, evaluate_action_outcome, mana_upper_bound,
@@ -87,31 +87,47 @@ pub(super) fn pick_generic_ability(state: &GameState, seat: usize, w: &EvalWeigh
                 } else {
                     (None, Vec::new())
                 };
-                let action = GameAction::ActivateAbility {
-                    card_id: card.id,
-                    ability_index: idx,
-                    target,
-                    additional_targets,
-                    x_value: x,
-                    mode: None,
-                };
-                // An until-end-of-turn gain reads as permanent to the evaluator.
-                if action_outcome_is_temporary(state, &action) {
-                    break;
-                }
-                probes += 1;
-                let Some(settled) = state.accept(action.clone()) else { continue };
-                // A Class level buys static and triggered abilities the
-                // material eval can't price; one that can be paid is taken.
-                if matches!(ab.effect, Effect::AdvanceClassLevel) {
-                    return Some(action);
-                }
-                let base = *baseline.get_or_insert_with(|| eval_material(state, seat, w));
-                if let Some(ev) = evaluate_action_outcome(state, seat, &action, Some(&settled), w)
-                    && ev > base
-                    && best.as_ref().is_none_or(|(b, _)| ev > *b)
+                // "Target player …" auto-aims at an opponent; a slot that is
+                // a gift (Fertilid's land search) is worth asking about us too.
+                let mut targets = vec![target];
+                if let Some(Target::Player(p)) = targets[0]
+                    && p != seat
+                    && additional_targets.is_empty()
                 {
-                    best = Some((ev, action));
+                    targets.push(Some(Target::Player(seat)));
+                }
+                let mut stop = false;
+                for target in targets {
+                    let action = GameAction::ActivateAbility {
+                        card_id: card.id,
+                        ability_index: idx,
+                        target,
+                        additional_targets: additional_targets.clone(),
+                        x_value: x,
+                        mode: None,
+                    };
+                    // An until-end-of-turn gain reads as permanent to the evaluator.
+                    if action_outcome_is_temporary(state, &action) {
+                        stop = true;
+                        break;
+                    }
+                    probes += 1;
+                    let Some(settled) = state.accept(action.clone()) else { continue };
+                    // A Class level buys static and triggered abilities the
+                    // material eval can't price; one that can be paid is taken.
+                    if matches!(ab.effect, Effect::AdvanceClassLevel) {
+                        return Some(action);
+                    }
+                    let base = *baseline.get_or_insert_with(|| eval_material(state, seat, w));
+                    if let Some(ev) = evaluate_action_outcome(state, seat, &action, Some(&settled), w)
+                        && ev > base
+                        && best.as_ref().is_none_or(|(b, _)| ev > *b)
+                    {
+                        best = Some((ev, action));
+                    }
+                }
+                if stop {
+                    break;
                 }
                 // Without `{X}` there is one action to try; with it and no
                 // target, the largest X is the one worth asking about.
@@ -122,4 +138,49 @@ pub(super) fn pick_generic_ability(state: &GameState, seat: usize, w: &EvalWeigh
         }
     }
     best.map(|(_, a)| a)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::card::{ActivatedAbility, CardDefinition, CardType};
+    use crate::effect::{PlayerRef, Selector, Value};
+
+    /// "Target player draws a card" auto-aims at an opponent; the sink also
+    /// asks about its own seat and takes the draw for itself.
+    #[test]
+    fn a_target_player_gift_is_aimed_at_the_bot() {
+        let mut g = crate::game::multi_player_game(3);
+        g.active_player_idx = 0;
+        g.step = TurnStep::PostCombatMain;
+        g.priority.player_with_priority = 0;
+        let rod = g.add_card_to_battlefield(
+            0,
+            CardDefinition {
+                name: "Test Scholar's Rod",
+                card_types: vec![CardType::Artifact],
+                activated_abilities: vec![ActivatedAbility {
+                    mana_cost: crate::mana::cost(&[crate::mana::generic(1)]),
+                    tap_cost: true,
+                    effect: Effect::Draw {
+                        who: Selector::Player(PlayerRef::Target(0)),
+                        amount: Value::ONE,
+                    },
+                    ..Default::default()
+                }],
+                ..Default::default()
+            },
+        );
+        for seat in 0..3 {
+            for _ in 0..3 {
+                g.add_card_to_library(seat, crate::catalog::island());
+            }
+        }
+        g.players[0].mana_pool.add_colorless(1);
+        let got = pick_generic_ability(&g, 0, &EvalWeights::default());
+        assert!(
+            matches!(got, Some(GameAction::ActivateAbility { card_id, target: Some(Target::Player(0)), .. }) if card_id == rod),
+            "got {got:?}"
+        );
+    }
 }
