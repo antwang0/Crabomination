@@ -715,7 +715,9 @@ Each a small targeted feature; sweep batch by batch.
   unknown card with the names it probably meant ("Lightnig Bolt", "Atraxa"),
   where the status line used to name four. Commander: the menu's deck
   picker (`deck_picker.rs`) chooses your stock deck and each bot's from the
-  183 stock lists, with search. Remaining ⏳: export, .dec/.cod, a warning
+  183 stock lists, with search and each deck's power tier (its measured win
+  share under bot play, `pod::power`); a bot left on Random is dealt near
+  your deck's power. Remaining ⏳: export, .dec/.cod, a warning
   for cards whose implementation is partial (no runtime list —
   INCOMPLETE_CARDS is prose).
 - ⏳ **Deck stats** (curve, pips, type breakdown).

@@ -7,6 +7,11 @@
 //! `MenuFields::pod_decks` and are dealt by `menu::build_local_match_state`;
 //! before this, the human always played the first stock deck and the bots'
 //! decks cycled one click per deck through the whole field.
+//!
+//! Each row shows the deck's power tier ([`crabomination::pod::power`], its
+//! measured win share in bot pods), and a bot seat left on Random is dealt a
+//! deck near the power of yours, so a 60 % deck is not seated against decks
+//! that win one game in fifty.
 
 use std::sync::OnceLock;
 
@@ -24,8 +29,21 @@ pub(crate) struct DeckEntry {
     pub(crate) name: &'static str,
     /// The commander's full name, "A + B" for a pair.
     pub(crate) commanders: String,
+    /// Its power tier, 1 (weakest) ..= 5; `None` for a deck the power table
+    /// predates.
+    pub(crate) tier: Option<u8>,
     /// Lowercased name and commanders — where a search term must appear.
     key: String,
+}
+
+impl DeckEntry {
+    /// The row's power column: "power 3/5", or "unrated".
+    fn power(&self) -> String {
+        match self.tier {
+            Some(t) => format!("power {t}/{}", crabomination::pod::power::TIERS),
+            None => "unrated".into(),
+        }
+    }
 }
 
 /// Every stock deck in `target_decks` order, so a [`DeckChoice::Stock`]
@@ -38,7 +56,7 @@ pub(crate) fn deck_index() -> &'static [DeckEntry] {
             .map(|d| {
                 let commanders = d.commanders.iter().map(|f| f().name).collect::<Vec<_>>().join(" + ");
                 let key = format!("{} {commanders}", d.name).to_lowercase();
-                DeckEntry { name: d.name, commanders, key }
+                DeckEntry { name: d.name, commanders, tier: crabomination::pod::power::tier(d.name), key }
             })
             .collect()
     })
@@ -111,7 +129,7 @@ pub(crate) fn sync_deck_picker(
     ui_fonts: Res<UiFonts>,
     roots: Query<Entity, With<DeckPickerRoot>>,
     lists: Query<Entity, With<DeckList>>,
-    mut listed: Local<Option<String>>,
+    mut listed: Local<Option<(String, bool)>>,
 ) {
     if !picker.open {
         for e in &roots {
@@ -126,16 +144,23 @@ pub(crate) fn sync_deck_picker(
         *listed = None;
         return; // the list container exists from next frame
     }
-    if listed.as_deref() == Some(picker.query.as_str()) {
+    // The Random row reads differently for your seat and a bot's.
+    let key = (picker.query.clone(), picker.seat == 0);
+    if listed.as_ref() == Some(&key) {
         return;
     }
     let Ok(list) = lists.single() else { return };
-    *listed = Some(picker.query.clone());
+    *listed = Some(key);
     commands.entity(list).despawn_children();
     commands.entity(list).with_children(|l| {
-        deck_row(l, &tf, DeckChoice::Random, "Random", "a different deck each game");
+        let random = if picker.seat == 0 {
+            "a different deck each game"
+        } else {
+            "a different deck each game, near your deck's power"
+        };
+        deck_row(l, &tf, DeckChoice::Random, "Random", random, "");
         for (i, d) in deck_index().iter().enumerate().filter(|(_, d)| deck_matches(d, &picker.query)) {
-            deck_row(l, &tf, DeckChoice::Stock(i), d.name, &d.commanders);
+            deck_row(l, &tf, DeckChoice::Stock(i), d.name, &d.commanders, &d.power());
         }
     });
 }
@@ -236,12 +261,23 @@ fn spawn_overlay(commands: &mut Commands, tf: &impl Fn(f32) -> TextFont, pod_siz
         });
 }
 
-fn deck_row(l: &mut ChildSpawnerCommands, tf: &impl Fn(f32) -> TextFont, choice: DeckChoice, name: &str, detail: &str) {
+/// One list row: the deck's name on the left; its commanders and, in a
+/// fixed-width column so the tiers line up down the list, its power on the
+/// right.
+fn deck_row(
+    l: &mut ChildSpawnerCommands,
+    tf: &impl Fn(f32) -> TextFont,
+    choice: DeckChoice,
+    name: &str,
+    detail: &str,
+    power: &str,
+) {
     l.spawn((
         Button,
         Node {
             flex_direction: FlexDirection::Row,
             justify_content: JustifyContent::SpaceBetween,
+            align_items: AlignItems::Center,
             column_gap: Val::Px(12.0),
             padding: UiRect::axes(Val::Px(10.0), Val::Px(4.0)),
             border_radius: BorderRadius::all(RADIUS_BUTTON),
@@ -251,11 +287,25 @@ fn deck_row(l: &mut ChildSpawnerCommands, tf: &impl Fn(f32) -> TextFont, choice:
         BackgroundColor(FIELD_BG),
         HoverTint::new(FIELD_BG),
         DeckRow(choice),
-        children![
-            (Text::new(name), tf(13.0), TextColor(theme::TEXT_PRIMARY), Pickable::IGNORE),
-            (Text::new(detail), tf(11.0), TextColor(theme::TEXT_MUTED), Pickable::IGNORE),
-        ],
-    ));
+    ))
+    .with_children(|row| {
+        row.spawn((Text::new(name), tf(13.0), TextColor(theme::TEXT_PRIMARY), Pickable::IGNORE));
+        row.spawn((
+            Node { flex_direction: FlexDirection::Row, column_gap: Val::Px(12.0), align_items: AlignItems::Center, ..default() },
+            Pickable::IGNORE,
+        ))
+        .with_children(|right| {
+            right.spawn((Text::new(detail), tf(11.0), TextColor(theme::TEXT_MUTED), Pickable::IGNORE));
+            // The column is reserved on every row; an empty text would set
+            // the Random row's height by itself.
+            let column = Node { width: Val::Px(70.0), flex_shrink: 0.0, ..default() };
+            if power.is_empty() {
+                right.spawn((column, Pickable::IGNORE));
+            } else {
+                right.spawn((Text::new(power), tf(11.0), TextColor(theme::TEXT_SECONDARY), column, Pickable::IGNORE));
+            }
+        });
+    });
 }
 
 /// Keep the tabs' labels and highlight, the rows' highlight (the selected

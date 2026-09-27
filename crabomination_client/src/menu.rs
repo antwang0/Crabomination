@@ -620,8 +620,16 @@ impl PodDecks {
 
 /// Resolve seat choices against the stock field: a fixed pick as chosen,
 /// and each Random seat a deck no other seat plays while the field has one
-/// to spare — drawn off `seed`.
-fn resolve_pod_decks(choices: &[DeckChoice], seed: u64) -> Vec<crabomination::pod::PodDeck> {
+/// to spare — drawn off `seed`. With an `anchor` tier (your deck's power,
+/// `pod::power`), a Random seat is dealt a deck within one tier of it while
+/// there is one, then within two, and so on; without one (an imported list
+/// has no measured power) from the whole field.
+fn resolve_pod_decks(
+    choices: &[DeckChoice],
+    seed: u64,
+    anchor: Option<u8>,
+) -> Vec<crabomination::pod::PodDeck> {
+    use crabomination::pod::power;
     use rand::SeedableRng;
     use rand::seq::SliceRandom;
     let field = crabomination::pod::target_decks();
@@ -632,6 +640,14 @@ fn resolve_pod_decks(choices: &[DeckChoice], seed: u64) -> Vec<crabomination::po
     let taken: Vec<usize> = choices.iter().filter_map(fixed).collect();
     let mut spare: Vec<usize> = (0..field.len()).filter(|i| !taken.contains(i)).collect();
     spare.shuffle(&mut rand::rngs::StdRng::seed_from_u64(seed));
+    if let Some(anchor) = anchor {
+        // A stable sort keeps the shuffle inside each band.
+        let band = |i: &usize| {
+            let t = power::tier(field[*i].name).unwrap_or(power::UNRATED);
+            t.abs_diff(anchor).saturating_sub(1)
+        };
+        spare.sort_by_key(band);
+    }
     let mut spare = spare.into_iter().cycle();
     choices
         .iter()
@@ -1959,17 +1975,18 @@ pub(crate) fn build_local_match_state(
     // choice for "Play vs Bot" — in seat 0 of a 2-4 player pod.
     let commander_deck = match (&imported, format) {
         (Some(deck), _) if !deck.commanders.is_empty() => {
-            Some((deck.commanders.clone(), deck.main.clone()))
+            Some((deck.commanders.clone(), deck.main.clone(), None))
         }
         (None, MatchFormat::Commander) => {
             use rand::RngExt;
-            let stock = resolve_pod_decks(&[pod_decks.you], rand::rng().random())[0];
-            Some((stock.commanders.to_vec(), stock.main.to_vec()))
+            let stock = resolve_pod_decks(&[pod_decks.you], rand::rng().random(), None)[0];
+            let tier = crabomination::pod::power::tier(stock.name).unwrap_or(crabomination::pod::power::UNRATED);
+            Some((stock.commanders.to_vec(), stock.main.to_vec(), Some(tier)))
         }
         _ => None,
     };
-    if let Some((commanders, main)) = commander_deck {
-        return commander_pod_state(&commanders, &main, pod_size, pod_decks, human_name);
+    if let Some((commanders, main, anchor)) = commander_deck {
+        return commander_pod_state(&commanders, &main, pod_size, pod_decks, anchor, human_name);
     }
     if let Some(deck) = imported {
         // Imported decklist vs. an opponent chosen by the selected
@@ -1998,19 +2015,21 @@ pub(crate) fn build_local_match_state(
 
 /// A local Commander pod: `commanders` + `main` in the human's seat 0 and
 /// `pod_size - 1` bots on the stock decks `decks` chooses for them, named
-/// after the deck they play. The deal is seeded off the state's own stream,
-/// as `build_commander_state` is.
+/// after the deck they play — a Random bot near `anchor`, the human deck's
+/// power tier, when it has one. The deal is seeded off the state's own
+/// stream, as `build_commander_state` is.
 fn commander_pod_state(
     commanders: &[crabomination::cube::CardFactory],
     main: &[crabomination::cube::CardFactory],
     pod_size: usize,
     decks: PodDecks,
+    anchor: Option<u8>,
     human_name: &str,
 ) -> GameState {
     use rand::RngExt;
     let seed: u64 = rand::rng().random();
     let n_bots = pod_size.clamp(2, 4) - 1;
-    let bots = resolve_pod_decks(&decks.bots[..n_bots], seed.rotate_left(32));
+    let bots = resolve_pod_decks(&decks.bots[..n_bots], seed.rotate_left(32), anchor);
     let mut state =
         crabomination::demo::build_custom_commander_state_seeded(commanders, main, &bots, seed);
     state.players[0].name = human_name.to_string();
@@ -2431,15 +2450,34 @@ mod tests {
     fn pod_decks_resolve_fixed_picks_and_distinct_random_ones() {
         let names = |v: Vec<crabomination::pod::PodDeck>| v.iter().map(|d| d.name).collect::<Vec<_>>();
         let choices = [DeckChoice::Stock(2), DeckChoice::Random, DeckChoice::Random, DeckChoice::Stock(1)];
-        let dealt = names(resolve_pod_decks(&choices, 11));
+        let dealt = names(resolve_pod_decks(&choices, 11, None));
         assert_eq!((dealt[0], dealt[3]), ("Hanna (UW)", "Judith (BR)"));
         let mut dedup = dealt.clone();
         dedup.sort_unstable();
         dedup.dedup();
         assert_eq!(dedup.len(), 4, "{dealt:?}");
-        assert_eq!(dealt, names(resolve_pod_decks(&choices, 11)));
+        assert_eq!(dealt, names(resolve_pod_decks(&choices, 11, None)));
         // The same fixed deck twice is allowed — a mirror is a choice.
-        assert_eq!(names(resolve_pod_decks(&[DeckChoice::Stock(2); 2], 11)), ["Hanna (UW)"; 2]);
+        assert_eq!(names(resolve_pod_decks(&[DeckChoice::Stock(2); 2], 11, None)), ["Hanna (UW)"; 2]);
+    }
+
+    /// With your deck's power as the anchor, every Random bot is dealt a
+    /// deck within one tier of it (each band holds far more decks than a
+    /// pod has seats), and a fixed pick is still dealt as chosen.
+    #[test]
+    fn random_pod_decks_are_dealt_near_the_anchor_power() {
+        use crabomination::pod::power;
+        let tier = |d: &crabomination::pod::PodDeck| power::tier(d.name).unwrap_or(power::UNRATED);
+        let choices = [DeckChoice::Random, DeckChoice::Random, DeckChoice::Stock(2)];
+        for anchor in 1..=power::TIERS {
+            for seed in 0..20 {
+                let dealt = resolve_pod_decks(&choices, seed, Some(anchor));
+                assert_eq!(dealt[2].name, "Hanna (UW)");
+                for d in &dealt[..2] {
+                    assert!(tier(d).abs_diff(anchor) <= 1, "{} is tier {} for anchor {anchor}", d.name, tier(d));
+                }
+            }
+        }
     }
 
     /// The game-over "New Game" rebuilds through `build_local_match_state`
@@ -2483,7 +2521,7 @@ mod tests {
     fn commander_pod_state_seats_the_human_first() {
         let stock = crabomination::pod::target_decks()[4];
         let decks = PodDecks { bots: [DeckChoice::Stock(0); 3], ..PodDecks::default() };
-        let state = commander_pod_state(stock.commanders, stock.main, 3, decks, "Ann");
+        let state = commander_pod_state(stock.commanders, stock.main, 3, decks, None, "Ann");
         assert_eq!(state.players.len(), 3);
         assert_eq!(state.players[0].name, "Ann");
         assert_eq!(state.players[0].command.len(), 2, "Krark + Rograkh");

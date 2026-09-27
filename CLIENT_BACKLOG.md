@@ -334,8 +334,13 @@ Cross-references the detailed entries below where one exists.
 - 🟡 **Deck library** — Commander's deck picker (2026-09-26,
   `deck_picker.rs`) picks your stock deck and each bot's from the 183 stock
   lists, with search. Paste-from-clipboard import ✅ (menu "Play Pasted
-  Deck", lobby "Paste Deck"). Remaining ⏳: save imported decks, list them
-  in the menu.
+  Deck", lobby "Paste Deck"). Power tiers ✅ (2026-09-27, `pod::power`):
+  each row shows the deck's tier 1-5 from its measured six-seat win share
+  under bot play (`scripts/pod_power.sh` regenerates the table), and a bot
+  seat left on Random is dealt a deck within one tier of yours — the same
+  decks ran 0-67 %, so a random pod could seat a two-in-three winner against
+  decks that almost never win. Remaining ⏳: save imported decks, list them
+  in the menu; the lobby's bot seats still take stock decks unbalanced.
 - ✅ **Deck import says what's wrong, all of it** (2026-09-26,
   `deck_import.rs`) — a list that can't play opens a report of every
   problem (each unknown card with the names it probably meant, or each
