@@ -876,6 +876,21 @@ fn conduit_of_worlds_casts_from_the_graveyard_then_locks() {
     .expect("activate");
     drain_stack(&mut g);
     assert!(g.players[0].graveyard.iter().find(|c| c.id == bear).unwrap().may_play_until.is_none(), "no permission");
+
+    // Bug fix: the window is this step's only — the grant arms the step
+    // sweep (it used to skip it, and the permission outlived the step).
+    let mut g = main_phase();
+    let conduit = g.add_card_to_battlefield(0, catalog::conduit_of_worlds());
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: conduit, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None, mode: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    let granted = |g: &GameState| g.players[0].graveyard.iter().find(|c| c.id == bear).unwrap().may_play_until.is_some();
+    assert!(granted(&g));
+    let _ = g.advance_step(Vec::new());
+    assert!(!granted(&g), "the next step closes the window");
 }
 
 /// Mishra's Factory, Blinkmoth Nexus, Mishra's Foundry — each "becomes a …

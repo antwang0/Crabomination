@@ -36847,9 +36847,7 @@ impl GameState {
                 pay_own_cost,
                 uncast_penalty,
             } => {
-                if *duration == crate::card::MayPlayDuration::UntilYourNextEndStep {
-                    self.step_bounded_may_play = true;
-                }
+                self.arm_step_bounded_may_play(*duration);
                 // Atomic helper: move the top `count` cards of `who`'s library
                 // to exile and stamp `may_play_until` on each in one step.
                 // The top of the library is index 0 (see `Player::draw_top`
@@ -37943,13 +37941,12 @@ impl GameState {
                         }
                     }
                 }
-                if *duration == crate::card::MayPlayDuration::UntilYourNextEndStep {
-                    self.step_bounded_may_play = true;
-                }
+                self.arm_step_bounded_may_play(*duration);
                 Ok(())
             }
 
             Effect::GrantMayPlayForLife { what, duration } => {
+                self.arm_step_bounded_may_play(*duration);
                 let granted_turn = self.turn_number;
                 let player = ctx.controller;
                 for ent in self.resolve_selector(what, ctx) {
@@ -38374,6 +38371,7 @@ impl GameState {
                         }
                     }
                 }
+                self.arm_step_bounded_may_play(*duration);
                 Ok(())
             }
 

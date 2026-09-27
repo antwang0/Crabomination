@@ -21238,6 +21238,18 @@ impl GameState {
         self.step_bounded_may_play = self.has_step_bounded_may_play();
     }
 
+    /// A grant of `d` is about to stamp a permission: a step-bounded window
+    /// (`EndOfThisStep`, `UntilYourNextEndStep`) arms the sweep's gate. Every
+    /// grant whose duration comes from its effect calls this.
+    pub(crate) fn arm_step_bounded_may_play(&mut self, d: crate::card::MayPlayDuration) {
+        if matches!(
+            d,
+            crate::card::MayPlayDuration::EndOfThisStep | crate::card::MayPlayDuration::UntilYourNextEndStep
+        ) {
+            self.step_bounded_may_play = true;
+        }
+    }
+
     /// Is a `MayPlayDuration::EndOfThisStep` window live in any zone? The
     /// invariant behind `step_bounded_may_play`: read-only, and used both to
     /// re-arm the gate after a sweep and to audit it in debug builds.
