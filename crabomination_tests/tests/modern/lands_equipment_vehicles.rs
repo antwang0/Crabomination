@@ -388,9 +388,10 @@ fn shuko_equips_for_free_and_grants_plus_one_zero() {
     assert_eq!(cp.toughness, 2);
 }
 
-/// Lavaspur Boots grants +1/+1 and haste while attached.
+/// Lavaspur Boots grants +1/+0, haste and ward {1} while attached (it
+/// shipped as +1/+1 without ward).
 #[test]
-fn lavaspur_boots_grants_haste_and_plus_one_one() {
+fn lavaspur_boots_grants_haste_ward_and_plus_one_zero() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let boots = g.add_card_to_battlefield(0, catalog::lavaspur_boots());
@@ -398,9 +399,30 @@ fn lavaspur_boots_grants_haste_and_plus_one_one() {
     g.perform_action(GameAction::Equip { equipment: boots, target: bear })
         .expect("equip {1} should succeed");
     let cp = g.computed_permanent(bear).unwrap();
-    assert_eq!(cp.power, 3);
-    assert_eq!(cp.toughness, 3);
+    assert_eq!((cp.power, cp.toughness), (3, 2));
     assert!(cp.keywords().contains(&crabomination::card::Keyword::Haste), "boots grant haste");
+    assert!(cp.keywords().iter().any(|k| matches!(k, crabomination::card::Keyword::Ward(_))), "and ward");
+}
+
+/// Hammerhand — its ETB stops a target creature blocking this turn; the
+/// enchanted creature gets +1/+1 and haste (it shipped as +1/+0 with "can't
+/// block" on its own host).
+#[test]
+fn hammerhand_pumps_its_host_and_stops_a_blocker() {
+    use crabomination::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let wall = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let aura = g.add_card_to_battlefield(0, catalog::hammerhand());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(bear);
+    let etb = catalog::hammerhand().triggered_abilities[0].effect.clone();
+    let ctx = crabomination::game::effects::EffectContext::for_ability(aura, 0, Some(Target::Permanent(wall)));
+    g.resolve_effect(&etb, &ctx).unwrap();
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3));
+    assert!(cp.keywords().contains(&Keyword::Haste));
+    assert!(!cp.keywords().contains(&Keyword::CantBlock), "its host can block");
+    assert!(g.permanent_has_keyword(wall, &Keyword::CantBlock));
 }
 
 /// Skullclamp's equip-granted "dies → draw two" trigger fires when the

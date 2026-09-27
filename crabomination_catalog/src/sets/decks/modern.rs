@@ -20251,11 +20251,8 @@ pub fn skullclamp() -> CardDefinition {
     }
 }
 
-/// Lavaspur Boots — {1} Artifact — Equipment.
-/// Equipped creature gets +1/+1 and has haste. Equip {1}.
-///
-/// (The printed "Equip — pay {1} less if it targets a creature that entered
-/// this turn" discount rider is omitted; the base equip {1} always applies.)
+/// Lavaspur Boots — {1} Artifact — Equipment. Equipped creature gets +1/+0
+/// and has haste and ward {1}. Equip {1}. (It shipped as +1/+1 without ward.)
 pub fn lavaspur_boots() -> CardDefinition {
     use crate::card::EquipBonus;
     CardDefinition {
@@ -20269,10 +20266,7 @@ pub fn lavaspur_boots() -> CardDefinition {
         keywords: vec![Keyword::Equip(cost(&[generic(1)]))],
         equipped_bonus: Some(EquipBonus {
             power: 1,
-            toughness: 1,
-            keywords: vec![Keyword::Haste],
-            scale: None,
-            triggered_abilities: vec![],
+            keywords: vec![Keyword::Haste, Keyword::Ward(crate::card::WardCost::generic(1))],
             ..Default::default()
         }),
         ..Default::default()
@@ -30802,16 +30796,18 @@ pub fn mark_of_the_vampire() -> CardDefinition {
     )
 }
 
-/// Hammerhand — {R} Aura. Enchanted creature gets +1/+0 and has haste and
-/// can't block.
+/// Hammerhand — {R} Aura. When it enters, target creature can't block this
+/// turn; enchanted creature gets +1/+1 and has haste. (It shipped as +1/+0
+/// with the "can't block" on its own host.)
 pub fn hammerhand() -> CardDefinition {
-    simple_aura(
-        "Hammerhand",
-        cost(&[r()]),
-        1,
-        0,
-        vec![Keyword::Haste, Keyword::CantBlock],
-    )
+    CardDefinition {
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::GrantKeyword {
+            what: target_filtered(SelectionRequirement::Creature),
+            keyword: Keyword::CantBlock,
+            duration: Duration::EndOfTurn,
+        })],
+        ..simple_aura("Hammerhand", cost(&[r()]), 1, 1, vec![Keyword::Haste])
+    }
 }
 
 /// Tap-down Aura ({2}{U} template): enchant creature, tap it on ETB, and it
