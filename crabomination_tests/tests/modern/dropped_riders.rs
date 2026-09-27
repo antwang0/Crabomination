@@ -1110,3 +1110,22 @@ fn triumph_of_saint_katherine_hides_in_the_top_seven() {
     assert!(at < 7, "among the top seven, at {at}");
     assert_eq!(lib[7].id, seventh_down, "the rest of the library is untouched");
 }
+
+/// Callidus Assassin — "You may have this creature enter **tapped** as a copy
+/// of any creature on the battlefield, except it has 'When this creature
+/// enters, destroy up to one other target creature with the same name'."
+#[test]
+fn callidus_assassin_enters_tapped_and_kills_its_namesake() {
+    let mut g = main_phase();
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let ca = g.add_card_to_hand(0, catalog::callidus_assassin());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    cast(&mut g, ca, None).expect("cast");
+    drain_stack(&mut g);
+    let me = g.battlefield_find(ca).expect("on the battlefield");
+    assert_eq!(me.definition.name, "Grizzly Bears");
+    assert!(me.tapped, "entered tapped");
+    assert!(g.battlefield_find(theirs).is_none(), "the namesake is destroyed");
+}

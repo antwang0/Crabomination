@@ -158,13 +158,15 @@ pub fn birth_of_the_imperium() -> CardDefinition {
 /// Callidus Assassin — flash; may enter as a copy of any creature, with
 /// "destroy up to one other creature with this name".
 ///
-/// ⚠ Residual: enters untapped; the trigger reads "shares a name with
-/// another permanent".
+/// ⚠ Residual: the trigger reads "shares a name with another permanent".
 pub fn callidus_assassin() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flash],
         enters_as_copy: Some(EntersAsCopy {
             filter: R::Creature,
+            // "enter tapped as a copy": the replacement re-decided against
+            // the copied characteristics (CR 616.1c) reads this.
+            extra_static: vec![super::super::enters_tapped()],
             extra_triggered: vec![etb(Effect::ApplyToTargets {
                 max_targets: 1,
                 min_targets: 0,
