@@ -2744,9 +2744,32 @@ impl GameState {
         effect: &Effect,
         ctx: &EffectContext,
     ) -> Result<Vec<GameEvent>, GameError> {
-        let mut events = self.resolve_effect(effect, ctx)?;
-        self.drive_suspensions(ctx, &mut events, Some(ctx.controller))?;
-        Ok(events)
+        // Off the stack, this can run while another resolution is parked on a
+        // decision — a vote waiting on its next voter, whose earlier ballots
+        // sit in the answer log, when a state-based action moves a card with
+        // an as-enters replacement (pod seed 1304015, Trial of a Time Lord).
+        // The nested resolution read the vote's ballot as its own answer, and
+        // on completing dropped the channel as a leak. The two channels are
+        // per resolution: set the parked one's aside and give it back.
+        let outer_log = if self.scratch.resolution_answer_log.is_empty() {
+            Vec::new()
+        } else {
+            std::mem::take(&mut self.scratch.resolution_answer_log)
+        };
+        let outer_stash = take_opt_scratch!(self.stashed_resolution_answer);
+        let run = |g: &mut Self| -> Result<Vec<GameEvent>, GameError> {
+            let mut events = g.resolve_effect(effect, ctx)?;
+            g.drive_suspensions(ctx, &mut events, Some(ctx.controller))?;
+            Ok(events)
+        };
+        let result = run(self);
+        if !outer_log.is_empty() {
+            self.scratch.resolution_answer_log = outer_log;
+        }
+        if outer_stash.is_some() {
+            self.scratch.stashed_resolution_answer = outer_stash;
+        }
+        result
     }
 
     /// Answer each pending suspension through the decider (or, for

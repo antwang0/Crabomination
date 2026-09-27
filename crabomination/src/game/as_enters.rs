@@ -91,3 +91,20 @@ impl GameState {
         false
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::decision::DecisionAnswer;
+
+    /// CR 614.12 — an as-enters replacement applied off the stack (a
+    /// state-based move while a vote waits on its next voter) resolves on its
+    /// own answer channel: the parked vote's ballot is still there after.
+    #[test]
+    fn cr_614_12_off_stack_as_enters_keeps_a_parked_resolutions_answers() {
+        let mut g = crate::game::multi_player_game(3);
+        let cavern = g.add_card_to_battlefield(0, crate::catalog::cavern_of_souls());
+        g.scratch.resolution_answer_log = vec![DecisionAnswer::Amount(0)];
+        g.apply_as_enters_replacements(cavern);
+        assert_eq!(g.scratch.resolution_answer_log, vec![DecisionAnswer::Amount(0)]);
+    }
+}
