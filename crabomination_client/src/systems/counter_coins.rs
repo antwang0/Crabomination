@@ -1,96 +1,94 @@
-//! 3-D counter-coin visualization on battlefield permanents.
+//! Counters on battlefield permanents: a pile of 3-D coins per counter kind
+//! down the card's left edge, the count printed on the pile's top coin and
+//! the kind named beside it.
 //!
-//! Each `CounterType` on a `PermanentView.counters` entry gets a small
-//! coloured cylinder ("coin") spawned as a child of the card entity.
-//! Multiple counters of the same type stack vertically; multiple types
-//! sit side-by-side along the card's local X axis.
+//! The column sits over the left of the art box, clear of the name bar, the
+//! P/T box and every corner badge. A pile grows a coin per counter up to
+//! [`MAX_PILE`], so "a few" and "a lot" read apart at a glance; the number
+//! says exactly how many. The coins used to stack *across* the card face, a
+//! coin-diameter per counter, so a Walking Ballista with eleven drew a
+//! tower the height of the card over its art and name.
 //!
-//! Each frame we despawn-and-respawn the coins for any card whose
-//! counter mix has changed, keyed by the same logic as the badge-removal
-//! pass: cheap (≤ ~10 active permanents on a typical board) and avoids
-//! the complexity of in-place reconciliation.
+//! A kind another overlay already reads gets no coin ([`board_counters`]):
+//! a planeswalker's loyalty is the ◆ badge, a battle's defense the ◇ badge
+//! (`pt_label`), a stun counter on a creature the "Stun N" status chip
+//! (`keyword_label`).
+//!
+//! Coins are children of the card entity, rebuilt only when a card's piles
+//! change; the labels are screen-space nodes reprojected every frame, like
+//! `pt_label`'s badges.
 
 use std::collections::{HashMap, HashSet};
 
 use bevy::prelude::*;
-use crabomination::card::{CardId, CounterType};
+use crabomination::card::{CardId, CardType, CounterType};
+use crabomination::net::PermanentView;
 
-use crate::card::{BattlefieldCard, CARD_THICKNESS};
-use crate::card::GameCardId;
+use crate::card::{BattlefieldCard, CARD_HEIGHT, CARD_THICKNESS, CARD_WIDTH, GameCardId};
 use crate::net_plugin::CurrentView;
 
-/// Shared cylinder mesh + per-counter-type material handles used to
-/// spawn coin entities. Initialised on app startup alongside the card
-/// mesh assets.
+/// Shared coin meshes and the rim material; each kind's fill is made the
+/// first time that kind is shown ([`coin_fill`]).
 #[derive(Resource)]
 pub struct CounterCoinAssets {
     pub coin_mesh: Handle<Mesh>,
-    /// Slightly larger, flatter cylinder spawned just behind each coin
-    /// to draw a bright rim ("outline") around it for contrast.
+    /// Slightly larger, flatter cylinder behind each coin: a bright rim
+    /// that keeps the coin's edge readable over any card art.
     pub outline_mesh: Handle<Mesh>,
     pub outline_material: Handle<StandardMaterial>,
-    pub plus_one_plus_one: Handle<StandardMaterial>,
-    pub minus_one_minus_one: Handle<StandardMaterial>,
-    pub loyalty: Handle<StandardMaterial>,
-    pub charge: Handle<StandardMaterial>,
-    pub stun: Handle<StandardMaterial>,
-    pub time: Handle<StandardMaterial>,
-    pub poison: Handle<StandardMaterial>,
-    pub energy: Handle<StandardMaterial>,
-    pub generic: Handle<StandardMaterial>,
+    fills: HashMap<CounterType, Handle<StandardMaterial>>,
 }
 
-/// Marker on each spawned coin-mesh entity. Stores which card it belongs
-/// to (so the system can match against the engine state) and the kind so
-/// stacking colours stay consistent across frames.
+/// Marker on each spawned coin-mesh entity, with its kind so a card's
+/// current piles can be read back off its children.
 #[derive(Component)]
 pub struct CounterCoin {
-    #[allow(dead_code)]
     pub card_id: CardId,
     pub kind: CounterType,
 }
 
-/// Geometry constants for coin layout in card-local space. Cards are
-/// `CARD_WIDTH × CARD_HEIGHT` rectangles oriented with their local +Z
-/// pointing toward the front face; once the card is laid flat on the
-/// battlefield via `rotation_x(-π/2)` the +Z direction becomes world +Y
-/// (above the table), so a coin sitting at local +Z naturally floats
-/// above the card.
-const COIN_RADIUS: f32 = 0.24;
-const COIN_HEIGHT: f32 = 0.07;
-const COIN_GAP_X: f32 = 0.10;
-const COIN_GAP_Y: f32 = 0.04;
-const COIN_BASE_Z: f32 = CARD_THICKNESS / 2.0 + 0.05; // floats clearly above the front face
+/// Coin geometry, card-local. The card's face lies in XY with +Z out of the
+/// front, which is world +Y once the card lies flat on the table, so a pile
+/// grows along +Z — toward the camera, like chips on a card.
+const COIN_RADIUS: f32 = 0.34;
+const COIN_HEIGHT: f32 = 0.06;
+const COIN_BASE_Z: f32 = CARD_THICKNESS / 2.0 + 0.03;
 /// Outline ring: a touch wider than the coin and a touch shorter, so it
-/// protrudes radially (a visible rim) without poking in front of the
-/// coin's face (which would z-fight).
-const OUTLINE_RADIUS: f32 = COIN_RADIUS + 0.055;
+/// shows as a rim without poking through the coin's face.
+const OUTLINE_RADIUS: f32 = COIN_RADIUS + 0.045;
 const OUTLINE_HEIGHT: f32 = COIN_HEIGHT * 0.7;
-/// Vertical spacing between stacked coins of the *same* type. The coins
-/// face the camera (their circular face lies in the card plane), so the
-/// stack must step by roughly a coin *diameter* — stepping by the coin's
-/// thickness (`COIN_HEIGHT`) made a 3-counter "tower" pile almost
-/// entirely on top of itself. A hair under a full diameter leaves a
-/// small rim of each lower coin visible so the stack is countable.
-const COIN_STACK_STEP: f32 = COIN_RADIUS * 1.7 + COIN_GAP_Y;
-/// Peak emissive magnitude (linear) for a coin fill. Pushed past the bloom
-/// prefilter threshold (~1.0, see `RenderQuality::bloom`) so each coin glows
-/// its own colour on HDR tiers. Normalised per-hue (see the `mat` closure) so
-/// a dark-green +1/+1 and a bright-gold loyalty bloom at the same intensity.
-/// On Low (no HDR/bloom) this is just a slightly brighter self-lit coin.
-const COIN_GLOW: f32 = 1.7;
+/// Coins in the tallest pile; the number on top carries the rest.
+const MAX_PILE: u32 = 5;
+/// The column: inset from the left edge, the first pile just under the name
+/// bar, one pile per kind going down.
+const COLUMN_X: f32 = -CARD_WIDTH / 2.0 + COIN_RADIUS + 0.14;
+const COLUMN_TOP_Y: f32 = CARD_HEIGHT / 2.0 - 0.85;
+const COLUMN_STEP: f32 = COIN_RADIUS * 2.0 + 0.12;
+
+/// Coins in the pile for `count` counters.
+fn pile_height(count: u32) -> u32 {
+    count.clamp(1, MAX_PILE)
+}
+
+/// Card-local point on the card face under the pile in column slot `slot`.
+fn pile_base(slot: usize) -> Vec3 {
+    Vec3::new(COLUMN_X, COLUMN_TOP_Y - slot as f32 * COLUMN_STEP, 0.0)
+}
+
+/// Card-local centre of the top face of the pile in column slot `slot`.
+fn pile_top(slot: usize, count: u32) -> Vec3 {
+    Vec3::new(
+        COLUMN_X,
+        COLUMN_TOP_Y - slot as f32 * COLUMN_STEP,
+        COIN_BASE_Z + pile_height(count) as f32 * COIN_HEIGHT,
+    )
+}
 
 pub fn init_counter_coin_assets(
     commands: &mut Commands,
     meshes: &mut ResMut<Assets<Mesh>>,
     materials: &mut ResMut<Assets<StandardMaterial>>,
 ) {
-    let coin_mesh = meshes.add(Cylinder::new(COIN_RADIUS, COIN_HEIGHT));
-    let outline_mesh = meshes.add(Cylinder::new(OUTLINE_RADIUS, OUTLINE_HEIGHT));
-
-    // Bright near-white rim so every coin's edge stands out crisply
-    // regardless of the card art behind it. Built before the `mat`
-    // closure below, which mutably borrows `materials` for its lifetime.
     let outline_material = materials.add(StandardMaterial {
         base_color: Color::srgb(0.96, 0.96, 0.98),
         perceptual_roughness: 0.5,
@@ -98,67 +96,35 @@ pub fn init_counter_coin_assets(
         emissive: LinearRgba::new(0.30, 0.30, 0.34, 1.0),
         ..default()
     });
-
-    // Deep, saturated coin fills — darker than before so they read as
-    // solid chips rather than washing out against bright card art. Each fill
-    // carries a self-coloured emissive normalised to `COIN_GLOW`, so on HDR
-    // tiers the coin glows its own colour (and trips bloom) at a brightness
-    // that's consistent across hues regardless of how dark the base fill is;
-    // the bright outline ring (below) still supplies the hard edge contrast.
-    let mut mat = |color: Color, metallic: f32| -> Handle<StandardMaterial> {
-        let lin = color.to_linear();
-        // Scale the hue so its brightest channel hits COIN_GLOW; keeps a deep
-        // fill and a bright fill blooming at the same intensity.
-        let peak = lin.red.max(lin.green).max(lin.blue).max(1e-4);
-        let g = COIN_GLOW / peak;
-        materials.add(StandardMaterial {
-            base_color: color,
-            perceptual_roughness: 0.40,
-            metallic,
-            emissive: LinearRgba::new(lin.red * g, lin.green * g, lin.blue * g, 1.0),
-            ..default()
-        })
-    };
-
     commands.insert_resource(CounterCoinAssets {
-        coin_mesh,
-        outline_mesh,
+        coin_mesh: meshes.add(Cylinder::new(COIN_RADIUS, COIN_HEIGHT)),
+        outline_mesh: meshes.add(Cylinder::new(OUTLINE_RADIUS, OUTLINE_HEIGHT)),
         outline_material,
-        // +1/+1 → deep green; −1/−1 → deep red.
-        plus_one_plus_one: mat(Color::srgb(0.10, 0.45, 0.16), 0.30),
-        minus_one_minus_one: mat(Color::srgb(0.50, 0.08, 0.08), 0.30),
-        // Loyalty → dark gold (high metallic for a coin look).
-        loyalty: mat(Color::srgb(0.62, 0.48, 0.06), 0.85),
-        charge: mat(Color::srgb(0.10, 0.48, 0.60), 0.45),
-        stun: mat(Color::srgb(0.44, 0.16, 0.60), 0.30),
-        time: mat(Color::srgb(0.62, 0.36, 0.08), 0.40),
-        poison: mat(Color::srgb(0.16, 0.34, 0.08), 0.10),
-        energy: mat(Color::srgb(0.12, 0.30, 0.66), 0.55),
-        generic: mat(Color::srgb(0.34, 0.34, 0.42), 0.30),
+        fills: HashMap::new(),
     });
 }
 
-fn material_for(kind: CounterType, assets: &CounterCoinAssets) -> Handle<StandardMaterial> {
-    match kind {
-        CounterType::PlusOnePlusOne
-        | CounterType::PlusOnePlusZero
-        | CounterType::PlusZeroPlusOne => assets.plus_one_plus_one.clone(),
-        CounterType::MinusOneMinusOne => assets.minus_one_minus_one.clone(),
-        CounterType::Loyalty => assets.loyalty.clone(),
-        CounterType::Charge => assets.charge.clone(),
-        CounterType::Stun => assets.stun.clone(),
-        CounterType::Time => assets.time.clone(),
-        CounterType::Poison => assets.poison.clone(),
-        CounterType::Energy => assets.energy.clone(),
-        _ => assets.generic.clone(),
+/// A kind's coin fill: the deep shade of its label colour, so the white
+/// number on it reads and the coin matches its tag. Self-lit a little so a
+/// coin in the card's shadow doesn't go black, not enough to bloom — a
+/// glowing coin washed out to pastel under the number.
+fn coin_fill(kind: CounterType) -> StandardMaterial {
+    let label = counter_label_color(kind).to_srgba();
+    let fill = Color::srgb(label.red * 0.42, label.green * 0.42, label.blue * 0.42);
+    let lin = fill.to_linear();
+    StandardMaterial {
+        base_color: fill,
+        perceptual_roughness: 0.45,
+        metallic: if kind == CounterType::Loyalty { 0.8 } else { 0.3 },
+        emissive: LinearRgba::new(lin.red * 0.35, lin.green * 0.35, lin.blue * 0.35, 1.0),
+        ..default()
     }
 }
 
-/// Sort key for counter types — pins +1/+1 / −1/−1 to the front (most
-/// commonly inspected during play), loyalty next, the rest in declaration
-/// order. Keeps coin rows stable across frames.
-fn sort_key(kind: CounterType) -> u8 {
-    match kind {
+/// Column order: +1/+1 and −1/−1 first (the most read), then loyalty and
+/// the other common kinds, the rest by name so the order holds still.
+fn sort_key(kind: CounterType) -> (u8, &'static str) {
+    let rank = match kind {
         CounterType::PlusOnePlusOne => 0,
         CounterType::MinusOneMinusOne => 1,
         CounterType::Loyalty => 2,
@@ -168,19 +134,42 @@ fn sort_key(kind: CounterType) -> u8 {
         CounterType::Poison => 6,
         CounterType::Energy => 7,
         _ => 8,
-    }
+    };
+    (rank, counter_token(kind))
 }
 
-/// Reconcile the 3-D counter coins with the engine's battlefield view.
-/// On every frame we compute the *desired* coin set per card and the
-/// *current* coin set from existing `CounterCoin` entities. Cards whose
-/// signature changed (any counter added, removed, or its count moved) are
-/// fully rebuilt — for everyone else we leave the coins alone so the
-/// existing entities stay parented correctly through tap/play animations.
+/// The counters `p` shows as coins, in column order: every kind with a
+/// count, less the ones another overlay reads (module note).
+pub(crate) fn board_counters(p: &PermanentView) -> Vec<(CounterType, u32)> {
+    let creature = p.is_creature();
+    let planeswalker = p.card_types.contains(&CardType::Planeswalker);
+    let read_elsewhere = |kind: CounterType| match kind {
+        CounterType::Loyalty => !creature && planeswalker,
+        CounterType::Defense => {
+            !creature && !planeswalker && p.card_types.contains(&CardType::Battle)
+        }
+        CounterType::Stun => crate::systems::keyword_label::has_status_strip(p),
+        _ => false,
+    };
+    let mut kinds: Vec<(CounterType, u32)> = p
+        .counters
+        .iter()
+        .filter(|&&(k, n)| n > 0 && !read_elsewhere(k))
+        .copied()
+        .collect();
+    kinds.sort_by_key(|(k, _)| sort_key(*k));
+    kinds
+}
+
+/// Reconcile the coin piles with the engine's battlefield view. A card
+/// whose piles changed (a kind added or gone, or a pile's height moved) is
+/// rebuilt; every other card's coins are left alone, so they stay parented
+/// through tap and play animations.
 pub fn sync_counter_coins(
     mut commands: Commands,
     view: Res<CurrentView>,
-    assets: Option<Res<CounterCoinAssets>>,
+    assets: Option<ResMut<CounterCoinAssets>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
     bf_cards: Query<(Entity, &GameCardId), With<BattlefieldCard>>,
     existing: Query<(Entity, &ChildOf, &CounterCoin)>,
     // Battlefield entities spawn via deferred commands, a frame after the
@@ -188,142 +177,101 @@ pub fn sync_counter_coins(
     added_bf: Query<(), Added<BattlefieldCard>>,
 ) {
     let Some(cv) = &view.0 else { return };
-    let Some(assets) = assets else { return };
-    // Coins are children of the card entity (positions ride the parent), so
-    // reconciliation only needs to run when the counter data or the set of
-    // battlefield entities can have changed — not every frame.
+    let Some(mut assets) = assets else { return };
+    // Coins ride their card, so this only needs to run when the counters
+    // or the set of battlefield entities can have changed.
     if !view.is_changed() && added_bf.is_empty() {
         return;
     }
 
-    // Build CardId → battlefield-entity lookup.
-    let mut card_entity: HashMap<CardId, Entity> = HashMap::new();
-    for (e, gid) in &bf_cards {
-        card_entity.insert(gid.0, e);
-    }
+    let card_entity: HashMap<CardId, Entity> = bf_cards.iter().map(|(e, gid)| (gid.0, e)).collect();
 
-    // Existing coin signature per parent entity, used to skip rebuilds when
-    // the counter list hasn't changed.
-    let mut existing_sig: HashMap<Entity, Vec<(CounterType, u32)>> = HashMap::new();
+    // Each card's current piles, read off its coins: (kind, coins).
+    let mut existing_piles: HashMap<Entity, Vec<(CounterType, u32)>> = HashMap::new();
     let mut existing_entities: HashMap<Entity, Vec<Entity>> = HashMap::new();
     {
-        // First pass: gather counts of (parent, kind).
         let mut accum: HashMap<(Entity, CounterType), u32> = HashMap::new();
         for (coin_e, child_of, coin) in &existing {
             *accum.entry((child_of.parent(), coin.kind)).or_default() += 1;
             existing_entities.entry(child_of.parent()).or_default().push(coin_e);
         }
         for ((parent, kind), n) in accum {
-            existing_sig.entry(parent).or_default().push((kind, n));
+            existing_piles.entry(parent).or_default().push((kind, n));
         }
-        // Sort each parent's signature for stable comparison.
-        for sig in existing_sig.values_mut() {
-            sig.sort_by_key(|(k, _)| sort_key(*k));
+        for piles in existing_piles.values_mut() {
+            piles.sort_by_key(|(k, _)| sort_key(*k));
         }
     }
 
-    let mut all_battlefield_entities: std::collections::HashSet<Entity> =
-        std::collections::HashSet::new();
-
+    let mut on_battlefield: HashSet<Entity> = HashSet::new();
     for p in &cv.battlefield {
         let Some(&parent) = card_entity.get(&p.id) else { continue };
-        all_battlefield_entities.insert(parent);
+        on_battlefield.insert(parent);
 
-        // Build desired counter list (sorted by sort_key, dropping zeros).
-        let mut desired: Vec<(CounterType, u32)> = p
-            .counters
-            .iter()
-            .filter(|(_, n)| *n > 0)
-            .map(|(k, n)| (*k, *n))
+        let desired: Vec<(CounterType, u32)> = board_counters(p)
+            .into_iter()
+            .map(|(k, n)| (k, pile_height(n)))
             .collect();
-        desired.sort_by_key(|(k, _)| sort_key(*k));
-
-        // Skip if the signature already matches.
-        if existing_sig.get(&parent).map(|v| v.as_slice()) == Some(desired.as_slice()) {
+        if existing_piles.get(&parent).map(Vec::as_slice).unwrap_or(&[]) == desired.as_slice() {
             continue;
         }
-
-        // Despawn old coins for this card and respawn the desired set.
         if let Some(coins) = existing_entities.remove(&parent) {
             for e in coins {
                 commands.entity(e).despawn();
             }
         }
 
-        if desired.is_empty() {
-            continue;
-        }
-
-        commands.entity(parent).with_children(|p_builder| {
-            // Lay out coin types along the card's local X axis (one
-            // column per type), stacking duplicates upward in the
-            // card's local Y axis so a creature with `+1/+1 ×3` shows
-            // a 3-coin tower and not three separate columns.
-            let n_types = desired.len() as f32;
-            let row_width = n_types * (COIN_RADIUS * 2.0 + COIN_GAP_X) - COIN_GAP_X;
-            let start_x = -row_width * 0.5 + COIN_RADIUS;
-            for (col, (kind, count)) in desired.iter().enumerate() {
-                let x = start_x + col as f32 * (COIN_RADIUS * 2.0 + COIN_GAP_X);
-                // Cap the visible stack so a Cosmogoyf with 30 +1/+1's
-                // doesn't tower off the table. The floating label carries
-                // the exact ×N; a truncated tower additionally floats its
-                // top coin a half-step higher — the visible break reads as
-                // "stack continues" instead of silently looking like 8.
-                let capped = *count > 8;
-                let n = (*count).min(8);
-                for i in 0..n {
-                    let mut y = COIN_STACK_STEP * i as f32;
-                    if capped && i == n - 1 {
-                        y += COIN_STACK_STEP * 1.5;
-                    }
-                    let coin_rot = Quat::from_rotation_x(std::f32::consts::FRAC_PI_2);
-                    p_builder
-                        .spawn((
-                            Mesh3d(assets.coin_mesh.clone()),
-                            MeshMaterial3d(material_for(*kind, &assets)),
-                            // Local space: card's surface lies in XY, +Z
-                            // is out of the front face. After the
-                            // parent's rotation_x(-π/2) the coins float
-                            // above the card on the table.
-                            Transform::from_xyz(x, y, COIN_BASE_Z).with_rotation(coin_rot),
-                            CounterCoin { card_id: p.id, kind: *kind },
-                        ))
-                        .with_children(|coin| {
-                            // Outline rim as a child of the coin (so it
-                            // shares the coin's despawn + isn't counted
-                            // in the rebuild signature). Local -Y maps to
-                            // world −Z under the coin's rotation_x(90°),
-                            // tucking the rim just behind the coin face.
-                            coin.spawn((
-                                Mesh3d(assets.outline_mesh.clone()),
-                                MeshMaterial3d(assets.outline_material.clone()),
-                                Transform::from_xyz(0.0, -0.012, 0.0),
-                                Pickable::IGNORE,
-                            ));
-                        });
+        let coin_rot = Quat::from_rotation_x(std::f32::consts::FRAC_PI_2);
+        for (slot, &(kind, coins)) in desired.iter().enumerate() {
+            let fill = assets
+                .fills
+                .entry(kind)
+                .or_insert_with(|| materials.add(coin_fill(kind)))
+                .clone();
+            let top = pile_top(slot, coins);
+            commands.entity(parent).with_children(|card| {
+                for i in 0..coins {
+                    // Local space: the card face is XY, +Z out of the front;
+                    // the cylinder's axis turned onto Z lays the coin flat on
+                    // the card, and each one sits on the one below.
+                    let z = COIN_BASE_Z + (i as f32 + 0.5) * COIN_HEIGHT;
+                    card.spawn((
+                        Mesh3d(assets.coin_mesh.clone()),
+                        MeshMaterial3d(fill.clone()),
+                        Transform::from_xyz(top.x, top.y, z).with_rotation(coin_rot),
+                        CounterCoin { card_id: p.id, kind },
+                    ))
+                    .with_children(|coin| {
+                        // The rim is the coin's child, so it despawns with it
+                        // and isn't counted as a coin. Local −Y is card −Z
+                        // under the coin's rotation: just behind its face.
+                        coin.spawn((
+                            Mesh3d(assets.outline_mesh.clone()),
+                            MeshMaterial3d(assets.outline_material.clone()),
+                            Transform::from_xyz(0.0, -0.01, 0.0),
+                            Pickable::IGNORE,
+                        ));
+                    });
                 }
-            }
-        });
+            });
+        }
     }
 
-    // Despawn any leftover coins whose parent no longer maps to a
-    // battlefield card (e.g. the card was destroyed/exiled).
-    for (parent, coin_entities) in existing_entities {
-        if !all_battlefield_entities.contains(&parent) {
-            for e in coin_entities {
+    // Coins whose card has left the battlefield.
+    for (parent, coins) in existing_entities {
+        if !on_battlefield.contains(&parent) {
+            for e in coins {
                 commands.entity(e).despawn();
             }
         }
     }
 }
 
-// ── Counter type+count labels ─────────────────────────────────────────────────
+// ── Counter labels ────────────────────────────────────────────────────────────
 //
-// The coins convey a counter's *kind* by colour, but a bare disc doesn't say
-// what it is or how many there are (the stack is capped at 8 and never showed a
-// number). A small screen-space label per counter type — "+1/+1 ×3", coloured
-// to match the coin — makes each coin self-explanatory and the count exact.
-// Mirrors `pt_label::sync_pt_labels`' reproject-and-reconcile pattern.
+// The coin says "some of this colour"; the label says what and how many: the
+// count centred on the pile's top coin, the kind's name in a small tag beside
+// it, on the side facing into the card.
 
 /// Below default-z UI so peek popups / tooltips / modals draw over it.
 const COUNTER_LABEL_Z: i32 = crate::theme::layer::CARD_OVERLAY;
@@ -491,12 +439,13 @@ fn counter_token(kind: CounterType) -> &'static str {
     }
 }
 
-/// Bright, legible text colour matching each counter's coin fill (the coin
-/// fills are deliberately dark for solidity; these are their readable twins).
+/// Bright, legible text colour for each counter kind's tag; the coin fill is
+/// its deep shade ([`coin_fill`]).
 fn counter_label_color(kind: CounterType) -> Color {
     match kind {
         CounterType::PlusOnePlusOne
         | CounterType::PlusOnePlusZero
+        | CounterType::PlusZeroPlusOne
         | CounterType::PlusTwoPlusZero
         | CounterType::PlusZeroPlusTwo
         | CounterType::PlusTwoPlusTwo => Color::srgb(0.45, 0.95, 0.50),
@@ -508,6 +457,7 @@ fn counter_label_color(kind: CounterType) -> Color {
         CounterType::Charge => Color::srgb(0.42, 0.85, 0.96),
         CounterType::Stun => Color::srgb(0.82, 0.56, 0.96),
         CounterType::Time => Color::srgb(0.96, 0.74, 0.42),
+        CounterType::Lore => Color::srgb(0.92, 0.66, 0.84),
         CounterType::Poison => Color::srgb(0.56, 0.86, 0.42),
         CounterType::Energy => Color::srgb(0.46, 0.66, 0.98),
         CounterType::Ki => Color::srgb(0.96, 0.62, 0.36),
@@ -520,161 +470,277 @@ fn counter_label_color(kind: CounterType) -> Color {
     }
 }
 
-/// Label text for a counter kind + count: "+1/+1 ×3", or just the token when
-/// there's a single counter (the "×1" is noise). Time counters on an
-/// Impending permanent (CR 702.183) badge the countdown instead.
-fn counter_label_text(kind: CounterType, count: u32, impending: bool) -> String {
-    if impending && kind == CounterType::Time {
-        return format!("Impending {count}");
-    }
-    let token = counter_token(kind);
-    if count > 1 {
-        format!("{token} ×{count}")
+/// The tag naming a pile: the counter's name, or "Impending" for the time
+/// counters an Impending permanent counts down with (CR 702.183).
+fn counter_tag(kind: CounterType, impending: bool) -> &'static str {
+    if impending && kind == CounterType::Time { "Impending" } else { counter_token(kind) }
+}
+
+/// Which side of its coin a tag hangs on: toward the card's local +X (into
+/// the art box) as that direction falls on screen, so an opponent's card,
+/// which faces them, and a tapped card keep their tags on the card.
+#[derive(Clone, Copy, PartialEq, Debug)]
+enum TagSide {
+    Right,
+    Left,
+    Below,
+    Above,
+}
+
+fn tag_side(into_card: Vec2) -> TagSide {
+    if into_card.x.abs() >= into_card.y.abs() {
+        if into_card.x >= 0.0 { TagSide::Right } else { TagSide::Left }
+    } else if into_card.y >= 0.0 {
+        TagSide::Below
     } else {
-        token.to_string()
+        TagSide::Above
     }
 }
 
-/// Project a card's coin-area world anchor to a viewport pixel, stacking each
-/// counter type's label on its own line (`row`).
-fn label_anchor(
-    camera: &Camera,
-    cam_xform: &GlobalTransform,
-    ui_scale: &UiScale,
-    world: Vec3,
-    row: usize,
-) -> Option<(f32, f32)> {
-    crate::theme::project_to_ui(camera, cam_xform, ui_scale, world)
-        .map(|v| (v.x - 26.0, v.y - 12.0 + row as f32 * 20.0))
+/// Place a tag on `side` of its coin's box: flush against it, centred on
+/// the other axis.
+fn place_tag(node: &mut Node, transform: &mut UiTransform, side: TagSide) {
+    let gap = Val::Px(2.0);
+    node.left = Val::Auto;
+    node.right = Val::Auto;
+    node.top = Val::Auto;
+    node.bottom = Val::Auto;
+    node.margin = UiRect::ZERO;
+    match side {
+        TagSide::Right => {
+            node.left = Val::Percent(100.0);
+            node.top = Val::Percent(50.0);
+            node.margin.left = gap;
+            transform.translation = Val2::percent(0.0, -50.0);
+        }
+        TagSide::Left => {
+            node.right = Val::Percent(100.0);
+            node.top = Val::Percent(50.0);
+            node.margin.right = gap;
+            transform.translation = Val2::percent(0.0, -50.0);
+        }
+        TagSide::Below => {
+            node.top = Val::Percent(100.0);
+            node.left = Val::Percent(50.0);
+            node.margin.top = gap;
+            transform.translation = Val2::percent(-50.0, 0.0);
+        }
+        TagSide::Above => {
+            node.bottom = Val::Percent(100.0);
+            node.left = Val::Percent(50.0);
+            node.margin.bottom = gap;
+            transform.translation = Val2::percent(-50.0, 0.0);
+        }
+    }
 }
 
-/// Screen-space "<type> ×N" label tied to a battlefield card's counter of a
-/// given kind. One per (card, kind) so each type gets its own coloured line.
+/// The count's font size for a coin `diameter` UI px across: as big as fits
+/// two digits, within reason.
+fn count_font_size(diameter: f32) -> f32 {
+    (diameter * 0.62).round().clamp(10.0, 20.0)
+}
+
+/// A pile's label, tied to a battlefield card's counter of one kind: a box
+/// the size of the pile's top coin with the count centred in it
+/// ([`CounterCount`]) and the kind's tag hung beside it ([`CounterTag`]).
 #[derive(Component)]
 pub struct CounterLabel {
     pub card_id: CardId,
     pub kind: CounterType,
 }
 
-/// Reconcile counter labels with the engine view (see module note above).
-#[allow(clippy::type_complexity)]
+#[derive(Component)]
+pub struct CounterCount;
+
+#[derive(Component)]
+pub struct CounterTag(TagSide);
+
+/// Where a pile's label goes this frame, in UI px: the top coin's centre,
+/// its radius, and the screen direction into the card.
+fn pile_on_screen(
+    camera: &Camera,
+    cam_xform: &GlobalTransform,
+    ui_scale: &UiScale,
+    card: &GlobalTransform,
+    slot: usize,
+    count: u32,
+) -> Option<(Vec2, f32, Vec2)> {
+    let project = |local: Vec3| {
+        crate::theme::project_to_ui(camera, cam_xform, ui_scale, card.transform_point(local))
+    };
+    let top = pile_top(slot, count);
+    let centre = project(top)?;
+    let along_x = project(top + Vec3::X * COIN_RADIUS)? - centre;
+    let along_y = project(top + Vec3::Y * COIN_RADIUS)? - centre;
+    Some((centre, along_x.length().max(along_y.length()), along_x))
+}
+
+/// Reconcile the pile labels with the engine view, and put each on its
+/// pile's top coin.
+#[allow(clippy::type_complexity, clippy::too_many_arguments)]
 pub fn sync_counter_labels(
     mut commands: Commands,
     view: Res<CurrentView>,
     ui_fonts: Res<crate::theme::UiFonts>,
-    cards: Query<(&GameCardId, &GlobalTransform), With<BattlefieldCard>>,
+    cards: Query<(Entity, &GameCardId, &GlobalTransform), With<BattlefieldCard>>,
+    cover_cards: crate::card::cover::CoverQuery,
     camera_q: Query<(&Camera, &GlobalTransform), With<crate::MainCamera>>,
     ui_scale: Res<UiScale>,
-    mut labels: Query<(Entity, &CounterLabel, &mut Node, &mut Text, &mut TextColor)>,
+    mut labels: Query<(Entity, &CounterLabel, &mut Node, &Children), Without<CounterTag>>,
+    mut counts: Query<(&mut Text, &mut TextFont), (With<CounterCount>, Without<CounterTag>)>,
+    mut tags: Query<(&mut Text, &mut CounterTag, &mut Node, &mut UiTransform), Without<CounterCount>>,
+    mut coins: Query<(&CounterCoin, &mut Visibility)>,
     mut desired_cache: Local<HashMap<(CardId, CounterType), (u32, usize, bool)>>,
 ) {
     let Some(cv) = &view.0 else {
-        for (e, _, _, _, _) in &mut labels {
+        for (e, ..) in &mut labels {
             commands.entity(e).despawn();
         }
         return;
     };
     let Ok((camera, cam_xform)) = camera_q.single() else { return };
+    let card_xform: HashMap<CardId, (Entity, &GlobalTransform)> =
+        cards.iter().map(|(e, g, t)| (g.0, (e, t))).collect();
+    // A pile hides, coins and label, while another card lies over the patch
+    // of card under it (`card::cover`). Not over the pile's top: the card on
+    // top of a wrapped row sits a few hundredths higher, and a pile poked
+    // up through it — a counter on the card underneath, seemingly on it.
+    let cover = crate::card::cover::CardCover::new(cam_xform, &cover_cards);
+    let mut covered: HashSet<(CardId, CounterType)> = HashSet::new();
 
-    // card_id → world anchor floating just above the card centre (by the coins).
-    let anchor_local = Vec3::new(0.0, 0.0, COIN_BASE_Z + 0.1);
-    let mut card_anchor: HashMap<CardId, Vec3> = HashMap::new();
-    for (gid, gtf) in &cards {
-        card_anchor.insert(gid.0, gtf.transform_point(anchor_local));
-    }
-
-    // desired (card, kind) → (count, row, impending). Row orders multiple
-    // counter types vertically in the same order as their coin columns
-    // (`sort_key`); `impending` flips the Time label into a countdown badge.
-    // Rebuilt only on view change; positions still track every frame, and
-    // ids without a live entity yet are hidden at use time.
+    // (card, kind) → (count, column slot, impending). Rebuilt on a view
+    // change; positions track every frame.
     if view.is_changed() {
         desired_cache.clear();
         for p in &cv.battlefield {
             let impending = p.impending_counters.unwrap_or(0) > 0;
-            let mut kinds: Vec<(CounterType, u32)> = p
-                .counters
-                .iter()
-                .filter(|(_, n)| *n > 0)
-                .map(|(k, n)| (*k, *n))
-                .collect();
-            kinds.sort_by_key(|(k, _)| sort_key(*k));
-            for (row, (k, n)) in kinds.into_iter().enumerate() {
-                desired_cache.insert((p.id, k), (n, row, impending));
+            for (slot, (k, n)) in board_counters(p).into_iter().enumerate() {
+                desired_cache.insert((p.id, k), (n, slot, impending));
             }
         }
     }
     let desired = &*desired_cache;
 
-    // Update existing labels; despawn any no longer present.
     let mut seen: HashSet<(CardId, CounterType)> = HashSet::new();
-    for (e, label, mut node, mut text, mut color) in &mut labels {
-        match desired.get(&(label.card_id, label.kind)) {
-            Some(&(count, row, impending)) => {
-                seen.insert((label.card_id, label.kind));
-                if let Some(world) = card_anchor.get(&label.card_id).copied()
-                    && let Some((x, y)) = label_anchor(camera, cam_xform, &ui_scale, world, row)
-                {
-                    node.display = Display::Flex;
-                    node.left = Val::Px(x);
-                    node.top = Val::Px(y);
-                } else {
-                    node.display = Display::None;
+    for (e, label, mut node, children) in &mut labels {
+        let Some(&(count, slot, impending)) = desired.get(&(label.card_id, label.kind)) else {
+            commands.entity(e).despawn();
+            continue;
+        };
+        seen.insert((label.card_id, label.kind));
+        let card = card_xform.get(&label.card_id);
+        if card.is_some_and(|(e, t)| cover.hides_local(*e, t, pile_base(slot))) {
+            covered.insert((label.card_id, label.kind));
+        }
+        let Some((centre, radius, into_card)) = card
+            .filter(|_| !covered.contains(&(label.card_id, label.kind)))
+            .and_then(|(_, t)| pile_on_screen(camera, cam_xform, &ui_scale, t, slot, count))
+        else {
+            node.display = Display::None;
+            continue;
+        };
+        node.display = Display::Flex;
+        node.left = Val::Px(centre.x);
+        node.top = Val::Px(centre.y);
+        node.width = Val::Px(radius * 2.0);
+        node.height = Val::Px(radius * 2.0);
+        for child in children.iter() {
+            if let Ok((mut text, mut font)) = counts.get_mut(child) {
+                let n = count.to_string();
+                if text.0 != n {
+                    text.0 = n;
+                    commands.entity(e).insert(crate::theme::OverlayPulse::default());
                 }
-                // Only dirty Text/TextColor on an actual change — an
-                // unconditional write forces text re-shaping every frame.
-                let new_text = counter_label_text(label.kind, count, impending);
-                if text.0 != new_text {
-                    *text = Text::new(new_text);
+                let size = FontSize::Px(count_font_size(radius * 2.0));
+                if font.font_size != size {
+                    font.font_size = size;
                 }
-                let new_color = counter_label_color(label.kind);
-                if color.0 != new_color {
-                    *color = TextColor(new_color);
+            } else if let Ok((mut text, mut tag, mut tag_node, mut transform)) = tags.get_mut(child) {
+                let name = counter_tag(label.kind, impending);
+                if text.0 != name {
+                    text.0 = name.to_string();
                 }
-            }
-            None => {
-                commands.entity(e).despawn();
+                let side = tag_side(into_card);
+                if tag.0 != side {
+                    tag.0 = side;
+                    place_tag(&mut tag_node, &mut transform, side);
+                }
             }
         }
     }
 
-    // Spawn labels for newly-present (card, kind) pairs.
-    for (&(id, kind), &(count, row, impending)) in desired.iter() {
-        if seen.contains(&(id, kind)) {
+    for (coin, mut visibility) in &mut coins {
+        let want = if covered.contains(&(coin.card_id, coin.kind)) {
+            Visibility::Hidden
+        } else {
+            Visibility::Inherited
+        };
+        if *visibility != want {
+            *visibility = want;
+        }
+    }
+
+    for (&(id, kind), &(count, _, impending)) in desired.iter() {
+        if seen.contains(&(id, kind)) || !card_xform.contains_key(&id) {
             continue;
         }
-        let (left, top) = card_anchor
-            .get(&id)
-            .copied()
-            .and_then(|world| label_anchor(camera, cam_xform, &ui_scale, world, row))
-            .unwrap_or((-1000.0, -1000.0));
-        commands.spawn((
-            CounterLabel { card_id: id, kind },
-            Text::new(counter_label_text(kind, count, impending)),
-            ui_fonts.tf(14.0),
-            TextColor(counter_label_color(kind)),
-            BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.72)),
-            Node {
-                position_type: PositionType::Absolute,
-                left: Val::Px(left),
-                top: Val::Px(top),
-                padding: UiRect::axes(Val::Px(4.0), Val::Px(1.0)),
-                justify_content: JustifyContent::Center,
-                align_items: AlignItems::Center,
-                border_radius: BorderRadius::all(Val::Px(3.0)),
-                ..default()
-            },
-            Pickable::IGNORE,
-            GlobalZIndex(COUNTER_LABEL_Z),
-            crate::systems::game_ui::InGameRoot,
-        ));
+        let color = counter_label_color(kind);
+        let mut tag_node = Node {
+            position_type: PositionType::Absolute,
+            padding: UiRect::axes(Val::Px(3.0), Val::Px(0.0)),
+            border_radius: BorderRadius::all(Val::Px(3.0)),
+            ..default()
+        };
+        let mut tag_transform = UiTransform::IDENTITY;
+        place_tag(&mut tag_node, &mut tag_transform, TagSide::Right);
+        // Parked off-screen until the next frame places it.
+        commands
+            .spawn((
+                CounterLabel { card_id: id, kind },
+                Node {
+                    position_type: PositionType::Absolute,
+                    left: Val::Px(-1000.0),
+                    top: Val::Px(-1000.0),
+                    justify_content: JustifyContent::Center,
+                    align_items: AlignItems::Center,
+                    ..default()
+                },
+                // Centred on the coin: left/top are the coin's centre.
+                UiTransform::from_translation(Val2::percent(-50.0, -50.0)),
+                // A new pile swells in, as a changed count does.
+                crate::theme::OverlayPulse::default(),
+                Pickable::IGNORE,
+                GlobalZIndex(COUNTER_LABEL_Z),
+                crate::systems::game_ui::InGameRoot,
+            ))
+            .with_children(|label| {
+                label.spawn((
+                    CounterCount,
+                    Text::new(count.to_string()),
+                    ui_fonts.tf(14.0),
+                    TextColor(Color::WHITE),
+                    TextShadow { offset: Vec2::splat(1.0), color: Color::srgba(0.0, 0.0, 0.0, 0.95) },
+                    Pickable::IGNORE,
+                ));
+                label.spawn((
+                    CounterTag(TagSide::Right),
+                    Text::new(counter_tag(kind, impending)),
+                    ui_fonts.tf(11.0),
+                    // Its box is the coin's: "+1/+1" wrapped in half.
+                    TextLayout::no_wrap(),
+                    TextColor(color),
+                    BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.78)),
+                    tag_node,
+                    tag_transform,
+                    Pickable::IGNORE,
+                ));
+            });
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{counter_label_text, counter_token};
-    use crabomination::card::CounterType;
+    use super::*;
 
     #[test]
     fn named_gameplay_counters_match_the_tooltip_names() {
@@ -686,10 +752,44 @@ mod tests {
     }
 
     #[test]
-    fn label_text_pluralizes_and_dedupes() {
-        assert_eq!(counter_label_text(CounterType::Unlock, 1, false), "Unlock");
-        assert_eq!(counter_label_text(CounterType::Unlock, 3, false), "Unlock ×3");
+    fn a_pile_is_capped_and_its_tag_names_the_kind() {
+        assert_eq!(pile_height(1), 1);
+        assert_eq!(pile_height(3), 3);
+        assert_eq!(pile_height(11), MAX_PILE);
+        assert_eq!(counter_tag(CounterType::Unlock, false), "Unlock");
         // Impending Time badges the countdown instead of a plain "Time".
-        assert_eq!(counter_label_text(CounterType::Time, 2, true), "Impending 2");
+        assert_eq!(counter_tag(CounterType::Time, true), "Impending");
+        assert_eq!(counter_tag(CounterType::Time, false), "Time");
+    }
+
+    #[test]
+    fn a_tag_hangs_toward_the_card() {
+        assert_eq!(tag_side(Vec2::new(12.0, 1.0)), TagSide::Right);
+        // An opponent's card faces them: its +X points left on screen.
+        assert_eq!(tag_side(Vec2::new(-12.0, -1.0)), TagSide::Left);
+        // A tapped card's +X runs up or down the screen.
+        assert_eq!(tag_side(Vec2::new(1.0, 9.0)), TagSide::Below);
+        assert_eq!(tag_side(Vec2::new(-1.0, -9.0)), TagSide::Above);
+    }
+
+    #[test]
+    fn a_counter_another_badge_reads_gets_no_coin() {
+        let mut p = crate::systems::counter_tooltip::tests::make_permanent_view(0, 1);
+        p.card_types = vec![CardType::Planeswalker];
+        p.counters = vec![(CounterType::Loyalty, 5), (CounterType::Charge, 1)];
+        assert_eq!(board_counters(&p), vec![(CounterType::Charge, 1)]);
+        // A creature's +1/+1 counters lead, its stun is the status chip's.
+        p.card_types = vec![CardType::Creature];
+        p.counters = vec![
+            (CounterType::Stun, 1),
+            (CounterType::Lore, 2),
+            (CounterType::PlusOnePlusOne, 3),
+            (CounterType::Charge, 0),
+        ];
+        assert_eq!(board_counters(&p), vec![(CounterType::PlusOnePlusOne, 3), (CounterType::Lore, 2)]);
+        // A stunned land has no status chip, so its stun is a coin.
+        p.card_types = vec![CardType::Land];
+        p.counters = vec![(CounterType::Lore, 2), (CounterType::Stun, 1)];
+        assert_eq!(board_counters(&p), vec![(CounterType::Stun, 1), (CounterType::Lore, 2)]);
     }
 }

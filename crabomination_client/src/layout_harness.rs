@@ -16,6 +16,7 @@
 
 use bevy::prelude::*;
 use bevy::render::view::screenshot::{Screenshot, save_to_disk};
+use crabomination::card::CounterType;
 use crabomination::game::{GameState, TurnStep};
 
 /// Command-line options for the harness, parsed once in `main`.
@@ -96,6 +97,17 @@ const CREATURES: &[&str] = &[
     "Birds of Paradise",
 ];
 const OTHER_PERMANENTS: &[&str] = &["Sol Ring", "Oblivion Ring"];
+/// Permanents that carry counters, and the counters they carry — every
+/// counter surface (coins, their labels, the P/T and loyalty badges) on one
+/// board. Two kinds on one card, and a stack past the coin cap.
+const COUNTERED: &[(&str, &[(CounterType, u32)])] = &[
+    ("Walking Ballista", &[(CounterType::PlusOnePlusOne, 11)]),
+    ("Luminarch Aspirant", &[(CounterType::PlusOnePlusOne, 2), (CounterType::Stun, 1)]),
+    ("Hangarback Walker", &[(CounterType::PlusOnePlusOne, 3)]),
+    ("Jace, the Mind Sculptor", &[(CounterType::Loyalty, 5)]),
+    ("History of Benalia", &[(CounterType::Lore, 2)]),
+    ("Everflowing Chalice", &[(CounterType::Charge, 2)]),
+];
 const HAND: &[&str] = &[
     "Lightning Bolt", "Counterspell", "Wrath of God", "Grizzly Bears", "Forest",
     "Serra Angel", "Shivan Dragon",
@@ -127,17 +139,31 @@ pub fn fixture_state(seats: usize) -> GameState {
             g.add_card_to_battlefield(seat, def);
         }
         for (i, def) in defs(CREATURES).into_iter().enumerate() {
+            let name = def.name;
             let id = g.add_card_to_battlefield(seat, def);
             g.clear_sickness(id);
+            let Some(c) = g.battlefield_find_mut(id) else { continue };
             // A couple tapped, so the rotated-card spacing shows.
-            if i % 3 == 1
-                && let Some(c) = g.battlefield_find_mut(id)
-            {
-                c.tapped = true;
+            c.tapped = i % 3 == 1;
+            // A -1/-1 counter and some marked damage on the plain creatures.
+            match name {
+                "Grizzly Bears" => _ = c.counters.insert(CounterType::MinusOneMinusOne, 1),
+                "Serra Angel" => c.damage = 2,
+                _ => {}
             }
         }
         for def in defs(OTHER_PERMANENTS) {
             g.add_card_to_battlefield(seat, def);
+        }
+        for &(name, counters) in COUNTERED {
+            let Some(def) = crabomination::catalog::lookup_by_name(name) else { continue };
+            let id = g.add_card_to_battlefield(seat, def);
+            g.clear_sickness(id);
+            if let Some(c) = g.battlefield_find_mut(id) {
+                for &(kind, n) in counters {
+                    c.counters.insert(kind, n);
+                }
+            }
         }
         let hand = if seat == 0 { HAND.len() } else { 5 };
         for def in defs(&HAND[..hand]) {
@@ -150,6 +176,7 @@ pub fn fixture_state(seats: usize) -> GameState {
     for def in defs(&["Lightning Bolt", "Grizzly Bears"]) {
         g.add_card_to_exile(1, def);
     }
+    g.players[1].poison_counters = 3;
     // An opposing monarch: the crown chip is a lone emoji on its row and
     // leads the viewer's "👑 <name>", so both of the symbol fallback's
     // lookups (Common and Latin runs) show up in a screenshot.

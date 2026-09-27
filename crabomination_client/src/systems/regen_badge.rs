@@ -40,7 +40,8 @@ pub fn sync_regen_badges(
     mut commands: Commands,
     view: Res<CurrentView>,
     ui_fonts: Res<UiFonts>,
-    cards: Query<(&GameCardId, &GlobalTransform), With<BattlefieldCard>>,
+    cards: Query<(Entity, &GameCardId, &GlobalTransform), With<BattlefieldCard>>,
+    cover_cards: crate::card::cover::CoverQuery,
     camera_q: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
     ui_scale: Res<UiScale>,
     mut badges: Query<(Entity, &RegenBadge, &mut Node, &mut Text)>,
@@ -52,6 +53,8 @@ pub fn sync_regen_badges(
         return;
     };
     let Ok((camera, cam_xform)) = camera_q.single() else { return };
+    // Hidden while another card lies over it (`card::cover`).
+    let cover = crate::card::cover::CardCover::new(cam_xform, &cover_cards);
 
     let desired: HashMap<CardId, u32> = cv
         .battlefield
@@ -61,8 +64,8 @@ pub fn sync_regen_badges(
         .collect();
     let corner_local = Vec3::new(-CARD_WIDTH / 2.0, -CARD_HEIGHT / 2.0, 0.0);
     let mut card_corner: HashMap<CardId, Vec3> = HashMap::new();
-    for (gid, gtf) in &cards {
-        if desired.contains_key(&gid.0) {
+    for (e, gid, gtf) in &cards {
+        if desired.contains_key(&gid.0) && !cover.hides_local(e, gtf, corner_local * 0.85) {
             card_corner.insert(gid.0, gtf.transform_point(corner_local));
         }
     }

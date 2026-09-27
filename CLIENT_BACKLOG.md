@@ -119,6 +119,50 @@ eye; `framing::tests::budget` gates the table sizes.
   for it scrolls rather than cutting off the title. Layout harness:
   `--menu`, `--menu-format FORMAT`.
 
+## Counters and card overlays (2026-09-27) — shipped
+
+Read off layout-harness screenshots of a fixture board that now carries
+counters (`layout_harness::COUNTERED`: +1/+1 stacks past the coin cap, two
+kinds on one card, a −1/−1, a planeswalker, a saga, charge, stun, marked
+damage, an opponent's poison), duel and pod, 1920x1080 and 1280x720.
+
+- ✅ **Counters are coin piles down the card's left edge**
+  (`counter_coins`): one pile per kind, a coin per counter up to five,
+  the count on the top coin and the kind in a small tag beside it, on the
+  side facing into the card (an opponent's cards face them; a tapped
+  card's tag hangs below). The coins stacked *across* the card face, a
+  diameter per counter, so an eleven-counter Walking Ballista drew a
+  glowing tower the height of the card over its art and name, with a
+  separate "+1/+1 ×11" label on top of the coins. Coins are the deep shade
+  of their tag's colour and no longer bloom — a glowing coin washed out to
+  pastel under its number.
+  - A kind another overlay reads gets no coin (`board_counters`): a
+    planeswalker's loyalty is its ◆ badge, a battle's defense its ◇
+    badge, a creature's stun its "Stun N" status chip. Stun showed three
+    times.
+- ✅ **The P/T badge tones each stat and shows damage** (`pt_label`).
+  Power and toughness are each green above the printed value and red
+  below, so a +2/−1 says which half went which way (the whole badge took
+  one tone, a tie broken by power). Marked damage comes off the toughness
+  shown, in red, as Arena shows it: a 4/4 with 2 damage reads "4/2".
+  Damage showed nowhere. The green/red ring drawn around a modified
+  creature (`draw_pt_modified_overlays`) is gone — the badge says the same
+  in numbers.
+- ✅ **A card's overlays hide while another card lies over them**
+  (`card::cover::CardCover`): counter piles (coins and label), P/T badges,
+  keyword strips, token-pile, lock and regeneration badges. They are
+  screen-space UI drawn over every card, so where cards overlap — a
+  wrapped creature row, a tapped card turned under its neighbour — a
+  covered card's overlays printed on the card on top: Serra Angel's "Fly
+  Vig" read as Hangarback Walker's.
+  - ⚠ **Test the card face under a pile, not the pile's top.** Stacked
+    cards sit a few hundredths apart, so a pile on the card underneath
+    rose through the card above; the covered-pile test passed and the
+    coin showed through.
+- ✅ **A changed count swells for a moment** (`theme::OverlayPulse`): a
+  pile's number, a P/T badge — the change catches the eye instead of
+  silently rewriting a digit.
+
 ## Paper-cut sweep (2026-09-12) — shipped, with residuals
 
 A read of the client turned up four defects that read as bugs rather than
@@ -271,46 +315,9 @@ cut, and the first two would make the third and fourth reviewable:
 
 ## Client — Visualization
 
-### Counter Display
-`PermanentView.counters` carries all counter types and counts, but there is no
-in-world or HUD display.  Suggested: floating text labels above affected cards
-showing `+1/+1 ×3`, `Lore: 2`, `Charge: 1`, `Poison: 3`, etc., using Bevy
-`Text3d` or billboard sprites.
-
-### Modified Power/Toughness Display
-When a creature's P/T differs from its printed values (pump spells, counters,
-static effects), the printed Scryfall art still shows the base stats.
-`PermanentView` exposes both `power`/`toughness` (current) and `base_power`/
-`base_toughness` (printed). Current surfacing of modifications:
-- 🟡 `draw_pt_modified_overlays` (`systems/gizmos.rs`) draws a coloured ring
-  around any creature whose computed P/T differs from its base (green
-  buffed / red debuffed / yellow mixed).
-- 🟡 The Alt-key counter tooltip (`systems/counter_tooltip.rs`) shows
-  `current/printed (printed X/Y)` when modified.
-- ⏳ Still missing: an in-world numeric P/T overlay anchored to the card
-  itself. Bevy's `Text2d` doesn't depth-sort with 3-D meshes, so this
-  needs either (a) a billboarded `Text3d`/quad with a generated texture
-  per card, or (b) a screen-space `Node` projected each frame off
-  `Camera::world_to_viewport(card_translation)`. (b) is the cheaper
-  retrofit; sits well next to the existing alt-tooltip projector.
-
-### Modified Loyalty Display
-There is no static loyalty badge today; loyalty surfaces only via the
-3-D counter coin column on each planeswalker
-(`systems/counter_coins.rs`, `CounterType::Loyalty` material). The coin
-count tracks the current loyalty correctly, but the printed starting
-loyalty from the card art and the precise current number are both
-absent at a glance. Same screen-space-overlay approach as the P/T
-overlay above would carry a "L: N" badge.
-
 ### Exile Zone Browser
 ✅ Shipped — `V` toggles a browser listing exiled cards with per-card
 source annotations (linked exile, cipher, foretell, …).
-
-### Stun Counter Visualization
-Static Prison and Rapier Wit add stun counters.  No indicator currently shows
-that a permanent has a stun counter (i.e., won't untap next turn).  A small
-badge or coloured ring on the card would communicate this clearly.
 
 ### Damage Overlays
 When combat damage is assigned, show floating damage numbers rising off

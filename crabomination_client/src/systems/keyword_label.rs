@@ -543,8 +543,9 @@ fn board_status_strip(
         parts.push(format!("Crew×{crewed_count}"));
     }
     // CR 122.1c — a permanent with stun counters skips that many untaps, so
-    // it stays tapped-out of future combats/activations. A real board read that
-    // the counter coin alone doesn't convey, so it sits by the "Zzz" can't-act tag.
+    // it stays tapped-out of future combats/activations. A real board read, so
+    // it sits by the "Zzz" can't-act tag — and it is the stun counters' only
+    // readout on a card with a strip (`counter_coins` leaves them out).
     if stun > 0 {
         parts.push(format!("Stun {stun}"));
     }
@@ -566,6 +567,12 @@ fn board_status_strip(
     parts.join(" ")
 }
 
+/// Whether `p` gets a status strip: creatures get the keyword/status strip;
+/// Cases, Classes and Rooms (non-creatures) get a state chip.
+pub(crate) fn has_status_strip(p: &crabomination::net::PermanentView) -> bool {
+    p.is_creature() || p.case_solved.is_some() || p.class_level.is_some() || !p.room_doors.is_empty()
+}
+
 /// Reconcile keyword strips with the engine view. Runs every frame in
 /// `AppState::InGame`.
 #[allow(clippy::type_complexity)]
@@ -573,7 +580,8 @@ pub fn sync_keyword_labels(
     mut commands: Commands,
     view: Res<CurrentView>,
     ui_fonts: Res<UiFonts>,
-    cards: Query<(&GameCardId, &GlobalTransform), With<BattlefieldCard>>,
+    cards: Query<(Entity, &GameCardId, &GlobalTransform), With<BattlefieldCard>>,
+    cover_cards: crate::card::cover::CoverQuery,
     camera_q: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
     ui_scale: Res<UiScale>,
     mut labels: Query<(Entity, &KeywordLabel, &mut Node, &mut Text)>,
@@ -596,13 +604,7 @@ pub fn sync_keyword_labels(
     if view.is_changed() {
         desired_cache.clear();
         for p in &cv.battlefield {
-            // Creatures get the keyword/status strip; Cases, Classes and
-            // Rooms (non-creatures) get a state chip.
-            if !p.is_creature()
-                && p.case_solved.is_none()
-                && p.class_level.is_none()
-                && p.room_doors.is_empty()
-            {
+            if !has_status_strip(p) {
                 continue;
             }
             let stun = p
@@ -661,16 +663,24 @@ pub fn sync_keyword_labels(
         Vec3::new(CARD_WIDTH / 2.0, 0.0, 0.0),
         Vec3::new(-CARD_WIDTH / 2.0, 0.0, 0.0),
     ];
+    // A strip hides while another card lies over that edge (`card::cover`):
+    // it printed on the card on top, whose keywords it then seemed to be.
+    let cover = crate::card::cover::CardCover::new(cam_xform, &cover_cards);
     let mut card_top: HashMap<CardId, Vec2> = HashMap::new();
-    for (gid, gtf) in &cards {
+    for (e, gid, gtf) in &cards {
         if !desired.contains_key(&gid.0) {
             continue;
         }
         let top = edges
             .iter()
-            .filter_map(|&e| crate::theme::project_to_ui(camera, cam_xform, &ui_scale, gtf.transform_point(e)))
-            .min_by(|a, b| a.y.total_cmp(&b.y));
-        if let Some(top) = top {
+            .filter_map(|&edge| {
+                crate::theme::project_to_ui(camera, cam_xform, &ui_scale, gtf.transform_point(edge))
+                    .map(|at| (at, edge))
+            })
+            .min_by(|a, b| a.0.y.total_cmp(&b.0.y));
+        if let Some((top, edge)) = top
+            && !cover.hides_local(e, gtf, edge * 0.85)
+        {
             card_top.insert(gid.0, top);
         }
     }

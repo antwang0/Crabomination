@@ -334,6 +334,35 @@ pub fn update_hover_tint(
     }
 }
 
+/// A short swell on a card overlay whose number just changed — a counter
+/// pile's count, a P/T badge — so the change catches the eye: it starts at
+/// 1.5x and settles over [`PULSE_SECS`]. Scales the node's `UiTransform`
+/// about its centre, leaving its translation alone.
+#[derive(Component, Default)]
+pub struct OverlayPulse(f32);
+
+const PULSE_SECS: f32 = 0.45;
+
+fn pulse_scale(elapsed: f32) -> f32 {
+    let left = (1.0 - elapsed / PULSE_SECS).clamp(0.0, 1.0);
+    1.0 + 0.5 * left * left
+}
+
+/// Bevy system: run each [`OverlayPulse`] and drop it once it has settled.
+pub fn animate_overlay_pulses(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut q: Query<(Entity, &mut OverlayPulse, &mut UiTransform)>,
+) {
+    for (e, mut pulse, mut transform) in &mut q {
+        pulse.0 += time.delta_secs();
+        transform.scale = Vec2::splat(pulse_scale(pulse.0));
+        if pulse.0 >= PULSE_SECS {
+            commands.entity(e).remove::<OverlayPulse>();
+        }
+    }
+}
+
 // ── Z layers ─────────────────────────────────────────────────────────────────
 
 /// The one ordering of every 2-D surface in the client.
@@ -441,7 +470,16 @@ pub mod layer {
 
 #[cfg(test)]
 mod tests {
-    use super::{FALLBACK_FONT_PATHS, FONT_PATH};
+
+    #[test]
+    fn an_overlay_pulse_swells_then_settles() {
+        assert_eq!(pulse_scale(0.0), 1.5);
+        assert!(pulse_scale(PULSE_SECS * 0.5) > 1.0 && pulse_scale(PULSE_SECS * 0.5) < 1.5);
+        assert_eq!(pulse_scale(PULSE_SECS), 1.0);
+        assert_eq!(pulse_scale(PULSE_SECS * 3.0), 1.0);
+    }
+
+    use super::{FALLBACK_FONT_PATHS, FONT_PATH, PULSE_SECS, pulse_scale};
     use ab_glyph::{Font as _, FontRef};
 
     /// Every non-ASCII character a client string literal uses has a glyph in

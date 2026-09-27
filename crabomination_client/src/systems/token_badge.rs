@@ -36,7 +36,8 @@ pub fn sync_token_pile_badges(
     mut commands: Commands,
     view: Res<CurrentView>,
     ui_fonts: Res<UiFonts>,
-    cards: Query<(&GameCardId, &GlobalTransform), With<BattlefieldCard>>,
+    cards: Query<(Entity, &GameCardId, &GlobalTransform), With<BattlefieldCard>>,
+    cover_cards: crate::card::cover::CoverQuery,
     camera_q: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
     ui_scale: Res<UiScale>,
     mut badges: Query<(Entity, &TokenPileBadge, &mut Node, &mut Text)>,
@@ -48,6 +49,8 @@ pub fn sync_token_pile_badges(
         return;
     };
     let Ok((camera, cam_xform)) = camera_q.single() else { return };
+    // Hidden while another card lies over it (`card::cover`).
+    let cover = crate::card::cover::CardCover::new(cam_xform, &cover_cards);
 
     // Pile membership per owner, keyed the same way the layout groups
     // (`creature_group_info_from_view`): tokens by visual identity. The
@@ -77,8 +80,8 @@ pub fn sync_token_pile_badges(
     // card_id → world position of the card's top-right corner.
     let top_right_local = Vec3::new(CARD_WIDTH / 2.0, CARD_HEIGHT / 2.0, 0.0);
     let mut card_corner: HashMap<CardId, Vec3> = HashMap::new();
-    for (gid, gtf) in &cards {
-        if desired.contains_key(&gid.0) {
+    for (e, gid, gtf) in &cards {
+        if desired.contains_key(&gid.0) && !cover.hides_local(e, gtf, top_right_local * 0.85) {
             card_corner.insert(gid.0, gtf.transform_point(top_right_local));
         }
     }

@@ -93,9 +93,9 @@ use systems::game_ui::{
 use systems::gizmos::{
     draw_active_seat_glow, draw_attachment_tethers, draw_attack_plan_gizmos,
     draw_attacker_overlays, draw_blocking_gizmos, draw_legal_target_rings,
-    draw_pt_modified_overlays, draw_stack_arrows, draw_target_arrow, ActiveSeatGizmos,
+    draw_stack_arrows, draw_target_arrow, ActiveSeatGizmos,
     AttachmentGizmos, AttackPlanGizmos, AttackerGizmos, BlockingGizmos,
-    LegalTargetGizmos, PtModifiedGizmos, StackGizmos, TargetArrowGizmos,
+    LegalTargetGizmos, StackGizmos, TargetArrowGizmos,
 };
 use systems::quality::{
     close_settings_on_esc, handle_leave_game_button, handle_quality_buttons, handle_speed_slider,
@@ -369,7 +369,6 @@ fn main() {
         .init_gizmo_group::<BlockingGizmos>()
         .init_gizmo_group::<AttackerGizmos>()
         .init_gizmo_group::<StackGizmos>()
-        .init_gizmo_group::<PtModifiedGizmos>()
         .init_gizmo_group::<AttackPlanGizmos>()
         .init_gizmo_group::<LegalTargetGizmos>()
         .init_gizmo_group::<TargetArrowGizmos>()
@@ -695,7 +694,7 @@ fn main() {
         // angle. Ungated: card images load during draft/menu as well as in a
         // match, and the system self-skips anything already mipmapped.
         .add_systems(Update, crate::card::mipmap::generate_card_mipmaps)
-        // Counter coins (3-D cylinders on top of permanents).
+        // Counter coins (3-D piles on top of permanents).
         .add_systems(
             Update,
             crate::systems::counter_coins::sync_counter_coins
@@ -718,10 +717,11 @@ fn main() {
                 .after(sync_game_visuals)
                 .run_if(in_state(AppState::InGame)),
         )
-        // Screen-space "<type> ×N" labels naming each counter and its count.
+        // Screen-space labels: each coin pile's count and kind; a changed
+        // count (or P/T) swells for a moment.
         .add_systems(
             Update,
-            crate::systems::counter_coins::sync_counter_labels
+            (crate::systems::counter_coins::sync_counter_labels, crate::theme::animate_overlay_pulses)
                 .run_if(in_state(AppState::InGame)),
         )
         // Alt-key tooltip with counter detail + modified P/T.
@@ -833,7 +833,6 @@ fn main() {
                 draw_attacker_overlays,
                 draw_stack_arrows,
                 draw_attack_plan_gizmos,
-                draw_pt_modified_overlays,
                 draw_legal_target_rings,
                 draw_target_arrow,
                 draw_attachment_tethers,
@@ -1061,8 +1060,6 @@ fn configure_gizmos(mut store: ResMut<GizmoConfigStore>) {
     config.line.width = 3.0;
     let (config, _) = store.config_mut::<StackGizmos>();
     config.line.width = 3.0;
-    let (config, _) = store.config_mut::<PtModifiedGizmos>();
-    config.line.width = 4.0;
     let (config, _) = store.config_mut::<AttackPlanGizmos>();
     config.line.width = 4.0;
     let (config, _) = store.config_mut::<LegalTargetGizmos>();
