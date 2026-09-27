@@ -36,6 +36,7 @@ pub(crate) fn slot0_required(effect: &Effect, mode: Option<usize>, kicked: bool,
     if filter.mentions_stack_object()
         || effect.target_slot_optional_x(0, mode, x)
         || effect.slot_owner(0, mode).is_some_and(deferred)
+        || under_may(effect)
     {
         return false;
     }
@@ -104,4 +105,23 @@ fn deferred(e: &Effect) -> bool {
             | Effect::AtEachCombatThisTurn { .. }
             | Effect::WhenLastCreatedTokenLeaves { .. }
     )
+}
+
+/// Slot 0 is declared inside a "you may" wrapper — the catalog's shape for
+/// "up to one target" on an ability (Geyadrone Dihada's +1), so the slot may
+/// be left empty.
+fn under_may(e: &Effect) -> bool {
+    let declares = |x: &Effect| x.target_filter_for_slot_in_mode_kicked(0, None, false).is_some();
+    match e {
+        Effect::Seq(v) => v.iter().find(|x| declares(x)).is_some_and(under_may),
+        Effect::MayDo { body, .. }
+        | Effect::MayDoBy { body, .. }
+        | Effect::MayPay { body, .. }
+        | Effect::MayPayBy { body, .. }
+        | Effect::MayPayLife { body, .. }
+        | Effect::MaySacrifice { then: body, .. }
+        | Effect::MayTap { then: body, .. }
+        | Effect::MayDiscard { then: body, .. } => declares(body),
+        _ => false,
+    }
 }
