@@ -520,27 +520,29 @@ pub fn ruthless_winnower() -> CardDefinition {
 }
 
 /// Serpent's Soul-Jar — your dying Elves are exiled with it; {T}, pay 2 life:
-/// cast creature spells from among them this turn.
-///
-/// ⚠ Residual: every exiled creature card becomes castable, not one.
+/// cast one creature spell from among them this turn.
 pub fn serpents_soul_jar() -> CardDefinition {
+    let jarred = || Selector::CardsInZone {
+        who: PlayerRef::You,
+        zone: Zone::Exile,
+        filter: R::ExiledWithSource.and(R::Creature),
+    };
     CardDefinition {
         triggered_abilities: vec![on_elf_dies(true, Effect::ExileWithSource { what: Selector::TriggerSource })],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             life_cost: 2,
-            effect: Effect::GrantMayPlay {
-                what: Selector::CardsInZone {
-                    who: PlayerRef::You,
-                    zone: Zone::Exile,
-                    filter: R::ExiledWithSource.and(R::Creature),
+            effect: Effect::Seq(vec![
+                Effect::GrantMayPlay {
+                    what: jarred(),
+                    duration: MayPlayDuration::EndOfThisTurn,
+                    to_owner: false,
+                    exile_after: false,
+                    pay_own_cost: true,
+                    any_color: false,
                 },
-                duration: MayPlayDuration::EndOfThisTurn,
-                to_owner: false,
-                exile_after: false,
-                pay_own_cost: true,
-                any_color: false,
-            },
+                Effect::OneCastAmongGranted { what: jarred() },
+            ]),
             ..Default::default()
         }],
         ..spell("Serpent's Soul-Jar", cost(&[generic(2), b()]), CardType::Artifact, Effect::Noop)

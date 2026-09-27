@@ -292,3 +292,30 @@ fn umaro_rolls_a_mode() {
     let burned = g.players[1].life == life - 5 || g.battlefield.len() < 2;
     assert_eq!([pumped, wheeled, burned].iter().filter(|b| **b).count(), 1);
 }
+
+/// Locke's Mug: everyone mills, and one spell from among the milled cards is
+/// castable this turn — "a spell from among those cards", not each of them.
+#[test]
+fn locke_mugs_one_spell_from_the_milled_cards() {
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = main_phase(2);
+    let locke = g.add_card_to_battlefield(0, catalog::locke_treasure_hunter());
+    let mine = g.add_card_to_library(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_library(1, catalog::goblin_piker());
+    g.clear_sickness(locke);
+    g.step = TurnStep::DeclareAttackers;
+    g.declare_attackers(vec![Attack { attacker: locke, target: AttackTarget::Player(1) }]).expect("attack");
+    drain_stack(&mut g);
+    g.step = TurnStep::PostCombatMain;
+    flood(&mut g, 0);
+    let from_gy = |card_id| GameAction::CastFromZoneWithoutPaying {
+        card_id,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    };
+    act(&mut g, from_gy(theirs)).expect("cast the opponent's milled Piker");
+    assert_eq!(named(&g, 0, "Goblin Piker").len(), 1);
+    assert!(act(&mut g, from_gy(mine)).is_err(), "one spell among them");
+}

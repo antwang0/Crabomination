@@ -205,29 +205,34 @@ fn ruthless_winnower_takes_a_non_elf_each_upkeep() {
     assert!(g.battlefield_find(elf).is_some());
 }
 
-/// Serpent's Soul-Jar exiles your dying Elves and lets you cast them after
-/// {T}, 2 life.
+/// Serpent's Soul-Jar exiles your dying Elves and lets you cast one of them
+/// ("a creature spell from among") after {T}, 2 life.
 #[test]
 fn serpents_soul_jar_recasts_an_exiled_elf() {
     let mut g = main_phase();
     let jar = g.add_card_to_battlefield(0, catalog::serpents_soul_jar());
-    let elf = elves(&mut g, 0, 1)[0];
-    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
-    play(&mut g, bolt, Some(Target::Permanent(elf))).expect("Bolt");
-    assert!(g.exile.iter().any(|c| c.id == elf), "the Elf was exiled with the Jar");
+    let two = elves(&mut g, 0, 2);
+    for &elf in &two {
+        let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+        play(&mut g, bolt, Some(Target::Permanent(elf))).expect("Bolt");
+        assert!(g.exile.iter().any(|c| c.id == elf), "the Elf was exiled with the Jar");
+    }
     activate(&mut g, jar, 0, None).expect("Jar");
     assert_eq!(g.players[0].life, 18);
     flood(&mut g, 0);
-    g.perform_action(GameAction::CastFromZoneWithoutPaying {
-        card_id: elf,
-        target: None,
-        additional_targets: vec![],
-        mode: None,
-        x_value: None,
-    })
-    .expect("cast the exiled Elf");
+    let cast_exiled = |g: &mut GameState, card_id| {
+        g.perform_action(GameAction::CastFromZoneWithoutPaying {
+            card_id,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+    };
+    cast_exiled(&mut g, two[0]).expect("cast the exiled Elf");
     drain_stack(&mut g);
-    assert!(g.battlefield_find(elf).is_some());
+    assert!(g.battlefield_find(two[0]).is_some());
+    assert!(cast_exiled(&mut g, two[1]).is_err(), "one creature spell");
 }
 
 /// Skemfar Elderhall: -2/-2 to up to one creature you don't control, plus two

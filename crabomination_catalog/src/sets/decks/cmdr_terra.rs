@@ -478,8 +478,8 @@ pub fn legions_to_ashes() -> CardDefinition {
 }
 
 /// Locke, Treasure Hunter — skulk-like; each attack mills everyone, a milled
-/// land makes a Treasure, and the milled cards are castable this turn.
-/// Residual: any of them, not only one spell.
+/// land makes a Treasure, and one spell from among the milled cards is
+/// castable this turn.
 pub fn locke_treasure_hunter() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Skulk],
@@ -498,6 +498,7 @@ pub fn locke_treasure_hunter() -> CardDefinition {
                 pay_own_cost: true,
                 any_color: false,
             },
+            Effect::OneCastAmongGranted { what: Selector::LastMoved },
         ]))],
         ..creature(
             "Locke, Treasure Hunter",
