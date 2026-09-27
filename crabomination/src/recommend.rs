@@ -2498,6 +2498,11 @@ pub struct ActionCensus {
     /// Printed activated (`false`) and loyalty (`true`) abilities by card and
     /// index: which abilities of a played card no seat ever activated.
     abilities: HashMap<(String, bool, usize), usize>,
+    /// Cards seen as the source of a triggered ability on the stack: a deck
+    /// card with printed triggers missing here never fired one (a dead
+    /// kind/scope pair — Tahngarth, First Mate's "whenever an opponent
+    /// attacks" was one).
+    triggered: HashMap<String, usize>,
 }
 
 /// An action about to be taken, with the card it names peeled off so
@@ -2546,6 +2551,25 @@ impl ActionCensus {
         &self.abilities
     }
 
+    /// How often each card was seen as a trigger's source. Read by key.
+    pub fn trigger_counts(&self) -> &HashMap<String, usize> {
+        &self.triggered
+    }
+
+    /// Note the source of every triggered ability now on `g`'s stack.
+    pub fn note_triggers(&mut self, g: &GameState) {
+        if !self.on {
+            return;
+        }
+        for si in g.stack.iter() {
+            if let crate::game::types::StackItem::Trigger { source, .. } = si
+                && let Some(c) = g.find_card_anywhere(*source)
+            {
+                *self.triggered.entry(c.definition.name.to_string()).or_insert(0) += 1;
+            }
+        }
+    }
+
     /// Fold another game's census in, so a run can total across games.
     pub fn merge(&mut self, other: &Self) {
         for (k, n) in &other.counts {
@@ -2556,6 +2580,9 @@ impl ActionCensus {
         }
         for (k, n) in &other.abilities {
             *self.abilities.entry(k.clone()).or_insert(0) += n;
+        }
+        for (k, n) in &other.triggered {
+            *self.triggered.entry(k.clone()).or_insert(0) += n;
         }
     }
 

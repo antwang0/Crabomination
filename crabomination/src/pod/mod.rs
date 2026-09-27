@@ -1647,6 +1647,7 @@ pub fn play_one_pod_game_censused(
             };
             if ok {
                 census.bump(key);
+                census.note_triggers(&g);
                 any = true;
                 actions += 1;
                 plays += usize::from(!is_pass);

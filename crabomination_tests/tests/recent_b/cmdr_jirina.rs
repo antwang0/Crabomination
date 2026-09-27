@@ -357,3 +357,23 @@ fn odric_and_fireflux_squad_on_the_attack() {
     assert!(gc.tapped);
     assert!(g.attacking.iter().any(|a| a.attacker == giant));
 }
+
+/// Sanctuary Blade: equipping it chooses a colour, and the equipped creature
+/// gets +2/+0 and protection from that colour (the census never saw its
+/// attach trigger fire in a pod).
+#[test]
+fn sanctuary_blade_equips_with_a_chosen_color() {
+    let mut g = main_phase(2);
+    let blade = g.add_card_to_battlefield(0, catalog::sanctuary_blade());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    flood(&mut g, 0);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Black)]));
+    act_as(&mut g, 0, GameAction::Equip { equipment: blade, target: bear }).expect("equip");
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!(cp.power, 4);
+    assert!(
+        cp.keywords().iter().any(|k| matches!(k, Keyword::Protection(Color::Black))),
+        "protection from the chosen colour: {:?}",
+        cp.keywords()
+    );
+}

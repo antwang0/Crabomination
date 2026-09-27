@@ -2808,6 +2808,13 @@ fn report_card_census(
                     println!("      never activated: {} loyalty #{i} [{label}]", def.name);
                 }
             }
+            // A played card none of whose printed triggers ever reached the
+            // stack: a kind/scope pair no dispatcher reads is a dead ability.
+            if !def.triggered_abilities.is_empty() && !census.trigger_counts().contains_key(def.name) {
+                let events: Vec<String> =
+                    def.triggered_abilities.iter().map(|t| format!("{:?}/{:?}", t.event.kind, t.event.scope)).collect();
+                println!("      never triggered: {} [{}]", def.name, events.join(", "));
+            }
         }
     }
 }
