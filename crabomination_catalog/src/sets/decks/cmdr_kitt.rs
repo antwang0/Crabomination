@@ -552,10 +552,20 @@ pub fn viviens_stampede() -> CardDefinition {
 }
 
 /// Zurzoth, Chaos Rider — an opponent's first draw outside their turn makes a
-/// Devil; your Devils attacking make you and the defender loot at random.
-///
-/// Approximation: the defender of the attack, one player per batch.
+/// Devil; your Devils attacking make you and each player they attack loot at
+/// random.
 pub fn zurzoth_chaos_rider() -> CardDefinition {
+    let attacked = |body: Effect| Effect::ForEach {
+        selector: Selector::Player(PlayerRef::EachOpponent),
+        body: Box::new(Effect::If {
+            cond: Predicate::PlayerAttackedByMatching {
+                player: PlayerRef::Triggerer,
+                filter: R::HasCreatureType(CreatureType::Devil),
+            },
+            then: Box::new(body),
+            else_: Box::new(Effect::Noop),
+        }),
+    };
     let devil = TokenDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
@@ -580,13 +590,13 @@ pub fn zurzoth_chaos_rider() -> CardDefinition {
                     .once_per_batch(),
                 effect: Effect::Seq(vec![
                     draw(1),
-                    Effect::Draw { who: Selector::Player(PlayerRef::DefendingPlayer), amount: Value::ONE },
+                    attacked(Effect::Draw { who: Selector::Player(PlayerRef::Triggerer), amount: Value::ONE }),
                     Effect::Discard { who: Selector::You, amount: Value::ONE, random: true },
-                    Effect::Discard {
-                        who: Selector::Player(PlayerRef::DefendingPlayer),
+                    attacked(Effect::Discard {
+                        who: Selector::Player(PlayerRef::Triggerer),
                         amount: Value::ONE,
                         random: true,
-                    },
+                    }),
                 ]),
             },
         ],

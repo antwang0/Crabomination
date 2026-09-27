@@ -5223,6 +5223,20 @@ fn cabaretti_cacophony_batch() {
     to_upkeep(&mut g);
     assert_eq!(g.players[1].hand.len(), 1, "secrets");
     assert_eq!(count_named(&g, 0, "Devil"), 1);
+
+    // Its Devils' attack loots for you and each player they attack — seat 1,
+    // not the unattacked seat 2.
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let z = g.add_card_to_battlefield(0, catalog::zurzoth_chaos_rider());
+    for seat in 0..3 {
+        g.add_card_to_library(seat, catalog::island());
+    }
+    combat(&mut g, vec![Attack { attacker: z, target: AttackTarget::Player(1) }], 0, |_| {});
+    let libs: Vec<usize> = (0..3).map(|s| g.players[s].library.len()).collect();
+    assert_eq!(libs, vec![0, 0, 1], "you and the attacked seat drew");
 }
 
 // ── Draconic Rage (Vrondiss, Rage of Ancients) ──────────────────────────────
