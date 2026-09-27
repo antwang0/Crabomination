@@ -1464,14 +1464,19 @@ fn necromancers_magemark_returns_the_enchanted_creature_to_hand() {
     assert!(g.players[0].hand.iter().any(|c| c.id == bear), "bounced, not buried");
 }
 
-/// Beastmaster's Magemark pumps the enchanted attacker by its blocker count.
+/// Beastmaster's Magemark — "a creature you control that's enchanted": an
+/// attacker wearing a different Aura is pumped per blocker too (it read only
+/// the Magemark's own host).
 #[test]
-fn beastmasters_magemark_pumps_per_blocker() {
+fn beastmasters_magemark_pumps_any_enchanted_attacker() {
     use crabomination::game::types::TurnStep;
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let elf = g.add_card_to_battlefield(0, catalog::llanowar_elves());
     let aura = g.add_card_to_battlefield(0, catalog::beastmasters_magemark());
-    g.battlefield_find_mut(aura).unwrap().attached_to = Some(bear);
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(elf);
+    let strength = g.add_card_to_battlefield(0, catalog::holy_strength());
+    g.battlefield_find_mut(strength).unwrap().attached_to = Some(bear);
     g.clear_sickness(bear);
     let b1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let b2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
@@ -1489,8 +1494,8 @@ fn beastmasters_magemark_pumps_per_blocker() {
     g.perform_action(GameAction::DeclareBlockers(vec![(b1, bear), (b2, bear)]))
         .expect("block");
     drain_stack(&mut g);
-    // 2/2 base + 1/1 anthem + 2/2 for the two blockers.
-    assert_eq!(g.computed_permanent(bear).unwrap().power, 5);
+    // 2 base + 1 Holy Strength + 1 anthem + 2 for the two blockers.
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 6);
 }
 
 /// Nivix banks the top card of your library as a castable exile.

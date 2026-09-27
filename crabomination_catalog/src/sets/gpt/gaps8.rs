@@ -66,13 +66,14 @@ pub fn beastmasters_magemark() -> CardDefinition {
             },
         }],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::BecomesBlocked, EventScope::EnchantedBySource),
+            // "A creature you control that's enchanted" — by any Aura.
+            event: EventSpec::new(EventKind::BecomesBlocked, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::IsEnchanted },
+            ),
             effect: Effect::PumpPT {
-                what: Selector::AttachedTo(Box::new(Selector::This)),
-                power: Value::BlockersOf(Box::new(Selector::AttachedTo(Box::new(Selector::This)))),
-                toughness: Value::BlockersOf(Box::new(Selector::AttachedTo(Box::new(
-                    Selector::This,
-                )))),
+                what: Selector::TriggerSource,
+                power: Value::BlockersOf(Box::new(Selector::TriggerSource)),
+                toughness: Value::BlockersOf(Box::new(Selector::TriggerSource)),
                 duration: Duration::EndOfTurn,
             },
         }],
