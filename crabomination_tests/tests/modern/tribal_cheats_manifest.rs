@@ -173,8 +173,14 @@ fn master_of_pearl_trident_buffs_other_merfolk() {
     let oc = g.computed_permanent(other).unwrap();
     assert_eq!((oc.power, oc.toughness), (2, 2), "Cursecatcher 1/1 → 2/2");
     assert!(oc.keywords().contains(&Keyword::Landwalk(crabomination::card::LandType::Island)), "islandwalk");
-    // The lord doesn't pump itself.
+    // The lord doesn't pump itself, nor an opponent's Merfolk ("you
+    // control" — it pumped every seat's, as did Merrow Reejerey).
     assert_eq!(g.computed_permanent(lord).unwrap().power, 2);
+    let theirs = g.add_card_to_battlefield(1, catalog::cursecatcher());
+    assert_eq!(g.computed_permanent(theirs).unwrap().power, 1);
+    g.add_card_to_battlefield(0, catalog::merrow_reejerey());
+    assert_eq!(g.computed_permanent(theirs).unwrap().power, 1);
+    assert_eq!(g.computed_permanent(other).unwrap().power, 3, "two lords");
 }
 
 /// Merfolk Mistbinder buffs only your other Merfolk.

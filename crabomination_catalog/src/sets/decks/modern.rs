@@ -41381,7 +41381,9 @@ pub fn master_of_the_pearl_trident() -> CardDefinition {
     use crate::effect::StaticEffect;
     let others = || {
         Selector::EachPermanent(
+            // "Other Merfolk creatures YOU CONTROL" — it read every seat's.
             SelectionRequirement::HasCreatureType(CreatureType::Merfolk)
+                .and(SelectionRequirement::ControlledByYou)
                 .and(SelectionRequirement::OtherThanSource),
         )
     };
@@ -41466,7 +41468,9 @@ pub fn merrow_reejerey() -> CardDefinition {
             description: "Other Merfolk get +1/+1.",
             effect: StaticEffect::PumpPT {
                 applies_to: Selector::EachPermanent(
+                    // "Other Merfolk creatures YOU CONTROL" — it read every seat's.
                     SelectionRequirement::HasCreatureType(CreatureType::Merfolk)
+                        .and(SelectionRequirement::ControlledByYou)
                         .and(SelectionRequirement::OtherThanSource),
                 ),
                 power: 1,
