@@ -424,8 +424,8 @@ pub fn drag_the_canal() -> CardDefinition {
 }
 
 /// Harried Dronesmith — {3}{R} Human Artificer 2/3. At the beginning of combat
-/// on your turn, create a 1/1 colorless Thopter with flying and haste; sacrifice
-/// it at the beginning of your next end step.
+/// on your turn, create a 1/1 colorless Thopter with flying that gains haste until
+/// end of turn; sacrifice it at the beginning of your next end step.
 pub fn harried_dronesmith() -> CardDefinition {
     CardDefinition {
         name: "Harried Dronesmith",
@@ -455,9 +455,14 @@ pub fn harried_dronesmith() -> CardDefinition {
                             creature_types: vec![CreatureType::Thopter],
                             ..Default::default()
                         },
-                        keywords: vec![Keyword::Flying, Keyword::Haste],
+                        keywords: vec![Keyword::Flying],
                         ..Default::default()
                     }),
+                },
+                Effect::GrantKeyword {
+                    what: Selector::LastCreatedTokens,
+                    keyword: Keyword::Haste,
+                    duration: crate::effect::Duration::EndOfTurn,
                 },
                 Effect::SacrificeLastCreatedTokensAtNextEndStep,
             ]),

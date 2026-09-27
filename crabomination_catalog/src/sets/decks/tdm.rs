@@ -593,7 +593,7 @@ pub fn rally_the_monastery() -> CardDefinition {
 
 // ── TDM batch 2: sieges / dragonstorms / equipment (modern_decks) ──────────
 
-fn warrior_haste_token() -> TokenDefinition {
+fn red_warrior_token() -> TokenDefinition {
     TokenDefinition {
         name: "Warrior".into(),
         power: 1,
@@ -604,13 +604,13 @@ fn warrior_haste_token() -> TokenDefinition {
             creature_types: vec![CreatureType::Warrior],
             ..Default::default()
         },
-        keywords: vec![Keyword::Haste],
         ..Default::default()
     }
 }
 
 /// Salt Road Skirmish — {3}{B} Sorcery. Destroy target creature. Create two
-/// 1/1 red Warriors with haste, sacrificed at the beginning of the next end step.
+/// 1/1 red Warriors that gain haste until end of turn, sacrificed at the
+/// beginning of the next end step.
 pub fn salt_road_skirmish() -> CardDefinition {
     CardDefinition {
         name: "Salt Road Skirmish",
@@ -620,11 +620,14 @@ pub fn salt_road_skirmish() -> CardDefinition {
             Effect::Destroy {
                 what: target_filtered(R::Creature),
             },
-            Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(2),
-                definition: std::sync::Arc::new(warrior_haste_token()),
-            },
+            crate::effect::shortcut::tokens_gain_until_eot(
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(2),
+                    definition: std::sync::Arc::new(red_warrior_token()),
+                },
+                &[Keyword::Haste],
+            ),
             Effect::SacrificeLastCreatedTokensAtNextEndStep,
         ]),
         ..Default::default()
@@ -2230,7 +2233,8 @@ pub fn rot_curse_rakshasa() -> CardDefinition {
 
 /// Windcrag Siege — {1}{R}{W} Enchantment. As it enters, choose Mardu or Jeskai.
 /// Mardu: an attack-caused trigger of a permanent you control fires an extra
-/// time. Jeskai: upkeep create a 1/1 red Goblin with lifelink and haste.
+/// time. Jeskai: upkeep create a 1/1 red Goblin that gains lifelink and haste until
+/// end of turn.
 pub fn windcrag_siege() -> CardDefinition {
     CardDefinition {
         name: "Windcrag Siege",
@@ -2253,25 +2257,25 @@ pub fn windcrag_siege() -> CardDefinition {
                         EventKind::StepBegins(TurnStep::Upkeep),
                         EventScope::ActivePlayer,
                     ),
-                    effect: Effect::CreateToken {
-                        who: PlayerRef::You,
-                        count: Value::ONE,
-                        // lifelink/haste are printed "until end of turn"; baked on
-                        // the token (negligible for a 1/1 that rarely survives).
-                        definition: std::sync::Arc::new(TokenDefinition {
-                            name: "Goblin".into(),
-                            power: 1,
-                            toughness: 1,
-                            card_types: vec![CardType::Creature],
-                            colors: vec![Color::Red],
-                            subtypes: Subtypes {
-                                creature_types: vec![CreatureType::Goblin],
+                    effect: crate::effect::shortcut::tokens_gain_until_eot(
+                        Effect::CreateToken {
+                            who: PlayerRef::You,
+                            count: Value::ONE,
+                            definition: std::sync::Arc::new(TokenDefinition {
+                                name: "Goblin".into(),
+                                power: 1,
+                                toughness: 1,
+                                card_types: vec![CardType::Creature],
+                                colors: vec![Color::Red],
+                                subtypes: Subtypes {
+                                    creature_types: vec![CreatureType::Goblin],
+                                    ..Default::default()
+                                },
                                 ..Default::default()
-                            },
-                            keywords: vec![Keyword::Lifelink, Keyword::Haste],
-                            ..Default::default()
-                        }),
-                    },
+                            }),
+                        },
+                        &[Keyword::Lifelink, Keyword::Haste],
+                    ),
                 }],
                 ..Default::default()
             },

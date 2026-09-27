@@ -1186,8 +1186,10 @@ mod recent241 {
         let ctx = EffectContext::for_ability(smith, 0, None);
         g.resolve_effect(&effect, &ctx).unwrap();
         drain_stack(&mut g);
-        let thopter = g.battlefield.iter().find(|c| c.definition.name == "Thopter").expect("thopter minted");
-        assert!(thopter.definition.keywords.contains(&Keyword::Haste), "thopter has haste");
+        let thopter = g.battlefield.iter().find(|c| c.definition.name == "Thopter").expect("thopter minted").id;
+        let cp = g.computed_permanent(thopter).unwrap();
+        assert!(cp.keywords().contains(&Keyword::Haste), "thopter has haste");
+        assert!(cp.keywords().contains(&Keyword::Flying));
     }
 
     /// Vengeful Tracker pings an opponent who sacrifices an artifact.

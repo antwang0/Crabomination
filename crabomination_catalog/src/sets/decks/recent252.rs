@@ -199,11 +199,14 @@ pub fn krenko_baron_of_tin_street() -> CardDefinition {
             effect: Effect::MayPay {
                 description: "Pay {R} to create a hasty Goblin?".into(),
                 mana_cost: cost(&[r()]),
-                body: Box::new(Effect::CreateToken {
-                    who: PlayerRef::You,
-                    count: Value::ONE,
-                    definition: std::sync::Arc::new(hasty_goblin_token()),
-                }),
+                body: Box::new(crate::effect::shortcut::tokens_gain_until_eot(
+                    Effect::CreateToken {
+                        who: PlayerRef::You,
+                        count: Value::ONE,
+                        definition: std::sync::Arc::new(red_goblin_token()),
+                    },
+                    &[Keyword::Haste],
+                )),
                 else_: None,
             },
         }],
@@ -438,7 +441,7 @@ fn plant_0_1_token() -> TokenDefinition {
     }
 }
 
-fn hasty_goblin_token() -> TokenDefinition {
+fn red_goblin_token() -> TokenDefinition {
     TokenDefinition {
         name: "Goblin".into(),
         colors: vec![crate::mana::Color::Red],
@@ -449,7 +452,6 @@ fn hasty_goblin_token() -> TokenDefinition {
         },
         power: 1,
         toughness: 1,
-        keywords: vec![Keyword::Haste],
         ..Default::default()
     }
 }

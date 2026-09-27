@@ -220,6 +220,18 @@ pub fn animate_land_until_eot(
     }
 }
 
+/// `create`, then "It gains / They gain `keywords` until end of turn." — the
+/// grant lands on the tokens this resolution made, never on their definition.
+pub fn tokens_gain_until_eot(create: Effect, keywords: &[Keyword]) -> Effect {
+    let mut seq = vec![create];
+    seq.extend(keywords.iter().map(|k| Effect::GrantKeyword {
+        what: Selector::LastCreatedTokens,
+        keyword: k.clone(),
+        duration: Duration::EndOfTurn,
+    }));
+    Effect::Seq(seq)
+}
+
 /// Awaken N—`mana_cost` (CR 702.113) alternative cost: cast for `mana_cost`;
 /// the spell resolves its `base_effect` and additionally animates the land in
 /// target slot `land_slot` with N +1/+1 counters. `base_effect` keeps its own

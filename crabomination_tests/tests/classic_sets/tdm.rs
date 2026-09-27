@@ -659,10 +659,8 @@ fn salt_road_skirmish_destroys_and_makes_warriors() {
         .filter(|c| c.controller == 0 && c.definition.name == "Warrior")
         .collect::<Vec<_>>();
     assert_eq!(warriors.len(), 2, "two Warriors");
-    assert!(
-        warriors[0].definition.keywords.contains(&Keyword::Haste),
-        "with haste"
-    );
+    let w0 = warriors[0].id;
+    assert!(g.computed_permanent(w0).unwrap().keywords().contains(&Keyword::Haste), "with haste");
 }
 
 /// Corroding Dragonstorm drains 2 on ETB and bounces itself when a Dragon enters.
@@ -2058,8 +2056,11 @@ fn windcrag_siege_jeskai_makes_goblin() {
         .battlefield
         .iter()
         .find(|c| c.definition.subtypes.creature_types.contains(&CreatureType::Goblin))
-        .expect("made a Goblin");
-    assert!(goblin.definition.keywords.contains(&Keyword::Haste), "Goblin has haste");
+        .expect("made a Goblin")
+        .id;
+    let cp = g.computed_permanent(goblin).unwrap();
+    assert!(cp.keywords().contains(&Keyword::Haste), "Goblin has haste");
+    assert!(cp.keywords().contains(&Keyword::Lifelink), "and lifelink, until end of turn");
     assert!(g.battlefield.len() > before, "battlefield grew");
 }
 

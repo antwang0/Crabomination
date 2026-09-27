@@ -1412,3 +1412,33 @@ fn until_end_of_turn_land_animations_leave_no_counters() {
     assert_eq!((cp.power, cp.toughness), (3, 3));
     assert!(!cp.keywords().contains(&Keyword::Haste), "no haste on the Spellbomb's 3/3");
 }
+
+/// "Create … tokens. They gain menace and haste until end of turn." — the
+/// grant ends with the turn; it was baked on the token definition (Mardu
+/// Monument, Windcrag Siege's lifelink Goblin, Sokenzan, Krenko, Baron of Tin
+/// Street, Harried Dronesmith, Salt Road Skirmish).
+#[test]
+fn created_tokens_gain_keywords_only_until_end_of_turn() {
+    let mut g = main_phase();
+    let monument = g.add_card_to_battlefield(0, catalog::mardu_monument());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility { card_id: monument, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None })
+        .expect("monument");
+    drain_stack(&mut g);
+    let warriors: Vec<CardId> = g.battlefield.iter().filter(|c| c.definition.name == "Warrior").map(|c| c.id).collect();
+    assert_eq!(warriors.len(), 3);
+    for &w in &warriors {
+        let cp = g.computed_permanent(w).unwrap();
+        let kws = cp.keywords();
+        assert!(kws.contains(&Keyword::Menace) && kws.contains(&Keyword::Haste));
+    }
+    g.do_cleanup(&mut vec![]);
+    for &w in &warriors {
+        let cp = g.computed_permanent(w).unwrap();
+        let kws = cp.keywords();
+        assert!(!kws.contains(&Keyword::Menace) && !kws.contains(&Keyword::Haste), "gone after the turn");
+    }
+}

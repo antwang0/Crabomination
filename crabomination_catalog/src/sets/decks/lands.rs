@@ -1291,13 +1291,12 @@ pub fn eiganjo_seat_of_the_empire() -> CardDefinition {
 }
 
 /// Sokenzan, Crucible of Defiance — `{T}: Add {R}`. Channel — {3}{R}: create
-/// two 1/1 colorless Spirit creature tokens with haste.
+/// two 1/1 colorless Spirit creature tokens; they gain haste until end of turn.
 pub fn sokenzan_crucible_of_defiance() -> CardDefinition {
     let spirit = crate::card::TokenDefinition {
         name: "Spirit".into(),
         power: 1,
         toughness: 1,
-        keywords: vec![crate::card::Keyword::Haste],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![crate::card::CreatureType::Spirit],
@@ -1309,11 +1308,14 @@ pub fn sokenzan_crucible_of_defiance() -> CardDefinition {
         "Sokenzan, Crucible of Defiance",
         Color::Red,
         cost(&[generic(3), crate::mana::r()]),
-        Effect::CreateToken {
-            who: PlayerRef::You,
-            count: Value::Const(2),
-            definition: std::sync::Arc::new(spirit),
-        },
+        crate::effect::shortcut::tokens_gain_until_eot(
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: std::sync::Arc::new(spirit),
+            },
+            &[crate::card::Keyword::Haste],
+        ),
     )
 }
 

@@ -2640,7 +2640,6 @@ fn warrior_token() -> crate::card::TokenDefinition {
         colors: vec![Color::Red],
         power: 1,
         toughness: 1,
-        keywords: vec![Keyword::Menace, Keyword::Haste],
         ..Default::default()
     }
 }
@@ -2683,8 +2682,8 @@ pub fn jeskai_monument() -> CardDefinition {
 }
 
 /// Mardu Monument — {2} Artifact. ETB: tutor a basic Mountain/Plains/Swamp.
-/// {2}{R}{W}{B}, {T}, Sacrifice: create three 1/1 red Warriors with menace and
-/// haste.
+/// {2}{R}{W}{B}, {T}, Sacrifice: create three 1/1 red Warriors; they gain menace
+/// and haste until end of turn.
 pub fn mardu_monument() -> CardDefinition {
     use crate::card::LandType;
     CardDefinition {
@@ -2698,11 +2697,14 @@ pub fn mardu_monument() -> CardDefinition {
         )],
         activated_abilities: vec![monument_sac(
             cost(&[generic(2), r(), w(), b()]),
-            Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(3),
-                definition: std::sync::Arc::new(warrior_token()),
-            },
+            crate::effect::shortcut::tokens_gain_until_eot(
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(3),
+                    definition: std::sync::Arc::new(warrior_token()),
+                },
+                &[Keyword::Menace, Keyword::Haste],
+            ),
         )],
         ..Default::default()
     }
