@@ -7740,7 +7740,7 @@ impl GameState {
                 }
                 continue;
             }
-            // Phase M: 21-commander-damage SBA (CR 704.5v). Any
+            // Phase M: 21-commander-damage SBA (CR 704.6c). Any
             // single (this-player, commander) entry of ≥ 21 in
             // `commander_damage` loses the game for this player. We
             // collect the check separately from life / poison so

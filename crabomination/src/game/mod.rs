@@ -1835,7 +1835,7 @@ pub struct ColdState {
     /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub commander_cast_count: HashMap<CardId, u32>,
-    /// 21-commander-damage tracker (Phase M / CR 704.5v). Keyed by
+    /// 21-commander-damage tracker (Phase M / CR 704.6c). Keyed by
     /// `(victim_seat, commander_card_id)`; values are running totals
     /// of combat damage dealt by that commander to that seat over the
     /// whole game (CR 903.10a — non-combat damage never counts). The SBA in

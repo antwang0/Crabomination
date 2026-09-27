@@ -5600,7 +5600,7 @@ impl GameState {
                 }
                 // Phase M: bump the 21-commander-damage tally when the
                 // attacker is a Commander. Both Infect and regular
-                // damage paths credit here — CR 704.5v doesn't restrict
+                // damage paths credit here — CR 704.6c doesn't restrict
                 // by damage type. The SBA in `check_state_based_actions`
                 // reads this table and eliminates the player when any
                 // single (victim, commander) entry crosses 21.
