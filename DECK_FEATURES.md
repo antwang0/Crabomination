@@ -67,11 +67,11 @@ lists were picked.
 | **Plunder the Graves** (C15 precon) BG | Meren of Clan Nel Toth | BG | 100 | ✅ complete |
 | **Graveyard Overdrive** (M3C precon) BRG | Disa the Restless | BRG | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
 | **Sworn to Darkness** (C14 precon) B | Ob Nixilis of the Black Oath (**planeswalker**) | B | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
-| **Seize Control** (C15 precon) UR | Mizzix of the Izmagnus | UR | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
+| **Seize Control** (C15 precon) UR | Mizzix of the Izmagnus | UR | 100 | ✅ complete |
 | **Rebellion Rising** (ONC precon) RW | Neyali, Suns' Vanguard | RW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Feline Ferocity** (C17 precon) GW | Arahbo, Roar of the World | GW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
 | **Primal Genesis** (C19 precon) RGW | Ghired, Conclave Exile | RGW | 100 | 🟡 all 100 implemented, 2 carry residuals (below) |
-| **Breed Lethality** (C16 precon) WUBG | Atraxa, Praetors' Voice | WUBG | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
+| **Breed Lethality** (C16 precon) WUBG | Atraxa, Praetors' Voice | WUBG | 100 | ✅ complete |
 | **Call the Spirits** (C15 precon) WB | Daxos the Returned | WB | 100 | 🟡 all 100 implemented, 1 carries a residual (below) |
 | **Peer Through Time** (C14 precon) U | Teferi, Temporal Archmage (**planeswalker**) | U | 100 | 🟡 all 100 implemented, 4 carry residuals (below) |
 | **Quantum Quandrix** (C21 precon) GU | Adrix and Nev, Twincasters | GU | 100 | 🟡 all 100 implemented, 3 carry residuals (below) |
@@ -653,8 +653,8 @@ path**: "each of X targets" (Meteor Blast, and Doppelgang before it) never built
 a legal cast because the slot walker fills every slot — `exactly_x_targets`
 picks distinct targets and sets X to their count; and the response picker's
 `effect_counters_spells` read neither a `ChooseN`'s default picks (Mystic
-Confluence) nor a spell steal (Aethersnatch). Residual: **Mystic Confluence**
-runs its default picks (counter unless {3}, draw two). Four-seat Izzet pods
+Confluence) nor a spell steal (Aethersnatch). Residual (since fixed, 7c60e12cf: Confluences choose their modes as cast):
+**Mystic Confluence** ran its default picks. Four-seat Izzet pods
 beside Zellix / Zndrsplt / Stella (seed 10111, 1,000 games, all decided, every
 Mizzix card played): Mizzix 16.2 %. Seed 10121, 300 games at 38 seats: **300
 decided, 0 caps, zero panics** (190.6 k actions/game, 1,038 s on 4 threads).
@@ -735,7 +735,8 @@ stopped**: two Enduring Scalelords feed each other a counter per "you may"
 forever (2 of 1,000 games capped). `HeuristicBot` now declines past 64
 optional yeses in one step (CR 732.2), and the rerun decided 1,000/1,000 with
 every card played: Atraxa 27.9 % beside Teval / Ixhel / Bello (seed 10191).
-Residual: **Duneblast** always keeps one creature. The 56-seat smoke of the
+Residual (since fixed, 2026-09-27: the pick is the survivor, ours or none):
+**Duneblast** always kept one creature — for a bot, the opponent's biggest. The 56-seat smoke of the
 field before this seat (seed 10181, 200 games): **197 decided, 3 board caps,
 zero panics**. `--bench` byte-identical.
 

@@ -20820,19 +20820,40 @@ impl GameState {
                         self.find_card_anywhere(*id).map(|c| (*id, c.definition.name.to_string()))
                     })
                     .collect();
+                // "Choose up to one …, destroy the rest" (Duneblast): the pick
+                // is the survivor, so it is a gain — ours first, the biggest —
+                // and choosing none is legal.
+                let keeps = matches!(**chosen, Effect::Noop);
+                let default = if keeps {
+                    ids.iter()
+                        .copied()
+                        .filter(|id| self.battlefield_find(*id).is_some_and(|c| c.controller == seat))
+                        .max_by_key(|id| self.computed_permanent(*id).map_or(0, |cp| cp.power.saturating_add(cp.toughness)))
+                        .into_iter()
+                        .collect()
+                } else {
+                    vec![ids[0]]
+                };
                 let Some(picked) = self.choose_up_to_cards(
                     seat,
                     "Choose one.".into(),
                     source,
                     candidates,
                     1,
-                    PickValue::Cost,
+                    if keeps { PickValue::Gain } else { PickValue::Cost },
                     effect,
-                    vec![ids[0]],
+                    default,
                 ) else {
                     return Ok(());
                 };
-                let one = picked.first().copied().unwrap_or(ids[0]);
+                let one = match picked.first() {
+                    Some(id) => *id,
+                    None if keeps => {
+                        self.separated_piles = (Vec::new(), ids);
+                        return self.run_piles_then_clear(chosen, other, ctx, events);
+                    }
+                    None => ids[0],
+                };
                 self.separated_piles =
                     (vec![one], ids.into_iter().filter(|id| *id != one).collect());
                 self.run_piles_then_clear(chosen, other, ctx, events)

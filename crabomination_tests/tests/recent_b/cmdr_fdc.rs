@@ -3863,7 +3863,15 @@ fn breed_lethality_cards() {
     }
     let d = g.add_card_to_hand(0, catalog::duneblast());
     cast(&mut g, d, &[]);
-    assert_eq!(g.battlefield.iter().filter(|c| c.definition.is_creature()).count(), 1);
+    let left: Vec<_> = g.battlefield.iter().filter(|c| c.definition.is_creature()).collect();
+    assert_eq!(left.len(), 1);
+    assert_eq!((left[0].controller, left[0].definition.name), (0, "Hill Giant"), "the caster keeps its best");
+    // "Up to one": with no creature of its own, the caster keeps none.
+    let mut g = main_phase();
+    g.add_card_to_battlefield(1, catalog::hill_giant());
+    let d = g.add_card_to_hand(0, catalog::duneblast());
+    cast(&mut g, d, &[]);
+    assert!(g.battlefield.iter().all(|c| !c.definition.is_creature()));
 
     // Juniper Order Ranger + Enduring Scalelord: an entering creature feeds both.
     let mut g = main_phase();
