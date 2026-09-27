@@ -73,6 +73,10 @@ pub fn the_birth_of_meletis() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Defender],
         card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: crate::card::Subtypes {
+            creature_types: vec![crate::card::CreatureType::Wall],
+            ..Default::default()
+        },
         ..Default::default()
     };
     CardDefinition {

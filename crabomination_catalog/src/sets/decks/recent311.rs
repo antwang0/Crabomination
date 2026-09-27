@@ -910,7 +910,7 @@ pub fn spawning_pit() -> CardDefinition {
                         name: "Spawn".into(),
                         card_types: vec![CardType::Artifact, CardType::Creature],
                         subtypes: Subtypes {
-                            creature_types: vec![CreatureType::Eldrazi],
+                            creature_types: vec![CreatureType::Spawn],
                             ..Default::default()
                         },
                         power: 2,

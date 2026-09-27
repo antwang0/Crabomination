@@ -1564,3 +1564,24 @@ fn flyer_conditional_cost_reductions() {
     assert!(cast(&mut g, trap, Some(Target::Permanent(bear))).is_err(), "full price on a ground creature");
     cast(&mut g, trap, Some(Target::Permanent(flyer))).expect("{1}{B} on a flyer");
 }
+
+/// CR 111.4 — a token's name is its subtypes: Carrier Thrall's "Eldrazi
+/// Scion" was a plain Eldrazi, so no Scion payoff counted it (also Eldrazi
+/// Confluence, Basking Broodscale's Spawn, Sporemound's Saprolings shipped as
+/// Plants; `scripts/audit_token_types.py --gate`).
+#[test]
+fn carrier_thrall_leaves_an_eldrazi_scion() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::carrier_thrall());
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    let kill = crabomination::effect::Effect::Destroy {
+        what: crabomination::effect::Selector::EachPermanent(crabomination::card::SelectionRequirement::Creature),
+    };
+    let evs = g.resolve_effect(&kill, &ctx).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    let scion = g.battlefield.iter().find(|c| c.is_token).expect("a token").id;
+    let cp = g.computed_permanent(scion).unwrap();
+    assert!(cp.subtypes().creature_types.contains(&CreatureType::Scion));
+    assert!(cp.subtypes().creature_types.contains(&CreatureType::Eldrazi));
+}

@@ -563,7 +563,7 @@ fn warrior_token() -> TokenDefinition {
         power: 1,
         toughness: 1,
         card_types: vec![CardType::Creature],
-        colors: vec![Color::Red, Color::White],
+        colors: vec![Color::Red],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Warrior],
             ..Default::default()

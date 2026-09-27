@@ -4858,7 +4858,7 @@ pub fn raptor_hatchling() -> CardDefinition {
                     toughness: 3,
                     keywords: vec![Keyword::Trample],
                     card_types: vec![CardType::Creature],
-                    colors: vec![Color::Red],
+                    colors: vec![Color::Green],
                     supertypes: vec![],
                     subtypes: Subtypes {
                         creature_types: vec![CreatureType::Dinosaur],
@@ -20747,7 +20747,7 @@ pub fn eldrazi_confluence() -> CardDefinition {
                         colors: vec![],
                         supertypes: vec![],
                         subtypes: Subtypes {
-                            creature_types: vec![CreatureType::Eldrazi],
+                            creature_types: vec![CreatureType::Eldrazi, CreatureType::Scion],
                             ..Default::default()
                         },
                         activated_abilities: vec![],
@@ -26602,7 +26602,7 @@ pub fn pinnacle_emissary() -> CardDefinition {
                     keywords: vec![Keyword::Flying, Keyword::CanBlockOnlyFlying],
                     card_types: vec![CardType::Artifact, CardType::Creature],
                     subtypes: Subtypes {
-                        creature_types: vec![CreatureType::Robot],
+                        creature_types: vec![CreatureType::Drone],
                         ..Default::default()
                     },
                     ..Default::default()
@@ -26669,6 +26669,10 @@ pub fn springleaf_parade() -> CardDefinition {
                 toughness: 1,
                 keywords: vec![Keyword::Changeling],
                 card_types: vec![CardType::Creature],
+                subtypes: Subtypes {
+                    creature_types: vec![CreatureType::Shapeshifter],
+                    ..Default::default()
+                },
                 ..Default::default()
             }),
         })],
@@ -30000,7 +30004,7 @@ pub fn carrier_thrall() -> CardDefinition {
                     toughness: 1,
                     card_types: vec![CardType::Creature],
                     subtypes: Subtypes {
-                        creature_types: vec![CreatureType::Eldrazi],
+                        creature_types: vec![CreatureType::Eldrazi, CreatureType::Scion],
                         ..Default::default()
                     },
                     activated_abilities: vec![ActivatedAbility {

@@ -3350,7 +3350,7 @@ pub fn sporemound() -> CardDefinition {
                     colors: vec![crate::mana::Color::Green],
                     supertypes: vec![],
                     subtypes: Subtypes {
-                        creature_types: vec![CreatureType::Plant],
+                        creature_types: vec![CreatureType::Saproling],
                         ..Default::default()
                     },
                     activated_abilities: vec![],
@@ -5296,7 +5296,7 @@ pub fn basking_broodscale() -> CardDefinition {
         colors: vec![],
         supertypes: vec![],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Eldrazi],
+            creature_types: vec![CreatureType::Eldrazi, CreatureType::Spawn],
             ..Default::default()
         },
         activated_abilities: vec![ActivatedAbility {

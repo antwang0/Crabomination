@@ -6125,6 +6125,10 @@ pub fn glimmerlight() -> CardDefinition {
             definition: std::sync::Arc::new(TokenDefinition {
                 name: "Glimmer".into(),
                 card_types: vec![CardType::Enchantment, CardType::Creature],
+                subtypes: Subtypes {
+                    creature_types: vec![CreatureType::Glimmer],
+                    ..Default::default()
+                },
                 colors: vec![Color::White],
                 power: 1,
                 toughness: 1,
