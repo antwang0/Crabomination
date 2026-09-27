@@ -5559,6 +5559,12 @@ impl Effect {
             | Effect::MayDiscard { then: body, .. }
             | Effect::MayDiscardMatching { then: body, .. }
             | Effect::MayPayLife { body, .. } => body.min_targets_in_mode(mode),
+            // The target walkers read these delayed bodies' slots as the
+            // spell's own, so their "up to one" is too (Ride the Avalanche).
+            Effect::OnYourNextSpellCastThisTurn { body }
+            | Effect::OnYourNextExhaustActivationThisTurn { body }
+            | Effect::OnYourNextAttackThisTurn { body }
+            | Effect::OnYourNextInstantSorceryThisTurn { body } => body.min_targets_in_mode(mode),
             _ => None,
         }
     }

@@ -9654,8 +9654,7 @@ impl GameState {
         let filter_violation = filter_violation
             || (target.is_none()
                 && additional_targets.is_empty()
-                && self.required_target_unfillable(
-                    p,
+                && self.required_target_missing(
                     &card,
                     if card.gift_promised {
                         card.definition.gift.as_ref().map(|g| &g.gifted_effect)
@@ -12069,6 +12068,13 @@ impl GameState {
             }
         }
 
+        // CR 601.2c — a required target must be announced.
+        if target.is_none()
+            && additional_targets.is_empty()
+            && self.required_target_missing(&card, &card.definition.effect, mode, false, x_value.unwrap_or(0))
+        {
+            return Err(GameError::SelectionRequirementViolated);
+        }
         // Validate target.
         if let Some(ref tgt) = target {
             self.check_target_legality(tgt, p)?;

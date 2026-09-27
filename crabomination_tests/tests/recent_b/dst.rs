@@ -51,10 +51,10 @@ fn color_watch_artifacts_gain_life_on_a_matching_cast() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, 20, "neither watches red");
     let raise = g.add_card_to_hand(0, catalog::raise_dead());
-    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
     g.players[0].mana_pool.add(Color::Black, 1);
     g.perform_action(GameAction::CastSpell {
-        card_id: raise, target: None, additional_targets: vec![], mode: None, x_value: None,
+        card_id: raise, target: Some(Target::Permanent(dead)), additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("cast a black spell");
     drain_stack(&mut g);

@@ -148,7 +148,8 @@ fn kellan_free_casts_a_permanent_after_a_graveyard_cast() {
 fn lilah_plots_a_multicolored_spell_on_resolution() {
     let mut g = main_phase();
     etb(&mut g, catalog::lilah_undefeated_slickshot());
-    let spell = cast(&mut g, catalog::terminate(), None);
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = cast(&mut g, catalog::terminate(), Some(Target::Permanent(foe)));
     assert!(g.exile.iter().any(|c| c.id == spell), "exiled rather than binned");
     assert!(g.plotted_cards.contains(&spell), "and plotted");
 }

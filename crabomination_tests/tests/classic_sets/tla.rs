@@ -1797,6 +1797,7 @@ fn guru_pathik_grows_another_creature_on_a_lesson_cast() {
     let mut g = two_player_game();
     let gp = g.add_card_to_battlefield(0, catalog::guru_pathik());
     let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let lesson = g.add_card_to_hand(0, catalog::boomerang_basics());
     for c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
         g.players[0].mana_pool.add(c, 3);
@@ -1805,7 +1806,7 @@ fn guru_pathik_grows_another_creature_on_a_lesson_cast() {
     g.active_player_idx = 0;
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::CastSpell {
-        card_id: lesson, target: None, additional_targets: vec![], mode: None, x_value: None,
+        card_id: lesson, target: Some(Target::Permanent(foe)), additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast the Lesson");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(bears).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,

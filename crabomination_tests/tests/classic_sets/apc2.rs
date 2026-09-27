@@ -418,13 +418,13 @@ fn dead_ringers_needs_identical_colors() {
 #[test]
 fn jaded_response_needs_a_shared_color() {
     let mut g = main_phase();
-    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let spell = g.add_card_to_hand(1, catalog::giant_growth());
     mana(&mut g, 1);
     g.priority.player_with_priority = 1;
     g.perform_action(GameAction::CastSpell {
         card_id: spell,
-        target: None,
+        target: Some(Target::Permanent(bears)),
         additional_targets: vec![],
         mode: None,
         x_value: None,

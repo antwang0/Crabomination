@@ -12135,8 +12135,35 @@ fn cr_601_2c_required_target_with_no_legal_candidate_rejects_the_cast() {
     assert!(!g.would_accept(cast(blade)), "only a black creature on board");
     assert!(g.perform_action(cast(blade)).is_err());
     assert!(g.players[0].hand.iter().any(|c| c.id == blade), "the card stays in hand");
-    g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    assert!(g.would_accept(cast(blade)), "a legal target exists");
+    let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    assert!(!g.would_accept(cast(blade)), "a legal target exists, but none was announced");
+    assert!(g.would_accept(GameAction::CastSpell {
+        card_id: blade, target: Some(Target::Permanent(bears)), additional_targets: vec![], mode: None, x_value: None,
+    }));
+}
+
+/// CR 601.2c — the same rule on a flashback cast (CR 702.34a: flashback is a
+/// cast): Deep Analysis with no target player announced is rejected before
+/// its life is paid, and one naming a player draws that player two.
+#[test]
+fn cr_601_2c_flashback_needs_its_required_target() {
+    let fb = |id, target| GameAction::CastFlashback {
+        card_id: id, target, additional_targets: vec![], mode: None, x_value: None,
+    };
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(1, catalog::island()); }
+    let deep = g.add_card_to_graveyard(0, catalog::deep_analysis());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    assert!(g.perform_action(fb(deep, None)).is_err());
+    assert_eq!(g.players[0].life, 20, "no life paid");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == deep));
+    let hand = g.players[1].hand.len();
+    g.perform_action(fb(deep, Some(Target::Player(1)))).expect("flashback naming a player");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), hand + 2);
 }
 
 /// CR 603.10 — a dies trigger's "its power" is the creature's last-known
