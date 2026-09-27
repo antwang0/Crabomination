@@ -2307,7 +2307,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Heroic Return | Avengers Assemble (MSC) | a returned Hero's two +1/+1 counters are put on as it lands, not as it enters. |
 | 🟡 Heroic Sacrifice | Avengers Assemble (MSC) | damage to your noncreature permanents is redirected too. |
 | 🟡 Scarlet Witch, Chaotic Avenger | Avengers Assemble (MSC) | the two cards are exiled face up. |
-| 🟡 Speed, Young Avenger | Avengers Assemble (MSC) | "can't be blocked except by creatures with haste" is unblockable. |
 | 🟡 Winter Soldier, Reborn Avenger | Avengers Assemble (MSC) | a returned Hero's +1/+1 counter is put on as it lands, not as it enters. |
 | 🟡 Mister Fantastic | The Fantastic Four (MSC) | the copies keep the original's targets, and an activated ability of yours is a legal target too. |
 | 🟡 Rikku, Resourceful Guardian | Counter Blitz (FIC) | "can't be blocked by creatures your opponents control" is unblockable (the same in free-for-all). |
